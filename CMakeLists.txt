@@ -4,6 +4,8 @@ project(xcikit)
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra")
 
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
+
 
 # ------------ #
 # Sources      #
@@ -15,10 +17,12 @@ set(XCI_LOG_SOURCES
     src/xci/util/format.h)
 
 set(XCI_TEXT_SOURCES
-    src/xci/text/FontLibrary.cpp
     src/xci/text/FontFace.cpp
+    src/xci/text/FontLibrary.cpp
+    src/xci/text/FontTexture.cpp
+    src/xci/text/FontFace.h
     src/xci/text/FontLibrary.h
-    src/xci/text/FontFace.h)
+    src/xci/text/FontTexture.h)
 
 
 # ------------ #
@@ -31,6 +35,9 @@ include(FindFreetype)
 # RectangleBinPack
 add_subdirectory(src/rbp)
 
+# SFML
+find_package(SFML 2.4 REQUIRED system window graphics)
+
 
 # ------------ #
 # Libraries    #
@@ -42,12 +49,14 @@ target_include_directories(${XCI_LOG_LIBRARY} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
 
 set(XCI_TEXT_LIBRARY xci-text)
 add_library(${XCI_TEXT_LIBRARY} STATIC ${XCI_TEXT_SOURCES})
-target_include_directories(${XCI_TEXT_LIBRARY} PUBLIC ${FREETYPE_INCLUDE_DIRS})
-target_include_directories(${XCI_TEXT_LIBRARY} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_include_directories(${XCI_TEXT_LIBRARY} PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${FREETYPE_INCLUDE_DIRS}
+    ${SFML_INCLUDE_DIR})
 target_link_libraries(${XCI_TEXT_LIBRARY}
-        ${XCI_LOG_LIBRARY}
-        ${FREETYPE_LIBRARIES}
-        ${RBP_LIBRARY})
+    ${XCI_LOG_LIBRARY}
+    ${FREETYPE_LIBRARIES}
+    ${RBP_LIBRARY})
 
 
 # ------------ #
