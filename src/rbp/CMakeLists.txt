@@ -1,0 +1,9 @@
+set(RBP_SOURCES
+    MaxRectsBinPack.cpp
+    MaxRectsBinPack.h
+    Rect.cpp
+    Rect.h)
+
+set(RBP_LIBRARY rbp)
+add_library(${RBP_LIBRARY} STATIC ${RBP_SOURCES})
+target_include_directories(${RBP_LIBRARY} INTERFACE .)

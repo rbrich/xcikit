@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.9)
 project(xcikit)
 
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra")
 
 
 # ------------ #
@@ -28,6 +28,9 @@ set(XCI_TEXT_SOURCES
 # FreeType
 include(FindFreetype)
 
+# RectangleBinPack
+add_subdirectory(src/rbp)
+
 
 # ------------ #
 # Libraries    #
@@ -41,7 +44,10 @@ set(XCI_TEXT_LIBRARY xci-text)
 add_library(${XCI_TEXT_LIBRARY} STATIC ${XCI_TEXT_SOURCES})
 target_include_directories(${XCI_TEXT_LIBRARY} PUBLIC ${FREETYPE_INCLUDE_DIRS})
 target_include_directories(${XCI_TEXT_LIBRARY} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_link_libraries(${XCI_TEXT_LIBRARY} ${XCI_LOG_LIBRARY} ${FREETYPE_LIBRARIES})
+target_link_libraries(${XCI_TEXT_LIBRARY}
+        ${XCI_LOG_LIBRARY}
+        ${FREETYPE_LIBRARIES}
+        ${RBP_LIBRARY})
 
 
 # ------------ #
