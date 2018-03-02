@@ -6,6 +6,8 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
+#include <memory>
+
 namespace xci {
 namespace text {
 
@@ -24,13 +26,13 @@ public:
     FontLibrary();
     ~FontLibrary();
 
-    static FontLibrary& get_default_instance();
-
     // non-copyable
     FontLibrary(const FontLibrary&) = delete;
     FontLibrary& operator =(const FontLibrary&) = delete;
 
-    FT_Library& get() { return library; }
+    static std::shared_ptr<FontLibrary> get_default_instance();
+
+    FT_Library& raw_handle() { return library; }
 
 private:
     FT_Library library;

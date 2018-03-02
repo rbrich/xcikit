@@ -16,7 +16,9 @@ set(XCI_LOG_SOURCES
 
 set(XCI_TEXT_SOURCES
     src/text/FontLibrary.cpp
-    include/xci/text/FontLibrary.h)
+    src/text/FontFace.cpp
+    include/xci/text/FontLibrary.h
+    include/xci/text/FontFace.h)
 
 
 # ------------ #
