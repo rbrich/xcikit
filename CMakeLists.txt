@@ -17,12 +17,16 @@ set(XCI_LOG_SOURCES
     src/xci/util/format.h)
 
 set(XCI_TEXT_SOURCES
-    src/xci/text/FontFace.cpp
     src/xci/text/FontLibrary.cpp
-    src/xci/text/FontTexture.cpp
-    src/xci/text/FontFace.h
     src/xci/text/FontLibrary.h
-    src/xci/text/FontTexture.h)
+    src/xci/text/FontFace.cpp
+    src/xci/text/FontFace.h
+    src/xci/text/FontTexture.cpp
+    src/xci/text/FontTexture.h
+    src/xci/text/Font.cpp
+    src/xci/text/Font.h
+    src/xci/text/Text.cpp
+    src/xci/text/Text.h)
 
 
 # ------------ #
@@ -34,6 +38,7 @@ include(FindFreetype)
 
 # RectangleBinPack
 add_subdirectory(src/rbp)
+set(RBP_LIBRARY rbp)
 
 # SFML
 find_package(SFML 2.4 REQUIRED system window graphics)
@@ -56,7 +61,8 @@ target_include_directories(${XCI_TEXT_LIBRARY} PUBLIC
 target_link_libraries(${XCI_TEXT_LIBRARY}
     ${XCI_LOG_LIBRARY}
     ${FREETYPE_LIBRARIES}
-    ${RBP_LIBRARY})
+    ${RBP_LIBRARY}
+    ${SFML_LIBRARIES})
 
 
 # ------------ #

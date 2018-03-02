@@ -1,3 +1,5 @@
+cmake_minimum_required(VERSION 3.9)
+
 set(RBP_SOURCES
     MaxRectsBinPack.cpp
     MaxRectsBinPack.h
