@@ -10,15 +10,15 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall")
 # ------------ #
 
 set(XCI_LOG_SOURCES
-    src/log/Logger.cpp
-    include/xci/log/Logger.h
-    include/xci/util/format.h)
+    src/xci/log/Logger.cpp
+    src/xci/log/Logger.h
+    src/xci/util/format.h)
 
 set(XCI_TEXT_SOURCES
-    src/text/FontLibrary.cpp
-    src/text/FontFace.cpp
-    include/xci/text/FontLibrary.h
-    include/xci/text/FontFace.h)
+    src/xci/text/FontLibrary.cpp
+    src/xci/text/FontFace.cpp
+    src/xci/text/FontLibrary.h
+    src/xci/text/FontFace.h)
 
 
 # ------------ #
@@ -35,12 +35,12 @@ include(FindFreetype)
 
 set(XCI_LOG_LIBRARY xci-log)
 add_library(${XCI_LOG_LIBRARY} STATIC ${XCI_LOG_SOURCES})
-target_include_directories(${XCI_LOG_LIBRARY} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(${XCI_LOG_LIBRARY} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 set(XCI_TEXT_LIBRARY xci-text)
 add_library(${XCI_TEXT_LIBRARY} STATIC ${XCI_TEXT_SOURCES})
 target_include_directories(${XCI_TEXT_LIBRARY} PUBLIC ${FREETYPE_INCLUDE_DIRS})
-target_include_directories(${XCI_TEXT_LIBRARY} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(${XCI_TEXT_LIBRARY} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 target_link_libraries(${XCI_TEXT_LIBRARY} ${XCI_LOG_LIBRARY} ${FREETYPE_LIBRARIES})
 
 
