@@ -6,7 +6,7 @@
 #include <xci/util/format.h>
 
 namespace xci {
-namespace log {
+namespace util {
 
 
 // Provides configuration options, passes messages to handlers
@@ -51,6 +51,13 @@ inline void log_debug(const char *fmt, Args&&... args) {
     Logger::get_default_instance().log(
             Logger::Level::Debug,
             xci::util::format(fmt, std::forward<Args>(args)...));
+}
+
+namespace log {
+    using xci::util::log_error;
+    using xci::util::log_warning;
+    using xci::util::log_info;
+    using xci::util::log_debug;
 }
 
 }} // namespace xci::log

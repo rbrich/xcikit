@@ -1,13 +1,13 @@
 // Logger.h created on 2018-03-01, part of XCI toolkit
 
-#include <xci/log/Logger.h>
+#include <xci/util/log.h>
 
 #include <iostream>
 #include <ctime>
 #include <iomanip>
 
 namespace xci {
-namespace log {
+namespace util {
 
 
 static const char* level_string[] = {

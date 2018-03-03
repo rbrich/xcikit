@@ -11,9 +11,9 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
 # Sources      #
 # ------------ #
 
-set(XCI_LOG_SOURCES
-    src/xci/log/Logger.cpp
-    src/xci/log/Logger.h
+set(XCI_UTIL_SOURCES
+    src/xci/util/log.cpp
+    src/xci/util/log.h
     src/xci/util/format.h)
 
 set(XCI_TEXT_SOURCES
@@ -48,9 +48,9 @@ find_package(SFML 2.4 REQUIRED system window graphics)
 # Libraries    #
 # ------------ #
 
-set(XCI_LOG_LIBRARY xci-log)
-add_library(${XCI_LOG_LIBRARY} STATIC ${XCI_LOG_SOURCES})
-target_include_directories(${XCI_LOG_LIBRARY} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+set(XCI_UTIL_LIBRARY xci-log)
+add_library(${XCI_UTIL_LIBRARY} STATIC ${XCI_UTIL_SOURCES})
+target_include_directories(${XCI_UTIL_LIBRARY} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 set(XCI_TEXT_LIBRARY xci-text)
 add_library(${XCI_TEXT_LIBRARY} STATIC ${XCI_TEXT_SOURCES})
@@ -59,7 +59,7 @@ target_include_directories(${XCI_TEXT_LIBRARY} PUBLIC
     ${FREETYPE_INCLUDE_DIRS}
     ${SFML_INCLUDE_DIR})
 target_link_libraries(${XCI_TEXT_LIBRARY}
-    ${XCI_LOG_LIBRARY}
+    ${XCI_UTIL_LIBRARY}
     ${FREETYPE_LIBRARIES}
     ${RBP_LIBRARY}
     ${SFML_LIBRARIES})
@@ -70,7 +70,7 @@ target_link_libraries(${XCI_TEXT_LIBRARY}
 # ------------ #
 
 add_executable(demo_logger examples/demo_logger.cpp)
-target_link_libraries(demo_logger ${XCI_LOG_LIBRARY})
+target_link_libraries(demo_logger ${XCI_UTIL_LIBRARY})
 
 add_executable(demo_font examples/demo_font.cpp)
 target_link_libraries(demo_font ${XCI_TEXT_LIBRARY} pthread)

@@ -2,8 +2,8 @@
 
 #include <xci/text/FontFace.h>
 
-#include <xci/log/Logger.h>
-using namespace xci::log;
+#include <xci/util/log.h>
+using namespace xci::util::log;
 
 namespace xci {
 namespace text {
