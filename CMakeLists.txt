@@ -18,19 +18,19 @@ set(XCI_UTIL_SOURCES
     src/xci/util/geometry.h)
 
 set(XCI_GRAPHICS_SOURCES
+    src/xci/graphics/Color.h
     src/xci/graphics/Texture.h
     src/xci/graphics/Sprite.h
     src/xci/graphics/View.h
-    src/xci/graphics/Color.h)
+    src/xci/graphics/Window.h)
 
 set(XCI_GRAPHICS_SFML_SOURCES
     src/xci/graphics/sfml/Texture.cpp
-    src/xci/graphics/sfml/Texture.h
+    src/xci/graphics/sfml/TextureImpl.h
     src/xci/graphics/sfml/Sprite.cpp
-    src/xci/graphics/sfml/Sprite.h
-    src/xci/graphics/sfml/View.cpp
-    src/xci/graphics/sfml/View.h
-    )
+    src/xci/graphics/sfml/SpriteImpl.h
+    src/xci/graphics/sfml/Window.cpp
+    src/xci/graphics/sfml/WindowImpl.h)
 
 set(XCI_TEXT_SOURCES
     src/xci/text/FontLibrary.cpp
@@ -71,9 +71,11 @@ target_include_directories(${XCI_UTIL_LIBRARY} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR
 
 set(XCI_GRAPHICS_LIBRARY xci-graphics)
 add_library(${XCI_GRAPHICS_LIBRARY} STATIC ${XCI_GRAPHICS_SOURCES})
-target_include_directories(${XCI_GRAPHICS_LIBRARY} PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${SFML_INCLUDE_DIR})
+target_include_directories(${XCI_GRAPHICS_LIBRARY}
+    PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+    PRIVATE
+        ${SFML_INCLUDE_DIR})
 target_link_libraries(${XCI_GRAPHICS_LIBRARY}
     ${SFML_LIBRARIES})
 

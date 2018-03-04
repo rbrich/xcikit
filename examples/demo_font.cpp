@@ -8,6 +8,7 @@
 #include <xci/text/Text.h>
 #include <xci/graphics/Sprite.h>
 #include <xci/graphics/View.h>
+#include <xci/graphics/Window.h>
 
 #include <iostream>
 #include <thread>
@@ -57,20 +58,19 @@ int main()
     Font font;
     font.add_face(face);
 
-    View view;
-    view.set_size({800, 600});
-    view.create_window("XCI font demo");
+    Window window;
+    window.create({800, 600}, "XCI font demo");
 
     Text text;
     text.set_string(some_text);
     text.set_font(font);
     text.set_size(20);
     text.set_color(Color::White());
-    text.draw(view, {-100, -200});
+    text.draw(window, {-100, -200});
 
     Sprite font_texture(font.get_texture());
-    view.draw(font_texture, {-300, -200});
+    window.draw(font_texture, {-300, -200});
 
-    view.display();
+    window.display();
     return EXIT_SUCCESS;
 }
