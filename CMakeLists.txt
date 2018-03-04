@@ -14,7 +14,23 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
 set(XCI_UTIL_SOURCES
     src/xci/util/log.cpp
     src/xci/util/log.h
-    src/xci/util/format.h)
+    src/xci/util/format.h
+    src/xci/util/geometry.h)
+
+set(XCI_GRAPHICS_SOURCES
+    src/xci/graphics/Texture.h
+    src/xci/graphics/Sprite.h
+    src/xci/graphics/View.h
+    src/xci/graphics/Color.h)
+
+set(XCI_GRAPHICS_SFML_SOURCES
+    src/xci/graphics/sfml/Texture.cpp
+    src/xci/graphics/sfml/Texture.h
+    src/xci/graphics/sfml/Sprite.cpp
+    src/xci/graphics/sfml/Sprite.h
+    src/xci/graphics/sfml/View.cpp
+    src/xci/graphics/sfml/View.h
+    )
 
 set(XCI_TEXT_SOURCES
     src/xci/text/FontLibrary.cpp
@@ -28,6 +44,7 @@ set(XCI_TEXT_SOURCES
     src/xci/text/Text.cpp
     src/xci/text/Text.h)
 
+set(XCI_GRAPHICS_SOURCES ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_SFML_SOURCES})
 
 # ------------ #
 # Dependencies #
@@ -48,21 +65,28 @@ find_package(SFML 2.4 REQUIRED system window graphics)
 # Libraries    #
 # ------------ #
 
-set(XCI_UTIL_LIBRARY xci-log)
+set(XCI_UTIL_LIBRARY xci-util)
 add_library(${XCI_UTIL_LIBRARY} STATIC ${XCI_UTIL_SOURCES})
 target_include_directories(${XCI_UTIL_LIBRARY} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+set(XCI_GRAPHICS_LIBRARY xci-graphics)
+add_library(${XCI_GRAPHICS_LIBRARY} STATIC ${XCI_GRAPHICS_SOURCES})
+target_include_directories(${XCI_GRAPHICS_LIBRARY} PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${SFML_INCLUDE_DIR})
+target_link_libraries(${XCI_GRAPHICS_LIBRARY}
+    ${SFML_LIBRARIES})
 
 set(XCI_TEXT_LIBRARY xci-text)
 add_library(${XCI_TEXT_LIBRARY} STATIC ${XCI_TEXT_SOURCES})
 target_include_directories(${XCI_TEXT_LIBRARY} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${FREETYPE_INCLUDE_DIRS}
-    ${SFML_INCLUDE_DIR})
+    ${FREETYPE_INCLUDE_DIRS})
 target_link_libraries(${XCI_TEXT_LIBRARY}
     ${XCI_UTIL_LIBRARY}
+    ${XCI_GRAPHICS_LIBRARY}
     ${FREETYPE_LIBRARIES}
-    ${RBP_LIBRARY}
-    ${SFML_LIBRARIES})
+    ${RBP_LIBRARY})
 
 
 # ------------ #

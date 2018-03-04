@@ -2,38 +2,23 @@
 
 #include "Text.h"
 
-#include <SFML/Graphics/Sprite.hpp>
-#include <SFML/Graphics/RenderTarget.hpp>
+#include <xci/graphics/Sprite.h>
+using namespace xci::graphics;
 
 namespace xci {
 namespace text {
 
 
-// Extend `rect` to contain `contained` rect.
-template<typename T>
-void extend_rect(sf::Rect<T>& rect, const sf::Rect<T>& contained) {
-    auto rr = rect.left + rect.width;
-    auto rb = rect.top + rect.height;
-    auto cr = contained.left + contained.width;
-    auto cb = contained.top + contained.height;
-    rect.left = std::min(rect.left, contained.left);
-    rect.top = std::min(rect.top, contained.top);
-    rect.width = std::max(rr, cr) - rect.left;
-    rect.height = std::max(rb, cb) - rect.top;
-}
-
-
-void Text::draw(sf::RenderTarget &target, sf::RenderStates states) const
+void Text::draw(View& target, const Vec2f& pos) const
 {
     m_font->set_size(m_size);
-    states.blendMode = sf::BlendAlpha;
-    states.transform.scale(m_font->get_ratio(), m_font->get_ratio());
+//    states.blendMode = sf::BlendAlpha;
 
-    sf::Vector2f pen;
+    Vec2f pen = pos;
     for (auto code_point : m_string) {
         // handle new lines
         if (code_point == 10) {
-            pen.x = 0;
+            pen.x = pos.x;
             pen.y += m_font->scaled_line_height();
             continue;
         }
@@ -42,11 +27,10 @@ void Text::draw(sf::RenderTarget &target, sf::RenderStates states) const
         if (glyph == nullptr)
             continue;
 
-        sf::Sprite sprite(m_font->get_texture(), glyph->tex_coords());
-        sprite.setPosition(pen.x + glyph->scaled_base_x(),
-                           pen.y - glyph->scaled_base_y());
-        sprite.setColor(m_color);
-        target.draw(sprite, states);
+        Sprite sprite(m_font->get_texture(), glyph->tex_coords());
+        //sprite.setColor(m_color);
+        target.draw(sprite, {pen.x + glyph->scaled_base_x(),
+                             pen.y - glyph->scaled_base_y()});
 
 #if 0
         sf::RectangleShape bbox;
@@ -75,12 +59,12 @@ Text::Metrics Text::get_metrics() const
         auto glyph = m_font->get_glyph(code_point);
 
         // Expand text bounds by glyph bounds
-        sf::FloatRect m;
-        m.left = metrics.advance.x + glyph->base_x();
-        m.top = 0 - glyph->base_y();
-        m.width = glyph->width();
-        m.height = glyph->height();  // ft_to_float(gm.height)
-        extend_rect(metrics.bounds, m);
+        Rect_f m;
+        m.x = metrics.advance.x + glyph->base_x();
+        m.y = 0 - glyph->base_y();
+        m.w = glyph->width();
+        m.h = glyph->height();  // ft_to_float(gm.height)
+        metrics.bounds = metrics.bounds.union_(m);
 
         metrics.advance.x += glyph->advance();
     }

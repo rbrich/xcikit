@@ -11,15 +11,15 @@ namespace text {
 
 FontTexture::FontTexture(unsigned int size_request)
 {
-    unsigned int size = std::min(size_request, sf::Texture::getMaximumSize());
+    unsigned int size = std::min(size_request, Texture::maximum_size());
     if (!m_texture.create(size, size))
         throw std::runtime_error("Could not create font texture.");
-    m_texture.setSmooth(true);
+    //m_texture.setSmooth(true);
     m_binpack.Init(size, size, /*allowFlip=*/false);
 }
 
 
-bool FontTexture::add_glyph(const FT_Bitmap& bitmap, sf::IntRect& coords)
+bool FontTexture::add_glyph(const FT_Bitmap& bitmap, Rect_u& coords)
 {
     // empty bitmap -> zero coords
     if (bitmap.width == 0 || bitmap.rows == 0) {
@@ -51,21 +51,21 @@ bool FontTexture::add_glyph(const FT_Bitmap& bitmap, sf::IntRect& coords)
         buffer[4*i+3] = bitmap.buffer[i];
     }
 
-    // copy pixels into texture
-    m_texture.update(buffer.data(), bitmap.width, bitmap.rows,
-                     unsigned(rect.x + p), unsigned(rect.y + p));
+    // set output coords
+    coords = {unsigned(rect.x + p), unsigned(rect.y + p), bitmap.width, bitmap.rows};
 
-    // return coords
-    coords = {rect.x + p, rect.y + p, (int) bitmap.width, (int) bitmap.rows};
+    // copy pixels into texture
+    m_texture.update(buffer.data(), coords);
+
     return true;
 }
 
 
 void FontTexture::clear()
 {
-    m_binpack.Init(m_texture.getSize().x, m_texture.getSize().y);
-    std::vector<uint8_t> buffer(m_texture.getSize().x * m_texture.getSize().y * 4);
-    m_texture.update(buffer.data());
+    m_binpack.Init(m_texture.width(), m_texture.height());
+    std::vector<uint8_t> buffer(m_texture.width() * m_texture.height() * 4);
+    m_texture.update(buffer.data(), {0, 0, m_texture.width(), m_texture.height()});
 }
 
 

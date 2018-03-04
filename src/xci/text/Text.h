@@ -5,20 +5,27 @@
 
 #include <xci/text/Font.h>
 
-#include <SFML/Graphics/Drawable.hpp>
-#include <SFML/Graphics/Texture.hpp>
-#include <SFML/System/String.hpp>
+#include <xci/graphics/Color.h>
+#include <xci/graphics/View.h>
+using xci::graphics::Color;
+using xci::graphics::View;
+
+#include <xci/util/geometry.h>
+using xci::util::Vec2f;
+using xci::util::Rect_f;
+
+#include <string>
 
 namespace xci {
 namespace text {
 
 
 // Text rendering
-class Text: public sf::Drawable {
+class Text {
 public:
 
     // Set string
-    void set_string(const sf::String& string) { m_string = string; }
+    void set_string(const std::string& string) { m_string = string; }
 
     // Font
     void set_font(Font* font) { m_font = font; }
@@ -29,24 +36,23 @@ public:
     unsigned size() const { return m_size; }
 
     // Color
-    void set_color(const sf::Color &color) { m_color = color; }
-    const sf::Color& color() const { return m_color; }
+    void set_color(const Color& color) { m_color = color; }
+    const Color& color() const { return m_color; }
 
     // Measure text (metrics are affected by string, font, size)
     struct Metrics {
-        sf::Vector2f advance;
-        sf::FloatRect bounds;
+        Vec2f advance;
+        Rect_f bounds;
     };
     Metrics get_metrics() const;
 
-protected:
-    void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
+    void draw(View& target, const Vec2f& pos) const;
 
 private:
-    sf::String m_string;
+    std::string m_string;
     Font* m_font;
     unsigned m_size = 12;
-    sf::Color m_color = sf::Color::White;
+    Color m_color = Color::White();
 };
 
 

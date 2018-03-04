@@ -9,7 +9,7 @@ namespace xci {
 namespace util {
 
 
-// Provides configuration options, passes messages to handlers
+// TODO: Provides configuration options, passes messages to handlers
 class Logger
 {
 public:
@@ -21,6 +21,7 @@ public:
         Info,
         Debug,
     };
+
     void log(Level lvl, std::string && msg);
 };
 

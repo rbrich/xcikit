@@ -7,7 +7,9 @@
 #include <xci/text/FontFace.h>
 #include <xci/text/FontTexture.h>
 
-#include <SFML/Graphics/Texture.hpp>
+#include <xci/util/geometry.h>
+using xci::util::Vec2f;
+using xci::util::Rect_u;
 
 #include <list>
 #include <map>
@@ -25,7 +27,7 @@ public:
     Font(const Font&) = delete;
     Font& operator =(const Font&) = delete;
 
-    // Add a face. Call multiple times if the strokes are in distinct files.
+    // Add a face. Call multiple times if the strokes are in separate files.
     void add_face(FontFace &face);
 
     // Select a loaded face by stroke style
@@ -66,20 +68,20 @@ public:
 
         float base_x() const { return m_base.x * m_font.get_ratio(); }
         float base_y() const { return m_base.y * m_font.get_ratio(); }
-        float width() const { return m_tex_coords.width * m_font.get_ratio(); }
-        float height() const { return m_tex_coords.height * m_font.get_ratio(); }
+        float width() const { return m_tex_coords.w * m_font.get_ratio(); }
+        float height() const { return m_tex_coords.h * m_font.get_ratio(); }
         float advance() const { return m_advance * m_font.get_ratio(); }
 
         float scaled_base_x() const { return m_base.x; }
         float scaled_base_y() const { return m_base.y; }
         float scaled_advance() const { return m_advance; }
 
-        const sf::IntRect& tex_coords() const { return m_tex_coords; };
+        const Rect_u& tex_coords() const { return m_tex_coords; };
 
     private:
         Font& m_font;
-        sf::IntRect m_tex_coords;
-        sf::Vector2f m_base;  // FT bitmap_left, bitmap_top
+        Rect_u m_tex_coords;
+        Vec2f m_base;  // FT bitmap_left, bitmap_top
         float m_advance = 0;
 
         friend class Font;
@@ -89,7 +91,7 @@ public:
     // just a facade
     float get_line_height() const { return scaled_line_height() * m_computed_ratio; }
     float scaled_line_height() const;
-    const sf::Texture& get_texture() const { return m_texture.get_texture(); }
+    const Texture& get_texture() const { return m_texture.get_texture(); }
 
     // Throw away any rendered glyphs
     void clear_cache();

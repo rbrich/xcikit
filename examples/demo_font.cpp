@@ -6,14 +6,15 @@
 #include <xci/text/FontFace.h>
 #include <xci/text/Font.h>
 #include <xci/text/Text.h>
-
-#include <SFML/Graphics.hpp>
+#include <xci/graphics/Sprite.h>
+#include <xci/graphics/View.h>
 
 #include <iostream>
 #include <thread>
 #include <mutex>
 
 using namespace xci::text;
+using namespace xci::graphics;
 
 static const char * some_text =
         "One morning, when Gregor Samsa \n"
@@ -56,34 +57,20 @@ int main()
     Font font;
     font.add_face(face);
 
+    View view;
+    view.set_size({800, 600});
+    view.create_window("XCI font demo");
+
     Text text;
     text.set_string(some_text);
     text.set_font(font);
     text.set_size(20);
-    text.set_color(sf::Color::White);
+    text.set_color(Color::White());
+    text.draw(view, {-100, -200});
 
-    sf::Sprite sprite(font.get_texture());
-    sprite.setPosition({-300, -200});
+    Sprite font_texture(font.get_texture());
+    view.draw(font_texture, {-300, -200});
 
-    sf::RenderWindow window(sf::VideoMode(800, 600), "SFML window");
-    sf::View view;
-    view.setCenter(0, 0);
-    view.setSize(800, 600);
-    window.setView(view);
-
-    sf::Event event = {};
-    while (window.isOpen()) {
-        while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed)
-                window.close();
-        }
-
-        window.clear();
-        sf::RenderStates states;
-        states.transform.translate({-100, -200});
-        window.draw(text, states);
-        window.draw(sprite);
-        window.display();
-    }
+    view.display();
     return EXIT_SUCCESS;
 }
