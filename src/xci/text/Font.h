@@ -40,15 +40,7 @@ public:
     void set_stroke(Stroke stroke);
 
     // Select a size for current face. This may create a new texture (glyph table).
-    void set_size(unsigned size) { m_size = size; update_size(); }
-
-    // Set scaling factor (forces clearing of cache)
-    // Use window_size / view_size to fit the pixels exactly.
-    void set_scale(float factor) { m_scale = factor; update_size(); }
-
-    // This is inverse scale, to convert scaled size back to virtual pixels
-    // Not to be used directly, scaling is handled by Glyph class.
-    float get_ratio() const { return m_computed_ratio; }
+    void set_size(unsigned size) { m_size = size; }
 
     struct GlyphKey {
         FontFace* font_face;
@@ -66,15 +58,11 @@ public:
     public:
         explicit Glyph(Font& font) : m_font(font) {}
 
-        float base_x() const { return m_base.x * m_font.get_ratio(); }
-        float base_y() const { return m_base.y * m_font.get_ratio(); }
-        float width() const { return m_tex_coords.w * m_font.get_ratio(); }
-        float height() const { return m_tex_coords.h * m_font.get_ratio(); }
-        float advance() const { return m_advance * m_font.get_ratio(); }
-
-        float scaled_base_x() const { return m_base.x; }
-        float scaled_base_y() const { return m_base.y; }
-        float scaled_advance() const { return m_advance; }
+        float base_x() const { return m_base.x; }
+        float base_y() const { return m_base.y; }
+        float width() const { return m_tex_coords.w; }
+        float height() const { return m_tex_coords.h; }
+        float advance() const { return m_advance; }
 
         const Rect_u& tex_coords() const { return m_tex_coords; };
 
@@ -89,8 +77,7 @@ public:
     Glyph* get_glyph(ulong code_point);
 
     // just a facade
-    float get_line_height() const { return scaled_line_height() * m_computed_ratio; }
-    float scaled_line_height() const;
+    float line_height() const;
     const Texture& get_texture() const { return m_texture.get_texture(); }
 
     // Throw away any rendered glyphs
@@ -98,15 +85,10 @@ public:
 
 private:
     unsigned m_size = 10;
-    float m_scale = 1.0f;
-    unsigned m_computed_size = 10;
-    float m_computed_ratio = 1.0;
     std::list<FontFace*> m_faces;  // faces for different strokes (eg. normal, bold, italic)
     FontFace* m_current_face = nullptr;
     FontTexture m_texture;  // glyph tables for different styles (size, outline)
     std::map<GlyphKey, Glyph> m_glyphs;
-
-    void update_size();
 };
 
 

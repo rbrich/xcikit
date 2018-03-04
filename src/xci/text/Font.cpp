@@ -35,13 +35,13 @@ Font::Glyph* Font::get_glyph(ulong code_point)
     }
 
     // check cache
-    GlyphKey glyph_key{m_current_face, m_computed_size, glyph_index};
+    GlyphKey glyph_key{m_current_face, m_size, glyph_index};
     auto iter = m_glyphs.find(glyph_key);
     if (iter != m_glyphs.end())
         return &iter->second;
 
     // render
-    m_current_face->set_size(m_computed_size);
+    m_current_face->set_size(m_size);
     auto glyph_slot = m_current_face->load_glyph(glyph_index);
     if (glyph_slot == nullptr)
         return nullptr;
@@ -72,16 +72,9 @@ void Font::clear_cache()
     m_texture.clear();
 }
 
-void Font::update_size()
+float Font::line_height() const
 {
-    constexpr float oversample = 1.0f;  // oversample font texture against screen
-    m_computed_size = unsigned(m_size * m_scale * oversample + 0.99f);
-    m_computed_ratio = float(m_size) / float(m_computed_size);  // inverse scale
-}
-
-float Font::scaled_line_height() const
-{
-    m_current_face->set_size(m_computed_size);
+    m_current_face->set_size(m_size);
     return m_current_face->get_line_height();
 }
 

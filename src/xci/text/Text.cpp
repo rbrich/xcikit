@@ -15,11 +15,11 @@ void Text::draw(View& target, const Vec2f& pos) const
 //    states.blendMode = sf::BlendAlpha;
 
     Vec2f pen = pos;
-    for (auto code_point : m_string) {
+    for (uint32_t code_point : m_string) {
         // handle new lines
         if (code_point == 10) {
             pen.x = pos.x;
-            pen.y += m_font->scaled_line_height();
+            pen.y += m_font->line_height();
             continue;
         }
 
@@ -29,8 +29,8 @@ void Text::draw(View& target, const Vec2f& pos) const
 
         Sprite sprite(m_font->get_texture(), glyph->tex_coords());
         //sprite.setColor(m_color);
-        target.draw(sprite, {pen.x + glyph->scaled_base_x(),
-                             pen.y - glyph->scaled_base_y()});
+        target.draw(sprite, {pen.x + glyph->base_x(),
+                             pen.y - glyph->base_y()});
 
 #if 0
         sf::RectangleShape bbox;
@@ -47,7 +47,7 @@ void Text::draw(View& target, const Vec2f& pos) const
         target.draw(bbox, states);
 #endif
 
-        pen.x += glyph->scaled_advance();
+        pen.x += glyph->advance();
     }
 }
 
