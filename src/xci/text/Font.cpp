@@ -22,7 +22,7 @@ void Font::add_face(FontFace &face)
 }
 
 
-Font::Glyph* Font::get_glyph(ulong code_point)
+Font::Glyph* Font::get_glyph(CodePoint code_point)
 {
     assert(m_current_face != nullptr);  // font must be loaded
 

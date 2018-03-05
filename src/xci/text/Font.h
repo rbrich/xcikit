@@ -45,7 +45,7 @@ public:
     struct GlyphKey {
         FontFace* font_face;
         unsigned font_size;
-        uint glyph_index;
+        GlyphIndex glyph_index;
 
         bool operator<(const GlyphKey& rhs) const
         {
@@ -74,7 +74,7 @@ public:
 
         friend class Font;
     };
-    Glyph* get_glyph(ulong code_point);
+    Glyph* get_glyph(CodePoint code_point);
 
     // just a facade
     float line_height() const;

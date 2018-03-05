@@ -12,6 +12,11 @@
 namespace xci {
 namespace text {
 
+
+using CodePoint = uint32_t;
+using GlyphIndex = uint32_t;
+
+
 // Wrapper around FT_Face. Set size and attributes,
 // retrieve rendered glyphs (bitmaps) and glyph metrics.
 
@@ -34,10 +39,10 @@ public:
 
     float get_line_height() const;
 
-    unsigned int get_glyph_index(unsigned long code_point) const;
+    GlyphIndex get_glyph_index(CodePoint code_point) const;
 
     // Returns null on error
-    FT_GlyphSlot load_glyph(unsigned int glyph_index);
+    FT_GlyphSlot load_glyph(GlyphIndex glyph_index);
 
     FT_Glyph_Metrics& get_glyph_metrics();
 
@@ -50,6 +55,7 @@ private:
     FT_Face face = nullptr;
     FT_Stroker stroker = nullptr;
 };
+
 
 }} // namespace xci::text
 

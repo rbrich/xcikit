@@ -74,6 +74,7 @@ endif (WITH_SFML)
 
 # Panda3D
 if (WITH_PANDA)
+    find_package(PythonLibs 2.7 REQUIRED)
     find_package(Panda3D REQUIRED)
 endif (WITH_PANDA)
 
@@ -107,7 +108,8 @@ if (WITH_PANDA)
         PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         PUBLIC
-        ${PANDA3D_INCLUDE_DIRS})
+        ${PANDA3D_INCLUDE_DIRS}
+        ${PYTHON_INCLUDE_DIRS})
     target_link_libraries(${XCI_GRAPHICS_PANDA_LIBRARY}
         ${PANDA3D_LIBRARIES})
     if (NOT DEFINED XCI_GRAPHICS_LIBRARY)

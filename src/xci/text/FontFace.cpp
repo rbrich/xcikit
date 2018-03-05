@@ -113,7 +113,7 @@ float FontFace::get_line_height() const
     return ft_to_float(face->size->metrics.height);
 }
 
-unsigned int FontFace::get_glyph_index(unsigned long code_point) const
+GlyphIndex FontFace::get_glyph_index(CodePoint code_point) const
 {
     return FT_Get_Char_Index(face, code_point);
 }
@@ -132,7 +132,7 @@ FT_Bitmap& FontFace::render_glyph()
     return face->glyph->bitmap;
 }
 
-FT_GlyphSlot FontFace::load_glyph(uint glyph_index)
+FT_GlyphSlot FontFace::load_glyph(GlyphIndex glyph_index)
 {
     int err = FT_Load_Glyph(face, glyph_index, FT_LOAD_NO_HINTING);
     if (err) {
