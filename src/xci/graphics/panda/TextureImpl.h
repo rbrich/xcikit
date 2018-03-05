@@ -5,12 +5,13 @@
 
 #include <xci/graphics/Texture.h>
 
-//#include <SFML/Graphics/Texture.hpp>
+#include <texture.h>
+#include <pointerTo.h>
 
 namespace xci {
 namespace graphics {
 
-class TextureImpl  {};
+class TextureImpl : public ::Texture {};
 
 }} // namespace xci::graphics
 

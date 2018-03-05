@@ -11,26 +11,35 @@ Texture::~Texture() { delete m_impl; }
 
 unsigned int Texture::maximum_size()
 {
-    return 512;
+    // TODO: leave this only inside SFML implementation
+    return 2048;
 }
 
 bool Texture::create(unsigned int width, unsigned int height)
 {
+    m_impl->setup_2d_texture(int(width), int(height),
+                             ::Texture::T_unsigned_byte,
+                             ::Texture::F_rgba);
+    m_impl->set_keep_ram_image(true);
     return true;
 }
 
 void Texture::update(const uint8_t* pixels, const Rect_u& region)
 {
-
+    auto img = m_impl->modify_ram_image();
+    for (int y = region.y; y < region.y + region.h; y++) {
+        uint8_t* row = &img[size_t(y * m_impl->get_x_size() + 4 * region.x)];
+        for (int x = region.x; x < region.x + region.w; x++) {
+            *row++ = *pixels++;
+            *row++ = *pixels++;
+            *row++ = *pixels++;
+            *row++ = *pixels++;
+        }
+    }
 }
 
-Vec2u Texture::size() const
-{
-    return {512, 512};
-}
-
-unsigned int Texture::width() const { return 512; }
-unsigned int Texture::height() const { return 512; }
+unsigned int Texture::width() const { return (unsigned) m_impl->get_x_size(); }
+unsigned int Texture::height() const { return (unsigned) m_impl->get_y_size(); }
 
 
 }} // namespace xci::graphics

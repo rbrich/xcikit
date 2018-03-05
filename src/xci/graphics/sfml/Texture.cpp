@@ -24,11 +24,6 @@ void Texture::update(const uint8_t* pixels, const Rect_u& region)
     m_impl->update(pixels, region.w, region.h, region.x, region.y);
 }
 
-Vec2u Texture::size() const
-{
-    return Vec2u(m_impl->getSize());
-}
-
 unsigned int Texture::width() const { return m_impl->getSize().x; }
 unsigned int Texture::height() const { return m_impl->getSize().y; }
 

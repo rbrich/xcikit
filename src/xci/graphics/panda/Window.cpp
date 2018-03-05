@@ -40,6 +40,13 @@ void Window::create(const Vec2u& size, const std::string& title)
     vdata = new GeomVertexData("name", GeomVertexFormat::get_v3n3c4t2(), Geom::UH_static);
     vdata->set_num_rows(4);
 
+    // texture
+    auto image = PNMImage(256, 256);
+    image.fill(0.3);
+    PT(::Texture) tex = new ::Texture("test");
+    tex->load(image);
+
+    // quad
     GeomVertexWriter vertex, normal, color, texcoord;
     vertex = GeomVertexWriter(vdata, "vertex");
     normal = GeomVertexWriter(vdata, "normal");
@@ -80,6 +87,7 @@ void Window::create(const Vec2u& size, const std::string& title)
     node->add_geom(geom);
 
     NodePath nodePath = window->get_aspect_2d().attach_new_node(node);
+    nodePath.set_texture(tex);
 }
 
 void Window::display()

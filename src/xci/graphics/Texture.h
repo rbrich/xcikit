@@ -26,7 +26,6 @@ public:
     bool create(unsigned int width, unsigned int height);
     void update(const uint8_t* pixels, const Rect_u& region);
 
-    Vec2u size() const;
     unsigned int width() const;
     unsigned int height() const;
 
