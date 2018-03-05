@@ -6,13 +6,7 @@
 #include <xci/text/FontFace.h>
 #include <xci/text/Font.h>
 #include <xci/text/Text.h>
-#include <xci/graphics/Sprite.h>
-#include <xci/graphics/View.h>
 #include <xci/graphics/Window.h>
-
-#include <iostream>
-#include <thread>
-#include <mutex>
 
 using namespace xci::text;
 using namespace xci::graphics;
@@ -30,28 +24,8 @@ static const char * some_text =
         "it and seemed ready to slide off any\n"
         "moment.";
 
-std::mutex cout_mutex;
-
-void thread_run(const std::string& thread_name)
-{
-    std::lock_guard<std::mutex> lock(cout_mutex);
-    std::cout << thread_name << ": "
-              << (size_t) FontLibrary::get_default_instance()->raw_handle()
-              << std::endl;
-}
-
 int main()
 {
-    // each thread has its own static instance of FontLibrary
-    std::cout << "main: "
-              << (size_t) FontLibrary::get_default_instance()->raw_handle()
-              << std::endl;
-
-    std::thread a(thread_run, "thread1"), b(thread_run, "thread2");
-
-    a.join();
-    b.join();
-
     FontFace face;
     if (!face.load_from_file("fonts/Share_Tech_Mono/ShareTechMono-Regular.ttf", 0))
         return EXIT_FAILURE;
