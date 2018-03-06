@@ -69,15 +69,11 @@ struct Rect {
     //bool intersects(const Rect<T>& rectangle) const;
 
     Rect<T> union_(const Rect<T>& other) {
-        auto r = x + w;
-        auto b = y + h;
-        auto other_r = other.x + other.w;
-        auto other_b = other.y + other.h;
         return {
                 std::min(x, other.x),
                 std::min(y, other.y),
-                std::max(r, other_r) - x,
-                std::max(b, other_b) - y,
+                std::max(right(), other.right()) - x,
+                std::max(bottom(), other.bottom()) - y,
         };
     }
 
@@ -88,6 +84,11 @@ struct Rect {
         w += 2 * radius;
         h += 2 * radius;
     }
+
+    inline T left() const { return x; }
+    inline T top() const { return y; }
+    inline T right() const { return x + w; }
+    inline T bottom() const { return y + h; }
 
 public:
     T x;  // left

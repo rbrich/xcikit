@@ -47,6 +47,7 @@ int main()
     text.draw(view, {-100, -200});
 
     Sprites font_texture(font.get_texture());
+    font_texture.add_sprite({0, 0}, Color::White());
     font_texture.draw(view, {-300, -200});
 
     window.display();

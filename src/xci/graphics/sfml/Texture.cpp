@@ -21,7 +21,13 @@ bool Texture::create(unsigned int width, unsigned int height)
 
 void Texture::update(const uint8_t* pixels, const Rect_u& region)
 {
-    m_impl->update(pixels, region.w, region.h, region.x, region.y);
+    // transform the bitmap into 32bit RGBA format
+    std::vector<uint8_t> buffer(region.w * region.h * 4, 0xFF);
+    for (uint i = 0; i < region.w * region.h; i++) {
+        buffer[4*i+3] = pixels[i];
+    }
+
+    m_impl->update(buffer.data(), region.w, region.h, region.x, region.y);
 }
 
 unsigned int Texture::width() const { return m_impl->getSize().x; }

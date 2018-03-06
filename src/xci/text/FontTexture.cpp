@@ -45,17 +45,11 @@ bool FontTexture::add_glyph(const FT_Bitmap& bitmap, Rect_u& coords)
     assert((int)bitmap.width == bitmap.pitch);
     assert(bitmap.pixel_mode == FT_PIXEL_MODE_GRAY);
 
-    // transform the bitmap into 32bit RGBA format
-    std::vector<uint8_t> buffer(bitmap.width * bitmap.rows * 4, 0xFF);
-    for (uint i = 0; i < bitmap.width * bitmap.rows; i++) {
-        buffer[4*i+3] = bitmap.buffer[i];
-    }
-
     // set output coords
     coords = {unsigned(rect.x + p), unsigned(rect.y + p), bitmap.width, bitmap.rows};
 
     // copy pixels into texture
-    m_texture.update(buffer.data(), coords);
+    m_texture.update(bitmap.buffer, coords);
 
     return true;
 }
@@ -64,7 +58,7 @@ bool FontTexture::add_glyph(const FT_Bitmap& bitmap, Rect_u& coords)
 void FontTexture::clear()
 {
     m_binpack.Init(m_texture.width(), m_texture.height());
-    std::vector<uint8_t> buffer(m_texture.width() * m_texture.height() * 4);
+    std::vector<uint8_t> buffer(m_texture.width() * m_texture.height());
     m_texture.update(buffer.data(), {0, 0, m_texture.width(), m_texture.height()});
 }
 
