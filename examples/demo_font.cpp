@@ -7,6 +7,7 @@
 #include <xci/text/Font.h>
 #include <xci/text/Text.h>
 #include <xci/graphics/Window.h>
+#include <xci/graphics/Sprites.h>
 
 using namespace xci::text;
 using namespace xci::graphics;
@@ -36,15 +37,17 @@ int main()
     Window window;
     window.create({800, 600}, "XCI font demo");
 
+    View view = window.create_view();
+
     Text text;
     text.set_string(some_text);
     text.set_font(font);
     text.set_size(20);
     text.set_color(Color::White());
-    text.draw(window, {-100, -200});
+    text.draw(view, {-100, -200});
 
-    Sprite font_texture(font.get_texture());
-    window.draw(font_texture, {-300, -200});
+    Sprites font_texture(font.get_texture());
+    font_texture.draw(view, {-300, -200});
 
     window.display();
     return EXIT_SUCCESS;

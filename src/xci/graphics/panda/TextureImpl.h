@@ -11,7 +11,10 @@
 namespace xci {
 namespace graphics {
 
-class TextureImpl : public ::Texture {};
+class TextureImpl {
+public:
+    PT(::Texture) texture;
+};
 
 }} // namespace xci::graphics
 

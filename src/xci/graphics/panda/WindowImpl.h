@@ -13,6 +13,7 @@ namespace graphics {
 class WindowImpl {
 public:
     PandaFramework framework;
+    WindowFramework *window;
 };
 
 }} // namespace xci::graphics

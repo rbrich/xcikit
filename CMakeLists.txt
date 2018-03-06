@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 project(xcikit)
 
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wextra")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wno-reorder")
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
 
@@ -22,23 +22,27 @@ set(XCI_UTIL_SOURCES
 set(XCI_GRAPHICS_SOURCES
     src/xci/graphics/Color.h
     src/xci/graphics/Texture.h
-    src/xci/graphics/Sprite.h
+    src/xci/graphics/Sprites.h
     src/xci/graphics/View.h
     src/xci/graphics/Window.h)
 
 set(XCI_GRAPHICS_SFML_SOURCES
     src/xci/graphics/sfml/Texture.cpp
     src/xci/graphics/sfml/TextureImpl.h
-    src/xci/graphics/sfml/Sprite.cpp
-    src/xci/graphics/sfml/SpriteImpl.h
+    src/xci/graphics/sfml/Sprites.cpp
+    src/xci/graphics/sfml/SpritesImpl.h
+    src/xci/graphics/sfml/View.cpp
+    src/xci/graphics/sfml/ViewImpl.h
     src/xci/graphics/sfml/Window.cpp
     src/xci/graphics/sfml/WindowImpl.h)
 
 set(XCI_GRAPHICS_PANDA_SOURCES
     src/xci/graphics/panda/Texture.cpp
     src/xci/graphics/panda/TextureImpl.h
-    src/xci/graphics/panda/Sprite.cpp
-    src/xci/graphics/panda/SpriteImpl.h
+    src/xci/graphics/panda/Sprites.cpp
+    src/xci/graphics/panda/SpritesImpl.h
+    src/xci/graphics/panda/View.cpp
+    src/xci/graphics/panda/ViewImpl.h
     src/xci/graphics/panda/Window.cpp
     src/xci/graphics/panda/WindowImpl.h)
 

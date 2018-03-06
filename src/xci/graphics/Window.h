@@ -17,15 +17,15 @@ namespace graphics {
 
 class WindowImpl;
 
-class Window: public View {
+class Window {
 public:
     Window();
-    ~Window() override;
+    ~Window();
 
     void create(const Vec2u& size, const std::string& title);
     void display();
 
-    void draw(const Sprite& sprite, const Vec2f& pos) override;
+    View create_view();
 
 private:
     WindowImpl* m_impl;

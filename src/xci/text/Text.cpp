@@ -2,7 +2,7 @@
 
 #include "Text.h"
 
-#include <xci/graphics/Sprite.h>
+#include <xci/graphics/Sprites.h>
 using namespace xci::graphics;
 
 namespace xci {
@@ -14,11 +14,13 @@ void Text::draw(View& target, const Vec2f& pos) const
     m_font->set_size(m_size);
 //    states.blendMode = sf::BlendAlpha;
 
-    Vec2f pen = pos;
-    for (uint32_t code_point : m_string) {
+    Sprites sprites(m_font->get_texture());
+
+    Vec2f pen;
+    for (CodePoint code_point : m_string) {
         // handle new lines
         if (code_point == 10) {
-            pen.x = pos.x;
+            pen.x = 0;
             pen.y += m_font->line_height();
             continue;
         }
@@ -27,10 +29,10 @@ void Text::draw(View& target, const Vec2f& pos) const
         if (glyph == nullptr)
             continue;
 
-        Sprite sprite(m_font->get_texture(), glyph->tex_coords());
-        //sprite.setColor(m_color);
-        target.draw(sprite, {pen.x + glyph->base_x(),
-                             pen.y - glyph->base_y()});
+        sprites.add_sprite({pen.x + glyph->base_x(),
+                            pen.y - glyph->base_y()},
+                           glyph->tex_coords(),
+                           m_color);
 
 #if 0
         sf::RectangleShape bbox;
@@ -49,13 +51,15 @@ void Text::draw(View& target, const Vec2f& pos) const
 
         pen.x += glyph->advance();
     }
+
+    sprites.draw(target, pos);
 }
 
 Text::Metrics Text::get_metrics() const
 {
     Text::Metrics metrics;
     m_font->set_size(m_size);
-    for (auto code_point : m_string) {
+    for (CodePoint code_point : m_string) {
         auto glyph = m_font->get_glyph(code_point);
 
         // Expand text bounds by glyph bounds

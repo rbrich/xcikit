@@ -3,21 +3,21 @@
 #ifndef XCI_GRAPHICS_VIEW_H
 #define XCI_GRAPHICS_VIEW_H
 
-#include <xci/graphics/Sprite.h>
-
-#include <xci/util/geometry.h>
-using xci::util::Vec2f;
-
 namespace xci {
 namespace graphics {
 
+class ViewImpl;
 
 class View
 {
 public:
-    virtual ~View() {}
+    View();
+    ~View();
 
-    virtual void draw(const Sprite& sprite, const Vec2f& pos) = 0;
+    ViewImpl& impl() const { return *m_impl; }
+
+private:
+    ViewImpl* m_impl;
 };
 
 

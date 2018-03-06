@@ -1,7 +1,8 @@
 // Window.cpp created on 2018-03-04, part of XCI toolkit
 
 #include "WindowImpl.h"
-#include "SpriteImpl.h"
+#include "SpritesImpl.h"
+#include "ViewImpl.h"
 
 #include <pandaSystem.h>
 #include <geomVertexFormat.h>
@@ -22,8 +23,9 @@ void Window::create(const Vec2u& size, const std::string& title)
     char** argv = {nullptr};
     framework.open_framework(argc, argv);
     framework.set_window_title(title);
-    WindowFramework *window = framework.open_window();
-
+    //framework.set_background_type(WindowFramework::BT_black);
+    m_impl->window = framework.open_window();
+/*
     // XX panda text
     PT(TextNode) text;
     text = new TextNode("node name");
@@ -31,7 +33,7 @@ void Window::create(const Vec2u& size, const std::string& title)
     PT(TextFont) cmr12=FontPool::load_font("fonts/Share_Tech_Mono/ShareTechMono-Regular.ttf");
     text->set_font(cmr12);
     text->set_text_color(0.0, 0.3, 0.1, 1);
-    NodePath textNodePath = window->get_aspect_2d().attach_new_node(text);
+    NodePath textNodePath = m_impl->window->get_aspect_2d().attach_new_node(text);
     textNodePath.set_scale(0.07);
     textNodePath.set_pos(-1, 0, 0);
     // XX
@@ -86,8 +88,8 @@ void Window::create(const Vec2u& size, const std::string& title)
     node = new GeomNode("gnode");
     node->add_geom(geom);
 
-    NodePath nodePath = window->get_aspect_2d().attach_new_node(node);
-    nodePath.set_texture(tex);
+    NodePath nodePath = m_impl->window->get_aspect_2d().attach_new_node(node);
+    nodePath.set_texture(tex);*/
 }
 
 void Window::display()
@@ -97,9 +99,11 @@ void Window::display()
     framework.close_framework();
 }
 
-void Window::draw(const Sprite& sprite, const Vec2f& pos)
+View Window::create_view()
 {
-
+    View view;
+    view.impl().root_node = m_impl->window->get_aspect_2d();
+    return view;
 }
 
 
