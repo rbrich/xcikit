@@ -15,12 +15,12 @@ namespace xci {
 namespace graphics {
 
 
-class SpritesImpl;
-
 class Sprites {
 public:
     explicit Sprites(const Texture& texture);
     ~Sprites();
+    Sprites(Sprites&&);
+    Sprites& operator=(Sprites&&);
 
     // Position a sprite with whole texture
     void add_sprite(const Vec2f& pos, const Color& color);
@@ -31,11 +31,13 @@ public:
 
     void draw(View& view, const Vec2f& pos);
 
-    const SpritesImpl& impl() const { return *m_impl; }
+    class Impl;
+    const Impl& impl() const { return *m_impl; }
 
 private:
-    SpritesImpl* m_impl;
+    std::unique_ptr<Impl> m_impl;
 };
+
 
 }} // namespace xci::graphics
 

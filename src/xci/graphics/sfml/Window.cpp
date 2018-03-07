@@ -1,7 +1,8 @@
 // Window.cpp created on 2018-03-04, part of XCI toolkit
 
 #include "WindowImpl.h"
-#include "SpriteImpl.h"
+#include "SpritesImpl.h"
+#include "ViewImpl.h"
 
 #include <SFML/Window/Event.hpp>
 
@@ -19,27 +20,28 @@ void Window::create(const Vec2u& size, const std::string& title)
     view.setCenter(0, 0);
     view.setSize(size.x, size.y);
     window.setView(view);
-    window.clear();
 }
 
 void Window::display()
 {
     sf::RenderWindow& window = m_impl->window;
-    window.display();
     while (window.isOpen()) {
         sf::Event event = {};
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed)
                 window.close();
         }
+        window.clear();
+        // TODO: draw view
+        window.display();
     }
 }
 
-void Window::draw(const Sprite& sprite, const Vec2f& pos)
+View Window::create_view()
 {
-    sf::RenderStates states;
-    states.transform.translate(pos.x, pos.y);
-    m_impl->window.draw(sprite.impl(), states);
+    View view;
+    view.impl().target = &m_impl->window;
+    return view;
 }
 
 

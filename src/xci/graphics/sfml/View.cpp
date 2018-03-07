@@ -10,4 +10,12 @@ View::View() : m_impl(new ViewImpl) {}
 View::~View() { delete m_impl; }
 
 
+void ViewImpl::draw(sf::RenderTarget& target)
+{
+ /*   sf::RenderStates states;
+    states.transform.translate(pos.x, pos.y);
+    target.draw(sprite.impl(), states);*/
+}
+
+
 }} // namespace xci::graphics

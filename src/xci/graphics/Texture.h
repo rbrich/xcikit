@@ -14,14 +14,12 @@ namespace xci {
 namespace graphics {
 
 
-class TextureImpl;
-
 class Texture {
 public:
     Texture();
     ~Texture();
-
-    static unsigned int maximum_size();
+    Texture(Texture&&);
+    Texture& operator=(Texture&&);
 
     bool create(unsigned int width, unsigned int height);
     void update(const uint8_t* pixels, const Rect_u& region);
@@ -29,10 +27,11 @@ public:
     unsigned int width() const;
     unsigned int height() const;
 
-    const TextureImpl& impl() const { return *m_impl; }
+    class Impl;
+    const Impl& impl() const { return *m_impl; }
 
 private:
-    TextureImpl* m_impl;
+    std::unique_ptr<Impl> m_impl;
 };
 
 

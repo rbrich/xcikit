@@ -9,9 +9,8 @@ namespace xci {
 namespace text {
 
 
-FontTexture::FontTexture(unsigned int size_request)
+FontTexture::FontTexture(unsigned int size)
 {
-    unsigned int size = std::min(size_request, Texture::maximum_size());
     if (!m_texture.create(size, size))
         throw std::runtime_error("Could not create font texture.");
     //m_texture.setSmooth(true);

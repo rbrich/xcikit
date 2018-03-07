@@ -5,15 +5,19 @@
 
 #include <xci/graphics/View.h>
 
-#include <pandaFramework.h>
+#include <SFML/Graphics/RenderTarget.hpp>
 
 namespace xci {
 namespace graphics {
 
+
 class ViewImpl {
 public:
-    NodePath root_node;
+    void draw(sf::RenderTarget& target);
+
+    sf::RenderTarget* target;
 };
+
 
 }} // namespace xci::graphics
 

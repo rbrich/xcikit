@@ -9,13 +9,12 @@ namespace graphics {
 Texture::Texture() : m_impl(new TextureImpl) {}
 Texture::~Texture() { delete m_impl; }
 
-unsigned int Texture::maximum_size()
-{
-    return sf::Texture::getMaximumSize();
-}
 
 bool Texture::create(unsigned int width, unsigned int height)
 {
+    unsigned int width = std::min(width, sf::Texture::getMaximumSize());
+    unsigned int height = std::min(height, sf::Texture::getMaximumSize());
+
     return m_impl->create(width, height);
 }
 
@@ -23,7 +22,7 @@ void Texture::update(const uint8_t* pixels, const Rect_u& region)
 {
     // transform the bitmap into 32bit RGBA format
     std::vector<uint8_t> buffer(region.w * region.h * 4, 0xFF);
-    for (uint i = 0; i < region.w * region.h; i++) {
+    for (unsigned i = 0; i < region.w * region.h; i++) {
         buffer[4*i+3] = pixels[i];
     }
 

@@ -22,9 +22,13 @@ set(XCI_UTIL_SOURCES
 set(XCI_GRAPHICS_SOURCES
     src/xci/graphics/Color.h
     src/xci/graphics/Texture.h
+    src/xci/graphics/Texture.i
     src/xci/graphics/Sprites.h
+    src/xci/graphics/Sprites.i
     src/xci/graphics/View.h
-    src/xci/graphics/Window.h)
+    src/xci/graphics/View.i
+    src/xci/graphics/Window.h
+    src/xci/graphics/Window.i)
 
 set(XCI_GRAPHICS_SFML_SOURCES
     src/xci/graphics/sfml/Texture.cpp
@@ -37,14 +41,14 @@ set(XCI_GRAPHICS_SFML_SOURCES
     src/xci/graphics/sfml/WindowImpl.h)
 
 set(XCI_GRAPHICS_PANDA_SOURCES
-    src/xci/graphics/panda/Texture.cpp
-    src/xci/graphics/panda/TextureImpl.h
-    src/xci/graphics/panda/Sprites.cpp
-    src/xci/graphics/panda/SpritesImpl.h
-    src/xci/graphics/panda/View.cpp
-    src/xci/graphics/panda/ViewImpl.h
-    src/xci/graphics/panda/Window.cpp
-    src/xci/graphics/panda/WindowImpl.h)
+    src/xci/graphics/panda/PandaTexture.cpp
+    src/xci/graphics/panda/PandaTexture.h
+    src/xci/graphics/panda/PandaSprites.cpp
+    src/xci/graphics/panda/PandaSprites.h
+    src/xci/graphics/panda/PandaView.cpp
+    src/xci/graphics/panda/PandaView.h
+    src/xci/graphics/panda/PandaWindow.cpp
+    src/xci/graphics/panda/PandaWindow.h)
 
 set(XCI_TEXT_SOURCES
     src/xci/text/FontLibrary.cpp
@@ -81,6 +85,10 @@ if (WITH_PANDA)
     find_package(PythonLibs 2.7 REQUIRED)
     find_package(Panda3D REQUIRED)
 endif (WITH_PANDA)
+
+# Catch
+find_package(Catch)
+
 
 # ------------ #
 # Libraries    #
@@ -147,3 +155,24 @@ target_link_libraries(demo_font
     ${XCI_GRAPHICS_LIBRARY}
     ${XCI_TEXT_LIBRARY}
     pthread)
+
+if (WITH_PANDA)
+    add_executable(demo_panda examples/demo_panda.cpp)
+    target_link_libraries(demo_panda ${XCI_GRAPHICS_PANDA_LIBRARY} pthread)
+endif (WITH_PANDA)
+
+if (WITH_SFML)
+    add_executable(demo_sfml examples/demo_sfml.cpp)
+    target_link_libraries(demo_sfml ${XCI_GRAPHICS_SFML_LIBRARY} pthread)
+endif (WITH_SFML)
+
+
+# ------------ #
+# Tests        #
+# ------------ #
+
+if (CATCH_FOUND)
+    add_executable(test_graphics tests/test_graphics.cpp)
+    target_link_libraries(test_graphics ${XCI_GRAPHICS_LIBRARY})
+    target_include_directories(test_graphics PRIVATE ${CATCH_INCLUDE_DIRS})
+endif (CATCH_FOUND)

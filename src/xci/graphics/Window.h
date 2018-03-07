@@ -10,25 +10,30 @@ using xci::util::Vec2u;
 using xci::util::Vec2f;
 
 #include <string>
+#include <memory>
 
 namespace xci {
 namespace graphics {
 
 
-class WindowImpl;
-
 class Window {
 public:
     Window();
     ~Window();
+    Window(Window&&);
+    Window& operator=(Window&&);
 
     void create(const Vec2u& size, const std::string& title);
     void display();
 
     View create_view();
 
+    class Impl;
+    const Impl& impl() const { return *m_impl; }
+    Impl* impl_ptr() { return m_impl.get(); }
+
 private:
-    WindowImpl* m_impl;
+    std::unique_ptr<Impl> m_impl;
 };
 
 

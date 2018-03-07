@@ -3,21 +3,25 @@
 #ifndef XCI_GRAPHICS_VIEW_H
 #define XCI_GRAPHICS_VIEW_H
 
+#include <memory>
+
 namespace xci {
 namespace graphics {
 
-class ViewImpl;
 
 class View
 {
 public:
     View();
     ~View();
+    View(View&&);
+    View& operator=(View&&);
 
-    ViewImpl& impl() const { return *m_impl; }
+    class Impl;
+    Impl& impl() { return *m_impl; }
 
 private:
-    ViewImpl* m_impl;
+    std::unique_ptr<Impl> m_impl;
 };
 
 

@@ -21,9 +21,9 @@ namespace text {
 
 class FontTexture {
 public:
-    // The size is fixed. If the size_request cannot be satisfied by HW,
+    // The size is fixed. If the size request cannot be satisfied by HW,
     // smaller size will be used (HW maximum texture size).
-    explicit FontTexture(unsigned int size_request=512);
+    explicit FontTexture(unsigned int size=512);
 
     // non-copyable
     FontTexture(const FontTexture&) = delete;

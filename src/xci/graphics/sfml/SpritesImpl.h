@@ -5,18 +5,19 @@
 
 #include "TextureImpl.h"
 
-#include <xci/graphics/Sprite.h>
+#include <xci/graphics/Sprites.h>
 
 #include <SFML/Graphics/Sprite.hpp>
 
 namespace xci {
 namespace graphics {
 
-class SpriteImpl : public sf::Sprite {
+class SpritesImpl {
 public:
-    explicit SpriteImpl(const TextureImpl& texture) : sf::Sprite(texture) {}
-    SpriteImpl(const TextureImpl& texture, const sf::IntRect& rectangle)
-            : sf::Sprite(texture, rectangle) {}
+    explicit SpritesImpl(const Texture& texture) : texture(texture.impl()) {}
+
+    std::vector<sf::Sprite> sprites;
+    sf::Texture texture;
 };
 
 }} // namespace xci::graphics
