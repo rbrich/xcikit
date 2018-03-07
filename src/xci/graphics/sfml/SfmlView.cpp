@@ -1,12 +1,11 @@
-// PandaView.cpp created on 2018-03-06, part of XCI toolkit
+// SfmlView.cpp created on 2018-03-06, part of XCI toolkit
 
-#include "PandaView.h"
+#include "SfmlView.h"
 
 // inline
 #include <xci/graphics/View.i>
 
 namespace xci {
 namespace graphics {
-
 
 }} // namespace xci::graphics

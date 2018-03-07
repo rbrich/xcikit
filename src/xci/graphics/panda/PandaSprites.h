@@ -1,4 +1,4 @@
-// SpritesImpl.h created on 2018-03-04, part of XCI toolkit
+// PandaSprites.h created on 2018-03-04, part of XCI toolkit
 
 #ifndef XCI_GRAPHICS_PANDA_SPRITES_H
 #define XCI_GRAPHICS_PANDA_SPRITES_H

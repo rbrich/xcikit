@@ -37,19 +37,18 @@ int main()
     Window window;
     window.create({800, 600}, "XCI font demo");
 
-    View view = window.create_view();
-
     Text text;
     text.set_string(some_text);
     text.set_font(font);
     text.set_size(20);
     text.set_color(Color::White());
-    text.draw(view, {-100, -200});
 
-    Sprites font_texture(font.get_texture());
-    font_texture.add_sprite({0, 0}, Color::White());
-    font_texture.draw(view, {-300, -200});
+    window.display([&](View& view){
+        text.draw(view, {-100, -200});
 
-    window.display();
+        Sprites font_texture(font.get_texture());
+        font_texture.add_sprite({0, 0}, Color::White());
+        font_texture.draw(view, {-300, -200});
+    });
     return EXIT_SUCCESS;
 }

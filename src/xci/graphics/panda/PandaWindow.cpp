@@ -1,4 +1,4 @@
-// Window.cpp created on 2018-03-04, part of XCI toolkit
+// PandaWindow.cpp created on 2018-03-04, part of XCI toolkit
 
 #include "PandaWindow.h"
 #include "PandaSprites.h"
@@ -28,8 +28,10 @@ void PandaWindow::create(const Vec2u& size, const std::string& title)
 }
 
 
-void PandaWindow::display()
+void PandaWindow::display(std::function<void(View& view)> draw_fn)
 {
+    View view = create_view();
+    draw_fn(view);
     m_framework.main_loop();
     m_framework.close_framework();
 }

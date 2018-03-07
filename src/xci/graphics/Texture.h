@@ -7,6 +7,7 @@
 using xci::util::Vec2u;
 using xci::util::Rect_u;
 
+#include <memory>
 #include <cstdint>
 using std::uint8_t;
 

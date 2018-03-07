@@ -11,6 +11,7 @@ using xci::util::Vec2f;
 
 #include <string>
 #include <memory>
+#include <functional>
 
 namespace xci {
 namespace graphics {
@@ -24,7 +25,7 @@ public:
     Window& operator=(Window&&);
 
     void create(const Vec2u& size, const std::string& title);
-    void display();
+    void display(std::function<void(View& view)> draw_fn);
 
     View create_view();
 

@@ -1,4 +1,4 @@
-// TextureImpl.h created on 2018-03-04, part of XCI toolkit
+// PandaTexture.h created on 2018-03-04, part of XCI toolkit
 
 #ifndef XCI_GRAPHICS_PANDA_TEXTURE_H
 #define XCI_GRAPHICS_PANDA_TEXTURE_H
@@ -19,7 +19,7 @@ public:
     unsigned int width() const;
     unsigned int height() const;
 
-    // access native handles
+    // access native handle
     PT(::Texture) panda_texture() const { return m_texture; }
 
 private:

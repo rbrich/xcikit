@@ -10,12 +10,15 @@
 namespace xci {
 namespace graphics {
 
+
 class PandaView {
 public:
     NodePath root_node;
 };
 
+
 class View::Impl : public PandaView {};
+
 
 }} // namespace xci::graphics
 

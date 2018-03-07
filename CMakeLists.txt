@@ -31,14 +31,14 @@ set(XCI_GRAPHICS_SOURCES
     src/xci/graphics/Window.i)
 
 set(XCI_GRAPHICS_SFML_SOURCES
-    src/xci/graphics/sfml/Texture.cpp
-    src/xci/graphics/sfml/TextureImpl.h
-    src/xci/graphics/sfml/Sprites.cpp
-    src/xci/graphics/sfml/SpritesImpl.h
-    src/xci/graphics/sfml/View.cpp
-    src/xci/graphics/sfml/ViewImpl.h
-    src/xci/graphics/sfml/Window.cpp
-    src/xci/graphics/sfml/WindowImpl.h)
+    src/xci/graphics/sfml/SfmlTexture.cpp
+    src/xci/graphics/sfml/SfmlTexture.h
+    src/xci/graphics/sfml/SfmlSprites.cpp
+    src/xci/graphics/sfml/SfmlSprites.h
+    src/xci/graphics/sfml/SfmlView.cpp
+    src/xci/graphics/sfml/SfmlView.h
+    src/xci/graphics/sfml/SfmlWindow.cpp
+    src/xci/graphics/sfml/SfmlWindow.h)
 
 set(XCI_GRAPHICS_PANDA_SOURCES
     src/xci/graphics/panda/PandaTexture.cpp

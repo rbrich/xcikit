@@ -12,7 +12,6 @@ namespace text {
 void Text::draw(View& target, const Vec2f& pos) const
 {
     m_font->set_size(m_size);
-//    states.blendMode = sf::BlendAlpha;
 
     Sprites sprites(m_font->get_texture());
 

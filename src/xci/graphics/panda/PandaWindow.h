@@ -13,7 +13,7 @@ namespace graphics {
 class PandaWindow {
 public:
     void create(const Vec2u& size, const std::string& title);
-    void display();
+    void display(std::function<void(View& view)> draw_fn);
 
     View create_view();
 

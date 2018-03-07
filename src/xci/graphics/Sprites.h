@@ -8,6 +8,8 @@
 #include <xci/graphics/View.h>
 #include <xci/util/geometry.h>
 
+#include <memory>
+
 using xci::util::Rect_u;
 using xci::util::Vec2f;
 
