@@ -2,6 +2,9 @@ XCI Toolkit
 ===========
 Render Text & User Interface
 
+![Font Texture](http://xci.cz/toolkit/img/xci-text.png)
+*The text on right side was rendered from the texture on left side*
+
 
 Why?
 ----
