@@ -3,10 +3,11 @@
 #include <xci/text/FontTexture.h>
 
 #include <xci/util/log.h>
-using namespace xci::util::log;
 
 namespace xci {
 namespace text {
+
+using namespace util::log;
 
 
 FontTexture::FontTexture(unsigned int size)

@@ -3,10 +3,12 @@
 #include "Text.h"
 
 #include <xci/graphics/Sprites.h>
-using namespace xci::graphics;
 
 namespace xci {
 namespace text {
+
+using namespace graphics;
+using namespace util;
 
 
 void Text::draw(View& target, const Vec2f& pos) const

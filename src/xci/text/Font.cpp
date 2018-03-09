@@ -3,10 +3,11 @@
 #include "Font.h"
 
 #include <xci/util/log.h>
-using namespace xci::util::log;
 
 namespace xci {
 namespace text {
+
+using namespace util::log;
 
 
 static inline float ft_to_float(FT_F26Dot6 ft_units) {

@@ -4,15 +4,9 @@
 #define XCI_TEXT_TEXT_H
 
 #include <xci/text/Font.h>
-
 #include <xci/graphics/Color.h>
 #include <xci/graphics/View.h>
-using xci::graphics::Color;
-using xci::graphics::View;
-
 #include <xci/util/geometry.h>
-using xci::util::Vec2f;
-using xci::util::Rect_f;
 
 #include <string>
 
@@ -23,6 +17,7 @@ namespace text {
 // Text rendering
 class Text {
 public:
+    using Color = graphics::Color;
 
     // Set string
     void set_string(const std::string& string) { m_string = string; }
@@ -41,12 +36,12 @@ public:
 
     // Measure text (metrics are affected by string, font, size)
     struct Metrics {
-        Vec2f advance;
-        Rect_f bounds;
+        util::Vec2f advance;
+        util::Rect_f bounds;
     };
     Metrics get_metrics() const;
 
-    void draw(View& target, const Vec2f& pos) const;
+    void draw(graphics::View& target, const util::Vec2f& pos) const;
 
 private:
     std::string m_string;

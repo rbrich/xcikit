@@ -158,7 +158,10 @@ target_link_libraries(demo_font
 
 if (WITH_PANDA)
     add_executable(demo_panda examples/demo_panda.cpp)
-    target_link_libraries(demo_panda ${XCI_GRAPHICS_PANDA_LIBRARY} pthread)
+    target_link_libraries(demo_panda
+        ${XCI_TEXT_LIBRARY}
+        ${XCI_GRAPHICS_PANDA_LIBRARY}
+        pthread)
 endif (WITH_PANDA)
 
 if (WITH_SFML)

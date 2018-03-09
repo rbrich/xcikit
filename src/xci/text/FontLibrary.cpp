@@ -1,12 +1,12 @@
 // FontLibrary.cpp created on 2018-03-01, part of XCI toolkit
 
 #include <xci/text/FontLibrary.h>
-
 #include <xci/util/log.h>
-using namespace xci::util::log;
 
 namespace xci {
 namespace text {
+
+using namespace util::log;
 
 
 FontLibrary::FontLibrary()

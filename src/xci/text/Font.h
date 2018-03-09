@@ -8,8 +8,6 @@
 #include <xci/text/FontTexture.h>
 
 #include <xci/util/geometry.h>
-using xci::util::Vec2f;
-using xci::util::Rect_u;
 
 #include <list>
 #include <map>
@@ -69,7 +67,7 @@ public:
     private:
         Font& m_font;
         Rect_u m_tex_coords;
-        Vec2f m_base;  // FT bitmap_left, bitmap_top
+        util::Vec2f m_base;  // FT bitmap_left, bitmap_top
         float m_advance = 0;
 
         friend class Font;
@@ -78,7 +76,7 @@ public:
 
     // just a facade
     float line_height() const;
-    const Texture& get_texture() const { return m_texture.get_texture(); }
+    const graphics::Texture& get_texture() const { return m_texture.get_texture(); }
 
     // Throw away any rendered glyphs
     void clear_cache();

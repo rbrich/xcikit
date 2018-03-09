@@ -7,12 +7,8 @@
 #include FT_FREETYPE_H
 
 #include <rbp/MaxRectsBinPack.h>
-
 #include <xci/graphics/Texture.h>
-using namespace xci::graphics;
-
 #include <xci/util/geometry.h>
-using xci::util::Rect_u;
 
 namespace xci {
 namespace text {
@@ -38,12 +34,12 @@ public:
 
     // Get the whole texture (cut the coords returned by `insert`
     // and you'll get your glyph picture).
-    const Texture& get_texture() const { return m_texture; }
+    const graphics::Texture& get_texture() const { return m_texture; }
 
     void clear();
 
 private:
-    Texture m_texture;
+    graphics::Texture m_texture;
     rbp::MaxRectsBinPack m_binpack;
 };
 

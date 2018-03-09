@@ -1,12 +1,12 @@
 // FontFace.cpp - created on 2018-03-02, part of XCI toolkit
 
 #include <xci/text/FontFace.h>
-
 #include <xci/util/log.h>
-using namespace xci::util::log;
 
 namespace xci {
 namespace text {
+
+using namespace util::log;
 
 
 static inline float ft_to_float(FT_F26Dot6 ft_units) {

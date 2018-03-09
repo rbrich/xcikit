@@ -19,6 +19,7 @@ public:
 
 class View::Impl : public PandaView {};
 
+View create_view_from_nodepath(NodePath node);
 
 }} // namespace xci::graphics
 

@@ -47,11 +47,15 @@ PandaSprites::add_sprite(const Vec2f& pos, const Rect_u& texrect, const Color& c
     wcolor = GeomVertexWriter(m_vertex_data, "color");
     wtexcoord = GeomVertexWriter(m_vertex_data, "texcoord");
 
+    float r = color.red_f();
+    float g = color.green_f();
+    float b = color.blue_f();
+    float a = color.alpha_f();
     wcolor.set_row(start_vertex);
-    wcolor.add_data4f(color.r, color.g, color.b, color.a);
-    wcolor.add_data4f(color.r, color.g, color.b, color.a);
-    wcolor.add_data4f(color.r, color.g, color.b, color.a);
-    wcolor.add_data4f(color.r, color.g, color.b, color.a);
+    wcolor.add_data4f(r, g, b, a);
+    wcolor.add_data4f(r, g, b, a);
+    wcolor.add_data4f(r, g, b, a);
+    wcolor.add_data4f(r, g, b, a);
 
     wvertex.set_row(start_vertex);
     wvertex.add_data3f(pos.x + texrect.w, 0, -pos.y);

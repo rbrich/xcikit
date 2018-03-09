@@ -9,4 +9,12 @@ namespace xci {
 namespace graphics {
 
 
+View create_view_from_nodepath(NodePath node)
+{
+    View view;
+    view.impl().root_node = node;
+    return view;
+}
+
+
 }} // namespace xci::graphics
