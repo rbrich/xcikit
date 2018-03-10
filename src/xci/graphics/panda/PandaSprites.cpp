@@ -12,7 +12,7 @@ using namespace xci::util::log;
 #include <geomVertexWriter.h>
 
 // inline
-#include <xci/graphics/Sprites.i>
+#include <xci/graphics/Sprites.inl>
 
 namespace xci {
 namespace graphics {

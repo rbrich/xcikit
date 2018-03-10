@@ -5,7 +5,7 @@
 #include "SfmlView.h"
 
 // inline
-#include <xci/graphics/Sprites.i>
+#include <xci/graphics/Sprites.inl>
 
 namespace xci {
 namespace graphics {

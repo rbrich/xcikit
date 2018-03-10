@@ -82,7 +82,7 @@ Text::Metrics Text::get_metrics() const
         m.y = 0 - glyph->base_y();
         m.w = glyph->width();
         m.h = glyph->height();  // ft_to_float(gm.height)
-        metrics.bounds = metrics.bounds.union_(m);
+        metrics.bounds.extend(m);
 
         metrics.advance.x += glyph->advance();
     }

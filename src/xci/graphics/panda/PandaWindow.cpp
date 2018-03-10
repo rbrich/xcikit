@@ -11,7 +11,7 @@
 #include <pointerTo.h>
 
 // inline
-#include <xci/graphics/Window.i>
+#include <xci/graphics/Window.inl>
 
 namespace xci {
 namespace graphics {

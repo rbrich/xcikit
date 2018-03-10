@@ -3,7 +3,7 @@
 #include "PandaView.h"
 
 // inline
-#include <xci/graphics/View.i>
+#include <xci/graphics/View.inl>
 
 namespace xci {
 namespace graphics {

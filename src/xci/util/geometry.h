@@ -49,9 +49,34 @@ public:
     T y;
 };
 
+// unary minus (opposite vector)
 template <typename T>
 Vec2<T> operator -(const Vec2<T>& rhs) {
     return Vec2<T>(-rhs.x, -rhs.y);
+}
+
+template <typename T>
+Vec2<T> operator +(const Vec2<T>& lhs, const Vec2<T>& rhs) {
+    return Vec2<T>(lhs.x + rhs.x, lhs.y + rhs.y);
+}
+
+template <typename T>
+Vec2<T> operator -(const Vec2<T>& lhs, const Vec2<T>& rhs) {
+    return Vec2<T>(lhs.x - rhs.x, lhs.y - rhs.y);
+}
+
+template <typename T>
+Vec2<T>& operator +=(Vec2<T>& lhs, const Vec2<T>& rhs) {
+    lhs.x += rhs.x;
+    lhs.y += rhs.y;
+    return lhs;
+}
+
+template <typename T>
+Vec2<T>& operator -=(Vec2<T>& lhs, const Vec2<T>& rhs) {
+    lhs.x -= rhs.x;
+    lhs.y -= rhs.y;
+    return lhs;
 }
 
 using Vec2i = Vec2<int>;
@@ -68,7 +93,7 @@ struct Rect {
     //bool contains(const Vec2<T>& point) const;
     //bool intersects(const Rect<T>& rectangle) const;
 
-    Rect<T> union_(const Rect<T>& other) {
+    Rect<T> union_(const Rect<T>& other) const {
         return {
                 std::min(x, other.x),
                 std::min(y, other.y),
@@ -77,7 +102,12 @@ struct Rect {
         };
     }
 
-    // Enlarge `rect` to all sides by `radius`
+    // Extend Rect to contain `other`
+    void extend(const Rect<T>& other) {
+        *this = union_(other);
+    }
+
+    // Enlarge Rect to all sides by `radius`
     void enlarge(T radius) {
         x -= radius;
         y -= radius;

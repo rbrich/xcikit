@@ -22,13 +22,13 @@ set(XCI_UTIL_SOURCES
 set(XCI_GRAPHICS_SOURCES
     src/xci/graphics/Color.h
     src/xci/graphics/Texture.h
-    src/xci/graphics/Texture.i
+    src/xci/graphics/Texture.inl
     src/xci/graphics/Sprites.h
-    src/xci/graphics/Sprites.i
+    src/xci/graphics/Sprites.inl
     src/xci/graphics/View.h
-    src/xci/graphics/View.i
+    src/xci/graphics/View.inl
     src/xci/graphics/Window.h
-    src/xci/graphics/Window.i)
+    src/xci/graphics/Window.inl)
 
 set(XCI_GRAPHICS_SFML_SOURCES
     src/xci/graphics/sfml/SfmlTexture.cpp
@@ -60,7 +60,11 @@ set(XCI_TEXT_SOURCES
     src/xci/text/Font.cpp
     src/xci/text/Font.h
     src/xci/text/Text.cpp
-    src/xci/text/Text.h)
+    src/xci/text/Text.h
+    src/xci/text/Layout.cpp
+    src/xci/text/Layout.h
+    src/xci/text/Markup.cpp
+    src/xci/text/Markup.h)
 
 
 # ------------ #
@@ -88,6 +92,9 @@ endif (WITH_PANDA)
 
 # Catch
 find_package(Catch)
+
+# PEGTL
+find_package(PEGTL)
 
 
 # ------------ #
@@ -133,7 +140,8 @@ set(XCI_TEXT_LIBRARY xci-text)
 add_library(${XCI_TEXT_LIBRARY} STATIC ${XCI_TEXT_SOURCES})
 target_include_directories(${XCI_TEXT_LIBRARY} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${FREETYPE_INCLUDE_DIRS})
+    ${FREETYPE_INCLUDE_DIRS}
+    ${PEGTL_INCLUDE_DIRS})
 target_link_libraries(${XCI_TEXT_LIBRARY}
     ${XCI_UTIL_LIBRARY}
     ${FREETYPE_LIBRARIES}
@@ -152,6 +160,12 @@ target_link_libraries(demo_thread ${XCI_TEXT_LIBRARY} pthread)
 
 add_executable(demo_font examples/demo_font.cpp)
 target_link_libraries(demo_font
+    ${XCI_GRAPHICS_LIBRARY}
+    ${XCI_TEXT_LIBRARY}
+    pthread)
+
+add_executable(demo_layout examples/demo_layout.cpp)
+target_link_libraries(demo_layout
     ${XCI_GRAPHICS_LIBRARY}
     ${XCI_TEXT_LIBRARY}
     pthread)

@@ -3,7 +3,7 @@
 #include "SfmlTexture.h"
 
 // inline
-#include <xci/graphics/Texture.i>
+#include <xci/graphics/Texture.inl>
 
 namespace xci {
 namespace graphics {
