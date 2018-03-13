@@ -12,17 +12,18 @@
 using namespace xci::text;
 using namespace xci::graphics;
 
-static const char * some_text =
-        "One morning, when Gregor Samsa \n"
-        "woke from troubled dreams, he found\n"
-        "himself transformed in his bed into\n"
-        "a horrible vermin. He lay on his\n"
-        "armour-like back, and if he lifted\n"
-        "his head a little he could see his\n"
-        "brown belly, slightly domed and\n"
-        "divided by arches into stiff sections.\n"
-        "The bedding was hardly able to cover\n"
-        "it and seemed ready to slide off any\n"
+// text with forced newlines
+static const char * sample_text =
+        "One morning, when Gregor Samsa\n\n"
+        "woke from troubled dreams, he found\n\n"
+        "himself transformed in his bed into\n\n"
+        "a horrible vermin. He lay on his\n\n"
+        "armour-like back, and if he lifted\n\n"
+        "his head a little he could see his\n\n"
+        "brown belly, slightly domed and\n\n"
+        "divided by arches into stiff sections.\n\n"
+        "The bedding was hardly able to cover\n\n"
+        "it and seemed ready to slide off any\n\n"
         "moment.";
 
 int main()
@@ -38,7 +39,7 @@ int main()
     window.create({800, 600}, "XCI font demo");
 
     Text text;
-    text.set_string(some_text);
+    text.set_string(sample_text);
     text.set_font(font);
     text.set_size(20);
     text.set_color(Color::White());

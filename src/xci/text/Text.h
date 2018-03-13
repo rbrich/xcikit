@@ -16,6 +16,7 @@
 #ifndef XCI_TEXT_TEXT_H
 #define XCI_TEXT_TEXT_H
 
+#include "Layout.h"
 #include <xci/text/Font.h>
 #include <xci/graphics/Color.h>
 #include <xci/graphics/View.h>
@@ -27,40 +28,21 @@ namespace xci {
 namespace text {
 
 
-// Text rendering
+// Text rendering - convenient combination of Layout and Markup
 class Text {
 public:
-    using Color = graphics::Color;
-
-    // Set string
     void set_string(const std::string& string) { m_string = string; }
+    void set_width(float width) { m_layout.set_width(width); }
+    void set_font(Font& font) { m_layout.set_font(font); }
+    void set_size(unsigned size) { m_layout.set_size(size); }
+    void set_color(const graphics::Color& color) { m_layout.set_color(color); }
 
-    // Font
-    void set_font(Font* font) { m_font = font; }
-    void set_font(Font& font) { m_font = &font; }
-
-    // Size
-    void set_size(unsigned size) { m_size = size; }
-    unsigned size() const { return m_size; }
-
-    // Color
-    void set_color(const Color& color) { m_color = color; }
-    const Color& color() const { return m_color; }
-
-    // Measure text (metrics are affected by string, font, size)
-    struct Metrics {
-        util::Vec2f advance;
-        util::Rect_f bounds;
-    };
-    Metrics get_metrics() const;
-
-    void draw(graphics::View& target, const util::Vec2f& pos) const;
+    void draw(graphics::View& target, const util::Vec2f& pos);
 
 private:
+    Layout m_layout;
     std::string m_string;
-    Font* m_font;
-    unsigned m_size = 12;
-    Color m_color = Color::White();
+    bool m_parsed = false;
 };
 
 

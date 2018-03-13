@@ -17,7 +17,7 @@
 #define XCI_TEXT_LAYOUT_H
 
 #include "Font.h"
-#include "Text.h"
+#include "../graphics/View.h"
 #include "../graphics/Color.h"
 #include "../util/geometry.h"
 
@@ -27,37 +27,55 @@
 namespace xci {
 namespace text {
 
-constexpr size_t invalid_index = ~0u;
 
 class Layout;
 
 
 // Single word, consisting of letters (glyphs), font and style.
-struct LayoutWord {
-    Text text;
-    util::Vec2f origin;  // relative to line origin
+class LayoutWord {
+public:
+    LayoutWord(const std::string& string,
+               Font* font,
+               unsigned size = 12,
+               const graphics::Color& color = graphics::Color::White(),
+               const util::Vec2f& origin = {0, 0})
+        : m_string(string), m_font(font), m_size(size), m_color(color),
+          m_origin(origin) {}
 
-    LayoutWord(const Text& text, const util::Vec2f& origin)
-            : text(text), origin(origin) {}
+    void set_color(const graphics::Color& color) { m_color = color; }
+    const graphics::Color& color() const { return m_color; }
+
+    void set_origin(const util::Vec2f& origin) { m_origin = origin; }
+
+    // Measure text (metrics are affected by string, font, size)
+    struct Metrics {
+        util::Vec2f advance;
+        util::Rect_f bounds;
+    };
+    Metrics get_metrics() const;
+
+    void draw(graphics::View& target, const util::Vec2f& pos) const;
+
+private:
+    std::string m_string;
+    Font* m_font;
+    unsigned m_size;
+    graphics::Color m_color;
+    util::Vec2f m_origin;  // relative to page origin (top-left corner)
 };
 
-
-// Single line, consisting of words
-struct LayoutLine {
-    std::vector<size_t> word_indices;
-
-    util::Vec2f origin;  // relative to page origin (top-left corner)
-    util::Rect_f bounds;
-};
 
 // Group of words, allowing mass editing and providing a bounding box
 struct LayoutSpan {
-    explicit LayoutSpan(Layout* m_layout, size_t begin);
+    using WordIndex = size_t;
+    static constexpr size_t invalid_index = ~0u;
 
-    void set_end(size_t end) { m_end = end; }
+    explicit LayoutSpan(Layout* m_layout, WordIndex begin);
 
-    size_t begin_index() const { return m_begin; }
-    size_t end_index() const { return m_end; }
+    void set_end(WordIndex end) { m_end = end; }
+
+    WordIndex begin_index() const { return m_begin; }
+    WordIndex end_index() const { return m_end; }
 
     bool is_empty() const { return m_begin == m_end; }
     bool is_open() const { return m_begin != invalid_index && m_end == invalid_index; }
@@ -75,8 +93,8 @@ struct LayoutSpan {
 
 private:
     Layout *m_layout;
-    size_t m_begin;
-    size_t m_end = invalid_index;  // points after last work in STL fashion
+    WordIndex m_begin;
+    WordIndex m_end = invalid_index;  // points after last work in STL fashion
     util::Rect_f m_bounds;
 };
 
@@ -87,12 +105,14 @@ private:
 // characters is translated to a single space.
 class Layout {
 public:
+    Layout();
+
     // Clear all state, start over.
     void clear();
 
     // Set page width. This drives the line breaking.
     // Default: 0 (same as INF - no line breaking)
-    void set_width(float w) { m_width = w; reflow(); }
+    void set_width(float width) { m_width = width; reflow(); }
     float get_width() const { return m_width; }
 
     // Set alignment
@@ -114,11 +134,15 @@ public:
     // Set font and style to be recorded with every following word.
     // Also affects spacing (which depends on font size).
     void set_font(Font& font) { m_font = &font; }
+
     void set_size(unsigned size) { m_size = size; }
+    unsigned size() const { return m_size; }
+
     void set_color(const graphics::Color &color) { m_color = color; }
+    const graphics::Color& color() const { return m_color; }
 
     // Put a word on pen position.
-    void add_word(const std::string &word);
+    void add_word(const std::string &string);
 
     // Add a space after last word. Does nothing if current line is empty.
     void add_space();
@@ -161,26 +185,29 @@ public:
 #endif
 
 private:
-    float m_width = 0.f;  // page width
-    util::Vec2f pen;  // pen position
-    Align align = Align::Left;  // horizontal alignment
+    // pen position
+    util::Vec2f pen;
 
     // text style
-    Font* m_font;
+    Font* m_font = nullptr;
     unsigned m_size = 12;
     graphics::Color m_color = graphics::Color::White();
 
+    // page parameters
+    float m_width = 0.f;  // page width
+    Align align = Align::Left;  // horizontal alignment
     std::vector<float> m_tab_stops;
 
+    // page content
     std::vector<LayoutWord> m_words;
-    std::vector<LayoutLine> m_lines = {LayoutLine()};
+    std::vector<LayoutSpan> m_lines;
     std::map<std::string, LayoutSpan> m_spans;
 
     float space_width() const;
     float line_height() const;
 
     // Apply new alignment on already laid out text
-    void realign();
+    void realign() {}
 
     // Apply new page witdth on already laid out text
     void reflow() {}

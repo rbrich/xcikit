@@ -54,17 +54,15 @@ int main()
     Window window;
     window.create({800, 600}, "XCI font demo");
 
-    Layout layout;
-    layout.set_width(400);
-    layout.set_font(font);
-    layout.set_size(20);
-    layout.set_color(Color::White());
-
-    Markup markup(layout);
-    markup.parse(sample_text);
+    Text text;
+    text.set_string(sample_text);
+    text.set_width(400);
+    text.set_font(font);
+    text.set_size(20);
+    text.set_color(Color::White());
 
     window.display([&](View& view){
-        layout.draw(view, {-100, -200});
+        text.draw(view, {-100, -200});
 
         Sprites font_texture(font.get_texture());
         font_texture.add_sprite({0, 0}, Color::White());
