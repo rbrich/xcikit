@@ -22,6 +22,108 @@ namespace xci {
 namespace text {
 
 
+LayoutWord::Metrics LayoutWord::get_metrics() const
+{
+    Metrics metrics;
+
+    // Word bounds are local, move by origin
+    metrics.bounds.x = m_origin.x;
+    metrics.bounds.y = m_origin.y;
+
+    m_font->set_size(m_size);
+    for (CodePoint code_point : m_string) {
+        auto glyph = m_font->get_glyph(code_point);
+
+        // Expand text bounds by glyph bounds
+        util::Rect_f m;
+        m.x = m_origin.x + metrics.advance.x + glyph->base_x();
+        m.y = m_origin.y - glyph->base_y();
+        m.w = glyph->width();
+        m.h = glyph->height();  // ft_to_float(gm.height)
+        metrics.bounds.extend(m);
+
+        metrics.advance.x += glyph->advance();
+    }
+    return metrics;
+}
+
+void LayoutWord::draw(graphics::View& target, const util::Vec2f& pos) const
+{
+    if (!m_font)
+        return;
+    m_font->set_size(m_size);
+
+    graphics::Sprites sprites(m_font->get_texture());
+
+    Vec2f pen;
+    for (CodePoint code_point : m_string) {
+        auto glyph = m_font->get_glyph(code_point);
+        if (glyph == nullptr)
+            continue;
+
+        sprites.add_sprite({pen.x + glyph->base_x(),
+                            pen.y - glyph->base_y()},
+                           glyph->tex_coords(),
+                           m_color);
+
+#if 0
+        sf::RectangleShape bbox;
+        sf::FloatRect m;
+        m.left = ft_to_float(gm.horiBearingX) + pen;
+        m.top = -ft_to_float(gm.horiBearingY);
+        m.width = ft_to_float(gm.width);
+        m.height = ft_to_float(gm.height);
+        bbox.setPosition(m.left, m.top);
+        bbox.setSize({m.width, m.height});
+        bbox.setFillColor(sf::Color::Transparent);
+        bbox.setOutlineColor(sf::Color::Blue);
+        bbox.setOutlineThickness(1);
+        target.draw(bbox, states);
+#endif
+
+        pen.x += glyph->advance();
+    }
+
+    sprites.draw(target, pos + m_origin);
+}
+
+
+// ----------------------------------------------------------------------------
+
+
+LayoutSpan::LayoutSpan(Layout* m_layout, size_t begin)
+        : m_layout(m_layout), m_begin(begin)
+{
+    assert(m_layout != nullptr);
+}
+
+void LayoutSpan::set_color(const graphics::Color &color)
+{
+    for (auto i = m_begin; i != m_end; i++) {
+        m_layout->m_words[i].set_color(color);
+    }
+}
+
+util::Rect_f LayoutSpan::get_bounds() const
+{
+    return m_bounds;
+}
+
+void LayoutSpan::add_padding(float radius)
+{
+    m_bounds.enlarge(radius);
+}
+
+
+// ----------------------------------------------------------------------------
+
+
+Layout::Layout()
+{
+    m_lines.emplace_back(this, 0);
+}
+
+
 void Layout::clear()
 {
     m_width = 0;
@@ -121,6 +223,32 @@ void Layout::advance_lines(float lines)
 }
 
 
+bool Layout::begin_span(const std::string& name)
+{
+    auto result = m_spans.emplace(name, LayoutSpan(this, m_words.size()));
+    return result.second;  // false if already existed
+}
+
+
+bool Layout::end_span(const std::string& name)
+{
+    auto iter = m_spans.find(name);
+    if (iter == m_spans.end())
+        return false;  // does not exist
+    iter->second.set_end(m_words.size());
+    return true;
+}
+
+
+LayoutSpan* Layout::get_span(const std::string& name)
+{
+    auto iter = m_spans.find(name);
+    if (iter == m_spans.end())
+        return nullptr;  // does not exist
+    return &iter->second;
+}
+
+
 void Layout::draw(graphics::View& target, const util::Vec2f& pos) const
 {
     for (auto& word : m_words) {
@@ -172,122 +300,5 @@ float Layout::line_height() const
     return m_font->line_height();
 }
 
-bool Layout::begin_span(const std::string& name)
-{
-    auto result = m_spans.emplace(name, LayoutSpan(this, m_words.size()));
-    return result.second;  // false if already existed
-}
-
-bool Layout::end_span(const std::string& name)
-{
-    auto iter = m_spans.find(name);
-    if (iter == m_spans.end())
-        return false;  // does not exist
-    iter->second.set_end(m_words.size());
-    return true;
-}
-
-LayoutSpan* Layout::get_span(const std::string& name)
-{
-    auto iter = m_spans.find(name);
-    if (iter == m_spans.end())
-        return nullptr;  // does not exist
-    return &iter->second;
-}
-
-Layout::Layout()
-{
-    m_lines.emplace_back(this, 0);
-}
-
-
-LayoutSpan::LayoutSpan(Layout* m_layout, size_t begin)
-        : m_layout(m_layout), m_begin(begin)
-{
-    assert(m_layout != nullptr);
-}
-
-void LayoutSpan::set_color(const graphics::Color &color)
-{
-    for (auto i = m_begin; i != m_end; i++) {
-        m_layout->m_words[i].set_color(color);
-    }
-}
-
-util::Rect_f LayoutSpan::get_bounds() const
-{
-    return m_bounds;
-}
-
-void LayoutSpan::add_padding(float radius)
-{
-    m_bounds.enlarge(radius);
-}
-
-
-LayoutWord::Metrics LayoutWord::get_metrics() const
-{
-    Metrics metrics;
-
-    // Word bounds are local, move by origin
-    metrics.bounds.x = m_origin.x;
-    metrics.bounds.y = m_origin.y;
-
-    m_font->set_size(m_size);
-    for (CodePoint code_point : m_string) {
-        auto glyph = m_font->get_glyph(code_point);
-
-        // Expand text bounds by glyph bounds
-        util::Rect_f m;
-        m.x = m_origin.x + metrics.advance.x + glyph->base_x();
-        m.y = m_origin.y - glyph->base_y();
-        m.w = glyph->width();
-        m.h = glyph->height();  // ft_to_float(gm.height)
-        metrics.bounds.extend(m);
-
-        metrics.advance.x += glyph->advance();
-    }
-    return metrics;
-}
-
-void LayoutWord::draw(graphics::View& target, const util::Vec2f& pos) const
-{
-    if (!m_font)
-        return;
-    m_font->set_size(m_size);
-
-    graphics::Sprites sprites(m_font->get_texture());
-
-    Vec2f pen;
-    for (CodePoint code_point : m_string) {
-        auto glyph = m_font->get_glyph(code_point);
-        if (glyph == nullptr)
-            continue;
-
-        sprites.add_sprite({pen.x + glyph->base_x(),
-                            pen.y - glyph->base_y()},
-                           glyph->tex_coords(),
-                           m_color);
-
-#if 0
-        sf::RectangleShape bbox;
-        sf::FloatRect m;
-        m.left = ft_to_float(gm.horiBearingX) + pen;
-        m.top = -ft_to_float(gm.horiBearingY);
-        m.width = ft_to_float(gm.width);
-        m.height = ft_to_float(gm.height);
-        bbox.setPosition(m.left, m.top);
-        bbox.setSize({m.width, m.height});
-        bbox.setFillColor(sf::Color::Transparent);
-        bbox.setOutlineColor(sf::Color::Blue);
-        bbox.setOutlineThickness(1);
-        target.draw(bbox, states);
-#endif
-
-        pen.x += glyph->advance();
-    }
-
-    sprites.draw(target, pos + m_origin);
-}
 
 }} // namespace xci::text

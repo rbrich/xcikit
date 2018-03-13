@@ -28,6 +28,8 @@ namespace xci {
 namespace text {
 
 
+class LayoutWord;
+class LayoutSpan;
 class Layout;
 
 
@@ -66,7 +68,8 @@ private:
 
 
 // Group of words, allowing mass editing and providing a bounding box
-struct LayoutSpan {
+class LayoutSpan {
+public:
     using WordIndex = size_t;
     static constexpr size_t invalid_index = ~0u;
 
@@ -89,9 +92,9 @@ struct LayoutSpan {
     // add padding to bounds
     void add_padding(float radius);
 
+private:
     friend class Layout;
 
-private:
     Layout *m_layout;
     WordIndex m_begin;
     WordIndex m_end = invalid_index;  // points after last work in STL fashion
