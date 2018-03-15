@@ -1,7 +1,7 @@
 // SfmlTexture.h created on 2018-03-04, part of XCI toolkit
 
-#ifndef XCI_GRAPHICS_SFML_TEXTUREL_H
-#define XCI_GRAPHICS_SFML_TEXTUREL_H
+#ifndef XCI_GRAPHICS_SFML_TEXTURE_H
+#define XCI_GRAPHICS_SFML_TEXTURE_H
 
 #include <xci/graphics/Texture.h>
 
@@ -32,4 +32,4 @@ class Texture::Impl : public SfmlTexture {};
 
 }} // namespace xci::graphics
 
-#endif //XCI_GRAPHICS_SFML_TEXTUREL_H
+#endif //XCI_GRAPHICS_SFML_TEXTURE_H

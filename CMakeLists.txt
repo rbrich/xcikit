@@ -6,6 +6,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wno-reorder")
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
 
+option(WITH_OPENGL "Link with GLFW and build libxci-graphics-opengl." ON)
 option(WITH_SFML "Link with SFML and build libxci-graphics-sfml." ON)
 option(WITH_PANDA "Link with Panda3D and build libxci-graphics-panda." OFF)
 
@@ -29,6 +30,16 @@ set(XCI_GRAPHICS_SOURCES
     src/xci/graphics/View.inl
     src/xci/graphics/Window.h
     src/xci/graphics/Window.inl)
+
+set(XCI_GRAPHICS_OPENGL_SOURCES
+    src/xci/graphics/opengl/GlTexture.cpp
+    src/xci/graphics/opengl/GlTexture.h
+    src/xci/graphics/opengl/GlSprites.cpp
+    src/xci/graphics/opengl/GlSprites.h
+    src/xci/graphics/opengl/GlView.cpp
+    src/xci/graphics/opengl/GlView.h
+    src/xci/graphics/opengl/GlWindow.cpp
+    src/xci/graphics/opengl/GlWindow.h)
 
 set(XCI_GRAPHICS_SFML_SOURCES
     src/xci/graphics/sfml/SfmlTexture.cpp
@@ -78,6 +89,14 @@ include(FindFreetype)
 add_subdirectory(src/rbp)
 set(RBP_LIBRARY rbp)
 
+# OpenGL
+if (WITH_OPENGL)
+    find_package(OpenGL REQUIRED)
+    find_package(GLEW REQUIRED)
+    # GLFW
+    find_package(glfw3 3.2 REQUIRED)
+endif (WITH_OPENGL)
+
 # SFML
 if (WITH_SFML)
     find_package(SFML 2.4 REQUIRED system window graphics)
@@ -104,6 +123,24 @@ find_package(PEGTL)
 set(XCI_UTIL_LIBRARY xci-util)
 add_library(${XCI_UTIL_LIBRARY} STATIC ${XCI_UTIL_SOURCES})
 target_include_directories(${XCI_UTIL_LIBRARY} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+if (WITH_OPENGL)
+    set(XCI_GRAPHICS_OPENGL_LIBRARY xci-graphics-opengl)
+    add_library(${XCI_GRAPHICS_OPENGL_LIBRARY} STATIC
+        ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_OPENGL_SOURCES})
+    target_include_directories(${XCI_GRAPHICS_OPENGL_LIBRARY}
+        PUBLIC
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        PRIVATE
+        ${OPENGL_INCLUDE_DIRS}
+        ${GLEW_INCLUDE_DIRS}
+        ${GLFW_INCLUDE_DIRS})
+    target_link_libraries(${XCI_GRAPHICS_OPENGL_LIBRARY}
+        ${OPENGL_LIBRARIES}
+        ${GLEW_LIBRARIES}
+        ${GLFW_LIBRARIES})
+    set(XCI_GRAPHICS_LIBRARY ${XCI_GRAPHICS_OPENGL_LIBRARY})
+endif (WITH_OPENGL)
 
 if (WITH_SFML)
     set(XCI_GRAPHICS_SFML_LIBRARY xci-graphics-sfml)
@@ -170,6 +207,16 @@ target_link_libraries(demo_layout
     ${XCI_TEXT_LIBRARY}
     pthread)
 
+if (WITH_OPENGL)
+    add_executable(demo_opengl examples/demo_opengl.cpp)
+    target_link_libraries(demo_opengl ${XCI_GRAPHICS_OPENGL_LIBRARY} pthread)
+endif (WITH_OPENGL)
+
+if (WITH_SFML)
+    add_executable(demo_sfml examples/demo_sfml.cpp)
+    target_link_libraries(demo_sfml ${XCI_GRAPHICS_SFML_LIBRARY} pthread)
+endif (WITH_SFML)
+
 if (WITH_PANDA)
     add_executable(demo_panda examples/demo_panda.cpp)
     target_link_libraries(demo_panda
@@ -177,11 +224,6 @@ if (WITH_PANDA)
         ${XCI_GRAPHICS_PANDA_LIBRARY}
         pthread)
 endif (WITH_PANDA)
-
-if (WITH_SFML)
-    add_executable(demo_sfml examples/demo_sfml.cpp)
-    target_link_libraries(demo_sfml ${XCI_GRAPHICS_SFML_LIBRARY} pthread)
-endif (WITH_SFML)
 
 
 # ------------ #

@@ -12,7 +12,7 @@
 using namespace xci::text;
 using namespace xci::graphics;
 
-// text with forced newlines
+// sample text with forced newlines
 static const char * sample_text =
         "One morning, when Gregor Samsa\n\n"
         "woke from troubled dreams, he found\n\n"
@@ -28,15 +28,15 @@ static const char * sample_text =
 
 int main()
 {
+    Window window;
+    window.create({800, 600}, "XCI font demo");
+
     FontFace face;
     if (!face.load_from_file("fonts/Share_Tech_Mono/ShareTechMono-Regular.ttf", 0))
         return EXIT_FAILURE;
 
     Font font;
     font.add_face(face);
-
-    Window window;
-    window.create({800, 600}, "XCI font demo");
 
     Text text;
     text.set_string(sample_text);

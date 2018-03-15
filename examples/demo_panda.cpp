@@ -1,4 +1,4 @@
-// demo_panda.cpp - created by Radek Brich on 2018-03-07
+// demo_panda.cpp created on 2018-03-07, part of XCI toolkit
 //
 // Shows how to integrate with Panda3d
 
@@ -12,7 +12,7 @@
 #include <pandaFramework.h>
 #include <fontPool.h>
 
-// Beware, this may cause name collisions
+// Caution, this may cause name collisions
 using namespace xci::graphics;
 using namespace xci::text;
 
@@ -23,7 +23,7 @@ int main(int argc, char **argv)
     // Panda3D init
     PandaFramework framework;
     framework.open_framework(argc, argv);
-    framework.set_window_title("XCI Panda3D demo");
+    framework.set_window_title("XCI Panda3D Demo");
     framework.set_background_type(WindowFramework::BT_black);
     WindowFramework* window = framework.open_window();
 

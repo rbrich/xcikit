@@ -65,11 +65,15 @@ PandaSprites::add_sprite(const Vec2f& pos, const Rect_u& texrect, const Color& c
 
     auto tw = m_texture->get_x_size();
     auto th = m_texture->get_y_size();
+    auto tl = (float)texrect.left() / tw;
+    auto tr = (float)texrect.right() / tw;
+    auto tb = (float)texrect.bottom() / th;
+    auto tt = (float)texrect.top() / th;
     wtexcoord.set_row(start_vertex);
-    wtexcoord.add_data2f((float)texrect.right() / tw, (float)texrect.top()    / th);
-    wtexcoord.add_data2f((float)texrect.right() / tw, (float)texrect.bottom() / th);
-    wtexcoord.add_data2f((float)texrect.left()  / tw, (float)texrect.bottom() / th);
-    wtexcoord.add_data2f((float)texrect.left()  / tw, (float)texrect.top()    / th);
+    wtexcoord.add_data2f(tr, tt);
+    wtexcoord.add_data2f(tr, tb);
+    wtexcoord.add_data2f(tl, tb);
+    wtexcoord.add_data2f(tl, tt);
 
     // add a quad primitive (two triangles)
     m_trifans->add_consecutive_vertices(start_vertex, 4);
