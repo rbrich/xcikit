@@ -48,7 +48,7 @@ void gl_debug_callback( GLenum source,
                       const void* userParam )
 {
     log_debug("GL (type {}, severity {}): {}",
-             ( type == GL_DEBUG_TYPE_ERROR ? "ERROR" : std::to_string(type) ),
+             ( type == GL_DEBUG_TYPE_ERROR ? "ERROR" : std::to_string((int)type) ),
              severity, message );
 }
 
@@ -74,24 +74,25 @@ void GlWindow::create(const Vec2u& size, const std::string& title)
     // OpenGL 3.3 Core profile
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, true);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     m_window = glfwCreateWindow(size.x, size.y, title.c_str(),
                                 nullptr, nullptr);
     if (!m_window) {
         log_error("Couldn't create GLFW window...");
-        abort();
+        exit(1);
     }
     glfwMakeContextCurrent(m_window);
     glfwSetKeyCallback(m_window, key_callback);
 
-    GLenum err = glewInit();
-    if (GLEW_OK != err) {
-        log_error("Couldn't initialize GLEW: {}", glewGetErrorString(err));
-        abort();
+    if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
+        log_error("Couldn't initialize OpenGL...");
+        exit(1);
     }
-    log_info("Status: Using GLEW {}", glewGetString(GLEW_VERSION));
+    log_info("OpenGL {} GLSL {}",
+             glGetString(GL_VERSION),
+             glGetString(GL_SHADING_LANGUAGE_VERSION));
 
 #ifndef NDEBUG
     // https://www.khronos.org/opengl/wiki/OpenGL_Error

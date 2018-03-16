@@ -7,7 +7,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wno-reorder")
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
 
 option(WITH_OPENGL "Link with GLFW and build libxci-graphics-opengl." ON)
-option(WITH_SFML "Link with SFML and build libxci-graphics-sfml." ON)
+option(WITH_SFML "Link with SFML and build libxci-graphics-sfml." OFF)
 option(WITH_PANDA "Link with Panda3D and build libxci-graphics-panda." OFF)
 
 # ------------ #
@@ -91,9 +91,6 @@ set(RBP_LIBRARY rbp)
 
 # OpenGL
 if (WITH_OPENGL)
-    find_package(OpenGL REQUIRED)
-    find_package(GLEW REQUIRED)
-    # GLFW
     find_package(glfw3 3.2 REQUIRED)
 endif (WITH_OPENGL)
 
@@ -126,19 +123,14 @@ target_include_directories(${XCI_UTIL_LIBRARY} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR
 
 if (WITH_OPENGL)
     set(XCI_GRAPHICS_OPENGL_LIBRARY xci-graphics-opengl)
+    add_library(glad STATIC src/glad/glad.c src/glad/glad.h)
     add_library(${XCI_GRAPHICS_OPENGL_LIBRARY} STATIC
         ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_OPENGL_SOURCES})
     target_include_directories(${XCI_GRAPHICS_OPENGL_LIBRARY}
         PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
-        PRIVATE
-        ${OPENGL_INCLUDE_DIRS}
-        ${GLEW_INCLUDE_DIRS}
-        ${GLFW_INCLUDE_DIRS})
+        ${CMAKE_CURRENT_SOURCE_DIR}/src)
     target_link_libraries(${XCI_GRAPHICS_OPENGL_LIBRARY}
-        ${OPENGL_LIBRARIES}
-        ${GLEW_LIBRARIES}
-        ${GLFW_LIBRARIES})
+        dl glad glfw)
     set(XCI_GRAPHICS_LIBRARY ${XCI_GRAPHICS_OPENGL_LIBRARY})
 endif (WITH_OPENGL)
 

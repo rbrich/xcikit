@@ -19,7 +19,8 @@
 #include <xci/graphics/Sprites.h>
 #include <xci/graphics/Texture.h>
 
-#include <GL/glew.h>
+#include <glad/glad.h>
+
 #include <vector>
 
 namespace xci {

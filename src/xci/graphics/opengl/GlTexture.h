@@ -18,7 +18,7 @@
 
 #include <xci/graphics/Texture.h>
 
-#include <GL/glew.h>
+#include <glad/glad.h>
 
 namespace xci {
 namespace graphics {
