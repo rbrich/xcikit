@@ -77,7 +77,11 @@ set(XCI_TEXT_SOURCES
     src/xci/text/Markup.cpp
     src/xci/text/Markup.h
     src/xci/text/Style.cpp
-    src/xci/text/Style.h)
+    src/xci/text/Style.h
+    src/xci/text/layout/Page.cpp
+    src/xci/text/layout/Page.h
+    src/xci/text/layout/Element.cpp
+    src/xci/text/layout/Element.h)
 
 
 # ------------ #
