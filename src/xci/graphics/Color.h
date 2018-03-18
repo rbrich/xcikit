@@ -3,8 +3,11 @@
 #ifndef XCI_GRAPHICS_COLOR_H
 #define XCI_GRAPHICS_COLOR_H
 
+#include <cstdint>
+
 namespace xci {
 namespace graphics {
+
 
 struct Color {
     Color() = default;
@@ -28,6 +31,7 @@ struct Color {
     uint8_t b = 0;    // blue
     uint8_t a = 255;  // alpha
 };
+
 
 }} // namespace xci::graphics
 

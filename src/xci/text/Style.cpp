@@ -1,4 +1,4 @@
-// Text.cpp created on 2018-03-02, part of XCI toolkit
+// Style.cpp created on 2018-03-18, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,28 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "Text.h"
-#include "Markup.h"
+#include "Style.h"
 
-#include <xci/graphics/Sprites.h>
-
-namespace xci {
-namespace text {
-
-using namespace graphics;
-using namespace util;
-
-
-void Text::draw(View& target, const Vec2f& pos)
+void xci::text::Style::clear()
 {
-    if (!m_parsed) {
-        Markup markup(m_layout);
-        markup.parse(m_string);
-        m_parsed = true;
-    }
-    m_layout.typeset(target);
-    m_layout.draw(target, pos);
+    m_font = nullptr;
+    m_size = 0.04;
+    m_color = graphics::Color::White();
 }
-
-
-}} // namespace xci::text

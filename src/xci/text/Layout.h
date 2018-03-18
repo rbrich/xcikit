@@ -17,74 +17,270 @@
 #define XCI_TEXT_LAYOUT_H
 
 #include "Font.h"
+#include "Style.h"
 #include "../graphics/View.h"
 #include "../graphics/Color.h"
 #include "../util/geometry.h"
 
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace xci {
 namespace text {
+namespace layout {
 
 
-class LayoutWord;
-class LayoutSpan;
+class Word;
+class Span;
 class Layout;
 
 
-// Single word, consisting of letters (glyphs), font and style.
-class LayoutWord {
+using ElementIndex = size_t;
+
+
+enum class Alignment {
+    Left,
+    Right,
+    Center,
+    Justify,
+};
+
+
+class Page {
 public:
-    LayoutWord(const std::string& string,
-               Font* font,
-               float size = 0.04,
-               const graphics::Color& color = graphics::Color::White(),
-               const util::Vec2f& origin = {0, 0})
-        : m_string(string), m_font(font), m_size(size), m_color(color),
-          m_origin(origin) {}
+    explicit Page(Layout& layout);
 
-    void set_color(const graphics::Color& color) { m_color = color; }
-    const graphics::Color& color() const { return m_color; }
+    // Target view which will be queried for sizes
+    // If not set (nullptr), some generic, probably wrong sizes will be used.
+    void set_target(const graphics::View* target) { m_target = target; }
 
-    void set_origin(const util::Vec2f& origin) { m_origin = origin; }
+    // Reset all state
+    void clear();
 
-    // Measure text (metrics are affected by string, font, size)
-    struct Metrics {
-        util::Vec2f advance;
-        util::Rect_f bounds;
-    };
-    Metrics get_metrics() const;
+    // Acknowledge that we've started processing next element
+    void advance_element();
 
+    // Element index of next element to be typeset
+    ElementIndex element_index() const { return m_element_index; }
+
+    // ------------------------------------------------------------------------
+
+    // Text style
+    void set_font(Font* font) { m_style.set_font(font); }
+    void set_font_size(float size) { m_style.set_size(size); }
+    void set_color(const graphics::Color &color) { m_style.set_color(color); }
+    const Style& style() const { return m_style; }
+
+    // Set page width. This drives the line breaking.
+    // Default: 0 (same as INF - no line breaking)
+    void set_width(float width) { m_width = width; }
+    float width() const { return m_width; }
+
+    void set_alignment(Alignment alignment) { m_alignment = alignment; }
+    Alignment get_alignment() const { return m_alignment; }
+
+    void add_tab_stop(float x);
+    void reset_tab_stops() { m_tab_stops.clear(); }
+
+    // ------------------------------------------------------------------------
+
+    // Pen is a position in page where elements are printed
+    void set_pen(util::Vec2f pen) { m_pen = pen; }
+    const util::Vec2f& pen() const { return m_pen; }
+
+    // Advance pen. The relative coords should be positive, don't move back.
+    void advance_pen(util::Vec2f advance) { m_pen += advance; }
+
+    // Finish current line, apply alignment and move to next one.
+    // Does nothing if current line is empty.
+    void finish_line();
+
+    // Add vertical space.
+    void advance_line(float lines = 1.0f);
+
+    // Add a space after last word. Does nothing if current line is empty.
+    void add_space(float spaces = 1.0f);
+
+    // Put horizontal tab onto line. It takes all space up to next tabstop.
+    void add_tab();
+
+    // ------------------------------------------------------------------------
+
+    void set_element_bounds(const util::Rect_f& word_bounds);
+
+private:
+    float space_width();
+
+private:
+    Layout& m_layout;
+    const graphics::View* m_target = nullptr;
+
+    // running state
+    ElementIndex m_element_index = 0;
+    util::Vec2f m_pen;  // pen position
+    Style m_style;  // text style
+
+    // page attributes
+    float m_width = 0.0f;  // page width
+    Alignment m_alignment = Alignment::Left;  // horizontal alignment
+    std::vector<float> m_tab_stops;
+
+    // page content
+    std::vector<Span> m_lines;
+};
+
+
+class Element {
+public:
+    virtual void apply(Page& page) = 0;
+    virtual void draw(graphics::View& target, const util::Vec2f& pos) const {}
+};
+
+
+// ------------------------------------------------------------------------
+// Control elements - change page attributes
+
+class SetPageWidth: public Element {
+public:
+    explicit SetPageWidth(float width) : m_width(width) {}
+    void apply(Page& page) override {
+        page.set_width(m_width);
+    }
+
+private:
+    float m_width;
+};
+
+
+class SetAlignment: public Element {
+public:
+    explicit SetAlignment(Alignment alignment) : m_alignment(alignment) {}
+    void apply(Page& page) override {
+        page.set_alignment(m_alignment);
+    }
+
+private:
+    Alignment m_alignment;
+};
+
+
+class AddTabStop: public Element {
+public:
+    explicit AddTabStop(float tab_stop) : m_tab_stop(tab_stop) {}
+    void apply(Page& page) override {
+        page.add_tab_stop(m_tab_stop);
+    }
+
+private:
+    float m_tab_stop;
+};
+
+
+class ResetTabStops: public Element {
+public:
+    void apply(Page& page) override {
+        page.reset_tab_stops();
+    }
+};
+
+
+class SetFont: public Element {
+public:
+    explicit SetFont(Font* font) : m_font(font) {}
+    void apply(Page& page) override {
+        page.set_font(m_font);
+    }
+
+private:
+    Font* m_font;
+};
+
+
+class SetFontSize: public Element {
+public:
+    explicit SetFontSize(float size) : m_size(size) {}
+    void apply(Page& page) override {
+        page.set_font_size(m_size);
+    }
+
+private:
+    float m_size;
+};
+
+
+class SetColor: public Element {
+public:
+    explicit SetColor(graphics::Color color) : m_color(color) {}
+    void apply(Page& page) override {
+        page.set_color(m_color);
+    }
+
+private:
+    graphics::Color m_color;
+};
+
+
+// ------------------------------------------------------------------------
+// Text elements
+
+
+// Single word, consisting of letters (glyphs), font and style.
+class Word: public Element {
+public:
+    explicit Word(std::string string) : m_string(std::move(string)) {}
+
+    void apply(Page& page) override;
     void draw(graphics::View& target, const util::Vec2f& pos) const;
 
 private:
     std::string m_string;
-    Font* m_font;
-    float m_size;
-    graphics::Color m_color;
-    util::Vec2f m_origin;  // relative to page origin (top-left corner)
+    Style m_style;
+    util::Vec2f m_pos;  // relative to page origin (top-left corner)
+};
+
+
+class Space: public Element {
+public:
+    void apply(Page& page) override { page.add_space(); }
+};
+
+
+class Tab: public Element {
+public:
+    void apply(Page& page) override { page.add_tab(); }
+};
+
+
+class FinishLine: public Element {
+public:
+    void apply(Page& page) override { page.finish_line(); }
 };
 
 
 // Group of words, allowing mass editing and providing a bounding box
-class LayoutSpan {
+class Span
+{
 public:
-    using WordIndex = size_t;
-    static constexpr size_t invalid_index = ~0u;
+    static constexpr ElementIndex invalid_index = ~0u;
 
-    explicit LayoutSpan(Layout* m_layout, WordIndex begin);
+    explicit Span(ElementIndex begin) : m_begin(begin) {}
 
-    void set_end(WordIndex end) { m_end = end; }
+    void set_end(ElementIndex end) { m_end = end; }
 
-    WordIndex begin_index() const { return m_begin; }
-    WordIndex end_index() const { return m_end; }
+    ElementIndex begin_index() const { return m_begin; }
+
+    ElementIndex end_index() const { return m_end; }
 
     bool is_empty() const { return m_begin == m_end; }
-    bool is_open() const { return m_begin != invalid_index && m_end == invalid_index; }
+
+    bool is_open() const
+    {
+        return m_begin != invalid_index && m_end == invalid_index;
+    }
 
     // Restyle all words in span
-    void set_color(const graphics::Color &color);
+    //void set_color(const graphics::Color& color);
 
     // Retrieve adjusted (global) bounding box of the span.
     util::Rect_f get_bounds() const;
@@ -93,92 +289,91 @@ public:
     void add_padding(float radius);
 
 private:
-    friend class Layout;
+    friend class Page;
 
-    Layout *m_layout;
-    WordIndex m_begin;
-    WordIndex m_end = invalid_index;  // points after last work in STL fashion
+    ElementIndex m_begin;
+    ElementIndex m_end = invalid_index;  // points after last work in STL fashion
     util::Rect_f m_bounds;
 };
 
 
-// Push text into Layout, read back the positions of lines, words, glyphs
-// Drawing is done by other object, this handles just the placement.
-// Parsing text is also done by other object, here, any sequence of whitespace
-// characters is translated to a single space.
-class Layout {
+// Layout allows to record a stream of elements (text and control)
+// and then apply this stream of elements to generate precise positions
+// bounding boxes according to current View, and draw them into the View.
+class Layout
+{
 public:
-    Layout();
+    Layout() : m_page(*this) {}
+
+    // Clear all contents.
+    void clear();
+
+    // ------------------------------------------------------------------------
+    // Control elements
+    //
+    // The following methods add control elements into the stream.
+    // The new state will affect text elements added after this.
 
     // Set page width. This drives the line breaking.
     // Default: 0 (same as INF - no line breaking)
-    void set_width(float width) { m_width = width; force_reflow(); }
-    float get_width() const { return m_width; }
+    void set_page_width(float width);
 
-    // Set alignment
-    enum class Align {
-        Left,
-        Right,
-        Center,
-        Justify,
-    };
-    void set_align(Align alignment) { m_align = alignment; force_reflow(); }
-    Align get_align() const { return m_align; }
+    // Set text alignment
+    void set_alignment(Alignment alignment);
 
-    // Advance pen. The relative coords should be positive, don't move back.
-    void move_pen(float rx, float ry) { m_pen.x += rx; m_pen.y += ry; }
-
+    // Horizontal tab stops. Following Tab elements will add horizontal space
+    // up to next tab stop.
     void add_tab_stop(float x);
+    void reset_tab_stops();
 
-    // Set font and style to be recorded with every following word.
-    // Also affects spacing (which depends on font size).
-    void set_font(Font& font) { m_font = &font; }
+    // Set font and text style.
+    // Also affects spacing (which depends on font metrics).
+    void set_font(Font* font);
+    void set_font_size(float size);
+    void set_color(const graphics::Color &color);
 
-    void set_size(float size) { m_size = size; }
-    float size() const { return m_size; }
+    // ------------------------------------------------------------------------
+    // Text elements
 
-    void set_color(const graphics::Color &color) { m_color = color; }
-    const graphics::Color& color() const { return m_color; }
-
-    // Put a word on pen position.
-    void add_word(const std::string &string);
+    // Word should be actual word. Punctuation can be attached to it
+    // or pushed separately as another "word". No whitespace should be contained
+    // in the word, unless it is meant to behave as hard, unbreakable space.
+    void add_word(const std::string& string);
 
     // Add a space after last word. Does nothing if current line is empty.
-    void add_space();
+    void add_space() { m_elements.push_back(std::make_unique<Space>()); }
 
     // Put horizontal tab onto line. It takes all space up to next tabstop.
-    void add_tab();
+    void add_tab() { m_elements.push_back(std::make_unique<Tab>()); }
 
     // Finish current line, apply alignment and move to new one.
     // Does nothing if current line is empty.
-    void finish_line();
-
-    // Add vertical space. Before this, call `finish_line`.
-    void advance_lines(float lines = 1.0f);
+    void finish_line() { m_elements.push_back(std::make_unique<FinishLine>()); }
 
     // ------------------------------------------------------------------------
     // Spans allow to name part of the text and change its attributes later
+
+    friend struct Span;
 
     // Begin and end the span.
     // Returns false on error:
     // - Trying to begin a span of same name twice.
     // - Trying to end not-started span.
-    bool begin_span(const std::string &name);
-    bool end_span(const std::string &name);
+    bool begin_span(const std::string& name);
+
+    bool end_span(const std::string& name);
 
     // Returns NULL if the span does not exist.
-    LayoutSpan* get_span(const std::string &name);
-
-    friend struct LayoutSpan;
-
-    // Clear all contents. Style is preserved.
-    void clear();
+    Span* get_span(const std::string& name);
 
     // ------------------------------------------------------------------------
-    // Draw
+    // Typeset and draw
 
-    // Resize whole layout for target
-    void resize(const graphics::View& target);
+    // Typeset the element stream for the target, ie. compute element
+    // positions and sizes.
+    // Should be called on every change of framebuffer size
+    // and after addition of new elements.
+    void typeset(const graphics::View& target);
 
     // Draw whole layout to target
     void draw(graphics::View& target, const util::Vec2f& pos) const;
@@ -190,40 +385,18 @@ public:
     bool d_show_bounds = false;
 #endif
 
-protected:
-    float space_width() const;
-    float line_height() const;
-
-    // Recompute word sizes, spacing, lines etc.
-    // Must be called on every change of:
-    // - framebuffer size
-    // - font size
-    // - layout attributes: width, align
-    void reflow() {}
-    void force_reflow() { m_need_reflow = true; }
-
 private:
-    // pen position
-    util::Vec2f m_pen;
-
-    // text style
-    Font* m_font = nullptr;
-    float m_size = 0.04;
-    graphics::Color m_color = graphics::Color::White();
-
-    // page parameters
-    float m_width = 0.f;  // page width
-    Align m_align = Align::Left;  // horizontal alignment
-    std::vector<float> m_tab_stops;
-
-    // page content
-    std::vector<LayoutWord> m_words;
-    std::vector<LayoutSpan> m_lines;
-    std::map<std::string, LayoutSpan> m_spans;
-
-    bool m_need_reflow = true;
+    friend class Page;
+    Page m_page;
+    std::vector<std::unique_ptr<Element>> m_elements;
+    std::map<std::string, Span> m_spans;
 };
 
+
+} // namespace layout
+
+// Export Layout into xci::text namespace
+using layout::Layout;
 
 }} // namespace xci::text
 

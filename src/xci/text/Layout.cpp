@@ -20,53 +20,69 @@
 
 namespace xci {
 namespace text {
+namespace layout {
 
 
-LayoutWord::Metrics LayoutWord::get_metrics() const
+void Word::apply(Page& page)
 {
-    Metrics metrics;
-
-    // Word bounds are local, move by origin
-    metrics.bounds.x = m_origin.x;
-    metrics.bounds.y = m_origin.y;
-
-    m_font->set_size(unsigned(m_size * 600));
+    // Measure word (metrics are affected by string, font, size)
+    util::Vec2f advance;
+    util::Rect_f bounds;
+    auto* font = page.style().font();
+    font->set_size(unsigned(page.style().size() * 600));
     for (CodePoint code_point : m_string) {
-        auto glyph = m_font->get_glyph(code_point);
+        auto glyph = font->get_glyph(code_point);
 
         // Expand text bounds by glyph bounds
         util::Rect_f m;
-        m.x = m_origin.x + metrics.advance.x + glyph->base_x()/300.0f;
-        m.y = m_origin.y - glyph->base_y()/300.0f;
-        m.w = glyph->width()/300.0f;
-        m.h = glyph->height()/300.0f;  // ft_to_float(gm.height)
-        metrics.bounds.extend(m);
+        m.x = advance.x + glyph->base_x() / 300.0f;
+        m.y = 0.0f - glyph->base_y() / 300.0f;
+        m.w = glyph->width() / 300.0f;
+        m.h = glyph->height() / 300.0f;  // ft_to_float(gm.height)
+        bounds.extend(m);
 
-        metrics.advance.x += glyph->advance()/300.0f;
+        advance.x += glyph->advance() / 300.0f;
     }
-    return metrics;
+
+    // Check line end
+    if (page.width() > 0.0 && page.pen().x + advance.x > page.width()) {
+        page.finish_line();
+        page.advance_line();
+    }
+
+    // Set position according to pen
+    m_pos = page.pen();
+    bounds.x += m_pos.x;
+    bounds.y += m_pos.y;
+
+    page.set_element_bounds(bounds);
+    page.advance_pen(advance);
+
+    m_style = page.style();
 }
 
-void LayoutWord::draw(graphics::View& target, const util::Vec2f& pos) const
-{
-    if (!m_font)
-        return;
-    m_font->set_size(unsigned(m_size*600));
 
-    graphics::Sprites sprites(m_font->get_texture());
+void Word::draw(graphics::View& target, const util::Vec2f& pos) const
+{
+    auto* font = m_style.font();
+    if (!font)
+        return;
+    font->set_size(unsigned(m_style.size() * 600));
+
+    graphics::Sprites sprites(font->get_texture());
 
     Vec2f pen;
     for (CodePoint code_point : m_string) {
-        auto glyph = m_font->get_glyph(code_point);
+        auto glyph = font->get_glyph(code_point);
         if (glyph == nullptr)
             continue;
 
-        sprites.add_sprite({pen.x + glyph->base_x()/300.0f,
-                            pen.y - glyph->base_y()/300.0f,
-                            glyph->width()/300.0f,
-                            glyph->height()/300.0f},
+        sprites.add_sprite({pen.x + glyph->base_x() / 300.0f,
+                            pen.y - glyph->base_y() / 300.0f,
+                            glyph->width() / 300.0f,
+                            glyph->height() / 300.0f},
                            glyph->tex_coords(),
-                           m_color);
+                           m_style.color());
 
 #if 0
         sf::RectangleShape bbox;
@@ -83,35 +99,31 @@ void LayoutWord::draw(graphics::View& target, const util::Vec2f& pos) const
         target.draw(bbox, states);
 #endif
 
-        pen.x += glyph->advance()/300.0f;
+        pen.x += glyph->advance() / 300.0f;
     }
 
-    sprites.draw(target, pos + m_origin);
+    sprites.draw(target, pos + m_pos);
 }
 
 
 // ----------------------------------------------------------------------------
 
-
-LayoutSpan::LayoutSpan(Layout* m_layout, size_t begin)
-        : m_layout(m_layout), m_begin(begin)
-{
-    assert(m_layout != nullptr);
-}
-
-void LayoutSpan::set_color(const graphics::Color &color)
+/*
+void Span::set_color(const graphics::Color& color)
 {
     for (auto i = m_begin; i != m_end; i++) {
-        m_layout->m_words[i].set_color(color);
+        // FIXME
+        //m_layout->m_elements[i].set_color(color);
     }
 }
+*/
 
-util::Rect_f LayoutSpan::get_bounds() const
+util::Rect_f Span::get_bounds() const
 {
     return m_bounds;
 }
 
-void LayoutSpan::add_padding(float radius)
+void Span::add_padding(float radius)
 {
     m_bounds.enlarge(radius);
 }
@@ -120,112 +132,17 @@ void LayoutSpan::add_padding(float radius)
 // ----------------------------------------------------------------------------
 
 
-Layout::Layout()
-{
-    m_lines.emplace_back(this, 0);
-}
-
-
 void Layout::clear()
 {
-    m_pen = {0, 0};
-    m_words.clear();
-    m_lines = {LayoutSpan(this, 0)};
+    m_page.clear();
+    m_elements.clear();
     m_spans.clear();
-}
-
-
-void Layout::add_tab_stop(float x)
-{
-    m_tab_stops.push_back(x);
-    std::sort(m_tab_stops.begin(), m_tab_stops.end());
-}
-
-
-void Layout::add_word(const std::string &string)
-{
-    // Prepare the word
-    LayoutWord word(string, m_font, m_size, m_color, m_pen);
-    auto metrics = word.get_metrics();
-
-    // Check line end
-    if (m_width > 0.0 && m_pen.x + metrics.advance.x > m_width) {
-        finish_line();
-        word.set_origin(m_pen);
-        metrics = word.get_metrics();
-    }
-
-    auto& line = m_lines.back();
-    if (line.is_empty()) {
-        line.m_bounds = {m_pen.x, m_pen.y, 0, 0};
-    }
-    line.m_bounds.extend(metrics.bounds);
-
-    m_words.push_back(std::move(word));
-    size_t word_index = m_words.size();
-    line.set_end(word_index);
-    m_pen += metrics.advance;
-
-    // Add the word to currently open spans
-    for (auto &span_pair : m_spans) {
-        auto &span = span_pair.second;
-        if (span.is_open()) {
-            if (span.begin_index() == word_index) {
-                span.m_bounds = metrics.bounds;
-            } else {
-                span.m_bounds.extend(metrics.bounds);
-            }
-        }
-    }
-}
-
-
-void Layout::add_space()
-{
-    if (m_lines.back().is_empty())
-        return;
-    m_pen.x += space_width();
-}
-
-
-void Layout::add_tab()
-{
-    // apply tab stops
-    auto tab_stop = m_tab_stops.begin();
-    float x = 0;
-    while (x < m_pen.x && tab_stop != m_tab_stops.end()) {
-        x = *tab_stop++;
-    }
-    // apply generic tabs
-    if (x < m_pen.x) {
-        float tab_size = 8 * space_width();
-        while (x < m_pen.x)
-            x += tab_size;
-    }
-    // move to new position
-    m_pen.x = x;
-}
-
-
-void Layout::finish_line()
-{
-    if (m_lines.back().is_empty())
-        return;
-    m_lines.emplace_back(this, m_words.size());
-    m_pen.x = 0;
-    m_pen.y += line_height();
-}
-
-
-void Layout::advance_lines(float lines)
-{
-    m_pen.y += lines * line_height();
 }
 
 
 bool Layout::begin_span(const std::string& name)
 {
-    auto result = m_spans.emplace(name, LayoutSpan(this, m_words.size()));
+    auto result = m_spans.emplace(name, Span(m_elements.size()));
     return result.second;  // false if already existed
 }
 
@@ -235,12 +152,12 @@ bool Layout::end_span(const std::string& name)
     auto iter = m_spans.find(name);
     if (iter == m_spans.end())
         return false;  // does not exist
-    iter->second.set_end(m_words.size());
+    iter->second.set_end(m_elements.size());
     return true;
 }
 
 
-LayoutSpan* Layout::get_span(const std::string& name)
+Span* Layout::get_span(const std::string& name)
 {
     auto iter = m_spans.find(name);
     if (iter == m_spans.end())
@@ -249,18 +166,25 @@ LayoutSpan* Layout::get_span(const std::string& name)
 }
 
 
-void Layout::resize(const graphics::View& target)
+void Layout::typeset(const graphics::View& target)
 {
-    if (m_need_reflow)
-        reflow();
+    // TODO: detect if target size changed and don't clear page if it didn't
+    m_page.clear();
+    m_page.set_target(&target);
 
+    for (auto elem = m_elements.begin() + m_page.element_index();
+         elem != m_elements.end(); elem++)
+    {
+        (*elem)->apply(m_page);
+        m_page.advance_element();
+    }
 }
 
 
 void Layout::draw(graphics::View& target, const util::Vec2f& pos) const
 {
-    for (auto& word : m_words) {
-        word.draw(target, pos);
+    for (auto& elem : m_elements) {
+        elem->draw(target, pos);
 
 #if 0
         sf::CircleShape basepoint(2);
@@ -295,18 +219,152 @@ void Layout::draw(graphics::View& target, const util::Vec2f& pos) const
     }
 }
 
-float Layout::space_width() const
+
+void Layout::set_page_width(float width)
 {
-    LayoutWord word(" ", m_font, m_size);
-    auto metrics = word.get_metrics();
-    return metrics.advance.x;
+    m_elements.push_back(std::make_unique<SetPageWidth>(width));
 }
 
-float Layout::line_height() const
+void Layout::set_alignment(Alignment alignment)
 {
-    m_font->set_size(unsigned(m_size*600));
-    return m_font->line_height()/300.0f;
+    m_elements.push_back(std::make_unique<SetAlignment>(alignment));
+}
+
+void Layout::add_tab_stop(float x)
+{
+    m_elements.push_back(std::make_unique<AddTabStop>(x));
+}
+
+void Layout::reset_tab_stops()
+{
+    m_elements.push_back(std::make_unique<ResetTabStops>());
+}
+
+void Layout::set_font(Font* font)
+{
+    m_elements.push_back(std::make_unique<SetFont>(font));
+}
+
+void Layout::set_font_size(float size)
+{
+    m_elements.push_back(std::make_unique<SetFontSize>(size));
+}
+
+void Layout::set_color(const graphics::Color& color)
+{
+    m_elements.push_back(std::make_unique<SetColor>(color));
+}
+
+void Layout::add_word(const std::string& string)
+{
+    m_elements.push_back(std::make_unique<Word>(string));
 }
 
 
-}} // namespace xci::text
+Page::Page(Layout& layout)
+    : m_layout(layout)
+{
+    m_lines.emplace_back(0);
+}
+
+
+void Page::clear()
+{
+    m_element_index = 0;
+    m_pen = {0, 0};
+    m_style.clear();
+    m_width = 0;
+    m_alignment = Alignment::Left;
+    m_tab_stops.clear();
+    m_lines.clear();
+    m_lines.emplace_back(0);
+}
+
+
+void Page::advance_element()
+{
+    m_element_index++;
+    m_lines.back().set_end(m_element_index);
+}
+
+
+void Page::add_tab_stop(float x)
+{
+    m_tab_stops.push_back(x);
+    std::sort(m_tab_stops.begin(), m_tab_stops.end());
+}
+
+void Page::finish_line()
+{
+    if (m_lines.back().is_empty())
+        return;
+    m_lines.emplace_back(m_element_index);
+    m_pen.x = 0;
+    advance_line();
+}
+
+void Page::advance_line(float lines)
+{
+    auto* font = m_style.font();
+    font->set_size(unsigned(m_style.size() * 600));
+    float line_height = font->line_height() / 300.0f;
+    m_pen.y += lines * line_height;
+}
+
+void Page::add_space(float spaces)
+{
+    if (m_lines.back().is_empty())
+        return;
+    m_pen.x += space_width();
+}
+
+void Page::add_tab()
+{
+    // apply tab stops
+    auto tab_stop = m_tab_stops.begin();
+    float x = 0;
+    while (x < m_pen.x && tab_stop != m_tab_stops.end()) {
+        x = *tab_stop++;
+    }
+    // apply generic tabs
+    if (x < m_pen.x) {
+        float tab_size = 8 * space_width();
+        while (x < m_pen.x)
+            x += tab_size;
+    }
+    // move to new position
+    m_pen.x = x;
+}
+
+float Page::space_width()
+{
+    auto* font = m_style.font();
+    font->set_size(unsigned(m_style.size() * 600));
+    auto glyph = font->get_glyph(' ');
+    return glyph->advance() / 300.0f;
+}
+
+void Page::set_element_bounds(const util::Rect_f& word_bounds)
+{
+    // Extend line bounds
+    auto& line = m_lines.back();
+    if (line.is_empty()) {
+        line.m_bounds = word_bounds;
+    } else {
+        line.m_bounds.extend(word_bounds);
+    }
+
+    // Extend bounds of relevant spans
+    for (auto& span_pair : m_layout.m_spans) {
+        auto& span = span_pair.second;
+        if (span.begin_index() == m_element_index) {
+            span.m_bounds = word_bounds;
+        } else
+        if (span.begin_index() > m_element_index && span.end_index() <= m_element_index) {
+            span.m_bounds.extend(word_bounds);
+        }
+    }
+}
+
+
+}}} // namespace xci::text::layout

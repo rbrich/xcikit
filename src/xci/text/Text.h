@@ -32,9 +32,9 @@ namespace text {
 class Text {
 public:
     void set_string(const std::string& string) { m_string = string; }
-    void set_width(float width) { m_layout.set_width(width); }
-    void set_font(Font& font) { m_layout.set_font(font); }
-    void set_size(float size) { m_layout.set_size(size); }
+    void set_width(float width) { m_layout.set_page_width(width); }
+    void set_font(Font& font) { m_layout.set_font(&font); }
+    void set_size(float size) { m_layout.set_font_size(size); }
     void set_color(const graphics::Color& color) { m_layout.set_color(color); }
 
     void draw(graphics::View& target, const util::Vec2f& pos);

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 project(xcikit)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wno-reorder")
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
@@ -75,7 +75,9 @@ set(XCI_TEXT_SOURCES
     src/xci/text/Layout.cpp
     src/xci/text/Layout.h
     src/xci/text/Markup.cpp
-    src/xci/text/Markup.h)
+    src/xci/text/Markup.h
+    src/xci/text/Style.cpp
+    src/xci/text/Style.h)
 
 
 # ------------ #
