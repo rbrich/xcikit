@@ -56,8 +56,11 @@ void main() {
 )~~~";
 
 
-GlView::GlView()
+GlView::GlView(Vec2u pixel_size)
+    : m_pixel_size(pixel_size)
 {
+    resize(pixel_size);
+
     // compile vertex shader
     GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex_shader, 1, &c_vertex_shader, nullptr);
@@ -141,6 +144,23 @@ GlView::GlView()
         log_debug("shader active uniform: {}", name.c_str());
     }
 #endif
+}
+
+
+void GlView::resize(Vec2u pixel_size)
+{
+    // Decide between vert+/hor+ depending on screen orientation.
+    if (pixel_size.x < pixel_size.y) {
+        // preserve screen width
+        float aspect = float(pixel_size.y) / float(pixel_size.x);
+        m_size = {2.0f, 2.0f * aspect};
+    } else {
+        // preserve screen height
+        float aspect = float(pixel_size.x) / float(pixel_size.y);
+        m_size = {2.0f * aspect, 2.0f};
+    }
+
+    m_pixel_size = pixel_size;
 }
 
 

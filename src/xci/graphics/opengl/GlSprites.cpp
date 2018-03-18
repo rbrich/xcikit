@@ -32,29 +32,29 @@ using namespace xci::util::log;
 GlSprites::GlSprites(const Texture& texture) : m_texture(texture) {}
 
 
-void GlSprites::add_sprite(const Vec2f& pos, const Color& color)
+void GlSprites::add_sprite(const Rect_f& rect, const Color& color)
 {
-    add_sprite(pos, {0, 0, m_texture.width(), m_texture.height()}, color);
+    auto ts = m_texture.size();
+    add_sprite(rect, {0, 0, ts.x, ts.y}, color);
 }
 
 
 // Position a sprite with cutoff from the texture
-void GlSprites::add_sprite(const Vec2f& pos, const Rect_u& texrect, const Color& color)
+void GlSprites::add_sprite(const Rect_f& rect, const Rect_u& texrect, const Color& color)
 {
-    float x1 = pos.x;
-    float y1 = -pos.y;
-    float x2 = pos.x + texrect.w;
-    float y2 = -pos.y - texrect.h;
+    float x1 = rect.x;
+    float y1 = -rect.y;
+    float x2 = rect.x + rect.w;
+    float y2 = -rect.y - rect.h;
     float r = color.red_f();
     float g = color.green_f();
     float b = color.blue_f();
     float a = color.alpha_f();
-    float tw = m_texture.width();
-    float th = m_texture.height();
-    float tl = (float)texrect.left() / tw;
-    float tr = (float)texrect.right() / tw;
-    float tb = (float)texrect.bottom() / th;
-    float tt = (float)texrect.top() / th;
+    auto ts = m_texture.size();
+    float tl = (float)texrect.left() / ts.x;
+    float tr = (float)texrect.right() / ts.x;
+    float tb = (float)texrect.bottom() / ts.y;
+    float tt = (float)texrect.top() / ts.y;
     GLushort i = (GLushort) m_vertex_data.size();
     m_vertex_data.push_back({x2, y1, r, g, b, a, tr, tt});
     m_vertex_data.push_back({x2, y2, r, g, b, a, tr, tb});
@@ -111,8 +111,8 @@ void GlSprites::draw(View& view, const Vec2f& pos)
                           sizeof(Vertex), (void*) (sizeof(GLfloat) * 6));
 
     // projection matrix
-    GLfloat xs = 2.0f / 800;
-    GLfloat ys = 2.0f / 600;
+    GLfloat xs = 2.0f / view.size().x;
+    GLfloat ys = 2.0f / view.size().y;
     GLfloat xt = pos.x * xs;
     GLfloat yt = pos.y * ys;
     const GLfloat mvp[] = {

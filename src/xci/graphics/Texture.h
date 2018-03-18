@@ -4,15 +4,16 @@
 #define XCI_GRAPHICS_TEXTURE_H
 
 #include <xci/util/geometry.h>
-using xci::util::Vec2u;
-using xci::util::Rect_u;
 
 #include <memory>
 #include <cstdint>
-using std::uint8_t;
 
 namespace xci {
 namespace graphics {
+
+using xci::util::Vec2u;
+using xci::util::Rect_u;
+using std::uint8_t;
 
 
 class Texture {
@@ -25,8 +26,7 @@ public:
     bool create(unsigned int width, unsigned int height);
     void update(const uint8_t* pixels, const Rect_u& region);
 
-    unsigned int width() const;
-    unsigned int height() const;
+    Vec2u size() const;
 
     class Impl;
     const Impl& impl() const { return *m_impl; }

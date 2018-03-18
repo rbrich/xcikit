@@ -34,13 +34,14 @@ public:
     void create(const Vec2u& size, const std::string& title);
     void display(std::function<void(View& view)> draw_fn);
 
-    View create_view();
-
     // access native handles
     GLFWwindow* glfw_window() { return m_window; }
 
 private:
+    void setup_view();
+
     GLFWwindow* m_window;
+    std::unique_ptr<View> m_view;
 };
 
 class Window::Impl : public GlWindow {};

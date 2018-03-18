@@ -30,14 +30,10 @@ void PandaTexture::update(const uint8_t* pixels, const Rect_u& region)
     }
 }
 
-unsigned int PandaTexture::width() const
+Vec2u PandaTexture::size() const
 {
-    return (unsigned) m_texture->get_x_size();
-}
-
-unsigned int PandaTexture::height() const
-{
-    return (unsigned) m_texture->get_y_size();
+    return {(unsigned int) m_texture->get_x_size(),
+            (unsigned int) m_texture->get_y_size()};
 }
 
 

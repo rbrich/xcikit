@@ -27,6 +27,7 @@ using namespace util;
 
 void Text::draw(View& target, const Vec2f& pos)
 {
+    m_layout.resize(target);
     if (!m_parsed) {
         Markup markup(m_layout);
         markup.parse(m_string);

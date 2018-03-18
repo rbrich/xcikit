@@ -70,9 +70,10 @@ bool FontTexture::add_glyph(const FT_Bitmap& bitmap, Rect_u& coords)
 
 void FontTexture::clear()
 {
-    m_binpack.Init(m_texture.width(), m_texture.height());
-    std::vector<uint8_t> buffer(m_texture.width() * m_texture.height());
-    m_texture.update(buffer.data(), {0, 0, m_texture.width(), m_texture.height()});
+    auto ts = m_texture.size();
+    m_binpack.Init(ts.x, ts.y);
+    std::vector<uint8_t> buffer(ts.x * ts.y);
+    m_texture.update(buffer.data(), {0, 0, ts.x, ts.y});
 }
 
 

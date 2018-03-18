@@ -28,8 +28,10 @@ void SfmlTexture::update(const uint8_t* pixels, const Rect_u& region)
     m_texture.update(buffer.data(), region.w, region.h, region.x, region.y);
 }
 
-unsigned int SfmlTexture::width() const { return m_texture.getSize().x; }
-unsigned int SfmlTexture::height() const { return m_texture.getSize().y; }
+Vec2u SfmlTexture::size() const
+{
+    return {m_texture.getSize().x, m_texture.getSize().y};
+}
 
 
 }} // namespace xci::graphics

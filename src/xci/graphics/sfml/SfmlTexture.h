@@ -16,8 +16,7 @@ public:
     bool create(unsigned int width, unsigned int height);
     void update(const uint8_t* pixels, const Rect_u& region);
 
-    unsigned int width() const;
-    unsigned int height() const;
+    Vec2u size() const;
 
     // access native handle
     const sf::Texture& sfml_texture() const { return m_texture; }

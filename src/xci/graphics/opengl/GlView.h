@@ -26,17 +26,26 @@ namespace graphics {
 
 class GlView {
 public:
-    GlView();
+    GlView(Vec2u pixel_size);
+
+    void resize(Vec2u pixel_size);
+    Vec2f size() const { return m_size; }
+    Vec2u pixel_size() const { return m_pixel_size; }
 
     // access native handles
     GLuint gl_program() { return m_program; }
 
 private:
+    Vec2f m_size;       // eg. {2.666, 2.0}
+    Vec2u m_pixel_size; // eg. {800, 600}
     GLuint m_program;
 };
 
 
-class View::Impl : public GlView {};
+class View::Impl : public GlView {
+public:
+    explicit Impl(Vec2u size) : GlView(size) {}
+};
 
 
 }} // namespace xci::graphics

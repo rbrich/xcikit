@@ -8,11 +8,11 @@ Sprites::~Sprites() = default;
 Sprites::Sprites(Sprites&&) = default;
 Sprites& Sprites::operator=(Sprites&&) = default;
 
-void Sprites::add_sprite(const Vec2f& pos, const Color& color)
-{ m_impl->add_sprite(pos, color); }
+void Sprites::add_sprite(const Rect_f& rect, const Color& color)
+{ m_impl->add_sprite(rect, color); }
 
-void Sprites::add_sprite(const Vec2f& pos, const Rect_u& texrect, const Color& color)
-{ m_impl->add_sprite(pos, texrect, color); }
+void Sprites::add_sprite(const Rect_f& rect, const Rect_u& texrect, const Color& color)
+{ m_impl->add_sprite(rect, texrect, color); }
 
 void Sprites::draw(View& view, const Vec2f& pos)
 { m_impl->draw(view, pos); }

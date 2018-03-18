@@ -50,8 +50,7 @@ void GlTexture::update(const uint8_t* pixels, const Rect_u& region)
                     GL_RED, GL_UNSIGNED_BYTE, pixels);
 }
 
-unsigned int GlTexture::width() const { return m_size.x; }
-unsigned int GlTexture::height() const { return m_size.y; }
+Vec2u GlTexture::size() const { return m_size; }
 
 
 }} // namespace xci::graphics

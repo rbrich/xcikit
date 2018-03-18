@@ -27,8 +27,6 @@ public:
     void create(const Vec2u& size, const std::string& title);
     void display(std::function<void(View& view)> draw_fn);
 
-    View create_view();
-
     class Impl;
     const Impl& impl() const { return *m_impl; }
     Impl* impl_ptr() { return m_impl.get(); }

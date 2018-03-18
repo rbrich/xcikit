@@ -85,6 +85,7 @@ void GlWindow::create(const Vec2u& size, const std::string& title)
     }
     glfwMakeContextCurrent(m_window);
     glfwSetKeyCallback(m_window, key_callback);
+    glfwSetWindowUserPointer(m_window, this);
 
     if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
         log_error("Couldn't initialize OpenGL...");
@@ -104,26 +105,28 @@ void GlWindow::create(const Vec2u& size, const std::string& title)
 
 void GlWindow::display(std::function<void(View& view)> draw_fn)
 {
-    int width, height;
-    glfwGetFramebufferSize(m_window, &width, &height);
-    glViewport(0, 0, width, height);
-
-    View view = create_view();
+    setup_view();
 
     while (!glfwWindowShouldClose(m_window)) {
         glClear(GL_COLOR_BUFFER_BIT);
-        draw_fn(view);
+        draw_fn(*m_view);
         glfwSwapBuffers(m_window);
         glfwPollEvents();
     }
 }
 
 
-View GlWindow::create_view()
+void GlWindow::setup_view()
 {
-    View view;
-    // ...
-    return view;
+    int width, height;
+    glfwGetFramebufferSize(m_window, &width, &height);
+    glViewport(0, 0, width, height);
+    m_view.reset(new View({(unsigned int) width, (unsigned int) height}));
+
+    glfwSetFramebufferSizeCallback(m_window, [](GLFWwindow* win, int w, int h) {
+        auto self = (GlWindow*) glfwGetWindowUserPointer(win);
+        self->m_view->resize({(uint) w, (uint) h});
+    });
 }
 
 

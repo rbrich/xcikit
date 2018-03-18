@@ -31,8 +31,8 @@ class GlSprites {
 public:
     explicit GlSprites(const Texture& texture);
 
-    void add_sprite(const Vec2f& pos, const Color& color);
-    void add_sprite(const Vec2f& pos, const Rect_u& texrect, const Color& color);
+    void add_sprite(const Rect_f& rect, const Color& color);
+    void add_sprite(const Rect_f& rect, const Rect_u& texrect, const Color& color);
     void draw(View& view, const Vec2f& pos);
 
 private:

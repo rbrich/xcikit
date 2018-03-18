@@ -38,7 +38,7 @@ class LayoutWord {
 public:
     LayoutWord(const std::string& string,
                Font* font,
-               unsigned size = 12,
+               float size = 0.04,
                const graphics::Color& color = graphics::Color::White(),
                const util::Vec2f& origin = {0, 0})
         : m_string(string), m_font(font), m_size(size), m_color(color),
@@ -61,7 +61,7 @@ public:
 private:
     std::string m_string;
     Font* m_font;
-    unsigned m_size;
+    float m_size;
     graphics::Color m_color;
     util::Vec2f m_origin;  // relative to page origin (top-left corner)
 };
@@ -110,12 +110,9 @@ class Layout {
 public:
     Layout();
 
-    // Clear all state, start over.
-    void clear();
-
     // Set page width. This drives the line breaking.
     // Default: 0 (same as INF - no line breaking)
-    void set_width(float width) { m_width = width; reflow(); }
+    void set_width(float width) { m_width = width; force_reflow(); }
     float get_width() const { return m_width; }
 
     // Set alignment
@@ -125,12 +122,11 @@ public:
         Center,
         Justify,
     };
-    void set_align(Align alignment) { align = alignment; realign(); }
-    Align get_align() const { return align; }
+    void set_align(Align alignment) { m_align = alignment; force_reflow(); }
+    Align get_align() const { return m_align; }
 
     // Advance pen. The relative coords should be positive, don't move back.
-    void move_pen(float rx, float ry) { pen.x += rx; pen.y += ry; }
-    const util::Vec2f &get_pen() const { return pen; }
+    void move_pen(float rx, float ry) { m_pen.x += rx; m_pen.y += ry; }
 
     void add_tab_stop(float x);
 
@@ -138,8 +134,8 @@ public:
     // Also affects spacing (which depends on font size).
     void set_font(Font& font) { m_font = &font; }
 
-    void set_size(unsigned size) { m_size = size; }
-    unsigned size() const { return m_size; }
+    void set_size(float size) { m_size = size; }
+    float size() const { return m_size; }
 
     void set_color(const graphics::Color &color) { m_color = color; }
     const graphics::Color& color() const { return m_color; }
@@ -175,9 +171,16 @@ public:
 
     friend struct LayoutSpan;
 
+    // Clear all contents. Style is preserved.
+    void clear();
+
     // ------------------------------------------------------------------------
     // Draw
 
+    // Resize whole layout for target
+    void resize(const graphics::View& target);
+
+    // Draw whole layout to target
     void draw(graphics::View& target, const util::Vec2f& pos) const;
 
     // ------------------------------------------------------------------------
@@ -187,18 +190,30 @@ public:
     bool d_show_bounds = false;
 #endif
 
+protected:
+    float space_width() const;
+    float line_height() const;
+
+    // Recompute word sizes, spacing, lines etc.
+    // Must be called on every change of:
+    // - framebuffer size
+    // - font size
+    // - layout attributes: width, align
+    void reflow() {}
+    void force_reflow() { m_need_reflow = true; }
+
 private:
     // pen position
-    util::Vec2f pen;
+    util::Vec2f m_pen;
 
     // text style
     Font* m_font = nullptr;
-    unsigned m_size = 12;
+    float m_size = 0.04;
     graphics::Color m_color = graphics::Color::White();
 
     // page parameters
     float m_width = 0.f;  // page width
-    Align align = Align::Left;  // horizontal alignment
+    Align m_align = Align::Left;  // horizontal alignment
     std::vector<float> m_tab_stops;
 
     // page content
@@ -206,14 +221,7 @@ private:
     std::vector<LayoutSpan> m_lines;
     std::map<std::string, LayoutSpan> m_spans;
 
-    float space_width() const;
-    float line_height() const;
-
-    // Apply new alignment on already laid out text
-    void realign() {}
-
-    // Apply new page witdth on already laid out text
-    void reflow() {}
+    bool m_need_reflow = true;
 };
 
 

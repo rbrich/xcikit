@@ -11,6 +11,7 @@
 #include <memory>
 
 using xci::util::Rect_u;
+using xci::util::Rect_f;
 using xci::util::Vec2f;
 
 namespace xci {
@@ -24,13 +25,17 @@ public:
     Sprites(Sprites&&);
     Sprites& operator=(Sprites&&);
 
-    // Position a sprite with whole texture
-    void add_sprite(const Vec2f& pos, const Color& color);
+    // Add new sprite containing whole texture
+    // `rect` defines position and size of the sprite
+    void add_sprite(const Rect_f& rect, const Color& color);
 
-    // Position a sprite with cutoff from the texture
-    void add_sprite(const Vec2f& pos, const Rect_u& texrect,
+    // Add new sprite containing a cutoff from the texture
+    // `rect` defines position and size of the sprite
+    void add_sprite(const Rect_f& rect, const Rect_u& texrect,
                     const Color& color);
 
+    // Draw all sprites to `view` at `pos`.
+    // Final sprite position is `pos` + sprite's relative position
     void draw(View& view, const Vec2f& pos);
 
     class Impl;

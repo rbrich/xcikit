@@ -172,6 +172,7 @@ target_include_directories(${XCI_TEXT_LIBRARY} PUBLIC
     ${FREETYPE_INCLUDE_DIRS}
     ${PEGTL_INCLUDE_DIRS})
 target_link_libraries(${XCI_TEXT_LIBRARY}
+    ${XCI_GRAPHICS_LIBRARY}
     ${XCI_UTIL_LIBRARY}
     ${FREETYPE_LIBRARIES}
     ${RBP_LIBRARY})
@@ -189,13 +190,11 @@ target_link_libraries(demo_thread ${XCI_TEXT_LIBRARY} pthread)
 
 add_executable(demo_font examples/demo_font.cpp)
 target_link_libraries(demo_font
-    ${XCI_GRAPHICS_LIBRARY}
     ${XCI_TEXT_LIBRARY}
     pthread)
 
 add_executable(demo_layout examples/demo_layout.cpp)
 target_link_libraries(demo_layout
-    ${XCI_GRAPHICS_LIBRARY}
     ${XCI_TEXT_LIBRARY}
     pthread)
 

@@ -26,6 +26,8 @@
 namespace xci {
 namespace text {
 
+using xci::util::Rect_u;
+
 // Places glyphs into a texture
 
 class FontTexture {
@@ -39,7 +41,7 @@ public:
     FontTexture& operator =(const FontTexture&) = delete;
 
     // Returns actual size of texture
-    unsigned int get_size() { return m_texture.height(); }
+    unsigned int get_size() { return m_texture.size().y; }
 
     // Insert a glyph bitmap into texture, get texture coords
     // Returns false when there is no space.
