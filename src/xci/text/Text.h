@@ -31,18 +31,21 @@ namespace text {
 // Text rendering - convenient combination of Layout and Markup
 class Text {
 public:
-    void set_string(const std::string& string) { m_string = string; }
-    void set_width(float width) { m_layout.set_page_width(width); }
-    void set_font(Font& font) { m_layout.set_font(&font); }
-    void set_size(float size) { m_layout.set_font_size(size); }
-    void set_color(const graphics::Color& color) { m_layout.set_color(color); }
+    Text() = default;
+    Text(const std::string &string, Font& font);
+
+    void set_string(const std::string& string);
+    void set_fixed_string(const std::string& string);
+
+    void set_width(float width) { m_layout.set_default_page_width(width); }
+    void set_font(Font& font) { m_layout.set_default_font(&font); }
+    void set_size(float size) { m_layout.set_default_font_size(size); }
+    void set_color(const graphics::Color& color) { m_layout.set_default_color(color); }
 
     void draw(graphics::View& target, const util::Vec2f& pos);
 
 private:
     Layout m_layout;
-    std::string m_string;
-    bool m_parsed = false;
 };
 
 

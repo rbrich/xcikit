@@ -64,6 +64,7 @@ public:
     void set_font(Font* font) { m_style.set_font(font); }
     void set_font_size(float size) { m_style.set_size(size); }
     void set_color(const graphics::Color &color) { m_style.set_color(color); }
+    void set_style(const Style& style) { m_style = style; }
     const Style& style() const { return m_style; }
 
     // Set page width. This drives the line breaking.

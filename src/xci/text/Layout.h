@@ -83,6 +83,12 @@ public:
     // Clear all contents.
     void clear();
 
+    // These are not affected by `clear`
+    void set_default_page_width(float width);
+    void set_default_font(Font* font);
+    void set_default_font_size(float size);
+    void set_default_color(const graphics::Color &color);
+
     // ------------------------------------------------------------------------
     // Control elements
     //
@@ -165,6 +171,9 @@ private:
     Page m_page;
     std::vector<std::unique_ptr<Element>> m_elements;
     std::map<std::string, Span> m_spans;
+
+    Style m_default_style;
+    float m_default_width = 0;
 };
 
 

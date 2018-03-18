@@ -38,7 +38,7 @@ public:
 
 private:
     Font* m_font = nullptr;
-    float m_size = 0.04;
+    float m_size = 0.05;
     graphics::Color m_color = graphics::Color::White();
 };
 

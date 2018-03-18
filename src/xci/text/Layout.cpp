@@ -55,6 +55,34 @@ void Layout::clear()
 }
 
 
+void Layout::set_default_page_width(float width)
+{
+    m_default_width = width;
+    m_page.clear();
+}
+
+
+void Layout::set_default_font(Font* font)
+{
+    m_default_style.set_font(font);
+    m_page.clear();
+}
+
+
+void Layout::set_default_font_size(float size)
+{
+    m_default_style.set_size(size);
+    m_page.clear();
+}
+
+
+void Layout::set_default_color(const graphics::Color& color)
+{
+    m_default_style.set_color(color);
+    m_page.clear();
+}
+
+
 bool Layout::begin_span(const std::string& name)
 {
     auto result = m_spans.emplace(name, Span(m_elements.size()));
@@ -86,6 +114,8 @@ void Layout::typeset(const graphics::View& target)
     // TODO: detect if target size changed and don't clear page if it didn't
     m_page.clear();
     m_page.set_target(&target);
+    m_page.set_width(m_default_width);
+    m_page.set_style(m_default_style);
 
     for (auto elem = m_elements.begin() + m_page.element_index();
          elem != m_elements.end(); elem++)

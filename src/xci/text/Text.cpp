@@ -25,13 +25,30 @@ using namespace graphics;
 using namespace util;
 
 
+Text::Text(const std::string &string, Font& font)
+{
+    m_layout.set_default_font(&font);
+    set_string(string);
+}
+
+
+void Text::set_string(const std::string& string)
+{
+    m_layout.clear();
+    Markup markup(m_layout);
+    markup.parse(string);
+}
+
+
+void Text::set_fixed_string(const std::string& string)
+{
+    m_layout.clear();
+    m_layout.add_word(string);
+}
+
+
 void Text::draw(View& target, const Vec2f& pos)
 {
-    if (!m_parsed) {
-        Markup markup(m_layout);
-        markup.parse(m_string);
-        m_parsed = true;
-    }
     m_layout.typeset(target);
     m_layout.draw(target, pos);
 }

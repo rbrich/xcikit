@@ -204,6 +204,9 @@ target_link_libraries(demo_layout
     ${XCI_TEXT_LIBRARY}
     pthread)
 
+add_executable(demo_coords examples/demo_coords.cpp)
+target_link_libraries(demo_coords ${XCI_TEXT_LIBRARY})
+
 if (WITH_OPENGL)
     add_executable(demo_opengl examples/demo_opengl.cpp)
     target_link_libraries(demo_opengl ${XCI_GRAPHICS_OPENGL_LIBRARY} pthread)

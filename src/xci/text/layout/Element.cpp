@@ -24,10 +24,15 @@ namespace layout {
 
 void Word::apply(Page& page)
 {
+    auto* font = page.style().font();
+    if (!font) {
+        assert(!"Font is not set!");
+        return;
+    }
+
     // Measure word (metrics are affected by string, font, size)
     util::Vec2f advance;
     util::Rect_f bounds;
-    auto* font = page.style().font();
     auto pxr = page.target_pixel_ratio();
     font->set_size(unsigned(m_style.size() * pxr.y));
     for (CodePoint code_point : m_string) {
@@ -64,8 +69,11 @@ void Word::apply(Page& page)
 void Word::draw(graphics::View& target, const util::Vec2f& pos) const
 {
     auto* font = m_style.font();
-    if (!font)
+    if (!font) {
+        assert(!"Font is not set!");
         return;
+    }
+
     auto pxr = target.pixel_ratio();
     font->set_size(unsigned(m_style.size() * pxr.y));
 

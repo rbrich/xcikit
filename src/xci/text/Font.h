@@ -52,6 +52,7 @@ public:
 
     // Select a size for current face. This may create a new texture (glyph table).
     void set_size(unsigned size) { m_size = size; }
+    unsigned size() const { return m_size; }
 
     struct GlyphKey {
         FontFace* font_face;
