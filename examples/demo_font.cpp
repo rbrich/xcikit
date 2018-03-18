@@ -41,19 +41,19 @@ int main()
     Text text;
     text.set_string(sample_text);
     text.set_font(font);
-    text.set_size(1.0f/30);
+    text.set_size(0.08);
     text.set_color(Color::White());
 
     window.display([&](View& view){
-        text.draw(view, {-0.333f, -0.333f});
+        text.draw(view, {0.5f * view.size().x - 2.0f, -0.5f});
 
         auto& tex = font.get_texture();
         Sprites font_texture(tex);
-        font_texture.add_sprite({0, 0,
-                                 tex.size().x * view.size().x / view.pixel_size().x,
-                                 tex.size().y * view.size().y / view.pixel_size().y},
-                                Color::White());
-        font_texture.draw(view, {-1.0f, -0.666f});
+        Rect_f rect = {0, 0,
+                       tex.size().x / view.pixel_ratio().x,
+                       tex.size().y / view.pixel_ratio().y};
+        font_texture.add_sprite(rect, Color::White());
+        font_texture.draw(view, {-0.5f * view.size().x + 0.01f, -0.5f * rect.h});
     });
     return EXIT_SUCCESS;
 }

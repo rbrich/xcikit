@@ -24,7 +24,7 @@ public:
 
     void resize(Vec2u pixel_size);
 
-    // View size in display units.
+    // Size of the view in display units.
     // These units are similar to base OpenGL coordinates, but with aspect
     // ratio correction. Center is {0,0}, bottom-left might be {-1.333, -1},
     // top-right might be {1.333, 1} (depending on aspect ratio). Total size
@@ -32,9 +32,16 @@ public:
     // Eg: {2.666, 2.0} for 800x600 (4/3 aspect ratio)
     Vec2f size() const;
 
-    // View size in framebuffer pixels.
+    // Size of the view in framebuffer pixels.
     // This is used for pixel-perfect font rendering.
     Vec2u pixel_size() const;
+
+    // Size of unit square (1x1 display units) in pixels.
+    Vec2f pixel_ratio() const {
+        auto p = pixel_size();
+        auto u = size();
+        return {p.x / u.x, p.y / u.y};
+    }
 
     class Impl;
     Impl& impl() { return *m_impl; }

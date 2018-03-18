@@ -126,6 +126,7 @@ void GlWindow::setup_view()
     glfwSetFramebufferSizeCallback(m_window, [](GLFWwindow* win, int w, int h) {
         auto self = (GlWindow*) glfwGetWindowUserPointer(win);
         self->m_view->resize({(uint) w, (uint) h});
+        glViewport(0, 0, w, h);
     });
 }
 

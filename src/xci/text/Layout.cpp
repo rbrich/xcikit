@@ -140,39 +140,64 @@ void Layout::set_page_width(float width)
     m_elements.push_back(std::make_unique<SetPageWidth>(width));
 }
 
+
 void Layout::set_alignment(Alignment alignment)
 {
     m_elements.push_back(std::make_unique<SetAlignment>(alignment));
 }
+
 
 void Layout::add_tab_stop(float x)
 {
     m_elements.push_back(std::make_unique<AddTabStop>(x));
 }
 
+
 void Layout::reset_tab_stops()
 {
     m_elements.push_back(std::make_unique<ResetTabStops>());
 }
+
 
 void Layout::set_font(Font* font)
 {
     m_elements.push_back(std::make_unique<SetFont>(font));
 }
 
+
 void Layout::set_font_size(float size)
 {
     m_elements.push_back(std::make_unique<SetFontSize>(size));
 }
+
 
 void Layout::set_color(const graphics::Color& color)
 {
     m_elements.push_back(std::make_unique<SetColor>(color));
 }
 
+
 void Layout::add_word(const std::string& string)
 {
     m_elements.push_back(std::make_unique<Word>(string));
+}
+
+
+void Layout::add_space()
+{
+    m_elements.push_back(std::make_unique<Space>());
+}
+
+
+void Layout::add_tab()
+{
+    m_elements.push_back(std::make_unique<Tab>());
+}
+
+
+void Layout::finish_line()
+{
+    m_elements.push_back(std::make_unique<FinishLine>());
 }
 
 

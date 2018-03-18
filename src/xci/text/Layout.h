@@ -116,14 +116,14 @@ public:
     void add_word(const std::string& string);
 
     // Add a space after last word. Does nothing if current line is empty.
-    void add_space() { m_elements.push_back(std::make_unique<Space>()); }
+    void add_space();
 
     // Put horizontal tab onto line. It takes all space up to next tabstop.
-    void add_tab() { m_elements.push_back(std::make_unique<Tab>()); }
+    void add_tab();
 
     // Finish current line, apply alignment and move to new one.
     // Does nothing if current line is empty.
-    void finish_line() { m_elements.push_back(std::make_unique<FinishLine>()); }
+    void finish_line();
 
     // ------------------------------------------------------------------------
     // Spans allow to name part of the text and change its attributes later

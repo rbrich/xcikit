@@ -28,6 +28,15 @@ Page::Page(Layout& layout)
 }
 
 
+util::Vec2f Page::target_pixel_ratio() const
+{
+    if (!m_target)
+        return {300, 300};
+
+    return m_target->pixel_ratio();
+}
+
+
 void Page::clear()
 {
     m_element_index = 0;
@@ -68,8 +77,9 @@ void Page::finish_line()
 void Page::advance_line(float lines)
 {
     auto* font = m_style.font();
-    font->set_size(unsigned(m_style.size() * 600));
-    float line_height = font->line_height() / 300.0f;
+    auto pxr = target_pixel_ratio();
+    font->set_size(unsigned(m_style.size() * pxr.y));
+    float line_height = font->line_height() / pxr.y;
     m_pen.y += lines * line_height;
 }
 
@@ -127,9 +137,10 @@ void Page::set_element_bounds(const util::Rect_f& word_bounds)
 float Page::space_width()
 {
     auto* font = m_style.font();
-    font->set_size(unsigned(m_style.size() * 600));
+    auto pxr = target_pixel_ratio();
+    font->set_size(unsigned(m_style.size() * pxr.y));
     auto glyph = font->get_glyph(' ');
-    return glyph->advance() / 300.0f;
+    return glyph->advance() / pxr.x;
 }
 
 

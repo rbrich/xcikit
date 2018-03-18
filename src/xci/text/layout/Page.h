@@ -19,6 +19,7 @@
 #include "../Font.h"
 #include "../Style.h"
 #include "../../graphics/View.h"
+#include "../../util/geometry.h"
 
 #include <vector>
 
@@ -46,6 +47,7 @@ public:
     // Target view which will be queried for sizes
     // If not set (nullptr), some generic, probably wrong sizes will be used.
     void set_target(const graphics::View* target) { m_target = target; }
+    util::Vec2f target_pixel_ratio() const;
 
     // Reset all state
     void clear();

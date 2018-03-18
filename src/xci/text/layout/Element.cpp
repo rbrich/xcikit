@@ -28,25 +28,25 @@ void Word::apply(Page& page)
     util::Vec2f advance;
     util::Rect_f bounds;
     auto* font = page.style().font();
-    font->set_size(unsigned(page.style().size() * 600));
+    auto pxr = page.target_pixel_ratio();
+    font->set_size(unsigned(m_style.size() * pxr.y));
     for (CodePoint code_point : m_string) {
         auto glyph = font->get_glyph(code_point);
 
         // Expand text bounds by glyph bounds
         util::Rect_f m;
-        m.x = advance.x + glyph->base_x() / 300.0f;
-        m.y = 0.0f - glyph->base_y() / 300.0f;
-        m.w = glyph->width() / 300.0f;
-        m.h = glyph->height() / 300.0f;  // ft_to_float(gm.height)
+        m.x = advance.x + glyph->base_x() / pxr.x;
+        m.y = 0.0f - glyph->base_y() / pxr.y;
+        m.w = glyph->width() / pxr.x;
+        m.h = glyph->height() / pxr.y;  // ft_to_float(gm.height)
         bounds.extend(m);
 
-        advance.x += glyph->advance() / 300.0f;
+        advance.x += glyph->advance() / pxr.x;
     }
 
     // Check line end
     if (page.width() > 0.0 && page.pen().x + advance.x > page.width()) {
         page.finish_line();
-        page.advance_line();
     }
 
     // Set position according to pen
@@ -66,7 +66,8 @@ void Word::draw(graphics::View& target, const util::Vec2f& pos) const
     auto* font = m_style.font();
     if (!font)
         return;
-    font->set_size(unsigned(m_style.size() * 600));
+    auto pxr = target.pixel_ratio();
+    font->set_size(unsigned(m_style.size() * pxr.y));
 
     graphics::Sprites sprites(font->get_texture());
 
@@ -76,10 +77,10 @@ void Word::draw(graphics::View& target, const util::Vec2f& pos) const
         if (glyph == nullptr)
             continue;
 
-        sprites.add_sprite({pen.x + glyph->base_x() / 300.0f,
-                            pen.y - glyph->base_y() / 300.0f,
-                            glyph->width() / 300.0f,
-                            glyph->height() / 300.0f},
+        sprites.add_sprite({pen.x + glyph->base_x() / pxr.x,
+                            pen.y - glyph->base_y() / pxr.y,
+                            glyph->width() / pxr.x,
+                            glyph->height() / pxr.y},
                            glyph->tex_coords(),
                            m_style.color());
 
@@ -98,7 +99,7 @@ void Word::draw(graphics::View& target, const util::Vec2f& pos) const
         target.draw(bbox, states);
 #endif
 
-        pen.x += glyph->advance() / 300.0f;
+        pen.x += glyph->advance() / pxr.x;
     }
 
     sprites.draw(target, pos + m_pos);
