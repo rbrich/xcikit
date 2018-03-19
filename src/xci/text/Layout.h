@@ -20,9 +20,9 @@
 #include "layout/Element.h"
 #include "Font.h"
 #include "Style.h"
-#include "../graphics/View.h"
-#include "../graphics/Color.h"
-#include "../util/geometry.h"
+#include <xci/graphics/View.h>
+#include <xci/graphics/Color.h>
+#include <xci/util/geometry.h>
 
 #include <string>
 #include <utility>

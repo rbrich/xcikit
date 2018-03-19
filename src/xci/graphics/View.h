@@ -14,13 +14,12 @@ using xci::util::Vec2u;
 using xci::util::Vec2f;
 
 
-class View
-{
+class View {
 public:
-    View(Vec2u pixel_size);
+    explicit View(Vec2u pixel_size);
     ~View();
-    View(View&&);
-    View& operator=(View&&);
+    View(View&&) noexcept;
+    View& operator=(View&&) noexcept;
 
     void resize(Vec2u pixel_size);
 

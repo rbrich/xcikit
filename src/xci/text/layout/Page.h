@@ -16,10 +16,10 @@
 #ifndef XCI_TEXT_LAYOUT_PAGE_H
 #define XCI_TEXT_LAYOUT_PAGE_H
 
-#include "../Font.h"
-#include "../Style.h"
-#include "../../graphics/View.h"
-#include "../../util/geometry.h"
+#include <xci/text/Font.h>
+#include <xci/text/Style.h>
+#include <xci/graphics/View.h>
+#include <xci/util/geometry.h>
 
 #include <vector>
 

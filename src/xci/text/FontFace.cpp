@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <xci/text/FontFace.h>
+#include "FontFace.h"
 #include <xci/util/log.h>
 
 namespace xci {

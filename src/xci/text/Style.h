@@ -17,7 +17,7 @@
 #define XCI_TEXT_STYLE_H
 
 #include "Font.h"
-#include "../graphics/Color.h"
+#include <xci/graphics/Color.h>
 
 namespace xci {
 namespace text {

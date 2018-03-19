@@ -16,7 +16,7 @@
 #ifndef XCI_GRAPHICS_GL_VIEW_H
 #define XCI_GRAPHICS_GL_VIEW_H
 
-#include "../View.h"
+#include <xci/graphics/View.h>
 
 #include <glad/glad.h>
 
@@ -26,7 +26,7 @@ namespace graphics {
 
 class GlView {
 public:
-    GlView(Vec2u pixel_size);
+    explicit GlView(Vec2u pixel_size);
     ~GlView();
 
     void resize(Vec2u pixel_size);
@@ -34,12 +34,14 @@ public:
     Vec2u pixel_size() const { return m_pixel_size; }
 
     // access native handles
-    GLuint gl_program() { return m_program; }
+    GLuint gl_program_rectangle();
+    GLuint gl_program_sprite();
 
 private:
     Vec2f m_size;       // eg. {2.666, 2.0}
     Vec2u m_pixel_size; // eg. {800, 600}
-    GLuint m_program;
+    GLuint m_rectangle_program = 0;
+    GLuint m_sprite_program = 0;
 };
 
 

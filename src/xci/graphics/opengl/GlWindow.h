@@ -26,6 +26,7 @@
 namespace xci {
 namespace graphics {
 
+
 class GlWindow {
 public:
     GlWindow();
@@ -44,7 +45,9 @@ private:
     std::unique_ptr<View> m_view;
 };
 
+
 class Window::Impl : public GlWindow {};
+
 
 }} // namespace xci::graphics
 

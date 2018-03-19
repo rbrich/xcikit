@@ -15,11 +15,14 @@
 
 #include "Element.h"
 
-#include "../../graphics/Sprites.h"
+#include <xci/graphics/Sprites.h>
+#include <xci/util/geometry.h>
 
 namespace xci {
 namespace text {
 namespace layout {
+
+using xci::util::Vec2f;
 
 
 void Word::apply(Page& page)

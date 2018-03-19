@@ -22,6 +22,8 @@ set(XCI_UTIL_SOURCES
 
 set(XCI_GRAPHICS_SOURCES
     src/xci/graphics/Color.h
+    src/xci/graphics/Rectangles.h
+    src/xci/graphics/Rectangles.inl
     src/xci/graphics/Texture.h
     src/xci/graphics/Texture.inl
     src/xci/graphics/Sprites.h
@@ -32,10 +34,12 @@ set(XCI_GRAPHICS_SOURCES
     src/xci/graphics/Window.inl)
 
 set(XCI_GRAPHICS_OPENGL_SOURCES
-    src/xci/graphics/opengl/GlTexture.cpp
-    src/xci/graphics/opengl/GlTexture.h
+    src/xci/graphics/opengl/GlRectangles.cpp
+    src/xci/graphics/opengl/GlRectangles.h
     src/xci/graphics/opengl/GlSprites.cpp
     src/xci/graphics/opengl/GlSprites.h
+    src/xci/graphics/opengl/GlTexture.cpp
+    src/xci/graphics/opengl/GlTexture.h
     src/xci/graphics/opengl/GlView.cpp
     src/xci/graphics/opengl/GlView.h
     src/xci/graphics/opengl/GlWindow.cpp
@@ -136,6 +140,7 @@ if (WITH_OPENGL)
         PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/src)
     target_link_libraries(${XCI_GRAPHICS_OPENGL_LIBRARY}
+        ${XCI_UTIL_LIBRARY}
         dl glad glfw)
     set(XCI_GRAPHICS_LIBRARY ${XCI_GRAPHICS_OPENGL_LIBRARY})
 endif (WITH_OPENGL)
@@ -150,6 +155,7 @@ if (WITH_SFML)
         PRIVATE
             ${SFML_INCLUDE_DIR})
     target_link_libraries(${XCI_GRAPHICS_SFML_LIBRARY}
+        ${XCI_UTIL_LIBRARY}
         ${SFML_LIBRARIES})
     set(XCI_GRAPHICS_LIBRARY ${XCI_GRAPHICS_SFML_LIBRARY})
 endif (WITH_SFML)
@@ -165,6 +171,7 @@ if (WITH_PANDA)
         ${PANDA3D_INCLUDE_DIRS}
         ${PYTHON_INCLUDE_DIRS})
     target_link_libraries(${XCI_GRAPHICS_PANDA_LIBRARY}
+        ${XCI_UTIL_LIBRARY}
         ${PANDA3D_LIBRARIES})
     if (NOT DEFINED XCI_GRAPHICS_LIBRARY)
         set(XCI_GRAPHICS_LIBRARY ${XCI_GRAPHICS_PANDA_LIBRARY})
@@ -188,42 +195,7 @@ target_link_libraries(${XCI_TEXT_LIBRARY}
 # Examples     #
 # ------------ #
 
-add_executable(demo_logger examples/demo_logger.cpp)
-target_link_libraries(demo_logger ${XCI_UTIL_LIBRARY})
-
-add_executable(demo_thread examples/demo_thread.cpp)
-target_link_libraries(demo_thread ${XCI_TEXT_LIBRARY} pthread)
-
-add_executable(demo_font examples/demo_font.cpp)
-target_link_libraries(demo_font
-    ${XCI_TEXT_LIBRARY}
-    pthread)
-
-add_executable(demo_layout examples/demo_layout.cpp)
-target_link_libraries(demo_layout
-    ${XCI_TEXT_LIBRARY}
-    pthread)
-
-add_executable(demo_coords examples/demo_coords.cpp)
-target_link_libraries(demo_coords ${XCI_TEXT_LIBRARY})
-
-if (WITH_OPENGL)
-    add_executable(demo_opengl examples/demo_opengl.cpp)
-    target_link_libraries(demo_opengl ${XCI_GRAPHICS_OPENGL_LIBRARY} pthread)
-endif (WITH_OPENGL)
-
-if (WITH_SFML)
-    add_executable(demo_sfml examples/demo_sfml.cpp)
-    target_link_libraries(demo_sfml ${XCI_GRAPHICS_SFML_LIBRARY} pthread)
-endif (WITH_SFML)
-
-if (WITH_PANDA)
-    add_executable(demo_panda examples/demo_panda.cpp)
-    target_link_libraries(demo_panda
-        ${XCI_TEXT_LIBRARY}
-        ${XCI_GRAPHICS_PANDA_LIBRARY}
-        pthread)
-endif (WITH_PANDA)
+add_subdirectory(examples)
 
 
 # ------------ #

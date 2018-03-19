@@ -26,7 +26,7 @@ namespace graphics {
 using namespace xci::util::log;
 
 
-static const char* c_vertex_shader = R"~~~(
+static const char* c_sprite_vertex_shader = R"~~~(
 #version 330
 
 uniform mat4 u_mvp;
@@ -45,7 +45,7 @@ void main() {
 }
 )~~~";
 
-static const char* c_fragment_shader = R"~~~(
+static const char* c_sprite_fragment_shader = R"~~~(
 #version 330
 
 uniform sampler2D u_texture;
@@ -57,19 +57,52 @@ out vec4 o_color;
 
 void main() {
     float alpha = texture(u_texture, v_tex_coord).r;
-    o_color = v_color * vec4(1.0, 1.0, 1.0, alpha);
+    o_color = vec4(v_color.rgb, v_color.a * alpha);
 }
 )~~~";
 
 
-GlView::GlView(Vec2u pixel_size)
-    : m_pixel_size(pixel_size)
-{
-    resize(pixel_size);
+static const char* c_rectangle_vertex_shader = R"~~~(
+#version 330
 
+uniform mat4 u_mvp;
+
+in vec2 a_position;
+in vec2 a_tex_coord;
+
+out vec2 v_tex_coord;
+
+void main() {
+    gl_Position = u_mvp * vec4(a_position, 0.0, 1.0);
+    v_tex_coord = a_tex_coord;
+}
+)~~~";
+
+static const char* c_rectangle_fragment_shader = R"~~~(
+#version 330
+
+uniform vec4 u_fill_color;
+uniform vec4 u_outline_color;
+
+in vec2 v_tex_coord;
+
+out vec4 o_color;
+
+void main() {
+    // >1 = outline, <1 = fill
+    float edge = max(abs(v_tex_coord.x), abs(v_tex_coord.y));
+    float alpha = step(1, edge);
+    o_color = mix(u_fill_color, u_outline_color, alpha);
+}
+)~~~";
+
+
+static GLuint compile_program(const char* vertex_source,
+                              const char* fragment_source)
+{
     // compile vertex shader
     GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex_shader, 1, &c_vertex_shader, nullptr);
+    glShaderSource(vertex_shader, 1, &vertex_source, nullptr);
     glCompileShader(vertex_shader);
 
     // check compilation result
@@ -86,7 +119,7 @@ GlView::GlView(Vec2u pixel_size)
 
     // compile fragment shader
     GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment_shader, 1, &c_fragment_shader, nullptr);
+    glShaderSource(fragment_shader, 1, &fragment_source, nullptr);
     glCompileShader(fragment_shader);
 
     // check compilation result
@@ -100,32 +133,32 @@ GlView::GlView(Vec2u pixel_size)
         exit(1);
     }
 
-    m_program = glCreateProgram();
-    glAttachShader(m_program, vertex_shader);
-    glAttachShader(m_program, fragment_shader);
+    GLuint program = glCreateProgram();
+    glAttachShader(program, vertex_shader);
+    glAttachShader(program, fragment_shader);
 
     // fixed attribute locations for VBO
-    glBindAttribLocation(m_program, 0, "a_position");
-    glBindAttribLocation(m_program, 1, "a_color");
-    glBindAttribLocation(m_program, 2, "a_tex_coord");
+    glBindAttribLocation(program, 0, "a_position");
+    glBindAttribLocation(program, 1, "a_color");
+    glBindAttribLocation(program, 2, "a_tex_coord");
 
     // link program
-    glLinkProgram(m_program);
+    glLinkProgram(program);
 
     // check link status
-    glGetProgramiv(m_program, GL_LINK_STATUS, &result);
+    glGetProgramiv(program, GL_LINK_STATUS, &result);
     if (result == GL_FALSE) {
         int length;
-        glGetProgramiv(m_program, GL_INFO_LOG_LENGTH, &length);
+        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length);
         std::string error_message(length + 1, '\0');
-        glGetProgramInfoLog(m_program, length, nullptr, &error_message[0]);
+        glGetProgramInfoLog(program, length, nullptr, &error_message[0]);
         log_error("shader program error: {}", error_message.c_str());
         exit(1);
     }
 
     // cleanup
-    glDetachShader(m_program, vertex_shader);
-    glDetachShader(m_program, fragment_shader);
+    glDetachShader(program, vertex_shader);
+    glDetachShader(program, fragment_shader);
 
     glDeleteShader(vertex_shader);
     glDeleteShader(fragment_shader);
@@ -133,35 +166,45 @@ GlView::GlView(Vec2u pixel_size)
 #ifndef NDEBUG
     // dump attributes
     GLint n, max_len;
-    glGetProgramiv(m_program, GL_ACTIVE_ATTRIBUTES, &n);
-    glGetProgramiv(m_program, GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, &max_len);
+    glGetProgramiv(program, GL_ACTIVE_ATTRIBUTES, &n);
+    glGetProgramiv(program, GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, &max_len);
     for (GLuint i = 0; i < (GLuint)n; i++) {
         GLsizei length;
         GLint size;
         GLenum type;
         std::string name(max_len, '\0');
-        glGetActiveAttrib(m_program, i, max_len, &length, &size, &type, &name[0]);
+        glGetActiveAttrib(program, i, max_len, &length, &size, &type, &name[0]);
         log_debug("shader active attribute: {}", name.c_str());
     }
 
     // dump uniforms
-    glGetProgramiv(m_program, GL_ACTIVE_UNIFORMS, &n);
-    glGetProgramiv(m_program, GL_ACTIVE_UNIFORM_MAX_LENGTH, &max_len);
+    glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &n);
+    glGetProgramiv(program, GL_ACTIVE_UNIFORM_MAX_LENGTH, &max_len);
     for (GLuint i = 0; i < (GLuint)n; i++) {
         GLsizei length;
         GLint size;
         GLenum type;
         std::string name(max_len, '\0');
-        glGetActiveUniform(m_program, i, max_len, &length, &size, &type, &name[0]);
+        glGetActiveUniform(program, i, max_len, &length, &size, &type, &name[0]);
         log_debug("shader active uniform: {}", name.c_str());
     }
 #endif
+
+    return program;
+}
+
+
+GlView::GlView(Vec2u pixel_size)
+    : m_pixel_size(pixel_size)
+{
+    resize(pixel_size);
 }
 
 
 GlView::~GlView()
 {
-    glDeleteProgram(m_program);
+    glDeleteProgram(m_sprite_program);
+    glDeleteProgram(m_rectangle_program);
 }
 
 
@@ -179,6 +222,28 @@ void GlView::resize(Vec2u pixel_size)
     }
 
     m_pixel_size = pixel_size;
+}
+
+
+GLuint GlView::gl_program_rectangle()
+{
+    if (!m_rectangle_program) {
+        m_rectangle_program = compile_program(
+                c_rectangle_vertex_shader,
+                c_rectangle_fragment_shader);
+    }
+    return m_rectangle_program;
+}
+
+
+GLuint GlView::gl_program_sprite()
+{
+    if (!m_sprite_program) {
+        m_sprite_program = compile_program(
+                c_sprite_vertex_shader,
+                c_sprite_fragment_shader);
+    }
+    return m_sprite_program;
 }
 
 

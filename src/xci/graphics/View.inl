@@ -5,8 +5,8 @@ namespace graphics {
 // Forward to View::Impl
 View::View(Vec2u pixel_size) : m_impl(new Impl(pixel_size)) {}
 View::~View() = default;
-View::View(View&&) = default;
-View& View::operator=(View&&) = default;
+View::View(View&&) noexcept = default;
+View& View::operator=(View&&) noexcept = default;
 
 void View::resize(Vec2u pixel_size) { m_impl->resize(pixel_size); }
 

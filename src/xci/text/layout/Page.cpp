@@ -14,7 +14,7 @@
 // limitations under the License.
 
 #include "Page.h"
-#include "../Layout.h"
+#include <xci/text/Layout.h>
 
 namespace xci {
 namespace text {

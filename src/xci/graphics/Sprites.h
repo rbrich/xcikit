@@ -10,20 +10,23 @@
 
 #include <memory>
 
+namespace xci {
+namespace graphics {
+
 using xci::util::Rect_u;
 using xci::util::Rect_f;
 using xci::util::Vec2f;
 
-namespace xci {
-namespace graphics {
-
+// A collection of sprites (ie. alpha-blended textured quads)
+// sharing the same texture. Each sprite can display different
+// part of the texture.
 
 class Sprites {
 public:
     explicit Sprites(const Texture& texture);
     ~Sprites();
-    Sprites(Sprites&&);
-    Sprites& operator=(Sprites&&);
+    Sprites(Sprites&&) noexcept;
+    Sprites& operator=(Sprites&&) noexcept;
 
     // Add new sprite containing whole texture
     // `rect` defines position and size of the sprite

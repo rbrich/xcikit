@@ -4,10 +4,7 @@
 #define XCI_GRAPHICS_WINDOW_H
 
 #include <xci/graphics/View.h>
-
 #include <xci/util/geometry.h>
-using xci::util::Vec2u;
-using xci::util::Vec2f;
 
 #include <string>
 #include <memory>
@@ -16,13 +13,16 @@ using xci::util::Vec2f;
 namespace xci {
 namespace graphics {
 
+using xci::util::Vec2u;
+using xci::util::Vec2f;
+
 
 class Window {
 public:
     Window();
     ~Window();
-    Window(Window&&);
-    Window& operator=(Window&&);
+    Window(Window&&) noexcept;
+    Window& operator=(Window&&) noexcept;
 
     void create(const Vec2u& size, const std::string& title);
     void display(std::function<void(View& view)> draw_fn);

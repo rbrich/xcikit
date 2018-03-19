@@ -20,8 +20,8 @@ class Texture {
 public:
     Texture();
     ~Texture();
-    Texture(Texture&&);
-    Texture& operator=(Texture&&);
+    Texture(Texture&&) noexcept;
+    Texture& operator=(Texture&&) noexcept;
 
     bool create(unsigned int width, unsigned int height);
     void update(const uint8_t* pixels, const Rect_u& region);

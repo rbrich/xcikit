@@ -37,7 +37,6 @@ public:
 private:
     GLuint m_texture = 0;
     Vec2u m_size;
-    bool m_smooth = false;
 };
 
 

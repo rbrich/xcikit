@@ -89,7 +89,7 @@ int main()
         size_pixel.draw(view, {-0.4f, -0.4f});
 
         auto pr = view.pixel_ratio();
-        size_ratio.set_fixed_string("Pixel ratio: 1.0 = "
+        size_ratio.set_fixed_string("Pixel ratio: 1x1 = "
                                     + format("{} x {}", pr.x, pr.y));
         size_ratio.draw(view, {-0.4f, -0.3f});
 
