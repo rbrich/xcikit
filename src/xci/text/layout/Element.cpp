@@ -80,7 +80,7 @@ void Word::draw(graphics::View& target, const util::Vec2f& pos) const
     auto pxr = target.pixel_ratio();
     font->set_size(unsigned(m_style.size() * pxr.y));
 
-    graphics::Sprites sprites(font->get_texture());
+    graphics::Sprites sprites(font->get_texture(), m_style.color());
 
     Vec2f pen;
     for (CodePoint code_point : m_string) {
@@ -92,8 +92,7 @@ void Word::draw(graphics::View& target, const util::Vec2f& pos) const
                             pen.y - glyph->base_y() / pxr.y,
                             glyph->width() / pxr.x,
                             glyph->height() / pxr.y},
-                           glyph->tex_coords(),
-                           m_style.color());
+                           glyph->tex_coords());
 
 #if 0
         sf::RectangleShape bbox;

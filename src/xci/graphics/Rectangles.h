@@ -28,7 +28,6 @@ using xci::util::Vec2f;
 
 // A collection of plain rectangles. Each rectangle may have
 // different size and outline width, but colors are uniform.
-// The rectangles are alpha blended.
 
 class Rectangles {
 public:

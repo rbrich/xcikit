@@ -66,7 +66,7 @@ int main()
         Rect_f rect = {0, 0,
                        tex.size().x / view.pixel_ratio().x,
                        tex.size().y / view.pixel_ratio().y};
-        font_texture.add_sprite(rect, Color::White());
+        font_texture.add_sprite(rect);
         font_texture.draw(view, {-0.5f * view.size().x + 0.01f, -0.5f * rect.h});
     });
     return EXIT_SUCCESS;

@@ -32,16 +32,13 @@ static const char* c_sprite_vertex_shader = R"~~~(
 uniform mat4 u_mvp;
 
 in vec2 a_position;
-in vec4 a_color;
 in vec2 a_tex_coord;
 
-out vec4 v_color;
 out vec2 v_tex_coord;
 
 void main() {
     gl_Position = u_mvp * vec4(a_position, 0.0, 1.0);
     v_tex_coord = a_tex_coord;
-    v_color = a_color;
 }
 )~~~";
 
@@ -49,15 +46,15 @@ static const char* c_sprite_fragment_shader = R"~~~(
 #version 330
 
 uniform sampler2D u_texture;
+uniform vec4 u_color;
 
-in vec4 v_color;
 in vec2 v_tex_coord;
 
 out vec4 o_color;
 
 void main() {
     float alpha = texture(u_texture, v_tex_coord).r;
-    o_color = vec4(v_color.rgb, v_color.a * alpha);
+    o_color = vec4(u_color.rgb, u_color.a * alpha);
 }
 )~~~";
 
@@ -139,8 +136,7 @@ static GLuint compile_program(const char* vertex_source,
 
     // fixed attribute locations for VBO
     glBindAttribLocation(program, 0, "a_position");
-    glBindAttribLocation(program, 1, "a_color");
-    glBindAttribLocation(program, 2, "a_tex_coord");
+    glBindAttribLocation(program, 1, "a_tex_coord");
 
     // link program
     glLinkProgram(program);

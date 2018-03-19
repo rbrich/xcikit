@@ -29,11 +29,12 @@ namespace graphics {
 
 class GlSprites {
 public:
-    explicit GlSprites(const Texture& texture);
+    explicit GlSprites(const Texture& texture,
+                       const Color& color = Color::White());
     ~GlSprites() { clear_gl_objects(); }
 
-    void add_sprite(const Rect_f& rect, const Color& color);
-    void add_sprite(const Rect_f& rect, const Rect_u& texrect, const Color& color);
+    void add_sprite(const Rect_f& rect);
+    void add_sprite(const Rect_f& rect, const Rect_u& texrect);
     void draw(View& view, const Vec2f& pos);
 
 private:
@@ -42,10 +43,10 @@ private:
 
 private:
     const Texture& m_texture;
+    Color m_color;
 
     struct Vertex {
         GLfloat x, y;         // vertex coords
-        GLfloat r, g, b, a;   // color
         GLfloat u, v;         // texture coords
     };
     std::vector<Vertex> m_vertex_data;
@@ -60,7 +61,8 @@ private:
 
 class Sprites::Impl : public GlSprites {
 public:
-    explicit Impl(const Texture& texture) : GlSprites(texture) {}
+    explicit Impl(const Texture& texture, const Color& color)
+            : GlSprites(texture, color) {}
 };
 
 

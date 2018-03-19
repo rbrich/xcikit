@@ -56,7 +56,7 @@ void GlRectangles::draw(View& view, const Vec2f& pos)
     auto program = view.impl().gl_program_rectangle();
     glUseProgram(program);
     glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(2);
+    glEnableVertexAttribArray(1);
 
     // projection matrix
     GLfloat xs = 2.0f / view.size().x;
@@ -90,7 +90,7 @@ void GlRectangles::draw(View& view, const Vec2f& pos)
     glDrawElements(GL_TRIANGLES, (GLsizei) m_indices.size(), GL_UNSIGNED_SHORT, nullptr);
 
     glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(2);
+    glDisableVertexAttribArray(1);
     glUseProgram(0);
 }
 
@@ -110,7 +110,7 @@ void GlRectangles::init_gl_objects()
 
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
                           sizeof(Vertex), (void*) (sizeof(GLfloat) * 0));
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE,
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
                           sizeof(Vertex), (void*) (sizeof(GLfloat) * 2));
 
     glGenBuffers(1, &m_index_buffer);

@@ -23,8 +23,9 @@ int main()
     Window window;
     window.create({800, 600}, "XCI rectangles demo");
 
-    Rectangles rts(Color(0, 40, 40), Color(180, 180, 0));
-    rts.add_rectangle({-1, -0.5, 2, 1}, 0.1);
+    Rectangles rts(Color(0, 40, 40, 128), Color(180, 180, 0));
+    rts.add_rectangle({-1, -0.5f, 2, 1}, 0.1);
+    rts.add_rectangle({-0.5f, -0.8f, 1, 1.6f}, 0.05);
 
     window.display([&](View& view) {
         rts.draw(view, {0, 0});

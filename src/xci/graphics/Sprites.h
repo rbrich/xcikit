@@ -23,19 +23,19 @@ using xci::util::Vec2f;
 
 class Sprites {
 public:
-    explicit Sprites(const Texture& texture);
+    explicit Sprites(const Texture& texture,
+                     const Color& color = Color::White());
     ~Sprites();
     Sprites(Sprites&&) noexcept;
     Sprites& operator=(Sprites&&) noexcept;
 
     // Add new sprite containing whole texture
     // `rect` defines position and size of the sprite
-    void add_sprite(const Rect_f& rect, const Color& color);
+    void add_sprite(const Rect_f& rect);
 
     // Add new sprite containing a cutoff from the texture
     // `rect` defines position and size of the sprite
-    void add_sprite(const Rect_f& rect, const Rect_u& texrect,
-                    const Color& color);
+    void add_sprite(const Rect_f& rect, const Rect_u& texrect);
 
     // Draw all sprites to `view` at `pos`.
     // Final sprite position is `pos` + sprite's relative position
