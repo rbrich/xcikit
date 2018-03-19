@@ -134,7 +134,7 @@ public:
     // ------------------------------------------------------------------------
     // Spans allow to name part of the text and change its attributes later
 
-    friend struct Span;
+    friend class Span;
 
     // Begin and end the span.
     // Returns false on error:

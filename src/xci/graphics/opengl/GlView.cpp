@@ -27,14 +27,16 @@ using namespace xci::util::log;
 
 
 static const char* c_vertex_shader = R"~~~(
+#version 330
+
 uniform mat4 u_mvp;
 
-attribute vec2 a_position;
-attribute vec4 a_color;
-attribute vec2 a_tex_coord;
+in vec2 a_position;
+in vec4 a_color;
+in vec2 a_tex_coord;
 
-varying vec4 v_color;
-varying vec2 v_tex_coord;
+out vec4 v_color;
+out vec2 v_tex_coord;
 
 void main() {
     gl_Position = u_mvp * vec4(a_position, 0.0, 1.0);
@@ -44,14 +46,18 @@ void main() {
 )~~~";
 
 static const char* c_fragment_shader = R"~~~(
+#version 330
+
 uniform sampler2D u_texture;
 
-varying vec4 v_color;
-varying vec2 v_tex_coord;
+in vec4 v_color;
+in vec2 v_tex_coord;
+
+out vec4 o_color;
 
 void main() {
-    float alpha = texture2D(u_texture, v_tex_coord).r;
-    gl_FragColor = v_color * vec4(1.0, 1.0, 1.0, alpha);
+    float alpha = texture(u_texture, v_tex_coord).r;
+    o_color = v_color * vec4(1.0, 1.0, 1.0, alpha);
 }
 )~~~";
 
@@ -94,10 +100,16 @@ GlView::GlView(Vec2u pixel_size)
         exit(1);
     }
 
-    // link program
     m_program = glCreateProgram();
     glAttachShader(m_program, vertex_shader);
     glAttachShader(m_program, fragment_shader);
+
+    // fixed attribute locations for VBO
+    glBindAttribLocation(m_program, 0, "a_position");
+    glBindAttribLocation(m_program, 1, "a_color");
+    glBindAttribLocation(m_program, 2, "a_tex_coord");
+
+    // link program
     glLinkProgram(m_program);
 
     // check link status
@@ -144,6 +156,12 @@ GlView::GlView(Vec2u pixel_size)
         log_debug("shader active uniform: {}", name.c_str());
     }
 #endif
+}
+
+
+GlView::~GlView()
+{
+    glDeleteProgram(m_program);
 }
 
 

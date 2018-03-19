@@ -42,6 +42,8 @@ void GlSprites::add_sprite(const Rect_f& rect, const Color& color)
 // Position a sprite with cutoff from the texture
 void GlSprites::add_sprite(const Rect_f& rect, const Rect_u& texrect, const Color& color)
 {
+    clear_gl_objects();
+
     float x1 = rect.x;
     float y1 = -rect.y;
     float x2 = rect.x + rect.w;
@@ -68,47 +70,13 @@ void GlSprites::add_sprite(const Rect_f& rect, const Rect_u& texrect, const Colo
 
 void GlSprites::draw(View& view, const Vec2f& pos)
 {
+    init_gl_objects();
+
     auto program = view.impl().gl_program();
-
-    GLuint vertex_array;
-    glGenVertexArrays(1, &vertex_array);
-    glBindVertexArray(vertex_array);
-
-    glGenBuffers(1, &m_vertex_buffer);
-    glBindBuffer(GL_ARRAY_BUFFER, m_vertex_buffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * m_vertex_data.size(),
-                 m_vertex_data.data(), GL_STATIC_DRAW);
-
-    GLint res;
-    res = glGetAttribLocation(program, "a_position");
-    if (res == -1) {
-        log_error("Couldn't get location of shader attribute: {}", "a_position");
-        exit(1);
-    }
-    auto a_position = GLuint(res);
-    glEnableVertexAttribArray(a_position);
-    glVertexAttribPointer(a_position, 2, GL_FLOAT, GL_FALSE,
-                          sizeof(Vertex), (void*) (sizeof(GLfloat) * 0));
-
-    res = glGetAttribLocation(program, "a_color");
-    if (res == -1) {
-        log_error("Couldn't get location of shader attribute: {}", "a_color");
-        exit(1);
-    }
-    auto a_color = GLuint(res);
-    glEnableVertexAttribArray(a_color);
-    glVertexAttribPointer(a_color, 4, GL_FLOAT, GL_FALSE,
-                          sizeof(Vertex), (void*) (sizeof(GLfloat) * 2));
-
-    res = glGetAttribLocation(program, "a_tex_coord");
-    if (res == -1) {
-        log_error("Couldn't get location of shader attribute: {}", "a_tex_coord");
-        exit(1);
-    }
-    auto a_tex_coord = GLuint(res);
-    glEnableVertexAttribArray(a_tex_coord);
-    glVertexAttribPointer(a_tex_coord, 2, GL_FLOAT, GL_FALSE,
-                          sizeof(Vertex), (void*) (sizeof(GLfloat) * 6));
+    glUseProgram(program);
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(2);
 
     // projection matrix
     GLfloat xs = 2.0f / view.size().x;
@@ -122,7 +90,6 @@ void GlSprites::draw(View& view, const Vec2f& pos)
             xt,  -yt,   0.0f, 1.0f,
     };
 
-    glUseProgram(program);
     GLint mvp_location = glGetUniformLocation(program, "u_mvp");
     glUniformMatrix4fv(mvp_location, 1, GL_FALSE, (const GLfloat*) mvp);
 
@@ -130,21 +97,60 @@ void GlSprites::draw(View& view, const Vec2f& pos)
     glUniform1i(tex_location, 0); // GL_TEXTURE0
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_texture.impl().gl_texture());
-
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    glDrawElements(GL_TRIANGLES, (GLsizei) m_indices.size(),
-                   GL_UNSIGNED_SHORT, m_indices.data());
+    glBindVertexArray(m_vertex_array);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_index_buffer);
 
-    glDisableVertexAttribArray(a_position);
-    glDisableVertexAttribArray(a_color);
-    glDisableVertexAttribArray(a_tex_coord);
+    glDrawElements(GL_TRIANGLES, (GLsizei) m_indices.size(), GL_UNSIGNED_SHORT, nullptr);
 
-    //glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
+    glDisableVertexAttribArray(2);
+    glUseProgram(0);
+}
+
+
+void GlSprites::init_gl_objects()
+{
+    if (m_objects_ready)
+        return;
+
+    glGenVertexArrays(1, &m_vertex_array);
+    glBindVertexArray(m_vertex_array);
+
+    glGenBuffers(1, &m_vertex_buffer);
+    glBindBuffer(GL_ARRAY_BUFFER, m_vertex_buffer);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * m_vertex_data.size(),
+                 m_vertex_data.data(), GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
+                          sizeof(Vertex), (void*) (sizeof(GLfloat) * 0));
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE,
+                          sizeof(Vertex), (void*) (sizeof(GLfloat) * 2));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE,
+                          sizeof(Vertex), (void*) (sizeof(GLfloat) * 6));
+
+    glGenBuffers(1, &m_index_buffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_index_buffer);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLushort) * m_indices.size(),
+                 m_indices.data(), GL_STATIC_DRAW);
+
+    m_objects_ready = true;
+}
+
+
+void GlSprites::clear_gl_objects()
+{
+    if (!m_objects_ready)
+        return;
+
+    glDeleteVertexArrays(1, &m_vertex_array);
     glDeleteBuffers(1, &m_vertex_buffer);
-    //glBindVertexArray(0);
-    glDeleteVertexArrays(1, &vertex_array);
+    glDeleteBuffers(1, &m_index_buffer);
+
+    m_objects_ready = false;
 }
 
 

@@ -27,6 +27,7 @@ namespace graphics {
 class GlView {
 public:
     GlView(Vec2u pixel_size);
+    ~GlView();
 
     void resize(Vec2u pixel_size);
     Vec2f size() const { return m_size; }

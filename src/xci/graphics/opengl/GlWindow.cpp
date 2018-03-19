@@ -53,6 +53,27 @@ void gl_debug_callback( GLenum source,
 }
 
 
+#ifdef GLAD_DEBUG
+void glad_debug_callback(const char *name, void *funcptr, int len_args, ...) {
+    GLenum err_code = glad_glGetError();
+    if (err_code != GL_NO_ERROR) {
+        std::string err_str;
+        switch (err_code) {
+            case GL_INVALID_ENUM:                  err_str = "INVALID_ENUM"; break;
+            case GL_INVALID_VALUE:                 err_str = "INVALID_VALUE"; break;
+            case GL_INVALID_OPERATION:             err_str = "INVALID_OPERATION"; break;
+            case GL_STACK_OVERFLOW:                err_str = "STACK_OVERFLOW"; break;
+            case GL_STACK_UNDERFLOW:               err_str = "STACK_UNDERFLOW"; break;
+            case GL_OUT_OF_MEMORY:                 err_str = "OUT_OF_MEMORY"; break;
+            case GL_INVALID_FRAMEBUFFER_OPERATION: err_str = "INVALID_FRAMEBUFFER_OPERATION"; break;
+            default:                               err_str = "UNKNOWN_" + std::to_string(err_code); break;
+        }
+        log_error("GL error {} in {}", err_str, name);
+    }
+}
+#endif
+
+
 GlWindow::GlWindow()
 {
     glfwSetErrorCallback(error_callback);
@@ -77,6 +98,10 @@ void GlWindow::create(const Vec2u& size, const std::string& title)
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, true);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+#ifndef NDEBUG
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
+#endif
+
     m_window = glfwCreateWindow(size.x, size.y, title.c_str(),
                                 nullptr, nullptr);
     if (!m_window) {
@@ -87,6 +112,13 @@ void GlWindow::create(const Vec2u& size, const std::string& title)
     glfwSetKeyCallback(m_window, key_callback);
     glfwSetWindowUserPointer(m_window, this);
 
+    // GLAD debugging is an alternative to GL_DEBUG_OUTPUT (bellow).
+    // Unlike that, it does not depend on any extension and always work.
+    // To enable it, rebuild GLAD loader with `--generator="c-debug"`.
+#ifdef GLAD_DEBUG
+    glad_set_post_callback(glad_debug_callback);
+#endif
+
     if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
         log_error("Couldn't initialize OpenGL...");
         exit(1);
@@ -96,9 +128,14 @@ void GlWindow::create(const Vec2u& size, const std::string& title)
              glGetString(GL_SHADING_LANGUAGE_VERSION));
 
 #ifndef NDEBUG
-    // https://www.khronos.org/opengl/wiki/OpenGL_Error
-    glEnable( GL_DEBUG_OUTPUT );
-    glDebugMessageCallback( (GLDEBUGPROC) gl_debug_callback, 0 );
+    GLint flags;
+    glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
+    if (flags & GL_CONTEXT_FLAG_DEBUG_BIT) {
+        // https://www.khronos.org/opengl/wiki/Debug_Output
+        // (This does not work on macOS, see GLAD debugging above instead)
+        glEnable(GL_DEBUG_OUTPUT);
+        glDebugMessageCallback((GLDEBUGPROC) gl_debug_callback, nullptr);
+    }
 #endif
 }
 

@@ -18,6 +18,8 @@
 
 #include "Page.h"
 
+#include <string>
+
 namespace xci {
 namespace text {
 namespace layout {

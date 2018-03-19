@@ -30,10 +30,15 @@ namespace graphics {
 class GlSprites {
 public:
     explicit GlSprites(const Texture& texture);
+    ~GlSprites() { clear_gl_objects(); }
 
     void add_sprite(const Rect_f& rect, const Color& color);
     void add_sprite(const Rect_f& rect, const Rect_u& texrect, const Color& color);
     void draw(View& view, const Vec2f& pos);
+
+private:
+    void init_gl_objects();
+    void clear_gl_objects();
 
 private:
     const Texture& m_texture;
@@ -46,7 +51,10 @@ private:
     std::vector<Vertex> m_vertex_data;
     std::vector<GLushort> m_indices;
 
-    GLuint m_vertex_buffer;
+    GLuint m_vertex_array = 0;  // aka VAO
+    GLuint m_vertex_buffer = 0;  // aka VBO
+    GLuint m_index_buffer = 0;  // aka IBO
+    bool m_objects_ready = false;
 };
 
 
