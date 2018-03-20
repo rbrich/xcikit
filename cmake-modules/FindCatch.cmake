@@ -9,6 +9,7 @@ find_path(CATCH_INCLUDE_DIR
     NAMES catch.hpp
     PATH_SUFFIXES include
     PATHS ${CATCH_SEARCH_PATHS})
+mark_as_advanced(CATCH_INCLUDE_DIR)
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(Catch DEFAULT_MSG

@@ -10,6 +10,7 @@ find_path(PANDA3D_INCLUDE_DIR
     NAMES pandaFramework.h
     PATH_SUFFIXES include panda3d
     PATHS ${PANDA3D_SEARCH_PATHS})
+mark_as_advanced(PANDA3D_INCLUDE_DIR)
 
 set(PANDA3D_ALL_LIBRARIES "")
 set(PANDA3D_ALL_LIBRARY_NAMES "")
@@ -19,6 +20,7 @@ foreach (libname p3framework panda pandaexpress p3dtoolconfig p3dtool p3pystub p
         NAMES ${libname}
         PATH_SUFFIXES lib panda3d
         PATHS ${PANDA3D_SEARCH_PATHS})
+    mark_as_advanced(PANDA3D_${ulibname}_LIBRARY)
     set(PANDA3D_ALL_LIBRARY_NAMES ${PANDA3D_ALL_LIBRARY_NAMES} PANDA3D_${ulibname}_LIBRARY)
     set(PANDA3D_ALL_LIBRARIES ${PANDA3D_ALL_LIBRARIES} ${PANDA3D_${ulibname}_LIBRARY})
 endforeach (libname)
