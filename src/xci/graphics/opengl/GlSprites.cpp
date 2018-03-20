@@ -71,8 +71,10 @@ void GlSprites::draw(View& view, const Vec2f& pos)
 
     auto program = view.impl().gl_program_sprite();
     glUseProgram(program);
+    glBindVertexArray(m_vertex_array);
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_index_buffer);
 
     // projection matrix
     GLfloat xs = 2.0f / view.size().x;
@@ -99,9 +101,6 @@ void GlSprites::draw(View& view, const Vec2f& pos)
     glBindTexture(GL_TEXTURE_2D, m_texture.impl().gl_texture());
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-    glBindVertexArray(m_vertex_array);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_index_buffer);
 
     glDrawElements(GL_TRIANGLES, (GLsizei) m_indices.size(), GL_UNSIGNED_SHORT, nullptr);
 

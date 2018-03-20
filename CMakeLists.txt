@@ -87,6 +87,9 @@ set(XCI_TEXT_SOURCES
     src/xci/text/layout/Element.cpp
     src/xci/text/layout/Element.h)
 
+set(XCI_WIDGETS_SOURCES
+    src/xci/widgets/Button.cpp
+    src/xci/widgets/Button.h)
 
 # ------------ #
 # Dependencies #
@@ -190,6 +193,11 @@ target_link_libraries(${XCI_TEXT_LIBRARY}
     ${FREETYPE_LIBRARIES}
     ${RBP_LIBRARY})
 
+set(XCI_WIDGETS_LIBRARY xci-widgets)
+add_library(${XCI_WIDGETS_LIBRARY} STATIC ${XCI_WIDGETS_SOURCES})
+target_link_libraries(${XCI_WIDGETS_LIBRARY}
+    ${XCI_TEXT_LIBRARY}
+    ${XCI_GRAPHICS_LIBRARY})
 
 # ------------ #
 # Examples     #

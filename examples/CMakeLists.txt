@@ -16,6 +16,9 @@ target_link_libraries(demo_coords ${XCI_TEXT_LIBRARY})
 add_executable(demo_rectangles demo_rectangles.cpp)
 target_link_libraries(demo_rectangles ${XCI_GRAPHICS_LIBRARY})
 
+add_executable(demo_widgets demo_widgets.cpp)
+target_link_libraries(demo_widgets ${XCI_WIDGETS_LIBRARY})
+
 if (WITH_OPENGL)
     add_executable(demo_opengl demo_opengl.cpp)
     target_link_libraries(demo_opengl ${XCI_GRAPHICS_OPENGL_LIBRARY})
