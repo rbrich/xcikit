@@ -35,11 +35,11 @@ public:
     // This is used for pixel-perfect font rendering.
     Vec2u pixel_size() const;
 
-    // Size of unit square (1x1 display units) in pixels.
+    // Size of 1x1 pixel square in display units.
     Vec2f pixel_ratio() const {
         auto p = pixel_size();
         auto u = size();
-        return {p.x / u.x, p.y / u.y};
+        return {u.x / p.x, u.y / p.y};
     }
 
     // Visual debugging

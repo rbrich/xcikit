@@ -36,8 +36,8 @@ void GlRectangles::add_rectangle(const Rect_f& rect, float outline_thickness)
     float y1 = -rect.y;
     float x2 = rect.x + rect.w;
     float y2 = -rect.y - rect.h;
-    float tx = 1.0f + outline_thickness / rect.w;
-    float ty = 1.0f + outline_thickness / rect.h;
+    float tx = 1.0f + 2.0f * outline_thickness / rect.w;
+    float ty = 1.0f + 2.0f * outline_thickness / rect.h;
     auto i = (GLushort) m_vertex_data.size();
     m_vertex_data.push_back({x2, y1, +tx, -ty});
     m_vertex_data.push_back({x2, y2, +tx, +ty});
@@ -45,6 +45,14 @@ void GlRectangles::add_rectangle(const Rect_f& rect, float outline_thickness)
     m_vertex_data.push_back({x1, y1, -tx, -ty});
     m_elem_first.push_back(i);
     m_elem_size.push_back(4);
+}
+
+
+void GlRectangles::clear_rectangles()
+{
+    m_vertex_data.clear();
+    m_elem_first.clear();
+    m_elem_size.clear();
 }
 
 

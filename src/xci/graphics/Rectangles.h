@@ -43,6 +43,7 @@ public:
     //                       this parameter defines how far (in display units)
     void add_rectangle(const Rect_f& rect,
                        float outline_thickness = 0);
+    void clear_rectangles();
 
     // Draw all rectangles to `view` at `pos`.
     // Final rectangle position is `pos` + rectangle's relative position

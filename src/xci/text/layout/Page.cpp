@@ -31,7 +31,7 @@ Page::Page(Layout& layout)
 util::Vec2f Page::target_pixel_ratio() const
 {
     if (!m_target)
-        return {300, 300};
+        return {1.0f/300, 1.0f/300};
 
     return m_target->pixel_ratio();
 }
@@ -78,8 +78,8 @@ void Page::advance_line(float lines)
 {
     auto* font = m_style.font();
     auto pxr = target_pixel_ratio();
-    font->set_size(unsigned(m_style.size() * pxr.y));
-    float line_height = font->line_height() / pxr.y;
+    font->set_size(unsigned(m_style.size() / pxr.y));
+    float line_height = font->line_height() * pxr.y;
     m_pen.y += lines * line_height;
 }
 
@@ -138,9 +138,9 @@ float Page::space_width()
 {
     auto* font = m_style.font();
     auto pxr = target_pixel_ratio();
-    font->set_size(unsigned(m_style.size() * pxr.y));
+    font->set_size(unsigned(m_style.size() / pxr.y));
     auto glyph = font->get_glyph(' ');
-    return glyph->advance() / pxr.x;
+    return glyph->advance() * pxr.x;
 }
 
 

@@ -90,7 +90,7 @@ int main()
 
         auto pr = view.pixel_ratio();
         size_ratio.set_fixed_string("Pixel ratio: 1x1 = "
-                                    + format("{} x {}", pr.x, pr.y));
+                                    + format("{} x {}", 1/pr.x, 1/pr.y));
         size_ratio.draw(view, {-0.4f, -0.3f});
 
         size_font.set_fixed_string("Font size:         "

@@ -23,12 +23,25 @@ int main()
     Window window;
     window.create({800, 600}, "XCI rectangles demo");
 
-    Rectangles rts(Color(0, 40, 40, 128), Color(180, 180, 0));
-    rts.add_rectangle({-1, -0.5f, 2, 1}, 0.1);
-    rts.add_rectangle({-0.5f, -0.8f, 1, 1.6f}, 0.05);
+    // normally, the border scales with viewport size
+    Rectangles rts(Color(0, 0, 40, 128), Color(180, 180, 0));
+    rts.add_rectangle({-1, -0.6f, 2, 1.2f}, 0.05);
+    rts.add_rectangle({-0.6f, -0.8f, 1.2f, 1.6f}, 0.02);
+
+    // using View::pixel_ratio, we can set constant border width, in pixels
+    Rectangles rts_px(Color(40, 40, 0, 128), Color(255, 255, 0));
 
     window.display([&](View& view) {
         rts.draw(view, {0, 0});
+
+        auto pxr = view.pixel_ratio().x;
+        rts_px.add_rectangle({0.0f, 0.0f, 0.5f, 0.5f}, 1 * pxr);
+        rts_px.add_rectangle({0.1f, 0.1f, 0.5f, 0.5f}, 2 * pxr);
+        rts_px.add_rectangle({0.2f, 0.2f, 0.5f, 0.5f}, 3 * pxr);
+        rts_px.add_rectangle({0.3f, 0.3f, 0.5f, 0.5f}, 4 * pxr);
+        rts_px.add_rectangle({0.4f, 0.4f, 0.5f, 0.5f}, 5 * pxr);
+        rts_px.draw(view, {-0.45f, -0.45f});
+        rts_px.clear_rectangles();
     });
     return EXIT_SUCCESS;
 }

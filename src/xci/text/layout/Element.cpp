@@ -40,19 +40,19 @@ void Word::apply(Page& page)
     util::Vec2f advance;
     util::Rect_f bounds;
     auto pxr = page.target_pixel_ratio();
-    font->set_size(unsigned(m_style.size() * pxr.y));
+    font->set_size(unsigned(m_style.size() / pxr.y));
     for (CodePoint code_point : m_string) {
         auto glyph = font->get_glyph(code_point);
 
         // Expand text bounds by glyph bounds
         util::Rect_f m;
-        m.x = advance.x + glyph->base_x() / pxr.x;
-        m.y = 0.0f - glyph->base_y() / pxr.y;
-        m.w = glyph->width() / pxr.x;
-        m.h = glyph->height() / pxr.y;  // ft_to_float(gm.height)
+        m.x = advance.x + glyph->base_x() * pxr.x;
+        m.y = 0.0f - glyph->base_y() * pxr.y;
+        m.w = glyph->width() * pxr.x;
+        m.h = glyph->height() * pxr.y;  // ft_to_float(gm.height)
         bounds.extend(m);
 
-        advance.x += glyph->advance() / pxr.x;
+        advance.x += glyph->advance() * pxr.x;
     }
 
     // Check line end
@@ -81,7 +81,7 @@ void Word::draw(View& target, const Vec2f& pos) const
     }
 
     auto pxr = target.pixel_ratio();
-    font->set_size(unsigned(m_style.size() * pxr.y));
+    font->set_size(unsigned(m_style.size() / pxr.y));
 
     bool show_bboxes = target.has_debug_flag(View::Debug::GlyphBBox);
 
@@ -94,15 +94,15 @@ void Word::draw(View& target, const Vec2f& pos) const
         if (glyph == nullptr)
             continue;
 
-        Rect_f rect{pen.x + glyph->base_x() / pxr.x,
-                    pen.y - glyph->base_y() / pxr.y,
-                    glyph->width() / pxr.x,
-                    glyph->height() / pxr.y};
+        Rect_f rect{pen.x + glyph->base_x() * pxr.x,
+                    pen.y - glyph->base_y() * pxr.y,
+                    glyph->width() * pxr.x,
+                    glyph->height() * pxr.y};
         sprites.add_sprite(rect, glyph->tex_coords());
         if (show_bboxes)
-            bboxes.add_rectangle(rect, 2 / pxr.x);
+            bboxes.add_rectangle(rect, 1 * pxr.x);
 
-        pen.x += glyph->advance() / pxr.x;
+        pen.x += glyph->advance() * pxr.x;
     }
 
     if (show_bboxes)

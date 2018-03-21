@@ -26,7 +26,7 @@ Button::Button(const std::string &string, Font& font)
     : m_bg_rect(Color(10, 20, 40), Color(180, 180, 0)),
       m_text("A button?", font)
 {
-    m_bg_rect.add_rectangle({-0.3f, -0.1f, 0.6, 0.2f}, 0.02);
+    m_bg_rect.add_rectangle({-0.3f, -0.1f, 0.6, 0.2f}, 0.01);
     m_text.set_size(0.07);
     m_text.set_color(Color::White());
 }

@@ -2,7 +2,7 @@ add_executable(demo_logger demo_logger.cpp)
 target_link_libraries(demo_logger ${XCI_UTIL_LIBRARY})
 
 add_executable(demo_thread demo_thread.cpp)
-target_link_libraries(demo_thread ${XCI_TEXT_LIBRARY})
+target_link_libraries(demo_thread ${XCI_TEXT_LIBRARY} pthread)
 
 add_executable(demo_font demo_font.cpp)
 target_link_libraries(demo_font ${XCI_TEXT_LIBRARY})
