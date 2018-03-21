@@ -38,10 +38,11 @@ public:
     Rectangles& operator=(Rectangles&&) noexcept;
 
     // Add new rectangle.
-    // `rect`          - rectangle position and size
-    // `outline_width` - width of the outline (display units)
+    // `rect`              - rectangle position and size
+    // `outline_thickness` - the outline actually goes from edge to inside
+    //                       this parameter defines how far (in display units)
     void add_rectangle(const Rect_f& rect,
-                       float outline_width = 0);
+                       float outline_thickness = 0);
 
     // Draw all rectangles to `view` at `pos`.
     // Final rectangle position is `pos` + rectangle's relative position

@@ -21,7 +21,9 @@ target_link_libraries(demo_widgets ${XCI_WIDGETS_LIBRARY})
 
 if (WITH_OPENGL)
     add_executable(demo_opengl demo_opengl.cpp)
-    target_link_libraries(demo_opengl ${XCI_GRAPHICS_OPENGL_LIBRARY})
+    target_link_libraries(demo_opengl
+        ${XCI_TEXT_LIBRARY}
+        ${XCI_GRAPHICS_OPENGL_LIBRARY})
 endif (WITH_OPENGL)
 
 if (WITH_SFML)

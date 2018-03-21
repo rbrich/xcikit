@@ -59,7 +59,7 @@ int main()
     text.set_color(Color::White());
 
     window.display([&](View& view){
-        text.draw(view, {-0.166, -0.333});
+        text.draw(view, {-0.166f, -0.333f});
 
         auto& tex = font.get_texture();
         Sprites font_texture(tex);

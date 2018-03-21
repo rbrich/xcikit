@@ -33,7 +33,7 @@ public:
     ~GlRectangles() { clear_gl_objects(); }
 
     void add_rectangle(const Rect_f& rect,
-                       float outline_width = 0);
+                       float outline_thickness = 0);
 
     void draw(View& view, const Vec2f& pos);
 
