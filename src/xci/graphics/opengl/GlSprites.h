@@ -50,11 +50,11 @@ private:
         GLfloat u, v;         // texture coords
     };
     std::vector<Vertex> m_vertex_data;
-    std::vector<GLushort> m_indices;
+    std::vector<GLint> m_elem_first;  // first vertex of each element
+    std::vector<GLsizei> m_elem_size;  // number of vertices of each element
 
     GLuint m_vertex_array = 0;  // aka VAO
     GLuint m_vertex_buffer = 0;  // aka VBO
-    GLuint m_index_buffer = 0;  // aka IBO
     bool m_objects_ready = false;
 };
 

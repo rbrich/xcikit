@@ -43,9 +43,8 @@ void GlRectangles::add_rectangle(const Rect_f& rect, float outline_width)
     m_vertex_data.push_back({x2, y2, +tx, +ty});
     m_vertex_data.push_back({x1, y2, -tx, +ty});
     m_vertex_data.push_back({x1, y1, -tx, -ty});
-    GLushort indices[] = {GLushort(i+0), GLushort(i+1), GLushort(i+2),
-                          GLushort(i+2), GLushort(i+3), GLushort(i+0)};
-    m_indices.insert(m_indices.end(), std::begin(indices), std::end(indices));
+    m_elem_first.push_back(i);
+    m_elem_size.push_back(4);
 }
 
 
@@ -58,7 +57,6 @@ void GlRectangles::draw(View& view, const Vec2f& pos)
     glBindVertexArray(m_vertex_array);
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_index_buffer);
 
     // projection matrix
     GLfloat xs = 2.0f / view.size().x;
@@ -86,7 +84,8 @@ void GlRectangles::draw(View& view, const Vec2f& pos)
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    glDrawElements(GL_TRIANGLES, (GLsizei) m_indices.size(), GL_UNSIGNED_SHORT, nullptr);
+    glMultiDrawArrays(GL_TRIANGLE_FAN, m_elem_first.data(), m_elem_size.data(),
+                      (GLsizei) m_elem_size.size());
 
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
@@ -112,11 +111,6 @@ void GlRectangles::init_gl_objects()
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
                           sizeof(Vertex), (void*) (sizeof(GLfloat) * 2));
 
-    glGenBuffers(1, &m_index_buffer);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_index_buffer);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLushort) * m_indices.size(),
-                 m_indices.data(), GL_STATIC_DRAW);
-
     m_objects_ready = true;
 }
 
@@ -128,7 +122,6 @@ void GlRectangles::clear_gl_objects()
 
     glDeleteVertexArrays(1, &m_vertex_array);
     glDeleteBuffers(1, &m_vertex_buffer);
-    glDeleteBuffers(1, &m_index_buffer);
 
     m_objects_ready = false;
 }
