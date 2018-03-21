@@ -16,13 +16,16 @@
 #include "Element.h"
 
 #include <xci/graphics/Sprites.h>
-#include <xci/util/geometry.h>
+#include <xci/graphics/Rectangles.h>
 
 namespace xci {
 namespace text {
 namespace layout {
 
 using xci::util::Vec2f;
+using xci::util::Rect_f;
+using xci::graphics::Color;
+using xci::graphics::View;
 
 
 void Word::apply(Page& page)
@@ -69,7 +72,7 @@ void Word::apply(Page& page)
 }
 
 
-void Word::draw(graphics::View& target, const util::Vec2f& pos) const
+void Word::draw(View& target, const Vec2f& pos) const
 {
     auto* font = m_style.font();
     if (!font) {
@@ -80,7 +83,10 @@ void Word::draw(graphics::View& target, const util::Vec2f& pos) const
     auto pxr = target.pixel_ratio();
     font->set_size(unsigned(m_style.size() * pxr.y));
 
+    bool show_bboxes = target.has_debug_flag(View::Debug::GlyphBBox);
+
     graphics::Sprites sprites(font->get_texture(), m_style.color());
+    graphics::Rectangles bboxes(Color(150, 0, 0), Color(250, 50, 50));
 
     Vec2f pen;
     for (CodePoint code_point : m_string) {
@@ -88,30 +94,19 @@ void Word::draw(graphics::View& target, const util::Vec2f& pos) const
         if (glyph == nullptr)
             continue;
 
-        sprites.add_sprite({pen.x + glyph->base_x() / pxr.x,
-                            pen.y - glyph->base_y() / pxr.y,
-                            glyph->width() / pxr.x,
-                            glyph->height() / pxr.y},
-                           glyph->tex_coords());
-
-#if 0
-        sf::RectangleShape bbox;
-        sf::FloatRect m;
-        m.left = ft_to_float(gm.horiBearingX) + pen;
-        m.top = -ft_to_float(gm.horiBearingY);
-        m.width = ft_to_float(gm.width);
-        m.height = ft_to_float(gm.height);
-        bbox.setPosition(m.left, m.top);
-        bbox.setSize({m.width, m.height});
-        bbox.setFillColor(sf::Color::Transparent);
-        bbox.setOutlineColor(sf::Color::Blue);
-        bbox.setOutlineThickness(1);
-        target.draw(bbox, states);
-#endif
+        Rect_f rect{pen.x + glyph->base_x() / pxr.x,
+                    pen.y - glyph->base_y() / pxr.y,
+                    glyph->width() / pxr.x,
+                    glyph->height() / pxr.y};
+        sprites.add_sprite(rect, glyph->tex_coords());
+        if (show_bboxes)
+            bboxes.add_rectangle(rect, 2 / pxr.x);
 
         pen.x += glyph->advance() / pxr.x;
     }
 
+    if (show_bboxes)
+        bboxes.draw(target, pos + m_pos);
     sprites.draw(target, pos + m_pos);
 }
 

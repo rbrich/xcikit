@@ -58,8 +58,20 @@ int main()
     text.set_size(0.07);
     text.set_color(Color::White());
 
+    Text help_text("[b] Show glyph bboxes", font);
+    help_text.set_color(Color(50, 200, 100));
+
+    bool glyph_bbox = false;
+    window.set_key_callback([&glyph_bbox](View& view, KeyEvent ev){
+        if (ev.key == Key::B) {
+            glyph_bbox = !glyph_bbox;
+            view.set_debug_flag(View::Debug::GlyphBBox, glyph_bbox);
+        }
+    });
+
     window.display([&](View& view){
-        text.draw(view, {-0.166f, -0.333f});
+        help_text.draw(view, {-0.17f, -0.9f});
+        text.draw(view, {-0.17f, -0.3f});
 
         auto& tex = font.get_texture();
         Sprites font_texture(tex);

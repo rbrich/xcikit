@@ -42,11 +42,20 @@ public:
         return {p.x / u.x, p.y / u.y};
     }
 
+    // Visual debugging
+    using DebugFlags = unsigned int;
+    enum class Debug: DebugFlags {
+        GlyphBBox = 1 << 0,
+    };
+    void set_debug_flag(Debug flag, bool enabled = true);
+    bool has_debug_flag(Debug flag) const;
+
     class Impl;
     Impl& impl() { return *m_impl; }
 
 private:
     std::unique_ptr<Impl> m_impl;
+    DebugFlags m_debug;
 };
 
 

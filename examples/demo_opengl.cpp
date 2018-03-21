@@ -74,7 +74,7 @@ int main()
         text.draw(view, {-1.0f, -0.333f});
 
         glfwSwapBuffers(window);
-        glfwPollEvents();
+        glfwWaitEvents();
     }
 
     glfwTerminate();

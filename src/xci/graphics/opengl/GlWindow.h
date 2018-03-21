@@ -35,14 +35,18 @@ public:
     void create(const Vec2u& size, const std::string& title);
     void display(std::function<void(View& view)> draw_fn);
 
+    void set_key_callback(std::function<void(View&, KeyEvent)> key_fn);
+
     // access native handles
     GLFWwindow* glfw_window() { return m_window; }
 
 private:
     void setup_view();
+    static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
     GLFWwindow* m_window;
     std::unique_ptr<View> m_view;
+    std::function<void(View&, KeyEvent)> m_key_fn;
 };
 
 

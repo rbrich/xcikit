@@ -32,13 +32,6 @@ static void error_callback(int error, const char* description)
 }
 
 
-static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, GLFW_TRUE);
-}
-
-
 void gl_debug_callback( GLenum source,
                       GLenum type,
                       GLuint id,
@@ -148,8 +141,14 @@ void GlWindow::display(std::function<void(View& view)> draw_fn)
         glClear(GL_COLOR_BUFFER_BIT);
         draw_fn(*m_view);
         glfwSwapBuffers(m_window);
-        glfwPollEvents();
+        glfwWaitEvents();
     }
+}
+
+
+void GlWindow::set_key_callback(std::function<void(View&, KeyEvent)> key_fn)
+{
+    m_key_fn = key_fn;
 }
 
 
@@ -165,6 +164,18 @@ void GlWindow::setup_view()
         self->m_view->resize({(uint) w, (uint) h});
         glViewport(0, 0, w, h);
     });
+}
+
+
+void GlWindow::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, GLFW_TRUE);
+
+    auto self = (GlWindow*) glfwGetWindowUserPointer(window);
+    if (action == GLFW_PRESS && self->m_key_fn && self->m_view) {
+        self->m_key_fn(*self->m_view, KeyEvent{Key(key)});
+    }
 }
 
 

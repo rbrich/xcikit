@@ -17,6 +17,18 @@ using xci::util::Vec2u;
 using xci::util::Vec2f;
 
 
+enum class Key {
+    A = 65,
+    B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z
+};
+static_assert((int)Key::Z == 90);
+
+
+struct KeyEvent {
+    Key key;
+};
+
+
 class Window {
 public:
     Window();
@@ -26,6 +38,8 @@ public:
 
     void create(const Vec2u& size, const std::string& title);
     void display(std::function<void(View& view)> draw_fn);
+
+    void set_key_callback(std::function<void(View&, KeyEvent)> key_fn);
 
     class Impl;
     const Impl& impl() const { return *m_impl; }

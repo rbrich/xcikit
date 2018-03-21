@@ -159,13 +159,6 @@ public:
     // Draw whole layout to target
     void draw(graphics::View& target, const util::Vec2f& pos) const;
 
-    // ------------------------------------------------------------------------
-    // Debug
-
-#ifndef NDEBUG
-    bool d_show_bounds = false;
-#endif
-
 private:
     friend class Page;
     Page m_page;
