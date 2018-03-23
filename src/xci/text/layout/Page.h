@@ -27,8 +27,8 @@ namespace xci {
 namespace text {
 namespace layout {
 
-class Span;
 class Layout;
+class Page;
 
 using ElementIndex = size_t;
 
@@ -37,6 +37,68 @@ enum class Alignment {
     Right,
     Center,
     Justify,
+};
+
+
+class Word {
+public:
+    Word(Page& page, const std::string& string);
+
+    const util::Rect_f& bbox() const { return m_bbox; }
+    Style& style() { return m_style; }
+
+    void draw(graphics::View& target, const util::Vec2f& pos) const;
+
+private:
+    std::string m_string;
+    Style m_style;
+    util::Vec2f m_pos;  // relative to page origin (top-left corner)
+    util::Rect_f m_bbox;
+};
+
+
+class Line {
+public:
+    void add_word(Word& word) { m_words.push_back(&word); m_bbox_valid = false; }
+    std::vector<Word*>& words() { return m_words; }
+
+    bool is_empty() const { return m_words.empty(); }
+
+    // Retrieve bounding box of the span, relative to page
+    const util::Rect_f& bbox() const;
+
+    // Padding to be added to each side of the bounding box
+    void set_padding(float padding) { m_padding = padding; m_bbox_valid = false; }
+
+private:
+    std::vector<Word*> m_words;
+    float m_padding = 0;
+    mutable util::Rect_f m_bbox;
+    mutable bool m_bbox_valid = false;
+};
+
+
+// Group of words, spanning one or more lines.
+// Allows mass editing of the line parts and words in span.
+class Span {
+public:
+    Span() { m_parts.emplace_back(); }
+
+    void add_word(Word& word);
+
+    void close() { m_open = false; }
+    bool is_open() const { return m_open; }
+
+    const std::vector<Line>& parts() const { return m_parts; }
+
+    // Restyle all words in span.
+    // The callback will be run on each word in the span,
+    // with reference to the word's current style to be adjusted.
+    void adjust_style(std::function<void(Style& word_style)> fn_adjust);
+
+private:
+    std::vector<Line> m_parts;
+    bool m_open = true;
 };
 
 
@@ -51,12 +113,6 @@ public:
 
     // Reset all state
     void clear();
-
-    // Acknowledge that we've started processing next element
-    void advance_element();
-
-    // Element index of next element to be typeset
-    ElementIndex element_index() const { return m_element_index; }
 
     // ------------------------------------------------------------------------
 
@@ -103,9 +159,23 @@ public:
     // ------------------------------------------------------------------------
 
     // Add word bbox to line bbox
-    void add_word_bbox(const util::Rect_f& bbox);
+    void add_word(const std::string& string);
 
-    const std::vector<Span>& lines() const { return m_lines; }
+    const std::vector<Word>& words() const { return m_words; }
+    const std::vector<Line>& lines() const { return m_lines; }
+
+    // ------------------------------------------------------------------------
+    // Spans allow to name part of the text and change its attributes later
+
+    // Begin and end the span.
+    // Returns false on error:
+    // - Trying to begin a span of same name twice.
+    // - Trying to end not-started span.
+    bool begin_span(const std::string& name);
+    bool end_span(const std::string& name);
+
+    // Returns NULL if the span does not exist.
+    Span* get_span(const std::string& name);
 
 private:
     float space_width();
@@ -115,7 +185,6 @@ private:
     const graphics::View* m_target = nullptr;
 
     // running state
-    ElementIndex m_element_index = 0;
     util::Vec2f m_pen;  // pen position
     Style m_style;  // text style
 
@@ -125,7 +194,9 @@ private:
     std::vector<float> m_tab_stops;
 
     // page content
-    std::vector<Span> m_lines;
+    std::vector<Word> m_words;
+    std::vector<Line> m_lines;
+    std::map<std::string, Span> m_spans;
 };
 
 

@@ -88,7 +88,6 @@ set(XCI_TEXT_SOURCES
     src/xci/text/Style.h
     src/xci/text/layout/Page.cpp
     src/xci/text/layout/Page.h
-    src/xci/text/layout/Element.cpp
     src/xci/text/layout/Element.h)
 
 set(XCI_WIDGETS_SOURCES

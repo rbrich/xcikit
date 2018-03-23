@@ -33,48 +33,6 @@ namespace text {
 namespace layout {
 
 
-// Group of words, allowing mass editing and providing a bounding box
-class Span
-{
-public:
-    static constexpr ElementIndex open_end = ~0u;
-
-    // Create new open span
-    explicit Span(ElementIndex begin) : Span(begin, open_end) {}
-
-    // Create new closed span
-    explicit Span(ElementIndex begin, ElementIndex end) : m_begin(begin), m_end(end) {
-        assert(begin != open_end);
-    }
-
-    // Set span end (close it)
-    void set_end(ElementIndex end) { m_end = end; }
-
-    // Begin is included, end is excluded (after last word)
-    ElementIndex begin_index() const { return m_begin; }
-    ElementIndex end_index() const { return m_end; }
-
-    bool is_empty() const { return m_begin == m_end; }
-    bool is_open() const { return m_end == open_end; }
-
-    // Restyle all words in span
-    //void set_color(const graphics::Color& color);
-
-    // Retrieve adjusted (global) bounding box of the span.
-    util::Rect_f bounds() const;
-
-    // add padding to bounds
-    void add_padding(float radius);
-
-private:
-    friend class Page;
-
-    ElementIndex m_begin;
-    ElementIndex m_end;
-    util::Rect_f m_bounds;
-};
-
-
 // Layout allows to record a stream of elements (text and control)
 // and then apply this stream of elements to generate precise positions
 // bounding boxes according to current View, and draw them into the View.
@@ -137,15 +95,12 @@ public:
     // ------------------------------------------------------------------------
     // Spans allow to name part of the text and change its attributes later
 
-    friend class Span;
-
     // Begin and end the span.
     // Returns false on error:
     // - Trying to begin a span of same name twice.
     // - Trying to end not-started span.
-    bool begin_span(const std::string& name);
-
-    bool end_span(const std::string& name);
+    void begin_span(const std::string& name);
+    void end_span(const std::string& name);
 
     // Returns NULL if the span does not exist.
     Span* get_span(const std::string& name);
@@ -166,7 +121,6 @@ private:
     friend class Page;
     Page m_page;
     std::vector<std::unique_ptr<Element>> m_elements;
-    std::map<std::string, Span> m_spans;
 
     Style m_default_style;
     float m_default_width = 0;

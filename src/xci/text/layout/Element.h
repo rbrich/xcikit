@@ -28,7 +28,6 @@ namespace layout {
 class Element {
 public:
     virtual void apply(Page& page) = 0;
-    virtual void draw(graphics::View& target, const util::Vec2f& pos) const {}
 };
 
 
@@ -121,22 +120,19 @@ private:
 
 
 // Single word, consisting of letters (glyphs), font and style.
-class Word: public Element {
+class AddWord: public Element {
 public:
-    explicit Word(std::string string) : m_string(std::move(string)) {}
-
-    void apply(Page& page) override;
-    void draw(graphics::View& target, const util::Vec2f& pos) const override;
+    explicit AddWord(std::string string) : m_string(std::move(string)) {}
+    void apply(Page& page) override {
+        page.add_word(m_string);
+    }
 
 private:
     std::string m_string;
-    Style m_style;
-    util::Vec2f m_pos;  // relative to page origin (top-left corner)
-    util::Rect_f m_bounds;
 };
 
 
-class Space: public Element {
+class AddSpace: public Element {
 public:
     void apply(Page& page) override {
         page.add_space();
@@ -144,7 +140,7 @@ public:
 };
 
 
-class Tab: public Element {
+class AddTab: public Element {
 public:
     void apply(Page& page) override {
         page.add_tab();
@@ -157,6 +153,30 @@ public:
     void apply(Page& page) override {
         page.finish_line();
     }
+};
+
+
+class BeginSpan: public Element {
+public:
+    explicit BeginSpan(std::string name) : m_name(std::move(name)) {}
+    void apply(Page& page) override {
+        page.begin_span(m_name);
+    }
+
+private:
+    std::string m_name;
+};
+
+
+class EndSpan: public Element {
+public:
+    explicit EndSpan(std::string name) : m_name(std::move(name)) {}
+    void apply(Page& page) override {
+        page.end_span(m_name);
+    }
+
+private:
+    std::string m_name;
 };
 
 

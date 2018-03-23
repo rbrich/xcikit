@@ -27,35 +27,11 @@ namespace layout {
 using xci::graphics::Color;
 using xci::graphics::View;
 
-/*
-void Span::set_color(const graphics::Color& color)
-{
-    for (auto i = m_begin; i != m_end; i++) {
-        // FIXME
-        //m_layout->m_elements[i].set_color(color);
-    }
-}
-*/
-
-util::Rect_f Span::bounds() const
-{
-    return m_bounds;
-}
-
-void Span::add_padding(float radius)
-{
-    m_bounds.enlarge(radius);
-}
-
-
-// ----------------------------------------------------------------------------
-
 
 void Layout::clear()
 {
     m_page.clear();
     m_elements.clear();
-    m_spans.clear();
 }
 
 
@@ -87,45 +63,15 @@ void Layout::set_default_color(const graphics::Color& color)
 }
 
 
-bool Layout::begin_span(const std::string& name)
-{
-    auto result = m_spans.emplace(name, Span(m_elements.size()));
-    return result.second;  // false if already existed
-}
-
-
-bool Layout::end_span(const std::string& name)
-{
-    auto iter = m_spans.find(name);
-    if (iter == m_spans.end())
-        return false;  // does not exist
-    iter->second.set_end(m_elements.size());
-    return true;
-}
-
-
-Span* Layout::get_span(const std::string& name)
-{
-    auto iter = m_spans.find(name);
-    if (iter == m_spans.end())
-        return nullptr;  // does not exist
-    return &iter->second;
-}
-
-
 void Layout::typeset(const graphics::View& target)
 {
-    // TODO: detect if target size changed and don't clear page if it didn't
     m_page.clear();
     m_page.set_target(&target);
     m_page.set_width(m_default_width);
     m_page.set_style(m_default_style);
 
-    for (auto elem = m_elements.begin() + m_page.element_index();
-         elem != m_elements.end(); elem++)
-    {
-        (*elem)->apply(m_page);
-        m_page.advance_element();
+    for (auto& elem : m_elements) {
+        elem->apply(m_page);
     }
 }
 
@@ -140,9 +86,9 @@ void Layout::draw(View& target, const util::Vec2f& pos) const
         graphics::Rectangles bbox(Color(150, 150, 0, 128), Color(200, 200, 50));
         for (auto& line : m_page.lines()) {
             if (bounds.empty())
-                bounds = line.bounds();
+                bounds = line.bbox();
             else
-                bounds.extend(line.bounds());
+                bounds.extend(line.bbox());
         }
         bbox.add_rectangle(bounds, 1 * pxr.x);
         bbox.draw(target, pos);
@@ -152,13 +98,13 @@ void Layout::draw(View& target, const util::Vec2f& pos) const
     if (target.has_debug_flag(View::Debug::LineBBox)) {
         for (auto& line : m_page.lines()) {
             graphics::Rectangles bbox(Color(0, 50, 150, 128), Color(50, 50, 250));
-            bbox.add_rectangle(line.bounds(), 1 * pxr.x);
+            bbox.add_rectangle(line.bbox(), 1 * pxr.x);
             bbox.draw(target, pos);
         }
     }
 
-    for (auto& elem : m_elements) {
-        elem->draw(target, pos);
+    for (auto& word : m_page.words()) {
+        word.draw(target, pos);
     }
 
 #if 0
@@ -221,25 +167,43 @@ void Layout::set_color(const graphics::Color& color)
 
 void Layout::add_word(const std::string& string)
 {
-    m_elements.push_back(std::make_unique<Word>(string));
+    m_elements.push_back(std::make_unique<AddWord>(string));
 }
 
 
 void Layout::add_space()
 {
-    m_elements.push_back(std::make_unique<Space>());
+    m_elements.push_back(std::make_unique<AddSpace>());
 }
 
 
 void Layout::add_tab()
 {
-    m_elements.push_back(std::make_unique<Tab>());
+    m_elements.push_back(std::make_unique<AddTab>());
 }
 
 
 void Layout::finish_line()
 {
     m_elements.push_back(std::make_unique<FinishLine>());
+}
+
+
+void Layout::begin_span(const std::string& name)
+{
+    m_elements.push_back(std::make_unique<BeginSpan>(name));
+}
+
+
+void Layout::end_span(const std::string& name)
+{
+    m_elements.push_back(std::make_unique<EndSpan>(name));
+}
+
+
+Span* Layout::get_span(const std::string& name)
+{
+    return m_page.get_span(name);
 }
 
 
