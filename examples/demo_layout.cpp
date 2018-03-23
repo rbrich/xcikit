@@ -30,10 +30,10 @@ static const char * sample_text =
         "One morning, when Gregor Samsa "
         "woke from troubled dreams, he found "
         "himself transformed in his bed into "
-        "a horrible vermin. He lay on his "
-        "armour-like back, and if he lifted "
+        "a horrible vermin. {+span1}He lay on his "
+        "armour-like back{-span1}, and if he lifted "
         "his head a little he could see his "
-        "brown belly, slightly domed and "
+        "brown belly, {+span2}slightly domed{-span2} and "
         "divided by arches into stiff sections. "
         "The bedding was hardly able to cover "
         "it and seemed ready to slide off any "
@@ -62,6 +62,7 @@ int main()
                    "[p] show word base points\n\n"
                    "[w] show word bboxes\n\n"
                    "[l] show line bboxes\n\n"
+                   "[s] show span bboxes\n\n"
                    "[b] show page bboxes", font);
     help_text.set_color(Color(50, 200, 100));
 
@@ -82,6 +83,10 @@ int main()
                 break;
             case Key::L:
                 debug_flags ^= (int)View::Debug::LineBBox;
+                view.set_debug_flags(debug_flags);
+                break;
+            case Key::S:
+                debug_flags ^= (int)View::Debug::SpanBBox;
                 view.set_debug_flags(debug_flags);
                 break;
             case Key::B:

@@ -94,13 +94,24 @@ void Layout::draw(View& target, const util::Vec2f& pos) const
         bbox.draw(target, pos);
     }
 
+    // Debug: span bboxes
+    if (target.has_debug_flag(View::Debug::SpanBBox)) {
+        graphics::Rectangles bboxes(Color(100, 0, 150, 128), Color(200, 50, 250));
+        for (auto* span : m_page.spans()) {
+            for (auto& part : span->parts()) {
+                bboxes.add_rectangle(part.bbox(), 1 * pxr.x);
+            }
+        }
+        bboxes.draw(target, pos);
+    }
+
     // Debug: line bboxes
     if (target.has_debug_flag(View::Debug::LineBBox)) {
+        graphics::Rectangles bboxes(Color(0, 50, 150, 128), Color(50, 50, 250));
         for (auto& line : m_page.lines()) {
-            graphics::Rectangles bbox(Color(0, 50, 150, 128), Color(50, 50, 250));
-            bbox.add_rectangle(line.bbox(), 1 * pxr.x);
-            bbox.draw(target, pos);
+            bboxes.add_rectangle(line.bbox(), 1 * pxr.x);
         }
+        bboxes.draw(target, pos);
     }
 
     for (auto& word : m_page.words()) {

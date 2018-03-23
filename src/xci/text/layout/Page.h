@@ -82,14 +82,15 @@ private:
 // Allows mass editing of the line parts and words in span.
 class Span {
 public:
-    Span() { m_parts.emplace_back(); }
+    Span() { add_part(); }
 
     void add_word(Word& word);
 
+    void add_part() { m_parts.emplace_back(); }
+    const std::vector<Line>& parts() const { return m_parts; }
+
     void close() { m_open = false; }
     bool is_open() const { return m_open; }
-
-    const std::vector<Line>& parts() const { return m_parts; }
 
     // Restyle all words in span.
     // The callback will be run on each word in the span,
@@ -156,13 +157,8 @@ public:
     // Put horizontal tab onto line. It takes all space up to next tabstop.
     void add_tab();
 
-    // ------------------------------------------------------------------------
-
     // Add word bbox to line bbox
     void add_word(const std::string& string);
-
-    const std::vector<Word>& words() const { return m_words; }
-    const std::vector<Line>& lines() const { return m_lines; }
 
     // ------------------------------------------------------------------------
     // Spans allow to name part of the text and change its attributes later
@@ -176,6 +172,12 @@ public:
 
     // Returns NULL if the span does not exist.
     Span* get_span(const std::string& name);
+
+    // ------------------------------------------------------------------------
+
+    const std::vector<Word>& words() const { return m_words; }
+    const std::vector<Line>& lines() const { return m_lines; }
+    const std::vector<const Span*> spans() const;
 
 private:
     float space_width();

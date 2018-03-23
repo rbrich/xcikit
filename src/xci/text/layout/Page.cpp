@@ -217,9 +217,17 @@ void Page::add_tab_stop(float x)
 
 void Page::finish_line()
 {
-    if (m_lines.back().is_empty())
-        return;
-    m_lines.emplace_back();
+    // Add new line
+    if (!m_lines.back().is_empty())
+         m_lines.emplace_back();
+    // Add new part to open spans
+    for (auto& span_pair : m_spans) {
+        auto& span = span_pair.second;
+        if (span.is_open()) {
+            span.add_part();
+        }
+    }
+    // Move pen
     m_pen.x = 0;
     advance_line();
 }
@@ -321,6 +329,16 @@ Span* Page::get_span(const std::string& name)
     if (iter == m_spans.end())
         return nullptr;  // does not exist
     return &iter->second;
+}
+
+
+const std::vector<const Span*> Page::spans() const
+{
+    std::vector<const Span*> out;
+    for (auto& pair : m_spans) {
+        out.push_back(&pair.second);
+    }
+    return out;
 }
 
 

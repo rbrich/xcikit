@@ -42,6 +42,8 @@ public:
     void set_size(float size) { m_layout.set_default_font_size(size); }
     void set_color(const graphics::Color& color) { m_layout.set_default_color(color); }
 
+    Layout& layout() { return m_layout; }
+
     void draw(graphics::View& target, const util::Vec2f& pos);
 
 private:

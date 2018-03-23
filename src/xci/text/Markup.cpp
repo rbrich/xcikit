@@ -65,16 +65,26 @@ struct Action<ControlSeq>
     static bool apply(const Input &in, Markup &ctx)
     {
         dump_token("csq", in);
-        auto csq = in.string();
-        if (csq == "{tab}") {
+        auto seq = in.string();
+        if (seq == "{tab}") {
             ctx.get_layout().add_tab();
             return true;
         }
-        if (csq == "{br}") {
+        if (seq == "{br}") {
             ctx.get_layout().finish_line();
             return true;
         }
-        log_warning("Markup: Ignoring unknown control sequence {}", csq);
+        if (seq[1] == '+') {
+            auto name = seq.substr(2, seq.size() - 3);
+            ctx.get_layout().begin_span(name);
+            return true;
+        }
+        if (seq[1] == '-') {
+            auto name = seq.substr(2, seq.size() - 3);
+            ctx.get_layout().end_span(name);
+            return true;
+        }
+        log_warning("Markup: Ignoring unknown control sequence {}", seq);
         return true;
     }
 };
