@@ -36,37 +36,43 @@ void Word::apply(Page& page)
         return;
     }
 
-    // Measure word (metrics are affected by string, font, size)
-    util::Vec2f advance;
-    util::Rect_f bounds;
     auto pxr = page.target_pixel_ratio();
     font->set_size(unsigned(m_style.size() / pxr.y));
+
+    // Measure word (metrics are affected by string, font, size)
+    m_bounds = {};
+    util::Vec2f pen;
     for (CodePoint code_point : m_string) {
         auto glyph = font->get_glyph(code_point);
+        if (glyph == nullptr)
+            continue;
 
         // Expand text bounds by glyph bounds
-        util::Rect_f m;
-        m.x = advance.x + glyph->base_x() * pxr.x;
-        m.y = 0.0f - glyph->base_y() * pxr.y;
-        m.w = glyph->width() * pxr.x;
-        m.h = glyph->height() * pxr.y;  // ft_to_float(gm.height)
-        bounds.extend(m);
+        util::Rect_f rect{pen.x + glyph->base_x() * pxr.x,
+                          pen.y - glyph->base_y() * pxr.y,
+                          glyph->width() * pxr.x,
+                          glyph->height() * pxr.y};
 
-        advance.x += glyph->advance() * pxr.x;
+        if (m_bounds.empty())
+            m_bounds = rect;
+        else
+            m_bounds.extend(rect);
+
+        pen.x += glyph->advance() * pxr.x;
     }
 
     // Check line end
-    if (page.width() > 0.0 && page.pen().x + advance.x > page.width()) {
+    if (page.width() > 0.0 && page.pen().x + pen.x > page.width()) {
         page.finish_line();
     }
 
     // Set position according to pen
     m_pos = page.pen();
-    bounds.x += m_pos.x;
-    bounds.y += m_pos.y;
+    m_bounds.x += m_pos.x;
+    m_bounds.y += m_pos.y;
 
-    page.set_element_bounds(bounds);
-    page.advance_pen(advance);
+    page.set_element_bounds(m_bounds);
+    page.advance_pen(pen);
 
     m_style = page.style();
 }
@@ -82,6 +88,12 @@ void Word::draw(View& target, const Vec2f& pos) const
 
     auto pxr = target.pixel_ratio();
     font->set_size(unsigned(m_style.size() / pxr.y));
+
+    if (target.has_debug_flag(View::Debug::WordBBox)) {
+        graphics::Rectangles bbox(Color(0, 150, 0), Color(50, 250, 50));
+        bbox.add_rectangle(m_bounds, 1 * pxr.x);
+        bbox.draw(target, pos);
+    }
 
     bool show_bboxes = target.has_debug_flag(View::Debug::GlyphBBox);
 
@@ -105,9 +117,16 @@ void Word::draw(View& target, const Vec2f& pos) const
         pen.x += glyph->advance() * pxr.x;
     }
 
+    auto p = pos + m_pos;
     if (show_bboxes)
-        bboxes.draw(target, pos + m_pos);
-    sprites.draw(target, pos + m_pos);
+        bboxes.draw(target, p);
+    sprites.draw(target, p);
+
+    if (target.has_debug_flag(View::Debug::WordBasePoint)) {
+        graphics::Rectangles basepoint(Color(150, 0, 150));
+        basepoint.add_rectangle({-pxr.x, -pxr.y, 2 * pxr.x, 2 * pxr.y});
+        basepoint.draw(target, p);
+    }
 }
 
 

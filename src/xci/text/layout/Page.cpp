@@ -24,7 +24,7 @@ namespace layout {
 Page::Page(Layout& layout)
         : m_layout(layout)
 {
-    m_lines.emplace_back(0);
+    m_lines.emplace_back(0, 0);
 }
 
 
@@ -46,7 +46,7 @@ void Page::clear()
     m_alignment = Alignment::Left;
     m_tab_stops.clear();
     m_lines.clear();
-    m_lines.emplace_back(0);
+    m_lines.emplace_back(0, 0);
 }
 
 
@@ -68,6 +68,7 @@ void Page::finish_line()
 {
     if (m_lines.back().is_empty())
         return;
+    m_lines.back().set_end(m_element_index);
     m_lines.emplace_back(m_element_index);
     m_pen.x = 0;
     advance_line();
@@ -115,7 +116,7 @@ void Page::set_element_bounds(const util::Rect_f& word_bounds)
 {
     // Extend line bounds
     auto& line = m_lines.back();
-    if (line.is_empty()) {
+    if (line.m_bounds.empty()) {
         line.m_bounds = word_bounds;
     } else {
         line.m_bounds.extend(word_bounds);

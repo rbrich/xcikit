@@ -58,14 +58,38 @@ int main()
     text.set_size(0.07);
     text.set_color(Color::White());
 
-    Text help_text("[b] Show glyph bboxes", font);
+    Text help_text("[c] show character quads\n\n"
+                   "[p] show word base points\n\n"
+                   "[w] show word bboxes\n\n"
+                   "[l] show line bboxes\n\n"
+                   "[b] show page bboxes", font);
     help_text.set_color(Color(50, 200, 100));
 
-    bool glyph_bbox = false;
-    window.set_key_callback([&glyph_bbox](View& view, KeyEvent ev){
-        if (ev.key == Key::B) {
-            glyph_bbox = !glyph_bbox;
-            view.set_debug_flag(View::Debug::GlyphBBox, glyph_bbox);
+    View::DebugFlags debug_flags = 0;
+    window.set_key_callback([&](View& view, KeyEvent ev){
+        switch (ev.key) {
+            case Key::C:
+                debug_flags ^= (int)View::Debug::GlyphBBox;
+                view.set_debug_flags(debug_flags);
+                break;
+            case Key::P:
+                debug_flags ^= (int)View::Debug::WordBasePoint;
+                view.set_debug_flags(debug_flags);
+                break;
+            case Key::W:
+                debug_flags ^= (int)View::Debug::WordBBox;
+                view.set_debug_flags(debug_flags);
+                break;
+            case Key::L:
+                debug_flags ^= (int)View::Debug::LineBBox;
+                view.set_debug_flags(debug_flags);
+                break;
+            case Key::B:
+                debug_flags ^= (int)View::Debug::PageBBox;
+                view.set_debug_flags(debug_flags);
+                break;
+            default:
+                break;
         }
     });
 

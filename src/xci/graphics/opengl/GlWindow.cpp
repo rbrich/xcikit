@@ -17,6 +17,7 @@
 #include <xci/util/log.h>
 
 // inline
+#include <utility>
 #include <xci/graphics/Window.inl>
 
 
@@ -148,7 +149,7 @@ void GlWindow::display(std::function<void(View& view)> draw_fn)
 
 void GlWindow::set_key_callback(std::function<void(View&, KeyEvent)> key_fn)
 {
-    m_key_fn = key_fn;
+    m_key_fn = std::move(key_fn);
 }
 
 

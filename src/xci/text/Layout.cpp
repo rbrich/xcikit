@@ -15,13 +15,17 @@
 
 #include "Layout.h"
 
-#include <cassert>
+#include <xci/graphics/Rectangles.h>
 
+#include <cassert>
+#include <xci/graphics/View.h>
 
 namespace xci {
 namespace text {
 namespace layout {
 
+using xci::graphics::Color;
+using xci::graphics::View;
 
 /*
 void Span::set_color(const graphics::Color& color)
@@ -33,7 +37,7 @@ void Span::set_color(const graphics::Color& color)
 }
 */
 
-util::Rect_f Span::get_bounds() const
+util::Rect_f Span::bounds() const
 {
     return m_bounds;
 }
@@ -126,29 +130,38 @@ void Layout::typeset(const graphics::View& target)
 }
 
 
-void Layout::draw(graphics::View& target, const util::Vec2f& pos) const
+void Layout::draw(View& target, const util::Vec2f& pos) const
 {
-    for (auto& elem : m_elements) {
-        elem->draw(target, pos);
+    auto pxr = target.pixel_ratio();
 
-#if 0
-        sf::CircleShape basepoint(2);
-        basepoint.setFillColor(sf::Color::Magenta);
-        target.draw(basepoint, translation);
-
-        auto metrics = word.text.get_metrics();
-        sf::RectangleShape bbox;
-        bbox.setPosition(metrics.bounds.left, metrics.bounds.top);
-        bbox.setSize({metrics.bounds.width, metrics.bounds.height});
-        bbox.setFillColor(sf::Color::Transparent);
-        bbox.setOutlineColor(sf::Color::Blue);
-        bbox.setOutlineThickness(1);
-        target.draw(bbox, translation);
-//#endif
+    // Debug: page bbox
+    if (target.has_debug_flag(View::Debug::PageBBox)) {
+        util::Rect_f bounds;
+        graphics::Rectangles bbox(Color(150, 150, 0, 128), Color(200, 200, 50));
+        for (auto& line : m_page.lines()) {
+            if (bounds.empty())
+                bounds = line.bounds();
+            else
+                bounds.extend(line.bounds());
+        }
+        bbox.add_rectangle(bounds, 1 * pxr.x);
+        bbox.draw(target, pos);
     }
 
-//#ifndef NDEBUG
-    if (d_show_bounds) {
+    // Debug: line bboxes
+    if (target.has_debug_flag(View::Debug::LineBBox)) {
+        for (auto& line : m_page.lines()) {
+            graphics::Rectangles bbox(Color(0, 50, 150, 128), Color(50, 50, 250));
+            bbox.add_rectangle(line.bounds(), 1 * pxr.x);
+            bbox.draw(target, pos);
+        }
+    }
+
+    for (auto& elem : m_elements) {
+        elem->draw(target, pos);
+    }
+
+#if 0
         for (auto& span_item : m_spans) {
             auto& span = span_item.second;
             auto bounds = span.get_bounds();
@@ -161,7 +174,6 @@ void Layout::draw(graphics::View& target, const util::Vec2f& pos) const
             target.draw(bbox);
         }
 #endif
-    }
 }
 
 

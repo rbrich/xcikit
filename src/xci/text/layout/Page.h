@@ -104,6 +104,8 @@ public:
 
     void set_element_bounds(const util::Rect_f& word_bounds);
 
+    const std::vector<Span>& lines() const { return m_lines; }
+
 private:
     float space_width();
 

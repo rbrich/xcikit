@@ -132,6 +132,7 @@ private:
     std::string m_string;
     Style m_style;
     util::Vec2f m_pos;  // relative to page origin (top-left corner)
+    util::Rect_f m_bounds;
 };
 
 

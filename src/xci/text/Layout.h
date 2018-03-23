@@ -37,28 +37,31 @@ namespace layout {
 class Span
 {
 public:
-    static constexpr ElementIndex invalid_index = ~0u;
+    static constexpr ElementIndex open_end = ~0u;
 
-    explicit Span(ElementIndex begin) : m_begin(begin) {}
+    // Create new open span
+    explicit Span(ElementIndex begin) : Span(begin, open_end) {}
 
+    // Create new closed span
+    explicit Span(ElementIndex begin, ElementIndex end) : m_begin(begin), m_end(end) {
+        assert(begin != open_end);
+    }
+
+    // Set span end (close it)
     void set_end(ElementIndex end) { m_end = end; }
 
+    // Begin is included, end is excluded (after last word)
     ElementIndex begin_index() const { return m_begin; }
-
     ElementIndex end_index() const { return m_end; }
 
     bool is_empty() const { return m_begin == m_end; }
-
-    bool is_open() const
-    {
-        return m_begin != invalid_index && m_end == invalid_index;
-    }
+    bool is_open() const { return m_end == open_end; }
 
     // Restyle all words in span
     //void set_color(const graphics::Color& color);
 
     // Retrieve adjusted (global) bounding box of the span.
-    util::Rect_f get_bounds() const;
+    util::Rect_f bounds() const;
 
     // add padding to bounds
     void add_padding(float radius);
@@ -67,7 +70,7 @@ private:
     friend class Page;
 
     ElementIndex m_begin;
-    ElementIndex m_end = invalid_index;  // points after last work in STL fashion
+    ElementIndex m_end;
     util::Rect_f m_bounds;
 };
 
@@ -127,7 +130,7 @@ public:
     // Put horizontal tab onto line. It takes all space up to next tabstop.
     void add_tab();
 
-    // Finish current line, apply alignment and move to new one.
+    // Finish current line, apply alignment and move to next one.
     // Does nothing if current line is empty.
     void finish_line();
 

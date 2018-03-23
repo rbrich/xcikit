@@ -45,9 +45,14 @@ public:
     // Visual debugging
     using DebugFlags = unsigned int;
     enum class Debug: DebugFlags {
-        GlyphBBox = 1 << 0,
+        GlyphBBox       = 1 << 0,
+        WordBBox        = 1 << 1,
+        WordBasePoint   = 1 << 2,
+        LineBBox        = 1 << 3,
+        PageBBox        = 1 << 4,
     };
     void set_debug_flag(Debug flag, bool enabled = true);
+    void set_debug_flags(DebugFlags flags) { m_debug = flags; }
     bool has_debug_flag(Debug flag) const;
 
     class Impl;

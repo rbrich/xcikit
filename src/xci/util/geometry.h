@@ -94,12 +94,11 @@ struct Rect {
     //bool intersects(const Rect<T>& rectangle) const;
 
     Rect<T> union_(const Rect<T>& other) const {
-        return {
-                std::min(x, other.x),
-                std::min(y, other.y),
-                std::max(right(), other.right()) - x,
-                std::max(bottom(), other.bottom()) - y,
-        };
+        auto l = std::min(x, other.x);
+        auto t = std::min(y, other.y);
+        auto r = std::max(right(), other.right());
+        auto b = std::max(bottom(), other.bottom());
+        return {l, t, r-l, b-t};
     }
 
     // Extend Rect to contain `other`
@@ -119,6 +118,8 @@ struct Rect {
     inline T top() const { return y; }
     inline T right() const { return x + w; }
     inline T bottom() const { return y + h; }
+
+    bool empty() const { return x + y + w + h == 0; }
 
 public:
     T x;  // left
