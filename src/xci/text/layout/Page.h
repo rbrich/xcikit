@@ -102,7 +102,8 @@ public:
 
     // ------------------------------------------------------------------------
 
-    void set_element_bounds(const util::Rect_f& word_bounds);
+    // Add word bbox to line bbox
+    void add_word_bbox(const util::Rect_f& bbox);
 
     const std::vector<Span>& lines() const { return m_lines; }
 

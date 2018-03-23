@@ -1,7 +1,7 @@
 // Logger.h created on 2018-03-01, part of XCI toolkit
 
-#ifndef XCI_LOG_LOGGER_H
-#define XCI_LOG_LOGGER_H
+#ifndef XCI_UTIL_LOG_H
+#define XCI_UTIL_LOG_H
 
 #include <xci/util/format.h>
 
@@ -63,4 +63,4 @@ namespace log {
 
 }} // namespace xci::log
 
-#endif // XCI_LOG_LOGGER_H
+#endif // XCI_UTIL_LOG_H

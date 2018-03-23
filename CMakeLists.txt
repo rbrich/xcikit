@@ -10,15 +10,19 @@ option(WITH_OPENGL "Link with GLFW and build libxci-graphics-opengl." ON)
 option(WITH_SFML "Link with SFML and build libxci-graphics-sfml." OFF)
 option(WITH_PANDA "Link with Panda3D and build libxci-graphics-panda." OFF)
 
+option(DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
+
 # ------------ #
 # Sources      #
 # ------------ #
 
 set(XCI_UTIL_SOURCES
+    src/xci/util/format.h
+    src/xci/util/geometry.h
     src/xci/util/log.cpp
     src/xci/util/log.h
-    src/xci/util/format.h
-    src/xci/util/geometry.h)
+    src/xci/util/string.cpp
+    src/xci/util/string.h)
 
 set(XCI_GRAPHICS_SOURCES
     src/xci/graphics/Color.h
@@ -192,6 +196,11 @@ target_link_libraries(${XCI_TEXT_LIBRARY}
     ${XCI_UTIL_LIBRARY}
     ${FREETYPE_LIBRARIES}
     ${RBP_LIBRARY})
+
+if (DEBUG_MARKUP_DUMP_TOKENS)
+    target_compile_definitions(${XCI_TEXT_LIBRARY} PRIVATE
+        MARKUP_DUMP_TOKENS)
+endif (DEBUG_MARKUP_DUMP_TOKENS)
 
 set(XCI_WIDGETS_LIBRARY xci-widgets)
 add_library(${XCI_WIDGETS_LIBRARY} STATIC ${XCI_WIDGETS_SOURCES})

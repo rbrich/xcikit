@@ -17,6 +17,7 @@
 
 #include <xci/graphics/Sprites.h>
 #include <xci/graphics/Rectangles.h>
+#include <xci/util/string.h>
 
 namespace xci {
 namespace text {
@@ -24,6 +25,7 @@ namespace layout {
 
 using xci::util::Vec2f;
 using xci::util::Rect_f;
+using xci::util::to_utf32;
 using xci::graphics::Color;
 using xci::graphics::View;
 
@@ -42,7 +44,7 @@ void Word::apply(Page& page)
     // Measure word (metrics are affected by string, font, size)
     m_bounds = {};
     util::Vec2f pen;
-    for (CodePoint code_point : m_string) {
+    for (CodePoint code_point : to_utf32(m_string)) {
         auto glyph = font->get_glyph(code_point);
         if (glyph == nullptr)
             continue;
@@ -71,7 +73,7 @@ void Word::apply(Page& page)
     m_bounds.x += m_pos.x;
     m_bounds.y += m_pos.y;
 
-    page.set_element_bounds(m_bounds);
+    page.add_word_bbox(m_bounds);
     page.advance_pen(pen);
 
     m_style = page.style();
@@ -101,7 +103,7 @@ void Word::draw(View& target, const Vec2f& pos) const
     graphics::Rectangles bboxes(Color(150, 0, 0), Color(250, 50, 50));
 
     Vec2f pen;
-    for (CodePoint code_point : m_string) {
+    for (CodePoint code_point : to_utf32(m_string)) {
         auto glyph = font->get_glyph(code_point);
         if (glyph == nullptr)
             continue;

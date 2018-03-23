@@ -21,7 +21,7 @@ enum class Key {
     A = 65,
     B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z
 };
-static_assert((int)Key::Z == 90);
+static_assert((int)Key::Z == 90, "ascii letters");
 
 
 struct KeyEvent {

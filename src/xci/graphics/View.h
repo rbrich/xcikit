@@ -45,11 +45,11 @@ public:
     // Visual debugging
     using DebugFlags = unsigned int;
     enum class Debug: DebugFlags {
-        GlyphBBox       = 1 << 0,
-        WordBBox        = 1 << 1,
-        WordBasePoint   = 1 << 2,
-        LineBBox        = 1 << 3,
-        PageBBox        = 1 << 4,
+        GlyphBBox       = 1u << 0u,
+        WordBBox        = 1u << 1u,
+        WordBasePoint   = 1u << 2u,
+        LineBBox        = 1u << 3u,
+        PageBBox        = 1u << 4u,
     };
     void set_debug_flag(Debug flag, bool enabled = true);
     void set_debug_flags(DebugFlags flags) { m_debug = flags; }
@@ -60,7 +60,7 @@ public:
 
 private:
     std::unique_ptr<Impl> m_impl;
-    DebugFlags m_debug;
+    DebugFlags m_debug = 0;
 };
 
 

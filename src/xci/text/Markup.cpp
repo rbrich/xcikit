@@ -14,6 +14,8 @@
 // limitations under the License.
 
 #include "Markup.h"
+#include <xci/util/log.h>
+#include <xci/util/string.h>
 
 #include <tao/pegtl.hpp>
 
@@ -21,6 +23,8 @@
 
 namespace xci {
 namespace text {
+
+using namespace util::log;
 
 namespace parser {
 using namespace tao::pegtl;
@@ -47,7 +51,7 @@ template<typename T>
 void dump_token(const char *name, T& token)
 {
 #ifdef MARKUP_DUMP_TOKENS
-    printf("%s: \"%s\"\n", name, token.string().c_str());
+    log_debug("{}: \"{}\"", name, util::escape(token.string()).c_str());
 #endif
 }
 
@@ -61,6 +65,16 @@ struct Action<ControlSeq>
     static bool apply(const Input &in, Markup &ctx)
     {
         dump_token("csq", in);
+        auto csq = in.string();
+        if (csq == "{tab}") {
+            ctx.get_layout().add_tab();
+            return true;
+        }
+        if (csq == "{br}") {
+            ctx.get_layout().finish_line();
+            return true;
+        }
+        log_warning("Markup: Ignoring unknown control sequence {}", csq);
         return true;
     }
 };
@@ -122,10 +136,10 @@ struct Control : normal< Rule >
     template< typename Input, typename... States >
     static void raise( const Input& in, States&&... /*unused*/ )
     {
-        std::cerr << in.position()
-                  << ": Parse error matching " << internal::demangle< Rule >()
-                  << " at [" << std::string(in.current(), in.size()).substr(0, 10) << "]"
-                  << std::endl;
+        log_error("{}: Parse error matching {} at [{}]",
+                  in.position(),
+                  internal::demangle< Rule >(),
+                  std::string(in.current(), in.size()).substr(0, 10));
         throw parse_error( "parse error matching " + internal::demangle< Rule >(), in );
     }
 };
@@ -141,7 +155,11 @@ bool Markup::parse(const std::string &s)
 
     tao::pegtl::memory_input<> in(s, "Markup");
 
-    return tao::pegtl::parse< Grammar, Action, Control >( in, *this );
+    try {
+        return tao::pegtl::parse< Grammar, Action, Control >( in, *this );
+    } catch (tao::pegtl::parse_error& error) {
+        return false;
+    }
 }
 
 

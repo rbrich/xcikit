@@ -26,7 +26,7 @@ namespace xci {
 namespace text {
 
 
-using CodePoint = uint32_t;
+using CodePoint = char32_t;
 using GlyphIndex = uint32_t;
 
 

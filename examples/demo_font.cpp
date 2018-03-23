@@ -13,18 +13,17 @@ using namespace xci::text;
 using namespace xci::graphics;
 
 // sample text with forced newlines
-static const char * sample_text =
-        "One morning, when Gregor Samsa\n\n"
-        "woke from troubled dreams, he found\n\n"
-        "himself transformed in his bed into\n\n"
-        "a horrible vermin. He lay on his\n\n"
-        "armour-like back, and if he lifted\n\n"
-        "his head a little he could see his\n\n"
-        "brown belly, slightly domed and\n\n"
-        "divided by arches into stiff sections.\n\n"
-        "The bedding was hardly able to cover\n\n"
-        "it and seemed ready to slide off any\n\n"
-        "moment.";
+static const char * sample_text = R"SAMPLE(
+Ty třepotné, smavé hvězdičky{br}
+tak čiperně na mne hledí -{br}
+ach prosím vás, je to pravda vše,{br}
+co lidé prý o vás vědí?{br}
+{br}
+Že maličké vy prý hvězdičky{br}
+jste obrovská samá těla -{br}
+a od jedné k druhé prý sto let{br}
+a k některé věčnost celá?{br}
+)SAMPLE";
 
 int main()
 {
@@ -32,7 +31,7 @@ int main()
     window.create({800, 600}, "XCI font demo");
 
     FontFace face;
-    if (!face.load_from_file("fonts/Share_Tech_Mono/ShareTechMono-Regular.ttf", 0))
+    if (!face.load_from_file("fonts/Enriqueta/Enriqueta-Regular.ttf", 0))
         return EXIT_FAILURE;
 
     Font font;
