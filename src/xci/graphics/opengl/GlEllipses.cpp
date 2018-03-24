@@ -55,8 +55,8 @@ in vec2 v_border_outer;
 out vec4 o_color;
 
 void main() {
-    float ri = sqrt(v_border_inner.x*v_border_inner.x + v_border_inner.y*v_border_inner.y);
-    float ro = sqrt(v_border_outer.x*v_border_outer.x + v_border_outer.y*v_border_outer.y);
+    float ri = length(v_border_inner);
+    float ro = length(v_border_outer);
     float f = fwidth(ri);
     float alpha = smoothstep(1-f, 1, ri);
     o_color = mix(u_fill_color, u_outline_color, alpha);

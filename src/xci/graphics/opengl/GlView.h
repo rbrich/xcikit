@@ -19,6 +19,7 @@
 #include <xci/graphics/View.h>
 
 #include <glad/glad.h>
+#include <array>
 
 namespace xci {
 namespace graphics {

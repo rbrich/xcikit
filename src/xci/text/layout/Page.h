@@ -22,6 +22,7 @@
 #include <xci/util/geometry.h>
 
 #include <vector>
+#include <string>
 
 namespace xci {
 namespace text {
@@ -105,7 +106,7 @@ private:
 
 class Page {
 public:
-    explicit Page(Layout& layout);
+    explicit Page();
 
     // Target view which will be queried for sizes
     // If not set (nullptr), some generic, probably wrong sizes will be used.
@@ -183,7 +184,6 @@ private:
     float space_width();
 
 private:
-    Layout& m_layout;
     const graphics::View* m_target = nullptr;
 
     // running state

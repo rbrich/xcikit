@@ -178,8 +178,7 @@ void Span::adjust_style(std::function<void(Style& word_style)> fn_adjust)
 }
 
 
-Page::Page(Layout& layout)
-        : m_layout(layout)
+Page::Page()
 {
     m_lines.emplace_back();
 }

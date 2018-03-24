@@ -39,8 +39,6 @@ namespace layout {
 class Layout
 {
 public:
-    Layout() : m_page(*this) {}
-
     // Clear all contents.
     void clear();
 
@@ -118,7 +116,6 @@ public:
     void draw(graphics::View& target, const util::Vec2f& pos) const;
 
 private:
-    friend class Page;
     Page m_page;
     std::vector<std::unique_ptr<Element>> m_elements;
 
