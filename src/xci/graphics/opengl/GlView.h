@@ -33,17 +33,26 @@ public:
     Vec2f size() const { return m_size; }
     Vec2u pixel_size() const { return m_pixel_size; }
 
-    // access native handles
-    GLuint gl_program_rectangle();
-    GLuint gl_program_ellipse();
-    GLuint gl_program_sprite();
+    // ------------------------------------------------------------------------
+    // Shaders
+
+    enum class ProgramId {
+        Sprite = 0,
+        Rectangle,
+        Ellipse,
+        // The last item helps with determining m_program array size
+        EnumSize_,
+    };
+
+    // Compile GLSL program once per ID
+    GLuint gl_program_from_string(ProgramId id,
+                                  const char* vertex_source,
+                                  const char* fragment_source);
 
 private:
     Vec2f m_size;       // eg. {2.666, 2.0}
     Vec2u m_pixel_size; // eg. {800, 600}
-    GLuint m_rectangle_program = 0;
-    GLuint m_ellipse_program = 0;
-    GLuint m_sprite_program = 0;
+    std::array<GLuint, (size_t)ProgramId::EnumSize_> m_program = {};
 };
 
 

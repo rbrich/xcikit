@@ -25,8 +25,41 @@
 namespace xci {
 namespace graphics {
 
-
 using namespace xci::util::log;
+
+
+static const char* c_vertex_shader = R"~~~(
+#version 330
+
+uniform mat4 u_mvp;
+
+layout(location = 0) in vec2 a_position;
+layout(location = 1) in vec2 a_tex_coord;
+
+out vec2 v_tex_coord;
+
+void main() {
+    gl_Position = u_mvp * vec4(a_position, 0.0, 1.0);
+    v_tex_coord = a_tex_coord;
+}
+)~~~";
+
+
+static const char* c_fragment_shader = R"~~~(
+#version 330
+
+uniform sampler2D u_texture;
+uniform vec4 u_color;
+
+in vec2 v_tex_coord;
+
+out vec4 o_color;
+
+void main() {
+    float alpha = texture(u_texture, v_tex_coord).r;
+    o_color = vec4(u_color.rgb, u_color.a * alpha);
+}
+)~~~";
 
 
 GlSprites::GlSprites(const Texture& texture, const Color& color)
@@ -68,7 +101,8 @@ void GlSprites::draw(View& view, const Vec2f& pos)
 {
     init_gl_objects();
 
-    auto program = view.impl().gl_program_sprite();
+    auto program = view.impl().gl_program_from_string(
+            GlView::ProgramId::Sprite, c_vertex_shader, c_fragment_shader);
     glUseProgram(program);
     glBindVertexArray(m_vertex_array);
     glEnableVertexAttribArray(0);

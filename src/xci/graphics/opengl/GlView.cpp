@@ -22,118 +22,7 @@
 namespace xci {
 namespace graphics {
 
-
 using namespace xci::util::log;
-
-
-static const char* c_sprite_vertex_shader = R"~~~(
-#version 330
-
-uniform mat4 u_mvp;
-
-layout(location = 0) in vec2 a_position;
-layout(location = 1) in vec2 a_tex_coord;
-
-out vec2 v_tex_coord;
-
-void main() {
-    gl_Position = u_mvp * vec4(a_position, 0.0, 1.0);
-    v_tex_coord = a_tex_coord;
-}
-)~~~";
-
-static const char* c_sprite_fragment_shader = R"~~~(
-#version 330
-
-uniform sampler2D u_texture;
-uniform vec4 u_color;
-
-in vec2 v_tex_coord;
-
-out vec4 o_color;
-
-void main() {
-    float alpha = texture(u_texture, v_tex_coord).r;
-    o_color = vec4(u_color.rgb, u_color.a * alpha);
-}
-)~~~";
-
-
-static const char* c_rectangle_vertex_shader = R"~~~(
-#version 330
-
-uniform mat4 u_mvp;
-
-layout(location = 0) in vec2 a_position;
-layout(location = 1) in vec2 a_border_inner;
-
-out vec2 v_border_inner;
-
-void main() {
-    gl_Position = u_mvp * vec4(a_position, 0.0, 1.0);
-    v_border_inner = a_border_inner;
-}
-)~~~";
-
-static const char* c_rectangle_fragment_shader = R"~~~(
-#version 330
-
-uniform vec4 u_fill_color;
-uniform vec4 u_outline_color;
-
-in vec2 v_border_inner;
-
-out vec4 o_color;
-
-void main() {
-    // >1 = outline, <1 = fill
-    float r = max(abs(v_border_inner.x), abs(v_border_inner.y));
-    float alpha = step(1, r);
-    o_color = mix(u_fill_color, u_outline_color, alpha);
-}
-)~~~";
-
-
-static const char* c_ellipse_vertex_shader = R"~~~(
-#version 330
-
-uniform mat4 u_mvp;
-
-layout(location = 0) in vec2 a_position;
-layout(location = 1) in vec2 a_border_inner;
-layout(location = 2) in vec2 a_border_outer;
-
-out vec2 v_border_inner;
-out vec2 v_border_outer;
-
-void main() {
-    gl_Position = u_mvp * vec4(a_position, 0.0, 1.0);
-    v_border_inner = a_border_inner;
-    v_border_outer = a_border_outer;
-}
-)~~~";
-
-static const char* c_ellipse_fragment_shader = R"~~~(
-#version 330
-
-uniform vec4 u_fill_color;
-uniform vec4 u_outline_color;
-
-in vec2 v_border_inner;
-in vec2 v_border_outer;
-
-out vec4 o_color;
-
-void main() {
-    float ri = sqrt(v_border_inner.x*v_border_inner.x + v_border_inner.y*v_border_inner.y);
-    float ro = sqrt(v_border_outer.x*v_border_outer.x + v_border_outer.y*v_border_outer.y);
-    float f = fwidth(ri);
-    float alpha = smoothstep(1-f, 1, ri);
-    o_color = mix(u_fill_color, u_outline_color, alpha);
-    alpha = smoothstep(1-f, 1, ro);
-    o_color = mix(o_color, vec4(0,0,0,0), alpha);
-}
-)~~~";
 
 
 static GLuint compile_program(const char* vertex_source,
@@ -237,9 +126,9 @@ GlView::GlView(Vec2u pixel_size)
 
 GlView::~GlView()
 {
-    glDeleteProgram(m_sprite_program);
-    glDeleteProgram(m_ellipse_program);
-    glDeleteProgram(m_rectangle_program);
+    for (auto program : m_program) {
+        glDeleteProgram(program);
+    }
 }
 
 
@@ -260,36 +149,17 @@ void GlView::resize(Vec2u pixel_size)
 }
 
 
-GLuint GlView::gl_program_rectangle()
+GLuint
+GlView::gl_program_from_string(GlView::ProgramId id,
+                               const char* vertex_source,
+                               const char* fragment_source)
 {
-    if (!m_rectangle_program) {
-        m_rectangle_program = compile_program(
-                c_rectangle_vertex_shader,
-                c_rectangle_fragment_shader);
+    GLuint program = m_program[(size_t)id];
+    if (!program) {
+        program = compile_program(vertex_source, fragment_source);
+        m_program[(size_t)id] = program;
     }
-    return m_rectangle_program;
-}
-
-
-GLuint GlView::gl_program_ellipse()
-{
-    if (!m_ellipse_program) {
-        m_ellipse_program = compile_program(
-                c_ellipse_vertex_shader,
-                c_ellipse_fragment_shader);
-    }
-    return m_ellipse_program;
-}
-
-
-GLuint GlView::gl_program_sprite()
-{
-    if (!m_sprite_program) {
-        m_sprite_program = compile_program(
-                c_sprite_vertex_shader,
-                c_sprite_fragment_shader);
-    }
-    return m_sprite_program;
+    return program;
 }
 
 

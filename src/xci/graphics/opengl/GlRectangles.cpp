@@ -23,6 +23,42 @@ namespace xci {
 namespace graphics {
 
 
+static const char* c_vertex_shader = R"~~~(
+#version 330
+
+uniform mat4 u_mvp;
+
+layout(location = 0) in vec2 a_position;
+layout(location = 1) in vec2 a_border_inner;
+
+out vec2 v_border_inner;
+
+void main() {
+    gl_Position = u_mvp * vec4(a_position, 0.0, 1.0);
+    v_border_inner = a_border_inner;
+}
+)~~~";
+
+
+static const char* c_fragment_shader = R"~~~(
+#version 330
+
+uniform vec4 u_fill_color;
+uniform vec4 u_outline_color;
+
+in vec2 v_border_inner;
+
+out vec4 o_color;
+
+void main() {
+    // >1 = outline, <1 = fill
+    float r = max(abs(v_border_inner.x), abs(v_border_inner.y));
+    float alpha = step(1, r);
+    o_color = mix(u_fill_color, u_outline_color, alpha);
+}
+)~~~";
+
+
 GlRectangles::GlRectangles(const Color& fill_color, const Color& outline_color)
     : m_fill_color(fill_color), m_outline_color(outline_color)
 {}
@@ -60,7 +96,8 @@ void GlRectangles::draw(View& view, const Vec2f& pos)
 {
     init_gl_objects();
 
-    auto program = view.impl().gl_program_rectangle();
+    auto program = view.impl().gl_program_from_string(
+            GlView::ProgramId::Rectangle, c_vertex_shader, c_fragment_shader);
     glUseProgram(program);
     glBindVertexArray(m_vertex_array);
     glEnableVertexAttribArray(0);
