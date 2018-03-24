@@ -35,12 +35,14 @@ public:
 
     // access native handles
     GLuint gl_program_rectangle();
+    GLuint gl_program_ellipse();
     GLuint gl_program_sprite();
 
 private:
     Vec2f m_size;       // eg. {2.666, 2.0}
     Vec2u m_pixel_size; // eg. {800, 600}
     GLuint m_rectangle_program = 0;
+    GLuint m_ellipse_program = 0;
     GLuint m_sprite_program = 0;
 };
 

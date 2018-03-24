@@ -1,4 +1,4 @@
-// Rectangles.h created on 2018-03-19, part of XCI toolkit
+// Ellipses.h created on 2018-03-24, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_GRAPHICS_RECTANGLES_H
-#define XCI_GRAPHICS_RECTANGLES_H
+#ifndef XCI_GRAPHICS_ELLIPSES_H
+#define XCI_GRAPHICS_ELLIPSES_H
 
 #include <xci/graphics/Color.h>
 #include <xci/graphics/View.h>
@@ -26,27 +26,27 @@ namespace graphics {
 using xci::util::Rect_f;
 using xci::util::Vec2f;
 
-// A collection of plain rectangles. Each rectangle may have
+// A collection of plain ellipses. Each ellipse may have
 // different size and outline width, but colors are uniform.
 
-class Rectangles {
+class Ellipses {
 public:
-    explicit Rectangles(const Color& fill_color,
+    explicit Ellipses(const Color& fill_color,
                         const Color& outline_color = Color::White());
-    ~Rectangles();
-    Rectangles(Rectangles&&) noexcept;
-    Rectangles& operator=(Rectangles&&) noexcept;
+    ~Ellipses();
+    Ellipses(Ellipses&&) noexcept;
+    Ellipses& operator=(Ellipses&&) noexcept;
 
-    // Add new rectangle.
-    // `rect`              - rectangle position and size
+    // Add new ellipse.
+    // `rect`              - ellipse position and size
     // `outline_thickness` - the outline actually goes from edge to inside
     //                       this parameter defines how far (in display units)
-    void add_rectangle(const Rect_f& rect,
+    void add_ellipse(const Rect_f& rect,
                        float outline_thickness = 0);
-    void clear_rectangles();
+    void clear_ellipses();
 
-    // Draw all rectangles to `view` at `pos`.
-    // Final rectangle position is `pos` + rectangle's relative position
+    // Draw all ellipses to `view` at `pos`.
+    // Final ellipse position is `pos` + ellipse's relative position
     void draw(View& view, const Vec2f& pos);
 
     class Impl;
@@ -59,4 +59,4 @@ private:
 
 }} // namespace xci::graphics
 
-#endif // XCI_GRAPHICS_RECTANGLES_H
+#endif // XCI_GRAPHICS_ELLIPSES_H

@@ -33,6 +33,8 @@ static void error_callback(int error, const char* description)
 }
 
 
+// This is enabled via CMake option
+#ifdef XCI_DEBUG_OPENGL
 void gl_debug_callback( GLenum source,
                       GLenum type,
                       GLuint id,
@@ -45,8 +47,10 @@ void gl_debug_callback( GLenum source,
              ( type == GL_DEBUG_TYPE_ERROR ? "ERROR" : std::to_string((int)type) ),
              severity, message );
 }
+#endif
 
 
+// This is enabled by replacing GLAD sources with their debug version
 #ifdef GLAD_DEBUG
 void glad_debug_callback(const char *name, void *funcptr, int len_args, ...) {
     GLenum err_code = glad_glGetError();
@@ -92,7 +96,7 @@ void GlWindow::create(const Vec2u& size, const std::string& title)
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, true);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-#ifndef NDEBUG
+#ifdef XCI_DEBUG_OPENGL
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 #endif
 
@@ -121,7 +125,7 @@ void GlWindow::create(const Vec2u& size, const std::string& title)
              glGetString(GL_VERSION),
              glGetString(GL_SHADING_LANGUAGE_VERSION));
 
-#ifndef NDEBUG
+#ifdef XCI_DEBUG_OPENGL
     GLint flags;
     glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
     if (flags & GL_CONTEXT_FLAG_DEBUG_BIT) {

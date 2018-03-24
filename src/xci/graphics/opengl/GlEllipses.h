@@ -1,4 +1,4 @@
-// GlRectangles.h created on 2018-03-19, part of XCI toolkit
+// GlEllipses.h created on 2018-03-24, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,10 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_GRAPHICS_GL_RECTANGLES_H
-#define XCI_GRAPHICS_GL_RECTANGLES_H
+#ifndef XCI_GRAPHICS_GL_ELLIPSES_H
+#define XCI_GRAPHICS_GL_ELLIPSES_H
 
-#include <xci/graphics/Rectangles.h>
+#include <xci/graphics/Ellipses.h>
 
 #include <glad/glad.h>
 
@@ -26,15 +26,15 @@ namespace xci {
 namespace graphics {
 
 
-class GlRectangles {
+class GlEllipses {
 public:
-    explicit GlRectangles(const Color& fill_color,
+    explicit GlEllipses(const Color& fill_color,
                           const Color& outline_color = Color::White());
-    ~GlRectangles() { clear_gl_objects(); }
+    ~GlEllipses() { clear_gl_objects(); }
 
-    void add_rectangle(const Rect_f& rect,
-                       float outline_thickness = 0);
-    void clear_rectangles();
+    void add_ellipse(const Rect_f& rect,
+                     float outline_thickness = 0);
+    void clear_ellipses();
 
     void draw(View& view, const Vec2f& pos);
 
@@ -48,7 +48,8 @@ private:
 
     struct Vertex {
         GLfloat x, y;         // vertex coords
-        GLfloat u, v;         // inner edge of the border
+        GLfloat iu, iv;       // inner edge of the border
+        GLfloat ou, ov;       // outline edge of the border
     };
     std::vector<Vertex> m_vertex_data;
     std::vector<GLint> m_elem_first;  // first vertex of each element
@@ -60,13 +61,13 @@ private:
 };
 
 
-class Rectangles::Impl : public GlRectangles {
+class Ellipses::Impl : public GlEllipses {
 public:
     explicit Impl(const Color& fill_color, const Color& outline_color)
-            : GlRectangles(fill_color, outline_color) {}
+            : GlEllipses(fill_color, outline_color) {}
 };
 
 
 }} // namespace xci::graphics
 
-#endif // XCI_GRAPHICS_GL_RECTANGLES_H
+#endif // XCI_GRAPHICS_GL_ELLIPSES_H

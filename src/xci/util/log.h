@@ -9,7 +9,8 @@ namespace xci {
 namespace util {
 
 
-// TODO: Provides configuration options, passes messages to handlers
+// TODO: Provide configuration options,
+//       pass messages to handlers instead of cerr directly
 class Logger
 {
 public:

@@ -31,8 +31,8 @@ static const char* c_sprite_vertex_shader = R"~~~(
 
 uniform mat4 u_mvp;
 
-in vec2 a_position;
-in vec2 a_tex_coord;
+layout(location = 0) in vec2 a_position;
+layout(location = 1) in vec2 a_tex_coord;
 
 out vec2 v_tex_coord;
 
@@ -64,14 +64,14 @@ static const char* c_rectangle_vertex_shader = R"~~~(
 
 uniform mat4 u_mvp;
 
-in vec2 a_position;
-in vec2 a_tex_coord;
+layout(location = 0) in vec2 a_position;
+layout(location = 1) in vec2 a_border_inner;
 
-out vec2 v_tex_coord;
+out vec2 v_border_inner;
 
 void main() {
     gl_Position = u_mvp * vec4(a_position, 0.0, 1.0);
-    v_tex_coord = a_tex_coord;
+    v_border_inner = a_border_inner;
 }
 )~~~";
 
@@ -81,15 +81,57 @@ static const char* c_rectangle_fragment_shader = R"~~~(
 uniform vec4 u_fill_color;
 uniform vec4 u_outline_color;
 
-in vec2 v_tex_coord;
+in vec2 v_border_inner;
 
 out vec4 o_color;
 
 void main() {
     // >1 = outline, <1 = fill
-    float edge = max(abs(v_tex_coord.x), abs(v_tex_coord.y));
-    float alpha = step(1, edge);
+    float r = max(abs(v_border_inner.x), abs(v_border_inner.y));
+    float alpha = step(1, r);
     o_color = mix(u_fill_color, u_outline_color, alpha);
+}
+)~~~";
+
+
+static const char* c_ellipse_vertex_shader = R"~~~(
+#version 330
+
+uniform mat4 u_mvp;
+
+layout(location = 0) in vec2 a_position;
+layout(location = 1) in vec2 a_border_inner;
+layout(location = 2) in vec2 a_border_outer;
+
+out vec2 v_border_inner;
+out vec2 v_border_outer;
+
+void main() {
+    gl_Position = u_mvp * vec4(a_position, 0.0, 1.0);
+    v_border_inner = a_border_inner;
+    v_border_outer = a_border_outer;
+}
+)~~~";
+
+static const char* c_ellipse_fragment_shader = R"~~~(
+#version 330
+
+uniform vec4 u_fill_color;
+uniform vec4 u_outline_color;
+
+in vec2 v_border_inner;
+in vec2 v_border_outer;
+
+out vec4 o_color;
+
+void main() {
+    float ri = sqrt(v_border_inner.x*v_border_inner.x + v_border_inner.y*v_border_inner.y);
+    float ro = sqrt(v_border_outer.x*v_border_outer.x + v_border_outer.y*v_border_outer.y);
+    float f = fwidth(ri);
+    float alpha = smoothstep(1-f, 1, ri);
+    o_color = mix(u_fill_color, u_outline_color, alpha);
+    alpha = smoothstep(1-f, 1, ro);
+    o_color = mix(o_color, vec4(0,0,0,0), alpha);
 }
 )~~~";
 
@@ -111,7 +153,7 @@ static GLuint compile_program(const char* vertex_source,
         std::string error_message(length + 1, '\0');
         glGetShaderInfoLog(vertex_shader, length, nullptr, &error_message[0]);
         log_error("vertex shader error: {}", error_message.c_str());
-        exit(1);
+        return 0;
     }
 
     // compile fragment shader
@@ -127,16 +169,12 @@ static GLuint compile_program(const char* vertex_source,
         std::string error_message(length + 1, '\0');
         glGetShaderInfoLog(fragment_shader, length, nullptr, &error_message[0]);
         log_error("fragment shader error: {}", error_message.c_str());
-        exit(1);
+        return 0;
     }
 
     GLuint program = glCreateProgram();
     glAttachShader(program, vertex_shader);
     glAttachShader(program, fragment_shader);
-
-    // fixed attribute locations for VBO
-    glBindAttribLocation(program, 0, "a_position");
-    glBindAttribLocation(program, 1, "a_tex_coord");
 
     // link program
     glLinkProgram(program);
@@ -149,7 +187,7 @@ static GLuint compile_program(const char* vertex_source,
         std::string error_message(length + 1, '\0');
         glGetProgramInfoLog(program, length, nullptr, &error_message[0]);
         log_error("shader program error: {}", error_message.c_str());
-        exit(1);
+        return 0;
     }
 
     // cleanup
@@ -159,7 +197,7 @@ static GLuint compile_program(const char* vertex_source,
     glDeleteShader(vertex_shader);
     glDeleteShader(fragment_shader);
 
-#ifndef NDEBUG
+#ifdef XCI_DEBUG_OPENGL
     // dump attributes
     GLint n, max_len;
     glGetProgramiv(program, GL_ACTIVE_ATTRIBUTES, &n);
@@ -200,6 +238,7 @@ GlView::GlView(Vec2u pixel_size)
 GlView::~GlView()
 {
     glDeleteProgram(m_sprite_program);
+    glDeleteProgram(m_ellipse_program);
     glDeleteProgram(m_rectangle_program);
 }
 
@@ -229,6 +268,17 @@ GLuint GlView::gl_program_rectangle()
                 c_rectangle_fragment_shader);
     }
     return m_rectangle_program;
+}
+
+
+GLuint GlView::gl_program_ellipse()
+{
+    if (!m_ellipse_program) {
+        m_ellipse_program = compile_program(
+                c_ellipse_vertex_shader,
+                c_ellipse_fragment_shader);
+    }
+    return m_ellipse_program;
 }
 
 

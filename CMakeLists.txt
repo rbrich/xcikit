@@ -11,6 +11,7 @@ option(WITH_SFML "Link with SFML and build libxci-graphics-sfml." OFF)
 option(WITH_PANDA "Link with Panda3D and build libxci-graphics-panda." OFF)
 
 option(DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
+option(DEBUG_OPENGL "Log info about OpenGL calls and errors." OFF)
 
 # ------------ #
 # Sources      #
@@ -26,6 +27,8 @@ set(XCI_UTIL_SOURCES
 
 set(XCI_GRAPHICS_SOURCES
     src/xci/graphics/Color.h
+    src/xci/graphics/Ellipses.inl
+    src/xci/graphics/Ellipses.h
     src/xci/graphics/Rectangles.h
     src/xci/graphics/Rectangles.inl
     src/xci/graphics/Texture.h
@@ -38,6 +41,8 @@ set(XCI_GRAPHICS_SOURCES
     src/xci/graphics/Window.inl)
 
 set(XCI_GRAPHICS_OPENGL_SOURCES
+    src/xci/graphics/opengl/GlEllipses.cpp
+    src/xci/graphics/opengl/GlEllipses.h
     src/xci/graphics/opengl/GlRectangles.cpp
     src/xci/graphics/opengl/GlRectangles.h
     src/xci/graphics/opengl/GlSprites.cpp
@@ -148,6 +153,10 @@ if (WITH_OPENGL)
     target_link_libraries(${XCI_GRAPHICS_OPENGL_LIBRARY}
         ${XCI_UTIL_LIBRARY}
         dl glad glfw)
+    if (DEBUG_OPENGL)
+        target_compile_definitions(${XCI_GRAPHICS_OPENGL_LIBRARY} PRIVATE
+            XCI_DEBUG_OPENGL)
+    endif (DEBUG_OPENGL)
     set(XCI_GRAPHICS_LIBRARY ${XCI_GRAPHICS_OPENGL_LIBRARY})
 endif (WITH_OPENGL)
 
@@ -198,7 +207,7 @@ target_link_libraries(${XCI_TEXT_LIBRARY}
 
 if (DEBUG_MARKUP_DUMP_TOKENS)
     target_compile_definitions(${XCI_TEXT_LIBRARY} PRIVATE
-        MARKUP_DUMP_TOKENS)
+        XCI_DEBUG_MARKUP_DUMP_TOKENS)
 endif (DEBUG_MARKUP_DUMP_TOKENS)
 
 set(XCI_WIDGETS_LIBRARY xci-widgets)

@@ -50,7 +50,7 @@ struct Grammar : must< star<sor< ControlSeq, Word, Paragraph, Tab, Space >>, eof
 template<typename T>
 void dump_token(const char *name, T& token)
 {
-#ifdef MARKUP_DUMP_TOKENS
+#ifdef XCI_DEBUG_MARKUP_DUMP_TOKENS
     log_debug("{}: \"{}\"", name, util::escape(token.string()).c_str());
 #endif
 }
