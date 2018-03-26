@@ -117,13 +117,6 @@ static GLuint compile_program(const char* vertex_source,
 }
 
 
-GlView::GlView(Vec2u pixel_size)
-    : m_pixel_size(pixel_size)
-{
-    resize(pixel_size);
-}
-
-
 GlView::~GlView()
 {
     for (auto program : m_program) {
@@ -132,20 +125,26 @@ GlView::~GlView()
 }
 
 
-void GlView::resize(Vec2u pixel_size)
+void GlView::set_screen_size(Vec2u size)
 {
     // Decide between vert+/hor+ depending on screen orientation.
-    if (pixel_size.x < pixel_size.y) {
+    if (size.x < size.y) {
         // preserve screen width
-        float aspect = float(pixel_size.y) / float(pixel_size.x);
-        m_size = {2.0f, 2.0f * aspect};
+        float aspect = float(size.y) / float(size.x);
+        m_scalable_size = {2.0f, 2.0f * aspect};
     } else {
         // preserve screen height
-        float aspect = float(pixel_size.x) / float(pixel_size.y);
-        m_size = {2.0f * aspect, 2.0f};
+        float aspect = float(size.x) / float(size.y);
+        m_scalable_size = {2.0f * aspect, 2.0f};
     }
 
-    m_pixel_size = pixel_size;
+    m_screen_size = size;
+}
+
+
+void GlView::set_framebuffer_size(Vec2u size)
+{
+    m_framebuffer_size = size;
 }
 
 

@@ -16,30 +16,45 @@ using xci::util::Vec2f;
 
 class View {
 public:
-    explicit View(Vec2u pixel_size);
+    View();
     ~View();
     View(View&&) noexcept;
     View& operator=(View&&) noexcept;
 
-    void resize(Vec2u pixel_size);
-
-    // Size of the view in display units.
-    // These units are similar to base OpenGL coordinates, but with aspect
-    // ratio correction. Center is {0,0}, bottom-left might be {-1.333, -1},
-    // top-right might be {1.333, 1} (depending on aspect ratio). Total size
-    // in one of the dimensions should always equal 2.0.
-    // Eg: {2.666, 2.0} for 800x600 (4/3 aspect ratio)
-    Vec2f size() const;
+    // Size of the view in screen pixels. This size might be different
+    // from framebuffer size - in that case, call also `set_framebuffer_size`.
+    void set_screen_size(Vec2u size);
+    Vec2u screen_size() const;
 
     // Size of the view in framebuffer pixels.
     // This is used for pixel-perfect font rendering.
-    Vec2u pixel_size() const;
+    // By default (or when set to {0, 0}, the framebuffer size will be set
+    // to same value as view size in screen pixels.
+    void set_framebuffer_size(Vec2u size);
+    Vec2u framebuffer_size() const;
 
-    // Size of 1x1 pixel square in display units.
-    Vec2f pixel_ratio() const {
-        auto p = pixel_size();
-        auto u = size();
-        return {u.x / p.x, u.y / p.y};
+    // Size of the view in scalable units. These units are used
+    // for placing objects in the view. The view size is at least 2 units
+    // in either direction, with center at {0, 0} and aspect correction.
+    // X goes right, Y goes down. Total size in one of the dimensions
+    // will always equal 2.0.
+    // Eg: {2.666, 2.0} for 800x600 (4/3 aspect ratio)
+    Vec2f scalable_size() const;
+
+    // Ratio of scalable units to screen pixels, ie.
+    // size of 1x1 screen pixel in scalable units.
+    Vec2f screen_ratio() const {
+        auto s = scalable_size();
+        auto px = screen_size();
+        return {s.x / px.x, s.y / px.y};
+    }
+
+    // Ration of scalable units to framebuffer pixels, ie.
+    // size of 1x1 framebuffer pixel in scalable units.
+    Vec2f framebuffer_ratio() const {
+        auto s = scalable_size();
+        auto fb = framebuffer_size();
+        return {s.x / fb.x, s.y / fb.y};
     }
 
     // Visual debugging

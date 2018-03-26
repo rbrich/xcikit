@@ -111,7 +111,7 @@ public:
     // Target view which will be queried for sizes
     // If not set (nullptr), some generic, probably wrong sizes will be used.
     void set_target(const graphics::View* target) { m_target = target; }
-    util::Vec2f target_pixel_ratio() const;
+    util::Vec2f target_framebuffer_ratio() const;
 
     // Reset all state
     void clear();

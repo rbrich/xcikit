@@ -112,8 +112,8 @@ void GlEllipses::draw(View& view, const Vec2f& pos)
     glEnableVertexAttribArray(2);
 
     // projection matrix
-    GLfloat xs = 2.0f / view.size().x;
-    GLfloat ys = 2.0f / view.size().y;
+    GLfloat xs = 2.0f / view.scalable_size().x;
+    GLfloat ys = 2.0f / view.scalable_size().y;
     GLfloat xt = pos.x * xs;
     GLfloat yt = pos.y * ys;
     const GLfloat mvp[] = {

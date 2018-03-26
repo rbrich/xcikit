@@ -78,7 +78,7 @@ void Layout::typeset(const graphics::View& target)
 
 void Layout::draw(View& target, const util::Vec2f& pos) const
 {
-    auto pxr = target.pixel_ratio();
+    auto pxr = target.screen_ratio();
 
     // Debug: page bbox
     if (target.has_debug_flag(View::Debug::PageBBox)) {
@@ -117,20 +117,6 @@ void Layout::draw(View& target, const util::Vec2f& pos) const
     for (auto& word : m_page.words()) {
         word.draw(target, pos);
     }
-
-#if 0
-        for (auto& span_item : m_spans) {
-            auto& span = span_item.second;
-            auto bounds = span.get_bounds();
-            sf::RectangleShape bbox;
-            bbox.setPosition(bounds.left, bounds.top);
-            bbox.setSize({bounds.width, bounds.height});
-            bbox.setFillColor(sf::Color::Transparent);
-            bbox.setOutlineColor(sf::Color::Blue);
-            bbox.setOutlineThickness(1);
-            target.draw(bbox);
-        }
-#endif
 }
 
 

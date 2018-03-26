@@ -27,12 +27,15 @@ namespace graphics {
 
 class GlView {
 public:
-    explicit GlView(Vec2u pixel_size);
     ~GlView();
 
-    void resize(Vec2u pixel_size);
-    Vec2f size() const { return m_size; }
-    Vec2u pixel_size() const { return m_pixel_size; }
+    void set_screen_size(Vec2u size);
+    Vec2u screen_size() const { return m_screen_size; }
+
+    void set_framebuffer_size(Vec2u size);
+    Vec2u framebuffer_size() const { return m_framebuffer_size; }
+
+    Vec2f scalable_size() const { return m_scalable_size; }
 
     // ------------------------------------------------------------------------
     // Shaders
@@ -51,16 +54,14 @@ public:
                                   const char* fragment_source);
 
 private:
-    Vec2f m_size;       // eg. {2.666, 2.0}
-    Vec2u m_pixel_size; // eg. {800, 600}
+    Vec2f m_scalable_size;      // eg. {2.666, 2.0}
+    Vec2u m_screen_size;        // eg. {800, 600}
+    Vec2u m_framebuffer_size;   // eg. {1600, 1200}
     std::array<GLuint, (size_t)ProgramId::EnumSize_> m_program = {};
 };
 
 
-class View::Impl : public GlView {
-public:
-    explicit Impl(Vec2u size) : GlView(size) {}
-};
+class View::Impl : public GlView {};
 
 
 }} // namespace xci::graphics

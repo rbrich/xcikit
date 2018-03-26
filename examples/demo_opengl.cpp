@@ -54,7 +54,7 @@ int main()
     glfwSetWindowUserPointer(window, &view);
     glfwSetFramebufferSizeCallback(window, [](GLFWwindow* win, int w, int h) {
         auto pview = (View*) glfwGetWindowUserPointer(win);
-        pview->resize({(unsigned) w, (unsigned) h});
+        pview->set_framebuffer_size({(unsigned) w, (unsigned) h});
         glViewport(0, 0, w, h);
     });
 

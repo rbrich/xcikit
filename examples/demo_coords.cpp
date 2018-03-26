@@ -42,56 +42,61 @@ int main()
     Text coords_br("(-, -)", font);
     Text coords_tr("(-, -)", font);
     Text coords_bl("(-, -)", font);
-    Text size_view("View size:         ", font);
-    size_view.set_color(Color(130, 120, 255));
-    Text size_pixel("Framebuffer size:  ", font);
-    size_pixel.set_color(Color(110, 130, 255));
-    Text size_ratio("Pixel ratio: 1x1 ~ ", font);
-    size_ratio.set_color(Color(90, 140, 255));
+    Text size_scal("View size:         ", font);
+    size_scal.set_color(Color(130, 120, 255));
+    Text size_screen("Screen size:       ", font);
+    size_screen.set_color(Color(90, 140, 255));
+    Text size_frame("Framebuffer size:  ", font);
+    size_frame.set_color(Color(110, 130, 255));
     Text size_font("Font size:         ", font);
     size_font.set_color(Color(70, 150, 255));
 
     window.display([&](View& view) {
         coords_center.draw(view, {0.0f, 0.0f});
         {
-            Vec2f xy = {-0.5f * view.size().x,
-                        -0.5f * view.size().y};
+            Vec2f xy = {-0.5f * view.scalable_size().x,
+                        -0.5f * view.scalable_size().y};
             coords_tl.set_fixed_string(format("({}, {})", xy.x, xy.y));
             coords_tl.draw(view, {xy.x + 0.1f, xy.y + 0.1f});
         }
         {
-            Vec2f xy = {+0.5f * view.size().x,
-                        +0.5f * view.size().y};
+            Vec2f xy = {+0.5f * view.scalable_size().x,
+                        +0.5f * view.scalable_size().y};
             coords_br.set_fixed_string(format("({}, {})", xy.x, xy.y));
             coords_br.draw(view, {xy.x - 0.4f, xy.y - 0.1f});
         }
         {
-            Vec2f xy = {+0.5f * view.size().x,
-                        -0.5f * view.size().y};
+            Vec2f xy = {+0.5f * view.scalable_size().x,
+                        -0.5f * view.scalable_size().y};
             coords_tr.set_fixed_string(format("({}, {})", xy.x, xy.y));
             coords_tr.draw(view, {xy.x - 0.4f, xy.y + 0.1f});
         }
         {
-            Vec2f xy = {-0.5f * view.size().x,
-                        +0.5f * view.size().y};
+            Vec2f xy = {-0.5f * view.scalable_size().x,
+                        +0.5f * view.scalable_size().y};
             coords_bl.set_fixed_string(format("({}, {})", xy.x, xy.y));
             coords_bl.draw(view, {xy.x + 0.1f, xy.y - 0.1f});
         }
 
-        auto vs = view.size();
-        size_view.set_fixed_string("View size:         "
-                                   + format("{} x {}", vs.x, vs.y));
-        size_view.draw(view, {-0.4f, -0.5f});
+        auto scal = view.scalable_size();
+        size_scal.set_fixed_string("Scalable size:     " +
+                                   format("{} x {}", scal.x, scal.y) +
+                                   "  (1.0 x 1.0)");
+        size_scal.draw(view, {-0.4f, -0.5f});
 
-        auto ps = view.pixel_size();
-        size_pixel.set_fixed_string("Framebuffer size:  "
-                                    + format("{} x {}", ps.x, ps.y));
-        size_pixel.draw(view, {-0.4f, -0.4f});
+        auto scr = view.screen_size();
+        auto pxr = view.screen_ratio();
+        size_screen.set_fixed_string("Screen size:       " +
+                                     format("{} x {}", scr.x, scr.y) +
+                                     "  (" + format("{} x {}", 1/pxr.x, 1/pxr.y) + ")");
+        size_screen.draw(view, {-0.4f, -0.4f});
 
-        auto pr = view.pixel_ratio();
-        size_ratio.set_fixed_string("Pixel ratio: 1x1 = "
-                                    + format("{} x {}", 1/pr.x, 1/pr.y));
-        size_ratio.draw(view, {-0.4f, -0.3f});
+        auto fb = view.framebuffer_size();
+        auto pxf = view.framebuffer_ratio();
+        size_frame.set_fixed_string("Framebuffer size:  " +
+                                    format("{} x {}", fb.x, fb.y) +
+                                    "  (" + format("{} x {}", 1/pxf.x, 1/pxf.y) + ")");
+        size_frame.draw(view, {-0.4f, -0.3f});
 
         size_font.set_fixed_string("Font size:         "
                                    + format("{}", font.size()));

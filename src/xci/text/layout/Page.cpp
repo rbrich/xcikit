@@ -41,7 +41,7 @@ Word::Word(Page& page, const std::string& string)
         return;
     }
 
-    auto pxr = page.target_pixel_ratio();
+    auto pxr = page.target_framebuffer_ratio();
     font->set_size(unsigned(m_style.size() / pxr.y));
 
     // Measure word (metrics are affected by string, font, size)
@@ -90,12 +90,12 @@ void Word::draw(graphics::View& target, const util::Vec2f& pos) const
         return;
     }
 
-    auto pxr = target.pixel_ratio();
-    font->set_size(unsigned(m_style.size() / pxr.y));
+    auto pxf = target.framebuffer_ratio();
+    font->set_size(unsigned(m_style.size() / pxf.y));
 
     if (target.has_debug_flag(View::Debug::WordBBox)) {
         graphics::Rectangles bbox(Color(0, 150, 0), Color(50, 250, 50));
-        bbox.add_rectangle(m_bbox, 1 * pxr.x);
+        bbox.add_rectangle(m_bbox, 1 * pxf.x);
         bbox.draw(target, pos);
     }
 
@@ -110,15 +110,15 @@ void Word::draw(graphics::View& target, const util::Vec2f& pos) const
         if (glyph == nullptr)
             continue;
 
-        Rect_f rect{pen.x + glyph->base_x() * pxr.x,
-                    pen.y - glyph->base_y() * pxr.y,
-                    glyph->width() * pxr.x,
-                    glyph->height() * pxr.y};
+        Rect_f rect{pen.x + glyph->base_x() * pxf.x,
+                    pen.y - glyph->base_y() * pxf.y,
+                    glyph->width() * pxf.x,
+                    glyph->height() * pxf.y};
         sprites.add_sprite(rect, glyph->tex_coords());
         if (show_bboxes)
-            bboxes.add_rectangle(rect, 1 * pxr.x);
+            bboxes.add_rectangle(rect, 1 * pxf.x);
 
-        pen.x += glyph->advance() * pxr.x;
+        pen.x += glyph->advance() * pxf.x;
     }
 
     auto p = pos + m_pos;
@@ -127,6 +127,7 @@ void Word::draw(graphics::View& target, const util::Vec2f& pos) const
     sprites.draw(target, p);
 
     if (target.has_debug_flag(View::Debug::WordBasePoint)) {
+        auto pxr = target.framebuffer_ratio();
         graphics::Rectangles basepoint(Color(150, 0, 150));
         basepoint.add_rectangle({-pxr.x, -pxr.y, 2 * pxr.x, 2 * pxr.y});
         basepoint.draw(target, p);
@@ -184,12 +185,12 @@ Page::Page()
 }
 
 
-util::Vec2f Page::target_pixel_ratio() const
+util::Vec2f Page::target_framebuffer_ratio() const
 {
     if (!m_target)
         return {1.0f/300, 1.0f/300};
 
-    return m_target->pixel_ratio();
+    return m_target->framebuffer_ratio();
 }
 
 
@@ -235,7 +236,7 @@ void Page::finish_line()
 void Page::advance_line(float lines)
 {
     auto* font = m_style.font();
-    auto pxr = target_pixel_ratio();
+    auto pxr = target_framebuffer_ratio();
     font->set_size(unsigned(m_style.size() / pxr.y));
     float line_height = font->line_height() * pxr.y;
     m_pen.y += lines * line_height;
@@ -288,7 +289,7 @@ void Page::add_word(const std::string& string)
 float Page::space_width()
 {
     auto* font = m_style.font();
-    auto pxr = target_pixel_ratio();
+    auto pxr = target_framebuffer_ratio();
     font->set_size(unsigned(m_style.size() / pxr.y));
     auto glyph = font->get_glyph(' ');
     return glyph->advance() * pxr.x;

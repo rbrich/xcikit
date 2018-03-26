@@ -28,13 +28,13 @@ int main()
     rts.add_ellipse({-1, -0.6f, 2, 1.2f}, 0.05);
     rts.add_ellipse({-0.6f, -0.8f, 1.2f, 1.6f}, 0.02);
 
-    // using View::pixel_ratio, we can set constant border width, in pixels
+    // using View::screen_ratio, we can set constant border width, in screen pixels
     Ellipses rts_px(Color(40, 40, 0, 128), Color(255, 255, 0));
 
     window.display([&](View& view) {
         rts.draw(view, {0, 0});
 
-        auto pxr = view.pixel_ratio().x;
+        auto pxr = view.screen_ratio().x;
         rts_px.add_ellipse({0.0f, 0.0f, 0.5f, 0.5f}, 1 * pxr);
         rts_px.add_ellipse({0.1f, 0.1f, 0.5f, 0.5f}, 2 * pxr);
         rts_px.add_ellipse({0.2f, 0.2f, 0.5f, 0.5f}, 3 * pxr);

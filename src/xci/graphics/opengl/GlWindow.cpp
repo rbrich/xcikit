@@ -162,12 +162,19 @@ void GlWindow::setup_view()
     int width, height;
     glfwGetFramebufferSize(m_window, &width, &height);
     glViewport(0, 0, width, height);
-    m_view.reset(new View({(unsigned int) width, (unsigned int) height}));
+    m_view.reset(new View);
+    m_view->set_framebuffer_size({(unsigned int) width, (unsigned int) height});
+    glfwGetWindowSize(m_window, &width, &height);
+    m_view->set_screen_size({(unsigned int) width, (unsigned int) height});
 
     glfwSetFramebufferSizeCallback(m_window, [](GLFWwindow* win, int w, int h) {
         auto self = (GlWindow*) glfwGetWindowUserPointer(win);
-        self->m_view->resize({(uint) w, (uint) h});
+        self->m_view->set_framebuffer_size({(uint) w, (uint) h});
         glViewport(0, 0, w, h);
+    });
+    glfwSetWindowSizeCallback(m_window, [](GLFWwindow* win, int w, int h) {
+        auto self = (GlWindow*) glfwGetWindowUserPointer(win);
+        self->m_view->set_screen_size({(uint) w, (uint) h});
     });
 }
 
