@@ -17,6 +17,7 @@
 #define XCI_WIDGETS_BUTTON_H
 
 #include <xci/graphics/Rectangles.h>
+#include <xci/graphics/Color.h>
 #include <xci/text/Font.h>
 #include <xci/text/Text.h>
 
@@ -28,11 +29,23 @@ class Button {
 public:
     Button(const std::string &string, text::Font& font);
 
+    void set_font_size(float size) { m_layout.set_default_font_size(size); }
+    void set_padding(float padding) { m_padding = padding; }
+    void set_outline_thickness(float thickness) { m_outline_thickness = thickness; }
+
+    void set_decoration_color(const graphics::Color& fill, const graphics::Color& border);
+    void set_text_color(const graphics::Color& color);
+
+    void resize(const graphics::View& target);
     void draw(graphics::View& view, const util::Vec2f& pos);
+
+    util::Rect_f bbox() const;
 
 private:
     graphics::Rectangles m_bg_rect;
-    text::Text m_text;
+    text::Layout m_layout;
+    float m_padding = 0.02f;
+    float m_outline_thickness = 0.005f;
 };
 
 

@@ -23,7 +23,7 @@ public:
         Debug,
     };
 
-    void log(Level lvl, std::string && msg);
+    void log(Level lvl, const std::string& msg);
 };
 
 

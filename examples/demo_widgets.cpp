@@ -32,10 +32,20 @@ int main()
     Font font;
     font.add_face(face);
 
-    Button button("A button?", font);
+    Button button_default("Default button", font);
+
+    Button button_styled("Styled button", font);
+    button_styled.set_font_size(0.07);
+    button_styled.set_padding(0.05);
+    button_styled.set_decoration_color(Color(10, 20, 100), Color(20, 50, 150));
+    button_styled.set_text_color(Color(255, 255, 50));
 
     window.display([&](View& view) {
-        button.draw(view, {0, 0});
+        button_default.resize(view);
+        button_default.draw(view, {0, -0.2f});
+        button_styled.set_outline_thickness(1 * view.screen_ratio().y);
+        button_styled.resize(view);
+        button_styled.draw(view, {0, 0});
     });
     return EXIT_SUCCESS;
 }

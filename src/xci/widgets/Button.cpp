@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "Button.h"
+#include <xci/text/Markup.h>
 
 namespace xci {
 namespace widgets {
@@ -23,19 +24,47 @@ using namespace xci::text;
 
 
 Button::Button(const std::string &string, Font& font)
-    : m_bg_rect(Color(10, 20, 40), Color(180, 180, 0)),
-      m_text("A button?", font)
+    : m_bg_rect(Color(10, 20, 40), Color(180, 180, 0))
 {
-    m_bg_rect.add_rectangle({-0.3f, -0.1f, 0.6, 0.2f}, 0.01);
-    m_text.set_size(0.07);
-    m_text.set_color(Color::White());
+    m_layout.set_default_font(&font);
+    Markup markup(m_layout);
+    markup.parse(string);
+}
+
+
+void Button::set_decoration_color(const graphics::Color& fill,
+                                  const graphics::Color& border)
+{
+    m_bg_rect = Rectangles(fill, border);
+}
+
+
+void Button::set_text_color(const graphics::Color& color)
+{
+    m_layout.set_default_color(color);
+}
+
+
+void Button::resize(const graphics::View& target)
+{
+    m_layout.typeset(target);
+    m_bg_rect.clear_rectangles();
+    m_bg_rect.add_rectangle(bbox(), m_outline_thickness);
 }
 
 
 void Button::draw(graphics::View& view, const util::Vec2f& pos)
 {
-    m_bg_rect.draw(view, pos);
-    m_text.draw(view, {-0.166f, 0.025});
+    m_bg_rect.draw(view, pos + m_padding);
+    m_layout.draw(view, pos + m_padding);
+}
+
+
+util::Rect_f Button::bbox() const
+{
+    auto rect = m_layout.bbox();
+    rect.enlarge(m_padding);
+    return rect;
 }
 
 

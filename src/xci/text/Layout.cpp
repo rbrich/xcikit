@@ -82,16 +82,9 @@ void Layout::draw(View& target, const util::Vec2f& pos) const
 
     // Debug: page bbox
     if (target.has_debug_flag(View::Debug::PageBBox)) {
-        util::Rect_f bounds;
-        graphics::Rectangles bbox(Color(150, 150, 0, 128), Color(200, 200, 50));
-        for (auto& line : m_page.lines()) {
-            if (bounds.empty())
-                bounds = line.bbox();
-            else
-                bounds.extend(line.bbox());
-        }
-        bbox.add_rectangle(bounds, 1 * pxr.x);
-        bbox.draw(target, pos);
+        graphics::Rectangles bbox_rect(Color(150, 150, 0, 128), Color(200, 200, 50));
+        bbox_rect.add_rectangle(bbox(), 1 * pxr.x);
+        bbox_rect.draw(target, pos);
     }
 
     // Debug: span bboxes
@@ -201,6 +194,19 @@ void Layout::end_span(const std::string& name)
 Span* Layout::get_span(const std::string& name)
 {
     return m_page.get_span(name);
+}
+
+
+util::Rect_f Layout::bbox() const
+{
+    util::Rect_f bbox;
+    for (auto& line : m_page.lines()) {
+        if (bbox.empty())
+            bbox = line.bbox();
+        else
+            bbox.extend(line.bbox());
+    }
+    return bbox;
 }
 
 

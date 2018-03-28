@@ -25,7 +25,7 @@ Logger& Logger::get_default_instance()
 }
 
 
-void Logger::log(Logger::Level lvl, std::string&& msg)
+void Logger::log(Logger::Level lvl, const std::string& msg)
 {
     auto now = std::time(nullptr);
     std::cerr

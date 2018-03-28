@@ -115,6 +115,11 @@ public:
     // Draw whole layout to target
     void draw(graphics::View& target, const util::Vec2f& pos) const;
 
+    // ------------------------------------------------------------------------
+    // Metrics
+
+    util::Rect_f bbox() const;
+
 private:
     Page m_page;
     std::vector<std::unique_ptr<Element>> m_elements;
