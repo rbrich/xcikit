@@ -18,6 +18,9 @@ option(DEBUG_OPENGL "Log info about OpenGL calls and errors." OFF)
 # ------------ #
 
 set(XCI_UTIL_SOURCES
+    src/xci/util/compat.h
+    src/xci/util/file.cpp
+    src/xci/util/file.h
     src/xci/util/format.h
     src/xci/util/geometry.h
     src/xci/util/log.cpp

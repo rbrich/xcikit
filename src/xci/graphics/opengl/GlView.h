@@ -53,6 +53,15 @@ public:
                                   const char* vertex_source,
                                   const char* fragment_source);
 
+    // Compile GLSL program once per ID
+    // First, try to read the file. If successful, setup a watch on the file
+    // to auto-reload on any change. If the file does not exist, fall back
+    // to source string given as another parameter.
+    // Either file or source parameter may be empty, in which case it's not used.
+    GLuint gl_program(ProgramId id,
+                      const char* vertex_file, const char* vertex_source,
+                      const char* fragment_file, const char* fragment_source);
+
 private:
     Vec2f m_scalable_size;      // eg. {2.666, 2.0}
     Vec2u m_screen_size;        // eg. {800, 600}

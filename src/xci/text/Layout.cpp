@@ -16,9 +16,10 @@
 #include "Layout.h"
 
 #include <xci/graphics/Rectangles.h>
+#include <xci/graphics/View.h>
+#include <xci/util/compat.h>
 
 #include <cassert>
-#include <xci/graphics/View.h>
 
 namespace xci {
 namespace text {

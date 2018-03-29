@@ -48,9 +48,12 @@ int main()
     }
 
     // Setup XCI view
+    View view;
     int width, height;
+    glfwGetWindowSize(window, &width, &height);
+    view.set_screen_size({(unsigned) width, (unsigned) height});
     glfwGetFramebufferSize(window, &width, &height);
-    View view({(unsigned) width, (unsigned) height});
+    view.set_framebuffer_size({(unsigned) width, (unsigned) height});
     glfwSetWindowUserPointer(window, &view);
     glfwSetFramebufferSizeCallback(window, [](GLFWwindow* win, int w, int h) {
         auto pview = (View*) glfwGetWindowUserPointer(win);

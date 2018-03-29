@@ -15,6 +15,7 @@
 
 #include "GlView.h"
 #include <xci/util/log.h>
+#include <xci/util/file.h>
 
 // inline
 #include <xci/graphics/View.inl>
@@ -23,6 +24,7 @@ namespace xci {
 namespace graphics {
 
 using namespace xci::util::log;
+using xci::util::read_file;
 
 
 static GLuint compile_program(const char* vertex_source,
@@ -139,6 +141,9 @@ void GlView::set_screen_size(Vec2u size)
     }
 
     m_screen_size = size;
+
+    if (m_framebuffer_size.x == 0)
+        m_framebuffer_size = size;
 }
 
 
@@ -155,6 +160,38 @@ GlView::gl_program_from_string(GlView::ProgramId id,
 {
     GLuint program = m_program[(size_t)id];
     if (!program) {
+        program = compile_program(vertex_source, fragment_source);
+        m_program[(size_t)id] = program;
+    }
+    return program;
+}
+
+
+GLuint
+GlView::gl_program(GlView::ProgramId id,
+                   const char* vertex_file, const char* vertex_source,
+                   const char* fragment_file, const char* fragment_source)
+{
+    GLuint program = m_program[(size_t)id];
+    if (!program) {
+        // Try to read shaders from file
+        std::string vertex_file_source;
+        std::string fragment_file_source;
+        if (vertex_file) {
+            vertex_file_source = read_file(vertex_file);
+            if (!vertex_file_source.empty()) {
+                vertex_source = vertex_file_source.c_str();
+                log_info("Loaded vertex shader: {}", vertex_file);
+            }
+        }
+        if (fragment_file) {
+            fragment_file_source = read_file(fragment_file);
+            if (!fragment_file_source.empty()) {
+                fragment_source = fragment_file_source.c_str();
+                log_info("Loaded fragment shader: {}", fragment_file);
+            }
+        }
+        // Compile and cache
         program = compile_program(vertex_source, fragment_source);
         m_program[(size_t)id] = program;
     }
