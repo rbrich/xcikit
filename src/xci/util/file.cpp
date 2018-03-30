@@ -16,9 +16,16 @@
 #include "file.h"
 #include "FileWatch.h"
 #include <fstream>
+#include <unistd.h>
 
 namespace xci {
 namespace util {
+
+
+void chdir_to_share()
+{
+    chdir(XCI_SHARE_DIR);
+}
 
 
 std::string read_file(const std::string& filename)

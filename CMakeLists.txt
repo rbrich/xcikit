@@ -14,6 +14,8 @@ option(WITH_PANDA "Link with Panda3D and build libxci-graphics-panda." OFF)
 option(DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
 option(DEBUG_OPENGL "Log info about OpenGL calls and errors." OFF)
 
+set(SHARE_DIR "${CMAKE_CURRENT_LIST_DIR}/share" CACHE PATH "Location of share dir (runtime data)")
+
 # ------------ #
 # Sources      #
 # ------------ #
@@ -152,6 +154,7 @@ set(XCI_UTIL_LIBRARY xci-util)
 add_library(${XCI_UTIL_LIBRARY} STATIC ${XCI_UTIL_SOURCES})
 target_link_libraries(${XCI_UTIL_LIBRARY} Threads::Threads)
 target_include_directories(${XCI_UTIL_LIBRARY} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+target_compile_definitions(${XCI_UTIL_LIBRARY} PRIVATE XCI_SHARE_DIR="${SHARE_DIR}")
 
 if (WITH_OPENGL)
     set(XCI_GRAPHICS_OPENGL_LIBRARY xci-graphics-opengl)

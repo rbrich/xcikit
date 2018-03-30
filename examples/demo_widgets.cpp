@@ -16,6 +16,7 @@
 #include <xci/graphics/Window.h>
 #include <xci/text/Text.h>
 #include <xci/widgets/Button.h>
+#include <xci/util/file.h>
 
 using namespace xci::graphics;
 using namespace xci::text;
@@ -23,6 +24,8 @@ using namespace xci::widgets;
 
 int main()
 {
+    xci::util::chdir_to_share();
+
     Window window;
     window.create({800, 600}, "XCI widgets demo");
 

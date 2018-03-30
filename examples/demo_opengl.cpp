@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include <xci/text/Text.h>
+#include <xci/util/file.h>
 
 #include <glad/glad.h>
 #define GLFW_INCLUDE_NONE
@@ -24,6 +25,8 @@ using namespace xci::graphics;
 
 int main()
 {
+    xci::util::chdir_to_share();
+
     if (!glfwInit())
         return EXIT_FAILURE;
 

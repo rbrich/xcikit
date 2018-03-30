@@ -15,11 +15,14 @@
 
 #include <xci/graphics/Window.h>
 #include <xci/graphics/Ellipses.h>
+#include <xci/util/file.h>
 
 using namespace xci::graphics;
 
 int main()
 {
+    xci::util::chdir_to_share();
+
     Window window;
     window.create({800, 600}, "XCI ellipses demo");
 

@@ -7,6 +7,7 @@
 #include <xci/text/Font.h>
 #include <xci/text/Text.h>
 #include <xci/graphics/panda/PandaView.h>
+#include <xci/util/file.h>
 
 // Panda3D headers
 #include <pandaFramework.h>
@@ -20,6 +21,8 @@ const char *font_path = "fonts/Share_Tech_Mono/ShareTechMono-Regular.ttf";
 
 int main(int argc, char **argv)
 {
+    xci::util::chdir_to_share();
+
     // Panda3D init
     PandaFramework framework;
     framework.open_framework(argc, argv);

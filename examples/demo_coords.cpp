@@ -21,6 +21,7 @@
 #include <xci/graphics/Window.h>
 #include <xci/graphics/Sprites.h>
 #include <xci/util/format.h>
+#include <xci/util/file.h>
 
 using namespace xci::text;
 using namespace xci::graphics;
@@ -28,6 +29,8 @@ using namespace xci::util;
 
 int main()
 {
+    chdir_to_share();
+
     Window window;
     window.create({800, 600}, "XCI coords demo");
 

@@ -23,6 +23,10 @@ namespace xci {
 namespace util {
 
 
+// Find share dir with fonts and other assets.
+// Change working directory to this dir.
+void chdir_to_share();
+
 // Try to read whole content of a file.
 // Returns empty string in case of any error.
 std::string read_file(const std::string& filename);

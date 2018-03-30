@@ -12,9 +12,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
-//
-// Set WORKDIR to project root.
 
 #include <xci/text/FontLibrary.h>
 #include <xci/text/FontFace.h>
@@ -22,6 +19,7 @@
 #include <xci/text/Text.h>
 #include <xci/graphics/Window.h>
 #include <xci/graphics/Sprites.h>
+#include <xci/util/file.h>
 
 using namespace xci::text;
 using namespace xci::graphics;
@@ -41,6 +39,8 @@ static const char * sample_text =
 
 int main()
 {
+    xci::util::chdir_to_share();
+
     Window window;
     window.create({800, 600}, "XCI layout demo");
 
