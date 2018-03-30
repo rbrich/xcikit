@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 project(xcikit)
 
 set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wno-reorder")
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
@@ -21,6 +22,7 @@ set(XCI_UTIL_SOURCES
     src/xci/util/compat.h
     src/xci/util/file.cpp
     src/xci/util/file.h
+    src/xci/util/format.cpp
     src/xci/util/format.h
     src/xci/util/geometry.h
     src/xci/util/log.cpp
@@ -234,4 +236,8 @@ if (CATCH_FOUND)
     add_executable(test_graphics tests/test_graphics.cpp)
     target_link_libraries(test_graphics ${XCI_GRAPHICS_LIBRARY})
     target_include_directories(test_graphics PRIVATE ${CATCH_INCLUDE_DIRS})
+
+    add_executable(test_util tests/test_util.cpp)
+    target_link_libraries(test_util ${XCI_UTIL_LIBRARY})
+    target_include_directories(test_util PRIVATE ${CATCH_INCLUDE_DIRS})
 endif (CATCH_FOUND)

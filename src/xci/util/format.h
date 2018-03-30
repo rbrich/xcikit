@@ -1,4 +1,17 @@
 // format.h created on 2018-03-01, part of XCI toolkit
+// Copyright 2018 Radek Brich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef XCI_UTIL_FORMAT_H
 #define XCI_UTIL_FORMAT_H
@@ -17,6 +30,19 @@ namespace util {
 // See:
 // - https://en.wikipedia.org/wiki/Variadic_template
 
+namespace format_impl {
+
+struct Context {
+    std::ostringstream stream;
+    std::string placeholder;
+};
+
+// Parses `fmt` (moves the pointer), outputs into `stream` and fills `placeholder`.
+// Stops on first placeholder it cannot process by itself.
+// Returns true if stopped on placeholder, false if reached end of `fmt`.
+bool partial_format(const char*& fmt, Context& ctx);
+
+} // namespace format_impl
 
 // Terminates evaluation when there are no more arguments
 //
@@ -25,18 +51,14 @@ namespace util {
 // - It guides the user to pass string literal instead of a variable
 inline std::string format(const char *fmt)
 {
-    std::ostringstream stream;
+    format_impl::Context ctx;
     while (*fmt) {
-        if (*fmt == '{') {
-            // "{{" -> "{"
-            if (*(fmt + 1) == '{') {
-                ++fmt;
-            }
-            // else: silently continue, leaving the '{' intact
+        if (format_impl::partial_format(fmt, ctx)) {
+            // unexpected placeholder -> leave as is
+            ctx.stream << "{" << ctx.placeholder << "}";
         }
-        stream << *fmt++;
     }
-    return stream.str();
+    return ctx.stream.str();
 }
 
 // Recursively evaluates arguments
@@ -48,25 +70,20 @@ inline std::string format(const char *fmt)
 template<typename T, typename ...Args>
 inline std::string format(const char *fmt, T value, Args... args)
 {
-    std::ostringstream stream;
+    format_impl::Context ctx;
     while (*fmt) {
-        if (*fmt == '{') {
-            // "{{" -> "{"
-            if (*(fmt + 1) == '{') {
-                ++fmt;
+        if (format_impl::partial_format(fmt, ctx)) {
+            // "{}" -> replace with value
+            if (ctx.placeholder.empty()) {
+                ctx.stream << value << format(fmt, args...);
+                return ctx.stream.str();
             }
-            // "{}" -> replace
-            else if (*(fmt + 1) == '}') {
-                stream << value;
-                fmt += 2;
-                stream << format(fmt, args...);
-                return stream.str();
-            }
-            // else: silently continue, leaving the '{' intact
+
+            // unknown placeholder -> leave as is
+            ctx.stream << "{" << ctx.placeholder << "}";
         }
-        stream << *fmt++;
     }
-    return stream.str();
+    return ctx.stream.str();
 }
 
 
