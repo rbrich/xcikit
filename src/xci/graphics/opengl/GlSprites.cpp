@@ -101,8 +101,10 @@ void GlSprites::draw(View& view, const Vec2f& pos)
 {
     init_gl_objects();
 
-    auto program = view.impl().gl_program_from_string(
-            GlView::ProgramId::Sprite, c_vertex_shader, c_fragment_shader);
+    auto program = view.impl()
+            .gl_program(GlView::ProgramId::Sprite,
+                        nullptr, c_vertex_shader,
+                        nullptr, c_fragment_shader);
     glUseProgram(program);
     glBindVertexArray(m_vertex_array);
     glEnableVertexAttribArray(0);

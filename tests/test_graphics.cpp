@@ -1,6 +1,5 @@
 // test_graphics.cpp - created by Radek Brich on 2018-03-07
 
-#define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
 #include <xci/graphics/Window.h>

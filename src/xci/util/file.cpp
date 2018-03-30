@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "file.h"
+#include "FileWatch.h"
 #include <fstream>
 
 namespace xci {
@@ -35,6 +36,19 @@ std::string read_file(const std::string& filename)
         content.clear();
 
     return content;
+}
+
+
+int add_file_watch(const std::string& filename, std::function<void()> cb)
+{
+    return FileWatch::default_instance()
+            .add_watch(filename, [cb](FileWatch::Event) { cb(); });
+}
+
+
+void remove_file_watch(int watch)
+{
+    FileWatch::default_instance().remove_watch(watch);
 }
 
 

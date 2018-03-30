@@ -98,8 +98,8 @@ void GlRectangles::draw(View& view, const Vec2f& pos)
 
     auto program = view.impl()
             .gl_program(GlView::ProgramId::Rectangle,
-            "shaders/rectangle.vert", c_vertex_shader,
-            "shaders/rectangle.frag", c_fragment_shader);
+                        "shaders/rectangle.vert", c_vertex_shader,
+                        "shaders/rectangle.frag", c_fragment_shader);
     glUseProgram(program);
     glBindVertexArray(m_vertex_array);
     glEnableVertexAttribArray(0);

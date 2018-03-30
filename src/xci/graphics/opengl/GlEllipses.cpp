@@ -103,8 +103,10 @@ void GlEllipses::draw(View& view, const Vec2f& pos)
 {
     init_gl_objects();
 
-    auto program = view.impl().gl_program_from_string(
-            GlView::ProgramId::Ellipse, c_vertex_shader, c_fragment_shader);
+    auto program = view.impl()
+            .gl_program(GlView::ProgramId::Ellipse,
+                        "shaders/ellipse.vert", c_vertex_shader,
+                        "shaders/ellipse.frag", c_fragment_shader);
     glUseProgram(program);
     glBindVertexArray(m_vertex_array);
     glEnableVertexAttribArray(0);

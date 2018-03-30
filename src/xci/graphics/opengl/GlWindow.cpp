@@ -15,9 +15,9 @@
 
 #include "GlWindow.h"
 #include <xci/util/log.h>
+#include <xci/util/compat.h>
 
 // inline
-#include <utility>
 #include <xci/graphics/Window.inl>
 
 
@@ -162,7 +162,7 @@ void GlWindow::setup_view()
     int width, height;
     glfwGetFramebufferSize(m_window, &width, &height);
     glViewport(0, 0, width, height);
-    m_view.reset(new View);
+    m_view = std::make_unique<View>();
     m_view->set_framebuffer_size({(unsigned int) width, (unsigned int) height});
     glfwGetWindowSize(m_window, &width, &height);
     m_view->set_screen_size({(unsigned int) width, (unsigned int) height});

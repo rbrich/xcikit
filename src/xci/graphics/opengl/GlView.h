@@ -20,6 +20,7 @@
 
 #include <glad/glad.h>
 #include <array>
+#include <atomic>
 
 namespace xci {
 namespace graphics {
@@ -27,6 +28,7 @@ namespace graphics {
 
 class GlView {
 public:
+    GlView();
     ~GlView();
 
     void set_screen_size(Vec2u size);
@@ -49,11 +51,6 @@ public:
     };
 
     // Compile GLSL program once per ID
-    GLuint gl_program_from_string(ProgramId id,
-                                  const char* vertex_source,
-                                  const char* fragment_source);
-
-    // Compile GLSL program once per ID
     // First, try to read the file. If successful, setup a watch on the file
     // to auto-reload on any change. If the file does not exist, fall back
     // to source string given as another parameter.
@@ -66,7 +63,8 @@ private:
     Vec2f m_scalable_size;      // eg. {2.666, 2.0}
     Vec2u m_screen_size;        // eg. {800, 600}
     Vec2u m_framebuffer_size;   // eg. {1600, 1200}
-    std::array<GLuint, (size_t)ProgramId::EnumSize_> m_program = {};
+    std::array<std::atomic<GLuint>, (size_t)ProgramId::EnumSize_> m_program = {};
+    std::array<int, 2 * (size_t)ProgramId::EnumSize_> m_shader_file_watch;
 };
 
 

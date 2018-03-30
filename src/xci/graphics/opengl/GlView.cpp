@@ -17,6 +17,9 @@
 #include <xci/util/log.h>
 #include <xci/util/file.h>
 
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
+
 // inline
 #include <xci/graphics/View.inl>
 
@@ -25,6 +28,8 @@ namespace graphics {
 
 using namespace xci::util::log;
 using xci::util::read_file;
+using xci::util::add_file_watch;
+using xci::util::remove_file_watch;
 
 
 static GLuint compile_program(const char* vertex_source,
@@ -119,10 +124,22 @@ static GLuint compile_program(const char* vertex_source,
 }
 
 
+GlView::GlView()
+{
+    for (auto& watch_handle : m_shader_file_watch) {
+        watch_handle = -1;
+    }
+}
+
+
 GlView::~GlView()
 {
-    for (auto program : m_program) {
-        glDeleteProgram(program);
+    for (auto& watch_handle : m_shader_file_watch) {
+        if (watch_handle != -1)
+            remove_file_watch(watch_handle);
+    }
+    for (auto& program : m_program) {
+        glDeleteProgram(program.load(std::memory_order_acquire));
     }
 }
 
@@ -154,26 +171,21 @@ void GlView::set_framebuffer_size(Vec2u size)
 
 
 GLuint
-GlView::gl_program_from_string(GlView::ProgramId id,
-                               const char* vertex_source,
-                               const char* fragment_source)
-{
-    GLuint program = m_program[(size_t)id];
-    if (!program) {
-        program = compile_program(vertex_source, fragment_source);
-        m_program[(size_t)id] = program;
-    }
-    return program;
-}
-
-
-GLuint
 GlView::gl_program(GlView::ProgramId id,
                    const char* vertex_file, const char* vertex_source,
                    const char* fragment_file, const char* fragment_source)
 {
-    GLuint program = m_program[(size_t)id];
+    auto& program_atomic = m_program[(size_t)id];
+    GLuint program = program_atomic.load(std::memory_order_acquire);
     if (!program) {
+        // Remove previous file watches, in case parameters has changed
+        int& vertex_fw = m_shader_file_watch[2*(size_t)id];
+        if (vertex_fw != -1)
+            remove_file_watch(vertex_fw);
+        int& fragment_fw = m_shader_file_watch[2*(size_t)id + 1];
+        if (fragment_fw != -1)
+            remove_file_watch(fragment_fw);
+
         // Try to read shaders from file
         std::string vertex_file_source;
         std::string fragment_file_source;
@@ -182,6 +194,11 @@ GlView::gl_program(GlView::ProgramId id,
             if (!vertex_file_source.empty()) {
                 vertex_source = vertex_file_source.c_str();
                 log_info("Loaded vertex shader: {}", vertex_file);
+                // Force reload when shader file changes
+                vertex_fw = add_file_watch(vertex_file, [&program_atomic](){
+                    program_atomic.store(0, std::memory_order_release);
+                    glfwPostEmptyEvent();
+                });
             }
         }
         if (fragment_file) {
@@ -189,11 +206,17 @@ GlView::gl_program(GlView::ProgramId id,
             if (!fragment_file_source.empty()) {
                 fragment_source = fragment_file_source.c_str();
                 log_info("Loaded fragment shader: {}", fragment_file);
+                // Force reload when shader file changes
+                fragment_fw = add_file_watch(fragment_file, [&program_atomic](){
+                    program_atomic.store(0, std::memory_order_release);
+                    glfwPostEmptyEvent();
+                });
             }
         }
-        // Compile and cache
+
+        // Compile and cache new program
         program = compile_program(vertex_source, fragment_source);
-        m_program[(size_t)id] = program;
+        program_atomic.store(program, std::memory_order_release);
     }
     return program;
 }

@@ -44,8 +44,8 @@ bool partial_format(const char*& fmt, Context& ctx)
             if (*fmt == '}') {
                 in_placeholder = false;
                 ++fmt;
-                if (ctx.placeholder == "m") {
-                    // "{m}" -> strerror
+                if (ctx.placeholder == ":m") {
+                    // "{:m}" -> strerror
                     ctx.stream << strerror;
                 } else {
                     // Leave other placeholders for processing by caller

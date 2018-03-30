@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(xcikit)
+project(xcikit C CXX)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -22,6 +22,8 @@ set(XCI_UTIL_SOURCES
     src/xci/util/compat.h
     src/xci/util/file.cpp
     src/xci/util/file.h
+    src/xci/util/FileWatch.cpp
+    src/xci/util/FileWatch.h
     src/xci/util/format.cpp
     src/xci/util/format.h
     src/xci/util/geometry.h
@@ -108,6 +110,9 @@ set(XCI_WIDGETS_SOURCES
 # Dependencies #
 # ------------ #
 
+# pthread
+find_package(Threads REQUIRED)
+
 # FreeType
 include(FindFreetype)
 
@@ -145,6 +150,7 @@ find_package(PEGTL)
 
 set(XCI_UTIL_LIBRARY xci-util)
 add_library(${XCI_UTIL_LIBRARY} STATIC ${XCI_UTIL_SOURCES})
+target_link_libraries(${XCI_UTIL_LIBRARY} Threads::Threads)
 target_include_directories(${XCI_UTIL_LIBRARY} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 if (WITH_OPENGL)
@@ -233,11 +239,5 @@ add_subdirectory(examples)
 # ------------ #
 
 if (CATCH_FOUND)
-    add_executable(test_graphics tests/test_graphics.cpp)
-    target_link_libraries(test_graphics ${XCI_GRAPHICS_LIBRARY})
-    target_include_directories(test_graphics PRIVATE ${CATCH_INCLUDE_DIRS})
-
-    add_executable(test_util tests/test_util.cpp)
-    target_link_libraries(test_util ${XCI_UTIL_LIBRARY})
-    target_include_directories(test_util PRIVATE ${CATCH_INCLUDE_DIRS})
+    add_subdirectory(tests)
 endif (CATCH_FOUND)
