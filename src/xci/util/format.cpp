@@ -24,13 +24,13 @@ namespace format_impl {
 std::ostream& strerror(std::ostream& stream)
 {
     char buf[100] = {};
-#if (_POSIX_C_SOURCE >= 200112L) && !_GNU_SOURCE
+#if _GNU_SOURCE
+    return stream << strerror_r(errno, buf, sizeof buf);
+#else
     if (strerror_r(errno, buf, sizeof buf) == 0) {
         stream << buf;
     }
     return stream;
-#else
-    return stream << strerror_r(errno, buf, sizeof buf);
 #endif
 }
 

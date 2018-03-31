@@ -17,7 +17,7 @@
 #define XCI_UTIL_COMPAT_H
 
 // Backported std::make_unique for C++11
-#ifndef __cpp_lib_make_unique
+#if !defined(__cpp_lib_make_unique) && __cplusplus == 201103L
 namespace std {
     template<class T, class... Args>
     unique_ptr<T> make_unique(Args&&... args) {

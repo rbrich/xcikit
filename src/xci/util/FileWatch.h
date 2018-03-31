@@ -35,7 +35,7 @@ public:
     enum class Event {
         Modify,     // File modified
         CloseWrite, // File open for writing was closed
-        Delete,     // File deleted
+        Delete,     // File deleted or moved away
     };
 
     using Callback = std::function<void(Event)>;
@@ -44,8 +44,8 @@ public:
     void remove_watch(int handle);
 
 private:
-    int m_inotify;
-    int m_quit_pipe[2];
+    int m_queue_fd;  // inotify or kqueue FD
+    int m_quit_pipe[2] __attribute__((unused));
     std::thread m_thread;
     std::map<int, Callback> m_callback;
 };

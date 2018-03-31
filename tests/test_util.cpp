@@ -31,14 +31,19 @@ TEST_CASE( "File watch", "[FileWatch]" )
 {
     FileWatch fw;
 
-    std::string tmpname = std::tmpnam(nullptr);
+    std::string tmpname = "/tmp/xci_test_filewatch.XXXXXX";
+    tmpname = mktemp(&tmpname[0]);
     std::ofstream f(tmpname);
 
     FileWatch::Event expected_events[] = {
         FileWatch::Event::Modify,
+#ifndef __APPLE__
         FileWatch::Event::CloseWrite,
+#endif
         FileWatch::Event::Modify,
+#ifndef __APPLE__
         FileWatch::Event::CloseWrite,
+#endif
         FileWatch::Event::Delete,
     };
     size_t ev_ptr = 0;
@@ -54,16 +59,17 @@ TEST_CASE( "File watch", "[FileWatch]" )
     // modify, close
     f << "one" << std::endl;
     f.close();
+    usleep(50000);
 
     // reopen, modify, close
     f.open(tmpname, std::ios::app);
     f << "two" << std::endl;
     f.close();
+    usleep(50000);
 
     // delete
     ::unlink(tmpname.c_str());
-
-    usleep(200000);
+    usleep(50000);
 
     // although the inotify watch is removed automatically after delete,
     // this should still be called to cleanup the callback info

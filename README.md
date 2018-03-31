@@ -73,6 +73,6 @@ Roadmap
 - [x] Basic text rendering
 - [x] Text layout with styled spans
 - [x] Raw OpenGL
-- [ ] Draw a button
+- [x] Draw a button
 - [ ] Hover, click events
 - [ ] ...

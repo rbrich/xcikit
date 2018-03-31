@@ -5,6 +5,7 @@
 #include <iostream>
 #include <ctime>
 #include <iomanip>
+#include <mutex>
 
 namespace xci {
 namespace util {
@@ -27,6 +28,8 @@ Logger& Logger::get_default_instance()
 
 void Logger::log(Logger::Level lvl, const std::string& msg)
 {
+    static std::mutex mutex;
+    std::lock_guard<std::mutex> lock(mutex);
     auto now = std::time(nullptr);
     std::cerr
         << std::put_time(std::localtime(&now), "%F %T ")

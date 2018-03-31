@@ -127,7 +127,7 @@ void Word::draw(graphics::View& target, const util::Vec2f& pos) const
     sprites.draw(target, p);
 
     if (target.has_debug_flag(View::Debug::WordBasePoint)) {
-        auto pxr = target.framebuffer_ratio();
+        auto pxr = target.screen_ratio();
         graphics::Rectangles basepoint(Color(150, 0, 150));
         basepoint.add_rectangle({-pxr.x, -pxr.y, 2 * pxr.x, 2 * pxr.y});
         basepoint.draw(target, p);
