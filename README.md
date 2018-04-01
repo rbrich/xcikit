@@ -26,15 +26,9 @@ This should be enough for games to render:
 
 The library should integrate well with:
 
-- Panda3D, OpenSceneGraph
+- generic OpenGL
 - SFML, SDL
-- raw OpenGL
-
-
-Competitors
------------
-
-TODO: reference libraries like CeGUI
+- Panda3D, OpenSceneGraph
 
 
 Plan
@@ -76,3 +70,23 @@ Roadmap
 - [x] Draw a button
 - [ ] Hover, click events
 - [ ] ...
+
+
+Build
+-----
+
+Dependencies - required:
+- FreeType
+- PEGTL
+
+Dependencies - optional:
+- GLFW (WITH_OPENGL)
+- SFML (WITH_SFML)
+- Panda3D (WATH_PANDA)
+- Catch (tests)
+
+Build with cmake:
+
+    mkdir build && cd build
+    cmake ..
+    make

@@ -143,7 +143,7 @@ endif (WITH_PANDA)
 find_package(Catch)
 
 # PEGTL
-find_package(PEGTL)
+find_package(PEGTL REQUIRED)
 
 
 # ------------ #

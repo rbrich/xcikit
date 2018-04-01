@@ -1,2 +1,4 @@
 language: cpp
 script: mkdir build && cd build && cmake .. && make && make test
+before_install:
+- [ $TRAVIS_OS_NAME == linux ] && sudo apt-get update -qq && sudo apt-get install -qq libglfw3-dev pegtl-dev
