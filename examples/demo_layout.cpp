@@ -20,6 +20,7 @@
 #include <xci/graphics/Window.h>
 #include <xci/graphics/Sprites.h>
 #include <xci/util/file.h>
+#include <cstdlib>
 
 using namespace xci::text;
 using namespace xci::graphics;

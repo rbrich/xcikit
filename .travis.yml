@@ -1,11 +1,24 @@
 language: cpp
+sudo: false
+dist: trusty
 
 os:
   - linux
   - osx
 
+compiler:
+  - gcc
+  - clang
+
+addons:
+  apt:
+    sources:
+      - debian-sid
+    packages:
+      - libglfw3-dev
+      - pegtl-dev
+
 install:
-  - if [ "$TRAVIS_OS_NAME" = linux ]; then sudo apt-get install libglfw3-dev pegtl-dev; fi
   - if [ "$TRAVIS_OS_NAME" = osx ]; then brew install glfw pegtl; fi
 
 script:

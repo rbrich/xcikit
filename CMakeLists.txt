@@ -242,5 +242,6 @@ add_subdirectory(examples)
 # ------------ #
 
 if (CATCH_FOUND)
+    enable_testing()
     add_subdirectory(tests)
 endif (CATCH_FOUND)

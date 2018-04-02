@@ -17,6 +17,7 @@
 #include <xci/text/Text.h>
 #include <xci/widgets/Button.h>
 #include <xci/util/file.h>
+#include <cstdlib>
 
 using namespace xci::graphics;
 using namespace xci::text;

@@ -22,6 +22,7 @@
 #include <xci/graphics/Sprites.h>
 #include <xci/util/format.h>
 #include <xci/util/file.h>
+#include <cstdlib>
 
 using namespace xci::text;
 using namespace xci::graphics;

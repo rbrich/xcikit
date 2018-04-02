@@ -16,6 +16,7 @@
 #include <xci/graphics/Window.h>
 #include <xci/graphics/Ellipses.h>
 #include <xci/util/file.h>
+#include <cstdlib>
 
 using namespace xci::graphics;
 
