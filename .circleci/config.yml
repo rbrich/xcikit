@@ -1,0 +1,23 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: debian:stretch
+    steps:
+      - checkout
+      - run: apt-get install -y libglfw3-dev
+      - run: |
+          wget https://github.com/taocpp/PEGTL/archive/2.4.0.tar.gz
+          tar xf 2.4.0.tar.gz && cd PEGTL-2.4.0
+          mkdir build && cd build
+          cmake -DCMAKE_INSTALL_PREFIX=$CIRCLE_WORKING_DIRECTORY/PEGTL ..
+          make -j $CPU_NUM
+          make install
+          cd ../..
+      - run: |
+          mkdir Catch
+          wget https://github.com/catchorg/Catch2/releases/download/v2.2.1/catch.hpp -O Catch/catch.hpp
+      - run: mkdir build && cd build
+      - run: cmake -DCATCH_ROOT=$CIRCLE_WORKING_DIRECTORY/Catch -DPEGTL_ROOT=$CIRCLE_WORKING_DIRECTORY/PEGTL ..
+      - run: make
+      - run: make test
