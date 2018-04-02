@@ -10,6 +10,14 @@ compiler:
   - gcc
   - clang
 
+# Let's disable the linux build for now, Ubuntu 14.04.5 LTS doesn't have all C++11 libs
+matrix:
+  exclude:
+    - os: linux
+      compiler: gcc
+    - os: linux
+      compiler: clang
+
 addons:
   apt:
     sources:
