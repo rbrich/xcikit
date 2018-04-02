@@ -110,6 +110,10 @@ int FileWatch::add_watch(const std::string& filename, std::function<void(Event)>
 {
     int wd = inotify_add_watch(m_queue_fd, filename.c_str(),
                                IN_MODIFY | IN_DELETE_SELF);
+    if (wd < 0) {
+        log_error("FileWatch: inotify_add_watch({}): {:m}", filename.c_str());
+        return -1;
+    }
     m_callback[wd] = std::move(cb);
     return wd;
 }

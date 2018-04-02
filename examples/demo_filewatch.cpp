@@ -22,8 +22,6 @@ using namespace xci::util;
 
 int main(int argc, char** argv)
 {
-    FileWatch fw;
-
     if (argc != 2) {
         log_info("Usage: {} <file_to_watch>", argv[0]);
         return 1;
@@ -31,6 +29,7 @@ int main(int argc, char** argv)
     std::string filename = argv[1];
 
     log_info("Watching: {}", filename);
+    FileWatch fw;
     std::atomic_bool done {false};
     int wd = fw.add_watch(filename, [&done] (FileWatch::Event ev) {
         switch (ev) {
