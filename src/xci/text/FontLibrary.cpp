@@ -27,7 +27,6 @@ FontLibrary::FontLibrary()
     auto err = FT_Init_FreeType(&library);
     if (err) {
         log_error("FT_Init_FreeType: {}", err);
-        abort();
     }
 }
 

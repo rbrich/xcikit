@@ -77,7 +77,6 @@ GlWindow::GlWindow()
     glfwSetErrorCallback(error_callback);
     if (!glfwInit()) {
         log_error("Couldn't initialize GLFW...");
-        abort();
     }
 }
 

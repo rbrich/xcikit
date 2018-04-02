@@ -48,7 +48,7 @@ public:
     FT_Library& raw_handle() { return library; }
 
 private:
-    FT_Library library;
+    FT_Library library = nullptr;
 };
 
 

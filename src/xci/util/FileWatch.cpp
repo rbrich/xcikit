@@ -81,8 +81,6 @@ FileWatch::FileWatch()
                         if (cb) {
                             if (event->mask & IN_MODIFY)
                                 cb(Event::Modify);
-                            if (event->mask & IN_CLOSE_WRITE)
-                                cb(Event::CloseWrite);
                             if (event->mask & IN_DELETE_SELF)
                                 cb(Event::Delete);
                         }
@@ -111,7 +109,7 @@ FileWatch::~FileWatch()
 int FileWatch::add_watch(const std::string& filename, std::function<void(Event)> cb)
 {
     int wd = inotify_add_watch(m_queue_fd, filename.c_str(),
-                               IN_MODIFY | IN_CLOSE_WRITE | IN_DELETE_SELF);
+                               IN_MODIFY | IN_DELETE_SELF);
     m_callback[wd] = std::move(cb);
     return wd;
 }
@@ -170,10 +168,6 @@ FileWatch::FileWatch()
                 if (cb) {
                     if (ke.fflags & NOTE_WRITE)
                         cb(Event::Modify);
-#ifdef NOTE_CLOSE_WRITE
-                    if (ke.fflags & NOTE_CLOSE_WRITE)
-                        cb(Event::CloseWrite);
-#endif
                     if (ke.fflags & NOTE_DELETE || ke.fflags & NOTE_RENAME) {
                         cb(Event::Delete);
                         // The file is gone, stop watching it
@@ -184,6 +178,9 @@ FileWatch::FileWatch()
         }
         log_debug("FileWatch: quit");
     });
+
+    // Needed for Linux implementation but unused here (this avoids warning)
+    (void) m_quit_pipe;
 }
 
 
@@ -213,11 +210,6 @@ int FileWatch::add_watch(const std::string& filename, std::function<void(Event)>
     kev.fflags = NOTE_WRITE | NOTE_RENAME | NOTE_DELETE;
     kev.data = 0;
     kev.udata = nullptr;
-
-    // Not available on MacOS
-#ifdef NOTE_CLOSE_WRITE
-    kev.fflags |= NOTE_CLOSE_WRITE;
-#endif
 
     if (kevent(m_queue_fd, &kev, 1, nullptr, 0, nullptr) == -1)
         log_error("FileWatch: kevent(EV_ADD, {}): {:m}", filename.c_str());

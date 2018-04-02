@@ -37,13 +37,7 @@ TEST_CASE( "File watch", "[FileWatch]" )
 
     FileWatch::Event expected_events[] = {
         FileWatch::Event::Modify,
-#ifndef __APPLE__
-        FileWatch::Event::CloseWrite,
-#endif
         FileWatch::Event::Modify,
-#ifndef __APPLE__
-        FileWatch::Event::CloseWrite,
-#endif
         FileWatch::Event::Delete,
     };
     size_t ev_ptr = 0;

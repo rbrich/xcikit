@@ -34,7 +34,6 @@ public:
 
     enum class Event {
         Modify,     // File modified
-        CloseWrite, // File open for writing was closed
         Delete,     // File deleted or moved away
     };
 
@@ -45,7 +44,7 @@ public:
 
 private:
     int m_queue_fd;  // inotify or kqueue FD
-    int m_quit_pipe[2] __attribute__((unused));
+    int m_quit_pipe[2];
     std::thread m_thread;
     std::map<int, Callback> m_callback;
 };
