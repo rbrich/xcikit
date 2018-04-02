@@ -19,10 +19,20 @@ addons:
       - pegtl-dev
 
 install:
+  - if [ "$TRAVIS_OS_NAME" = linux ]; then
+        wget https://github.com/taocpp/PEGTL/archive/2.4.0.tar.gz
+        tar xf 2.4.0.tar.gz && cd PEGTL-2.4.0
+        mkdir build && cd build
+        cmake -DCMAKE_INSTALL_PREFIX=$TRAVIS_BUILD_DIR/PEGTL ..
+        make -j $CPU_NUM
+        make install
+        cd ../..
+    fi
   - if [ "$TRAVIS_OS_NAME" = osx ]; then brew install glfw pegtl; fi
+  - mkdir Catch; wget https://github.com/catchorg/Catch2/releases/download/v2.2.1/catch.hpp -O Catch/catch.hpp
 
 script:
   - mkdir build && cd build
-  - cmake ..
+  - cmake -DCATCH_ROOT=$TRAVIS_BUILD_DIR/Catch -DPEGTL_ROOT=$TRAVIS_BUILD_DIR/PEGTL ..
   - make
   - make test

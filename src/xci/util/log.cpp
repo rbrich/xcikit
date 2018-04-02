@@ -3,9 +3,10 @@
 #include <xci/util/log.h>
 
 #include <iostream>
-#include <ctime>
 #include <iomanip>
-#include <mutex>
+#include <cstdio>
+#include <ctime>
+#include <cassert>
 
 namespace xci {
 namespace util {
@@ -28,12 +29,12 @@ Logger& Logger::get_default_instance()
 
 void Logger::log(Logger::Level lvl, const std::string& msg)
 {
-    static std::mutex mutex;
-    std::lock_guard<std::mutex> lock(mutex);
-    auto now = std::time(nullptr);
-    std::cerr
-        << std::put_time(std::localtime(&now), "%F %T ")
-        << level_string[(int)lvl] << "  " << msg << std::endl;
+    time_t now = std::time(nullptr);
+    char ts_buf[20];
+    size_t ts_res = std::strftime(ts_buf, sizeof(ts_buf), "%F %T", std::localtime(&now));
+    assert(ts_res > 0 && ts_res < sizeof(ts_buf));
+
+    fprintf(stderr, "%s %s  %s\n", ts_buf, level_string[(int)lvl], msg.c_str());
 }
 
 
