@@ -37,6 +37,8 @@ public:
 
     void add_ellipse(const Rect_f& rect,
                      float outline_thickness = 0);
+    void add_ellipse_slice(const Rect_f& rect, const Rect_f& ellipse,
+                           float outline_thickness = 0);
     void clear_ellipses();
 
     void draw(View& view, const Vec2f& pos,

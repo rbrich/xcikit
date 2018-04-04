@@ -15,6 +15,10 @@ void Shapes::add_rectangle(const Rect_f& rect, float outline_thickness)
 void Shapes::add_ellipse(const Rect_f& rect, float outline_thickness)
 { m_impl->add_ellipse(rect, outline_thickness); }
 
+void Shapes::add_rounded_rectangle(const Rect_f& rect, float radius,
+                                   float outline_thickness)
+{ m_impl->add_rounded_rectangle(rect, radius, outline_thickness); }
+
 void Shapes::clear() { m_impl->clear(); }
 
 void Shapes::draw(View& view, const Vec2f& pos)

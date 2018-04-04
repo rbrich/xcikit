@@ -38,6 +38,34 @@ void GlShapes::add_ellipse(const Rect_f& rect, float outline_thickness)
     m_ellipses.add_ellipse(rect, outline_thickness);
 }
 
+void
+GlShapes::add_rounded_rectangle(const Rect_f& rect, float radius,
+                                float outline_thickness)
+{
+    // the shape is composed from 7-slice pattern:
+    // corner ellipse slices and center rectangle slices
+    float x = rect.x;
+    float y = rect.y;
+    float w = rect.w;
+    float h = rect.h;
+    float r = radius;
+    float rr = 2 * r;
+    m_ellipses.add_ellipse_slice({x, y, r, r},
+                                 {x, y, rr, rr},
+                                 outline_thickness);
+    m_ellipses.add_ellipse_slice({x+w-r, y, r, r},
+                                 {x+w-rr, y, rr, rr},
+                                 outline_thickness);
+    m_ellipses.add_ellipse_slice({x, y+h-r, r, r},
+                                 {x, y+h-rr, rr, rr},
+                                 outline_thickness);
+    m_ellipses.add_ellipse_slice({x+w-r, y+h-r, r, r},
+                                 {x+w-rr, y+h-rr, rr, rr},
+                                 outline_thickness);
+    m_rectangles.add_rectangle({x+r, y, w-rr, r}, outline_thickness);
+    m_rectangles.add_rectangle({x+r, y+h-r, w-rr, r}, outline_thickness);
+    m_rectangles.add_rectangle({x, y+r, w, h-rr}, outline_thickness);
+}
 
 void GlShapes::clear()
 {

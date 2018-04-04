@@ -83,6 +83,32 @@ void GlEllipses::add_ellipse(const Rect_f& rect, float outline_thickness)
 }
 
 
+void GlEllipses::add_ellipse_slice(const Rect_f& rect, const Rect_f& ellipse,
+                                   float outline_thickness)
+{
+    clear_gl_objects();
+
+    float x1 = rect.x;
+    float y1 = -rect.y;
+    float x2 = rect.x + rect.w;
+    float y2 = -rect.y - rect.h;
+    float ax = 2 * (rect.x+rect.w - ellipse.x-ellipse.w/2) / ellipse.w;
+    float ay = 2 * (rect.y+rect.h - ellipse.y-ellipse.h/2) / ellipse.h;
+    float bx = 2 * (rect.x - ellipse.x-ellipse.w/2) / ellipse.w;
+    float by = 2 * (rect.y - ellipse.y-ellipse.h/2) / ellipse.h;
+    float cx = ax * (1.0f + 2.0f * outline_thickness / ellipse.w);
+    float cy = ay * (1.0f + 2.0f * outline_thickness / ellipse.h);
+    float dx = bx * (1.0f + 2.0f * outline_thickness / ellipse.w);
+    float dy = by * (1.0f + 2.0f * outline_thickness / ellipse.h);
+    auto i = (GLushort) m_vertex_data.size();
+    m_vertex_data.push_back({x2, y1, cx, dy, ax, by});
+    m_vertex_data.push_back({x2, y2, cx, cy, ax, ay});
+    m_vertex_data.push_back({x1, y2, dx, cy, bx, ay});
+    m_vertex_data.push_back({x1, y1, dx, dy, bx, by});
+    m_elem_first.push_back(i);
+    m_elem_size.push_back(4);
+}
+
 void GlEllipses::clear_ellipses()
 {
     m_vertex_data.clear();

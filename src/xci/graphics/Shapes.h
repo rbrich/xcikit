@@ -52,6 +52,14 @@ public:
     void add_ellipse(const Rect_f& rect,
                      float outline_thickness = 0);
 
+    // Add new rounded rectangle.
+    // `rect`              - position and size
+    // `radius`            - corner radius
+    // `outline_thickness` - the outline actually goes from edge to inside
+    //                       this parameter defines how far (in display units)
+    void add_rounded_rectangle(const Rect_f& rect, float radius,
+                               float outline_thickness = 0);
+
     // Remove all shapes
     void clear();
 
