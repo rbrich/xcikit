@@ -35,7 +35,7 @@ Button::Button(const std::string &string, Font& font)
 void Button::set_decoration_color(const graphics::Color& fill,
                                   const graphics::Color& border)
 {
-    m_bg_rect = Rectangles(fill, border);
+    m_bg_rect = Shapes(fill, border);
 }
 
 
@@ -48,7 +48,7 @@ void Button::set_text_color(const graphics::Color& color)
 void Button::resize(const graphics::View& target)
 {
     m_layout.typeset(target);
-    m_bg_rect.clear_rectangles();
+    m_bg_rect.clear();
     m_bg_rect.add_rectangle(bbox(), m_outline_thickness);
 }
 

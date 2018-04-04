@@ -16,7 +16,9 @@
 #ifndef XCI_GRAPHICS_GL_RECTANGLES_H
 #define XCI_GRAPHICS_GL_RECTANGLES_H
 
-#include <xci/graphics/Rectangles.h>
+#include <xci/graphics/Color.h>
+#include <xci/graphics/View.h>
+#include <xci/util/geometry.h>
 
 #include <glad/glad.h>
 
@@ -25,27 +27,26 @@
 namespace xci {
 namespace graphics {
 
+using xci::util::Rect_f;
+using xci::util::Vec2f;
+
 
 class GlRectangles {
 public:
-    explicit GlRectangles(const Color& fill_color,
-                          const Color& outline_color = Color::White());
     ~GlRectangles() { clear_gl_objects(); }
 
     void add_rectangle(const Rect_f& rect,
                        float outline_thickness = 0);
     void clear_rectangles();
 
-    void draw(View& view, const Vec2f& pos);
+    void draw(View& view, const Vec2f& pos,
+              const Color& fill_color, const Color& outline_color);
 
 private:
     void init_gl_objects();
     void clear_gl_objects();
 
 private:
-    Color m_fill_color;
-    Color m_outline_color;
-
     struct Vertex {
         GLfloat x, y;         // vertex coords
         GLfloat u, v;         // inner edge of the border
@@ -57,13 +58,6 @@ private:
     GLuint m_vertex_array = 0;  // aka VAO
     GLuint m_vertex_buffer = 0;  // aka VBO
     bool m_objects_ready = false;
-};
-
-
-class Rectangles::Impl : public GlRectangles {
-public:
-    explicit Impl(const Color& fill_color, const Color& outline_color)
-            : GlRectangles(fill_color, outline_color) {}
 };
 
 

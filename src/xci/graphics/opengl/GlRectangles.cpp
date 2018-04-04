@@ -16,9 +16,6 @@
 #include "GlRectangles.h"
 #include "GlView.h"
 
-// inline
-#include <xci/graphics/Rectangles.inl>
-
 namespace xci {
 namespace graphics {
 
@@ -59,11 +56,6 @@ void main() {
 )~~~";
 
 
-GlRectangles::GlRectangles(const Color& fill_color, const Color& outline_color)
-    : m_fill_color(fill_color), m_outline_color(outline_color)
-{}
-
-
 void GlRectangles::add_rectangle(const Rect_f& rect, float outline_thickness)
 {
     clear_gl_objects();
@@ -92,7 +84,8 @@ void GlRectangles::clear_rectangles()
 }
 
 
-void GlRectangles::draw(View& view, const Vec2f& pos)
+void GlRectangles::draw(View& view, const Vec2f& pos,
+                        const Color& fill_color, const Color& outline_color)
 {
     init_gl_objects();
 
@@ -121,12 +114,12 @@ void GlRectangles::draw(View& view, const Vec2f& pos)
     glUniformMatrix4fv(u_mvp, 1, GL_FALSE, (const GLfloat*) mvp);
 
     GLint u_fill_color = glGetUniformLocation(program, "u_fill_color");
-    glUniform4f(u_fill_color, m_fill_color.red_f(), m_fill_color.green_f(),
-                              m_fill_color.blue_f(), m_fill_color.alpha_f());
+    glUniform4f(u_fill_color, fill_color.red_f(), fill_color.green_f(),
+                              fill_color.blue_f(), fill_color.alpha_f());
 
     GLint u_outline_color = glGetUniformLocation(program, "u_outline_color");
-    glUniform4f(u_outline_color, m_outline_color.red_f(), m_outline_color.green_f(),
-                m_outline_color.blue_f(), m_outline_color.alpha_f());
+    glUniform4f(u_outline_color, outline_color.red_f(), outline_color.green_f(),
+                outline_color.blue_f(), outline_color.alpha_f());
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

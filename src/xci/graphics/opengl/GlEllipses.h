@@ -16,7 +16,9 @@
 #ifndef XCI_GRAPHICS_GL_ELLIPSES_H
 #define XCI_GRAPHICS_GL_ELLIPSES_H
 
-#include <xci/graphics/Ellipses.h>
+#include <xci/graphics/Color.h>
+#include <xci/graphics/View.h>
+#include <xci/util/geometry.h>
 
 #include <glad/glad.h>
 
@@ -25,27 +27,26 @@
 namespace xci {
 namespace graphics {
 
+using xci::util::Rect_f;
+using xci::util::Vec2f;
+
 
 class GlEllipses {
 public:
-    explicit GlEllipses(const Color& fill_color,
-                          const Color& outline_color = Color::White());
     ~GlEllipses() { clear_gl_objects(); }
 
     void add_ellipse(const Rect_f& rect,
                      float outline_thickness = 0);
     void clear_ellipses();
 
-    void draw(View& view, const Vec2f& pos);
+    void draw(View& view, const Vec2f& pos,
+              const Color& fill_color, const Color& outline_color);
 
 private:
     void init_gl_objects();
     void clear_gl_objects();
 
 private:
-    Color m_fill_color;
-    Color m_outline_color;
-
     struct Vertex {
         GLfloat x, y;         // vertex coords
         GLfloat iu, iv;       // inner edge of the border
@@ -58,13 +59,6 @@ private:
     GLuint m_vertex_array = 0;  // aka VAO
     GLuint m_vertex_buffer = 0;  // aka VBO
     bool m_objects_ready = false;
-};
-
-
-class Ellipses::Impl : public GlEllipses {
-public:
-    explicit Impl(const Color& fill_color, const Color& outline_color)
-            : GlEllipses(fill_color, outline_color) {}
 };
 
 

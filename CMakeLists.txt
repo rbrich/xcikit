@@ -36,10 +36,8 @@ set(XCI_UTIL_SOURCES
 
 set(XCI_GRAPHICS_SOURCES
     src/xci/graphics/Color.h
-    src/xci/graphics/Ellipses.inl
-    src/xci/graphics/Ellipses.h
-    src/xci/graphics/Rectangles.h
-    src/xci/graphics/Rectangles.inl
+    src/xci/graphics/Shapes.h
+    src/xci/graphics/Shapes.inl
     src/xci/graphics/Texture.h
     src/xci/graphics/Texture.inl
     src/xci/graphics/Sprites.h
@@ -54,6 +52,8 @@ set(XCI_GRAPHICS_OPENGL_SOURCES
     src/xci/graphics/opengl/GlEllipses.h
     src/xci/graphics/opengl/GlRectangles.cpp
     src/xci/graphics/opengl/GlRectangles.h
+    src/xci/graphics/opengl/GlShapes.cpp
+    src/xci/graphics/opengl/GlShapes.h
     src/xci/graphics/opengl/GlSprites.cpp
     src/xci/graphics/opengl/GlSprites.h
     src/xci/graphics/opengl/GlTexture.cpp

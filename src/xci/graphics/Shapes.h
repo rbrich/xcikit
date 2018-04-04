@@ -1,4 +1,4 @@
-// Rectangles.h created on 2018-03-19, part of XCI toolkit
+// Shapes.h created on 2018-04-04, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_GRAPHICS_RECTANGLES_H
-#define XCI_GRAPHICS_RECTANGLES_H
+#ifndef XCI_GRAPHICS_SHAPES_H
+#define XCI_GRAPHICS_SHAPES_H
 
 #include <xci/graphics/Color.h>
 #include <xci/graphics/View.h>
@@ -26,16 +26,17 @@ namespace graphics {
 using xci::util::Rect_f;
 using xci::util::Vec2f;
 
-// A collection of plain rectangles. Each rectangle may have
-// different size and outline width, but colors are uniform.
+// A collection of basic shapes: rectangles, ellipses.
+// Each shape may have different size and outline width,
+// but colors are uniform.
 
-class Rectangles {
+class Shapes {
 public:
-    explicit Rectangles(const Color& fill_color,
-                        const Color& outline_color = Color::White());
-    ~Rectangles();
-    Rectangles(Rectangles&&) noexcept;
-    Rectangles& operator=(Rectangles&&) noexcept;
+    explicit Shapes(const Color& fill_color,
+                    const Color& outline_color = Color::White());
+    ~Shapes();
+    Shapes(Shapes&&) noexcept;
+    Shapes& operator=(Shapes&&) noexcept;
 
     // Add new rectangle.
     // `rect`              - rectangle position and size
@@ -43,10 +44,19 @@ public:
     //                       this parameter defines how far (in display units)
     void add_rectangle(const Rect_f& rect,
                        float outline_thickness = 0);
-    void clear_rectangles();
 
-    // Draw all rectangles to `view` at `pos`.
-    // Final rectangle position is `pos` + rectangle's relative position
+    // Add new ellipse.
+    // `rect`              - ellipse position and size
+    // `outline_thickness` - the outline actually goes from edge to inside
+    //                       this parameter defines how far (in display units)
+    void add_ellipse(const Rect_f& rect,
+                     float outline_thickness = 0);
+
+    // Remove all shapes
+    void clear();
+
+    // Draw all shapes to `view` at `pos`.
+    // Final shape position is `pos` + shapes's relative position
     void draw(View& view, const Vec2f& pos);
 
     class Impl;
@@ -59,4 +69,4 @@ private:
 
 }} // namespace xci::graphics
 
-#endif // XCI_GRAPHICS_RECTANGLES_H
+#endif //XCI_GRAPHICS_SHAPES_H

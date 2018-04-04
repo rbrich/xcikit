@@ -14,7 +14,7 @@
 // limitations under the License.
 
 #include <xci/graphics/Window.h>
-#include <xci/graphics/Ellipses.h>
+#include <xci/graphics/Shapes.h>
 #include <xci/util/file.h>
 #include <cstdlib>
 
@@ -28,12 +28,12 @@ int main()
     window.create({800, 600}, "XCI ellipses demo");
 
     // normally, the border scales with viewport size
-    Ellipses rts(Color(0, 0, 40, 128), Color(180, 180, 0));
+    Shapes rts(Color(0, 0, 40, 128), Color(180, 180, 0));
     rts.add_ellipse({-1, -0.6f, 2, 1.2f}, 0.05);
     rts.add_ellipse({-0.6f, -0.8f, 1.2f, 1.6f}, 0.02);
 
     // using View::screen_ratio, we can set constant border width, in screen pixels
-    Ellipses rts_px(Color(40, 40, 0, 128), Color(255, 255, 0));
+    Shapes rts_px(Color(40, 40, 0, 128), Color(255, 255, 0));
 
     window.display([&](View& view) {
         rts.draw(view, {0, 0});
@@ -45,7 +45,7 @@ int main()
         rts_px.add_ellipse({0.3f, 0.3f, 0.5f, 0.5f}, 4 * pxr);
         rts_px.add_ellipse({0.4f, 0.4f, 0.5f, 0.5f}, 5 * pxr);
         rts_px.draw(view, {-0.45f, -0.45f});
-        rts_px.clear_ellipses();
+        rts_px.clear();
     });
     return EXIT_SUCCESS;
 }
