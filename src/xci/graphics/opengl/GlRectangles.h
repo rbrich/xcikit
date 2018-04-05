@@ -37,10 +37,13 @@ public:
 
     void add_rectangle(const Rect_f& rect,
                        float outline_thickness = 0);
+    void add_rectangle_slice(const Rect_f& slice, const Rect_f& rect,
+                             float outline_thickness = 0);
     void clear_rectangles();
 
     void draw(View& view, const Vec2f& pos,
-              const Color& fill_color, const Color& outline_color);
+              const Color& fill_color, const Color& outline_color,
+              float softness = 0);
 
 private:
     void init_gl_objects();
@@ -49,7 +52,8 @@ private:
 private:
     struct Vertex {
         GLfloat x, y;         // vertex coords
-        GLfloat u, v;         // inner edge of the border
+        GLfloat iu, iv;       // inner edge of the border
+        GLfloat ou, ov;       // outline edge of the border
     };
     std::vector<Vertex> m_vertex_data;
     std::vector<GLint> m_elem_first;  // first vertex of each element

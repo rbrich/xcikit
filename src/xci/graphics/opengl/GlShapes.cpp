@@ -62,9 +62,19 @@ GlShapes::add_rounded_rectangle(const Rect_f& rect, float radius,
     m_ellipses.add_ellipse_slice({x+w-r, y+h-r, r, r},
                                  {x+w-rr, y+h-rr, rr, rr},
                                  outline_thickness);
-    m_rectangles.add_rectangle({x+r, y, w-rr, r}, outline_thickness);
-    m_rectangles.add_rectangle({x+r, y+h-r, w-rr, r}, outline_thickness);
-    m_rectangles.add_rectangle({x, y+r, w, h-rr}, outline_thickness);
+    m_rectangles.add_rectangle_slice({x+r, y, w-rr, r},
+                                     rect, outline_thickness);
+    m_rectangles.add_rectangle_slice({x+r, y+h-r, w-rr, r},
+                                     rect, outline_thickness);
+    m_rectangles.add_rectangle_slice({x, y+r, w, h-rr},
+                                     rect, outline_thickness);
+/*
+    m_rectangles.add_rectangle_slice({x+r, y, r, h},
+                                     rect, outline_thickness);
+    m_rectangles.add_rectangle_slice({x+rr, y, r, h/2},
+                                     {x,y,w,h/2}, outline_thickness);
+    m_rectangles.add_rectangle_slice({x+3*r, y, r, h/4},
+                                     {x,y,w,h/4}, outline_thickness);*/
 }
 
 void GlShapes::clear()
@@ -76,8 +86,9 @@ void GlShapes::clear()
 
 void GlShapes::draw(View& view, const Vec2f& pos)
 {
-    m_rectangles.draw(view, pos, m_fill_color, m_outline_color);
-    m_ellipses.draw(view, pos, m_fill_color, m_outline_color);
+    float softness = 10;
+    m_rectangles.draw(view, pos, m_fill_color, m_outline_color, softness);
+    m_ellipses.draw(view, pos, m_fill_color, m_outline_color, softness);
 }
 
 

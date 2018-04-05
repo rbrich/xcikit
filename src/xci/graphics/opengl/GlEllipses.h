@@ -37,12 +37,13 @@ public:
 
     void add_ellipse(const Rect_f& rect,
                      float outline_thickness = 0);
-    void add_ellipse_slice(const Rect_f& rect, const Rect_f& ellipse,
+    void add_ellipse_slice(const Rect_f& slice, const Rect_f& ellipse,
                            float outline_thickness = 0);
     void clear_ellipses();
 
     void draw(View& view, const Vec2f& pos,
-              const Color& fill_color, const Color& outline_color);
+              const Color& fill_color, const Color& outline_color,
+              float softness = 2);
 
 private:
     void init_gl_objects();

@@ -71,35 +71,39 @@ void GlEllipses::add_ellipse(const Rect_f& rect, float outline_thickness)
     float y1 = -rect.y;
     float x2 = rect.x + rect.w;
     float y2 = -rect.y - rect.h;
-    float tx = 1.0f + 2.0f * outline_thickness / rect.w;
-    float ty = 1.0f + 2.0f * outline_thickness / rect.h;
+    float tx = 2.0f * outline_thickness / rect.w;
+    float ty = 2.0f * outline_thickness / rect.h;
+    float ix = 1.0f + tx / (1-tx);
+    float iy = 1.0f + ty / (1-ty);
     auto i = (GLushort) m_vertex_data.size();
-    m_vertex_data.push_back({x2, y1, +tx, -ty, +1.0f, -1.0f});
-    m_vertex_data.push_back({x2, y2, +tx, +ty, +1.0f, +1.0f});
-    m_vertex_data.push_back({x1, y2, -tx, +ty, -1.0f, +1.0f});
-    m_vertex_data.push_back({x1, y1, -tx, -ty, -1.0f, -1.0f});
+    m_vertex_data.push_back({x2, y1, +ix, -iy, +1.0f, -1.0f});
+    m_vertex_data.push_back({x2, y2, +ix, +iy, +1.0f, +1.0f});
+    m_vertex_data.push_back({x1, y2, -ix, +iy, -1.0f, +1.0f});
+    m_vertex_data.push_back({x1, y1, -ix, -iy, -1.0f, -1.0f});
     m_elem_first.push_back(i);
     m_elem_size.push_back(4);
 }
 
 
-void GlEllipses::add_ellipse_slice(const Rect_f& rect, const Rect_f& ellipse,
+void GlEllipses::add_ellipse_slice(const Rect_f& slice, const Rect_f& ellipse,
                                    float outline_thickness)
 {
     clear_gl_objects();
 
-    float x1 = rect.x;
-    float y1 = -rect.y;
-    float x2 = rect.x + rect.w;
-    float y2 = -rect.y - rect.h;
-    float ax = 2 * (rect.x+rect.w - ellipse.x-ellipse.w/2) / ellipse.w;
-    float ay = 2 * (rect.y+rect.h - ellipse.y-ellipse.h/2) / ellipse.h;
-    float bx = 2 * (rect.x - ellipse.x-ellipse.w/2) / ellipse.w;
-    float by = 2 * (rect.y - ellipse.y-ellipse.h/2) / ellipse.h;
-    float cx = ax * (1.0f + 2.0f * outline_thickness / ellipse.w);
-    float cy = ay * (1.0f + 2.0f * outline_thickness / ellipse.h);
-    float dx = bx * (1.0f + 2.0f * outline_thickness / ellipse.w);
-    float dy = by * (1.0f + 2.0f * outline_thickness / ellipse.h);
+    float x1 = slice.x;
+    float y1 = -slice.y;
+    float x2 = slice.x + slice.w;
+    float y2 = -slice.y - slice.h;
+    float ax = 2 * (slice.x+slice.w - ellipse.x-ellipse.w/2) / ellipse.w;
+    float ay = 2 * (slice.y+slice.h - ellipse.y-ellipse.h/2) / ellipse.h;
+    float bx = 2 * (slice.x - ellipse.x-ellipse.w/2) / ellipse.w;
+    float by = 2 * (slice.y - ellipse.y-ellipse.h/2) / ellipse.h;
+    float tx = 2.0f * outline_thickness / ellipse.w;
+    float ty = 2.0f * outline_thickness / ellipse.h;
+    float cx = ax * (1.0f + tx / (1-tx));
+    float cy = ay * (1.0f + ty / (1-ty));
+    float dx = bx * (1.0f + tx / (1-tx));
+    float dy = by * (1.0f + ty / (1-ty));
     auto i = (GLushort) m_vertex_data.size();
     m_vertex_data.push_back({x2, y1, cx, dy, ax, by});
     m_vertex_data.push_back({x2, y2, cx, cy, ax, ay});
@@ -118,7 +122,8 @@ void GlEllipses::clear_ellipses()
 
 
 void GlEllipses::draw(View& view, const Vec2f& pos,
-                      const Color& fill_color, const Color& outline_color)
+                      const Color& fill_color, const Color& outline_color,
+                      float softness)
 {
     init_gl_objects();
 
@@ -154,6 +159,9 @@ void GlEllipses::draw(View& view, const Vec2f& pos,
     GLint u_outline_color = glGetUniformLocation(program, "u_outline_color");
     glUniform4f(u_outline_color, outline_color.red_f(), outline_color.green_f(),
                 outline_color.blue_f(), outline_color.alpha_f());
+
+    GLint u_softness = glGetUniformLocation(program, "u_softness");
+    glUniform1f(u_softness, softness);
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
