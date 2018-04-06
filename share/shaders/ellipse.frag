@@ -3,6 +3,7 @@
 uniform vec4 u_fill_color;
 uniform vec4 u_outline_color;
 uniform float u_softness;
+uniform float u_antialiasing;
 
 // See rectangle.frag for description of these.
 // For ellipses, these work similarly, but the borders
@@ -18,10 +19,10 @@ out vec4 o_color;
 void main() {
     float ri = length(v_border_inner);
     float ro = length(v_border_outer);
-    float f = fwidth(ri) * u_softness;
-    float alpha = smoothstep(1-f, 1, ri);
+    float f = fwidth(ri) * u_antialiasing + (ri/ro - 1) * u_softness;
+    float alpha = smoothstep(1-f/2, 1+f/2, ri);
     o_color = mix(u_fill_color, u_outline_color, alpha);
-    f = fwidth(ro) * u_softness;
-    alpha = smoothstep(1-f, 1, ro);
+    f = fwidth(ro) * u_antialiasing + (1 - ro/ri) * u_softness;
+    alpha = smoothstep(1-f/2, 1+f/2, ro);
     o_color = mix(o_color, vec4(0,0,0,0), alpha);
 }

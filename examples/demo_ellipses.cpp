@@ -28,12 +28,12 @@ int main()
     window.create({800, 600}, "XCI ellipses demo");
 
     // normally, the border scales with viewport size
-    Shapes rts(Color(0, 0, 40, 128), Color(180, 180, 0));
+    Shapes rts(Color(0, 0, 40, 128), Color(180, 180, 0), 2);
     rts.add_ellipse({-1, -0.6f, 2, 1.2f}, 0.05);
     rts.add_ellipse({-0.6f, -0.8f, 1.2f, 1.6f}, 0.02);
 
     // using View::screen_ratio, we can set constant border width, in screen pixels
-    Shapes rts_px(Color(40, 40, 0, 128), Color(255, 255, 0));
+    Shapes rts_px(Color(40, 40, 0, 128), Color(255, 255, 0), 2);
 
     window.display([&](View& view) {
         rts.draw(view, {0, 0});

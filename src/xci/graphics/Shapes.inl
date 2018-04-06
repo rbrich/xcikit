@@ -3,8 +3,9 @@ namespace graphics {
 
 
 // Forward to Shapes::Impl
-Shapes::Shapes(const Color& fill_color, const Color& outline_color)
-        : m_impl(new Impl(fill_color, outline_color)) {}
+Shapes::Shapes(const Color& fill_color, const Color& outline_color,
+               float antialiasing, float softness)
+        : m_impl(new Impl(fill_color, outline_color, antialiasing, softness)) {}
 Shapes::~Shapes() = default;
 Shapes::Shapes(Shapes&&) noexcept = default;
 Shapes& Shapes::operator=(Shapes&&) noexcept = default;

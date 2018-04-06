@@ -31,7 +31,9 @@ namespace graphics {
 class GlShapes {
 public:
     explicit GlShapes(const Color& fill_color,
-                      const Color& outline_color = Color::White());
+                      const Color& outline_color = Color::White(),
+                      float antialiasing = 0,
+                      float softness = 0);
 
     void add_rectangle(const Rect_f& rect,
                        float outline_thickness = 0);
@@ -49,6 +51,8 @@ public:
 private:
     Color m_fill_color;
     Color m_outline_color;
+    float m_softness;
+    float m_antialiasing;
 
     GlRectangles m_rectangles;
     GlEllipses m_ellipses;
@@ -57,8 +61,9 @@ private:
 
 class Shapes::Impl : public GlShapes {
 public:
-    explicit Impl(const Color& fill_color, const Color& outline_color)
-            : GlShapes(fill_color, outline_color) {}
+    explicit Impl(const Color& fill_color, const Color& outline_color,
+                  float antialiasing, float softness)
+            : GlShapes(fill_color, outline_color, antialiasing, softness) {}
 };
 
 

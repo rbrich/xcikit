@@ -33,7 +33,9 @@ using xci::util::Vec2f;
 class Shapes {
 public:
     explicit Shapes(const Color& fill_color,
-                    const Color& outline_color = Color::White());
+                    const Color& outline_color = Color::White(),
+                    float antialiasing = 0,
+                    float softness = 0);
     ~Shapes();
     Shapes(Shapes&&) noexcept;
     Shapes& operator=(Shapes&&) noexcept;

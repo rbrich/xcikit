@@ -123,7 +123,7 @@ void GlEllipses::clear_ellipses()
 
 void GlEllipses::draw(View& view, const Vec2f& pos,
                       const Color& fill_color, const Color& outline_color,
-                      float softness)
+                      float antialiasing, float softness)
 {
     init_gl_objects();
 
@@ -162,6 +162,9 @@ void GlEllipses::draw(View& view, const Vec2f& pos,
 
     GLint u_softness = glGetUniformLocation(program, "u_softness");
     glUniform1f(u_softness, softness);
+
+    GLint u_antialiasing = glGetUniformLocation(program, "u_antialiasing");
+    glUniform1f(u_antialiasing, antialiasing);
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

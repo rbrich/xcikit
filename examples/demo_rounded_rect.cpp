@@ -27,7 +27,7 @@ int main()
     Window window;
     window.create({800, 600}, "XCI rounded rectangle demo");
 
-    Shapes rrect(Color(0, 0, 40, 128), Color(180, 180, 0));
+    Shapes rrect(Color(0, 0, 40, 128), Color(180, 180, 0), 2);
     rrect.add_rounded_rectangle({-1, -0.6f, 2, 1.2f}, 0.4, 0.05);
 
     window.display([&](View& view) {

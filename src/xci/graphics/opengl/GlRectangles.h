@@ -43,7 +43,7 @@ public:
 
     void draw(View& view, const Vec2f& pos,
               const Color& fill_color, const Color& outline_color,
-              float softness = 0);
+              float antialiasing = 0, float softness = 0);
 
 private:
     void init_gl_objects();

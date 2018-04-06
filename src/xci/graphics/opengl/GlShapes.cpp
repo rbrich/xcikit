@@ -22,8 +22,10 @@ namespace xci {
 namespace graphics {
 
 
-GlShapes::GlShapes(const Color& fill_color, const Color& outline_color)
-        : m_fill_color(fill_color), m_outline_color(outline_color)
+GlShapes::GlShapes(const Color& fill_color, const Color& outline_color,
+                   float antialiasing, float softness)
+        : m_fill_color(fill_color), m_outline_color(outline_color),
+          m_antialiasing(antialiasing), m_softness(softness)
 {}
 
 
@@ -68,13 +70,6 @@ GlShapes::add_rounded_rectangle(const Rect_f& rect, float radius,
                                      rect, outline_thickness);
     m_rectangles.add_rectangle_slice({x, y+r, w, h-rr},
                                      rect, outline_thickness);
-/*
-    m_rectangles.add_rectangle_slice({x+r, y, r, h},
-                                     rect, outline_thickness);
-    m_rectangles.add_rectangle_slice({x+rr, y, r, h/2},
-                                     {x,y,w,h/2}, outline_thickness);
-    m_rectangles.add_rectangle_slice({x+3*r, y, r, h/4},
-                                     {x,y,w,h/4}, outline_thickness);*/
 }
 
 void GlShapes::clear()
@@ -86,9 +81,10 @@ void GlShapes::clear()
 
 void GlShapes::draw(View& view, const Vec2f& pos)
 {
-    float softness = 10;
-    m_rectangles.draw(view, pos, m_fill_color, m_outline_color, softness);
-    m_ellipses.draw(view, pos, m_fill_color, m_outline_color, softness);
+    m_rectangles.draw(view, pos, m_fill_color, m_outline_color,
+                      m_antialiasing, m_softness);
+    m_ellipses.draw(view, pos, m_fill_color, m_outline_color,
+                    m_antialiasing, m_softness);
 }
 
 
