@@ -75,18 +75,37 @@ Roadmap
 Build
 -----
 
-Dependencies - required:
+Build system (required):
+- CMake (eg. `apt-get install cmake`)
+
+Package manager (optional):
+- Conan (eg. `pip3 install conan`)
+
+Dependencies (required):
 - FreeType
 - PEGTL
 
-Dependencies - optional:
+Dependencies (optional):
 - GLFW (WITH_OPENGL)
 - SFML (WITH_SFML)
 - Panda3D (WATH_PANDA)
-- Catch (tests)
+- Catch2 (for tests)
 
-Build with cmake:
+Build steps:
 
     mkdir build && cd build
+    
+    # Optionally, install dependencies using Conan.
+    # Otherwise, they will be looked up in default system locations
+    # or specified paths (see in cmake-modules).
+    ../.conan/create-local.sh
+    conan install .. [-s compiler=clang]
+    
+    # Configure
     cmake ..
+    
+    # Optionally, adjust configuration
+    ccmake ..
+    
+    # Build
     make

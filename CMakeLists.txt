@@ -7,6 +7,11 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -Wno-reorder")
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
 
+if(EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    conan_basic_setup()
+endif()
+
 option(WITH_OPENGL "Link with GLFW and build libxci-graphics-opengl." ON)
 option(WITH_SFML "Link with SFML and build libxci-graphics-sfml." OFF)
 option(WITH_PANDA "Link with Panda3D and build libxci-graphics-panda." OFF)

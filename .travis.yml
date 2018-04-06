@@ -8,11 +8,12 @@ compiler:
   - clang
 
 install:
-  - if [ "$TRAVIS_OS_NAME" = osx ]; then brew install glfw pegtl; fi
-  - mkdir Catch; wget https://github.com/catchorg/Catch2/releases/download/v2.2.1/catch.hpp -O Catch/catch.hpp
+  - if [ "$TRAVIS_OS_NAME" = osx ]; then brew install glfw conan; fi
 
 script:
   - mkdir build && cd build
-  - cmake -DCATCH_ROOT=$TRAVIS_BUILD_DIR/Catch ..
+  - ../.conan/create-local.sh
+  - conan install ..
+  - cmake ..
   - make
   - make test

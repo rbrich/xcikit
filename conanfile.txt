@@ -1,0 +1,6 @@
+[requires]
+catch2/2.2.2@bincrafters/stable
+PEGTL/2.4.0@xci/local
+
+[generators]
+cmake
