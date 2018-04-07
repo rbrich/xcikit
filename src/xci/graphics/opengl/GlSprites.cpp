@@ -22,44 +22,24 @@
 // inline
 #include <xci/graphics/Sprites.inl>
 
+#ifdef XCI_EMBED_SHADERS
+#define INCBIN_PREFIX g_
+#define INCBIN_STYLE INCBIN_STYLE_SNAKE
+#include "incbin.h"
+INCBIN(sprite_vert, XCI_SHARE_DIR "/shaders/sprite.vert");
+INCBIN(sprite_frag, XCI_SHARE_DIR "/shaders/sprite.frag");
+#else
+static const unsigned char* g_sprite_vert_data = nullptr;
+static const unsigned int g_sprite_vert_size = 0;
+static const unsigned char* g_sprite_frag_data = nullptr;
+static const unsigned int g_sprite_frag_size = 0;
+#endif
+
+
 namespace xci {
 namespace graphics {
 
 using namespace xci::util::log;
-
-
-static const char* c_vertex_shader = R"~~~(
-#version 330
-
-uniform mat4 u_mvp;
-
-layout(location = 0) in vec2 a_position;
-layout(location = 1) in vec2 a_tex_coord;
-
-out vec2 v_tex_coord;
-
-void main() {
-    gl_Position = u_mvp * vec4(a_position, 0.0, 1.0);
-    v_tex_coord = a_tex_coord;
-}
-)~~~";
-
-
-static const char* c_fragment_shader = R"~~~(
-#version 330
-
-uniform sampler2D u_texture;
-uniform vec4 u_color;
-
-in vec2 v_tex_coord;
-
-out vec4 o_color;
-
-void main() {
-    float alpha = texture(u_texture, v_tex_coord).r;
-    o_color = vec4(u_color.rgb, u_color.a * alpha);
-}
-)~~~";
 
 
 GlSprites::GlSprites(const Texture& texture, const Color& color)
@@ -103,8 +83,9 @@ void GlSprites::draw(View& view, const Vec2f& pos)
 
     auto program = view.impl()
             .gl_program(GlView::ProgramId::Sprite,
-                        nullptr, c_vertex_shader,
-                        nullptr, c_fragment_shader);
+                        "shaders/sprite.vert", "shaders/sprite.frag",
+                        (const char*)g_sprite_vert_data, g_sprite_vert_size,
+                        (const char*)g_sprite_frag_data, g_sprite_frag_size);
     glUseProgram(program);
     glBindVertexArray(m_vertex_array);
     glEnableVertexAttribArray(0);

@@ -16,51 +16,22 @@
 #include "GlEllipses.h"
 #include "GlView.h"
 
+#ifdef XCI_EMBED_SHADERS
+#define INCBIN_PREFIX g_
+#define INCBIN_STYLE INCBIN_STYLE_SNAKE
+#include "incbin.h"
+INCBIN(ellipse_vert, XCI_SHARE_DIR "/shaders/ellipse.vert");
+INCBIN(ellipse_frag, XCI_SHARE_DIR "/shaders/ellipse.frag");
+#else
+static const unsigned char* g_ellipse_vert_data = nullptr;
+static const unsigned int g_ellipse_vert_size = 0;
+static const unsigned char* g_ellipse_frag_data = nullptr;
+static const unsigned int g_ellipse_frag_size = 0;
+#endif
+
+
 namespace xci {
 namespace graphics {
-
-
-static const char* c_vertex_shader = R"~~~(
-#version 330
-
-uniform mat4 u_mvp;
-
-layout(location = 0) in vec2 a_position;
-layout(location = 1) in vec2 a_border_inner;
-layout(location = 2) in vec2 a_border_outer;
-
-out vec2 v_border_inner;
-out vec2 v_border_outer;
-
-void main() {
-    gl_Position = u_mvp * vec4(a_position, 0.0, 1.0);
-    v_border_inner = a_border_inner;
-    v_border_outer = a_border_outer;
-}
-)~~~";
-
-
-static const char* c_fragment_shader = R"~~~(
-#version 330
-
-uniform vec4 u_fill_color;
-uniform vec4 u_outline_color;
-
-in vec2 v_border_inner;
-in vec2 v_border_outer;
-
-out vec4 o_color;
-
-void main() {
-    float ri = length(v_border_inner);
-    float ro = length(v_border_outer);
-    float f = fwidth(ri);
-    float alpha = smoothstep(1-f, 1, ri);
-    o_color = mix(u_fill_color, u_outline_color, alpha);
-    alpha = smoothstep(1-f, 1, ro);
-    o_color = mix(o_color, vec4(0,0,0,0), alpha);
-}
-)~~~";
 
 
 void GlEllipses::add_ellipse(const Rect_f& rect, float outline_thickness)
@@ -129,8 +100,9 @@ void GlEllipses::draw(View& view, const Vec2f& pos,
 
     auto program = view.impl()
             .gl_program(GlView::ProgramId::Ellipse,
-                        "shaders/ellipse.vert", c_vertex_shader,
-                        "shaders/ellipse.frag", c_fragment_shader);
+                        "shaders/ellipse.vert", "shaders/ellipse.frag",
+                        (const char*)g_ellipse_vert_data, g_ellipse_vert_size,
+                        (const char*)g_ellipse_frag_data, g_ellipse_frag_size);
     glUseProgram(program);
     glBindVertexArray(m_vertex_array);
     glEnableVertexAttribArray(0);

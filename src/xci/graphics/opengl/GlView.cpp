@@ -33,11 +33,13 @@ using xci::util::remove_file_watch;
 
 
 static GLuint compile_program(const char* vertex_source,
-                              const char* fragment_source)
+                              int vertex_source_length,
+                              const char* fragment_source,
+                              int fragment_source_length)
 {
     // compile vertex shader
     GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex_shader, 1, &vertex_source, nullptr);
+    glShaderSource(vertex_shader, 1, &vertex_source, &vertex_source_length);
     glCompileShader(vertex_shader);
 
     // check compilation result
@@ -54,7 +56,7 @@ static GLuint compile_program(const char* vertex_source,
 
     // compile fragment shader
     GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment_shader, 1, &fragment_source, nullptr);
+    glShaderSource(fragment_shader, 1, &fragment_source, &fragment_source_length);
     glCompileShader(fragment_shader);
 
     // check compilation result
@@ -172,8 +174,9 @@ void GlView::set_framebuffer_size(Vec2u size)
 
 GLuint
 GlView::gl_program(GlView::ProgramId id,
-                   const char* vertex_file, const char* vertex_source,
-                   const char* fragment_file, const char* fragment_source)
+                   const char* vertex_file, const char* fragment_file,
+                   const char* vertex_source, int vertex_source_length,
+                   const char* fragment_source, int fragment_source_length)
 {
     auto& program_atomic = m_program[(size_t)id];
     GLuint program = program_atomic.load(std::memory_order_acquire);
@@ -192,7 +195,8 @@ GlView::gl_program(GlView::ProgramId id,
         if (vertex_file) {
             vertex_file_source = read_file(vertex_file);
             if (!vertex_file_source.empty()) {
-                vertex_source = vertex_file_source.c_str();
+                vertex_source = vertex_file_source.data();
+                vertex_source_length = (int) vertex_file_source.size();
                 log_info("Loaded vertex shader: {}", vertex_file);
                 // Force reload when shader file changes
                 vertex_fw = add_file_watch(vertex_file, [&program_atomic](){
@@ -204,7 +208,8 @@ GlView::gl_program(GlView::ProgramId id,
         if (fragment_file) {
             fragment_file_source = read_file(fragment_file);
             if (!fragment_file_source.empty()) {
-                fragment_source = fragment_file_source.c_str();
+                fragment_source = fragment_file_source.data();
+                fragment_source_length = (int) fragment_file_source.size();
                 log_info("Loaded fragment shader: {}", fragment_file);
                 // Force reload when shader file changes
                 fragment_fw = add_file_watch(fragment_file, [&program_atomic](){
@@ -215,7 +220,8 @@ GlView::gl_program(GlView::ProgramId id,
         }
 
         // Compile and cache new program
-        program = compile_program(vertex_source, fragment_source);
+        program = compile_program(vertex_source, vertex_source_length,
+                                  fragment_source, fragment_source_length);
         program_atomic.store(program, std::memory_order_release);
     }
     return program;

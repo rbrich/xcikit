@@ -16,6 +16,8 @@ option(WITH_OPENGL "Link with GLFW and build libxci-graphics-opengl." ON)
 option(WITH_SFML "Link with SFML and build libxci-graphics-sfml." OFF)
 option(WITH_PANDA "Link with Panda3D and build libxci-graphics-panda." OFF)
 
+option(EMBED_SHADERS "Embed shader files into binaries to avoid dependency on share dir." OFF)
+
 option(DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
 option(DEBUG_OPENGL "Log info about OpenGL calls and errors." OFF)
 
@@ -168,10 +170,17 @@ if (WITH_OPENGL)
         ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_OPENGL_SOURCES})
     target_include_directories(${XCI_GRAPHICS_OPENGL_LIBRARY}
         PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/src)
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/ext/incbin)
     target_link_libraries(${XCI_GRAPHICS_OPENGL_LIBRARY}
         ${XCI_UTIL_LIBRARY}
         dl glad glfw)
+    target_compile_definitions(${XCI_GRAPHICS_OPENGL_LIBRARY} PRIVATE
+        XCI_SHARE_DIR="${SHARE_DIR}")
+    if (EMBED_SHADERS)
+        target_compile_definitions(${XCI_GRAPHICS_OPENGL_LIBRARY} PRIVATE
+            XCI_EMBED_SHADERS)
+    endif (EMBED_SHADERS)
     if (DEBUG_OPENGL)
         target_compile_definitions(${XCI_GRAPHICS_OPENGL_LIBRARY} PRIVATE
             XCI_DEBUG_OPENGL)

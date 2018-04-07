@@ -54,10 +54,11 @@ public:
     // First, try to read the file. If successful, setup a watch on the file
     // to auto-reload on any change. If the file does not exist, fall back
     // to source string given as another parameter.
-    // Either file or source parameter may be empty, in which case it's not used.
+    // Either file or source parameter may be nullptr, in which case it's not used.
     GLuint gl_program(ProgramId id,
-                      const char* vertex_file, const char* vertex_source,
-                      const char* fragment_file, const char* fragment_source);
+                      const char* vertex_file, const char* fragment_file,
+                      const char* vertex_source=nullptr, int vertex_source_length=-1,
+                      const char* fragment_source= nullptr, int fragment_source_length=-1);
 
 private:
     Vec2f m_scalable_size;      // eg. {2.666, 2.0}
