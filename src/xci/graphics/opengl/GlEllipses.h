@@ -16,6 +16,7 @@
 #ifndef XCI_GRAPHICS_GL_ELLIPSES_H
 #define XCI_GRAPHICS_GL_ELLIPSES_H
 
+#include "GlPrimitives.h"
 #include <xci/graphics/Color.h>
 #include <xci/graphics/View.h>
 #include <xci/util/geometry.h>
@@ -33,8 +34,6 @@ using xci::util::Vec2f;
 
 class GlEllipses {
 public:
-    ~GlEllipses() { clear_gl_objects(); }
-
     void add_ellipse(const Rect_f& rect,
                      float outline_thickness = 0);
     void add_ellipse_slice(const Rect_f& slice, const Rect_f& ellipse,
@@ -46,22 +45,7 @@ public:
               float antialiasing = 2, float softness = 0);
 
 private:
-    void init_gl_objects();
-    void clear_gl_objects();
-
-private:
-    struct Vertex {
-        GLfloat x, y;         // vertex coords
-        GLfloat iu, iv;       // inner edge of the border
-        GLfloat ou, ov;       // outline edge of the border
-    };
-    std::vector<Vertex> m_vertex_data;
-    std::vector<GLint> m_elem_first;  // first vertex of each element
-    std::vector<GLsizei> m_elem_size;  // number of vertices of each element
-
-    GLuint m_vertex_array = 0;  // aka VAO
-    GLuint m_vertex_buffer = 0;  // aka VBO
-    bool m_objects_ready = false;
+    GlPrimitives m_primitives;
 };
 
 
