@@ -41,6 +41,7 @@ public:
     void end_primitive();
     void add_vertex(const Vertex2Tex22 &v);
     void clear();
+    bool empty() const { return m_vertex_data.empty(); }
 
     void set_program(GLuint program);
     void set_uniform(const char* name, float f);

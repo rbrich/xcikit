@@ -55,12 +55,8 @@ set(XCI_GRAPHICS_SOURCES
     src/xci/graphics/Window.inl)
 
 set(XCI_GRAPHICS_OPENGL_SOURCES
-    src/xci/graphics/opengl/GlEllipses.cpp
-    src/xci/graphics/opengl/GlEllipses.h
     src/xci/graphics/opengl/GlPrimitives.cpp
     src/xci/graphics/opengl/GlPrimitives.h
-    src/xci/graphics/opengl/GlRectangles.cpp
-    src/xci/graphics/opengl/GlRectangles.h
     src/xci/graphics/opengl/GlShapes.cpp
     src/xci/graphics/opengl/GlShapes.h
     src/xci/graphics/opengl/GlSprites.cpp

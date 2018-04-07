@@ -16,16 +16,17 @@
 #ifndef XCI_GRAPHICS_GL_SHAPES_H
 #define XCI_GRAPHICS_GL_SHAPES_H
 
+#include "GlPrimitives.h"
 #include <xci/graphics/Shapes.h>
-#include <xci/graphics/opengl/GlRectangles.h>
-#include <xci/graphics/opengl/GlEllipses.h>
-
-#include <glad/glad.h>
-
-#include <vector>
+#include <xci/graphics/Color.h>
+#include <xci/graphics/View.h>
+#include <xci/util/geometry.h>
 
 namespace xci {
 namespace graphics {
+
+using xci::util::Rect_f;
+using xci::util::Vec2f;
 
 
 class GlShapes {
@@ -37,9 +38,13 @@ public:
 
     void add_rectangle(const Rect_f& rect,
                        float outline_thickness = 0);
+    void add_rectangle_slice(const Rect_f& slice, const Rect_f& rect,
+                             float outline_thickness = 0);
 
     void add_ellipse(const Rect_f& rect,
                      float outline_thickness = 0);
+    void add_ellipse_slice(const Rect_f& slice, const Rect_f& ellipse,
+                           float outline_thickness = 0);
 
     void add_rounded_rectangle(const Rect_f& rect, float radius,
                                float outline_thickness = 0);
@@ -51,11 +56,11 @@ public:
 private:
     Color m_fill_color;
     Color m_outline_color;
-    float m_softness;
     float m_antialiasing;
+    float m_softness;
 
-    GlRectangles m_rectangles;
-    GlEllipses m_ellipses;
+    GlPrimitives m_rectangles;
+    GlPrimitives m_ellipses;
 };
 
 
