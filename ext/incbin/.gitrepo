@@ -1,0 +1,11 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = https://github.com/graphitemaster/incbin.git
+	branch = master
+	commit = c8dda08da18eadf78cd678fc217c52620a0620a4
+	parent = 4579aa6edb82735657987bc5e84e42371342af40
+	cmdver = 0.3.1
