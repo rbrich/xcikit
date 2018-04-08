@@ -90,7 +90,7 @@ public:
 
     // just a facade
     float line_height() const;
-    const graphics::Texture& get_texture() const { return m_texture.get_texture(); }
+    graphics::TexturePtr& get_texture() { return m_texture.get_texture(); }
 
     // Throw away any rendered glyphs
     void clear_cache();

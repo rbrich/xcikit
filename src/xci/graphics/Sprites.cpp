@@ -31,7 +31,7 @@ namespace graphics {
 using namespace xci::util::log;
 
 
-Sprites::Sprites(const Texture& texture, const Color& color)
+Sprites::Sprites(TexturePtr& texture, const Color& color)
         : m_texture(texture), m_color(color),
           m_sprites(Primitives::VertexFormat::V2T2)
 {}
@@ -39,7 +39,7 @@ Sprites::Sprites(const Texture& texture, const Color& color)
 
 void Sprites::add_sprite(const Rect_f& rect)
 {
-    auto ts = m_texture.size();
+    auto ts = m_texture->size();
     add_sprite(rect, {0, 0, ts.x, ts.y});
 }
 
@@ -51,7 +51,7 @@ void Sprites::add_sprite(const Rect_f& rect, const Rect_u& texrect)
     float y1 = -rect.y;
     float x2 = rect.x + rect.w;
     float y2 = -rect.y - rect.h;
-    auto ts = m_texture.size();
+    auto ts = m_texture->size();
     float tl = (float)texrect.left() / ts.x;
     float tr = (float)texrect.right() / ts.x;
     float tb = (float)texrect.bottom() / ts.y;
@@ -86,13 +86,13 @@ void Sprites::init_shader()
     m_shader = renderer.new_shader(Renderer::ShaderId::Sprite);
 
 #ifdef XCI_EMBED_SHADERS
-    bool res = renderer.shader_load_from_memory(m_rectangle_shader,
+    bool res = m_shader->load_from_memory(
                 (const char*)g_sprite_vert_data, g_sprite_vert_size,
                 (const char*)g_sprite_frag_data, g_sprite_frag_size);
 )
 #else
-    bool res = renderer.shader_load_from_file(m_shader,
-                "shaders/sprite.vert", "shaders/sprite.frag");
+    bool res = m_shader->load_from_file("shaders/sprite.vert",
+                                        "shaders/sprite.frag");
 #endif
     if (!res) {
         log_error("Rectangle shader not loaded!");

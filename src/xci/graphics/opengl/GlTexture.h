@@ -24,23 +24,19 @@ namespace xci {
 namespace graphics {
 
 
-class GlTexture {
+class GlTexture : public Texture {
 public:
-    bool create(unsigned int width, unsigned int height);
-    void update(const uint8_t* pixels, const Rect_u& region);
+    bool create(unsigned int width, unsigned int height) override;
+    void update(const uint8_t* pixels, const Rect_u& region) override;
 
-    Vec2u size() const;
+    Vec2u size() const override;
 
-    // access native handle
-    GLuint gl_texture() const { return m_texture; }
+    GLuint native_handle() const { return m_texture; }
 
 private:
     GLuint m_texture = 0;
     Vec2u m_size;
 };
-
-
-class Texture::Impl : public GlTexture {};
 
 
 }} // namespace xci::graphics

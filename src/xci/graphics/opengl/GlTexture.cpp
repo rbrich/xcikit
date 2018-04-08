@@ -17,9 +17,6 @@
 
 #include <vector>
 
-// inline
-#include <xci/graphics/Texture.inl>
-
 namespace xci {
 namespace graphics {
 

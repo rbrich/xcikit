@@ -54,8 +54,6 @@ set(XCI_GRAPHICS_SOURCES
     src/xci/graphics/Renderer.h
     src/xci/graphics/Shapes.h
     src/xci/graphics/Shapes.cpp
-    src/xci/graphics/Texture.h
-    src/xci/graphics/Texture.inl
     src/xci/graphics/Sprites.h
     src/xci/graphics/Sprites.cpp
     src/xci/graphics/View.h
@@ -68,12 +66,14 @@ set(XCI_GRAPHICS_OPENGL_SOURCES
     src/xci/graphics/opengl/GlPrimitives.h
     src/xci/graphics/opengl/GlRenderer.cpp
     src/xci/graphics/opengl/GlRenderer.h
+    src/xci/graphics/opengl/GlShader.cpp
+    src/xci/graphics/opengl/GlShader.h
     src/xci/graphics/opengl/GlTexture.cpp
     src/xci/graphics/opengl/GlTexture.h
     src/xci/graphics/opengl/GlView.cpp
     src/xci/graphics/opengl/GlView.h
     src/xci/graphics/opengl/GlWindow.cpp
-    src/xci/graphics/opengl/GlWindow.h)
+    src/xci/graphics/opengl/GlWindow.h src/xci/graphics/Shader.h)
 
 set(XCI_GRAPHICS_SFML_SOURCES
     src/xci/graphics/sfml/SfmlTexture.cpp

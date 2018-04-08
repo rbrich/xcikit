@@ -20,13 +20,16 @@
 #include FT_FREETYPE_H
 
 #include <rbp/MaxRectsBinPack.h>
-#include <xci/graphics/Texture.h>
+#include <xci/graphics/Renderer.h>
 #include <xci/util/geometry.h>
 
 namespace xci {
 namespace text {
 
 using xci::util::Rect_u;
+using graphics::TexturePtr;
+using graphics::Renderer;
+
 
 // Places glyphs into a texture
 
@@ -34,14 +37,12 @@ class FontTexture {
 public:
     // The size is fixed. If the size request cannot be satisfied by HW,
     // smaller size will be used (HW maximum texture size).
-    explicit FontTexture(unsigned int size=512);
+    explicit FontTexture(unsigned int size=512,
+                         Renderer& renderer = Renderer::default_renderer());
 
     // non-copyable
     FontTexture(const FontTexture&) = delete;
     FontTexture& operator =(const FontTexture&) = delete;
-
-    // Returns actual size of texture
-    unsigned int get_size() { return m_texture.size().y; }
 
     // Insert a glyph bitmap into texture, get texture coords
     // Returns false when there is no space.
@@ -49,12 +50,13 @@ public:
 
     // Get the whole texture (cut the coords returned by `insert`
     // and you'll get your glyph picture).
-    const graphics::Texture& get_texture() const { return m_texture; }
+    TexturePtr& get_texture() { return m_texture; }
 
     void clear();
 
 private:
-    graphics::Texture m_texture;
+    Renderer& m_renderer;
+    TexturePtr m_texture;
     rbp::MaxRectsBinPack m_binpack;
 };
 

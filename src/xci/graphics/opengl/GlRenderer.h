@@ -16,13 +16,15 @@
 #ifndef XCI_GRAPHICS_GL_RENDERER_H
 #define XCI_GRAPHICS_GL_RENDERER_H
 
+#include "GlShader.h"
+#include "GlTexture.h"
 #include <xci/graphics/Renderer.h>
 #include <xci/util/FileWatch.h>
 
 #include <glad/glad.h>
 
 #include <array>
-#include <atomic>
+
 
 namespace xci {
 namespace graphics {
@@ -37,39 +39,15 @@ public:
 
     ShaderPtr new_shader(ShaderId shader_id) override;
 
-    // If successful, setup a watch on the file to auto-reload on any change.
-    bool shader_load_from_file(ShaderPtr& shader,
-            const std::string& vertex, const std::string& fragment) override;
+    // ------------------------------------------------------------------------
+    // Texture
 
-    bool shader_load_from_memory(ShaderPtr& shader,
-            const char* vertex_data, int vertex_size,
-            const char* fragment_data, int fragment_size) override;
+    TexturePtr new_texture() override { return std::make_shared<GlTexture>(); }
 
 private:
     FileWatch m_file_watch;
     static constexpr auto c_num_shaders = (size_t)ShaderId::Custom;
     std::array<ShaderPtr, c_num_shaders> m_shader = {};
-};
-
-
-class Shader {
-public:
-    explicit Shader(FileWatch& fw);
-    ~Shader();
-
-    GLuint program() const;
-    void set_program(GLuint program);
-    void reset_program() { set_program(0); }
-
-    void add_watches(const std::string& vertex,
-                     const std::string& fragment);
-    void remove_watches();
-
-private:
-    FileWatch& m_file_watch;
-    std::atomic<GLuint> m_program_atomic;
-    int m_vertex_file_watch = -1;
-    int m_fragment_file_watch = -1;
 };
 
 

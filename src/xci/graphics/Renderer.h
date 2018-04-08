@@ -16,14 +16,22 @@
 #ifndef XCI_GRAPHICS_RENDERER_H
 #define XCI_GRAPHICS_RENDERER_H
 
+#include "Shader.h"
+#include "Texture.h"
+#include <xci/util/geometry.h>
+
+#include <cstdint>
 #include <memory>
 
 namespace xci {
 namespace graphics {
 
+using xci::util::Rect_u;
+using xci::util::Vec2u;
+using std::uint8_t;
 
-class Shader;
 using ShaderPtr = std::shared_ptr<Shader>;
+using TexturePtr = std::shared_ptr<Texture>;
 
 
 class Renderer {
@@ -46,14 +54,10 @@ public:
     // Create new shader or get one of the predefined shaders
     virtual ShaderPtr new_shader(ShaderId shader_id) = 0;
 
-    // Load and compile GLSL program
-    virtual bool shader_load_from_file(ShaderPtr& shader,
-                       const std::string& vertex, const std::string& fragment) = 0;
+    // ------------------------------------------------------------------------
+    // Texture
 
-    virtual bool shader_load_from_memory(ShaderPtr& shader,
-                        const char* vertex_data, int vertex_size,
-                        const char* fragment_data, int fragment_size) = 0;
-
+    virtual TexturePtr new_texture() = 0;
 };
 
 

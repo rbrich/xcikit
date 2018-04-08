@@ -80,7 +80,7 @@ void GlPrimitives::clear()
 
 void GlPrimitives::set_shader(ShaderPtr& shader)
 {
-    GLuint program = shader->program();
+    GLuint program = static_cast<GlShader*>(shader.get())->program();
     glUseProgram(program);
     m_program = program;
 }
@@ -103,14 +103,14 @@ void GlPrimitives::set_uniform(const char* name,
 }
 
 
-void GlPrimitives::set_texture(const char* name, const Texture& texture)
+void GlPrimitives::set_texture(const char* name, TexturePtr& texture)
 {
     assert(m_program != 0);
 
     GLint location = glGetUniformLocation(m_program, name);
     glUniform1i(location, 0); // GL_TEXTURE0
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture.impl().gl_texture());
+    glBindTexture(GL_TEXTURE_2D, static_cast<GlTexture*>(texture.get())->native_handle());
 }
 
 

@@ -23,9 +23,11 @@ namespace text {
 using namespace util::log;
 
 
-FontTexture::FontTexture(unsigned int size)
+FontTexture::FontTexture(unsigned int size, Renderer& renderer)
+    : m_renderer(renderer),
+      m_texture(m_renderer.new_texture())
 {
-    if (!m_texture.create(size, size))
+    if (!m_texture->create(size, size))
         throw std::runtime_error("Could not create font texture.");
     //m_texture.setSmooth(true);
     m_binpack.Init(size, size, /*allowFlip=*/false);
@@ -62,7 +64,7 @@ bool FontTexture::add_glyph(const FT_Bitmap& bitmap, Rect_u& coords)
     coords = {unsigned(rect.x + p), unsigned(rect.y + p), bitmap.width, bitmap.rows};
 
     // copy pixels into texture
-    m_texture.update(bitmap.buffer, coords);
+    m_texture->update(bitmap.buffer, coords);
 
     return true;
 }
@@ -70,10 +72,10 @@ bool FontTexture::add_glyph(const FT_Bitmap& bitmap, Rect_u& coords)
 
 void FontTexture::clear()
 {
-    auto ts = m_texture.size();
+    auto ts = m_texture->size();
     m_binpack.Init(ts.x, ts.y);
     std::vector<uint8_t> buffer(ts.x * ts.y);
-    m_texture.update(buffer.data(), {0, 0, ts.x, ts.y});
+    m_texture->update(buffer.data(), {0, 0, ts.x, ts.y});
 }
 
 

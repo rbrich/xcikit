@@ -16,8 +16,8 @@
 #ifndef XCI_GRAPHICS_SPRITES_H
 #define XCI_GRAPHICS_SPRITES_H
 
+#include <xci/graphics/Renderer.h>
 #include <xci/graphics/Primitives.h>
-#include <xci/graphics/Texture.h>
 #include <xci/graphics/Color.h>
 #include <xci/graphics/View.h>
 #include <xci/util/geometry.h>
@@ -35,7 +35,7 @@ using xci::util::Vec2f;
 
 class Sprites {
 public:
-    explicit Sprites(const Texture& texture,
+    explicit Sprites(TexturePtr& texture,
                      const Color& color = Color::White());
 
     // Add new sprite containing whole texture
@@ -54,7 +54,7 @@ private:
     void init_shader();
 
 private:
-    const Texture& m_texture;
+    TexturePtr& m_texture;
     Color m_color;
     Primitives m_sprites;
     ShaderPtr m_shader;

@@ -18,7 +18,6 @@
 
 #include <xci/graphics/Primitives.h>
 #include <xci/graphics/View.h>
-#include <xci/graphics/Texture.h>
 
 #include <glad/glad.h>
 
@@ -30,7 +29,7 @@ namespace graphics {
 
 class GlPrimitives {
 public:
-    GlPrimitives(Primitives::VertexFormat m_format) : m_format(m_format) {}
+    explicit GlPrimitives(Primitives::VertexFormat m_format) : m_format(m_format) {}
     ~GlPrimitives() { invalidate_gl_objects(); }
 
     void begin_primitive();
@@ -43,7 +42,7 @@ public:
     void set_shader(ShaderPtr& shader);
     void set_uniform(const char* name, float f);
     void set_uniform(const char* name, float f1, float f2, float f3, float f4);
-    void set_texture(const char* name, const Texture& texture);
+    void set_texture(const char* name, TexturePtr& texture);
     void draw(View& view, const Vec2f& pos);
 
 private:

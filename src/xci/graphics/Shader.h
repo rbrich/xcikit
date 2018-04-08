@@ -1,4 +1,4 @@
-// Texture.h created on 2018-03-04, part of XCI toolkit
+// Shader.h created on 2018-04-08, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,33 +13,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_GRAPHICS_TEXTURE_H
-#define XCI_GRAPHICS_TEXTURE_H
+#ifndef XCI_GRAPHICS_SHADER_H
+#define XCI_GRAPHICS_SHADER_H
 
-#include <xci/util/geometry.h>
-
-#include <memory>
-#include <cstdint>
+#include <string>
 
 namespace xci {
 namespace graphics {
 
-using xci::util::Vec2u;
-using xci::util::Rect_u;
-using std::uint8_t;
 
-
-class Texture {
+class Shader {
 public:
-    virtual ~Texture() = default;
+    virtual ~Shader() = default;
 
-    virtual bool create(unsigned int width, unsigned int height) = 0;
-    virtual void update(const uint8_t* pixels, const Rect_u& region) = 0;
+    // Load and compile GLSL program.
+    virtual bool load_from_file(
+            const std::string& vertex, const std::string& fragment) = 0;
 
-    virtual Vec2u size() const = 0;
+    virtual bool load_from_memory(
+            const char* vertex_data, int vertex_size,
+            const char* fragment_data, int fragment_size) = 0;
 };
+
 
 
 }} // namespace xci::graphics
 
-#endif // XCI_GRAPHICS_TEXTURE_H
+
+#endif // XCI_GRAPHICS_SHADER_H

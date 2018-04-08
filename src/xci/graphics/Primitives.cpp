@@ -39,7 +39,7 @@ bool Primitives::empty() const { return m_impl->empty(); }
 void Primitives::set_shader(ShaderPtr& shader) { m_impl->set_shader(shader); }
 void Primitives::set_uniform(const char* name, float f) { m_impl->set_uniform(name, f); }
 void Primitives::set_uniform(const char* name, float f1, float f2, float f3, float f4) { m_impl->set_uniform(name, f1, f2, f3, f4); }
-void Primitives::set_texture(const char* name, const Texture& texture) { m_impl->set_texture(name, texture); }
+void Primitives::set_texture(const char* name, TexturePtr& texture) { m_impl->set_texture(name, texture); }
 void Primitives::draw(View& view, const Vec2f& pos) { m_impl->draw(view, pos); }
 
 
