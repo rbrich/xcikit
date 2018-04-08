@@ -51,8 +51,8 @@ set(XCI_GRAPHICS_SOURCES
     src/xci/graphics/Primitives.h
     src/xci/graphics/Renderer.cpp
     src/xci/graphics/Renderer.h
-    src/xci/graphics/Shapes.h
-    src/xci/graphics/Shapes.cpp
+    src/xci/graphics/Shape.h
+    src/xci/graphics/Shape.cpp
     src/xci/graphics/Sprites.h
     src/xci/graphics/Sprites.cpp
     src/xci/graphics/View.h

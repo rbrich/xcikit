@@ -1,4 +1,4 @@
-// Shapes.h created on 2018-04-04, part of XCI toolkit
+// Shape.h created on 2018-04-04, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,16 +32,16 @@ using xci::util::Vec2f;
 // Each shape may have different size and outline width,
 // but colors are uniform.
 
-class Shapes {
+class Shape {
 public:
-    explicit Shapes(const Color& fill_color,
+    explicit Shape(const Color& fill_color,
                     const Color& outline_color = Color::White(),
                     float antialiasing = 0,
                     float softness = 0,
                     Renderer& renderer = Renderer::default_renderer());
-    ~Shapes();
-    Shapes(Shapes&&) noexcept;
-    Shapes& operator=(Shapes&&) noexcept;
+    ~Shape();
+    Shape(Shape&&) noexcept;
+    Shape& operator=(Shape&&) noexcept;
 
     // Add new rectangle.
     // `rect`              - rectangle position and size

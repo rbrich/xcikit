@@ -35,7 +35,7 @@ Button::Button(const std::string &string, Font& font)
 void Button::set_decoration_color(const graphics::Color& fill,
                                   const graphics::Color& border)
 {
-    m_bg_rect = Shapes(fill, border);
+    m_bg_rect = Shape(fill, border);
 }
 
 

@@ -1,4 +1,4 @@
-// Shapes.cpp created on 2018-04-04, part of XCI toolkit
+// Shape.cpp created on 2018-04-04, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "Shapes.h"
+#include "Shape.h"
 #include "Renderer.h"
 #include <xci/util/log.h>
 
@@ -33,7 +33,7 @@ namespace graphics {
 using namespace xci::util::log;
 
 
-Shapes::Shapes(const Color& fill_color, const Color& outline_color,
+Shape::Shape(const Color& fill_color, const Color& outline_color,
                float antialiasing, float softness,
                Renderer& renderer)
         : m_fill_color(fill_color), m_outline_color(outline_color),
@@ -43,12 +43,12 @@ Shapes::Shapes(const Color& fill_color, const Color& outline_color,
 {}
 
 
-Shapes::~Shapes() = default;
-Shapes::Shapes(Shapes&&) noexcept = default;
-Shapes& Shapes::operator=(Shapes&&) noexcept = default;
+Shape::~Shape() = default;
+Shape::Shape(Shape&&) noexcept = default;
+Shape& Shape::operator=(Shape&&) noexcept = default;
 
 
-void Shapes::add_rectangle(const Rect_f& rect, float outline_thickness)
+void Shape::add_rectangle(const Rect_f& rect, float outline_thickness)
 {
     float x1 = rect.x;
     float y1 = -rect.y;
@@ -68,7 +68,7 @@ void Shapes::add_rectangle(const Rect_f& rect, float outline_thickness)
 }
 
 
-void Shapes::add_rectangle_slice(const Rect_f& slice, const Rect_f& rect,
+void Shape::add_rectangle_slice(const Rect_f& slice, const Rect_f& rect,
                                    float outline_thickness)
 {
     float x1 = slice.x;
@@ -94,7 +94,7 @@ void Shapes::add_rectangle_slice(const Rect_f& slice, const Rect_f& rect,
 }
 
 
-void Shapes::add_ellipse(const Rect_f& rect, float outline_thickness)
+void Shape::add_ellipse(const Rect_f& rect, float outline_thickness)
 {
     float x1 = rect.x;
     float y1 = -rect.y;
@@ -113,7 +113,7 @@ void Shapes::add_ellipse(const Rect_f& rect, float outline_thickness)
 }
 
 
-void Shapes::add_ellipse_slice(const Rect_f& slice, const Rect_f& ellipse,
+void Shape::add_ellipse_slice(const Rect_f& slice, const Rect_f& ellipse,
                                float outline_thickness)
 {
     float x1 = slice.x;
@@ -140,7 +140,7 @@ void Shapes::add_ellipse_slice(const Rect_f& slice, const Rect_f& ellipse,
 
 
 void
-Shapes::add_rounded_rectangle(const Rect_f& rect, float radius,
+Shape::add_rounded_rectangle(const Rect_f& rect, float radius,
                               float outline_thickness)
 {
     // the shape is composed from 7-slice pattern:
@@ -160,14 +160,14 @@ Shapes::add_rounded_rectangle(const Rect_f& rect, float radius,
     add_rectangle_slice({x,   y+r,   w, h-rr}, rect, outline_thickness);
 }
 
-void Shapes::clear()
+void Shape::clear()
 {
     m_rectangles->clear();
     m_ellipses->clear();
 }
 
 
-void Shapes::draw(View& view, const Vec2f& pos)
+void Shape::draw(View& view, const Vec2f& pos)
 {
     // rectangles
     if (!m_rectangles->empty()) {
@@ -201,7 +201,7 @@ void Shapes::draw(View& view, const Vec2f& pos)
 }
 
 
-void Shapes::init_rectangle_shader()
+void Shape::init_rectangle_shader()
 {
     if (m_rectangle_shader)
         return;
@@ -223,7 +223,7 @@ void Shapes::init_rectangle_shader()
 }
 
 
-void Shapes::init_ellipse_shader()
+void Shape::init_ellipse_shader()
 {
     if (m_ellipse_shader)
         return;

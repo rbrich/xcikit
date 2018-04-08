@@ -14,7 +14,7 @@
 // limitations under the License.
 
 #include <xci/graphics/Window.h>
-#include <xci/graphics/Shapes.h>
+#include <xci/graphics/Shape.h>
 #include <xci/util/file.h>
 #include <cstdlib>
 
@@ -28,12 +28,12 @@ int main()
     window.create({800, 600}, "XCI rectangles demo");
 
     // normally, the border scales with viewport size
-    Shapes rts(Color(0, 0, 40, 128), Color(180, 180, 0));
+    Shape rts(Color(0, 0, 40, 128), Color(180, 180, 0));
     rts.add_rectangle({-1, -0.6f, 2, 1.2f}, 0.05);
     rts.add_rectangle({-0.6f, -0.8f, 1.2f, 1.6f}, 0.02);
 
     // using View::screen_ratio, we can set constant border width, in screen pixels
-    Shapes rts_px(Color(40, 40, 0, 128), Color(255, 255, 0));
+    Shape rts_px(Color(40, 40, 0, 128), Color(255, 255, 0));
 
     window.display([&](View& view) {
         rts.draw(view, {0, 0});

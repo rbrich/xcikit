@@ -16,7 +16,7 @@
 #include <xci/text/layout/Page.h>
 #include <xci/text/Layout.h>
 #include <xci/graphics/Sprites.h>
-#include <xci/graphics/Shapes.h>
+#include <xci/graphics/Shape.h>
 #include <xci/util/string.h>
 #include <xci/util/log.h>
 
@@ -94,7 +94,7 @@ void Word::draw(graphics::View& target, const util::Vec2f& pos) const
     font->set_size(unsigned(m_style.size() / pxf.y));
 
     if (target.has_debug_flag(View::Debug::WordBBox)) {
-        graphics::Shapes bbox(Color(0, 150, 0), Color(50, 250, 50));
+        graphics::Shape bbox(Color(0, 150, 0), Color(50, 250, 50));
         bbox.add_rectangle(m_bbox, 1 * pxf.x);
         bbox.draw(target, pos);
     }
@@ -102,7 +102,7 @@ void Word::draw(graphics::View& target, const util::Vec2f& pos) const
     bool show_bboxes = target.has_debug_flag(View::Debug::GlyphBBox);
 
     graphics::Sprites sprites(font->get_texture(), m_style.color());
-    graphics::Shapes bboxes(Color(150, 0, 0), Color(250, 50, 50));
+    graphics::Shape bboxes(Color(150, 0, 0), Color(250, 50, 50));
 
     Vec2f pen;
     for (CodePoint code_point : to_utf32(m_string)) {
@@ -128,7 +128,7 @@ void Word::draw(graphics::View& target, const util::Vec2f& pos) const
 
     if (target.has_debug_flag(View::Debug::WordBasePoint)) {
         auto pxr = target.screen_ratio();
-        graphics::Shapes basepoint(Color(150, 0, 150));
+        graphics::Shape basepoint(Color(150, 0, 150));
         basepoint.add_rectangle({-pxr.x, -pxr.y, 2 * pxr.x, 2 * pxr.y});
         basepoint.draw(target, p);
     }

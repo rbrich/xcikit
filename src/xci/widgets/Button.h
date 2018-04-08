@@ -16,7 +16,7 @@
 #ifndef XCI_WIDGETS_BUTTON_H
 #define XCI_WIDGETS_BUTTON_H
 
-#include <xci/graphics/Shapes.h>
+#include <xci/graphics/Shape.h>
 #include <xci/graphics/Color.h>
 #include <xci/text/Font.h>
 #include <xci/text/Text.h>
@@ -42,7 +42,7 @@ public:
     util::Rect_f bbox() const;
 
 private:
-    graphics::Shapes m_bg_rect;
+    graphics::Shape m_bg_rect;
     text::Layout m_layout;
     float m_padding = 0.02f;
     float m_outline_thickness = 0.005f;

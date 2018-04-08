@@ -15,7 +15,7 @@
 
 #include "Layout.h"
 
-#include <xci/graphics/Shapes.h>
+#include <xci/graphics/Shape.h>
 #include <xci/graphics/View.h>
 #include <xci/util/compat.h>
 
@@ -83,14 +83,14 @@ void Layout::draw(View& target, const util::Vec2f& pos) const
 
     // Debug: page bbox
     if (target.has_debug_flag(View::Debug::PageBBox)) {
-        graphics::Shapes bbox_rect(Color(150, 150, 0, 128), Color(200, 200, 50));
+        graphics::Shape bbox_rect(Color(150, 150, 0, 128), Color(200, 200, 50));
         bbox_rect.add_rectangle(bbox(), 1 * pxr.x);
         bbox_rect.draw(target, pos);
     }
 
     // Debug: span bboxes
     if (target.has_debug_flag(View::Debug::SpanBBox)) {
-        graphics::Shapes bboxes(Color(100, 0, 150, 128), Color(200, 50, 250));
+        graphics::Shape bboxes(Color(100, 0, 150, 128), Color(200, 50, 250));
         for (auto* span : m_page.spans()) {
             for (auto& part : span->parts()) {
                 bboxes.add_rectangle(part.bbox(), 1 * pxr.x);
@@ -101,7 +101,7 @@ void Layout::draw(View& target, const util::Vec2f& pos) const
 
     // Debug: line bboxes
     if (target.has_debug_flag(View::Debug::LineBBox)) {
-        graphics::Shapes bboxes(Color(0, 50, 150, 128), Color(50, 50, 250));
+        graphics::Shape bboxes(Color(0, 50, 150, 128), Color(50, 50, 250));
         for (auto& line : m_page.lines()) {
             bboxes.add_rectangle(line.bbox(), 1 * pxr.x);
         }
