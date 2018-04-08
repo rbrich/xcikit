@@ -17,9 +17,17 @@
 #include "GlPrimitives.h"
 #include "GlRenderer.h"
 #include "GlTexture.h"
+#include "GlShader.h"
 
 namespace xci {
 namespace graphics {
+
+
+GlPrimitives::GlPrimitives(VertexFormat format, PrimitiveType type)
+        : m_format(format)
+{
+    assert(type == PrimitiveType::TriFans);
+}
 
 
 void GlPrimitives::begin_primitive()
@@ -41,7 +49,7 @@ void GlPrimitives::end_primitive()
 
 void GlPrimitives::add_vertex(float x, float y, float u, float v)
 {
-    assert(m_format == Primitives::VertexFormat::V2T2);
+    assert(m_format == VertexFormat::V2t2);
     assert(m_open_vertices != -1);
     invalidate_gl_objects();
     m_vertex_data.push_back(x);
@@ -54,7 +62,7 @@ void GlPrimitives::add_vertex(float x, float y, float u, float v)
 
 void GlPrimitives::add_vertex(float x, float y, float u1, float v1, float u2, float v2)
 {
-    assert(m_format == Primitives::VertexFormat::V2T22);
+    assert(m_format == VertexFormat::V2t22);
     assert(m_open_vertices != -1);
     invalidate_gl_objects();
     m_vertex_data.push_back(x);
@@ -121,7 +129,7 @@ void GlPrimitives::draw(View& view, const Vec2f& pos)
     glBindVertexArray(m_vertex_array);
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
-    if (m_format == Primitives::VertexFormat::V2T22) {
+    if (m_format == VertexFormat::V2t22) {
         glEnableVertexAttribArray(2);
     }
 
@@ -148,7 +156,7 @@ void GlPrimitives::draw(View& view, const Vec2f& pos)
 
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
-    if (m_format == Primitives::VertexFormat::V2T22) {
+    if (m_format == VertexFormat::V2t22) {
         glDisableVertexAttribArray(2);
     }
     glUseProgram(0);
@@ -169,7 +177,7 @@ void GlPrimitives::init_gl_objects()
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * m_vertex_data.size(),
                  m_vertex_data.data(), GL_STATIC_DRAW);
 
-    if (m_format == Primitives::VertexFormat::V2T22) {
+    if (m_format == VertexFormat::V2t22) {
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
                               sizeof(float) * 6, (void*) (sizeof(float) * 0));
         glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
@@ -177,7 +185,7 @@ void GlPrimitives::init_gl_objects()
         glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE,
                               sizeof(float) * 6, (void*) (sizeof(float) * 4));
     }
-    if (m_format == Primitives::VertexFormat::V2T2) {
+    if (m_format == VertexFormat::V2t2) {
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
                               sizeof(float) * 4, (void*) (sizeof(float) * 0));
         glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,

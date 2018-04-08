@@ -16,8 +16,9 @@
 #ifndef XCI_GRAPHICS_RENDERER_H
 #define XCI_GRAPHICS_RENDERER_H
 
-#include "Shader.h"
 #include "Texture.h"
+#include "Shader.h"
+#include "Primitives.h"
 #include <xci/util/geometry.h>
 
 #include <cstdint>
@@ -30,34 +31,19 @@ using xci::util::Rect_u;
 using xci::util::Vec2u;
 using std::uint8_t;
 
-using ShaderPtr = std::shared_ptr<Shader>;
-using TexturePtr = std::shared_ptr<Texture>;
-
 
 class Renderer {
 public:
     static Renderer& default_renderer();
     virtual ~Renderer();
 
-    // ------------------------------------------------------------------------
-    // Shader
-
-    enum class ShaderId {
-        // Obtain one of predefined shaders
-        Sprite = 0,
-        Rectangle,
-        Ellipse,
-        // Create new, custom shader
-        Custom,  // (this has to stay as last item)
-    };
+    virtual TexturePtr new_texture() = 0;
 
     // Create new shader or get one of the predefined shaders
     virtual ShaderPtr new_shader(ShaderId shader_id) = 0;
 
-    // ------------------------------------------------------------------------
-    // Texture
-
-    virtual TexturePtr new_texture() = 0;
+    virtual PrimitivesPtr new_primitives(VertexFormat format,
+                                         PrimitiveType type) = 0;
 };
 
 

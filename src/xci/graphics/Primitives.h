@@ -17,41 +17,43 @@
 #define XCI_GRAPHICS_PRIMITIVES_H
 
 #include <xci/graphics/View.h>
-#include <xci/graphics/Renderer.h>
+#include <xci/graphics/Shader.h>
+#include <xci/graphics/Texture.h>
 
 namespace xci {
 namespace graphics {
 
 
+enum class VertexFormat {
+    V2t2,       // 2 vertex coords, 2 texture coords (all float)
+    V2t22,      // 2 vertex coords, 2 + 2 texture coords (all float)
+};
+
+enum class PrimitiveType {
+    TriFans
+};
+
+
 class Primitives {
 public:
-    enum class VertexFormat {
-        V2T2,
-        V2T22,
-    };
+    virtual ~Primitives() = default;
 
-    explicit Primitives(VertexFormat format);
-    ~Primitives();
-    Primitives(Primitives&&) noexcept;
-    Primitives& operator=(Primitives&&) noexcept;
+    virtual void begin_primitive() = 0;
+    virtual void end_primitive() = 0;
+    virtual void add_vertex(float x, float y, float u, float v) = 0;
+    virtual void add_vertex(float x, float y, float u1, float v1, float u2, float v2) = 0;
+    virtual void clear() = 0;
+    virtual bool empty() const = 0;
 
-    void begin_primitive();
-    void end_primitive();
-    void add_vertex(float x, float y, float u, float v);
-    void add_vertex(float x, float y, float u1, float v1, float u2, float v2);
-    void clear();
-    bool empty() const;
-
-    void set_shader(ShaderPtr& shader);
-    void set_uniform(const char* name, float f);
-    void set_uniform(const char* name, float f1, float f2, float f3, float f4);
-    void set_texture(const char* name, TexturePtr& texture);
-    void draw(View& view, const Vec2f& pos);
-
-private:
-    class Impl;
-    std::unique_ptr<Impl> m_impl;
+    virtual void set_shader(ShaderPtr& shader) = 0;
+    virtual void set_uniform(const char* name, float f) = 0;
+    virtual void set_uniform(const char* name, float f1, float f2, float f3, float f4) = 0;
+    virtual void set_texture(const char* name, TexturePtr& texture) = 0;
+    virtual void draw(View& view, const Vec2f& pos) = 0;
 };
+
+
+using PrimitivesPtr = std::shared_ptr<Primitives>;
 
 
 }} // namespace xci::graphics

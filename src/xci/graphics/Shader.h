@@ -17,9 +17,20 @@
 #define XCI_GRAPHICS_SHADER_H
 
 #include <string>
+#include <memory>
 
 namespace xci {
 namespace graphics {
+
+
+enum class ShaderId {
+    // Obtain one of predefined shaders
+    Sprite = 0,
+    Rectangle,
+    Ellipse,
+    // Create new, custom shader
+    Custom,  // (this has to stay as last item)
+};
 
 
 class Shader {
@@ -35,6 +46,8 @@ public:
             const char* fragment_data, int fragment_size) = 0;
 };
 
+
+using ShaderPtr = std::shared_ptr<Shader>;
 
 
 }} // namespace xci::graphics

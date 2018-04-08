@@ -16,8 +16,6 @@
 #ifndef XCI_GRAPHICS_GL_RENDERER_H
 #define XCI_GRAPHICS_GL_RENDERER_H
 
-#include "GlShader.h"
-#include "GlTexture.h"
 #include <xci/graphics/Renderer.h>
 #include <xci/util/FileWatch.h>
 
@@ -34,15 +32,13 @@ using xci::util::FileWatch;
 
 class GlRenderer: public Renderer {
 public:
-    // ------------------------------------------------------------------------
-    // Shaders
+
+    TexturePtr new_texture() override;
 
     ShaderPtr new_shader(ShaderId shader_id) override;
 
-    // ------------------------------------------------------------------------
-    // Texture
-
-    TexturePtr new_texture() override { return std::make_shared<GlTexture>(); }
+    PrimitivesPtr new_primitives(VertexFormat format,
+                                 PrimitiveType type) override;
 
 private:
     FileWatch m_file_watch;

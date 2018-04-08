@@ -14,14 +14,23 @@
 // limitations under the License.
 
 #include "GlRenderer.h"
+#include "GlTexture.h"
+#include "GlShader.h"
+#include "GlPrimitives.h"
 
 namespace xci {
 namespace graphics {
 
 
-ShaderPtr GlRenderer::new_shader(Renderer::ShaderId shader_id)
+TexturePtr GlRenderer::new_texture()
 {
-    if (shader_id != Renderer::ShaderId::Custom) {
+    return std::make_shared<GlTexture>();
+}
+
+
+ShaderPtr GlRenderer::new_shader(ShaderId shader_id)
+{
+    if (shader_id != ShaderId::Custom) {
         auto& shader = m_shader[(size_t) shader_id];
         if (!shader) {
             shader = std::make_shared<GlShader>(m_file_watch);
@@ -30,6 +39,13 @@ ShaderPtr GlRenderer::new_shader(Renderer::ShaderId shader_id)
     } else {
         return std::make_shared<GlShader>(m_file_watch);
     }
+}
+
+
+PrimitivesPtr GlRenderer::new_primitives(VertexFormat format,
+                                         PrimitiveType type)
+{
+    return std::make_shared<GlPrimitives>(format, type);
 }
 
 

@@ -17,6 +17,7 @@
 #define XCI_GRAPHICS_GL_PRIMITIVES_H
 
 #include <xci/graphics/Primitives.h>
+#include <xci/graphics/Texture.h>
 #include <xci/graphics/View.h>
 
 #include <glad/glad.h>
@@ -27,30 +28,30 @@ namespace xci {
 namespace graphics {
 
 
-class GlPrimitives {
+class GlPrimitives: public Primitives {
 public:
-    explicit GlPrimitives(Primitives::VertexFormat m_format) : m_format(m_format) {}
-    ~GlPrimitives() { invalidate_gl_objects(); }
+    explicit GlPrimitives(VertexFormat format, PrimitiveType type);
+    ~GlPrimitives() override { invalidate_gl_objects(); }
 
-    void begin_primitive();
-    void end_primitive();
-    void add_vertex(float x, float y, float u, float v);
-    void add_vertex(float x, float y, float u1, float v1, float u2, float v2);
-    void clear();
-    bool empty() const { return m_vertex_data.empty(); }
+    void begin_primitive() override;
+    void end_primitive() override;
+    void add_vertex(float x, float y, float u, float v) override;
+    void add_vertex(float x, float y, float u1, float v1, float u2, float v2) override;
+    void clear() override;
+    bool empty() const override { return m_vertex_data.empty(); }
 
-    void set_shader(ShaderPtr& shader);
-    void set_uniform(const char* name, float f);
-    void set_uniform(const char* name, float f1, float f2, float f3, float f4);
-    void set_texture(const char* name, TexturePtr& texture);
-    void draw(View& view, const Vec2f& pos);
+    void set_shader(ShaderPtr& shader) override;
+    void set_uniform(const char* name, float f) override;
+    void set_uniform(const char* name, float f1, float f2, float f3, float f4) override;
+    void set_texture(const char* name, TexturePtr& texture) override;
+    void draw(View& view, const Vec2f& pos) override;
 
 private:
     void init_gl_objects();
     void invalidate_gl_objects();
 
 private:
-    Primitives::VertexFormat m_format;
+    VertexFormat m_format;
     std::vector<float> m_vertex_data;
     std::vector<GLint> m_elem_first;  // first vertex of each element
     std::vector<GLsizei> m_elem_size;  // number of vertices of each element
@@ -62,12 +63,6 @@ private:
 
     int m_closed_vertices = 0;
     int m_open_vertices = -1;
-};
-
-
-class Primitives::Impl : public GlPrimitives {
-public:
-    explicit Impl(VertexFormat format) : GlPrimitives(format) {}
 };
 
 

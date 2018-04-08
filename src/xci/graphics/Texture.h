@@ -40,6 +40,9 @@ public:
 };
 
 
+using TexturePtr = std::shared_ptr<Texture>;
+
+
 }} // namespace xci::graphics
 
 #endif // XCI_GRAPHICS_TEXTURE_H

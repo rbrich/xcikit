@@ -31,9 +31,10 @@ namespace graphics {
 using namespace xci::util::log;
 
 
-Sprites::Sprites(TexturePtr& texture, const Color& color)
+Sprites::Sprites(TexturePtr& texture, const Color& color,
+                 Renderer& renderer)
         : m_texture(texture), m_color(color),
-          m_sprites(Primitives::VertexFormat::V2T2)
+          m_trifans(renderer.new_primitives(VertexFormat::V2t2, PrimitiveType::TriFans))
 {}
 
 
@@ -57,24 +58,24 @@ void Sprites::add_sprite(const Rect_f& rect, const Rect_u& texrect)
     float tb = (float)texrect.bottom() / ts.y;
     float tt = (float)texrect.top() / ts.y;
 
-    m_sprites.begin_primitive();
-    m_sprites.add_vertex(x2, y1, tr, tt);
-    m_sprites.add_vertex(x2, y2, tr, tb);
-    m_sprites.add_vertex(x1, y2, tl, tb);
-    m_sprites.add_vertex(x1, y1, tl, tt);
-    m_sprites.end_primitive();
+    m_trifans->begin_primitive();
+    m_trifans->add_vertex(x2, y1, tr, tt);
+    m_trifans->add_vertex(x2, y2, tr, tb);
+    m_trifans->add_vertex(x1, y2, tl, tb);
+    m_trifans->add_vertex(x1, y1, tl, tt);
+    m_trifans->end_primitive();
 }
 
 
 void Sprites::draw(View& view, const Vec2f& pos)
 {
     init_shader();
-    m_sprites.set_shader(m_shader);
-    m_sprites.set_uniform("u_color",
+    m_trifans->set_shader(m_shader);
+    m_trifans->set_uniform("u_color",
                           m_color.red_f(), m_color.green_f(),
                           m_color.blue_f(), m_color.alpha_f());
-    m_sprites.set_texture("u_texture", m_texture);
-    m_sprites.draw(view, pos);
+    m_trifans->set_texture("u_texture", m_texture);
+    m_trifans->draw(view, pos);
 }
 
 
@@ -83,7 +84,7 @@ void Sprites::init_shader()
     if (m_shader)
         return;
     auto& renderer = Renderer::default_renderer();
-    m_shader = renderer.new_shader(Renderer::ShaderId::Sprite);
+    m_shader = renderer.new_shader(ShaderId::Sprite);
 
 #ifdef XCI_EMBED_SHADERS
     bool res = m_shader->load_from_memory(

@@ -37,7 +37,8 @@ public:
     explicit Shapes(const Color& fill_color,
                     const Color& outline_color = Color::White(),
                     float antialiasing = 0,
-                    float softness = 0);
+                    float softness = 0,
+                    Renderer& renderer = Renderer::default_renderer());
     ~Shapes();
     Shapes(Shapes&&) noexcept;
     Shapes& operator=(Shapes&&) noexcept;
@@ -85,8 +86,8 @@ private:
     float m_antialiasing;
     float m_softness;
 
-    Primitives m_rectangles;
-    Primitives m_ellipses;
+    PrimitivesPtr m_rectangles;
+    PrimitivesPtr m_ellipses;
 
     ShaderPtr m_rectangle_shader;
     ShaderPtr m_ellipse_shader;

@@ -36,7 +36,8 @@ using xci::util::Vec2f;
 class Sprites {
 public:
     explicit Sprites(TexturePtr& texture,
-                     const Color& color = Color::White());
+                     const Color& color = Color::White(),
+                     Renderer& renderer = Renderer::default_renderer());
 
     // Add new sprite containing whole texture
     // `rect` defines position and size of the sprite
@@ -54,9 +55,9 @@ private:
     void init_shader();
 
 private:
-    TexturePtr& m_texture;
+    TexturePtr m_texture;
     Color m_color;
-    Primitives m_sprites;
+    PrimitivesPtr m_trifans;
     ShaderPtr m_shader;
 };
 
