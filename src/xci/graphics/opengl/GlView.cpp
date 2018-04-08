@@ -15,135 +15,14 @@
 
 #include "GlView.h"
 #include <xci/util/log.h>
-#include <xci/util/file.h>
 
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
+#include <glad/glad.h>
 
 // inline
 #include <xci/graphics/View.inl>
 
 namespace xci {
 namespace graphics {
-
-using namespace xci::util::log;
-using xci::util::read_file;
-using xci::util::add_file_watch;
-using xci::util::remove_file_watch;
-
-
-static GLuint compile_program(const char* vertex_source,
-                              int vertex_source_length,
-                              const char* fragment_source,
-                              int fragment_source_length)
-{
-    // compile vertex shader
-    GLuint vertex_shader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertex_shader, 1, &vertex_source, &vertex_source_length);
-    glCompileShader(vertex_shader);
-
-    // check compilation result
-    GLint result = GL_FALSE;
-    glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &result);
-    if (result == GL_FALSE) {
-        int length;
-        glGetShaderiv(vertex_shader, GL_INFO_LOG_LENGTH, &length);
-        std::string error_message(length + 1, '\0');
-        glGetShaderInfoLog(vertex_shader, length, nullptr, &error_message[0]);
-        log_error("vertex shader error: {}", error_message.c_str());
-        return 0;
-    }
-
-    // compile fragment shader
-    GLuint fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragment_shader, 1, &fragment_source, &fragment_source_length);
-    glCompileShader(fragment_shader);
-
-    // check compilation result
-    glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &result);
-    if (result == GL_FALSE) {
-        int length;
-        glGetShaderiv(fragment_shader, GL_INFO_LOG_LENGTH, &length);
-        std::string error_message(length + 1, '\0');
-        glGetShaderInfoLog(fragment_shader, length, nullptr, &error_message[0]);
-        log_error("fragment shader error: {}", error_message.c_str());
-        return 0;
-    }
-
-    GLuint program = glCreateProgram();
-    glAttachShader(program, vertex_shader);
-    glAttachShader(program, fragment_shader);
-
-    // link program
-    glLinkProgram(program);
-
-    // check link status
-    glGetProgramiv(program, GL_LINK_STATUS, &result);
-    if (result == GL_FALSE) {
-        int length;
-        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length);
-        std::string error_message(length + 1, '\0');
-        glGetProgramInfoLog(program, length, nullptr, &error_message[0]);
-        log_error("shader program error: {}", error_message.c_str());
-        return 0;
-    }
-
-    // cleanup
-    glDetachShader(program, vertex_shader);
-    glDetachShader(program, fragment_shader);
-
-    glDeleteShader(vertex_shader);
-    glDeleteShader(fragment_shader);
-
-#ifdef XCI_DEBUG_OPENGL
-    // dump attributes
-    GLint n, max_len;
-    glGetProgramiv(program, GL_ACTIVE_ATTRIBUTES, &n);
-    glGetProgramiv(program, GL_ACTIVE_ATTRIBUTE_MAX_LENGTH, &max_len);
-    for (GLuint i = 0; i < (GLuint)n; i++) {
-        GLsizei length;
-        GLint size;
-        GLenum type;
-        std::string name(max_len, '\0');
-        glGetActiveAttrib(program, i, max_len, &length, &size, &type, &name[0]);
-        log_debug("shader active attribute: {}", name.c_str());
-    }
-
-    // dump uniforms
-    glGetProgramiv(program, GL_ACTIVE_UNIFORMS, &n);
-    glGetProgramiv(program, GL_ACTIVE_UNIFORM_MAX_LENGTH, &max_len);
-    for (GLuint i = 0; i < (GLuint)n; i++) {
-        GLsizei length;
-        GLint size;
-        GLenum type;
-        std::string name(max_len, '\0');
-        glGetActiveUniform(program, i, max_len, &length, &size, &type, &name[0]);
-        log_debug("shader active uniform: {}", name.c_str());
-    }
-#endif
-
-    return program;
-}
-
-
-GlView::GlView()
-{
-    for (auto& watch_handle : m_shader_file_watch) {
-        watch_handle = -1;
-    }
-}
-
-
-GlView::~GlView()
-{
-    for (auto& watch_handle : m_shader_file_watch) {
-        if (watch_handle != -1)
-            remove_file_watch(watch_handle);
-    }
-    for (auto& program : m_program) {
-        glDeleteProgram(program.load(std::memory_order_acquire));
-    }
-}
 
 
 void GlView::set_screen_size(Vec2u size)
@@ -169,62 +48,6 @@ void GlView::set_screen_size(Vec2u size)
 void GlView::set_framebuffer_size(Vec2u size)
 {
     m_framebuffer_size = size;
-}
-
-
-GLuint
-GlView::gl_program(GlView::ProgramId id,
-                   const char* vertex_file, const char* fragment_file,
-                   const char* vertex_source, int vertex_source_length,
-                   const char* fragment_source, int fragment_source_length)
-{
-    auto& program_atomic = m_program[(size_t)id];
-    GLuint program = program_atomic.load(std::memory_order_acquire);
-    if (!program) {
-        // Remove previous file watches, in case parameters has changed
-        int& vertex_fw = m_shader_file_watch[2*(size_t)id];
-        if (vertex_fw != -1)
-            remove_file_watch(vertex_fw);
-        int& fragment_fw = m_shader_file_watch[2*(size_t)id + 1];
-        if (fragment_fw != -1)
-            remove_file_watch(fragment_fw);
-
-        // Try to read shaders from file
-        std::string vertex_file_source;
-        std::string fragment_file_source;
-        if (vertex_file) {
-            vertex_file_source = read_file(vertex_file);
-            if (!vertex_file_source.empty()) {
-                vertex_source = vertex_file_source.data();
-                vertex_source_length = (int) vertex_file_source.size();
-                log_info("Loaded vertex shader: {}", vertex_file);
-                // Force reload when shader file changes
-                vertex_fw = add_file_watch(vertex_file, [&program_atomic](){
-                    program_atomic.store(0, std::memory_order_release);
-                    glfwPostEmptyEvent();
-                });
-            }
-        }
-        if (fragment_file) {
-            fragment_file_source = read_file(fragment_file);
-            if (!fragment_file_source.empty()) {
-                fragment_source = fragment_file_source.data();
-                fragment_source_length = (int) fragment_file_source.size();
-                log_info("Loaded fragment shader: {}", fragment_file);
-                // Force reload when shader file changes
-                fragment_fw = add_file_watch(fragment_file, [&program_atomic](){
-                    program_atomic.store(0, std::memory_order_release);
-                    glfwPostEmptyEvent();
-                });
-            }
-        }
-
-        // Compile and cache new program
-        program = compile_program(vertex_source, vertex_source_length,
-                                  fragment_source, fragment_source_length);
-        program_atomic.store(program, std::memory_order_release);
-    }
-    return program;
 }
 
 

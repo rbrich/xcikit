@@ -15,6 +15,8 @@
 
 #include <cassert>
 #include "GlPrimitives.h"
+#include "GlRenderer.h"
+#include "GlTexture.h"
 
 namespace xci {
 namespace graphics {
@@ -23,7 +25,7 @@ namespace graphics {
 void GlPrimitives::begin_primitive()
 {
     assert(m_open_vertices == -1);
-    m_elem_first.push_back( (GLushort) m_vertex_data.size() );
+    m_elem_first.push_back(m_closed_vertices);
     m_open_vertices = 0;
 }
 
@@ -32,15 +34,35 @@ void GlPrimitives::end_primitive()
 {
     assert(m_open_vertices != -1);
     m_elem_size.push_back(m_open_vertices);
+    m_closed_vertices += m_open_vertices;
     m_open_vertices = -1;
 }
 
 
-void GlPrimitives::add_vertex(const Vertex2Tex22& v)
+void GlPrimitives::add_vertex(float x, float y, float u, float v)
 {
+    assert(m_format == Primitives::VertexFormat::V2T2);
     assert(m_open_vertices != -1);
     invalidate_gl_objects();
+    m_vertex_data.push_back(x);
+    m_vertex_data.push_back(y);
+    m_vertex_data.push_back(u);
     m_vertex_data.push_back(v);
+    m_open_vertices++;
+}
+
+
+void GlPrimitives::add_vertex(float x, float y, float u1, float v1, float u2, float v2)
+{
+    assert(m_format == Primitives::VertexFormat::V2T22);
+    assert(m_open_vertices != -1);
+    invalidate_gl_objects();
+    m_vertex_data.push_back(x);
+    m_vertex_data.push_back(y);
+    m_vertex_data.push_back(u1);
+    m_vertex_data.push_back(v1);
+    m_vertex_data.push_back(u2);
+    m_vertex_data.push_back(v2);
     m_open_vertices++;
 }
 
@@ -50,6 +72,17 @@ void GlPrimitives::clear()
     m_vertex_data.clear();
     m_elem_first.clear();
     m_elem_size.clear();
+    m_closed_vertices = 0;
+    m_open_vertices = -1;
+    m_objects_ready = false;
+}
+
+
+void GlPrimitives::set_shader(ShaderPtr& shader)
+{
+    GLuint program = shader->program();
+    glUseProgram(program);
+    m_program = program;
 }
 
 
@@ -70,6 +103,17 @@ void GlPrimitives::set_uniform(const char* name,
 }
 
 
+void GlPrimitives::set_texture(const char* name, const Texture& texture)
+{
+    assert(m_program != 0);
+
+    GLint location = glGetUniformLocation(m_program, name);
+    glUniform1i(location, 0); // GL_TEXTURE0
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture.impl().gl_texture());
+}
+
+
 void GlPrimitives::draw(View& view, const Vec2f& pos)
 {
     init_gl_objects();
@@ -77,7 +121,9 @@ void GlPrimitives::draw(View& view, const Vec2f& pos)
     glBindVertexArray(m_vertex_array);
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
-    glEnableVertexAttribArray(2);
+    if (m_format == Primitives::VertexFormat::V2T22) {
+        glEnableVertexAttribArray(2);
+    }
 
     // projection matrix
     GLfloat xs = 2.0f / view.scalable_size().x;
@@ -102,7 +148,9 @@ void GlPrimitives::draw(View& view, const Vec2f& pos)
 
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
-    glDisableVertexAttribArray(2);
+    if (m_format == Primitives::VertexFormat::V2T22) {
+        glDisableVertexAttribArray(2);
+    }
     glUseProgram(0);
     m_program = 0;
 }
@@ -118,15 +166,23 @@ void GlPrimitives::init_gl_objects()
 
     glGenBuffers(1, &m_vertex_buffer);
     glBindBuffer(GL_ARRAY_BUFFER, m_vertex_buffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex2Tex22) * m_vertex_data.size(),
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * m_vertex_data.size(),
                  m_vertex_data.data(), GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
-                          sizeof(Vertex2Tex22), (void*) (sizeof(GLfloat) * 0));
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
-                          sizeof(Vertex2Tex22), (void*) (sizeof(GLfloat) * 2));
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE,
-                          sizeof(Vertex2Tex22), (void*) (sizeof(GLfloat) * 4));
+    if (m_format == Primitives::VertexFormat::V2T22) {
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
+                              sizeof(float) * 6, (void*) (sizeof(float) * 0));
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
+                              sizeof(float) * 6, (void*) (sizeof(float) * 2));
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE,
+                              sizeof(float) * 6, (void*) (sizeof(float) * 4));
+    }
+    if (m_format == Primitives::VertexFormat::V2T2) {
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
+                              sizeof(float) * 4, (void*) (sizeof(float) * 0));
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
+                              sizeof(float) * 4, (void*) (sizeof(float) * 2));
+    }
 
     m_objects_ready = true;
 }
@@ -141,13 +197,6 @@ void GlPrimitives::invalidate_gl_objects()
     glDeleteBuffers(1, &m_vertex_buffer);
 
     m_objects_ready = false;
-}
-
-
-void GlPrimitives::set_program(GLuint program)
-{
-    glUseProgram(program);
-    m_program = program;
 }
 
 

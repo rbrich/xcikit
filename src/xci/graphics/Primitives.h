@@ -1,4 +1,4 @@
-// GlPrimitives.h created on 2018-04-07, part of XCI toolkit
+// Primitives.h created on 2018-04-08, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,32 +13,35 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_GRAPHICS_GL_PRIMITIVES_H
-#define XCI_GRAPHICS_GL_PRIMITIVES_H
+#ifndef XCI_GRAPHICS_PRIMITIVES_H
+#define XCI_GRAPHICS_PRIMITIVES_H
 
-#include <xci/graphics/Primitives.h>
 #include <xci/graphics/View.h>
+#include <xci/graphics/Renderer.h>
 #include <xci/graphics/Texture.h>
-
-#include <glad/glad.h>
-
-#include <vector>
 
 namespace xci {
 namespace graphics {
 
 
-class GlPrimitives {
+class Primitives {
 public:
-    GlPrimitives(Primitives::VertexFormat m_format) : m_format(m_format) {}
-    ~GlPrimitives() { invalidate_gl_objects(); }
+    enum class VertexFormat {
+        V2T2,
+        V2T22,
+    };
+
+    explicit Primitives(VertexFormat format);
+    ~Primitives();
+    Primitives(Primitives&&) noexcept;
+    Primitives& operator=(Primitives&&) noexcept;
 
     void begin_primitive();
     void end_primitive();
     void add_vertex(float x, float y, float u, float v);
     void add_vertex(float x, float y, float u1, float v1, float u2, float v2);
     void clear();
-    bool empty() const { return m_vertex_data.empty(); }
+    bool empty() const;
 
     void set_shader(ShaderPtr& shader);
     void set_uniform(const char* name, float f);
@@ -47,31 +50,11 @@ public:
     void draw(View& view, const Vec2f& pos);
 
 private:
-    void init_gl_objects();
-    void invalidate_gl_objects();
-
-private:
-    Primitives::VertexFormat m_format;
-    std::vector<float> m_vertex_data;
-    std::vector<GLint> m_elem_first;  // first vertex of each element
-    std::vector<GLsizei> m_elem_size;  // number of vertices of each element
-
-    GLuint m_vertex_array = 0;  // aka VAO
-    GLuint m_vertex_buffer = 0;  // aka VBO
-    GLuint m_program = 0;
-    bool m_objects_ready = false;
-
-    int m_closed_vertices = 0;
-    int m_open_vertices = -1;
-};
-
-
-class Primitives::Impl : public GlPrimitives {
-public:
-    explicit Impl(VertexFormat format) : GlPrimitives(format) {}
+    class Impl;
+    std::unique_ptr<Impl> m_impl;
 };
 
 
 }} // namespace xci::graphics
 
-#endif // XCI_GRAPHICS_GL_PRIMITIVES_H
+#endif // XCI_GRAPHICS_PRIMITIVES_H

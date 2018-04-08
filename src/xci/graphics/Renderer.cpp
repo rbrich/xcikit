@@ -1,4 +1,4 @@
-// file.cpp created on 2018-03-29, part of XCI toolkit
+// Renderer.cpp created on 2018-04-08, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,37 +13,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "file.h"
-#include "FileWatch.h"
-#include <fstream>
-#include <unistd.h>
+#include "Renderer.h"
+
+#ifdef XCI_WITH_OPENGL
+#include <xci/graphics/opengl/GlRenderer.h>
+#endif
+
+#include <cassert>
 
 namespace xci {
-namespace util {
+namespace graphics {
 
 
-void chdir_to_share()
+Renderer& Renderer::default_renderer()
 {
-    chdir(XCI_SHARE_DIR);
+#ifdef XCI_WITH_OPENGL
+    static GlRenderer renderer;
+    return renderer;
+#endif
+    assert(!"No renderer available");
 }
 
 
-std::string read_file(const std::string& filename)
-{
-    std::string content;
-    std::ifstream f(filename);
-    if (!f)
-        return content;  // empty
-
-    f.seekg(0, std::ios::end);
-    content.resize((size_t) f.tellg());
-    f.seekg(0, std::ios::beg);
-    f.read(&content[0], content.size());
-    if (!f)
-        content.clear();
-
-    return content;
-}
+Renderer::~Renderer() = default;
 
 
-}}  // namespace xci::util
+}} // namespace xci::graphics

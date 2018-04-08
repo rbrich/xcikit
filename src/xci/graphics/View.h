@@ -57,7 +57,9 @@ public:
         return {s.x / fb.x, s.y / fb.y};
     }
 
+    // ------------------------------------------------------------------------
     // Visual debugging
+
     using DebugFlags = unsigned int;
     enum class Debug: DebugFlags {
         GlyphBBox       = 1u << 0u,

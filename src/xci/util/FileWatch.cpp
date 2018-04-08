@@ -77,6 +77,7 @@ FileWatch::FileWatch()
                     int ofs = 0;
                     while (ofs < readlen) {
                         auto* event = (inotify_event*) &buffer[ofs];
+                        std::lock_guard<std::mutex> lock_guard(m_mutex);
                         auto& cb = m_callback[event->wd];
                         if (cb) {
                             if (event->mask & IN_MODIFY)
@@ -114,6 +115,8 @@ int FileWatch::add_watch(const std::string& filename, std::function<void(Event)>
         log_error("FileWatch: inotify_add_watch({}): {:m}", filename.c_str());
         return -1;
     }
+
+    std::lock_guard<std::mutex> lock_guard(m_mutex);
     m_callback[wd] = std::move(cb);
     return wd;
 }
@@ -121,10 +124,11 @@ int FileWatch::add_watch(const std::string& filename, std::function<void(Event)>
 
 void FileWatch::remove_watch(int handle)
 {
-    if (handle != -1) {
-        inotify_rm_watch(m_queue_fd, handle);
-        m_callback.erase(handle);
-    }
+    std::lock_guard<std::mutex> lock_guard(m_mutex);
+    if (handle == -1 || m_callback.find(handle) == m_callback.end())
+        return;
+    inotify_rm_watch(m_queue_fd, handle);
+    m_callback.erase(handle);
 }
 
 
@@ -168,6 +172,7 @@ FileWatch::FileWatch()
                 break;
             }
             if (rc == 1 && ke.filter == EVFILT_VNODE) {
+                std::lock_guard<std::mutex> lock_guard(m_mutex);
                 auto& cb = m_callback[ke.ident];
                 if (cb) {
                     if (ke.fflags & NOTE_WRITE)
@@ -218,6 +223,7 @@ int FileWatch::add_watch(const std::string& filename, std::function<void(Event)>
     if (kevent(m_queue_fd, &kev, 1, nullptr, 0, nullptr) == -1)
         log_error("FileWatch: kevent(EV_ADD, {}): {:m}", filename.c_str());
 
+    std::lock_guard<std::mutex> lock_guard(m_mutex);
     m_callback[fd] = std::move(cb);
     return fd;
 }
@@ -225,6 +231,7 @@ int FileWatch::add_watch(const std::string& filename, std::function<void(Event)>
 
 void FileWatch::remove_watch(int handle)
 {
+    std::lock_guard<std::mutex> lock_guard(m_mutex);
     if (handle == -1 || m_callback.find(handle) == m_callback.end())
         return;
 

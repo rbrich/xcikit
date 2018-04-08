@@ -1,4 +1,4 @@
-// GlShapes.cpp created on 2018-04-04, part of XCI toolkit
+// Shapes.cpp created on 2018-04-04, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,11 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "GlShapes.h"
-#include "GlView.h"
-
-// inline
-#include <xci/graphics/Shapes.inl>
+#include "Shapes.h"
+#include "Renderer.h"
+#include <xci/util/log.h>
 
 #ifdef XCI_EMBED_SHADERS
 #define INCBIN_PREFIX g_
@@ -27,29 +25,29 @@ INCBIN(rectangle_vert, XCI_SHARE_DIR "/shaders/rectangle.vert");
 INCBIN(rectangle_frag, XCI_SHARE_DIR "/shaders/rectangle.frag");
 INCBIN(ellipse_vert, XCI_SHARE_DIR "/shaders/ellipse.vert");
 INCBIN(ellipse_frag, XCI_SHARE_DIR "/shaders/ellipse.frag");
-#else
-static const unsigned char* g_rectangle_vert_data = nullptr;
-static const unsigned int   g_rectangle_vert_size = 0;
-static const unsigned char* g_rectangle_frag_data = nullptr;
-static const unsigned int   g_rectangle_frag_size = 0;
-static const unsigned char* g_ellipse_vert_data = nullptr;
-static const unsigned int   g_ellipse_vert_size = 0;
-static const unsigned char* g_ellipse_frag_data = nullptr;
-static const unsigned int   g_ellipse_frag_size = 0;
 #endif
 
 namespace xci {
 namespace graphics {
 
+using namespace xci::util::log;
 
-GlShapes::GlShapes(const Color& fill_color, const Color& outline_color,
-                   float antialiasing, float softness)
+
+Shapes::Shapes(const Color& fill_color, const Color& outline_color,
+               float antialiasing, float softness)
         : m_fill_color(fill_color), m_outline_color(outline_color),
-          m_antialiasing(antialiasing), m_softness(softness)
+          m_antialiasing(antialiasing), m_softness(softness),
+          m_rectangles(Primitives::VertexFormat::V2T22),
+          m_ellipses(Primitives::VertexFormat::V2T22)
 {}
 
 
-void GlShapes::add_rectangle(const Rect_f& rect, float outline_thickness)
+Shapes::~Shapes() = default;
+Shapes::Shapes(Shapes&&) noexcept = default;
+Shapes& Shapes::operator=(Shapes&&) noexcept = default;
+
+
+void Shapes::add_rectangle(const Rect_f& rect, float outline_thickness)
 {
     float x1 = rect.x;
     float y1 = -rect.y;
@@ -61,15 +59,15 @@ void GlShapes::add_rectangle(const Rect_f& rect, float outline_thickness)
     float iy = 1.0f + ty / (1-ty);
 
     m_rectangles.begin_primitive();
-    m_rectangles.add_vertex({x2, y1, +ix, -iy, +1.0f, -1.0f});
-    m_rectangles.add_vertex({x2, y2, +ix, +iy, +1.0f, +1.0f});
-    m_rectangles.add_vertex({x1, y2, -ix, +iy, -1.0f, +1.0f});
-    m_rectangles.add_vertex({x1, y1, -ix, -iy, -1.0f, -1.0f});
+    m_rectangles.add_vertex(x2, y1, +ix, -iy, +1.0f, -1.0f);
+    m_rectangles.add_vertex(x2, y2, +ix, +iy, +1.0f, +1.0f);
+    m_rectangles.add_vertex(x1, y2, -ix, +iy, -1.0f, +1.0f);
+    m_rectangles.add_vertex(x1, y1, -ix, -iy, -1.0f, -1.0f);
     m_rectangles.end_primitive();
 }
 
 
-void GlShapes::add_rectangle_slice(const Rect_f& slice, const Rect_f& rect,
+void Shapes::add_rectangle_slice(const Rect_f& slice, const Rect_f& rect,
                                    float outline_thickness)
 {
     float x1 = slice.x;
@@ -87,15 +85,15 @@ void GlShapes::add_rectangle_slice(const Rect_f& slice, const Rect_f& rect,
     float dx = bx * (1.0f + tx / (1-tx));
     float dy = by * (1.0f + ty / (1-ty));
     m_rectangles.begin_primitive();
-    m_rectangles.add_vertex({x2, y1, cx, dy, ax, by});
-    m_rectangles.add_vertex({x2, y2, cx, cy, ax, ay});
-    m_rectangles.add_vertex({x1, y2, dx, cy, bx, ay});
-    m_rectangles.add_vertex({x1, y1, dx, dy, bx, by});
+    m_rectangles.add_vertex(x2, y1, cx, dy, ax, by);
+    m_rectangles.add_vertex(x2, y2, cx, cy, ax, ay);
+    m_rectangles.add_vertex(x1, y2, dx, cy, bx, ay);
+    m_rectangles.add_vertex(x1, y1, dx, dy, bx, by);
     m_rectangles.end_primitive();
 }
 
 
-void GlShapes::add_ellipse(const Rect_f& rect, float outline_thickness)
+void Shapes::add_ellipse(const Rect_f& rect, float outline_thickness)
 {
     float x1 = rect.x;
     float y1 = -rect.y;
@@ -106,16 +104,16 @@ void GlShapes::add_ellipse(const Rect_f& rect, float outline_thickness)
     float ix = 1.0f + tx / (1-tx);
     float iy = 1.0f + ty / (1-ty);
     m_ellipses.begin_primitive();
-    m_ellipses.add_vertex({x2, y1, +ix, -iy, +1.0f, -1.0f});
-    m_ellipses.add_vertex({x2, y2, +ix, +iy, +1.0f, +1.0f});
-    m_ellipses.add_vertex({x1, y2, -ix, +iy, -1.0f, +1.0f});
-    m_ellipses.add_vertex({x1, y1, -ix, -iy, -1.0f, -1.0f});
+    m_ellipses.add_vertex(x2, y1, +ix, -iy, +1.0f, -1.0f);
+    m_ellipses.add_vertex(x2, y2, +ix, +iy, +1.0f, +1.0f);
+    m_ellipses.add_vertex(x1, y2, -ix, +iy, -1.0f, +1.0f);
+    m_ellipses.add_vertex(x1, y1, -ix, -iy, -1.0f, -1.0f);
     m_ellipses.end_primitive();
 }
 
 
-void GlShapes::add_ellipse_slice(const Rect_f& slice, const Rect_f& ellipse,
-                                 float outline_thickness)
+void Shapes::add_ellipse_slice(const Rect_f& slice, const Rect_f& ellipse,
+                               float outline_thickness)
 {
     float x1 = slice.x;
     float y1 = -slice.y;
@@ -132,17 +130,17 @@ void GlShapes::add_ellipse_slice(const Rect_f& slice, const Rect_f& ellipse,
     float dx = bx * (1.0f + tx / (1-tx));
     float dy = by * (1.0f + ty / (1-ty));
     m_ellipses.begin_primitive();
-    m_ellipses.add_vertex({x2, y1, cx, dy, ax, by});
-    m_ellipses.add_vertex({x2, y2, cx, cy, ax, ay});
-    m_ellipses.add_vertex({x1, y2, dx, cy, bx, ay});
-    m_ellipses.add_vertex({x1, y1, dx, dy, bx, by});
+    m_ellipses.add_vertex(x2, y1, cx, dy, ax, by);
+    m_ellipses.add_vertex(x2, y2, cx, cy, ax, ay);
+    m_ellipses.add_vertex(x1, y2, dx, cy, bx, ay);
+    m_ellipses.add_vertex(x1, y1, dx, dy, bx, by);
     m_ellipses.end_primitive();
 }
 
 
 void
-GlShapes::add_rounded_rectangle(const Rect_f& rect, float radius,
-                                float outline_thickness)
+Shapes::add_rounded_rectangle(const Rect_f& rect, float radius,
+                              float outline_thickness)
 {
     // the shape is composed from 7-slice pattern:
     // corner ellipse slices and center rectangle slices
@@ -161,23 +159,19 @@ GlShapes::add_rounded_rectangle(const Rect_f& rect, float radius,
     add_rectangle_slice({x,   y+r,   w, h-rr}, rect, outline_thickness);
 }
 
-void GlShapes::clear()
+void Shapes::clear()
 {
     m_rectangles.clear();
     m_ellipses.clear();
 }
 
 
-void GlShapes::draw(View& view, const Vec2f& pos)
+void Shapes::draw(View& view, const Vec2f& pos)
 {
     // rectangles
     if (!m_rectangles.empty()) {
-        auto rectangle_program = view.impl()
-                .gl_program(GlView::ProgramId::Rectangle,
-                            "shaders/rectangle.vert", "shaders/rectangle.frag",
-                            (const char*)g_rectangle_vert_data, g_rectangle_vert_size,
-                            (const char*)g_rectangle_frag_data, g_rectangle_frag_size);
-        m_rectangles.set_program(rectangle_program);
+        init_rectangle_shader();
+        m_rectangles.set_shader(m_rectangle_shader);
         m_rectangles.set_uniform("u_fill_color",
                                  m_fill_color.red_f(), m_fill_color.green_f(),
                                  m_fill_color.blue_f(), m_fill_color.alpha_f());
@@ -191,21 +185,61 @@ void GlShapes::draw(View& view, const Vec2f& pos)
 
     // ellipses
     if (!m_ellipses.empty()) {
-        auto program = view.impl()
-                .gl_program(GlView::ProgramId::Ellipse,
-                            "shaders/ellipse.vert", "shaders/ellipse.frag",
-                            (const char*)g_ellipse_vert_data, g_ellipse_vert_size,
-                            (const char*)g_ellipse_frag_data, g_ellipse_frag_size);
-        m_ellipses.set_program(program);
+        init_ellipse_shader();
+        m_ellipses.set_shader(m_ellipse_shader);
         m_ellipses.set_uniform("u_fill_color",
-                                 m_fill_color.red_f(), m_fill_color.green_f(),
-                                 m_fill_color.blue_f(), m_fill_color.alpha_f());
+                               m_fill_color.red_f(), m_fill_color.green_f(),
+                               m_fill_color.blue_f(), m_fill_color.alpha_f());
         m_ellipses.set_uniform("u_outline_color",
-                                 m_outline_color.red_f(), m_outline_color.green_f(),
-                                 m_outline_color.blue_f(), m_outline_color.alpha_f());
+                               m_outline_color.red_f(), m_outline_color.green_f(),
+                               m_outline_color.blue_f(), m_outline_color.alpha_f());
         m_ellipses.set_uniform("u_softness", m_softness);
         m_ellipses.set_uniform("u_antialiasing", m_antialiasing);
         m_ellipses.draw(view, pos);
+    }
+}
+
+
+void Shapes::init_rectangle_shader()
+{
+    if (m_rectangle_shader)
+        return;
+    auto& renderer = Renderer::default_renderer();
+    m_rectangle_shader = renderer.new_shader(Renderer::ShaderId::Rectangle);
+
+#ifdef XCI_EMBED_SHADERS
+    bool res = renderer.shader_load_from_memory(m_rectangle_shader,
+                (const char*)g_rectangle_vert_data, g_rectangle_vert_size,
+                (const char*)g_rectangle_frag_data, g_rectangle_frag_size);
+)
+#else
+    bool res = renderer.shader_load_from_file(m_rectangle_shader,
+                "shaders/rectangle.vert", "shaders/rectangle.frag");
+#endif
+    if (!res) {
+        log_error("Rectangle shader not loaded!");
+    }
+}
+
+
+void Shapes::init_ellipse_shader()
+{
+    if (m_ellipse_shader)
+        return;
+    auto& renderer = Renderer::default_renderer();
+    m_ellipse_shader = renderer.new_shader(Renderer::ShaderId::Ellipse);
+
+#ifdef XCI_EMBED_SHADERS
+    bool res = renderer.shader_load_from_memory(m_ellipse_shader,
+                (const char*)g_ellipse_vert_data, g_ellipse_vert_size,
+                (const char*)g_ellipse_frag_data, g_ellipse_frag_size);
+)
+#else
+    bool res = renderer.shader_load_from_file(m_ellipse_shader,
+                "shaders/ellipse.vert", "shaders/ellipse.frag");
+#endif
+    if (!res) {
+        log_error("Ellipse shader not loaded!");
     }
 }
 

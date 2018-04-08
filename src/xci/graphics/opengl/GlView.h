@@ -18,19 +18,12 @@
 
 #include <xci/graphics/View.h>
 
-#include <glad/glad.h>
-#include <array>
-#include <atomic>
-
 namespace xci {
 namespace graphics {
 
 
 class GlView {
 public:
-    GlView();
-    ~GlView();
-
     void set_screen_size(Vec2u size);
     Vec2u screen_size() const { return m_screen_size; }
 
@@ -39,33 +32,10 @@ public:
 
     Vec2f scalable_size() const { return m_scalable_size; }
 
-    // ------------------------------------------------------------------------
-    // Shaders
-
-    enum class ProgramId {
-        Sprite = 0,
-        Rectangle,
-        Ellipse,
-        // The last item helps with determining m_program array size
-        EnumSize_,
-    };
-
-    // Compile GLSL program once per ID
-    // First, try to read the file. If successful, setup a watch on the file
-    // to auto-reload on any change. If the file does not exist, fall back
-    // to source string given as another parameter.
-    // Either file or source parameter may be nullptr, in which case it's not used.
-    GLuint gl_program(ProgramId id,
-                      const char* vertex_file, const char* fragment_file,
-                      const char* vertex_source=nullptr, int vertex_source_length=-1,
-                      const char* fragment_source= nullptr, int fragment_source_length=-1);
-
 private:
     Vec2f m_scalable_size;      // eg. {2.666, 2.0}
     Vec2u m_screen_size;        // eg. {800, 600}
     Vec2u m_framebuffer_size;   // eg. {1600, 1200}
-    std::array<std::atomic<GLuint>, (size_t)ProgramId::EnumSize_> m_program = {};
-    std::array<int, 2 * (size_t)ProgramId::EnumSize_> m_shader_file_watch;
 };
 
 

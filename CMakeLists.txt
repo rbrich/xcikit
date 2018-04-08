@@ -48,12 +48,16 @@ set(XCI_UTIL_SOURCES
 
 set(XCI_GRAPHICS_SOURCES
     src/xci/graphics/Color.h
+    src/xci/graphics/Primitives.cpp
+    src/xci/graphics/Primitives.h
+    src/xci/graphics/Renderer.cpp
+    src/xci/graphics/Renderer.h
     src/xci/graphics/Shapes.h
-    src/xci/graphics/Shapes.inl
+    src/xci/graphics/Shapes.cpp
     src/xci/graphics/Texture.h
     src/xci/graphics/Texture.inl
     src/xci/graphics/Sprites.h
-    src/xci/graphics/Sprites.inl
+    src/xci/graphics/Sprites.cpp
     src/xci/graphics/View.h
     src/xci/graphics/View.inl
     src/xci/graphics/Window.h
@@ -62,10 +66,8 @@ set(XCI_GRAPHICS_SOURCES
 set(XCI_GRAPHICS_OPENGL_SOURCES
     src/xci/graphics/opengl/GlPrimitives.cpp
     src/xci/graphics/opengl/GlPrimitives.h
-    src/xci/graphics/opengl/GlShapes.cpp
-    src/xci/graphics/opengl/GlShapes.h
-    src/xci/graphics/opengl/GlSprites.cpp
-    src/xci/graphics/opengl/GlSprites.h
+    src/xci/graphics/opengl/GlRenderer.cpp
+    src/xci/graphics/opengl/GlRenderer.h
     src/xci/graphics/opengl/GlTexture.cpp
     src/xci/graphics/opengl/GlTexture.h
     src/xci/graphics/opengl/GlView.cpp
@@ -179,6 +181,7 @@ if (WITH_OPENGL)
         ${XCI_UTIL_LIBRARY}
         dl glad glfw)
     target_compile_definitions(${XCI_GRAPHICS_OPENGL_LIBRARY} PRIVATE
+        XCI_WITH_OPENGL
         XCI_SHARE_DIR="${SHARE_DIR}")
     if (EMBED_SHADERS)
         target_compile_definitions(${XCI_GRAPHICS_OPENGL_LIBRARY} PRIVATE
@@ -203,7 +206,9 @@ if (WITH_SFML)
     target_link_libraries(${XCI_GRAPHICS_SFML_LIBRARY}
         ${XCI_UTIL_LIBRARY}
         ${SFML_LIBRARIES})
-    set(XCI_GRAPHICS_LIBRARY ${XCI_GRAPHICS_SFML_LIBRARY})
+    if (NOT DEFINED XCI_GRAPHICS_LIBRARY)
+        set(XCI_GRAPHICS_LIBRARY ${XCI_GRAPHICS_SFML_LIBRARY})
+    endif()
 endif (WITH_SFML)
 
 if (WITH_PANDA)

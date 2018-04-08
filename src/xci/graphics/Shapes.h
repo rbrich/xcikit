@@ -16,6 +16,8 @@
 #ifndef XCI_GRAPHICS_SHAPES_H
 #define XCI_GRAPHICS_SHAPES_H
 
+#include "Primitives.h"
+#include "Renderer.h"
 #include <xci/graphics/Color.h>
 #include <xci/graphics/View.h>
 #include <xci/util/geometry.h>
@@ -46,6 +48,8 @@ public:
     //                       this parameter defines how far (in display units)
     void add_rectangle(const Rect_f& rect,
                        float outline_thickness = 0);
+    void add_rectangle_slice(const Rect_f& slice, const Rect_f& rect,
+                             float outline_thickness = 0);
 
     // Add new ellipse.
     // `rect`              - ellipse position and size
@@ -53,6 +57,8 @@ public:
     //                       this parameter defines how far (in display units)
     void add_ellipse(const Rect_f& rect,
                      float outline_thickness = 0);
+    void add_ellipse_slice(const Rect_f& slice, const Rect_f& ellipse,
+                           float outline_thickness = 0);
 
     // Add new rounded rectangle.
     // `rect`              - position and size
@@ -69,11 +75,21 @@ public:
     // Final shape position is `pos` + shapes's relative position
     void draw(View& view, const Vec2f& pos);
 
-    class Impl;
-    const Impl& impl() const { return *m_impl; }
+private:
+    void init_rectangle_shader();
+    void init_ellipse_shader();
 
 private:
-    std::unique_ptr<Impl> m_impl;
+    Color m_fill_color;
+    Color m_outline_color;
+    float m_antialiasing;
+    float m_softness;
+
+    Primitives m_rectangles;
+    Primitives m_ellipses;
+
+    ShaderPtr m_rectangle_shader;
+    ShaderPtr m_ellipse_shader;
 };
 
 

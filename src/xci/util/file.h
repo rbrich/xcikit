@@ -31,13 +31,6 @@ void chdir_to_share();
 // Returns empty string in case of any error.
 std::string read_file(const std::string& filename);
 
-// Watch file `filename` for any changes (creation, deletion, modification)
-// and call `cb` when such event occurs. Note that the callback might be called
-// in another thread context.
-// Returns watch handle on success, -1 on error.
-int add_file_watch(const std::string& filename, std::function<void()> cb);
-void remove_file_watch(int watch);
-
 
 }}  // namespace xci::util
 
