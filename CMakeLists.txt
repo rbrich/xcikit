@@ -18,10 +18,15 @@ option(WITH_PANDA "Link with Panda3D and build libxci-graphics-panda." OFF)
 
 option(EMBED_SHADERS "Embed shader files into binaries to avoid dependency on share dir." OFF)
 
+option(DEBUG_CLANG_ASAN "Build with Clang address sanitizer." OFF)
 option(DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
 option(DEBUG_OPENGL "Log info about OpenGL calls and errors." OFF)
 
 set(SHARE_DIR "${CMAKE_CURRENT_LIST_DIR}/share" CACHE PATH "Location of share dir (runtime data)")
+
+if (DEBUG_CLANG_ASAN)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
+endif (DEBUG_CLANG_ASAN)
 
 # ------------ #
 # Sources      #
