@@ -34,10 +34,9 @@ using namespace xci::util::log;
 
 
 Shape::Shape(const Color& fill_color, const Color& outline_color,
-               float antialiasing, float softness,
-               Renderer& renderer)
+             Renderer& renderer)
         : m_fill_color(fill_color), m_outline_color(outline_color),
-          m_antialiasing(antialiasing), m_softness(softness),
+          m_lines(renderer.new_primitives(VertexFormat::V2t2, PrimitiveType::TriFans)),
           m_rectangles(renderer.new_primitives(VertexFormat::V2t22, PrimitiveType::TriFans)),
           m_ellipses(renderer.new_primitives(VertexFormat::V2t22, PrimitiveType::TriFans))
 {}
@@ -46,6 +45,37 @@ Shape::Shape(const Color& fill_color, const Color& outline_color,
 Shape::~Shape() = default;
 Shape::Shape(Shape&&) noexcept = default;
 Shape& Shape::operator=(Shape&&) noexcept = default;
+
+
+void Shape::add_line_slice(const Rect_f& slice, const Vec2f& a, const Vec2f& b,
+                           float thickness)
+{
+    auto dir = (b-a).norm();
+    auto rotate = [dir](float x, float y) -> Vec2f {
+        float xnew = x * dir.x - y * dir.y;
+        float ynew = x * dir.y + y * dir.x;
+        return {xnew, ynew};
+    };
+
+    float x1 = slice.x;
+    float y1 = -slice.y;
+    float x2 = slice.x + slice.w;
+    float y2 = -slice.y - slice.h;
+    float ax = (slice.x+slice.w - a.x) / thickness;
+    float ay = (slice.y+slice.h - a.y) / thickness;
+    float bx = (slice.x - a.x) / thickness;
+    float by = (slice.y - a.y) / thickness;
+    auto t1 = rotate(ax, by);
+    auto t2 = rotate(ax, ay);
+    auto t3 = rotate(bx, ay);
+    auto t4 = rotate(bx, by);
+    m_lines->begin_primitive();
+    m_lines->add_vertex(x2, y1, t1.x, t1.y);
+    m_lines->add_vertex(x2, y2, t2.x, t2.y);
+    m_lines->add_vertex(x1, y2, t3.x, t3.y);
+    m_lines->add_vertex(x1, y1, t4.x, t4.y);
+    m_lines->end_primitive();
+}
 
 
 void Shape::add_rectangle(const Rect_f& rect, float outline_thickness)
@@ -162,6 +192,7 @@ Shape::add_rounded_rectangle(const Rect_f& rect, float radius,
 
 void Shape::clear()
 {
+    m_lines->clear();
     m_rectangles->clear();
     m_ellipses->clear();
 }
@@ -169,6 +200,21 @@ void Shape::clear()
 
 void Shape::draw(View& view, const Vec2f& pos)
 {
+    // lines
+    if (!m_lines->empty()) {
+        init_line_shader();
+        m_lines->set_shader(m_line_shader);
+        m_lines->set_uniform("u_fill_color",
+                                  m_fill_color.red_f(), m_fill_color.green_f(),
+                                  m_fill_color.blue_f(), m_fill_color.alpha_f());
+        m_lines->set_uniform("u_outline_color",
+                                  m_outline_color.red_f(), m_outline_color.green_f(),
+                                  m_outline_color.blue_f(), m_outline_color.alpha_f());
+        m_lines->set_uniform("u_softness", m_softness);
+        m_lines->set_uniform("u_antialiasing", m_antialiasing);
+        m_lines->draw(view, pos);
+    }
+
     // rectangles
     if (!m_rectangles->empty()) {
         init_rectangle_shader();
@@ -197,6 +243,28 @@ void Shape::draw(View& view, const Vec2f& pos)
         m_ellipses->set_uniform("u_softness", m_softness);
         m_ellipses->set_uniform("u_antialiasing", m_antialiasing);
         m_ellipses->draw(view, pos);
+    }
+}
+
+
+void Shape::init_line_shader()
+{
+    if (m_line_shader)
+        return;
+    auto& renderer = Renderer::default_renderer();
+    m_line_shader = renderer.new_shader(ShaderId::Line);
+
+#ifdef XCI_EMBED_SHADERS
+    bool res = m_line_shader->load_from_memory(
+                (const char*)g_line_vert_data, g_line_vert_size,
+                (const char*)g_line_frag_data, g_line_frag_size);
+)
+#else
+    bool res = m_line_shader->load_from_file(
+            "shaders/line.vert", "shaders/line.frag");
+#endif
+    if (!res) {
+        log_error("Line shader not loaded!");
     }
 }
 

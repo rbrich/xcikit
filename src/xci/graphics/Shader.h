@@ -26,6 +26,7 @@ namespace graphics {
 enum class ShaderId {
     // Obtain one of predefined shaders
     Sprite = 0,
+    Line,
     Rectangle,
     Ellipse,
     // Create new, custom shader

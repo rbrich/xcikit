@@ -36,12 +36,24 @@ class Shape {
 public:
     explicit Shape(const Color& fill_color,
                     const Color& outline_color = Color::White(),
-                    float antialiasing = 0,
-                    float softness = 0,
                     Renderer& renderer = Renderer::default_renderer());
     ~Shape();
     Shape(Shape&&) noexcept;
     Shape& operator=(Shape&&) noexcept;
+
+    void set_antialiasing(float antialiasing) { m_antialiasing = antialiasing; }
+    void set_softness(float softness) { m_softness = softness; }
+
+    // Add a slice of infinite line
+    // `a`, `b`            - two points to define the line
+    // `slice`             - rectangular region in which is the line visible
+    // `thickness`         - line width, measured perpendicularly from a-b
+    //
+    //   ---- a --- b ----
+    //                    > thickness
+    //   -----------------
+    void add_line_slice(const Rect_f& slice, const Vec2f& a, const Vec2f& b,
+                        float thickness);
 
     // Add new rectangle.
     // `rect`              - rectangle position and size
@@ -77,18 +89,21 @@ public:
     void draw(View& view, const Vec2f& pos);
 
 private:
+    void init_line_shader();
     void init_rectangle_shader();
     void init_ellipse_shader();
 
 private:
     Color m_fill_color;
     Color m_outline_color;
-    float m_antialiasing;
-    float m_softness;
+    float m_antialiasing = 0;
+    float m_softness = 0;
 
+    PrimitivesPtr m_lines;
     PrimitivesPtr m_rectangles;
     PrimitivesPtr m_ellipses;
 
+    ShaderPtr m_line_shader;
     ShaderPtr m_rectangle_shader;
     ShaderPtr m_ellipse_shader;
 };

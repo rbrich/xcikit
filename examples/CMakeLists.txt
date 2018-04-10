@@ -25,6 +25,9 @@ target_link_libraries(demo_ellipses ${XCI_GRAPHICS_LIBRARY})
 add_executable(demo_rounded_rect demo_rounded_rect.cpp)
 target_link_libraries(demo_rounded_rect ${XCI_GRAPHICS_LIBRARY})
 
+add_executable(demo_shapes demo_shapes.cpp)
+target_link_libraries(demo_shapes ${XCI_GRAPHICS_LIBRARY})
+
 add_executable(demo_widgets demo_widgets.cpp)
 target_link_libraries(demo_widgets ${XCI_WIDGETS_LIBRARY})
 
