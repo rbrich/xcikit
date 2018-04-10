@@ -9,3 +9,6 @@ Fonts
 
 [Share Tech Mono](https://fonts.google.com/specimen/Share+Tech+Mono)
 - monospace typeface
+
+[Material Icons](https://material.io/icons/)
+- Material Design icons

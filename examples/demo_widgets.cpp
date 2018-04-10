@@ -13,15 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <xci/graphics/Window.h>
-#include <xci/text/Text.h>
+#include <xci/widgets/Theme.h>
 #include <xci/widgets/Button.h>
+#include <xci/widgets/Icon.h>
+#include <xci/text/Text.h>
+#include <xci/graphics/Window.h>
 #include <xci/util/file.h>
+#include <xci/util/format.h>
 #include <cstdlib>
 
-using namespace xci::graphics;
-using namespace xci::text;
 using namespace xci::widgets;
+using namespace xci::text;
+using namespace xci::graphics;
+using namespace xci::util;
 
 int main()
 {
@@ -30,8 +34,10 @@ int main()
     Window window;
     window.create({800, 600}, "XCI widgets demo");
 
+    Theme::load_default_theme();
+
     FontFace face;
-    if (!face.load_from_file("fonts/Share_Tech_Mono/ShareTechMono-Regular.ttf", 0))
+    if (!face.load_from_file("fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
         return EXIT_FAILURE;
     Font font;
     font.add_face(face);
@@ -44,12 +50,20 @@ int main()
     button_styled.set_decoration_color(Color(10, 20, 100), Color(20, 50, 150));
     button_styled.set_text_color(Color(255, 255, 50));
 
+    Icon checkbox;
+    checkbox.set_icon(IconId::CheckBoxChecked);
+    checkbox.set_size(0.08);
+    checkbox.set_color(Color(200, 200, 200));
+
     window.display([&](View& view) {
         button_default.resize(view);
         button_default.draw(view, {0, -0.2f});
         button_styled.set_outline_thickness(1 * view.screen_ratio().y);
         button_styled.resize(view);
         button_styled.draw(view, {0, 0});
+
+        checkbox.resize(view);
+        checkbox.draw(view, {0, 0.4f});
     });
     return EXIT_SUCCESS;
 }

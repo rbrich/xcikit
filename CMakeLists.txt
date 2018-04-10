@@ -117,7 +117,7 @@ set(XCI_TEXT_SOURCES
 
 set(XCI_WIDGETS_SOURCES
     src/xci/widgets/Button.cpp
-    src/xci/widgets/Button.h)
+    src/xci/widgets/Button.h src/xci/widgets/Icon.cpp src/xci/widgets/Icon.h src/xci/widgets/Theme.cpp src/xci/widgets/Theme.h)
 
 # ------------ #
 # Dependencies #
@@ -250,6 +250,8 @@ add_library(${XCI_WIDGETS_LIBRARY} STATIC ${XCI_WIDGETS_SOURCES})
 target_link_libraries(${XCI_WIDGETS_LIBRARY}
     ${XCI_TEXT_LIBRARY}
     ${XCI_GRAPHICS_LIBRARY})
+target_compile_definitions(${XCI_WIDGETS_LIBRARY} PRIVATE
+    XCI_SHARE_DIR="${SHARE_DIR}")
 
 # ------------ #
 # Examples     #

@@ -36,7 +36,7 @@ int main()
     window.create({800, 600}, "XCI coords demo");
 
     FontFace face;
-    if (!face.load_from_file("fonts/Share_Tech_Mono/ShareTechMono-Regular.ttf", 0))
+    if (!face.load_from_file("fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
         return EXIT_FAILURE;
     Font font;
     font.add_face(face);

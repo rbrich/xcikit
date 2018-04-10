@@ -28,6 +28,9 @@ std::string escape(const std::string& str);
 // In case of invalid source string, logs error and returns empty string.
 std::u32string to_utf32(const std::string& utf8);
 
+// Convert single UTF32 char to UTF8 string. Can't fail.
+std::string to_utf8(char32_t codepoint);
+
 }} // namespace xci::log
 
 #endif // XCI_UTIL_STRING_H

@@ -17,7 +17,7 @@
 using namespace xci::graphics;
 using namespace xci::text;
 
-const char *font_path = "fonts/Share_Tech_Mono/ShareTechMono-Regular.ttf";
+const char *font_path = "fonts/ShareTechMono/ShareTechMono-Regular.ttf";
 
 int main(int argc, char **argv)
 {

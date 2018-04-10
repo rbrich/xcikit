@@ -63,4 +63,12 @@ std::u32string to_utf32(const std::string& utf8)
     }
 }
 
+
+std::string to_utf8(char32_t codepoint)
+{
+    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert_utf32;
+    return convert_utf32.to_bytes(codepoint);
+}
+
+
 }} // namespace xci::log
