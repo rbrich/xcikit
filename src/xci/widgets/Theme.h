@@ -17,6 +17,7 @@
 #define XCI_WIDGETS_THEME_H
 
 #include <xci/text/Font.h>
+#include <array>
 
 namespace xci {
 namespace widgets {
@@ -41,12 +42,19 @@ public:
     static bool load_default_theme();
     static Theme& default_theme();
 
+    bool load_font(const char* file_path, int face_index);
+    Font& font() { return m_font; }
+
     bool load_icon_font(const char* file_path, int face_index);
     Font& icon_font() { return m_icon_font; }
     void set_icon_codepoint(IconId icon, CodePoint codepoint);
     CodePoint icon_codepoint(IconId icon_id);
 
 private:
+    // base font
+    FontFace m_font_face;
+    Font m_font;
+    // icons
     FontFace m_icon_font_face;
     Font m_icon_font;
     IconMap m_icon_map;

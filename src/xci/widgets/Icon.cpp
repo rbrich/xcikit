@@ -22,17 +22,20 @@ namespace widgets {
 using xci::util::to_utf8;
 
 
-Icon::Icon(Theme& theme) : m_theme(theme)
-{
-    m_layout.set_default_font(&theme.icon_font());
-}
+Icon::Icon(Theme& theme) : m_theme(theme) {}
 
 
 void Icon::set_icon(IconId icon_id)
 {
     m_icon_id = icon_id;
-    m_layout.clear();
-    m_layout.add_word(to_utf8(m_theme.icon_codepoint(icon_id)));
+    refresh();
+}
+
+
+void Icon::set_text(const std::string& text)
+{
+    m_text = text;
+    refresh();
 }
 
 
@@ -63,6 +66,17 @@ void Icon::draw(graphics::View& view, const util::Vec2f& pos)
 util::Rect_f Icon::bbox() const
 {
     return m_layout.bbox();
+}
+
+
+void Icon::refresh()
+{
+    m_layout.clear();
+    m_layout.set_font(&m_theme.icon_font());
+    m_layout.add_word(to_utf8(m_theme.icon_codepoint(m_icon_id)));
+    m_layout.set_font(&m_theme.font());
+    m_layout.add_space();
+    m_layout.add_word(m_text);
 }
 
 

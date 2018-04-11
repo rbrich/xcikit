@@ -26,6 +26,15 @@ Theme& Theme::default_theme()
 }
 
 
+bool Theme::load_font(const char* file_path, int face_index)
+{
+    if (!m_font_face.load_from_file(file_path, face_index))
+        return false;
+    m_font.add_face(m_font_face);
+    return true;
+}
+
+
 bool Theme::load_icon_font(const char* file_path, int face_index)
 {
     if (!m_icon_font_face.load_from_file(file_path, face_index))
@@ -54,6 +63,9 @@ CodePoint Theme::icon_codepoint(IconId icon_id)
 bool Theme::load_default_theme()
 {
     Theme& theme = Theme::default_theme();
+
+    // Base font
+    TRY(theme.load_font(XCI_SHARE_DIR "/fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0));
 
     // Material Icons
     TRY(theme.load_icon_font(XCI_SHARE_DIR "/fonts/MaterialIcons/MaterialIcons-Regular.woff", 0));

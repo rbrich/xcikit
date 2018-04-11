@@ -34,17 +34,12 @@ int main()
     Window window;
     window.create({800, 600}, "XCI widgets demo");
 
-    Theme::load_default_theme();
-
-    FontFace face;
-    if (!face.load_from_file("fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
+    if (!Theme::load_default_theme())
         return EXIT_FAILURE;
-    Font font;
-    font.add_face(face);
 
-    Button button_default("Default button", font);
+    Button button_default("Default button");
 
-    Button button_styled("Styled button", font);
+    Button button_styled("Styled button");
     button_styled.set_font_size(0.07);
     button_styled.set_padding(0.05);
     button_styled.set_decoration_color(Color(10, 20, 100), Color(20, 50, 150));
@@ -52,6 +47,7 @@ int main()
 
     Icon checkbox;
     checkbox.set_icon(IconId::CheckBoxChecked);
+    checkbox.set_text("checkbox");
     checkbox.set_size(0.08);
     checkbox.set_color(Color(200, 200, 200));
 

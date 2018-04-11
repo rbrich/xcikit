@@ -23,10 +23,10 @@ using namespace xci::graphics;
 using namespace xci::text;
 
 
-Button::Button(const std::string &string, Font& font)
-    : m_bg_rect(Color(10, 20, 40), Color(180, 180, 0))
+Button::Button(const std::string &string, Theme& theme)
+    : m_theme(theme), m_bg_rect(Color(10, 20, 40), Color(180, 180, 0))
 {
-    m_layout.set_default_font(&font);
+    m_layout.set_default_font(&m_theme.font());
     Markup markup(m_layout);
     markup.parse(string);
 }

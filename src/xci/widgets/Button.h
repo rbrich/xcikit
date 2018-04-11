@@ -16,6 +16,7 @@
 #ifndef XCI_WIDGETS_BUTTON_H
 #define XCI_WIDGETS_BUTTON_H
 
+#include "Theme.h"
 #include <xci/graphics/Shape.h>
 #include <xci/graphics/Color.h>
 #include <xci/text/Font.h>
@@ -27,7 +28,7 @@ namespace widgets {
 
 class Button {
 public:
-    Button(const std::string &string, text::Font& font);
+    explicit Button(const std::string &string, Theme& theme = Theme::default_theme());
 
     void set_font_size(float size) { m_layout.set_default_font_size(size); }
     void set_padding(float padding) { m_padding = padding; }
@@ -42,6 +43,7 @@ public:
     util::Rect_f bbox() const;
 
 private:
+    Theme& m_theme;
     graphics::Shape m_bg_rect;
     text::Layout m_layout;
     float m_padding = 0.02f;

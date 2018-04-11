@@ -29,6 +29,7 @@ public:
     explicit Icon(Theme& theme = Theme::default_theme());
 
     void set_icon(IconId icon_id);
+    void set_text(const std::string& text);
     void set_size(float size);
     void set_color(const graphics::Color& color);
 
@@ -38,7 +39,11 @@ public:
     util::Rect_f bbox() const;
 
 private:
+    void refresh();
+
+private:
     IconId m_icon_id = IconId::None;
+    std::string m_text;
     Layout m_layout;
     Theme& m_theme;
 };
