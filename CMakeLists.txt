@@ -51,14 +51,15 @@ set(XCI_GRAPHICS_SOURCES
     src/xci/graphics/Primitives.h
     src/xci/graphics/Renderer.cpp
     src/xci/graphics/Renderer.h
-    src/xci/graphics/Shape.h
     src/xci/graphics/Shape.cpp
-    src/xci/graphics/Sprites.h
+    src/xci/graphics/Shape.h
     src/xci/graphics/Sprites.cpp
+    src/xci/graphics/Sprites.h
+    src/xci/graphics/Texture.h
+    src/xci/graphics/View.cpp
     src/xci/graphics/View.h
-    src/xci/graphics/View.inl
-    src/xci/graphics/Window.h
-    src/xci/graphics/Window.inl)
+    src/xci/graphics/Window.cpp
+    src/xci/graphics/Window.h)
 
 set(XCI_GRAPHICS_OPENGL_SOURCES
     src/xci/graphics/opengl/GlPrimitives.cpp
@@ -69,8 +70,6 @@ set(XCI_GRAPHICS_OPENGL_SOURCES
     src/xci/graphics/opengl/GlShader.h
     src/xci/graphics/opengl/GlTexture.cpp
     src/xci/graphics/opengl/GlTexture.h
-    src/xci/graphics/opengl/GlView.cpp
-    src/xci/graphics/opengl/GlView.h
     src/xci/graphics/opengl/GlWindow.cpp
     src/xci/graphics/opengl/GlWindow.h src/xci/graphics/Shader.h)
 

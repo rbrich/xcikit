@@ -44,24 +44,14 @@ struct KeyEvent {
 
 class Window {
 public:
-    Window();
-    ~Window();
-    Window(Window&&) noexcept;
-    Window& operator=(Window&&) noexcept;
+    static Window& default_window();
+    virtual ~Window() = default;
 
-    void create(const Vec2u& size, const std::string& title);
-    void display(std::function<void(View& view)> draw_fn);
+    virtual void create(const Vec2u& size, const std::string& title) = 0;
+    virtual void display(std::function<void(View& view)> draw_cb) = 0;
 
-    void set_key_callback(std::function<void(View&, KeyEvent)> key_fn);
-
-    // ------------------------------------------------------------------------
-
-    class Impl;
-    const Impl& impl() const { return *m_impl; }
-    Impl* impl_ptr() { return m_impl.get(); }
-
-private:
-    std::unique_ptr<Impl> m_impl;
+    virtual void set_size_callback(std::function<void(View&)> size_cb) = 0;
+    virtual void set_key_callback(std::function<void(View&, KeyEvent)> key_cb) = 0;
 };
 
 

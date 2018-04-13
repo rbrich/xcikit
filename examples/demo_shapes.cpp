@@ -24,7 +24,7 @@ int main()
 {
     xci::util::chdir_to_share();
 
-    Window window;
+    Window& window = Window::default_window();
     window.create({800, 600}, "XCI rectangles demo");
 
     Shape line(Color(0, 0, 40, 128), Color(180, 180, 0));

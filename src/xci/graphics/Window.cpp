@@ -1,4 +1,4 @@
-// Renderer.cpp created on 2018-04-08, part of XCI toolkit
+// Window.cpp created on 2018-04-13, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,24 +13,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "Renderer.h"
+#include "Window.h"
 
 #ifdef XCI_WITH_OPENGL
-#include <xci/graphics/opengl/GlRenderer.h>
+#include <xci/graphics/opengl/GlWindow.h>
 #endif
 
 namespace xci {
 namespace graphics {
 
 
-Renderer& Renderer::default_renderer()
+Window& Window::default_window()
 {
 #ifdef XCI_WITH_OPENGL
-    static GlRenderer renderer;
+    static GlWindow window;
 #else
-    #error "No renderer available"
+    #error "No window implementation available"
 #endif
-    return renderer;
+    return window;
 }
 
 

@@ -27,15 +27,16 @@ namespace xci {
 namespace graphics {
 
 
-class GlWindow {
+class GlWindow: public Window {
 public:
     GlWindow();
-    ~GlWindow();
+    ~GlWindow() override;
 
-    void create(const Vec2u& size, const std::string& title);
-    void display(std::function<void(View& view)> draw_fn);
+    void create(const Vec2u& size, const std::string& title) override;
+    void display(std::function<void(View& view)> draw_cb) override;
 
-    void set_key_callback(std::function<void(View&, KeyEvent)> key_fn);
+    void set_size_callback(std::function<void(View&)> size_cb) override;
+    void set_key_callback(std::function<void(View&, KeyEvent)> key_cb) override;
 
     // access native handles
     GLFWwindow* glfw_window() { return m_window; }
@@ -46,11 +47,9 @@ private:
 
     GLFWwindow* m_window;
     std::unique_ptr<View> m_view;
-    std::function<void(View&, KeyEvent)> m_key_fn;
+    std::function<void(View&)> m_size_cb;
+    std::function<void(View&, KeyEvent)> m_key_cb;
 };
-
-
-class Window::Impl : public GlWindow {};
 
 
 }} // namespace xci::graphics

@@ -26,12 +26,12 @@ namespace graphics {
 
 class GlTexture : public Texture {
 public:
-    bool create(unsigned int width, unsigned int height) override;
+    bool create(const Vec2u& size) override;
     void update(const uint8_t* pixels, const Rect_u& region) override;
 
     Vec2u size() const override;
 
-    GLuint native_handle() const { return m_texture; }
+    GLuint gl_texture() const { return m_texture; }
 
 private:
     GLuint m_texture = 0;

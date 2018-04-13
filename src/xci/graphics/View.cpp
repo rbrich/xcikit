@@ -1,4 +1,4 @@
-// GlView.cpp created on 2018-03-14, part of XCI toolkit
+// View.cpp created on 2018-03-14, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,19 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "GlView.h"
-#include <xci/util/log.h>
-
-#include <glad/glad.h>
-
-// inline
-#include <xci/graphics/View.inl>
+#include "View.h"
 
 namespace xci {
 namespace graphics {
 
 
-void GlView::set_screen_size(Vec2u size)
+void View::set_screen_size(Vec2u size)
 {
     // Decide between vert+/hor+ depending on screen orientation.
     if (size.x < size.y) {
@@ -45,9 +39,19 @@ void GlView::set_screen_size(Vec2u size)
 }
 
 
-void GlView::set_framebuffer_size(Vec2u size)
+void View::set_framebuffer_size(Vec2u size)
 {
     m_framebuffer_size = size;
+}
+
+
+void View::set_debug_flag(View::Debug flag, bool enabled) {
+    if (has_debug_flag(flag) != enabled)
+        m_debug ^= (DebugFlags) flag;
+}
+
+bool View::has_debug_flag(View::Debug flag) const {
+    return bool(m_debug & (DebugFlags)flag);
 }
 
 

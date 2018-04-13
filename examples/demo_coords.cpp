@@ -32,7 +32,7 @@ int main()
 {
     chdir_to_share();
 
-    Window window;
+    Window& window = Window::default_window();
     window.create({800, 600}, "XCI coords demo");
 
     FontFace face;
@@ -55,55 +55,43 @@ int main()
     Text size_font("Font size:         ", font);
     size_font.set_color(Color(70, 150, 255));
 
+    window.set_size_callback([&](View& view) {
+        Vec2f vs = view.scalable_size();
+        coords_tl.set_fixed_string(format("({}, {})", -0.5f * vs.x, -0.5f * vs.y));
+        coords_br.set_fixed_string(format("({}, {})", +0.5f * vs.x, +0.5f * vs.y));
+        coords_tr.set_fixed_string(format("({}, {})", +0.5f * vs.x, -0.5f * vs.y));
+        coords_bl.set_fixed_string(format("({}, {})", -0.5f * vs.x, +0.5f * vs.y));
+
+        size_scal.set_fixed_string("Scalable size:     " +
+                                   format("{} x {}", vs.x, vs.y) +
+                                   "  (1.0 x 1.0)");
+
+        auto ps = view.screen_size();
+        auto pr = view.screen_ratio();
+        size_screen.set_fixed_string("Screen size:       " +
+                                     format("{} x {}", ps.x, ps.y) +
+                                     "  (" + format("{} x {}", 1/pr.x, 1/pr.y) + ")");
+
+        auto fs = view.framebuffer_size();
+        auto fr = view.framebuffer_ratio();
+        size_frame.set_fixed_string("Framebuffer size:  " +
+                                    format("{} x {}", fs.x, fs.y) +
+                                    "  (" + format("{} x {}", 1/fr.x, 1/fr.y) + ")");
+
+        size_font.set_fixed_string("Font size:         " +
+                                   format("{}", font.size()));
+    });
+
     window.display([&](View& view) {
         coords_center.draw(view, {0.0f, 0.0f});
-        {
-            Vec2f xy = {-0.5f * view.scalable_size().x,
-                        -0.5f * view.scalable_size().y};
-            coords_tl.set_fixed_string(format("({}, {})", xy.x, xy.y));
-            coords_tl.draw(view, {xy.x + 0.1f, xy.y + 0.1f});
-        }
-        {
-            Vec2f xy = {+0.5f * view.scalable_size().x,
-                        +0.5f * view.scalable_size().y};
-            coords_br.set_fixed_string(format("({}, {})", xy.x, xy.y));
-            coords_br.draw(view, {xy.x - 0.4f, xy.y - 0.1f});
-        }
-        {
-            Vec2f xy = {+0.5f * view.scalable_size().x,
-                        -0.5f * view.scalable_size().y};
-            coords_tr.set_fixed_string(format("({}, {})", xy.x, xy.y));
-            coords_tr.draw(view, {xy.x - 0.4f, xy.y + 0.1f});
-        }
-        {
-            Vec2f xy = {-0.5f * view.scalable_size().x,
-                        +0.5f * view.scalable_size().y};
-            coords_bl.set_fixed_string(format("({}, {})", xy.x, xy.y));
-            coords_bl.draw(view, {xy.x + 0.1f, xy.y - 0.1f});
-        }
-
-        auto scal = view.scalable_size();
-        size_scal.set_fixed_string("Scalable size:     " +
-                                   format("{} x {}", scal.x, scal.y) +
-                                   "  (1.0 x 1.0)");
+        Vec2f vs = view.scalable_size();
+        coords_tl.draw(view, {-0.5f * vs.x + 0.1f, -0.5f * vs.y + 0.1f});
+        coords_br.draw(view, {+0.5f * vs.x - 0.4f, +0.5f * vs.y - 0.1f});
+        coords_tr.draw(view, {+0.5f * vs.x - 0.4f, -0.5f * vs.y + 0.1f});
+        coords_bl.draw(view, {-0.5f * vs.x + 0.1f, +0.5f * vs.y - 0.1f});
         size_scal.draw(view, {-0.4f, -0.5f});
-
-        auto scr = view.screen_size();
-        auto pxr = view.screen_ratio();
-        size_screen.set_fixed_string("Screen size:       " +
-                                     format("{} x {}", scr.x, scr.y) +
-                                     "  (" + format("{} x {}", 1/pxr.x, 1/pxr.y) + ")");
         size_screen.draw(view, {-0.4f, -0.4f});
-
-        auto fb = view.framebuffer_size();
-        auto pxf = view.framebuffer_ratio();
-        size_frame.set_fixed_string("Framebuffer size:  " +
-                                    format("{} x {}", fb.x, fb.y) +
-                                    "  (" + format("{} x {}", 1/pxf.x, 1/pxf.y) + ")");
         size_frame.draw(view, {-0.4f, -0.3f});
-
-        size_font.set_fixed_string("Font size:         "
-                                   + format("{}", font.size()));
         size_font.draw(view, {-0.4f, -0.2f});
     });
     return EXIT_SUCCESS;

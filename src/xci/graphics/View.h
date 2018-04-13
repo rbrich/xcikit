@@ -1,4 +1,17 @@
 // View.h created on 2018-03-04, part of XCI toolkit
+// Copyright 2018 Radek Brich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef XCI_GRAPHICS_VIEW_H
 #define XCI_GRAPHICS_VIEW_H
@@ -16,22 +29,19 @@ using xci::util::Vec2f;
 
 class View {
 public:
-    View();
-    ~View();
-    View(View&&) noexcept;
-    View& operator=(View&&) noexcept;
+    virtual ~View() = default;
 
     // Size of the view in screen pixels. This size might be different
     // from framebuffer size - in that case, call also `set_framebuffer_size`.
     void set_screen_size(Vec2u size);
-    Vec2u screen_size() const;
+    Vec2u screen_size() const { return m_screen_size; }
 
     // Size of the view in framebuffer pixels.
     // This is used for pixel-perfect font rendering.
     // By default (or when set to {0, 0}, the framebuffer size will be set
     // to same value as view size in screen pixels.
     void set_framebuffer_size(Vec2u size);
-    Vec2u framebuffer_size() const;
+    Vec2u framebuffer_size() const { return m_framebuffer_size; }
 
     // Size of the view in scalable units. These units are used
     // for placing objects in the view. The view size is at least 2 units
@@ -39,7 +49,7 @@ public:
     // X goes right, Y goes down. Total size in one of the dimensions
     // will always equal 2.0.
     // Eg: {2.666, 2.0} for 800x600 (4/3 aspect ratio)
-    Vec2f scalable_size() const;
+    Vec2f scalable_size() const { return m_scalable_size; }
 
     // Ratio of scalable units to screen pixels, ie.
     // size of 1x1 screen pixel in scalable units.
@@ -73,11 +83,10 @@ public:
     void set_debug_flags(DebugFlags flags) { m_debug = flags; }
     bool has_debug_flag(Debug flag) const;
 
-    class Impl;
-    Impl& impl() { return *m_impl; }
-
 private:
-    std::unique_ptr<Impl> m_impl;
+    Vec2f m_scalable_size;      // eg. {2.666, 2.0}
+    Vec2u m_screen_size;        // eg. {800, 600}
+    Vec2u m_framebuffer_size;   // eg. {1600, 1200}
     DebugFlags m_debug = 0;
 };
 

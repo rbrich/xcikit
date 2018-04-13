@@ -35,7 +35,7 @@ using std::uint8_t;
 class Renderer {
 public:
     static Renderer& default_renderer();
-    virtual ~Renderer();
+    virtual ~Renderer() = default;
 
     virtual TexturePtr new_texture() = 0;
 

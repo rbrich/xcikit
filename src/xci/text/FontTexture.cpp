@@ -27,7 +27,7 @@ FontTexture::FontTexture(unsigned int size, Renderer& renderer)
     : m_renderer(renderer),
       m_texture(m_renderer.new_texture())
 {
-    if (!m_texture->create(size, size))
+    if (!m_texture->create({size, size}))
         throw std::runtime_error("Could not create font texture.");
     //m_texture.setSmooth(true);
     m_binpack.Init(size, size, /*allowFlip=*/false);

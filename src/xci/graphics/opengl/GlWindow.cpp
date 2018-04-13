@@ -17,9 +17,6 @@
 #include <xci/util/log.h>
 #include <xci/util/compat.h>
 
-// inline
-#include <xci/graphics/Window.inl>
-
 
 namespace xci {
 namespace graphics {
@@ -137,22 +134,28 @@ void GlWindow::create(const Vec2u& size, const std::string& title)
 }
 
 
-void GlWindow::display(std::function<void(View& view)> draw_fn)
+void GlWindow::display(std::function<void(View& view)> draw_cb)
 {
     setup_view();
 
     while (!glfwWindowShouldClose(m_window)) {
         glClear(GL_COLOR_BUFFER_BIT);
-        draw_fn(*m_view);
+        draw_cb(*m_view);
         glfwSwapBuffers(m_window);
         glfwWaitEvents();
     }
 }
 
 
-void GlWindow::set_key_callback(std::function<void(View&, KeyEvent)> key_fn)
+void GlWindow::set_size_callback(std::function<void(View&)> size_cb)
 {
-    m_key_fn = std::move(key_fn);
+    m_size_cb = std::move(size_cb);
+}
+
+
+void GlWindow::set_key_callback(std::function<void(View&, KeyEvent)> key_cb)
+{
+    m_key_cb = std::move(key_cb);
 }
 
 
@@ -170,11 +173,17 @@ void GlWindow::setup_view()
         auto self = (GlWindow*) glfwGetWindowUserPointer(win);
         self->m_view->set_framebuffer_size({(uint) w, (uint) h});
         glViewport(0, 0, w, h);
+        if (self->m_size_cb)
+            self->m_size_cb(*self->m_view);
     });
     glfwSetWindowSizeCallback(m_window, [](GLFWwindow* win, int w, int h) {
         auto self = (GlWindow*) glfwGetWindowUserPointer(win);
         self->m_view->set_screen_size({(uint) w, (uint) h});
+        if (self->m_size_cb)
+            self->m_size_cb(*self->m_view);
     });
+    if (m_size_cb)
+        m_size_cb(*m_view);
 }
 
 
@@ -184,8 +193,8 @@ void GlWindow::key_callback(GLFWwindow* window, int key, int scancode, int actio
         glfwSetWindowShouldClose(window, GLFW_TRUE);
 
     auto self = (GlWindow*) glfwGetWindowUserPointer(window);
-    if (action == GLFW_PRESS && self->m_key_fn && self->m_view) {
-        self->m_key_fn(*self->m_view, KeyEvent{Key(key)});
+    if (action == GLFW_PRESS && self->m_key_cb && self->m_view) {
+        self->m_key_cb(*self->m_view, KeyEvent{Key(key)});
     }
 }
 

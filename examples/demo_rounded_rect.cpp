@@ -24,7 +24,7 @@ int main()
 {
     xci::util::chdir_to_share();
 
-    Window window;
+    Window& window = Window::default_window();
     window.create({800, 600}, "XCI rounded rectangle demo");
 
     Shape rrect(Color(0, 20, 100, 128), Color(180, 180, 0));

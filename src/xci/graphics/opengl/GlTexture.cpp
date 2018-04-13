@@ -21,14 +21,14 @@ namespace xci {
 namespace graphics {
 
 
-bool GlTexture::create(unsigned int width, unsigned int height)
+bool GlTexture::create(const Vec2u& size)
 {
-    m_size = {width, height};
+    m_size = size;
     glGenTextures(1, &m_texture);
     glBindTexture(GL_TEXTURE_2D, m_texture);
 
-    std::vector<uint8_t> buffer(width * height, 0);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, width, height, 0,
+    std::vector<uint8_t> buffer(m_size.x * m_size.y, 0);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, m_size.x, m_size.y, 0,
                  GL_RED, GL_UNSIGNED_BYTE, buffer.data());
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);

@@ -118,7 +118,7 @@ void GlPrimitives::set_texture(const char* name, TexturePtr& texture)
     GLint location = glGetUniformLocation(m_program, name);
     glUniform1i(location, 0); // GL_TEXTURE0
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, static_cast<GlTexture*>(texture.get())->native_handle());
+    glBindTexture(GL_TEXTURE_2D, static_cast<GlTexture*>(texture.get())->gl_texture());
 }
 
 
