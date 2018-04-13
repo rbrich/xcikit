@@ -40,6 +40,8 @@ set(XCI_UTIL_SOURCES
     src/xci/util/FileWatch.h
     src/xci/util/format.cpp
     src/xci/util/format.h
+    src/xci/util/FpsCounter.cpp
+    src/xci/util/FpsCounter.h
     src/xci/util/geometry.h
     src/xci/util/log.cpp
     src/xci/util/log.h
