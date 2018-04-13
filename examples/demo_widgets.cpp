@@ -47,18 +47,22 @@ int main()
 
     Icon checkbox;
     checkbox.set_icon(IconId::CheckBoxChecked);
-    checkbox.set_text("checkbox");
+    checkbox.set_text("Checkbox");
     checkbox.set_size(0.08);
     checkbox.set_color(Color(200, 200, 200));
 
-    window.display([&](View& view) {
+    window.set_size_callback([&](View& view) {
+        //view.set_debug_flag(View::Debug::WordBasePoint);
+        //view.set_debug_flag(View::Debug::WordBBox);
         button_default.resize(view);
-        button_default.draw(view, {0, -0.2f});
         button_styled.set_outline_thickness(1 * view.screen_ratio().y);
         button_styled.resize(view);
-        button_styled.draw(view, {0, 0});
-
         checkbox.resize(view);
+    });
+
+    window.display([&](View& view) {
+        button_default.draw(view, {0, -0.2f});
+        button_styled.draw(view, {0, 0});
         checkbox.draw(view, {0, 0.4f});
     });
     return EXIT_SUCCESS;

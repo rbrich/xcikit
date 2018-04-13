@@ -66,6 +66,11 @@ public:
     void add_tab_stop(float x);
     void reset_tab_stops();
 
+    // Horizontal/vertical offset (in multiplies of font size)
+    // This can be used to create subscript/superscript.
+    void set_offset(const util::Vec2f offset);
+    void reset_offset() { set_offset({0.f, 0.f}); }
+
     // Set font and text style.
     // Also affects spacing (which depends on font metrics).
     void set_font(Font* font);

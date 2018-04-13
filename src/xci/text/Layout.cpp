@@ -138,6 +138,12 @@ void Layout::reset_tab_stops()
 }
 
 
+void Layout::set_offset(const util::Vec2f offset)
+{
+    m_elements.push_back(std::make_unique<SetOffset>(offset));
+}
+
+
 void Layout::set_font(Font* font)
 {
     m_elements.push_back(std::make_unique<SetFont>(font));

@@ -73,8 +73,10 @@ void Icon::refresh()
 {
     m_layout.clear();
     m_layout.set_font(&m_theme.icon_font());
+    m_layout.set_offset({0, 0.125f});
     m_layout.add_word(to_utf8(m_theme.icon_codepoint(m_icon_id)));
     m_layout.set_font(&m_theme.font());
+    m_layout.reset_offset();
     m_layout.add_space();
     m_layout.add_word(m_text);
 }

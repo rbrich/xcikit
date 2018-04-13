@@ -140,7 +140,8 @@ public:
 
     // Pen is a position in page where elements are printed
     void set_pen(util::Vec2f pen) { m_pen = pen; }
-    const util::Vec2f& pen() const { return m_pen; }
+    void set_pen_offset(util::Vec2f pen_offset) { m_pen_offset = pen_offset; }
+    util::Vec2f pen() const { return m_pen + m_pen_offset * m_style.size(); }
 
     // Advance pen. The relative coords should be positive, don't move back.
     void advance_pen(util::Vec2f advance) { m_pen += advance; }
@@ -188,6 +189,7 @@ private:
 
     // running state
     util::Vec2f m_pen;  // pen position
+    util::Vec2f m_pen_offset;
     Style m_style;  // text style
 
     // page attributes

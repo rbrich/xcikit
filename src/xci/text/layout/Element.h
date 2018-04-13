@@ -79,6 +79,18 @@ public:
 };
 
 
+class SetOffset: public Element {
+public:
+    explicit SetOffset(const util::Vec2f offset) : m_offset(offset) {}
+    void apply(Page& page) override {
+        page.set_pen_offset(m_offset);
+    }
+
+private:
+    const util::Vec2f m_offset;
+};
+
+
 class SetFont: public Element {
 public:
     explicit SetFont(Font* font) : m_font(font) {}

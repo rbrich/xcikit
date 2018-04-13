@@ -66,6 +66,11 @@ Vec2<T> operator +(const Vec2<T>& lhs, float rhs) {
 }
 
 template <typename T>
+Vec2<T> operator *(const Vec2<T>& lhs, float rhs) {
+    return Vec2<T>(lhs.x * rhs, lhs.y * rhs);
+}
+
+template <typename T>
 Vec2<T> operator -(const Vec2<T>& lhs, const Vec2<T>& rhs) {
     return Vec2<T>(lhs.x - rhs.x, lhs.y - rhs.y);
 }
