@@ -45,6 +45,14 @@ void View::set_framebuffer_size(Vec2u size)
 }
 
 
+bool View::pop_refresh()
+{
+    bool res = m_needs_refresh;
+    m_needs_refresh = false;
+    return res;
+}
+
+
 void View::set_debug_flag(View::Debug flag, bool enabled) {
     if (has_debug_flag(flag) != enabled)
         m_debug ^= (DebugFlags) flag;

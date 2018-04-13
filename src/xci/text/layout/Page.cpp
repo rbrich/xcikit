@@ -196,9 +196,10 @@ util::Vec2f Page::target_framebuffer_ratio() const
 
 void Page::clear()
 {
-    m_pen = {0, 0};
+    m_pen = {0.f, 0.f};
+    m_pen_offset = {0.f, 0.f};
     m_style.clear();
-    m_width = 0;
+    m_width = 0.f;
     m_alignment = Alignment::Left;
     m_tab_stops.clear();
     m_lines.clear();

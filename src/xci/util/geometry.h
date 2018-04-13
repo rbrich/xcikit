@@ -5,6 +5,7 @@
 
 #include <cmath>
 #include <algorithm>
+#include <ostream>
 
 namespace xci {
 namespace util {
@@ -61,6 +62,16 @@ Vec2<T> operator +(const Vec2<T>& lhs, const Vec2<T>& rhs) {
 }
 
 template <typename T>
+Vec2<T> operator -(const Vec2<T>& lhs, const Vec2<T>& rhs) {
+    return Vec2<T>(lhs.x - rhs.x, lhs.y - rhs.y);
+}
+
+template <typename T>
+Vec2<T> operator *(const Vec2<T>& lhs, const Vec2<T>& rhs) {
+    return Vec2<T>(lhs.x * rhs.x, lhs.y * rhs.y);
+}
+
+template <typename T>
 Vec2<T> operator +(const Vec2<T>& lhs, float rhs) {
     return Vec2<T>(lhs.x + rhs, lhs.y + rhs);
 }
@@ -71,8 +82,8 @@ Vec2<T> operator *(const Vec2<T>& lhs, float rhs) {
 }
 
 template <typename T>
-Vec2<T> operator -(const Vec2<T>& lhs, const Vec2<T>& rhs) {
-    return Vec2<T>(lhs.x - rhs.x, lhs.y - rhs.y);
+Vec2<T> operator *(float lhs, const Vec2<T>& rhs) {
+    return Vec2<T>(lhs * rhs.x, lhs * rhs.y);
 }
 
 template <typename T>
@@ -89,6 +100,11 @@ Vec2<T>& operator -=(Vec2<T>& lhs, const Vec2<T>& rhs) {
     return lhs;
 }
 
+template <typename T>
+std::ostream& operator <<(std::ostream& s, Vec2<T> v) {
+    return s << "{" << v.x << ", " << v.y << "}";
+}
+
 using Vec2i = Vec2<int>;
 using Vec2u = Vec2<unsigned int>;
 using Vec2f = Vec2<float>;
@@ -100,7 +116,10 @@ struct Rect {
     Rect(T x, T y, T w, T h) : x(x), y(y), w(w), h(h) {}
     Rect(const Vec2<T>& pos, const Vec2<T>& size) : x(pos.x), y(pos.y), w(size.x), h(size.y) {}
 
-    //bool contains(const Vec2<T>& point) const;
+    bool contains(const Vec2<T>& point) const {
+        return point.x >= x && point.x <= x + w &&
+               point.y >= y && point.y <= y + h;
+    }
     //bool intersects(const Rect<T>& rectangle) const;
 
     Rect<T> union_(const Rect<T>& other) const {
@@ -137,6 +156,12 @@ public:
     T w;  // width
     T h;  // height
 };
+
+template <typename T>
+std::ostream& operator <<(std::ostream& s, Rect<T> r) {
+    return s << "{" << r.x << ", " << r.y << ", "
+                    << r.w << ", " << r.h << "}";
+}
 
 using Rect_i = Rect<int>;
 using Rect_u = Rect<unsigned int>;

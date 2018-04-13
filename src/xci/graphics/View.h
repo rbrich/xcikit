@@ -67,6 +67,16 @@ public:
         return {s.x / fb.x, s.y / fb.y};
     }
 
+    Vec2f screen_to_scalable(const Vec2f& screen_coords) const {
+        return screen_coords * screen_ratio() - 0.5f * scalable_size();
+    }
+
+    // ------------------------------------------------------------------------
+    // Refresh
+
+    void refresh() { m_needs_refresh = true; }
+    bool pop_refresh();
+
     // ------------------------------------------------------------------------
     // Visual debugging
 
@@ -88,6 +98,7 @@ private:
     Vec2u m_screen_size;        // eg. {800, 600}
     Vec2u m_framebuffer_size;   // eg. {1600, 1200}
     DebugFlags m_debug = 0;
+    bool m_needs_refresh = false;
 };
 
 

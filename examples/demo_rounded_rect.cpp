@@ -31,8 +31,10 @@ int main()
     rrect.set_antialiasing(2);
     rrect.add_rounded_rectangle({-1, -0.6f, 2, 1.2f}, 0.05, 0.01);
 
-    window.display([&](View& view) {
+    window.set_draw_callback([&](View& view) {
         rrect.draw(view, {0, 0});
     });
+
+    window.display();
     return EXIT_SUCCESS;
 }

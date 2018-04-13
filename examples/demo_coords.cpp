@@ -82,7 +82,7 @@ int main()
                                    format("{}", font.size()));
     });
 
-    window.display([&](View& view) {
+    window.set_draw_callback([&](View& view) {
         coords_center.draw(view, {0.0f, 0.0f});
         Vec2f vs = view.scalable_size();
         coords_tl.draw(view, {-0.5f * vs.x + 0.1f, -0.5f * vs.y + 0.1f});
@@ -94,5 +94,7 @@ int main()
         size_frame.draw(view, {-0.4f, -0.3f});
         size_font.draw(view, {-0.4f, -0.2f});
     });
+
+    window.display();
     return EXIT_SUCCESS;
 }

@@ -42,16 +42,40 @@ struct KeyEvent {
 };
 
 
+enum class MouseButton { Left = 0, Right = 1, Middle = 2 };
+enum class Action { Release = 0, Press = 1 };
+
+struct MouseEvent {
+    MouseButton button;
+    Action action;
+    Vec2f pos;  // scalable coordinates
+};
+
+
+enum class RefreshMode {
+    OnDemand,  // refresh event from system or through View::refresh()
+    OnEvent,   // got any event from system
+    PeriodicVsync,
+    PeriodicNoWait,
+};
+
+
 class Window {
 public:
     static Window& default_window();
     virtual ~Window() = default;
 
     virtual void create(const Vec2u& size, const std::string& title) = 0;
-    virtual void display(std::function<void(View& view)> draw_cb) = 0;
+    virtual void display() = 0;
+
+    using MouseCallback = std::function<void(View&, const MouseEvent&)>;
 
     virtual void set_size_callback(std::function<void(View&)> size_cb) = 0;
+    virtual void set_draw_callback(std::function<void(View & )> draw_cb) = 0;
     virtual void set_key_callback(std::function<void(View&, KeyEvent)> key_cb) = 0;
+    virtual void set_mouse_button_callback(MouseCallback mouse_cb) = 0;
+
+    virtual void set_refresh_mode(RefreshMode mode) = 0;
 };
 
 

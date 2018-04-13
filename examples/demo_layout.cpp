@@ -97,9 +97,10 @@ int main()
             default:
                 break;
         }
+        view.refresh();
     });
 
-    window.display([&](View& view){
+    window.set_draw_callback([&](View& view) {
         help_text.draw(view, {-0.17f, -0.9f});
         text.draw(view, {-0.17f, -0.3f});
 
@@ -112,5 +113,7 @@ int main()
         font_texture.draw(view, {-0.5f * view.scalable_size().x + 0.01f,
                                  -0.5f * rect.h});
     });
+
+    window.display();
     return EXIT_SUCCESS;
 }

@@ -103,7 +103,6 @@ void GlWindow::create(const Vec2u& size, const std::string& title)
         exit(1);
     }
     glfwMakeContextCurrent(m_window);
-    glfwSetKeyCallback(m_window, key_callback);
     glfwSetWindowUserPointer(m_window, this);
 
     // GLAD debugging is an alternative to GL_DEBUG_OUTPUT (bellow).
@@ -134,15 +133,27 @@ void GlWindow::create(const Vec2u& size, const std::string& title)
 }
 
 
-void GlWindow::display(std::function<void(View& view)> draw_cb)
+void GlWindow::display()
 {
     setup_view();
 
     while (!glfwWindowShouldClose(m_window)) {
-        glClear(GL_COLOR_BUFFER_BIT);
-        draw_cb(*m_view);
-        glfwSwapBuffers(m_window);
-        glfwWaitEvents();
+        switch (m_mode) {
+            case RefreshMode::OnDemand:
+                if (m_view->pop_refresh())
+                    draw();
+                glfwWaitEvents();
+                break;
+            case RefreshMode::OnEvent:
+                draw();
+                glfwWaitEvents();
+                break;
+            case RefreshMode::PeriodicVsync:
+            case RefreshMode::PeriodicNoWait:
+                draw();
+                glfwPollEvents();
+                break;
+        }
     }
 }
 
@@ -153,9 +164,51 @@ void GlWindow::set_size_callback(std::function<void(View&)> size_cb)
 }
 
 
+void GlWindow::set_draw_callback(std::function<void(View&)> draw_cb)
+{
+    m_draw_cb = std::move(draw_cb);
+    glfwSetWindowRefreshCallback(m_window, [](GLFWwindow* window) {
+        auto self = (GlWindow*) glfwGetWindowUserPointer(window);
+        self->draw();
+    });
+}
+
+
 void GlWindow::set_key_callback(std::function<void(View&, KeyEvent)> key_cb)
 {
     m_key_cb = std::move(key_cb);
+}
+
+
+void GlWindow::set_mouse_button_callback(MouseCallback mouse_cb)
+{
+    m_mouse_cb = std::move(mouse_cb);
+    glfwSetMouseButtonCallback(m_window, [](GLFWwindow* window, int button, int action, int mods) {
+        auto self = (GlWindow*) glfwGetWindowUserPointer(window);
+        if (self->m_mouse_cb) {
+            double xpos, ypos;
+            glfwGetCursorPos(window, &xpos, &ypos);
+            auto pos = self->m_view->screen_to_scalable({(float)xpos, (float)ypos});
+            self->m_mouse_cb(*self->m_view,
+                             {(MouseButton) button, (Action) action, pos});
+        }
+    });
+}
+
+
+void GlWindow::set_refresh_mode(RefreshMode mode)
+{
+    switch (mode) {
+        case RefreshMode::PeriodicVsync:
+            glfwSwapInterval(1);
+            break;
+        case RefreshMode::PeriodicNoWait:
+            glfwSwapInterval(0);
+            break;
+        default:
+            break;
+    }
+    m_mode = mode;
 }
 
 
@@ -168,6 +221,8 @@ void GlWindow::setup_view()
     m_view->set_framebuffer_size({(unsigned int) width, (unsigned int) height});
     glfwGetWindowSize(m_window, &width, &height);
     m_view->set_screen_size({(unsigned int) width, (unsigned int) height});
+    if (m_size_cb)
+        m_size_cb(*m_view);
 
     glfwSetFramebufferSizeCallback(m_window, [](GLFWwindow* win, int w, int h) {
         auto self = (GlWindow*) glfwGetWindowUserPointer(win);
@@ -176,26 +231,34 @@ void GlWindow::setup_view()
         if (self->m_size_cb)
             self->m_size_cb(*self->m_view);
     });
+
     glfwSetWindowSizeCallback(m_window, [](GLFWwindow* win, int w, int h) {
         auto self = (GlWindow*) glfwGetWindowUserPointer(win);
         self->m_view->set_screen_size({(uint) w, (uint) h});
         if (self->m_size_cb)
             self->m_size_cb(*self->m_view);
     });
-    if (m_size_cb)
-        m_size_cb(*m_view);
+
+    glfwSetKeyCallback(m_window, [](GLFWwindow* window, int key, int scancode,
+                                    int action, int mods)
+    {
+        if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+            glfwSetWindowShouldClose(window, GLFW_TRUE);
+
+        auto self = (GlWindow*) glfwGetWindowUserPointer(window);
+        if (action == GLFW_PRESS && self->m_key_cb && self->m_view) {
+            self->m_key_cb(*self->m_view, KeyEvent{Key(key)});
+        }
+    });
 }
 
 
-void GlWindow::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+void GlWindow::draw()
 {
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-        glfwSetWindowShouldClose(window, GLFW_TRUE);
-
-    auto self = (GlWindow*) glfwGetWindowUserPointer(window);
-    if (action == GLFW_PRESS && self->m_key_cb && self->m_view) {
-        self->m_key_cb(*self->m_view, KeyEvent{Key(key)});
-    }
+    glClear(GL_COLOR_BUFFER_BIT);
+    if (m_draw_cb)
+        m_draw_cb(*m_view);
+    glfwSwapBuffers(m_window);
 }
 
 

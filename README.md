@@ -31,6 +31,15 @@ The library should integrate well with:
 - Panda3D, OpenSceneGraph
 
 
+Research 
+--------
+
+GUI Toolkits for OpenGL:
+- [CEGUI](http://cegui.org.uk/)
+- [Dear ImGui](https://github.com/ocornut/imgui) - focuses on debug UIs
+- [Nuklear](https://github.com/vurtun/nuklear) - C
+
+
 Plan
 ----
 

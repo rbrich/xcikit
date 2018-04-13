@@ -35,7 +35,7 @@ int main()
     // using View::screen_ratio, we can set constant border width, in screen pixels
     Shape rts_px(Color(40, 40, 0, 128), Color(255, 255, 0));
 
-    window.display([&](View& view) {
+    window.set_draw_callback([&](View& view) {
         rts.draw(view, {0, 0});
 
         auto pxr = view.screen_ratio().x;
@@ -47,5 +47,7 @@ int main()
         rts_px.draw(view, {-0.45f, -0.45f});
         rts_px.clear();
     });
+
+    window.display();
     return EXIT_SUCCESS;
 }

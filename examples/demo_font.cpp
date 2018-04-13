@@ -58,7 +58,7 @@ int main()
     text.set_size(0.08);
     text.set_color(Color::White());
 
-    window.display([&](View& view){
+    window.set_draw_callback([&](View& view) {
         text.draw(view, {0.5f * view.scalable_size().x - 2.0f, -0.5f});
 
         auto& tex = font.get_texture();
@@ -69,5 +69,7 @@ int main()
         font_texture.add_sprite(rect);
         font_texture.draw(view, {-0.5f * view.scalable_size().x + 0.01f, -0.5f * rect.h});
     });
+
+    window.display();
     return EXIT_SUCCESS;
 }

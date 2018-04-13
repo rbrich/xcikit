@@ -20,12 +20,14 @@
 #include <xci/graphics/Window.h>
 #include <xci/util/file.h>
 #include <xci/util/format.h>
+#include <xci/util/log.h>
 #include <cstdlib>
 
 using namespace xci::widgets;
 using namespace xci::text;
 using namespace xci::graphics;
 using namespace xci::util;
+using namespace xci::util::log;
 
 int main()
 {
@@ -50,20 +52,38 @@ int main()
     checkbox.set_text("Checkbox");
     checkbox.set_size(0.08);
     checkbox.set_color(Color(200, 200, 200));
+    bool checkbox_state = true;
 
     window.set_size_callback([&](View& view) {
         //view.set_debug_flag(View::Debug::WordBasePoint);
-        //view.set_debug_flag(View::Debug::WordBBox);
+        //view.set_debug_flag(View::Debug::PageBBox);
         button_default.resize(view);
         button_styled.set_outline_thickness(1 * view.screen_ratio().y);
         button_styled.resize(view);
         checkbox.resize(view);
     });
 
-    window.display([&](View& view) {
+    window.set_draw_callback([&](View& view) {
         button_default.draw(view, {0, -0.2f});
         button_styled.draw(view, {0, 0});
         checkbox.draw(view, {0, 0.4f});
     });
+
+    window.set_mouse_button_callback([&](View& view, const MouseEvent& ev) {
+        if (ev.action == Action::Press && ev.button == MouseButton::Left) {
+            log_debug("checkbox mouse {}", ev.pos - Vec2f(0, 0.4f));
+            log_debug("checkbox bbox {}", checkbox.bbox());
+            if (checkbox.bbox().contains(ev.pos - Vec2f(0, 0.4f))) {
+                checkbox_state = !checkbox_state;
+                log_debug("checkbox state {}", checkbox_state);
+                checkbox.set_icon(checkbox_state ? IconId::CheckBoxChecked
+                                                 : IconId::CheckBoxUnchecked);
+                checkbox.resize(view);
+                view.refresh();
+            }
+        }
+    });
+
+    window.display();
     return EXIT_SUCCESS;
 }

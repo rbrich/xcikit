@@ -33,22 +33,29 @@ public:
     ~GlWindow() override;
 
     void create(const Vec2u& size, const std::string& title) override;
-    void display(std::function<void(View& view)> draw_cb) override;
+    void display() override;
 
     void set_size_callback(std::function<void(View&)> size_cb) override;
+    void set_draw_callback(std::function<void(View&)> draw_cb) override;
     void set_key_callback(std::function<void(View&, KeyEvent)> key_cb) override;
+    void set_mouse_button_callback(MouseCallback mouse_cb) override;
+
+    void set_refresh_mode(RefreshMode mode) override;
 
     // access native handles
     GLFWwindow* glfw_window() { return m_window; }
 
 private:
     void setup_view();
-    static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
+    void draw();
 
     GLFWwindow* m_window;
     std::unique_ptr<View> m_view;
     std::function<void(View&)> m_size_cb;
+    std::function<void(View&)> m_draw_cb;
     std::function<void(View&, KeyEvent)> m_key_cb;
+    std::function<void(View&, MouseEvent)> m_mouse_cb;
+    RefreshMode m_mode = RefreshMode::OnDemand;
 };
 
 

@@ -193,7 +193,7 @@ private:
     Style m_style;  // text style
 
     // page attributes
-    float m_width = 0.0f;  // page width
+    float m_width = 0.f;  // page width
     Alignment m_alignment = Alignment::Left;  // horizontal alignment
     std::vector<float> m_tab_stops;
 

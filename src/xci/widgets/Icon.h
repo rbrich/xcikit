@@ -46,6 +46,7 @@ private:
     std::string m_text;
     Layout m_layout;
     Theme& m_theme;
+    bool m_needs_refresh = false;
 };
 
 
