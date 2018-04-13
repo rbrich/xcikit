@@ -54,6 +54,8 @@ int main()
     size_frame.set_color(Color(110, 130, 255));
     Text size_font("Font size:         ", font);
     size_font.set_color(Color(70, 150, 255));
+    Text mouse_pos("Mouse position:    ", font);
+    mouse_pos.set_color(Color(255, 150, 50));
 
     window.set_size_callback([&](View& view) {
         Vec2f vs = view.scalable_size();
@@ -93,6 +95,13 @@ int main()
         size_screen.draw(view, {-0.4f, -0.4f});
         size_frame.draw(view, {-0.4f, -0.3f});
         size_font.draw(view, {-0.4f, -0.2f});
+        mouse_pos.draw(view, {-0.4f, 0.2f});
+    });
+
+    window.set_mouse_position_callback([&](View& view, const Vec2f& pos) {
+        mouse_pos.set_fixed_string("Mouse position:    " +
+                                   format("({}, {})", pos.x, pos.y));
+        view.refresh();
     });
 
     window.display();

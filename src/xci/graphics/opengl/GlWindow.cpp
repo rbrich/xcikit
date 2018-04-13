@@ -180,16 +180,29 @@ void GlWindow::set_key_callback(std::function<void(View&, KeyEvent)> key_cb)
 }
 
 
-void GlWindow::set_mouse_button_callback(MouseCallback mouse_cb)
+void GlWindow::set_mouse_position_callback(Window::MousePosCallback mpos_cb)
 {
-    m_mouse_cb = std::move(mouse_cb);
+    m_mpos_cb = std::move(mpos_cb);
+    glfwSetCursorPosCallback(m_window, [](GLFWwindow* window, double xpos, double ypos) {
+        auto self = (GlWindow*) glfwGetWindowUserPointer(window);
+        if (self->m_mpos_cb) {
+            auto pos = self->m_view->screen_to_scalable({(float)xpos, (float)ypos});
+            self->m_mpos_cb(*self->m_view, pos);
+        }
+    });
+}
+
+
+void GlWindow::set_mouse_button_callback(MouseBtnCallback mbtn_cb)
+{
+    m_mbtn_cb = std::move(mbtn_cb);
     glfwSetMouseButtonCallback(m_window, [](GLFWwindow* window, int button, int action, int mods) {
         auto self = (GlWindow*) glfwGetWindowUserPointer(window);
-        if (self->m_mouse_cb) {
+        if (self->m_mbtn_cb) {
             double xpos, ypos;
             glfwGetCursorPos(window, &xpos, &ypos);
             auto pos = self->m_view->screen_to_scalable({(float)xpos, (float)ypos});
-            self->m_mouse_cb(*self->m_view,
+            self->m_mbtn_cb(*self->m_view,
                              {(MouseButton) button, (Action) action, pos});
         }
     });

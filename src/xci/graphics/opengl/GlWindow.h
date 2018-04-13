@@ -38,7 +38,8 @@ public:
     void set_size_callback(std::function<void(View&)> size_cb) override;
     void set_draw_callback(std::function<void(View&)> draw_cb) override;
     void set_key_callback(std::function<void(View&, KeyEvent)> key_cb) override;
-    void set_mouse_button_callback(MouseCallback mouse_cb) override;
+    void set_mouse_position_callback(MousePosCallback mpos_cb) override;
+    void set_mouse_button_callback(MouseBtnCallback mbtn_cb) override;
 
     void set_refresh_mode(RefreshMode mode) override;
 
@@ -54,7 +55,8 @@ private:
     std::function<void(View&)> m_size_cb;
     std::function<void(View&)> m_draw_cb;
     std::function<void(View&, KeyEvent)> m_key_cb;
-    std::function<void(View&, MouseEvent)> m_mouse_cb;
+    MousePosCallback m_mpos_cb;
+    MouseBtnCallback m_mbtn_cb;
     RefreshMode m_mode = RefreshMode::OnDemand;
 };
 

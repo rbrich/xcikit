@@ -51,7 +51,7 @@ int main()
     checkbox.set_icon(IconId::CheckBoxChecked);
     checkbox.set_text("Checkbox");
     checkbox.set_size(0.08);
-    checkbox.set_color(Color(200, 200, 200));
+    checkbox.set_color(Color(150, 200, 200));
     bool checkbox_state = true;
 
     window.set_size_callback([&](View& view) {
@@ -82,6 +82,16 @@ int main()
                 view.refresh();
             }
         }
+    });
+
+    window.set_mouse_position_callback([&checkbox](View& view, const Vec2f& pos) {
+        if (checkbox.bbox().contains(pos - Vec2f(0, 0.4f))) {
+            checkbox.set_color(Color::White());
+        } else {
+            checkbox.set_color(Color(150, 200, 200));
+        }
+        checkbox.resize(view);
+        view.refresh();
     });
 
     window.display();

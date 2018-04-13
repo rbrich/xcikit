@@ -68,12 +68,14 @@ public:
     virtual void create(const Vec2u& size, const std::string& title) = 0;
     virtual void display() = 0;
 
-    using MouseCallback = std::function<void(View&, const MouseEvent&)>;
+    using MousePosCallback = std::function<void(View&, const Vec2f&)>;
+    using MouseBtnCallback = std::function<void(View&, const MouseEvent&)>;
 
     virtual void set_size_callback(std::function<void(View&)> size_cb) = 0;
-    virtual void set_draw_callback(std::function<void(View & )> draw_cb) = 0;
+    virtual void set_draw_callback(std::function<void(View& )> draw_cb) = 0;
     virtual void set_key_callback(std::function<void(View&, KeyEvent)> key_cb) = 0;
-    virtual void set_mouse_button_callback(MouseCallback mouse_cb) = 0;
+    virtual void set_mouse_position_callback(MousePosCallback mpos_cb) = 0;
+    virtual void set_mouse_button_callback(MouseBtnCallback mbtn_cb) = 0;
 
     virtual void set_refresh_mode(RefreshMode mode) = 0;
 };
