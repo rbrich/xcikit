@@ -1,0 +1,43 @@
+set(XCI_UTIL_SOURCES
+    compat.h
+    file.cpp
+    file.h
+    FileWatch.cpp
+    FileWatch.h
+    format.cpp
+    format.h
+    FpsCounter.cpp
+    FpsCounter.h
+    geometry.h
+    log.cpp
+    log.h
+    string.cpp
+    string.h)
+
+
+# Choose FileWatch implementation
+if (CMAKE_SYSTEM_NAME STREQUAL Linux)
+    list(APPEND XCI_UTIL_SOURCES
+        filewatch/FileWatchInotify.cpp
+        filewatch/FileWatchInotify.h)
+    set(FILEWATCH_IMPL "XCI_FILEWATCH_INOTIFY")
+elseif (CMAKE_SYSTEM_NAME STREQUAL Darwin)
+    list(APPEND XCI_UTIL_SOURCES
+        filewatch/FileWatchKqueue.cpp
+        filewatch/FileWatchKqueue.h)
+    set(FILEWATCH_IMPL "XCI_FILEWATCH_KQUEUE")
+else()
+    list(APPEND XCI_UTIL_SOURCES
+        filewatch/FileWatchDummy.cpp
+        filewatch/FileWatchDummy.h)
+    set(FILEWATCH_IMPL "XCI_FILEWATCH_DUMMY")
+endif()
+
+
+add_library(${XCI_UTIL_LIBRARY} STATIC ${XCI_UTIL_SOURCES})
+target_link_libraries(${XCI_UTIL_LIBRARY} Threads::Threads)
+target_include_directories(${XCI_UTIL_LIBRARY} PUBLIC ${CMAKE_SOURCE_DIR}/src)
+target_compile_definitions(${XCI_UTIL_LIBRARY} PRIVATE
+    XCI_SHARE_DIR="${SHARE_DIR}"
+    XCI_FILEWATCH_HEADER="${FILEWATCH_HEADER}"
+    ${FILEWATCH_IMPL})

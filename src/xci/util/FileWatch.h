@@ -30,9 +30,6 @@ class FileWatch {
 public:
     static FileWatch& default_instance();
 
-    FileWatch();
-    ~FileWatch();
-
     enum class Event {
         Modify,     // File modified
         Delete,     // File deleted or moved away
@@ -40,19 +37,13 @@ public:
 
     using Callback = std::function<void(Event)>;
 
-    // Watch file `filename` for changes (content modified or file deleted)
-    // and call `cb` when such event occurs. Note that the callback might be called
-    // in another thread context.
+    // Watch file `filename` for changes and call `cb` when an event occurs.
+    // Note that the callback might be called in another thread context.
     // Returns watch handle on success, -1 on error.
-    int add_watch(const std::string& filename, Callback cb);
-    void remove_watch(int handle);
+    virtual int add_watch(const std::string& filename, Callback cb) = 0;
 
-private:
-    int m_queue_fd;  // inotify or kqueue FD
-    int m_quit_pipe[2];
-    std::thread m_thread;
-    std::mutex m_mutex;
-    std::map<int, Callback> m_callback;
+    // Stop watching file with handle. Does nothing for handle -1.
+    virtual void remove_watch(int handle) = 0;
 };
 
 

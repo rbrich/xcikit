@@ -36,9 +36,10 @@ TEST_CASE( "File watch", "[FileWatch]" )
     std::ofstream f(tmpname);
 
     FileWatch::Event expected_events[] = {
-        FileWatch::Event::Modify,
-        FileWatch::Event::Modify,
-        FileWatch::Event::Delete,
+        FileWatch::Event::Modify,  // one
+        FileWatch::Event::Modify,  // two
+        FileWatch::Event::Modify,  // three
+        FileWatch::Event::Delete,  // unlink
     };
     size_t ev_ptr = 0;
     size_t ev_size = sizeof(expected_events) / sizeof(expected_events[0]);
@@ -50,14 +51,18 @@ TEST_CASE( "File watch", "[FileWatch]" )
         ev_ptr++;
     });
 
-    // modify, close
+    // modify
     f << "one" << std::endl;
+    usleep(50000);
+
+    // modify, close
+    f << "two" << std::endl;
     f.close();
     usleep(50000);
 
     // reopen, modify, close
     f.open(tmpname, std::ios::app);
-    f << "two" << std::endl;
+    f << "three" << std::endl;
     f.close();
     usleep(50000);
 

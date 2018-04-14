@@ -29,7 +29,7 @@ int main(int argc, char** argv)
     std::string filename = argv[1];
 
     log_info("Watching: {}", filename);
-    FileWatch fw;
+    FileWatch& fw = FileWatch::default_instance();
     std::atomic_bool done {false};
     int wd = fw.add_watch(filename, [&done] (FileWatch::Event ev) {
         switch (ev) {

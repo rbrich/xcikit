@@ -1,4 +1,4 @@
-// FileWatch.cpp created on 2018-03-30, part of XCI toolkit
+// FileWatchDummy.cpp created on 2018-04-14, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,28 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "FileWatch.h"
-
-#ifdef XCI_FILEWATCH_INOTIFY
-    #include <xci/util/filewatch/FileWatchInotify.h>
-    #define XCI_FILEWATCH_CLASS FileWatchInotify
-#elif defined(XCI_FILEWATCH_KQUEUE)
-    #include <xci/util/filewatch/FileWatchKqueue.h>
-    #define XCI_FILEWATCH_CLASS FileWatchKqueue
-#else
-    #include <xci/util/filewatch/FileWatchDummy.h>
-    #define XCI_FILEWATCH_CLASS FileWatchDummy
-#endif
+#include "FileWatchDummy.h"
+#include <xci/util/log.h>
 
 namespace xci {
 namespace util {
 
 
-FileWatch& FileWatch::default_instance()
+FileWatchDummy::FileWatchDummy()
 {
-    static XCI_FILEWATCH_CLASS instance;
-    return instance;
+    log_warning("Using FileWatchDummy, auto-reload won't work!");
 }
 
 
-}}  // namespace xci::util
+int FileWatchDummy::add_watch(const std::string& filename, FileWatch::Callback cb)
+{
+    return -1;
+}
+
+
+}} // namespace xci::util

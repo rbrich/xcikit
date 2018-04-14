@@ -32,22 +32,6 @@ endif (DEBUG_CLANG_ASAN)
 # Sources      #
 # ------------ #
 
-set(XCI_UTIL_SOURCES
-    src/xci/util/compat.h
-    src/xci/util/file.cpp
-    src/xci/util/file.h
-    src/xci/util/FileWatch.cpp
-    src/xci/util/FileWatch.h
-    src/xci/util/format.cpp
-    src/xci/util/format.h
-    src/xci/util/FpsCounter.cpp
-    src/xci/util/FpsCounter.h
-    src/xci/util/geometry.h
-    src/xci/util/log.cpp
-    src/xci/util/log.h
-    src/xci/util/string.cpp
-    src/xci/util/string.h)
-
 set(XCI_GRAPHICS_SOURCES
     src/xci/graphics/Color.h
     src/xci/graphics/Primitives.h
@@ -163,10 +147,7 @@ find_package(PEGTL REQUIRED)
 # ------------ #
 
 set(XCI_UTIL_LIBRARY xci-util)
-add_library(${XCI_UTIL_LIBRARY} STATIC ${XCI_UTIL_SOURCES})
-target_link_libraries(${XCI_UTIL_LIBRARY} Threads::Threads)
-target_include_directories(${XCI_UTIL_LIBRARY} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
-target_compile_definitions(${XCI_UTIL_LIBRARY} PRIVATE XCI_SHARE_DIR="${SHARE_DIR}")
+add_subdirectory(src/xci/util)
 
 if (WITH_OPENGL)
     set(XCI_GRAPHICS_OPENGL_LIBRARY xci-graphics-opengl)
