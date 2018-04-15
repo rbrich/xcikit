@@ -34,6 +34,7 @@ public:
     virtual ~Texture() = default;
 
     virtual bool create(const Vec2u& size) = 0;
+    virtual void update(const uint8_t* pixels) = 0;
     virtual void update(const uint8_t* pixels, const Rect_u& region) = 0;
 
     virtual Vec2u size() const = 0;

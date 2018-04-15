@@ -27,6 +27,7 @@ namespace graphics {
 class GlTexture : public Texture {
 public:
     bool create(const Vec2u& size) override;
+    void update(const uint8_t* pixels) override;
     void update(const uint8_t* pixels, const Rect_u& region) override;
 
     Vec2u size() const override;

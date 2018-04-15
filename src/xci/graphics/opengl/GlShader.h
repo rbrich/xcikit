@@ -26,12 +26,13 @@ namespace xci {
 namespace graphics {
 
 using xci::util::FileWatch;
+using xci::util::FileWatchPtr;
 
 
 class GlShader: public Shader {
 public:
-    explicit GlShader(FileWatch& fw);
-    ~GlShader();
+    GlShader() : m_file_watch(FileWatch::create()) {}
+    ~GlShader() override { clear(); }
 
     // If successful, setup a watch on the file to auto-reload on any change.
     bool load_from_file(
@@ -41,17 +42,20 @@ public:
             const char* vertex_data, int vertex_size,
             const char* fragment_data, int fragment_size) override;
 
-    GLuint program() const;
-    void set_program(GLuint program);
-    void reset_program() { set_program(0); }
+    GLuint program();
 
-    void add_watches(const std::string& vertex,
-                     const std::string& fragment);
+    void add_watches();
     void remove_watches();
 
+    bool reload_from_file();
+    void clear();
+
 private:
-    FileWatch& m_file_watch;
-    std::atomic<GLuint> m_program_atomic;
+    GLuint m_program = 0;
+    std::atomic_flag m_program_ready = ATOMIC_FLAG_INIT;
+    FileWatchPtr m_file_watch;
+    std::string m_vertex_file;
+    std::string m_fragment_file;
     int m_vertex_file_watch = -1;
     int m_fragment_file_watch = -1;
 };

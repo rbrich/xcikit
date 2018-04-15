@@ -17,7 +17,6 @@
 #define XCI_GRAPHICS_GL_RENDERER_H
 
 #include <xci/graphics/Renderer.h>
-#include <xci/util/FileWatch.h>
 
 #include <glad/glad.h>
 
@@ -26,8 +25,6 @@
 
 namespace xci {
 namespace graphics {
-
-using xci::util::FileWatch;
 
 
 class GlRenderer: public Renderer {
@@ -41,7 +38,6 @@ public:
                                  PrimitiveType type) override;
 
 private:
-    FileWatch m_file_watch;
     static constexpr auto c_num_shaders = (size_t)ShaderId::Custom;
     std::array<ShaderPtr, c_num_shaders> m_shader = {};
 };

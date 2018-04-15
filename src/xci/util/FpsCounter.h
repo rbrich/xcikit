@@ -36,6 +36,10 @@ public:
     void tick(float delta_sec);
     int fps() const;
 
+    // Export for FpsDisplay
+    const std::vector<uint16_t>& ticks() const { return m_ticks; }
+    size_t current_tick() const { return m_current; }
+
 private:
     float m_fraction;
     std::vector<uint16_t> m_ticks;

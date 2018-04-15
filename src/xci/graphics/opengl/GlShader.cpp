@@ -32,20 +32,6 @@ using xci::util::read_file;
 using namespace xci::util::log;
 
 
-GlShader::GlShader(FileWatch& fw)
-        : m_file_watch(fw)
-{
-    reset_program();
-}
-
-
-GlShader::~GlShader()
-{
-    remove_watches();
-    glDeleteProgram(program());
-}
-
-
 static GLuint compile_program(const char* vertex_source,
                               int vertex_source_length,
                               const char* fragment_source,
@@ -143,27 +129,24 @@ static GLuint compile_program(const char* vertex_source,
 bool GlShader::load_from_file(const std::string& vertex,
                               const std::string& fragment)
 {
-    if (!program()) {
-        // Remove previous file watches, in case parameters have changed
-        remove_watches();
-
-        // Try to read shaders from file
-        std::string vertex_file_source = read_file(vertex);
-        std::string fragment_file_source = read_file(fragment);
-        if (vertex_file_source.empty() || fragment_file_source.empty())
-            return false;
-        log_info("Loaded vertex shader: {}", vertex);
-        log_info("Loaded fragment shader: {}", fragment);
-
-        // Force reload when shader file changes
-        add_watches(vertex, fragment);
-
-        // Compile and cache new program
-        auto program = compile_program(
-                vertex_file_source.data(), (int) vertex_file_source.size(),
-                fragment_file_source.data(), (int) fragment_file_source.size());
-        set_program(program);
+    // Is this shader already loaded?
+    bool ready = m_program_ready.test_and_set(std::memory_order_acquire);
+    if (ready && m_program &&
+        m_vertex_file == vertex &&
+        m_fragment_file == fragment) {
+        return true;
     }
+    m_vertex_file = vertex;
+    m_fragment_file = fragment;
+
+    clear();
+
+    if (!reload_from_file())
+        return false;
+
+    // Force reload when shader file changes
+    add_watches();
+
     return true;
 }
 
@@ -171,53 +154,81 @@ bool GlShader::load_from_file(const std::string& vertex,
 bool GlShader::load_from_memory(const char* vertex_data, int vertex_size,
                                 const char* fragment_data, int fragment_size)
 {
-    if (!program()) {
-        // Remove previous file watches, in case parameters have changed
-        remove_watches();
+    // Is this shader already loaded?
+    bool ready = m_program_ready.test_and_set(std::memory_order_acquire);
+    if (ready && m_program)
+        return true;
 
-        // Compile and cache new program
-        auto program = compile_program(vertex_data, vertex_size,
-                                       fragment_data, fragment_size);
-        set_program(program);
-    }
+    // Compile and cache new program
+    m_program = compile_program(vertex_data, vertex_size,
+                                fragment_data, fragment_size);
     return true;
 }
 
 
-void GlShader::set_program(GLuint program)
+GLuint GlShader::program()
 {
-    m_program_atomic.store(program, std::memory_order_release);
+    bool ok = m_program_ready.test_and_set(std::memory_order_acquire);
+    if (!ok) {
+        // reload
+        reload_from_file();
+    }
+    return m_program;
 }
 
 
-GLuint GlShader::program() const
+void GlShader::add_watches()
 {
-    return m_program_atomic.load(std::memory_order_acquire);
-}
-
-
-void GlShader::add_watches(const std::string& vertex, const std::string& fragment)
-{
-    auto& prog = m_program_atomic;
-    auto cb = [&prog](FileWatch::Event) {
-        prog.store(0, std::memory_order_release);
-        glfwPostEmptyEvent();
+    auto cb = [this](FileWatch::Event ev) {
+        if (ev == FileWatch::Event::Create || ev == FileWatch::Event::Modify) {
+            log_info("Shader file changed...");
+            m_program_ready.clear(std::memory_order_release);
+            glfwPostEmptyEvent();
+        }
     };
-    m_vertex_file_watch = m_file_watch.add_watch(vertex, cb);
-    m_fragment_file_watch = m_file_watch.add_watch(fragment, cb);
+    m_vertex_file_watch = m_file_watch->add_watch(m_vertex_file, cb);
+    m_fragment_file_watch = m_file_watch->add_watch(m_fragment_file, cb);
+    log_info("Shader watches installed");
 }
 
 
 void GlShader::remove_watches()
 {
     if (m_vertex_file_watch != -1) {
-        m_file_watch.remove_watch(m_vertex_file_watch);
+        m_file_watch->remove_watch(m_vertex_file_watch);
         m_vertex_file_watch = -1;
     }
     if (m_fragment_file_watch != -1) {
-        m_file_watch.remove_watch(m_fragment_file_watch);
+        m_file_watch->remove_watch(m_fragment_file_watch);
         m_fragment_file_watch = -1;
     }
+    log_info("Shader watches removed");
+}
+
+
+bool GlShader::reload_from_file()
+{
+    // Try to read shaders from file
+    std::string vertex_file_source = read_file(m_vertex_file);
+    std::string fragment_file_source = read_file(m_fragment_file);
+    if (vertex_file_source.empty() || fragment_file_source.empty())
+        return false;
+    log_info("Loaded vertex shader: {}", m_vertex_file);
+    log_info("Loaded fragment shader: {}", m_fragment_file);
+
+    // Compile and cache new program
+    m_program = compile_program(
+            vertex_file_source.data(), (int) vertex_file_source.size(),
+            fragment_file_source.data(), (int) fragment_file_source.size());
+    return true;
+}
+
+
+void GlShader::clear()
+{
+    remove_watches();
+    glDeleteProgram(m_program);
+    m_program = 0;
 }
 
 

@@ -23,13 +23,14 @@ namespace graphics {
 
 bool GlTexture::create(const Vec2u& size)
 {
+    // FIXME: free old texture
     m_size = size;
     glGenTextures(1, &m_texture);
     glBindTexture(GL_TEXTURE_2D, m_texture);
 
-    std::vector<uint8_t> buffer(m_size.x * m_size.y, 0);
+    // Just allocate the memory. Content is left undefined.
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, m_size.x, m_size.y, 0,
-                 GL_RED, GL_UNSIGNED_BYTE, buffer.data());
+                 GL_RED, GL_UNSIGNED_BYTE, nullptr);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -39,6 +40,16 @@ bool GlTexture::create(const Vec2u& size)
     return true;
 }
 
+
+void GlTexture::update(const uint8_t* pixels)
+{
+    glBindTexture(GL_TEXTURE_2D, m_texture);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, m_size.x, m_size.y, 0,
+                 GL_RED, GL_UNSIGNED_BYTE, pixels);
+}
+
+
 void GlTexture::update(const uint8_t* pixels, const Rect_u& region)
 {
     glBindTexture(GL_TEXTURE_2D, m_texture);
@@ -46,6 +57,7 @@ void GlTexture::update(const uint8_t* pixels, const Rect_u& region)
     glTexSubImage2D(GL_TEXTURE_2D, 0, region.x, region.y, region.w, region.h,
                     GL_RED, GL_UNSIGNED_BYTE, pixels);
 }
+
 
 Vec2u GlTexture::size() const { return m_size; }
 

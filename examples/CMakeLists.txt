@@ -11,7 +11,7 @@ add_executable(demo_font demo_font.cpp)
 target_link_libraries(demo_font ${XCI_TEXT_LIBRARY})
 
 add_executable(demo_fps demo_fps.cpp)
-target_link_libraries(demo_fps ${XCI_TEXT_LIBRARY})
+target_link_libraries(demo_fps ${XCI_WIDGETS_LIBRARY})
 
 add_executable(demo_layout demo_layout.cpp)
 target_link_libraries(demo_layout ${XCI_TEXT_LIBRARY})

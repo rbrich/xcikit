@@ -102,7 +102,13 @@ set(XCI_TEXT_SOURCES
 
 set(XCI_WIDGETS_SOURCES
     src/xci/widgets/Button.cpp
-    src/xci/widgets/Button.h src/xci/widgets/Icon.cpp src/xci/widgets/Icon.h src/xci/widgets/Theme.cpp src/xci/widgets/Theme.h)
+    src/xci/widgets/Button.h
+    src/xci/widgets/FpsDisplay.cpp
+    src/xci/widgets/FpsDisplay.h
+    src/xci/widgets/Icon.cpp
+    src/xci/widgets/Icon.h
+    src/xci/widgets/Theme.cpp
+    src/xci/widgets/Theme.h)
 
 # ------------ #
 # Dependencies #

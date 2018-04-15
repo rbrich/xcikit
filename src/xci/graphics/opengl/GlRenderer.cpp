@@ -33,11 +33,11 @@ ShaderPtr GlRenderer::new_shader(ShaderId shader_id)
     if (shader_id != ShaderId::Custom) {
         auto& shader = m_shader[(size_t) shader_id];
         if (!shader) {
-            shader = std::make_shared<GlShader>(m_file_watch);
+            shader = std::make_shared<GlShader>();
         }
         return shader;
     } else {
-        return std::make_shared<GlShader>(m_file_watch);
+        return std::make_shared<GlShader>();
     }
 }
 

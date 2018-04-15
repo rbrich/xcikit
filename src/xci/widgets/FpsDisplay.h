@@ -1,4 +1,4 @@
-// Icon.h created on 2018-04-10, part of XCI toolkit
+// FpsDisplay.h created on 2018-04-14, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,43 +13,40 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_WIDGETS_ICON_H
-#define XCI_WIDGETS_ICON_H
+#ifndef XCIKIT_FPSDISPLAY_H
+#define XCIKIT_FPSDISPLAY_H
 
 #include <xci/widgets/Theme.h>
-#include <xci/text/Layout.h>
+#include <xci/text/Text.h>
+#include <xci/graphics/Primitives.h>
+#include <xci/util/FpsCounter.h>
 
 namespace xci {
 namespace widgets {
 
-using namespace xci::text;
 
-class Icon {
+class FpsDisplay {
 public:
-    explicit Icon(Theme& theme = Theme::default_theme());
-
-    void set_icon(IconId icon_id);
-    void set_text(const std::string& text);
-    void set_size(float size);
-    void set_color(const graphics::Color& color);
+    explicit FpsDisplay(const util::FpsCounter& fps_counter,
+                        Theme& theme = Theme::default_theme());
 
     void resize(const graphics::View& target);
     void draw(graphics::View& view, const util::Vec2f& pos);
 
-    util::Rect_f bbox() const;
+private:
+    void init_shader();
+    void update_texture();
 
 private:
-    void refresh();
-
-private:
+    const util::FpsCounter& m_fps_counter;
     Theme& m_theme;
-    IconId m_icon_id = IconId::None;
-    std::string m_text;
-    Layout m_layout;
-    bool m_needs_refresh = false;
+    graphics::PrimitivesPtr m_quad;
+    graphics::ShaderPtr m_shader;
+    graphics::TexturePtr m_texture;
+    text::Text m_text;
 };
 
 
 }} // namespace xci::widgets
 
-#endif // XCI_WIDGETS_ICON_H
+#endif // XCIKIT_FPSDISPLAY_H

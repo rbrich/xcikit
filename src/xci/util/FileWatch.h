@@ -18,9 +18,14 @@
 
 #include <string>
 #include <functional>
+#include <memory>
 
 namespace xci {
 namespace util {
+
+
+class FileWatch;
+using FileWatchPtr = std::unique_ptr<FileWatch>;
 
 
 // FileWatch may be used for auto-reloading of resource files.
@@ -28,6 +33,7 @@ namespace util {
 class FileWatch {
 public:
     static FileWatch& default_instance();
+    static FileWatchPtr create();
 
     enum class Event {
         Create,     // File was created or moved in
