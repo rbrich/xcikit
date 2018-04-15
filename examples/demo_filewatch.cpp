@@ -33,11 +33,20 @@ int main(int argc, char** argv)
     std::atomic_bool done {false};
     int wd = fw.add_watch(filename, [&done] (FileWatch::Event ev) {
         switch (ev) {
+            case FileWatch::Event::Create:
+                log_info("File created / moved in");
+                break;
+            case FileWatch::Event::Delete:
+                log_info("File deleted / moved away");
+                break;
             case FileWatch::Event::Modify:
                 log_info("File modified");
                 break;
-            case FileWatch::Event::Delete:
-                log_info("File deleted");
+            case FileWatch::Event::Attrib:
+                log_info("File touched (attribs changed)");
+                break;
+            case FileWatch::Event::Stopped:
+                log_info("File watching stopped (dir deleted / moved)");
                 done = true;
                 break;
         }

@@ -22,6 +22,8 @@ TEST_CASE( "Format placeholders", "[format]" )
 
     CHECK(format("surplus placeholder {}{}", "left as is") == "surplus placeholder left as is{}");
 
+    CHECK(format("hex {:x} dec {}", 255, 255) == "hex ff dec 255");
+
     errno = EACCES;
     CHECK(format("error: {:m}") == "error: Permission denied");
 }
@@ -29,7 +31,7 @@ TEST_CASE( "Format placeholders", "[format]" )
 
 TEST_CASE( "File watch", "[FileWatch]" )
 {
-    FileWatch fw;
+    FileWatch& fw = FileWatch::default_instance();
 
     std::string tmpname = "/tmp/xci_test_filewatch.XXXXXX";
     tmpname = mktemp(&tmpname[0]);

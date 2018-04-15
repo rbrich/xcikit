@@ -32,6 +32,10 @@ void chdir_to_share();
 std::string read_file(const std::string& filename);
 
 
+std::string path_dirname(std::string filename);
+std::string path_basename(std::string filename);
+
+
 }}  // namespace xci::util
 
 #endif //XCI_UTIL_FILE_H

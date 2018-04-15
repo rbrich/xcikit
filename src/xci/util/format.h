@@ -73,9 +73,15 @@ inline std::string format(const char *fmt, T value, Args... args)
     format_impl::Context ctx;
     while (*fmt) {
         if (format_impl::partial_format(fmt, ctx)) {
-            // "{}" -> replace with value
+            // {} -> replace with value
             if (ctx.placeholder.empty()) {
                 ctx.stream << value << format(fmt, args...);
+                return ctx.stream.str();
+            }
+            
+            // {:x} -> hex format
+            if (ctx.placeholder == ":x") {
+                ctx.stream << std::hex << value << format(fmt, args...);
                 return ctx.stream.str();
             }
 

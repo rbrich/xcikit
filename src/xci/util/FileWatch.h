@@ -18,31 +18,36 @@
 
 #include <string>
 #include <functional>
-#include <thread>
-#include <map>
-#include <mutex>
 
 namespace xci {
 namespace util {
 
+
+// FileWatch may be used for auto-reloading of resource files.
 
 class FileWatch {
 public:
     static FileWatch& default_instance();
 
     enum class Event {
-        Modify,     // File modified
-        Delete,     // File deleted or moved away
+        Create,     // File was created or moved in
+        Delete,     // File was deleted or moved away
+        Modify,     // File content was modified
+        Attrib,     // File attributes were changed
+        Stopped,    // The file is no longer watched (containing directory was deleted or moved)
     };
 
     using Callback = std::function<void(Event)>;
 
     // Watch file `filename` for changes and call `cb` when an event occurs.
-    // Note that the callback might be called in another thread context.
-    // Returns watch handle on success, -1 on error.
+    // It's possible to add more than one callback for the same `filename`.
+    // Note that the callback might be called from another thread.
+    // Returns new watch handle on success, -1 on error.
     virtual int add_watch(const std::string& filename, Callback cb) = 0;
 
-    // Stop watching file with handle. Does nothing for handle -1.
+    // Remove previously added watch with `handle`. Does nothing for handle -1.
+    // In case the same file has multiple callbacks installed, this removes
+    // just the one identified by `handle`.
     virtual void remove_watch(int handle) = 0;
 };
 

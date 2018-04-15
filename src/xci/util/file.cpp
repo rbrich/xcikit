@@ -17,6 +17,8 @@
 #include "FileWatch.h"
 #include <fstream>
 #include <unistd.h>
+#include <libgen.h>
+#include <cassert>
 
 namespace xci {
 namespace util {
@@ -43,6 +45,22 @@ std::string read_file(const std::string& filename)
         content.clear();
 
     return content;
+}
+
+
+std::string path_dirname(std::string filename)
+{
+    // dirname() may modify the argument, so we take it by value
+    // (we also make sure that the internal value is null-terminated)
+    assert(filename.c_str() == &filename[0]);
+    return ::dirname(&filename[0]);
+}
+
+
+std::string path_basename(std::string filename)
+{
+    assert(filename.c_str() == &filename[0]);
+    return ::basename(&filename[0]);
 }
 
 

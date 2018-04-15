@@ -17,6 +17,10 @@
 #define XCI_UTIL_FILEWATCH_INOTIFY_H
 
 #include <xci/util/FileWatch.h>
+#include <list>
+#include <thread>
+#include <map>
+#include <mutex>
 
 namespace xci {
 namespace util {
@@ -31,12 +35,28 @@ public:
     void remove_watch(int handle) override;
 
 private:
-    int m_queue_fd;  // inotify or kqueue FD
+    void handle_event(int wd, uint32_t mask, const std::string& name);
+
+private:
+    int m_inotify_fd;
     int m_quit_pipe[2];
     std::thread m_thread;
     std::mutex m_mutex;
-    std::map<int, Callback> m_callback;
-    std::map<int, std::string> m_filename;
+    int m_next_handle = 0;
+
+    struct Watch {
+        int handle;
+        std::string dir;  // directory containing the file
+        std::string name;  // filename without dir part
+        Callback cb;
+    };
+    std::list<Watch> m_watch;
+
+    struct Dir {
+        std::string dir;  // watched directory
+        int wd;  // inotify watch descriptor
+    };
+    std::list<Dir> m_dir;
 };
 
 
