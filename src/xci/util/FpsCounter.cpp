@@ -14,7 +14,6 @@
 // limitations under the License.
 
 #include "FpsCounter.h"
-#include <numeric>
 
 namespace xci {
 namespace util {
@@ -23,27 +22,50 @@ namespace util {
 FpsCounter::FpsCounter(size_t resolution)
 {
     m_fraction = 1.0f / resolution;
-    m_ticks.resize(resolution);
+    m_samples.resize(resolution);
 }
 
 
-void xci::util::FpsCounter::tick(float delta_sec)
+void xci::util::FpsCounter::tick(float frame_time)
 {
-    m_delta += delta_sec;
+    m_delta += frame_time;
     while (m_delta >= m_fraction) {
         m_delta -= m_fraction;
-        m_current ++;
-        if (m_current >= m_ticks.size())
-            m_current = 0;
-        m_ticks[m_current] = 0;
+        m_idx ++;
+        if (m_idx >= m_samples.size())
+            m_idx = 0;
+        m_sum -= m_samples[m_idx];
+        m_samples[m_idx] = {0.f, 0};
     }
-    m_ticks[m_current] ++;
+    m_samples[m_idx] += {frame_time, 1};
+    m_sum += {frame_time, 1};
 }
 
 
-int FpsCounter::fps() const
+int FpsCounter::frame_rate() const
 {
-    return std::accumulate(m_ticks.begin(), m_ticks.end(), 0);
+    return m_sum.num_frames;
+}
+
+
+float FpsCounter::avg_frame_time() const
+{
+    return m_sum.total_time / m_sum.num_frames;
+}
+
+
+void FpsCounter::foreach_sample(const std::function<void(float)>& cb) const
+{
+    float last_sample = 0.f;
+    for (auto i = (m_idx + 1 == m_samples.size()) ? 0 : m_idx + 1;;
+              i = (i == m_samples.size()) ? 0 : i+1) {
+        auto& s = m_samples[i];
+        if (s.num_frames > 0)
+            last_sample = s.total_time / s.num_frames;
+        cb(last_sample);
+        if (i == m_idx)
+            break;
+    }
 }
 
 

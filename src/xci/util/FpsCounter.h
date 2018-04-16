@@ -17,6 +17,7 @@
 #define XCI_UTIL_FPSCOUNTER_H
 
 #include <vector>
+#include <functional>
 #include <cstddef>
 #include <cstdint>
 
@@ -33,18 +34,41 @@ class FpsCounter {
 public:
     explicit FpsCounter(size_t resolution = 60);
 
-    void tick(float delta_sec);
-    int fps() const;
+    // Append new frame time to the counter
+    void tick(float frame_time);
+
+    // Number of frames in last second
+    int frame_rate() const;
+
+    // Average frame time during last second
+    float avg_frame_time() const;
 
     // Export for FpsDisplay
-    const std::vector<uint16_t>& ticks() const { return m_ticks; }
-    size_t current_tick() const { return m_current; }
+    void foreach_sample(const std::function<void(float)>& cb) const;
+    size_t resolution() const { return m_samples.size(); }
 
 private:
     float m_fraction;
-    std::vector<uint16_t> m_ticks;
-    size_t m_current = 0;
     float m_delta = 0;
+
+    struct Sample {
+        float total_time = 0.f;
+        uint16_t num_frames = 0;
+
+        void operator+=(const Sample& r) {
+            total_time += r.total_time;
+            num_frames += r.num_frames;
+        }
+
+        void operator-=(const Sample& r) {
+            total_time -= r.total_time;
+            num_frames -= r.num_frames;
+        }
+    };
+
+    std::vector<Sample> m_samples;
+    size_t m_idx = 0;  // current sample
+    Sample m_sum;  // sum of all samples
 };
 
 

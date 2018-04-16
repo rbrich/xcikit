@@ -15,6 +15,7 @@
 
 #include "FpsDisplay.h"
 #include <xci/util/log.h>
+#include <xci/util/format.h>
 
 #ifdef XCI_EMBED_SHADERS
 #define INCBIN_PREFIX g_
@@ -29,6 +30,7 @@ namespace widgets {
 
 using namespace xci::graphics;
 using namespace xci::util::log;
+using xci::util::format;
 
 
 FpsDisplay::FpsDisplay(const util::FpsCounter& fps_counter, Theme& theme)
@@ -42,7 +44,7 @@ void FpsDisplay::resize(const graphics::View& target)
 {
     float x1 = 0;
     float y1 = -0.10f;
-    float x2 = 0.30;
+    float x2 = 0.50;
     float y2 = 0.0;
     m_quad->clear();
     m_quad->begin_primitive();
@@ -51,7 +53,7 @@ void FpsDisplay::resize(const graphics::View& target)
     m_quad->add_vertex(x1, y2, 0, 1);
     m_quad->add_vertex(x1, y1, 0, 0);
     m_quad->end_primitive();
-    m_texture->create({(unsigned)m_fps_counter.ticks().size(), 1});
+    m_texture->create({(unsigned)m_fps_counter.resolution(), 1});
     m_text.set_font(m_theme.font());
 }
 
@@ -64,7 +66,9 @@ void FpsDisplay::draw(graphics::View& view, const util::Vec2f& pos)
     m_quad->set_texture("u_texture", m_texture);
     m_quad->draw(view, pos);
 
-    m_text.set_string(std::to_string(m_fps_counter.fps()) + " fps");
+    m_text.set_string(format("{}fps ({:.2f}ms)",
+                             m_fps_counter.frame_rate(),
+                             m_fps_counter.avg_frame_time() * 1000));
     m_text.draw(view, pos + Vec2f{0.02, 0.07f});
 }
 
@@ -93,15 +97,12 @@ void FpsDisplay::init_shader()
 
 void FpsDisplay::update_texture()
 {
-    auto& ticks = m_fps_counter.ticks();
-    auto tick_max = std::max_element(ticks.begin(), ticks.end());
-    uint8_t pixels[ticks.size()];
-    uint8_t* pixel = pixels + ticks.size() - m_fps_counter.current_tick() - 1;
-    for (auto t : ticks) {
-        if (pixel >= pixels + ticks.size())
-            pixel = pixels;
-        *pixel++ = uint8_t(float(t) / *tick_max * 255.f);
-    }
+    const float sample_max = 1.f / 30.f;
+    uint8_t pixels[m_fps_counter.resolution()];
+    uint8_t* pixel = pixels;
+    m_fps_counter.foreach_sample([&](float sample) {
+        *pixel++ = uint8_t(sample / sample_max * 255.f);
+    });
     m_texture->update(pixels);
 }
 
