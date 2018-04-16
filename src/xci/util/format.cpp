@@ -13,12 +13,84 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <cstring>
 #include "format.h"
+
+#include <tao/pegtl.hpp>
+
+#include <cstring>
 
 namespace xci {
 namespace util {
 namespace format_impl {
+
+namespace parser {
+using namespace tao::pegtl;
+
+// ----------------------------------------------------------------------------
+// Grammar
+
+struct FieldName: plus<alnum> {};
+
+struct Precision: plus<digit> {};
+
+struct Type: one<'f', 'x'> {};
+
+struct FormatSpec: seq< opt<seq< one<'.'>, Precision >>, opt<Type> > {};
+
+struct Grammar: seq< opt<FieldName>, opt< seq< one<':'>, FormatSpec > > > {};
+
+// ----------------------------------------------------------------------------
+// Actions
+
+template<typename Rule>
+struct Action : nothing<Rule> {};
+
+template<>
+struct Action<FieldName>
+{
+    template<typename Input>
+    static void apply(const Input &in, Context &ctx)
+    {
+        ctx.field_name = in.string();
+    }
+};
+
+template<>
+struct Action<Precision>
+{
+    template<typename Input>
+    static void apply(const Input &in, Context &ctx)
+    {
+        ctx.precision = atoi(in.string().c_str());
+    }
+};
+
+template<>
+struct Action<Type>
+{
+    template<typename Input>
+    static void apply(const Input &in, Context &ctx)
+    {
+        ctx.type = *in.begin();
+    }
+};
+
+} // namespace parser
+
+
+bool parse_placeholder(Context& ctx)
+{
+    using parser::Grammar;
+    using parser::Action;
+
+    tao::pegtl::memory_input<> in(ctx.placeholder, "Placeholder");
+
+    try {
+        return tao::pegtl::parse< Grammar, Action >( in, ctx );
+    } catch (tao::pegtl::parse_error& error) {
+        return false;
+    }
+}
 
 
 std::ostream& strerror(std::ostream& stream)
@@ -37,18 +109,19 @@ std::ostream& strerror(std::ostream& stream)
 
 bool partial_format(const char*& fmt, Context& ctx)
 {
-    ctx.placeholder.clear();
+    ctx.clear();
     bool in_placeholder = false;
     while (*fmt) {
         if (in_placeholder) {
             if (*fmt == '}') {
                 in_placeholder = false;
                 ++fmt;
-                if (ctx.placeholder == ":m") {
-                    // "{:m}" -> strerror
+                if (ctx.placeholder == "m") {
+                    // "{m}" -> strerror
                     ctx.stream << strerror;
                 } else {
                     // Leave other placeholders for processing by caller
+                    parse_placeholder(ctx);
                     return true;
                 }
                 ctx.placeholder.clear();

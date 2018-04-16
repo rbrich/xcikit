@@ -33,12 +33,12 @@ FileWatchInotify::FileWatchInotify()
 {
     m_inotify_fd = inotify_init();
     if (m_inotify_fd < 0 ) {
-        log_error("FileWatchInotify: inotify_init: {:m}");
+        log_error("FileWatchInotify: inotify_init: {m}");
         return;
     }
 
     if (pipe(m_quit_pipe) == -1) {
-        log_error("FileWatchInotify: pipe: {:m}");
+        log_error("FileWatchInotify: pipe: {m}");
         return;
     }
 
@@ -54,7 +54,7 @@ FileWatchInotify::FileWatchInotify()
         for (;;) {
             int rc = poll(fds, 2, -1);
             if (rc == -1) {
-                log_error("FileWatchInotify: poll: {:m}");
+                log_error("FileWatchInotify: poll: {m}");
                 break;
             }
             if (rc > 0) {
@@ -63,7 +63,7 @@ FileWatchInotify::FileWatchInotify()
                 if (fds[0].revents & POLLIN) {
                     ssize_t readlen = read(m_inotify_fd, buffer, buflen);
                     if (readlen < 0) {
-                        log_error("FileWatchInotify: read: {} {:m}", errno);
+                        log_error("FileWatchInotify: read: {} {m}", errno);
                         break;
                     }
 
@@ -112,7 +112,7 @@ int FileWatchInotify::add_watch(const std::string& filename,
                                    IN_ATTRIB | IN_MOVED_FROM | IN_MOVED_TO |
                                    IN_DELETE_SELF | IN_MOVE_SELF | IN_ONLYDIR);
         if (wd < 0) {
-            log_error("FileWatchInotify: inotify_add_watch({}): {:m}", dir.c_str());
+            log_error("FileWatchInotify: inotify_add_watch({}): {m}", dir.c_str());
             return -1;
         }
         m_dir.push_back({dir, wd});

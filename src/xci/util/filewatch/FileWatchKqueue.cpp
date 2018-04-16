@@ -29,7 +29,7 @@ FileWatchKqueue::FileWatchKqueue()
 {
     m_queue_fd = kqueue();
     if (m_queue_fd < 0 ) {
-        log_error("FileWatchKqueue: kqueue: {:m}");
+        log_error("FileWatchKqueue: kqueue: {m}");
         return;
     }
 
@@ -41,7 +41,7 @@ FileWatchKqueue::FileWatchKqueue()
             if (rc == -1) {
                 if (errno == EBADF)
                     break;  // kqueue closed, quit
-                log_error("FileWatchKqueue: kevent(): {:m}");
+                log_error("FileWatchKqueue: kevent(): {m}");
                 break;
             }
             if (rc == 1 && ke.filter == EVFILT_VNODE) {
@@ -81,7 +81,7 @@ int FileWatchKqueue::add_watch(const std::string& filename, std::function<void(E
 
     int fd = ::open(filename.c_str(), O_EVTONLY);
     if (fd < 0) {
-        log_error("FileWatchKqueue: open({}, O_EVTONLY): {:m}", filename.c_str());
+        log_error("FileWatchKqueue: open({}, O_EVTONLY): {m}", filename.c_str());
         return -1;
     }
 
@@ -94,7 +94,7 @@ int FileWatchKqueue::add_watch(const std::string& filename, std::function<void(E
     kev.udata = nullptr;
 
     if (kevent(m_queue_fd, &kev, 1, nullptr, 0, nullptr) == -1)
-        log_error("FileWatchKqueue: kevent(EV_ADD, {}): {:m}", filename.c_str());
+        log_error("FileWatchKqueue: kevent(EV_ADD, {}): {m}", filename.c_str());
 
     std::lock_guard<std::mutex> lock_guard(m_mutex);
     m_callback[fd] = std::move(cb);
@@ -114,7 +114,7 @@ void FileWatchKqueue::remove_watch(int handle)
     kev.flags = EV_DELETE;
 
     if (kevent(m_queue_fd, &kev, 1, nullptr, 0, nullptr) == -1)
-        log_error("FileWatchKqueue: kevent(EV_DELETE): {:m}");
+        log_error("FileWatchKqueue: kevent(EV_DELETE): {m}");
 
     ::close(handle);
     m_callback.erase(handle);

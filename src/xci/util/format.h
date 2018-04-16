@@ -18,6 +18,7 @@
 
 #include <iostream>
 #include <sstream>
+#include <iomanip>
 
 namespace xci {
 namespace util {
@@ -35,6 +36,17 @@ namespace format_impl {
 struct Context {
     std::ostringstream stream;
     std::string placeholder;
+    // parsed placeholder:
+    std::string field_name;
+    int precision;
+    char type;
+
+    void clear() {
+        placeholder.clear();
+        field_name.clear();
+        precision = 6;
+        type = 's';
+    }
 };
 
 // Parses `fmt` (moves the pointer), outputs into `stream` and fills `placeholder`.
@@ -63,25 +75,27 @@ inline std::string format(const char *fmt)
 
 // Recursively evaluates arguments
 //
-// The format string is the like of Python's format(), see:
+// The format string is similar to Python's format(), see:
 // - https://docs.python.org/3/library/string.html#formatspec
 //
-// The only supported placeholder is simple "{}"
+// Only subset of format specifiers is supported
+// (see code bellow and tests)
+
 template<typename T, typename ...Args>
 inline std::string format(const char *fmt, T value, Args... args)
 {
     format_impl::Context ctx;
     while (*fmt) {
         if (format_impl::partial_format(fmt, ctx)) {
-            // {} -> replace with value
-            if (ctx.placeholder.empty()) {
-                ctx.stream << value << format(fmt, args...);
-                return ctx.stream.str();
-            }
-            
-            // {:x} -> hex format
-            if (ctx.placeholder == ":x") {
-                ctx.stream << std::hex << value << format(fmt, args...);
+            // replace placeholder with arg value
+            if (ctx.field_name.empty()) {
+                switch (ctx.type) {
+                    case 'f': ctx.stream << std::fixed; break;
+                    case 'x': ctx.stream << std::hex; break;
+                    default: break;
+                }
+                ctx.stream << std::setprecision(ctx.precision)
+                           << value << format(fmt, args...);
                 return ctx.stream.str();
             }
 

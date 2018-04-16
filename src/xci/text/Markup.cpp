@@ -32,7 +32,7 @@ using namespace tao::pegtl;
 // ----------------------------------------------------------------------------
 // Grammar
 
-struct ControlSeq : seq< one<'{'>, plus<not_one<'{', '}'>>, one<'}'> > {};
+struct ControlSeq: seq< one<'{'>, plus<not_one<'{', '}'>>, one<'}'> > {};
 
 struct Word: plus<not_at<space>, sor< not_one<'{'>, two<'{'> >> {};
 
@@ -42,7 +42,7 @@ struct Tab: one<'\t'> {};
 
 struct Space: plus<space> {};
 
-struct Grammar : must< star<sor< ControlSeq, Word, Paragraph, Tab, Space >>, eof > {};
+struct Grammar: must< star<sor< ControlSeq, Word, Paragraph, Tab, Space >>, eof > {};
 
 // ----------------------------------------------------------------------------
 // Actions
@@ -62,30 +62,30 @@ template<>
 struct Action<ControlSeq>
 {
     template<typename Input>
-    static bool apply(const Input &in, Markup &ctx)
+    static void apply(const Input &in, Markup &ctx)
     {
         dump_token("csq", in);
         auto seq = in.string();
         if (seq == "{tab}") {
             ctx.get_layout().add_tab();
-            return true;
+            return;
         }
         if (seq == "{br}") {
             ctx.get_layout().finish_line();
-            return true;
+            return;
         }
         if (seq[1] == '+') {
             auto name = seq.substr(2, seq.size() - 3);
             ctx.get_layout().begin_span(name);
-            return true;
+            return;
         }
         if (seq[1] == '-') {
             auto name = seq.substr(2, seq.size() - 3);
             ctx.get_layout().end_span(name);
-            return true;
+            return;
         }
         log_warning("Markup: Ignoring unknown control sequence {}", seq);
-        return true;
+        return;
     }
 };
 
@@ -93,11 +93,10 @@ template<>
 struct Action<Word>
 {
     template<typename Input>
-    static bool apply(const Input &in, Markup &ctx)
+    static void apply(const Input &in, Markup &ctx)
     {
         dump_token("word", in);
         ctx.get_layout().add_word(in.string());
-        return true;
     }
 };
 
@@ -105,11 +104,10 @@ template<>
 struct Action<Tab>
 {
     template<typename Input>
-    static bool apply(const Input &in, Markup &ctx)
+    static void apply(const Input &in, Markup &ctx)
     {
         dump_token("tab", in);
         ctx.get_layout().add_tab();
-        return true;
     }
 };
 
@@ -117,11 +115,10 @@ template<>
 struct Action<Paragraph>
 {
     template<typename Input>
-    static bool apply(const Input &in, Markup &ctx)
+    static void apply(const Input &in, Markup &ctx)
     {
         dump_token("par", in);
         ctx.get_layout().finish_line();
-        return true;
     }
 };
 
@@ -129,11 +126,10 @@ template<>
 struct Action<Space>
 {
     template<typename Input>
-    static bool apply(const Input &in, Markup &ctx)
+    static void apply(const Input &in, Markup &ctx)
     {
         dump_token("space", in);
         ctx.get_layout().add_space();
-        return true;
     }
 };
 
