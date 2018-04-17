@@ -35,11 +35,12 @@ public:
     void remove_watch(int handle) override;
 
 private:
+    void remove_watch_nolock(int handle);
     void handle_event(int wd, uint32_t mask, const std::string& name);
 
 private:
     int m_inotify_fd;
-    int m_quit_pipe[2];
+    int m_quit_fd;
     std::thread m_thread;
     std::mutex m_mutex;
     int m_next_handle = 0;

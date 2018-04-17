@@ -18,12 +18,13 @@
 #include <xci/util/log.h>
 
 #include <algorithm>
+#include <vector>
 #include <climits>
 #include <cassert>
-
 #include <unistd.h>
-#include <sys/inotify.h>
 #include <poll.h>
+#include <sys/inotify.h>
+#include <sys/eventfd.h>
 
 namespace xci {
 namespace util {
@@ -37,19 +38,20 @@ FileWatchInotify::FileWatchInotify()
         return;
     }
 
-    if (pipe(m_quit_pipe) == -1) {
-        log_error("FileWatchInotify: pipe: {m}");
+    m_quit_fd = eventfd(0, 0);
+    if (m_quit_fd == -1) {
+        log_error("FileWatchInotify: eventfd: {m}");
         return;
     }
 
     m_thread = std::thread([this]() {
-        log_debug("FileWatchInotify: starting");
+        log_debug("FileWatchInotify: Thread starting");
         constexpr size_t buflen = sizeof(inotify_event) + NAME_MAX + 1;
         char buffer[buflen];
         struct pollfd fds[2] = {};
         fds[0].fd = m_inotify_fd;
         fds[0].events = POLLIN;
-        fds[1].fd = m_quit_pipe[0];
+        fds[1].fd = m_quit_fd;
         fds[1].events = POLLIN;
         for (;;) {
             int rc = poll(fds, 2, -1);
@@ -58,12 +60,20 @@ FileWatchInotify::FileWatchInotify()
                 break;
             }
             if (rc > 0) {
-                if (fds[1].revents != 0)
-                    break;  // quit
+                if (fds[1].revents != 0) {
+                    uint64_t value;
+                    ssize_t readlen = read(m_quit_fd, &value, sizeof(value));
+                    if (readlen < 0) {
+                        log_error("FileWatchInotify: read(quit_fd): {m}");
+                        break;
+                    }
+                    if (value > 0)
+                        break;  // quit
+                }
                 if (fds[0].revents & POLLIN) {
                     ssize_t readlen = read(m_inotify_fd, buffer, buflen);
                     if (readlen < 0) {
-                        log_error("FileWatchInotify: read: {} {m}", errno);
+                        log_error("FileWatchInotify: read(inotify_fd): {m}");
                         break;
                     }
 
@@ -79,7 +89,7 @@ FileWatchInotify::FileWatchInotify()
                 }
             }
         }
-        log_debug("FileWatchInotify: quit");
+        log_debug("FileWatchInotify: Thread finished");
     });
 }
 
@@ -87,12 +97,12 @@ FileWatchInotify::FileWatchInotify()
 FileWatchInotify::~FileWatchInotify()
 {
     // Signal the thread to quit
-    ::write(m_quit_pipe[1], "\n", 1);
+    uint64_t value = 1;
+    ::write(m_quit_fd, &value, sizeof(value));
     m_thread.join();
     // Cleanup
     ::close(m_inotify_fd);
-    ::close(m_quit_pipe[0]);
-    ::close(m_quit_pipe[1]);
+    ::close(m_quit_fd);
 }
 
 
@@ -116,12 +126,14 @@ int FileWatchInotify::add_watch(const std::string& filename,
             return -1;
         }
         m_dir.push_back({dir, wd});
+        log_debug("FileWatchInotify: Watching dir {} ({})", dir, wd);
     }
 
     // Directory is now watched, add the new watch to it
     auto base = path_basename(filename);
     auto handle = m_next_handle++;
     m_watch.push_back({handle, dir, base, std::move(cb)});
+    log_debug("FileWatchInotify: Added watch {} / {} ({})", dir, base, handle);
     return handle;
 }
 
@@ -133,12 +145,20 @@ void FileWatchInotify::remove_watch(int handle)
 
     std::lock_guard<std::mutex> lock_guard(m_mutex);
 
+    remove_watch_nolock(handle);
+}
+
+
+void FileWatchInotify::remove_watch_nolock(int handle)
+{
     // Remove the watch
     auto it = std::find_if(m_watch.begin(), m_watch.end(),
                            [handle](const Watch& w) { return w.handle == handle; });
     if (it == m_watch.end())
         return;
     auto dir = it->dir;
+    log_debug("FileWatchInotify: Removed watch {} / {} ({})",
+              it->dir, it->name, it->handle);
     m_watch.erase(it);
 
     // Remove also the watched dir, if it's not used by any other watches
@@ -153,6 +173,8 @@ void FileWatchInotify::remove_watch(int handle)
         return;
     }
     inotify_rm_watch(m_inotify_fd, it_dir->wd);
+    log_debug("FileWatchInotify: Stopped watching dir {} ({})",
+              it_dir->dir, it_dir->wd);
     m_dir.erase(it_dir);
 }
 
@@ -182,10 +204,16 @@ void FileWatchInotify::handle_event(int wd, uint32_t mask, const std::string& na
 
     // Watched directory itself was deleted / moved
     if (mask & (IN_DELETE_SELF | IN_MOVE_SELF)) {
+        std::vector<int> remove_list;
         for (auto& w : m_watch) {
-            if (w.dir == it_dir->dir && w.cb) {
-                w.cb(Event::Stopped);
+            if (w.dir == it_dir->dir) {
+                if (w.cb)
+                    w.cb(Event::Stopped);
+                remove_list.push_back(w.handle);
             }
+        }
+        for (int handle : remove_list) {
+            remove_watch_nolock(handle);
         }
     }
 }

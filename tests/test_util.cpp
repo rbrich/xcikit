@@ -38,7 +38,7 @@ TEST_CASE( "File watch", "[FileWatch]" )
     FileWatch& fw = FileWatch::default_instance();
 
     std::string tmpname = "/tmp/xci_test_filewatch.XXXXXX";
-    tmpname = mktemp(&tmpname[0]);
+    close(mkstemp(&tmpname[0]));
     std::ofstream f(tmpname);
 
     FileWatch::Event expected_events[] = {

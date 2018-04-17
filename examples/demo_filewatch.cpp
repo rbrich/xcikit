@@ -16,9 +16,17 @@
 #include <xci/util/log.h>
 #include <xci/util/FileWatch.h>
 #include <atomic>
+#include <csignal>
 #include <unistd.h>
 
 using namespace xci::util;
+
+std::atomic_bool done {false};
+
+static void sigterm(int)
+{
+    done = true;
+}
 
 int main(int argc, char** argv)
 {
@@ -28,10 +36,9 @@ int main(int argc, char** argv)
     }
     std::string filename = argv[1];
 
-    log_info("Watching: {}", filename);
+    log_info("Demo: Watching {}", filename);
     FileWatch& fw = FileWatch::default_instance();
-    std::atomic_bool done {false};
-    int wd = fw.add_watch(filename, [&done] (FileWatch::Event ev) {
+    int wd = fw.add_watch(filename, [](FileWatch::Event ev) {
         switch (ev) {
             case FileWatch::Event::Create:
                 log_info("File created / moved in");
@@ -55,9 +62,12 @@ int main(int argc, char** argv)
     if (wd == -1)
         return 1;
 
+    signal(SIGTERM, sigterm);
     while (!done) {
         sleep(1);
     }
 
+    // This is noop after Stopped event
     fw.remove_watch(wd);
+    return 0;
 }
