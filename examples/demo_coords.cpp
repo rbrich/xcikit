@@ -79,9 +79,6 @@ int main()
         size_frame.set_fixed_string("Framebuffer size:  " +
                                     format("{} x {}", fs.x, fs.y) +
                                     "  (" + format("{} x {}", 1/fr.x, 1/fr.y) + ")");
-
-        size_font.set_fixed_string("Font size:         " +
-                                   format("{}", font.size()));
     });
 
     window.set_draw_callback([&](View& view) {
@@ -94,6 +91,8 @@ int main()
         size_scal.draw(view, {-0.4f, -0.5f});
         size_screen.draw(view, {-0.4f, -0.4f});
         size_frame.draw(view, {-0.4f, -0.3f});
+        size_font.set_fixed_string("Font size:         " +
+                                   format("{}", font.size()));
         size_font.draw(view, {-0.4f, -0.2f});
         mouse_pos.draw(view, {-0.4f, 0.2f});
     });

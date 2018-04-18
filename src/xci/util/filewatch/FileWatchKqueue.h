@@ -17,6 +17,10 @@
 #define XCIKIT_FILEWATCHKQUEUE_H
 
 #include <xci/util/FileWatch.h>
+#include <thread>
+#include <mutex>
+#include <map>
+#include <list>
 
 namespace xci {
 namespace util {
@@ -35,11 +39,30 @@ public:
     void remove_watch(int handle) override;
 
 private:
-    int m_queue_fd;  // inotify or kqueue FD
+    void remove_watch_nolock(int handle);
+    int register_kevent(const std::string& path, uint32_t fflags);
+    void unregister_kevent(int fd);
+    void handle_event(int fd, uint32_t fflags);
+
+private:
+    int m_kqueue_fd;  // inotify or kqueue FD
     int m_quit_pipe[2];
     std::thread m_thread;
     std::mutex m_mutex;
-    std::map<int, Callback> m_callback;
+
+    struct Watch {
+        int fd;
+        std::string dir;  // directory containing the file
+        std::string name;  // filename without dir part
+        Callback cb;
+    };
+    std::list<Watch> m_watch;
+
+    struct Dir {
+        int fd;
+        std::string dir;  // watched directory
+    };
+    std::list<Dir> m_dir;
 };
 
 

@@ -109,6 +109,9 @@ FileWatchInotify::~FileWatchInotify()
 int FileWatchInotify::add_watch(const std::string& filename,
                                 std::function<void(Event)> cb)
 {
+    if (m_inotify_fd < 0)
+        return -1;
+
     std::lock_guard<std::mutex> lock_guard(m_mutex);
 
     // Is the directory already watched?
@@ -190,7 +193,7 @@ void FileWatchInotify::handle_event(int wd, uint32_t mask, const std::string& na
         return;
     }
 
-    // Find callbacks for the file name
+    // Fire callbacks registered for the file
     for (auto& w : m_watch) {
         if (w.dir == it_dir->dir && w.name == name && w.cb) {
             if (mask & IN_CREATE)  w.cb(Event::Create);

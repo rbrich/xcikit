@@ -54,7 +54,7 @@ int main()
     FpsCounter fps;
     double t_prev = 0;
     FpsDisplay fps_display(fps);
-    Text help_text("[v] vsync{br}[c] nowait", font);
+    Text help_text("[v] vsync{tab}[d] on demand{br}[n] nowait{tab}[e] on event", font);
     Text mouse_pos("Mouse: ", font);
     mouse_pos.set_color(Color(255, 150, 50));
 
@@ -87,8 +87,14 @@ int main()
             case Key::V:
                 window.set_refresh_mode(RefreshMode::PeriodicVsync);
                 break;
-            case Key::C:
+            case Key::N:
                 window.set_refresh_mode(RefreshMode::PeriodicNoWait);
+                break;
+            case Key::D:
+                window.set_refresh_mode(RefreshMode::OnDemand);
+                break;
+            case Key::E:
+                window.set_refresh_mode(RefreshMode::OnEvent);
                 break;
             default:
                 break;

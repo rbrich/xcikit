@@ -26,7 +26,7 @@ TEST_CASE( "Format placeholders", "[format]" )
 
     float f = 1.2345678f;
     CHECK(format("float {} {:.2} {:.3f} {:.3f}", f, f, f, 1.2) ==
-                 "float 1.234567 1.2 1.235 1.200");
+                 "float 1.23457 1.2 1.235 1.200");
 
     errno = EACCES;
     CHECK(format("error: {m}") == "error: Permission denied");
