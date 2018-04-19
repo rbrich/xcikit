@@ -125,7 +125,7 @@ int FileWatchInotify::add_watch(const std::string& filename,
                                    IN_ATTRIB | IN_MOVED_FROM | IN_MOVED_TO |
                                    IN_DELETE_SELF | IN_MOVE_SELF | IN_ONLYDIR);
         if (wd < 0) {
-            log_error("FileWatchInotify: inotify_add_watch({}): {m}", dir.c_str());
+            log_error("FileWatchInotify: inotify_add_watch({}): {m}", dir);
             return -1;
         }
         m_dir.push_back({dir, wd});

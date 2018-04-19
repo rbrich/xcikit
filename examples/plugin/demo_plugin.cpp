@@ -53,6 +53,8 @@ int main()
         if (ev == FileWatch::Event::Create || ev == FileWatch::Event::Modify)
             reload = true;
     });
+    if (wd == -1)
+        return EXIT_FAILURE;
 
     // Main loop
 

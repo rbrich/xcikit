@@ -37,6 +37,7 @@ set(XCI_GRAPHICS_SOURCES
     src/xci/graphics/Primitives.h
     src/xci/graphics/Renderer.cpp
     src/xci/graphics/Renderer.h
+    src/xci/graphics/Shader.h
     src/xci/graphics/Shape.cpp
     src/xci/graphics/Shape.h
     src/xci/graphics/Sprites.cpp
@@ -57,7 +58,7 @@ set(XCI_GRAPHICS_OPENGL_SOURCES
     src/xci/graphics/opengl/GlTexture.cpp
     src/xci/graphics/opengl/GlTexture.h
     src/xci/graphics/opengl/GlWindow.cpp
-    src/xci/graphics/opengl/GlWindow.h src/xci/graphics/Shader.h)
+    src/xci/graphics/opengl/GlWindow.h)
 
 set(XCI_GRAPHICS_SFML_SOURCES
     src/xci/graphics/sfml/SfmlTexture.cpp
@@ -170,15 +171,9 @@ if (WITH_OPENGL)
         glad glfw)
     target_compile_definitions(${XCI_GRAPHICS_OPENGL_LIBRARY} PRIVATE
         XCI_WITH_OPENGL
-        XCI_SHARE_DIR="${SHARE_DIR}")
-    if (EMBED_SHADERS)
-        target_compile_definitions(${XCI_GRAPHICS_OPENGL_LIBRARY} PRIVATE
-            XCI_EMBED_SHADERS)
-    endif (EMBED_SHADERS)
-    if (DEBUG_OPENGL)
-        target_compile_definitions(${XCI_GRAPHICS_OPENGL_LIBRARY} PRIVATE
-            XCI_DEBUG_OPENGL)
-    endif (DEBUG_OPENGL)
+        XCI_SHARE_DIR="${SHARE_DIR}"
+        $<$<BOOL:${EMBED_SHADERS}>:XCI_EMBED_SHADERS>
+        $<$<BOOL:${DEBUG_OPENGL}>:XCI_DEBUG_OPENGL>)
     set(XCI_GRAPHICS_LIBRARY ${XCI_GRAPHICS_OPENGL_LIBRARY})
 endif (WITH_OPENGL)
 

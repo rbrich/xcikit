@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "SharedLibrary.h"
+#include <xci/util/log.h>
 #include <dlfcn.h>
 
 namespace xci {
@@ -23,24 +24,37 @@ namespace util {
 bool SharedLibrary::open(const std::string& filename)
 {
     m_library = dlopen(filename.c_str(), RTLD_LAZY);
-    return m_library != nullptr;
+    if (m_library == nullptr) {
+        log_error("SharedLibrary: dlopen: {}", dlerror());
+        return false;
+    }
+    return true;
 }
 
 
 bool SharedLibrary::close()
 {
-    int rc = 0;
-    if (m_library) {
-        rc = dlclose(m_library);
-        m_library = nullptr;
+    if (m_library == nullptr)
+        return true;  // already closed
+
+    if (dlclose(m_library) != 0) {
+        log_error("SharedLibrary: dlclose: {}", dlerror());
+        return false;
     }
-    return rc == 0;
+
+    m_library = nullptr;
+    return true;
 }
 
 
 void* SharedLibrary::resolve(const std::string& symbol)
 {
-    return dlsym(m_library, symbol.c_str());
+    void* res = dlsym(m_library, symbol.c_str());
+    if (res == nullptr) {
+        log_error("SharedLibrary: dlsym({}): {}", symbol, dlerror());
+        return nullptr;
+    }
+    return res;
 }
 
 
