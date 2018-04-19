@@ -29,7 +29,7 @@ namespace util {
 class FileWatchInotify: public FileWatch {
 public:
     FileWatchInotify();
-    ~FileWatchInotify();
+    ~FileWatchInotify() override;
 
     int add_watch(const std::string& filename, Callback cb) override;
     void remove_watch(int handle) override;

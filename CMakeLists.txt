@@ -166,7 +166,8 @@ if (WITH_OPENGL)
         ${CMAKE_CURRENT_SOURCE_DIR}/ext/incbin)
     target_link_libraries(${XCI_GRAPHICS_OPENGL_LIBRARY}
         ${XCI_UTIL_LIBRARY}
-        dl glad glfw)
+        ${CMAKE_DL_LIBS}
+        glad glfw)
     target_compile_definitions(${XCI_GRAPHICS_OPENGL_LIBRARY} PRIVATE
         XCI_WITH_OPENGL
         XCI_SHARE_DIR="${SHARE_DIR}")

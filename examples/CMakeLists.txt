@@ -1,3 +1,5 @@
+add_subdirectory(plugin)
+
 add_executable(demo_log demo_log.cpp)
 target_link_libraries(demo_log ${XCI_UTIL_LIBRARY})
 

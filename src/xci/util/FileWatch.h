@@ -35,6 +35,8 @@ public:
     static FileWatch& default_instance();
     static FileWatchPtr create();
 
+    virtual ~FileWatch() = default;
+
     enum class Event {
         Create,     // File was created or moved in
         Delete,     // File was deleted or moved away

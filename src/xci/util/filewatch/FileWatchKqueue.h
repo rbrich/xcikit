@@ -29,7 +29,7 @@ namespace util {
 class FileWatchKqueue: public FileWatch {
 public:
     FileWatchKqueue();
-    ~FileWatchKqueue();
+    ~FileWatchKqueue() override;
 
     // Watch file `filename` for changes (content modified or file deleted)
     // and call `cb` when such event occurs. Note that the callback might be called

@@ -11,6 +11,8 @@ set(XCI_UTIL_SOURCES
     geometry.h
     log.cpp
     log.h
+    SharedLibrary.cpp
+    SharedLibrary.h
     string.cpp
     string.h)
 
