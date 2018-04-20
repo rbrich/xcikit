@@ -255,10 +255,31 @@ void GlWindow::setup_view()
     glfwSetKeyCallback(m_window, [](GLFWwindow* window, int key, int scancode,
                                     int action, int mods)
     {
-        if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-            glfwSetWindowShouldClose(window, GLFW_TRUE);
-
         auto self = (GlWindow*) glfwGetWindowUserPointer(window);
+
+        if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+            glfwSetWindowShouldClose(window, GLFW_TRUE);
+            return;
+        }
+
+        if (key == GLFW_KEY_F11 && action == GLFW_PRESS) {
+            // Toggle fullscreen / windowed mode
+            auto& pos = self->m_window_pos;
+            auto& size = self->m_window_size;
+            if (glfwGetWindowMonitor(window)) {
+                glfwSetWindowMonitor(window, NULL, pos.x, pos.y, size.x, size.y, 0);
+            } else {
+                GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+                if (monitor) {
+                    const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+                    glfwGetWindowPos(window, &pos.x, &pos.y);
+                    glfwGetWindowSize(window, &size.x, &size.y);
+                    glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+                }
+            }
+            return;
+        }
+
         if (action == GLFW_PRESS && self->m_key_cb && self->m_view) {
             self->m_key_cb(*self->m_view, KeyEvent{Key(key)});
         }

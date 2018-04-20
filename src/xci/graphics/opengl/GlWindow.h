@@ -17,6 +17,7 @@
 #define XCI_GRAPHICS_GL_WINDOW_H
 
 #include <xci/graphics/Window.h>
+#include <xci/util/geometry.h>
 
 #include <glad/glad.h>
 
@@ -26,6 +27,7 @@
 namespace xci {
 namespace graphics {
 
+using util::Vec2i;
 
 class GlWindow: public Window {
 public:
@@ -58,6 +60,8 @@ private:
     MousePosCallback m_mpos_cb;
     MouseBtnCallback m_mbtn_cb;
     RefreshMode m_mode = RefreshMode::OnDemand;
+    Vec2i m_window_pos;
+    Vec2i m_window_size;
 };
 
 
