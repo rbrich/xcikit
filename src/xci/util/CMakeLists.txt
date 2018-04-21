@@ -39,6 +39,7 @@ endif()
 add_library(${XCI_UTIL_LIBRARY} STATIC ${XCI_UTIL_SOURCES})
 target_link_libraries(${XCI_UTIL_LIBRARY} Threads::Threads)
 target_include_directories(${XCI_UTIL_LIBRARY} PUBLIC ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(${XCI_UTIL_LIBRARY} PRIVATE ${PEGTL_INCLUDE_DIRS})
 target_compile_definitions(${XCI_UTIL_LIBRARY} PRIVATE
     XCI_SHARE_DIR="${SHARE_DIR}"
     XCI_FILEWATCH_HEADER="${FILEWATCH_HEADER}"

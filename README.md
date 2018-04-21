@@ -34,10 +34,12 @@ The library should integrate well with:
 Research 
 --------
 
-GUI Toolkits for OpenGL:
+OpenGL GUI Toolkits:
+
 - [CEGUI](http://cegui.org.uk/)
 - [Dear ImGui](https://github.com/ocornut/imgui) - focuses on debug UIs
 - [Nuklear](https://github.com/vurtun/nuklear) - C
+- [Turbo Badger](https://github.com/fruxo/turbobadger)
 
 
 Plan

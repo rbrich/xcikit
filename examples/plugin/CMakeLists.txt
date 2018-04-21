@@ -4,4 +4,5 @@ target_compile_definitions(demo_plugin PRIVATE
     XCI_DEMO_PLUGINS="${CMAKE_INSTALL_PREFIX}/lib")
 
 add_library(pluggable SHARED pluggable.cpp)
+target_link_libraries(pluggable ${XCI_UTIL_LIBRARY})
 install(TARGETS pluggable DESTINATION lib)

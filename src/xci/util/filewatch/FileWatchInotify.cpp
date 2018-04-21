@@ -1,4 +1,4 @@
-// FileWatchInotifyInotify.cpp created on 2018-04-14, part of XCI toolkit
+// FileWatchInotify.cpp created on 2018-04-14, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");

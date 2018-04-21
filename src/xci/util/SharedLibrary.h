@@ -22,11 +22,21 @@ namespace xci {
 namespace util {
 
 
+// Dynamically load shared object files
+//
+// Inspiration:
+// - http://doc.qt.io/qt-5/qlibrary.html
+// - https://developer.gnome.org/glib/stable/glib-Dynamic-Loading-of-Modules.html
+
 class SharedLibrary {
 public:
     ~SharedLibrary() { close(); }
 
+    // Load library with `filename` or initialize this instance
+    // with previously loaded library (references are counted)
     bool open(const std::string& filename);
+
+    // Unload the library if this was the last instance referencing it.
     bool close();
 
     // Returns symbol address or nullptr if not found

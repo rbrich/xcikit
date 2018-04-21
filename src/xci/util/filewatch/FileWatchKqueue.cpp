@@ -18,6 +18,7 @@
 #include <xci/util/log.h>
 
 #include <vector>
+#include <cassert>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/event.h>
