@@ -40,7 +40,7 @@ FpsDisplay::FpsDisplay(const util::FpsCounter& fps_counter, Theme& theme)
 {}
 
 
-void FpsDisplay::resize(const graphics::View& target)
+void FpsDisplay::update(const graphics::View& target)
 {
     float x1 = 0;
     float y1 = -0.10f;

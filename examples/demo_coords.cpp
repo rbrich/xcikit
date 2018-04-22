@@ -97,9 +97,9 @@ int main()
         mouse_pos.draw(view, {-0.4f, 0.2f});
     });
 
-    window.set_mouse_position_callback([&](View& view, const Vec2f& pos) {
+    window.set_mouse_position_callback([&](View& view, const MousePosEvent& ev) {
         mouse_pos.set_fixed_string("Mouse position:    " +
-                                   format("({}, {})", pos.x, pos.y));
+                                   format("({}, {})", ev.pos.x, ev.pos.y));
         view.refresh();
     });
 

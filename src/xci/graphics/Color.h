@@ -37,9 +37,10 @@ struct Color {
     float alpha_f() const { return a / 255.f; }
 
     // Predefined colors
+    static inline Color Transparent() { return {0, 0, 0, 0}; }
     static inline Color Black() { return {0, 0, 0}; }
     static inline Color White() { return {255, 255, 255}; }
-    static inline Color Transparent() { return {0, 0, 0, 0}; }
+    static inline Color Red() { return {255, 0, 0}; }
 
     uint8_t r = 0;    // red
     uint8_t g = 0;    // green

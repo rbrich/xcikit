@@ -45,7 +45,7 @@ void Button::set_text_color(const graphics::Color& color)
 }
 
 
-void Button::resize(const graphics::View& target)
+void Button::update(const graphics::View& target)
 {
     m_layout.typeset(target);
     m_bg_rect.clear();

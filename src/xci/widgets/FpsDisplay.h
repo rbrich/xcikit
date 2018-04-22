@@ -30,7 +30,7 @@ public:
     explicit FpsDisplay(const util::FpsCounter& fps_counter,
                         Theme& theme = Theme::default_theme());
 
-    void resize(const graphics::View& target);
+    void update(const graphics::View& target);
     void draw(graphics::View& view, const util::Vec2f& pos);
 
 private:

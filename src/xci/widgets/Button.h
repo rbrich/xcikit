@@ -37,7 +37,7 @@ public:
     void set_decoration_color(const graphics::Color& fill, const graphics::Color& border);
     void set_text_color(const graphics::Color& color);
 
-    void resize(const graphics::View& target);
+    void update(const graphics::View& target);
     void draw(graphics::View& view, const util::Vec2f& pos);
 
     util::Rect_f bbox() const;

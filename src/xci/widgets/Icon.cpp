@@ -52,7 +52,7 @@ void Icon::set_color(const graphics::Color& color)
 }
 
 
-void Icon::resize(const graphics::View& target)
+void Icon::update(const graphics::View& target)
 {
     if (m_needs_refresh)
         refresh();

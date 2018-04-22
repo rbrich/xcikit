@@ -37,9 +37,9 @@ public:
     void create(const Vec2u& size, const std::string& title) override;
     void display() override;
 
-    void set_size_callback(std::function<void(View&)> size_cb) override;
-    void set_draw_callback(std::function<void(View&)> draw_cb) override;
-    void set_key_callback(std::function<void(View&, KeyEvent)> key_cb) override;
+    void set_size_callback(SizeCallback size_cb) override;
+    void set_draw_callback(DrawCallback draw_cb) override;
+    void set_key_callback(KeyCallback key_cb) override;
     void set_mouse_position_callback(MousePosCallback mpos_cb) override;
     void set_mouse_button_callback(MouseBtnCallback mbtn_cb) override;
 
@@ -54,9 +54,9 @@ private:
 
     GLFWwindow* m_window;
     std::unique_ptr<View> m_view;
-    std::function<void(View&)> m_size_cb;
-    std::function<void(View&)> m_draw_cb;
-    std::function<void(View&, KeyEvent)> m_key_cb;
+    SizeCallback m_size_cb;
+    DrawCallback m_draw_cb;
+    KeyCallback m_key_cb;
     MousePosCallback m_mpos_cb;
     MouseBtnCallback m_mbtn_cb;
     RefreshMode m_mode = RefreshMode::OnDemand;

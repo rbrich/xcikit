@@ -112,6 +112,15 @@ set(XCI_WIDGETS_SOURCES
     src/xci/widgets/Theme.cpp
     src/xci/widgets/Theme.h)
 
+set(XCI_UI_SOURCES
+    src/xci/ui/Button.cpp
+    src/xci/ui/Button.h
+    src/xci/ui/Checkbox.cpp
+    src/xci/ui/Checkbox.h
+    src/xci/ui/Node.cpp
+    src/xci/ui/Node.h)
+
+
 # ------------ #
 # Dependencies #
 # ------------ #
@@ -237,6 +246,11 @@ target_link_libraries(${XCI_WIDGETS_LIBRARY}
     ${XCI_GRAPHICS_LIBRARY})
 target_compile_definitions(${XCI_WIDGETS_LIBRARY} PRIVATE
     XCI_SHARE_DIR="${SHARE_DIR}")
+
+set(XCI_UI_LIBRARY xci-ui)
+add_library(${XCI_UI_LIBRARY} STATIC ${XCI_UI_SOURCES})
+target_link_libraries(${XCI_UI_LIBRARY} ${XCI_WIDGETS_LIBRARY})
+
 
 # ------------ #
 # Examples     #

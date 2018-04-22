@@ -57,10 +57,10 @@ int main()
     window.set_size_callback([&](View& view) {
         //view.set_debug_flag(View::Debug::WordBasePoint);
         //view.set_debug_flag(View::Debug::PageBBox);
-        button_default.resize(view);
+        button_default.update(view);
         button_styled.set_outline_thickness(1 * view.screen_ratio().y);
-        button_styled.resize(view);
-        checkbox.resize(view);
+        button_styled.update(view);
+        checkbox.update(view);
     });
 
     window.set_draw_callback([&](View& view) {
@@ -69,7 +69,7 @@ int main()
         checkbox.draw(view, {0, 0.4f});
     });
 
-    window.set_mouse_button_callback([&](View& view, const MouseEvent& ev) {
+    window.set_mouse_button_callback([&](View& view, const MouseBtnEvent& ev) {
         if (ev.action == Action::Press && ev.button == MouseButton::Left) {
             log_debug("checkbox mouse {}", ev.pos - Vec2f(0, 0.4f));
             log_debug("checkbox bbox {}", checkbox.bbox());
@@ -78,19 +78,19 @@ int main()
                 log_debug("checkbox state {}", checkbox_state);
                 checkbox.set_icon(checkbox_state ? IconId::CheckBoxChecked
                                                  : IconId::CheckBoxUnchecked);
-                checkbox.resize(view);
+                checkbox.update(view);
                 view.refresh();
             }
         }
     });
 
-    window.set_mouse_position_callback([&checkbox](View& view, const Vec2f& pos) {
-        if (checkbox.bbox().contains(pos - Vec2f(0, 0.4f))) {
+    window.set_mouse_position_callback([&checkbox](View& view, const MousePosEvent& ev) {
+        if (checkbox.bbox().contains(ev.pos - Vec2f(0, 0.4f))) {
             checkbox.set_color(Color::White());
         } else {
             checkbox.set_color(Color(150, 200, 200));
         }
-        checkbox.resize(view);
+        checkbox.update(view);
         view.refresh();
     });
 
