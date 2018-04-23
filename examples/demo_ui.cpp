@@ -13,15 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <xci/ui/Button.h>
-#include <xci/ui/Checkbox.h>
+#include <xci/widgets/Button.h>
+#include <xci/widgets/Checkbox.h>
+#include <xci/widgets/FpsDisplay.h>
 #include <xci/graphics/Window.h>
 #include <xci/util/file.h>
 #include <random>
 #include <cstdlib>
 
-using namespace xci::ui;
 using namespace xci::graphics;
+using namespace xci::widgets;
 
 int main()
 {
@@ -42,7 +43,7 @@ int main()
     Button button("Click me!");
     button.set_font_size(0.07);
     button.set_padding(0.05);
-    button.set_click_callback([&](View& view){
+    button.on_click([&](View& view) {
         button.set_text_color(random_color());
         button.update(view);
     });
@@ -51,11 +52,16 @@ int main()
     checkbox.set_text("Checkbox");
     checkbox.set_position({0, 0.2});
 
-    Node root;
+    FpsDisplay fps_display;
+    fps_display.set_position({-1.2f, -0.8f});
+
+    Composite root;
     root.add(button);
     root.add(checkbox);
-    root.bind(window);
+    root.add(fps_display);
 
+    Bind bind(window, root);
+    window.set_refresh_mode(RefreshMode::OnDemand);
     window.display();
     return EXIT_SUCCESS;
 }

@@ -16,30 +16,30 @@
 #ifndef XCIKIT_FPSDISPLAY_H
 #define XCIKIT_FPSDISPLAY_H
 
-#include <xci/widgets/Theme.h>
+#include <xci/widgets/Widget.h>
 #include <xci/text/Text.h>
 #include <xci/graphics/Primitives.h>
 #include <xci/util/FpsCounter.h>
+#include <chrono>
 
 namespace xci {
 namespace widgets {
 
 
-class FpsDisplay {
+class FpsDisplay: public Widget {
 public:
-    explicit FpsDisplay(const util::FpsCounter& fps_counter,
-                        Theme& theme = Theme::default_theme());
+    FpsDisplay();
 
-    void update(const graphics::View& target);
-    void draw(graphics::View& view, const util::Vec2f& pos);
+    void update(const graphics::View& view) override;
+    void draw(graphics::View& view) override;
 
 private:
     void init_shader();
     void update_texture();
 
 private:
-    const util::FpsCounter& m_fps_counter;
-    Theme& m_theme;
+    std::chrono::time_point<std::chrono::steady_clock> m_prevtime;
+    util::FpsCounter m_fps;
     graphics::PrimitivesPtr m_quad;
     graphics::ShaderPtr m_shader;
     graphics::TexturePtr m_texture;

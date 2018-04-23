@@ -13,19 +13,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_UI_CHECKBOX_H
-#define XCI_UI_CHECKBOX_H
+#ifndef XCI_WIDGETS_CHECKBOX_H
+#define XCI_WIDGETS_CHECKBOX_H
 
-#include "Node.h"
 #include <xci/widgets/Icon.h>
+#include <xci/graphics/View.h>
+#include <xci/graphics/Window.h>
 
 namespace xci {
-namespace ui {
+namespace widgets {
 
 using widgets::Theme;
+using graphics::View;
+using graphics::MouseBtnEvent;
 
 
-class Checkbox: public widgets::Icon, public Node {
+class Checkbox: public widgets::Icon {
 public:
     Checkbox();
 
@@ -33,12 +36,9 @@ public:
     bool checked() const { return m_checked; }
 
     using ChangeCallback = std::function<void(View&)>;
-    void set_change_callback(ChangeCallback cb) { m_change_cb = std::move(cb); }
+    void on_change(ChangeCallback cb) { m_change_cb = std::move(cb); }
 
-protected:
-    void handle_resize(View& view) override { update(view); }
-    void handle_draw(View& view) override { draw(view, position()); }
-    void handle_input(View& view, const MouseBtnEvent& ev) override;
+    void handle(View& view, const MouseBtnEvent& ev) override;
 
 private:
     bool m_checked = false;
@@ -46,6 +46,6 @@ private:
 };
 
 
-}} // namespace xci::ui
+}} // namespace xci::widgets
 
-#endif // XCI_UI_CHECKBOX_H
+#endif // XCI_WIDGETS_CHECKBOX_H

@@ -33,14 +33,13 @@ using namespace xci::util::log;
 using xci::util::format;
 
 
-FpsDisplay::FpsDisplay(const util::FpsCounter& fps_counter, Theme& theme)
-        : m_fps_counter(fps_counter), m_theme(theme),
-          m_quad(Renderer::default_renderer().new_primitives(VertexFormat::V2t2, PrimitiveType::TriFans)),
+FpsDisplay::FpsDisplay()
+        : m_quad(Renderer::default_renderer().new_primitives(VertexFormat::V2t2, PrimitiveType::TriFans)),
           m_texture(Renderer::default_renderer().new_texture())
 {}
 
 
-void FpsDisplay::update(const graphics::View& target)
+void FpsDisplay::update(const graphics::View& view)
 {
     float x1 = 0;
     float y1 = -0.10f;
@@ -53,23 +52,30 @@ void FpsDisplay::update(const graphics::View& target)
     m_quad->add_vertex(x1, y2, 0, 1);
     m_quad->add_vertex(x1, y1, 0, 0);
     m_quad->end_primitive();
-    m_texture->create({(unsigned)m_fps_counter.resolution(), 1});
-    m_text.set_font(m_theme.font());
+    m_texture->create({(unsigned)m_fps.resolution(), 1});
+    m_text.set_font(theme().font());
 }
 
 
-void FpsDisplay::draw(graphics::View& view, const util::Vec2f& pos)
+void FpsDisplay::draw(graphics::View& view)
 {
+    // Measure time from previous frame
+    auto now = std::chrono::steady_clock::now();
+    std::chrono::duration<float> elapsed = now - m_prevtime;
+    m_fps.tick(elapsed.count());
+    m_prevtime = now;
+
+    // Draw
     init_shader();
     update_texture();
     m_quad->set_shader(m_shader);
     m_quad->set_texture("u_texture", m_texture);
-    m_quad->draw(view, pos);
+    m_quad->draw(view, position());
 
     m_text.set_string(format("{}fps ({:.2f}ms)",
-                             m_fps_counter.frame_rate(),
-                             m_fps_counter.avg_frame_time() * 1000));
-    m_text.draw(view, pos + Vec2f{0.02, 0.07f});
+                             m_fps.frame_rate(),
+                             m_fps.avg_frame_time() * 1000));
+    m_text.draw(view, position() + Vec2f{0.02, 0.07f});
 }
 
 
@@ -98,9 +104,9 @@ void FpsDisplay::init_shader()
 void FpsDisplay::update_texture()
 {
     const float sample_max = 1.f / 30.f;
-    uint8_t pixels[m_fps_counter.resolution()];
+    uint8_t pixels[m_fps.resolution()];
     uint8_t* pixel = pixels;
-    m_fps_counter.foreach_sample([&](float sample) {
+    m_fps.foreach_sample([&](float sample) {
         *pixel++ = uint8_t(sample / sample_max * 255.f);
     });
     m_texture->update(pixels);

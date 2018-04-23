@@ -1,4 +1,4 @@
-// Button.cpp created on 2018-04-22, part of XCI toolkit
+// Checkbox.cpp created on 2018-04-22, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,24 +13,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "Button.h"
+#include "Checkbox.h"
+
 
 namespace xci {
-namespace ui {
+namespace widgets {
 
 using namespace xci::graphics;
 
 
-void Button::handle_input(View& view, const MouseBtnEvent& ev)
+Checkbox::Checkbox()
+{
+    set_icon(IconId::CheckBoxUnchecked);
+}
+
+
+void Checkbox::handle(View& view, const MouseBtnEvent& ev)
 {
     if (ev.action == Action::Press && ev.button == MouseButton::Left) {
-        if (m_click_cb && bbox().contains(ev.pos - position())) {
-            m_click_cb(view);
+        if (bbox().contains(ev.pos - position())) {
+            m_checked = !m_checked;
+            set_icon(m_checked ? IconId::CheckBoxChecked
+                               : IconId::CheckBoxUnchecked);
+            update(view);
             view.refresh();
+
+            if (m_change_cb)
+                m_change_cb(view);
         }
     }
 }
 
 
-}} // namespace xci::ui
-
+}} // namespace xci::widgets

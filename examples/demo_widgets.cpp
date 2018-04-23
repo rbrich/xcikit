@@ -40,6 +40,7 @@ int main()
         return EXIT_FAILURE;
 
     Button button_default("Default button");
+    button_default.set_position({0, -0.2f});
 
     Button button_styled("Styled button");
     button_styled.set_font_size(0.07);
@@ -48,6 +49,7 @@ int main()
     button_styled.set_text_color(Color(255, 255, 50));
 
     Icon checkbox;
+    checkbox.set_position({0, 0.4f});
     checkbox.set_icon(IconId::CheckBoxChecked);
     checkbox.set_text("Checkbox");
     checkbox.set_size(0.08);
@@ -64,9 +66,9 @@ int main()
     });
 
     window.set_draw_callback([&](View& view) {
-        button_default.draw(view, {0, -0.2f});
-        button_styled.draw(view, {0, 0});
-        checkbox.draw(view, {0, 0.4f});
+        button_default.draw(view);
+        button_styled.draw(view);
+        checkbox.draw(view);
     });
 
     window.set_mouse_button_callback([&](View& view, const MouseBtnEvent& ev) {

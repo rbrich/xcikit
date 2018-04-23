@@ -37,7 +37,7 @@ add_executable(demo_widgets demo_widgets.cpp)
 target_link_libraries(demo_widgets ${XCI_WIDGETS_LIBRARY})
 
 add_executable(demo_ui demo_ui.cpp)
-target_link_libraries(demo_ui ${XCI_UI_LIBRARY})
+target_link_libraries(demo_ui ${XCI_WIDGETS_LIBRARY})
 
 if (WITH_OPENGL)
     add_executable(demo_opengl demo_opengl.cpp)

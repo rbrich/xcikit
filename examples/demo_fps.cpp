@@ -17,13 +17,9 @@
 #include <xci/text/Text.h>
 #include <xci/graphics/Window.h>
 #include <xci/graphics/Shape.h>
-#include <xci/util/FpsCounter.h>
 #include <xci/util/file.h>
 #include <xci/util/format.h>
 #include <cstdlib>
-
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
 
 using namespace xci::widgets;
 using namespace xci::text;
@@ -51,9 +47,8 @@ int main()
     Shape rts_px(Color(40, 40, 0, 128), Color(255, 255, 0));
     rts_px.set_antialiasing(2);
 
-    FpsCounter fps;
-    double t_prev = 0;
-    FpsDisplay fps_display(fps);
+    FpsDisplay fps_display;
+    fps_display.set_position({-1.2f, -0.8f});
     Text help_text("[v] vsync{tab}[d] on demand{br}[n] nowait{tab}[e] on event", font);
     Text mouse_pos("Mouse: ", font);
     mouse_pos.set_color(Color(255, 150, 50));
@@ -73,12 +68,8 @@ int main()
         rts.draw(view, {0, 0});
         rts_px.draw(view, {-0.45f, -0.45f});
 
-        double t_now = glfwGetTime();
-        fps.tick(float(t_now - t_prev));
-        t_prev = t_now;
-
         help_text.draw(view, {-1.2f, -0.9f});
-        fps_display.draw(view, {-1.2f, -0.8f});
+        fps_display.draw(view);
         mouse_pos.draw(view, {-1.2f, 0.9f});
     });
 

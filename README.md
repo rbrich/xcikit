@@ -53,17 +53,16 @@ Long-term goal:
 
 These goals should be achieved by separate libraries:
 
-- `xci-ui`
 - `xci-widgets`
 - `xci-text`
+- `xci-graphics`
 
-When only `xci-text` is to be used, no UI widgets need to be even compiled.
-For just rendering widgets (ie. immediate mode), only `xci-widgets` + `xci-text`
-are to be used. The top-level `xci-ui` will provide UI with input processing,
-events, callbacks...
+The top-level `xci-widgets` provides UI components with event processing.
+It uses text layout engine `xci-text`, which can also be used separately.
 
-All rendering should go through `xci-graphics` library, which provides
+All rendering goes through `xci-graphics` library, which provides
 adapters for different frameworks and APIs, including low-level OpenGL.
+This can also be used separately when neither UI nor text rendering is needed.
 
 Technologies:
 

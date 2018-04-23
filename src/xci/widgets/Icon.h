@@ -16,7 +16,7 @@
 #ifndef XCI_WIDGETS_ICON_H
 #define XCI_WIDGETS_ICON_H
 
-#include <xci/widgets/Theme.h>
+#include <xci/widgets/Widget.h>
 #include <xci/text/Layout.h>
 
 namespace xci {
@@ -24,17 +24,16 @@ namespace widgets {
 
 using namespace xci::text;
 
-class Icon {
-public:
-    explicit Icon(Theme& theme = Theme::default_theme());
 
+class Icon: public Widget {
+public:
     void set_icon(IconId icon_id);
     void set_text(const std::string& text);
     void set_size(float size);
     void set_color(const graphics::Color& color);
 
-    void update(const graphics::View& target);
-    void draw(graphics::View& view, const util::Vec2f& pos);
+    void update(const graphics::View& view) override;
+    void draw(graphics::View& view) override;
 
     util::Rect_f bbox() const;
 
@@ -42,7 +41,6 @@ private:
     void refresh();
 
 private:
-    Theme& m_theme;
     IconId m_icon_id = IconId::None;
     std::string m_text;
     Layout m_layout;

@@ -23,10 +23,10 @@ using namespace xci::graphics;
 using namespace xci::text;
 
 
-Button::Button(const std::string &string, Theme& theme)
-    : m_theme(theme), m_bg_rect(Color(10, 20, 40), Color(180, 180, 0))
+Button::Button(const std::string &string)
+    : m_bg_rect(Color(10, 20, 40), Color(180, 180, 0))
 {
-    m_layout.set_default_font(&m_theme.font());
+    m_layout.set_default_font(&theme().font());
     Markup markup(m_layout);
     markup.parse(string);
 }
@@ -53,10 +53,21 @@ void Button::update(const graphics::View& target)
 }
 
 
-void Button::draw(graphics::View& view, const util::Vec2f& pos)
+void Button::draw(graphics::View& view)
 {
-    m_bg_rect.draw(view, pos + m_padding);
-    m_layout.draw(view, pos + m_padding);
+    m_bg_rect.draw(view, position() + m_padding);
+    m_layout.draw(view, position() + m_padding);
+}
+
+
+void Button::handle(View& view, const MouseBtnEvent& ev)
+{
+    if (ev.action == Action::Press && ev.button == MouseButton::Left) {
+        if (m_click_cb && bbox().contains(ev.pos - position())) {
+            m_click_cb(view);
+            view.refresh();
+        }
+    }
 }
 
 

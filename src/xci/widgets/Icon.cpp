@@ -22,9 +22,6 @@ namespace widgets {
 using xci::util::to_utf8;
 
 
-Icon::Icon(Theme& theme) : m_theme(theme) {}
-
-
 void Icon::set_icon(IconId icon_id)
 {
     m_icon_id = icon_id;
@@ -52,17 +49,17 @@ void Icon::set_color(const graphics::Color& color)
 }
 
 
-void Icon::update(const graphics::View& target)
+void Icon::update(const graphics::View& view)
 {
     if (m_needs_refresh)
         refresh();
-    m_layout.typeset(target);
+    m_layout.typeset(view);
 }
 
 
-void Icon::draw(graphics::View& view, const util::Vec2f& pos)
+void Icon::draw(graphics::View& view)
 {
-    m_layout.draw(view, pos);
+    m_layout.draw(view, position());
 }
 
 
@@ -75,11 +72,11 @@ util::Rect_f Icon::bbox() const
 void Icon::refresh()
 {
     m_layout.clear();
-    m_layout.set_font(&m_theme.icon_font());
+    m_layout.set_font(&theme().icon_font());
     m_layout.set_offset({0, 0.125f});
-    m_layout.add_word(to_utf8(m_theme.icon_codepoint(m_icon_id)));
+    m_layout.add_word(to_utf8(theme().icon_codepoint(m_icon_id)));
     m_layout.reset_offset();
-    m_layout.set_font(&m_theme.font());
+    m_layout.set_font(&theme().font());
     m_layout.add_space();
     m_layout.add_word(m_text);
 }
