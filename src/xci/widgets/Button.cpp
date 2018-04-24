@@ -45,25 +45,26 @@ void Button::set_text_color(const graphics::Color& color)
 }
 
 
-void Button::update(const graphics::View& target)
+void Button::update(View& view)
 {
-    m_layout.typeset(target);
+    m_layout.typeset(view);
     m_bg_rect.clear();
     m_bg_rect.add_rectangle(bbox(), m_outline_thickness);
 }
 
 
-void Button::draw(graphics::View& view)
+void Button::draw(View& view)
 {
-    m_bg_rect.draw(view, position() + m_padding);
-    m_layout.draw(view, position() + m_padding);
+    auto rect = m_layout.bbox();
+    m_bg_rect.draw(view, {0, 0});
+    m_layout.draw(view, position() + Vec2f{m_padding - rect.x, m_padding - rect.y});
 }
 
 
 void Button::handle(View& view, const MouseBtnEvent& ev)
 {
     if (ev.action == Action::Press && ev.button == MouseButton::Left) {
-        if (m_click_cb && bbox().contains(ev.pos - position())) {
+        if (m_click_cb && bbox().contains(ev.pos)) {
             m_click_cb(view);
             view.refresh();
         }
@@ -75,6 +76,8 @@ util::Rect_f Button::bbox() const
 {
     auto rect = m_layout.bbox();
     rect.enlarge(m_padding);
+    rect.x = position().x;
+    rect.y = position().y;
     return rect;
 }
 

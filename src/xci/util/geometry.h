@@ -148,8 +148,6 @@ struct Rect {
     inline T right() const { return x + w; }
     inline T bottom() const { return y + h; }
 
-    bool empty() const { return x + y + w + h == 0; }
-
 public:
     T x;  // left
     T y;  // top

@@ -32,8 +32,8 @@ public:
     void set_size(float size);
     void set_color(const graphics::Color& color);
 
-    void update(const graphics::View& view) override;
-    void draw(graphics::View& view) override;
+    void update(View& view) override;
+    void draw(View& view) override;
 
     util::Rect_f bbox() const;
 

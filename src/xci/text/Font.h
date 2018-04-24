@@ -90,6 +90,8 @@ public:
 
     // just a facade
     float line_height() const;
+    float ascender() const;
+    float descender() const;
     graphics::TexturePtr& get_texture() { return m_texture.get_texture(); }
 
     // Throw away any rendered glyphs

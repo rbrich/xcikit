@@ -118,12 +118,25 @@ bool FontFace::set_outline()
             return false;
         }
     }
+
+    // TODO
+
     return true;
 }
 
-float FontFace::get_line_height() const
+float FontFace::line_height() const
 {
     return ft_to_float(face->size->metrics.height);
+}
+
+float FontFace::ascender() const
+{
+    return ft_to_float(face->size->metrics.ascender);
+}
+
+float FontFace::descender() const
+{
+    return ft_to_float(face->size->metrics.descender);
 }
 
 GlyphIndex FontFace::get_glyph_index(CodePoint code_point) const
@@ -131,7 +144,7 @@ GlyphIndex FontFace::get_glyph_index(CodePoint code_point) const
     return FT_Get_Char_Index(face, code_point);
 }
 
-FT_Glyph_Metrics& FontFace::get_glyph_metrics()
+FT_Glyph_Metrics& FontFace::glyph_metrics()
 {
     return face->glyph->metrics;
 }

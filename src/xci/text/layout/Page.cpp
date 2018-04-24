@@ -53,10 +53,12 @@ Word::Word(Page& page, const std::string& string)
             continue;
 
         // Expand text bounds by glyph bounds
-        util::Rect_f rect{pen.x + glyph->base_x() * pxr.x,
-                          pen.y - glyph->base_y() * pxr.y,
-                          glyph->width() * pxr.x,
-                          glyph->height() * pxr.y};
+        auto ascender = font->ascender();
+        auto descender = font->descender();
+        util::Rect_f rect{pen.x ,
+                          pen.y - ascender * pxr.y,
+                          glyph->advance() * pxr.x,
+                          (ascender - descender) * pxr.y};
 
         if (first) {
             m_bbox = rect;
@@ -65,7 +67,7 @@ Word::Word(Page& page, const std::string& string)
             m_bbox.extend(rect);
         }
 
-        pen.x += glyph->advance() * pxr.x;
+        pen.x += rect.w;
     }
 
     // Check line end

@@ -37,8 +37,8 @@ public:
     void set_decoration_color(const graphics::Color& fill, const graphics::Color& border);
     void set_text_color(const graphics::Color& color);
 
-    void update(const graphics::View& target) override;
-    void draw(graphics::View& view) override;
+    void update(View& view) override;
+    void draw(View& view) override;
     void handle(View& view, const MouseBtnEvent& ev) override;
 
     util::Rect_f bbox() const;

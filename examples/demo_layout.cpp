@@ -61,10 +61,10 @@ int main()
 
     Text help_text("[c] show character quads\n\n"
                    "[p] show word base points\n\n"
-                   "[w] show word bboxes\n\n"
-                   "[l] show line bboxes\n\n"
-                   "[s] show span bboxes\n\n"
-                   "[b] show page bboxes", font);
+                   "[w] show word boxes\n\n"
+                   "[l] show line boxes\n\n"
+                   "[s] show span boxes\n\n"
+                   "[b] show page boxes", font);
     help_text.set_color(Color(50, 200, 100));
 
     View::DebugFlags debug_flags = 0;

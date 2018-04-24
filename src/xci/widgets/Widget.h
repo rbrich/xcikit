@@ -44,8 +44,8 @@ public:
     // Events need to be injected into root widget.
     // This can be set up using Bind helper or manually by calling these methods.
 
-    virtual void update(const graphics::View& view) = 0;
-    virtual void draw(graphics::View& view) = 0;
+    virtual void update(View& view) = 0;
+    virtual void draw(View& view) = 0;
     virtual void handle(View& view, const KeyEvent& ev) {}
     virtual void handle(View& view, const MousePosEvent& ev) {}
     virtual void handle(View& view, const MouseBtnEvent& ev) {}
@@ -56,20 +56,23 @@ private:
 };
 
 
+using WidgetPtr = std::shared_ptr<Widget>;
+
+
 // Manages list of child widgets and forwards all events to them
 
 class Composite: public Widget {
 public:
-    void add(Widget& child) { m_child.push_back(&child); }
+    void add(WidgetPtr child) { m_child.push_back(std::move(child)); }
 
-    void update(const graphics::View& view) override;
-    void draw(graphics::View& view) override;
+    void update(View& view) override;
+    void draw(View& view) override;
     void handle(View& view, const KeyEvent& ev) override;
     void handle(View& view, const MousePosEvent& ev) override;
     void handle(View& view, const MouseBtnEvent& ev) override;
 
 private:
-    std::vector<Widget*> m_child;
+    std::vector<WidgetPtr> m_child;
 };
 
 

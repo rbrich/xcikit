@@ -30,8 +30,8 @@ class FpsDisplay: public Widget {
 public:
     FpsDisplay();
 
-    void update(const graphics::View& view) override;
-    void draw(graphics::View& view) override;
+    void update(View& view) override;
+    void draw(View& view) override;
 
 private:
     void init_shader();

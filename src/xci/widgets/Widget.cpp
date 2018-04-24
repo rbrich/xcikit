@@ -21,37 +21,37 @@ namespace widgets {
 using graphics::View;
 
 
-void Composite::update(const graphics::View& view)
+void Composite::update(View& view)
 {
-    for (auto* child : m_child)
+    for (auto& child : m_child)
         child->update(view);
 }
 
 
 void Composite::draw(View& view)
 {
-    for (auto* child : m_child)
+    for (auto& child : m_child)
         child->draw(view);
 }
 
 
 void Composite::handle(View& view, const KeyEvent& ev)
 {
-    for (auto* child : m_child)
+    for (auto& child : m_child)
         child->handle(view, ev);
 }
 
 
 void Composite::handle(View& view, const MousePosEvent& ev)
 {
-    for (auto* child : m_child)
+    for (auto& child : m_child)
         child->handle(view, ev);
 }
 
 
 void Composite::handle(View& view, const MouseBtnEvent& ev)
 {
-    for (auto* child : m_child)
+    for (auto& child : m_child)
         child->handle(view, ev);
 }
 

@@ -48,16 +48,18 @@ public:
 
     bool set_size(unsigned pixel_size);
 
-    bool set_outline();
+    bool set_outline();  // TODO
 
-    float get_line_height() const;
+    float line_height() const;
+    float ascender() const;
+    float descender() const;
 
     GlyphIndex get_glyph_index(CodePoint code_point) const;
 
     // Returns null on error
     FT_GlyphSlot load_glyph(GlyphIndex glyph_index);
 
-    FT_Glyph_Metrics& get_glyph_metrics();
+    FT_Glyph_Metrics& glyph_metrics();
 
     FT_Bitmap& render_glyph();
 

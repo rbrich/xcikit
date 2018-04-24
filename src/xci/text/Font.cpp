@@ -88,8 +88,19 @@ void Font::clear_cache()
 
 float Font::line_height() const
 {
-    m_current_face->set_size(m_size);
-    return m_current_face->get_line_height();
+    return m_current_face->line_height();
+}
+
+
+float Font::ascender() const
+{
+    return m_current_face->ascender();
+}
+
+
+float Font::descender() const
+{
+    return m_current_face->descender();
 }
 
 

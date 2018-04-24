@@ -207,11 +207,14 @@ Span* Layout::get_span(const std::string& name)
 util::Rect_f Layout::bbox() const
 {
     util::Rect_f bbox;
+    bool first = true;
     for (auto& line : m_page.lines()) {
-        if (bbox.empty())
+        if (first) {
             bbox = line.bbox();
-        else
+            first = false;
+        } else {
             bbox.extend(line.bbox());
+        }
     }
     return bbox;
 }

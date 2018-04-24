@@ -49,7 +49,7 @@ void Icon::set_color(const graphics::Color& color)
 }
 
 
-void Icon::update(const graphics::View& view)
+void Icon::update(View& view)
 {
     if (m_needs_refresh)
         refresh();
@@ -57,7 +57,7 @@ void Icon::update(const graphics::View& view)
 }
 
 
-void Icon::draw(graphics::View& view)
+void Icon::draw(View& view)
 {
     m_layout.draw(view, position());
 }

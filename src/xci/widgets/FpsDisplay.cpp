@@ -39,7 +39,7 @@ FpsDisplay::FpsDisplay()
 {}
 
 
-void FpsDisplay::update(const graphics::View& view)
+void FpsDisplay::update(View& view)
 {
     float x1 = 0;
     float y1 = -0.10f;
@@ -57,7 +57,7 @@ void FpsDisplay::update(const graphics::View& view)
 }
 
 
-void FpsDisplay::draw(graphics::View& view)
+void FpsDisplay::draw(View& view)
 {
     // Measure time from previous frame
     auto now = std::chrono::steady_clock::now();

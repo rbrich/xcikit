@@ -40,28 +40,31 @@ int main()
     std::uniform_int_distribution<int> runi(0, 255);
     auto random_color = [&](){ return Color(runi(re), runi(re), runi(re)); };
 
-    Button button("Click me!");
-    button.set_font_size(0.07);
-    button.set_padding(0.05);
-    button.on_click([&](View& view) {
-        button.set_text_color(random_color());
-        button.update(view);
-    });
-
-    Checkbox checkbox;
-    checkbox.set_text("Checkbox");
-    checkbox.set_position({0, 0.2});
-
-    FpsDisplay fps_display;
-    fps_display.set_position({-1.2f, -0.8f});
-
     Composite root;
-    root.add(button);
-    root.add(checkbox);
+    for (auto i : {1,2,3,4,5}) {
+        auto button = std::make_shared<Button>(std::to_string(i) + ". click me!");
+        button->set_position({-0.2f, -0.5f + i * 0.12f});
+        button->set_font_size(0.07);
+        button->on_click([button, &random_color](View& view) {
+            button->set_text_color(random_color());
+            button->update(view);
+        });
+        root.add(button);
+    }
+
+    for (auto i : {1,2,3,4,5}) {
+        auto checkbox = std::make_shared<Checkbox>();
+        checkbox->set_text("Checkbox " + std::to_string(i));
+        checkbox->set_position({0.5f, -0.5f + i * 0.05f});
+        root.add(checkbox);
+    }
+
+    auto fps_display = std::make_shared<FpsDisplay>();
+    fps_display->set_position({-1.2f, -0.8f});
     root.add(fps_display);
 
     Bind bind(window, root);
-    window.set_refresh_mode(RefreshMode::OnDemand);
+    window.set_refresh_mode(RefreshMode::OnEvent);
     window.display();
     return EXIT_SUCCESS;
 }
