@@ -51,7 +51,7 @@ public:
     void set_stroke(Stroke stroke);
 
     // Select a size for current face. This may create a new texture (glyph table).
-    void set_size(unsigned size) { m_size = size; }
+    void set_size(unsigned size);
     unsigned size() const { return m_size; }
 
     struct GlyphKey {

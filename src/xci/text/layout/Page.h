@@ -21,8 +21,9 @@
 #include <xci/graphics/View.h>
 #include <xci/util/geometry.h>
 
-#include <vector>
 #include <string>
+#include <vector>
+#include <list>
 
 namespace xci {
 namespace text {
@@ -177,9 +178,9 @@ public:
 
     // ------------------------------------------------------------------------
 
-    const std::vector<Word>& words() const { return m_words; }
-    const std::vector<Line>& lines() const { return m_lines; }
-    const std::vector<const Span*> spans() const;
+    void foreach_word(const std::function<void(const Word& word)>& cb) const;
+    void foreach_line(const std::function<void(const Line& line)>& cb) const;
+    void foreach_span(const std::function<void(const Span& span)>& cb) const;
 
 private:
     float space_width();
@@ -198,7 +199,7 @@ private:
     std::vector<float> m_tab_stops;
 
     // page content
-    std::vector<Word> m_words;
+    std::list<Word> m_words;
     std::vector<Line> m_lines;
     std::map<std::string, Span> m_spans;
 };

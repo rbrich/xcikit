@@ -43,6 +43,8 @@ Word::Word(Page& page, const std::string& string)
 
     auto pxr = page.target_framebuffer_ratio();
     font->set_size(unsigned(m_style.size() / pxr.y));
+    auto ascender = font->ascender();
+    auto descender = font->descender();
 
     // Measure word (metrics are affected by string, font, size)
     util::Vec2f pen;
@@ -53,8 +55,6 @@ Word::Word(Page& page, const std::string& string)
             continue;
 
         // Expand text bounds by glyph bounds
-        auto ascender = font->ascender();
-        auto descender = font->descender();
         util::Rect_f rect{pen.x ,
                           pen.y - ascender * pxr.y,
                           glyph->advance() * pxr.x,
@@ -335,13 +335,30 @@ Span* Page::get_span(const std::string& name)
 }
 
 
-const std::vector<const Span*> Page::spans() const
+void Page::foreach_word(const std::function<void(const Word& word)>& cb) const
 {
-    std::vector<const Span*> out;
-    for (auto& pair : m_spans) {
-        out.push_back(&pair.second);
+    if (!cb) return;
+    for (auto& word : m_words) {
+        cb(word);
     }
-    return out;
+}
+
+
+void Page::foreach_line(const std::function<void(const Line& line)>& cb) const
+{
+    if (!cb) return;
+    for (auto& line : m_lines) {
+        cb(line);
+    }
+}
+
+
+void Page::foreach_span(const std::function<void(const Span& span)>& cb) const
+{
+    if (!cb) return;
+    for (auto& pair : m_spans) {
+        cb(pair.second);
+    }
 }
 
 

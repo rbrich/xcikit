@@ -91,26 +91,26 @@ void Layout::draw(View& target, const util::Vec2f& pos) const
     // Debug: span bboxes
     if (target.has_debug_flag(View::Debug::SpanBBox)) {
         graphics::Shape bboxes(Color(100, 0, 150, 128), Color(200, 50, 250));
-        for (auto* span : m_page.spans()) {
-            for (auto& part : span->parts()) {
+        m_page.foreach_span([&](const Span& span) {
+            for (auto& part : span.parts()) {
                 bboxes.add_rectangle(part.bbox(), 1 * pxr.x);
             }
-        }
+        });
         bboxes.draw(target, pos);
     }
 
     // Debug: line bboxes
     if (target.has_debug_flag(View::Debug::LineBBox)) {
         graphics::Shape bboxes(Color(0, 50, 150, 128), Color(50, 50, 250));
-        for (auto& line : m_page.lines()) {
+        m_page.foreach_line([&](const Line& line) {
             bboxes.add_rectangle(line.bbox(), 1 * pxr.x);
-        }
+        });
         bboxes.draw(target, pos);
     }
 
-    for (auto& word : m_page.words()) {
+    m_page.foreach_word([&](const Word& word) {
         word.draw(target, pos);
-    }
+    });
 }
 
 
@@ -208,14 +208,14 @@ util::Rect_f Layout::bbox() const
 {
     util::Rect_f bbox;
     bool first = true;
-    for (auto& line : m_page.lines()) {
+    m_page.foreach_line([&](const Line& line) {
         if (first) {
             bbox = line.bbox();
             first = false;
         } else {
             bbox.extend(line.bbox());
         }
-    }
+    });
     return bbox;
 }
 

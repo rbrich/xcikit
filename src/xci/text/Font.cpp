@@ -36,6 +36,14 @@ void Font::add_face(FontFace &face)
 }
 
 
+void Font::set_size(unsigned size)
+{
+    m_size = size;
+    if (m_current_face)
+        m_current_face->set_size(m_size);
+}
+
+
 Font::Glyph* Font::get_glyph(CodePoint code_point)
 {
     assert(m_current_face != nullptr);  // font must be loaded
@@ -88,18 +96,21 @@ void Font::clear_cache()
 
 float Font::line_height() const
 {
+    assert(m_current_face != nullptr);  // font must be loaded
     return m_current_face->line_height();
 }
 
 
 float Font::ascender() const
 {
+    assert(m_current_face != nullptr);  // font must be loaded
     return m_current_face->ascender();
 }
 
 
 float Font::descender() const
 {
+    assert(m_current_face != nullptr);  // font must be loaded
     return m_current_face->descender();
 }
 

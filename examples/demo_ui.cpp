@@ -43,7 +43,7 @@ int main()
     Composite root;
     for (auto i : {1,2,3,4,5}) {
         auto button = std::make_shared<Button>(std::to_string(i) + ". click me!");
-        button->set_position({-0.2f, -0.5f + i * 0.12f});
+        button->set_position({-0.2f, -0.5f + i * 0.14f});
         button->set_font_size(0.07);
         button->on_click([button, &random_color](View& view) {
             button->set_text_color(random_color());
@@ -55,7 +55,7 @@ int main()
     for (auto i : {1,2,3,4,5}) {
         auto checkbox = std::make_shared<Checkbox>();
         checkbox->set_text("Checkbox " + std::to_string(i));
-        checkbox->set_position({0.5f, -0.5f + i * 0.05f});
+        checkbox->set_position({0.5f, -0.5f + i * 0.06f});
         root.add(checkbox);
     }
 
@@ -64,7 +64,7 @@ int main()
     root.add(fps_display);
 
     Bind bind(window, root);
-    window.set_refresh_mode(RefreshMode::OnEvent);
+    window.set_refresh_mode(RefreshMode::OnDemand);
     window.display();
     return EXIT_SUCCESS;
 }
