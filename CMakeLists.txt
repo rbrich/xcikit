@@ -154,6 +154,9 @@ find_package(Catch)
 # PEGTL
 find_package(PEGTL REQUIRED)
 
+# Doxygen
+find_package(Doxygen)
+
 
 # ------------ #
 # Libraries    #
@@ -259,3 +262,22 @@ if (CATCH_FOUND)
     enable_testing()
     add_subdirectory(tests)
 endif (CATCH_FOUND)
+
+
+
+# ------------- #
+# Documentation #
+# ------------- #
+
+if (DOXYGEN_FOUND)
+    set(DOXYGEN_OUTPUT_DIRECTORY doc)
+    set(DOXYGEN_EXTRACT_ALL YES)
+    set(DOXYGEN_BUILTIN_STL_SUPPORT YES)
+    set(DOXYGEN_SOURCE_BROWSER YES)
+    set(DOXYGEN_JAVADOC_AUTOBRIEF YES)
+    set(DOXYGEN_SORT_MEMBER_DOCS NO)
+    doxygen_add_docs(doc
+        xci
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/src
+        COMMENT "Generate documentation")
+endif (DOXYGEN_FOUND)

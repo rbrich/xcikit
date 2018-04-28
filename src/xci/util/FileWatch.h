@@ -28,7 +28,7 @@ class FileWatch;
 using FileWatchPtr = std::unique_ptr<FileWatch>;
 
 
-// FileWatch may be used for auto-reloading of resource files.
+/// FileWatch may be used for auto-reloading of resource files.
 
 class FileWatch {
 public:
@@ -38,24 +38,27 @@ public:
     virtual ~FileWatch() = default;
 
     enum class Event {
-        Create,     // File was created or moved in
-        Delete,     // File was deleted or moved away
-        Modify,     // File content was modified
-        Attrib,     // File attributes were changed
-        Stopped,    // The file is no longer watched (containing directory was deleted or moved)
+        Create,     ///< File was created or moved in
+        Delete,     ///< File was deleted or moved away
+        Modify,     ///< File content was modified
+        Attrib,     ///< File attributes were changed
+        Stopped,    ///< The file is no longer watched (containing directory was deleted or moved)
     };
 
     using Callback = std::function<void(Event)>;
 
-    // Watch file `filename` for changes and call `cb` when an event occurs.
-    // It's possible to add more than one callback for the same `filename`.
-    // Note that the callback might be called from another thread.
-    // Returns new watch handle on success, -1 on error.
+    /// Watch file for changes and run a callback when an event occurs.
+    /// It's possible to add more than one callback for the same `filename`.
+    /// Note that the callback might be called from another thread.
+    /// \param filename File to be watched.
+    /// \param cb       Callback function called for each event.
+    /// \return         New watch handle on success, -1 on error.
     virtual int add_watch(const std::string& filename, Callback cb) = 0;
 
-    // Remove previously added watch with `handle`. Does nothing for handle -1.
-    // In case the same file has multiple callbacks installed, this removes
-    // just the one identified by `handle`.
+    /// Remove previously added watch. Does nothing for handle -1.
+    /// In case the same file has multiple callbacks installed, this removes
+    /// just the one identified by `handle`.
+    /// \param handle Handle to the watch as returned from add_watch.
     virtual void remove_watch(int handle) = 0;
 };
 

@@ -34,13 +34,13 @@ class FpsCounter {
 public:
     explicit FpsCounter(size_t resolution = 60);
 
-    // Append new frame time to the counter
+    /// Append new frame time to the counter
     void tick(float frame_time);
 
-    // Number of frames in last second
+    /// Number of frames in last second
     int frame_rate() const;
 
-    // Average frame time during last second
+    /// Average frame time during last second
     float avg_frame_time() const;
 
     // Export for FpsDisplay
