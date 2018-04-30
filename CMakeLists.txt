@@ -277,7 +277,8 @@ if (DOXYGEN_FOUND)
     set(DOXYGEN_JAVADOC_AUTOBRIEF YES)
     set(DOXYGEN_SORT_MEMBER_DOCS NO)
     doxygen_add_docs(doc
-        xci
-        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/src
+        src/xci
+        docs
+        README.md
         COMMENT "Generate documentation")
 endif (DOXYGEN_FOUND)

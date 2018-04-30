@@ -1,4 +1,4 @@
-XCI Toolkit
+XCI Toolkit {#mainpage}
 ===========
 Render Text & User Interface
 

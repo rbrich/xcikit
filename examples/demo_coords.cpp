@@ -20,6 +20,8 @@
 #include <xci/text/Text.h>
 #include <xci/graphics/Window.h>
 #include <xci/graphics/Sprites.h>
+#include <xci/graphics/Shape.h>
+#include <xci/graphics/Color.h>
 #include <xci/util/format.h>
 #include <xci/util/file.h>
 #include <cstdlib>
@@ -57,6 +59,8 @@ int main()
     Text mouse_pos("Mouse position:    ", font);
     mouse_pos.set_color(Color(255, 150, 50));
 
+    Shape unit_square(Color::Transparent(), Color(0.7, 0.7, 0.7));
+
     window.set_size_callback([&](View& view) {
         Vec2f vs = view.scalable_size();
         coords_tl.set_fixed_string(format("({}, {})", -0.5f * vs.x, -0.5f * vs.y));
@@ -79,9 +83,13 @@ int main()
         size_frame.set_fixed_string("Framebuffer size:  " +
                                     format("{} x {}", fs.x, fs.y) +
                                     "  (" + format("{} x {}", 1/fr.x, 1/fr.y) + ")");
+
+        unit_square.clear();
+        unit_square.add_rectangle({-1, -1, 2, 2}, pr.y);
     });
 
     window.set_draw_callback([&](View& view) {
+        unit_square.draw(view, {0,0});
         coords_center.draw(view, {0.0f, 0.0f});
         Vec2f vs = view.scalable_size();
         coords_tl.draw(view, {-0.5f * vs.x + 0.1f, -0.5f * vs.y + 0.1f});
