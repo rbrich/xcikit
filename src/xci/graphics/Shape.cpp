@@ -52,28 +52,28 @@ void Shape::add_line_slice(const Rect_f& slice, const Vec2f& a, const Vec2f& b,
 {
     auto dir = (b-a).norm();
     auto rotate = [dir](float x, float y) -> Vec2f {
-        float xnew = x * dir.x - y * dir.y;
-        float ynew = x * dir.y + y * dir.x;
+        float xnew = x * dir.x + y * dir.y;
+        float ynew = -x * dir.y + y * dir.x;
         return {xnew, ynew};
     };
 
     float x1 = slice.x;
-    float y1 = -slice.y;
+    float y1 = slice.y;
     float x2 = slice.x + slice.w;
-    float y2 = -slice.y - slice.h;
-    float ax = (slice.x+slice.w - a.x) / thickness;
-    float ay = (slice.y+slice.h - a.y) / thickness;
-    float bx = (slice.x - a.x) / thickness;
-    float by = (slice.y - a.y) / thickness;
-    auto t1 = rotate(ax, by);
-    auto t2 = rotate(ax, ay);
-    auto t3 = rotate(bx, ay);
-    auto t4 = rotate(bx, by);
+    float y2 = slice.y + slice.h;
+    float ax = (slice.x - a.x) / thickness;
+    float ay = (slice.y - a.y) / thickness;
+    float bx = (slice.x+slice.w - a.x) / thickness;
+    float by = (slice.y+slice.h - a.y) / thickness;
+    auto t1 = rotate(ax, ay);
+    auto t2 = rotate(ax, by);
+    auto t3 = rotate(bx, by);
+    auto t4 = rotate(bx, ay);
     m_lines->begin_primitive();
-    m_lines->add_vertex(x2, y1, t1.x, t1.y);
-    m_lines->add_vertex(x2, y2, t2.x, t2.y);
-    m_lines->add_vertex(x1, y2, t3.x, t3.y);
-    m_lines->add_vertex(x1, y1, t4.x, t4.y);
+    m_lines->add_vertex(x1, y1, t1.x, t1.y);
+    m_lines->add_vertex(x1, y2, t2.x, t2.y);
+    m_lines->add_vertex(x2, y2, t3.x, t3.y);
+    m_lines->add_vertex(x2, y1, t4.x, t4.y);
     m_lines->end_primitive();
 }
 
@@ -81,19 +81,19 @@ void Shape::add_line_slice(const Rect_f& slice, const Vec2f& a, const Vec2f& b,
 void Shape::add_rectangle(const Rect_f& rect, float outline_thickness)
 {
     float x1 = rect.x;
-    float y1 = -rect.y;
+    float y1 = rect.y;
     float x2 = rect.x + rect.w;
-    float y2 = -rect.y - rect.h;
+    float y2 = rect.y + rect.h;
     float tx = 2.0f * outline_thickness / rect.w;
     float ty = 2.0f * outline_thickness / rect.h;
     float ix = 1.0f + tx / (1-tx);
     float iy = 1.0f + ty / (1-ty);
 
     m_rectangles->begin_primitive();
-    m_rectangles->add_vertex(x2, y1, +ix, -iy, +1.0f, -1.0f);
-    m_rectangles->add_vertex(x2, y2, +ix, +iy, +1.0f, +1.0f);
-    m_rectangles->add_vertex(x1, y2, -ix, +iy, -1.0f, +1.0f);
     m_rectangles->add_vertex(x1, y1, -ix, -iy, -1.0f, -1.0f);
+    m_rectangles->add_vertex(x1, y2, -ix, +iy, -1.0f, +1.0f);
+    m_rectangles->add_vertex(x2, y2, +ix, +iy, +1.0f, +1.0f);
+    m_rectangles->add_vertex(x2, y1, +ix, -iy, +1.0f, -1.0f);
     m_rectangles->end_primitive();
 }
 
@@ -102,13 +102,13 @@ void Shape::add_rectangle_slice(const Rect_f& slice, const Rect_f& rect,
                                    float outline_thickness)
 {
     float x1 = slice.x;
-    float y1 = -slice.y;
+    float y1 = slice.y;
     float x2 = slice.x + slice.w;
-    float y2 = -slice.y - slice.h;
-    float ax = 2 * (slice.x+slice.w - rect.x-rect.w/2) / rect.w;
-    float ay = 2 * (slice.y+slice.h - rect.y-rect.h/2) / rect.h;
-    float bx = 2 * (slice.x - rect.x-rect.w/2) / rect.w;
-    float by = 2 * (slice.y - rect.y-rect.h/2) / rect.h;
+    float y2 = slice.y + slice.h;
+    float ax = 2 * (slice.x - rect.x-rect.w/2) / rect.w;
+    float ay = 2 * (slice.y - rect.y-rect.h/2) / rect.h;
+    float bx = 2 * (slice.x+slice.w - rect.x-rect.w/2) / rect.w;
+    float by = 2 * (slice.y+slice.h - rect.y-rect.h/2) / rect.h;
     float tx = 2.0f * outline_thickness / rect.w;
     float ty = 2.0f * outline_thickness / rect.h;
     float cx = ax * (1.0f + tx / (1-tx));
@@ -116,10 +116,10 @@ void Shape::add_rectangle_slice(const Rect_f& slice, const Rect_f& rect,
     float dx = bx * (1.0f + tx / (1-tx));
     float dy = by * (1.0f + ty / (1-ty));
     m_rectangles->begin_primitive();
-    m_rectangles->add_vertex(x2, y1, cx, dy, ax, by);
-    m_rectangles->add_vertex(x2, y2, cx, cy, ax, ay);
-    m_rectangles->add_vertex(x1, y2, dx, cy, bx, ay);
-    m_rectangles->add_vertex(x1, y1, dx, dy, bx, by);
+    m_rectangles->add_vertex(x1, y1, cx, cy, ax, ay);
+    m_rectangles->add_vertex(x1, y2, cx, dy, ax, by);
+    m_rectangles->add_vertex(x2, y2, dx, dy, bx, by);
+    m_rectangles->add_vertex(x2, y1, dx, cy, bx, ay);
     m_rectangles->end_primitive();
 }
 
@@ -127,18 +127,18 @@ void Shape::add_rectangle_slice(const Rect_f& slice, const Rect_f& rect,
 void Shape::add_ellipse(const Rect_f& rect, float outline_thickness)
 {
     float x1 = rect.x;
-    float y1 = -rect.y;
+    float y1 = rect.y;
     float x2 = rect.x + rect.w;
-    float y2 = -rect.y - rect.h;
+    float y2 = rect.y + rect.h;
     float tx = 2.0f * outline_thickness / rect.w;
     float ty = 2.0f * outline_thickness / rect.h;
     float ix = 1.0f + tx / (1-tx);
     float iy = 1.0f + ty / (1-ty);
     m_ellipses->begin_primitive();
-    m_ellipses->add_vertex(x2, y1, +ix, -iy, +1.0f, -1.0f);
-    m_ellipses->add_vertex(x2, y2, +ix, +iy, +1.0f, +1.0f);
-    m_ellipses->add_vertex(x1, y2, -ix, +iy, -1.0f, +1.0f);
     m_ellipses->add_vertex(x1, y1, -ix, -iy, -1.0f, -1.0f);
+    m_ellipses->add_vertex(x1, y2, -ix, +iy, -1.0f, +1.0f);
+    m_ellipses->add_vertex(x2, y2, +ix, +iy, +1.0f, +1.0f);
+    m_ellipses->add_vertex(x2, y1, +ix, -iy, +1.0f, -1.0f);
     m_ellipses->end_primitive();
 }
 
@@ -147,13 +147,13 @@ void Shape::add_ellipse_slice(const Rect_f& slice, const Rect_f& ellipse,
                                float outline_thickness)
 {
     float x1 = slice.x;
-    float y1 = -slice.y;
+    float y1 = slice.y;
     float x2 = slice.x + slice.w;
-    float y2 = -slice.y - slice.h;
-    float ax = 2 * (slice.x+slice.w - ellipse.x-ellipse.w/2) / ellipse.w;
-    float ay = 2 * (slice.y+slice.h - ellipse.y-ellipse.h/2) / ellipse.h;
-    float bx = 2 * (slice.x - ellipse.x-ellipse.w/2) / ellipse.w;
-    float by = 2 * (slice.y - ellipse.y-ellipse.h/2) / ellipse.h;
+    float y2 = slice.y + slice.h;
+    float ax = 2 * (slice.x - ellipse.x-ellipse.w/2) / ellipse.w;
+    float ay = 2 * (slice.y - ellipse.y-ellipse.h/2) / ellipse.h;
+    float bx = 2 * (slice.x+slice.w - ellipse.x-ellipse.w/2) / ellipse.w;
+    float by = 2 * (slice.y+slice.h - ellipse.y-ellipse.h/2) / ellipse.h;
     float tx = 2.0f * outline_thickness / ellipse.w;
     float ty = 2.0f * outline_thickness / ellipse.h;
     float cx = ax * (1.0f + tx / (1-tx));
@@ -161,10 +161,10 @@ void Shape::add_ellipse_slice(const Rect_f& slice, const Rect_f& ellipse,
     float dx = bx * (1.0f + tx / (1-tx));
     float dy = by * (1.0f + ty / (1-ty));
     m_ellipses->begin_primitive();
-    m_ellipses->add_vertex(x2, y1, cx, dy, ax, by);
-    m_ellipses->add_vertex(x2, y2, cx, cy, ax, ay);
-    m_ellipses->add_vertex(x1, y2, dx, cy, bx, ay);
-    m_ellipses->add_vertex(x1, y1, dx, dy, bx, by);
+    m_ellipses->add_vertex(x1, y1, cx, cy, ax, ay);
+    m_ellipses->add_vertex(x1, y2, cx, dy, ax, by);
+    m_ellipses->add_vertex(x2, y2, dx, dy, bx, by);
+    m_ellipses->add_vertex(x2, y1, dx, cy, bx, ay);
     m_ellipses->end_primitive();
 }
 

@@ -49,9 +49,9 @@ void Sprites::add_sprite(const Rect_f& rect)
 void Sprites::add_sprite(const Rect_f& rect, const Rect_u& texrect)
 {
     float x1 = rect.x;
-    float y1 = -rect.y;
+    float y1 = rect.y;
     float x2 = rect.x + rect.w;
-    float y2 = -rect.y - rect.h;
+    float y2 = rect.y + rect.h;
     auto ts = m_texture->size();
     float tl = (float)texrect.left() / ts.x;
     float tr = (float)texrect.right() / ts.x;
@@ -59,10 +59,10 @@ void Sprites::add_sprite(const Rect_f& rect, const Rect_u& texrect)
     float tt = (float)texrect.top() / ts.y;
 
     m_trifans->begin_primitive();
-    m_trifans->add_vertex(x2, y1, tr, tt);
-    m_trifans->add_vertex(x2, y2, tr, tb);
-    m_trifans->add_vertex(x1, y2, tl, tb);
     m_trifans->add_vertex(x1, y1, tl, tt);
+    m_trifans->add_vertex(x1, y2, tl, tb);
+    m_trifans->add_vertex(x2, y2, tr, tb);
+    m_trifans->add_vertex(x2, y1, tr, tt);
     m_trifans->end_primitive();
 }
 

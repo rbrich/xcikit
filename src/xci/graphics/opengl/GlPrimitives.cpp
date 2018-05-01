@@ -140,9 +140,9 @@ void GlPrimitives::draw(View& view, const Vec2f& pos)
     GLfloat yt = pos.y * ys;
     const GLfloat mvp[] = {
             xs,   0.0f, 0.0f, 0.0f,
-            0.0f, ys,   0.0f, 0.0f,
+            0.0f, -ys,  0.0f, 0.0f,
             0.0f, 0.0f, 1.0f, 0.0f,
-            xt,  -yt,   0.0f, 1.0f,
+            xt,   -yt,  0.0f, 1.0f,
     };
 
     GLint u_mvp = glGetUniformLocation(m_program, "u_mvp");
@@ -150,6 +150,9 @@ void GlPrimitives::draw(View& view, const Vec2f& pos)
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glCullFace(GL_BACK);
+    glEnable(GL_CULL_FACE);
 
     glMultiDrawArrays(GL_TRIANGLE_FAN, m_elem_first.data(), m_elem_size.data(),
                       (GLsizei) m_elem_size.size());
