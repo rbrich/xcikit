@@ -1,4 +1,4 @@
-// demo_shapes.cpp created on 2018-04-10, part of XCI toolkit
+// demo_rectangles.cpp created on 2018-03-19, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,11 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <xci/text/FontFace.h>
+#include <xci/text/Font.h>
+#include <xci/text/Text.h>
 #include <xci/graphics/Window.h>
 #include <xci/graphics/Shape.h>
 #include <xci/util/file.h>
 #include <cstdlib>
 
+using namespace xci::text;
 using namespace xci::graphics;
 
 int main()
@@ -25,26 +29,77 @@ int main()
     xci::util::chdir_to_share();
 
     Window& window = Window::default_window();
-    window.create({800, 600}, "XCI rectangles demo");
+    window.create({800, 600}, "XCI shapes demo");
 
-    Shape line(Color(0, 0, 40, 128), Color(180, 180, 0));
-    line.set_softness(1.0);
-    line.add_line_slice({-0.8f, -0.8f, 1.6f, 1.6f},
-                        {0.0f, 0.0f}, {1.0f, 0.2f},
-                        0.04);
+    FontFace face;
+    if (!face.load_from_file("fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
+        return EXIT_FAILURE;
+    Font font;
+    font.add_face(face);
 
+    Text help_text("[r] rectangles{br}"
+                   "[o] rounded rectangles{br}"
+                   "[e] ellipses{br}"
+                   "{br}"
+                   "[a] antialiasing", font);
+    help_text.set_color(Color(50, 200, 100));
+
+    // normally, the border scales with viewport size
+    Shape shapes(Color(0, 0, 40, 128), Color(180, 180, 0));
     // using View::screen_ratio, we can set constant border width, in screen pixels
-    Shape line_px(Color(40, 40, 0, 0), Color(255, 0, 0));
+    Shape shapes_px(Color(40, 40, 0, 128), Color(255, 255, 0));
+
+    std::function<void(Shape&, const Rect_f&, float)>
+    add_shape_fn = [](Shape& shape, const Rect_f& rect, float th) {
+        shape.add_rectangle(rect, th);
+    };
+
+    float antialiasing = 0;
+
+    window.set_key_callback([&](View& view, KeyEvent ev){
+        switch (ev.key) {
+            case Key::R:
+                add_shape_fn = [](Shape& shape, const Rect_f& rect, float th) {
+                    shape.add_rectangle(rect, th);
+                };
+                break;
+            case Key::O:
+                add_shape_fn = [](Shape& shape, const Rect_f& rect, float th) {
+                    shape.add_rounded_rectangle(rect, 0.05, th);
+                };
+                break;
+            case Key::E:
+                add_shape_fn = [](Shape& shape, const Rect_f& rect, float th) {
+                    shape.add_ellipse(rect, th);
+                };
+                break;
+            case Key::A:
+                antialiasing = (antialiasing == 0) ? 2 : 0;
+                shapes.set_antialiasing(antialiasing);
+                shapes_px.set_antialiasing(antialiasing);
+            default:
+                break;
+        }
+        view.refresh();
+    });
 
     window.set_draw_callback([&](View& view) {
-        line.draw(view, {0, 0});
+        Vec2f vs = view.scalable_size();
+        help_text.draw(view, {-vs.x/2 + 0.1f, -vs.y/2 + 0.1f});
+
+        add_shape_fn(shapes, {-1, -0.6f, 2, 1.2f}, 0.05);
+        add_shape_fn(shapes, {-0.6f, -0.8f, 1.2f, 1.6f}, 0.02);
+        shapes.draw(view, {0, 0});
+        shapes.clear();
 
         auto pxr = view.screen_ratio().x;
-        line_px.add_line_slice({-0.8f, -0.8f, 1.6f, 1.6f},
-                               {0.0f, 0.0f}, {1.0f, 0.2f},
-                               1*pxr);
-        line_px.draw(view, {0, 0});
-        line_px.clear();
+        add_shape_fn(shapes_px, {0.0f, 0.0f, 0.5f, 0.5f}, 1 * pxr);
+        add_shape_fn(shapes_px, {0.1f, 0.1f, 0.5f, 0.5f}, 2 * pxr);
+        add_shape_fn(shapes_px, {0.2f, 0.2f, 0.5f, 0.5f}, 3 * pxr);
+        add_shape_fn(shapes_px, {0.3f, 0.3f, 0.5f, 0.5f}, 4 * pxr);
+        add_shape_fn(shapes_px, {0.4f, 0.4f, 0.5f, 0.5f}, 5 * pxr);
+        shapes_px.draw(view, {-0.45f, -0.45f});
+        shapes_px.clear();
     });
 
     window.display();

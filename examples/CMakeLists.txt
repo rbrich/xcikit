@@ -21,17 +21,11 @@ target_link_libraries(demo_layout ${XCI_TEXT_LIBRARY})
 add_executable(demo_coords demo_coords.cpp)
 target_link_libraries(demo_coords ${XCI_TEXT_LIBRARY})
 
-add_executable(demo_rectangles demo_rectangles.cpp)
-target_link_libraries(demo_rectangles ${XCI_GRAPHICS_LIBRARY})
-
-add_executable(demo_ellipses demo_ellipses.cpp)
-target_link_libraries(demo_ellipses ${XCI_GRAPHICS_LIBRARY})
-
-add_executable(demo_rounded_rect demo_rounded_rect.cpp)
-target_link_libraries(demo_rounded_rect ${XCI_GRAPHICS_LIBRARY})
-
 add_executable(demo_shapes demo_shapes.cpp)
-target_link_libraries(demo_shapes ${XCI_GRAPHICS_LIBRARY})
+target_link_libraries(demo_shapes ${XCI_GRAPHICS_LIBRARY} ${XCI_TEXT_LIBRARY})
+
+add_executable(demo_line_shape demo_line_shape.cpp)
+target_link_libraries(demo_line_shape ${XCI_GRAPHICS_LIBRARY})
 
 add_executable(demo_widgets demo_widgets.cpp)
 target_link_libraries(demo_widgets ${XCI_WIDGETS_LIBRARY})

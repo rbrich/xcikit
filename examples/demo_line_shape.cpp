@@ -1,4 +1,4 @@
-// demo_ellipses.cpp created on 2018-03-24, part of XCI toolkit
+// demo_shapes.cpp created on 2018-04-10, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,29 +25,26 @@ int main()
     xci::util::chdir_to_share();
 
     Window& window = Window::default_window();
-    window.create({800, 600}, "XCI ellipses demo");
+    window.create({800, 600}, "XCI line shape demo");
 
-    // normally, the border scales with viewport size
-    Shape rts(Color(0, 0, 40, 128), Color(180, 180, 0));
-    rts.set_antialiasing(2);
-    rts.add_ellipse({-1, -0.6f, 2, 1.2f}, 0.05);
-    rts.add_ellipse({-0.6f, -0.8f, 1.2f, 1.6f}, 0.02);
+    Shape line(Color(0, 0, 40, 128), Color(180, 180, 0));
+    line.set_softness(1.0);
+    line.add_line_slice({-0.8f, -0.8f, 1.6f, 1.6f},
+                        {0.0f, 0.0f}, {1.0f, 0.2f},
+                        0.04);
 
     // using View::screen_ratio, we can set constant border width, in screen pixels
-    Shape rts_px(Color(40, 40, 0, 128), Color(255, 255, 0));
-    rts_px.set_antialiasing(2);
+    Shape line_px(Color(40, 40, 0, 0), Color(255, 0, 0));
 
     window.set_draw_callback([&](View& view) {
-        rts.draw(view, {0, 0});
+        line.draw(view, {0, 0});
 
         auto pxr = view.screen_ratio().x;
-        rts_px.add_ellipse({0.0f, 0.0f, 0.5f, 0.5f}, 1 * pxr);
-        rts_px.add_ellipse({0.1f, 0.1f, 0.5f, 0.5f}, 2 * pxr);
-        rts_px.add_ellipse({0.2f, 0.2f, 0.5f, 0.5f}, 3 * pxr);
-        rts_px.add_ellipse({0.3f, 0.3f, 0.5f, 0.5f}, 4 * pxr);
-        rts_px.add_ellipse({0.4f, 0.4f, 0.5f, 0.5f}, 5 * pxr);
-        rts_px.draw(view, {-0.45f, -0.45f});
-        rts_px.clear();
+        line_px.add_line_slice({-0.8f, -0.8f, 1.6f, 1.6f},
+                               {0.0f, 0.0f}, {1.0f, 0.2f},
+                               1*pxr);
+        line_px.draw(view, {0, 0});
+        line_px.clear();
     });
 
     window.display();
