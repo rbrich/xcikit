@@ -24,9 +24,6 @@ target_link_libraries(demo_coords ${XCI_TEXT_LIBRARY})
 add_executable(demo_shapes demo_shapes.cpp)
 target_link_libraries(demo_shapes ${XCI_GRAPHICS_LIBRARY} ${XCI_TEXT_LIBRARY})
 
-add_executable(demo_line_shape demo_line_shape.cpp)
-target_link_libraries(demo_line_shape ${XCI_GRAPHICS_LIBRARY})
-
 add_executable(demo_widgets demo_widgets.cpp)
 target_link_libraries(demo_widgets ${XCI_WIDGETS_LIBRARY})
 

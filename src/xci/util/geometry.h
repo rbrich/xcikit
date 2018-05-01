@@ -148,6 +148,8 @@ struct Rect {
     inline T right() const { return x + w; }
     inline T bottom() const { return y + h; }
 
+    inline Vec2<T> center() const { return {x + w/2, y + h/2}; }
+
 public:
     T x;  // left
     T y;  // top

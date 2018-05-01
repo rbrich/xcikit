@@ -37,12 +37,14 @@ int main()
     Font font;
     font.add_face(face);
 
-    Text help_text("[r] rectangles{br}"
-                   "[o] rounded rectangles{br}"
-                   "[e] ellipses{br}"
-                   "{br}"
-                   "[a] antialiasing", font);
-    help_text.set_color(Color(50, 200, 100));
+    Text shapes_help("[r] rectangles{br}"
+                     "[o] rounded rectangles{br}"
+                     "[e] ellipses{br}"
+                     "[l] lines", font);
+    shapes_help.set_color(Color(200, 100, 50));
+    Text option_help("[a] antialiasing{br}"
+                     "[s] softness", font);
+    option_help.set_color(Color(200, 100, 50));
 
     // normally, the border scales with viewport size
     Shape shapes(Color(0, 0, 40, 128), Color(180, 180, 0));
@@ -55,6 +57,7 @@ int main()
     };
 
     float antialiasing = 0;
+    float softness = 0;
 
     window.set_key_callback([&](View& view, KeyEvent ev){
         switch (ev.key) {
@@ -73,10 +76,33 @@ int main()
                     shape.add_ellipse(rect, th);
                 };
                 break;
+            case Key::L:
+                add_shape_fn = [](Shape& shape, const Rect_f& rect, float th) {
+                    auto l = rect.left();
+                    auto t = rect.top();
+                    auto r = rect.right();
+                    auto b = rect.bottom();
+                    auto w2 = rect.w / 2;
+                    auto h2 = rect.h / 2;
+                    auto w4 = rect.w / 4;
+                    auto h4 = rect.h / 4;
+                    auto c = rect.center();
+                    shape.add_line_slice({l, t, w2, h2}, {l, t+h4}, {c.x, t}, th);
+                    shape.add_line_slice({c.x, t, w2, h2}, {r-w4, t}, {r, c.y}, th);
+                    shape.add_line_slice({c.x, c.y, w2, h2}, {r, b-h4}, {c.x, b}, th);
+                    shape.add_line_slice({l, c.y, w2, h2}, {l+w4, b}, {l, c.y}, th);
+                };
+                break;
             case Key::A:
                 antialiasing = (antialiasing == 0) ? 2 : 0;
                 shapes.set_antialiasing(antialiasing);
                 shapes_px.set_antialiasing(antialiasing);
+                break;
+            case Key::S:
+                softness = (softness == 0) ? 1 : 0;
+                shapes.set_softness(softness);
+                shapes_px.set_softness(softness);
+                break;
             default:
                 break;
         }
@@ -85,7 +111,8 @@ int main()
 
     window.set_draw_callback([&](View& view) {
         Vec2f vs = view.scalable_size();
-        help_text.draw(view, {-vs.x/2 + 0.1f, -vs.y/2 + 0.1f});
+        shapes_help.draw(view, {-vs.x/2 + 0.1f, -vs.y/2 + 0.1f});
+        option_help.draw(view, {vs.x/2 - 0.5f, -vs.y/2 + 0.1f});
 
         add_shape_fn(shapes, {-1, -0.6f, 2, 1.2f}, 0.05);
         add_shape_fn(shapes, {-0.6f, -0.8f, 1.2f, 1.6f}, 0.02);
