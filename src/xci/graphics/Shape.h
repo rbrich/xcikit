@@ -34,12 +34,9 @@ using xci::util::Vec2f;
 
 class Shape {
 public:
-    explicit Shape(const Color& fill_color,
+    explicit Shape(const Color& fill_color = Color::Black(),
                    const Color& outline_color = Color::White(),
                    Renderer& renderer = Renderer::default_renderer());
-    ~Shape();
-    Shape(Shape&&) noexcept;
-    Shape& operator=(Shape&&) noexcept;
 
     void set_fill_color(const Color& fill_color) { m_fill_color = fill_color; }
     void set_outline_color(const Color& outline_color) { m_outline_color = outline_color; }

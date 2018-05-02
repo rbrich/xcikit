@@ -42,11 +42,6 @@ Shape::Shape(const Color& fill_color, const Color& outline_color,
 {}
 
 
-Shape::~Shape() = default;
-Shape::Shape(Shape&&) noexcept = default;
-Shape& Shape::operator=(Shape&&) noexcept = default;
-
-
 void Shape::add_line_slice(const Rect_f& slice, const Vec2f& a, const Vec2f& b,
                            float thickness)
 {
@@ -144,7 +139,7 @@ void Shape::add_ellipse(const Rect_f& rect, float outline_thickness)
 
 
 void Shape::add_ellipse_slice(const Rect_f& slice, const Rect_f& ellipse,
-                               float outline_thickness)
+                              float outline_thickness)
 {
     float x1 = slice.x;
     float y1 = slice.y;
@@ -171,7 +166,7 @@ void Shape::add_ellipse_slice(const Rect_f& slice, const Rect_f& ellipse,
 
 void
 Shape::add_rounded_rectangle(const Rect_f& rect, float radius,
-                              float outline_thickness)
+                             float outline_thickness)
 {
     // the shape is composed from 7-slice pattern:
     // corner ellipse slices and center rectangle slices
@@ -179,7 +174,7 @@ Shape::add_rounded_rectangle(const Rect_f& rect, float radius,
     float y = rect.y;
     float w = rect.w;
     float h = rect.h;
-    float r = radius;
+    float r = std::max(radius, outline_thickness * 1.1f);
     float rr = 2 * r;
     add_ellipse_slice({x,     y,     r, r}, {x,      y,      rr, rr}, outline_thickness);
     add_ellipse_slice({x+w-r, y,     r, r}, {x+w-rr, y,      rr, rr}, outline_thickness);

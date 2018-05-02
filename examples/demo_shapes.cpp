@@ -46,10 +46,18 @@ int main()
                      "[s] softness", font);
     option_help.set_color(Color(200, 100, 50));
 
-    // normally, the border scales with viewport size
-    Shape shapes(Color(0, 0, 40, 128), Color(180, 180, 0));
-    // using View::screen_ratio, we can set constant border width, in screen pixels
-    Shape shapes_px(Color(40, 40, 0, 128), Color(255, 255, 0));
+    Shape shapes[7];
+    int idx = 0;
+    for (Shape& shape : shapes) {
+        if (idx < 2) {
+            shape.set_fill_color(Color(0, 0, 40, 128));
+            shape.set_outline_color(Color(180, 180, 0));
+        } else {
+            shape.set_fill_color(Color(40, 40, 0, 128));
+            shape.set_outline_color(Color(255, 255, 0));
+        }
+        idx ++;
+    }
 
     std::function<void(Shape&, const Rect_f&, float)>
     add_shape_fn = [](Shape& shape, const Rect_f& rect, float th) {
@@ -95,13 +103,13 @@ int main()
                 break;
             case Key::A:
                 antialiasing = (antialiasing == 0) ? 2 : 0;
-                shapes.set_antialiasing(antialiasing);
-                shapes_px.set_antialiasing(antialiasing);
+                for (Shape& shape : shapes)
+                    shape.set_antialiasing(antialiasing);
                 break;
             case Key::S:
                 softness = (softness == 0) ? 1 : 0;
-                shapes.set_softness(softness);
-                shapes_px.set_softness(softness);
+                for (Shape& shape : shapes)
+                    shape.set_softness(softness);
                 break;
             default:
                 break;
@@ -114,19 +122,23 @@ int main()
         shapes_help.draw(view, {-vs.x/2 + 0.1f, -vs.y/2 + 0.1f});
         option_help.draw(view, {vs.x/2 - 0.5f, -vs.y/2 + 0.1f});
 
-        add_shape_fn(shapes, {-1, -0.6f, 2, 1.2f}, 0.05);
-        add_shape_fn(shapes, {-0.6f, -0.8f, 1.2f, 1.6f}, 0.02);
-        shapes.draw(view, {0, 0});
-        shapes.clear();
+        // Border scaled with viewport size
+        add_shape_fn(shapes[0], {-1, -0.6f, 2, 1.2f}, 0.05);
+        add_shape_fn(shapes[1], {-0.6f, -0.8f, 1.2f, 1.6f}, 0.02);
+        shapes[0].draw(view, {0, 0});
+        shapes[1].draw(view, {0, 0});
 
+        // Constant border width, in screen pixels
         auto pxr = view.screen_ratio().x;
-        add_shape_fn(shapes_px, {0.0f, 0.0f, 0.5f, 0.5f}, 1 * pxr);
-        add_shape_fn(shapes_px, {0.1f, 0.1f, 0.5f, 0.5f}, 2 * pxr);
-        add_shape_fn(shapes_px, {0.2f, 0.2f, 0.5f, 0.5f}, 3 * pxr);
-        add_shape_fn(shapes_px, {0.3f, 0.3f, 0.5f, 0.5f}, 4 * pxr);
-        add_shape_fn(shapes_px, {0.4f, 0.4f, 0.5f, 0.5f}, 5 * pxr);
-        shapes_px.draw(view, {-0.45f, -0.45f});
-        shapes_px.clear();
+        add_shape_fn(shapes[2], {0.0f, 0.0f, 0.5f, 0.5f}, 1 * pxr);
+        add_shape_fn(shapes[3], {0.1f, 0.1f, 0.5f, 0.5f}, 2 * pxr);
+        add_shape_fn(shapes[4], {0.2f, 0.2f, 0.5f, 0.5f}, 3 * pxr);
+        add_shape_fn(shapes[5], {0.3f, 0.3f, 0.5f, 0.5f}, 4 * pxr);
+        add_shape_fn(shapes[6], {0.4f, 0.4f, 0.5f, 0.5f}, 5 * pxr);
+        for (size_t i = 2; i <= 6; i++)
+            shapes[i].draw(view, {-0.45f, -0.45f});
+        for (Shape& shape : shapes)
+            shape.clear();
     });
 
     window.display();
