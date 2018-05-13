@@ -167,23 +167,27 @@ add_subdirectory(src/xci/util)
 
 if (WITH_OPENGL)
     set(XCI_GRAPHICS_OPENGL_LIBRARY xci-graphics-opengl)
-    add_library(glad STATIC src/glad/glad.c src/glad/glad.h)
+    add_library(glad OBJECT src/glad/glad.c src/glad/glad.h)
     add_library(${XCI_GRAPHICS_OPENGL_LIBRARY} STATIC
-        ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_OPENGL_SOURCES})
+        ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_OPENGL_SOURCES}
+        $<TARGET_OBJECTS:glad>)
     target_include_directories(${XCI_GRAPHICS_OPENGL_LIBRARY}
         PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${CMAKE_CURRENT_SOURCE_DIR}/ext/incbin)
+            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
+            $<INSTALL_INTERFACE:include>
+        PRIVATE ext/incbin)
     target_link_libraries(${XCI_GRAPHICS_OPENGL_LIBRARY}
         ${XCI_UTIL_LIBRARY}
         ${CMAKE_DL_LIBS}
-        glad glfw)
+        glfw)
     target_compile_definitions(${XCI_GRAPHICS_OPENGL_LIBRARY} PRIVATE
         XCI_WITH_OPENGL
         XCI_SHARE_DIR="${SHARE_DIR}"
         $<$<BOOL:${EMBED_SHADERS}>:XCI_EMBED_SHADERS>
         $<$<BOOL:${DEBUG_OPENGL}>:XCI_DEBUG_OPENGL>)
     set(XCI_GRAPHICS_LIBRARY ${XCI_GRAPHICS_OPENGL_LIBRARY})
+    install(TARGETS ${XCI_GRAPHICS_OPENGL_LIBRARY}
+        EXPORT xcikit DESTINATION lib)
 endif (WITH_OPENGL)
 
 if (WITH_SFML)
@@ -192,7 +196,8 @@ if (WITH_SFML)
         ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_SFML_SOURCES})
     target_include_directories(${XCI_GRAPHICS_SFML_LIBRARY}
         PUBLIC
-            ${CMAKE_CURRENT_SOURCE_DIR}/src
+            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
+            $<INSTALL_INTERFACE:include>
         PRIVATE
             ${SFML_INCLUDE_DIR})
     target_link_libraries(${XCI_GRAPHICS_SFML_LIBRARY}
@@ -201,6 +206,8 @@ if (WITH_SFML)
     if (NOT DEFINED XCI_GRAPHICS_LIBRARY)
         set(XCI_GRAPHICS_LIBRARY ${XCI_GRAPHICS_SFML_LIBRARY})
     endif()
+    install(TARGETS ${XCI_GRAPHICS_SFML_LIBRARY}
+        EXPORT xcikit DESTINATION lib)
 endif (WITH_SFML)
 
 if (WITH_PANDA)
@@ -209,7 +216,8 @@ if (WITH_PANDA)
         ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_PANDA_SOURCES})
     target_include_directories(${XCI_GRAPHICS_PANDA_LIBRARY}
         PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
+            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
+            $<INSTALL_INTERFACE:include>
         PUBLIC
         ${PANDA3D_INCLUDE_DIRS}
         ${PYTHON_INCLUDE_DIRS})
@@ -219,19 +227,23 @@ if (WITH_PANDA)
     if (NOT DEFINED XCI_GRAPHICS_LIBRARY)
         set(XCI_GRAPHICS_LIBRARY ${XCI_GRAPHICS_PANDA_LIBRARY})
     endif()
+    install(TARGETS ${XCI_GRAPHICS_PANDA_LIBRARY}
+        EXPORT xcikit DESTINATION lib)
 endif (WITH_PANDA)
 
 set(XCI_TEXT_LIBRARY xci-text)
-add_library(${XCI_TEXT_LIBRARY} STATIC ${XCI_TEXT_SOURCES})
+add_library(${XCI_TEXT_LIBRARY} STATIC ${XCI_TEXT_SOURCES}
+    $<TARGET_OBJECTS:${RBP_LIBRARY}>)
 target_include_directories(${XCI_TEXT_LIBRARY} PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
+    $<INSTALL_INTERFACE:include>
     ${FREETYPE_INCLUDE_DIRS}
     ${PEGTL_INCLUDE_DIRS})
 target_link_libraries(${XCI_TEXT_LIBRARY}
     ${XCI_GRAPHICS_LIBRARY}
     ${XCI_UTIL_LIBRARY}
-    ${FREETYPE_LIBRARIES}
-    ${RBP_LIBRARY})
+    ${FREETYPE_LIBRARIES})
+install(TARGETS ${XCI_TEXT_LIBRARY} EXPORT xcikit DESTINATION lib)
 
 if (DEBUG_MARKUP_DUMP_TOKENS)
     target_compile_definitions(${XCI_TEXT_LIBRARY} PRIVATE
@@ -245,6 +257,7 @@ target_link_libraries(${XCI_WIDGETS_LIBRARY}
     ${XCI_GRAPHICS_LIBRARY})
 target_compile_definitions(${XCI_WIDGETS_LIBRARY} PRIVATE
     XCI_SHARE_DIR="${SHARE_DIR}")
+install(TARGETS ${XCI_WIDGETS_LIBRARY} EXPORT xcikit DESTINATION lib)
 
 
 # ------------ #
@@ -282,3 +295,15 @@ if (DOXYGEN_FOUND)
         README.md
         COMMENT "Generate documentation")
 endif (DOXYGEN_FOUND)
+
+
+# ------------- #
+# Installation  #
+# ------------- #
+
+install(DIRECTORY src/xci DESTINATION include
+    FILES_MATCHING
+    REGEX "xci/[a-z]+/[a-z]+$" EXCLUDE
+    REGEX "xci/[a-z]+/[^/]+\\.h")
+
+install(EXPORT xcikit DESTINATION lib/cmake/xci)

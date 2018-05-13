@@ -51,9 +51,9 @@ int main()
     Text size_scal("View size:         ", font);
     size_scal.set_color(Color(130, 120, 255));
     Text size_screen("Screen size:       ", font);
-    size_screen.set_color(Color(90, 140, 255));
+    size_screen.set_color(Color(110, 130, 255));
     Text size_frame("Framebuffer size:  ", font);
-    size_frame.set_color(Color(110, 130, 255));
+    size_frame.set_color(Color(90, 140, 255));
     Text size_font("Font size:         ", font);
     size_font.set_color(Color(70, 150, 255));
     Text mouse_pos("Mouse position:    ", font);

@@ -7,5 +7,5 @@ set(RBP_SOURCES
     Rect.h)
 
 set(RBP_LIBRARY rbp)
-add_library(${RBP_LIBRARY} STATIC ${RBP_SOURCES})
+add_library(${RBP_LIBRARY} OBJECT ${RBP_SOURCES})
 target_include_directories(${RBP_LIBRARY} INTERFACE .)
