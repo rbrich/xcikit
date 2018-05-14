@@ -8,7 +8,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
 
-if(EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+if (EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
     include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
     conan_basic_setup()
 endif()
@@ -162,6 +162,9 @@ find_package(Doxygen)
 # Libraries    #
 # ------------ #
 
+set(XCI_BUILD_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/src)
+set(XCI_INCLUDE_DIRS include)
+
 set(XCI_UTIL_LIBRARY xci-util)
 add_subdirectory(src/xci/util)
 
@@ -173,8 +176,8 @@ if (WITH_OPENGL)
         $<TARGET_OBJECTS:glad>)
     target_include_directories(${XCI_GRAPHICS_OPENGL_LIBRARY}
         PUBLIC
-            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
-            $<INSTALL_INTERFACE:include>
+            $<BUILD_INTERFACE:${XCI_BUILD_INCLUDE_DIRS}>
+            $<INSTALL_INTERFACE:${XCI_INCLUDE_DIRS}>
         PRIVATE ext/incbin)
     target_link_libraries(${XCI_GRAPHICS_OPENGL_LIBRARY}
         ${XCI_UTIL_LIBRARY}
@@ -196,8 +199,8 @@ if (WITH_SFML)
         ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_SFML_SOURCES})
     target_include_directories(${XCI_GRAPHICS_SFML_LIBRARY}
         PUBLIC
-            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
-            $<INSTALL_INTERFACE:include>
+            $<BUILD_INTERFACE:${XCI_BUILD_INCLUDE_DIRS}>
+            $<INSTALL_INTERFACE:${XCI_INCLUDE_DIRS}>
         PRIVATE
             ${SFML_INCLUDE_DIR})
     target_link_libraries(${XCI_GRAPHICS_SFML_LIBRARY}
@@ -216,8 +219,8 @@ if (WITH_PANDA)
         ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_PANDA_SOURCES})
     target_include_directories(${XCI_GRAPHICS_PANDA_LIBRARY}
         PUBLIC
-            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
-            $<INSTALL_INTERFACE:include>
+            $<BUILD_INTERFACE:${XCI_BUILD_INCLUDE_DIRS}>
+            $<INSTALL_INTERFACE:${XCI_INCLUDE_DIRS}>
         PUBLIC
         ${PANDA3D_INCLUDE_DIRS}
         ${PYTHON_INCLUDE_DIRS})
@@ -235,8 +238,8 @@ set(XCI_TEXT_LIBRARY xci-text)
 add_library(${XCI_TEXT_LIBRARY} STATIC ${XCI_TEXT_SOURCES}
     $<TARGET_OBJECTS:${RBP_LIBRARY}>)
 target_include_directories(${XCI_TEXT_LIBRARY} PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
-    $<INSTALL_INTERFACE:include>
+    $<BUILD_INTERFACE:${XCI_BUILD_INCLUDE_DIRS}>
+    $<INSTALL_INTERFACE:${XCI_INCLUDE_DIRS}>
     ${FREETYPE_INCLUDE_DIRS}
     ${PEGTL_INCLUDE_DIRS})
 target_link_libraries(${XCI_TEXT_LIBRARY}
@@ -306,4 +309,16 @@ install(DIRECTORY src/xci DESTINATION include
     REGEX "xci/[a-z]+/[a-z]+$" EXCLUDE
     REGEX "xci/[a-z]+/[^/]+\\.h")
 
-install(EXPORT xcikit DESTINATION lib/cmake/xci)
+install(EXPORT xcikit DESTINATION lib/cmake/xci FILE "xcikitTargets.cmake")
+
+include(CMakePackageConfigHelpers)
+configure_package_config_file(xcikitConfig.cmake.in xcikitConfig.cmake
+    INSTALL_DESTINATION lib/cmake/xci
+    PATH_VARS XCI_INCLUDE_DIRS)
+write_basic_package_version_file(xcikitConfigVersion.cmake
+    VERSION 0.0.1
+    COMPATIBILITY SameMajorVersion)
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/xcikitConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/xcikitConfigVersion.cmake
+    DESTINATION lib/cmake/xci)

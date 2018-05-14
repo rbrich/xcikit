@@ -1,0 +1,9 @@
+@PACKAGE_INIT@
+
+set_and_check(XCI_INCLUDE_DIRS "@PACKAGE_XCI_INCLUDE_DIRS@")
+
+# Dependencies
+include(CMakeFindDependencyMacro)
+find_dependency(Threads)
+
+include("${CMAKE_CURRENT_LIST_DIR}/xcikitTargets.cmake")
