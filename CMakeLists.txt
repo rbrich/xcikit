@@ -292,6 +292,7 @@ if (DOXYGEN_FOUND)
     set(DOXYGEN_SOURCE_BROWSER YES)
     set(DOXYGEN_JAVADOC_AUTOBRIEF YES)
     set(DOXYGEN_SORT_MEMBER_DOCS NO)
+    set(DOXYGEN_USE_MDFILE_AS_MAINPAGE README.md)
     doxygen_add_docs(doc
         src/xci
         docs
