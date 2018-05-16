@@ -3,9 +3,11 @@ Plugin Demo
 
 Demonstrates how to create hot-swappable shared library.
 
-1. Set `CMAKE_INSTALL_PREFIX` to eg. `~/xcikit` (so you don't need sudo to install)
+1. Set `CMAKE_INSTALL_PREFIX` to eg. `~/xcikit`
+   (so you don't need sudo to install)
 
-2. Build and install the demo. This installs *pluggable* library in `~/xcikit/lib`
+2. Build and install the demo. This installs *pluggable* library
+   in `~/xcikit/share/xcikit/examples`
 
 3. Run `demo_plugin`. It will load the *pluggable* library
    and call it once per second.

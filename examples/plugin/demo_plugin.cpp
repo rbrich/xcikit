@@ -67,6 +67,7 @@ int main()
             lib.close();
             lib.open(filename);
             fn = reinterpret_cast<const char*(*)()>(lib.resolve("sample_text"));
+            reload = false;
         }
     }
 

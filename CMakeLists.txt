@@ -17,6 +17,7 @@ option(WITH_OPENGL "Link with GLFW and build libxci-graphics-opengl." ON)
 option(WITH_SFML "Link with SFML and build libxci-graphics-sfml." OFF)
 option(WITH_PANDA "Link with Panda3D and build libxci-graphics-panda." OFF)
 
+option(BUILD_SHARED_LIBS "Build shared libs instead of static libs." OFF)
 option(EMBED_SHADERS "Embed shader files into binaries to avoid dependency on share dir." OFF)
 
 option(DEBUG_CLANG_ASAN "Build with Clang address sanitizer." OFF)
@@ -171,7 +172,7 @@ add_subdirectory(src/xci/util)
 if (WITH_OPENGL)
     set(XCI_GRAPHICS_OPENGL_LIBRARY xci-graphics-opengl)
     add_library(glad OBJECT src/glad/glad.c src/glad/glad.h)
-    add_library(${XCI_GRAPHICS_OPENGL_LIBRARY} STATIC
+    add_library(${XCI_GRAPHICS_OPENGL_LIBRARY}
         ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_OPENGL_SOURCES}
         $<TARGET_OBJECTS:glad>)
     target_include_directories(${XCI_GRAPHICS_OPENGL_LIBRARY}
@@ -195,7 +196,7 @@ endif (WITH_OPENGL)
 
 if (WITH_SFML)
     set(XCI_GRAPHICS_SFML_LIBRARY xci-graphics-sfml)
-    add_library(${XCI_GRAPHICS_SFML_LIBRARY} STATIC
+    add_library(${XCI_GRAPHICS_SFML_LIBRARY}
         ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_SFML_SOURCES})
     target_include_directories(${XCI_GRAPHICS_SFML_LIBRARY}
         PUBLIC
@@ -215,7 +216,7 @@ endif (WITH_SFML)
 
 if (WITH_PANDA)
     set(XCI_GRAPHICS_PANDA_LIBRARY xci-graphics-panda)
-    add_library(${XCI_GRAPHICS_PANDA_LIBRARY} STATIC
+    add_library(${XCI_GRAPHICS_PANDA_LIBRARY}
         ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_PANDA_SOURCES})
     target_include_directories(${XCI_GRAPHICS_PANDA_LIBRARY}
         PUBLIC
@@ -235,7 +236,7 @@ if (WITH_PANDA)
 endif (WITH_PANDA)
 
 set(XCI_TEXT_LIBRARY xci-text)
-add_library(${XCI_TEXT_LIBRARY} STATIC ${XCI_TEXT_SOURCES}
+add_library(${XCI_TEXT_LIBRARY} ${XCI_TEXT_SOURCES}
     $<TARGET_OBJECTS:${RBP_LIBRARY}>)
 target_include_directories(${XCI_TEXT_LIBRARY} PUBLIC
     $<BUILD_INTERFACE:${XCI_BUILD_INCLUDE_DIRS}>
@@ -254,7 +255,7 @@ if (DEBUG_MARKUP_DUMP_TOKENS)
 endif (DEBUG_MARKUP_DUMP_TOKENS)
 
 set(XCI_WIDGETS_LIBRARY xci-widgets)
-add_library(${XCI_WIDGETS_LIBRARY} STATIC ${XCI_WIDGETS_SOURCES})
+add_library(${XCI_WIDGETS_LIBRARY} ${XCI_WIDGETS_SOURCES})
 target_link_libraries(${XCI_WIDGETS_LIBRARY}
     ${XCI_TEXT_LIBRARY}
     ${XCI_GRAPHICS_LIBRARY})

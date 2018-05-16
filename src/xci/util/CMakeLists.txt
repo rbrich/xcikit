@@ -36,8 +36,10 @@ else()
 endif()
 
 
-add_library(${XCI_UTIL_LIBRARY} STATIC ${XCI_UTIL_SOURCES})
-target_link_libraries(${XCI_UTIL_LIBRARY} Threads::Threads)
+add_library(${XCI_UTIL_LIBRARY} ${XCI_UTIL_SOURCES})
+target_link_libraries(${XCI_UTIL_LIBRARY}
+    Threads::Threads
+    ${CMAKE_DL_LIBS})
 target_include_directories(${XCI_UTIL_LIBRARY} PUBLIC
     $<BUILD_INTERFACE:${XCI_BUILD_INCLUDE_DIRS}>
     $<INSTALL_INTERFACE:${XCI_INCLUDE_DIRS}>)
