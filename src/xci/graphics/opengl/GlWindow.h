@@ -40,6 +40,7 @@ public:
     void set_size_callback(SizeCallback size_cb) override;
     void set_draw_callback(DrawCallback draw_cb) override;
     void set_key_callback(KeyCallback key_cb) override;
+    void set_char_callback(CharCallback char_cb) override;
     void set_mouse_position_callback(MousePosCallback mpos_cb) override;
     void set_mouse_button_callback(MouseBtnCallback mbtn_cb) override;
 
@@ -57,6 +58,7 @@ private:
     SizeCallback m_size_cb;
     DrawCallback m_draw_cb;
     KeyCallback m_key_cb;
+    CharCallback m_char_cb;
     MousePosCallback m_mpos_cb;
     MouseBtnCallback m_mbtn_cb;
     RefreshMode m_mode = RefreshMode::OnDemand;

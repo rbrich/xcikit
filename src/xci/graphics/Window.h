@@ -43,6 +43,11 @@ struct KeyEvent {
 };
 
 
+struct CharEvent {
+    char32_t code_point;
+};
+
+
 enum class MouseButton { Left = 0, Right = 1, Middle = 2 };
 enum class Action { Release = 0, Press = 1 };
 
@@ -80,12 +85,14 @@ public:
     using SizeCallback = std::function<void(View&)>;
     using DrawCallback = std::function<void(View&)>;
     using KeyCallback = std::function<void(View&, const KeyEvent&)>;
+    using CharCallback = std::function<void(View&, const CharEvent&)>;
     using MousePosCallback = std::function<void(View&, const MousePosEvent&)>;
     using MouseBtnCallback = std::function<void(View&, const MouseBtnEvent&)>;
 
     virtual void set_size_callback(SizeCallback size_cb) = 0;
     virtual void set_draw_callback(DrawCallback draw_cb) = 0;
     virtual void set_key_callback(KeyCallback key_cb) = 0;
+    virtual void set_char_callback(CharCallback char_cb) = 0;
     virtual void set_mouse_position_callback(MousePosCallback mpos_cb) = 0;
     virtual void set_mouse_button_callback(MouseBtnCallback mbtn_cb) = 0;
 

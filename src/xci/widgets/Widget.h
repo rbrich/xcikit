@@ -27,6 +27,7 @@ namespace widgets {
 
 using graphics::View;
 using graphics::KeyEvent;
+using graphics::CharEvent;
 using graphics::MousePosEvent;
 using graphics::MouseBtnEvent;
 
@@ -47,6 +48,7 @@ public:
     virtual void update(View& view) = 0;
     virtual void draw(View& view) = 0;
     virtual void handle(View& view, const KeyEvent& ev) {}
+    virtual void handle(View& view, const CharEvent& ev) {}
     virtual void handle(View& view, const MousePosEvent& ev) {}
     virtual void handle(View& view, const MouseBtnEvent& ev) {}
 
@@ -68,6 +70,7 @@ public:
     void update(View& view) override;
     void draw(View& view) override;
     void handle(View& view, const KeyEvent& ev) override;
+    void handle(View& view, const CharEvent& ev) override;
     void handle(View& view, const MousePosEvent& ev) override;
     void handle(View& view, const MouseBtnEvent& ev) override;
 

@@ -42,6 +42,13 @@ void Composite::handle(View& view, const KeyEvent& ev)
 }
 
 
+void Composite::handle(View& view, const CharEvent& ev)
+{
+    for (auto& child : m_child)
+        child->handle(view, ev);
+}
+
+
 void Composite::handle(View& view, const MousePosEvent& ev)
 {
     for (auto& child : m_child)
@@ -62,6 +69,7 @@ Bind::Bind(graphics::Window& window, Widget& root)
     window.set_size_callback([&](View& v) { root.update(v); });
     window.set_draw_callback([&](View& v) { root.draw(v); });
     window.set_key_callback([&](View& v, const KeyEvent& e) { root.handle(v, e); });
+    window.set_char_callback([&](View& v, const CharEvent& e) { root.handle(v, e); });
     window.set_mouse_position_callback([&](View& v, const MousePosEvent& e) { root.handle(v, e); });
     window.set_mouse_button_callback([&](View& v, const MouseBtnEvent& e) { root.handle(v, e); });
 }
@@ -72,6 +80,7 @@ Bind::~Bind()
     m_window.set_size_callback(nullptr);
     m_window.set_draw_callback(nullptr);
     m_window.set_key_callback(nullptr);
+    m_window.set_char_callback(nullptr);
     m_window.set_mouse_position_callback(nullptr);
     m_window.set_mouse_button_callback(nullptr);
 }

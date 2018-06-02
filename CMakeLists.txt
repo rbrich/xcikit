@@ -115,7 +115,9 @@ set(XCI_WIDGETS_SOURCES
     src/xci/widgets/Theme.cpp
     src/xci/widgets/Theme.h
     src/xci/widgets/Widget.cpp
-    src/xci/widgets/Widget.h)
+    src/xci/widgets/Widget.h
+    src/xci/widgets/TextInput.cpp
+    src/xci/widgets/TextInput.h)
 
 
 # ------------ #

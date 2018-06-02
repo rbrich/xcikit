@@ -16,6 +16,7 @@
 #include <xci/widgets/Button.h>
 #include <xci/widgets/Checkbox.h>
 #include <xci/widgets/FpsDisplay.h>
+#include <xci/widgets/TextInput.h>
 #include <xci/graphics/Window.h>
 #include <xci/util/file.h>
 #include <random>
@@ -58,6 +59,10 @@ int main()
         checkbox->set_position({0.5f, -0.5f + i * 0.06f});
         root.add(checkbox);
     }
+
+    auto text_input = std::make_shared<TextInput>("input");
+    text_input->set_position({-1.0f, 0});
+    root.add(text_input);
 
     auto fps_display = std::make_shared<FpsDisplay>();
     fps_display->set_position({-1.2f, -0.8f});

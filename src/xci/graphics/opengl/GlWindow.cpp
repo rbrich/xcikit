@@ -184,6 +184,13 @@ void GlWindow::set_key_callback(KeyCallback key_cb)
 }
 
 
+void GlWindow::set_char_callback(Window::CharCallback char_cb)
+{
+    assert(!char_cb || !m_char_cb || !"Window callback already set!");
+    m_char_cb = std::move(char_cb);
+}
+
+
 void GlWindow::set_mouse_position_callback(Window::MousePosCallback mpos_cb)
 {
     assert(!mpos_cb || !m_mpos_cb || !"Window callback already set!");
@@ -288,6 +295,14 @@ void GlWindow::setup_view()
 
         if (action == GLFW_PRESS && self->m_key_cb && self->m_view) {
             self->m_key_cb(*self->m_view, KeyEvent{Key(key)});
+        }
+    });
+
+    glfwSetCharCallback(m_window, [](GLFWwindow* window, unsigned int codepoint)
+    {
+        auto self = (GlWindow*) glfwGetWindowUserPointer(window);
+        if (self->m_char_cb && self->m_view) {
+            self->m_char_cb(*self->m_view, CharEvent{codepoint});
         }
     });
 }
