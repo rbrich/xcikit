@@ -37,6 +37,7 @@ public:
 
     void update(View& view) override;
     void draw(View& view) override;
+    void handle(View& view, const KeyEvent& ev) override;
     void handle(View& view, const CharEvent& ev) override;
     void handle(View& view, const MouseBtnEvent& ev) override;
 
@@ -46,6 +47,7 @@ private:
     std::string m_text;
     text::Layout m_layout;
     graphics::Shape m_bg_rect;
+    size_t m_cursor = 0;
     float m_padding = 0.02f;
     float m_outline_thickness = 0.005f;
 };

@@ -32,8 +32,24 @@ using xci::util::Vec2f;
 
 
 enum class Key {
+    Unknown = 0,
+    F1 = 1,
+    F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12,
+    Escape,
+    Enter,
+    Backspace,
+    Tab,
+    Insert, Delete,
+    Home, End,
+    PageUp, PageDown,
+    Left, Right, Up, Down,
+    CapsLock, ScrollLock, NumLock,
+    PrintScreen,
+    Pause,
+    Num0 = 48,
+    Num1, Num2, Num3, Num4, Num5, Num6, Num7, Num8, Num9,
     A = 65,
-    B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z
+    B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z,
 };
 static_assert((int)Key::Z == 90, "ascii letters");
 

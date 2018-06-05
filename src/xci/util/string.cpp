@@ -19,6 +19,7 @@
 #include <cctype>
 #include <locale>
 #include <codecvt>
+#include <cassert>
 
 namespace xci {
 namespace util {
@@ -68,6 +69,53 @@ std::string to_utf8(char32_t codepoint)
 {
     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert_utf32;
     return convert_utf32.to_bytes(codepoint);
+}
+
+
+std::string::const_iterator
+utf8_next(std::string::const_iterator pos)
+{
+    auto first = (unsigned char) *pos;
+    if ((first & 0b10000000) == 0) {
+        // 0xxxxxxx -> 1 byte
+        return pos + 1;
+    } else
+    if ((first & 0b11100000) == 0b11000000) {
+        // 110xxxxx -> 2 bytes
+        return pos + 2;
+    } else
+    if ((first & 0b11110000) == 0b11100000) {
+        // 1110xxxx -> 3 bytes
+        return pos + 3;
+    } else
+    if ((first & 0b11111000) == 0b11110000) {
+        // 11110xxx -> 4 bytes
+        return pos + 4;
+    } else {
+        assert(!"Invalid UTF8 string");
+        return pos + 1;
+    }
+}
+
+
+std::string::const_reverse_iterator
+utf8_prev(std::string::const_reverse_iterator pos)
+{
+    while ((*pos & 0b11000000) == 0b10000000)
+        ++pos;
+    return pos + 1;
+}
+
+
+int utf8_length(const std::string& str)
+{
+    int length = 0;
+    auto pos = str.cbegin();
+    while (pos != str.cend()) {
+        pos = utf8_next(pos);
+        ++length;
+    }
+    return length;
 }
 
 

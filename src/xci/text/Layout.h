@@ -76,6 +76,7 @@ public:
     void set_font(Font* font);
     void set_font_size(float size);
     void set_color(const graphics::Color &color);
+    void reset_color();
 
     // ------------------------------------------------------------------------
     // Text elements

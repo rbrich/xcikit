@@ -294,7 +294,38 @@ void GlWindow::setup_view()
         }
 
         if (action == GLFW_PRESS && self->m_key_cb && self->m_view) {
-            self->m_key_cb(*self->m_view, KeyEvent{Key(key)});
+            Key ev_key;
+            if ((key >= GLFW_KEY_A && key <= GLFW_KEY_Z)
+            ||  (key >= GLFW_KEY_0 && key <= GLFW_KEY_9)) {
+                ev_key = Key(key);
+            } else
+            if (key >= GLFW_KEY_F1 && key <= GLFW_KEY_F12) {
+                ev_key = Key(key - GLFW_KEY_F1 + (int)Key::F1);
+            } else
+            switch (key) {
+                case GLFW_KEY_ESCAPE: ev_key = Key::Escape; break;
+                case GLFW_KEY_ENTER: ev_key = Key::Enter; break;
+                case GLFW_KEY_BACKSPACE: ev_key = Key::Backspace; break;
+                case GLFW_KEY_TAB: ev_key = Key::Tab; break;
+                case GLFW_KEY_INSERT: ev_key = Key::Insert; break;
+                case GLFW_KEY_DELETE: ev_key = Key::Delete; break;
+                case GLFW_KEY_HOME: ev_key = Key::Home; break;
+                case GLFW_KEY_END: ev_key = Key::End; break;
+                case GLFW_KEY_PAGE_UP: ev_key = Key::PageUp; break;
+                case GLFW_KEY_PAGE_DOWN: ev_key = Key::PageDown; break;
+                case GLFW_KEY_LEFT: ev_key = Key::Left; break;
+                case GLFW_KEY_RIGHT: ev_key = Key::Right; break;
+                case GLFW_KEY_UP: ev_key = Key::Up; break;
+                case GLFW_KEY_DOWN: ev_key = Key::Down; break;
+                case GLFW_KEY_CAPS_LOCK: ev_key = Key::CapsLock; break;
+                case GLFW_KEY_SCROLL_LOCK: ev_key = Key::ScrollLock; break;
+                case GLFW_KEY_NUM_LOCK: ev_key = Key::NumLock; break;
+                case GLFW_KEY_PRINT_SCREEN: ev_key = Key::PrintScreen; break;
+                case GLFW_KEY_PAUSE: ev_key = Key::Pause; break;
+                default: ev_key = Key::Unknown; break;
+            }
+
+            self->m_key_cb(*self->m_view, KeyEvent{ev_key});
         }
     });
 

@@ -5,6 +5,7 @@
 #include <xci/util/format.h>
 #include <xci/util/log.h>
 #include <xci/util/FileWatch.h>
+#include <xci/util/string.h>
 
 #include <fstream>
 #include <cstdio>
@@ -81,4 +82,21 @@ TEST_CASE( "File watch", "[FileWatch]" )
     fw.remove_watch(wd);
 
     CHECK(ev_ptr == ev_size);  // got all expected events
+}
+
+
+TEST_CASE( "utf8_length", "[string]" )
+{
+    std::string s = "河北梆子";
+    CHECK(s.size() == 4 * 3);
+    CHECK(utf8_length(s) == 4);
+
+    // count characters backwards
+    auto pos = s.crbegin();
+    int size = 0;
+    while (pos != s.crend()) {
+        pos = utf8_prev(pos);
+        ++size;
+    }
+    CHECK(size == 4);
 }

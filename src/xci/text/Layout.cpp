@@ -162,6 +162,12 @@ void Layout::set_color(const graphics::Color& color)
 }
 
 
+void Layout::reset_color()
+{
+    m_elements.push_back(std::make_unique<SetColor>(m_default_style.color()));
+}
+
+
 void Layout::add_word(const std::string& string)
 {
     m_elements.push_back(std::make_unique<AddWord>(string));

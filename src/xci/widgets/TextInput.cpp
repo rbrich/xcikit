@@ -15,6 +15,7 @@
 
 #include "TextInput.h"
 #include <xci/util/string.h>
+#include <xci/util/geometry.h>
 
 namespace xci {
 namespace widgets {
@@ -26,6 +27,7 @@ using namespace xci::util;
 
 TextInput::TextInput(const std::string& string)
     : m_text(string),
+      m_cursor(string.size()),
       m_bg_rect(Color(10, 20, 40), Color(180, 180, 0))
 {
     m_layout.set_default_font(&theme().font());
@@ -42,7 +44,14 @@ void TextInput::set_decoration_color(const graphics::Color& fill,
 void TextInput::update(View& view)
 {
     m_layout.clear();
-    m_layout.add_word(m_text);
+    // Text before cursor
+    m_layout.add_word(m_text.substr(0, m_cursor));
+    // Cursor
+    m_layout.set_color(Color::Red());
+    m_layout.add_word("|");
+    m_layout.reset_color();
+    // Text after cursor
+    m_layout.add_word(m_text.substr(m_cursor));
     m_layout.typeset(view);
     m_bg_rect.clear();
     m_bg_rect.add_rectangle(bbox(), m_outline_thickness);
@@ -57,9 +66,31 @@ void TextInput::draw(View& view)
 }
 
 
+void TextInput::handle(View& view, const KeyEvent& ev)
+{
+    switch (ev.key) {
+        case Key::Backspace: {
+            auto pos = m_text.rbegin() + m_text.size() - m_cursor;
+            if (pos != m_text.rend()) {
+                auto prev = m_text.rbegin() + m_text.size() - utf8_prev(pos);
+                m_text.erase(prev, m_cursor - prev);
+                m_cursor = prev;
+                update(view);
+                view.refresh();
+            }
+            return;
+        }
+        default:
+            return;
+    }
+}
+
+
 void TextInput::handle(View& view, const CharEvent& ev)
 {
-    m_text += to_utf8(ev.code_point);
+    auto ch = to_utf8(ev.code_point);
+    m_text += ch;
+    m_cursor += ch.size();
     update(view);
     view.refresh();
 }

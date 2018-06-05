@@ -31,6 +31,14 @@ std::u32string to_utf32(const std::string& utf8);
 // Convert single UTF32 char to UTF8 string. Can't fail.
 std::string to_utf8(char32_t codepoint);
 
+std::string::const_iterator
+utf8_next(std::string::const_iterator pos);
+
+std::string::const_reverse_iterator
+utf8_prev(std::string::const_reverse_iterator pos);
+
+int utf8_length(const std::string& str);
+
 }} // namespace xci::log
 
 #endif // XCI_UTIL_STRING_H
