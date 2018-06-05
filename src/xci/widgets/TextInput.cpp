@@ -69,27 +69,66 @@ void TextInput::draw(View& view)
 void TextInput::handle(View& view, const KeyEvent& ev)
 {
     switch (ev.key) {
-        case Key::Backspace: {
-            auto pos = m_text.rbegin() + m_text.size() - m_cursor;
-            if (pos != m_text.rend()) {
+        case Key::Backspace:
+            if (m_cursor > 0) {
+                auto pos = m_text.rbegin() + m_text.size() - m_cursor;
                 auto prev = m_text.rbegin() + m_text.size() - utf8_prev(pos);
                 m_text.erase(prev, m_cursor - prev);
                 m_cursor = prev;
-                update(view);
-                view.refresh();
+                break;
             }
             return;
-        }
+
+        case Key::Delete:
+            if (m_cursor < m_text.size()) {
+                auto next = utf8_next(m_text.begin() + m_cursor) - m_text.begin();
+                m_text.erase(m_cursor, next - m_cursor);
+                break;
+            }
+            return;
+
+        case Key::Left:
+            if (m_cursor > 0) {
+                auto pos = m_text.rbegin() + m_text.size() - m_cursor;
+                m_cursor = m_text.rbegin() + m_text.size() - utf8_prev(pos);
+                break;
+            }
+            return;
+
+        case Key::Right:
+            if (m_cursor < m_text.size()) {
+                m_cursor = utf8_next(m_text.begin() + m_cursor) - m_text.begin();
+                break;
+            }
+            return;
+
+        case Key::Home:
+            if (m_cursor > 0) {
+                m_cursor = 0;
+                break;
+            }
+            return;
+
+        case Key::End:
+            if (m_cursor < m_text.size()) {
+                m_cursor = m_text.size();
+                break;
+            }
+            return;
+
         default:
             return;
     }
+
+    update(view);
+    view.refresh();
 }
 
 
 void TextInput::handle(View& view, const CharEvent& ev)
 {
     auto ch = to_utf8(ev.code_point);
-    m_text += ch;
+    m_text.insert(m_cursor, ch);
     m_cursor += ch.size();
     update(view);
     view.refresh();
