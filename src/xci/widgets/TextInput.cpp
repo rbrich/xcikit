@@ -28,7 +28,8 @@ using namespace xci::util;
 TextInput::TextInput(const std::string& string)
     : m_text(string),
       m_cursor(string.size()),
-      m_bg_rect(Color(10, 20, 40), Color(180, 180, 0))
+      m_bg_rect(Color(10, 20, 40), Color(180, 180, 0)),
+      m_cursor_shape(Color(255, 255, 0), Color::Transparent())
 {
     m_layout.set_default_font(&theme().font());
 }
@@ -46,14 +47,21 @@ void TextInput::update(View& view)
     m_layout.clear();
     // Text before cursor
     m_layout.add_word(m_text.substr(0, m_cursor));
-    // Cursor
-    m_layout.set_color(Color::Red());
-    m_layout.add_word("|");
-    m_layout.reset_color();
+    // Cursor placing
+    m_layout.begin_span("cursor");
+    m_layout.add_word("");
+    m_layout.end_span("cursor");
     // Text after cursor
     m_layout.add_word(m_text.substr(m_cursor));
     m_layout.typeset(view);
+    // Cursor rect
+    layout::Span* cursor_span = m_layout.get_span("cursor");
+    m_cursor_shape.clear();
     m_bg_rect.clear();
+    auto cursor_box = cursor_span->part(0).bbox();
+    cursor_box.w = view.screen_ratio().x;
+    m_cursor_shape.add_rectangle(cursor_box);
+    // Background rect
     m_bg_rect.add_rectangle(bbox(), m_outline_thickness);
 }
 
@@ -61,8 +69,10 @@ void TextInput::update(View& view)
 void TextInput::draw(View& view)
 {
     auto rect = m_layout.bbox();
+    auto pos = position() + Vec2f{m_padding - rect.x, m_padding - rect.y};
     m_bg_rect.draw(view, {0, 0});
-    m_layout.draw(view, position() + Vec2f{m_padding - rect.x, m_padding - rect.y});
+    m_layout.draw(view, pos);
+    m_cursor_shape.draw(view, pos);
 }
 
 

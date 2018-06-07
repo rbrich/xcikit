@@ -48,7 +48,7 @@ Word::Word(Page& page, const std::string& string)
 
     // Measure word (metrics are affected by string, font, size)
     util::Vec2f pen;
-    bool first = true;
+    m_bbox = {0, 0 - ascender * pxr.y, 0, (ascender - descender) * pxr.y};
     for (CodePoint code_point : to_utf32(m_string)) {
         auto glyph = font->get_glyph(code_point);
         if (glyph == nullptr)
@@ -60,13 +60,7 @@ Word::Word(Page& page, const std::string& string)
                           glyph->advance() * pxr.x,
                           (ascender - descender) * pxr.y};
 
-        if (first) {
-            m_bbox = rect;
-            first = false;
-        } else {
-            m_bbox.extend(rect);
-        }
-
+        m_bbox.extend(rect);
         pen.x += rect.w;
     }
 

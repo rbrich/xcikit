@@ -89,6 +89,7 @@ public:
     void add_word(Word& word);
 
     void add_part() { m_parts.emplace_back(); }
+    const Line& part(int idx) const { return m_parts[idx]; }
     const std::vector<Line>& parts() const { return m_parts; }
 
     void close() { m_open = false; }

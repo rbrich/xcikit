@@ -47,6 +47,7 @@ private:
     std::string m_text;
     text::Layout m_layout;
     graphics::Shape m_bg_rect;
+    graphics::Shape m_cursor_shape;
     size_t m_cursor = 0;
     float m_padding = 0.02f;
     float m_outline_thickness = 0.005f;
