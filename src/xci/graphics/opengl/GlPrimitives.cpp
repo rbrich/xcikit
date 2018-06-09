@@ -154,9 +154,18 @@ void GlPrimitives::draw(View& view, const Vec2f& pos)
     glCullFace(GL_BACK);
     glEnable(GL_CULL_FACE);
 
+    if (view.has_crop()) {
+        glEnable(GL_SCISSOR_TEST);
+        auto cr = view.scalable_to_framebuffer(view.get_crop());
+        glScissor(cr.x, cr.y, cr.w, cr.h);
+    }
+
     glMultiDrawArrays(GL_TRIANGLE_FAN, m_elem_first.data(), m_elem_size.data(),
                       (GLsizei) m_elem_size.size());
 
+    glDisable(GL_SCISSOR_TEST);
+    glDisable(GL_CULL_FACE);
+    glDisable(GL_BLEND);
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
     if (m_format == VertexFormat::V2t22) {

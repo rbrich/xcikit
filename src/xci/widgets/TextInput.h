@@ -29,6 +29,7 @@ public:
     explicit TextInput(const std::string &string);
 
     void set_font_size(float size) { m_layout.set_default_font_size(size); }
+    void set_width(float width) { m_width = width; }
     void set_padding(float padding) { m_padding = padding; }
     void set_outline_thickness(float thickness) { m_outline_thickness = thickness; }
 
@@ -49,7 +50,9 @@ private:
     graphics::Shape m_bg_rect;
     graphics::Shape m_cursor_shape;
     size_t m_cursor = 0;
+    float m_width = 0.2f;
     float m_padding = 0.02f;
+    float m_content_pos = 0;
     float m_outline_thickness = 0.005f;
 };
 

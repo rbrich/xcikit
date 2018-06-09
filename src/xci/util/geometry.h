@@ -72,6 +72,11 @@ Vec2<T> operator *(const Vec2<T>& lhs, const Vec2<T>& rhs) {
 }
 
 template <typename T>
+Vec2<T> operator /(const Vec2<T>& lhs, const Vec2<T>& rhs) {
+    return Vec2<T>(lhs.x / rhs.x, lhs.y / rhs.y);
+}
+
+template <typename T>
 Vec2<T> operator +(const Vec2<T>& lhs, float rhs) {
     return Vec2<T>(lhs.x + rhs, lhs.y + rhs);
 }
@@ -130,9 +135,25 @@ struct Rect {
         return {l, t, r-l, b-t};
     }
 
+    Rect<T> intersection(const Rect<T>& other) const {
+        auto l = std::max(x, other.x);
+        auto t = std::max(y, other.y);
+        auto r = std::min(right(), other.right());
+        auto b = std::min(bottom(), other.bottom());
+        return {l, t, r-l, b-t};
+    }
+
+    Rect<T> enlarged(T radius) const {
+        return {x - radius, y - radius, w + 2*radius, h + 2*radius};
+    }
+
     // Extend Rect to contain `other`
     void extend(const Rect<T>& other) {
         *this = union_(other);
+    }
+
+    void crop(const Rect<T>& other) {
+        *this = intersection(other);
     }
 
     // Enlarge Rect to all sides by `radius`
@@ -149,6 +170,7 @@ struct Rect {
     inline T bottom() const { return y + h; }
 
     inline Vec2<T> top_left() const { return {x, y}; }
+    inline Vec2<T> size() const { return {w, h}; }
     inline Vec2<T> center() const { return {x + w/2, y + h/2}; }
 
 public:

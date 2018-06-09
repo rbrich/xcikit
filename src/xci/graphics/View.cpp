@@ -45,6 +45,16 @@ void View::set_framebuffer_size(Vec2u size)
 }
 
 
+void View::push_crop(const Rect_f& region)
+{
+    if (m_crop.empty())
+        m_crop.push_back(region);
+    else {
+        m_crop.push_back(region.intersection(m_crop.back()));
+    }
+}
+
+
 bool View::pop_refresh()
 {
     bool res = m_needs_refresh;
@@ -57,6 +67,7 @@ void View::set_debug_flag(View::Debug flag, bool enabled) {
     if (has_debug_flag(flag) != enabled)
         m_debug ^= (DebugFlags) flag;
 }
+
 
 bool View::has_debug_flag(View::Debug flag) const {
     return bool(m_debug & (DebugFlags)flag);

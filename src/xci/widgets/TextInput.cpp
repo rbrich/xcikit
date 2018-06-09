@@ -57,11 +57,15 @@ void TextInput::update(View& view)
     // Cursor rect
     layout::Span* cursor_span = m_layout.get_span("cursor");
     m_cursor_shape.clear();
-    m_bg_rect.clear();
     auto cursor_box = cursor_span->part(0).bbox();
     cursor_box.w = view.screen_ratio().x;
+    if (cursor_box.x < m_content_pos)
+        m_content_pos = cursor_box.x;
+    if (cursor_box.x > m_content_pos + m_width)
+        m_content_pos = cursor_box.x - m_width;
     m_cursor_shape.add_rectangle(cursor_box);
     // Background rect
+    m_bg_rect.clear();
     m_bg_rect.add_rectangle(bbox(), m_outline_thickness);
 }
 
@@ -69,10 +73,13 @@ void TextInput::update(View& view)
 void TextInput::draw(View& view)
 {
     auto rect = m_layout.bbox();
-    auto pos = position() + Vec2f{m_padding - rect.x, m_padding - rect.y};
+    auto pos = position() + Vec2f{m_padding - rect.x - m_content_pos,
+                                  m_padding - rect.y};
     m_bg_rect.draw(view, {0, 0});
+    view.push_crop(bbox().enlarged(-m_outline_thickness));
     m_layout.draw(view, pos);
     m_cursor_shape.draw(view, pos);
+    view.pop_crop();
 }
 
 
@@ -154,6 +161,7 @@ void TextInput::handle(View& view, const MouseBtnEvent& ev)
 util::Rect_f TextInput::bbox() const
 {
     auto rect = m_layout.bbox();
+    rect.w = m_width;
     rect.enlarge(m_padding);
     rect.x = position().x;
     rect.y = position().y;

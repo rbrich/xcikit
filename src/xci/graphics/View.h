@@ -19,12 +19,16 @@
 #include <xci/util/geometry.h>
 
 #include <memory>
+#include <vector>
 
 namespace xci {
 namespace graphics {
 
-using xci::util::Vec2u;
 using xci::util::Vec2f;
+using xci::util::Vec2u;
+using xci::util::Vec2i;
+using xci::util::Rect_f;
+using xci::util::Rect_i;
 
 
 class View {
@@ -59,7 +63,7 @@ public:
         return {s.x / px.x, s.y / px.y};
     }
 
-    // Ration of scalable units to framebuffer pixels, ie.
+    // Ratio of scalable units to framebuffer pixels, ie.
     // size of 1x1 framebuffer pixel in scalable units.
     Vec2f framebuffer_ratio() const {
         auto s = scalable_size();
@@ -70,6 +74,28 @@ public:
     Vec2f screen_to_scalable(const Vec2f& screen_coords) const {
         return screen_coords * screen_ratio() - 0.5f * scalable_size();
     }
+
+    /// Convert coords in scalable units into framebuffer coords.
+    /// Framebuffer has zero coords in bottom-left corner, inverted Y axis.
+    Vec2i scalable_to_framebuffer(const Vec2f& scalable_coords) const {
+        Vec2f c = (scalable_coords + 0.5f * scalable_size()) / framebuffer_ratio();
+        return {int(c.x), int(framebuffer_size().y - c.y)};
+    }
+
+    /// Convert rectangle in scalable space into framebuffer space.
+    Rect_i scalable_to_framebuffer(const Rect_f& rect) const {
+        Vec2i xy = scalable_to_framebuffer(rect.top_left());
+        Vec2f size = rect.size() / framebuffer_ratio();
+        return {xy.x, xy.y - int(size.y), int(size.x), int(size.y)};
+    }
+
+    // ------------------------------------------------------------------------
+    // Crop region (scissors test)
+
+    void push_crop(const Rect_f& region);
+    void pop_crop() { m_crop.pop_back(); }
+    bool has_crop() const { return !m_crop.empty(); }
+    const Rect_f& get_crop() const { return m_crop.back(); }
 
     // ------------------------------------------------------------------------
     // Refresh
@@ -99,6 +125,7 @@ private:
     Vec2u m_framebuffer_size;   // eg. {1600, 1200}
     DebugFlags m_debug = 0;
     bool m_needs_refresh = false;
+    std::vector<Rect_f> m_crop;  // Crop region stack (current crop region on top)
 };
 
 
