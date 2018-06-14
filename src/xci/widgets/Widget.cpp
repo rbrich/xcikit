@@ -14,11 +14,16 @@
 // limitations under the License.
 
 #include "Widget.h"
+#include <xci/util/log.h>
+#include <xci/graphics/Window.h>
 
 namespace xci {
 namespace widgets {
 
 using graphics::View;
+using graphics::Key;
+using graphics::Action;
+using namespace util::log;
 
 
 void Composite::add(WidgetPtr child)
@@ -47,6 +52,37 @@ void Composite::draw(View& view, State state)
 
 void Composite::handle(View& view, const KeyEvent& ev)
 {
+    // Switch focus with Tab, Shift+Tab
+    if (ev.action == Action::Press && ev.key == Key::Tab && !m_child.empty()) {
+        if (m_focus.expired())
+            m_focus = m_child.front();
+        else {
+            auto iter = std::find(m_child.begin(), m_child.end(), m_focus.lock());
+            if (iter == m_child.end()) {
+                // not found
+                m_focus = m_child.front();
+            } else {
+                if (!ev.mod.shift) {
+                    // tab
+                    iter++;
+                    if (iter == m_child.end())
+                        iter = m_child.begin();
+                } else {
+                    // shift + tab
+                    if (iter == m_child.begin())
+                        iter = m_child.begin() + (m_child.size() - 1);
+                    else
+                        iter--;
+                }
+                m_focus = *iter;
+            }
+        }
+        update(view);
+        view.refresh();
+        return;
+    }
+
+    // Prpagate the event
     if (!m_focus.expired())
         m_focus.lock()->handle(view, ev);
 }

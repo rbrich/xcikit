@@ -293,7 +293,7 @@ void GlWindow::setup_view()
             return;
         }
 
-        if (action == GLFW_PRESS && self->m_key_cb && self->m_view) {
+        if (self->m_key_cb && self->m_view) {
             Key ev_key;
             if ((key >= GLFW_KEY_A && key <= GLFW_KEY_Z)
             ||  (key >= GLFW_KEY_0 && key <= GLFW_KEY_9)) {
@@ -325,7 +325,15 @@ void GlWindow::setup_view()
                 default: ev_key = Key::Unknown; break;
             }
 
-            self->m_key_cb(*self->m_view, KeyEvent{ev_key});
+            static_assert(int(Action::Release) == GLFW_RELEASE, "GLFW_RELEASE");
+            static_assert(int(Action::Press) == GLFW_PRESS, "GLFW_PRESS");
+            static_assert(int(Action::Repeat) == GLFW_REPEAT, "GLFW_REPEAT");
+            ModKey mod = {
+                    bool(mods & GLFW_MOD_SHIFT),
+                    bool(mods & GLFW_MOD_CONTROL),
+                    bool(mods & GLFW_MOD_ALT),
+            };
+            self->m_key_cb(*self->m_view, KeyEvent{ev_key, mod, Action(action)});
         }
     });
 

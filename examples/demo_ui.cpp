@@ -35,13 +35,14 @@ int main()
     if (!Theme::load_default_theme())
         return EXIT_FAILURE;
 
+    Composite root;
+
     // Random color generator
     std::random_device rd;
     std::default_random_engine re(rd());
     std::uniform_int_distribution<int> runi(0, 255);
     auto random_color = [&](){ return Color(runi(re), runi(re), runi(re)); };
 
-    Composite root;
     for (auto i : {1,2,3,4,5}) {
         auto button = std::make_shared<Button>(std::to_string(i) + ". click me!");
         button->set_position({-0.2f, -0.5f + i * 0.14f});

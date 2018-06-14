@@ -86,6 +86,10 @@ void TextInput::draw(View& view, State state)
 
 void TextInput::handle(View& view, const KeyEvent& ev)
 {
+    // Ignore key release, handle only press and repeat
+    if (ev.action == Action::Release)
+        return;
+
     switch (ev.key) {
         case Key::Backspace:
             if (m_cursor > 0) {
