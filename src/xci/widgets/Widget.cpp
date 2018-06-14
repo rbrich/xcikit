@@ -21,6 +21,14 @@ namespace widgets {
 using graphics::View;
 
 
+void Composite::add(WidgetPtr child)
+{
+    if (m_focus.expired())
+        m_focus = child;
+    m_child.push_back(std::move(child));
+}
+
+
 void Composite::update(View& view)
 {
     for (auto& child : m_child)
@@ -28,24 +36,26 @@ void Composite::update(View& view)
 }
 
 
-void Composite::draw(View& view)
+void Composite::draw(View& view, State state)
 {
-    for (auto& child : m_child)
-        child->draw(view);
+    for (auto& child : m_child) {
+        state.focused = (m_focus.lock() == child);
+        child->draw(view, state);
+    }
 }
 
 
 void Composite::handle(View& view, const KeyEvent& ev)
 {
-    for (auto& child : m_child)
-        child->handle(view, ev);
+    if (!m_focus.expired())
+        m_focus.lock()->handle(view, ev);
 }
 
 
 void Composite::handle(View& view, const CharEvent& ev)
 {
-    for (auto& child : m_child)
-        child->handle(view, ev);
+    if (!m_focus.expired())
+        m_focus.lock()->handle(view, ev);
 }
 
 

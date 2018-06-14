@@ -20,6 +20,7 @@
 #include <xci/graphics/Window.h>
 #include <xci/graphics/View.h>
 #include <xci/util/geometry.h>
+#include <utility>
 #include <vector>
 
 namespace xci {
@@ -31,6 +32,10 @@ using graphics::CharEvent;
 using graphics::MousePosEvent;
 using graphics::MouseBtnEvent;
 
+
+struct State {
+    bool focused = false;
+};
 
 class Widget {
 public:
@@ -46,11 +51,13 @@ public:
     // This can be set up using Bind helper or manually by calling these methods.
 
     virtual void update(View& view) = 0;
-    virtual void draw(View& view) = 0;
+    virtual void draw(View& view, State state) = 0;
     virtual void handle(View& view, const KeyEvent& ev) {}
     virtual void handle(View& view, const CharEvent& ev) {}
     virtual void handle(View& view, const MousePosEvent& ev) {}
     virtual void handle(View& view, const MouseBtnEvent& ev) {}
+
+    void draw(View& view) { draw(view, State{}); }
 
 private:
     Theme* m_theme = &Theme::default_theme();
@@ -59,16 +66,20 @@ private:
 
 
 using WidgetPtr = std::shared_ptr<Widget>;
+using WidgetRef = std::weak_ptr<Widget>;
 
 
-// Manages list of child widgets and forwards all events to them
+// Manages list of child widgets and forwards events to them
 
 class Composite: public Widget {
 public:
-    void add(WidgetPtr child) { m_child.push_back(std::move(child)); }
+    void add(WidgetPtr child);
+
+    void focus(WidgetRef child) { m_focus = std::move(child); }
+    WidgetPtr focus() const { return m_focus.lock(); }
 
     void update(View& view) override;
-    void draw(View& view) override;
+    void draw(View& view, State state) override;
     void handle(View& view, const KeyEvent& ev) override;
     void handle(View& view, const CharEvent& ev) override;
     void handle(View& view, const MousePosEvent& ev) override;
@@ -76,6 +87,7 @@ public:
 
 private:
     std::vector<WidgetPtr> m_child;
+    WidgetRef m_focus;  // a child with keyboard focus
 };
 
 

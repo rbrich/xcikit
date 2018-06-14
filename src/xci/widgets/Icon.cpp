@@ -57,7 +57,7 @@ void Icon::update(View& view)
 }
 
 
-void Icon::draw(View& view)
+void Icon::draw(View& view, State state)
 {
     m_layout.draw(view, position());
 }

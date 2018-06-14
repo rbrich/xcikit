@@ -31,7 +31,7 @@ public:
     FpsDisplay();
 
     void update(View& view) override;
-    void draw(View& view) override;
+    void draw(View& view, State state) override;
 
 private:
     void init_shader();

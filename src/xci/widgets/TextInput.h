@@ -37,7 +37,7 @@ public:
     void set_text_color(const graphics::Color& color) { m_layout.set_default_color(color); }
 
     void update(View& view) override;
-    void draw(View& view) override;
+    void draw(View& view, State state) override;
     void handle(View& view, const KeyEvent& ev) override;
     void handle(View& view, const CharEvent& ev) override;
     void handle(View& view, const MouseBtnEvent& ev) override;

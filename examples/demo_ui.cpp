@@ -60,9 +60,13 @@ int main()
         root.add(checkbox);
     }
 
-    auto text_input = std::make_shared<TextInput>("input");
-    text_input->set_position({-1.0f, 0});
-    root.add(text_input);
+    for (auto i : {1,2,3,4,5}) {
+        auto text_input = std::make_shared<TextInput>("input");
+        text_input->set_position({-1.0f, -0.5f + i * 0.12f});
+        root.add(text_input);
+        if (i == 1)
+            root.focus(text_input);
+    }
 
     auto fps_display = std::make_shared<FpsDisplay>();
     fps_display->set_position({-1.2f, -0.8f});

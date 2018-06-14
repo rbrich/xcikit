@@ -70,7 +70,7 @@ void TextInput::update(View& view)
 }
 
 
-void TextInput::draw(View& view)
+void TextInput::draw(View& view, State state)
 {
     auto rect = m_layout.bbox();
     auto pos = position() + Vec2f{m_padding - rect.x - m_content_pos,
@@ -78,7 +78,8 @@ void TextInput::draw(View& view)
     m_bg_rect.draw(view, {0, 0});
     view.push_crop(bbox().enlarged(-m_outline_thickness));
     m_layout.draw(view, pos);
-    m_cursor_shape.draw(view, pos);
+    if (state.focused)
+        m_cursor_shape.draw(view, pos);
     view.pop_crop();
 }
 

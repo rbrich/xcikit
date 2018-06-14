@@ -53,7 +53,7 @@ void Button::update(View& view)
 }
 
 
-void Button::draw(View& view)
+void Button::draw(View& view, State state)
 {
     auto rect = m_layout.bbox();
     m_bg_rect.draw(view, {0, 0});

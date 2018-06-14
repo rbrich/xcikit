@@ -33,7 +33,7 @@ public:
     void set_color(const graphics::Color& color);
 
     void update(View& view) override;
-    void draw(View& view) override;
+    void draw(View& view, State state) override;
 
     util::Rect_f bbox() const;
 
