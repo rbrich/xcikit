@@ -33,13 +33,10 @@ public:
     void set_color(const graphics::Color& color);
 
     bool contains(const util::Vec2f& point) override;
-    void update(View& view) override;
+    void resize(View& view) override;
     void draw(View& view, State state) override;
 
     util::Rect_f bbox() const;
-
-private:
-    void refresh();
 
 private:
     IconId m_icon_id = IconId::None;

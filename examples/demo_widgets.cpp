@@ -59,10 +59,10 @@ int main()
     window.set_size_callback([&](View& view) {
         //view.set_debug_flag(View::Debug::WordBasePoint);
         //view.set_debug_flag(View::Debug::PageBBox);
-        button_default.update(view);
+        button_default.resize(view);
         button_styled.set_outline_thickness(1 * view.screen_ratio().y);
-        button_styled.update(view);
-        checkbox.update(view);
+        button_styled.resize(view);
+        checkbox.resize(view);
     });
 
     window.set_draw_callback([&](View& view) {
@@ -80,7 +80,7 @@ int main()
                 log_debug("checkbox state {}", checkbox_state);
                 checkbox.set_icon(checkbox_state ? IconId::CheckBoxChecked
                                                  : IconId::CheckBoxUnchecked);
-                checkbox.update(view);
+                checkbox.resize(view);
                 view.refresh();
             }
         }
@@ -92,7 +92,7 @@ int main()
         } else {
             checkbox.set_color(Color(150, 200, 200));
         }
-        checkbox.update(view);
+        checkbox.resize(view);
         view.refresh();
     });
 

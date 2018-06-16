@@ -24,7 +24,7 @@ using namespace xci::text;
 
 
 Button::Button(const std::string &string)
-    : m_bg_rect(Color(10, 20, 40), Color(180, 180, 0))
+    : m_bg_rect(Color(10, 20, 40), Color(180, 180, 180))
 {
     m_layout.set_default_font(&theme().font());
     Markup markup(m_layout);
@@ -51,10 +51,11 @@ bool Button::contains(const util::Vec2f& point)
 }
 
 
-void Button::update(View& view)
+void Button::resize(View& view)
 {
     m_layout.typeset(view);
     m_bg_rect.clear();
+    m_bg_rect.set_outline_color(Color(180, 180, 180));
     m_bg_rect.add_rectangle(bbox(), m_outline_thickness);
 }
 
@@ -62,6 +63,8 @@ void Button::update(View& view)
 void Button::draw(View& view, State state)
 {
     auto rect = m_layout.bbox();
+    if (state.focused)
+        m_bg_rect.set_outline_color(Color::Yellow());
     m_bg_rect.draw(view, {0, 0});
     m_layout.draw(view, position() + Vec2f{m_padding - rect.x, m_padding - rect.y});
 }

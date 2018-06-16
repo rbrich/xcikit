@@ -39,7 +39,7 @@ FpsDisplay::FpsDisplay()
 {}
 
 
-void FpsDisplay::update(View& view)
+void FpsDisplay::resize(View& view)
 {
     float x1 = 0;
     float y1 = -0.10f;

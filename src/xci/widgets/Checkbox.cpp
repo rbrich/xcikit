@@ -31,11 +31,11 @@ Checkbox::Checkbox()
 void Checkbox::handle(View& view, const MouseBtnEvent& ev)
 {
     if (ev.action == Action::Press && ev.button == MouseButton::Left) {
-        if (bbox().contains(ev.pos - position())) {
+        if (contains(ev.pos)) {
             m_checked = !m_checked;
             set_icon(m_checked ? IconId::CheckBoxChecked
                                : IconId::CheckBoxUnchecked);
-            update(view);
+            resize(view);
             view.refresh();
 
             if (m_change_cb)

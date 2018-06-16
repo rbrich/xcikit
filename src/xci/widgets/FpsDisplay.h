@@ -30,7 +30,7 @@ class FpsDisplay: public Widget {
 public:
     FpsDisplay();
 
-    void update(View& view) override;
+    void resize(View& view) override;
     void draw(View& view, State state) override;
 
 private:

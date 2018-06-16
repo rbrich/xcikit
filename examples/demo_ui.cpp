@@ -49,7 +49,7 @@ int main()
         button->set_font_size(0.07);
         button->on_click([button, &random_color](View& view) {
             button->set_text_color(random_color());
-            button->update(view);
+            button->resize(view);
         });
         root.add(button);
     }

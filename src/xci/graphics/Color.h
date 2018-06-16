@@ -41,6 +41,7 @@ struct Color {
     static inline Color Black() { return {0, 0, 0}; }
     static inline Color White() { return {255, 255, 255}; }
     static inline Color Red() { return {255, 0, 0}; }
+    static inline Color Yellow() { return {255, 255, 0}; }
 
     uint8_t r = 0;    // red
     uint8_t g = 0;    // green

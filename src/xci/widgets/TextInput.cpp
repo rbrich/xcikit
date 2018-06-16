@@ -28,8 +28,8 @@ using namespace xci::util;
 TextInput::TextInput(const std::string& string)
     : m_text(string),
       m_cursor(string.size()),
-      m_bg_rect(Color(10, 20, 40), Color(180, 180, 0)),
-      m_cursor_shape(Color(255, 255, 0), Color::Transparent())
+      m_bg_rect(Color(10, 20, 40), Color(180, 180, 180)),
+      m_cursor_shape(Color::Yellow(), Color::Transparent())
 {
     m_layout.set_default_font(&theme().font());
 }
@@ -48,7 +48,7 @@ bool TextInput::contains(const util::Vec2f& point)
 }
 
 
-void TextInput::update(View& view)
+void TextInput::resize(View& view)
 {
     m_layout.clear();
     // Text before cursor
@@ -148,7 +148,7 @@ void TextInput::handle(View& view, const KeyEvent& ev)
             return;
     }
 
-    update(view);
+    resize(view);
     view.refresh();
 }
 
@@ -158,7 +158,7 @@ void TextInput::handle(View& view, const CharEvent& ev)
     auto ch = to_utf8(ev.code_point);
     m_text.insert(m_cursor, ch);
     m_cursor += ch.size();
-    update(view);
+    resize(view);
     view.refresh();
 }
 

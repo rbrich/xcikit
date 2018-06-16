@@ -43,10 +43,10 @@ bool Composite::contains(const util::Vec2f& point)
 }
 
 
-void Composite::update(View& view)
+void Composite::resize(View& view)
 {
     for (auto& child : m_child)
-        child->update(view);
+        child->resize(view);
 }
 
 
@@ -86,7 +86,7 @@ void Composite::handle(View& view, const KeyEvent& ev)
                 m_focus = *iter;
             }
         }
-        update(view);
+        resize(view);
         view.refresh();
         return;
     }
@@ -125,7 +125,7 @@ void Composite::handle(View& view, const MouseBtnEvent& ev)
         child->handle(view, ev);
     }
     if (focus_changed) {
-        update(view);
+        resize(view);
         view.refresh();
     }
 }
@@ -134,8 +134,8 @@ void Composite::handle(View& view, const MouseBtnEvent& ev)
 Bind::Bind(graphics::Window& window, Widget& root)
     : m_window(window)
 {
-    window.set_size_callback([&](View& v) { root.update(v); });
-    window.set_draw_callback([&](View& v) { root.draw(v); });
+    window.set_size_callback([&](View& v) { root.resize(v); });
+    window.set_draw_callback([&](View& v) { root.draw(v, {}); });
     window.set_key_callback([&](View& v, const KeyEvent& e) { root.handle(v, e); });
     window.set_char_callback([&](View& v, const CharEvent& e) { root.handle(v, e); });
     window.set_mouse_position_callback([&](View& v, const MousePosEvent& e) { root.handle(v, e); });

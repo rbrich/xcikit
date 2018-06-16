@@ -20,6 +20,7 @@ namespace xci {
 namespace widgets {
 
 using xci::util::to_utf8;
+using namespace xci::graphics;
 
 
 void Icon::set_icon(IconId icon_id)
@@ -51,20 +52,35 @@ void Icon::set_color(const graphics::Color& color)
 
 bool Icon::contains(const util::Vec2f& point)
 {
-    return bbox().contains(point);
+    return bbox().contains(point - position());
 }
 
 
-void Icon::update(View& view)
+void Icon::resize(View& view)
 {
-    if (m_needs_refresh)
-        refresh();
+    if (m_needs_refresh) {
+        // Refresh
+        m_layout.clear();
+        m_layout.set_font(&theme().icon_font());
+        m_layout.begin_span("icon");
+        m_layout.set_offset({0, 0.125f});
+        m_layout.add_word(to_utf8(theme().icon_codepoint(m_icon_id)));
+        m_layout.end_span("icon");
+        m_layout.reset_offset();
+        m_layout.set_font(&theme().font());
+        m_layout.add_space();
+        m_layout.add_word(m_text);
+        m_needs_refresh = false;
+    }
     m_layout.typeset(view);
 }
 
 
 void Icon::draw(View& view, State state)
 {
+    m_layout.get_span("icon")->adjust_style([&state](Style& s) {
+        s.set_color(state.focused ? Color::Yellow() : Color::White());
+    });
     m_layout.draw(view, position());
 }
 
@@ -72,19 +88,6 @@ void Icon::draw(View& view, State state)
 util::Rect_f Icon::bbox() const
 {
     return m_layout.bbox();
-}
-
-
-void Icon::refresh()
-{
-    m_layout.clear();
-    m_layout.set_font(&theme().icon_font());
-    m_layout.set_offset({0, 0.125f});
-    m_layout.add_word(to_utf8(theme().icon_codepoint(m_icon_id)));
-    m_layout.reset_offset();
-    m_layout.set_font(&theme().font());
-    m_layout.add_space();
-    m_layout.add_word(m_text);
 }
 
 

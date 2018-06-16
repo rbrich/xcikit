@@ -53,14 +53,12 @@ public:
     // Events need to be injected into root widget.
     // This can be set up using Bind helper or manually by calling these methods.
 
-    virtual void update(View& view) = 0;
+    virtual void resize(View& view) = 0;
     virtual void draw(View& view, State state) = 0;
     virtual void handle(View& view, const KeyEvent& ev) {}
     virtual void handle(View& view, const CharEvent& ev) {}
     virtual void handle(View& view, const MousePosEvent& ev) {}
     virtual void handle(View& view, const MouseBtnEvent& ev) {}
-
-    void draw(View& view) { draw(view, State{}); }
 
 private:
     Theme* m_theme = &Theme::default_theme();
@@ -82,7 +80,7 @@ public:
     WidgetPtr focus() const { return m_focus.lock(); }
 
     bool contains(const util::Vec2f& point) override;
-    void update(View& view) override;
+    void resize(View& view) override;
     void draw(View& view, State state) override;
     void handle(View& view, const KeyEvent& ev) override;
     void handle(View& view, const CharEvent& ev) override;
