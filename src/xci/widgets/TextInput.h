@@ -36,6 +36,7 @@ public:
     void set_decoration_color(const graphics::Color& fill, const graphics::Color& border);
     void set_text_color(const graphics::Color& color) { m_layout.set_default_color(color); }
 
+    bool contains(const util::Vec2f& point) override;
     void update(View& view) override;
     void draw(View& view, State state) override;
     void handle(View& view, const KeyEvent& ev) override;

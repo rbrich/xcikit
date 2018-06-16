@@ -45,6 +45,12 @@ void Button::set_text_color(const graphics::Color& color)
 }
 
 
+bool Button::contains(const util::Vec2f& point)
+{
+    return bbox().contains(point);
+}
+
+
 void Button::update(View& view)
 {
     m_layout.typeset(view);

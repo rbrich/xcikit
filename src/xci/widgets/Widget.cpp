@@ -34,6 +34,15 @@ void Composite::add(WidgetPtr child)
 }
 
 
+bool Composite::contains(const util::Vec2f& point)
+{
+    for (auto& child : m_child)
+        if (child->contains(point))
+            return true;
+    return false;
+}
+
+
 void Composite::update(View& view)
 {
     for (auto& child : m_child)
@@ -104,8 +113,21 @@ void Composite::handle(View& view, const MousePosEvent& ev)
 
 void Composite::handle(View& view, const MouseBtnEvent& ev)
 {
-    for (auto& child : m_child)
+    bool focus_changed = false;
+    for (auto& child : m_child) {
+        // Switch focus on click
+        if (child->contains(ev.pos) && m_focus.lock() != child) {
+            m_focus = child;
+            focus_changed = true;
+        }
+
+        // Propagate the event
         child->handle(view, ev);
+    }
+    if (focus_changed) {
+        update(view);
+        view.refresh();
+    }
 }
 
 

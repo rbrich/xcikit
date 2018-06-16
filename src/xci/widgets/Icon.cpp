@@ -49,6 +49,12 @@ void Icon::set_color(const graphics::Color& color)
 }
 
 
+bool Icon::contains(const util::Vec2f& point)
+{
+    return bbox().contains(point);
+}
+
+
 void Icon::update(View& view)
 {
     if (m_needs_refresh)
