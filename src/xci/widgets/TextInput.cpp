@@ -42,7 +42,7 @@ void TextInput::set_decoration_color(const graphics::Color& fill,
 }
 
 
-bool TextInput::contains(const util::Vec2f& point)
+bool TextInput::contains(const util::Vec2f& point) const
 {
     return bbox().contains(point);
 }

@@ -32,7 +32,7 @@ public:
     void set_size(float size);
     void set_color(const graphics::Color& color);
 
-    bool contains(const util::Vec2f& point) override;
+    bool contains(const util::Vec2f& point) const override;
     void resize(View& view) override;
     void draw(View& view, State state) override;
 

@@ -34,7 +34,76 @@ void Composite::add(WidgetPtr child)
 }
 
 
-bool Composite::contains(const util::Vec2f& point)
+void Composite::focus_next()
+{
+    // Check if there is any focusable widget
+    if (m_child.empty() || !can_focus())
+        return;
+
+    // Point iterator to expected position (after currently focused widget)
+    auto iter = m_child.begin();
+    if (!m_focus.expired()) {
+        iter = std::find(m_child.begin(), m_child.end(), m_focus.lock());
+        if (iter != m_child.end()) {
+            ++iter;
+            if (iter == m_child.end())
+                iter = m_child.begin();
+        }
+    }
+
+    // Find first widget which can take focus
+    while (!(*iter)->can_focus()) {
+        // try next
+        ++iter;
+        if (iter == m_child.end())
+            iter = m_child.begin();
+    }
+
+    m_focus = *iter;
+}
+
+
+void Composite::focus_previous()
+{
+    // Check if there is any focusable widget
+    if (m_child.empty() || !can_focus())
+        return;
+
+    // Point iterator to expected position (before currently focused widget)
+    auto iter = m_child.begin();
+    if (!m_focus.expired()) {
+        iter = std::find(m_child.begin(), m_child.end(), m_focus.lock());
+        if (iter != m_child.end()) {
+            if (iter == m_child.begin())
+                iter = m_child.begin() + (m_child.size() - 1);
+            else
+                --iter;
+        }
+    }
+
+    // Find first widget which can take focus
+    while (!(*iter)->can_focus()) {
+        // try previous
+        if (iter == m_child.begin())
+            iter = m_child.begin() + (m_child.size() - 1);
+        else
+            --iter;
+    }
+
+    m_focus = *iter;
+}
+
+
+bool Composite::can_focus() const
+{
+    for (auto& child : m_child)
+        if (child->can_focus())
+            return true;
+    return false;
+}
+
+
+bool Composite::contains(const util::Vec2f& point) const
 {
     for (auto& child : m_child)
         if (child->contains(point))
@@ -63,28 +132,12 @@ void Composite::handle(View& view, const KeyEvent& ev)
 {
     // Switch focus with Tab, Shift+Tab
     if (ev.action == Action::Press && ev.key == Key::Tab && !m_child.empty()) {
-        if (m_focus.expired())
-            m_focus = m_child.front();
-        else {
-            auto iter = std::find(m_child.begin(), m_child.end(), m_focus.lock());
-            if (iter == m_child.end()) {
-                // not found
-                m_focus = m_child.front();
-            } else {
-                if (!ev.mod.shift) {
-                    // tab
-                    iter++;
-                    if (iter == m_child.end())
-                        iter = m_child.begin();
-                } else {
-                    // shift + tab
-                    if (iter == m_child.begin())
-                        iter = m_child.begin() + (m_child.size() - 1);
-                    else
-                        iter--;
-                }
-                m_focus = *iter;
-            }
+        if (!ev.mod.shift) {
+            // tab
+            focus_next();
+        } else {
+            // shift + tab
+            focus_previous();
         }
         resize(view);
         view.refresh();

@@ -50,7 +50,7 @@ void Icon::set_color(const graphics::Color& color)
 }
 
 
-bool Icon::contains(const util::Vec2f& point)
+bool Icon::contains(const util::Vec2f& point) const
 {
     return bbox().contains(point - position());
 }

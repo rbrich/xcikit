@@ -47,8 +47,12 @@ public:
     void set_position(const util::Vec2f& pos) { m_position = pos; }
     const util::Vec2f& position() const { return m_position; }
 
+    // Is this widget focusable?
+    // When true, it has to implement contains().
+    virtual bool can_focus() const { return false; }
+
     // Test if point is contained inside widget area
-    virtual bool contains(const util::Vec2f& point) { return false; }
+    virtual bool contains(const util::Vec2f& point) const { return false; }
 
     // Events need to be injected into root widget.
     // This can be set up using Bind helper or manually by calling these methods.
@@ -78,8 +82,11 @@ public:
 
     void focus(WidgetRef child) { m_focus = std::move(child); }
     WidgetPtr focus() const { return m_focus.lock(); }
+    void focus_next();
+    void focus_previous();
 
-    bool contains(const util::Vec2f& point) override;
+    bool can_focus() const override;
+    bool contains(const util::Vec2f& point) const override;
     void resize(View& view) override;
     void draw(View& view, State state) override;
     void handle(View& view, const KeyEvent& ev) override;

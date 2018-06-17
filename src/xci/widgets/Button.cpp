@@ -45,7 +45,7 @@ void Button::set_text_color(const graphics::Color& color)
 }
 
 
-bool Button::contains(const util::Vec2f& point)
+bool Button::contains(const util::Vec2f& point) const
 {
     return bbox().contains(point);
 }
