@@ -322,6 +322,7 @@ void GlWindow::setup_view()
                 case GLFW_KEY_NUM_LOCK: ev_key = Key::NumLock; break;
                 case GLFW_KEY_PRINT_SCREEN: ev_key = Key::PrintScreen; break;
                 case GLFW_KEY_PAUSE: ev_key = Key::Pause; break;
+                case GLFW_KEY_SPACE: ev_key = Key::Space; break;
                 default: ev_key = Key::Unknown; break;
             }
 

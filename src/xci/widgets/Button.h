@@ -41,6 +41,7 @@ public:
     bool contains(const util::Vec2f& point) const override;
     void resize(View& view) override;
     void draw(View& view, State state) override;
+    void handle(View& view, const KeyEvent& ev) override;
     void handle(View& view, const MouseBtnEvent& ev) override;
 
     util::Rect_f bbox() const;

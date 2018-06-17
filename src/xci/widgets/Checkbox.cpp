@@ -28,16 +28,33 @@ Checkbox::Checkbox()
 }
 
 
+void Checkbox::set_checked(bool checked)
+{
+    m_checked = checked;
+    set_icon(m_checked ? IconId::CheckBoxChecked
+                       : IconId::CheckBoxUnchecked);
+}
+
+
+void Checkbox::handle(View& view, const KeyEvent& ev)
+{
+    if (ev.action == Action::Press && ev.key == Key::Enter) {
+        set_checked(!m_checked);
+        resize(view);
+        view.refresh();
+        if (m_change_cb)
+            m_change_cb(view);
+    }
+}
+
+
 void Checkbox::handle(View& view, const MouseBtnEvent& ev)
 {
     if (ev.action == Action::Press && ev.button == MouseButton::Left) {
         if (contains(ev.pos)) {
-            m_checked = !m_checked;
-            set_icon(m_checked ? IconId::CheckBoxChecked
-                               : IconId::CheckBoxUnchecked);
+            set_checked(!m_checked);
             resize(view);
             view.refresh();
-
             if (m_change_cb)
                 m_change_cb(view);
         }

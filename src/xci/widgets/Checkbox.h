@@ -32,13 +32,14 @@ class Checkbox: public widgets::Icon {
 public:
     Checkbox();
 
-    void set_checked(bool checked) { m_checked = checked; }
+    void set_checked(bool checked);
     bool checked() const { return m_checked; }
 
     using ChangeCallback = std::function<void(View&)>;
     void on_change(ChangeCallback cb) { m_change_cb = std::move(cb); }
 
     bool can_focus() const override { return true; }
+    void handle(View& view, const KeyEvent& ev) override;
     void handle(View& view, const MouseBtnEvent& ev) override;
 
 private:

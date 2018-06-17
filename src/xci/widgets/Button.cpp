@@ -70,6 +70,17 @@ void Button::draw(View& view, State state)
 }
 
 
+void Button::handle(View& view, const KeyEvent& ev)
+{
+    if (ev.action == Action::Press && ev.key == Key::Enter) {
+        if (m_click_cb) {
+            m_click_cb(view);
+            view.refresh();
+        }
+    }
+}
+
+
 void Button::handle(View& view, const MouseBtnEvent& ev)
 {
     if (ev.action == Action::Press && ev.button == MouseButton::Left) {
