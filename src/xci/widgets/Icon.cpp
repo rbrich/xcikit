@@ -52,7 +52,7 @@ void Icon::set_color(const graphics::Color& color)
 
 bool Icon::contains(const util::Vec2f& point) const
 {
-    return bbox().contains(point - position());
+    return bbox().contains(point);
 }
 
 
@@ -81,13 +81,17 @@ void Icon::draw(View& view, State state)
     m_layout.get_span("icon")->adjust_style([&state](Style& s) {
         s.set_color(state.focused ? Color::Yellow() : Color::White());
     });
-    m_layout.draw(view, position());
+    auto rect = m_layout.bbox();
+    m_layout.draw(view, position() - rect.top_left());
 }
 
 
 util::Rect_f Icon::bbox() const
 {
-    return m_layout.bbox();
+    auto rect = m_layout.bbox();
+    rect.x = position().x;
+    rect.y = position().y;
+    return rect;
 }
 
 

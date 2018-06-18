@@ -19,11 +19,35 @@
 #include <xci/widgets/TextInput.h>
 #include <xci/graphics/Window.h>
 #include <xci/util/file.h>
+#include <xci/util/format.h>
 #include <random>
 #include <cstdlib>
 
 using namespace xci::graphics;
 using namespace xci::widgets;
+using namespace xci::util;
+
+
+class MousePosInfo: public Widget {
+public:
+    MousePosInfo() : m_text("Mouse: ", Theme::default_theme().font()) {
+        m_text.set_color(Color(255, 150, 50));
+    }
+
+    void draw(View& view, State state) override {
+        m_text.draw(view, position());
+    }
+
+    void handle(View& view, const MousePosEvent& ev) override {
+        m_text.set_fixed_string("Mouse: " +
+                                format("({}, {})", ev.pos.x, ev.pos.y));
+        view.refresh();
+    }
+
+private:
+    Text m_text;
+};
+
 
 int main()
 {
@@ -43,10 +67,15 @@ int main()
     std::uniform_int_distribution<int> runi(0, 255);
     auto random_color = [&](){ return Color(runi(re), runi(re), runi(re)); };
 
-    for (auto i : {1,2,3,4,5}) {
-        auto button = std::make_shared<Button>(std::to_string(i) + ". click me!");
-        button->set_position({-0.2f, -0.5f + i * 0.14f});
-        button->set_font_size(0.07);
+    for (auto i : {0,1,2,3,4}) {
+        auto text_input = std::make_shared<TextInput>("input");
+        text_input->set_position({-1.0f, -0.5f + i * 0.12f});
+        root.add(text_input);
+    }
+
+    for (auto i : {0,1,2,3,4}) {
+        auto button = std::make_shared<Button>(std::to_string(i+1) + ". click me!");
+        button->set_position({-0.2f, -0.5f + i * 0.12f});
         button->on_click([button, &random_color](View& view) {
             button->set_text_color(random_color());
             button->resize(view);
@@ -54,20 +83,16 @@ int main()
         root.add(button);
     }
 
-    for (auto i : {1,2,3,4,5}) {
+    for (auto i : {0,1,2,3,4}) {
         auto checkbox = std::make_shared<Checkbox>();
-        checkbox->set_text("Checkbox " + std::to_string(i));
+        checkbox->set_text("Checkbox " + std::to_string(i+1));
         checkbox->set_position({0.5f, -0.5f + i * 0.06f});
         root.add(checkbox);
     }
 
-    for (auto i : {1,2,3,4,5}) {
-        auto text_input = std::make_shared<TextInput>("input");
-        text_input->set_position({-1.0f, -0.5f + i * 0.12f});
-        root.add(text_input);
-        if (i == 1)
-            root.focus(text_input);
-    }
+    auto mouse_pos_info = std::make_shared<MousePosInfo>();
+    mouse_pos_info->set_position({-1.2f, 0.9f});
+    root.add(mouse_pos_info);
 
     auto fps_display = std::make_shared<FpsDisplay>();
     fps_display->set_position({-1.2f, -0.8f});

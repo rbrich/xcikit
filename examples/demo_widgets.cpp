@@ -66,9 +66,9 @@ int main()
     });
 
     window.set_draw_callback([&](View& view) {
-        button_default.draw(view);
-        button_styled.draw(view);
-        checkbox.draw(view);
+        button_default.draw(view, {});
+        button_styled.draw(view, {});
+        checkbox.draw(view, {});
     });
 
     window.set_mouse_button_callback([&](View& view, const MouseBtnEvent& ev) {

@@ -57,7 +57,7 @@ public:
     // Events need to be injected into root widget.
     // This can be set up using Bind helper or manually by calling these methods.
 
-    virtual void resize(View& view) = 0;
+    virtual void resize(View& view) {}
     virtual void draw(View& view, State state) = 0;
     virtual void handle(View& view, const KeyEvent& ev) {}
     virtual void handle(View& view, const CharEvent& ev) {}
