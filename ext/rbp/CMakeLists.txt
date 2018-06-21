@@ -8,4 +8,4 @@ set(RBP_SOURCES
 
 set(RBP_LIBRARY rbp)
 add_library(${RBP_LIBRARY} OBJECT ${RBP_SOURCES})
-target_include_directories(${RBP_LIBRARY} INTERFACE .)
+target_include_directories(${RBP_LIBRARY} INTERFACE ${CMAKE_CURRENT_LIST_DIR})

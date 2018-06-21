@@ -16,11 +16,12 @@
 #include "FpsDisplay.h"
 #include <xci/util/log.h>
 #include <xci/util/format.h>
+#include <xci/graphics/Renderer.h>
 
 #ifdef XCI_EMBED_SHADERS
 #define INCBIN_PREFIX g_
 #define INCBIN_STYLE INCBIN_STYLE_SNAKE
-#include "incbin.h"
+#include <incbin/incbin.h>
 INCBIN(fps_vert, XCI_SHARE_DIR "/shaders/fps.vert");
 INCBIN(fps_frag, XCI_SHARE_DIR "/shaders/fps.frag");
 #endif

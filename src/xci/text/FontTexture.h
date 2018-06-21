@@ -26,7 +26,7 @@
 namespace xci {
 namespace text {
 
-using xci::util::Rect_u;
+using util::Rect_u;
 using graphics::TexturePtr;
 using graphics::Renderer;
 

@@ -18,8 +18,6 @@
 
 #include <xci/graphics/Renderer.h>
 
-#include <glad/glad.h>
-
 #include <array>
 
 

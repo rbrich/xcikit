@@ -18,8 +18,7 @@
 
 #include <xci/text/FontLibrary.h>
 #include <xci/text/FontFace.h>
-#include <xci/text/FontTexture.h>
-
+#include <xci/graphics/Texture.h>
 #include <xci/util/geometry.h>
 
 #include <list>
@@ -28,11 +27,18 @@
 namespace xci {
 namespace text {
 
+using util::Rect_u;
+using graphics::TexturePtr;
+
+
+class FontTexture;
+
 
 // Encapsulates faces, styles and glyph caches for a font
 class Font {
 public:
-    Font() = default;
+    Font();
+    ~Font();
 
     // non-copyable
     Font(const Font&) = delete;
@@ -92,7 +98,7 @@ public:
     float line_height() const;
     float ascender() const;
     float descender() const;
-    graphics::TexturePtr& get_texture() { return m_texture.get_texture(); }
+    TexturePtr& get_texture();
 
     // Throw away any rendered glyphs
     void clear_cache();
@@ -101,7 +107,7 @@ private:
     unsigned m_size = 10;
     std::list<FontFace*> m_faces;  // faces for different strokes (eg. normal, bold, italic)
     FontFace* m_current_face = nullptr;
-    FontTexture m_texture;  // glyph tables for different styles (size, outline)
+    std::unique_ptr<FontTexture> m_texture;  // glyph tables for different styles (size, outline)
     std::map<GlyphKey, Glyph> m_glyphs;
 };
 

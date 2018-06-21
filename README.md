@@ -105,6 +105,9 @@ Build steps:
 
     mkdir build && cd build
     
+    # Optionally, regenerate glad bindings
+    ../bootstrap.sh
+
     # Optionally, install dependencies using Conan.
     # Otherwise, they will be looked up in default system locations
     # or specified paths (see in cmake-modules).

@@ -47,6 +47,7 @@ if (WITH_OPENGL)
     target_link_libraries(demo_opengl
         ${XCI_TEXT_LIBRARY}
         ${XCI_GRAPHICS_OPENGL_LIBRARY})
+    target_include_directories(demo_opengl PRIVATE ${CMAKE_SOURCE_DIR}/ext)
     install(TARGETS demo_opengl EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 endif (WITH_OPENGL)
 

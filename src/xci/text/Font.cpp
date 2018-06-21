@@ -15,6 +15,7 @@
 
 #include "Font.h"
 
+#include <xci/text/FontTexture.h>
 #include <xci/util/log.h>
 
 namespace xci {
@@ -26,6 +27,10 @@ using namespace util::log;
 static inline float ft_to_float(FT_F26Dot6 ft_units) {
     return (float)(ft_units) / 64.f;
 }
+
+
+Font::Font() : m_texture(std::make_unique<FontTexture>()) {}
+Font::~Font() = default;
 
 
 void Font::add_face(FontFace &face)
@@ -71,7 +76,7 @@ Font::Glyph* Font::get_glyph(CodePoint code_point)
 
     // insert into texture
     Glyph glyph(*this);
-    if (!m_texture.add_glyph(bitmap, glyph.m_tex_coords)) {
+    if (!m_texture->add_glyph(bitmap, glyph.m_tex_coords)) {
         // no more space in texture -> reset and try again
         clear_cache();
         return get_glyph(code_point);
@@ -91,7 +96,7 @@ Font::Glyph* Font::get_glyph(CodePoint code_point)
 void Font::clear_cache()
 {
     m_glyphs.clear();
-    m_texture.clear();
+    m_texture->clear();
 }
 
 float Font::line_height() const
@@ -112,6 +117,12 @@ float Font::descender() const
 {
     assert(m_current_face != nullptr);  // font must be loaded
     return m_current_face->descender();
+}
+
+
+graphics::TexturePtr& Font::get_texture()
+{
+    return m_texture->get_texture();
 }
 
 

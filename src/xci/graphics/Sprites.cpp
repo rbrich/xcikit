@@ -20,7 +20,7 @@
 #ifdef XCI_EMBED_SHADERS
 #define INCBIN_PREFIX g_
 #define INCBIN_STYLE INCBIN_STYLE_SNAKE
-#include "incbin.h"
+#include <incbin/incbin.h>
 INCBIN(sprite_vert, XCI_SHARE_DIR "/shaders/sprite.vert");
 INCBIN(sprite_frag, XCI_SHARE_DIR "/shaders/sprite.frag");
 #endif

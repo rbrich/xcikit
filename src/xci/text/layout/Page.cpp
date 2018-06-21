@@ -20,6 +20,8 @@
 #include <xci/util/string.h>
 #include <xci/util/log.h>
 
+#include <cassert>
+
 namespace xci {
 namespace text {
 namespace layout {

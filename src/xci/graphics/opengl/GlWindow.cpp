@@ -16,6 +16,9 @@
 #include "GlWindow.h"
 #include <xci/util/log.h>
 #include <xci/util/compat.h>
+
+#include <glad/glad.h>
+
 #include <cassert>
 
 

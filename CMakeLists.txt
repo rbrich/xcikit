@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.9)
 project(xcikit C CXX)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -131,7 +131,7 @@ find_package(Threads REQUIRED)
 include(FindFreetype)
 
 # RectangleBinPack
-add_subdirectory(src/rbp)
+add_subdirectory(ext/rbp)
 set(RBP_LIBRARY rbp)
 
 # OpenGL
@@ -173,7 +173,7 @@ add_subdirectory(src/xci/util)
 
 if (WITH_OPENGL)
     set(XCI_GRAPHICS_OPENGL_LIBRARY xci-graphics-opengl)
-    add_library(glad OBJECT src/glad/glad.c src/glad/glad.h)
+    add_library(glad OBJECT ext/glad/glad.c ext/glad/glad.h)
     add_library(${XCI_GRAPHICS_OPENGL_LIBRARY}
         ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_OPENGL_SOURCES}
         $<TARGET_OBJECTS:glad>)
@@ -181,7 +181,8 @@ if (WITH_OPENGL)
         PUBLIC
             $<BUILD_INTERFACE:${XCI_BUILD_INCLUDE_DIRS}>
             $<INSTALL_INTERFACE:${XCI_INCLUDE_DIRS}>
-        PRIVATE ext/incbin)
+        PRIVATE
+            ext)
     target_link_libraries(${XCI_GRAPHICS_OPENGL_LIBRARY}
         ${XCI_UTIL_LIBRARY}
         ${CMAKE_DL_LIBS}
@@ -240,11 +241,14 @@ endif (WITH_PANDA)
 set(XCI_TEXT_LIBRARY xci-text)
 add_library(${XCI_TEXT_LIBRARY} ${XCI_TEXT_SOURCES}
     $<TARGET_OBJECTS:${RBP_LIBRARY}>)
-target_include_directories(${XCI_TEXT_LIBRARY} PUBLIC
-    $<BUILD_INTERFACE:${XCI_BUILD_INCLUDE_DIRS}>
-    $<INSTALL_INTERFACE:${XCI_INCLUDE_DIRS}>
-    ${FREETYPE_INCLUDE_DIRS}
-    ${PEGTL_INCLUDE_DIRS})
+target_include_directories(${XCI_TEXT_LIBRARY}
+    PUBLIC
+        $<BUILD_INTERFACE:${XCI_BUILD_INCLUDE_DIRS}>
+        $<INSTALL_INTERFACE:${XCI_INCLUDE_DIRS}>
+        ${FREETYPE_INCLUDE_DIRS}
+        ${PEGTL_INCLUDE_DIRS}
+    PRIVATE
+        ext)
 target_link_libraries(${XCI_TEXT_LIBRARY}
     ${XCI_GRAPHICS_LIBRARY}
     ${XCI_UTIL_LIBRARY}
@@ -258,6 +262,7 @@ endif (DEBUG_MARKUP_DUMP_TOKENS)
 
 set(XCI_WIDGETS_LIBRARY xci-widgets)
 add_library(${XCI_WIDGETS_LIBRARY} ${XCI_WIDGETS_SOURCES})
+target_include_directories(${XCI_WIDGETS_LIBRARY} PRIVATE ext)
 target_link_libraries(${XCI_WIDGETS_LIBRARY}
     ${XCI_TEXT_LIBRARY}
     ${XCI_GRAPHICS_LIBRARY})
