@@ -51,7 +51,7 @@ void Checkbox::handle(View& view, const KeyEvent& ev)
 void Checkbox::handle(View& view, const MouseBtnEvent& ev)
 {
     if (ev.action == Action::Press && ev.button == MouseButton::Left) {
-        if (contains(ev.pos)) {
+        if (contains(ev.pos - view.offset())) {
             set_checked(!m_checked);
             resize(view);
             view.refresh();

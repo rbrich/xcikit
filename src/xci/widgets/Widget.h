@@ -31,6 +31,7 @@ using graphics::KeyEvent;
 using graphics::CharEvent;
 using graphics::MousePosEvent;
 using graphics::MouseBtnEvent;
+using util::Vec2f;
 
 
 struct State {
@@ -44,15 +45,18 @@ public:
     void set_theme(Theme& theme) { m_theme = &theme; }
     Theme& theme() const { return *m_theme; }
 
-    void set_position(const util::Vec2f& pos) { m_position = pos; }
-    const util::Vec2f& position() const { return m_position; }
+    // Set position of widget, relative to the parent
+    void set_position(const Vec2f& pos) { m_position = pos; }
+    const Vec2f& position() const { return m_position; }
+
+    virtual Vec2f size() const { return {0.4f, 0.1f}; }
 
     // Is this widget focusable?
     // When true, it has to implement contains().
     virtual bool can_focus() const { return false; }
 
     // Test if point is contained inside widget area
-    virtual bool contains(const util::Vec2f& point) const { return false; }
+    virtual bool contains(const Vec2f& point) const { return false; }
 
     // Events need to be injected into root widget.
     // This can be set up using Bind helper or manually by calling these methods.
@@ -66,7 +70,7 @@ public:
 
 private:
     Theme* m_theme = &Theme::default_theme();
-    util::Vec2f m_position;
+    Vec2f m_position;
 };
 
 
@@ -86,7 +90,7 @@ public:
     void focus_previous();
 
     bool can_focus() const override;
-    bool contains(const util::Vec2f& point) const override;
+    bool contains(const Vec2f& point) const override;
     void resize(View& view) override;
     void draw(View& view, State state) override;
     void handle(View& view, const KeyEvent& ev) override;

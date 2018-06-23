@@ -45,12 +45,28 @@ void View::set_framebuffer_size(Vec2u size)
 }
 
 
+void View::push_offset(const Vec2f& offset)
+{
+    m_offset.push_back(this->offset() + offset);
+}
+
+
+const Vec2f& View::offset() const
+{
+    if (m_offset.empty()) {
+        static Vec2f default_offset{0, 0};
+        return default_offset;
+    }
+    return m_offset.back();
+}
+
+
 void View::push_crop(const Rect_f& region)
 {
     if (m_crop.empty())
-        m_crop.push_back(region);
+        m_crop.push_back(region.moved(offset()));
     else {
-        m_crop.push_back(region.intersection(m_crop.back()));
+        m_crop.push_back(region.moved(offset()).intersection(m_crop.back()));
     }
 }
 

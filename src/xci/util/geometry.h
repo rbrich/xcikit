@@ -147,6 +147,10 @@ struct Rect {
         return {x - radius, y - radius, w + 2*radius, h + 2*radius};
     }
 
+    Rect<T> moved(const Vec2<T>& offset) const {
+        return {x + offset.x, y + offset.y, w, h };
+    }
+
     // Extend Rect to contain `other`
     void extend(const Rect<T>& other) {
         *this = union_(other);

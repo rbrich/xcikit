@@ -103,7 +103,7 @@ bool Composite::can_focus() const
 }
 
 
-bool Composite::contains(const util::Vec2f& point) const
+bool Composite::contains(const Vec2f& point) const
 {
     for (auto& child : m_child)
         if (child->contains(point))
@@ -121,10 +121,12 @@ void Composite::resize(View& view)
 
 void Composite::draw(View& view, State state)
 {
+    view.push_offset(position());
     for (auto& child : m_child) {
         state.focused = (m_focus.lock() == child);
         child->draw(view, state);
     }
+    view.pop_offset();
 }
 
 
@@ -159,17 +161,20 @@ void Composite::handle(View& view, const CharEvent& ev)
 
 void Composite::handle(View& view, const MousePosEvent& ev)
 {
+    view.push_offset(position());
     for (auto& child : m_child)
         child->handle(view, ev);
+    view.pop_offset();
 }
 
 
 void Composite::handle(View& view, const MouseBtnEvent& ev)
 {
+    view.push_offset(position());
     bool focus_changed = false;
     for (auto& child : m_child) {
         // Switch focus on click
-        if (child->contains(ev.pos) && m_focus.lock() != child) {
+        if (child->contains(ev.pos - view.offset()) && m_focus.lock() != child) {
             m_focus = child;
             focus_changed = true;
         }
@@ -181,6 +186,7 @@ void Composite::handle(View& view, const MouseBtnEvent& ev)
         resize(view);
         view.refresh();
     }
+    view.pop_offset();
 }
 
 

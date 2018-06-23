@@ -122,7 +122,7 @@ void GlPrimitives::set_texture(const char* name, TexturePtr& texture)
 }
 
 
-void GlPrimitives::draw(View& view, const Vec2f& pos)
+void GlPrimitives::draw(View& view)
 {
     init_gl_objects();
 
@@ -136,8 +136,8 @@ void GlPrimitives::draw(View& view, const Vec2f& pos)
     // projection matrix
     GLfloat xs = 2.0f / view.scalable_size().x;
     GLfloat ys = 2.0f / view.scalable_size().y;
-    GLfloat xt = pos.x * xs;
-    GLfloat yt = pos.y * ys;
+    GLfloat xt = view.offset().x * xs;
+    GLfloat yt = view.offset().y * ys;
     const GLfloat mvp[] = {
             xs,   0.0f, 0.0f, 0.0f,
             0.0f, -ys,  0.0f, 0.0f,

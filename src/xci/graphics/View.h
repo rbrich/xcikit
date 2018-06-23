@@ -35,6 +35,9 @@ class View {
 public:
     virtual ~View() = default;
 
+    // ------------------------------------------------------------------------
+    // Sizes, coordinates
+
     // Size of the view in screen pixels. This size might be different
     // from framebuffer size - in that case, call also `set_framebuffer_size`.
     void set_screen_size(Vec2u size);
@@ -90,6 +93,13 @@ public:
     }
 
     // ------------------------------------------------------------------------
+    // Local offset of coordinates
+
+    void push_offset(const Vec2f& offset);
+    void pop_offset() { m_offset.pop_back(); }
+    const Vec2f& offset() const;
+
+    // ------------------------------------------------------------------------
     // Crop region (scissors test)
 
     void push_crop(const Rect_f& region);
@@ -125,7 +135,8 @@ private:
     Vec2u m_framebuffer_size;   // eg. {1600, 1200}
     DebugFlags m_debug = 0;
     bool m_needs_refresh = false;
-    std::vector<Rect_f> m_crop;  // Crop region stack (current crop region on top)
+    std::vector<Rect_f> m_crop;  // Crop region stack (current crop region on back)
+    std::vector<Vec2f> m_offset;  // Offset stack (current offset on back)
 };
 
 
