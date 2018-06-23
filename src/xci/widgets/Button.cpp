@@ -45,18 +45,16 @@ void Button::set_text_color(const graphics::Color& color)
 }
 
 
-bool Button::contains(const util::Vec2f& point) const
-{
-    return bbox().contains(point);
-}
-
-
 void Button::resize(View& view)
 {
     m_layout.typeset(view);
+    auto rect = m_layout.bbox();
+    rect.enlarge(m_padding);
+    set_size(rect.size());
+
     m_bg_rect.clear();
     m_bg_rect.set_outline_color(Color(180, 180, 180));
-    m_bg_rect.add_rectangle(bbox(), m_outline_thickness);
+    m_bg_rect.add_rectangle(aabb(), m_outline_thickness);
 }
 
 
@@ -84,21 +82,11 @@ void Button::handle(View& view, const KeyEvent& ev)
 void Button::handle(View& view, const MouseBtnEvent& ev)
 {
     if (ev.action == Action::Press && ev.button == MouseButton::Left) {
-        if (m_click_cb && bbox().contains(ev.pos - view.offset())) {
+        if (m_click_cb && aabb().contains(ev.pos - view.offset())) {
             m_click_cb(view);
             view.refresh();
         }
     }
-}
-
-
-util::Rect_f Button::bbox() const
-{
-    auto rect = m_layout.bbox();
-    rect.enlarge(m_padding);
-    rect.x = position().x;
-    rect.y = position().y;
-    return rect;
 }
 
 

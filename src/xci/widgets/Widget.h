@@ -49,14 +49,20 @@ public:
     void set_position(const Vec2f& pos) { m_position = pos; }
     const Vec2f& position() const { return m_position; }
 
-    virtual Vec2f size() const { return {0.4f, 0.1f}; }
+    // Set size of widget.
+    // This may not be respected by actual implementation,
+    // but it determines space taken in layout.
+    void set_size(const Vec2f& size) { m_size = size; }
+    const Vec2f& size() const { return m_size; }
+
+    util::Rect_f aabb() const { return {m_position, m_size}; }
 
     // Is this widget focusable?
     // When true, it has to implement contains().
     virtual bool can_focus() const { return false; }
 
     // Test if point is contained inside widget area
-    virtual bool contains(const Vec2f& point) const { return false; }
+    virtual bool contains(const Vec2f& point) const { return aabb().contains(point); }
 
     // Events need to be injected into root widget.
     // This can be set up using Bind helper or manually by calling these methods.
@@ -71,6 +77,7 @@ public:
 private:
     Theme* m_theme = &Theme::default_theme();
     Vec2f m_position;
+    Vec2f m_size;
 };
 
 
@@ -98,8 +105,10 @@ public:
     void handle(View& view, const MousePosEvent& ev) override;
     void handle(View& view, const MouseBtnEvent& ev) override;
 
-private:
+protected:
     std::vector<WidgetPtr> m_child;
+
+private:
     WidgetRef m_focus;  // a child with keyboard focus
 };
 

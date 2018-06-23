@@ -73,6 +73,7 @@ void TextInput::resize(View& view)
     // Background rect
     m_bg_rect.clear();
     m_bg_rect.add_rectangle(bbox(), m_outline_thickness);
+    set_size(bbox().size());
 }
 
 

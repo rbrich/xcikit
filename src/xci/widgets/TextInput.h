@@ -52,7 +52,7 @@ private:
     graphics::Shape m_bg_rect;
     graphics::Shape m_cursor_shape;
     size_t m_cursor = 0;
-    float m_width = 0.2f;
+    float m_width = 0.4f;
     float m_padding = 0.02f;
     float m_content_pos = 0;
     float m_outline_thickness = 0.005f;

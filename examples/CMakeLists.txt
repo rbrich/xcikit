@@ -42,6 +42,10 @@ add_executable(demo_ui demo_ui.cpp)
 target_link_libraries(demo_ui ${XCI_WIDGETS_LIBRARY})
 install(TARGETS demo_ui EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 
+add_executable(demo_form demo_form.cpp)
+target_link_libraries(demo_form ${XCI_WIDGETS_LIBRARY})
+install(TARGETS demo_form EXPORT xcikit DESTINATION ${INST_EXAMPLES})
+
 if (WITH_OPENGL)
     add_executable(demo_opengl demo_opengl.cpp)
     target_link_libraries(demo_opengl

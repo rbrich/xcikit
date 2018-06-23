@@ -38,13 +38,10 @@ public:
     void set_text_color(const graphics::Color& color);
 
     bool can_focus() const override { return true; }
-    bool contains(const util::Vec2f& point) const override;
     void resize(View& view) override;
     void draw(View& view, State state) override;
     void handle(View& view, const KeyEvent& ev) override;
     void handle(View& view, const MouseBtnEvent& ev) override;
-
-    util::Rect_f bbox() const;
 
     using ClickCallback = std::function<void(View&)>;
     void on_click(ClickCallback cb) { m_click_cb = std::move(cb); }

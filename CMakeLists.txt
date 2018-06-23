@@ -117,7 +117,11 @@ set(XCI_WIDGETS_SOURCES
     src/xci/widgets/Widget.cpp
     src/xci/widgets/Widget.h
     src/xci/widgets/TextInput.cpp
-    src/xci/widgets/TextInput.h)
+    src/xci/widgets/TextInput.h
+    src/xci/widgets/Form.cpp
+    src/xci/widgets/Form.h
+    src/xci/widgets/Label.cpp
+    src/xci/widgets/Label.h)
 
 
 # ------------ #
