@@ -60,26 +60,33 @@ int main()
     text.set_color(Color::White());
 
     Text help_text("[c] show character quads\n\n"
-                   "[p] show word base points\n\n"
+                   "[o] show word base points\n\n"
                    "[w] show word boxes\n\n"
+                   "[u] show line base lines\n\n"
                    "[l] show line boxes\n\n"
                    "[s] show span boxes\n\n"
-                   "[b] show page boxes", font);
+                   "[p] show page boxes", font);
     help_text.set_color(Color(50, 200, 100));
 
     View::DebugFlags debug_flags = 0;
     window.set_key_callback([&](View& view, KeyEvent ev){
+        if (ev.action != Action::Press)
+            return;
         switch (ev.key) {
             case Key::C:
                 debug_flags ^= (int)View::Debug::GlyphBBox;
                 view.set_debug_flags(debug_flags);
                 break;
-            case Key::P:
+            case Key::O:
                 debug_flags ^= (int)View::Debug::WordBasePoint;
                 view.set_debug_flags(debug_flags);
                 break;
             case Key::W:
                 debug_flags ^= (int)View::Debug::WordBBox;
+                view.set_debug_flags(debug_flags);
+                break;
+            case Key::U:
+                debug_flags ^= (int)View::Debug::LineBaseLine;
                 view.set_debug_flags(debug_flags);
                 break;
             case Key::L:
@@ -90,7 +97,7 @@ int main()
                 debug_flags ^= (int)View::Debug::SpanBBox;
                 view.set_debug_flags(debug_flags);
                 break;
-            case Key::B:
+            case Key::P:
                 debug_flags ^= (int)View::Debug::PageBBox;
                 view.set_debug_flags(debug_flags);
                 break;

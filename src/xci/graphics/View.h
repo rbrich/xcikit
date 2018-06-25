@@ -122,11 +122,12 @@ public:
         WordBBox        = 1u << 1u,
         WordBasePoint   = 1u << 2u,
         LineBBox        = 1u << 3u,
-        SpanBBox        = 1u << 4u,
-        PageBBox        = 1u << 5u,
+        LineBaseLine    = 1u << 4u,
+        SpanBBox        = 1u << 5u,
+        PageBBox        = 1u << 6u,
     };
-    void set_debug_flag(Debug flag, bool enabled = true);
     void set_debug_flags(DebugFlags flags) { m_debug = flags; }
+    void set_debug_flag(Debug flag, bool enabled = true);
     bool has_debug_flag(Debug flag) const;
 
 private:

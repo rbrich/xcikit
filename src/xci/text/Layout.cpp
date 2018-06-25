@@ -108,6 +108,18 @@ void Layout::draw(View& target, const util::Vec2f& pos) const
         bboxes.draw(target, pos);
     }
 
+    // Debug line baselines
+    if (target.has_debug_flag(View::Debug::LineBaseLine)) {
+        graphics::Shape baselines(Color(255, 50, 150));
+        m_page.foreach_line([&](const Line& line) {
+            auto rect = line.bbox();
+            rect.y += line.baseline();
+            rect.h = pxr.y;
+            baselines.add_rectangle(rect);
+        });
+        baselines.draw(target, pos);
+    }
+
     m_page.foreach_word([&](const Word& word) {
         word.draw(target, pos);
     });
@@ -138,7 +150,7 @@ void Layout::reset_tab_stops()
 }
 
 
-void Layout::set_offset(const util::Vec2f offset)
+void Layout::set_offset(const util::Vec2f& offset)
 {
     m_elements.push_back(std::make_unique<SetOffset>(offset));
 }

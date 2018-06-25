@@ -68,7 +68,7 @@ public:
 
     // Horizontal/vertical offset (in multiplies of font size)
     // This can be used to create subscript/superscript.
-    void set_offset(const util::Vec2f offset);
+    void set_offset(const util::Vec2f& offset);
     void reset_offset() { set_offset({0.f, 0.f}); }
 
     // Set font and text style.

@@ -45,12 +45,12 @@ Word::Word(Page& page, const std::string& string)
 
     auto pxr = page.target_framebuffer_ratio();
     font->set_size(unsigned(m_style.size() / pxr.y));
-    auto ascender = font->ascender();
-    auto descender = font->descender();
+    m_baseline = font->ascender() * pxr.y;
+    const auto font_height = m_baseline - font->descender() * pxr.y;
 
     // Measure word (metrics are affected by string, font, size)
     util::Vec2f pen;
-    m_bbox = {0, 0 - ascender * pxr.y, 0, (ascender - descender) * pxr.y};
+    m_bbox = {0, 0 - m_baseline, 0, font_height};
     for (CodePoint code_point : to_utf32(m_string)) {
         auto glyph = font->get_glyph(code_point);
         if (glyph == nullptr)
@@ -58,9 +58,9 @@ Word::Word(Page& page, const std::string& string)
 
         // Expand text bounds by glyph bounds
         util::Rect_f rect{pen.x ,
-                          pen.y - ascender * pxr.y,
+                          pen.y - m_baseline,
                           glyph->advance() * pxr.x,
-                          (ascender - descender) * pxr.y};
+                          font_height};
 
         m_bbox.extend(rect);
         pen.x += rect.w;
@@ -126,7 +126,7 @@ void Word::draw(graphics::View& target, const util::Vec2f& pos) const
 
     if (target.has_debug_flag(View::Debug::WordBasePoint)) {
         auto pxr = target.screen_ratio();
-        graphics::Shape basepoint(Color(150, 0, 150));
+        graphics::Shape basepoint(Color(150, 0, 255));
         basepoint.add_rectangle({-pxr.x, -pxr.y, 2 * pxr.x, 2 * pxr.y});
         basepoint.draw(target, p);
     }
@@ -156,6 +156,14 @@ const util::Rect_f& Line::bbox() const
     }
     m_bbox_valid = true;
     return m_bbox;
+}
+
+
+float Line::baseline() const
+{
+    if (m_words.empty())
+        return 0;
+    return m_words[0]->baseline();
 }
 
 

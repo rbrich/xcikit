@@ -47,6 +47,7 @@ public:
     Word(Page& page, const std::string& string);
 
     const util::Rect_f& bbox() const { return m_bbox; }
+    float baseline() const { return m_baseline; }
     Style& style() { return m_style; }
 
     void draw(graphics::View& target, const util::Vec2f& pos) const;
@@ -56,6 +57,7 @@ private:
     Style m_style;
     util::Vec2f m_pos;  // relative to page origin (top-left corner)
     util::Rect_f m_bbox;
+    float m_baseline = 0;  // relative to bbox top
 };
 
 
@@ -66,8 +68,9 @@ public:
 
     bool is_empty() const { return m_words.empty(); }
 
-    // Retrieve bounding box of the span, relative to page
+    // Retrieve bounding box of the whole line, relative to page
     const util::Rect_f& bbox() const;
+    float baseline() const;
 
     // Padding to be added to each side of the bounding box
     void set_padding(float padding) { m_padding = padding; m_bbox_valid = false; }
