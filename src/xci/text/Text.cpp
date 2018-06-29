@@ -47,10 +47,22 @@ void Text::set_fixed_string(const std::string& string)
 }
 
 
-void Text::draw(View& target, const Vec2f& pos)
+void Text::resize(graphics::View& view)
 {
-    m_layout.typeset(target);
-    m_layout.draw(target, pos);
+    m_layout.typeset(view);
+}
+
+
+void Text::draw(graphics::View& view, const util::Vec2f& pos)
+{
+    m_layout.draw(view, pos);
+}
+
+
+void Text::resize_draw(View& view, const Vec2f& pos)
+{
+    m_layout.typeset(view);
+    m_layout.draw(view, pos);
 }
 
 

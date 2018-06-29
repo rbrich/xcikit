@@ -73,9 +73,9 @@ int main()
 
     window.set_mouse_button_callback([&](View& view, const MouseBtnEvent& ev) {
         if (ev.action == Action::Press && ev.button == MouseButton::Left) {
-            log_debug("checkbox mouse {}", ev.pos - Vec2f(0, 0.4f));
-            log_debug("checkbox bbox {}", checkbox.bbox());
-            if (checkbox.bbox().contains(ev.pos - Vec2f(0, 0.4f))) {
+            log_debug("checkbox mouse {}", ev.pos - view.offset());
+            log_debug("checkbox bbox {}", checkbox.aabb());
+            if (checkbox.contains(ev.pos - view.offset())) {
                 checkbox_state = !checkbox_state;
                 log_debug("checkbox state {}", checkbox_state);
                 checkbox.set_icon(checkbox_state ? IconId::CheckBoxChecked
@@ -87,7 +87,7 @@ int main()
     });
 
     window.set_mouse_position_callback([&checkbox](View& view, const MousePosEvent& ev) {
-        if (checkbox.bbox().contains(ev.pos - Vec2f(0, 0.4f))) {
+        if (checkbox.contains(ev.pos - view.offset())) {
             checkbox.set_color(Color::White());
         } else {
             checkbox.set_color(Color(150, 200, 200));

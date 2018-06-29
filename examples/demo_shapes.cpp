@@ -119,8 +119,8 @@ int main()
 
     window.set_draw_callback([&](View& view) {
         Vec2f vs = view.scalable_size();
-        shapes_help.draw(view, {-vs.x/2 + 0.1f, -vs.y/2 + 0.1f});
-        option_help.draw(view, {vs.x/2 - 0.5f, -vs.y/2 + 0.1f});
+        shapes_help.resize_draw(view, {-vs.x / 2 + 0.1f, -vs.y / 2 + 0.1f});
+        option_help.resize_draw(view, {vs.x / 2 - 0.5f, -vs.y / 2 + 0.1f});
 
         // Border scaled with viewport size
         add_shape_fn(shapes[0], {-1, -0.6f, 2, 1.2f}, 0.05);

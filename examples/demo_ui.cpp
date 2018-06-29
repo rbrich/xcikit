@@ -35,7 +35,7 @@ public:
     }
 
     void draw(View& view, State state) override {
-        m_text.draw(view, position());
+        m_text.resize_draw(view, position());
     }
 
     void handle(View& view, const MousePosEvent& ev) override {

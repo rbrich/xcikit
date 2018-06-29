@@ -17,7 +17,7 @@
 #define XCIKIT_LABEL_H
 
 #include <xci/widgets/Widget.h>
-#include <xci/text/Layout.h>
+#include <xci/text/Text.h>
 
 namespace xci {
 namespace widgets {
@@ -25,13 +25,16 @@ namespace widgets {
 
 class Label: public Widget {
 public:
+    Label();
     explicit Label(const std::string &string);
+
+    Text& text() { return m_text; }
 
     void resize(View& view) override;
     void draw(View& view, State state) override;
 
 private:
-    text::Layout m_layout;
+    text::Text m_text;
     float m_padding = 0.02f;
 };
 

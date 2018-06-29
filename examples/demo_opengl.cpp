@@ -79,7 +79,7 @@ int main()
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT);
 
-        text.draw(view, {-1.0f, -0.333f});
+        text.resize_draw(view, {-1.0f, -0.333f});
 
         glfwSwapBuffers(window);
         glfwWaitEvents();

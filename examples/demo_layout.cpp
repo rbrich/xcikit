@@ -108,8 +108,8 @@ int main()
     });
 
     window.set_draw_callback([&](View& view) {
-        help_text.draw(view, {-0.17f, -0.9f});
-        text.draw(view, {-0.17f, -0.3f});
+        help_text.resize_draw(view, {-0.17f, -0.9f});
+        text.resize_draw(view, {-0.17f, -0.3f});
 
         auto& tex = font.get_texture();
         Sprites font_texture(tex);

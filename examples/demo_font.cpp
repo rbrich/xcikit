@@ -59,7 +59,7 @@ int main()
     text.set_color(Color::White());
 
     window.set_draw_callback([&](View& view) {
-        text.draw(view, {0.5f * view.scalable_size().x - 2.0f, -0.5f});
+        text.resize_draw(view, {0.5f * view.scalable_size().x - 2.0f, -0.5f});
 
         auto& tex = font.get_texture();
         Sprites font_texture(tex);

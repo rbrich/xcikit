@@ -19,17 +19,22 @@ namespace xci {
 namespace widgets {
 
 
-Label::Label(const std::string& string)
+Label::Label()
 {
-    m_layout.set_default_font(&theme().font());
-    m_layout.add_word(string);
+    m_text.set_font(theme().font());
+}
+
+
+Label::Label(const std::string& string) : Label()
+{
+    m_text.set_fixed_string(string);
 }
 
 
 void Label::resize(View& view)
 {
-    m_layout.typeset(view);
-    auto rect = m_layout.bbox();
+    m_text.resize(view);
+    auto rect = m_text.layout().bbox();
     rect.enlarge(m_padding);
     set_size(rect.size());
     set_baseline(-rect.y);
@@ -39,10 +44,10 @@ void Label::resize(View& view)
 void Label::draw(View& view, State state)
 {
     view.push_offset(position());
-    auto rect = m_layout.bbox();
+    auto rect = m_text.layout().bbox();
     auto pos = Vec2f{m_padding - rect.x,
                      m_padding - rect.y};
-    m_layout.draw(view, pos);
+    m_text.draw(view, pos);
     view.pop_offset();
 }
 

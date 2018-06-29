@@ -44,7 +44,9 @@ public:
 
     Layout& layout() { return m_layout; }
 
-    void draw(graphics::View& target, const util::Vec2f& pos);
+    void resize(graphics::View& view);
+    void draw(graphics::View& view, const util::Vec2f& pos);
+    void resize_draw(graphics::View& view, const util::Vec2f& pos);
 
 private:
     Layout m_layout;

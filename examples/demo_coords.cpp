@@ -67,22 +67,30 @@ int main()
         coords_br.set_fixed_string(format("({}, {})", +0.5f * vs.x, +0.5f * vs.y));
         coords_tr.set_fixed_string(format("({}, {})", +0.5f * vs.x, -0.5f * vs.y));
         coords_bl.set_fixed_string(format("({}, {})", -0.5f * vs.x, +0.5f * vs.y));
+        coords_center.resize(view);
+        coords_tl.resize(view);
+        coords_br.resize(view);
+        coords_tr.resize(view);
+        coords_bl.resize(view);
 
         size_scal.set_fixed_string("Scalable size:     " +
                                    format("{} x {}", vs.x, vs.y) +
                                    "  (1.0 x 1.0)");
+        size_scal.resize(view);
 
         auto ps = view.screen_size();
         auto pr = view.screen_ratio();
         size_screen.set_fixed_string("Screen size:       " +
                                      format("{} x {}", ps.x, ps.y) +
                                      "  (" + format("{} x {}", 1/pr.x, 1/pr.y) + ")");
+        size_screen.resize(view);
 
         auto fs = view.framebuffer_size();
         auto fr = view.framebuffer_ratio();
         size_frame.set_fixed_string("Framebuffer size:  " +
                                     format("{} x {}", fs.x, fs.y) +
                                     "  (" + format("{} x {}", 1/fr.x, 1/fr.y) + ")");
+        size_frame.resize(view);
 
         unit_square.clear();
         unit_square.add_rectangle({-1, -1, 2, 2}, pr.y);
@@ -101,13 +109,14 @@ int main()
         size_frame.draw(view, {-0.4f, -0.3f});
         size_font.set_fixed_string("Font size:         " +
                                    format("{}", font.size()));
-        size_font.draw(view, {-0.4f, -0.2f});
+        size_font.resize_draw(view, {-0.4f, -0.2f});
         mouse_pos.draw(view, {-0.4f, 0.2f});
     });
 
     window.set_mouse_position_callback([&](View& view, const MousePosEvent& ev) {
         mouse_pos.set_fixed_string("Mouse position:    " +
                                    format("({}, {})", ev.pos.x, ev.pos.y));
+        mouse_pos.resize(view);
         view.refresh();
     });
 

@@ -18,6 +18,7 @@
 #include <xci/widgets/FpsDisplay.h>
 #include <xci/widgets/Form.h>
 #include <xci/graphics/Window.h>
+#include <xci/widgets/Label.h>
 #include <xci/util/file.h>
 #include <xci/util/format.h>
 #include <random>
@@ -34,9 +35,8 @@ public:
         m_text.set_color(Color(255, 150, 50));
     }
 
-    void draw(View& view, State state) override {
-        m_text.draw(view, position());
-    }
+    void resize(View& view) override { m_text.resize(view); }
+    void draw(View& view, State state) override { m_text.draw(view, position()); }
 
     void handle(View& view, const MousePosEvent& ev) override {
         m_text.set_fixed_string("Mouse: " +
@@ -82,12 +82,28 @@ int main()
     mouse_pos_info->set_position({-1.2f, 0.9f});
     root.add(mouse_pos_info);
 
+    auto output_text = std::make_shared<Label>();
+    output_text->set_position({0.2f, -0.5f});
+    output_text->text().set_color(Color(180, 100, 140));
+    button->on_click([output_text, &input_text, &checkbox1, &checkbox2]
+                     (View& view) {
+        auto text = format("Submitted:\n\n"
+                           "input_text = {}\n\n"
+                           "checkbox1 = {}\n\n"
+                           "checkbox2 = {}\n\n",
+                           input_text, checkbox1, checkbox2);
+        output_text->text().set_string(text);
+        output_text->resize(view);
+    });
+    root.add(output_text);
+
     auto fps_display = std::make_shared<FpsDisplay>();
     fps_display->set_position({-1.2f, -0.8f});
     root.add(fps_display);
 
     Bind bind(window, root);
     window.set_refresh_mode(RefreshMode::OnDemand);
+    //window.set_debug_flags(View::DebugFlags(View::Debug::LineBaseLine));
     window.display();
     return EXIT_SUCCESS;
 }

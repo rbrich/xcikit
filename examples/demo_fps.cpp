@@ -62,6 +62,8 @@ int main()
         rts_px.add_ellipse({0.3f, 0.3f, 0.5f, 0.5f}, 4 * pxr);
         rts_px.add_ellipse({0.4f, 0.4f, 0.5f, 0.5f}, 5 * pxr);
         fps_display.resize(view);
+        help_text.resize(view);
+        mouse_pos.resize(view);
     });
 
     window.set_draw_callback([&](View& view) {
