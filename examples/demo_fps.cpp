@@ -76,6 +76,8 @@ int main()
     });
 
     window.set_key_callback([&](View& view, KeyEvent ev){
+        if (ev.action != Action::Press)
+            return;
         switch (ev.key) {
             case Key::V:
                 window.set_refresh_mode(RefreshMode::PeriodicVsync);

@@ -27,9 +27,9 @@ using namespace xci::util;
 
 TextInput::TextInput(const std::string& string)
     : m_text(string),
-      m_cursor(string.size()),
       m_bg_rect(Color(10, 20, 40), Color(180, 180, 180)),
-      m_cursor_shape(Color::Yellow(), Color::Transparent())
+      m_cursor_shape(Color::Yellow(), Color::Transparent()),
+      m_cursor(string.size())
 {
     m_layout.set_default_font(&theme().font());
 }

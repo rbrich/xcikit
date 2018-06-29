@@ -68,6 +68,8 @@ int main()
     float softness = 0;
 
     window.set_key_callback([&](View& view, KeyEvent ev){
+        if (ev.action != Action::Press)
+            return;
         switch (ev.key) {
             case Key::R:
                 add_shape_fn = [](Shape& shape, const Rect_f& rect, float th) {

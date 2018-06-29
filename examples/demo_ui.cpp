@@ -76,9 +76,10 @@ int main()
     for (auto i : {0,1,2,3,4}) {
         auto button = std::make_shared<Button>(std::to_string(i+1) + ". click me!");
         button->set_position({-0.2f, -0.5f + i * 0.12f});
-        button->on_click([button, &random_color](View& view) {
-            button->set_text_color(random_color());
-            button->resize(view);
+        auto* btn_self = button.get();
+        button->on_click([btn_self, &random_color](View& view) {
+            btn_self->set_text_color(random_color());
+            btn_self->resize(view);
         });
         root.add(button);
     }

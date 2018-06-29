@@ -32,6 +32,7 @@ void Logger::log(Logger::Level lvl, const std::string& msg)
     time_t now = std::time(nullptr);
     char ts_buf[20];
     size_t ts_res = std::strftime(ts_buf, sizeof(ts_buf), "%F %T", std::localtime(&now));
+    (void) ts_res;  // unused with NDEBUG
     assert(ts_res > 0 && ts_res < sizeof(ts_buf));
 
     fprintf(stderr, "%s %s  %s\n", ts_buf, level_string[(int)lvl], msg.c_str());

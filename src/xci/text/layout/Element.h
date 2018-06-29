@@ -27,6 +27,7 @@ namespace layout {
 
 class Element {
 public:
+    virtual ~Element() = default;
     virtual void apply(Page& page) = 0;
 };
 
