@@ -130,6 +130,7 @@ public:
     virtual void set_mouse_button_callback(MouseBtnCallback mbtn_cb) = 0;
 
     virtual void set_refresh_mode(RefreshMode mode) = 0;
+    virtual void set_debug_flags(View::DebugFlags flags) = 0;
 };
 
 

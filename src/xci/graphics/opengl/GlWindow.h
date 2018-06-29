@@ -43,6 +43,7 @@ public:
     void set_mouse_button_callback(MouseBtnCallback mbtn_cb) override;
 
     void set_refresh_mode(RefreshMode mode) override;
+    void set_debug_flags(View::DebugFlags flags) override;
 
     // access native handles
     GLFWwindow* glfw_window() { return m_window; }
@@ -52,7 +53,7 @@ private:
     void draw();
 
     GLFWwindow* m_window;
-    std::unique_ptr<View> m_view;
+    View m_view;
     SizeCallback m_size_cb;
     DrawCallback m_draw_cb;
     KeyCallback m_key_cb;

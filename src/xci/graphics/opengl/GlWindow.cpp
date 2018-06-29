@@ -144,7 +144,7 @@ void GlWindow::display()
     while (!glfwWindowShouldClose(m_window)) {
         switch (m_mode) {
             case RefreshMode::OnDemand:
-                if (m_view->pop_refresh())
+                if (m_view.pop_refresh())
                     draw();
                 glfwWaitEvents();
                 break;
@@ -201,8 +201,8 @@ void GlWindow::set_mouse_position_callback(Window::MousePosCallback mpos_cb)
     glfwSetCursorPosCallback(m_window, [](GLFWwindow* window, double xpos, double ypos) {
         auto self = (GlWindow*) glfwGetWindowUserPointer(window);
         if (self->m_mpos_cb) {
-            auto pos = self->m_view->screen_to_scalable({(float)xpos, (float)ypos});
-            self->m_mpos_cb(*self->m_view, {pos});
+            auto pos = self->m_view.screen_to_scalable({(float)xpos, (float)ypos});
+            self->m_mpos_cb(self->m_view, {pos});
         }
     });
 }
@@ -217,8 +217,8 @@ void GlWindow::set_mouse_button_callback(MouseBtnCallback mbtn_cb)
         if (self->m_mbtn_cb) {
             double xpos, ypos;
             glfwGetCursorPos(window, &xpos, &ypos);
-            auto pos = self->m_view->screen_to_scalable({(float)xpos, (float)ypos});
-            self->m_mbtn_cb(*self->m_view,
+            auto pos = self->m_view.screen_to_scalable({(float)xpos, (float)ypos});
+            self->m_mbtn_cb(self->m_view,
                              {(MouseButton) button, (Action) action, pos});
         }
     });
@@ -241,31 +241,36 @@ void GlWindow::set_refresh_mode(RefreshMode mode)
 }
 
 
+void GlWindow::set_debug_flags(View::DebugFlags flags)
+{
+    m_view.set_debug_flags(flags);
+}
+
+
 void GlWindow::setup_view()
 {
     int width, height;
     glfwGetFramebufferSize(m_window, &width, &height);
     glViewport(0, 0, width, height);
-    m_view = std::make_unique<View>();
-    m_view->set_framebuffer_size({(unsigned int) width, (unsigned int) height});
+    m_view.set_framebuffer_size({(unsigned int) width, (unsigned int) height});
     glfwGetWindowSize(m_window, &width, &height);
-    m_view->set_screen_size({(unsigned int) width, (unsigned int) height});
+    m_view.set_screen_size({(unsigned int) width, (unsigned int) height});
     if (m_size_cb)
-        m_size_cb(*m_view);
+        m_size_cb(m_view);
 
     glfwSetFramebufferSizeCallback(m_window, [](GLFWwindow* win, int w, int h) {
         auto self = (GlWindow*) glfwGetWindowUserPointer(win);
-        self->m_view->set_framebuffer_size({(uint) w, (uint) h});
+        self->m_view.set_framebuffer_size({(uint) w, (uint) h});
         glViewport(0, 0, w, h);
         if (self->m_size_cb)
-            self->m_size_cb(*self->m_view);
+            self->m_size_cb(self->m_view);
     });
 
     glfwSetWindowSizeCallback(m_window, [](GLFWwindow* win, int w, int h) {
         auto self = (GlWindow*) glfwGetWindowUserPointer(win);
-        self->m_view->set_screen_size({(uint) w, (uint) h});
+        self->m_view.set_screen_size({(uint) w, (uint) h});
         if (self->m_size_cb)
-            self->m_size_cb(*self->m_view);
+            self->m_size_cb(self->m_view);
     });
 
     glfwSetKeyCallback(m_window, [](GLFWwindow* window, int key, int scancode,
@@ -296,7 +301,7 @@ void GlWindow::setup_view()
             return;
         }
 
-        if (self->m_key_cb && self->m_view) {
+        if (self->m_key_cb) {
             Key ev_key;
             if ((key >= GLFW_KEY_A && key <= GLFW_KEY_Z)
             ||  (key >= GLFW_KEY_0 && key <= GLFW_KEY_9)) {
@@ -337,15 +342,15 @@ void GlWindow::setup_view()
                     bool(mods & GLFW_MOD_CONTROL),
                     bool(mods & GLFW_MOD_ALT),
             };
-            self->m_key_cb(*self->m_view, KeyEvent{ev_key, mod, Action(action)});
+            self->m_key_cb(self->m_view, KeyEvent{ev_key, mod, Action(action)});
         }
     });
 
     glfwSetCharCallback(m_window, [](GLFWwindow* window, unsigned int codepoint)
     {
         auto self = (GlWindow*) glfwGetWindowUserPointer(window);
-        if (self->m_char_cb && self->m_view) {
-            self->m_char_cb(*self->m_view, CharEvent{codepoint});
+        if (self->m_char_cb) {
+            self->m_char_cb(self->m_view, CharEvent{codepoint});
         }
     });
 }
@@ -355,7 +360,7 @@ void GlWindow::draw()
 {
     glClear(GL_COLOR_BUFFER_BIT);
     if (m_draw_cb)
-        m_draw_cb(*m_view);
+        m_draw_cb(m_view);
     glfwSwapBuffers(m_window);
 }
 

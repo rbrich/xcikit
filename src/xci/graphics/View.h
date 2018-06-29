@@ -33,8 +33,6 @@ using xci::util::Rect_i;
 
 class View {
 public:
-    virtual ~View() = default;
-
     // ------------------------------------------------------------------------
     // Sizes, coordinates
 
