@@ -56,6 +56,7 @@ public:
     const Vec2f& size() const { return m_size; }
 
     util::Rect_f aabb() const { return {m_position, m_size}; }
+    float baseline() const { return m_baseline; }
 
     // Is this widget focusable?
     // When true, it has to implement contains().
@@ -74,10 +75,14 @@ public:
     virtual void handle(View& view, const MousePosEvent& ev) {}
     virtual void handle(View& view, const MouseBtnEvent& ev) {}
 
+protected:
+    void set_baseline(float baseline) { m_baseline = baseline; }
+
 private:
     Theme* m_theme = &Theme::default_theme();
     Vec2f m_position;
     Vec2f m_size;
+    float m_baseline = 0;
 };
 
 

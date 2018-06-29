@@ -51,10 +51,13 @@ void Button::resize(View& view)
     auto rect = m_layout.bbox();
     rect.enlarge(m_padding);
     set_size(rect.size());
+    set_baseline(-rect.y);
 
+    rect.x = 0;
+    rect.y = 0;
     m_bg_rect.clear();
     m_bg_rect.set_outline_color(Color(180, 180, 180));
-    m_bg_rect.add_rectangle(aabb(), m_outline_thickness);
+    m_bg_rect.add_rectangle(rect, m_outline_thickness);
 }
 
 
@@ -63,7 +66,7 @@ void Button::draw(View& view, State state)
     auto rect = m_layout.bbox();
     if (state.focused)
         m_bg_rect.set_outline_color(Color::Yellow());
-    m_bg_rect.draw(view, {0, 0});
+    m_bg_rect.draw(view, position());
     m_layout.draw(view, position() + Vec2f{m_padding - rect.x, m_padding - rect.y});
 }
 

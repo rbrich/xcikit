@@ -70,10 +70,13 @@ void TextInput::resize(View& view)
     rect.w = m_width;
     rect.enlarge(m_padding);
     set_size(rect.size());
+    set_baseline(-rect.y);
 
     // Background rect
+    rect.x = 0;
+    rect.y = 0;
     m_bg_rect.clear();
-    m_bg_rect.add_rectangle(aabb(), m_outline_thickness);
+    m_bg_rect.add_rectangle(rect, m_outline_thickness);
 }
 
 
@@ -82,7 +85,7 @@ void TextInput::draw(View& view, State state)
     auto rect = m_layout.bbox();
     auto pos = position() + Vec2f{m_padding - rect.x - m_content_pos,
                                   m_padding - rect.y};
-    m_bg_rect.draw(view, {0, 0});
+    m_bg_rect.draw(view, position());
     view.push_crop(aabb().enlarged(-m_outline_thickness));
     m_layout.draw(view, pos);
     if (state.focused)

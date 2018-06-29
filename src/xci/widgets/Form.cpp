@@ -52,10 +52,21 @@ void Form::add_input(const std::string& label, bool& checkbox)
 
 void Form::resize(View& view)
 {
-    std::sort(m_hint.begin(), m_hint.end());
+    // Resize children, compute max_height (vertical space reserved for each line)
+    float max_ascent = 0;
+    float max_descent = 0;
+    for (auto& child : m_child) {
+        child->resize(view);
+        auto h = child->size().y;
+        auto b = child->baseline();
+        max_ascent = std::max(b, max_ascent);
+        max_descent = std::max(h - b, max_descent);
+    }
+    const float max_height = max_ascent + max_descent;
 
-    util::Vec2f pos;
-    float max_height = 0;
+    // Position children
+    util::Vec2f pos = {0, max_ascent};
+    std::sort(m_hint.begin(), m_hint.end());
     size_t index = 0;
     auto hint_it = m_hint.cbegin();
     for (auto& child : m_child) {
@@ -74,17 +85,14 @@ void Form::resize(View& view)
                 case Hint::NextRow:
                     pos.x = 0;
                     pos.y += max_height + m_margin.y;
-                    max_height = 0;
                     break;
             }
             hint_it++;
         }
 
         // Position child
-        child->set_position(pos);
-        child->resize(view);
+        child->set_position({pos.x, pos.y - child->baseline()});
         pos.x += child->size().x + m_margin.x;
-        max_height = std::max(child->size().y, max_height);
         ++index;
     }
 }

@@ -32,6 +32,7 @@ void Label::resize(View& view)
     auto rect = m_layout.bbox();
     rect.enlarge(m_padding);
     set_size(rect.size());
+    set_baseline(-rect.y);
 }
 
 

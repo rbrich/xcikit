@@ -69,6 +69,7 @@ void Icon::resize(View& view)
     m_layout.typeset(view);
     auto rect = m_layout.bbox();
     set_size(rect.size());
+    set_baseline(-rect.y);
 }
 
 
