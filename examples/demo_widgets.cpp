@@ -52,7 +52,7 @@ int main()
     checkbox.set_position({0, 0.4f});
     checkbox.set_icon(IconId::CheckBoxChecked);
     checkbox.set_text("Checkbox");
-    checkbox.set_size(0.08);
+    checkbox.set_font_size(0.08);
     checkbox.set_color(Color(150, 200, 200));
     bool checkbox_state = true;
 

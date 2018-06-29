@@ -42,12 +42,6 @@ void TextInput::set_decoration_color(const graphics::Color& fill,
 }
 
 
-bool TextInput::contains(const util::Vec2f& point) const
-{
-    return bbox().contains(point);
-}
-
-
 void TextInput::resize(View& view)
 {
     m_layout.clear();
@@ -60,6 +54,7 @@ void TextInput::resize(View& view)
     // Text after cursor
     m_layout.add_word(m_text.substr(m_cursor));
     m_layout.typeset(view);
+
     // Cursor rect
     layout::Span* cursor_span = m_layout.get_span("cursor");
     m_cursor_shape.clear();
@@ -70,10 +65,15 @@ void TextInput::resize(View& view)
     if (cursor_box.x > m_content_pos + m_width)
         m_content_pos = cursor_box.x - m_width;
     m_cursor_shape.add_rectangle(cursor_box);
+
+    auto rect = m_layout.bbox();
+    rect.w = m_width;
+    rect.enlarge(m_padding);
+    set_size(rect.size());
+
     // Background rect
     m_bg_rect.clear();
-    m_bg_rect.add_rectangle(bbox(), m_outline_thickness);
-    set_size(bbox().size());
+    m_bg_rect.add_rectangle(aabb(), m_outline_thickness);
 }
 
 
@@ -83,7 +83,7 @@ void TextInput::draw(View& view, State state)
     auto pos = position() + Vec2f{m_padding - rect.x - m_content_pos,
                                   m_padding - rect.y};
     m_bg_rect.draw(view, {0, 0});
-    view.push_crop(bbox().enlarged(-m_outline_thickness));
+    view.push_crop(aabb().enlarged(-m_outline_thickness));
     m_layout.draw(view, pos);
     if (state.focused)
         m_cursor_shape.draw(view, pos);
@@ -167,17 +167,6 @@ void TextInput::handle(View& view, const CharEvent& ev)
 void TextInput::handle(View& view, const MouseBtnEvent& ev)
 {
     Widget::handle(view, ev);
-}
-
-
-util::Rect_f TextInput::bbox() const
-{
-    auto rect = m_layout.bbox();
-    rect.w = m_width;
-    rect.enlarge(m_padding);
-    rect.x = position().x;
-    rect.y = position().y;
-    return rect;
 }
 
 

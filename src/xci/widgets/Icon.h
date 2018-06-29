@@ -29,14 +29,11 @@ class Icon: public Widget {
 public:
     void set_icon(IconId icon_id);
     void set_text(const std::string& text);
-    void set_size(float size);
+    void set_font_size(float size);
     void set_color(const graphics::Color& color);
 
-    bool contains(const util::Vec2f& point) const override;
     void resize(View& view) override;
     void draw(View& view, State state) override;
-
-    util::Rect_f bbox() const;
 
 private:
     IconId m_icon_id = IconId::None;

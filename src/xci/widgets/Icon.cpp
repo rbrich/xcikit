@@ -37,7 +37,7 @@ void Icon::set_text(const std::string& text)
 }
 
 
-void Icon::set_size(float size)
+void Icon::set_font_size(float size)
 {
     m_layout.set_default_font_size(size);
     m_needs_refresh = true;
@@ -47,12 +47,6 @@ void Icon::set_size(float size)
 void Icon::set_color(const graphics::Color& color)
 {
     m_layout.set_default_color(color);
-}
-
-
-bool Icon::contains(const util::Vec2f& point) const
-{
-    return bbox().contains(point);
 }
 
 
@@ -73,6 +67,8 @@ void Icon::resize(View& view)
         m_needs_refresh = false;
     }
     m_layout.typeset(view);
+    auto rect = m_layout.bbox();
+    set_size(rect.size());
 }
 
 
@@ -83,15 +79,6 @@ void Icon::draw(View& view, State state)
     });
     auto rect = m_layout.bbox();
     m_layout.draw(view, position() - rect.top_left());
-}
-
-
-util::Rect_f Icon::bbox() const
-{
-    auto rect = m_layout.bbox();
-    rect.x = position().x;
-    rect.y = position().y;
-    return rect;
 }
 
 
