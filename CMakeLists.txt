@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.7)
 project(xcikit C CXX)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -297,7 +297,8 @@ endif (CATCH_FOUND)
 # Documentation #
 # ------------- #
 
-if (DOXYGEN_FOUND)
+# Only with CMake v3.9+ (older versions don't have doxygen_add_docs())
+if (DOXYGEN_FOUND AND NOT CMAKE_VERSION VERSION_LESS "3.9")
     set(DOXYGEN_OUTPUT_DIRECTORY doc)
     set(DOXYGEN_EXTRACT_ALL YES)
     set(DOXYGEN_BUILTIN_STL_SUPPORT YES)
@@ -310,7 +311,7 @@ if (DOXYGEN_FOUND)
         docs
         README.md
         COMMENT "Generate documentation")
-endif (DOXYGEN_FOUND)
+endif ()
 
 
 # ------------- #
