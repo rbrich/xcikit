@@ -31,6 +31,10 @@ void Form::add_input(const std::string& label, std::string& text_input)
     add_hint(Form::Hint::NextColumn);
     // TextInput
     auto w_text_input = std::make_shared<TextInput>(text_input);
+    auto* rawptr = w_text_input.get();
+    w_text_input->on_change([rawptr, &text_input](View&) {
+        text_input = rawptr->string();
+    });
     add(w_text_input);
     add_hint(Form::Hint::NextRow);
 }
@@ -45,6 +49,10 @@ void Form::add_input(const std::string& label, bool& checkbox)
     // Checkbox
     auto w_checkbox = std::make_shared<Checkbox>();
     w_checkbox->set_checked(checkbox);
+    auto* rawptr = w_checkbox.get();
+    w_checkbox->on_change([rawptr, &checkbox](View&) {
+        checkbox = rawptr->checked();
+    });
     add(w_checkbox);
     add_hint(Form::Hint::NextRow);
 }

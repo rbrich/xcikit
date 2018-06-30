@@ -26,7 +26,10 @@ namespace widgets {
 
 class TextInput: public Widget {
 public:
-    explicit TextInput(const std::string &string);
+    explicit TextInput(const std::string& string);
+
+    void set_string(const std::string& string);
+    const std::string& string() const { return m_text; }
 
     void set_font_size(float size) { m_layout.set_default_font_size(size); }
     void set_width(float width) { m_width = width; }
@@ -35,6 +38,9 @@ public:
 
     void set_decoration_color(const graphics::Color& fill, const graphics::Color& border);
     void set_text_color(const graphics::Color& color) { m_layout.set_default_color(color); }
+
+    using ChangeCallback = std::function<void(View&)>;
+    void on_change(ChangeCallback cb) { m_change_cb = std::move(cb); }
 
     bool can_focus() const override { return true; }
     void resize(View& view) override;
@@ -53,6 +59,7 @@ private:
     float m_padding = 0.02f;
     float m_content_pos = 0;
     float m_outline_thickness = 0.005f;
+    ChangeCallback m_change_cb;
 };
 
 

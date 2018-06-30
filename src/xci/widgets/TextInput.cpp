@@ -35,6 +35,12 @@ TextInput::TextInput(const std::string& string)
 }
 
 
+void TextInput::set_string(const std::string& string)
+{
+    m_text = string;
+}
+
+
 void TextInput::set_decoration_color(const graphics::Color& fill,
                                      const graphics::Color& border)
 {
@@ -154,6 +160,8 @@ void TextInput::handle(View& view, const KeyEvent& ev)
 
     resize(view);
     view.refresh();
+    if (m_change_cb)
+        m_change_cb(view);
 }
 
 
@@ -164,6 +172,8 @@ void TextInput::handle(View& view, const CharEvent& ev)
     m_cursor += ch.size();
     resize(view);
     view.refresh();
+    if (m_change_cb)
+        m_change_cb(view);
 }
 
 
