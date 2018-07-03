@@ -104,6 +104,15 @@ int main()
     Bind bind(window, root);
     window.set_refresh_mode(RefreshMode::OnDemand);
     //window.set_debug_flags(View::DebugFlags(View::Debug::LineBaseLine));
+
+    window.set_key_callback([&root](View& v, const KeyEvent& e) {
+        if (e.action == Action::Press && e.key == Key::D) {
+            root.dump(std::cout);
+            std::cout << std::endl;
+        }
+    });
+
+    Bind bind(window, root);
     window.display();
     return EXIT_SUCCESS;
 }

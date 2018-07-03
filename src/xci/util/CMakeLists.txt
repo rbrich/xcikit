@@ -14,7 +14,9 @@ set(XCI_UTIL_SOURCES
     SharedLibrary.cpp
     SharedLibrary.h
     string.cpp
-    string.h)
+    string.h
+    rtti.cc
+    rtti.h)
 
 
 # Choose FileWatch implementation

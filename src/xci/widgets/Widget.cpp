@@ -15,6 +15,7 @@
 
 #include "Widget.h"
 #include <xci/util/log.h>
+#include <xci/util/rtti.h>
 #include <xci/graphics/Window.h>
 
 namespace xci {
@@ -24,6 +25,17 @@ using graphics::View;
 using graphics::Key;
 using graphics::Action;
 using namespace util::log;
+
+
+void Widget::partial_dump(std::ostream& stream, const std::string& nl_prefix)
+{
+    using namespace std;
+    stream << util::type_name(typeid(*this))
+           << "<" << hex << this << "> "
+           << "pos=" << m_position << " "
+           << "size=" << m_size << " "
+           << "baseline=" << m_baseline << " ";
+}
 
 
 void Composite::add(WidgetPtr child)
@@ -185,26 +197,79 @@ void Composite::handle(View& view, const MouseBtnEvent& ev)
 }
 
 
+void Composite::partial_dump(std::ostream& stream, const std::string& nl_prefix)
+{
+    Widget::partial_dump(stream, nl_prefix);
+    for (auto& child : m_child) {
+        stream << std::endl << nl_prefix;
+        if (child != m_child.back()) {
+            // intermediate child
+            stream << "  ├ ";
+            child->partial_dump(stream, nl_prefix + "  │ ");
+        } else {
+            // last child
+            stream << "  └ ";
+            child->partial_dump(stream, nl_prefix + "    ");
+        }
+    }
+}
+
+
 Bind::Bind(graphics::Window& window, Widget& root)
     : m_window(window)
 {
-    window.set_size_callback([&](View& v) { root.resize(v); });
-    window.set_draw_callback([&](View& v) { root.draw(v, {}); });
-    window.set_key_callback([&](View& v, const KeyEvent& e) { root.handle(v, e); });
-    window.set_char_callback([&](View& v, const CharEvent& e) { root.handle(v, e); });
-    window.set_mouse_position_callback([&](View& v, const MousePosEvent& e) { root.handle(v, e); });
-    window.set_mouse_button_callback([&](View& v, const MouseBtnEvent& e) { root.handle(v, e); });
+    m_size_cb = window.get_size_callback();
+    window.set_size_callback([&](View& v) {
+        if (m_size_cb)
+            m_size_cb(v);
+        root.resize(v);
+    });
+
+    m_draw_cb = window.get_draw_callback();
+    window.set_draw_callback([&](View& v) {
+        if (m_draw_cb)
+            m_draw_cb(v);
+        root.draw(v, {});
+    });
+
+    m_key_cb = window.get_key_callback();
+    window.set_key_callback([&](View& v, const KeyEvent& e) {
+        if (m_key_cb)
+            m_key_cb(v, e);
+        root.handle(v, e);
+    });
+
+    m_char_cb = window.get_char_callback();
+    window.set_char_callback([&](View& v, const CharEvent& e) {
+        if (m_char_cb)
+            m_char_cb(v, e);
+        root.handle(v, e);
+    });
+
+    m_mpos_cb = window.get_mouse_position_callback();
+    window.set_mouse_position_callback([&](View& v, const MousePosEvent& e) {
+        if (m_mpos_cb)
+            m_mpos_cb(v, e);
+        root.handle(v, e);
+    });
+
+    m_mbtn_cb = window.get_mouse_button_callback();
+    window.set_mouse_button_callback([&](View& v, const MouseBtnEvent& e) {
+        if (m_mbtn_cb)
+            m_mbtn_cb(v, e);
+        root.handle(v, e);
+    });
 }
 
 
 Bind::~Bind()
 {
-    m_window.set_size_callback(nullptr);
-    m_window.set_draw_callback(nullptr);
-    m_window.set_key_callback(nullptr);
-    m_window.set_char_callback(nullptr);
-    m_window.set_mouse_position_callback(nullptr);
-    m_window.set_mouse_button_callback(nullptr);
+    m_window.set_size_callback(m_size_cb);
+    m_window.set_draw_callback(m_draw_cb);
+    m_window.set_key_callback(m_key_cb);
+    m_window.set_char_callback(m_char_cb);
+    m_window.set_mouse_position_callback(m_mpos_cb);
+    m_window.set_mouse_button_callback(m_mbtn_cb);
 }
 
 

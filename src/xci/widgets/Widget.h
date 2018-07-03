@@ -83,6 +83,10 @@ public:
     virtual void handle(View& view, const MousePosEvent& ev) {}
     virtual void handle(View& view, const MouseBtnEvent& ev) {}
 
+    // Debug dump
+    void dump(std::ostream& stream) { partial_dump(stream, ""); stream << std::endl; }
+    virtual void partial_dump(std::ostream& stream, const std::string& nl_prefix);
+
 protected:
     void set_baseline(float baseline) { m_baseline = baseline; }
 
@@ -122,6 +126,9 @@ public:
     void handle(View& view, const MousePosEvent& ev) override;
     void handle(View& view, const MouseBtnEvent& ev) override;
 
+    // Debug dump
+    void partial_dump(std::ostream& stream, const std::string& nl_prefix) override;
+
 protected:
     std::vector<WidgetPtr> m_child;
 
@@ -139,6 +146,12 @@ public:
 
 private:
     graphics::Window& m_window;
+    graphics::Window::SizeCallback m_size_cb;
+    graphics::Window::DrawCallback m_draw_cb;
+    graphics::Window::KeyCallback m_key_cb;
+    graphics::Window::CharCallback m_char_cb;
+    graphics::Window::MousePosCallback m_mpos_cb;
+    graphics::Window::MouseBtnCallback m_mbtn_cb;
 };
 
 

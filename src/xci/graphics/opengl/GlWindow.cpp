@@ -162,17 +162,10 @@ void GlWindow::display()
 }
 
 
-void GlWindow::set_size_callback(SizeCallback size_cb)
-{
-    assert(!size_cb || !m_size_cb || !"Window callback already set!");
-    m_size_cb = std::move(size_cb);
-}
-
 
 void GlWindow::set_draw_callback(DrawCallback draw_cb)
 {
-    assert(!draw_cb || !m_draw_cb || !"Window callback already set!");
-    m_draw_cb = std::move(draw_cb);
+    Window::set_draw_callback(draw_cb);
     glfwSetWindowRefreshCallback(m_window, [](GLFWwindow* window) {
         auto self = (GlWindow*) glfwGetWindowUserPointer(window);
         self->draw();
@@ -180,24 +173,10 @@ void GlWindow::set_draw_callback(DrawCallback draw_cb)
 }
 
 
-void GlWindow::set_key_callback(KeyCallback key_cb)
-{
-    assert(!key_cb || !m_key_cb || !"Window callback already set!");
-    m_key_cb = std::move(key_cb);
-}
-
-
-void GlWindow::set_char_callback(Window::CharCallback char_cb)
-{
-    assert(!char_cb || !m_char_cb || !"Window callback already set!");
-    m_char_cb = std::move(char_cb);
-}
-
 
 void GlWindow::set_mouse_position_callback(Window::MousePosCallback mpos_cb)
 {
-    assert(!mpos_cb || !m_mpos_cb || !"Window callback already set!");
-    m_mpos_cb = std::move(mpos_cb);
+    Window::set_mouse_position_callback(mpos_cb);
     glfwSetCursorPosCallback(m_window, [](GLFWwindow* window, double xpos, double ypos) {
         auto self = (GlWindow*) glfwGetWindowUserPointer(window);
         if (self->m_mpos_cb) {
@@ -210,8 +189,7 @@ void GlWindow::set_mouse_position_callback(Window::MousePosCallback mpos_cb)
 
 void GlWindow::set_mouse_button_callback(MouseBtnCallback mbtn_cb)
 {
-    assert(!mbtn_cb || !m_mbtn_cb || !"Window callback already set!");
-    m_mbtn_cb = std::move(mbtn_cb);
+    Window::set_mouse_button_callback(mbtn_cb);
     glfwSetMouseButtonCallback(m_window, [](GLFWwindow* window, int button, int action, int mods) {
         auto self = (GlWindow*) glfwGetWindowUserPointer(window);
         if (self->m_mbtn_cb) {
