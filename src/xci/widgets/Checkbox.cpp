@@ -24,6 +24,7 @@ using namespace xci::graphics;
 
 Checkbox::Checkbox()
 {
+    set_focusable(true);
     set_icon(IconId::CheckBoxUnchecked);
 }
 
@@ -36,7 +37,7 @@ void Checkbox::set_checked(bool checked)
 }
 
 
-void Checkbox::handle(View& view, const KeyEvent& ev)
+bool Checkbox::handle(View& view, const KeyEvent& ev)
 {
     if (ev.action == Action::Press && ev.key == Key::Enter) {
         set_checked(!m_checked);
@@ -44,7 +45,9 @@ void Checkbox::handle(View& view, const KeyEvent& ev)
         view.refresh();
         if (m_change_cb)
             m_change_cb(view);
+        return true;
     }
+    return false;
 }
 
 

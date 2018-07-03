@@ -31,6 +31,7 @@ TextInput::TextInput(const std::string& string)
       m_cursor_shape(Color::Yellow(), Color::Transparent()),
       m_cursor(string.size())
 {
+    set_focusable(true);
     m_layout.set_default_font(&theme().font());
 }
 
@@ -100,11 +101,11 @@ void TextInput::draw(View& view, State state)
 }
 
 
-void TextInput::handle(View& view, const KeyEvent& ev)
+bool TextInput::handle(View& view, const KeyEvent& ev)
 {
     // Ignore key release, handle only press and repeat
     if (ev.action == Action::Release)
-        return;
+        return false;
 
     switch (ev.key) {
         case Key::Backspace:
@@ -115,7 +116,7 @@ void TextInput::handle(View& view, const KeyEvent& ev)
                 m_cursor = prev;
                 break;
             }
-            return;
+            return true;
 
         case Key::Delete:
             if (m_cursor < m_text.size()) {
@@ -123,7 +124,7 @@ void TextInput::handle(View& view, const KeyEvent& ev)
                 m_text.erase(m_cursor, next - m_cursor);
                 break;
             }
-            return;
+            return true;
 
         case Key::Left:
             if (m_cursor > 0) {
@@ -131,37 +132,38 @@ void TextInput::handle(View& view, const KeyEvent& ev)
                 m_cursor = m_text.rbegin() + m_text.size() - utf8_prev(pos);
                 break;
             }
-            return;
+            return true;
 
         case Key::Right:
             if (m_cursor < m_text.size()) {
                 m_cursor = utf8_next(m_text.begin() + m_cursor) - m_text.begin();
                 break;
             }
-            return;
+            return true;
 
         case Key::Home:
             if (m_cursor > 0) {
                 m_cursor = 0;
                 break;
             }
-            return;
+            return true;
 
         case Key::End:
             if (m_cursor < m_text.size()) {
                 m_cursor = m_text.size();
                 break;
             }
-            return;
+            return true;
 
         default:
-            return;
+            return false;
     }
 
     resize(view);
     view.refresh();
     if (m_change_cb)
         m_change_cb(view);
+    return true;
 }
 
 

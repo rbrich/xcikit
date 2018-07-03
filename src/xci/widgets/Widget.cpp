@@ -37,7 +37,7 @@ void Composite::add(WidgetPtr child)
 void Composite::focus_next()
 {
     // Check if there is any focusable widget
-    if (m_child.empty() || !can_focus())
+    if (m_child.empty())
         return;
 
     // Point iterator to expected position (after currently focused widget)
@@ -52,7 +52,7 @@ void Composite::focus_next()
     }
 
     // Find first widget which can take focus
-    while (!(*iter)->can_focus()) {
+    while (!(*iter)->is_tab_focusable()) {
         // try next
         ++iter;
         if (iter == m_child.end())
@@ -66,7 +66,7 @@ void Composite::focus_next()
 void Composite::focus_previous()
 {
     // Check if there is any focusable widget
-    if (m_child.empty() || !can_focus())
+    if (m_child.empty())
         return;
 
     // Point iterator to expected position (before currently focused widget)
@@ -82,7 +82,7 @@ void Composite::focus_previous()
     }
 
     // Find first widget which can take focus
-    while (!(*iter)->can_focus()) {
+    while (!(*iter)->is_tab_focusable()) {
         // try previous
         if (iter == m_child.begin())
             iter = m_child.begin() + (m_child.size() - 1);
@@ -91,15 +91,6 @@ void Composite::focus_previous()
     }
 
     m_focus = *iter;
-}
-
-
-bool Composite::can_focus() const
-{
-    for (auto& child : m_child)
-        if (child->can_focus())
-            return true;
-    return false;
 }
 
 
@@ -130,8 +121,13 @@ void Composite::draw(View& view, State state)
 }
 
 
-void Composite::handle(View& view, const KeyEvent& ev)
+bool Composite::handle(View& view, const KeyEvent& ev)
 {
+    // Propagate the event to the focused child
+    if (!m_focus.expired())
+        if (m_focus.lock()->handle(view, ev))
+            return true;
+
     // Switch focus with Tab, Shift+Tab
     if (ev.action == Action::Press && ev.key == Key::Tab && !m_child.empty()) {
         if (!ev.mod.shift) {
@@ -143,12 +139,11 @@ void Composite::handle(View& view, const KeyEvent& ev)
         }
         resize(view);
         view.refresh();
-        return;
+        return true;
     }
 
-    // Prpagate the event
-    if (!m_focus.expired())
-        m_focus.lock()->handle(view, ev);
+    // Not handled
+    return false;
 }
 
 

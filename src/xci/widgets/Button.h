@@ -37,10 +37,9 @@ public:
     void set_decoration_color(const graphics::Color& fill, const graphics::Color& border);
     void set_text_color(const graphics::Color& color);
 
-    bool can_focus() const override { return true; }
     void resize(View& view) override;
     void draw(View& view, State state) override;
-    void handle(View& view, const KeyEvent& ev) override;
+    bool handle(View& view, const KeyEvent& ev) override;
     void handle(View& view, const MouseBtnEvent& ev) override;
 
     using ClickCallback = std::function<void(View&)>;

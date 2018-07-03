@@ -40,6 +40,7 @@ struct State {
 
 class Widget {
 public:
+    Widget() : m_tab_focusable(false), m_click_focusable(false) {}
     virtual ~Widget() = default;
 
     void set_theme(Theme& theme) { m_theme = &theme; }
@@ -58,9 +59,16 @@ public:
     util::Rect_f aabb() const { return {m_position, m_size}; }
     float baseline() const { return m_baseline; }
 
-    // Is this widget focusable?
-    // When true, it has to implement contains().
-    virtual bool can_focus() const { return false; }
+    // Accept keyboard focus by cycling with tab key
+    void set_tab_focusable(bool enabled) { m_tab_focusable = enabled; }
+    bool is_tab_focusable() const { return m_tab_focusable; }
+
+    // Accept keyboard focus by clicking on the widget
+    void set_click_focusable(bool enabled) { m_click_focusable = enabled; }
+    bool is_click_focusable() const { return m_click_focusable; }
+
+    // Accept keyboard focus by tab or click
+    void set_focusable(bool enabled) { m_tab_focusable = enabled; m_click_focusable = enabled; }
 
     // Test if point is contained inside widget area
     virtual bool contains(const Vec2f& point) const { return aabb().contains(point); }
@@ -70,7 +78,7 @@ public:
 
     virtual void resize(View& view) {}
     virtual void draw(View& view, State state) = 0;
-    virtual void handle(View& view, const KeyEvent& ev) {}
+    virtual bool handle(View& view, const KeyEvent& ev) { return false; }
     virtual void handle(View& view, const CharEvent& ev) {}
     virtual void handle(View& view, const MousePosEvent& ev) {}
     virtual void handle(View& view, const MouseBtnEvent& ev) {}
@@ -83,6 +91,10 @@ private:
     Vec2f m_position;
     Vec2f m_size;
     float m_baseline = 0;
+
+    // Flags
+    bool m_tab_focusable : 1;
+    bool m_click_focusable : 1;
 };
 
 
@@ -101,11 +113,11 @@ public:
     void focus_next();
     void focus_previous();
 
-    bool can_focus() const override;
+    // impl Widget
     bool contains(const Vec2f& point) const override;
     void resize(View& view) override;
     void draw(View& view, State state) override;
-    void handle(View& view, const KeyEvent& ev) override;
+    bool handle(View& view, const KeyEvent& ev) override;
     void handle(View& view, const CharEvent& ev) override;
     void handle(View& view, const MousePosEvent& ev) override;
     void handle(View& view, const MouseBtnEvent& ev) override;

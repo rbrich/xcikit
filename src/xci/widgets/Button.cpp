@@ -26,6 +26,7 @@ using namespace xci::text;
 Button::Button(const std::string &string)
     : m_bg_rect(Color(10, 20, 40), Color(180, 180, 180))
 {
+    set_focusable(true);
     m_layout.set_default_font(&theme().font());
     Markup markup(m_layout);
     markup.parse(string);
@@ -71,14 +72,16 @@ void Button::draw(View& view, State state)
 }
 
 
-void Button::handle(View& view, const KeyEvent& ev)
+bool Button::handle(View& view, const KeyEvent& ev)
 {
     if (ev.action == Action::Press && ev.key == Key::Enter) {
         if (m_click_cb) {
             m_click_cb(view);
             view.refresh();
         }
+        return true;
     }
+    return false;
 }
 
 

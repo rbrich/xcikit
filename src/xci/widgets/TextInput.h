@@ -42,10 +42,9 @@ public:
     using ChangeCallback = std::function<void(View&)>;
     void on_change(ChangeCallback cb) { m_change_cb = std::move(cb); }
 
-    bool can_focus() const override { return true; }
     void resize(View& view) override;
     void draw(View& view, State state) override;
-    void handle(View& view, const KeyEvent& ev) override;
+    bool handle(View& view, const KeyEvent& ev) override;
     void handle(View& view, const CharEvent& ev) override;
     void handle(View& view, const MouseBtnEvent& ev) override;
 
