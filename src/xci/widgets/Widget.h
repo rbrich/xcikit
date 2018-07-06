@@ -81,7 +81,8 @@ public:
     virtual bool handle(View& view, const KeyEvent& ev) { return false; }
     virtual void handle(View& view, const CharEvent& ev) {}
     virtual void handle(View& view, const MousePosEvent& ev) {}
-    virtual void handle(View& view, const MouseBtnEvent& ev) {}
+    virtual bool handle(View& view, const MouseBtnEvent& ev) { return false; }
+    virtual bool click_focus(View& view, const MouseBtnEvent& ev) { return is_click_focusable() && contains(ev.pos - view.offset()); }
 
     // Debug dump
     void dump(std::ostream& stream) { partial_dump(stream, ""); stream << std::endl; }
@@ -112,7 +113,7 @@ class Composite: public Widget {
 public:
     void add(WidgetPtr child);
 
-    void focus(WidgetRef child) { m_focus = std::move(child); }
+    void set_focus(WidgetRef child) { m_focus = std::move(child); }
     WidgetPtr focus() const { return m_focus.lock(); }
     void focus_next();
     void focus_previous();
@@ -124,7 +125,8 @@ public:
     bool handle(View& view, const KeyEvent& ev) override;
     void handle(View& view, const CharEvent& ev) override;
     void handle(View& view, const MousePosEvent& ev) override;
-    void handle(View& view, const MouseBtnEvent& ev) override;
+    bool handle(View& view, const MouseBtnEvent& ev) override;
+    bool click_focus(View& view, const MouseBtnEvent& ev) override;
 
     // Debug dump
     void partial_dump(std::ostream& stream, const std::string& nl_prefix) override;

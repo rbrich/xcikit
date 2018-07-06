@@ -51,7 +51,7 @@ bool Checkbox::handle(View& view, const KeyEvent& ev)
 }
 
 
-void Checkbox::handle(View& view, const MouseBtnEvent& ev)
+bool Checkbox::handle(View& view, const MouseBtnEvent& ev)
 {
     if (ev.action == Action::Press && ev.button == MouseButton::Left) {
         if (contains(ev.pos - view.offset())) {
@@ -60,8 +60,10 @@ void Checkbox::handle(View& view, const MouseBtnEvent& ev)
             view.refresh();
             if (m_change_cb)
                 m_change_cb(view);
+            return true;
         }
     }
+    return false;
 }
 
 

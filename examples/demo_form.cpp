@@ -41,6 +41,7 @@ public:
     void handle(View& view, const MousePosEvent& ev) override {
         m_text.set_fixed_string("Mouse: " +
                                 format("({}, {})", ev.pos.x, ev.pos.y));
+        resize(view);
         view.refresh();
     }
 
@@ -61,27 +62,25 @@ int main()
 
     Composite root;
 
-    auto form = std::make_shared<Form>();
-    form->set_position({-1.0f, -0.5f});
-    root.add(form);
+    // Form #1
+    auto form1 = std::make_shared<Form>();
+    form1->set_position({-1.0f, -0.5f});
+    root.add(form1);
 
     std::string input_text = "2018-06-23";
-    form->add_input("date", input_text);
+    form1->add_input("date", input_text);
 
     bool checkbox1 = false;
-    form->add_input("checkbox1", checkbox1);
+    form1->add_input("checkbox1", checkbox1);
 
     bool checkbox2 = true;
-    form->add_input("checkbox2", checkbox2);
+    form1->add_input("checkbox2", checkbox2);
 
     auto button = std::make_shared<Button>("submit");
-    form->add_hint(Form::Hint::NextColumn);
-    form->add(button);
+    form1->add_hint(Form::Hint::NextColumn);
+    form1->add(button);
 
-    auto mouse_pos_info = std::make_shared<MousePosInfo>();
-    mouse_pos_info->set_position({-1.2f, 0.9f});
-    root.add(mouse_pos_info);
-
+    // Form #1 output
     auto output_text = std::make_shared<Label>();
     output_text->set_position({0.2f, -0.5f});
     output_text->text().set_color(Color(180, 100, 140));
@@ -97,11 +96,27 @@ int main()
     });
     root.add(output_text);
 
+    // Form #2
+    auto form2 = std::make_shared<Form>();
+    form2->set_position({-1.0f, 0.2f});
+    root.add(form2);
+
+    std::string name = "Player1";
+    form2->add_input("name", name);
+
+    bool hardcore = false;
+    form2->add_input("hardcore", hardcore);
+
+    // Mouse pos
+    auto mouse_pos_info = std::make_shared<MousePosInfo>();
+    mouse_pos_info->set_position({-1.2f, 0.9f});
+    root.add(mouse_pos_info);
+
+    // FPS
     auto fps_display = std::make_shared<FpsDisplay>();
     fps_display->set_position({-1.2f, -0.8f});
     root.add(fps_display);
 
-    Bind bind(window, root);
     window.set_refresh_mode(RefreshMode::OnDemand);
     //window.set_debug_flags(View::DebugFlags(View::Debug::LineBaseLine));
 

@@ -39,7 +39,7 @@ public:
     void on_change(ChangeCallback cb) { m_change_cb = std::move(cb); }
 
     bool handle(View& view, const KeyEvent& ev) override;
-    void handle(View& view, const MouseBtnEvent& ev) override;
+    bool handle(View& view, const MouseBtnEvent& ev) override;
 
 private:
     bool m_checked = false;

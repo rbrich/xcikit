@@ -179,10 +179,4 @@ void TextInput::handle(View& view, const CharEvent& ev)
 }
 
 
-void TextInput::handle(View& view, const MouseBtnEvent& ev)
-{
-    Widget::handle(view, ev);
-}
-
-
 }} // namespace xci::widgets

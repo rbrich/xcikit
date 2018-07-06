@@ -85,14 +85,16 @@ bool Button::handle(View& view, const KeyEvent& ev)
 }
 
 
-void Button::handle(View& view, const MouseBtnEvent& ev)
+bool Button::handle(View& view, const MouseBtnEvent& ev)
 {
     if (ev.action == Action::Press && ev.button == MouseButton::Left) {
-        if (m_click_cb && aabb().contains(ev.pos - view.offset())) {
+        if (m_click_cb && contains(ev.pos - view.offset())) {
             m_click_cb(view);
             view.refresh();
+            return true;
         }
     }
+    return false;
 }
 
 

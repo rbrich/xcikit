@@ -46,7 +46,6 @@ public:
     void draw(View& view, State state) override;
     bool handle(View& view, const KeyEvent& ev) override;
     void handle(View& view, const CharEvent& ev) override;
-    void handle(View& view, const MouseBtnEvent& ev) override;
 
 private:
     std::string m_text;

@@ -40,7 +40,7 @@ public:
     void resize(View& view) override;
     void draw(View& view, State state) override;
     bool handle(View& view, const KeyEvent& ev) override;
-    void handle(View& view, const MouseBtnEvent& ev) override;
+    bool handle(View& view, const MouseBtnEvent& ev) override;
 
     using ClickCallback = std::function<void(View&)>;
     void on_click(ClickCallback cb) { m_click_cb = std::move(cb); }

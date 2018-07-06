@@ -175,25 +175,40 @@ void Composite::handle(View& view, const MousePosEvent& ev)
 }
 
 
-void Composite::handle(View& view, const MouseBtnEvent& ev)
+bool Composite::handle(View& view, const MouseBtnEvent& ev)
 {
     view.push_offset(position());
-    bool focus_changed = false;
+    bool handled = false;
     for (auto& child : m_child) {
-        // Switch focus on click
-        if (child->contains(ev.pos - view.offset()) && m_focus.lock() != child) {
-            m_focus = child;
-            focus_changed = true;
-        }
-
         // Propagate the event
-        child->handle(view, ev);
+        handled = child->handle(view, ev);
+        if (handled)
+            break;
     }
-    if (focus_changed) {
+    view.pop_offset();
+    return handled;
+}
+
+
+bool Composite::click_focus(View& view, const MouseBtnEvent& ev)
+{
+    view.push_offset(position());
+    bool handled = false;
+    auto original_focus = std::move(m_focus);
+    for (auto& child : m_child) {
+        // Propagate the event
+        if (child->click_focus(view, ev)) {
+            m_focus = child;
+            handled = true;
+            break;
+        }
+    }
+    if (original_focus.lock() != m_focus.lock()) {
         resize(view);
         view.refresh();
     }
     view.pop_offset();
+    return handled;
 }
 
 
@@ -201,14 +216,15 @@ void Composite::partial_dump(std::ostream& stream, const std::string& nl_prefix)
 {
     Widget::partial_dump(stream, nl_prefix);
     for (auto& child : m_child) {
+        bool focus = (m_focus.lock() == child);
         stream << std::endl << nl_prefix;
         if (child != m_child.back()) {
             // intermediate child
-            stream << "  ├ ";
+            stream << " " << (focus? ">" : " ") << "├ ";
             child->partial_dump(stream, nl_prefix + "  │ ");
         } else {
             // last child
-            stream << "  └ ";
+            stream << " " << (focus? ">" : " ") << "└ ";
             child->partial_dump(stream, nl_prefix + "    ");
         }
     }
@@ -257,6 +273,7 @@ Bind::Bind(graphics::Window& window, Widget& root)
     window.set_mouse_button_callback([&](View& v, const MouseBtnEvent& e) {
         if (m_mbtn_cb)
             m_mbtn_cb(v, e);
+        root.click_focus(v, e);
         root.handle(v, e);
     });
 }
