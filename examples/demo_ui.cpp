@@ -23,6 +23,7 @@
 #include <random>
 #include <cstdlib>
 
+using namespace xci::text;
 using namespace xci::graphics;
 using namespace xci::widgets;
 using namespace xci::util;
@@ -38,7 +39,7 @@ public:
         m_text.resize_draw(view, position());
     }
 
-    void handle(View& view, const MousePosEvent& ev) override {
+    void mouse_pos_event(View& view, const MousePosEvent& ev) override {
         m_text.set_fixed_string("Mouse: " +
                                 format("({}, {})", ev.pos.x, ev.pos.y));
         view.refresh();

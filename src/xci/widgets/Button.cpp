@@ -24,7 +24,7 @@ using namespace xci::text;
 
 
 Button::Button(const std::string &string)
-    : m_bg_rect(Color(10, 20, 40), Color(180, 180, 180))
+    : m_bg_rect(Color(10, 20, 40), theme().color(ColorId::Default))
 {
     set_focusable(true);
     m_layout.set_default_font(&theme().font());
@@ -57,7 +57,6 @@ void Button::resize(View& view)
     rect.x = 0;
     rect.y = 0;
     m_bg_rect.clear();
-    m_bg_rect.set_outline_color(Color(180, 180, 180));
     m_bg_rect.add_rectangle(rect, m_outline_thickness);
 }
 
@@ -65,34 +64,42 @@ void Button::resize(View& view)
 void Button::draw(View& view, State state)
 {
     auto rect = m_layout.bbox();
-    if (state.focused)
-        m_bg_rect.set_outline_color(Color::Yellow());
+    if (state.focused) {
+        m_bg_rect.set_outline_color(theme().color(ColorId::Focus));
+    } else if (last_hover() == LastHover::Inside) {
+        m_bg_rect.set_outline_color(theme().color(ColorId::Hover));
+    } else {
+        m_bg_rect.set_outline_color(theme().color(ColorId::Default));
+    }
     m_bg_rect.draw(view, position());
     m_layout.draw(view, position() + Vec2f{m_padding - rect.x, m_padding - rect.y});
 }
 
 
-bool Button::handle(View& view, const KeyEvent& ev)
+bool Button::key_event(View& view, const KeyEvent& ev)
 {
     if (ev.action == Action::Press && ev.key == Key::Enter) {
-        if (m_click_cb) {
-            m_click_cb(view);
-            view.refresh();
-        }
+        do_click(view);
         return true;
     }
     return false;
 }
 
 
-bool Button::handle(View& view, const MouseBtnEvent& ev)
+void Button::mouse_pos_event(View& view, const MousePosEvent& ev)
 {
-    if (ev.action == Action::Press && ev.button == MouseButton::Left) {
-        if (m_click_cb && contains(ev.pos - view.offset())) {
-            m_click_cb(view);
-            view.refresh();
-            return true;
-        }
+    do_hover(view, contains(ev.pos - view.offset()));
+}
+
+
+bool Button::mouse_button_event(View& view, const MouseBtnEvent& ev)
+{
+    if (ev.action == Action::Press &&
+        ev.button == MouseButton::Left &&
+        contains(ev.pos - view.offset()))
+    {
+        do_click(view);
+        return true;
     }
     return false;
 }

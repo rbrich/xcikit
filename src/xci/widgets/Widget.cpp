@@ -21,9 +21,7 @@
 namespace xci {
 namespace widgets {
 
-using graphics::View;
-using graphics::Key;
-using graphics::Action;
+using namespace xci::graphics;
 using namespace util::log;
 
 
@@ -71,11 +69,11 @@ void Composite::draw(View& view, State state)
 }
 
 
-bool Composite::handle(View& view, const KeyEvent& ev)
+bool Composite::key_event(View& view, const KeyEvent& ev)
 {
     // Propagate the event to the focused child
     if (!m_focus.expired())
-        if (m_focus.lock()->handle(view, ev))
+        if (m_focus.lock()->key_event(view, ev))
             return true;
 
     // Not handled
@@ -83,29 +81,29 @@ bool Composite::handle(View& view, const KeyEvent& ev)
 }
 
 
-void Composite::handle(View& view, const CharEvent& ev)
+void Composite::char_event(View& view, const CharEvent& ev)
 {
     if (!m_focus.expired())
-        m_focus.lock()->handle(view, ev);
+        m_focus.lock()->char_event(view, ev);
 }
 
 
-void Composite::handle(View& view, const MousePosEvent& ev)
+void Composite::mouse_pos_event(View& view, const MousePosEvent& ev)
 {
     view.push_offset(position());
     for (auto& child : m_child)
-        child->handle(view, ev);
+        child->mouse_pos_event(view, ev);
     view.pop_offset();
 }
 
 
-bool Composite::handle(View& view, const MouseBtnEvent& ev)
+bool Composite::mouse_button_event(View& view, const MouseBtnEvent& ev)
 {
     view.push_offset(position());
     bool handled = false;
     for (auto& child : m_child) {
         // Propagate the event
-        handled = child->handle(view, ev);
+        handled = child->mouse_button_event(view, ev);
         if (handled)
             break;
     }
@@ -220,6 +218,28 @@ void Composite::partial_dump(std::ostream& stream, const std::string& nl_prefix)
 }
 
 
+void Clickable::do_hover(View& view, bool inside)
+{
+    if ((inside && m_last_hover == LastHover::Inside)
+    || (!inside && m_last_hover == LastHover::Outside))
+        return;
+    if (m_hover_cb) {
+        m_hover_cb(view, inside);
+        view.refresh();
+    }
+    m_last_hover = inside ? LastHover::Inside : LastHover::Outside;
+}
+
+
+void Clickable::do_click(View& view)
+{
+    if (m_click_cb) {
+        m_click_cb(view);
+        view.refresh();
+    }
+}
+
+
 Bind::Bind(graphics::Window& window, Widget& root)
     : m_window(window)
 {
@@ -241,7 +261,7 @@ Bind::Bind(graphics::Window& window, Widget& root)
     window.set_key_callback([&](View& v, const KeyEvent& e) {
         if (m_key_cb)
             m_key_cb(v, e);
-        if (root.handle(v, e))
+        if (root.key_event(v, e))
             return;
         // Switch focus with Tab, Shift+Tab
         if (e.action == Action::Press && e.key == Key::Tab) {
@@ -259,14 +279,14 @@ Bind::Bind(graphics::Window& window, Widget& root)
     window.set_char_callback([&](View& v, const CharEvent& e) {
         if (m_char_cb)
             m_char_cb(v, e);
-        root.handle(v, e);
+        root.char_event(v, e);
     });
 
     m_mpos_cb = window.get_mouse_position_callback();
     window.set_mouse_position_callback([&](View& v, const MousePosEvent& e) {
         if (m_mpos_cb)
             m_mpos_cb(v, e);
-        root.handle(v, e);
+        root.mouse_pos_event(v, e);
     });
 
     m_mbtn_cb = window.get_mouse_button_callback();
@@ -274,7 +294,7 @@ Bind::Bind(graphics::Window& window, Widget& root)
         if (m_mbtn_cb)
             m_mbtn_cb(v, e);
         root.click_focus(v, e.pos);
-        root.handle(v, e);
+        root.mouse_button_event(v, e);
     });
 }
 

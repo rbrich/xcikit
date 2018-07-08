@@ -78,10 +78,10 @@ public:
 
     virtual void resize(View& view) {}
     virtual void draw(View& view, State state) = 0;
-    virtual bool handle(View& view, const KeyEvent& ev) { return false; }
-    virtual void handle(View& view, const CharEvent& ev) {}
-    virtual void handle(View& view, const MousePosEvent& ev) {}
-    virtual bool handle(View& view, const MouseBtnEvent& ev) { return false; }
+    virtual bool key_event(View& view, const KeyEvent& ev) { return false; }
+    virtual void char_event(View& view, const CharEvent& ev) {}
+    virtual void mouse_pos_event(View& view, const MousePosEvent& ev) {}
+    virtual bool mouse_button_event(View& view, const MouseBtnEvent& ev) { return false; }
     virtual bool click_focus(View& view, Vec2f pos) { return is_click_focusable() && contains(pos); }
     virtual bool tab_focus(View& view, int& step) { return is_tab_focusable(); }
 
@@ -121,10 +121,10 @@ public:
     bool contains(const Vec2f& point) const override;
     void resize(View& view) override;
     void draw(View& view, State state) override;
-    bool handle(View& view, const KeyEvent& ev) override;
-    void handle(View& view, const CharEvent& ev) override;
-    void handle(View& view, const MousePosEvent& ev) override;
-    bool handle(View& view, const MouseBtnEvent& ev) override;
+    bool key_event(View& view, const KeyEvent& ev) override;
+    void char_event(View& view, const CharEvent& ev) override;
+    void mouse_pos_event(View& view, const MousePosEvent& ev) override;
+    bool mouse_button_event(View& view, const MouseBtnEvent& ev) override;
     bool click_focus(View& view, Vec2f pos) override;
     bool tab_focus(View& view, int& step) override;
 
@@ -138,6 +138,43 @@ private:
     WidgetRef m_focus;  // a child with keyboard focus
 };
 
+
+// Clickable widget mixin
+class Clickable {
+public:
+    using HoverCallback = std::function<void(View&, bool inside)>;
+    void on_hover(HoverCallback cb) { m_hover_cb = std::move(cb); }
+
+    using ClickCallback = std::function<void(View&)>;
+    void on_click(ClickCallback cb) { m_click_cb = std::move(cb); }
+
+protected:
+    // Call from mouse_pos_event like this:
+    //
+    //     do_hover(view, contains(ev.pos - view.offset()));
+    void do_hover(View& view, bool inside);
+
+    // Call from mouse_button_event like this:
+    //
+    //     if (ev.action == Action::Press && ev.button == MouseButton::Left
+    //     && contains(ev.pos - view.offset())) {
+    //         do_click(view);
+    //         return true;
+    //     }
+    void do_click(View& view);
+
+    enum class LastHover {
+        None,
+        Inside,
+        Outside,
+    };
+    LastHover last_hover() const { return m_last_hover; }
+
+private:
+    HoverCallback m_hover_cb;
+    ClickCallback m_click_cb;
+    LastHover m_last_hover {LastHover::None};
+};
 
 // Connects window to root widget through event callbacks
 

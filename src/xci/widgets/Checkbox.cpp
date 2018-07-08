@@ -26,6 +26,15 @@ Checkbox::Checkbox()
 {
     set_focusable(true);
     set_icon(IconId::CheckBoxUnchecked);
+    on_click([this](View& view) {
+        set_checked(!checked());
+        resize(view);
+    });
+    on_hover([this](View& view, bool inside) {
+        set_icon_color(inside ?
+                       theme().color(ColorId::Hover) :
+                       theme().color(ColorId::Default));
+    });
 }
 
 
@@ -37,31 +46,28 @@ void Checkbox::set_checked(bool checked)
 }
 
 
-bool Checkbox::handle(View& view, const KeyEvent& ev)
+bool Checkbox::key_event(View& view, const KeyEvent& ev)
 {
     if (ev.action == Action::Press && ev.key == Key::Enter) {
-        set_checked(!m_checked);
-        resize(view);
-        view.refresh();
-        if (m_change_cb)
-            m_change_cb(view);
+        do_click(view);
         return true;
     }
     return false;
 }
 
 
-bool Checkbox::handle(View& view, const MouseBtnEvent& ev)
+void Checkbox::mouse_pos_event(View& view, const MousePosEvent& ev)
 {
-    if (ev.action == Action::Press && ev.button == MouseButton::Left) {
-        if (contains(ev.pos - view.offset())) {
-            set_checked(!m_checked);
-            resize(view);
-            view.refresh();
-            if (m_change_cb)
-                m_change_cb(view);
-            return true;
-        }
+    do_hover(view, contains(ev.pos - view.offset()));
+}
+
+
+bool Checkbox::mouse_button_event(View& view, const MouseBtnEvent& ev)
+{
+    if (ev.action == Action::Press && ev.button == MouseButton::Left
+        && contains(ev.pos - view.offset())) {
+        do_click(view);
+        return true;
     }
     return false;
 }

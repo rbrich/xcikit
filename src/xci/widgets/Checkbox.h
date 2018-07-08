@@ -28,22 +28,19 @@ using graphics::View;
 using graphics::MouseBtnEvent;
 
 
-class Checkbox: public widgets::Icon {
+class Checkbox: public Icon, public Clickable {
 public:
     Checkbox();
 
     void set_checked(bool checked);
     bool checked() const { return m_checked; }
 
-    using ChangeCallback = std::function<void(View&)>;
-    void on_change(ChangeCallback cb) { m_change_cb = std::move(cb); }
-
-    bool handle(View& view, const KeyEvent& ev) override;
-    bool handle(View& view, const MouseBtnEvent& ev) override;
+    bool key_event(View& view, const KeyEvent& ev) override;
+    void mouse_pos_event(View& view, const MousePosEvent& ev) override;
+    bool mouse_button_event(View& view, const MouseBtnEvent& ev) override;
 
 private:
     bool m_checked = false;
-    ChangeCallback m_change_cb;
 };
 
 

@@ -50,7 +50,7 @@ void Form::add_input(const std::string& label, bool& checkbox)
     auto w_checkbox = std::make_shared<Checkbox>();
     w_checkbox->set_checked(checkbox);
     auto* rawptr = w_checkbox.get();
-    w_checkbox->on_change([rawptr, &checkbox](View&) {
+    w_checkbox->on_click([rawptr, &checkbox](View&) {
         checkbox = rawptr->checked();
     });
     add(w_checkbox);

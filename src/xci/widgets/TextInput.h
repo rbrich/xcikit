@@ -24,7 +24,7 @@ namespace xci {
 namespace widgets {
 
 
-class TextInput: public Widget {
+class TextInput: public Widget, public Clickable {
 public:
     explicit TextInput(const std::string& string);
 
@@ -44,8 +44,10 @@ public:
 
     void resize(View& view) override;
     void draw(View& view, State state) override;
-    bool handle(View& view, const KeyEvent& ev) override;
-    void handle(View& view, const CharEvent& ev) override;
+    bool key_event(View& view, const KeyEvent& ev) override;
+    void char_event(View& view, const CharEvent& ev) override;
+    void mouse_pos_event(View& view, const MousePosEvent& ev) override;
+    bool mouse_button_event(View& view, const MouseBtnEvent& ev) override;
 
 private:
     std::string m_text;

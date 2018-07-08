@@ -22,14 +22,13 @@
 namespace xci {
 namespace widgets {
 
-using namespace xci::text;
-
 
 class Icon: public Widget {
 public:
     void set_icon(IconId icon_id);
     void set_text(const std::string& text);
     void set_font_size(float size);
+    void set_icon_color(const graphics::Color& color) { m_icon_color = color; }
     void set_color(const graphics::Color& color);
 
     void resize(View& view) override;
@@ -37,8 +36,9 @@ public:
 
 private:
     IconId m_icon_id = IconId::None;
+    graphics::Color m_icon_color = theme().color(ColorId::Default);
     std::string m_text;
-    Layout m_layout;
+    text::Layout m_layout;
     bool m_needs_refresh = false;
 };
 

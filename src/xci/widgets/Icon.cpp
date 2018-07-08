@@ -21,6 +21,7 @@ namespace widgets {
 
 using xci::util::to_utf8;
 using namespace xci::graphics;
+using namespace xci::text;
 
 
 void Icon::set_icon(IconId icon_id)
@@ -75,8 +76,8 @@ void Icon::resize(View& view)
 
 void Icon::draw(View& view, State state)
 {
-    m_layout.get_span("icon")->adjust_style([&state](Style& s) {
-        s.set_color(state.focused ? Color::Yellow() : Color::White());
+    m_layout.get_span("icon")->adjust_style([this, &state](Style& s) {
+        s.set_color(state.focused ? theme().color(ColorId::Focus) : m_icon_color);
     });
     auto rect = m_layout.bbox();
     m_layout.draw(view, position() - rect.top_left());

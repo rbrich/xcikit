@@ -26,7 +26,7 @@ namespace xci {
 namespace widgets {
 
 
-class Button: public Widget {
+class Button: public Widget, public Clickable {
 public:
     explicit Button(const std::string &string);
 
@@ -39,18 +39,15 @@ public:
 
     void resize(View& view) override;
     void draw(View& view, State state) override;
-    bool handle(View& view, const KeyEvent& ev) override;
-    bool handle(View& view, const MouseBtnEvent& ev) override;
-
-    using ClickCallback = std::function<void(View&)>;
-    void on_click(ClickCallback cb) { m_click_cb = std::move(cb); }
+    bool key_event(View& view, const KeyEvent& ev) override;
+    void mouse_pos_event(View& view, const MousePosEvent& ev) override;
+    bool mouse_button_event(View& view, const MouseBtnEvent& ev) override;
 
 private:
     graphics::Shape m_bg_rect;
     text::Layout m_layout;
     float m_padding = 0.02f;
     float m_outline_thickness = 0.005f;
-    ClickCallback m_click_cb;
 };
 
 

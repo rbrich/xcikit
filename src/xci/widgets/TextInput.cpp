@@ -27,7 +27,7 @@ using namespace xci::util;
 
 TextInput::TextInput(const std::string& string)
     : m_text(string),
-      m_bg_rect(Color(10, 20, 40), Color(180, 180, 180)),
+      m_bg_rect(Color(10, 20, 40), theme().color(ColorId::Default)),
       m_cursor_shape(Color::Yellow(), Color::Transparent()),
       m_cursor(string.size())
 {
@@ -92,6 +92,11 @@ void TextInput::draw(View& view, State state)
     auto rect = m_layout.bbox();
     auto pos = position() + Vec2f{m_padding - rect.x - m_content_pos,
                                   m_padding - rect.y};
+    if (last_hover() == LastHover::Inside) {
+        m_bg_rect.set_outline_color(theme().color(ColorId::Hover));
+    } else {
+        m_bg_rect.set_outline_color(theme().color(ColorId::Default));
+    }
     m_bg_rect.draw(view, position());
     view.push_crop(aabb().enlarged(-m_outline_thickness));
     m_layout.draw(view, pos);
@@ -101,7 +106,7 @@ void TextInput::draw(View& view, State state)
 }
 
 
-bool TextInput::handle(View& view, const KeyEvent& ev)
+bool TextInput::key_event(View& view, const KeyEvent& ev)
 {
     // Ignore key release, handle only press and repeat
     if (ev.action == Action::Release)
@@ -167,7 +172,7 @@ bool TextInput::handle(View& view, const KeyEvent& ev)
 }
 
 
-void TextInput::handle(View& view, const CharEvent& ev)
+void TextInput::char_event(View& view, const CharEvent& ev)
 {
     auto ch = to_utf8(ev.code_point);
     m_text.insert(m_cursor, ch);
@@ -176,6 +181,25 @@ void TextInput::handle(View& view, const CharEvent& ev)
     view.refresh();
     if (m_change_cb)
         m_change_cb(view);
+}
+
+
+void TextInput::mouse_pos_event(View& view, const MousePosEvent& ev)
+{
+    do_hover(view, contains(ev.pos - view.offset()));
+}
+
+
+bool TextInput::mouse_button_event(View& view, const MouseBtnEvent& ev)
+{
+    if (ev.action == Action::Press &&
+        ev.button == MouseButton::Left &&
+        contains(ev.pos - view.offset()))
+    {
+        do_click(view);
+        return true;
+    }
+    return false;
 }
 
 
