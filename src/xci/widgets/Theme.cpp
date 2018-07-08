@@ -19,6 +19,32 @@ namespace xci {
 namespace widgets {
 
 
+#define TRY(stmt)  do { auto res = stmt; if (!res) return false; } while(0)
+
+bool Theme::load_default_theme()
+{
+    Theme& theme = Theme::default_theme();
+
+    // Base font
+    TRY(theme.load_font(XCI_SHARE_DIR "/fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0));
+
+    // Material Icons
+    TRY(theme.load_icon_font(XCI_SHARE_DIR "/fonts/MaterialIcons/MaterialIcons-Regular.woff", 0));
+    theme.set_icon_codepoint(IconId::None, L' ');
+    theme.set_icon_codepoint(IconId::CheckBoxUnchecked, L'\ue835');
+    theme.set_icon_codepoint(IconId::CheckBoxChecked, L'\ue834');
+    theme.set_icon_codepoint(IconId::RadioButtonUnchecked, L'\ue836');
+    theme.set_icon_codepoint(IconId::RadioButtonChecked, L'\ue837');
+
+    // Colors
+    theme.set_color(ColorId::Default, {180, 180, 180});
+    theme.set_color(ColorId::Hover, graphics::Color::White());
+    theme.set_color(ColorId::Focus, graphics::Color::Yellow());
+
+    return true;
+}
+
+
 Theme& Theme::default_theme()
 {
     static Theme theme;
@@ -44,37 +70,27 @@ bool Theme::load_icon_font(const char* file_path, int face_index)
 }
 
 
-void Theme::set_icon_codepoint(IconId icon, CodePoint codepoint)
+void Theme::set_icon_codepoint(IconId icon_id, text::CodePoint codepoint)
 {
-    m_icon_map[(size_t) icon] = codepoint;
+    m_icon_map[static_cast<size_t>(icon_id)] = codepoint;
 }
 
 
-CodePoint Theme::icon_codepoint(IconId icon_id)
+text::CodePoint Theme::icon_codepoint(IconId icon_id)
 {
-    if (icon_id == IconId::None)
-        return ' ';
-    return m_icon_map[(size_t) icon_id];
+    return m_icon_map[static_cast<size_t>(icon_id)];
 }
 
 
-#define TRY(stmt)  do { auto res = stmt; if (!res) return false; } while(0)
-
-bool Theme::load_default_theme()
+void Theme::set_color(ColorId color_id, graphics::Color color)
 {
-    Theme& theme = Theme::default_theme();
+    m_color_map[static_cast<size_t>(color_id)] = color;
+}
 
-    // Base font
-    TRY(theme.load_font(XCI_SHARE_DIR "/fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0));
 
-    // Material Icons
-    TRY(theme.load_icon_font(XCI_SHARE_DIR "/fonts/MaterialIcons/MaterialIcons-Regular.woff", 0));
-    theme.set_icon_codepoint(IconId::CheckBoxUnchecked, L'\ue835');
-    theme.set_icon_codepoint(IconId::CheckBoxChecked, L'\ue834');
-    theme.set_icon_codepoint(IconId::RadioButtonUnchecked, L'\ue836');
-    theme.set_icon_codepoint(IconId::RadioButtonChecked, L'\ue837');
-
-    return true;
+graphics::Color Theme::color(ColorId color_id)
+{
+    return m_color_map[static_cast<size_t>(color_id)];
 }
 
 
