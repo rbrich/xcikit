@@ -40,69 +40,7 @@ void Widget::partial_dump(std::ostream& stream, const std::string& nl_prefix)
 
 void Composite::add(WidgetPtr child)
 {
-    if (m_focus.expired())
-        m_focus = child;
     m_child.push_back(std::move(child));
-}
-
-
-void Composite::focus_next()
-{
-    // Check if there is any focusable widget
-    if (m_child.empty())
-        return;
-
-    // Point iterator to expected position (after currently focused widget)
-    auto iter = m_child.begin();
-    if (!m_focus.expired()) {
-        iter = std::find(m_child.begin(), m_child.end(), m_focus.lock());
-        if (iter != m_child.end()) {
-            ++iter;
-            if (iter == m_child.end())
-                iter = m_child.begin();
-        }
-    }
-
-    // Find first widget which can take focus
-    while (!(*iter)->is_tab_focusable()) {
-        // try next
-        ++iter;
-        if (iter == m_child.end())
-            iter = m_child.begin();
-    }
-
-    m_focus = *iter;
-}
-
-
-void Composite::focus_previous()
-{
-    // Check if there is any focusable widget
-    if (m_child.empty())
-        return;
-
-    // Point iterator to expected position (before currently focused widget)
-    auto iter = m_child.begin();
-    if (!m_focus.expired()) {
-        iter = std::find(m_child.begin(), m_child.end(), m_focus.lock());
-        if (iter != m_child.end()) {
-            if (iter == m_child.begin())
-                iter = m_child.begin() + (m_child.size() - 1);
-            else
-                --iter;
-        }
-    }
-
-    // Find first widget which can take focus
-    while (!(*iter)->is_tab_focusable()) {
-        // try previous
-        if (iter == m_child.begin())
-            iter = m_child.begin() + (m_child.size() - 1);
-        else
-            --iter;
-    }
-
-    m_focus = *iter;
 }
 
 
@@ -140,20 +78,6 @@ bool Composite::handle(View& view, const KeyEvent& ev)
         if (m_focus.lock()->handle(view, ev))
             return true;
 
-    // Switch focus with Tab, Shift+Tab
-    if (ev.action == Action::Press && ev.key == Key::Tab && !m_child.empty()) {
-        if (!ev.mod.shift) {
-            // tab
-            focus_next();
-        } else {
-            // shift + tab
-            focus_previous();
-        }
-        resize(view);
-        view.refresh();
-        return true;
-    }
-
     // Not handled
     return false;
 }
@@ -190,14 +114,13 @@ bool Composite::handle(View& view, const MouseBtnEvent& ev)
 }
 
 
-bool Composite::click_focus(View& view, const MouseBtnEvent& ev)
+bool Composite::click_focus(View& view, Vec2f pos)
 {
-    view.push_offset(position());
     bool handled = false;
     auto original_focus = std::move(m_focus);
     for (auto& child : m_child) {
         // Propagate the event
-        if (child->click_focus(view, ev)) {
+        if (child->click_focus(view, pos - position())) {
             m_focus = child;
             handled = true;
             break;
@@ -207,8 +130,74 @@ bool Composite::click_focus(View& view, const MouseBtnEvent& ev)
         resize(view);
         view.refresh();
     }
-    view.pop_offset();
     return handled;
+}
+
+
+bool Composite::tab_focus(View& view, int& step)
+{
+    // No children at all - early exit (this is just an optimization)
+    if (m_child.empty())
+        return false;
+
+    // No focus child - change to first or last focusable child
+    if (m_focus.expired()) {
+        if (step >= 0) {
+            auto it = std::find_if(m_child.begin(), m_child.end(), [&view, &step](auto& w) {
+                return w->tab_focus(view, step);
+            });
+            if (it == m_child.end())
+                return false;
+            m_focus = *it;
+        } else {
+            auto it = std::find_if(m_child.rbegin(), m_child.rend(), [&view, &step](auto& w) {
+                return w->tab_focus(view, step);
+            });
+            if (it == m_child.rend())
+                return false;
+            m_focus = *it;
+        }
+        resize(view);
+        view.refresh();
+        return true;
+    }
+
+    // Current focus child - propagate event, give it chance to consume the step
+    bool res = m_focus.lock()->tab_focus(view, step);
+    if (res && step == 0)
+        return true;
+
+    // Step to next focusable child
+    if (step > 0) {
+        auto it = std::find(m_child.begin(), m_child.end(), m_focus.lock());
+        assert(it != m_child.end());
+        it = std::find_if(it+1, m_child.end(), [&view, &step](auto& w) {
+            return w->tab_focus(view, step);
+        });
+        if (it != m_child.end()) {
+            m_focus = *it;
+            --step;
+        } else {
+            m_focus.reset();
+        }
+    }
+    if (step < 0)  {
+        auto it = std::find(m_child.rbegin(), m_child.rend(), m_focus.lock());
+        assert(it != m_child.rend());
+        it = std::find_if(it+1, m_child.rend(), [&view, &step](auto& w) {
+            return w->tab_focus(view, step);
+        });
+        if (it != m_child.rend()) {
+            m_focus = *it;
+            ++step;
+        } else {
+            m_focus.reset();
+        }
+    }
+
+    resize(view);
+    view.refresh();
+    return !m_focus.expired();
 }
 
 
@@ -252,7 +241,18 @@ Bind::Bind(graphics::Window& window, Widget& root)
     window.set_key_callback([&](View& v, const KeyEvent& e) {
         if (m_key_cb)
             m_key_cb(v, e);
-        root.handle(v, e);
+        if (root.handle(v, e))
+            return;
+        // Switch focus with Tab, Shift+Tab
+        if (e.action == Action::Press && e.key == Key::Tab) {
+            int step = e.mod.shift ? -1 : 1;
+            // When root widget returns false, it means that either
+            // - there is no focusable widget, or
+            // - the focus cycled to initial state (nothing is focused).
+            // In the second case, call tab_focus again to skip
+            // the initial state when cycling with Tab key.
+            (root.tab_focus(v, step) || root.tab_focus(v, step));
+        }
     });
 
     m_char_cb = window.get_char_callback();
@@ -273,7 +273,7 @@ Bind::Bind(graphics::Window& window, Widget& root)
     window.set_mouse_button_callback([&](View& v, const MouseBtnEvent& e) {
         if (m_mbtn_cb)
             m_mbtn_cb(v, e);
-        root.click_focus(v, e);
+        root.click_focus(v, e.pos);
         root.handle(v, e);
     });
 }

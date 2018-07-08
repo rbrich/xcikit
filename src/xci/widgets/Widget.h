@@ -82,7 +82,8 @@ public:
     virtual void handle(View& view, const CharEvent& ev) {}
     virtual void handle(View& view, const MousePosEvent& ev) {}
     virtual bool handle(View& view, const MouseBtnEvent& ev) { return false; }
-    virtual bool click_focus(View& view, const MouseBtnEvent& ev) { return is_click_focusable() && contains(ev.pos - view.offset()); }
+    virtual bool click_focus(View& view, Vec2f pos) { return is_click_focusable() && contains(pos); }
+    virtual bool tab_focus(View& view, int& step) { return is_tab_focusable(); }
 
     // Debug dump
     void dump(std::ostream& stream) { partial_dump(stream, ""); stream << std::endl; }
@@ -115,8 +116,6 @@ public:
 
     void set_focus(WidgetRef child) { m_focus = std::move(child); }
     WidgetPtr focus() const { return m_focus.lock(); }
-    void focus_next();
-    void focus_previous();
 
     // impl Widget
     bool contains(const Vec2f& point) const override;
@@ -126,7 +125,8 @@ public:
     void handle(View& view, const CharEvent& ev) override;
     void handle(View& view, const MousePosEvent& ev) override;
     bool handle(View& view, const MouseBtnEvent& ev) override;
-    bool click_focus(View& view, const MouseBtnEvent& ev) override;
+    bool click_focus(View& view, Vec2f pos) override;
+    bool tab_focus(View& view, int& step) override;
 
     // Debug dump
     void partial_dump(std::ostream& stream, const std::string& nl_prefix) override;
