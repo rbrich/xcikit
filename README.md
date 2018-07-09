@@ -1,17 +1,17 @@
 XCI Toolkit
 ===========
-Render Text & User Interface
+Toolkit for rendering text and simple user interface with OpenGL.
 
 ![Font Texture](http://xci.cz/toolkit/img/xci-text.png)
 
 *The text on the right side was rendered from the texture on the left side*
 
 
-Why?
-----
+About
+-----
 
-Text and UI rendering seems to be somewhat lacking in many frameworks
-for 2D/3D graphics. I basically want to be able to:
+Text and UI rendering seems to be somewhat lacking in many graphics frameworks
+for 2D/3D games. I basically want to be able to:
 
 - render a few paragraphs of text
 - style some parts of the text differently (colored highlights)
@@ -34,39 +34,47 @@ The library should integrate well with:
 Research 
 --------
 
-OpenGL GUI Toolkits:
+OpenGL GUI toolkits:
 
 - [CEGUI](http://cegui.org.uk/)
 - [Dear ImGui](https://github.com/ocornut/imgui) - focuses on debug UIs
 - [Nuklear](https://github.com/vurtun/nuklear) - C
 - [Turbo Badger](https://github.com/fruxo/turbobadger)
 
+General GUI toolkits:
+
+- [Qt](https://www.qt.io/)
+- [GTK+](https://developer.gnome.org/gtk3/stable/index.html)
 
 Plan
 ----
 
 Long-term goal:
 
-- advanced text rendering,
-- not-so-advanced UI widgets,
+- advanced text rendering
+- not-so-advanced UI widgets
 - basic UI logic
 
 These goals should be achieved by separate libraries:
 
-- `xci-widgets`
-- `xci-text`
+- `xci-util`
 - `xci-graphics`
+- `xci-text`
+- `xci-widgets`
 
 The top-level `xci-widgets` provides UI components with event processing.
 It uses text layout engine `xci-text`, which can also be used separately.
 
 All rendering goes through `xci-graphics` library, which provides
 adapters for different frameworks and APIs, including low-level OpenGL.
-This can also be used separately when neither UI nor text rendering is needed.
+Graphics lib can also be used separately when neither UI nor text rendering is needed.
+
+All of the above use `xci-util`, which contains miscellaneous utilities,
+This can also be used separately. 
 
 Technologies:
 
-- C++11
+- C++14
 - CMake
 - Python bindings - Cython?
 
@@ -74,12 +82,12 @@ Technologies:
 Roadmap
 -------
 
-- [x] Basic text rendering
-- [x] Text layout with styled spans
-- [x] Raw OpenGL
-- [x] Draw a button
-- [ ] Hover, click events
-- [ ] ...
+- [x] Basic libraries as described above
+- [ ] More widgets: context menu, combo box
+- [ ] Floating windows
+- [ ] Integrate with Panda3D
+- [ ] Screensaver support
+- [ ] New roadmap...
 
 
 Build
