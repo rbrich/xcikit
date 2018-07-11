@@ -14,21 +14,46 @@
 // limitations under the License.
 
 #include "Term.h"
+#include "log.h"
 #include <xci/config.h>
 
 #include <unistd.h>
 
 #ifdef XCI_WITH_TINFO
-#include <ncursesw/term.h>
+#include <curses.h>
+#include <term.h>
 #endif
 
 namespace xci {
 namespace util {
 
+using namespace log;
 
-bool Term::is_tty() const
+
+void Term::initialize(int fd)
 {
-    return isatty(m_fd) == 1;
+    // Do not even try if not TTY (ie. pipes)
+    if (isatty(fd) != 1)
+        return;
+    // Setup terminfo
+    int err = 0;
+    if (setupterm(nullptr, fd, &err) != OK)
+        return;
+    // All ok
+    m_fd = fd;
+}
+
+
+Term Term::red() const { return Term(*this, is_initialized() ? tparm(set_a_foreground, COLOR_RED) : ""); }
+Term Term::on_blue() const { return Term(*this, is_initialized() ? tparm(set_a_background, COLOR_BLUE) : ""); }
+Term Term::bold() const { return Term(*this, is_initialized() ? enter_bold_mode : ""); }
+Term Term::normal() const { return Term(*this, is_initialized() ? exit_attribute_mode : ""); }
+
+
+std::ostream& operator<<(std::ostream& os, const Term& term)
+{
+    os << term.m_seq;
+    return os;
 }
 
 

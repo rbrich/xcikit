@@ -23,7 +23,8 @@ int main()
 {
     Term t;
 
-    cout << "is_tty: " << t.is_tty() << endl;
+    cout << (t.is_initialized() ? "terminal initialized" : "terminal not supported") << endl;
+    cout << t.bold().red().on_blue() << "RED" << t.normal() << "normal" << endl;
 
     return 0;
 }

@@ -16,18 +16,45 @@
 #ifndef XCI_UTIL_TERM_H
 #define XCI_UTIL_TERM_H
 
+#include <string>
+#include <ostream>
+
 namespace xci {
 namespace util {
 
+
 class Term {
 public:
-    Term() = default;
-    explicit Term(int fd): m_fd(fd) {}
+    Term() { initialize(1 /* stdout */); }
+    explicit Term(int fd) { initialize(fd); }
 
-    bool is_tty() const;
+    // Initialize the terminal
+    void initialize(int fd);
+    bool is_initialized() const { return m_fd != -1; }
+
+    // Following methods are appending the capability codes
+    // to a copy of Term instance, which can then be send to stream
+
+    // foreground
+    Term red() const;
+
+    // background
+    Term on_blue() const;
+
+    // mode
+    Term bold() const;
+    Term normal() const;  // reset all attributes
+
+    // Output cached seq
+    friend std::ostream& operator<<(std::ostream& os, const Term& term);
 
 private:
-    int m_fd = 1;  // stdout
+    // Copy Term and append seq to new instance
+    Term(const Term& term, const char* seq) : m_fd(term.m_fd), m_seq(term.m_seq + seq) {}
+
+private:
+    int m_fd = -1;  // terminal attached to this FD
+    std::string m_seq;  // cached capability sequences
 };
 
 }} // namespace xci::util
