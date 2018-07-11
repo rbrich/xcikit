@@ -15,6 +15,7 @@
 
 #include "Shape.h"
 #include "Renderer.h"
+#include <xci/config.h>
 #include <xci/util/log.h>
 
 #ifdef XCI_EMBED_SHADERS

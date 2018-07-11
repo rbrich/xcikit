@@ -39,6 +39,6 @@ utf8_prev(std::string::const_reverse_iterator pos);
 
 int utf8_length(const std::string& str);
 
-}} // namespace xci::log
+}} // namespace xci::util
 
 #endif // XCI_UTIL_STRING_H

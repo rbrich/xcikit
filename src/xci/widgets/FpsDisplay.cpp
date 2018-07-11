@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "FpsDisplay.h"
+#include <xci/config.h>
 #include <xci/util/log.h>
 #include <xci/util/format.h>
 #include <xci/graphics/Renderer.h>

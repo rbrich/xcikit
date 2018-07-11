@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "GlWindow.h"
+#include <xci/config.h>
 #include <xci/util/log.h>
 #include <xci/util/compat.h>
 

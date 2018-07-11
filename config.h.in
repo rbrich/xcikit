@@ -1,0 +1,26 @@
+// config.h.in created on 2018-07-11, part of XCI toolkit
+//
+// This config header is private - it must not be included from public headers.
+
+#ifndef XCI_CONFIG_H
+#define XCI_CONFIG_H
+
+// Select xci-graphics implementation
+#cmakedefine XCI_WITH_OPENGL
+#cmakedefine XCI_WITH_SFML
+#cmakedefine XCI_WITH_PANDA
+
+// Other optional libraries
+#cmakedefine XCI_WITH_TINFO
+
+// Location of share dir (runtime data)
+#cmakedefine XCI_SHARE_DIR "@XCI_SHARE_DIR@"
+
+// Embed shader files into binaries to avoid dependency on share dir
+#cmakedefine XCI_EMBED_SHADERS
+
+// Debugging
+#cmakedefine XCI_DEBUG_MARKUP_DUMP_TOKENS
+#cmakedefine XCI_DEBUG_OPENGL
+
+#endif //XCI_CONFIG_H

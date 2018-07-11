@@ -15,6 +15,8 @@
 
 #include "Window.h"
 
+#include <xci/config.h>
+
 #ifdef XCI_WITH_OPENGL
 #include <xci/graphics/opengl/GlWindow.h>
 #endif

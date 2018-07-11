@@ -15,6 +15,7 @@
 
 #include "Sprites.h"
 
+#include <xci/config.h>
 #include <xci/util/log.h>
 
 #ifdef XCI_EMBED_SHADERS

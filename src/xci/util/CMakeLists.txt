@@ -16,7 +16,9 @@ set(XCI_UTIL_SOURCES
     string.cpp
     string.h
     rtti.cc
-    rtti.h)
+    rtti.h
+    Term.cpp
+    Term.h)
 
 
 # Choose FileWatch implementation
@@ -42,14 +44,16 @@ add_library(${XCI_UTIL_LIBRARY} ${XCI_UTIL_SOURCES})
 target_link_libraries(${XCI_UTIL_LIBRARY}
     Threads::Threads
     ${CMAKE_DL_LIBS})
-target_include_directories(${XCI_UTIL_LIBRARY} PUBLIC
-    $<BUILD_INTERFACE:${XCI_BUILD_INCLUDE_DIRS}>
-    $<INSTALL_INTERFACE:${XCI_INCLUDE_DIRS}>)
+target_include_directories(${XCI_UTIL_LIBRARY} PUBLIC ${XCI_INCLUDE_DIRS})
 target_include_directories(${XCI_UTIL_LIBRARY} PRIVATE ${PEGTL_INCLUDE_DIRS})
-target_compile_definitions(${XCI_UTIL_LIBRARY} PRIVATE
-    XCI_SHARE_DIR="${SHARE_DIR}"
-    XCI_FILEWATCH_HEADER="${FILEWATCH_HEADER}"
-    ${FILEWATCH_IMPL})
+target_compile_definitions(${XCI_UTIL_LIBRARY} PRIVATE ${FILEWATCH_IMPL})
+
+# Link with tinfo if available
+if (XCI_WITH_TINFO)
+    target_link_libraries(${XCI_UTIL_LIBRARY} ${TINFO_LIBRARIES})
+    target_include_directories(${XCI_UTIL_LIBRARY} PRIVATE ${TINFO_INCLUDE_DIRS})
+    target_compile_options(${XCI_UTIL_LIBRARY} PRIVATE ${TINFO_CFLAGS})
+endif()
 
 install(TARGETS ${XCI_UTIL_LIBRARY}
     EXPORT xcikit

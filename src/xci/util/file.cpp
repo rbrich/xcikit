@@ -15,6 +15,8 @@
 
 #include "file.h"
 #include "FileWatch.h"
+#include <xci/config.h>
+
 #include <fstream>
 #include <unistd.h>
 #include <libgen.h>

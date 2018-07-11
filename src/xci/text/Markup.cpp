@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "Markup.h"
+#include <xci/config.h>
 #include <xci/util/log.h>
 #include <xci/util/string.h>
 

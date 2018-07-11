@@ -13,22 +13,21 @@ if (EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
     conan_basic_setup()
 endif()
 
-option(WITH_OPENGL "Link with GLFW and build libxci-graphics-opengl." ON)
-option(WITH_SFML "Link with SFML and build libxci-graphics-sfml." OFF)
-option(WITH_PANDA "Link with Panda3D and build libxci-graphics-panda." OFF)
+option(XCI_WITH_OPENGL "Link with GLFW and build libxci-graphics-opengl." ON)
+option(XCI_WITH_SFML "Link with SFML and build libxci-graphics-sfml." OFF)
+option(XCI_WITH_PANDA "Link with Panda3D and build libxci-graphics-panda." OFF)
+
+set(XCI_SHARE_DIR "${CMAKE_CURRENT_LIST_DIR}/share" CACHE PATH "Location of share dir (runtime data)")
+option(XCI_EMBED_SHADERS "Embed shader files into binaries to avoid dependency on share dir." OFF)
+option(XCI_DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
+option(XCI_DEBUG_OPENGL "Log info about OpenGL calls and errors." OFF)
 
 option(BUILD_SHARED_LIBS "Build shared libs instead of static libs." OFF)
-option(EMBED_SHADERS "Embed shader files into binaries to avoid dependency on share dir." OFF)
+option(BUILD_WITH_ASAN "Build with AddressSanitizer." OFF)
 
-option(DEBUG_ASAN "Build with Clang address sanitizer." OFF)
-option(DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
-option(DEBUG_OPENGL "Log info about OpenGL calls and errors." OFF)
-
-set(SHARE_DIR "${CMAKE_CURRENT_LIST_DIR}/share" CACHE PATH "Location of share dir (runtime data)")
-
-if (DEBUG_ASAN)
+if (BUILD_WITH_ASAN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
-endif (DEBUG_ASAN)
+endif ()
 
 # ------------ #
 # Sources      #
@@ -139,21 +138,21 @@ add_subdirectory(ext/rbp)
 set(RBP_LIBRARY rbp)
 
 # OpenGL
-if (WITH_OPENGL)
+if (XCI_WITH_OPENGL)
     find_package(glfw3 3.2 REQUIRED)
-endif (WITH_OPENGL)
+endif ()
 
 # SFML
-if (WITH_SFML)
+if (XCI_WITH_SFML)
     find_package(SFML 2.4 REQUIRED system window graphics)
-endif (WITH_SFML)
+endif ()
 
 
 # Panda3D
-if (WITH_PANDA)
+if (XCI_WITH_PANDA)
     find_package(PythonLibs 2.7 REQUIRED)
     find_package(Panda3D REQUIRED)
-endif (WITH_PANDA)
+endif ()
 
 # Catch
 find_package(Catch)
@@ -164,18 +163,27 @@ find_package(PEGTL REQUIRED)
 # Doxygen
 find_package(Doxygen)
 
+# TInfo (ncurses)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(TINFO tinfo)
+set(XCI_WITH_TINFO ${TINFO_FOUND})
+
+# Generate config.h
+configure_file(config.h.in include/xci/config.h)
 
 # ------------ #
 # Libraries    #
 # ------------ #
 
-set(XCI_BUILD_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/src)
-set(XCI_INCLUDE_DIRS include)
+set(XCI_INCLUDE_DIRS
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
+    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
 
 set(XCI_UTIL_LIBRARY xci-util)
 add_subdirectory(src/xci/util)
 
-if (WITH_OPENGL)
+if (XCI_WITH_OPENGL)
     set(XCI_GRAPHICS_OPENGL_LIBRARY xci-graphics-opengl)
     add_library(glad OBJECT ext/glad/glad.c ext/glad/glad.h)
     add_library(${XCI_GRAPHICS_OPENGL_LIBRARY}
@@ -183,32 +191,25 @@ if (WITH_OPENGL)
         $<TARGET_OBJECTS:glad>)
     target_include_directories(${XCI_GRAPHICS_OPENGL_LIBRARY}
         PUBLIC
-            $<BUILD_INTERFACE:${XCI_BUILD_INCLUDE_DIRS}>
-            $<INSTALL_INTERFACE:${XCI_INCLUDE_DIRS}>
+            ${XCI_INCLUDE_DIRS}
         PRIVATE
             ext)
     target_link_libraries(${XCI_GRAPHICS_OPENGL_LIBRARY}
         ${XCI_UTIL_LIBRARY}
         ${CMAKE_DL_LIBS}
         glfw)
-    target_compile_definitions(${XCI_GRAPHICS_OPENGL_LIBRARY} PRIVATE
-        XCI_WITH_OPENGL
-        XCI_SHARE_DIR="${SHARE_DIR}"
-        $<$<BOOL:${EMBED_SHADERS}>:XCI_EMBED_SHADERS>
-        $<$<BOOL:${DEBUG_OPENGL}>:XCI_DEBUG_OPENGL>)
     set(XCI_GRAPHICS_LIBRARY ${XCI_GRAPHICS_OPENGL_LIBRARY})
     install(TARGETS ${XCI_GRAPHICS_OPENGL_LIBRARY}
         EXPORT xcikit DESTINATION lib)
-endif (WITH_OPENGL)
+endif ()
 
-if (WITH_SFML)
+if (XCI_WITH_SFML)
     set(XCI_GRAPHICS_SFML_LIBRARY xci-graphics-sfml)
     add_library(${XCI_GRAPHICS_SFML_LIBRARY}
         ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_SFML_SOURCES})
     target_include_directories(${XCI_GRAPHICS_SFML_LIBRARY}
         PUBLIC
-            $<BUILD_INTERFACE:${XCI_BUILD_INCLUDE_DIRS}>
-            $<INSTALL_INTERFACE:${XCI_INCLUDE_DIRS}>
+            ${XCI_INCLUDE_DIRS}
         PRIVATE
             ${SFML_INCLUDE_DIR})
     target_link_libraries(${XCI_GRAPHICS_SFML_LIBRARY}
@@ -219,16 +220,15 @@ if (WITH_SFML)
     endif()
     install(TARGETS ${XCI_GRAPHICS_SFML_LIBRARY}
         EXPORT xcikit DESTINATION lib)
-endif (WITH_SFML)
+endif ()
 
-if (WITH_PANDA)
+if (XCI_WITH_PANDA)
     set(XCI_GRAPHICS_PANDA_LIBRARY xci-graphics-panda)
     add_library(${XCI_GRAPHICS_PANDA_LIBRARY}
         ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_PANDA_SOURCES})
     target_include_directories(${XCI_GRAPHICS_PANDA_LIBRARY}
         PUBLIC
-            $<BUILD_INTERFACE:${XCI_BUILD_INCLUDE_DIRS}>
-            $<INSTALL_INTERFACE:${XCI_INCLUDE_DIRS}>
+            ${XCI_INCLUDE_DIRS}
         PUBLIC
         ${PANDA3D_INCLUDE_DIRS}
         ${PYTHON_INCLUDE_DIRS})
@@ -240,15 +240,14 @@ if (WITH_PANDA)
     endif()
     install(TARGETS ${XCI_GRAPHICS_PANDA_LIBRARY}
         EXPORT xcikit DESTINATION lib)
-endif (WITH_PANDA)
+endif ()
 
 set(XCI_TEXT_LIBRARY xci-text)
 add_library(${XCI_TEXT_LIBRARY} ${XCI_TEXT_SOURCES}
     $<TARGET_OBJECTS:${RBP_LIBRARY}>)
 target_include_directories(${XCI_TEXT_LIBRARY}
     PUBLIC
-        $<BUILD_INTERFACE:${XCI_BUILD_INCLUDE_DIRS}>
-        $<INSTALL_INTERFACE:${XCI_INCLUDE_DIRS}>
+        ${XCI_INCLUDE_DIRS}
         ${FREETYPE_INCLUDE_DIRS}
         ${PEGTL_INCLUDE_DIRS}
     PRIVATE
@@ -259,19 +258,12 @@ target_link_libraries(${XCI_TEXT_LIBRARY}
     ${FREETYPE_LIBRARIES})
 install(TARGETS ${XCI_TEXT_LIBRARY} EXPORT xcikit DESTINATION lib)
 
-if (DEBUG_MARKUP_DUMP_TOKENS)
-    target_compile_definitions(${XCI_TEXT_LIBRARY} PRIVATE
-        XCI_DEBUG_MARKUP_DUMP_TOKENS)
-endif (DEBUG_MARKUP_DUMP_TOKENS)
-
 set(XCI_WIDGETS_LIBRARY xci-widgets)
 add_library(${XCI_WIDGETS_LIBRARY} ${XCI_WIDGETS_SOURCES})
 target_include_directories(${XCI_WIDGETS_LIBRARY} PRIVATE ext)
 target_link_libraries(${XCI_WIDGETS_LIBRARY}
     ${XCI_TEXT_LIBRARY}
     ${XCI_GRAPHICS_LIBRARY})
-target_compile_definitions(${XCI_WIDGETS_LIBRARY} PRIVATE
-    XCI_SHARE_DIR="${SHARE_DIR}")
 install(TARGETS ${XCI_WIDGETS_LIBRARY} EXPORT xcikit DESTINATION lib)
 
 
@@ -323,12 +315,14 @@ install(DIRECTORY src/xci DESTINATION include
     REGEX "xci/[a-z]+/[a-z]+$" EXCLUDE
     REGEX "xci/[a-z]+/[^/]+\\.h")
 
+# config.h
+install(DIRECTORY ${CMAKE_BINARY_DIR}/include/xci DESTINATION include)
+
 install(EXPORT xcikit DESTINATION lib/cmake/xci FILE "xcikitTargets.cmake")
 
 include(CMakePackageConfigHelpers)
 configure_package_config_file(xcikitConfig.cmake.in xcikitConfig.cmake
-    INSTALL_DESTINATION lib/cmake/xci
-    PATH_VARS XCI_INCLUDE_DIRS)
+    INSTALL_DESTINATION lib/cmake/xci)
 write_basic_package_version_file(xcikitConfigVersion.cmake
     VERSION 0.0.1
     COMPATIBILITY SameMajorVersion)

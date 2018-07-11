@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "Theme.h"
+#include <xci/config.h>
 
 namespace xci {
 namespace widgets {

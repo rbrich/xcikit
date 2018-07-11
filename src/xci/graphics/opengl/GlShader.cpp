@@ -15,6 +15,7 @@
 
 #include "GlShader.h"
 
+#include <xci/config.h>
 #include <xci/util/file.h>
 #include <xci/util/log.h>
 

@@ -104,9 +104,9 @@ Dependencies (required):
 - PEGTL
 
 Dependencies (optional):
-- GLFW (WITH_OPENGL)
-- SFML (WITH_SFML)
-- Panda3D (WATH_PANDA)
+- GLFW (XCI_WITH_OPENGL)
+- SFML (XCI_WITH_SFML)
+- Panda3D (XCI_WITH_PANDA)
 - Catch2 (for tests)
 
 Build steps:

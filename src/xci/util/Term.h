@@ -1,4 +1,4 @@
-// Renderer.cpp created on 2018-04-08, part of XCI toolkit
+// term.h created on 2018-07-09, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,27 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "Renderer.h"
-
-#include <xci/config.h>
-
-#ifdef XCI_WITH_OPENGL
-#include <xci/graphics/opengl/GlRenderer.h>
-#endif
+#ifndef XCI_UTIL_TERM_H
+#define XCI_UTIL_TERM_H
 
 namespace xci {
-namespace graphics {
+namespace util {
 
+class Term {
+public:
+    Term() = default;
+    explicit Term(int fd): m_fd(fd) {}
 
-Renderer& Renderer::default_renderer()
-{
-#ifdef XCI_WITH_OPENGL
-    static GlRenderer renderer;
-#else
-    #error "No renderer available"
-#endif
-    return renderer;
-}
+    bool is_tty() const;
 
+private:
+    int m_fd = 1;  // stdout
+};
 
-}} // namespace xci::graphics
+}} // namespace xci::util
+
+#endif //XCI_UTIL_TERM_H

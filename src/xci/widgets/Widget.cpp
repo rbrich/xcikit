@@ -17,6 +17,7 @@
 #include <xci/util/log.h>
 #include <xci/util/rtti.h>
 #include <xci/graphics/Window.h>
+#include <cassert>
 
 namespace xci {
 namespace widgets {
