@@ -164,7 +164,7 @@ find_package(PEGTL REQUIRED)
 find_package(Doxygen)
 
 # TInfo (ncurses)
-find_package(PkgConfig REQUIRED)
+find_package(PkgConfig)
 pkg_check_modules(TINFO tinfo)
 set(XCI_WITH_TINFO ${TINFO_FOUND})
 

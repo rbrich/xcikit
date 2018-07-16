@@ -29,8 +29,31 @@ namespace util {
 
 using namespace log;
 
+static_assert(int(Term::Color::Black) == COLOR_BLACK, "curses color black");
+static_assert(int(Term::Color::Red) == COLOR_RED, "curses color red");
+static_assert(int(Term::Color::Green) == COLOR_GREEN, "curses color green");
+static_assert(int(Term::Color::Yellow) == COLOR_YELLOW, "curses color yellow");
+static_assert(int(Term::Color::Blue) == COLOR_BLUE, "curses color blue");
+static_assert(int(Term::Color::Magenta) == COLOR_MAGENTA, "curses color magenta");
+static_assert(int(Term::Color::Cyan) == COLOR_CYAN, "curses color cyan");
+static_assert(int(Term::Color::White) == COLOR_WHITE, "curses color white");
 
-void Term::initialize(int fd)
+
+Term& Term::stdout_instance()
+{
+    static Term term(STDOUT_FILENO);
+    return term;
+}
+
+
+Term& Term::stderr_instance()
+{
+    static Term term(STDERR_FILENO);
+    return term;
+}
+
+
+Term::Term(int fd)
 {
     // Do not even try if not TTY (ie. pipes)
     if (isatty(fd) != 1)
@@ -44,10 +67,22 @@ void Term::initialize(int fd)
 }
 
 
-Term Term::red() const { return Term(*this, is_initialized() ? tparm(set_a_foreground, COLOR_RED) : ""); }
-Term Term::on_blue() const { return Term(*this, is_initialized() ? tparm(set_a_background, COLOR_BLUE) : ""); }
-Term Term::bold() const { return Term(*this, is_initialized() ? enter_bold_mode : ""); }
-Term Term::normal() const { return Term(*this, is_initialized() ? exit_attribute_mode : ""); }
+// Note that this cannot be implemented with variadic template,
+// because the arguments must not be evaluated unless is_initialized() is true
+#define TERM_APPEND(...) Term(*this, is_initialized() ? tparm(__VA_ARGS__) : "")
+
+Term Term::fg(Term::Color color) const
+{
+    return TERM_APPEND(set_a_foreground, static_cast<int>(color));
+}
+
+Term Term::bg(Term::Color color) const
+{
+    return TERM_APPEND(set_a_background, static_cast<int>(color));
+}
+
+Term Term::bold() const { return TERM_APPEND(enter_bold_mode); }
+Term Term::normal() const { return TERM_APPEND(exit_attribute_mode); }
 
 
 std::ostream& operator<<(std::ostream& os, const Term& term)

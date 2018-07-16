@@ -1,6 +1,7 @@
 // Logger.h created on 2018-03-01, part of XCI toolkit
 
 #include <xci/util/log.h>
+#include <xci/util/Term.h>
 
 #include <iostream>
 #include <iomanip>
@@ -20,6 +21,13 @@ static const char* level_string[] = {
 };
 
 
+static const Term::Color level_color[] = {
+        Term::Color::Red,
+        Term::Color::Yellow,
+        Term::Color::White,
+        Term::Color::White,
+};
+
 Logger& Logger::get_default_instance()
 {
     static Logger logger;
@@ -35,7 +43,16 @@ void Logger::log(Logger::Level lvl, const std::string& msg)
     (void) ts_res;  // unused with NDEBUG
     assert(ts_res > 0 && ts_res < sizeof(ts_buf));
 
-    fprintf(stderr, "%s %s  %s\n", ts_buf, level_string[(int)lvl], msg.c_str());
+    auto lvl_num = static_cast<int>(lvl);
+
+    Term& t = Term::stderr_instance();
+    fputs(format("{} {}{}{}  {}{}{}{}\n",
+                 ts_buf,
+                 t.bold(), level_string[lvl_num], t.normal(),
+                 (lvl < Logger::Level::Debug ? t.bold() : t.normal()),
+                 t.fg(level_color[lvl_num]), msg, t.normal()
+          ).c_str(),
+          stderr);
 }
 
 
