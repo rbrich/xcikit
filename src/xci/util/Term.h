@@ -16,6 +16,7 @@
 #ifndef XCI_UTIL_TERM_H
 #define XCI_UTIL_TERM_H
 
+#include "format.h"
 #include <string>
 #include <ostream>
 
@@ -69,11 +70,21 @@ public:
     Term normal() const;  // reset all attributes
 
     // Output cached seq
+    const std::string& seq() const { return m_seq; }
     friend std::ostream& operator<<(std::ostream& os, const Term& term);
+
+    template<typename ...Args>
+    std::string format(const char *fmt, Args... args) {
+        return fun_format(fmt, [this](const format_impl::Context& ctx) {
+            return format_cb(ctx);
+        }, args...);
+    }
 
 private:
     // Copy Term and append seq to new instance
     Term(const Term& term, const char* seq) : m_fd(term.m_fd), m_seq(term.m_seq + seq) {}
+
+    std::string format_cb(const format_impl::Context& ctx);
 
 private:
     int m_fd = -1;  // terminal attached to this FD

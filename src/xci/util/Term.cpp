@@ -87,8 +87,25 @@ Term Term::normal() const { return TERM_APPEND(exit_attribute_mode); }
 
 std::ostream& operator<<(std::ostream& os, const Term& term)
 {
-    os << term.m_seq;
+    os << term.seq();
     return os;
+}
+
+
+std::string Term::format_cb(const format_impl::Context& ctx)
+{
+    if (ctx.placeholder == "bold")      return bold().seq();
+    if (ctx.placeholder == "normal")    return normal().seq();
+    if (ctx.placeholder == "black")     return black().seq();
+    if (ctx.placeholder == "red")       return red().seq();
+    if (ctx.placeholder == "green")     return green().seq();
+    if (ctx.placeholder == "yellow")    return yellow().seq();
+    if (ctx.placeholder == "blue")      return blue().seq();
+    if (ctx.placeholder == "magenta")   return magenta().seq();
+    if (ctx.placeholder == "cyan")      return cyan().seq();
+    if (ctx.placeholder == "white")     return white().seq();
+
+    return format_impl::print_placeholder(ctx);
 }
 
 

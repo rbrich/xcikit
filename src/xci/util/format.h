@@ -19,6 +19,7 @@
 #include <iostream>
 #include <sstream>
 #include <iomanip>
+#include <functional>
 
 namespace xci {
 namespace util {
@@ -38,8 +39,8 @@ struct Context {
     std::string placeholder;
     // parsed placeholder:
     std::string field_name;
-    int precision;
-    char type;
+    int precision = 6;
+    char type = 's';
 
     void clear() {
         placeholder.clear();
@@ -54,35 +55,51 @@ struct Context {
 // Returns true if stopped on placeholder, false if reached end of `fmt`.
 bool partial_format(const char*& fmt, Context& ctx);
 
+// Prints original placeholder as-is
+inline std::string print_placeholder(const format_impl::Context& ctx)
+{
+    return "{" + ctx.placeholder + "}";
+}
+
 } // namespace format_impl
 
-// Terminates evaluation when there are no more arguments
+
+// Called for each placeholder not recognized by format function itself
+using FormatCallback = std::function<std::string (const format_impl::Context& ctx)>;
+
+// Parameter-less variant of format function.
+// (Terminates evaluation when there are no more arguments.)
 //
 // Note that `fmt` is const char*, not std::string. This has two advantages:
 // - We can handle part of it to next recursive iteration
 // - It guides the user to pass string literal instead of a variable
-inline std::string format(const char *fmt)
+//
+// `fun` is called for each unrecognized placeholder
+inline std::string fun_format(const char *fmt, const FormatCallback& fun)
 {
     format_impl::Context ctx;
     while (*fmt) {
         if (format_impl::partial_format(fmt, ctx)) {
-            // unexpected placeholder -> leave as is
-            ctx.stream << "{" << ctx.placeholder << "}";
+            // delegate placeholder processing to custom function
+            ctx.stream << fun(ctx);
         }
     }
     return ctx.stream.str();
 }
 
-// Recursively evaluates arguments
+// Variadic format function.
+// (Recursively evaluates arguments.)
 //
 // The format string is similar to Python's format(), see:
 // - https://docs.python.org/3/library/string.html#formatspec
 //
-// Only subset of format specifiers is supported
+// Only a subset of format specifiers is supported
 // (see code bellow and tests)
-
+//
+// `fun` is called for each unrecognized placeholder
 template<typename T, typename ...Args>
-inline std::string format(const char *fmt, T value, Args... args)
+inline std::string fun_format(const char *fmt, const FormatCallback& fun,
+                              T value, Args... args)
 {
     format_impl::Context ctx;
     while (*fmt) {
@@ -95,15 +112,24 @@ inline std::string format(const char *fmt, T value, Args... args)
                     default: break;
                 }
                 ctx.stream << std::setprecision(ctx.precision)
-                           << value << format(fmt, args...);
+                           << value << fun_format(fmt, fun, args...);
                 return ctx.stream.str();
             }
 
-            // unknown placeholder -> leave as is
-            ctx.stream << "{" << ctx.placeholder << "}";
+            // delegate placeholder processing to custom function
+            ctx.stream << fun(ctx);
         }
     }
     return ctx.stream.str();
+}
+
+
+// Simple format function without collback.
+// Unrecognized placeholders are left untouched.
+template<typename ...Args>
+inline std::string format(const char *fmt, Args... args)
+{
+    return fun_format(fmt, format_impl::print_placeholder, args...);
 }
 
 

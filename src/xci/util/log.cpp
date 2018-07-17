@@ -13,20 +13,13 @@ namespace xci {
 namespace util {
 
 
-static const char* level_string[] = {
-        "ERROR",
-        "WARN ",
-        "INFO ",
-        "DEBUG",
+static const char* level_format[] = {
+        "{} {bold}ERROR{normal}  {bold}{red}{}{normal}\n",
+        "{} {bold}WARN {normal}  {bold}{yellow}{}{normal}\n",
+        "{} {bold}INFO {normal}  {bold}{white}{}{normal}\n",
+        "{} {bold}DEBUG{normal}  {white}{}{normal}\n",
 };
 
-
-static const Term::Color level_color[] = {
-        Term::Color::Red,
-        Term::Color::Yellow,
-        Term::Color::White,
-        Term::Color::White,
-};
 
 Logger& Logger::get_default_instance()
 {
@@ -46,13 +39,8 @@ void Logger::log(Logger::Level lvl, const std::string& msg)
     auto lvl_num = static_cast<int>(lvl);
 
     Term& t = Term::stderr_instance();
-    fputs(format("{} {}{}{}  {}{}{}{}\n",
-                 ts_buf,
-                 t.bold(), level_string[lvl_num], t.normal(),
-                 (lvl < Logger::Level::Debug ? t.bold() : t.normal()),
-                 t.fg(level_color[lvl_num]), msg, t.normal()
-          ).c_str(),
-          stderr);
+    auto formatted_msg = t.format(level_format[lvl_num], ts_buf, msg);
+    fputs(formatted_msg.c_str(), stderr);
 }
 
 
