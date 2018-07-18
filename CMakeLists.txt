@@ -8,6 +8,7 @@ option(XCI_WITH_TINFO "Link with TInfo (from NCurses) and use it for TTY control
 
 set(XCI_SHARE_DIR "${CMAKE_CURRENT_LIST_DIR}/share" CACHE PATH "Location of share dir (runtime data)")
 option(XCI_EMBED_SHADERS "Embed shader files into binaries to avoid dependency on share dir." OFF)
+option(XCI_DEBUG_TRACE "Enable trace log messages." OFF)
 option(XCI_DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
 option(XCI_DEBUG_OPENGL "Log info about OpenGL calls and errors." OFF)
 
@@ -19,7 +20,7 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
 if (BUILD_PEDANTIC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wpedantic -Wno-vla-extension -Werror")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wpedantic -Wno-vla-extension -Wno-gnu-zero-variadic-macro-arguments -Werror")
 endif()
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 

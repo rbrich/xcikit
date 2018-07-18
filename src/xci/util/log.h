@@ -4,6 +4,7 @@
 #define XCI_UTIL_LOG_H
 
 #include <xci/util/format.h>
+#include <xci/config.h>
 
 namespace xci {
 namespace util {
@@ -61,6 +62,14 @@ namespace log {
     using xci::util::log_info;
     using xci::util::log_debug;
 }
+
+
+#ifdef XCI_DEBUG_TRACE
+#define TRACE(fmt, ...)  log_debug("{}:{} ({}) " fmt, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
+#else
+#define TRACE(fmt, ...)
+#endif
+
 
 }} // namespace xci::log
 

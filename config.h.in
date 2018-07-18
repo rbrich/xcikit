@@ -20,6 +20,7 @@
 #cmakedefine XCI_EMBED_SHADERS
 
 // Debugging
+#cmakedefine XCI_DEBUG_TRACE
 #cmakedefine XCI_DEBUG_MARKUP_DUMP_TOKENS
 #cmakedefine XCI_DEBUG_OPENGL
 

@@ -34,4 +34,6 @@ int main()
     log_info("float: {} int: {}!", 1.23f, 42);
     log_warning("arbitrary object: {}", obj);
     log_error("beware");
+
+    TRACE("trace message");
 }
