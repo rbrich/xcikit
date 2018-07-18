@@ -1,18 +1,6 @@
 cmake_minimum_required(VERSION 3.7)
 project(xcikit C CXX)
 
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
-
-if (EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-    conan_basic_setup()
-endif()
-
 option(XCI_WITH_OPENGL "Link with GLFW and build libxci-graphics-opengl." ON)
 option(XCI_WITH_SFML "Link with SFML and build libxci-graphics-sfml." OFF)
 option(XCI_WITH_PANDA "Link with Panda3D and build libxci-graphics-panda." OFF)
@@ -25,6 +13,22 @@ option(XCI_DEBUG_OPENGL "Log info about OpenGL calls and errors." OFF)
 
 option(BUILD_SHARED_LIBS "Build shared libs instead of static libs." OFF)
 option(BUILD_WITH_ASAN "Build with AddressSanitizer." OFF)
+option(BUILD_PEDANTIC "Build with -Wpedantic -Werror." OFF)
+
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
+if (BUILD_PEDANTIC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wpedantic -Wno-vla-extension -Werror")
+endif()
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
+
+if (EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    conan_basic_setup()
+endif()
 
 if (BUILD_WITH_ASAN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
