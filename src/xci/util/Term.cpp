@@ -1,4 +1,4 @@
-// term.cpp created on 2018-07-09, part of XCI toolkit
+// Term.cpp created on 2018-07-09, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,6 +12,10 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+// References:
+// - https://en.wikipedia.org/wiki/POSIX_terminal_interface
+// - https://en.wikipedia.org/wiki/ANSI_escape_code
 
 #include "Term.h"
 #include "log.h"
@@ -20,7 +24,6 @@
 #include <unistd.h>
 
 #ifdef XCI_WITH_TINFO
-#include <curses.h>
 #include <term.h>
 #endif
 
@@ -29,15 +32,16 @@ namespace util {
 
 using namespace log;
 
-static_assert(int(Term::Color::Black) == COLOR_BLACK, "curses color black");
-static_assert(int(Term::Color::Red) == COLOR_RED, "curses color red");
-static_assert(int(Term::Color::Green) == COLOR_GREEN, "curses color green");
-static_assert(int(Term::Color::Yellow) == COLOR_YELLOW, "curses color yellow");
-static_assert(int(Term::Color::Blue) == COLOR_BLUE, "curses color blue");
-static_assert(int(Term::Color::Magenta) == COLOR_MAGENTA, "curses color magenta");
-static_assert(int(Term::Color::Cyan) == COLOR_CYAN, "curses color cyan");
-static_assert(int(Term::Color::White) == COLOR_WHITE, "curses color white");
-
+// When building without TInfo, emit ANSI escape sequences directly
+#ifndef XCI_WITH_TINFO
+static constexpr auto enter_bold_mode = "\033[1m";
+static constexpr auto exit_attribute_mode = "\033[0m";
+static constexpr auto set_a_foreground = "\033[3{}m";
+static constexpr auto set_a_background = "\033[4{}m";
+inline constexpr const char* tparm(const char* seq) { return seq; }
+template<typename ...Args>
+inline std::string tparm(const char* seq, Args... args) { return format(seq, args...); }
+#endif // XCI_WITH_TINFO
 
 Term& Term::stdout_instance()
 {
@@ -58,10 +62,12 @@ Term::Term(int fd)
     // Do not even try if not TTY (ie. pipes)
     if (isatty(fd) != 1)
         return;
+#ifdef XCI_WITH_TINFO
     // Setup terminfo
     int err = 0;
-    if (setupterm(nullptr, fd, &err) != OK)
+    if (setupterm(nullptr, fd, &err) != 0)
         return;
+#endif
     // All ok
     m_fd = fd;
 }
@@ -69,7 +75,7 @@ Term::Term(int fd)
 
 // Note that this cannot be implemented with variadic template,
 // because the arguments must not be evaluated unless is_initialized() is true
-#define TERM_APPEND(...) Term(*this, is_initialized() ? tparm(__VA_ARGS__) : "")
+#define TERM_APPEND(...) Term(*this, is_tty() ? tparm(__VA_ARGS__) : "")
 
 Term Term::fg(Term::Color color) const
 {

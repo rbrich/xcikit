@@ -23,7 +23,7 @@ int main()
 {
     Term& t = Term::stdout_instance();
 
-    cout << (t.is_initialized() ? "terminal initialized" : "terminal not supported") << endl;
+    cout << (t.is_tty() ? "terminal initialized" : "terminal not supported") << endl;
     cout << t.bold().red().on_blue() << "RED" << t.normal() << "normal" << endl;
 
     return 0;

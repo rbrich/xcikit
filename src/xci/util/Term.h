@@ -1,4 +1,4 @@
-// term.h created on 2018-07-09, part of XCI toolkit
+// Term.h created on 2018-07-09, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,6 +23,8 @@
 namespace xci {
 namespace util {
 
+// Sends control codes and escape sequences to controlling terminal
+// or does nothing if the output stream is not connected to TTY.
 
 // FIXME: switch cur_term, free resources (del_curterm)
 
@@ -35,8 +37,8 @@ public:
     // Constructor for custom streams
     explicit Term(int fd);
 
-    // Initialize the terminal
-    bool is_initialized() const { return m_fd != -1; }
+    // Is the output stream connected to TTY?
+    bool is_tty() const { return m_fd != -1; }
 
     // Following methods are appending the capability codes
     // to a copy of Term instance, which can then be send to stream
@@ -82,7 +84,7 @@ public:
 
 private:
     // Copy Term and append seq to new instance
-    Term(const Term& term, const char* seq) : m_fd(term.m_fd), m_seq(term.m_seq + seq) {}
+    Term(const Term& term, const std::string& seq) : m_fd(term.m_fd), m_seq(term.m_seq + seq) {}
 
     std::string format_cb(const format_impl::Context& ctx);
 

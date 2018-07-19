@@ -16,6 +16,7 @@ endif()
 option(XCI_WITH_OPENGL "Link with GLFW and build libxci-graphics-opengl." ON)
 option(XCI_WITH_SFML "Link with SFML and build libxci-graphics-sfml." OFF)
 option(XCI_WITH_PANDA "Link with Panda3D and build libxci-graphics-panda." OFF)
+option(XCI_WITH_TINFO "Link with TInfo (from NCurses) and use it for TTY control sequences." OFF)
 
 set(XCI_SHARE_DIR "${CMAKE_CURRENT_LIST_DIR}/share" CACHE PATH "Location of share dir (runtime data)")
 option(XCI_EMBED_SHADERS "Embed shader files into binaries to avoid dependency on share dir." OFF)
@@ -164,9 +165,10 @@ find_package(PEGTL REQUIRED)
 find_package(Doxygen)
 
 # TInfo (ncurses)
-find_package(PkgConfig)
-pkg_check_modules(TINFO tinfo)
-set(XCI_WITH_TINFO ${TINFO_FOUND})
+if (XCI_WITH_TINFO)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(TINFO REQUIRED tinfo)
+endif ()
 
 # Generate config.h
 configure_file(config.h.in include/xci/config.h)
