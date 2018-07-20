@@ -129,6 +129,20 @@ float FontFace::line_height() const
     return ft_to_float(face->size->metrics.height);
 }
 
+float FontFace::max_advance()
+{
+    // Measure letter 'M' instead of trusting max_advance
+    uint glyph_index = get_glyph_index('M');
+    if (!glyph_index) {
+        return ft_to_float(face->size->metrics.max_advance);
+    }
+    auto glyph_slot = load_glyph(glyph_index);
+    if (glyph_slot == nullptr) {
+        return ft_to_float(face->size->metrics.max_advance);
+    }
+    return ft_to_float(glyph_slot->metrics.horiAdvance);
+}
+
 float FontFace::ascender() const
 {
     return ft_to_float(face->size->metrics.ascender);
@@ -160,7 +174,7 @@ FT_Bitmap& FontFace::render_glyph()
 
 FT_GlyphSlot FontFace::load_glyph(GlyphIndex glyph_index)
 {
-    int err = FT_Load_Glyph(face, glyph_index, FT_LOAD_NO_HINTING);
+    int err = FT_Load_Glyph(face, glyph_index, FT_LOAD_DEFAULT | FT_LOAD_TARGET_LIGHT);
     if (err) {
         log_error("FT_Load_Glyph error: {}", err);
         return nullptr;

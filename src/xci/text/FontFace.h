@@ -51,6 +51,7 @@ public:
     bool set_outline();  // TODO
 
     float line_height() const;
+    float max_advance();
     float ascender() const;
     float descender() const;
 

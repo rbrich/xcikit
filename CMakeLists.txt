@@ -126,7 +126,9 @@ set(XCI_WIDGETS_SOURCES
     src/xci/widgets/Form.cpp
     src/xci/widgets/Form.h
     src/xci/widgets/Label.cpp
-    src/xci/widgets/Label.h)
+    src/xci/widgets/Label.h
+    src/xci/widgets/TextTerminal.cpp
+    src/xci/widgets/TextTerminal.h)
 
 
 # ------------ #

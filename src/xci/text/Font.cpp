@@ -106,6 +106,13 @@ float Font::line_height() const
 }
 
 
+float Font::max_advance()
+{
+    assert(m_current_face != nullptr);  // font must be loaded
+    return m_current_face->max_advance();
+}
+
+
 float Font::ascender() const
 {
     assert(m_current_face != nullptr);  // font must be loaded

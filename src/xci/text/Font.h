@@ -96,6 +96,7 @@ public:
 
     // just a facade
     float line_height() const;
+    float max_advance();
     float ascender() const;
     float descender() const;
     TexturePtr& get_texture();
