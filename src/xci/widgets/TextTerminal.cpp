@@ -25,14 +25,44 @@ namespace widgets {
 
 using graphics::Color;
 using text::CodePoint;
-using util::Rect_f;
-using util::to_utf32;
+using namespace util;
 using namespace util::log;
 
 
-void TextTerminal::add_string(const std::string& string)
+int terminal::Line::length() const
 {
-    current_line().append(string);
+    return utf8_length(m_content);
+}
+
+
+void TextTerminal::add_text(const std::string& text)
+{
+    // Add characters up to terminal width (columns)
+    int length = current_line().length();
+    for (auto pos = text.cbegin(); pos != text.cend(); ) {
+        // Check for newline character
+        bool new_line = false;
+        if (*pos == '\n') {
+            current_line().append("\n");
+            new_line = true;
+        }
+
+        // Check line length
+        if (length >= m_cells.x || new_line) {
+            // Add new line
+            m_buffer.add_line();
+            ++m_cursor.y;
+            m_cursor.x = 0;
+            length = 0;
+        }
+
+        // Add character to current line
+        auto end_pos = utf8_next(pos);
+        if (!new_line)
+            current_line().append(text.substr(pos - text.cbegin(), end_pos - pos));
+        pos = end_pos;
+        ++length;
+    }
 }
 
 
@@ -59,24 +89,31 @@ void TextTerminal::draw(View& view, State state)
     graphics::Shape boxes(Color(150, 0, 0));
 
     Vec2f pen;
-    for (CodePoint code_point : to_utf32(current_line().content())) {
-        auto glyph = font.get_glyph(code_point);
-        if (glyph == nullptr)
-            glyph = font.get_glyph(' ');
+    auto buffer_last = std::min(int(m_buffer.size()), m_buffer_offset + m_cells.y);
+    for (int line_idx = m_buffer_offset; line_idx < buffer_last; line_idx++) {
+        for (CodePoint code_point : to_utf32(m_buffer[line_idx].content())) {
+            if (code_point == '\n')
+                break;
+            auto glyph = font.get_glyph(code_point);
+            if (glyph == nullptr)
+                glyph = font.get_glyph(' ');
 
-        Rect_f rect{pen.x + glyph->base_x() * pxf.x,
-                    pen.y + (font.ascender() - glyph->base_y()) * pxf.y,
-                    glyph->width() * pxf.x,
-                    glyph->height() * pxf.y};
-        sprites.add_sprite(rect, glyph->tex_coords());
+            Rect_f rect{pen.x + glyph->base_x() * pxf.x,
+                        pen.y + (font.ascender() - glyph->base_y()) * pxf.y,
+                        glyph->width() * pxf.x,
+                        glyph->height() * pxf.y};
+            sprites.add_sprite(rect, glyph->tex_coords());
 
-        rect.x = pen.x;
-        rect.y = pen.y;
-        rect.w = m_cell_size.x;
-        rect.h = m_cell_size.y;
-        boxes.add_rectangle(rect);
+            rect.x = pen.x;
+            rect.y = pen.y;
+            rect.w = m_cell_size.x;
+            rect.h = m_cell_size.y;
+            boxes.add_rectangle(rect);
 
-        pen.x += glyph->advance() * pxf.x;
+            pen.x += glyph->advance() * pxf.x;
+        }
+        pen.x = 0;
+        pen.y += font.line_height() * pxf.y;
     }
 
     boxes.draw(view, position());

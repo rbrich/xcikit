@@ -17,6 +17,8 @@
 #include <xci/graphics/Window.h>
 #include <xci/util/file.h>
 #include <cstdlib>
+#include <cstdio>
+#include <iostream>
 
 using namespace xci::widgets;
 using namespace xci::graphics;
@@ -32,8 +34,20 @@ int main()
     if (!Theme::load_default_theme())
         return EXIT_FAILURE;
 
+    const char* cmd = "ls -la ..";
+
     TextTerminal terminal;
-    terminal.add_string("prompt> Hello!");
+    terminal.add_text(get_cwd() + "> " + cmd);
+
+    FILE* f = popen(cmd, "r");
+    if (!f)
+        return EXIT_FAILURE;
+    std::string buf(256, 0);
+    size_t nread;
+    while ((nread = fread(&buf[0], 1, buf.size(), f)) > 0) {
+        terminal.add_text(buf.substr(0, nread));
+    }
+    pclose(f);
 
     // Make the terminal fullscreen
     window.set_size_callback([&](View& v) {

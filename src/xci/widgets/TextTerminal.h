@@ -31,6 +31,7 @@ class Line {
 public:
     void append(const std::string& string) { m_content += string; }
     const std::string& content() const { return m_content; }
+    int length() const;
 
 private:
     std::string m_content;
@@ -39,6 +40,10 @@ private:
 class Buffer {
 public:
     Buffer() : m_lines(1) {}
+
+    void add_line() { m_lines.emplace_back(); }
+
+    size_t size() const { return m_lines.size(); }
 
     Line& operator[] (int line_index) { return m_lines[line_index]; }
 
@@ -51,7 +56,7 @@ private:
 
 class TextTerminal: public Widget {
 public:
-    void add_string(const std::string& string);
+    void add_text(const std::string& text);
 
     void resize(View& view) override;
     void draw(View& view, State state) override;
@@ -62,7 +67,7 @@ protected:
 private:
     float m_font_size = 0.05;
     util::Vec2f m_cell_size;
-    util::Vec2i m_cells;
+    util::Vec2i m_cells = {80, 25};  // rows, columns
     terminal::Buffer m_buffer;
     int m_buffer_offset = 0;  // offset to line in buffer which is first on screen
     util::Vec2i m_cursor;  // x/y of cursor on screen

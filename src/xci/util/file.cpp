@@ -21,6 +21,7 @@
 #include <unistd.h>
 #include <libgen.h>
 #include <cassert>
+#include <sys/param.h>
 
 namespace xci {
 namespace util {
@@ -63,6 +64,17 @@ std::string path_basename(std::string filename)
 {
     assert(filename.c_str() == &filename[0]);
     return ::basename(&filename[0]);
+}
+
+
+std::string get_cwd()
+{
+    std::string result(MAXPATHLEN, ' ');
+    if (getcwd(&result[0], result.size()) == nullptr) {
+        return std::string();
+    }
+    result.resize(strlen(result.data()));
+    return result;
 }
 
 

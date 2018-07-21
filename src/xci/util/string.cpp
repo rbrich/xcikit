@@ -110,9 +110,7 @@ utf8_prev(std::string::const_reverse_iterator pos)
 int utf8_length(const std::string& str)
 {
     int length = 0;
-    auto pos = str.cbegin();
-    while (pos != str.cend()) {
-        pos = utf8_next(pos);
+    for (auto pos = str.cbegin(); pos != str.cend(); pos = utf8_next(pos)) {
         ++length;
     }
     return length;

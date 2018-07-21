@@ -36,6 +36,9 @@ std::string path_dirname(std::string filename);
 std::string path_basename(std::string filename);
 
 
+std::string get_cwd();
+
+
 }}  // namespace xci::util
 
 #endif //XCI_UTIL_FILE_H
