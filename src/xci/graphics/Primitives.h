@@ -16,6 +16,7 @@
 #ifndef XCI_GRAPHICS_PRIMITIVES_H
 #define XCI_GRAPHICS_PRIMITIVES_H
 
+#include <xci/graphics/Color.h>
 #include <xci/graphics/View.h>
 #include <xci/graphics/Shader.h>
 #include <xci/graphics/Texture.h>
@@ -27,6 +28,8 @@ namespace graphics {
 enum class VertexFormat {
     V2t2,       // 2 vertex coords, 2 texture coords (all float)
     V2t22,      // 2 vertex coords, 2 + 2 texture coords (all float)
+    V2c4t2,     // 2 vertex coords, RGBA color, 2 texture coords (all float)
+    V2c4t22,    // 2 vertex coords, RGBA color, 2 + 2 texture coords (all float)
 };
 
 enum class PrimitiveType {
@@ -42,6 +45,8 @@ public:
     virtual void end_primitive() = 0;
     virtual void add_vertex(float x, float y, float u, float v) = 0;
     virtual void add_vertex(float x, float y, float u1, float v1, float u2, float v2) = 0;
+    virtual void add_vertex(float x, float y, Color c, float u, float v) = 0;
+    virtual void add_vertex(float x, float y, Color c, float u1, float v1, float u2, float v2) = 0;
     virtual void clear() = 0;
     virtual bool empty() const = 0;
 

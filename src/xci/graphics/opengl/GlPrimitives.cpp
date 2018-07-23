@@ -23,6 +23,14 @@ namespace xci {
 namespace graphics {
 
 
+constexpr GLuint c_format_narrays[] = {
+    2,  // V2t2
+    3,  // V2t22
+    3,  // V2c4t2
+    4,  // V2c4t22
+};
+
+
 GlPrimitives::GlPrimitives(VertexFormat format, PrimitiveType type)
         : m_format(format)
 {
@@ -74,6 +82,41 @@ void GlPrimitives::add_vertex(float x, float y, float u1, float v1, float u2, fl
     m_open_vertices++;
 }
 
+
+void GlPrimitives::add_vertex(float x, float y, Color c, float u, float v)
+{
+    assert(m_format == VertexFormat::V2c4t2);
+    assert(m_open_vertices != -1);
+    invalidate_gl_objects();
+    m_vertex_data.push_back(x);
+    m_vertex_data.push_back(y);
+    m_vertex_data.push_back(c.red_f());
+    m_vertex_data.push_back(c.green_f());
+    m_vertex_data.push_back(c.blue_f());
+    m_vertex_data.push_back(c.alpha_f());
+    m_vertex_data.push_back(u);
+    m_vertex_data.push_back(v);
+    m_open_vertices++;
+}
+
+
+void GlPrimitives::add_vertex(float x, float y, Color c, float u1, float v1, float u2, float v2)
+{
+    assert(m_format == VertexFormat::V2c4t22);
+    assert(m_open_vertices != -1);
+    invalidate_gl_objects();
+    m_vertex_data.push_back(x);
+    m_vertex_data.push_back(y);
+    m_vertex_data.push_back(c.red_f());
+    m_vertex_data.push_back(c.green_f());
+    m_vertex_data.push_back(c.blue_f());
+    m_vertex_data.push_back(c.alpha_f());
+    m_vertex_data.push_back(u1);
+    m_vertex_data.push_back(v1);
+    m_vertex_data.push_back(u2);
+    m_vertex_data.push_back(v2);
+    m_open_vertices++;
+}
 
 void GlPrimitives::clear()
 {
@@ -127,10 +170,8 @@ void GlPrimitives::draw(View& view)
     init_gl_objects();
 
     glBindVertexArray(m_vertex_array);
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-    if (m_format == VertexFormat::V2t22) {
-        glEnableVertexAttribArray(2);
+    for (GLuint i = 0; i < c_format_narrays[int(m_format)]; i++) {
+        glEnableVertexAttribArray(i);
     }
 
     // projection matrix
@@ -166,10 +207,8 @@ void GlPrimitives::draw(View& view)
     glDisable(GL_SCISSOR_TEST);
     glDisable(GL_CULL_FACE);
     glDisable(GL_BLEND);
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
-    if (m_format == VertexFormat::V2t22) {
-        glDisableVertexAttribArray(2);
+    for (GLuint i = 0; i < c_format_narrays[int(m_format)]; i++) {
+        glDisableVertexAttribArray(i);
     }
     glUseProgram(0);
     m_program = 0;
@@ -189,6 +228,12 @@ void GlPrimitives::init_gl_objects()
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * m_vertex_data.size(),
                  m_vertex_data.data(), GL_STATIC_DRAW);
 
+    if (m_format == VertexFormat::V2t2) {
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
+                              sizeof(float) * 4, (void*) (sizeof(float) * 0));
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
+                              sizeof(float) * 4, (void*) (sizeof(float) * 2));
+    }
     if (m_format == VertexFormat::V2t22) {
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
                               sizeof(float) * 6, (void*) (sizeof(float) * 0));
@@ -197,11 +242,23 @@ void GlPrimitives::init_gl_objects()
         glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE,
                               sizeof(float) * 6, (void*) (sizeof(float) * 4));
     }
-    if (m_format == VertexFormat::V2t2) {
+    if (m_format == VertexFormat::V2c4t2) {
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
-                              sizeof(float) * 4, (void*) (sizeof(float) * 0));
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
-                              sizeof(float) * 4, (void*) (sizeof(float) * 2));
+                              sizeof(float) * 8, (void*) (sizeof(float) * 0));
+        glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE,
+                              sizeof(float) * 8, (void*) (sizeof(float) * 2));
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE,
+                              sizeof(float) * 8, (void*) (sizeof(float) * 6));
+    }
+    if (m_format == VertexFormat::V2c4t22) {
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
+                              sizeof(float) * 10, (void*) (sizeof(float) * 0));
+        glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE,
+                              sizeof(float) * 10, (void*) (sizeof(float) * 2));
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE,
+                              sizeof(float) * 10, (void*) (sizeof(float) * 6));
+        glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE,
+                              sizeof(float) * 10, (void*) (sizeof(float) * 8));
     }
 
     m_objects_ready = true;

@@ -37,6 +37,8 @@ public:
     void end_primitive() override;
     void add_vertex(float x, float y, float u, float v) override;
     void add_vertex(float x, float y, float u1, float v1, float u2, float v2) override;
+    void add_vertex(float x, float y, Color c, float u, float v) override;
+    void add_vertex(float x, float y, Color c, float u1, float v1, float u2, float v2) override;
     void clear() override;
     bool empty() const override { return m_vertex_data.empty(); }
 

@@ -58,6 +58,13 @@ class TextTerminal: public Widget {
 public:
     void add_text(const std::string& text);
 
+    enum class Color4bit {
+        Black, Red, Green, Yellow, Blue, Magenta, Cyan, White,
+        BrightBlack, BrightRed, BrightGreen, BrightYellow,
+        BrightBlue, BrightMagenta, BrightCyan, BrightWhite
+    };
+    void set_color(Color4bit fg, Color4bit bg);
+
     void resize(View& view) override;
     void draw(View& view, State state) override;
 

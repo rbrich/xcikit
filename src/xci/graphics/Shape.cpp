@@ -38,7 +38,7 @@ Shape::Shape(const Color& fill_color, const Color& outline_color,
              Renderer& renderer)
         : m_fill_color(fill_color), m_outline_color(outline_color),
           m_lines(renderer.new_primitives(VertexFormat::V2t2, PrimitiveType::TriFans)),
-          m_rectangles(renderer.new_primitives(VertexFormat::V2t22, PrimitiveType::TriFans)),
+          m_rectangles(renderer.new_primitives(VertexFormat::V2c4t22, PrimitiveType::TriFans)),
           m_ellipses(renderer.new_primitives(VertexFormat::V2t22, PrimitiveType::TriFans))
 {}
 
@@ -86,10 +86,10 @@ void Shape::add_rectangle(const Rect_f& rect, float outline_thickness)
     float iy = 1.0f + ty / (1-ty);
 
     m_rectangles->begin_primitive();
-    m_rectangles->add_vertex(x1, y1, -ix, -iy, -1.0f, -1.0f);
-    m_rectangles->add_vertex(x1, y2, -ix, +iy, -1.0f, +1.0f);
-    m_rectangles->add_vertex(x2, y2, +ix, +iy, +1.0f, +1.0f);
-    m_rectangles->add_vertex(x2, y1, +ix, -iy, +1.0f, -1.0f);
+    m_rectangles->add_vertex(x1, y1, m_fill_color, -ix, -iy, -1.0f, -1.0f);
+    m_rectangles->add_vertex(x1, y2, m_fill_color, -ix, +iy, -1.0f, +1.0f);
+    m_rectangles->add_vertex(x2, y2, m_fill_color, +ix, +iy, +1.0f, +1.0f);
+    m_rectangles->add_vertex(x2, y1, m_fill_color, +ix, -iy, +1.0f, -1.0f);
     m_rectangles->end_primitive();
 }
 
@@ -112,10 +112,10 @@ void Shape::add_rectangle_slice(const Rect_f& slice, const Rect_f& rect,
     float dx = bx * (1.0f + tx / (1-tx));
     float dy = by * (1.0f + ty / (1-ty));
     m_rectangles->begin_primitive();
-    m_rectangles->add_vertex(x1, y1, cx, cy, ax, ay);
-    m_rectangles->add_vertex(x1, y2, cx, dy, ax, by);
-    m_rectangles->add_vertex(x2, y2, dx, dy, bx, by);
-    m_rectangles->add_vertex(x2, y1, dx, cy, bx, ay);
+    m_rectangles->add_vertex(x1, y1, m_fill_color, cx, cy, ax, ay);
+    m_rectangles->add_vertex(x1, y2, m_fill_color, cx, dy, ax, by);
+    m_rectangles->add_vertex(x2, y2, m_fill_color, dx, dy, bx, by);
+    m_rectangles->add_vertex(x2, y1, m_fill_color, dx, cy, bx, ay);
     m_rectangles->end_primitive();
 }
 
@@ -215,9 +215,6 @@ void Shape::draw(View& view, const Vec2f& pos)
     if (!m_rectangles->empty()) {
         init_rectangle_shader();
         m_rectangles->set_shader(m_rectangle_shader);
-        m_rectangles->set_uniform("u_fill_color",
-                                 m_fill_color.red_f(), m_fill_color.green_f(),
-                                 m_fill_color.blue_f(), m_fill_color.alpha_f());
         m_rectangles->set_uniform("u_outline_color",
                                  m_outline_color.red_f(), m_outline_color.green_f(),
                                  m_outline_color.blue_f(), m_outline_color.alpha_f());

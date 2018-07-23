@@ -62,6 +62,39 @@ private:
 };
 
 
+// Similar to Sprites, but allows using a different color for each sprite.
+
+class ColoredSprites {
+public:
+    explicit ColoredSprites(TexturePtr& texture,
+                            const Color& color = Color::White(),
+                            Renderer& renderer = Renderer::default_renderer());
+
+    void set_color(const Color& color) { m_color = color; }
+
+    // Add new sprite containing whole texture
+    // `rect` defines position and size of the sprite
+    void add_sprite(const Rect_f& rect);
+
+    // Add new sprite containing a cutoff from the texture
+    // `rect` defines position and size of the sprite
+    void add_sprite(const Rect_f& rect, const Rect_u& texrect);
+
+    // Draw all sprites to `view` at `pos`.
+    // Final sprite position is `pos` + sprite's relative position
+    void draw(View& view, const Vec2f& pos);
+
+private:
+    void init_shader();
+
+private:
+    TexturePtr m_texture;
+    Color m_color;
+    PrimitivesPtr m_trifans;
+    ShaderPtr m_shader;
+};
+
+
 }} // namespace xci::graphics
 
 #endif // XCI_GRAPHICS_SPRITES_H

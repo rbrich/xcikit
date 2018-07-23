@@ -23,12 +23,12 @@ namespace graphics {
 
 
 struct Color {
-    Color() = default;
-    Color(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255)
+    constexpr Color() = default;
+    constexpr Color(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255)
             : r(r), g(g), b(b), a(a) {}
-    Color(int r, int g, int b, int a = 255)
+    constexpr Color(int r, int g, int b, int a = 255)
             : r(uint8_t(r)), g(uint8_t(g)), b(uint8_t(b)), a(uint8_t(a)) {}
-    Color(double r, double g, double b, double a = 1.0)
+    constexpr Color(double r, double g, double b, double a = 1.0)
             : r(uint8_t(r*255)), g(uint8_t(g*255)), b(uint8_t(b*255)), a(uint8_t(a*255)) {}
 
     float red_f() const { return r / 255.f; }
@@ -37,11 +37,11 @@ struct Color {
     float alpha_f() const { return a / 255.f; }
 
     // Predefined colors
-    static inline Color Transparent() { return {0, 0, 0, 0}; }
-    static inline Color Black() { return {0, 0, 0}; }
-    static inline Color White() { return {255, 255, 255}; }
-    static inline Color Red() { return {255, 0, 0}; }
-    static inline Color Yellow() { return {255, 255, 0}; }
+    static constexpr Color Transparent() { return {0, 0, 0, 0}; }
+    static constexpr Color Black() { return {0, 0, 0}; }
+    static constexpr Color White() { return {255, 255, 255}; }
+    static constexpr Color Red() { return {255, 0, 0}; }
+    static constexpr Color Yellow() { return {255, 255, 0}; }
 
     uint8_t r = 0;    // red
     uint8_t g = 0;    // green

@@ -29,6 +29,27 @@ using namespace util;
 using namespace util::log;
 
 
+// Basic palette of 4-bit colors
+static constexpr Color c_colors_4bit[16] = {
+    {0,0,0},        // 0 - black
+    {178,23,23},    // 1 - red
+    {23,178,23},    // 2 - green
+    {178,103,23},   // 3 - yellow
+    {23,23,178},    // 4 - blue
+    {178,23,178},   // 5 - magenta
+    {23,178,178},   // 6 - cyan
+    {178,178,178},  // 7 - white
+    {104,104,104},  // 8 - bright black
+    {255,84,84},    // 9 - bright red
+    {84,255,84},    // 10 - bright green
+    {255,255,84},   // 11 - bright yellow
+    {84,84,255},    // 12 - bright blue
+    {255,84,255},   // 13 - bright magenta
+    {84,255,255},   // 14 - bright cyan
+    {255,255,255},  // 15 - bright white
+};
+
+
 int terminal::Line::length() const
 {
     return utf8_length(m_content);
@@ -66,6 +87,14 @@ void TextTerminal::add_text(const std::string& text)
 }
 
 
+void TextTerminal::set_color(Color4bit fg, Color4bit bg)
+{
+    uint8_t encoded_color = (uint8_t(bg) << 4) + uint8_t(fg);
+    uint8_t seq[] = {0xc1, encoded_color};
+    current_line().append(std::string(std::begin(seq), std::end(seq)));
+}
+
+
 void TextTerminal::resize(View& view)
 {
     auto& font = theme().font();
@@ -85,15 +114,35 @@ void TextTerminal::draw(View& view, State state)
     auto pxf = view.framebuffer_ratio();
     font.set_size(unsigned(m_font_size / pxf.y));
 
-    graphics::Sprites sprites(font.get_texture(), Color::White());
-    graphics::Shape boxes(Color(150, 0, 0));
+    graphics::ColoredSprites sprites(font.get_texture(), c_colors_4bit[7]);
+    graphics::Shape boxes(c_colors_4bit[0]);
 
     Vec2f pen;
     auto buffer_last = std::min(int(m_buffer.size()), m_buffer_offset + m_cells.y);
     for (int line_idx = m_buffer_offset; line_idx < buffer_last; line_idx++) {
-        for (CodePoint code_point : to_utf32(m_buffer[line_idx].content())) {
-            if (code_point == '\n')
+        auto& line = m_buffer[line_idx].content();
+        for (auto pos = line.cbegin(); pos != line.cend(); ) {
+            if (*pos == '\n') {
+                // newline is ignored and finishes line processing
                 break;
+            }
+            if (*pos == '\xc1') {
+                // decode 4-bit colors
+                ++pos;
+                auto& fg = c_colors_4bit[*pos & 0x0f];
+                auto& bg = c_colors_4bit[*pos >> 4];
+                sprites.set_color(fg);
+                boxes.set_fill_color(bg);
+                ++pos;
+                continue;
+            }
+
+            // extract single UTF-8 character
+            auto end_pos = utf8_next(pos);
+            auto ch = line.substr(pos - line.cbegin(), end_pos - pos);
+            pos = end_pos;
+
+            CodePoint code_point = to_utf32(ch)[0];
             auto glyph = font.get_glyph(code_point);
             if (glyph == nullptr)
                 glyph = font.get_glyph(' ');
@@ -112,6 +161,7 @@ void TextTerminal::draw(View& view, State state)
 
             pen.x += glyph->advance() * pxf.x;
         }
+
         pen.x = 0;
         pen.y += font.line_height() * pxf.y;
     }
