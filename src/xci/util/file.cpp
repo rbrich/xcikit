@@ -22,6 +22,7 @@
 #include <libgen.h>
 #include <cassert>
 #include <sys/param.h>
+#include <cstring>
 
 namespace xci {
 namespace util {

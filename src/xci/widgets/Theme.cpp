@@ -27,7 +27,7 @@ bool Theme::load_default_theme()
     Theme& theme = Theme::default_theme();
 
     // Base font
-    TRY(theme.load_font(XCI_SHARE_DIR "/fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0));
+    TRY(theme.load_font(XCI_SHARE_DIR "/fonts/Hack/Hack-Regular.ttf", 0));
 
     // Material Icons
     TRY(theme.load_icon_font(XCI_SHARE_DIR "/fonts/MaterialIcons/MaterialIcons-Regular.woff", 0));
