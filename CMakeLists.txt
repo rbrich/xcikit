@@ -14,6 +14,7 @@ option(XCI_DEBUG_OPENGL "Log info about OpenGL calls and errors." OFF)
 
 option(BUILD_SHARED_LIBS "Build shared libs instead of static libs." OFF)
 option(BUILD_WITH_ASAN "Build with AddressSanitizer." OFF)
+option(BUILD_WITH_UBSAN "Build with UndefinedBehaviorSanitizer." OFF)
 option(BUILD_PEDANTIC "Build with -Wpedantic -Werror." OFF)
 
 set(CMAKE_CXX_STANDARD 14)
@@ -33,6 +34,9 @@ endif()
 
 if (BUILD_WITH_ASAN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
+endif ()
+if (BUILD_WITH_UBSAN)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined")
 endif ()
 
 # ------------ #
@@ -329,11 +333,13 @@ install(DIRECTORY ${CMAKE_BINARY_DIR}/include/xci DESTINATION include)
 
 install(EXPORT xcikit DESTINATION lib/cmake/xci FILE "xcikitTargets.cmake")
 
+set(XCI_INCLUDE_DIRS include)
 include(CMakePackageConfigHelpers)
 configure_package_config_file(xcikitConfig.cmake.in xcikitConfig.cmake
-    INSTALL_DESTINATION lib/cmake/xci)
+    INSTALL_DESTINATION lib/cmake/xci
+    PATH_VARS XCI_INCLUDE_DIRS)
 write_basic_package_version_file(xcikitConfigVersion.cmake
-    VERSION 0.0.1
+    VERSION 0.1.0
     COMPATIBILITY SameMajorVersion)
 install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/xcikitConfig.cmake

@@ -19,6 +19,8 @@
 #include <cxxabi.h>
 #endif
 
+#include <cstdlib>
+
 namespace xci {
 namespace util {
 

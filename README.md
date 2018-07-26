@@ -130,3 +130,27 @@ Build steps:
     
     # Build
     make
+
+    # Install (default prefix is /usr/local)
+    make install
+
+
+Linking with XCI Toolkit (using CMake)
+--------------------------------------
+
+Build and install XCI libraries (see Build above),
+then use installed `xcikitConfig.cmake` from your project's
+`CMakeLists.txt`:
+
+    cmake_minimum_required(VERSION 3.7)
+    project(example CXX)
+    
+    set(CMAKE_CXX_STANDARD 17)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+    
+    set(xcikit_DIR /usr/local/lib/cmake/xci)
+    find_package(xcikit REQUIRED)
+    
+    add_executable(example src/main.cpp)
+    target_link_libraries(example xci-widgets)
