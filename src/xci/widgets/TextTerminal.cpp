@@ -50,6 +50,13 @@ static constexpr Color c_colors_4bit[16] = {
 };
 
 
+static constexpr uint8_t c_font_style_mask = 0b00000011;
+static constexpr uint8_t c_decoration_mask = 0b00011100;
+static constexpr uint8_t c_mode_mask       = 0b01100000;
+static constexpr int c_decoration_shift = 2;
+static constexpr int c_mode_shift = 5;
+
+
 int terminal::Line::length() const
 {
     return utf8_length(m_content);
@@ -95,6 +102,34 @@ void TextTerminal::set_color(Color4bit fg, Color4bit bg)
 }
 
 
+void TextTerminal::set_attribute(uint8_t mask, uint8_t attr)
+{
+    // Overwrite the respective bits in m_attributes
+    m_attributes = (m_attributes & ~mask) | (attr & mask);
+    // Append control code
+    uint8_t seq[] = {0xc0, m_attributes};
+    current_line().append(std::string(std::begin(seq), std::end(seq)));
+}
+
+
+void TextTerminal::set_font_style(TextTerminal::FontStyle style)
+{
+    set_attribute(c_font_style_mask, static_cast<uint8_t>(style));
+}
+
+
+void TextTerminal::set_decoration(TextTerminal::Decoration decoration)
+{
+    set_attribute(c_decoration_mask, static_cast<uint8_t>(decoration) << c_decoration_shift);
+}
+
+
+void TextTerminal::set_mode(TextTerminal::Mode mode)
+{
+    set_attribute(c_mode_mask, static_cast<uint8_t>(mode) << c_mode_shift);
+}
+
+
 void TextTerminal::resize(View& view)
 {
     auto& font = theme().font();
@@ -126,6 +161,20 @@ void TextTerminal::draw(View& view, State state)
                 // newline is ignored and finishes line processing
                 break;
             }
+
+            if (*pos == '\xc0') {
+                // decode attributes
+                ++pos;
+                auto style = static_cast<FontStyle>(*pos & c_font_style_mask);
+                auto deco = static_cast<Decoration>((*pos & c_decoration_mask) >> c_decoration_shift);
+                auto mode = static_cast<Mode>((*pos & c_mode_mask) >> c_mode_shift);
+                font.set_style(style);
+                (void) deco; // TODO
+                (void) mode; // TODO
+                ++pos;
+                continue;
+            }
+
             if (*pos == '\xc1') {
                 // decode 4-bit colors
                 ++pos;

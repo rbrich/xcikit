@@ -37,7 +37,10 @@ int main()
     const char* cmd = "ls -la ..";
 
     TextTerminal terminal;
-    terminal.add_text(get_cwd() + "> " + cmd + "\n");
+    terminal.add_text(get_cwd() + "> ");
+    terminal.set_font_style(TextTerminal::FontStyle::Bold);
+    terminal.add_text(std::string(cmd) + "\n");
+    terminal.set_font_style(TextTerminal::FontStyle::Regular);
     terminal.set_color(TextTerminal::Color4bit::BrightYellow, TextTerminal::Color4bit::Blue);
 
     FILE* f = popen(cmd, "r");

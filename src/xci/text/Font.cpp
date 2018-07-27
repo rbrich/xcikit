@@ -33,11 +33,25 @@ Font::Font() : m_texture(std::make_unique<FontTexture>()) {}
 Font::~Font() = default;
 
 
-void Font::add_face(FontFace &face)
+void Font::add_face(std::unique_ptr<FontFace> face)
 {
-    m_faces.emplace_back(&face);
+    m_faces.emplace_back(std::move(face));
     if (m_current_face == nullptr)
-        m_current_face = m_faces.back();
+        m_current_face = m_faces.front().get();
+}
+
+
+void Font::set_style(FontStyle style)
+{
+    for (auto& face : m_faces) {
+        if (face->style() == style) {
+            m_current_face = face.get();
+            return;
+        }
+    }
+    // Style not found, select the first one
+    log_warning("Requested font style not found: {}", int(style));
+    m_current_face = m_faces.front().get();
 }
 
 
@@ -47,7 +61,6 @@ void Font::set_size(unsigned size)
     if (m_current_face)
         m_current_face->set_size(m_size);
 }
-
 
 Font::Glyph* Font::get_glyph(CodePoint code_point)
 {
@@ -98,6 +111,7 @@ void Font::clear_cache()
     m_glyphs.clear();
     m_texture->clear();
 }
+
 
 float Font::line_height() const
 {

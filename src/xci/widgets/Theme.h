@@ -55,11 +55,11 @@ public:
     static Theme& default_theme();
 
     // base font
-    bool load_font(const char* file_path, int face_index);
+    bool load_font_face(const char* file_path, int face_index);
     text::Font& font() { return m_font; }
 
     // icons
-    bool load_icon_font(const char* file_path, int face_index);
+    bool load_icon_font_face(const char* file_path, int face_index);
     text::Font& icon_font() { return m_icon_font; }
     void set_icon_codepoint(IconId icon_id, text::CodePoint codepoint);
     text::CodePoint icon_codepoint(IconId icon_id);
@@ -70,10 +70,8 @@ public:
 
 private:
     // base font
-    text::FontFace m_font_face;
     text::Font m_font;
     // icons
-    text::FontFace m_icon_font_face;
     text::Font m_icon_font;
     IconMap m_icon_map;
     // colors

@@ -30,6 +30,16 @@ using CodePoint = char32_t;
 using GlyphIndex = uint32_t;
 
 
+// This enum can also be considered a bitset,
+// with 0b01 = italic, 0b10 = bold.
+enum class FontStyle {
+    Regular,        // 00
+    Italic,         // 01
+    Bold,           // 10
+    BoldItalic,     // 11
+};
+
+
 // Wrapper around FT_Face. Set size and attributes,
 // retrieve rendered glyphs (bitmaps) and glyph metrics.
 
@@ -50,6 +60,7 @@ public:
 
     bool set_outline();  // TODO
 
+    FontStyle style() const;
     float line_height() const;
     float max_advance();
     float ascender() const;

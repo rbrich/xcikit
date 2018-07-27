@@ -31,11 +31,11 @@ int main()
     Window& window = Window::default_window();
     window.create({800, 600}, "XCI shapes demo");
 
-    FontFace face;
-    if (!face.load_from_file("fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
+    auto face = std::make_unique<FontFace>();
+    if (!face->load_from_file("fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
         return EXIT_FAILURE;
     Font font;
-    font.add_face(face);
+    font.add_face(std::move(face));
 
     Text shapes_help("[r] rectangles{br}"
                      "[o] rounded rectangles{br}"

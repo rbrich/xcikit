@@ -24,11 +24,11 @@ namespace graphics {
 
 struct Color {
     constexpr Color() = default;
-    constexpr Color(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255)
+    constexpr Color(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255) noexcept
             : r(r), g(g), b(b), a(a) {}
-    constexpr Color(int r, int g, int b, int a = 255)
+    constexpr Color(int r, int g, int b, int a = 255) noexcept
             : r(uint8_t(r)), g(uint8_t(g)), b(uint8_t(b)), a(uint8_t(a)) {}
-    constexpr Color(double r, double g, double b, double a = 1.0)
+    constexpr Color(double r, double g, double b, double a = 1.0) noexcept
             : r(uint8_t(r*255)), g(uint8_t(g*255)), b(uint8_t(b*255)), a(uint8_t(a*255)) {}
 
     float red_f() const { return r / 255.f; }

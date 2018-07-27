@@ -15,6 +15,7 @@
 
 #include "FontFace.h"
 #include <xci/util/log.h>
+#include <cassert>
 
 namespace xci {
 namespace text {
@@ -108,6 +109,7 @@ bool FontFace::set_size(unsigned pixel_size)
     return true;
 }
 
+
 bool FontFace::set_outline()
 {
     if (stroker == nullptr) {
@@ -124,10 +126,21 @@ bool FontFace::set_outline()
     return true;
 }
 
+
+FontStyle FontFace::style() const
+{
+    assert(face != nullptr);
+    static_assert(FT_STYLE_FLAG_ITALIC == int(FontStyle::Italic), "freetype italic flag == 1");
+    static_assert(FT_STYLE_FLAG_BOLD == int(FontStyle::Bold), "freetype bold flag == 2");
+    return static_cast<FontStyle>(face->style_flags & 0b11);
+}
+
+
 float FontFace::line_height() const
 {
     return ft_to_float(face->size->metrics.height);
 }
+
 
 float FontFace::max_advance()
 {
@@ -143,25 +156,30 @@ float FontFace::max_advance()
     return ft_to_float(glyph_slot->metrics.horiAdvance);
 }
 
+
 float FontFace::ascender() const
 {
     return ft_to_float(face->size->metrics.ascender);
 }
+
 
 float FontFace::descender() const
 {
     return ft_to_float(face->size->metrics.descender);
 }
 
+
 GlyphIndex FontFace::get_glyph_index(CodePoint code_point) const
 {
     return FT_Get_Char_Index(face, code_point);
 }
 
+
 FT_Glyph_Metrics& FontFace::glyph_metrics()
 {
     return face->glyph->metrics;
 }
+
 
 FT_Bitmap& FontFace::render_glyph()
 {
@@ -171,6 +189,7 @@ FT_Bitmap& FontFace::render_glyph()
     }
     return face->glyph->bitmap;
 }
+
 
 FT_GlyphSlot FontFace::load_glyph(GlyphIndex glyph_index)
 {

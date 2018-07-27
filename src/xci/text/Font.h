@@ -45,16 +45,10 @@ public:
     Font& operator =(const Font&) = delete;
 
     // Add a face. Call multiple times if the strokes are in separate files.
-    void add_face(FontFace &face);
+    void add_face(std::unique_ptr<FontFace> face);
 
-    // Select a loaded face by stroke style
-    enum Stroke {
-        Regular,
-        Bold,
-        Italic,
-        BoldItalic,
-    };
-    void set_stroke(Stroke stroke);
+    // Select a loaded face by style
+    void set_style(FontStyle style);
 
     // Select a size for current face. This may create a new texture (glyph table).
     void set_size(unsigned size);
@@ -106,7 +100,7 @@ public:
 
 private:
     unsigned m_size = 10;
-    std::list<FontFace*> m_faces;  // faces for different strokes (eg. normal, bold, italic)
+    std::list<std::unique_ptr<FontFace>> m_faces;  // faces for different strokes (eg. normal, bold, italic)
     FontFace* m_current_face = nullptr;
     std::unique_ptr<FontTexture> m_texture;  // glyph tables for different styles (size, outline)
     std::map<GlyphKey, Glyph> m_glyphs;

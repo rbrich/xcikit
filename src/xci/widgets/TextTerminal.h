@@ -65,11 +65,33 @@ public:
     };
     void set_color(Color4bit fg, Color4bit bg);
 
+    using FontStyle = text::FontStyle;
+    void set_font_style(FontStyle style);
+
+    enum class Decoration {
+        None,
+        Underlined,
+        Overlined,
+        CrossedOut,
+        Framed,
+        Encircled,
+    };
+    void set_decoration(Decoration decoration);
+
+    enum class Mode {
+        Normal,
+        Blink,
+        Conceal,
+        Inverse,
+    };
+    void set_mode(Mode mode);
+
     void resize(View& view) override;
     void draw(View& view, State state) override;
 
-protected:
+private:
     terminal::Line& current_line() { return m_buffer[m_buffer_offset + m_cursor.y]; }
+    void set_attribute(uint8_t mask, uint8_t attr);
 
 private:
     float m_font_size = 0.05;
@@ -78,6 +100,7 @@ private:
     terminal::Buffer m_buffer;
     int m_buffer_offset = 0;  // offset to line in buffer which is first on screen
     util::Vec2i m_cursor;  // x/y of cursor on screen
+    uint8_t m_attributes = 0;  // encoded attributes (font style, mode, decorations)
 };
 
 
