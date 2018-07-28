@@ -20,6 +20,7 @@
 #include <xci/text/FontFace.h>
 #include <xci/util/geometry.h>
 #include <vector>
+#include <chrono>
 
 namespace xci {
 namespace widgets {
@@ -86,6 +87,10 @@ public:
     };
     void set_mode(Mode mode);
 
+    // visual bell
+    void bell();
+
+    void update(std::chrono::nanoseconds elapsed) override;
     void resize(View& view) override;
     void draw(View& view, State state) override;
 
@@ -101,6 +106,7 @@ private:
     int m_buffer_offset = 0;  // offset to line in buffer which is first on screen
     util::Vec2i m_cursor;  // x/y of cursor on screen
     uint8_t m_attributes = 0;  // encoded attributes (font style, mode, decorations)
+    std::chrono::nanoseconds m_bell_time {0};
 };
 
 

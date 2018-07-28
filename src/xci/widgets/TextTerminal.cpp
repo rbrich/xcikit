@@ -27,6 +27,8 @@ using graphics::Color;
 using text::CodePoint;
 using namespace util;
 using namespace util::log;
+using namespace std::chrono;
+using namespace std::chrono_literals;
 
 
 // Basic palette of 4-bit colors
@@ -130,6 +132,17 @@ void TextTerminal::set_mode(TextTerminal::Mode mode)
 }
 
 
+void TextTerminal::update(std::chrono::nanoseconds elapsed)
+{
+    if (m_bell_time > 0ns) {
+        m_bell_time -= elapsed;
+        // zero is special, make sure we don't end at that value
+        if (m_bell_time == 0ns)
+            m_bell_time = -1ns;
+    }
+}
+
+
 void TextTerminal::resize(View& view)
 {
     auto& font = theme().font();
@@ -217,6 +230,23 @@ void TextTerminal::draw(View& view, State state)
 
     boxes.draw(view, position());
     sprites.draw(view, position());
+
+    if (m_bell_time > 0ns) {
+        auto x = (float) duration_cast<milliseconds>(m_bell_time).count() / 500.f;
+        graphics::Shape frame(Color::Transparent(), Color(1.f, 0.f, 0.f, x));
+        frame.add_rectangle({{0, 0}, size()}, 0.01f);
+        frame.draw(view, position());
+        view.start_periodic_refresh();
+    } else if (m_bell_time < 0ns) {
+        m_bell_time = 0ns;
+        view.stop_periodic_refresh();
+    }
+}
+
+
+void TextTerminal::bell()
+{
+    m_bell_time = 500ms;
 }
 
 

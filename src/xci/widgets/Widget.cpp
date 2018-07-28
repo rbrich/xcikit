@@ -244,6 +244,13 @@ void Clickable::do_click(View& view)
 Bind::Bind(graphics::Window& window, Widget& root)
     : m_window(window)
 {
+    m_update_cb = window.get_update_callback();
+    window.set_update_callback([&](std::chrono::nanoseconds t) {
+        if (m_update_cb)
+            m_update_cb(t);
+        root.update(t);
+    });
+
     m_size_cb = window.get_size_callback();
     window.set_size_callback([&](View& v) {
         if (m_size_cb)

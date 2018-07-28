@@ -58,6 +58,7 @@ int main()
         auto s = v.scalable_size();
         terminal.set_position({-s * 0.5});
         terminal.set_size(s);
+        terminal.bell();
     });
 
     Bind bind(window, terminal);

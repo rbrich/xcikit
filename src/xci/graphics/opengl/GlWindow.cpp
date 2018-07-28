@@ -27,6 +27,7 @@ namespace xci {
 namespace graphics {
 
 using namespace xci::util::log;
+using namespace std::chrono;
 
 
 static void error_callback(int error, const char* description)
@@ -142,15 +143,19 @@ void GlWindow::display()
 {
     setup_view();
 
+    auto t_last = steady_clock::now();
     while (!glfwWindowShouldClose(m_window)) {
         switch (m_mode) {
             case RefreshMode::OnDemand:
-                if (m_view.pop_refresh())
-                    draw();
-                glfwWaitEvents();
-                break;
             case RefreshMode::OnEvent:
-                draw();
+                if (m_view.periodic_refresh()) {
+                    draw();
+                    glfwPollEvents();
+                    break;
+                }
+                if (m_mode == RefreshMode::OnEvent || m_view.pop_refresh()) {
+                    draw();
+                }
                 glfwWaitEvents();
                 break;
             case RefreshMode::PeriodicVsync:
@@ -158,6 +163,11 @@ void GlWindow::display()
                 draw();
                 glfwPollEvents();
                 break;
+        }
+        if (m_update_cb) {
+            auto t_now = steady_clock::now();
+            m_update_cb(t_now - t_last);
+            t_last = t_now;
         }
     }
 }

@@ -76,6 +76,7 @@ public:
     // Events need to be injected into root widget.
     // This can be set up using Bind helper or manually by calling these methods.
 
+    virtual void update(std::chrono::nanoseconds elapsed) {}
     virtual void resize(View& view) {}
     virtual void draw(View& view, State state) = 0;
     virtual bool key_event(View& view, const KeyEvent& ev) { return false; }
@@ -185,6 +186,7 @@ public:
 
 private:
     graphics::Window& m_window;
+    graphics::Window::UpdateCallback m_update_cb;
     graphics::Window::SizeCallback m_size_cb;
     graphics::Window::DrawCallback m_draw_cb;
     graphics::Window::KeyCallback m_key_cb;

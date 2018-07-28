@@ -34,6 +34,7 @@ public:
 
     void create(const Vec2u& size, const std::string& title) override;
     void display() override;
+    void wakeup() const override { glfwPostEmptyEvent(); }
 
     void set_draw_callback(DrawCallback draw_cb) override;
     void set_mouse_position_callback(MousePosCallback mpos_cb) override;

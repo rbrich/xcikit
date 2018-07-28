@@ -23,6 +23,7 @@
 #include <memory>
 #include <functional>
 #include <utility>
+#include <chrono>
 
 namespace xci {
 namespace graphics {
@@ -115,6 +116,12 @@ public:
     virtual void create(const Vec2u& size, const std::string& title) = 0;
     virtual void display() = 0;
 
+    // When in OnDemand or OnEvent refresh mode, call this to wake up
+    // event loop. Put custom handler into UpdateCallback.
+    // (thread-safe)
+    virtual void wakeup() const = 0;
+
+    using UpdateCallback = std::function<void(std::chrono::nanoseconds elapsed)>;
     using SizeCallback = std::function<void(View&)>;
     using DrawCallback = std::function<void(View&)>;
     using KeyCallback = std::function<void(View&, const KeyEvent&)>;
@@ -124,6 +131,7 @@ public:
 
     // The original callback is replaced. To cascade callbacks,
     // you have to get and wrap original callback manually.
+    virtual void set_update_callback(UpdateCallback update_cb) { m_update_cb = std::move(update_cb); }
     virtual void set_size_callback(SizeCallback size_cb) { m_size_cb = std::move(size_cb); }
     virtual void set_draw_callback(DrawCallback draw_cb) { m_draw_cb = std::move(draw_cb); }
     virtual void set_key_callback(KeyCallback key_cb) { m_key_cb = std::move(key_cb); }
@@ -131,6 +139,7 @@ public:
     virtual void set_mouse_position_callback(MousePosCallback mpos_cb) { m_mpos_cb = std::move(mpos_cb); }
     virtual void set_mouse_button_callback(MouseBtnCallback mbtn_cb) { m_mbtn_cb = std::move(mbtn_cb); }
 
+    UpdateCallback get_update_callback() { return m_update_cb; }
     SizeCallback get_size_callback() { return m_size_cb; }
     DrawCallback get_draw_callback() { return m_draw_cb; }
     KeyCallback get_key_callback() { return m_key_cb; }
@@ -142,6 +151,7 @@ public:
     virtual void set_debug_flags(View::DebugFlags flags) = 0;
 
 protected:
+    UpdateCallback m_update_cb;
     SizeCallback m_size_cb;
     DrawCallback m_draw_cb;
     KeyCallback m_key_cb;

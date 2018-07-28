@@ -108,8 +108,14 @@ public:
     // ------------------------------------------------------------------------
     // Refresh
 
+    // Demand refresh (in OnDemand refresh mode)
     void refresh() { m_needs_refresh = true; }
     bool pop_refresh();
+
+    // Temporarily switch to periodic refresh (in OnDemand refresh mode)
+    void start_periodic_refresh() { ++m_periodic_refresh; }
+    void stop_periodic_refresh() { --m_periodic_refresh; }
+    bool periodic_refresh() const { return m_periodic_refresh > 0; }
 
     // ------------------------------------------------------------------------
     // Visual debugging
@@ -134,6 +140,7 @@ private:
     Vec2u m_framebuffer_size;   // eg. {1600, 1200}
     DebugFlags m_debug = 0;
     bool m_needs_refresh = false;
+    int m_periodic_refresh = 0;
     std::vector<Rect_f> m_crop;  // Crop region stack (current crop region on back)
     std::vector<Vec2f> m_offset;  // Offset stack (current offset on back)
 };

@@ -67,12 +67,9 @@ Font::Glyph* Font::get_glyph(CodePoint code_point)
     assert(m_current_face != nullptr);  // font must be loaded
 
     // translate char to glyph
+    // In case of failure, this returns 0, which is okay, because
+    // glyph nr. 0 contains graphic for "undefined character code".
     uint glyph_index = m_current_face->get_glyph_index(code_point);
-    if (!glyph_index) {
-        // Note that this is not an error, not even warning!
-        // Glyph nr. 0 actually contains graphic for "undefined character code"
-        log_debug("Font does not define char: {}", code_point);
-    }
 
     // check cache
     GlyphKey glyph_key{m_current_face, m_size, glyph_index};
