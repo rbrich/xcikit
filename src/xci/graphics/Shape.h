@@ -43,6 +43,9 @@ public:
     void set_antialiasing(float antialiasing) { m_antialiasing = antialiasing; }
     void set_softness(float softness) { m_softness = softness; }
 
+    const Color& fill_color() const { return m_fill_color; }
+    const Color& outline_color() const { return m_outline_color; }
+
     // Add a slice of infinite line
     // `a`, `b`            - two points to define the line
     // `slice`             - rectangular region in which is the line visible

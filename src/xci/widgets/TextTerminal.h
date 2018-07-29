@@ -31,6 +31,8 @@ namespace terminal {
 class Line {
 public:
     void append(const std::string& string) { m_content += string; }
+    void erase(int first, int num);
+
     const std::string& content() const { return m_content; }
     int length() const;
 
@@ -83,19 +85,24 @@ public:
         Normal,
         Blink,
         Conceal,
-        Inverse,
+        Reverse,
     };
     void set_mode(Mode mode);
 
     // visual bell
     void bell();
 
+    void set_cursor_pos(util::Vec2i pos);
+    util::Vec2i cursor_pos() const { return m_cursor; }
+
+    terminal::Line& current_line() { return m_buffer[m_buffer_offset + m_cursor.y]; }
+    util::Vec2i size_in_cells() const { return m_cells; }
+
     void update(std::chrono::nanoseconds elapsed) override;
     void resize(View& view) override;
     void draw(View& view, State state) override;
 
 private:
-    terminal::Line& current_line() { return m_buffer[m_buffer_offset + m_cursor.y]; }
     void set_attribute(uint8_t mask, uint8_t attr);
 
 private:

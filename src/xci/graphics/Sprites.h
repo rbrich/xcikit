@@ -71,6 +71,7 @@ public:
                             Renderer& renderer = Renderer::default_renderer());
 
     void set_color(const Color& color) { m_color = color; }
+    const Color& color() const { return m_color; }
 
     // Add new sprite containing whole texture
     // `rect` defines position and size of the sprite
