@@ -60,25 +60,63 @@ static constexpr int c_decoration_shift = 2;
 static constexpr int c_mode_shift = 5;
 
 
+void terminal::Line::insert(int pos, std::string_view string)
+{
+    int current = 0;
+    for (auto it = m_content.cbegin(); it != m_content.cend(); it = utf8_next(it)) {
+        if (*it == '\xc0' || *it == '\xc1')
+            continue;
+        if (pos == current) {
+            m_content.insert(it, string.cbegin(), string.cend());
+            return;
+        }
+        ++current;
+    }
+    assert(pos >= current);
+    m_content.append(string);
+}
+
+
+void terminal::Line::replace(int pos, std::string_view string)
+{
+    int current = 0;
+    for (auto it = m_content.cbegin(); it != m_content.cend(); it = utf8_next(it)) {
+        if (*it == '\xc0' || *it == '\xc1')
+            continue;
+        if (pos == current) {
+            auto end = it;
+            for (size_t i = 0; i < string.size(); i++) {
+                end = utf8_next(end);
+            }
+            m_content.replace(it, end, string);
+            return;
+        }
+        ++current;
+    }
+    assert(pos >= current);
+    m_content.append(string);
+}
+
+
 void terminal::Line::erase(int first, int num)
 {
     int current = 0;
     std::string::const_iterator erase_start = m_content.cend();
     std::string::const_iterator erase_end = m_content.cend();
     for (auto pos = m_content.cbegin(); pos != m_content.cend(); pos = utf8_next(pos)) {
-        if (*pos != '\xc0' && *pos != '\xc1' && *pos != '\n') {
-            if (current == first) {
-                erase_start = pos;
-            }
-            if (current > first) {
-                if (num > 0)
-                    --num;
-                else {
-                    erase_end = pos;
-                }
-            }
-            ++current;
+        if (*pos == '\xc0' || *pos == '\xc1')
+            continue;
+        if (current == first) {
+            erase_start = pos;
         }
+        if (current > first) {
+            if (num > 0)
+                --num;
+            else {
+                erase_end = pos;
+            }
+        }
+        ++current;
     }
     if (erase_end != m_content.cend())
         m_content.erase(erase_start - m_content.cbegin(), erase_end - erase_start);
@@ -101,17 +139,16 @@ int terminal::Line::length() const
 void TextTerminal::add_text(const std::string& text)
 {
     // Add characters up to terminal width (columns)
-    int length = current_line().length();
-    for (auto pos = text.cbegin(); pos != text.cend(); ) {
+    for (auto it = text.cbegin(); it != text.cend(); ) {
         // Special handling for newline character
         bool new_line = false;
-        if (*pos == '\n') {
-            ++pos;
+        if (*it == '\n') {
+            ++it;
             new_line = true;
         }
 
         // Check line length
-        if (length >= m_cells.x) {
+        if (m_cursor.x >= m_cells.x) {
             new_line =  true;
         }
 
@@ -120,16 +157,14 @@ void TextTerminal::add_text(const std::string& text)
             m_buffer.add_line();
             ++m_cursor.y;
             m_cursor.x = 0;
-            length = 0;
             continue;
         }
 
         // Add character to current line
-        auto end_pos = utf8_next(pos);
-        current_line().append(text.substr(pos - text.cbegin(), end_pos - pos));
-        pos = end_pos;
+        auto end_pos = utf8_next(it);
+        current_line().replace(m_cursor.x, text.substr(it - text.cbegin(), end_pos - it));
+        it = end_pos;
         ++m_cursor.x;
-        ++length;
     }
 }
 
@@ -186,8 +221,8 @@ void TextTerminal::resize(View& view)
     auto& font = theme().font();
     auto pxf = view.framebuffer_ratio();
     font.set_size(unsigned(m_font_size / pxf.y));
-    m_cell_size = {(font.max_advance() + 0.5f) * pxf.x,
-                   (font.line_height() + 0.5f) * pxf.y};
+    m_cell_size = {font.max_advance() * pxf.x,
+                   font.line_height() * pxf.y};
     m_cells = {int(size().x / m_cell_size.x),
                int(size().y / m_cell_size.y)};
     log_debug("TextTerminal cells {}", m_cells);
@@ -271,7 +306,7 @@ void TextTerminal::draw(View& view, State state)
                 boxes.set_fill_color(bg);
             }
 
-            pen.x += glyph->advance() * pxf.x;
+            pen.x += m_cell_size.x;
             ++column;
         }
 
@@ -285,7 +320,7 @@ void TextTerminal::draw(View& view, State state)
         }
 
         pen.x = 0;
-        pen.y += font.line_height() * pxf.y;
+        pen.y += m_cell_size.y;
     }
 
     boxes.draw(view, position());
@@ -321,7 +356,6 @@ void TextTerminal::set_cursor_pos(util::Vec2i pos)
     while (m_cursor.y >= int(m_buffer.size()) - m_buffer_offset) {
         m_buffer.add_line();
     }
-    log_debug("set_cursor_pos({}) -> {}", pos, m_cursor);
 }
 
 

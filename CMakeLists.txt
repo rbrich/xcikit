@@ -291,10 +291,10 @@ add_subdirectory(examples)
 # Tests        #
 # ------------ #
 
-if (CATCH_FOUND)
+if (Catch_FOUND)
     enable_testing()
     add_subdirectory(tests)
-endif (CATCH_FOUND)
+endif (Catch_FOUND)
 
 
 
@@ -331,7 +331,13 @@ install(DIRECTORY src/xci DESTINATION include
 # config.h
 install(DIRECTORY ${CMAKE_BINARY_DIR}/include/xci DESTINATION include)
 
-install(EXPORT xcikit DESTINATION lib/cmake/xci FILE "xcikitTargets.cmake")
+install(EXPORT xcikit
+    NAMESPACE xcikit::
+    DESTINATION lib/cmake/xci
+    FILE "xcikitTargets.cmake")
+
+# Make our CMake modules available to clients
+install(FILES cmake-modules/FindCatch.cmake DESTINATION lib/cmake/xci)
 
 set(XCI_INCLUDE_DIRS include)
 include(CMakePackageConfigHelpers)
