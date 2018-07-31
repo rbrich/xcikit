@@ -17,7 +17,7 @@
 
 #include <xci/graphics/Shape.h>
 #include <xci/graphics/View.h>
-#include <xci/util/compat.h>
+#include <xci/compat/unique.h>
 
 #include <cassert>
 

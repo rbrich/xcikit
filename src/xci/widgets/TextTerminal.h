@@ -21,7 +21,7 @@
 #include <xci/util/geometry.h>
 #include <vector>
 #include <chrono>
-#include <string_view>
+#include <xci/compat/string_view.h>
 
 namespace xci {
 namespace widgets {
@@ -32,7 +32,7 @@ namespace terminal {
 class Line {
 public:
     void insert(int pos, std::string_view string);
-    void append(std::string_view string) { m_content.append(string); }
+    void append(std::string_view string) { m_content.append(string.cbegin(), string.cend()); }
     void replace(int pos, std::string_view string);
     void erase(int first, int num);
 

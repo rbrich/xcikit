@@ -1,5 +1,4 @@
 set(XCI_UTIL_SOURCES
-    compat.h
     file.cpp
     file.h
     FileWatch.cpp

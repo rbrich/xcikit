@@ -16,7 +16,7 @@
 #include "GlWindow.h"
 #include <xci/config.h>
 #include <xci/util/log.h>
-#include <xci/util/compat.h>
+#include <xci/compat/unique.h>
 
 #include <glad/glad.h>
 
@@ -277,7 +277,7 @@ void GlWindow::setup_view()
             auto& pos = self->m_window_pos;
             auto& size = self->m_window_size;
             if (glfwGetWindowMonitor(window)) {
-                glfwSetWindowMonitor(window, NULL, pos.x, pos.y, size.x, size.y, 0);
+                glfwSetWindowMonitor(window, nullptr, pos.x, pos.y, size.x, size.y, 0);
             } else {
                 GLFWmonitor* monitor = glfwGetPrimaryMonitor();
                 if (monitor) {

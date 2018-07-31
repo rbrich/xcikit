@@ -1,4 +1,4 @@
-// compat.h created on 2018-03-30, part of XCI toolkit
+// unique.h created on 2018-03-30, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,17 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_UTIL_COMPAT_H
-#define XCI_UTIL_COMPAT_H
+#ifndef XCI_COMPAT_UNIQUE_H
+#define XCI_COMPAT_UNIQUE_H
 
 // Backported std::make_unique for C++11
 #if !defined(__cpp_lib_make_unique) && __cplusplus == 201103L
+
 namespace std {
-    template<class T, class... Args>
-    unique_ptr<T> make_unique(Args&&... args) {
-        return unique_ptr<T>(new T(std::forward<Args>(args)...));
-    }
+
+template<class T, class... Args>
+unique_ptr<T> make_unique(Args&&... args) {
+    return unique_ptr<T>(new T(std::forward<Args>(args)...));
 }
+
+} // namespace std
+
 #endif
 
-#endif //XCI_UTIL_COMPAT_H
+#endif //XCI_COMPAT_UNIQUE_H

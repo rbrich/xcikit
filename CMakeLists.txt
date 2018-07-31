@@ -17,7 +17,7 @@ option(BUILD_WITH_ASAN "Build with AddressSanitizer." OFF)
 option(BUILD_WITH_UBSAN "Build with UndefinedBehaviorSanitizer." OFF)
 option(BUILD_PEDANTIC "Build with -Wpedantic -Werror." OFF)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
 if (BUILD_PEDANTIC)
@@ -273,7 +273,8 @@ install(TARGETS ${XCI_TEXT_LIBRARY} EXPORT xcikit DESTINATION lib)
 
 set(XCI_WIDGETS_LIBRARY xci-widgets)
 add_library(${XCI_WIDGETS_LIBRARY} ${XCI_WIDGETS_SOURCES})
-target_include_directories(${XCI_WIDGETS_LIBRARY} PRIVATE ext)
+target_include_directories(${XCI_WIDGETS_LIBRARY}
+    PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/ext>)
 target_link_libraries(${XCI_WIDGETS_LIBRARY}
     ${XCI_TEXT_LIBRARY}
     ${XCI_GRAPHICS_LIBRARY})
@@ -327,6 +328,7 @@ install(DIRECTORY src/xci DESTINATION include
     FILES_MATCHING
     REGEX "xci/[a-z]+/[a-z]+$" EXCLUDE
     REGEX "xci/[a-z]+/[^/]+\\.h")
+install(DIRECTORY ext/nonstd DESTINATION include/xci/compat)
 
 # config.h
 install(DIRECTORY ${CMAKE_BINARY_DIR}/include/xci DESTINATION include)

@@ -61,7 +61,17 @@ struct ModKey {
     bool ctrl : 1;
     bool alt : 1;
 
-    bool none() const { return !(shift || ctrl || alt); }
+    static constexpr ModKey None() { return {false, false, false}; }
+    static constexpr ModKey Shift() { return {true, false, false}; }
+    static constexpr ModKey Ctrl() { return {false, true, false}; }
+    static constexpr ModKey Alt() { return {false, false, true}; }
+    static constexpr ModKey ShiftCtrl() { return {true, true, false}; }
+    static constexpr ModKey ShiftAlt() { return {true, false, true}; }
+    static constexpr ModKey CtrlAlt() { return {false, true, true}; }
+    static constexpr ModKey ShiftCtrlAlt() { return {true, true, true}; }
+
+    bool operator== (ModKey other) const
+        { return shift == other.shift && ctrl == other.ctrl && alt == other.alt;}
 };
 
 
@@ -113,13 +123,20 @@ public:
     static Window& default_window();
     virtual ~Window() = default;
 
+    // Create the window.
     virtual void create(const Vec2u& size, const std::string& title) = 0;
+
+    // Run main loop. Doesn't exit until the window is closed.
     virtual void display() = 0;
 
     // When in OnDemand or OnEvent refresh mode, call this to wake up
     // event loop. Put custom handler into UpdateCallback.
     // (thread-safe)
     virtual void wakeup() const = 0;
+
+    // Stop the main loop and close the window.
+    // (thread-safe)
+    virtual void close() const = 0;
 
     using UpdateCallback = std::function<void(std::chrono::nanoseconds elapsed)>;
     using SizeCallback = std::function<void(View&)>;

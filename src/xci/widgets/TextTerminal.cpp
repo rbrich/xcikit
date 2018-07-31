@@ -73,7 +73,7 @@ void terminal::Line::insert(int pos, std::string_view string)
         ++current;
     }
     assert(pos >= current);
-    m_content.append(string);
+    m_content.append(string.cbegin(), string.cend());
 }
 
 
@@ -88,13 +88,13 @@ void terminal::Line::replace(int pos, std::string_view string)
             for (size_t i = 0; i < string.size(); i++) {
                 end = utf8_next(end);
             }
-            m_content.replace(it, end, string);
+            m_content.replace(it, end, string.cbegin(), string.cend());
             return;
         }
         ++current;
     }
     assert(pos >= current);
-    m_content.append(string);
+    m_content.append(string.cbegin(), string.cend());
 }
 
 
