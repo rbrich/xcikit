@@ -292,8 +292,10 @@ void GlWindow::setup_view()
 
         if (self->m_key_cb) {
             Key ev_key;
-            if ((key >= GLFW_KEY_A && key <= GLFW_KEY_Z)
-            ||  (key >= GLFW_KEY_0 && key <= GLFW_KEY_9)) {
+            if ((key == GLFW_KEY_SPACE)
+            ||  (key >= GLFW_KEY_0 && key <= GLFW_KEY_9)
+            ||  (key >= GLFW_KEY_A && key <= GLFW_KEY_Z)
+            ||  (key >= GLFW_KEY_LEFT_BRACKET && key <= GLFW_KEY_RIGHT_BRACKET)) {
                 ev_key = Key(key);
             } else
             if (key >= GLFW_KEY_F1 && key <= GLFW_KEY_F12) {
