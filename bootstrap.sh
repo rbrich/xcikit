@@ -28,5 +28,5 @@ fi
 if [ ! -e "ext/nonstd/string_view.hpp" ] ; then
     echo "=== Download string_view lite (nonstd) ==="
     curl -L "https://raw.githubusercontent.com/martinmoene/string-view-lite/master/include/nonstd/string_view.hpp" \
-         -o "ext/nonstd/string_view.hpp"
+         --create-dirs -o "ext/nonstd/string_view.hpp"
 fi

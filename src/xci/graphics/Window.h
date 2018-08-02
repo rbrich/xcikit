@@ -54,6 +54,10 @@ enum class Key {
     A = 65, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z,
     LeftBracket = 91, Backslash, RightBracket,  // [ \ ]
     GraveAccent = 96,  // `
+
+    // Numeric keypad
+    Keypad0 = 128, Keypad1, Keypad2, Keypad3, Keypad4, Keypad5, Keypad6, Keypad7, Keypad8, Keypad9,
+    KeypadPlus, KeypadMinus, KeypadAsterisk, KeypadSlash, KeypadDecimalPoint, KeypadEnter,
 };
 static_assert((int)Key::Z == 90, "ascii letters");
 

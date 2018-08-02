@@ -301,28 +301,40 @@ void GlWindow::setup_view()
             if (key >= GLFW_KEY_F1 && key <= GLFW_KEY_F12) {
                 ev_key = Key(key - GLFW_KEY_F1 + (int)Key::F1);
             } else
-            switch (key) {
-                case GLFW_KEY_ESCAPE: ev_key = Key::Escape; break;
-                case GLFW_KEY_ENTER: ev_key = Key::Enter; break;
-                case GLFW_KEY_BACKSPACE: ev_key = Key::Backspace; break;
-                case GLFW_KEY_TAB: ev_key = Key::Tab; break;
-                case GLFW_KEY_INSERT: ev_key = Key::Insert; break;
-                case GLFW_KEY_DELETE: ev_key = Key::Delete; break;
-                case GLFW_KEY_HOME: ev_key = Key::Home; break;
-                case GLFW_KEY_END: ev_key = Key::End; break;
-                case GLFW_KEY_PAGE_UP: ev_key = Key::PageUp; break;
-                case GLFW_KEY_PAGE_DOWN: ev_key = Key::PageDown; break;
-                case GLFW_KEY_LEFT: ev_key = Key::Left; break;
-                case GLFW_KEY_RIGHT: ev_key = Key::Right; break;
-                case GLFW_KEY_UP: ev_key = Key::Up; break;
-                case GLFW_KEY_DOWN: ev_key = Key::Down; break;
-                case GLFW_KEY_CAPS_LOCK: ev_key = Key::CapsLock; break;
-                case GLFW_KEY_SCROLL_LOCK: ev_key = Key::ScrollLock; break;
-                case GLFW_KEY_NUM_LOCK: ev_key = Key::NumLock; break;
-                case GLFW_KEY_PRINT_SCREEN: ev_key = Key::PrintScreen; break;
-                case GLFW_KEY_PAUSE: ev_key = Key::Pause; break;
-                case GLFW_KEY_SPACE: ev_key = Key::Space; break;
-                default: ev_key = Key::Unknown; break;
+            if (key >= GLFW_KEY_KP_0 && key <= GLFW_KEY_KP_9) {
+                ev_key = Key(key - GLFW_KEY_KP_0 + (int)Key::Keypad0);
+            } else {
+                switch (key) {
+                    case GLFW_KEY_ESCAPE: ev_key = Key::Escape; break;
+                    case GLFW_KEY_ENTER: ev_key = Key::Enter; break;
+                    case GLFW_KEY_BACKSPACE: ev_key = Key::Backspace; break;
+                    case GLFW_KEY_TAB: ev_key = Key::Tab; break;
+                    case GLFW_KEY_INSERT: ev_key = Key::Insert; break;
+                    case GLFW_KEY_DELETE: ev_key = Key::Delete; break;
+                    case GLFW_KEY_HOME: ev_key = Key::Home; break;
+                    case GLFW_KEY_END: ev_key = Key::End; break;
+                    case GLFW_KEY_PAGE_UP: ev_key = Key::PageUp; break;
+                    case GLFW_KEY_PAGE_DOWN: ev_key = Key::PageDown; break;
+                    case GLFW_KEY_LEFT: ev_key = Key::Left; break;
+                    case GLFW_KEY_RIGHT: ev_key = Key::Right; break;
+                    case GLFW_KEY_UP: ev_key = Key::Up; break;
+                    case GLFW_KEY_DOWN: ev_key = Key::Down; break;
+                    case GLFW_KEY_CAPS_LOCK: ev_key = Key::CapsLock; break;
+                    case GLFW_KEY_SCROLL_LOCK: ev_key = Key::ScrollLock; break;
+                    case GLFW_KEY_NUM_LOCK: ev_key = Key::NumLock; break;
+                    case GLFW_KEY_PRINT_SCREEN: ev_key = Key::PrintScreen; break;
+                    case GLFW_KEY_PAUSE: ev_key = Key::Pause; break;
+                    case GLFW_KEY_SPACE: ev_key = Key::Space; break;
+                    case GLFW_KEY_KP_ADD: ev_key = Key::KeypadPlus; break;
+                    case GLFW_KEY_KP_SUBTRACT: ev_key = Key::KeypadMinus; break;
+                    case GLFW_KEY_KP_MULTIPLY: ev_key = Key::KeypadAsterisk; break;
+                    case GLFW_KEY_KP_DIVIDE: ev_key = Key::KeypadSlash; break;
+                    case GLFW_KEY_KP_DECIMAL: ev_key = Key::KeypadDecimalPoint; break;
+                    case GLFW_KEY_KP_ENTER: ev_key = Key::KeypadEnter; break;
+                    default:
+                        log_debug("GlWindow: unknown key: {}", key);
+                        ev_key = Key::Unknown; break;
+                }
             }
 
             static_assert(int(Action::Release) == GLFW_RELEASE, "GLFW_RELEASE");
