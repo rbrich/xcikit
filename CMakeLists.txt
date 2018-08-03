@@ -12,32 +12,19 @@ option(XCI_DEBUG_TRACE "Enable trace log messages." OFF)
 option(XCI_DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
 option(XCI_DEBUG_OPENGL "Log info about OpenGL calls and errors." OFF)
 
-option(BUILD_SHARED_LIBS "Build shared libs instead of static libs." OFF)
-option(BUILD_WITH_ASAN "Build with AddressSanitizer." OFF)
-option(BUILD_WITH_UBSAN "Build with UndefinedBehaviorSanitizer." OFF)
-option(BUILD_PEDANTIC "Build with -Wpedantic -Werror." OFF)
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
-if (BUILD_PEDANTIC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wpedantic -Wno-vla-extension -Wno-gnu-zero-variadic-macro-arguments -Werror")
-endif()
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
+include(XciBuildOptions)
 
 if (EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
     include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
     conan_basic_setup()
 endif()
 
-if (BUILD_WITH_ASAN)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
-endif ()
-if (BUILD_WITH_UBSAN)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined")
-endif ()
 
 # ------------ #
 # Sources      #
