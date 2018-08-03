@@ -17,12 +17,13 @@
 #define XCI_GRAPHICS_PRIMITIVES_H
 
 #include <xci/graphics/Color.h>
-#include <xci/graphics/View.h>
 #include <xci/graphics/Shader.h>
 #include <xci/graphics/Texture.h>
+#include <xci/util/geometry.h>
 
-namespace xci {
-namespace graphics {
+namespace xci::graphics {
+
+class View;
 
 
 enum class VertexFormat {
@@ -56,17 +57,13 @@ public:
     virtual void set_texture(const char* name, TexturePtr& texture) = 0;
     virtual void draw(View& view) = 0;
 
-    void draw(View& view, const Vec2f& pos) {
-        view.push_offset(pos);
-        draw(view);
-        view.pop_offset();
-    }
+    void draw(View& view, const util::Vec2f& pos);
 };
 
 
 using PrimitivesPtr = std::shared_ptr<Primitives>;
 
 
-}} // namespace xci::graphics
+} // namespace xci::graphics
 
 #endif // XCI_GRAPHICS_PRIMITIVES_H

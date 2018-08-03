@@ -14,7 +14,6 @@
 // limitations under the License.
 
 #include "Widget.h"
-#include <xci/util/log.h>
 #include <xci/util/rtti.h>
 #include <xci/graphics/Window.h>
 #include <cassert>
@@ -23,7 +22,6 @@ namespace xci {
 namespace widgets {
 
 using namespace xci::graphics;
-using namespace util::log;
 
 
 void Widget::partial_dump(std::ostream& stream, const std::string& nl_prefix)

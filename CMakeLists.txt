@@ -32,6 +32,7 @@ endif()
 
 set(XCI_GRAPHICS_SOURCES
     src/xci/graphics/Color.h
+    src/xci/graphics/Primitives.cpp
     src/xci/graphics/Primitives.h
     src/xci/graphics/Renderer.cpp
     src/xci/graphics/Renderer.h

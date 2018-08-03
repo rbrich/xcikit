@@ -17,15 +17,15 @@
 #define XCI_TEXT_TEXT_H
 
 #include "Layout.h"
-#include <xci/text/Font.h>
-#include <xci/graphics/Color.h>
-#include <xci/graphics/View.h>
 #include <xci/util/geometry.h>
 
 #include <string>
 
-namespace xci {
-namespace text {
+namespace xci::graphics { class View; }
+namespace xci::graphics { struct Color; }
+namespace xci::text { class Font; }
+
+namespace xci::text {
 
 
 // Text rendering - convenient combination of Layout and Markup
@@ -53,6 +53,6 @@ private:
 };
 
 
-}} // namespace xci::text
+} // namespace xci::text
 
 #endif // XCI_TEXT_TEXT_H

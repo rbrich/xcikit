@@ -19,8 +19,9 @@
 #include "Primitives.h"
 #include "Renderer.h"
 #include <xci/graphics/Color.h>
-#include <xci/graphics/View.h>
 #include <xci/util/geometry.h>
+
+namespace xci::graphics { class View; }
 
 namespace xci {
 namespace graphics {

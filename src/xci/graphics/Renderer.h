@@ -22,14 +22,9 @@
 #include <xci/util/geometry.h>
 
 #include <cstdint>
-#include <memory>
 
 namespace xci {
 namespace graphics {
-
-using xci::util::Rect_u;
-using xci::util::Vec2u;
-using std::uint8_t;
 
 
 class Renderer {
