@@ -14,7 +14,7 @@
 // limitations under the License.
 
 #include <xci/text/layout/Page.h>
-#include <xci/text/Layout.h>
+#include <xci/graphics/View.h>
 #include <xci/graphics/Sprites.h>
 #include <xci/graphics/Shape.h>
 #include <xci/util/string.h>
@@ -22,9 +22,9 @@
 
 #include <cassert>
 
-namespace xci {
-namespace text {
-namespace layout {
+namespace xci::text { class Style; }
+
+namespace xci::text::layout {
 
 using namespace xci::util::log;
 using xci::graphics::View;
@@ -366,4 +366,4 @@ void Page::foreach_span(const std::function<void(const Span& span)>& cb) const
 }
 
 
-}}} // namespace xci::text::layout
+} // namespace xci::text::layout

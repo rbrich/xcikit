@@ -19,7 +19,6 @@ endif()
 
 if (BUILD_PEDANTIC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wpedantic -Werror")
-    message("CMAKE_CXX_COMPILER_ID ${CMAKE_CXX_COMPILER_ID}")
     if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-vla -Wno-gnu-zero-variadic-macro-arguments")
     endif()

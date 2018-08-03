@@ -16,18 +16,17 @@
 #ifndef XCI_TEXT_LAYOUT_PAGE_H
 #define XCI_TEXT_LAYOUT_PAGE_H
 
-#include <xci/text/Font.h>
 #include <xci/text/Style.h>
-#include <xci/graphics/View.h>
 #include <xci/util/geometry.h>
 
 #include <string>
 #include <vector>
 #include <list>
 
-namespace xci {
-namespace text {
-namespace layout {
+namespace xci::graphics { class View; }
+namespace xci::text { class Font; }
+
+namespace xci::text::layout {
 
 class Layout;
 class Page;
@@ -209,6 +208,6 @@ private:
 };
 
 
-}}} // namespace xci::text::layout
+} // namespace xci::text::layout
 
 #endif // XCI_TEXT_LAYOUT_PAGE_H

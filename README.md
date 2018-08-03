@@ -123,16 +123,16 @@ Build steps:
     conan install .. [-s compiler=clang]
     
     # Configure
-    cmake ..
+    cmake .. -G "Unix Makefiles"
     
     # Optionally, adjust configuration
     ccmake ..
     
-    # Build
-    make
-
+    # Build:
+    cmake --build .
+    
     # Install (default prefix is /usr/local)
-    make install
+    cmake --build . --target install
 
 
 Linking with XCI Toolkit (using CMake)

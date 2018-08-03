@@ -22,6 +22,8 @@
 #include FT_FREETYPE_H
 #include FT_STROKER_H
 
+#include <memory>  // shared_ptr
+
 namespace xci {
 namespace text {
 

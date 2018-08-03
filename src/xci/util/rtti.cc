@@ -19,7 +19,7 @@
 #include <cxxabi.h>
 #endif
 
-#include <cstdlib>
+#include <cstdlib>  // free
 
 namespace xci {
 namespace util {
@@ -35,7 +35,7 @@ std::string demangle_type_name(const char* name)
         return name;
     }
     std::string result(realname);
-    free(realname);
+    std::free(realname);
     return result;
 #else
     // not mangled
