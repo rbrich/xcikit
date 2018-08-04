@@ -62,14 +62,37 @@ private:
 
 class TextTerminal: public Widget {
 public:
+    // ------------------------------------------------------------------------
+    // Text content
+
     void add_text(const std::string& text);
+    void new_line();
+
+    // ------------------------------------------------------------------------
+    // Color attributes
 
     enum class Color4bit {
         Black, Red, Green, Yellow, Blue, Magenta, Cyan, White,
         BrightBlack, BrightRed, BrightGreen, BrightYellow,
         BrightBlue, BrightMagenta, BrightCyan, BrightWhite
     };
-    void set_color(Color4bit fg, Color4bit bg);
+    using Color8bit = uint8_t;
+    using Color24bit = graphics::Color;  // alpha channel is ignored
+
+    // Basic 16 colors
+    void set_fg(Color4bit fg_color) { set_fg(static_cast<Color8bit>(fg_color)); }
+    void set_bg(Color4bit bg_color) { set_bg(static_cast<Color8bit>(bg_color)); }
+
+    // Default (xterm-compatible) 256 color palette
+    void set_fg(Color8bit fg_color);
+    void set_bg(Color8bit bg_color);
+
+    // "True color"
+    void set_fg(Color24bit fg_color);
+    void set_bg(Color24bit bg_color);
+
+    // ------------------------------------------------------------------------
+    // Text attributes
 
     using FontStyle = text::FontStyle;
     void set_font_style(FontStyle style);
@@ -92,11 +115,19 @@ public:
     };
     void set_mode(Mode mode);
 
+    // ------------------------------------------------------------------------
+    // Effects
+
     // visual bell
     void bell();
 
+    // ------------------------------------------------------------------------
+    // Cursor positioning
+
     void set_cursor_pos(util::Vec2i pos);
     util::Vec2i cursor_pos() const { return m_cursor; }
+
+    // ------------------------------------------------------------------------
 
     terminal::Line& current_line() { return m_buffer[m_buffer_offset + m_cursor.y]; }
     util::Vec2i size_in_cells() const { return m_cells; }

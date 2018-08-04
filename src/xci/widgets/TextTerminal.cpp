@@ -32,27 +32,22 @@ using namespace std::chrono;
 using namespace std::chrono_literals;
 
 
-// Basic palette of 4-bit colors
-static constexpr Color c_colors_4bit[16] = {
-    {0,0,0},        // 0 - black
-    {178,23,23},    // 1 - red
-    {23,178,23},    // 2 - green
-    {178,103,23},   // 3 - yellow
-    {23,23,178},    // 4 - blue
-    {178,23,178},   // 5 - magenta
-    {23,178,178},   // 6 - cyan
-    {178,178,178},  // 7 - white
-    {104,104,104},  // 8 - bright black
-    {255,84,84},    // 9 - bright red
-    {84,255,84},    // 10 - bright green
-    {255,255,84},   // 11 - bright yellow
-    {84,84,255},    // 12 - bright blue
-    {255,84,255},   // 13 - bright magenta
-    {84,255,255},   // 14 - bright cyan
-    {255,255,255},  // 15 - bright white
-};
+// Custom control sequence introducers
+// (These are added to text internally)
+static constexpr uint8_t c_ctl_attrs = 0xc0;
+static constexpr uint8_t c_ctl_fg8bit = 0xf5;
+static constexpr uint8_t c_ctl_bg8bit = 0xf6;
+static constexpr uint8_t c_ctl_fg24bit = 0xf7;
+static constexpr uint8_t c_ctl_bg24bit = 0xf8;
 
+// Length of custom control sequences
+static constexpr size_t c_len_attrs = 2;
+static constexpr size_t c_len_fg8bit = 2;
+static constexpr size_t c_len_bg8bit = 2;
+static constexpr size_t c_len_fg24bit = 4;
+static constexpr size_t c_len_bg24bit = 4;
 
+// Encoding of attributes byte
 static constexpr uint8_t c_font_style_mask = 0b00000011;
 static constexpr uint8_t c_decoration_mask = 0b00011100;
 static constexpr uint8_t c_mode_mask       = 0b01100000;
@@ -60,12 +55,29 @@ static constexpr int c_decoration_shift = 2;
 static constexpr int c_mode_shift = 5;
 
 
+// Skip custom control seqs in UTF-8 string
+static std::string::const_iterator
+ctl_skip(std::string::const_iterator pos)
+{
+    for (;;) {
+        switch (static_cast<uint8_t>(*pos)) {
+            case c_ctl_attrs: pos += c_len_attrs; break;
+            case c_ctl_fg8bit: pos += c_len_fg8bit; break;
+            case c_ctl_bg8bit: pos += c_len_bg8bit; break;
+            case c_ctl_fg24bit: pos += c_len_fg24bit; break;
+            case c_ctl_bg24bit: pos += c_len_bg24bit; break;
+            default:
+                return pos;
+        }
+    }
+}
+
+
 void terminal::Line::insert(int pos, std::string_view string)
 {
     int current = 0;
     for (auto it = m_content.cbegin(); it != m_content.cend(); it = utf8_next(it)) {
-        if (*it == '\xc0' || *it == '\xc1')
-            continue;
+        it = ctl_skip(it);
         if (pos == current) {
             m_content.insert(it, string.cbegin(), string.cend());
             return;
@@ -81,8 +93,7 @@ void terminal::Line::replace(int pos, std::string_view string)
 {
     int current = 0;
     for (auto it = m_content.cbegin(); it != m_content.cend(); it = utf8_next(it)) {
-        if (*it == '\xc0' || *it == '\xc1')
-            continue;
+        it = ctl_skip(it);
         if (pos == current) {
             auto end = it;
             for (size_t i = 0; i < string.size(); i++) {
@@ -101,19 +112,18 @@ void terminal::Line::replace(int pos, std::string_view string)
 void terminal::Line::erase(int first, int num)
 {
     int current = 0;
-    std::string::const_iterator erase_start = m_content.cend();
-    std::string::const_iterator erase_end = m_content.cend();
-    for (auto pos = m_content.cbegin(); pos != m_content.cend(); pos = utf8_next(pos)) {
-        if (*pos == '\xc0' || *pos == '\xc1')
-            continue;
+    auto erase_start = m_content.cend();
+    auto erase_end = m_content.cend();
+    for (auto it = m_content.cbegin(); it != m_content.cend(); it = utf8_next(it)) {
+        it = ctl_skip(it);
         if (current == first) {
-            erase_start = pos;
+            erase_start = it;
         }
         if (current > first) {
             if (num > 0)
                 --num;
             else {
-                erase_end = pos;
+                erase_end = it;
             }
         }
         ++current;
@@ -128,8 +138,9 @@ void terminal::Line::erase(int first, int num)
 int terminal::Line::length() const
 {
     int length = 0;
-    for (auto pos = m_content.cbegin(); pos != m_content.cend(); pos = utf8_next(pos)) {
-        if (*pos != '\xc0' && *pos != '\xc1' && *pos != '\n')
+    for (auto it = m_content.cbegin(); it != m_content.cend(); it = utf8_next(it)) {
+        it = ctl_skip(it);
+        if (*it != '\n')
             ++length;
     }
     return length;
@@ -141,22 +152,15 @@ void TextTerminal::add_text(const std::string& text)
     // Add characters up to terminal width (columns)
     for (auto it = text.cbegin(); it != text.cend(); ) {
         // Special handling for newline character
-        bool new_line = false;
         if (*it == '\n') {
             ++it;
-            new_line = true;
+            new_line();
+            continue;
         }
 
         // Check line length
         if (m_cursor.x >= m_cells.x) {
-            new_line =  true;
-        }
-
-        if (new_line) {
-            // Add new line
-            m_buffer.add_line();
-            ++m_cursor.y;
-            m_cursor.x = 0;
+            new_line();
             continue;
         }
 
@@ -169,11 +173,39 @@ void TextTerminal::add_text(const std::string& text)
 }
 
 
-void TextTerminal::set_color(Color4bit fg, Color4bit bg)
+void TextTerminal::new_line()
 {
-    uint8_t encoded_color = (uint8_t(bg) << 4) + uint8_t(fg);
-    uint8_t seq[] = {0xc1, encoded_color};
-    current_line().append(std::string(std::begin(seq), std::end(seq)));
+    m_buffer.add_line();
+    ++m_cursor.y;
+    m_cursor.x = 0;
+}
+
+
+void TextTerminal::set_fg(Color8bit fg_color)
+{
+    uint8_t seq[] = {c_ctl_fg8bit, fg_color};
+    current_line().append(std::string_view((char*)seq, sizeof(seq)));
+}
+
+
+void TextTerminal::set_bg(Color8bit bg_color)
+{
+    uint8_t seq[] = {c_ctl_bg8bit, bg_color};
+    current_line().append(std::string_view((char*)seq, sizeof(seq)));
+}
+
+
+void TextTerminal::set_fg(Color24bit fg_color)
+{
+    uint8_t seq[] = {c_ctl_fg24bit, fg_color.r, fg_color.g, fg_color.b};
+    current_line().append(std::string_view((char*)seq, sizeof(seq)));
+}
+
+
+void TextTerminal::set_bg(Color24bit bg_color)
+{
+    uint8_t seq[] = {c_ctl_bg24bit, bg_color.r, bg_color.g, bg_color.b};
+    current_line().append(std::string_view((char*)seq, sizeof(seq)));
 }
 
 
@@ -182,8 +214,8 @@ void TextTerminal::set_attribute(uint8_t mask, uint8_t attr)
     // Overwrite the respective bits in m_attributes
     m_attributes = (m_attributes & ~mask) | (attr & mask);
     // Append control code
-    uint8_t seq[] = {0xc0, m_attributes};
-    current_line().append(std::string(std::begin(seq), std::end(seq)));
+    uint8_t seq[] = {c_ctl_attrs, m_attributes};
+    current_line().append(std::string_view((char*)seq, sizeof(seq)));
 }
 
 
@@ -235,8 +267,8 @@ void TextTerminal::draw(View& view, State state)
     auto pxf = view.framebuffer_ratio();
     font.set_size(unsigned(m_font_size / pxf.y));
 
-    graphics::ColoredSprites sprites(font.get_texture(), c_colors_4bit[7]);
-    graphics::Shape boxes(c_colors_4bit[0]);
+    graphics::ColoredSprites sprites(font.get_texture(), Color(7));
+    graphics::Shape boxes(Color(0));
 
     Vec2f pen;
     auto buffer_last = std::min(int(m_buffer.size()), m_buffer_offset + m_cells.y);
@@ -245,7 +277,7 @@ void TextTerminal::draw(View& view, State state)
         int row = line_idx - m_buffer_offset;
         int column = 0;
         for (auto pos = line.cbegin(); pos != line.cend(); ) {
-            if (*pos == '\xc0') {
+            if (uint8_t(*pos) == c_ctl_attrs) {
                 // decode attributes
                 ++pos;
                 auto style = static_cast<FontStyle>(*pos & c_font_style_mask);
@@ -258,12 +290,33 @@ void TextTerminal::draw(View& view, State state)
                 continue;
             }
 
-            if (*pos == '\xc1') {
-                // decode 4-bit colors
+            if (uint8_t(*pos) == c_ctl_fg8bit){
+                // decode 8-bit fg color
                 ++pos;
-                auto& fg = c_colors_4bit[*pos & 0x0f];
-                auto& bg = c_colors_4bit[*pos >> 4];
+                sprites.set_color(Color(uint8_t(*pos)));
+                ++pos;
+                continue;
+            }
+
+            if (uint8_t(*pos) == c_ctl_bg8bit){
+                // decode 8-bit bg color
+                ++pos;
+                boxes.set_fill_color(Color(uint8_t(*pos)));
+                ++pos;
+                continue;
+            }
+
+            if (uint8_t(*pos) == c_ctl_fg24bit){
+                // decode 24-bit fg color
+                Color fg(*++pos, *++pos, *++pos);
                 sprites.set_color(fg);
+                ++pos;
+                continue;
+            }
+
+            if (uint8_t(*pos) == c_ctl_bg24bit){
+                // decode 24-bit bg color
+                Color bg(*++pos, *++pos, *++pos);
                 boxes.set_fill_color(bg);
                 ++pos;
                 continue;
@@ -314,7 +367,7 @@ void TextTerminal::draw(View& view, State state)
         if (row == m_cursor.y && column <= m_cursor.x) {
             Rect_f rect { m_cell_size.x * m_cursor.x, pen.y, m_cell_size.x, m_cell_size.y };
             auto orig_color = boxes.fill_color();
-            boxes.set_fill_color(c_colors_4bit[7]);
+            boxes.set_fill_color(Color(7));
             boxes.add_rectangle(rect);
             boxes.set_fill_color(orig_color);
         }

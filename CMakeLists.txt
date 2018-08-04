@@ -31,6 +31,7 @@ endif()
 # ------------ #
 
 set(XCI_GRAPHICS_SOURCES
+    src/xci/graphics/Color.cpp
     src/xci/graphics/Color.h
     src/xci/graphics/Primitives.cpp
     src/xci/graphics/Primitives.h

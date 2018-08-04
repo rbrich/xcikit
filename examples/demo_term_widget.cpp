@@ -16,6 +16,7 @@
 #include <xci/widgets/TextTerminal.h>
 #include <xci/graphics/Window.h>
 #include <xci/util/file.h>
+#include <xci/util/format.h>
 #include <cstdlib>
 #include <cstdio>
 #include <iostream>
@@ -34,14 +35,15 @@ int main()
     if (!Theme::load_default_theme())
         return EXIT_FAILURE;
 
-    const char* cmd = "ls -la ..";
+    const char* cmd = "uname -a";
 
     TextTerminal terminal;
     terminal.add_text(get_cwd() + "> ");
     terminal.set_font_style(TextTerminal::FontStyle::Bold);
     terminal.add_text(std::string(cmd) + "\n");
     terminal.set_font_style(TextTerminal::FontStyle::Regular);
-    terminal.set_color(TextTerminal::Color4bit::BrightYellow, TextTerminal::Color4bit::Blue);
+    terminal.set_fg(TextTerminal::Color4bit::BrightYellow);
+    terminal.set_bg(TextTerminal::Color4bit::Blue);
 
     FILE* f = popen(cmd, "r");
     if (!f)
@@ -52,6 +54,54 @@ int main()
         terminal.add_text(buf.substr(0, nread));
     }
     pclose(f);
+
+    // Present some colors
+    terminal.set_fg(TextTerminal::Color4bit::White);
+    terminal.set_bg(TextTerminal::Color4bit::Black);
+    terminal.add_text(get_cwd() + "> ");
+    terminal.set_font_style(TextTerminal::FontStyle::Bold);
+    terminal.add_text("color_palette\n");
+    terminal.set_font_style(TextTerminal::FontStyle::Regular);
+
+    // basic 16 colors
+    for (int row = 0; row < 2; row++) {
+        terminal.add_text("|");
+        for (int col = 0; col < 8; col++) {
+            terminal.set_fg(TextTerminal::Color8bit(row * 8 + col));
+            terminal.add_text(format(" {:02x} ", row * 8 + col));
+        }
+        terminal.set_fg(TextTerminal::Color4bit::White);
+        terminal.add_text("|");
+        terminal.new_line();
+    }
+    terminal.new_line();
+
+    // 216 color matrix (in 3 columns)
+    for (int row = 0; row < 12; row++) {
+        for (int column = 0; column < 3; column++) {
+            if (column == 0)
+                terminal.add_text("|");
+            for (int i = 0; i < 6; i++) {
+                auto idx = 16 + column * 72 + row * 6 + i;
+                terminal.set_fg(TextTerminal::Color8bit(idx));
+                terminal.add_text(format(" {:02x} ", idx));
+            }
+            terminal.set_fg(TextTerminal::Color4bit::White);
+            terminal.add_text("|");
+        }
+        terminal.new_line();
+    }
+    terminal.new_line();
+
+    // greyscale
+    terminal.add_text("|");
+    for (int i = 0; i < 24; i++) {
+        auto idx = 232 + i;
+        terminal.set_fg(TextTerminal::Color8bit(idx));
+        terminal.add_text(format(" {:02x}", idx));
+    }
+    terminal.set_fg(TextTerminal::Color4bit::White);
+    terminal.add_text(" |");
 
     // Make the terminal fullscreen
     window.set_size_callback([&](View& v) {

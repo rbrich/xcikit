@@ -24,6 +24,7 @@ TEST_CASE( "Format placeholders", "[format]" )
     CHECK(format("surplus placeholder {}{}", "left as is") == "surplus placeholder left as is{}");
 
     CHECK(format("hex {:x} dec {}", 255, 255) == "hex ff dec 255");
+    CHECK(format("hex {:02X} dec {:03}", 15, 15) == "hex 0F dec 015");
 
     float f = 1.2345678f;
     CHECK(format("float {} {:.2} {:.3f} {:.3f}", f, f, f, 1.2) ==
