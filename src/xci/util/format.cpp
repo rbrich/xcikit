@@ -30,13 +30,20 @@ using namespace tao::pegtl;
 // Grammar
 
 struct FieldName: plus<alnum> {};
-
+struct ZeroFill: one<'0'> {};
+struct Width: plus<digit> {};
 struct Precision: plus<digit> {};
+struct Type: one<'f', 'x', 'X'> {};
 
-struct Type: one<'f', 'x'> {};
+// [ZeroFill] [Width] ["." Precision] [Type]
+struct FormatSpec: seq<
+           opt<ZeroFill>,
+           opt<Width>,
+           opt<seq< one<'.'>, Precision >>,
+           opt<Type>
+       > {};
 
-struct FormatSpec: seq< opt<seq< one<'.'>, Precision >>, opt<Type> > {};
-
+// [FieldName] [":" FormatSpec]
 struct Grammar: seq< opt<FieldName>, opt< seq< one<':'>, FormatSpec > > > {};
 
 // ----------------------------------------------------------------------------
@@ -52,6 +59,25 @@ struct Action<FieldName>
     static void apply(const Input &in, Context &ctx)
     {
         ctx.field_name = in.string();
+    }
+};
+
+template<>
+struct Action<ZeroFill>
+{
+    static void apply0(Context &ctx)
+    {
+        ctx.fill = '0';
+    }
+};
+
+template<>
+struct Action<Width>
+{
+    template<typename Input>
+    static void apply(const Input &in, Context &ctx)
+    {
+        ctx.width = atoi(in.string().c_str());
     }
 };
 

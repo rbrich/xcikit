@@ -39,6 +39,8 @@ struct Context {
     std::string placeholder;
     // parsed placeholder:
     std::string field_name;
+    char fill = ' ';
+    int width = 0;
     int precision = 6;
     char type = 's';
 
@@ -109,10 +111,14 @@ inline std::string fun_format(const char *fmt, const FormatCallback& fun,
                 switch (ctx.type) {
                     case 'f': ctx.stream << std::fixed; break;
                     case 'x': ctx.stream << std::hex; break;
+                    case 'X': ctx.stream << std::uppercase << std::hex; break;
                     default: break;
                 }
-                ctx.stream << std::setprecision(ctx.precision)
-                           << value << fun_format(fmt, fun, args...);
+                ctx.stream
+                    << std::setfill(ctx.fill)
+                    << std::setw(ctx.width)
+                    << std::setprecision(ctx.precision)
+                    << value << fun_format(fmt, fun, args...);
                 return ctx.stream.str();
             }
 
@@ -124,7 +130,7 @@ inline std::string fun_format(const char *fmt, const FormatCallback& fun,
 }
 
 
-// Simple format function without collback.
+// Simple format function without callback.
 // Unrecognized placeholders are left untouched.
 template<typename ...Args>
 inline std::string format(const char *fmt, Args... args)
