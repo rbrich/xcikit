@@ -17,6 +17,7 @@
 #define XCI_UTIL_STRING_H
 
 #include <string>
+#include <string_view>
 
 namespace xci {
 namespace util {
@@ -31,13 +32,12 @@ std::u32string to_utf32(const std::string& utf8);
 // Convert single UTF32 char to UTF8 string. Can't fail.
 std::string to_utf8(char32_t codepoint);
 
-std::string::const_iterator
-utf8_next(std::string::const_iterator pos);
+const char* utf8_next(const char* pos);
 
 std::string::const_reverse_iterator
 utf8_prev(std::string::const_reverse_iterator pos);
 
-int utf8_length(const std::string& str);
+size_t utf8_length(std::string_view str);
 
 }} // namespace xci::util
 

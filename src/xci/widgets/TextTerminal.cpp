@@ -14,9 +14,9 @@
 // limitations under the License.
 
 #include "TextTerminal.h"
-#include <xci/util/string.h>
 #include <xci/graphics/Sprites.h>
 #include <xci/graphics/Shape.h>
+#include <xci/util/string.h>
 #include <xci/util/log.h>
 
 
@@ -56,8 +56,7 @@ static constexpr int c_mode_shift = 5;
 
 
 // Skip custom control seqs in UTF-8 string
-static std::string::const_iterator
-ctl_skip(std::string::const_iterator pos)
+static const char* ctl_skip(const char* pos)
 {
     for (;;) {
         switch (static_cast<uint8_t>(*pos)) {
@@ -73,39 +72,44 @@ ctl_skip(std::string::const_iterator pos)
 }
 
 
-void terminal::Line::insert(int pos, std::string_view string)
+void terminal::Line::insert(int pos, std::string_view sv)
 {
     int current = 0;
-    for (auto it = m_content.cbegin(); it != m_content.cend(); it = utf8_next(it)) {
+    for (const char* it = m_content.data();
+            it != m_content.data() + m_content.size();
+            it = utf8_next(it))
+    {
         it = ctl_skip(it);
         if (pos == current) {
-            m_content.insert(it, string.cbegin(), string.cend());
+            m_content.insert(it - m_content.data(), sv.data(), sv.size());
             return;
         }
         ++current;
     }
     assert(pos >= current);
-    m_content.append(string.cbegin(), string.cend());
+    m_content.append(sv.data(), sv.size());
 }
 
 
-void terminal::Line::replace(int pos, std::string_view string)
+void terminal::Line::replace(int pos, std::string_view sv)
 {
     int current = 0;
-    for (auto it = m_content.cbegin(); it != m_content.cend(); it = utf8_next(it)) {
-        it = ctl_skip(it);
+    for (const char* it = ctl_skip(m_content.data());
+            it != m_content.data() + m_content.size();
+            it = ctl_skip(utf8_next(it)))
+    {
         if (pos == current) {
             auto end = it;
-            for (size_t i = 0; i < string.size(); i++) {
+            for (size_t i = 0; i < utf8_length(sv); i++) {
                 end = utf8_next(end);
             }
-            m_content.replace(it, end, string.cbegin(), string.cend());
+            m_content.replace(it - m_content.data(), end - it, sv.data(), sv.size());
             return;
         }
         ++current;
     }
     assert(pos >= current);
-    m_content.append(string.cbegin(), string.cend());
+    m_content.append(sv.data(), sv.size());
 }
 
 
@@ -113,9 +117,12 @@ void terminal::Line::erase(int first, int num)
 {
     TRACE("first={}, num={}, line size={}", first, num, m_content.size());
     int current = 0;
-    auto erase_start = m_content.cend();
-    auto erase_end = m_content.cend();
-    for (auto it = m_content.cbegin(); it < m_content.cend(); it = utf8_next(it)) {
+    const char* erase_start = m_content.data() + m_content.size();
+    const char* erase_end = erase_start;
+    for (const char* it = m_content.data();
+            it != m_content.data() + m_content.size();
+            it = utf8_next(it))
+    {
         it = ctl_skip(it);
         if (current == first) {
             erase_start = it;
@@ -129,17 +136,17 @@ void terminal::Line::erase(int first, int num)
         }
         ++current;
     }
-    if (erase_end != m_content.cend())
-        m_content.erase(erase_start - m_content.cbegin(), erase_end - erase_start);
+    if (erase_end != m_content.data() + m_content.size())
+        m_content.erase(erase_start - m_content.data(), erase_end - erase_start);
     else
-        m_content.erase(erase_start - m_content.cbegin());
+        m_content.erase(erase_start - m_content.data());
 }
 
 
 int terminal::Line::length() const
 {
     int length = 0;
-    for (auto it = m_content.cbegin(); it != m_content.cend(); it = utf8_next(it)) {
+    for (const char* it = m_content.data(); it != m_content.data() + m_content.size(); it = utf8_next(it)) {
         it = ctl_skip(it);
         if (*it != '\n')
             ++length;
@@ -148,7 +155,13 @@ int terminal::Line::length() const
 }
 
 
-void TextTerminal::add_text(const std::string& text)
+void terminal::Buffer::remove_lines(size_t start, size_t count)
+{
+    m_lines.erase(m_lines.begin() + start, m_lines.begin() + start + count);
+}
+
+
+void TextTerminal::add_text(std::string_view text)
 {
     // Add characters up to terminal width (columns)
     for (auto it = text.cbegin(); it != text.cend(); ) {
@@ -185,38 +198,39 @@ void TextTerminal::new_line()
 void TextTerminal::set_fg(Color8bit fg_color)
 {
     uint8_t seq[] = {c_ctl_fg8bit, fg_color};
-    current_line().append(std::string_view((char*)seq, sizeof(seq)));
+    current_line().insert(m_cursor.x, std::string_view((char*)seq, sizeof(seq)));
 }
 
 
 void TextTerminal::set_bg(Color8bit bg_color)
 {
     uint8_t seq[] = {c_ctl_bg8bit, bg_color};
-    current_line().append(std::string_view((char*)seq, sizeof(seq)));
+    current_line().insert(m_cursor.x, std::string_view((char*)seq, sizeof(seq)));
 }
 
 
 void TextTerminal::set_fg(Color24bit fg_color)
 {
     uint8_t seq[] = {c_ctl_fg24bit, fg_color.r, fg_color.g, fg_color.b};
-    current_line().append(std::string_view((char*)seq, sizeof(seq)));
+    current_line().insert(m_cursor.x, std::string_view((char*)seq, sizeof(seq)));
 }
 
 
 void TextTerminal::set_bg(Color24bit bg_color)
 {
     uint8_t seq[] = {c_ctl_bg24bit, bg_color.r, bg_color.g, bg_color.b};
-    current_line().append(std::string_view((char*)seq, sizeof(seq)));
+    current_line().insert(m_cursor.x, std::string_view((char*)seq, sizeof(seq)));
 }
 
 
 void TextTerminal::set_attribute(uint8_t mask, uint8_t attr)
 {
     // Overwrite the respective bits in m_attributes
+    // FIXME: retrieve actual attributes at cursor position
     m_attributes = (m_attributes & ~mask) | (attr & mask);
     // Append control code
     uint8_t seq[] = {c_ctl_attrs, m_attributes};
-    current_line().append(std::string_view((char*)seq, sizeof(seq)));
+    current_line().insert(m_cursor.x, std::string_view((char*)seq, sizeof(seq)));
 }
 
 
@@ -277,56 +291,62 @@ void TextTerminal::draw(View& view, State state)
         auto& line = m_buffer[line_idx].content();
         int row = line_idx - m_buffer_offset;
         int column = 0;
-        for (auto pos = line.cbegin(); pos != line.cend(); ) {
-            if (uint8_t(*pos) == c_ctl_attrs) {
+        for (const char* it = line.data(); it != line.data() + line.size(); ) {
+            if (uint8_t(*it) == c_ctl_attrs) {
                 // decode attributes
-                ++pos;
-                auto style = static_cast<FontStyle>(*pos & c_font_style_mask);
-                auto deco = static_cast<Decoration>((*pos & c_decoration_mask) >> c_decoration_shift);
-                auto mode = static_cast<Mode>((*pos & c_mode_mask) >> c_mode_shift);
+                ++it;
+                auto style = static_cast<FontStyle>(*it & c_font_style_mask);
+                auto deco = static_cast<Decoration>((*it & c_decoration_mask) >> c_decoration_shift);
+                auto mode = static_cast<Mode>((*it & c_mode_mask) >> c_mode_shift);
                 font.set_style(style);
                 (void) deco; // TODO
                 (void) mode; // TODO
-                ++pos;
+                ++it;
                 continue;
             }
 
-            if (uint8_t(*pos) == c_ctl_fg8bit){
+            if (uint8_t(*it) == c_ctl_fg8bit){
                 // decode 8-bit fg color
-                ++pos;
-                sprites.set_color(Color(uint8_t(*pos)));
-                ++pos;
+                ++it;
+                sprites.set_color(Color(uint8_t(*it)));
+                ++it;
                 continue;
             }
 
-            if (uint8_t(*pos) == c_ctl_bg8bit){
+            if (uint8_t(*it) == c_ctl_bg8bit){
                 // decode 8-bit bg color
-                ++pos;
-                boxes.set_fill_color(Color(uint8_t(*pos)));
-                ++pos;
+                ++it;
+                boxes.set_fill_color(Color(uint8_t(*it)));
+                ++it;
                 continue;
             }
 
-            if (uint8_t(*pos) == c_ctl_fg24bit){
+            if (uint8_t(*it) == c_ctl_fg24bit){
                 // decode 24-bit fg color
-                Color fg(*++pos, *++pos, *++pos);
+                auto r = *++it;
+                auto g = *++it;
+                auto b = *++it;
+                Color fg(r, g, b);
                 sprites.set_color(fg);
-                ++pos;
+                ++it;
                 continue;
             }
 
-            if (uint8_t(*pos) == c_ctl_bg24bit){
+            if (uint8_t(*it) == c_ctl_bg24bit){
                 // decode 24-bit bg color
-                Color bg(*++pos, *++pos, *++pos);
+                auto r = *++it;
+                auto g = *++it;
+                auto b = *++it;
+                Color bg(r, g, b);
                 boxes.set_fill_color(bg);
-                ++pos;
+                ++it;
                 continue;
             }
 
             // extract single UTF-8 character
-            auto end_pos = utf8_next(pos);
-            auto ch = line.substr(pos - line.cbegin(), end_pos - pos);
-            pos = end_pos;
+            auto end_pos = utf8_next(it);
+            auto ch = line.substr(it - line.data(), end_pos - it);
+            it = end_pos;
 
             CodePoint code_point = to_utf32(ch)[0];
             auto glyph = font.get_glyph(code_point);
@@ -410,6 +430,22 @@ void TextTerminal::set_cursor_pos(util::Vec2i pos)
     while (m_cursor.y >= int(m_buffer.size()) - m_buffer_offset) {
         m_buffer.add_line();
     }
+}
+
+
+void TextTerminal::erase_page()
+{
+    m_buffer.remove_lines(size_t(m_buffer_offset), m_buffer.size() - m_buffer_offset);
+    m_buffer.add_line();
+    m_cursor.y = 0;
+}
+
+
+void TextTerminal::erase_buffer()
+{
+    m_buffer.remove_lines(0, m_buffer.size());
+    m_buffer.add_line();
+    m_cursor.y = 0;
 }
 
 

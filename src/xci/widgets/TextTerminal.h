@@ -19,9 +19,9 @@
 #include <xci/widgets/Widget.h>
 #include <xci/text/FontFace.h>
 #include <xci/util/geometry.h>
+#include <xci/compat/string_view.h>
 #include <vector>
 #include <chrono>
-#include <xci/compat/string_view.h>
 
 namespace xci {
 namespace widgets {
@@ -31,9 +31,9 @@ namespace terminal {
 
 class Line {
 public:
-    void insert(int pos, std::string_view string);
+    void insert(int pos, std::string_view sv);
     void append(std::string_view string) { m_content.append(string.cbegin(), string.cend()); }
-    void replace(int pos, std::string_view string);
+    void replace(int pos, std::string_view sv);
     void erase(int first, int num);
 
     const std::string& content() const { return m_content; }
@@ -48,6 +48,7 @@ public:
     Buffer() : m_lines(1) {}
 
     void add_line() { m_lines.emplace_back(); }
+    void remove_lines(size_t start, size_t count);
 
     size_t size() const { return m_lines.size(); }
 
@@ -65,8 +66,21 @@ public:
     // ------------------------------------------------------------------------
     // Text content
 
-    void add_text(const std::string& text);
+    void add_text(std::string_view text);
     void new_line();
+    terminal::Line& current_line() { return m_buffer[m_buffer_offset + m_cursor.y]; }
+
+    // Erase page (visible part of the buffer)
+    void erase_page();
+    // Erase whole buffer (page + scrollback)
+    void erase_buffer();
+
+    // ------------------------------------------------------------------------
+    // Cursor positioning
+
+    void set_cursor_pos(util::Vec2i pos);
+    util::Vec2i cursor_pos() const { return m_cursor; }
+    util::Vec2i size_in_cells() const { return m_cells; }
 
     // ------------------------------------------------------------------------
     // Color attributes
@@ -122,15 +136,7 @@ public:
     void bell();
 
     // ------------------------------------------------------------------------
-    // Cursor positioning
-
-    void set_cursor_pos(util::Vec2i pos);
-    util::Vec2i cursor_pos() const { return m_cursor; }
-
-    // ------------------------------------------------------------------------
-
-    terminal::Line& current_line() { return m_buffer[m_buffer_offset + m_cursor.y]; }
-    util::Vec2i size_in_cells() const { return m_cells; }
+    // impl Widget
 
     void update(std::chrono::nanoseconds elapsed) override;
     void resize(View& view) override;
@@ -144,7 +150,7 @@ private:
     util::Vec2f m_cell_size;
     util::Vec2i m_cells = {80, 25};  // rows, columns
     terminal::Buffer m_buffer;
-    int m_buffer_offset = 0;  // offset to line in buffer which is first on screen
+    int m_buffer_offset = 0;  // offset to line in buffer which is first on page
     util::Vec2i m_cursor;  // x/y of cursor on screen
     uint8_t m_attributes = 0;  // encoded attributes (font style, mode, decorations)
     std::chrono::nanoseconds m_bell_time {0};

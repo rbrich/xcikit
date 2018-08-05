@@ -125,7 +125,7 @@ bool TextInput::key_event(View& view, const KeyEvent& ev)
 
         case Key::Delete:
             if (m_cursor < m_text.size()) {
-                auto next = utf8_next(m_text.begin() + m_cursor) - m_text.begin();
+                auto next = utf8_next(m_text.data() + m_cursor) - m_text.data();
                 m_text.erase(m_cursor, next - m_cursor);
                 break;
             }
@@ -141,7 +141,7 @@ bool TextInput::key_event(View& view, const KeyEvent& ev)
 
         case Key::Right:
             if (m_cursor < m_text.size()) {
-                m_cursor = utf8_next(m_text.begin() + m_cursor) - m_text.begin();
+                m_cursor = utf8_next(m_text.data() + m_cursor) - m_text.data();
                 break;
             }
             return true;

@@ -71,8 +71,7 @@ std::string to_utf8(char32_t codepoint)
 }
 
 
-std::string::const_iterator
-utf8_next(std::string::const_iterator pos)
+const char* utf8_next(const char* pos)
 {
     auto first = (unsigned char) *pos;
     if ((first & 0b10000000) == 0) {
@@ -106,7 +105,7 @@ utf8_prev(std::string::const_reverse_iterator pos)
 }
 
 
-int utf8_length(const std::string& str)
+size_t utf8_length(std::string_view str)
 {
     int length = 0;
     for (auto pos = str.cbegin(); pos != str.cend(); pos = utf8_next(pos)) {
