@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include <xci/util/string.h>
+#include <xci/util/format.h>
 #include <xci/util/log.h>
 
 #include <cctype>
@@ -35,17 +36,15 @@ std::string escape(const std::string& str)
             switch (ch) {
                 case '\a': out += "\\a"; break;
                 case '\b': out += "\\b"; break;
-                case '\f': out += "\\f"; break;
-                case '\n': out += "\\n"; break;
-                case '\r': out += "\\r"; break;
                 case '\t': out += "\\t"; break;
+                case '\n': out += "\\n"; break;
                 case '\v': out += "\\v"; break;
+                case '\f': out += "\\f"; break;
+                case '\r': out += "\\r"; break;
                 case '\\': out += "\\\\"; break;
                 default: {
-                    std::string buf;
-                    buf.resize(4);
-                    std::snprintf(&buf[0], 4, "\\x%02X", ch);
-                    out += buf;
+                    out += format("\\x{:02x}", (int)(unsigned char)(ch));
+                    break;
                 }
             }
         }

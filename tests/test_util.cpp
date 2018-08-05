@@ -13,6 +13,7 @@
 
 using namespace xci::util;
 
+
 TEST_CASE( "Format placeholders", "[format]" )
 {
     CHECK(format("") == "");
@@ -33,7 +34,6 @@ TEST_CASE( "Format placeholders", "[format]" )
     errno = EACCES;
     CHECK(format("error: {m}") == "error: Permission denied");
 }
-
 
 
 TEST_CASE( "Format char type", "[format]" )
@@ -117,4 +117,14 @@ TEST_CASE( "utf8_length", "[string]" )
         ++size;
     }
     CHECK(size == 4);
+}
+
+
+TEST_CASE( "escape", "[string]" )
+{
+    CHECK(escape(std::string("\x00", 1)) == "\\x00");
+    CHECK(escape("\x01\x02\x03\x04\x05\x06") == "\\x01\\x02\\x03\\x04\\x05\\x06");
+    CHECK(escape("\x07\x08\x09\x0a\x0b\x0c") == "\\a\\b\\t\\n\\v\\f");
+    CHECK(escape("\x0d\x0e\x0f\x10\x1a\x1b") == "\\r\\x0e\\x0f\\x10\\x1a\\x1b");
+    CHECK(escape("\x80\xff") == "\\x80\\xff");
 }
