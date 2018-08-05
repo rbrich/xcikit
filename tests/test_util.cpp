@@ -35,6 +35,23 @@ TEST_CASE( "Format placeholders", "[format]" )
 }
 
 
+
+TEST_CASE( "Format char type", "[format]" )
+{
+    // format uses std::ostream operator<<()
+    // -> there is overload for char type:
+    CHECK(format("{}", char('c')) == "c");
+    CHECK(format("{}", (unsigned char)('c')) == "c");
+    CHECK(format("{}", int8_t('c')) == "c");
+    CHECK(format("{}", uint8_t('c')) == "c");
+    // 'x' format spec just sends std::hex, it does not convert char to int implicitly:
+    CHECK(format("{:02x}", uint8_t('c')) == "0c");
+    // -> if we want char's numeric value, it has to be cast:
+    CHECK(format("{}", int('c')) == "99");
+    CHECK(format("{:02x}", int('c')) == "63");
+}
+
+
 TEST_CASE( "File watch", "[FileWatch]" )
 {
     FileWatch& fw = FileWatch::default_instance();

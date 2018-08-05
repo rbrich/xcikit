@@ -60,48 +60,57 @@ int main()
     terminal.set_bg(TextTerminal::Color4bit::Black);
     terminal.add_text(get_cwd() + "> ");
     terminal.set_font_style(TextTerminal::FontStyle::Bold);
-    terminal.add_text("color_palette\n");
+    terminal.add_text("rainbow\n");
     terminal.set_font_style(TextTerminal::FontStyle::Regular);
 
     // basic 16 colors
+    terminal.set_fg(TextTerminal::Color4bit::BrightWhite);
     for (int row = 0; row < 2; row++) {
-        terminal.add_text("|");
         for (int col = 0; col < 8; col++) {
-            terminal.set_fg(TextTerminal::Color8bit(row * 8 + col));
+            terminal.set_bg(TextTerminal::Color8bit(row * 8 + col));
             terminal.add_text(format(" {:02x} ", row * 8 + col));
         }
-        terminal.set_fg(TextTerminal::Color4bit::White);
-        terminal.add_text("|");
+        terminal.set_bg(TextTerminal::Color4bit::Black);
+        terminal.set_fg(TextTerminal::Color4bit::Black);
         terminal.new_line();
     }
     terminal.new_line();
 
     // 216 color matrix (in 3 columns)
+    terminal.set_fg(TextTerminal::Color4bit::BrightWhite);
     for (int row = 0; row < 12; row++) {
         for (int column = 0; column < 3; column++) {
-            if (column == 0)
-                terminal.add_text("|");
             for (int i = 0; i < 6; i++) {
                 auto idx = 16 + column * 72 + row * 6 + i;
-                terminal.set_fg(TextTerminal::Color8bit(idx));
+                terminal.set_bg(TextTerminal::Color8bit(idx));
                 terminal.add_text(format(" {:02x} ", idx));
             }
-            terminal.set_fg(TextTerminal::Color4bit::White);
-            terminal.add_text("|");
+            terminal.set_bg(TextTerminal::Color4bit::Black);
+            terminal.add_text(" ");
+        }
+        if (row == 5) {
+            terminal.set_fg(TextTerminal::Color4bit::BrightWhite);
+            terminal.new_line();
+        }
+        if (row == 2 || row == 8) {
+            terminal.set_fg(TextTerminal::Color4bit::Black);
         }
         terminal.new_line();
     }
     terminal.new_line();
 
     // greyscale
-    terminal.add_text("|");
-    for (int i = 0; i < 24; i++) {
-        auto idx = 232 + i;
-        terminal.set_fg(TextTerminal::Color8bit(idx));
-        terminal.add_text(format(" {:02x}", idx));
+    terminal.set_fg(TextTerminal::Color4bit::BrightWhite);
+    for (int row = 0; row < 2; row++) {
+        for (int col = 0; col < 12; col++) {
+            auto idx = 232 + row * 12 + col;
+            terminal.set_bg(TextTerminal::Color8bit(idx));
+            terminal.add_text(format(" {:02x} ", idx));
+        }
+        terminal.set_bg(TextTerminal::Color4bit::Black);
+        terminal.set_fg(TextTerminal::Color4bit::Black);
+        terminal.new_line();
     }
-    terminal.set_fg(TextTerminal::Color4bit::White);
-    terminal.add_text(" |");
 
     // Make the terminal fullscreen
     window.set_size_callback([&](View& v) {

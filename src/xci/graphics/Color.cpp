@@ -53,7 +53,7 @@ Color::Color(uint8_t index) noexcept
         return;
     }
 
-    // matrix of 216 colors (6*6*6)
+    // 216 colors (6*6*6 cube)
     if (index < 232) {
         index -= 16;
         r = color_scale_6to256(index / 36);
@@ -62,7 +62,7 @@ Color::Color(uint8_t index) noexcept
         return;
     }
 
-    // grayscale
+    // 24 step grayscale
     index -= 232;
     r = g = b = uint8_t(8 + 10 * index);
 }

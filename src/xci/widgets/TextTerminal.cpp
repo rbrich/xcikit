@@ -111,10 +111,11 @@ void terminal::Line::replace(int pos, std::string_view string)
 
 void terminal::Line::erase(int first, int num)
 {
+    TRACE("first={}, num={}, line size={}", first, num, m_content.size());
     int current = 0;
     auto erase_start = m_content.cend();
     auto erase_end = m_content.cend();
-    for (auto it = m_content.cbegin(); it != m_content.cend(); it = utf8_next(it)) {
+    for (auto it = m_content.cbegin(); it < m_content.cend(); it = utf8_next(it)) {
         it = ctl_skip(it);
         if (current == first) {
             erase_start = it;

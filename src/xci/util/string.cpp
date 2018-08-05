@@ -92,7 +92,7 @@ utf8_next(std::string::const_iterator pos)
         // 11110xxx -> 4 bytes
         return pos + 4;
     } else {
-        assert(!"Invalid UTF8 string");
+        log_error("Invalid UTF8 string, encountered code {:02x}", int(first));
         return pos + 1;
     }
 }
