@@ -1,4 +1,4 @@
-// test_Color.cpp created on 2018-08-04, part of XCI toolkit
+// test_graphics.cpp created on 2018-08-04, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");

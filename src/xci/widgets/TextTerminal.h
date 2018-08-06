@@ -29,12 +29,60 @@ namespace widgets {
 
 namespace terminal {
 
+
+enum class Color4bit {
+    Black, Red, Green, Yellow, Blue, Magenta, Cyan, White,
+    BrightBlack, BrightRed, BrightGreen, BrightYellow,
+    BrightBlue, BrightMagenta, BrightCyan, BrightWhite
+};
+using Color8bit = uint8_t;
+using Color24bit = graphics::Color;  // alpha channel is ignored
+
+
+class Attributes {
+public:
+    // ------------------------------------------------------------------------
+    // Encoding (internal format, not to be presented in public TextTerminal API).
+
+    // Check character `c`, return true if it introduces attribute sequence.
+    static bool is_introducer(char c);
+
+    // Having string_view with first char introducing attribute sequence,
+    // return length of the sequence.
+    static size_t encoded_length(std::string_view sv);
+
+    // Decode attribute sequence from string_view into object state
+    void decode(std::string_view sv);
+
+    // Encode object state into attribute sequence
+    const std::string& encode() const { return m_encoded_attrs; }
+
+    // ------------------------------------------------------------------------
+    // Mutators
+
+    void set_fg(Color8bit fg_color);
+    void reset_fg();  // set to default value
+
+    // ------------------------------------------------------------------------
+    // Accessors
+
+
+
+
+private:
+    std::string m_encoded_attrs;
+};
+
+
 class Line {
 public:
-    void insert(int pos, std::string_view sv);
-    void append(std::string_view string) { m_content.append(string.cbegin(), string.cend()); }
-    void replace(int pos, std::string_view sv);
-    void erase(int first, int num);
+    void set_attr(int pos, const Attributes& attr);
+    Attributes get_attr(int pos);
+
+    void insert_text(int pos, std::string_view sv);
+    void append_text(std::string_view string) { m_content.append(string.cbegin(), string.cend()); }
+    void replace_text(int pos, std::string_view sv);
+    void erase_text(int first, int num);
 
     const std::string& content() const { return m_content; }
     int length() const;
@@ -42,6 +90,7 @@ public:
 private:
     std::string m_content;
 };
+
 
 class Buffer {
 public:
@@ -57,6 +106,7 @@ public:
 private:
     std::vector<Line> m_lines;
 };
+
 
 } // terminal
 
@@ -85,13 +135,9 @@ public:
     // ------------------------------------------------------------------------
     // Color attributes
 
-    enum class Color4bit {
-        Black, Red, Green, Yellow, Blue, Magenta, Cyan, White,
-        BrightBlack, BrightRed, BrightGreen, BrightYellow,
-        BrightBlue, BrightMagenta, BrightCyan, BrightWhite
-    };
-    using Color8bit = uint8_t;
-    using Color24bit = graphics::Color;  // alpha channel is ignored
+    using Color4bit = terminal::Color4bit;
+    using Color8bit = terminal::Color8bit;
+    using Color24bit = terminal::Color24bit;
 
     // Basic 16 colors
     void set_fg(Color4bit fg_color) { set_fg(static_cast<Color8bit>(fg_color)); }

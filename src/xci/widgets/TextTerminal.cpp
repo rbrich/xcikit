@@ -72,7 +72,14 @@ static const char* ctl_skip(const char* pos)
 }
 
 
-void terminal::Line::insert(int pos, std::string_view sv)
+void terminal::Attributes::set_fg(terminal::Color8bit fg_color)
+{
+    m_encoded_attrs.push_back(c_ctl_fg8bit);
+    m_encoded_attrs.push_back(fg_color);
+}
+
+
+void terminal::Line::insert_text(int pos, std::string_view sv)
 {
     int current = 0;
     for (const char* it = m_content.data();
@@ -91,7 +98,7 @@ void terminal::Line::insert(int pos, std::string_view sv)
 }
 
 
-void terminal::Line::replace(int pos, std::string_view sv)
+void terminal::Line::replace_text(int pos, std::string_view sv)
 {
     int current = 0;
     for (const char* it = ctl_skip(m_content.data());
@@ -113,7 +120,7 @@ void terminal::Line::replace(int pos, std::string_view sv)
 }
 
 
-void terminal::Line::erase(int first, int num)
+void terminal::Line::erase_text(int first, int num)
 {
     TRACE("first={}, num={}, line size={}", first, num, m_content.size());
     int current = 0;
@@ -180,7 +187,7 @@ void TextTerminal::add_text(std::string_view text)
 
         // Add character to current line
         auto end_pos = utf8_next(it);
-        current_line().replace(m_cursor.x, text.substr(it - text.cbegin(), end_pos - it));
+        current_line().replace_text(m_cursor.x, text.substr(it - text.cbegin(), end_pos - it));
         it = end_pos;
         ++m_cursor.x;
     }
@@ -198,28 +205,28 @@ void TextTerminal::new_line()
 void TextTerminal::set_fg(Color8bit fg_color)
 {
     uint8_t seq[] = {c_ctl_fg8bit, fg_color};
-    current_line().insert(m_cursor.x, std::string_view((char*)seq, sizeof(seq)));
+    current_line().insert_text(m_cursor.x, std::string_view((char*) seq, sizeof(seq)));
 }
 
 
 void TextTerminal::set_bg(Color8bit bg_color)
 {
     uint8_t seq[] = {c_ctl_bg8bit, bg_color};
-    current_line().insert(m_cursor.x, std::string_view((char*)seq, sizeof(seq)));
+    current_line().insert_text(m_cursor.x, std::string_view((char*) seq, sizeof(seq)));
 }
 
 
 void TextTerminal::set_fg(Color24bit fg_color)
 {
     uint8_t seq[] = {c_ctl_fg24bit, fg_color.r, fg_color.g, fg_color.b};
-    current_line().insert(m_cursor.x, std::string_view((char*)seq, sizeof(seq)));
+    current_line().insert_text(m_cursor.x, std::string_view((char*) seq, sizeof(seq)));
 }
 
 
 void TextTerminal::set_bg(Color24bit bg_color)
 {
     uint8_t seq[] = {c_ctl_bg24bit, bg_color.r, bg_color.g, bg_color.b};
-    current_line().insert(m_cursor.x, std::string_view((char*)seq, sizeof(seq)));
+    current_line().insert_text(m_cursor.x, std::string_view((char*) seq, sizeof(seq)));
 }
 
 
@@ -230,7 +237,7 @@ void TextTerminal::set_attribute(uint8_t mask, uint8_t attr)
     m_attributes = (m_attributes & ~mask) | (attr & mask);
     // Append control code
     uint8_t seq[] = {c_ctl_attrs, m_attributes};
-    current_line().insert(m_cursor.x, std::string_view((char*)seq, sizeof(seq)));
+    current_line().insert_text(m_cursor.x, std::string_view((char*) seq, sizeof(seq)));
 }
 
 
