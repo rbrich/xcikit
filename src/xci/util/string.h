@@ -17,7 +17,7 @@
 #define XCI_UTIL_STRING_H
 
 #include <string>
-#include <string_view>
+#include <xci/compat/string_view.h>
 
 namespace xci {
 namespace util {

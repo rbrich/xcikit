@@ -182,6 +182,9 @@ set(XCI_INCLUDE_DIRS
     $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 
+set(XCI_COMPAT_LIBRARY xci-compat)
+add_subdirectory(src/xci/compat)
+
 set(XCI_UTIL_LIBRARY xci-util)
 add_subdirectory(src/xci/util)
 
@@ -262,8 +265,6 @@ install(TARGETS ${XCI_TEXT_LIBRARY} EXPORT xcikit DESTINATION lib)
 
 set(XCI_WIDGETS_LIBRARY xci-widgets)
 add_library(${XCI_WIDGETS_LIBRARY} ${XCI_WIDGETS_SOURCES})
-target_include_directories(${XCI_WIDGETS_LIBRARY}
-    PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/ext>)
 target_link_libraries(${XCI_WIDGETS_LIBRARY}
     ${XCI_TEXT_LIBRARY}
     ${XCI_GRAPHICS_LIBRARY})

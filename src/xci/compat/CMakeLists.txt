@@ -1,0 +1,8 @@
+add_library(${XCI_COMPAT_LIBRARY} INTERFACE)
+target_include_directories(${XCI_COMPAT_LIBRARY}
+    INTERFACE $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/ext>)
+
+install(TARGETS ${XCI_COMPAT_LIBRARY}
+    EXPORT xcikit
+    DESTINATION lib
+    INCLUDES DESTINATION include)
