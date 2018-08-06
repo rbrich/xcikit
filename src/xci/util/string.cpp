@@ -25,7 +25,7 @@
 namespace xci {
 namespace util {
 
-std::string escape(const std::string& str)
+std::string escape(std::string_view str)
 {
     std::string out;
     out.reserve(str.size());
@@ -74,6 +74,9 @@ std::string to_utf8(char32_t codepoint)
 const char* utf8_next(const char* pos)
 {
     auto first = (unsigned char) *pos;
+    if (first == 0) {
+        return pos;
+    } else
     if ((first & 0b10000000) == 0) {
         // 0xxxxxxx -> 1 byte
         return pos + 1;

@@ -23,7 +23,7 @@ namespace xci {
 namespace util {
 
 // Escape non-printable characters with C escape sequences (eg. '\n')
-std::string escape(const std::string& str);
+std::string escape(std::string_view str);
 
 // Convert UTF8 string to UTF32, ie. extract Unicode code points.
 // In case of invalid source string, logs error and returns empty string.
