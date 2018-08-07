@@ -34,17 +34,15 @@ namespace terminal {
 
 // Internal control codes
 // ----------------------
-// Codes 1-14 are reserved for terminator.
-// Code 15 is new line.
 // Codes 16 to 31 are reserved for attribute introducers
 // Number of parameters are deducible from introducer value:
 // 16-19 -> 0
 // 20-23 -> 1
 // 24-27 -> 2
 // 28-31 -> 3
-static constexpr uint8_t c_ctl_max_terminator = 14;
-static constexpr uint8_t c_ctl_max_introducer = 31;
-static constexpr uint8_t c_ctl_new_line = 15;
+static constexpr uint8_t c_ctl_new_line = 10;
+static constexpr uint8_t c_ctl_first_introducer = 16;
+static constexpr uint8_t c_ctl_last_introducer = 31;
 static constexpr uint8_t c_ctl_set_attrs = 22;
 static constexpr uint8_t c_ctl_reset_attrs = 23;
 static constexpr uint8_t c_ctl_default_fg = 16;
@@ -53,6 +51,13 @@ static constexpr uint8_t c_ctl_fg8bit = 20;
 static constexpr uint8_t c_ctl_bg8bit = 21;
 static constexpr uint8_t c_ctl_fg24bit = 30;
 static constexpr uint8_t c_ctl_bg24bit = 31;
+
+// Encoding of attributes byte
+static constexpr uint8_t c_font_style_mask = 0b00000011;
+static constexpr uint8_t c_decoration_mask = 0b00011100;
+static constexpr uint8_t c_mode_mask       = 0b01100000;
+static constexpr int c_decoration_shift = 2;
+static constexpr int c_mode_shift = 5;
 
 
 enum class Color4bit {
@@ -71,8 +76,7 @@ public:
 
     // Check character `c`, return true if it introduces or terminates
     // attribute sequence.
-    static bool is_introducer(char c) { return c > c_ctl_max_terminator && c <= c_ctl_max_introducer; }
-    static bool is_terminator(char c) { return c >= 1 && c <= c_ctl_max_terminator; }
+    static bool is_introducer(char c) { return c >= c_ctl_first_introducer && c <= c_ctl_last_introducer; }
 
     // Skip over attribute sequence.
     // Return pointer to following non-attr character.
@@ -81,17 +85,13 @@ public:
 
     static size_t length(const char* introducer) { return skip(introducer) - introducer; }
 
-    // Skip over attribute sequence in reverse direction.
-    // Return pointer to preceding non-attr character.
-    // Expects that `is_terminator(*last) = true`.
-    static const char* rskip(const char* terminator);
-
     /// Encode object state into sequence of attribute bytes.
     /// Max length of encoded string is 13:
     /// 2*4 for colors (24bit) + 2*2 to set & reset attrs + 1 for terminator
     std::string encode() const;
 
     /// Decode attribute sequence from string_view into object state
+    /// This is usable for incremental (running) decoder.
     size_t decode(std::string_view sv);
 
     // ------------------------------------------------------------------------
@@ -108,10 +108,19 @@ public:
     void set_bold(bool bold) { set_bit(Bold, bold); }
 
     // Combine attributes from `other` into this.
-    void add_from(const Attributes& other);
+    void include_from(const Attributes& other);
+    // Remove attributes also in `other` from this.
+    void exclude_from(const Attributes& other);
 
     // ------------------------------------------------------------------------
     // Accessors
+
+    text::FontStyle font_style() const { return text::FontStyle(m_set.to_ulong() & c_font_style_mask); }
+
+    bool has_fg() const { return m_set[Fg]; }
+    bool has_bg() const { return m_set[Bg]; }
+    graphics::Color fg() const;
+    graphics::Color bg() const;
 
 private:
     void set_bit(size_t i) { set_bit(i, true); }
@@ -135,18 +144,21 @@ private:
 class Line {
 public:
 
-    /// Skip `pos` characters and set `attr` for the following char(s).
-    void set_attr(int pos, const Attributes& new_attr);
+    void append_attr(const Attributes& attr);
 
     void insert_text(int pos, std::string_view sv);
     void append_text(std::string_view string) { m_content.append(string.cbegin(), string.cend()); }
-    void replace_text(int pos, std::string_view sv);
+
+    /// Skip `pos` characters, set `attr` for the following char(s)
+    /// and replace current cells at `pos` with content from `sv`.
+    void replace_text(size_t pos, std::string_view sv, Attributes attr);
+
     void erase_text(int first, int num);
 
     // Mark the line with line break control code to forbid reflow.
     void set_line_break();
 
-    const std::string& content() const { return m_content; }
+    std::string_view content() const { return m_content; }
 
     const char* content_begin() const { return m_content.c_str(); }
     const char* content_end() const { return m_content.c_str() + m_content.size(); }
@@ -196,9 +208,9 @@ public:
     // ------------------------------------------------------------------------
     // Cursor positioning
 
-    void set_cursor_pos(util::Vec2i pos);
-    util::Vec2i cursor_pos() const { return m_cursor; }
-    util::Vec2i size_in_cells() const { return m_cells; }
+    void set_cursor_pos(util::Vec2u pos);
+    util::Vec2u cursor_pos() const { return m_cursor; }
+    util::Vec2u size_in_cells() const { return m_cells; }
 
     // ------------------------------------------------------------------------
     // Color attributes
@@ -212,12 +224,15 @@ public:
     void set_bg(Color4bit bg_color) { set_bg(static_cast<Color8bit>(bg_color)); }
 
     // Default (xterm-compatible) 256 color palette
-    void set_fg(Color8bit fg_color);
-    void set_bg(Color8bit bg_color);
+    void set_fg(Color8bit fg_color) { m_attrs.set_fg(fg_color); }
+    void set_bg(Color8bit bg_color) { m_attrs.set_bg(bg_color); }
 
     // "True color"
-    void set_fg(Color24bit fg_color);
-    void set_bg(Color24bit bg_color);
+    void set_fg(Color24bit fg_color) { m_attrs.set_fg(fg_color); }
+    void set_bg(Color24bit bg_color) { m_attrs.set_bg(bg_color); }
+
+    void set_default_fg() { m_attrs.reset_fg(); }
+    void set_default_bg() { m_attrs.reset_bg(); }
 
     // ------------------------------------------------------------------------
     // Text attributes
@@ -259,11 +274,11 @@ public:
 private:
     float m_font_size = 0.05;
     util::Vec2f m_cell_size;
-    util::Vec2i m_cells = {80, 25};  // rows, columns
+    util::Vec2u m_cells = {80, 25};  // rows, columns
     terminal::Buffer m_buffer;
-    int m_buffer_offset = 0;  // offset to line in buffer which is first on page
-    util::Vec2i m_cursor;  // x/y of cursor on screen
-    uint8_t m_attributes = 0;  // encoded attributes (font style, mode, decorations)
+    size_t m_buffer_offset = 0;  // offset to line in buffer which is first on page
+    util::Vec2u m_cursor;  // x/y of cursor on screen
+    terminal::Attributes m_attrs;  // current attributes
     std::chrono::nanoseconds m_bell_time {0};
 };
 

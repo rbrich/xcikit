@@ -27,7 +27,7 @@ std::string escape(std::string_view str);
 
 // Convert UTF8 string to UTF32, ie. extract Unicode code points.
 // In case of invalid source string, logs error and returns empty string.
-std::u32string to_utf32(const std::string& utf8);
+std::u32string to_utf32(std::string_view utf8);
 
 // Convert single UTF32 char to UTF8 string. Can't fail.
 std::string to_utf8(char32_t codepoint);

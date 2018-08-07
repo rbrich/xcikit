@@ -32,14 +32,6 @@ using namespace std::chrono;
 using namespace std::chrono_literals;
 
 
-// Encoding of attributes byte
-static constexpr uint8_t c_font_style_mask = 0b00000011;
-static constexpr uint8_t c_decoration_mask = 0b00011100;
-static constexpr uint8_t c_mode_mask       = 0b01100000;
-static constexpr int c_decoration_shift = 2;
-static constexpr int c_mode_shift = 5;
-
-
 // Skip custom control seqs in UTF-8 string
 const char* terminal::Attributes::skip(const char* introducer)
 {
@@ -51,13 +43,6 @@ const char* terminal::Attributes::skip(const char* introducer)
         else if (*it < 28)  it += 3;
         else if (*it < 32)  it += 4;
     }
-}
-
-
-const char* terminal::Attributes::rskip(const char* terminator)
-{
-    char size = *terminator;
-    return terminator - size;
 }
 
 
@@ -98,7 +83,7 @@ void terminal::Attributes::set_bg(Color24bit bg_color)
 }
 
 
-void terminal::Attributes::add_from(const terminal::Attributes& other)
+void terminal::Attributes::include_from(const terminal::Attributes& other)
 {
     if (other.m_set[Fg]) {
         m_fg_r = other.m_fg_r;
@@ -114,6 +99,29 @@ void terminal::Attributes::add_from(const terminal::Attributes& other)
     }
     m_set = (m_set | other.m_set) & ~(other.m_reset);
     m_reset = (m_reset | other.m_reset) & ~(other.m_set);
+}
+
+
+void terminal::Attributes::exclude_from(const terminal::Attributes& other)
+{
+    if (m_set[Fg] && other.m_set[Fg]
+    && m_fg8bit == other.m_fg8bit
+    && m_fg_r == other.m_fg_r
+    && (m_fg8bit || m_fg_g == other.m_fg_g)
+    && (m_fg8bit || m_fg_b == other.m_fg_b)) {
+        m_set[Fg] = false;
+    }
+    if (m_set[Bg] && other.m_set[Bg]
+    && m_bg8bit == other.m_bg8bit
+    && m_bg_r == other.m_bg_r
+    && (m_bg8bit || m_bg_g == other.m_bg_g)
+    && (m_bg8bit || m_bg_b == other.m_bg_b)) {
+        m_set[Bg] = false;
+    }
+    m_set[Italic] = m_set[Italic] & ~other.m_set[Italic];
+    m_set[Bold] = m_set[Bold] & ~other.m_set[Bold];
+
+    m_reset = m_reset & ~other.m_reset;
 }
 
 
@@ -161,22 +169,15 @@ std::string terminal::Attributes::encode() const
         result.push_back(m_bg_b);
     }
 
-    if (result.empty())
-        return result;
-
-    assert(result.size() <= c_ctl_max_terminator);
-    result.push_back(uint8_t(result.size()));
     return result;
 }
 
 
 size_t terminal::Attributes::decode(std::string_view sv)
 {
-    m_set.reset();
-    m_reset.reset();
     auto* it = sv.cbegin();
     while (it < sv.cend()) {
-        if (*it <= c_ctl_max_terminator || *it > c_ctl_max_introducer)
+        if (*it <= c_ctl_first_introducer || *it > c_ctl_last_introducer)
             break;
         switch (*it) {
             case c_ctl_set_attrs: {
@@ -193,19 +194,15 @@ size_t terminal::Attributes::decode(std::string_view sv)
             }
             case c_ctl_default_fg:
                 reset_fg();
-                ++it;
                 break;
             case c_ctl_default_bg:
                 reset_bg();
-                ++it;
                 break;
             case c_ctl_fg8bit:
                 set_fg(Color8bit(*++it));
-                ++it;
                 break;
             case c_ctl_bg8bit:
                 set_bg(Color8bit(*++it));
-                ++it;
                 break;
             case c_ctl_fg24bit:
                 set_bit(Fg);
@@ -213,7 +210,6 @@ size_t terminal::Attributes::decode(std::string_view sv)
                 m_fg_r = uint8_t(*++it);
                 m_fg_g = uint8_t(*++it);
                 m_fg_b = uint8_t(*++it);
-                ++it;
                 break;
             case c_ctl_bg24bit:
                 set_bit(Bg);
@@ -221,34 +217,37 @@ size_t terminal::Attributes::decode(std::string_view sv)
                 m_bg_r = uint8_t(*++it);
                 m_bg_g = uint8_t(*++it);
                 m_bg_b = uint8_t(*++it);
-                ++it;
                 break;
             default:
                 log_error("terminal decode attributes: Encountered invalid code: {:02x}", int(*it));
                 return it - sv.cbegin();
         }
-    }
-    if (*it > 0 && *it <= c_ctl_max_terminator)
         ++it;
+    }
     return it - sv.cbegin();
+}
+
+
+Color terminal::Attributes::fg() const
+{
+    return m_fg8bit ? Color{m_fg_r} : Color{m_fg_r, m_fg_g, m_fg_b};
+}
+
+
+Color terminal::Attributes::bg() const
+{
+    return m_bg8bit ? Color{m_bg_r} : Color{m_bg_r, m_bg_g, m_bg_b};
 }
 
 
 // ------------------------------------------------------------------------
 
 
-void terminal::Line::set_attr(int pos, const terminal::Attributes& new_attr)
+void terminal::Line::append_attr(const terminal::Attributes& attr)
 {
-    const char* it = content_begin();
-    while (pos > 0 && it < content_end()) {
-        it = Attributes::skip(it);
-        it = utf8_next(it);
-    }
-    Attributes attr;
-    size_t old_length = attr.decode({it, size_t(content_end() - it)});
-    attr.add_from(new_attr);
-    m_content.replace(it - content_begin(), old_length, new_attr.encode());
+    m_content.append(attr.encode());
 }
+
 
 
 void terminal::Line::insert_text(int pos, std::string_view sv)
@@ -270,25 +269,43 @@ void terminal::Line::insert_text(int pos, std::string_view sv)
 }
 
 
-void terminal::Line::replace_text(int pos, std::string_view sv)
+void terminal::Line::replace_text(size_t pos, std::string_view sv, Attributes attr)
 {
-    int current = 0;
-    for (const char* it = Attributes::skip(m_content.data());
-            it != m_content.data() + m_content.size();
-            it = Attributes::skip(utf8_next(it)))
-    {
-        if (pos == current) {
-            auto end = it;
-            for (size_t i = 0; i < utf8_length(sv); i++) {
-                end = utf8_next(end);
-            }
-            m_content.replace(it - m_content.data(), end - it, sv.data(), sv.size());
-            return;
-        }
-        ++current;
+    // Find `pos` in content (or end of content)
+    auto* it = content_begin();
+    auto skip = pos;
+    Attributes attr_start;
+    while (skip > 0 && it < content_end()) {
+        if (Attributes::is_introducer(*it))
+            it += attr_start.decode({it, size_t(content_end() - it)});
+        it = utf8_next(it);
+        --skip;
     }
-    assert(pos >= current);
-    m_content.append(sv.data(), sv.size());
+
+    // Now we are at `pos` (or content end), but there might be also some attributes
+    auto* end = it;
+    Attributes attr_end(attr_start);
+    if (Attributes::is_introducer(*end))
+        end += attr_end.decode({end, size_t(content_end() - end)});
+
+    // Find end of the place for new text (same length as `sv`)
+    auto len = utf8_length(sv);
+    while (len > 0 && end < content_end()) {
+        if (Attributes::is_introducer(*end))
+            end += attr_end.decode({end, size_t(content_end() - end)});
+        end = utf8_next(end);
+        --len;
+    }
+
+    attr.exclude_from(attr_start);
+    attr_end.exclude_from(attr);
+
+    auto replace_start = it - content_begin();
+    auto replace_length = end - it;
+    m_content.replace(replace_start, replace_length, sv.data(), sv.size());
+    m_content.insert(replace_start + sv.size(), attr_end.encode());
+    m_content.insert(replace_start, attr.encode());
+    TRACE("content={}", escape(m_content));
 }
 
 
@@ -348,28 +365,41 @@ void terminal::Buffer::remove_lines(size_t start, size_t count)
 
 void TextTerminal::add_text(std::string_view text)
 {
+    // Flush text
+    std::string buffer;
+    size_t buffer_length = 0;
+    auto flush_buffer = [&buffer, &buffer_length, this]() {
+        if (!buffer.empty()) {
+            current_line().replace_text(m_cursor.x, buffer, m_attrs);
+            buffer.clear();
+            m_cursor.x += buffer_length;
+        }
+    };
     // Add characters up to terminal width (columns)
     for (auto it = text.cbegin(); it != text.cend(); ) {
         // Special handling for newline character
         if (*it == '\n') {
             ++it;
+            flush_buffer();
             break_line();
             new_line();
             continue;
         }
 
         // Check line length
-        if (m_cursor.x >= m_cells.x) {
+        if (m_cursor.x + buffer_length >= m_cells.x - 1) {
+            flush_buffer();
             new_line();
             continue;
         }
 
         // Add character to current line
         auto end_pos = utf8_next(it);
-        current_line().replace_text(m_cursor.x, text.substr(it - text.cbegin(), end_pos - it));
+        buffer.append(std::string(text.substr(it - text.cbegin(), end_pos - it)));
+        ++buffer_length;
         it = end_pos;
-        ++m_cursor.x;
     }
+    flush_buffer();
 }
 
 
@@ -381,44 +411,10 @@ void TextTerminal::new_line()
 }
 
 
-void TextTerminal::set_fg(Color8bit fg_color)
-{
-    terminal::Attributes attr;
-    attr.set_fg(fg_color);
-    current_line().set_attr(m_cursor.x, attr);
-}
-
-
-void TextTerminal::set_bg(Color8bit bg_color)
-{
-    terminal::Attributes attr;
-    attr.set_bg(bg_color);
-    current_line().set_attr(m_cursor.x, attr);
-}
-
-
-void TextTerminal::set_fg(Color24bit fg_color)
-{
-    terminal::Attributes attr;
-    attr.set_fg(fg_color);
-    current_line().set_attr(m_cursor.x, attr);
-}
-
-
-void TextTerminal::set_bg(Color24bit bg_color)
-{
-    terminal::Attributes attr;
-    attr.set_bg(bg_color);
-    current_line().set_attr(m_cursor.x, attr);
-}
-
-
 void TextTerminal::set_font_style(FontStyle style)
 {
-    terminal::Attributes attr;
-    attr.set_italic(style == FontStyle::Italic || style == FontStyle::BoldItalic);
-    attr.set_bold(style == FontStyle::Bold || style == FontStyle::BoldItalic);
-    current_line().set_attr(m_cursor.x, attr);
+    m_attrs.set_italic(style == FontStyle::Italic || style == FontStyle::BoldItalic);
+    m_attrs.set_bold(style == FontStyle::Bold || style == FontStyle::BoldItalic);
 }
 
 
@@ -454,8 +450,8 @@ void TextTerminal::resize(View& view)
     font.set_size(unsigned(m_font_size / pxf.y));
     m_cell_size = {font.max_advance() * pxf.x,
                    font.line_height() * pxf.y};
-    m_cells = {int(size().x / m_cell_size.x),
-               int(size().y / m_cell_size.y)};
+    m_cells = {unsigned(size().x / m_cell_size.x),
+               unsigned(size().y / m_cell_size.y)};
     log_debug("TextTerminal cells {}", m_cells);
 }
 
@@ -470,66 +466,35 @@ void TextTerminal::draw(View& view, State state)
     graphics::Shape boxes(Color(0));
 
     Vec2f pen;
-    auto buffer_last = std::min(int(m_buffer.size()), m_buffer_offset + m_cells.y);
-    for (int line_idx = m_buffer_offset; line_idx < buffer_last; line_idx++) {
-        auto& line = m_buffer[line_idx].content();
-        int row = line_idx - m_buffer_offset;
-        int column = 0;
-        for (const char* it = line.data(); it != line.data() + line.size(); ) {
-            if (uint8_t(*it) == terminal::c_ctl_set_attrs) {
-                // decode attributes
-                ++it;
-                auto style = static_cast<FontStyle>(*it & c_font_style_mask);
-                auto deco = static_cast<Decoration>((*it & c_decoration_mask) >> c_decoration_shift);
-                auto mode = static_cast<Mode>((*it & c_mode_mask) >> c_mode_shift);
-                font.set_style(style);
-                (void) deco; // TODO
-                (void) mode; // TODO
+    auto buffer_last = std::min(m_buffer.size(), m_buffer_offset + m_cells.y);
+    for (size_t line_idx = m_buffer_offset; line_idx < buffer_last; line_idx++) {
+        auto& line = m_buffer[line_idx];
+        size_t row = line_idx - m_buffer_offset;
+        size_t column = 0;
+        for (const char* it = line.content_begin(); it != line.content_end(); ) {
+            if (*it == terminal::c_ctl_new_line) {
                 ++it;
                 continue;
             }
-
-            if (uint8_t(*it) == terminal::c_ctl_fg8bit){
-                // decode 8-bit fg color
-                ++it;
-                sprites.set_color(Color(uint8_t(*it)));
-                ++it;
-                continue;
-            }
-
-            if (uint8_t(*it) == terminal::c_ctl_bg8bit){
-                // decode 8-bit bg color
-                ++it;
-                boxes.set_fill_color(Color(uint8_t(*it)));
-                ++it;
-                continue;
-            }
-
-            if (uint8_t(*it) == terminal::c_ctl_fg24bit){
-                // decode 24-bit fg color
-                auto r = *++it;
-                auto g = *++it;
-                auto b = *++it;
-                Color fg(r, g, b);
-                sprites.set_color(fg);
-                ++it;
-                continue;
-            }
-
-            if (uint8_t(*it) == terminal::c_ctl_bg24bit){
-                // decode 24-bit bg color
-                auto r = *++it;
-                auto g = *++it;
-                auto b = *++it;
-                Color bg(r, g, b);
-                boxes.set_fill_color(bg);
-                ++it;
+            if (terminal::Attributes::is_introducer(*it)) {
+                terminal::Attributes attr;
+                it += attr.decode({it, size_t(line.content_end() - it)});
+                font.set_style(attr.font_style());
+                // TODO:
+//                auto deco = static_cast<Decoration>((*it & c_decoration_mask) >> c_decoration_shift);
+//                auto mode = static_cast<Mode>((*it & c_mode_mask) >> c_mode_shift);
+//                (void) deco; // TODO
+//                (void) mode; // TODO
+                if (attr.has_fg())
+                    sprites.set_color(attr.fg());
+                if (attr.has_bg())
+                    boxes.set_fill_color(attr.bg());
                 continue;
             }
 
             // extract single UTF-8 character
             auto end_pos = utf8_next(it);
-            auto ch = line.substr(it - line.data(), end_pos - it);
+            auto ch = std::string_view(it, end_pos - it);
             it = end_pos;
 
             CodePoint code_point = to_utf32(ch)[0];
@@ -603,7 +568,7 @@ void TextTerminal::bell()
 }
 
 
-void TextTerminal::set_cursor_pos(util::Vec2i pos)
+void TextTerminal::set_cursor_pos(util::Vec2u pos)
 {
     // make sure new cursor position is not outside screen area
     m_cursor = {

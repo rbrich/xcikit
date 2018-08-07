@@ -33,39 +33,39 @@ TEST_CASE( "Attributes", "[TextTerminal]" )
 
     attr.set_fg(7);
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}\x07\x02", terminal::c_ctl_fg8bit)) );
-    CHECK( attr2.decode(enc) == 3 );
+    CHECK( escape(enc) == escape(format("{}\x07", terminal::c_ctl_fg8bit)) );
+    CHECK( attr2.decode(enc) == 2 );
     CHECK( escape(attr2.encode()) == escape(enc) );
 
     attr.set_bg(15);
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}\x07{}\x0f\x04", terminal::c_ctl_fg8bit, terminal::c_ctl_bg8bit)) );
-    CHECK( attr2.decode(enc) == 5 );
+    CHECK( escape(enc) == escape(format("{}\x07{}\x0f", terminal::c_ctl_fg8bit, terminal::c_ctl_bg8bit)) );
+    CHECK( attr2.decode(enc) == 4 );
     CHECK( escape(attr2.encode()) == escape(enc) );
 
     attr.set_fg(terminal::Color24bit(0x40, 0x50, 0x60));
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}\x0f{}\x40\x50\x60\x06", terminal::c_ctl_bg8bit, terminal::c_ctl_fg24bit)) );
-    CHECK( attr2.decode(enc) == 7 );
+    CHECK( escape(enc) == escape(format("{}\x0f{}\x40\x50\x60", terminal::c_ctl_bg8bit, terminal::c_ctl_fg24bit)) );
+    CHECK( attr2.decode(enc) == 6 );
     CHECK( escape(attr2.encode()) == escape(enc) );
 
     attr.set_bg(terminal::Color24bit(0x70, 0x80, 0x90));
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}\x40\x50\x60{}\x70\x80\x90\x08", terminal::c_ctl_fg24bit, terminal::c_ctl_bg24bit)) );
+    CHECK( escape(enc) == escape(format("{}\x40\x50\x60{}\x70\x80\x90", terminal::c_ctl_fg24bit, terminal::c_ctl_bg24bit)) );
 
     attr.reset_fg();
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}{}\x70\x80\x90\x05", terminal::c_ctl_default_fg, terminal::c_ctl_bg24bit)) );
+    CHECK( escape(enc) == escape(format("{}{}\x70\x80\x90", terminal::c_ctl_default_fg, terminal::c_ctl_bg24bit)) );
 
     attr.reset_bg();
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}{}\x02", terminal::c_ctl_default_fg, terminal::c_ctl_default_bg)) );
+    CHECK( escape(enc) == escape(format("{}{}", terminal::c_ctl_default_fg, terminal::c_ctl_default_bg)) );
 
     attr.set_bold(true);
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}\x02{}{}\x04", terminal::c_ctl_set_attrs, terminal::c_ctl_default_fg, terminal::c_ctl_default_bg)) );
+    CHECK( escape(enc) == escape(format("{}\x02{}{}", terminal::c_ctl_set_attrs, terminal::c_ctl_default_fg, terminal::c_ctl_default_bg)) );
 
     attr.set_italic(false);
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}\x02{}\x01{}{}\x06", terminal::c_ctl_set_attrs, terminal::c_ctl_reset_attrs, terminal::c_ctl_default_fg, terminal::c_ctl_default_bg)) );
+    CHECK( escape(enc) == escape(format("{}\x02{}\x01{}{}", terminal::c_ctl_set_attrs, terminal::c_ctl_reset_attrs, terminal::c_ctl_default_fg, terminal::c_ctl_default_bg)) );
 }
