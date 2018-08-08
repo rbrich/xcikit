@@ -144,18 +144,16 @@ private:
 class Line {
 public:
 
-    void append_attr(const Attributes& attr);
-
-    void insert_text(int pos, std::string_view sv);
-    void append_text(std::string_view string) { m_content.append(string.cbegin(), string.cend()); }
+    /// Clear the line and set initial attributes.
+    void clear(const Attributes& attr);
 
     /// Skip `pos` characters, set `attr` for the following char(s)
-    /// and replace current cells at `pos` with content from `sv`.
-    void replace_text(size_t pos, std::string_view sv, Attributes attr);
+    /// and insert `sv` or replace current cells at `pos` with content from `sv`.
+    void add_text(size_t pos, std::string_view sv, Attributes attr, bool insert);
 
     void erase_text(int first, int num);
 
-    // Mark the line with line break control code to forbid reflow.
+    /// Mark the line with line break control code to forbid reflow.
     void set_line_break();
 
     std::string_view content() const { return m_content; }
@@ -193,7 +191,7 @@ public:
     // ------------------------------------------------------------------------
     // Text content
 
-    void add_text(std::string_view text);
+    void add_text(std::string_view text, bool insert=false);
 
     // Forced line end (disallow reflow for current line).
     void break_line() { current_line().set_line_break(); }

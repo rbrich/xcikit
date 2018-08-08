@@ -243,33 +243,14 @@ Color terminal::Attributes::bg() const
 // ------------------------------------------------------------------------
 
 
-void terminal::Line::append_attr(const terminal::Attributes& attr)
+void terminal::Line::clear(const terminal::Attributes& attr)
 {
+    m_content.clear();
     m_content.append(attr.encode());
 }
 
 
-
-void terminal::Line::insert_text(int pos, std::string_view sv)
-{
-    int current = 0;
-    for (const char* it = m_content.data();
-            it != m_content.data() + m_content.size();
-            it = utf8_next(it))
-    {
-        it = Attributes::skip(it);
-        if (pos == current) {
-            m_content.insert(it - m_content.data(), sv.data(), sv.size());
-            return;
-        }
-        ++current;
-    }
-    assert(pos >= current);
-    m_content.append(sv.data(), sv.size());
-}
-
-
-void terminal::Line::replace_text(size_t pos, std::string_view sv, Attributes attr)
+void terminal::Line::add_text(size_t pos, std::string_view sv, Attributes attr, bool insert)
 {
     // Find `pos` in content (or end of content)
     auto* it = content_begin();
@@ -282,19 +263,21 @@ void terminal::Line::replace_text(size_t pos, std::string_view sv, Attributes at
         --skip;
     }
 
-    // Now we are at `pos` (or content end), but there might be also some attributes
+    // Now we are at `pos` (or content end), but there might be some attribute
     auto* end = it;
     Attributes attr_end(attr_start);
     if (Attributes::is_introducer(*end))
         end += attr_end.decode({end, size_t(content_end() - end)});
 
-    // Find end of the place for new text (same length as `sv`)
-    auto len = utf8_length(sv);
-    while (len > 0 && end < content_end()) {
-        if (Attributes::is_introducer(*end))
-            end += attr_end.decode({end, size_t(content_end() - end)});
-        end = utf8_next(end);
-        --len;
+    // Replace mode - find end of the place for new text (same length as `sv`)
+    if (!insert) {
+        auto len = utf8_length(sv);
+        while (len > 0 && end < content_end()) {
+            if (Attributes::is_introducer(*end))
+                end += attr_end.decode({end, size_t(content_end() - end)});
+            end = utf8_next(end);
+            --len;
+        }
     }
 
     attr.exclude_from(attr_start);
@@ -363,14 +346,14 @@ void terminal::Buffer::remove_lines(size_t start, size_t count)
 }
 
 
-void TextTerminal::add_text(std::string_view text)
+void TextTerminal::add_text(std::string_view text, bool insert)
 {
-    // Flush text
+    // Buffer for fragment of text without any attributes
     std::string buffer;
     size_t buffer_length = 0;
-    auto flush_buffer = [&buffer, &buffer_length, this]() {
+    auto flush_buffer = [this, &buffer, &buffer_length, insert]() {
         if (!buffer.empty()) {
-            current_line().replace_text(m_cursor.x, buffer, m_attrs);
+            current_line().add_text(m_cursor.x, buffer, m_attrs, insert);
             buffer.clear();
             m_cursor.x += buffer_length;
         }
