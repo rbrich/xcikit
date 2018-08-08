@@ -40,6 +40,7 @@ public:
     void set_draw_callback(DrawCallback draw_cb) override;
     void set_mouse_position_callback(MousePosCallback mpos_cb) override;
     void set_mouse_button_callback(MouseBtnCallback mbtn_cb) override;
+    void set_scroll_callback(ScrollCallback scroll_cb) override;
 
     void set_refresh_mode(RefreshMode mode) override;
     void set_debug_flags(View::DebugFlags flags) override;

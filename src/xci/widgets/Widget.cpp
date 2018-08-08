@@ -111,6 +111,14 @@ bool Composite::mouse_button_event(View& view, const MouseBtnEvent& ev)
 }
 
 
+void Composite::scroll_event(View& view, const ScrollEvent& ev)
+{
+    // TODO: mouse-over widget, enter/exit events, propagate scroll to only one Widget
+    for (auto& child : m_child)
+        child->scroll_event(view, ev);
+}
+
+
 bool Composite::click_focus(View& view, Vec2f pos)
 {
     bool handled = false;
@@ -301,6 +309,13 @@ Bind::Bind(graphics::Window& window, Widget& root)
             m_mbtn_cb(v, e);
         root.click_focus(v, e.pos);
         root.mouse_button_event(v, e);
+    });
+
+    m_scroll_cb = window.get_scroll_callback();
+    window.set_scroll_callback([&](View& v, const ScrollEvent& e) {
+        if (m_scroll_cb)
+            m_scroll_cb(v, e);
+        root.scroll_event(v, e);
     });
 }
 

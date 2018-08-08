@@ -340,10 +340,16 @@ int terminal::Line::length() const
 }
 
 
+// ------------------------------------------------------------------------
+
+
 void terminal::Buffer::remove_lines(size_t start, size_t count)
 {
     m_lines.erase(m_lines.begin() + start, m_lines.begin() + start + count);
 }
+
+
+// ------------------------------------------------------------------------
 
 
 void TextTerminal::add_text(std::string_view text, bool insert)
@@ -389,8 +395,46 @@ void TextTerminal::add_text(std::string_view text, bool insert)
 void TextTerminal::new_line()
 {
     m_buffer.add_line();
-    ++m_cursor.y;
     m_cursor.x = 0;
+    if (m_cursor.y < m_cells.y - 1)
+        ++m_cursor.y;
+    else
+        ++m_buffer_offset;
+}
+
+
+void TextTerminal::erase_page()
+{
+    m_buffer.remove_lines(size_t(m_buffer_offset), m_buffer.size() - m_buffer_offset);
+    m_buffer.add_line();
+    m_cursor.y = 0;
+}
+
+
+void TextTerminal::erase_buffer()
+{
+    m_buffer.remove_lines(0, m_buffer.size());
+    m_buffer.add_line();
+    m_cursor.y = 0;
+}
+
+
+void TextTerminal::set_cursor_pos(util::Vec2u pos)
+{
+    // make sure new cursor position is not outside screen area
+    m_cursor = {
+        min(pos.x, m_cells.x),
+        min(pos.y, m_cells.y),
+    };
+    // make sure there is a line in buffer at cursor position
+    while (m_cursor.y >= int(m_buffer.size()) - m_buffer_offset) {
+        m_buffer.add_line();
+    }
+    // scroll up if the cursor got out of page
+    if (m_cursor.y >= m_cells.y) {
+        m_buffer_offset += m_cursor.y - m_cells.y + 1;
+        m_cursor.y = m_cells.y - 1;
+    }
 }
 
 
@@ -548,36 +592,6 @@ void TextTerminal::draw(View& view, State state)
 void TextTerminal::bell()
 {
     m_bell_time = 500ms;
-}
-
-
-void TextTerminal::set_cursor_pos(util::Vec2u pos)
-{
-    // make sure new cursor position is not outside screen area
-    m_cursor = {
-        min(pos.x, m_cells.x),
-        min(pos.y, m_cells.y),
-    };
-    // make sure there is a line in buffer at cursor position
-    while (m_cursor.y >= int(m_buffer.size()) - m_buffer_offset) {
-        m_buffer.add_line();
-    }
-}
-
-
-void TextTerminal::erase_page()
-{
-    m_buffer.remove_lines(size_t(m_buffer_offset), m_buffer.size() - m_buffer_offset);
-    m_buffer.add_line();
-    m_cursor.y = 0;
-}
-
-
-void TextTerminal::erase_buffer()
-{
-    m_buffer.remove_lines(0, m_buffer.size());
-    m_buffer.add_line();
-    m_cursor.y = 0;
 }
 
 

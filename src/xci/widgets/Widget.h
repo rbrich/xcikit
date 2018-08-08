@@ -31,6 +31,7 @@ using graphics::KeyEvent;
 using graphics::CharEvent;
 using graphics::MousePosEvent;
 using graphics::MouseBtnEvent;
+using graphics::ScrollEvent;
 using util::Vec2f;
 
 
@@ -83,6 +84,7 @@ public:
     virtual void char_event(View& view, const CharEvent& ev) {}
     virtual void mouse_pos_event(View& view, const MousePosEvent& ev) {}
     virtual bool mouse_button_event(View& view, const MouseBtnEvent& ev) { return false; }
+    virtual void scroll_event(View& view, const ScrollEvent& ev) {}
     virtual bool click_focus(View& view, Vec2f pos) { return is_click_focusable() && contains(pos); }
     virtual bool tab_focus(View& view, int& step) { return is_tab_focusable(); }
 
@@ -126,6 +128,7 @@ public:
     void char_event(View& view, const CharEvent& ev) override;
     void mouse_pos_event(View& view, const MousePosEvent& ev) override;
     bool mouse_button_event(View& view, const MouseBtnEvent& ev) override;
+    void scroll_event(View& view, const ScrollEvent& ev) override;
     bool click_focus(View& view, Vec2f pos) override;
     bool tab_focus(View& view, int& step) override;
 
@@ -193,6 +196,7 @@ private:
     graphics::Window::CharCallback m_char_cb;
     graphics::Window::MousePosCallback m_mpos_cb;
     graphics::Window::MouseBtnCallback m_mbtn_cb;
+    graphics::Window::ScrollCallback m_scroll_cb;
 };
 
 

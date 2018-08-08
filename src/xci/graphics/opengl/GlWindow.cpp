@@ -214,6 +214,21 @@ void GlWindow::set_mouse_button_callback(MouseBtnCallback mbtn_cb)
 }
 
 
+void GlWindow::set_scroll_callback(ScrollCallback scroll_cb)
+{
+    Window::set_scroll_callback(scroll_cb);
+    if (m_scroll_cb) {
+        glfwSetScrollCallback(m_window, [](GLFWwindow* window, double xoffset,
+                                           double yoffset) {
+            auto self = (GlWindow*) glfwGetWindowUserPointer(window);
+            self->m_scroll_cb(self->m_view, {{float(xoffset), float(yoffset)}});
+        });
+    } else {
+        glfwSetScrollCallback(m_window, nullptr);
+    }
+}
+
+
 void GlWindow::set_refresh_mode(RefreshMode mode)
 {
     switch (mode) {

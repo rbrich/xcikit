@@ -116,6 +116,11 @@ struct MouseBtnEvent {
 };
 
 
+struct ScrollEvent {
+    Vec2f offset;
+};
+
+
 enum class RefreshMode {
     OnDemand,  // refresh event from system or through View::refresh()
     OnEvent,   // got any event from system
@@ -151,6 +156,7 @@ public:
     using CharCallback = std::function<void(View&, const CharEvent&)>;
     using MousePosCallback = std::function<void(View&, const MousePosEvent&)>;
     using MouseBtnCallback = std::function<void(View&, const MouseBtnEvent&)>;
+    using ScrollCallback = std::function<void(View&, const ScrollEvent&)>;
 
     // The original callback is replaced. To cascade callbacks,
     // you have to get and wrap original callback manually.
@@ -161,6 +167,7 @@ public:
     virtual void set_char_callback(CharCallback char_cb) { m_char_cb = std::move(char_cb); }
     virtual void set_mouse_position_callback(MousePosCallback mpos_cb) { m_mpos_cb = std::move(mpos_cb); }
     virtual void set_mouse_button_callback(MouseBtnCallback mbtn_cb) { m_mbtn_cb = std::move(mbtn_cb); }
+    virtual void set_scroll_callback(ScrollCallback scroll_cb) { m_scroll_cb = std::move(scroll_cb); }
 
     UpdateCallback get_update_callback() { return m_update_cb; }
     SizeCallback get_size_callback() { return m_size_cb; }
@@ -169,6 +176,7 @@ public:
     CharCallback get_char_callback() { return m_char_cb; }
     MousePosCallback get_mouse_position_callback() { return m_mpos_cb; }
     MouseBtnCallback get_mouse_button_callback() { return m_mbtn_cb; }
+    ScrollCallback get_scroll_callback() { return m_scroll_cb; }
 
     virtual void set_refresh_mode(RefreshMode mode) = 0;
     virtual void set_debug_flags(View::DebugFlags flags) = 0;
@@ -181,6 +189,7 @@ protected:
     CharCallback m_char_cb;
     MousePosCallback m_mpos_cb;
     MouseBtnCallback m_mbtn_cb;
+    ScrollCallback m_scroll_cb;
 };
 
 
