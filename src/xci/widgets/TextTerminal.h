@@ -262,6 +262,10 @@ public:
     // visual bell
     void bell();
 
+    // mouse scroll (scrollback)
+    void scrollback(double lines);
+    void cancel_scrollback();
+
     // ------------------------------------------------------------------------
     // impl Widget
 
@@ -270,11 +274,14 @@ public:
     void draw(View& view, State state) override;
 
 private:
+    static constexpr double c_scroll_end = std::numeric_limits<double>::infinity();
+
     float m_font_size = 0.05;
     util::Vec2f m_cell_size;
     util::Vec2u m_cells = {80, 25};  // rows, columns
     terminal::Buffer m_buffer;
     size_t m_buffer_offset = 0;  // offset to line in buffer which is first on page
+    double m_scroll_offset = c_scroll_end;  // scroll back with mouse wheel
     util::Vec2u m_cursor;  // x/y of cursor on screen
     terminal::Attributes m_attrs;  // current attributes
     std::chrono::nanoseconds m_bell_time {0};

@@ -459,6 +459,33 @@ void TextTerminal::set_mode(TextTerminal::Mode mode)
 }
 
 
+void TextTerminal::bell()
+{
+    m_bell_time = 500ms;
+}
+
+
+void TextTerminal::scrollback(double lines)
+{
+    if (m_scroll_offset == c_scroll_end) {
+        m_scroll_offset = m_buffer_offset;
+    }
+    m_scroll_offset -= lines;
+    if (m_scroll_offset > m_buffer_offset) {
+        m_scroll_offset = m_buffer_offset;
+    }
+    if (m_scroll_offset < 0.0) {
+        m_scroll_offset = 0.0;
+    }
+}
+
+
+void TextTerminal::cancel_scrollback()
+{
+    m_scroll_offset = c_scroll_end;
+}
+
+
 void TextTerminal::update(std::chrono::nanoseconds elapsed)
 {
     if (m_bell_time > 0ns) {
@@ -493,8 +520,17 @@ void TextTerminal::draw(View& view, State state)
     graphics::Shape boxes(Color(0));
 
     Vec2f pen;
-    auto buffer_last = std::min(m_buffer.size(), m_buffer_offset + m_cells.y);
-    for (size_t line_idx = m_buffer_offset; line_idx < buffer_last; line_idx++) {
+    size_t buffer_first, buffer_last;
+    if (m_scroll_offset == c_scroll_end) {
+        buffer_first = m_buffer_offset;
+        buffer_last = std::min(m_buffer.size(), buffer_first + m_cells.y);
+    } else {
+        buffer_first = size_t(m_scroll_offset);
+        buffer_last = std::min(m_buffer.size(), buffer_first + m_cells.y + 1);
+        pen.y -= (m_scroll_offset - buffer_first);
+    }
+
+    for (size_t line_idx = buffer_first; line_idx < buffer_last; line_idx++) {
         auto& line = m_buffer[line_idx];
         size_t row = line_idx - m_buffer_offset;
         size_t column = 0;
@@ -586,12 +622,6 @@ void TextTerminal::draw(View& view, State state)
         m_bell_time = 0ns;
         view.stop_periodic_refresh();
     }
-}
-
-
-void TextTerminal::bell()
-{
-    m_bell_time = 500ms;
 }
 
 
