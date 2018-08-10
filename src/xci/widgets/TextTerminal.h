@@ -257,6 +257,13 @@ public:
     void set_mode(Mode mode);
 
     // ------------------------------------------------------------------------
+    // Set/Reset all attributes
+
+    void set_attrs(terminal::Attributes attrs) { m_attrs = attrs; }
+    void reset_attrs() { m_attrs = {}; }
+    terminal::Attributes attrs() const { return m_attrs; }
+
+    // ------------------------------------------------------------------------
     // Effects
 
     // visual bell
