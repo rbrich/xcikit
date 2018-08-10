@@ -360,8 +360,9 @@ void TextTerminal::add_text(std::string_view text, bool insert)
     auto flush_buffer = [this, &buffer, &buffer_length, insert]() {
         if (!buffer.empty()) {
             current_line().add_text(m_cursor.x, buffer, m_attrs, insert);
-            buffer.clear();
             m_cursor.x += buffer_length;
+            buffer_length = 0;
+            buffer.clear();
         }
     };
     // Add characters up to terminal width (columns)
