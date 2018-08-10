@@ -14,8 +14,8 @@ option(XCI_DEBUG_OPENGL "Log info about OpenGL calls and errors." OFF)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+add_compile_options(-Wall -Wextra -Wno-unused-parameter)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
 include(XciBuildOptions)
@@ -32,96 +32,54 @@ endif()
 
 set(XCI_GRAPHICS_SOURCES
     src/xci/graphics/Color.cpp
-    src/xci/graphics/Color.h
     src/xci/graphics/Primitives.cpp
-    src/xci/graphics/Primitives.h
     src/xci/graphics/Renderer.cpp
-    src/xci/graphics/Renderer.h
-    src/xci/graphics/Shader.h
     src/xci/graphics/Shape.cpp
-    src/xci/graphics/Shape.h
     src/xci/graphics/Sprites.cpp
-    src/xci/graphics/Sprites.h
-    src/xci/graphics/Texture.h
     src/xci/graphics/View.cpp
-    src/xci/graphics/View.h
-    src/xci/graphics/Window.cpp
-    src/xci/graphics/Window.h)
+    src/xci/graphics/Window.cpp)
 
 set(XCI_GRAPHICS_OPENGL_SOURCES
     src/xci/graphics/opengl/GlPrimitives.cpp
-    src/xci/graphics/opengl/GlPrimitives.h
     src/xci/graphics/opengl/GlRenderer.cpp
-    src/xci/graphics/opengl/GlRenderer.h
     src/xci/graphics/opengl/GlShader.cpp
-    src/xci/graphics/opengl/GlShader.h
     src/xci/graphics/opengl/GlTexture.cpp
-    src/xci/graphics/opengl/GlTexture.h
-    src/xci/graphics/opengl/GlWindow.cpp
-    src/xci/graphics/opengl/GlWindow.h)
+    src/xci/graphics/opengl/GlWindow.cpp)
 
 set(XCI_GRAPHICS_SFML_SOURCES
     src/xci/graphics/sfml/SfmlTexture.cpp
-    src/xci/graphics/sfml/SfmlTexture.h
     src/xci/graphics/sfml/SfmlSprites.cpp
-    src/xci/graphics/sfml/SfmlSprites.h
     src/xci/graphics/sfml/SfmlView.cpp
-    src/xci/graphics/sfml/SfmlView.h
-    src/xci/graphics/sfml/SfmlWindow.cpp
-    src/xci/graphics/sfml/SfmlWindow.h)
+    src/xci/graphics/sfml/SfmlWindow.cpp)
 
 set(XCI_GRAPHICS_PANDA_SOURCES
     src/xci/graphics/panda/PandaTexture.cpp
-    src/xci/graphics/panda/PandaTexture.h
     src/xci/graphics/panda/PandaSprites.cpp
-    src/xci/graphics/panda/PandaSprites.h
     src/xci/graphics/panda/PandaView.cpp
-    src/xci/graphics/panda/PandaView.h
-    src/xci/graphics/panda/PandaWindow.cpp
-    src/xci/graphics/panda/PandaWindow.h)
+    src/xci/graphics/panda/PandaWindow.cpp)
 
 set(XCI_TEXT_SOURCES
     src/xci/text/FontLibrary.cpp
-    src/xci/text/FontLibrary.h
     src/xci/text/FontFace.cpp
-    src/xci/text/FontFace.h
     src/xci/text/FontTexture.cpp
-    src/xci/text/FontTexture.h
     src/xci/text/Font.cpp
-    src/xci/text/Font.h
     src/xci/text/Text.cpp
-    src/xci/text/Text.h
     src/xci/text/Layout.cpp
-    src/xci/text/Layout.h
     src/xci/text/Markup.cpp
-    src/xci/text/Markup.h
     src/xci/text/Style.cpp
-    src/xci/text/Style.h
-    src/xci/text/layout/Page.cpp
-    src/xci/text/layout/Page.h
-    src/xci/text/layout/Element.h)
+    src/xci/text/layout/Page.cpp)
 
 set(XCI_WIDGETS_SOURCES
     src/xci/widgets/Button.cpp
-    src/xci/widgets/Button.h
     src/xci/widgets/Checkbox.cpp
-    src/xci/widgets/Checkbox.h
     src/xci/widgets/FpsDisplay.cpp
-    src/xci/widgets/FpsDisplay.h
     src/xci/widgets/Icon.cpp
-    src/xci/widgets/Icon.h
     src/xci/widgets/Theme.cpp
-    src/xci/widgets/Theme.h
     src/xci/widgets/Widget.cpp
-    src/xci/widgets/Widget.h
     src/xci/widgets/TextInput.cpp
-    src/xci/widgets/TextInput.h
     src/xci/widgets/Form.cpp
-    src/xci/widgets/Form.h
     src/xci/widgets/Label.cpp
-    src/xci/widgets/Label.h
-    src/xci/widgets/TextTerminal.cpp
-    src/xci/widgets/TextTerminal.h)
+    src/xci/widgets/TextTerminal.cpp)
 
 
 # ------------ #
@@ -190,7 +148,7 @@ add_subdirectory(src/xci/util)
 
 if (XCI_WITH_OPENGL)
     set(XCI_GRAPHICS_OPENGL_LIBRARY xci-graphics-opengl)
-    add_library(glad OBJECT ext/glad/glad.c ext/glad/glad.h)
+    add_library(glad OBJECT ext/glad/glad.c)
     add_library(${XCI_GRAPHICS_OPENGL_LIBRARY}
         ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_OPENGL_SOURCES}
         $<TARGET_OBJECTS:glad>)
