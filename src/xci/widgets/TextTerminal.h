@@ -188,6 +188,17 @@ private:
 
 class TextTerminal: public Widget {
 public:
+
+    // ------------------------------------------------------------------------
+    // Font size, number of cells
+
+    /// Set font size and font scaling mode:
+    /// \param size     size in screen pixels or scalable units (depending on `scalable` param)
+    /// \param scalable false: size is in screen pixels, font size stays same when window resizes
+    ///                 true: size in scalable units, number of cells stays (circa) the same when window resizes
+    void set_font_size(float size, bool scalable);
+    util::Vec2u size_in_cells() const { return m_cells; }
+
     // ------------------------------------------------------------------------
     // Text content
 
@@ -208,7 +219,6 @@ public:
 
     void set_cursor_pos(util::Vec2u pos);
     util::Vec2u cursor_pos() const { return m_cursor; }
-    util::Vec2u size_in_cells() const { return m_cells; }
 
     // ------------------------------------------------------------------------
     // Color attributes
@@ -283,7 +293,8 @@ public:
 private:
     static constexpr double c_scroll_end = std::numeric_limits<double>::infinity();
 
-    float m_font_size = 0.05;
+    float m_font_size = 14.0;
+    bool m_font_scalable = false;
     util::Vec2f m_cell_size;
     util::Vec2u m_cells = {80, 25};  // rows, columns
     terminal::Buffer m_buffer;

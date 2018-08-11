@@ -352,6 +352,13 @@ void terminal::Buffer::remove_lines(size_t start, size_t count)
 // ------------------------------------------------------------------------
 
 
+void TextTerminal::set_font_size(float size, bool scalable)
+{
+    m_font_size = size;
+    m_font_scalable = scalable;
+}
+
+
 void TextTerminal::add_text(std::string_view text, bool insert)
 {
     // Buffer for fragment of text without any attributes
@@ -502,7 +509,10 @@ void TextTerminal::resize(View& view)
 {
     auto& font = theme().font();
     auto pxf = view.framebuffer_ratio();
-    font.set_size(unsigned(m_font_size / pxf.y));
+    if (m_font_scalable)
+        font.set_size(unsigned(m_font_size / pxf.y));
+    else
+        font.set_size(unsigned(m_font_size * view.framebuffer_to_screen_ratio().y));
     m_cell_size = {font.max_advance() * pxf.x,
                    font.line_height() * pxf.y};
     m_cells = {unsigned(size().x / m_cell_size.x),
@@ -515,8 +525,10 @@ void TextTerminal::draw(View& view, State state)
 {
     auto& font = theme().font();
     auto pxf = view.framebuffer_ratio();
-    font.set_size(unsigned(m_font_size / pxf.y));
-
+    if (m_font_scalable)
+        font.set_size(unsigned(m_font_size / pxf.y));
+    else
+        font.set_size(unsigned(m_font_size * view.framebuffer_to_screen_ratio().y));
     graphics::ColoredSprites sprites(font.get_texture(), Color(7));
     graphics::Shape boxes(Color(0));
 
@@ -528,7 +540,7 @@ void TextTerminal::draw(View& view, State state)
     } else {
         buffer_first = size_t(m_scroll_offset);
         buffer_last = std::min(m_buffer.size(), buffer_first + m_cells.y + 1);
-        pen.y -= (m_scroll_offset - buffer_first);
+        //pen.y -= (m_scroll_offset - buffer_first);
     }
 
     for (size_t line_idx = buffer_first; line_idx < buffer_last; line_idx++) {

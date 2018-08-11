@@ -72,6 +72,12 @@ public:
         return {s.x / fb.x, s.y / fb.y};
     }
 
+    Vec2f framebuffer_to_screen_ratio() const {
+        auto fb = framebuffer_size();
+        auto sn = screen_size();
+        return {float(fb.x) / sn.x, float(fb.y) / sn.y};
+    }
+
     Vec2f screen_to_scalable(const Vec2f& screen_coords) const {
         return screen_coords * screen_ratio() - 0.5f * scalable_size();
     }
