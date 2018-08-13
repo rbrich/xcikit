@@ -49,7 +49,7 @@ const char* terminal::Attributes::skip(const char* introducer)
 void terminal::Attributes::set_fg(terminal::Color8bit fg_color)
 {
     set_bit(Fg);
-    m_fg8bit = true;
+    m_fg = ColorMode::Color8bit;
     m_fg_r = fg_color;
 }
 
@@ -57,7 +57,7 @@ void terminal::Attributes::set_fg(terminal::Color8bit fg_color)
 void terminal::Attributes::set_bg(terminal::Color8bit bg_color)
 {
     set_bit(Bg);
-    m_bg8bit = true;
+    m_bg = ColorMode::Color8bit;
     m_bg_r = bg_color;
 }
 
@@ -65,7 +65,7 @@ void terminal::Attributes::set_bg(terminal::Color8bit bg_color)
 void terminal::Attributes::set_fg(Color24bit fg_color)
 {
     set_bit(Fg);
-    m_fg8bit = false;
+    m_fg = ColorMode::Color24bit;
     m_fg_r = fg_color.r;
     m_fg_g = fg_color.g;
     m_fg_b = fg_color.b;
@@ -76,80 +76,106 @@ void terminal::Attributes::set_fg(Color24bit fg_color)
 void terminal::Attributes::set_bg(Color24bit bg_color)
 {
     set_bit(Bg);
-    m_bg8bit = false;
+    m_bg = ColorMode::Color24bit;
     m_bg_r = bg_color.r;
     m_bg_g = bg_color.g;
     m_bg_b = bg_color.b;
 }
 
 
+void terminal::Attributes::set_default_fg()
+{
+    set_bit(Fg);
+    m_fg = ColorMode::ColorDefault;
+}
+
+
+void terminal::Attributes::set_default_bg()
+{
+    set_bit(Bg);
+    m_bg = ColorMode::ColorDefault;
+}
+
+
+
 void terminal::Attributes::preceded_by(const terminal::Attributes& other)
 {
+    // If this and other set same attribute -> leave it out
     // If other sets some attribute, but this does not -> reset it
-    m_reset = other.m_set & ~m_set;
-    // If this and other set the same color, don't set the color
-    // and don't reset it
+    if (m_set[Attr] && other.m_set[Attr] && m_attr == other.m_attr) {
+        m_set[Attr] = false;
+    } else if (!m_set[Attr] && other.m_set[Attr] && !other.m_attr.none()) {
+        m_set[Attr] = true;
+        m_attr.reset();
+    }
+
     if (m_set[Fg] && other.m_set[Fg]
-    && m_fg8bit == other.m_fg8bit
-    && m_fg_r == other.m_fg_r
-    && (m_fg8bit || m_fg_g == other.m_fg_g)
-    && (m_fg8bit || m_fg_b == other.m_fg_b)) {
+    && m_fg == other.m_fg
+    && (m_fg == ColorMode::ColorDefault || m_fg_r == other.m_fg_r)
+    && (m_fg != ColorMode::Color24bit || m_fg_g == other.m_fg_g)
+    && (m_fg != ColorMode::Color24bit || m_fg_b == other.m_fg_b)) {
         m_set[Fg] = false;
+    } else if (!m_set[Fg] && other.m_set[Fg] && other.m_fg != ColorMode::ColorDefault) {
+        m_set[Fg] = true;
+        m_fg = ColorMode::ColorDefault;
     }
+
     if (m_set[Bg] && other.m_set[Bg]
-    && m_bg8bit == other.m_bg8bit
-    && m_bg_r == other.m_bg_r
-    && (m_bg8bit || m_bg_g == other.m_bg_g)
-    && (m_bg8bit || m_bg_b == other.m_bg_b)) {
+        && m_bg == other.m_bg
+        && (m_bg == ColorMode::ColorDefault || m_bg_r == other.m_bg_r)
+        && (m_bg != ColorMode::Color24bit || m_bg_g == other.m_bg_g)
+        && (m_bg != ColorMode::Color24bit || m_bg_b == other.m_bg_b)) {
         m_set[Bg] = false;
+    } else if (!m_set[Bg] && other.m_set[Bg] && other.m_bg != ColorMode::ColorDefault) {
+        m_set[Bg] = true;
+        m_bg = ColorMode::ColorDefault;
     }
-    m_set[Italic] = m_set[Italic] & ~other.m_set[Italic];
-    m_set[Bold] = m_set[Bold] & ~other.m_set[Bold];
 }
 
 
 std::string terminal::Attributes::encode() const
 {
-    assert((m_set & m_reset) == 0);
-
     std::string result;
 
-    auto set_attrs = static_cast<uint8_t>(m_set.to_ulong() & c_attrs_mask);
-    if (set_attrs) {
+    if (m_set[Attr]) {
         result.push_back(c_ctl_set_attrs);
-        result.push_back(set_attrs);
-    }
-    auto reset_attrs = static_cast<uint8_t>(m_reset.to_ulong() & c_attrs_mask);
-    if (reset_attrs) {
-        result.push_back(c_ctl_reset_attrs);
-        result.push_back(reset_attrs);
+        result.push_back(char(m_attr.to_ulong()));
     }
 
-    if (m_reset[Fg]) {
-        result.push_back(c_ctl_default_fg);
+    if (m_set[Fg]) {
+        switch (m_fg) {
+            case ColorMode::ColorDefault:
+                result.push_back(c_ctl_default_fg);
+                break;
+            case ColorMode::Color8bit:
+                result.push_back(c_ctl_fg8bit);
+                result.push_back(m_fg_r);
+                break;
+            case ColorMode::Color24bit:
+                result.push_back(c_ctl_fg24bit);
+                result.push_back(m_fg_r);
+                result.push_back(m_fg_g);
+                result.push_back(m_fg_b);
+                break;
+        }
     }
-    if (m_reset[Bg]) {
-        result.push_back(c_ctl_default_bg);
-    }
-    if (m_fg8bit && m_set[Fg]) {
-        result.push_back(c_ctl_fg8bit);
-        result.push_back(m_fg_r);
-    }
-    if (m_bg8bit && m_set[Bg]) {
-        result.push_back(c_ctl_bg8bit);
-        result.push_back(m_bg_r);
-    }
-    if (!m_fg8bit && m_set[Fg]) {
-        result.push_back(c_ctl_fg24bit);
-        result.push_back(m_fg_r);
-        result.push_back(m_fg_g);
-        result.push_back(m_fg_b);
-    }
-    if (!m_bg8bit && m_set[Bg]) {
-        result.push_back(c_ctl_bg24bit);
-        result.push_back(m_bg_r);
-        result.push_back(m_bg_g);
-        result.push_back(m_bg_b);
+
+    if (m_set[Bg]) {
+        switch (m_bg) {
+            case ColorMode::ColorDefault:
+                result.push_back(c_ctl_default_bg);
+                break;
+            case ColorMode::Color8bit:
+                result.push_back(c_ctl_bg8bit);
+                result.push_back(m_bg_r);
+                break;
+            case ColorMode::Color24bit:
+                result.push_back(c_ctl_bg24bit);
+                result.push_back(m_bg_r);
+                result.push_back(m_bg_g);
+                result.push_back(m_bg_b);
+                break;
+        }
     }
 
     return result;
@@ -163,23 +189,15 @@ size_t terminal::Attributes::decode(std::string_view sv)
         if (*it <= c_ctl_first_introducer || *it > c_ctl_last_introducer)
             break;
         switch (*it) {
-            case c_ctl_set_attrs: {
-                auto a = (*++it) & c_attrs_mask;
-                m_set |= a;
-                m_reset &= ~a;
+            case c_ctl_set_attrs:
+                m_set[Attr] = true;
+                m_attr = (*++it);
                 break;
-            }
-            case c_ctl_reset_attrs: {
-                auto a = (*++it) & c_attrs_mask;
-                m_reset |= a;
-                m_set &= ~a;
-                break;
-            }
             case c_ctl_default_fg:
-                reset_fg();
+                set_default_fg();
                 break;
             case c_ctl_default_bg:
-                reset_bg();
+                set_default_bg();
                 break;
             case c_ctl_fg8bit:
                 set_fg(Color8bit(*++it));
@@ -189,14 +207,14 @@ size_t terminal::Attributes::decode(std::string_view sv)
                 break;
             case c_ctl_fg24bit:
                 set_bit(Fg);
-                m_fg8bit = false;
+                m_fg = ColorMode::Color24bit;
                 m_fg_r = uint8_t(*++it);
                 m_fg_g = uint8_t(*++it);
                 m_fg_b = uint8_t(*++it);
                 break;
             case c_ctl_bg24bit:
                 set_bit(Bg);
-                m_bg8bit = false;
+                m_bg = ColorMode::Color24bit;
                 m_bg_r = uint8_t(*++it);
                 m_bg_g = uint8_t(*++it);
                 m_bg_b = uint8_t(*++it);
@@ -213,13 +231,22 @@ size_t terminal::Attributes::decode(std::string_view sv)
 
 Color terminal::Attributes::fg() const
 {
-    return m_fg8bit ? Color{m_fg_r} : Color{m_fg_r, m_fg_g, m_fg_b};
+    switch (m_fg) {
+        case ColorMode::ColorDefault:   return Color(7);
+        case ColorMode::Color8bit:      return Color(m_fg_r);
+        case ColorMode::Color24bit:     return Color(m_fg_r, m_fg_g, m_fg_b);
+    }
 }
 
 
 Color terminal::Attributes::bg() const
 {
-    return m_bg8bit ? Color{m_bg_r} : Color{m_bg_r, m_bg_g, m_bg_b};
+    switch (m_bg) {
+        default:
+        case ColorMode::ColorDefault:   return Color(0);
+        case ColorMode::Color8bit:      return Color(m_bg_r);
+        case ColorMode::Color24bit:     return Color(m_bg_r, m_bg_g, m_bg_b);
+    }
 }
 
 
@@ -542,6 +569,12 @@ void TextTerminal::draw(View& view, State state)
         auto& line = (*m_buffer)[line_idx];
         size_t row = line_idx - m_buffer_offset;
         size_t column = 0;
+
+        // Reset attributes
+        font.set_style(text::FontStyle::Regular);
+        sprites.set_color(Color(7));
+        boxes.set_fill_color(Color(0));
+
         for (const char* it = line.content_begin(); it != line.content_end(); ) {
             if (*it == terminal::c_ctl_new_line) {
                 ++it;
@@ -550,12 +583,14 @@ void TextTerminal::draw(View& view, State state)
             if (terminal::Attributes::is_introducer(*it)) {
                 terminal::Attributes attr;
                 it += attr.decode({it, size_t(line.content_end() - it)});
-                font.set_style(attr.font_style());
-                // TODO:
-//                auto deco = static_cast<Decoration>((*it & c_decoration_mask) >> c_decoration_shift);
-//                auto mode = static_cast<Mode>((*it & c_mode_mask) >> c_mode_shift);
-//                (void) deco; // TODO
-//                (void) mode; // TODO
+                if (attr.has_attr()) {
+                    font.set_style(attr.font_style());
+                    // TODO:
+                    //auto deco = static_cast<Decoration>((*it & c_decoration_mask) >> c_decoration_shift);
+                    //auto mode = static_cast<Mode>((*it & c_mode_mask) >> c_mode_shift);
+                    //(void) deco; // TODO
+                    //(void) mode; // TODO
+                }
                 if (attr.has_fg())
                     sprites.set_color(attr.fg());
                 if (attr.has_bg())

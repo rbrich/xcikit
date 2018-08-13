@@ -44,7 +44,6 @@ static constexpr uint8_t c_ctl_new_line = 10;
 static constexpr uint8_t c_ctl_first_introducer = 16;
 static constexpr uint8_t c_ctl_last_introducer = 31;
 static constexpr uint8_t c_ctl_set_attrs = 22;
-static constexpr uint8_t c_ctl_reset_attrs = 23;
 static constexpr uint8_t c_ctl_default_fg = 16;
 static constexpr uint8_t c_ctl_default_bg = 17;
 static constexpr uint8_t c_ctl_fg8bit = 20;
@@ -101,11 +100,11 @@ public:
     void set_bg(Color8bit bg_color);
     void set_fg(Color24bit fg_color);
     void set_bg(Color24bit bg_color);
-    void reset_fg() { reset_bit(Fg); }
-    void reset_bg() { reset_bit(Bg); }
+    void set_default_fg();
+    void set_default_bg();
 
-    void set_italic(bool italic) { set_bit(Italic, italic); }
-    void set_bold(bool bold) { set_bit(Bold, bold); }
+    void set_italic(bool italic) { set_bit(Attr); m_attr[Italic] = italic; }
+    void set_bold(bool bold) { set_bit(Attr); m_attr[Bold] = bold; }
 
     // Update this to go after `other` in stream,
     // ie. reset/skip all attributes set in `other`.
@@ -114,7 +113,8 @@ public:
     // ------------------------------------------------------------------------
     // Accessors
 
-    text::FontStyle font_style() const { return text::FontStyle(m_set.to_ulong() & c_font_style_mask); }
+    bool has_attr() const { return m_set[Attr]; }
+    text::FontStyle font_style() const { return text::FontStyle(m_attr.to_ulong() & c_font_style_mask); }
 
     bool has_fg() const { return m_set[Fg]; }
     bool has_bg() const { return m_set[Bg]; }
@@ -122,21 +122,20 @@ public:
     graphics::Color bg() const;
 
 private:
-    void set_bit(size_t i) { set_bit(i, true); }
-    void reset_bit(size_t i) { set_bit(i, false); }
-    void set_bit(size_t i, bool value) { m_set[i] = value; m_reset[i] = !value; }
+    void set_bit(size_t i) { m_set.set(i, true); }
 
 private:
+    enum class ColorMode { ColorDefault, Color8bit, Color24bit };
     uint8_t m_fg_r, m_fg_g, m_fg_b;
-    bool m_fg8bit;
     uint8_t m_bg_r, m_bg_g, m_bg_b;
-    bool m_bg8bit;
+    ColorMode m_fg = ColorMode::ColorDefault;
+    ColorMode m_bg = ColorMode::ColorDefault;
 
-    enum { Italic, Bold, Fg, Bg, _flag_count_};
+    enum { Italic, Bold, _attr_count_ };
+    std::bitset<_attr_count_> m_attr;
+
+    enum { Attr, Fg, Bg, _flag_count_};
     std::bitset<_flag_count_> m_set;
-    std::bitset<_flag_count_> m_reset;
-
-    static constexpr uint8_t c_attrs_mask = 0b11;
 };
 
 
@@ -245,8 +244,8 @@ public:
     void set_fg(Color24bit fg_color) { m_attrs.set_fg(fg_color); }
     void set_bg(Color24bit bg_color) { m_attrs.set_bg(bg_color); }
 
-    void set_default_fg() { m_attrs.reset_fg(); }
-    void set_default_bg() { m_attrs.reset_bg(); }
+    void set_default_fg() { m_attrs.set_default_fg(); }
+    void set_default_bg() { m_attrs.set_default_bg(); }
 
     // ------------------------------------------------------------------------
     // Text attributes
