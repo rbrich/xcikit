@@ -107,10 +107,9 @@ public:
     void set_italic(bool italic) { set_bit(Italic, italic); }
     void set_bold(bool bold) { set_bit(Bold, bold); }
 
-    // Combine attributes from `other` into this.
-    void include_from(const Attributes& other);
-    // Remove attributes also in `other` from this.
-    void exclude_from(const Attributes& other);
+    // Update this to go after `other` in stream,
+    // ie. reset/skip all attributes set in `other`.
+    void preceded_by(const Attributes& other);
 
     // ------------------------------------------------------------------------
     // Accessors
@@ -144,8 +143,8 @@ private:
 class Line {
 public:
 
-    /// Clear the line and set initial attributes.
-    void clear(const Attributes& attr);
+    /// Clear the line and reset all attributes.
+    void clear() { m_content.clear(); }
 
     /// Skip `pos` characters, set `attr` for the following char(s)
     /// and insert `sv` or replace current cells at `pos` with content from `sv`.
@@ -200,19 +199,26 @@ public:
     util::Vec2u size_in_cells() const { return m_cells; }
 
     // ------------------------------------------------------------------------
-    // Text content
+    // Text buffer
 
     void add_text(std::string_view text, bool insert=false);
 
-    // Forced line end (disallow reflow for current line).
+    /// Forced line end (disallow reflow for current line).
     void break_line() { current_line().set_line_break(); }
     void new_line();
-    terminal::Line& current_line() { return m_buffer[m_buffer_offset + m_cursor.y]; }
+    terminal::Line& current_line() { return (*m_buffer)[m_buffer_offset + m_cursor.y]; }
 
-    // Erase page (visible part of the buffer)
+    /// Erase page (visible part of the buffer)
     void erase_page();
-    // Erase whole buffer (page + scrollback)
+    /// Erase whole buffer (page + scrollback)
     void erase_buffer();
+
+    /// Set character buffer to `new_buffer`, returning current buffer.
+    /// \param new_buffer   unique_ptr to Buffer object (must be initialized)
+    /// Example usage:
+    ///     auto new_buffer = std::make_unique<terminal::Buffer>();
+    ///     auto old_buffer = terminal.set_buffer(std::move(new_buffer));
+    std::unique_ptr<terminal::Buffer> set_buffer(std::unique_ptr<terminal::Buffer> new_buffer);
 
     // ------------------------------------------------------------------------
     // Cursor positioning
@@ -297,7 +303,7 @@ private:
     bool m_font_scalable = false;
     util::Vec2f m_cell_size;
     util::Vec2u m_cells = {80, 25};  // rows, columns
-    terminal::Buffer m_buffer;
+    std::unique_ptr<terminal::Buffer> m_buffer = std::make_unique<terminal::Buffer>();
     size_t m_buffer_offset = 0;  // offset to line in buffer which is first on page
     double m_scroll_offset = c_scroll_end;  // scroll back with mouse wheel
     util::Vec2u m_cursor;  // x/y of cursor on screen

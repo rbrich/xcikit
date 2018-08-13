@@ -70,3 +70,31 @@ TEST_CASE( "Attributes", "[TextTerminal]" )
     enc = attr.encode();
     CHECK( escape(enc) == escape(format("{}\x02{}\x01{}{}", terminal::c_ctl_set_attrs, terminal::c_ctl_reset_attrs, terminal::c_ctl_default_fg, terminal::c_ctl_default_bg)) );
 }
+
+
+TEST_CASE( "Line", "[TextTerminal]" )
+{
+    terminal::Line line;
+    terminal::Attributes bold, italic, attr;
+
+    CHECK(line.content().empty());
+
+    bold.set_bold(true);
+    line.add_text(0, "bold", bold, /*insert=*/false);
+    CHECK(line.content() == bold.encode() + "bold");
+
+    italic.set_italic(true);
+    line.add_text(0, "italic", italic, /*insert=*/true);
+    bold.preceded_by(italic);
+    auto expected = italic.encode() + "italic" + bold.encode() + "bold";
+    CHECK(line.content() == expected);
+
+    line.add_text(2, "BOLD", bold, /*insert=*/false);
+    expected = italic.encode() + "it" + bold.encode() + "BOLDbold";
+    CHECK(line.content() == expected);
+
+    line.add_text(20, "skipped 10 chars", attr, /*insert=*/true);
+    attr.preceded_by(bold);
+    expected += + "          " + attr.encode() + "skipped 10 chars";
+    CHECK(line.content() == expected);
+}

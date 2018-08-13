@@ -83,27 +83,12 @@ void terminal::Attributes::set_bg(Color24bit bg_color)
 }
 
 
-void terminal::Attributes::include_from(const terminal::Attributes& other)
+void terminal::Attributes::preceded_by(const terminal::Attributes& other)
 {
-    if (other.m_set[Fg]) {
-        m_fg_r = other.m_fg_r;
-        m_fg_g = other.m_fg_g;
-        m_fg_b = other.m_fg_b;
-        m_fg8bit = other.m_fg8bit;
-    }
-    if (other.m_set[Bg]) {
-        m_bg_r = other.m_bg_r;
-        m_bg_g = other.m_bg_g;
-        m_bg_b = other.m_bg_b;
-        m_bg8bit = other.m_bg8bit;
-    }
-    m_set = (m_set | other.m_set) & ~(other.m_reset);
-    m_reset = (m_reset | other.m_reset) & ~(other.m_set);
-}
-
-
-void terminal::Attributes::exclude_from(const terminal::Attributes& other)
-{
+    // If other sets some attribute, but this does not -> reset it
+    m_reset = other.m_set & ~m_set;
+    // If this and other set the same color, don't set the color
+    // and don't reset it
     if (m_set[Fg] && other.m_set[Fg]
     && m_fg8bit == other.m_fg8bit
     && m_fg_r == other.m_fg_r
@@ -120,8 +105,6 @@ void terminal::Attributes::exclude_from(const terminal::Attributes& other)
     }
     m_set[Italic] = m_set[Italic] & ~other.m_set[Italic];
     m_set[Bold] = m_set[Bold] & ~other.m_set[Bold];
-
-    m_reset = m_reset & ~other.m_reset;
 }
 
 
@@ -243,13 +226,6 @@ Color terminal::Attributes::bg() const
 // ------------------------------------------------------------------------
 
 
-void terminal::Line::clear(const terminal::Attributes& attr)
-{
-    m_content.clear();
-    m_content.append(attr.encode());
-}
-
-
 void terminal::Line::add_text(size_t pos, std::string_view sv, Attributes attr, bool insert)
 {
     // Find `pos` in content (or end of content)
@@ -278,17 +254,24 @@ void terminal::Line::add_text(size_t pos, std::string_view sv, Attributes attr, 
             end = utf8_next(end);
             --len;
         }
+
+        // Read also attributes after replace span
+        // and unify them with attr_end
+        if (Attributes::is_introducer(*end))
+            end += attr_end.decode({end, size_t(content_end() - end)});
     }
 
-    attr.exclude_from(attr_start);
-    attr_end.exclude_from(attr);
+    attr.preceded_by(attr_start);
+    attr_end.preceded_by(attr);
 
-    auto replace_start = it - content_begin();
+    auto replace_start = it - content_begin() + skip;
     auto replace_length = end - it;
+    m_content.append(skip, ' ');
     m_content.replace(replace_start, replace_length, sv.data(), sv.size());
-    m_content.insert(replace_start + sv.size(), attr_end.encode());
+    if (replace_start + sv.size() < m_content.size())
+        m_content.insert(replace_start + sv.size(), attr_end.encode());
     m_content.insert(replace_start, attr.encode());
-    TRACE("content={}", escape(m_content));
+    //TRACE("content={}", escape(m_content));
 }
 
 
@@ -402,7 +385,7 @@ void TextTerminal::add_text(std::string_view text, bool insert)
 
 void TextTerminal::new_line()
 {
-    m_buffer.add_line();
+    m_buffer->add_line();
     m_cursor.x = 0;
     if (m_cursor.y < m_cells.y - 1)
         ++m_cursor.y;
@@ -413,17 +396,29 @@ void TextTerminal::new_line()
 
 void TextTerminal::erase_page()
 {
-    m_buffer.remove_lines(size_t(m_buffer_offset), m_buffer.size() - m_buffer_offset);
-    m_buffer.add_line();
-    m_cursor.y = 0;
+    m_buffer->remove_lines(size_t(m_buffer_offset), m_buffer->size() - m_buffer_offset);
+    m_buffer->add_line();
+    m_cursor = {0, 0};
 }
 
 
 void TextTerminal::erase_buffer()
 {
-    m_buffer.remove_lines(0, m_buffer.size());
-    m_buffer.add_line();
-    m_cursor.y = 0;
+    m_buffer->remove_lines(0, m_buffer->size());
+    m_buffer->add_line();
+    m_cursor = {0, 0};
+}
+
+
+std::unique_ptr<terminal::Buffer>
+TextTerminal::set_buffer(std::unique_ptr<terminal::Buffer> new_buffer)
+{
+    assert(new_buffer);
+    if (!new_buffer)
+        return nullptr;
+    std::swap(m_buffer, new_buffer);
+    m_cursor = {0, 0};
+    return new_buffer;
 }
 
 
@@ -435,8 +430,8 @@ void TextTerminal::set_cursor_pos(util::Vec2u pos)
         min(pos.y, m_cells.y),
     };
     // make sure there is a line in buffer at cursor position
-    while (m_cursor.y >= int(m_buffer.size()) - m_buffer_offset) {
-        m_buffer.add_line();
+    while (m_cursor.y >= int(m_buffer->size()) - m_buffer_offset) {
+        m_buffer->add_line();
     }
     // scroll up if the cursor got out of page
     if (m_cursor.y >= m_cells.y) {
@@ -536,15 +531,15 @@ void TextTerminal::draw(View& view, State state)
     size_t buffer_first, buffer_last;
     if (m_scroll_offset == c_scroll_end) {
         buffer_first = m_buffer_offset;
-        buffer_last = std::min(m_buffer.size(), buffer_first + m_cells.y);
+        buffer_last = std::min(m_buffer->size(), buffer_first + m_cells.y);
     } else {
         buffer_first = size_t(m_scroll_offset);
-        buffer_last = std::min(m_buffer.size(), buffer_first + m_cells.y + 1);
+        buffer_last = std::min(m_buffer->size(), buffer_first + m_cells.y + 1);
         //pen.y -= (m_scroll_offset - buffer_first);
     }
 
     for (size_t line_idx = buffer_first; line_idx < buffer_last; line_idx++) {
-        auto& line = m_buffer[line_idx];
+        auto& line = (*m_buffer)[line_idx];
         size_t row = line_idx - m_buffer_offset;
         size_t column = 0;
         for (const char* it = line.content_begin(); it != line.content_end(); ) {

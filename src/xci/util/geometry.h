@@ -106,6 +106,16 @@ Vec2<T>& operator -=(Vec2<T>& lhs, const Vec2<T>& rhs) {
 }
 
 template <typename T>
+bool operator ==(const Vec2<T>& lhs, const Vec2<T>& rhs) {
+    return lhs.x == rhs.x && lhs.y == rhs.y;
+}
+
+template <typename T>
+bool operator !=(const Vec2<T>& lhs, const Vec2<T>& rhs) {
+    return lhs.x != rhs.x || lhs.y != rhs.y;
+}
+
+template <typename T>
 std::ostream& operator <<(std::ostream& s, Vec2<T> v) {
     return s << "{" << v.x << ", " << v.y << "}";
 }
