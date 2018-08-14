@@ -275,6 +275,11 @@ void GlWindow::setup_view()
         self->m_view.set_screen_size({(uint) w, (uint) h});
         if (self->m_size_cb)
             self->m_size_cb(self->m_view);
+        // Update and redraw has to be called explicitly here,
+        // because glfwWaitEvents may block on resize events
+        if (self->m_update_cb)
+            self->m_update_cb(0ns);
+        self->draw();
     });
 
     glfwSetKeyCallback(m_window, [](GLFWwindow* window, int key, int scancode,
