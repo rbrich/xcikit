@@ -30,9 +30,17 @@ using xci::util::Vec2i;
 using xci::util::Rect_f;
 using xci::util::Rect_i;
 
+class Window;
+
 
 class View {
 public:
+    View() = default;
+    explicit View(Window* m_window) : m_window(m_window) {}
+
+    // Window might be nullptr if the View was created directly
+    const Window* window() const { return m_window; }
+
     // ------------------------------------------------------------------------
     // Sizes, coordinates
 
@@ -141,6 +149,7 @@ public:
     bool has_debug_flag(Debug flag) const;
 
 private:
+    Window* m_window = nullptr;  // Window which created this View
     Vec2f m_scalable_size;      // eg. {2.666, 2.0}
     Vec2u m_screen_size;        // eg. {800, 600}
     Vec2u m_framebuffer_size;   // eg. {1600, 1200}

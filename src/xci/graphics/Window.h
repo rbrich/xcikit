@@ -149,6 +149,9 @@ public:
     // (thread-safe)
     virtual void close() const = 0;
 
+    virtual void set_clipboard_string(const std::string& s) const = 0;
+    virtual std::string get_clipboard_string() const = 0;
+
     using UpdateCallback = std::function<void(std::chrono::nanoseconds elapsed)>;
     using SizeCallback = std::function<void(View&)>;
     using DrawCallback = std::function<void(View&)>;

@@ -37,6 +37,9 @@ public:
     void wakeup() const override { glfwPostEmptyEvent(); }
     void close() const override { glfwSetWindowShouldClose(m_window, GLFW_TRUE); }
 
+    void set_clipboard_string(const std::string& s) const override { glfwSetClipboardString(m_window, s.c_str()); }
+    std::string get_clipboard_string() const override { return glfwGetClipboardString(m_window); }
+
     void set_draw_callback(DrawCallback draw_cb) override;
     void set_mouse_position_callback(MousePosCallback mpos_cb) override;
     void set_mouse_button_callback(MouseBtnCallback mbtn_cb) override;
@@ -45,15 +48,12 @@ public:
     void set_refresh_mode(RefreshMode mode) override;
     void set_debug_flags(View::DebugFlags flags) override;
 
-    // access native handles
-    GLFWwindow* glfw_window() { return m_window; }
-
 private:
     void setup_view();
     void draw();
 
     GLFWwindow* m_window;
-    View m_view;
+    View m_view {this};
     RefreshMode m_mode = RefreshMode::OnDemand;
     Vec2i m_window_pos;
     Vec2i m_window_size;
