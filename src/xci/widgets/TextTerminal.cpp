@@ -186,7 +186,7 @@ size_t terminal::Attributes::decode(std::string_view sv)
 {
     auto* it = sv.cbegin();
     while (it < sv.cend()) {
-        if (*it <= ctl::first_introducer || *it > ctl::last_introducer)
+        if (*it < ctl::first_introducer || *it > ctl::last_introducer)
             break;
         switch (*it) {
             case ctl::set_attrs:
@@ -232,6 +232,7 @@ size_t terminal::Attributes::decode(std::string_view sv)
 Color terminal::Attributes::fg() const
 {
     switch (m_fg) {
+        default:
         case ColorMode::ColorDefault:   return Color(7);
         case ColorMode::Color8bit:      return Color(m_fg_r);
         case ColorMode::Color24bit:     return Color(m_fg_r, m_fg_g, m_fg_b);
@@ -260,9 +261,9 @@ void terminal::Line::clear(const terminal::Attributes& attr)
 }
 
 
-const char* terminal::Line::content_skip(size_t skip, const char* start, Attributes& attr)
+size_t terminal::Line::content_skip(size_t skip, size_t start, Attributes& attr)
 {
-    auto* it = start;
+    auto* it = content_begin() + start;
     while (skip > 0 && it < content_end()) {
         if (Attributes::is_introducer(*it))
             it += attr.decode({it, size_t(content_end() - it)});
@@ -284,7 +285,9 @@ const char* terminal::Line::content_skip(size_t skip, const char* start, Attribu
                 num_blanks -= skip;
                 skip = 0;
                 uint8_t blank_rest[2] = {ctl::blanks, uint8_t(num_blanks)};
-                m_content.insert(it - content_begin(), (char*)blank_rest, sizeof(blank_rest));
+                auto pos = it - content_begin();
+                m_content.insert(pos, (char*)blank_rest, sizeof(blank_rest));
+                it = content_begin() + pos;
                 break;
             }
         }
@@ -293,10 +296,12 @@ const char* terminal::Line::content_skip(size_t skip, const char* start, Attribu
     }
     if (skip > 0) {
         uint8_t blank_skip[2] = {ctl::blanks, uint8_t(skip)};
-        m_content.insert(it - content_begin(), (char*)blank_skip, sizeof(blank_skip));
-        it += sizeof(blank_skip);
+        auto pos = it - content_begin();
+        m_content.insert(pos, (char*)blank_skip, sizeof(blank_skip));
+        return pos + sizeof(blank_skip);
+    } else {
+        return it - content_begin();
     }
-    return it;
 }
 
 
@@ -304,13 +309,13 @@ void terminal::Line::add_text(size_t pos, std::string_view sv, Attributes attr, 
 {
     // Find `pos` in content
     Attributes attr_start;
-    auto* start = content_skip(pos, content_begin(), attr_start);
+    auto start = content_skip(pos, 0, attr_start);
 
     // Now we are at `pos` (or content end), but there might be some attribute
     Attributes attr_end(attr_start);
-    auto* end = start;
-    if (Attributes::is_introducer(*end))
-        end += attr_end.decode({end, size_t(content_end() - end)});
+    auto end = start;
+    if (Attributes::is_introducer(m_content[end]))
+        end += attr_end.decode({content_begin() + end, m_content.size() - end});
 
     // Replace mode - find end of the place for new text (same length as `sv`)
     if (!insert) {
@@ -319,25 +324,24 @@ void terminal::Line::add_text(size_t pos, std::string_view sv, Attributes attr, 
 
         // Read also attributes after replace span
         // and unify them with attr_end
-        if (Attributes::is_introducer(*end))
-            end += attr_end.decode({end, size_t(content_end() - end)});
+        if (Attributes::is_introducer(m_content[end]))
+            end += attr_end.decode({content_begin() + end, m_content.size() - end});
     }
 
     attr.preceded_by(attr_start);
     attr_end.preceded_by(attr);
 
-    auto replace_start = start - content_begin();
     auto replace_length = end - start;
 
     // Write attributes
     auto attr_enc = attr.encode();
-    m_content.insert(replace_start, attr_enc);
-    replace_start += attr_enc.size();
+    m_content.insert(start, attr_enc);
+    start += attr_enc.size();
 
     // Write text
-    m_content.replace(replace_start, replace_length, sv.data(), sv.size());
-    if (replace_start + sv.size() < m_content.size())
-        m_content.insert(replace_start + sv.size(), attr_end.encode());
+    m_content.replace(start, replace_length, sv.data(), sv.size());
+    if (start + sv.size() < m_content.size())
+        m_content.insert(start + sv.size(), attr_end.encode());
 
     //TRACE("content={}", escape(m_content));
 }
@@ -348,43 +352,63 @@ void terminal::Line::delete_text(size_t first, size_t num)
     TRACE("first={}, num={}, line size={}", first, num, m_content.size());
     if (!num)
         return;
-    size_t current = 0;
-    const char* start = nullptr;
-    const char* end = nullptr;
-    for (const char* it = m_content.data();
-            it != m_content.data() + m_content.size();
-            it = utf8_next(it))
-    {
-        it = Attributes::skip(it);
-        if (current == first) {
-            start = it;
-        }
-        if (current > first) {
-            if (num > 0)
-                --num;
-            if (num == 0) {
-                end = it;
-                break;
-            }
-        }
-        ++current;
-    }
-    if (end)
-        m_content.erase(start - m_content.data(), end - start);
-    else if (start)
-        m_content.erase(start - m_content.data(), SIZE_MAX);
+
+    // Find `first` in content
+    Attributes attr_start;
+    auto start = content_skip(first, 0, attr_start);
+
+    // Find `first` + `num` in content
+    Attributes attr_end(attr_start);
+    auto end = content_skip(num, start, attr_end);
+
+    // Read also attributes after delete span
+    // and unify them with attr_end
+    if (Attributes::is_introducer(m_content[end]))
+        end += attr_end.decode({content_begin() + end, m_content.size() - end});
+
+    attr_end.preceded_by(attr_start);
+    m_content.erase(start, end - start);
+    m_content.insert(start, attr_end.encode());
 }
 
 
 void terminal::Line::erase_text(size_t first, size_t num, Attributes attr)
 {
-    delete_text(first, num);
+    if (!num)
+        return;
+
+    // Find `first` in content
+    Attributes attr_start;
+    auto start = content_skip(first, 0, attr_start);
+
+    // Find `first` + `num` in content
+    Attributes attr_end(attr_start);
+    auto end = content_skip(num, start, attr_end);
+
+    // Read also attributes after delete span
+    // and unify them with attr_end
+    if (Attributes::is_introducer(m_content[end]))
+        end += attr_end.decode({content_begin() + end, m_content.size() - end});
+
+    attr.preceded_by(attr_start);
+    attr_end.preceded_by(attr);
+
+    // Write attributes
+    std::string repl = attr.encode();
+
+    // Write blanks
     while (num > 0) {
         auto num_blanks = std::min(num, size_t(UINT8_MAX));
-        uint8_t blanks[2] = {ctl::blanks, uint8_t(num_blanks)};
+        repl.push_back(ctl::blanks);
+        repl.push_back(uint8_t(num_blanks));
         num -= num_blanks;
-        add_text(first, {(char*)blanks, sizeof(blanks)}, attr, /*insert=*/true);
     }
+
+    // Write back original attributes
+    repl += attr_end.encode();
+
+    // Replace text with blanks
+    m_content.replace(start, end - start, repl.data(), repl.size());
 }
 
 

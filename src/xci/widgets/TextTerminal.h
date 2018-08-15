@@ -175,10 +175,10 @@ public:
 
     /// Skip `skip` chars, starting at `start`. Attributes at `start` are `attr`.
     /// \param skip     num of chars to skip
-    /// \param start    pointer into content where to start (eg. `content_begin()`)
+    /// \param start    index into content where to start
     /// \param attr     [INOUT] IN: attrs at start, OUT attrs at new pos
     /// \returns        new pos (ie. start + skip)
-    const char* content_skip(size_t skip, const char* start, Attributes& attr);
+    size_t content_skip(size_t skip, size_t start, Attributes& attr);
 
     int length() const;
 
