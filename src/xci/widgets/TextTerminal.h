@@ -40,16 +40,26 @@ namespace terminal {
 // 20-23 -> 1
 // 24-27 -> 2
 // 28-31 -> 3
-static constexpr uint8_t c_ctl_new_line = 10;
-static constexpr uint8_t c_ctl_first_introducer = 16;
-static constexpr uint8_t c_ctl_last_introducer = 31;
-static constexpr uint8_t c_ctl_set_attrs = 22;
-static constexpr uint8_t c_ctl_default_fg = 16;
-static constexpr uint8_t c_ctl_default_bg = 17;
-static constexpr uint8_t c_ctl_fg8bit = 20;
-static constexpr uint8_t c_ctl_bg8bit = 21;
-static constexpr uint8_t c_ctl_fg24bit = 30;
-static constexpr uint8_t c_ctl_bg24bit = 31;
+// The same pattern applies for lower ctl codes too:
+//  0-3  -> 0
+//  4-7  -> 1
+//  8-11 -> 2
+// 12-15 -> 3
+namespace ctl {
+    static constexpr uint8_t new_line = 1;      // hard line break
+    static constexpr uint8_t blank_line = 3;    // blanked rest of line
+    static constexpr uint8_t blanks = 7;        // blanks (1b param - num of cells)
+
+    static constexpr uint8_t first_introducer = 16;
+    static constexpr uint8_t default_fg = 16;
+    static constexpr uint8_t default_bg = 17;
+    static constexpr uint8_t fg8bit = 20;
+    static constexpr uint8_t bg8bit = 21;
+    static constexpr uint8_t set_attrs = 22;
+    static constexpr uint8_t fg24bit = 30;
+    static constexpr uint8_t bg24bit = 31;
+    static constexpr uint8_t last_introducer = 31;
+}
 
 // Encoding of attributes byte
 static constexpr uint8_t c_font_style_mask = 0b00000011;
@@ -75,7 +85,7 @@ public:
 
     // Check character `c`, return true if it introduces or terminates
     // attribute sequence.
-    static bool is_introducer(char c) { return c >= c_ctl_first_introducer && c <= c_ctl_last_introducer; }
+    static bool is_introducer(char c) { return c >= ctl::first_introducer && c <= ctl::last_introducer; }
 
     // Skip over attribute sequence.
     // Return pointer to following non-attr character.
@@ -142,26 +152,45 @@ private:
 class Line {
 public:
 
-    /// Clear the line and reset all attributes.
-    void clear() { m_content.clear(); }
+    /// Clear the line and set initial attributes.
+    void clear(const Attributes& attr);
 
     /// Skip `pos` characters, set `attr` for the following char(s)
     /// and insert `sv` or replace current cells at `pos` with content from `sv`.
     void add_text(size_t pos, std::string_view sv, Attributes attr, bool insert);
 
-    void erase_text(int first, int num);
+    /// Delete part of line, shifting the rest to the left
+    void delete_text(size_t first, size_t num);
+
+    /// Erase part of line, replacing it with blank chars with `attr`
+    void erase_text(size_t first, size_t num, Attributes attr);
 
     /// Mark the line with line break control code to forbid reflow.
-    void set_line_break();
+    void set_hard_break();
 
     std::string_view content() const { return m_content; }
 
     const char* content_begin() const { return m_content.c_str(); }
     const char* content_end() const { return m_content.c_str() + m_content.size(); }
+
+    /// Skip `skip` chars, starting at `start`. Attributes at `start` are `attr`.
+    /// \param skip     num of chars to skip
+    /// \param start    pointer into content where to start (eg. `content_begin()`)
+    /// \param attr     [INOUT] IN: attrs at start, OUT attrs at new pos
+    /// \returns        new pos (ie. start + skip)
+    const char* content_skip(size_t skip, const char* start, Attributes& attr);
+
     int length() const;
 
 private:
     std::string m_content;
+
+    // TODO: possible optimization (benchmark!)
+    // index cache - this avoids searching from begining for each operation
+    // the index will usually be the same as cursor
+    //size_t m_last_content_pos = 0;  // index into content where a char touched last time begins
+    //size_t m_last_char_index = 0;  // char index (cell) touched last tiem
+    //Attributes m_last_attr;
 };
 
 
@@ -203,10 +232,17 @@ public:
     void add_text(std::string_view text, bool insert=false);
 
     /// Forced line end (disallow reflow for current line).
-    void break_line() { current_line().set_line_break(); }
+    void break_line() { current_line().set_hard_break(); }
     void new_line();
     terminal::Line& current_line() { return (*m_buffer)[m_buffer_offset + m_cursor.y]; }
 
+    /// Erase `num` chars from `first`, replacing them with current attr (blanks)
+    void erase_in_line(size_t first, size_t num);
+    /// Erase from cursor to the end of page
+    void erase_to_end_of_page();
+    /// Erase from the beginning of the page
+    /// up to and including the cursor position
+    void erase_to_cursor();
     /// Erase page (visible part of the buffer)
     void erase_page();
     /// Erase whole buffer (page + scrollback)

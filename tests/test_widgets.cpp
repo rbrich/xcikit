@@ -22,7 +22,7 @@
 
 using namespace xci::widgets;
 using namespace xci::util;
-
+using namespace xci::widgets::terminal::ctl;
 
 TEST_CASE( "Attributes", "[TextTerminal]" )
 {
@@ -34,49 +34,49 @@ TEST_CASE( "Attributes", "[TextTerminal]" )
 
     attr.set_fg(7);
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}\x07", terminal::c_ctl_fg8bit)) );
+    CHECK( escape(enc) == escape(format("{}\x07", fg8bit)) );
     CHECK( attr2.decode(enc) == 2 );
     CHECK( escape(attr2.encode()) == escape(enc) );
 
     attr.set_bg(15);
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}\x07{}\x0f", terminal::c_ctl_fg8bit, terminal::c_ctl_bg8bit)) );
+    CHECK( escape(enc) == escape(format("{}\x07{}\x0f", fg8bit, bg8bit)) );
     CHECK( attr2.decode(enc) == 4 );
     CHECK( escape(attr2.encode()) == escape(enc) );
 
     attr.set_fg(terminal::Color24bit(0x40, 0x50, 0x60));
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}\x40\x50\x60{}\x0f", terminal::c_ctl_fg24bit, terminal::c_ctl_bg8bit)) );
+    CHECK( escape(enc) == escape(format("{}\x40\x50\x60{}\x0f", fg24bit, bg8bit)) );
     CHECK( attr2.decode(enc) == 6 );
     CHECK( escape(attr2.encode()) == escape(enc) );
 
     attr.set_bg(terminal::Color24bit(0x70, 0x80, 0x90));
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}\x40\x50\x60{}\x70\x80\x90", terminal::c_ctl_fg24bit, terminal::c_ctl_bg24bit)) );
+    CHECK( escape(enc) == escape(format("{}\x40\x50\x60{}\x70\x80\x90", fg24bit, bg24bit)) );
 
     attr.set_default_fg();
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}{}\x70\x80\x90", terminal::c_ctl_default_fg, terminal::c_ctl_bg24bit)) );
+    CHECK( escape(enc) == escape(format("{}{}\x70\x80\x90", default_fg, bg24bit)) );
 
     attr.set_default_bg();
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}{}", terminal::c_ctl_default_fg, terminal::c_ctl_default_bg)) );
+    CHECK( escape(enc) == escape(format("{}{}", default_fg, default_bg)) );
 
     attr.set_bold(true);
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}\x02{}{}", terminal::c_ctl_set_attrs, terminal::c_ctl_default_fg, terminal::c_ctl_default_bg)) );
+    CHECK( escape(enc) == escape(format("{}\x02{}{}", set_attrs, default_fg, default_bg)) );
 
     attr.set_italic(false);
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}\x02{}{}", terminal::c_ctl_set_attrs, terminal::c_ctl_default_fg, terminal::c_ctl_default_bg)) );
+    CHECK( escape(enc) == escape(format("{}\x02{}{}", set_attrs, default_fg, default_bg)) );
     
     attr.set_italic(true);
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}\x03{}{}", terminal::c_ctl_set_attrs, terminal::c_ctl_default_fg, terminal::c_ctl_default_bg)) );
+    CHECK( escape(enc) == escape(format("{}\x03{}{}", set_attrs, default_fg, default_bg)) );
 }
 
 
-TEST_CASE( "Line", "[TextTerminal]" )
+TEST_CASE( "Line::add_text", "[TextTerminal]" )
 {
     terminal::Line line;
     terminal::Attributes bold, italic, attr;
@@ -99,6 +99,22 @@ TEST_CASE( "Line", "[TextTerminal]" )
 
     line.add_text(20, "skipped 10 chars", attr, /*insert=*/true);
     attr.preceded_by(bold);
-    expected += + "          " + attr.encode() + "skipped 10 chars";
-    CHECK(line.content() == expected);
+    expected += format("{}\x0a{}skipped 10 chars", char(blanks), attr.encode());
+    CHECK(escape(line.content()) == escape(expected));
+}
+
+
+TEST_CASE( "Line::erase_text", "[TextTerminal]" )
+{
+    terminal::Line line;
+    terminal::Attributes bold, italic, attr;
+
+    bold.set_bold(true);
+    line.add_text(0, "verybold", bold, /*insert=*/false);
+    CHECK(line.content() == bold.encode() + "verybold");
+
+    italic.set_italic(true);
+    line.erase_text(3, 3, italic);
+    auto expected = format("{}ver{}{}\x03{}ld", bold.encode(), italic.encode(), char(blanks), bold.encode());
+    CHECK(escape(line.content()) == escape(expected));
 }
