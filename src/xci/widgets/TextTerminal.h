@@ -46,8 +46,6 @@ namespace terminal {
 //  8-11 -> 2
 // 12-15 -> 3
 namespace ctl {
-    static constexpr uint8_t new_line = 1;      // hard line break
-    static constexpr uint8_t blank_line = 3;    // blanked rest of line
     static constexpr uint8_t blanks = 7;        // blanks (1b param - num of cells)
 
     static constexpr uint8_t first_introducer = 16;
@@ -166,7 +164,9 @@ public:
     void erase_text(size_t first, size_t num, Attributes attr);
 
     /// Mark the line with line break control code to forbid reflow.
-    void set_hard_break();
+    void set_hard_break() { m_flags[HardBreak] = true; }
+
+    void set_blank_page() { m_flags[BlankPage] = true; }
 
     std::string_view content() const { return m_content; }
 
@@ -182,8 +182,19 @@ public:
 
     int length() const;
 
+    bool is_blanked() const { return m_flags[BlankLine]; }
+    bool is_page_blanked() const { return m_flags[BlankPage]; }
+
 private:
     std::string m_content;
+
+    enum {
+        HardBreak,    // hard line break
+        BlankLine,    // blanked rest of line
+        BlankPage,    // blanked rest of page
+        _flag_count_
+    };
+    std::bitset<_flag_count_> m_flags;
 
     // TODO: possible optimization (benchmark!)
     // index cache - this avoids searching from begining for each operation
@@ -198,7 +209,7 @@ class Buffer {
 public:
     Buffer() : m_lines(1) {}
 
-    void add_line() { m_lines.emplace_back(); }
+    void add_line();
     void remove_lines(size_t start, size_t count);
 
     size_t size() const { return m_lines.size(); }
@@ -237,6 +248,8 @@ public:
     terminal::Line& current_line() { return (*m_buffer)[m_buffer_offset + m_cursor.y]; }
 
     /// Erase `num` chars from `first`, replacing them with current attr (blanks)
+    /// \param first    first cell to be erased
+    /// \param num      num cells to erase or 0 for rest of the line
     void erase_in_line(size_t first, size_t num);
     /// Erase from cursor to the end of page
     void erase_to_end_of_page();

@@ -121,10 +121,10 @@ void terminal::Attributes::preceded_by(const terminal::Attributes& other)
     }
 
     if (m_set[Bg] && other.m_set[Bg]
-        && m_bg == other.m_bg
-        && (m_bg == ColorMode::ColorDefault || m_bg_r == other.m_bg_r)
-        && (m_bg != ColorMode::Color24bit || m_bg_g == other.m_bg_g)
-        && (m_bg != ColorMode::Color24bit || m_bg_b == other.m_bg_b)) {
+    && m_bg == other.m_bg
+    && (m_bg == ColorMode::ColorDefault || m_bg_r == other.m_bg_r)
+    && (m_bg != ColorMode::Color24bit || m_bg_g == other.m_bg_g)
+    && (m_bg != ColorMode::Color24bit || m_bg_b == other.m_bg_b)) {
         m_set[Bg] = false;
     } else if (!m_set[Bg] && other.m_set[Bg] && other.m_bg != ColorMode::ColorDefault) {
         m_set[Bg] = true;
@@ -258,49 +258,45 @@ void terminal::Line::clear(const terminal::Attributes& attr)
 {
     m_content.clear();
     m_content.append(attr.encode());
+    m_flags[BlankLine] = true;
 }
 
 
 size_t terminal::Line::content_skip(size_t skip, size_t start, Attributes& attr)
 {
-    auto* it = content_begin() + start;
-    while (skip > 0 && it < content_end()) {
-        if (Attributes::is_introducer(*it))
-            it += attr.decode({it, size_t(content_end() - it)});
-        if (*it == ctl::new_line)
-            break;
-        if (*it == ctl::blanks) {
-            ++it;
-            auto num_blanks = (size_t) *it;
+    auto pos = start;
+    while (skip > 0 && pos < m_content.size()) {
+        if (Attributes::is_introducer(m_content[pos]))
+            pos += attr.decode({content_begin() + pos, m_content.size() - pos});
+        if (m_content[pos] == ctl::blanks) {
+            ++pos;
+            auto num_blanks = (size_t) m_content[pos];
             if (skip >= num_blanks) {
                 skip -= num_blanks;
-                ++it;
+                ++pos;
                 continue;
             } else { // skip < num
                 // Split blanks into two groups
                 // Write back blanks before pos
-                m_content[it - content_begin()] = uint8_t(skip);
-                ++it;
+                m_content[pos] = uint8_t(skip);
+                ++pos;
                 // Write rest of blanks after pos
                 num_blanks -= skip;
                 skip = 0;
                 uint8_t blank_rest[2] = {ctl::blanks, uint8_t(num_blanks)};
-                auto pos = it - content_begin();
                 m_content.insert(pos, (char*)blank_rest, sizeof(blank_rest));
-                it = content_begin() + pos;
                 break;
             }
         }
-        it = utf8_next(it);
+        pos = utf8_next(content_begin() + pos) - content_begin();
         --skip;
     }
     if (skip > 0) {
         uint8_t blank_skip[2] = {ctl::blanks, uint8_t(skip)};
-        auto pos = it - content_begin();
         m_content.insert(pos, (char*)blank_skip, sizeof(blank_skip));
         return pos + sizeof(blank_skip);
     } else {
-        return it - content_begin();
+        return pos;
     }
 }
 
@@ -334,14 +330,16 @@ void terminal::Line::add_text(size_t pos, std::string_view sv, Attributes attr, 
     auto replace_length = end - start;
 
     // Write attributes
-    auto attr_enc = attr.encode();
-    m_content.insert(start, attr_enc);
-    start += attr_enc.size();
+    auto repl = attr.encode();
 
     // Write text
-    m_content.replace(start, replace_length, sv.data(), sv.size());
-    if (start + sv.size() < m_content.size())
-        m_content.insert(start + sv.size(), attr_end.encode());
+    repl.append(sv.data(), sv.size());
+
+    // Write original attributes
+    repl.append(attr_end.encode());
+
+    // Replace original text
+    m_content.replace(start, replace_length, repl);
 
     //TRACE("content={}", escape(m_content));
 }
@@ -374,9 +372,6 @@ void terminal::Line::delete_text(size_t first, size_t num)
 
 void terminal::Line::erase_text(size_t first, size_t num, Attributes attr)
 {
-    if (!num)
-        return;
-
     // Find `first` in content
     Attributes attr_start;
     auto start = content_skip(first, 0, attr_start);
@@ -396,25 +391,24 @@ void terminal::Line::erase_text(size_t first, size_t num, Attributes attr)
     // Write attributes
     std::string repl = attr.encode();
 
-    // Write blanks
-    while (num > 0) {
-        auto num_blanks = std::min(num, size_t(UINT8_MAX));
-        repl.push_back(ctl::blanks);
-        repl.push_back(uint8_t(num_blanks));
-        num -= num_blanks;
+    if (num != 0) {
+        // Write blanks
+        while (num > 0) {
+            auto num_blanks = std::min(num, size_t(UINT8_MAX));
+            repl.push_back(ctl::blanks);
+            repl.push_back(uint8_t(num_blanks));
+            num -= num_blanks;
+        }
+        // Write back original attributes
+        repl += attr_end.encode();
+    } else {
+        // Write special control for blanked rest of line
+        m_flags[BlankLine] = true;
+        end = m_content.size();
     }
 
-    // Write back original attributes
-    repl += attr_end.encode();
-
     // Replace text with blanks
-    m_content.replace(start, end - start, repl.data(), repl.size());
-}
-
-
-void terminal::Line::set_hard_break()
-{
-    m_content.push_back(ctl::new_line);
+    m_content.replace(start, end - start, repl);
 }
 
 
@@ -431,6 +425,12 @@ int terminal::Line::length() const
 
 
 // ------------------------------------------------------------------------
+
+
+void terminal::Buffer::add_line()
+{
+    m_lines.emplace_back();
+}
 
 
 void terminal::Buffer::remove_lines(size_t start, size_t count)
@@ -503,16 +503,19 @@ void TextTerminal::new_line()
 
 void TextTerminal::erase_in_line(size_t first, size_t num)
 {
-    num = std::max(num, size_in_cells().x - first);
+    if (num > size_in_cells().x - first)
+        num = 0;
     current_line().erase_text(first, num, m_attrs);
 }
+
 
 void TextTerminal::erase_to_end_of_page()
 {
     size_t line_from = m_buffer_offset + m_cursor.y + 1;
     if (line_from < m_buffer->size())
         m_buffer->remove_lines(line_from, m_buffer->size() - line_from);
-    current_line().erase_text(cursor_pos().x, size_in_cells().x - cursor_pos().x, m_attrs);
+    current_line().erase_text(cursor_pos().x, 0, m_attrs);
+    current_line().set_blank_page();
 }
 
 
@@ -679,17 +682,13 @@ void TextTerminal::draw(View& view, State state)
         boxes.set_fill_color(Color(0));
 
         for (const char* it = line.content_begin(); it != line.content_end(); ) {
-            if (*it == terminal::ctl::new_line) {
-                ++it;
-                continue;
-            }
             if (*it == terminal::ctl::blanks) {
-                ++it;
                 uint8_t num = *++it;
                 Rect_f rect{pen.x, pen.y, m_cell_size.x * num, m_cell_size.y};
                 boxes.add_rectangle(rect);
                 pen.x += m_cell_size.x * num;
                 column += num;
+                ++it;
                 continue;
             }
             if (terminal::Attributes::is_introducer(*it)) {
@@ -749,6 +748,20 @@ void TextTerminal::draw(View& view, State state)
 
             pen.x += m_cell_size.x;
             ++column;
+        }
+
+        // draw rest of blanked line
+        if (line.is_blanked()) {
+            Rect_f rect { pen.x, pen.y, m_cell_size.x * (m_cells.x - column), m_cell_size.y };
+            boxes.add_rectangle(rect);
+        }
+
+        // draw rest of blanked page
+        if (line.is_page_blanked()) {
+            Rect_f rect { 0, pen.y + m_cell_size.y,
+                          m_cell_size.x * m_cells.x, m_cell_size.y * (m_cells.y - row - 1) };
+            boxes.add_rectangle(rect);
+            std::cout << escape(line.content()) << std::endl;
         }
 
         // draw the cursor separately in case it's out of line
