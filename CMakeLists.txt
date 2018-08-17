@@ -15,7 +15,7 @@ option(XCI_DEBUG_OPENGL "Log info about OpenGL calls and errors." OFF)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-add_compile_options(-Wall -Wextra -Wno-unused-parameter)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
 include(XciBuildOptions)
@@ -300,4 +300,8 @@ write_basic_package_version_file(xcikitConfigVersion.cmake
 install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/xcikitConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/xcikitConfigVersion.cmake
+    DESTINATION lib/cmake/xci)
+
+install(FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules/XciBuildOptions.cmake
     DESTINATION lib/cmake/xci)

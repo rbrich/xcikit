@@ -240,7 +240,11 @@ public:
     // ------------------------------------------------------------------------
     // Text buffer
 
-    void add_text(std::string_view text, bool insert=false);
+    /// Add text at current cursor position, moving the cursor to end of new text.
+    /// \param insert   insert characters, shifting rest of the line (false = replace)
+    /// \param wrap     wrap to next line if the cursor gets to right border of page
+    ///                 (false = no wrap, keep overwriting the right-most cell)
+    void add_text(std::string_view text, bool insert=false, bool wrap=true);
 
     /// Forced line end (disallow reflow for current line).
     void break_line() { current_line().set_hard_break(); }

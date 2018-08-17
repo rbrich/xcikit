@@ -449,7 +449,7 @@ void TextTerminal::set_font_size(float size, bool scalable)
 }
 
 
-void TextTerminal::add_text(std::string_view text, bool insert)
+void TextTerminal::add_text(std::string_view text, bool insert, bool wrap)
 {
     // Buffer for fragment of text without any attributes
     std::string buffer;
@@ -474,16 +474,27 @@ void TextTerminal::add_text(std::string_view text, bool insert)
         }
 
         // Check line length
-        if (m_cursor.x + buffer_length >= m_cells.x - 1) {
+        if (m_cursor.x + buffer_length >= m_cells.x) {
             flush_buffer();
-            new_line();
+            if (wrap)
+                new_line();
+            else
+                m_cursor.x = m_cells.x - 1;
             continue;
         }
 
         // Add character to current line
         auto end_pos = utf8_next(it);
-        buffer.append(std::string(text.substr(it - text.cbegin(), end_pos - it)));
-        ++buffer_length;
+        std::string ch_str(text.substr(it - text.cbegin(), end_pos - it));
+
+        if (!wrap && buffer.empty() && m_cursor.x == m_cells.x - 1) {
+            // nowrap mode - keep overwriting last cell
+            current_line().add_text(m_cursor.x, ch_str, m_attrs, /*insert=*/false);
+        } else {
+            buffer.append(ch_str);
+            ++buffer_length;
+        }
+
         it = end_pos;
     }
     flush_buffer();

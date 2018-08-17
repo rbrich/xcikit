@@ -29,11 +29,11 @@ if (BUILD_PEDANTIC)
 endif()
 
 if (BUILD_WITH_ASAN)
-    add_compile_options(-fsanitize=address)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
 endif ()
 
 if (BUILD_WITH_UBSAN)
-    add_compile_options(-fsanitize=undefined)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined")
 endif ()
 
 # Strip dead-code
