@@ -634,7 +634,7 @@ void TextTerminal::cancel_scrollback()
 }
 
 
-void TextTerminal::update(std::chrono::nanoseconds elapsed)
+void TextTerminal::update(View& view, std::chrono::nanoseconds elapsed)
 {
     if (m_bell_time > 0ns) {
         m_bell_time -= elapsed;

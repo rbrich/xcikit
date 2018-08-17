@@ -344,7 +344,7 @@ public:
     // ------------------------------------------------------------------------
     // impl Widget
 
-    void update(std::chrono::nanoseconds elapsed) override;
+    void update(View& view, std::chrono::nanoseconds elapsed) override;
     void resize(View& view) override;
     void draw(View& view, State state) override;
 

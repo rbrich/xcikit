@@ -166,7 +166,7 @@ void GlWindow::display()
         }
         if (m_update_cb) {
             auto t_now = steady_clock::now();
-            m_update_cb(t_now - t_last);
+            m_update_cb(m_view, t_now - t_last);
             t_last = t_now;
         }
     }
@@ -235,10 +235,9 @@ void GlWindow::set_refresh_mode(RefreshMode mode)
         case RefreshMode::PeriodicVsync:
             glfwSwapInterval(1);
             break;
+        default:
         case RefreshMode::PeriodicNoWait:
             glfwSwapInterval(0);
-            break;
-        default:
             break;
     }
     m_mode = mode;
@@ -278,7 +277,7 @@ void GlWindow::setup_view()
         // Update and redraw has to be called explicitly here,
         // because glfwWaitEvents may block on resize events
         if (self->m_update_cb)
-            self->m_update_cb(0ns);
+            self->m_update_cb(self->m_view, 0ns);
         self->draw();
     });
 

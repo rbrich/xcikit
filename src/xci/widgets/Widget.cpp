@@ -251,10 +251,10 @@ Bind::Bind(graphics::Window& window, Widget& root)
     : m_window(window)
 {
     m_update_cb = window.get_update_callback();
-    window.set_update_callback([&](std::chrono::nanoseconds t) {
+    window.set_update_callback([&](View& v, std::chrono::nanoseconds t) {
         if (m_update_cb)
-            m_update_cb(t);
-        root.update(t);
+            m_update_cb(v, t);
+        root.update(v, t);
     });
 
     m_size_cb = window.get_size_callback();
