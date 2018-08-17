@@ -17,7 +17,9 @@ set(XCI_UTIL_SOURCES
     rtti.cc
     rtti.h
     Term.cpp
-    Term.h)
+    Term.h
+    sys.cpp
+    sys.h)
 
 
 # Choose FileWatch implementation

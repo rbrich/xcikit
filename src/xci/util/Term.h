@@ -69,6 +69,8 @@ public:
 
     // mode
     Term bold() const;
+    Term underline() const;
+    Term overline() const;
     Term normal() const;  // reset all attributes
 
     // Output cached seq

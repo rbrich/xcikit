@@ -17,6 +17,9 @@ class Logger
 public:
     static Logger& get_default_instance();
 
+    Logger();
+    ~Logger();
+
     enum class Level {
         Error,
         Warning,

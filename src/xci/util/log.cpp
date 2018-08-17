@@ -2,22 +2,25 @@
 
 #include <xci/util/log.h>
 #include <xci/util/Term.h>
+#include <xci/util/sys.h>
 
 #include <iostream>
 #include <iomanip>
-#include <cstdio>
 #include <ctime>
 #include <cassert>
+#include <unistd.h>
+#include "log.h"
+
 
 namespace xci {
 namespace util {
 
 
 static const char* level_format[] = {
-        "{} {bold}ERROR{normal}  {bold}{red}{}{normal}\n",
-        "{} {bold}WARN {normal}  {bold}{yellow}{}{normal}\n",
-        "{} {bold}INFO {normal}  {bold}{white}{}{normal}\n",
-        "{} {bold}DEBUG{normal}  {white}{}{normal}\n",
+        "{:20} {cyan}{}{normal}  {bold}ERROR{normal}  {bold}{red}{}{normal}\n",
+        "{:20} {cyan}{}{normal}  {bold}WARN {normal}  {bold}{yellow}{}{normal}\n",
+        "{:20} {cyan}{}{normal}  {bold}INFO {normal}  {bold}{white}{}{normal}\n",
+        "{:20} {cyan}{}{normal}  {bold}DEBUG{normal}  {white}{}{normal}\n",
 };
 
 
@@ -25,6 +28,22 @@ Logger& Logger::get_default_instance()
 {
     static Logger logger;
     return logger;
+}
+
+
+Logger::Logger()
+{
+    Term& t = Term::stderr_instance();
+    auto msg = t.format("{underline}   Date      Time     TID   Level  Message   {normal}\n");
+    ::write(STDERR_FILENO, msg.data(), msg.size());
+}
+
+
+Logger::~Logger()
+{
+    Term& t = Term::stderr_instance();
+    auto msg = t.format("{overline}                 End of Log                   {normal}\n");
+    ::write(STDERR_FILENO, msg.data(), msg.size());
 }
 
 
@@ -39,8 +58,8 @@ void Logger::log(Logger::Level lvl, const std::string& msg)
     auto lvl_num = static_cast<int>(lvl);
 
     Term& t = Term::stderr_instance();
-    auto formatted_msg = t.format(level_format[lvl_num], ts_buf, msg);
-    fputs(formatted_msg.c_str(), stderr);
+    auto formatted_msg = t.format(level_format[lvl_num], ts_buf, get_thread_id(), msg);
+    ::write(STDERR_FILENO, formatted_msg.data(), formatted_msg.size());
 }
 
 

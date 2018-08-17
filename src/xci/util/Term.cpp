@@ -35,6 +35,7 @@ using namespace log;
 // When building without TInfo, emit ANSI escape sequences directly
 #ifndef XCI_WITH_TINFO
 static constexpr auto enter_bold_mode = "\033[1m";
+static constexpr auto enter_underline_mode = "\033[4m";
 static constexpr auto exit_attribute_mode = "\033[0m";
 static constexpr auto set_a_foreground = "\033[3{}m";
 static constexpr auto set_a_background = "\033[4{}m";
@@ -42,6 +43,10 @@ inline constexpr const char* tparm(const char* seq) { return seq; }
 template<typename ...Args>
 inline std::string tparm(const char* seq, Args... args) { return format(seq, args...); }
 #endif // XCI_WITH_TINFO
+
+// not in Terminfo DB:
+static constexpr auto enter_overline_mode = "\033[53m";
+
 
 Term& Term::stdout_instance()
 {
@@ -88,6 +93,8 @@ Term Term::bg(Term::Color color) const
 }
 
 Term Term::bold() const { return TERM_APPEND(enter_bold_mode); }
+Term Term::underline() const { return TERM_APPEND(enter_underline_mode); }
+Term Term::overline() const { return TERM_APPEND(enter_overline_mode); }
 Term Term::normal() const { return TERM_APPEND(exit_attribute_mode); }
 
 
@@ -100,8 +107,12 @@ std::ostream& operator<<(std::ostream& os, const Term& term)
 
 std::string Term::format_cb(const format_impl::Context& ctx)
 {
+    // mode
     if (ctx.placeholder == "bold")      return bold().seq();
+    if (ctx.placeholder == "underline") return underline().seq();
+    if (ctx.placeholder == "overline")  return overline().seq();
     if (ctx.placeholder == "normal")    return normal().seq();
+    // foreground
     if (ctx.placeholder == "black")     return black().seq();
     if (ctx.placeholder == "red")       return red().seq();
     if (ctx.placeholder == "green")     return green().seq();
@@ -110,7 +121,16 @@ std::string Term::format_cb(const format_impl::Context& ctx)
     if (ctx.placeholder == "magenta")   return magenta().seq();
     if (ctx.placeholder == "cyan")      return cyan().seq();
     if (ctx.placeholder == "white")     return white().seq();
-
+    // background
+    if (ctx.placeholder == "on_black")   return on_black().seq();
+    if (ctx.placeholder == "on_red")     return on_red().seq();
+    if (ctx.placeholder == "on_green")   return on_green().seq();
+    if (ctx.placeholder == "on_yellow")  return on_yellow().seq();
+    if (ctx.placeholder == "on_blue")    return on_blue().seq();
+    if (ctx.placeholder == "on_magenta") return on_magenta().seq();
+    if (ctx.placeholder == "on_cyan")    return on_cyan().seq();
+    if (ctx.placeholder == "on_white")   return on_white().seq();
+    // unknown placeholder - leave as is
     return format_impl::print_placeholder(ctx);
 }
 
