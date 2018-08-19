@@ -40,6 +40,12 @@ public:
                      const Color& color = Color::White(),
                      Renderer& renderer = Renderer::default_renderer());
 
+    // Reserve memory for `num` sprites.
+    void reserve(size_t num);
+
+    // Clear all sprites.
+    void clear() { m_trifans->clear(); }
+
     // Add new sprite containing whole texture
     // `rect` defines position and size of the sprite
     void add_sprite(const Rect_f& rect);
@@ -70,6 +76,10 @@ public:
     explicit ColoredSprites(TexturePtr& texture,
                             const Color& color = Color::White(),
                             Renderer& renderer = Renderer::default_renderer());
+
+    // Reserve memory for `num` sprites.
+    void reserve(size_t num);
+    void clear() { m_trifans->clear(); }
 
     void set_color(const Color& color) { m_color = color; }
     const Color& color() const { return m_color; }

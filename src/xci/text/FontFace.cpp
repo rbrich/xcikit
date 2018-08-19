@@ -30,8 +30,8 @@ static inline float ft_to_float(FT_F26Dot6 ft_units) {
 
 FontFace::~FontFace()
 {
-    if (face != nullptr) {
-        auto err = FT_Done_Face(face);
+    if (m_face != nullptr) {
+        auto err = FT_Done_Face(m_face);
         if (err) {
             log_error("FT_Done_FreeType: {}", err);
             return;
@@ -46,7 +46,7 @@ FontFace::~FontFace()
 template<typename F>
 bool FontFace::load_face(F load_fn)
 {
-    if (face != nullptr) {
+    if (m_face != nullptr) {
         log_error("FontFace: Reloading not supported! Create new instance instead.");
         return false;
     }
@@ -65,10 +65,10 @@ bool FontFace::load_face(F load_fn)
     }
 
     // Our code points are in Unicode, make sure it's selected
-    if (FT_Select_Charmap(face, FT_ENCODING_UNICODE) != 0) {
+    if (FT_Select_Charmap(m_face, FT_ENCODING_UNICODE) != 0) {
         log_error("FT_Select_Charmap: Error setting to Unicode: {}", err);
-        FT_Done_Face(face);
-        face = nullptr;
+        FT_Done_Face(m_face);
+        m_face = nullptr;
         return false;
     }
 
@@ -79,7 +79,7 @@ bool FontFace::load_face(F load_fn)
 bool FontFace::load_from_file(const char* file_path, int face_index)
 {
     return load_face([this, file_path, face_index](){
-        return FT_New_Face(library->raw_handle(), file_path, face_index, &face);
+        return FT_New_Face(library->raw_handle(), file_path, face_index, &m_face);
     });
 }
 
@@ -87,7 +87,7 @@ bool FontFace::load_from_file(const char* file_path, int face_index)
 bool FontFace::load_from_memory(const uint8_t *buffer, ssize_t size, int face_index)
 {
     return load_face([this, buffer, size, face_index](){
-        return FT_New_Memory_Face(library->raw_handle(), buffer, size, face_index, &face);
+        return FT_New_Memory_Face(library->raw_handle(), buffer, size, face_index, &m_face);
     });
 }
 
@@ -100,7 +100,7 @@ bool FontFace::set_size(unsigned pixel_size)
     size_req.width = wh;
     size_req.height = wh;
     auto err = FT_Request_Size(face, &size_req);*/
-    auto err = FT_Set_Pixel_Sizes(face, pixel_size, pixel_size);
+    auto err = FT_Set_Pixel_Sizes(m_face, pixel_size, pixel_size);
     if (err) {
         log_error("FT_Set_Char_Size: {}", err);
         return false;
@@ -129,16 +129,16 @@ bool FontFace::set_outline()
 
 FontStyle FontFace::style() const
 {
-    assert(face != nullptr);
+    assert(m_face != nullptr);
     static_assert(FT_STYLE_FLAG_ITALIC == int(FontStyle::Italic), "freetype italic flag == 1");
     static_assert(FT_STYLE_FLAG_BOLD == int(FontStyle::Bold), "freetype bold flag == 2");
-    return static_cast<FontStyle>(face->style_flags & 0b11);
+    return static_cast<FontStyle>(m_face->style_flags & 0b11);
 }
 
 
 float FontFace::line_height() const
 {
-    return ft_to_float(face->size->metrics.height);
+    return ft_to_float(m_face->size->metrics.height);
 }
 
 
@@ -147,11 +147,11 @@ float FontFace::max_advance()
     // Measure letter 'M' instead of trusting max_advance
     uint glyph_index = get_glyph_index('M');
     if (!glyph_index) {
-        return ft_to_float(face->size->metrics.max_advance);
+        return ft_to_float(m_face->size->metrics.max_advance);
     }
     auto glyph_slot = load_glyph(glyph_index);
     if (glyph_slot == nullptr) {
-        return ft_to_float(face->size->metrics.max_advance);
+        return ft_to_float(m_face->size->metrics.max_advance);
     }
     return ft_to_float(glyph_slot->metrics.horiAdvance);
 }
@@ -159,46 +159,46 @@ float FontFace::max_advance()
 
 float FontFace::ascender() const
 {
-    return ft_to_float(face->size->metrics.ascender);
+    return ft_to_float(m_face->size->metrics.ascender);
 }
 
 
 float FontFace::descender() const
 {
-    return ft_to_float(face->size->metrics.descender);
+    return ft_to_float(m_face->size->metrics.descender);
 }
 
 
 GlyphIndex FontFace::get_glyph_index(CodePoint code_point) const
 {
-    return FT_Get_Char_Index(face, code_point);
+    return FT_Get_Char_Index(m_face, code_point);
 }
 
 
 FT_Glyph_Metrics& FontFace::glyph_metrics()
 {
-    return face->glyph->metrics;
+    return m_face->glyph->metrics;
 }
 
 
 FT_Bitmap& FontFace::render_glyph()
 {
-    int err = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL);
+    int err = FT_Render_Glyph(m_face->glyph, FT_RENDER_MODE_NORMAL);
     if (err) {
         log_error("FT_Render_Glyph error: {}", err);
     }
-    return face->glyph->bitmap;
+    return m_face->glyph->bitmap;
 }
 
 
 FT_GlyphSlot FontFace::load_glyph(GlyphIndex glyph_index)
 {
-    int err = FT_Load_Glyph(face, glyph_index, FT_LOAD_DEFAULT | FT_LOAD_TARGET_LIGHT);
+    int err = FT_Load_Glyph(m_face, glyph_index, FT_LOAD_DEFAULT | FT_LOAD_TARGET_LIGHT);
     if (err) {
         log_error("FT_Load_Glyph error: {}", err);
         return nullptr;
     }
-    return face->glyph;
+    return m_face->glyph;
 }
 
 

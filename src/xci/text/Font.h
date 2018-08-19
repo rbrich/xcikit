@@ -21,8 +21,9 @@
 #include <xci/graphics/Texture.h>
 #include <xci/util/geometry.h>
 
-#include <list>
+#include <vector>
 #include <map>
+#include <cassert>
 
 namespace xci {
 namespace text {
@@ -47,6 +48,10 @@ public:
     // Add a face. Call multiple times if the strokes are in separate files.
     void add_face(std::unique_ptr<FontFace> face);
 
+    // Get currently selected face.
+    FontFace& face() { check_face(); return *m_faces[m_current_face].get(); }
+    const FontFace& face() const { check_face(); return *m_faces[m_current_face].get(); }
+
     // Select a loaded face by style
     void set_style(FontStyle style);
 
@@ -55,7 +60,7 @@ public:
     unsigned size() const { return m_size; }
 
     struct GlyphKey {
-        FontFace* font_face;
+        size_t font_face;
         unsigned font_size;
         GlyphIndex glyph_index;
 
@@ -68,8 +73,6 @@ public:
 
     class Glyph {
     public:
-        explicit Glyph(Font& font) : m_font(font) {}
-
         float base_x() const { return m_base.x; }
         float base_y() const { return m_base.y; }
         float width() const { return m_tex_coords.w; }
@@ -79,7 +82,6 @@ public:
         const Rect_u& tex_coords() const { return m_tex_coords; };
 
     private:
-        Font& m_font;
         Rect_u m_tex_coords;
         util::Vec2f m_base;  // FT bitmap_left, bitmap_top
         float m_advance = 0;
@@ -89,19 +91,23 @@ public:
     Glyph* get_glyph(CodePoint code_point);
 
     // just a facade
-    float line_height() const;
-    float max_advance();
-    float ascender() const;
-    float descender() const;
+    float line_height() const { return face().line_height(); }
+    float max_advance() { return face().max_advance(); }
+    float ascender() const { return face().ascender(); }
+    float descender() const { return face().descender(); }
     TexturePtr& get_texture();
 
     // Throw away any rendered glyphs
     void clear_cache();
 
 private:
+    // check that at leas one face is loaded
+    void check_face() const { assert(!m_faces.empty());  }
+
+private:
     unsigned m_size = 10;
-    std::list<std::unique_ptr<FontFace>> m_faces;  // faces for different strokes (eg. normal, bold, italic)
-    FontFace* m_current_face = nullptr;
+    size_t m_current_face = 0;
+    std::vector<std::unique_ptr<FontFace>> m_faces;  // faces for different strokes (eg. normal, bold, italic)
     std::unique_ptr<FontTexture> m_texture;  // glyph tables for different styles (size, outline)
     std::map<GlyphKey, Glyph> m_glyphs;
 };

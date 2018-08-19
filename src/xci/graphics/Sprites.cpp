@@ -41,6 +41,12 @@ Sprites::Sprites(TexturePtr& texture, const Color& color,
 {}
 
 
+void Sprites::reserve(size_t num)
+{
+    m_trifans->reserve(num, 4 * num);
+}
+
+
 void Sprites::add_sprite(const Rect_f& rect)
 {
     auto ts = m_texture->size();
@@ -111,6 +117,12 @@ ColoredSprites::ColoredSprites(TexturePtr& texture, const Color& color,
 {}
 
 
+void ColoredSprites::reserve(size_t num)
+{
+    m_trifans->reserve(num, 4);
+}
+
+
 void ColoredSprites::add_sprite(const Rect_f& rect)
 {
     auto ts = m_texture->size();
@@ -154,7 +166,7 @@ void ColoredSprites::init_shader()
     if (m_shader)
         return;
     auto& renderer = Renderer::default_renderer();
-    m_shader = renderer.new_shader(ShaderId::Sprite);
+    m_shader = renderer.new_shader(ShaderId::SpriteC);
 
 #ifdef XCI_EMBED_SHADERS
     bool res = m_shader->load_from_memory(

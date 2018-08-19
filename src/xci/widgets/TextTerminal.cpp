@@ -14,8 +14,6 @@
 // limitations under the License.
 
 #include "TextTerminal.h"
-#include <xci/graphics/Sprites.h>
-#include <xci/graphics/Shape.h>
 #include <xci/util/string.h>
 #include <xci/util/log.h>
 
@@ -668,8 +666,13 @@ void TextTerminal::draw(View& view, State state)
         font.set_size(unsigned(m_font_size / pxf.y));
     else
         font.set_size(unsigned(m_font_size * view.framebuffer_to_screen_ratio().y));
+
     graphics::ColoredSprites sprites(font.get_texture(), Color(7));
     graphics::Shape boxes(Color(0));
+
+    size_t expected_num_cells = m_cells.x * m_cells.y / 2;
+    sprites.reserve(expected_num_cells);
+    boxes.reserve(0, expected_num_cells, 0);
 
     Vec2f pen;
     size_t buffer_first, buffer_last;
@@ -691,6 +694,7 @@ void TextTerminal::draw(View& view, State state)
         font.set_style(text::FontStyle::Regular);
         sprites.set_color(Color(7));
         boxes.set_fill_color(Color(0));
+        auto ascender = font.ascender();
 
         for (const char* it = line.content_begin(); it != line.content_end(); ) {
             if (*it == terminal::ctl::blanks) {
@@ -712,6 +716,7 @@ void TextTerminal::draw(View& view, State state)
                     //auto mode = static_cast<Mode>((*it & c_mode_mask) >> c_mode_shift);
                     //(void) deco; // TODO
                     //(void) mode; // TODO
+                    ascender = font.ascender();
                 }
                 if (attr.has_fg())
                     sprites.set_color(attr.fg());
@@ -740,7 +745,7 @@ void TextTerminal::draw(View& view, State state)
             }
 
             Rect_f rect{pen.x + glyph->base_x() * pxf.x,
-                        pen.y + (font.ascender() - glyph->base_y()) * pxf.y,
+                        pen.y + (ascender - glyph->base_y()) * pxf.y,
                         glyph->width() * pxf.x,
                         glyph->height() * pxf.y};
             sprites.add_sprite(rect, glyph->tex_coords());

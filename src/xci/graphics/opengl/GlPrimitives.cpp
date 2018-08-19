@@ -38,6 +38,14 @@ GlPrimitives::GlPrimitives(VertexFormat format, PrimitiveType type)
 }
 
 
+void GlPrimitives::reserve(size_t primitives, size_t vertices)
+{
+    m_vertex_data.reserve(vertices);
+    m_elem_first.reserve(primitives);
+    m_elem_size.reserve(primitives);
+}
+
+
 void GlPrimitives::begin_primitive()
 {
     assert(m_open_vertices == -1);

@@ -36,40 +36,35 @@ Font::~Font() = default;
 void Font::add_face(std::unique_ptr<FontFace> face)
 {
     m_faces.emplace_back(std::move(face));
-    if (m_current_face == nullptr)
-        m_current_face = m_faces.front().get();
 }
 
 
 void Font::set_style(FontStyle style)
 {
+    m_current_face = 0;
     for (auto& face : m_faces) {
         if (face->style() == style) {
-            m_current_face = face.get();
             return;
         }
+        ++m_current_face;
     }
-    // Style not found, select the first one
+    // Style not found, selected the first one
     log_warning("Requested font style not found: {}", int(style));
-    m_current_face = m_faces.front().get();
 }
 
 
 void Font::set_size(unsigned size)
 {
     m_size = size;
-    if (m_current_face)
-        m_current_face->set_size(m_size);
+    face().set_size(m_size);
 }
 
 Font::Glyph* Font::get_glyph(CodePoint code_point)
 {
-    assert(m_current_face != nullptr);  // font must be loaded
-
     // translate char to glyph
     // In case of failure, this returns 0, which is okay, because
     // glyph nr. 0 contains graphic for "undefined character code".
-    uint glyph_index = m_current_face->get_glyph_index(code_point);
+    uint glyph_index = face().get_glyph_index(code_point);
 
     // check cache
     GlyphKey glyph_key{m_current_face, m_size, glyph_index};
@@ -78,14 +73,14 @@ Font::Glyph* Font::get_glyph(CodePoint code_point)
         return &iter->second;
 
     // render
-    m_current_face->set_size(m_size);
-    auto glyph_slot = m_current_face->load_glyph(glyph_index);
+    face().set_size(m_size);
+    auto glyph_slot = face().load_glyph(glyph_index);
     if (glyph_slot == nullptr)
         return nullptr;
-    auto& bitmap = m_current_face->render_glyph();
+    auto& bitmap = face().render_glyph();
 
     // insert into texture
-    Glyph glyph(*this);
+    Glyph glyph;
     if (!m_texture->add_glyph(bitmap, glyph.m_tex_coords)) {
         // no more space in texture -> reset and try again
         clear_cache();
@@ -103,6 +98,7 @@ Font::Glyph* Font::get_glyph(CodePoint code_point)
     return &glyph_item.first->second;
 }
 
+
 void Font::clear_cache()
 {
     m_glyphs.clear();
@@ -110,35 +106,7 @@ void Font::clear_cache()
 }
 
 
-float Font::line_height() const
-{
-    assert(m_current_face != nullptr);  // font must be loaded
-    return m_current_face->line_height();
-}
-
-
-float Font::max_advance()
-{
-    assert(m_current_face != nullptr);  // font must be loaded
-    return m_current_face->max_advance();
-}
-
-
-float Font::ascender() const
-{
-    assert(m_current_face != nullptr);  // font must be loaded
-    return m_current_face->ascender();
-}
-
-
-float Font::descender() const
-{
-    assert(m_current_face != nullptr);  // font must be loaded
-    return m_current_face->descender();
-}
-
-
-graphics::TexturePtr& Font::get_texture()
+TexturePtr& Font::get_texture()
 {
     return m_texture->get_texture();
 }

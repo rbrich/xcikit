@@ -18,6 +18,8 @@
 
 #include <xci/widgets/Widget.h>
 #include <xci/text/FontFace.h>
+#include <xci/graphics/Sprites.h>
+#include <xci/graphics/Shape.h>
 #include <xci/util/geometry.h>
 #include <xci/compat/string_view.h>
 #include <vector>
@@ -226,6 +228,8 @@ private:
 
 class TextTerminal: public Widget {
 public:
+
+    TextTerminal() { set_focusable(true); }
 
     // ------------------------------------------------------------------------
     // Font size, number of cells

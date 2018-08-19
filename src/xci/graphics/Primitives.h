@@ -42,6 +42,11 @@ class Primitives {
 public:
     virtual ~Primitives() = default;
 
+    /// Reserve memory for primitives that will be added later
+    /// \param primitives   number of primitives that will be created
+    /// \param vertices     total number of vertices in the primitives
+    virtual void reserve(size_t primitives, size_t vertices) = 0;
+
     virtual void begin_primitive() = 0;
     virtual void end_primitive() = 0;
     virtual void add_vertex(float x, float y, float u, float v) = 0;

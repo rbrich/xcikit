@@ -33,6 +33,8 @@ public:
     explicit GlPrimitives(VertexFormat format, PrimitiveType type);
     ~GlPrimitives() override { invalidate_gl_objects(); }
 
+    void reserve(size_t primitives, size_t vertices) override;
+
     void begin_primitive() override;
     void end_primitive() override;
     void add_vertex(float x, float y, float u, float v) override;

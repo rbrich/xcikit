@@ -84,6 +84,9 @@ public:
     void add_rounded_rectangle(const Rect_f& rect, float radius,
                                float outline_thickness = 0);
 
+    // Reserve memory for a number of `lines`, `rectangles`, `ellipses`.
+    void reserve(size_t lines, size_t rectangles, size_t ellipses);
+
     // Remove all shapes
     void clear();
 

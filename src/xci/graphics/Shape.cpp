@@ -194,6 +194,14 @@ void Shape::clear()
 }
 
 
+void Shape::reserve(size_t lines, size_t rectangles, size_t ellipses)
+{
+    m_lines->reserve(lines, 4 * lines);
+    m_rectangles->reserve(rectangles, 4 * rectangles);
+    m_ellipses->reserve(ellipses, 4 * ellipses);
+}
+
+
 void Shape::draw(View& view, const Vec2f& pos)
 {
     // lines

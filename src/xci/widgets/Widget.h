@@ -122,6 +122,8 @@ public:
 
     // impl Widget
     bool contains(const Vec2f& point) const override;
+
+    void update(View& view, std::chrono::nanoseconds elapsed) override;
     void resize(View& view) override;
     void draw(View& view, State state) override;
     bool key_event(View& view, const KeyEvent& ev) override;

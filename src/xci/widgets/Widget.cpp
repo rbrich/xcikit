@@ -50,6 +50,13 @@ bool Composite::contains(const Vec2f& point) const
 }
 
 
+void Composite::update(View& view, std::chrono::nanoseconds elapsed)
+{
+    for (auto& child : m_child)
+        child->update(view, elapsed);
+}
+
+
 void Composite::resize(View& view)
 {
     for (auto& child : m_child)

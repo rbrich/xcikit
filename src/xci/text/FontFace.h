@@ -81,7 +81,7 @@ private:
     template<typename F> bool load_face(F load_fn);
 
     std::shared_ptr<FontLibrary> library;
-    FT_Face face = nullptr;
+    FT_Face m_face = nullptr;
     FT_Stroker stroker = nullptr;
 };
 

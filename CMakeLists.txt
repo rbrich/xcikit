@@ -274,8 +274,8 @@ endif ()
 
 install(DIRECTORY src/xci DESTINATION include
     FILES_MATCHING
-    REGEX "xci/[a-z]+/[a-z]+$" EXCLUDE
-    REGEX "xci/[a-z]+/[^/]+\\.h")
+    REGEX "xci/(graphics|util)/[a-z]+$" EXCLUDE  # internal headers
+    PATTERN "*.h")
 install(DIRECTORY ext/nonstd DESTINATION include/xci/compat)
 
 # config.h
