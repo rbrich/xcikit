@@ -17,6 +17,7 @@
 #include <xci/graphics/Window.h>
 #include <xci/util/file.h>
 #include <xci/util/format.h>
+#include <xci/util/log.h>
 #include <cstdlib>
 #include <cstdio>
 #include <iostream>
@@ -27,6 +28,7 @@ using namespace xci::util;
 
 int main()
 {
+    Logger::init();
     xci::util::chdir_to_share();
 
     Window& window = Window::default_window();

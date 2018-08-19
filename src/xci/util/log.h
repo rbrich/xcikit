@@ -15,7 +15,13 @@ namespace util {
 class Logger
 {
 public:
-    static Logger& get_default_instance();
+    // Initialize default logger, Call this before anything that logs
+    // to make sure logger is created before it (and destroyed after).
+    // If not called, default logger will be created lazily
+    // (at the time of first use).
+    static void init() { (void) default_instance(); }
+
+    static Logger& default_instance();
 
     Logger();
     ~Logger();
@@ -33,28 +39,28 @@ public:
 
 template<typename... Args>
 inline void log_error(const char *fmt, Args&&... args) {
-    Logger::get_default_instance().log(
+    Logger::default_instance().log(
             Logger::Level::Error,
             xci::util::format(fmt, std::forward<Args>(args)...));
 }
 
 template<typename... Args>
 inline void log_warning(const char *fmt, Args&&... args) {
-    Logger::get_default_instance().log(
+    Logger::default_instance().log(
             Logger::Level::Warning,
             xci::util::format(fmt, std::forward<Args>(args)...));
 }
 
 template<typename... Args>
 inline void log_info(const char *fmt, Args&&... args) {
-    Logger::get_default_instance().log(
+    Logger::default_instance().log(
             Logger::Level::Info,
             xci::util::format(fmt, std::forward<Args>(args)...));
 }
 
 template<typename... Args>
 inline void log_debug(const char *fmt, Args&&... args) {
-    Logger::get_default_instance().log(
+    Logger::default_instance().log(
             Logger::Level::Debug,
             xci::util::format(fmt, std::forward<Args>(args)...));
 }

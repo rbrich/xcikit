@@ -24,7 +24,7 @@ static const char* level_format[] = {
 };
 
 
-Logger& Logger::get_default_instance()
+Logger& Logger::default_instance()
 {
     static Logger logger;
     return logger;
