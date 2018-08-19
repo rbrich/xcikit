@@ -5,6 +5,7 @@ option(BUILD_WITH_IWYU "Run iwyu (Include What You Use) on each compiled file, w
 option(BUILD_PEDANTIC "Build with -Wpedantic -Werror." OFF)
 option(BUILD_WITH_ASAN "Build with AddressSanitizer." OFF)
 option(BUILD_WITH_UBSAN "Build with UndefinedBehaviorSanitizer." OFF)
+option(BUILD_WITH_TSAN "Build with ThreadSanitizer." OFF)
 
 if (BUILD_LTO)
     add_compile_options(-flto)
@@ -56,6 +57,10 @@ endif ()
 
 if (BUILD_WITH_UBSAN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined")
+endif ()
+
+if (BUILD_WITH_TSAN)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread")
 endif ()
 
 # Strip dead-code
