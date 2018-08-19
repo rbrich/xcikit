@@ -158,8 +158,7 @@ void GlWindow::display()
                 }
                 glfwWaitEvents();
                 break;
-            case RefreshMode::PeriodicVsync:
-            case RefreshMode::PeriodicNoWait:
+            case RefreshMode::Periodic:
                 draw();
                 glfwPollEvents();
                 break;
@@ -229,18 +228,9 @@ void GlWindow::set_scroll_callback(ScrollCallback scroll_cb)
 }
 
 
-void GlWindow::set_refresh_mode(RefreshMode mode)
+void GlWindow::set_refresh_interval(int interval)
 {
-    switch (mode) {
-        case RefreshMode::PeriodicVsync:
-            glfwSwapInterval(1);
-            break;
-        default:
-        case RefreshMode::PeriodicNoWait:
-            glfwSwapInterval(0);
-            break;
-    }
-    m_mode = mode;
+    glfwSwapInterval(interval);
 }
 
 

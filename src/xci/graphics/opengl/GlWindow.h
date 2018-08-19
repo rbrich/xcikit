@@ -45,7 +45,8 @@ public:
     void set_mouse_button_callback(MouseBtnCallback mbtn_cb) override;
     void set_scroll_callback(ScrollCallback scroll_cb) override;
 
-    void set_refresh_mode(RefreshMode mode) override;
+    void set_refresh_mode(RefreshMode mode) override { m_mode = mode; }
+    void set_refresh_interval(int interval) override;
     void set_debug_flags(View::DebugFlags flags) override;
 
 private:

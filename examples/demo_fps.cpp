@@ -49,7 +49,8 @@ int main()
 
     FpsDisplay fps_display;
     fps_display.set_position({-1.2f, -0.8f});
-    Text help_text("[v] vsync{tab}[d] on demand{br}[n] nowait{tab}[e] on event", font);
+    Text help_text("[v] periodic vsync{tab}[d] on demand{br}"
+                   "[n] periodic nowait{tab}[e] on event{br}", font);
     Text mouse_pos("Mouse: ", font);
     mouse_pos.set_color(Color(255, 150, 50));
 
@@ -80,10 +81,12 @@ int main()
             return;
         switch (ev.key) {
             case Key::V:
-                window.set_refresh_mode(RefreshMode::PeriodicVsync);
+                window.set_refresh_mode(RefreshMode::Periodic);
+                window.set_refresh_interval(1);
                 break;
             case Key::N:
-                window.set_refresh_mode(RefreshMode::PeriodicNoWait);
+                window.set_refresh_mode(RefreshMode::Periodic);
+                window.set_refresh_interval(0);
                 break;
             case Key::D:
                 window.set_refresh_mode(RefreshMode::OnDemand);
@@ -102,7 +105,7 @@ int main()
         view.refresh();
     });
 
-    window.set_refresh_mode(RefreshMode::PeriodicVsync);
+    window.set_refresh_mode(RefreshMode::Periodic);
     window.display();
     return EXIT_SUCCESS;
 }

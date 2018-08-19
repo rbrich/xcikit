@@ -122,10 +122,9 @@ struct ScrollEvent {
 
 
 enum class RefreshMode {
-    OnDemand,  // refresh event from system or through View::refresh()
+    OnDemand,  // got refresh event from system or called View::refresh()
     OnEvent,   // got any event from system
-    PeriodicVsync,
-    PeriodicNoWait,
+    Periodic,   // continuous refresh
 };
 
 
@@ -181,7 +180,18 @@ public:
     MouseBtnCallback get_mouse_button_callback() { return m_mbtn_cb; }
     ScrollCallback get_scroll_callback() { return m_scroll_cb; }
 
+    // Refresh mode:
+    // - OnDemand is energy-saving mode, good for normal GUI applications (forms etc.)
+    // - OnEvent is similar, but does not require explicit calls to View::refresh()
+    // - Periodic is good for games (continuous animations)
     virtual void set_refresh_mode(RefreshMode mode) = 0;
+
+    // Refresh interval:
+    // - 0: do not wait for screen update
+    // - 1: wait for screen update (vsync)
+    // - 2: wait for 2nd screen update (vsync with halved FPS)
+    virtual void set_refresh_interval(int interval) = 0;
+
     virtual void set_debug_flags(View::DebugFlags flags) = 0;
 
 protected:
