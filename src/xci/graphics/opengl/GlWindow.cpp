@@ -145,28 +145,25 @@ void GlWindow::display()
 
     auto t_last = steady_clock::now();
     while (!glfwWindowShouldClose(m_window)) {
+        if (m_update_cb) {
+            auto t_now = steady_clock::now();
+            m_update_cb(m_view, t_now - t_last);
+            t_last = t_now;
+        }
         switch (m_mode) {
             case RefreshMode::OnDemand:
+                if (m_view.pop_refresh())
+                    draw();
+                glfwWaitEvents();
+                break;
             case RefreshMode::OnEvent:
-                if (m_view.periodic_refresh()) {
-                    draw();
-                    glfwPollEvents();
-                    break;
-                }
-                if (m_mode == RefreshMode::OnEvent || m_view.pop_refresh()) {
-                    draw();
-                }
+                draw();
                 glfwWaitEvents();
                 break;
             case RefreshMode::Periodic:
                 draw();
                 glfwPollEvents();
                 break;
-        }
-        if (m_update_cb) {
-            auto t_now = steady_clock::now();
-            m_update_cb(m_view, t_now - t_last);
-            t_last = t_now;
         }
     }
 }

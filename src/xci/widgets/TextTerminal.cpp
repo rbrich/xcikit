@@ -636,9 +636,9 @@ void TextTerminal::update(View& view, std::chrono::nanoseconds elapsed)
 {
     if (m_bell_time > 0ns) {
         m_bell_time -= elapsed;
-        // zero is special, make sure we don't end at that value
-        if (m_bell_time == 0ns)
-            m_bell_time = -1ns;
+        // Request new draw and wakeup event loop immediately
+        view.refresh();
+        view.window()->wakeup();
     }
 }
 
@@ -801,10 +801,9 @@ void TextTerminal::draw(View& view, State state)
         graphics::Shape frame(Color::Transparent(), Color(1.f, 0.f, 0.f, x));
         frame.add_rectangle({{0, 0}, size()}, 0.01f);
         frame.draw(view, position());
-        view.start_periodic_refresh();
-    } else if (m_bell_time < 0ns) {
-        m_bell_time = 0ns;
-        view.stop_periodic_refresh();
+        // Request new draw and wakeup event loop immediately
+        view.refresh();
+        view.window()->wakeup();
     }
 }
 
