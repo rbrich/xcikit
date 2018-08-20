@@ -141,6 +141,8 @@ public:
     graphics::Color fg() const;
     graphics::Color bg() const;
 
+    void render(Renderer& renderer);
+
 private:
     void set_bit(size_t i) { m_set.set(i, true); }
 

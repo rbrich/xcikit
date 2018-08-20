@@ -249,6 +249,18 @@ Color terminal::Attributes::bg() const
 }
 
 
+void terminal::Attributes::render(terminal::Renderer& renderer)
+{
+    if (has_attr()) {
+        renderer.set_font_style(font_style());
+    }
+    if (has_fg())
+        renderer.set_fg_color(fg());
+    if (has_bg())
+        renderer.set_bg_color(bg());
+}
+
+
 // ------------------------------------------------------------------------
 
 
@@ -434,13 +446,7 @@ void terminal::Line::render(Renderer& renderer)
         if (terminal::Attributes::is_introducer(*it)) {
             terminal::Attributes attr;
             it += attr.decode({it, size_t(content_end() - it)});
-            if (attr.has_attr()) {
-                renderer.set_font_style(attr.font_style());
-            }
-            if (attr.has_fg())
-                renderer.set_fg_color(attr.fg());
-            if (attr.has_bg())
-                renderer.set_bg_color(attr.bg());
+            attr.render(renderer);
             continue;
         }
 
@@ -731,19 +737,18 @@ void TextTerminal::draw(View& view, State state)
         class LineRenderer: public terminal::Renderer {
         public:
             // capture by ref
-            LineRenderer(Vec2f& pen, size_t& row, size_t& column,
+            LineRenderer(Vec2f& pen, size_t& column,
                          graphics::ColoredSprites& sprites, graphics::Shape& boxes,
-                         text::Font& font, float& ascender, const util::Vec2u& cursor,
+                         text::Font& font, float& ascender,
                          const util::Vec2f& cell_size, const Vec2f& pxf)
-            : pen(pen), row(row), column(column), sprites(sprites), boxes(boxes),
+            : pen(pen), column(column), sprites(sprites), boxes(boxes),
               font(font), ascender(ascender),
-              cursor(cursor), cell_size(cell_size), pxf(pxf)
+              cell_size(cell_size), pxf(pxf)
             {}
 
             void set_font_style(FontStyle font_style) override {
                 font.set_style(font_style);
                 ascender = font.ascender();
-                // TODO:
                 //auto deco = static_cast<Decoration>((*it & c_decoration_mask) >> c_decoration_shift);
                 //auto mode = static_cast<Mode>((*it & c_mode_mask) >> c_mode_shift);
                 //(void) deco; // TODO
@@ -756,8 +761,7 @@ void TextTerminal::draw(View& view, State state)
                 boxes.set_fill_color(bg);
             }
             void draw_blanks(size_t num) override {
-                Rect_f rect{pen.x, pen.y, cell_size.x * num, cell_size.y};
-                boxes.add_rectangle(rect);
+                boxes.add_rectangle({pen.x, pen.y, cell_size.x * num, cell_size.y});
                 pen.x += cell_size.x * num;
                 column += num;
             }
@@ -766,32 +770,14 @@ void TextTerminal::draw(View& view, State state)
                 if (glyph == nullptr)
                     glyph = font.get_glyph(' ');
 
-                // cursor = temporary reverse video
-                // FIXME: draw cursor separately using "cursor shader"
-                auto bg = boxes.fill_color();
-                auto fg = sprites.color();
-                if (row == cursor.y && column == cursor.x) {
-                    sprites.set_color(bg);
-                    boxes.set_fill_color(fg);
-                }
+                sprites.add_sprite({
+                        pen.x + glyph->base_x() * pxf.x,
+                        pen.y + (ascender - glyph->base_y()) * pxf.y,
+                        glyph->width() * pxf.x,
+                        glyph->height() * pxf.y
+                    }, glyph->tex_coords());
 
-                Rect_f rect{pen.x + glyph->base_x() * pxf.x,
-                            pen.y + (ascender - glyph->base_y()) * pxf.y,
-                            glyph->width() * pxf.x,
-                            glyph->height() * pxf.y};
-                sprites.add_sprite(rect, glyph->tex_coords());
-
-                rect.x = pen.x;
-                rect.y = pen.y;
-                rect.w = cell_size.x;
-                rect.h = cell_size.y;
-                boxes.add_rectangle(rect);
-
-                // revert colors after drawing cursor
-                if (row == cursor.y && column == cursor.x) {
-                    sprites.set_color(fg);
-                    boxes.set_fill_color(bg);
-                }
+                boxes.add_rectangle({pen, cell_size});
 
                 pen.x += cell_size.x;
                 ++column;
@@ -799,17 +785,15 @@ void TextTerminal::draw(View& view, State state)
 
         private:
             Vec2f& pen;
-            size_t& row;
             size_t& column;
             graphics::ColoredSprites& sprites;
             graphics::Shape& boxes;
             text::Font& font;
             float& ascender;
-            const util::Vec2u& cursor;
             const util::Vec2f& cell_size;
             const util::Vec2f& pxf;
-        } line_renderer(pen, row, column, sprites, boxes, font, ascender,
-                        m_cursor, m_cell_size, pxf);
+        } line_renderer(pen, column, sprites, boxes, font, ascender,
+                        m_cell_size, pxf);
 
         line.render(line_renderer);
 
@@ -826,12 +810,13 @@ void TextTerminal::draw(View& view, State state)
             boxes.add_rectangle(rect);
         }
 
-        // draw the cursor separately in case it's out of line
-        if (row == m_cursor.y && column <= m_cursor.x) {
+        // draw the cursor
+        if (row == m_cursor.y) {
             Rect_f rect { m_cell_size.x * m_cursor.x, pen.y, m_cell_size.x, m_cell_size.y };
             auto orig_color = boxes.fill_color();
-            boxes.set_fill_color(Color(7));
-            boxes.add_rectangle(rect);
+            boxes.set_fill_color(Color::Transparent());
+            boxes.set_outline_color(Color(0, 255, 0));
+            boxes.add_rectangle(rect, pxf.x);
             boxes.set_fill_color(orig_color);
         }
 
