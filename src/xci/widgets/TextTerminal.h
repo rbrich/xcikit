@@ -78,6 +78,16 @@ using Color8bit = uint8_t;
 using Color24bit = graphics::Color;  // alpha channel is ignored
 
 
+class Renderer {
+public:
+    virtual void set_font_style(text::FontStyle font_style) = 0;
+    virtual void set_fg_color(graphics::Color fg) = 0;
+    virtual void set_bg_color(graphics::Color bg) = 0;
+    virtual void draw_blanks(size_t num) = 0;
+    virtual void draw_char(text::CodePoint code_point) = 0;
+};
+
+
 class Attributes {
 public:
     // ------------------------------------------------------------------------
@@ -172,8 +182,7 @@ public:
 
     std::string_view content() const { return m_content; }
 
-    const char* content_begin() const { return m_content.c_str(); }
-    const char* content_end() const { return m_content.c_str() + m_content.size(); }
+    void render(Renderer& renderer);
 
     /// Skip `skip` chars, starting at `start`. Attributes at `start` are `attr`.
     /// \param skip     num of chars to skip
@@ -186,6 +195,10 @@ public:
 
     bool is_blanked() const { return m_flags[BlankLine]; }
     bool is_page_blanked() const { return m_flags[BlankPage]; }
+
+private:
+    const char* content_begin() const { return m_content.c_str(); }
+    const char* content_end() const { return m_content.c_str() + m_content.size(); }
 
 private:
     std::string m_content;

@@ -21,8 +21,43 @@
 #include <xci/util/format.h>
 
 using namespace xci::widgets;
+using namespace xci::text;
+using namespace xci::graphics;
 using namespace xci::util;
 using namespace xci::widgets::terminal::ctl;
+
+class TestRenderer: public terminal::Renderer {
+public:
+    void set_font_style(FontStyle font_style) override {
+        m_output.append([font_style](){
+            switch (font_style) {
+                default:
+                case FontStyle::Regular:    return "[r]";
+                case FontStyle::Italic:     return "[i]";
+                case FontStyle::Bold:       return "[b]";
+                case FontStyle::BoldItalic: return "[bi]";
+            }
+        }());
+    }
+    void set_fg_color(Color fg) override {
+        m_output.append(format("[fg:{}]"));
+    }
+    void set_bg_color(Color bg) override {
+        m_output.append(format("[bg:{}]"));
+    }
+    void draw_blanks(size_t num) override {
+        m_output.append(num, ' ');
+    }
+    void draw_char(CodePoint code_point) override {
+        m_output.append(to_utf8(code_point));
+    }
+
+    std::string output() { return std::move(m_output); }
+
+private:
+    std::string m_output;
+};
+
 
 TEST_CASE( "Attributes", "[TextTerminal]" )
 {
@@ -78,43 +113,46 @@ TEST_CASE( "Attributes", "[TextTerminal]" )
 
 TEST_CASE( "Line::add_text", "[TextTerminal]" )
 {
+    TestRenderer r;
     terminal::Line line;
     terminal::Attributes bold, italic, attr;
 
-    CHECK(line.content().empty());
+    line.render(r);
+    CHECK(r.output().empty());
 
     bold.set_bold(true);
     line.add_text(0, "bold", bold, /*insert=*/false);
-    CHECK(line.content() == bold.encode() + "bold");
+    line.render(r);
+    CHECK(r.output() == "[b]bold[r]");
 
     italic.set_italic(true);
     line.add_text(0, "italic", italic, /*insert=*/true);
-    bold.preceded_by(italic);
-    auto expected = italic.encode() + "italic" + bold.encode() + "bold";
-    CHECK(line.content() == expected);
+    line.render(r);
+    CHECK(r.output() == "[i]italic[b]bold[r]");
 
     line.add_text(2, "BOLD", bold, /*insert=*/false);
-    expected = italic.encode() + "it" + bold.encode() + "BOLDbold";
-    CHECK(line.content() == expected);
+    line.render(r);
+    CHECK(r.output() == "[i]it[b]BOLDbold[r]");
 
-    line.add_text(20, "skipped 10 chars", attr, /*insert=*/true);
-    attr.preceded_by(bold);
-    expected += format("{}\x0a{}skipped 10 chars", char(blanks), attr.encode());
-    CHECK(escape(line.content()) == escape(expected));
+    line.add_text(20, "skipped after end", attr, /*insert=*/true);
+    line.render(r);
+    CHECK(r.output() == "[i]it[b]BOLDbold[r]         skipped after end[r]");
 }
 
 
 TEST_CASE( "Line::erase_text", "[TextTerminal]" )
 {
+    TestRenderer r;
     terminal::Line line;
     terminal::Attributes bold, italic, attr;
 
     bold.set_bold(true);
     line.add_text(0, "verybold", bold, /*insert=*/false);
-    CHECK(line.content() == bold.encode() + "verybold");
+    line.render(r);
+    CHECK(r.output() == "[b]verybold[r]");
 
     italic.set_italic(true);
     line.erase_text(3, 3, italic);
-    auto expected = format("{}ver{}{}\x03{}ld", bold.encode(), italic.encode(), char(blanks), bold.encode());
-    CHECK(escape(line.content()) == escape(expected));
+    line.render(r);
+    CHECK(r.output() == "[b]ver[i]   [b]ld[r]");
 }

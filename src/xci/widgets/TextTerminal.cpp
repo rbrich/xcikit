@@ -422,6 +422,38 @@ int terminal::Line::length() const
 }
 
 
+void terminal::Line::render(Renderer& renderer)
+{
+    for (const char* it = content_begin(); it != content_end(); ) {
+        if (*it == terminal::ctl::blanks) {
+            auto num = uint8_t(*++it);
+            renderer.draw_blanks(num);
+            ++it;
+            continue;
+        }
+        if (terminal::Attributes::is_introducer(*it)) {
+            terminal::Attributes attr;
+            it += attr.decode({it, size_t(content_end() - it)});
+            if (attr.has_attr()) {
+                renderer.set_font_style(attr.font_style());
+            }
+            if (attr.has_fg())
+                renderer.set_fg_color(attr.fg());
+            if (attr.has_bg())
+                renderer.set_bg_color(attr.bg());
+            continue;
+        }
+
+        // extract single UTF-8 character
+        auto end_pos = utf8_next(it);
+        auto ch = std::string_view(it, end_pos - it);
+        it = end_pos;
+        CodePoint code_point = to_utf32(ch)[0];
+        renderer.draw_char(code_point);
+    }
+}
+
+
 // ------------------------------------------------------------------------
 
 
@@ -696,75 +728,90 @@ void TextTerminal::draw(View& view, State state)
         boxes.set_fill_color(Color(0));
         auto ascender = font.ascender();
 
-        for (const char* it = line.content_begin(); it != line.content_end(); ) {
-            if (*it == terminal::ctl::blanks) {
-                uint8_t num = *++it;
-                Rect_f rect{pen.x, pen.y, m_cell_size.x * num, m_cell_size.y};
-                boxes.add_rectangle(rect);
-                pen.x += m_cell_size.x * num;
-                column += num;
-                ++it;
-                continue;
+        class LineRenderer: public terminal::Renderer {
+        public:
+            // capture by ref
+            LineRenderer(Vec2f& pen, size_t& row, size_t& column,
+                         graphics::ColoredSprites& sprites, graphics::Shape& boxes,
+                         text::Font& font, float& ascender, const util::Vec2u& cursor,
+                         const util::Vec2f& cell_size, const Vec2f& pxf)
+            : pen(pen), row(row), column(column), sprites(sprites), boxes(boxes),
+              font(font), ascender(ascender),
+              cursor(cursor), cell_size(cell_size), pxf(pxf)
+            {}
+
+            void set_font_style(FontStyle font_style) override {
+                font.set_style(font_style);
+                ascender = font.ascender();
+                // TODO:
+                //auto deco = static_cast<Decoration>((*it & c_decoration_mask) >> c_decoration_shift);
+                //auto mode = static_cast<Mode>((*it & c_mode_mask) >> c_mode_shift);
+                //(void) deco; // TODO
+                //(void) mode; // TODO
             }
-            if (terminal::Attributes::is_introducer(*it)) {
-                terminal::Attributes attr;
-                it += attr.decode({it, size_t(line.content_end() - it)});
-                if (attr.has_attr()) {
-                    font.set_style(attr.font_style());
-                    // TODO:
-                    //auto deco = static_cast<Decoration>((*it & c_decoration_mask) >> c_decoration_shift);
-                    //auto mode = static_cast<Mode>((*it & c_mode_mask) >> c_mode_shift);
-                    //(void) deco; // TODO
-                    //(void) mode; // TODO
-                    ascender = font.ascender();
-                }
-                if (attr.has_fg())
-                    sprites.set_color(attr.fg());
-                if (attr.has_bg())
-                    boxes.set_fill_color(attr.bg());
-                continue;
-            }
-
-            // extract single UTF-8 character
-            auto end_pos = utf8_next(it);
-            auto ch = std::string_view(it, end_pos - it);
-            it = end_pos;
-
-            CodePoint code_point = to_utf32(ch)[0];
-            auto glyph = font.get_glyph(code_point);
-            if (glyph == nullptr)
-                glyph = font.get_glyph(' ');
-
-            // cursor = temporary reverse video
-            // FIXME: draw cursor separately using "cursor shader"
-            auto bg = boxes.fill_color();
-            auto fg = sprites.color();
-            if (row == m_cursor.y && column == m_cursor.x) {
-                sprites.set_color(bg);
-                boxes.set_fill_color(fg);
-            }
-
-            Rect_f rect{pen.x + glyph->base_x() * pxf.x,
-                        pen.y + (ascender - glyph->base_y()) * pxf.y,
-                        glyph->width() * pxf.x,
-                        glyph->height() * pxf.y};
-            sprites.add_sprite(rect, glyph->tex_coords());
-
-            rect.x = pen.x;
-            rect.y = pen.y;
-            rect.w = m_cell_size.x;
-            rect.h = m_cell_size.y;
-            boxes.add_rectangle(rect);
-
-            // revert colors after drawing cursor
-            if (row == m_cursor.y && column == m_cursor.x) {
+            void set_fg_color(Color fg) override {
                 sprites.set_color(fg);
+            }
+            void set_bg_color(Color bg) override {
                 boxes.set_fill_color(bg);
             }
+            void draw_blanks(size_t num) override {
+                Rect_f rect{pen.x, pen.y, cell_size.x * num, cell_size.y};
+                boxes.add_rectangle(rect);
+                pen.x += cell_size.x * num;
+                column += num;
+            }
+            void draw_char(CodePoint code_point) override {
+                auto glyph = font.get_glyph(code_point);
+                if (glyph == nullptr)
+                    glyph = font.get_glyph(' ');
 
-            pen.x += m_cell_size.x;
-            ++column;
-        }
+                // cursor = temporary reverse video
+                // FIXME: draw cursor separately using "cursor shader"
+                auto bg = boxes.fill_color();
+                auto fg = sprites.color();
+                if (row == cursor.y && column == cursor.x) {
+                    sprites.set_color(bg);
+                    boxes.set_fill_color(fg);
+                }
+
+                Rect_f rect{pen.x + glyph->base_x() * pxf.x,
+                            pen.y + (ascender - glyph->base_y()) * pxf.y,
+                            glyph->width() * pxf.x,
+                            glyph->height() * pxf.y};
+                sprites.add_sprite(rect, glyph->tex_coords());
+
+                rect.x = pen.x;
+                rect.y = pen.y;
+                rect.w = cell_size.x;
+                rect.h = cell_size.y;
+                boxes.add_rectangle(rect);
+
+                // revert colors after drawing cursor
+                if (row == cursor.y && column == cursor.x) {
+                    sprites.set_color(fg);
+                    boxes.set_fill_color(bg);
+                }
+
+                pen.x += cell_size.x;
+                ++column;
+            }
+
+        private:
+            Vec2f& pen;
+            size_t& row;
+            size_t& column;
+            graphics::ColoredSprites& sprites;
+            graphics::Shape& boxes;
+            text::Font& font;
+            float& ascender;
+            const util::Vec2u& cursor;
+            const util::Vec2f& cell_size;
+            const util::Vec2f& pxf;
+        } line_renderer(pen, row, column, sprites, boxes, font, ascender,
+                        m_cursor, m_cell_size, pxf);
+
+        line.render(line_renderer);
 
         // draw rest of blanked line
         if (line.is_blanked()) {
@@ -777,7 +824,6 @@ void TextTerminal::draw(View& view, State state)
             Rect_f rect { 0, pen.y + m_cell_size.y,
                           m_cell_size.x * m_cells.x, m_cell_size.y * (m_cells.y - row - 1) };
             boxes.add_rectangle(rect);
-            std::cout << escape(line.content()) << std::endl;
         }
 
         // draw the cursor separately in case it's out of line
