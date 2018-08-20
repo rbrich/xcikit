@@ -55,6 +55,7 @@ TEST_CASE( "Format char type", "[format]" )
 
 TEST_CASE( "File watch", "[FileWatch]" )
 {
+    Logger::init(Logger::Level::Error);
     FileWatch& fw = FileWatch::default_instance();
 
     std::string tmpname = "/tmp/xci_test_filewatch.XXXXXX";

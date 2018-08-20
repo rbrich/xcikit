@@ -24,31 +24,38 @@ static const char* level_format[] = {
 };
 
 
-Logger& Logger::default_instance()
+Logger& Logger::default_instance(Logger::Level initial_level)
 {
-    static Logger logger;
+    static Logger logger(initial_level);
     return logger;
 }
 
 
-Logger::Logger()
+Logger::Logger(Level level) : m_level(level)
 {
-    Term& t = Term::stderr_instance();
-    auto msg = t.format("{underline}   Date      Time     TID   Level  Message   {normal}\n");
-    ::write(STDERR_FILENO, msg.data(), msg.size());
+    if (m_level <= Level::Info) {
+        Term& t = Term::stderr_instance();
+        auto msg = t.format("{underline}   Date      Time     TID   Level  Message   {normal}\n");
+        ::write(STDERR_FILENO, msg.data(), msg.size());
+    }
 }
 
 
 Logger::~Logger()
 {
-    Term& t = Term::stderr_instance();
-    auto msg = t.format("{overline}                 End of Log                   {normal}\n");
-    ::write(STDERR_FILENO, msg.data(), msg.size());
+    if (m_level <= Level::Info) {
+        Term& t = Term::stderr_instance();
+        auto msg = t.format("{overline}                 End of Log                   {normal}\n");
+        ::write(STDERR_FILENO, msg.data(), msg.size());
+    }
 }
 
 
 void Logger::log(Logger::Level lvl, const std::string& msg)
 {
+    if (lvl < m_level)
+        return;
+
     time_t now = std::time(nullptr);
     char ts_buf[20];
     size_t ts_res = std::strftime(ts_buf, sizeof(ts_buf), "%F %T", std::localtime(&now));

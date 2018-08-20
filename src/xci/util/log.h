@@ -15,25 +15,32 @@ namespace util {
 class Logger
 {
 public:
+    enum class Level {
+        Debug,
+        Info,
+        Warning,
+        Error,
+    };
+
     // Initialize default logger, Call this before anything that logs
     // to make sure logger is created before it (and destroyed after).
     // If not called, default logger will be created lazily
     // (at the time of first use).
-    static void init() { (void) default_instance(); }
+    static void init(Level level = Level::Debug) { (void) default_instance(level); }
 
-    static Logger& default_instance();
+    static Logger& default_instance(Logger::Level initial_level = Level::Debug);
 
-    Logger();
+    explicit Logger(Level level);
     ~Logger();
 
-    enum class Level {
-        Error,
-        Warning,
-        Info,
-        Debug,
-    };
+    // Set minimal level of messages to be logged.
+    // Messages below this level are dropped.
+    void set_level(Level level) { m_level = level; }
 
     void log(Level lvl, const std::string& msg);
+
+private:
+    Level m_level;
 };
 
 
