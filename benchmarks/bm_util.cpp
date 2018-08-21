@@ -19,12 +19,12 @@
 using namespace xci::util;
 
 
-static void bm_utf8_to_codepoint(benchmark::State& state) {
+static void bm_utf8_codepoint(benchmark::State& state) {
     std::string input = "人";
     for (auto _ : state)
-        to_codepoint(input);
+        utf8_codepoint(input.data());
 }
-BENCHMARK(bm_utf8_to_codepoint);
+BENCHMARK(bm_utf8_codepoint);
 
 
 BENCHMARK_MAIN();

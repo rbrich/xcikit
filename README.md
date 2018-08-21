@@ -111,6 +111,7 @@ Dependencies (optional):
 - Google Benchmark (for benchmarks)
 
 Installing dependencies:
+- Debian: `apt-get install libbenchmark-dev`
 - macOS (Homebrew): `brew install google-benchmark`
 
 Build steps:

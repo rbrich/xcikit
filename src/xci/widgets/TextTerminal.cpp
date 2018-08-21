@@ -451,10 +451,8 @@ void terminal::Line::render(Renderer& renderer)
         }
 
         // extract single UTF-8 character
-        auto end_pos = utf8_next(it);
-        auto ch = std::string_view(it, end_pos - it);
-        it = end_pos;
-        renderer.draw_char(to_codepoint(ch));
+        renderer.draw_char(utf8_codepoint(it));
+        it = utf8_next(it);
     }
 }
 

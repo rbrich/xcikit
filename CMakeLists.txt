@@ -5,6 +5,7 @@ option(XCI_WITH_OPENGL "Link with GLFW and build libxci-graphics-opengl." ON)
 option(XCI_WITH_SFML "Link with SFML and build libxci-graphics-sfml." OFF)
 option(XCI_WITH_PANDA "Link with Panda3D and build libxci-graphics-panda." OFF)
 option(XCI_WITH_TINFO "Link with TInfo (from NCurses) and use it for TTY control sequences." OFF)
+option(XCI_BENCHMARK "Enable benchmarks. Requires Google benchmark to be installed and in CMake path." OFF)
 
 set(XCI_SHARE_DIR "${CMAKE_CURRENT_LIST_DIR}/share" CACHE PATH "Location of share dir (runtime data)")
 option(XCI_EMBED_SHADERS "Embed shader files into binaries to avoid dependency on share dir." OFF)
@@ -250,10 +251,9 @@ endif ()
 # Benchmarks   #
 # ------------ #
 
-# Google Benchmark
-find_package(benchmark)
-
-if (benchmark_FOUND)
+if (XCI_BENCHMARK)
+    # Google Benchmark
+    find_package(benchmark REQUIRED)
     add_subdirectory(benchmarks)
 endif ()
 

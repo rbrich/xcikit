@@ -128,7 +128,7 @@ TEST_CASE( "to_codepoint", "[string]" )
     CHECK(s.size() == 3);
     CHECK(utf8_length(s) == 1);
 
-    CHECK(to_codepoint(s) == 0x4EBA);
+    CHECK(utf8_codepoint(s.data()) == 0x4EBA);
 }
 
 

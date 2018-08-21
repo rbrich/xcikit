@@ -64,19 +64,6 @@ std::u32string to_utf32(std::string_view utf8)
 }
 
 
-char32_t to_codepoint(std::string_view utf8)
-{
-    // TODO: This is very slow. Optimize.
-    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert_utf32;
-    try {
-        return convert_utf32.from_bytes(utf8.cbegin(), utf8.cend())[0];
-    } catch (const std::range_error& e) {
-        log_error("to_codepoint: Invalid UTF8 string: {}", utf8);
-        return 0;
-    }
-}
-
-
 std::string to_utf8(char32_t codepoint)
 {
     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert_utf32;
@@ -106,7 +93,7 @@ const char* utf8_next(const char* pos)
         // 11110xxx -> 4 bytes
         return pos + 4;
     } else {
-        log_error("Invalid UTF8 string, encountered code {:02x}", int(first));
+        log_error("utf8_next: Invalid UTF8 string, encountered code {:02x}", int(first));
         return pos + 1;
     }
 }
@@ -123,11 +110,36 @@ utf8_prev(std::string::const_reverse_iterator pos)
 
 size_t utf8_length(std::string_view str)
 {
-    int length = 0;
+    size_t length = 0;
     for (auto pos = str.cbegin(); pos != str.cend(); pos = utf8_next(pos)) {
         ++length;
     }
     return length;
+}
+
+
+char32_t utf8_codepoint(const char* utf8)
+{
+    char c0 = utf8[0];
+    if ((c0 & 0x80) == 0) {
+        // 0xxxxxxx -> 1 byte
+        return char32_t(c0 & 0x7f);
+    } else
+    if ((c0 & 0xe0) == 0xc0) {
+        // 110xxxxx -> 2 bytes
+        return char32_t(0x80 | ((c0 & 0x1f) << 6) | (utf8[1] & 0x3f));
+    } else
+    if ((c0 & 0xf0) == 0xe0) {
+        // 1110xxxx -> 3 bytes
+        return char32_t(0x800 | ((c0 & 0x0f) << 12) | ((utf8[1] & 0x3f) << 6) | (utf8[2] & 0x3f));
+    } else
+    if ((c0 & 0xf8) == 0xf0) {
+        // 11110xxx -> 4 bytes
+        return char32_t(0x10000 | ((c0 & 0x07) << 18) | ((utf8[1] & 0x3f) << 12) | ((utf8[2] & 0x3f) << 6) | (utf8[3] & 0x3f));
+    } else {
+        log_error("utf8_codepoint: Invalid UTF8 string, encountered code {:02x}", int(c0));
+        return 0;
+    }
 }
 
 

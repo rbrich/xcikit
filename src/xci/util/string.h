@@ -29,11 +29,6 @@ std::string escape(std::string_view str);
 // In case of invalid source string, logs error and returns empty string.
 std::u32string to_utf32(std::string_view utf8);
 
-// Convert single UTF8 character to Unicode code point.
-// Only the first UF8 character is used, rest of input is ignored.
-// In case of error, return 0.
-char32_t to_codepoint(std::string_view utf8);
-
 // Convert single UTF32 char to UTF8 string. Can't fail.
 std::string to_utf8(char32_t codepoint);
 
@@ -43,6 +38,11 @@ std::string::const_reverse_iterator
 utf8_prev(std::string::const_reverse_iterator pos);
 
 size_t utf8_length(std::string_view str);
+
+// Convert single UTF-8 character to Unicode code point.
+// Only the first UTF-8 character is used, rest of input is ignored.
+// In case of error, return 0.
+char32_t utf8_codepoint(const char* utf8);
 
 }} // namespace xci::util
 
