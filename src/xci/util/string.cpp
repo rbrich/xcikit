@@ -64,6 +64,19 @@ std::u32string to_utf32(std::string_view utf8)
 }
 
 
+char32_t to_codepoint(std::string_view utf8)
+{
+    // TODO: This is very slow. Optimize.
+    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert_utf32;
+    try {
+        return convert_utf32.from_bytes(utf8.cbegin(), utf8.cend())[0];
+    } catch (const std::range_error& e) {
+        log_error("to_codepoint: Invalid UTF8 string: {}", utf8);
+        return 0;
+    }
+}
+
+
 std::string to_utf8(char32_t codepoint)
 {
     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert_utf32;

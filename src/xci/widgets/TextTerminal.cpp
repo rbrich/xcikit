@@ -454,8 +454,7 @@ void terminal::Line::render(Renderer& renderer)
         auto end_pos = utf8_next(it);
         auto ch = std::string_view(it, end_pos - it);
         it = end_pos;
-        CodePoint code_point = to_utf32(ch)[0];
-        renderer.draw_char(code_point);
+        renderer.draw_char(to_codepoint(ch));
     }
 }
 

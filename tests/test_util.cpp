@@ -122,6 +122,16 @@ TEST_CASE( "utf8_length", "[string]" )
 }
 
 
+TEST_CASE( "to_codepoint", "[string]" )
+{
+    std::string s = "人";
+    CHECK(s.size() == 3);
+    CHECK(utf8_length(s) == 1);
+
+    CHECK(to_codepoint(s) == 0x4EBA);
+}
+
+
 TEST_CASE( "escape", "[string]" )
 {
     CHECK(escape(std::string("\x00", 1)) == "\\x00");

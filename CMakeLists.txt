@@ -243,8 +243,19 @@ add_subdirectory(examples)
 if (Catch_FOUND)
     enable_testing()
     add_subdirectory(tests)
-endif (Catch_FOUND)
+endif ()
 
+
+# ------------ #
+# Benchmarks   #
+# ------------ #
+
+# Google Benchmark
+find_package(benchmark)
+
+if (benchmark_FOUND)
+    add_subdirectory(benchmarks)
+endif ()
 
 
 # ------------- #

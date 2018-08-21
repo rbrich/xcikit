@@ -108,6 +108,10 @@ Dependencies (optional):
 - SFML (XCI_WITH_SFML)
 - Panda3D (XCI_WITH_PANDA)
 - Catch2 (for tests)
+- Google Benchmark (for benchmarks)
+
+Installing dependencies:
+- macOS (Homebrew): `brew install google-benchmark`
 
 Build steps:
 
