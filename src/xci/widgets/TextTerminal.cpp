@@ -475,6 +475,22 @@ void terminal::Buffer::remove_lines(size_t start, size_t count)
 // ------------------------------------------------------------------------
 
 
+void terminal::Cursor::update(View& view, const Rect_f& rect)
+{
+    m_shape.clear();
+    m_shape.add_rectangle(rect, view.screen_ratio().x);
+}
+
+
+void terminal::Cursor::draw(View& view, const Vec2f& pos)
+{
+    m_shape.draw(view, pos);
+}
+
+
+// ------------------------------------------------------------------------
+
+
 void TextTerminal::set_font_size(float size, bool scalable)
 {
     m_font_size = size;
@@ -807,22 +823,18 @@ void TextTerminal::draw(View& view, State state)
             boxes.add_rectangle(rect);
         }
 
-        // draw the cursor
-        if (row == m_cursor.y) {
-            Rect_f rect { m_cell_size.x * m_cursor.x, pen.y, m_cell_size.x, m_cell_size.y };
-            auto orig_color = boxes.fill_color();
-            boxes.set_fill_color(Color::Transparent());
-            boxes.set_outline_color(Color(0, 255, 0));
-            boxes.add_rectangle(rect, pxf.x);
-            boxes.set_fill_color(orig_color);
-        }
-
         pen.x = 0;
         pen.y += m_cell_size.y;
     }
 
     boxes.draw(view, position());
     sprites.draw(view, position());
+
+    // draw the cursor
+    terminal::Cursor cursor;
+    cursor.update(view, {m_cell_size.x * m_cursor.x, m_cell_size.y * m_cursor.y,
+                         m_cell_size.x, m_cell_size.y});
+    cursor.draw(view, position());
 
     if (m_bell_time > 0ns) {
         auto x = (float) duration_cast<milliseconds>(m_bell_time).count() / 500.f;

@@ -238,6 +238,17 @@ private:
 };
 
 
+class Cursor {
+public:
+    void update(View& view, const util::Rect_f& rect);
+    void draw(View& view, const Vec2f& pos);
+
+private:
+    graphics::Shape m_shape {graphics::Color::Transparent(),
+                             graphics::Color(0, 255, 0)};
+};
+
+
 } // terminal
 
 
