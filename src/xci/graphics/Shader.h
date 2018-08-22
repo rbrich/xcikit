@@ -30,6 +30,7 @@ enum class ShaderId {
     Line,
     Rectangle,
     Ellipse,
+    Cursor,
     // Create new, custom shader
     Custom,  // (this has to stay as last item)
 };

@@ -60,8 +60,11 @@ public:
     virtual void set_uniform(const char* name, float f) = 0;
     virtual void set_uniform(const char* name, float f1, float f2, float f3, float f4) = 0;
     virtual void set_texture(const char* name, TexturePtr& texture) = 0;
-    virtual void draw(View& view) = 0;
 
+    enum class BlendFunc { AlphaBlend, InverseVideo, };
+    virtual void set_blend(BlendFunc func) = 0;
+
+    virtual void draw(View& view) = 0;
     void draw(View& view, const util::Vec2f& pos);
 };
 

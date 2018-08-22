@@ -157,6 +157,7 @@ void ColoredSprites::draw(View& view, const Vec2f& pos)
     init_shader();
     m_trifans->set_shader(m_shader);
     m_trifans->set_texture("u_texture", m_texture);
+    m_trifans->set_blend(Primitives::BlendFunc::AlphaBlend);
     m_trifans->draw(view, pos);
 }
 

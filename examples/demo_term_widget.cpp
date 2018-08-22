@@ -122,6 +122,27 @@ int main()
         terminal.bell();
     });
 
+    window.set_key_callback([&](View& view, const KeyEvent& ev) {
+        if (ev.action != Action::Press || ev.mod != ModKey::None())
+        switch (ev.key) {
+            case Key::Up:
+                terminal.set_cursor_pos(terminal.cursor_pos() - Vec2u{0, 1});
+                break;
+            case Key::Down:
+                terminal.set_cursor_pos(terminal.cursor_pos() + Vec2u{0, 1});
+                break;
+            case Key::Left:
+                terminal.set_cursor_pos(terminal.cursor_pos() - Vec2u{1, 0});
+                break;
+            case Key::Right:
+                terminal.set_cursor_pos(terminal.cursor_pos() + Vec2u{1, 0});
+                break;
+            default:
+                break;
+        }
+        view.refresh();
+    });
+
     Bind bind(window, terminal);
     window.set_refresh_mode(RefreshMode::OnDemand);
     window.display();

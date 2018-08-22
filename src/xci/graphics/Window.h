@@ -78,6 +78,7 @@ struct ModKey {
 
     bool operator== (ModKey other) const
         { return shift == other.shift && ctrl == other.ctrl && alt == other.alt;}
+    bool operator!= (ModKey other) const { return !(*this == other); }
 };
 
 

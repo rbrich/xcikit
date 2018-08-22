@@ -17,17 +17,24 @@
 #include <xci/util/string.h>
 #include <xci/util/log.h>
 
+#ifdef XCI_EMBED_SHADERS
+#define INCBIN_PREFIX g_
+#define INCBIN_STYLE INCBIN_STYLE_SNAKE
+#include <incbin/incbin.h>
+INCBIN(cursor_vert, XCI_SHARE_DIR "/shaders/cursor.vert");
+INCBIN(cursor_frag, XCI_SHARE_DIR "/shaders/cursor.frag");
+#endif
 
 namespace xci {
 namespace widgets {
 
-using graphics::Color;
-using text::CodePoint;
+using namespace graphics;
 using namespace util;
 using namespace util::log;
-using std::min;
 using namespace std::chrono;
 using namespace std::chrono_literals;
+using std::min;
+using text::CodePoint;
 
 
 // Skip custom control seqs in UTF-8 string
@@ -477,14 +484,60 @@ void terminal::Buffer::remove_lines(size_t start, size_t count)
 
 void terminal::Cursor::update(View& view, const Rect_f& rect)
 {
-    m_shape.clear();
-    m_shape.add_rectangle(rect, view.screen_ratio().x);
+    float x1 = rect.x;
+    float y1 = rect.y;
+    float x2 = rect.x + rect.w;
+    float y2 = rect.y + rect.h;
+    float tx = 2.0f * view.screen_ratio().x / rect.w;
+    float ty = 2.0f * view.screen_ratio().y / rect.h;
+    float ix = 1.0f + tx / (1-tx);
+    float iy = 1.0f + ty / (1-ty);
+
+    m_prim->clear();
+    m_prim->begin_primitive();
+    m_prim->add_vertex(x1, y1, -ix, -iy);
+    m_prim->add_vertex(x1, y2, -ix, +iy);
+    m_prim->add_vertex(x2, y2, +ix, +iy);
+    m_prim->add_vertex(x2, y1, +ix, -iy);
+    m_prim->end_primitive();
 }
 
 
 void terminal::Cursor::draw(View& view, const Vec2f& pos)
 {
-    m_shape.draw(view, pos);
+    constexpr Color fill_color(0.2, 0.7, 0.0);
+    constexpr Color outline_color(0.5, 1.0, 0.0);
+    init_shader();
+    m_prim->set_shader(m_shader);
+    m_prim->set_uniform("u_fill_color",
+                        fill_color.red_f(), fill_color.green_f(),
+                        fill_color.blue_f(), fill_color.alpha_f());
+    m_prim->set_uniform("u_outline_color",
+                        outline_color.red_f(), outline_color.green_f(),
+                        outline_color.blue_f(), outline_color.alpha_f());
+    m_prim->set_blend(Primitives::BlendFunc::InverseVideo);
+    m_prim->draw(view, pos);
+}
+
+
+void terminal::Cursor::init_shader()
+{
+    if (m_shader)
+        return;
+    auto& renderer = graphics::Renderer::default_renderer();
+    m_shader = renderer.new_shader(ShaderId::Cursor);
+
+#ifdef XCI_EMBED_SHADERS
+    bool res = m_shader->load_from_memory(
+                (const char*)g_cursor_vert_data, g_cursor_vert_size,
+                (const char*)g_cursor_frag_data, g_cursor_frag_size);
+)
+#else
+    bool res = m_shader->load_from_file("shaders/cursor.vert", "shaders/cursor.frag");
+#endif
+    if (!res) {
+        log_error("Cursor shader not loaded!");
+    }
 }
 
 

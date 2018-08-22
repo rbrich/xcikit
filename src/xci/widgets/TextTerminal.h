@@ -20,6 +20,7 @@
 #include <xci/text/FontFace.h>
 #include <xci/graphics/Sprites.h>
 #include <xci/graphics/Shape.h>
+#include <xci/graphics/Primitives.h>
 #include <xci/util/geometry.h>
 #include <xci/compat/string_view.h>
 #include <vector>
@@ -240,12 +241,18 @@ private:
 
 class Cursor {
 public:
+    explicit Cursor(graphics::Renderer& renderer = graphics::Renderer::default_renderer())
+    : m_prim(renderer.new_primitives(graphics::VertexFormat::V2t2, graphics::PrimitiveType::TriFans)) {}
+
     void update(View& view, const util::Rect_f& rect);
     void draw(View& view, const Vec2f& pos);
 
 private:
-    graphics::Shape m_shape {graphics::Color::Transparent(),
-                             graphics::Color(0, 255, 0)};
+    void init_shader();
+
+private:
+    graphics::PrimitivesPtr m_prim;
+    graphics::ShaderPtr m_shader;
 };
 
 

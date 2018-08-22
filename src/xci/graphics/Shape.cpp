@@ -216,6 +216,7 @@ void Shape::draw(View& view, const Vec2f& pos)
                                   m_outline_color.blue_f(), m_outline_color.alpha_f());
         m_lines->set_uniform("u_softness", m_softness);
         m_lines->set_uniform("u_antialiasing", m_antialiasing);
+        m_lines->set_blend(Primitives::BlendFunc::AlphaBlend);
         m_lines->draw(view, pos);
     }
 
@@ -228,6 +229,7 @@ void Shape::draw(View& view, const Vec2f& pos)
                                  m_outline_color.blue_f(), m_outline_color.alpha_f());
         m_rectangles->set_uniform("u_softness", m_softness);
         m_rectangles->set_uniform("u_antialiasing", m_antialiasing);
+        m_rectangles->set_blend(Primitives::BlendFunc::AlphaBlend);
         m_rectangles->draw(view, pos);
     }
 
@@ -243,6 +245,7 @@ void Shape::draw(View& view, const Vec2f& pos)
                                m_outline_color.blue_f(), m_outline_color.alpha_f());
         m_ellipses->set_uniform("u_softness", m_softness);
         m_ellipses->set_uniform("u_antialiasing", m_antialiasing);
+        m_ellipses->set_blend(Primitives::BlendFunc::AlphaBlend);
         m_ellipses->draw(view, pos);
     }
 }

@@ -48,6 +48,8 @@ public:
     void set_uniform(const char* name, float f) override;
     void set_uniform(const char* name, float f1, float f2, float f3, float f4) override;
     void set_texture(const char* name, TexturePtr& texture) override;
+    void set_blend(BlendFunc func) override;
+
     void draw(View& view) override;
 
 private:

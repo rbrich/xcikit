@@ -173,6 +173,20 @@ void GlPrimitives::set_texture(const char* name, TexturePtr& texture)
 }
 
 
+void GlPrimitives::set_blend(BlendFunc func)
+{
+    glEnable(GL_BLEND);
+    switch (func) {
+        case BlendFunc::AlphaBlend:
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            break;
+        case BlendFunc::InverseVideo:
+            glBlendFunc(GL_ONE_MINUS_DST_COLOR, GL_ZERO);
+            break;
+    }
+}
+
+
 void GlPrimitives::draw(View& view)
 {
     init_gl_objects();
@@ -196,9 +210,6 @@ void GlPrimitives::draw(View& view)
 
     GLint u_mvp = glGetUniformLocation(m_program, "u_mvp");
     glUniformMatrix4fv(u_mvp, 1, GL_FALSE, (const GLfloat*) mvp);
-
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glCullFace(GL_BACK);
     glEnable(GL_CULL_FACE);
