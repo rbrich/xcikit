@@ -84,6 +84,7 @@ void Sprites::draw(View& view, const Vec2f& pos)
                           m_color.red_f(), m_color.green_f(),
                           m_color.blue_f(), m_color.alpha_f());
     m_trifans->set_texture("u_texture", m_texture);
+    m_trifans->set_blend(Primitives::BlendFunc::AlphaBlend);
     m_trifans->draw(view, pos);
 }
 
