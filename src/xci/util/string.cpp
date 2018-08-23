@@ -127,15 +127,15 @@ char32_t utf8_codepoint(const char* utf8)
     } else
     if ((c0 & 0xe0) == 0xc0) {
         // 110xxxxx -> 2 bytes
-        return char32_t(0x80 | ((c0 & 0x1f) << 6) | (utf8[1] & 0x3f));
+        return char32_t(((c0 & 0x1f) << 6) | (utf8[1] & 0x3f));
     } else
     if ((c0 & 0xf0) == 0xe0) {
         // 1110xxxx -> 3 bytes
-        return char32_t(0x800 | ((c0 & 0x0f) << 12) | ((utf8[1] & 0x3f) << 6) | (utf8[2] & 0x3f));
+        return char32_t(((c0 & 0x0f) << 12) | ((utf8[1] & 0x3f) << 6) | (utf8[2] & 0x3f));
     } else
     if ((c0 & 0xf8) == 0xf0) {
         // 11110xxx -> 4 bytes
-        return char32_t(0x10000 | ((c0 & 0x07) << 18) | ((utf8[1] & 0x3f) << 12) | ((utf8[2] & 0x3f) << 6) | (utf8[3] & 0x3f));
+        return char32_t(((c0 & 0x07) << 18) | ((utf8[1] & 0x3f) << 12) | ((utf8[2] & 0x3f) << 6) | (utf8[3] & 0x3f));
     } else {
         log_error("utf8_codepoint: Invalid UTF8 string, encountered code {:02x}", int(c0));
         return 0;

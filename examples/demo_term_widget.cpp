@@ -114,6 +114,11 @@ int main()
         terminal.new_line();
     }
 
+    terminal.reset_attrs();
+    terminal.add_text(get_cwd() + "> ");
+    terminal.set_font_style(TextTerminal::FontStyle::Bold);
+    terminal.add_text("Příliš žluťoučký kůň úpěl ďábelské ódy.");
+
     // Make the terminal fullscreen
     window.set_size_callback([&](View& v) {
         auto s = v.scalable_size();

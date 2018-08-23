@@ -127,8 +127,10 @@ TEST_CASE( "to_codepoint", "[string]" )
     std::string s = "人";
     CHECK(s.size() == 3);
     CHECK(utf8_length(s) == 1);
-
     CHECK(utf8_codepoint(s.data()) == 0x4EBA);
+
+    CHECK(utf8_codepoint("ž") == 0x017E);
+    CHECK(utf8_codepoint("€") == 0x20AC);
 }
 
 
