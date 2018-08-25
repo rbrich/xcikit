@@ -505,8 +505,15 @@ void terminal::Cursor::update(View& view, const Rect_f& rect)
 
 void terminal::Cursor::draw(View& view, const Vec2f& pos)
 {
-    constexpr Color fill_color(0.2, 0.7, 0.0);
-    constexpr Color outline_color(0.5, 1.0, 0.0);
+    // pure white
+    constexpr Color fill_color(0.7, 0.7, 0.7);
+    constexpr Color outline_color(0.7, 0.7, 0.7);
+    // green
+    //constexpr Color fill_color(0.0, 0.7, 0.3);
+    //constexpr Color outline_color(0.0, 1.0, 0.0);
+    // yellow
+    //constexpr Color fill_color(0.7, 0.7, 0.3);
+    //constexpr Color outline_color(1.0, 1.0, 0.0);
     init_shader();
     m_prim->set_shader(m_shader);
     m_prim->set_uniform("u_fill_color",

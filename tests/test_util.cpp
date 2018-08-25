@@ -142,3 +142,29 @@ TEST_CASE( "escape", "[string]" )
     CHECK(escape("\x0d\x0e\x0f\x10\x1a\x1b") == "\\r\\x0e\\x0f\\x10\\x1a\\x1b");
     CHECK(escape("\x80\xff") == "\\x80\\xff");
 }
+
+
+TEST_CASE( "utf8_partial_end", "[string]" )
+{
+    CHECK(utf8_partial_end("") == 0);
+    CHECK(utf8_partial_end("hello") == 0);
+
+    std::string s = "fň";
+    REQUIRE(s.size() == 3);  // 1 + 2
+    CHECK(utf8_partial_end(s) == 0);
+    CHECK(utf8_partial_end(s.substr(0, 2)) == 1);
+    CHECK(utf8_partial_end(s.substr(0, 1)) == 0);
+
+    s = "€";
+    REQUIRE(s.size() == 3);
+    CHECK(utf8_partial_end(s) == 0);
+    CHECK(utf8_partial_end(s.substr(0, 2)) == 2);
+    CHECK(utf8_partial_end(s.substr(0, 1)) == 1);
+
+    s = "\xF0\x9F\x98\x88";
+    REQUIRE(s.size() == 4);
+    CHECK(utf8_partial_end(s) == 0);
+    CHECK(utf8_partial_end(s.substr(0, 3)) == 3);
+    CHECK(utf8_partial_end(s.substr(0, 2)) == 2);
+    CHECK(utf8_partial_end(s.substr(0, 1)) == 1);
+}

@@ -21,6 +21,8 @@
 #include <locale>
 #include <codecvt>
 #include <cassert>
+#include "string.h"
+
 
 namespace xci {
 namespace util {
@@ -93,7 +95,7 @@ const char* utf8_next(const char* pos)
         // 11110xxx -> 4 bytes
         return pos + 4;
     } else {
-        log_error("utf8_next: Invalid UTF8 string, encountered code {:02x}", int(first));
+        log_error("utf8_next: Invalid UTF8 string, encountered code 0x{:02x}", int(first));
         return pos + 1;
     }
 }
@@ -140,6 +142,36 @@ char32_t utf8_codepoint(const char* utf8)
         log_error("utf8_codepoint: Invalid UTF8 string, encountered code {:02x}", int(c0));
         return 0;
     }
+}
+
+
+size_t utf8_partial_end(std::string_view str)
+{
+    // Single byte from multi-byte UTF-8 char?
+    if (str.length() < 1)
+        return 0;
+    // Last byte must initiate 2, 3 or 4-byte sequence.
+    char back0 = str.back();
+    if ((back0 & 0xe0) == 0xc0 || (back0 & 0xf0) == 0xe0 || (back0 & 0xf8) == 0xf0)
+        return 1;
+
+    // Two bytes from multi-byte UTF-8 char? Last byte must be continuation byte.
+    if (str.length() < 2 || (back0 & 0xc0) != 0x80)
+        return 0;
+    // Second last byte must initiate 3 or 4-byte sequence.
+    char back1 = str[str.size() - 2];
+    if ((back1 & 0xf0) == 0xe0 || (back1 & 0xf8) == 0xf0)
+        return 2;
+
+    // Three bytes from 4-byte UTF-8 char? Second last byte must be continuation byte.
+    if (str.length() < 3 || (back1 & 0xc0) != 0x80)
+        return 0;
+    // Third last byte must initiate 4-byte sequence.
+    if ((back1 & 0xf8) == 0xf0)
+        return 3;
+    
+    // The UTF-8 sequence is properly closed.
+    return 0;
 }
 
 

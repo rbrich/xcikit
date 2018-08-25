@@ -44,6 +44,11 @@ size_t utf8_length(std::string_view str);
 // In case of error, return 0.
 char32_t utf8_codepoint(const char* utf8);
 
+/// Check if there is partial UTF-8 character at the end of string
+/// \param str  string to be checked
+/// \returns    length of the partial char, 0 if there is none
+size_t utf8_partial_end(std::string_view str);
+
 }} // namespace xci::util
 
 #endif // XCI_UTIL_STRING_H
