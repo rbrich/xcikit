@@ -19,14 +19,7 @@ namespace xci {
 namespace util {
 
 
-FpsCounter::FpsCounter(size_t resolution)
-{
-    m_fraction = 1.0f / resolution;
-    m_samples.resize(resolution);
-}
-
-
-void xci::util::FpsCounter::tick(float frame_time)
+void FpsCounter::tick(float frame_time)
 {
     m_delta += frame_time;
     while (m_delta >= m_fraction) {
@@ -39,18 +32,6 @@ void xci::util::FpsCounter::tick(float frame_time)
     }
     m_samples[m_idx] += {frame_time, 1};
     m_sum += {frame_time, 1};
-}
-
-
-int FpsCounter::frame_rate() const
-{
-    return m_sum.num_frames;
-}
-
-
-float FpsCounter::avg_frame_time() const
-{
-    return m_sum.total_time / m_sum.num_frames;
 }
 
 

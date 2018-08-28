@@ -31,6 +31,7 @@ namespace xci {
 namespace widgets {
 
 using namespace xci::graphics;
+using namespace xci::util;
 using namespace xci::util::log;
 using xci::util::format;
 
@@ -106,8 +107,8 @@ void FpsDisplay::init_shader()
 
 void FpsDisplay::update_texture()
 {
-    const float sample_max = 1.f / 30.f;
-    uint8_t pixels[m_fps.resolution()];
+    constexpr float sample_max = 1.f / 30.f;
+    uint8_t pixels[FpsCounter::max_resolution];
     uint8_t* pixel = pixels;
     m_fps.foreach_sample([&](float sample) {
         *pixel++ = uint8_t(sample / sample_max * 255.f);

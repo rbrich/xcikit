@@ -32,16 +32,21 @@ namespace util {
 
 class FpsCounter {
 public:
-    explicit FpsCounter(size_t resolution = 60);
+    FpsCounter() : FpsCounter(60) {}
+    explicit FpsCounter(size_t resolution)
+      : m_fraction(1.0f / resolution), m_samples(resolution)
+      { assert(resolution < max_resolution); }
+
+    static constexpr size_t max_resolution = 240;
 
     /// Append new frame time to the counter
     void tick(float frame_time);
 
     /// Number of frames in last second
-    int frame_rate() const;
+    int frame_rate() const { return m_sum.num_frames; }
 
     /// Average frame time during last second
-    float avg_frame_time() const;
+    float avg_frame_time() const { return m_sum.total_time / m_sum.num_frames; }
 
     // Export for FpsDisplay
     void foreach_sample(const std::function<void(float)>& cb) const;

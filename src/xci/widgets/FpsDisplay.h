@@ -38,7 +38,7 @@ private:
     void update_texture();
 
 private:
-    std::chrono::steady_clock::time_point m_prevtime;
+    std::chrono::steady_clock::time_point m_prevtime = std::chrono::steady_clock::now();
     util::FpsCounter m_fps;
     graphics::PrimitivesPtr m_quad;
     graphics::ShaderPtr m_shader;
