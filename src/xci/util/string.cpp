@@ -167,9 +167,10 @@ size_t utf8_partial_end(std::string_view str)
     if (str.length() < 3 || (back1 & 0xc0) != 0x80)
         return 0;
     // Third last byte must initiate 4-byte sequence.
-    if ((back1 & 0xf8) == 0xf0)
+    char back2 = str[str.size() - 3];
+    if ((back2 & 0xf8) == 0xf0)
         return 3;
-    
+
     // The UTF-8 sequence is properly closed.
     return 0;
 }

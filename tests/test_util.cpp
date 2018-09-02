@@ -161,7 +161,7 @@ TEST_CASE( "utf8_partial_end", "[string]" )
     CHECK(utf8_partial_end(s.substr(0, 2)) == 2);
     CHECK(utf8_partial_end(s.substr(0, 1)) == 1);
 
-    s = "\xF0\x9F\x98\x88";
+    s = "😈";  // F0 9F 98 88
     REQUIRE(s.size() == 4);
     CHECK(utf8_partial_end(s) == 0);
     CHECK(utf8_partial_end(s.substr(0, 3)) == 3);
