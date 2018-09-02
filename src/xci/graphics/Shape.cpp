@@ -266,7 +266,7 @@ void Shape::init_line_shader()
                 (const char*)g_line_frag_data, g_line_frag_size);
 )
 #else
-    bool res = m_ellipse_shader->load_from_vfs(
+    bool res = m_line_shader->load_from_vfs(
             "shaders/line.vert", "shaders/line.frag");
 #endif
     if (!res) {

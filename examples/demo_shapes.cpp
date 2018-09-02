@@ -18,24 +18,30 @@
 #include <xci/text/Text.h>
 #include <xci/graphics/Window.h>
 #include <xci/graphics/Shape.h>
-#include <xci/util/file.h>
+#include <xci/util/Vfs.h>
+#include <xci/config.h>
 #include <cstdlib>
 
 using namespace xci::text;
 using namespace xci::graphics;
+using namespace xci::util;
 
 int main()
 {
-    xci::util::chdir_to_share();
+    auto& vfs = Vfs::default_instance();
+    vfs.mount_dir(XCI_SHARE_DIR);
 
     Window& window = Window::default_window();
     window.create({800, 600}, "XCI shapes demo");
 
-    auto face = std::make_unique<FontFace>();
-    if (!face->load_from_file("fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
-        return EXIT_FAILURE;
     Font font;
-    font.add_face(std::move(face));
+    {
+        auto face_file = vfs.open("fonts/ShareTechMono/ShareTechMono-Regular.ttf");
+        auto face = std::make_unique<FontFace>();
+        if (!face->load_from_file(face_file.path(), 0))
+            return EXIT_FAILURE;
+        font.add_face(std::move(face));
+    }
 
     Text shapes_help("[r] rectangles{br}"
                      "[o] rounded rectangles{br}"

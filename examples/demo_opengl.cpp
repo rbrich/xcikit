@@ -14,7 +14,8 @@
 // limitations under the License.
 
 #include <xci/text/Text.h>
-#include <xci/util/file.h>
+#include <xci/util/Vfs.h>
+#include <xci/config.h>
 
 #include <glad/glad.h>
 #define GLFW_INCLUDE_NONE
@@ -24,10 +25,12 @@
 
 using namespace xci::text;
 using namespace xci::graphics;
+using namespace xci::util;
 
 int main()
 {
-    xci::util::chdir_to_share();
+    auto& vfs = Vfs::default_instance();
+    vfs.mount_dir(XCI_SHARE_DIR);
 
     if (!glfwInit())
         return EXIT_FAILURE;
@@ -67,11 +70,14 @@ int main()
     });
 
     // Create XCI text
-    auto face = std::make_unique<FontFace>();
-    if (!face->load_from_file("fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
-        return EXIT_FAILURE;
     Font font;
-    font.add_face(std::move(face));
+    {
+        auto face_file = vfs.open("fonts/ShareTechMono/ShareTechMono-Regular.ttf");
+        auto face = std::make_unique<FontFace>();
+        if (!face->load_from_file(face_file.path(), 0))
+            return EXIT_FAILURE;
+        font.add_face(std::move(face));
+    }
     Text text("Hello from XCI", font);
     text.set_size(0.2);
 

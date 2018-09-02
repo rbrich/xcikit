@@ -18,8 +18,9 @@
 #include <xci/widgets/FpsDisplay.h>
 #include <xci/widgets/TextInput.h>
 #include <xci/graphics/Window.h>
-#include <xci/util/file.h>
+#include <xci/util/Vfs.h>
 #include <xci/util/format.h>
+#include <xci/config.h>
 #include <random>
 #include <cstdlib>
 
@@ -52,7 +53,7 @@ private:
 
 int main()
 {
-    xci::util::chdir_to_share();
+    Vfs::default_instance().mount_dir(XCI_SHARE_DIR);
 
     Window& window = Window::default_window();
     window.create({800, 600}, "XCI UI demo");

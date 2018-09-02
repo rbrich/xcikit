@@ -19,11 +19,13 @@
 #include <xci/text/Text.h>
 #include <xci/graphics/Window.h>
 #include <xci/graphics/Sprites.h>
-#include <xci/util/file.h>
+#include <xci/util/Vfs.h>
+#include <xci/config.h>
 #include <cstdlib>
 
 using namespace xci::text;
 using namespace xci::graphics;
+using namespace xci::util;
 
 static const char * sample_text =
         "One morning, when Gregor Samsa "
@@ -40,7 +42,7 @@ static const char * sample_text =
 
 int main()
 {
-    xci::util::chdir_to_share();
+    Vfs::default_instance().mount_dir(XCI_SHARE_DIR);
 
     Window& window = Window::default_window();
     window.create({800, 600}, "XCI layout demo");

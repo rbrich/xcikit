@@ -129,7 +129,7 @@ static GLuint compile_program(const char* vertex_source,
 
 bool GlShader::is_ready() const
 {
-    bool ready = m_program_ready.test_and_set(std::memory_order_acquire);
+    bool ready = m_program_ready.load(std::memory_order_acquire);
     return (ready && m_program);
 }
 
@@ -158,13 +158,14 @@ bool GlShader::load_from_memory(const char* vertex_data, int vertex_size,
     // Compile and cache new program
     m_program = compile_program(vertex_data, vertex_size,
                                 fragment_data, fragment_size);
+    m_program_ready.store(true, std::memory_order_release);
     return true;
 }
 
 
 GLuint GlShader::program()
 {
-    bool ok = m_program_ready.test_and_set(std::memory_order_acquire);
+    bool ok = m_program_ready.load(std::memory_order_acquire);
     if (!ok) {
         // reload
         reload_from_file();
@@ -178,7 +179,7 @@ void GlShader::add_watches()
     auto cb = [this](FileWatch::Event ev) {
         if (ev == FileWatch::Event::Create || ev == FileWatch::Event::Modify) {
             log_info("Shader file changed...");
-            m_program_ready.clear(std::memory_order_release);
+            m_program_ready.store(false, std::memory_order_release);
             glfwPostEmptyEvent();
         }
     };
@@ -216,6 +217,7 @@ bool GlShader::reload_from_file()
     m_program = compile_program(
             vertex_file_source.data(), (int) vertex_file_source.size(),
             fragment_file_source.data(), (int) fragment_file_source.size());
+    m_program_ready.store(true, std::memory_order_release);
     return true;
 }
 
@@ -225,6 +227,7 @@ void GlShader::clear()
     remove_watches();
     glDeleteProgram(m_program);
     m_program = 0;
+    m_program_ready = false;
 }
 
 

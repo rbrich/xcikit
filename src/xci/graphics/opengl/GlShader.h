@@ -53,7 +53,7 @@ public:
 
 private:
     GLuint m_program = 0;
-    mutable std::atomic_flag m_program_ready = ATOMIC_FLAG_INIT;
+    mutable std::atomic_bool m_program_ready {false};
     FileWatchPtr m_file_watch;
     std::string m_vertex_file;
     std::string m_fragment_file;

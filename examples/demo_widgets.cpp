@@ -18,9 +18,10 @@
 #include <xci/widgets/Icon.h>
 #include <xci/text/Text.h>
 #include <xci/graphics/Window.h>
-#include <xci/util/file.h>
+#include <xci/util/Vfs.h>
 #include <xci/util/format.h>
 #include <xci/util/log.h>
+#include <xci/config.h>
 #include <cstdlib>
 
 using namespace xci::widgets;
@@ -31,7 +32,7 @@ using namespace xci::util::log;
 
 int main()
 {
-    xci::util::chdir_to_share();
+    Vfs::default_instance().mount_dir(XCI_SHARE_DIR);
 
     Window& window = Window::default_window();
     window.create({800, 600}, "XCI widgets demo");

@@ -173,6 +173,8 @@ void ColoredSprites::init_shader()
         return;
     auto& renderer = Renderer::default_renderer();
     m_shader = renderer.get_or_create_shader(ShaderId::SpriteC);
+    if (m_shader->is_ready())
+        return;
 
 #ifdef XCI_EMBED_SHADERS
     bool res = m_shader->load_from_memory(

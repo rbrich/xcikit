@@ -15,9 +15,11 @@
 
 #include <xci/widgets/TextTerminal.h>
 #include <xci/graphics/Window.h>
+#include <xci/util/Vfs.h>
 #include <xci/util/file.h>
 #include <xci/util/format.h>
 #include <xci/util/log.h>
+#include <xci/config.h>
 #include <cstdlib>
 #include <cstdio>
 #include <iostream>
@@ -29,7 +31,7 @@ using namespace xci::util;
 int main()
 {
     Logger::init();
-    xci::util::chdir_to_share();
+    Vfs::default_instance().mount_dir(XCI_SHARE_DIR);
 
     Window& window = Window::default_window();
     window.create({800, 600}, "XCI TextTerminal demo");
