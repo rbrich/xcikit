@@ -35,6 +35,7 @@ set(XCI_GRAPHICS_SOURCES
     src/xci/graphics/Color.cpp
     src/xci/graphics/Primitives.cpp
     src/xci/graphics/Renderer.cpp
+    src/xci/graphics/Shader.cpp
     src/xci/graphics/Shape.cpp
     src/xci/graphics/Sprites.cpp
     src/xci/graphics/View.cpp

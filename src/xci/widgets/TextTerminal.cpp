@@ -540,7 +540,7 @@ void terminal::Cursor::init_shader()
                 (const char*)g_cursor_frag_data, g_cursor_frag_size);
 )
 #else
-    bool res = m_shader->load_from_file("shaders/cursor.vert", "shaders/cursor.frag");
+    bool res = m_shader->load_from_vfs("shaders/cursor.vert", "shaders/cursor.frag");
 #endif
     if (!res) {
         log_error("Cursor shader not loaded!");

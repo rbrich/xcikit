@@ -20,6 +20,10 @@ add_executable(demo_term demo_term.cpp)
 target_link_libraries(demo_term ${XCI_UTIL_LIBRARY})
 install(TARGETS demo_term EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 
+add_executable(demo_vfs demo_vfs.cpp)
+target_link_libraries(demo_vfs ${XCI_UTIL_LIBRARY})
+install(TARGETS demo_vfs EXPORT xcikit DESTINATION ${INST_EXAMPLES})
+
 # graphics
 
 add_executable(demo_coords demo_coords.cpp)

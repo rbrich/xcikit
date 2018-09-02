@@ -14,7 +14,8 @@
 // limitations under the License.
 
 #include "Theme.h"
-#include <xci/config.h>
+#include <xci/util/Vfs.h>
+#include <xci/util/file.h>
 
 namespace xci {
 namespace widgets {
@@ -27,13 +28,13 @@ bool Theme::load_default_theme()
     Theme& theme = Theme::default_theme();
 
     // Base font
-    TRY(theme.load_font_face(XCI_SHARE_DIR "/fonts/Hack/Hack-Regular.ttf", 0));
-    TRY(theme.load_font_face(XCI_SHARE_DIR "/fonts/Hack/Hack-Bold.ttf", 0));
-    TRY(theme.load_font_face(XCI_SHARE_DIR "/fonts/Hack/Hack-Italic.ttf", 0));
-    TRY(theme.load_font_face(XCI_SHARE_DIR "/fonts/Hack/Hack-BoldItalic.ttf", 0));
+    TRY(theme.load_font_face("fonts/Hack/Hack-Regular.ttf", 0));
+    TRY(theme.load_font_face("fonts/Hack/Hack-Bold.ttf", 0));
+    TRY(theme.load_font_face("fonts/Hack/Hack-Italic.ttf", 0));
+    TRY(theme.load_font_face("fonts/Hack/Hack-BoldItalic.ttf", 0));
 
     // Material Icons
-    TRY(theme.load_icon_font_face(XCI_SHARE_DIR "/fonts/MaterialIcons/MaterialIcons-Regular.woff", 0));
+    TRY(theme.load_icon_font_face("fonts/MaterialIcons/MaterialIcons-Regular.woff", 0));
     theme.set_icon_codepoint(IconId::None, L' ');
     theme.set_icon_codepoint(IconId::CheckBoxUnchecked, L'\ue835');
     theme.set_icon_codepoint(IconId::CheckBoxChecked, L'\ue834');
@@ -56,23 +57,35 @@ Theme& Theme::default_theme()
 }
 
 
+static bool impl_load_font_face(text::Font& font, const char* file_path, int face_index)
+{
+    auto& vfs = util::Vfs::default_instance();
+    auto font_face = std::make_unique<text::FontFace>();
+    auto face_file = vfs.open(file_path);
+    if (face_file.is_real_file()) {
+        // it's a real file, use only the path, let FreeType read the data
+        if (!font_face->load_from_file(face_file.path(), face_index))
+            return false;
+    } else {
+        // not real file, we have to read all data into memory
+        auto face_data = util::read_binary_file(face_file);
+        if (!font_face->load_from_memory(std::move(face_data), face_index))
+            return false;
+    }
+    font.add_face(std::move(font_face));
+    return true;
+}
+
+
 bool Theme::load_font_face(const char* file_path, int face_index)
 {
-    auto font_face = std::make_unique<text::FontFace>();
-    if (!font_face->load_from_file(file_path, face_index))
-        return false;
-    m_font.add_face(std::move(font_face));
-    return true;
+    return impl_load_font_face(m_font, file_path, face_index);
 }
 
 
 bool Theme::load_icon_font_face(const char* file_path, int face_index)
 {
-    auto font_face = std::make_unique<text::FontFace>();
-    if (!font_face->load_from_file(file_path, face_index))
-        return false;
-    m_icon_font.add_face(std::move(font_face));
-    return true;
+    return impl_load_font_face(m_icon_font, file_path, face_index);
 }
 
 

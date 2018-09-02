@@ -102,8 +102,8 @@ void Sprites::init_shader()
                 (const char*)g_sprite_frag_data, g_sprite_frag_size);
 )
 #else
-    bool res = m_shader->load_from_file("shaders/sprite.vert",
-                                        "shaders/sprite.frag");
+    bool res = m_shader->load_from_vfs("shaders/sprite.vert",
+                                       "shaders/sprite.frag");
 #endif
     if (!res) {
         log_error("Rectangle shader not loaded!");
@@ -176,8 +176,8 @@ void ColoredSprites::init_shader()
                 (const char*)g_sprite_frag_c_data, g_sprite_frag_c_size);
 )
 #else
-    bool res = m_shader->load_from_file("shaders/sprite_c.vert",
-                                        "shaders/sprite_c.frag");
+    bool res = m_shader->load_from_vfs("shaders/sprite_c.vert",
+                                       "shaders/sprite_c.frag");
 #endif
     if (!res) {
         log_error("Rectangle shader not loaded!");

@@ -19,8 +19,7 @@
 #include <string>
 #include <memory>
 
-namespace xci {
-namespace graphics {
+namespace xci::graphics {
 
 
 enum class ShaderId {
@@ -40,7 +39,10 @@ class Shader {
 public:
     virtual ~Shader() = default;
 
-    // Load and compile GLSL program.
+    // Load and compile GLSL program
+
+    bool load_from_vfs(const std::string& vertex, const std::string& fragment);
+
     virtual bool load_from_file(
             const std::string& vertex, const std::string& fragment) = 0;
 
@@ -53,7 +55,6 @@ public:
 using ShaderPtr = std::shared_ptr<Shader>;
 
 
-}} // namespace xci::graphics
-
+} // namespace xci::graphics
 
 #endif // XCI_GRAPHICS_SHADER_H

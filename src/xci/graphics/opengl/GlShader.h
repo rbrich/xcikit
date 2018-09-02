@@ -35,8 +35,7 @@ public:
     ~GlShader() override { clear(); }
 
     // If successful, setup a watch on the file to auto-reload on any change.
-    bool load_from_file(
-            const std::string& vertex, const std::string& fragment) override;
+    bool load_from_file(const std::string& vertex, const std::string& fragment) override;
 
     bool load_from_memory(
             const char* vertex_data, int vertex_size,

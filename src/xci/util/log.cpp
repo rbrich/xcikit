@@ -17,10 +17,10 @@ namespace util {
 
 
 static const char* level_format[] = {
-        "{:20} {cyan}{}{normal}  {bold}ERROR{normal}  {bold}{red}{}{normal}\n",
-        "{:20} {cyan}{}{normal}  {bold}WARN {normal}  {bold}{yellow}{}{normal}\n",
-        "{:20} {cyan}{}{normal}  {bold}INFO {normal}  {bold}{white}{}{normal}\n",
         "{:20} {cyan}{}{normal}  {bold}DEBUG{normal}  {white}{}{normal}\n",
+        "{:20} {cyan}{}{normal}  {bold}INFO {normal}  {bold}{white}{}{normal}\n",
+        "{:20} {cyan}{}{normal}  {bold}WARN {normal}  {bold}{yellow}{}{normal}\n",
+        "{:20} {cyan}{}{normal}  {bold}ERROR{normal}  {bold}{red}{}{normal}\n",
 };
 
 

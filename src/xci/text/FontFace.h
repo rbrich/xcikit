@@ -23,6 +23,7 @@
 #include FT_STROKER_H
 
 #include <memory>  // shared_ptr
+#include <vector>
 
 namespace xci {
 namespace text {
@@ -55,8 +56,10 @@ public:
     FontFace(const FontFace&) = delete;
     FontFace& operator =(const FontFace&) = delete;
 
+    bool load_from_file(const std::string& file_path, int face_index)
+    { return load_from_file(file_path.c_str(), face_index); }
     bool load_from_file(const char* file_path, int face_index);
-    bool load_from_memory(const uint8_t* buffer, ssize_t size, int face_index);
+    bool load_from_memory(std::vector<uint8_t> buffer, int face_index);
 
     bool set_size(unsigned pixel_size);
 
@@ -83,6 +86,7 @@ private:
     std::shared_ptr<FontLibrary> library;
     FT_Face m_face = nullptr;
     FT_Stroker stroker = nullptr;
+    std::vector<uint8_t> m_memory_buffer;
 };
 
 

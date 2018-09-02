@@ -28,24 +28,48 @@ namespace xci {
 namespace util {
 
 
-void chdir_to_share()
+std::string read_text_file(const std::string& filename)
 {
-    chdir(XCI_SHARE_DIR);
+    std::ifstream f(filename);
+    return read_text_file(f);
 }
 
 
-std::string read_file(const std::string& filename)
+std::string read_text_file(std::istream& file)
 {
-    std::string content;
-    std::ifstream f(filename);
-    if (!f)
-        return content;  // empty
+    if (!file)
+        return {};
 
-    f.seekg(0, std::ios::end);
-    content.resize((size_t) f.tellg());
-    f.seekg(0, std::ios::beg);
-    f.read(&content[0], content.size());
-    if (!f)
+    file.seekg(0, std::ios::end);
+    auto file_size = size_t(file.tellg());
+    file.seekg(0, std::ios::beg);
+    std::string content(file_size, char(0));
+    file.read(&content[0], content.size());
+    if (!file)
+        content.clear();
+
+    return content;
+}
+
+
+std::vector<uint8_t> read_binary_file(const std::string& filename)
+{
+    std::ifstream f(filename, std::ios::binary);
+    return read_binary_file(f);
+}
+
+
+std::vector<uint8_t> read_binary_file(std::istream& file)
+{
+    if (!file)
+        return {};
+
+    file.seekg(0, std::ios::end);
+    auto file_size = size_t(file.tellg());
+    file.seekg(0, std::ios::beg);
+    std::vector<uint8_t> content(file_size, 0);
+    file.read((char*)&content[0], content.size());
+    if (!file)
         content.clear();
 
     return content;
@@ -65,6 +89,18 @@ std::string path_basename(std::string filename)
 {
     assert(filename.c_str() == &filename[0]);
     return ::basename(&filename[0]);
+}
+
+
+std::string path_join(const std::string &part1, const std::string &part2)
+{
+    // Add separator between parts only if there is none already
+    std::string sep = "/";
+    if (!part1.empty() && part1[part1.size() - 1] == '/')
+        sep.clear();
+    if (!part2.empty() && part2[0] == '/')
+        sep.clear();
+    return part1 + sep + part2;
 }
 
 

@@ -20,10 +20,13 @@
 #include <xci/graphics/Window.h>
 #include <xci/graphics/Sprites.h>
 #include <xci/util/file.h>
+#include <xci/util/Vfs.h>
+#include <xci/config.h>
 #include <cstdlib>
 
 using namespace xci::text;
 using namespace xci::graphics;
+using namespace xci::util;
 
 // sample text with forced newlines
 static const char * sample_text = R"SAMPLE(
@@ -40,17 +43,28 @@ a k některé věčnost celá?{br}
 
 int main()
 {
-    xci::util::chdir_to_share();
+    auto& vfs = Vfs::default_instance();
+    vfs.mount_dir(XCI_SHARE_DIR);
 
     Window& window = Window::default_window();
     window.create({800, 600}, "XCI font demo");
 
-    auto face = std::make_unique<FontFace>();
-    if (!face->load_from_file("fonts/Enriqueta/Enriqueta-Regular.ttf", 0))
-        return EXIT_FAILURE;
-
     Font font;
-    font.add_face(std::move(face));
+    {
+        auto face = std::make_unique<FontFace>();
+        auto face_file = vfs.open("fonts/Enriqueta/Enriqueta-Regular.ttf");
+        if (face_file.is_real_file()) {
+            // it's a real file, use only the path, let FreeType read the data
+            if (!face->load_from_file(face_file.path(), 0))
+                return EXIT_FAILURE;
+        } else {
+            // not real file, we have to read all data into memory
+            auto face_data = read_binary_file(face_file);
+            if (!face->load_from_memory(std::move(face_data), 0))
+                return EXIT_FAILURE;
+        }
+        font.add_face(std::move(face));
+    }
 
     Text text;
     text.set_string(sample_text);

@@ -78,16 +78,19 @@ bool FontFace::load_face(F load_fn)
 
 bool FontFace::load_from_file(const char* file_path, int face_index)
 {
-    return load_face([this, file_path, face_index](){
+    return load_face([this, file_path, face_index]() {
         return FT_New_Face(library->raw_handle(), file_path, face_index, &m_face);
     });
 }
 
 
-bool FontFace::load_from_memory(const uint8_t *buffer, ssize_t size, int face_index)
+bool FontFace::load_from_memory(std::vector<uint8_t> buffer, int face_index)
 {
-    return load_face([this, buffer, size, face_index](){
-        return FT_New_Memory_Face(library->raw_handle(), buffer, size, face_index, &m_face);
+    m_memory_buffer = std::move(buffer);
+    return load_face([this, face_index]() {
+        return FT_New_Memory_Face(library->raw_handle(),
+                m_memory_buffer.data(), m_memory_buffer.size(),
+                face_index, &m_face);
     });
 }
 

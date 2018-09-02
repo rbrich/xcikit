@@ -17,24 +17,24 @@
 #define XCI_UTIL_FILE_H
 
 #include <string>
+#include <vector>
 #include <functional>
 
 namespace xci {
 namespace util {
 
 
-// Find share dir with fonts and other assets.
-// Change working directory to this dir.
-void chdir_to_share();
-
 // Try to read whole content of a file.
 // Returns empty string in case of any error.
-std::string read_file(const std::string& filename);
+std::string read_text_file(const std::string& filename);
+std::string read_text_file(std::istream& file);
+std::vector<uint8_t> read_binary_file(const std::string& filename);
+std::vector<uint8_t> read_binary_file(std::istream& file);
 
 
 std::string path_dirname(std::string filename);
 std::string path_basename(std::string filename);
-
+std::string path_join(const std::string &part1, const std::string &part2);
 
 std::string get_cwd();
 

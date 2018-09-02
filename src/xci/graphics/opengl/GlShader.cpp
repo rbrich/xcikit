@@ -28,7 +28,7 @@
 namespace xci {
 namespace graphics {
 
-using xci::util::read_file;
+using xci::util::read_text_file;
 
 using namespace xci::util::log;
 
@@ -210,8 +210,8 @@ void GlShader::remove_watches()
 bool GlShader::reload_from_file()
 {
     // Try to read shaders from file
-    std::string vertex_file_source = read_file(m_vertex_file);
-    std::string fragment_file_source = read_file(m_fragment_file);
+    std::string vertex_file_source = read_text_file(m_vertex_file);
+    std::string fragment_file_source = read_text_file(m_fragment_file);
     if (vertex_file_source.empty() || fragment_file_source.empty())
         return false;
     log_info("Loaded vertex shader: {}", m_vertex_file);

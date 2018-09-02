@@ -264,7 +264,7 @@ void Shape::init_line_shader()
                 (const char*)g_line_frag_data, g_line_frag_size);
 )
 #else
-    bool res = m_line_shader->load_from_file(
+    bool res = m_ellipse_shader->load_from_vfs(
             "shaders/line.vert", "shaders/line.frag");
 #endif
     if (!res) {
@@ -286,7 +286,7 @@ void Shape::init_rectangle_shader()
                 (const char*)g_rectangle_frag_data, g_rectangle_frag_size);
 )
 #else
-    bool res = m_rectangle_shader->load_from_file(
+    bool res = m_rectangle_shader->load_from_vfs(
             "shaders/rectangle.vert", "shaders/rectangle.frag");
 #endif
     if (!res) {
@@ -303,13 +303,13 @@ void Shape::init_ellipse_shader()
     m_ellipse_shader = renderer.new_shader(ShaderId::Ellipse);
 
 #ifdef XCI_EMBED_SHADERS
-    bool res = m_ellipse_shader->load_from_file(
+    bool res = m_ellipse_shader->load_from_memory(
                 (const char*)g_ellipse_vert_data, g_ellipse_vert_size,
                 (const char*)g_ellipse_frag_data, g_ellipse_frag_size);
 )
 #else
-    bool res = m_ellipse_shader->load_from_file(
-                "shaders/ellipse.vert", "shaders/ellipse.frag");
+    bool res = m_ellipse_shader->load_from_vfs(
+            "shaders/ellipse.vert", "shaders/ellipse.frag");
 #endif
     if (!res) {
         log_error("Ellipse shader not loaded!");
