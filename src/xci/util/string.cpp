@@ -27,6 +27,28 @@
 namespace xci {
 namespace util {
 
+
+std::vector<std::string_view> split(std::string_view str, char delim)
+{
+    std::vector<std::string_view> res;
+    size_t pos = 0;
+    size_t end = 0;
+    for (;;) {
+        end = str.find(delim, pos);
+        if (end != str.npos) {
+            if (end != pos)
+                res.push_back(str.substr(pos, end - pos));
+            pos = end + 1;
+        } else {
+            if (pos < str.size() - 1)
+                res.push_back(str.substr(pos, end - pos));
+            break;
+        }
+    }
+    return res;
+}
+
+
 std::string escape(std::string_view str)
 {
     std::string out;
@@ -53,6 +75,7 @@ std::string escape(std::string_view str)
     }
     return out;
 }
+
 
 std::u32string to_utf32(std::string_view utf8)
 {

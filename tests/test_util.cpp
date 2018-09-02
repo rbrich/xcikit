@@ -168,3 +168,25 @@ TEST_CASE( "utf8_partial_end", "[string]" )
     CHECK(utf8_partial_end(s.substr(0, 2)) == 2);
     CHECK(utf8_partial_end(s.substr(0, 1)) == 1);
 }
+
+
+TEST_CASE( "split", "[string]" )
+{
+    {
+        std::string s = "one\ntwo\nthree";
+        auto res = split(s, '\n');
+        REQUIRE(res.size() == 3);
+        CHECK(res[0] == "one");
+        CHECK(res[1] == "two");
+        CHECK(res[2] == "three");
+    }
+    {
+        // empty substrings are skipped
+        std::string s = "\none\ntwo\n\nthree\n";
+        auto res = split(s, '\n');
+        REQUIRE(res.size() == 3);
+        CHECK(res[0] == "one");
+        CHECK(res[1] == "two");
+        CHECK(res[2] == "three");
+    }
+}

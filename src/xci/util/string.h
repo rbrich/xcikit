@@ -17,10 +17,13 @@
 #define XCI_UTIL_STRING_H
 
 #include <string>
+#include <vector>
 #include <xci/compat/string_view.h>
 
 namespace xci {
 namespace util {
+
+std::vector<std::string_view> split(std::string_view str, char delim);
 
 // Escape non-printable characters with C escape sequences (eg. '\n')
 std::string escape(std::string_view str);
