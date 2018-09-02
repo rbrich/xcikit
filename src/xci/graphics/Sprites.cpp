@@ -37,7 +37,8 @@ using namespace xci::util::log;
 Sprites::Sprites(TexturePtr& texture, const Color& color,
                  Renderer& renderer)
         : m_texture(texture), m_color(color),
-          m_trifans(renderer.new_primitives(VertexFormat::V2t2, PrimitiveType::TriFans))
+          m_trifans(renderer.create_primitives(VertexFormat::V2t2,
+                                               PrimitiveType::TriFans))
 {}
 
 
@@ -94,7 +95,9 @@ void Sprites::init_shader()
     if (m_shader)
         return;
     auto& renderer = Renderer::default_renderer();
-    m_shader = renderer.new_shader(ShaderId::Sprite);
+    m_shader = renderer.get_or_create_shader(ShaderId::Sprite);
+    if (m_shader->is_ready())
+        return;
 
 #ifdef XCI_EMBED_SHADERS
     bool res = m_shader->load_from_memory(
@@ -114,7 +117,8 @@ void Sprites::init_shader()
 ColoredSprites::ColoredSprites(TexturePtr& texture, const Color& color,
                                Renderer& renderer)
     : m_texture(texture), m_color(color),
-      m_trifans(renderer.new_primitives(VertexFormat::V2c4t2, PrimitiveType::TriFans))
+      m_trifans(renderer.create_primitives(VertexFormat::V2c4t2,
+                                           PrimitiveType::TriFans))
 {}
 
 
@@ -168,7 +172,7 @@ void ColoredSprites::init_shader()
     if (m_shader)
         return;
     auto& renderer = Renderer::default_renderer();
-    m_shader = renderer.new_shader(ShaderId::SpriteC);
+    m_shader = renderer.get_or_create_shader(ShaderId::SpriteC);
 
 #ifdef XCI_EMBED_SHADERS
     bool res = m_shader->load_from_memory(

@@ -20,6 +20,7 @@
 #include <functional>
 #include <cstddef>
 #include <cstdint>
+#include <cassert>
 
 namespace xci {
 namespace util {

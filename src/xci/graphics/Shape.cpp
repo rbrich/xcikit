@@ -37,9 +37,9 @@ using namespace xci::util::log;
 Shape::Shape(const Color& fill_color, const Color& outline_color,
              Renderer& renderer)
         : m_fill_color(fill_color), m_outline_color(outline_color),
-          m_lines(renderer.new_primitives(VertexFormat::V2t2, PrimitiveType::TriFans)),
-          m_rectangles(renderer.new_primitives(VertexFormat::V2c4t22, PrimitiveType::TriFans)),
-          m_ellipses(renderer.new_primitives(VertexFormat::V2t22, PrimitiveType::TriFans))
+          m_lines(renderer.create_primitives(VertexFormat::V2t2, PrimitiveType::TriFans)),
+          m_rectangles(renderer.create_primitives(VertexFormat::V2c4t22, PrimitiveType::TriFans)),
+          m_ellipses(renderer.create_primitives(VertexFormat::V2t22, PrimitiveType::TriFans))
 {}
 
 
@@ -256,7 +256,9 @@ void Shape::init_line_shader()
     if (m_line_shader)
         return;
     auto& renderer = Renderer::default_renderer();
-    m_line_shader = renderer.new_shader(ShaderId::Line);
+    m_line_shader = renderer.get_or_create_shader(ShaderId::Line);
+    if (m_line_shader->is_ready())
+        return;
 
 #ifdef XCI_EMBED_SHADERS
     bool res = m_line_shader->load_from_memory(
@@ -278,7 +280,9 @@ void Shape::init_rectangle_shader()
     if (m_rectangle_shader)
         return;
     auto& renderer = Renderer::default_renderer();
-    m_rectangle_shader = renderer.new_shader(ShaderId::Rectangle);
+    m_rectangle_shader = renderer.get_or_create_shader(ShaderId::Rectangle);
+    if (m_rectangle_shader->is_ready())
+        return;
 
 #ifdef XCI_EMBED_SHADERS
     bool res = m_rectangle_shader->load_from_memory(
@@ -300,7 +304,9 @@ void Shape::init_ellipse_shader()
     if (m_ellipse_shader)
         return;
     auto& renderer = Renderer::default_renderer();
-    m_ellipse_shader = renderer.new_shader(ShaderId::Ellipse);
+    m_ellipse_shader = renderer.get_or_create_shader(ShaderId::Ellipse);
+    if (m_ellipse_shader->is_ready())
+        return;
 
 #ifdef XCI_EMBED_SHADERS
     bool res = m_ellipse_shader->load_from_memory(

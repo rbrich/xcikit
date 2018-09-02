@@ -22,13 +22,13 @@ namespace xci {
 namespace graphics {
 
 
-TexturePtr GlRenderer::new_texture()
+TexturePtr GlRenderer::create_texture()
 {
     return std::make_shared<GlTexture>();
 }
 
 
-ShaderPtr GlRenderer::new_shader(ShaderId shader_id)
+ShaderPtr GlRenderer::get_or_create_shader(ShaderId shader_id)
 {
     if (shader_id != ShaderId::Custom) {
         auto& shader = m_shader[(size_t) shader_id];
@@ -42,8 +42,8 @@ ShaderPtr GlRenderer::new_shader(ShaderId shader_id)
 }
 
 
-PrimitivesPtr GlRenderer::new_primitives(VertexFormat format,
-                                         PrimitiveType type)
+PrimitivesPtr GlRenderer::create_primitives(VertexFormat format,
+                                            PrimitiveType type)
 {
     return std::make_shared<GlPrimitives>(format, type);
 }

@@ -34,6 +34,8 @@ public:
     GlShader() : m_file_watch(FileWatch::create()) {}
     ~GlShader() override { clear(); }
 
+    bool is_ready() const override;
+
     // If successful, setup a watch on the file to auto-reload on any change.
     bool load_from_file(const std::string& vertex, const std::string& fragment) override;
 
@@ -51,7 +53,7 @@ public:
 
 private:
     GLuint m_program = 0;
-    std::atomic_flag m_program_ready = ATOMIC_FLAG_INIT;
+    mutable std::atomic_flag m_program_ready = ATOMIC_FLAG_INIT;
     FileWatchPtr m_file_watch;
     std::string m_vertex_file;
     std::string m_fragment_file;

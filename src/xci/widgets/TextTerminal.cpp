@@ -532,7 +532,9 @@ void terminal::Cursor::init_shader()
     if (m_shader)
         return;
     auto& renderer = graphics::Renderer::default_renderer();
-    m_shader = renderer.new_shader(ShaderId::Cursor);
+    m_shader = renderer.get_or_create_shader(ShaderId::Cursor);
+    if (m_shader->is_ready())
+        return;
 
 #ifdef XCI_EMBED_SHADERS
     bool res = m_shader->load_from_memory(

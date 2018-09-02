@@ -32,15 +32,15 @@ public:
     static Renderer& default_renderer();
     virtual ~Renderer() = default;
 
-    virtual TexturePtr new_texture() = 0;
+    virtual TexturePtr create_texture() = 0;
 
     /// Create new shader or get one of the predefined shaders
     /// \param shader_id Use `Custom` to create new shader
     /// \return shared_ptr to the shader or nullptr on error
-    virtual ShaderPtr new_shader(ShaderId shader_id) = 0;
+    virtual ShaderPtr get_or_create_shader(ShaderId shader_id) = 0;
 
-    virtual PrimitivesPtr new_primitives(VertexFormat format,
-                                         PrimitiveType type) = 0;
+    virtual PrimitivesPtr create_primitives(VertexFormat format,
+                                            PrimitiveType type) = 0;
 };
 
 

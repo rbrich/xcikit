@@ -127,16 +127,16 @@ static GLuint compile_program(const char* vertex_source,
 }
 
 
+bool GlShader::is_ready() const
+{
+    bool ready = m_program_ready.test_and_set(std::memory_order_acquire);
+    return (ready && m_program);
+}
+
+
 bool GlShader::load_from_file(const std::string& vertex,
                               const std::string& fragment)
 {
-    // Is this shader already loaded?
-    bool ready = m_program_ready.test_and_set(std::memory_order_acquire);
-    if (ready && m_program &&
-        m_vertex_file == vertex &&
-        m_fragment_file == fragment) {
-        return true;
-    }
     m_vertex_file = vertex;
     m_fragment_file = fragment;
 
@@ -155,11 +155,6 @@ bool GlShader::load_from_file(const std::string& vertex,
 bool GlShader::load_from_memory(const char* vertex_data, int vertex_size,
                                 const char* fragment_data, int fragment_size)
 {
-    // Is this shader already loaded?
-    bool ready = m_program_ready.test_and_set(std::memory_order_acquire);
-    if (ready && m_program)
-        return true;
-
     // Compile and cache new program
     m_program = compile_program(vertex_data, vertex_size,
                                 fragment_data, fragment_size);

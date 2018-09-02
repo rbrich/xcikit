@@ -37,8 +37,8 @@ using xci::util::format;
 
 
 FpsDisplay::FpsDisplay()
-        : m_quad(Renderer::default_renderer().new_primitives(VertexFormat::V2t2, PrimitiveType::TriFans)),
-          m_texture(Renderer::default_renderer().new_texture())
+        : m_quad(Renderer::default_renderer().create_primitives(VertexFormat::V2t2, PrimitiveType::TriFans)),
+          m_texture(Renderer::default_renderer().create_texture())
 {}
 
 
@@ -88,7 +88,9 @@ void FpsDisplay::init_shader()
     if (m_shader)
         return;
     auto& renderer = Renderer::default_renderer();
-    m_shader = renderer.new_shader(ShaderId::Custom);
+    m_shader = renderer.get_or_create_shader(ShaderId::Custom);
+    if (m_shader->is_ready())
+        return;
 
 #ifdef XCI_EMBED_SHADERS
     bool res = m_shader->load_from_memory(

@@ -25,7 +25,7 @@ using namespace util::log;
 
 FontTexture::FontTexture(unsigned int size, Renderer& renderer)
     : m_renderer(renderer),
-      m_texture(m_renderer.new_texture())
+      m_texture(m_renderer.create_texture())
 {
     if (!m_texture->create({size, size}))
         throw std::runtime_error("Could not create font texture.");

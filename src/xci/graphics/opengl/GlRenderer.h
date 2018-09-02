@@ -28,12 +28,12 @@ namespace graphics {
 class GlRenderer: public Renderer {
 public:
 
-    TexturePtr new_texture() override;
+    TexturePtr create_texture() override;
 
-    ShaderPtr new_shader(ShaderId shader_id) override;
+    ShaderPtr get_or_create_shader(ShaderId shader_id) override;
 
-    PrimitivesPtr new_primitives(VertexFormat format,
-                                 PrimitiveType type) override;
+    PrimitivesPtr create_primitives(VertexFormat format,
+                                    PrimitiveType type) override;
 
 private:
     static constexpr auto c_num_shaders = (size_t)ShaderId::Custom;

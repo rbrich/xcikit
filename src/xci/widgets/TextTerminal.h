@@ -242,7 +242,8 @@ private:
 class Cursor {
 public:
     explicit Cursor(graphics::Renderer& renderer = graphics::Renderer::default_renderer())
-    : m_prim(renderer.new_primitives(graphics::VertexFormat::V2t2, graphics::PrimitiveType::TriFans)) {}
+    : m_prim(renderer.create_primitives(graphics::VertexFormat::V2t2,
+                                        graphics::PrimitiveType::TriFans)) {}
 
     void update(View& view, const util::Rect_f& rect);
     void draw(View& view, const Vec2f& pos);

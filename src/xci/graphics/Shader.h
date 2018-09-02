@@ -39,13 +39,21 @@ class Shader {
 public:
     virtual ~Shader() = default;
 
-    // Load and compile GLSL program
+    /// Is this shader already loaded?
+    virtual bool is_ready() const = 0;
 
+    // Load and compile GLSL program:
+
+    /// Load program from VFS
+    /// This in turn calls either `load_from_file` or `load_from_memory`
+    /// depending on kind of VfsLoader used (real file or archive)
     bool load_from_vfs(const std::string& vertex, const std::string& fragment);
 
+    /// Load program from a file (possibly creating FileWatch for auto-reload)
     virtual bool load_from_file(
             const std::string& vertex, const std::string& fragment) = 0;
 
+    /// Load program directly from memory
     virtual bool load_from_memory(
             const char* vertex_data, int vertex_size,
             const char* fragment_data, int fragment_size) = 0;
