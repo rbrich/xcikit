@@ -663,6 +663,16 @@ void TextTerminal::erase_buffer()
     m_buffer->remove_lines(0, m_buffer->size());
     m_buffer->add_line();
     m_cursor = {0, 0};
+    m_buffer_offset = 0;
+}
+
+
+void TextTerminal::erase_scrollback()
+{
+    if (m_buffer_offset > 0) {
+        m_buffer->remove_lines(0, m_buffer_offset);
+        m_buffer_offset = 0;
+    }
 }
 
 

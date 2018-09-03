@@ -302,6 +302,8 @@ public:
     void erase_page();
     /// Erase whole buffer (page + scrollback)
     void erase_buffer();
+    /// Erase scrollback buffer (the scrolled-out part)
+    void erase_scrollback();
 
     /// Set character buffer to `new_buffer`, returning current buffer.
     /// \param new_buffer   unique_ptr to Buffer object (must be initialized)
