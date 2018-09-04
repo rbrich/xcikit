@@ -1,27 +1,16 @@
 set(XCI_UTIL_SOURCES
+    chrono.cpp
     file.cpp
-    file.h
     FileWatch.cpp
-    FileWatch.h
     format.cpp
-    format.h
     FpsCounter.cpp
-    FpsCounter.h
-    geometry.h
     log.cpp
-    log.h
     SharedLibrary.cpp
-    SharedLibrary.h
     string.cpp
-    string.h
     sys.cpp
-    sys.h
     rtti.cc
-    rtti.h
     Term.cpp
-    Term.h
     Vfs.cpp
-    Vfs.h
     )
 
 

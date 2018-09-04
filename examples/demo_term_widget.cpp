@@ -124,7 +124,7 @@ int main()
     // Make the terminal fullscreen
     window.set_size_callback([&](View& v) {
         auto s = v.scalable_size();
-        terminal.set_position({-s * 0.5});
+        terminal.set_position({-s * 0.5f});
         terminal.set_size(s);
         terminal.bell();
     });
