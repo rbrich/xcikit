@@ -28,12 +28,10 @@ namespace xci::util {
 
 class VfsFile : public std::iostream {
 public:
-    VfsFile() { init(&m_filebuf); }
+    VfsFile() : std::iostream(&m_filebuf) {}
     explicit VfsFile(std::string path,
-                     std::ios_base::openmode mode = std::ios_base::in) {
-        init(&m_filebuf);
-        open(std::move(path), mode);
-    }
+                     std::ios_base::openmode mode = std::ios_base::in)
+        : VfsFile() { open(std::move(path), mode); }
 
     // move/swap
     VfsFile(const VfsFile&) = delete;
@@ -45,7 +43,7 @@ public:
     VfsFile& operator=(VfsFile&& rhs) {
         std::iostream::operator=(std::move(rhs));
         m_filebuf = std::move(rhs.m_filebuf);
-        m_path = std::move(m_path);
+        m_path = std::move(rhs.m_path);
         return *this;
     }
     void swap(VfsFile& rhs) {

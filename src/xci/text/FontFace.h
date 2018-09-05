@@ -24,6 +24,7 @@
 
 #include <memory>  // shared_ptr
 #include <vector>
+#include <string>
 
 namespace xci {
 namespace text {
@@ -57,7 +58,7 @@ public:
     FontFace& operator =(const FontFace&) = delete;
 
     bool load_from_file(const std::string& file_path, int face_index)
-    { return load_from_file(file_path.c_str(), face_index); }
+        { return load_from_file(file_path.c_str(), face_index); }
     bool load_from_file(const char* file_path, int face_index);
     bool load_from_memory(std::vector<uint8_t> buffer, int face_index);
 
