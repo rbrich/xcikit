@@ -125,6 +125,7 @@ Build steps:
     # Otherwise, they will be looked up in default system locations
     # or specified paths (see in cmake-modules).
     ../.conan/create-local.sh
+    conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan
     conan install .. [-s compiler=clang]
     
     # Configure

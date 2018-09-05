@@ -35,7 +35,7 @@ std::vector<std::string_view> split(std::string_view str, char delim)
     size_t end = 0;
     for (;;) {
         end = str.find(delim, pos);
-        if (end != str.npos) {
+        if (end != std::string_view::npos) {
             if (end != pos)
                 res.push_back(str.substr(pos, end - pos));
             pos = end + 1;
@@ -140,6 +140,22 @@ size_t utf8_length(std::string_view str)
         ++length;
     }
     return length;
+}
+
+
+std::string_view utf8_substr(std::string_view str, size_t pos, size_t count)
+{
+    auto begin = str.cbegin();
+    while (pos > 0 && begin != str.cend()) {
+        begin = utf8_next(begin);
+        --pos;
+    }
+    auto end = begin;
+    while (count > 0 && end != str.cend()) {
+        end = utf8_next(end);
+        --count;
+    }
+    return {begin, size_t(end - begin)};
 }
 
 
