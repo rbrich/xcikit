@@ -28,6 +28,7 @@ using graphics::View;
 using graphics::MouseBtnEvent;
 
 
+// FIXME: Checkbox has-an Icon -> m_icon
 class Checkbox: public Icon, public Clickable {
 public:
     Checkbox();

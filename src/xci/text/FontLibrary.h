@@ -45,7 +45,7 @@ public:
 
     static std::shared_ptr<FontLibrary> get_default_instance();
 
-    FT_Library& raw_handle() { return library; }
+    FT_Library raw_handle() { return library; }
 
 private:
     FT_Library library = nullptr;

@@ -38,6 +38,7 @@ class FontTexture;
 // Encapsulates faces, styles and glyph caches for a font
 class Font {
 public:
+    // dtor has to be implemented in cpp file to allow forward declaration of unique_ptr<FontTexture>
     Font();
     ~Font();
 

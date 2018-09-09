@@ -37,8 +37,8 @@ FontFace::~FontFace()
             return;
         }
     }
-    if (stroker) {
-        FT_Stroker_Done(stroker);
+    if (m_stroker) {
+        FT_Stroker_Done(m_stroker);
     }
 }
 
@@ -79,7 +79,7 @@ bool FontFace::load_face(F load_fn)
 bool FontFace::load_from_file(const char* file_path, int face_index)
 {
     return load_face([this, file_path, face_index]() {
-        return FT_New_Face(library->raw_handle(), file_path, face_index, &m_face);
+        return FT_New_Face(m_library->raw_handle(), file_path, face_index, &m_face);
     });
 }
 
@@ -88,7 +88,7 @@ bool FontFace::load_from_memory(std::vector<uint8_t> buffer, int face_index)
 {
     m_memory_buffer = std::move(buffer);
     return load_face([this, face_index]() {
-        return FT_New_Memory_Face(library->raw_handle(),
+        return FT_New_Memory_Face(m_library->raw_handle(),
                 m_memory_buffer.data(), m_memory_buffer.size(),
                 face_index, &m_face);
     });
@@ -115,9 +115,9 @@ bool FontFace::set_size(unsigned pixel_size)
 
 bool FontFace::set_outline()
 {
-    if (stroker == nullptr) {
+    if (m_stroker == nullptr) {
         // Create stroker
-        auto err = FT_Stroker_New(library->raw_handle(), &stroker);
+        auto err = FT_Stroker_New(m_library->raw_handle(), &m_stroker);
         if (err) {
             log_error("FT_Stroker_New: {}", err);
             return false;

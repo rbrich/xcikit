@@ -49,8 +49,8 @@ enum class FontStyle {
 
 class FontFace {
 public:
-    FontFace() : library(FontLibrary::get_default_instance()) {}
-    explicit FontFace(std::shared_ptr<FontLibrary> library) : library(std::move(library)) {}
+    FontFace() : m_library(FontLibrary::get_default_instance()) {}
+    explicit FontFace(std::shared_ptr<FontLibrary> library) : m_library(std::move(library)) {}
     ~FontFace();
 
     // non-copyable
@@ -84,9 +84,9 @@ public:
 private:
     template<typename F> bool load_face(F load_fn);
 
-    std::shared_ptr<FontLibrary> library;
+    std::shared_ptr<FontLibrary> m_library;
     FT_Face m_face = nullptr;
-    FT_Stroker stroker = nullptr;
+    FT_Stroker m_stroker = nullptr;
     std::vector<uint8_t> m_memory_buffer;
 };
 

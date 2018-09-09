@@ -29,12 +29,14 @@ static inline float ft_to_float(FT_F26Dot6 ft_units) {
 }
 
 
-Font::Font() : m_texture(std::make_unique<FontTexture>()) {}
+Font::Font() = default;
 Font::~Font() = default;
 
 
 void Font::add_face(std::unique_ptr<FontFace> face)
 {
+    if (!m_texture)
+        m_texture = std::make_unique<FontTexture>();
     m_faces.emplace_back(std::move(face));
 }
 
@@ -102,7 +104,8 @@ Font::Glyph* Font::get_glyph(CodePoint code_point)
 void Font::clear_cache()
 {
     m_glyphs.clear();
-    m_texture->clear();
+    if (m_texture)
+        m_texture->clear();
 }
 
 
