@@ -10,8 +10,6 @@ namespace xci {
 namespace util {
 
 
-// TODO: Provide configuration options,
-//       pass messages to handlers instead of cerr directly
 class Logger
 {
 public:
@@ -37,10 +35,19 @@ public:
     // Messages below this level are dropped.
     void set_level(Level level) { m_level = level; }
 
+    // Customizable log handler
+    // A function with same signature as `default_handler` can be used
+    // instead of default handler. The function parameters are preformatted
+    // messages and log level. The handler has to add timestamp by itself.
+    static void default_handler(Level lvl, const std::string& msg);
+    using Handler = decltype(&default_handler);
+    void set_handler(Handler handler) { m_handler = handler; }
+
     void log(Level lvl, const std::string& msg);
 
 private:
     Level m_level;
+    Handler m_handler = default_handler;
 };
 
 

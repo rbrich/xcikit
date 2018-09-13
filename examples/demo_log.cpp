@@ -14,7 +14,7 @@
 // limitations under the License.
 
 #include <xci/util/log.h>
-using namespace xci::util::log;
+using namespace xci::util;
 
 #include <ostream>
 using std::ostream;
@@ -36,4 +36,18 @@ int main()
     log_error("beware");
 
     TRACE("trace message");
+
+    // Custom handler
+    Logger::default_instance().set_handler([](Logger::Level lvl, const std::string& msg) {
+        std::cerr << "[custom handler] " << int(lvl) << ": " << msg << std::endl;
+    });
+
+    log_debug("{} {}!", "Hello", "World");
+    log_info("float: {} int: {}!", 1.23f, 42);
+    log_warning("arbitrary object: {}", obj);
+    log_error("beware");
+
+    // Reinstall default handler
+    Logger::default_instance().set_handler(Logger::default_handler);
+    log_info("back to normal");
 }
