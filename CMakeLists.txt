@@ -171,6 +171,20 @@ if (XCI_WITH_OPENGL)
         ${XCI_UTIL_LIBRARY}
         ${CMAKE_DL_LIBS}
         glfw)
+
+    if (BUILD_FRAMEWORKS)
+        set_target_properties(${XCI_GRAPHICS_OPENGL_LIBRARY} PROPERTIES
+            FRAMEWORK TRUE
+            FRAMEWORK_VERSION A
+            MACOSX_FRAMEWORK_IDENTIFIER cz.xci.xci-graphics-opengl
+            # "current version" in semantic format in Mach-O binary file
+            VERSION 1.0.0
+            # "compatibility version" in semantic format in Mach-O binary file
+            SOVERSION 1.0.0
+            PUBLIC_HEADER xci-graphics.h
+            )
+    endif()
+
     set(XCI_GRAPHICS_LIBRARY ${XCI_GRAPHICS_OPENGL_LIBRARY})
     install(TARGETS ${XCI_GRAPHICS_OPENGL_LIBRARY}
         EXPORT xcikit DESTINATION lib)
@@ -229,6 +243,20 @@ target_link_libraries(${XCI_TEXT_LIBRARY}
     ${XCI_GRAPHICS_LIBRARY}
     ${XCI_UTIL_LIBRARY}
     ${FREETYPE_LIBRARIES})
+
+if (BUILD_FRAMEWORKS)
+    set_target_properties(${XCI_TEXT_LIBRARY} PROPERTIES
+        FRAMEWORK TRUE
+        FRAMEWORK_VERSION A
+        MACOSX_FRAMEWORK_IDENTIFIER cz.xci.xci-text
+        # "current version" in semantic format in Mach-O binary file
+        VERSION 1.0.0
+        # "compatibility version" in semantic format in Mach-O binary file
+        SOVERSION 1.0.0
+        PUBLIC_HEADER xci-text.h
+        )
+endif()
+
 install(TARGETS ${XCI_TEXT_LIBRARY} EXPORT xcikit DESTINATION lib)
 
 set(XCI_WIDGETS_LIBRARY xci-widgets)
@@ -236,6 +264,20 @@ add_library(${XCI_WIDGETS_LIBRARY} ${XCI_WIDGETS_SOURCES})
 target_link_libraries(${XCI_WIDGETS_LIBRARY}
     ${XCI_TEXT_LIBRARY}
     ${XCI_GRAPHICS_LIBRARY})
+
+if (BUILD_FRAMEWORKS)
+    set_target_properties(${XCI_WIDGETS_LIBRARY} PROPERTIES
+        FRAMEWORK TRUE
+        FRAMEWORK_VERSION A
+        MACOSX_FRAMEWORK_IDENTIFIER cz.xci.xci-widgets-opengl
+        # "current version" in semantic format in Mach-O binary file
+        VERSION 1.0.0
+        # "compatibility version" in semantic format in Mach-O binary file
+        SOVERSION 1.0.0
+        PUBLIC_HEADER xci-widgets.h
+        )
+endif()
+
 install(TARGETS ${XCI_WIDGETS_LIBRARY} EXPORT xcikit DESTINATION lib)
 
 

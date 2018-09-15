@@ -1,4 +1,5 @@
 option(BUILD_SHARED_LIBS "Build shared libs instead of static libs." OFF)
+option(BUILD_FRAMEWORKS "Build shared libs as OSX frameworks. Implies BUILD_SHARED_LIBS." OFF)
 option(BUILD_LTO "Enable link-time, whole-program optimizations." OFF)
 option(BUILD_WITH_CCACHE "Use ccache as compiler launcher, when available." ON)
 option(BUILD_WITH_IWYU "Run iwyu (Include What You Use) on each compiled file, when available." OFF)
@@ -6,6 +7,10 @@ option(BUILD_PEDANTIC "Build with -Wpedantic -Werror." OFF)
 option(BUILD_WITH_ASAN "Build with AddressSanitizer." OFF)
 option(BUILD_WITH_UBSAN "Build with UndefinedBehaviorSanitizer." OFF)
 option(BUILD_WITH_TSAN "Build with ThreadSanitizer." OFF)
+
+if (BUILD_FRAMEWORKS)
+    set(BUILD_SHARED_LIBS ON)
+endif()
 
 if (BUILD_LTO)
     add_compile_options(-flto)

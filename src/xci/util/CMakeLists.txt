@@ -52,6 +52,19 @@ if (XCI_WITH_TINFO)
     target_compile_options(${XCI_UTIL_LIBRARY} PRIVATE ${TINFO_CFLAGS})
 endif()
 
+if (BUILD_FRAMEWORKS)
+    set_target_properties(${XCI_UTIL_LIBRARY} PROPERTIES
+        FRAMEWORK TRUE
+        FRAMEWORK_VERSION A
+        MACOSX_FRAMEWORK_IDENTIFIER cz.xci.xci-util
+        # "current version" in semantic format in Mach-O binary file
+        VERSION 1.0.0
+        # "compatibility version" in semantic format in Mach-O binary file
+        SOVERSION 1.0.0
+        PUBLIC_HEADER xci-util.h
+        )
+endif()
+
 install(TARGETS ${XCI_UTIL_LIBRARY}
     EXPORT xcikit
     DESTINATION lib
