@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.7)
+cmake_policy(VERSION 3.7)
 project(xcikit C CXX)
 
 option(XCI_WITH_OPENGL "Link with GLFW and build libxci-graphics-opengl." ON)
@@ -23,7 +24,7 @@ include(XciBuildOptions)
 
 if (EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
     include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-    conan_basic_setup()
+    conan_basic_setup(KEEP_RPATHS)
 endif()
 
 
@@ -142,6 +143,13 @@ set(XCI_INCLUDE_DIRS
     $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 
+# Setup RPATH
+if (APPLE)
+    set(CMAKE_INSTALL_RPATH "@executable_path/../lib")
+else()
+    set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
+endif()
+
 set(XCI_COMPAT_LIBRARY xci-compat)
 add_subdirectory(src/xci/compat)
 
@@ -195,8 +203,8 @@ if (XCI_WITH_PANDA)
         PUBLIC
             ${XCI_INCLUDE_DIRS}
         PUBLIC
-        ${PANDA3D_INCLUDE_DIRS}
-        ${PYTHON_INCLUDE_DIRS})
+            ${PANDA3D_INCLUDE_DIRS}
+            ${PYTHON_INCLUDE_DIRS})
     target_link_libraries(${XCI_GRAPHICS_PANDA_LIBRARY}
         ${XCI_UTIL_LIBRARY}
         ${PANDA3D_LIBRARIES})
