@@ -12,10 +12,6 @@ add_executable(demo_filewatch demo_filewatch.cpp)
 target_link_libraries(demo_filewatch ${XCI_UTIL_LIBRARY})
 install(TARGETS demo_filewatch EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 
-add_executable(demo_thread demo_thread.cpp)
-target_link_libraries(demo_thread ${XCI_TEXT_LIBRARY} Threads::Threads)
-install(TARGETS demo_thread EXPORT xcikit DESTINATION ${INST_EXAMPLES})
-
 add_executable(demo_term demo_term.cpp)
 target_link_libraries(demo_term ${XCI_UTIL_LIBRARY})
 install(TARGETS demo_term EXPORT xcikit DESTINATION ${INST_EXAMPLES})

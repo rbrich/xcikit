@@ -49,7 +49,7 @@ enum class FontStyle {
 
 class FontFace {
 public:
-    FontFace() : m_library(FontLibrary::get_default_instance()) {}
+    FontFace() : m_library(FontLibrary::default_instance()) {}
     explicit FontFace(std::shared_ptr<FontLibrary> library) : m_library(std::move(library)) {}
     ~FontFace();
 

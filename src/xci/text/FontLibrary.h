@@ -43,7 +43,7 @@ public:
     FontLibrary(const FontLibrary&) = delete;
     FontLibrary& operator =(const FontLibrary&) = delete;
 
-    static std::shared_ptr<FontLibrary> get_default_instance();
+    static std::shared_ptr<FontLibrary> default_instance();
 
     FT_Library raw_handle() { return library; }
 

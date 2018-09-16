@@ -41,7 +41,7 @@ FontLibrary::~FontLibrary()
 }
 
 
-std::shared_ptr<FontLibrary> FontLibrary::get_default_instance()
+std::shared_ptr<FontLibrary> FontLibrary::default_instance()
 {
     thread_local static auto instance = std::make_shared<FontLibrary>();
     return instance;

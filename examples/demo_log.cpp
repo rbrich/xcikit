@@ -19,10 +19,18 @@ using namespace xci::util;
 #include <ostream>
 using std::ostream;
 
+#include <thread>
+
 
 class ArbitraryObject {};
 ostream& operator<<(ostream& stream, const ArbitraryObject&) {
     return stream << "I am arbitrary!";
+}
+
+
+void thread_run(const std::string& thread_name)
+{
+    log_info("Log from {}", thread_name);
 }
 
 
@@ -50,4 +58,11 @@ int main()
     // Reinstall default handler
     Logger::default_instance().set_handler(Logger::default_handler);
     log_info("back to normal");
+    
+    // Log from threads
+    std::thread a(thread_run, "thread1"), b(thread_run, "thread2");
+    a.join();
+    b.join();
+
+    return EXIT_SUCCESS;
 }
