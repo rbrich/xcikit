@@ -283,8 +283,10 @@ size_t terminal::Line::content_skip(size_t skip, size_t start, Attributes& attr)
 {
     auto pos = start;
     while (skip > 0 && pos < m_content.size()) {
-        if (Attributes::is_introducer(m_content[pos]))
+        if (Attributes::is_introducer(m_content[pos])) {
             pos += attr.decode({content_begin() + pos, m_content.size() - pos});
+            continue;
+        }
         if (m_content[pos] == ctl::blanks) {
             ++pos;
             auto num_blanks = (size_t) m_content[pos];

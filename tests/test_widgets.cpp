@@ -29,6 +29,8 @@ using namespace xci::widgets::terminal::ctl;
 class TestRenderer: public terminal::Renderer {
 public:
     void set_font_style(FontStyle font_style) override {
+        if (font_style == m_font_style)
+            return;
         m_output.append([font_style](){
             switch (font_style) {
                 default:
@@ -38,6 +40,7 @@ public:
                 case FontStyle::BoldItalic: return "[bi]";
             }
         }());
+        m_font_style = font_style;
     }
     void set_fg_color(Color fg) override {
         m_output.append(format("[fg:{}]"));
@@ -56,6 +59,7 @@ public:
 
 private:
     std::string m_output;
+    FontStyle m_font_style = FontStyle::Regular;
 };
 
 
@@ -136,7 +140,11 @@ TEST_CASE( "Line::add_text", "[TextTerminal]" )
 
     line.add_text(20, "skipped after end", attr, /*insert=*/true);
     line.render(r);
-    CHECK(r.output() == "[i]it[b]BOLDbold[r]         skipped after end[r]");
+    CHECK(r.output() == "[i]it[b]BOLDbold[r]          skipped after end");
+
+    line.add_text(18, "#", attr, /*insert=*/false);
+    line.render(r);
+    CHECK(r.output() == "[i]it[b]BOLDbold[r]        # skipped after end");
 }
 
 
