@@ -14,37 +14,38 @@
 // limitations under the License.
 
 #include "FontLibrary.h"
-#include <xci/util/log.h>
+#include "freetype/FtFontLibrary.h"
+#include "freetype/FtFontFace.h"
+#include <xci/util/format.h>
+
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 namespace xci {
 namespace text {
 
-using namespace util::log;
+
+FontError::FontError(int error_code, const char* detail) :
+    Error(util::format("FT_Error: {} detail: {}", error_code, detail)),
+    m_error_code(error_code) {}
 
 
-FontLibrary::FontLibrary()
+FontLibraryPtr FontLibrary::create_instance()
 {
-    auto err = FT_Init_FreeType(&library);
-    if (err) {
-        log_error("FT_Init_FreeType: {}", err);
-    }
-}
-
-
-FontLibrary::~FontLibrary()
-{
-    auto err = FT_Done_FreeType(library);
-    if (err) {
-        log_error("FT_Done_FreeType: {}", err);
-        return;
-    }
+    return std::make_shared<FtFontLibrary>();
 }
 
 
 std::shared_ptr<FontLibrary> FontLibrary::default_instance()
 {
-    thread_local static auto instance = std::make_shared<FontLibrary>();
+    thread_local static auto instance = create_instance();
     return instance;
+}
+
+
+FontFacePtr FontLibrary::create_font_face()
+{
+    return std::make_unique<FtFontFace>(shared_from_this());
 }
 
 

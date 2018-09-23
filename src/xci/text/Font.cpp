@@ -24,11 +24,7 @@ namespace text {
 using namespace util::log;
 
 
-static inline float ft_to_float(FT_F26Dot6 ft_units) {
-    return (float)(ft_units) / 64.f;
-}
-
-
+// dtor has to be implemented in cpp file to allow forward declaration of unique_ptr<FontTexture>
 Font::Font() = default;
 Font::~Font() = default;
 
@@ -76,23 +72,23 @@ Font::Glyph* Font::get_glyph(CodePoint code_point)
 
     // render
     face().set_size(m_size);
-    auto glyph_slot = face().load_glyph(glyph_index);
-    if (glyph_slot == nullptr)
+    FontFace::Glyph glyph_render;
+    if (!face().render_glyph(glyph_index, glyph_render)) {
         return nullptr;
-    auto& bitmap = face().render_glyph();
+    }
 
     // insert into texture
     Glyph glyph;
-    if (!m_texture->add_glyph(bitmap, glyph.m_tex_coords)) {
+    if (!m_texture->add_glyph(glyph_render.bitmap_size, glyph_render.bitmap_buffer,
+                              glyph.m_tex_coords)) {
         // no more space in texture -> reset and try again
         clear_cache();
         return get_glyph(code_point);
     }
 
     // fill metrics
-    glyph.m_base.x = glyph_slot->bitmap_left;  // ft_to_float(gm.horiBearingX)
-    glyph.m_base.y = glyph_slot->bitmap_top;  // ft_to_float(gm.horiBearingY)
-    glyph.m_advance = ft_to_float(glyph_slot->advance.x);
+    glyph.m_bearing = glyph_render.bearing;
+    glyph.m_advance = glyph_render.advance.x;
 
     // insert into cache
     auto glyph_item = m_glyphs.emplace(glyph_key, glyph);

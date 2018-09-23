@@ -47,7 +47,7 @@ int main()
     Window& window = Window::default_window();
     window.create({800, 600}, "XCI layout demo");
 
-    auto face = std::make_unique<FontFace>();
+    auto face = FontLibrary::default_instance()->create_font_face();
     if (!face->load_from_file("fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
         return EXIT_FAILURE;
 

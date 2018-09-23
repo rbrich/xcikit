@@ -1,4 +1,4 @@
-// rtti.h created on 2018-07-03, part of XCI toolkit
+// FtFontLibrary.h created on 2018-09-23, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,22 +13,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_UTIL_RTTI_H
-#define XCI_UTIL_RTTI_H
+#ifndef XCI_TEXT_FREETYPE_FONTLIBRARY_H
+#define XCI_TEXT_FREETYPE_FONTLIBRARY_H
 
-#include <string>
-#include <typeinfo>
+#include <xci/text/FontLibrary.h>
 
-namespace xci {
-namespace util {
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
-// Demangle type name when mangled (GCC/Clang)
-std::string demangle_type_name(const char* name);
+namespace xci::text {
 
-// Returns human-readable type name for given typeid()
-// Typical usage: `type_name(typeid(*this))`
-inline std::string type_name(const std::type_info& ti) { return demangle_type_name(ti.name()); }
 
-}}  // namespace xci::util
+class FtFontLibrary: public FontLibrary {
+public:
+    FtFontLibrary();
+    ~FtFontLibrary() override;
 
-#endif // XCI_UTIL_RTTI_H
+    FT_Library ft_library() const { return m_ft_library; }
+
+private:
+    FT_Library m_ft_library = nullptr;
+};
+
+
+} // xci::text
+
+#endif // XCI_TEXT_FREETYPE_FONTLIBRARY_H

@@ -108,10 +108,10 @@ void Word::draw(graphics::View& target, const util::Vec2f& pos) const
         if (glyph == nullptr)
             continue;
 
-        Rect_f rect{pen.x + glyph->base_x() * pxf.x,
-                    pen.y - glyph->base_y() * pxf.y,
-                    glyph->width() * pxf.x,
-                    glyph->height() * pxf.y};
+        Rect_f rect{pen.x + glyph->bearing().x * pxf.x,
+                    pen.y - glyph->bearing().y * pxf.y,
+                    glyph->size().x * pxf.x,
+                    glyph->size().y * pxf.y};
         sprites.add_sprite(rect, glyph->tex_coords());
         if (show_bboxes)
             bboxes.add_rectangle(rect, 1 * pxf.x);

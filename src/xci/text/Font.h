@@ -38,7 +38,6 @@ class FontTexture;
 // Encapsulates faces, styles and glyph caches for a font
 class Font {
 public:
-    // dtor has to be implemented in cpp file to allow forward declaration of unique_ptr<FontTexture>
     Font();
     ~Font();
 
@@ -46,7 +45,8 @@ public:
     Font(const Font&) = delete;
     Font& operator =(const Font&) = delete;
 
-    // Add a face. Call multiple times if the strokes are in separate files.
+    // Add a face. Call multiple times to add differect strokes
+    // (either from separate files or using face_index).
     void add_face(std::unique_ptr<FontFace> face);
 
     // Get currently selected face.
@@ -74,17 +74,15 @@ public:
 
     class Glyph {
     public:
-        float base_x() const { return m_base.x; }
-        float base_y() const { return m_base.y; }
-        float width() const { return m_tex_coords.w; }
-        float height() const { return m_tex_coords.h; }
+        util::Vec2u size() const { return m_tex_coords.size(); }
+        const util::Vec2i& bearing() const { return m_bearing; }
         float advance() const { return m_advance; }
 
         const Rect_u& tex_coords() const { return m_tex_coords; };
 
     private:
         Rect_u m_tex_coords;
-        util::Vec2f m_base;  // FT bitmap_left, bitmap_top
+        util::Vec2i m_bearing;  // FT bitmap_left, bitmap_top
         float m_advance = 0;
 
         friend class Font;

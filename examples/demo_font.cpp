@@ -51,7 +51,7 @@ int main()
 
     Font font;
     {
-        auto face = std::make_unique<FontFace>();
+        auto face = FontLibrary::default_instance()->create_font_face();
         auto face_file = vfs.open("fonts/Enriqueta/Enriqueta-Regular.ttf");
         if (face_file.is_real_file()) {
             // it's a real file, use only the path, let FreeType read the data

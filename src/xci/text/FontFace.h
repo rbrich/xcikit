@@ -17,17 +17,13 @@
 #define XCI_TEXT_FONTFACE_H
 
 #include <xci/text/FontLibrary.h>
-
-#include <ft2build.h>
-#include FT_FREETYPE_H
-#include FT_STROKER_H
+#include <xci/util/geometry.h>
 
 #include <memory>  // shared_ptr
 #include <vector>
 #include <string>
 
-namespace xci {
-namespace text {
+namespace xci::text {
 
 
 using CodePoint = char32_t;
@@ -49,48 +45,41 @@ enum class FontStyle {
 
 class FontFace {
 public:
-    FontFace() : m_library(FontLibrary::default_instance()) {}
-    explicit FontFace(std::shared_ptr<FontLibrary> library) : m_library(std::move(library)) {}
-    ~FontFace();
+    explicit FontFace(FontLibraryPtr library) : m_library(std::move(library)) {}
+    virtual ~FontFace() = default;
 
     // non-copyable
     FontFace(const FontFace&) = delete;
     FontFace& operator =(const FontFace&) = delete;
 
-    bool load_from_file(const std::string& file_path, int face_index)
-        { return load_from_file(file_path.c_str(), face_index); }
-    bool load_from_file(const char* file_path, int face_index);
-    bool load_from_memory(std::vector<uint8_t> buffer, int face_index);
+    virtual bool load_from_file(std::string_view file_path, int face_index) = 0;
+    virtual bool load_from_memory(std::vector<uint8_t> buffer, int face_index) = 0;
 
-    bool set_size(unsigned pixel_size);
+    virtual bool set_size(unsigned pixel_size) = 0;
 
-    bool set_outline();  // TODO
+    virtual bool set_outline() = 0;
 
-    FontStyle style() const;
-    float line_height() const;
-    float max_advance();
-    float ascender() const;
-    float descender() const;
+    virtual FontStyle style() const = 0;
+    virtual float line_height() const = 0;
+    virtual float max_advance() = 0;
+    virtual float ascender() const = 0;
+    virtual float descender() const = 0;
 
-    GlyphIndex get_glyph_index(CodePoint code_point) const;
+    virtual GlyphIndex get_glyph_index(CodePoint code_point) const = 0;
 
-    // Returns null on error
-    FT_GlyphSlot load_glyph(GlyphIndex glyph_index);
+    struct Glyph {
+        util::Vec2u bitmap_size;
+        uint8_t* bitmap_buffer = nullptr;
+        util::Vec2i bearing;
+        util::Vec2f advance;
+    };
+    virtual bool render_glyph(GlyphIndex glyph_index, Glyph& glyph) = 0;
 
-    FT_Glyph_Metrics& glyph_metrics();
-
-    FT_Bitmap& render_glyph();
-
-private:
-    template<typename F> bool load_face(F load_fn);
-
+protected:
     std::shared_ptr<FontLibrary> m_library;
-    FT_Face m_face = nullptr;
-    FT_Stroker m_stroker = nullptr;
-    std::vector<uint8_t> m_memory_buffer;
 };
 
 
-}} // namespace xci::text
+} // namespace xci::text
 
 #endif // XCI_TEXT_FONTFACE_H

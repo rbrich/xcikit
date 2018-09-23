@@ -16,9 +16,6 @@
 #ifndef XCI_TEXT_FONTTEXTURE_H
 #define XCI_TEXT_FONTTEXTURE_H
 
-#include <ft2build.h>
-#include FT_FREETYPE_H
-
 #include <rbp/MaxRectsBinPack.h>
 #include <xci/graphics/Renderer.h>
 #include <xci/util/geometry.h>
@@ -26,6 +23,7 @@
 namespace xci {
 namespace text {
 
+using util::Vec2u;
 using util::Rect_u;
 using graphics::TexturePtr;
 using graphics::Renderer;
@@ -44,9 +42,12 @@ public:
     FontTexture(const FontTexture&) = delete;
     FontTexture& operator =(const FontTexture&) = delete;
 
-    // Insert a glyph bitmap into texture, get texture coords
-    // Returns false when there is no space.
-    bool add_glyph(const FT_Bitmap& bitmap, Rect_u& coords);
+    /// Insert a glyph bitmap into texture, return texture coords
+    /// \param size     IN size of glyph bitmap
+    /// \param pixels   IN data of glyph bitmap
+    /// \param coords   OUT new texture coordinates for the glyph
+    /// \returns        false when there is no space
+    bool add_glyph(Vec2u size, const uint8_t* pixels, Rect_u& coords);
 
     // Get the whole texture (cut the coords returned by `insert`
     // and you'll get your glyph picture).

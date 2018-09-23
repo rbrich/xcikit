@@ -63,14 +63,15 @@ set(XCI_GRAPHICS_PANDA_SOURCES
 
 set(XCI_TEXT_SOURCES
     src/xci/text/FontLibrary.cpp
-    src/xci/text/FontFace.cpp
     src/xci/text/FontTexture.cpp
     src/xci/text/Font.cpp
     src/xci/text/Text.cpp
     src/xci/text/Layout.cpp
     src/xci/text/Markup.cpp
     src/xci/text/Style.cpp
-    src/xci/text/layout/Page.cpp)
+    src/xci/text/layout/Page.cpp
+    src/xci/text/freetype/FtFontLibrary.cpp
+    src/xci/text/freetype/FtFontFace.cpp)
 
 set(XCI_WIDGETS_SOURCES
     src/xci/widgets/Button.cpp

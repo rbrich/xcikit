@@ -16,42 +16,55 @@
 #ifndef XCI_TEXT_FONTLIBRARY_H
 #define XCI_TEXT_FONTLIBRARY_H
 
-#include <ft2build.h>
-#include FT_FREETYPE_H
-
 #include <memory>
+#include <vector>
+#include <string>
+#include <xci/util/error.h>
 
-namespace xci {
-namespace text {
+namespace xci::text {
 
 
-// FontLibrary is a factory for FontFace objects.
-//
-// By default, it has one instance per thread, unless you construct
-// new instances explicitly. In that case, it's up to you how you manage
-// their lifetime. But keep in mind that the FontLibrary instance must outlive
-// any FontFaces created with it.
-//
-// See also the FT_Library documentation.
-
-class FontLibrary {
+/// Fatal errors in font library (FreeType)
+class FontError: public util::Error {
 public:
-    FontLibrary();
-    ~FontLibrary();
+    FontError(int error_code, const char* detail);
+
+    // FreeType error code (FT_Error)
+    int error_code() const { return m_error_code; }
+
+private:
+    int m_error_code;
+};
+
+
+class FontLibrary;
+using FontLibraryPtr = std::shared_ptr<FontLibrary>;
+class FontFace;
+using FontFacePtr = std::unique_ptr<FontFace>;
+
+
+/// FontLibrary is a factory for FontFace objects.
+///
+/// By default, it has one instance per thread, unless you construct
+/// new instances explicitly. In that case, it's up to you how you manage
+/// their lifetime. But keep in mind that the FontLibrary instance must outlive
+/// any FontFaces created with it.
+class FontLibrary : public std::enable_shared_from_this<FontLibrary> {
+public:
+    FontLibrary() = default;
+    virtual ~FontLibrary() = default;
 
     // non-copyable
     FontLibrary(const FontLibrary&) = delete;
     FontLibrary& operator =(const FontLibrary&) = delete;
 
-    static std::shared_ptr<FontLibrary> default_instance();
+    static FontLibraryPtr create_instance();
+    static FontLibraryPtr default_instance();
 
-    FT_Library raw_handle() { return library; }
-
-private:
-    FT_Library library = nullptr;
+    FontFacePtr create_font_face();
 };
 
 
-}} // namespace xci::text
+} // namespace xci::text
 
 #endif // XCI_TEXT_FONTLIBRARY_H

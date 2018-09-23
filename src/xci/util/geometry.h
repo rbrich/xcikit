@@ -125,8 +125,8 @@ std::ostream& operator <<(std::ostream& s, Vec2<T> v) {
     return s << "{" << v.x << ", " << v.y << "}";
 }
 
-using Vec2i = Vec2<int>;
-using Vec2u = Vec2<unsigned int>;
+using Vec2i = Vec2<int32_t>;
+using Vec2u = Vec2<uint32_t>;
 using Vec2f = Vec2<float>;
 
 

@@ -858,10 +858,10 @@ void TextTerminal::draw(View& view, State state)
                     glyph = font.get_glyph(' ');
 
                 sprites.add_sprite({
-                        pen.x + glyph->base_x() * pxf.x,
-                        pen.y + (ascender - glyph->base_y()) * pxf.y,
-                        glyph->width() * pxf.x,
-                        glyph->height() * pxf.y
+                        pen.x + glyph->bearing().x * pxf.x,
+                        pen.y + (ascender - glyph->bearing().y) * pxf.y,
+                        glyph->size().x * pxf.x,
+                        glyph->size().y * pxf.y
                     }, glyph->tex_coords());
 
                 boxes.add_rectangle({pen, cell_size});

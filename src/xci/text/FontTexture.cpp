@@ -34,10 +34,10 @@ FontTexture::FontTexture(unsigned int size, Renderer& renderer)
 }
 
 
-bool FontTexture::add_glyph(const FT_Bitmap& bitmap, Rect_u& coords)
+bool FontTexture::add_glyph(Vec2u size, const uint8_t* pixels, Rect_u& coords)
 {
     // empty bitmap -> zero coords
-    if (bitmap.width == 0 || bitmap.rows == 0) {
+    if (size.x == 0 || size.y == 0) {
         coords = {0, 0, 0, 0};
         return true;
     }
@@ -45,7 +45,7 @@ bool FontTexture::add_glyph(const FT_Bitmap& bitmap, Rect_u& coords)
     // try to place the rect
     constexpr int p = 1;  // padding
     constexpr int pp = 2 * p;
-    rbp::Rect rect = m_binpack.Insert(bitmap.width + pp, bitmap.rows + pp,
+    rbp::Rect rect = m_binpack.Insert(size.x + pp, size.y + pp,
                                       rbp::MaxRectsBinPack::RectBestShortSideFit);
     if (rect.height == 0 || rect.width == 0)
         return false;
@@ -54,18 +54,11 @@ bool FontTexture::add_glyph(const FT_Bitmap& bitmap, Rect_u& coords)
     assert(rect.x >= 0);
     assert(rect.y >= 0);
 
-    // check that the bitmap is as expected (this depends
-    // on FreeType settings which are under our control)
-    assert(bitmap.num_grays == 256);
-    assert((int)bitmap.width == bitmap.pitch);
-    assert(bitmap.pixel_mode == FT_PIXEL_MODE_GRAY);
-
     // set output coords
-    coords = {unsigned(rect.x + p), unsigned(rect.y + p), bitmap.width, bitmap.rows};
+    coords = {unsigned(rect.x + p), unsigned(rect.y + p), size.x, size.y};
 
     // copy pixels into texture
-    m_texture->update(bitmap.buffer, coords);
-
+    m_texture->update(pixels, coords);
     return true;
 }
 

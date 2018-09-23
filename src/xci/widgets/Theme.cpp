@@ -16,6 +16,7 @@
 #include "Theme.h"
 #include <xci/util/Vfs.h>
 #include <xci/util/file.h>
+#include <xci/text/FontLibrary.h>
 
 namespace xci {
 namespace widgets {
@@ -60,7 +61,7 @@ Theme& Theme::default_theme()
 static bool impl_load_font_face(text::Font& font, const char* file_path, int face_index)
 {
     auto& vfs = util::Vfs::default_instance();
-    auto font_face = std::make_unique<text::FontFace>();
+    auto font_face = text::FontLibrary::default_instance()->create_font_face();
     auto face_file = vfs.open(file_path);
     if (face_file.is_real_file()) {
         // it's a real file, use only the path, let FreeType read the data
