@@ -18,8 +18,8 @@
 #include <xci/widgets/FpsDisplay.h>
 #include <xci/widgets/TextInput.h>
 #include <xci/graphics/Window.h>
-#include <xci/util/Vfs.h>
-#include <xci/util/format.h>
+#include <xci/core/Vfs.h>
+#include <xci/core/format.h>
 #include <xci/config.h>
 #include <random>
 #include <cstdlib>
@@ -27,7 +27,7 @@
 using namespace xci::text;
 using namespace xci::graphics;
 using namespace xci::widgets;
-using namespace xci::util;
+using namespace xci::core;
 
 
 class MousePosInfo: public Widget {

@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <xci/util/log.h>
-using namespace xci::util;
+#include <xci/core/log.h>
+using namespace xci::core;
 
 #include <ostream>
 using std::ostream;

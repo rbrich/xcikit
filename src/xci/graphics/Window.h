@@ -17,7 +17,7 @@
 #define XCI_GRAPHICS_WINDOW_H
 
 #include <xci/graphics/View.h>
-#include <xci/util/geometry.h>
+#include <xci/core/geometry.h>
 
 #include <string>
 #include <memory>
@@ -28,8 +28,8 @@
 namespace xci {
 namespace graphics {
 
-using xci::util::Vec2u;
-using xci::util::Vec2f;
+using xci::core::Vec2u;
+using xci::core::Vec2f;
 
 
 enum class Key {

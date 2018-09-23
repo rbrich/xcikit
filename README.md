@@ -57,7 +57,7 @@ Long-term goal:
 
 These goals should be achieved by separate libraries:
 
-- `xci-util`
+- `xci-core`
 - `xci-graphics`
 - `xci-text`
 - `xci-widgets`
@@ -69,7 +69,7 @@ All rendering goes through `xci-graphics` library, which provides
 adapters for different frameworks and APIs, including low-level OpenGL.
 Graphics lib can also be used separately when neither UI nor text rendering is needed.
 
-All of the above use `xci-util`, which contains miscellaneous utilities,
+All of the above use `xci-core`, which contains miscellaneous utilities,
 This can also be used separately. 
 
 Technologies:

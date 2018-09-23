@@ -19,14 +19,14 @@
 #include <xci/text/Text.h>
 #include <xci/graphics/Window.h>
 #include <xci/graphics/Sprites.h>
-#include <xci/util/file.h>
-#include <xci/util/Vfs.h>
+#include <xci/core/file.h>
+#include <xci/core/Vfs.h>
 #include <xci/config.h>
 #include <cstdlib>
 
 using namespace xci::text;
 using namespace xci::graphics;
-using namespace xci::util;
+using namespace xci::core;
 
 // sample text with forced newlines
 static const char * sample_text = R"SAMPLE(

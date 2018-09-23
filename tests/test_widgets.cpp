@@ -17,13 +17,13 @@
 #include "catch.hpp"
 
 #include <xci/widgets/TextTerminal.h>
-#include <xci/util/string.h>
-#include <xci/util/format.h>
+#include <xci/core/string.h>
+#include <xci/core/format.h>
 
 using namespace xci::widgets;
 using namespace xci::text;
 using namespace xci::graphics;
-using namespace xci::util;
+using namespace xci::core;
 using namespace xci::widgets::terminal::ctl;
 
 class TestRenderer: public terminal::Renderer {

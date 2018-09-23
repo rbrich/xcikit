@@ -14,13 +14,13 @@
 // limitations under the License.
 
 #include "Shader.h"
-#include <xci/util/Vfs.h>
-#include <xci/util/file.h>
+#include <xci/core/Vfs.h>
+#include <xci/core/file.h>
 
 
 namespace xci::graphics {
 
-using namespace xci::util;
+using namespace xci::core;
 
 
 bool Shader::load_from_vfs(const std::string& vertex, const std::string& fragment)

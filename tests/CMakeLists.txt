@@ -1,6 +1,6 @@
-add_executable(test_util test_util.cpp)
-target_link_libraries(test_util Catch::Catch ${XCI_UTIL_LIBRARY})
-add_test(NAME test_util COMMAND test_util)
+add_executable(test_core test_core.cpp)
+target_link_libraries(test_core Catch::Catch ${XCI_CORE_LIBRARY})
+add_test(NAME test_core COMMAND test_core)
 
 add_executable(test_graphics test_graphics.cpp)
 target_link_libraries(test_graphics Catch::Catch ${XCI_GRAPHICS_LIBRARY})

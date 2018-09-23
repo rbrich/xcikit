@@ -18,13 +18,13 @@
 
 #include <rbp/MaxRectsBinPack.h>
 #include <xci/graphics/Renderer.h>
-#include <xci/util/geometry.h>
+#include <xci/core/geometry.h>
 
 namespace xci {
 namespace text {
 
-using util::Vec2u;
-using util::Rect_u;
+using core::Vec2u;
+using core::Rect_u;
 using graphics::TexturePtr;
 using graphics::Renderer;
 

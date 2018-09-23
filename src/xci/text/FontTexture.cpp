@@ -15,12 +15,12 @@
 
 #include <xci/text/FontTexture.h>
 
-#include <xci/util/log.h>
+#include <xci/core/log.h>
 
 namespace xci {
 namespace text {
 
-using namespace util::log;
+using namespace core::log;
 
 
 FontTexture::FontTexture(unsigned int size, Renderer& renderer)

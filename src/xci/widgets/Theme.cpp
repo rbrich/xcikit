@@ -14,8 +14,8 @@
 // limitations under the License.
 
 #include "Theme.h"
-#include <xci/util/Vfs.h>
-#include <xci/util/file.h>
+#include <xci/core/Vfs.h>
+#include <xci/core/file.h>
 #include <xci/text/FontLibrary.h>
 
 namespace xci {
@@ -60,7 +60,7 @@ Theme& Theme::default_theme()
 
 static bool impl_load_font_face(text::Font& font, const char* file_path, int face_index)
 {
-    auto& vfs = util::Vfs::default_instance();
+    auto& vfs = core::Vfs::default_instance();
     auto font_face = text::FontLibrary::default_instance()->create_font_face();
     auto face_file = vfs.open(file_path);
     if (face_file.is_real_file()) {
@@ -69,7 +69,7 @@ static bool impl_load_font_face(text::Font& font, const char* file_path, int fac
             return false;
     } else {
         // not real file, we have to read all data into memory
-        auto face_data = util::read_binary_file(face_file);
+        auto face_data = core::read_binary_file(face_file);
         if (!font_face->load_from_memory(std::move(face_data), face_index))
             return false;
     }

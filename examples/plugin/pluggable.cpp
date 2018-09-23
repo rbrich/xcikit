@@ -1,7 +1,7 @@
 #include <string>
-#include <xci/util/log.h>
+#include <xci/core/log.h>
 
-using namespace xci::util::log;
+using namespace xci::core::log;
 
 static void lib_load() __attribute__((constructor));
 static void lib_load() {

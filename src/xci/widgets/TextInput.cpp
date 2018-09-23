@@ -14,15 +14,15 @@
 // limitations under the License.
 
 #include "TextInput.h"
-#include <xci/util/string.h>
-#include <xci/util/geometry.h>
+#include <xci/core/string.h>
+#include <xci/core/geometry.h>
 
 namespace xci {
 namespace widgets {
 
 using namespace xci::graphics;
 using namespace xci::text;
-using namespace xci::util;
+using namespace xci::core;
 
 
 TextInput::TextInput(const std::string& string)

@@ -13,13 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <xci/util/log.h>
-#include <xci/util/FileWatch.h>
+#include <xci/core/log.h>
+#include <xci/core/FileWatch.h>
 #include <atomic>
 #include <csignal>
 #include <unistd.h>
 
-using namespace xci::util;
+using namespace xci::core;
 
 std::atomic_bool done {false};
 

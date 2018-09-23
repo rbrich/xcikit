@@ -16,7 +16,7 @@
 #include "FontLibrary.h"
 #include "freetype/FtFontLibrary.h"
 #include "freetype/FtFontFace.h"
-#include <xci/util/format.h>
+#include <xci/core/format.h>
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -26,7 +26,7 @@ namespace text {
 
 
 FontError::FontError(int error_code, const char* detail) :
-    Error(util::format("FT_Error: {} detail: {}", error_code, detail)),
+    Error(core::format("FT_Error: {} detail: {}", error_code, detail)),
     m_error_code(error_code) {}
 
 

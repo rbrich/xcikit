@@ -18,17 +18,17 @@
 #include <xci/widgets/Icon.h>
 #include <xci/text/Text.h>
 #include <xci/graphics/Window.h>
-#include <xci/util/Vfs.h>
-#include <xci/util/format.h>
-#include <xci/util/log.h>
+#include <xci/core/Vfs.h>
+#include <xci/core/format.h>
+#include <xci/core/log.h>
 #include <xci/config.h>
 #include <cstdlib>
 
 using namespace xci::widgets;
 using namespace xci::text;
 using namespace xci::graphics;
-using namespace xci::util;
-using namespace xci::util::log;
+using namespace xci::core;
+using namespace xci::core::log;
 
 int main()
 {

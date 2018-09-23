@@ -16,7 +16,7 @@
 #include "Shape.h"
 #include "Renderer.h"
 #include <xci/config.h>
-#include <xci/util/log.h>
+#include <xci/core/log.h>
 
 #ifdef XCI_EMBED_SHADERS
 #define INCBIN_PREFIX g_
@@ -31,7 +31,7 @@ INCBIN(ellipse_frag, XCI_SHARE_DIR "/shaders/ellipse.frag");
 namespace xci {
 namespace graphics {
 
-using namespace xci::util::log;
+using namespace xci::core::log;
 
 
 Shape::Shape(const Color& fill_color, const Color& outline_color,

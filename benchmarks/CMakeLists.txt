@@ -1,2 +1,2 @@
-add_executable(bm_util bm_util.cpp)
-target_link_libraries(bm_util benchmark::benchmark ${XCI_UTIL_LIBRARY})
+add_executable(bm_core bm_core.cpp)
+target_link_libraries(bm_core benchmark::benchmark ${XCI_CORE_LIBRARY})

@@ -19,13 +19,13 @@
 #include <memory>
 #include <vector>
 #include <string>
-#include <xci/util/error.h>
+#include <xci/core/error.h>
 
 namespace xci::text {
 
 
 /// Fatal errors in font library (FreeType)
-class FontError: public util::Error {
+class FontError: public core::Error {
 public:
     FontError(int error_code, const char* detail);
 

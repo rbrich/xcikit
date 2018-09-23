@@ -13,13 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <xci/util/log.h>
+#include <xci/core/log.h>
 #include "FtFontFace.h"
 #include "FtFontLibrary.h"
 
 namespace xci::text {
 
-using namespace util::log;
+using namespace core::log;
 
 
 static inline float ft_to_float(FT_F26Dot6 ft_units) {

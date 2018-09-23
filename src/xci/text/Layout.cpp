@@ -77,7 +77,7 @@ void Layout::typeset(const graphics::View& target)
 }
 
 
-void Layout::draw(View& target, const util::Vec2f& pos) const
+void Layout::draw(View& target, const core::Vec2f& pos) const
 {
     auto pxr = target.screen_ratio();
 
@@ -150,7 +150,7 @@ void Layout::reset_tab_stops()
 }
 
 
-void Layout::set_offset(const util::Vec2f& offset)
+void Layout::set_offset(const core::Vec2f& offset)
 {
     m_elements.push_back(std::make_unique<SetOffset>(offset));
 }
@@ -222,9 +222,9 @@ Span* Layout::get_span(const std::string& name)
 }
 
 
-util::Rect_f Layout::bbox() const
+core::Rect_f Layout::bbox() const
 {
-    util::Rect_f bbox;
+    core::Rect_f bbox;
     bool first = true;
     m_page.foreach_line([&](const Line& line) {
         if (first) {

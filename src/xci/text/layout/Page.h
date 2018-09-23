@@ -17,7 +17,7 @@
 #define XCI_TEXT_LAYOUT_PAGE_H
 
 #include <xci/text/Style.h>
-#include <xci/util/geometry.h>
+#include <xci/core/geometry.h>
 
 #include <string>
 #include <vector>
@@ -45,17 +45,17 @@ class Word {
 public:
     Word(Page& page, const std::string& string);
 
-    const util::Rect_f& bbox() const { return m_bbox; }
+    const core::Rect_f& bbox() const { return m_bbox; }
     float baseline() const { return m_baseline; }
     Style& style() { return m_style; }
 
-    void draw(graphics::View& target, const util::Vec2f& pos) const;
+    void draw(graphics::View& target, const core::Vec2f& pos) const;
 
 private:
     std::string m_string;
     Style m_style;
-    util::Vec2f m_pos;  // relative to page origin (top-left corner)
-    util::Rect_f m_bbox;
+    core::Vec2f m_pos;  // relative to page origin (top-left corner)
+    core::Rect_f m_bbox;
     float m_baseline = 0;  // relative to bbox top
 };
 
@@ -68,7 +68,7 @@ public:
     bool is_empty() const { return m_words.empty(); }
 
     // Retrieve bounding box of the whole line, relative to page
-    const util::Rect_f& bbox() const;
+    const core::Rect_f& bbox() const;
     float baseline() const;
 
     // Padding to be added to each side of the bounding box
@@ -77,7 +77,7 @@ public:
 private:
     std::vector<Word*> m_words;
     float m_padding = 0;
-    mutable util::Rect_f m_bbox;
+    mutable core::Rect_f m_bbox;
     mutable bool m_bbox_valid = false;
 };
 
@@ -115,7 +115,7 @@ public:
     // Target view which will be queried for sizes
     // If not set (nullptr), some generic, probably wrong sizes will be used.
     void set_target(const graphics::View* target) { m_target = target; }
-    util::Vec2f target_framebuffer_ratio() const;
+    core::Vec2f target_framebuffer_ratio() const;
 
     // Reset all state
     void clear();
@@ -143,12 +143,12 @@ public:
     // ------------------------------------------------------------------------
 
     // Pen is a position in page where elements are printed
-    void set_pen(util::Vec2f pen) { m_pen = pen; }
-    void set_pen_offset(util::Vec2f pen_offset) { m_pen_offset = pen_offset; }
-    util::Vec2f pen() const { return m_pen + m_pen_offset * m_style.size(); }
+    void set_pen(core::Vec2f pen) { m_pen = pen; }
+    void set_pen_offset(core::Vec2f pen_offset) { m_pen_offset = pen_offset; }
+    core::Vec2f pen() const { return m_pen + m_pen_offset * m_style.size(); }
 
     // Advance pen. The relative coords should be positive, don't move back.
-    void advance_pen(util::Vec2f advance) { m_pen += advance; }
+    void advance_pen(core::Vec2f advance) { m_pen += advance; }
 
     // Finish current line, apply alignment and move to next one.
     // Does nothing if current line is empty.
@@ -192,8 +192,8 @@ private:
     const graphics::View* m_target = nullptr;
 
     // running state
-    util::Vec2f m_pen;  // pen position
-    util::Vec2f m_pen_offset;
+    core::Vec2f m_pen;  // pen position
+    core::Vec2f m_pen_offset;
     Style m_style;  // text style
 
     // page attributes

@@ -154,8 +154,8 @@ endif()
 set(XCI_COMPAT_LIBRARY xci-compat)
 add_subdirectory(src/xci/compat)
 
-set(XCI_UTIL_LIBRARY xci-util)
-add_subdirectory(src/xci/util)
+set(XCI_CORE_LIBRARY xci-core)
+add_subdirectory(src/xci/core)
 
 if (XCI_WITH_OPENGL)
     set(XCI_GRAPHICS_OPENGL_LIBRARY xci-graphics-opengl)
@@ -169,7 +169,7 @@ if (XCI_WITH_OPENGL)
         PRIVATE
             ext)
     target_link_libraries(${XCI_GRAPHICS_OPENGL_LIBRARY}
-        ${XCI_UTIL_LIBRARY}
+        ${XCI_CORE_LIBRARY}
         ${CMAKE_DL_LIBS}
         glfw)
 
@@ -201,7 +201,7 @@ if (XCI_WITH_SFML)
         PRIVATE
             ${SFML_INCLUDE_DIR})
     target_link_libraries(${XCI_GRAPHICS_SFML_LIBRARY}
-        ${XCI_UTIL_LIBRARY}
+        ${XCI_CORE_LIBRARY}
         ${SFML_LIBRARIES})
     if (NOT DEFINED XCI_GRAPHICS_LIBRARY)
         set(XCI_GRAPHICS_LIBRARY ${XCI_GRAPHICS_SFML_LIBRARY})
@@ -221,7 +221,7 @@ if (XCI_WITH_PANDA)
             ${PANDA3D_INCLUDE_DIRS}
             ${PYTHON_INCLUDE_DIRS})
     target_link_libraries(${XCI_GRAPHICS_PANDA_LIBRARY}
-        ${XCI_UTIL_LIBRARY}
+        ${XCI_CORE_LIBRARY}
         ${PANDA3D_LIBRARIES})
     if (NOT DEFINED XCI_GRAPHICS_LIBRARY)
         set(XCI_GRAPHICS_LIBRARY ${XCI_GRAPHICS_PANDA_LIBRARY})
@@ -242,7 +242,7 @@ target_include_directories(${XCI_TEXT_LIBRARY}
         ext)
 target_link_libraries(${XCI_TEXT_LIBRARY}
     ${XCI_GRAPHICS_LIBRARY}
-    ${XCI_UTIL_LIBRARY}
+    ${XCI_CORE_LIBRARY}
     ${FREETYPE_LIBRARIES})
 
 if (BUILD_FRAMEWORKS)
@@ -337,7 +337,7 @@ endif ()
 
 install(DIRECTORY src/xci DESTINATION include
     FILES_MATCHING
-    REGEX "xci/(graphics|util)/[a-z]+$" EXCLUDE  # internal headers
+    REGEX "xci/(graphics|core)/[a-z]+$" EXCLUDE  # internal headers
     PATTERN "*.h")
 install(DIRECTORY ext/nonstd DESTINATION include/xci/compat)
 

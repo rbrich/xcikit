@@ -14,12 +14,12 @@
 // limitations under the License.
 
 #include "Icon.h"
-#include <xci/util/string.h>
+#include <xci/core/string.h>
 
 namespace xci {
 namespace widgets {
 
-using xci::util::to_utf8;
+using xci::core::to_utf8;
 using namespace xci::graphics;
 using namespace xci::text;
 

@@ -2,22 +2,22 @@ add_subdirectory(plugin)
 
 set(INST_EXAMPLES share/xcikit/examples)
 
-# util etc.
+# core
 
 add_executable(demo_log demo_log.cpp)
-target_link_libraries(demo_log ${XCI_UTIL_LIBRARY})
+target_link_libraries(demo_log ${XCI_CORE_LIBRARY})
 install(TARGETS demo_log EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 
 add_executable(demo_filewatch demo_filewatch.cpp)
-target_link_libraries(demo_filewatch ${XCI_UTIL_LIBRARY})
+target_link_libraries(demo_filewatch ${XCI_CORE_LIBRARY})
 install(TARGETS demo_filewatch EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 
 add_executable(demo_term demo_term.cpp)
-target_link_libraries(demo_term ${XCI_UTIL_LIBRARY})
+target_link_libraries(demo_term ${XCI_CORE_LIBRARY})
 install(TARGETS demo_term EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 
 add_executable(demo_vfs demo_vfs.cpp)
-target_link_libraries(demo_vfs ${XCI_UTIL_LIBRARY})
+target_link_libraries(demo_vfs ${XCI_CORE_LIBRARY})
 install(TARGETS demo_vfs EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 
 # graphics

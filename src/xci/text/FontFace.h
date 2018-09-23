@@ -17,7 +17,8 @@
 #define XCI_TEXT_FONTFACE_H
 
 #include <xci/text/FontLibrary.h>
-#include <xci/util/geometry.h>
+#include <xci/core/geometry.h>
+#include <xci/compat/string_view.h>
 
 #include <memory>  // shared_ptr
 #include <vector>
@@ -68,10 +69,10 @@ public:
     virtual GlyphIndex get_glyph_index(CodePoint code_point) const = 0;
 
     struct Glyph {
-        util::Vec2u bitmap_size;
+        core::Vec2u bitmap_size;
         uint8_t* bitmap_buffer = nullptr;
-        util::Vec2i bearing;
-        util::Vec2f advance;
+        core::Vec2i bearing;
+        core::Vec2f advance;
     };
     virtual bool render_glyph(GlyphIndex glyph_index, Glyph& glyph) = 0;
 

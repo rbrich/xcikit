@@ -19,16 +19,16 @@
 #include <xci/graphics/Renderer.h>
 #include <xci/graphics/Primitives.h>
 #include <xci/graphics/Color.h>
-#include <xci/util/geometry.h>
+#include <xci/core/geometry.h>
 
 namespace xci::graphics { class View; }
 
 namespace xci {
 namespace graphics {
 
-using xci::util::Rect_u;
-using xci::util::Rect_f;
-using xci::util::Vec2f;
+using xci::core::Rect_u;
+using xci::core::Rect_f;
+using xci::core::Vec2f;
 
 // A collection of sprites (ie. alpha-blended textured quads)
 // sharing the same texture. Each sprite can display different

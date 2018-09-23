@@ -15,7 +15,7 @@
 
 #include "GlWindow.h"
 #include <xci/config.h>
-#include <xci/util/log.h>
+#include <xci/core/log.h>
 #include <xci/compat/unique.h>
 
 #include <glad/glad.h>
@@ -26,7 +26,7 @@
 namespace xci {
 namespace graphics {
 
-using namespace xci::util::log;
+using namespace xci::core::log;
 using namespace std::chrono;
 
 

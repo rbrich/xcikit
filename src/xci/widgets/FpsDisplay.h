@@ -19,7 +19,7 @@
 #include <xci/widgets/Widget.h>
 #include <xci/text/Text.h>
 #include <xci/graphics/Primitives.h>
-#include <xci/util/FpsCounter.h>
+#include <xci/core/FpsCounter.h>
 #include <chrono>
 
 namespace xci {
@@ -39,7 +39,7 @@ private:
 
 private:
     std::chrono::steady_clock::time_point m_prevtime = std::chrono::steady_clock::now();
-    util::FpsCounter m_fps;
+    core::FpsCounter m_fps;
     graphics::PrimitivesPtr m_quad;
     graphics::ShaderPtr m_shader;
     graphics::TexturePtr m_texture;

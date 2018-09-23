@@ -17,7 +17,7 @@
 #define XCI_TEXT_TEXT_H
 
 #include "Layout.h"
-#include <xci/util/geometry.h>
+#include <xci/core/geometry.h>
 
 #include <string>
 
@@ -45,8 +45,8 @@ public:
     Layout& layout() { return m_layout; }
 
     void resize(graphics::View& view);
-    void draw(graphics::View& view, const util::Vec2f& pos);
-    void resize_draw(graphics::View& view, const util::Vec2f& pos);
+    void draw(graphics::View& view, const core::Vec2f& pos);
+    void resize_draw(graphics::View& view, const core::Vec2f& pos);
 
 private:
     Layout m_layout;

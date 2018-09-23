@@ -13,12 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <xci/util/Vfs.h>
-#include <xci/util/log.h>
+#include <xci/core/Vfs.h>
+#include <xci/core/log.h>
 #include <xci/config.h>
 
-using namespace xci::util;
-using namespace xci::util::log;
+using namespace xci::core;
+using namespace xci::core::log;
 
 int main()
 {

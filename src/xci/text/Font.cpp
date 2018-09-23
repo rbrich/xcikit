@@ -16,12 +16,12 @@
 #include "Font.h"
 
 #include <xci/text/FontTexture.h>
-#include <xci/util/log.h>
+#include <xci/core/log.h>
 
 namespace xci {
 namespace text {
 
-using namespace util::log;
+using namespace core::log;
 
 
 // dtor has to be implemented in cpp file to allow forward declaration of unique_ptr<FontTexture>

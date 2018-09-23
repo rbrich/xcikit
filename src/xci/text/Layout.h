@@ -22,7 +22,7 @@
 #include "Style.h"
 #include <xci/graphics/View.h>
 #include <xci/graphics/Color.h>
-#include <xci/util/geometry.h>
+#include <xci/core/geometry.h>
 
 #include <string>
 #include <utility>
@@ -68,7 +68,7 @@ public:
 
     // Horizontal/vertical offset (in multiplies of font size)
     // This can be used to create subscript/superscript.
-    void set_offset(const util::Vec2f& offset);
+    void set_offset(const core::Vec2f& offset);
     void reset_offset() { set_offset({0.f, 0.f}); }
 
     // Set font and text style.
@@ -119,12 +119,12 @@ public:
     void typeset(const graphics::View& target);
 
     // Draw whole layout to target
-    void draw(graphics::View& target, const util::Vec2f& pos) const;
+    void draw(graphics::View& target, const core::Vec2f& pos) const;
 
     // ------------------------------------------------------------------------
     // Metrics
 
-    util::Rect_f bbox() const;
+    core::Rect_f bbox() const;
 
 private:
     Page m_page;

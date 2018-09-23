@@ -19,15 +19,15 @@
 #include "Primitives.h"
 #include "Renderer.h"
 #include <xci/graphics/Color.h>
-#include <xci/util/geometry.h>
+#include <xci/core/geometry.h>
 
 namespace xci::graphics { class View; }
 
 namespace xci {
 namespace graphics {
 
-using xci::util::Rect_f;
-using xci::util::Vec2f;
+using xci::core::Rect_f;
+using xci::core::Vec2f;
 
 // A collection of basic shapes: rectangles, ellipses.
 // Each shape may have different size and outline width,

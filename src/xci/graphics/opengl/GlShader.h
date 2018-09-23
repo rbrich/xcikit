@@ -17,7 +17,7 @@
 #define XCI_GRAPHICS_GL_SHADER_H
 
 #include <xci/graphics/Shader.h>
-#include <xci/util/FileWatch.h>
+#include <xci/core/FileWatch.h>
 
 #include <glad/glad.h>
 #include <atomic>
@@ -25,8 +25,8 @@
 namespace xci {
 namespace graphics {
 
-using xci::util::FileWatch;
-using xci::util::FileWatchPtr;
+using xci::core::FileWatch;
+using xci::core::FileWatchPtr;
 
 
 class GlShader: public Shader {

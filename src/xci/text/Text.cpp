@@ -22,7 +22,7 @@ namespace xci {
 namespace text {
 
 using namespace graphics;
-using namespace util;
+using namespace core;
 
 
 Text::Text(const std::string &string, Font& font)
@@ -53,7 +53,7 @@ void Text::resize(graphics::View& view)
 }
 
 
-void Text::draw(graphics::View& view, const util::Vec2f& pos)
+void Text::draw(graphics::View& view, const core::Vec2f& pos)
 {
     m_layout.draw(view, pos);
 }

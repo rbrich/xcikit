@@ -15,8 +15,8 @@
 
 #include "FpsDisplay.h"
 #include <xci/config.h>
-#include <xci/util/log.h>
-#include <xci/util/format.h>
+#include <xci/core/log.h>
+#include <xci/core/format.h>
 #include <xci/graphics/Renderer.h>
 
 #ifdef XCI_EMBED_SHADERS
@@ -31,9 +31,9 @@ namespace xci {
 namespace widgets {
 
 using namespace xci::graphics;
-using namespace xci::util;
-using namespace xci::util::log;
-using xci::util::format;
+using namespace xci::core;
+using namespace xci::core::log;
+using xci::core::format;
 
 
 FpsDisplay::FpsDisplay()

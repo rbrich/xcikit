@@ -15,10 +15,10 @@
 
 #include <xci/widgets/TextTerminal.h>
 #include <xci/graphics/Window.h>
-#include <xci/util/Vfs.h>
-#include <xci/util/file.h>
-#include <xci/util/format.h>
-#include <xci/util/log.h>
+#include <xci/core/Vfs.h>
+#include <xci/core/file.h>
+#include <xci/core/format.h>
+#include <xci/core/log.h>
 #include <xci/config.h>
 #include <cstdlib>
 #include <cstdio>
@@ -26,7 +26,7 @@
 
 using namespace xci::widgets;
 using namespace xci::graphics;
-using namespace xci::util;
+using namespace xci::core;
 
 int main()
 {

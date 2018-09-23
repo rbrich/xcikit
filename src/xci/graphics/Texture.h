@@ -16,7 +16,7 @@
 #ifndef XCI_GRAPHICS_TEXTURE_H
 #define XCI_GRAPHICS_TEXTURE_H
 
-#include <xci/util/geometry.h>
+#include <xci/core/geometry.h>
 
 #include <memory>
 #include <cstdint>
@@ -24,8 +24,8 @@
 namespace xci {
 namespace graphics {
 
-using xci::util::Vec2u;
-using xci::util::Rect_u;
+using xci::core::Vec2u;
+using xci::core::Rect_u;
 using std::uint8_t;
 
 

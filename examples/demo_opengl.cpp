@@ -14,7 +14,7 @@
 // limitations under the License.
 
 #include <xci/text/Text.h>
-#include <xci/util/Vfs.h>
+#include <xci/core/Vfs.h>
 #include <xci/config.h>
 
 #include <glad/glad.h>
@@ -25,7 +25,7 @@
 
 using namespace xci::text;
 using namespace xci::graphics;
-using namespace xci::util;
+using namespace xci::core;
 
 int main()
 {

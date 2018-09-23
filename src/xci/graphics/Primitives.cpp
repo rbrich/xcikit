@@ -20,7 +20,7 @@
 namespace xci::graphics {
 
 
-void Primitives::draw(View& view, const util::Vec2f& pos)
+void Primitives::draw(View& view, const core::Vec2f& pos)
 {
     view.push_offset(pos);
     draw(view);

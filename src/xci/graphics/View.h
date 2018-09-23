@@ -16,7 +16,7 @@
 #ifndef XCI_GRAPHICS_VIEW_H
 #define XCI_GRAPHICS_VIEW_H
 
-#include <xci/util/geometry.h>
+#include <xci/core/geometry.h>
 
 #include <memory>
 #include <vector>
@@ -24,11 +24,11 @@
 namespace xci {
 namespace graphics {
 
-using xci::util::Vec2f;
-using xci::util::Vec2u;
-using xci::util::Vec2i;
-using xci::util::Rect_f;
-using xci::util::Rect_i;
+using xci::core::Vec2f;
+using xci::core::Vec2u;
+using xci::core::Vec2i;
+using xci::core::Rect_f;
+using xci::core::Rect_i;
 
 class Window;
 

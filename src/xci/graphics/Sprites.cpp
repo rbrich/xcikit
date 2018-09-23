@@ -16,7 +16,7 @@
 #include "Sprites.h"
 
 #include <xci/config.h>
-#include <xci/util/log.h>
+#include <xci/core/log.h>
 
 #ifdef XCI_EMBED_SHADERS
 #define INCBIN_PREFIX g_
@@ -31,7 +31,7 @@ INCBIN(sprite_c_frag, XCI_SHARE_DIR "/shaders/sprite_c.frag");
 namespace xci {
 namespace graphics {
 
-using namespace xci::util::log;
+using namespace xci::core::log;
 
 
 Sprites::Sprites(TexturePtr& texture, const Color& color,

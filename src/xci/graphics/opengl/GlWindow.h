@@ -17,7 +17,7 @@
 #define XCI_GRAPHICS_GL_WINDOW_H
 
 #include <xci/graphics/Window.h>
-#include <xci/util/geometry.h>
+#include <xci/core/geometry.h>
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -25,7 +25,7 @@
 namespace xci {
 namespace graphics {
 
-using util::Vec2i;
+using core::Vec2i;
 
 class GlWindow: public Window {
 public:

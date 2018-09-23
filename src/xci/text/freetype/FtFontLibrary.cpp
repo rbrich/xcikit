@@ -14,13 +14,13 @@
 // limitations under the License.
 
 #include "FtFontLibrary.h"
-#include <xci/util/log.h>
-#include <xci/util/error.h>
+#include <xci/core/log.h>
+#include <xci/core/error.h>
 
 namespace xci::text {
 
-using namespace util;
-using namespace util::log;
+using namespace core;
+using namespace core::log;
 
 
 FtFontLibrary::FtFontLibrary()

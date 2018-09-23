@@ -14,8 +14,8 @@
 // limitations under the License.
 
 #include "TextTerminal.h"
-#include <xci/util/string.h>
-#include <xci/util/log.h>
+#include <xci/core/string.h>
+#include <xci/core/log.h>
 
 #ifdef XCI_EMBED_SHADERS
 #define INCBIN_PREFIX g_
@@ -29,8 +29,8 @@ namespace xci {
 namespace widgets {
 
 using namespace graphics;
-using namespace util;
-using namespace util::log;
+using namespace core;
+using namespace core::log;
 using namespace std::chrono;
 using namespace std::chrono_literals;
 using std::min;
@@ -690,7 +690,7 @@ TextTerminal::set_buffer(std::unique_ptr<terminal::Buffer> new_buffer)
 }
 
 
-void TextTerminal::set_cursor_pos(util::Vec2u pos)
+void TextTerminal::set_cursor_pos(core::Vec2u pos)
 {
     // make sure new cursor position is not outside screen area
     m_cursor = {
@@ -827,7 +827,7 @@ void TextTerminal::draw(View& view, State state)
             LineRenderer(Vec2f& pen, size_t& column,
                          graphics::ColoredSprites& sprites, graphics::Shape& boxes,
                          text::Font& font, float& ascender,
-                         const util::Vec2f& cell_size, const Vec2f& pxf)
+                         const core::Vec2f& cell_size, const Vec2f& pxf)
             : pen(pen), column(column), sprites(sprites), boxes(boxes),
               font(font), ascender(ascender),
               cell_size(cell_size), pxf(pxf)
@@ -877,8 +877,8 @@ void TextTerminal::draw(View& view, State state)
             graphics::Shape& boxes;
             text::Font& font;
             float& ascender;
-            const util::Vec2f& cell_size;
-            const util::Vec2f& pxf;
+            const core::Vec2f& cell_size;
+            const core::Vec2f& pxf;
         } line_renderer(pen, column, sprites, boxes, font, ascender,
                         m_cell_size, pxf);
 

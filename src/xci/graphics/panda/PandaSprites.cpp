@@ -4,8 +4,8 @@
 #include "PandaView.h"
 #include "PandaTexture.h"
 
-#include <xci/util/log.h>
-using namespace xci::util::log;
+#include <xci/core/log.h>
+using namespace xci::core::log;
 
 #include <geom.h>
 #include <geomTrifans.h>

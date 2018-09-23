@@ -16,8 +16,8 @@
 #include "GlShader.h"
 
 #include <xci/config.h>
-#include <xci/util/file.h>
-#include <xci/util/log.h>
+#include <xci/core/file.h>
+#include <xci/core/log.h>
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -28,9 +28,9 @@
 namespace xci {
 namespace graphics {
 
-using xci::util::read_text_file;
+using xci::core::read_text_file;
 
-using namespace xci::util::log;
+using namespace xci::core::log;
 
 
 static GLuint compile_program(const char* vertex_source,

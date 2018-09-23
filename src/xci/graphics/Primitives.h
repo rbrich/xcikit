@@ -19,7 +19,7 @@
 #include <xci/graphics/Color.h>
 #include <xci/graphics/Shader.h>
 #include <xci/graphics/Texture.h>
-#include <xci/util/geometry.h>
+#include <xci/core/geometry.h>
 
 namespace xci::graphics {
 
@@ -65,7 +65,7 @@ public:
     virtual void set_blend(BlendFunc func) = 0;
 
     virtual void draw(View& view) = 0;
-    void draw(View& view, const util::Vec2f& pos);
+    void draw(View& view, const core::Vec2f& pos);
 };
 
 

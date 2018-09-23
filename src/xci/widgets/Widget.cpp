@@ -14,7 +14,7 @@
 // limitations under the License.
 
 #include "Widget.h"
-#include <xci/util/rtti.h>
+#include <xci/core/rtti.h>
 #include <xci/graphics/Window.h>
 #include <cassert>
 
@@ -27,7 +27,7 @@ using namespace xci::graphics;
 void Widget::partial_dump(std::ostream& stream, const std::string& nl_prefix)
 {
     using namespace std;
-    stream << util::type_name(typeid(*this))
+    stream << core::type_name(typeid(*this))
            << "<" << hex << this << "> "
            << "pos=" << m_position << " "
            << "size=" << m_size << " "

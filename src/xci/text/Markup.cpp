@@ -15,8 +15,8 @@
 
 #include "Markup.h"
 #include <xci/config.h>
-#include <xci/util/log.h>
-#include <xci/util/string.h>
+#include <xci/core/log.h>
+#include <xci/core/string.h>
 
 #include <tao/pegtl.hpp>
 
@@ -25,7 +25,7 @@
 namespace xci {
 namespace text {
 
-using namespace util::log;
+using namespace core::log;
 
 namespace parser {
 using namespace tao::pegtl;
@@ -52,7 +52,7 @@ template<typename T>
 void dump_token(const char *name, T& token)
 {
 #ifdef XCI_DEBUG_MARKUP_DUMP_TOKENS
-    log_debug("{}: \"{}\"", name, util::escape(token.string()).c_str());
+    log_debug("{}: \"{}\"", name, core::escape(token.string()).c_str());
 #endif
 }
 

@@ -73,7 +73,7 @@ void Form::resize(View& view)
     const float max_height = max_ascent + max_descent;
 
     // Position children
-    util::Vec2f pos = {0, max_ascent};
+    core::Vec2f pos = {0, max_ascent};
     std::sort(m_hint.begin(), m_hint.end());
     size_t index = 0;
     auto hint_it = m_hint.cbegin();

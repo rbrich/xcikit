@@ -13,16 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <xci/util/SharedLibrary.h>
-#include <xci/util/FileWatch.h>
-#include <xci/util/log.h>
+#include <xci/core/SharedLibrary.h>
+#include <xci/core/FileWatch.h>
+#include <xci/core/log.h>
 #include <functional>
 #include <atomic>
 #include <csignal>
 #include <unistd.h>
 
-using namespace xci::util;
-using namespace xci::util::log;
+using namespace xci::core;
+using namespace xci::core::log;
 
 static const char* filename = XCI_DEMO_PLUGINS "/libpluggable.so";
 std::atomic_bool done {false};

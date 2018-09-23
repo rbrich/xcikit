@@ -19,7 +19,7 @@
 #include <xci/text/FontLibrary.h>
 #include <xci/text/FontFace.h>
 #include <xci/graphics/Texture.h>
-#include <xci/util/geometry.h>
+#include <xci/core/geometry.h>
 
 #include <vector>
 #include <map>
@@ -28,7 +28,7 @@
 namespace xci {
 namespace text {
 
-using util::Rect_u;
+using core::Rect_u;
 using graphics::TexturePtr;
 
 
@@ -74,15 +74,15 @@ public:
 
     class Glyph {
     public:
-        util::Vec2u size() const { return m_tex_coords.size(); }
-        const util::Vec2i& bearing() const { return m_bearing; }
+        core::Vec2u size() const { return m_tex_coords.size(); }
+        const core::Vec2i& bearing() const { return m_bearing; }
         float advance() const { return m_advance; }
 
         const Rect_u& tex_coords() const { return m_tex_coords; };
 
     private:
         Rect_u m_tex_coords;
-        util::Vec2i m_bearing;  // FT bitmap_left, bitmap_top
+        core::Vec2i m_bearing;  // FT bitmap_left, bitmap_top
         float m_advance = 0;
 
         friend class Font;

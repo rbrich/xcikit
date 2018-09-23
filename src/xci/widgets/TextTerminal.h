@@ -21,7 +21,7 @@
 #include <xci/graphics/Sprites.h>
 #include <xci/graphics/Shape.h>
 #include <xci/graphics/Primitives.h>
-#include <xci/util/geometry.h>
+#include <xci/core/geometry.h>
 #include <xci/compat/string_view.h>
 #include <vector>
 #include <chrono>
@@ -245,7 +245,7 @@ public:
     : m_prim(renderer.create_primitives(graphics::VertexFormat::V2t2,
                                         graphics::PrimitiveType::TriFans)) {}
 
-    void update(View& view, const util::Rect_f& rect);
+    void update(View& view, const core::Rect_f& rect);
     void draw(View& view, const Vec2f& pos);
 
 private:
@@ -273,7 +273,7 @@ public:
     /// \param scalable false: size is in screen pixels, font size stays same when window resizes
     ///                 true: size in scalable units, number of cells stays (circa) the same when window resizes
     void set_font_size(float size, bool scalable);
-    util::Vec2u size_in_cells() const { return m_cells; }
+    core::Vec2u size_in_cells() const { return m_cells; }
 
     // ------------------------------------------------------------------------
     // Text buffer
@@ -315,8 +315,8 @@ public:
     // ------------------------------------------------------------------------
     // Cursor positioning
 
-    void set_cursor_pos(util::Vec2u pos);
-    util::Vec2u cursor_pos() const { return m_cursor; }
+    void set_cursor_pos(core::Vec2u pos);
+    core::Vec2u cursor_pos() const { return m_cursor; }
 
     // ------------------------------------------------------------------------
     // Color attributes
@@ -393,12 +393,12 @@ private:
 
     float m_font_size = 14.0;
     bool m_font_scalable = false;
-    util::Vec2f m_cell_size;
-    util::Vec2u m_cells = {80, 25};  // rows, columns
+    core::Vec2f m_cell_size;
+    core::Vec2u m_cells = {80, 25};  // rows, columns
     std::unique_ptr<terminal::Buffer> m_buffer = std::make_unique<terminal::Buffer>();
     size_t m_buffer_offset = 0;  // offset to line in buffer which is first on page
     double m_scroll_offset = c_scroll_end;  // scroll back with mouse wheel
-    util::Vec2u m_cursor;  // x/y of cursor on screen
+    core::Vec2u m_cursor;  // x/y of cursor on screen
     terminal::Attributes m_attrs;  // current attributes
     std::chrono::nanoseconds m_bell_time {0};
 };

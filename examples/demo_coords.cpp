@@ -22,14 +22,14 @@
 #include <xci/graphics/Sprites.h>
 #include <xci/graphics/Shape.h>
 #include <xci/graphics/Color.h>
-#include <xci/util/format.h>
-#include <xci/util/Vfs.h>
+#include <xci/core/format.h>
+#include <xci/core/Vfs.h>
 #include <xci/config.h>
 #include <cstdlib>
 
 using namespace xci::text;
 using namespace xci::graphics;
-using namespace xci::util;
+using namespace xci::core;
 
 int main()
 {

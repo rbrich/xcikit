@@ -19,7 +19,7 @@
 #include <xci/widgets/Theme.h>
 #include <xci/graphics/Window.h>
 #include <xci/graphics/View.h>
-#include <xci/util/geometry.h>
+#include <xci/core/geometry.h>
 #include <utility>
 #include <vector>
 
@@ -32,7 +32,7 @@ using graphics::CharEvent;
 using graphics::MousePosEvent;
 using graphics::MouseBtnEvent;
 using graphics::ScrollEvent;
-using util::Vec2f;
+using core::Vec2f;
 
 
 struct State {
@@ -57,7 +57,7 @@ public:
     void set_size(const Vec2f& size) { m_size = size; }
     const Vec2f& size() const { return m_size; }
 
-    util::Rect_f aabb() const { return {m_position, m_size}; }
+    core::Rect_f aabb() const { return {m_position, m_size}; }
     float baseline() const { return m_baseline; }
 
     // Accept keyboard focus by cycling with tab key

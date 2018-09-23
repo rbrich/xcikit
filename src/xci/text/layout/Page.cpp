@@ -17,8 +17,8 @@
 #include <xci/graphics/View.h>
 #include <xci/graphics/Sprites.h>
 #include <xci/graphics/Shape.h>
-#include <xci/util/string.h>
-#include <xci/util/log.h>
+#include <xci/core/string.h>
+#include <xci/core/log.h>
 
 #include <cassert>
 
@@ -26,12 +26,12 @@ namespace xci::text { class Style; }
 
 namespace xci::text::layout {
 
-using namespace xci::util::log;
+using namespace xci::core::log;
 using xci::graphics::View;
 using xci::graphics::Color;
-using xci::util::Rect_f;
-using xci::util::Vec2f;
-using xci::util::to_utf32;
+using xci::core::Rect_f;
+using xci::core::Vec2f;
+using xci::core::to_utf32;
 
 
 Word::Word(Page& page, const std::string& string)
@@ -49,7 +49,7 @@ Word::Word(Page& page, const std::string& string)
     const auto font_height = m_baseline - font->descender() * pxr.y;
 
     // Measure word (metrics are affected by string, font, size)
-    util::Vec2f pen;
+    core::Vec2f pen;
     m_bbox = {0, 0 - m_baseline, 0, font_height};
     for (CodePoint code_point : to_utf32(m_string)) {
         auto glyph = font->get_glyph(code_point);
@@ -57,7 +57,7 @@ Word::Word(Page& page, const std::string& string)
             continue;
 
         // Expand text bounds by glyph bounds
-        util::Rect_f rect{pen.x ,
+        core::Rect_f rect{pen.x ,
                           pen.y - m_baseline,
                           glyph->advance() * pxr.x,
                           font_height};
@@ -80,7 +80,7 @@ Word::Word(Page& page, const std::string& string)
 }
 
 
-void Word::draw(graphics::View& target, const util::Vec2f& pos) const
+void Word::draw(graphics::View& target, const core::Vec2f& pos) const
 {
     auto* font = m_style.font();
     if (!font) {
@@ -133,7 +133,7 @@ void Word::draw(graphics::View& target, const util::Vec2f& pos) const
 }
 
 
-const util::Rect_f& Line::bbox() const
+const core::Rect_f& Line::bbox() const
 {
     if (m_bbox_valid)
         return m_bbox;
@@ -191,7 +191,7 @@ Page::Page()
 }
 
 
-util::Vec2f Page::target_framebuffer_ratio() const
+core::Vec2f Page::target_framebuffer_ratio() const
 {
     if (!m_target)
         return {1.0f/300, 1.0f/300};
