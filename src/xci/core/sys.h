@@ -20,14 +20,32 @@
 
 namespace xci::core {
 
-
+/// Integral thread ID
+///
+/// The actual type is system-dependent
 #if defined(__linux__)
     using ThreadId = int32_t;
 #elif defined(__APPLE__)
     using ThreadId = uint64_t;
 #endif
 
-// Get thread ID
+/// Get integral thread ID of this thread
+///
+/// The standard function `std::this_thread::get_id()` returns opaque object,
+/// which may be dumped into iostream. Unfortunately, the implementation I tested
+/// returns what seems to be pointer value as returned by `pthread_self()`.
+///
+/// Let's test with 3 threads (main + two spawned):
+/// - Linux: TODO
+/// - Mac (libc++): `0x7fffb4263380`, `0x700005ab1000`, `0x700005b34000`
+///
+/// This function, on the other hand, returns real TID, eg:
+/// - Linux: TODO
+/// - Mac: `7094490`, `7094491`, `7094492`
+///
+/// This value is more useful for logging and debugging purposes.
+///
+/// \return system-wide unique integral thread ID
 ThreadId get_thread_id();
 
 
