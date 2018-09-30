@@ -18,13 +18,16 @@
 
 #include <cstdint>
 
+#ifdef __linux__
+#include <sys/types.h>
+#endif
+
 namespace xci::core {
 
-/// Integral thread ID
-///
-/// The actual type is system-dependent
+// Integral thread ID
+// The actual type is system-dependent.
 #if defined(__linux__)
-    using ThreadId = int32_t;
+    using ThreadId = pid_t;
 #elif defined(__APPLE__)
     using ThreadId = uint64_t;
 #endif
@@ -35,15 +38,16 @@ namespace xci::core {
 /// which may be dumped into iostream. Unfortunately, the implementation I tested
 /// returns what seems to be pointer value as returned by `pthread_self()`.
 ///
-/// Let's test with 3 threads (main + two spawned):
-/// - Linux: TODO
+/// Let's test with three threads (main + two spawned):
+/// - Linux (libstdc++): `7f5cb868d740`, `7f5cb6c43700`, `7f5cb7444700` (with std::hex)
 /// - Mac (libc++): `0x7fffb4263380`, `0x700005ab1000`, `0x700005b34000`
 ///
 /// This function, on the other hand, returns real TID, eg:
-/// - Linux: TODO
+/// - Linux: `13543`, `13577`, `13578`
 /// - Mac: `7094490`, `7094491`, `7094492`
 ///
-/// This value is more useful for logging and debugging purposes.
+/// This, similarly to PID, is system-wide ID used to identify the thread.
+/// Such value is more useful for logging and debugging purposes.
 ///
 /// \return system-wide unique integral thread ID
 ThreadId get_thread_id();
