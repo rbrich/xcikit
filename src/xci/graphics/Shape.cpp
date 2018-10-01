@@ -22,6 +22,8 @@
 #define INCBIN_PREFIX g_
 #define INCBIN_STYLE INCBIN_STYLE_SNAKE
 #include <incbin/incbin.h>
+INCBIN(line_vert, XCI_SHARE_DIR "/shaders/line.vert");
+INCBIN(line_frag, XCI_SHARE_DIR "/shaders/line.frag");
 INCBIN(rectangle_vert, XCI_SHARE_DIR "/shaders/rectangle.vert");
 INCBIN(rectangle_frag, XCI_SHARE_DIR "/shaders/rectangle.frag");
 INCBIN(ellipse_vert, XCI_SHARE_DIR "/shaders/ellipse.vert");
@@ -264,7 +266,6 @@ void Shape::init_line_shader()
     bool res = m_line_shader->load_from_memory(
                 (const char*)g_line_vert_data, g_line_vert_size,
                 (const char*)g_line_frag_data, g_line_frag_size);
-)
 #else
     bool res = m_line_shader->load_from_vfs(
             "shaders/line.vert", "shaders/line.frag");
@@ -288,7 +289,6 @@ void Shape::init_rectangle_shader()
     bool res = m_rectangle_shader->load_from_memory(
                 (const char*)g_rectangle_vert_data, g_rectangle_vert_size,
                 (const char*)g_rectangle_frag_data, g_rectangle_frag_size);
-)
 #else
     bool res = m_rectangle_shader->load_from_vfs(
             "shaders/rectangle.vert", "shaders/rectangle.frag");
@@ -312,7 +312,6 @@ void Shape::init_ellipse_shader()
     bool res = m_ellipse_shader->load_from_memory(
                 (const char*)g_ellipse_vert_data, g_ellipse_vert_size,
                 (const char*)g_ellipse_frag_data, g_ellipse_frag_size);
-)
 #else
     bool res = m_ellipse_shader->load_from_vfs(
             "shaders/ellipse.vert", "shaders/ellipse.frag");

@@ -13,7 +13,7 @@ install:
 script:
   - ./bootstrap.sh
   - mkdir build && cd build
-  - ../.conan/create-local.sh
+  - ../conan/create-local.sh
   - conan install ..
   - cmake ..
   - make

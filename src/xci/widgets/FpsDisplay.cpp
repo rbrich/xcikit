@@ -96,7 +96,6 @@ void FpsDisplay::init_shader()
     bool res = m_shader->load_from_memory(
                 (const char*)g_fps_vert_data, g_fps_vert_size,
                 (const char*)g_fps_frag_data, g_fps_frag_size);
-)
 #else
     bool res = m_shader->load_from_vfs("shaders/fps.vert", "shaders/fps.frag");
 #endif

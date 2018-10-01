@@ -103,7 +103,6 @@ void Sprites::init_shader()
     bool res = m_shader->load_from_memory(
                 (const char*)g_sprite_vert_data, g_sprite_vert_size,
                 (const char*)g_sprite_frag_data, g_sprite_frag_size);
-)
 #else
     bool res = m_shader->load_from_vfs("shaders/sprite.vert",
                                        "shaders/sprite.frag");
@@ -178,9 +177,8 @@ void ColoredSprites::init_shader()
 
 #ifdef XCI_EMBED_SHADERS
     bool res = m_shader->load_from_memory(
-                (const char*)g_sprite_vert_c_data, g_sprite_vert_c_size,
-                (const char*)g_sprite_frag_c_data, g_sprite_frag_c_size);
-)
+                (const char*)g_sprite_c_vert_data, g_sprite_c_vert_size,
+                (const char*)g_sprite_c_frag_data, g_sprite_c_frag_size);
 #else
     bool res = m_shader->load_from_vfs("shaders/sprite_c.vert",
                                        "shaders/sprite_c.frag");

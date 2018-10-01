@@ -167,7 +167,8 @@ if (XCI_WITH_OPENGL)
         PUBLIC
             ${XCI_INCLUDE_DIRS}
         PRIVATE
-            ext)
+            ext
+            ${CONAN_INCLUDE_DIRS_INCBIN})
     target_link_libraries(${XCI_GRAPHICS_OPENGL_LIBRARY}
         ${XCI_CORE_LIBRARY}
         ${CMAKE_DL_LIBS}
@@ -265,6 +266,10 @@ add_library(${XCI_WIDGETS_LIBRARY} ${XCI_WIDGETS_SOURCES})
 target_link_libraries(${XCI_WIDGETS_LIBRARY}
     ${XCI_TEXT_LIBRARY}
     ${XCI_GRAPHICS_LIBRARY})
+target_include_directories(${XCI_WIDGETS_LIBRARY}
+    PRIVATE
+        ${CONAN_INCLUDE_DIRS_INCBIN}
+)
 
 if (BUILD_FRAMEWORKS)
     set_target_properties(${XCI_WIDGETS_LIBRARY} PROPERTIES
