@@ -9,6 +9,7 @@
 
 find_path(CATCH_INCLUDE_DIR
     NAMES catch.hpp
+    PATHS ${Catch_ROOT}
     PATH_SUFFIXES include)
 mark_as_advanced(CATCH_INCLUDE_DIR)
 
@@ -23,6 +24,5 @@ endif()
 if (Catch_FOUND AND NOT TARGET Catch::Catch)
     add_library(Catch::Catch INTERFACE IMPORTED)
     set_target_properties(Catch::Catch PROPERTIES
-        INTERFACE_INCLUDE_DIRECTORIES "${Catch_INCLUDE_DIRS}"
-        )
+        INTERFACE_INCLUDE_DIRECTORIES "${Catch_INCLUDE_DIRS}")
 endif()

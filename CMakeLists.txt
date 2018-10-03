@@ -123,6 +123,9 @@ find_package(Catch)
 # PEGTL
 find_package(PEGTL REQUIRED)
 
+# Abseil
+find_package(Abseil REQUIRED)
+
 # Doxygen
 find_package(Doxygen)
 

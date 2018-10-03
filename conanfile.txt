@@ -1,7 +1,8 @@
 [requires]
 catch2/2.2.2@bincrafters/stable
 PEGTL/2.4.0@xci/local
-incbin/0.1-c61cae6@xci/local
+incbin/20180413-c61cae6@xci/local
+abseil/20181003-f21d187@xci/local
 
 [generators]
 cmake
