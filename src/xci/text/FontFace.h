@@ -18,7 +18,7 @@
 
 #include <xci/text/FontLibrary.h>
 #include <xci/core/geometry.h>
-#include <xci/compat/string_view.h>
+#include <absl/strings/string_view.h>
 
 #include <memory>  // shared_ptr
 #include <vector>
@@ -53,7 +53,7 @@ public:
     FontFace(const FontFace&) = delete;
     FontFace& operator =(const FontFace&) = delete;
 
-    virtual bool load_from_file(std::string_view file_path, int face_index) = 0;
+    virtual bool load_from_file(absl::string_view file_path, int face_index) = 0;
     virtual bool load_from_memory(std::vector<uint8_t> buffer, int face_index) = 0;
 
     virtual bool set_size(unsigned pixel_size) = 0;

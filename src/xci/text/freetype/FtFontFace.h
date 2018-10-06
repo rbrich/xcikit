@@ -30,7 +30,7 @@ public:
     explicit FtFontFace(FontLibraryPtr library) : FontFace(std::move(library)) {}
     ~FtFontFace() override;
 
-    bool load_from_file(std::string_view file_path, int face_index) override;
+    bool load_from_file(absl::string_view file_path, int face_index) override;
     bool load_from_memory(std::vector<uint8_t> buffer, int face_index) override;
 
     bool set_size(unsigned pixel_size) override;

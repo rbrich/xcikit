@@ -15,7 +15,7 @@ find_path(Abseil_INCLUDE_DIRS
     PATHS ${Abseil_ROOT}
     PATH_SUFFIXES include)
 
-set(Abseil_LIBS base strings)
+set(Abseil_LIBS base strings throw_delegate)
 set(Abseil_LIBRARIES "")
 
 foreach(lib ${Abseil_LIBS})
@@ -38,3 +38,5 @@ foreach(lib ${Abseil_LIBS})
         )
     endif()
 endforeach()
+
+target_link_libraries(absl::strings INTERFACE absl::throw_delegate)

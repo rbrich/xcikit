@@ -42,7 +42,7 @@ FtFontFace::~FtFontFace()
 }
 
 
-bool FtFontFace::load_from_file(std::string_view file_path, int face_index)
+bool FtFontFace::load_from_file(absl::string_view file_path, int face_index)
 {
     return load_face(file_path.data(), nullptr, 0, face_index);
 }

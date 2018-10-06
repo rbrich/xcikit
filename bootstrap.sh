@@ -23,10 +23,3 @@ if [ ! -e "share/fonts/Hack/Hack-Regular.ttf" ] ; then
     mv share/fonts/ttf share/fonts/Hack
     rm ${HACK_ARCHIVE}
 fi
-
-# See: https://github.com/martinmoene/string-view-lite
-if [ ! -e "ext/nonstd/string_view.hpp" ] ; then
-    echo "=== Download string_view lite (nonstd) ==="
-    curl -L "https://raw.githubusercontent.com/martinmoene/string-view-lite/master/include/nonstd/string_view.hpp" \
-         --create-dirs -o "ext/nonstd/string_view.hpp"
-fi

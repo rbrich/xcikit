@@ -36,6 +36,7 @@ endif()
 add_library(${XCI_CORE_LIBRARY} ${XCI_CORE_SOURCES})
 target_link_libraries(${XCI_CORE_LIBRARY}
     Threads::Threads
+    absl::strings
     ${CMAKE_DL_LIBS}
     ${XCI_COMPAT_LIBRARY})
 target_include_directories(${XCI_CORE_LIBRARY}

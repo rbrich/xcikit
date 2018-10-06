@@ -187,7 +187,7 @@ std::string terminal::Attributes::encode() const
 }
 
 
-size_t terminal::Attributes::decode(std::string_view sv)
+size_t terminal::Attributes::decode(absl::string_view sv)
 {
     auto* it = sv.cbegin();
     while (it < sv.cend()) {
@@ -320,7 +320,7 @@ size_t terminal::Line::content_skip(size_t skip, size_t start, Attributes& attr)
 }
 
 
-void terminal::Line::add_text(size_t pos, std::string_view sv, Attributes attr, bool insert)
+void terminal::Line::add_text(size_t pos, absl::string_view sv, Attributes attr, bool insert)
 {
     // Find `pos` in content
     Attributes attr_start;
@@ -561,7 +561,7 @@ void TextTerminal::set_font_size(float size, bool scalable)
 }
 
 
-void TextTerminal::add_text(std::string_view text, bool insert, bool wrap)
+void TextTerminal::add_text(absl::string_view text, bool insert, bool wrap)
 {
     // Buffer for fragment of text without any attributes
     std::string buffer;

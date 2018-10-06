@@ -154,9 +154,6 @@ else()
     set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
 endif()
 
-set(XCI_COMPAT_LIBRARY xci-compat)
-add_subdirectory(src/xci/compat)
-
 set(XCI_CORE_LIBRARY xci-core)
 add_subdirectory(src/xci/core)
 
@@ -347,7 +344,6 @@ install(DIRECTORY src/xci DESTINATION include
     FILES_MATCHING
     REGEX "xci/(graphics|core)/[a-z]+$" EXCLUDE  # internal headers
     PATTERN "*.h")
-install(DIRECTORY ext/nonstd DESTINATION include/xci/compat)
 
 # config.h
 install(DIRECTORY ${CMAKE_BINARY_DIR}/include/xci DESTINATION include)

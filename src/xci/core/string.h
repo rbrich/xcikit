@@ -18,19 +18,19 @@
 
 #include <string>
 #include <vector>
-#include <xci/compat/string_view.h>
+#include <absl/strings/string_view.h>
 
 namespace xci::core {
 
 
-std::vector<std::string_view> split(std::string_view str, char delim);
+std::vector<absl::string_view> split(absl::string_view str, char delim);
 
 // Escape non-printable characters with C escape sequences (eg. '\n')
-std::string escape(std::string_view str);
+std::string escape(absl::string_view str);
 
 // Convert UTF8 string to UTF32, ie. extract Unicode code points.
 // In case of invalid source string, logs error and returns empty string.
-std::u32string to_utf32(std::string_view utf8);
+std::u32string to_utf32(absl::string_view utf8);
 
 // Convert single UTF32 char to UTF8 string. Can't fail.
 std::string to_utf8(char32_t codepoint);
@@ -40,9 +40,9 @@ const char* utf8_next(const char* pos);
 std::string::const_reverse_iterator
 utf8_prev(std::string::const_reverse_iterator pos);
 
-size_t utf8_length(std::string_view str);
+size_t utf8_length(absl::string_view str);
 
-std::string_view utf8_substr(std::string_view str, size_t pos, size_t count);
+absl::string_view utf8_substr(absl::string_view str, size_t pos, size_t count);
 
 // Convert single UTF-8 character to Unicode code point.
 // Only the first UTF-8 character is used, rest of input is ignored.
@@ -52,7 +52,7 @@ char32_t utf8_codepoint(const char* utf8);
 /// Check if there is partial UTF-8 character at the end of string
 /// \param str  string to be checked
 /// \returns    length of the partial char, 0 if there is none
-size_t utf8_partial_end(std::string_view str);
+size_t utf8_partial_end(absl::string_view str);
 
 
 } // namespace xci::core
