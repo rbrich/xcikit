@@ -2,7 +2,7 @@ Abseil Conan Recipe
 ===================
 
 Based on bincrafters recipe:
-- https://github.com/bincrafters/conan-abseil
+- [bincrafters/conan-abseil](https://github.com/bincrafters/conan-abseil)
 - version: 7a9b8e67912360b460c77b2f152c0817d3afd2c6
 
 Even though we build Abseil with CMake, it does not have install target

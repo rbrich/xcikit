@@ -31,12 +31,13 @@ find_package_handle_standard_args(Abseil DEFAULT_MSG Abseil_INCLUDE_DIRS Abseil_
 
 foreach(lib ${Abseil_LIBS})
     if (Abseil_FOUND AND NOT TARGET absl::${lib})
-        add_library(absl::${lib} INTERFACE IMPORTED)
+        add_library(absl::${lib} UNKNOWN IMPORTED)
         set_target_properties(absl::${lib} PROPERTIES
+            IMPORTED_LOCATION "${Abseil_${lib}_LIBRARY}"
             INTERFACE_INCLUDE_DIRECTORIES "${Abseil_INCLUDE_DIRS}"
-            INTERFACE_LINK_LIBRARIES "${Abseil_${lib}_LIBRARY}"
         )
     endif()
 endforeach()
 
-target_link_libraries(absl::strings INTERFACE absl::throw_delegate)
+set_target_properties(absl::strings PROPERTIES
+    INTERFACE_LINK_LIBRARIES absl::throw_delegate)
