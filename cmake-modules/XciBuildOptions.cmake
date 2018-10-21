@@ -8,6 +8,10 @@ option(BUILD_WITH_ASAN "Build with AddressSanitizer." OFF)
 option(BUILD_WITH_UBSAN "Build with UndefinedBehaviorSanitizer." OFF)
 option(BUILD_WITH_TSAN "Build with ThreadSanitizer." OFF)
 
+# Set possible options for build type
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo" "")
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+
 if (BUILD_FRAMEWORKS)
     set(BUILD_SHARED_LIBS ON)
 endif()
