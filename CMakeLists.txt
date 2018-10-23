@@ -355,6 +355,7 @@ install(EXPORT xcikit
 
 # Make our CMake modules available to clients
 install(FILES cmake-modules/FindCatch.cmake DESTINATION lib/cmake/xci)
+install(FILES cmake-modules/FindAbseil.cmake DESTINATION lib/cmake/xci)
 
 set(XCI_INCLUDE_DIRS include)
 include(CMakePackageConfigHelpers)
