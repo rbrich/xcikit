@@ -33,28 +33,27 @@ else()
 endif()
 
 
-add_library(${XCI_CORE_LIBRARY} ${XCI_CORE_SOURCES})
-target_link_libraries(${XCI_CORE_LIBRARY}
+add_library(xci-core ${XCI_CORE_SOURCES})
+target_link_libraries(xci-core
     Threads::Threads
     absl::strings
-    ${CMAKE_DL_LIBS}
-    ${XCI_COMPAT_LIBRARY})
-target_include_directories(${XCI_CORE_LIBRARY}
+    ${CMAKE_DL_LIBS})
+target_include_directories(xci-core
     PUBLIC
         ${XCI_INCLUDE_DIRS}
     PRIVATE
         ${PEGTL_INCLUDE_DIRS})
-target_compile_definitions(${XCI_CORE_LIBRARY} PRIVATE ${FILEWATCH_IMPL})
+target_compile_definitions(xci-core PRIVATE ${FILEWATCH_IMPL})
 
 # Link with tinfo if available
 if (XCI_WITH_TINFO)
-    target_link_libraries(${XCI_CORE_LIBRARY} ${TINFO_LIBRARIES})
-    target_include_directories(${XCI_CORE_LIBRARY} PRIVATE ${TINFO_INCLUDE_DIRS})
-    target_compile_options(${XCI_CORE_LIBRARY} PRIVATE ${TINFO_CFLAGS})
+    target_link_libraries(xci-core ${TINFO_LIBRARIES})
+    target_include_directories(xci-core PRIVATE ${TINFO_INCLUDE_DIRS})
+    target_compile_options(xci-core PRIVATE ${TINFO_CFLAGS})
 endif()
 
 if (BUILD_FRAMEWORKS)
-    set_target_properties(${XCI_CORE_LIBRARY} PROPERTIES
+    set_target_properties(xci-core PROPERTIES
         FRAMEWORK TRUE
         FRAMEWORK_VERSION A
         MACOSX_FRAMEWORK_IDENTIFIER cz.xci.xci-core
@@ -66,7 +65,7 @@ if (BUILD_FRAMEWORKS)
         )
 endif()
 
-install(TARGETS ${XCI_CORE_LIBRARY}
+install(TARGETS xci-core
     EXPORT xcikit
     DESTINATION lib
     INCLUDES DESTINATION include)

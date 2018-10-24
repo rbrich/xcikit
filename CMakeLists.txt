@@ -3,8 +3,9 @@ cmake_policy(VERSION 3.7)
 project(xcikit C CXX)
 
 option(XCI_WITH_OPENGL "Link with GLFW and build libxci-graphics-opengl." ON)
+option(XCI_WITH_MAGNUM "Link with Magnum and build libxci-graphics-magnum." OFF)
 option(XCI_WITH_SFML "Link with SFML and build libxci-graphics-sfml." OFF)
-option(XCI_WITH_PANDA "Link with Panda3D and build libxci-graphics-panda." OFF)
+option(XCI_WITH_PANDA3D "Link with Panda3D and build libxci-graphics-panda." OFF)
 option(XCI_WITH_TINFO "Link with TInfo (from NCurses) and use it for TTY control sequences." OFF)
 option(XCI_BENCHMARK "Enable benchmarks. Requires Google benchmark to be installed and in CMake path." OFF)
 
@@ -31,35 +32,6 @@ endif()
 # ------------ #
 # Sources      #
 # ------------ #
-
-set(XCI_GRAPHICS_SOURCES
-    src/xci/graphics/Color.cpp
-    src/xci/graphics/Primitives.cpp
-    src/xci/graphics/Renderer.cpp
-    src/xci/graphics/Shader.cpp
-    src/xci/graphics/Shape.cpp
-    src/xci/graphics/Sprites.cpp
-    src/xci/graphics/View.cpp
-    src/xci/graphics/Window.cpp)
-
-set(XCI_GRAPHICS_OPENGL_SOURCES
-    src/xci/graphics/opengl/GlPrimitives.cpp
-    src/xci/graphics/opengl/GlRenderer.cpp
-    src/xci/graphics/opengl/GlShader.cpp
-    src/xci/graphics/opengl/GlTexture.cpp
-    src/xci/graphics/opengl/GlWindow.cpp)
-
-set(XCI_GRAPHICS_SFML_SOURCES
-    src/xci/graphics/sfml/SfmlTexture.cpp
-    src/xci/graphics/sfml/SfmlSprites.cpp
-    src/xci/graphics/sfml/SfmlView.cpp
-    src/xci/graphics/sfml/SfmlWindow.cpp)
-
-set(XCI_GRAPHICS_PANDA_SOURCES
-    src/xci/graphics/panda/PandaTexture.cpp
-    src/xci/graphics/panda/PandaSprites.cpp
-    src/xci/graphics/panda/PandaView.cpp
-    src/xci/graphics/panda/PandaWindow.cpp)
 
 set(XCI_TEXT_SOURCES
     src/xci/text/FontLibrary.cpp
@@ -90,7 +62,6 @@ set(XCI_WIDGETS_SOURCES
 # Dependencies #
 # ------------ #
 
-# pthread
 find_package(Threads REQUIRED)
 
 # FreeType
@@ -100,31 +71,14 @@ include(FindFreetype)
 add_subdirectory(ext/rbp)
 set(RBP_LIBRARY rbp)
 
-# OpenGL
-if (XCI_WITH_OPENGL)
-    find_package(glfw3 3.2 REQUIRED)
-endif ()
-
-# SFML
-if (XCI_WITH_SFML)
-    find_package(SFML 2.4 REQUIRED system window graphics)
-endif ()
-
-
-# Panda3D
-if (XCI_WITH_PANDA)
-    find_package(PythonLibs 2.7 REQUIRED)
-    find_package(Panda3D REQUIRED)
-endif ()
-
-# Catch
-find_package(Catch)
-
 # PEGTL
 find_package(PEGTL REQUIRED)
 
 # Abseil
 find_package(Abseil REQUIRED)
+
+# Catch
+find_package(Catch)
 
 # Doxygen
 find_package(Doxygen)
@@ -134,6 +88,12 @@ if (XCI_WITH_TINFO)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(TINFO REQUIRED tinfo)
 endif ()
+
+# Glad
+if (XCI_WITH_OPENGL)
+    add_library(glad OBJECT ext/glad/glad.c)
+    target_include_directories(glad PUBLIC ext)
+endif()
 
 # Generate config.h
 configure_file(config.h.in include/xci/config.h)
@@ -154,100 +114,35 @@ else()
     set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
 endif()
 
-set(XCI_CORE_LIBRARY xci-core)
 add_subdirectory(src/xci/core)
 
+add_subdirectory(src/xci/graphics)
+
+# Choose default graphics engine:
 if (XCI_WITH_OPENGL)
-    set(XCI_GRAPHICS_OPENGL_LIBRARY xci-graphics-opengl)
-    add_library(glad OBJECT ext/glad/glad.c)
-    add_library(${XCI_GRAPHICS_OPENGL_LIBRARY}
-        ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_OPENGL_SOURCES}
-        $<TARGET_OBJECTS:glad>)
-    target_include_directories(${XCI_GRAPHICS_OPENGL_LIBRARY}
-        PUBLIC
-            ${XCI_INCLUDE_DIRS}
-        PRIVATE
-            ext
-            ${CONAN_INCLUDE_DIRS_INCBIN})
-    target_link_libraries(${XCI_GRAPHICS_OPENGL_LIBRARY}
-        ${XCI_CORE_LIBRARY}
-        ${CMAKE_DL_LIBS}
-        glfw)
+    add_library(xci-graphics ALIAS xci-graphics-opengl)
+elseif (XCI_WITH_SFML)
+    add_library(xci-graphics ALIAS xci-graphics-sfml)
+elseif (XCI_WITH_PANDA3D)
+    add_library(xci-graphics ALIAS xci-graphics-panda3d)
+endif()
 
-    if (BUILD_FRAMEWORKS)
-        set_target_properties(${XCI_GRAPHICS_OPENGL_LIBRARY} PROPERTIES
-            FRAMEWORK TRUE
-            FRAMEWORK_VERSION A
-            MACOSX_FRAMEWORK_IDENTIFIER cz.xci.xci-graphics-opengl
-            # "current version" in semantic format in Mach-O binary file
-            VERSION 1.0.0
-            # "compatibility version" in semantic format in Mach-O binary file
-            SOVERSION 1.0.0
-            PUBLIC_HEADER xci-graphics.h
-            )
-    endif()
-
-    set(XCI_GRAPHICS_LIBRARY ${XCI_GRAPHICS_OPENGL_LIBRARY})
-    install(TARGETS ${XCI_GRAPHICS_OPENGL_LIBRARY}
-        EXPORT xcikit DESTINATION lib)
-endif ()
-
-if (XCI_WITH_SFML)
-    set(XCI_GRAPHICS_SFML_LIBRARY xci-graphics-sfml)
-    add_library(${XCI_GRAPHICS_SFML_LIBRARY}
-        ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_SFML_SOURCES})
-    target_include_directories(${XCI_GRAPHICS_SFML_LIBRARY}
-        PUBLIC
-            ${XCI_INCLUDE_DIRS}
-        PRIVATE
-            ${SFML_INCLUDE_DIR})
-    target_link_libraries(${XCI_GRAPHICS_SFML_LIBRARY}
-        ${XCI_CORE_LIBRARY}
-        ${SFML_LIBRARIES})
-    if (NOT DEFINED XCI_GRAPHICS_LIBRARY)
-        set(XCI_GRAPHICS_LIBRARY ${XCI_GRAPHICS_SFML_LIBRARY})
-    endif()
-    install(TARGETS ${XCI_GRAPHICS_SFML_LIBRARY}
-        EXPORT xcikit DESTINATION lib)
-endif ()
-
-if (XCI_WITH_PANDA)
-    set(XCI_GRAPHICS_PANDA_LIBRARY xci-graphics-panda)
-    add_library(${XCI_GRAPHICS_PANDA_LIBRARY}
-        ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_PANDA_SOURCES})
-    target_include_directories(${XCI_GRAPHICS_PANDA_LIBRARY}
-        PUBLIC
-            ${XCI_INCLUDE_DIRS}
-        PUBLIC
-            ${PANDA3D_INCLUDE_DIRS}
-            ${PYTHON_INCLUDE_DIRS})
-    target_link_libraries(${XCI_GRAPHICS_PANDA_LIBRARY}
-        ${XCI_CORE_LIBRARY}
-        ${PANDA3D_LIBRARIES})
-    if (NOT DEFINED XCI_GRAPHICS_LIBRARY)
-        set(XCI_GRAPHICS_LIBRARY ${XCI_GRAPHICS_PANDA_LIBRARY})
-    endif()
-    install(TARGETS ${XCI_GRAPHICS_PANDA_LIBRARY}
-        EXPORT xcikit DESTINATION lib)
-endif ()
-
-set(XCI_TEXT_LIBRARY xci-text)
-add_library(${XCI_TEXT_LIBRARY} ${XCI_TEXT_SOURCES}
+add_library(xci-text ${XCI_TEXT_SOURCES}
     $<TARGET_OBJECTS:${RBP_LIBRARY}>)
-target_include_directories(${XCI_TEXT_LIBRARY}
+target_include_directories(xci-text
     PUBLIC
         ${XCI_INCLUDE_DIRS}
         ${FREETYPE_INCLUDE_DIRS}
         ${PEGTL_INCLUDE_DIRS}
     PRIVATE
         ext)
-target_link_libraries(${XCI_TEXT_LIBRARY}
-    ${XCI_GRAPHICS_LIBRARY}
-    ${XCI_CORE_LIBRARY}
+target_link_libraries(xci-text
+    xci-graphics
+    xci-core
     ${FREETYPE_LIBRARIES})
 
 if (BUILD_FRAMEWORKS)
-    set_target_properties(${XCI_TEXT_LIBRARY} PROPERTIES
+    set_target_properties(xci-text PROPERTIES
         FRAMEWORK TRUE
         FRAMEWORK_VERSION A
         MACOSX_FRAMEWORK_IDENTIFIER cz.xci.xci-text
@@ -259,20 +154,18 @@ if (BUILD_FRAMEWORKS)
         )
 endif()
 
-install(TARGETS ${XCI_TEXT_LIBRARY} EXPORT xcikit DESTINATION lib)
+install(TARGETS xci-text EXPORT xcikit DESTINATION lib)
 
-set(XCI_WIDGETS_LIBRARY xci-widgets)
-add_library(${XCI_WIDGETS_LIBRARY} ${XCI_WIDGETS_SOURCES})
-target_link_libraries(${XCI_WIDGETS_LIBRARY}
-    ${XCI_TEXT_LIBRARY}
-    ${XCI_GRAPHICS_LIBRARY})
-target_include_directories(${XCI_WIDGETS_LIBRARY}
+add_library(xci-widgets ${XCI_WIDGETS_SOURCES})
+target_link_libraries(xci-widgets
+    xci-text)
+target_include_directories(xci-widgets
     PRIVATE
         ${CONAN_INCLUDE_DIRS_INCBIN}
 )
 
 if (BUILD_FRAMEWORKS)
-    set_target_properties(${XCI_WIDGETS_LIBRARY} PROPERTIES
+    set_target_properties(xci-widgets PROPERTIES
         FRAMEWORK TRUE
         FRAMEWORK_VERSION A
         MACOSX_FRAMEWORK_IDENTIFIER cz.xci.xci-widgets-opengl
@@ -284,7 +177,7 @@ if (BUILD_FRAMEWORKS)
         )
 endif()
 
-install(TARGETS ${XCI_WIDGETS_LIBRARY} EXPORT xcikit DESTINATION lib)
+install(TARGETS xci-widgets EXPORT xcikit DESTINATION lib)
 
 
 # ------------ #
