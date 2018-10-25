@@ -94,6 +94,20 @@ if (XCI_WITH_OPENGL)
         EXPORT xcikit DESTINATION lib)
 endif ()
 
+if (XCI_WITH_MAGNUM)
+    add_library(xci-graphics-magnum
+        ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_MAGNUM_SOURCES})
+    target_include_directories(xci-graphics-magnum
+        PUBLIC ${XCI_INCLUDE_DIRS})
+    target_link_libraries(xci-graphics-magnum
+        xci-core
+        Magnum::GL
+        Magnum::Magnum
+        Magnum::Shaders)
+    install(TARGETS xci-graphics-magnum
+        EXPORT xcikit DESTINATION lib)
+endif ()
+
 if (XCI_WITH_SFML)
     add_library(xci-graphics-sfml
         ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_SFML_SOURCES})

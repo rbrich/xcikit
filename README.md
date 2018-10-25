@@ -159,9 +159,13 @@ then use installed `xcikitConfig.cmake` from your project's
     set(CMAKE_CXX_STANDARD 17)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
-    
-    set(xcikit_DIR /usr/local/lib/cmake/xci)
+
     find_package(xcikit REQUIRED)
     
     add_executable(example src/main.cpp)
     target_link_libraries(example xci-widgets)
+
+In the case xcikit was installed into non-standard location,
+for example `~/sdk/xcikit`, you need to setup `CMAKE_PREFIX_PATH` appropriately:
+
+    cmake -DCMAKE_PREFIX_PATH="~/sdk/xcikit" ..
