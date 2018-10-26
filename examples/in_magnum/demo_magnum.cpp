@@ -13,72 +13,115 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <xci/text/Text.h>
+#include <xci/core/Vfs.h>
+#include <xci/config.h>
+
+#include <Magnum/Magnum.h>
 #include <Magnum/GL/Buffer.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Mesh.h>
 #include <Magnum/Platform/GLContext.h>
 #include <Magnum/Shaders/VertexColor.h>
+
 #include <GLFW/glfw3.h>
 
+#include <cstdlib>
+
+using namespace xci::text;
+using namespace xci::graphics;
+using namespace xci::core;
 using namespace Magnum;
+using namespace Magnum::Math::Literals;
 
 int main(int argc, char** argv) {
-    /* Initialize the library */
-    if(!glfwInit()) return -1;
+    // XCI vfs
+    auto& vfs = Vfs::default_instance();
+    vfs.mount_dir(XCI_SHARE_DIR);
 
-    /* Create a windowed mode window and its OpenGL context */
-    GLFWwindow* const window = glfwCreateWindow(
-            800, 600, "Magnum Plain GLFW Triangle Example", nullptr, nullptr);
-    if(!window) {
+    // GLFW window
+    if (!glfwInit())
+        return EXIT_FAILURE;
+
+    // OpenGL 3.3 Core profile
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, true);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+    GLFWwindow* const window = glfwCreateWindow(800, 600, "XCI Magnum Demo", nullptr, nullptr);
+    if (!window) {
         glfwTerminate();
-        return -1;
+        return EXIT_FAILURE;
     }
-
-    /* Make the window's context current */
     glfwMakeContextCurrent(window);
 
+    // Magnum
+    Platform::GLContext ctx{argc, argv};
+
+    /* Setup the colored triangle */
+    struct TriangleVertex {
+        Vector2 position;
+        Color3 color;
+    };
+    const TriangleVertex data[]{
+            {{-0.5f, -0.5f}, 0xff0000_rgbf},    /* Left vertex, red color */
+            {{ 0.5f, -0.5f}, 0x00ff00_rgbf},    /* Right vertex, green color */
+            {{ 0.0f,  0.5f}, 0x0000ff_rgbf}     /* Top vertex, blue color */
+    };
+
+    GL::Buffer buffer;
+    buffer.setData(data);
+
+    GL::Mesh mesh;
+    mesh.setPrimitive(GL::MeshPrimitive::Triangles)
+            .setCount(3)
+            .addVertexBuffer(buffer, 0,
+                             Shaders::VertexColor2D::Position{},
+                             Shaders::VertexColor2D::Color3{});
+
+    Shaders::VertexColor2D shader;
+
+    // Setup XCI view
+    View view;
+    int width, height;
+    glfwGetWindowSize(window, &width, &height);
+    view.set_screen_size({(unsigned) width, (unsigned) height});
+    glfwGetFramebufferSize(window, &width, &height);
+    view.set_framebuffer_size({(unsigned) width, (unsigned) height});
+    glfwSetWindowUserPointer(window, &view);
+    glfwSetFramebufferSizeCallback(window, [](GLFWwindow* win, int w, int h) {
+        auto pview = (View*) glfwGetWindowUserPointer(win);
+        pview->set_framebuffer_size({(unsigned) w, (unsigned) h});
+        glViewport(0, 0, w, h);
+    });
+
+    // Create XCI text
+    Font font;
     {
-        /* Create Magnum context in an isolated scope */
-        Platform::GLContext ctx{argc, argv};
+        auto face_file = vfs.open("fonts/ShareTechMono/ShareTechMono-Regular.ttf");
+        auto face = FontLibrary::default_instance()->create_font_face();
+        if (!face->load_from_file(face_file.path(), 0))
+            return EXIT_FAILURE;
+        font.add_face(std::move(face));
+    }
+    Text text("Hello from XCI", font);
+    text.set_size(0.2);
 
-        /* Setup the colored triangle */
-        using namespace Math::Literals;
+    /* Loop until the user closes the window */
+    while(!glfwWindowShouldClose(window)) {
 
-        struct TriangleVertex {
-            Vector2 position;
-            Color3 color;
-        };
-        const TriangleVertex data[]{
-                {{-0.5f, -0.5f}, 0xff0000_rgbf},    /* Left vertex, red color */
-                {{ 0.5f, -0.5f}, 0x00ff00_rgbf},    /* Right vertex, green color */
-                {{ 0.0f,  0.5f}, 0x0000ff_rgbf}     /* Top vertex, blue color */
-        };
+        /* Render here */
+        GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
+        mesh.draw(shader);
 
-        GL::Buffer buffer;
-        buffer.setData(data);
+        text.resize_draw(view, {-1.0f, -0.333f});
 
-        GL::Mesh mesh;
-        mesh.setPrimitive(GL::MeshPrimitive::Triangles)
-                .setCount(3)
-                .addVertexBuffer(buffer, 0,
-                                 Shaders::VertexColor2D::Position{},
-                                 Shaders::VertexColor2D::Color3{});
+        /* Swap front and back buffers */
+        glfwSwapBuffers(window);
 
-        Shaders::VertexColor2D shader;
-
-        /* Loop until the user closes the window */
-        while(!glfwWindowShouldClose(window)) {
-
-            /* Render here */
-            GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
-            mesh.draw(shader);
-
-            /* Swap front and back buffers */
-            glfwSwapBuffers(window);
-
-            /* Poll for and process events */
-            glfwPollEvents();
-        }
+        /* Poll for and process events */
+        glfwPollEvents();
     }
 
     glfwTerminate();

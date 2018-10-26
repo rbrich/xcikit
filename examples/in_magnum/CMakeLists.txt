@@ -1,3 +1,5 @@
+find_package(glfw3 3.2 REQUIRED)
+
 if(APPLE)
     find_package(Magnum REQUIRED CglContext)
 else()
@@ -6,6 +8,7 @@ endif()
 
 add_executable(demo_magnum demo_magnum.cpp)
 target_link_libraries(demo_magnum
+    xci-text
     xci-graphics-magnum
     Magnum::GLContext
     glfw)

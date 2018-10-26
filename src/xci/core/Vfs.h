@@ -79,6 +79,7 @@ private:
 
 class VfsLoader {
 public:
+    virtual ~VfsLoader() = default;
     virtual VfsFile open(const std::string& path, std::ios_base::openmode mode) = 0;
 };
 
