@@ -5,7 +5,6 @@
 set(XCI_GRAPHICS_SOURCES
     Color.cpp
     Primitives.cpp
-    Renderer.cpp
     Shader.cpp
     Shape.cpp
     Sprites.cpp
@@ -30,6 +29,10 @@ set(XCI_GRAPHICS_PANDA3D_SOURCES
     panda/PandaSprites.cpp
     panda/PandaView.cpp
     panda/PandaWindow.cpp)
+
+set(XCI_GRAPHICS_MAGNUM_SOURCES
+    magnum/MagnumRenderer.cpp
+    magnum/MagnumTexture.cpp)
 
 
 # ------------ #

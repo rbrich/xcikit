@@ -1,4 +1,4 @@
-// Renderer.cpp created on 2018-04-08, part of XCI toolkit
+// MagnumTexture.h created on 2018-10-26, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,27 +13,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "Renderer.h"
+#ifndef XCIKIT_MAGNUMTEXTURE_H
+#define XCIKIT_MAGNUMTEXTURE_H
 
-#include <xci/config.h>
+#include <xci/graphics/Texture.h>
 
-#ifdef XCI_WITH_OPENGL
-#include <xci/graphics/opengl/GlRenderer.h>
-#endif
+#include <Magnum/GL/Texture.h>
 
-namespace xci {
-namespace graphics {
+namespace xci::graphics {
 
 
-Renderer& Renderer::default_renderer()
-{
-#ifdef XCI_WITH_OPENGL
-    static GlRenderer renderer;
-#else
-    #error "No renderer available"
-#endif
-    return renderer;
-}
+class MagnumTexture : public Texture {
+public:
+    bool create(const Vec2u& size) override;
+    void update(const uint8_t* pixels) override;
+    void update(const uint8_t* pixels, const Rect_u& region) override;
+
+    Vec2u size() const override;
+
+private:
+    Magnum::GL::Texture2D m_texture;
+    Vec2u m_size;
+};
 
 
-}} // namespace xci::graphics
+} // namespace xci::graphics
+
+#endif // include guard

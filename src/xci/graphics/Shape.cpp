@@ -257,7 +257,7 @@ void Shape::init_line_shader()
 {
     if (m_line_shader)
         return;
-    auto& renderer = Renderer::default_renderer();
+    auto& renderer = Renderer::default_instance();
     m_line_shader = renderer.get_or_create_shader(ShaderId::Line);
     if (m_line_shader->is_ready())
         return;
@@ -280,7 +280,7 @@ void Shape::init_rectangle_shader()
 {
     if (m_rectangle_shader)
         return;
-    auto& renderer = Renderer::default_renderer();
+    auto& renderer = Renderer::default_instance();
     m_rectangle_shader = renderer.get_or_create_shader(ShaderId::Rectangle);
     if (m_rectangle_shader->is_ready())
         return;
@@ -303,7 +303,7 @@ void Shape::init_ellipse_shader()
 {
     if (m_ellipse_shader)
         return;
-    auto& renderer = Renderer::default_renderer();
+    auto& renderer = Renderer::default_instance();
     m_ellipse_shader = renderer.get_or_create_shader(ShaderId::Ellipse);
     if (m_ellipse_shader->is_ready())
         return;

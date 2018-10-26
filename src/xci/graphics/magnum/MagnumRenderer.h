@@ -1,4 +1,4 @@
-// GlTexture.h created on 2018-03-14, part of XCI toolkit
+// MagnumRenderer.h created on 2018-10-26, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,29 +13,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_GRAPHICS_GL_TEXTURE_H
-#define XCI_GRAPHICS_GL_TEXTURE_H
+#ifndef XCI_GRAPHICS_MAGNUM_RENDERER_H
+#define XCI_GRAPHICS_MAGNUM_RENDERER_H
 
-#include <xci/graphics/Texture.h>
-
-#include <glad/glad.h>
+#include <xci/graphics/Renderer.h>
 
 namespace xci::graphics {
 
 
-class GlTexture : public Texture {
+class MagnumRenderer: public Renderer {
 public:
-    bool create(const Vec2u& size) override;
-    void update(const uint8_t* pixels) override;
-    void update(const uint8_t* pixels, const Rect_u& region) override;
 
-    Vec2u size() const override;
+    TexturePtr create_texture() override;
 
-    GLuint gl_texture() const { return m_texture; }
+    ShaderPtr get_or_create_shader(ShaderId shader_id) override;
+
+    PrimitivesPtr create_primitives(VertexFormat format,
+                                    PrimitiveType type) override;
 
 private:
-    GLuint m_texture = 0;
-    Vec2u m_size;
+    static constexpr auto c_num_shaders = (size_t)ShaderId::Custom;
+    std::array<ShaderPtr, c_num_shaders> m_shader = {};
 };
 
 

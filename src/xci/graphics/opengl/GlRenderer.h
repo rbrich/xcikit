@@ -21,8 +21,7 @@
 #include <array>
 
 
-namespace xci {
-namespace graphics {
+namespace xci::graphics {
 
 
 class GlRenderer: public Renderer {
@@ -41,6 +40,6 @@ private:
 };
 
 
-}} // namespace xci::graphics
+} // namespace xci::graphics
 
 #endif // XCI_GRAPHICS_GL_RENDERER_H

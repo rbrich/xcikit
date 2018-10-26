@@ -38,7 +38,7 @@ class Sprites {
 public:
     explicit Sprites(TexturePtr& texture,
                      const Color& color = Color::White(),
-                     Renderer& renderer = Renderer::default_renderer());
+                     Renderer& renderer = Renderer::default_instance());
 
     // Reserve memory for `num` sprites.
     void reserve(size_t num);
@@ -75,7 +75,7 @@ class ColoredSprites {
 public:
     explicit ColoredSprites(TexturePtr& texture,
                             const Color& color = Color::White(),
-                            Renderer& renderer = Renderer::default_renderer());
+                            Renderer& renderer = Renderer::default_instance());
 
     // Reserve memory for `num` sprites.
     void reserve(size_t num);

@@ -241,7 +241,7 @@ private:
 
 class Cursor {
 public:
-    explicit Cursor(graphics::Renderer& renderer = graphics::Renderer::default_renderer())
+    explicit Cursor(graphics::Renderer& renderer = graphics::Renderer::default_instance())
     : m_prim(renderer.create_primitives(graphics::VertexFormat::V2t2,
                                         graphics::PrimitiveType::TriFans)) {}
 

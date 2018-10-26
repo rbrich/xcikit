@@ -533,7 +533,7 @@ void terminal::Cursor::init_shader()
 {
     if (m_shader)
         return;
-    auto& renderer = graphics::Renderer::default_renderer();
+    auto& renderer = graphics::Renderer::default_instance();
     m_shader = renderer.get_or_create_shader(ShaderId::Cursor);
     if (m_shader->is_ready())
         return;

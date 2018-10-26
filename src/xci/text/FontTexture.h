@@ -36,7 +36,7 @@ public:
     // The size is fixed. If the size request cannot be satisfied by HW,
     // smaller size will be used (HW maximum texture size).
     explicit FontTexture(unsigned int size=512,
-                         Renderer& renderer = Renderer::default_renderer());
+                         Renderer& renderer = Renderer::default_instance());
 
     // non-copyable
     FontTexture(const FontTexture&) = delete;

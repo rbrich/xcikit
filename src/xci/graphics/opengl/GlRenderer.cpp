@@ -18,8 +18,14 @@
 #include "GlShader.h"
 #include "GlPrimitives.h"
 
-namespace xci {
-namespace graphics {
+namespace xci::graphics {
+
+
+Renderer& Renderer::default_instance()
+{
+    static GlRenderer instance;
+    return instance;
+}
 
 
 TexturePtr GlRenderer::create_texture()
@@ -49,4 +55,4 @@ PrimitivesPtr GlRenderer::create_primitives(VertexFormat format,
 }
 
 
-}} // namespace xci::graphics
+} // namespace xci::graphics

@@ -29,8 +29,7 @@ namespace graphics {
 
 class Renderer {
 public:
-    static Renderer& default_renderer();
-    virtual ~Renderer() = default;
+    static Renderer& default_instance();
 
     virtual TexturePtr create_texture() = 0;
 
@@ -41,9 +40,13 @@ public:
 
     virtual PrimitivesPtr create_primitives(VertexFormat format,
                                             PrimitiveType type) = 0;
+
+protected:
+    Renderer() = default;
+    virtual ~Renderer() = default;
 };
 
 
 }} // namespace xci::graphics
 
-#endif // XCI_GRAPHICS_RENDERER_H
+#endif // include guard

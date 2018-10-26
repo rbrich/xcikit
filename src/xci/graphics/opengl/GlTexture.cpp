@@ -17,8 +17,7 @@
 
 #include <vector>
 
-namespace xci {
-namespace graphics {
+namespace xci::graphics {
 
 
 bool GlTexture::create(const Vec2u& size)
@@ -62,4 +61,4 @@ void GlTexture::update(const uint8_t* pixels, const Rect_u& region)
 Vec2u GlTexture::size() const { return m_size; }
 
 
-}} // namespace xci::graphics
+} // namespace xci::graphics

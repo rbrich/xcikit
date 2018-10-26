@@ -94,7 +94,7 @@ void Sprites::init_shader()
 {
     if (m_shader)
         return;
-    auto& renderer = Renderer::default_renderer();
+    auto& renderer = Renderer::default_instance();
     m_shader = renderer.get_or_create_shader(ShaderId::Sprite);
     if (m_shader->is_ready())
         return;
@@ -170,7 +170,7 @@ void ColoredSprites::init_shader()
 {
     if (m_shader)
         return;
-    auto& renderer = Renderer::default_renderer();
+    auto& renderer = Renderer::default_instance();
     m_shader = renderer.get_or_create_shader(ShaderId::SpriteC);
     if (m_shader->is_ready())
         return;
