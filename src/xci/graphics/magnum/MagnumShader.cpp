@@ -84,16 +84,12 @@ void MagnumShader::set_uniform(const char* name,
 }
 
 
-void MagnumShader::set_uniform_matrix4(const char* name, const float* matrix4x4)
+void MagnumShader::set_magnum_uniform(const char* name,
+                                      const Magnum::Matrix4& mat)
 {
     assert(m_ready);
     auto location = uniformLocation(name);
-    setUniform(location, Matrix4(
-            Vector4(matrix4x4[0], matrix4x4[1], matrix4x4[2], matrix4x4[3]),
-            Vector4(matrix4x4[4], matrix4x4[5], matrix4x4[6], matrix4x4[7]),
-            Vector4(matrix4x4[8], matrix4x4[9], matrix4x4[10], matrix4x4[11]),
-            Vector4(matrix4x4[12], matrix4x4[13], matrix4x4[14], matrix4x4[15])
-            ));
+    setUniform(location, mat);
 }
 
 

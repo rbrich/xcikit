@@ -138,7 +138,7 @@ void GlPrimitives::clear()
 
 void GlPrimitives::set_shader(ShaderPtr& shader)
 {
-    GLuint program = static_cast<GlShader*>(shader.get())->program();
+    GLuint program = static_cast<GlShader*>(shader.get())->gl_program();
     glUseProgram(program);
     m_program = program;
 }

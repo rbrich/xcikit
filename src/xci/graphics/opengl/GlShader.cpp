@@ -195,7 +195,7 @@ void GlShader::set_texture(const char* name, TexturePtr& texture)
 }
 
 
-GLuint GlShader::program()
+GLuint GlShader::gl_program()
 {
     bool ok = m_program_ready.load(std::memory_order_acquire);
     if (!ok) {

@@ -167,13 +167,12 @@ void MagnumPrimitives::draw(View& view)
     GLfloat ys = 2.0f / view.scalable_size().y;
     GLfloat xt = view.offset().x * xs;
     GLfloat yt = view.offset().y * ys;
-    const GLfloat mvp[] = {
-            xs,   0.0f, 0.0f, 0.0f,
-            0.0f, -ys,  0.0f, 0.0f,
-            0.0f, 0.0f, 1.0f, 0.0f,
-            xt,   -yt,  0.0f, 1.0f,
-    };
-    m_shader->set_uniform_matrix4("u_mvp", mvp);
+    m_shader->set_magnum_uniform("u_mvp", Matrix4(
+            Vector4(xs, 0.0f, 0.0f, 0.0f),
+            Vector4(0.0f, -ys, 0.0f, 0.0f),
+            Vector4(0.0f, 0.0f, 1.0f, 0.0f),
+            Vector4(xt, -yt, 0.0f, 1.0f)
+    ));
 
     GL::Buffer vertex_buffer;
     vertex_buffer.setData(m_vertex_data, GL::BufferUsage::StaticDraw);
