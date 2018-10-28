@@ -15,12 +15,15 @@
 
 #include "MagnumPrimitives.h"
 #include "MagnumShader.h"
+#include <xci/graphics/View.h>
 
 #include <cassert>
 #include <Magnum/GL/Buffer.h>
 #include <Magnum/GL/Mesh.h>
 #include <Magnum/GL/MeshView.h>
 #include <Magnum/GL/AbstractShaderProgram.h>
+#include <Magnum/GL/Renderer.h>
+#include <Magnum/Shaders/Flat.h>
 
 namespace xci::graphics {
 
@@ -139,52 +142,39 @@ void MagnumPrimitives::set_shader(ShaderPtr& shader)
 }
 
 
-void MagnumPrimitives::set_texture(const char* name, TexturePtr& texture)
-{
-
-}
-
-
 void MagnumPrimitives::set_blend(Primitives::BlendFunc func)
 {
-
+    GL::Renderer::enable(GL::Renderer::Feature::Blending);
+    switch (func) {
+        case BlendFunc::AlphaBlend:
+            GL::Renderer::setBlendFunction(
+                    GL::Renderer::BlendFunction::SourceAlpha,
+                    GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+            break;
+        case BlendFunc::InverseVideo:
+            GL::Renderer::setBlendFunction(
+                    GL::Renderer::BlendFunction::OneMinusDestinationColor,
+                    GL::Renderer::BlendFunction::Zero);
+            break;
+    }
 }
-
-
-class ShaderV2t2: public GL::AbstractShaderProgram {
-public:
-    typedef GL::Attribute<0, Vector2> Position;
-    typedef GL::Attribute<1, Vector2> TexCoords;
-};
-
-
-class ShaderV2t22: public GL::AbstractShaderProgram {
-public:
-    typedef GL::Attribute<0, Vector2> Position;
-    typedef GL::Attribute<1, Vector2> TexCoords1;
-    typedef GL::Attribute<2, Vector2> TexCoords2;
-};
-
-
-class ShaderV2c4t2: public GL::AbstractShaderProgram {
-public:
-    typedef GL::Attribute<0, Vector2> Position;
-    typedef GL::Attribute<1, Color4> Color;
-    typedef GL::Attribute<2, Vector2> TexCoords;
-};
-
-
-class ShaderV2c4t22: public GL::AbstractShaderProgram {
-public:
-    typedef GL::Attribute<0, Vector2> Position;
-    typedef GL::Attribute<1, Color4> Color;
-    typedef GL::Attribute<2, Vector2> TexCoords1;
-    typedef GL::Attribute<3, Vector2> TexCoords2;
-};
 
 
 void MagnumPrimitives::draw(View& view)
 {
+    // projection matrix
+    GLfloat xs = 2.0f / view.scalable_size().x;
+    GLfloat ys = 2.0f / view.scalable_size().y;
+    GLfloat xt = view.offset().x * xs;
+    GLfloat yt = view.offset().y * ys;
+    const GLfloat mvp[] = {
+            xs,   0.0f, 0.0f, 0.0f,
+            0.0f, -ys,  0.0f, 0.0f,
+            0.0f, 0.0f, 1.0f, 0.0f,
+            xt,   -yt,  0.0f, 1.0f,
+    };
+    m_shader->set_uniform_matrix4("u_mvp", mvp);
+
     GL::Buffer vertex_buffer;
     vertex_buffer.setData(m_vertex_data, GL::BufferUsage::StaticDraw);
 
@@ -192,30 +182,30 @@ void MagnumPrimitives::draw(View& view)
         case VertexFormat::V2t2:
             m_mesh.setCount(static_cast<Magnum::Int>(m_elem_base.size()))
                   .addVertexBuffer(vertex_buffer, 0,
-                          ShaderV2t2::Position{},
-                          ShaderV2t2::TexCoords{});
+                                   GL::Attribute<0, Vector2>{},  // position
+                                   GL::Attribute<1, Vector2>{}); // tex coords
             break;
         case VertexFormat::V2t22:
             m_mesh.setCount(static_cast<Magnum::Int>(m_elem_base.size()))
-                    .addVertexBuffer(vertex_buffer, 0,
-                                     ShaderV2t22::Position{},
-                                     ShaderV2t22::TexCoords1{},
-                                     ShaderV2t22::TexCoords2{});
+                  .addVertexBuffer(vertex_buffer, 0,
+                                   GL::Attribute<0, Vector2>{},  // position;
+                                   GL::Attribute<1, Vector2>{},  // tex coords 1
+                                   GL::Attribute<2, Vector2>{}); // tex coords 2
             break;
         case VertexFormat::V2c4t2:
             m_mesh.setCount(static_cast<Magnum::Int>(m_elem_base.size()))
-                    .addVertexBuffer(vertex_buffer, 0,
-                                     ShaderV2c4t2::Position{},
-                                     ShaderV2c4t2::Color{},
-                                     ShaderV2c4t2::TexCoords{});
+                  .addVertexBuffer(vertex_buffer, 0,
+                                   GL::Attribute<0, Vector2>{},  // position
+                                   GL::Attribute<1, Color4>{},   // color
+                                   GL::Attribute<2, Vector2>{}); // tex coords
             break;
         case VertexFormat::V2c4t22:
             m_mesh.setCount(static_cast<Magnum::Int>(m_elem_base.size()))
-                    .addVertexBuffer(vertex_buffer, 0,
-                                     ShaderV2c4t22::Position{},
-                                     ShaderV2c4t22::Color{},
-                                     ShaderV2c4t22::TexCoords1{},
-                                     ShaderV2c4t22::TexCoords2{});
+                  .addVertexBuffer(vertex_buffer, 0,
+                                   GL::Attribute<0, Vector2>{},  // position
+                                   GL::Attribute<1, Color4>{},   // color
+                                   GL::Attribute<2, Vector2>{},  // tex coords 1
+                                   GL::Attribute<3, Vector2>{}); // tex coords 2
             break;
     }
 
@@ -226,9 +216,8 @@ void MagnumPrimitives::draw(View& view)
         MeshView(m_mesh)
             .setBaseVertex(*it_base)
             .setCount(*it_size)
-            .draw(m_shader->program());
+            .draw(m_shader->magnum_shader());
     }
-
 }
 
 

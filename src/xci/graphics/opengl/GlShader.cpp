@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "GlShader.h"
+#include "GlTexture.h"
 
 #include <xci/config.h>
 #include <xci/core/file.h>
@@ -179,6 +180,18 @@ void GlShader::set_uniform(const char* name,
     GLint location = glGetUniformLocation(m_program, name);
     glUseProgram(m_program);
     glUniform4f(location, f1, f2, f3, f4);
+}
+
+
+void GlShader::set_texture(const char* name, TexturePtr& texture)
+{
+    assert(m_program != 0);
+
+    GLint location = glGetUniformLocation(m_program, name);
+    glUseProgram(m_program);
+    glUniform1i(location, 0); // GL_TEXTURE0
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, static_cast<GlTexture*>(texture.get())->gl_texture());
 }
 
 

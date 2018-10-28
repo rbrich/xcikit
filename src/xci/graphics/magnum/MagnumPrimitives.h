@@ -43,7 +43,6 @@ public:
     bool empty() const override { return m_vertex_data.empty(); }
 
     void set_shader(ShaderPtr& shader) override;
-    void set_texture(const char* name, TexturePtr& texture) override;
     void set_blend(BlendFunc func) override;
 
     void draw(View& view) override;

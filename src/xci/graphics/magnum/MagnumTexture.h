@@ -31,6 +31,8 @@ public:
 
     Vec2u size() const override;
 
+    Magnum::GL::Texture2D& magnum_texture() { return m_texture; }
+
 private:
     Magnum::GL::Texture2D m_texture;
     Vec2u m_size;

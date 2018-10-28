@@ -29,14 +29,14 @@ bool MagnumTexture::create(const xci::core::Vec2u& size)
     m_texture.setWrapping(GL::SamplerWrapping::ClampToEdge)
              .setMagnificationFilter(GL::SamplerFilter::Nearest)
              .setMinificationFilter(GL::SamplerFilter::Nearest)
-             .setStorage(1, GL::TextureFormat::Red, {int(size.x), int(size.y)});
+             .setStorage(1, GL::TextureFormat::R8, {int(size.x), int(size.y)});
     return true;
 }
 
 
 void MagnumTexture::update(const uint8_t* pixels)
 {
-    ImageView2D image{PixelStorage{}.setAlignment(1), PixelFormat::R8UI,
+    ImageView2D image{PixelStorage{}.setAlignment(1), PixelFormat::R8Unorm,
                       {int(m_size.x), int(m_size.y)},
                       {pixels, size_t(m_size.x * m_size.y)}};
     m_texture.setSubImage(0, {}, image);
@@ -45,7 +45,7 @@ void MagnumTexture::update(const uint8_t* pixels)
 
 void MagnumTexture::update(const uint8_t* pixels, const xci::core::Rect_u& region)
 {
-    ImageView2D image{PixelStorage{}.setAlignment(1), PixelFormat::R8UI,
+    ImageView2D image{PixelStorage{}.setAlignment(1), PixelFormat::R8Unorm,
                       {int(region.w), int(region.h)},
                       {pixels, size_t(region.w * region.h)}};
     m_texture.setSubImage(0, {int(region.x), int(region.y)}, image);

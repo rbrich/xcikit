@@ -59,29 +59,6 @@ int main(int argc, char** argv) {
     // Magnum
     Platform::GLContext ctx{argc, argv};
 
-    /* Setup the colored triangle */
-    struct TriangleVertex {
-        Vector2 position;
-        Color3 color;
-    };
-    const TriangleVertex data[]{
-            {{-0.5f, -0.5f}, 0xff0000_rgbf},    /* Left vertex, red color */
-            {{ 0.5f, -0.5f}, 0x00ff00_rgbf},    /* Right vertex, green color */
-            {{ 0.0f,  0.5f}, 0x0000ff_rgbf}     /* Top vertex, blue color */
-    };
-
-    GL::Buffer buffer;
-    buffer.setData(data);
-
-    GL::Mesh mesh;
-    mesh.setPrimitive(GL::MeshPrimitive::Triangles)
-            .setCount(3)
-            .addVertexBuffer(buffer, 0,
-                             Shaders::VertexColor2D::Position{},
-                             Shaders::VertexColor2D::Color3{});
-
-    Shaders::VertexColor2D shader;
-
     // Setup XCI view
     View view;
     int width, height;
@@ -113,7 +90,6 @@ int main(int argc, char** argv) {
 
         /* Render here */
         GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
-        mesh.draw(shader);
 
         text.resize_draw(view, {-1.0f, -0.333f});
 

@@ -17,7 +17,6 @@
 #define XCI_GRAPHICS_GL_PRIMITIVES_H
 
 #include <xci/graphics/Primitives.h>
-#include <xci/graphics/Texture.h>
 #include <xci/graphics/View.h>
 
 #include <glad/glad.h>
@@ -44,7 +43,6 @@ public:
     bool empty() const override { return m_vertex_data.empty(); }
 
     void set_shader(ShaderPtr& shader) override;
-    void set_texture(const char* name, TexturePtr& texture) override;
     void set_blend(BlendFunc func) override;
 
     void draw(View& view) override;

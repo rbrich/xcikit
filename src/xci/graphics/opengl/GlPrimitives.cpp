@@ -15,7 +15,6 @@
 
 #include "GlPrimitives.h"
 #include "GlRenderer.h"
-#include "GlTexture.h"
 #include "GlShader.h"
 #include <cassert>
 
@@ -142,17 +141,6 @@ void GlPrimitives::set_shader(ShaderPtr& shader)
     GLuint program = static_cast<GlShader*>(shader.get())->program();
     glUseProgram(program);
     m_program = program;
-}
-
-
-void GlPrimitives::set_texture(const char* name, TexturePtr& texture)
-{
-    assert(m_program != 0);
-
-    GLint location = glGetUniformLocation(m_program, name);
-    glUniform1i(location, 0); // GL_TEXTURE0
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, static_cast<GlTexture*>(texture.get())->gl_texture());
 }
 
 

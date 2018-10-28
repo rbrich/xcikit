@@ -16,6 +16,8 @@
 #ifndef XCI_GRAPHICS_SHADER_H
 #define XCI_GRAPHICS_SHADER_H
 
+#include <xci/graphics/Texture.h>
+
 #include <string>
 #include <memory>
 
@@ -60,6 +62,9 @@ public:
 
     virtual void set_uniform(const char* name, float f) = 0;
     virtual void set_uniform(const char* name, float f1, float f2, float f3, float f4) = 0;
+    virtual void set_uniform_matrix4(const char* name, const float* matrix4x4) = 0;
+
+    virtual void set_texture(const char* name, TexturePtr& texture) = 0;
 };
 
 

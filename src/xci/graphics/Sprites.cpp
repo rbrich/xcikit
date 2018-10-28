@@ -83,8 +83,8 @@ void Sprites::draw(View& view, const Vec2f& pos)
     m_shader->set_uniform("u_color",
                           m_color.red_f(), m_color.green_f(),
                           m_color.blue_f(), m_color.alpha_f());
+    m_shader->set_texture("u_texture", m_texture);
     m_trifans->set_shader(m_shader);
-    m_trifans->set_texture("u_texture", m_texture);
     m_trifans->set_blend(Primitives::BlendFunc::AlphaBlend);
     m_trifans->draw(view, pos);
 }
@@ -159,8 +159,8 @@ void ColoredSprites::add_sprite(const Rect_f& rect, const Rect_u& texrect)
 void ColoredSprites::draw(View& view, const Vec2f& pos)
 {
     init_shader();
+    m_shader->set_texture("u_texture", m_texture);
     m_trifans->set_shader(m_shader);
-    m_trifans->set_texture("u_texture", m_texture);
     m_trifans->set_blend(Primitives::BlendFunc::AlphaBlend);
     m_trifans->draw(view, pos);
 }

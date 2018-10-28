@@ -14,6 +14,8 @@
 // limitations under the License.
 
 #include "MagnumShader.h"
+#include "MagnumTexture.h"
+#include <Magnum/Math/Matrix4.h>
 #include <Magnum/Math/Vector4.h>
 #include <Magnum/GL/Shader.h>
 #include <Magnum/GL/Version.h>
@@ -79,6 +81,28 @@ void MagnumShader::set_uniform(const char* name,
     assert(m_ready);
     auto location = uniformLocation(name);
     setUniform(location, Vector4(f1, f2, f3, f4));
+}
+
+
+void MagnumShader::set_uniform_matrix4(const char* name, const float* matrix4x4)
+{
+    assert(m_ready);
+    auto location = uniformLocation(name);
+    setUniform(location, Matrix4(
+            Vector4(matrix4x4[0], matrix4x4[1], matrix4x4[2], matrix4x4[3]),
+            Vector4(matrix4x4[4], matrix4x4[5], matrix4x4[6], matrix4x4[7]),
+            Vector4(matrix4x4[8], matrix4x4[9], matrix4x4[10], matrix4x4[11]),
+            Vector4(matrix4x4[12], matrix4x4[13], matrix4x4[14], matrix4x4[15])
+            ));
+}
+
+
+void MagnumShader::set_texture(const char* name, TexturePtr& texture)
+{
+    auto& t = static_cast<MagnumTexture*>(texture.get())->magnum_texture();
+    auto location = uniformLocation(name);
+    setUniform(location, 0);
+    t.bind(0);
 }
 
 

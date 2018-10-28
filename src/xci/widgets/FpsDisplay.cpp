@@ -71,8 +71,8 @@ void FpsDisplay::draw(View& view, State state)
     // Draw
     init_shader();
     update_texture();
+    m_shader->set_texture("u_texture", m_texture);
     m_quad->set_shader(m_shader);
-    m_quad->set_texture("u_texture", m_texture);
     m_quad->draw(view, position());
 
     m_text.set_string(format("{}fps ({:.2f}ms)",
