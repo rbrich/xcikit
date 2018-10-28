@@ -19,7 +19,7 @@ if (Catch_FOUND)
 endif()
 
 if (Catch_FOUND AND NOT TARGET Catch::Catch)
-    add_library(Catch::Catch UNKNOWN IMPORTED)
+    add_library(Catch::Catch INTERFACE IMPORTED)
     set_target_properties(Catch::Catch PROPERTIES
         INTERFACE_INCLUDE_DIRECTORIES "${Catch_INCLUDE_DIRS}")
 endif()

@@ -66,7 +66,7 @@ bool FontTexture::add_glyph(Vec2u size, const uint8_t* pixels, Rect_u& coords)
 void FontTexture::clear()
 {
     auto ts = m_texture->size();
-    m_binpack.Init(ts.x, ts.y);
+    m_binpack.Init(ts.x, ts.y, /*allowFlip=*/false);
     std::vector<uint8_t> buffer(ts.x * ts.y);
     m_texture->update(buffer.data(), {0, 0, ts.x, ts.y});
 }

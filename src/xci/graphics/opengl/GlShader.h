@@ -44,6 +44,7 @@ public:
 
     void set_uniform(const char* name, float f) override;
     void set_uniform(const char* name, float f1, float f2, float f3, float f4) override;
+    void set_uniform_matrix4(const char* name, const float* matrix4x4) override {}
 
     void set_texture(const char* name, TexturePtr& texture) override;
 
