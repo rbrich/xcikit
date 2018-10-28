@@ -57,6 +57,9 @@ public:
     virtual bool load_from_memory(
             const char* vertex_data, int vertex_size,
             const char* fragment_data, int fragment_size) = 0;
+
+    virtual void set_uniform(const char* name, float f) = 0;
+    virtual void set_uniform(const char* name, float f1, float f2, float f3, float f4) = 0;
 };
 
 

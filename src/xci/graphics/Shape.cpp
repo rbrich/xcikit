@@ -209,15 +209,15 @@ void Shape::draw(View& view, const Vec2f& pos)
     // lines
     if (!m_lines->empty()) {
         init_line_shader();
+        m_line_shader->set_uniform("u_fill_color",
+                                   m_fill_color.red_f(), m_fill_color.green_f(),
+                                   m_fill_color.blue_f(), m_fill_color.alpha_f());
+        m_line_shader->set_uniform("u_outline_color",
+                                   m_outline_color.red_f(), m_outline_color.green_f(),
+                                   m_outline_color.blue_f(), m_outline_color.alpha_f());
+        m_line_shader->set_uniform("u_softness", m_softness);
+        m_line_shader->set_uniform("u_antialiasing", m_antialiasing);
         m_lines->set_shader(m_line_shader);
-        m_lines->set_uniform("u_fill_color",
-                                  m_fill_color.red_f(), m_fill_color.green_f(),
-                                  m_fill_color.blue_f(), m_fill_color.alpha_f());
-        m_lines->set_uniform("u_outline_color",
-                                  m_outline_color.red_f(), m_outline_color.green_f(),
-                                  m_outline_color.blue_f(), m_outline_color.alpha_f());
-        m_lines->set_uniform("u_softness", m_softness);
-        m_lines->set_uniform("u_antialiasing", m_antialiasing);
         m_lines->set_blend(Primitives::BlendFunc::AlphaBlend);
         m_lines->draw(view, pos);
     }
@@ -225,12 +225,12 @@ void Shape::draw(View& view, const Vec2f& pos)
     // rectangles
     if (!m_rectangles->empty()) {
         init_rectangle_shader();
+        m_rectangle_shader->set_uniform("u_outline_color",
+                                        m_outline_color.red_f(), m_outline_color.green_f(),
+                                        m_outline_color.blue_f(), m_outline_color.alpha_f());
+        m_rectangle_shader->set_uniform("u_softness", m_softness);
+        m_rectangle_shader->set_uniform("u_antialiasing", m_antialiasing);
         m_rectangles->set_shader(m_rectangle_shader);
-        m_rectangles->set_uniform("u_outline_color",
-                                 m_outline_color.red_f(), m_outline_color.green_f(),
-                                 m_outline_color.blue_f(), m_outline_color.alpha_f());
-        m_rectangles->set_uniform("u_softness", m_softness);
-        m_rectangles->set_uniform("u_antialiasing", m_antialiasing);
         m_rectangles->set_blend(Primitives::BlendFunc::AlphaBlend);
         m_rectangles->draw(view, pos);
     }
@@ -238,15 +238,15 @@ void Shape::draw(View& view, const Vec2f& pos)
     // ellipses
     if (!m_ellipses->empty()) {
         init_ellipse_shader();
+        m_ellipse_shader->set_uniform("u_fill_color",
+                                      m_fill_color.red_f(), m_fill_color.green_f(),
+                                      m_fill_color.blue_f(), m_fill_color.alpha_f());
+        m_ellipse_shader->set_uniform("u_outline_color",
+                                      m_outline_color.red_f(), m_outline_color.green_f(),
+                                      m_outline_color.blue_f(), m_outline_color.alpha_f());
+        m_ellipse_shader->set_uniform("u_softness", m_softness);
+        m_ellipse_shader->set_uniform("u_antialiasing", m_antialiasing);
         m_ellipses->set_shader(m_ellipse_shader);
-        m_ellipses->set_uniform("u_fill_color",
-                               m_fill_color.red_f(), m_fill_color.green_f(),
-                               m_fill_color.blue_f(), m_fill_color.alpha_f());
-        m_ellipses->set_uniform("u_outline_color",
-                               m_outline_color.red_f(), m_outline_color.green_f(),
-                               m_outline_color.blue_f(), m_outline_color.alpha_f());
-        m_ellipses->set_uniform("u_softness", m_softness);
-        m_ellipses->set_uniform("u_antialiasing", m_antialiasing);
         m_ellipses->set_blend(Primitives::BlendFunc::AlphaBlend);
         m_ellipses->draw(view, pos);
     }

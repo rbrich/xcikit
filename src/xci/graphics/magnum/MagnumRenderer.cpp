@@ -15,6 +15,8 @@
 
 #include "MagnumRenderer.h"
 #include "MagnumTexture.h"
+#include "MagnumShader.h"
+#include "MagnumPrimitives.h"
 
 namespace xci::graphics {
 
@@ -34,14 +36,22 @@ TexturePtr MagnumRenderer::create_texture()
 
 ShaderPtr MagnumRenderer::get_or_create_shader(ShaderId shader_id)
 {
-    return xci::graphics::ShaderPtr();
+    if (shader_id != ShaderId::Custom) {
+        auto& shader = m_shader[(size_t) shader_id];
+        if (!shader) {
+            shader = std::make_shared<MagnumShader>();
+        }
+        return shader;
+    } else {
+        return std::make_shared<MagnumShader>();
+    }
 }
 
 
 PrimitivesPtr
 MagnumRenderer::create_primitives(VertexFormat format, PrimitiveType type)
 {
-    return xci::graphics::PrimitivesPtr();
+    return std::make_shared<MagnumPrimitives>(format, type);
 }
 
 

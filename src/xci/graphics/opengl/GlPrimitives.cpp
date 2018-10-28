@@ -13,11 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <cassert>
 #include "GlPrimitives.h"
 #include "GlRenderer.h"
 #include "GlTexture.h"
 #include "GlShader.h"
+#include <cassert>
 
 namespace xci {
 namespace graphics {
@@ -145,23 +145,6 @@ void GlPrimitives::set_shader(ShaderPtr& shader)
 }
 
 
-void GlPrimitives::set_uniform(const char* name, float f)
-{
-    assert(m_program != 0);
-    GLint location = glGetUniformLocation(m_program, name);
-    glUniform1f(location, f);
-}
-
-
-void GlPrimitives::set_uniform(const char* name,
-                               float f1, float f2, float f3, float f4)
-{
-    assert(m_program != 0);
-    GLint location = glGetUniformLocation(m_program, name);
-    glUniform4f(location, f1, f2, f3, f4);
-}
-
-
 void GlPrimitives::set_texture(const char* name, TexturePtr& texture)
 {
     assert(m_program != 0);
@@ -247,37 +230,51 @@ void GlPrimitives::init_gl_objects()
     glBufferData(GL_ARRAY_BUFFER, sizeof(float) * m_vertex_data.size(),
                  m_vertex_data.data(), GL_STATIC_DRAW);
 
-    if (m_format == VertexFormat::V2t2) {
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
-                              sizeof(float) * 4, (void*) (sizeof(float) * 0));
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
-                              sizeof(float) * 4, (void*) (sizeof(float) * 2));
-    }
-    if (m_format == VertexFormat::V2t22) {
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
-                              sizeof(float) * 6, (void*) (sizeof(float) * 0));
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
-                              sizeof(float) * 6, (void*) (sizeof(float) * 2));
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE,
-                              sizeof(float) * 6, (void*) (sizeof(float) * 4));
-    }
-    if (m_format == VertexFormat::V2c4t2) {
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
-                              sizeof(float) * 8, (void*) (sizeof(float) * 0));
-        glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE,
-                              sizeof(float) * 8, (void*) (sizeof(float) * 2));
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE,
-                              sizeof(float) * 8, (void*) (sizeof(float) * 6));
-    }
-    if (m_format == VertexFormat::V2c4t22) {
-        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
-                              sizeof(float) * 10, (void*) (sizeof(float) * 0));
-        glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE,
-                              sizeof(float) * 10, (void*) (sizeof(float) * 2));
-        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE,
-                              sizeof(float) * 10, (void*) (sizeof(float) * 6));
-        glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE,
-                              sizeof(float) * 10, (void*) (sizeof(float) * 8));
+    switch (m_format) {
+        case VertexFormat::V2t2:
+            glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
+                                  sizeof(float) * 4,
+                                  (void*) (sizeof(float) * 0));
+            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
+                                  sizeof(float) * 4,
+                                  (void*) (sizeof(float) * 2));
+            break;
+        case VertexFormat::V2t22:
+            glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
+                                  sizeof(float) * 6,
+                                  (void*) (sizeof(float) * 0));
+            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
+                                  sizeof(float) * 6,
+                                  (void*) (sizeof(float) * 2));
+            glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE,
+                                  sizeof(float) * 6,
+                                  (void*) (sizeof(float) * 4));
+            break;
+        case VertexFormat::V2c4t2:
+            glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
+                                  sizeof(float) * 8,
+                                  (void*) (sizeof(float) * 0));
+            glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE,
+                                  sizeof(float) * 8,
+                                  (void*) (sizeof(float) * 2));
+            glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE,
+                                  sizeof(float) * 8,
+                                  (void*) (sizeof(float) * 6));
+            break;
+        case VertexFormat::V2c4t22:
+            glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
+                                  sizeof(float) * 10,
+                                  (void*) (sizeof(float) * 0));
+            glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE,
+                                  sizeof(float) * 10,
+                                  (void*) (sizeof(float) * 2));
+            glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE,
+                                  sizeof(float) * 10,
+                                  (void*) (sizeof(float) * 6));
+            glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE,
+                                  sizeof(float) * 10,
+                                  (void*) (sizeof(float) * 8));
+            break;
     }
 
     m_objects_ready = true;

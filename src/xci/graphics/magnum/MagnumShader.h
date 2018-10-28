@@ -1,4 +1,4 @@
-// GlShader.h created on 2018-04-08, part of XCI toolkit
+// MagnumShader.h created on 2018-10-26, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,29 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_GRAPHICS_GL_SHADER_H
-#define XCI_GRAPHICS_GL_SHADER_H
+#ifndef XCI_GRAPHICS_MAGNUM_SHADER_H
+#define XCI_GRAPHICS_MAGNUM_SHADER_H
 
 #include <xci/graphics/Shader.h>
-#include <xci/core/FileWatch.h>
 
-#include <glad/glad.h>
-#include <atomic>
+#include <Magnum/GL/AbstractShaderProgram.h>
 
 namespace xci::graphics {
 
-using xci::core::FileWatch;
-using xci::core::FileWatchPtr;
 
-
-class GlShader: public Shader {
+class MagnumShader : public Shader, private Magnum::GL::AbstractShaderProgram {
 public:
-    GlShader() : m_file_watch(FileWatch::create()) {}
-    ~GlShader() override { clear(); }
+    MagnumShader() {}
+    ~MagnumShader() override {}
 
-    bool is_ready() const override;
+    bool is_ready() const override { return m_ready; }
 
-    // If successful, setup a watch on the file to auto-reload on any change.
     bool load_from_file(const std::string& vertex, const std::string& fragment) override;
 
     bool load_from_memory(
@@ -45,25 +39,13 @@ public:
     void set_uniform(const char* name, float f) override;
     void set_uniform(const char* name, float f1, float f2, float f3, float f4) override;
 
-    GLuint program();
-
-    void add_watches();
-    void remove_watches();
-
-    bool reload_from_file();
-    void clear();
+    Magnum::GL::AbstractShaderProgram& program() { return *this; }
 
 private:
-    GLuint m_program = 0;
-    mutable std::atomic_bool m_program_ready {false};
-    FileWatchPtr m_file_watch;
-    std::string m_vertex_file;
-    std::string m_fragment_file;
-    int m_vertex_file_watch = -1;
-    int m_fragment_file_watch = -1;
+    bool m_ready = false;
 };
 
 
 } // namespace xci::graphics
 
-#endif // XCI_GRAPHICS_GL_SHADER_H
+#endif // include guard

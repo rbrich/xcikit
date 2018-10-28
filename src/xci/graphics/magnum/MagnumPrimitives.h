@@ -1,4 +1,4 @@
-// GlPrimitives.h created on 2018-04-07, part of XCI toolkit
+// MagnumPrimitives.h created on 2018-10-26, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,24 +13,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_GRAPHICS_GL_PRIMITIVES_H
-#define XCI_GRAPHICS_GL_PRIMITIVES_H
+#ifndef XCI_GRAPHICS_MAGNUM_PRIMITIVES_H
+#define XCI_GRAPHICS_MAGNUM_PRIMITIVES_H
 
 #include <xci/graphics/Primitives.h>
-#include <xci/graphics/Texture.h>
-#include <xci/graphics/View.h>
+#include <xci/graphics/magnum/MagnumShader.h>
 
-#include <glad/glad.h>
+#include <Magnum/GL/Mesh.h>
 
 #include <vector>
 
 namespace xci::graphics {
 
 
-class GlPrimitives: public Primitives {
+class MagnumPrimitives : public Primitives {
 public:
-    explicit GlPrimitives(VertexFormat format, PrimitiveType type);
-    ~GlPrimitives() override { invalidate_gl_objects(); }
+    explicit MagnumPrimitives(VertexFormat format, PrimitiveType type);
+    ~MagnumPrimitives() override = default;
 
     void reserve(size_t primitives, size_t vertices) override;
 
@@ -50,25 +49,20 @@ public:
     void draw(View& view) override;
 
 private:
-    void init_gl_objects();
-    void invalidate_gl_objects();
+    Magnum::GL::Mesh m_mesh;
 
-private:
     VertexFormat m_format;
     std::vector<float> m_vertex_data;
-    std::vector<GLint> m_elem_first;  // first vertex of each element
+    std::vector<GLint> m_elem_base;  // first vertex of each element
     std::vector<GLsizei> m_elem_size;  // number of vertices of each element
-
-    GLuint m_vertex_array = 0;  // aka VAO
-    GLuint m_vertex_buffer = 0;  // aka VBO
-    GLuint m_program = 0;
-    bool m_objects_ready = false;
 
     int m_closed_vertices = 0;
     int m_open_vertices = -1;
+
+    std::shared_ptr<MagnumShader> m_shader;
 };
 
 
 } // namespace xci::graphics
 
-#endif // XCI_GRAPHICS_GL_PRIMITIVES_H
+#endif // include guard

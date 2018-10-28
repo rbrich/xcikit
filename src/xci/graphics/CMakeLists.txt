@@ -31,7 +31,9 @@ set(XCI_GRAPHICS_PANDA3D_SOURCES
     panda/PandaWindow.cpp)
 
 set(XCI_GRAPHICS_MAGNUM_SOURCES
+    magnum/MagnumPrimitives.cpp
     magnum/MagnumRenderer.cpp
+    magnum/MagnumShader.cpp
     magnum/MagnumTexture.cpp)
 
 

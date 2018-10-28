@@ -163,6 +163,23 @@ bool GlShader::load_from_memory(const char* vertex_data, int vertex_size,
 }
 
 
+void GlShader::set_uniform(const char* name, float f)
+{
+    assert(m_program != 0);
+    GLint location = glGetUniformLocation(m_program, name);
+    glUniform1f(location, f);
+}
+
+
+void GlShader::set_uniform(const char* name,
+                               float f1, float f2, float f3, float f4)
+{
+    assert(m_program != 0);
+    GLint location = glGetUniformLocation(m_program, name);
+    glUniform4f(location, f1, f2, f3, f4);
+}
+
+
 GLuint GlShader::program()
 {
     bool ok = m_program_ready.load(std::memory_order_acquire);
