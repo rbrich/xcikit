@@ -27,7 +27,7 @@ target_link_libraries(demo_coords xci-graphics xci-text)
 install(TARGETS demo_coords EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 
 add_executable(demo_fps demo_fps.cpp)
-target_link_libraries(demo_fps xci-graphics xci-widgets)
+target_link_libraries(demo_fps xci-widgets xci-text xci-graphics)
 install(TARGETS demo_fps EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 
 add_executable(demo_shapes demo_shapes.cpp)

@@ -25,6 +25,7 @@
 namespace xci {
 namespace graphics {
 
+using namespace xci::core;
 using namespace xci::core::log;
 using namespace std::chrono;
 
@@ -37,6 +38,33 @@ static void error_callback(int error, const char* description)
 
 // This is enabled via CMake option
 #ifdef XCI_DEBUG_OPENGL
+const char* gl_type_to_string(GLenum type)
+{
+    switch (type) {
+        case GL_DEBUG_TYPE_ERROR: return "ERROR";
+        case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: return "DEPRECATED_BEHAVIOR";
+        case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR: return "UNDEFINED_BEHAVIOR";
+        case GL_DEBUG_TYPE_PERFORMANCE: return "PERFORMANCE";
+        case GL_DEBUG_TYPE_OTHER: return "OTHER";
+        default:
+            log_debug("Unknown GL type: 0x{:x}", type);
+            return "UNKNOWN";
+    }
+}
+
+const char* gl_severity_to_string(GLenum severity)
+{
+    switch (severity) {
+        case GL_DEBUG_SEVERITY_HIGH: return "HIGH";
+        case GL_DEBUG_SEVERITY_MEDIUM: return "MEDIUM";
+        case GL_DEBUG_SEVERITY_LOW: return "LOW";
+        case GL_DEBUG_SEVERITY_NOTIFICATION: return "NOTIFICATION";
+        default:
+            log_debug("Unknown GL severity: 0x{:x}", severity);
+            return "UNKNOWN";
+    }
+}
+
 void gl_debug_callback( GLenum source,
                       GLenum type,
                       GLuint id,
@@ -45,9 +73,10 @@ void gl_debug_callback( GLenum source,
                       const GLchar* message,
                       const void* userParam )
 {
-    log_debug("GL (type {}, severity {}): {}",
-             ( type == GL_DEBUG_TYPE_ERROR ? "ERROR" : std::to_string((int)type) ),
-             severity, message );
+    Logger::default_instance().log(
+            (type == GL_DEBUG_TYPE_ERROR) ? Logger::Level::Error : Logger::Level::Debug,
+            format("GL {} (severity: {}) message: {}",
+                   gl_type_to_string(type), gl_severity_to_string(severity), message));
 }
 #endif
 

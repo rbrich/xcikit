@@ -517,13 +517,13 @@ void terminal::Cursor::draw(View& view, const Vec2f& pos)
     //constexpr Color fill_color(0.7, 0.7, 0.3);
     //constexpr Color outline_color(1.0, 1.0, 0.0);
     init_shader();
+    m_shader->set_uniform("u_fill_color",
+                          fill_color.red_f(), fill_color.green_f(),
+                          fill_color.blue_f(), fill_color.alpha_f());
+    m_shader->set_uniform("u_outline_color",
+                          outline_color.red_f(), outline_color.green_f(),
+                          outline_color.blue_f(), outline_color.alpha_f());
     m_prim->set_shader(m_shader);
-    m_prim->set_uniform("u_fill_color",
-                        fill_color.red_f(), fill_color.green_f(),
-                        fill_color.blue_f(), fill_color.alpha_f());
-    m_prim->set_uniform("u_outline_color",
-                        outline_color.red_f(), outline_color.green_f(),
-                        outline_color.blue_f(), outline_color.alpha_f());
     m_prim->set_blend(Primitives::BlendFunc::InverseVideo);
     m_prim->draw(view, pos);
 }

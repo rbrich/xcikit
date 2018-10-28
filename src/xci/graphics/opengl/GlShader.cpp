@@ -167,6 +167,7 @@ void GlShader::set_uniform(const char* name, float f)
 {
     assert(m_program != 0);
     GLint location = glGetUniformLocation(m_program, name);
+    glUseProgram(m_program);
     glUniform1f(location, f);
 }
 
@@ -176,6 +177,7 @@ void GlShader::set_uniform(const char* name,
 {
     assert(m_program != 0);
     GLint location = glGetUniformLocation(m_program, name);
+    glUseProgram(m_program);
     glUniform4f(location, f1, f2, f3, f4);
 }
 
