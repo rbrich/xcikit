@@ -4,7 +4,6 @@ os:
   - osx
 
 compiler:
-  - gcc
   - clang
 
 install:
@@ -12,9 +11,9 @@ install:
 
 script:
   - ./bootstrap.sh
+  - ./conan/create-local.sh
   - mkdir build && cd build
-  - ../conan/create-local.sh
   - conan install ..
   - cmake ..
-  - make
-  - make test
+  - cmake --build .
+  - cmake --build . --target test
