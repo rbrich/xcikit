@@ -9,13 +9,15 @@ RUN printf 'APT::Get::Install-Recommends "false";\nAPT::Get::Install-Suggests "f
 # Install development tools
 RUN apt-get install -y build-essential git curl ca-certificates
 RUN apt-get install -y python-pip python-setuptools python-wheel
-RUN apt-get install -y -t stretch-backports cmake
+RUN apt-get install -y -t stretch-backports cmake ninja-build
 
 # Install xcikit dependencies
 RUN apt-get install -y libfreetype6-dev libglfw3-dev
 
 # Install Conan
 RUN pip --no-cache-dir install conan
+RUN conan profile new default --detect
+RUN conan profile update "settings.compiler.libcxx=libstdc++11" default
 
 # Cleanup
 RUN apt-get clean
