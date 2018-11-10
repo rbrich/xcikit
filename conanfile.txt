@@ -1,6 +1,6 @@
 [requires]
 catch2/2.2.2@bincrafters/stable
-PEGTL/2.4.0@xci/local
+pegtl/2.7.1@taocpp/stable
 incbin/20180413-c61cae6@xci/local
 abseil/20181003-f21d187@xci/local
 

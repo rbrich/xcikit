@@ -1,7 +1,6 @@
 #!/bin/bash
 cd "$(dirname "$0")"
 
-conan create PEGTL xci/local
 conan create incbin xci/local
 conan create abseil xci/local
 

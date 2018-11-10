@@ -121,22 +121,24 @@ Installing dependencies:
 
 Build steps:
 
+    # Only when building from Git checkout:
+    # Download additional assets, generate glad bindings
+    ./bootstrap.sh
+
+    # Create local Conan packages (these will be replaced by conan-center later)
+    ../conan/create-local.sh 
+
     mkdir build && cd build
-    
-    # Optionally, regenerate glad bindings
-    ../bootstrap.sh
 
     # Optionally, install dependencies using Conan.
     # Otherwise, they will be looked up in default system locations
     # or specified paths (see in cmake-modules).
-    ../.conan/create-local.sh
-    conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan
-    conan install .. [-s compiler=clang]
-    
+    conan install .. -s compiler=clang
+
     # Configure
-    cmake .. -G "Unix Makefiles"
-    
-    # Optionally, adjust configuration
+    cmake .. -G Ninja
+
+    # Adjust CMake configuration
     ccmake ..
     
     # Build:
