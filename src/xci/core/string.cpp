@@ -27,6 +27,13 @@
 namespace xci::core {
 
 
+bool starts_with(const std::string& str, const std::string& sub)
+{
+    // Note: don't use find(), that would be ineffective to decide negative result
+    return str.size() >= sub.size() && str.substr(0, sub.size()) == sub;
+}
+
+
 std::vector<absl::string_view> split(absl::string_view str, char delim)
 {
     std::vector<absl::string_view> res;

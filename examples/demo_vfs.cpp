@@ -23,14 +23,24 @@ using namespace xci::core::log;
 int main()
 {
     Vfs vfs;
-    vfs.mount_dir("/does/not/exist");
-    vfs.mount_dir(XCI_SHARE_DIR);
+    vfs.mount("/does/not/exist");
+    vfs.mount(XCI_SHARE_DIR);
+
+    // This also works:
+    //vfs.mount(XCI_SHARE_DIR "/shaders", "shaders");
 
     auto f = vfs.open("non/existent.file");
     log_info("main: open result: {}", f.is_open());
 
     f = vfs.open("shaders/fps.frag");
     log_info("main: open result: {}", f.is_open());
+
+    // Note that leading slashes in VFS paths don't matter (they are auto-normalized).
+    // The VFS paths are always absolute, there is no CWD.
+    // Same as above:
+    //vfs.mount(XCI_SHARE_DIR "/shaders", "/shaders");
+    // Also same as above:
+    //vfs.open("/shaders/fps.frag");
 
     return 0;
 }

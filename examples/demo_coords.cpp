@@ -34,7 +34,7 @@ using namespace xci::core;
 int main()
 {
     auto& vfs = Vfs::default_instance();
-    vfs.mount_dir(XCI_SHARE_DIR);
+    vfs.mount(XCI_SHARE_DIR);
 
     Window& window = Window::default_window();
     window.create({800, 600}, "XCI coords demo");

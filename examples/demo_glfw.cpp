@@ -30,7 +30,7 @@ using namespace xci::core;
 int main()
 {
     auto& vfs = Vfs::default_instance();
-    vfs.mount_dir(XCI_SHARE_DIR);
+    vfs.mount(XCI_SHARE_DIR);
 
     if (!glfwInit())
         return EXIT_FAILURE;

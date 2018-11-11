@@ -16,6 +16,7 @@
 #include "Vfs.h"
 #include "file.h"
 #include <xci/core/log.h>
+#include <xci/core/string.h>
 
 namespace xci::core {
 
@@ -37,17 +38,31 @@ Vfs& Vfs::default_instance()
 }
 
 
-void Vfs::mount_dir(std::string path)
+void Vfs::mount(std::string real_path, std::string target_path)
 {
-    m_loaders.push_back(std::make_unique<VfsDirLoader>(std::move(path)));
+    auto loader = std::make_unique<VfsDirLoader>(std::move(real_path));
+    lstrip(target_path, '/');
+    rstrip(target_path, '/');
+    m_loaders.push_back({std::move(target_path), std::move(loader)});
 }
 
 
-VfsFile Vfs::open(const std::string& path, std::ios_base::openmode mode)
+VfsFile Vfs::open(std::string path, std::ios_base::openmode mode)
 {
+    lstrip(path, '/');
     log_debug("Vfs: try open: {}", path);
-    for (auto& loader : m_loaders) {
-        auto f = loader->open(path, mode);
+    for (auto& path_loader : m_loaders) {
+        // Is the loader applicable for requested path?
+        if (!path_loader.path.empty()) {
+            if (!starts_with(path, path_loader.path))
+                continue;
+            path = path.substr(path_loader.path.size());
+            if (path.front() != '/')
+                continue;
+            lstrip(path, '/');
+        }
+        // Open the path with loader
+        auto f = path_loader.loader->open(path, mode);
         if (f.is_open()) {
             log_debug("Vfs: success!");
             return f;

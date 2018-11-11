@@ -190,3 +190,30 @@ TEST_CASE( "split", "[string]" )
         CHECK(res[2] == "three");
     }
 }
+
+
+TEST_CASE( "starts_with", "[string]" )
+{
+    CHECK(starts_with("/ab/cdef", "/ab") == true);
+    CHECK(starts_with("/ab/cdef", "/ab/cdef") == true);
+    CHECK(starts_with("/ab/cdef", "/ab/cdef/") == false);
+    CHECK(starts_with("", "") == true);
+    CHECK(starts_with("abc", "") == true);
+    CHECK(starts_with("", "abc") == false);
+}
+
+
+TEST_CASE( "lstrip", "[string]" )
+{
+    CHECK(lstrip("/ab/cdef/", '/') == "ab/cdef/");
+    CHECK(lstrip("/ab/cdef/", ' ') == "/ab/cdef/");
+    CHECK(lstrip("/ab/cdef/", "/ba") == "cdef/");
+}
+
+
+TEST_CASE( "rstrip", "[string]" )
+{
+    CHECK(rstrip("/ab/cdef/", '/') == "/ab/cdef");
+    CHECK(rstrip("/ab/cdef/", ' ') == "/ab/cdef/");
+    CHECK(rstrip("/ab/cdef/", "/fedc") == "/ab");
+}

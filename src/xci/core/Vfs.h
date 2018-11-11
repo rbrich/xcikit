@@ -77,12 +77,16 @@ private:
 };
 
 
+/// VFS abstract loader.
+/// Inherit from this to implement additional archive format.
 class VfsLoader {
 public:
     virtual ~VfsLoader() = default;
     virtual VfsFile open(const std::string& path, std::ios_base::openmode mode) = 0;
 };
 
+
+/// Lookup files in real directory, which is mapped to VFS path
 class VfsDirLoader: public VfsLoader {
 public:
     explicit VfsDirLoader(std::string m_path) : m_path(std::move(m_path)) {}
@@ -97,7 +101,7 @@ private:
 /// Virtual File System
 ///
 /// Search for files by path and open them as file streams.
-/// Multiple real FS paths can be mounted as a root of VFS.
+/// Multiple real FS paths can be mounted as to a VFS.
 /// When searching for a file, all mounted paths are checked
 /// (in order of addition).
 /// TODO: Single dir can be mounted for writing - any file opened for writing
@@ -106,19 +110,32 @@ class Vfs {
 public:
     static Vfs& default_instance();
 
-    /// Mount real FS dir as root of the VFS.
-    /// Multiple dirs can be added this way - they will be searched
-    /// in order of addition. The path don't have to exists at time of addition,
-    /// but can be created later. It will be checked every time when opening a file.
-    void mount_dir(std::string path);
+    /// Mount real FS path to a VFS path.
+    ///
+    /// Multiple dirs can overlap - they will be searched in order of addition.
+    ///
+    /// The real_path doesn't have to exists at time of addition,
+    /// but can be created later. In that case, it will be tried as a directory
+    /// every time when opening a file.
+    ///
+    /// The path can point to an archive instead of directory.
+    /// Supported archive formats:
+    /// - DAR - see `tools/pack_assets.py`
+    /// - ZIP - TODO
+    ///
+    /// \param real_path        FS path to a directory or archive.
+    /// \param target_path      The target path inside the VFS
+    void mount(std::string real_path, std::string target_path="");
 
-    // TODO: return custom stream class inherited from `basic_iostream`
-    //       (to make it possible to abstract also zip files etc.)
-    VfsFile open(const std::string& path,
+    VfsFile open(std::string path,
                  std::ios_base::openmode mode = std::ios_base::in);
 
 private:
-    std::vector<std::unique_ptr<VfsLoader>> m_loaders;
+    struct PathLoader {
+        std::string path;  // mounted path
+        std::unique_ptr<VfsLoader> loader;
+    };
+    std::vector<PathLoader> m_loaders;
 };
 
 

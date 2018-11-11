@@ -23,7 +23,39 @@
 namespace xci::core {
 
 
+constexpr const char* whitespace_chars = "\t\n\v\f\r ";
+
+
+/// Check if a string starts with another string
+/// \param str      String to be checked
+/// \param sub      String to be looked up (length should be shorter or same)
+bool starts_with(const std::string& str, const std::string& sub);
+
 std::vector<absl::string_view> split(absl::string_view str, char delim);
+
+// Strip chars from start of a string
+template <typename T>
+std::string& lstrip(std::string &str, T strip_chars) {
+    return str.erase(0, str.find_first_not_of(strip_chars));
+}
+std::string& lstrip(std::string &str) { return lstrip(str, whitespace_chars); }
+template <typename T>
+std::string& lstrip(std::string &&str, T strip_chars) {
+    return str.erase(0, str.find_first_not_of(strip_chars));
+}
+std::string& lstrip(std::string &&str) { return lstrip(str, whitespace_chars); }
+
+// Strip chars from end of a string
+template <typename T>
+std::string& rstrip(std::string &str, T strip_chars) {
+    return str.erase(str.find_last_not_of(strip_chars) + 1);
+}
+std::string& rstrip(std::string &str) { return rstrip(str, whitespace_chars); }
+template <typename T>
+std::string& rstrip(std::string &&str, T strip_chars) {
+    return str.erase(str.find_last_not_of(strip_chars) + 1);
+}
+std::string& rstrip(std::string &&str) { return rstrip(str, whitespace_chars); }
 
 // Escape non-printable characters with C escape sequences (eg. '\n')
 std::string escape(absl::string_view str);

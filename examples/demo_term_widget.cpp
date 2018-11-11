@@ -31,7 +31,7 @@ using namespace xci::core;
 int main()
 {
     Logger::init();
-    Vfs::default_instance().mount_dir(XCI_SHARE_DIR);
+    Vfs::default_instance().mount(XCI_SHARE_DIR);
 
     Window& window = Window::default_window();
     window.create({800, 600}, "XCI TextTerminal demo");

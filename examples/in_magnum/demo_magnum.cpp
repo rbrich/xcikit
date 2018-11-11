@@ -37,7 +37,7 @@ using namespace Magnum::Math::Literals;
 int main(int argc, char** argv) {
     // XCI vfs
     auto& vfs = Vfs::default_instance();
-    vfs.mount_dir(XCI_SHARE_DIR);
+    vfs.mount(XCI_SHARE_DIR);
 
     // GLFW window
     if (!glfwInit())
