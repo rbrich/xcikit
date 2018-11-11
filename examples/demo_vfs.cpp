@@ -29,6 +29,9 @@ int main()
     // This also works:
     //vfs.mount(XCI_SHARE_DIR "/shaders", "shaders");
 
+    // Or create share.dar and mount that:
+    //vfs.mount(XCI_SHARE_DIR ".dar");
+
     auto f = vfs.open("non/existent.file");
     log_info("main: open result: {}", f.is_open());
 

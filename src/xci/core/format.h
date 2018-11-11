@@ -114,6 +114,7 @@ inline std::string fun_format(const char *fmt, const FormatCallback& fun,
                     default: break;
                 }
                 ctx.stream
+                    << std::boolalpha
                     << std::setfill(ctx.fill)
                     << std::setw(ctx.width)
                     << std::setprecision(ctx.precision)
