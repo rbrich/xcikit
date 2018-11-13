@@ -220,15 +220,23 @@ TEST_CASE( "starts_with", "[string]" )
 
 TEST_CASE( "lstrip", "[string]" )
 {
-    CHECK(lstrip("/ab/cdef/", '/') == "ab/cdef/");
-    CHECK(lstrip("/ab/cdef/", ' ') == "/ab/cdef/");
-    CHECK(lstrip("/ab/cdef/", "/ba") == "cdef/");
+    std::string s;
+    s = "/ab/cdef/"; lstrip(s, '/');
+    CHECK(s == "ab/cdef/");
+    s = "/ab/cdef/"; lstrip(s, ' ');
+    CHECK(s == "/ab/cdef/");
+    s = "/ab/cdef/"; lstrip(s, "/ba");
+    CHECK(s == "cdef/");
 }
 
 
 TEST_CASE( "rstrip", "[string]" )
 {
-    CHECK(rstrip("/ab/cdef/", '/') == "/ab/cdef");
-    CHECK(rstrip("/ab/cdef/", ' ') == "/ab/cdef/");
-    CHECK(rstrip("/ab/cdef/", "/fedc") == "/ab");
+    std::string s;
+    s = "/ab/cdef/"; rstrip(s, '/');
+    CHECK(s == "/ab/cdef");
+    s = "/ab/cdef/"; rstrip(s, ' ');
+    CHECK(s == "/ab/cdef/");
+    s = "/ab/cdef/"; rstrip(s, "/fedc");
+    CHECK(s == "/ab");
 }

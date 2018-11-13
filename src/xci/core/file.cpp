@@ -67,7 +67,7 @@ BufferPtr read_binary_file(std::istream& file)
     auto file_size = size_t(file.tellg());
     file.seekg(0, std::ios::beg);
 
-    auto* content = new std::byte[file_size];
+    auto* content = new Byte[file_size];
     file.read(reinterpret_cast<char*>(content), file_size);
     if (!file) {
         delete[] content;

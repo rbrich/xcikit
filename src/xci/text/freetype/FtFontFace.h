@@ -17,6 +17,7 @@
 #define XCI_TEXT_FREETYPE_FONTFACE_H
 
 #include <xci/text/FontFace.h>
+#include <xci/core/types.h>
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -49,7 +50,7 @@ public:
 
 private:
     FT_Library ft_library();
-    bool load_face(const char* file_path, const std::byte* buffer, size_t buffer_size, int face_index);
+    bool load_face(const char* file_path, const core::Byte* buffer, size_t buffer_size, int face_index);
 
     // Returns null on error
     FT_GlyphSlot load_glyph(GlyphIndex glyph_index);

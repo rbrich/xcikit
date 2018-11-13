@@ -1,4 +1,4 @@
-// bit_cast.h created on 2018-11-11, part of XCI toolkit
+// bit_read.h created on 2018-11-11, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,32 +13,41 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_COMPAT_BIT_CAST_H
-#define XCI_COMPAT_BIT_CAST_H
+#ifndef XCI_COMPAT_BIT_READ_H
+#define XCI_COMPAT_BIT_READ_H
 
 #include <type_traits>
 #include <cstring>
 
-namespace xci::compat {
+namespace xci::core {
 
 
-// C++20 compatibility
-// https://en.cppreference.com/w/cpp/numeric/bit_cast
+/// Similar to C++20 bit_cast, but read bits from void*, char*, byte* etc.
+/// Useful to emulate file reading from memory buffer.
+///
+/// Example:
+///
+///     vector<byte> buf;
+///     auto ptr = buf.data();
+///     auto a = bit_read<int32_t>(ptr);
+///     auto b = bit_read<uint16_t>(ptr + 4);
 
 template <class To, class From>
 typename std::enable_if<
-    (sizeof(To) == sizeof(From)) &&
-    std::is_trivially_copyable<From>::value &&
-    std::is_trivial<To>::value,
-    To>::type
-bit_cast(const From &src) noexcept
+        std::is_trivially_copyable<From>::value &&
+        std::is_trivial<To>::value &&
+        !std::is_pointer<From>::value &&
+        !std::is_pointer<To>::value &&
+        sizeof(From) == 1,
+        To>::type
+bit_read(const From* src) noexcept
 {
     To dst;
-    std::memcpy(&dst, &src, sizeof(To));
+    std::memcpy(&dst, src, sizeof(To));
     return dst;
 }
 
 
-} // namespace xci::compat
+} // namespace
 
 #endif // include guard

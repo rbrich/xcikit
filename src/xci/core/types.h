@@ -16,15 +16,22 @@
 #ifndef XCI_CORE_TYPES_H
 #define XCI_CORE_TYPES_H
 
-#include <string>
 #include <absl/types/span.h>
+#include <memory>
+#include <cstddef>
 
 namespace xci {
 namespace core {
 
 
+#ifdef __cpp_lib_byte
+using Byte = std::byte;
+#else
+enum class Byte: uint8_t {};
+#endif
+
 // This is an unowned buffer
-using Buffer = absl::Span<std::byte>;
+using Buffer = absl::Span<Byte>;
 
 // Possibly owned buffer. Attach deleter when transferring ownership.
 using BufferPtr = std::shared_ptr<Buffer>;

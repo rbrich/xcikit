@@ -33,11 +33,11 @@ public:
                      std::ios_base::openmode mode = std::ios_base::in)
         : m_fstream(path, mode), m_path(std::move(path)) {}
 
-    explicit VfsFile(std::byte* data, std::size_t size)
+    explicit VfsFile(Byte* data, std::size_t size)
         : m_content(new Buffer(data, size)) {}
 
     template<class TDeleter>
-    explicit VfsFile(std::byte* data, std::size_t size, TDeleter d)
+    explicit VfsFile(Byte* data, std::size_t size, TDeleter d)
         : m_content(new Buffer(data, size), d) {}
 
     // check
@@ -91,10 +91,8 @@ public:
     VfsFile open(const std::string& path, std::ios_base::openmode mode) override;
 
 private:
-    static constexpr char c_magic[] = "dar\n";
-
     // mmapped archive:
-    std::byte* m_addr = nullptr;
+    Byte* m_addr = nullptr;
     size_t m_size = 0;
 
     // index:

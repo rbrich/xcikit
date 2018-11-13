@@ -17,8 +17,8 @@
 #include "file.h"
 #include <xci/core/log.h>
 #include <xci/core/string.h>
+#include <xci/core/bit_read.h>
 #include <xci/compat/endian.h>
-#include <xci/compat/bit_cast.h>
 
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -28,7 +28,7 @@
 namespace xci::core {
 
 using namespace core::log;
-using xci::compat::bit_cast;
+using xci::core::bit_read;
 
 
 BufferPtr VfsFile::content()
@@ -55,6 +55,9 @@ VfsFile VfsDirLoader::open(const std::string& path, std::ios_base::openmode mode
 }
 
 
+static constexpr char c_dar_magic[] = "dar\n";
+
+
 VfsDarArchiveLoader::VfsDarArchiveLoader(std::string path)
 {
     // open archive file
@@ -74,7 +77,7 @@ VfsDarArchiveLoader::VfsDarArchiveLoader(std::string path)
     m_size = (size_t)(st.st_size);
 
     // map whole archive into memory
-    m_addr = (std::byte*)::mmap(nullptr, m_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    m_addr = (Byte*)::mmap(nullptr, m_size, PROT_READ, MAP_PRIVATE, fd, 0);
     if (m_addr == MAP_FAILED) {
         log_error("VfsDarArchiveLoader: Failed to mmap file: {}: {m}", path.c_str());
         ::close(fd);
@@ -98,9 +101,9 @@ bool VfsDarArchiveLoader::can_handle(const std::string& path)
     if (fd == -1)
         return false;
     std::string buf(4, ' ');
-    if (::read(fd, buf.data(), 4) != 4)
+    if (::read(fd, &buf[0], 4) != 4)
         return false;
-    return buf == c_magic;
+    return buf == c_dar_magic;
 }
 
 
@@ -126,12 +129,12 @@ VfsFile VfsDarArchiveLoader::open(const std::string& path, std::ios_base::openmo
 bool VfsDarArchiveLoader::read_index()
 {
     // HEADER: ID
-    if (std::string(reinterpret_cast<char*>(m_addr), 4) != c_magic) {
+    if (std::string(reinterpret_cast<char*>(m_addr), 4) != c_dar_magic) {
         log_error("VfsDarArchiveLoader: Corrupted archive ({}).", "ID");
         return false;
     }
     // HEADER: INDEX_OFFSET
-    auto index_offset = be32toh(*bit_cast<uint32_t*>(m_addr + 4));
+    auto index_offset = be32toh(bit_read<uint32_t>(m_addr + 4));
     if (index_offset + 4 > m_size) {
         // the offset must be inside archive, plus 4B for num_entries
         log_error("VfsDarArchiveLoader: Corrupted archive ({}).", "INDEX_OFFSET");
@@ -139,7 +142,7 @@ bool VfsDarArchiveLoader::read_index()
     }
     // INDEX: NUMBER_OF_ENTRIES
     auto addr = m_addr + index_offset;
-    auto num_entries = be32toh(*bit_cast<uint32_t*>(addr));
+    auto num_entries = be32toh(bit_read<uint32_t>(addr));
     addr += 4;
     // INDEX: INDEX_ENTRY[]
     m_entries.resize(num_entries);
@@ -151,10 +154,10 @@ bool VfsDarArchiveLoader::read_index()
         }
         auto& entry = m_entries[i];
         // INDEX_ENTRY: CONTENT_OFFSET
-        entry.offset = be32toh(*bit_cast<uint32_t*>(addr));
+        entry.offset = be32toh(bit_read<uint32_t>(addr));
         addr += 4;
         // INDEX_ENTRY: CONTENT_SIZE
-        entry.size = be32toh(*bit_cast<uint32_t*>(addr));
+        entry.size = be32toh(bit_read<uint32_t>(addr));
         addr += 4;
         if (entry.offset + entry.size > index_offset) {
             // there must be space for the name in archive
@@ -163,7 +166,7 @@ bool VfsDarArchiveLoader::read_index()
             return false;
         }
         // INDEX_ENTRY: NAME_SIZE
-        auto name_size = be16toh(*bit_cast<uint16_t*>(addr));
+        auto name_size = be16toh(bit_read<uint16_t>(addr));
         addr += 2;
         // INDEX_ENTRY: NAME
         if ((size_t)(addr - m_addr) + name_size > m_size) {
@@ -171,7 +174,7 @@ bool VfsDarArchiveLoader::read_index()
             log_error("VfsDarArchiveLoader: Corrupted archive ({}).", "NAME");
             return false;
         }
-        entry.name.assign((char*)addr, name_size);
+        entry.name.assign(reinterpret_cast<char*>(addr), name_size);
         addr += name_size;
     }
     return true;
