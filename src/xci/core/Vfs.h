@@ -16,6 +16,7 @@
 #ifndef XCI_CORE_VFS_H
 #define XCI_CORE_VFS_H
 
+#include "types.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -33,10 +34,14 @@ public:
         : m_fstream(path, mode), m_path(std::move(path)) {}
 
     explicit VfsFile(std::byte* data, std::size_t size)
-        : m_data(data), m_size(size) {}
+        : m_content(new Buffer(data, size)) {}
+
+    template<class TDeleter>
+    explicit VfsFile(std::byte* data, std::size_t size, TDeleter d)
+        : m_content(new Buffer(data, size), d) {}
 
     // check
-    bool is_open() { return m_fstream.is_open() || m_data != nullptr; }
+    bool is_open() { return m_fstream.is_open() || m_content != nullptr; }
 
     // publish real path info when available
     bool is_real_file() const { return !m_path.empty(); }
@@ -44,14 +49,12 @@ public:
     std::iostream& stream() { return m_fstream; }
 
     // publish data
-    const std::byte* data() const { return m_data; }
-    std::size_t size() const { return m_size; }
+    BufferPtr content();
 
 private:
     std::fstream m_fstream;
     std::string m_path;
-    std::byte* m_data = nullptr;
-    std::size_t m_size = 0;
+    BufferPtr m_content;
 };
 
 

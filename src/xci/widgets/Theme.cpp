@@ -69,8 +69,7 @@ static bool impl_load_font_face(text::Font& font, const char* file_path, int fac
             return false;
     } else {
         // not real file, we have to read all data into memory
-        auto face_data = core::read_binary_file(face_file);
-        if (!font_face->load_from_memory(std::move(face_data), face_index))
+        if (!font_face->load_from_memory(face_file.content(), face_index))
             return false;
     }
     font.add_face(std::move(font_face));

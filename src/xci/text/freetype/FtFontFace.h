@@ -31,7 +31,7 @@ public:
     ~FtFontFace() override;
 
     bool load_from_file(absl::string_view file_path, int face_index) override;
-    bool load_from_memory(std::vector<uint8_t> buffer, int face_index) override;
+    bool load_from_memory(core::BufferPtr buffer, int face_index) override;
 
     bool set_size(unsigned pixel_size) override;
 
@@ -49,13 +49,13 @@ public:
 
 private:
     FT_Library ft_library();
-    bool load_face(const char* file_path, const uint8_t* buffer, size_t buffer_size, int face_index);
+    bool load_face(const char* file_path, const std::byte* buffer, size_t buffer_size, int face_index);
 
     // Returns null on error
     FT_GlyphSlot load_glyph(GlyphIndex glyph_index);
 
 private:
-    std::vector<uint8_t> m_memory_buffer;
+    core::BufferPtr m_memory_buffer;
     FT_Face m_face = nullptr;
     FT_Stroker m_stroker = nullptr;
 };

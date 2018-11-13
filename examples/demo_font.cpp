@@ -59,8 +59,7 @@ int main()
                 return EXIT_FAILURE;
         } else {
             // not real file, we have to read all data into memory
-            auto face_data = read_binary_file(face_file);
-            if (!face->load_from_memory(std::move(face_data), 0))
+            if (!face->load_from_memory(face_file.content(), 0))
                 return EXIT_FAILURE;
         }
         font.add_face(std::move(face));

@@ -31,11 +31,11 @@ bool Shader::load_from_vfs(const std::string& vertex, const std::string& fragmen
     if (vert_file.is_real_file() && frag_file.is_real_file()) {
         return load_from_file(vert_file.path(), frag_file.path());
     } else {
-        auto vert_data = read_text_file(vert_file);
-        auto frag_data = read_text_file(frag_file);
+        auto vert_data = vert_file.content();
+        auto frag_data = frag_file.content();
         return load_from_memory(
-                vert_data.data(), (int) vert_data.size(),
-                frag_data.data(), (int) frag_data.size());
+            reinterpret_cast<const char*>(vert_data->data()), static_cast<int>(vert_data->size()),
+            reinterpret_cast<const char*>(frag_data->data()), static_cast<int>(frag_data->size()));
     }
 }
 

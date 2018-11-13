@@ -31,6 +31,14 @@ using namespace core::log;
 using xci::compat::bit_cast;
 
 
+BufferPtr VfsFile::content()
+{
+    if (!m_content)
+        m_content = read_binary_file(m_fstream);
+    return m_content;
+}
+
+
 bool VfsDirLoader::can_handle(const std::string& path)
 {
     struct stat st = {};
@@ -109,6 +117,8 @@ VfsFile VfsDarArchiveLoader::open(const std::string& path, std::ios_base::openmo
 
     // return a view into mmapped archive
     log_debug("VfsDarArchiveLoader: open file: {}", path);
+
+    // FIXME: mmap just the one file here and pass deleter with munmap
     return VfsFile(m_addr + entry_it->offset, entry_it->size);
 }
 
@@ -116,7 +126,7 @@ VfsFile VfsDarArchiveLoader::open(const std::string& path, std::ios_base::openmo
 bool VfsDarArchiveLoader::read_index()
 {
     // HEADER: ID
-    if (std::string(bit_cast<char*>(m_addr), 4) != c_magic) {
+    if (std::string(reinterpret_cast<char*>(m_addr), 4) != c_magic) {
         log_error("VfsDarArchiveLoader: Corrupted archive ({}).", "ID");
         return false;
     }

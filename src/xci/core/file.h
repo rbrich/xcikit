@@ -16,6 +16,7 @@
 #ifndef XCI_CORE_FILE_H
 #define XCI_CORE_FILE_H
 
+#include "types.h"
 #include <string>
 #include <vector>
 #include <functional>
@@ -27,8 +28,8 @@ namespace xci::core {
 // Returns empty string in case of any error.
 std::string read_text_file(const std::string& filename);
 std::string read_text_file(std::istream& file);
-std::vector<uint8_t> read_binary_file(const std::string& filename);
-std::vector<uint8_t> read_binary_file(std::istream& file);
+BufferPtr read_binary_file(const std::string& filename);
+BufferPtr read_binary_file(std::istream& file);
 
 
 std::string path_dirname(std::string filename);

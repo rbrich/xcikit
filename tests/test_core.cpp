@@ -5,12 +5,14 @@
 
 #include <xci/core/format.h>
 #include <xci/core/log.h>
+#include <xci/core/file.h>
 #include <xci/core/FileWatch.h>
 #include <xci/core/string.h>
 
 #include <fstream>
 #include <cstdio>
 #include <unistd.h>
+#include <sys/stat.h>
 
 using namespace xci::core;
 
@@ -50,6 +52,19 @@ TEST_CASE( "Format char type", "[format]" )
     // -> if we want char's numeric value, it has to be cast:
     CHECK(format("{}", int('c')) == "99");
     CHECK(format("{:02x}", int('c')) == "63");
+}
+
+
+TEST_CASE( "read_binary_file", "[file]" )
+{
+    const char* filename = XCI_SHARE_DIR "/shaders/rectangle.vert";
+    auto content = read_binary_file(filename);
+    REQUIRE(bool(content));
+
+    struct stat st = {};
+    ::stat(filename, &st);
+    CHECK(size_t(st.st_size) == content->size());
+    CHECK(content.use_count() == 1);
 }
 
 

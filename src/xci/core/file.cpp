@@ -51,14 +51,14 @@ std::string read_text_file(std::istream& file)
 }
 
 
-std::vector<uint8_t> read_binary_file(const std::string& filename)
+BufferPtr read_binary_file(const std::string& filename)
 {
     std::ifstream f(filename, std::ios::binary);
     return read_binary_file(f);
 }
 
 
-std::vector<uint8_t> read_binary_file(std::istream& file)
+BufferPtr read_binary_file(std::istream& file)
 {
     if (!file)
         return {};
@@ -66,12 +66,15 @@ std::vector<uint8_t> read_binary_file(std::istream& file)
     file.seekg(0, std::ios::end);
     auto file_size = size_t(file.tellg());
     file.seekg(0, std::ios::beg);
-    std::vector<uint8_t> content(file_size, 0);
-    file.read((char*)&content[0], content.size());
-    if (!file)
-        content.clear();
 
-    return content;
+    auto* content = new std::byte[file_size];
+    file.read(reinterpret_cast<char*>(content), file_size);
+    if (!file) {
+        delete[] content;
+        return {};
+    }
+
+    return {new Buffer{content, file_size}, [content](auto p){ delete[] content; }};
 }
 
 

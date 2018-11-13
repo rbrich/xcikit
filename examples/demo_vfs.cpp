@@ -37,6 +37,9 @@ int main()
 
     f = vfs.open("shaders/fps.frag");
     log_info("main: open result: {}", f.is_open());
+    auto content = f.content();
+    if (content)
+        log_info("main: file size: {}", content->size());
 
     // Note that leading slashes in VFS paths don't matter (they are auto-normalized).
     // The VFS paths are always absolute, there is no CWD.
