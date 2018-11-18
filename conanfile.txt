@@ -2,7 +2,7 @@
 catch2/2.2.2@bincrafters/stable
 pegtl/2.7.1@taocpp/stable
 incbin/20180413-c61cae6@xci/local
-abseil/20181003-f21d187@xci/local
+abseil/20180600@bincrafters/stable
 
 [generators]
 cmake

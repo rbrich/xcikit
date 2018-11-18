@@ -242,17 +242,17 @@ install(DIRECTORY ${CMAKE_BINARY_DIR}/include/xci DESTINATION include)
 
 install(EXPORT xcikit
     NAMESPACE xcikit::
-    DESTINATION lib/cmake/xci
+    DESTINATION lib/cmake/xcikit
     FILE "xcikitTargets.cmake")
 
 # Make our CMake modules available to clients
-install(FILES cmake-modules/FindCatch.cmake DESTINATION lib/cmake/xci)
-install(FILES cmake-modules/FindAbseil.cmake DESTINATION lib/cmake/xci)
+install(FILES cmake-modules/FindCatch.cmake DESTINATION lib/cmake/xcikit)
+install(FILES cmake-modules/FindAbseil.cmake DESTINATION lib/cmake/xcikit)
 
 set(XCI_INCLUDE_DIRS include)
 include(CMakePackageConfigHelpers)
 configure_package_config_file(xcikitConfig.cmake.in xcikitConfig.cmake
-    INSTALL_DESTINATION lib/cmake/xci
+    INSTALL_DESTINATION lib/cmake/xcikit
     PATH_VARS XCI_INCLUDE_DIRS)
 write_basic_package_version_file(xcikitConfigVersion.cmake
     VERSION 0.1.0
@@ -260,8 +260,8 @@ write_basic_package_version_file(xcikitConfigVersion.cmake
 install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/xcikitConfig.cmake
     ${CMAKE_CURRENT_BINARY_DIR}/xcikitConfigVersion.cmake
-    DESTINATION lib/cmake/xci)
+    DESTINATION lib/cmake/xcikit)
 
 install(FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules/XciBuildOptions.cmake
-    DESTINATION lib/cmake/xci)
+    DESTINATION lib/cmake/xcikit)
