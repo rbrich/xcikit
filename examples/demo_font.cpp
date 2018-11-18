@@ -52,7 +52,7 @@ int main()
     Font font;
     {
         auto face = FontLibrary::default_instance()->create_font_face();
-        auto face_file = vfs.open("fonts/Enriqueta/Enriqueta-Regular.ttf");
+        auto face_file = vfs.read_file("fonts/Enriqueta/Enriqueta-Regular.ttf");
         if (face_file.is_real_file()) {
             // it's a real file, use only the path, let FreeType read the data
             if (!face->load_from_file(face_file.path(), 0))

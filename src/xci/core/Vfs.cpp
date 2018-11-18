@@ -31,14 +31,6 @@ using namespace core::log;
 using xci::core::bit_read;
 
 
-BufferPtr VfsFile::content()
-{
-    if (!m_content)
-        m_content = read_binary_file(m_fstream);
-    return m_content;
-}
-
-
 bool VfsDirLoader::can_handle(const std::string& path)
 {
     struct stat st = {};
@@ -47,11 +39,41 @@ bool VfsDirLoader::can_handle(const std::string& path)
 }
 
 
-VfsFile VfsDirLoader::open(const std::string& path, std::ios_base::openmode mode)
+VfsFile VfsDirLoader::read_file(const std::string& path)
 {
-    auto full_path = path_join(m_path, path);
+    auto full_path = path_join(m_dir_path, path);
     log_debug("VfsDirLoader: open file: {}", full_path);
-    return VfsFile(std::move(full_path), mode);
+
+    // open the file
+    int fd = ::open(full_path.c_str(), O_RDONLY);
+    if (fd == -1) {
+        log_error("VfsDirLoader: Failed to open file: {}: {m}", full_path.c_str());
+        return {};
+    }
+
+    // obtain file size
+    struct stat st = {};
+    if (::fstat(fd, &st) == -1) {
+        log_error("VfsDirLoader: Failed to stat file: {}: {m}", full_path.c_str());
+        ::close(fd);
+        return {};
+    }
+    auto size = static_cast<size_t>(st.st_size);
+
+    // map file into memory
+    void* addr = ::mmap(nullptr, size, PROT_READ, MAP_PRIVATE, fd, 0);
+    if (addr == MAP_FAILED) {
+        log_error("VfsDirLoader: Failed to mmap file: {}: {m}", full_path.c_str());
+        ::close(fd);
+        return {};
+    }
+
+    // close file (it's already mapped, so we no longer need FD)
+    ::close(fd);
+
+    return VfsFile(std::move(full_path),
+                   static_cast<Byte*>(addr), size,
+                   [](Buffer* b) { ::munmap(b->data(), b->size()); });
 }
 
 
@@ -107,7 +129,7 @@ bool VfsDarArchiveLoader::can_handle(const std::string& path)
 }
 
 
-VfsFile VfsDarArchiveLoader::open(const std::string& path, std::ios_base::openmode mode)
+VfsFile VfsDarArchiveLoader::read_file(const std::string& path)
 {
     // search for the entry
     auto entry_it = std::find_if(m_entries.cbegin(), m_entries.cend(), [&path](auto& entry){
@@ -122,7 +144,8 @@ VfsFile VfsDarArchiveLoader::open(const std::string& path, std::ios_base::openmo
     log_debug("VfsDarArchiveLoader: open file: {}", path);
 
     // FIXME: mmap just the one file here and pass deleter with munmap
-    return VfsFile(m_addr + entry_it->offset, entry_it->size);
+    return VfsFile("", m_addr + entry_it->offset, entry_it->size,
+                   [](Buffer*) {});
 }
 
 
@@ -201,12 +224,12 @@ bool Vfs::mount(std::string real_path, std::string target_path)
 {
     std::unique_ptr<VfsLoader> loader;
     if (VfsDirLoader::can_handle(real_path)) {
+        log_info("Vfs: mount {} (directory)", real_path);
         loader = std::make_unique<VfsDirLoader>(std::move(real_path));
-        log_info("Vfs: mounted {} (directory)", real_path);
     }
     else if (VfsDarArchiveLoader::can_handle(real_path)) {
+        log_info("Vfs: mount {} (DAR archive)", real_path);
         loader = std::make_unique<VfsDarArchiveLoader>(std::move(real_path));
-        log_info("Vfs: mounted {} (DAR archive)", real_path);
     }
     else {
         log_warning("Vfs: couldn't mount {}", real_path);
@@ -219,7 +242,7 @@ bool Vfs::mount(std::string real_path, std::string target_path)
 }
 
 
-VfsFile Vfs::open(std::string path, std::ios_base::openmode mode)
+VfsFile Vfs::read_file(std::string path)
 {
     lstrip(path, '/');
     log_debug("Vfs: try open: {}", path);
@@ -234,7 +257,7 @@ VfsFile Vfs::open(std::string path, std::ios_base::openmode mode)
             lstrip(path, '/');
         }
         // Open the path with loader
-        auto f = path_loader.loader->open(path, mode);
+        auto f = path_loader.loader->read_file(path);
         if (f.is_open()) {
             log_debug("Vfs: success!");
             return f;

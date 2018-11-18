@@ -32,10 +32,10 @@ int main()
     // Or create share.dar and mount that:
     //vfs.mount(XCI_SHARE_DIR ".dar");
 
-    auto f = vfs.open("non/existent.file");
+    auto f = vfs.read_file("non/existent.file");
     log_info("main: open result: {}", f.is_open());
 
-    f = vfs.open("shaders/fps.frag");
+    f = vfs.read_file("shaders/fps.frag");
     log_info("main: open result: {}", f.is_open());
     auto content = f.content();
     if (content)

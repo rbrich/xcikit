@@ -34,7 +34,7 @@ enum class Byte: uint8_t {};
 using Buffer = absl::Span<Byte>;
 
 // Possibly owned buffer. Attach deleter when transferring ownership.
-using BufferPtr = std::shared_ptr<Buffer>;
+using BufferPtr = std::shared_ptr<const Buffer>;
 
 
 }} // namespace xci::core

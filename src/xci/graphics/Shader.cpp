@@ -26,8 +26,8 @@ using namespace xci::core;
 bool Shader::load_from_vfs(const std::string& vertex, const std::string& fragment)
 {
     auto& vfs = Vfs::default_instance();
-    auto vert_file = vfs.open(vertex);
-    auto frag_file = vfs.open(fragment);
+    auto vert_file = vfs.read_file(vertex);
+    auto frag_file = vfs.read_file(fragment);
     if (vert_file.is_real_file() && frag_file.is_real_file()) {
         return load_from_file(vert_file.path(), frag_file.path());
     } else {

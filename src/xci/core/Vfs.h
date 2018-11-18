@@ -26,58 +26,62 @@
 namespace xci::core {
 
 
-class VfsFile {
+/// Holds the data loaded from file in memory until released
+class VfsFile final {
 public:
+    // create empty file (eg. when reading failed)
     VfsFile() = default;
-    explicit VfsFile(std::string path,
-                     std::ios_base::openmode mode = std::ios_base::in)
-        : m_fstream(path, mode), m_path(std::move(path)) {}
 
-    explicit VfsFile(Byte* data, std::size_t size)
-        : m_content(new Buffer(data, size)) {}
-
+    // create file object with path and data
+    // deleter is used to cleanup the buffer when no longer needed
     template<class TDeleter>
-    explicit VfsFile(Byte* data, std::size_t size, TDeleter d)
-        : m_content(new Buffer(data, size), d) {}
+    explicit VfsFile(std::string path, Byte* data, std::size_t size, TDeleter d)
+        : m_path(std::move(path)), m_content(new Buffer(data, size), d) {}
 
-    // check
-    bool is_open() { return m_fstream.is_open() || m_content != nullptr; }
+    // move only
+    VfsFile(const VfsFile &) = delete;
+    VfsFile& operator=(const VfsFile&) = delete;
+    VfsFile(VfsFile &&) = default;
+    VfsFile& operator=(VfsFile&&) = default;
 
-    // publish real path info when available
-    bool is_real_file() const { return !m_path.empty(); }
+    /// \returns true if file was successfuly read
+    bool is_open() { return m_content != nullptr; }
+    bool is_real_file() { return !m_path.empty(); }
+
+    /// path to file (only regular files, empty for archives)
     const std::string& path() const { return m_path; }
-    std::iostream& stream() { return m_fstream; }
 
-    // publish data
-    BufferPtr content();
+    /// memory buffer containing the file data
+    /// or nullptr if there was error reading the file
+    BufferPtr content() { return m_content; }
 
 private:
-    std::fstream m_fstream;
-    std::string m_path;
+    std::string m_path;   ///< path of the file or archive containing the file
     BufferPtr m_content;
 };
 
 
 /// VFS abstract loader.
 /// Inherit from this to implement additional archive format.
+/// In case of archives, the loader looks up files inside archive by path.
 class VfsLoader {
 public:
     virtual ~VfsLoader() = default;
-    virtual VfsFile open(const std::string& path, std::ios_base::openmode mode) = 0;
+    virtual VfsFile read_file(const std::string& path) = 0;
 };
 
 
-/// Lookup files in real directory, which is mapped to VFS path
+/// Lookup regular files in real directory, which is mapped to VFS path
 class VfsDirLoader: public VfsLoader {
 public:
-    explicit VfsDirLoader(std::string m_path) : m_path(std::move(m_path)) {}
+    explicit VfsDirLoader(std::string dir_path) : m_dir_path(std::move(dir_path)) {}
 
     static bool can_handle(const std::string& path);
 
-    VfsFile open(const std::string& path, std::ios_base::openmode mode) override;
+    VfsFile read_file(const std::string& path) override;
 
 private:
-    std::string m_path;
+    std::string m_dir_path;
 };
 
 
@@ -85,10 +89,15 @@ private:
 class VfsDarArchiveLoader: public VfsLoader {
 public:
     explicit VfsDarArchiveLoader(std::string path);
+    ~VfsDarArchiveLoader() override { close_archive(); }
 
     static bool can_handle(const std::string& path);
 
-    VfsFile open(const std::string& path, std::ios_base::openmode mode) override;
+    VfsFile read_file(const std::string& path) override;
+
+private:
+    bool read_index();
+    void close_archive();
 
 private:
     // mmapped archive:
@@ -102,16 +111,13 @@ private:
         std::string name;
     };
     std::vector<IndexEntry> m_entries;
-
-    bool read_index();
-    void close_archive();
 };
 
 
 /// Virtual File System
 ///
 /// Search for files by path and open them as file streams.
-/// Multiple real FS paths can be mounted as to a VFS.
+/// Multiple real FS paths can be mounted to a VFS.
 /// When searching for a file, all mounted paths are checked
 /// (in order of addition).
 /// TODO: Single dir can be mounted for writing - any file opened for writing
@@ -137,8 +143,7 @@ public:
     /// \param target_path      The target path inside the VFS
     bool mount(std::string real_path, std::string target_path="");
 
-    VfsFile open(std::string path,
-                 std::ios_base::openmode mode = std::ios_base::in);
+    VfsFile read_file(std::string path);
 
 private:
     struct MountedLoader {
@@ -146,7 +151,6 @@ private:
         std::unique_ptr<VfsLoader> loader;
     };
     std::vector<MountedLoader> m_mounted_loaders;
-
 };
 
 

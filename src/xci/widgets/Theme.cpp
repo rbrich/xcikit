@@ -62,7 +62,7 @@ static bool impl_load_font_face(text::Font& font, const char* file_path, int fac
 {
     auto& vfs = core::Vfs::default_instance();
     auto font_face = text::FontLibrary::default_instance()->create_font_face();
-    auto face_file = vfs.open(file_path);
+    auto face_file = vfs.read_file(file_path);
     if (face_file.is_real_file()) {
         // it's a real file, use only the path, let FreeType read the data
         if (!font_face->load_from_file(face_file.path(), face_index))

@@ -36,7 +36,7 @@ int main()
 
     Font font;
     {
-        auto face_file = vfs.open("fonts/ShareTechMono/ShareTechMono-Regular.ttf");
+        auto face_file = vfs.read_file("fonts/ShareTechMono/ShareTechMono-Regular.ttf");
         auto face = FontLibrary::default_instance()->create_font_face();
         if (!face->load_from_file(face_file.path(), 0))
             return EXIT_FAILURE;
