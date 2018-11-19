@@ -6,7 +6,7 @@ FROM rbrich/xcikit-debian:stretch
 WORKDIR /opt/xcikit
 
 ADD .conan .conan/
-ADD cmake-modules cmake-modules/
+ADD cmake cmake/
 ADD examples examples/
 ADD ext ext/
 ADD share share/

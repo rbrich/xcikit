@@ -20,7 +20,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(XciBuildOptions)
 
 if (EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
@@ -240,8 +240,8 @@ install(EXPORT xcikit
     FILE "xcikitTargets.cmake")
 
 # Make our CMake modules available to clients
-install(FILES cmake-modules/FindCatch.cmake DESTINATION lib/cmake/xcikit)
-install(FILES cmake-modules/FindAbseil.cmake DESTINATION lib/cmake/xcikit)
+install(FILES cmake/FindCatch.cmake DESTINATION lib/cmake/xcikit)
+install(FILES cmake/FindAbseil.cmake DESTINATION lib/cmake/xcikit)
 
 set(XCI_INCLUDE_DIRS include)
 include(CMakePackageConfigHelpers)
@@ -257,5 +257,5 @@ install(FILES
     DESTINATION lib/cmake/xcikit)
 
 install(FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/cmake-modules/XciBuildOptions.cmake
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/XciBuildOptions.cmake
     DESTINATION lib/cmake/xcikit)
