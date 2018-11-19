@@ -89,12 +89,6 @@ if (XCI_WITH_TINFO)
     pkg_check_modules(TINFO REQUIRED tinfo)
 endif ()
 
-# Glad
-if (XCI_WITH_OPENGL)
-    add_library(glad OBJECT ext/glad/glad.c)
-    target_include_directories(glad PUBLIC ext)
-endif()
-
 # Generate config.h
 configure_file(config.h.in include/xci/config.h)
 

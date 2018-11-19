@@ -69,18 +69,17 @@ endif ()
 
 if (XCI_WITH_OPENGL)
     add_library(xci-graphics-opengl
-        ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_OPENGL_SOURCES}
-        $<TARGET_OBJECTS:glad>)
+        ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_OPENGL_SOURCES})
     target_include_directories(xci-graphics-opengl
         PUBLIC
             ${XCI_INCLUDE_DIRS}
         PRIVATE
-            $<TARGET_PROPERTY:glad,INCLUDE_DIRECTORIES>
             ${CONAN_INCLUDE_DIRS_INCBIN})
     target_link_libraries(xci-graphics-opengl
         xci-core
         ${CMAKE_DL_LIBS}
-        glfw)
+        glfw
+        glad)
 
     if (BUILD_FRAMEWORKS)
         set_target_properties(xci-graphics-opengl PROPERTIES
