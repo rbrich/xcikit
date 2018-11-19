@@ -20,7 +20,7 @@
 #ifdef XCI_EMBED_SHADERS
 #define INCBIN_PREFIX g_
 #define INCBIN_STYLE INCBIN_STYLE_SNAKE
-#include <incbin/incbin.h>
+#include <incbin.h>
 INCBIN(cursor_vert, XCI_SHARE_DIR "/shaders/cursor.vert");
 INCBIN(cursor_frag, XCI_SHARE_DIR "/shaders/cursor.frag");
 #endif

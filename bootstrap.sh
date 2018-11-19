@@ -5,6 +5,36 @@
 
 cd $(dirname "$0")
 
+YES=0
+if [[ $1 = '-y' ]] ; then
+    YES=1
+fi
+
+function ask {
+    [[ $YES -eq 1 ]] && return 0
+    while true ; do
+        read -p "$1 [y/n/q] " -n 1 -r
+        echo
+        case $REPLY in
+            [Yy]) return 0;;
+            [Nn]) return 1;;
+            [Qq]) exit 0;;
+        esac
+    done
+}
+
+function run { echo "$@" ; "$@"; }
+
+echo "=== Check Conan remotes ==="
+conan_remotes=$(conan remote list)
+echo "${conan_remotes}"
+if ! echo "${conan_remotes}" | grep -q '^bincrafters:' && ask 'Add conan remote "bincrafters"?'; then
+    run conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan
+fi
+if ! echo "${conan_remotes}" | grep -q '^xcikit:' && ask 'Add conan remote "xcikit"?'; then
+    run conan remote add xcikit https://api.bintray.com/conan/rbrich/xcikit
+fi
+
 # See: https://github.com/source-foundry/Hack
 if [ ! -e "share/fonts/Hack/Hack-Regular.ttf" ] ; then
     echo "=== Download Hack font ==="

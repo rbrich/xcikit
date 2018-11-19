@@ -21,7 +21,7 @@
 #ifdef XCI_EMBED_SHADERS
 #define INCBIN_PREFIX g_
 #define INCBIN_STYLE INCBIN_STYLE_SNAKE
-#include <incbin/incbin.h>
+#include <incbin.h>
 INCBIN(line_vert, XCI_SHARE_DIR "/shaders/line.vert");
 INCBIN(line_frag, XCI_SHARE_DIR "/shaders/line.frag");
 INCBIN(rectangle_vert, XCI_SHARE_DIR "/shaders/rectangle.vert");

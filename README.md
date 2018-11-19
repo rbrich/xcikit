@@ -119,30 +119,28 @@ Installing dependencies:
 - Debian: `apt-get install libbenchmark-dev`
 - macOS (Homebrew): `brew install google-benchmark`
 
-Build steps:
+Build steps (these are examples, adjust parameters as needed):
 
-    # Only when building from Git checkout:
-    # Download additional assets, generate glad bindings
+    # Configure Conan remotes, download additional assets
     ./bootstrap.sh
 
-    # Create local Conan packages (these will be replaced by conan-center later)
-    ../conan/create-local.sh 
-
+    # Prepare build directory
     mkdir build && cd build
 
-    # Optionally, install dependencies using Conan.
-    # Otherwise, they will be looked up in default system locations
-    # or specified paths (see in cmake-modules).
+    # Install dependencies using Conan.
     conan install .. -s compiler=clang
 
     # Configure
-    cmake .. -G Ninja
+    cmake .. -G Ninja -DCMAKE_INSTALL_PREFIX=~/sdk/xcikit
 
     # Adjust CMake configuration
     ccmake ..
     
-    # Build:
+    # Build
     cmake --build .
+
+    # Run unit tests
+    cmake --build . --target test
     
     # Install (default prefix is /usr/local)
     cmake --build . --target install

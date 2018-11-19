@@ -10,8 +10,7 @@ install:
   - if [ "$TRAVIS_OS_NAME" = osx ]; then brew install glfw conan; fi
 
 script:
-  - ./bootstrap.sh
-  - ./conan/create-local.sh
+  - ./bootstrap.sh -y
   - mkdir build && cd build
   - conan install ..
   - cmake ..

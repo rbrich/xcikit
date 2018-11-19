@@ -1,5 +1,5 @@
 #include <iostream>
-#include <incbin/incbin.h>
+#include <incbin.h>
 
 INCBIN(Test, "conaninfo.txt");
 
