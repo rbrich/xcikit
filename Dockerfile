@@ -27,7 +27,7 @@ RUN conan profile new --detect default && \
 RUN mkdir build
 WORKDIR /opt/xcikit/build
 
-RUN conan install ..
+RUN conan install .. --build glad
 
 RUN cmake ..
 RUN make

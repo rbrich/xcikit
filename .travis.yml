@@ -12,7 +12,7 @@ install:
 script:
   - ./bootstrap.sh -y
   - mkdir build && cd build
-  - conan install ..
+  - conan install .. --build glad
   - cmake ..
   - cmake --build .
   - cmake --build . --target test

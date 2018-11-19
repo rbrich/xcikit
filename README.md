@@ -128,7 +128,7 @@ Build steps (these are examples, adjust parameters as needed):
     mkdir build && cd build
 
     # Install dependencies using Conan.
-    conan install .. -s compiler=clang
+    conan install .. --build missing -s compiler=clang
 
     # Configure
     cmake .. -G Ninja -DCMAKE_INSTALL_PREFIX=~/sdk/xcikit
