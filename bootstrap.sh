@@ -51,4 +51,5 @@ if [ ! -e "share.dar" ] ; then
     echo "=== Create share.dar archive ==="
     (cd share; find shaders fonts -type f > file_list.txt)
     tools/pack_assets.py share.dar share/file_list.txt
+    rm share/file_list.txt
 fi
