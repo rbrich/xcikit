@@ -62,7 +62,7 @@ private:
 /// VFS abstract directory.
 /// Inherit from this to implement additional archive formats.
 /// In case of archives, the "directory" looks up files inside archive by path.
-class VfsDirectory {
+class VfsDirectory: public std::enable_shared_from_this<VfsDirectory> {
 public:
     virtual ~VfsDirectory() = default;
 
@@ -123,6 +123,8 @@ private:
     void close_archive();
 
 private:
+    std::string m_archive_path;
+
     // mmapped archive:
     Byte* m_addr = nullptr;
     size_t m_size = 0;
@@ -161,7 +163,7 @@ public:
     explicit Vfs(Loaders loaders);
 
     /// Register custom loader
-    void add_loader(std::shared_ptr<VfsLoader> loader) { m_loaders.emplace_back(std::move(loader)); }
+    void add_loader(std::unique_ptr<VfsLoader> loader) { m_loaders.emplace_back(std::move(loader)); }
 
     /// Mount real FS path to a VFS path.
     ///
@@ -184,7 +186,7 @@ public:
 
 private:
     // Registered loaders
-    std::vector<std::shared_ptr<VfsLoader>> m_loaders;
+    std::vector<std::unique_ptr<VfsLoader>> m_loaders;
     // Mounted virtual directories
     struct MountedDir {
         std::string path;  // mounted path

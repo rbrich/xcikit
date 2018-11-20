@@ -45,3 +45,10 @@ if [ ! -e "share/fonts/Hack/Hack-Regular.ttf" ] ; then
     mv share/fonts/ttf share/fonts/Hack
     rm ${HACK_ARCHIVE}
 fi
+
+# Needed for demo_vfs
+if [ ! -e "share.dar" ] ; then
+    echo "=== Create share.dar archive ==="
+    (cd share; find shaders fonts -type f > file_list.txt)
+    tools/pack_assets.py share.dar share/file_list.txt
+fi

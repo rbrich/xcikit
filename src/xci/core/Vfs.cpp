@@ -98,18 +98,21 @@ std::shared_ptr<VfsDirectory> vfs::DarArchiveLoader::try_load(const std::string&
 
 
 vfs::DarArchive::DarArchive(std::string path)
+    : m_archive_path(std::move(path))
 {
+    TRACE("Opening archive: {}", m_archive_path);
+
     // open archive file
-    int fd = ::open(path.c_str(), O_RDONLY);
+    int fd = ::open(m_archive_path.c_str(), O_RDONLY);
     if (fd == -1) {
-        log_error("VfsDarArchiveLoader: Failed to open file: {}: {m}", path.c_str());
+        log_error("VfsDarArchiveLoader: Failed to open file: {}: {m}", m_archive_path);
         return;
     }
 
     // obtain file size
     struct stat st = {};
     if (::fstat(fd, &st) == -1) {
-        log_error("VfsDarArchiveLoader: Failed to stat file: {}: {m}", path.c_str());
+        log_error("VfsDarArchiveLoader: Failed to stat file: {}: {m}", m_archive_path);
         ::close(fd);
         return;
     }
@@ -118,7 +121,7 @@ vfs::DarArchive::DarArchive(std::string path)
     // map whole archive into memory
     m_addr = (Byte*)::mmap(nullptr, m_size, PROT_READ, MAP_PRIVATE, fd, 0);
     if (m_addr == MAP_FAILED) {
-        log_error("VfsDarArchiveLoader: Failed to mmap file: {}: {m}", path.c_str());
+        log_error("VfsDarArchiveLoader: Failed to mmap file: {}: {m}", m_archive_path);
         ::close(fd);
         close_archive();
         return;
@@ -148,8 +151,13 @@ VfsFile vfs::DarArchive::read_file(const std::string& path)
     // return a view into mmapped archive
     log_debug("VfsDarArchiveLoader: open file: {}", path);
 
-    // FIXME: pass refcounted deleter with munmap
-    return VfsFile("", std::make_shared<Buffer>(m_addr + entry_it->offset, entry_it->size));
+    // Pass self to Buffer deleter, so the archive object lives
+    // at least as long as the buffer.
+    auto this_ptr = shared_from_this();
+    auto content = std::make_shared<Buffer>(
+            m_addr + entry_it->offset, entry_it->size,
+            [this_ptr](Byte* d, size_t s) {});
+    return VfsFile("", std::move(content));
 }
 
 
@@ -157,14 +165,16 @@ bool vfs::DarArchive::read_index()
 {
     // HEADER: ID
     if (std::string(reinterpret_cast<char*>(m_addr), 4) != c_dar_magic) {
-        log_error("VfsDarArchiveLoader: Corrupted archive ({}).", "ID");
+        log_error("VfsDarArchiveLoader: Corrupted archive: {} ({}).",
+                  m_archive_path, "ID");
         return false;
     }
     // HEADER: INDEX_OFFSET
     auto index_offset = be32toh(bit_read<uint32_t>(m_addr + 4));
     if (index_offset + 4 > m_size) {
         // the offset must be inside archive, plus 4B for num_entries
-        log_error("VfsDarArchiveLoader: Corrupted archive ({}).", "INDEX_OFFSET");
+        log_error("VfsDarArchiveLoader: Corrupted archive: {} ({}).",
+                  m_archive_path, "INDEX_OFFSET");
         return false;
     }
     // INDEX: NUMBER_OF_ENTRIES
@@ -176,7 +186,8 @@ bool vfs::DarArchive::read_index()
     for (unsigned i = 0; i < num_entries; i++) {
         if ((size_t)(addr - m_addr) + 10 > m_size) {
             // there must be space for the entry (4+4+2 bytes)
-            log_error("VfsDarArchiveLoader: Corrupted archive ({}).", "INDEX_ENTRY");
+            log_error("VfsDarArchiveLoader: Corrupted archive: {} ({}).",
+                      m_archive_path, "INDEX_ENTRY");
             return false;
         }
         auto& entry = m_entries[i];
@@ -188,8 +199,8 @@ bool vfs::DarArchive::read_index()
         addr += 4;
         if (entry.offset + entry.size > index_offset) {
             // there must be space for the name in archive
-            log_error("VfsDarArchiveLoader: Corrupted archive ({}).",
-                    "CONTENT_OFFSET + CONTENT_SIZE");
+            log_error("VfsDarArchiveLoader: Corrupted archive: {} ({}).",
+                      m_archive_path, "CONTENT_OFFSET + CONTENT_SIZE");
             return false;
         }
         // INDEX_ENTRY: NAME_SIZE
@@ -198,7 +209,8 @@ bool vfs::DarArchive::read_index()
         // INDEX_ENTRY: NAME
         if ((size_t)(addr - m_addr) + name_size > m_size) {
             // there must be space for the name in archive
-            log_error("VfsDarArchiveLoader: Corrupted archive ({}).", "NAME");
+            log_error("VfsDarArchiveLoader: Corrupted archive: {} ({}).",
+                      m_archive_path, "NAME");
             return false;
         }
         entry.name.assign(reinterpret_cast<char*>(addr), name_size);
@@ -210,8 +222,10 @@ bool vfs::DarArchive::read_index()
 
 void vfs::DarArchive::close_archive()
 {
-    if (m_addr != nullptr && m_addr != MAP_FAILED)
+    if (m_addr != nullptr && m_addr != MAP_FAILED) {
+        TRACE("Closing archive: {}", m_archive_path);
         ::munmap(m_addr, m_size);
+    }
     m_addr = nullptr;
     m_size = 0;
 }
@@ -228,10 +242,10 @@ Vfs::Vfs(Loaders loaders)
 {
     switch (loaders) {
         case Loaders::All:
-            m_loaders.emplace_back(std::make_shared<vfs::DarArchiveLoader>());
+            m_loaders.emplace_back(std::make_unique<vfs::DarArchiveLoader>());
             FALLTHROUGH;
         case Loaders::RealDirectory:
-            m_loaders.emplace_back(std::make_shared<vfs::RealDirectoryLoader>());
+            m_loaders.emplace_back(std::make_unique<vfs::RealDirectoryLoader>());
             FALLTHROUGH;
         case Loaders::None:
             break;
@@ -247,6 +261,7 @@ bool Vfs::mount(std::string real_path, std::string target_path)
         if (!vfs_directory)
             continue;
         log_info("Vfs: mount {} ({})", real_path, loader->name());
+        break;
     }
     if (!vfs_directory) {
         log_warning("Vfs: couldn't mount {}", real_path);

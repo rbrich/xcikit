@@ -22,31 +22,61 @@ using namespace xci::core::log;
 
 int main()
 {
-    Vfs vfs(Vfs::Loaders::All);
-    vfs.mount("/does/not/exist");
-    vfs.mount(XCI_SHARE_DIR);
+    log_info("====== VFS with manually managed loaders ======");
+    {
+        Vfs vfs;
+        vfs.add_loader(std::make_unique<vfs::RealDirectoryLoader>());
+        vfs.mount("/does/not/exist");
+        vfs.mount(XCI_SHARE_DIR);
 
-    // This also works:
-    //vfs.mount(XCI_SHARE_DIR "/shaders", "shaders");
+        auto f = vfs.read_file("non/existent.file");
+        log_info("demo: open result: {}", f.is_open());
 
-    // Or create share.dar and mount that:
-    //vfs.mount(XCI_SHARE_DIR ".dar");
+        f = vfs.read_file("shaders/fps.frag");
+        log_info("demo: open result: {}", f.is_open());
+        auto content = f.content();
+        if (content)
+            log_info("demo: file size: {}", content->size());
+    }
 
-    auto f = vfs.read_file("non/existent.file");
-    log_info("main: open result: {}", f.is_open());
+    log_info("====== VFS with default loaders, load archive ======");
+    {
+        // Buffer can outlive Vfs object.
+        // DarArchive(VfsDirectory) will also be kept alive (but no longer accessible).
+        BufferPtr content;
+        {
+            Vfs vfs(Vfs::Loaders::All);
 
-    f = vfs.read_file("shaders/fps.frag");
-    log_info("main: open result: {}", f.is_open());
-    auto content = f.content();
-    if (content)
-        log_info("main: file size: {}", content->size());
+            // Don't forget to run bootstrap.sh to create share.dar archive
+            vfs.mount(XCI_SHARE_DIR ".dar");
+            // Directory overlapping the archive, will be tried after archive
+            vfs.mount(XCI_SHARE_DIR);
+            auto f = vfs.read_file("fonts/Hack/Hack-Regular.ttf");
+            content = f.content();
+            // Vfs deleted here, together with DarArchiveLoader and VfsFile
+            // but not the DarArchive or content Buffer
+        }
+        if (content)
+            log_info("demo: file size: {}", content->size());
+        // content Buffer and DarArchive deleted here
+    }
 
-    // Note that leading slashes in VFS paths don't matter (they are auto-normalized).
-    // The VFS paths are always absolute, there is no CWD.
-    // Same as above:
-    //vfs.mount(XCI_SHARE_DIR "/shaders", "/shaders");
-    // Also same as above:
-    //vfs.open("/shaders/fps.frag");
+    log_info("====== VFS default instance ======");
+    {
+        auto& vfs = Vfs::default_instance();
+        // Mount just a subfolder
+        vfs.mount(XCI_SHARE_DIR "/shaders", "shaders");
 
+        // Note that leading slashes in VFS paths don't matter (they are auto-normalized).
+        // The VFS paths are always absolute, there is no CWD.
+        // Same as above:
+        //vfs.mount(XCI_SHARE_DIR "/shaders", "/shaders");
+        // This applies to all VFS paths:
+        auto f = vfs.read_file("/shaders/fps.frag");
+        log_info("demo: open result: {}", f.is_open());
+        auto content = f.content();
+        if (content)
+            log_info("demo: file size: {}", content->size());
+    }
     return 0;
 }
