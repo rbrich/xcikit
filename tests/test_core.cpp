@@ -137,15 +137,34 @@ TEST_CASE( "utf8_length", "[string]" )
 }
 
 
+TEST_CASE( "to_utf32", "[string]" )
+{
+    CHECK(to_utf32(u8"Červeňoučký 🦞") == U"Červeňoučký 🦞");
+}
+
+
+TEST_CASE( "to_utf8", "[string]" )
+{
+    CHECK(to_utf8(0x1F99E) == u8"🦞");
+}
+
+
 TEST_CASE( "to_codepoint", "[string]" )
 {
-    std::string s = "人";
-    CHECK(s.size() == 3);
-    CHECK(utf8_length(s) == 1);
-    CHECK(utf8_codepoint(s.data()) == 0x4EBA);
-
+    CHECK(utf8_codepoint("\n") == 0xa);
+    CHECK(utf8_codepoint("#") == '#');
     CHECK(utf8_codepoint("ž") == 0x017E);
     CHECK(utf8_codepoint("€") == 0x20AC);
+
+    std::string s3 = "人";
+    CHECK(s3.size() == 3);
+    CHECK(utf8_length(s3) == 1);
+    CHECK(utf8_codepoint(s3.data()) == 0x4EBA);
+
+    std::string s4 = "🦞";
+    CHECK(s4.size() == 4);
+    CHECK(utf8_length(s4) == 1);
+    CHECK(utf8_codepoint(s4.data()) == 0x1F99E);
 }
 
 

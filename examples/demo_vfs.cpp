@@ -22,7 +22,7 @@ using namespace xci::core::log;
 
 int main()
 {
-    Vfs vfs;
+    Vfs vfs(Vfs::Loaders::All);
     vfs.mount("/does/not/exist");
     vfs.mount(XCI_SHARE_DIR);
 

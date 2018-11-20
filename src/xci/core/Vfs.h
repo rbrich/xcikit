@@ -59,22 +59,42 @@ private:
 };
 
 
-/// VFS abstract loader.
-/// Inherit from this to implement additional archive format.
-/// In case of archives, the loader looks up files inside archive by path.
-class VfsLoader {
+/// VFS abstract directory.
+/// Inherit from this to implement additional archive formats.
+/// In case of archives, the "directory" looks up files inside archive by path.
+class VfsDirectory {
 public:
-    virtual ~VfsLoader() = default;
+    virtual ~VfsDirectory() = default;
+
     virtual VfsFile read_file(const std::string& path) = 0;
 };
 
 
-/// Lookup regular files in real directory, which is mapped to VFS path
-class VfsDirLoader: public VfsLoader {
+/// VFS abstract loader.
+/// Inherit from this to implement additional archive formats.
+/// In case of archives, the loader opens the archive.
+class VfsLoader {
 public:
-    explicit VfsDirLoader(std::string dir_path) : m_dir_path(std::move(dir_path)) {}
+    virtual ~VfsLoader() = default;
 
-    static bool can_handle(const std::string& path);
+    virtual const char* name() const = 0;
+    virtual std::shared_ptr<VfsDirectory> try_load(const std::string& path) = 0;
+};
+
+
+namespace vfs {
+
+/// Lookup regular files in real directory, which is mapped to VFS path
+class RealDirectoryLoader: public VfsLoader {
+public:
+    const char* name() const override { return "directory"; };
+    std::shared_ptr<VfsDirectory> try_load(const std::string& path) override;
+};
+
+/// Lookup regular files in real directory, which is mapped to VFS path
+class RealDirectory: public VfsDirectory {
+public:
+    explicit RealDirectory(std::string dir_path) : m_dir_path(std::move(dir_path)) {}
 
     VfsFile read_file(const std::string& path) override;
 
@@ -84,12 +104,17 @@ private:
 
 
 /// Lookup files in real directory, which is mapped to VFS path
-class VfsDarArchiveLoader: public VfsLoader {
+class DarArchiveLoader: public VfsLoader {
 public:
-    explicit VfsDarArchiveLoader(std::string path);
-    ~VfsDarArchiveLoader() override { close_archive(); }
+    const char* name() const override { return "DAR archive"; };
+    std::shared_ptr<VfsDirectory> try_load(const std::string& path) override;
+};
 
-    static bool can_handle(const std::string& path);
+/// Lookup files in real directory, which is mapped to VFS path
+class DarArchive: public VfsDirectory {
+public:
+    explicit DarArchive(std::string path);
+    ~DarArchive() override { close_archive(); }
 
     VfsFile read_file(const std::string& path) override;
 
@@ -112,6 +137,9 @@ private:
 };
 
 
+}  // namespace vfs
+
+
 /// Virtual File System
 ///
 /// Search for files by path and open them as file streams.
@@ -123,6 +151,17 @@ private:
 class Vfs {
 public:
     static Vfs& default_instance();
+
+    enum class Loaders {
+        None,               // do not preload any loaders
+        RealDirectory,      // preload only RealDirectoryLoader
+        All,                // preload all default loaders
+    };
+    Vfs() : Vfs(Loaders::None) {}
+    explicit Vfs(Loaders loaders);
+
+    /// Register custom loader
+    void add_loader(std::shared_ptr<VfsLoader> loader) { m_loaders.emplace_back(std::move(loader)); }
 
     /// Mount real FS path to a VFS path.
     ///
@@ -144,11 +183,14 @@ public:
     VfsFile read_file(std::string path);
 
 private:
-    struct MountedLoader {
+    // Registered loaders
+    std::vector<std::shared_ptr<VfsLoader>> m_loaders;
+    // Mounted virtual directories
+    struct MountedDir {
         std::string path;  // mounted path
-        std::unique_ptr<VfsLoader> loader;
+        std::shared_ptr<VfsDirectory> vfs_dir;
     };
-    std::vector<MountedLoader> m_mounted_loaders;
+    std::vector<MountedDir> m_mounted_dir;
 };
 
 

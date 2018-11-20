@@ -5,7 +5,6 @@ FROM rbrich/xcikit-debian:stretch
 
 WORKDIR /opt/xcikit
 
-ADD .conan .conan/
 ADD cmake cmake/
 ADD examples examples/
 ADD ext ext/
@@ -17,19 +16,10 @@ ADD bootstrap.sh \
     conanfile.txt \
     config.h.in \
     xcikitConfig.cmake.in \
+    build.sh \
     ./
 
-RUN ./bootstrap.sh
+RUN ./bootstrap.sh -y
 
-RUN conan profile new --detect default && \
-    conan profile update settings.compiler.libcxx="libstdc++11" default
-
-RUN mkdir build
-WORKDIR /opt/xcikit/build
-
-RUN conan install .. --build glad
-
-RUN cmake ..
-RUN make
-
-CMD make test
+WORKDIR /opt/xcikit
+CMD ./build.sh

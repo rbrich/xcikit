@@ -19,6 +19,7 @@
 #include <xci/core/string.h>
 #include <xci/core/bit_read.h>
 #include <xci/compat/endian.h>
+#include <xci/compat/macros.h>
 
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -31,15 +32,17 @@ using namespace core::log;
 using xci::core::bit_read;
 
 
-bool VfsDirLoader::can_handle(const std::string& path)
+std::shared_ptr<VfsDirectory> vfs::RealDirectoryLoader::try_load(const std::string& path)
 {
     struct stat st = {};
     auto rc = ::stat(path.c_str(), &st);
-    return rc == 0 && (st.st_mode & S_IFDIR) == S_IFDIR;
+    if (rc != 0 || (st.st_mode & S_IFDIR) != S_IFDIR)
+        return {};
+    return std::make_shared<vfs::RealDirectory>(path);
 }
 
 
-VfsFile VfsDirLoader::read_file(const std::string& path)
+VfsFile vfs::RealDirectory::read_file(const std::string& path)
 {
     auto full_path = path_join(m_dir_path, path);
     log_debug("VfsDirLoader: open file: {}", full_path);
@@ -82,7 +85,19 @@ VfsFile VfsDirLoader::read_file(const std::string& path)
 static constexpr char c_dar_magic[] = "dar\n";
 
 
-VfsDarArchiveLoader::VfsDarArchiveLoader(std::string path)
+std::shared_ptr<VfsDirectory> vfs::DarArchiveLoader::try_load(const std::string& path)
+{
+    int fd = ::open(path.c_str(), O_RDONLY);
+    if (fd == -1)
+        return {};
+    std::string buf(4, ' ');
+    if (::read(fd, &buf[0], 4) != 4 || buf != c_dar_magic)
+        return {};
+    return std::make_shared<vfs::DarArchive>(path);
+}
+
+
+vfs::DarArchive::DarArchive(std::string path)
 {
     // open archive file
     int fd = ::open(path.c_str(), O_RDONLY);
@@ -119,19 +134,7 @@ VfsDarArchiveLoader::VfsDarArchiveLoader(std::string path)
 }
 
 
-bool VfsDarArchiveLoader::can_handle(const std::string& path)
-{
-    int fd = ::open(path.c_str(), O_RDONLY);
-    if (fd == -1)
-        return false;
-    std::string buf(4, ' ');
-    if (::read(fd, &buf[0], 4) != 4)
-        return false;
-    return buf == c_dar_magic;
-}
-
-
-VfsFile VfsDarArchiveLoader::read_file(const std::string& path)
+VfsFile vfs::DarArchive::read_file(const std::string& path)
 {
     // search for the entry
     auto entry_it = std::find_if(m_entries.cbegin(), m_entries.cend(), [&path](auto& entry){
@@ -150,7 +153,7 @@ VfsFile VfsDarArchiveLoader::read_file(const std::string& path)
 }
 
 
-bool VfsDarArchiveLoader::read_index()
+bool vfs::DarArchive::read_index()
 {
     // HEADER: ID
     if (std::string(reinterpret_cast<char*>(m_addr), 4) != c_dar_magic) {
@@ -205,7 +208,7 @@ bool VfsDarArchiveLoader::read_index()
 }
 
 
-void VfsDarArchiveLoader::close_archive()
+void vfs::DarArchive::close_archive()
 {
     if (m_addr != nullptr && m_addr != MAP_FAILED)
         ::munmap(m_addr, m_size);
@@ -216,29 +219,42 @@ void VfsDarArchiveLoader::close_archive()
 
 Vfs& Vfs::default_instance()
 {
-    static Vfs instance;
+    static Vfs instance(Loaders::All);
     return instance;
+}
+
+
+Vfs::Vfs(Loaders loaders)
+{
+    switch (loaders) {
+        case Loaders::All:
+            m_loaders.emplace_back(std::make_shared<vfs::DarArchiveLoader>());
+            FALLTHROUGH;
+        case Loaders::RealDirectory:
+            m_loaders.emplace_back(std::make_shared<vfs::RealDirectoryLoader>());
+            FALLTHROUGH;
+        case Loaders::None:
+            break;
+    }
 }
 
 
 bool Vfs::mount(std::string real_path, std::string target_path)
 {
-    std::unique_ptr<VfsLoader> loader;
-    if (VfsDirLoader::can_handle(real_path)) {
-        log_info("Vfs: mount {} (directory)", real_path);
-        loader = std::make_unique<VfsDirLoader>(std::move(real_path));
+    std::shared_ptr<VfsDirectory> vfs_directory;
+    for (auto& loader : m_loaders) {
+        vfs_directory = loader->try_load(real_path);
+        if (!vfs_directory)
+            continue;
+        log_info("Vfs: mount {} ({})", real_path, loader->name());
     }
-    else if (VfsDarArchiveLoader::can_handle(real_path)) {
-        log_info("Vfs: mount {} (DAR archive)", real_path);
-        loader = std::make_unique<VfsDarArchiveLoader>(std::move(real_path));
-    }
-    else {
+    if (!vfs_directory) {
         log_warning("Vfs: couldn't mount {}", real_path);
         return false;
     }
     lstrip(target_path, '/');
     rstrip(target_path, '/');
-    m_mounted_loaders.push_back({std::move(target_path), std::move(loader)});
+    m_mounted_dir.push_back({std::move(target_path), std::move(vfs_directory)});
     return true;
 }
 
@@ -247,7 +263,7 @@ VfsFile Vfs::read_file(std::string path)
 {
     lstrip(path, '/');
     log_debug("Vfs: try open: {}", path);
-    for (auto& path_loader : m_mounted_loaders) {
+    for (auto& path_loader : m_mounted_dir) {
         // Is the loader applicable for requested path?
         if (!path_loader.path.empty()) {
             if (!starts_with(path, path_loader.path))
@@ -258,7 +274,7 @@ VfsFile Vfs::read_file(std::string path)
             lstrip(path, '/');
         }
         // Open the path with loader
-        auto f = path_loader.loader->read_file(path);
+        auto f = path_loader.vfs_dir->read_file(path);
         if (f.is_open()) {
             log_debug("Vfs: success!");
             return f;
