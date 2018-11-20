@@ -18,6 +18,8 @@
 
 #include <absl/types/span.h>
 #include <memory>
+#include <functional>
+#include <utility>
 #include <cstddef>
 
 namespace xci {
@@ -30,10 +32,34 @@ using Byte = std::byte;
 enum class Byte: uint8_t {};
 #endif
 
-// This is an unowned buffer
-using Buffer = absl::Span<Byte>;
-
 // Possibly owned buffer. Attach deleter when transferring ownership.
+class Buffer {
+    using Deleter = std::function<void(Byte*, std::size_t)>;
+
+public:
+    Buffer(Byte* data, std::size_t size)
+            : m_data(data), m_size(size) {}
+    Buffer(Byte* data, std::size_t size, Deleter deleter)
+        : m_data(data), m_size(size), m_deleter(std::move(deleter)) {}
+    ~Buffer() { if (m_deleter) m_deleter(m_data, m_size); }
+
+    // non copyable, non movable
+    Buffer(const Buffer &) = delete;
+    Buffer& operator=(const Buffer&) = delete;
+    Buffer(Buffer &&) = delete;
+    Buffer& operator=(Buffer&&) = delete;
+
+    Byte* data() const { return m_data; }
+    std::size_t size() const { return m_size; }
+
+    absl::Span<Byte> span() const { return {m_data, m_size}; }
+
+private:
+    Byte* m_data;
+    std::size_t m_size;
+    Deleter m_deleter = {};
+};
+
 using BufferPtr = std::shared_ptr<const Buffer>;
 
 

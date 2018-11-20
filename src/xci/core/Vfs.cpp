@@ -71,9 +71,11 @@ VfsFile VfsDirLoader::read_file(const std::string& path)
     // close file (it's already mapped, so we no longer need FD)
     ::close(fd);
 
-    return VfsFile(std::move(full_path),
-                   static_cast<Byte*>(addr), size,
-                   [](Buffer* b) { ::munmap(b->data(), b->size()); });
+    auto content = std::make_shared<Buffer>(
+            static_cast<Byte*>(addr), size,
+            [](Byte* d, size_t s) { ::munmap(d, s); });
+
+    return VfsFile(std::move(full_path), std::move(content));
 }
 
 
@@ -143,9 +145,8 @@ VfsFile VfsDarArchiveLoader::read_file(const std::string& path)
     // return a view into mmapped archive
     log_debug("VfsDarArchiveLoader: open file: {}", path);
 
-    // FIXME: mmap just the one file here and pass deleter with munmap
-    return VfsFile("", m_addr + entry_it->offset, entry_it->size,
-                   [](Buffer*) {});
+    // FIXME: pass refcounted deleter with munmap
+    return VfsFile("", std::make_shared<Buffer>(m_addr + entry_it->offset, entry_it->size));
 }
 
 

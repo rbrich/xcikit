@@ -33,16 +33,14 @@ public:
     VfsFile() = default;
 
     // create file object with path and data
-    // deleter is used to cleanup the buffer when no longer needed
-    template<class TDeleter>
-    explicit VfsFile(std::string path, Byte* data, std::size_t size, TDeleter d)
-        : m_path(std::move(path)), m_content(new Buffer(data, size), d) {}
+    explicit VfsFile(std::string path, BufferPtr content)
+        : m_path(std::move(path)), m_content(std::move(content)) {}
 
     // move only
     VfsFile(const VfsFile &) = delete;
     VfsFile& operator=(const VfsFile&) = delete;
-    VfsFile(VfsFile &&) = default;
-    VfsFile& operator=(VfsFile&&) = default;
+    VfsFile(VfsFile &&) noexcept = default;
+    VfsFile& operator=(VfsFile&&) noexcept = default;
 
     /// \returns true if file was successfuly read
     bool is_open() { return m_content != nullptr; }
