@@ -11,6 +11,7 @@ ADD ext ext/
 ADD share share/
 ADD src src/
 ADD tests tests/
+ADD tools tools/
 ADD bootstrap.sh \
     CMakeLists.txt \
     conanfile.txt \

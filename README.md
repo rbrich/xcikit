@@ -10,8 +10,10 @@ Toolkit for rendering text and simple user interface with OpenGL.
 About
 -----
 
-Text and UI rendering seems to be somewhat lacking in many graphics frameworks
-for 2D/3D games. I basically want to be able to:
+This is a library of basic elements useful for creating simple games and graphical demos.
+The focus is on text rendering and closely connected UI rendering.
+
+The library should make it easy to:
 
 - render a few paragraphs of text
 - style some parts of the text differently (colored highlights)
@@ -27,28 +29,7 @@ This should be enough for games to render:
 The library should integrate well with:
 
 - generic OpenGL
-- SFML, SDL
-- Panda3D, OpenSceneGraph
-
-
-Research 
---------
-
-OpenGL GUI toolkits:
-
-- [CEGUI](http://cegui.org.uk/)
-- [Dear ImGui](https://github.com/ocornut/imgui) - focuses on debug UIs
-- [Nuklear](https://github.com/vurtun/nuklear) - C
-- [Turbo Badger](https://github.com/fruxo/turbobadger)
-
-General GUI toolkits:
-
-- [Qt](https://www.qt.io/)
-- [GTK+](https://developer.gnome.org/gtk3/stable/index.html)
-
-Low-level graphics:
-
-- [mango fun framework](https://github.com/t0rakka/mango)
+- 2D/3D graphics engines (eg. SDL, SFML, Magnum, OGRE)
 
 
 Plan
@@ -79,8 +60,8 @@ This can also be used separately.
 
 Technologies:
 
-- C++14
-- CMake
+- C++17 (partial compatibility with C++11/14 as needed)
+- CMake, Conan
 - Python bindings - Cython?
 
 
@@ -90,9 +71,56 @@ Roadmap
 - [x] Basic libraries as described above
 - [ ] More widgets: context menu, combo box
 - [ ] Floating windows
-- [ ] Integrate with Panda3D
+- [x] Integrate with GLFW and one other library
 - [ ] Screensaver support
 - [ ] New roadmap...
+
+
+Current Features
+----------------
+
+Supported compilers:
+
+- GCC 6.3 (tested with Debian Stretch)
+- AppleClang 9.1
+
+### xci::compat
+
+Fills gaps between different systems and compilers.
+
+- `endian.h` - Linux-like macros provided for MacOS
+- `macros.h` - C++17 `[[fallthrough]]` missing in GCC 6.3
+
+### xci::core
+
+Core utilities. These have little or no dependencies. Mostly just stdlib + OS API.
+
+- `FileWatch` - Watch files and notify on changes. Useful for auto-reloading of resource files.
+- `FpsCounter` - Tracks delays between frames and computes frame rate.
+- `Logger` (`log.h`) - Logging functions.
+- `SharedLibrary` - Thin wrapper around dlopen. For plugins.
+- `Term` - Colored output for ANSI terminals.
+- `Buffer` (`types.h`) - Owned blob of data, with deleter.
+- `Vfs` - Unified reading of regular files and archives. Mount the archive to virtual path
+  and read contained files in same fashion as regular files.
+- `file.h` - Read whole files. Also path utilities (dirname, basename, ...).
+- `format.h` - Formatted strings. Similar to Python's `format()`.
+- `geometry.h` - 2D vector, rectangle. GLM seemed too much for currently simple needs.
+- `rtti.h` - C++ name demangling.
+- `string.h` - String manipulation. Unicode utilities.
+- `get_thread_id()` (`sys.h`) - A replacement for `std::this_thread::get_id()`, providing the canonical TID.
+
+### xci::graphics
+
+The basic building blocks for rendering of text and UI elemenents.
+
+### xci::text
+
+Text rendering and text layout.
+
+### xci::widgets
+
+Basic UI elements.
 
 
 Build
