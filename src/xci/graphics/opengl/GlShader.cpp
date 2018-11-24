@@ -26,8 +26,7 @@
 #include <memory>
 #include <cassert>
 
-namespace xci {
-namespace graphics {
+namespace xci::graphics {
 
 using xci::core::read_text_file;
 
@@ -263,4 +262,4 @@ void GlShader::clear()
 }
 
 
-}} // namespace xci::graphics
+} // namespace xci::graphics

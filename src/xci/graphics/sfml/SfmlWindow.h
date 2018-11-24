@@ -1,4 +1,17 @@
 // SfmlWindow.h created on 2018-03-04, part of XCI toolkit
+// Copyright 2018 Radek Brich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #ifndef XCI_GRAPHICS_SFML_WINDOW_H
 #define XCI_GRAPHICS_SFML_WINDOW_H
@@ -8,24 +21,36 @@
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/Window/Window.hpp>
 
-namespace xci {
-namespace graphics {
+namespace xci::graphics {
 
-class SfmlWindow {
+class SfmlWindow: public Window {
 public:
-    void create(const Vec2u& size, const std::string& title);
-    void display(std::function<void(View& view)> draw_fn);
+    void create(const Vec2u& size, const std::string& title) override;
+    void display() override;
+    void wakeup() const override { /* TODO */ }
+    void close() const override { /* TODO */ }
 
-    View create_view();
+    void set_clipboard_string(const std::string& s) const override { /* TODO */ }
+    std::string get_clipboard_string() const override { /* TODO */ return ""; }
 
-    // access native handles
+    void set_refresh_mode(RefreshMode mode) override { m_mode = mode; }
+    void set_refresh_interval(int interval) override {}
+    void set_debug_flags(View::DebugFlags flags) override {}
+
+    // access native object
     sf::RenderWindow& sfml_window() { return m_window; }
 
 private:
-    sf::RenderWindow m_window;
-};
+    void setup_view();
+    void handle_event(sf::Event& event);
+    void draw();
 
-class Window::Impl : public SfmlWindow {};
+private:
+    sf::RenderWindow m_window;
+
+    View m_view {this};
+    RefreshMode m_mode = RefreshMode::OnDemand;
+};
 
 }} // namespace xci::graphics
 

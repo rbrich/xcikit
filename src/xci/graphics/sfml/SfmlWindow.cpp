@@ -6,11 +6,11 @@
 
 #include <SFML/Window/Event.hpp>
 
-// inline
-#include <xci/graphics/Window.inl>
+#include <chrono>
 
-namespace xci {
-namespace graphics {
+namespace xci::graphics {
+
+using namespace std::chrono;
 
 
 void SfmlWindow::create(const Vec2u& size, const std::string& title)
@@ -22,27 +22,67 @@ void SfmlWindow::create(const Vec2u& size, const std::string& title)
     m_window.setView(view);
 }
 
-void SfmlWindow::display(std::function<void(View& view)> draw_fn)
+
+void SfmlWindow::display()
 {
-    View view = create_view();
+    setup_view();
+
+    auto t_last = steady_clock::now();
     while (m_window.isOpen()) {
-        sf::Event event = {};
-        while (m_window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed)
-                m_window.close();
+        if (m_update_cb) {
+            auto t_now = steady_clock::now();
+            m_update_cb(m_view, t_now - t_last);
+            t_last = t_now;
         }
-        m_window.clear();
-        draw_fn(view);
-        m_window.display();
+
+        sf::Event event = {};
+        switch (m_mode) {
+            case RefreshMode::OnDemand:
+                if (m_view.pop_refresh())
+                    draw();
+                if (m_window.waitEvent(event)) {
+                    handle_event(event);
+                    while (m_window.pollEvent(event))
+                        handle_event(event);
+                }
+                break;
+            case RefreshMode::OnEvent:
+                draw();
+                if (m_window.waitEvent(event)) {
+                    handle_event(event);
+                    while (m_window.pollEvent(event))
+                        handle_event(event);
+                }
+                break;
+            case RefreshMode::Periodic:
+                draw();
+                while (m_window.pollEvent(event))
+                    handle_event(event);
+                break;
+        }
     }
 }
 
-View SfmlWindow::create_view()
+
+void SfmlWindow::setup_view()
 {
-    View view;
-    view.impl().set_sfml_target(m_window);
-    return view;
 }
 
 
-}} // namespace xci::graphics
+void SfmlWindow::handle_event(sf::Event& event)
+{
+    if (event.type == sf::Event::Closed)
+        m_window.close();
+}
+
+
+void SfmlWindow::draw()
+{
+    m_window.clear();
+    if (m_draw_cb)
+        m_draw_cb(m_view);
+    m_window.display();
+}
+
+
+} // namespace xci::graphics
