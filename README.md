@@ -103,10 +103,10 @@ Core utilities. These have little or no dependencies. Mostly just stdlib + OS AP
 - `Buffer` (`types.h`) - Owned blob of data, with deleter.
 - `Vfs` - Unified reading of regular files and archives. Mount the archive to virtual path
   and read contained files in same fashion as regular files.
-- `file.h` - Read whole files. Also path utilities (dirname, basename, ...).
+- `file.h` - Read whole files. Path utilities (dirname, basename, ...).
 - `format.h` - Formatted strings. Similar to Python's `format()`.
-- `geometry.h` - 2D vector, rectangle. GLM seemed too much for currently simple needs.
-- `rtti.h` - C++ name demangling.
+- `geometry.h` - 2D vector, rectangle. Linear algebra.
+- `rtti.h` - C++ demangled type names.
 - `string.h` - String manipulation. Unicode utilities.
 - `get_thread_id()` (`sys.h`) - A replacement for `std::this_thread::get_id()`, providing the canonical TID.
 

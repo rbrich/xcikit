@@ -76,10 +76,7 @@ if (XCI_WITH_MAGNUM)
 endif ()
 
 if (XCI_WITH_SFML)
-    add_executable(demo_sfml demo_sfml.cpp)
-    target_link_libraries(demo_sfml
-        xci-graphics-sfml)
-    install(TARGETS demo_sfml EXPORT xcikit DESTINATION ${INST_EXAMPLES})
+    add_subdirectory(in_sfml)
 endif ()
 
 if (XCI_WITH_PANDA3D)
