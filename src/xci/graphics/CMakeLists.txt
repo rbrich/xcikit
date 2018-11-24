@@ -22,7 +22,6 @@ set(XCI_GRAPHICS_SFML_SOURCES
     sfml/SfmlTexture.cpp
     sfml/SfmlSprites.cpp
     sfml/SfmlShader.cpp
-    sfml/SfmlView.cpp
     sfml/SfmlWindow.cpp)
 
 set(XCI_GRAPHICS_PANDA3D_SOURCES

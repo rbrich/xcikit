@@ -2,7 +2,6 @@
 
 #include "SfmlWindow.h"
 #include "SfmlSprites.h"
-#include "SfmlView.h"
 
 #include <SFML/Window/Event.hpp>
 
