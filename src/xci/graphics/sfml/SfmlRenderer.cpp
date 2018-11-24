@@ -1,4 +1,4 @@
-// MagnumRenderer.h created on 2018-10-26, part of XCI toolkit
+// SfmlRenderer.cpp created on 2018-11-24, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,25 +13,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_GRAPHICS_MAGNUM_RENDERER_H
-#define XCI_GRAPHICS_MAGNUM_RENDERER_H
-
-#include <xci/graphics/Renderer.h>
+#include "SfmlRenderer.h"
+#include "SfmlTexture.h"
+#include "SfmlShader.h"
+#include "SfmlPrimitives.h"
 
 namespace xci::graphics {
 
 
-class MagnumRenderer: public Renderer {
-public:
-    TexturePtr create_texture() override;
+Renderer& Renderer::default_instance()
+{
+    static SfmlRenderer instance;
+    return instance;
+}
 
-    ShaderPtr create_shader() override;
 
-    PrimitivesPtr create_primitives(VertexFormat format,
-                                    PrimitiveType type) override;
-};
+TexturePtr SfmlRenderer::create_texture()
+{
+    return std::make_shared<SfmlTexture>();
+}
+
+
+ShaderPtr SfmlRenderer::create_shader()
+{
+    return std::make_shared<SfmlShader>();
+}
+
+
+PrimitivesPtr
+SfmlRenderer::create_primitives(VertexFormat format, PrimitiveType type)
+{
+    return std::make_shared<SfmlPrimitives>(format, type);
+}
 
 
 } // namespace xci::graphics
-
-#endif // include guard

@@ -1,4 +1,4 @@
-// MagnumRenderer.h created on 2018-10-26, part of XCI toolkit
+// Renderer.cpp created on 2018-11-24, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,25 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_GRAPHICS_MAGNUM_RENDERER_H
-#define XCI_GRAPHICS_MAGNUM_RENDERER_H
-
-#include <xci/graphics/Renderer.h>
+#include "Renderer.h"
 
 namespace xci::graphics {
 
 
-class MagnumRenderer: public Renderer {
-public:
-    TexturePtr create_texture() override;
-
-    ShaderPtr create_shader() override;
-
-    PrimitivesPtr create_primitives(VertexFormat format,
-                                    PrimitiveType type) override;
-};
+ShaderPtr Renderer::get_or_create_shader(ShaderId shader_id)
+{
+    if (shader_id == ShaderId::Custom)
+        return create_shader();
+    auto& cached_shader = m_shader[(size_t) shader_id];
+    if (!cached_shader) {
+        cached_shader = create_shader();
+    }
+    return cached_shader;
+}
 
 
 } // namespace xci::graphics
-
-#endif // include guard

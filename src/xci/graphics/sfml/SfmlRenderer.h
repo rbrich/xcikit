@@ -1,4 +1,4 @@
-// MagnumRenderer.h created on 2018-10-26, part of XCI toolkit
+// SfmlRenderer.h created on 2018-11-24, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,15 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_GRAPHICS_MAGNUM_RENDERER_H
-#define XCI_GRAPHICS_MAGNUM_RENDERER_H
+#ifndef XCI_GRAPHICS_SFML_RENDERER_H
+#define XCI_GRAPHICS_SFML_RENDERER_H
 
 #include <xci/graphics/Renderer.h>
 
 namespace xci::graphics {
 
 
-class MagnumRenderer: public Renderer {
+class SfmlRenderer: public Renderer {
 public:
     TexturePtr create_texture() override;
 

@@ -4,6 +4,7 @@
 
 set(XCI_GRAPHICS_SOURCES
     Color.cpp
+    Renderer.cpp
     Primitives.cpp
     Shader.cpp
     Shape.cpp
@@ -19,6 +20,7 @@ set(XCI_GRAPHICS_OPENGL_SOURCES
     opengl/GlWindow.cpp)
 
 set(XCI_GRAPHICS_SFML_SOURCES
+    sfml/SfmlRenderer.cpp
     sfml/SfmlTexture.cpp
     sfml/SfmlSprites.cpp
     sfml/SfmlShader.cpp

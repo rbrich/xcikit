@@ -23,8 +23,7 @@
 
 #include <cstdint>
 
-namespace xci {
-namespace graphics {
+namespace xci::graphics {
 
 
 class Renderer {
@@ -33,20 +32,26 @@ public:
 
     virtual TexturePtr create_texture() = 0;
 
-    /// Create new shader or get one of the predefined shaders
-    /// \param shader_id Use `Custom` to create new shader
-    /// \return shared_ptr to the shader or nullptr on error
-    virtual ShaderPtr get_or_create_shader(ShaderId shader_id) = 0;
+    virtual ShaderPtr create_shader() = 0;
 
     virtual PrimitivesPtr create_primitives(VertexFormat format,
                                             PrimitiveType type) = 0;
 
+    /// Create new shader or get one of the predefined shaders
+    /// \param shader_id Use `Custom` to create new shader
+    /// \return shared_ptr to the shader or nullptr on error
+    ShaderPtr get_or_create_shader(ShaderId shader_id);
+
 protected:
     Renderer() = default;
     virtual ~Renderer() = default;
+
+private:
+    static constexpr auto c_num_shaders = (size_t)ShaderId::Custom;
+    std::array<ShaderPtr, c_num_shaders> m_shader = {};
 };
 
 
-}} // namespace xci::graphics
+} // namespace xci::graphics
 
 #endif // include guard

@@ -34,17 +34,9 @@ TexturePtr GlRenderer::create_texture()
 }
 
 
-ShaderPtr GlRenderer::get_or_create_shader(ShaderId shader_id)
+ShaderPtr GlRenderer::create_shader()
 {
-    if (shader_id != ShaderId::Custom) {
-        auto& shader = m_shader[(size_t) shader_id];
-        if (!shader) {
-            shader = std::make_shared<GlShader>();
-        }
-        return shader;
-    } else {
-        return std::make_shared<GlShader>();
-    }
+    return std::make_shared<GlShader>();
 }
 
 

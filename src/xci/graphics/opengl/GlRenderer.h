@@ -26,17 +26,12 @@ namespace xci::graphics {
 
 class GlRenderer: public Renderer {
 public:
-
     TexturePtr create_texture() override;
 
-    ShaderPtr get_or_create_shader(ShaderId shader_id) override;
+    ShaderPtr create_shader() override;
 
     PrimitivesPtr create_primitives(VertexFormat format,
                                     PrimitiveType type) override;
-
-private:
-    static constexpr auto c_num_shaders = (size_t)ShaderId::Custom;
-    std::array<ShaderPtr, c_num_shaders> m_shader = {};
 };
 
 
