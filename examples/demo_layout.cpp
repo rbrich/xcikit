@@ -44,7 +44,7 @@ int main()
 {
     Vfs::default_instance().mount(XCI_SHARE_DIR);
 
-    Window& window = Window::default_window();
+    Window& window = Window::default_instance();
     window.create({800, 600}, "XCI layout demo");
 
     auto face = FontLibrary::default_instance()->create_font_face();

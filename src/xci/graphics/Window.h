@@ -131,7 +131,8 @@ enum class RefreshMode {
 
 class Window {
 public:
-    static Window& default_window();
+    static Window& default_instance();
+
     virtual ~Window() = default;
 
     // Create the window.

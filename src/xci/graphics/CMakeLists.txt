@@ -22,7 +22,7 @@ set(XCI_GRAPHICS_OPENGL_SOURCES
 set(XCI_GRAPHICS_SFML_SOURCES
     sfml/SfmlRenderer.cpp
     sfml/SfmlTexture.cpp
-    sfml/SfmlSprites.cpp
+    sfml/SfmlPrimitives.cpp
     sfml/SfmlShader.cpp
     sfml/SfmlWindow.cpp)
 
@@ -55,7 +55,7 @@ endif ()
 
 # SFML
 if (XCI_WITH_SFML)
-    find_package(SFML 2.4 REQUIRED system window graphics)
+    find_package(SFML 2.5 REQUIRED system window graphics)
 endif ()
 
 # Panda3D
@@ -119,12 +119,11 @@ if (XCI_WITH_SFML)
         ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_SFML_SOURCES})
     target_include_directories(xci-graphics-sfml
         PUBLIC
-            ${XCI_INCLUDE_DIRS}
-        PRIVATE
-            ${SFML_INCLUDE_DIR})
+            ${XCI_INCLUDE_DIRS})
     target_link_libraries(xci-graphics-sfml
         xci-core
-        ${SFML_LIBRARIES})
+        sfml-graphics
+        glad)
     install(TARGETS xci-graphics-sfml
         EXPORT xcikit DESTINATION lib)
 endif ()

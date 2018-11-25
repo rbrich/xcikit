@@ -15,25 +15,8 @@
 
 #include "Window.h"
 
-#include <xci/config.h>
-
-#ifdef XCI_WITH_OPENGL
-#include <xci/graphics/opengl/GlWindow.h>
-#endif
-
-namespace xci {
-namespace graphics {
+namespace xci::graphics {
 
 
-Window& Window::default_window()
-{
-#ifdef XCI_WITH_OPENGL
-    static GlWindow window;
-#else
-    #error "No window implementation available"
-#endif
-    return window;
-}
 
-
-}} // namespace xci::graphics
+} // namespace xci::graphics

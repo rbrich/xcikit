@@ -20,13 +20,12 @@ class XcikitConan(ConanFile):
         "shared": False,
         # Glad commandline:
         # --profile="core" --api="gl=3.3" --generator="c" --spec="gl" \
-        # --no-loader --local-files --omit-khrplatform --extensions="GL_KHR_debug"
+        # --local-files --omit-khrplatform --extensions="GL_KHR_debug"
         "glad:spec": "gl",
         "glad:api_type": "gl",
         "glad:api_version": "3.3",
         "glad:profile": "core",
         "glad:extensions": "GL_KHR_debug",
-        "glad:no_loader": True,
     }
     generators = "cmake"
     scm = {

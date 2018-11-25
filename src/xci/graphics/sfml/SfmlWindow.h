@@ -35,7 +35,7 @@ public:
 
     void set_refresh_mode(RefreshMode mode) override { m_mode = mode; }
     void set_refresh_interval(int interval) override {}
-    void set_debug_flags(View::DebugFlags flags) override {}
+    void set_debug_flags(View::DebugFlags flags) override { m_view.set_debug_flags(flags); }
 
     // access native object
     sf::RenderWindow& sfml_window() { return m_window; }
@@ -52,6 +52,6 @@ private:
     RefreshMode m_mode = RefreshMode::OnDemand;
 };
 
-}} // namespace xci::graphics
+} // namespace xci::graphics
 
 #endif // XCI_GRAPHICS_SFML_WINDOW_H

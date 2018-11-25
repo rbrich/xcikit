@@ -113,13 +113,17 @@ add_subdirectory(src/xci/core)
 add_subdirectory(src/xci/graphics)
 
 # Choose default graphics engine:
-if (XCI_WITH_OPENGL)
-    add_library(xci-graphics ALIAS xci-graphics-opengl)
-elseif (XCI_WITH_SFML)
-    add_library(xci-graphics ALIAS xci-graphics-sfml)
-elseif (XCI_WITH_PANDA3D)
-    add_library(xci-graphics ALIAS xci-graphics-panda3d)
+if (NOT XCI_GRAPHICS_DEFAULT)
+    if (XCI_WITH_OPENGL)
+        set(XCI_GRAPHICS_DEFAULT opengl)
+    elseif (XCI_WITH_SFML)
+        set(XCI_GRAPHICS_DEFAULT sfml)
+    elseif (XCI_WITH_PANDA3D)
+        set(XCI_GRAPHICS_DEFAULT panda3d)
+    endif()
 endif()
+set(XCI_GRAPHICS_DEFAULT ${XCI_GRAPHICS_DEFAULT} CACHE STRING "Default graphics implementation.")
+add_library(xci-graphics ALIAS xci-graphics-${XCI_GRAPHICS_DEFAULT})
 
 add_library(xci-text ${XCI_TEXT_SOURCES}
     $<TARGET_OBJECTS:${RBP_LIBRARY}>)

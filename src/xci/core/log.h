@@ -93,6 +93,6 @@ namespace log {
 #endif
 
 
-} // namespace xci::log
+} // namespace xci::core
 
 #endif // XCI_CORE_LOG_H

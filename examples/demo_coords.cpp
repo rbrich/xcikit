@@ -36,7 +36,7 @@ int main()
     auto& vfs = Vfs::default_instance();
     vfs.mount(XCI_SHARE_DIR);
 
-    Window& window = Window::default_window();
+    Window& window = Window::default_instance();
     window.create({800, 600}, "XCI coords demo");
 
     Font font;

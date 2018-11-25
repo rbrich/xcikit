@@ -57,7 +57,9 @@ void SfmlShader::set_uniform(const char* name,
 
 void SfmlShader::set_texture(const char* name, TexturePtr& texture)
 {
-    m_shader.setUniform(name, static_cast<SfmlTexture*>(texture.get())->sfml_texture());
+    auto& sfml_texture = static_cast<SfmlTexture*>(texture.get())->sfml_texture();
+    m_shader.setUniform(name, sfml_texture);
+    sf::Texture::bind(&sfml_texture);
 }
 
 

@@ -30,6 +30,13 @@ using namespace xci::core::log;
 using namespace std::chrono;
 
 
+Window& Window::default_instance()
+{
+    static GlWindow window;
+    return window;
+}
+
+
 static void error_callback(int error, const char* description)
 {
     log_error("GLFW error {}: {}", error, description);

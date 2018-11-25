@@ -1,4 +1,4 @@
-// GlPrimitives.cpp created on 2018-04-07, part of XCI toolkit
+// SfmlPrimitives.cpp created on 2018-03-04, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,30 +13,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "GlPrimitives.h"
-#include "GlRenderer.h"
-#include "GlShader.h"
+#include "SfmlPrimitives.h"
+#include "SfmlTexture.h"
+#include "SfmlShader.h"
+#include <xci/graphics/View.h>
 #include <cassert>
 
 namespace xci::graphics {
 
 
 constexpr GLuint c_format_narrays[] = {
-    2,  // V2t2
-    3,  // V2t22
-    3,  // V2c4t2
-    4,  // V2c4t22
+        2,  // V2t2
+        3,  // V2t22
+        3,  // V2c4t2
+        4,  // V2c4t22
 };
 
 
-GlPrimitives::GlPrimitives(VertexFormat format, PrimitiveType type)
+SfmlPrimitives::SfmlPrimitives(VertexFormat format, PrimitiveType type)
         : m_format(format)
 {
     assert(type == PrimitiveType::TriFans);
 }
 
 
-void GlPrimitives::reserve(size_t primitives, size_t vertices)
+void SfmlPrimitives::reserve(size_t primitives, size_t vertices)
 {
     m_vertex_data.reserve(vertices);
     m_elem_first.reserve(primitives);
@@ -44,7 +45,7 @@ void GlPrimitives::reserve(size_t primitives, size_t vertices)
 }
 
 
-void GlPrimitives::begin_primitive()
+void SfmlPrimitives::begin_primitive()
 {
     assert(m_open_vertices == -1);
     m_elem_first.push_back(m_closed_vertices);
@@ -52,7 +53,7 @@ void GlPrimitives::begin_primitive()
 }
 
 
-void GlPrimitives::end_primitive()
+void SfmlPrimitives::end_primitive()
 {
     assert(m_open_vertices != -1);
     m_elem_size.push_back(m_open_vertices);
@@ -61,7 +62,7 @@ void GlPrimitives::end_primitive()
 }
 
 
-void GlPrimitives::add_vertex(float x, float y, float u, float v)
+void SfmlPrimitives::add_vertex(float x, float y, float u, float v)
 {
     assert(m_format == VertexFormat::V2t2);
     assert(m_open_vertices != -1);
@@ -74,7 +75,7 @@ void GlPrimitives::add_vertex(float x, float y, float u, float v)
 }
 
 
-void GlPrimitives::add_vertex(float x, float y, float u1, float v1, float u2, float v2)
+void SfmlPrimitives::add_vertex(float x, float y, float u1, float v1, float u2, float v2)
 {
     assert(m_format == VertexFormat::V2t22);
     assert(m_open_vertices != -1);
@@ -89,7 +90,7 @@ void GlPrimitives::add_vertex(float x, float y, float u1, float v1, float u2, fl
 }
 
 
-void GlPrimitives::add_vertex(float x, float y, Color c, float u, float v)
+void SfmlPrimitives::add_vertex(float x, float y, Color c, float u, float v)
 {
     assert(m_format == VertexFormat::V2c4t2);
     assert(m_open_vertices != -1);
@@ -106,7 +107,7 @@ void GlPrimitives::add_vertex(float x, float y, Color c, float u, float v)
 }
 
 
-void GlPrimitives::add_vertex(float x, float y, Color c, float u1, float v1, float u2, float v2)
+void SfmlPrimitives::add_vertex(float x, float y, Color c, float u1, float v1, float u2, float v2)
 {
     assert(m_format == VertexFormat::V2c4t22);
     assert(m_open_vertices != -1);
@@ -124,7 +125,7 @@ void GlPrimitives::add_vertex(float x, float y, Color c, float u1, float v1, flo
     m_open_vertices++;
 }
 
-void GlPrimitives::clear()
+void SfmlPrimitives::clear()
 {
     m_vertex_data.clear();
     m_elem_first.clear();
@@ -135,15 +136,15 @@ void GlPrimitives::clear()
 }
 
 
-void GlPrimitives::set_shader(ShaderPtr& shader)
+void SfmlPrimitives::set_shader(ShaderPtr& shader)
 {
-    GLuint program = static_cast<GlShader*>(shader.get())->gl_program();
+    GLuint program = static_cast<SfmlShader*>(shader.get())->sfml_shader().getNativeHandle();
     glUseProgram(program);
     m_program = program;
 }
 
 
-void GlPrimitives::set_blend(BlendFunc func)
+void SfmlPrimitives::set_blend(BlendFunc func)
 {
     glEnable(GL_BLEND);
     switch (func) {
@@ -157,7 +158,7 @@ void GlPrimitives::set_blend(BlendFunc func)
 }
 
 
-void GlPrimitives::draw(View& view)
+void SfmlPrimitives::draw(View& view)
 {
     init_gl_objects();
 
@@ -204,7 +205,7 @@ void GlPrimitives::draw(View& view)
 }
 
 
-void GlPrimitives::init_gl_objects()
+void SfmlPrimitives::init_gl_objects()
 {
     if (m_objects_ready)
         return;
@@ -268,7 +269,7 @@ void GlPrimitives::init_gl_objects()
 }
 
 
-void GlPrimitives::invalidate_gl_objects()
+void SfmlPrimitives::invalidate_gl_objects()
 {
     if (!m_objects_ready)
         return;
