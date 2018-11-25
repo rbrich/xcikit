@@ -29,7 +29,7 @@ This should be enough for games to render:
 The library should integrate well with:
 
 - generic OpenGL
-- 2D/3D graphics engines (eg. SDL, SFML, Magnum, OGRE)
+- 2D/3D graphics engines (eg. SDL, Magnum, OGRE)
 
 
 Plan
@@ -138,7 +138,7 @@ Dependencies (required):
 
 Dependencies (optional):
 - GLFW (XCI_WITH_OPENGL)
-- SFML (XCI_WITH_SFML)
+- Magnum (XCI_WITH_MAGNUM)
 - Panda3D (XCI_WITH_PANDA)
 - Catch2 (for tests)
 - Google Benchmark (for benchmarks)

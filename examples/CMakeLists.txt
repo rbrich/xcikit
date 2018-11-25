@@ -71,12 +71,12 @@ if (XCI_WITH_OPENGL)
     install(TARGETS demo_glfw EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 endif ()
 
-if (XCI_WITH_MAGNUM)
-    add_subdirectory(in_magnum)
-endif ()
-
 if (XCI_WITH_SFML)
     add_subdirectory(in_sfml)
+endif()
+
+if (XCI_WITH_MAGNUM)
+    add_subdirectory(in_magnum)
 endif ()
 
 if (XCI_WITH_PANDA3D)

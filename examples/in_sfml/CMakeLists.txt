@@ -1,4 +1,4 @@
-find_package(SFML 2.4 REQUIRED system window graphics)
+find_package(SFML 2.5 REQUIRED COMPONENTS system window graphics)
 
 add_executable(demo_sfml demo_sfml.cpp)
 target_link_libraries(demo_sfml

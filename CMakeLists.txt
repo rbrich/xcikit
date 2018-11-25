@@ -5,6 +5,7 @@ project(xcikit C CXX)
 option(XCI_WITH_OPENGL "Link with GLFW and build libxci-graphics-opengl." ON)
 option(XCI_WITH_MAGNUM "Link with Magnum and build libxci-graphics-magnum." OFF)
 option(XCI_WITH_PANDA3D "Link with Panda3D and build libxci-graphics-panda." OFF)
+option(XCI_WITH_SFML "Build example of integration with SFML." OFF)
 option(XCI_WITH_TINFO "Link with TInfo (from NCurses) and use it for TTY control sequences." OFF)
 option(XCI_BENCHMARK "Enable benchmarks. Requires Google benchmark to be installed and in CMake path." OFF)
 
