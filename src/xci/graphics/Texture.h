@@ -33,6 +33,7 @@ class Texture {
 public:
     virtual ~Texture() = default;
 
+    // Create or resize the texture
     virtual bool create(const Vec2u& size) = 0;
     virtual void update(const uint8_t* pixels) = 0;
     virtual void update(const uint8_t* pixels, const Rect_u& region) = 0;

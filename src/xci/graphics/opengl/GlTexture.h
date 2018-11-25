@@ -25,13 +25,19 @@ namespace xci::graphics {
 
 class GlTexture : public Texture {
 public:
+    ~GlTexture() override { destroy(); }
+
     bool create(const Vec2u& size) override;
+
     void update(const uint8_t* pixels) override;
     void update(const uint8_t* pixels, const Rect_u& region) override;
 
     Vec2u size() const override;
 
     GLuint gl_texture() const { return m_texture; }
+
+private:
+    void destroy();
 
 private:
     GLuint m_texture = 0;

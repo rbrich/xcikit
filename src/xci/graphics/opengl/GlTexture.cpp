@@ -22,7 +22,7 @@ namespace xci::graphics {
 
 bool GlTexture::create(const Vec2u& size)
 {
-    // FIXME: free old texture
+    destroy();
     m_size = size;
     glGenTextures(1, &m_texture);
     glBindTexture(GL_TEXTURE_2D, m_texture);
@@ -59,6 +59,15 @@ void GlTexture::update(const uint8_t* pixels, const Rect_u& region)
 
 
 Vec2u GlTexture::size() const { return m_size; }
+
+
+void GlTexture::destroy()
+{
+    if (m_texture == 0)
+        return;
+
+    glDeleteTextures(1, &m_texture);
+}
 
 
 } // namespace xci::graphics
