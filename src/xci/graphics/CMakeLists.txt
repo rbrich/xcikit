@@ -19,13 +19,6 @@ set(XCI_GRAPHICS_OPENGL_SOURCES
     opengl/GlTexture.cpp
     opengl/GlWindow.cpp)
 
-set(XCI_GRAPHICS_SFML_SOURCES
-    sfml/SfmlRenderer.cpp
-    sfml/SfmlTexture.cpp
-    sfml/SfmlPrimitives.cpp
-    sfml/SfmlShader.cpp
-    sfml/SfmlWindow.cpp)
-
 set(XCI_GRAPHICS_PANDA3D_SOURCES
     panda/PandaTexture.cpp
     panda/PandaSprites.cpp
@@ -51,11 +44,6 @@ endif ()
 # Magnum
 if (XCI_WITH_MAGNUM)
     find_package(Magnum REQUIRED GL Shaders)
-endif ()
-
-# SFML
-if (XCI_WITH_SFML)
-    find_package(SFML 2.5 REQUIRED system window graphics)
 endif ()
 
 # Panda3D
@@ -111,20 +99,6 @@ if (XCI_WITH_MAGNUM)
         Magnum::Magnum
         Magnum::Shaders)
     install(TARGETS xci-graphics-magnum
-        EXPORT xcikit DESTINATION lib)
-endif ()
-
-if (XCI_WITH_SFML)
-    add_library(xci-graphics-sfml
-        ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_SFML_SOURCES})
-    target_include_directories(xci-graphics-sfml
-        PUBLIC
-            ${XCI_INCLUDE_DIRS})
-    target_link_libraries(xci-graphics-sfml
-        xci-core
-        sfml-graphics
-        glad)
-    install(TARGETS xci-graphics-sfml
         EXPORT xcikit DESTINATION lib)
 endif ()
 
