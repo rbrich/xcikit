@@ -17,6 +17,7 @@
 #define XCI_GRAPHICS_GL_RENDERER_H
 
 #include <xci/graphics/Renderer.h>
+#include <xci/core/FileWatch.h>
 
 #include <array>
 
@@ -26,12 +27,17 @@ namespace xci::graphics {
 
 class GlRenderer: public Renderer {
 public:
+    GlRenderer() : m_file_watch(core::FileWatch::create()) {}
+
     TexturePtr create_texture() override;
 
     ShaderPtr create_shader() override;
 
     PrimitivesPtr create_primitives(VertexFormat format,
                                     PrimitiveType type) override;
+
+private:
+    core::FileWatchPtr m_file_watch;
 };
 
 

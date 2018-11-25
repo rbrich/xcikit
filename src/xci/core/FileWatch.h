@@ -24,7 +24,7 @@ namespace xci::core {
 
 
 class FileWatch;
-using FileWatchPtr = std::unique_ptr<FileWatch>;
+using FileWatchPtr = std::shared_ptr<FileWatch>;
 
 
 /// FileWatch may be used for auto-reloading of resource files.

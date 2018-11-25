@@ -38,7 +38,7 @@ FileWatch& FileWatch::default_instance()
 
 FileWatchPtr FileWatch::create()
 {
-    return std::unique_ptr<XCI_FILEWATCH_CLASS>(new XCI_FILEWATCH_CLASS);
+    return std::make_shared<XCI_FILEWATCH_CLASS>();
 }
 
 

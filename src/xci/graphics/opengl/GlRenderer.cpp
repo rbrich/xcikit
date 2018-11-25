@@ -36,7 +36,7 @@ TexturePtr GlRenderer::create_texture()
 
 ShaderPtr GlRenderer::create_shader()
 {
-    return std::make_shared<GlShader>();
+    return std::make_shared<GlShader>(m_file_watch);
 }
 
 

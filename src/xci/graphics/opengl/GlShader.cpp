@@ -17,6 +17,7 @@
 #include "GlTexture.h"
 
 #include <xci/config.h>
+#include <xci/core/FileWatch.h>
 #include <xci/core/file.h>
 #include <xci/core/log.h>
 
@@ -29,7 +30,7 @@
 namespace xci::graphics {
 
 using xci::core::read_text_file;
-
+using xci::core::FileWatch;
 using namespace xci::core::log;
 
 
@@ -214,6 +215,7 @@ void GlShader::add_watches()
             glfwPostEmptyEvent();
         }
     };
+    // FIXME: Disable filewatches in release (NDEBUG)
     m_vertex_file_watch = m_file_watch->add_watch(m_vertex_file, cb);
     m_fragment_file_watch = m_file_watch->add_watch(m_fragment_file, cb);
     log_info("Shader watches installed");

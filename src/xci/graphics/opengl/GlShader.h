@@ -24,13 +24,10 @@
 
 namespace xci::graphics {
 
-using xci::core::FileWatch;
-using xci::core::FileWatchPtr;
-
 
 class GlShader: public Shader {
 public:
-    GlShader() : m_file_watch(FileWatch::create()) {}
+    explicit GlShader(core::FileWatchPtr fw) : m_file_watch(std::move(fw)) {}
     ~GlShader() override { clear(); }
 
     bool is_ready() const override;
@@ -51,6 +48,7 @@ public:
 
     GLuint gl_program();
 
+private:
     void add_watches();
     void remove_watches();
 
@@ -60,7 +58,7 @@ public:
 private:
     GLuint m_program = 0;
     mutable std::atomic_bool m_program_ready {false};
-    FileWatchPtr m_file_watch;
+    core::FileWatchPtr m_file_watch;
     std::string m_vertex_file;
     std::string m_fragment_file;
     int m_vertex_file_watch = -1;
