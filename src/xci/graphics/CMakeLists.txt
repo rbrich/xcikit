@@ -39,6 +39,7 @@ set(XCI_GRAPHICS_MAGNUM_SOURCES
 # OpenGL
 if (XCI_WITH_OPENGL)
     find_package(glfw3 3.2 REQUIRED)
+    find_package(glad REQUIRED)
 endif ()
 
 # Magnum
@@ -69,7 +70,7 @@ if (XCI_WITH_OPENGL)
         xci-core
         ${CMAKE_DL_LIBS}
         glfw
-        glad)
+        glad::glad)
 
     if (BUILD_FRAMEWORKS)
         set_target_properties(xci-graphics-opengl PROPERTIES

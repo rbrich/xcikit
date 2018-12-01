@@ -197,3 +197,29 @@ In the case xcikit was installed into non-standard location,
 for example `~/sdk/xcikit`, you need to setup `CMAKE_PREFIX_PATH` appropriately:
 
     cmake -DCMAKE_PREFIX_PATH="~/sdk/xcikit" ..
+
+
+Linking with XCI Toolkit (using CMake + Conan)
+----------------------------------------------
+
+Add xcikit as dependency to `conanfile.txt`:
+
+    [requires]
+    xcikit/0.1@rbrich/stable
+    
+    [generators]
+    cmake_paths
+
+Then include generated `conan_paths.cmake` from project's `CMakeLists.txt`:
+    
+    if (EXISTS ${CMAKE_BINARY_DIR}/conan_paths.cmake)
+        include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
+    endif()
+
+Now find `xcikit` in usual way:
+
+    find_package(xcikit REQUIRED)
+
+Optionally, include XCI goodies:
+
+    include(XciBuildOptions)

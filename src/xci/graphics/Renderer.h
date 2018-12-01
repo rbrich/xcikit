@@ -21,6 +21,7 @@
 #include "Primitives.h"
 #include <xci/core/geometry.h>
 
+#include <array>
 #include <cstdint>
 
 namespace xci::graphics {

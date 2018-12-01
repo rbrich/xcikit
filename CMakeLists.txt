@@ -23,11 +23,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(XciBuildOptions)
 
-if (EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-    conan_basic_setup(KEEP_RPATHS)
+if (EXISTS ${CMAKE_BINARY_DIR}/conan_paths.cmake)
+    include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
 endif()
-
 
 # ------------ #
 # Sources      #
@@ -228,6 +226,7 @@ endif ()
 # Installation  #
 # ------------- #
 
+# Headers
 install(DIRECTORY src/xci DESTINATION include
     FILES_MATCHING
     REGEX "xci/(graphics|core)/[a-z]+$" EXCLUDE  # internal headers
@@ -261,3 +260,7 @@ install(FILES
 install(FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/cmake/XciBuildOptions.cmake
     DESTINATION lib/cmake/xcikit)
+
+# Data (share)
+install(DIRECTORY share/fonts DESTINATION share/xcikit)
+install(DIRECTORY share/shaders DESTINATION share/xcikit)

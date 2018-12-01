@@ -13,9 +13,9 @@ class XcikitConan(ConanFile):
     options = {"shared": [True, False]}
     build_requires = ('catch2/2.2.2@bincrafters/stable',
                       'pegtl/2.7.1@taocpp/stable',
-                      'glad/0.1.24@bincrafters/stable',
-                      'incbin/20180413@rbrich/stable',
-                      'abseil/20180600@bincrafters/stable')
+                      'incbin/20180413@rbrich/stable',)
+    requires = ('abseil/20180600@bincrafters/stable',
+                'glad/0.1.24@bincrafters/stable',)
     default_options = {
         "shared": False,
         # Glad commandline:
@@ -27,7 +27,7 @@ class XcikitConan(ConanFile):
         "glad:profile": "core",
         "glad:extensions": "GL_KHR_debug",
     }
-    generators = "cmake"
+    generators = "cmake_paths"
     scm = {
         "type": "git",
         "url": "auto",
@@ -35,8 +35,10 @@ class XcikitConan(ConanFile):
     }
 
     def build(self):
+        self.run("./bootstrap.sh --no-conan-remotes")
         cmake = CMake(self)
         cmake.definitions["CMAKE_INSTALL_PREFIX"] = self.package_folder
+        cmake.definitions["XCI_SHARE_DIR"] = self.package_folder + "/share/xcikit"
         cmake.configure()
         cmake.install()
 

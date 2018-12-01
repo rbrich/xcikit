@@ -6,8 +6,12 @@
 cd $(dirname "$0")
 
 YES=0
+NO_CONAN_REMOTES=0
 if [[ $1 = '-y' ]] ; then
     YES=1
+fi
+if [[ $1 = '--no-conan-remotes' ]] ; then
+    NO_CONAN_REMOTES=1
 fi
 
 function ask {
@@ -25,18 +29,20 @@ function ask {
 
 function run { echo "$@" ; "$@"; }
 
-echo "=== Check Conan remotes ==="
-conan_remotes=$(conan remote list)
-echo "${conan_remotes}"
-if ! echo "${conan_remotes}" | grep -q '^bincrafters:' && ask 'Add conan remote "bincrafters"?'; then
-    run conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan
-fi
-if ! echo "${conan_remotes}" | grep -q '^xcikit:' && ask 'Add conan remote "xcikit"?'; then
-    run conan remote add xcikit https://api.bintray.com/conan/rbrich/xcikit
+if [[ ${NO_CONAN_REMOTES} -eq 0 ]] ; then
+    echo "=== Check Conan remotes ==="
+    conan_remotes=$(conan remote list)
+    echo "${conan_remotes}"
+    if ! echo "${conan_remotes}" | grep -q '^bincrafters:' && ask 'Add conan remote "bincrafters"?'; then
+        run conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan
+    fi
+    if ! echo "${conan_remotes}" | grep -q '^xcikit:' && ask 'Add conan remote "xcikit"?'; then
+        run conan remote add xcikit https://api.bintray.com/conan/rbrich/xcikit
+    fi
 fi
 
 # See: https://github.com/source-foundry/Hack
-if [ ! -e "share/fonts/Hack/Hack-Regular.ttf" ] ; then
+if [[ ! -e "share/fonts/Hack/Hack-Regular.ttf" ]] ; then
     echo "=== Download Hack font ==="
     HACK_VERSION="v3.003"
     HACK_ARCHIVE="Hack-${HACK_VERSION}-ttf.tar.gz"
@@ -47,7 +53,7 @@ if [ ! -e "share/fonts/Hack/Hack-Regular.ttf" ] ; then
 fi
 
 # Needed for demo_vfs
-if [ ! -e "share.dar" ] ; then
+if [[ ! -e "share.dar" ]] ; then
     echo "=== Create share.dar archive ==="
     (cd share; find shaders fonts -type f > file_list.txt)
     tools/pack_assets.py share.dar share/file_list.txt
