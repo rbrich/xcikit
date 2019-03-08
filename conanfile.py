@@ -11,7 +11,7 @@ class XcikitConan(ConanFile):
     topics = ("OpenGL", "text-rendering", "UI")
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False]}
-    build_requires = ('catch2/2.2.2@bincrafters/stable',
+    build_requires = ('Catch2/2.6.1@catchorg/stable',
                       'pegtl/2.7.1@taocpp/stable',
                       'incbin/20180413@rbrich/stable',)
     requires = ('abseil/20180600@bincrafters/stable',

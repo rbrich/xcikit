@@ -70,13 +70,13 @@ add_subdirectory(ext/rbp)
 set(RBP_LIBRARY rbp)
 
 # PEGTL
-find_package(PEGTL REQUIRED)
+find_package(pegtl REQUIRED)
 
 # Abseil
 find_package(Abseil REQUIRED)
 
 # Catch
-find_package(Catch)
+find_package(Catch2)
 
 # Doxygen
 find_package(Doxygen)
@@ -127,11 +127,11 @@ target_include_directories(xci-text
     PUBLIC
         ${XCI_INCLUDE_DIRS}
         ${FREETYPE_INCLUDE_DIRS}
-        ${PEGTL_INCLUDE_DIRS}
     PRIVATE
         ext)
 target_link_libraries(xci-text
     xci-core
+    taocpp::pegtl
     ${FREETYPE_LIBRARIES})
 
 if (BUILD_FRAMEWORKS)
@@ -241,7 +241,6 @@ install(EXPORT xcikit
     FILE "xcikitTargets.cmake")
 
 # Make our CMake modules available to clients
-install(FILES cmake/FindCatch.cmake DESTINATION lib/cmake/xcikit)
 install(FILES cmake/FindAbseil.cmake DESTINATION lib/cmake/xcikit)
 
 set(XCI_INCLUDE_DIRS include)
