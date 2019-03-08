@@ -34,14 +34,14 @@ bool starts_with(const std::string& str, const std::string& sub)
 }
 
 
-std::vector<absl::string_view> split(absl::string_view str, char delim)
+std::vector<string_view> split(string_view str, char delim)
 {
-    std::vector<absl::string_view> res;
+    std::vector<string_view> res;
     size_t pos = 0;
     size_t end = 0;
     for (;;) {
         end = str.find(delim, pos);
-        if (end != absl::string_view::npos) {
+        if (end != string_view::npos) {
             if (end != pos)
                 res.push_back(str.substr(pos, end - pos));
             pos = end + 1;
@@ -55,7 +55,7 @@ std::vector<absl::string_view> split(absl::string_view str, char delim)
 }
 
 
-std::string escape(absl::string_view str)
+std::string escape(string_view str)
 {
     std::string out;
     out.reserve(str.size());
@@ -83,7 +83,7 @@ std::string escape(absl::string_view str)
 }
 
 
-std::u32string to_utf32(absl::string_view utf8)
+std::u32string to_utf32(string_view utf8)
 {
     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert_utf32;
     try {
@@ -139,7 +139,7 @@ utf8_prev(std::string::const_reverse_iterator pos)
 }
 
 
-size_t utf8_length(absl::string_view str)
+size_t utf8_length(string_view str)
 {
     size_t length = 0;
     for (auto pos = str.cbegin(); pos != str.cend(); pos = utf8_next(pos)) {
@@ -149,7 +149,7 @@ size_t utf8_length(absl::string_view str)
 }
 
 
-absl::string_view utf8_substr(absl::string_view str, size_t pos, size_t count)
+string_view utf8_substr(string_view str, size_t pos, size_t count)
 {
     auto begin = str.cbegin();
     while (pos > 0 && begin != str.cend()) {
@@ -190,7 +190,7 @@ char32_t utf8_codepoint(const char* utf8)
 }
 
 
-size_t utf8_partial_end(absl::string_view str)
+size_t utf8_partial_end(string_view str)
 {
     // Single byte from multi-byte UTF-8 char?
     if (str.length() < 1)

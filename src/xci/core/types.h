@@ -16,7 +16,6 @@
 #ifndef XCI_CORE_TYPES_H
 #define XCI_CORE_TYPES_H
 
-#include <absl/types/span.h>
 #include <memory>
 #include <functional>
 #include <utility>
@@ -52,7 +51,7 @@ public:
     Byte* data() const { return m_data; }
     std::size_t size() const { return m_size; }
 
-    absl::Span<Byte> span() const { return {m_data, m_size}; }
+    //std::span<Byte> span() const { return {m_data, m_size}; }
 
 private:
     Byte* m_data;

@@ -72,9 +72,6 @@ set(RBP_LIBRARY rbp)
 # PEGTL
 find_package(pegtl REQUIRED)
 
-# Abseil
-find_package(Abseil REQUIRED)
-
 # Catch
 find_package(Catch2)
 
@@ -130,9 +127,11 @@ target_include_directories(xci-text
     PRIVATE
         ext)
 target_link_libraries(xci-text
-    xci-core
-    taocpp::pegtl
-    ${FREETYPE_LIBRARIES})
+    PUBLIC
+        xci-core
+    PRIVATE
+        taocpp::pegtl
+        ${FREETYPE_LIBRARIES})
 
 if (BUILD_FRAMEWORKS)
     set_target_properties(xci-text PROPERTIES
@@ -240,9 +239,6 @@ install(EXPORT xcikit
     DESTINATION lib/cmake/xcikit
     FILE "xcikitTargets.cmake")
 
-# Make our CMake modules available to clients
-install(FILES cmake/FindAbseil.cmake DESTINATION lib/cmake/xcikit)
-
 set(XCI_INCLUDE_DIRS include)
 include(CMakePackageConfigHelpers)
 configure_package_config_file(xcikitConfig.cmake.in xcikitConfig.cmake
@@ -256,9 +252,8 @@ install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/xcikitConfigVersion.cmake
     DESTINATION lib/cmake/xcikit)
 
-install(FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/XciBuildOptions.cmake
-    DESTINATION lib/cmake/xcikit)
+# Make our CMake modules available to clients
+install(FILES cmake/XciBuildOptions.cmake DESTINATION lib/cmake/xcikit)
 
 # Data (share)
 install(DIRECTORY share/fonts DESTINATION share/xcikit)

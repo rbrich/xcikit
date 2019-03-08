@@ -35,10 +35,11 @@ endif()
 
 add_library(xci-core ${XCI_CORE_SOURCES})
 target_link_libraries(xci-core
-    Threads::Threads
-    absl::strings
-    taocpp::pegtl
-    ${CMAKE_DL_LIBS})
+    PUBLIC
+        Threads::Threads
+    PRIVATE
+        taocpp::pegtl
+        ${CMAKE_DL_LIBS})
 target_include_directories(xci-core
     PUBLIC
         ${XCI_INCLUDE_DIRS})

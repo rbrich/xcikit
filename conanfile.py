@@ -14,8 +14,7 @@ class XcikitConan(ConanFile):
     build_requires = ('Catch2/2.6.1@catchorg/stable',
                       'pegtl/2.7.1@taocpp/stable',
                       'incbin/20180413@rbrich/stable',)
-    requires = ('abseil/20180600@bincrafters/stable',
-                'glad/0.1.24@bincrafters/stable',)
+    requires = ('glad/0.1.24@bincrafters/stable',)
     default_options = {
         "shared": False,
         # Glad commandline:
@@ -39,6 +38,7 @@ class XcikitConan(ConanFile):
         cmake = CMake(self)
         cmake.definitions["CMAKE_INSTALL_PREFIX"] = self.package_folder
         cmake.definitions["XCI_SHARE_DIR"] = self.package_folder + "/share/xcikit"
+        cmake.definitions["BUILD_SHARED_LIBS"] = True
         cmake.configure()
         cmake.install()
 
