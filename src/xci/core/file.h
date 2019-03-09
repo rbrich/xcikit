@@ -16,7 +16,7 @@
 #ifndef XCI_CORE_FILE_H
 #define XCI_CORE_FILE_H
 
-#include "types.h"
+#include "Buffer.h"
 #include <string>
 #include <vector>
 #include <functional>

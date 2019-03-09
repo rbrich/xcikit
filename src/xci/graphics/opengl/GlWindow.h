@@ -35,7 +35,7 @@ public:
     void create(const Vec2u& size, const std::string& title) override;
     void display() override;
     void wakeup() const override { glfwPostEmptyEvent(); }
-    void close() const override { glfwSetWindowShouldClose(m_window, GLFW_TRUE); }
+    void close() const override { glfwSetWindowShouldClose(m_window, GLFW_TRUE); glfwPostEmptyEvent(); }
 
     void set_clipboard_string(const std::string& s) const override { glfwSetClipboardString(m_window, s.c_str()); }
     std::string get_clipboard_string() const override { return glfwGetClipboardString(m_window); }

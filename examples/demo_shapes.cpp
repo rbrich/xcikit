@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <xci/text/FontFace.h>
 #include <xci/text/Font.h>
 #include <xci/text/Text.h>
 #include <xci/graphics/Window.h>
@@ -35,13 +34,8 @@ int main()
     window.create({800, 600}, "XCI shapes demo");
 
     Font font;
-    {
-        auto face_file = vfs.read_file("fonts/ShareTechMono/ShareTechMono-Regular.ttf");
-        auto face = FontLibrary::default_instance()->create_font_face();
-        if (!face->load_from_file(face_file.path(), 0))
-            return EXIT_FAILURE;
-        font.add_face(std::move(face));
-    }
+    if (!font.add_face("fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
+        return EXIT_FAILURE;
 
     Text shapes_help("[r] rectangles{br}"
                      "[o] rounded rectangles{br}"

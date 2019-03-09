@@ -76,8 +76,8 @@ VfsFile vfs::RealDirectory::read_file(const std::string& path)
     ::close(fd);
 
     auto content = std::make_shared<Buffer>(
-            static_cast<Byte*>(addr), size,
-            [](Byte* d, size_t s) { ::munmap(d, s); });
+            static_cast<byte*>(addr), size,
+            [](byte* d, size_t s) { ::munmap(d, s); });
 
     return VfsFile(std::move(full_path), std::move(content));
 }
@@ -120,7 +120,7 @@ vfs::DarArchive::DarArchive(std::string path)
     m_size = (size_t)(st.st_size);
 
     // map whole archive into memory
-    m_addr = (Byte*)::mmap(nullptr, m_size, PROT_READ, MAP_PRIVATE, fd, 0);
+    m_addr = (byte*)::mmap(nullptr, m_size, PROT_READ, MAP_PRIVATE, fd, 0);
     if (m_addr == MAP_FAILED) {
         log_error("VfsDarArchiveLoader: Failed to mmap file: {}: {m}", m_archive_path);
         ::close(fd);
@@ -157,7 +157,7 @@ VfsFile vfs::DarArchive::read_file(const std::string& path)
     auto this_ptr = shared_from_this();
     auto content = std::make_shared<Buffer>(
             m_addr + entry_it->offset, entry_it->size,
-            [this_ptr](Byte* d, size_t s) {});
+            [this_ptr](byte* d, size_t s) {});
     return VfsFile("", std::move(content));
 }
 

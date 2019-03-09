@@ -15,13 +15,16 @@
 
 #include "Font.h"
 
+#include <xci/text/FontLibrary.h>
 #include <xci/text/FontTexture.h>
+#include <xci/core/Vfs.h>
 #include <xci/core/log.h>
 
 namespace xci {
 namespace text {
 
 using namespace core::log;
+using core::Vfs;
 
 
 // dtor has to be implemented in cpp file to allow forward declaration of unique_ptr<FontTexture>
@@ -34,6 +37,24 @@ void Font::add_face(std::unique_ptr<FontFace> face)
     if (!m_texture)
         m_texture = std::make_unique<FontTexture>();
     m_faces.emplace_back(std::move(face));
+}
+
+
+bool Font::add_face(std::string path, int face_index)
+{
+    auto face = FontLibrary::default_instance()->create_font_face();
+    auto face_file = Vfs::default_instance().read_file(std::move(path));
+    if (face_file.is_real_file()) {
+        // it's a real file, use only the path, let FreeType read the data
+        if (!face->load_from_file(face_file.path(), face_index))
+            return false;
+    } else {
+        // not real file, we have to read all data into memory
+        if (!face->load_from_memory(face_file.content(), face_index))
+            return false;
+    }
+    add_face(std::move(face));
+    return true;
 }
 
 

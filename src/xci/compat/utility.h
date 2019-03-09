@@ -1,4 +1,4 @@
-// string_view.h created on 2019-03-08, part of XCI toolkit
+// utility.h created on 2019-03-09, part of XCI toolkit
 // Copyright 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,23 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_COMPAT_STRING_VIEW_H
-#define XCI_COMPAT_STRING_VIEW_H
+#ifndef XCI_COMPAT_UTILITY_H
+#define XCI_COMPAT_UTILITY_H
 
-#if __cplusplus >= 201703L || __cpp_lib_string_view >= 201606L
+// This is included from <utility>, but let's keep the includes minimal.
+#include <cstddef>
 
-#include <string_view>
+#if __cplusplus >= 201703L || defined(__cpp_lib_byte)
 namespace xci {
-    using std::string_view;
+    using byte = std::byte;
 }
-
 #else
-
-#include <experimental/string_view>
 namespace xci {
-    using std::experimental::string_view;
+    enum class byte: unsigned char {};
 }
-
 #endif
 
 #endif // include guard

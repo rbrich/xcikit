@@ -16,7 +16,6 @@
 #ifndef XCI_TEXT_FONT_H
 #define XCI_TEXT_FONT_H
 
-#include <xci/text/FontLibrary.h>
 #include <xci/text/FontFace.h>
 #include <xci/graphics/Texture.h>
 #include <xci/core/geometry.h>
@@ -45,9 +44,14 @@ public:
     Font(const Font&) = delete;
     Font& operator =(const Font&) = delete;
 
-    // Add a face. Call multiple times to add differect strokes
+    // Add a face. Call multiple times to add different strokes
     // (either from separate files or using face_index).
     void add_face(std::unique_ptr<FontFace> face);
+
+    // The same as above, but constructs FontFace object for you
+    // (using default FontLibrary and default Vfs).
+    // Returns false when FontFace load operation fails.
+    bool add_face(std::string path, int face_index);
 
     // Get currently selected face.
     FontFace& face() { check_face(); return *m_faces[m_current_face].get(); }

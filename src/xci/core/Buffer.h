@@ -1,4 +1,4 @@
-// types.h created on 2018-11-12, part of XCI toolkit
+// buffer.h created on 2018-11-12, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,32 +13,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_CORE_TYPES_H
-#define XCI_CORE_TYPES_H
+#ifndef XCI_CORE_BUFFER_H
+#define XCI_CORE_BUFFER_H
 
-#include <memory>
+#include <xci/compat/utility.h>
 #include <functional>
-#include <utility>
-#include <cstddef>
+#include <memory>
 
 namespace xci {
 namespace core {
 
 
-#ifdef __cpp_lib_byte
-using Byte = std::byte;
-#else
-enum class Byte: uint8_t {};
-#endif
-
 // Possibly owned buffer. Attach deleter when transferring ownership.
 class Buffer {
-    using Deleter = std::function<void(Byte*, std::size_t)>;
+    using Deleter = std::function<void(byte*, std::size_t)>;
 
 public:
-    Buffer(Byte* data, std::size_t size)
+    Buffer(byte* data, std::size_t size)
             : m_data(data), m_size(size) {}
-    Buffer(Byte* data, std::size_t size, Deleter deleter)
+    Buffer(byte* data, std::size_t size, Deleter deleter)
         : m_data(data), m_size(size), m_deleter(std::move(deleter)) {}
     ~Buffer() { if (m_deleter) m_deleter(m_data, m_size); }
 
@@ -48,13 +41,13 @@ public:
     Buffer(Buffer &&) = delete;
     Buffer& operator=(Buffer&&) = delete;
 
-    Byte* data() const { return m_data; }
+    byte* data() const { return m_data; }
     std::size_t size() const { return m_size; }
 
-    //std::span<Byte> span() const { return {m_data, m_size}; }
+    //std::span<byte> span() const { return {m_data, m_size}; }
 
 private:
-    Byte* m_data;
+    byte* m_data;
     std::size_t m_size;
     Deleter m_deleter = {};
 };

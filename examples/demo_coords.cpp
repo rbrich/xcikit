@@ -14,8 +14,6 @@
 // limitations under the License.
 
 
-#include <xci/text/FontLibrary.h>
-#include <xci/text/FontFace.h>
 #include <xci/text/Font.h>
 #include <xci/text/Text.h>
 #include <xci/graphics/Window.h>
@@ -40,13 +38,8 @@ int main()
     window.create({800, 600}, "XCI coords demo");
 
     Font font;
-    {
-        auto face_file = vfs.read_file("fonts/ShareTechMono/ShareTechMono-Regular.ttf");
-        auto face = FontLibrary::default_instance()->create_font_face();
-        if (!face->load_from_file(face_file.path(), 0))
-            return EXIT_FAILURE;
-        font.add_face(std::move(face));
-    }
+    if (!font.add_face("fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
+        return EXIT_FAILURE;
 
     Text coords_center("(0, 0)", font);
     Text coords_tl("(-, -)", font);

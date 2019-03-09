@@ -13,8 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <xci/text/FontLibrary.h>
-#include <xci/text/FontFace.h>
 #include <xci/text/Font.h>
 #include <xci/text/Text.h>
 #include <xci/graphics/Window.h>
@@ -50,20 +48,8 @@ int main()
     window.create({800, 600}, "XCI font demo");
 
     Font font;
-    {
-        auto face = FontLibrary::default_instance()->create_font_face();
-        auto face_file = vfs.read_file("fonts/Enriqueta/Enriqueta-Regular.ttf");
-        if (face_file.is_real_file()) {
-            // it's a real file, use only the path, let FreeType read the data
-            if (!face->load_from_file(face_file.path(), 0))
-                return EXIT_FAILURE;
-        } else {
-            // not real file, we have to read all data into memory
-            if (!face->load_from_memory(face_file.content(), 0))
-                return EXIT_FAILURE;
-        }
-        font.add_face(std::move(face));
-    }
+    if (!font.add_face("fonts/Enriqueta/Enriqueta-Regular.ttf", 0))
+        return EXIT_FAILURE;
 
     Text text;
     text.set_string(sample_text);

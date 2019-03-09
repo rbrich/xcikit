@@ -18,7 +18,7 @@
 
 #include <xci/text/FontLibrary.h>
 #include <xci/core/geometry.h>
-#include <xci/core/types.h>
+#include <xci/core/Buffer.h>
 #include <xci/compat/string_view.h>
 
 #include <memory>  // shared_ptr

@@ -185,7 +185,7 @@ FT_Library FtFontFace::ft_library()
 
 
 // Internal helper to avoid repeating error handling etc.
-bool FtFontFace::load_face(const char* file_path, const core::Byte* buffer, size_t buffer_size, int face_index)
+bool FtFontFace::load_face(const char* file_path, const byte* buffer, size_t buffer_size, int face_index)
 {
     if (m_face != nullptr) {
         log_error("FontFace: Reloading not supported! Create new instance instead.");

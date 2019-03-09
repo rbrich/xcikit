@@ -16,7 +16,7 @@
 #ifndef XCI_CORE_VFS_H
 #define XCI_CORE_VFS_H
 
-#include "types.h"
+#include "Buffer.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -126,7 +126,7 @@ private:
     std::string m_archive_path;
 
     // mmapped archive:
-    Byte* m_addr = nullptr;
+    byte* m_addr = nullptr;
     size_t m_size = 0;
 
     // index:

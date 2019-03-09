@@ -13,8 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <xci/text/FontLibrary.h>
-#include <xci/text/FontFace.h>
 #include <xci/text/Font.h>
 #include <xci/text/Text.h>
 #include <xci/graphics/Window.h>
@@ -42,17 +40,15 @@ static const char * sample_text =
 
 int main()
 {
-    Vfs::default_instance().mount(XCI_SHARE_DIR);
+    auto& vfs = Vfs::default_instance();
+    vfs.mount(XCI_SHARE_DIR);
 
     Window& window = Window::default_instance();
     window.create({800, 600}, "XCI layout demo");
 
-    auto face = FontLibrary::default_instance()->create_font_face();
-    if (!face->load_from_file("fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
-        return EXIT_FAILURE;
-
     Font font;
-    font.add_face(std::move(face));
+    if (!font.add_face("fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
+        return EXIT_FAILURE;
 
     Text text;
     text.set_string(sample_text);

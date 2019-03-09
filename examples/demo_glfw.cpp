@@ -70,14 +70,11 @@ int main()
     });
 
     // Create XCI text
+
     Font font;
-    {
-        auto face_file = vfs.read_file("fonts/ShareTechMono/ShareTechMono-Regular.ttf");
-        auto face = FontLibrary::default_instance()->create_font_face();
-        if (!face->load_from_file(face_file.path(), 0))
-            return EXIT_FAILURE;
-        font.add_face(std::move(face));
-    }
+    if (!font.add_face("fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
+        return EXIT_FAILURE;
+
     Text text("Hello from XCI", font);
     text.set_size(0.2);
 

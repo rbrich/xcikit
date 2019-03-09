@@ -14,15 +14,13 @@
 // limitations under the License.
 
 #include "Theme.h"
-#include <xci/core/Vfs.h>
-#include <xci/core/file.h>
-#include <xci/text/FontLibrary.h>
 
 namespace xci {
 namespace widgets {
 
 
 #define TRY(stmt)  do { auto res = stmt; if (!res) return false; } while(0)
+
 
 bool Theme::load_default_theme()
 {
@@ -58,34 +56,15 @@ Theme& Theme::default_theme()
 }
 
 
-static bool impl_load_font_face(text::Font& font, const char* file_path, int face_index)
-{
-    auto& vfs = core::Vfs::default_instance();
-    auto font_face = text::FontLibrary::default_instance()->create_font_face();
-    auto face_file = vfs.read_file(file_path);
-    if (face_file.is_real_file()) {
-        // it's a real file, use only the path, let FreeType read the data
-        if (!font_face->load_from_file(face_file.path(), face_index))
-            return false;
-    } else {
-        // not real file, we have to read all data into memory
-        if (!font_face->load_from_memory(face_file.content(), face_index))
-            return false;
-    }
-    font.add_face(std::move(font_face));
-    return true;
-}
-
-
 bool Theme::load_font_face(const char* file_path, int face_index)
 {
-    return impl_load_font_face(m_font, file_path, face_index);
+    return m_font.add_face(file_path, face_index);
 }
 
 
 bool Theme::load_icon_font_face(const char* file_path, int face_index)
 {
-    return impl_load_font_face(m_icon_font, file_path, face_index);
+    return m_icon_font.add_face(file_path, face_index);
 }
 
 
