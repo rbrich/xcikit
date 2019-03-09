@@ -223,3 +223,7 @@ Now find `xcikit` in usual way:
 Optionally, include XCI goodies:
 
     include(XciBuildOptions)
+
+Link with the libraries:
+
+    target_link_libraries(example xcikit::xci-text xcikit::xci-graphics-opengl)

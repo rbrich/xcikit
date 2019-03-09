@@ -133,6 +133,11 @@ target_link_libraries(xci-text
         taocpp::pegtl
         ${FREETYPE_LIBRARIES})
 
+if (APPLE)
+    set_target_properties(xci-text PROPERTIES
+        LINK_FLAGS "-undefined dynamic_lookup")
+endif()
+
 if (BUILD_FRAMEWORKS)
     set_target_properties(xci-text PROPERTIES
         FRAMEWORK TRUE
@@ -155,6 +160,11 @@ target_include_directories(xci-widgets
     PRIVATE
         ${CONAN_INCLUDE_DIRS_INCBIN}
 )
+
+if (APPLE)
+    set_target_properties(xci-widgets PROPERTIES
+        LINK_FLAGS "-undefined dynamic_lookup")
+endif()
 
 if (BUILD_FRAMEWORKS)
     set_target_properties(xci-widgets PROPERTIES

@@ -38,7 +38,6 @@ class XcikitConan(ConanFile):
         cmake = CMake(self)
         cmake.definitions["CMAKE_INSTALL_PREFIX"] = self.package_folder
         cmake.definitions["XCI_SHARE_DIR"] = self.package_folder + "/share/xcikit"
-        cmake.definitions["BUILD_SHARED_LIBS"] = True
         cmake.configure()
         cmake.install()
 
