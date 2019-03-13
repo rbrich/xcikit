@@ -8,8 +8,6 @@ GitHub: https://github.com/juj/RectangleBinPack
 Included some of the sources here as I don't expect
 that the whole repo will be needed for font texture generation.
 
-Eventually, this whole dir can be replaced with Git submodule.
-
 License according to source files:
 
     This work is released to Public Domain, do whatever you want with it.
