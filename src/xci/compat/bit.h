@@ -19,11 +19,31 @@
 #include <type_traits>
 #include <cstring>
 
-namespace xci::core {
+namespace xci {
+
+/// C++20 bit_cast emulation.
+///
+/// Example:
+///
+///     double f = 3.14;
+///     auto u = std::bit_cast<std::uint64_t>(f);
+
+template <class To, class From>
+typename std::enable_if<
+        (sizeof(To) == sizeof(From)) &&
+        std::is_trivially_copyable<From>::value &&
+        std::is_trivial<To>::value,
+        To>::type
+bit_cast(const From &src) noexcept
+{
+    To dst;
+    std::memcpy(&dst, &src, sizeof(To));
+    return dst;
+}
 
 
 /// Similar to C++20 bit_cast, but read bits from void*, char*, byte* etc.
-/// Useful to emulate file reading from memory buffer.
+/// Does not check type sizes. Useful to emulate file reading from memory buffer.
 ///
 /// Example:
 ///

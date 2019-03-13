@@ -63,6 +63,9 @@ set(XCI_WIDGETS_SOURCES
 find_package(Threads REQUIRED)
 
 # FreeType
+find_package(ZLIB REQUIRED)
+
+# FreeType
 include(FindFreetype)
 
 # RectangleBinPack
@@ -104,7 +107,7 @@ else()
 endif()
 
 add_subdirectory(src/xci/core)
-
+add_subdirectory(src/xci/data)
 add_subdirectory(src/xci/graphics)
 
 # Choose default graphics engine:
@@ -193,7 +196,7 @@ add_subdirectory(examples)
 # Tests        #
 # ------------ #
 
-if (Catch_FOUND)
+if (Catch2_FOUND)
     enable_testing()
     add_subdirectory(tests)
 endif ()

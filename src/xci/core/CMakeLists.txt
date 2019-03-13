@@ -1,4 +1,4 @@
-set(XCI_CORE_SOURCES
+add_library(xci-core
     chrono.cpp
     file.cpp
     FileWatch.cpp
@@ -13,27 +13,18 @@ set(XCI_CORE_SOURCES
     Vfs.cpp
     )
 
-
 # Choose FileWatch implementation
 if (CMAKE_SYSTEM_NAME STREQUAL Linux)
-    list(APPEND XCI_CORE_SOURCES
-        filewatch/FileWatchInotify.cpp
-        filewatch/FileWatchInotify.h)
+    target_sources(xci-core PRIVATE filewatch/FileWatchInotify.cpp)
     set(FILEWATCH_IMPL "XCI_FILEWATCH_INOTIFY")
 elseif (CMAKE_SYSTEM_NAME STREQUAL Darwin)
-    list(APPEND XCI_CORE_SOURCES
-        filewatch/FileWatchKqueue.cpp
-        filewatch/FileWatchKqueue.h)
+    target_sources(xci-core PRIVATE filewatch/FileWatchKqueue.cpp)
     set(FILEWATCH_IMPL "XCI_FILEWATCH_KQUEUE")
 else()
-    list(APPEND XCI_CORE_SOURCES
-        filewatch/FileWatchDummy.cpp
-        filewatch/FileWatchDummy.h)
+    target_sources(xci-core PRIVATE filewatch/FileWatchDummy.cpp)
     set(FILEWATCH_IMPL "XCI_FILEWATCH_DUMMY")
 endif()
 
-
-add_library(xci-core ${XCI_CORE_SOURCES})
 target_link_libraries(xci-core
     PUBLIC
         Threads::Threads

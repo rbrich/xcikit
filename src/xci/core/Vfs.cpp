@@ -17,7 +17,7 @@
 #include "file.h"
 #include <xci/core/log.h>
 #include <xci/core/string.h>
-#include <xci/core/bit_read.h>
+#include <xci/compat/bit.h>
 #include <xci/compat/endian.h>
 #include <xci/compat/macros.h>
 
