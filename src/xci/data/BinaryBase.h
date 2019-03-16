@@ -53,8 +53,8 @@ protected:
         Length62_Flag3      = 0b11000000,
         Length62_FlagMask   = 0b11000000,
         // master chunk
-        Master_Enter        = 0b00000000,    // ORed with Type_Master and depth
-        Master_Leave        = 0b00010000,    // ... enter/leave sub-chunks
+        Master_Enter        = 1,    // LEN field, enter/leave sub-chunks
+        Master_Leave        = 0,
     };
 
     uint32_t m_crc = 0;

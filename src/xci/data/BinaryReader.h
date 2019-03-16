@@ -17,6 +17,7 @@
 #define XCI_DATA_BINARY_READER_H
 
 #include "BinaryBase.h"
+#include <xci/data/reflection.h>
 #include <istream>
 #include <iostream>
 #include <map>
@@ -42,18 +43,52 @@ public:
     void read(T& o) {
         uint8_t type = 0;
         uint64_t len = 0;
-        read_type_len(type, len);
-        auto* key = read_key();
-
-        std::cout << "t:"<< std::hex << int(type) << " l:" << len
-        << " k:" << key << std::endl;
+        for (;;) {
+            read_type_len(type, len);
+            auto* key = read_key();
+            switch (type) {
+                case Type_Master:
+                    // member object - enter (read) or leave (we're in the sub-object)
+                    switch (len) {
+                        case Master_Enter:
+                            meta::doForAllMembers<T>(
+                                [this, key, &o](const auto& member) {
+                                    if (!strcmp(key, member.getName())) {
+                                        using MemberT = meta::get_member_type<decltype(member)>;
+                                        this->read<MemberT>(member.getRef(o));
+                                    }
+                                });
+                            break;
+                        case Master_Leave:
+                            return;
+                        default:
+                            m_stream.setstate(std::ios::failbit);
+                            m_error = Error::BadFieldType;
+                            return;
+                    }
+                    break;
+                case Type_String: {
+                    std::string value(len, 0);
+                    read(key, value);
+                    meta::setMemberValue<std::string>(o, key, std::move(value));
+                    break;
+                }
+                default:
+                    std::cout << "t:" << std::hex << int(type) << " l:" << len
+                              << " k:" << key << std::endl;
+                    return;
+            }
+        }
     }
+
+    void read(const char* name, std::string& value);
 
     enum class Error {
         None,
         BadMagic,
         BadVersion,
         BadFlags,
+        BadFieldType,
     };
 
     Error get_error() const { return m_error; }
@@ -64,6 +99,7 @@ public:
             case Error::BadMagic: return "Bad magic";
             case Error::BadVersion: return "Bad version";
             case Error::BadFlags: return "Bad flags";
+            case Error::BadFieldType: return "Bad field type";
         }
         __builtin_unreachable();
     }

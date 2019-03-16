@@ -111,31 +111,30 @@ void BinaryReader::read_type_len(uint8_t& type, uint64_t& len)
 const char* BinaryReader::read_key()
 {
     auto startpos = m_pos;
-    uint8_t first = 0;
-    read_with_crc(first);
-    if (first & 0x80) {
+    uint8_t len = 0;
+    read_with_crc(len);
+    if (len & 0x80) {
         // Read offset, lookup prev key
-        uint8_t second = 0;
-        read_with_crc(second);
-        auto offset = ((first << 8) | second) & 0x7fff;
+        uint8_t len1 = 0;
+        read_with_crc(len1);
+        auto offset = ((len << 8) | len1) & 0x7fff;
         auto key_pos = startpos - offset;
         return m_pos_to_key[key_pos].c_str();
     } else {
         // Read key
-        std::string key;
-        if (first > 0x02)
-            key.push_back(first);
-        uint8_t ch = 0;
-        read_with_crc(ch);
-        while (ch != 0) {
-            key.push_back(ch);
-            read_with_crc(ch);
-        };
+        std::string key(len, 0);
+        read_with_crc((uint8_t*)&key[0], len);
         // Save key
         auto& slot = m_pos_to_key[startpos];
         slot = std::move(key);
         return slot.c_str();
     }
+}
+
+
+void BinaryReader::read(const char* name, std::string& value)
+{
+    read_with_crc((uint8_t*)&value[0], value.size());
 }
 
 

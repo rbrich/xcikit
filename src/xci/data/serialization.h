@@ -16,6 +16,7 @@
 #ifndef XCI_DATA_SERIALIZATION_H
 #define XCI_DATA_SERIALIZATION_H
 
+#include "Property.h"
 #include <iostream>
 
 namespace xci::data {
@@ -71,6 +72,11 @@ public:
         }
     }
 
+    template <class T>
+    void write(const char* name, Property<T> value) {
+        m_stream << indent() << name << ": " << value.get() << "" << std::endl;
+    }
+
     void write(const char* name, const std::string& value) {
         m_stream << indent() << name << ": \"" << value << "\"" << std::endl;
     }
@@ -81,6 +87,12 @@ public:
 
     void write(const char* name, double value) {
         m_stream << indent() << name << ": " << value << "" << std::endl;
+    }
+
+    template <class T, typename std::enable_if_t<std::is_enum<T>::value, int> = 0>
+    void write(const char* name, T value) {
+        m_stream << indent() << name << ": "
+            << metaobject::get_enum_constant_name<T>(value) << std::endl;
     }
 
 private:

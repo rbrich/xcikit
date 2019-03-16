@@ -58,7 +58,7 @@ void BinaryWriter::write(const char* name, const std::string& value)
     // TYPE:3 LENFLAG:1 LEN:4 [LEN:8-64]
     write_type_len(Type_String, value.size());
 
-    // KEY:8..24
+    // KEY
     write_key(name);
 
     // VALUE
@@ -154,12 +154,9 @@ void BinaryWriter::write_key(const char* key)
     // Is it new?
     if (item.second || m_pos - item.first->second > 0x7fff) {
         // Write raw key
-        if (*key & 0x80) {
-            // Prepend 0x02 to avoid the FLAG bit
-            uint8_t placeholder = 0x02;
-            write_with_crc(placeholder);
-        }
-        write_with_crc((const uint8_t*)key, strlen(key)+1);
+        auto len = uint8_t(std::max(127uL, strlen(key)));
+        write_with_crc(len);
+        write_with_crc((const uint8_t*)key, len);
     } else {
         // Write offset to first appearance
         auto offset = uint16_t(0x8000 | (m_pos - item.first->second));

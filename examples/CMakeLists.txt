@@ -86,3 +86,7 @@ if (XCI_WITH_PANDA3D)
         xci-graphics-panda3d)
     install(TARGETS demo_panda3d EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 endif ()
+
+
+add_executable(demo_reflect reflect/demo_reflect.cpp)
+target_link_libraries(demo_reflect xci-data)

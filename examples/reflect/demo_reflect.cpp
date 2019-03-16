@@ -17,11 +17,14 @@
 #include <xci/data/serialization.h>
 #include <xci/data/BinaryWriter.h>
 #include <xci/data/BinaryReader.h>
+#include <xci/data/Property.h>
 
 #include <string>
 #include <vector>
 #include <iostream>
 #include <fstream>
+
+using xci::data::Property;
 
 
 struct DialogReply
@@ -46,9 +49,26 @@ struct Dialog
 };
 
 
-XCI_DATA_REFLECT(DialogReply, text, next)
-XCI_DATA_REFLECT(DialogState, id, text, re)
-XCI_DATA_REFLECT(Dialog, title, state)
+XCI_METAOBJECT(DialogReply, text, next);
+XCI_METAOBJECT(DialogState, id, text, re);
+XCI_METAOBJECT(Dialog, title, state);
+
+
+enum class Option {
+    ThisOne,
+    ThatOne,
+    OtherOne,
+};
+XCI_METAOBJECT_FOR_ENUM(Option, ThisOne, ThatOne, OtherOne);
+
+
+struct Node
+{
+    Property<std::string> name;
+    Option option;
+    std::vector<Node> child;
+};
+XCI_METAOBJECT(Node, name, option, child);
 
 
 int main()
@@ -61,9 +81,9 @@ int main()
     dialog.state.re.push_back({"Please continue...", 1});
     dialog.state.re.push_back({"Please stop!", 2});
 
-    xci::data::TextualWriter w(std::cout);
+    xci::data::TextualWriter wcout(std::cout);
     std::cout << "BEGIN" << std::endl;
-    w.write(dialog);
+    wcout.write(dialog);
     std::cout << "END" << std::endl;
 
     std::ofstream f("/tmp/xci-sertest.bin");
@@ -73,12 +93,25 @@ int main()
 
     std::ifstream fi("/tmp/xci-sertest.bin");
     xci::data::BinaryReader br(fi);
-    br.load(dialog);
+    Dialog loaded_dialog;
+    br.load(loaded_dialog);
 
     if (fi.fail()) {
         std::cerr << "Load failed at " << br.get_last_pos() << ": "
                   << br.get_error_cstr() << std::endl;
     }
+
+    wcout.write(loaded_dialog);
+
+    // ---------------
+
+    std::cout << "=== Node ===\n";
+    Node root{"root", Option::ThisOne, {
+        Node{"child1", Option::ThatOne, {}},
+        Node{"child2", Option::OtherOne, {}},
+        }};
+
+    wcout.write(root);
 
     return 0;
 }

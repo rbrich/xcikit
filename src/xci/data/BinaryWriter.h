@@ -32,13 +32,12 @@ namespace xci::data {
 /// - keys are compressed to 8..16 bits
 /// - maximum number of distinct keys is 32768
 /// - header is: <MAGIC:16><VERSION:8><FLAGS:8>
-/// - the general format is: <TYPE:3><FLAG:1><LEN:4>[<+LEN>]<KEY:8..24)><VALUE>
+/// - the general format is: <TYPE:3><FLAG:1><LEN:4>[<+LEN>]<KEY><VALUE>
 /// - key is encoded:
-///   - first appearance - null-terminated string: <UTF8_CHARS><NUL>
-///   - exception: first char must be 7-bit ASCII, 8th bit is used as a flag
-///   - when first char contains upper UTF-8, 0x02 is written before it - this needs to be skipped by Reader
+///   - first appearance - length + string: <FLAG:1><LEN:7><CHARS> (flag=0)
+///   - keys are truncated to 127 chars (max LEN:7)
 ///   - next appearance, offset from first app. less than 32768: <FLAG:1><OFS:15> (flag=1)
-///   - remember pos before reading offset, subtract offset, seek, read <KEY><NUL>
+///   - remember pos before reading offset, subtract offset, seek, read <LEN:7><CHARS> (flag is zero an can be ignored)
 /// - footer is: <TYPE_FLAG_LEN:8><CRC:32> (type=7,flag=0,len=4)
 /// - master chunks contain sub-chunks, terminated with master chunk with LENFLAG=1
 ///   (LEN is set to depth level, but this is only informative)
