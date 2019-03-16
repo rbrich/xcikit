@@ -17,14 +17,11 @@
 #include <xci/data/serialization.h>
 #include <xci/data/BinaryWriter.h>
 #include <xci/data/BinaryReader.h>
-#include <xci/data/Property.h>
 
 #include <string>
 #include <vector>
 #include <iostream>
 #include <fstream>
-
-using xci::data::Property;
 
 
 struct DialogReply
@@ -64,7 +61,7 @@ XCI_METAOBJECT_FOR_ENUM(Option, ThisOne, ThatOne, OtherOne);
 
 struct Node
 {
-    Property<std::string> name;
+    std::string name;
     Option option;
     std::vector<Node> child;
 };

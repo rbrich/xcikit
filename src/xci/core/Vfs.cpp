@@ -30,7 +30,7 @@
 namespace xci::core {
 
 using namespace core::log;
-using xci::core::bit_read;
+using xci::bit_read;
 
 
 std::shared_ptr<VfsDirectory> vfs::RealDirectoryLoader::try_load(const std::string& path)

@@ -16,7 +16,6 @@
 #ifndef XCI_DATA_SERIALIZATION_H
 #define XCI_DATA_SERIALIZATION_H
 
-#include "Property.h"
 #include <iostream>
 
 namespace xci::data {
@@ -70,11 +69,6 @@ public:
         for (auto& item : o) {
             write(name, item);
         }
-    }
-
-    template <class T>
-    void write(const char* name, Property<T> value) {
-        m_stream << indent() << name << ": " << value.get() << "" << std::endl;
     }
 
     void write(const char* name, const std::string& value) {

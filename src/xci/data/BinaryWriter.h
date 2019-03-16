@@ -79,6 +79,11 @@ public:
         }
     }
 
+    template <class T, typename std::enable_if_t<std::is_enum<T>::value, int> = 0>
+    void write(const char* name, T value) {
+        write(name, (unsigned int) value);
+    }
+
     void write(const char* name, const std::string& value);
     void write(const char* name, unsigned int value);
     void write(const char* name, double value);
