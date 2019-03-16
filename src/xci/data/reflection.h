@@ -57,13 +57,33 @@ constexpr bool has_metaobject()
 template <typename TEnum>
 const char* get_enum_constant_name(TEnum value)
 {
-    const char* result = "<unknown>";
+    const char* result = nullptr;
     meta::detail::for_tuple([&result, value](const EnumConstant<TEnum>& ec) {
             if (ec.value() == value)
                 result = ec.name();
         }, get_metaobject<TEnum>());
+    if (result == nullptr)
+        throw std::runtime_error("metaobject: Unknown enum constant value.");
     return result;
 }
+
+
+template <typename TEnum>
+TEnum get_enum_constant_value(const char* name)
+{
+    TEnum result;
+    bool found = false;
+    meta::detail::for_tuple([&result, &found, name](const EnumConstant<TEnum>& ec) {
+        if (strcasecmp(name, ec.name()) == 0) {
+            result = ec.value();
+            found = true;
+        }
+    }, get_metaobject<TEnum>());
+    if (!found)
+        throw std::runtime_error("metaobject: Unknown enum constant name.");
+    return result;
+}
+
 
 } // namespace xci::data::metaobject
 

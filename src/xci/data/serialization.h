@@ -89,10 +89,19 @@ public:
         m_stream << indent() << name << ": " << value << "" << std::endl;
     }
 
-    template <class T, typename std::enable_if_t<std::is_enum<T>::value, int> = 0>
+    // Enum with metaobject
+    template <class T, typename std::enable_if_t<
+            std::is_enum<T>::value && metaobject::has_metaobject<T>(), int> = 0>
     void write(const char* name, T value) {
         m_stream << indent() << name << ": "
             << metaobject::get_enum_constant_name<T>(value) << std::endl;
+    }
+
+    // Enum without metaobject (just a number)
+    template <class T, typename std::enable_if_t<
+            std::is_enum<T>::value && !metaobject::has_metaobject<T>(), int> = 0>
+    void write(const char* name, T value) {
+        m_stream << indent() << name << ": " << int(value) << std::endl;
     }
 
 private:

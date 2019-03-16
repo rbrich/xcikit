@@ -113,5 +113,8 @@ int main()
 
     wcout.write(root);
 
+    std::cout << "Option::ThatOne = "
+        << (int) xci::data::metaobject::get_enum_constant_value<Option>("thatone") << std::endl;
+
     return 0;
 }
