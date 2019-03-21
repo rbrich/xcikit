@@ -45,19 +45,20 @@ TEST_CASE( "node tree", "[reflection]" )
         Node{"child1", Option::ThatOne, {}},
         Node{"child2", Option::OtherOne, {}},
     }};
+    const char* node_text = "name: \"root\"\n"
+                            "option: ThisOne\n"
+                            "child:\n"
+                            "    name: \"child1\"\n"
+                            "    option: ThatOne\n"
+                            "child:\n"
+                            "    name: \"child2\"\n"
+                            "    option: OtherOne\n";
 
     SECTION( "textual serialization" ) {
         std::stringstream s("");
         TextualWriter wtext(s);
         wtext.write(root);
-        CHECK(s.str() == "name: \"root\"\n"
-                         "option: ThisOne\n"
-                         "child:\n"
-                         "    name: \"child1\"\n"
-                         "    option: ThatOne\n"
-                         "child:\n"
-                         "    name: \"child2\"\n"
-                         "    option: OtherOne\n");
+        CHECK(s.str() == node_text);
     }
 
     SECTION( "binary serialization/deserialization" ) {
@@ -71,5 +72,10 @@ TEST_CASE( "node tree", "[reflection]" )
         rbin.load(reconstructed_node);
 
         root.check_equal(reconstructed_node);
+
+        std::stringstream st("");
+        TextualWriter wtext(st);
+        wtext.write(reconstructed_node);
+        CHECK(st.str() == node_text);
     }
 }

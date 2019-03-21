@@ -39,37 +39,46 @@ public:
     void read_header();
     void read_footer();
 
-    template <class T>
+    template <class T, typename std::enable_if_t<meta::isRegistered<T>(), int> = 0>
     void read(T& o) {
         uint8_t type = 0;
         uint64_t len = 0;
         for (;;) {
             read_type_len(type, len);
+
+            // Process end of member object (this is special, it has no key)
+            if (type == Type_Master && len == Master_Leave)
+                break;
+
             auto* key = read_key();
             switch (type) {
                 case Type_Master:
-                    // member object - enter (read) or leave (we're in the sub-object)
-                    switch (len) {
-                        case Master_Enter:
-                            meta::doForAllMembers<T>(
-                                [this, key, &o](const auto& member) {
-                                    if (!strcmp(key, member.getName())) {
-                                        using MemberT = meta::get_member_type<decltype(member)>;
-                                        this->read<MemberT>(member.getRef(o));
-                                    }
-                                });
-                            break;
-                        case Master_Leave:
-                            return;
-                        default:
-                            m_stream.setstate(std::ios::failbit);
-                            m_error = Error::BadFieldType;
-                            return;
+                    // enter member object (read a sub-object)
+                    if (len == Master_Enter) {
+                        meta::doForAllMembers<T>(
+                            [this, key, &o](const auto& member) {
+                                if (!strcmp(key, member.getName())) {
+                                    this->read(member.getRef(o));
+                                }
+                            });
+                    } else {
+                        m_stream.setstate(std::ios::failbit);
+                        m_error = Error::BadFieldType;
+                        return;
                     }
+                    break;
+                case Type_Float:
+                case Type_Integer:
+                    meta::doForAllMembers<T>(
+                            [this, key, &o](const auto& member) {
+                                if (!strcmp(key, member.getName())) {
+                                    this->read(member.getRef(o));
+                                }
+                            });
                     break;
                 case Type_String: {
                     std::string value(len, 0);
-                    read(key, value);
+                    read(value);
                     meta::setMemberValue<std::string>(o, key, std::move(value));
                     break;
                 }
@@ -81,7 +90,28 @@ public:
         }
     }
 
-    void read(const char* name, std::string& value);
+    void read(std::string& value);
+
+    template <class T, typename std::enable_if_t<meta::isRegistered<typename T::value_type>(), int> = 0>
+    void read(T& out) {
+        typename T::value_type value;
+        read(value);
+        out.push_back(value);
+    }
+
+    template <class T, typename std::enable_if_t<std::is_integral<T>::value || std::is_enum<T>::value, int> = 0>
+    void read(T& out) {
+        unsigned int value = 0;
+        read_with_crc(value);
+        out = T(le32toh(value));
+    }
+
+    template <class T, typename std::enable_if_t<std::is_floating_point<T>::value, int> = 0>
+    void read(T& out) {
+        double value = 0.;
+        read_with_crc(value);
+        out = T(value);
+    }
 
     enum class Error {
         None,

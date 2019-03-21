@@ -117,7 +117,7 @@ const char* BinaryReader::read_key()
         // Read offset, lookup prev key
         uint8_t len1 = 0;
         read_with_crc(len1);
-        auto offset = ((len << 8) | len1) & 0x7fff;
+        auto offset = ((len1 << 7) | (len & 0x7f));
         auto key_pos = startpos - offset;
         return m_pos_to_key[key_pos].c_str();
     } else {
@@ -132,7 +132,7 @@ const char* BinaryReader::read_key()
 }
 
 
-void BinaryReader::read(const char* name, std::string& value)
+void BinaryReader::read(std::string& value)
 {
     read_with_crc((uint8_t*)&value[0], value.size());
 }

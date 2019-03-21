@@ -70,7 +70,7 @@ void BinaryWriter::write(const char* name, unsigned int value)
 {
     write_type_len(Type_Integer, sizeof(value));
     write_key(name);
-    write_with_crc(value);
+    write_with_crc(htole32(value));
 }
 
 
@@ -159,8 +159,11 @@ void BinaryWriter::write_key(const char* key)
         write_with_crc((const uint8_t*)key, len);
     } else {
         // Write offset to first appearance
-        auto offset = uint16_t(0x8000 | (m_pos - item.first->second));
-        write_with_crc(offset);
+        auto offset = uint16_t(m_pos - item.first->second);
+        auto b1 = uint8_t(0x80 | (offset & 0x7f));
+        write_with_crc(b1);
+        auto b2 = uint8_t(offset >> 7);
+        write_with_crc(b2);
     }
 }
 
