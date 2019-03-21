@@ -26,6 +26,7 @@ struct Node
     std::string name;
     Option option = Option(-1);
     std::vector<Node> child;
+    double f;
 
     void check_equal(const Node& rhs) const {
         CHECK(name == rhs.name);
@@ -36,23 +37,26 @@ struct Node
         }
     }
 };
-XCI_METAOBJECT(Node, name, option, child);
+XCI_METAOBJECT(Node, name, option, child, f);
 
 
 TEST_CASE( "node tree", "[reflection]" )
 {
     Node root{"root", Option::ThisOne, {
-        Node{"child1", Option::ThatOne, {}},
-        Node{"child2", Option::OtherOne, {}},
-    }};
+        Node{"child1", Option::ThatOne, {}, 1.1},
+        Node{"child2", Option::OtherOne, {}, 2.2},
+    }, 0.0};
     const char* node_text = "name: \"root\"\n"
                             "option: ThisOne\n"
                             "child:\n"
                             "    name: \"child1\"\n"
                             "    option: ThatOne\n"
+                            "    f: 1.1\n"
                             "child:\n"
                             "    name: \"child2\"\n"
-                            "    option: OtherOne\n";
+                            "    option: OtherOne\n"
+                            "    f: 2.2\n"
+                            "f: 0\n";
 
     SECTION( "textual serialization" ) {
         std::stringstream s("");
@@ -70,6 +74,8 @@ TEST_CASE( "node tree", "[reflection]" )
         Node reconstructed_node;
         BinaryReader rbin(s);
         rbin.load(reconstructed_node);
+        INFO(rbin.get_error_cstr());
+        CHECK(!s.fail());
 
         root.check_equal(reconstructed_node);
 

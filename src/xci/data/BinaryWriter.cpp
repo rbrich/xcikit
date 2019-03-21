@@ -173,7 +173,7 @@ void BinaryWriter::write_master(int flag)
     if (flag == Master_Leave)
         m_depth--;
 
-    auto type_len = uint8_t(Type_Master | flag | (m_depth & Length41_Mask));
+    auto type_len = uint8_t(Type_Master | (flag & Length41_Mask));
     write_with_crc(type_len);
 
     if (flag == Master_Enter)

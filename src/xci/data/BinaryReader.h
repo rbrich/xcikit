@@ -19,7 +19,6 @@
 #include "BinaryBase.h"
 #include <xci/data/reflection.h>
 #include <istream>
-#include <iostream>
 #include <map>
 
 namespace xci::data {
@@ -33,7 +32,7 @@ public:
     void load(T& o) {
         read_header();
         read(o);
-        //read_footer();
+        read_footer();
     }
 
     void read_header();
@@ -47,7 +46,13 @@ public:
             read_type_len(type, len);
 
             // Process end of member object (this is special, it has no key)
-            if (type == Type_Master && len == Master_Leave)
+            if (type == Type_Master && len == Master_Leave) {
+                --m_depth;
+                break;
+            }
+
+            // CRC32 at depth=0 ends the file
+            if (type == Type_Checksum && len == sizeof(m_crc) && m_depth == 0)
                 break;
 
             auto* key = read_key();
@@ -55,6 +60,7 @@ public:
                 case Type_Master:
                     // enter member object (read a sub-object)
                     if (len == Master_Enter) {
+                        ++m_depth;
                         meta::doForAllMembers<T>(
                             [this, key, &o](const auto& member) {
                                 if (!strcmp(key, member.getName())) {
@@ -83,8 +89,8 @@ public:
                     break;
                 }
                 default:
-                    std::cout << "t:" << std::hex << int(type) << " l:" << len
-                              << " k:" << key << std::endl;
+                    m_stream.setstate(std::ios::failbit);
+                    m_error = Error::BadFieldType;
                     return;
             }
         }
@@ -119,6 +125,7 @@ public:
         BadVersion,
         BadFlags,
         BadFieldType,
+        BadChecksum,
     };
 
     Error get_error() const { return m_error; }
@@ -130,6 +137,7 @@ public:
             case Error::BadVersion: return "Bad version";
             case Error::BadFlags: return "Bad flags";
             case Error::BadFieldType: return "Bad field type";
+            case Error::BadChecksum: return "Bad checksum";
         }
         __builtin_unreachable();
     }
@@ -153,6 +161,7 @@ private:
     Error m_error = Error::None;
     std::map<size_t, std::string> m_pos_to_key;
     size_t m_pos = 0;
+    int m_depth = 0;
 };
 
 

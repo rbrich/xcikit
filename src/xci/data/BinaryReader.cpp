@@ -26,6 +26,7 @@ void BinaryReader::read_header() {
     // initialize CRC
     m_crc = (uint32_t) crc32(0L, Z_NULL, 0);
     m_pos = 0;
+    m_depth = 0;
 
     // MAGIC:16
     uint8_t magic[2];
@@ -46,7 +47,9 @@ void BinaryReader::read_header() {
 
 void BinaryReader::read_footer()
 {
-
+    uint32_t crc = 0;
+    m_stream.read((char*)&crc, sizeof(crc));
+    FAIL_IF(crc != m_crc, Error::BadChecksum)
 }
 
 

@@ -39,8 +39,7 @@ namespace xci::data {
 ///   - next appearance, offset from first app. less than 32768: <FLAG:1><OFS:15> (flag=1)
 ///   - remember pos before reading offset, subtract offset, seek, read <LEN:7><CHARS> (flag is zero an can be ignored)
 /// - footer is: <TYPE_FLAG_LEN:8><CRC:32> (type=7,flag=0,len=4)
-/// - master chunks contain sub-chunks, terminated with master chunk with LENFLAG=1
-///   (LEN is set to depth level, but this is only informative)
+/// - master chunks contain sub-chunks, terminated with master chunk with LEN=1
 /// See source code for actual values.
 
 class BinaryWriter : private BinaryBase {
