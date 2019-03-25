@@ -27,49 +27,49 @@
 namespace xci::core {
 
 
-std::string read_text_file(const std::string& filename)
+std::string read_text_file(const std::string& pathname)
 {
-    std::ifstream f(filename);
+    std::ifstream f(pathname);
     return read_text_file(f);
 }
 
 
-std::string read_text_file(std::istream& file)
+std::string read_text_file(std::istream& stream)
 {
-    if (!file)
+    if (!stream)
         return {};
 
-    file.seekg(0, std::ios::end);
-    auto file_size = size_t(file.tellg());
-    file.seekg(0, std::ios::beg);
+    stream.seekg(0, std::ios::end);
+    auto file_size = size_t(stream.tellg());
+    stream.seekg(0, std::ios::beg);
     std::string content(file_size, char(0));
-    file.read(&content[0], content.size());
-    if (!file)
+    stream.read(&content[0], content.size());
+    if (!stream)
         content.clear();
 
     return content;
 }
 
 
-BufferPtr read_binary_file(const std::string& filename)
+BufferPtr read_binary_file(const std::string& pathname)
 {
-    std::ifstream f(filename, std::ios::binary);
+    std::ifstream f(pathname, std::ios::binary);
     return read_binary_file(f);
 }
 
 
-BufferPtr read_binary_file(std::istream& file)
+BufferPtr read_binary_file(std::istream& stream)
 {
-    if (!file)
+    if (!stream)
         return {};
 
-    file.seekg(0, std::ios::end);
-    auto file_size = size_t(file.tellg());
-    file.seekg(0, std::ios::beg);
+    stream.seekg(0, std::ios::end);
+    auto file_size = size_t(stream.tellg());
+    stream.seekg(0, std::ios::beg);
 
     auto* content = new byte[file_size];
-    file.read(reinterpret_cast<char*>(content), file_size);
-    if (!file) {
+    stream.read(reinterpret_cast<char*>(content), file_size);
+    if (!stream) {
         delete[] content;
         return {};
     }
@@ -78,19 +78,19 @@ BufferPtr read_binary_file(std::istream& file)
 }
 
 
-std::string path_dirname(std::string filename)
+std::string path_dirname(std::string pathname)
 {
     // dirname() may modify the argument, so we take it by value
     // (we also make sure that the internal value is null-terminated)
-    assert(filename.c_str() == &filename[0]);
-    return ::dirname(&filename[0]);
+    assert(pathname.c_str() == &pathname[0]);
+    return ::dirname(&pathname[0]);
 }
 
 
-std::string path_basename(std::string filename)
+std::string path_basename(std::string pathname)
 {
-    assert(filename.c_str() == &filename[0]);
-    return ::basename(&filename[0]);
+    assert(pathname.c_str() == &pathname[0]);
+    return ::basename(&pathname[0]);
 }
 
 

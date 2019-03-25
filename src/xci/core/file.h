@@ -26,14 +26,14 @@ namespace xci::core {
 
 // Try to read whole content of a file.
 // Returns empty string in case of any error.
-std::string read_text_file(const std::string& filename);
-std::string read_text_file(std::istream& file);
-BufferPtr read_binary_file(const std::string& filename);
-BufferPtr read_binary_file(std::istream& file);
+std::string read_text_file(const std::string& pathname);
+std::string read_text_file(std::istream& stream);
+BufferPtr read_binary_file(const std::string& pathname);
+BufferPtr read_binary_file(std::istream& stream);
 
 
-std::string path_dirname(std::string filename);
-std::string path_basename(std::string filename);
+std::string path_dirname(std::string pathname);
+std::string path_basename(std::string pathname);
 std::string path_join(const std::string &part1, const std::string &part2);
 
 std::string get_cwd();
