@@ -1,7 +1,7 @@
 // test_core.cpp created on 2018-03-30, part of XCI toolkit
 
 #define CATCH_CONFIG_MAIN
-#include "catch.hpp"
+#include <catch2/catch.hpp>
 
 #include <xci/core/format.h>
 #include <xci/core/log.h>
