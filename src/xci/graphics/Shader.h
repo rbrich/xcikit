@@ -51,7 +51,7 @@ public:
     /// depending on kind of VfsLoader used (real file or archive)
     bool load_from_vfs(const std::string& vertex, const std::string& fragment);
 
-    /// Load program from a file (possibly creating FileWatch for auto-reload)
+    /// Load program from a file (possibly adding a file watch for auto-reload)
     virtual bool load_from_file(
             const std::string& vertex, const std::string& fragment) = 0;
 

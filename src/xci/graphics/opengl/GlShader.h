@@ -17,7 +17,7 @@
 #define XCI_GRAPHICS_GL_SHADER_H
 
 #include <xci/graphics/Shader.h>
-#include <xci/core/FileWatch.h>
+#include <xci/core/dispatch.h>
 
 #include <glad/glad.h>
 #include <atomic>
@@ -27,7 +27,7 @@ namespace xci::graphics {
 
 class GlShader: public Shader {
 public:
-    explicit GlShader(core::FileWatchPtr fw) : m_file_watch(std::move(fw)) {}
+    explicit GlShader(core::FSDispatchPtr fsd) : m_fs_dispatch(std::move(fsd)) {}
     ~GlShader() override { clear(); }
 
     bool is_ready() const override;
@@ -58,11 +58,9 @@ private:
 private:
     GLuint m_program = 0;
     mutable std::atomic_bool m_program_ready {false};
-    core::FileWatchPtr m_file_watch;
+    core::FSDispatchPtr m_fs_dispatch;
     std::string m_vertex_file;
     std::string m_fragment_file;
-    int m_vertex_file_watch = -1;
-    int m_fragment_file_watch = -1;
 };
 
 

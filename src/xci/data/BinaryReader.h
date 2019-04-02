@@ -18,6 +18,8 @@
 
 #include "BinaryBase.h"
 #include <xci/data/reflection.h>
+#include <xci/compat/endian.h>
+
 #include <istream>
 #include <map>
 
@@ -147,11 +149,7 @@ private:
     void read_with_crc(T& value) {
         read_with_crc((uint8_t*)&value, sizeof(value));
     }
-    void read_with_crc(uint8_t* buffer, size_t length) {
-        m_stream.read((char*)buffer, length);
-        m_crc = (uint32_t) crc32(m_crc, buffer, (uInt)length);
-        m_pos += length;
-    }
+    void read_with_crc(uint8_t* buffer, size_t length);
 
     void read_type_len(uint8_t& type, uint64_t& len);
     const char* read_key();

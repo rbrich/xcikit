@@ -14,7 +14,7 @@
 // limitations under the License.
 
 #include <xci/core/SharedLibrary.h>
-#include <xci/core/FileWatch.h>
+#include <xci/core/dispatch.h>
 #include <xci/core/log.h>
 #include <functional>
 #include <atomic>
@@ -48,9 +48,9 @@ int main()
 
     // Setup hot reload
 
-    FileWatchPtr watch = FileWatch::create();
-    int wd = watch->add_watch(filename, [](FileWatch::Event ev) {
-        if (ev == FileWatch::Event::Create || ev == FileWatch::Event::Modify)
+    FSDispatchPtr watch = std::make_shared<FSDispatch>();
+    int wd = watch->add_watch(filename, [](FSDispatch::Event ev) {
+        if (ev == FSDispatch::Event::Create || ev == FSDispatch::Event::Modify)
             reload = true;
     });
     if (wd == -1)

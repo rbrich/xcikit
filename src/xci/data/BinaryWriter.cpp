@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "BinaryWriter.h"
+#include <zlib.h>
 #include <vector>
 
 namespace xci::data {
@@ -79,6 +80,14 @@ void BinaryWriter::write(const char* name, double value)
     write_type_len(Type_Float, sizeof(value));
     write_key(name);
     write_with_crc(value);
+}
+
+
+void BinaryWriter::write_with_crc(const uint8_t* buffer, size_t length)
+{
+    m_stream.write((char*)buffer, length);
+    m_crc = (uint32_t) crc32(m_crc, buffer, (uInt)length);
+    m_pos += length;
 }
 
 

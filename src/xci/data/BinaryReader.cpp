@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "BinaryReader.h"
+#include <zlib.h>
 
 namespace xci::data {
 
@@ -50,6 +51,14 @@ void BinaryReader::read_footer()
     uint32_t crc = 0;
     m_stream.read((char*)&crc, sizeof(crc));
     FAIL_IF(crc != m_crc, Error::BadChecksum)
+}
+
+
+void BinaryReader::read_with_crc(uint8_t* buffer, size_t length)
+{
+    m_stream.read((char*)buffer, length);
+    m_crc = (uint32_t) crc32(m_crc, buffer, (uInt)length);
+    m_pos += length;
 }
 
 

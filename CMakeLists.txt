@@ -241,7 +241,7 @@ endif ()
 # Headers
 install(DIRECTORY src/xci DESTINATION include
     FILES_MATCHING
-    REGEX "xci/(graphics|core)/[a-z]+$" EXCLUDE  # internal headers
+    REGEX "xci/(graphics)/[a-z]+$" EXCLUDE  # internal headers
     PATTERN "*.h")
 
 # config.h

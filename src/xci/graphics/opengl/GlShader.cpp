@@ -17,7 +17,7 @@
 #include "GlTexture.h"
 
 #include <xci/config.h>
-#include <xci/core/FileWatch.h>
+#include <xci/core/dispatch.h>
 #include <xci/core/file.h>
 #include <xci/core/log.h>
 
@@ -30,7 +30,7 @@
 namespace xci::graphics {
 
 using xci::core::read_text_file;
-using xci::core::FileWatch;
+using xci::core::FSDispatch;
 using namespace xci::core::log;
 
 
@@ -208,30 +208,24 @@ GLuint GlShader::gl_program()
 
 void GlShader::add_watches()
 {
-    auto cb = [this](FileWatch::Event ev) {
-        if (ev == FileWatch::Event::Create || ev == FileWatch::Event::Modify) {
+    auto cb = [this](FSDispatch::Event ev) {
+        if (ev == FSDispatch::Event::Create || ev == FSDispatch::Event::Modify) {
             log_info("Shader file changed...");
             m_program_ready.store(false, std::memory_order_release);
             glfwPostEmptyEvent();
         }
     };
-    // FIXME: Disable filewatches in release (NDEBUG)
-    m_vertex_file_watch = m_file_watch->add_watch(m_vertex_file, cb);
-    m_fragment_file_watch = m_file_watch->add_watch(m_fragment_file, cb);
+    // FIXME: Disable file watches in release (NDEBUG)
+    m_fs_dispatch->add_watch(m_vertex_file, cb);
+    m_fs_dispatch->add_watch(m_fragment_file, cb);
     log_info("Shader watches installed");
 }
 
 
 void GlShader::remove_watches()
 {
-    if (m_vertex_file_watch != -1) {
-        m_file_watch->remove_watch(m_vertex_file_watch);
-        m_vertex_file_watch = -1;
-    }
-    if (m_fragment_file_watch != -1) {
-        m_file_watch->remove_watch(m_fragment_file_watch);
-        m_fragment_file_watch = -1;
-    }
+    m_fs_dispatch->remove_watch(m_vertex_file);
+    m_fs_dispatch->remove_watch(m_fragment_file);
     log_info("Shader watches removed");
 }
 

@@ -88,27 +88,31 @@ Supported compilers:
 
 Fills gaps between different systems and compilers.
 
+- `bit.h` - C++20 `bit_cast` backport (+ custom `bit_read`)
 - `endian.h` - Linux-like macros provided for MacOS
 - `macros.h` - C++17 `[[fallthrough]]` missing in GCC 6.3
+- `string_view.h` - C++17 `string_view` missing in GCC 6.3, but it has `experimental` impl
+- `utility.h` - C++17 `byte` missing in GCC 6.3
 
 ### xci::core
 
 Core utilities. These have little or no dependencies. Mostly just stdlib + OS API.
 
-- `FileWatch` - Watch files and notify on changes. Useful for auto-reloading of resource files.
+- `Buffer` (`types.h`) - Owned blob of data, with deleter.
 - `FpsCounter` - Tracks delays between frames and computes frame rate.
 - `Logger` (`log.h`) - Logging functions.
 - `SharedLibrary` - Thin wrapper around dlopen. For plugins.
 - `Term` - Colored output for ANSI terminals.
-- `Buffer` (`types.h`) - Owned blob of data, with deleter.
 - `Vfs` - Unified reading of regular files and archives. Mount the archive to virtual path
   and read contained files in same fashion as regular files.
+- `event.h` - System event loop (abstraction of kqueue / epoll).
+- `dispatch.h` - Watch files and notify on changes. Useful for auto-reloading of resource files.
 - `file.h` - Read whole files. Path utilities (dirname, basename, ...).
 - `format.h` - Formatted strings. Similar to Python's `format()`.
 - `geometry.h` - 2D vector, rectangle. Linear algebra.
 - `rtti.h` - C++ demangled type names.
 - `string.h` - String manipulation. Unicode utilities.
-- `get_thread_id()` (`sys.h`) - A replacement for `std::this_thread::get_id()`, providing the canonical TID.
+- `sys.h` - A replacement for `std::this_thread::get_id()`, providing the canonical TID.
 
 ### xci::graphics
 

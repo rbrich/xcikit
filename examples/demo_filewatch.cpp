@@ -1,5 +1,5 @@
 // demo_filewatch.cpp created on 2018-04-02, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018,2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,19 +14,13 @@
 // limitations under the License.
 
 #include <xci/core/log.h>
-#include <xci/core/FileWatch.h>
+#include <xci/core/event.h>
 #include <atomic>
 #include <csignal>
 #include <unistd.h>
 
 using namespace xci::core;
 
-std::atomic_bool done {false};
-
-static void sigterm(int)
-{
-    done = true;
-}
 
 int main(int argc, char** argv)
 {
@@ -37,37 +31,35 @@ int main(int argc, char** argv)
     std::string filename = argv[1];
 
     log_info("Demo: Watching {}", filename);
-    FileWatch& fw = FileWatch::default_instance();
-    int wd = fw.add_watch(filename, [](FileWatch::Event ev) {
+    EventLoop loop;
+    FSWatch fs_watch(loop);
+    bool ok = fs_watch.add(filename, [&loop](FSWatch::Event ev) {
         switch (ev) {
-            case FileWatch::Event::Create:
+            case FSWatch::Event::Create:
                 log_info("File created / moved in");
                 break;
-            case FileWatch::Event::Delete:
+            case FSWatch::Event::Delete:
                 log_info("File deleted / moved away");
                 break;
-            case FileWatch::Event::Modify:
+            case FSWatch::Event::Modify:
                 log_info("File modified");
                 break;
-            case FileWatch::Event::Attrib:
+            case FSWatch::Event::Attrib:
                 log_info("File touched (attribs changed)");
                 break;
-            case FileWatch::Event::Stopped:
+            case FSWatch::Event::Stopped:
                 log_info("File watching stopped (dir deleted / moved)");
-                done = true;
+                loop.terminate();
                 break;
         }
     });
+    if (!ok)
+        return EXIT_FAILURE;
 
-    if (wd == -1)
-        return 1;
+    SignalWatch signal_watch(loop, {SIGTERM}, [&loop](int signum){
+        loop.terminate();
+    });
 
-    signal(SIGTERM, sigterm);
-    while (!done) {
-        sleep(1);
-    }
-
-    // This is noop after Stopped event
-    fw.remove_watch(wd);
-    return 0;
+    loop.run();
+    return EXIT_SUCCESS;
 }

@@ -2,6 +2,10 @@ add_executable(test_core test_core.cpp)
 target_link_libraries(test_core Catch2::Catch2 xci-core)
 add_test(NAME test_core COMMAND test_core)
 
+add_executable(test_eventloop test_eventloop.cpp)
+target_link_libraries(test_eventloop Catch2::Catch2 xci-core)
+add_test(NAME test_eventloop COMMAND test_eventloop)
+
 add_executable(test_serialization test_serialization.cpp)
 target_link_libraries(test_serialization Catch2::Catch2 xci-data)
 add_test(NAME test_serialization COMMAND test_serialization)

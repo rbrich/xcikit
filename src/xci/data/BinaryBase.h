@@ -16,7 +16,6 @@
 #ifndef XCI_DATA_BINARY_BASE_H
 #define XCI_DATA_BINARY_BASE_H
 
-#include <zlib.h>
 #include <cstdint>
 
 namespace xci::data {

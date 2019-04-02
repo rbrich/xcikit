@@ -14,7 +14,7 @@
 // limitations under the License.
 
 #include "file.h"
-#include "FileWatch.h"
+#include "dispatch.h"
 #include <xci/config.h>
 
 #include <fstream>

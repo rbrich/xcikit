@@ -1,7 +1,7 @@
 add_library(xci-core
     chrono.cpp
     file.cpp
-    FileWatch.cpp
+    dispatch.cpp
     format.cpp
     FpsCounter.cpp
     log.cpp
@@ -13,16 +13,27 @@ add_library(xci-core
     Vfs.cpp
     )
 
-# Choose FileWatch implementation
-if (CMAKE_SYSTEM_NAME STREQUAL Linux)
-    target_sources(xci-core PRIVATE filewatch/FileWatchInotify.cpp)
-    set(FILEWATCH_IMPL "XCI_FILEWATCH_INOTIFY")
-elseif (CMAKE_SYSTEM_NAME STREQUAL Darwin)
-    target_sources(xci-core PRIVATE filewatch/FileWatchKqueue.cpp)
-    set(FILEWATCH_IMPL "XCI_FILEWATCH_KQUEUE")
+# Choose EventLoop implementation
+if (APPLE)
+    target_sources(xci-core PRIVATE
+        event/kqueue/EventLoop.cpp
+        event/kqueue/IOWatch.cpp
+        event/kqueue/EventWatch.cpp
+        event/kqueue/FSWatch.cpp
+        event/kqueue/SignalWatch.cpp
+        event/kqueue/TimerWatch.cpp
+        )
+    target_compile_definitions(xci-core PUBLIC XCI_WITH_KQUEUE)
 else()
-    target_sources(xci-core PRIVATE filewatch/FileWatchDummy.cpp)
-    set(FILEWATCH_IMPL "XCI_FILEWATCH_DUMMY")
+    target_sources(xci-core PRIVATE
+        event/epoll/EventLoop.cpp
+        event/epoll/EventWatch.cpp
+        event/epoll/FSWatch.cpp
+        event/epoll/IOWatch.cpp
+        event/epoll/SignalWatch.cpp
+        event/epoll/TimerWatch.cpp
+        )
+    target_compile_definitions(xci-core PUBLIC XCI_WITH_EPOLL)
 endif()
 
 target_link_libraries(xci-core
@@ -34,7 +45,6 @@ target_link_libraries(xci-core
 target_include_directories(xci-core
     PUBLIC
         ${XCI_INCLUDE_DIRS})
-target_compile_definitions(xci-core PRIVATE ${FILEWATCH_IMPL})
 
 # Link with tinfo if available
 if (XCI_WITH_TINFO)

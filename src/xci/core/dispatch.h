@@ -1,4 +1,4 @@
-// FileWatch.h created on 2018-03-30, part of XCI toolkit
+// dispatch.h created on 2018-03-30, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,55 +13,66 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_CORE_FILEWATCH_H
-#define XCI_CORE_FILEWATCH_H
+#ifndef XCI_CORE_DISPATCH_H
+#define XCI_CORE_DISPATCH_H
 
+#include "event.h"
 #include <string>
 #include <functional>
 #include <memory>
+#include <thread>
 
 namespace xci::core {
 
 
-class FileWatch;
-using FileWatchPtr = std::shared_ptr<FileWatch>;
+/// EventLoop in a thread
 
-
-/// FileWatch may be used for auto-reloading of resource files.
-
-class FileWatch {
+class Dispatch {
 public:
-    static FileWatch& default_instance();
-    static FileWatchPtr create();
+    Dispatch();
+    ~Dispatch();
 
-    virtual ~FileWatch() = default;
+    EventLoop& loop() { return m_loop; }
 
-    enum class Event {
-        Create,     ///< File was created or moved in
-        Delete,     ///< File was deleted or moved away
-        Modify,     ///< File content was modified
-        Attrib,     ///< File attributes were changed
-        Stopped,    ///< The file is no longer watched (containing directory was deleted or moved)
-    };
+    void terminate() { m_quit_event.fire(); }
 
-    using Callback = std::function<void(Event)>;
+private:
+    std::thread m_thread;
+    EventLoop m_loop;
+    EventWatch m_quit_event {m_loop, [this]{ m_loop.terminate(); }};
+};
+
+
+/// Convenient Dispatch thread with embedded FSWatch.
+/// This may be used for auto-reloading of resource files.
+
+class FSDispatch: private Dispatch {
+public:
+    using Event = FSWatch::Event;
+    using Callback = FSWatch::PathCallback;
 
     /// Watch file for changes and run a callback when an event occurs.
     /// It's possible to add more than one callback for the same `filename`.
     /// Note that the callback might be called from another thread.
-    /// \param filename File to be watched.
+    /// \param pathname File to be watched.
     /// \param cb       Callback function called for each event.
     /// \return         New watch handle on success, -1 on error.
-    virtual int add_watch(const std::string& filename, Callback cb) = 0;
+    bool add_watch(const std::string& pathname, Callback cb);
 
     /// Remove previously added watch. Does nothing for handle -1.
     /// In case the same file has multiple callbacks installed, this removes
     /// just the one identified by `handle`.
     /// \param handle Handle to the watch as returned from add_watch.
-    virtual void remove_watch(int handle) = 0;
+    bool remove_watch(const std::string& pathname);
+
+private:
+    FSWatch m_fs_watch { loop() };
 };
+
+
+using FSDispatchPtr = std::shared_ptr<FSDispatch>;
 
 
 }  // namespace xci::core
 
-#endif // XCI_CORE_FILEWATCH_H
+#endif // include guard

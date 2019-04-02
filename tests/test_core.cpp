@@ -6,7 +6,7 @@
 #include <xci/core/format.h>
 #include <xci/core/log.h>
 #include <xci/core/file.h>
-#include <xci/core/FileWatch.h>
+#include <xci/core/dispatch.h>
 #include <xci/core/string.h>
 
 #include <fstream>
@@ -68,25 +68,25 @@ TEST_CASE( "read_binary_file", "[file]" )
 }
 
 
-TEST_CASE( "File watch", "[FileWatch]" )
+TEST_CASE( "File watch", "[FSDispatch]" )
 {
     Logger::init(Logger::Level::Error);
-    FileWatch& fw = FileWatch::default_instance();
+    FSDispatch fw;
 
     std::string tmpname = "/tmp/xci_test_filewatch.XXXXXX";
     close(mkstemp(&tmpname[0]));
     std::ofstream f(tmpname);
 
-    FileWatch::Event expected_events[] = {
-        FileWatch::Event::Modify,  // one
-        FileWatch::Event::Modify,  // two
-        FileWatch::Event::Modify,  // three
-        FileWatch::Event::Delete,  // unlink
+    FSDispatch::Event expected_events[] = {
+        FSDispatch::Event::Modify,  // one
+        FSDispatch::Event::Modify,  // two
+        FSDispatch::Event::Modify,  // three
+        FSDispatch::Event::Delete,  // unlink
     };
     size_t ev_ptr = 0;
     size_t ev_size = sizeof(expected_events) / sizeof(expected_events[0]);
-    int wd = fw.add_watch(tmpname,
-            [&expected_events, &ev_ptr, ev_size] (FileWatch::Event ev)
+    fw.add_watch(tmpname,
+            [&expected_events, &ev_ptr, ev_size] (FSDispatch::Event ev)
     {
         CHECK(ev_ptr < ev_size);
         CHECK(expected_events[ev_ptr] == ev);
@@ -114,7 +114,7 @@ TEST_CASE( "File watch", "[FileWatch]" )
 
     // although the inotify watch is removed automatically after delete,
     // this should still be called to cleanup the callback info
-    fw.remove_watch(wd);
+    fw.remove_watch(tmpname);
 
     CHECK(ev_ptr == ev_size);  // got all expected events
 }

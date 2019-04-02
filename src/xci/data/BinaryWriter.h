@@ -92,11 +92,7 @@ private:
     void write_with_crc(const T& value) {
         write_with_crc((uint8_t*)&value, sizeof(value));
     }
-    void write_with_crc(const uint8_t* buffer, size_t length) {
-        m_stream.write((char*)buffer, length);
-        m_crc = (uint32_t) crc32(m_crc, buffer, (uInt)length);
-        m_pos += length;
-    }
+    void write_with_crc(const uint8_t* buffer, size_t length);
 
     void write_type_len(uint8_t type, uint64_t len);
     void write_key(const char* key);

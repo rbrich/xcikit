@@ -17,7 +17,7 @@
 #define XCI_GRAPHICS_GL_RENDERER_H
 
 #include <xci/graphics/Renderer.h>
-#include <xci/core/FileWatch.h>
+#include <xci/core/dispatch.h>
 
 #include <array>
 
@@ -27,7 +27,7 @@ namespace xci::graphics {
 
 class GlRenderer: public Renderer {
 public:
-    GlRenderer() : m_file_watch(core::FileWatch::create()) {}
+    GlRenderer() : m_file_watch(std::make_shared<core::FSDispatch>()) {}
 
     TexturePtr create_texture() override;
 
@@ -37,7 +37,7 @@ public:
                                     PrimitiveType type) override;
 
 private:
-    core::FileWatchPtr m_file_watch;
+    core::FSDispatchPtr m_file_watch;
 };
 
 

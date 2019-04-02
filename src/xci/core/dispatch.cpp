@@ -1,4 +1,4 @@
-// FileWatch.cpp created on 2018-03-30, part of XCI toolkit
+// dispatch.cpp created on 2018-03-30, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,32 +13,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "FileWatch.h"
-
-#ifdef XCI_FILEWATCH_INOTIFY
-    #include <xci/core/filewatch/FileWatchInotify.h>
-    #define XCI_FILEWATCH_CLASS FileWatchInotify
-#elif defined(XCI_FILEWATCH_KQUEUE)
-    #include <xci/core/filewatch/FileWatchKqueue.h>
-    #define XCI_FILEWATCH_CLASS FileWatchKqueue
-#else
-    #include <xci/core/filewatch/FileWatchDummy.h>
-    #define XCI_FILEWATCH_CLASS FileWatchDummy
-#endif
+#include "dispatch.h"
+#include <xci/core/log.h>
 
 namespace xci::core {
 
 
-FileWatch& FileWatch::default_instance()
+Dispatch::Dispatch()
 {
-    static XCI_FILEWATCH_CLASS instance;
-    return instance;
+    m_thread = std::thread([this]() {
+        log_debug("Dispatch: Thread starting");
+        m_loop.run();
+        log_debug("Dispatch: Thread finished");
+    });
 }
 
 
-FileWatchPtr FileWatch::create()
+Dispatch::~Dispatch()
 {
-    return std::make_shared<XCI_FILEWATCH_CLASS>();
+    // Signal the thread to quit
+    m_quit_event.fire();
+    m_thread.join();
+}
+
+
+bool FSDispatch::add_watch(const std::string& pathname, Callback cb)
+{
+    return m_fs_watch.add(pathname, std::move(cb));
+}
+
+
+bool FSDispatch::remove_watch(const std::string& pathname)
+{
+    return m_fs_watch.remove(pathname);
 }
 
 
