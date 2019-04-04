@@ -40,11 +40,13 @@ target_link_libraries(xci-core
     PUBLIC
         Threads::Threads
     PRIVATE
-        taocpp::pegtl
         ${CMAKE_DL_LIBS})
 target_include_directories(xci-core
     PUBLIC
-        ${XCI_INCLUDE_DIRS})
+        ${XCI_INCLUDE_DIRS}
+    PRIVATE
+        $<TARGET_PROPERTY:taocpp::pegtl,INTERFACE_INCLUDE_DIRECTORIES>
+    )
 
 # Link with tinfo if available
 if (XCI_WITH_TINFO)

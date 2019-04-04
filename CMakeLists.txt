@@ -128,12 +128,17 @@ target_include_directories(xci-text
         ${XCI_INCLUDE_DIRS}
         ${FREETYPE_INCLUDE_DIRS}
     PRIVATE
-        ext)
+        ext
+        # NOTE: We cannot link `taocpp::pegtl` directly, because it would become
+        #       dependency in exported target and the whole xcikit would have to
+        #       externally depend on PEGTL while it is used only in implementation.
+        #       See: https://gitlab.kitware.com/cmake/cmake/issues/18049
+        $<TARGET_PROPERTY:taocpp::pegtl,INTERFACE_INCLUDE_DIRECTORIES>
+    )
 target_link_libraries(xci-text
     PUBLIC
         xci-core
     PRIVATE
-        taocpp::pegtl
         ${FREETYPE_LIBRARIES})
 
 if (APPLE)
