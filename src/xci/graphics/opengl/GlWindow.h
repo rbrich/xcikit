@@ -53,7 +53,7 @@ private:
     void setup_view();
     void draw();
 
-    GLFWwindow* m_window;
+    GLFWwindow* m_window = nullptr;
     View m_view {this};
     RefreshMode m_mode = RefreshMode::OnDemand;
     Vec2i m_window_pos;

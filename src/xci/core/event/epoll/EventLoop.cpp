@@ -49,8 +49,6 @@ void EventLoop::run()
         if (rnum == -1) {
             if (errno == EINTR)
                 continue;
-            if (errno == EBADF)
-                break;  // epoll is closed (terminate() was called)
             log_error("EventLoop: poll: {m}");
             break;
         }

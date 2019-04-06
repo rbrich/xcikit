@@ -121,6 +121,8 @@ GlWindow::GlWindow()
 
 GlWindow::~GlWindow()
 {
+    if (m_window != nullptr)
+        glfwDestroyWindow(m_window);
     glfwTerminate();
 }
 

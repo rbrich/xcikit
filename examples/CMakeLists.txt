@@ -62,6 +62,10 @@ add_executable(demo_term_widget demo_term_widget.cpp)
 target_link_libraries(demo_term_widget xci-widgets xci-graphics)
 install(TARGETS demo_term_widget EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 
+add_executable(demo_term_dispatch demo_term_dispatch.cpp)
+target_link_libraries(demo_term_dispatch xci-widgets xci-graphics)
+install(TARGETS demo_term_dispatch EXPORT xcikit DESTINATION ${INST_EXAMPLES})
+
 if (XCI_WITH_OPENGL)
     add_executable(demo_glfw demo_glfw.cpp)
     target_link_libraries(demo_glfw
