@@ -9,7 +9,7 @@ add_library(xci-core
     string.cpp
     sys.cpp
     rtti.cc
-    Term.cpp
+    TermCtl.cpp
     Vfs.cpp
     )
 

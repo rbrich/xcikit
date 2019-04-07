@@ -102,7 +102,7 @@ Core utilities. These have little or no dependencies. Mostly just stdlib + OS AP
 - `FpsCounter` - Tracks delays between frames and computes frame rate.
 - `Logger` (`log.h`) - Logging functions.
 - `SharedLibrary` - Thin wrapper around dlopen. For plugins.
-- `Term` - Colored output for ANSI terminals.
+- `TermCtl` - Colored output for ANSI terminals.
 - `Vfs` - Unified reading of regular files and archives. Mount the archive to virtual path
   and read contained files in same fashion as regular files.
 - `event.h` - System event loop (abstraction of kqueue / epoll).

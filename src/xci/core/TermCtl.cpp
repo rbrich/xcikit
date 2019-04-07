@@ -1,4 +1,4 @@
-// Term.cpp created on 2018-07-09, part of XCI toolkit
+// TermCtl.cpp created on 2018-07-09, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,7 +17,7 @@
 // - https://en.wikipedia.org/wiki/POSIX_terminal_interface
 // - https://en.wikipedia.org/wiki/ANSI_escape_code
 
-#include "Term.h"
+#include "TermCtl.h"
 #include "log.h"
 #include <xci/config.h>
 
@@ -48,21 +48,21 @@ inline std::string tparm(const char* seq, Args... args) { return format(seq, arg
 static constexpr auto enter_overline_mode = "\033[53m";
 
 
-Term& Term::stdout_instance()
+TermCtl& TermCtl::stdout_instance()
 {
-    static Term term(STDOUT_FILENO);
+    static TermCtl term(STDOUT_FILENO);
     return term;
 }
 
 
-Term& Term::stderr_instance()
+TermCtl& TermCtl::stderr_instance()
 {
-    static Term term(STDERR_FILENO);
+    static TermCtl term(STDERR_FILENO);
     return term;
 }
 
 
-Term::Term(int fd)
+TermCtl::TermCtl(int fd)
 {
     // Do not even try if not TTY (ie. pipes)
     if (isatty(fd) != 1)
@@ -80,32 +80,32 @@ Term::Term(int fd)
 
 // Note that this cannot be implemented with variadic template,
 // because the arguments must not be evaluated unless is_initialized() is true
-#define TERM_APPEND(...) Term(*this, is_tty() ? tparm(__VA_ARGS__) : "")
+#define TERM_APPEND(...) TermCtl(*this, is_tty() ? tparm(__VA_ARGS__) : "")
 
-Term Term::fg(Term::Color color) const
+TermCtl TermCtl::fg(TermCtl::Color color) const
 {
     return TERM_APPEND(set_a_foreground, static_cast<int>(color));
 }
 
-Term Term::bg(Term::Color color) const
+TermCtl TermCtl::bg(TermCtl::Color color) const
 {
     return TERM_APPEND(set_a_background, static_cast<int>(color));
 }
 
-Term Term::bold() const { return TERM_APPEND(enter_bold_mode); }
-Term Term::underline() const { return TERM_APPEND(enter_underline_mode); }
-Term Term::overline() const { return TERM_APPEND(enter_overline_mode); }
-Term Term::normal() const { return TERM_APPEND(exit_attribute_mode); }
+TermCtl TermCtl::bold() const { return TERM_APPEND(enter_bold_mode); }
+TermCtl TermCtl::underline() const { return TERM_APPEND(enter_underline_mode); }
+TermCtl TermCtl::overline() const { return TERM_APPEND(enter_overline_mode); }
+TermCtl TermCtl::normal() const { return TERM_APPEND(exit_attribute_mode); }
 
 
-std::ostream& operator<<(std::ostream& os, const Term& term)
+std::ostream& operator<<(std::ostream& os, const TermCtl& term)
 {
     os << term.seq();
     return os;
 }
 
 
-std::string Term::format_cb(const format_impl::Context& ctx)
+std::string TermCtl::format_cb(const format_impl::Context& ctx)
 {
     // mode
     if (ctx.placeholder == "bold")      return bold().seq();

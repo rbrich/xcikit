@@ -12,9 +12,9 @@ add_executable(demo_filewatch demo_filewatch.cpp)
 target_link_libraries(demo_filewatch xci-core)
 install(TARGETS demo_filewatch EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 
-add_executable(demo_term demo_term.cpp)
-target_link_libraries(demo_term xci-core)
-install(TARGETS demo_term EXPORT xcikit DESTINATION ${INST_EXAMPLES})
+add_executable(demo_termctl demo_termctl.cpp)
+target_link_libraries(demo_termctl xci-core)
+install(TARGETS demo_termctl EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 
 add_executable(demo_vfs demo_vfs.cpp)
 target_link_libraries(demo_vfs xci-core)

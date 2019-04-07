@@ -1,4 +1,4 @@
-// Term.h created on 2018-07-09, part of XCI toolkit
+// TermCtl.h created on 2018-07-09, part of XCI toolkit
 // Copyright 2018 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,54 +28,54 @@ namespace core {
 
 // FIXME: switch cur_term, free resources (del_curterm)
 
-class Term {
+class TermCtl {
 public:
     // Static instances for standard streams
-    static Term& stdout_instance();
-    static Term& stderr_instance();
+    static TermCtl& stdout_instance();
+    static TermCtl& stderr_instance();
 
     // Constructor for custom streams
-    explicit Term(int fd);
+    explicit TermCtl(int fd);
 
     // Is the output stream connected to TTY?
     bool is_tty() const { return m_fd != -1; }
 
     // Following methods are appending the capability codes
-    // to a copy of Term instance, which can then be send to stream
+    // to a copy of TermCtl instance, which can then be send to stream
 
     enum class Color { Black, Red, Green, Yellow, Blue, Magenta, Cyan, White };
 
     // foreground
-    Term fg(Color color) const;
-    Term black() const { return fg(Color::Black); }
-    Term red() const { return fg(Color::Red); }
-    Term green() const { return fg(Color::Green); }
-    Term yellow() const { return fg(Color::Yellow); }
-    Term blue() const { return fg(Color::Blue); }
-    Term magenta() const { return fg(Color::Magenta); }
-    Term cyan() const { return fg(Color::Cyan); }
-    Term white() const { return fg(Color::White); }
+    TermCtl fg(Color color) const;
+    TermCtl black() const { return fg(Color::Black); }
+    TermCtl red() const { return fg(Color::Red); }
+    TermCtl green() const { return fg(Color::Green); }
+    TermCtl yellow() const { return fg(Color::Yellow); }
+    TermCtl blue() const { return fg(Color::Blue); }
+    TermCtl magenta() const { return fg(Color::Magenta); }
+    TermCtl cyan() const { return fg(Color::Cyan); }
+    TermCtl white() const { return fg(Color::White); }
 
     // background
-    Term bg(Color color) const;
-    Term on_black() const { return bg(Color::Black); }
-    Term on_red() const { return bg(Color::Red); }
-    Term on_green() const { return bg(Color::Green); }
-    Term on_yellow() const { return bg(Color::Yellow); }
-    Term on_blue() const { return bg(Color::Blue); }
-    Term on_magenta() const { return bg(Color::Magenta); }
-    Term on_cyan() const { return bg(Color::Cyan); }
-    Term on_white() const { return bg(Color::White); }
+    TermCtl bg(Color color) const;
+    TermCtl on_black() const { return bg(Color::Black); }
+    TermCtl on_red() const { return bg(Color::Red); }
+    TermCtl on_green() const { return bg(Color::Green); }
+    TermCtl on_yellow() const { return bg(Color::Yellow); }
+    TermCtl on_blue() const { return bg(Color::Blue); }
+    TermCtl on_magenta() const { return bg(Color::Magenta); }
+    TermCtl on_cyan() const { return bg(Color::Cyan); }
+    TermCtl on_white() const { return bg(Color::White); }
 
     // mode
-    Term bold() const;
-    Term underline() const;
-    Term overline() const;
-    Term normal() const;  // reset all attributes
+    TermCtl bold() const;
+    TermCtl underline() const;
+    TermCtl overline() const;
+    TermCtl normal() const;  // reset all attributes
 
     // Output cached seq
     const std::string& seq() const { return m_seq; }
-    friend std::ostream& operator<<(std::ostream& os, const Term& term);
+    friend std::ostream& operator<<(std::ostream& os, const TermCtl& term);
 
     template<typename ...Args>
     std::string format(const char *fmt, Args... args) {
@@ -85,8 +85,8 @@ public:
     }
 
 private:
-    // Copy Term and append seq to new instance
-    Term(const Term& term, const std::string& seq) : m_fd(term.m_fd), m_seq(term.m_seq + seq) {}
+    // Copy TermCtl and append seq to new instance
+    TermCtl(const TermCtl& term, const std::string& seq) : m_fd(term.m_fd), m_seq(term.m_seq + seq) {}
 
     std::string format_cb(const format_impl::Context& ctx);
 

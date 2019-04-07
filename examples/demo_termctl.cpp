@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <xci/core/Term.h>
+#include <xci/core/TermCtl.h>
 #include <iostream>
 
 using namespace std;
@@ -21,7 +21,7 @@ using namespace xci::core;
 
 int main()
 {
-    Term& t = Term::stdout_instance();
+    TermCtl& t = TermCtl::stdout_instance();
 
     cout << (t.is_tty() ? "terminal initialized" : "terminal not supported") << endl;
     cout << t.bold().red().on_blue() << "RED" << t.normal() << "normal" << endl;

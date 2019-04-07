@@ -1,7 +1,7 @@
 // Logger.h created on 2018-03-01, part of XCI toolkit
 
 #include <xci/core/log.h>
-#include <xci/core/Term.h>
+#include <xci/core/TermCtl.h>
 #include <xci/core/sys.h>
 
 #include <iostream>
@@ -33,7 +33,7 @@ Logger& Logger::default_instance(Logger::Level initial_level)
 Logger::Logger(Level level) : m_level(level)
 {
     if (m_level <= Level::Info) {
-        Term& t = Term::stderr_instance();
+        TermCtl& t = TermCtl::stderr_instance();
         auto msg = t.format("{underline}   Date      Time    TID   Level  Message   {normal}\n");
         ::write(STDERR_FILENO, msg.data(), msg.size());
     }
@@ -43,7 +43,7 @@ Logger::Logger(Level level) : m_level(level)
 Logger::~Logger()
 {
     if (m_level <= Level::Info) {
-        Term& t = Term::stderr_instance();
+        TermCtl& t = TermCtl::stderr_instance();
         auto msg = t.format("{overline}                 End of Log                 {normal}\n");
         ::write(STDERR_FILENO, msg.data(), msg.size());
     }
@@ -63,7 +63,7 @@ static inline std::string format_current_time()
 
 void Logger::default_handler(Logger::Level lvl, const std::string& msg)
 {
-    Term& t = Term::stderr_instance();
+    TermCtl& t = TermCtl::stderr_instance();
     auto lvl_num = static_cast<int>(lvl);
     auto formatted_msg = t.format(level_format[lvl_num], format_current_time(), get_thread_id(), msg);
     ::write(STDERR_FILENO, formatted_msg.data(), formatted_msg.size());
