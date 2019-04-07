@@ -22,9 +22,11 @@
 
 namespace xci::core {
 
+// You get these with xci::core as a bonus!
+using namespace std::chrono_literals;
 
-std::chrono::system_clock::time_point
-localtime_now();
+
+std::chrono::system_clock::time_point localtime_now();
 
 
 } // namespace xci::core

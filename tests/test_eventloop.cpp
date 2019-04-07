@@ -17,11 +17,13 @@
 #include <catch2/catch.hpp>
 
 #include <xci/core/event.h>
+#include <xci/core/chrono.h>
 
 #include <thread>
 #include <unistd.h>
 
 using namespace xci::core;
+using std::this_thread::sleep_for;
 
 
 TEST_CASE( "IO events", "[core][event][IOWatch]" )
@@ -107,26 +109,26 @@ TEST_CASE( "FS events", "[core][event][FSWatch]" )
     std::thread t([&quit_cond, &tmpname](){
         // open
         std::ofstream f(tmpname);
-        usleep(50000);
+        sleep_for(50ms);
 
         // modify
         f << "1\n";
-        usleep(50000);
+        sleep_for(50ms);
 
         // modify, close
         f << "2\n";
         f.close();
-        usleep(50000);
+        sleep_for(50ms);
 
         // reopen, modify, close
         f.open(tmpname, std::ios::app);
         f << "3\n";
         f.close();
-        usleep(50000);
+        sleep_for(50ms);
 
         // delete
         ::unlink(tmpname.c_str());
-        usleep(50000);
+        sleep_for(50ms);
 
         quit_cond.fire();
     });

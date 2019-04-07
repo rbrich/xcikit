@@ -8,6 +8,7 @@
 #include <xci/core/file.h>
 #include <xci/core/dispatch.h>
 #include <xci/core/string.h>
+#include <xci/core/chrono.h>
 
 #include <fstream>
 #include <cstdio>
@@ -15,6 +16,7 @@
 #include <sys/stat.h>
 
 using namespace xci::core;
+using std::this_thread::sleep_for;
 
 
 TEST_CASE( "Format placeholders", "[format]" )
@@ -95,22 +97,22 @@ TEST_CASE( "File watch", "[FSDispatch]" )
 
     // modify
     f << "one" << std::endl;
-    usleep(50000);
+    sleep_for(50ms);
 
     // modify, close
     f << "two" << std::endl;
     f.close();
-    usleep(50000);
+    sleep_for(50ms);
 
     // reopen, modify, close
     f.open(tmpname, std::ios::app);
     f << "three" << std::endl;
     f.close();
-    usleep(50000);
+    sleep_for(50ms);
 
     // delete
     ::unlink(tmpname.c_str());
-    usleep(50000);
+    sleep_for(50ms);
 
     // although the inotify watch is removed automatically after delete,
     // this should still be called to cleanup the callback info
