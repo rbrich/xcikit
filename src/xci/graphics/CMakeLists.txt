@@ -67,10 +67,12 @@ if (XCI_WITH_OPENGL)
         PRIVATE
             ${CONAN_INCLUDE_DIRS_INCBIN})
     target_link_libraries(xci-graphics-opengl
-        xci-core
-        ${CMAKE_DL_LIBS}
-        glfw
-        glad::glad)
+        PUBLIC
+            xci-core
+            ${CMAKE_DL_LIBS}
+            glad::glad
+        PRIVATE
+            glfw)
 
     if (BUILD_FRAMEWORKS)
         set_target_properties(xci-graphics-opengl PROPERTIES

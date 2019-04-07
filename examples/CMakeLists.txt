@@ -67,10 +67,14 @@ target_link_libraries(demo_term_dispatch xci-widgets xci-graphics)
 install(TARGETS demo_term_dispatch EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 
 if (XCI_WITH_OPENGL)
+    find_package(glfw3 3.2 REQUIRED)
+    find_package(glad REQUIRED)
     add_executable(demo_glfw demo_glfw.cpp)
     target_link_libraries(demo_glfw
         xci-text
-        xci-graphics-opengl)
+        xci-graphics-opengl
+        glad::glad
+        glfw)
     target_include_directories(demo_glfw PRIVATE ${CMAKE_SOURCE_DIR}/ext)
     install(TARGETS demo_glfw EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 endif ()
