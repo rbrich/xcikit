@@ -1,5 +1,5 @@
 // demo_fps.cpp created on 2018-04-14, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -49,11 +49,16 @@ int main()
     rts_px.set_antialiasing(2);
 
     FpsDisplay fps_display;
-    fps_display.set_position({-1.2f, -0.8f});
-    Text help_text("[v] periodic vsync{tab}[d] on demand{br}"
-                   "[n] periodic nowait{tab}[e] on event{br}", font);
+    fps_display.set_position({-1.2f, -0.7f});
+    Text help_text("[p] periodic{tab}[n] nowait{br}"
+                   "[d] on demand{tab}[v] vsync{br}"
+                   "[e] on event{tab}[h] halfrate{br}", font);
     Text mouse_pos("Mouse: ", font);
     mouse_pos.set_color(Color(255, 150, 50));
+
+    window.set_update_callback([&](View& view, std::chrono::nanoseconds elapsed){
+        fps_display.update(view, elapsed);
+    });
 
     window.set_size_callback([&](View& view) {
         auto pxr = view.screen_ratio().x;
@@ -81,19 +86,23 @@ int main()
         if (ev.action != Action::Press)
             return;
         switch (ev.key) {
-            case Key::V:
+            case Key::P:
                 window.set_refresh_mode(RefreshMode::Periodic);
-                window.set_refresh_interval(1);
-                break;
-            case Key::N:
-                window.set_refresh_mode(RefreshMode::Periodic);
-                window.set_refresh_interval(0);
                 break;
             case Key::D:
                 window.set_refresh_mode(RefreshMode::OnDemand);
                 break;
             case Key::E:
                 window.set_refresh_mode(RefreshMode::OnEvent);
+                break;
+            case Key::N:
+                window.set_refresh_interval(0);
+                break;
+            case Key::V:
+                window.set_refresh_interval(1);
+                break;
+            case Key::H:
+                window.set_refresh_interval(2);
                 break;
             default:
                 break;
@@ -103,6 +112,7 @@ int main()
     window.set_mouse_position_callback([&](View& view, const MousePosEvent& ev) {
         mouse_pos.set_fixed_string("Mouse: " +
                                    format("({}, {})", ev.pos.x, ev.pos.y));
+        mouse_pos.resize(view);
         view.refresh();
     });
 

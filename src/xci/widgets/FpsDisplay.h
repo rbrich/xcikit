@@ -1,5 +1,5 @@
 // FpsDisplay.h created on 2018-04-14, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,14 +22,14 @@
 #include <xci/core/FpsCounter.h>
 #include <chrono>
 
-namespace xci {
-namespace widgets {
+namespace xci::widgets {
 
 
 class FpsDisplay: public Widget {
 public:
     FpsDisplay();
 
+    void update(View& view, std::chrono::nanoseconds elapsed) override;
     void resize(View& view) override;
     void draw(View& view, State state) override;
 
@@ -44,9 +44,10 @@ private:
     graphics::ShaderPtr m_shader;
     graphics::TexturePtr m_texture;
     text::Text m_text;
+    bool m_frozen = false;
 };
 
 
-}} // namespace xci::widgets
+} // namespace xci::widgets
 
 #endif // XCIKIT_FPSDISPLAY_H

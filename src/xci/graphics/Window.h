@@ -1,5 +1,5 @@
 // Window.h created on 2018-03-04, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,8 +25,7 @@
 #include <utility>
 #include <chrono>
 
-namespace xci {
-namespace graphics {
+namespace xci::graphics {
 
 using xci::core::Vec2u;
 using xci::core::Vec2f;
@@ -188,11 +187,20 @@ public:
     // - Periodic is good for games (continuous animations)
     virtual void set_refresh_mode(RefreshMode mode) = 0;
 
-    // Refresh interval:
+    // Refresh interval. This helps limiting framerate.
     // - 0: do not wait for screen update
     // - 1: wait for screen update (vsync)
     // - 2: wait for 2nd screen update (vsync with halved FPS)
     virtual void set_refresh_interval(int interval) = 0;
+
+    /// Set refresh timeout. This is useful for OnDemand/OnEvent modes,
+    /// where no update events are generated unless an event occurs.
+    /// When configured, the update is called at most after `timetout`,
+    /// but possibly sooner if something else happens.
+    /// \param timeout      The timeout in usecs. Zero disables the timeout.
+    /// \param periodic     False = one-shot (timeout is cleared after next update).
+    ///                     True = periodic (no clear).
+    virtual void set_refresh_timeout(std::chrono::microseconds timeout, bool periodic) = 0;
 
     virtual void set_debug_flags(View::DebugFlags flags) = 0;
 
@@ -208,6 +216,6 @@ protected:
 };
 
 
-}} // namespace xci::graphics
+} // namespace xci::graphics
 
 #endif // XCI_GRAPHICS_WINDOW_H

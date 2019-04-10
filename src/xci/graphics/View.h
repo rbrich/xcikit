@@ -39,7 +39,7 @@ public:
     explicit View(Window* m_window) : m_window(m_window) {}
 
     // Window might be nullptr if the View was created directly
-    const Window* window() const { return m_window; }
+    Window* window() { return m_window; }
 
     // ------------------------------------------------------------------------
     // Sizes, coordinates

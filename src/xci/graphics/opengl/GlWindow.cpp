@@ -1,5 +1,5 @@
 // GlWindow.cpp created on 2018-03-14, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,8 +22,7 @@
 #include <cassert>
 
 
-namespace xci {
-namespace graphics {
+namespace xci::graphics {
 
 using namespace xci::core;
 using namespace xci::core::log;
@@ -189,13 +188,16 @@ void GlWindow::display()
         }
         switch (m_mode) {
             case RefreshMode::OnDemand:
-                if (m_view.pop_refresh())
-                    draw();
-                glfwWaitEvents();
-                break;
             case RefreshMode::OnEvent:
-                draw();
-                glfwWaitEvents();
+                if (m_mode == RefreshMode::OnEvent || m_view.pop_refresh())
+                    draw();
+                if (m_timeout == 0us) {
+                    glfwWaitEvents();
+                } else {
+                    glfwWaitEventsTimeout(double(m_timeout.count()) / 1e6);
+                    if (m_clear_timeout)
+                        m_timeout = 0us;
+                }
                 break;
             case RefreshMode::Periodic:
                 draw();
@@ -265,6 +267,13 @@ void GlWindow::set_scroll_callback(ScrollCallback scroll_cb)
 void GlWindow::set_refresh_interval(int interval)
 {
     glfwSwapInterval(interval);
+}
+
+
+void GlWindow::set_refresh_timeout(std::chrono::microseconds timeout, bool periodic)
+{
+    m_timeout = timeout;
+    m_clear_timeout = !periodic;
 }
 
 
@@ -411,4 +420,4 @@ void GlWindow::draw()
 }
 
 
-}} // namespace xci::graphics
+} // namespace xci::graphics

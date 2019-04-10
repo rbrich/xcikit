@@ -1,5 +1,5 @@
 // FpsDisplay.cpp created on 2018-04-14, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@
 #include <xci/core/log.h>
 #include <xci/core/format.h>
 #include <xci/graphics/Renderer.h>
+#include <chrono>
+#include <cstring>
 
 #ifdef XCI_EMBED_SHADERS
 #define INCBIN_PREFIX g_
@@ -27,19 +29,34 @@ INCBIN(fps_vert, XCI_SHARE_DIR "/shaders/fps.vert");
 INCBIN(fps_frag, XCI_SHARE_DIR "/shaders/fps.frag");
 #endif
 
-namespace xci {
-namespace widgets {
+namespace xci::widgets {
 
 using namespace xci::graphics;
 using namespace xci::core;
 using namespace xci::core::log;
 using xci::core::format;
+using namespace std::chrono_literals;
 
 
 FpsDisplay::FpsDisplay()
         : m_quad(Renderer::default_instance().create_primitives(VertexFormat::V2t2, PrimitiveType::TriFans)),
           m_texture(Renderer::default_instance().create_texture())
 {}
+
+
+void FpsDisplay::update(View& view, std::chrono::nanoseconds elapsed)
+{
+    if (elapsed > 400ms && !m_frozen) {
+        // Almost 1 seconds since last refresh - freeze the counter
+        m_frozen = true;
+        view.refresh();
+        return;
+    }
+
+    // Still fast enough, reset timeout
+    view.window()->set_refresh_timeout(500ms, false);
+    m_frozen = false;
+}
 
 
 void FpsDisplay::resize(View& view)
@@ -67,6 +84,9 @@ void FpsDisplay::draw(View& view, State state)
     std::chrono::duration<float> elapsed = now - m_prevtime;
     m_fps.tick(elapsed.count());
     m_prevtime = now;
+
+    if (m_frozen)
+        return; // don't draw anything
 
     // Draw
     init_shader();
@@ -117,4 +137,4 @@ void FpsDisplay::update_texture()
 }
 
 
-}} // namespace xci::widgets
+} // namespace xci::widgets

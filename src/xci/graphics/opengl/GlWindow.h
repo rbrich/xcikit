@@ -1,5 +1,5 @@
 // GlWindow.h created on 2018-03-14, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -47,6 +47,8 @@ public:
 
     void set_refresh_mode(RefreshMode mode) override { m_mode = mode; }
     void set_refresh_interval(int interval) override;
+    void set_refresh_timeout(std::chrono::microseconds timeout, bool periodic) override;
+
     void set_debug_flags(View::DebugFlags flags) override;
 
 private:
@@ -58,6 +60,8 @@ private:
     RefreshMode m_mode = RefreshMode::OnDemand;
     Vec2i m_window_pos;
     Vec2i m_window_size;
+    std::chrono::microseconds m_timeout {0};
+    bool m_clear_timeout = false;
 };
 
 
