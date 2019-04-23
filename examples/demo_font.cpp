@@ -58,15 +58,15 @@ int main()
     text.set_color(Color::White());
 
     window.set_draw_callback([&](View& view) {
-        text.resize_draw(view, {0.5f * view.scalable_size().x - 2.0f, -0.5f});
+        auto vs = view.viewport_size();
+        text.resize_draw(view, {0.5f * vs.x - 1.5f, -0.5f});
 
         auto& tex = font.get_texture();
+        auto tex_size = view.size_to_viewport(FramebufferSize{tex->size()});
         Sprites font_texture(tex);
-        Rect_f rect = {0, 0,
-                       tex->size().x * view.framebuffer_ratio().x,
-                       tex->size().y * view.framebuffer_ratio().y};
+        ViewportRect rect = {0, 0, tex_size.x, tex_size.y};
         font_texture.add_sprite(rect);
-        font_texture.draw(view, {-0.5f * view.scalable_size().x + 0.01f, -0.5f * rect.h});
+        font_texture.draw(view, {-0.5f * vs.x + 0.01f, -0.5f * rect.h});
     });
 
     window.display();

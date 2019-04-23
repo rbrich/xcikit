@@ -1,5 +1,5 @@
 // Form.cpp created on 2018-06-22, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,8 +19,7 @@
 #include <xci/widgets/Checkbox.h>
 #include <utility>
 
-namespace xci {
-namespace widgets {
+namespace xci::widgets {
 
 
 void Form::add_input(const std::string& label, std::string& text_input)
@@ -61,8 +60,8 @@ void Form::add_input(const std::string& label, bool& checkbox)
 void Form::resize(View& view)
 {
     // Resize children, compute max_height (vertical space reserved for each line)
-    float max_ascent = 0;
-    float max_descent = 0;
+    ViewportUnits max_ascent = 0;
+    ViewportUnits max_descent = 0;
     for (auto& child : m_child) {
         child->resize(view);
         auto h = child->size().y;
@@ -70,10 +69,10 @@ void Form::resize(View& view)
         max_ascent = std::max(b, max_ascent);
         max_descent = std::max(h - b, max_descent);
     }
-    const float max_height = max_ascent + max_descent;
+    const ViewportUnits max_height = max_ascent + max_descent;
 
     // Position children
-    core::Vec2f pos = {0, max_ascent};
+    ViewportCoords pos = {0, max_ascent};
     std::sort(m_hint.begin(), m_hint.end());
     size_t index = 0;
     auto hint_it = m_hint.cbegin();
@@ -112,4 +111,4 @@ void Form::add_hint(size_t child_index, Form::Hint hint)
 }
 
 
-}} // namespace xci::widgets
+} // namespace xci::widgets

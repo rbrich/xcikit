@@ -61,13 +61,12 @@ int main()
     });
 
     window.set_size_callback([&](View& view) {
-        auto pxr = view.screen_ratio().x;
         rts_px.clear();
-        rts_px.add_ellipse({0.0f, 0.0f, 0.5f, 0.5f}, 1 * pxr);
-        rts_px.add_ellipse({0.1f, 0.1f, 0.5f, 0.5f}, 2 * pxr);
-        rts_px.add_ellipse({0.2f, 0.2f, 0.5f, 0.5f}, 3 * pxr);
-        rts_px.add_ellipse({0.3f, 0.3f, 0.5f, 0.5f}, 4 * pxr);
-        rts_px.add_ellipse({0.4f, 0.4f, 0.5f, 0.5f}, 5 * pxr);
+        rts_px.add_ellipse({0.0f, 0.0f, 0.5f, 0.5f}, view.size_to_viewport(1_sc));
+        rts_px.add_ellipse({0.1f, 0.1f, 0.5f, 0.5f}, view.size_to_viewport(2_sc));
+        rts_px.add_ellipse({0.2f, 0.2f, 0.5f, 0.5f}, view.size_to_viewport(3_sc));
+        rts_px.add_ellipse({0.3f, 0.3f, 0.5f, 0.5f}, view.size_to_viewport(4_sc));
+        rts_px.add_ellipse({0.4f, 0.4f, 0.5f, 0.5f}, view.size_to_viewport(5_sc));
         fps_display.resize(view);
         help_text.resize(view);
         mouse_pos.resize(view);

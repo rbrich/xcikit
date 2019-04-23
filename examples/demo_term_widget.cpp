@@ -123,35 +123,37 @@ int main()
 
     // Make the terminal fullscreen
     window.set_size_callback([&](View& v) {
-        auto s = v.scalable_size();
-        terminal.set_position({-s * 0.5f});
-        terminal.set_size(s);
-        terminal.bell();
+        auto vs = v.viewport_size();
+        terminal.set_position({50, vs.y - 500});
+        terminal.set_size({700, 500});
     });
 
     window.set_key_callback([&](View& view, const KeyEvent& ev) {
         if (ev.action != Action::Press || ev.mod != ModKey::None())
-        switch (ev.key) {
-            case Key::Up:
-                terminal.set_cursor_pos(terminal.cursor_pos() - Vec2u{0, 1});
-                break;
-            case Key::Down:
-                terminal.set_cursor_pos(terminal.cursor_pos() + Vec2u{0, 1});
-                break;
-            case Key::Left:
-                terminal.set_cursor_pos(terminal.cursor_pos() - Vec2u{1, 0});
-                break;
-            case Key::Right:
-                terminal.set_cursor_pos(terminal.cursor_pos() + Vec2u{1, 0});
-                break;
-            default:
-                break;
+        {
+            switch (ev.key) {
+                case Key::Up:
+                    terminal.set_cursor_pos(terminal.cursor_pos() - Vec2u{0, 1});
+                    break;
+                case Key::Down:
+                    terminal.set_cursor_pos(terminal.cursor_pos() + Vec2u{0, 1});
+                    break;
+                case Key::Left:
+                    terminal.set_cursor_pos(terminal.cursor_pos() - Vec2u{1, 0});
+                    break;
+                case Key::Right:
+                    terminal.set_cursor_pos(terminal.cursor_pos() + Vec2u{1, 0});
+                    break;
+                default:
+                    break;
+            }
         }
         view.refresh();
     });
 
     Bind bind(window, terminal);
     window.set_refresh_mode(RefreshMode::OnDemand);
+    window.set_view_mode(ViewOrigin::TopLeft, ViewScale::FixedScreenPixels);
     window.display();
     return EXIT_SUCCESS;
 }

@@ -58,12 +58,12 @@ This is identity matrix and as such, it does nothing to our vertices.
 Note, that OpenGL matrices are column-major, so they look transposed when
 compared to standard mathematical notation:
 
-    GLfloat gl_matrix[] = { //  In math:
-        ax, ay, az, aw,     //  | ax  bx  cx  dx |
-        bx, by, cz, bw,     //  | ay  by  cy  dy |
-        cx, cy, cz, cw,     //  | az  bz  cz  dz |
-        dx, dy, dz, dw,     //  | aw  bw  cw  dw |
-    };                      //
+    GLfloat gl_matrix[] = {  //  In math:
+        ax, ay, az, aw,      //  | ax  bx  cx  dx |
+        bx, by, cz, bw,      //  | ay  by  cy  dy |
+        cx, cy, cz, cw,      //  | az  bz  cz  dz |
+        dx, dy, dz, dw,      //  | aw  bw  cw  dw |
+    };                       //
 
 To adjust the 2D view without touching Z coordinate, we can adjust
 some of the fields:
@@ -104,23 +104,24 @@ coordinates, with two modifications:
   when drawing text or widgets, because we usually write from top to bottom.
 
 - One of the X/Y axis is expanded, so the visible coordinates go beyond -1/1.
-  This aspect ratio correction.
+  This is the aspect ratio correction.
 
 The diagram shows that the square of (-1,-1) .. (1,1) is always completely
 covered by the view. Depending on actual ratio of width and height,
 it is expanded either horizontally or vertically.
 
-    horizontal+         vertical+
-    +---+-----+---+     +-----+
-    | + | 2x2 | + |     |  +  |
-    |   |     |   |     +-----+
-    +---+-----+---+     | 2x2 |
-                        |     |
-                        +-----+
-                        |  +  |
-                        +-----+
+    horizontal+           vertical+
+    +---+-------+---+     +---------+
+    |   |       |   |     |    +    |
+    | + |  2x2  | + |     +---------+
+    |   |       |   |     |         |
+    +---+-------+---+     |   2x2   |
+                          |         |
+                          +---------+
+                          |    +    |
+                          +---------+
 
-Same as with OpenGL, zero coordinates are in the center.
+Same as with OpenGL coordinates, origin (0,0) is in the center of the screen.
 
 These coordinates are used for positioning text and widgets in the viewport.
 There is always the same amount of elements, disregarding the actual size
@@ -136,4 +137,7 @@ There are also two other kinds of units:
   (the pixels with "normal" size)
 
 The screen pixels might be the same as framebuffer pixels, or they might
-be bigger (this technique is used for high DPI screens).
+be bigger (this technique is used for high-DPI screens).
+
+See `demo_coords` in examples for live demonstration of all kinds of the
+coordinates.

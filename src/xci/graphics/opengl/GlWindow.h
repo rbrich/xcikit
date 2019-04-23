@@ -48,6 +48,7 @@ public:
     void set_refresh_mode(RefreshMode mode) override { m_mode = mode; }
     void set_refresh_interval(int interval) override;
     void set_refresh_timeout(std::chrono::microseconds timeout, bool periodic) override;
+    void set_view_mode(ViewOrigin origin, ViewScale scale) override;
 
     void set_debug_flags(View::DebugFlags flags) override;
 

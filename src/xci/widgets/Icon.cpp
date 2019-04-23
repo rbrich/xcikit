@@ -1,5 +1,5 @@
 // Icon.cpp created on 2018-04-10, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,8 +16,7 @@
 #include "Icon.h"
 #include <xci/core/string.h>
 
-namespace xci {
-namespace widgets {
+namespace xci::widgets {
 
 using xci::core::to_utf8;
 using namespace xci::graphics;
@@ -58,7 +57,7 @@ void Icon::resize(View& view)
         m_layout.clear();
         m_layout.set_font(&theme().icon_font());
         m_layout.begin_span("icon");
-        m_layout.set_offset({0, 0.125f});
+        m_layout.set_offset({0_vp, 0.125f * m_layout.default_style().size()});
         m_layout.add_word(to_utf8(theme().icon_codepoint(m_icon_id)));
         m_layout.end_span("icon");
         m_layout.reset_offset();
@@ -84,4 +83,4 @@ void Icon::draw(View& view, State state)
 }
 
 
-}} // namespace xci::widgets
+} // namespace xci::widgets

@@ -1,5 +1,5 @@
 // Sprites.cpp created on 2018-03-14, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,8 +28,7 @@ INCBIN(sprite_c_vert, XCI_SHARE_DIR "/shaders/sprite_c.vert");
 INCBIN(sprite_c_frag, XCI_SHARE_DIR "/shaders/sprite_c.frag");
 #endif
 
-namespace xci {
-namespace graphics {
+namespace xci::graphics {
 
 using namespace xci::core::log;
 
@@ -48,7 +47,7 @@ void Sprites::reserve(size_t num)
 }
 
 
-void Sprites::add_sprite(const Rect_f& rect)
+void Sprites::add_sprite(const ViewportRect& rect)
 {
     auto ts = m_texture->size();
     add_sprite(rect, {0, 0, ts.x, ts.y});
@@ -56,12 +55,12 @@ void Sprites::add_sprite(const Rect_f& rect)
 
 
 // Position a sprite with cutoff from the texture
-void Sprites::add_sprite(const Rect_f& rect, const Rect_u& texrect)
+void Sprites::add_sprite(const ViewportRect& rect, const Rect_u& texrect)
 {
-    float x1 = rect.x;
-    float y1 = rect.y;
-    float x2 = rect.x + rect.w;
-    float y2 = rect.y + rect.h;
+    auto x1 = rect.x;
+    auto y1 = rect.y;
+    auto x2 = rect.x + rect.w;
+    auto y2 = rect.y + rect.h;
     auto ts = m_texture->size();
     float tl = (float)texrect.left() / ts.x;
     float tr = (float)texrect.right() / ts.x;
@@ -69,15 +68,15 @@ void Sprites::add_sprite(const Rect_f& rect, const Rect_u& texrect)
     float tt = (float)texrect.top() / ts.y;
 
     m_trifans->begin_primitive();
-    m_trifans->add_vertex(x1, y1, tl, tt);
-    m_trifans->add_vertex(x1, y2, tl, tb);
-    m_trifans->add_vertex(x2, y2, tr, tb);
-    m_trifans->add_vertex(x2, y1, tr, tt);
+    m_trifans->add_vertex({x1, y1}, tl, tt);
+    m_trifans->add_vertex({x1, y2}, tl, tb);
+    m_trifans->add_vertex({x2, y2}, tr, tb);
+    m_trifans->add_vertex({x2, y1}, tr, tt);
     m_trifans->end_primitive();
 }
 
 
-void Sprites::draw(View& view, const Vec2f& pos)
+void Sprites::draw(View& view, const ViewportCoords& pos)
 {
     init_shader();
     m_shader->set_uniform("u_color",
@@ -127,7 +126,7 @@ void ColoredSprites::reserve(size_t num)
 }
 
 
-void ColoredSprites::add_sprite(const Rect_f& rect)
+void ColoredSprites::add_sprite(const ViewportRect& rect)
 {
     auto ts = m_texture->size();
     add_sprite(rect, {0, 0, ts.x, ts.y});
@@ -135,12 +134,12 @@ void ColoredSprites::add_sprite(const Rect_f& rect)
 
 
 // Position a sprite with cutoff from the texture
-void ColoredSprites::add_sprite(const Rect_f& rect, const Rect_u& texrect)
+void ColoredSprites::add_sprite(const ViewportRect& rect, const Rect_u& texrect)
 {
-    float x1 = rect.x;
-    float y1 = rect.y;
-    float x2 = rect.x + rect.w;
-    float y2 = rect.y + rect.h;
+    auto x1 = rect.x;
+    auto y1 = rect.y;
+    auto x2 = rect.x + rect.w;
+    auto y2 = rect.y + rect.h;
     auto ts = m_texture->size();
     float tl = (float)texrect.left() / ts.x;
     float tr = (float)texrect.right() / ts.x;
@@ -148,15 +147,15 @@ void ColoredSprites::add_sprite(const Rect_f& rect, const Rect_u& texrect)
     float tt = (float)texrect.top() / ts.y;
 
     m_trifans->begin_primitive();
-    m_trifans->add_vertex(x1, y1, m_color, tl, tt);
-    m_trifans->add_vertex(x1, y2, m_color, tl, tb);
-    m_trifans->add_vertex(x2, y2, m_color, tr, tb);
-    m_trifans->add_vertex(x2, y1, m_color, tr, tt);
+    m_trifans->add_vertex({x1, y1}, m_color, tl, tt);
+    m_trifans->add_vertex({x1, y2}, m_color, tl, tb);
+    m_trifans->add_vertex({x2, y2}, m_color, tr, tb);
+    m_trifans->add_vertex({x2, y1}, m_color, tr, tt);
     m_trifans->end_primitive();
 }
 
 
-void ColoredSprites::draw(View& view, const Vec2f& pos)
+void ColoredSprites::draw(View& view, const ViewportCoords& pos)
 {
     init_shader();
     m_shader->set_texture("u_texture", m_texture);
@@ -189,4 +188,4 @@ void ColoredSprites::init_shader()
 }
 
 
-}} // namespace xci::graphics
+} // namespace xci::graphics

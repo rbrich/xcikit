@@ -67,10 +67,10 @@ void FpsDisplay::resize(View& view)
     float y2 = 0.10f;
     m_quad->clear();
     m_quad->begin_primitive();
-    m_quad->add_vertex(x1, y1, 0, 0);
-    m_quad->add_vertex(x1, y2, 0, 1);
-    m_quad->add_vertex(x2, y2, 1, 1);
-    m_quad->add_vertex(x2, y1, 1, 0);
+    m_quad->add_vertex({x1, y1}, 0, 0);
+    m_quad->add_vertex({x1, y2}, 0, 1);
+    m_quad->add_vertex({x2, y2}, 1, 1);
+    m_quad->add_vertex({x2, y1}, 1, 0);
     m_quad->end_primitive();
     m_texture->create({(unsigned)m_fps.resolution(), 1});
     m_text.set_font(theme().font());
@@ -99,7 +99,7 @@ void FpsDisplay::draw(View& view, State state)
                              m_fps.frame_rate(),
                              m_fps.avg_frame_time() * 1000));
     m_text.resize(view);
-    m_text.draw(view, position() + Vec2f{0.02, 0.07f});
+    m_text.draw(view, position() + ViewportCoords{0.02, 0.07f});
 }
 
 

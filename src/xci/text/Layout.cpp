@@ -1,5 +1,5 @@
 // Layout.cpp created on 2018-03-10, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,12 +20,11 @@
 
 #include <cassert>
 
-namespace xci {
-namespace text {
-namespace layout {
+namespace xci::text::layout {
 
 using xci::graphics::Color;
 using xci::graphics::View;
+using namespace xci::graphics::unit_literals;
 
 
 void Layout::clear()
@@ -35,7 +34,7 @@ void Layout::clear()
 }
 
 
-void Layout::set_default_page_width(float width)
+void Layout::set_default_page_width(ViewportUnits width)
 {
     m_default_width = width;
     m_page.clear();
@@ -49,7 +48,7 @@ void Layout::set_default_font(Font* font)
 }
 
 
-void Layout::set_default_font_size(float size)
+void Layout::set_default_font_size(ViewportUnits size)
 {
     m_default_style.set_size(size);
     m_page.clear();
@@ -76,14 +75,14 @@ void Layout::typeset(const graphics::View& target)
 }
 
 
-void Layout::draw(View& target, const core::Vec2f& pos) const
+void Layout::draw(View& target, const ViewportCoords& pos) const
 {
-    auto pxr = target.screen_ratio();
+    const auto sc_1px = target.size_to_viewport(1_sc);
 
     // Debug: page bbox
     if (target.has_debug_flag(View::Debug::PageBBox)) {
         graphics::Shape bbox_rect(Color(150, 150, 0, 128), Color(200, 200, 50));
-        bbox_rect.add_rectangle(bbox(), 1 * pxr.x);
+        bbox_rect.add_rectangle(bbox(), sc_1px);
         bbox_rect.draw(target, pos);
     }
 
@@ -92,7 +91,7 @@ void Layout::draw(View& target, const core::Vec2f& pos) const
         graphics::Shape bboxes(Color(100, 0, 150, 128), Color(200, 50, 250));
         m_page.foreach_span([&](const Span& span) {
             for (auto& part : span.parts()) {
-                bboxes.add_rectangle(part.bbox(), 1 * pxr.x);
+                bboxes.add_rectangle(part.bbox(), sc_1px);
             }
         });
         bboxes.draw(target, pos);
@@ -102,7 +101,7 @@ void Layout::draw(View& target, const core::Vec2f& pos) const
     if (target.has_debug_flag(View::Debug::LineBBox)) {
         graphics::Shape bboxes(Color(0, 50, 150, 128), Color(50, 50, 250));
         m_page.foreach_line([&](const Line& line) {
-            bboxes.add_rectangle(line.bbox(), 1 * pxr.x);
+            bboxes.add_rectangle(line.bbox(), sc_1px);
         });
         bboxes.draw(target, pos);
     }
@@ -113,7 +112,7 @@ void Layout::draw(View& target, const core::Vec2f& pos) const
         m_page.foreach_line([&](const Line& line) {
             auto rect = line.bbox();
             rect.y += line.baseline();
-            rect.h = pxr.y;
+            rect.h = sc_1px;
             baselines.add_rectangle(rect);
         });
         baselines.draw(target, pos);
@@ -125,7 +124,7 @@ void Layout::draw(View& target, const core::Vec2f& pos) const
 }
 
 
-void Layout::set_page_width(float width)
+void Layout::set_page_width(ViewportUnits width)
 {
     m_elements.push_back(std::make_unique<SetPageWidth>(width));
 }
@@ -137,7 +136,7 @@ void Layout::set_alignment(Alignment alignment)
 }
 
 
-void Layout::add_tab_stop(float x)
+void Layout::add_tab_stop(ViewportUnits x)
 {
     m_elements.push_back(std::make_unique<AddTabStop>(x));
 }
@@ -149,7 +148,7 @@ void Layout::reset_tab_stops()
 }
 
 
-void Layout::set_offset(const core::Vec2f& offset)
+void Layout::set_offset(const ViewportSize& offset)
 {
     m_elements.push_back(std::make_unique<SetOffset>(offset));
 }
@@ -161,7 +160,7 @@ void Layout::set_font(Font* font)
 }
 
 
-void Layout::set_font_size(float size)
+void Layout::set_font_size(ViewportUnits size)
 {
     m_elements.push_back(std::make_unique<SetFontSize>(size));
 }
@@ -221,9 +220,9 @@ Span* Layout::get_span(const std::string& name)
 }
 
 
-core::Rect_f Layout::bbox() const
+ViewportRect Layout::bbox() const
 {
-    core::Rect_f bbox;
+    ViewportRect bbox;
     bool first = true;
     m_page.foreach_line([&](const Line& line) {
         if (first) {
@@ -237,4 +236,4 @@ core::Rect_f Layout::bbox() const
 }
 
 
-}}} // namespace xci::text::layout
+} // namespace xci::text::layout

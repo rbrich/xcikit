@@ -112,17 +112,18 @@ TEST_CASE( "FS events", "[core][event][FSWatch]" )
         sleep_for(50ms);
 
         // modify
-        f << "1\n";
+        f.write("1\n", 2);
+        f.flush();
         sleep_for(50ms);
 
         // modify, close
-        f << "2\n";
+        f.write("2\n", 2);
         f.close();
         sleep_for(50ms);
 
         // reopen, modify, close
         f.open(tmpname, std::ios::app);
-        f << "3\n";
+        f.write("3\n", 2);
         f.close();
         sleep_for(50ms);
 

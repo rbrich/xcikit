@@ -1,5 +1,5 @@
 // TextInput.cpp created on 2018-06-02, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,8 +17,7 @@
 #include <xci/core/string.h>
 #include <xci/core/geometry.h>
 
-namespace xci {
-namespace widgets {
+namespace xci::widgets {
 
 using namespace xci::graphics;
 using namespace xci::text;
@@ -66,7 +65,7 @@ void TextInput::resize(View& view)
     layout::Span* cursor_span = m_layout.get_span("cursor");
     m_cursor_shape.clear();
     auto cursor_box = cursor_span->part(0).bbox();
-    cursor_box.w = view.screen_ratio().x;
+    cursor_box.w = view.size_to_viewport(1_sc);
     if (cursor_box.x < m_content_pos)
         m_content_pos = cursor_box.x;
     if (cursor_box.x > m_content_pos + m_width)
@@ -90,8 +89,8 @@ void TextInput::resize(View& view)
 void TextInput::draw(View& view, State state)
 {
     auto rect = m_layout.bbox();
-    auto pos = position() + Vec2f{m_padding - rect.x - m_content_pos,
-                                  m_padding - rect.y};
+    auto pos = position() + ViewportCoords{m_padding - rect.x - m_content_pos,
+                                           m_padding - rect.y};
     if (last_hover() == LastHover::Inside) {
         m_bg_rect.set_outline_color(theme().color(ColorId::Hover));
     } else {
@@ -203,4 +202,4 @@ bool TextInput::mouse_button_event(View& view, const MouseBtnEvent& ev)
 }
 
 
-}} // namespace xci::widgets
+} // namespace xci::widgets

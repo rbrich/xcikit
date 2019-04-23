@@ -1,5 +1,5 @@
 // Text.cpp created on 2018-03-02, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -53,13 +53,13 @@ void Text::resize(graphics::View& view)
 }
 
 
-void Text::draw(graphics::View& view, const core::Vec2f& pos)
+void Text::draw(graphics::View& view, const ViewportCoords& pos)
 {
     m_layout.draw(view, pos);
 }
 
 
-void Text::resize_draw(View& view, const Vec2f& pos)
+void Text::resize_draw(View& view, const ViewportCoords& pos)
 {
     m_layout.typeset(view);
     m_layout.draw(view, pos);

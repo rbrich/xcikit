@@ -59,8 +59,8 @@ int main()
         idx ++;
     }
 
-    std::function<void(Shape&, const Rect_f&, float)>
-    add_shape_fn = [](Shape& shape, const Rect_f& rect, float th) {
+    std::function<void(Shape&, const ViewportRect&, ViewportUnits)>
+    add_shape_fn = [](Shape& shape, const ViewportRect& rect, ViewportUnits th) {
         shape.add_rectangle(rect, th);
     };
 
@@ -72,22 +72,22 @@ int main()
             return;
         switch (ev.key) {
             case Key::R:
-                add_shape_fn = [](Shape& shape, const Rect_f& rect, float th) {
+                add_shape_fn = [](Shape& shape, const ViewportRect& rect, ViewportUnits th) {
                     shape.add_rectangle(rect, th);
                 };
                 break;
             case Key::O:
-                add_shape_fn = [](Shape& shape, const Rect_f& rect, float th) {
+                add_shape_fn = [](Shape& shape, const ViewportRect& rect, ViewportUnits th) {
                     shape.add_rounded_rectangle(rect, 0.05, th);
                 };
                 break;
             case Key::E:
-                add_shape_fn = [](Shape& shape, const Rect_f& rect, float th) {
+                add_shape_fn = [](Shape& shape, const ViewportRect& rect, ViewportUnits th) {
                     shape.add_ellipse(rect, th);
                 };
                 break;
             case Key::L:
-                add_shape_fn = [](Shape& shape, const Rect_f& rect, float th) {
+                add_shape_fn = [](Shape& shape, const ViewportRect& rect, ViewportUnits th) {
                     auto l = rect.left();
                     auto t = rect.top();
                     auto r = rect.right();
@@ -120,7 +120,7 @@ int main()
     });
 
     window.set_draw_callback([&](View& view) {
-        Vec2f vs = view.scalable_size();
+        auto vs = view.viewport_size();
         shapes_help.resize_draw(view, {-vs.x / 2 + 0.1f, -vs.y / 2 + 0.1f});
         option_help.resize_draw(view, {vs.x / 2 - 0.5f, -vs.y / 2 + 0.1f});
 
@@ -131,12 +131,11 @@ int main()
         shapes[1].draw(view, {0, 0});
 
         // Constant border width, in screen pixels
-        auto pxr = view.screen_ratio().x;
-        add_shape_fn(shapes[2], {0.0f, 0.0f, 0.5f, 0.5f}, 1 * pxr);
-        add_shape_fn(shapes[3], {0.1f, 0.1f, 0.5f, 0.5f}, 2 * pxr);
-        add_shape_fn(shapes[4], {0.2f, 0.2f, 0.5f, 0.5f}, 3 * pxr);
-        add_shape_fn(shapes[5], {0.3f, 0.3f, 0.5f, 0.5f}, 4 * pxr);
-        add_shape_fn(shapes[6], {0.4f, 0.4f, 0.5f, 0.5f}, 5 * pxr);
+        add_shape_fn(shapes[2], {0.0f, 0.0f, 0.5f, 0.5f}, view.size_to_viewport(1_sc));
+        add_shape_fn(shapes[3], {0.1f, 0.1f, 0.5f, 0.5f}, view.size_to_viewport(2_sc));
+        add_shape_fn(shapes[4], {0.2f, 0.2f, 0.5f, 0.5f}, view.size_to_viewport(3_sc));
+        add_shape_fn(shapes[5], {0.3f, 0.3f, 0.5f, 0.5f}, view.size_to_viewport(4_sc));
+        add_shape_fn(shapes[6], {0.4f, 0.4f, 0.5f, 0.5f}, view.size_to_viewport(5_sc));
         for (size_t i = 2; i <= 6; i++)
             shapes[i].draw(view, {-0.45f, -0.45f});
         for (Shape& shape : shapes)

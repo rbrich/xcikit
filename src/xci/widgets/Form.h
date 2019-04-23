@@ -1,5 +1,5 @@
 // Form.h created on 2018-06-22, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,8 +18,7 @@
 
 #include <xci/widgets/Widget.h>
 
-namespace xci {
-namespace widgets {
+namespace xci::widgets {
 
 
 class Form: public Composite {
@@ -41,7 +40,7 @@ public:
     void resize(View& view) override;
 
 private:
-    Vec2f m_margin = {0.02f, 0.02f};
+    ViewportCoords m_margin = {0.02f, 0.02f};
 
     struct ChildHint {
         size_t child_index;
@@ -55,6 +54,6 @@ private:
 };
 
 
-}} // namespace xci::widgets
+} // namespace xci::widgets
 
 #endif // XCI_WIDGETS_FORM_H

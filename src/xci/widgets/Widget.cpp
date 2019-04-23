@@ -1,5 +1,5 @@
 // Widget.cpp created on 2018-04-23, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,8 +18,7 @@
 #include <xci/graphics/Window.h>
 #include <cassert>
 
-namespace xci {
-namespace widgets {
+namespace xci::widgets {
 
 using namespace xci::graphics;
 
@@ -41,7 +40,7 @@ void Composite::add(WidgetPtr child)
 }
 
 
-bool Composite::contains(const Vec2f& point) const
+bool Composite::contains(const ViewportCoords& point) const
 {
     for (auto& child : m_child)
         if (child->contains(point))
@@ -126,7 +125,7 @@ void Composite::scroll_event(View& view, const ScrollEvent& ev)
 }
 
 
-bool Composite::click_focus(View& view, Vec2f pos)
+bool Composite::click_focus(View& view, ViewportCoords pos)
 {
     bool handled = false;
     auto original_focus = std::move(m_focus);
@@ -338,4 +337,4 @@ Bind::~Bind()
 }
 
 
-}} // namespace xci::widgets
+} // namespace xci::widgets

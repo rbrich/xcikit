@@ -1,5 +1,5 @@
 // Page.h created on 2018-03-18, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,6 +28,14 @@ namespace xci::text { class Font; }
 
 namespace xci::text::layout {
 
+using graphics::ScreenPixels;
+using graphics::FramebufferPixels;
+using graphics::FramebufferCoords;
+using graphics::FramebufferSize;
+using graphics::ViewportCoords;
+using graphics::ViewportSize;
+using graphics::ViewportRect;
+
 class Layout;
 class Page;
 
@@ -43,20 +51,20 @@ enum class Alignment {
 
 class Word {
 public:
-    Word(Page& page, const std::string& string);
+    Word(Page& page, std::string string);
 
-    const core::Rect_f& bbox() const { return m_bbox; }
-    float baseline() const { return m_baseline; }
+    const ViewportRect& bbox() const { return m_bbox; }
+    ViewportUnits baseline() const { return m_baseline; }
     Style& style() { return m_style; }
 
-    void draw(graphics::View& target, const core::Vec2f& pos) const;
+    void draw(graphics::View& target, const ViewportCoords& pos) const;
 
 private:
     std::string m_string;
     Style m_style;
-    core::Vec2f m_pos;  // relative to page origin (top-left corner)
-    core::Rect_f m_bbox;
-    float m_baseline = 0;  // relative to bbox top
+    ViewportCoords m_pos;  // relative to page origin (top-left corner)
+    ViewportRect m_bbox;
+    ViewportUnits m_baseline = 0;  // relative to bbox top
 };
 
 
@@ -68,16 +76,16 @@ public:
     bool is_empty() const { return m_words.empty(); }
 
     // Retrieve bounding box of the whole line, relative to page
-    const core::Rect_f& bbox() const;
-    float baseline() const;
+    const ViewportRect& bbox() const;
+    ViewportUnits baseline() const;
 
     // Padding to be added to each side of the bounding box
-    void set_padding(float padding) { m_padding = padding; m_bbox_valid = false; }
+    void set_padding(ViewportUnits padding) { m_padding = padding; m_bbox_valid = false; }
 
 private:
     std::vector<Word*> m_words;
-    float m_padding = 0;
-    mutable core::Rect_f m_bbox;
+    ViewportUnits m_padding = 0;
+    mutable ViewportRect m_bbox;
     mutable bool m_bbox_valid = false;
 };
 
@@ -100,7 +108,7 @@ public:
     // Restyle all words in span.
     // The callback will be run on each word in the span,
     // with reference to the word's current style to be adjusted.
-    void adjust_style(std::function<void(Style& word_style)> fn_adjust);
+    void adjust_style(const std::function<void(Style& word_style)>& fn_adjust);
 
 private:
     std::vector<Line> m_parts;
@@ -115,7 +123,7 @@ public:
     // Target view which will be queried for sizes
     // If not set (nullptr), some generic, probably wrong sizes will be used.
     void set_target(const graphics::View* target) { m_target = target; }
-    core::Vec2f target_framebuffer_ratio() const;
+    const graphics::View& target() const;
 
     // Reset all state
     void clear();
@@ -124,31 +132,34 @@ public:
 
     // Text style
     void set_font(Font* font) { m_style.set_font(font); }
-    void set_font_size(float size) { m_style.set_size(size); }
+    void set_font_size(ViewportUnits size) { m_style.set_size(size); }
     void set_color(const graphics::Color &color) { m_style.set_color(color); }
     void set_style(const Style& style) { m_style = style; }
     const Style& style() const { return m_style; }
 
     // Set page width. This drives the line breaking.
     // Default: 0 (same as INF - no line breaking)
-    void set_width(float width) { m_width = width; }
-    float width() const { return m_width; }
+    void set_width(ViewportUnits width) { m_width = width; }
+    ViewportUnits width() const { return m_width; }
 
     void set_alignment(Alignment alignment) { m_alignment = alignment; }
     Alignment get_alignment() const { return m_alignment; }
 
-    void add_tab_stop(float x);
+    void add_tab_stop(ViewportUnits x);
     void reset_tab_stops() { m_tab_stops.clear(); }
 
     // ------------------------------------------------------------------------
 
     // Pen is a position in page where elements are printed
-    void set_pen(core::Vec2f pen) { m_pen = pen; }
-    void set_pen_offset(core::Vec2f pen_offset) { m_pen_offset = pen_offset; }
-    core::Vec2f pen() const { return m_pen + m_pen_offset * m_style.size(); }
+    void set_pen(ViewportCoords pen) { m_pen = pen; m_pen_offset = {}; }
+    ViewportCoords pen() const { return m_pen + m_pen_offset; }
 
     // Advance pen. The relative coords should be positive, don't move back.
-    void advance_pen(core::Vec2f advance) { m_pen += advance; }
+    void advance_pen(ViewportSize advance) { m_pen += advance; }
+
+    // Offset pen position. Can be used for subscript/superscript etc.
+    void set_pen_offset(ViewportSize pen_offset) { m_pen_offset = pen_offset; }
+    ViewportSize pen_offset() const { return m_pen_offset; }
 
     // Finish current line, apply alignment and move to next one.
     // Does nothing if current line is empty.
@@ -186,20 +197,20 @@ public:
     void foreach_span(const std::function<void(const Span& span)>& cb) const;
 
 private:
-    float space_width();
+    ViewportUnits space_width();
 
 private:
     const graphics::View* m_target = nullptr;
 
     // running state
-    core::Vec2f m_pen;  // pen position
-    core::Vec2f m_pen_offset;
+    ViewportCoords m_pen;  // pen position
+    ViewportSize m_pen_offset;
     Style m_style;  // text style
 
     // page attributes
-    float m_width = 0.f;  // page width
+    ViewportUnits m_width = ViewportUnits{0};  // page width
     Alignment m_alignment = Alignment::Left;  // horizontal alignment
-    std::vector<float> m_tab_stops;
+    std::vector<ViewportUnits> m_tab_stops;
 
     // page content
     std::list<Word> m_words;

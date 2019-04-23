@@ -15,8 +15,7 @@
 
 #include "Theme.h"
 
-namespace xci {
-namespace widgets {
+namespace xci::widgets {
 
 
 #define TRY(stmt)  do { auto res = stmt; if (!res) return false; } while(0)
@@ -92,4 +91,4 @@ graphics::Color Theme::color(ColorId color_id)
 }
 
 
-}} // namespace xci::widgets
+} // namespace xci::widgets

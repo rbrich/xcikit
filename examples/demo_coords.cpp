@@ -27,12 +27,12 @@
 
 using namespace xci::text;
 using namespace xci::graphics;
+using namespace xci::graphics::unit_literals;
 using namespace xci::core;
 
 int main()
 {
-    auto& vfs = Vfs::default_instance();
-    vfs.mount(XCI_SHARE_DIR);
+    Vfs::default_instance().mount(XCI_SHARE_DIR);
 
     Window& window = Window::default_instance();
     window.create({800, 600}, "XCI coords demo");
@@ -46,7 +46,7 @@ int main()
     Text coords_br("(-, -)", font);
     Text coords_tr("(-, -)", font);
     Text coords_bl("(-, -)", font);
-    Text size_scal("View size:         ", font);
+    Text size_scal("Viewport size:         ", font);
     size_scal.set_color(Color(130, 120, 255));
     Text size_screen("Screen size:       ", font);
     size_screen.set_color(Color(110, 130, 255));
@@ -59,56 +59,128 @@ int main()
 
     Shape unit_square(Color::Transparent(), Color(0.7, 0.7, 0.7));
 
+    ViewScale view_scale = ViewScale::ScalingWithAspectCorrection;
+    ViewOrigin view_origin = ViewOrigin::Center;
+    ViewportUnits font_size = 0.05;
+
     window.set_size_callback([&](View& view) {
-        Vec2f vs = view.scalable_size();
-        coords_tl.set_fixed_string(format("({}, {})", -0.5f * vs.x, -0.5f * vs.y));
-        coords_br.set_fixed_string(format("({}, {})", +0.5f * vs.x, +0.5f * vs.y));
-        coords_tr.set_fixed_string(format("({}, {})", +0.5f * vs.x, -0.5f * vs.y));
-        coords_bl.set_fixed_string(format("({}, {})", -0.5f * vs.x, +0.5f * vs.y));
+        auto vs = view.viewport_size();
+        auto ps = view.screen_size();
+        auto fs = view.framebuffer_size();
+        auto vc = view.viewport_center();
+        coords_center.set_size(font_size);
+        coords_tl.set_size(font_size);
+        coords_br.set_size(font_size);
+        coords_tr.set_size(font_size);
+        coords_bl.set_size(font_size);
+        size_scal.set_size(font_size);
+        size_screen.set_size(font_size);
+        size_frame.set_size(font_size);
+        size_font.set_size(font_size);
+        mouse_pos.set_size(font_size);
+
+        coords_tl.set_fixed_string(format("({}, {})", vc.x - 0.5f * vs.x, vc.y - 0.5f * vs.y));
+        coords_br.set_fixed_string(format("({}, {})", vc.x + 0.5f * vs.x, vc.y + 0.5f * vs.y));
+        coords_tr.set_fixed_string(format("({}, {})", vc.x + 0.5f * vs.x, vc.y - 0.5f * vs.y));
+        coords_bl.set_fixed_string(format("({}, {})", vc.x - 0.5f * vs.x, vc.y + 0.5f * vs.y));
         coords_center.resize(view);
         coords_tl.resize(view);
         coords_br.resize(view);
         coords_tr.resize(view);
         coords_bl.resize(view);
 
-        size_scal.set_fixed_string("Scalable size:     " +
+        size_scal.set_fixed_string("Viewport size:     " +
                                    format("{} x {}", vs.x, vs.y) +
-                                   "  (1.0 x 1.0)");
+                                   "  (1 x 1)");
         size_scal.resize(view);
 
-        auto ps = view.screen_size();
-        auto pr = view.screen_ratio();
         size_screen.set_fixed_string("Screen size:       " +
                                      format("{} x {}", ps.x, ps.y) +
-                                     "  (" + format("{} x {}", 1/pr.x, 1/pr.y) + ")");
+                                     "  (" + format("{} x {}", ps.x.value/vs.x.value, ps.y.value/vs.y.value) + ")");
         size_screen.resize(view);
 
-        auto fs = view.framebuffer_size();
-        auto fr = view.framebuffer_ratio();
         size_frame.set_fixed_string("Framebuffer size:  " +
                                     format("{} x {}", fs.x, fs.y) +
-                                    "  (" + format("{} x {}", 1/fr.x, 1/fr.y) + ")");
+                                    "  (" + format("{} x {}", fs.x.value/vs.x.value, fs.y.value/vs.y.value) + ")");
         size_frame.resize(view);
 
         unit_square.clear();
-        unit_square.add_rectangle({-1, -1, 2, 2}, pr.y);
+        if (view_origin == ViewOrigin::Center)
+            unit_square.add_rectangle({-1, -1, 2, 2}, view.size_to_viewport(1_sc));
+        else
+            unit_square.add_rectangle({0, 0, 2, 2}, view.size_to_viewport(1_sc));
     });
 
     window.set_draw_callback([&](View& view) {
-        unit_square.draw(view, {0,0});
-        coords_center.draw(view, {0.0f, 0.0f});
-        Vec2f vs = view.scalable_size();
-        coords_tl.draw(view, {-0.5f * vs.x + 0.1f, -0.5f * vs.y + 0.1f});
-        coords_br.draw(view, {+0.5f * vs.x - 0.4f, +0.5f * vs.y - 0.1f});
-        coords_tr.draw(view, {+0.5f * vs.x - 0.4f, -0.5f * vs.y + 0.1f});
-        coords_bl.draw(view, {-0.5f * vs.x + 0.1f, +0.5f * vs.y - 0.1f});
-        size_scal.draw(view, {-0.4f, -0.5f});
-        size_screen.draw(view, {-0.4f, -0.4f});
-        size_frame.draw(view, {-0.4f, -0.3f});
-        size_font.set_fixed_string("Font size:         " +
-                                   format("{}", font.size()));
-        size_font.resize_draw(view, {-0.4f, -0.2f});
-        mouse_pos.draw(view, {-0.4f, 0.2f});
+        size_font.set_fixed_string(format("Font size:         {}", font.size()));
+
+        if (view_scale == ViewScale::ScalingWithAspectCorrection)
+            unit_square.draw(view, {0,0});
+
+        auto vs = view.viewport_size();
+        auto vc = view.viewport_center();
+
+        if (view_origin == ViewOrigin::Center)
+            coords_center.draw(view, {0.0f, 0.0f});
+
+        if (view_scale == ViewScale::ScalingWithAspectCorrection) {
+            coords_tl.draw(view, {vc.x - 0.45f * vs.x, vc.y - 0.45f * vs.y});
+            coords_br.draw(view, {vc.x + 0.30f * vs.x, vc.y + 0.45f * vs.y});
+            coords_tr.draw(view, {vc.x + 0.30f * vs.x, vc.y - 0.45f * vs.y});
+            coords_bl.draw(view, {vc.x - 0.45f * vs.x, vc.y + 0.45f * vs.y});
+            size_scal.draw(view, {vc.x - 0.4f, vc.y - 0.5f});
+            size_screen.draw(view, {vc.x - 0.4f, vc.y - 0.4f});
+            size_frame.draw(view, {vc.x - 0.4f, vc.y - 0.3f});
+            size_font.resize_draw(view, {vc.x - 0.4f, vc.y - 0.2f});
+            mouse_pos.draw(view, {vc.x - 0.4f, vc.y + 0.2f});
+        } else {
+            auto tl = vc - vs / 2.0_vp;
+            auto br = vc + vs / 2.0_vp;
+            coords_tl.draw(view, {tl.x + 30, tl.y + 30});
+            coords_br.draw(view, {br.x - 150, br.y - 30});
+            coords_tr.draw(view, {br.x - 150, tl.y + 30});
+            coords_bl.draw(view, {tl.x + 30, br.y - 30});
+            size_scal.draw(view, {vc.x - 120, vc.y - 150});
+            size_screen.draw(view, {vc.x - 120, vc.y - 120});
+            size_frame.draw(view, {vc.x - 120, vc.y - 90});
+            size_font.resize_draw(view, {vc.x - 120, vc.y - 60});
+            mouse_pos.draw(view, {vc.x - 120, vc.y + 60});
+        }
+    });
+
+    window.set_key_callback([&](View& view, KeyEvent ev){
+        if (ev.action != Action::Press)
+            return;
+        switch (ev.key) {
+            case Key::S:
+                view_scale = ViewScale::ScalingWithAspectCorrection;
+                font_size = 0.05;
+                window.set_view_mode(view_origin, view_scale);
+                window.get_size_callback()(view);
+                view.refresh();
+                break;
+            case Key::F:
+                view_scale = ViewScale::FixedScreenPixels;
+                font_size = 15.0;
+                window.set_view_mode(view_origin, view_scale);
+                window.get_size_callback()(view);
+                view.refresh();
+                break;
+            case Key::C:
+                view_origin = ViewOrigin::Center;
+                window.set_view_mode(view_origin, view_scale);
+                window.get_size_callback()(view);
+                view.refresh();
+                break;
+            case Key::T:
+                view_origin = ViewOrigin::TopLeft;
+                window.set_view_mode(view_origin, view_scale);
+                window.get_size_callback()(view);
+                view.refresh();
+                break;
+            default:
+                break;
+        }
     });
 
     window.set_mouse_position_callback([&](View& view, const MousePosEvent& ev) {

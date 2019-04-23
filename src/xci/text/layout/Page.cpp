@@ -1,5 +1,5 @@
 // Page.cpp created on 2018-03-18, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,12 +21,14 @@
 #include <xci/core/log.h>
 
 #include <cassert>
+#include <utility>
 
 namespace xci::text { class Style; }
 
 namespace xci::text::layout {
 
 using namespace xci::core::log;
+using namespace xci::graphics::unit_literals;
 using xci::graphics::View;
 using xci::graphics::Color;
 using xci::core::Rect_f;
@@ -34,8 +36,8 @@ using xci::core::Vec2f;
 using xci::core::to_utf32;
 
 
-Word::Word(Page& page, const std::string& string)
-    : m_string(string), m_style(page.style())
+Word::Word(Page& page, std::string string)
+    : m_string(std::move(string)), m_style(page.style())
 {
     auto* font = m_style.font();
     if (!font) {
@@ -43,23 +45,25 @@ Word::Word(Page& page, const std::string& string)
         return;
     }
 
-    auto pxr = page.target_framebuffer_ratio();
-    font->set_size(unsigned(m_style.size() / pxr.y));
-    m_baseline = font->ascender() * pxr.y;
-    const auto font_height = m_baseline - font->descender() * pxr.y;
+    auto size_fb = page.target().size_to_framebuffer(m_style.size());
+    font->set_size(size_fb.as<uint32_t>());
+    m_baseline = page.target().size_to_viewport(FramebufferPixels{font->ascender()});
+    auto descender_vp = page.target().size_to_viewport(FramebufferPixels{font->descender()});
+    const auto font_height = m_baseline - descender_vp;
 
     // Measure word (metrics are affected by string, font, size)
-    core::Vec2f pen;
-    m_bbox = {0, 0 - m_baseline, 0, font_height};
+    ViewportCoords pen;
+    m_bbox = {0, ViewportUnits{0} - m_baseline, 0, font_height};
     for (CodePoint code_point : to_utf32(m_string)) {
         auto glyph = font->get_glyph(code_point);
         if (glyph == nullptr)
             continue;
 
         // Expand text bounds by glyph bounds
-        core::Rect_f rect{pen.x ,
+        auto advance_vp = page.target().size_to_viewport(FramebufferPixels{glyph->advance()});
+        ViewportRect rect{pen.x ,
                           pen.y - m_baseline,
-                          glyph->advance() * pxr.x,
+                          advance_vp,
                           font_height};
 
         m_bbox.extend(rect);
@@ -67,7 +71,7 @@ Word::Word(Page& page, const std::string& string)
     }
 
     // Check line end
-    if (page.width() > 0.0 && page.pen().x + pen.x > page.width()) {
+    if (page.width() > 0.0f && page.pen().x + pen.x > page.width()) {
         page.finish_line();
     }
 
@@ -80,7 +84,7 @@ Word::Word(Page& page, const std::string& string)
 }
 
 
-void Word::draw(graphics::View& target, const core::Vec2f& pos) const
+void Word::draw(graphics::View& target, const ViewportCoords& pos) const
 {
     auto* font = m_style.font();
     if (!font) {
@@ -88,12 +92,13 @@ void Word::draw(graphics::View& target, const core::Vec2f& pos) const
         return;
     }
 
-    auto pxf = target.framebuffer_ratio();
-    font->set_size(unsigned(m_style.size() / pxf.y));
+    auto size_fb = target.size_to_framebuffer(m_style.size());
+    font->set_size(size_fb.as<uint32_t>());
 
+    const auto fb_1px = target.size_to_viewport(1_fb);
     if (target.has_debug_flag(View::Debug::WordBBox)) {
         graphics::Shape bbox(Color(0, 150, 0), Color(50, 250, 50));
-        bbox.add_rectangle(m_bbox, 1 * pxf.x);
+        bbox.add_rectangle(m_bbox, fb_1px);
         bbox.draw(target, pos);
     }
 
@@ -102,21 +107,23 @@ void Word::draw(graphics::View& target, const core::Vec2f& pos) const
     graphics::Sprites sprites(font->get_texture(), m_style.color());
     graphics::Shape bboxes(Color(150, 0, 0), Color(250, 50, 50));
 
-    Vec2f pen;
+    ViewportCoords pen;
     for (CodePoint code_point : to_utf32(m_string)) {
         auto glyph = font->get_glyph(code_point);
         if (glyph == nullptr)
             continue;
 
-        Rect_f rect{pen.x + glyph->bearing().x * pxf.x,
-                    pen.y - glyph->bearing().y * pxf.y,
-                    glyph->size().x * pxf.x,
-                    glyph->size().y * pxf.y};
+        auto bearing = target.size_to_viewport(FramebufferSize{glyph->bearing()});
+        auto glyph_size = target.size_to_viewport(FramebufferSize{glyph->size()});
+        ViewportRect rect{pen.x + bearing.x,
+                          pen.y - bearing.y,
+                          glyph_size.x,
+                          glyph_size.y};
         sprites.add_sprite(rect, glyph->tex_coords());
         if (show_bboxes)
-            bboxes.add_rectangle(rect, 1 * pxf.x);
+            bboxes.add_rectangle(rect, fb_1px);
 
-        pen.x += glyph->advance() * pxf.x;
+        pen.x += target.size_to_viewport(FramebufferPixels{glyph->advance()});
     }
 
     auto p = pos + m_pos;
@@ -125,15 +132,15 @@ void Word::draw(graphics::View& target, const core::Vec2f& pos) const
     sprites.draw(target, p);
 
     if (target.has_debug_flag(View::Debug::WordBasePoint)) {
-        auto pxr = target.screen_ratio();
+        const auto sc_1px = target.size_to_viewport(1_sc);
         graphics::Shape basepoint(Color(150, 0, 255));
-        basepoint.add_rectangle({-pxr.x, -pxr.y, 2 * pxr.x, 2 * pxr.y});
+        basepoint.add_rectangle({-sc_1px, -sc_1px, 2 * sc_1px, 2 * sc_1px});
         basepoint.draw(target, p);
     }
 }
 
 
-const core::Rect_f& Line::bbox() const
+const ViewportRect& Line::bbox() const
 {
     if (m_bbox_valid)
         return m_bbox;
@@ -148,7 +155,7 @@ const core::Rect_f& Line::bbox() const
         }
     }
     // Add padding
-    if (m_padding != 0) {
+    if (m_padding != 0_vp) {
         m_bbox.x -= m_padding;
         m_bbox.y -= m_padding;
         m_bbox.w += 2 * m_padding;
@@ -159,10 +166,10 @@ const core::Rect_f& Line::bbox() const
 }
 
 
-float Line::baseline() const
+ViewportUnits Line::baseline() const
 {
     if (m_words.empty())
-        return 0;
+        return 0_vp;
     return m_words[0]->baseline();
 }
 
@@ -175,7 +182,7 @@ void Span::add_word(Word& word)
 }
 
 
-void Span::adjust_style(std::function<void(Style& word_style)> fn_adjust)
+void Span::adjust_style(const std::function<void(Style& word_style)>& fn_adjust)
 {
     for (Line& part : m_parts) {
         for (Word* word : part.words()) {
@@ -191,12 +198,15 @@ Page::Page()
 }
 
 
-core::Vec2f Page::target_framebuffer_ratio() const
+const graphics::View& Page::target() const
 {
-    if (!m_target)
-        return {1.0f/300, 1.0f/300};
+    if (!m_target) {
+        assert(!"Target not set!");
+        static graphics::View default_view;
+        return default_view;
+    }
 
-    return m_target->framebuffer_ratio();
+    return *m_target;
 }
 
 
@@ -215,7 +225,7 @@ void Page::clear()
 }
 
 
-void Page::add_tab_stop(float x)
+void Page::add_tab_stop(ViewportUnits x)
 {
     m_tab_stops.push_back(x);
     std::sort(m_tab_stops.begin(), m_tab_stops.end());
@@ -243,9 +253,9 @@ void Page::finish_line()
 void Page::advance_line(float lines)
 {
     auto* font = m_style.font();
-    auto pxr = target_framebuffer_ratio();
-    font->set_size(unsigned(m_style.size() / pxr.y));
-    float line_height = font->line_height() * pxr.y;
+    auto font_size = target().size_to_framebuffer(m_style.size());
+    font->set_size(font_size.as<unsigned int>());
+    auto line_height = target().size_to_viewport(FramebufferPixels{font->line_height()});
     m_pen.y += lines * line_height;
 }
 
@@ -260,13 +270,13 @@ void Page::add_tab()
 {
     // apply tab stops
     auto tab_stop = m_tab_stops.begin();
-    float x = 0;
+    ViewportUnits x = 0_vp;
     while (x <= m_pen.x && tab_stop != m_tab_stops.end()) {
         x = *tab_stop++;
     }
     // apply generic tabs
     if (x <= m_pen.x) {
-        float tab_size = 8 * space_width();
+        ViewportUnits tab_size = 8 * space_width();
         while (x <= m_pen.x)
             x += tab_size;
     }
@@ -293,13 +303,13 @@ void Page::add_word(const std::string& string)
 }
 
 
-float Page::space_width()
+ViewportUnits Page::space_width()
 {
     auto* font = m_style.font();
-    auto pxr = target_framebuffer_ratio();
-    font->set_size(unsigned(m_style.size() / pxr.y));
+    auto font_size = target().size_to_framebuffer(m_style.size());
+    font->set_size(font_size.as<unsigned int>());
     auto glyph = font->get_glyph(' ');
-    return glyph->advance() * pxr.x;
+    return target().size_to_viewport(FramebufferPixels{glyph->advance()});
 }
 
 

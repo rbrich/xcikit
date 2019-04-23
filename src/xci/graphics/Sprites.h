@@ -1,5 +1,5 @@
 // Sprites.h created on 2018-03-04, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -48,15 +48,15 @@ public:
 
     // Add new sprite containing whole texture
     // `rect` defines position and size of the sprite
-    void add_sprite(const Rect_f& rect);
+    void add_sprite(const ViewportRect& rect);
 
     // Add new sprite containing a cutoff from the texture
     // `rect` defines position and size of the sprite
-    void add_sprite(const Rect_f& rect, const Rect_u& texrect);
+    void add_sprite(const ViewportRect& rect, const Rect_u& texrect);
 
     // Draw all sprites to `view` at `pos`.
     // Final sprite position is `pos` + sprite's relative position
-    void draw(View& view, const Vec2f& pos);
+    void draw(View& view, const ViewportCoords& pos);
 
 private:
     void init_shader();
@@ -86,15 +86,15 @@ public:
 
     // Add new sprite containing whole texture
     // `rect` defines position and size of the sprite
-    void add_sprite(const Rect_f& rect);
+    void add_sprite(const ViewportRect& rect);
 
     // Add new sprite containing a cutoff from the texture
     // `rect` defines position and size of the sprite
-    void add_sprite(const Rect_f& rect, const Rect_u& texrect);
+    void add_sprite(const ViewportRect& rect, const Rect_u& texrect);
 
     // Draw all sprites to `view` at `pos`.
     // Final sprite position is `pos` + sprite's relative position
-    void draw(View& view, const Vec2f& pos);
+    void draw(View& view, const ViewportCoords& pos);
 
 private:
     void init_shader();

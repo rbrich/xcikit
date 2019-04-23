@@ -84,6 +84,9 @@ Supported compilers:
 - GCC 6.3 (tested with Debian Stretch)
 - AppleClang 9.1
 
+C++ standard set to C++17, but only bits of it are used due to GCC 6.3 compatibility
+requirement.
+
 ### xci::compat
 
 Fills gaps between different systems and compilers.

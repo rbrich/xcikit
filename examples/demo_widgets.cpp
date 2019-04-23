@@ -61,7 +61,7 @@ int main()
         //view.set_debug_flag(View::Debug::WordBasePoint);
         //view.set_debug_flag(View::Debug::PageBBox);
         button_default.resize(view);
-        button_styled.set_outline_thickness(1 * view.screen_ratio().y);
+        button_styled.set_outline_thickness(view.size_to_viewport(1_sc));
         button_styled.resize(view);
         checkbox.resize(view);
     });

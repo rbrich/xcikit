@@ -21,8 +21,7 @@
 #include <memory>
 #include <cstdint>
 
-namespace xci {
-namespace graphics {
+namespace xci::graphics {
 
 using xci::core::Vec2u;
 using xci::core::Rect_u;
@@ -45,6 +44,6 @@ public:
 using TexturePtr = std::shared_ptr<Texture>;
 
 
-}} // namespace xci::graphics
+} // namespace xci::graphics
 
 #endif // XCI_GRAPHICS_TEXTURE_H

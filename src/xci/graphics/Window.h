@@ -102,7 +102,7 @@ struct CharEvent {
 enum class MouseButton { Left = 0, Right = 1, Middle = 2 };
 
 struct MousePosEvent {
-    Vec2f pos;  // scalable coordinates
+    ViewportCoords pos;
 
     MousePosEvent() = delete;
 };
@@ -110,7 +110,7 @@ struct MousePosEvent {
 struct MouseBtnEvent {
     MouseButton button;
     Action action;
-    Vec2f pos;  // scalable coordinates
+    ViewportCoords pos;
 
     MouseBtnEvent() = delete;
 };
@@ -201,6 +201,12 @@ public:
     /// \param periodic     False = one-shot (timeout is cleared after next update).
     ///                     True = periodic (no clear).
     virtual void set_refresh_timeout(std::chrono::microseconds timeout, bool periodic) = 0;
+
+    /// Select kind of viewport units to be used throughout the program
+    /// for all placing and sizes of elements in view.
+    /// \param origin       The position of (0,0) coordinates. Default is Center.
+    /// \param scale        The scale of the units. Default is ScalingWithAspectCorrection.
+    virtual void set_view_mode(ViewOrigin origin, ViewScale scale) = 0;
 
     virtual void set_debug_flags(View::DebugFlags flags) = 0;
 

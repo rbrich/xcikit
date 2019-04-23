@@ -1,5 +1,5 @@
 // TextInput.h created on 2018-06-02, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,8 +20,7 @@
 #include <xci/text/Layout.h>
 #include <xci/graphics/Shape.h>
 
-namespace xci {
-namespace widgets {
+namespace xci::widgets {
 
 
 class TextInput: public Widget, public Clickable {
@@ -31,10 +30,10 @@ public:
     void set_string(const std::string& string);
     const std::string& string() const { return m_text; }
 
-    void set_font_size(float size) { m_layout.set_default_font_size(size); }
-    void set_width(float width) { m_width = width; }
-    void set_padding(float padding) { m_padding = padding; }
-    void set_outline_thickness(float thickness) { m_outline_thickness = thickness; }
+    void set_font_size(ViewportUnits size) { m_layout.set_default_font_size(size); }
+    void set_width(ViewportUnits width) { m_width = width; }
+    void set_padding(ViewportUnits padding) { m_padding = padding; }
+    void set_outline_thickness(ViewportUnits thickness) { m_outline_thickness = thickness; }
 
     void set_decoration_color(const graphics::Color& fill, const graphics::Color& border);
     void set_text_color(const graphics::Color& color) { m_layout.set_default_color(color); }
@@ -55,14 +54,14 @@ private:
     graphics::Shape m_bg_rect;
     graphics::Shape m_cursor_shape;
     size_t m_cursor = 0;
-    float m_width = 0.4f;
-    float m_padding = 0.02f;
-    float m_content_pos = 0;
-    float m_outline_thickness = 0.005f;
+    ViewportUnits m_width = 0.4f;
+    ViewportUnits m_padding = 0.02f;
+    ViewportUnits m_content_pos = 0;
+    ViewportUnits m_outline_thickness = 0.005f;
     ChangeCallback m_change_cb;
 };
 
 
-}} // namespace xci::widgets
+} // namespace xci::widgets
 
 #endif // XCI_WIDGETS_TEXTINPUT_H

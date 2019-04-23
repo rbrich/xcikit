@@ -61,26 +61,26 @@ void GlPrimitives::end_primitive()
 }
 
 
-void GlPrimitives::add_vertex(float x, float y, float u, float v)
+void GlPrimitives::add_vertex(ViewportCoords xy, float u, float v)
 {
     assert(m_format == VertexFormat::V2t2);
     assert(m_open_vertices != -1);
     invalidate_gl_objects();
-    m_vertex_data.push_back(x);
-    m_vertex_data.push_back(y);
+    m_vertex_data.push_back(xy.x.value);
+    m_vertex_data.push_back(xy.y.value);
     m_vertex_data.push_back(u);
     m_vertex_data.push_back(v);
     m_open_vertices++;
 }
 
 
-void GlPrimitives::add_vertex(float x, float y, float u1, float v1, float u2, float v2)
+void GlPrimitives::add_vertex(ViewportCoords xy, float u1, float v1, float u2, float v2)
 {
     assert(m_format == VertexFormat::V2t22);
     assert(m_open_vertices != -1);
     invalidate_gl_objects();
-    m_vertex_data.push_back(x);
-    m_vertex_data.push_back(y);
+    m_vertex_data.push_back(xy.x.value);
+    m_vertex_data.push_back(xy.y.value);
     m_vertex_data.push_back(u1);
     m_vertex_data.push_back(v1);
     m_vertex_data.push_back(u2);
@@ -89,13 +89,13 @@ void GlPrimitives::add_vertex(float x, float y, float u1, float v1, float u2, fl
 }
 
 
-void GlPrimitives::add_vertex(float x, float y, Color c, float u, float v)
+void GlPrimitives::add_vertex(ViewportCoords xy, Color c, float u, float v)
 {
     assert(m_format == VertexFormat::V2c4t2);
     assert(m_open_vertices != -1);
     invalidate_gl_objects();
-    m_vertex_data.push_back(x);
-    m_vertex_data.push_back(y);
+    m_vertex_data.push_back(xy.x.value);
+    m_vertex_data.push_back(xy.y.value);
     m_vertex_data.push_back(c.red_f());
     m_vertex_data.push_back(c.green_f());
     m_vertex_data.push_back(c.blue_f());
@@ -106,13 +106,13 @@ void GlPrimitives::add_vertex(float x, float y, Color c, float u, float v)
 }
 
 
-void GlPrimitives::add_vertex(float x, float y, Color c, float u1, float v1, float u2, float v2)
+void GlPrimitives::add_vertex(ViewportCoords xy, Color c, float u1, float v1, float u2, float v2)
 {
     assert(m_format == VertexFormat::V2c4t22);
     assert(m_open_vertices != -1);
     invalidate_gl_objects();
-    m_vertex_data.push_back(x);
-    m_vertex_data.push_back(y);
+    m_vertex_data.push_back(xy.x.value);
+    m_vertex_data.push_back(xy.y.value);
     m_vertex_data.push_back(c.red_f());
     m_vertex_data.push_back(c.green_f());
     m_vertex_data.push_back(c.blue_f());
@@ -167,27 +167,17 @@ void GlPrimitives::draw(View& view)
     }
 
     // projection matrix
-    GLfloat xs = 2.0f / view.scalable_size().x;
-    GLfloat ys = 2.0f / view.scalable_size().y;
-    GLfloat xt = view.offset().x * xs;
-    GLfloat yt = view.offset().y * ys;
-    const GLfloat mvp[] = {
-            xs,   0.0f, 0.0f, 0.0f,
-            0.0f, -ys,  0.0f, 0.0f,
-            0.0f, 0.0f, 1.0f, 0.0f,
-            xt,   -yt,  0.0f, 1.0f,
-    };
-
+    auto mvp = view.projection_matrix();
     GLint u_mvp = glGetUniformLocation(m_program, "u_mvp");
-    glUniformMatrix4fv(u_mvp, 1, GL_FALSE, (const GLfloat*) mvp);
+    glUniformMatrix4fv(u_mvp, 1, GL_FALSE, mvp.data());
 
     glCullFace(GL_BACK);
     glEnable(GL_CULL_FACE);
 
     if (view.has_crop()) {
         glEnable(GL_SCISSOR_TEST);
-        auto cr = view.scalable_to_framebuffer(view.get_crop());
-        glScissor(cr.x, cr.y, cr.w, cr.h);
+        auto cr = view.rect_to_framebuffer(view.get_crop());
+        glScissor(cr.x.as<int>(), cr.y.as<int>(), cr.w.as<int>(), cr.h.as<int>());
     }
 
     glMultiDrawArrays(GL_TRIANGLE_FAN, m_elem_first.data(), m_elem_size.data(),

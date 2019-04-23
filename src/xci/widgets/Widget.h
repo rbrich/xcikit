@@ -1,5 +1,5 @@
 // Widget.h created on 2018-04-23, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,8 +23,7 @@
 #include <utility>
 #include <vector>
 
-namespace xci {
-namespace widgets {
+namespace xci::widgets {
 
 using graphics::View;
 using graphics::KeyEvent;
@@ -32,7 +31,10 @@ using graphics::CharEvent;
 using graphics::MousePosEvent;
 using graphics::MouseBtnEvent;
 using graphics::ScrollEvent;
-using core::Vec2f;
+using graphics::ViewportUnits;
+using graphics::ViewportCoords;
+using graphics::ViewportSize;
+using graphics::ViewportRect;
 
 
 struct State {
@@ -48,17 +50,17 @@ public:
     Theme& theme() const { return *m_theme; }
 
     // Set position of widget, relative to the parent
-    void set_position(const Vec2f& pos) { m_position = pos; }
-    const Vec2f& position() const { return m_position; }
+    void set_position(const ViewportCoords& pos) { m_position = pos; }
+    const ViewportCoords& position() const { return m_position; }
 
     // Set size of widget.
     // This may not be respected by actual implementation,
     // but it determines space taken in layout.
-    void set_size(const Vec2f& size) { m_size = size; }
-    const Vec2f& size() const { return m_size; }
+    void set_size(const ViewportSize& size) { m_size = size; }
+    const ViewportSize& size() const { return m_size; }
 
-    core::Rect_f aabb() const { return {m_position, m_size}; }
-    float baseline() const { return m_baseline; }
+    ViewportRect aabb() const { return {m_position, m_size}; }
+    ViewportUnits baseline() const { return m_baseline; }
 
     // Accept keyboard focus by cycling with tab key
     void set_tab_focusable(bool enabled) { m_tab_focusable = enabled; }
@@ -72,7 +74,7 @@ public:
     void set_focusable(bool enabled) { m_tab_focusable = enabled; m_click_focusable = enabled; }
 
     // Test if point is contained inside widget area
-    virtual bool contains(const Vec2f& point) const { return aabb().contains(point); }
+    virtual bool contains(const ViewportCoords& point) const { return aabb().contains(point); }
 
     // Events need to be injected into root widget.
     // This can be set up using Bind helper or manually by calling these methods.
@@ -85,7 +87,7 @@ public:
     virtual void mouse_pos_event(View& view, const MousePosEvent& ev) {}
     virtual bool mouse_button_event(View& view, const MouseBtnEvent& ev) { return false; }
     virtual void scroll_event(View& view, const ScrollEvent& ev) {}
-    virtual bool click_focus(View& view, Vec2f pos) { return is_click_focusable() && contains(pos); }
+    virtual bool click_focus(View& view, ViewportCoords pos) { return is_click_focusable() && contains(pos); }
     virtual bool tab_focus(View& view, int& step) { return is_tab_focusable(); }
 
     // Debug dump
@@ -93,13 +95,13 @@ public:
     virtual void partial_dump(std::ostream& stream, const std::string& nl_prefix);
 
 protected:
-    void set_baseline(float baseline) { m_baseline = baseline; }
+    void set_baseline(ViewportUnits baseline) { m_baseline = baseline; }
 
 private:
     Theme* m_theme = &Theme::default_theme();
-    Vec2f m_position;
-    Vec2f m_size;
-    float m_baseline = 0;
+    ViewportCoords m_position;
+    ViewportSize m_size;
+    ViewportUnits m_baseline = 0;
 
     // Flags
     bool m_tab_focusable : 1;
@@ -121,7 +123,7 @@ public:
     WidgetPtr focus() const { return m_focus.lock(); }
 
     // impl Widget
-    bool contains(const Vec2f& point) const override;
+    bool contains(const ViewportCoords& point) const override;
 
     void update(View& view, std::chrono::nanoseconds elapsed) override;
     void resize(View& view) override;
@@ -131,7 +133,7 @@ public:
     void mouse_pos_event(View& view, const MousePosEvent& ev) override;
     bool mouse_button_event(View& view, const MouseBtnEvent& ev) override;
     void scroll_event(View& view, const ScrollEvent& ev) override;
-    bool click_focus(View& view, Vec2f pos) override;
+    bool click_focus(View& view, ViewportCoords pos) override;
     bool tab_focus(View& view, int& step) override;
 
     // Debug dump
@@ -202,6 +204,6 @@ private:
 };
 
 
-}} // namespace xci::widgets
+} // namespace xci::widgets
 
 #endif // XCI_WIDGETS_WIDGET_H

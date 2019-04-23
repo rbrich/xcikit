@@ -1,5 +1,5 @@
 // TextTerminal.h created on 2018-07-19, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,14 +21,16 @@
 #include <xci/graphics/Sprites.h>
 #include <xci/graphics/Shape.h>
 #include <xci/graphics/Primitives.h>
+#include <xci/graphics/View.h>
 #include <xci/core/geometry.h>
 #include <xci/compat/string_view.h>
 #include <vector>
 #include <chrono>
 #include <bitset>
 
-namespace xci {
-namespace widgets {
+namespace xci::widgets {
+
+using graphics::FramebufferPixels;
 
 
 // Gory bits...
@@ -245,8 +247,8 @@ public:
     : m_prim(renderer.create_primitives(graphics::VertexFormat::V2t2,
                                         graphics::PrimitiveType::TriFans)) {}
 
-    void update(View& view, const core::Rect_f& rect);
-    void draw(View& view, const Vec2f& pos);
+    void update(View& view, const ViewportRect& rect);
+    void draw(View& view, const ViewportCoords& pos);
 
 private:
     void init_shader();
@@ -269,10 +271,8 @@ public:
     // Font size, number of cells
 
     /// Set font size and font scaling mode:
-    /// \param size     size in screen pixels or scalable units (depending on `scalable` param)
-    /// \param scalable false: size is in screen pixels, font size stays same when window resizes
-    ///                 true: size in scalable units, number of cells stays (circa) the same when window resizes
-    void set_font_size(float size, bool scalable);
+    /// \param size     size in viewport units
+    void set_font_size(ViewportUnits size);
     core::Vec2u size_in_cells() const { return m_cells; }
 
     // ------------------------------------------------------------------------
@@ -391,9 +391,9 @@ public:
 private:
     static constexpr double c_scroll_end = std::numeric_limits<double>::infinity();
 
-    float m_font_size = 14.0;
-    bool m_font_scalable = false;
-    core::Vec2f m_cell_size;
+    FramebufferPixels m_font_size = 0;
+    ViewportUnits m_font_size_requested {14.0};
+    ViewportSize m_cell_size;
     core::Vec2u m_cells = {80, 25};  // rows, columns
     std::unique_ptr<terminal::Buffer> m_buffer = std::make_unique<terminal::Buffer>();
     size_t m_buffer_offset = 0;  // offset to line in buffer which is first on page
@@ -404,7 +404,7 @@ private:
 };
 
 
-}} // namespace xci::widgets
+} // namespace xci::widgets
 
 
 #endif // XCI_WIDGETS_TEXTTERMINAL_H

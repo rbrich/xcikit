@@ -1,5 +1,5 @@
 // Layout.h created on 2018-03-10, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,8 +28,7 @@
 #include <utility>
 #include <vector>
 
-namespace xci {
-namespace text {
+namespace xci::text {
 namespace layout {
 
 
@@ -43,10 +42,12 @@ public:
     void clear();
 
     // These are not affected by `clear`
-    void set_default_page_width(float width);
+    void set_default_page_width(ViewportUnits width);
     void set_default_font(Font* font);
-    void set_default_font_size(float size);
+    void set_default_font_size(ViewportUnits size);
     void set_default_color(const graphics::Color &color);
+
+    const Style& default_style() const { return m_default_style; }
 
     // ------------------------------------------------------------------------
     // Control elements
@@ -56,25 +57,25 @@ public:
 
     // Set page width. This drives the line breaking.
     // Default: 0 (same as INF - no line breaking)
-    void set_page_width(float width);
+    void set_page_width(ViewportUnits width);
 
     // Set text alignment
     void set_alignment(Alignment alignment);
 
     // Horizontal tab stops. Following Tab elements will add horizontal space
     // up to next tab stop.
-    void add_tab_stop(float x);
+    void add_tab_stop(ViewportUnits x);
     void reset_tab_stops();
 
     // Horizontal/vertical offset (in multiplies of font size)
     // This can be used to create subscript/superscript.
-    void set_offset(const core::Vec2f& offset);
+    void set_offset(const ViewportSize& offset);
     void reset_offset() { set_offset({0.f, 0.f}); }
 
     // Set font and text style.
     // Also affects spacing (which depends on font metrics).
     void set_font(Font* font);
-    void set_font_size(float size);
+    void set_font_size(ViewportUnits size);
     void set_color(const graphics::Color &color);
     void reset_color();
 
@@ -119,19 +120,19 @@ public:
     void typeset(const graphics::View& target);
 
     // Draw whole layout to target
-    void draw(graphics::View& target, const core::Vec2f& pos) const;
+    void draw(graphics::View& target, const ViewportCoords& pos) const;
 
     // ------------------------------------------------------------------------
     // Metrics
 
-    core::Rect_f bbox() const;
+    ViewportRect bbox() const;
 
 private:
     Page m_page;
     std::vector<std::unique_ptr<Element>> m_elements;
 
     Style m_default_style;
-    float m_default_width = 0;
+    ViewportUnits m_default_width = 0;
 };
 
 
@@ -140,6 +141,6 @@ private:
 // Export Layout into xci::text namespace
 using layout::Layout;
 
-}} // namespace xci::text
+} // namespace xci::text
 
 #endif // XCI_TEXT_LAYOUT_H

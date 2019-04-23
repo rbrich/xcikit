@@ -1,5 +1,5 @@
 // Label.cpp created on 2018-06-23, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,8 +15,7 @@
 
 #include "Label.h"
 
-namespace xci {
-namespace widgets {
+namespace xci::widgets {
 
 
 Label::Label()
@@ -45,11 +44,11 @@ void Label::draw(View& view, State state)
 {
     view.push_offset(position());
     auto rect = m_text.layout().bbox();
-    auto pos = Vec2f{m_padding - rect.x,
-                     m_padding - rect.y};
+    auto pos = ViewportCoords{m_padding - rect.x,
+                              m_padding - rect.y};
     m_text.draw(view, pos);
     view.pop_offset();
 }
 
 
-}} // namespace xci::widgets
+} // namespace xci::widgets

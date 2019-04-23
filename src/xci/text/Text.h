@@ -1,5 +1,5 @@
 // Text.h created on 2018-03-02, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,15 +18,17 @@
 
 #include "Layout.h"
 #include <xci/core/geometry.h>
+#include <xci/graphics/View.h>
 
 #include <string>
 
-namespace xci::graphics { class View; }
 namespace xci::graphics { struct Color; }
 namespace xci::text { class Font; }
 
 namespace xci::text {
 
+using graphics::ViewportUnits;
+using graphics::ViewportCoords;
 
 // Text rendering - convenient combination of Layout and Markup
 class Text {
@@ -37,16 +39,16 @@ public:
     void set_string(const std::string& string);
     void set_fixed_string(const std::string& string);
 
-    void set_width(float width) { m_layout.set_default_page_width(width); }
+    void set_width(ViewportUnits width) { m_layout.set_default_page_width(width); }
     void set_font(Font& font) { m_layout.set_default_font(&font); }
-    void set_size(float size) { m_layout.set_default_font_size(size); }
+    void set_size(ViewportUnits size) { m_layout.set_default_font_size(size); }
     void set_color(const graphics::Color& color) { m_layout.set_default_color(color); }
 
     Layout& layout() { return m_layout; }
 
     void resize(graphics::View& view);
-    void draw(graphics::View& view, const core::Vec2f& pos);
-    void resize_draw(graphics::View& view, const core::Vec2f& pos);
+    void draw(graphics::View& view, const ViewportCoords& pos);
+    void resize_draw(graphics::View& view, const ViewportCoords& pos);
 
 private:
     Layout m_layout;

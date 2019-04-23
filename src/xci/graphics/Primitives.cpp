@@ -1,5 +1,5 @@
 // Primitives.cpp created on 2018-08-03, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 namespace xci::graphics {
 
 
-void Primitives::draw(View& view, const core::Vec2f& pos)
+void Primitives::draw(View& view, const ViewportCoords& pos)
 {
     view.push_offset(pos);
     draw(view);

@@ -1,5 +1,5 @@
 // Button.h created on 2018-03-21, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,17 +22,16 @@
 #include <xci/text/Font.h>
 #include <xci/text/Text.h>
 
-namespace xci {
-namespace widgets {
+namespace xci::widgets {
 
 
 class Button: public Widget, public Clickable {
 public:
     explicit Button(const std::string &string);
 
-    void set_font_size(float size) { m_layout.set_default_font_size(size); }
-    void set_padding(float padding) { m_padding = padding; }
-    void set_outline_thickness(float thickness) { m_outline_thickness = thickness; }
+    void set_font_size(ViewportUnits size) { m_layout.set_default_font_size(size); }
+    void set_padding(ViewportUnits padding) { m_padding = padding; }
+    void set_outline_thickness(ViewportUnits thickness) { m_outline_thickness = thickness; }
 
     void set_decoration_color(const graphics::Color& fill, const graphics::Color& border);
     void set_text_color(const graphics::Color& color);
@@ -46,11 +45,11 @@ public:
 private:
     graphics::Shape m_bg_rect;
     text::Layout m_layout;
-    float m_padding = 0.02f;
-    float m_outline_thickness = 0.005f;
+    ViewportUnits m_padding = 0.02f;
+    ViewportUnits m_outline_thickness = 0.005f;
 };
 
 
-}} // namespace xci::widgets
+} // namespace xci::widgets
 
 #endif // XCI_WIDGETS_BUTTON_H

@@ -109,13 +109,13 @@ int main()
 
     // Make the terminal fullscreen
     window.set_size_callback([&](View& v) {
-        auto s = v.scalable_size();
-        terminal.set_position({-s * 0.5f});
-        terminal.set_size(s);
+        auto vs = v.viewport_size();
+        terminal.set_size(vs);
     });
 
     Bind bind(window, terminal);
     window.set_refresh_mode(RefreshMode::OnDemand);
+    window.set_view_mode(ViewOrigin::TopLeft, ViewScale::FixedScreenPixels);
     window.display();
 
     dispatch.terminate();

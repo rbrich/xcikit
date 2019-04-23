@@ -1,5 +1,5 @@
 // Button.cpp created on 2018-03-21, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,8 +16,7 @@
 #include "Button.h"
 #include <xci/text/Markup.h>
 
-namespace xci {
-namespace widgets {
+namespace xci::widgets {
 
 using namespace xci::graphics;
 using namespace xci::text;
@@ -72,7 +71,7 @@ void Button::draw(View& view, State state)
         m_bg_rect.set_outline_color(theme().color(ColorId::Default));
     }
     m_bg_rect.draw(view, position());
-    m_layout.draw(view, position() + Vec2f{m_padding - rect.x, m_padding - rect.y});
+    m_layout.draw(view, position() + ViewportCoords{m_padding - rect.x, m_padding - rect.y});
 }
 
 
@@ -105,4 +104,4 @@ bool Button::mouse_button_event(View& view, const MouseBtnEvent& ev)
 }
 
 
-}} // namespace xci::widgets
+} // namespace xci::widgets

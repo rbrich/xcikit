@@ -38,7 +38,7 @@ public:
 
 class SetPageWidth: public Element {
 public:
-    explicit SetPageWidth(float width) : m_width(width) {}
+    explicit SetPageWidth(ViewportUnits width) : m_width(width) {}
     void apply(Page& page) override {
         page.set_width(m_width);
     }
@@ -62,7 +62,7 @@ private:
 
 class AddTabStop: public Element {
 public:
-    explicit AddTabStop(float tab_stop) : m_tab_stop(tab_stop) {}
+    explicit AddTabStop(ViewportUnits tab_stop) : m_tab_stop(tab_stop) {}
     void apply(Page& page) override {
         page.add_tab_stop(m_tab_stop);
     }
@@ -82,13 +82,13 @@ public:
 
 class SetOffset: public Element {
 public:
-    explicit SetOffset(const core::Vec2f offset) : m_offset(offset) {}
+    explicit SetOffset(const ViewportSize& offset) : m_offset(offset) {}
     void apply(Page& page) override {
         page.set_pen_offset(m_offset);
     }
 
 private:
-    const core::Vec2f m_offset;
+    const ViewportSize m_offset;
 };
 
 
@@ -106,7 +106,7 @@ private:
 
 class SetFontSize: public Element {
 public:
-    explicit SetFontSize(float size) : m_size(size) {}
+    explicit SetFontSize(ViewportUnits size) : m_size(size) {}
     void apply(Page& page) override {
         page.set_font_size(m_size);
     }

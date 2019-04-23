@@ -20,11 +20,11 @@ struct Vec2 {
     explicit Vec2(const TVec& other) : x(other.x), y(other.y) {}
 
     T length() const {
-        return std::hypot(x, y);
+        return std::hypot(float(x), float(y));
     }
 
     const Vec2<T> norm() const {
-        float l = length();
+        auto l = length();
         return { x / l, y / l };
     }
 
@@ -80,8 +80,8 @@ Vec2<T> operator *(const Vec2<T>& lhs, T rhs) {
     return Vec2<T>(lhs.x * rhs, lhs.y * rhs);
 }
 
-template <typename T>
-Vec2<T> operator *(T lhs, const Vec2<T>& rhs) {
+template <typename T, typename U>
+Vec2<T> operator *(U lhs, const Vec2<T>& rhs) {
     return Vec2<T>(lhs * rhs.x, lhs * rhs.y);
 }
 

@@ -110,12 +110,11 @@ int main()
         text.resize_draw(view, {-0.17f, -0.3f});
 
         auto& tex = font.get_texture();
+        auto tex_size = view.size_to_viewport(FramebufferSize{tex->size()});
         Sprites font_texture(tex);
-        Rect_f rect = {0, 0,
-                       tex->size().x * view.framebuffer_ratio().x,
-                       tex->size().y * view.framebuffer_ratio().y};
+        ViewportRect rect = {0, 0, tex_size.x, tex_size.y};
         font_texture.add_sprite(rect);
-        font_texture.draw(view, {-0.5f * view.scalable_size().x + 0.01f,
+        font_texture.draw(view, {-0.5f * view.viewport_size().x + 0.01f,
                                  -0.5f * rect.h});
     });
 

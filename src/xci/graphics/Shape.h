@@ -1,5 +1,5 @@
 // Shape.h created on 2018-04-04, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,12 +19,10 @@
 #include "Primitives.h"
 #include "Renderer.h"
 #include <xci/graphics/Color.h>
+#include <xci/graphics/View.h>
 #include <xci/core/geometry.h>
 
-namespace xci::graphics { class View; }
-
-namespace xci {
-namespace graphics {
+namespace xci::graphics {
 
 using xci::core::Rect_f;
 using xci::core::Vec2f;
@@ -49,40 +47,41 @@ public:
 
     // Add a slice of infinite line
     // `a`, `b`            - two points to define the line
-    // `slice`             - rectangular region in which is the line visible
+    // `slice`             - rectangular region in which the line is visible
     // `thickness`         - line width, measured perpendicularly from a-b
     //
     //   ---- a --- b ----
     //                    > thickness
     //   -----------------
-    void add_line_slice(const Rect_f& slice, const Vec2f& a, const Vec2f& b,
-                        float thickness);
+    void add_line_slice(const ViewportRect& slice,
+                        const ViewportCoords& a, const ViewportCoords& b,
+                        ViewportUnits thickness);
 
     // Add new rectangle.
     // `rect`              - rectangle position and size
     // `outline_thickness` - the outline actually goes from edge to inside
-    //                       this parameter defines how far (in display units)
-    void add_rectangle(const Rect_f& rect,
-                       float outline_thickness = 0);
-    void add_rectangle_slice(const Rect_f& slice, const Rect_f& rect,
-                             float outline_thickness = 0);
+    //                       this parameter defines how far (in viewport units)
+    void add_rectangle(const ViewportRect& rect,
+                       ViewportUnits outline_thickness = 0);
+    void add_rectangle_slice(const ViewportRect& slice, const ViewportRect& rect,
+                             ViewportUnits outline_thickness = 0);
 
     // Add new ellipse.
     // `rect`              - ellipse position and size
     // `outline_thickness` - the outline actually goes from edge to inside
     //                       this parameter defines how far (in display units)
-    void add_ellipse(const Rect_f& rect,
-                     float outline_thickness = 0);
-    void add_ellipse_slice(const Rect_f& slice, const Rect_f& ellipse,
-                           float outline_thickness = 0);
+    void add_ellipse(const ViewportRect& rect,
+                     ViewportUnits outline_thickness = 0);
+    void add_ellipse_slice(const ViewportRect& slice, const ViewportRect& ellipse,
+                           ViewportUnits outline_thickness = 0);
 
     // Add new rounded rectangle.
     // `rect`              - position and size
     // `radius`            - corner radius
     // `outline_thickness` - the outline actually goes from edge to inside
     //                       this parameter defines how far (in display units)
-    void add_rounded_rectangle(const Rect_f& rect, float radius,
-                               float outline_thickness = 0);
+    void add_rounded_rectangle(const ViewportRect& rect, ViewportUnits radius,
+                               ViewportUnits outline_thickness = 0);
 
     // Reserve memory for a number of `lines`, `rectangles`, `ellipses`.
     void reserve(size_t lines, size_t rectangles, size_t ellipses);
@@ -92,7 +91,7 @@ public:
 
     // Draw all shapes to `view` at `pos`.
     // Final shape position is `pos` + shapes's relative position
-    void draw(View& view, const Vec2f& pos);
+    void draw(View& view, const ViewportCoords& pos);
 
 private:
     void init_line_shader();
@@ -115,6 +114,6 @@ private:
 };
 
 
-}} // namespace xci::graphics
+} // namespace xci::graphics
 
 #endif //XCI_GRAPHICS_SHAPES_H

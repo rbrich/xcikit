@@ -1,5 +1,5 @@
 // Primitives.h created on 2018-04-08, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,14 +16,13 @@
 #ifndef XCI_GRAPHICS_PRIMITIVES_H
 #define XCI_GRAPHICS_PRIMITIVES_H
 
+#include <xci/graphics/View.h>
 #include <xci/graphics/Color.h>
 #include <xci/graphics/Shader.h>
 #include <xci/graphics/Texture.h>
 #include <xci/core/geometry.h>
 
 namespace xci::graphics {
-
-class View;
 
 
 enum class VertexFormat {
@@ -49,10 +48,10 @@ public:
 
     virtual void begin_primitive() = 0;
     virtual void end_primitive() = 0;
-    virtual void add_vertex(float x, float y, float u, float v) = 0;
-    virtual void add_vertex(float x, float y, float u1, float v1, float u2, float v2) = 0;
-    virtual void add_vertex(float x, float y, Color c, float u, float v) = 0;
-    virtual void add_vertex(float x, float y, Color c, float u1, float v1, float u2, float v2) = 0;
+    virtual void add_vertex(ViewportCoords xy, float u, float v) = 0;
+    virtual void add_vertex(ViewportCoords xy, float u1, float v1, float u2, float v2) = 0;
+    virtual void add_vertex(ViewportCoords xy, Color c, float u, float v) = 0;
+    virtual void add_vertex(ViewportCoords xy, Color c, float u1, float v1, float u2, float v2) = 0;
     virtual void clear() = 0;
     virtual bool empty() const = 0;
 
@@ -62,7 +61,7 @@ public:
     virtual void set_blend(BlendFunc func) = 0;
 
     virtual void draw(View& view) = 0;
-    void draw(View& view, const core::Vec2f& pos);
+    void draw(View& view, const ViewportCoords& pos);
 };
 
 

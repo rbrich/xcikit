@@ -1,5 +1,5 @@
 // TextTerminal.cpp created on 2018-07-19, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,10 +25,10 @@ INCBIN(cursor_vert, XCI_SHARE_DIR "/shaders/cursor.vert");
 INCBIN(cursor_frag, XCI_SHARE_DIR "/shaders/cursor.frag");
 #endif
 
-namespace xci {
-namespace widgets {
+namespace xci::widgets {
 
 using namespace graphics;
+using namespace graphics::unit_literals;
 using namespace core;
 using namespace core::log;
 using namespace std::chrono;
@@ -484,28 +484,29 @@ void terminal::Buffer::remove_lines(size_t start, size_t count)
 // ------------------------------------------------------------------------
 
 
-void terminal::Cursor::update(View& view, const Rect_f& rect)
+void terminal::Cursor::update(View& view, const ViewportRect& rect)
 {
-    float x1 = rect.x;
-    float y1 = rect.y;
-    float x2 = rect.x + rect.w;
-    float y2 = rect.y + rect.h;
-    float tx = 2.0f * view.screen_ratio().x / rect.w;
-    float ty = 2.0f * view.screen_ratio().y / rect.h;
-    float ix = 1.0f + tx / (1-tx);
-    float iy = 1.0f + ty / (1-ty);
+    auto x1 = rect.x;
+    auto y1 = rect.y;
+    auto x2 = rect.x + rect.w;
+    auto y2 = rect.y + rect.h;
+    auto outline_thickness = view.size_to_viewport(1.0_sc);
+    float tx = 2.0f * outline_thickness.value / rect.w.value;
+    float ty = 2.0f * outline_thickness.value / rect.h.value;
+    float ix = 1.0f + tx / (1.0f - tx);
+    float iy = 1.0f + ty / (1.0f - ty);
 
     m_prim->clear();
     m_prim->begin_primitive();
-    m_prim->add_vertex(x1, y1, -ix, -iy);
-    m_prim->add_vertex(x1, y2, -ix, +iy);
-    m_prim->add_vertex(x2, y2, +ix, +iy);
-    m_prim->add_vertex(x2, y1, +ix, -iy);
+    m_prim->add_vertex({x1, y1}, -ix, -iy);
+    m_prim->add_vertex({x1, y2}, -ix, +iy);
+    m_prim->add_vertex({x2, y2}, +ix, +iy);
+    m_prim->add_vertex({x2, y1}, +ix, -iy);
     m_prim->end_primitive();
 }
 
 
-void terminal::Cursor::draw(View& view, const Vec2f& pos)
+void terminal::Cursor::draw(View& view, const ViewportCoords& pos)
 {
     // pure white
     constexpr Color fill_color(0.7, 0.7, 0.7);
@@ -554,10 +555,10 @@ void terminal::Cursor::init_shader()
 // ------------------------------------------------------------------------
 
 
-void TextTerminal::set_font_size(float size, bool scalable)
+void TextTerminal::set_font_size(ViewportUnits size)
 {
-    m_font_size = size;
-    m_font_scalable = scalable;
+    m_font_size_requested = size;
+    m_font_size = 0;
 }
 
 
@@ -770,26 +771,19 @@ void TextTerminal::update(View& view, std::chrono::nanoseconds elapsed)
 void TextTerminal::resize(View& view)
 {
     auto& font = theme().font();
-    auto pxf = view.framebuffer_ratio();
-    if (m_font_scalable)
-        font.set_size(unsigned(m_font_size / pxf.y));
-    else
-        font.set_size(unsigned(m_font_size * view.framebuffer_to_screen_ratio().y));
-    m_cell_size = {font.max_advance() * pxf.x,
-                   font.line_height() * pxf.y};
-    m_cells = {unsigned(size().x / m_cell_size.x),
-               unsigned(size().y / m_cell_size.y)};
+    m_font_size = view.size_to_framebuffer(m_font_size_requested);
+    font.set_size(m_font_size.as<unsigned>());
+    m_cell_size = view.size_to_viewport(FramebufferSize{
+        font.max_advance(), font.line_height()});
+    m_cells = {(size().x / m_cell_size.x).as<unsigned>(),
+               (size().y / m_cell_size.y).as<unsigned>()};
 }
 
 
 void TextTerminal::draw(View& view, State state)
 {
     auto& font = theme().font();
-    auto pxf = view.framebuffer_ratio();
-    if (m_font_scalable)
-        font.set_size(unsigned(m_font_size / pxf.y));
-    else
-        font.set_size(unsigned(m_font_size * view.framebuffer_to_screen_ratio().y));
+    font.set_size(m_font_size.as<unsigned>());
 
     graphics::ColoredSprites sprites(font.get_texture(), Color(7));
     graphics::Shape boxes(Color(0));
@@ -798,7 +792,7 @@ void TextTerminal::draw(View& view, State state)
     sprites.reserve(expected_num_cells);
     boxes.reserve(0, expected_num_cells, 0);
 
-    Vec2f pen;
+    ViewportCoords pen;
     size_t buffer_first, buffer_last;
     if (m_scroll_offset == c_scroll_end) {
         buffer_first = m_buffer_offset;
@@ -823,13 +817,13 @@ void TextTerminal::draw(View& view, State state)
         class LineRenderer: public terminal::Renderer {
         public:
             // capture by ref
-            LineRenderer(Vec2f& pen, size_t& column,
+            LineRenderer(ViewportCoords& pen, size_t& column,
                          graphics::ColoredSprites& sprites, graphics::Shape& boxes,
                          text::Font& font, float& ascender,
-                         const core::Vec2f& cell_size, const Vec2f& pxf)
+                         const ViewportSize& cell_size, View& view)
             : pen(pen), column(column), sprites(sprites), boxes(boxes),
               font(font), ascender(ascender),
-              cell_size(cell_size), pxf(pxf)
+              cell_size(cell_size), view(view)
             {}
 
             void set_font_style(FontStyle font_style) override {
@@ -856,11 +850,14 @@ void TextTerminal::draw(View& view, State state)
                 if (glyph == nullptr)
                     glyph = font.get_glyph(' ');
 
+                auto bearing = view.size_to_viewport(FramebufferSize{glyph->bearing()});
+                auto ascender_vp = view.size_to_viewport(FramebufferPixels{ascender});
+                auto glyph_size = view.size_to_viewport(FramebufferSize{glyph->size()});
                 sprites.add_sprite({
-                        pen.x + glyph->bearing().x * pxf.x,
-                        pen.y + (ascender - glyph->bearing().y) * pxf.y,
-                        glyph->size().x * pxf.x,
-                        glyph->size().y * pxf.y
+                        pen.x + bearing.x,
+                        pen.y + (ascender_vp - bearing.y),
+                        glyph_size.x,
+                        glyph_size.y
                     }, glyph->tex_coords());
 
                 boxes.add_rectangle({pen, cell_size});
@@ -870,29 +867,32 @@ void TextTerminal::draw(View& view, State state)
             }
 
         private:
-            Vec2f& pen;
+            ViewportCoords& pen;
             size_t& column;
             graphics::ColoredSprites& sprites;
             graphics::Shape& boxes;
             text::Font& font;
             float& ascender;
-            const core::Vec2f& cell_size;
-            const core::Vec2f& pxf;
+            const ViewportSize& cell_size;
+            View& view;
         } line_renderer(pen, column, sprites, boxes, font, ascender,
-                        m_cell_size, pxf);
+                        m_cell_size, view);
 
         line.render(line_renderer);
 
         // draw rest of blanked line
         if (line.is_blanked()) {
-            Rect_f rect { pen.x, pen.y, m_cell_size.x * (m_cells.x - column), m_cell_size.y };
+            ViewportRect rect {
+                pen.x, pen.y,
+                m_cell_size.x * (m_cells.x - column), m_cell_size.y };
             boxes.add_rectangle(rect);
         }
 
         // draw rest of blanked page
         if (line.is_page_blanked()) {
-            Rect_f rect { 0, pen.y + m_cell_size.y,
-                          m_cell_size.x * m_cells.x, m_cell_size.y * (m_cells.y - row - 1) };
+            ViewportRect rect {
+                0, pen.y + m_cell_size.y,
+                m_cell_size.x * m_cells.x, m_cell_size.y * (m_cells.y - row - 1) };
             boxes.add_rectangle(rect);
         }
 
@@ -921,4 +921,4 @@ void TextTerminal::draw(View& view, State state)
 }
 
 
-}} // namespace xci::widgets
+} // namespace xci::widgets
