@@ -32,12 +32,12 @@ using namespace xci::core;
 
 class MousePosInfo: public Widget {
 public:
-    MousePosInfo() : m_text("Mouse: ", Theme::default_theme().font()) {
+    MousePosInfo() : m_text(Theme::default_theme().font(), "Mouse: ") {
         m_text.set_color(Color(255, 150, 50));
     }
 
     void draw(View& view, State state) override {
-        m_text.resize_draw(view, position());
+        m_text.draw(view, position());
     }
 
     void mouse_pos_event(View& view, const MousePosEvent& ev) override {

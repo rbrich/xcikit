@@ -33,7 +33,7 @@ using namespace xci::core;
 
 class MousePosInfo: public Widget {
 public:
-    MousePosInfo() : m_text("Mouse: ", Theme::default_theme().font()) {
+    MousePosInfo() : m_text(Theme::default_theme().font(), "Mouse: ") {
         m_text.set_color(Color(255, 150, 50));
     }
 

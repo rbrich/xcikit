@@ -51,19 +51,19 @@ int main()
         return EXIT_FAILURE;
 
     Text text;
-    text.set_string(sample_text);
+    text.set_markup_string(sample_text);
     text.set_width(1.33);
     text.set_font(font);
-    text.set_size(0.07);
+    text.set_font_size(0.07);
     text.set_color(Color::White());
 
-    Text help_text("[c] show character quads\n\n"
-                   "[o] show word base points\n\n"
-                   "[w] show word boxes\n\n"
-                   "[u] show line base lines\n\n"
-                   "[l] show line boxes\n\n"
-                   "[s] show span boxes\n\n"
-                   "[p] show page boxes", font);
+    Text help_text(font, "[c] show character quads\n"
+                         "[o] show word base points\n"
+                         "[w] show word boxes\n"
+                         "[u] show line base lines\n"
+                         "[l] show line boxes\n"
+                         "[s] show span boxes\n"
+                         "[p] show page boxes\n");
     help_text.set_color(Color(50, 200, 100));
 
     View::DebugFlags debug_flags = 0;
@@ -106,8 +106,8 @@ int main()
     });
 
     window.set_draw_callback([&](View& view) {
-        help_text.resize_draw(view, {-0.17f, -0.9f});
-        text.resize_draw(view, {-0.17f, -0.3f});
+        help_text.draw(view, {-0.17f, -0.9f});
+        text.draw(view, {-0.17f, -0.3f});
 
         auto& tex = font.get_texture();
         auto tex_size = view.size_to_viewport(FramebufferSize{tex->size()});

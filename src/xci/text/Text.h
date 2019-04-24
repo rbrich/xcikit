@@ -33,25 +33,32 @@ using graphics::ViewportCoords;
 // Text rendering - convenient combination of Layout and Markup
 class Text {
 public:
+    enum class Format {
+        None,   // interpret nothing (\n is char 0x10 in the font)
+        Plain,  // interpret just C escapes (\n, \t)
+        Markup, // interpret control sequences etc. (see Markup.h)
+    };
+
     Text() = default;
-    Text(const std::string &string, Font& font);
+    Text(Font& font, const std::string &string, Format format = Format::Plain);
 
-    void set_string(const std::string& string);
-    void set_fixed_string(const std::string& string);
+    void set_string(const std::string& string, Format format = Format::Plain);
+    void set_fixed_string(const std::string& string) { set_string(string, Format::None); }
+    void set_markup_string(const std::string& string) { set_string(string, Format::Markup); }
 
-    void set_width(ViewportUnits width) { m_layout.set_default_page_width(width); }
-    void set_font(Font& font) { m_layout.set_default_font(&font); }
-    void set_size(ViewportUnits size) { m_layout.set_default_font_size(size); }
-    void set_color(const graphics::Color& color) { m_layout.set_default_color(color); }
+    void set_width(ViewportUnits width);
+    void set_font(Font& font);
+    void set_font_size(ViewportUnits size);
+    void set_color(const graphics::Color& color);
 
     Layout& layout() { return m_layout; }
 
     void resize(graphics::View& view);
     void draw(graphics::View& view, const ViewportCoords& pos);
-    void resize_draw(graphics::View& view, const ViewportCoords& pos);
 
 private:
     Layout m_layout;
+    bool m_need_typeset = false;
 };
 
 

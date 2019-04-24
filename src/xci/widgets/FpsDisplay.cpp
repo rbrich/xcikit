@@ -32,6 +32,7 @@ INCBIN(fps_frag, XCI_SHARE_DIR "/shaders/fps.frag");
 namespace xci::widgets {
 
 using namespace xci::graphics;
+using namespace xci::graphics::unit_literals;
 using namespace xci::core;
 using namespace xci::core::log;
 using xci::core::format;
@@ -41,7 +42,10 @@ using namespace std::chrono_literals;
 FpsDisplay::FpsDisplay()
         : m_quad(Renderer::default_instance().create_primitives(VertexFormat::V2t2, PrimitiveType::TriFans)),
           m_texture(Renderer::default_instance().create_texture())
-{}
+{
+    // default size in "scalable" units
+    set_size({0.50f, 0.10f});
+}
 
 
 void FpsDisplay::update(View& view, std::chrono::nanoseconds elapsed)
@@ -61,10 +65,10 @@ void FpsDisplay::update(View& view, std::chrono::nanoseconds elapsed)
 
 void FpsDisplay::resize(View& view)
 {
-    float x1 = 0;
-    float y1 = 0;
-    float x2 = 0.50f;
-    float y2 = 0.10f;
+    auto x1 = 0_vp;
+    auto y1 = 0_vp;
+    auto x2 = size().x;
+    auto y2 = size().y;
     m_quad->clear();
     m_quad->begin_primitive();
     m_quad->add_vertex({x1, y1}, 0, 0);
@@ -74,6 +78,7 @@ void FpsDisplay::resize(View& view)
     m_quad->end_primitive();
     m_texture->create({(unsigned)m_fps.resolution(), 1});
     m_text.set_font(theme().font());
+    m_text.set_font_size(size().y / 2);
 }
 
 
@@ -98,8 +103,10 @@ void FpsDisplay::draw(View& view, State state)
     m_text.set_string(format("{}fps ({:.2f}ms)",
                              m_fps.frame_rate(),
                              m_fps.avg_frame_time() * 1000));
-    m_text.resize(view);
-    m_text.draw(view, position() + ViewportCoords{0.02, 0.07f});
+
+    auto font_size = size().y / 2;
+    auto offset = size().y / 5;
+    m_text.draw(view, position() + ViewportCoords{offset, offset + font_size});
 }
 
 

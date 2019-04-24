@@ -18,52 +18,109 @@
 
 #include <xci/graphics/Sprites.h>
 
-namespace xci {
-namespace text {
+namespace xci::text {
 
 using namespace graphics;
 using namespace core;
 
 
-Text::Text(const std::string &string, Font& font)
+Text::Text(Font& font, const std::string &string, Format format)
 {
     m_layout.set_default_font(&font);
-    set_string(string);
+    set_string(string, format);
 }
 
 
-void Text::set_string(const std::string& string)
+static void parse_plain(Layout& layout, const std::string& s)
 {
-    m_layout.clear();
-    Markup markup(m_layout);
-    markup.parse(string);
+    auto it = s.begin();
+    auto word = s.end();
+    auto finish_word = [&] {
+        if (word == s.end())
+            return;
+        layout.add_word(std::string{word, it});
+        word = s.end();
+    };
+    while (it != s.end()) {
+        switch (*it) {
+            case '\t':
+                finish_word();
+                layout.add_tab();
+                break;
+            case '\n':
+                finish_word();
+                layout.finish_line();
+                break;
+            default:
+                if (word == s.end())
+                    word = it;
+                break;
+        }
+        ++it;
+    }
+    finish_word();
 }
 
 
-void Text::set_fixed_string(const std::string& string)
+void Text::set_string(const std::string& string, Format format)
 {
     m_layout.clear();
-    m_layout.add_word(string);
+    switch (format) {
+        case Format::None:
+            m_layout.add_word(string);
+            break;
+        case Format::Plain:
+            parse_plain(m_layout, string);
+            break;
+        case Format::Markup:
+            Markup(m_layout, string);
+            break;
+    }
+    m_need_typeset = true;
+}
+
+
+void Text::set_width(ViewportUnits width)
+{
+    m_layout.set_default_page_width(width);
+    m_need_typeset = true;
+}
+
+
+void Text::set_font(Font& font)
+{
+    m_layout.set_default_font(&font);
+    m_need_typeset = true;
+}
+
+
+void Text::set_font_size(ViewportUnits size)
+{
+    m_layout.set_default_font_size(size);
+    m_need_typeset = true;
+}
+
+
+void Text::set_color(const graphics::Color& color)
+{
+    m_layout.set_default_color(color);
+    m_need_typeset = true;
 }
 
 
 void Text::resize(graphics::View& view)
 {
     m_layout.typeset(view);
+    m_need_typeset = false;
 }
 
 
 void Text::draw(graphics::View& view, const ViewportCoords& pos)
 {
+    if (m_need_typeset)
+        m_layout.typeset(view);
     m_layout.draw(view, pos);
 }
 
 
-void Text::resize_draw(View& view, const ViewportCoords& pos)
-{
-    m_layout.typeset(view);
-    m_layout.draw(view, pos);
-}
-
-
-}} // namespace xci::text
+} // namespace xci::text

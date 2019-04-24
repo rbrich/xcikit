@@ -54,12 +54,12 @@ int main()
     Text text;
     text.set_string(sample_text);
     text.set_font(font);
-    text.set_size(0.08);
+    text.set_font_size(0.08);
     text.set_color(Color::White());
 
     window.set_draw_callback([&](View& view) {
         auto vs = view.viewport_size();
-        text.resize_draw(view, {0.5f * vs.x - 1.5f, -0.5f});
+        text.draw(view, {0.5f * vs.x - 1.5f, -0.5f});
 
         auto& tex = font.get_texture();
         auto tex_size = view.size_to_viewport(FramebufferSize{tex->size()});

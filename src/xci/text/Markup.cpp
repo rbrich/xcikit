@@ -22,12 +22,12 @@
 
 #include <iostream>
 
-namespace xci {
-namespace text {
+namespace xci::text {
 
 using namespace core::log;
 
 namespace parser {
+
 using namespace tao::pegtl;
 
 // ----------------------------------------------------------------------------
@@ -170,4 +170,4 @@ bool Markup::parse(const std::string &s)
 }
 
 
-}} // namespace xci::text
+} // namespace xci::text

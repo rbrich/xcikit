@@ -41,21 +41,25 @@ int main()
     if (!font.add_face("fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
         return EXIT_FAILURE;
 
-    Text coords_center("(0, 0)", font);
-    Text coords_tl("(-, -)", font);
-    Text coords_br("(-, -)", font);
-    Text coords_tr("(-, -)", font);
-    Text coords_bl("(-, -)", font);
-    Text size_scal("Viewport size:         ", font);
+    Text coords_center(font, "(0, 0)");
+    Text coords_tl(font, "(-, -)");
+    Text coords_br(font, "(-, -)");
+    Text coords_tr(font, "(-, -)");
+    Text coords_bl(font, "(-, -)");
+    Text size_scal(font, "Viewport size:         ");
     size_scal.set_color(Color(130, 120, 255));
-    Text size_screen("Screen size:       ", font);
+    Text size_screen(font, "Screen size:       ");
     size_screen.set_color(Color(110, 130, 255));
-    Text size_frame("Framebuffer size:  ", font);
+    Text size_frame(font, "Framebuffer size:  ");
     size_frame.set_color(Color(90, 140, 255));
-    Text size_font("Font size:         ", font);
+    Text size_font(font, "Font size:         ");
     size_font.set_color(Color(70, 150, 255));
-    Text mouse_pos("Mouse position:    ", font);
+    Text mouse_pos(font, "Mouse position:    ");
     mouse_pos.set_color(Color(255, 150, 50));
+
+    Text help_text(font, "Units:     \tOrigin:\n"
+                         "[s] scaling\t[c] center\n"
+                         "[f] fixed  \t[t] top-left\n");
 
     Shape unit_square(Color::Transparent(), Color(0.7, 0.7, 0.7));
 
@@ -68,16 +72,17 @@ int main()
         auto ps = view.screen_size();
         auto fs = view.framebuffer_size();
         auto vc = view.viewport_center();
-        coords_center.set_size(font_size);
-        coords_tl.set_size(font_size);
-        coords_br.set_size(font_size);
-        coords_tr.set_size(font_size);
-        coords_bl.set_size(font_size);
-        size_scal.set_size(font_size);
-        size_screen.set_size(font_size);
-        size_frame.set_size(font_size);
-        size_font.set_size(font_size);
-        mouse_pos.set_size(font_size);
+        coords_center.set_font_size(font_size);
+        coords_tl.set_font_size(font_size);
+        coords_br.set_font_size(font_size);
+        coords_tr.set_font_size(font_size);
+        coords_bl.set_font_size(font_size);
+        size_scal.set_font_size(font_size);
+        size_screen.set_font_size(font_size);
+        size_frame.set_font_size(font_size);
+        size_font.set_font_size(font_size);
+        mouse_pos.set_font_size(font_size);
+        help_text.set_font_size(font_size);
 
         coords_tl.set_fixed_string(format("({}, {})", vc.x - 0.5f * vs.x, vc.y - 0.5f * vs.y));
         coords_br.set_fixed_string(format("({}, {})", vc.x + 0.5f * vs.x, vc.y + 0.5f * vs.y));
@@ -131,8 +136,9 @@ int main()
             size_scal.draw(view, {vc.x - 0.4f, vc.y - 0.5f});
             size_screen.draw(view, {vc.x - 0.4f, vc.y - 0.4f});
             size_frame.draw(view, {vc.x - 0.4f, vc.y - 0.3f});
-            size_font.resize_draw(view, {vc.x - 0.4f, vc.y - 0.2f});
+            size_font.draw(view, {vc.x - 0.4f, vc.y - 0.2f});
             mouse_pos.draw(view, {vc.x - 0.4f, vc.y + 0.2f});
+            help_text.draw(view, {vc.x - 0.4f, vc.y + 0.3f});
         } else {
             auto tl = vc - vs / 2.0_vp;
             auto br = vc + vs / 2.0_vp;
@@ -143,8 +149,9 @@ int main()
             size_scal.draw(view, {vc.x - 120, vc.y - 150});
             size_screen.draw(view, {vc.x - 120, vc.y - 120});
             size_frame.draw(view, {vc.x - 120, vc.y - 90});
-            size_font.resize_draw(view, {vc.x - 120, vc.y - 60});
+            size_font.draw(view, {vc.x - 120, vc.y - 60});
             mouse_pos.draw(view, {vc.x - 120, vc.y + 60});
+            help_text.draw(view, {vc.x - 120, vc.y + 90});
         }
     });
 

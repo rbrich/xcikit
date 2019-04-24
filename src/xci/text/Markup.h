@@ -1,5 +1,5 @@
 // Markup.h created on 2018-03-10, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,23 +18,24 @@
 
 #include "Layout.h"
 
-namespace xci {
-namespace text {
+namespace xci::text {
 
 
 class Markup {
 public:
-    explicit Markup(Layout &layout) : layout(layout) {}
+    explicit Markup(Layout &layout) : m_layout(layout) {}
+    explicit Markup(Layout &layout, const std::string &s)
+        : m_layout(layout) { parse(s); }
 
     bool parse(const std::string &s);
 
-    Layout& get_layout() { return layout; };
+    Layout& get_layout() { return m_layout; };
 
 private:
-    Layout& layout;
+    Layout& m_layout;
 };
 
 
-}} // namespace xci::text
+} // namespace xci::text
 
 #endif // XCI_TEXT_MARKUP_H

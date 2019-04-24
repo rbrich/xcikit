@@ -50,10 +50,10 @@ int main()
 
     FpsDisplay fps_display;
     fps_display.set_position({-1.2f, -0.7f});
-    Text help_text("[p] periodic{tab}[n] nowait{br}"
-                   "[d] on demand{tab}[v] vsync{br}"
-                   "[e] on event{tab}[h] halfrate{br}", font);
-    Text mouse_pos("Mouse: ", font);
+    Text help_text(font, "[p] periodic\t[n] nowait\n"
+                         "[d] on demand\t[v] vsync\n"
+                         "[e] on event\t[h] halfrate\n");
+    Text mouse_pos(font, "Mouse: ");
     mouse_pos.set_color(Color(255, 150, 50));
 
     window.set_update_callback([&](View& view, std::chrono::nanoseconds elapsed){
@@ -109,9 +109,8 @@ int main()
     });
 
     window.set_mouse_position_callback([&](View& view, const MousePosEvent& ev) {
-        mouse_pos.set_fixed_string("Mouse: " +
-                                   format("({}, {})", ev.pos.x, ev.pos.y));
-        mouse_pos.resize(view);
+        mouse_pos.set_string("Mouse: " +
+                             format("({}, {})", ev.pos.x, ev.pos.y));
         view.refresh();
     });
 

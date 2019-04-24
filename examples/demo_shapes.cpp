@@ -37,13 +37,13 @@ int main()
     if (!font.add_face("fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
         return EXIT_FAILURE;
 
-    Text shapes_help("[r] rectangles{br}"
-                     "[o] rounded rectangles{br}"
-                     "[e] ellipses{br}"
-                     "[l] lines", font);
+    Text shapes_help(font, "[r] rectangles\n"
+                           "[o] rounded rectangles\n"
+                           "[e] ellipses\n"
+                           "[l] lines\n");
     shapes_help.set_color(Color(200, 100, 50));
-    Text option_help("[a] antialiasing{br}"
-                     "[s] softness", font);
+    Text option_help(font, "[a] antialiasing\n"
+                           "[s] softness\n");
     option_help.set_color(Color(200, 100, 50));
 
     Shape shapes[7];
@@ -121,8 +121,8 @@ int main()
 
     window.set_draw_callback([&](View& view) {
         auto vs = view.viewport_size();
-        shapes_help.resize_draw(view, {-vs.x / 2 + 0.1f, -vs.y / 2 + 0.1f});
-        option_help.resize_draw(view, {vs.x / 2 - 0.5f, -vs.y / 2 + 0.1f});
+        shapes_help.draw(view, {-vs.x / 2 + 0.1f, -vs.y / 2 + 0.1f});
+        option_help.draw(view, {vs.x / 2 - 0.5f, -vs.y / 2 + 0.1f});
 
         // Border scaled with viewport size
         add_shape_fn(shapes[0], {-1, -0.6f, 2, 1.2f}, 0.05);
