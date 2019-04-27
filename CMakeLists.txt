@@ -7,6 +7,7 @@ option(XCI_WITH_MAGNUM "Link with Magnum and build libxci-graphics-magnum." OFF)
 option(XCI_WITH_PANDA3D "Link with Panda3D and build libxci-graphics-panda." OFF)
 option(XCI_WITH_SFML "Build example of integration with SFML." OFF)
 option(XCI_WITH_TINFO "Link with TInfo (from NCurses) and use it for TTY control sequences." OFF)
+option(XCI_WITH_ZIP "Link xci-core with libzip and use it for ZIP format in VFS." OFF)
 option(XCI_BENCHMARK "Enable benchmarks. Requires Google benchmark to be installed and in CMake path." OFF)
 
 set(XCI_SHARE_DIR "${CMAKE_CURRENT_LIST_DIR}/share" CACHE PATH "Location of share dir (runtime data)")

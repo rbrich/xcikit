@@ -144,6 +144,7 @@ Dependencies (required):
 - PEGTL
 
 Dependencies (optional):
+- libzip (XCI_WITH_ZIP)
 - GLFW (XCI_WITH_OPENGL)
 - Magnum (XCI_WITH_MAGNUM)
 - Panda3D (XCI_WITH_PANDA)
@@ -152,7 +153,7 @@ Dependencies (optional):
 
 Installing dependencies:
 - Debian: `apt-get install libbenchmark-dev`
-- macOS (Homebrew): `brew install google-benchmark`
+- macOS (Homebrew): `brew install libzip google-benchmark`
 
 Build steps (these are examples, adjust parameters as needed):
 

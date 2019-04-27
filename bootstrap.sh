@@ -59,3 +59,9 @@ if [[ ! -e "share.dar" ]] ; then
     tools/pack_assets.py share.dar share/file_list.txt
     rm share/file_list.txt
 fi
+
+# Needed for demo_vfs
+if [[ ! -e "share.zip" ]] ; then
+    echo "=== Create share.zip archive ==="
+    (cd share; zip -r ../share.zip shaders fonts)
+fi

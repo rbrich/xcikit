@@ -19,7 +19,7 @@
 
 #include <fstream>
 #include <unistd.h>
-#include <libgen.h>
+#include <libgen.h>  // dirname, basename
 #include <cassert>
 #include <sys/param.h>
 #include <cstring>

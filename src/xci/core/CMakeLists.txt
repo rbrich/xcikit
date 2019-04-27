@@ -55,6 +55,14 @@ if (XCI_WITH_TINFO)
     target_compile_options(xci-core PRIVATE ${TINFO_CFLAGS})
 endif()
 
+# ZIP support in VFS requires libzip
+if (XCI_WITH_ZIP)
+    find_package(PkgConfig REQUIRED)
+    pkg_search_module(LibZip REQUIRED IMPORTED_TARGET libzip)
+    target_link_libraries(xci-core PRIVATE PkgConfig::LibZip)
+    target_compile_definitions(xci-core PRIVATE XCI_WITH_ZIP)
+endif ()
+
 if (BUILD_FRAMEWORKS)
     set_target_properties(xci-core PROPERTIES
         FRAMEWORK TRUE

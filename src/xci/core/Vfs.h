@@ -22,6 +22,7 @@
 #include <memory>
 #include <fstream>
 #include <utility>
+#include <array>
 
 namespace xci::core {
 
@@ -77,18 +78,23 @@ class VfsLoader {
 public:
     virtual ~VfsLoader() = default;
 
+    using Magic = std::array<char, 4>;
+
     virtual const char* name() const = 0;
-    virtual std::shared_ptr<VfsDirectory> try_load(const std::string& path) = 0;
+    virtual std::shared_ptr<VfsDirectory>
+        try_load(const std::string& path, bool is_dir, Magic magic) = 0;
 };
 
 
 namespace vfs {
 
+
 /// Lookup regular files in real directory, which is mapped to VFS path
 class RealDirectoryLoader: public VfsLoader {
 public:
     const char* name() const override { return "directory"; };
-    std::shared_ptr<VfsDirectory> try_load(const std::string& path) override;
+    std::shared_ptr<VfsDirectory>
+        try_load(const std::string& path, bool is_dir, Magic magic) override;
 };
 
 /// Lookup regular files in real directory, which is mapped to VFS path
@@ -103,14 +109,17 @@ private:
 };
 
 
-/// Lookup files in real directory, which is mapped to VFS path
+/// Lookup files in DAR archive, which is mapped to VFS path
 class DarArchiveLoader: public VfsLoader {
 public:
     const char* name() const override { return "DAR archive"; };
-    std::shared_ptr<VfsDirectory> try_load(const std::string& path) override;
+    std::shared_ptr<VfsDirectory>
+        try_load(const std::string& path, bool is_dir, Magic magic) override;
 };
 
-/// Lookup files in real directory, which is mapped to VFS path
+/// Lookup files in DAR archive, which is mapped to VFS path
+/// DAR is custom uncompressed archive format, see `tools/pack_assets.py`
+/// Unlike ZipArchive, this has no external dependency and very simple implementation.
 class DarArchive: public VfsDirectory {
 public:
     explicit DarArchive(std::string path);
@@ -139,6 +148,30 @@ private:
 };
 
 
+/// Lookup files in ZIP archive, which is mapped to VFS path
+class ZipArchiveLoader: public VfsLoader {
+public:
+    const char* name() const override { return "ZIP archive"; };
+    std::shared_ptr<VfsDirectory>
+        try_load(const std::string& path, bool is_dir, Magic magic) override;
+};
+
+/// Lookup files in ZIP archive, which is mapped to VFS path
+class ZipArchive: public VfsDirectory {
+public:
+    explicit ZipArchive(std::string path);
+    ~ZipArchive() override;
+
+    bool is_open() const { return m_zip != nullptr; }
+
+    VfsFile read_file(const std::string& path) override;
+
+private:
+    std::string m_zip_path;
+    void* m_zip = nullptr;
+};
+
+
 }  // namespace vfs
 
 
@@ -157,9 +190,10 @@ public:
     enum class Loaders {
         None,               // do not preload any loaders
         RealDirectory,      // preload only RealDirectoryLoader
-        All,                // preload all default loaders
+        Dar,                // preload also DAR archive loader
+        Zip,                // preload also ZIP archive loader (when available)
     };
-    Vfs() : Vfs(Loaders::None) {}
+    Vfs() : Vfs(Loaders::Zip) {}
     explicit Vfs(Loaders loaders);
 
     /// Register custom loader
@@ -176,7 +210,7 @@ public:
     /// The path can point to an archive instead of directory.
     /// Supported archive formats:
     /// - DAR - see `tools/pack_assets.py`
-    /// - ZIP - TODO
+    /// - ZIP - when linked with libzip (in cmake: XCI_WITH_ZIP)
     ///
     /// \param real_path        FS path to a directory or archive.
     /// \param target_path      The target path inside the VFS

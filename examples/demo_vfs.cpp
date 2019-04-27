@@ -39,13 +39,13 @@ int main()
             log_info("demo: file size: {}", content->size());
     }
 
-    log_info("====== VFS with default loaders, load archive ======");
+    log_info("====== VFS with default loaders, load DAR archive ======");
     {
         // Buffer can outlive Vfs object.
         // DarArchive(VfsDirectory) will also be kept alive (but no longer accessible).
         BufferPtr content;
         {
-            Vfs vfs(Vfs::Loaders::All);
+            Vfs vfs;
 
             // Don't forget to run bootstrap.sh to create share.dar archive
             vfs.mount(XCI_SHARE_DIR ".dar");
@@ -59,6 +59,22 @@ int main()
         if (content)
             log_info("demo: file size: {}", content->size());
         // content Buffer and DarArchive deleted here
+    }
+
+    log_info("====== VFS with default loaders, load ZIP archive ======");
+    {
+        // Buffer can outlive Vfs object.
+        BufferPtr content;
+        {
+            Vfs vfs;
+
+            // Don't forget to run bootstrap.sh to create share.zip archive
+            vfs.mount(XCI_SHARE_DIR ".zip");
+            auto f = vfs.read_file("fonts/Hack/Hack-Regular.ttf");
+            content = f.content();
+        }
+        if (content)
+            log_info("demo: file size: {}", content->size());
     }
 
     log_info("====== VFS default instance ======");
