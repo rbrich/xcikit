@@ -60,6 +60,8 @@ struct Units {
     template <typename U>
     U as() const { return static_cast<U>(value); }
 
+    // Value of Units can be explicitly casted to T
+    using numeric_type = T;
     constexpr explicit operator T() const { return value; }
 
     T value = 0;

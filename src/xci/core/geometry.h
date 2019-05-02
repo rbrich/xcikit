@@ -9,6 +9,15 @@
 
 namespace xci::core {
 
+// Return value as POD numeric type.
+template<typename T, typename std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
+T cast_to_numeric(T var) { return var; }
+
+// Specialization for graphics::Units and other types defining 'numeric_type' as member.
+template<typename T>
+typename T::numeric_type cast_to_numeric(T var)
+{ return static_cast<typename T::numeric_type>(var); }
+
 
 template <typename T>
 struct Vec2 {
@@ -20,7 +29,9 @@ struct Vec2 {
     explicit Vec2(const TVec& other) : x(other.x), y(other.y) {}
 
     T length() const {
-        return std::hypot(float(x), float(y));
+        return static_cast<T>(std::hypot(
+                cast_to_numeric(x),
+                cast_to_numeric(y)));
     }
 
     const Vec2<T> norm() const {
@@ -29,7 +40,9 @@ struct Vec2 {
     }
 
     T dist(const Vec2<T>& other) const {
-        return static_cast<T>(std::hypot(x - other.x, y - other.y));
+        return static_cast<T>(std::hypot(
+                cast_to_numeric(x - other.x),
+                cast_to_numeric(y - other.y)));
     }
 
     T dist_squared(const Vec2<T>& other) const {
@@ -39,8 +52,8 @@ struct Vec2 {
     }
 
     T dist_taxicab(const Vec2<T>& other) const {
-        auto dx = x - other.x;
-        auto dy = y - other.y;
+        auto dx = cast_to_numeric(x - other.x);
+        auto dy = cast_to_numeric(y - other.y);
         return std::abs(dx) + std::abs(dy);
     }
 

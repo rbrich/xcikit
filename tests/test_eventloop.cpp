@@ -75,7 +75,7 @@ TEST_CASE( "Timer events", "[core][event][TimerWatch]" )
 }
 
 
-TEST_CASE( "FS events", "[core][event][FSWatch]" )
+TEST_CASE( "FS events", "[.][core][event][FSWatch]" )
 {
     EventLoop loop;
 

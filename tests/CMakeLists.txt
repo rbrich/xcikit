@@ -2,6 +2,10 @@ add_executable(test_core test_core.cpp)
 target_link_libraries(test_core Catch2::Catch2 xci-core)
 add_test(NAME test_core COMMAND test_core)
 
+add_executable(test_geometry test_geometry.cpp)
+target_link_libraries(test_geometry Catch2::Catch2 xci-core)
+add_test(NAME test_geometry COMMAND test_geometry)
+
 add_executable(test_eventloop test_eventloop.cpp)
 target_link_libraries(test_eventloop Catch2::Catch2 xci-core)
 add_test(NAME test_eventloop COMMAND test_eventloop)
