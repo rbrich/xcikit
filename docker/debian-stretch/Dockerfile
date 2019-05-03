@@ -8,7 +8,7 @@ RUN printf 'APT::Get::Install-Recommends "false";\nAPT::Get::Install-Suggests "f
 
 # Install development tools
 RUN apt-get install -y build-essential git curl ca-certificates
-RUN apt-get install -y python3-pip
+RUN apt-get install -y python3-pip zip
 RUN apt-get install -y -t stretch-backports cmake ninja-build
 
 # Install xcikit dependencies

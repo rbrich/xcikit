@@ -1,5 +1,6 @@
-# docker build -t xcikit-build-test .
-# docker run --rm -it xcikit-build-test
+# Test build in Docker:
+#   docker build -t xcikit-build-test .
+#   docker run --rm -it xcikit-build-test
 
 FROM rbrich/xcikit-debian:stretch
 
@@ -14,7 +15,7 @@ ADD tests tests/
 ADD tools tools/
 ADD bootstrap.sh \
     CMakeLists.txt \
-    conanfile.txt \
+    conanfile.py \
     config.h.in \
     xcikitConfig.cmake.in \
     build.sh \
