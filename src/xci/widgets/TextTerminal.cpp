@@ -775,8 +775,10 @@ void TextTerminal::resize(View& view)
     font.set_size(m_font_size.as<unsigned>());
     m_cell_size = view.size_to_viewport(FramebufferSize{
         font.max_advance(), font.line_height()});
-    m_cells = {(size().x / m_cell_size.x).as<unsigned>(),
-               (size().y / m_cell_size.y).as<unsigned>()};
+    if (m_resize_cells) {
+        m_cells = {(size().x / m_cell_size.x).as<unsigned>(),
+                   (size().y / m_cell_size.y).as<unsigned>()};
+    }
 }
 
 

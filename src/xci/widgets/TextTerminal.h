@@ -273,6 +273,13 @@ public:
     /// Set font size and font scaling mode:
     /// \param size     size in viewport units
     void set_font_size(ViewportUnits size);
+
+    /// Set requested terminal size in cells (i.e. do not scale the number of cells
+    /// according to widget size - keep it fixed)
+    void set_size_in_cells(core::Vec2u cells) { m_cells = cells; m_resize_cells = false; }
+    void reset_req_cells() { m_resize_cells = true; }
+
+    /// Retrieve current (actual) terminal size
     core::Vec2u size_in_cells() const { return m_cells; }
 
     // ------------------------------------------------------------------------
@@ -395,6 +402,7 @@ private:
     ViewportUnits m_font_size_requested {14.0};
     ViewportSize m_cell_size;
     core::Vec2u m_cells = {80, 25};  // rows, columns
+    bool m_resize_cells = true;
     std::unique_ptr<terminal::Buffer> m_buffer = std::make_unique<terminal::Buffer>();
     size_t m_buffer_offset = 0;  // offset to line in buffer which is first on page
     double m_scroll_offset = c_scroll_end;  // scroll back with mouse wheel
