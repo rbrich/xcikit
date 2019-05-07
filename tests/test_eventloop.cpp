@@ -52,7 +52,7 @@ TEST_CASE( "IO events", "[core][event][IOWatch]" )
 }
 
 
-TEST_CASE( "Timer events", "[core][event][TimerWatch]" )
+TEST_CASE( "Timer events", "[.][core][event][TimerWatch]" )
 {
     EventLoop loop;
 

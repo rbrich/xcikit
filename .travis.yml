@@ -7,7 +7,7 @@ compiler:
   - clang
 
 install:
-  - if [ "$TRAVIS_OS_NAME" = osx ]; then brew install glfw conan; fi
+  - if [ "$TRAVIS_OS_NAME" = osx ]; then brew install glfw conan ccache; export PATH="/usr/local/opt/ccache/libexec:$PATH"; fi
 
 script:
   - ./bootstrap.sh -y
@@ -15,3 +15,6 @@ script:
 
 after_failure:
   - cat build/*/Testing/Temporary/LastTest.log
+
+cache:
+  ccache: true
