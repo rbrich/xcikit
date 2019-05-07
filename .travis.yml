@@ -6,8 +6,12 @@ os:
 compiler:
   - clang
 
-install:
-  - if [ "$TRAVIS_OS_NAME" = osx ]; then brew install glfw conan ccache; export PATH="/usr/local/opt/ccache/libexec:$PATH"; fi
+addons:
+  homebrew:
+    packages:
+      - glfw
+      - conan
+      - ccache
 
 script:
   - ./bootstrap.sh -y

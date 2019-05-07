@@ -89,7 +89,7 @@ VfsFile vfs::RealDirectory::read_file(const std::string& path)
 // ----------------------------------------------------------------------------
 
 
-static constexpr std::array<char, 4> c_dar_magic = {'d', 'a', 'r', '\n'};
+static constexpr std::array<char, 4> c_dar_magic = {{'d', 'a', 'r', '\n'}};
 
 
 std::shared_ptr<VfsDirectory>

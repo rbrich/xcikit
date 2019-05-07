@@ -29,12 +29,12 @@ std::array<float, 16> View::projection_matrix() const
         xt -= 1.0;
         yt -= 1.0;
     }
-    return {
+    return {{
             xs,   0.0f, 0.0f, 0.0f,
             0.0f, -ys,  0.0f, 0.0f,
             0.0f, 0.0f, 1.0f, 0.0f,
             xt,   -yt,  0.0f, 1.0f,
-    };
+    }};
 }
 
 
