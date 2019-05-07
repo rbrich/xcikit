@@ -11,8 +11,7 @@ install:
 
 script:
   - ./bootstrap.sh -y
-  - mkdir build && cd build
-  - conan install .. --build glad
-  - cmake ..
-  - cmake --build .
-  - cmake --build . --target test
+  - ./build.sh
+
+after_failure:
+  - cat build/*/Testing/Temporary/LastTest.log

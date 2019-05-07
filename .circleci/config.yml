@@ -11,14 +11,13 @@ jobs:
 
       - run:
           name: Bootstrap
-          command: |
-            ./bootstrap.sh -y
+          command: ./bootstrap.sh -y
 
       - run:
           name: Build
           command: |
             mkdir build && cd build
-            conan install .. --build glad
+            conan install .. --build missing
             cmake .. -G Ninja
             cmake --build .
 

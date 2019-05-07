@@ -1,101 +1,137 @@
 XCI Toolkit
 ===========
-Toolkit for rendering text and simple user interface with OpenGL.
+Collection of C++ libraries focused on drawing 2D graphics and rendering text.
 
 ![Font Texture](http://xci.cz/toolkit/img/xci-text.png)
 
 *The text on the right side was rendered from the texture on the left side*
 
+- [About](#about)
+- [Features](#features)
+- [Contents of the libraries](#contents-of-the-libraries)
+    - [xci::widgets](#xciwidgets)
+    - [xci::text](#xcitext)
+    - [xci::graphics](#xcigraphics)
+    - [xci::data](#xcidata)
+    - [xci::core](#xcicore)
+    - [xci::compat](#xcicompat)
+- [How to build](#how-to-build)
+    - [Using build script](#using-build-script)
+    - [Manual build with CMake](#manual-build-with-cmake)
+- [How to use in client program](#how-to-use-in-client-program)
+    - [Linking with client using only CMake](#linking-with-client-using-only-cmake)
+    - [Linking with client using CMake and Conan](#linking-with-client-using-cmake-and-conan)
+
 
 About
 -----
 
-This is a library of basic elements useful for creating simple games and graphical demos.
-The focus is on text rendering and closely connected UI rendering.
+XCI Toolkit contains basic elements needed for creating simple graphical demos
+and games. The focus is on text rendering and closely related UI rendering.
 
-The library should make it easy to:
+With this toolkit, it should be easy to:
 
-- render a few paragraphs of text
-- style some parts of the text differently (colored highlights)
-- respond to mouse hover, click on the highlighted parts (spans)
-- add some buttons, checkboxes, combo-boxes
+- render a few paragraphs of text,
+- style some parts of the text differently (colored highlights),
+- respond to mouse hover, click on the highlighted parts (spans),
+- add some buttons, checkboxes, combo-boxes.
 
-This should be enough for games to render:
+This should be enough for a game to render:
 
-- menu
-- settings screen
-- dialogs
+- menu,
+- settings screen,
+- dialogs.
 
 The library should integrate well with:
 
 - generic OpenGL
 - 2D/3D graphics engines (eg. SDL, Magnum, OGRE)
 
+I use Linux and Mac, so Windows is currently unsupported, but the code is generally
+written in portable fashion. It should be easy to add Windows support later, if needed. 
 
-Plan
-----
 
-Long-term goal:
+Features
+--------
+
+Note that the toolkit is still under development and mostly experimental.
+There is no stable API. There are no releases. The features below are partially planned, but already
+implemented to some degree. In short, this is one-man show, I did not announce it
+anywhere, so nobody probably even knows about it. The development is expected
+to be slow but steady.
+
+The target features:
 
 - advanced text rendering
-- not-so-advanced UI widgets
-- basic UI logic
+- some UI widgets (not meant to replace Qt)
+- GPU oriented 2D graphics
+- data file management (VFS)
+- support library (logging, eventloop etc.)
 
-These goals should be achieved by separate libraries:
+These features are implemented by a set of libraries:
 
-- `xci-core`
-- `xci-graphics`
-- `xci-text`
 - `xci-widgets`
+- `xci-text`
+- `xci-graphics`
+- `xci-data`
+- `xci-core`
+
+The separation of the code into libraries also helps to create layers
+and avoid bi-directional dependencies. As listed above, each library
+depends only on the libraries listed after it. (But nothing depends
+on `xci-data` - that one is completely optional.)
 
 The top-level `xci-widgets` provides UI components with event processing.
 It uses text layout engine `xci-text`, which can also be used separately.
 
 All rendering goes through `xci-graphics` library, which provides
 adapters for different frameworks and APIs, including low-level OpenGL.
-Graphics lib can also be used separately when neither UI nor text rendering is needed.
+Graphics lib can also be used separately when neither UI nor text rendering
+is needed.
+
+Optional `xci-data` library provides custom text and binary format
+for serialization / deserialization of hierarchical data structures.
+Think of Json and Google Protobuf, but without the complexity and bloat.
 
 All of the above use `xci-core`, which contains miscellaneous utilities,
 This can also be used separately. 
+
+There is also header-only `compat` library, which is used to hide
+differences between compilers and OS's. It does not implement any
+abstraction layer, but just provides what is available elsewhere.
 
 Technologies:
 
 - C++17 (partial compatibility with C++11/14 as needed)
 - CMake, Conan
-- Python bindings - Cython?
-
-
-Roadmap
--------
-
-- [x] Basic libraries as described above
-- [ ] More widgets: context menu, combo box
-- [ ] Floating windows
-- [x] Integrate with GLFW and one other library
-- [ ] Screensaver support
-- [ ] New roadmap...
-
-
-Current Features
-----------------
 
 Supported compilers:
 
 - GCC 6.3 (tested with Debian Stretch)
 - AppleClang 9.1
 
-C++ standard set to C++17, but only bits of it are used due to GCC 6.3 compatibility
-requirement.
+C++ standard is set to C++17, but only bits of it are used due to GCC 6.3
+compatibility requirement.
 
-### xci::compat
 
-Fills gaps between different systems and compilers.
+Contents of the libraries
+-------------------------
 
-- `bit.h` - C++20 `bit_cast` backport (+ custom `bit_read`)
-- `endian.h` - Linux-like macros provided for MacOS
-- `macros.h` - C++17 `[[fallthrough]]` missing in GCC 6.3
-- `string_view.h` - C++17 `string_view` missing in GCC 6.3, but it has `experimental` impl
-- `utility.h` - C++17 `byte` missing in GCC 6.3
+### xci::widgets
+
+Basic UI elements.
+
+### xci::text
+
+Text rendering and text layout.
+
+### xci::graphics
+
+The basic building blocks for rendering of text and UI elemenents.
+
+### xci::data
+
+Serialization and deserialization of structured data.
 
 ### xci::core
 
@@ -117,21 +153,19 @@ Core utilities. These have little or no dependencies. Mostly just stdlib + OS AP
 - `string.h` - String manipulation. Unicode utilities.
 - `sys.h` - A replacement for `std::this_thread::get_id()`, providing the canonical TID.
 
-### xci::graphics
+### xci::compat
 
-The basic building blocks for rendering of text and UI elemenents.
+Fills gaps between different systems and compilers.
 
-### xci::text
-
-Text rendering and text layout.
-
-### xci::widgets
-
-Basic UI elements.
+- `bit.h` - C++20 `bit_cast` backport (+ custom `bit_read`)
+- `endian.h` - Linux-like macros provided for MacOS
+- `macros.h` - C++17 `[[fallthrough]]` missing in GCC 6.3
+- `string_view.h` - C++17 `string_view` missing in GCC 6.3, but it has `experimental` impl
+- `utility.h` - C++17 `byte` missing in GCC 6.3
 
 
-Build
------
+How to build
+------------
 
 Build system (required):
 - CMake (eg. `apt-get install cmake`)
@@ -155,7 +189,27 @@ Installing dependencies:
 - Debian: `apt-get install libbenchmark-dev`
 - macOS (Homebrew): `brew install libzip google-benchmark`
 
-Build steps (these are examples, adjust parameters as needed):
+
+### Using build script
+
+This should be run once to download missing files etc.:
+
+    ./bootstrap.sh
+
+The complete build process is handled by build script:
+
+    ./build.sh
+    
+When finished, you'll find the temporary build files in `build/`
+and installation artifacts in `artifacts/`. 
+
+Both scripts are incremental, so it's safe to run them repeatably.
+They do only the required work and re-use what was done previously.
+
+
+### Manual build with CMake
+
+Detailed build steps (these are examples, adjust parameters as needed):
 
     # Configure Conan remotes, download additional assets
     ./bootstrap.sh
@@ -182,11 +236,13 @@ Build steps (these are examples, adjust parameters as needed):
     cmake --build . --target install
 
 
-Linking with XCI Toolkit (using CMake)
---------------------------------------
+How to use in client program
+----------------------------
 
-Build and install XCI libraries (see Build above),
-then use installed `xcikitConfig.cmake` from your project's
+### Linking with client using only CMake
+
+Build and install XCI libraries (see "How to build" above),
+then use installed `xcikitConfig.cmake` in your project's
 `CMakeLists.txt`:
 
     cmake_minimum_required(VERSION 3.7)
@@ -207,8 +263,7 @@ for example `~/sdk/xcikit`, you need to setup `CMAKE_PREFIX_PATH` appropriately:
     cmake -DCMAKE_PREFIX_PATH="~/sdk/xcikit" ..
 
 
-Linking with XCI Toolkit (using CMake + Conan)
-----------------------------------------------
+### Linking with client using CMake and Conan
 
 Add xcikit as dependency to `conanfile.txt`:
 
