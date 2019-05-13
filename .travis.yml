@@ -12,6 +12,7 @@ addons:
       - glfw
       - conan
       - ccache
+    update: true
 
 script:
   - ./bootstrap.sh -y
