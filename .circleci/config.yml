@@ -14,13 +14,21 @@ jobs:
           command: ./bootstrap.sh -y
 
       - run:
+          name: Deps
+          command: ./build.sh deps
+
+      - run:
+          name: Configure
+          command: ./build.sh config -G Ninja
+
+      - run:
           name: Build
-          command: |
-            mkdir build && cd build
-            conan install .. --build missing
-            cmake .. -G Ninja
-            cmake --build .
+          command: ./build.sh build
 
       - run:
           name: Run tests
-          command: cmake --build build --target test
+          command: ./build.sh test
+
+      - run:
+          name: Install
+          command: ./build.sh install
