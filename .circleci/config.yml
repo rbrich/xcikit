@@ -15,20 +15,20 @@ jobs:
 
       - run:
           name: Deps
-          command: ./build.sh deps
+          command: ./build.sh -G Ninja deps
 
       - run:
           name: Configure
-          command: ./build.sh config -G Ninja
+          command: ./build.sh -G Ninja config
 
       - run:
           name: Build
-          command: ./build.sh build
+          command: ./build.sh -G Ninja build
 
       - run:
           name: Run tests
-          command: ./build.sh test
+          command: ./build.sh -G Ninja test
 
       - run:
           name: Install
-          command: ./build.sh install
+          command: ./build.sh -G Ninja install
