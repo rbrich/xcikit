@@ -60,7 +60,7 @@ public:
     void _notify(const struct kevent& event) override;
 
 private:
-    int register_kevent(const std::string& path, uint32_t fflags);
+    int register_kevent(const std::string& path, uint32_t fflags, bool no_exist_ok=false);
     void unregister_kevent(int fd);
 
 private:

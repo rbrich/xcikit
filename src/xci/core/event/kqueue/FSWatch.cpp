@@ -61,9 +61,7 @@ bool FSWatch::add(const std::string& pathname, FSWatch::PathCallback cb)
     }
 
     // Directory is now watched, add watch for the file
-    int fd = register_kevent(pathname, fflags_file);
-    if (fd == -1)
-        return -1;
+    int fd = register_kevent(pathname, fflags_file, /*no_exist_ok=*/true);
     auto filename = path_basename(pathname);
     m_file.push_back(File{fd, dir_fd, filename, std::move(cb)});
     log_debug("EventLoop: Added watch {} / {} ({})", dir, filename, fd);
@@ -135,7 +133,7 @@ void FSWatch::_notify(const struct kevent& event)
             // Directory content has changed, look for newly created files
             DIR *dirp = opendir(dir.c_str());
             if (dirp == nullptr) {
-                log_error("FSWatch: opendir({}): {:m}", dir);
+                log_error("FSWatch: opendir({}): {m}", dir);
                 return;
             }
             struct dirent *dp;
@@ -192,11 +190,12 @@ void FSWatch::_notify(const struct kevent& event)
 }
 
 
-int FSWatch::register_kevent(const std::string& path, uint32_t fflags)
+int FSWatch::register_kevent(const std::string& path, uint32_t fflags, bool no_exist_ok)
 {
     int fd = ::open(path.c_str(), O_EVTONLY);
     if (fd == -1) {
-        log_error("FSWatch: open({}, O_EVTONLY): {m}", path.c_str());
+        if (!no_exist_ok)
+            log_error("FSWatch: open(\"{}\", O_EVTONLY): {m}", path.c_str());
         return -1;
     }
 
