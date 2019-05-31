@@ -32,4 +32,5 @@ deploy:
   file: artifacts/xcikit-snapshot-Darwin-x86_64.zip
   on:
     repo: rbrich/xcikit
+  skip_cleanup: true
   draft: true
