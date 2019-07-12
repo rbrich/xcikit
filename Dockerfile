@@ -2,7 +2,7 @@
 #   docker build -t xcikit-build-test .
 #   docker run --rm -it xcikit-build-test
 
-FROM rbrich/xcikit-debian:stretch
+FROM rbrich/xcikit-debian:buster
 
 WORKDIR /opt/xcikit
 
@@ -23,5 +23,5 @@ ADD bootstrap.sh \
 
 RUN ./bootstrap.sh -y
 
-WORKDIR /opt/xcikit
-CMD ./build.sh
+# actual build is executed as default command so we have full TTY with colors
+CMD ./build.sh -G Ninja
