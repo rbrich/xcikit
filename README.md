@@ -47,9 +47,6 @@ The library should integrate well with:
 - generic OpenGL
 - 2D/3D graphics engines (eg. SDL, Magnum, OGRE)
 
-I use Linux and Mac, so Windows is currently unsupported, but the code is generally
-written in portable fashion. It should be easy to add Windows support later, if needed. 
-
 
 Features
 --------
@@ -102,16 +99,17 @@ abstraction layer, but just provides what is available elsewhere.
 
 Technologies:
 
-- C++17 (partial compatibility with C++11/14 as needed)
-- CMake, Conan
+- C++17 as main programming language
+- CMake as build system
+- Conan as dependency manager
 
-Supported compilers:
+Tested compilers:
 
-- GCC 6.3 (tested with Debian Stretch)
-- AppleClang 9.1
+- GCC 8.3 (Debian Buster)
+- AppleClang 11 (Travis CI)
 
-C++ standard is set to C++17, but only bits of it are used due to GCC 6.3
-compatibility requirement.
+Any Unix-like OS with C++17 compliant compiler should work. There is no direct Windows support,
+but it's possible that the project will compile with some layer of Unix compatibility, e.g. WSL. 
 
 
 Contents of the libraries

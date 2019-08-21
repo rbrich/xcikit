@@ -20,6 +20,7 @@
 
 namespace xci::text {
 
+using namespace std;
 using namespace core::log;
 
 

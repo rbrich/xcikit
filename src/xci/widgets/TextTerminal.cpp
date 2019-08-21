@@ -31,10 +31,11 @@ using namespace graphics;
 using namespace graphics::unit_literals;
 using namespace core;
 using namespace core::log;
+using text::CodePoint;
+
+using namespace std;
 using namespace std::chrono;
 using namespace std::chrono_literals;
-using std::min;
-using text::CodePoint;
 
 
 // Skip custom control seqs in UTF-8 string

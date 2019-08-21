@@ -26,6 +26,8 @@
 
 namespace xci::core {
 
+using namespace std;
+
 
 bool starts_with(const std::string& str, const std::string& sub)
 {

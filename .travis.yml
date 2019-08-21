@@ -1,8 +1,7 @@
 language: cpp
-
+compiler: clang
 os: osx
 osx_image: xcode11
-compiler: clang
 
 env:
   - MACOSX_DEPLOYMENT_TARGET=10.12

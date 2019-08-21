@@ -23,7 +23,7 @@
 #include <xci/graphics/Primitives.h>
 #include <xci/graphics/View.h>
 #include <xci/core/geometry.h>
-#include <xci/compat/string_view.h>
+#include <string_view>
 #include <vector>
 #include <chrono>
 #include <bitset>
@@ -114,7 +114,7 @@ public:
 
     /// Decode attribute sequence from string_view into object state
     /// This is usable for incremental (running) decoder.
-    size_t decode(string_view sv);
+    size_t decode(std::string_view sv);
 
     // ------------------------------------------------------------------------
     // Mutators
@@ -172,7 +172,7 @@ public:
 
     /// Skip `pos` characters, set `attr` for the following char(s)
     /// and insert `sv` or replace current cells at `pos` with content from `sv`.
-    void add_text(size_t pos, string_view sv, Attributes attr, bool insert);
+    void add_text(size_t pos, std::string_view sv, Attributes attr, bool insert);
 
     /// Delete part of line, shifting the rest to the left
     void delete_text(size_t first, size_t num);
@@ -185,7 +185,7 @@ public:
 
     void set_blank_page() { m_flags[BlankPage] = true; }
 
-    string_view content() const { return m_content; }
+    std::string_view content() const { return m_content; }
 
     void render(Renderer& renderer);
 
@@ -289,7 +289,7 @@ public:
     /// \param insert   insert characters, shifting rest of the line (false = replace)
     /// \param wrap     wrap to next line if the cursor gets to right border of page
     ///                 (false = no wrap, keep overwriting the right-most cell)
-    void add_text(string_view text, bool insert=false, bool wrap=true);
+    void add_text(std::string_view text, bool insert=false, bool wrap=true);
 
     /// Forced line end (disallow reflow for current line).
     void break_line() { current_line().set_hard_break(); }
