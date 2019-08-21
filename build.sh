@@ -5,12 +5,14 @@ cd $(dirname $0)
 ROOT_DIR="$PWD"
 BUILD_TYPE=MinSizeRel
 GENERATOR="Unix Makefiles"
+which ninja >/dev/null && GENERATOR="Ninja"
+JOBS=
 
 print_usage()
 {
-    echo "Usage: ./build.sh [<phase>, ...] [-G <cmake_generator>]"
+    echo "Usage: ./build.sh [<phase>, ...] [-G <cmake_generator>] [-j <jobs>]"
     echo "Where: <phase> = deps | config | build | test | install | package (default: deps..install)"
-    echo "       <cmake_generator> = \"Unix Makefiles\" | Ninja | ..."
+    echo "       <cmake_generator> = \"Unix Makefiles\" | Ninja | ... (default: Ninja if available, Unix Makefiles otherwise)"
 }
 
 phase()
@@ -29,6 +31,9 @@ while [[ $# > 0 ]] ; do
             shift 1 ;;
         -G )
             GENERATOR="$2"
+            shift 2 ;;
+        -j )
+            JOBS="-j $2"
             shift 2 ;;
         * )
             printf "Error: Unsupported option ${1}.\n\n"
@@ -85,19 +90,19 @@ fi
 
 if phase build; then
     echo "=== Build ==="
-    cmake --build ${BUILD_DIR}
+    cmake --build ${BUILD_DIR} -- ${JOBS}
     echo
 fi
 
 if phase test; then
     echo "=== Test ==="
-    cmake --build ${BUILD_DIR} --target test
+    cmake --build ${BUILD_DIR} --target test -- ${JOBS}
     echo
 fi
 
 if phase install; then
     echo "=== Install ==="
-    cmake --build ${BUILD_DIR} --target install
+    cmake --build ${BUILD_DIR} --target install -- ${JOBS}
     echo
 fi
 

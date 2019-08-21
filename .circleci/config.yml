@@ -15,27 +15,27 @@ jobs:
 
       - run:
           name: Deps
-          command: ./build.sh -G Ninja deps
+          command: ./build.sh deps
 
       - run:
           name: Configure
-          command: ./build.sh -G Ninja config
+          command: ./build.sh config
 
       - run:
           name: Build
-          command: ./build.sh -G Ninja build
+          command: ./build.sh build
 
       - run:
           name: Run tests
-          command: ./build.sh -G Ninja test
+          command: ./build.sh test
 
       - run:
           name: Install
-          command: ./build.sh -G Ninja install
+          command: ./build.sh install
 
       - run:
           name: Package
-          command: ./build.sh -G Ninja package
+          command: ./build.sh package
 
       - store_artifacts:
           path: artifacts
