@@ -1,10 +1,8 @@
 language: cpp
 
-os:
-  - osx
-
-compiler:
-  - clang
+os: osx
+osx_image: xcode11
+compiler: clang
 
 env:
   - MACOSX_DEPLOYMENT_TARGET=10.12
@@ -15,12 +13,13 @@ addons:
       - glfw
       - conan
       - ccache
-    update: true
+
+before_script:
+  - ./bootstrap.sh -y
+  - ./build.sh deps
 
 script:
-  - ./bootstrap.sh -y
-  - ./build.sh
-  - ./build.sh package
+  - ./build.sh config build test install package
 
 after_failure:
   - cat build/*/Testing/Temporary/LastTest.log
@@ -32,7 +31,8 @@ deploy:
   provider: releases
   api_key:
     secure: UsZbVmTy8zcx1eyfck70Nn4IZ2MKFjI7H9WxVja/ymBjs8ptqFjkgGf2cmMIa37YVQ9eOw6zqmrN8ZV1vRj6mMdBOP7aAMdrFevL2ZcjVVw/2xQf0PGj3TiRVCBcOxY1yNLwrPye/GZ/uZUFY+EkGWF/N573eT6fgy7P6lH2+HPQWxGWhXlJ8n0NE3zS07fePeMEGFyLVXGISf8kjoUwxBogI2eXq8a70Vq7X8DTBrzbx/ECEy3f6MWJCA9fdH653u6fqYOZ381kTfbJ35aMRP+u3Y+765Evl3/JKA1HBKArYlX1sE0vgc4cpDWGvVT/FhbP0+wLr9JM88Hqza1bF1unE8Mhxxfu0dwKiGjjPCBWxI0jfJScc5B95o7ZE3DeFdbBm5lLA3QqAgO9XJIYE6NwgPTvuPDTbiX+XCVzUVRbpUKWxa9Zrvh17pvxdb4RGtxMXrUCTsrYj8hLyf/8CYaCwGhGlaz3Yqi8pqJsV/IMexADmKppwAiDM+8ONff+fOBCFV6/lxve5FQP7DYkp/STonGS+G3Z47T05UjOF7gIt+Ulp5JRnMA3ovgkQGQljRF6D9pXMwV7sccRgpUoU3Mgj2cH6G/o+r/QNIe3rD766/zZDcZ1D4IJRS1e8/5Ck3Fspvm1CiLsFVPTgipM+Y5F3olKQxjqqRwE2rbmDHI=
-  file: artifacts/xcikit-*-x86_64.zip
+  file_glob: true
+  file: artifacts/*.zip
   on:
     repo: rbrich/xcikit
   skip_cleanup: true
