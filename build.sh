@@ -16,7 +16,7 @@ print_usage()
 phase()
 {
     local PHASE="phase_$1"
-    test -n "${!PHASE}" -o -n "${phase_default}" -a "$1" != "package"
+    test -n "${!PHASE}" -o -n "${phase_all}" -o \( -n "${phase_default}" -a "$1" != "package" \)
 }
 
 # parse args...
@@ -39,13 +39,16 @@ done
 
 echo "=== Settings ==="
 
-PLATFORM="$(uname)-$(uname -m)"
-VERSION="snapshot"
-BUILD_CONFIG="${PLATFORM}-${BUILD_TYPE}"
+ARCH="$(uname -m)"
+PLATFORM="$(uname)"
+[[ ${PLATFORM} = "Darwin" ]] && PLATFORM="macos${MACOSX_DEPLOYMENT_TARGET}"
+VERSION="0.0+$(git rev-parse --short HEAD)"
+BUILD_CONFIG="${PLATFORM}-${ARCH}-${BUILD_TYPE}"
 [[ "${GENERATOR}" != "Unix Makefiles" ]] && BUILD_CONFIG="${BUILD_CONFIG}_${GENERATOR}"
 BUILD_DIR="${ROOT_DIR}/build/${BUILD_CONFIG}"
 INSTALL_DIR="${ROOT_DIR}/artifacts/${BUILD_CONFIG}"
-PACKAGE_NAME="xcikit-${VERSION}-${PLATFORM}"
+PACKAGE_DIR="xcikit-${VERSION}"
+PACKAGE_NAME="${PACKAGE_DIR}-${PLATFORM}-${ARCH}.zip"
 
 echo "BUILD_CONFIG: ${BUILD_CONFIG}"
 echo "BUILD_DIR:    ${BUILD_DIR}"
@@ -57,16 +60,25 @@ mkdir -p "${BUILD_DIR}"
 
 if phase deps; then
     echo "=== Install Dependencies ==="
-    (cd "${BUILD_DIR}"; conan install "${ROOT_DIR}" --build missing)
+    CONAN_SETTINGS=
+    if [[ -n "${MACOSX_DEPLOYMENT_TARGET}" ]]; then
+        CONAN_SETTINGS="-s os.version=${MACOSX_DEPLOYMENT_TARGET}"
+    fi
+    (
+        cd "${BUILD_DIR}"
+        conan install "${ROOT_DIR}" ${CONAN_SETTINGS} --build missing
+    )
     echo
 fi
 
 if phase config; then
     echo "=== Configure ==="
-    (cd "${BUILD_DIR}"; cmake "${ROOT_DIR}" \
-        -G "${GENERATOR}" \
-        -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-        -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+    (
+        cd "${BUILD_DIR}"
+        cmake "${ROOT_DIR}" \
+            -G "${GENERATOR}" \
+            -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+            -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
     )
     echo
 fi
@@ -91,8 +103,11 @@ fi
 
 if phase package; then
     echo "=== Package ==="
-    (cd "${INSTALL_DIR}/.."; mv "${INSTALL_DIR}" "${PACKAGE_NAME}"; \
-     zip --move -r "${PACKAGE_NAME}.zip" ${PACKAGE_NAME} \
+    (
+        cd "${INSTALL_DIR}/.."
+        mv "${INSTALL_DIR}" "${PACKAGE_DIR}"
+        rm -f "${PACKAGE_NAME}"
+        zip --move -r "${PACKAGE_NAME}" ${PACKAGE_DIR}
     )
     echo
 fi
