@@ -1,0 +1,366 @@
+// Machine.cpp created on 2019-05-18, part of XCI toolkit
+// Copyright 2019 Radek Brich
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "Machine.h"
+#include "Builtin.h"
+#include "Value.h"
+#include "Error.h"
+#include <xci/core/format.h>
+#include <stack>
+#include <sstream>
+#include <cassert>
+#include <iostream>
+#include <functional>
+
+namespace xci::script {
+
+using namespace std;
+
+
+void Machine::call(const Function& function, const InvokeCallback& cb)
+{
+    const Function* cur_fun = &function;
+    auto it = function.code().begin();
+    auto call_fun = [this, &it, &cur_fun](const Function& fn) {
+        m_stack.push_frame(cur_fun, it - cur_fun->code().begin());
+        cur_fun = &fn;
+        it = cur_fun->code().begin();
+        if (m_call_enter_cb)
+            m_call_enter_cb(*cur_fun);
+    };
+
+    // Run function code
+    m_stack.push_frame(nullptr, 0);
+    if (m_call_enter_cb)
+        m_call_enter_cb(*cur_fun);
+    for (;;) {
+        if (it == cur_fun->code().end()) {
+            // return from function
+            if (m_bytecode_trace_cb)
+                m_bytecode_trace_cb(*cur_fun, cur_fun->code().end());
+
+            if (m_call_exit_cb)
+                m_call_exit_cb(*cur_fun);
+
+            // no more stack frames?
+            if (m_stack.frame().function == nullptr) {
+                m_stack.pop_frame();
+                assert(m_stack.n_values() == std::max(size_t(1),
+                        function.signature().return_type.subtypes().size()));
+                break;
+            }
+
+            // return into previous call location
+            cur_fun = m_stack.frame().function;
+            it = cur_fun->code().begin() + m_stack.frame().instruction;
+            m_stack.pop_frame();
+            continue;
+        }
+
+        if (m_bytecode_trace_cb)
+            m_bytecode_trace_cb(*cur_fun, it);
+
+
+        auto opcode = static_cast<Opcode>(*it++);
+        switch (opcode) {
+            // --------------------------------------------------------------
+            // No args
+
+            case Opcode::LogicalOr:
+            case Opcode::LogicalAnd: {
+                auto fn = builtin::logical_op_function(opcode);
+                if (!fn)
+                    throw NotImplemented(core::format("logical operator {}", opcode));
+                auto lhs = m_stack.pull<value::Bool>();
+                auto rhs = m_stack.pull<value::Bool>();
+                m_stack.push(fn(lhs, rhs));
+                break;
+            }
+
+            case Opcode::Equal_8:
+            case Opcode::NotEqual_8:
+            case Opcode::LessEqual_8:
+            case Opcode::GreaterEqual_8:
+            case Opcode::LessThan_8:
+            case Opcode::GreaterThan_8: {
+                auto fn = builtin::comparison_op_function<value::Byte>(opcode);
+                if (!fn)
+                    throw NotImplemented(core::format("comparison operator {}", opcode));
+                auto lhs = m_stack.pull<value::Byte>();
+                auto rhs = m_stack.pull<value::Byte>();
+                m_stack.push(fn(lhs, rhs));
+                break;
+            }
+
+            case Opcode::Equal_32:
+            case Opcode::NotEqual_32:
+            case Opcode::LessEqual_32:
+            case Opcode::GreaterEqual_32:
+            case Opcode::LessThan_32:
+            case Opcode::GreaterThan_32: {
+                auto fn = builtin::comparison_op_function<value::Int32>(opcode);
+                if (!fn)
+                    throw NotImplemented(core::format("comparison operator {}", opcode));
+                auto lhs = m_stack.pull<value::Int32>();
+                auto rhs = m_stack.pull<value::Int32>();
+                m_stack.push(fn(lhs, rhs));
+                break;
+            }
+
+            case Opcode::Equal_64:
+            case Opcode::NotEqual_64:
+            case Opcode::LessEqual_64:
+            case Opcode::GreaterEqual_64:
+            case Opcode::LessThan_64:
+            case Opcode::GreaterThan_64: {
+                auto fn = builtin::comparison_op_function<value::Int64>(opcode);
+                if (!fn)
+                    throw NotImplemented(core::format("comparison operator {}", opcode));
+                auto lhs = m_stack.pull<value::Int64>();
+                auto rhs = m_stack.pull<value::Int64>();
+                m_stack.push(fn(lhs, rhs));
+                break;
+            }
+
+            case Opcode::BitwiseOr_8:
+            case Opcode::BitwiseAnd_8:
+            case Opcode::BitwiseXor_8:
+            case Opcode::ShiftLeft_8:
+            case Opcode::ShiftRight_8:
+            case Opcode::Add_8:
+            case Opcode::Sub_8:
+            case Opcode::Mul_8:
+            case Opcode::Div_8:
+            case Opcode::Mod_8:
+            case Opcode::Exp_8: {
+                auto fn = builtin::binary_op_function<value::Byte>(opcode);
+                if (!fn)
+                    throw NotImplemented(core::format("binary operator {}", opcode));
+                auto lhs = m_stack.pull<value::Byte>();
+                auto rhs = m_stack.pull<value::Byte>();
+                m_stack.push(fn(lhs, rhs));
+                break;
+            }
+
+            case Opcode::BitwiseOr_32:
+            case Opcode::BitwiseAnd_32:
+            case Opcode::BitwiseXor_32:
+            case Opcode::ShiftLeft_32:
+            case Opcode::ShiftRight_32:
+            case Opcode::Add_32:
+            case Opcode::Sub_32:
+            case Opcode::Mul_32:
+            case Opcode::Div_32:
+            case Opcode::Mod_32:
+            case Opcode::Exp_32: {
+                auto fn = builtin::binary_op_function<value::Int32>(opcode);
+                if (!fn)
+                    throw NotImplemented(core::format("binary operator {}", opcode));
+                auto lhs = m_stack.pull<value::Int32>();
+                auto rhs = m_stack.pull<value::Int32>();
+                m_stack.push(fn(lhs, rhs));
+                break;
+            }
+
+            case Opcode::BitwiseOr_64:
+            case Opcode::BitwiseAnd_64:
+            case Opcode::BitwiseXor_64:
+            case Opcode::ShiftLeft_64:
+            case Opcode::ShiftRight_64:
+            case Opcode::Add_64:
+            case Opcode::Sub_64:
+            case Opcode::Mul_64:
+            case Opcode::Div_64:
+            case Opcode::Mod_64:
+            case Opcode::Exp_64: {
+                auto fn = builtin::binary_op_function<value::Int64>(opcode);
+                if (!fn)
+                    throw NotImplemented(core::format("binary operator {}", opcode));
+                auto lhs = m_stack.pull<value::Int64>();
+                auto rhs = m_stack.pull<value::Int64>();
+                m_stack.push(fn(lhs, rhs));
+                break;
+            }
+
+            case Opcode::LogicalNot: {
+                auto fn = builtin::logical_not_function();
+                assert(fn);
+                auto rhs = m_stack.pull<value::Bool>();
+                m_stack.push(fn(rhs));
+                break;
+            }
+
+            case Opcode::BitwiseNot_8:
+            case Opcode::Neg_8: {
+                auto fn = builtin::unary_op_function<value::Byte>(opcode);
+                if (!fn)
+                    throw NotImplemented(core::format("unary operator {}", opcode));
+                auto rhs = m_stack.pull<value::Byte>();
+                m_stack.push(fn(rhs));
+                break;
+            }
+
+            case Opcode::BitwiseNot_32:
+            case Opcode::Neg_32: {
+                auto fn = builtin::unary_op_function<value::Int32>(opcode);
+                if (!fn)
+                    throw NotImplemented(core::format("unary operator {}", opcode));
+                auto rhs = m_stack.pull<value::Int32>();
+                m_stack.push(fn(rhs));
+                break;
+            }
+
+            case Opcode::BitwiseNot_64:
+            case Opcode::Neg_64: {
+                auto fn = builtin::unary_op_function<value::Int64>(opcode);
+                if (!fn)
+                    throw NotImplemented(core::format("unary operator {}", opcode));
+                auto rhs = m_stack.pull<value::Int64>();
+                m_stack.push(fn(rhs));
+                break;
+            }
+
+            case Opcode::Invoke:
+                cb(*m_stack.pull_any());
+                break;
+
+            case Opcode::Execute: {
+                auto o = m_stack.pull<value::Lambda>();
+                auto closure = o.closure();
+                for (const auto& nl : closure.values()) {
+                    m_stack.push(*nl);
+                }
+                call_fun(o.function());
+                break;
+            }
+
+            // --------------------------------------------------------------
+            // Single 1-byte arg
+
+            case Opcode::LoadStatic: {
+                auto arg = *it++;
+                auto& o = cur_fun->module().get_value(arg);
+                m_stack.push(o);
+                break;
+            }
+
+            case Opcode::LoadFunction: {
+                auto arg = *it++;
+                auto& fn = cur_fun->module().get_function(arg);
+                m_stack.push(value::Lambda(fn));
+                break;
+            }
+
+            case Opcode::CopyVariable: {
+                auto arg1 = *it++;
+                auto size = *it++; // arg2
+                auto addr = m_stack.to_rel(m_stack.frame().base) - arg1 - size;
+                m_stack.copy(addr, size);
+                break;
+            }
+
+            case Opcode::CopyArgument: {
+                auto arg1 = *it++;
+                auto size = *it++; // arg2
+                auto addr = m_stack.to_rel(m_stack.frame().base) + arg1;
+                m_stack.copy(addr, size);
+                break;
+            }
+
+            case Opcode::Drop: {
+                auto arg1 = *it++;
+                auto arg2 = *it++;
+                m_stack.drop(arg1, arg2);
+                break;
+            }
+
+            case Opcode::Call0:
+            case Opcode::Call1:
+            case Opcode::Call:
+            {
+                // get the function's module
+                Module* module;
+                if (opcode == Opcode::Call0) {
+                    module = &cur_fun->module();
+                } else {
+                    size_t idx;
+                    if (opcode == Opcode::Call1) {
+                        idx = 0;
+                    } else {
+                        // read arg1
+                        idx = *it++;
+                    }
+                    module = &cur_fun->module().get_imported_module(idx);
+                }
+                // call function from the module
+                auto arg = *it++;
+                auto& fn = module->get_function(arg);
+                call_fun(fn);
+                break;
+            }
+
+            case Opcode::MakeClosure: {
+                auto arg1 = *it++;
+                // get function
+                auto& fn = cur_fun->module().get_function(arg1);
+                // pull nonlocals
+                auto nl_types = fn.nonlocals();
+                Values nonlocals;
+                nonlocals.reserve(nl_types.size());
+                for (const auto & ti : nl_types) {
+                    nonlocals.add(m_stack.pull(ti));
+                }
+                // push closure
+                m_stack.push(value::Lambda{fn, move(nonlocals)});
+                break;
+            }
+
+            case Opcode::IncRef: {
+                auto arg = *it++;
+                HeapSlot slot {static_cast<byte*>(m_stack.get_ptr(arg))};
+                slot.incref();
+                break;
+            }
+
+            case Opcode::DecRef: {
+                auto arg = *it++;
+                HeapSlot slot {static_cast<byte*>(m_stack.get_ptr(arg))};
+                slot.decref();
+                break;
+            }
+
+            case Opcode::Jump: {
+                auto arg = *it++;
+                it += arg;
+                break;
+            }
+
+            case Opcode::JumpIfNot: {
+                auto arg = *it++;
+                auto cond = m_stack.pull<value::Bool>();
+                if (!cond.value()) {
+                    it += arg;
+                }
+                break;
+            }
+
+            default:
+                throw NotImplemented(core::format("opcode {}", opcode));
+        }
+    }
+}
+
+
+} // namespace xci::script

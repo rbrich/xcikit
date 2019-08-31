@@ -20,8 +20,7 @@
 #include <string>
 #include <ostream>
 
-namespace xci {
-namespace core {
+namespace xci::core {
 
 // Sends control codes and escape sequences to controlling terminal
 // or does nothing if the output stream is not connected to TTY.
@@ -73,6 +72,12 @@ public:
     TermCtl overline() const;
     TermCtl normal() const;  // reset all attributes
 
+    // cursor movement
+    TermCtl move_up(int n_lines) const;
+
+    // clear screen content
+    TermCtl clear_screen_down() const;
+
     // Output cached seq
     const std::string& seq() const { return m_seq; }
     friend std::ostream& operator<<(std::ostream& os, const TermCtl& term);
@@ -83,6 +88,12 @@ public:
             return format_cb(ctx);
         }, args...);
     }
+
+    // Temporarily change terminal mode to RAW mode
+    // (no echo, no buffering, no special processing)
+    // NOTE: Signal processing is enabled, so Ctrl-C still works
+    void with_raw_mode(const std::function<void()>& cb);
+    int raw_getch();
 
 private:
     // Copy TermCtl and append seq to new instance
@@ -95,6 +106,6 @@ private:
     std::string m_seq;  // cached capability sequences
 };
 
-}} // namespace xci::core
+} // namespace xci::core
 
 #endif //XCI_CORE_TERM_H

@@ -1,0 +1,32 @@
+add_library(xci-script
+    AST.cpp
+    Builtin.cpp
+    Code.cpp
+    Compiler.cpp
+    Function.cpp
+    Heap.cpp
+    Interpreter.cpp
+    Machine.cpp
+    Module.cpp
+    Value.cpp
+    Optimizer.cpp
+    Parser.cpp
+    Stack.cpp
+    SymbolResolver.cpp
+    SymbolTable.cpp
+    TypeResolver.cpp
+    TypeInfo.cpp
+    )
+
+target_link_libraries(xci-script
+    PRIVATE
+        xci-core
+        range-v3
+    )
+
+target_include_directories(xci-script
+    PUBLIC
+        ${XCI_INCLUDE_DIRS}
+    PRIVATE
+        $<TARGET_PROPERTY:taocpp::pegtl,INTERFACE_INCLUDE_DIRECTORIES>
+    )

@@ -1,6 +1,7 @@
-add_subdirectory(plugin)
-
 set(INST_EXAMPLES share/xcikit/examples)
+
+add_subdirectory(plugin)
+add_subdirectory(script)
 
 # core
 

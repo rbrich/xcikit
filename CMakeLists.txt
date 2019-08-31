@@ -76,6 +76,12 @@ set(RBP_LIBRARY rbp)
 # PEGTL
 find_package(pegtl REQUIRED)
 
+# range-v3
+find_package(range-v3 REQUIRED)
+
+# docopt
+find_package(Docopt REQUIRED)
+
 # Catch
 find_package(Catch2)
 
@@ -110,6 +116,7 @@ endif()
 add_subdirectory(src/xci/core)
 add_subdirectory(src/xci/data)
 add_subdirectory(src/xci/graphics)
+add_subdirectory(src/xci/script)
 
 # Choose default graphics engine:
 if (NOT XCI_GRAPHICS_DEFAULT)

@@ -19,6 +19,7 @@
 #include "BinaryBase.h"
 #include <xci/data/reflection.h>
 #include <xci/compat/endian.h>
+#include <xci/compat/macros.h>
 
 #include <istream>
 #include <map>
@@ -141,7 +142,7 @@ public:
             case Error::BadFieldType: return "Bad field type";
             case Error::BadChecksum: return "Bad checksum";
         }
-        __builtin_unreachable();
+        UNREACHABLE;
     }
 
 private:

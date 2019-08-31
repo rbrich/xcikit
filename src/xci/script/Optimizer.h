@@ -1,5 +1,5 @@
-// macros.h created on 2018-11-20, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Optimizer.h created on 2019-06-13, part of XCI toolkit
+// Copyright 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,18 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_COMPAT_MACROS_H
-#define XCI_COMPAT_MACROS_H
+#ifndef XCI_SCRIPT_OPTIMIZER_H
+#define XCI_SCRIPT_OPTIMIZER_H
+
+#include "AST.h"
+
+namespace xci::script {
 
 
-#if __cplusplus >= 201703L || __has_cpp_attribute(fallthrough)
-    #define FALLTHROUGH [[fallthrough]]
-#else
-    #define FALLTHROUGH
-#endif
+class Optimizer: public ast::BlockProcessor {
+public:
+    void process_block(Function& func, const ast::Block& block) final;
+};
 
 
-#define UNREACHABLE     __builtin_unreachable()
-
+} // namespace xci::script
 
 #endif // include guard

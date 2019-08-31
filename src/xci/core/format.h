@@ -100,7 +100,7 @@ inline std::string fun_format(const char *fmt, const FormatCallback& fun)
 // `fun` is called for each unrecognized placeholder
 template<typename T, typename ...Args>
 inline std::string fun_format(const char *fmt, const FormatCallback& fun,
-                              T value, Args... args)
+                              const T& value, Args... args)
 {
     format_impl::Context ctx;
     while (*fmt) {
@@ -133,9 +133,16 @@ inline std::string fun_format(const char *fmt, const FormatCallback& fun,
 // Simple format function without callback.
 // Unrecognized placeholders are left untouched.
 template<typename ...Args>
-inline std::string format(const char *fmt, Args... args)
+inline std::string format(const char *fmt, Args&&... args)
 {
-    return fun_format(fmt, format_impl::print_placeholder, args...);
+    return fun_format(fmt, format_impl::print_placeholder, std::forward<Args>(args)...);
+}
+
+
+template<typename ...Args>
+inline std::string format(const std::string& fmt, Args&&... args)
+{
+    return fun_format(fmt.c_str(), format_impl::print_placeholder, std::forward<Args>(args)...);
 }
 
 

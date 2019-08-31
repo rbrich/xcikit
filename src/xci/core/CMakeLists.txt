@@ -50,7 +50,7 @@ target_include_directories(xci-core
 
 # Link with tinfo if available
 if (XCI_WITH_TINFO)
-    target_link_libraries(xci-core ${TINFO_LIBRARIES})
+    target_link_libraries(xci-core PRIVATE ${TINFO_LIBRARIES})
     target_include_directories(xci-core PRIVATE ${TINFO_INCLUDE_DIRS})
     target_compile_options(xci-core PRIVATE ${TINFO_CFLAGS})
 endif()

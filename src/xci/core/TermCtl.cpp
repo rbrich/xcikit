@@ -22,13 +22,16 @@
 #include <xci/config.h>
 
 #include <unistd.h>
+#include <termios.h>
+#include <cassert>
 
 #ifdef XCI_WITH_TINFO
 #include <term.h>
+#include <cassert>
+
 #endif
 
-namespace xci {
-namespace core {
+namespace xci::core {
 
 using namespace log;
 
@@ -39,6 +42,8 @@ static constexpr auto enter_underline_mode = "\033[4m";
 static constexpr auto exit_attribute_mode = "\033[0m";
 static constexpr auto set_a_foreground = "\033[3{}m";
 static constexpr auto set_a_background = "\033[4{}m";
+static constexpr auto parm_up_cursor = "\033[{}A";  // move cursor up N lines
+static constexpr auto clr_eos = "\033[J";  // clear screen from cursor down
 inline constexpr const char* tparm(const char* seq) { return seq; }
 template<typename ...Args>
 inline std::string tparm(const char* seq, Args... args) { return format(seq, args...); }
@@ -98,6 +103,11 @@ TermCtl TermCtl::overline() const { return TERM_APPEND(enter_overline_mode); }
 TermCtl TermCtl::normal() const { return TERM_APPEND(exit_attribute_mode); }
 
 
+TermCtl TermCtl::move_up(int n_lines) const { return TERM_APPEND(parm_up_cursor, n_lines); }
+
+TermCtl TermCtl::clear_screen_down() const { return TERM_APPEND(clr_eos); }
+
+
 std::ostream& operator<<(std::ostream& os, const TermCtl& term)
 {
     os << term.seq();
@@ -135,4 +145,39 @@ std::string TermCtl::format_cb(const format_impl::Context& ctx)
 }
 
 
-}} // namespace xci::core
+void TermCtl::with_raw_mode(const std::function<void()>& cb)
+{
+    struct termios origtc = {};
+    if (tcgetattr(0, &origtc) < 0) {
+        assert(!"tcgetattr failed");
+        return;
+    }
+
+    struct termios newtc = origtc;
+    cfmakeraw(&newtc);
+    newtc.c_lflag |= ISIG;
+    if (tcsetattr(0, TCSANOW, &newtc) < 0)  {
+        assert(!"tcsetattr failed");
+        return;
+    }
+
+    cb();
+
+    if (tcsetattr(0, TCSANOW, &origtc) < 0) {
+        assert(!"tcsetattr failed");
+        return;
+    }
+}
+
+
+int TermCtl::raw_getch()
+{
+    char buf = 0;
+    with_raw_mode([&buf] {
+        while (read(0, &buf, 1) < 0 && (errno == EINTR || errno == EAGAIN));
+    });
+    return buf;
+}
+
+
+} // namespace xci::core
