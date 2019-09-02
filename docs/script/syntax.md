@@ -41,7 +41,7 @@ Scoped blocks:
 
 - Semicolons are separators, not required after last expression and before EOL/EOF
 - The block has a return value which is the result of last expression.
-- Definitions don't return the value - explicit Invocation is required instead.
+- Definitions don't return the value - explicit expression is required instead.
 
 Function call:
 
@@ -298,9 +298,9 @@ Given this source file:
 
 Imagine that it's executed like this:
 
-    _0 = none
-    _1 = executor |_0|{ 1 + 2 }
-    _2 = executor |_1|{ 3 * _1 }
+    _0 = void
+    _1 = executor (|_|{ 1 + 2 } _0)
+    _2 = executor (|_|{ 3 * _ } _1)
 
 The Executor can do anything with the results, for example:
 
@@ -374,9 +374,10 @@ Precedence table:
     7    |  add, subtract     |  +  -
     8    |  multiply, divide  |  *  /  %
     9    |  power             |  **
+    10   |  subscript         |  x @ y
     
-    (10) |  unary ops         |  -  +  !  ~
-    (11) |  function call     |  f [<arg> ...]
+    (11) |  unary ops         |  -  +  !  ~
+    (12) |  function call     |  f [<arg> ...]
 
 Higher precedence means tighter binding.
 

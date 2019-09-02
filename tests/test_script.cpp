@@ -70,6 +70,20 @@ TEST_CASE( "Comments", "[script][parser]" )
 }
 
 
+TEST_CASE( "Values", "[script][parser]" )
+{
+    check_parser("identifier", "identifier");
+    check_parser("123", "123");
+    check_parser("1.", "1.0");
+    check_parser("1.23", "1.23");
+    check_parser("\"string literal\"", "\"string literal\"");
+    check_parser("$$ raw \n\r\t string $$", "\" raw \n\r\t string \"");
+    check_parser("1,2,3", "(1, 2, 3)");  // comma operator makes tuple, braces are optional
+    check_parser("(1,2,\"str\")", "(1, 2, \"str\")");
+    check_parser("[1,2,3]", "[1, 2, 3]");
+}
+
+
 TEST_CASE( "Operator precedence", "[script][parser]" )
 {
     check_parser("a+b", "(a + b)");
@@ -150,6 +164,8 @@ TEST_CASE( "Expressions", "[script][interpreter]" )
     check_interpreter("1 + 6/5",        "2");
     check_interpreter("1 + 2 / 3 == 1 + (2 / 3)",  "true");
     check_interpreter("-(1 + 2)",       "-3");
+    check_interpreter("1+1, {2+2}",       "(2, 4)");
+    check_interpreter("f=|a:Int|{a+1}; [1, f 2]",       "[1, 3]");
 }
 
 
@@ -165,15 +181,24 @@ TEST_CASE( "Blocks and lambdas", "[script][interpreter]" )
 TEST_CASE( "Lexical scope", "[script][interpreter]" )
 {
     check_interpreter("a=1; {b=2; {a + b}}",     "3");
-    check_interpreter("a=1; f=|b:Int32|{a + b}; f 2",  "3");
+    check_interpreter("a=1; f=|b:Int|{a + b}; f 2",  "3");
 
     // recursion
-    check_interpreter("f=|n:Int32| -> Int32 { if n == 1 then 1 else n * f (n-1) }; f 7",  "5040");      // factorial
-    check_interpreter("f=|x:Int32| -> Int32 { if x < 2 then x else f (x-1) + f (x-2) }; f 7",  "13");   // Fibonacci number
+    check_interpreter("f=|n:Int| -> Int { if n == 1 then 1 else n * f (n-1) }; f 7",  "5040");      // factorial
+    check_interpreter("f=|x:Int| -> Int { if x < 2 then x else f (x-1) + f (x-2) }; f 7",  "13");   // Fibonacci number
 
     // iteration (with tail-recursive functions)
-    check_interpreter("fi=|prod:Int32 cnt:Int32 max:Int32| -> Int32 { if cnt > max then prod else fi (cnt*prod) (cnt+1) max };\n"
-                      "f=|n:Int32| -> Int32 { fi 1 1 n }; f 7",  "5040");  // factorial
-    check_interpreter("fi=|a:Int32 b:Int32 n:Int32| -> Int32 { if n==0 then b else fi (a+b) a (n-1) };\n"
-                      "f=|n:Int32| -> Int32 { fi 1 0 n }; f 7",  "13");    // Fibonacci number
+    check_interpreter("fi=|prod:Int cnt:Int max:Int| -> Int { if cnt > max then prod else fi (cnt*prod) (cnt+1) max };\n"
+                      "f=|n:Int| -> Int { fi 1 1 n }; f 7",  "5040");  // factorial
+    check_interpreter("fi=|a:Int b:Int n:Int| -> Int { if n==0 then b else fi (a+b) a (n-1) };\n"
+                      "f=|n:Int| -> Int { fi 1 0 n }; f 7",  "13");    // Fibonacci number
+}
+
+
+TEST_CASE( "Lists", "[script][interpreter]" )
+{
+    check_interpreter("[1,2,3] @ 2", "3");
+    CHECK_THROWS_AS(Interpreter{0}.eval("[1,2,3] @ 3"), IndexOutOfBounds);
+    //check_interpreter("[[1,2],[3,4],[5,6]] @ 1 @ 0", "3");
+    check_interpreter("head = |l:[Int]| -> Int { l @ 0 }; head [1,2,3]", "1");
 }

@@ -146,7 +146,7 @@ public:
     std::unique_ptr<Value> make_copy() const override { return std::make_unique<Void>(); }
     void write(byte* buffer) const override { *buffer = byte{0}; }
     void read(const byte* buffer) override {}
-    TypeInfo type_info() const override { return {Type::Void}; }
+    TypeInfo type_info() const override { return TypeInfo{Type::Void}; }
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
 };
 
@@ -164,7 +164,7 @@ public:
 
     void write(byte* buffer) const override { *buffer = byte(m_value); }
     void read(const byte* buffer) override { m_value = bool(*buffer); }
-    TypeInfo type_info() const override { return {Type::Bool}; }
+    TypeInfo type_info() const override { return TypeInfo{Type::Bool}; }
 
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
 
@@ -183,7 +183,7 @@ public:
 
     void write(byte* buffer) const override { *buffer = byte(m_value); }
     void read(const byte* buffer) override { m_value = uint8_t(*buffer); }
-    TypeInfo type_info() const override { return {Type::Byte}; }
+    TypeInfo type_info() const override { return TypeInfo{Type::Byte}; }
 
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
 
@@ -202,7 +202,7 @@ public:
 
     void write(byte* buffer) const override { std::memcpy(buffer, &m_value, sizeof(m_value)); }
     void read(const byte* buffer) override { std::memcpy(&m_value, buffer, sizeof(m_value)); }
-    TypeInfo type_info() const override { return {Type::Char}; }
+    TypeInfo type_info() const override { return TypeInfo{Type::Char}; }
 
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
 
@@ -221,7 +221,7 @@ public:
 
     void write(byte* buffer) const override { std::memcpy(buffer, &m_value, sizeof(m_value)); }
     void read(const byte* buffer) override { std::memcpy(&m_value, buffer, sizeof(m_value)); }
-    TypeInfo type_info() const override { return {Type::Int32}; }
+    TypeInfo type_info() const override { return TypeInfo{Type::Int32}; }
 
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
 
@@ -240,7 +240,7 @@ public:
 
     void write(byte* buffer) const override { std::memcpy(buffer, &m_value, sizeof(m_value)); }
     void read(const byte* buffer) override { std::memcpy(&m_value, buffer, sizeof(m_value)); }
-    TypeInfo type_info() const override { return {Type::Int64}; }
+    TypeInfo type_info() const override { return TypeInfo{Type::Int64}; }
 
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
 
@@ -259,7 +259,7 @@ public:
 
     void write(byte* buffer) const override { std::memcpy(buffer, &m_value, sizeof(m_value)); }
     void read(const byte* buffer) override { std::memcpy(&m_value, buffer, sizeof(m_value)); }
-    TypeInfo type_info() const override { return {Type::Float32}; }
+    TypeInfo type_info() const override { return TypeInfo{Type::Float32}; }
 
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
 
@@ -278,7 +278,7 @@ public:
 
     void write(byte* buffer) const override { std::memcpy(buffer, &m_value, sizeof(m_value)); }
     void read(const byte* buffer) override { std::memcpy(&m_value, buffer, sizeof(m_value)); }
-    TypeInfo type_info() const override { return {Type::Float64}; }
+    TypeInfo type_info() const override { return TypeInfo{Type::Float64}; }
 
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
 
@@ -321,7 +321,7 @@ public:
     void incref() const override { m_value.incref(); }
     void decref() const override { m_value.decref(); }
 
-    TypeInfo type_info() const override { return {Type::String}; }
+    TypeInfo type_info() const override { return TypeInfo{Type::String}; }
 
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
 
@@ -338,9 +338,9 @@ class List: public Value {
 public:
     List() = default;
     explicit List(const Values& values);  // all values must have same type!
-    explicit List(const TypeInfo& elem_type) : m_elem_type(elem_type) {}
-    explicit List(const TypeInfo& elem_type, size_t length, const HeapSlot& slot)
-            : m_elem_type(elem_type), m_length(length), m_elements(slot) {}
+    explicit List(TypeInfo elem_type) : m_elem_type(std::move(elem_type)) {}
+    explicit List(TypeInfo elem_type, size_t length, HeapSlot slot)
+            : m_elem_type(std::move(elem_type)), m_length(length), m_elements(std::move(slot)) {}
 
     List(const List& other) = default;
     List(List&& other) noexcept = default;
@@ -363,6 +363,12 @@ private:
     TypeInfo m_elem_type;
     size_t m_length = 0;  // number of elements
     HeapSlot m_elements;
+};
+
+
+struct Int32List: public List {
+public:
+    Int32List() : List(TypeInfo{Type::Int32}) {}
 };
 
 
@@ -430,7 +436,7 @@ public:
     void write(byte* buffer) const override {}
     void read(const byte* buffer) override {}
 
-    TypeInfo type_info() const override { return {Type::Module}; }
+    TypeInfo type_info() const override { return TypeInfo{Type::Module}; }
 
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
 

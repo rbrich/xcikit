@@ -95,9 +95,10 @@ enum class Opcode: uint8_t {
     Exp_32,
     Exp_64,
 
+    Subscript_32,
+
     // Control flow
-    Invoke,                 // pop from stack, invoke the value
-    Execute,                // pop function object from stack, execute it
+    Execute,                // pull function object from stack, execute it
 
     // --------------------------------------------------------------
     // The following have one 1-byte arg
@@ -106,8 +107,8 @@ enum class Opcode: uint8_t {
     LoadModule,             // arg => idx of imported module, push it as value on stack
     LoadFunction,           // arg => idx of function in module, push on stack
 
-    Call0,                  // arg = idx of function in current module, call it, pop args from stack, push result back
-    Call1,                  // arg = idx of function in builtin module, call it, pop args from stack, push result back
+    Call0,                  // arg = idx of function in current module, call it, pull args from stack, push result back
+    Call1,                  // arg = idx of function in builtin module, call it, pull args from stack, push result back
 
     MakeClosure,            // arg = idx of function in current module, pull nonlocals from stack, wrap them into closure, push closure back
 
@@ -115,12 +116,16 @@ enum class Opcode: uint8_t {
     DecRef,                 // arg = offset from top, (uint32*) at the offset is dereferenced and decremented
 
     Jump,                   // arg => relative jump (+N instructions) - unconditional
-    JumpIfNot,              // pop cond from stack, arg => relative jump (+N instructions) if cond is false
+    JumpIfNot,              // pull cond from stack, arg => relative jump (+N instructions) if cond is false
+
+    Invoke,                 // arg => type index in current module, pull value from stack, invoke it
 
     // --------------------------------------------------------------
     // The following have two 1-byte args
 
-    Call,                   // arg1 = idx of imported module, arg2 = idx of function in the module, call it, pop args from stack, push result back
+    Call,                   // arg1 = idx of imported module, arg2 = idx of function in the module, call it, pull args from stack, push result back
+
+    MakeList,               // arg1 = number of elements, arg2 = size of each element, pulls number*size bytes from stack, creates list on heap, pushes list handle back to stack
 
     CopyVariable,           // arg1 => offset from base (0 = base - size = first local), arg2 => size, copy bytes from stack and push back on top
     CopyArgument,           // arg1 => offset from base (0 = base = first arg), arg2 => size, copy bytes from stack and push back on top
@@ -133,7 +138,7 @@ enum class Opcode: uint8_t {
     ZeroArgFirst = Noop,
     ZeroArgLast = Execute,
     OneArgFirst = LoadStatic,
-    OneArgLast = JumpIfNot,
+    OneArgLast = Invoke,
     TwoArgFirst = Call,
     TwoArgLast = Drop,
 };

@@ -134,7 +134,7 @@ std::pair<size_t, TypeInfo> Function::nonlocal_offset_and_type(Index idx) const
 bool Function::is_generic() const
 {
     return ranges::any_of(signature().params, [](const TypeInfo& type_info) {
-        return type_info.type() == Type::Auto;
+        return type_info.type() == Type::Unknown;
     });
 }
 

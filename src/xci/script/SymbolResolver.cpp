@@ -58,6 +58,12 @@ public:
         }
     }
 
+    void visit(ast::List& v) override {
+        for (auto& item : v.items) {
+            item->apply(*this);
+        }
+    }
+
     void visit(ast::Call& v) override {
         auto& symptr = v.identifier.symbol;
         symptr = resolve_symbol(v.identifier.name);
@@ -102,6 +108,7 @@ public:
 
     void visit(ast::TypeName& t) final {}
     void visit(ast::FunctionType& t) final {}
+    void visit(ast::ListType& t) final {}
 
     struct PostponedBlock {
         Function& func;
@@ -202,6 +209,12 @@ public:
         }
     }
 
+    void visit(ast::List& v) override {
+        for (auto& item : v.items) {
+            item->apply(*this);
+        }
+    }
+
     void visit(ast::Call& v) override {
         for (auto& arg : v.args) {
             arg->apply(*this);
@@ -245,6 +258,7 @@ public:
 
     void visit(ast::TypeName& t) final {}
     void visit(ast::FunctionType& t) final {}
+    void visit(ast::ListType& t) final {}
 
 private:
     Module& module() { return m_function.module(); }

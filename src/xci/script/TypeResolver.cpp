@@ -44,10 +44,12 @@ public:
 
     void visit(ast::Invocation& inv) override {
         inv.expression->apply(*this);
+        inv.type_index = module().add_type(move(m_value_type));
     }
 
     void visit(ast::Return& ret) override {
         ret.expression->apply(*this);
+        m_function.signature().resolve_return_type(m_value_type);
     }
 
     void visit(ast::Integer& v) override { m_value_type = TypeInfo{Type::Int32}; }
@@ -63,6 +65,24 @@ public:
             subtypes.push_back(move(m_value_type));
         }
         m_value_type = TypeInfo(move(subtypes));
+    }
+
+    void visit(ast::List& v) override {
+        // check all items have same type
+        TypeInfo elem_type;
+        for (auto& item : v.items) {
+            item->apply(*this);
+            if (item.get() == v.items.front().get()) {
+                // first item
+                elem_type = move(m_value_type);
+            } else {
+                // other items
+                if (elem_type != m_value_type)
+                    throw ListElemTypeMismatch(elem_type, m_value_type);
+            }
+        }
+        v.item_size = elem_type.size();
+        m_value_type = TypeInfo(Type::List, move(elem_type));
     }
 
     struct CallArg {
@@ -202,13 +222,13 @@ public:
             if (p.type)
                 p.type->apply(*this);
             else
-                m_type_info = TypeInfo{Type::Auto};
+                m_type_info = TypeInfo{Type::Unknown};
             fn.signature().add_parameter(move(m_type_info));
         }
         if (v.type.result_type)
             v.type.result_type->apply(*this);
         else
-            m_type_info = TypeInfo{Type::Auto};
+            m_type_info = TypeInfo{Type::Unknown};
         fn.signature().set_return_type(move(m_type_info));
         m_value_type = TypeInfo{fn.signature_ptr()};
 
@@ -220,6 +240,11 @@ public:
         // compile body and resolve return type
         m_processor.process_block(fn, v.body);
         m_value_type = TypeInfo{fn.signature_ptr()};
+
+        // parameterless function is equivalent to its return type (eager evaluation)
+        if (m_value_type.is_callable() && m_value_type.signature().params.empty()) {
+            m_value_type = m_value_type.signature().return_type;
+        }
     }
 
     void visit(ast::TypeName& t) final {
@@ -235,6 +260,11 @@ public:
         t.result_type->apply(*this);
         signature->set_return_type(m_type_info);
         m_type_info = TypeInfo{signature};
+    }
+
+    void visit(ast::ListType& t) final {
+        t.elem_type->apply(*this);
+        m_type_info = TypeInfo{Type::List, move(m_type_info)};
     }
 
     TypeInfo value_type() const { return m_value_type; }
@@ -340,7 +370,6 @@ void TypeResolver::process_block(Function& func, const ast::Block& block)
     for (const auto& stmt : block.statements) {
         stmt->apply(visitor);
     }
-    func.signature().resolve_return_type(visitor.value_type());
 }
 
 

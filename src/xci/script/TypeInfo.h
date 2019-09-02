@@ -31,8 +31,8 @@ namespace xci::script {
 
 
 enum class Type : uint8_t {
+    Unknown,    // type not known at this time (might be inferred or generic)
     Void,       // void type - has no value
-    Auto,       // automatic type for generics
 
     // Plain types
     Bool,
@@ -58,7 +58,7 @@ struct Signature;
 class TypeInfo {
 public:
     TypeInfo() = default;
-    TypeInfo(Type type) : m_type(type) {}
+    explicit TypeInfo(Type type) : m_type(type) {}
     explicit TypeInfo(Type type, uint8_t var) : m_type(type), m_var(var) {}
     // Function
     explicit TypeInfo(std::shared_ptr<Signature> signature)
@@ -77,7 +77,7 @@ public:
     Type type() const { return m_type; }
     bool is_callable() const { return type() == Type::Function; }
 
-    bool is_generic() const { return m_type == Type::Auto; }
+    bool is_generic() const { return m_type == Type::Unknown; }
     uint8_t generic_var() const { return m_var; }
 
     Signature& signature() { return *m_signature; }
@@ -90,7 +90,7 @@ public:
     bool operator!=(const TypeInfo& rhs) const { return !(*this == rhs); }
 
 private:
-    Type m_type {Type::Void};
+    Type m_type {Type::Unknown};
     uint8_t m_var {0};  // for auto type, specifies which type variable this represents
     std::shared_ptr<Signature> m_signature;
     std::vector<TypeInfo> m_subtypes;

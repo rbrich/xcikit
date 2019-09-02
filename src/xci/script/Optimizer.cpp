@@ -55,7 +55,11 @@ public:
     void visit(ast::String& v) override { set_const_value(make_unique<value::String>(v.value)); }
 
     void visit(ast::Tuple& v) override {
-        // FIXME: const tuple -> static value
+        // TODO: const tuple -> static value
+    }
+
+    void visit(ast::List& v) override {
+        // TODO: const list -> static value
     }
 
     void visit(ast::Call& v) override {
@@ -144,7 +148,7 @@ public:
         }
 
         if (is_nonconst) {
-            set_variable_value(TypeInfo{Type::Auto});
+            set_variable_value(TypeInfo{Type::Unknown});
             return;
         }
 
@@ -168,7 +172,7 @@ public:
             v.else_expr->apply(*this);
             if (m_collapsed)
                 v.else_expr = move(m_collapsed);
-            set_variable_value(TypeInfo{Type::Auto});
+            set_variable_value(TypeInfo{Type::Unknown});
             return;
         }
 
@@ -197,17 +201,12 @@ public:
         Function& func = m_function.module().get_function(v.index);
         m_processor.process_block(func, v.body);
 
-        set_variable_value(TypeInfo{Type::Auto});
+        set_variable_value(TypeInfo{Type::Unknown});
     }
 
-    void visit(ast::TypeName& t) final {
-        //m_type_info = builtin::type_by_name(t.name);
-    }
-
-    void visit(ast::FunctionType& t) final {
-
-    }
-
+    void visit(ast::TypeName& t) final {}
+    void visit(ast::FunctionType& t) final {}
+    void visit(ast::ListType& t) final {}
 
 private:
     Module& module() { return m_function.module(); }

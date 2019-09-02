@@ -16,6 +16,7 @@
 #include "Builtin.h"
 #include "Function.h"
 #include "Error.h"
+#include <xci/compat/macros.h>
 #include <functional>
 #include <cmath>
 
@@ -176,6 +177,7 @@ const char* builtin::op_to_name(ast::Operator::Op op)
 {
     using Op = ast::Operator;
     switch (op) {
+        case Op::Undefined:     return nullptr;
         case Op::LogicalOr:     return "||";
         case Op::LogicalAnd:    return "&&";
         case Op::Equal:         return "==";
@@ -195,12 +197,13 @@ const char* builtin::op_to_name(ast::Operator::Op op)
         case Op::Div:           return "/";
         case Op::Mod:           return "%";
         case Op::Exp:           return "**";
+        case Op::Subscript:     return "[]";
         case Op::LogicalNot:    return "-";
         case Op::BitwiseNot:    return "~";
         case Op::UnaryPlus:     return "+";
         case Op::UnaryMinus:    return "-";
-        default:                return nullptr;
     }
+    UNREACHABLE;
 }
 
 
@@ -208,6 +211,7 @@ const char* builtin::op_to_function_name(ast::Operator::Op op)
 {
     using Op = ast::Operator;
     switch (op) {
+        case Op::Undefined:     return nullptr;
         case Op::LogicalOr:     return "or";
         case Op::LogicalAnd:    return "and";
         case Op::Equal:         return "eq";
@@ -227,20 +231,31 @@ const char* builtin::op_to_function_name(ast::Operator::Op op)
         case Op::Div:           return "div";
         case Op::Mod:           return "mod";
         case Op::Exp:           return "exp";
+        case Op::Subscript:     return "subscript";
         case Op::LogicalNot:    return "not";
         case Op::BitwiseNot:    return "bit_not";
         case Op::UnaryMinus:    return "neg";
-        default:                return nullptr;
+        case Op::UnaryPlus:     return nullptr;
     }
+    UNREACHABLE;
 }
 
 
 TypeInfo builtin::type_by_name(const std::string& name)
 {
-    if (name.empty())       return TypeInfo(Type::Auto);
+    if (name.empty())       return TypeInfo(Type::Unknown);
+    if (name == "Void")     return TypeInfo(Type::Void);
+    if (name == "Bool")     return TypeInfo(Type::Bool);
+    if (name == "Byte")     return TypeInfo(Type::Byte);
+    if (name == "Char")     return TypeInfo(Type::Char);
+    if (name == "Int")      return TypeInfo(Type::Int32);
     if (name == "Int32")    return TypeInfo(Type::Int32);
+    if (name == "Int64")    return TypeInfo(Type::Int64);
+    if (name == "Float")    return TypeInfo(Type::Float32);
+    if (name == "Float32")  return TypeInfo(Type::Float32);
+    if (name == "Float64")  return TypeInfo(Type::Float64);
     if (name == "String")   return TypeInfo(Type::String);
-    return TypeInfo();
+    throw UnknownTypeName(name);
 }
 
 
@@ -269,6 +284,7 @@ BuiltinModule::BuiltinModule()
     add_arithmetic_op_function("mod", Opcode::Mod_8);
     add_arithmetic_op_function("exp", Opcode::Exp_8);
     add_unary_op_functions();
+    add_subscript_function();
 }
 
 
@@ -440,6 +456,20 @@ BuiltinModule::add_unary_op_functions()
         p8->set_next(p32);
         p32->set_next(p64);
     }
+}
+
+
+void
+BuiltinModule::add_subscript_function()
+{
+    auto name = "subscript";
+
+    auto fn = std::make_unique<Function>(*this, symtab().add_child(name));
+    fn->signature().return_type = TypeInfo{Type::Int32};
+    fn->add_parameter("lhs", TypeInfo{Type::List, TypeInfo{Type::Int32}});
+    fn->add_parameter("rhs", TypeInfo{Type::Int32});
+    fn->code().add_opcode(Opcode::Subscript_32);
+    symtab().add({name, Symbol::Function, add_function(std::move(fn))});
 }
 
 

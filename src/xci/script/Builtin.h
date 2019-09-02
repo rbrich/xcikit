@@ -53,6 +53,7 @@ private:
     void add_bitwise_op_function(const std::string& name, Opcode opcode);
     void add_arithmetic_op_function(const std::string& name, Opcode opcode);
     void add_unary_op_functions();
+    void add_subscript_function();
 };
 
 } // namespace xci::script

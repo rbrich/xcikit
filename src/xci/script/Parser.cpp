@@ -40,7 +40,6 @@ struct RSC: seq<space, SC> {};  // required at least one space
 
 // Basic tokens
 struct Semicolon: sor<one<';'>, eolf> {};  // optional at EOL / EOF
-struct Comma: one<','> {};
 struct Identifier: seq< lower, star< identifier_other > > {};
 struct TypeName: seq< upper, star< identifier_other > > {};
 struct PrefixOperator: sor< one<'-'>, one<'+'>, one<'!'>, one<'~'> > {};
@@ -48,7 +47,7 @@ struct InfixOperator: sor< two<'&'>, two<'|'>, two<'='>, string<'!','='>,
                            string<'<','='>, string<'>','='>,
                            two<'<'>, two<'>'>, one<'<'>, one<'>'>,
                            one<'+'>, one<'-'>, two<'*'>, one<'*'>,
-                           one<'/'>, one<'%'>,
+                           one<'/'>, one<'%'>, one<'@'>,
                            one<'&'>, one<'|'>, one<'^'> > {};
 
 // Keywords
@@ -71,26 +70,30 @@ struct Literal: sor< Float, Integer, String, RawString > {};
 // Expressions
 struct Expression;
 struct Statement;
-struct ExprUnary;
-struct FunctionType;
-struct Type: sor< TypeName, FunctionType > {};
+struct ExprArgSafe;
+struct ExprOperand;
+struct ExprInfix;
+struct Type;
 struct Variable: seq< not_at<Keyword>, Identifier, opt<SC, one<':'>, SC, Type > > {};
 struct Parameter: sor< Variable > {};
-struct DeclParams: seq< one<'|'>, SC, plus<Parameter, SC>, one<'|'> > {};
+struct DeclParams: seq< one<'|'>, SC, plus<Parameter, SC>, one<'|'> > {};  // do not fail if '|' matches but the rest doesn't - it may be |-operator instead
 struct DeclResult: if_must< string<'-', '>'>, SC, Type > {};
 struct FunctionType: seq< opt<DeclParams>, SC, opt<DeclResult> > {};
+struct ListType: if_must< one<'['>, SC, Type, SC, one<']'> > {};
+struct Type: sor< TypeName, ListType, FunctionType > {};
 struct Block: if_must< one<'{'>, SC, sor< one<'}'>, seq<Statement, SC, star<Semicolon, SC, Statement, SC>, opt<Semicolon, SC>, one<'}'>> > > {};
 struct Function: seq< FunctionType, SC, Block> {};
 struct BracedExpr: if_must< one<'('>, SC, Expression, SC, one<')'> > {};
-struct ExprPrefix: if_must< PrefixOperator, SC, ExprUnary, SC > {};
+struct ExprPrefix: if_must< PrefixOperator, SC, ExprOperand, SC > {};
 struct VarCall: seq< not_at<Keyword>, Identifier > {};  // FunCall without any arguments
-struct ExprArgSafe: sor<Literal, VarCall, Function, BracedExpr> {};  // expressions which can be used as args in FunCall
+struct List: if_must< one<'['>, SC, sor<one<']'>, seq<ExprInfix, SC, until<one<']'>, one<','>, SC, ExprInfix, SC>>> > {};
+struct ExprArgSafe: sor< BracedExpr, List, Literal, VarCall, Function > {};  // expressions which can be used as args in FunCall
 struct FunCall: seq< not_at<Keyword>, Identifier, star<RSC, ExprArgSafe> > {};
-struct ExprUnary: sor<FunCall, ExprArgSafe, ExprPrefix> {};
-struct ExprInfixRight: if_must<InfixOperator, SC, ExprUnary, SC, opt<ExprInfixRight>> {};
-struct ExprInfix: seq< ExprUnary, SC, opt<ExprInfixRight> > {};
+struct ExprOperand: sor<FunCall, ExprArgSafe, ExprPrefix> {};
+struct ExprInfixRight: if_must<InfixOperator, SC, ExprOperand, SC, opt<ExprInfixRight>> {};
+struct ExprInfix: seq< ExprOperand, SC, opt<ExprInfixRight> > {};
 struct ExprCond: if_must< KeywordIf, SC, ExprInfix, SC, KeywordThen, SC, Expression, SC, KeywordElse, SC, Expression> {};
-struct ExprTuple: if_must< seq<ExprInfix, SC, Comma>, SC, ExprInfix, star<SC, Comma, SC, ExprInfix> > {};
+struct ExprTuple: if_must< seq<ExprInfix, SC, one<','>>, SC, ExprInfix, star<SC, one<','>, SC, ExprInfix> > {};
 struct Expression: sor< ExprCond, ExprTuple, ExprInfix > {};
 
 // Statements
@@ -276,40 +279,35 @@ struct Action<ExprInfix> : change_states< ast::OpCall > {
 
     template<typename Input>
     static void success(const Input &in, ast::OpCall& opc, std::unique_ptr<ast::Expression>& expr) {
-        // Collapse empty OpCall
-        if (opc.op.is_undefined()) {
-            assert(!opc.right_tmp);
-            assert(opc.args.size() == 1);
-            expr = std::move(opc.args.front());
-            expr->source_info = opc.source_info;
-        } else {
-            expr = std::make_unique<ast::OpCall>(std::move(opc));
-        }
+        expr = prepare_expression(opc);
     }
 
     template<typename Input>
     static void success(const Input &in, ast::OpCall& opc, ast::Condition& cnd) {
-        // Collapse empty OpCall
-        if (opc.op.is_undefined()) {
-            assert(!opc.right_tmp);
-            assert(opc.args.size() == 1);
-            cnd.cond = std::move(opc.args.front());
-            cnd.source_info = opc.source_info;
-        } else {
-            cnd.cond = std::make_unique<ast::OpCall>(std::move(opc));
-        }
+        cnd.cond = prepare_expression(opc);
     }
 
     template<typename Input>
     static void success(const Input &in, ast::OpCall& opc, ast::Tuple& tpl) {
+        tpl.items.emplace_back(prepare_expression(opc));
+    }
+
+    template<typename Input>
+    static void success(const Input &in, ast::OpCall& opc, ast::List& lst) {
+        lst.items.emplace_back(prepare_expression(opc));
+    }
+
+private:
+    static std::unique_ptr<ast::Expression> prepare_expression(ast::OpCall& opc) {
         // Collapse empty OpCall
         if (opc.op.is_undefined()) {
             assert(!opc.right_tmp);
             assert(opc.args.size() == 1);
-            tpl.items.emplace_back(std::move(opc.args.front()));
-            tpl.source_info = opc.source_info;
+            auto& expr = opc.args.front();
+            expr->source_info = opc.source_info;
+            return move(expr);
         } else {
-            tpl.items.emplace_back(std::make_unique<ast::OpCall>(std::move(opc)));
+            return std::make_unique<ast::OpCall>(std::move(opc));
         }
     }
 };
@@ -339,6 +337,20 @@ struct Action<ExprTuple> : change_states< ast::Tuple > {
     template<typename Input>
     static void success(const Input &in, ast::Tuple& tpl, std::unique_ptr<ast::Expression>& expr) {
         expr = std::make_unique<ast::Tuple>(std::move(tpl));
+    }
+};
+
+
+template<>
+struct Action<List> : change_states< ast::List > {
+    template<typename Input>
+    static void apply(const Input &in, ast::List& lst) {
+        lst.source_info.load(in.input(), in.position());
+    }
+
+    template<typename Input>
+    static void success(const Input &in, ast::List& lst, std::unique_ptr<ast::Expression>& expr) {
+        expr = std::make_unique<ast::List>(std::move(lst));
     }
 };
 
@@ -443,6 +455,14 @@ struct Action<TypeName> {
 };
 
 
+template<>
+struct Action<ListType> : change_states< ast::ListType > {
+    template<typename Input>
+    static void success(const Input &in, ast::ListType& ltype, std::unique_ptr<ast::Type>& type) {
+        type = std::make_unique<ast::ListType>(std::move(ltype));
+    }
+};
+
 
 template<>
 struct Action<FunctionType> : change_states< ast::FunctionType > {
@@ -461,6 +481,24 @@ struct Action<FunctionType> : change_states< ast::FunctionType > {
 
 
 template<>
+struct Action<Type> : change_states< std::unique_ptr<ast::Type> >  {
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::FunctionType& ftype) {
+        ftype.result_type = std::move(type);
+    }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::ListType& ltype) {
+        ltype.elem_type = std::move(type);
+    }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::Variable& var) {
+        var.type = std::move(type);
+    }
+};
+
+template<>
 struct Action<Variable> : change_states< ast::Variable > {
     template<typename Input>
     static void success(const Input &in, ast::Variable& var, ast::Definition& def) {
@@ -470,19 +508,6 @@ struct Action<Variable> : change_states< ast::Variable > {
     template<typename Input>
     static void success(const Input &in, ast::Variable& var, ast::FunctionType& ftype) {
         ftype.params.push_back(std::move(var));
-    }
-};
-
-template<>
-struct Action<Type> : change_states< std::unique_ptr<ast::Type> >  {
-    template<typename Input>
-    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::FunctionType& ftype) {
-        ftype.result_type = std::move(type);
-    }
-
-    template<typename Input>
-    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::Variable& var) {
-        var.type = std::move(type);
     }
 };
 
@@ -522,6 +547,17 @@ template<>
 struct Action<String> {
     template<typename Input>
     static void apply(const Input &in, std::unique_ptr<ast::Expression>& expr) {
+        const auto& str = in.string();
+        expr = std::make_unique<ast::String>(str.substr(1, str.size() - 2));
+        expr->source_info.load(in.input(), in.position());
+    }
+};
+
+
+template<>
+struct Action<RawString::content> {
+    template<typename Input, typename States>
+    static void apply(const Input &in, const States& /* raw_string states */, std::unique_ptr<ast::Expression>& expr) {
         expr = std::make_unique<ast::String>(in.string());
         expr->source_info.load(in.input(), in.position());
     }

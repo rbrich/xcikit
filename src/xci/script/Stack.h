@@ -48,9 +48,6 @@ public:
 
     void push(const Value& o);
 
-    // FIXME: drop this, use pull(TypeInfo) instead
-    std::unique_ptr<Value> pull_any();
-
     std::unique_ptr<Value> pull(const TypeInfo& type_info);
 
     template <typename T,
@@ -88,6 +85,10 @@ public:
     bool empty() const { return m_stack_capacity == m_stack_pointer; }
     StackAbs size() const { return m_stack_capacity - m_stack_pointer; }
     size_t capacity() const { return m_stack_capacity; }
+
+    // Get moving pointer to top of the stack (lowest valid address)
+    // The address changes with each operation.
+    byte* data() const { return &m_stack[m_stack_pointer]; }
 
     // ------------------------------------------------------------------------
     // Type tracking

@@ -15,6 +15,7 @@
 
 #include "TypeInfo.h"
 #include "Error.h"
+#include <xci/compat/macros.h>
 #include <numeric>
 
 using namespace std;
@@ -25,7 +26,7 @@ namespace xci::script {
 size_t TypeInfo::size() const
 {
     switch (type()) {
-        case Type::Auto:        return 0;
+        case Type::Unknown:     return 0;
         case Type::Void:        return 1;
         case Type::Bool:        return 1;
         case Type::Byte:        return 1;
@@ -77,6 +78,8 @@ const TypeInfo& TypeInfo::elem_type() const
 
 bool TypeInfo::operator==(const TypeInfo& rhs) const
 {
+    if (m_type == Type::Unknown || rhs.type() == Type::Unknown)
+        return true;  // unknown type matches all other types
     if (m_type != rhs.type())
         return false;
     if (m_type == Type::Function)
@@ -90,8 +93,8 @@ bool TypeInfo::operator==(const TypeInfo& rhs) const
 std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
 {
     switch (v.type()) {
+        case Type::Unknown:     return os << "?";
         case Type::Void:        return os << "Void";
-        case Type::Auto:        return os << "<auto>";
         case Type::Bool:        return os << "Bool";
         case Type::Byte:        return os << "Byte";
         case Type::Char:        return os << "Char";
@@ -112,8 +115,9 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
             return os << ")";
         }
         case Type::Function:    return os << v.signature();
-        default:                return os << "<unknown>";
+        case Type::Module:      return os << "Module";
     }
+    UNREACHABLE;
 }
 
 

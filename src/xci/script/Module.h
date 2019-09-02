@@ -44,6 +44,10 @@ public:
     Index add_value(std::unique_ptr<Value>&& value);
     const Value& get_value(Index idx) const { return m_values[idx]; }
 
+    // Type information
+    Index add_type(TypeInfo type_info);
+    const TypeInfo& get_type(Index idx) const { return m_types[idx]; }
+
     // Top-level symbol table
     SymbolTable& symtab() { return m_symtab; }
 
@@ -52,6 +56,7 @@ public:
 private:
     std::vector<Module*> m_modules;
     std::vector<std::unique_ptr<Function>> m_functions;
+    std::vector<TypeInfo> m_types;
     Values m_values;
     SymbolTable m_symtab;
 };

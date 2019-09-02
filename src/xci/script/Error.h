@@ -133,6 +133,12 @@ struct UnexpectedArgumentCount : public Error {
 };
 
 
+struct UnknownTypeName : public Error {
+    explicit UnknownTypeName(const std::string& name)
+        : Error(core::format("unknown type name: {}", name)) {}
+};
+
+
 struct UnexpectedArgumentType : public Error {
     explicit UnexpectedArgumentType(int idx, TypeInfo exp, TypeInfo got, const SourceInfo& si)
             : Error(core::format("function expects {} for arg #{}, called with {}",
@@ -176,6 +182,13 @@ struct ListElemTypeMismatch : public Error {
     explicit ListElemTypeMismatch(TypeInfo exp, TypeInfo got)
             : Error(core::format("list element type mismatch: got {} in list of {}",
                                  got, exp)) {}
+};
+
+
+struct IndexOutOfBounds : public Error {
+    explicit IndexOutOfBounds(int idx, size_t len)
+            : Error(core::format("list index out of bounds: {} not in [0..{}]",
+                                 idx, len-1)) {}
 };
 
 

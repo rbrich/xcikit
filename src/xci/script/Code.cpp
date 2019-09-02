@@ -84,6 +84,7 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::Neg_8:
         case Opcode::Neg_32:
         case Opcode::Neg_64:        return os << "NEG";
+        case Opcode::Subscript_32:  return os << "SUBSCRIPT";
         case Opcode::Invoke:        return os << "INVOKE";
         case Opcode::Execute:       return os << "EXECUTE";
         case Opcode::LoadStatic:    return os << "LOAD_STATIC";
@@ -96,6 +97,7 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::Call1:         return os << "CALL1";
         case Opcode::Call:          return os << "CALL";
         case Opcode::MakeClosure:   return os << "MAKE_CLOSURE";
+        case Opcode::MakeList:      return os << "MAKE_LIST";
         case Opcode::IncRef:        return os << "INC_REF";
         case Opcode::DecRef:        return os << "DEC_REF";
         case Opcode::Jump:          return os << "JUMP";

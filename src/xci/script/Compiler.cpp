@@ -47,20 +47,12 @@ public:
 
     void visit(ast::Invocation& inv) override {
         inv.expression->apply(*this);
-        m_function.code().add_opcode(Opcode::Invoke);
+        m_function.code().add_opcode(Opcode::Invoke, inv.type_index);
     }
 
     void visit(ast::Return& ret) override {
         ret.expression->apply(*this);
-        // if the return value is parameterless function, evaluate it
-        TypeInfo& rti = m_function.signature().return_type;
-        if (rti.is_callable() && rti.signature().params.empty()) {
-            // EXECUTE
-            m_function.code().add_opcode(Opcode::Execute);
-            rti = rti.signature().return_type;
-        }
-
-        auto skip = rti.size();
+        auto skip = m_function.signature().return_type.size();
         auto drop = m_function.raw_size_of_parameters()
                   + m_function.raw_size_of_nonlocals()
                   + m_function.raw_size_of_values();
@@ -119,6 +111,15 @@ public:
         for (auto& item : ranges::views::reverse(v.items)) {
             item->apply(*this);
         }
+    }
+
+    void visit(ast::List& v) override {
+        // build list
+        for (auto& item : ranges::views::reverse(v.items)) {
+            item->apply(*this);
+        }
+        // MAKE_LIST <length> <elem_size>
+        m_function.code().add_opcode(Opcode::MakeList, v.items.size(), v.item_size);
     }
 
     void visit(ast::Call& v) override {
@@ -299,14 +300,25 @@ public:
             }
             // MAKE_CLOSURE <function_idx> <n_nonlocals>
             m_function.code().add_opcode(Opcode::MakeClosure, v.index);
+            if (!func.has_parameters()) {
+                // parameterless closure is executed immediately
+                // EXECUTE
+                m_function.code().add_opcode(Opcode::Execute);
+            }
         } else {
-            // LOAD_FUNCTION <function_idx>
-            m_function.code().add_opcode(Opcode::LoadFunction, v.index);
+            if (func.has_parameters()) {
+                // LOAD_FUNCTION <function_idx>
+                m_function.code().add_opcode(Opcode::LoadFunction, v.index);
+            } else {
+                // CALL0 <function_idx>
+                m_function.code().add_opcode(Opcode::Call0, v.index);
+            }
         }
     }
 
     void visit(ast::TypeName& t) final {}
     void visit(ast::FunctionType& t) final {}
+    void visit(ast::ListType& t) final {}
 
 private:
     Module& module() { return m_function.module(); }
@@ -352,7 +364,7 @@ void Compiler::configure(uint32_t flags)
 
 void Compiler::compile(Function& func, AST& ast)
 {
-    func.signature().set_return_type(TypeInfo{Type::Auto});
+    func.signature().set_return_type(TypeInfo{Type::Unknown});
     ast.body.symtab = &func.symtab();
 
     // Preprocess AST

@@ -75,8 +75,6 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
 
         auto opcode = static_cast<Opcode>(*it++);
         switch (opcode) {
-            // --------------------------------------------------------------
-            // No args
 
             case Opcode::LogicalOr:
             case Opcode::LogicalAnd: {
@@ -232,9 +230,25 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                 break;
             }
 
-            case Opcode::Invoke:
-                cb(*m_stack.pull_any());
+            case Opcode::Subscript_32: {
+                auto lhs = m_stack.pull<value::Int32List>();
+                auto rhs = m_stack.pull<value::Int32>();
+                auto idx = rhs.value();
+                auto len = lhs.length();
+                if (idx < 0)
+                    idx += len;
+                if (idx < 0 || (size_t) idx >= len)
+                    throw IndexOutOfBounds(idx, len);
+                m_stack.push(*lhs.get(idx));
                 break;
+            }
+
+            case Opcode::Invoke: {
+                const auto type_index = *it++;
+                const auto& type_info = cur_fun->module().get_type(type_index);
+                cb(*m_stack.pull(type_info));
+                break;
+            }
 
             case Opcode::Execute: {
                 auto o = m_stack.pull<value::Lambda>();
@@ -245,9 +259,6 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                 call_fun(o.function());
                 break;
             }
-
-            // --------------------------------------------------------------
-            // Single 1-byte arg
 
             case Opcode::LoadStatic: {
                 auto arg = *it++;
@@ -308,6 +319,19 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                 auto arg = *it++;
                 auto& fn = module->get_function(arg);
                 call_fun(fn);
+                break;
+            }
+
+            case Opcode::MakeList: {
+                const auto num_elems = *it++;
+                const auto size_of_elem = *it++;
+                const size_t total_size = num_elems * size_of_elem;
+                // move list contents from stack to heap
+                HeapSlot slot{total_size};
+                std::memcpy(slot.data(), m_stack.data(), total_size);
+                m_stack.drop(0, total_size);
+                // push list handle back to stack
+                m_stack.push(value::List{{}, num_elems, slot});
                 break;
             }
 

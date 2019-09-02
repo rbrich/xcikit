@@ -42,6 +42,7 @@ struct Integer;
 struct Float;
 struct String;
 struct Tuple;
+struct List;
 struct Call;
 struct OpCall;
 struct Condition;
@@ -50,6 +51,8 @@ struct Block;
 struct Statement;
 struct TypeName;
 struct FunctionType;
+struct ListType;
+struct Variable;
 
 
 class ConstVisitor {
@@ -63,6 +66,7 @@ public:
     virtual void visit(const Float&) = 0;
     virtual void visit(const String&) = 0;
     virtual void visit(const Tuple&) = 0;
+    virtual void visit(const List&) = 0;
     virtual void visit(const Call&) = 0;
     virtual void visit(const OpCall&) = 0;
     virtual void visit(const Condition&) = 0;
@@ -70,6 +74,7 @@ public:
     // type
     virtual void visit(const TypeName&) = 0;
     virtual void visit(const FunctionType&) = 0;
+    virtual void visit(const ListType&) = 0;
 };
 
 class Visitor {
@@ -83,6 +88,7 @@ public:
     virtual void visit(Float&) = 0;
     virtual void visit(String&) = 0;
     virtual void visit(Tuple&) = 0;
+    virtual void visit(List&) = 0;
     virtual void visit(Call&) = 0;
     virtual void visit(OpCall&) = 0;
     virtual void visit(Condition&) = 0;
@@ -90,6 +96,7 @@ public:
     // type
     virtual void visit(TypeName&) = 0;
     virtual void visit(FunctionType&) = 0;
+    virtual void visit(ListType&) = 0;
 };
 
 
@@ -101,6 +108,7 @@ public:
     void visit(Float&) final {}
     void visit(String&) final {}
     void visit(Tuple&) final {}
+    void visit(List&) final {}
     void visit(Call&) final {}
     void visit(OpCall&) final {}
     void visit(Condition&) final {}
@@ -108,6 +116,7 @@ public:
     // skip type visits
     void visit(TypeName&) final {}
     void visit(FunctionType&) final {}
+    void visit(ListType&) final {}
 };
 
 
@@ -123,6 +132,7 @@ public:
     void visit(Float&) final {}
     void visit(String&) final {}
     void visit(Tuple&) final {}
+    void visit(List&) final {}
     void visit(Call&) final {}
     void visit(OpCall&) final {}
     void visit(Condition&) final {}
@@ -162,9 +172,10 @@ struct TypeName: public Type {
 };
 
 
-struct Variable {
-    Identifier identifier;
-    std::unique_ptr<Type> type;
+struct ListType: public Type {
+    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
+    void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<Type> elem_type;
 };
 
 
@@ -173,6 +184,12 @@ struct FunctionType: public Type {
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::vector<Variable> params;
     std::unique_ptr<Type> result_type;
+};
+
+
+struct Variable {
+    Identifier identifier;
+    std::unique_ptr<Type> type;
 };
 
 
@@ -226,6 +243,13 @@ struct Tuple: public Expression {
     std::vector<std::unique_ptr<Expression>> items;
 };
 
+struct List: public Expression {
+    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
+    void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::vector<std::unique_ptr<Expression>> items;
+    size_t item_size = 0;
+};
+
 struct Call: public Expression {
     Call() = default;
     explicit Call(Identifier&& s) : identifier(std::move(s)) {}
@@ -236,15 +260,6 @@ struct Call: public Expression {
 };
 
 struct Operator {
-    Operator() = default;
-    explicit Operator(const std::string& s, bool prefix=false);
-    const char* to_cstr() const;
-    int precedence() const;
-    bool is_right_associative() const;
-    bool is_undefined() const { return op == Undefined; }
-    bool operator==(const Operator& rhs) const { return op == rhs.op; }
-    bool operator!=(const Operator& rhs) const { return op != rhs.op; }
-
     enum Op {
         Undefined,
         // binary
@@ -267,23 +282,38 @@ struct Operator {
         Div,            // x / y
         Mod,            // x % y
         Exp,            // x ** y
+        Subscript,      // x @ y
         // unary
         LogicalNot,     // !x
         BitwiseNot,     // ~x
         UnaryPlus,      // +x
         UnaryMinus,     // -x
     };
+
+    Operator() = default;
+    explicit Operator(Op op) : op(op) {}
+    explicit Operator(const std::string& s, bool prefix=false);
+    const char* to_cstr() const;
+    int precedence() const;
+    bool is_right_associative() const;
+    bool is_undefined() const { return op == Undefined; }
+    bool operator==(const Operator& rhs) const { return op == rhs.op; }
+    bool operator!=(const Operator& rhs) const { return op != rhs.op; }
+
     Op op = Undefined;
 };
 
 
 // infix operators -> mirrors FunCall
 struct OpCall: public Call {
+    OpCall() = default;
+    OpCall(Operator::Op op) : op(op) {}
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     Operator op;
     std::unique_ptr<OpCall> right_tmp;  // used during parsing, cleared when finished
 };
+
 
 struct Function: public Expression {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
@@ -324,6 +354,9 @@ struct Invocation: public Statement {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<Expression> expression;
+
+    // resolved:
+    Index type_index = no_index;
 };
 
 struct Return: public Statement {
@@ -338,11 +371,13 @@ std::ostream& operator<<(std::ostream& os, const Integer& v);
 std::ostream& operator<<(std::ostream& os, const Float& v);
 std::ostream& operator<<(std::ostream& os, const String& v);
 std::ostream& operator<<(std::ostream& os, const Tuple& v);
+std::ostream& operator<<(std::ostream& os, const List& v);
 std::ostream& operator<<(std::ostream& os, const Variable& v);
 std::ostream& operator<<(std::ostream& os, const Identifier& v);
 std::ostream& operator<<(std::ostream& os, const Type& v);
 std::ostream& operator<<(std::ostream& os, const TypeName& v);
 std::ostream& operator<<(std::ostream& os, const FunctionType& v);
+std::ostream& operator<<(std::ostream& os, const ListType& v);
 std::ostream& operator<<(std::ostream& os, const Call& v);
 std::ostream& operator<<(std::ostream& os, const OpCall& v);
 std::ostream& operator<<(std::ostream& os, const Condition& v);

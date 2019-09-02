@@ -25,7 +25,7 @@ using namespace std;
 std::unique_ptr<Value> Value::create(const TypeInfo& type_info)
 {
     switch (type_info.type()) {
-        case Type::Auto: assert(!"Cannot create Value of type=Auto"); break;
+        case Type::Unknown: assert(!"Cannot create Value of Unknown type"); break;
         case Type::Void: return std::make_unique<value::Void>();
         case Type::Bool: return std::make_unique<value::Bool>();
         case Type::Byte: return std::make_unique<value::Byte>();

@@ -19,12 +19,13 @@
 
 #include <range/v3/view/reverse.hpp>
 
-#include <cstdlib>
+#include <string>
 #include <stdexcept>
 #include <iostream>
 #include <sstream>
-#include <cassert>
 #include <iomanip>
+#include <cstdlib>
+#include <cassert>
 
 using namespace std;
 
@@ -42,12 +43,14 @@ public:
     void visit(const Float& v) override { m_os << v; }
     void visit(const String& v) override { m_os << v; }
     void visit(const Tuple& v) override { m_os << v; }
+    void visit(const List& v) override { m_os << v; }
     void visit(const Call& v) override { m_os << v; }
     void visit(const OpCall& v) override { m_os << v; }
     void visit(const Condition& v) override { m_os << v; }
     void visit(const Function& v) override { m_os << v; }
     void visit(const TypeName& v) override { m_os << v; }
     void visit(const FunctionType& v) override { m_os << v; }
+    void visit(const ListType& v) override { m_os << v; }
 
 private:
     std::ostream& m_os;
@@ -145,6 +148,7 @@ Operator::Operator(const std::string& s, bool prefix)
         case '*':   op = (c2 == '*')? Exp : Mul; break;
         case '/':   op = Div; break;
         case '%':   op = Mod; break;
+        case '@':   op = Subscript; break;
         case '~':   assert(prefix); op = BitwiseNot; break;
         default: assert(!"Unreachable! Wrong OP!"); break;
     }
@@ -173,10 +177,11 @@ int Operator::precedence() const
         case Div:           return 8;
         case Mod:           return 8;
         case Exp:           return 9;
-        case LogicalNot:    return 10;
-        case BitwiseNot:    return 10;
-        case UnaryPlus:     return 10;
-        case UnaryMinus:    return 10;
+        case Subscript:     return 10;
+        case LogicalNot:    return 11;
+        case BitwiseNot:    return 11;
+        case UnaryPlus:     return 11;
+        case UnaryMinus:    return 11;
     }
     UNREACHABLE;
 }
@@ -215,6 +220,7 @@ const char* Operator::to_cstr() const
         case Operator::BitwiseNot:  return "~";
         case Operator::UnaryPlus:   return "+";
         case Operator::UnaryMinus:  return "-";
+        case Operator::Subscript:   return "@";
     }
     UNREACHABLE;
 }
@@ -234,18 +240,24 @@ static StreamOptions& stream_options(std::ostream& os) {
 std::ostream& operator<<(std::ostream& os, const Integer& v)
 {
     if (stream_options(os).enable_tree) {
-        return os << put_indent << "Int32(Expression) " << v.value << std::endl;
+        return os << put_indent << "Integer(Expression) " << v.value << std::endl;
     } else {
-        return os << v.value << ":Int32";
+        return os << v.value;
     }
 }
 
 std::ostream& operator<<(std::ostream& os, const Float& v)
 {
     if (stream_options(os).enable_tree) {
-        return os << put_indent << "Float32(Expression) " << v.value << std::endl;
+        return os << put_indent << "Float(Expression) " << v.value << std::endl;
     } else {
-        return os << v.value << ":Float32";
+        ostringstream sbuf;
+        sbuf << v.value;
+        auto str = sbuf.str();
+        if (str.find('.') == string::npos)
+            return os << str << ".0";
+        else
+            return os << str;
     }
 }
 
@@ -254,7 +266,7 @@ std::ostream& operator<<(std::ostream& os, const String& v)
     if (stream_options(os).enable_tree) {
         return os << put_indent << "String(Expression) " << v.value << std::endl;
     } else {
-        return os << '"' << v.value << "\":String";
+        return os << '"' << v.value << '"';
     }
 }
 
@@ -274,6 +286,25 @@ std::ostream& operator<<(std::ostream& os, const Tuple& v)
                 os << ", ";
         }
         return os << ")";
+    }
+}
+
+std::ostream& operator<<(std::ostream& os, const List& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << put_indent << "List(Expression)" << std::endl;
+        os << more_indent;
+        for (const auto& item : v.items)
+            os << *item;
+        return os << less_indent;
+    } else {
+        os << "[";
+        for (const auto& item : v.items) {
+            os << *item;
+            if (&item != &v.items.back())
+                os << ", ";
+        }
+        return os << "]";
     }
 }
 
@@ -357,6 +388,22 @@ std::ostream& operator<<(std::ostream& os, const FunctionType& v)
             os << "-> " << *v.result_type << " ";
         }
         return os;
+    }
+}
+
+
+std::ostream& operator<<(std::ostream& os, const ListType& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << put_indent << "ListType(Type) " << std::endl;
+        if (v.elem_type)
+            os << more_indent << *v.elem_type << less_indent;
+        return os;
+    } else {
+        os << "[";
+        if (v.elem_type)
+            os << *v.elem_type;
+        return os << "]";
     }
 }
 

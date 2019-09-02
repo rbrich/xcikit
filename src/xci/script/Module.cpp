@@ -24,7 +24,7 @@ using namespace std;
 
 Index Module::get_imported_module_index(Module* module) const
 {
-    auto it = std::find(m_modules.begin(), m_modules.end(), module);
+    auto it = find(m_modules.begin(), m_modules.end(), module);
     if (it == m_modules.end())
         return no_index;
     return it - m_modules.begin();
@@ -33,15 +33,22 @@ Index Module::get_imported_module_index(Module* module) const
 
 Index Module::add_function(std::unique_ptr<Function>&& fn)
 {
-    m_functions.push_back(std::move(fn));
+    m_functions.push_back(move(fn));
     return m_functions.size() - 1;
 }
 
 
 Index Module::add_value(std::unique_ptr<Value>&& value)
 {
-    m_values.add(std::move(value));
+    m_values.add(move(value));
     return m_values.size() - 1;
+}
+
+
+Index Module::add_type(TypeInfo type_info)
+{
+    m_types.push_back(move(type_info));
+    return m_types.size() - 1;
 }
 
 

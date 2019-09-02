@@ -40,24 +40,6 @@ void Stack::push(const Value& o)
 }
 
 
-std::unique_ptr<Value> Stack::pull_any()
-{
-    if (m_stack_types.empty())
-        throw StackUnderflow{};
-    auto ti = m_stack_types.back();
-    m_stack_types.pop_back();
-    // create Value with TypeInfo, read contents from stack
-    auto value = Value::create(ti);
-    auto size = ti.size();
-    if (Stack::size() < size)
-        throw StackUnderflow{};
-    value->read(&m_stack[m_stack_pointer]);
-    value->decref();
-    m_stack_pointer += size;
-    return value;
-}
-
-
 std::unique_ptr<Value> Stack::pull(const TypeInfo& ti)
 {
     auto s = ti.size();
