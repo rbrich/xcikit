@@ -92,10 +92,10 @@ Define a function with parameters:
 
     add2 = |a b| {a + b}   // generic function - works with any type supported by op+
     add2 = |a:t b:t| -> t {a + b}  // same as above, but with explicit type variable
-    add2 = |a:Int32 b:Int32|->Int32 {a + b}   // specific, with type declarations
+    add2 = |a:Int b:Int|->Int {a + b}   // specific, with type declarations
     
     // function definition can span multiple lines
-    add2 = | a:Int32 b:Int32 | -> Int32
+    add2 = | a:Int b:Int | -> Int
     {
         a + b
     }
@@ -107,7 +107,7 @@ Define a function with parameters:
 
 Function call can explicitly name the arguments:
 
-    make_book = | name:String author:String isbn:Int32 | -> MyBook
+    make_book = | name:String author:String isbn:Int | -> MyBook
         { MyBook(name, author, isbn) }
     make_book name="Title" author="Karel IV" isbn=12345
 
@@ -182,9 +182,9 @@ The BitwiseOr operator has lower precedence that lambda operator:
 
 Record field lookup:
 
-    MyRecord = (String name, Int32 age) 
+    MyRecord = (String name, Int age) 
     rec = MyRecord("A name", 42)
-    rec.name    # dot operator
+    rec.name    // dot operator
 
 
 Types
@@ -192,32 +192,38 @@ Types
 
 Primitive types:
 
-    12                  // Int32
+    12                  // Int32 (alias Int)
     12:Int64            // Int64
-    1.2                 // Float32
+    1.2                 // Float32 (alias Float)
     1.2:Float64         // Floaf64
     true    false       // Bool
     'a'                 // Char
-    "Hello."            // String = [Char]
-    ("Hello", 33)       // (String, Int32)  -- a tuple
-    [1, 2, 3]           // [Int32]          -- a list
+    "Hello."            // String         -- UTF-8 string
+    ['a', 'b', 'c']     // [Char]         -- compatible with String, but not the same
+    ("Hello", 33)       // (String, Int)  -- a tuple
+    [1, 2, 3]           // [Int]          -- a list
+
+Strings and lists have the same interface and can be handled universally in generic functions.
+List of chars has different underlying implementation than String: it stores 32bit characters,
+allowing constant-time indexing, but taking more space. String is UTF-8 encoded, random access
+is slower (linear-time), but it takes much less space.
 
 Custom types are made by composition of other types.
 Types must begin with uppercase letter (this is enforced part of the syntax):
 
-    MyType = Int32
-    MyTuple = (String, Int32)
-    MyRecord = (String name, Int32 age)    // just a tuple with named fields
+    MyType = Int
+    MyTuple = (String, Int)
+    MyRecord = (String name, Int age)    // just a tuple with named fields
     MyBool = false | true
-    MyVariant = int Int32 | string String | none   // discriminated variant type
+    MyVariant = int Int | string String | none   // discriminated variant type
     MyOptional = some v | none
 
 Function types:
 
-    |a:Int32 b:Int32| -> |c:Int32| -> Int32
-    |Int32 Int32| -> |Int32| -> Int32           // without parameter names
-    |Int32 Int32 Int32| -> Int32                // Compact form
-    |Int32| -> |Int32| -> |Int32| -> Int32      // Normalized form
+    |a:Int b:Int| -> |c:Int| -> Int
+    |Int Int| -> |Int| -> Int           // without parameter names
+    |Int Int Int| -> Int                // Compact form
+    |Int| -> |Int| -> |Int| -> Int      // Normalized form
 
 - All of the above types are equivalent - they all describe the same function.
 - The normalized form describes how the partial evaluation works.
@@ -256,17 +262,16 @@ Basic operations:
 
 Subscript (index) operator:
 
-    # zero-based index
-    nums[3] == 4
+    // zero-based index
+    nums @ 3 == 4
+    // note that this calls `nums` with list arg `[3]`
+    nums [3]   // not subscription!
 
 Concatenation:
 
-    cat nums [6, 7]
-    # =>  [1, 2, 3, 4, 5, 6, 7]
-    cat "hello" [' '] "world"
-    # =>  "hello world"
-    cons 0 nums
-    # =>  [0, 1, 2, 3, 4, 5]
+    cat nums [6, 7]             // =>  [1, 2, 3, 4, 5, 6, 7]
+    cat "hello" [' '] "world"   // =>  "hello world"
+    cons 0 nums                 // =>  [0, 1, 2, 3, 4, 5]
 
 Ranges:
 
