@@ -257,6 +257,9 @@ struct Call: public Expression {
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     Identifier identifier;
     std::vector<std::unique_ptr<Expression>> args;
+
+    // resolved:
+    size_t wrapped_execs = 0;
 };
 
 struct Operator {

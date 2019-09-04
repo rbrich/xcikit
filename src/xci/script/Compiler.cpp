@@ -214,6 +214,10 @@ public:
         if (sym.type() != Symbol::Function && sym.is_callable()) {
             m_function.code().add_opcode(Opcode::Execute);
         }
+        while (v.wrapped_execs > 0) {
+            m_function.code().add_opcode(Opcode::Execute);
+            -- v.wrapped_execs;
+        }
     }
 
     void visit(ast::OpCall& v) override {

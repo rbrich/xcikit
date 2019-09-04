@@ -188,7 +188,7 @@ public:
         v.identifier.symbol->set_callable(m_value_type.is_callable());
         if (m_value_type.is_callable()) {
             // result is new signature with args removed (applied)
-            auto new_signature = resolve_params(m_value_type.signature(), args);
+            auto new_signature = resolve_params(m_value_type.signature(), args, v.wrapped_execs);
             if (new_signature->params.empty())
                 // effective type of zero-arg function is its return type
                 m_value_type = new_signature->return_type;
@@ -302,8 +302,8 @@ private:
         return fn;
     }
 
-    // Check and consume params from `called`, creating new signature
-    std::shared_ptr<Signature> resolve_params(const Signature& orig_signature, const CallArgs& args) const
+    // Check and consume params from `args`, creating new signature
+    std::shared_ptr<Signature> resolve_params(const Signature& orig_signature, const CallArgs& args, size_t& wrapped_execs) const
     {
         auto res = std::make_shared<Signature>(orig_signature);
         int i = 0;
@@ -314,6 +314,7 @@ private:
                 if (res->return_type.type() == Type::Function) {
                     // collapse returned function, start consuming its params
                     res = std::make_unique<Signature>(res->return_type.signature());
+                    ++wrapped_execs;
                 } else {
                     throw UnexpectedArgument(i, arg.source_info);
                 }

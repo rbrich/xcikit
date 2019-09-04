@@ -171,10 +171,16 @@ TEST_CASE( "Expressions", "[script][interpreter]" )
 
 TEST_CASE( "Blocks and lambdas", "[script][interpreter]" )
 {
-    // blocks are evaluated and return value
+    // blocks are evaluated and return a value
     check_interpreter("{}",         "");
     check_interpreter("{1+2}",      "3");
     check_interpreter("{{{1+2}}}",  "3");
+
+    // argument propagation: `f` returns a function which consumes the second arg
+    check_interpreter("f = |a:Int|{ |b:Int|{ a+b } }; f 1 2",     "3");
+
+    // partial call: `(add 1)` returns a lambda which takes single argument
+    //check_interpreter("(add 1) 2",     "3");
 }
 
 
