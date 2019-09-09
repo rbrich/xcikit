@@ -122,12 +122,7 @@ public:
         m_function.code().add_opcode(Opcode::MakeList, v.items.size(), v.item_size);
     }
 
-    void visit(ast::Call& v) override {
-        // evaluate each arg
-        for (auto& arg : ranges::views::reverse(v.args)) {
-            arg->apply(*this);
-        }
-        // call the function or push the value
+    void visit(ast::Reference& v) override {
         assert(v.identifier.symbol);
         auto& symtab = *v.identifier.symbol.symtab();
         auto& sym = *v.identifier.symbol;
@@ -143,7 +138,7 @@ public:
                 auto ofs_ti = m_function.nonlocal_offset_and_type(sym.index());
                 // COPY_ARGUMENT <frame_offset>
                 m_function.code().add_opcode(Opcode::CopyArgument,
-                    ofs_ti.first, ofs_ti.second.size());
+                                             ofs_ti.first, ofs_ti.second.size());
                 ofs_ti.second.foreach_heap_slot([this](size_t offset) {
                     // INC_REF <stack_offset>
                     m_function.code().add_opcode(Opcode::IncRef, offset);
@@ -167,8 +162,8 @@ public:
                 // COPY_VARIABLE <frame_offset> <size>
                 const auto& ti = m_function.get_value(sym.index());
                 m_function.code().add_opcode(Opcode::CopyVariable,
-                    m_function.value_offset(sym.index()),
-                    ti.size());
+                                             m_function.value_offset(sym.index()),
+                                             ti.size());
                 ti.foreach_heap_slot([this](size_t offset) {
                     m_function.code().add_opcode(Opcode::IncRef, offset);
                 });
@@ -180,8 +175,8 @@ public:
                 auto nonlocals_size = m_function.raw_size_of_nonlocals();
                 const auto& ti = m_function.get_parameter(sym.index());
                 m_function.code().add_opcode(Opcode::CopyArgument,
-                    m_function.parameter_offset(sym.index()) + nonlocals_size,
-                    ti.size());
+                                             m_function.parameter_offset(sym.index()) + nonlocals_size,
+                                             ti.size());
                 ti.foreach_heap_slot([this](size_t offset) {
                     m_function.code().add_opcode(Opcode::IncRef, offset);
                 });
@@ -210,10 +205,19 @@ public:
                 UNREACHABLE;
         }
         // if it's function object, execute it
-        assert(v.args.empty() || sym.is_callable());
         if (sym.type() != Symbol::Function && sym.is_callable()) {
             m_function.code().add_opcode(Opcode::Execute);
         }
+    }
+
+    void visit(ast::Call& v) override {
+        // evaluate each arg
+        for (auto& arg : ranges::views::reverse(v.args)) {
+            arg->apply(*this);
+        }
+        // call the function or push the value
+        v.callable->apply(*this);
+        // add executes for each call that results in function which consumes more args
         while (v.wrapped_execs > 0) {
             m_function.code().add_opcode(Opcode::Execute);
             -- v.wrapped_execs;
@@ -221,8 +225,6 @@ public:
     }
 
     void visit(ast::OpCall& v) override {
-        assert(!v.right_tmp);
-        v.identifier.name = builtin::op_to_function_name(v.op.op);
         visit(*static_cast<ast::Call*>(&v));
     }
 
@@ -361,7 +363,8 @@ void Compiler::configure(uint32_t flags)
         return;
 
     if (flags & OConstFold) {
-        m_ast_passes.push_back(make_unique<Optimizer>());
+        // FIXME: update Optimizer
+        //m_ast_passes.push_back(make_unique<Optimizer>());
     }
 }
 

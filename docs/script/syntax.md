@@ -93,6 +93,7 @@ Define a function with parameters:
     add2 = |a b| {a + b}   // generic function - works with any type supported by op+
     add2 = |a:t b:t| -> t {a + b}  // same as above, but with explicit type variable
     add2 = |a:Int b:Int|->Int {a + b}   // specific, with type declarations
+    add2 : |Int Int|->Int = |a b|{a + b}   // type declaration on left side (i.e. disable type inference)
     
     // function definition can span multiple lines
     add2 = | a:Int b:Int | -> Int

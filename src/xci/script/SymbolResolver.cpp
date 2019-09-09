@@ -30,11 +30,11 @@ public:
 
     void visit(ast::Definition& dfn) override {
         // check for name collision
-        if (m_function.symtab().find_by_name(dfn.identifier.name))
-            throw MultipleDeclarationError(dfn.identifier.name);
+        if (m_function.symtab().find_by_name(dfn.variable.identifier.name))
+            throw MultipleDeclarationError(dfn.variable.identifier.name);
 
         // add new symbol
-        dfn.identifier.symbol = m_function.symtab().add({dfn.identifier.name, Symbol::Value, no_index});
+        dfn.variable.identifier.symbol = m_function.symtab().add({dfn.variable.identifier.name, Symbol::Value, no_index});
         m_definition = &dfn;
         dfn.expression->apply(*this);
         m_definition = nullptr;
@@ -64,19 +64,23 @@ public:
         }
     }
 
-    void visit(ast::Call& v) override {
+    void visit(ast::Reference& v) override {
         auto& symptr = v.identifier.symbol;
         symptr = resolve_symbol(v.identifier.name);
         if (!symptr)
             throw UndefinedName(v.identifier.name, v.source_info);
+    }
 
+    void visit(ast::Call& v) override {
+        v.callable->apply(*this);
         for (auto& arg : v.args) {
             arg->apply(*this);
         }
     }
 
     void visit(ast::OpCall& v) override {
-        v.identifier.name = builtin::op_to_function_name(v.op.op);
+        assert(!v.right_tmp);
+        v.callable = make_unique<ast::Reference>(ast::Identifier{builtin::op_to_function_name(v.op.op)});
         visit(*static_cast<ast::Call*>(&v));
     }
 
@@ -91,8 +95,8 @@ public:
         if (v.type.params.empty())
             name = "<block>";
         if (m_definition != nullptr) {
-            name = m_definition->identifier.name;
-            m_definition->identifier.symbol->set_callable(true);
+            name = m_definition->variable.identifier.name;
+            m_definition->variable.identifier.symbol->set_callable(true);
         }
         SymbolTable& symtab = m_function.symtab().add_child(name);
         size_t par_idx = 0;
@@ -215,7 +219,10 @@ public:
         }
     }
 
+    void visit(ast::Reference& v) override {}
+
     void visit(ast::Call& v) override {
+        v.callable->apply(*this);
         for (auto& arg : v.args) {
             arg->apply(*this);
         }
@@ -250,7 +257,7 @@ public:
             }
         }
         if (m_definition != nullptr && func.symtab().count_nonlocals() == 0) {
-            auto& sym = m_definition->identifier.symbol;
+            auto& sym = m_definition->variable.identifier.symbol;
             sym->set_type(Symbol::Function);
             sym->set_index(v.index);
         }

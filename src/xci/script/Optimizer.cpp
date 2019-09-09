@@ -62,22 +62,7 @@ public:
         // TODO: const list -> static value
     }
 
-    void visit(ast::Call& v) override {
-        Values const_args;
-        int n_nonconst_args = 0;
-        for (auto& arg : v.args) {
-            arg->apply(*this);
-
-            if (m_collapsed)
-                arg = move(m_collapsed);
-
-            if (m_is_const && n_nonconst_args == 0) {
-                const_args.add(std::move(m_value));
-            } else {
-                n_nonconst_args ++;
-            }
-        }
-
+    void visit(ast::Reference& v) override {
         assert(v.identifier.symbol);
         auto& symtab = *v.identifier.symbol.symtab();
         auto& sym = *v.identifier.symbol;
@@ -111,11 +96,30 @@ public:
                 // fallthrough
                 break;
         }
+    }
 
+    void visit(ast::Call& v) override {
+        Values const_args;
+        int n_nonconst_args = 0;
+        for (auto& arg : v.args) {
+            arg->apply(*this);
+
+            if (m_collapsed)
+                arg = move(m_collapsed);
+
+            if (m_is_const && n_nonconst_args == 0) {
+                const_args.add(std::move(m_value));
+            } else {
+                n_nonconst_args ++;
+            }
+        }
+
+        v.callable->apply(*this);
+/*
         assert(sym.depth() == 0);
         auto& fn = module().get_function(sym.index());
         set_variable_value(TypeInfo{fn.signature_ptr()});
-
+*/
         /*
         // Evaluate const function
         if (f.signature().params.size() <= const_args.size()) {

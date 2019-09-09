@@ -26,6 +26,12 @@ namespace xci::script {
 
 
 class TypeCheckerVisitor: public ast::Visitor {
+    struct CallArg {
+        TypeInfo type_info;
+        SourceInfo source_info;
+    };
+    using CallArgs = std::vector<CallArg>;
+
 public:
     explicit TypeCheckerVisitor(TypeResolver& processor, Function& func)
         : m_processor(processor), m_function(func) {}
@@ -34,7 +40,7 @@ public:
         // in case this is function definition, we might need partial type
         // for recursive calls - pass the definition index to Function visitor
         Index idx = m_function.add_value({});
-        dfn.identifier.symbol->set_index(idx);
+        dfn.variable.identifier.symbol->set_index(idx);
         m_definition = &dfn;
         dfn.expression->apply(*this);
         m_definition = nullptr;
@@ -85,19 +91,7 @@ public:
         m_value_type = TypeInfo(Type::List, move(elem_type));
     }
 
-    struct CallArg {
-        TypeInfo type_info;
-        SourceInfo source_info;
-    };
-    using CallArgs = std::vector<CallArg>;
-
-    void visit(ast::Call& v) override {
-        CallArgs args;
-        for (auto& arg : v.args) {
-            arg->apply(*this);
-            assert(arg->source_info.source != nullptr);
-            args.push_back({move(m_value_type), arg->source_info});
-        }
+    void visit(ast::Reference& v) override {
         assert(v.identifier.symbol);
         const auto& symtab = *v.identifier.symbol.symtab();
         const auto& sym = *v.identifier.symbol;
@@ -114,7 +108,7 @@ public:
                     auto sig_ptr = fn.signature_ptr();
                     if (fn.is_generic()) {
                         // instantiate the specialization
-                        auto fspec = resolve_specialization(fn, args);
+                        auto fspec = resolve_specialization(fn);
                         sig_ptr = fspec->signature_ptr();
                         Symbol sym_copy {*symptr};
                         sym_copy.set_index(module().add_function(move(fspec)));
@@ -122,7 +116,7 @@ public:
                         m_value_type = TypeInfo{sig_ptr};
                         found = true;
                         break;
-                    } else if (match_params(*sig_ptr, args)) {
+                    } else if (match_params(*sig_ptr)) {
                         v.identifier.symbol = symptr;
                         m_value_type = TypeInfo{sig_ptr};
                         found = true;
@@ -145,7 +139,7 @@ public:
                 }
                 stringstream o_args;
                 o_args << "| ";
-                for (const auto& arg : args) {
+                for (const auto& arg : m_call_args) {
                     o_args << arg.type_info << ' ';
                 }
                 o_args << '|';
@@ -181,25 +175,41 @@ public:
             case Symbol::Unresolved:
                 UNREACHABLE;
         }
-
-        if (!m_value_type.is_callable() && !args.empty()) {
-            throw UnexpectedArgument(1, args[0].source_info);
-        }
         v.identifier.symbol->set_callable(m_value_type.is_callable());
+    }
+
+    void visit(ast::Call& v) override {
+        // resolve each argument
+        CallArgs args;
+        for (auto& arg : v.args) {
+            arg->apply(*this);
+            assert(arg->source_info.source != nullptr);
+            args.push_back({move(m_value_type), arg->source_info});
+        }
+
+        // using resolved args, resolve the callable itself
+        // (it may use args types for overload resolution)
+        assert(m_call_args.empty());
+        m_call_args = move(args);
+        v.callable->apply(*this);
+
+        if (!m_value_type.is_callable() && !m_call_args.empty()) {
+            throw UnexpectedArgument(1, m_call_args[0].source_info);
+        }
+
         if (m_value_type.is_callable()) {
             // result is new signature with args removed (applied)
-            auto new_signature = resolve_params(m_value_type.signature(), args, v.wrapped_execs);
+            auto new_signature = resolve_params(m_value_type.signature(), v.wrapped_execs);
             if (new_signature->params.empty())
                 // effective type of zero-arg function is its return type
                 m_value_type = new_signature->return_type;
             else
                 m_value_type = TypeInfo{new_signature};
         }
+        m_call_args.clear();
     }
 
     void visit(ast::OpCall& v) override {
-        assert(!v.right_tmp);
-        v.identifier.name = builtin::op_to_function_name(v.op.op);
         visit(*static_cast<ast::Call*>(&v));
     }
 
@@ -234,7 +244,7 @@ public:
 
         if (m_definition != nullptr) {
             // partial type for recursive functions - no auto resolution
-            m_function.set_value(m_definition->identifier.symbol.index(), move(m_value_type));
+            m_function.set_value(m_definition->variable.identifier.symbol.index(), move(m_value_type));
         }
 
         // compile body and resolve return type
@@ -274,13 +284,13 @@ private:
 
     // return new function according to requested signature
     // throw when the signature doesn't match
-    std::unique_ptr<Function> resolve_specialization(const Function& orig_fn, const CallArgs& args) const
+    std::unique_ptr<Function> resolve_specialization(const Function& orig_fn) const
     {
         auto fn = make_unique<Function>(orig_fn.module(), orig_fn.symtab());
         fn->signature() = orig_fn.signature();
-        assert(args.size() == fn->signature().params.size());
+        assert(m_call_args.size() == fn->signature().params.size());
         for (size_t i = 0; i < fn->signature().params.size(); i++) {
-            const auto& arg = args[i];
+            const auto& arg = m_call_args[i];
             auto& out_type = fn->signature().params[i];
             if (arg.type_info.is_generic())
                 continue;
@@ -302,12 +312,12 @@ private:
         return fn;
     }
 
-    // Check and consume params from `args`, creating new signature
-    std::shared_ptr<Signature> resolve_params(const Signature& orig_signature, const CallArgs& args, size_t& wrapped_execs) const
+    // Consume params from `orig_signature` according to `m_call_args`, creating new signature
+    std::shared_ptr<Signature> resolve_params(const Signature& orig_signature, size_t& wrapped_execs) const
     {
         auto res = std::make_shared<Signature>(orig_signature);
         int i = 0;
-        for (const auto& arg : args) {
+        for (const auto& arg : m_call_args) {
             i += 1;
             // check there are more params to consume
             while (res->params.empty()) {
@@ -329,12 +339,12 @@ private:
         return res;
     }
 
-    // Check params from `args` against `signature`
-    bool match_params(const Signature& signature, const CallArgs& args) const
+    // Check params from `signature` against `m_call_args`
+    bool match_params(const Signature& signature) const
     {
         auto sig = std::make_unique<Signature>(signature);
         int i = 0;
-        for (const auto& arg : args) {
+        for (const auto& arg : m_call_args) {
             i += 1;
             // check there are more params to consume
             while (sig->params.empty()) {
@@ -362,6 +372,7 @@ private:
     TypeInfo m_type_info;
     TypeInfo m_value_type;
     ast::Definition* m_definition = nullptr;
+    CallArgs m_call_args;
 };
 
 

@@ -98,7 +98,7 @@ enum class Opcode: uint8_t {
     Subscript_32,
 
     // Control flow
-    Execute,                // pull function object from stack, execute it
+    Execute,                // pull closure from stack, unwrap it, call the contained function
 
     // --------------------------------------------------------------
     // The following have one 1-byte arg
@@ -109,6 +109,7 @@ enum class Opcode: uint8_t {
 
     Call0,                  // arg = idx of function in current module, call it, pull args from stack, push result back
     Call1,                  // arg = idx of function in builtin module, call it, pull args from stack, push result back
+    PartialExecute,         // arg = bytes passed as args; pull args, closure from stack, rewrap closure with new args, push closure back
 
     MakeClosure,            // arg = idx of function in current module, pull nonlocals from stack, wrap them into closure, push closure back
 
@@ -124,6 +125,8 @@ enum class Opcode: uint8_t {
     // The following have two 1-byte args
 
     Call,                   // arg1 = idx of imported module, arg2 = idx of function in the module, call it, pull args from stack, push result back
+    Partial0,               // arg1 = idx of function in current module, arg2 = bytes passed as args; pull args from stack, wrap them in closure, push closure back
+    Partial1,               // arg1 = idx of function in builtin module, arg2 = bytes passed as args; pull args from stack, wrap them in closure, push closure back
 
     MakeList,               // arg1 = number of elements, arg2 = size of each element, pulls number*size bytes from stack, creates list on heap, pushes list handle back to stack
 
@@ -131,6 +134,11 @@ enum class Opcode: uint8_t {
     CopyArgument,           // arg1 => offset from base (0 = base = first arg), arg2 => size, copy bytes from stack and push back on top
 
     Drop,                   // drop <arg2> bytes from stack, skipping top <arg1> bytes
+
+    // --------------------------------------------------------------
+    // The following have three 1-byte args
+
+    Partial,                // arg1 = idx of imported module, arg2 = idx of function in the module, arg3 = bytes passed as args; pull args from stack, wrap them in closure, push closure back
 
     // --------------------------------------------------------------
     // Auxiliary aliases
@@ -141,6 +149,8 @@ enum class Opcode: uint8_t {
     OneArgLast = Invoke,
     TwoArgFirst = Call,
     TwoArgLast = Drop,
+    ThreeArgFirst = Partial,
+    ThreeArgLast = Partial,
 };
 
 // Allow basic arithmetic on OpCode

@@ -43,6 +43,7 @@ struct Float;
 struct String;
 struct Tuple;
 struct List;
+struct Reference;
 struct Call;
 struct OpCall;
 struct Condition;
@@ -67,6 +68,7 @@ public:
     virtual void visit(const String&) = 0;
     virtual void visit(const Tuple&) = 0;
     virtual void visit(const List&) = 0;
+    virtual void visit(const Reference&) = 0;
     virtual void visit(const Call&) = 0;
     virtual void visit(const OpCall&) = 0;
     virtual void visit(const Condition&) = 0;
@@ -89,6 +91,7 @@ public:
     virtual void visit(String&) = 0;
     virtual void visit(Tuple&) = 0;
     virtual void visit(List&) = 0;
+    virtual void visit(Reference&) = 0;
     virtual void visit(Call&) = 0;
     virtual void visit(OpCall&) = 0;
     virtual void visit(Condition&) = 0;
@@ -109,6 +112,7 @@ public:
     void visit(String&) final {}
     void visit(Tuple&) final {}
     void visit(List&) final {}
+    void visit(Reference&) final {}
     void visit(Call&) final {}
     void visit(OpCall&) final {}
     void visit(Condition&) final {}
@@ -133,6 +137,7 @@ public:
     void visit(String&) final {}
     void visit(Tuple&) final {}
     void visit(List&) final {}
+    void visit(Reference&) final {}
     void visit(Call&) final {}
     void visit(OpCall&) final {}
     void visit(Condition&) final {}
@@ -250,12 +255,20 @@ struct List: public Expression {
     size_t item_size = 0;
 };
 
-struct Call: public Expression {
-    Call() = default;
-    explicit Call(Identifier&& s) : identifier(std::move(s)) {}
+// variable reference
+struct Reference: public Expression {
+    Reference() = default;
+    explicit Reference(Identifier&& s) : identifier(std::move(s)) {}
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
+
     Identifier identifier;
+};
+
+struct Call: public Expression {
+    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
+    void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<Expression> callable;
     std::vector<std::unique_ptr<Expression>> args;
 
     // resolved:
@@ -349,7 +362,7 @@ struct Statement {
 struct Definition: public Statement {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
-    Identifier identifier;
+    Variable variable;
     std::unique_ptr<Expression> expression;
 };
 
@@ -381,6 +394,7 @@ std::ostream& operator<<(std::ostream& os, const Type& v);
 std::ostream& operator<<(std::ostream& os, const TypeName& v);
 std::ostream& operator<<(std::ostream& os, const FunctionType& v);
 std::ostream& operator<<(std::ostream& os, const ListType& v);
+std::ostream& operator<<(std::ostream& os, const Reference& v);
 std::ostream& operator<<(std::ostream& os, const Call& v);
 std::ostream& operator<<(std::ostream& os, const OpCall& v);
 std::ostream& operator<<(std::ostream& os, const Condition& v);

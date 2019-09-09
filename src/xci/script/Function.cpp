@@ -210,6 +210,23 @@ std::ostream& operator<<(std::ostream& os, Function::DumpInstruction f)
                 break;
         }
     }
+    if (opcode >= Opcode::ThreeArgFirst && opcode <= Opcode::ThreeArgLast) {
+        // 3 args
+        Index arg1 = *(++f.pos);
+        Index arg2 = *(++f.pos);
+        Index arg3 = *(++f.pos);
+        os << static_cast<int>(arg1) << ' ' << static_cast<int>(arg2);
+        switch (opcode) {
+            case Opcode::Partial: {
+                const auto& fn = f.func.module().get_imported_module(arg1).get_function(arg2);
+                os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
+                break;
+            }
+            default:
+                break;
+        }
+        os << ' ' << static_cast<int>(arg3);
+    }
     return os;
 }
 

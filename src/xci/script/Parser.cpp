@@ -85,11 +85,12 @@ struct Block: if_must< one<'{'>, SC, sor< one<'}'>, seq<Statement, SC, star<Semi
 struct Function: seq< FunctionType, SC, Block> {};
 struct BracedExpr: if_must< one<'('>, SC, Expression, SC, one<')'> > {};
 struct ExprPrefix: if_must< PrefixOperator, SC, ExprOperand, SC > {};
-struct VarCall: seq< not_at<Keyword>, Identifier > {};  // FunCall without any arguments
+struct Reference: seq< not_at<Keyword>, Identifier > {};
 struct List: if_must< one<'['>, SC, sor<one<']'>, seq<ExprInfix, SC, until<one<']'>, one<','>, SC, ExprInfix, SC>>> > {};
-struct ExprArgSafe: sor< BracedExpr, List, Literal, VarCall, Function > {};  // expressions which can be used as args in FunCall
-struct FunCall: seq< not_at<Keyword>, Identifier, star<RSC, ExprArgSafe> > {};
-struct ExprOperand: sor<FunCall, ExprArgSafe, ExprPrefix> {};
+struct ExprCallable: sor< BracedExpr, Reference, Function> {};
+struct ExprArgSafe: sor< BracedExpr, List, Literal, Reference, Function > {};  // expressions which can be used as args in Call
+struct Call: seq< ExprCallable, plus<RSC, ExprArgSafe> > {};
+struct ExprOperand: sor<Call, ExprArgSafe, ExprPrefix> {};
 struct ExprInfixRight: if_must<InfixOperator, SC, ExprOperand, SC, opt<ExprInfixRight>> {};
 struct ExprInfix: seq< ExprOperand, SC, opt<ExprInfixRight> > {};
 struct ExprCond: if_must< KeywordIf, SC, ExprInfix, SC, KeywordThen, SC, Expression, SC, KeywordElse, SC, Expression> {};
@@ -356,6 +357,20 @@ struct Action<List> : change_states< ast::List > {
 
 
 template<>
+struct Action<ExprCallable> : change_states< std::unique_ptr<ast::Expression> > {
+    template<typename Input>
+    static void apply(const Input &in, std::unique_ptr<ast::Expression>& expr) {
+        expr->source_info.load(in.input(), in.position());
+    }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Call& call) {
+        call.callable = std::move(expr);
+    }
+};
+
+
+template<>
 struct Action<ExprArgSafe> : change_states< std::unique_ptr<ast::Expression> > {
     template<typename Input>
     static void apply(const Input &in, std::unique_ptr<ast::Expression>& expr) {
@@ -363,8 +378,8 @@ struct Action<ExprArgSafe> : change_states< std::unique_ptr<ast::Expression> > {
     }
 
     template<typename Input>
-    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Call& fnc) {
-        fnc.args.push_back(std::move(expr));
+    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Call& call) {
+        call.args.push_back(std::move(expr));
     }
 
     template<typename Input>
@@ -380,40 +395,40 @@ struct Action<ExprArgSafe> : change_states< std::unique_ptr<ast::Expression> > {
 
 
 template<>
-struct Action<VarCall> : change_states< ast::Call > {
+struct Action<Reference> : change_states< ast::Reference > {
     template<typename Input>
-    static void apply(const Input &in, ast::Call& fnc) {
-        fnc.source_info.load(in.input(), in.position());
+    static void apply(const Input &in, ast::Reference& ref) {
+        ref.source_info.load(in.input(), in.position());
     }
 
     template<typename Input>
-    static void success(const Input &in, ast::Call& fnc, std::unique_ptr<ast::Expression>& expr) {
-        expr = std::make_unique<ast::Call>(std::move(fnc));
+    static void success(const Input &in, ast::Reference& ref, std::unique_ptr<ast::Expression>& expr) {
+        expr = std::make_unique<ast::Reference>(std::move(ref));
     }
 };
 
 
 template<>
-struct Action<FunCall> : change_states< ast::Call > {
+struct Action<Call> : change_states< ast::Call > {
     template<typename Input>
-    static void apply(const Input &in, ast::Call& fnc) {
-        fnc.source_info.load(in.input(), in.position());
+    static void apply(const Input &in, ast::Call& call) {
+        call.source_info.load(in.input(), in.position());
     }
 
     template<typename Input>
-    static void success(const Input &in, ast::Call& fnc, std::unique_ptr<ast::Expression>& expr) {
-        expr = std::make_unique<ast::Call>(std::move(fnc));
+    static void success(const Input &in, ast::Call& call, std::unique_ptr<ast::Expression>& expr) {
+        expr = std::make_unique<ast::Call>(std::move(call));
     }
 
     template<typename Input>
-    static void success(const Input &in, ast::Call& fnc, ast::Call& outer_fnc) {
-        auto expr = std::make_unique<ast::Call>(std::move(fnc));
-        outer_fnc.args.push_back(std::move(expr));
+    static void success(const Input &in, ast::Call& call, ast::Call& outer_call) {
+        auto expr = std::make_unique<ast::Call>(std::move(call));
+        outer_call.args.push_back(std::move(expr));
     }
 
     template<typename Input>
-    static void success(const Input &in, ast::Call& fnc, ast::OpCall& outer_opc) {
-        auto expr = std::make_unique<ast::Call>(std::move(fnc));
+    static void success(const Input &in, ast::Call& call, ast::OpCall& outer_opc) {
+        auto expr = std::make_unique<ast::Call>(std::move(call));
         outer_opc.args.push_back(std::move(expr));
     }
 };
@@ -422,12 +437,12 @@ template<>
 struct Action<Identifier> {
     template<typename Input>
     static void apply(const Input &in, ast::Variable& var) {
-        var.identifier = ast::Identifier(in.string());
+        var.identifier.name = in.string();
     }
 
     template<typename Input>
-    static void apply(const Input &in, ast::Call& fnc) {
-        fnc.identifier.name = in.string();
+    static void apply(const Input &in, ast::Reference& ref) {
+        ref.identifier.name = in.string();
     }
 };
 
@@ -502,7 +517,7 @@ template<>
 struct Action<Variable> : change_states< ast::Variable > {
     template<typename Input>
     static void success(const Input &in, ast::Variable& var, ast::Definition& def) {
-        def.identifier = var.identifier;
+        def.variable = std::move(var);
     }
 
     template<typename Input>

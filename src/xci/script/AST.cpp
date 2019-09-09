@@ -44,6 +44,7 @@ public:
     void visit(const String& v) override { m_os << v; }
     void visit(const Tuple& v) override { m_os << v; }
     void visit(const List& v) override { m_os << v; }
+    void visit(const Reference& v) override { m_os << v; }
     void visit(const Call& v) override { m_os << v; }
     void visit(const OpCall& v) override { m_os << v; }
     void visit(const Condition& v) override { m_os << v; }
@@ -90,7 +91,7 @@ void Block::finish()
     }
 
     // Missing return statement - insert `return void` automatically
-    statements.push_back(std::make_unique<Return>(std::make_unique<Call>(Identifier{"void"})));
+    statements.push_back(std::make_unique<Return>(std::make_unique<Reference>(Identifier{"void"})));
 }
 
 
@@ -407,17 +408,28 @@ std::ostream& operator<<(std::ostream& os, const ListType& v)
 }
 
 
+std::ostream& operator<<(std::ostream& os, const Reference& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << put_indent << "Reference(Expression)" << std::endl;
+        return os << more_indent << v.identifier << less_indent;
+    } else {
+        return os << v.identifier;
+    }
+}
+
+
 std::ostream& operator<<(std::ostream& os, const Call& v)
 {
     if (stream_options(os).enable_tree) {
         os << put_indent << "Call(Expression)" << std::endl;
-        os << more_indent << v.identifier;
+        os << more_indent << *v.callable;
         for (const auto& arg : v.args) {
             os << *arg;
         }
         return os << less_indent;
     } else {
-        os << v.identifier;
+        os << *v.callable;
         for (const auto& arg : v.args) {
             os << ' ' << *arg;
         }
@@ -430,8 +442,8 @@ std::ostream& operator<<(std::ostream& os, const OpCall& v)
     if (stream_options(os).enable_tree) {
         os << put_indent << "OpCall(Expression)" << std::endl;
         os << more_indent << v.op;
-        if (!v.identifier.name.empty())
-            os << v.identifier;
+        if (v.callable)
+            os << *v.callable;
         for (const auto& arg : v.args) {
             os << *arg;
         }
@@ -492,9 +504,9 @@ std::ostream& operator<<(std::ostream& os, const Definition& v)
 {
     if (stream_options(os).enable_tree) {
         os << put_indent << "Definition(Statement)" << std::endl;
-        return os << more_indent << v.identifier << *v.expression << less_indent;
+        return os << more_indent << v.variable << *v.expression << less_indent;
     } else {
-        return os << "/*def*/ " << v.identifier << " = (" << *v.expression << ");";
+        return os << "/*def*/ " << v.variable << " = (" << *v.expression << ");";
     }
 }
 
