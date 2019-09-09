@@ -53,7 +53,6 @@ struct Statement;
 struct TypeName;
 struct FunctionType;
 struct ListType;
-struct Variable;
 
 
 class ConstVisitor {
@@ -155,6 +154,7 @@ public:
 struct Identifier {
     Identifier() = default;
     explicit Identifier(std::string s) : name(std::move(s)) {}
+    explicit operator bool() const { return !name.empty(); }
     std::string name;
 
     // resolved symbol:
@@ -184,16 +184,22 @@ struct ListType: public Type {
 };
 
 
+struct Parameter {
+    Identifier identifier;  // optional
+    std::unique_ptr<Type> type;
+};
+
+
 struct FunctionType: public Type {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
-    std::vector<Variable> params;
+    std::vector<Parameter> params;
     std::unique_ptr<Type> result_type;
 };
 
 
 struct Variable {
-    Identifier identifier;
+    Identifier identifier;  // required
     std::unique_ptr<Type> type;
 };
 
@@ -389,6 +395,7 @@ std::ostream& operator<<(std::ostream& os, const String& v);
 std::ostream& operator<<(std::ostream& os, const Tuple& v);
 std::ostream& operator<<(std::ostream& os, const List& v);
 std::ostream& operator<<(std::ostream& os, const Variable& v);
+std::ostream& operator<<(std::ostream& os, const Parameter& v);
 std::ostream& operator<<(std::ostream& os, const Identifier& v);
 std::ostream& operator<<(std::ostream& os, const Type& v);
 std::ostream& operator<<(std::ostream& os, const TypeName& v);

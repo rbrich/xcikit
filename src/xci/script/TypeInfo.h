@@ -89,6 +89,8 @@ public:
     bool operator==(const TypeInfo& rhs) const;
     bool operator!=(const TypeInfo& rhs) const { return !(*this == rhs); }
 
+    explicit operator bool() const { return m_type != Type::Unknown; }
+
 private:
     Type m_type {Type::Unknown};
     uint8_t m_var {0};  // for auto type, specifies which type variable this represents

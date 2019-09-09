@@ -37,15 +37,29 @@ public:
         : m_processor(processor), m_function(func) {}
 
     void visit(ast::Definition& dfn) override {
-        // in case this is function definition, we might need partial type
-        // for recursive calls - pass the definition index to Function visitor
-        Index idx = m_function.add_value({});
-        dfn.variable.identifier.symbol->set_index(idx);
-        m_definition = &dfn;
+        // Evaluate specified type
+        if (dfn.variable.type) {
+            dfn.variable.type->apply(*this);
+        } else {
+            m_type_info = {};
+        }
+        TypeInfo specified_type = m_type_info;
+
+        // Expression might used the specified type from `m_type_info`
         dfn.expression->apply(*this);
-        m_definition = nullptr;
-        // type might be partially filled (see above) - replace it with final type
-        m_function.set_value(idx, move(m_value_type));
+
+        // Specified type must match the inferred type
+        if (specified_type && specified_type != m_value_type)
+            throw DefinitionTypeMismatch(specified_type, m_value_type);
+
+        Index idx = m_function.add_value(move(m_value_type));
+        dfn.variable.identifier.symbol->set_index(idx);
+        // if the function was just a parameterless block, change symbol type to a value
+        if (dfn.variable.identifier.symbol->type() == Symbol::Type::Function
+        && !m_value_type.is_callable()) {
+            dfn.variable.identifier.symbol->set_type(Symbol::Type::Value);
+            dfn.variable.identifier.symbol->set_callable(false);
+        }
     }
 
     void visit(ast::Invocation& inv) override {
@@ -227,13 +241,25 @@ public:
     }
 
     void visit(ast::Function& v) override {
+        TypeInfo specified_type = move(m_type_info);
+
         Function& fn = module().get_function(v.index);
+        int idx = 0;
         for (auto& p : v.type.params) {
             if (p.type)
                 p.type->apply(*this);
             else
                 m_type_info = TypeInfo{Type::Unknown};
+            if (specified_type) {
+                const auto& param_type = specified_type.signature().params[idx];
+                if (!m_type_info)
+                    m_type_info = param_type;
+                else if (param_type != m_type_info)
+                    throw DefinitionParamTypeMismatch(idx, param_type, m_type_info);
+            }
+
             fn.signature().add_parameter(move(m_type_info));
+            ++idx;
         }
         if (v.type.result_type)
             v.type.result_type->apply(*this);
@@ -241,11 +267,6 @@ public:
             m_type_info = TypeInfo{Type::Unknown};
         fn.signature().set_return_type(move(m_type_info));
         m_value_type = TypeInfo{fn.signature_ptr()};
-
-        if (m_definition != nullptr) {
-            // partial type for recursive functions - no auto resolution
-            m_function.set_value(m_definition->variable.identifier.symbol.index(), move(m_value_type));
-        }
 
         // compile body and resolve return type
         m_processor.process_block(fn, v.body);
@@ -371,7 +392,6 @@ private:
     Function& m_function;
     TypeInfo m_type_info;
     TypeInfo m_value_type;
-    ast::Definition* m_definition = nullptr;
     CallArgs m_call_args;
 };
 

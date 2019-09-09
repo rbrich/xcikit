@@ -31,8 +31,16 @@ using namespace tao::pegtl;
 // ----------------------------------------------------------------------------
 // Grammar
 
+struct Keyword;
+struct Expression;
+struct Statement;
+struct ExprArgSafe;
+struct ExprOperand;
+struct ExprInfix;
+struct Type;
+
 // Spaces and comments
-struct LineComment: seq< two<'/'>, until<eolf> > {};
+struct LineComment: if_must< two<'/'>, until<eolf> > {};
 struct BlockComment: if_must< string<'/', '*'>, until< string<'*', '/'>, any > > {};
 struct SpaceOrComment: sor< space, LineComment, BlockComment> {};
 struct SC: star< SpaceOrComment > {};
@@ -40,7 +48,7 @@ struct RSC: seq<space, SC> {};  // required at least one space
 
 // Basic tokens
 struct Semicolon: sor<one<';'>, eolf> {};  // optional at EOL / EOF
-struct Identifier: seq< lower, star< identifier_other > > {};
+struct Identifier: seq< not_at<Keyword>, lower, star< identifier_other > > {};
 struct TypeName: seq< upper, star< identifier_other > > {};
 struct PrefixOperator: sor< one<'-'>, one<'+'>, one<'!'>, one<'~'> > {};
 struct InfixOperator: sor< two<'&'>, two<'|'>, two<'='>, string<'!','='>,
@@ -68,24 +76,18 @@ struct RawString : raw_string< '$', '-', '$' > {};  // raw_string = $$ raw text!
 struct Literal: sor< Float, Integer, String, RawString > {};
 
 // Expressions
-struct Expression;
-struct Statement;
-struct ExprArgSafe;
-struct ExprOperand;
-struct ExprInfix;
-struct Type;
-struct Variable: seq< not_at<Keyword>, Identifier, opt<SC, one<':'>, SC, Type > > {};
-struct Parameter: sor< Variable > {};
+struct Variable: seq< Identifier, opt<SC, one<':'>, SC, Type > > {};
+struct Parameter: sor< Type, Variable > {};
 struct DeclParams: seq< one<'|'>, SC, plus<Parameter, SC>, one<'|'> > {};  // do not fail if '|' matches but the rest doesn't - it may be |-operator instead
 struct DeclResult: if_must< string<'-', '>'>, SC, Type > {};
-struct FunctionType: seq< opt<DeclParams>, SC, opt<DeclResult> > {};
+struct FunctionType: seq< DeclParams, SC, opt<DeclResult> > {};
 struct ListType: if_must< one<'['>, SC, Type, SC, one<']'> > {};
 struct Type: sor< TypeName, ListType, FunctionType > {};
 struct Block: if_must< one<'{'>, SC, sor< one<'}'>, seq<Statement, SC, star<Semicolon, SC, Statement, SC>, opt<Semicolon, SC>, one<'}'>> > > {};
-struct Function: seq< FunctionType, SC, Block> {};
+struct Function: seq< opt<FunctionType>, SC, Block> {};
 struct BracedExpr: if_must< one<'('>, SC, Expression, SC, one<')'> > {};
 struct ExprPrefix: if_must< PrefixOperator, SC, ExprOperand, SC > {};
-struct Reference: seq< not_at<Keyword>, Identifier > {};
+struct Reference: seq< Identifier > {};
 struct List: if_must< one<'['>, SC, sor<one<']'>, seq<ExprInfix, SC, until<one<']'>, one<','>, SC, ExprInfix, SC>>> > {};
 struct ExprCallable: sor< BracedExpr, Reference, Function> {};
 struct ExprArgSafe: sor< BracedExpr, List, Literal, Reference, Function > {};  // expressions which can be used as args in Call
@@ -511,6 +513,11 @@ struct Action<Type> : change_states< std::unique_ptr<ast::Type> >  {
     static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::Variable& var) {
         var.type = std::move(type);
     }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::Parameter& par) {
+        par.type = std::move(type);
+    }
 };
 
 template<>
@@ -521,8 +528,17 @@ struct Action<Variable> : change_states< ast::Variable > {
     }
 
     template<typename Input>
-    static void success(const Input &in, ast::Variable& var, ast::FunctionType& ftype) {
-        ftype.params.push_back(std::move(var));
+    static void success(const Input &in, ast::Variable& var, ast::Parameter& par) {
+        par.identifier = std::move(var.identifier);
+        par.type = std::move(var.type);
+    }
+};
+
+template<>
+struct Action<Parameter> : change_states< ast::Parameter > {
+    template<typename Input>
+    static void success(const Input &in, ast::Parameter& par, ast::FunctionType& ftype) {
+        ftype.params.push_back(std::move(par));
     }
 };
 

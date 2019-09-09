@@ -103,6 +103,7 @@ TEST_CASE( "Operator precedence", "[script][parser]" )
 
 TEST_CASE( "Disambiguation", "[script][parser]" )
 {
+    // operator '|' vs. lambda
     check_parser("a |b", "(a | b)");
     check_parser("a |b| c", "((a | b) | c)");
     check_parser("a |b| {}", "a (|b| {void})");  // 'a' is function being called, 'b' is lambda parameter
@@ -169,6 +170,20 @@ TEST_CASE( "Expressions", "[script][interpreter]" )
 }
 
 
+TEST_CASE( "Types", "[script][interpreter]" )
+{
+    // each definition can have explicit type
+    check_interpreter("a:Int = 1 ; a",        "1");
+
+    // function type can be specified in lambda or specified explicitly
+    check_interpreter("f = |a:Int b:Int|->Int {a+b}; f 1 2", "3");
+    check_interpreter("f:|Int Int|->Int = |a b|{a+b}; f 1 2", "3");
+
+    // narrowing type of polymorphic function (`f 1.0 2.0` would be error, while `add 1.0 2.0` still works)
+    // check_interpreter("f:|Int Int|->Int = add ; f 1 2",        "3");
+}
+
+
 TEST_CASE( "Blocks and lambdas", "[script][interpreter]" )
 {
     // blocks are evaluated and return a value
@@ -176,11 +191,15 @@ TEST_CASE( "Blocks and lambdas", "[script][interpreter]" )
     check_interpreter("{1+2}",      "3");
     check_interpreter("{{{1+2}}}",  "3");
 
+    // blocks can be assigned to a name
+    check_interpreter("b = {1+2}; b", "3");
+    check_interpreter("b:Int = {1+2}; b", "3");
+
     // argument propagation: `f` returns a function which consumes the second arg
     check_interpreter("f = |a:Int|{ |b:Int|{ a+b } }; f 1 2",     "3");
 
     // partial call: `(add 1)` returns a lambda which takes single argument
-    //check_interpreter("(add 1) 2",     "3");
+    //check_interpreter("(add ) 1 2",     "3");
 }
 
 

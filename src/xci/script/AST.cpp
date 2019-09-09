@@ -317,13 +317,32 @@ std::ostream& operator<<(std::ostream& os, const Variable& v)
             os << *v.type;
         return os << less_indent;
     } else {
-        if (!v.identifier.name.empty()) {
+        os << v.identifier;
+        if (v.type)
+            os << ':' << *v.type;
+        return os;
+    }
+}
+
+
+std::ostream& operator<<(std::ostream& os, const Parameter& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << put_indent << "Parameter" << std::endl;
+        os << more_indent;
+        if (v.identifier)
+            os << v.identifier;
+        if (v.type)
+            os << *v.type;
+        return os << less_indent;
+    } else {
+        if (v.identifier) {
             os << v.identifier;
             if (v.type)
                 os << ':';
         }
         if (v.type)
-            os << ':' << *v.type;
+            os << *v.type;
         return os;
     }
 }

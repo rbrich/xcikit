@@ -140,14 +140,14 @@ struct UnknownTypeName : public Error {
 
 
 struct UnexpectedArgumentType : public Error {
-    explicit UnexpectedArgumentType(int idx, TypeInfo exp, TypeInfo got, const SourceInfo& si)
+    explicit UnexpectedArgumentType(int idx, const TypeInfo& exp, const TypeInfo& got, const SourceInfo& si)
             : Error(core::format("function expects {} for arg #{}, called with {}",
                                  exp, idx, got), si) {}
 };
 
 
 struct UnexpectedReturnType : public Error {
-    explicit UnexpectedReturnType(TypeInfo exp, TypeInfo got)
+    explicit UnexpectedReturnType(const TypeInfo& exp, const TypeInfo& got)
             : Error(core::format("function returns {}, body evaluates to {}",
                                  exp, got)) {}
 };
@@ -171,15 +171,29 @@ struct ConditionNotBool : public Error {
 };
 
 
+struct DefinitionTypeMismatch : public Error {
+    explicit DefinitionTypeMismatch(const TypeInfo& exp, const TypeInfo& got)
+            : Error(core::format("definition type mismatch: specified {}, inferred {}",
+                                 exp, got)) {}
+};
+
+
+struct DefinitionParamTypeMismatch : public Error {
+    explicit DefinitionParamTypeMismatch(int idx, const TypeInfo& exp, const TypeInfo& got)
+            : Error(core::format("definition type mismatch: specified {} for param #{}, inferred {}",
+                                 exp, idx, got)) {}
+};
+
+
 struct BranchTypeMismatch : public Error {
-    explicit BranchTypeMismatch(TypeInfo exp, TypeInfo got)
+    explicit BranchTypeMismatch(const TypeInfo& exp, const TypeInfo& got)
             : Error(core::format("branch type mismatch: then branch {} else branch {}",
                                  exp, got)) {}
 };
 
 
 struct ListElemTypeMismatch : public Error {
-    explicit ListElemTypeMismatch(TypeInfo exp, TypeInfo got)
+    explicit ListElemTypeMismatch(const TypeInfo& exp, const TypeInfo& got)
             : Error(core::format("list element type mismatch: got {} in list of {}",
                                  got, exp)) {}
 };
