@@ -48,7 +48,7 @@ struct RSC: seq<space, SC> {};  // required at least one space
 
 // Basic tokens
 struct Semicolon: sor<one<';'>, eolf> {};  // optional at EOL / EOF
-struct Identifier: seq< not_at<Keyword>, lower, star< identifier_other > > {};
+struct Identifier: seq< not_at<Keyword>, star<one<'_'>>, lower, star< identifier_other > > {};
 struct TypeName: seq< upper, star< identifier_other > > {};
 struct PrefixOperator: sor< one<'-'>, one<'+'>, one<'!'>, one<'~'> > {};
 struct InfixOperator: sor< two<'&'>, two<'|'>, two<'='>, string<'!','='>,
@@ -62,7 +62,12 @@ struct InfixOperator: sor< two<'&'>, two<'|'>, two<'='>, string<'!','='>,
 struct KeywordIf: TAO_PEGTL_KEYWORD("if") {};
 struct KeywordThen: TAO_PEGTL_KEYWORD("then") {};
 struct KeywordElse: TAO_PEGTL_KEYWORD("else") {};
-struct Keyword: sor<KeywordIf, KeywordThen, KeywordElse> {};
+struct KeywordClass: TAO_PEGTL_KEYWORD("class") {};
+struct KeywordInstance: TAO_PEGTL_KEYWORD("instance") {};
+struct KeywordWith: TAO_PEGTL_KEYWORD("with") {};
+struct KeywordMatch: TAO_PEGTL_KEYWORD("match") {};
+struct Keyword: sor<KeywordIf, KeywordThen, KeywordElse, KeywordClass, KeywordInstance,
+                    KeywordWith, KeywordMatch> {};
 
 // Literals
 struct Integer: seq< opt<one<'-','+'>>, plus<digit> > {};
@@ -76,11 +81,13 @@ struct RawString : raw_string< '$', '-', '$' > {};  // raw_string = $$ raw text!
 struct Literal: sor< Float, Integer, String, RawString > {};
 
 // Expressions
-struct Variable: seq< Identifier, opt<SC, one<':'>, SC, Type > > {};
+struct Variable: seq< Identifier, opt<SC, one<':'>, SC, must<Type> > > {};
 struct Parameter: sor< Type, Variable > {};
 struct DeclParams: seq< one<'|'>, SC, plus<Parameter, SC>, one<'|'> > {};  // do not fail if '|' matches but the rest doesn't - it may be |-operator instead
 struct DeclResult: if_must< string<'-', '>'>, SC, Type > {};
-struct FunctionType: seq< DeclParams, SC, opt<DeclResult> > {};
+struct TypeConstraint: seq<TypeName, RSC, TypeName> {};
+struct TypeContext: if_must< one<'('>, SC, TypeConstraint, SC, star_must<one<','>, SC, TypeConstraint, SC>, one<')'> > {};
+struct FunctionType: seq< DeclParams, SC, opt<DeclResult>, SC, opt<if_must<KeywordWith, SC, TypeContext>> > {};
 struct ListType: if_must< one<'['>, SC, Type, SC, one<']'> > {};
 struct Type: sor< TypeName, ListType, FunctionType > {};
 struct Block: if_must< one<'{'>, SC, sor< one<'}'>, seq<Statement, SC, star<Semicolon, SC, Statement, SC>, opt<Semicolon, SC>, one<'}'>> > > {};
@@ -104,8 +111,15 @@ struct Definition: seq< Variable, SC, seq<one<'='>, not_at<one<'='>>, SC, must<E
 struct Invocation: seq< Expression > {};
 struct Statement: sor< Definition, Invocation > {};
 
+// Module-level definitions
+struct ClassDefinition: seq< Variable, SC, opt_must<one<'='>, SC, Expression> > {};
+struct DefClass: if_must< KeywordClass, SC, TypeName, RSC, TypeName, SC, opt<TypeContext>, SC,
+        one<'{'>, SC, sor< one<'}'>, must<ClassDefinition, SC, star<Semicolon, SC, ClassDefinition, SC>, opt<Semicolon>, SC, one<'}'>> > > {};
+struct DefInstance: if_must< KeywordInstance, SC, TypeName, RSC, Type, SC, opt<TypeContext>, SC,
+        one<'{'>, SC, sor< one<'}'>, must<Definition, SC, star<Semicolon, SC, Definition, SC>, opt<Semicolon, SC>, one<'}'>> > > {};
+
 // Source module
-struct Module: until< eof, must<seq< SC, Statement, SC, Semicolon, SC >> > {};
+struct Module: until< eof, must<seq< SC, sor<DefClass, DefInstance, Statement>, SC, Semicolon, SC >> > {};
 
 
 // ----------------------------------------------------------------------------
@@ -116,25 +130,31 @@ struct Action : nothing<Rule> {};
 
 
 template<>
-struct Action<Module> : change_states< ast::Block > {
-    template<typename Input>
-    static void success(const Input &in, ast::Block& block, AST &ast) {
-        block.finish();
-        ast.body = std::move(block);
-    }
-};
-
-template<>
 struct Action<Definition> : change_states< ast::Definition > {
+    template<typename Input>
+    static void success(const Input &in, ast::Definition& def, ast::Module& mod) {
+        mod.body.statements.push_back(std::make_unique<ast::Definition>(std::move(def)));
+    }
+
     template<typename Input>
     static void success(const Input &in, ast::Definition& def, ast::Block& block) {
         block.statements.push_back(std::make_unique<ast::Definition>(std::move(def)));
+    }
+
+    template<typename Input>
+    static void success(const Input &in, ast::Definition& def, ast::Instance& inst) {
+        inst.defs.push_back(std::move(def));
     }
 };
 
 
 template<>
 struct Action<Invocation> : change_states< ast::Invocation > {
+    template<typename Input>
+    static void success(const Input &in, ast::Invocation& inv, ast::Module& mod) {
+        mod.body.statements.push_back(std::make_unique<ast::Invocation>(std::move(inv)));
+    }
+
     template<typename Input>
     static void success(const Input &in, ast::Invocation& inv, ast::Block& block) {
         block.statements.push_back(std::make_unique<ast::Invocation>(std::move(inv)));
@@ -469,6 +489,27 @@ struct Action<TypeName> {
     static void apply(const Input &in, std::unique_ptr<ast::Type>& type) {
         type = std::make_unique<ast::TypeName>(in.string());
     }
+
+    template<typename Input>
+    static void apply(const Input &in, ast::TypeConstraint& tcst) {
+        if (tcst.type_class.name.empty())
+            tcst.type_class.name = in.string();
+        else
+            tcst.type_name.name = in.string();
+    }
+
+    template<typename Input>
+    static void apply(const Input &in, ast::Class& cls) {
+        if (cls.class_name.name.empty())
+            cls.class_name.name = in.string();
+        else
+            cls.type_var.name = in.string();
+    }
+
+    template<typename Input>
+    static void apply(const Input &in, ast::Instance& inst) {
+        inst.class_name.name = in.string();
+    }
 };
 
 
@@ -477,6 +518,25 @@ struct Action<ListType> : change_states< ast::ListType > {
     template<typename Input>
     static void success(const Input &in, ast::ListType& ltype, std::unique_ptr<ast::Type>& type) {
         type = std::make_unique<ast::ListType>(std::move(ltype));
+    }
+};
+
+
+template<>
+struct Action<TypeConstraint> : change_states< ast::TypeConstraint > {
+    template<typename Input>
+    static void success(const Input &in, ast::TypeConstraint& tcst, ast::FunctionType& ftype) {
+        ftype.context.push_back(std::move(tcst));
+    }
+
+    template<typename Input>
+    static void success(const Input &in, ast::TypeConstraint& tcst, ast::Class& cls) {
+        cls.context.push_back(std::move(tcst));
+    }
+
+    template<typename Input>
+    static void success(const Input &in, ast::TypeConstraint& tcst, ast::Instance& inst) {
+        inst.context.push_back(std::move(tcst));
     }
 };
 
@@ -518,6 +578,11 @@ struct Action<Type> : change_states< std::unique_ptr<ast::Type> >  {
     static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::Parameter& par) {
         par.type = std::move(type);
     }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::Instance& inst) {
+        inst.type_inst = std::move(type);
+    }
 };
 
 template<>
@@ -550,6 +615,33 @@ struct Action<Block> : change_states< ast::Block > {
         if (!fn)
             fn = std::make_unique<ast::Function>();
         fn->body = std::move(block);
+    }
+};
+
+
+template<>
+struct Action<DefClass> : change_states< ast::Class > {
+    template<typename Input>
+    static void success(const Input &in, ast::Class& cls, ast::Module& mod) {
+        mod.classes.push_back(std::move(cls));
+    }
+};
+
+
+template<>
+struct Action<ClassDefinition> : change_states< ast::Definition > {
+    template<typename Input>
+    static void success(const Input &in, ast::Definition& def, ast::Class& cls) {
+        cls.defs.push_back(std::move(def));
+    }
+};
+
+
+template<>
+struct Action<DefInstance> : change_states< ast::Instance > {
+    template<typename Input>
+    static void success(const Input &in, ast::Instance& inst, ast::Module& mod) {
+        mod.instances.push_back(std::move(inst));
     }
 };
 
@@ -625,7 +717,7 @@ const std::string Control< T >::errmsg = "parse error matching " + internal::dem
 } // namespace parser
 
 
-void Parser::parse(const std::string& input, AST& ast)
+void Parser::parse(const std::string& input, ast::Module& mod)
 {
     using parser::Module;
     using parser::Action;
@@ -638,8 +730,9 @@ void Parser::parse(const std::string& input, AST& ast)
     in(input, "<input>");
 
     try {
-        if (!tao::pegtl::parse< Module, Action, Control >( in, ast ))
+        if (!tao::pegtl::parse< Module, Action, Control >( in, mod ))
             throw ParseError{"input not matched"};
+        mod.body.finish();
     } catch (tao::pegtl::parse_error& e) {
         const auto p = e.positions.front();
         throw ParseError{core::format("{}\n{}\n{}^", e.what(), in.line_at(p),

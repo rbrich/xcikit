@@ -46,7 +46,7 @@ public:
 
     // Compile AST into Function object, which contains objects in scope + code
     // (module is special kind of function, with predefined parameters)
-    void compile(Function& func, AST& ast);
+    void compile(Function& func, ast::Module& ast);
 
     // Compile block, return type of its return value
     void compile_block(Function& func, const ast::Block& block);

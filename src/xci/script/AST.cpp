@@ -29,8 +29,7 @@
 
 using namespace std;
 
-namespace xci::script {
-namespace ast {
+namespace xci::script::ast {
 
 
 class DumpVisitor: public ConstVisitor {
@@ -427,6 +426,17 @@ std::ostream& operator<<(std::ostream& os, const ListType& v)
 }
 
 
+std::ostream& operator<<(std::ostream& os, const TypeConstraint& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << put_indent << "TypeConstraint " << v.type_class << ' ' << v.type_name << std::endl;
+        return os;
+    } else {
+        return os << v.type_class << ' ' << v.type_name;
+    }
+}
+
+
 std::ostream& operator<<(std::ostream& os, const Reference& v)
 {
     if (stream_options(os).enable_tree) {
@@ -523,9 +533,15 @@ std::ostream& operator<<(std::ostream& os, const Definition& v)
 {
     if (stream_options(os).enable_tree) {
         os << put_indent << "Definition(Statement)" << std::endl;
-        return os << more_indent << v.variable << *v.expression << less_indent;
+        os << more_indent << v.variable;
+        if (v.expression)
+            os << *v.expression;
+        return os << less_indent;
     } else {
-        return os << "/*def*/ " << v.variable << " = (" << *v.expression << ");";
+        os << "/*def*/ " << v.variable;
+        if (v.expression)
+            os << " = (" << *v.expression << ")";
+        return os << ';';
     }
 }
 
@@ -547,6 +563,64 @@ std::ostream& operator<<(std::ostream& os, const Return& v)
         return os << more_indent << *v.expression << less_indent;
     } else {
         return os << *v.expression;
+    }
+}
+
+
+std::ostream& operator<<(std::ostream& os, const Class& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << put_indent << "Class" << std::endl;
+        os << more_indent << v.class_name << v.type_var;
+        for (const auto& cst : v.context)
+            os << cst;
+        for (const auto& def : v.defs)
+            os << def;
+        return os << less_indent;
+    } else {
+        os << "class " << v.class_name << ' ' << v.type_var;
+        if (!v.context.empty()) {
+            os << " (";
+            for (const auto& cst : v.context) {
+                os << cst;
+                if (&cst != &v.context.back())
+                    os << ", ";
+            }
+            os << ")";
+        }
+        os << " {" << endl << more_indent;
+        for (const auto& def : v.defs)
+            os << put_indent << def << endl;
+        return os;
+    }
+}
+
+
+std::ostream& operator<<(std::ostream& os, const Instance& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << put_indent << "Instance" << std::endl;
+        os << more_indent << v.class_name << *v.type_inst;
+        for (const auto& cst : v.context)
+            os << cst;
+        for (const auto& def : v.defs)
+            os << def;
+        return os << less_indent;
+    } else {
+        os << "instance " << v.class_name << ' ' << *v.type_inst;
+        if (!v.context.empty()) {
+            os << " (";
+            for (const auto& cst : v.context) {
+                os << cst;
+                if (&cst != &v.context.back())
+                    os << ", ";
+            }
+            os << ")";
+        }
+        os << " {" << endl << more_indent;
+        for (const auto& def : v.defs)
+            os << put_indent << def << endl;
+        return os;
     }
 }
 
@@ -573,6 +647,27 @@ std::ostream& operator<<(std::ostream& os, const Block& v)
     }
 }
 
+
+std::ostream& operator<<(std::ostream& os, const Module& v)
+{
+    if (ast::stream_options(os).enable_tree) {
+        os << ast::put_indent << "Module" << std::endl;
+        os << ast::more_indent;
+        for (const auto& cls : v.classes)
+            os << cls;
+        for (const auto& inst : v.instances)
+            os << inst;
+        return os << v.body << ast::less_indent;
+    } else {
+        for (const auto& cls : v.classes)
+            os << cls;
+        for (const auto& inst : v.instances)
+            os << inst;
+        return os << v.body;
+    }
+}
+
+
 std::ostream& dump_tree(std::ostream& os)
 {
     stream_options(os).enable_tree = true;
@@ -598,18 +693,5 @@ std::ostream& less_indent(std::ostream& os)
     return os;
 }
 
-} // namespace ast
 
-
-std::ostream& operator<<(std::ostream& os, const AST& ast)
-{
-    if (ast::stream_options(os).enable_tree) {
-        os << ast::put_indent << "Module" << std::endl;
-        return os << ast::more_indent << ast.body << ast::less_indent;
-    } else {
-        return os << ast.body;
-    }
-}
-
-
-} // namespace xci::script
+} // namespace xci::script::ast

@@ -55,7 +55,7 @@ void evaluate(const string& line, const Options& opts)
 
     try {
         // parse
-        AST ast;
+        ast::Module ast;
         parser.parse(line, ast);
 
         if (opts.print_raw_ast) {

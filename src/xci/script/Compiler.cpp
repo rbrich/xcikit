@@ -369,7 +369,7 @@ void Compiler::configure(uint32_t flags)
 }
 
 
-void Compiler::compile(Function& func, AST& ast)
+void Compiler::compile(Function& func, ast::Module& ast)
 {
     func.signature().set_return_type(TypeInfo{Type::Unknown});
     ast.body.symtab = &func.symtab();

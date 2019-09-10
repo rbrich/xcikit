@@ -25,7 +25,7 @@ namespace xci::script {
 
 class Parser {
 public:
-    void parse(const std::string& input, AST& ast);
+    void parse(const std::string& input, ast::Module& mod);
 };
 
 

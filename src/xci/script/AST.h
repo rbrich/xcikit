@@ -170,6 +170,7 @@ struct Type {
 
 
 struct TypeName: public Type {
+    TypeName() = default;
     explicit TypeName(std::string  s) : name(std::move(s)) {}
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
@@ -190,11 +191,17 @@ struct Parameter {
 };
 
 
+struct TypeConstraint {
+    TypeName type_class;
+    TypeName type_name;
+};
+
 struct FunctionType: public Type {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::vector<Parameter> params;
     std::unique_ptr<Type> result_type;
+    std::vector<TypeConstraint> context;
 };
 
 
@@ -389,6 +396,29 @@ struct Return: public Statement {
 };
 
 
+struct Class {
+    TypeName class_name;
+    TypeName type_var;
+    std::vector<TypeConstraint> context;
+    std::vector<ast::Definition> defs;  // functions in class
+};
+
+
+struct Instance {
+    TypeName class_name;
+    std::unique_ptr<Type> type_inst;
+    std::vector<TypeConstraint> context;
+    std::vector<ast::Definition> defs;  // functions in class
+};
+
+
+struct Module {
+    std::vector<Class> classes;
+    std::vector<Instance> instances;
+    ast::Block body;
+};
+
+
 std::ostream& operator<<(std::ostream& os, const Integer& v);
 std::ostream& operator<<(std::ostream& os, const Float& v);
 std::ostream& operator<<(std::ostream& os, const String& v);
@@ -401,6 +431,7 @@ std::ostream& operator<<(std::ostream& os, const Type& v);
 std::ostream& operator<<(std::ostream& os, const TypeName& v);
 std::ostream& operator<<(std::ostream& os, const FunctionType& v);
 std::ostream& operator<<(std::ostream& os, const ListType& v);
+std::ostream& operator<<(std::ostream& os, const TypeConstraint& v);
 std::ostream& operator<<(std::ostream& os, const Reference& v);
 std::ostream& operator<<(std::ostream& os, const Call& v);
 std::ostream& operator<<(std::ostream& os, const OpCall& v);
@@ -411,7 +442,10 @@ std::ostream& operator<<(std::ostream& os, const Expression& v);
 std::ostream& operator<<(std::ostream& os, const Definition& v);
 std::ostream& operator<<(std::ostream& os, const Invocation& v);
 std::ostream& operator<<(std::ostream& os, const Return& v);
+std::ostream& operator<<(std::ostream& os, const Class& v);
+std::ostream& operator<<(std::ostream& os, const Instance& v);
 std::ostream& operator<<(std::ostream& os, const Block& v);
+std::ostream& operator<<(std::ostream& os, const Module& v);
 
 // stream manipulators
 std::ostream& dump_tree(std::ostream& os);
@@ -420,16 +454,6 @@ std::ostream& more_indent(std::ostream& os);
 std::ostream& less_indent(std::ostream& os);
 
 } // namespace ast
-
-
-struct AST {
-    ast::Block body;
-};
-
-
-std::ostream& operator<<(std::ostream& os, const AST& ast);
-
-
 } // namespace xci::script
 
 

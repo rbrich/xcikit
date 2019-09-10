@@ -21,7 +21,7 @@ namespace xci::script {
 std::unique_ptr<Value> Interpreter::eval(const std::string& input, const InvokeCallback& cb)
 {
     // parse
-    AST ast;
+    ast::Module ast;
     m_parser.parse(input, ast);
 
     // compile

@@ -32,7 +32,7 @@ using namespace xci::script;
 void check_parser(const string& input, const string& expected_output)
 {
     Parser parser;
-    AST ast;
+    ast::Module ast;
     parser.parse(input, ast);
     ostringstream os;
     os << ast;
@@ -199,7 +199,7 @@ TEST_CASE( "Blocks and lambdas", "[script][interpreter]" )
     check_interpreter("f = |a:Int|{ |b:Int|{ a+b } }; f 1 2",     "3");
 
     // partial call: `(add 1)` returns a lambda which takes single argument
-    //check_interpreter("(add ) 1 2",     "3");
+    //check_interpreter("(add 1) 2",     "3");
 }
 
 
@@ -226,4 +226,12 @@ TEST_CASE( "Lists", "[script][interpreter]" )
     CHECK_THROWS_AS(Interpreter{0}.eval("[1,2,3]!3"), IndexOutOfBounds);
     //check_interpreter("[[1,2],[3,4],[5,6]] @ 1 @ 0", "3");
     check_interpreter("head = |l:[Int]| -> Int { l!0 }; head [1,2,3]", "1");
+}
+
+
+TEST_CASE( "Type classes", "[script][interpreter]" )
+{
+    check_interpreter("class XEq T { xeq : |T T| -> Bool }; "
+                      "instance XEq Int32 { xeq = { __equal_32 } }; "
+                      "xeq 1 2", "true");
 }
