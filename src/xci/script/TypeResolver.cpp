@@ -110,6 +110,9 @@ public:
         const auto& symtab = *v.identifier.symbol.symtab();
         const auto& sym = *v.identifier.symbol;
         switch (sym.type()) {
+            case Symbol::Instruction:
+                m_value_type = {};
+                return;
             case Symbol::Function: {
                 // find matching overload
                 auto symptr = v.identifier.symbol;

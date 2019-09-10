@@ -124,6 +124,13 @@ private:
     Module& module() { return m_function.module(); }
 
     SymbolPointer resolve_symbol(const string& name) {
+        // lookup intrinsics in builtin module first
+        // (this is just optiomization, the same lookup is repeated below)
+        if (name.size() > 3 && name[0] == '_' && name[1] == '_') {
+            auto symptr = module().get_imported_module(0).symtab().find_by_name(name);
+            if (symptr)
+                return symptr;
+        }
         // (non)local values and parameters
         {
             // lookup in this and parent symtabs

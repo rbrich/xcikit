@@ -173,6 +173,7 @@ public:
     using const_iterator = std::vector<uint8_t>::const_iterator;
     const_iterator begin() const { return m_ops.begin(); }
     const_iterator end() const { return m_ops.end(); }
+    size_t size() const { return m_ops.size(); }
 
     bool operator==(const Code& rhs) const { return m_ops == rhs.m_ops; }
 

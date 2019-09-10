@@ -54,6 +54,7 @@ private:
     void add_arithmetic_op_function(const std::string& name, Opcode opcode);
     void add_unary_op_functions();
     void add_subscript_function();
+    void add_intrinsics();
 };
 
 } // namespace xci::script

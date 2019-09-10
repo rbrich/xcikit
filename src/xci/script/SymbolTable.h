@@ -72,6 +72,7 @@ public:
         Nonlocal,           // non-local value in function scope, i.e. a capture from outer scope
         Function,           // static function (module-level)
         Module,             // imported module (module-level)
+        Instruction,        // intrinsics (e.g. __equal_32) resolve to this, index is Opcode
     };
 
     explicit Symbol(std::string name) : m_name(std::move(name)) {}

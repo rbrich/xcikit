@@ -285,6 +285,7 @@ BuiltinModule::BuiltinModule()
     add_arithmetic_op_function("exp", Opcode::Exp_8);
     add_unary_op_functions();
     add_subscript_function();
+    add_intrinsics();
 }
 
 
@@ -470,6 +471,97 @@ BuiltinModule::add_subscript_function()
     fn->add_parameter("rhs", TypeInfo{Type::Int32});
     fn->code().add_opcode(Opcode::Subscript_32);
     symtab().add({name, Symbol::Function, add_function(std::move(fn))});
+}
+
+
+void BuiltinModule::add_intrinsics()
+{
+    symtab().add({"__noop", Symbol::Instruction, Index(Opcode::Noop)});
+    symtab().add({"__logical_not", Symbol::Instruction, Index(Opcode::LogicalNot)});
+    symtab().add({"__logical_or", Symbol::Instruction, Index(Opcode::LogicalOr)});
+    symtab().add({"__logical_and", Symbol::Instruction, Index(Opcode::LogicalAnd)});
+    symtab().add({"__equal_8", Symbol::Instruction, Index(Opcode::Equal_8)});
+    symtab().add({"__equal_32", Symbol::Instruction, Index(Opcode::Equal_32)});
+    symtab().add({"__equal_64", Symbol::Instruction, Index(Opcode::Equal_64)});
+    symtab().add({"__not_equal_8", Symbol::Instruction, Index(Opcode::NotEqual_8)});
+    symtab().add({"__not_equal_32", Symbol::Instruction, Index(Opcode::NotEqual_32)});
+    symtab().add({"__not_equal_64", Symbol::Instruction, Index(Opcode::NotEqual_64)});
+    symtab().add({"__less_equal_8", Symbol::Instruction, Index(Opcode::LessEqual_8)});
+    symtab().add({"__less_equal_32", Symbol::Instruction, Index(Opcode::LessEqual_32)});
+    symtab().add({"__less_equal_64", Symbol::Instruction, Index(Opcode::LessEqual_64)});
+    symtab().add({"__greater_equal_8", Symbol::Instruction, Index(Opcode::GreaterEqual_8)});
+    symtab().add({"__greater_equal_32", Symbol::Instruction, Index(Opcode::GreaterEqual_32)});
+    symtab().add({"__greater_equal_64", Symbol::Instruction, Index(Opcode::GreaterEqual_64)});
+    symtab().add({"__less_than_8", Symbol::Instruction, Index(Opcode::LessThan_8)});
+    symtab().add({"__less_than_32", Symbol::Instruction, Index(Opcode::LessThan_32)});
+    symtab().add({"__less_than_64", Symbol::Instruction, Index(Opcode::LessThan_64)});
+    symtab().add({"__greater_than_8", Symbol::Instruction, Index(Opcode::GreaterThan_8)});
+    symtab().add({"__greater_than_32", Symbol::Instruction, Index(Opcode::GreaterThan_32)});
+    symtab().add({"__greater_than_64", Symbol::Instruction, Index(Opcode::GreaterThan_64)});
+    symtab().add({"__bitwise_not_8", Symbol::Instruction, Index(Opcode::BitwiseNot_8)});
+    symtab().add({"__bitwise_not_32", Symbol::Instruction, Index(Opcode::BitwiseNot_32)});
+    symtab().add({"__bitwise_not_64", Symbol::Instruction, Index(Opcode::BitwiseNot_64)});
+    symtab().add({"__bitwise_or_8", Symbol::Instruction, Index(Opcode::BitwiseOr_8)});
+    symtab().add({"__bitwise_or_32", Symbol::Instruction, Index(Opcode::BitwiseOr_32)});
+    symtab().add({"__bitwise_or_64", Symbol::Instruction, Index(Opcode::BitwiseOr_64)});
+    symtab().add({"__bitwise_and_8", Symbol::Instruction, Index(Opcode::BitwiseAnd_8)});
+    symtab().add({"__bitwise_and_32", Symbol::Instruction, Index(Opcode::BitwiseAnd_32)});
+    symtab().add({"__bitwise_and_64", Symbol::Instruction, Index(Opcode::BitwiseAnd_64)});
+    symtab().add({"__bitwise_xor_8", Symbol::Instruction, Index(Opcode::BitwiseXor_8)});
+    symtab().add({"__bitwise_xor_32", Symbol::Instruction, Index(Opcode::BitwiseXor_32)});
+    symtab().add({"__bitwise_xor_64", Symbol::Instruction, Index(Opcode::BitwiseXor_64)});
+    symtab().add({"__shift_left_8", Symbol::Instruction, Index(Opcode::ShiftLeft_8)});
+    symtab().add({"__shift_left_32", Symbol::Instruction, Index(Opcode::ShiftLeft_32)});
+    symtab().add({"__shift_left_64", Symbol::Instruction, Index(Opcode::ShiftLeft_64)});
+    symtab().add({"__shift_right_8", Symbol::Instruction, Index(Opcode::ShiftRight_8)});
+    symtab().add({"__shift_right_32", Symbol::Instruction, Index(Opcode::ShiftRight_32)});
+    symtab().add({"__shift_right_64", Symbol::Instruction, Index(Opcode::ShiftRight_64)});
+    symtab().add({"__neg_8", Symbol::Instruction, Index(Opcode::Neg_8)});
+    symtab().add({"__neg_32", Symbol::Instruction, Index(Opcode::Neg_32)});
+    symtab().add({"__neg_64", Symbol::Instruction, Index(Opcode::Neg_64)});
+    symtab().add({"__add_8", Symbol::Instruction, Index(Opcode::Add_8)});
+    symtab().add({"__add_32", Symbol::Instruction, Index(Opcode::Add_32)});
+    symtab().add({"__add_64", Symbol::Instruction, Index(Opcode::Add_64)});
+    symtab().add({"__sub_8", Symbol::Instruction, Index(Opcode::Sub_8)});
+    symtab().add({"__sub_32", Symbol::Instruction, Index(Opcode::Sub_32)});
+    symtab().add({"__sub_64", Symbol::Instruction, Index(Opcode::Sub_64)});
+    symtab().add({"__mul_8", Symbol::Instruction, Index(Opcode::Mul_8)});
+    symtab().add({"__mul_32", Symbol::Instruction, Index(Opcode::Mul_32)});
+    symtab().add({"__mul_64", Symbol::Instruction, Index(Opcode::Mul_64)});
+    symtab().add({"__div_8", Symbol::Instruction, Index(Opcode::Div_8)});
+    symtab().add({"__div_32", Symbol::Instruction, Index(Opcode::Div_32)});
+    symtab().add({"__div_64", Symbol::Instruction, Index(Opcode::Div_64)});
+    symtab().add({"__mod_8", Symbol::Instruction, Index(Opcode::Mod_8)});
+    symtab().add({"__mod_32", Symbol::Instruction, Index(Opcode::Mod_32)});
+    symtab().add({"__mod_64", Symbol::Instruction, Index(Opcode::Mod_64)});
+    symtab().add({"__exp_8", Symbol::Instruction, Index(Opcode::Exp_8)});
+    symtab().add({"__exp_32", Symbol::Instruction, Index(Opcode::Exp_32)});
+    symtab().add({"__exp_64", Symbol::Instruction, Index(Opcode::Exp_64)});
+    symtab().add({"__subscript_32", Symbol::Instruction, Index(Opcode::Subscript_32)});
+    /*
+    // these instructions need args, it doesn't make sense to provide them at this time
+    symtab().add({"__execute", Symbol::Instruction, Index(Opcode::Execute)});
+    symtab().add({"__load_static", Symbol::Instruction, Index(Opcode::LoadStatic)});
+    symtab().add({"__load_module", Symbol::Instruction, Index(Opcode::LoadModule)});
+    symtab().add({"__load_function", Symbol::Instruction, Index(Opcode::LoadFunction)});
+    symtab().add({"__call0", Symbol::Instruction, Index(Opcode::Call0)});
+    symtab().add({"__call1", Symbol::Instruction, Index(Opcode::Call1)});
+    symtab().add({"__partial_execute", Symbol::Instruction, Index(Opcode::PartialExecute)});
+    symtab().add({"__make_closure", Symbol::Instruction, Index(Opcode::MakeClosure)});
+    symtab().add({"__inc_ref", Symbol::Instruction, Index(Opcode::IncRef)});
+    symtab().add({"__dec_ref", Symbol::Instruction, Index(Opcode::DecRef)});
+    symtab().add({"__jump", Symbol::Instruction, Index(Opcode::Jump)});
+    symtab().add({"__jump_if_not", Symbol::Instruction, Index(Opcode::JumpIfNot)});
+    symtab().add({"__invoke", Symbol::Instruction, Index(Opcode::Invoke)});
+    symtab().add({"__call", Symbol::Instruction, Index(Opcode::Call)});
+    symtab().add({"__partial0", Symbol::Instruction, Index(Opcode::Partial0)});
+    symtab().add({"__partial1", Symbol::Instruction, Index(Opcode::Partial1)});
+    symtab().add({"__make_list", Symbol::Instruction, Index(Opcode::MakeList)});
+    symtab().add({"__copy_variable", Symbol::Instruction, Index(Opcode::CopyVariable)});
+    symtab().add({"__copy_argument", Symbol::Instruction, Index(Opcode::CopyArgument)});
+    symtab().add({"__drop", Symbol::Instruction, Index(Opcode::Drop)});
+    symtab().add({"__partial", Symbol::Instruction, Index(Opcode::Partial)});
+    */
 }
 
 

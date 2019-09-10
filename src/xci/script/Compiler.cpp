@@ -52,6 +52,14 @@ public:
 
     void visit(ast::Return& ret) override {
         ret.expression->apply(*this);
+
+        if (m_function.has_intrinsics()) {
+            if (m_function.intrinsics() != m_function.code().size())
+                throw IntrinsicsFunctionError("cannot mix compiled code with intrinsics");
+            // no DROP for intrinsics function
+            return;
+        }
+
         auto skip = m_function.signature().return_type.size();
         auto drop = m_function.raw_size_of_parameters()
                   + m_function.raw_size_of_nonlocals()
@@ -127,6 +135,11 @@ public:
         auto& symtab = *v.identifier.symbol.symtab();
         auto& sym = *v.identifier.symbol;
         switch (sym.type()) {
+            case Symbol::Instruction:
+                // intrinsics - just output the requested instruction
+                assert(sym.index() < 256);
+                m_function.add_intrinsic(uint8_t(sym.index()));
+                break;
             case Symbol::Module: {
                 assert(sym.depth() == 0);
                 // LOAD_MODULE <module_idx>
@@ -304,7 +317,7 @@ public:
                     }
                 }
             }
-            // MAKE_CLOSURE <function_idx> <n_nonlocals>
+            // MAKE_CLOSURE <function_idx>
             m_function.code().add_opcode(Opcode::MakeClosure, v.index);
             if (!func.has_parameters()) {
                 // parameterless closure is executed immediately

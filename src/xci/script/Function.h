@@ -85,6 +85,12 @@ public:
     // true if this function is generic
     bool is_generic() const;
 
+    // Special intrinsics function cannot contain any compiled code and is always inlined.
+    // This counter helps to check no other code was generated.
+    void add_intrinsic(uint8_t code) { m_intrinsics++; m_code.add_arg(code); }
+    size_t intrinsics() const { return m_intrinsics; }
+    bool has_intrinsics() const { return m_intrinsics > 0; }
+
     // return new function with applied args (args are drained, left empty)
     //Function partial_call(std::vector<Value>& args) const;
 
@@ -105,6 +111,8 @@ private:
     std::vector<TypeInfo> m_values;
     // Function code
     Code m_code;
+    // Counter for instructions from intrinsics
+    size_t m_intrinsics = 0;
 };
 
 

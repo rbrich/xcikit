@@ -92,6 +92,8 @@ public:
             case Symbol::Unresolved:
                 assert(!"Optimizer: unresolved symbol");
                 return;
+            case Symbol::Instruction:
+                return;
             case Symbol::Function:
                 // fallthrough
                 break;

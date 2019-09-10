@@ -233,5 +233,16 @@ TEST_CASE( "Type classes", "[script][interpreter]" )
 {
     check_interpreter("class XEq T { xeq : |T T| -> Bool }; "
                       "instance XEq Int32 { xeq = { __equal_32 } }; "
-                      "xeq 1 2", "true");
+                      "xeq 1 2", "false");
+}
+
+
+TEST_CASE( "Compiler intrinsics", "[script][interpreter]" )
+{
+    // function signature must be explicitly declared, it's never inferred from intrinsics
+    // parameter names are not needed (and not used), intrinsics work directly with stack
+    // e.g. __equal_32 pulls two 32bit values and pushes 8bit Bool value back
+    check_interpreter("my_eq = |Int32 Int32| -> Bool { __equal_32 }; my_eq 42 (2*21)", "true");
+    // alternative style - essentially the same
+    check_interpreter("my_eq : |Int32 Int32| -> Bool = { __equal_32 }; my_eq 42 43", "false");
 }

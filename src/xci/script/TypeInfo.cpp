@@ -123,9 +123,11 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
 
 void Signature::resolve_return_type(const TypeInfo& t)
 {
-    assert(!t.is_generic());
-    if (return_type.is_generic())
+    if (!return_type) {
+        if (!t)
+            throw MissingExplicitType();
         return_type = t;
+    }
     if (return_type != t)
         throw UnexpectedReturnType(return_type, t);
 }

@@ -146,6 +146,7 @@ std::ostream& operator<<(std::ostream& os, Symbol::Type v)
         case Symbol::Nonlocal:      return os << "Nonlocal";
         case Symbol::Function:      return os << "Function";
         case Symbol::Module:        return os << "Module";
+        case Symbol::Instruction:   return os << "Instruction";
     }
     return os;
 }

@@ -153,6 +153,12 @@ struct UnexpectedReturnType : public Error {
 };
 
 
+struct MissingExplicitType : public Error {
+    explicit MissingExplicitType()
+        : Error("type cannot be inferred and wasn't specified") {}
+};
+
+
 struct FunctionNotFound : public Error {
     explicit FunctionNotFound(const std::string& name, const std::string& args,
                               const std::string& candidates)
@@ -203,6 +209,12 @@ struct IndexOutOfBounds : public Error {
     explicit IndexOutOfBounds(int idx, size_t len)
             : Error(core::format("list index out of bounds: {} not in [0..{}]",
                                  idx, len-1)) {}
+};
+
+
+struct IntrinsicsFunctionError : public Error {
+    explicit IntrinsicsFunctionError(const std::string& message)
+        : Error("intrinsics function: " + message) {}
 };
 
 
