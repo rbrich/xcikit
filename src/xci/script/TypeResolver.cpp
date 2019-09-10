@@ -45,7 +45,7 @@ public:
         }
         TypeInfo specified_type = m_type_info;
 
-        // Expression might used the specified type from `m_type_info`
+        // Expression might use the specified type from `m_type_info`
         dfn.expression->apply(*this);
 
         // Specified type must match the inferred type
@@ -244,40 +244,44 @@ public:
     }
 
     void visit(ast::Function& v) override {
+        // specified type (left hand side of '=')
         TypeInfo specified_type = move(m_type_info);
+        // lambda type (right hand side of '=')
+        v.type.apply(*this);
+        // fill in / check type from specified type
+        if (specified_type.is_callable()) {
+            if (!m_type_info.signature().return_type && specified_type.signature().return_type)
+                m_type_info.signature().set_return_type(specified_type.signature().return_type);
+            size_t idx = 0;
+            auto& params = m_type_info.signature().params;
+            for (const auto& sp : specified_type.signature().params) {
+                if (idx >= params.size())
+                    params.emplace_back(sp);
+                else if (!params[idx])
+                    params[idx] = sp;
+                // specified param must match now
+                if (params[idx] != sp)
+                    throw DefinitionParamTypeMismatch(idx, sp, params[idx]);
+                ++idx;
+            }
+        }
+        m_value_type = move(m_type_info);
 
         Function& fn = module().get_function(v.index);
-        int idx = 0;
-        for (auto& p : v.type.params) {
-            if (p.type)
-                p.type->apply(*this);
-            else
-                m_type_info = TypeInfo{Type::Unknown};
-            if (specified_type) {
-                const auto& param_type = specified_type.signature().params[idx];
-                if (!m_type_info)
-                    m_type_info = param_type;
-                else if (param_type != m_type_info)
-                    throw DefinitionParamTypeMismatch(idx, param_type, m_type_info);
-            }
-
-            fn.signature().add_parameter(move(m_type_info));
-            ++idx;
-        }
-        if (v.type.result_type)
-            v.type.result_type->apply(*this);
-        else
-            m_type_info = TypeInfo{Type::Unknown};
-        fn.signature().set_return_type(move(m_type_info));
-        m_value_type = TypeInfo{fn.signature_ptr()};
+        fn.set_signature(m_value_type.signature_ptr());
 
         // compile body and resolve return type
         m_processor.process_block(fn, v.body);
         m_value_type = TypeInfo{fn.signature_ptr()};
 
         // parameterless function is equivalent to its return type (eager evaluation)
-        if (m_value_type.is_callable() && m_value_type.signature().params.empty()) {
+        while (m_value_type.is_callable() && m_value_type.signature().params.empty()) {
             m_value_type = m_value_type.signature().return_type;
+        }
+        // check specified type again - in case it wasn't Function
+        if (!m_value_type.is_callable() && specified_type) {
+            if (m_value_type != specified_type)
+                throw DefinitionTypeMismatch(specified_type, m_value_type);
         }
     }
 
@@ -288,10 +292,16 @@ public:
     void visit(ast::FunctionType& t) final {
         auto signature = std::make_shared<Signature>();
         for (const auto& p : t.params) {
-            p.type->apply(*this);
+            if (p.type)
+                p.type->apply(*this);
+            else
+                m_type_info = TypeInfo{Type::Unknown};
             signature->add_parameter(move(m_type_info));
         }
-        t.result_type->apply(*this);
+        if (t.result_type)
+            t.result_type->apply(*this);
+        else
+            m_type_info = TypeInfo{Type::Unknown};
         signature->set_return_type(m_type_info);
         m_type_info = TypeInfo{signature};
     }

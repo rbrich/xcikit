@@ -1,7 +1,3 @@
-#include <utility>
-
-#include <utility>
-
 // TypeInfo.h created on 2019-06-09, part of XCI toolkit
 // Copyright 2019 Radek Brich
 //
@@ -26,6 +22,7 @@
 #include <string>
 #include <memory>
 #include <functional>
+#include <utility>
 
 namespace xci::script {
 
@@ -82,6 +79,7 @@ public:
 
     Signature& signature() { return *m_signature; }
     const Signature& signature() const { return *m_signature; }
+    std::shared_ptr<Signature> signature_ptr() const { return m_signature; }
 
     const std::vector<TypeInfo>& subtypes() const { return m_subtypes; }
     const TypeInfo& elem_type() const;

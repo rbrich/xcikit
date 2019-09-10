@@ -62,6 +62,7 @@ public:
     size_t raw_size_of_parameters() const;
     size_t parameter_offset(Index idx) const;
 
+    void set_signature(const std::shared_ptr<Signature>& newsig) { m_signature = newsig; }
     std::shared_ptr<Signature> signature_ptr() const { return m_signature; }
     Signature& signature() { return *m_signature; }
     const Signature& signature() const { return *m_signature; }
