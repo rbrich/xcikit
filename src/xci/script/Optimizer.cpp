@@ -93,6 +93,7 @@ public:
                 assert(!"Optimizer: unresolved symbol");
                 return;
             case Symbol::Instruction:
+            case Symbol::Class:
                 return;
             case Symbol::Function:
                 // fallthrough
@@ -209,6 +210,9 @@ public:
 
         set_variable_value(TypeInfo{Type::Unknown});
     }
+
+    void visit(ast::Class& v) override {}
+    void visit(ast::Instance& v) override {}
 
     void visit(ast::TypeName& t) final {}
     void visit(ast::FunctionType& t) final {}

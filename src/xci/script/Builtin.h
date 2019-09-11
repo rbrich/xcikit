@@ -38,8 +38,6 @@ namespace builtin {
 
     const char* op_to_name(ast::Operator::Op op);
     const char* op_to_function_name(ast::Operator::Op op);
-
-    TypeInfo type_by_name(const std::string& name);
 }
 
 
@@ -55,6 +53,7 @@ private:
     void add_unary_op_functions();
     void add_subscript_function();
     void add_intrinsics();
+    void add_types();
 };
 
 } // namespace xci::script

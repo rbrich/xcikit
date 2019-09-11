@@ -36,8 +36,9 @@ using namespace xci::script;
 struct Options {
     bool print_raw_ast = false;
     bool print_ast = false;
-    bool print_bytecode = false;
     bool print_symtab = false;
+    bool print_module = false;
+    bool print_bytecode = false;
     bool trace_bytecode = false;
     uint32_t compiler_flags = 0;
 };
@@ -80,6 +81,11 @@ void evaluate(const string& line, const Options& opts)
         // print symbol table
         if (opts.print_symtab) {
             cout << "Symbol table:" << endl << compiler.module().symtab() << endl;
+        }
+
+        // print compiled module content
+        if (opts.print_module) {
+            cout << "Module content:" << endl << compiler.module() << endl;
         }
 
         // stop if we were only processing the AST, without actual compilation
@@ -181,6 +187,7 @@ int main(int argc, char* argv[])
             "   -t --ast               Print processed AST\n"
             "   -b --bytecode          Print bytecode\n"
             "   -s --symtab            Print symbol table\n"
+            "   -m --module            Print compiled module content\n"
             "   --trace                Trace bytecode\n"
             "   --pp-symbols           Stop after symbols pass\n"
             "   --pp-nonlocals         Stop after nonlocals pass\n"
@@ -193,8 +200,9 @@ int main(int argc, char* argv[])
     Options opts;
     opts.print_raw_ast = args["--raw-ast"].asBool();
     opts.print_ast = args["--ast"].asBool();
-    opts.print_bytecode = args["--bytecode"].asBool();
     opts.print_symtab = args["--symtab"].asBool();
+    opts.print_module = args["--module"].asBool();
+    opts.print_bytecode = args["--bytecode"].asBool();
     opts.trace_bytecode = args["--trace"].asBool();
 
     if (args["--optimize"].asBool())

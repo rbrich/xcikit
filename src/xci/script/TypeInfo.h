@@ -76,6 +76,7 @@ public:
 
     bool is_generic() const { return m_type == Type::Unknown; }
     uint8_t generic_var() const { return m_var; }
+    void replace_var(uint8_t idx, const TypeInfo& ti);
 
     Signature& signature() { return *m_signature; }
     const Signature& signature() const { return *m_signature; }
@@ -90,8 +91,8 @@ public:
     explicit operator bool() const { return m_type != Type::Unknown; }
 
 private:
-    Type m_type {Type::Unknown};
-    uint8_t m_var {0};  // for auto type, specifies which type variable this represents
+    Type m_type { Type::Unknown };
+    uint8_t m_var {0};  // for unknown type, specifies which type variable this represents
     std::shared_ptr<Signature> m_signature;
     std::vector<TypeInfo> m_subtypes;
 };

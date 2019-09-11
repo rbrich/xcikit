@@ -30,13 +30,16 @@ public:
 
     void visit(ast::Definition& dfn) override {
         // check for name collision
-        if (m_function.symtab().find_by_name(dfn.variable.identifier.name))
+        if (symtab().find_by_name(dfn.variable.identifier.name))
             throw MultipleDeclarationError(dfn.variable.identifier.name);
 
         // add new symbol
-        dfn.variable.identifier.symbol = m_function.symtab().add({dfn.variable.identifier.name, Symbol::Value, no_index});
+        dfn.variable.identifier.symbol = symtab().add({dfn.variable.identifier.name, Symbol::Value, no_index});
         m_definition = &dfn;
-        dfn.expression->apply(*this);
+        if (dfn.variable.type)
+            dfn.variable.type->apply(*this);
+        if (dfn.expression)
+            dfn.expression->apply(*this);
         m_definition = nullptr;
     }
 
@@ -46,6 +49,64 @@ public:
 
     void visit(ast::Return& ret) override {
         ret.expression->apply(*this);
+    }
+
+    void visit(ast::Class& v) override {
+        // check for name collision
+        if (symtab().find_by_name(v.class_name.name))
+            throw MultipleDeclarationError(v.class_name.name);
+
+        // add child symbol table for the class
+        SymbolTable& cls_symtab = symtab().add_child(v.class_name.name);
+        auto p_type_var = cls_symtab.add({v.type_var.name, Symbol::TypeVar, 1});
+        m_symtab = &cls_symtab;
+
+        for (auto& dfn : v.defs)
+            dfn.apply(*this);
+
+        m_symtab = cls_symtab.parent();
+
+        // add new class to the module
+        auto cls = make_unique<Class>(module(), cls_symtab);
+        v.index = module().add_class(move(cls));
+        v.symtab = &cls_symtab;
+
+        // add new symbol
+        v.class_name.symbol = symtab().add({v.class_name.name, Symbol::Class, v.index});
+    }
+
+    void visit(ast::Instance& v) override {
+        v.class_name.symbol = resolve_symbol(v.class_name.name);
+        if (!v.class_name.symbol)
+            throw UndefinedTypeName(v.class_name.name);
+
+        v.type_inst->apply(*this);
+
+        // add child symbol table for the instance
+        SymbolTable& inst_symtab = symtab().add_child(core::format("{} ({})",
+                v.class_name.name, *v.type_inst));
+        m_symtab = &inst_symtab;
+        // add new instance to the module
+        auto& cls = module().get_class(v.class_name.symbol->index());
+        auto inst = make_unique<Instance>(cls, inst_symtab);
+        m_instance = inst.get();
+
+        for (auto& dfn : v.defs)
+            dfn.apply(*this);
+
+        m_symtab = inst_symtab.parent();
+        m_instance = nullptr;
+
+        // resolve symbols with the class
+        for (auto& sym : inst_symtab) {
+            auto ref = cls.symtab().find_by_name(sym.name());
+            if (!ref)
+                throw FunctionNotFoundInClass(sym.name(), v.class_name.name);
+            sym.set_ref(ref);
+        }
+
+        v.index = module().add_instance(move(inst));
+        v.symtab = &inst_symtab;
     }
 
     void visit(ast::Integer& v) override {}
@@ -98,21 +159,42 @@ public:
             name = m_definition->variable.identifier.name;
             m_definition->variable.identifier.symbol->set_callable(true);
         }
-        SymbolTable& symtab = m_function.symtab().add_child(name);
+        SymbolTable& fn_symtab = symtab().add_child(name);
         size_t par_idx = 0;
         for (auto& p : v.type.params) {
-            p.identifier.symbol = symtab.add({p.identifier.name, Symbol::Parameter, par_idx++});
+            p.identifier.symbol = fn_symtab.add({p.identifier.name, Symbol::Parameter, par_idx++});
         }
 
-        auto fn = make_unique<Function>(module(), symtab);
+        auto fn = make_unique<Function>(module(), fn_symtab);
         m_postponed_blocks.push_back({*fn, v.body});
-        v.index = module().add_function(move(fn));
-        v.body.symtab = &symtab;
+        v.body.symtab = &fn_symtab;
+        if (m_instance == nullptr)
+            v.index = module().add_function(move(fn));
+        else
+            v.index = m_instance->add_function(move(fn));
     }
 
-    void visit(ast::TypeName& t) final {}
-    void visit(ast::FunctionType& t) final {}
-    void visit(ast::ListType& t) final {}
+    void visit(ast::TypeName& t) final {
+        if (t.name.empty())
+            //  TypeInfo(Type::Unknown); ?
+            throw UndefinedTypeName(t.name);
+        t.symbol = resolve_symbol(t.name);
+        if (!t.symbol)
+            throw UndefinedTypeName(t.name);
+    }
+
+    void visit(ast::FunctionType& t) final {
+        for (const auto& p : t.params) {
+            if (p.type)
+                p.type->apply(*this);
+        }
+        if (t.result_type)
+            t.result_type->apply(*this);
+    }
+
+    void visit(ast::ListType& t) final {
+        t.elem_type->apply(*this);
+    }
 
     struct PostponedBlock {
         Function& func;
@@ -122,6 +204,7 @@ public:
 
 private:
     Module& module() { return m_function.module(); }
+    SymbolTable& symtab() { return *m_symtab; }
 
     SymbolPointer resolve_symbol(const string& name) {
         // lookup intrinsics in builtin module first
@@ -135,18 +218,18 @@ private:
         {
             // lookup in this and parent symtabs
             size_t depth = 0;
-            for (auto p_symtab = &m_function.symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
+            for (auto p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
                 if (p_symtab->name() == name && p_symtab->parent() != nullptr) {
                     // recursion - unwrap the function
                     auto symptr = p_symtab->parent()->find_by_name(name);
-                    return m_function.symtab().add({symptr, Symbol::Function, depth + 1});
+                    return symtab().add({symptr, Symbol::Function, depth + 1});
                 }
 
                 auto symptr = p_symtab->find_by_name(name);
                 if (symptr) {
                     if (depth > 0) {
                         // add Nonlocal symbol
-                        return m_function.symtab().add({symptr, Symbol::Nonlocal, depth});
+                        return symtab().add({symptr, Symbol::Nonlocal, depth});
                     } else {
                         return symptr;
                     }
@@ -173,7 +256,9 @@ private:
 private:
     std::vector<PostponedBlock> m_postponed_blocks;
     Function& m_function;
+    SymbolTable* m_symtab = &m_function.symtab();
     ast::Definition* m_definition = nullptr;  // symbol being currently defined
+    Instance* m_instance = nullptr;
 };
 
 
@@ -209,6 +294,9 @@ public:
     void visit(ast::Return& ret) override {
         ret.expression->apply(*this);
     }
+
+    void visit(ast::Class& v) override {}
+    void visit(ast::Instance& v) override {}
 
     void visit(ast::Integer& v) override {}
     void visit(ast::Float& v) override {}

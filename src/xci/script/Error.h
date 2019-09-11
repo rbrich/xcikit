@@ -108,6 +108,12 @@ struct UndefinedName : public Error {
 };
 
 
+struct UndefinedTypeName : public Error {
+    explicit UndefinedTypeName(const std::string& name)
+            : Error(core::format("undefined type name: {}", name)) {}
+};
+
+
 struct MultipleDeclarationError : public Error {
     explicit MultipleDeclarationError(const std::string& name)
             : Error(core::format("multiple declaration of name: {}", name)) {}
@@ -163,6 +169,13 @@ struct FunctionNotFound : public Error {
     explicit FunctionNotFound(const std::string& name, const std::string& args,
                               const std::string& candidates)
         : Error(core::format("function not found: {} {}\n   Candidates:\n{}", name, args, candidates)) {}
+};
+
+
+struct FunctionNotFoundInClass : public Error {
+    explicit FunctionNotFoundInClass(const std::string& fn, const std::string& cls)
+            : Error(core::format("instance function '{}' not found in class '{}'",
+                                 fn, cls)) {}
 };
 
 

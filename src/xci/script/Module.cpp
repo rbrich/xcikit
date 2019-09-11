@@ -52,11 +52,99 @@ Index Module::add_type(TypeInfo type_info)
 }
 
 
+Index Module::add_class(std::unique_ptr<Class>&& cls)
+{
+    m_classes.push_back(move(cls));
+    return m_classes.size() - 1;
+}
+
+
+Index Module::add_instance(std::unique_ptr<Instance>&& inst)
+{
+    m_instances.push_back(move(inst));
+    return m_instances.size() - 1;
+}
+
+
 bool Module::operator==(const Module& rhs) const
 {
     return m_modules == rhs.m_modules &&
            m_functions == rhs.m_functions &&
            m_values == rhs.m_values;
+}
+
+
+struct StreamOptions {
+    unsigned level;
+};
+
+static StreamOptions& stream_options(std::ostream& os) {
+    static int idx = std::ios_base::xalloc();
+    return reinterpret_cast<StreamOptions&>(os.iword(idx));
+}
+
+static std::ostream& put_indent(std::ostream& os)
+{
+    std::string pad(stream_options(os).level * 3, ' ');
+    return os << pad;
+}
+
+static std::ostream& more_indent(std::ostream& os)
+{
+    stream_options(os).level += 1;
+    return os;
+}
+
+static std::ostream& less_indent(std::ostream& os)
+{
+    assert(stream_options(os).level >= 1);
+    stream_options(os).level -= 1;
+    return os;
+}
+
+std::ostream& operator<<(std::ostream& os, const Module& v)
+{
+    os << v.num_imported_modules() << " imported modules" << endl << more_indent;
+    for (size_t i = 0; i < v.num_imported_modules(); ++i)
+        os << put_indent << i << ": " << v.get_imported_module(i).symtab().name() << endl;
+    os << less_indent;
+
+    os << v.num_functions() << " functions" << endl << more_indent;
+    for (size_t i = 0; i < v.num_functions(); ++i) {
+        const auto& f = v.get_function(i);
+        os << put_indent << i << ": " << f.symtab().name() << ": " << f << endl;
+    }
+    os << less_indent;
+
+    os << v.num_values() << " static values" << endl << more_indent;
+    for (size_t i = 0; i < v.num_values(); ++i) {
+        const auto& val = v.get_value(i);
+        os << put_indent << i << ": " << val << endl;
+    }
+    os << less_indent;
+
+    os << v.num_types() << " types" << endl << more_indent;
+    for (size_t i = 0; i < v.num_types(); ++i) {
+        const auto& typ = v.get_type(i);
+        os << put_indent << i << ": " << typ << endl;
+    }
+    os << less_indent;
+
+    os << v.num_classes() << " type classes" << endl << more_indent;
+    for (size_t i = 0; i < v.num_classes(); ++i) {
+        const auto& cls = v.get_class(i);
+        os << put_indent << i << ": " << cls.symtab() << endl;
+    }
+    os << less_indent;
+
+    os << v.num_instances() << " instances" << endl << more_indent;
+    for (size_t i = 0; i < v.num_instances(); ++i) {
+        const auto& inst = v.get_instance(i);
+        os << put_indent << i << ": " << inst.type_inst() << endl;
+    }
+    os << less_indent;
+
+    return os;
 }
 
 

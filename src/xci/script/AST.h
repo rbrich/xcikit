@@ -35,9 +35,15 @@ class Module;
 namespace ast {
 
 
+struct Statement;
+struct Block;
+
 struct Definition;
 struct Invocation;
 struct Return;
+struct Class;
+struct Instance;
+
 struct Integer;
 struct Float;
 struct String;
@@ -48,8 +54,7 @@ struct Call;
 struct OpCall;
 struct Condition;
 struct Function;
-struct Block;
-struct Statement;
+
 struct TypeName;
 struct FunctionType;
 struct ListType;
@@ -61,6 +66,8 @@ public:
     virtual void visit(const Definition&) = 0;
     virtual void visit(const Invocation&) = 0;
     virtual void visit(const Return&) = 0;
+    virtual void visit(const Class&) = 0;
+    virtual void visit(const Instance&) = 0;
     // expression
     virtual void visit(const Integer&) = 0;
     virtual void visit(const Float&) = 0;
@@ -84,6 +91,8 @@ public:
     virtual void visit(Definition&) = 0;
     virtual void visit(Invocation&) = 0;
     virtual void visit(Return&) = 0;
+    virtual void visit(Class&) = 0;
+    virtual void visit(Instance&) = 0;
     // expression
     virtual void visit(Integer&) = 0;
     virtual void visit(Float&) = 0;
@@ -130,6 +139,8 @@ public:
     void visit(Definition&) final {}
     void visit(Invocation&) final {}
     void visit(Return&) final {}
+    void visit(Class&) final {}
+    void visit(Instance&) final {}
     // skip expression visits
     void visit(Integer&) final {}
     void visit(Float&) final {}
@@ -175,6 +186,9 @@ struct TypeName: public Type {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::string name;
+
+    // resolved symbol:
+    SymbolPointer symbol;
 };
 
 
@@ -396,25 +410,35 @@ struct Return: public Statement {
 };
 
 
-struct Class {
+struct Class: public Statement {
+    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
+    void apply(Visitor& visitor) override { visitor.visit(*this); }
     TypeName class_name;
     TypeName type_var;
     std::vector<TypeConstraint> context;
     std::vector<ast::Definition> defs;  // functions in class
+
+    // resolved:
+    Index index = no_index;
+    SymbolTable* symtab = nullptr;
 };
 
 
-struct Instance {
+struct Instance: public Statement {
+    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
+    void apply(Visitor& visitor) override { visitor.visit(*this); }
     TypeName class_name;
     std::unique_ptr<Type> type_inst;
     std::vector<TypeConstraint> context;
     std::vector<ast::Definition> defs;  // functions in class
+
+    // resolved:
+    Index index = no_index;
+    SymbolTable* symtab = nullptr;
 };
 
 
 struct Module {
-    std::vector<Class> classes;
-    std::vector<Instance> instances;
     ast::Block body;
 };
 

@@ -28,6 +28,7 @@ namespace xci::script {
 class Symbol;
 class SymbolTable;
 class Function;
+class Class;
 class Module;
 
 
@@ -51,7 +52,7 @@ public:
     const Symbol* operator-> () const;
 
     SymbolTable* symtab() const { return m_symtab; }
-    Index index() const { return m_index; }
+    Index symidx() const { return m_index; }
 
     bool operator==(const SymbolPointer& rhs) const {
         return m_symtab == rhs.m_symtab && m_index == rhs.m_index;
@@ -73,6 +74,9 @@ public:
         Function,           // static function (module-level)
         Module,             // imported module (module-level)
         Instruction,        // intrinsics (e.g. __equal_32) resolve to this, index is Opcode
+        Class,              // type class
+        TypeName,           // type
+        TypeVar,            // type variable
     };
 
     explicit Symbol(std::string name) : m_name(std::move(name)) {}
@@ -82,7 +86,7 @@ public:
     Symbol(std::string name, Type type, Index idx, size_t depth)
         : m_name(std::move(name)), m_type(type), m_index(idx), m_depth(depth) {}
     Symbol(const SymbolPointer& ref, Type type, size_t depth)
-        : m_name(ref->name()), m_type(type), m_index(ref.index()),
+        : m_name(ref->name()), m_type(type), m_index(ref.symidx()),
           m_depth(depth), m_ref(ref) {}
 
     const std::string& name() const { return m_name; }
@@ -97,6 +101,7 @@ public:
     void set_type(Type type) { m_type = type; }
     void set_index(Index idx) { m_index = idx; }
     void set_depth(size_t depth) { m_depth = depth; }
+    void set_ref(const SymbolPointer& ref) { m_ref = ref; }
     void set_next(const SymbolPointer& next) { m_next = next; }
     void set_callable(bool callable) { m_is_callable = callable; }
 
@@ -113,7 +118,7 @@ private:
 
 /// Hierarchical symbol table
 ///
-/// Symbol indexes are persistent - symbols can only be added, never removed
+/// Symbol indices are persistent - symbols can only be added, never removed
 /// If a symbol does not appear in optimized code, it is marked as such.
 /// Count and indexes of actual local variables are computed from symbol table
 /// (by skipping unused symbols).
@@ -132,6 +137,10 @@ public:
     // related function
     void set_function(Function* function) { m_function = function; }
     Function* function() const { return m_function; }
+
+    // related class
+    void set_class(Class* cls) { m_class = cls; }
+    Class* class_() const { return m_class; }
 
     // related module
     void set_module(Module* module) { m_module = module; }
@@ -187,6 +196,7 @@ private:
     std::string m_name;   // only for debugging
     SymbolTable* m_parent = nullptr;
     Function* m_function = nullptr;
+    Class* m_class = nullptr;
     Module* m_module = nullptr;
     std::list<SymbolTable> m_children;  // NOTE: member addresses must not change
     std::vector<Symbol> m_symbols;

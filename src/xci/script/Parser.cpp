@@ -623,7 +623,7 @@ template<>
 struct Action<DefClass> : change_states< ast::Class > {
     template<typename Input>
     static void success(const Input &in, ast::Class& cls, ast::Module& mod) {
-        mod.classes.push_back(std::move(cls));
+        mod.body.statements.emplace_back(std::make_unique<ast::Class>(std::move(cls)));
     }
 };
 
@@ -641,7 +641,7 @@ template<>
 struct Action<DefInstance> : change_states< ast::Instance > {
     template<typename Input>
     static void success(const Input &in, ast::Instance& inst, ast::Module& mod) {
-        mod.instances.push_back(std::move(inst));
+        mod.body.statements.emplace_back(std::make_unique<ast::Instance>(std::move(inst)));
     }
 };
 

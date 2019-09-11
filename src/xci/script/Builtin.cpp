@@ -241,24 +241,6 @@ const char* builtin::op_to_function_name(ast::Operator::Op op)
 }
 
 
-TypeInfo builtin::type_by_name(const std::string& name)
-{
-    if (name.empty())       return TypeInfo(Type::Unknown);
-    if (name == "Void")     return TypeInfo(Type::Void);
-    if (name == "Bool")     return TypeInfo(Type::Bool);
-    if (name == "Byte")     return TypeInfo(Type::Byte);
-    if (name == "Char")     return TypeInfo(Type::Char);
-    if (name == "Int")      return TypeInfo(Type::Int32);
-    if (name == "Int32")    return TypeInfo(Type::Int32);
-    if (name == "Int64")    return TypeInfo(Type::Int64);
-    if (name == "Float")    return TypeInfo(Type::Float32);
-    if (name == "Float32")  return TypeInfo(Type::Float32);
-    if (name == "Float64")  return TypeInfo(Type::Float64);
-    if (name == "String")   return TypeInfo(Type::String);
-    throw UnknownTypeName(name);
-}
-
-
 BuiltinModule::BuiltinModule()
 {
     symtab().add({"void", add_value(std::make_unique<value::Void>())});
@@ -286,6 +268,7 @@ BuiltinModule::BuiltinModule()
     add_unary_op_functions();
     add_subscript_function();
     add_intrinsics();
+    add_types();
 }
 
 
@@ -562,6 +545,22 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__drop", Symbol::Instruction, Index(Opcode::Drop)});
     symtab().add({"__partial", Symbol::Instruction, Index(Opcode::Partial)});
     */
+}
+
+
+void BuiltinModule::add_types()
+{
+    symtab().add({"Void", Symbol::TypeName, Index(Type::Void)});
+    symtab().add({"Bool", Symbol::TypeName, Index(Type::Bool)});
+    symtab().add({"Byte", Symbol::TypeName, Index(Type::Byte)});
+    symtab().add({"Char", Symbol::TypeName, Index(Type::Char)});
+    symtab().add({"Int", Symbol::TypeName, Index(Type::Int32)});
+    symtab().add({"Int32", Symbol::TypeName, Index(Type::Int32)});
+    symtab().add({"Int64", Symbol::TypeName, Index(Type::Int64)});
+    symtab().add({"Float", Symbol::TypeName, Index(Type::Float32)});
+    symtab().add({"Float32", Symbol::TypeName, Index(Type::Float32)});
+    symtab().add({"Float64", Symbol::TypeName, Index(Type::Float64)});
+    symtab().add({"String", Symbol::TypeName, Index(Type::String)});
 }
 
 

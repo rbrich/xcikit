@@ -135,6 +135,9 @@ public:
         auto& symtab = *v.identifier.symbol.symtab();
         auto& sym = *v.identifier.symbol;
         switch (sym.type()) {
+            case Symbol::Class:
+                assert(!"Class cannot be called.");
+                break;
             case Symbol::Instruction:
                 // intrinsics - just output the requested instruction
                 assert(sym.index() < 256);
@@ -333,6 +336,14 @@ public:
                 m_function.code().add_opcode(Opcode::Call0, v.index);
             }
         }
+    }
+
+    void visit(ast::Class& v) override {
+        // TODO
+    }
+
+    void visit(ast::Instance& v) override {
+        // TODO
     }
 
     void visit(ast::TypeName& t) final {}

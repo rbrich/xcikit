@@ -43,20 +43,36 @@ public:
         } else {
             m_type_info = {};
         }
-        TypeInfo specified_type = m_type_info;
+
+        if (m_class != nullptr) {
+            auto idx = m_class->add_function_type(move(m_type_info));
+            dfn.variable.identifier.symbol->set_index(idx);
+            return;
+        }
+
+        if (m_instance != nullptr) {
+            // evaluate type according to class and type var
+            auto& symptr = dfn.variable.identifier.symbol;
+            TypeInfo eval_type = m_instance->class_().get_function_type(symptr->ref()->index());
+            eval_type.replace_var(1, m_instance->type_inst());
+
+            // specified type is basically useless here, let's just check
+            // it matches evaluated type from class instance
+            if (m_type_info && m_type_info != eval_type)
+                throw DefinitionTypeMismatch(m_type_info, eval_type);
+
+            m_type_info = move(eval_type);
+        }
 
         // Expression might use the specified type from `m_type_info`
-        dfn.expression->apply(*this);
-
-        // Specified type must match the inferred type
-        if (specified_type && specified_type != m_value_type)
-            throw DefinitionTypeMismatch(specified_type, m_value_type);
+        if (dfn.expression)
+            dfn.expression->apply(*this);
 
         Index idx = m_function.add_value(move(m_value_type));
         dfn.variable.identifier.symbol->set_index(idx);
         // if the function was just a parameterless block, change symbol type to a value
         if (dfn.variable.identifier.symbol->type() == Symbol::Type::Function
-        && !m_value_type.is_callable()) {
+            && !m_value_type.is_callable()) {
             dfn.variable.identifier.symbol->set_type(Symbol::Type::Value);
             dfn.variable.identifier.symbol->set_callable(false);
         }
@@ -70,6 +86,25 @@ public:
     void visit(ast::Return& ret) override {
         ret.expression->apply(*this);
         m_function.signature().resolve_return_type(m_value_type);
+    }
+
+    void visit(ast::Class& v) override {
+        m_class = &module().get_class(v.index);
+        for (auto& dfn : v.defs)
+            dfn.apply(*this);
+        m_class = nullptr;
+    }
+
+    void visit(ast::Instance& v) override {
+        m_instance = &module().get_instance(v.index);
+        // resolve instance type
+        v.type_inst->apply(*this);
+        m_instance->set_type_inst(move(m_type_info));
+        // resolve each Definition from the class,
+        // fill-in FunctionType, match with possible named arguments and body
+        for (auto& dfn : v.defs)
+            dfn.apply(*this);
+        m_instance = nullptr;
     }
 
     void visit(ast::Integer& v) override { m_value_type = TypeInfo{Type::Int32}; }
@@ -112,6 +147,9 @@ public:
         switch (sym.type()) {
             case Symbol::Instruction:
                 m_value_type = {};
+                return;
+            case Symbol::Class:
+                // TODO
                 return;
             case Symbol::Function: {
                 // find matching overload
@@ -267,7 +305,8 @@ public:
         }
         m_value_type = move(m_type_info);
 
-        Function& fn = module().get_function(v.index);
+        Function& fn = m_instance ? m_instance->get_function(v.index)
+                                  : module().get_function(v.index);
         fn.set_signature(m_value_type.signature_ptr());
 
         // compile body and resolve return type
@@ -286,7 +325,14 @@ public:
     }
 
     void visit(ast::TypeName& t) final {
-        m_type_info = builtin::type_by_name(t.name);
+        switch (t.symbol->type()) {
+            case Symbol::TypeName:
+                m_type_info = TypeInfo{ Type(t.symbol->index()) };
+                break;
+            case Symbol::TypeVar:
+                m_type_info = TypeInfo{ Type::Unknown, uint8_t(t.symbol->index()) };
+                break;
+        }
     }
 
     void visit(ast::FunctionType& t) final {
@@ -406,6 +452,8 @@ private:
     TypeInfo m_type_info;
     TypeInfo m_value_type;
     CallArgs m_call_args;
+    Class* m_class = nullptr;
+    Instance* m_instance = nullptr;
 };
 
 

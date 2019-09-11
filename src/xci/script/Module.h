@@ -18,6 +18,7 @@
 
 #include "Value.h"
 #include "SymbolTable.h"
+#include "Class.h"
 #include <cstdint>
 
 namespace xci::script {
@@ -38,15 +39,26 @@ public:
     // Functions
     Index add_function(std::unique_ptr<Function>&& fn);
     Function& get_function(size_t idx) const { return *m_functions[idx]; }
-    Function& get_last_function() { return *m_functions.back(); }
+    size_t num_functions() const { return m_functions.size(); }
 
     // Static values
     Index add_value(std::unique_ptr<Value>&& value);
     const Value& get_value(Index idx) const { return m_values[idx]; }
+    size_t num_values() const { return m_values.size(); }
 
     // Type information
     Index add_type(TypeInfo type_info);
     const TypeInfo& get_type(Index idx) const { return m_types[idx]; }
+    size_t num_types() const { return m_types.size(); }
+
+    // Type classes
+    Index add_class(std::unique_ptr<Class>&& cls);
+    Class& get_class(size_t idx) const { return *m_classes[idx]; }
+    size_t num_classes() const { return m_classes.size(); }
+
+    Index add_instance(std::unique_ptr<Instance>&& inst);
+    Instance& get_instance(size_t idx) const { return *m_instances[idx]; }
+    size_t num_instances() const { return m_instances.size(); }
 
     // Top-level symbol table
     SymbolTable& symtab() { return m_symtab; }
@@ -56,10 +68,15 @@ public:
 private:
     std::vector<Module*> m_modules;
     std::vector<std::unique_ptr<Function>> m_functions;
+    std::vector<std::unique_ptr<Class>> m_classes;
+    std::vector<std::unique_ptr<Instance>> m_instances;
     std::vector<TypeInfo> m_types;
     Values m_values;
     SymbolTable m_symtab;
 };
+
+
+std::ostream& operator<<(std::ostream& os, const Module& v);
 
 
 } // namespace xci::script

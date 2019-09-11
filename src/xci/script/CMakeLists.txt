@@ -1,6 +1,7 @@
 add_library(xci-script
     AST.cpp
     Builtin.cpp
+    Class.cpp
     Code.cpp
     Compiler.cpp
     Function.cpp

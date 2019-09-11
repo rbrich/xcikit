@@ -69,6 +69,36 @@ void TypeInfo::foreach_heap_slot(std::function<void(size_t offset)> cb) const
 }
 
 
+void TypeInfo::replace_var(uint8_t idx, const TypeInfo& ti)
+{
+    if (idx == 0)
+        return;
+    switch (m_type) {
+        case Type::Unknown:
+            if (m_var == idx)
+                *this = ti;
+            break;
+        case Type::Function: {
+            // work on copy of signature
+            auto sig_copy = make_shared<Signature>(*m_signature);
+            for (auto& prm : sig_copy->params) {
+                prm.replace_var(idx, ti);
+            }
+            sig_copy->return_type.replace_var(idx, ti);
+            m_signature = move(sig_copy);
+            break;
+        }
+        case Type::Tuple:
+        case Type::List:
+            for (auto& sub : m_subtypes)
+                sub.replace_var(idx, ti);
+            break;
+        default:
+            break;
+    }
+}
+
+
 const TypeInfo& TypeInfo::elem_type() const
 {
     assert(m_type == Type::List);
