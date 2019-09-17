@@ -86,7 +86,7 @@ foreach(src ${FONTS})
     list(APPEND assets "fonts/${src}")
     if (XCI_INSTALL_SHARE_DIR)
         get_filename_component(dirname ${src} DIRECTORY)
-        install(FILES "${output}" DESTINATION share/xcikit/fonts/${dirname})
+        install(FILES "${output}" DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/xcikit/fonts/${dirname})
     endif()
 endforeach()
 

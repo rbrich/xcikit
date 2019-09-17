@@ -44,5 +44,5 @@ if (BUILD_FRAMEWORKS)
 endif()
 
 if (BUILD_SHARED_LIBS OR XCI_INSTALL_DEVEL)
-    install(TARGETS xci-widgets EXPORT xcikit DESTINATION lib)
+    install(TARGETS xci-widgets EXPORT xcikit DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()

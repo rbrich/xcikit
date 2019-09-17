@@ -48,7 +48,7 @@ foreach(src ${SHADER_SOURCES})
     list(APPEND outputs ${output})
     list(APPEND assets "shaders/${src}.spv")
     if (XCI_INSTALL_SHARE_DIR)
-        install(FILES "${output}" DESTINATION share/xcikit/shaders)
+        install(FILES "${output}" DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/xcikit/shaders)
     endif()
 endforeach()
 
