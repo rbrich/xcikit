@@ -263,7 +263,7 @@ Basic operations:
 Subscript (index) operator:
 
     // zero-based index
-    nums @ 3 == 4
+    nums ! 3 == 4
     // note that this calls `nums` with list arg `[3]`
     nums [3]   // not subscription!
 
@@ -379,7 +379,7 @@ Precedence table:
     7    |  add, subtract     |  +  -
     8    |  multiply, divide  |  *  /  %
     9    |  power             |  **
-    10   |  subscript         |  x @ y
+    10   |  subscript         |  x ! y
     
     (11) |  unary ops         |  -  +  !  ~
     (12) |  function call     |  f [<arg> ...]

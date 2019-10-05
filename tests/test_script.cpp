@@ -203,8 +203,8 @@ TEST_CASE( "Lexical scope", "[script][interpreter]" )
 
 TEST_CASE( "Lists", "[script][interpreter]" )
 {
-    check_interpreter("[1,2,3] @ 2", "3");
-    CHECK_THROWS_AS(Interpreter{0}.eval("[1,2,3] @ 3"), IndexOutOfBounds);
+    check_interpreter("[1,2,3] ! 2", "3");
+    CHECK_THROWS_AS(Interpreter{0}.eval("[1,2,3]!3"), IndexOutOfBounds);
     //check_interpreter("[[1,2],[3,4],[5,6]] @ 1 @ 0", "3");
-    check_interpreter("head = |l:[Int]| -> Int { l @ 0 }; head [1,2,3]", "1");
+    check_interpreter("head = |l:[Int]| -> Int { l!0 }; head [1,2,3]", "1");
 }

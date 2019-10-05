@@ -126,7 +126,7 @@ Operator::Operator(const std::string& s, bool prefix)
         case '!':
             switch (c2) {  // NOLINT
                 case '=':   op = NotEqual; break;
-                default:    assert(prefix); op = LogicalNot; break;
+                default:    assert(c2 == 0); op = prefix? LogicalNot : Subscript; break;
             }
             break;
         case '<':
@@ -148,7 +148,6 @@ Operator::Operator(const std::string& s, bool prefix)
         case '*':   op = (c2 == '*')? Exp : Mul; break;
         case '/':   op = Div; break;
         case '%':   op = Mod; break;
-        case '@':   op = Subscript; break;
         case '~':   assert(prefix); op = BitwiseNot; break;
         default: assert(!"Unreachable! Wrong OP!"); break;
     }
@@ -220,7 +219,7 @@ const char* Operator::to_cstr() const
         case Operator::BitwiseNot:  return "~";
         case Operator::UnaryPlus:   return "+";
         case Operator::UnaryMinus:  return "-";
-        case Operator::Subscript:   return "@";
+        case Operator::Subscript:   return "!";
     }
     UNREACHABLE;
 }

@@ -285,7 +285,7 @@ struct Operator {
         Div,            // x / y
         Mod,            // x % y
         Exp,            // x ** y
-        Subscript,      // x @ y
+        Subscript,      // x ! y
         // unary
         LogicalNot,     // !x
         BitwiseNot,     // ~x

@@ -47,7 +47,7 @@ struct InfixOperator: sor< two<'&'>, two<'|'>, two<'='>, string<'!','='>,
                            string<'<','='>, string<'>','='>,
                            two<'<'>, two<'>'>, one<'<'>, one<'>'>,
                            one<'+'>, one<'-'>, two<'*'>, one<'*'>,
-                           one<'/'>, one<'%'>, one<'@'>,
+                           one<'/'>, one<'%'>, one<'!'>,
                            one<'&'>, one<'|'>, one<'^'> > {};
 
 // Keywords
