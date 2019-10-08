@@ -20,6 +20,7 @@
 #include <xci/script/Error.h>
 #include <xci/script/Value.h>
 #include <xci/script/Builtin.h>
+#include <xci/script/dump.h>
 #include <xci/core/TermCtl.h>
 
 #include <docopt.h>
@@ -60,7 +61,7 @@ void evaluate(const string& line, const Options& opts)
         parser.parse(line, ast);
 
         if (opts.print_raw_ast) {
-            cout << "Raw AST:" << endl << ast::dump_tree << ast << endl;
+            cout << "Raw AST:" << endl << dump_tree << ast << endl;
         }
 
         // compile
@@ -75,7 +76,7 @@ void evaluate(const string& line, const Options& opts)
 
         // print AST with Compiler modifications
         if (opts.print_ast) {
-            cout << "Processed AST:" << endl << ast::dump_tree << ast << endl;
+            cout << "Processed AST:" << endl << dump_tree << ast << endl;
         }
 
         // print symbol table

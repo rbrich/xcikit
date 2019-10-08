@@ -203,12 +203,6 @@ private:
 };
 
 
-std::ostream& operator<<(std::ostream& os, Symbol::Type v);
-std::ostream& operator<<(std::ostream& os, const Symbol& v);
-std::ostream& operator<<(std::ostream& os, const SymbolPointer& v);
-std::ostream& operator<<(std::ostream& os, const SymbolTable& v);
-
-
 } // namespace xci::script
 
 #endif // include guard

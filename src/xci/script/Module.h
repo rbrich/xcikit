@@ -76,9 +76,6 @@ private:
 };
 
 
-std::ostream& operator<<(std::ostream& os, const Module& v);
-
-
 } // namespace xci::script
 
 #endif // include guard

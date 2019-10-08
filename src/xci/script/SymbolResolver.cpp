@@ -17,6 +17,7 @@
 #include "Function.h"
 #include "Module.h"
 #include "Builtin.h"
+#include "dump.h"
 #include <vector>
 
 using namespace std;
@@ -83,7 +84,7 @@ public:
         v.type_inst->apply(*this);
 
         // add child symbol table for the instance
-        SymbolTable& inst_symtab = symtab().add_child(core::format("{} ({})",
+        SymbolTable& inst_symtab = symtab().add_child(core::format("{} {}",
                 v.class_name.name, *v.type_inst));
         m_symtab = &inst_symtab;
         // add new instance to the module

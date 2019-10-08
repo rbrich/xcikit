@@ -443,42 +443,7 @@ struct Module {
 };
 
 
-std::ostream& operator<<(std::ostream& os, const Integer& v);
-std::ostream& operator<<(std::ostream& os, const Float& v);
-std::ostream& operator<<(std::ostream& os, const String& v);
-std::ostream& operator<<(std::ostream& os, const Tuple& v);
-std::ostream& operator<<(std::ostream& os, const List& v);
-std::ostream& operator<<(std::ostream& os, const Variable& v);
-std::ostream& operator<<(std::ostream& os, const Parameter& v);
-std::ostream& operator<<(std::ostream& os, const Identifier& v);
-std::ostream& operator<<(std::ostream& os, const Type& v);
-std::ostream& operator<<(std::ostream& os, const TypeName& v);
-std::ostream& operator<<(std::ostream& os, const FunctionType& v);
-std::ostream& operator<<(std::ostream& os, const ListType& v);
-std::ostream& operator<<(std::ostream& os, const TypeConstraint& v);
-std::ostream& operator<<(std::ostream& os, const Reference& v);
-std::ostream& operator<<(std::ostream& os, const Call& v);
-std::ostream& operator<<(std::ostream& os, const OpCall& v);
-std::ostream& operator<<(std::ostream& os, const Condition& v);
-std::ostream& operator<<(std::ostream& os, const Operator& v);
-std::ostream& operator<<(std::ostream& os, const Function& v);
-std::ostream& operator<<(std::ostream& os, const Expression& v);
-std::ostream& operator<<(std::ostream& os, const Definition& v);
-std::ostream& operator<<(std::ostream& os, const Invocation& v);
-std::ostream& operator<<(std::ostream& os, const Return& v);
-std::ostream& operator<<(std::ostream& os, const Class& v);
-std::ostream& operator<<(std::ostream& os, const Instance& v);
-std::ostream& operator<<(std::ostream& os, const Block& v);
-std::ostream& operator<<(std::ostream& os, const Module& v);
-
-// stream manipulators
-std::ostream& dump_tree(std::ostream& os);
-std::ostream& put_indent(std::ostream& os);
-std::ostream& more_indent(std::ostream& os);
-std::ostream& less_indent(std::ostream& os);
-
 } // namespace ast
 } // namespace xci::script
-
 
 #endif // include guard

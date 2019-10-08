@@ -47,6 +47,8 @@ class Instance {
 public:
     explicit Instance(Class& cls, SymbolTable& symtab);
 
+    SymbolTable& symtab() const { return m_symtab; }
+
     void set_type_inst(TypeInfo&& ti) { m_type_inst = std::move(ti); }
     const TypeInfo& type_inst() const { return m_type_inst; }
 

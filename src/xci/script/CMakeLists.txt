@@ -17,7 +17,7 @@ add_library(xci-script
     SymbolTable.cpp
     TypeResolver.cpp
     TypeInfo.cpp
-    )
+    dump.cpp)
 
 target_link_libraries(xci-script
     PRIVATE

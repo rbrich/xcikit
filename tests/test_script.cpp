@@ -20,6 +20,7 @@
 #include <xci/script/Interpreter.h>
 #include <xci/script/Error.h>
 #include <xci/script/Stack.h>
+#include <xci/script/dump.h>
 
 #include <string>
 #include <sstream>
