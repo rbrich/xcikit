@@ -42,6 +42,21 @@ public:
         if (dfn.expression)
             dfn.expression->apply(*this);
         m_definition = nullptr;
+
+        if (m_class) {
+            // export symbol to outer scoupe
+            auto outer_sym = symtab().parent()->add({dfn.variable.identifier.name, Symbol::ClassFunction, m_class->index});
+            outer_sym->set_ref(dfn.variable.identifier.symbol);
+            return;
+        }
+
+        if (m_instance) {
+            // resolve symbol with the class
+            auto ref = m_instance->class_().symtab().find_by_name(dfn.variable.identifier.name);
+            if (!ref)
+                throw FunctionNotFoundInClass(dfn.variable.identifier.name, m_instance->class_().name());
+            dfn.variable.identifier.symbol->set_ref(ref);
+        }
     }
 
     void visit(ast::Invocation& inv) override {
@@ -59,55 +74,60 @@ public:
 
         // add child symbol table for the class
         SymbolTable& cls_symtab = symtab().add_child(v.class_name.name);
-        auto p_type_var = cls_symtab.add({v.type_var.name, Symbol::TypeVar, 1});
-        m_symtab = &cls_symtab;
-
-        for (auto& dfn : v.defs)
-            dfn.apply(*this);
-
-        m_symtab = cls_symtab.parent();
+        cls_symtab.add({v.type_var.name, Symbol::TypeVar, 1});
 
         // add new class to the module
         auto cls = make_unique<Class>(module(), cls_symtab);
         v.index = module().add_class(move(cls));
         v.symtab = &cls_symtab;
 
+        m_class = &v;
+        m_symtab = &cls_symtab;
+
+        for (auto& dfn : v.defs)
+            dfn.apply(*this);
+
+        m_symtab = cls_symtab.parent();
+        m_class = nullptr;
+
         // add new symbol
         v.class_name.symbol = symtab().add({v.class_name.name, Symbol::Class, v.index});
     }
 
     void visit(ast::Instance& v) override {
-        v.class_name.symbol = resolve_symbol(v.class_name.name);
-        if (!v.class_name.symbol)
+        // lookup class
+        auto sym_class = resolve_symbol_of_type(v.class_name.name, Symbol::Class);
+        if (!sym_class)
             throw UndefinedTypeName(v.class_name.name);
 
+        // find next instance of the class (if any)
+        auto next = resolve_symbol_of_type(v.class_name.name, Symbol::Instance);
+
+        // create symbol for the instance
+        v.class_name.symbol = symtab().add({sym_class, Symbol::Instance});
+        v.class_name.symbol->set_next(next);
+
+        // resolve type_inst
         v.type_inst->apply(*this);
 
         // add child symbol table for the instance
-        SymbolTable& inst_symtab = symtab().add_child(core::format("{} {}",
+        SymbolTable& inst_symtab = symtab().add_child(core::format("{} ({})",
                 v.class_name.name, *v.type_inst));
         m_symtab = &inst_symtab;
+
         // add new instance to the module
-        auto& cls = module().get_class(v.class_name.symbol->index());
+        auto& cls = module().get_class(sym_class->index());
         auto inst = make_unique<Instance>(cls, inst_symtab);
         m_instance = inst.get();
 
         for (auto& dfn : v.defs)
             dfn.apply(*this);
 
-        m_symtab = inst_symtab.parent();
         m_instance = nullptr;
-
-        // resolve symbols with the class
-        for (auto& sym : inst_symtab) {
-            auto ref = cls.symtab().find_by_name(sym.name());
-            if (!ref)
-                throw FunctionNotFoundInClass(sym.name(), v.class_name.name);
-            sym.set_ref(ref);
-        }
-
+        m_symtab = inst_symtab.parent();
         v.index = module().add_instance(move(inst));
         v.symtab = &inst_symtab;
+        v.class_name.symbol->set_index(v.index);
     }
 
     void visit(ast::Integer& v) override {}
@@ -209,7 +229,7 @@ private:
 
     SymbolPointer resolve_symbol(const string& name) {
         // lookup intrinsics in builtin module first
-        // (this is just optiomization, the same lookup is repeated below)
+        // (this is just an optimization, the same lookup is repeated below)
         if (name.size() > 3 && name[0] == '_' && name[1] == '_') {
             auto symptr = module().get_imported_module(0).symtab().find_by_name(name);
             if (symptr)
@@ -217,7 +237,7 @@ private:
         }
         // (non)local values and parameters
         {
-            // lookup in this and parent symtabs
+            // lookup in this and parent scopes
             size_t depth = 0;
             for (auto p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
                 if (p_symtab->name() == name && p_symtab->parent() != nullptr) {
@@ -254,11 +274,36 @@ private:
         return {};
     }
 
+    SymbolPointer resolve_symbol_of_type(const string& name, Symbol::Type type) {
+        // lookup in this and parent scopes
+        for (auto p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
+            auto symptr = p_symtab->find_last_of(name, type);
+            if (symptr)
+                return symptr;
+        }
+        // this module
+        {
+            auto symptr = module().symtab().find_last_of(name, type);
+            if (symptr)
+                return symptr;
+        }
+        // imported modules
+        for (size_t i = 0; i < module().num_imported_modules(); i++) {
+            auto symptr = module().get_imported_module(
+                    i).symtab().find_last_of(name, type);
+            if (symptr)
+                return symptr;
+        }
+        // nowhere
+        return {};
+    }
+
 private:
     std::vector<PostponedBlock> m_postponed_blocks;
     Function& m_function;
     SymbolTable* m_symtab = &m_function.symtab();
     ast::Definition* m_definition = nullptr;  // symbol being currently defined
+    ast::Class* m_class = nullptr;
     Instance* m_instance = nullptr;
 };
 

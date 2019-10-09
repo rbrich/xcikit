@@ -35,7 +35,6 @@ class Module;
 using Index = size_t;
 static constexpr Index no_index {SIZE_MAX};
 
-
 class SymbolPointer {
 public:
     SymbolPointer() = default;
@@ -75,6 +74,8 @@ public:
         Module,             // imported module (module-level)
         Instruction,        // intrinsics (e.g. __equal_32) resolve to this, index is Opcode
         Class,              // type class
+        ClassFunction,      // function declaration from a class: index = class index, ref = symbol in class scope
+        Instance,           // instance of type class
         TypeName,           // type
         TypeVar,            // type variable
     };
@@ -85,6 +86,8 @@ public:
     Symbol(std::string name, Type type, Index idx) : m_name(std::move(name)), m_type(type), m_index(idx) {}
     Symbol(std::string name, Type type, Index idx, size_t depth)
         : m_name(std::move(name)), m_type(type), m_index(idx), m_depth(depth) {}
+    Symbol(const SymbolPointer& ref, Type type)
+            : m_name(ref->name()), m_type(type), m_ref(ref) {}
     Symbol(const SymbolPointer& ref, Type type, size_t depth)
         : m_name(ref->name()), m_type(type), m_index(ref.symidx()),
           m_depth(depth), m_ref(ref) {}
@@ -153,6 +156,7 @@ public:
 
     // find symbol in this table
     SymbolPointer find_by_name(const std::string& name);
+    SymbolPointer find_last_of(const std::string& name, Symbol::Type type);
 
     // return actual number of nonlocals (skipping unreferenced symbols)
     size_t count_nonlocals() const;

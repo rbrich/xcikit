@@ -138,6 +138,9 @@ public:
             case Symbol::Class:
                 assert(!"Class cannot be called.");
                 break;
+            case Symbol::Instance:
+                assert(!"Instance cannot be called.");
+                break;
             case Symbol::Instruction:
                 // intrinsics - just output the requested instruction
                 assert(sym.index() < 256);

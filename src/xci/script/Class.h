@@ -28,6 +28,8 @@ class Class {
 public:
     explicit Class(Module& module, SymbolTable& symtab);
 
+    const std::string& name() const { return m_symtab.name(); }
+
     // symbol table associated with the class
     // (contains type_var and function prototypes)
     SymbolTable& symtab() const { return m_symtab; }
@@ -57,6 +59,7 @@ public:
     // Functions
     Index add_function(std::unique_ptr<Function>&& fn);
     Function& get_function(size_t idx) const { return *m_functions[idx]; }
+    size_t num_functions() const { return m_functions.size(); }
 
 private:
     Class& m_class;

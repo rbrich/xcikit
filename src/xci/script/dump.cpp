@@ -541,7 +541,7 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
     os << "* " << v.num_classes() << " type classes" << endl << more_indent;
     for (size_t i = 0; i < v.num_classes(); ++i) {
         const auto& cls = v.get_class(i);
-        os << put_indent << '[' << i << "] " << cls.symtab().name();
+        os << put_indent << '[' << i << "] " << cls.name();
         for (const auto& sym : cls.symtab()) {
             if (sym.type() == Symbol::TypeVar) {
                 os << ' ' << sym.name() << endl << more_indent;
@@ -558,12 +558,12 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
     os << "* " << v.num_instances() << " instances" << endl << more_indent;
     for (size_t i = 0; i < v.num_instances(); ++i) {
         const auto& inst = v.get_instance(i);
-        os << put_indent << '[' << i << "] " << inst.symtab().name() << endl;
+        os << put_indent << '[' << i << "] " << inst.class_().name()
+           << ' ' << inst.type_inst() << endl;
         os << more_indent;
-        for (const auto& sym : inst.symtab()) {
-            assert(sym.type() == Symbol::Value);
-            os << put_indent << sym.name() << ": "
-               << inst.get_function(sym.index()) << endl;
+        for (size_t j = 0; j < inst.num_functions(); ++j) {
+            const auto& f = inst.get_function(j);
+            os << put_indent << f.symtab().name() << ": " << f << endl;
         }
         os << less_indent;
     }
@@ -586,6 +586,8 @@ std::ostream& operator<<(std::ostream& os, Symbol::Type v)
         case Symbol::Module:        return os << "Module";
         case Symbol::Instruction:   return os << "Instruction";
         case Symbol::Class:         return os << "Class";
+        case Symbol::ClassFunction: return os << "ClassFunction";
+        case Symbol::Instance:      return os << "Instance";
         case Symbol::TypeVar:       return os << "TypeVar";
     }
     return os;

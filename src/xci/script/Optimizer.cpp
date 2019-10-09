@@ -94,6 +94,7 @@ public:
                 return;
             case Symbol::Instruction:
             case Symbol::Class:
+            case Symbol::Instance:
                 return;
             case Symbol::Function:
                 // fallthrough

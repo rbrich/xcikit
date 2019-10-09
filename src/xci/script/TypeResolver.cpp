@@ -149,10 +149,15 @@ public:
                 m_value_type = {};
                 return;
             case Symbol::Class:
+            case Symbol::Instance:
                 // TODO
                 return;
+            case Symbol::ClassFunction: {
+                // TODO
+                break;
+            }
             case Symbol::Function: {
-                // find matching overload
+                // find matching instance
                 auto symptr = v.identifier.symbol;
                 bool found = false;
                 while (symptr) {

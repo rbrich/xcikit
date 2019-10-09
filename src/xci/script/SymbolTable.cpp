@@ -108,4 +108,17 @@ SymbolPointer SymbolTable::find_by_name(const std::string& name)
 }
 
 
+SymbolPointer SymbolTable::find_last_of(const std::string& name,
+                                        Symbol::Type type)
+{
+    auto it = std::find_if(m_symbols.rbegin(), m_symbols.rend(),
+                   [&name, type](const Symbol& sym) {
+                        return sym.type() == type && sym.name() == name;
+                   });
+    if (it == m_symbols.rend())
+        return {*this, no_index};
+    return {*this, Index((m_symbols.rend() - it) - 1)};
+}
+
+
 } // namespace xci::script

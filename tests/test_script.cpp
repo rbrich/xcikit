@@ -20,6 +20,7 @@
 #include <xci/script/Interpreter.h>
 #include <xci/script/Error.h>
 #include <xci/script/Stack.h>
+#include <xci/script/SymbolTable.h>
 #include <xci/script/dump.h>
 
 #include <string>
@@ -157,6 +158,23 @@ TEST_CASE( "Stack push/pull", "[script][machine]" )
     CHECK(stack.pull<value::String>().value() == "hello");
     CHECK(stack.pull<value::Int32>().value() == 73);
     CHECK(stack.pull<value::Bool>().value() == true);
+}
+
+
+TEST_CASE( "SymbolTable", "[script][compiler]" )
+{
+    SymbolTable symtab;
+
+    auto alpha = symtab.add({"alpha", Symbol::Value});
+    auto beta = symtab.add({"beta", Symbol::Value});
+    auto gamma = symtab.add({"Gamma", Symbol::Instance});
+    auto delta = symtab.add({"delta", Symbol::Value});
+
+    CHECK(alpha == symtab.find_last_of("alpha", Symbol::Value));
+    CHECK(beta == symtab.find_last_of("beta", Symbol::Value));
+    CHECK(gamma == symtab.find_last_of("Gamma", Symbol::Instance));
+    CHECK(delta == symtab.find_last_of("delta", Symbol::Value));
+    CHECK(! symtab.find_last_of("zeta", Symbol::Value));
 }
 
 
