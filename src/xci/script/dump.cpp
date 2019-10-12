@@ -559,7 +559,7 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
     for (size_t i = 0; i < v.num_instances(); ++i) {
         const auto& inst = v.get_instance(i);
         os << put_indent << '[' << i << "] " << inst.class_().name()
-           << ' ' << inst.type_inst() << endl;
+           << ' ' << inst.type() << endl;
         os << more_indent;
         for (size_t j = 0; j < inst.num_functions(); ++j) {
             const auto& f = inst.get_function(j);

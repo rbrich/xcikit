@@ -54,7 +54,7 @@ public:
             // evaluate type according to class and type var
             auto& symptr = dfn.variable.identifier.symbol;
             TypeInfo eval_type = m_instance->class_().get_function_type(symptr->ref()->index());
-            eval_type.replace_var(1, m_instance->type_inst());
+            eval_type.replace_var(1, m_instance->type());
 
             // specified type is basically useless here, let's just check
             // it matches evaluated type from class instance
@@ -99,7 +99,7 @@ public:
         m_instance = &module().get_instance(v.index);
         // resolve instance type
         v.type_inst->apply(*this);
-        m_instance->set_type_inst(move(m_type_info));
+        m_instance->set_type(move(m_type_info));
         // resolve each Definition from the class,
         // fill-in FunctionType, match with possible named arguments and body
         for (auto& dfn : v.defs)
@@ -153,8 +153,47 @@ public:
                 // TODO
                 return;
             case Symbol::ClassFunction: {
-                // TODO
-                break;
+                // find prototype of the function, resolve actual type of T
+                auto& cls = module().get_class(sym.index());
+                auto& cls_fn = cls.get_function_type(sym.ref()->index());
+                auto inst_type = resolve_instance_type(cls_fn.signature());
+                // find instance using resolved T
+                bool found = false;
+                auto inst_psym = v.chain;
+                while (inst_psym) {
+                    auto* inst_mod = inst_psym.symtab()->module();
+                    if (inst_mod == nullptr)
+                        inst_mod = &module();
+                    auto& inst = inst_mod->get_instance(inst_psym->index());
+                    if (inst.type() == inst_type) {
+                        // find instance function
+                        auto& inst_fn = inst.get_function(sym.ref()->index());
+                        m_value_type = TypeInfo{inst_fn.signature_ptr()};
+                        found = true;
+                        break;
+                    }
+                    inst_psym = inst_psym->next();
+                }
+                if (found)
+                    break;
+                // ERROR couldn't find matching instance for `args`
+                stringstream o_candidates;
+                inst_psym = v.chain;
+                while (inst_psym) {
+                    auto* inst_mod = inst_psym.symtab()->module();
+                    if (inst_mod == nullptr)
+                        inst_mod = &module();
+                    auto& inst = inst_mod->get_instance(inst_psym->index());
+                    o_candidates << "   " << inst.type() << endl;
+                    inst_psym = inst_psym->next();
+                }
+                stringstream o_args;
+                o_args << "| ";
+                for (const auto& arg : m_call_args) {
+                    o_args << arg.type_info << ' ';
+                }
+                o_args << '|';
+                throw FunctionNotFound(v.identifier.name, o_args.str(), o_candidates.str());
             }
             case Symbol::Function: {
                 // find matching instance
@@ -377,18 +416,18 @@ private:
         for (size_t i = 0; i < fn->signature().params.size(); i++) {
             const auto& arg = m_call_args[i];
             auto& out_type = fn->signature().params[i];
-            if (arg.type_info.is_generic())
+            if (arg.type_info.is_unknown())
                 continue;
-            if (out_type.is_generic()) {
+            if (out_type.is_unknown()) {
                 auto var = out_type.generic_var();
                 // resolve this generic var to received type
                 for (size_t j = i; j < fn->signature().params.size(); j++) {
                     auto& outj_type = fn->signature().params[j];
-                    if (outj_type.is_generic() && outj_type.generic_var() == var)
+                    if (outj_type.is_unknown() && outj_type.generic_var() == var)
                         outj_type = arg.type_info;
                 }
                 auto& ret_type = fn->signature().return_type;
-                if (ret_type.is_generic() && ret_type.generic_var() == var)
+                if (ret_type.is_unknown() && ret_type.generic_var() == var)
                     ret_type = arg.type_info;
             }
         }
@@ -449,6 +488,46 @@ private:
             sig->params.erase(sig->params.begin());
         }
         return true;
+    }
+
+    // match call args with signature (which contains generic type T)
+    // throw if unmatched, return resolved type for T if matched
+    TypeInfo resolve_instance_type(const Signature& signature) const
+    {
+        auto* sig = &signature;
+        size_t i_arg = 0;
+        size_t i_prm = 0;
+        TypeInfo res;
+        for (const auto& arg : m_call_args) {
+            i_arg += 1;
+            // check there are more params to consume
+            while (i_prm >= sig->params.size()) {
+                if (sig->return_type.type() == Type::Function) {
+                    // collapse returned function, start consuming its params
+                    sig = &sig->return_type.signature();
+                    i_prm = 0;
+                } else {
+                    // unexpected argument
+                    throw UnexpectedArgument(i_arg, arg.source_info);
+                }
+            }
+            // resolve T (only from original signature)
+            if (sig->params[i_prm].is_unknown() && sig == &signature) {
+                if (res.is_unknown())
+                    res = arg.type_info;
+                else if (res != arg.type_info)
+                    throw UnexpectedArgumentType(i_arg, res, arg.type_info,
+                            arg.source_info);
+            }
+            // check type of next param
+            if (sig->params[i_prm] != arg.type_info) {
+                throw UnexpectedArgumentType(i_arg, sig->params[i_prm],
+                        arg.type_info, arg.source_info);
+            }
+            // consume next param
+            ++i_prm;
+        }
+        return res;
     }
 
 private:

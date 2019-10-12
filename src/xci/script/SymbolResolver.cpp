@@ -151,6 +151,12 @@ public:
         symptr = resolve_symbol(v.identifier.name);
         if (!symptr)
             throw UndefinedName(v.identifier.name, v.source_info);
+        if (symptr->type() == Symbol::ClassFunction) {
+            // if the reference points to a class function, find nearest
+            // instance of the class
+            auto& class_name = module().get_class(symptr->index()).name();
+            v.chain = resolve_symbol_of_type(class_name, Symbol::Instance);
+        }
     }
 
     void visit(ast::Call& v) override {

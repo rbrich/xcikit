@@ -74,7 +74,7 @@ public:
     Type type() const { return m_type; }
     bool is_callable() const { return type() == Type::Function; }
 
-    bool is_generic() const { return m_type == Type::Unknown; }
+    bool is_unknown() const { return m_type == Type::Unknown; }
     uint8_t generic_var() const { return m_var; }
     void replace_var(uint8_t idx, const TypeInfo& ti);
 

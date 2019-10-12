@@ -290,6 +290,9 @@ struct Reference: public Expression {
     void apply(Visitor& visitor) override { visitor.visit(*this); }
 
     Identifier identifier;
+
+    // resolved:
+    SymbolPointer chain;  // tip of chain of Instances in case of ClassFunction
 };
 
 struct Call: public Expression {
