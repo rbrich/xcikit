@@ -142,7 +142,22 @@ public:
                 assert(!"Instance cannot be called.");
                 break;
             case Symbol::ClassFunction: {
-                // TODO
+                // this module
+                if (v.module == &m_function.module()) {
+                    // CALL0 <function_idx>
+                    m_function.code().add_opcode(Opcode::Call0, v.index);
+                    break;
+                }
+                // builtin module or imported module
+                auto mod_idx = m_function.module().get_imported_module_index(v.module);
+                assert(mod_idx != no_index);
+                if (mod_idx == 0) {
+                    // CALL1 <function_idx>
+                    m_function.code().add_opcode(Opcode::Call1, v.index);
+                } else {
+                    // CALL <module_idx> <function_idx>
+                    m_function.code().add_opcode(Opcode::Call, mod_idx, v.index);
+                }
                 break;
             }
             case Symbol::Instruction:
@@ -228,7 +243,9 @@ public:
                 UNREACHABLE;
         }
         // if it's function object, execute it
-        if (sym.type() != Symbol::Function && sym.is_callable()) {
+        if (sym.type() != Symbol::Function
+        &&  sym.type() != Symbol::ClassFunction
+        &&  sym.is_callable()) {
             m_function.code().add_opcode(Opcode::Execute);
         }
     }
@@ -274,7 +291,8 @@ public:
         // compile body
         Function& func = m_compiler.module().get_function(v.index);
         m_compiler.compile_block(func, v.body);
-        assert(func.symtab().parent() == &m_function.symtab());
+        if (func.symtab().parent() != &m_function.symtab())
+            return;  // instance function -> just compile it
         auto n_nonlocals = func.symtab().count_nonlocals();
         auto nonlocals_size = m_function.raw_size_of_nonlocals();
         if (n_nonlocals > 0) {
@@ -350,7 +368,8 @@ public:
     }
 
     void visit(ast::Instance& v) override {
-        // TODO
+        for (auto& dfn : v.defs)
+            dfn.apply(*this);
     }
 
     void visit(ast::TypeName& t) final {}

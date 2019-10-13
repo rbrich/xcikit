@@ -45,7 +45,8 @@ public:
 
         if (m_class) {
             // export symbol to outer scoupe
-            auto outer_sym = symtab().parent()->add({dfn.variable.identifier.name, Symbol::ClassFunction, m_class->index});
+            auto outer_sym = symtab().parent()->add({dfn.variable.identifier.name,
+                                                     Symbol::ClassFunction, m_class->index});
             outer_sym->set_ref(dfn.variable.identifier.symbol);
             return;
         }
@@ -179,6 +180,10 @@ public:
     }
 
     void visit(ast::Function& v) override {
+        // resolve TypeNames and composite types to symbols
+        // (in both parameters and result)
+        v.type.apply(*this);
+        // add symbol table for the function, fill in parameters
         std::string name = "<lambda>";
         if (v.type.params.empty())
             name = "<block>";
@@ -191,14 +196,15 @@ public:
         for (auto& p : v.type.params) {
             p.identifier.symbol = fn_symtab.add({p.identifier.name, Symbol::Parameter, par_idx++});
         }
-
+        // add function itself, pospone body compilation
         auto fn = make_unique<Function>(module(), fn_symtab);
         m_postponed_blocks.push_back({*fn, v.body});
         v.body.symtab = &fn_symtab;
-        if (m_instance == nullptr)
-            v.index = module().add_function(move(fn));
-        else
-            v.index = m_instance->add_function(move(fn));
+        v.index = module().add_function(move(fn));
+        if (m_definition != nullptr && m_instance != nullptr) {
+            m_definition->variable.identifier.symbol->set_type(Symbol::Function);
+            m_definition->variable.identifier.symbol->set_index(v.index);
+        }
     }
 
     void visit(ast::TypeName& t) final {

@@ -52,8 +52,8 @@ public:
 
         if (m_instance != nullptr) {
             // evaluate type according to class and type var
-            auto& symptr = dfn.variable.identifier.symbol;
-            TypeInfo eval_type = m_instance->class_().get_function_type(symptr->ref()->index());
+            auto& psym = dfn.variable.identifier.symbol;
+            TypeInfo eval_type = m_instance->class_().get_function_type(psym->ref()->index());
             eval_type.replace_var(1, m_instance->type());
 
             // specified type is basically useless here, let's just check
@@ -62,17 +62,22 @@ public:
                 throw DefinitionTypeMismatch(m_type_info, eval_type);
 
             m_type_info = move(eval_type);
+
+            m_instance->set_function(psym->ref()->index(), psym->index());
         }
 
         // Expression might use the specified type from `m_type_info`
         if (dfn.expression)
             dfn.expression->apply(*this);
 
+        if (m_instance != nullptr)
+            return;
+
         Index idx = m_function.add_value(move(m_value_type));
         dfn.variable.identifier.symbol->set_index(idx);
         // if the function was just a parameterless block, change symbol type to a value
         if (dfn.variable.identifier.symbol->type() == Symbol::Type::Function
-            && !m_value_type.is_callable()) {
+        && !m_value_type.is_callable()) {
             dfn.variable.identifier.symbol->set_type(Symbol::Type::Value);
             dfn.variable.identifier.symbol->set_callable(false);
         }
@@ -167,7 +172,10 @@ public:
                     auto& inst = inst_mod->get_instance(inst_psym->index());
                     if (inst.type() == inst_type) {
                         // find instance function
-                        auto& inst_fn = inst.get_function(sym.ref()->index());
+                        auto fn_idx = inst.get_function(sym.ref()->index());
+                        auto& inst_fn = inst_mod->get_function(fn_idx);
+                        v.module = inst_mod;
+                        v.index = fn_idx;
                         m_value_type = TypeInfo{inst_fn.signature_ptr()};
                         found = true;
                         break;
@@ -349,8 +357,7 @@ public:
         }
         m_value_type = move(m_type_info);
 
-        Function& fn = m_instance ? m_instance->get_function(v.index)
-                                  : module().get_function(v.index);
+        Function& fn = module().get_function(v.index);
         fn.set_signature(m_value_type.signature_ptr());
 
         // compile body and resolve return type

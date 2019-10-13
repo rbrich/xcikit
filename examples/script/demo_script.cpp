@@ -22,6 +22,7 @@
 #include <xci/script/Builtin.h>
 #include <xci/script/dump.h>
 #include <xci/core/TermCtl.h>
+#include <xci/core/file.h>
 
 #include <docopt.h>
 #include <iostream>
@@ -41,6 +42,7 @@ struct Options {
     bool print_module = false;
     bool print_bytecode = false;
     bool trace_bytecode = false;
+    bool load_lib = true;
     uint32_t compiler_flags = 0;
 };
 
@@ -178,8 +180,7 @@ int main(int argc, char* argv[])
 {
     map<string, docopt::value> args = docopt::docopt(
             "Usage:\n"
-            "    demo_script [options] [SOURCE_FILE]\n"
-            "    demo_script [options] [-e EXPR]\n"
+            "    demo_script [options] [INPUT ...]\n"
             "\n"
             "Options:\n"
             "   -e EXPR --eval EXPR    Load EXPR as it was a module, run it and exit\n"
@@ -193,6 +194,7 @@ int main(int argc, char* argv[])
             "   --pp-symbols           Stop after symbols pass\n"
             "   --pp-nonlocals         Stop after nonlocals pass\n"
             "   --pp-typecheck         Stop after typecheck pass\n"
+            "   --no-lib               Do not load standard library\n"
             "   -h --help              Show help\n",
             { argv + 1, argv + argc },
             /*help =*/ true,
@@ -205,6 +207,7 @@ int main(int argc, char* argv[])
     opts.print_module = args["--module"].asBool();
     opts.print_bytecode = args["--bytecode"].asBool();
     opts.trace_bytecode = args["--trace"].asBool();
+    opts.load_lib = !args["--no-lib"].asBool();
 
     if (args["--optimize"].asBool())
         opts.compiler_flags |= Compiler::O1;
@@ -217,6 +220,18 @@ int main(int argc, char* argv[])
 
     if (args["--eval"]) {
         evaluate(args["--eval"].asString(), opts);
+        return 0;
+    }
+
+    if (args["INPUT"]) {
+        for (const auto& input : args["INPUT"].asStringList()) {
+            auto content = read_text_file(input);
+            if (!content) {
+                std::cerr << "cannot read file: " << input << std::endl;
+                exit(1);
+            }
+            evaluate(*content, opts);
+        }
         return 0;
     }
 

@@ -20,14 +20,15 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <optional>
 
 namespace xci::core {
 
 
 // Try to read whole content of a file.
 // Returns empty string in case of any error.
-std::string read_text_file(const std::string& pathname);
-std::string read_text_file(std::istream& stream);
+std::optional<std::string> read_text_file(const std::string& pathname);
+std::optional<std::string> read_text_file(std::istream& stream);
 BufferPtr read_binary_file(const std::string& pathname);
 BufferPtr read_binary_file(std::istream& stream);
 

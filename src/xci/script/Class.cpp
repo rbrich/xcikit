@@ -42,10 +42,10 @@ Instance::Instance(Class& cls, SymbolTable& symtab)
 }
 
 
-Index Instance::add_function(std::unique_ptr<Function>&& fn)
+void Instance::set_function(Index cls_fn_idx, Index mod_fn_idx)
 {
-    m_functions.push_back(move(fn));
-    return m_functions.size() - 1;
+    m_functions.resize(m_class.num_functions(), no_index);
+    m_functions[cls_fn_idx] = mod_fn_idx;
 }
 
 

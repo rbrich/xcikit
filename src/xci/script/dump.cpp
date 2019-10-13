@@ -562,7 +562,8 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
            << ' ' << inst.type() << endl;
         os << more_indent;
         for (size_t j = 0; j < inst.num_functions(); ++j) {
-            const auto& f = inst.get_function(j);
+            const auto fi = inst.get_function(j);
+            const auto& f = v.get_function(fi);
             os << put_indent << f.symtab().name() << ": " << f << endl;
         }
         os << less_indent;

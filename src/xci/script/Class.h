@@ -36,6 +36,7 @@ public:
 
     Index add_function_type(TypeInfo&& type_info);
     const TypeInfo& get_function_type(size_t idx) const { return m_functions[idx]; }
+    size_t num_functions() const { return m_functions.size(); }
 
 private:
     Module& m_module;
@@ -58,8 +59,8 @@ public:
     Class& class_() const { return m_class; }
 
     // Functions
-    Index add_function(std::unique_ptr<Function>&& fn);
-    Function& get_function(size_t idx) const { return *m_functions[idx]; }
+    void set_function(Index cls_fn_idx, Index mod_fn_idx);
+    Index get_function(size_t idx) const { return m_functions[idx]; }
     size_t num_functions() const { return m_functions.size(); }
 
 private:
@@ -67,8 +68,8 @@ private:
     SymbolTable& m_symtab;
     // instantiation type
     TypeInfo m_type;
-    // functions in the instance
-    std::vector<std::unique_ptr<Function>> m_functions;
+    // functions in the instance - map of class function idx -> module function idx
+    std::vector<Index> m_functions;
 };
 
 

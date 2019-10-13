@@ -27,14 +27,14 @@
 namespace xci::core {
 
 
-std::string read_text_file(const std::string& pathname)
+std::optional<std::string> read_text_file(const std::string& pathname)
 {
     std::ifstream f(pathname);
     return read_text_file(f);
 }
 
 
-std::string read_text_file(std::istream& stream)
+std::optional<std::string> read_text_file(std::istream& stream)
 {
     if (!stream)
         return {};
