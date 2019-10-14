@@ -514,13 +514,13 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
 {
     os << "* " << v.num_imported_modules() << " imported modules" << endl << more_indent;
     for (size_t i = 0; i < v.num_imported_modules(); ++i)
-        os << put_indent << '[' << i << "] " << v.get_imported_module(i).symtab().name() << endl;
+        os << put_indent << '[' << i << "] " << v.get_imported_module(i).name() << endl;
     os << less_indent;
 
     os << "* " << v.num_functions() << " functions" << endl << more_indent;
     for (size_t i = 0; i < v.num_functions(); ++i) {
         const auto& f = v.get_function(i);
-        os << put_indent << '[' << i << "] " << f.symtab().name() << ": " << f << endl;
+        os << put_indent << '[' << i << "] " << f.name() << ": " << f.signature() << endl;
     }
     os << less_indent;
 
@@ -564,7 +564,7 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
         for (size_t j = 0; j < inst.num_functions(); ++j) {
             const auto fi = inst.get_function(j);
             const auto& f = v.get_function(fi);
-            os << put_indent << f.symtab().name() << ": " << f << endl;
+            os << put_indent << f.name() << ": " << f.signature() << endl;
         }
         os << less_indent;
     }
@@ -587,7 +587,7 @@ std::ostream& operator<<(std::ostream& os, Symbol::Type v)
         case Symbol::Module:        return os << "Module";
         case Symbol::Instruction:   return os << "Instruction";
         case Symbol::Class:         return os << "Class";
-        case Symbol::ClassFunction: return os << "ClassFunction";
+        case Symbol::Method:        return os << "Method";
         case Symbol::Instance:      return os << "Instance";
         case Symbol::TypeVar:       return os << "TypeVar";
     }

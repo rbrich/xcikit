@@ -19,7 +19,7 @@
 #include "Parser.h"
 #include "Compiler.h"
 #include "Machine.h"
-#include <string>
+#include <string_view>
 
 namespace xci::script {
 
@@ -28,11 +28,21 @@ namespace xci::script {
 
 class Interpreter {
 public:
+    Interpreter() = default;
     explicit Interpreter(uint32_t flags) : m_compiler(flags) {}
 
-    using InvokeCallback = Machine::InvokeCallback;
+    // `flags` are Compiler::Flags
+    void configure(uint32_t flags) { m_compiler.configure(flags); }
 
-    std::unique_ptr<Value> eval(const std::string& input, const InvokeCallback& cb = {});
+    void add_module(const std::string& name, std::string_view content);
+
+    using InvokeCallback = Machine::InvokeCallback;
+    std::unique_ptr<Value> eval(std::string_view input, const InvokeCallback& cb = {});
+
+    // low-level component access
+    Parser& parser() { return m_parser; }
+    Compiler& compiler() { return m_compiler; }
+    Machine& machine() { return m_machine; }
 
 private:
     Parser m_parser;

@@ -157,9 +157,12 @@ public:
             case Symbol::Instance:
                 // TODO
                 return;
-            case Symbol::ClassFunction: {
+            case Symbol::Method: {
                 // find prototype of the function, resolve actual type of T
-                auto& cls = module().get_class(sym.index());
+                auto* symmod = symtab.module();
+                if (symmod == nullptr)
+                    symmod = &module();
+                auto& cls = symmod->get_class(sym.index());
                 auto& cls_fn = cls.get_function_type(sym.ref()->index());
                 auto inst_type = resolve_instance_type(cls_fn.signature());
                 // find instance using resolved T
@@ -192,7 +195,9 @@ public:
                     if (inst_mod == nullptr)
                         inst_mod = &module();
                     auto& inst = inst_mod->get_instance(inst_psym->index());
-                    o_candidates << "   " << inst.type() << endl;
+                    auto fn_idx = inst.get_function(sym.ref()->index());
+                    auto& inst_fn = inst_mod->get_function(fn_idx);
+                    o_candidates << "   " << inst_fn.signature() << endl;
                     inst_psym = inst_psym->next();
                 }
                 stringstream o_args;

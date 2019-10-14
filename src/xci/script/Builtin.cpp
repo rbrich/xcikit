@@ -241,19 +241,13 @@ const char* builtin::op_to_function_name(ast::Operator::Op op)
 }
 
 
-BuiltinModule::BuiltinModule()
+BuiltinModule::BuiltinModule() : Module("builtin")
 {
     symtab().add({"void", add_value(std::make_unique<value::Void>())});
     symtab().add({"false", add_value(std::make_unique<value::Bool>(false))});
     symtab().add({"true", add_value(std::make_unique<value::Bool>(true))});
     add_logical_op_function("or", Opcode::LogicalOr);
     add_logical_op_function("and", Opcode::LogicalAnd);
-    add_comparison_op_function("eq", Opcode::Equal_8);
-    add_comparison_op_function("ne", Opcode::NotEqual_8);
-    add_comparison_op_function("le", Opcode::LessEqual_8);
-    add_comparison_op_function("ge", Opcode::GreaterEqual_8);
-    add_comparison_op_function("lt", Opcode::LessThan_8);
-    add_comparison_op_function("gt", Opcode::GreaterThan_8);
     add_bitwise_op_function("bit_or", Opcode::BitwiseOr_8);
     add_bitwise_op_function("bit_and", Opcode::BitwiseAnd_8);
     add_bitwise_op_function("bit_xor", Opcode::BitwiseXor_8);
@@ -282,35 +276,6 @@ BuiltinModule::add_logical_op_function(const std::string& name, Opcode opcode)
     fn->add_parameter("rhs", TypeInfo{Type::Bool});
     fn->code().add_opcode(opcode);  // call operator
     symtab().add({name, Symbol::Function, add_function(std::move(fn))});
-}
-
-
-void
-BuiltinModule::add_comparison_op_function(const std::string& name, Opcode opcode)
-{
-    auto fn8 = std::make_unique<Function>(*this, symtab().add_child(name));
-    fn8->signature().return_type = TypeInfo{Type::Bool};
-    fn8->add_parameter("lhs", TypeInfo{Type::Byte});
-    fn8->add_parameter("rhs", TypeInfo{Type::Byte});
-    fn8->code().add_opcode(opcode);
-    auto p8 = symtab().add({name, Symbol::Function, add_function(std::move(fn8))});
-
-    auto fn32 = std::make_unique<Function>(*this, symtab().add_child(name));
-    fn32->signature().return_type = TypeInfo{Type::Bool};
-    fn32->add_parameter("lhs", TypeInfo{Type::Int32});
-    fn32->add_parameter("rhs", TypeInfo{Type::Int32});
-    fn32->code().add_opcode(opcode + 1);
-    auto p32 = symtab().add({name, Symbol::Function, add_function(std::move(fn32))});
-
-    auto fn64 = std::make_unique<Function>(*this, symtab().add_child(name));
-    fn64->signature().return_type = TypeInfo{Type::Bool};
-    fn64->add_parameter("lhs", TypeInfo{Type::Int64});
-    fn64->add_parameter("rhs", TypeInfo{Type::Int64});
-    fn64->code().add_opcode(opcode + 2);
-    auto p64 = symtab().add({name, Symbol::Function, add_function(std::move(fn64))});
-
-    p8->set_next(p32);
-    p32->set_next(p64);
 }
 
 

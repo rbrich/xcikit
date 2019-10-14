@@ -13,16 +13,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <xci/script/Parser.h>
-#include <xci/script/Optimizer.h>
-#include <xci/script/Compiler.h>
-#include <xci/script/Machine.h>
+#include <xci/script/Interpreter.h>
 #include <xci/script/Error.h>
 #include <xci/script/Value.h>
 #include <xci/script/Builtin.h>
 #include <xci/script/dump.h>
 #include <xci/core/TermCtl.h>
 #include <xci/core/file.h>
+#include <xci/core/Vfs.h>
+#include <xci/core/log.h>
+#include <xci/config.h>
 
 #include <docopt.h>
 #include <iostream>
@@ -42,7 +42,7 @@ struct Options {
     bool print_module = false;
     bool print_bytecode = false;
     bool trace_bytecode = false;
-    bool load_lib = true;
+    bool with_std_lib = true;
     uint32_t compiler_flags = 0;
 };
 
@@ -50,14 +50,29 @@ struct Options {
 void evaluate(const string& line, const Options& opts)
 {
     static TermCtl& t = TermCtl::stdout_instance();
-    static Parser parser;
-    static Compiler compiler;
-    static Machine machine;
+    static Interpreter interpreter;
     static std::unique_ptr<Function> prev_func;
+    static bool initialized = false;
 
-    compiler.configure(opts.compiler_flags);
+    auto& parser = interpreter.parser();
+    auto& compiler = interpreter.compiler();
+    auto& machine = interpreter.machine();
 
     try {
+        if (!initialized) {
+            interpreter.configure(opts.compiler_flags);
+
+            if (opts.with_std_lib) {
+                auto f = Vfs::default_instance().read_file("script/sys.ys");
+                auto content = f.content();
+                interpreter.add_module("sys", content->string_view());
+
+                /*if (opts.print_module) {
+                    cout << "Sys module content:" << endl << compiler.get_module(2) << endl;
+                }*/
+            }
+        }
+
         // parse
         ast::Module ast;
         parser.parse(line, ast);
@@ -69,9 +84,10 @@ void evaluate(const string& line, const Options& opts)
         // compile
         std::unique_ptr<Function> func;
         if (!prev_func) {
-            func = std::make_unique<Function>(compiler.module(), compiler.module().symtab().add_child("<input>"));
+            func = std::make_unique<Function>(compiler.main_module(),
+                                              compiler.main_module().symtab().add_child("<input>"));
         } else {
-            func = std::make_unique<Function>(compiler.module(), prev_func->symtab().add_child("<input>"));
+            func = std::make_unique<Function>(compiler.main_module(), prev_func->symtab().add_child("<input>"));
         }
 
         compiler.compile(*func, ast);
@@ -83,12 +99,12 @@ void evaluate(const string& line, const Options& opts)
 
         // print symbol table
         if (opts.print_symtab) {
-            cout << "Symbol table:" << endl << compiler.module().symtab() << endl;
+            cout << "Symbol table:" << endl << compiler.main_module().symtab() << endl;
         }
 
         // print compiled module content
         if (opts.print_module) {
-            cout << "Module content:" << endl << compiler.module() << endl;
+            cout << "Module content:" << endl << compiler.main_module() << endl;
         }
 
         // stop if we were only processing the AST, without actual compilation
@@ -116,7 +132,8 @@ void evaluate(const string& line, const Options& opts)
         }
         bool erase = true;
         if (opts.trace_bytecode) {
-            machine.set_bytecode_trace_cb([&erase, &codelines_stack](const Function& f, Code::const_iterator ipos) {
+            machine.set_bytecode_trace_cb([&erase, &codelines_stack, &machine]
+            (const Function& f, Code::const_iterator ipos) {
                 if (erase)
                     cout << t.move_up(codelines_stack.top().size());
                 for (auto it = f.code().begin(); it != f.code().end(); it++) {
@@ -178,6 +195,9 @@ void evaluate(const string& line, const Options& opts)
 
 int main(int argc, char* argv[])
 {
+    Logger::init(Logger::Level::Warning);
+    Vfs::default_instance().mount(XCI_SHARE_DIR);
+
     map<string, docopt::value> args = docopt::docopt(
             "Usage:\n"
             "    demo_script [options] [INPUT ...]\n"
@@ -194,7 +214,7 @@ int main(int argc, char* argv[])
             "   --pp-symbols           Stop after symbols pass\n"
             "   --pp-nonlocals         Stop after nonlocals pass\n"
             "   --pp-typecheck         Stop after typecheck pass\n"
-            "   --no-lib               Do not load standard library\n"
+            "   --no-std               Do not load standard library\n"
             "   -h --help              Show help\n",
             { argv + 1, argv + argc },
             /*help =*/ true,
@@ -207,7 +227,7 @@ int main(int argc, char* argv[])
     opts.print_module = args["--module"].asBool();
     opts.print_bytecode = args["--bytecode"].asBool();
     opts.trace_bytecode = args["--trace"].asBool();
-    opts.load_lib = !args["--no-lib"].asBool();
+    opts.with_std_lib = !args["--no-std"].asBool();
 
     if (args["--optimize"].asBool())
         opts.compiler_flags |= Compiler::O1;
@@ -223,7 +243,7 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    if (args["INPUT"]) {
+    if (!args["INPUT"].asStringList().empty()) {
         for (const auto& input : args["INPUT"].asStringList()) {
             auto content = read_text_file(input);
             if (!content) {

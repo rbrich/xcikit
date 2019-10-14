@@ -18,15 +18,26 @@
 namespace xci::script {
 
 
-std::unique_ptr<Value> Interpreter::eval(const std::string& input, const InvokeCallback& cb)
+void Interpreter::add_module(const std::string& name, std::string_view content)
+{
+    // parse
+    ast::Module ast;
+    m_parser.parse(content, ast);
+
+    // compile
+    m_compiler.add_module(name, ast);
+}
+
+
+std::unique_ptr<Value> Interpreter::eval(std::string_view input, const InvokeCallback& cb)
 {
     // parse
     ast::Module ast;
     m_parser.parse(input, ast);
 
     // compile
-    auto& symtab = m_compiler.module().symtab().add_child("<input>");
-    auto func = std::make_unique<Function>(m_compiler.module(), symtab);
+    auto& symtab = m_compiler.main_module().symtab().add_child("<input>");
+    auto func = std::make_unique<Function>(m_compiler.main_module(), symtab);
     //Pointer<Function> func = m_compiler.module().add_function(std::move(fn));
     m_compiler.compile(*func, ast);
 

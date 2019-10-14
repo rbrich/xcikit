@@ -21,6 +21,7 @@
 #include "TypeResolver.h"
 #include "Stack.h"
 #include <xci/core/format.h>
+#include <xci/core/Vfs.h>
 #include <xci/compat/macros.h>
 
 #include <range/v3/view/reverse.hpp>
@@ -141,7 +142,7 @@ public:
             case Symbol::Instance:
                 assert(!"Instance cannot be called.");
                 break;
-            case Symbol::ClassFunction: {
+            case Symbol::Method: {
                 // this module
                 if (v.module == &m_function.module()) {
                     // CALL0 <function_idx>
@@ -244,7 +245,7 @@ public:
         }
         // if it's function object, execute it
         if (sym.type() != Symbol::Function
-        &&  sym.type() != Symbol::ClassFunction
+        &&  sym.type() != Symbol::Method
         &&  sym.is_callable()) {
             m_function.code().add_opcode(Opcode::Execute);
         }
@@ -289,7 +290,7 @@ public:
 
     void visit(ast::Function& v) override {
         // compile body
-        Function& func = m_compiler.module().get_function(v.index);
+        Function& func = m_compiler.main_module().get_function(v.index);
         m_compiler.compile_block(func, v.body);
         if (func.symtab().parent() != &m_function.symtab())
             return;  // instance function -> just compile it
@@ -391,7 +392,7 @@ Compiler::Compiler()
     m_modules.push_back(make_unique<Module>());
     // module with builtins
     m_modules.push_back(make_unique<BuiltinModule>());
-    module().add_imported_module(*m_modules.back());
+    main_module().add_imported_module(*m_modules.back());
 }
 
 
@@ -445,6 +446,24 @@ void Compiler::compile_block(Function& func, const ast::Block& block)
     for (const auto& stmt : block.statements) {
         stmt->apply(visitor);
     }
+}
+
+
+void Compiler::add_module(const std::string& name, ast::Module& ast)
+{
+    // save default module and replace it with a fresh one
+    auto default_module = move(m_modules[0]);
+    m_modules[0] = make_unique<Module>(name);
+    main_module().add_imported_module(*m_modules[1]);  // builtin
+
+    // compile AST
+    Function func {main_module(), main_module().symtab()};
+    compile(func, ast);
+
+    // add new module to imported modules and restore default module
+    default_module->add_imported_module(*m_modules[0]);
+    m_modules.push_back(move(m_modules[0]));
+    m_modules[0] = move(default_module);
 }
 
 

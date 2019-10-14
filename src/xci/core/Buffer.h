@@ -19,6 +19,7 @@
 #include <xci/compat/utility.h>
 #include <functional>
 #include <memory>
+#include <string_view>
 
 namespace xci::core {
 
@@ -59,7 +60,7 @@ public:
     byte* data() const { return m_data; }
     std::size_t size() const { return m_size; }
 
-    //std::span<byte> span() const { return {m_data, m_size}; }
+    std::string_view string_view() const { return {(char*)m_data, m_size}; }
 
 private:
     byte* m_data;

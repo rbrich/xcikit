@@ -74,7 +74,7 @@ public:
         Module,             // imported module (module-level)
         Instruction,        // intrinsics (e.g. __equal_32) resolve to this, index is Opcode
         Class,              // type class
-        ClassFunction,      // function declaration from a class: index = class index, ref = symbol in class scope
+        Method,             // method declaration: index = class index, ref = symbol in class scope
         Instance,           // instance of type class
         TypeName,           // type
         TypeVar,            // type variable

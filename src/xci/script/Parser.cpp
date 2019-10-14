@@ -717,7 +717,7 @@ const std::string Control< T >::errmsg = "parse error matching " + internal::dem
 } // namespace parser
 
 
-void Parser::parse(const std::string& input, ast::Module& mod)
+void Parser::parse(std::string_view input, ast::Module& mod)
 {
     using parser::Module;
     using parser::Action;
@@ -727,7 +727,7 @@ void Parser::parse(const std::string& input, ast::Module& mod)
         tao::pegtl::tracking_mode::eager,
         tao::pegtl::eol::lf_crlf,
         const char*>  // pass source filename as non-owning char*
-    in(input, "<input>");
+    in(input.data(), input.size(), "<input>");
 
     try {
         if (!tao::pegtl::parse< Module, Action, Control >( in, mod ))

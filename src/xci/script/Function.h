@@ -48,6 +48,8 @@ class Function {
 public:
     explicit Function(Module& module, SymbolTable& symtab);
 
+    const std::string& name() const { return m_symtab.name(); }
+
     // module containing this function
     Module& module() const { return m_module; }
 

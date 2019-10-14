@@ -292,7 +292,7 @@ struct Reference: public Expression {
     Identifier identifier;
 
     // resolved:
-    SymbolPointer chain;  // tip of chain of Instances in case of ClassFunction
+    SymbolPointer chain;  // tip of chain of Instances in case of Method
     Module* module = nullptr;
     Index index = no_index;
 };

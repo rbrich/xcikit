@@ -62,8 +62,8 @@ public:
         v.read(&m_stack[m_stack_pointer]);
         v.decref();
         m_stack_pointer += s;
-        // check type on stack
-        assert(v.type_info() == m_stack_types.back());
+        // check type on stack (allow casts - only size have to match)
+        assert(v.type_info().size() == m_stack_types.back().size());
         m_stack_types.pop_back();
         return v;
     }

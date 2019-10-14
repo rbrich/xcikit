@@ -43,7 +43,7 @@ public:
     VfsFile(VfsFile &&) noexcept = default;
     VfsFile& operator=(VfsFile&&) noexcept = default;
 
-    /// \returns true if file was successfuly read
+    /// \returns true if file was successfully read
     bool is_open() { return m_content != nullptr; }
     bool is_real_file() { return !m_path.empty(); }
 

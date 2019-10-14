@@ -18,14 +18,14 @@
 
 #include "AST.h"
 
-#include <string>
+#include <string_view>
 
 namespace xci::script {
 
 
 class Parser {
 public:
-    void parse(const std::string& input, ast::Module& mod);
+    void parse(std::string_view input, ast::Module& mod);
 };
 
 

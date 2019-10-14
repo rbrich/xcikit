@@ -46,7 +46,7 @@ public:
         if (m_class) {
             // export symbol to outer scoupe
             auto outer_sym = symtab().parent()->add({dfn.variable.identifier.name,
-                                                     Symbol::ClassFunction, m_class->index});
+                                                     Symbol::Method, m_class->index});
             outer_sym->set_ref(dfn.variable.identifier.symbol);
             return;
         }
@@ -152,10 +152,10 @@ public:
         symptr = resolve_symbol(v.identifier.name);
         if (!symptr)
             throw UndefinedName(v.identifier.name, v.source_info);
-        if (symptr->type() == Symbol::ClassFunction) {
+        if (symptr->type() == Symbol::Method) {
             // if the reference points to a class function, find nearest
             // instance of the class
-            auto& class_name = module().get_class(symptr->index()).name();
+            auto& class_name = symptr.symtab()->module()->get_class(symptr->index()).name();
             v.chain = resolve_symbol_of_type(class_name, Symbol::Instance);
         }
     }

@@ -28,7 +28,10 @@ namespace xci::script {
 
 class Module {
 public:
-    Module() : m_symtab("<module>") { m_symtab.set_module(this); }
+    explicit Module(std::string name) : m_symtab(move(name)) { m_symtab.set_module(this); }
+    Module() : Module("<module>") {}
+
+    const std::string& name() const { return m_symtab.name(); }
 
     // Imported modules
     void add_imported_module(Module& module) { m_modules.push_back(&module); }

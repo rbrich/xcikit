@@ -51,11 +51,19 @@ public:
     // Compile block, return type of its return value
     void compile_block(Function& func, const ast::Block& block);
 
-    // Module being compiled
-    Module& module() { return *m_modules[0]; }
+    // Compile AST into Module object and add it to imported modules
+    void add_module(const std::string& name, ast::Module& ast);
+
+    // Default modules
+    Module& main_module() { return *m_modules[0]; }
+
+    // Builtin module
+    Module& builtin_module() { return *m_modules[1]; }
+
+    Module& get_module(Index idx) { return *m_modules[idx]; }
 
 private:
-    std::vector<std::unique_ptr<Module>> m_modules;
+    std::vector<std::unique_ptr<Module>> m_modules;  // 0 = main, 1 = builtin, 2 = std lib
     std::vector<std::unique_ptr<ast::BlockProcessor>> m_ast_passes;  // preprocessing & optimization passes
 };
 
