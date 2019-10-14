@@ -10,7 +10,7 @@ set(XCI_GRAPHICS_SOURCES
     Shape.cpp
     Sprites.cpp
     View.cpp
-    Window.cpp)
+    )
 
 set(XCI_GRAPHICS_OPENGL_SOURCES
     opengl/GlPrimitives.cpp

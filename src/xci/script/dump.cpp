@@ -589,6 +589,7 @@ std::ostream& operator<<(std::ostream& os, Symbol::Type v)
         case Symbol::Class:         return os << "Class";
         case Symbol::Method:        return os << "Method";
         case Symbol::Instance:      return os << "Instance";
+        case Symbol::TypeName:      return os << "TypeName";
         case Symbol::TypeVar:       return os << "TypeVar";
     }
     return os;

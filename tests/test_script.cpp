@@ -22,12 +22,16 @@
 #include <xci/script/Stack.h>
 #include <xci/script/SymbolTable.h>
 #include <xci/script/dump.h>
+#include <xci/core/Vfs.h>
+#include <xci/core/log.h>
+#include <xci/config.h>
 
 #include <string>
 #include <sstream>
 
 using namespace std;
 using namespace xci::script;
+using namespace xci::core;
 
 
 // Check parsing into AST and dumping back to code
@@ -42,9 +46,20 @@ void check_parser(const string& input, const string& expected_output)
 }
 
 
-void check_interpreter(const string& input, const string& expected_output, uint32_t flags=0)
+void check_interpreter(const string& input, const string& expected_output)
 {
-    Interpreter interpreter {flags};
+    static std::unique_ptr<Module> sys_module;
+    Interpreter interpreter;
+
+    if (!sys_module) {
+        Logger::init(Logger::Level::Warning);
+        Vfs::default_instance().mount(XCI_SHARE_DIR);
+
+        auto f = Vfs::default_instance().read_file("script/sys.ys");
+        auto content = f.content();
+        sys_module = interpreter.build_module("sys", content->string_view());
+    }
+    interpreter.add_imported_module(*sys_module);
 
     ostringstream os;
     try {

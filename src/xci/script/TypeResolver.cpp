@@ -284,6 +284,10 @@ public:
                     m_value_type = m_function.get_value(sym.index());
                 }
                 break;
+            case Symbol::TypeName:
+            case Symbol::TypeVar:
+                // TODO
+                return;
             case Symbol::Unresolved:
                 UNREACHABLE;
         }
@@ -387,6 +391,8 @@ public:
                 break;
             case Symbol::TypeVar:
                 m_type_info = TypeInfo{ Type::Unknown, uint8_t(t.symbol->index()) };
+                break;
+            default:
                 break;
         }
     }

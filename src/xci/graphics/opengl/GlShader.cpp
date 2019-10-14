@@ -233,17 +233,17 @@ void GlShader::remove_watches()
 bool GlShader::reload_from_file()
 {
     // Try to read shaders from file
-    std::string vertex_file_source = read_text_file(m_vertex_file);
-    std::string fragment_file_source = read_text_file(m_fragment_file);
-    if (vertex_file_source.empty() || fragment_file_source.empty())
+    auto vertex_file_source = read_text_file(m_vertex_file);
+    auto fragment_file_source = read_text_file(m_fragment_file);
+    if (!vertex_file_source || !fragment_file_source)
         return false;
     log_info("Loaded vertex shader: {}", m_vertex_file);
     log_info("Loaded fragment shader: {}", m_fragment_file);
 
     // Compile and cache new program
     m_program = compile_program(
-            vertex_file_source.data(), (int) vertex_file_source.size(),
-            fragment_file_source.data(), (int) fragment_file_source.size());
+            vertex_file_source->data(), (int) vertex_file_source->size(),
+            fragment_file_source->data(), (int) fragment_file_source->size());
     m_program_ready.store(true, std::memory_order_release);
     return true;
 }

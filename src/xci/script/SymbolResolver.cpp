@@ -78,7 +78,7 @@ public:
         cls_symtab.add({v.type_var.name, Symbol::TypeVar, 1});
 
         // add new class to the module
-        auto cls = make_unique<Class>(module(), cls_symtab);
+        auto cls = make_unique<Class>(cls_symtab);
         v.index = module().add_class(move(cls));
         v.symtab = &cls_symtab;
 
@@ -155,7 +155,10 @@ public:
         if (symptr->type() == Symbol::Method) {
             // if the reference points to a class function, find nearest
             // instance of the class
-            auto& class_name = symptr.symtab()->module()->get_class(symptr->index()).name();
+            auto* symmod = symptr.symtab()->module();
+            if (symmod == nullptr)
+                symmod = &module();
+            auto& class_name = symmod->get_class(symptr->index()).name();
             v.chain = resolve_symbol_of_type(class_name, Symbol::Instance);
         }
     }

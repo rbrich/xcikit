@@ -16,7 +16,6 @@
 #include <xci/script/Interpreter.h>
 #include <xci/script/Error.h>
 #include <xci/script/Value.h>
-#include <xci/script/Builtin.h>
 #include <xci/script/dump.h>
 #include <xci/core/TermCtl.h>
 #include <xci/core/file.h>
@@ -51,21 +50,22 @@ void evaluate(const string& line, const Options& opts)
 {
     static TermCtl& t = TermCtl::stdout_instance();
     static Interpreter interpreter;
-    static std::unique_ptr<Function> prev_func;
-    static bool initialized = false;
+    static std::vector<std::unique_ptr<Module>> modules;
 
     auto& parser = interpreter.parser();
     auto& compiler = interpreter.compiler();
     auto& machine = interpreter.machine();
 
     try {
-        if (!initialized) {
+        if (modules.empty()) {
             interpreter.configure(opts.compiler_flags);
+            modules.push_back(std::make_unique<BuiltinModule>());
 
             if (opts.with_std_lib) {
                 auto f = Vfs::default_instance().read_file("script/sys.ys");
                 auto content = f.content();
-                interpreter.add_module("sys", content->string_view());
+                auto sys_module = interpreter.build_module("sys", content->string_view());
+                modules.push_back(move(sys_module));
 
                 /*if (opts.print_module) {
                     cout << "Sys module content:" << endl << compiler.get_module(2) << endl;
@@ -82,15 +82,11 @@ void evaluate(const string& line, const Options& opts)
         }
 
         // compile
-        std::unique_ptr<Function> func;
-        if (!prev_func) {
-            func = std::make_unique<Function>(compiler.main_module(),
-                                              compiler.main_module().symtab().add_child("<input>"));
-        } else {
-            func = std::make_unique<Function>(compiler.main_module(), prev_func->symtab().add_child("<input>"));
-        }
-
-        compiler.compile(*func, ast);
+        auto module = std::make_unique<Module>("<input>");
+        for (auto& m : modules)
+            module->add_imported_module(*m);
+        Function func {*module, module->symtab()};
+        compiler.compile(func, ast);
 
         // print AST with Compiler modifications
         if (opts.print_ast) {
@@ -99,12 +95,12 @@ void evaluate(const string& line, const Options& opts)
 
         // print symbol table
         if (opts.print_symtab) {
-            cout << "Symbol table:" << endl << compiler.main_module().symtab() << endl;
+            cout << "Symbol table:" << endl << module->symtab() << endl;
         }
 
         // print compiled module content
         if (opts.print_module) {
-            cout << "Module content:" << endl << compiler.main_module() << endl;
+            cout << "Module content:" << endl << *module << endl;
         }
 
         // stop if we were only processing the AST, without actual compilation
@@ -169,19 +165,19 @@ void evaluate(const string& line, const Options& opts)
                 }
             });
         }
-        machine.call(*func, [](const Value& invoked) {
+        machine.call(func, [](const Value& invoked) {
             if (!invoked.is_void()) {
                 cout << t.bold().yellow() << invoked << t.normal() << endl;
             }
         });
 
         // returned value of last statement
-        auto result = machine.stack().pull(func->signature().return_type);
+        auto result = machine.stack().pull(func.signature().return_type);
         if (!result->is_void()) {
             cout << t.bold() << *result << t.normal() << endl;
         }
 
-        prev_func = move(func);
+        modules.push_back(move(module));
     } catch (const Error& e) {
         if (!e.file().empty())
             cout << e.file() << ": ";

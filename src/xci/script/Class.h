@@ -26,7 +26,7 @@ class Function;
 
 class Class {
 public:
-    explicit Class(Module& module, SymbolTable& symtab);
+    explicit Class(SymbolTable& symtab);
 
     const std::string& name() const { return m_symtab.name(); }
 
@@ -39,7 +39,6 @@ public:
     size_t num_functions() const { return m_functions.size(); }
 
 private:
-    Module& m_module;
     SymbolTable& m_symtab;
     // functions in the class
     std::vector<TypeInfo> m_functions;

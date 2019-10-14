@@ -21,8 +21,8 @@ namespace xci::script {
 using namespace std;
 
 
-Class::Class(Module& module, SymbolTable& symtab)
-        : m_module(module), m_symtab(symtab)
+Class::Class(SymbolTable& symtab)
+        : m_symtab(symtab)
 {
     symtab.set_class(this);
 }

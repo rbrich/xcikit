@@ -1,7 +1,6 @@
 add_library(xci-data
     BinaryWriter.cpp
     BinaryReader.cpp
-    reflection.cpp
     )
 
 target_link_libraries(xci-data

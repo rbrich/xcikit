@@ -17,15 +17,31 @@
 
 namespace xci::script {
 
+using std::move;
 
-void Interpreter::add_module(const std::string& name, std::string_view content)
+
+Interpreter::Interpreter(uint32_t flags)
+    : m_compiler(flags)
 {
+    add_imported_module(m_builtin);
+}
+
+
+std::unique_ptr<Module> Interpreter::build_module(const std::string& name, std::string_view content)
+{
+    // setup module
+    auto module = std::make_unique<Module>(name);
+    module->add_imported_module(m_builtin);
+
     // parse
     ast::Module ast;
     m_parser.parse(content, ast);
 
     // compile
-    m_compiler.add_module(name, ast);
+    Function func {*module, module->symtab()};
+    m_compiler.compile(func, ast);
+
+    return module;
 }
 
 
@@ -36,16 +52,15 @@ std::unique_ptr<Value> Interpreter::eval(std::string_view input, const InvokeCal
     m_parser.parse(input, ast);
 
     // compile
-    auto& symtab = m_compiler.main_module().symtab().add_child("<input>");
-    auto func = std::make_unique<Function>(m_compiler.main_module(), symtab);
-    //Pointer<Function> func = m_compiler.module().add_function(std::move(fn));
-    m_compiler.compile(*func, ast);
+    auto& symtab = m_main.symtab().add_child("<input>");
+    Function func {m_main, symtab};
+    m_compiler.compile(func, ast);
 
     // execute
-    m_machine.call(*func, cb);
+    m_machine.call(func, cb);
 
     // get result from stack
-    return m_machine.stack().pull(func->signature().return_type);
+    return m_machine.stack().pull(func.signature().return_type);
 }
 
 

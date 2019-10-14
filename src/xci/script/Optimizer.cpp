@@ -95,7 +95,10 @@ public:
             case Symbol::Instruction:
             case Symbol::Class:
             case Symbol::Instance:
-                return;
+            case Symbol::Method:
+            case Symbol::TypeName:
+            case Symbol::TypeVar:
+                break;
             case Symbol::Function:
                 // fallthrough
                 break;
