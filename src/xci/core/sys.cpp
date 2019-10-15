@@ -15,6 +15,11 @@
 
 #include "sys.h"
 
+#include <unistd.h>
+#include <sys/types.h>
+#include <pwd.h>
+
+
 #if defined(__linux__)
     #include <unistd.h>
     #include <sys/syscall.h>
@@ -36,6 +41,47 @@ ThreadId get_thread_id()
 #else
     #error "Unsupported OS"
 #endif
+}
+
+
+
+void block_signals(std::initializer_list<int> signums)
+{
+    sigset_t sigset;
+    sigemptyset(&sigset);
+    for (const auto signum : signums)
+        sigaddset(&sigset, signum);
+    pthread_sigmask(SIG_BLOCK, &sigset, nullptr);
+}
+
+
+int pending_signals(std::initializer_list<int> signums)
+{
+    sigset_t sigset;
+    if (sigpending(&sigset) < 0)
+        return -1;
+    for (const auto signum : signums)
+        if (sigismember(&sigset, signum))
+            return signum;
+    return 0;
+}
+
+
+std::string get_home_dir()
+{
+    struct passwd pwd {};
+    struct passwd *result;
+    constexpr size_t bufsize = 16384;
+    char buf[bufsize];
+
+    getpwuid_r(getuid(), &pwd, buf, bufsize, &result);
+    if (result == nullptr) {
+        // not found or error
+        // (we could check return value + errno and log error here)
+        return "/tmp";
+    }
+
+    return {result->pw_dir};
 }
 
 

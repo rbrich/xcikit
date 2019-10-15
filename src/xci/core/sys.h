@@ -16,7 +16,10 @@
 #ifndef XCI_CORE_SYS_H
 #define XCI_CORE_SYS_H
 
+#include <initializer_list>
+#include <string>
 #include <cstdint>
+#include <csignal>
 
 #ifdef __linux__
 #include <sys/types.h>
@@ -51,6 +54,21 @@ namespace xci::core {
 ///
 /// \return system-wide unique integral thread ID
 ThreadId get_thread_id();
+
+
+/// Block a set of signals. Blocked signals can be checked using `pending_signals`.
+/// \param signums      set of signals to block
+void block_signals(std::initializer_list<int> signums);
+
+/// Check for any pending signal from the set.
+/// \param signums      set of signals to check
+/// \return             -1 error, 0 none, N = signum
+int pending_signals(std::initializer_list<int> signums);
+
+
+/// Retrieve home dir of current user from password file (i.e. /etc/passwd).
+/// \return             the home dir or in case of error "/tmp"
+std::string get_home_dir();
 
 
 }  // namespace xci::core

@@ -21,17 +21,23 @@
 #include <xci/core/file.h>
 #include <xci/core/Vfs.h>
 #include <xci/core/log.h>
+#include <xci/core/sys.h>
+#include <xci/core/format.h>
+#include <xci/core/string.h>
 #include <xci/config.h>
 
 #include <docopt.h>
+#include <replxx.hxx>
+
 #include <iostream>
 #include <vector>
 #include <stack>
 #include <algorithm>
 
-using namespace std;
 using namespace xci::core;
 using namespace xci::script;
+using Replxx = replxx::Replxx;
+using namespace std;
 
 
 struct Options {
@@ -46,30 +52,31 @@ struct Options {
 };
 
 
-void evaluate(const string& line, const Options& opts)
+std::vector<std::unique_ptr<Module>>& modules()
+{
+    static std::vector<std::unique_ptr<Module>> modules;
+    return modules;
+}
+
+bool evaluate(const string& line, const Options& opts, int input_number=-1)
 {
     static TermCtl& t = TermCtl::stdout_instance();
     static Interpreter interpreter;
-    static std::vector<std::unique_ptr<Module>> modules;
 
     auto& parser = interpreter.parser();
     auto& compiler = interpreter.compiler();
     auto& machine = interpreter.machine();
 
     try {
-        if (modules.empty()) {
+        if (modules().empty()) {
             interpreter.configure(opts.compiler_flags);
-            modules.push_back(std::make_unique<BuiltinModule>());
+            modules().push_back(std::make_unique<BuiltinModule>());
 
             if (opts.with_std_lib) {
                 auto f = Vfs::default_instance().read_file("script/sys.ys");
                 auto content = f.content();
                 auto sys_module = interpreter.build_module("sys", content->string_view());
-                modules.push_back(move(sys_module));
-
-                /*if (opts.print_module) {
-                    cout << "Sys module content:" << endl << compiler.get_module(2) << endl;
-                }*/
+                modules().push_back(move(sys_module));
             }
         }
 
@@ -82,8 +89,9 @@ void evaluate(const string& line, const Options& opts)
         }
 
         // compile
-        auto module = std::make_unique<Module>("<input>");
-        for (auto& m : modules)
+        std::string module_name = input_number >= 0 ? format("<input_{}>", input_number) : "<input>";
+        auto module = std::make_unique<Module>(module_name);
+        for (auto& m : modules())
             module->add_imported_module(*m);
         Function func {*module, module->symtab()};
         compiler.compile(func, ast);
@@ -105,7 +113,7 @@ void evaluate(const string& line, const Options& opts)
 
         // stop if we were only processing the AST, without actual compilation
         if ((opts.compiler_flags & Compiler::PPMask) != 0)
-            return;
+            return false;
 
         stack<vector<size_t>> codelines_stack;
         if (opts.print_bytecode || opts.trace_bytecode) {
@@ -177,7 +185,8 @@ void evaluate(const string& line, const Options& opts)
             cout << t.bold() << *result << t.normal() << endl;
         }
 
-        modules.push_back(move(module));
+        modules().push_back(move(module));
+        return true;
     } catch (const Error& e) {
         if (!e.file().empty())
             cout << e.file() << ": ";
@@ -185,7 +194,15 @@ void evaluate(const string& line, const Options& opts)
         if (!e.detail().empty())
             cout << std::endl << t.yellow() << e.detail() << t.normal();
         cout << endl;
+        return false;
     }
+}
+
+
+void repl_help()
+{
+    cout << ".h, .help                  show all accepted commands" << endl;
+    cout << ".dm, .dump-module [#]      print module contents of last compiled input (or specified input number)" << endl;
 }
 
 
@@ -252,14 +269,50 @@ int main(int argc, char* argv[])
     }
 
     TermCtl& t = TermCtl::stdout_instance();
-    string line;
-    do {
-        cout << t.green() << "λ " << t.normal() << flush;
-        // TODO: use replxx for line editing
-        if (!getline(cin, line))
-            break;
-        evaluate(line, opts);
-    } while (true);
+    Replxx rx;
+    int input_number = 0;
+    std::string history_file = "./.xci_script_history";
+    rx.history_load(history_file);
+    rx.set_max_history_size(1000);
 
+    block_signals({SIGINT, SIGQUIT});
+    while (pending_signals({SIGINT, SIGQUIT}) <= 0) {
+        const char* input;
+        do {
+            input = rx.input(t.format("{green}_{}> {normal}", input_number));
+        } while (input == nullptr && errno == EAGAIN);
+
+        if (input == nullptr)
+            break;
+
+        std::string line{input};
+        strip(line);
+        if (line.empty())
+            continue;
+
+        rx.history_add(input);
+
+        if (line[0] == '.') {
+            // control commands
+            // TODO: use PEGTL for parsing
+            if (line == ".h" || line == ".help")
+                repl_help();
+            else if (line == ".dm" || line == ".dump-module") {
+                if (modules().empty())
+                    cout << t.red().bold() << "Error: no modules available" << t.normal() << endl;
+                else {
+                    int num = modules().size() - 1;
+                    cout << "Module content (" << num << "):" << endl << *modules()[num] << endl;
+                }
+            } else
+                cout << t.red().bold() << "Error: unknown command: " << line << " (try .help)" << t.normal() << endl;
+            continue;
+        }
+
+        if (evaluate(line, opts, input_number))
+            ++input_number;
+    }
+
+    rx.history_save(history_file);
     return 0;
 }
