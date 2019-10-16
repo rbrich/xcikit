@@ -21,13 +21,13 @@
 #include <xci/core/file.h>
 #include <xci/core/Vfs.h>
 #include <xci/core/log.h>
-#include <xci/core/sys.h>
 #include <xci/core/format.h>
 #include <xci/core/string.h>
 #include <xci/config.h>
 
 #include <docopt.h>
 #include <replxx.hxx>
+#include <tao/pegtl.hpp>
 
 #include <iostream>
 #include <vector>
@@ -37,7 +37,14 @@
 using namespace xci::core;
 using namespace xci::script;
 using Replxx = replxx::Replxx;
-using namespace std;
+using std::string;
+using std::cin;
+using std::cout;
+using std::endl;
+using std::flush;
+using std::stack;
+using std::vector;
+using std::map;
 
 
 struct Options {
@@ -89,7 +96,7 @@ bool evaluate(const string& line, const Options& opts, int input_number=-1)
         }
 
         // compile
-        std::string module_name = input_number >= 0 ? format("<input_{}>", input_number) : "<input>";
+        std::string module_name = input_number >= 0 ? format("input_{}", input_number) : "<input>";
         auto module = std::make_unique<Module>(module_name);
         for (auto& m : modules())
             module->add_imported_module(*m);
@@ -199,11 +206,105 @@ bool evaluate(const string& line, const Options& opts, int input_number=-1)
 }
 
 
-void repl_help()
-{
-    cout << ".h, .help                  show all accepted commands" << endl;
-    cout << ".dm, .dump-module [#]      print module contents of last compiled input (or specified input number)" << endl;
-}
+namespace cmd_parser {
+using namespace tao::pegtl;
+
+// ----------------------------------------------------------------------------
+// Grammar
+
+struct Unsigned: seq< plus<digit> > {};
+
+struct Help: sor<TAO_PEGTL_KEYWORD("h"), TAO_PEGTL_KEYWORD("help")> {};
+struct DumpModule: seq<
+            sor<TAO_PEGTL_KEYWORD("dm"), TAO_PEGTL_KEYWORD("dump_module")>,
+            star<space>,
+            opt<sor< Unsigned, identifier> >
+        > {};
+
+struct CmdGrammar: seq<
+            one<'.'>,
+            sor<Help, DumpModule>,
+            eof
+        > {};
+
+// ----------------------------------------------------------------------------
+// Actions
+
+struct Args {
+    size_t num = 0;
+    unsigned u1;
+    std::string s1;
+};
+
+template<typename Rule>
+struct Action : nothing<Rule> {};
+
+template<>
+struct Action<Help> {
+    static void apply0() {
+        cout << ".h, .help                      show all accepted commands" << endl;
+        cout << ".dm, .dump_module [#|name]     print contents of last compiled module (or module by index or by name)" << endl;
+    }
+};
+
+template<>
+struct Action<DumpModule> : change_states< Args > {
+    template<typename Input>
+    static void success(const Input &in, Args& args) {
+        TermCtl& t = TermCtl::stdout_instance();
+        if (modules().empty()) {
+            cout << t.red().bold() << "Error: no modules available" << t.normal() << endl;
+            return;
+        }
+
+        unsigned mod = 0;
+        if (args.num == 1) {
+            if (!args.s1.empty()) {
+                size_t n = 0;
+                for (const auto& m : modules()) {
+                    if (m->name() == args.s1) {
+                        cout << "Module [" << n << "] " << args.s1 << ":" << endl << *m << endl;
+                        return;
+                    }
+                    ++n;
+                }
+            } else {
+                mod = args.u1;
+                if (mod >= modules().size()) {
+                    cout << t.red().bold() << "Error: module index out of range: "
+                         << mod << t.normal() << endl;
+                    return;
+                }
+            }
+        } else {
+            mod = modules().size() - 1;
+        }
+        const auto& m = *modules()[mod];
+        cout << "Module [" << mod << "] " << m.name() << ":" << endl << m << endl;
+    }
+};
+
+template<>
+struct Action<Unsigned> {
+    template<typename Input>
+    static void apply(const Input &in, Args& args) {
+        ++args.num;
+        args.u1 = atoi(in.string().c_str());
+    }
+};
+
+template<>
+struct Action<identifier> {
+    template<typename Input>
+    static void apply(const Input &in, Args& args) {
+        ++args.num;
+        args.s1 = in.string();
+    }
+};
+
+// ----------------------------------------------------------------------------
+
+}  // namespace cmd_parser
 
 
 int main(int argc, char* argv[])
@@ -275,15 +376,16 @@ int main(int argc, char* argv[])
     rx.history_load(history_file);
     rx.set_max_history_size(1000);
 
-    block_signals({SIGINT, SIGQUIT});
-    while (pending_signals({SIGINT, SIGQUIT}) <= 0) {
+    for (;;) {
         const char* input;
         do {
             input = rx.input(t.format("{green}_{}> {normal}", input_number));
         } while (input == nullptr && errno == EAGAIN);
 
-        if (input == nullptr)
+        if (input == nullptr) {
+            cout << ".quit" << endl;
             break;
+        }
 
         std::string line{input};
         strip(line);
@@ -294,18 +396,19 @@ int main(int argc, char* argv[])
 
         if (line[0] == '.') {
             // control commands
-            // TODO: use PEGTL for parsing
-            if (line == ".h" || line == ".help")
-                repl_help();
-            else if (line == ".dm" || line == ".dump-module") {
-                if (modules().empty())
-                    cout << t.red().bold() << "Error: no modules available" << t.normal() << endl;
-                else {
-                    int num = modules().size() - 1;
-                    cout << "Module content (" << num << "):" << endl << *modules()[num] << endl;
+            using cmd_parser::CmdGrammar;
+            using cmd_parser::Action;
+
+            tao::pegtl::memory_input<> in(line, "command");
+            try {
+                if (!tao::pegtl::parse< CmdGrammar, Action >( in )) {
+                    // not matched at all
+                    cout << t.red().bold() << "Error: unknown command: " << line << " (try .help)" << t.normal() << endl;
                 }
-            } else
+            } catch (tao::pegtl::parse_error&) {
+                // partially matched, encountered error - possibly wrong argument
                 cout << t.red().bold() << "Error: unknown command: " << line << " (try .help)" << t.normal() << endl;
+            }
             continue;
         }
 

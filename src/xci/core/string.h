@@ -49,7 +49,7 @@ void rstrip(std::string &str, T strip_chars) {
 inline
 void rstrip(std::string &str) { return rstrip(str, whitespace_chars); }
 
-void strip(std::string &str) { lstrip(str); rstrip(str); }
+inline void strip(std::string &str) { lstrip(str); rstrip(str); }
 
 // Escape non-printable characters with C escape sequences (eg. '\n')
 std::string escape(std::string_view str);
