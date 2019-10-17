@@ -229,6 +229,10 @@ TEST_CASE( "Blocks and lambdas", "[script][interpreter]" )
     check_interpreter("b = {1+2}; b", "3");
     check_interpreter("b:Int = {1+2}; b", "3");
 
+    // immediately called lambda
+    check_interpreter("|x:Int|{x+1} 2", "3");
+    check_interpreter("|x|{x+1} 2", "3");  // generic lambda
+
     // argument propagation: `f` returns a function which consumes the second arg
     check_interpreter("f = |a:Int|{ |b:Int|{ a+b } }; f 1 2",     "3");
 

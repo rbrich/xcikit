@@ -368,10 +368,17 @@ public:
 
         Function& fn = module().get_function(v.index);
         fn.set_signature(m_value_type.signature_ptr());
-
-        // compile body and resolve return type
-        m_processor.process_block(fn, v.body);
-        m_value_type = TypeInfo{fn.signature_ptr()};
+        if (fn.is_generic()) {
+            // instantiate the specialization
+            auto fspec = resolve_specialization(fn);
+            m_processor.process_block(*fspec, v.body);
+            m_value_type = TypeInfo{fspec->signature_ptr()};
+            v.index = module().add_function(move(fspec));
+        } else {
+            // compile body and resolve return type
+            m_processor.process_block(fn, v.body);
+            m_value_type = TypeInfo{fn.signature_ptr()};
+        }
 
         // parameterless function is equivalent to its return type (eager evaluation)
         while (m_value_type.is_callable() && m_value_type.signature().params.empty()) {

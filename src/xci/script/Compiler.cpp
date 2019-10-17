@@ -261,7 +261,10 @@ public:
             arg->apply(*this);
         }
         // call the function or push the value
+        m_imm_call = true;
         v.callable->apply(*this);
+        m_imm_call = false;
+
         // add executes for each call that results in function which consumes more args
         while (v.wrapped_execs > 0) {
             m_function.code().add_opcode(Opcode::Execute);
@@ -352,7 +355,7 @@ public:
             }
             // MAKE_CLOSURE <function_idx>
             m_function.code().add_opcode(Opcode::MakeClosure, v.index);
-            if (!func.has_parameters()) {
+            if (m_imm_call || !func.has_parameters()) {
                 // parameterless closure is executed immediately
                 // EXECUTE
                 m_function.code().add_opcode(Opcode::Execute);
@@ -361,6 +364,8 @@ public:
             if (func.has_parameters()) {
                 // LOAD_FUNCTION <function_idx>
                 m_function.code().add_opcode(Opcode::LoadFunction, v.index);
+                if (m_imm_call)
+                    m_function.code().add_opcode(Opcode::Execute);
             } else {
                 // CALL0 <function_idx>
                 m_function.code().add_opcode(Opcode::Call0, v.index);
@@ -384,9 +389,10 @@ public:
 private:
     Module& module() { return m_function.module(); }
 
-protected:
+private:
     Compiler& m_compiler;
     Function& m_function;
+    bool m_imm_call = false;
 };
 
 
