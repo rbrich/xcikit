@@ -46,8 +46,10 @@ struct SpaceOrComment: sor< space, LineComment, BlockComment> {};
 struct SC: star< SpaceOrComment > {};
 struct RSC: seq<space, SC> {};  // required at least one space
 
+// Aux templates
+template <class T> struct SSList: list_tail<T, one<';'>, SpaceOrComment> {};  // semicolon-separated list
+
 // Basic tokens
-struct Semicolon: sor<one<';'>, eolf> {};  // optional at EOL / EOF
 struct Identifier: seq< not_at<Keyword>, star<one<'_'>>, lower, star< identifier_other > > {};
 struct TypeName: seq< upper, star< identifier_other > > {};
 struct PrefixOperator: sor< one<'-'>, one<'+'>, one<'!'>, one<'~'> > {};
@@ -90,7 +92,7 @@ struct TypeContext: if_must< one<'('>, SC, TypeConstraint, SC, star_must<one<','
 struct FunctionType: seq< DeclParams, SC, opt<DeclResult>, SC, opt<if_must<KeywordWith, SC, TypeContext>> > {};
 struct ListType: if_must< one<'['>, SC, Type, SC, one<']'> > {};
 struct Type: sor< TypeName, ListType, FunctionType > {};
-struct Block: if_must< one<'{'>, SC, sor< one<'}'>, seq<Statement, SC, star<Semicolon, SC, Statement, SC>, opt<Semicolon, SC>, one<'}'>> > > {};
+struct Block: if_must< one<'{'>, SC, sor< one<'}'>, seq<SSList<Statement>, SC, one<'}'>> > > {};
 struct Function: seq< opt<FunctionType>, SC, Block> {};
 struct BracedExpr: if_must< one<'('>, SC, Expression, SC, one<')'> > {};
 struct ExprPrefix: if_must< PrefixOperator, SC, ExprOperand, SC > {};
@@ -114,12 +116,13 @@ struct Statement: sor< Definition, Invocation > {};
 // Module-level definitions
 struct ClassDefinition: seq< Variable, SC, opt_must<one<'='>, SC, Expression> > {};
 struct DefClass: if_must< KeywordClass, SC, TypeName, RSC, TypeName, SC, opt<TypeContext>, SC,
-        one<'{'>, SC, sor< one<'}'>, must<ClassDefinition, SC, star<Semicolon, SC, ClassDefinition, SC>, opt<Semicolon>, SC, one<'}'>> > > {};
+        one<'{'>, SC, sor< one<'}'>, must<SSList<ClassDefinition>, SC, one<'}'>> > > {};
 struct DefInstance: if_must< KeywordInstance, SC, TypeName, RSC, Type, SC, opt<TypeContext>, SC,
-        one<'{'>, SC, sor< one<'}'>, must<Definition, SC, star<Semicolon, SC, Definition, SC>, opt<Semicolon, SC>, one<'}'>> > > {};
+        one<'{'>, SC, sor< one<'}'>, must<SSList<Definition>, SC, one<'}'>> > > {};
+struct TopLevelStatement: sor<DefClass, DefInstance, Statement> {};
 
 // Source module
-struct Module: until< eof, must<seq< SC, sor<DefClass, DefInstance, Statement>, SC, Semicolon, SC >> > {};
+struct Module: must<SC, SSList<TopLevelStatement>, SC, eof> {};
 
 
 // ----------------------------------------------------------------------------
@@ -701,8 +704,8 @@ struct Control : normal< Rule >
     }
 };
 
+template<> const std::string Control<eof>::errmsg = "unexpected statement (missing semicolon?)";
 template<> const std::string Control<Expression>::errmsg = "expected Expression";
-template<> const std::string Control<Semicolon>::errmsg = "expected ';'";
 template<> const std::string Control<DeclParams>::errmsg = "expected function parameter declaration";
 template<> const std::string Control<ExprInfixRight>::errmsg = "expected infix operator";
 template<> const std::string Control<Variable>::errmsg = "expected variable name";
