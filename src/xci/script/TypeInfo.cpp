@@ -6,6 +6,7 @@
 
 #include "TypeInfo.h"
 #include "Error.h"
+#include <range/v3/algorithm/any_of.hpp>
 #include <numeric>
 
 namespace xci::script {
@@ -209,6 +210,22 @@ bool TypeInfo::operator==(const TypeInfo& rhs) const
 }
 
 
+bool TypeInfo::is_generic() const
+{
+    if (m_type == Type::Unknown)
+        return true;
+    if (m_type == Type::Function)
+        return signature_ptr()->is_generic();
+    if (m_type == Type::List)
+        return elem_type().is_generic();
+    if (m_type == Type::Tuple)
+        return ranges::any_of(subtypes(), [](const TypeInfo& type_info) {
+            return type_info.is_generic();
+        });
+    return false;
+}
+
+
 auto TypeInfo::generic_var() const -> Var
 {
     assert(m_type == Type::Unknown);
@@ -263,16 +280,11 @@ std::string TypeInfo::name() const
 }
 
 
-void Signature::resolve_return_type(const TypeInfo& t)
+bool Signature::is_generic() const
 {
-    if (!return_type) {
-        if (!t)
-            throw MissingExplicitType();
-        return_type = t;
-        return;
-    }
-    if (return_type != t)
-        throw UnexpectedReturnType(return_type, t);
+    return ranges::any_of(params, [](const TypeInfo& type_info) {
+        return type_info.is_generic();
+    });
 }
 
 

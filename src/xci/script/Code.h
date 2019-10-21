@@ -86,8 +86,6 @@ enum class Opcode: uint8_t {
     Exp_32,
     Exp_64,
 
-    Subscript_32,
-
     // Control flow
     Execute,                // pull closure from stack, unwrap it, call the contained function
 
@@ -118,6 +116,8 @@ enum class Opcode: uint8_t {
 
     Jump,                   // arg => relative jump (+N instructions) - unconditional
     JumpIfNot,              // pull cond from stack, arg => relative jump (+N instructions) if cond is false
+
+    Subscript,              // arg => elem type
 
     Invoke,                 // arg => type index in current module, pull value from stack, invoke it
 

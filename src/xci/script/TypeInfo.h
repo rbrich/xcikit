@@ -113,6 +113,7 @@ public:
     bool is_void() const { return m_type == Type::Void; }
     bool is_struct() const { return m_type == Type::Struct; }
 
+    bool is_generic() const;
     void replace_var(uint8_t idx, const TypeInfo& ti);
 
     TypeInfo effective_type() const;
@@ -155,8 +156,7 @@ struct Signature {
 
     bool has_closure() const { return !nonlocals.empty() || !partial.empty(); }
 
-    // Check return type matches and set it to concrete type if it's generic.
-    void resolve_return_type(const TypeInfo& t);
+    bool is_generic() const;
 
     bool operator==(const Signature& rhs) const = default;
     bool operator!=(const Signature& rhs) const = default;

@@ -532,7 +532,7 @@ TEST_CASE( "Lists", "[script][interpreter]" )
 {
     CHECK(interpret("[1,2,3] ! 2") == "3");
     CHECK_THROWS_AS(interpret("[1,2,3]!3"), IndexOutOfBounds);
-    //CHECK(interpret("[[1,2],[3,4],[5,6]] ! 1 ! 0") == "3");
+    CHECK(interpret("[[1,2],[3,4],[5,6]] ! 1 ! 0") == "3");
     CHECK(interpret("head = fun l:[Int] -> Int { l!0 }; head [1,2,3]") == "1");
 }
 

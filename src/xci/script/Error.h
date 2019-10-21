@@ -148,8 +148,8 @@ struct UnexpectedReturnType : public ScriptError {
 
 
 struct MissingExplicitType : public ScriptError {
-    explicit MissingExplicitType()
-        : ScriptError("type cannot be inferred and wasn't specified") {}
+    explicit MissingExplicitType(const SourceLocation& loc)
+        : ScriptError("type cannot be inferred and wasn't specified", loc) {}
 };
 
 

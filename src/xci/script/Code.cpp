@@ -75,7 +75,7 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::Neg_8:
         case Opcode::Neg_32:
         case Opcode::Neg_64:            return os << "NEG";
-        case Opcode::Subscript_32:      return os << "SUBSCRIPT";
+        case Opcode::Subscript:         return os << "SUBSCRIPT";
         case Opcode::Invoke:            return os << "INVOKE";
         case Opcode::LoadStatic:        return os << "LOAD_STATIC";
         case Opcode::LoadModule:        return os << "LOAD_MODULE";

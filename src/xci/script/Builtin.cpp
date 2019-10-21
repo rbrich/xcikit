@@ -191,7 +191,7 @@ const char* builtin::op_to_name(ast::Operator::Op op)
         case Op::Div:           return "/";
         case Op::Mod:           return "%";
         case Op::Exp:           return "**";
-        case Op::Subscript:     return "[]";
+        case Op::Subscript:     return "!";
         case Op::LogicalNot:    return "-";
         case Op::BitwiseNot:    return "~";
         case Op::UnaryPlus:     return "+";
@@ -436,13 +436,16 @@ BuiltinModule::add_subscript_function()
     fn->add_parameter("lhs", ti_list(ti_int32()));
     fn->add_parameter("rhs", ti_int32());
     fn->set_compiled();
-    fn->code().add_opcode(Opcode::Subscript_32);
+    Index tidx = add_type(TypeInfo{Type::Int32});
+    fn->code().add_opcode(Opcode::Subscript, tidx);
     symtab().add({name, Symbol::Function, add_function(std::move(fn))});
 }
 
 
 void BuiltinModule::add_intrinsics()
 {
+    // directly write instructions to function code
+
     // no args
     symtab().add({"__noop", Symbol::Instruction, Index(Opcode::Noop)});
     symtab().add({"__logical_not", Symbol::Instruction, Index(Opcode::LogicalNot)});
@@ -505,9 +508,11 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__exp_8", Symbol::Instruction, Index(Opcode::Exp_8)});
     symtab().add({"__exp_32", Symbol::Instruction, Index(Opcode::Exp_32)});
     symtab().add({"__exp_64", Symbol::Instruction, Index(Opcode::Exp_64)});
-    symtab().add({"__subscript_32", Symbol::Instruction, Index(Opcode::Subscript_32)});
+
     // one arg
+    symtab().add({"__subscript", Symbol::Instruction, Index(Opcode::Subscript)});
     symtab().add({"__cast", Symbol::Instruction, Index(Opcode::Cast)});
+
     // two args
     symtab().add({"__copy", Symbol::Instruction, Index(Opcode::Copy)});
     symtab().add({"__drop", Symbol::Instruction, Index(Opcode::Drop)});

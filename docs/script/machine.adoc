@@ -195,3 +195,80 @@ so its size depends on system machine, e.g. for 64bit CPU, it's 8 bytes.
 
 The closure values are a tuple of nonlocals and partial call arguments.
 The size of the tuple and its content depends on the function's type information.
+
+== Bytecode
+
+The instructions and their arguments are encoded in a bytecode representation.
+There are 256 possible instructions, each of which can have any number of bytes
+are arguments. Some instructions use variable-length arguments, so
+the instruction code is not enough for knowing how many following bytes
+are the arguments. We have to look inside their bits.
+
+Example instructions:
+
+* `NOOP` - Do nothing. Useful as placeholder or replacement of deleted code
+when generating the machine bytecode.
+* `LOGICAL_OR` - Pulls two Bools from stack and pushes a Bool result
+of `||` operation back.
+* `SUBSCRIPT` - Has a type T as an instruction argument. Pulls a list of T
+and a Int index from stack. Pushes result of `!` operation (of type T) back.
+
+NOTE: All instructions are documented in `Code.h` and `Machine.cpp`.
+
+=== Encoding of a type
+
+Types are stored in modules. Any type from current module, builtin module
+or an imported module can be referenced by an instruction.
+The information that needs to be encoded in the instruction arguments
+is which module contains the type and index of the type in the module's
+type table.
+
+Builtin types and types from current module are expected to be referenced
+more frequently, so they have special encoding. Other (imported) modules
+have a common varint encoding.
+
+Two most-significant two bits of first byte decides which kind of encoding is used:
+
+- `00 <idx:6>` - current module (first 64 types)
+- `01 <idx:6>` - builtin types (first 64 types)
+- `10 <mod:3> <idx:3>` - imported module (first 8 imported modules, first 8 types from each one)
+- `11 <mod:Varint> <idx:Varint>` - any module, any type index (varint encoding)
+
+Note that in the last kind of encoding, the varint of module index begins
+with only 6 bits. The most-significant bit of those six is still used as the
+continuation bit. Up to 5 bits of module index can fit this first byte,
+resulting in 32 first imported modules still having single byte representation.
+
+=== Varint encoding
+
+Variable length integers are used for encoding various indexes.
+The most-significant bit is reserved as the _continuation_ bit,
+the other bits carry the actual data.
+
+Continuation bit:
+
+- `0` - This is the final byte.
+- `1` - More bytes need to be processed.
+
+The data bits are joined in little-endian order, i.e. the first byte
+always contains the least-significant bits, the bits from the following
+bytes are then appended as more significant bits (without shifting the
+already collected bits).
+
+Example:
+
+- `0b_0000_0000` => 0
+- `0b_0000_1000` => 8
+- `0b_0111_1111` => 127 (maximal single-byte value)
+- `0b_1000_1000, 0b_0101_1001` => `0b101_1001_000_1000` => 11400
+
+==== Shortened first byte
+
+Spare bits from previous byte (which already contain some other information)
+can be used as the first "byte" of Varint encoding. In this case, the first
+byte is shorter, providing less information bits to the output integer. All
+other rules still apply.
+
+Example: First byte has only 5 bits (contributing 4 bits to the result):
+
+- `0b_1_1000, 0b_0101_1001` => `0b101_1001_1000` => 1432

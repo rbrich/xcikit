@@ -10,6 +10,7 @@
 #include <xci/script/Builtin.h>
 #include <xci/script/Error.h>
 #include <range/v3/view/enumerate.hpp>
+#include <range/v3/algorithm/any_of.hpp>
 #include <vector>
 #include <sstream>
 
@@ -244,7 +245,10 @@ public:
             v.index = v.definition->symbol()->index();
         } else {
             // add new symbol table for the function
-            SymbolTable& fn_symtab = symtab().add_child("<lambda>");
+            std::string name = "<lambda>";
+            if (v.type.params.empty())
+                name = "<block>";
+            SymbolTable& fn_symtab = symtab().add_child(name);
             auto fn = make_unique<Function>(module(), fn_symtab);
             v.index = module().add_function(move(fn));
         }
@@ -276,8 +280,13 @@ public:
             //  TypeInfo(Type::Unknown); ?
             throw UndefinedTypeName(t.name, t.source_loc);
         t.symbol = resolve_symbol(t.name);
-        if (!t.symbol)
-            throw UndefinedTypeName(t.name, t.source_loc);
+        if (!t.symbol) {
+            if (t.name.size() == 1 && isupper(t.name[0])) {
+                // single-letter uppercase types like T are generic by default
+                t.symbol = symtab().add({t.name, Symbol::TypeVar, 1});
+            } else
+                throw UndefinedTypeName(t.name, t.source_loc);
+        }
     }
 
     void visit(ast::FunctionType& t) final {
@@ -290,7 +299,8 @@ public:
         for (auto& p : t.params) {
             if (p.type)
                 p.type->apply(*this);
-            p.identifier.symbol = symtab().add({p.identifier.name, Symbol::Parameter, par_idx++});
+            if (!p.identifier.name.empty())
+                p.identifier.symbol = symtab().add({p.identifier.name, Symbol::Parameter, par_idx++});
         }
         if (t.result_type)
             t.result_type->apply(*this);

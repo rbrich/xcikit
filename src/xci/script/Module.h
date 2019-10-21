@@ -92,6 +92,7 @@ private:
     std::vector<std::unique_ptr<Function>> m_functions;
     std::vector<std::unique_ptr<Class>> m_classes;
     std::vector<std::unique_ptr<Instance>> m_instances;
+    std::vector<std::unique_ptr<Function>> m_templates;
     std::vector<TypeInfo> m_types;
     TypedValues m_values;
     SymbolTable m_symtab;
