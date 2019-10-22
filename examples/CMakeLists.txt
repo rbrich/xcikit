@@ -82,11 +82,12 @@ endif ()
 
 if (XCI_WITH_VULKAN)
     find_package(glfw3 3.2 REQUIRED)
+    find_package(Vulkan REQUIRED)
     add_executable(demo_vulkan demo_vulkan.cpp)
     target_link_libraries(demo_vulkan
         #xci-text
         #xci-graphics-vulkan
-        vulkan
+        Vulkan::Vulkan
         glfw)
     target_include_directories(demo_vulkan PRIVATE ${CMAKE_SOURCE_DIR}/ext)
     install(TARGETS demo_vulkan EXPORT xcikit DESTINATION ${INST_EXAMPLES})

@@ -53,9 +53,17 @@ public:
     void set_debug_flags(View::DebugFlags flags) override;
 
 private:
+    void setup_view();
+    void draw();
+
+private:
     GLFWwindow* m_window = nullptr;
     View m_view {this};
     RefreshMode m_mode = RefreshMode::OnDemand;
+    Vec2i m_window_pos;
+    Vec2i m_window_size;
+    std::chrono::microseconds m_timeout {0};
+    bool m_clear_timeout = false;
 };
 
 
