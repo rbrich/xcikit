@@ -19,6 +19,13 @@ set(XCI_GRAPHICS_OPENGL_SOURCES
     opengl/GlTexture.cpp
     opengl/GlWindow.cpp)
 
+set(XCI_GRAPHICS_VULKAN_SOURCES
+#    vulkan/VulkanPrimitives.cpp
+#    vulkan/VulkanRenderer.cpp
+#    vulkan/VulkanShader.cpp
+#    vulkan/VulkanTexture.cpp
+    vulkan/VulkanWindow.cpp)
+
 set(XCI_GRAPHICS_PANDA3D_SOURCES
     panda/PandaTexture.cpp
     panda/PandaSprites.cpp
@@ -36,9 +43,11 @@ set(XCI_GRAPHICS_MAGNUM_SOURCES
 # Dependencies #
 # ------------ #
 
-# OpenGL
-if (XCI_WITH_OPENGL)
+# OpenGL / Vulkan
+if (XCI_WITH_OPENGL OR XCI_WITH_VULKAN)
     find_package(glfw3 3.2 REQUIRED)
+endif()
+if (XCI_WITH_OPENGL)
     find_package(glad REQUIRED)
 endif ()
 
@@ -88,6 +97,24 @@ if (XCI_WITH_OPENGL)
     endif()
 
     install(TARGETS xci-graphics-opengl
+        EXPORT xcikit DESTINATION lib)
+endif ()
+
+if (XCI_WITH_VULKAN)
+    add_library(xci-graphics-vulkan
+        ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_VULKAN_SOURCES})
+    target_include_directories(xci-graphics-vulkan
+        PUBLIC
+            ${XCI_INCLUDE_DIRS}
+        PRIVATE
+            ${CONAN_INCLUDE_DIRS_INCBIN})
+    target_link_libraries(xci-graphics-vulkan
+        PUBLIC
+            xci-core
+            ${CMAKE_DL_LIBS}
+        PRIVATE
+            glfw)
+    install(TARGETS xci-graphics-vulkan
         EXPORT xcikit DESTINATION lib)
 endif ()
 

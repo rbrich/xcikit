@@ -7,6 +7,7 @@
 
 // Select xci-graphics implementation
 #cmakedefine XCI_WITH_OPENGL
+#cmakedefine XCI_WITH_VULKAN
 #cmakedefine XCI_WITH_MAGNUM
 #cmakedefine XCI_WITH_PANDA
 

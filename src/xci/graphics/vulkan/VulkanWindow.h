@@ -1,5 +1,5 @@
-// GlWindow.h created on 2018-03-14, part of XCI toolkit
-// Copyright 2018, 2019 Radek Brich
+// VulkanWindow.h created on 2019-10-22, part of XCI toolkit
+// Copyright 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,13 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_GRAPHICS_GL_WINDOW_H
-#define XCI_GRAPHICS_GL_WINDOW_H
+#ifndef XCI_GRAPHICS_VULKAN_WINDOW_H
+#define XCI_GRAPHICS_VULKAN_WINDOW_H
 
 #include <xci/graphics/Window.h>
 #include <xci/core/geometry.h>
 
-#define GLFW_INCLUDE_NONE
+#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 namespace xci::graphics {
@@ -27,10 +27,10 @@ namespace xci::graphics {
 using core::Vec2i;
 
 
-class GlWindow: public Window {
+class VulkanWindow: public Window {
 public:
-    GlWindow();
-    ~GlWindow() override;
+    VulkanWindow();
+    ~VulkanWindow() override;
 
     void create(const Vec2u& size, const std::string& title) override;
     void display() override;
@@ -53,20 +53,11 @@ public:
     void set_debug_flags(View::DebugFlags flags) override;
 
 private:
-    void setup_view();
-    void draw();
-
-private:
     GLFWwindow* m_window = nullptr;
     View m_view {this};
-    RefreshMode m_mode = RefreshMode::OnDemand;
-    Vec2i m_window_pos;
-    Vec2i m_window_size;
-    std::chrono::microseconds m_timeout {0};
-    bool m_clear_timeout = false;
 };
 
 
 } // namespace xci::graphics
 
-#endif // XCI_GRAPHICS_GL_WINDOW_H
+#endif // include guard

@@ -80,6 +80,18 @@ if (XCI_WITH_OPENGL)
     install(TARGETS demo_glfw EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 endif ()
 
+if (XCI_WITH_VULKAN)
+    find_package(glfw3 3.2 REQUIRED)
+    add_executable(demo_vulkan demo_vulkan.cpp)
+    target_link_libraries(demo_vulkan
+        #xci-text
+        #xci-graphics-vulkan
+        vulkan
+        glfw)
+    target_include_directories(demo_vulkan PRIVATE ${CMAKE_SOURCE_DIR}/ext)
+    install(TARGETS demo_vulkan EXPORT xcikit DESTINATION ${INST_EXAMPLES})
+endif ()
+
 if (XCI_WITH_SFML)
     add_subdirectory(in_sfml)
 endif()

@@ -177,7 +177,7 @@ Dependencies (required):
 
 Dependencies (optional):
 - libzip (XCI_WITH_ZIP)
-- GLFW (XCI_WITH_OPENGL)
+- GLFW (XCI_WITH_OPENGL, XCI_WITH_VULKAN)
 - Magnum (XCI_WITH_MAGNUM)
 - Panda3D (XCI_WITH_PANDA)
 - Catch2 (for tests)

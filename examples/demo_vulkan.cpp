@@ -13,49 +13,59 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <xci/text/Text.h>
-#include <xci/core/Vfs.h>
-#include <xci/config.h>
+//#include <xci/text/Text.h>
+//#include <xci/core/Vfs.h>
+//#include <xci/config.h>
 
-#include <glad/glad.h>
-#define GLFW_INCLUDE_NONE
+#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include <iostream>
 #include <cstdlib>
 
-using namespace xci::text;
-using namespace xci::graphics;
-using namespace xci::core;
+//using namespace xci::text;
+//using namespace xci::graphics;
+//using namespace xci::core;
 
 int main()
 {
-    auto& vfs = Vfs::default_instance();
-    vfs.mount(XCI_SHARE_DIR);
+//    auto& vfs = Vfs::default_instance();
+//    vfs.mount(XCI_SHARE_DIR);
 
     if (!glfwInit())
         return EXIT_FAILURE;
 
-    // OpenGL 3.3 Core profile
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, true);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    if (!glfwVulkanSupported()) {
+        std::cerr << "Vulkan not supported." << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
     // Setup GLFW window
     GLFWwindow* window = glfwCreateWindow(
-            800, 600,
-            "XCI OpenGL Demo",
+            800, 600, "XCI Vulkan Demo",
             nullptr, nullptr);
     if (!window) {
         glfwTerminate();
         return EXIT_FAILURE;
     }
-    glfwMakeContextCurrent(window);
 
-    // Setup GLAD loader
-    if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
-        return EXIT_FAILURE;
+    uint32_t extensionCount = 0;
+    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+
+    std::cout << extensionCount << " extensions supported" << std::endl;
+
+    while(!glfwWindowShouldClose(window)) {
+        glfwPollEvents();
     }
+
+    glfwDestroyWindow(window);
+
+    glfwTerminate();
+
+    /*
+    glfwMakeContextCurrent(window);
 
     // Setup XCI view
     View view;
@@ -95,6 +105,6 @@ int main()
         glfwWaitEvents();
     }
 
-    glfwTerminate();
+    glfwTerminate();*/
     return EXIT_SUCCESS;
 }

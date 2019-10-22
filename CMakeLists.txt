@@ -3,6 +3,7 @@ cmake_policy(VERSION 3.7)
 project(xcikit C CXX)
 
 option(XCI_WITH_OPENGL "Link with GLFW and build libxci-graphics-opengl." ON)
+option(XCI_WITH_VULKAN "Link with GLFW and build libxci-graphics-vulkan." OFF)
 option(XCI_WITH_MAGNUM "Link with Magnum and build libxci-graphics-magnum." OFF)
 option(XCI_WITH_PANDA3D "Link with Panda3D and build libxci-graphics-panda." OFF)
 option(XCI_WITH_SFML "Build example of integration with SFML." OFF)
@@ -120,7 +121,9 @@ add_subdirectory(src/xci/script)
 
 # Choose default graphics engine:
 if (NOT XCI_GRAPHICS_DEFAULT)
-    if (XCI_WITH_OPENGL)
+    if (XCI_WITH_VULKAN)
+        set(XCI_GRAPHICS_DEFAULT vulkan)
+    elseif (XCI_WITH_OPENGL)
         set(XCI_GRAPHICS_DEFAULT opengl)
     elseif (XCI_WITH_PANDA3D)
         set(XCI_GRAPHICS_DEFAULT panda3d)
