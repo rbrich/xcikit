@@ -55,6 +55,7 @@ public:
 private:
     GLFWwindow* m_window = nullptr;
     View m_view {this};
+    RefreshMode m_mode = RefreshMode::OnDemand;
 };
 
 

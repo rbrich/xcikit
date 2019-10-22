@@ -17,7 +17,6 @@
 #include <xci/text/Text.h>
 #include <xci/graphics/Window.h>
 #include <xci/graphics/Sprites.h>
-#include <xci/core/file.h>
 #include <xci/core/Vfs.h>
 #include <xci/config.h>
 #include <cstdlib>
@@ -27,16 +26,20 @@ using namespace xci::graphics;
 using namespace xci::core;
 
 // sample text with forced newlines
+// source: http://www.columbia.edu/~fdc/utf8/index.html
 static const char * sample_text = R"SAMPLE(
-Ty třepotné, smavé hvězdičky{br}
-tak čiperně na mne hledí -{br}
-ach prosím vás, je to pravda vše,{br}
-co lidé prý o vás vědí?{br}
-{br}
-Že maličké vy prý hvězdičky{br}
-jste obrovská samá těla -{br}
-a od jedné k druhé prý sto let{br}
-a k některé věčnost celá?{br}
+Vitrum edere possum; mihi non nocet.{br}
+Posso mangiare il vetro e non mi fa male.{br}
+Je peux manger du verre, ça ne me fait pas mal.{br}
+Puedo comer vidrio, no me hace daño.{br}
+Posso comer vidro, não me faz mal.{br}
+Mi kian niam glas han i neba hot mi.{br}
+Ich kann Glas essen, ohne mir zu schaden.{br}
+Mogę jeść szkło i mi nie szkodzi.{br}
+Meg tudom enni az üveget, nem lesz tőle bajom.{br}
+Pot să mănânc sticlă și ea nu mă rănește.{br}
+Eg kan eta glas utan å skada meg.{br}
+Ik kan glas eten, het doet mĳ geen kwaad.{br}
 )SAMPLE";
 
 int main()
@@ -52,18 +55,18 @@ int main()
         return EXIT_FAILURE;
 
     Text text;
-    text.set_string(sample_text);
+    text.set_markup_string(sample_text);
     text.set_font(font);
     text.set_font_size(0.08);
     text.set_color(Color::White());
 
     window.set_draw_callback([&](View& view) {
         auto vs = view.viewport_size();
-        text.draw(view, {0.5f * vs.x - 1.5f, -0.5f});
+        text.draw(view, {0.5f * vs.x - 1.9f, -0.55f});
 
         auto& tex = font.get_texture();
         auto tex_size = view.size_to_viewport(FramebufferSize{tex->size()});
-        Sprites font_texture(tex);
+        Sprites font_texture(tex, Color::Blue());
         ViewportRect rect = {0, 0, tex_size.x, tex_size.y};
         font_texture.add_sprite(rect);
         font_texture.draw(view, {-0.5f * vs.x + 0.01f, -0.5f * rect.h});

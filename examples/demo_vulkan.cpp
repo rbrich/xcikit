@@ -56,14 +56,6 @@ int main()
 
     std::cout << extensionCount << " extensions supported" << std::endl;
 
-    while(!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
-    }
-
-    glfwDestroyWindow(window);
-
-    glfwTerminate();
-
     /*
     glfwMakeContextCurrent(window);
 
@@ -94,17 +86,18 @@ int main()
 
     Text text(font, "Hello from XCI", Text::Format::None);
     text.set_font_size(50);
-
+*/
     // Run
     while (!glfwWindowShouldClose(window)) {
-        glClear(GL_COLOR_BUFFER_BIT);
+        //glClear(GL_COLOR_BUFFER_BIT);
 
-        text.draw(view, {-200, 0});
+        //text.draw(view, {-200, 0});
 
-        glfwSwapBuffers(window);
+        //glfwSwapBuffers(window);
         glfwWaitEvents();
     }
 
-    glfwTerminate();*/
+    glfwDestroyWindow(window);
+    glfwTerminate();
     return EXIT_SUCCESS;
 }
