@@ -15,8 +15,6 @@
 
 #include "GlTexture.h"
 
-#include <vector>
-
 namespace xci::graphics {
 
 

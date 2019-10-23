@@ -20,8 +20,7 @@
 #include <xci/graphics/Renderer.h>
 #include <xci/core/geometry.h>
 
-namespace xci {
-namespace text {
+namespace xci::text {
 
 using core::Vec2u;
 using core::Rect_u;
@@ -61,6 +60,6 @@ private:
     rbp::MaxRectsBinPack m_binpack;
 };
 
-}} // namespace xci::text
+} // namespace xci::text
 
 #endif // XCI_TEXT_FONTTEXTURE_H

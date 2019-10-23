@@ -17,8 +17,7 @@
 
 #include <xci/core/log.h>
 
-namespace xci {
-namespace text {
+namespace xci::text {
 
 using namespace core::log;
 
@@ -72,4 +71,4 @@ void FontTexture::clear()
 }
 
 
-}} // namespace xci::text
+} // namespace xci::text

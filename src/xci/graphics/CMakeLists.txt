@@ -23,7 +23,7 @@ set(XCI_GRAPHICS_VULKAN_SOURCES
 #    vulkan/VulkanPrimitives.cpp
     vulkan/VulkanRenderer.cpp
 #    vulkan/VulkanShader.cpp
-#    vulkan/VulkanTexture.cpp
+    vulkan/VulkanTexture.cpp
     vulkan/VulkanWindow.cpp)
 
 set(XCI_GRAPHICS_PANDA3D_SOURCES

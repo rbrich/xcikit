@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <xci/graphics/vulkan/VulkanRenderer.h>
 //#include <xci/text/Text.h>
 //#include <xci/core/Vfs.h>
 //#include <xci/config.h>
@@ -24,7 +25,7 @@
 #include <cstdlib>
 
 //using namespace xci::text;
-//using namespace xci::graphics;
+using namespace xci::graphics;
 //using namespace xci::core;
 
 int main()
@@ -51,10 +52,7 @@ int main()
         return EXIT_FAILURE;
     }
 
-    uint32_t extensionCount = 0;
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-
-    std::cout << extensionCount << " extensions supported" << std::endl;
+    VulkanRenderer renderer;
 
     /*
     glfwMakeContextCurrent(window);

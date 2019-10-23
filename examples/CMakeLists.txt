@@ -86,7 +86,7 @@ if (XCI_WITH_VULKAN)
     add_executable(demo_vulkan demo_vulkan.cpp)
     target_link_libraries(demo_vulkan
         #xci-text
-        #xci-graphics-vulkan
+        xci-graphics-vulkan
         Vulkan::Vulkan
         glfw)
     target_include_directories(demo_vulkan PRIVATE ${CMAKE_SOURCE_DIR}/ext)

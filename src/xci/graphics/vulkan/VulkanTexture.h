@@ -1,4 +1,4 @@
-// VulkanRenderer.h created on 2019-10-23, part of XCI toolkit
+// VulkanTexture.h created on 2019-10-23, part of XCI toolkit
 // Copyright 2019 Radek Brich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,31 +13,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_GRAPHICS_VULKAN_RENDERER_H
-#define XCI_GRAPHICS_VULKAN_RENDERER_H
+#ifndef XCI_GRAPHICS_VULKAN_TEXTURE_H
+#define XCI_GRAPHICS_VULKAN_TEXTURE_H
 
-#include <xci/graphics/Renderer.h>
-
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
+#include <xci/graphics/Texture.h>
 
 namespace xci::graphics {
 
 
-class VulkanRenderer: public Renderer {
+class VulkanTexture : public Texture {
 public:
-    VulkanRenderer();
-    ~VulkanRenderer() override;
+    bool create(const Vec2u& size) override;
 
-    TexturePtr create_texture() override;
+    void update(const uint8_t* pixels) override;
+    void update(const uint8_t* pixels, const Rect_u& region) override;
 
-    ShaderPtr create_shader() override;
-
-    PrimitivesPtr create_primitives(VertexFormat format,
-                                    PrimitiveType type) override;
+    Vec2u size() const override;
 
 private:
-    VkInstance m_instance {};
+
 };
 
 
