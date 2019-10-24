@@ -20,7 +20,7 @@ set(XCI_GRAPHICS_OPENGL_SOURCES
     opengl/GlWindow.cpp)
 
 set(XCI_GRAPHICS_VULKAN_SOURCES
-#    vulkan/VulkanPrimitives.cpp
+    vulkan/VulkanPrimitives.cpp
     vulkan/VulkanRenderer.cpp
 #    vulkan/VulkanShader.cpp
     vulkan/VulkanTexture.cpp
@@ -117,6 +117,7 @@ if (XCI_WITH_VULKAN)
             ${CMAKE_DL_LIBS}
             Vulkan::Vulkan
         PRIVATE
+            range-v3
             glfw)
     install(TARGETS xci-graphics-vulkan
         EXPORT xcikit DESTINATION lib)

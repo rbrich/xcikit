@@ -16,6 +16,7 @@ option(XCI_EMBED_SHADERS "Embed shader files into binaries to avoid dependency o
 option(XCI_DEBUG_TRACE "Enable trace log messages." OFF)
 option(XCI_DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
 option(XCI_DEBUG_OPENGL "Log info about OpenGL calls and errors." OFF)
+option(XCI_DEBUG_VULKAN "Log info about Vulkan calls and errors." ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS OFF)

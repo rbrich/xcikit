@@ -17,6 +17,7 @@
 #define XCI_GRAPHICS_VULKAN_RENDERER_H
 
 #include <xci/graphics/Renderer.h>
+#include <xci/config.h>
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -38,6 +39,9 @@ public:
 
 private:
     VkInstance m_instance {};
+#ifdef XCI_DEBUG_VULKAN
+    VkDebugUtilsMessengerEXT m_debug_messenger {};
+#endif
 };
 
 

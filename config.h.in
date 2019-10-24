@@ -24,5 +24,6 @@
 #cmakedefine XCI_DEBUG_TRACE
 #cmakedefine XCI_DEBUG_MARKUP_DUMP_TOKENS
 #cmakedefine XCI_DEBUG_OPENGL
+#cmakedefine XCI_DEBUG_VULKAN
 
 #endif //XCI_CONFIG_H
