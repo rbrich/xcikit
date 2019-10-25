@@ -38,7 +38,14 @@ public:
                                     PrimitiveType type) override;
 
 private:
+    bool check_queue_families(const VkPhysicalDevice& device);
+
+private:
     VkInstance m_instance {};
+    VkPhysicalDevice m_physical_device {};
+    VkDevice m_device {};
+    VkQueue m_graphics_queue {};
+    size_t m_idx_graphics_queue_family = 0;
 #ifdef XCI_DEBUG_VULKAN
     VkDebugUtilsMessengerEXT m_debug_messenger {};
 #endif
