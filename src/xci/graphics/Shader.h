@@ -17,6 +17,7 @@
 #define XCI_GRAPHICS_SHADER_H
 
 #include <xci/graphics/Texture.h>
+#include <xci/core/Vfs.h>
 
 #include <string>
 #include <memory>
@@ -49,7 +50,7 @@ public:
     /// Load program from VFS
     /// This in turn calls either `load_from_file` or `load_from_memory`
     /// depending on kind of VfsLoader used (real file or archive)
-    bool load_from_vfs(const std::string& vertex, const std::string& fragment);
+    bool load_from_vfs(const core::Vfs& vfs, const std::string& vertex, const std::string& fragment);
 
     /// Load program from a file (possibly adding a file watch for auto-reload)
     virtual bool load_from_file(

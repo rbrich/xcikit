@@ -40,14 +40,14 @@ static const char * sample_text =
 
 int main()
 {
-    auto& vfs = Vfs::default_instance();
+    Vfs vfs;
     vfs.mount(XCI_SHARE_DIR);
 
     Window& window = Window::default_instance();
     window.create({800, 600}, "XCI layout demo");
 
     Font font;
-    if (!font.add_face("fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
+    if (!font.add_face(vfs, "fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
         return EXIT_FAILURE;
 
     Text text;

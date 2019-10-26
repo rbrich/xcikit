@@ -29,7 +29,7 @@ using namespace xci::core;
 
 int main()
 {
-    auto& vfs = Vfs::default_instance();
+    Vfs vfs;
     vfs.mount(XCI_SHARE_DIR);
 
     if (!glfwInit())

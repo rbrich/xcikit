@@ -33,7 +33,7 @@ using namespace xci::core::log;
 
 int main()
 {
-    auto& vfs = Vfs::default_instance();
+    Vfs vfs;
     vfs.mount(XCI_SHARE_DIR);
 
     // === Create SFML window ===

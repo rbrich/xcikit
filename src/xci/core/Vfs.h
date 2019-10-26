@@ -67,7 +67,7 @@ class VfsDirectory: public std::enable_shared_from_this<VfsDirectory> {
 public:
     virtual ~VfsDirectory() = default;
 
-    virtual VfsFile read_file(const std::string& path) = 0;
+    virtual VfsFile read_file(const std::string& path) const = 0;
 };
 
 
@@ -102,7 +102,7 @@ class RealDirectory: public VfsDirectory {
 public:
     explicit RealDirectory(std::string dir_path) : m_dir_path(std::move(dir_path)) {}
 
-    VfsFile read_file(const std::string& path) override;
+    VfsFile read_file(const std::string& path) const override;
 
 private:
     std::string m_dir_path;
@@ -125,7 +125,7 @@ public:
     explicit DarArchive(std::string path);
     ~DarArchive() override { close_archive(); }
 
-    VfsFile read_file(const std::string& path) override;
+    VfsFile read_file(const std::string& path) const override;
 
 private:
     bool read_index();
@@ -164,7 +164,7 @@ public:
 
     bool is_open() const { return m_zip != nullptr; }
 
-    VfsFile read_file(const std::string& path) override;
+    VfsFile read_file(const std::string& path) const override;
 
 private:
     std::string m_zip_path;
@@ -185,15 +185,13 @@ private:
 ///       will be created in that dir.
 class Vfs {
 public:
-    static Vfs& default_instance();
-
     enum class Loaders {
         None,               // do not preload any loaders
-        RealDirectory,      // preload only RealDirectoryLoader
-        Dar,                // preload also DAR archive loader
-        Zip,                // preload also ZIP archive loader (when available)
+        NoArchives,         // preload RealDirectoryLoader
+        NoZip,              // preload RealDirectoryLoader, DarArchiveLoader
+        All,                // preload all loaders (incl. ZipArchiveLoader when available)
     };
-    Vfs() : Vfs(Loaders::Zip) {}
+    Vfs() : Vfs(Loaders::All) {};
     explicit Vfs(Loaders loaders);
 
     /// Register custom loader
@@ -214,9 +212,9 @@ public:
     ///
     /// \param real_path        FS path to a directory or archive.
     /// \param target_path      The target path inside the VFS
-    bool mount(std::string real_path, std::string target_path="");
+    bool mount(const std::string& real_path, std::string target_path="");
 
-    VfsFile read_file(std::string path);
+    VfsFile read_file(std::string path) const;
 
 private:
     // Registered loaders

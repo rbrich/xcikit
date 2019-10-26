@@ -24,7 +24,7 @@ int main()
 {
     log_info("====== VFS with manually managed loaders ======");
     {
-        Vfs vfs;
+        Vfs vfs {Vfs::Loaders::NoArchives};
         vfs.add_loader(std::make_unique<vfs::RealDirectoryLoader>());
         vfs.mount("/does/not/exist");
         vfs.mount(XCI_SHARE_DIR);
@@ -45,11 +45,11 @@ int main()
         // DarArchive(VfsDirectory) will also be kept alive (but no longer accessible).
         BufferPtr content;
         {
-            Vfs vfs;
+            Vfs vfs {Vfs::Loaders::NoZip};
 
             // Don't forget to run bootstrap.sh to create share.dar archive
             vfs.mount(XCI_SHARE_DIR ".dar");
-            // Directory overlapping the archive, will be tried after archive
+            // Directory overlapping the archive, will be tried after the archive
             vfs.mount(XCI_SHARE_DIR);
             auto f = vfs.read_file("fonts/Hack/Hack-Regular.ttf");
             content = f.content();
@@ -77,9 +77,9 @@ int main()
             log_info("demo: file size: {}", content->size());
     }
 
-    log_info("====== VFS default instance ======");
+    log_info("====== VFS leading slashes ======");
     {
-        auto& vfs = Vfs::default_instance();
+        Vfs vfs {Vfs::Loaders::NoArchives};
         // Mount just a subfolder
         vfs.mount(XCI_SHARE_DIR "/shaders", "shaders");
 

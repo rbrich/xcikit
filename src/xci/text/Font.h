@@ -19,13 +19,13 @@
 #include <xci/text/FontFace.h>
 #include <xci/graphics/Texture.h>
 #include <xci/core/geometry.h>
+#include <xci/core/Vfs.h>
 
 #include <vector>
 #include <map>
 #include <cassert>
 
-namespace xci {
-namespace text {
+namespace xci::text {
 
 using core::Rect_u;
 using graphics::TexturePtr;
@@ -49,9 +49,9 @@ public:
     void add_face(std::unique_ptr<FontFace> face);
 
     // The same as above, but constructs FontFace object for you
-    // (using default FontLibrary and default Vfs).
+    // (using default FontLibrary).
     // Returns false when FontFace load operation fails.
-    bool add_face(std::string path, int face_index);
+    bool add_face(const core::Vfs& vfs, std::string path, int face_index);
 
     // Get currently selected face.
     FontFace& face() { check_face(); return *m_faces[m_current_face].get(); }
@@ -116,6 +116,6 @@ private:
 };
 
 
-}} // namespace xci::text
+} // namespace xci::text
 
 #endif // XCI_TEXT_FONT_H

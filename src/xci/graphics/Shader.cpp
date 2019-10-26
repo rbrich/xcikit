@@ -14,7 +14,6 @@
 // limitations under the License.
 
 #include "Shader.h"
-#include <xci/core/Vfs.h>
 #include <xci/core/file.h>
 
 
@@ -23,9 +22,8 @@ namespace xci::graphics {
 using namespace xci::core;
 
 
-bool Shader::load_from_vfs(const std::string& vertex, const std::string& fragment)
+bool Shader::load_from_vfs(const Vfs& vfs, const std::string& vertex, const std::string& fragment)
 {
-    auto& vfs = Vfs::default_instance();
     auto vert_file = vfs.read_file(vertex);
     auto frag_file = vfs.read_file(fragment);
     if (vert_file.is_real_file() && frag_file.is_real_file()) {

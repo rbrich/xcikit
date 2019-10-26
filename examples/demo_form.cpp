@@ -54,7 +54,8 @@ private:
 
 int main()
 {
-    Vfs::default_instance().mount(XCI_SHARE_DIR);
+    Vfs vfs;
+    vfs.mount(XCI_SHARE_DIR);
 
     Window& window = Window::default_instance();
     window.create({800, 600}, "XCI form demo");

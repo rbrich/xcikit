@@ -15,6 +15,7 @@
 
 #include <xci/text/Font.h>
 #include <xci/text/Text.h>
+#include <xci/graphics/Renderer.h>
 #include <xci/graphics/Window.h>
 #include <xci/graphics/Sprites.h>
 #include <xci/core/Vfs.h>
@@ -44,7 +45,7 @@ Ik kan glas eten, het doet mĳ geen kwaad.{br}
 
 int main()
 {
-    auto& vfs = Vfs::default_instance();
+    Vfs vfs;
     vfs.mount(XCI_SHARE_DIR);
 
     Window& window = Window::default_instance();
