@@ -82,17 +82,19 @@ vulkan_debug_callback(
 
 VulkanRenderer::VulkanRenderer()
 {
-    VkApplicationInfo appInfo = {};
-    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "an xci-graphics based app";
-    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.pEngineName = "xci-graphics";
-    appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_1;
+    VkApplicationInfo application_info = {
+            .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+            .pApplicationName = "an xci-graphics based app",
+            .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
+            .pEngineName = "xci-graphics",
+            .engineVersion = VK_MAKE_VERSION(1, 0, 0),
+            .apiVersion = VK_API_VERSION_1_1,
+    };
 
-    VkInstanceCreateInfo createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    createInfo.pApplicationInfo = &appInfo;
+    VkInstanceCreateInfo instance_create_info = {
+            .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+            .pApplicationInfo = &application_info,
+    };
 
     uint32_t glfwExtensionCount = 0;
     const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
@@ -125,8 +127,8 @@ VulkanRenderer::VulkanRenderer()
         if (enable)
             enabled_layers.push_back(props.layerName);
     }
-    createInfo.enabledLayerCount = enabled_layers.size();
-    createInfo.ppEnabledLayerNames = enabled_layers.data();
+    instance_create_info.enabledLayerCount = enabled_layers.size();
+    instance_create_info.ppEnabledLayerNames = enabled_layers.data();
 
     // setup debug messenger
     extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -144,7 +146,7 @@ VulkanRenderer::VulkanRenderer()
     debugCreateInfo.pfnUserCallback = vulkan_debug_callback;
 
     // this should enable debug messenger for create/destroy of the instance itself
-    createInfo.pNext = &debugCreateInfo;
+    instance_create_info.pNext = &debugCreateInfo;
 #endif
 
     uint32_t ext_count = 0;
@@ -161,10 +163,10 @@ VulkanRenderer::VulkanRenderer()
                  props.extensionName, props.specVersion);
     }
 
-    createInfo.enabledExtensionCount = extensions.size();
-    createInfo.ppEnabledExtensionNames = extensions.data();
+    instance_create_info.enabledExtensionCount = extensions.size();
+    instance_create_info.ppEnabledExtensionNames = extensions.data();
 
-    if (vkCreateInstance(&createInfo, nullptr, &m_instance) != VK_SUCCESS)
+    if (vkCreateInstance(&instance_create_info, nullptr, &m_instance) != VK_SUCCESS)
         throw std::runtime_error("vulkan: failed to create VkInstance");
 
 #ifdef XCI_DEBUG_VULKAN
@@ -215,16 +217,16 @@ VulkanRenderer::VulkanRenderer()
 
         VkPhysicalDeviceFeatures device_features = {};
 
-        VkDeviceCreateInfo device_create_info = {};
-        device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-        device_create_info.pQueueCreateInfos = &queue_create_info;
-        device_create_info.queueCreateInfoCount = 1;
-        device_create_info.pEnabledFeatures = &device_features;
-
+        VkDeviceCreateInfo device_create_info = {
+                .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+                .queueCreateInfoCount = 1,
+                .pQueueCreateInfos = &queue_create_info,
 #ifdef XCI_DEBUG_VULKAN
-        device_create_info.enabledLayerCount = enabled_layers.size();
-        device_create_info.ppEnabledLayerNames = enabled_layers.data();
+                .enabledLayerCount = (uint32_t) enabled_layers.size(),
+                .ppEnabledLayerNames = enabled_layers.data(),
 #endif
+                .pEnabledFeatures = &device_features,
+        };
 
         if (vkCreateDevice(m_physical_device, &device_create_info,
                            nullptr, &m_device) != VK_SUCCESS)

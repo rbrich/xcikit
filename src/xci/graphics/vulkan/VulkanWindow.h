@@ -58,6 +58,7 @@ private:
 
 private:
     GLFWwindow* m_window = nullptr;
+    VkSurfaceKHR m_surface {};
     View m_view {this};
     RefreshMode m_mode = RefreshMode::OnDemand;
     Vec2i m_window_pos;
