@@ -24,15 +24,16 @@ namespace xci::text {
 using namespace core::log;
 
 
-// dtor has to be implemented in cpp file to allow forward declaration of unique_ptr<FontTexture>
-Font::Font() = default;
+// ctor+dtor have to be implemented in cpp file
+// to allow use of forward declaration in unique_ptr<FontTexture>
+Font::Font(Renderer& renderer) : m_renderer(renderer) {}
 Font::~Font() = default;
 
 
 void Font::add_face(std::unique_ptr<FontFace> face)
 {
     if (!m_texture)
-        m_texture = std::make_unique<FontTexture>();
+        m_texture = std::make_unique<FontTexture>(m_renderer);
     m_faces.emplace_back(std::move(face));
 }
 

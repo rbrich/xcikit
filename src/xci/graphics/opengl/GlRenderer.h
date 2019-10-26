@@ -27,7 +27,8 @@ namespace xci::graphics {
 
 class GlRenderer: public Renderer {
 public:
-    GlRenderer() : m_file_watch(std::make_shared<core::FSDispatch>()) {}
+    explicit GlRenderer(core::Vfs& vfs);
+    ~GlRenderer() override;
 
     TexturePtr create_texture() override;
 

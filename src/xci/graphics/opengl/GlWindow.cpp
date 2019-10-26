@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "GlWindow.h"
+#include <xci/graphics/Renderer.h>
 #include <xci/config.h>
 #include <xci/core/log.h>
 
@@ -29,17 +30,7 @@ using namespace xci::core::log;
 using namespace std::chrono;
 
 
-Window& Window::default_instance()
-{
-    static GlWindow window;
-    return window;
-}
 
-
-static void error_callback(int error, const char* description)
-{
-    log_error("GLFW error {}: {}", error, description);
-}
 
 
 // This is enabled via CMake option
@@ -109,20 +100,17 @@ void glad_debug_callback(const char *name, void *funcptr, int len_args, ...) {
 #endif
 
 
-GlWindow::GlWindow()
-{
-    glfwSetErrorCallback(error_callback);
-    if (!glfwInit()) {
-        log_error("Couldn't initialize GLFW...");
-    }
-}
+GlWindow::GlWindow(Renderer& renderer) : Window(renderer) {}
 
 
 GlWindow::~GlWindow()
 {
+    // dispose of any cached shaders because they depend on
+    // OpenGL context which is destroyed together with the Window
+    m_renderer.clear_shader_cache();
+
     if (m_window != nullptr)
         glfwDestroyWindow(m_window);
-    glfwTerminate();
 }
 
 

@@ -17,14 +17,36 @@
 #include "GlTexture.h"
 #include "GlShader.h"
 #include "GlPrimitives.h"
+#include <xci/core/log.h>
+
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
 
 namespace xci::graphics {
 
+using namespace xci::core::log;
 
-Renderer& Renderer::default_instance()
+
+static void glfw_error_callback(int error, const char* description)
 {
-    static GlRenderer instance;
-    return instance;
+    log_error("GLFW error {}: {}", error, description);
+}
+
+
+GlRenderer::GlRenderer(core::Vfs& vfs)
+        : Renderer(vfs),
+          m_file_watch(std::make_shared<core::FSDispatch>())
+{
+    glfwSetErrorCallback(glfw_error_callback);
+    if (!glfwInit()) {
+        log_error("Couldn't initialize GLFW...");
+    }
+}
+
+
+GlRenderer::~GlRenderer()
+{
+    glfwTerminate();
 }
 
 

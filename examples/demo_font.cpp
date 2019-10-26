@@ -15,8 +15,8 @@
 
 #include <xci/text/Font.h>
 #include <xci/text/Text.h>
-#include <xci/graphics/Renderer.h>
-#include <xci/graphics/Window.h>
+#include <xci/graphics/DefaultRenderer.h>
+#include <xci/graphics/DefaultWindow.h>
 #include <xci/graphics/Sprites.h>
 #include <xci/core/Vfs.h>
 #include <xci/config.h>
@@ -48,11 +48,12 @@ int main()
     Vfs vfs;
     vfs.mount(XCI_SHARE_DIR);
 
-    Window& window = Window::default_instance();
+    DefaultRenderer renderer {vfs};
+    DefaultWindow window {renderer};
     window.create({800, 600}, "XCI font demo");
 
-    Font font;
-    if (!font.add_face("fonts/Enriqueta/Enriqueta-Regular.ttf", 0))
+    Font font {renderer};
+    if (!font.add_face(vfs, "fonts/Enriqueta/Enriqueta-Regular.ttf", 0))
         return EXIT_FAILURE;
 
     Text text;
@@ -67,7 +68,7 @@ int main()
 
         auto& tex = font.get_texture();
         auto tex_size = view.size_to_viewport(FramebufferSize{tex->size()});
-        Sprites font_texture(tex, Color::Blue());
+        Sprites font_texture(renderer, tex, Color::Blue());
         ViewportRect rect = {0, 0, tex_size.x, tex_size.y};
         font_texture.add_sprite(rect);
         font_texture.draw(view, {-0.5f * vs.x + 0.01f, -0.5f * rect.h});

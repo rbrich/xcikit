@@ -22,27 +22,13 @@ using namespace xci::core::log;
 using namespace std::chrono;
 
 
-Window& Window::default_instance()
-{
-    static VulkanWindow window;
-    return window;
-}
-
-
-VulkanWindow::VulkanWindow()
-{
-    // glfwSetErrorCallback(error_callback);
-    if (!glfwInit()) {
-        log_error("Couldn't initialize GLFW...");
-    }
-}
+VulkanWindow::VulkanWindow(Renderer& renderer) : Window(renderer) {}
 
 
 VulkanWindow::~VulkanWindow()
 {
     if (m_window != nullptr)
         glfwDestroyWindow(m_window);
-    glfwTerminate();
 }
 
 

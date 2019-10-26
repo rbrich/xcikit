@@ -35,9 +35,9 @@ namespace xci::graphics {
 using namespace xci::core::log;
 
 
-Shape::Shape(const Color& fill_color, const Color& outline_color,
-             Renderer& renderer)
-        : m_fill_color(fill_color), m_outline_color(outline_color),
+Shape::Shape(Renderer& renderer, const Color& fill_color, const Color& outline_color)
+        : m_renderer(renderer),
+          m_fill_color(fill_color), m_outline_color(outline_color),
           m_lines(renderer.create_primitives(VertexFormat::V2t2, PrimitiveType::TriFans)),
           m_rectangles(renderer.create_primitives(VertexFormat::V2c4t22, PrimitiveType::TriFans)),
           m_ellipses(renderer.create_primitives(VertexFormat::V2t22, PrimitiveType::TriFans))
@@ -259,8 +259,7 @@ void Shape::init_line_shader()
 {
     if (m_line_shader)
         return;
-    auto& renderer = Renderer::default_instance();
-    m_line_shader = renderer.get_or_create_shader(ShaderId::Line);
+    m_line_shader = m_renderer.get_or_create_shader(ShaderId::Line);
     if (m_line_shader->is_ready())
         return;
 
@@ -269,7 +268,7 @@ void Shape::init_line_shader()
                 (const char*)g_line_vert_data, g_line_vert_size,
                 (const char*)g_line_frag_data, g_line_frag_size);
 #else
-    bool res = m_line_shader->load_from_vfs(
+    bool res = m_line_shader->load_from_vfs(m_renderer.vfs(),
             "shaders/line.vert", "shaders/line.frag");
 #endif
     if (!res) {
@@ -282,8 +281,7 @@ void Shape::init_rectangle_shader()
 {
     if (m_rectangle_shader)
         return;
-    auto& renderer = Renderer::default_instance();
-    m_rectangle_shader = renderer.get_or_create_shader(ShaderId::Rectangle);
+    m_rectangle_shader = m_renderer.get_or_create_shader(ShaderId::Rectangle);
     if (m_rectangle_shader->is_ready())
         return;
 
@@ -292,7 +290,7 @@ void Shape::init_rectangle_shader()
                 (const char*)g_rectangle_vert_data, g_rectangle_vert_size,
                 (const char*)g_rectangle_frag_data, g_rectangle_frag_size);
 #else
-    bool res = m_rectangle_shader->load_from_vfs(
+    bool res = m_rectangle_shader->load_from_vfs(m_renderer.vfs(),
             "shaders/rectangle.vert", "shaders/rectangle.frag");
 #endif
     if (!res) {
@@ -305,8 +303,7 @@ void Shape::init_ellipse_shader()
 {
     if (m_ellipse_shader)
         return;
-    auto& renderer = Renderer::default_instance();
-    m_ellipse_shader = renderer.get_or_create_shader(ShaderId::Ellipse);
+    m_ellipse_shader = m_renderer.get_or_create_shader(ShaderId::Ellipse);
     if (m_ellipse_shader->is_ready())
         return;
 
@@ -315,7 +312,7 @@ void Shape::init_ellipse_shader()
                 (const char*)g_ellipse_vert_data, g_ellipse_vert_size,
                 (const char*)g_ellipse_frag_data, g_ellipse_frag_size);
 #else
-    bool res = m_ellipse_shader->load_from_vfs(
+    bool res = m_ellipse_shader->load_from_vfs(m_renderer.vfs(),
             "shaders/ellipse.vert", "shaders/ellipse.frag");
 #endif
     if (!res) {

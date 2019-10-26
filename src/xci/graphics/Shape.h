@@ -33,9 +33,9 @@ using xci::core::Vec2f;
 
 class Shape {
 public:
-    explicit Shape(const Color& fill_color = Color::Black(),
-                   const Color& outline_color = Color::White(),
-                   Renderer& renderer = Renderer::default_instance());
+    explicit Shape(Renderer& renderer,
+                   const Color& fill_color = Color::Black(),
+                   const Color& outline_color = Color::White());
 
     void set_fill_color(const Color& fill_color) { m_fill_color = fill_color; }
     void set_outline_color(const Color& outline_color) { m_outline_color = outline_color; }
@@ -99,6 +99,8 @@ private:
     void init_ellipse_shader();
 
 private:
+    Renderer& m_renderer;
+
     Color m_fill_color;
     Color m_outline_color;
     float m_antialiasing = 0;

@@ -30,6 +30,12 @@ using namespace xci::core::log;
 using std::make_unique;
 
 
+static void glfw_error_callback(int error, const char* description)
+{
+    log_error("GLFW error {}: {}", error, description);
+}
+
+
 #ifdef XCI_DEBUG_VULKAN
 static Logger::Level vulkan_severity_to_log_level(
         VkDebugUtilsMessageSeverityFlagBitsEXT severity)
@@ -80,8 +86,13 @@ vulkan_debug_callback(
 #endif
 
 
-VulkanRenderer::VulkanRenderer()
+VulkanRenderer::VulkanRenderer(core::Vfs& vfs) : Renderer(vfs)
 {
+    glfwSetErrorCallback(glfw_error_callback);
+    if (!glfwInit()) {
+        log_error("Couldn't initialize GLFW...");
+    }
+
     VkApplicationInfo application_info = {
             .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
             .pApplicationName = "an xci-graphics based app",
@@ -246,13 +257,7 @@ VulkanRenderer::~VulkanRenderer()
         vkDestroyDebugUtilsMessengerEXT(m_instance, m_debug_messenger, nullptr);
     vkDestroyDevice(m_device, nullptr);
     vkDestroyInstance(m_instance, nullptr);
-}
-
-
-Renderer& Renderer::default_instance()
-{
-    static VulkanRenderer instance;
-    return instance;
+    glfwTerminate();
 }
 
 

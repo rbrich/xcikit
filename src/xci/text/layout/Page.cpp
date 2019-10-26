@@ -17,6 +17,7 @@
 #include <xci/graphics/View.h>
 #include <xci/graphics/Sprites.h>
 #include <xci/graphics/Shape.h>
+#include <xci/graphics/Window.h>
 #include <xci/core/string.h>
 #include <xci/core/log.h>
 
@@ -95,17 +96,19 @@ void Word::draw(graphics::View& target, const ViewportCoords& pos) const
     auto size_fb = target.size_to_framebuffer(m_style.size());
     font->set_size(size_fb.as<uint32_t>());
 
+    auto& renderer = target.window()->renderer();
+
     const auto fb_1px = target.size_to_viewport(1_fb);
     if (target.has_debug_flag(View::Debug::WordBBox)) {
-        graphics::Shape bbox(Color(0, 150, 0), Color(50, 250, 50));
+        graphics::Shape bbox(renderer, Color(0, 150, 0), Color(50, 250, 50));
         bbox.add_rectangle(m_bbox, fb_1px);
         bbox.draw(target, pos);
     }
 
     bool show_bboxes = target.has_debug_flag(View::Debug::GlyphBBox);
 
-    graphics::Sprites sprites(font->get_texture(), m_style.color());
-    graphics::Shape bboxes(Color(150, 0, 0), Color(250, 50, 50));
+    graphics::Sprites sprites(renderer, font->get_texture(), m_style.color());
+    graphics::Shape bboxes(renderer, Color(150, 0, 0), Color(250, 50, 50));
 
     ViewportCoords pen;
     for (CodePoint code_point : to_utf32(m_string)) {
@@ -133,7 +136,7 @@ void Word::draw(graphics::View& target, const ViewportCoords& pos) const
 
     if (target.has_debug_flag(View::Debug::WordBasePoint)) {
         const auto sc_1px = target.size_to_viewport(1_sc);
-        graphics::Shape basepoint(Color(150, 0, 255));
+        graphics::Shape basepoint(renderer, Color(150, 0, 255));
         basepoint.add_rectangle({-sc_1px, -sc_1px, 2 * sc_1px, 2 * sc_1px});
         basepoint.draw(target, p);
     }

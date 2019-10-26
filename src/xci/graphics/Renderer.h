@@ -20,7 +20,9 @@
 #include "Shader.h"
 #include "Primitives.h"
 #include <xci/core/geometry.h>
+#include <xci/core/Vfs.h>
 
+#include <memory>
 #include <array>
 #include <cstdint>
 
@@ -29,7 +31,10 @@ namespace xci::graphics {
 
 class Renderer {
 public:
-    static Renderer& default_instance();
+    explicit Renderer(core::Vfs& vfs) : m_vfs(vfs) {}
+    virtual ~Renderer() = default;
+
+    core::Vfs& vfs() { return m_vfs; }
 
     virtual TexturePtr create_texture() = 0;
 
@@ -43,11 +48,10 @@ public:
     /// \return shared_ptr to the shader or nullptr on error
     ShaderPtr get_or_create_shader(ShaderId shader_id);
 
-protected:
-    Renderer() = default;
-    virtual ~Renderer() = default;
+    void clear_shader_cache();
 
 private:
+    core::Vfs& m_vfs;
     static constexpr auto c_num_shaders = (size_t)ShaderId::Custom;
     std::array<ShaderPtr, c_num_shaders> m_shader = {};
 };

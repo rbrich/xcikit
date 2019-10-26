@@ -33,9 +33,8 @@ namespace xci::graphics {
 using namespace xci::core::log;
 
 
-Sprites::Sprites(TexturePtr& texture, const Color& color,
-                 Renderer& renderer)
-        : m_texture(texture), m_color(color),
+Sprites::Sprites(Renderer& renderer, TexturePtr& texture, const Color& color)
+        : m_renderer(renderer), m_texture(texture), m_color(color),
           m_trifans(renderer.create_primitives(VertexFormat::V2t2,
                                                PrimitiveType::TriFans))
 {}
@@ -93,8 +92,7 @@ void Sprites::init_shader()
 {
     if (m_shader)
         return;
-    auto& renderer = Renderer::default_instance();
-    m_shader = renderer.get_or_create_shader(ShaderId::Sprite);
+    m_shader = m_renderer.get_or_create_shader(ShaderId::Sprite);
     if (m_shader->is_ready())
         return;
 
@@ -103,8 +101,8 @@ void Sprites::init_shader()
                 (const char*)g_sprite_vert_data, g_sprite_vert_size,
                 (const char*)g_sprite_frag_data, g_sprite_frag_size);
 #else
-    bool res = m_shader->load_from_vfs("shaders/sprite.vert",
-                                       "shaders/sprite.frag");
+    bool res = m_shader->load_from_vfs(m_renderer.vfs(),
+            "shaders/sprite.vert", "shaders/sprite.frag");
 #endif
     if (!res) {
         log_error("Rectangle shader not loaded!");
@@ -112,9 +110,9 @@ void Sprites::init_shader()
 }
 
 
-ColoredSprites::ColoredSprites(TexturePtr& texture, const Color& color,
-                               Renderer& renderer)
-    : m_texture(texture), m_color(color),
+ColoredSprites::ColoredSprites(Renderer& renderer,
+                               TexturePtr& texture, const Color& color)
+    : m_renderer(renderer), m_texture(texture), m_color(color),
       m_trifans(renderer.create_primitives(VertexFormat::V2c4t2,
                                            PrimitiveType::TriFans))
 {}
@@ -169,8 +167,7 @@ void ColoredSprites::init_shader()
 {
     if (m_shader)
         return;
-    auto& renderer = Renderer::default_instance();
-    m_shader = renderer.get_or_create_shader(ShaderId::SpriteC);
+    m_shader = m_renderer.get_or_create_shader(ShaderId::SpriteC);
     if (m_shader->is_ready())
         return;
 
@@ -179,8 +176,8 @@ void ColoredSprites::init_shader()
                 (const char*)g_sprite_c_vert_data, g_sprite_c_vert_size,
                 (const char*)g_sprite_c_frag_data, g_sprite_c_frag_size);
 #else
-    bool res = m_shader->load_from_vfs("shaders/sprite_c.vert",
-                                       "shaders/sprite_c.frag");
+    bool res = m_shader->load_from_vfs(m_renderer.vfs(),
+            "shaders/sprite_c.vert", "shaders/sprite_c.frag");
 #endif
     if (!res) {
         log_error("Rectangle shader not loaded!");

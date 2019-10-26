@@ -23,8 +23,7 @@
 
 namespace xci::graphics { class View; }
 
-namespace xci {
-namespace graphics {
+namespace xci::graphics {
 
 using xci::core::Rect_u;
 using xci::core::Rect_f;
@@ -36,9 +35,8 @@ using xci::core::Vec2f;
 
 class Sprites {
 public:
-    explicit Sprites(TexturePtr& texture,
-                     const Color& color = Color::White(),
-                     Renderer& renderer = Renderer::default_instance());
+    explicit Sprites(Renderer& renderer, TexturePtr& texture,
+                     const Color& color = Color::White());
 
     // Reserve memory for `num` sprites.
     void reserve(size_t num);
@@ -62,6 +60,7 @@ private:
     void init_shader();
 
 private:
+    Renderer& m_renderer;
     TexturePtr m_texture;
     Color m_color;
     PrimitivesPtr m_trifans;
@@ -73,9 +72,8 @@ private:
 
 class ColoredSprites {
 public:
-    explicit ColoredSprites(TexturePtr& texture,
-                            const Color& color = Color::White(),
-                            Renderer& renderer = Renderer::default_instance());
+    explicit ColoredSprites(Renderer& renderer, TexturePtr& texture,
+                            const Color& color = Color::White());
 
     // Reserve memory for `num` sprites.
     void reserve(size_t num);
@@ -100,6 +98,7 @@ private:
     void init_shader();
 
 private:
+    Renderer& m_renderer;
     TexturePtr m_texture;
     Color m_color;
     PrimitivesPtr m_trifans;
@@ -107,6 +106,6 @@ private:
 };
 
 
-}} // namespace xci::graphics
+} // namespace xci::graphics
 
 #endif // XCI_GRAPHICS_SPRITES_H

@@ -27,7 +27,7 @@ namespace xci::graphics {
 
 class VulkanRenderer: public Renderer {
 public:
-    VulkanRenderer();
+    explicit VulkanRenderer(core::Vfs& vfs);
     ~VulkanRenderer() override;
 
     TexturePtr create_texture() override;

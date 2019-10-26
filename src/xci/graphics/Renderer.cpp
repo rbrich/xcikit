@@ -30,4 +30,11 @@ ShaderPtr Renderer::get_or_create_shader(ShaderId shader_id)
 }
 
 
+void Renderer::clear_shader_cache()
+{
+    for (auto& shader : m_shader)
+        shader.reset();
+}
+
+
 } // namespace xci::graphics

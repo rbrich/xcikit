@@ -22,7 +22,7 @@ namespace xci::text {
 using namespace core::log;
 
 
-FontTexture::FontTexture(unsigned int size, Renderer& renderer)
+FontTexture::FontTexture(Renderer& renderer, unsigned int size)
     : m_renderer(renderer),
       m_texture(m_renderer.create_texture())
 {

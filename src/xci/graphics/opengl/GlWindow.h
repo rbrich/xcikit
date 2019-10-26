@@ -29,7 +29,7 @@ using core::Vec2i;
 
 class GlWindow: public Window {
 public:
-    GlWindow();
+    explicit GlWindow(Renderer& renderer);
     ~GlWindow() override;
 
     void create(const Vec2u& size, const std::string& title) override;

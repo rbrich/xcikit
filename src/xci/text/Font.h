@@ -17,6 +17,7 @@
 #define XCI_TEXT_FONT_H
 
 #include <xci/text/FontFace.h>
+#include <xci/graphics/Renderer.h>
 #include <xci/graphics/Texture.h>
 #include <xci/core/geometry.h>
 #include <xci/core/Vfs.h>
@@ -28,6 +29,7 @@
 namespace xci::text {
 
 using core::Rect_u;
+using graphics::Renderer;
 using graphics::TexturePtr;
 
 
@@ -37,7 +39,7 @@ class FontTexture;
 // Encapsulates faces, styles and glyph caches for a font
 class Font {
 public:
-    Font();
+    explicit Font(Renderer& renderer);
     ~Font();
 
     // non-copyable
@@ -108,6 +110,7 @@ private:
     void check_face() const { assert(!m_faces.empty());  }
 
 private:
+    Renderer& m_renderer;
     unsigned m_size = 10;
     size_t m_current_face = 0;
     std::vector<std::unique_ptr<FontFace>> m_faces;  // faces for different strokes (eg. normal, bold, italic)

@@ -16,7 +16,7 @@
 #ifndef XCI_GRAPHICS_WINDOW_H
 #define XCI_GRAPHICS_WINDOW_H
 
-#include <xci/graphics/View.h>
+#include "View.h"
 #include <xci/core/geometry.h>
 
 #include <string>
@@ -128,11 +128,15 @@ enum class RefreshMode {
 };
 
 
+class Renderer;
+
+
 class Window {
 public:
-    static Window& default_instance();
-
+    explicit Window(Renderer& renderer) : m_renderer(renderer) {}
     virtual ~Window() = default;
+
+    Renderer& renderer() { return m_renderer; }
 
     // Create the window.
     virtual void create(const Vec2u& size, const std::string& title) = 0;
@@ -211,6 +215,7 @@ public:
     virtual void set_debug_flags(View::DebugFlags flags) = 0;
 
 protected:
+    Renderer& m_renderer;
     UpdateCallback m_update_cb;
     SizeCallback m_size_cb;
     DrawCallback m_draw_cb;
@@ -220,6 +225,9 @@ protected:
     MouseBtnCallback m_mbtn_cb;
     ScrollCallback m_scroll_cb;
 };
+
+
+using WindowPtr = std::unique_ptr<Window>;
 
 
 } // namespace xci::graphics

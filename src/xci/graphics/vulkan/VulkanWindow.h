@@ -29,7 +29,7 @@ using core::Vec2i;
 
 class VulkanWindow: public Window {
 public:
-    VulkanWindow();
+    VulkanWindow(Renderer& renderer);
     ~VulkanWindow() override;
 
     void create(const Vec2u& size, const std::string& title) override;

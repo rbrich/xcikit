@@ -17,6 +17,7 @@
 
 #include <xci/graphics/Shape.h>
 #include <xci/graphics/View.h>
+#include <xci/graphics/Window.h>
 
 #include <cassert>
 
@@ -77,18 +78,19 @@ void Layout::typeset(const graphics::View& target)
 
 void Layout::draw(View& target, const ViewportCoords& pos) const
 {
+    auto& renderer = target.window()->renderer();
     const auto sc_1px = target.size_to_viewport(1_sc);
 
     // Debug: page bbox
     if (target.has_debug_flag(View::Debug::PageBBox)) {
-        graphics::Shape bbox_rect(Color(150, 150, 0, 128), Color(200, 200, 50));
+        graphics::Shape bbox_rect(renderer, Color(150, 150, 0, 128), Color(200, 200, 50));
         bbox_rect.add_rectangle(bbox(), sc_1px);
         bbox_rect.draw(target, pos);
     }
 
     // Debug: span bboxes
     if (target.has_debug_flag(View::Debug::SpanBBox)) {
-        graphics::Shape bboxes(Color(100, 0, 150, 128), Color(200, 50, 250));
+        graphics::Shape bboxes(renderer, Color(100, 0, 150, 128), Color(200, 50, 250));
         m_page.foreach_span([&](const Span& span) {
             for (auto& part : span.parts()) {
                 bboxes.add_rectangle(part.bbox(), sc_1px);
@@ -99,7 +101,7 @@ void Layout::draw(View& target, const ViewportCoords& pos) const
 
     // Debug: line bboxes
     if (target.has_debug_flag(View::Debug::LineBBox)) {
-        graphics::Shape bboxes(Color(0, 50, 150, 128), Color(50, 50, 250));
+        graphics::Shape bboxes(renderer, Color(0, 50, 150, 128), Color(50, 50, 250));
         m_page.foreach_line([&](const Line& line) {
             bboxes.add_rectangle(line.bbox(), sc_1px);
         });
@@ -108,7 +110,7 @@ void Layout::draw(View& target, const ViewportCoords& pos) const
 
     // Debug line baselines
     if (target.has_debug_flag(View::Debug::LineBaseLine)) {
-        graphics::Shape baselines(Color(255, 50, 150));
+        graphics::Shape baselines(renderer, Color(255, 50, 150));
         m_page.foreach_line([&](const Line& line) {
             auto rect = line.bbox();
             rect.y += line.baseline();
