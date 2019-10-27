@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "VulkanWindow.h"
+#include "VulkanRenderer.h"
 #include <xci/core/log.h>
 
 namespace xci::graphics {
@@ -22,7 +23,8 @@ using namespace xci::core::log;
 using namespace std::chrono;
 
 
-VulkanWindow::VulkanWindow(Renderer& renderer) : Window(renderer) {}
+VulkanWindow::VulkanWindow(VulkanRenderer& renderer)
+    : m_renderer(renderer), m_device(m_renderer) {}
 
 
 VulkanWindow::~VulkanWindow()
@@ -43,6 +45,8 @@ void VulkanWindow::create(const Vec2u& size, const std::string& title)
         exit(1);
     }
     glfwSetWindowUserPointer(m_window, this);
+
+    m_device.init(m_window);
 }
 
 
@@ -239,6 +243,12 @@ void VulkanWindow::draw()
     if (m_draw_cb)
         m_draw_cb(m_view);
     glfwSwapBuffers(m_window);
+}
+
+
+Renderer& VulkanWindow::renderer()
+{
+    return m_renderer;
 }
 
 

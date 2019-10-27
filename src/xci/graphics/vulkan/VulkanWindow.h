@@ -16,6 +16,7 @@
 #ifndef XCI_GRAPHICS_VULKAN_WINDOW_H
 #define XCI_GRAPHICS_VULKAN_WINDOW_H
 
+#include "VulkanDevice.h"
 #include <xci/graphics/Window.h>
 #include <xci/core/geometry.h>
 
@@ -26,10 +27,12 @@ namespace xci::graphics {
 
 using core::Vec2i;
 
+class VulkanRenderer;
+
 
 class VulkanWindow: public Window {
 public:
-    VulkanWindow(Renderer& renderer);
+    explicit VulkanWindow(VulkanRenderer& renderer);
     ~VulkanWindow() override;
 
     void create(const Vec2u& size, const std::string& title) override;
@@ -52,13 +55,20 @@ public:
 
     void set_debug_flags(View::DebugFlags flags) override;
 
+    Renderer& renderer() override;
+    //VulkanRenderer& vulkan_renderer() { return m_renderer; }
+
+    // GLFW handles
+    GLFWwindow* glfw_window() const { return m_window; }
+
 private:
     void setup_view();
     void draw();
 
 private:
+    VulkanRenderer& m_renderer;
+    VulkanDevice m_device;
     GLFWwindow* m_window = nullptr;
-    VkSurfaceKHR m_surface {};
     View m_view {this};
     RefreshMode m_mode = RefreshMode::OnDemand;
     Vec2i m_window_pos;

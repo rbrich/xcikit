@@ -133,10 +133,9 @@ class Renderer;
 
 class Window {
 public:
-    explicit Window(Renderer& renderer) : m_renderer(renderer) {}
     virtual ~Window() = default;
 
-    Renderer& renderer() { return m_renderer; }
+    virtual Renderer& renderer() = 0;
 
     // Create the window.
     virtual void create(const Vec2u& size, const std::string& title) = 0;
@@ -215,7 +214,6 @@ public:
     virtual void set_debug_flags(View::DebugFlags flags) = 0;
 
 protected:
-    Renderer& m_renderer;
     UpdateCallback m_update_cb;
     SizeCallback m_size_cb;
     DrawCallback m_draw_cb;

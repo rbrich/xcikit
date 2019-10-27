@@ -14,45 +14,26 @@
 // limitations under the License.
 
 #include <xci/graphics/vulkan/VulkanRenderer.h>
+#include <xci/graphics/vulkan/VulkanWindow.h>
 //#include <xci/text/Text.h>
-//#include <xci/core/Vfs.h>
-//#include <xci/config.h>
-
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
+#include <xci/core/Vfs.h>
+#include <xci/config.h>
 
 #include <iostream>
 #include <cstdlib>
 
 //using namespace xci::text;
 using namespace xci::graphics;
-//using namespace xci::core;
+using namespace xci::core;
 
 int main()
 {
-//    auto& vfs = Vfs::default_instance();
-//    vfs.mount(XCI_SHARE_DIR);
+    Vfs vfs;
+    vfs.mount(XCI_SHARE_DIR);
 
-    if (!glfwInit())
-        return EXIT_FAILURE;
-
-    if (!glfwVulkanSupported()) {
-        std::cerr << "Vulkan not supported." << std::endl;
-        return EXIT_FAILURE;
-    }
-
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-
-    // Setup GLFW window
-    GLFWwindow* window = glfwCreateWindow(
-            800, 600, "XCI Vulkan Demo",
-            nullptr, nullptr);
-    if (!window) {
-        glfwTerminate();
-        return EXIT_FAILURE;
-    }
-
-    VulkanRenderer renderer;
+    VulkanRenderer renderer(vfs);
+    VulkanWindow window {renderer};
+    window.create({800, 600}, "XCI Vulkan Demo");
 
     /*
     glfwMakeContextCurrent(window);
@@ -86,7 +67,7 @@ int main()
     text.set_font_size(50);
 */
     // Run
-    while (!glfwWindowShouldClose(window)) {
+    while (!glfwWindowShouldClose(window.glfw_window())) {
         //glClear(GL_COLOR_BUFFER_BIT);
 
         //text.draw(view, {-200, 0});
@@ -95,7 +76,6 @@ int main()
         glfwWaitEvents();
     }
 
-    glfwDestroyWindow(window);
-    glfwTerminate();
+    //window.display();
     return EXIT_SUCCESS;
 }

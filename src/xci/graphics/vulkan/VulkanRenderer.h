@@ -37,15 +37,11 @@ public:
     PrimitivesPtr create_primitives(VertexFormat format,
                                     PrimitiveType type) override;
 
-private:
-    bool check_queue_families(const VkPhysicalDevice& device);
+    // Vulkan handles
+    VkInstance vk_instance() const { return m_instance; }
 
 private:
     VkInstance m_instance {};
-    VkPhysicalDevice m_physical_device {};
-    VkDevice m_device {};
-    VkQueue m_graphics_queue {};
-    size_t m_idx_graphics_queue_family = 0;
 #ifdef XCI_DEBUG_VULKAN
     VkDebugUtilsMessengerEXT m_debug_messenger {};
 #endif

@@ -19,7 +19,6 @@
 #include <xci/core/string.h>
 #include <xci/compat/macros.h>
 #include <range/v3/algorithm/any_of.hpp>
-#include <range/v3/view/enumerate.hpp>
 #include <memory>
 #include <cstring>
 
@@ -93,6 +92,10 @@ VulkanRenderer::VulkanRenderer(core::Vfs& vfs) : Renderer(vfs)
         log_error("Couldn't initialize GLFW...");
     }
 
+    if (!glfwVulkanSupported()) {
+        throw std::runtime_error("Vulkan not supported.");
+    }
+
     VkApplicationInfo application_info = {
             .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
             .pApplicationName = "an xci-graphics based app",
@@ -125,10 +128,11 @@ VulkanRenderer::VulkanRenderer(core::Vfs& vfs) : Renderer(vfs)
         bool enable = false;
         if ((
                 starts_with(props.layerName, "VK_LAYER_LUNARG_") ||
-                starts_with(props.layerName, "VK_LAYER_GOOGLE_")
+                starts_with(props.layerName, "VK_LAYER_GOOGLE_") ||
+                starts_with(props.layerName, "VK_LAYER_KHRONOS_")
             ) && !ranges::any_of(enabled_layers,[&](const char* name) {
                 return strcmp(name, props.layerName) == 0;
-            })
+            }) && strcmp(props.layerName, "VK_LAYER_LUNARG_api_dump") != 0
         )
             enable = true;
         log_info("[{}] {} - {} (spec {}, impl {})",
@@ -190,62 +194,6 @@ VulkanRenderer::VulkanRenderer(core::Vfs& vfs) : Renderer(vfs)
         throw std::runtime_error("failed to set up debug messenger!");
     }
 #endif
-
-    uint32_t device_count = 0;
-    vkEnumeratePhysicalDevices(m_instance, &device_count, nullptr);
-    if (device_count == 0)
-        throw std::runtime_error("vulkan: couldn't find any physical device");
-    std::vector<VkPhysicalDevice> devices(device_count);
-    vkEnumeratePhysicalDevices(m_instance, &device_count, devices.data());
-
-    log_info("Vulkan: {} devices available:", device_count);
-    for (const auto& device : devices) {
-        VkPhysicalDeviceProperties device_props;
-        vkGetPhysicalDeviceProperties(device, &device_props);
-        VkPhysicalDeviceFeatures device_features;
-        vkGetPhysicalDeviceFeatures(device, &device_features);
-
-        bool choose = check_queue_families(device);
-        if (choose && m_physical_device == VK_NULL_HANDLE) {
-            m_physical_device = device;
-        } else {
-            choose = false;
-        }
-        log_info("({}) {}: {} (api {})",
-                 choose ? '*' : ' ',
-                 device_props.deviceID,
-                 device_props.deviceName, device_props.apiVersion);
-    }
-
-    // create VkDevice
-    {
-        VkDeviceQueueCreateInfo queue_create_info = {};
-        const float queue_priorities[] = {1.0f};
-        queue_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queue_create_info.queueFamilyIndex = m_idx_graphics_queue_family;
-        queue_create_info.queueCount = 1;
-        queue_create_info.pQueuePriorities = queue_priorities;
-
-        VkPhysicalDeviceFeatures device_features = {};
-
-        VkDeviceCreateInfo device_create_info = {
-                .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-                .queueCreateInfoCount = 1,
-                .pQueueCreateInfos = &queue_create_info,
-#ifdef XCI_DEBUG_VULKAN
-                .enabledLayerCount = (uint32_t) enabled_layers.size(),
-                .ppEnabledLayerNames = enabled_layers.data(),
-#endif
-                .pEnabledFeatures = &device_features,
-        };
-
-        if (vkCreateDevice(m_physical_device, &device_create_info,
-                           nullptr, &m_device) != VK_SUCCESS)
-            throw std::runtime_error("vkCreateDevice failed");
-    }
-
-    vkGetDeviceQueue(m_device, m_idx_graphics_queue_family,
-            0, &m_graphics_queue);
 }
 
 
@@ -255,7 +203,6 @@ VulkanRenderer::~VulkanRenderer()
             vkGetInstanceProcAddr(m_instance, "vkDestroyDebugUtilsMessengerEXT");
     if (vkDestroyDebugUtilsMessengerEXT != nullptr)
         vkDestroyDebugUtilsMessengerEXT(m_instance, m_debug_messenger, nullptr);
-    vkDestroyDevice(m_device, nullptr);
     vkDestroyInstance(m_instance, nullptr);
     glfwTerminate();
 }
@@ -277,24 +224,6 @@ PrimitivesPtr VulkanRenderer::create_primitives(VertexFormat format,
                                                 PrimitiveType type)
 {
     return xci::graphics::PrimitivesPtr();
-}
-
-
-bool VulkanRenderer::check_queue_families(const VkPhysicalDevice& device)
-{
-    uint32_t family_count = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &family_count, nullptr);
-
-    std::vector<VkQueueFamilyProperties> families(family_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &family_count, families.data());
-
-    for (auto&& [i, family] : families | ranges::views::enumerate) {
-        if (family.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-            m_idx_graphics_queue_family = i;
-            return true;
-        }
-    }
-    return false;
 }
 
 
