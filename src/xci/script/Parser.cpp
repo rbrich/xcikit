@@ -50,7 +50,8 @@ struct RSC: seq<space, SC> {};  // required at least one space
 template <class T> struct SSList: list_tail<T, one<';'>, SpaceOrComment> {};  // semicolon-separated list
 
 // Basic tokens
-struct Identifier: seq< not_at<Keyword>, star<one<'_'>>, lower, star< identifier_other > > {};
+//                 underscore* (lower identifier_other* | digit+)
+struct Identifier: seq< not_at<Keyword>, star<one<'_'>>, sor<seq<lower, star<identifier_other>>, plus<digit>> > {};
 struct TypeName: seq< upper, star< identifier_other > > {};
 struct PrefixOperator: sor< one<'-'>, one<'+'>, one<'!'>, one<'~'> > {};
 struct InfixOperator: sor< two<'&'>, two<'|'>, two<'='>, string<'!','='>,

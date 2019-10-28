@@ -192,6 +192,10 @@ bool evaluate(const string& line, const Options& opts, int input_number=-1)
             cout << t.bold() << *result << t.normal() << endl;
         }
 
+        // save result as static value `_<N>` in the module
+        auto result_idx = module->add_value(std::move(result));
+        module->symtab().add({"_" + std::to_string(input_number), result_idx});
+
         modules().push_back(move(module));
         return true;
     } catch (const Error& e) {
