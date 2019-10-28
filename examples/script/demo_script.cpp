@@ -59,6 +59,8 @@ struct Options {
 };
 
 
+static bool g_done {false};
+
 std::vector<std::unique_ptr<Module>>& modules()
 {
     static std::vector<std::unique_ptr<Module>> modules;
@@ -218,6 +220,7 @@ using namespace tao::pegtl;
 
 struct Unsigned: seq< plus<digit> > {};
 
+struct Quit: sor<TAO_PEGTL_KEYWORD("q"), TAO_PEGTL_KEYWORD("quit")> {};
 struct Help: sor<TAO_PEGTL_KEYWORD("h"), TAO_PEGTL_KEYWORD("help")> {};
 struct DumpModule: seq<
             sor<TAO_PEGTL_KEYWORD("dm"), TAO_PEGTL_KEYWORD("dump_module")>,
@@ -227,7 +230,7 @@ struct DumpModule: seq<
 
 struct CmdGrammar: seq<
             one<'.'>,
-            sor<Help, DumpModule>,
+            sor<Quit, Help, DumpModule>,
             eof
         > {};
 
@@ -244,8 +247,16 @@ template<typename Rule>
 struct Action : nothing<Rule> {};
 
 template<>
+struct Action<Quit> {
+    static void apply0() {
+        g_done = true;
+    }
+};
+
+template<>
 struct Action<Help> {
     static void apply0() {
+        cout << ".q, .quit                      quit" << endl;
         cout << ".h, .help                      show all accepted commands" << endl;
         cout << ".dm, .dump_module [#|name]     print contents of last compiled module (or module by index or by name)" << endl;
     }
@@ -380,7 +391,7 @@ int main(int argc, char* argv[])
     rx.history_load(history_file);
     rx.set_max_history_size(1000);
 
-    for (;;) {
+    while (!g_done) {
         const char* input;
         do {
             input = rx.input(t.format("{green}_{}> {normal}", input_number));
