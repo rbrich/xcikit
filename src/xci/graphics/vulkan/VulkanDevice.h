@@ -48,6 +48,7 @@ private:
     VkQueue m_graphics_queue {};
     VkSwapchainKHR m_swapchain {};
     std::vector<VkImage> m_images;
+    std::vector<VkImageView> m_image_views;
 
     // swapchain create info
     VkSurfaceFormatKHR m_surface_format {};
