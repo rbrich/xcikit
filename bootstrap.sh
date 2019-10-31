@@ -52,6 +52,12 @@ if [[ ! -e "share/fonts/Hack/Hack-Regular.ttf" ]] ; then
     rm ${HACK_ARCHIVE}
 fi
 
+# Compile shaders to SPIR-V
+if [[ ! -e "share/shaders/test_vk.frag.spv" ]] ; then
+    echo "=== Compile shaders to SPIR-V ==="
+    ( cd share/shaders; make )
+fi
+
 # Needed for demo_vfs
 if [[ ! -e "share.dar" ]] ; then
     echo "=== Create share.dar archive ==="
