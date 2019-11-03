@@ -24,7 +24,7 @@ using namespace std::chrono;
 
 
 VulkanWindow::VulkanWindow(VulkanRenderer& renderer)
-    : m_renderer(renderer), m_device(m_renderer) {}
+    : m_renderer(renderer) {}
 
 
 VulkanWindow::~VulkanWindow()
@@ -46,7 +46,7 @@ void VulkanWindow::create(const Vec2u& size, const std::string& title)
     }
     glfwSetWindowUserPointer(m_window, this);
 
-    m_device.init(m_window);
+    m_renderer.init(m_window);
 }
 
 

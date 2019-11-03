@@ -16,7 +16,6 @@
 #ifndef XCI_GRAPHICS_VULKAN_WINDOW_H
 #define XCI_GRAPHICS_VULKAN_WINDOW_H
 
-#include "VulkanDevice.h"
 #include <xci/graphics/Window.h>
 #include <xci/core/geometry.h>
 
@@ -67,7 +66,6 @@ private:
 
 private:
     VulkanRenderer& m_renderer;
-    VulkanDevice m_device;
     GLFWwindow* m_window = nullptr;
     View m_view {this};
     RefreshMode m_mode = RefreshMode::OnDemand;

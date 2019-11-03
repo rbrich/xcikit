@@ -22,6 +22,9 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
+#include <vector>
+#include <optional>
+
 namespace xci::graphics {
 
 
@@ -37,14 +40,37 @@ public:
     PrimitivesPtr create_primitives(VertexFormat format,
                                     PrimitiveType type) override;
 
+    void init(GLFWwindow* m_window);
+
     // Vulkan handles
     VkInstance vk_instance() const { return m_instance; }
+    VkDevice& vk_device() { return m_device; }
+
+private:
+    void create_device();
+    void create_swapchain();
+
+    std::optional<uint32_t> query_queue_families(VkPhysicalDevice device);
+    bool query_swapchain(VkPhysicalDevice device);
 
 private:
     VkInstance m_instance {};
 #ifdef XCI_DEBUG_VULKAN
     VkDebugUtilsMessengerEXT m_debug_messenger {};
 #endif
+    VkSurfaceKHR m_surface {};
+    VkPhysicalDevice m_physical_device {};
+    VkDevice m_device {};
+    VkQueue m_graphics_queue {};
+    VkSwapchainKHR m_swapchain {};
+    std::vector<VkImage> m_images;
+    std::vector<VkImageView> m_image_views;
+
+    // swapchain create info
+    VkSurfaceFormatKHR m_surface_format {};
+    VkPresentModeKHR m_present_mode = VK_PRESENT_MODE_FIFO_KHR;
+    VkExtent2D m_extent {};
+    uint32_t m_image_count = 0;
 };
 
 

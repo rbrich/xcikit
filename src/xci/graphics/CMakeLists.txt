@@ -20,10 +20,9 @@ set(XCI_GRAPHICS_OPENGL_SOURCES
     opengl/GlWindow.cpp)
 
 set(XCI_GRAPHICS_VULKAN_SOURCES
-    vulkan/VulkanDevice.cpp
     vulkan/VulkanPrimitives.cpp
     vulkan/VulkanRenderer.cpp
-#    vulkan/VulkanShader.cpp
+    vulkan/VulkanShader.cpp
     vulkan/VulkanTexture.cpp
     vulkan/VulkanWindow.cpp)
 
