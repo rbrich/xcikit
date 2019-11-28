@@ -94,7 +94,8 @@ TEST_CASE( "Values", "[script][parser]" )
     check_parser("1.", "1.0");
     check_parser("1.23", "1.23");
     check_parser("\"string literal\"", "\"string literal\"");
-    check_parser("$$ raw \n\r\t string $$", "\" raw \n\r\t string \"");
+    check_parser("\"escape sequences: \\\"\\n\\0\\x12 \"", "\"escape sequences: \\\"\\n\\0\\x12 \"");
+    check_parser("$$ raw \n\r\t\" string $$", "\" raw \\n\\r\\t\\\" string \"");
     check_parser("1,2,3", "(1, 2, 3)");  // comma operator makes tuple, braces are optional
     check_parser("(1,2,\"str\")", "(1, 2, \"str\")");
     check_parser("[1,2,3]", "[1, 2, 3]");

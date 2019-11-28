@@ -355,7 +355,7 @@ struct Operator {
 // infix operators -> mirrors FunCall
 struct OpCall: public Call {
     OpCall() = default;
-    OpCall(Operator::Op op) : op(op) {}
+    explicit OpCall(Operator::Op op) : op(op) {}
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     Operator op;
