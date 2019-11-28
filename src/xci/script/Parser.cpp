@@ -75,10 +75,12 @@ struct Keyword: sor<KeywordIf, KeywordThen, KeywordElse, KeywordClass, KeywordIn
 // Literals
 struct Integer: seq< opt<one<'-','+'>>, plus<digit> > {};
 struct Float: seq< opt<one<'-','+'>>, plus<digit>, one<'.'>, star<digit> > {};
-struct StringChEscSingle : one< 'a', 'b', 'f', 'n', 'r', 't', 'v', '\\', '"', '\'', '0', '\n' > {};
+struct StringChEscSingle : one< 'a', 'b', 'f', 'n', 'r', 't', 'v', 'e', '\\', '"', '\'', '0', '\n' > {};
 struct StringChEscHex : if_must< one< 'x' >, xdigit, xdigit > {};
-struct StringChEsc : if_must< one< '\\' >, sor< StringChEscHex, StringChEscSingle > > {};
-struct StringCh : sor< StringChEsc, not_one<'\r', '\n'> > {};
+struct StringChEscOct : if_must< digit, opt<digit>, opt<digit> > {};
+struct StringChEsc : if_must< one< '\\' >, sor< StringChEscHex, StringChEscOct, StringChEscSingle > > {};
+struct StringChOther : sor< one<'\t'>, not_range<0, 31> > {};
+struct StringCh : sor< StringChEsc, StringChOther > {};
 struct String: if_must< one<'"'>, until<one<'"'>, StringCh > > {};
 struct RawString : raw_string< '$', '-', '$' > {};  // raw_string = $$ raw text! $$
 struct Literal: sor< Float, Integer, String, RawString > {};
@@ -671,12 +673,75 @@ struct Action<Integer> {
 
 
 template<>
-struct Action<String> {
+struct Action<String> : change_states< std::string > {
     template<typename Input>
     static void apply(const Input &in, std::unique_ptr<ast::Expression>& expr) {
-        const auto& str = in.string();
-        expr = std::make_unique<ast::String>(str.substr(1, str.size() - 2));
         expr->source_info.load(in.input(), in.position());
+    }
+
+    template<typename Input>
+    static void success(const Input &in, std::string& str, std::unique_ptr<ast::Expression>& expr) {
+        str.shrink_to_fit();
+        expr = std::make_unique<ast::String>(std::move(str));
+    }
+};
+
+
+template<>
+struct Action<StringChOther> {
+    template<typename Input, typename... States>
+    static void apply(const Input &in, std::string& str, States&&...) {
+        if (str.capacity() == str.size())
+            str.reserve(str.capacity() * 3 / 2);
+        str += in.string();
+    }
+};
+
+
+template<>
+struct Action<StringChEscSingle> {
+    template<typename Input, typename... States>
+    static void apply(const Input &in, std::string& str, States&&...) {
+        if (str.capacity() == str.size())
+            str.reserve(str.capacity() * 3 / 2);
+        assert( in.size() == 1 );
+        char ch = *in.begin();
+        switch (ch) {
+            case 'a': str += '\a'; break;
+            case 'b': str += '\b'; break;
+            case 'f': str += '\f'; break;
+            case 'n': str += '\n'; break;
+            case 'r': str += '\r'; break;
+            case 't': str += '\t'; break;
+            case 'v': str += '\v'; break;
+            case 'e': str += '\033'; break;
+            case '\n': break;
+            default: str += ch; break;
+        }
+    }
+};
+
+
+template<>
+struct Action<StringChEscHex> {
+    template<typename Input, typename... States>
+    static void apply(const Input &in, std::string& str, States&&...) {
+        if (str.capacity() == str.size())
+            str.reserve(str.capacity() * 3 / 2);
+        assert( in.size() == 3 );
+        str += (char) std::stoi(std::string{in.begin()+1, in.end()}, nullptr, 16);
+    }
+};
+
+
+template<>
+struct Action<StringChEscOct> {
+    template<typename Input, typename... States>
+    static void apply(const Input &in, std::string& str, States&&...) {
+        if (str.capacity() == str.size())
+            str.reserve(str.capacity() * 3 / 2);
+        assert( in.size() >= 1 && in.size() <= 3 );
+        str += (char) std::stoi(in.string(), nullptr, 8);
     }
 };
 

@@ -26,7 +26,7 @@ struct Node
     std::string name;
     Option option = Option(-1);
     std::vector<Node> child;
-    double f;
+    double f = 0.0;
 
     void check_equal(const Node& rhs) const {
         CHECK(name == rhs.name);

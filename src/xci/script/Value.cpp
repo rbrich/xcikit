@@ -15,6 +15,7 @@
 
 #include "Value.h"
 #include "Function.h"
+#include <xci/core/string.h>
 #include <numeric>
 
 namespace xci::script {
@@ -81,7 +82,7 @@ std::ostream& operator<<(std::ostream& os, const Value& o)
         void visit(const value::Int64& v) override { os << v.value() << ":Int64"; }
         void visit(const value::Float32& v) override { os << v.value(); }
         void visit(const value::Float64& v) override { os << v.value() << ":Float64"; }
-        void visit(const value::String& v) override { os << v.value(); }
+        void visit(const value::String& v) override { os << '"' << core::escape(v.value()) << '"'; }
         void visit(const value::List& v) override {
             os << "[";
             for (size_t idx = 0; idx < v.length(); idx++) {

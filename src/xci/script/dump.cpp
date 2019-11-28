@@ -16,6 +16,7 @@
 #include "dump.h"
 #include "Function.h"
 #include "Module.h"
+#include <xci/core/string.h>
 
 namespace xci::script {
 
@@ -121,9 +122,9 @@ std::ostream& operator<<(std::ostream& os, const Float& v)
 std::ostream& operator<<(std::ostream& os, const String& v)
 {
     if (stream_options(os).enable_tree) {
-        return os << put_indent << "String(Expression) " << v.value << endl;
+        return os << put_indent << "String(Expression) " << core::escape(v.value) << endl;
     } else {
-        return os << '"' << v.value << '"';
+        return os << '"' << core::escape(v.value) << '"';
     }
 }
 
