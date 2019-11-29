@@ -1,19 +1,11 @@
-// string.cpp created on 2018-03-23, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// string.cpp created on 2018-03-23 belongs to XCI Toolkit
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018, 2019 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#include <xci/core/string.h>
+#include "string.h"
+#include "parser/unescape.h"
 #include <xci/core/format.h>
 #include <xci/core/log.h>
 
@@ -21,8 +13,6 @@
 #include <locale>
 #include <codecvt>
 #include <cassert>
-#include "string.h"
-
 
 namespace xci::core {
 
@@ -62,26 +52,63 @@ std::string escape(string_view str)
     std::string out;
     out.reserve(str.size());
     for (auto ch : str) {
-        if (std::isprint(ch)) {
-            out += ch;
-        } else {
-            switch (ch) {
-                case '\a': out += "\\a"; break;
-                case '\b': out += "\\b"; break;
-                case '\t': out += "\\t"; break;
-                case '\n': out += "\\n"; break;
-                case '\v': out += "\\v"; break;
-                case '\f': out += "\\f"; break;
-                case '\r': out += "\\r"; break;
-                case '\\': out += "\\\\"; break;
-                default: {
+        switch (ch) {
+            case '\a': out += "\\a"; break;
+            case '\b': out += "\\b"; break;
+            case '\f': out += "\\f"; break;
+            case '\n': out += "\\n"; break;
+            case '\r': out += "\\r"; break;
+            case '\t': out += "\\t"; break;
+            case '\v': out += "\\v"; break;
+            case '\\': out += "\\\\"; break;
+            case '"': out += "\\\""; break;
+            case '\'': out += "\\'"; break;
+            default: {
+                if (std::isprint(ch))
+                    out += ch;
+                else if (ch >= 0 && ch < 8)
+                    out += format("\\{}", (int)(unsigned char)(ch));
+                else
                     out += format("\\x{:02x}", (int)(unsigned char)(ch));
-                    break;
-                }
+                break;
             }
         }
     }
     return out;
+}
+
+
+std::string unescape(string_view str)
+{
+    using namespace parser::unescape;
+
+    tao::pegtl::memory_input<
+        tao::pegtl::tracking_mode::eager,
+        tao::pegtl::eol::lf_crlf,
+        const char*>
+    input(str.data(), str.size(), "<input>");
+    std::string result;
+    result.reserve(str.size());
+
+    try {
+        auto matched = tao::pegtl::parse< String, Action >( input, result );
+        assert(matched);
+        (void) matched;
+    } catch (tao::pegtl::parse_error&) {
+        assert(!"unescape: parse error");
+    }
+    result.shrink_to_fit();
+    return result;
+}
+
+
+std::string to_lower(std::string_view str)
+{
+    std::string result(str.size(), '\0');
+    std::transform(
+        str.begin(), str.end(),
+        result.begin(), [](char c){ return std::tolower(c); });
+    return result;
 }
 
 
