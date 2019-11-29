@@ -11,12 +11,14 @@
 #include <xci/core/chrono.h>
 
 #include <fstream>
+#include <string>
 #include <cstdio>
 #include <unistd.h>
 #include <sys/stat.h>
 
 using namespace xci::core;
 using std::this_thread::sleep_for;
+using namespace std::string_literals;
 
 
 TEST_CASE( "Format placeholders", "[format]" )
@@ -172,11 +174,30 @@ TEST_CASE( "to_codepoint", "[string]" )
 
 TEST_CASE( "escape", "[string]" )
 {
-    CHECK(escape(std::string("\x00", 1)) == "\\x00");
-    CHECK(escape("\x01\x02\x03\x04\x05\x06") == "\\x01\\x02\\x03\\x04\\x05\\x06");
+    CHECK(escape("abc\0"s) == "abc\\0");
+    CHECK(escape("\1\2\3\4\5\6") == "\\1\\2\\3\\4\\5\\6");
     CHECK(escape("\x07\x08\x09\x0a\x0b\x0c") == "\\a\\b\\t\\n\\v\\f");
     CHECK(escape("\x0d\x0e\x0f\x10\x1a\x1b") == "\\r\\x0e\\x0f\\x10\\x1a\\x1b");
     CHECK(escape("\x80\xff") == "\\x80\\xff");
+}
+
+
+TEST_CASE( "unescape", "[string]" )
+{
+    CHECK(unescape("abc\\n") == "abc\n"s);
+    CHECK(unescape("\\0\\1\\2\\3\\4\\5\\6") == "\0\1\2\3\4\5\6"s);
+    CHECK(unescape("\\a\\b\\t\\n\\v\\f") == "\x07\x08\x09\x0a\x0b\x0c");
+    CHECK(unescape("\\r\\x0e\\x0f\\x10\\x1a\\x1b") == "\x0d\x0e\x0f\x10\x1a\x1b");
+    CHECK(unescape("\\x80\\xff") == "\x80\xff");
+    // ill-formatted:
+    CHECK(unescape("trailing backslash \\") == "trailing backslash ");
+    CHECK(unescape("bad esc \\J\\X\\\\") == "bad esc JX\\");
+}
+
+
+TEST_CASE( "to_lower", "[string]" )
+{
+    CHECK(to_lower("HELLO!") == "hello!");
 }
 
 
