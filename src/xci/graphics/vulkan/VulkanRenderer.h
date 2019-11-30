@@ -19,7 +19,8 @@
 #include <xci/graphics/Renderer.h>
 #include <xci/config.h>
 
-#define GLFW_INCLUDE_VULKAN
+#include <vulkan/vulkan.h>
+#define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
 #include <vector>
@@ -44,7 +45,9 @@ public:
 
     // Vulkan handles
     VkInstance vk_instance() const { return m_instance; }
-    VkDevice& vk_device() { return m_device; }
+    VkDevice vk_device() const { return m_device; }
+    const VkExtent2D& vk_image_extent() const { return m_extent; }
+    const VkSurfaceFormatKHR& vk_surface_format() const { return m_surface_format; }
 
 private:
     void create_device();

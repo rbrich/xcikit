@@ -16,6 +16,7 @@
 #include "VulkanRenderer.h"
 #include "VulkanTexture.h"
 #include "VulkanShader.h"
+#include "VulkanPrimitives.h"
 #include <xci/core/log.h>
 #include <xci/core/string.h>
 #include <xci/compat/macros.h>
@@ -235,7 +236,7 @@ ShaderPtr VulkanRenderer::create_shader()
 PrimitivesPtr VulkanRenderer::create_primitives(VertexFormat format,
                                                 PrimitiveType type)
 {
-    return xci::graphics::PrimitivesPtr();
+    return std::make_shared<VulkanPrimitives>(*this, format, type);
 }
 
 

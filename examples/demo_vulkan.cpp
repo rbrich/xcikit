@@ -15,14 +15,13 @@
 
 #include <xci/graphics/vulkan/VulkanRenderer.h>
 #include <xci/graphics/vulkan/VulkanWindow.h>
-//#include <xci/text/Text.h>
+#include <xci/graphics/vulkan/VulkanPrimitives.h>
+#include <xci/graphics/vulkan/VulkanShader.h>
 #include <xci/core/Vfs.h>
 #include <xci/config.h>
 
-#include <iostream>
 #include <cstdlib>
 
-//using namespace xci::text;
 using namespace xci::graphics;
 using namespace xci::core;
 
@@ -35,47 +34,18 @@ int main()
     VulkanWindow window {renderer};
     window.create({800, 600}, "XCI Vulkan Demo");
 
-    /*
-    glfwMakeContextCurrent(window);
+    VulkanShader shader {renderer.vk_device()};
+    shader.load_from_file(
+            vfs.read_file("shaders/test_vk.vert.spv").path(),
+            vfs.read_file("shaders/test_vk.frag.spv").path());
 
-    // Setup XCI view
-    View view;
-    view.set_viewport_mode(ViewOrigin::Center, ViewScale::FixedScreenPixels);
-    int width, height;
-    glfwGetWindowSize(window, &width, &height);
-    view.set_screen_size({(float) width, (float) height});
-    glfwGetFramebufferSize(window, &width, &height);
-    view.set_framebuffer_size({(float) width, (float) height});
-    glfwSetWindowUserPointer(window, &view);
-    glfwSetFramebufferSizeCallback(window, [](GLFWwindow* win, int w, int h) {
-        auto pview = (View*) glfwGetWindowUserPointer(win);
-        pview->set_framebuffer_size({(float) w, (float) h});
-        glViewport(0, 0, w, h);
-    });
-    glfwSetWindowSizeCallback(window, [](GLFWwindow* win, int w, int h) {
-        auto pview = (View*) glfwGetWindowUserPointer(win);
-        pview->set_screen_size({(float) w, (float) h});
+    VulkanPrimitives primitives {renderer, VertexFormat::V2c4t22, PrimitiveType::TriFans};
+    primitives.set_shader(shader);
+
+    window.set_draw_callback([&](View& view) {
+        primitives.draw(view);
     });
 
-    // Create XCI text
-
-    Font font;
-    if (!font.add_face("fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
-        return EXIT_FAILURE;
-
-    Text text(font, "Hello from XCI", Text::Format::None);
-    text.set_font_size(50);
-*/
-    // Run
-    while (!glfwWindowShouldClose(window.glfw_window())) {
-        //glClear(GL_COLOR_BUFFER_BIT);
-
-        //text.draw(view, {-200, 0});
-
-        //glfwSwapBuffers(window);
-        glfwWaitEvents();
-    }
-
-    //window.display();
+    window.display();
     return EXIT_SUCCESS;
 }

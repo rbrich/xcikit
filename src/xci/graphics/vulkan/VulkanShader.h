@@ -18,8 +18,7 @@
 
 #include <xci/graphics/Shader.h>
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
+#include <vulkan/vulkan.h>
 
 namespace xci::graphics {
 
@@ -42,6 +41,10 @@ public:
     void set_uniform(const char* name, float f1, float f2, float f3, float f4) override;
 
     void set_texture(const char* name, TexturePtr& texture) override;
+
+    // Vulkan handles:
+    VkShaderModule vk_vertex_module() const { return m_vertex_module; }
+    VkShaderModule vk_fragment_module() const { return m_fragment_module; }
 
 private:
     VkShaderModule create_module(const uint32_t* code, size_t size);

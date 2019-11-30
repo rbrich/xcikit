@@ -18,12 +18,17 @@
 
 #include <xci/graphics/Primitives.h>
 
+#include <vulkan/vulkan.h>
+
 namespace xci::graphics {
+
+class VulkanShader;
+class VulkanRenderer;
 
 
 class VulkanPrimitives : public Primitives {
 public:
-    explicit VulkanPrimitives(VertexFormat format, PrimitiveType type);
+    explicit VulkanPrimitives(VulkanRenderer& renderer, VertexFormat format, PrimitiveType type);
     ~VulkanPrimitives() override;
 
     void reserve(size_t primitives, size_t vertices) override;
@@ -37,13 +42,21 @@ public:
     void clear() override;
     bool empty() const override;
 
-    void set_shader(ShaderPtr& shader) override;
+    void set_shader(Shader& shader) override;
     void set_blend(BlendFunc func) override;
 
     void draw(View& view) override;
 
 private:
+    void create_pipeline();
+    void create_renderpass();
 
+private:
+    VulkanRenderer& m_renderer;
+    VulkanShader* m_shader = nullptr;
+    VkRenderPass m_render_pass {};
+    VkPipelineLayout m_pipeline_layout {};
+    VkPipeline m_pipeline {};
 };
 
 

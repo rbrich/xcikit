@@ -55,7 +55,7 @@ public:
     virtual void clear() = 0;
     virtual bool empty() const = 0;
 
-    virtual void set_shader(ShaderPtr& shader) = 0;
+    virtual void set_shader(Shader& shader) = 0;
 
     enum class BlendFunc { AlphaBlend, InverseVideo, };
     virtual void set_blend(BlendFunc func) = 0;
