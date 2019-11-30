@@ -1,4 +1,4 @@
-Lambda Script v0.2
+Lambda Script v0.3
 ==================
 ***Syntax reference***
 
@@ -90,25 +90,25 @@ Definition (naming a value) can occur only once for each name in a scope:
 
 Define a function with parameters:
 
-    add2 = |a b| {a + b}   // generic function - works with any type supported by op+
-    add2 = |a:t b:t| -> t {a + b}  // same as above, but with explicit type variable
-    add2 = |a:Int b:Int|->Int {a + b}   // specific, with type declarations
-    add2 : |Int Int|->Int = |a b|{a + b}   // type declaration on left side (i.e. disable type inference)
+    add2 = fn a b {a + b}   // generic function - works with any type supported by op+
+    add2 = fn a:t b:t -> t {a + b}  // same as above, but with explicit type variable
+    add2 = fn a:Int b:Int -> Int {a + b}   // specific, with type declarations
+    add2 : Int Int -> Int = fn a b {a + b}   // type declaration on left side (i.e. disable type inference)
     
     // function definition can span multiple lines
-    add2 = | a:Int b:Int | -> Int
+    add2 = fn a:Int b:Int -> Int
     {
         a + b
     }
     
     // possible program main function
-    main = | args:[String] | -> Void {
+    main = fn args:[String] -> Void {
         print "Hello World!"
     }
 
 Function call can explicitly name the arguments:
 
-    make_book = | name:String author:String isbn:Int | -> MyBook
+    make_book = fn name:String author:String isbn:Int -> MyBook
         { MyBook(name, author, isbn) }
     make_book name="Title" author="Karel IV" isbn=12345
 
@@ -120,14 +120,14 @@ prototype.
 
 Pass a function as an argument:
 
-    eval2 = | f a b | { f a b }
+    eval2 = fn f a b { f a b }
     eval2 add2 1 2                  // calls `add2 1 2`
-    eval2 |a b|{a + b} 1 2          // calls anonymous function
+    eval2 fn a b {a + b} 1 2        // calls anonymous function
 
 Return a function from a function:
 
-    sub2 = | a b | { a - b }
-    choose = |x| { if (x == "add") add2 sub2 }
+    sub2 = fn a b { a - b }
+    choose = fn x { if (x == "add") add2 sub2 }
     choose "add" 1 2
     choose "sub" 1 2
 
@@ -164,8 +164,8 @@ Block is a function with zero arguments:
     block3_bound = bind a=1 b=2 block3
     block3_bound    // returns 3
     
-    a = {f = |x|{ 5 } }; f    // ERROR - block creates new scope - f is undefined outside
-    a = (f = |x|{ 5 } ); f    // ok - f is declared in outer scope
+    a = {f = fn x {5}}; f    // ERROR - block creates new scope - f is undefined outside
+    a = (f = fn x {5}); f    // ok - f is declared in outer scope
 
 Infix operators:
 
@@ -174,12 +174,6 @@ Infix operators:
     1 + 2 * 3 ** 4 == 1 + (2 * (3 ** 4))
     // Bitwise operators
     1 | 2 & 3 >> 1 == 1 | (2 & (3 >> 1))
-
-The BitwiseOr operator has lower precedence that lambda operator:
-
-    a | b | c       // ok, bitwise
-    a | b | {c}     // calls 'a' with lambda '|b|{c}' as an argument
-    a | b | ({c})   // now the '{c}' block is an arg in bitwise-or
 
 Record field lookup:
 
@@ -221,10 +215,12 @@ Types must begin with uppercase letter (this is enforced part of the syntax):
 
 Function types:
 
-    |a:Int b:Int| -> |c:Int| -> Int
-    |Int Int| -> |Int| -> Int           // without parameter names
-    |Int Int Int| -> Int                // Compact form
-    |Int| -> |Int| -> |Int| -> Int      // Normalized form
+    a:Int b:Int -> c:Int -> Int         // with parameter names
+    Int Int -> Int -> Int               // without parameter names
+    Int Int Int -> Int                  // compact form
+    Int -> Int -> Int -> Int            // normalized form
+    (Int, Int, Int) -> Int              // signle tuple argument
+    (Int, Int) Int -> Int               // two arguments, first is tuple
 
 - All of the above types are equivalent - they all describe the same function.
 - The normalized form describes how the partial evaluation works.
@@ -234,7 +230,7 @@ Function types:
 
 ### Lists
 
-Lists are homogenous data types:
+Lists are homogeneous data types:
 
     nums = [1, 2, 3, 4, 5]
     chars = ['a', 'b', 'c', 'd', 'e']
@@ -305,8 +301,8 @@ Given this source file:
 Imagine that it's executed like this:
 
     _0 = void
-    _1 = executor (|_|{ 1 + 2 } _0)
-    _2 = executor (|_|{ 3 * _ } _1)
+    _1 = executor (fn _{ 1 + 2 } _0)
+    _2 = executor (fn _{ 3 * _ } _1)
 
 The Executor can do anything with the results, for example:
 
@@ -363,7 +359,7 @@ Appendix
 
 List of Keywords:
 
-    else if then
+    else fn if then
 
 Precedence table:
 
@@ -383,7 +379,7 @@ Precedence table:
     10   |  subscript         |  x ! y
     
     (11) |  unary ops         |  -  +  !  ~
-    (12) |  function call     |  f [<arg> ...]
+    (12) |  function call     |  name [<arg> ...]
 
 Higher precedence means tighter binding.
 
