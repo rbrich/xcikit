@@ -35,7 +35,6 @@ VulkanPrimitives::~VulkanPrimitives()
 {
     vkDestroyPipeline(m_renderer.vk_device(), m_pipeline, nullptr);
     vkDestroyPipelineLayout(m_renderer.vk_device(), m_pipeline_layout, nullptr);
-    vkDestroyRenderPass(m_renderer.vk_device(), m_render_pass, nullptr);
 }
 
 
@@ -148,51 +147,13 @@ void VulkanPrimitives::create_pipeline()
         .pMultisampleState = &multisample_ci,
         .pColorBlendState = &color_blend_ci,
         .layout = m_pipeline_layout,
-        .renderPass = m_render_pass,
+        .renderPass = m_renderer.vk_render_pass(),
         .subpass = 0,
     };
 
     if (vkCreateGraphicsPipelines(m_renderer.vk_device(), VK_NULL_HANDLE, 1,
             &pipeline_ci, nullptr, &m_pipeline) != VK_SUCCESS)
         throw std::runtime_error("failed to create graphics pipeline!");
-}
-
-
-void VulkanPrimitives::create_renderpass()
-{
-    VkAttachmentDescription color_attachment = {
-        .format = m_renderer.vk_surface_format().format,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-        .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-        .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-        .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-    };
-
-    VkAttachmentReference color_attachment_ref = {
-        .attachment = 0,  // layout(location = 0)
-        .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    };
-
-    VkSubpassDescription subpass = {
-        .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-        .colorAttachmentCount = 1,
-        .pColorAttachments = &color_attachment_ref,
-    };
-
-    VkRenderPassCreateInfo render_pass_ci = {
-        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-        .attachmentCount = 1,
-        .pAttachments = &color_attachment,
-        .subpassCount = 1,
-        .pSubpasses = &subpass,
-    };
-
-    if (vkCreateRenderPass(m_renderer.vk_device(), &render_pass_ci,
-            nullptr, &m_render_pass) != VK_SUCCESS)
-        throw std::runtime_error("failed to create render pass!");
 }
 
 
@@ -259,8 +220,6 @@ void VulkanPrimitives::set_blend(Primitives::BlendFunc func)
 
 void VulkanPrimitives::draw(View& view)
 {
-    if (m_render_pass == VK_NULL_HANDLE)
-        create_renderpass();
     if (m_pipeline == VK_NULL_HANDLE)
         create_pipeline();
 }

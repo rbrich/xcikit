@@ -49,12 +49,10 @@ public:
 
 private:
     void create_pipeline();
-    void create_renderpass();
 
 private:
     VulkanRenderer& m_renderer;
     VulkanShader* m_shader = nullptr;
-    VkRenderPass m_render_pass {};
     VkPipelineLayout m_pipeline_layout {};
     VkPipeline m_pipeline {};
 };

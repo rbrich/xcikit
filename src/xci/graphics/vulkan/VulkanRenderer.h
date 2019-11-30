@@ -47,11 +47,13 @@ public:
     VkInstance vk_instance() const { return m_instance; }
     VkDevice vk_device() const { return m_device; }
     const VkExtent2D& vk_image_extent() const { return m_extent; }
-    const VkSurfaceFormatKHR& vk_surface_format() const { return m_surface_format; }
+    const VkRenderPass& vk_render_pass() const { return m_render_pass; }
 
 private:
     void create_device();
     void create_swapchain();
+    void create_renderpass();
+    void create_framebuffers();
 
     std::optional<uint32_t> query_queue_families(VkPhysicalDevice device);
     bool query_swapchain(VkPhysicalDevice device);
@@ -66,8 +68,11 @@ private:
     VkDevice m_device {};
     VkQueue m_graphics_queue {};
     VkSwapchainKHR m_swapchain {};
+    VkRenderPass m_render_pass {};
+    VkCommandPool m_command_pool {};
     std::vector<VkImage> m_images;
     std::vector<VkImageView> m_image_views;
+    std::vector<VkFramebuffer> m_framebuffers;
 
     // swapchain create info
     VkSurfaceFormatKHR m_surface_format {};

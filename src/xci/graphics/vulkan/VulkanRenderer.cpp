@@ -206,11 +206,16 @@ VulkanRenderer::VulkanRenderer(core::Vfs& vfs)
 
 VulkanRenderer::~VulkanRenderer()
 {
+    for (auto framebuffer : m_framebuffers) {
+        vkDestroyFramebuffer(m_device, framebuffer, nullptr);
+    }
+    vkDestroyRenderPass(m_device, m_render_pass, nullptr);
     for (auto image_view : m_image_views) {
         vkDestroyImageView(m_device, image_view, nullptr);
     }
     vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+    vkDestroyCommandPool(m_device, m_command_pool, nullptr);
     vkDestroyDevice(m_device, nullptr);
     auto vkDestroyDebugUtilsMessengerEXT = (PFN_vkDestroyDebugUtilsMessengerEXT)
             vkGetInstanceProcAddr(m_instance, "vkDestroyDebugUtilsMessengerEXT");
@@ -249,6 +254,8 @@ void VulkanRenderer::init(GLFWwindow* window)
 
     create_device();
     create_swapchain();
+    create_renderpass();
+    create_framebuffers();
 }
 
 
@@ -353,6 +360,15 @@ void VulkanRenderer::create_device()
 
     vkGetDeviceQueue(m_device, graphics_queue_family,
             0, &m_graphics_queue);
+
+    // create VkCommandPool
+    VkCommandPoolCreateInfo command_pool_ci = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .queueFamilyIndex = graphics_queue_family,
+    };
+    if (vkCreateCommandPool(m_device, &command_pool_ci,
+            nullptr, &m_command_pool) != VK_SUCCESS)
+        throw std::runtime_error("failed to create command pool!");
 }
 
 
@@ -409,6 +425,70 @@ void VulkanRenderer::create_swapchain()
         if (vkCreateImageView(m_device, &image_view_create_info,
                 nullptr, &m_image_views[i]) != VK_SUCCESS)
             throw std::runtime_error("failed to create image views!");
+    }
+}
+
+
+void VulkanRenderer::create_renderpass()
+{
+    VkAttachmentDescription color_attachment = {
+            .format = m_surface_format.format,
+            .samples = VK_SAMPLE_COUNT_1_BIT,
+            .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+            .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+            .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+            .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+            .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+            .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+    };
+
+    VkAttachmentReference color_attachment_ref = {
+            .attachment = 0,  // layout(location = 0)
+            .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    };
+
+    VkSubpassDescription subpass = {
+            .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+            .colorAttachmentCount = 1,
+            .pColorAttachments = &color_attachment_ref,
+    };
+
+    VkRenderPassCreateInfo render_pass_ci = {
+            .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+            .attachmentCount = 1,
+            .pAttachments = &color_attachment,
+            .subpassCount = 1,
+            .pSubpasses = &subpass,
+    };
+
+    if (vkCreateRenderPass(m_device, &render_pass_ci,
+            nullptr, &m_render_pass) != VK_SUCCESS)
+        throw std::runtime_error("failed to create render pass!");
+}
+
+
+void VulkanRenderer::create_framebuffers()
+{
+    m_framebuffers.resize(m_image_views.size());
+    for (size_t i = 0; i < m_image_views.size(); i++) {
+        VkImageView attachments[] = {
+                m_image_views[i]
+        };
+
+        VkFramebufferCreateInfo framebuffer_ci = {
+            .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+            .renderPass = m_render_pass,
+            .attachmentCount = 1,
+            .pAttachments = attachments,
+            .width = m_extent.width,
+            .height = m_extent.height,
+            .layers = 1,
+
+        };
+
+        if (vkCreateFramebuffer(m_device, &framebuffer_ci,
+                nullptr, &m_framebuffers[i]) != VK_SUCCESS)
+            throw std::runtime_error("failed to create framebuffer!");
     }
 }
 
