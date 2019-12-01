@@ -29,6 +29,12 @@ VulkanWindow::VulkanWindow(VulkanRenderer& renderer)
 
 VulkanWindow::~VulkanWindow()
 {
+    for (auto* fence : m_cmd_buf_fences)
+        vkDestroyFence(m_renderer.vk_device(), fence, nullptr);
+    for (auto* sem : m_render_semaphore)
+        vkDestroySemaphore(m_renderer.vk_device(), sem, nullptr);
+    for (auto* sem : m_image_semaphore)
+        vkDestroySemaphore(m_renderer.vk_device(), sem, nullptr);
     if (m_window != nullptr)
         glfwDestroyWindow(m_window);
 }
@@ -80,6 +86,7 @@ void VulkanWindow::display()
                 break;
         }
     }
+    vkDeviceWaitIdle(m_renderer.vk_device());
 }
 
 
@@ -233,16 +240,126 @@ void VulkanWindow::setup_view()
             self->m_char_cb(self->m_view, CharEvent{codepoint});
         }
     });
+
+    create_command_buffers();
+}
+
+
+void VulkanWindow::create_command_buffers()
+{
+    VkCommandBufferAllocateInfo alloc_info = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = m_renderer.vk_command_pool(),
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = cmd_buf_count,
+    };
+    if (vkAllocateCommandBuffers(m_renderer.vk_device(), &alloc_info,
+            m_command_buffers) != VK_SUCCESS)
+        throw std::runtime_error("failed to allocate command buffers!");
+
+    VkFenceCreateInfo fence_ci {
+        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
+    };
+    VkSemaphoreCreateInfo semaphore_ci = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+    };
+    for (size_t i = 0; i < cmd_buf_count; ++i) {
+        if (vkCreateFence(m_renderer.vk_device(), &fence_ci,
+                nullptr, &m_cmd_buf_fences[i]) != VK_SUCCESS)
+            throw std::runtime_error("vkCreateFence failed");
+
+        if (vkCreateSemaphore(m_renderer.vk_device(), &semaphore_ci,
+                nullptr, &m_image_semaphore[i]) != VK_SUCCESS ||
+            vkCreateSemaphore(m_renderer.vk_device(), &semaphore_ci,
+                nullptr, &m_render_semaphore[i]) != VK_SUCCESS)
+            throw std::runtime_error("failed to create semaphores!");
+    }
 }
 
 
 void VulkanWindow::draw()
 {
     TRACE("Draw");
-    //glClear(GL_COLOR_BUFFER_BIT);
-    if (m_draw_cb)
-        m_draw_cb(m_view);
-    glfwSwapBuffers(m_window);
+
+    uint32_t image_index;
+    if (vkAcquireNextImageKHR(m_renderer.vk_device(),
+            m_renderer.vk_swapchain(), UINT64_MAX,
+            m_image_semaphore[m_current_cmd_buf],
+            VK_NULL_HANDLE, &image_index) != VK_SUCCESS)
+        throw std::runtime_error("vulkan failed: acquire next image");
+
+    auto* cmd_buf = m_command_buffers[m_current_cmd_buf];
+
+    {
+        if (vkWaitForFences(m_renderer.vk_device(),
+                1, &m_cmd_buf_fences[m_current_cmd_buf], VK_TRUE, UINT64_MAX) != VK_SUCCESS)
+            throw std::runtime_error("vkWaitForFences failed");
+        if (vkResetFences(m_renderer.vk_device(),
+                1, &m_cmd_buf_fences[m_current_cmd_buf]) != VK_SUCCESS)
+            throw std::runtime_error("vkResetFences failed");
+
+        VkCommandBufferBeginInfo begin_info = {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+        };
+        if (vkBeginCommandBuffer(cmd_buf, &begin_info) != VK_SUCCESS)
+            throw std::runtime_error("failed to begin recording command buffer!");
+
+        VkClearValue clear_value = {.color = {{0.0f, 0.0f, 0.0f, 1.0f}}};
+        VkRenderPassBeginInfo render_pass_info = {
+            .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+            .renderPass = m_renderer.vk_render_pass(),
+            .framebuffer = m_renderer.vk_framebuffer(image_index),
+            .renderArea = {
+                .offset = {0, 0},
+                .extent = m_renderer.vk_image_extent(),
+            },
+            .clearValueCount = 1,
+            .pClearValues = &clear_value,
+        };
+        vkCmdBeginRenderPass(cmd_buf, &render_pass_info,
+                VK_SUBPASS_CONTENTS_INLINE);
+
+        if (m_draw_cb)
+            m_draw_cb(m_view);
+
+        vkCmdEndRenderPass(cmd_buf);
+
+        if (vkEndCommandBuffer(cmd_buf) != VK_SUCCESS)
+            throw std::runtime_error("failed to record command buffer!");
+    }
+
+    VkSemaphore wait_semaphores[] = {m_image_semaphore[m_current_cmd_buf]};
+    VkSemaphore signal_semaphores[] = {m_render_semaphore[m_current_cmd_buf]};
+    VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    VkSubmitInfo submit_info = {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = wait_semaphores,
+        .pWaitDstStageMask = wait_stages,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &cmd_buf,
+        .signalSemaphoreCount = 1,
+        .pSignalSemaphores = signal_semaphores,
+    };
+    if (vkQueueSubmit(m_renderer.vk_queue(), 1, &submit_info,
+            m_cmd_buf_fences[m_current_cmd_buf]) != VK_SUCCESS)
+        throw std::runtime_error("failed to submit draw command buffer!");
+
+    VkSwapchainKHR swapchains[] = {m_renderer.vk_swapchain()};
+    VkPresentInfoKHR present_info = {
+        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = signal_semaphores,
+        .swapchainCount = 1,
+        .pSwapchains = swapchains,
+        .pImageIndices = &image_index,
+    };
+    if (vkQueuePresentKHR(m_renderer.vk_queue(), &present_info) != VK_SUCCESS)
+        throw std::runtime_error("vulkan failed: vkQueuePresentKHR");
+
+    m_current_cmd_buf = (m_current_cmd_buf + 1) % cmd_buf_count;
 }
 
 

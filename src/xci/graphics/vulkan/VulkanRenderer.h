@@ -23,7 +23,6 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
-#include <vector>
 #include <optional>
 
 namespace xci::graphics {
@@ -46,8 +45,12 @@ public:
     // Vulkan handles
     VkInstance vk_instance() const { return m_instance; }
     VkDevice vk_device() const { return m_device; }
+    VkSwapchainKHR vk_swapchain() const { return m_swapchain; }
+    VkQueue vk_queue() const { return m_queue; }
+    VkCommandPool vk_command_pool() const { return m_command_pool; }
     const VkExtent2D& vk_image_extent() const { return m_extent; }
-    const VkRenderPass& vk_render_pass() const { return m_render_pass; }
+    VkRenderPass vk_render_pass() const { return m_render_pass; }
+    VkFramebuffer vk_framebuffer(uint32_t index) const { return m_framebuffers[index]; }
 
 private:
     void create_device();
@@ -66,19 +69,21 @@ private:
     VkSurfaceKHR m_surface {};
     VkPhysicalDevice m_physical_device {};
     VkDevice m_device {};
-    VkQueue m_graphics_queue {};
+    VkQueue m_queue {};
     VkSwapchainKHR m_swapchain {};
     VkRenderPass m_render_pass {};
     VkCommandPool m_command_pool {};
-    std::vector<VkImage> m_images;
-    std::vector<VkImageView> m_image_views;
-    std::vector<VkFramebuffer> m_framebuffers;
+
+    static constexpr uint32_t max_image_count = 8;
+    VkImage m_images[max_image_count];
+    VkImageView m_image_views[max_image_count];
+    VkFramebuffer m_framebuffers[max_image_count];
 
     // swapchain create info
     VkSurfaceFormatKHR m_surface_format {};
     VkPresentModeKHR m_present_mode = VK_PRESENT_MODE_FIFO_KHR;
     VkExtent2D m_extent {};
-    uint32_t m_image_count = 0;
+    uint32_t m_image_count = 0;  // swapchain image count, N <= max_image_count
 };
 
 

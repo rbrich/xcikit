@@ -359,11 +359,12 @@ void VulkanRenderer::create_device()
     }
 
     vkGetDeviceQueue(m_device, graphics_queue_family,
-            0, &m_graphics_queue);
+            0, &m_queue);
 
     // create VkCommandPool
     VkCommandPoolCreateInfo command_pool_ci = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
         .queueFamilyIndex = graphics_queue_family,
     };
     if (vkCreateCommandPool(m_device, &command_pool_ci,
@@ -394,11 +395,15 @@ void VulkanRenderer::create_swapchain()
     if (vkCreateSwapchainKHR(m_device, &swapchain_create_info,
             nullptr, &m_swapchain) != VK_SUCCESS)
         throw std::runtime_error("failed to create swap chain!");
+    log_debug("Vulkan: swapchain image count: {}", m_image_count);
+    vkGetSwapchainImagesKHR(m_device, m_swapchain,
+            &m_image_count, nullptr);
 
-    uint32_t image_count;
-    vkGetSwapchainImagesKHR(m_device, m_swapchain, &image_count, nullptr);
-    m_images.resize(image_count);
-    vkGetSwapchainImagesKHR(m_device, m_swapchain, &image_count, m_images.data());
+    if (m_image_count > max_image_count)
+        throw std::runtime_error("vulkan: too many swapchain images");
+
+    vkGetSwapchainImagesKHR(m_device, m_swapchain, &m_image_count, m_images);
+    assert(m_image_count <= max_image_count);
 
     VkImageViewCreateInfo image_view_create_info = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -419,8 +424,7 @@ void VulkanRenderer::create_swapchain()
                     .layerCount = 1,
             },
     };
-    m_image_views.resize(image_count);
-    for (size_t i = 0; i < image_count; i++) {
+    for (size_t i = 0; i < m_image_count; i++) {
         image_view_create_info.image = m_images[i];
         if (vkCreateImageView(m_device, &image_view_create_info,
                 nullptr, &m_image_views[i]) != VK_SUCCESS)
@@ -453,12 +457,24 @@ void VulkanRenderer::create_renderpass()
             .pColorAttachments = &color_attachment_ref,
     };
 
+    VkSubpassDependency dependency = {
+            .srcSubpass = VK_SUBPASS_EXTERNAL,
+            .dstSubpass = 0,
+            .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+            .srcAccessMask = 0,
+            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
+                    | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+    };
+
     VkRenderPassCreateInfo render_pass_ci = {
             .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
             .attachmentCount = 1,
             .pAttachments = &color_attachment,
             .subpassCount = 1,
             .pSubpasses = &subpass,
+            .dependencyCount = 1,
+            .pDependencies = &dependency,
     };
 
     if (vkCreateRenderPass(m_device, &render_pass_ci,
@@ -469,8 +485,7 @@ void VulkanRenderer::create_renderpass()
 
 void VulkanRenderer::create_framebuffers()
 {
-    m_framebuffers.resize(m_image_views.size());
-    for (size_t i = 0; i < m_image_views.size(); i++) {
+    for (size_t i = 0; i < m_image_count; i++) {
         VkImageView attachments[] = {
                 m_image_views[i]
         };
@@ -526,6 +541,8 @@ bool VulkanRenderer::query_swapchain(VkPhysicalDevice device)
 
     m_extent.width = std::clamp(capabilities.currentExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
     m_extent.height = std::clamp(capabilities.currentExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+
+    // evaluate min image count
     m_image_count = capabilities.minImageCount + 1;
     if (capabilities.maxImageCount > 0 && m_image_count > capabilities.maxImageCount)
         m_image_count = capabilities.maxImageCount;

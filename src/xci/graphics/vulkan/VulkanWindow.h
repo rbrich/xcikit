@@ -56,13 +56,17 @@ public:
     void set_debug_flags(View::DebugFlags flags) override;
 
     Renderer& renderer() override;
-    //VulkanRenderer& vulkan_renderer() { return m_renderer; }
+    VulkanRenderer& vulkan_renderer() { return m_renderer; }
 
     // GLFW handles
     GLFWwindow* glfw_window() const { return m_window; }
 
+    // Vulkan - current command buffer
+    VkCommandBuffer vk_command_buffer() const { return m_command_buffers[m_current_cmd_buf]; }
+
 private:
     void setup_view();
+    void create_command_buffers();
     void draw();
 
 private:
@@ -74,6 +78,13 @@ private:
     Vec2i m_window_size;
     std::chrono::microseconds m_timeout {0};
     bool m_clear_timeout = false;
+
+    static constexpr uint32_t cmd_buf_count = 2;
+    VkCommandBuffer m_command_buffers[cmd_buf_count];
+    VkFence m_cmd_buf_fences[cmd_buf_count];
+    VkSemaphore m_image_semaphore[cmd_buf_count];   // image available
+    VkSemaphore m_render_semaphore[cmd_buf_count];  // render finished
+    uint32_t m_current_cmd_buf = 0;
 };
 
 

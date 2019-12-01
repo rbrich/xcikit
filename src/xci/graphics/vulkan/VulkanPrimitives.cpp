@@ -16,6 +16,7 @@
 #include "VulkanPrimitives.h"
 #include "VulkanRenderer.h"
 #include "VulkanShader.h"
+#include "VulkanWindow.h"
 
 #include <cassert>
 
@@ -222,6 +223,11 @@ void VulkanPrimitives::draw(View& view)
 {
     if (m_pipeline == VK_NULL_HANDLE)
         create_pipeline();
+
+    auto cmd_buf = dynamic_cast<VulkanWindow*>(view.window())->vk_command_buffer();
+
+    vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
+    vkCmdDraw(cmd_buf, 3, 1, 0, 0);
 }
 
 
