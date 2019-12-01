@@ -217,10 +217,12 @@ VulkanRenderer::~VulkanRenderer()
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
     vkDestroyCommandPool(m_device, m_command_pool, nullptr);
     vkDestroyDevice(m_device, nullptr);
+#ifdef XCI_DEBUG_VULKAN
     auto vkDestroyDebugUtilsMessengerEXT = (PFN_vkDestroyDebugUtilsMessengerEXT)
             vkGetInstanceProcAddr(m_instance, "vkDestroyDebugUtilsMessengerEXT");
     if (vkDestroyDebugUtilsMessengerEXT != nullptr)
         vkDestroyDebugUtilsMessengerEXT(m_instance, m_debug_messenger, nullptr);
+#endif
     vkDestroyInstance(m_instance, nullptr);
     glfwTerminate();
 }

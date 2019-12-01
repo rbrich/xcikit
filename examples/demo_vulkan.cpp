@@ -39,13 +39,15 @@ int main()
             vfs.read_file("shaders/test_vk.vert.spv").path(),
             vfs.read_file("shaders/test_vk.frag.spv").path());
 
-    VulkanPrimitives primitives {renderer, VertexFormat::V2c4t22, PrimitiveType::TriFans};
+    VulkanPrimitives primitives {renderer,
+        VertexFormat::V2c4t22, PrimitiveType::TriStrips};
     primitives.set_shader(shader);
 
     window.set_draw_callback([&](View& view) {
         primitives.draw(view);
     });
 
+    window.set_refresh_mode(RefreshMode::Periodic);
     window.display();
     return EXIT_SUCCESS;
 }

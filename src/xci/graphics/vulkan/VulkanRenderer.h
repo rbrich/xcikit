@@ -63,9 +63,6 @@ private:
 
 private:
     VkInstance m_instance {};
-#ifdef XCI_DEBUG_VULKAN
-    VkDebugUtilsMessengerEXT m_debug_messenger {};
-#endif
     VkSurfaceKHR m_surface {};
     VkPhysicalDevice m_physical_device {};
     VkDevice m_device {};
@@ -84,6 +81,10 @@ private:
     VkPresentModeKHR m_present_mode = VK_PRESENT_MODE_FIFO_KHR;
     VkExtent2D m_extent {};
     uint32_t m_image_count = 0;  // swapchain image count, N <= max_image_count
+
+#ifdef XCI_DEBUG_VULKAN
+    VkDebugUtilsMessengerEXT m_debug_messenger {};
+#endif
 };
 
 

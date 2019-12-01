@@ -33,7 +33,8 @@ enum class VertexFormat {
 };
 
 enum class PrimitiveType {
-    TriFans
+    TriStrips,
+    TriFans,
 };
 
 

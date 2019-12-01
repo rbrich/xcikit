@@ -28,7 +28,7 @@ VulkanPrimitives::VulkanPrimitives(
         VulkanRenderer& renderer, VertexFormat format, PrimitiveType type)
         : m_renderer(renderer)
 {
-    assert(type == PrimitiveType::TriFans);
+    assert(type == PrimitiveType::TriStrips);
 }
 
 
@@ -78,7 +78,7 @@ void VulkanPrimitives::create_pipeline()
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly_ci = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN,
+        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
         .primitiveRestartEnable = VK_FALSE,
     };
 

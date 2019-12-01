@@ -280,8 +280,6 @@ void VulkanWindow::create_command_buffers()
 
 void VulkanWindow::draw()
 {
-    TRACE("Draw");
-
     uint32_t image_index;
     if (vkAcquireNextImageKHR(m_renderer.vk_device(),
             m_renderer.vk_swapchain(), UINT64_MAX,
