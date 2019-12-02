@@ -41,6 +41,7 @@ public:
                                     PrimitiveType type) override;
 
     void init(GLFWwindow* m_window);
+    void reset_framebuffer(VkExtent2D new_size = {0, 0});
 
     // Vulkan handles
     VkInstance vk_instance() const { return m_instance; }
@@ -57,6 +58,8 @@ private:
     void create_swapchain();
     void create_renderpass();
     void create_framebuffers();
+    void destroy_swapchain();
+    void destroy_framebuffers();
 
     std::optional<uint32_t> query_queue_families(VkPhysicalDevice device);
     bool query_swapchain(VkPhysicalDevice device);

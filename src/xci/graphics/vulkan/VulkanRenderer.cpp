@@ -206,14 +206,9 @@ VulkanRenderer::VulkanRenderer(core::Vfs& vfs)
 
 VulkanRenderer::~VulkanRenderer()
 {
-    for (auto framebuffer : m_framebuffers) {
-        vkDestroyFramebuffer(m_device, framebuffer, nullptr);
-    }
+    destroy_framebuffers();
     vkDestroyRenderPass(m_device, m_render_pass, nullptr);
-    for (auto image_view : m_image_views) {
-        vkDestroyImageView(m_device, image_view, nullptr);
-    }
-    vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
+    destroy_swapchain();
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
     vkDestroyCommandPool(m_device, m_command_pool, nullptr);
     vkDestroyDevice(m_device, nullptr);
@@ -254,10 +249,31 @@ void VulkanRenderer::init(GLFWwindow* window)
             &m_surface) != VK_SUCCESS)
         throw std::runtime_error("failed to create window surface!");
 
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+    m_extent = { uint32_t(width), uint32_t(height) };
+
     create_device();
     create_swapchain();
     create_renderpass();
     create_framebuffers();
+}
+
+
+void VulkanRenderer::reset_framebuffer(VkExtent2D new_size)
+{
+    vkDeviceWaitIdle(m_device);
+
+    m_extent = new_size;
+    if (!query_swapchain(m_physical_device))
+        throw std::runtime_error("vulkan: physical device no longer usable");
+
+    destroy_framebuffers();
+    destroy_swapchain();
+    create_swapchain();
+    create_framebuffers();
+
+    TRACE("framebuffer resized to {}x{}", m_extent.width, m_extent.height);
 }
 
 
@@ -397,7 +413,7 @@ void VulkanRenderer::create_swapchain()
     if (vkCreateSwapchainKHR(m_device, &swapchain_create_info,
             nullptr, &m_swapchain) != VK_SUCCESS)
         throw std::runtime_error("failed to create swap chain!");
-    log_debug("Vulkan: swapchain image count: {}", m_image_count);
+    TRACE("Vulkan: swapchain image count: {}", m_image_count);
     vkGetSwapchainImagesKHR(m_device, m_swapchain,
             &m_image_count, nullptr);
 
@@ -489,7 +505,7 @@ void VulkanRenderer::create_framebuffers()
 {
     for (size_t i = 0; i < m_image_count; i++) {
         VkImageView attachments[] = {
-                m_image_views[i]
+            m_image_views[i]
         };
 
         VkFramebufferCreateInfo framebuffer_ci = {
@@ -500,7 +516,6 @@ void VulkanRenderer::create_framebuffers()
             .width = m_extent.width,
             .height = m_extent.height,
             .layers = 1,
-
         };
 
         if (vkCreateFramebuffer(m_device, &framebuffer_ci,
@@ -539,10 +554,14 @@ VulkanRenderer::query_queue_families(VkPhysicalDevice device)
 bool VulkanRenderer::query_swapchain(VkPhysicalDevice device)
 {
     VkSurfaceCapabilitiesKHR capabilities;
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_surface, &capabilities);
+    if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_surface, &capabilities) != VK_SUCCESS)
+        throw std::runtime_error("vkGetPhysicalDeviceSurfaceCapabilitiesKHR failed");
 
-    m_extent.width = std::clamp(capabilities.currentExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-    m_extent.height = std::clamp(capabilities.currentExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+    if (capabilities.currentExtent.width != UINT32_MAX)
+        m_extent = capabilities.currentExtent;
+
+    m_extent.width = std::clamp(m_extent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+    m_extent.height = std::clamp(m_extent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
 
     // evaluate min image count
     m_image_count = capabilities.minImageCount + 1;
@@ -576,6 +595,23 @@ bool VulkanRenderer::query_swapchain(VkPhysicalDevice device)
     }
 
     return format_count > 0 && mode_count > 0;
+}
+
+
+void VulkanRenderer::destroy_swapchain()
+{
+    for (auto image_view : m_image_views) {
+        vkDestroyImageView(m_device, image_view, nullptr);
+    }
+    vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
+}
+
+
+void VulkanRenderer::destroy_framebuffers()
+{
+    for (auto framebuffer : m_framebuffers) {
+        vkDestroyFramebuffer(m_device, framebuffer, nullptr);
+    }
 }
 
 

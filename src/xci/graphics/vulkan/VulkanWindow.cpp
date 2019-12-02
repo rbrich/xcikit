@@ -172,10 +172,10 @@ void VulkanWindow::set_debug_flags(View::DebugFlags flags)
 
 void VulkanWindow::setup_view()
 {
+    auto fsize = m_renderer.vk_image_extent();
+    m_view.set_framebuffer_size({float(fsize.width), float(fsize.height)});
+
     int width, height;
-    glfwGetFramebufferSize(m_window, &width, &height);
-    //glViewport(0, 0, width, height);
-    m_view.set_framebuffer_size({float(width), float(height)});
     glfwGetWindowSize(m_window, &width, &height);
     m_view.set_screen_size({float(width), float(height)});
     if (m_size_cb)
@@ -184,9 +184,10 @@ void VulkanWindow::setup_view()
     glfwSetFramebufferSizeCallback(m_window, [](GLFWwindow* win, int w, int h) {
         TRACE("Framebuffer resize: {} {}", w, h);
         auto self = (VulkanWindow*) glfwGetWindowUserPointer(win);
-        //glViewport(0, 0, w, h);
         if (self->m_view.set_framebuffer_size({float(w), float(h)}) && self->m_size_cb)
             self->m_size_cb(self->m_view);
+        self->m_renderer.reset_framebuffer({uint32_t(w), uint32_t(h)});
+        self->wakeup();
     });
 
     glfwSetWindowSizeCallback(m_window, [](GLFWwindow* win, int w, int h) {
@@ -281,11 +282,20 @@ void VulkanWindow::create_command_buffers()
 void VulkanWindow::draw()
 {
     uint32_t image_index;
-    if (vkAcquireNextImageKHR(m_renderer.vk_device(),
+    auto rc = vkAcquireNextImageKHR(m_renderer.vk_device(),
             m_renderer.vk_swapchain(), UINT64_MAX,
             m_image_semaphore[m_current_cmd_buf],
-            VK_NULL_HANDLE, &image_index) != VK_SUCCESS)
-        throw std::runtime_error("vulkan failed: acquire next image");
+            VK_NULL_HANDLE, &image_index);
+    if (rc == VK_ERROR_OUT_OF_DATE_KHR) {
+        m_renderer.reset_framebuffer();
+        wakeup();
+        return;
+    }
+    if (rc != VK_SUCCESS && rc != VK_SUBOPTIMAL_KHR) {
+        // VK_SUBOPTIMAL_KHR handled later with vkQueuePresentKHR
+        log_error("vkAcquireNextImageKHR failed: {}", rc);
+        return;
+    }
 
     auto* cmd_buf = m_command_buffers[m_current_cmd_buf];
 
@@ -354,8 +364,11 @@ void VulkanWindow::draw()
         .pSwapchains = swapchains,
         .pImageIndices = &image_index,
     };
-    if (vkQueuePresentKHR(m_renderer.vk_queue(), &present_info) != VK_SUCCESS)
-        throw std::runtime_error("vulkan failed: vkQueuePresentKHR");
+    rc = vkQueuePresentKHR(m_renderer.vk_queue(), &present_info);
+    if (rc == VK_ERROR_OUT_OF_DATE_KHR || rc == VK_SUBOPTIMAL_KHR)
+        m_renderer.reset_framebuffer();
+    else if (rc != VK_SUCCESS)
+        log_error("vkQueuePresentKHR failed: {}", rc);
 
     m_current_cmd_buf = (m_current_cmd_buf + 1) % cmd_buf_count;
 }

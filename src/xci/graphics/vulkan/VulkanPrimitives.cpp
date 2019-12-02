@@ -82,22 +82,14 @@ void VulkanPrimitives::create_pipeline()
         .primitiveRestartEnable = VK_FALSE,
     };
 
-    VkViewport viewport = {};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = (float) m_renderer.vk_image_extent().width;
-    viewport.height = (float) m_renderer.vk_image_extent().height;
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-
     VkRect2D scissor = {};
     scissor.offset = {0, 0};
-    scissor.extent = m_renderer.vk_image_extent();
+    scissor.extent = { INT32_MAX, INT32_MAX };
 
     VkPipelineViewportStateCreateInfo viewport_state_ci = {};
     viewport_state_ci.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewport_state_ci.viewportCount = 1;
-    viewport_state_ci.pViewports = &viewport;
+    viewport_state_ci.pViewports = nullptr;  // dynamic state
     viewport_state_ci.scissorCount = 1;
     viewport_state_ci.pScissors = &scissor;
 
@@ -137,6 +129,16 @@ void VulkanPrimitives::create_pipeline()
             &m_pipeline_layout) != VK_SUCCESS)
         throw std::runtime_error("failed to create pipeline layout!");
 
+    VkDynamicState dynamic_states[] = {
+        VK_DYNAMIC_STATE_VIEWPORT,
+    };
+
+    VkPipelineDynamicStateCreateInfo dynamic_state_ci = {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+        .dynamicStateCount = 1,
+        .pDynamicStates = dynamic_states,
+    };
+
     VkGraphicsPipelineCreateInfo pipeline_ci = {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
         .stageCount = 2,
@@ -147,6 +149,7 @@ void VulkanPrimitives::create_pipeline()
         .pRasterizationState = &rasterization_ci,
         .pMultisampleState = &multisample_ci,
         .pColorBlendState = &color_blend_ci,
+        .pDynamicState = &dynamic_state_ci,
         .layout = m_pipeline_layout,
         .renderPass = m_renderer.vk_render_pass(),
         .subpass = 0,
@@ -227,6 +230,17 @@ void VulkanPrimitives::draw(View& view)
     auto cmd_buf = dynamic_cast<VulkanWindow*>(view.window())->vk_command_buffer();
 
     vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
+
+    VkViewport viewport = {
+        .x = 0.0f,
+        .y = 0.0f,
+        .width = (float) m_renderer.vk_image_extent().width,
+        .height = (float) m_renderer.vk_image_extent().height,
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f,
+    };
+    vkCmdSetViewport(cmd_buf, 0, 1, &viewport);
+
     vkCmdDraw(cmd_buf, 3, 1, 0, 0);
 }
 
