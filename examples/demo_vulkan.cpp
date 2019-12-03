@@ -40,7 +40,12 @@ int main()
             vfs.read_file("shaders/test_vk.frag.spv").path());
 
     VulkanPrimitives primitives {renderer,
-        VertexFormat::V2c4t22, PrimitiveType::TriStrips};
+        VertexFormat::V2c4t2, PrimitiveType::TriStrips};
+    primitives.begin_primitive();
+    primitives.add_vertex({0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}, 0, 0);
+    primitives.add_vertex({-0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}, 0, 0);
+    primitives.add_vertex({0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, 0, 0);
+    primitives.end_primitive();
     primitives.set_shader(shader);
 
     window.set_draw_callback([&](View& view) {

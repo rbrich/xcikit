@@ -46,6 +46,7 @@ public:
     // Vulkan handles
     VkInstance vk_instance() const { return m_instance; }
     VkDevice vk_device() const { return m_device; }
+    VkPhysicalDevice vk_physical_device() const { return m_physical_device; }
     VkSwapchainKHR vk_swapchain() const { return m_swapchain; }
     VkQueue vk_queue() const { return m_queue; }
     VkCommandPool vk_command_pool() const { return m_command_pool; }

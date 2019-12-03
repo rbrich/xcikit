@@ -19,6 +19,7 @@
 #include <xci/graphics/Primitives.h>
 
 #include <vulkan/vulkan.h>
+#include <array>
 
 namespace xci::graphics {
 
@@ -49,12 +50,27 @@ public:
 
 private:
     void create_pipeline();
+    void create_vertex_buffer();
+    void destroy_pipeline();
+
+    auto make_binding_desc() -> VkVertexInputBindingDescription;
+    uint32_t get_attr_desc_count();
+    static constexpr size_t max_attr_descs = 4;
+    auto make_attr_descs() -> std::array<VkVertexInputAttributeDescription, max_attr_descs>;
+    uint32_t find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags properties);
 
 private:
+    VertexFormat m_format;
+    int m_closed_vertices = 0;
+    int m_open_vertices = -1;
+    std::vector<float> m_vertex_data;
+
     VulkanRenderer& m_renderer;
     VulkanShader* m_shader = nullptr;
     VkPipelineLayout m_pipeline_layout {};
     VkPipeline m_pipeline {};
+    VkBuffer m_vertex_buffer {};
+    VkDeviceMemory m_vertex_buffer_memory {};
 };
 
 
