@@ -187,7 +187,7 @@ void VulkanWindow::setup_view()
         if (self->m_view.set_framebuffer_size({float(w), float(h)}) && self->m_size_cb)
             self->m_size_cb(self->m_view);
         self->m_renderer.reset_framebuffer({uint32_t(w), uint32_t(h)});
-        self->wakeup();
+        self->draw();
     });
 
     glfwSetWindowSizeCallback(m_window, [](GLFWwindow* win, int w, int h) {
