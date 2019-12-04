@@ -50,7 +50,7 @@ public:
 
 private:
     void create_pipeline();
-    void create_vertex_buffer();
+    void create_buffers();
     void destroy_pipeline();
 
     auto make_binding_desc() -> VkVertexInputBindingDescription;
@@ -64,13 +64,15 @@ private:
     int m_closed_vertices = 0;
     int m_open_vertices = -1;
     std::vector<float> m_vertex_data;
+    std::vector<uint16_t> m_index_data;
 
     VulkanRenderer& m_renderer;
     VulkanShader* m_shader = nullptr;
     VkPipelineLayout m_pipeline_layout {};
     VkPipeline m_pipeline {};
     VkBuffer m_vertex_buffer {};
-    VkDeviceMemory m_vertex_buffer_memory {};
+    VkBuffer m_index_buffer {};
+    VkDeviceMemory m_buffer_memory {};
 };
 
 

@@ -31,7 +31,7 @@ VulkanPrimitives::VulkanPrimitives(VulkanRenderer& renderer,
         VertexFormat format, PrimitiveType type)
         : m_format(format), m_renderer(renderer)
 {
-    assert(type == PrimitiveType::TriStrips);
+    assert(type == PrimitiveType::TriFans);
 }
 
 
@@ -57,12 +57,25 @@ void VulkanPrimitives::begin_primitive()
 {
     assert(m_open_vertices == -1);
     m_open_vertices = 0;
+    destroy_pipeline();
 }
 
 
 void VulkanPrimitives::end_primitive()
 {
+    assert(m_open_vertices >= 3);
 
+    // fan triangles: 0 1 2, 0 2 3, 0 3 4, ...
+    const auto base = m_closed_vertices;
+    auto offset = 1;
+    while (offset + 1 < m_open_vertices) {
+        m_index_data.push_back(base);
+        m_index_data.push_back(base + offset);
+        m_index_data.push_back(base + ++offset);
+    }
+
+    m_closed_vertices += m_open_vertices;
+    m_open_vertices = -1;
 }
 
 
@@ -81,8 +94,8 @@ void VulkanPrimitives::add_vertex(ViewportCoords xy, float u1, float v1, float u
 void VulkanPrimitives::add_vertex(ViewportCoords xy, Color c, float u, float v)
 {
     assert(m_format == VertexFormat::V2c4t2);
-    assert(m_open_vertices != -1);
-    destroy_pipeline();
+    assert(m_open_vertices >= 0);
+    m_open_vertices++;
     m_vertex_data.push_back(xy.x.value);
     m_vertex_data.push_back(xy.y.value);
     m_vertex_data.push_back(c.red_f());
@@ -91,7 +104,6 @@ void VulkanPrimitives::add_vertex(ViewportCoords xy, Color c, float u, float v)
     m_vertex_data.push_back(c.alpha_f());
     m_vertex_data.push_back(u);
     m_vertex_data.push_back(v);
-    m_open_vertices++;
 }
 
 
@@ -141,8 +153,9 @@ void VulkanPrimitives::draw(View& view)
 
     VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(cmd_buf, 0, 1, &m_vertex_buffer, &offset);
+    vkCmdBindIndexBuffer(cmd_buf, m_index_buffer, 0, VK_INDEX_TYPE_UINT16);
 
-    vkCmdDraw(cmd_buf, 3, 1, 0, 0);
+    vkCmdDrawIndexed(cmd_buf, static_cast<uint32_t>(m_index_data.size()), 1, 0, 0, 0);
 }
 
 
@@ -182,7 +195,7 @@ void VulkanPrimitives::create_pipeline()
 
     VkPipelineInputAssemblyStateCreateInfo input_assembly_ci = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
+        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
         .primitiveRestartEnable = VK_FALSE,
     };
 
@@ -274,7 +287,7 @@ void VulkanPrimitives::create_pipeline()
             &pipeline_ci, nullptr, &m_pipeline) != VK_SUCCESS)
         throw std::runtime_error("vkCreateGraphicsPipelines failed");
 
-    create_vertex_buffer();
+    create_buffers();
 }
 
 
@@ -292,40 +305,64 @@ uint32_t VulkanPrimitives::find_memory_type(uint32_t type_filter, VkMemoryProper
 }
 
 
-void VulkanPrimitives::create_vertex_buffer()
+void VulkanPrimitives::create_buffers()
 {
-    VkBufferCreateInfo buffer_ci = {
-            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            .size = sizeof(float) * m_vertex_data.size(),
-            .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+    VkBufferCreateInfo vertex_buffer_ci = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = sizeof(m_vertex_data[0]) * m_vertex_data.size(),
+        .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
     };
-    if (vkCreateBuffer(m_renderer.vk_device(), &buffer_ci,
+    if (vkCreateBuffer(m_renderer.vk_device(), &vertex_buffer_ci,
             nullptr, &m_vertex_buffer) != VK_SUCCESS)
-        throw std::runtime_error("vkCreateBuffer failed");
+        throw std::runtime_error("vkCreateBuffer(vertex) failed");
 
-    VkMemoryRequirements memory_requirements;
-    vkGetBufferMemoryRequirements(m_renderer.vk_device(), m_vertex_buffer, &memory_requirements);
+    VkBufferCreateInfo index_buffer_ci = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = sizeof(m_index_data[0]) * m_index_data.size(),
+        .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+    };
+    if (vkCreateBuffer(m_renderer.vk_device(), &index_buffer_ci,
+            nullptr, &m_index_buffer) != VK_SUCCESS)
+        throw std::runtime_error("vkCreateBuffer(index) failed");
+
+    VkMemoryRequirements vertex_mem_req;
+    vkGetBufferMemoryRequirements(m_renderer.vk_device(), m_vertex_buffer, &vertex_mem_req);
+    VkMemoryRequirements index_mem_req;
+    vkGetBufferMemoryRequirements(m_renderer.vk_device(), m_index_buffer, &index_mem_req);
+
+    VkDeviceSize size = vertex_mem_req.size;
+    auto padding = index_mem_req.alignment - (size % index_mem_req.alignment);
+    padding = (padding == index_mem_req.alignment) ? 0 : padding;
+    size += padding + index_mem_req.size;
 
     VkMemoryAllocateInfo alloc_info = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .allocationSize = memory_requirements.size,
+        .allocationSize = size,
         .memoryTypeIndex = find_memory_type(
-                memory_requirements.memoryTypeBits,
+                vertex_mem_req.memoryTypeBits & index_mem_req.memoryTypeBits,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
     };
     if (vkAllocateMemory(m_renderer.vk_device(), &alloc_info,
-            nullptr, &m_vertex_buffer_memory) != VK_SUCCESS)
-        throw std::runtime_error("vkAllocateMemory failed (vertex buffer)");
+            nullptr, &m_buffer_memory) != VK_SUCCESS)
+        throw std::runtime_error("vkAllocateMemory failed (vertex/index buffer)");
 
+    void* mapped;
     vkBindBufferMemory(m_renderer.vk_device(), m_vertex_buffer,
-            m_vertex_buffer_memory, 0);
+            m_buffer_memory, 0);
+    vkMapMemory(m_renderer.vk_device(), m_buffer_memory,
+            0, vertex_buffer_ci.size, 0, &mapped);
+    std::memcpy(mapped, m_vertex_data.data(), (size_t) vertex_buffer_ci.size);
+    vkUnmapMemory(m_renderer.vk_device(), m_buffer_memory);
 
-    void* data;
-    vkMapMemory(m_renderer.vk_device(), m_vertex_buffer_memory,
-            0, buffer_ci.size, 0, &data);
-    std::memcpy(data, m_vertex_data.data(), (size_t) buffer_ci.size);
-    vkUnmapMemory(m_renderer.vk_device(), m_vertex_buffer_memory);
+    VkDeviceSize offset = vertex_mem_req.size + padding;
+    vkBindBufferMemory(m_renderer.vk_device(), m_index_buffer,
+            m_buffer_memory, offset);
+    vkMapMemory(m_renderer.vk_device(), m_buffer_memory,
+            offset, index_buffer_ci.size, 0, &mapped);
+    std::memcpy(mapped, m_index_data.data(), (size_t) index_buffer_ci.size);
+    vkUnmapMemory(m_renderer.vk_device(), m_buffer_memory);
 }
 
 
@@ -333,7 +370,8 @@ void VulkanPrimitives::destroy_pipeline()
 {
     if (m_pipeline == VK_NULL_HANDLE)
         return;
-    vkFreeMemory(m_renderer.vk_device(), m_vertex_buffer_memory, nullptr);
+    vkFreeMemory(m_renderer.vk_device(), m_buffer_memory, nullptr);
+    vkDestroyBuffer(m_renderer.vk_device(), m_index_buffer, nullptr);
     vkDestroyBuffer(m_renderer.vk_device(), m_vertex_buffer, nullptr);
     vkDestroyPipelineLayout(m_renderer.vk_device(), m_pipeline_layout, nullptr);
     vkDestroyPipeline(m_renderer.vk_device(), m_pipeline, nullptr);
