@@ -15,6 +15,7 @@
 
 #include "VulkanWindow.h"
 #include "VulkanRenderer.h"
+#include "VulkanError.h"
 #include <xci/core/log.h>
 
 namespace xci::graphics {
@@ -254,9 +255,9 @@ void VulkanWindow::create_command_buffers()
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         .commandBufferCount = cmd_buf_count,
     };
-    if (vkAllocateCommandBuffers(m_renderer.vk_device(), &alloc_info,
-            m_command_buffers) != VK_SUCCESS)
-        throw std::runtime_error("failed to allocate command buffers!");
+    VK_TRY("vkAllocateCommandBuffers",
+            vkAllocateCommandBuffers(m_renderer.vk_device(), &alloc_info,
+                    m_command_buffers));
 
     VkFenceCreateInfo fence_ci {
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
@@ -266,15 +267,15 @@ void VulkanWindow::create_command_buffers()
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
     for (size_t i = 0; i < cmd_buf_count; ++i) {
-        if (vkCreateFence(m_renderer.vk_device(), &fence_ci,
-                nullptr, &m_cmd_buf_fences[i]) != VK_SUCCESS)
-            throw std::runtime_error("vkCreateFence failed");
-
-        if (vkCreateSemaphore(m_renderer.vk_device(), &semaphore_ci,
-                nullptr, &m_image_semaphore[i]) != VK_SUCCESS ||
-            vkCreateSemaphore(m_renderer.vk_device(), &semaphore_ci,
-                nullptr, &m_render_semaphore[i]) != VK_SUCCESS)
-            throw std::runtime_error("failed to create semaphores!");
+        VK_TRY("vkCreateFence",
+                vkCreateFence(m_renderer.vk_device(), &fence_ci,
+                        nullptr, &m_cmd_buf_fences[i]));
+        VK_TRY("vkCreateSemaphore",
+                vkCreateSemaphore(m_renderer.vk_device(), &semaphore_ci,
+                        nullptr, &m_image_semaphore[i]));
+        VK_TRY("vkCreateSemaphore",
+                vkCreateSemaphore(m_renderer.vk_device(), &semaphore_ci,
+                        nullptr, &m_render_semaphore[i]));
     }
 }
 
@@ -300,19 +301,19 @@ void VulkanWindow::draw()
     auto* cmd_buf = m_command_buffers[m_current_cmd_buf];
 
     {
-        if (vkWaitForFences(m_renderer.vk_device(),
-                1, &m_cmd_buf_fences[m_current_cmd_buf], VK_TRUE, UINT64_MAX) != VK_SUCCESS)
-            throw std::runtime_error("vkWaitForFences failed");
-        if (vkResetFences(m_renderer.vk_device(),
-                1, &m_cmd_buf_fences[m_current_cmd_buf]) != VK_SUCCESS)
-            throw std::runtime_error("vkResetFences failed");
+        VK_TRY("vkWaitForFences",
+                vkWaitForFences(m_renderer.vk_device(),
+                        1, &m_cmd_buf_fences[m_current_cmd_buf], VK_TRUE, UINT64_MAX));
+        VK_TRY("vkResetFences",
+                vkResetFences(m_renderer.vk_device(),
+                        1, &m_cmd_buf_fences[m_current_cmd_buf]));
 
         VkCommandBufferBeginInfo begin_info = {
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
             .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
         };
-        if (vkBeginCommandBuffer(cmd_buf, &begin_info) != VK_SUCCESS)
-            throw std::runtime_error("failed to begin recording command buffer!");
+        VK_TRY("vkBeginCommandBuffer",
+                vkBeginCommandBuffer(cmd_buf, &begin_info));
 
         VkClearValue clear_value = {.color = {{0.0f, 0.0f, 0.0f, 1.0f}}};
         VkRenderPassBeginInfo render_pass_info = {
@@ -334,8 +335,7 @@ void VulkanWindow::draw()
 
         vkCmdEndRenderPass(cmd_buf);
 
-        if (vkEndCommandBuffer(cmd_buf) != VK_SUCCESS)
-            throw std::runtime_error("failed to record command buffer!");
+        VK_TRY("vkEndCommandBuffer", vkEndCommandBuffer(cmd_buf));
     }
 
     VkSemaphore wait_semaphores[] = {m_image_semaphore[m_current_cmd_buf]};
@@ -351,9 +351,9 @@ void VulkanWindow::draw()
         .signalSemaphoreCount = 1,
         .pSignalSemaphores = signal_semaphores,
     };
-    if (vkQueueSubmit(m_renderer.vk_queue(), 1, &submit_info,
-            m_cmd_buf_fences[m_current_cmd_buf]) != VK_SUCCESS)
-        throw std::runtime_error("failed to submit draw command buffer!");
+    VK_TRY("vkQueueSubmit",
+            vkQueueSubmit(m_renderer.vk_queue(), 1, &submit_info,
+                    m_cmd_buf_fences[m_current_cmd_buf]));
 
     VkSwapchainKHR swapchains[] = {m_renderer.vk_swapchain()};
     VkPresentInfoKHR present_info = {

@@ -17,6 +17,8 @@
 #include "VulkanTexture.h"
 #include "VulkanShader.h"
 #include "VulkanPrimitives.h"
+#include "VulkanError.h"
+
 #include <xci/core/log.h>
 #include <xci/core/string.h>
 #include <xci/compat/macros.h>
@@ -95,13 +97,11 @@ VulkanRenderer::VulkanRenderer(core::Vfs& vfs)
     : Renderer(vfs)
 {
     glfwSetErrorCallback(glfw_error_callback);
-    if (!glfwInit()) {
-        log_error("Couldn't initialize GLFW...");
-    }
+    if (!glfwInit())
+        VK_THROW("Couldn't initialize GLFW");
 
-    if (!glfwVulkanSupported()) {
-        throw std::runtime_error("Vulkan not supported.");
-    }
+    if (!glfwVulkanSupported())
+        VK_THROW("Vulkan not supported.");
 
     VkApplicationInfo application_info = {
             .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -188,18 +188,18 @@ VulkanRenderer::VulkanRenderer(core::Vfs& vfs)
     instance_create_info.enabledExtensionCount = extensions.size();
     instance_create_info.ppEnabledExtensionNames = extensions.data();
 
-    if (vkCreateInstance(&instance_create_info, nullptr, &m_instance) != VK_SUCCESS)
-        throw std::runtime_error("vulkan: failed to create VkInstance");
+    VK_TRY("vkCreateInstance",
+            vkCreateInstance(&instance_create_info, nullptr, &m_instance));
 
 #ifdef XCI_DEBUG_VULKAN
     // create debug messenger
     auto vkCreateDebugUtilsMessengerEXT = (PFN_vkCreateDebugUtilsMessengerEXT)
-            vkGetInstanceProcAddr(m_instance, "vkCreateDebugUtilsMessengerEXT");
+        vkGetInstanceProcAddr(m_instance, "vkCreateDebugUtilsMessengerEXT");
     if (vkCreateDebugUtilsMessengerEXT == nullptr)
-        throw std::runtime_error("vkCreateDebugUtilsMessengerEXT not available");
-    if (vkCreateDebugUtilsMessengerEXT(m_instance, &debugCreateInfo, nullptr, &m_debug_messenger) != VK_SUCCESS) {
-        throw std::runtime_error("failed to set up debug messenger!");
-    }
+        VK_THROW("vkCreateDebugUtilsMessengerEXT not available");
+    VK_TRY("vkCreateDebugUtilsMessengerEXT",
+            vkCreateDebugUtilsMessengerEXT(m_instance, &debugCreateInfo,
+                    nullptr, &m_debug_messenger));
 #endif
 }
 
@@ -244,10 +244,8 @@ PrimitivesPtr VulkanRenderer::create_primitives(VertexFormat format,
 
 void VulkanRenderer::init(GLFWwindow* window)
 {
-    if (glfwCreateWindowSurface(m_instance,
-            window, nullptr,
-            &m_surface) != VK_SUCCESS)
-        throw std::runtime_error("failed to create window surface!");
+    VK_TRY("glfwCreateWindowSurface",
+            glfwCreateWindowSurface(m_instance, window, nullptr, &m_surface));
 
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
@@ -266,7 +264,7 @@ void VulkanRenderer::reset_framebuffer(VkExtent2D new_size)
 
     m_extent = new_size;
     if (!query_swapchain(m_physical_device))
-        throw std::runtime_error("vulkan: physical device no longer usable");
+        VK_THROW("vulkan: physical device no longer usable");
 
     destroy_framebuffers();
     destroy_swapchain();
@@ -282,7 +280,7 @@ void VulkanRenderer::create_device()
     uint32_t device_count = 0;
     vkEnumeratePhysicalDevices(m_instance, &device_count, nullptr);
     if (device_count == 0)
-        throw std::runtime_error("vulkan: couldn't find any physical device");
+        VK_THROW("vulkan: couldn't find any physical device");
     std::vector<VkPhysicalDevice> devices(device_count);
     vkEnumeratePhysicalDevices(m_instance, &device_count, devices.data());
 
@@ -371,9 +369,9 @@ void VulkanRenderer::create_device()
                 .pEnabledFeatures = &device_features,
         };
 
-        if (vkCreateDevice(m_physical_device, &device_create_info,
-                nullptr, &m_device) != VK_SUCCESS)
-            throw std::runtime_error("vkCreateDevice failed");
+        VK_TRY("vkCreateDevice",
+                vkCreateDevice(m_physical_device, &device_create_info,
+                        nullptr, &m_device));
     }
 
     vkGetDeviceQueue(m_device, graphics_queue_family,
@@ -385,9 +383,9 @@ void VulkanRenderer::create_device()
         .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
         .queueFamilyIndex = graphics_queue_family,
     };
-    if (vkCreateCommandPool(m_device, &command_pool_ci,
-            nullptr, &m_command_pool) != VK_SUCCESS)
-        throw std::runtime_error("failed to create command pool!");
+    VK_TRY("vkCreateCommandPool",
+            vkCreateCommandPool(m_device, &command_pool_ci,
+                    nullptr, &m_command_pool));
 }
 
 
@@ -410,15 +408,16 @@ void VulkanRenderer::create_swapchain()
             .oldSwapchain = VK_NULL_HANDLE,
     };
 
-    if (vkCreateSwapchainKHR(m_device, &swapchain_create_info,
-            nullptr, &m_swapchain) != VK_SUCCESS)
-        throw std::runtime_error("failed to create swap chain!");
+    VK_TRY("vkCreateSwapchainKHR",
+            vkCreateSwapchainKHR(m_device, &swapchain_create_info,
+                    nullptr, &m_swapchain));
+
     TRACE("Vulkan: swapchain image count: {}", m_image_count);
     vkGetSwapchainImagesKHR(m_device, m_swapchain,
             &m_image_count, nullptr);
 
     if (m_image_count > max_image_count)
-        throw std::runtime_error("vulkan: too many swapchain images");
+        VK_THROW("vulkan: too many swapchain images");
 
     vkGetSwapchainImagesKHR(m_device, m_swapchain, &m_image_count, m_images);
     assert(m_image_count <= max_image_count);
@@ -444,9 +443,9 @@ void VulkanRenderer::create_swapchain()
     };
     for (size_t i = 0; i < m_image_count; i++) {
         image_view_create_info.image = m_images[i];
-        if (vkCreateImageView(m_device, &image_view_create_info,
-                nullptr, &m_image_views[i]) != VK_SUCCESS)
-            throw std::runtime_error("failed to create image views!");
+        VK_TRY("vkCreateImageView",
+                vkCreateImageView(m_device, &image_view_create_info,
+                        nullptr, &m_image_views[i]));
     }
 }
 
@@ -481,8 +480,9 @@ void VulkanRenderer::create_renderpass()
             .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
             .srcAccessMask = 0,
-            .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT
-                    | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+            .dstAccessMask =
+                    VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+                    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
     };
 
     VkRenderPassCreateInfo render_pass_ci = {
@@ -495,18 +495,16 @@ void VulkanRenderer::create_renderpass()
             .pDependencies = &dependency,
     };
 
-    if (vkCreateRenderPass(m_device, &render_pass_ci,
-            nullptr, &m_render_pass) != VK_SUCCESS)
-        throw std::runtime_error("failed to create render pass!");
+    VK_TRY("vkCreateRenderPass",
+            vkCreateRenderPass(m_device, &render_pass_ci,
+                    nullptr, &m_render_pass));
 }
 
 
 void VulkanRenderer::create_framebuffers()
 {
     for (size_t i = 0; i < m_image_count; i++) {
-        VkImageView attachments[] = {
-            m_image_views[i]
-        };
+        VkImageView attachments[] = { m_image_views[i] };
 
         VkFramebufferCreateInfo framebuffer_ci = {
             .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
@@ -518,9 +516,9 @@ void VulkanRenderer::create_framebuffers()
             .layers = 1,
         };
 
-        if (vkCreateFramebuffer(m_device, &framebuffer_ci,
-                nullptr, &m_framebuffers[i]) != VK_SUCCESS)
-            throw std::runtime_error("failed to create framebuffer!");
+        VK_TRY("vkCreateFramebuffer",
+                vkCreateFramebuffer(m_device, &framebuffer_ci,
+                        nullptr, &m_framebuffers[i]));
     }
 }
 
@@ -554,8 +552,9 @@ VulkanRenderer::query_queue_families(VkPhysicalDevice device)
 bool VulkanRenderer::query_swapchain(VkPhysicalDevice device)
 {
     VkSurfaceCapabilitiesKHR capabilities;
-    if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, m_surface, &capabilities) != VK_SUCCESS)
-        throw std::runtime_error("vkGetPhysicalDeviceSurfaceCapabilitiesKHR failed");
+    VK_TRY("vkGetPhysicalDeviceSurfaceCapabilitiesKHR",
+            vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+                    device, m_surface, &capabilities));
 
     if (capabilities.currentExtent.width != UINT32_MAX)
         m_extent = capabilities.currentExtent;

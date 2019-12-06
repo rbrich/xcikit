@@ -76,9 +76,9 @@ private:
     VkCommandPool m_command_pool {};
 
     static constexpr uint32_t max_image_count = 8;
-    VkImage m_images[max_image_count];
-    VkImageView m_image_views[max_image_count];
-    VkFramebuffer m_framebuffers[max_image_count];
+    VkImage m_images[max_image_count] {};
+    VkImageView m_image_views[max_image_count] {};
+    VkFramebuffer m_framebuffers[max_image_count] {};
 
     // swapchain create info
     VkSurfaceFormatKHR m_surface_format {};

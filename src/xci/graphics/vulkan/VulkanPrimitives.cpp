@@ -17,6 +17,7 @@
 #include "VulkanRenderer.h"
 #include "VulkanShader.h"
 #include "VulkanWindow.h"
+#include "VulkanError.h"
 
 #include <xci/compat/macros.h>
 
@@ -252,10 +253,10 @@ void VulkanPrimitives::create_pipeline()
         .pushConstantRangeCount = 0,
     };
 
-    if (vkCreatePipelineLayout(
-            m_renderer.vk_device(), &pipeline_layout_ci, nullptr,
-            &m_pipeline_layout) != VK_SUCCESS)
-        throw std::runtime_error("vkCreatePipelineLayout failed");
+    VK_TRY("vkCreatePipelineLayout",
+            vkCreatePipelineLayout(
+                    m_renderer.vk_device(), &pipeline_layout_ci, nullptr,
+                    &m_pipeline_layout));
 
     VkDynamicState dynamic_states[] = {
         VK_DYNAMIC_STATE_VIEWPORT,
@@ -283,9 +284,9 @@ void VulkanPrimitives::create_pipeline()
         .subpass = 0,
     };
 
-    if (vkCreateGraphicsPipelines(m_renderer.vk_device(), VK_NULL_HANDLE, 1,
-            &pipeline_ci, nullptr, &m_pipeline) != VK_SUCCESS)
-        throw std::runtime_error("vkCreateGraphicsPipelines failed");
+    VK_TRY("vkCreateGraphicsPipelines",
+            vkCreateGraphicsPipelines(m_renderer.vk_device(), VK_NULL_HANDLE, 1,
+                    &pipeline_ci, nullptr, &m_pipeline));
 
     create_buffers();
 }
@@ -301,7 +302,7 @@ uint32_t VulkanPrimitives::find_memory_type(uint32_t type_filter, VkMemoryProper
             return i;
     }
 
-    throw std::runtime_error("failed to find suitable memory type!");
+    VK_THROW("vkGetPhysicalDeviceMemoryProperties didn't return suitable memory type");
 }
 
 
@@ -313,9 +314,9 @@ void VulkanPrimitives::create_buffers()
         .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
     };
-    if (vkCreateBuffer(m_renderer.vk_device(), &vertex_buffer_ci,
-            nullptr, &m_vertex_buffer) != VK_SUCCESS)
-        throw std::runtime_error("vkCreateBuffer(vertex) failed");
+    VK_TRY("vkCreateBuffer(vertex)",
+            vkCreateBuffer(m_renderer.vk_device(), &vertex_buffer_ci,
+                    nullptr, &m_vertex_buffer));
 
     VkBufferCreateInfo index_buffer_ci = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -323,9 +324,9 @@ void VulkanPrimitives::create_buffers()
         .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
     };
-    if (vkCreateBuffer(m_renderer.vk_device(), &index_buffer_ci,
-            nullptr, &m_index_buffer) != VK_SUCCESS)
-        throw std::runtime_error("vkCreateBuffer(index) failed");
+    VK_TRY("vkCreateBuffer(index)",
+            vkCreateBuffer(m_renderer.vk_device(), &index_buffer_ci,
+                    nullptr, &m_index_buffer));
 
     VkMemoryRequirements vertex_mem_req;
     vkGetBufferMemoryRequirements(m_renderer.vk_device(), m_vertex_buffer, &vertex_mem_req);
@@ -344,9 +345,9 @@ void VulkanPrimitives::create_buffers()
                 vertex_mem_req.memoryTypeBits & index_mem_req.memoryTypeBits,
                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
     };
-    if (vkAllocateMemory(m_renderer.vk_device(), &alloc_info,
-            nullptr, &m_buffer_memory) != VK_SUCCESS)
-        throw std::runtime_error("vkAllocateMemory failed (vertex/index buffer)");
+    VK_TRY("vkAllocateMemory (vertex/index buffer)",
+            vkAllocateMemory(m_renderer.vk_device(), &alloc_info,
+                    nullptr, &m_buffer_memory));
 
     void* mapped;
     vkBindBufferMemory(m_renderer.vk_device(), m_vertex_buffer,

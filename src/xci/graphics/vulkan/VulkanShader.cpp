@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "VulkanShader.h"
+#include "VulkanError.h"
 #include <xci/core/log.h>
 
 #include <cassert>
@@ -52,9 +53,8 @@ VkShaderModule VulkanShader::create_module(const uint32_t* code, size_t size)
     };
 
     VkShaderModule module;
-    if (vkCreateShaderModule(m_device, &module_create_info, nullptr, &module) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create shader module!");
-    }
+    VK_TRY("vkCreateShaderModule",
+            vkCreateShaderModule(m_device, &module_create_info, nullptr, &module));
     return module;
 }
 
