@@ -34,6 +34,10 @@ VulkanPrimitives::VulkanPrimitives(VulkanRenderer& renderer,
           m_device_memory(renderer)
 {
     assert(type == PrimitiveType::TriFans);
+
+    VkPhysicalDeviceProperties props;
+    vkGetPhysicalDeviceProperties(m_renderer.vk_physical_device(), &props);
+    m_min_uniform_offset_alignment = props.limits.minUniformBufferOffsetAlignment;
 }
 
 
@@ -132,7 +136,7 @@ void VulkanPrimitives::set_shader(Shader& shader)
 void VulkanPrimitives::set_uniform_data(uint32_t binding, const void* data, size_t size)
 {
     assert(binding > 0);  // zero is reserved for MVP matrix
-    auto offset = m_uniform_data.size();
+    auto offset = align_uniform(m_uniform_data.size());
     m_uniform_data.resize(offset + size);
     std::memcpy(&m_uniform_data[offset], data, size);
     m_uniforms.push_back({binding, offset, size});
@@ -356,7 +360,7 @@ void VulkanPrimitives::create_buffers()
     for (size_t i = 0; i < VulkanWindow::cmd_buf_count; i++) {
         VkBufferCreateInfo uniform_buffer_ci = {
                 .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-                .size = m_mvp_size + m_uniform_data.size(),
+                .size = align_uniform(m_mvp_size) + m_uniform_data.size(),
                 .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
         };
@@ -378,7 +382,7 @@ void VulkanPrimitives::create_buffers()
             m_index_data.data());
     for (size_t i = 0; i < VulkanWindow::cmd_buf_count; i++) {
         m_device_memory.bind_buffer(m_uniform_buffers[i], m_uniform_offsets[i]);
-        m_device_memory.copy_data(m_uniform_offsets[i] + m_mvp_size,
+        m_device_memory.copy_data(m_uniform_offsets[i] + align_uniform(m_mvp_size),
                 m_uniform_data.size(), m_uniform_data.data());
     }
 }
@@ -469,10 +473,11 @@ void VulkanPrimitives::create_descriptor_sets()
                 .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                 .pBufferInfo = &buffer_info.back(),
         });
+        auto offset_base = align_uniform(m_mvp_size);
         for (const auto& uni : m_uniforms) {
             buffer_info.push_back({
                     .buffer = m_uniform_buffers[i],
-                    .offset = m_mvp_size + uni.offset,
+                    .offset = offset_base + uni.offset,
                     .range = uni.range,
             });
             write_descriptor_set.push_back(VkWriteDescriptorSet{
@@ -505,6 +510,15 @@ void VulkanPrimitives::destroy_pipeline()
     vkDestroyPipelineLayout(device(), m_pipeline_layout, nullptr);
     vkDestroyPipeline(device(), m_pipeline, nullptr);
     m_pipeline = VK_NULL_HANDLE;
+}
+
+
+VkDeviceSize VulkanPrimitives::align_uniform(VkDeviceSize offset)
+{
+    auto unaligned = offset % m_min_uniform_offset_alignment;
+    if (unaligned > 0)
+        offset += m_min_uniform_offset_alignment - unaligned;
+    return offset;
 }
 
 

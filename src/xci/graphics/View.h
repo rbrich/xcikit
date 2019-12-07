@@ -259,7 +259,7 @@ private:
     ViewOrigin m_origin = ViewOrigin::Center;
     ViewScale m_scale = ViewScale::ScalingWithAspectCorrection;
     DebugFlags m_debug = 0;
-    bool m_needs_refresh = false;
+    bool m_needs_refresh = true;  // start with dirty state to force first refresh
     std::vector<ViewportRect> m_crop;  // Crop region stack (current crop region on back)
     std::vector<ViewportCoords> m_offset;  // Offset stack (current offset on back)
 };

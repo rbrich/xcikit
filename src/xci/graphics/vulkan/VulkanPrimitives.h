@@ -59,6 +59,7 @@ private:
     void create_descriptor_sets();
     void destroy_pipeline();
 
+    VkDeviceSize align_uniform(VkDeviceSize offset);
     auto make_binding_desc() -> VkVertexInputBindingDescription;
     uint32_t get_attr_desc_count();
     static constexpr size_t max_attr_descs = 4;
@@ -79,6 +80,7 @@ private:
         VkDeviceSize range;
     };
     std::vector<Uniform> m_uniforms;
+    VkDeviceSize m_min_uniform_offset_alignment = 0;
     BlendFunc m_blend = BlendFunc::Off;
 
     VulkanRenderer& m_renderer;
