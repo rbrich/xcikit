@@ -114,18 +114,6 @@ void VulkanShader::clear()
 }
 
 
-void VulkanShader::set_uniform(const char* name, float f)
-{
-
-}
-
-
-void VulkanShader::set_uniform(const char* name, float f1, float f2, float f3, float f4)
-{
-
-}
-
-
 void VulkanShader::set_texture(const char* name, TexturePtr& texture)
 {
 

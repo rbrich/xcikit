@@ -17,6 +17,8 @@
 #define XCI_GRAPHICS_VULKAN_PRIMITIVES_H
 
 #include <xci/graphics/Primitives.h>
+#include "VulkanWindow.h"
+#include "VulkanMemory.h"
 
 #include <vulkan/vulkan.h>
 #include <array>
@@ -44,20 +46,24 @@ public:
     bool empty() const override;
 
     void set_shader(Shader& shader) override;
+    void set_uniform(const char* name, float f) override;
+    void set_uniform(const char* name, float f1, float f2, float f3, float f4) override;
     void set_blend(BlendFunc func) override;
 
     void draw(View& view) override;
 
 private:
+    VkDevice device() const;
     void create_pipeline();
     void create_buffers();
+    void create_descriptor_set_layout();
+    void create_descriptor_sets();
     void destroy_pipeline();
 
     auto make_binding_desc() -> VkVertexInputBindingDescription;
     uint32_t get_attr_desc_count();
     static constexpr size_t max_attr_descs = 4;
     auto make_attr_descs() -> std::array<VkVertexInputAttributeDescription, max_attr_descs>;
-    uint32_t find_memory_type(uint32_t type_filter, VkMemoryPropertyFlags properties);
 
 private:
     VertexFormat m_format;
@@ -65,14 +71,20 @@ private:
     int m_open_vertices = -1;
     std::vector<float> m_vertex_data;
     std::vector<uint16_t> m_index_data;
+    static constexpr VkDeviceSize m_mvp_size = sizeof(float) * 16;
 
     VulkanRenderer& m_renderer;
     VulkanShader* m_shader = nullptr;
+    VkDescriptorSetLayout m_descriptor_set_layout {};
+    VkDescriptorPool m_descriptor_pool {};
+    VkDescriptorSet m_descriptor_sets[VulkanWindow::cmd_buf_count] {};
     VkPipelineLayout m_pipeline_layout {};
     VkPipeline m_pipeline {};
     VkBuffer m_vertex_buffer {};
     VkBuffer m_index_buffer {};
-    VkDeviceMemory m_buffer_memory {};
+    VkBuffer m_uniform_buffers[VulkanWindow::cmd_buf_count] {};
+    VkDeviceSize m_uniform_offsets[VulkanWindow::cmd_buf_count] {};
+    VulkanMemory m_device_memory;
 };
 
 

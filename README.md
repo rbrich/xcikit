@@ -1,6 +1,6 @@
-XCI Toolkit
-===========
-Collection of C++ libraries focused on drawing 2D graphics and rendering text.
+xcikit
+======
+Collection of C++ libraries for drawing 2D graphics, rendering text and more.
 
 ![Font Texture](http://xci.cz/toolkit/img/xci-text.png)
 

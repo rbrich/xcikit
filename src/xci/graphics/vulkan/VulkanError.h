@@ -26,12 +26,12 @@ private:
 
 #ifndef VK_THROW
 #define VK_THROW(msg) \
-    throw VulkanError(msg);
+    throw VulkanError(msg)
 #endif
 
 #ifndef VK_TRY
 #define VK_TRY(msg, expr) \
-    if ((expr) != VK_SUCCESS) throw VulkanError(msg);
+    do { if ((expr) != VK_SUCCESS) throw VulkanError(msg); } while(0)
 #endif
 
 

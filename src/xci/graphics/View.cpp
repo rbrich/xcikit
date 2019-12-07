@@ -19,7 +19,7 @@
 namespace xci::graphics {
 
 
-std::array<float, 16> View::projection_matrix() const
+std::array<float, 16> View::projection_matrix(bool inverted_y) const
 {
     float xs = 2.0f / viewport_size().x.value;
     float ys = 2.0f / viewport_size().y.value;
@@ -29,11 +29,15 @@ std::array<float, 16> View::projection_matrix() const
         xt -= 1.0;
         yt -= 1.0;
     }
+    if (inverted_y) {
+        ys = -ys;
+        yt = -yt;
+    }
     return {{
             xs,   0.0f, 0.0f, 0.0f,
-            0.0f, -ys,  0.0f, 0.0f,
+            0.0f, ys,  0.0f, 0.0f,
             0.0f, 0.0f, 1.0f, 0.0f,
-            xt,   -yt,  0.0f, 1.0f,
+            xt,   yt,  0.0f, 1.0f,
     }};
 }
 

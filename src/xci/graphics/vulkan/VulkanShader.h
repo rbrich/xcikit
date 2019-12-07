@@ -37,9 +37,6 @@ public:
             const char* vertex_data, int vertex_size,
             const char* fragment_data, int fragment_size) override;
 
-    void set_uniform(const char* name, float f) override;
-    void set_uniform(const char* name, float f1, float f2, float f3, float f4) override;
-
     void set_texture(const char* name, TexturePtr& texture) override;
 
     // Vulkan handles:

@@ -63,11 +63,15 @@ public:
 
     // Vulkan - current command buffer
     VkCommandBuffer vk_command_buffer() const { return m_command_buffers[m_current_cmd_buf]; }
+    uint32_t vk_command_buffer_index() const { return m_current_cmd_buf; }
 
 private:
     void setup_view();
     void create_command_buffers();
     void draw();
+
+public:
+    static constexpr uint32_t cmd_buf_count = 2;
 
 private:
     VulkanRenderer& m_renderer;
@@ -79,7 +83,6 @@ private:
     std::chrono::microseconds m_timeout {0};
     bool m_clear_timeout = false;
 
-    static constexpr uint32_t cmd_buf_count = 2;
     VkCommandBuffer m_command_buffers[cmd_buf_count];
     VkFence m_cmd_buf_fences[cmd_buf_count];
     VkSemaphore m_image_semaphore[cmd_buf_count];   // image available

@@ -250,21 +250,21 @@ void VulkanWindow::setup_view()
 void VulkanWindow::create_command_buffers()
 {
     VkCommandBufferAllocateInfo alloc_info = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool = m_renderer.vk_command_pool(),
-        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandBufferCount = cmd_buf_count,
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+            .commandPool = m_renderer.vk_command_pool(),
+            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+            .commandBufferCount = cmd_buf_count,
     };
     VK_TRY("vkAllocateCommandBuffers",
             vkAllocateCommandBuffers(m_renderer.vk_device(), &alloc_info,
                     m_command_buffers));
 
     VkFenceCreateInfo fence_ci {
-        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        .flags = VK_FENCE_CREATE_SIGNALED_BIT,
+            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+            .flags = VK_FENCE_CREATE_SIGNALED_BIT,
     };
     VkSemaphoreCreateInfo semaphore_ci = {
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+           .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
     for (size_t i = 0; i < cmd_buf_count; ++i) {
         VK_TRY("vkCreateFence",
@@ -309,23 +309,23 @@ void VulkanWindow::draw()
                         1, &m_cmd_buf_fences[m_current_cmd_buf]));
 
         VkCommandBufferBeginInfo begin_info = {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-            .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+                .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+                .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
         };
         VK_TRY("vkBeginCommandBuffer",
                 vkBeginCommandBuffer(cmd_buf, &begin_info));
 
         VkClearValue clear_value = {.color = {{0.0f, 0.0f, 0.0f, 1.0f}}};
         VkRenderPassBeginInfo render_pass_info = {
-            .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-            .renderPass = m_renderer.vk_render_pass(),
-            .framebuffer = m_renderer.vk_framebuffer(image_index),
-            .renderArea = {
-                .offset = {0, 0},
-                .extent = m_renderer.vk_image_extent(),
-            },
-            .clearValueCount = 1,
-            .pClearValues = &clear_value,
+                .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+                .renderPass = m_renderer.vk_render_pass(),
+                .framebuffer = m_renderer.vk_framebuffer(image_index),
+                .renderArea = {
+                        .offset = {0, 0},
+                        .extent = m_renderer.vk_image_extent(),
+                },
+                .clearValueCount = 1,
+                .pClearValues = &clear_value,
         };
         vkCmdBeginRenderPass(cmd_buf, &render_pass_info,
                 VK_SUBPASS_CONTENTS_INLINE);
@@ -342,14 +342,14 @@ void VulkanWindow::draw()
     VkSemaphore signal_semaphores[] = {m_render_semaphore[m_current_cmd_buf]};
     VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     VkSubmitInfo submit_info = {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .waitSemaphoreCount = 1,
-        .pWaitSemaphores = wait_semaphores,
-        .pWaitDstStageMask = wait_stages,
-        .commandBufferCount = 1,
-        .pCommandBuffers = &cmd_buf,
-        .signalSemaphoreCount = 1,
-        .pSignalSemaphores = signal_semaphores,
+            .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+            .waitSemaphoreCount = 1,
+            .pWaitSemaphores = wait_semaphores,
+            .pWaitDstStageMask = wait_stages,
+            .commandBufferCount = 1,
+            .pCommandBuffers = &cmd_buf,
+            .signalSemaphoreCount = 1,
+            .pSignalSemaphores = signal_semaphores,
     };
     VK_TRY("vkQueueSubmit",
             vkQueueSubmit(m_renderer.vk_queue(), 1, &submit_info,
@@ -357,12 +357,12 @@ void VulkanWindow::draw()
 
     VkSwapchainKHR swapchains[] = {m_renderer.vk_swapchain()};
     VkPresentInfoKHR present_info = {
-        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-        .waitSemaphoreCount = 1,
-        .pWaitSemaphores = signal_semaphores,
-        .swapchainCount = 1,
-        .pSwapchains = swapchains,
-        .pImageIndices = &image_index,
+            .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+            .waitSemaphoreCount = 1,
+            .pWaitSemaphores = signal_semaphores,
+            .swapchainCount = 1,
+            .pSwapchains = swapchains,
+            .pImageIndices = &image_index,
     };
     rc = vkQueuePresentKHR(m_renderer.vk_queue(), &present_info);
     if (rc == VK_ERROR_OUT_OF_DATE_KHR || rc == VK_SUBOPTIMAL_KHR)

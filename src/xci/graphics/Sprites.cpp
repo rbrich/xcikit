@@ -78,9 +78,9 @@ void Sprites::add_sprite(const ViewportRect& rect, const Rect_u& texrect)
 void Sprites::draw(View& view, const ViewportCoords& pos)
 {
     init_shader();
-    m_shader->set_uniform("u_color",
-                          m_color.red_f(), m_color.green_f(),
-                          m_color.blue_f(), m_color.alpha_f());
+    m_trifans->set_uniform("u_color",
+            m_color.red_f(), m_color.green_f(),
+            m_color.blue_f(), m_color.alpha_f());
     m_shader->set_texture("u_texture", m_texture);
     m_trifans->set_shader(*m_shader);
     m_trifans->set_blend(Primitives::BlendFunc::AlphaBlend);

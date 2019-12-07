@@ -507,13 +507,13 @@ void VulkanRenderer::create_framebuffers()
         VkImageView attachments[] = { m_image_views[i] };
 
         VkFramebufferCreateInfo framebuffer_ci = {
-            .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-            .renderPass = m_render_pass,
-            .attachmentCount = 1,
-            .pAttachments = attachments,
-            .width = m_extent.width,
-            .height = m_extent.height,
-            .layers = 1,
+                .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+                .renderPass = m_render_pass,
+                .attachmentCount = 1,
+                .pAttachments = attachments,
+                .width = m_extent.width,
+                .height = m_extent.height,
+                .layers = 1,
         };
 
         VK_TRY("vkCreateFramebuffer",
