@@ -22,6 +22,7 @@
 #include <xci/compat/macros.h>
 
 #include <cassert>
+#include <cstring>
 
 
 namespace xci::graphics {
@@ -39,24 +40,6 @@ VulkanPrimitives::VulkanPrimitives(VulkanRenderer& renderer,
 VulkanPrimitives::~VulkanPrimitives()
 {
     destroy_pipeline();
-}
-
-
-void VulkanPrimitives::set_shader(Shader& shader)
-{
-    m_shader = dynamic_cast<VulkanShader*>(&shader);
-}
-
-
-void VulkanPrimitives::set_uniform(const char* name, float f)
-{
-
-}
-
-
-void VulkanPrimitives::set_uniform(const char* name, float f1, float f2, float f3, float f4)
-{
-
 }
 
 
@@ -104,24 +87,24 @@ void VulkanPrimitives::add_vertex(ViewportCoords xy, float u1, float v1, float u
 }
 
 
-void VulkanPrimitives::add_vertex(ViewportCoords xy, Color c, float u, float v)
+void VulkanPrimitives::add_vertex(ViewportCoords xy, Color color, float u, float v)
 {
     assert(m_format == VertexFormat::V2c4t2);
     assert(m_open_vertices >= 0);
     m_open_vertices++;
     m_vertex_data.push_back(xy.x.value);
     m_vertex_data.push_back(xy.y.value);
-    m_vertex_data.push_back(c.red_f());
-    m_vertex_data.push_back(c.green_f());
-    m_vertex_data.push_back(c.blue_f());
-    m_vertex_data.push_back(c.alpha_f());
+    m_vertex_data.push_back(color.red_f());
+    m_vertex_data.push_back(color.green_f());
+    m_vertex_data.push_back(color.blue_f());
+    m_vertex_data.push_back(color.alpha_f());
     m_vertex_data.push_back(u);
     m_vertex_data.push_back(v);
 }
 
 
 void
-VulkanPrimitives::add_vertex(ViewportCoords xy, Color c, float u1, float v1, float u2, float v2)
+VulkanPrimitives::add_vertex(ViewportCoords xy, Color color, float u1, float v1, float u2, float v2)
 {
 
 }
@@ -139,9 +122,28 @@ bool VulkanPrimitives::empty() const
 }
 
 
-void VulkanPrimitives::set_blend(Primitives::BlendFunc func)
+void VulkanPrimitives::set_shader(Shader& shader)
 {
+    m_shader = dynamic_cast<VulkanShader*>(&shader);
+    destroy_pipeline();
+}
 
+
+void VulkanPrimitives::set_uniform_data(uint32_t binding, const void* data, size_t size)
+{
+    assert(binding > 0);  // zero is reserved for MVP matrix
+    auto offset = m_uniform_data.size();
+    m_uniform_data.resize(offset + size);
+    std::memcpy(&m_uniform_data[offset], data, size);
+    m_uniforms.push_back({binding, offset, size});
+    destroy_pipeline();
+}
+
+
+void VulkanPrimitives::set_blend(BlendFunc func)
+{
+    m_blend = func;
+    destroy_pipeline();
 }
 
 
@@ -261,14 +263,7 @@ void VulkanPrimitives::create_pipeline()
         .sampleShadingEnable = VK_FALSE,
     };
 
-    VkPipelineColorBlendAttachmentState color_blend_attachment = {
-        .blendEnable = VK_FALSE,
-        .colorWriteMask =
-                VK_COLOR_COMPONENT_R_BIT |
-                VK_COLOR_COMPONENT_G_BIT |
-                VK_COLOR_COMPONENT_B_BIT |
-                VK_COLOR_COMPONENT_A_BIT,
-    };
+    auto color_blend_attachment = make_color_blend();
 
     VkPipelineColorBlendStateCreateInfo color_blend_ci = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
@@ -361,7 +356,7 @@ void VulkanPrimitives::create_buffers()
     for (size_t i = 0; i < VulkanWindow::cmd_buf_count; i++) {
         VkBufferCreateInfo uniform_buffer_ci = {
                 .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-                .size = m_mvp_size,
+                .size = m_mvp_size + m_uniform_data.size(),
                 .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                 .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
         };
@@ -383,6 +378,8 @@ void VulkanPrimitives::create_buffers()
             m_index_data.data());
     for (size_t i = 0; i < VulkanWindow::cmd_buf_count; i++) {
         m_device_memory.bind_buffer(m_uniform_buffers[i], m_uniform_offsets[i]);
+        m_device_memory.copy_data(m_uniform_offsets[i] + m_mvp_size,
+                m_uniform_data.size(), m_uniform_data.data());
     }
 }
 
@@ -390,16 +387,28 @@ void VulkanPrimitives::create_buffers()
 void VulkanPrimitives::create_descriptor_set_layout()
 {
     // descriptor set layout
-    VkDescriptorSetLayoutBinding mvp_layout_binding = {
+    std::vector<VkDescriptorSetLayoutBinding> layout_bindings;
+    // mvp
+    layout_bindings.push_back({
             .binding = 0,
             .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-    };
+    });
+    for (const auto& uniform : m_uniforms) {
+        layout_bindings.push_back({
+                .binding = uniform.binding,
+                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .descriptorCount = 1,
+                .stageFlags =
+                        VK_SHADER_STAGE_VERTEX_BIT |
+                        VK_SHADER_STAGE_FRAGMENT_BIT,
+        });
+    }
     VkDescriptorSetLayoutCreateInfo layout_ci = {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-            .bindingCount = 1,
-            .pBindings = &mvp_layout_binding,
+            .bindingCount = (uint32_t) layout_bindings.size(),
+            .pBindings = layout_bindings.data(),
     };
     VK_TRY("vkCreateDescriptorSetLayout",
             vkCreateDescriptorSetLayout(
@@ -413,7 +422,8 @@ void VulkanPrimitives::create_descriptor_sets()
     // descriptor pool
     VkDescriptorPoolSize pool_size = {
             .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = VulkanWindow::cmd_buf_count,
+            .descriptorCount = VulkanWindow::cmd_buf_count
+                               * uint32_t(1 + m_uniforms.size()),
     };
     VkDescriptorPoolCreateInfo pool_info = {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
@@ -442,24 +452,41 @@ void VulkanPrimitives::create_descriptor_sets()
                     m_descriptor_sets));
 
     for (size_t i = 0; i < VulkanWindow::cmd_buf_count; i++) {
-        VkDescriptorBufferInfo buffer_info = {
+        std::vector<VkDescriptorBufferInfo> buffer_info;
+        buffer_info.reserve(m_uniforms.size() + 1);
+        buffer_info.push_back({
                 .buffer = m_uniform_buffers[i],
                 .offset = 0,
-                .range = VK_WHOLE_SIZE,
-        };
-
-        VkWriteDescriptorSet write_descriptor_set = {
+                .range = m_mvp_size,
+        });
+        std::vector<VkWriteDescriptorSet> write_descriptor_set;
+        write_descriptor_set.reserve(m_uniforms.size() + 1);
+        write_descriptor_set.push_back(VkWriteDescriptorSet{
                 .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                 .dstSet = m_descriptor_sets[i],
                 .dstBinding = 0,
-                .dstArrayElement = 0,
                 .descriptorCount = 1,
                 .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                .pBufferInfo = &buffer_info,
-        };
+                .pBufferInfo = &buffer_info.back(),
+        });
+        for (const auto& uni : m_uniforms) {
+            buffer_info.push_back({
+                    .buffer = m_uniform_buffers[i],
+                    .offset = m_mvp_size + uni.offset,
+                    .range = uni.range,
+            });
+            write_descriptor_set.push_back(VkWriteDescriptorSet{
+                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                    .dstSet = m_descriptor_sets[i],
+                    .dstBinding = uni.binding,
+                    .descriptorCount = 1,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                    .pBufferInfo = &buffer_info.back(),
+            });
+        }
 
-        vkUpdateDescriptorSets(device(), 1,
-                &write_descriptor_set, 0, nullptr);
+        vkUpdateDescriptorSets(device(), write_descriptor_set.size(),
+                write_descriptor_set.data(), 0, nullptr);
     }
 }
 
@@ -550,6 +577,47 @@ auto VulkanPrimitives::make_attr_descs()
             break;
     }
     return out;
+}
+
+
+auto VulkanPrimitives::make_color_blend() -> VkPipelineColorBlendAttachmentState
+{
+    constexpr VkColorComponentFlags color_mask =
+            VK_COLOR_COMPONENT_R_BIT |
+            VK_COLOR_COMPONENT_G_BIT |
+            VK_COLOR_COMPONENT_B_BIT |
+            VK_COLOR_COMPONENT_A_BIT;
+
+    switch (m_blend) {
+        case BlendFunc::Off:
+            return VkPipelineColorBlendAttachmentState {
+                    .blendEnable = VK_FALSE,
+                    .colorWriteMask = color_mask,
+            };
+        case BlendFunc::AlphaBlend:
+            return VkPipelineColorBlendAttachmentState {
+                    .blendEnable = VK_TRUE,
+                    .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+                    .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+                    .colorBlendOp = VK_BLEND_OP_ADD,
+                    .srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
+                    .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+                    .alphaBlendOp = VK_BLEND_OP_ADD,
+                    .colorWriteMask = color_mask,
+            };
+        case BlendFunc::InverseVideo:
+            return VkPipelineColorBlendAttachmentState {
+                    .blendEnable = VK_TRUE,
+                    .srcColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR,
+                    .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
+                    .colorBlendOp = VK_BLEND_OP_ADD,
+                    .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
+                    .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
+                    .alphaBlendOp = VK_BLEND_OP_ADD,
+                    .colorWriteMask = color_mask,
+            };
+    }
+    UNREACHABLE;
 }
 
 

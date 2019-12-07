@@ -39,26 +39,29 @@ int main()
             vfs.read_file("shaders/test_vk.vert.spv").path(),
             vfs.read_file("shaders/test_vk.frag.spv").path());
 
-    VulkanPrimitives primitives {renderer,
-        VertexFormat::V2c4t2, PrimitiveType::TriFans};
-    primitives.begin_primitive();
-    primitives.add_vertex({-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, 0, 0);
-    primitives.add_vertex({-0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}, 0, 0);
-    primitives.add_vertex({0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, 0, 0);
-    primitives.add_vertex({0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}, 0, 0);
-    primitives.end_primitive();
+    VulkanPrimitives prim {renderer,
+                           VertexFormat::V2c4t2, PrimitiveType::TriFans};
 
-    primitives.begin_primitive();
-    primitives.add_vertex({-1.0f, -1.0f}, {1.0f, 0.0f, 0.0f}, 0, 0);
-    primitives.add_vertex({-1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, 0, 0);
-    primitives.add_vertex({0.0f, 0.0f}, {1.0f, 0.0f, 1.0f}, 0, 0);
-    primitives.add_vertex({0.0f, -1.0f}, {1.0f, 1.0f, 0.0f}, 0, 0);
-    primitives.end_primitive();
+    prim.begin_primitive();
+    prim.add_vertex({-1.0f, -1.0f}, {1.0f, 0.0f, 0.0f}, 0, 0);
+    prim.add_vertex({-1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, 0, 0);
+    prim.add_vertex({0.0f, 0.0f}, {1.0f, 0.0f, 1.0f}, 0, 0);
+    prim.add_vertex({0.0f, -1.0f}, {1.0f, 1.0f, 0.0f}, 0, 0);
+    prim.end_primitive();
 
-    primitives.set_shader(shader);
+    prim.begin_primitive();
+    prim.add_vertex({-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, 0, 0);
+    prim.add_vertex({-0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}, 0, 0);
+    prim.add_vertex({0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, 0, 0);
+    prim.add_vertex({0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}, 0, 0);
+    prim.end_primitive();
+
+    prim.set_shader(shader);
+    prim.set_uniform(1, Color(0., 0., 0., 0.5));
+    prim.set_blend(BlendFunc::AlphaBlend);
 
     window.set_draw_callback([&](View& view) {
-        primitives.draw(view);
+        prim.draw(view);
     });
 
     window.set_refresh_mode(RefreshMode::OnDemand);

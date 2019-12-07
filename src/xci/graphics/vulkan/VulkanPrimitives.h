@@ -40,14 +40,13 @@ public:
     void end_primitive() override;
     void add_vertex(ViewportCoords xy, float u, float v) override;
     void add_vertex(ViewportCoords xy, float u1, float v1, float u2, float v2) override;
-    void add_vertex(ViewportCoords xy, Color c, float u, float v) override;
-    void add_vertex(ViewportCoords xy, Color c, float u1, float v1, float u2, float v2) override;
+    void add_vertex(ViewportCoords xy, Color color, float u, float v) override;
+    void add_vertex(ViewportCoords xy, Color color, float u1, float v1, float u2, float v2) override;
     void clear() override;
     bool empty() const override;
 
     void set_shader(Shader& shader) override;
-    void set_uniform(const char* name, float f) override;
-    void set_uniform(const char* name, float f1, float f2, float f3, float f4) override;
+    void set_uniform_data(uint32_t binding, const void* data, size_t size) override;
     void set_blend(BlendFunc func) override;
 
     void draw(View& view) override;
@@ -64,6 +63,7 @@ private:
     uint32_t get_attr_desc_count();
     static constexpr size_t max_attr_descs = 4;
     auto make_attr_descs() -> std::array<VkVertexInputAttributeDescription, max_attr_descs>;
+    auto make_color_blend() -> VkPipelineColorBlendAttachmentState;
 
 private:
     VertexFormat m_format;
@@ -72,6 +72,14 @@ private:
     std::vector<float> m_vertex_data;
     std::vector<uint16_t> m_index_data;
     static constexpr VkDeviceSize m_mvp_size = sizeof(float) * 16;
+    std::vector<std::byte> m_uniform_data;
+    struct Uniform {
+        uint32_t binding;
+        VkDeviceSize offset;
+        VkDeviceSize range;
+    };
+    std::vector<Uniform> m_uniforms;
+    BlendFunc m_blend = BlendFunc::Off;
 
     VulkanRenderer& m_renderer;
     VulkanShader* m_shader = nullptr;

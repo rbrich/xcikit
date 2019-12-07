@@ -37,6 +37,13 @@ enum class PrimitiveType {
 };
 
 
+enum class BlendFunc {
+    Off,
+    AlphaBlend,
+    InverseVideo,
+};
+
+
 class Primitives {
 public:
     virtual ~Primitives() = default;
@@ -57,10 +64,10 @@ public:
 
     virtual void set_shader(Shader& shader) = 0;
 
-    virtual void set_uniform(const char* name, float f) = 0;
-    virtual void set_uniform(const char* name, float f1, float f2, float f3, float f4) = 0;
+    virtual void set_uniform_data(uint32_t binding, const void* data, size_t size) = 0;
+    void set_uniform(uint32_t binding, float f) { set_uniform_data(binding, &f, sizeof(f)); }
+    void set_uniform(uint32_t binding, const Color& color);
 
-    enum class BlendFunc { AlphaBlend, InverseVideo, };
     virtual void set_blend(BlendFunc func) = 0;
 
     virtual void draw(View& view) = 0;
