@@ -112,7 +112,7 @@ public:
     explicit View(Window* m_window) : m_window(m_window) {}
 
     // Window might be nullptr if the View was created directly
-    Window* window() { return m_window; }
+    Window* window() const { return m_window; }
 
     // Compute projection matrix based on viewport size and offset
     std::array<float, 16> projection_matrix(bool inverted_y = true) const;

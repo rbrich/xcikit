@@ -22,6 +22,7 @@
 #include "Style.h"
 #include <xci/graphics/View.h>
 #include <xci/graphics/Color.h>
+#include <xci/graphics/Shape.h>
 #include <xci/core/geometry.h>
 
 #include <string>
@@ -133,6 +134,8 @@ private:
 
     Style m_default_style;
     ViewportUnits m_default_width = 0;
+
+    mutable std::vector<graphics::Shape> m_debug_shapes;
 };
 
 

@@ -115,10 +115,17 @@ void Text::resize(graphics::View& view)
 }
 
 
+void Text::update(graphics::View& view)
+{
+    if (m_need_typeset) {
+        m_layout.typeset(view);
+        m_need_typeset = false;
+    }
+}
+
+
 void Text::draw(graphics::View& view, const ViewportCoords& pos)
 {
-    if (m_need_typeset)
-        m_layout.typeset(view);
     m_layout.draw(view, pos);
 }
 

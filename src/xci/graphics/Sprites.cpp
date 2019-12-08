@@ -79,7 +79,7 @@ void Sprites::draw(View& view, const ViewportCoords& pos)
 {
     init_shader();
     m_trifans->set_uniform(1, m_color);
-    m_shader->set_texture("u_texture", m_texture);
+    m_trifans->set_texture(2, m_texture);
     m_trifans->set_shader(*m_shader);
     m_trifans->set_blend(BlendFunc::AlphaBlend);
     m_trifans->draw(view, pos);
@@ -100,7 +100,7 @@ void Sprites::init_shader()
                 (const char*)g_sprite_frag_data, g_sprite_frag_size);
 #else
     bool res = m_shader->load_from_vfs(m_renderer.vfs(),
-            "shaders/sprite.vert", "shaders/sprite.frag");
+            "shaders/sprite.vert.spv", "shaders/sprite.frag.spv");
 #endif
     if (!res) {
         log_error("Rectangle shader not loaded!");
@@ -154,7 +154,7 @@ void ColoredSprites::add_sprite(const ViewportRect& rect, const Rect_u& texrect)
 void ColoredSprites::draw(View& view, const ViewportCoords& pos)
 {
     init_shader();
-    m_shader->set_texture("u_texture", m_texture);
+    m_trifans->set_texture(1, m_texture);
     m_trifans->set_shader(*m_shader);
     m_trifans->set_blend(BlendFunc::AlphaBlend);
     m_trifans->draw(view, pos);

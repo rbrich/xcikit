@@ -28,18 +28,25 @@ void Primitives::draw(View& view, const ViewportCoords& pos)
 }
 
 
+void Primitives::set_uniform(uint32_t binding, float f1, float f2)
+{
+    struct { float f1, f2; } buf { f1, f2 };
+    set_uniform_data(binding, &buf, sizeof(buf));
+}
+
+
 void Primitives::set_uniform(uint32_t binding, const Color& color)
 {
     struct FloatColor {
         float r, g, b, a;
     };
-    FloatColor fc {
+    FloatColor buf {
         color.red_f(),
         color.green_f(),
         color.blue_f(),
         color.alpha_f(),
     };
-    set_uniform_data(binding, &fc, sizeof(fc));
+    set_uniform_data(binding, &buf, sizeof(buf));
 }
 
 

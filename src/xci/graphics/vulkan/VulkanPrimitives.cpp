@@ -18,6 +18,7 @@
 #include "VulkanShader.h"
 #include "VulkanWindow.h"
 #include "VulkanError.h"
+#include "VulkanTexture.h"
 
 #include <xci/compat/macros.h>
 
@@ -81,13 +82,27 @@ void VulkanPrimitives::end_primitive()
 
 void VulkanPrimitives::add_vertex(ViewportCoords xy, float u, float v)
 {
-
+    assert(m_format == VertexFormat::V2t2);
+    assert(m_open_vertices >= 0);
+    m_open_vertices++;
+    m_vertex_data.push_back(xy.x.value);
+    m_vertex_data.push_back(xy.y.value);
+    m_vertex_data.push_back(u);
+    m_vertex_data.push_back(v);
 }
 
 
 void VulkanPrimitives::add_vertex(ViewportCoords xy, float u1, float v1, float u2, float v2)
 {
-
+    assert(m_format == VertexFormat::V2t22);
+    assert(m_open_vertices >= 0);
+    m_open_vertices++;
+    m_vertex_data.push_back(xy.x.value);
+    m_vertex_data.push_back(xy.y.value);
+    m_vertex_data.push_back(u1);
+    m_vertex_data.push_back(v1);
+    m_vertex_data.push_back(u2);
+    m_vertex_data.push_back(v2);
 }
 
 
@@ -110,19 +125,32 @@ void VulkanPrimitives::add_vertex(ViewportCoords xy, Color color, float u, float
 void
 VulkanPrimitives::add_vertex(ViewportCoords xy, Color color, float u1, float v1, float u2, float v2)
 {
-
+    assert(m_format == VertexFormat::V2c4t22);
+    assert(m_open_vertices >= 0);
+    m_open_vertices++;
+    m_vertex_data.push_back(xy.x.value);
+    m_vertex_data.push_back(xy.y.value);
+    m_vertex_data.push_back(color.red_f());
+    m_vertex_data.push_back(color.green_f());
+    m_vertex_data.push_back(color.blue_f());
+    m_vertex_data.push_back(color.alpha_f());
+    m_vertex_data.push_back(u1);
+    m_vertex_data.push_back(v1);
+    m_vertex_data.push_back(u2);
+    m_vertex_data.push_back(v2);
 }
 
 
 void VulkanPrimitives::clear()
 {
-
-}
-
-
-bool VulkanPrimitives::empty() const
-{
-    return false;
+    destroy_pipeline();
+    m_vertex_data.clear();
+    m_index_data.clear();
+    m_uniform_data.clear();
+    m_uniforms.clear();
+    m_closed_vertices = 0;
+    m_open_vertices = -1;
+    m_blend = BlendFunc::Off;
 }
 
 
@@ -130,6 +158,13 @@ void VulkanPrimitives::set_shader(Shader& shader)
 {
     m_shader = dynamic_cast<VulkanShader*>(&shader);
     destroy_pipeline();
+}
+
+
+void VulkanPrimitives::set_texture(uint32_t binding, TexturePtr& texture)
+{
+    m_texture.binding = binding;
+    m_texture.ptr = texture;
 }
 
 
@@ -390,8 +425,8 @@ void VulkanPrimitives::create_buffers()
 
 void VulkanPrimitives::create_descriptor_set_layout()
 {
-    // descriptor set layout
     std::vector<VkDescriptorSetLayoutBinding> layout_bindings;
+
     // mvp
     layout_bindings.push_back({
             .binding = 0,
@@ -399,6 +434,8 @@ void VulkanPrimitives::create_descriptor_set_layout()
             .descriptorCount = 1,
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
     });
+
+    // uniforms
     for (const auto& uniform : m_uniforms) {
         layout_bindings.push_back({
                 .binding = uniform.binding,
@@ -409,6 +446,17 @@ void VulkanPrimitives::create_descriptor_set_layout()
                         VK_SHADER_STAGE_FRAGMENT_BIT,
         });
     }
+
+    // texture
+    if (m_texture.ptr) {
+        layout_bindings.push_back({
+                .binding = m_texture.binding,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .descriptorCount = 1,
+                .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+        });
+    }
+
     VkDescriptorSetLayoutCreateInfo layout_ci = {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
             .bindingCount = (uint32_t) layout_bindings.size(),
@@ -424,16 +472,22 @@ void VulkanPrimitives::create_descriptor_set_layout()
 void VulkanPrimitives::create_descriptor_sets()
 {
     // descriptor pool
-    VkDescriptorPoolSize pool_size = {
-            .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = VulkanWindow::cmd_buf_count
-                               * uint32_t(1 + m_uniforms.size()),
+    VkDescriptorPoolSize pool_sizes[2] = {
+            {
+                    .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                    .descriptorCount = VulkanWindow::cmd_buf_count
+                                       * uint32_t(1 + m_uniforms.size()),
+            },
+            {
+                    .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    .descriptorCount = VulkanWindow::cmd_buf_count,
+            },
     };
     VkDescriptorPoolCreateInfo pool_info = {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
             .maxSets = VulkanWindow::cmd_buf_count,
-            .poolSizeCount = 1,
-            .pPoolSizes = &pool_size,
+            .poolSizeCount = m_texture.ptr ? 2u : 1u,
+            .pPoolSizes = pool_sizes,
     };
     VK_TRY("vkCreateDescriptorPool",
             vkCreateDescriptorPool(device(), &pool_info, nullptr,
@@ -457,14 +511,16 @@ void VulkanPrimitives::create_descriptor_sets()
 
     for (size_t i = 0; i < VulkanWindow::cmd_buf_count; i++) {
         std::vector<VkDescriptorBufferInfo> buffer_info;
+        std::vector<VkWriteDescriptorSet> write_descriptor_set;
         buffer_info.reserve(m_uniforms.size() + 1);
+        write_descriptor_set.reserve(m_uniforms.size() + 1);
+
+        // mvp
         buffer_info.push_back({
                 .buffer = m_uniform_buffers[i],
                 .offset = 0,
                 .range = m_mvp_size,
         });
-        std::vector<VkWriteDescriptorSet> write_descriptor_set;
-        write_descriptor_set.reserve(m_uniforms.size() + 1);
         write_descriptor_set.push_back(VkWriteDescriptorSet{
                 .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
                 .dstSet = m_descriptor_sets[i],
@@ -473,6 +529,8 @@ void VulkanPrimitives::create_descriptor_sets()
                 .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                 .pBufferInfo = &buffer_info.back(),
         });
+
+        // uniforms
         auto offset_base = align_uniform(m_mvp_size);
         for (const auto& uni : m_uniforms) {
             buffer_info.push_back({
@@ -487,6 +545,25 @@ void VulkanPrimitives::create_descriptor_sets()
                     .descriptorCount = 1,
                     .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                     .pBufferInfo = &buffer_info.back(),
+            });
+        }
+
+        // texture
+        VkDescriptorImageInfo image_info;  // keep alive for vkUpdateDescriptorSets()
+        if (m_texture.ptr) {
+            auto* texture = static_cast<VulkanTexture*>(m_texture.ptr.get());
+            image_info = {
+                    .sampler = texture->vk_sampler(),
+                    .imageView = texture->vk_image_view(),
+                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            };
+            write_descriptor_set.push_back(VkWriteDescriptorSet{
+                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                    .dstSet = m_descriptor_sets[i],
+                    .dstBinding = m_texture.binding,
+                    .descriptorCount = 1,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    .pImageInfo = &image_info,
             });
         }
 

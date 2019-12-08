@@ -114,10 +114,4 @@ void VulkanShader::clear()
 }
 
 
-void VulkanShader::set_texture(const char* name, TexturePtr& texture)
-{
-
-}
-
-
 } // namespace xci::graphics

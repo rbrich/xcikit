@@ -1,10 +1,10 @@
-// VulkanMemory.cpp created on 2019-12-07 as part of xcikit project
+// DeviceMemory.cpp created on 2019-12-07 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
 // Copyright 2019 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#include "VulkanMemory.h"
+#include "DeviceMemory.h"
 #include "VulkanRenderer.h"
 #include "VulkanError.h"
 #include <cstring>
@@ -13,7 +13,7 @@
 namespace xci::graphics {
 
 
-VkDeviceSize VulkanMemory::reserve(const VkMemoryRequirements& requirements)
+VkDeviceSize DeviceMemory::reserve(const VkMemoryRequirements& requirements)
 {
     assert(m_memory_pool == VK_NULL_HANDLE);  // not yet allocated
 
@@ -31,14 +31,12 @@ VkDeviceSize VulkanMemory::reserve(const VkMemoryRequirements& requirements)
 }
 
 
-void VulkanMemory::allocate()
+void DeviceMemory::allocate(VkMemoryPropertyFlags properties)
 {
     VkMemoryAllocateInfo alloc_info = {
             .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
             .allocationSize = m_alloc_size,
-            .memoryTypeIndex = find_memory_type(
-                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                    VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+            .memoryTypeIndex = find_memory_type(properties),
     };
     VK_TRY("vkAllocateMemory (vertex/index buffer)",
             vkAllocateMemory(m_renderer.vk_device(), &alloc_info,
@@ -46,14 +44,14 @@ void VulkanMemory::allocate()
 }
 
 
-void VulkanMemory::free()
+void DeviceMemory::free()
 {
     vkFreeMemory(m_renderer.vk_device(), m_memory_pool, nullptr);
     m_memory_pool = VK_NULL_HANDLE;
 }
 
 
-void VulkanMemory::bind_buffer(VkBuffer buffer, VkDeviceSize offset)
+void DeviceMemory::bind_buffer(VkBuffer buffer, VkDeviceSize offset)
 {
     assert(m_memory_pool != VK_NULL_HANDLE);  // must be allocated
     VK_TRY("vkBindBufferMemory",
@@ -62,7 +60,16 @@ void VulkanMemory::bind_buffer(VkBuffer buffer, VkDeviceSize offset)
 }
 
 
-void VulkanMemory::copy_data(VkDeviceSize offset, VkDeviceSize size,
+void DeviceMemory::bind_image(VkImage image, VkDeviceSize offset)
+{
+    assert(m_memory_pool != VK_NULL_HANDLE);  // must be allocated
+    VK_TRY("vkBindImageMemory",
+            vkBindImageMemory(m_renderer.vk_device(), image,
+                    m_memory_pool, offset));
+}
+
+
+void DeviceMemory::copy_data(VkDeviceSize offset, VkDeviceSize size,
         const void* src_data)
 {
     assert(m_memory_pool != VK_NULL_HANDLE);  // must be allocated
@@ -75,7 +82,7 @@ void VulkanMemory::copy_data(VkDeviceSize offset, VkDeviceSize size,
 }
 
 
-uint32_t VulkanMemory::find_memory_type(VkMemoryPropertyFlags properties)
+uint32_t DeviceMemory::find_memory_type(VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties mem_props;
     vkGetPhysicalDeviceMemoryProperties(m_renderer.vk_physical_device(), &mem_props);
@@ -90,7 +97,7 @@ uint32_t VulkanMemory::find_memory_type(VkMemoryPropertyFlags properties)
 }
 
 
-void VulkanMemory::pad_to_alignment(VkDeviceSize alignment)
+void DeviceMemory::pad_to_alignment(VkDeviceSize alignment)
 {
     auto padding = alignment - (m_alloc_size % alignment);
     m_alloc_size += (padding == alignment) ? 0 : padding;

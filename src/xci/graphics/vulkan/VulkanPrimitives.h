@@ -18,7 +18,7 @@
 
 #include <xci/graphics/Primitives.h>
 #include "VulkanWindow.h"
-#include "VulkanMemory.h"
+#include "DeviceMemory.h"
 
 #include <vulkan/vulkan.h>
 #include <array>
@@ -43,9 +43,10 @@ public:
     void add_vertex(ViewportCoords xy, Color color, float u, float v) override;
     void add_vertex(ViewportCoords xy, Color color, float u1, float v1, float u2, float v2) override;
     void clear() override;
-    bool empty() const override;
+    bool empty() const override { return m_vertex_data.empty(); }
 
     void set_shader(Shader& shader) override;
+    void set_texture(uint32_t binding, TexturePtr& texture) override;
     void set_uniform_data(uint32_t binding, const void* data, size_t size) override;
     void set_blend(BlendFunc func) override;
 
@@ -81,6 +82,11 @@ private:
     };
     std::vector<Uniform> m_uniforms;
     VkDeviceSize m_min_uniform_offset_alignment = 0;
+    struct Texture {
+        uint32_t binding;
+        TexturePtr ptr;
+    };
+    Texture m_texture;
     BlendFunc m_blend = BlendFunc::Off;
 
     VulkanRenderer& m_renderer;
@@ -94,7 +100,7 @@ private:
     VkBuffer m_index_buffer {};
     VkBuffer m_uniform_buffers[VulkanWindow::cmd_buf_count] {};
     VkDeviceSize m_uniform_offsets[VulkanWindow::cmd_buf_count] {};
-    VulkanMemory m_device_memory;
+    DeviceMemory m_device_memory;
 };
 
 

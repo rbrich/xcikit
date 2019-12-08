@@ -37,8 +37,6 @@ public:
             const char* vertex_data, int vertex_size,
             const char* fragment_data, int fragment_size) override;
 
-    void set_texture(const char* name, TexturePtr& texture) override;
-
     // Vulkan handles:
     VkShaderModule vk_vertex_module() const { return m_vertex_module; }
     VkShaderModule vk_fragment_module() const { return m_fragment_module; }

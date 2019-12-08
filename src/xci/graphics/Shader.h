@@ -60,8 +60,6 @@ public:
     virtual bool load_from_memory(
             const char* vertex_data, int vertex_size,
             const char* fragment_data, int fragment_size) = 0;
-
-    virtual void set_texture(const char* name, TexturePtr& texture) = 0;
 };
 
 

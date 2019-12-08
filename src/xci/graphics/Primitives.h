@@ -66,7 +66,10 @@ public:
 
     virtual void set_uniform_data(uint32_t binding, const void* data, size_t size) = 0;
     void set_uniform(uint32_t binding, float f) { set_uniform_data(binding, &f, sizeof(f)); }
+    void set_uniform(uint32_t binding, float f1, float f2);
     void set_uniform(uint32_t binding, const Color& color);
+
+    virtual void set_texture(uint32_t binding, TexturePtr& texture) = 0;
 
     virtual void set_blend(BlendFunc func) = 0;
 

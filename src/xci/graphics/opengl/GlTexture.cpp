@@ -56,9 +56,6 @@ void GlTexture::update(const uint8_t* pixels, const Rect_u& region)
 }
 
 
-Vec2u GlTexture::size() const { return m_size; }
-
-
 void GlTexture::destroy()
 {
     if (m_texture == 0)

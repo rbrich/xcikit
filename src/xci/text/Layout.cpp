@@ -73,51 +73,60 @@ void Layout::typeset(const graphics::View& target)
     for (auto& elem : m_elements) {
         elem->apply(m_page);
     }
+
+    // setup debug rectangles
+
+    auto& renderer = target.window()->renderer();
+    const auto sc_1px = target.size_to_viewport(1_sc);
+    m_debug_shapes.clear();
+
+    // Debug: page bbox
+    if (target.has_debug_flag(View::Debug::PageBBox)) {
+        m_debug_shapes.emplace_back(renderer,
+                Color(150, 150, 0, 128),
+                Color(200, 200, 50));
+        m_debug_shapes.back().add_rectangle(bbox(), sc_1px);
+    }
+
+    // Debug: span bboxes
+    if (target.has_debug_flag(View::Debug::SpanBBox)) {
+        m_debug_shapes.emplace_back(renderer,
+                Color(100, 0, 150, 128),
+                Color(200, 50, 250));
+        m_page.foreach_span([&](const Span& span) {
+            for (auto& part : span.parts()) {
+                m_debug_shapes.back().add_rectangle(part.bbox(), sc_1px);
+            }
+        });
+    }
+
+    // Debug: line bboxes
+    if (target.has_debug_flag(View::Debug::LineBBox)) {
+        m_debug_shapes.emplace_back(renderer,
+                Color(0, 50, 150, 128),
+                Color(50, 50, 250));
+        m_page.foreach_line([&](const Line& line) {
+            m_debug_shapes.back().add_rectangle(line.bbox(), sc_1px);
+        });
+    }
+
+    // Debug: line baselines
+    if (target.has_debug_flag(View::Debug::LineBaseLine)) {
+        m_debug_shapes.emplace_back(renderer, Color(255, 50, 150));
+        m_page.foreach_line([&](const Line& line) {
+            auto rect = line.bbox();
+            rect.y += line.baseline();
+            rect.h = sc_1px;
+            m_debug_shapes.back().add_rectangle(rect);
+        });
+    }
 }
 
 
 void Layout::draw(View& target, const ViewportCoords& pos) const
 {
-    auto& renderer = target.window()->renderer();
-    const auto sc_1px = target.size_to_viewport(1_sc);
-
-    // Debug: page bbox
-    if (target.has_debug_flag(View::Debug::PageBBox)) {
-        graphics::Shape bbox_rect(renderer, Color(150, 150, 0, 128), Color(200, 200, 50));
-        bbox_rect.add_rectangle(bbox(), sc_1px);
-        bbox_rect.draw(target, pos);
-    }
-
-    // Debug: span bboxes
-    if (target.has_debug_flag(View::Debug::SpanBBox)) {
-        graphics::Shape bboxes(renderer, Color(100, 0, 150, 128), Color(200, 50, 250));
-        m_page.foreach_span([&](const Span& span) {
-            for (auto& part : span.parts()) {
-                bboxes.add_rectangle(part.bbox(), sc_1px);
-            }
-        });
-        bboxes.draw(target, pos);
-    }
-
-    // Debug: line bboxes
-    if (target.has_debug_flag(View::Debug::LineBBox)) {
-        graphics::Shape bboxes(renderer, Color(0, 50, 150, 128), Color(50, 50, 250));
-        m_page.foreach_line([&](const Line& line) {
-            bboxes.add_rectangle(line.bbox(), sc_1px);
-        });
-        bboxes.draw(target, pos);
-    }
-
-    // Debug line baselines
-    if (target.has_debug_flag(View::Debug::LineBaseLine)) {
-        graphics::Shape baselines(renderer, Color(255, 50, 150));
-        m_page.foreach_line([&](const Line& line) {
-            auto rect = line.bbox();
-            rect.y += line.baseline();
-            rect.h = sc_1px;
-            baselines.add_rectangle(rect);
-        });
-        baselines.draw(target, pos);
+    for (auto& shape : m_debug_shapes) {
+        shape.draw(target, pos);
     }
 
     m_page.foreach_word([&](const Word& word) {

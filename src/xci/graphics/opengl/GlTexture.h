@@ -32,7 +32,7 @@ public:
     void update(const uint8_t* pixels) override;
     void update(const uint8_t* pixels, const Rect_u& region) override;
 
-    Vec2u size() const override;
+    Vec2u size() const override { return m_size; }
 
     GLuint gl_texture() const { return m_texture; }
 

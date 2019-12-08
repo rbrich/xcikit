@@ -20,7 +20,8 @@ set(XCI_GRAPHICS_OPENGL_SOURCES
     opengl/GlWindow.cpp)
 
 set(XCI_GRAPHICS_VULKAN_SOURCES
-    vulkan/VulkanMemory.cpp
+    vulkan/CommandBuffer.cpp
+    vulkan/DeviceMemory.cpp
     vulkan/VulkanPrimitives.cpp
     vulkan/VulkanRenderer.cpp
     vulkan/VulkanShader.cpp

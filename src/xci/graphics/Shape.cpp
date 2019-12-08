@@ -210,36 +210,41 @@ void Shape::draw(View& view, const ViewportCoords& pos)
 {
     // lines
     if (!m_lines->empty()) {
-        init_line_shader();
-        m_lines->set_uniform(1, m_fill_color);
-        m_lines->set_uniform(2, m_outline_color);
-        m_lines->set_uniform(3, m_softness);
-        m_lines->set_uniform(4, m_antialiasing);
-        m_lines->set_shader(*m_line_shader);
-        m_lines->set_blend(BlendFunc::AlphaBlend);
+        if (!m_line_shader) {
+            init_line_shader();
+            m_lines->set_uniform(1, m_fill_color);
+            m_lines->set_uniform(2, m_outline_color);
+            m_lines->set_uniform(3, m_softness);
+            m_lines->set_uniform(4, m_antialiasing);
+            m_lines->set_shader(*m_line_shader);
+            m_lines->set_blend(BlendFunc::AlphaBlend);
+        }
         m_lines->draw(view, pos);
     }
 
     // rectangles
     if (!m_rectangles->empty()) {
-        init_rectangle_shader();
-        m_rectangles->set_uniform(1, m_outline_color);
-        m_rectangles->set_uniform(2, m_softness);
-        m_rectangles->set_uniform(3, m_antialiasing);
-        m_rectangles->set_shader(*m_rectangle_shader);
-        m_rectangles->set_blend(BlendFunc::AlphaBlend);
+        if (!m_rectangle_shader) {
+            init_rectangle_shader();
+            m_rectangles->set_uniform(1, m_outline_color);
+            m_rectangles->set_uniform(2, m_softness, m_antialiasing);
+            m_rectangles->set_shader(*m_rectangle_shader);
+            m_rectangles->set_blend(BlendFunc::AlphaBlend);
+        }
         m_rectangles->draw(view, pos);
     }
 
     // ellipses
     if (!m_ellipses->empty()) {
-        init_ellipse_shader();
-        m_ellipses->set_uniform(1, m_fill_color);
-        m_ellipses->set_uniform(2, m_outline_color);
-        m_ellipses->set_uniform(3, m_softness);
-        m_ellipses->set_uniform(4, m_antialiasing);
-        m_ellipses->set_shader(*m_ellipse_shader);
-        m_ellipses->set_blend(BlendFunc::AlphaBlend);
+        if (!m_ellipse_shader) {
+            init_ellipse_shader();
+            m_ellipses->set_uniform(1, m_fill_color);
+            m_ellipses->set_uniform(2, m_outline_color);
+            m_ellipses->set_uniform(3, m_softness);
+            m_ellipses->set_uniform(4, m_antialiasing);
+            m_ellipses->set_shader(*m_ellipse_shader);
+            m_ellipses->set_blend(BlendFunc::AlphaBlend);
+        }
         m_ellipses->draw(view, pos);
     }
 }
@@ -247,8 +252,6 @@ void Shape::draw(View& view, const ViewportCoords& pos)
 
 void Shape::init_line_shader()
 {
-    if (m_line_shader)
-        return;
     m_line_shader = m_renderer.get_or_create_shader(ShaderId::Line);
     if (m_line_shader->is_ready())
         return;
@@ -259,7 +262,7 @@ void Shape::init_line_shader()
                 (const char*)g_line_frag_data, g_line_frag_size);
 #else
     bool res = m_line_shader->load_from_vfs(m_renderer.vfs(),
-            "shaders/line.vert", "shaders/line.frag");
+            "shaders/line.vert.spv", "shaders/line.frag.spv");
 #endif
     if (!res) {
         log_error("Line shader not loaded!");
@@ -269,8 +272,6 @@ void Shape::init_line_shader()
 
 void Shape::init_rectangle_shader()
 {
-    if (m_rectangle_shader)
-        return;
     m_rectangle_shader = m_renderer.get_or_create_shader(ShaderId::Rectangle);
     if (m_rectangle_shader->is_ready())
         return;
@@ -281,7 +282,7 @@ void Shape::init_rectangle_shader()
                 (const char*)g_rectangle_frag_data, g_rectangle_frag_size);
 #else
     bool res = m_rectangle_shader->load_from_vfs(m_renderer.vfs(),
-            "shaders/rectangle.vert", "shaders/rectangle.frag");
+            "shaders/rectangle.vert.spv", "shaders/rectangle.frag.spv");
 #endif
     if (!res) {
         log_error("Rectangle shader not loaded!");
@@ -291,8 +292,6 @@ void Shape::init_rectangle_shader()
 
 void Shape::init_ellipse_shader()
 {
-    if (m_ellipse_shader)
-        return;
     m_ellipse_shader = m_renderer.get_or_create_shader(ShaderId::Ellipse);
     if (m_ellipse_shader->is_ready())
         return;
@@ -303,7 +302,7 @@ void Shape::init_ellipse_shader()
                 (const char*)g_ellipse_frag_data, g_ellipse_frag_size);
 #else
     bool res = m_ellipse_shader->load_from_vfs(m_renderer.vfs(),
-            "shaders/ellipse.vert", "shaders/ellipse.frag");
+            "shaders/ellipse.vert.spv", "shaders/ellipse.frag.spv");
 #endif
     if (!res) {
         log_error("Ellipse shader not loaded!");

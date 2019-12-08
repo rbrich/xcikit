@@ -206,11 +206,13 @@ VulkanRenderer::VulkanRenderer(core::Vfs& vfs)
 
 VulkanRenderer::~VulkanRenderer()
 {
+    clear_shader_cache();
     destroy_framebuffers();
     vkDestroyRenderPass(m_device, m_render_pass, nullptr);
     destroy_swapchain();
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
     vkDestroyCommandPool(m_device, m_command_pool, nullptr);
+    vkDestroyCommandPool(m_device, m_transient_command_pool, nullptr);
     vkDestroyDevice(m_device, nullptr);
 #ifdef XCI_DEBUG_VULKAN
     auto vkDestroyDebugUtilsMessengerEXT = (PFN_vkDestroyDebugUtilsMessengerEXT)
@@ -225,7 +227,7 @@ VulkanRenderer::~VulkanRenderer()
 
 TexturePtr VulkanRenderer::create_texture()
 {
-    return std::make_shared<VulkanTexture>();
+    return std::make_shared<VulkanTexture>(*this);
 }
 
 
@@ -378,14 +380,26 @@ void VulkanRenderer::create_device()
             0, &m_queue);
 
     // create VkCommandPool
-    VkCommandPoolCreateInfo command_pool_ci = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-        .queueFamilyIndex = graphics_queue_family,
-    };
-    VK_TRY("vkCreateCommandPool",
-            vkCreateCommandPool(m_device, &command_pool_ci,
-                    nullptr, &m_command_pool));
+    {
+        VkCommandPoolCreateInfo command_pool_ci = {
+                .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+                .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+                .queueFamilyIndex = graphics_queue_family,
+        };
+        VK_TRY("vkCreateCommandPool",
+                vkCreateCommandPool(m_device, &command_pool_ci,
+                        nullptr, &m_command_pool));
+    }
+    {
+        VkCommandPoolCreateInfo command_pool_ci = {
+                .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+                .flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
+                .queueFamilyIndex = graphics_queue_family,
+        };
+        VK_TRY("vkCreateCommandPool(TRANSIENT)",
+                vkCreateCommandPool(m_device, &command_pool_ci,
+                        nullptr, &m_transient_command_pool));
+    }
 }
 
 
@@ -422,17 +436,10 @@ void VulkanRenderer::create_swapchain()
     vkGetSwapchainImagesKHR(m_device, m_swapchain, &m_image_count, m_images);
     assert(m_image_count <= max_image_count);
 
-    VkImageViewCreateInfo image_view_create_info = {
+    VkImageViewCreateInfo image_view_ci = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-            .image = VK_NULL_HANDLE,
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
             .format = m_surface_format.format,
-            .components = {
-                    .r = VK_COMPONENT_SWIZZLE_IDENTITY,
-                    .g = VK_COMPONENT_SWIZZLE_IDENTITY,
-                    .b = VK_COMPONENT_SWIZZLE_IDENTITY,
-                    .a = VK_COMPONENT_SWIZZLE_IDENTITY,
-            },
             .subresourceRange = {
                     .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                     .baseMipLevel = 0,
@@ -442,9 +449,9 @@ void VulkanRenderer::create_swapchain()
             },
     };
     for (size_t i = 0; i < m_image_count; i++) {
-        image_view_create_info.image = m_images[i];
+        image_view_ci.image = m_images[i];
         VK_TRY("vkCreateImageView",
-                vkCreateImageView(m_device, &image_view_create_info,
+                vkCreateImageView(m_device, &image_view_ci,
                         nullptr, &m_image_views[i]));
     }
 }

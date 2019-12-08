@@ -50,6 +50,7 @@ public:
     VkSwapchainKHR vk_swapchain() const { return m_swapchain; }
     VkQueue vk_queue() const { return m_queue; }
     VkCommandPool vk_command_pool() const { return m_command_pool; }
+    VkCommandPool vk_transient_command_pool() const { return m_transient_command_pool; }
     const VkExtent2D& vk_image_extent() const { return m_extent; }
     VkRenderPass vk_render_pass() const { return m_render_pass; }
     VkFramebuffer vk_framebuffer(uint32_t index) const { return m_framebuffers[index]; }
@@ -74,6 +75,7 @@ private:
     VkSwapchainKHR m_swapchain {};
     VkRenderPass m_render_pass {};
     VkCommandPool m_command_pool {};
+    VkCommandPool m_transient_command_pool {};
 
     static constexpr uint32_t max_image_count = 8;
     VkImage m_images[max_image_count] {};
