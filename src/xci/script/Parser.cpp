@@ -16,6 +16,7 @@
 #include "Parser.h"
 #include "Error.h"
 #include <xci/core/format.h>
+#include <xci/core/parser/unescape_rules.h>
 
 #include <tao/pegtl.hpp>
 #include <tao/pegtl/contrib/raw_string.hpp>
@@ -26,6 +27,7 @@ namespace xci::script {
 namespace parser {
 
 using namespace tao::pegtl;
+using namespace xci::core::parser::unescape;
 
 
 // ----------------------------------------------------------------------------
@@ -50,7 +52,8 @@ struct RSC: seq<space, SC> {};  // required at least one space
 template <class T> struct SSList: list_tail<T, one<';'>, SpaceOrComment> {};  // semicolon-separated list
 
 // Basic tokens
-struct Identifier: seq< not_at<Keyword>, star<one<'_'>>, lower, star< identifier_other > > {};
+//                 underscore* (lower identifier_other* | digit+)
+struct Identifier: seq< not_at<Keyword>, star<one<'_'>>, sor<seq<lower, star<identifier_other>>, plus<digit>> > {};
 struct TypeName: seq< upper, star< identifier_other > > {};
 struct PrefixOperator: sor< one<'-'>, one<'+'>, one<'!'>, one<'~'> > {};
 struct InfixOperator: sor< two<'&'>, two<'|'>, two<'='>, string<'!','='>,
@@ -74,10 +77,6 @@ struct Keyword: sor<KeywordIf, KeywordThen, KeywordElse, KeywordClass, KeywordIn
 // Literals
 struct Integer: seq< opt<one<'-','+'>>, plus<digit> > {};
 struct Float: seq< opt<one<'-','+'>>, plus<digit>, one<'.'>, star<digit> > {};
-struct StringChEscSingle : one< 'a', 'b', 'f', 'n', 'r', 't', 'v', '\\', '"', '\'', '0', '\n' > {};
-struct StringChEscHex : if_must< one< 'x' >, xdigit, xdigit > {};
-struct StringChEsc : if_must< one< '\\' >, sor< StringChEscHex, StringChEscSingle > > {};
-struct StringCh : sor< StringChEsc, not_one<'\r', '\n'> > {};
 struct String: if_must< one<'"'>, until<one<'"'>, StringCh > > {};
 struct RawString : raw_string< '$', '-', '$' > {};  // raw_string = $$ raw text! $$
 struct Literal: sor< Float, Integer, String, RawString > {};
@@ -670,14 +669,24 @@ struct Action<Integer> {
 
 
 template<>
-struct Action<String> {
+struct Action<String> : change_states< std::string > {
     template<typename Input>
     static void apply(const Input &in, std::unique_ptr<ast::Expression>& expr) {
-        const auto& str = in.string();
-        expr = std::make_unique<ast::String>(str.substr(1, str.size() - 2));
         expr->source_info.load(in.input(), in.position());
     }
+
+    template<typename Input>
+    static void success(const Input &in, std::string& str, std::unique_ptr<ast::Expression>& expr) {
+        str.shrink_to_fit();
+        expr = std::make_unique<ast::String>(std::move(str));
+    }
 };
+
+
+template<> struct Action<StringChOther> : StringAppend {};
+template<> struct Action<StringChEscSingle> : StringAppendEscSingle {};
+template<> struct Action<StringChEscHex> : StringAppendEscHex {};
+template<> struct Action<StringChEscOct> : StringAppendEscOct {};
 
 
 template<>

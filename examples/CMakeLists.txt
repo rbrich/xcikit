@@ -93,22 +93,5 @@ if (XCI_WITH_VULKAN)
     install(TARGETS demo_vulkan EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 endif ()
 
-if (XCI_WITH_SFML)
-    add_subdirectory(in_sfml)
-endif()
-
-if (XCI_WITH_MAGNUM)
-    add_subdirectory(in_magnum)
-endif ()
-
-if (XCI_WITH_PANDA3D)
-    add_executable(demo_panda3d demo_panda3d.cpp)
-    target_link_libraries(demo_panda3d
-        xci-text
-        xci-graphics-panda3d)
-    install(TARGETS demo_panda3d EXPORT xcikit DESTINATION ${INST_EXAMPLES})
-endif ()
-
-
 add_executable(demo_reflect reflect/demo_reflect.cpp)
 target_link_libraries(demo_reflect xci-data)

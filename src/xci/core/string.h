@@ -1,17 +1,8 @@
-// string.h created on 2018-03-23, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// string.h created on 2018-03-23 belongs to XCI Toolkit
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018, 2019 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_STRING_H
 #define XCI_CORE_STRING_H
@@ -53,6 +44,15 @@ inline void strip(std::string &str) { lstrip(str); rstrip(str); }
 
 // Escape non-printable characters with C escape sequences (eg. '\n')
 std::string escape(std::string_view str);
+
+// Unescape (expand) C escape sequences (i.e. "\\n" -> "\n")
+// This expects the input is well-formatted:
+// - a trailing backslash is just ignored
+// - unknown escape sequence (e.g. "\\J") is expanded to literal character ("J")
+std::string unescape(std::string_view str);
+
+// Convert string to lower case
+std::string to_lower(std::string_view str);
 
 // Convert UTF8 string to UTF32, ie. extract Unicode code points.
 // In case of invalid source string, logs error and returns empty string.
