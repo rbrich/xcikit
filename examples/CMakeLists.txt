@@ -80,9 +80,5 @@ if (XCI_WITH_OPENGL)
     install(TARGETS demo_glfw EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 endif ()
 
-if (XCI_WITH_MAGNUM)
-    add_subdirectory(in_magnum)
-endif ()
-
 add_executable(demo_reflect reflect/demo_reflect.cpp)
 target_link_libraries(demo_reflect xci-data)
