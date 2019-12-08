@@ -19,12 +19,6 @@ set(XCI_GRAPHICS_OPENGL_SOURCES
     opengl/GlTexture.cpp
     opengl/GlWindow.cpp)
 
-set(XCI_GRAPHICS_PANDA3D_SOURCES
-    panda/PandaTexture.cpp
-    panda/PandaSprites.cpp
-    panda/PandaView.cpp
-    panda/PandaWindow.cpp)
-
 set(XCI_GRAPHICS_MAGNUM_SOURCES
     magnum/MagnumPrimitives.cpp
     magnum/MagnumRenderer.cpp
@@ -45,12 +39,6 @@ endif ()
 # Magnum
 if (XCI_WITH_MAGNUM)
     find_package(Magnum REQUIRED GL Shaders)
-endif ()
-
-# Panda3D
-if (XCI_WITH_PANDA3D)
-    find_package(PythonLibs 2.7 REQUIRED)
-    find_package(Panda3D REQUIRED)
 endif ()
 
 
@@ -102,21 +90,5 @@ if (XCI_WITH_MAGNUM)
         Magnum::Magnum
         Magnum::Shaders)
     install(TARGETS xci-graphics-magnum
-        EXPORT xcikit DESTINATION lib)
-endif ()
-
-if (XCI_WITH_PANDA3D)
-    add_library(xci-graphics-panda3d
-        ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_PANDA3D_SOURCES})
-    target_include_directories(xci-graphics-panda3d
-        PUBLIC
-            ${XCI_INCLUDE_DIRS}
-        PRIVATE
-            ${PANDA3D_INCLUDE_DIRS}
-            ${PYTHON_INCLUDE_DIRS})
-    target_link_libraries(xci-graphics-panda3d
-        xci-core
-        ${PANDA3D_LIBRARIES})
-    install(TARGETS xci-graphics-panda3d
         EXPORT xcikit DESTINATION lib)
 endif ()
