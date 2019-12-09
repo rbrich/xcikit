@@ -195,6 +195,9 @@ void Shape::clear()
     m_lines->clear();
     m_rectangles->clear();
     m_ellipses->clear();
+    m_line_shader.reset();
+    m_rectangle_shader.reset();
+    m_ellipse_shader.reset();
 }
 
 
@@ -212,10 +215,8 @@ void Shape::draw(View& view, const ViewportCoords& pos)
     if (!m_lines->empty()) {
         if (!m_line_shader) {
             init_line_shader();
-            m_lines->set_uniform(1, m_fill_color);
-            m_lines->set_uniform(2, m_outline_color);
-            m_lines->set_uniform(3, m_softness);
-            m_lines->set_uniform(4, m_antialiasing);
+            m_lines->set_uniform(1, m_fill_color, m_outline_color);
+            m_lines->set_uniform(2, m_softness, m_antialiasing);
             m_lines->set_shader(*m_line_shader);
             m_lines->set_blend(BlendFunc::AlphaBlend);
         }
@@ -238,10 +239,8 @@ void Shape::draw(View& view, const ViewportCoords& pos)
     if (!m_ellipses->empty()) {
         if (!m_ellipse_shader) {
             init_ellipse_shader();
-            m_ellipses->set_uniform(1, m_fill_color);
-            m_ellipses->set_uniform(2, m_outline_color);
-            m_ellipses->set_uniform(3, m_softness);
-            m_ellipses->set_uniform(4, m_antialiasing);
+            m_ellipses->set_uniform(1, m_fill_color, m_outline_color);
+            m_ellipses->set_uniform(2, m_softness,m_antialiasing);
             m_ellipses->set_shader(*m_ellipse_shader);
             m_ellipses->set_blend(BlendFunc::AlphaBlend);
         }

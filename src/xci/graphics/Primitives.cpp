@@ -20,6 +20,18 @@
 namespace xci::graphics {
 
 
+namespace {
+    struct FloatColor {
+        float r, g, b, a;
+        FloatColor(const Color& color)  // NOLINT
+                : r(color.red_f())
+                , g(color.green_f())
+                , b(color.blue_f())
+                , a(color.alpha_f()) {}
+    };
+}
+
+
 void Primitives::draw(View& view, const ViewportCoords& pos)
 {
     view.push_offset(pos);
@@ -37,15 +49,14 @@ void Primitives::set_uniform(uint32_t binding, float f1, float f2)
 
 void Primitives::set_uniform(uint32_t binding, const Color& color)
 {
-    struct FloatColor {
-        float r, g, b, a;
-    };
-    FloatColor buf {
-        color.red_f(),
-        color.green_f(),
-        color.blue_f(),
-        color.alpha_f(),
-    };
+    FloatColor buf {color};
+    set_uniform_data(binding, &buf, sizeof(buf));
+}
+
+
+void Primitives::set_uniform(uint32_t binding, const Color& color1, const Color& color2)
+{
+    struct { FloatColor c1, c2; } buf { color1, color2 };
     set_uniform_data(binding, &buf, sizeof(buf));
 }
 

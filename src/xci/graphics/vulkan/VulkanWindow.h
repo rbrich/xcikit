@@ -58,6 +58,8 @@ public:
     Renderer& renderer() override;
     VulkanRenderer& vulkan_renderer() { return m_renderer; }
 
+    void reset_command_buffers();
+
     // GLFW handles
     GLFWwindow* glfw_window() const { return m_window; }
 

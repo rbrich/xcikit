@@ -150,6 +150,7 @@ void VulkanPrimitives::clear()
     m_uniforms.clear();
     m_closed_vertices = 0;
     m_open_vertices = -1;
+    m_texture.ptr.reset();
     m_blend = BlendFunc::Off;
 }
 

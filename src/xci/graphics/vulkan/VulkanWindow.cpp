@@ -171,6 +171,12 @@ void VulkanWindow::set_debug_flags(View::DebugFlags flags)
 }
 
 
+Renderer& VulkanWindow::renderer()
+{
+    return m_renderer;
+}
+
+
 void VulkanWindow::setup_view()
 {
     auto fsize = m_renderer.vk_image_extent();
@@ -232,7 +238,62 @@ void VulkanWindow::setup_view()
         }
 
         if (self->m_key_cb) {
-            // TODO
+            Key ev_key;
+            if ((key == GLFW_KEY_SPACE)
+            ||  (key >= GLFW_KEY_0 && key <= GLFW_KEY_9)
+            ||  (key >= GLFW_KEY_A && key <= GLFW_KEY_Z)
+            ||  (key >= GLFW_KEY_LEFT_BRACKET && key <= GLFW_KEY_RIGHT_BRACKET)) {
+                ev_key = Key(key);
+
+            } else if (key >= GLFW_KEY_F1 && key <= GLFW_KEY_F12) {
+                ev_key = Key(key - GLFW_KEY_F1 + (int)Key::F1);
+
+            } else if (key >= GLFW_KEY_KP_0 && key <= GLFW_KEY_KP_9) {
+                ev_key = Key(key - GLFW_KEY_KP_0 + (int)Key::Keypad0);
+
+            } else {
+                switch (key) {
+                    case GLFW_KEY_ESCAPE: ev_key = Key::Escape; break;
+                    case GLFW_KEY_ENTER: ev_key = Key::Enter; break;
+                    case GLFW_KEY_BACKSPACE: ev_key = Key::Backspace; break;
+                    case GLFW_KEY_TAB: ev_key = Key::Tab; break;
+                    case GLFW_KEY_INSERT: ev_key = Key::Insert; break;
+                    case GLFW_KEY_DELETE: ev_key = Key::Delete; break;
+                    case GLFW_KEY_HOME: ev_key = Key::Home; break;
+                    case GLFW_KEY_END: ev_key = Key::End; break;
+                    case GLFW_KEY_PAGE_UP: ev_key = Key::PageUp; break;
+                    case GLFW_KEY_PAGE_DOWN: ev_key = Key::PageDown; break;
+                    case GLFW_KEY_LEFT: ev_key = Key::Left; break;
+                    case GLFW_KEY_RIGHT: ev_key = Key::Right; break;
+                    case GLFW_KEY_UP: ev_key = Key::Up; break;
+                    case GLFW_KEY_DOWN: ev_key = Key::Down; break;
+                    case GLFW_KEY_CAPS_LOCK: ev_key = Key::CapsLock; break;
+                    case GLFW_KEY_SCROLL_LOCK: ev_key = Key::ScrollLock; break;
+                    case GLFW_KEY_NUM_LOCK: ev_key = Key::NumLock; break;
+                    case GLFW_KEY_PRINT_SCREEN: ev_key = Key::PrintScreen; break;
+                    case GLFW_KEY_PAUSE: ev_key = Key::Pause; break;
+                    case GLFW_KEY_SPACE: ev_key = Key::Space; break;
+                    case GLFW_KEY_KP_ADD: ev_key = Key::KeypadPlus; break;
+                    case GLFW_KEY_KP_SUBTRACT: ev_key = Key::KeypadMinus; break;
+                    case GLFW_KEY_KP_MULTIPLY: ev_key = Key::KeypadAsterisk; break;
+                    case GLFW_KEY_KP_DIVIDE: ev_key = Key::KeypadSlash; break;
+                    case GLFW_KEY_KP_DECIMAL: ev_key = Key::KeypadDecimalPoint; break;
+                    case GLFW_KEY_KP_ENTER: ev_key = Key::KeypadEnter; break;
+                    default:
+                        log_debug("GlWindow: unknown key: {}", key);
+                        ev_key = Key::Unknown; break;
+                }
+            }
+
+            static_assert(int(Action::Release) == GLFW_RELEASE, "GLFW_RELEASE");
+            static_assert(int(Action::Press) == GLFW_PRESS, "GLFW_PRESS");
+            static_assert(int(Action::Repeat) == GLFW_REPEAT, "GLFW_REPEAT");
+            ModKey mod = {
+                    bool(mods & GLFW_MOD_SHIFT),
+                    bool(mods & GLFW_MOD_CONTROL),
+                    bool(mods & GLFW_MOD_ALT),
+            };
+            self->m_key_cb(self->m_view, KeyEvent{ev_key, mod, Action(action)});
         }
     });
 
@@ -276,6 +337,17 @@ void VulkanWindow::create_command_buffers()
         VK_TRY("vkCreateSemaphore",
                 vkCreateSemaphore(m_renderer.vk_device(), &semaphore_ci,
                         nullptr, &m_render_semaphore[i]));
+    }
+}
+
+
+void VulkanWindow::reset_command_buffers()
+{
+    vkDeviceWaitIdle(m_renderer.vk_device());
+
+    for (size_t i = 0; i < cmd_buf_count; ++i) {
+        VK_TRY("vkBeginCommandBuffer",
+                vkResetCommandBuffer(m_command_buffers[i], 0));
     }
 }
 
@@ -371,12 +443,6 @@ void VulkanWindow::draw()
         log_error("vkQueuePresentKHR failed: {}", rc);
 
     m_current_cmd_buf = (m_current_cmd_buf + 1) % cmd_buf_count;
-}
-
-
-Renderer& VulkanWindow::renderer()
-{
-    return m_renderer;
 }
 
 

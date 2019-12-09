@@ -1,9 +1,15 @@
-#version 330
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
 
-uniform vec4 u_fill_color;
-uniform vec4 u_outline_color;
-uniform float u_softness;
-uniform float u_antialiasing;
+layout(binding = 1) uniform Color {
+    vec4 fill;
+    vec4 outline;
+} color;
+
+layout(binding = 2) uniform Attr {
+    float softness;
+    float antialiasing;
+} attr;
 
 // See rectangle.frag for description of these.
 // For ellipses, these work similarly, but the borders
@@ -11,18 +17,18 @@ uniform float u_antialiasing;
 // distance from the center. Each border is used to compute
 // unit circle (radius 1.0 from center) and the outline
 // is bounded by these two circles.
-in vec2 v_border_inner;
-in vec2 v_border_outer;
+layout(location = 0) in vec2 in_border_inner;
+layout(location = 1) in vec2 in_border_outer;
 
-out vec4 o_color;
+layout(location = 0) out vec4 out_color;
 
 void main() {
-    float ri = length(v_border_inner);
-    float ro = length(v_border_outer);
-    float f = fwidth(ri) * u_antialiasing + (ri/ro - 1) * u_softness;
+    float ri = length(in_border_inner);
+    float ro = length(in_border_outer);
+    float f = fwidth(ri) * attr.antialiasing + (ri/ro - 1) * attr.softness;
     float alpha = smoothstep(1-f/2, 1+f/2, ri);
-    o_color = mix(u_fill_color, u_outline_color, alpha);
-    f = fwidth(ro) * u_antialiasing + (1 - ro/ri) * u_softness;
+    out_color = mix(color.fill, color.outline, alpha);
+    f = fwidth(ro) * attr.antialiasing + (1 - ro/ri) * attr.softness;
     alpha = smoothstep(1-f/2, 1+f/2, ro);
-    o_color = mix(o_color, vec4(0,0,0,0), alpha);
+    out_color = mix(out_color, vec4(0,0,0,0), alpha);
 }

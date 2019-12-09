@@ -86,7 +86,7 @@ public:
     // Reserve memory for a number of `lines`, `rectangles`, `ellipses`.
     void reserve(size_t lines, size_t rectangles, size_t ellipses);
 
-    // Remove all shapes
+    // Remove all shapes and clear all state (colors etc.)
     void clear();
 
     // Draw all shapes to `view` at `pos`.

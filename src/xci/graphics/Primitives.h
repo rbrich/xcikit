@@ -68,6 +68,7 @@ public:
     void set_uniform(uint32_t binding, float f) { set_uniform_data(binding, &f, sizeof(f)); }
     void set_uniform(uint32_t binding, float f1, float f2);
     void set_uniform(uint32_t binding, const Color& color);
+    void set_uniform(uint32_t binding, const Color& color1, const Color& color2);
 
     virtual void set_texture(uint32_t binding, TexturePtr& texture) = 0;
 
