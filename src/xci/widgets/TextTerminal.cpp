@@ -788,7 +788,7 @@ void TextTerminal::draw(View& view, State state)
     auto& font = theme().font();
     font.set_size(m_font_size.as<unsigned>());
 
-    graphics::ColoredSprites sprites(font.get_texture(), Color(7));
+    graphics::ColoredSprites sprites(font.texture(), Color(7));
     graphics::Shape boxes(Color(0));
 
     size_t expected_num_cells = m_cells.x * m_cells.y / 2;

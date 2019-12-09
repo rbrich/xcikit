@@ -256,28 +256,28 @@ void Clickable::do_click(View& view)
 Bind::Bind(graphics::Window& window, Widget& root)
     : m_window(window)
 {
-    m_update_cb = window.get_update_callback();
+    m_update_cb = window.update_callback();
     window.set_update_callback([&](View& v, std::chrono::nanoseconds t) {
         if (m_update_cb)
             m_update_cb(v, t);
         root.update(v, t);
     });
 
-    m_size_cb = window.get_size_callback();
+    m_size_cb = window.size_callback();
     window.set_size_callback([&](View& v) {
         if (m_size_cb)
             m_size_cb(v);
         root.resize(v);
     });
 
-    m_draw_cb = window.get_draw_callback();
+    m_draw_cb = window.draw_callback();
     window.set_draw_callback([&](View& v) {
         if (m_draw_cb)
             m_draw_cb(v);
         root.draw(v, {});
     });
 
-    m_key_cb = window.get_key_callback();
+    m_key_cb = window.key_callback();
     window.set_key_callback([&](View& v, const KeyEvent& e) {
         if (m_key_cb)
             m_key_cb(v, e);
@@ -295,21 +295,21 @@ Bind::Bind(graphics::Window& window, Widget& root)
         }
     });
 
-    m_char_cb = window.get_char_callback();
+    m_char_cb = window.char_callback();
     window.set_char_callback([&](View& v, const CharEvent& e) {
         if (m_char_cb)
             m_char_cb(v, e);
         root.char_event(v, e);
     });
 
-    m_mpos_cb = window.get_mouse_position_callback();
+    m_mpos_cb = window.mouse_position_callback();
     window.set_mouse_position_callback([&](View& v, const MousePosEvent& e) {
         if (m_mpos_cb)
             m_mpos_cb(v, e);
         root.mouse_pos_event(v, e);
     });
 
-    m_mbtn_cb = window.get_mouse_button_callback();
+    m_mbtn_cb = window.mouse_button_callback();
     window.set_mouse_button_callback([&](View& v, const MouseBtnEvent& e) {
         if (m_mbtn_cb)
             m_mbtn_cb(v, e);
@@ -317,7 +317,7 @@ Bind::Bind(graphics::Window& window, Widget& root)
         root.mouse_button_event(v, e);
     });
 
-    m_scroll_cb = window.get_scroll_callback();
+    m_scroll_cb = window.scroll_callback();
     window.set_scroll_callback([&](View& v, const ScrollEvent& e) {
         if (m_scroll_cb)
             m_scroll_cb(v, e);

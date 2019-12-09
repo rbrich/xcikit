@@ -62,11 +62,15 @@ int main()
     text.set_font_size(0.08);
     text.set_color(Color::White());
 
+    window.set_update_callback([&](View& view, std::chrono::nanoseconds) {
+        text.update(view);
+    });
+
     window.set_draw_callback([&](View& view) {
         auto vs = view.viewport_size();
         text.draw(view, {0.5f * vs.x - 1.9f, -0.55f});
 
-        auto& tex = font.get_texture();
+        auto& tex = font.texture();
         auto tex_size = view.size_to_viewport(FramebufferSize{tex->size()});
         Sprites font_texture(renderer, tex, Color::Blue());
         ViewportRect rect = {0, 0, tex_size.x, tex_size.y};
@@ -74,6 +78,7 @@ int main()
         font_texture.draw(view, {-0.5f * vs.x + 0.01f, -0.5f * rect.h});
     });
 
+    window.set_refresh_mode(RefreshMode::OnDemand);
     window.display();
     return EXIT_SUCCESS;
 }

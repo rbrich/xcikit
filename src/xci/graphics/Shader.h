@@ -1,17 +1,8 @@
-// Shader.h created on 2018-04-08, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Shader.h created on 2018-04-08 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018, 2019 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_SHADER_H
 #define XCI_GRAPHICS_SHADER_H
@@ -19,31 +10,36 @@
 #include <xci/graphics/Texture.h>
 #include <xci/core/Vfs.h>
 
+#include <vulkan/vulkan.h>
+
 #include <string>
 #include <memory>
 
 namespace xci::graphics {
 
+class Renderer;
 
+
+// predefined shaders
 enum class ShaderId {
-    // Obtain one of predefined shaders
     Sprite = 0,
     SpriteC,
     Line,
     Rectangle,
     Ellipse,
     Cursor,
-    // Create new, custom shader
-    Custom,  // (this has to stay as last item)
+
+    _count
 };
 
 
 class Shader {
 public:
-    virtual ~Shader() = default;
+    explicit Shader(Renderer& renderer);
+    ~Shader() { clear(); }
 
     /// Is this shader already loaded?
-    virtual bool is_ready() const = 0;
+    bool is_ready() const;
 
     // Load and compile GLSL program:
 
@@ -53,19 +49,29 @@ public:
     bool load_from_vfs(const core::Vfs& vfs, const std::string& vertex, const std::string& fragment);
 
     /// Load program from a file (possibly adding a file watch for auto-reload)
-    virtual bool load_from_file(
-            const std::string& vertex, const std::string& fragment) = 0;
+    bool load_from_file(
+            const std::string& vertex, const std::string& fragment);
 
     /// Load program directly from memory
-    virtual bool load_from_memory(
+    bool load_from_memory(
             const char* vertex_data, int vertex_size,
-            const char* fragment_data, int fragment_size) = 0;
+            const char* fragment_data, int fragment_size);
+
+    // Vulkan handles:
+    VkShaderModule vk_vertex_module() const { return m_vertex_module; }
+    VkShaderModule vk_fragment_module() const { return m_fragment_module; }
+
+private:
+    VkShaderModule create_module(const uint32_t* code, size_t size);
+    void clear();
+
+private:
+    VkDevice m_device;
+    VkShaderModule m_vertex_module {};
+    VkShaderModule m_fragment_module {};
 };
-
-
-using ShaderPtr = std::shared_ptr<Shader>;
 
 
 } // namespace xci::graphics
 
-#endif // XCI_GRAPHICS_SHADER_H
+#endif // include guard

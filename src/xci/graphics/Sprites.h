@@ -35,14 +35,14 @@ using xci::core::Vec2f;
 
 class Sprites {
 public:
-    explicit Sprites(Renderer& renderer, TexturePtr& texture,
+    explicit Sprites(Renderer& renderer, Texture& texture,
                      const Color& color = Color::White());
 
     // Reserve memory for `num` sprites.
     void reserve(size_t num);
 
     // Clear all sprites.
-    void clear() { m_trifans->clear(); }
+    void clear() { m_quads.clear(); }
 
     // Add new sprite containing whole texture
     // `rect` defines position and size of the sprite
@@ -52,19 +52,19 @@ public:
     // `rect` defines position and size of the sprite
     void add_sprite(const ViewportRect& rect, const Rect_u& texrect);
 
+    // Update sprites attributes according to settings (color etc.)
+    void update();
+
     // Draw all sprites to `view` at `pos`.
     // Final sprite position is `pos` + sprite's relative position
     void draw(View& view, const ViewportCoords& pos);
 
 private:
-    void init_shader();
-
-private:
     Renderer& m_renderer;
-    TexturePtr m_texture;
+    Texture& m_texture;
     Color m_color;
-    PrimitivesPtr m_trifans;
-    ShaderPtr m_shader;
+    Primitives m_quads;
+    Shader& m_shader;
 };
 
 
@@ -72,12 +72,12 @@ private:
 
 class ColoredSprites {
 public:
-    explicit ColoredSprites(Renderer& renderer, TexturePtr& texture,
+    explicit ColoredSprites(Renderer& renderer, Texture& texture,
                             const Color& color = Color::White());
 
     // Reserve memory for `num` sprites.
     void reserve(size_t num);
-    void clear() { m_trifans->clear(); }
+    void clear() { m_quads.clear(); }
 
     void set_color(const Color& color) { m_color = color; }
     const Color& color() const { return m_color; }
@@ -90,19 +90,19 @@ public:
     // `rect` defines position and size of the sprite
     void add_sprite(const ViewportRect& rect, const Rect_u& texrect);
 
+    // Update sprites attributes according to settings (color etc.)
+    void update();
+
     // Draw all sprites to `view` at `pos`.
     // Final sprite position is `pos` + sprite's relative position
     void draw(View& view, const ViewportCoords& pos);
 
 private:
-    void init_shader();
-
-private:
     Renderer& m_renderer;
-    TexturePtr m_texture;
+    Texture& m_texture;
     Color m_color;
-    PrimitivesPtr m_trifans;
-    ShaderPtr m_shader;
+    Primitives m_quads;
+    Shader& m_shader;
 };
 
 

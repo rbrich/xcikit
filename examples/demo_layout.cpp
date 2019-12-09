@@ -109,7 +109,7 @@ int main()
         help_text.draw(view, {-0.17f, -0.9f});
         text.draw(view, {-0.17f, -0.3f});
 
-        auto& tex = font.get_texture();
+        auto& tex = font.texture();
         auto tex_size = view.size_to_viewport(FramebufferSize{tex->size()});
         Sprites font_texture(tex);
         ViewportRect rect = {0, 0, tex_size.x, tex_size.y};

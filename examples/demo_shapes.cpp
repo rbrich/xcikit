@@ -15,8 +15,8 @@
 
 #include <xci/text/Font.h>
 #include <xci/text/Text.h>
-#include <xci/graphics/DefaultRenderer.h>
-#include <xci/graphics/DefaultWindow.h>
+#include <xci/graphics/Renderer.h>
+#include <xci/graphics/Window.h>
 #include <xci/graphics/Shape.h>
 #include <xci/core/Vfs.h>
 #include <xci/config.h>
@@ -31,8 +31,8 @@ int main()
     Vfs vfs;
     vfs.mount(XCI_SHARE_DIR);
 
-    DefaultRenderer renderer {vfs};
-    DefaultWindow window {renderer};
+    Renderer renderer {vfs};
+    Window window {renderer};
     window.create({800, 600}, "XCI shapes demo");
 
     Font font {renderer};
@@ -69,6 +69,7 @@ int main()
         }
         shape.set_antialiasing(antialiasing);
         shape.set_softness(softness);
+        shape.update();
     };
 
     bool dirty = true;
@@ -127,7 +128,7 @@ int main()
             return;
         dirty = false;
 
-        dynamic_cast<VulkanWindow*>(view.window())->reset_command_buffers();
+        view.window()->reset_command_buffers();
 
         for (Shape& shape : shapes)
             shape.clear();

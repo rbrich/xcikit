@@ -164,26 +164,26 @@ int main()
                 view_scale = ViewScale::ScalingWithAspectCorrection;
                 font_size = 0.05;
                 window.set_view_mode(view_origin, view_scale);
-                window.get_size_callback()(view);
+                window.size_callback()(view);
                 view.refresh();
                 break;
             case Key::F:
                 view_scale = ViewScale::FixedScreenPixels;
                 font_size = 15.0;
                 window.set_view_mode(view_origin, view_scale);
-                window.get_size_callback()(view);
+                window.size_callback()(view);
                 view.refresh();
                 break;
             case Key::C:
                 view_origin = ViewOrigin::Center;
                 window.set_view_mode(view_origin, view_scale);
-                window.get_size_callback()(view);
+                window.size_callback()(view);
                 view.refresh();
                 break;
             case Key::T:
                 view_origin = ViewOrigin::TopLeft;
                 window.set_view_mode(view_origin, view_scale);
-                window.get_size_callback()(view);
+                window.size_callback()(view);
                 view.refresh();
                 break;
             default:

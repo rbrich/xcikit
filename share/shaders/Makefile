@@ -5,3 +5,7 @@ all:    rectangle.vert.spv rectangle.frag.spv \
         ellipse.vert.spv ellipse.frag.spv
 
 %.spv: % ; glslc $< -o $@
+
+.PHONY: clean
+clean:
+	rm *.spv

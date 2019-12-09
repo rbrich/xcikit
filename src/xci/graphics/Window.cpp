@@ -1,21 +1,12 @@
-// VulkanWindow.cpp created on 2019-10-22, part of XCI toolkit
+// Window.cpp created on 2019-10-22 as part of xcikit project
+// https://github.com/rbrich/xcikit
+//
 // Copyright 2019 Radek Brich
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#include "VulkanWindow.h"
-#include "VulkanRenderer.h"
-#include "VulkanError.h"
+#include "Window.h"
+#include "Renderer.h"
+#include "vulkan/VulkanError.h"
 #include <xci/core/log.h>
 
 namespace xci::graphics {
@@ -24,11 +15,11 @@ using namespace xci::core::log;
 using namespace std::chrono;
 
 
-VulkanWindow::VulkanWindow(VulkanRenderer& renderer)
-    : m_renderer(renderer) {}
+Window::Window(Renderer& renderer)
+  : m_renderer(renderer) {}
 
 
-VulkanWindow::~VulkanWindow()
+Window::~Window()
 {
     for (auto* fence : m_cmd_buf_fences)
         vkDestroyFence(m_renderer.vk_device(), fence, nullptr);
@@ -41,7 +32,7 @@ VulkanWindow::~VulkanWindow()
 }
 
 
-void VulkanWindow::create(const Vec2u& size, const std::string& title)
+void Window::create(const Vec2u& size, const std::string& title)
 {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
@@ -57,7 +48,7 @@ void VulkanWindow::create(const Vec2u& size, const std::string& title)
 }
 
 
-void VulkanWindow::display()
+void Window::display()
 {
     setup_view();
 
@@ -91,21 +82,21 @@ void VulkanWindow::display()
 }
 
 
-void VulkanWindow::set_draw_callback(Window::DrawCallback draw_cb)
+void Window::set_draw_callback(Window::DrawCallback draw_cb)
 {
-    Window::set_draw_callback(draw_cb);
+    m_draw_cb = std::move(draw_cb);
     glfwSetWindowRefreshCallback(m_window, [](GLFWwindow* window) {
-        auto self = (VulkanWindow*) glfwGetWindowUserPointer(window);
+        auto self = (Window*) glfwGetWindowUserPointer(window);
         self->draw();
     });
 }
 
 
-void VulkanWindow::set_mouse_position_callback(Window::MousePosCallback mpos_cb)
+void Window::set_mouse_position_callback(Window::MousePosCallback mpos_cb)
 {
-    Window::set_mouse_position_callback(mpos_cb);
+    m_mpos_cb = std::move(mpos_cb);
     glfwSetCursorPosCallback(m_window, [](GLFWwindow* window, double xpos, double ypos) {
-        auto self = (VulkanWindow*) glfwGetWindowUserPointer(window);
+        auto self = (Window*) glfwGetWindowUserPointer(window);
         if (self->m_mpos_cb) {
             auto pos = self->m_view.coords_to_viewport(ScreenCoords{float(xpos), float(ypos)});
             self->m_mpos_cb(self->m_view, {pos});
@@ -114,11 +105,11 @@ void VulkanWindow::set_mouse_position_callback(Window::MousePosCallback mpos_cb)
 }
 
 
-void VulkanWindow::set_mouse_button_callback(Window::MouseBtnCallback mbtn_cb)
+void Window::set_mouse_button_callback(Window::MouseBtnCallback mbtn_cb)
 {
-    Window::set_mouse_button_callback(mbtn_cb);
+    m_mbtn_cb = std::move(mbtn_cb);
     glfwSetMouseButtonCallback(m_window, [](GLFWwindow* window, int button, int action, int mods) {
-        auto self = (VulkanWindow*) glfwGetWindowUserPointer(window);
+        auto self = (Window*) glfwGetWindowUserPointer(window);
         if (self->m_mbtn_cb) {
             double xpos, ypos;
             glfwGetCursorPos(window, &xpos, &ypos);
@@ -130,13 +121,13 @@ void VulkanWindow::set_mouse_button_callback(Window::MouseBtnCallback mbtn_cb)
 }
 
 
-void VulkanWindow::set_scroll_callback(Window::ScrollCallback scroll_cb)
+void Window::set_scroll_callback(Window::ScrollCallback scroll_cb)
 {
-    Window::set_scroll_callback(scroll_cb);
+    m_scroll_cb = std::move(scroll_cb);
     if (m_scroll_cb) {
         glfwSetScrollCallback(m_window, [](GLFWwindow* window, double xoffset,
                                            double yoffset) {
-            auto self = (VulkanWindow*) glfwGetWindowUserPointer(window);
+            auto self = (Window*) glfwGetWindowUserPointer(window);
             self->m_scroll_cb(self->m_view, {{float(xoffset), float(yoffset)}});
         });
     } else {
@@ -145,13 +136,13 @@ void VulkanWindow::set_scroll_callback(Window::ScrollCallback scroll_cb)
 }
 
 
-void VulkanWindow::set_refresh_interval(int interval)
+void Window::set_refresh_interval(int interval)
 {
     glfwSwapInterval(interval);
 }
 
 
-void VulkanWindow::set_refresh_timeout(std::chrono::microseconds timeout,
+void Window::set_refresh_timeout(std::chrono::microseconds timeout,
                                        bool periodic)
 {
     m_timeout = timeout;
@@ -159,25 +150,25 @@ void VulkanWindow::set_refresh_timeout(std::chrono::microseconds timeout,
 }
 
 
-void VulkanWindow::set_view_mode(ViewOrigin origin, ViewScale scale)
+void Window::set_view_mode(ViewOrigin origin, ViewScale scale)
 {
     m_view.set_viewport_mode(origin, scale);
 }
 
 
-void VulkanWindow::set_debug_flags(View::DebugFlags flags)
+void Window::set_debug_flags(View::DebugFlags flags)
 {
     m_view.set_debug_flags(flags);
 }
 
 
-Renderer& VulkanWindow::renderer()
+Renderer& Window::renderer()
 {
     return m_renderer;
 }
 
 
-void VulkanWindow::setup_view()
+void Window::setup_view()
 {
     auto fsize = m_renderer.vk_image_extent();
     m_view.set_framebuffer_size({float(fsize.width), float(fsize.height)});
@@ -190,7 +181,7 @@ void VulkanWindow::setup_view()
 
     glfwSetFramebufferSizeCallback(m_window, [](GLFWwindow* win, int w, int h) {
         TRACE("Framebuffer resize: {} {}", w, h);
-        auto self = (VulkanWindow*) glfwGetWindowUserPointer(win);
+        auto self = (Window*) glfwGetWindowUserPointer(win);
         if (self->m_view.set_framebuffer_size({float(w), float(h)}) && self->m_size_cb)
             self->m_size_cb(self->m_view);
         self->m_renderer.reset_framebuffer({uint32_t(w), uint32_t(h)});
@@ -199,20 +190,20 @@ void VulkanWindow::setup_view()
 
     glfwSetWindowSizeCallback(m_window, [](GLFWwindow* win, int w, int h) {
         TRACE("Window resize: {} {}", w, h);
-        auto self = (VulkanWindow*) glfwGetWindowUserPointer(win);
+        auto self = (Window*) glfwGetWindowUserPointer(win);
         if (self->m_view.set_screen_size({float(w), float(h)}) && self->m_size_cb)
             self->m_size_cb(self->m_view);
     });
 
     glfwSetWindowRefreshCallback(m_window, [](GLFWwindow* win) {
         TRACE("Window refresh");
-        auto self = (VulkanWindow*) glfwGetWindowUserPointer(win);
+        auto self = (Window*) glfwGetWindowUserPointer(win);
         self->draw();
     });
 
     glfwSetKeyCallback(m_window, [](GLFWwindow* window, int key, int scancode,
                                     int action, int mods) {
-        auto self = (VulkanWindow*) glfwGetWindowUserPointer(window);
+        auto self = (Window*) glfwGetWindowUserPointer(window);
 
         if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
             glfwSetWindowShouldClose(window, GLFW_TRUE);
@@ -298,7 +289,7 @@ void VulkanWindow::setup_view()
     });
 
     glfwSetCharCallback(m_window, [](GLFWwindow* window, unsigned int codepoint) {
-        auto self = (VulkanWindow*) glfwGetWindowUserPointer(window);
+        auto self = (Window*) glfwGetWindowUserPointer(window);
         if (self->m_char_cb) {
             self->m_char_cb(self->m_view, CharEvent{codepoint});
         }
@@ -308,7 +299,7 @@ void VulkanWindow::setup_view()
 }
 
 
-void VulkanWindow::create_command_buffers()
+void Window::create_command_buffers()
 {
     VkCommandBufferAllocateInfo alloc_info = {
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -341,7 +332,7 @@ void VulkanWindow::create_command_buffers()
 }
 
 
-void VulkanWindow::reset_command_buffers()
+void Window::reset_command_buffers()
 {
     vkDeviceWaitIdle(m_renderer.vk_device());
 
@@ -352,7 +343,7 @@ void VulkanWindow::reset_command_buffers()
 }
 
 
-void VulkanWindow::draw()
+void Window::draw()
 {
     uint32_t image_index;
     auto rc = vkAcquireNextImageKHR(m_renderer.vk_device(),

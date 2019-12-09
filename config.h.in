@@ -5,12 +5,7 @@
 #ifndef XCI_CONFIG_H
 #define XCI_CONFIG_H
 
-// Select xci-graphics implementation
-#cmakedefine XCI_WITH_OPENGL
-#cmakedefine XCI_WITH_VULKAN
-#cmakedefine XCI_WITH_MAGNUM
-
-// Other optional libraries
+// Optional libraries
 #cmakedefine XCI_WITH_TINFO
 
 // Location of share dir (runtime data)
@@ -22,7 +17,6 @@
 // Debugging
 #cmakedefine XCI_DEBUG_TRACE
 #cmakedefine XCI_DEBUG_MARKUP_DUMP_TOKENS
-#cmakedefine XCI_DEBUG_OPENGL
 #cmakedefine XCI_DEBUG_VULKAN
 
 #endif //XCI_CONFIG_H

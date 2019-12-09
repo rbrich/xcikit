@@ -27,10 +27,10 @@ namespace xci::graphics {
 using xci::core::Rect_f;
 using xci::core::Vec2f;
 
-// A collection of basic shapes: rectangles, ellipses.
-// Each shape may have different size and outline width,
-// but colors are uniform.
 
+/// A collection of one of basic shapes: rectangles, ellipses, lines.
+/// Each shape may have different size and outline width,
+/// but colors are uniform.
 class Shape {
 public:
     explicit Shape(Renderer& renderer,
@@ -89,14 +89,12 @@ public:
     // Remove all shapes and clear all state (colors etc.)
     void clear();
 
+    // Update shapes attributes according to settings (color etc.)
+    void update();
+
     // Draw all shapes to `view` at `pos`.
     // Final shape position is `pos` + shapes's relative position
     void draw(View& view, const ViewportCoords& pos);
-
-private:
-    void init_line_shader();
-    void init_rectangle_shader();
-    void init_ellipse_shader();
 
 private:
     Renderer& m_renderer;
@@ -106,13 +104,13 @@ private:
     float m_antialiasing = 0;
     float m_softness = 0;
 
-    PrimitivesPtr m_lines;
-    PrimitivesPtr m_rectangles;
-    PrimitivesPtr m_ellipses;
+    Primitives m_lines;
+    Primitives m_rectangles;
+    Primitives m_ellipses;
 
-    ShaderPtr m_line_shader;
-    ShaderPtr m_rectangle_shader;
-    ShaderPtr m_ellipse_shader;
+    Shader& m_line_shader;
+    Shader& m_rectangle_shader;
+    Shader& m_ellipse_shader;
 };
 
 

@@ -107,7 +107,7 @@ void Word::draw(graphics::View& target, const ViewportCoords& pos) const
 
     bool show_bboxes = target.has_debug_flag(View::Debug::GlyphBBox);
 
-    graphics::Sprites sprites(renderer, font->get_texture(), m_style.color());
+    graphics::Sprites sprites(renderer, font->texture(), m_style.color());
     graphics::Shape bboxes(renderer, Color(150, 0, 0), Color(250, 50, 50));
 
     ViewportCoords pen;

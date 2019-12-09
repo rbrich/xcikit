@@ -6,13 +6,13 @@
 
 #include <cassert>
 #include "CommandBuffer.h"
-#include "VulkanRenderer.h"
+#include <xci/graphics/Renderer.h>
 #include "VulkanError.h"
 
 namespace xci::graphics {
 
 
-CommandBuffer::CommandBuffer(VulkanRenderer& renderer)
+CommandBuffer::CommandBuffer(Renderer& renderer)
     : m_renderer(renderer)
 {
     VkCommandBufferAllocateInfo alloc_info = {

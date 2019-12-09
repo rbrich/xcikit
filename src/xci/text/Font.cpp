@@ -124,9 +124,9 @@ void Font::clear_cache()
 }
 
 
-TexturePtr& Font::get_texture()
+Texture& Font::texture()
 {
-    return m_texture->get_texture();
+    return m_texture->texture();
 }
 
 

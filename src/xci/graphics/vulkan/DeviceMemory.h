@@ -11,7 +11,7 @@
 
 namespace xci::graphics {
 
-class VulkanRenderer;
+class Renderer;
 
 
 /// Static memory allocator.
@@ -19,7 +19,7 @@ class VulkanRenderer;
 /// is allocated and later freed. Dynamic allocations are not supported.
 class DeviceMemory {
 public:
-    explicit DeviceMemory(VulkanRenderer& renderer) : m_renderer(renderer) {}
+    explicit DeviceMemory(Renderer& renderer) : m_renderer(renderer) {}
     ~DeviceMemory() { free(); }
 
     /// Reserve memory in pool
@@ -43,7 +43,7 @@ private:
     void pad_to_alignment(VkDeviceSize alignment);
 
 private:
-    VulkanRenderer& m_renderer;
+    Renderer& m_renderer;
     VkDeviceMemory m_memory_pool { VK_NULL_HANDLE };
     VkDeviceSize m_alloc_size = 0;
     uint32_t m_type_bits = 0;

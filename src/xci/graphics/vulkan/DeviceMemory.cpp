@@ -5,7 +5,7 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "DeviceMemory.h"
-#include "VulkanRenderer.h"
+#include <xci/graphics/Renderer.h>
 #include "VulkanError.h"
 #include <cstring>
 #include <cassert>

@@ -2,8 +2,7 @@ cmake_minimum_required(VERSION 3.7)
 cmake_policy(VERSION 3.7)
 project(xcikit C CXX)
 
-option(XCI_WITH_OPENGL "Link with GLFW and build libxci-graphics-opengl." ON)
-option(XCI_WITH_VULKAN "Link with GLFW and build libxci-graphics-vulkan." OFF)
+option(XCI_WITH_VULKAN "Link with GLFW and build libxci-graphics-vulkan." ON)
 option(XCI_WITH_TINFO "Link with TInfo (from NCurses) and use it for TTY control sequences." OFF)
 option(XCI_WITH_ZIP "Link xci-core with libzip and use it for ZIP format in VFS." OFF)
 option(XCI_BENCHMARK "Enable benchmarks. Requires Google benchmark to be installed and in CMake path." OFF)
@@ -12,8 +11,7 @@ set(XCI_SHARE_DIR "${CMAKE_CURRENT_LIST_DIR}/share" CACHE PATH "Location of shar
 option(XCI_EMBED_SHADERS "Embed shader files into binaries to avoid dependency on share dir." OFF)
 option(XCI_DEBUG_TRACE "Enable trace log messages." OFF)
 option(XCI_DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
-option(XCI_DEBUG_OPENGL "Log info about OpenGL calls and errors." OFF)
-option(XCI_DEBUG_VULKAN "Log info about Vulkan calls and errors." ON)
+option(XCI_DEBUG_VULKAN "Log info about Vulkan calls and errors." OFF)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -115,19 +113,11 @@ endif()
 
 add_subdirectory(src/xci/core)
 add_subdirectory(src/xci/data)
-add_subdirectory(src/xci/graphics)
 add_subdirectory(src/xci/script)
 
-# Choose default graphics engine:
-if (NOT XCI_GRAPHICS_DEFAULT)
-    if (XCI_WITH_VULKAN)
-        set(XCI_GRAPHICS_DEFAULT vulkan)
-    elseif (XCI_WITH_OPENGL)
-        set(XCI_GRAPHICS_DEFAULT opengl)
-    endif()
+if (XCI_WITH_VULKAN)
+    add_subdirectory(src/xci/graphics)
 endif()
-set(XCI_GRAPHICS_DEFAULT ${XCI_GRAPHICS_DEFAULT} CACHE STRING "Default graphics implementation.")
-add_library(xci-graphics ALIAS xci-graphics-${XCI_GRAPHICS_DEFAULT})
 
 add_library(xci-text ${XCI_TEXT_SOURCES}
     $<TARGET_OBJECTS:${RBP_LIBRARY}>)
@@ -186,7 +176,7 @@ if (BUILD_FRAMEWORKS)
     set_target_properties(xci-widgets PROPERTIES
         FRAMEWORK TRUE
         FRAMEWORK_VERSION A
-        MACOSX_FRAMEWORK_IDENTIFIER cz.xci.xci-widgets-opengl
+        MACOSX_FRAMEWORK_IDENTIFIER cz.xci.widgets
         # "current version" in semantic format in Mach-O binary file
         VERSION 1.0.0
         # "compatibility version" in semantic format in Mach-O binary file

@@ -24,12 +24,12 @@ using namespace core::log;
 
 FontTexture::FontTexture(Renderer& renderer, unsigned int size)
     : m_renderer(renderer),
-      m_texture(m_renderer.create_texture())
+      m_texture(m_renderer)
 {
-    if (!m_texture->create({size, size}))
+    if (!m_texture.create({size, size}))
         throw std::runtime_error("Could not create font texture.");
     //m_texture.setSmooth(true);
-    m_binpack.Init(size, size, /*allowFlip=*/false);
+    m_binpack.Init(int(size), int(size), /*allowFlip=*/false);
 }
 
 
@@ -57,17 +57,17 @@ bool FontTexture::add_glyph(Vec2u size, const uint8_t* pixels, Rect_u& coords)
     coords = {unsigned(rect.x + p), unsigned(rect.y + p), size.x, size.y};
 
     // copy pixels into texture
-    m_texture->update(pixels, coords);
+    m_texture.update(pixels, coords);
     return true;
 }
 
 
 void FontTexture::clear()
 {
-    auto ts = m_texture->size();
+    auto ts = m_texture.size();
     m_binpack.Init(ts.x, ts.y, /*allowFlip=*/false);
     std::vector<uint8_t> buffer(ts.x * ts.y);
-    m_texture->update(buffer.data(), {0, 0, ts.x, ts.y});
+    m_texture.update(buffer.data(), {0, 0, ts.x, ts.y});
 }
 
 

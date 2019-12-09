@@ -1,25 +1,25 @@
-// VulkanTexture.cpp created on 2019-10-23 as part of xcikit project
+// Texture.cpp created on 2019-10-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
 // Copyright 2019 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#include "VulkanTexture.h"
-#include "VulkanRenderer.h"
-#include "VulkanError.h"
-#include "CommandBuffer.h"
+#include "Texture.h"
+#include "Renderer.h"
+#include "vulkan/VulkanError.h"
+#include "vulkan/CommandBuffer.h"
 #include <cassert>
 
 namespace xci::graphics {
 
 
-VulkanTexture::VulkanTexture(VulkanRenderer& renderer)
+Texture::Texture(Renderer& renderer)
     : m_renderer(renderer),
       m_staging_memory(renderer), m_image_memory(renderer)
 {}
 
 
-bool VulkanTexture::create(const Vec2u& size)
+bool Texture::create(const Vec2u& size)
 {
     destroy();
     m_size = size;
@@ -115,7 +115,7 @@ bool VulkanTexture::create(const Vec2u& size)
 }
 
 
-void VulkanTexture::update(const uint8_t* pixels)
+void Texture::update(const uint8_t* pixels)
 {
     m_staging_memory.copy_data(0, byte_size(), pixels);
 
@@ -138,19 +138,19 @@ void VulkanTexture::update(const uint8_t* pixels)
 }
 
 
-void VulkanTexture::update(const uint8_t* pixels, const Rect_u& region)
+void Texture::update(const uint8_t* pixels, const Rect_u& region)
 {
     // TODO: update texture region
 }
 
 
-VkDevice VulkanTexture::device() const
+VkDevice Texture::device() const
 {
     return m_renderer.vk_device();
 }
 
 
-void VulkanTexture::destroy()
+void Texture::destroy()
 {
     vkDestroySampler(device(), m_sampler, nullptr);
     vkDestroyImageView(device(), m_image_view, nullptr);

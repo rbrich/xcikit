@@ -30,7 +30,7 @@ namespace xci::text {
 
 using core::Rect_u;
 using graphics::Renderer;
-using graphics::TexturePtr;
+using graphics::Texture;
 
 
 class FontTexture;
@@ -100,7 +100,7 @@ public:
     float max_advance() { return face().max_advance(); }
     float ascender() const { return face().ascender(); }
     float descender() const { return face().descender(); }
-    TexturePtr& get_texture();
+    Texture& texture();
 
     // Throw away any rendered glyphs
     void clear_cache();

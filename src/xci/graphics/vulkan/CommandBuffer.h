@@ -11,12 +11,12 @@
 
 namespace xci::graphics {
 
-class VulkanRenderer;
+class Renderer;
 
 
 class CommandBuffer {
 public:
-    explicit CommandBuffer(VulkanRenderer& renderer);
+    explicit CommandBuffer(Renderer& renderer);
     ~CommandBuffer();
 
     void begin();
@@ -29,7 +29,7 @@ public:
             uint32_t width, uint32_t height);
 
 private:
-    VulkanRenderer& m_renderer;
+    Renderer& m_renderer;
     VkCommandBuffer m_command_buffer;
 };
 
