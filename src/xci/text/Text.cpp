@@ -111,6 +111,7 @@ void Text::set_color(const graphics::Color& color)
 void Text::resize(graphics::View& view)
 {
     m_layout.typeset(view);
+    m_layout.update(view);
     m_need_typeset = false;
 }
 
@@ -121,6 +122,7 @@ void Text::update(graphics::View& view)
         m_layout.typeset(view);
         m_need_typeset = false;
     }
+    m_layout.update(view);
 }
 
 

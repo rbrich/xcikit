@@ -25,6 +25,7 @@ using xci::core::Rect_u;
 using std::uint8_t;
 
 
+/// Gray-scale texture - 1 byte per pixel
 class Texture {
 public:
     explicit Texture(Renderer& renderer);
@@ -36,7 +37,7 @@ public:
     void update(const uint8_t* pixels, const Rect_u& region);
 
     Vec2u size() const { return m_size; }
-    VkDeviceSize byte_size() const { return 4 * m_size.x * m_size.y; }
+    VkDeviceSize byte_size() const { return m_size.x * m_size.y; }
 
     // Vulkan handles
     VkSampler vk_sampler() const { return m_sampler; }

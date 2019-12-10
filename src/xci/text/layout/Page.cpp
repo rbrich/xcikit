@@ -15,9 +15,6 @@
 
 #include <xci/text/layout/Page.h>
 #include <xci/graphics/View.h>
-#include <xci/graphics/Sprites.h>
-#include <xci/graphics/Shape.h>
-#include <xci/graphics/Window.h>
 #include <xci/core/string.h>
 #include <xci/core/log.h>
 
@@ -85,7 +82,7 @@ Word::Word(Page& page, std::string string)
 }
 
 
-void Word::draw(graphics::View& target, const ViewportCoords& pos) const
+void Word::update(const graphics::View& target)
 {
     auto* font = m_style.font();
     if (!font) {
@@ -99,18 +96,26 @@ void Word::draw(graphics::View& target, const ViewportCoords& pos) const
     auto& renderer = target.window()->renderer();
 
     const auto fb_1px = target.size_to_viewport(1_fb);
+    m_debug_shapes.clear();
+    m_sprites.reset();
+
     if (target.has_debug_flag(View::Debug::WordBBox)) {
-        graphics::Shape bbox(renderer, Color(0, 150, 0), Color(50, 250, 50));
-        bbox.add_rectangle(m_bbox, fb_1px);
-        bbox.draw(target, pos);
+        m_debug_shapes.emplace_back(renderer,
+                Color(0, 150, 0),
+                Color(50, 250, 50));
+        m_debug_shapes.back().add_rectangle(m_bbox, fb_1px);
     }
 
     bool show_bboxes = target.has_debug_flag(View::Debug::GlyphBBox);
+    if (show_bboxes) {
+        m_debug_shapes.emplace_back(renderer,
+                Color(150, 0, 0),
+                Color(250, 50, 50));
+    }
 
-    graphics::Sprites sprites(renderer, font->texture(), m_style.color());
-    graphics::Shape bboxes(renderer, Color(150, 0, 0), Color(250, 50, 50));
+    m_sprites.emplace(renderer, font->texture(), m_style.color());
 
-    ViewportCoords pen;
+    ViewportCoords pen = m_pos;
     for (CodePoint code_point : to_utf32(m_string)) {
         auto glyph = font->get_glyph(code_point);
         if (glyph == nullptr)
@@ -122,23 +127,37 @@ void Word::draw(graphics::View& target, const ViewportCoords& pos) const
                           pen.y - bearing.y,
                           glyph_size.x,
                           glyph_size.y};
-        sprites.add_sprite(rect, glyph->tex_coords());
+        m_sprites->add_sprite(rect, glyph->tex_coords());
         if (show_bboxes)
-            bboxes.add_rectangle(rect, fb_1px);
+            m_debug_shapes.back().add_rectangle(rect, fb_1px);
 
         pen.x += target.size_to_viewport(FramebufferPixels{glyph->advance()});
     }
 
-    auto p = pos + m_pos;
-    if (show_bboxes)
-        bboxes.draw(target, p);
-    sprites.draw(target, p);
+    m_sprites->update();
 
     if (target.has_debug_flag(View::Debug::WordBasePoint)) {
         const auto sc_1px = target.size_to_viewport(1_sc);
-        graphics::Shape basepoint(renderer, Color(150, 0, 255));
-        basepoint.add_rectangle({-sc_1px, -sc_1px, 2 * sc_1px, 2 * sc_1px});
-        basepoint.draw(target, p);
+        m_debug_shapes.emplace_back(renderer, Color(150, 0, 255));
+        m_debug_shapes.back().add_rectangle({
+            m_pos.x - sc_1px, m_pos.y - sc_1px,
+            2 * sc_1px, 2 * sc_1px});
+    }
+}
+
+
+void Word::draw(graphics::View& target, const ViewportCoords& pos) const
+{
+    for (auto& shape : m_debug_shapes) {
+        shape.draw(target, pos);
+    }
+
+    if (m_sprites)
+        m_sprites->draw(target, pos);
+
+    if (target.has_debug_flag(View::Debug::WordBasePoint)) {
+        // basepoint needs to be drawn on-top (it's the last debug shape)
+        m_debug_shapes.back().draw(target, pos);
     }
 }
 
@@ -349,6 +368,15 @@ Span* Page::get_span(const std::string& name)
     if (iter == m_spans.end())
         return nullptr;  // does not exist
     return &iter->second;
+}
+
+
+void Page::foreach_word(const std::function<void(Word& word)>& cb)
+{
+    if (!cb) return;
+    for (auto& word : m_words) {
+        cb(word);
+    }
 }
 
 

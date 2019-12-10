@@ -69,10 +69,7 @@ int main()
         }
         shape.set_antialiasing(antialiasing);
         shape.set_softness(softness);
-        shape.update();
     };
-
-    bool dirty = true;
 
     window.set_key_callback([&](View& view, KeyEvent ev){
         if (ev.action != Action::Press)
@@ -119,19 +116,24 @@ int main()
             default:
                 break;
         }
-        dirty = true;
         view.refresh();
     });
 
-    window.set_update_callback([&](View& view, std::chrono::nanoseconds) {
-        if (!dirty)
-            return;
-        dirty = false;
+    window.set_size_callback([&](View& view) {
+        shapes_help.resize(view);
+        option_help.resize(view);
+    });
 
+    window.set_update_callback([&](View& view, std::chrono::nanoseconds) {
         view.window()->reset_command_buffers();
 
-        for (Shape& shape : shapes)
+        shapes_help.update(view);
+        option_help.update(view);
+
+        for (Shape& shape : shapes) {
             shape.clear();
+            set_shape_attr(shape);
+        }
 
         // Border scaled with viewport size
         add_shape_fn(shapes[0], {-1, -0.6f, 2, 1.2f}, 0.05);
@@ -145,13 +147,13 @@ int main()
         add_shape_fn(shapes[6], {0.4f, 0.4f, 0.5f, 0.5f}, view.size_to_viewport(5_sc));
 
         for (Shape& shape : shapes)
-            set_shape_attr(shape);
+            shape.update();
     });
 
     window.set_draw_callback([&](View& view) {
-//        auto vs = view.viewport_size();
-//        shapes_help.draw(view, {-vs.x / 2 + 0.1f, -vs.y / 2 + 0.1f});
-//        option_help.draw(view, {vs.x / 2 - 0.5f, -vs.y / 2 + 0.1f});
+        auto vs = view.viewport_size();
+        shapes_help.draw(view, {-vs.x / 2 + 0.1f, -vs.y / 2 + 0.1f});
+        option_help.draw(view, {vs.x / 2 - 0.5f, -vs.y / 2 + 0.1f});
 
         shapes[0].draw(view, {0, 0});
         shapes[1].draw(view, {0, 0});

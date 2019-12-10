@@ -120,6 +120,9 @@ public:
     // and after addition of new elements.
     void typeset(const graphics::View& target);
 
+    // Recreate graphics objects. Must be called at least once before draw.
+    void update(const graphics::View& target);
+
     // Draw whole layout to target
     void draw(graphics::View& target, const ViewportCoords& pos) const;
 

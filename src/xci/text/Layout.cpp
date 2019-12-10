@@ -62,7 +62,6 @@ void Layout::set_default_color(const graphics::Color& color)
     m_page.clear();
 }
 
-
 void Layout::typeset(const graphics::View& target)
 {
     m_page.clear();
@@ -73,6 +72,13 @@ void Layout::typeset(const graphics::View& target)
     for (auto& elem : m_elements) {
         elem->apply(m_page);
     }
+}
+
+void Layout::update(const graphics::View& target)
+{
+    m_page.foreach_word([&](Word& word) {
+        word.update(target);
+    });
 
     // setup debug rectangles
 

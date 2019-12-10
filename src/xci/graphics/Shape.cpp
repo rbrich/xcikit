@@ -191,9 +191,9 @@ void Shape::clear()
 
 void Shape::reserve(size_t lines, size_t rectangles, size_t ellipses)
 {
-    m_lines.reserve(lines, 4 * lines);
-    m_rectangles.reserve(rectangles, 4 * rectangles);
-    m_ellipses.reserve(ellipses, 4 * ellipses);
+    m_lines.reserve(4 * lines);
+    m_rectangles.reserve(4 * rectangles);
+    m_ellipses.reserve(4 * ellipses);
 }
 
 

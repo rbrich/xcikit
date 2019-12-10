@@ -115,7 +115,7 @@ public:
     Window* window() const { return m_window; }
 
     // Compute projection matrix based on viewport size and offset
-    std::array<float, 16> projection_matrix(bool inverted_y = true) const;
+    std::array<float, 16> projection_matrix() const;
 
     // ------------------------------------------------------------------------
     // Sizes, coordinates

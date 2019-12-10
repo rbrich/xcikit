@@ -182,17 +182,16 @@ void Window::setup_view()
     glfwSetFramebufferSizeCallback(m_window, [](GLFWwindow* win, int w, int h) {
         TRACE("Framebuffer resize: {} {}", w, h);
         auto self = (Window*) glfwGetWindowUserPointer(win);
+        self->m_renderer.reset_framebuffer({uint32_t(w), uint32_t(h)});
         if (self->m_view.set_framebuffer_size({float(w), float(h)}) && self->m_size_cb)
             self->m_size_cb(self->m_view);
-        self->m_renderer.reset_framebuffer({uint32_t(w), uint32_t(h)});
         self->draw();
     });
 
     glfwSetWindowSizeCallback(m_window, [](GLFWwindow* win, int w, int h) {
         TRACE("Window resize: {} {}", w, h);
         auto self = (Window*) glfwGetWindowUserPointer(win);
-        if (self->m_view.set_screen_size({float(w), float(h)}) && self->m_size_cb)
-            self->m_size_cb(self->m_view);
+        self->m_view.set_screen_size({float(w), float(h)});
     });
 
     glfwSetWindowRefreshCallback(m_window, [](GLFWwindow* win) {

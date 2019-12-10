@@ -47,7 +47,7 @@ bool Texture::create(const Vec2u& size)
     VkImageCreateInfo image_ci = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             .imageType = VK_IMAGE_TYPE_2D,
-            .format = VK_FORMAT_R8G8B8A8_UNORM,
+            .format = VK_FORMAT_R8_UNORM,
             .extent = {
                     .width = size.x,
                     .height = size.y,
@@ -77,7 +77,7 @@ bool Texture::create(const Vec2u& size)
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = m_image,
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = VK_FORMAT_R8G8B8A8_UNORM,
+            .format = VK_FORMAT_R8_UNORM,
             .subresourceRange = {
                     .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                     .baseMipLevel = 0,
@@ -127,7 +127,7 @@ void Texture::update(const uint8_t* pixels)
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     cmd_buf.copy_buffer_to_image(m_staging_buffer, m_image,
-            m_size.x, m_size.y);
+            {0, 0, m_size.x, m_size.y});
 
     cmd_buf.transition_image_layout(m_image,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
@@ -140,7 +140,23 @@ void Texture::update(const uint8_t* pixels)
 
 void Texture::update(const uint8_t* pixels, const Rect_u& region)
 {
-    // TODO: update texture region
+    m_staging_memory.copy_data(0, region.w * region.h, pixels);
+
+    CommandBuffer cmd_buf(m_renderer);
+    cmd_buf.begin();
+
+    cmd_buf.transition_image_layout(m_image,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    cmd_buf.copy_buffer_to_image(m_staging_buffer, m_image, region);
+
+    cmd_buf.transition_image_layout(m_image,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    cmd_buf.end();
+    cmd_buf.submit();
 }
 
 

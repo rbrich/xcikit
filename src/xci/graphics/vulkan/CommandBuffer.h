@@ -8,10 +8,13 @@
 #define XCI_GRAPHICS_VULKAN_COMMAND_BUFFER_H
 
 #include <vulkan/vulkan.h>
+#include <xci/core/geometry.h>
 
 namespace xci::graphics {
 
 class Renderer;
+
+using xci::core::Rect_u;
 
 
 class CommandBuffer {
@@ -26,7 +29,7 @@ public:
     void transition_image_layout(VkImage image,
             VkImageLayout old_layout, VkImageLayout new_layout);
     void copy_buffer_to_image(VkBuffer buffer, VkImage image,
-            uint32_t width, uint32_t height);
+            const Rect_u& region);
 
 private:
     Renderer& m_renderer;

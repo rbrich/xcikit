@@ -32,7 +32,7 @@ Sprites::Sprites(Renderer& renderer, Texture& texture, const Color& color)
 
 void Sprites::reserve(size_t num)
 {
-    m_quads.reserve(num, 4 * num);
+    m_quads.reserve(4 * num);
 }
 
 
@@ -71,6 +71,7 @@ void Sprites::update()
     m_quads.set_blend(BlendFunc::AlphaBlend);
     m_quads.set_texture(2, m_texture);
     m_quads.set_shader(m_shader);
+    m_quads.update();
 }
 
 
@@ -93,7 +94,7 @@ ColoredSprites::ColoredSprites(Renderer& renderer,
 
 void ColoredSprites::reserve(size_t num)
 {
-    m_quads.reserve(num, 4);
+    m_quads.reserve(num * 4);
 }
 
 

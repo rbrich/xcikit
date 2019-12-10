@@ -39,9 +39,12 @@ Primitives::~Primitives()
 }
 
 
-void Primitives::reserve(size_t primitives, size_t vertices)
+void Primitives::reserve(size_t vertices)
 {
-
+    m_vertex_data.reserve(vertices * get_vertex_float_count());
+    // heuristic for quads (won't match for other primitives)
+    // each 4 vertices (a quad) require 6 indices (two triangles)
+    m_index_data.reserve(vertices / 4 * 6);
 }
 
 
@@ -74,7 +77,7 @@ void Primitives::end_primitive()
 void Primitives::add_vertex(ViewportCoords xy, float u, float v)
 {
     assert(m_format == VertexFormat::V2t2);
-    assert(m_open_vertices >= 0);
+    assert(m_open_vertices != -1);
     m_open_vertices++;
     m_vertex_data.push_back(xy.x.value);
     m_vertex_data.push_back(xy.y.value);
@@ -86,7 +89,7 @@ void Primitives::add_vertex(ViewportCoords xy, float u, float v)
 void Primitives::add_vertex(ViewportCoords xy, float u1, float v1, float u2, float v2)
 {
     assert(m_format == VertexFormat::V2t22);
-    assert(m_open_vertices >= 0);
+    assert(m_open_vertices != -1);
     m_open_vertices++;
     m_vertex_data.push_back(xy.x.value);
     m_vertex_data.push_back(xy.y.value);
@@ -100,7 +103,7 @@ void Primitives::add_vertex(ViewportCoords xy, float u1, float v1, float u2, flo
 void Primitives::add_vertex(ViewportCoords xy, Color color, float u, float v)
 {
     assert(m_format == VertexFormat::V2c4t2);
-    assert(m_open_vertices >= 0);
+    assert(m_open_vertices != -1);
     m_open_vertices++;
     m_vertex_data.push_back(xy.x.value);
     m_vertex_data.push_back(xy.y.value);
@@ -117,7 +120,7 @@ void
 Primitives::add_vertex(ViewportCoords xy, Color color, float u1, float v1, float u2, float v2)
 {
     assert(m_format == VertexFormat::V2c4t22);
-    assert(m_open_vertices >= 0);
+    assert(m_open_vertices != -1);
     m_open_vertices++;
     m_vertex_data.push_back(xy.x.value);
     m_vertex_data.push_back(xy.y.value);
@@ -221,14 +224,17 @@ void Primitives::update()
 
 void Primitives::draw(View& view)
 {
-    if (m_pipeline == VK_NULL_HANDLE)
+    if (m_pipeline == VK_NULL_HANDLE) {
+        assert(!"Primitives: call update before draw!");
         return;
+    }
 
     auto* window = dynamic_cast<Window*>(view.window());
     auto cmd_buf = window->vk_command_buffer();
 
     vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
 
+    // set viewport
     VkViewport viewport = {
             .x = 0.0f,
             .y = 0.0f,
@@ -239,13 +245,27 @@ void Primitives::draw(View& view)
     };
     vkCmdSetViewport(cmd_buf, 0, 1, &viewport);
 
+    // set scissor region
+    VkRect2D scissor = {
+            .offset = {0, 0},
+            .extent = { INT32_MAX, INT32_MAX },
+    };
+    if (view.has_crop()) {
+        auto cr = view.rect_to_framebuffer(view.get_crop());
+        scissor.offset.x = cr.x.as<int32_t>();
+        scissor.offset.y = cr.y.as<int32_t>();
+        scissor.extent.width = cr.w.as<int32_t>();
+        scissor.extent.height = cr.h.as<int32_t>();
+    }
+    vkCmdSetScissor(cmd_buf, 0, 1, &scissor);
+
     VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(cmd_buf, 0, 1, &m_vertex_buffer, &offset);
     vkCmdBindIndexBuffer(cmd_buf, m_index_buffer, 0, VK_INDEX_TYPE_UINT16);
 
     // projection matrix
     {
-        auto mvp = view.projection_matrix(false);
+        auto mvp = view.projection_matrix();
         assert(mvp.size() * sizeof(mvp[0]) == m_mvp_size);
         auto i = window->vk_command_buffer_index();
         m_device_memory.copy_data(m_uniform_offsets[i],
@@ -313,17 +333,12 @@ void Primitives::create_pipeline()
             .primitiveRestartEnable = VK_FALSE,
     };
 
-    VkRect2D scissor = {
-            .offset = {0, 0},
-            .extent = { INT32_MAX, INT32_MAX },
-    };
-
     VkPipelineViewportStateCreateInfo viewport_state_ci = {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
             .viewportCount = 1,
             .pViewports = nullptr,  // dynamic state
             .scissorCount = 1,
-            .pScissors = &scissor,
+            .pScissors = nullptr,  // dynamic state
     };
 
     VkPipelineRasterizationStateCreateInfo rasterization_ci = {
@@ -369,17 +384,18 @@ void Primitives::create_pipeline()
 
     VkDynamicState dynamic_states[] = {
             VK_DYNAMIC_STATE_VIEWPORT,
+            VK_DYNAMIC_STATE_SCISSOR,
     };
 
     VkPipelineDynamicStateCreateInfo dynamic_state_ci = {
             .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-            .dynamicStateCount = 1,
+            .dynamicStateCount = std::size(dynamic_states),
             .pDynamicStates = dynamic_states,
     };
 
     VkGraphicsPipelineCreateInfo pipeline_ci = {
             .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-            .stageCount = 2,
+            .stageCount = std::size(shader_stages),
             .pStages = shader_stages,
             .pVertexInputState = &vertex_input_ci,
             .pInputAssemblyState = &input_assembly_ci,
@@ -645,11 +661,19 @@ VkDeviceSize Primitives::align_uniform(VkDeviceSize offset)
 
 auto Primitives::make_binding_desc() -> VkVertexInputBindingDescription
 {
+    return {
+        .stride = (uint32_t) sizeof(float) * get_vertex_float_count()
+    };
+}
+
+
+uint32_t Primitives::get_vertex_float_count()
+{
     switch (m_format) {
-        case VertexFormat::V2t2: return { .stride = sizeof(float) * 4 };
-        case VertexFormat::V2t22: return { .stride = sizeof(float) * 6 };
-        case VertexFormat::V2c4t2: return { .stride = sizeof(float) * 8 };
-        case VertexFormat::V2c4t22: return { .stride = sizeof(float) * 10 };
+        case VertexFormat::V2t2: return 4;
+        case VertexFormat::V2t22: return 6;
+        case VertexFormat::V2c4t2: return 8;
+        case VertexFormat::V2c4t22: return 10;
     }
     UNREACHABLE;
 }

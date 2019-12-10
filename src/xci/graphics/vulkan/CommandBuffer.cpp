@@ -122,9 +122,9 @@ void CommandBuffer::transition_image_layout(VkImage image,
 
 
 void
-CommandBuffer::copy_buffer_to_image(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
+CommandBuffer::copy_buffer_to_image(VkBuffer buffer, VkImage image, const Rect_u& region)
 {
-    VkBufferImageCopy region = {
+    VkBufferImageCopy copy_region = {
             .bufferOffset = 0,
             .bufferRowLength = 0,
             .bufferImageHeight = 0,
@@ -134,11 +134,12 @@ CommandBuffer::copy_buffer_to_image(VkBuffer buffer, VkImage image, uint32_t wid
                     .baseArrayLayer = 0,
                     .layerCount = 1,
             },
-            .imageOffset = {0, 0, 0},
-            .imageExtent = {width, height, 1},
+            .imageOffset = {int32_t(region.x), int32_t(region.y), 0},
+            .imageExtent = {region.w, region.h, 1},
     };
     vkCmdCopyBufferToImage(m_command_buffer, buffer, image,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            1, &copy_region);
 }
 
 

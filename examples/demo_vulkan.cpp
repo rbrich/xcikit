@@ -14,7 +14,6 @@
 #include <xci/config.h>
 
 #include <cstdlib>
-#include <cstring>
 
 using namespace xci::graphics;
 using namespace xci::core;
@@ -25,15 +24,20 @@ void generate_checkerboard(Texture& texture)
     std::vector<uint8_t> pixels(texture.byte_size());
     auto size = texture.size();
 
+    // generate whole texture
     for (uint32_t y = 0; y != size.y; ++y)
         for (uint32_t x = 0; x != size.x; ++x) {
-            const auto base = (y * size.x + x) * 4;
-            const auto color = (x / 16 + y / 16) % 2 == 0
-                    ? Color::Yellow()
-                    : Color::Blue();
-            std::memcpy(&pixels[base], &color, 4);
+            pixels[y * size.x + x] =
+                    (x / 16 + y / 16) % 2 == 0
+                    ? 255 : 0;
         }
     texture.update(pixels.data());
+
+    // replace sub-region of the texture
+    for (uint32_t i = 0; i != 50*50; ++i) {
+        pixels[i] = 128;
+    }
+    texture.update(pixels.data(), {100, 100, 50, 50});
 }
 
 

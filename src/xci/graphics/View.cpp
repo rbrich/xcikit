@@ -19,7 +19,7 @@
 namespace xci::graphics {
 
 
-std::array<float, 16> View::projection_matrix(bool inverted_y) const
+std::array<float, 16> View::projection_matrix() const
 {
     float xs = 2.0f / viewport_size().x.value;
     float ys = 2.0f / viewport_size().y.value;
@@ -28,10 +28,6 @@ std::array<float, 16> View::projection_matrix(bool inverted_y) const
     if (m_origin == ViewOrigin::TopLeft) {
         xt -= 1.0;
         yt -= 1.0;
-    }
-    if (inverted_y) {
-        ys = -ys;
-        yt = -yt;
     }
     return {{
             xs,   0.0f, 0.0f, 0.0f,
@@ -48,13 +44,13 @@ bool View::set_screen_size(ScreenCoords size)
     m_screen_size = size;
 
     // Set framebuffer to same size, if not set explicitly (by set_framebuffer_size)
-    if (m_framebuffer_size.x.value == 0) {
+    if (m_framebuffer_size.x.value == 0.0) {
         m_framebuffer_size.x.value = size.x.value;
         m_framebuffer_size.y.value = size.y.value;
         changed = true;
     }
 
-    if (changed || m_viewport_size.x.value == 0) {
+    if (changed || m_viewport_size.x.value == 0.0) {
         rescale_viewport();
         changed = true;
     }

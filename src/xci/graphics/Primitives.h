@@ -50,9 +50,8 @@ public:
     ~Primitives();
 
     /// Reserve memory for primitives that will be added later
-    /// \param primitives   number of primitives that will be created
-    /// \param vertices     total number of vertices in the primitives
-    void reserve(size_t primitives, size_t vertices);
+    /// \param vertices     expected total number of vertices in all primitives
+    void reserve(size_t vertices);
 
     void begin_primitive();
     void end_primitive();
@@ -89,6 +88,7 @@ private:
 
     VkDeviceSize align_uniform(VkDeviceSize offset);
     auto make_binding_desc() -> VkVertexInputBindingDescription;
+    uint32_t get_vertex_float_count();
     uint32_t get_attr_desc_count();
     static constexpr size_t max_attr_descs = 4;
     auto make_attr_descs() -> std::array<VkVertexInputAttributeDescription, max_attr_descs>;
