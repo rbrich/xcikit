@@ -1,4 +1,4 @@
-Lambda Script v0.2
+Lambda Script v0.3
 ==================
 ***Syntax reference***
 
@@ -27,23 +27,23 @@ See `xci::script` in [xcikit](https://github.com/rbrich/xcikit) codebase.
 Syntax Elements
 ---------------
 
-C++ style comments:
-
-    // inline comment
-    /* possibly multiline comment */
-
-Scoped blocks:
+### Scoped block
 
     // define some names in a scope:
-    { a = 1; b = 2 }    // the whole expression is evaluated to `none`  
+    { a = 1; b = 2 }    // the whole expression evaluates to `none`  
     a                   // ERROR - `a` is not defined in outer scope
-    c = { a = 1; a }    // block returns `a`, `c` evaluates to `1`
+    
+    // block returns `a`, `c` evaluates to `1`
+    c = { a = 1; a }
+    
+    // the outer scope is visible inside the block
+    x = 1; y = { x + 2 }
 
 - Semicolons are separators, not required after last expression and before EOL/EOF
-- The block has a return value which is the result of last expression.
-- Definitions don't return the value - explicit expression is required instead.
+- The block has a return value which is the result of the last expression.
+- Definitions don't return a value - explicit expression is required instead.
 
-Function call:
+### Function call
 
     add 1 2
     sub (1 + 2) 3   // => 0
@@ -53,40 +53,84 @@ Function call:
 - Parens can be used around each single argument.
 - Infix operators and other function calls require parens around them.
 
-About infix function calls:
-- left-hand side expression is passed as first argument, right-hand side
-  expressions are passed as following arguments (zero or more of them)
-- spaces around the dot are optional, but numbers might need parenthesis:
+### Infix function call
 
-      one = 1
-      one.add 2
-      1.add 2  // syntax error!
-      (1).add 2  // ok
-      one. add 2  // ok, but bad style
-      1 . add 2   // ok, but bad style
-      "{} {}" .format "hello" 91
-      "string".len
+Any function can be used as "infix operator", or when comparing to object-oriented languages,
+as a method call, giving the first argument is the "object" on which it operates:
 
-- unlike infix operators, functions have no precedence - they are always
-  evaluated from left to right:
+    foo .do bar
+    "string".len
+
+The evaluation rule is simple:
+The left-hand side expression is passed as the first argument and
+zero or more right-hand side expressions are passed as the following arguments.
+
+Spaces around the dot are optional, but numbers might need parenthesis,
+depending if the dot is preceded by a space or not:
+
+    one = 1; one.add 2    // ok, but bad style
+    1.add 2               // wrong and misleading, parsed as `(1.) add (2)`
+    (1).add 2             // ok, but better add a space before the dot
+    one. add 2            // ok, but bad style
+    1 . add 2             // ok, but bad style
+
+Putting the first argument on left-hand side improves readability in some cases:
+
+    "{} {}" .format "hello" 91
+    "string".len
+
+Unlike infix operators, functions have no precedence - they are always
+evaluated from left to right:
   
-      1 .add 2 .mul 3  // => 9
-      (1 .add 2).mul 3  // => 9
-      1 .add (2 .mul 3)  // => 7
+    1 .add 2 .mul 3  // => 9
+    (1 .add 2).mul 3  // => 9
+    1 .add (2 .mul 3)  // => 7
+
+The dot operator breaks the argument list. Single argument calls can be chained:
+
+    // all these lines are equivalent
+    uniq (sort (a_list))        // forced right-to-left evaluation
+    a_list .sort .uniq          // implicit left-to-right evaluation
+    ((a_list) .sort) .uniq      // the same, explicit
+
+    // also equivalent, the general rule still applies
+    list_1 .cat list_2 list_3 .sort .uniq
+    cat list_1 list_2 list_3 .sort .uniq
+    
+    // might be more readable with explicit parens
+    (cat list_1 list_2 list_3) .sort .uniq
+
+### Operators
 
 Infix and prefix operators, operator precedence:
 
     1 + 2 / 3 == 1 + (2 / 3)
     -(1 + 2)
 
-Definition (naming a value) can occur only once for each name in a scope:
+### Variables
 
-    i = 1               // auto type
+Variables are named values. They are always immutable - the name can be
+assigned only once in each scope. But it's possible to override the name
+in inner scope:
+
+    // variable type is inferred
+    i = 1               
+    
+    // right-hand side can be any expression
     j = 1 + 2
-    i = j               // ERROR - redefinition of a name
     k = add2 1 2
-    l:Int32 = k         // definition with type declaration
-    s:String = "XCI"    // UTF-8 string
+    
+    // error, redefinition of a name
+    k = 1; k = k + 1       
+    
+    // ok, inner `m` has value `2` 
+    m = 1; { m = m + 1 }   
+    
+    // variable type can be explicitly declared
+    l:Int32 = k
+    s:String = "XCI"
+
+### Function definition
 
 Define a function with parameters:
 
@@ -283,6 +327,18 @@ Comprehensions:
 
     [2*x for x in [1..10] if x > 3]
     [2*x | x <= [1..10], x > 3]
+
+
+### Other syntax
+
+C++ style comments:
+
+    // comment line
+    
+    print "hello " /* inline comment */ "world"
+    
+    /* multiline
+       comment */
 
 
 Modules
