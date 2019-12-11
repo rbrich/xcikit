@@ -100,6 +100,8 @@ The dot operator breaks the argument list. Single argument calls can be chained:
     // might be more readable with explicit parens
     (cat list_1 list_2 list_3) .sort .uniq
 
+Generally, the dot operator has weaker binding than a function call.
+
 ### Operators
 
 Infix and prefix operators, operator precedence:
@@ -438,8 +440,9 @@ Precedence table:
     9    |  power             |  **
     10   |  subscript         |  x ! y
     
-    (11) |  unary ops         |  -  +  !  ~
-    (12) |  function call     |  f [<arg> ...]
+    (11) |  dot function call |  <arg1> . f [<arg2> ...]
+    (12) |  unary ops         |  -  +  !  ~
+    (13) |  function call     |  f [<arg> ...]
 
 Higher precedence means tighter binding.
 
