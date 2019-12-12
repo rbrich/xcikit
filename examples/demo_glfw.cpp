@@ -15,6 +15,7 @@
 
 #include <xci/text/Text.h>
 #include <xci/core/Vfs.h>
+#include <xci/core/log.h>
 #include <xci/config.h>
 
 #include <glad/glad.h>
@@ -29,8 +30,12 @@ using namespace xci::core;
 
 int main()
 {
+    Logger::init(Logger::Level::Info);
+
     auto& vfs = Vfs::default_instance();
     vfs.mount(XCI_SHARE_DIR);
+
+    // === Create GLFW window ===
 
     if (!glfwInit())
         return EXIT_FAILURE;
@@ -50,10 +55,16 @@ int main()
     }
     glfwMakeContextCurrent(window);
 
-    // Setup GLAD loader
+    // === Setup GLAD ===
+
     if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
         return EXIT_FAILURE;
     }
+    log_info("OpenGL {} GLSL {}",
+            glGetString(GL_VERSION),
+            glGetString(GL_SHADING_LANGUAGE_VERSION));
+
+    // === XCI ===
 
     // Setup XCI view
     View view;
@@ -75,7 +86,6 @@ int main()
     });
 
     // Create XCI text
-
     Font font;
     if (!font.add_face("fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
         return EXIT_FAILURE;
@@ -87,12 +97,14 @@ int main()
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT);
 
+        text.resize(view);
         text.draw(view, {-200, 0});
 
         glfwSwapBuffers(window);
         glfwWaitEvents();
     }
 
-    glfwTerminate();
+    // FIXME: crash due to static Renderer instance being destroyed to late
+    //glfwTerminate();
     return EXIT_SUCCESS;
 }
