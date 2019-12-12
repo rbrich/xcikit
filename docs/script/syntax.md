@@ -136,25 +136,25 @@ in inner scope:
 
 Define a function with parameters:
 
-    add2 = fn a b {a + b}   // generic function - works with any type supported by op+
-    add2 = fn a:t b:t -> t {a + b}  // same as above, but with explicit type variable
-    add2 = fn a:Int b:Int -> Int {a + b}   // specific, with type declarations
-    add2 : Int Int -> Int = fn a b {a + b}   // type declaration on left side (i.e. disable type inference)
+    add2 = fun a b {a + b}   // generic function - works with any type supported by op+
+    add2 = fun a:t b:t -> t {a + b}  // same as above, but with explicit type variable
+    add2 = fun a:Int b:Int -> Int {a + b}   // specific, with type declarations
+    add2 : Int Int -> Int = fun a b {a + b}   // type declaration on left side (i.e. disable type inference)
     
     // function definition can span multiple lines
-    add2 = fn a:Int b:Int -> Int
+    add2 = fun a:Int b:Int -> Int
     {
         a + b
     }
     
     // possible program main function
-    main = fn args:[String] -> Void {
+    main = fun args:[String] -> Void {
         print "Hello World!"
     }
 
 Function call can explicitly name the arguments:
 
-    make_book = fn name:String author:String isbn:Int -> MyBook
+    make_book = fun name:String author:String isbn:Int -> MyBook
         { MyBook(name, author, isbn) }
     make_book name="Title" author="Karel IV" isbn=12345
 
@@ -166,14 +166,14 @@ prototype.
 
 Pass a function as an argument:
 
-    eval2 = fn f a b { f a b }
+    eval2 = fun f a b { f a b }
     eval2 add2 1 2                  // calls `add2 1 2`
-    eval2 fn a b {a + b} 1 2        // calls anonymous function
+    eval2 fun a b {a + b} 1 2        // calls anonymous function
 
 Return a function from a function:
 
-    sub2 = fn a b { a - b }
-    choose = fn x { if (x == "add") add2 sub2 }
+    sub2 = fun a b { a - b }
+    choose = fun x { if (x == "add") add2 sub2 }
     choose "add" 1 2
     choose "sub" 1 2
 
@@ -210,8 +210,8 @@ Block is a function with zero arguments:
     block3_bound = bind a=1 b=2 block3
     block3_bound    // returns 3
     
-    a = {f = fn x {5}}; f    // ERROR - block creates new scope - f is undefined outside
-    a = (f = fn x {5}); f    // ok - f is declared in outer scope
+    a = {f = fun x {5}}; f    // ERROR - block creates new scope - f is undefined outside
+    a = (f = fun x {5}); f    // ok - f is declared in outer scope
 
 Infix operators:
 
@@ -359,8 +359,8 @@ Given this source file:
 Imagine that it's executed like this:
 
     _0 = void
-    _1 = executor (fn _{ 1 + 2 } _0)
-    _2 = executor (fn _{ 3 * _ } _1)
+    _1 = executor (fun _{ 1 + 2 } _0)
+    _2 = executor (fun _{ 3 * _ } _1)
 
 The Executor can do anything with the results, for example:
 
@@ -417,7 +417,7 @@ Appendix
 
 List of Keywords:
 
-    else fn if then
+    else fun if then
 
 Precedence table:
 
