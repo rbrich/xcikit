@@ -27,7 +27,12 @@ public:
     void submit();
 
     void transition_image_layout(VkImage image,
+            VkAccessFlags src_access, VkAccessFlags dst_access,
+            VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage,
             VkImageLayout old_layout, VkImageLayout new_layout);
+    void transition_buffer(VkBuffer buffer, VkDeviceSize size,
+            VkAccessFlags src_access, VkAccessFlags dst_access,
+            VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage);
     void copy_buffer_to_image(VkBuffer buffer, VkImage image,
             const Rect_u& region);
 

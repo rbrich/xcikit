@@ -62,14 +62,18 @@ void CommandBuffer::submit()
             vkQueueSubmit(m_renderer.vk_queue(), 1, &submit_info,
                     VK_NULL_HANDLE));
     VK_TRY("vkQueueWaitIdle", vkQueueWaitIdle(m_renderer.vk_queue()));
-
 }
 
+
 void CommandBuffer::transition_image_layout(VkImage image,
+        VkAccessFlags src_access, VkAccessFlags dst_access,
+        VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage,
         VkImageLayout old_layout, VkImageLayout new_layout)
 {
     VkImageMemoryBarrier barrier = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+            .srcAccessMask = src_access,
+            .dstAccessMask = dst_access,
             .oldLayout = old_layout,
             .newLayout = new_layout,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -83,40 +87,39 @@ void CommandBuffer::transition_image_layout(VkImage image,
                     .layerCount = 1,
             },
     };
-
-    VkPipelineStageFlags source_stage;
-    VkPipelineStageFlags destination_stage;
-
-    if (
-            old_layout == VK_IMAGE_LAYOUT_UNDEFINED &&
-            new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-    ) {
-        barrier.srcAccessMask = 0;
-        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        source_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        destination_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-
-    } else if (
-            old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
-            new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-    ) {
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        source_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        destination_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-
-    } else {
-        assert(!"transition_image_layout: unsupported arguments");
-        return;
-    }
-
     vkCmdPipelineBarrier(
             m_command_buffer,
-            source_stage, destination_stage,
+            src_stage, dst_stage,
             0,
             0, nullptr,
             0, nullptr,
             1, &barrier
+    );
+}
+
+
+void CommandBuffer::transition_buffer(
+    VkBuffer buffer, VkDeviceSize size,
+    VkAccessFlags src_access, VkAccessFlags dst_access,
+    VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage)
+{
+    VkBufferMemoryBarrier barrier = {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+        .srcAccessMask = src_access,
+        .dstAccessMask = dst_access,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .buffer = buffer,
+        .offset = 0,
+        .size = size,
+    };
+    vkCmdPipelineBarrier(
+        m_command_buffer,
+        src_stage, dst_stage,
+        0,
+        0, nullptr,
+        1, &barrier,
+        0, nullptr
     );
 }
 

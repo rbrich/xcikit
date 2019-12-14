@@ -15,8 +15,8 @@
 
 #include <xci/text/Font.h>
 #include <xci/text/Text.h>
-#include <xci/graphics/DefaultRenderer.h>
-#include <xci/graphics/DefaultWindow.h>
+#include <xci/graphics/Renderer.h>
+#include <xci/graphics/Window.h>
 #include <xci/graphics/Sprites.h>
 #include <xci/core/Vfs.h>
 #include <xci/config.h>
@@ -48,8 +48,8 @@ int main()
     Vfs vfs;
     vfs.mount(XCI_SHARE_DIR);
 
-    DefaultRenderer renderer {vfs};
-    DefaultWindow window {renderer};
+    Renderer renderer {vfs};
+    Window window {renderer};
     window.create({800, 600}, "XCI font demo");
 
     Font font {renderer};
@@ -62,20 +62,22 @@ int main()
     text.set_font_size(0.08);
     text.set_color(Color::White());
 
-    window.set_update_callback([&](View& view, std::chrono::nanoseconds) {
-        text.update(view);
+    Sprites font_texture(renderer, font.texture(), Color::Blue());
+
+    window.set_size_callback([&](View& view) {
+        text.resize(view);
+
+        auto tex_size = view.size_to_viewport(FramebufferSize{font.texture().size()});
+        ViewportRect rect = {0, 0, tex_size.x, tex_size.y};
+        font_texture.clear();
+        font_texture.add_sprite(rect);
+        font_texture.update();
     });
 
     window.set_draw_callback([&](View& view) {
         auto vs = view.viewport_size();
         text.draw(view, {0.5f * vs.x - 1.9f, -0.55f});
-
-        auto& tex = font.texture();
-        auto tex_size = view.size_to_viewport(FramebufferSize{tex->size()});
-        Sprites font_texture(renderer, tex, Color::Blue());
-        ViewportRect rect = {0, 0, tex_size.x, tex_size.y};
-        font_texture.add_sprite(rect);
-        font_texture.draw(view, {-0.5f * vs.x + 0.01f, -0.5f * rect.h});
+        font_texture.draw(view, {-0.5f * vs.x + 0.01f, -0.5f});
     });
 
     window.set_refresh_mode(RefreshMode::OnDemand);
