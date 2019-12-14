@@ -31,13 +31,14 @@ void generate_checkerboard(Texture& texture)
                     (x / 16 + y / 16) % 2 == 0
                     ? 255 : 0;
         }
-    texture.update(pixels.data());
+    texture.write(pixels.data());
 
     // replace sub-region of the texture
     for (uint32_t i = 0; i != 50*50; ++i) {
         pixels[i] = 128;
     }
-    texture.update(pixels.data(), {100, 100, 50, 50});
+    texture.write(pixels.data(), {100, 100, 50, 50});
+    texture.update();
 }
 
 

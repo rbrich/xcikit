@@ -72,12 +72,25 @@ void DeviceMemory::bind_image(VkImage image, VkDeviceSize offset)
 void DeviceMemory::copy_data(VkDeviceSize offset, VkDeviceSize size,
         const void* src_data)
 {
+    void* mapped = map(offset, size);
+    std::memcpy(mapped, src_data, (size_t) size);
+    unmap();
+}
+
+
+void* DeviceMemory::map(VkDeviceSize offset, VkDeviceSize size)
+{
     assert(m_memory_pool != VK_NULL_HANDLE);  // must be allocated
     void* mapped = nullptr;
     VK_TRY("vkMapMemory",
             vkMapMemory(m_renderer.vk_device(), m_memory_pool,
-            offset, size, 0, &mapped));
-    std::memcpy(mapped, src_data, (size_t) size);
+                    offset, size, 0, &mapped));
+    return mapped;
+}
+
+
+void DeviceMemory::unmap()
+{
     vkUnmapMemory(m_renderer.vk_device(), m_memory_pool);
 }
 

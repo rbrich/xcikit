@@ -125,11 +125,13 @@ void CommandBuffer::transition_buffer(
 
 
 void
-CommandBuffer::copy_buffer_to_image(VkBuffer buffer, VkImage image, const Rect_u& region)
+CommandBuffer::copy_buffer_to_image(
+        VkBuffer buffer, VkDeviceSize buffer_offset, uint32_t buffer_row_len,
+        VkImage image, const Rect_u& region)
 {
     VkBufferImageCopy copy_region = {
-            .bufferOffset = 0,
-            .bufferRowLength = 0,
+            .bufferOffset = buffer_offset,
+            .bufferRowLength = buffer_row_len,
             .bufferImageHeight = 0,
             .imageSubresource = {
                     .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,

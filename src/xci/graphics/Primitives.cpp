@@ -219,6 +219,8 @@ void Primitives::update()
 {
     if (m_pipeline == VK_NULL_HANDLE)
         create_pipeline();
+    if (m_texture.ptr)
+        m_texture.ptr->update();
 }
 
 

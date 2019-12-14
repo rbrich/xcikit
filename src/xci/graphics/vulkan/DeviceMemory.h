@@ -38,6 +38,9 @@ public:
     void copy_data(VkDeviceSize offset, VkDeviceSize size,
             const void* src_data);
 
+    void* map(VkDeviceSize offset, VkDeviceSize size);
+    void unmap();
+
 private:
     uint32_t find_memory_type(VkMemoryPropertyFlags properties);
     void pad_to_alignment(VkDeviceSize alignment);

@@ -17,10 +17,11 @@
 
 #include <range/v3/algorithm/any_of.hpp>
 #include <range/v3/view/enumerate.hpp>
-
+#include <range/v3/view/take.hpp>
 #include <memory>
 #include <cstring>
 #include <bitset>
+#include <array>
 
 #ifdef XCI_EMBED_SHADERS
 #define INCBIN_PREFIX g_
@@ -344,12 +345,12 @@ void Renderer::reset_framebuffer(VkExtent2D new_size)
 
 void Renderer::create_device()
 {
-    uint32_t device_count = 0;
-    vkEnumeratePhysicalDevices(m_instance, &device_count, nullptr);
+    constexpr uint32_t max_physical_devices = 20;
+    std::array<VkPhysicalDevice, max_physical_devices> devices;  // NOLINT
+    uint32_t device_count = max_physical_devices;
+    vkEnumeratePhysicalDevices(m_instance, &device_count, devices.data());
     if (device_count == 0)
         VK_THROW("vulkan: couldn't find any physical device");
-    std::vector<VkPhysicalDevice> devices(device_count);
-    vkEnumeratePhysicalDevices(m_instance, &device_count, devices.data());
 
     // required device extensions
     const char* const device_extensions[] = {
@@ -360,7 +361,7 @@ void Renderer::create_device()
     uint32_t graphics_queue_family = 0;
 
     log_info("Vulkan: {} devices available:", device_count);
-    for (const auto& device : devices) {
+    for (const auto& device : devices | ranges::views::take(device_count)) {
         VkPhysicalDeviceProperties device_props;
         vkGetPhysicalDeviceProperties(device, &device_props);
         VkPhysicalDeviceFeatures device_features;

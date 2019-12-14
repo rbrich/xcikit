@@ -8,9 +8,13 @@
 #include "Renderer.h"
 #include "vulkan/VulkanError.h"
 #include "vulkan/CommandBuffer.h"
+#include <xci/core/log.h>
 #include <cassert>
+#include <cstring>
 
 namespace xci::graphics {
+
+using namespace xci::core::log;
 
 
 Texture::Texture(Renderer& renderer)
@@ -42,6 +46,7 @@ bool Texture::create(const Vec2u& size)
             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
             VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         m_staging_memory.bind_buffer(m_staging_buffer, offset);
+        m_staging_mapped = m_staging_memory.map(0, byte_size());
     }
 
     // image
@@ -117,49 +122,58 @@ bool Texture::create(const Vec2u& size)
 }
 
 
-void Texture::update(const uint8_t* pixels)
+void Texture::write(const uint8_t* pixels)
 {
-    m_staging_memory.copy_data(0, byte_size(), pixels);
-
-    CommandBuffer cmd_buf(m_renderer);
-    cmd_buf.begin();
-
-    cmd_buf.transition_image_layout(m_image,
-        VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
-        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
-    cmd_buf.copy_buffer_to_image(m_staging_buffer, m_image,
-            {0, 0, m_size.x, m_size.y});
-
-    cmd_buf.transition_image_layout(m_image,
-        VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-    cmd_buf.end();
-    cmd_buf.submit();
+    assert(m_staging_mapped != nullptr);
+    std::memcpy(m_staging_mapped, pixels, byte_size());
+    m_pending_regions.clear();
+    m_pending_regions.emplace_back(0, 0, m_size.x, m_size.y);
 }
 
 
-void Texture::update(const uint8_t* pixels, const Rect_u& region)
+void Texture::write(const uint8_t* pixels, const Rect_u& region)
 {
-    m_staging_memory.copy_data(0, region.w * region.h, pixels);
+    assert(m_staging_mapped != nullptr);
+    for (size_t y = 0; y != region.h; ++y) {
+        std::memcpy(
+            (char*) m_staging_mapped + (y + region.y) * m_size.x + region.x,
+            pixels + y * region.w,
+            region.w);
+    }
+    m_pending_regions.push_back(region);
+}
 
+
+void Texture::update()
+{
+    if (m_pending_regions.empty())
+        return;
+
+    TRACE("write pending regions to texture");
     CommandBuffer cmd_buf(m_renderer);
     cmd_buf.begin();
 
     cmd_buf.transition_image_layout(m_image,
-        VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
-        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+            m_image_layout,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-    cmd_buf.copy_buffer_to_image(m_staging_buffer, m_image, region);
+    for (auto& region : m_pending_regions) {
+        // offset must be a multiple of 4
+        auto align = (region.y * m_size.x + region.x) % 4;
+        region.x -= align;
+        region.w += align;
+        cmd_buf.copy_buffer_to_image(m_staging_buffer,
+                region.y * m_size.x + region.x, m_size.x,
+                m_image, region);
+    }
+    m_pending_regions.clear();
 
+    m_image_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     cmd_buf.transition_image_layout(m_image,
-        VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
-        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT,
+            VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, m_image_layout);
 
     cmd_buf.end();
     cmd_buf.submit();
@@ -174,6 +188,8 @@ VkDevice Texture::device() const
 
 void Texture::destroy()
 {
+    if (m_staging_mapped != nullptr)
+        m_staging_memory.unmap();
     vkDestroySampler(device(), m_sampler, nullptr);
     vkDestroyImageView(device(), m_image_view, nullptr);
     vkDestroyImage(device(), m_image, nullptr);

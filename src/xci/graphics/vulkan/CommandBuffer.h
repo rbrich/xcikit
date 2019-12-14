@@ -33,8 +33,9 @@ public:
     void transition_buffer(VkBuffer buffer, VkDeviceSize size,
             VkAccessFlags src_access, VkAccessFlags dst_access,
             VkPipelineStageFlags src_stage, VkPipelineStageFlags dst_stage);
-    void copy_buffer_to_image(VkBuffer buffer, VkImage image,
-            const Rect_u& region);
+    void copy_buffer_to_image(VkBuffer buffer,
+            VkDeviceSize buffer_offset, uint32_t buffer_row_len,
+            VkImage image, const Rect_u& region);
 
 private:
     Renderer& m_renderer;
