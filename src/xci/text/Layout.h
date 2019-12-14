@@ -138,7 +138,7 @@ private:
     Style m_default_style;
     ViewportUnits m_default_width = 0;
 
-    mutable std::vector<graphics::Shape> m_debug_shapes;
+    mutable std::list<graphics::Shape> m_debug_shapes;
 };
 
 

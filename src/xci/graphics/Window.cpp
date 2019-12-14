@@ -335,9 +335,11 @@ void Window::reset_command_buffers()
 {
     vkDeviceWaitIdle(m_renderer.vk_device());
 
-    for (size_t i = 0; i < cmd_buf_count; ++i) {
-        VK_TRY("vkBeginCommandBuffer",
-                vkResetCommandBuffer(m_command_buffers[i], 0));
+    for (auto & com_buf : m_command_buffers) {
+        if (com_buf != nullptr) {
+            VK_TRY("vkResetCommandBuffer",
+                    vkResetCommandBuffer(com_buf, 0));
+        }
     }
 }
 

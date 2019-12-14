@@ -43,10 +43,11 @@ int main()
     Vfs vfs;
     vfs.mount(XCI_SHARE_DIR);
 
-    Window& window = Window::default_instance();
+    Renderer renderer {vfs};
+    Window window {renderer};
     window.create({800, 600}, "XCI layout demo");
 
-    Font font;
+    Font font {renderer};
     if (!font.add_face(vfs, "fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
         return EXIT_FAILURE;
 
@@ -66,56 +67,62 @@ int main()
                          "[p] show page boxes\n");
     help_text.set_color(Color(50, 200, 100));
 
+    Sprites font_texture(renderer, font.texture(), Color(0, 50, 255));
+
     View::DebugFlags debug_flags = 0;
-    window.set_key_callback([&](View& view, KeyEvent ev){
+    window.set_key_callback([&](View& view, KeyEvent ev) {
         if (ev.action != Action::Press)
             return;
         switch (ev.key) {
             case Key::C:
                 debug_flags ^= (int)View::Debug::GlyphBBox;
-                view.set_debug_flags(debug_flags);
                 break;
             case Key::O:
                 debug_flags ^= (int)View::Debug::WordBasePoint;
-                view.set_debug_flags(debug_flags);
                 break;
             case Key::W:
                 debug_flags ^= (int)View::Debug::WordBBox;
-                view.set_debug_flags(debug_flags);
                 break;
             case Key::U:
                 debug_flags ^= (int)View::Debug::LineBaseLine;
-                view.set_debug_flags(debug_flags);
                 break;
             case Key::L:
                 debug_flags ^= (int)View::Debug::LineBBox;
-                view.set_debug_flags(debug_flags);
                 break;
             case Key::S:
                 debug_flags ^= (int)View::Debug::SpanBBox;
-                view.set_debug_flags(debug_flags);
                 break;
             case Key::P:
                 debug_flags ^= (int)View::Debug::PageBBox;
-                view.set_debug_flags(debug_flags);
                 break;
             default:
-                break;
+                return;
         }
+        view.set_debug_flags(debug_flags);
         view.refresh();
+    });
+
+    window.set_size_callback([&](View& view) {
+        help_text.resize(view);
+        text.resize(view);
+
+        auto tex_size = view.size_to_viewport(FramebufferSize{font.texture().size()});
+        ViewportRect rect = {0, 0, tex_size.x, tex_size.y};
+        font_texture.clear();
+        font_texture.add_sprite(rect);
+        font_texture.update();
+    });
+
+    window.set_update_callback([&](View& view, std::chrono::nanoseconds) {
+        text.update(view);
     });
 
     window.set_draw_callback([&](View& view) {
         help_text.draw(view, {-0.17f, -0.9f});
         text.draw(view, {-0.17f, -0.3f});
 
-        auto& tex = font.texture();
-        auto tex_size = view.size_to_viewport(FramebufferSize{tex->size()});
-        Sprites font_texture(tex);
-        ViewportRect rect = {0, 0, tex_size.x, tex_size.y};
-        font_texture.add_sprite(rect);
         font_texture.draw(view, {-0.5f * view.viewport_size().x + 0.01f,
-                                 -0.5f * rect.h});
+                                 -0.5f * view.viewport_size().y + 0.01f});
     });
 
     window.display();

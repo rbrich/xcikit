@@ -125,8 +125,6 @@ int main()
     });
 
     window.set_update_callback([&](View& view, std::chrono::nanoseconds) {
-        view.window()->reset_command_buffers();
-
         shapes_help.update(view);
         option_help.update(view);
 

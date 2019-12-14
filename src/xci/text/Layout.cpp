@@ -92,6 +92,7 @@ void Layout::update(const graphics::View& target)
                 Color(150, 150, 0, 128),
                 Color(200, 200, 50));
         m_debug_shapes.back().add_rectangle(bbox(), sc_1px);
+        m_debug_shapes.back().update();
     }
 
     // Debug: span bboxes
@@ -104,6 +105,7 @@ void Layout::update(const graphics::View& target)
                 m_debug_shapes.back().add_rectangle(part.bbox(), sc_1px);
             }
         });
+        m_debug_shapes.back().update();
     }
 
     // Debug: line bboxes
@@ -114,6 +116,7 @@ void Layout::update(const graphics::View& target)
         m_page.foreach_line([&](const Line& line) {
             m_debug_shapes.back().add_rectangle(line.bbox(), sc_1px);
         });
+        m_debug_shapes.back().update();
     }
 
     // Debug: line baselines
@@ -125,6 +128,7 @@ void Layout::update(const graphics::View& target)
             rect.h = sc_1px;
             m_debug_shapes.back().add_rectangle(rect);
         });
+        m_debug_shapes.back().update();
     }
 }
 

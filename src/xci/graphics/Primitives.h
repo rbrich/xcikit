@@ -14,6 +14,7 @@
 #include "Texture.h"
 #include "vulkan/DeviceMemory.h"
 #include <xci/core/geometry.h>
+#include <xci/core/NonCopyable.h>
 
 #include <vulkan/vulkan.h>
 
@@ -44,7 +45,7 @@ enum class BlendFunc {
 };
 
 
-class Primitives {
+class Primitives: private core::NonCopyable {
 public:
     explicit Primitives(Renderer& renderer, VertexFormat format, PrimitiveType type);
     ~Primitives();

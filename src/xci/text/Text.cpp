@@ -118,6 +118,7 @@ void Text::resize(graphics::View& view)
 
 void Text::update(graphics::View& view)
 {
+    view.window()->reset_command_buffers();
     if (m_need_typeset) {
         m_layout.typeset(view);
         m_need_typeset = false;

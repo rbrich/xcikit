@@ -21,6 +21,7 @@
 #include <xci/graphics/Color.h>
 #include <xci/graphics/View.h>
 #include <xci/core/geometry.h>
+#include <xci/core/NonCopyable.h>
 
 namespace xci::graphics {
 
@@ -31,7 +32,7 @@ using xci::core::Vec2f;
 /// A collection of one of basic shapes: rectangles, ellipses, lines.
 /// Each shape may have different size and outline width,
 /// but colors are uniform.
-class Shape {
+class Shape: private core::NonCopyable {
 public:
     explicit Shape(Renderer& renderer,
                    const Color& fill_color = Color::Black(),

@@ -104,6 +104,7 @@ void Word::update(const graphics::View& target)
                 Color(0, 150, 0),
                 Color(50, 250, 50));
         m_debug_shapes.back().add_rectangle(m_bbox, fb_1px);
+        m_debug_shapes.back().update();
     }
 
     bool show_bboxes = target.has_debug_flag(View::Debug::GlyphBBox);
@@ -134,6 +135,9 @@ void Word::update(const graphics::View& target)
         pen.x += target.size_to_viewport(FramebufferPixels{glyph->advance()});
     }
 
+    if (show_bboxes)
+        m_debug_shapes.back().update();
+
     m_sprites->update();
 
     if (target.has_debug_flag(View::Debug::WordBasePoint)) {
@@ -142,6 +146,7 @@ void Word::update(const graphics::View& target)
         m_debug_shapes.back().add_rectangle({
             m_pos.x - sc_1px, m_pos.y - sc_1px,
             2 * sc_1px, 2 * sc_1px});
+        m_debug_shapes.back().update();
     }
 }
 
@@ -155,7 +160,8 @@ void Word::draw(graphics::View& target, const ViewportCoords& pos) const
     if (m_sprites)
         m_sprites->draw(target, pos);
 
-    if (target.has_debug_flag(View::Debug::WordBasePoint)) {
+    if (target.has_debug_flag(View::Debug::WordBasePoint)
+    && !m_debug_shapes.empty()) {
         // basepoint needs to be drawn on-top (it's the last debug shape)
         m_debug_shapes.back().draw(target, pos);
     }

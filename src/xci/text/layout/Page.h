@@ -71,7 +71,7 @@ private:
     ViewportUnits m_baseline = 0;  // relative to bbox top
 
     mutable std::optional<graphics::Sprites> m_sprites;
-    mutable std::vector<graphics::Shape> m_debug_shapes;
+    mutable std::list<graphics::Shape> m_debug_shapes;
 };
 
 
