@@ -97,8 +97,6 @@ public:
     void draw(View& view, const ViewportCoords& pos);
 
 private:
-    Renderer& m_renderer;
-
     Color m_fill_color;
     Color m_outline_color;
     float m_antialiasing = 0;

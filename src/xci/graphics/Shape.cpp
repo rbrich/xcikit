@@ -24,8 +24,7 @@ using namespace xci::core::log;
 
 
 Shape::Shape(Renderer& renderer, const Color& fill_color, const Color& outline_color)
-        : m_renderer(renderer),
-          m_fill_color(fill_color), m_outline_color(outline_color),
+        : m_fill_color(fill_color), m_outline_color(outline_color),
           m_lines(renderer, VertexFormat::V2t2, PrimitiveType::TriFans),
           m_rectangles(renderer, VertexFormat::V2c4t22, PrimitiveType::TriFans),
           m_ellipses(renderer, VertexFormat::V2t22, PrimitiveType::TriFans),

@@ -38,7 +38,9 @@ bool Texture::create(const Vec2u& size)
         vkGetBufferMemoryRequirements(device(), m_staging_buffer, &mem_req);
         auto offset = m_staging_memory.reserve(mem_req);
         assert(offset == 0);
-        m_staging_memory.allocate();
+        m_staging_memory.allocate(
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
         m_staging_memory.bind_buffer(m_staging_buffer, offset);
     }
 

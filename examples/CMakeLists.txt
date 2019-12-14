@@ -23,6 +23,10 @@ install(TARGETS demo_vfs EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 
 # graphics
 
+add_executable(demo_vulkan demo_vulkan.cpp)
+target_link_libraries(demo_vulkan xci-graphics)
+install(TARGETS demo_vulkan EXPORT xcikit DESTINATION ${INST_EXAMPLES})
+
 add_executable(demo_coords demo_coords.cpp)
 target_link_libraries(demo_coords xci-text xci-graphics)
 install(TARGETS demo_coords EXPORT xcikit DESTINATION ${INST_EXAMPLES})
@@ -66,31 +70,6 @@ install(TARGETS demo_term_widget EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 add_executable(demo_term_dispatch demo_term_dispatch.cpp)
 target_link_libraries(demo_term_dispatch xci-widgets xci-graphics)
 install(TARGETS demo_term_dispatch EXPORT xcikit DESTINATION ${INST_EXAMPLES})
-
-if (XCI_WITH_OPENGL)
-    find_package(glfw3 3.2 REQUIRED)
-    find_package(glad REQUIRED)
-    add_executable(demo_glfw demo_glfw.cpp)
-    target_link_libraries(demo_glfw
-        xci-text
-        xci-graphics-opengl
-        glad::glad
-        glfw)
-    target_include_directories(demo_glfw PRIVATE ${CMAKE_SOURCE_DIR}/ext)
-    install(TARGETS demo_glfw EXPORT xcikit DESTINATION ${INST_EXAMPLES})
-endif ()
-
-if (XCI_WITH_VULKAN)
-    find_package(glfw3 3.2 REQUIRED)
-    find_package(Vulkan REQUIRED)
-    add_executable(demo_vulkan demo_vulkan.cpp)
-    target_link_libraries(demo_vulkan
-        xci-graphics
-        Vulkan::Vulkan
-        glfw)
-    target_include_directories(demo_vulkan PRIVATE ${CMAKE_SOURCE_DIR}/ext)
-    install(TARGETS demo_vulkan EXPORT xcikit DESTINATION ${INST_EXAMPLES})
-endif ()
 
 add_executable(demo_reflect reflect/demo_reflect.cpp)
 target_link_libraries(demo_reflect xci-data)

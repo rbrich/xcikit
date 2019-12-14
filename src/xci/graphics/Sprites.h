@@ -60,7 +60,6 @@ public:
     void draw(View& view, const ViewportCoords& pos);
 
 private:
-    Renderer& m_renderer;
     Texture& m_texture;
     Color m_color;
     Primitives m_quads;
@@ -98,7 +97,6 @@ public:
     void draw(View& view, const ViewportCoords& pos);
 
 private:
-    Renderer& m_renderer;
     Texture& m_texture;
     Color m_color;
     Primitives m_quads;

@@ -136,6 +136,7 @@ target_include_directories(xci-text
 target_link_libraries(xci-text
     PUBLIC
         xci-core
+        xci-graphics
     PRIVATE
         ${FREETYPE_LIBRARIES})
 
