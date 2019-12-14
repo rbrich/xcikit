@@ -37,6 +37,8 @@ public:
             VkDeviceSize buffer_offset, uint32_t buffer_row_len,
             VkImage image, const Rect_u& region);
 
+    VkCommandBuffer vk_command_buffer() const { return m_command_buffer; }
+
 private:
     Renderer& m_renderer;
     VkCommandBuffer m_command_buffer;

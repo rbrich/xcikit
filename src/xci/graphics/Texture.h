@@ -38,6 +38,7 @@ public:
     // Write data to staging memory (don't forget to `update` the texture)
     void write(const uint8_t* pixels);
     void write(const uint8_t* pixels, const Rect_u& region);
+    void clear();
 
     // Transfer pending data to texture memory
     void update();
@@ -65,6 +66,7 @@ private:
     DeviceMemory m_image_memory;  // FIXME: pool the memory
     void* m_staging_mapped = nullptr;
     std::vector<Rect_u> m_pending_regions;
+    bool m_pending_clear = false;
 };
 
 

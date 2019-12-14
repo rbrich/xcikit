@@ -714,6 +714,9 @@ void Renderer::set_present_mode(PresentMode mode)
         case PresentMode::Fifo:
             m_present_mode = VK_PRESENT_MODE_FIFO_KHR;
             break;
+        case PresentMode::FifoRelaxed:
+            m_present_mode = VK_PRESENT_MODE_FIFO_RELAXED_KHR;
+            break;
     }
 
     // not yet initialized

@@ -27,9 +27,10 @@ namespace xci::graphics {
 
 
 enum class PresentMode {
-    Immediate,  // no vsync, possible tearing
-    Mailbox,    // vsync, new request replaces old one (program is not slowed down)
-    Fifo,       // vsync, requests are queued
+    Immediate,      // no vsync, possible tearing
+    Mailbox,        // vsync, new request replaces old one (program is not slowed down)
+    Fifo,           // vsync, requests are queued
+    FifoRelaxed,    // vsync, requests are queued, late frame can be displayed immediately
 };
 
 
@@ -44,6 +45,7 @@ public:
     /// - Immediate      - do not wait for vertical blank period
     /// - Mailbox        - driver waits, program doesn't (new request replaces old one)
     /// - Fifo*          - full vsync, requests are queued (*default)
+    /// - FifoRelaxed    - mostly vsync, late frame can be displayed immediately
     void set_present_mode(PresentMode mode);
 
     /// Get one of the predefined shaders

@@ -144,6 +144,14 @@ void Texture::write(const uint8_t* pixels, const Rect_u& region)
 }
 
 
+void Texture::clear()
+{
+    m_pending_clear = true;
+    m_pending_regions.clear();
+    std::memset(m_staging_mapped, 0, byte_size());
+}
+
+
 void Texture::update()
 {
     if (m_pending_regions.empty())
@@ -157,6 +165,21 @@ void Texture::update()
             VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
             VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
             m_image_layout,VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    if (m_pending_clear) {
+        m_pending_clear = false;
+        VkImageSubresourceRange range {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+        };
+        VkClearColorValue clear_color {};
+        vkCmdClearColorImage(cmd_buf.vk_command_buffer(),
+                m_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                &clear_color, 1, &range);
+    }
 
     for (auto& region : m_pending_regions) {
         // offset must be a multiple of 4
