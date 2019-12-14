@@ -15,6 +15,7 @@
 
 #include "Button.h"
 #include <xci/text/Markup.h>
+#include <xci/graphics/Renderer.h>
 
 namespace xci::widgets {
 
@@ -22,20 +23,23 @@ using namespace xci::graphics;
 using namespace xci::text;
 
 
-Button::Button(const std::string &string)
-    : m_bg_rect(Color(10, 20, 40), theme().color(ColorId::Default))
+Button::Button(Theme& theme, const std::string &string)
+    : Widget(theme),
+      m_bg_rect(theme.renderer(),
+              Color(10, 20, 40), theme.color(ColorId::Default))
 {
     set_focusable(true);
-    m_layout.set_default_font(&theme().font());
+    m_layout.set_default_font(&theme.font());
     Markup markup(m_layout);
     markup.parse(string);
 }
 
 
 void Button::set_decoration_color(const graphics::Color& fill,
-                                  const graphics::Color& border)
+                                  const graphics::Color& outline)
 {
-    m_bg_rect = Shape(fill, border);
+    m_bg_rect.set_fill_color(fill);
+    m_bg_rect.set_outline_color(outline);
 }
 
 

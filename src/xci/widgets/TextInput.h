@@ -25,7 +25,7 @@ namespace xci::widgets {
 
 class TextInput: public Widget, public Clickable {
 public:
-    explicit TextInput(const std::string& string);
+    explicit TextInput(Theme& theme, const std::string& string);
 
     void set_string(const std::string& string);
     const std::string& string() const { return m_text; }
@@ -35,7 +35,7 @@ public:
     void set_padding(ViewportUnits padding) { m_padding = padding; }
     void set_outline_thickness(ViewportUnits thickness) { m_outline_thickness = thickness; }
 
-    void set_decoration_color(const graphics::Color& fill, const graphics::Color& border);
+    void set_decoration_color(const graphics::Color& fill, const graphics::Color& outline);
     void set_text_color(const graphics::Color& color) { m_layout.set_default_color(color); }
 
     using ChangeCallback = std::function<void(View&)>;

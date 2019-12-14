@@ -18,13 +18,15 @@
 namespace xci::widgets {
 
 
-Label::Label()
+Label::Label(Theme& theme)
+    : Widget(theme)
 {
-    m_text.set_font(theme().font());
+    m_text.set_font(theme.font());
 }
 
 
-Label::Label(const std::string& string) : Label()
+Label::Label(Theme& theme, const std::string& string)
+    : Label(theme)
 {
     m_text.set_fixed_string(string);
 }

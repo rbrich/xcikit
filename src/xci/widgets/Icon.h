@@ -19,12 +19,13 @@
 #include <xci/widgets/Widget.h>
 #include <xci/text/Layout.h>
 
-namespace xci {
-namespace widgets {
+namespace xci::widgets {
 
 
 class Icon: public Widget {
 public:
+    explicit Icon(Theme& theme) : Widget(theme) {}
+
     void set_icon(IconId icon_id);
     void set_text(const std::string& text);
     void set_font_size(float size);
@@ -43,6 +44,6 @@ private:
 };
 
 
-}} // namespace xci::widgets
+} // namespace xci::widgets
 
 #endif // XCI_WIDGETS_ICON_H

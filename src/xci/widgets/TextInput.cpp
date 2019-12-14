@@ -24,14 +24,15 @@ using namespace xci::text;
 using namespace xci::core;
 
 
-TextInput::TextInput(const std::string& string)
-    : m_text(string),
-      m_bg_rect(Color(10, 20, 40), theme().color(ColorId::Default)),
-      m_cursor_shape(Color::Yellow(), Color::Transparent()),
+TextInput::TextInput(Theme& theme, const std::string& string)
+    : Widget(theme),
+      m_text(string),
+      m_bg_rect(theme.renderer(), Color(10, 20, 40), theme.color(ColorId::Default)),
+      m_cursor_shape(theme.renderer(), Color::Yellow(), Color::Transparent()),
       m_cursor(string.size())
 {
     set_focusable(true);
-    m_layout.set_default_font(&theme().font());
+    m_layout.set_default_font(&theme.font());
 }
 
 
@@ -42,9 +43,10 @@ void TextInput::set_string(const std::string& string)
 
 
 void TextInput::set_decoration_color(const graphics::Color& fill,
-                                     const graphics::Color& border)
+                                     const graphics::Color& outline)
 {
-    m_bg_rect = Shape(fill, border);
+    m_bg_rect.set_fill_color(fill);
+    m_bg_rect.set_outline_color(outline);
 }
 
 

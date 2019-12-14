@@ -27,13 +27,13 @@ namespace xci::widgets {
 
 class Button: public Widget, public Clickable {
 public:
-    explicit Button(const std::string &string);
+    explicit Button(Theme& theme, const std::string &string);
 
     void set_font_size(ViewportUnits size) { m_layout.set_default_font_size(size); }
     void set_padding(ViewportUnits padding) { m_padding = padding; }
     void set_outline_thickness(ViewportUnits thickness) { m_outline_thickness = thickness; }
 
-    void set_decoration_color(const graphics::Color& fill, const graphics::Color& border);
+    void set_decoration_color(const graphics::Color& fill, const graphics::Color& outline);
     void set_text_color(const graphics::Color& color);
 
     void resize(View& view) override;

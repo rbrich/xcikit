@@ -43,11 +43,10 @@ struct State {
 
 class Widget {
 public:
-    Widget() : m_tab_focusable(false), m_click_focusable(false) {}
+    explicit Widget(Theme& theme);
     virtual ~Widget() = default;
 
-    void set_theme(Theme& theme) { m_theme = &theme; }
-    Theme& theme() const { return *m_theme; }
+    Theme& theme() const { return m_theme; }
 
     // Set position of widget, relative to the parent
     void set_position(const ViewportCoords& pos) { m_position = pos; }
@@ -98,7 +97,7 @@ protected:
     void set_baseline(ViewportUnits baseline) { m_baseline = baseline; }
 
 private:
-    Theme* m_theme = &Theme::default_theme();
+    Theme& m_theme;
     ViewportCoords m_position;
     ViewportSize m_size;
     ViewportUnits m_baseline = 0;

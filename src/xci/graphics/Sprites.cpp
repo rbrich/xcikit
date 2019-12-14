@@ -132,6 +132,7 @@ void ColoredSprites::update()
     m_quads.set_texture(1, m_texture);
     m_quads.set_shader(m_shader);
     m_quads.set_blend(BlendFunc::AlphaBlend);
+    m_quads.update();
 }
 
 

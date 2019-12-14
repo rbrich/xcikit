@@ -27,22 +27,22 @@ namespace xci::widgets {
 
 class FpsDisplay: public Widget {
 public:
-    FpsDisplay();
+    explicit FpsDisplay(Theme& theme);
 
     void update(View& view, std::chrono::nanoseconds elapsed) override;
     void resize(View& view) override;
     void draw(View& view, State state) override;
 
 private:
-    void init_shader();
+    void create_sprite();
     void update_texture();
 
 private:
     std::chrono::steady_clock::time_point m_prevtime = std::chrono::steady_clock::now();
     core::FpsCounter m_fps;
-    graphics::PrimitivesPtr m_quad;
-    graphics::ShaderPtr m_shader;
-    graphics::TexturePtr m_texture;
+    graphics::Primitives m_quad;
+    graphics::Shader& m_shader;
+    graphics::Texture m_texture;
     text::Text m_text;
     bool m_frozen = false;
 };

@@ -117,8 +117,8 @@ struct ScrollEvent {
 
 
 enum class RefreshMode {
-    OnDemand,  // got refresh event from system or called View::refresh()
-    OnEvent,   // got any event from system
+    OnDemand,   // got refresh event from system or called View::refresh()
+    OnEvent,    // got any event from system
     Periodic,   // continuous refresh
 };
 
@@ -184,13 +184,7 @@ public:
     // - OnDemand is energy-saving mode, good for normal GUI applications (forms etc.)
     // - OnEvent is similar, but does not require explicit calls to View::refresh()
     // - Periodic is good for games (continuous animations)
-    void set_refresh_mode(RefreshMode mode)  { m_mode = mode; }
-
-    // Refresh interval. This helps limiting framerate.
-    // - 0: do not wait for screen update
-    // - 1: wait for screen update (vsync)
-    // - 2: wait for 2nd screen update (vsync with halved FPS)
-    void set_refresh_interval(int interval);
+    void set_refresh_mode(RefreshMode mode)  { m_refresh_mode = mode; }
 
     /// Set refresh timeout. This is useful for OnDemand/OnEvent modes,
     /// where no update events are generated unless an event occurs.
@@ -230,7 +224,7 @@ private:
     Renderer& m_renderer;
     GLFWwindow* m_window = nullptr;
     View m_view {this};
-    RefreshMode m_mode = RefreshMode::OnDemand;
+    RefreshMode m_refresh_mode = RefreshMode::OnDemand;
     Vec2i m_window_pos;
     Vec2i m_window_size;
     std::chrono::microseconds m_timeout {0};

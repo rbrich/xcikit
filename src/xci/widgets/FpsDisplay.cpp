@@ -14,20 +14,9 @@
 // limitations under the License.
 
 #include "FpsDisplay.h"
-#include <xci/config.h>
-#include <xci/core/log.h>
 #include <xci/core/format.h>
 #include <xci/graphics/Renderer.h>
 #include <chrono>
-#include <cstring>
-
-#ifdef XCI_EMBED_SHADERS
-#define INCBIN_PREFIX g_
-#define INCBIN_STYLE INCBIN_STYLE_SNAKE
-#include <incbin.h>
-INCBIN(fps_vert, XCI_SHARE_DIR "/shaders/fps.vert");
-INCBIN(fps_frag, XCI_SHARE_DIR "/shaders/fps.frag");
-#endif
 
 namespace xci::widgets {
 
@@ -39,17 +28,31 @@ using xci::core::format;
 using namespace std::chrono_literals;
 
 
-FpsDisplay::FpsDisplay()
-        : m_quad(Renderer::default_instance().create_primitives(VertexFormat::V2t2, PrimitiveType::TriFans)),
-          m_texture(Renderer::default_instance().create_texture())
+FpsDisplay::FpsDisplay(Theme& theme)
+        : Widget(theme),
+          m_quad(theme.renderer(), VertexFormat::V2t2, PrimitiveType::TriFans),
+          m_shader(theme.renderer().get_shader(ShaderId::Fps)),
+          m_texture(theme.renderer())
 {
+    m_texture.create({(unsigned)m_fps.resolution(), 1});
+
     // default size in "scalable" units
     set_size({0.50f, 0.10f});
+    create_sprite();
 }
 
 
 void FpsDisplay::update(View& view, std::chrono::nanoseconds elapsed)
 {
+    if (!m_frozen) {
+        update_texture();
+        m_text.set_string(format("{}fps ({:.2f}ms)",
+                        m_fps.frame_rate(),
+                        m_fps.avg_frame_time() * 1000));
+        m_text.update(view);
+        m_quad.update();
+    }
+
     if (elapsed > 400ms && !m_frozen) {
         // Almost 1 seconds since last refresh - freeze the counter
         m_frozen = true;
@@ -65,18 +68,10 @@ void FpsDisplay::update(View& view, std::chrono::nanoseconds elapsed)
 
 void FpsDisplay::resize(View& view)
 {
-    auto x1 = 0_vp;
-    auto y1 = 0_vp;
-    auto x2 = size().x;
-    auto y2 = size().y;
-    m_quad->clear();
-    m_quad->begin_primitive();
-    m_quad->add_vertex({x1, y1}, 0, 0);
-    m_quad->add_vertex({x1, y2}, 0, 1);
-    m_quad->add_vertex({x2, y2}, 1, 1);
-    m_quad->add_vertex({x2, y1}, 1, 0);
-    m_quad->end_primitive();
-    m_texture->create({(unsigned)m_fps.resolution(), 1});
+    m_quad.clear();
+    create_sprite();
+
+
     m_text.set_font(theme().font());
     m_text.set_font_size(size().y / 2);
 }
@@ -94,15 +89,7 @@ void FpsDisplay::draw(View& view, State state)
         return; // don't draw anything
 
     // Draw
-    init_shader();
-    update_texture();
-    m_shader->set_texture("u_texture", m_texture);
-    m_quad->set_shader(m_shader);
-    m_quad->draw(view, position());
-
-    m_text.set_string(format("{}fps ({:.2f}ms)",
-                             m_fps.frame_rate(),
-                             m_fps.avg_frame_time() * 1000));
+    m_quad.draw(view, position());
 
     auto font_size = size().y / 2;
     auto offset = size().y / 5;
@@ -110,25 +97,22 @@ void FpsDisplay::draw(View& view, State state)
 }
 
 
-void FpsDisplay::init_shader()
+void FpsDisplay::create_sprite()
 {
-    if (m_shader)
-        return;
-    auto& renderer = Renderer::default_instance();
-    m_shader = renderer.get_or_create_shader(ShaderId::Custom);
-    if (m_shader->is_ready())
-        return;
-
-#ifdef XCI_EMBED_SHADERS
-    bool res = m_shader->load_from_memory(
-                (const char*)g_fps_vert_data, g_fps_vert_size,
-                (const char*)g_fps_frag_data, g_fps_frag_size);
-#else
-    bool res = m_shader->load_from_vfs("shaders/fps.vert", "shaders/fps.frag");
-#endif
-    if (!res) {
-        log_error("FPS shader not loaded!");
-    }
+    auto x1 = 0_vp;
+    auto y1 = 0_vp;
+    auto x2 = size().x;
+    auto y2 = size().y;
+    m_quad.reserve(4);
+    m_quad.begin_primitive();
+    m_quad.add_vertex({x1, y1}, 0, 0);
+    m_quad.add_vertex({x1, y2}, 0, 1);
+    m_quad.add_vertex({x2, y2}, 1, 1);
+    m_quad.add_vertex({x2, y1}, 1, 0);
+    m_quad.end_primitive();
+    m_quad.set_texture(1, m_texture);
+    m_quad.set_shader(m_shader);
+    m_quad.update();
 }
 
 
@@ -140,7 +124,8 @@ void FpsDisplay::update_texture()
     m_fps.foreach_sample([&](float sample) {
         *pixel++ = uint8_t(sample / sample_max * 255.f);
     });
-    m_texture->update(pixels);
+    m_texture.write(pixels);
+    m_texture.update();
 }
 
 

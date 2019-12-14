@@ -23,6 +23,12 @@ namespace xci::widgets {
 using namespace xci::graphics;
 
 
+Widget::Widget(Theme& theme)
+    : m_theme(theme),
+      m_tab_focusable(false), m_click_focusable(false)
+{}
+
+
 void Widget::partial_dump(std::ostream& stream, const std::string& nl_prefix)
 {
     using namespace std;

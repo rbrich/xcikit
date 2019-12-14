@@ -27,16 +27,18 @@
 #define INCBIN_PREFIX g_
 #define INCBIN_STYLE INCBIN_STYLE_SNAKE
 #include <incbin.h>
-INCBIN(sprite_vert, XCI_SHARE_DIR "/shaders/sprite.vert");
-INCBIN(sprite_frag, XCI_SHARE_DIR "/shaders/sprite.frag");
-INCBIN(sprite_c_vert, XCI_SHARE_DIR "/shaders/sprite_c.vert");
-INCBIN(sprite_c_frag, XCI_SHARE_DIR "/shaders/sprite_c.frag");
-INCBIN(line_vert, XCI_SHARE_DIR "/shaders/line.vert");
-INCBIN(line_frag, XCI_SHARE_DIR "/shaders/line.frag");
-INCBIN(rectangle_vert, XCI_SHARE_DIR "/shaders/rectangle.vert");
-INCBIN(rectangle_frag, XCI_SHARE_DIR "/shaders/rectangle.frag");
-INCBIN(ellipse_vert, XCI_SHARE_DIR "/shaders/ellipse.vert");
-INCBIN(ellipse_frag, XCI_SHARE_DIR "/shaders/ellipse.frag");
+INCBIN(sprite_vert, XCI_SHARE_DIR "/shaders/sprite.vert.spv");
+INCBIN(sprite_frag, XCI_SHARE_DIR "/shaders/sprite.frag.spv");
+INCBIN(sprite_c_vert, XCI_SHARE_DIR "/shaders/sprite_c.vert.spv");
+INCBIN(sprite_c_frag, XCI_SHARE_DIR "/shaders/sprite_c.frag.spv");
+INCBIN(line_vert, XCI_SHARE_DIR "/shaders/line.vert.spv");
+INCBIN(line_frag, XCI_SHARE_DIR "/shaders/line.frag.spv");
+INCBIN(rectangle_vert, XCI_SHARE_DIR "/shaders/rectangle.vert.spv");
+INCBIN(rectangle_frag, XCI_SHARE_DIR "/shaders/rectangle.frag.spv");
+INCBIN(ellipse_vert, XCI_SHARE_DIR "/shaders/ellipse.vert.spv");
+INCBIN(ellipse_frag, XCI_SHARE_DIR "/shaders/ellipse.frag.spv");
+INCBIN(fps_vert, XCI_SHARE_DIR "/shaders/fps.vert.spv");
+INCBIN(fps_frag, XCI_SHARE_DIR "/shaders/fps.frag.spv");
 #endif
 
 namespace xci::graphics {
@@ -270,7 +272,11 @@ bool Renderer::load_shader(ShaderId shader_id, Shader& shader)
              return shader.load_from_memory(
                     (const char*) g_ellipse_vert_data, g_ellipse_vert_size,
                     (const char*) g_ellipse_frag_data, g_ellipse_frag_size);
-        case ShaderId::_count:
+        case ShaderId::Fps:
+             return shader.load_from_memory(
+                    (const char*) g_fps_vert_data, g_fps_vert_size,
+                    (const char*) g_fps_frag_data, g_fps_frag_size);
+        case ShaderId::_NumItems_:
             return false;
     }
 #else
@@ -295,7 +301,11 @@ bool Renderer::load_shader(ShaderId shader_id, Shader& shader)
             return shader.load_from_vfs(vfs(),
                     "shaders/ellipse.vert.spv",
                     "shaders/ellipse.frag.spv");
-        case ShaderId::_count:
+        case ShaderId::Fps:
+            return shader.load_from_vfs(vfs(),
+                    "shaders/fps.vert.spv",
+                    "shaders/fps.frag.spv");
+        case ShaderId::_NumItems_:
             return false;
     }
 #endif
@@ -661,9 +671,14 @@ bool Renderer::query_swapchain(VkPhysicalDevice device)
     std::vector<VkPresentModeKHR> modes(mode_count);
     vkGetPhysicalDeviceSurfacePresentModesKHR(device, m_surface, &mode_count, modes.data());
 
+    auto found_mode = VK_PRESENT_MODE_FIFO_KHR;
     for (const auto mode : modes) {
-        if (mode == VK_PRESENT_MODE_MAILBOX_KHR)
-            m_present_mode = mode;
+        if (mode == m_present_mode)
+            found_mode = mode;
+    }
+    if (m_present_mode != found_mode) {
+        log_warning("vulkan: requested present mode not supported: {}", m_present_mode);
+        m_present_mode = found_mode;
     }
 
     return format_count > 0 && mode_count > 0;
@@ -684,6 +699,36 @@ void Renderer::destroy_framebuffers()
     for (auto framebuffer : m_framebuffers) {
         vkDestroyFramebuffer(m_device, framebuffer, nullptr);
     }
+}
+
+
+void Renderer::set_present_mode(PresentMode mode)
+{
+    switch (mode) {
+        case PresentMode::Immediate:
+            m_present_mode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+            break;
+        case PresentMode::Mailbox:
+            m_present_mode = VK_PRESENT_MODE_MAILBOX_KHR;
+            break;
+        case PresentMode::Fifo:
+            m_present_mode = VK_PRESENT_MODE_FIFO_KHR;
+            break;
+    }
+
+    // not yet initialized
+    if (!m_surface)
+        return;
+
+    vkDeviceWaitIdle(m_device);
+
+    if (!query_swapchain(m_physical_device))
+        VK_THROW("vulkan: physical device no longer usable");
+
+    destroy_framebuffers();
+    destroy_swapchain();
+    create_swapchain();
+    create_framebuffers();
 }
 
 

@@ -27,9 +27,10 @@ enum class ShaderId {
     Line,
     Rectangle,
     Ellipse,
+    Fps,
     Cursor,
 
-    _count
+    _NumItems_
 };
 
 

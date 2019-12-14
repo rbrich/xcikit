@@ -26,12 +26,25 @@
 namespace xci::graphics {
 
 
+enum class PresentMode {
+    Immediate,  // no vsync, possible tearing
+    Mailbox,    // vsync, new request replaces old one (program is not slowed down)
+    Fifo,       // vsync, requests are queued
+};
+
+
 class Renderer {
 public:
     explicit Renderer(core::Vfs& vfs);
     ~Renderer();
 
     core::Vfs& vfs() { return m_vfs; }
+
+    /// Presentation mode. Limits framerate, avoids tearing.
+    /// - Immediate      - do not wait for vertical blank period
+    /// - Mailbox        - driver waits, program doesn't (new request replaces old one)
+    /// - Fifo*          - full vsync, requests are queued (*default)
+    void set_present_mode(PresentMode mode);
 
     /// Get one of the predefined shaders
     /// \param shader_id Use `Custom` to create new shader
@@ -73,7 +86,7 @@ private:
 
 private:
     core::Vfs& m_vfs;
-    static constexpr auto c_num_shaders = (size_t)ShaderId::_count;
+    static constexpr auto c_num_shaders = (size_t) ShaderId::_NumItems_;
     std::array<std::unique_ptr<Shader>, c_num_shaders> m_shader = {};
 
     VkInstance m_instance {};

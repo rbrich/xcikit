@@ -59,10 +59,10 @@ void Window::display()
             m_update_cb(m_view, t_now - t_last);
             t_last = t_now;
         }
-        switch (m_mode) {
+        switch (m_refresh_mode) {
             case RefreshMode::OnDemand:
             case RefreshMode::OnEvent:
-                if (m_mode == RefreshMode::OnEvent || m_view.pop_refresh())
+                if (m_refresh_mode == RefreshMode::OnEvent || m_view.pop_refresh())
                     draw();
                 if (m_timeout == 0us) {
                     glfwWaitEvents();
@@ -133,12 +133,6 @@ void Window::set_scroll_callback(Window::ScrollCallback scroll_cb)
     } else {
         glfwSetScrollCallback(m_window, nullptr);
     }
-}
-
-
-void Window::set_refresh_interval(int interval)
-{
-    glfwSwapInterval(interval);
 }
 
 
