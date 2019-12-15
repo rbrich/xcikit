@@ -9,6 +9,9 @@
 #include "vulkan/VulkanError.h"
 #include <xci/core/log.h>
 
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
+
 namespace xci::graphics {
 
 using namespace xci::core::log;
@@ -82,6 +85,31 @@ void Window::display()
         }
     }
     vkDeviceWaitIdle(m_renderer.vk_device());
+}
+
+
+void Window::wakeup() const
+{
+    glfwPostEmptyEvent();
+}
+
+
+void Window::close() const
+{
+    glfwSetWindowShouldClose(m_window, GLFW_TRUE);
+    glfwPostEmptyEvent();
+}
+
+
+void Window::set_clipboard_string(const std::string& s) const
+{
+    glfwSetClipboardString(m_window, s.c_str());
+}
+
+
+std::string Window::get_clipboard_string() const
+{
+    return glfwGetClipboardString(m_window);
 }
 
 

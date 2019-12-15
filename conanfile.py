@@ -11,24 +11,13 @@ class XcikitConan(ConanFile):
     topics = ("text-rendering", "ui", "scripting-language", "vulkan", "glsl", "freetype")
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False]}
+    default_options = {"shared": False}
     build_requires = ('Catch2/2.6.1@catchorg/stable',
                       'pegtl/2.8.0@taocpp/stable',
                       'range-v3/0.9.0@ericniebler/stable',
                       'incbin/20180413@rbrich/stable',
                       'docopt/0.6.2@conan/stable',
                       'replxx/20190926@rbrich/stable',)
-    requires = ('glad/0.1.24@bincrafters/stable',)
-    default_options = {
-        "shared": False,
-        # Glad commandline:
-        # --profile="core" --api="gl=3.3" --generator="c" --spec="gl" \
-        # --local-files --omit-khrplatform --extensions="GL_KHR_debug"
-        "glad:spec": "gl",
-        "glad:api_type": "gl",
-        "glad:api_version": "3.3",
-        "glad:profile": "core",
-        "glad:extensions": "GL_KHR_debug",
-    }
     generators = "cmake_paths"
     scm = {
         "type": "git",

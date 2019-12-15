@@ -13,13 +13,13 @@
 #include <xci/config.h>
 
 #include <vulkan/vulkan.h>
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
 
 #include <optional>
 #include <memory>
 #include <array>
 #include <cstdint>
+
+struct GLFWwindow;
 
 namespace xci::graphics {
 

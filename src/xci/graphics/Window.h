@@ -11,14 +11,14 @@
 #include <xci/core/geometry.h>
 
 #include <vulkan/vulkan.h>
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
 
 #include <string>
 #include <memory>
 #include <functional>
 #include <utility>
 #include <chrono>
+
+struct GLFWwindow;
 
 namespace xci::graphics {
 
@@ -142,14 +142,14 @@ public:
     // When in OnDemand or OnEvent refresh mode, call this to wake up
     // event loop. Put custom handler into UpdateCallback.
     // (thread-safe)
-    void wakeup() const { glfwPostEmptyEvent(); }
+    void wakeup() const;
 
     // Stop the main loop and close the window.
     // (thread-safe)
-    void close() const { glfwSetWindowShouldClose(m_window, GLFW_TRUE); glfwPostEmptyEvent(); }
+    void close() const;
 
-    void set_clipboard_string(const std::string& s) const { glfwSetClipboardString(m_window, s.c_str()); }
-    std::string get_clipboard_string() const { return glfwGetClipboardString(m_window); }
+    void set_clipboard_string(const std::string& s) const;
+    std::string get_clipboard_string() const;
 
     using UpdateCallback = std::function<void(View&, std::chrono::nanoseconds elapsed)>;
     using SizeCallback = std::function<void(View&)>;

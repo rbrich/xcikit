@@ -12,6 +12,9 @@
 #include <xci/core/string.h>
 #include <xci/compat/macros.h>
 
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
+
 #include <range/v3/algorithm/any_of.hpp>
 #include <range/v3/view/enumerate.hpp>
 #include <range/v3/view/take.hpp>
