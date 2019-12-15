@@ -37,7 +37,7 @@ int main()
     Window& window = Window::default_instance();
     window.create({800, 600}, "XCI TextTerminal demo");
 
-    if (!Theme::load_default_theme())
+    if (!Theme::load_default())
         return EXIT_FAILURE;
 
     const char* cmd = "uname -a";

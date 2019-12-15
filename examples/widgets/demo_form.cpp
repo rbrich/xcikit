@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
+#include "MousePosInfo.h"
 #include <xci/widgets/Button.h>
 #include <xci/widgets/FpsDisplay.h>
 #include <xci/widgets/Form.h>
@@ -22,50 +22,10 @@
 #include <xci/core/Vfs.h>
 #include <xci/core/format.h>
 #include <xci/config.h>
-#include <random>
 #include <cstdlib>
 
-using namespace xci::text;
-using namespace xci::graphics;
-using namespace xci::widgets;
-using namespace xci::core;
-
-
-class MousePosInfo: public Widget {
-public:
-    explicit MousePosInfo(Theme& theme)
-        : Widget(theme),
-          m_text(theme.font(), "Mouse: ")
-    {
-        m_text.set_color(Color(255, 150, 50));
-    }
-
-    void resize(View& view) override {
-        m_text.resize(view);
-    }
-
-    void update(View& view, State state) override {
-        if (!m_pos_str.empty()) {
-            m_text.set_fixed_string("Mouse: " + m_pos_str);
-            m_text.update(view);
-            view.refresh();
-            m_pos_str.clear();
-        }
-    }
-
-    void draw(View& view) override {
-        m_text.draw(view, position());
-    }
-
-    void mouse_pos_event(View& view, const MousePosEvent& ev) override {
-        m_pos_str = format("({}, {})", ev.pos.x, ev.pos.y);
-    }
-
-private:
-    Text m_text;
-    std::string m_pos_str;
-};
-
+// this brings in all required namespaces
+using namespace xci::demo;
 
 int main()
 {
