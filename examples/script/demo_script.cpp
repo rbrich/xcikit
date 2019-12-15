@@ -67,7 +67,16 @@ std::vector<std::unique_ptr<Module>>& modules()
     return modules;
 }
 
-bool evaluate(const string& line, const Options& opts, int input_number=-1)
+struct Environment {
+    Vfs vfs;
+
+    Environment() {
+        Logger::init(Logger::Level::Warning);
+        vfs.mount(XCI_SHARE_DIR);
+    }
+};
+
+bool evaluate(Environment& env, const string& line, const Options& opts, int input_number=-1)
 {
     static TermCtl& t = TermCtl::stdout_instance();
     static Interpreter interpreter;
@@ -82,7 +91,7 @@ bool evaluate(const string& line, const Options& opts, int input_number=-1)
             modules().push_back(std::make_unique<BuiltinModule>());
 
             if (opts.with_std_lib) {
-                auto f = Vfs::default_instance().read_file("script/sys.ys");
+                auto f = env.vfs.read_file("script/sys.ys");
                 auto content = f.content();
                 auto sys_module = interpreter.build_module("sys", content->string_view());
                 modules().push_back(move(sys_module));
@@ -324,8 +333,7 @@ struct Action<identifier> {
 
 int main(int argc, char* argv[])
 {
-    Logger::init(Logger::Level::Warning);
-    Vfs::default_instance().mount(XCI_SHARE_DIR);
+    Environment env;
 
     map<string, docopt::value> args = docopt::docopt(
             "Usage:\n"
@@ -368,7 +376,7 @@ int main(int argc, char* argv[])
         opts.compiler_flags |= Compiler::PPTypes;
 
     if (args["--eval"]) {
-        evaluate(args["--eval"].asString(), opts);
+        evaluate(env, args["--eval"].asString(), opts);
         return 0;
     }
 
@@ -379,7 +387,7 @@ int main(int argc, char* argv[])
                 std::cerr << "cannot read file: " << input << std::endl;
                 exit(1);
             }
-            evaluate(*content, opts);
+            evaluate(env, *content, opts);
         }
         return 0;
     }
@@ -427,7 +435,7 @@ int main(int argc, char* argv[])
             continue;
         }
 
-        if (evaluate(line, opts, input_number))
+        if (evaluate(env, line, opts, input_number))
             ++input_number;
     }
 

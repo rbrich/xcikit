@@ -16,13 +16,13 @@
 #include "Checkbox.h"
 
 
-namespace xci {
-namespace widgets {
+namespace xci::widgets {
 
 using namespace xci::graphics;
 
 
-Checkbox::Checkbox()
+Checkbox::Checkbox(Theme& theme)
+    : Icon(theme)
 {
     set_focusable(true);
     set_icon(IconId::CheckBoxUnchecked);
@@ -32,8 +32,8 @@ Checkbox::Checkbox()
     });
     on_hover([this](View& view, bool inside) {
         set_icon_color(inside ?
-                       theme().color(ColorId::Hover) :
-                       theme().color(ColorId::Default));
+                       Widget::theme().color(ColorId::Hover) :
+                       Widget::theme().color(ColorId::Default));
     });
 }
 
@@ -43,6 +43,8 @@ void Checkbox::set_checked(bool checked)
     m_checked = checked;
     set_icon(m_checked ? IconId::CheckBoxChecked
                        : IconId::CheckBoxUnchecked);
+    if (m_change_cb)
+        m_change_cb();
 }
 
 
@@ -65,7 +67,7 @@ void Checkbox::mouse_pos_event(View& view, const MousePosEvent& ev)
 bool Checkbox::mouse_button_event(View& view, const MouseBtnEvent& ev)
 {
     if (ev.action == Action::Press && ev.button == MouseButton::Left
-        && contains(ev.pos - view.offset())) {
+    && contains(ev.pos - view.offset())) {
         do_click(view);
         return true;
     }
@@ -73,4 +75,4 @@ bool Checkbox::mouse_button_event(View& view, const MouseBtnEvent& ev)
 }
 
 
-}} // namespace xci::widgets
+} // namespace xci::widgets

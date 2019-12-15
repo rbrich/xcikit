@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "MousePosInfo.h"
 #include <xci/widgets/Button.h>
 #include <xci/widgets/Checkbox.h>
 #include <xci/widgets/FpsDisplay.h>
@@ -24,44 +25,23 @@
 #include <random>
 #include <cstdlib>
 
-using namespace xci::text;
-using namespace xci::graphics;
-using namespace xci::widgets;
-using namespace xci::core;
-
-
-class MousePosInfo: public Widget {
-public:
-    MousePosInfo() : m_text(Theme::default_theme().font(), "Mouse: ") {
-        m_text.set_color(Color(255, 150, 50));
-    }
-
-    void draw(View& view, State state) override {
-        m_text.draw(view, position());
-    }
-
-    void mouse_pos_event(View& view, const MousePosEvent& ev) override {
-        m_text.set_fixed_string("Mouse: " +
-                                format("({}, {})", ev.pos.x, ev.pos.y));
-        view.refresh();
-    }
-
-private:
-    Text m_text;
-};
-
+// this brings in all required namespaces
+using namespace xci::demo;
 
 int main()
 {
-    Vfs::default_instance().mount(XCI_SHARE_DIR);
+    Vfs vfs;
+    vfs.mount(XCI_SHARE_DIR);
 
-    Window& window = Window::default_instance();
+    Renderer renderer {vfs};
+    Window window {renderer};
     window.create({800, 600}, "XCI UI demo");
 
-    if (!Theme::load_default_theme())
+    Theme theme(renderer);
+    if (!theme.load_default())
         return EXIT_FAILURE;
 
-    Composite root;
+    Composite root {theme};
 
     // Random color generator
     std::random_device rd;
@@ -69,36 +49,40 @@ int main()
     std::uniform_int_distribution<int> runi(0, 255);
     auto random_color = [&](){ return Color(runi(re), runi(re), runi(re)); };
 
+    std::list<TextInput> text_inputs;
     for (auto i : {0,1,2,3,4}) {
-        auto text_input = std::make_shared<TextInput>("input");
-        text_input->set_position({-1.0f, -0.5f + i * 0.12f});
-        root.add(text_input);
+        text_inputs.emplace_back(theme, "input");
+        text_inputs.back().set_position({-1.0f, -0.5f + i * 0.12f});
+        root.add(text_inputs.back());
     }
 
+    std::list<Button> buttons;
     for (auto i : {0,1,2,3,4}) {
-        auto button = std::make_shared<Button>(std::to_string(i+1) + ". click me!");
-        button->set_position({-0.2f, -0.5f + i * 0.12f});
-        auto* btn_self = button.get();
-        button->on_click([btn_self, &random_color](View& view) {
+        buttons.emplace_back(theme, std::to_string(i+1) + ". click me!");
+        buttons.back().set_position({-0.2f, -0.5f + i * 0.12f});
+        auto* btn_self = &buttons.back();
+        buttons.back().on_click([btn_self, &random_color](View& view) {
+            view.finish_draw();
             btn_self->set_text_color(random_color());
             btn_self->resize(view);
         });
-        root.add(button);
+        root.add(buttons.back());
     }
 
+    std::list<Checkbox> checkboxes;
     for (auto i : {0,1,2,3,4}) {
-        auto checkbox = std::make_shared<Checkbox>();
-        checkbox->set_text("Checkbox " + std::to_string(i+1));
-        checkbox->set_position({0.5f, -0.5f + i * 0.06f});
-        root.add(checkbox);
+        checkboxes.emplace_back(theme);
+        checkboxes.back().set_text("Checkbox " + std::to_string(i+1));
+        checkboxes.back().set_position({0.5f, -0.5f + i * 0.06f});
+        root.add(checkboxes.back());
     }
 
-    auto mouse_pos_info = std::make_shared<MousePosInfo>();
-    mouse_pos_info->set_position({-1.2f, 0.9f});
+    MousePosInfo mouse_pos_info {theme};
+    mouse_pos_info.set_position({-1.2f, 0.9f});
     root.add(mouse_pos_info);
 
-    auto fps_display = std::make_shared<FpsDisplay>();
-    fps_display->set_position({-1.2f, -0.8f});
+    FpsDisplay fps_display {theme};
+    fps_display.set_position({-1.2f, -0.8f});
     root.add(fps_display);
 
     Bind bind(window, root);

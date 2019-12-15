@@ -18,13 +18,15 @@
 namespace xci::widgets {
 
 
-Label::Label()
+Label::Label(Theme& theme)
+    : Widget(theme)
 {
-    m_text.set_font(theme().font());
+    m_text.set_font(theme.font());
 }
 
 
-Label::Label(const std::string& string) : Label()
+Label::Label(Theme& theme, const std::string& string)
+    : Label(theme)
 {
     m_text.set_fixed_string(string);
 }
@@ -32,6 +34,7 @@ Label::Label(const std::string& string) : Label()
 
 void Label::resize(View& view)
 {
+    view.finish_draw();
     m_text.resize(view);
     auto rect = m_text.layout().bbox();
     rect.enlarge(m_padding);
@@ -40,7 +43,7 @@ void Label::resize(View& view)
 }
 
 
-void Label::draw(View& view, State state)
+void Label::draw(View& view)
 {
     view.push_offset(position());
     auto rect = m_text.layout().bbox();

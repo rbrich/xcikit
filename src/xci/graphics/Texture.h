@@ -1,49 +1,75 @@
-// Texture.h created on 2018-03-04, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Texture.h created on 2018-03-04 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018, 2019 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
+
 
 #ifndef XCI_GRAPHICS_TEXTURE_H
 #define XCI_GRAPHICS_TEXTURE_H
 
 #include <xci/core/geometry.h>
+#include "vulkan/DeviceMemory.h"
+
+#include <vulkan/vulkan.h>
 
 #include <memory>
 #include <cstdint>
+#include <vector>
 
 namespace xci::graphics {
+
+class Renderer;
 
 using xci::core::Vec2u;
 using xci::core::Rect_u;
 using std::uint8_t;
 
 
+/// Gray-scale texture - 1 byte per pixel
 class Texture {
 public:
-    virtual ~Texture() = default;
+    explicit Texture(Renderer& renderer);
+    ~Texture() { destroy(); }
 
     // Create or resize the texture
-    virtual bool create(const Vec2u& size) = 0;
-    virtual void update(const uint8_t* pixels) = 0;
-    virtual void update(const uint8_t* pixels, const Rect_u& region) = 0;
+    bool create(const Vec2u& size);
 
-    virtual Vec2u size() const = 0;
+    // Write data to staging memory (don't forget to `update` the texture)
+    void write(const uint8_t* pixels);
+    void write(const uint8_t* pixels, const Rect_u& region);
+    void clear();
+
+    // Transfer pending data to texture memory
+    void update();
+
+    Vec2u size() const { return m_size; }
+    VkDeviceSize byte_size() const { return m_size.x * m_size.y; }
+
+    // Vulkan handles
+    VkSampler vk_sampler() const { return m_sampler; }
+    VkImageView vk_image_view() const { return m_image_view; }
+
+private:
+    VkDevice device() const;
+    void destroy();
+
+private:
+    Renderer& m_renderer;
+    Vec2u m_size;
+    VkBuffer m_staging_buffer {};
+    VkImage m_image {};
+    VkImageView m_image_view {};
+    VkImageLayout m_image_layout { VK_IMAGE_LAYOUT_UNDEFINED };
+    VkSampler m_sampler {};
+    DeviceMemory m_staging_memory;  // FIXME: pool the memory
+    DeviceMemory m_image_memory;  // FIXME: pool the memory
+    void* m_staging_mapped = nullptr;
+    std::vector<Rect_u> m_pending_regions;
+    bool m_pending_clear = false;
 };
-
-
-using TexturePtr = std::shared_ptr<Texture>;
 
 
 } // namespace xci::graphics
 
-#endif // XCI_GRAPHICS_TEXTURE_H
+#endif // include guard

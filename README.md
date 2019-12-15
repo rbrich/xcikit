@@ -1,6 +1,6 @@
-XCI Toolkit
-===========
-Collection of C++ libraries focused on drawing 2D graphics and rendering text.
+xcikit
+======
+Collection of C++ libraries for drawing 2D graphics, rendering text and more.
 
 ![Font Texture](http://xci.cz/toolkit/img/xci-text.png)
 
@@ -42,10 +42,7 @@ This should be enough for a game to render:
 - settings screen,
 - dialogs.
 
-The library should integrate well with:
-
-- generic OpenGL
-- 2D/3D graphics engines (eg. SDL, Magnum, OGRE)
+The library uses GLFW and Vulkan for graphics.
 
 
 Features
@@ -81,9 +78,8 @@ on `xci-data` - that one is completely optional.)
 The top-level `xci-widgets` provides UI components with event processing.
 It uses text layout engine `xci-text`, which can also be used separately.
 
-All rendering goes through `xci-graphics` library, which provides
-adapters for different frameworks and APIs, including low-level OpenGL.
-Graphics lib can also be used separately when neither UI nor text rendering
+All rendering goes through GLFW and Vulkan based `xci-graphics` library.
+Graphics lib can be used separately when neither UI nor text rendering
 is needed.
 
 Optional `xci-data` library provides custom text and binary format
@@ -125,7 +121,7 @@ Text rendering and text layout.
 
 ### xci::graphics
 
-The basic building blocks for rendering of text and UI elemenents.
+The basic building blocks for rendering of text and UI elements.
 
 ### xci::data
 
@@ -172,13 +168,12 @@ Package manager (optional):
 - Conan (eg. `pip3 install conan`)
 
 Dependencies (required):
-- FreeType
-- PEGTL
+- PEGTL (xci-core)
+- FreeType (xci-text)
+- GLFW, Vulkan (xci-graphics)
 
 Dependencies (optional):
 - libzip (XCI_WITH_ZIP)
-- GLFW (XCI_WITH_OPENGL)
-- Magnum (XCI_WITH_MAGNUM)
 - Catch2 (for tests)
 - Google Benchmark (for benchmarks)
 
@@ -286,4 +281,4 @@ Optionally, include XCI goodies:
 
 Link with the libraries:
 
-    target_link_libraries(example xcikit::xci-text xcikit::xci-graphics-opengl)
+    target_link_libraries(example xcikit::xci-text xcikit::xci-graphics)

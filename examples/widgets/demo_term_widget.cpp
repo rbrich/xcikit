@@ -31,17 +31,20 @@ using namespace xci::core;
 int main()
 {
     Logger::init();
-    Vfs::default_instance().mount(XCI_SHARE_DIR);
+    Vfs vfs;
+    vfs.mount(XCI_SHARE_DIR);
 
-    Window& window = Window::default_instance();
+    Renderer renderer {vfs};
+    Window window {renderer};
     window.create({800, 600}, "XCI TextTerminal demo");
 
-    if (!Theme::load_default_theme())
+    Theme theme(renderer);
+    if (!theme.load_default())
         return EXIT_FAILURE;
 
     const char* cmd = "uname -a";
 
-    TextTerminal terminal;
+    TextTerminal terminal {theme};
     terminal.add_text(get_cwd() + "> ");
     terminal.set_font_style(TextTerminal::FontStyle::Bold);
     terminal.add_text(std::string(cmd) + "\n");
@@ -121,12 +124,8 @@ int main()
     terminal.set_font_style(TextTerminal::FontStyle::Bold);
     terminal.add_text("Příliš žluťoučký kůň úpěl ďábelské ódy.");
 
-    // Make the terminal fullscreen
-    window.set_size_callback([&](View& v) {
-        auto vs = v.viewport_size();
-        terminal.set_position({50, vs.y - 500});
-        terminal.set_size({700, 500});
-    });
+    terminal.set_position({50, 50});
+    terminal.set_size({700, 500});
 
     window.set_key_callback([&](View& view, const KeyEvent& ev) {
         if (ev.action != Action::Press || ev.mod != ModKey::None())

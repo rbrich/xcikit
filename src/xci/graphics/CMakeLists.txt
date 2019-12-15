@@ -1,94 +1,55 @@
 # ------------ #
-# Sources      #
-# ------------ #
-
-set(XCI_GRAPHICS_SOURCES
-    Color.cpp
-    Renderer.cpp
-    Primitives.cpp
-    Shader.cpp
-    Shape.cpp
-    Sprites.cpp
-    View.cpp
-    )
-
-set(XCI_GRAPHICS_OPENGL_SOURCES
-    opengl/GlPrimitives.cpp
-    opengl/GlRenderer.cpp
-    opengl/GlShader.cpp
-    opengl/GlTexture.cpp
-    opengl/GlWindow.cpp)
-
-set(XCI_GRAPHICS_MAGNUM_SOURCES
-    magnum/MagnumPrimitives.cpp
-    magnum/MagnumRenderer.cpp
-    magnum/MagnumShader.cpp
-    magnum/MagnumTexture.cpp)
-
-
-# ------------ #
 # Dependencies #
 # ------------ #
 
-# OpenGL
-if (XCI_WITH_OPENGL)
-    find_package(glfw3 3.2 REQUIRED)
-    find_package(glad REQUIRED)
-endif ()
-
-# Magnum
-if (XCI_WITH_MAGNUM)
-    find_package(Magnum REQUIRED GL Shaders)
-endif ()
-
+find_package(glfw3 3.2 REQUIRED)
+find_package(Vulkan REQUIRED)
+find_path(INCBIN_INCLUDE_DIR incbin.h)
 
 # ------------ #
 # Libraries    #
 # ------------ #
 
-if (XCI_WITH_OPENGL)
-    add_library(xci-graphics-opengl
-        ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_OPENGL_SOURCES})
-    target_include_directories(xci-graphics-opengl
-        PUBLIC
-            ${XCI_INCLUDE_DIRS}
-        PRIVATE
-            ${CONAN_INCLUDE_DIRS_INCBIN})
-    target_link_libraries(xci-graphics-opengl
-        PUBLIC
-            xci-core
-            ${CMAKE_DL_LIBS}
-            glad::glad
-        PRIVATE
-            glfw)
+add_library(xci-graphics
+    Color.cpp
+    Primitives.cpp
+    Renderer.cpp
+    Shader.cpp
+    Shape.cpp
+    Sprites.cpp
+    Texture.cpp
+    View.cpp
+    Window.cpp
+    vulkan/CommandBuffer.cpp
+    vulkan/DeviceMemory.cpp
+    )
 
-    if (BUILD_FRAMEWORKS)
-        set_target_properties(xci-graphics-opengl PROPERTIES
-            FRAMEWORK TRUE
-            FRAMEWORK_VERSION A
-            MACOSX_FRAMEWORK_IDENTIFIER cz.xci.xci-graphics-opengl
-            # "current version" in semantic format in Mach-O binary file
-            VERSION 1.0.0
-            # "compatibility version" in semantic format in Mach-O binary file
-            SOVERSION 1.0.0
-            PUBLIC_HEADER xci-graphics.h
-            )
-    endif()
+target_include_directories(xci-graphics
+    PUBLIC
+        ${XCI_INCLUDE_DIRS}
+    PRIVATE
+        ${INCBIN_INCLUDE_DIR})
 
-    install(TARGETS xci-graphics-opengl
-        EXPORT xcikit DESTINATION lib)
-endif ()
-
-if (XCI_WITH_MAGNUM)
-    add_library(xci-graphics-magnum
-        ${XCI_GRAPHICS_SOURCES} ${XCI_GRAPHICS_MAGNUM_SOURCES})
-    target_include_directories(xci-graphics-magnum
-        PUBLIC ${XCI_INCLUDE_DIRS})
-    target_link_libraries(xci-graphics-magnum
+target_link_libraries(xci-graphics
+    PUBLIC
         xci-core
-        Magnum::GL
-        Magnum::Magnum
-        Magnum::Shaders)
-    install(TARGETS xci-graphics-magnum
-        EXPORT xcikit DESTINATION lib)
-endif ()
+        ${CMAKE_DL_LIBS}
+        Vulkan::Vulkan
+    PRIVATE
+        range-v3
+        glfw)
+
+if (BUILD_FRAMEWORKS)
+    set_target_properties(xci-graphics PROPERTIES
+        FRAMEWORK TRUE
+        FRAMEWORK_VERSION A
+        MACOSX_FRAMEWORK_IDENTIFIER cz.xci.graphics
+        # "current version" in semantic format in Mach-O binary file
+        VERSION 1.0.0
+        # "compatibility version" in semantic format in Mach-O binary file
+        SOVERSION 1.0.0
+        PUBLIC_HEADER xci-graphics.h
+        )
+endif()
+
+install(TARGETS xci-graphics EXPORT xcikit DESTINATION lib)

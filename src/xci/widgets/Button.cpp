@@ -15,6 +15,7 @@
 
 #include "Button.h"
 #include <xci/text/Markup.h>
+#include <xci/graphics/Renderer.h>
 
 namespace xci::widgets {
 
@@ -22,20 +23,23 @@ using namespace xci::graphics;
 using namespace xci::text;
 
 
-Button::Button(const std::string &string)
-    : m_bg_rect(Color(10, 20, 40), theme().color(ColorId::Default))
+Button::Button(Theme& theme, const std::string &string)
+    : Widget(theme),
+      m_bg_rect(theme.renderer(),
+              Color(10, 20, 40), theme.color(ColorId::Default))
 {
     set_focusable(true);
-    m_layout.set_default_font(&theme().font());
+    m_layout.set_default_font(&theme.font());
     Markup markup(m_layout);
     markup.parse(string);
 }
 
 
 void Button::set_decoration_color(const graphics::Color& fill,
-                                  const graphics::Color& border)
+                                  const graphics::Color& outline)
 {
-    m_bg_rect = Shape(fill, border);
+    m_bg_rect.set_fill_color(fill);
+    m_bg_rect.set_outline_color(outline);
 }
 
 
@@ -48,6 +52,7 @@ void Button::set_text_color(const graphics::Color& color)
 void Button::resize(View& view)
 {
     m_layout.typeset(view);
+    m_layout.update(view);
     auto rect = m_layout.bbox();
     rect.enlarge(m_padding);
     set_size(rect.size());
@@ -57,12 +62,12 @@ void Button::resize(View& view)
     rect.y = 0;
     m_bg_rect.clear();
     m_bg_rect.add_rectangle(rect, m_outline_thickness);
+    m_bg_rect.update();
 }
 
 
-void Button::draw(View& view, State state)
+void Button::update(View& view, State state)
 {
-    auto rect = m_layout.bbox();
     if (state.focused) {
         m_bg_rect.set_outline_color(theme().color(ColorId::Focus));
     } else if (last_hover() == LastHover::Inside) {
@@ -70,6 +75,13 @@ void Button::draw(View& view, State state)
     } else {
         m_bg_rect.set_outline_color(theme().color(ColorId::Default));
     }
+    m_bg_rect.update();
+}
+
+
+void Button::draw(View& view)
+{
+    auto rect = m_layout.bbox();
     m_bg_rect.draw(view, position());
     m_layout.draw(view, position() + ViewportCoords{m_padding - rect.x, m_padding - rect.y});
 }

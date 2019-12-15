@@ -1,13 +1,14 @@
-#version 330
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
 
-uniform sampler2D u_texture;
+layout(binding = 1) uniform sampler2D u_tex_sampler;
 
-in vec4 v_color;
-in vec2 v_tex_coord;
+layout(location = 0) in vec4 in_color;
+layout(location = 1) in vec2 in_tex_coord;
 
-out vec4 o_color;
+layout(location = 0) out vec4 out_color;
 
 void main() {
-    float alpha = texture(u_texture, v_tex_coord).r;
-    o_color = vec4(v_color.rgb, v_color.a * alpha);
+    float alpha = texture(u_tex_sampler, in_tex_coord).r;
+    out_color = vec4(in_color.rgb, in_color.a * alpha);
 }

@@ -20,9 +20,7 @@
 
 #include <string>
 
-namespace xci {
-namespace text {
-namespace layout {
+namespace xci::text::layout {
 
 
 class Element {
@@ -193,6 +191,6 @@ private:
 };
 
 
-}}} // namespace xci::text::layout
+} // namespace xci::text::layout
 
 #endif // XCI_TEXT_LAYOUT_PAGE_ELEMENT_H

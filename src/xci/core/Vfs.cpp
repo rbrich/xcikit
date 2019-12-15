@@ -46,7 +46,7 @@ vfs::RealDirectoryLoader::try_load(const std::string& path, bool is_dir, Magic m
 }
 
 
-VfsFile vfs::RealDirectory::read_file(const std::string& path)
+VfsFile vfs::RealDirectory::read_file(const std::string& path) const
 {
     auto full_path = path_join(m_dir_path, path);
     log_debug("VfsDirLoader: open file: {}", full_path);
@@ -141,7 +141,7 @@ vfs::DarArchive::DarArchive(std::string path)
 }
 
 
-VfsFile vfs::DarArchive::read_file(const std::string& path)
+VfsFile vfs::DarArchive::read_file(const std::string& path) const
 {
     // search for the entry
     auto entry_it = std::find_if(m_entries.cbegin(), m_entries.cend(), [&path](auto& entry){
@@ -282,7 +282,7 @@ vfs::ZipArchive::~ZipArchive()
 }
 
 
-VfsFile vfs::ZipArchive::read_file(const std::string& path)
+VfsFile vfs::ZipArchive::read_file(const std::string& path) const
 {
 #ifdef XCI_WITH_ZIP
     struct zip_stat st = {};
@@ -327,23 +327,16 @@ VfsFile vfs::ZipArchive::read_file(const std::string& path)
 // ----------------------------------------------------------------------------
 
 
-Vfs& Vfs::default_instance()
-{
-    static Vfs instance(Loaders::Zip);
-    return instance;
-}
-
-
 Vfs::Vfs(Loaders loaders)
 {
     switch (loaders) {
-        case Loaders::Zip:
+        case Loaders::All:
             m_loaders.emplace_back(std::make_unique<vfs::ZipArchiveLoader>());
             FALLTHROUGH;
-        case Loaders::Dar:
+        case Loaders::NoZip:
             m_loaders.emplace_back(std::make_unique<vfs::DarArchiveLoader>());
             FALLTHROUGH;
-        case Loaders::RealDirectory:
+        case Loaders::NoArchives:
             m_loaders.emplace_back(std::make_unique<vfs::RealDirectoryLoader>());
             FALLTHROUGH;
         case Loaders::None:
@@ -352,7 +345,7 @@ Vfs::Vfs(Loaders loaders)
 }
 
 
-bool Vfs::mount(std::string real_path, std::string target_path)
+bool Vfs::mount(const std::string& real_path, std::string target_path)
 {
     // Open the file or directory
     int fd = ::open(real_path.c_str(), O_RDONLY);
@@ -404,11 +397,11 @@ bool Vfs::mount(std::string real_path, std::string target_path)
 }
 
 
-VfsFile Vfs::read_file(std::string path)
+VfsFile Vfs::read_file(std::string path) const
 {
     lstrip(path, '/');
     log_debug("Vfs: try open: {}", path);
-    for (auto& path_loader : m_mounted_dir) {
+    for (const auto& path_loader : m_mounted_dir) {
         // Is the loader applicable for requested path?
         if (!path_loader.path.empty()) {
             if (!starts_with(path, path_loader.path))

@@ -38,16 +38,16 @@ using graphics::ViewportRect;
 
 
 struct State {
+    std::chrono::nanoseconds elapsed;
     bool focused = false;
 };
 
 class Widget {
 public:
-    Widget() : m_tab_focusable(false), m_click_focusable(false) {}
+    explicit Widget(Theme& theme);
     virtual ~Widget() = default;
 
-    void set_theme(Theme& theme) { m_theme = &theme; }
-    Theme& theme() const { return *m_theme; }
+    Theme& theme() const { return m_theme; }
 
     // Set position of widget, relative to the parent
     void set_position(const ViewportCoords& pos) { m_position = pos; }
@@ -79,9 +79,9 @@ public:
     // Events need to be injected into root widget.
     // This can be set up using Bind helper or manually by calling these methods.
 
-    virtual void update(View& view, std::chrono::nanoseconds elapsed) {}
     virtual void resize(View& view) {}
-    virtual void draw(View& view, State state) = 0;
+    virtual void update(View& view, State state) {}
+    virtual void draw(View& view) = 0;
     virtual bool key_event(View& view, const KeyEvent& ev) { return false; }
     virtual void char_event(View& view, const CharEvent& ev) {}
     virtual void mouse_pos_event(View& view, const MousePosEvent& ev) {}
@@ -98,7 +98,7 @@ protected:
     void set_baseline(ViewportUnits baseline) { m_baseline = baseline; }
 
 private:
-    Theme* m_theme = &Theme::default_theme();
+    Theme& m_theme;
     ViewportCoords m_position;
     ViewportSize m_size;
     ViewportUnits m_baseline = 0;
@@ -109,25 +109,24 @@ private:
 };
 
 
-using WidgetPtr = std::shared_ptr<Widget>;
-using WidgetRef = std::weak_ptr<Widget>;
-
-
 // Manages list of child widgets and forwards events to them
 
 class Composite: public Widget {
 public:
-    void add(WidgetPtr child);
+    explicit Composite(Theme& theme) : Widget(theme) {}
 
-    void set_focus(WidgetRef child) { m_focus = std::move(child); }
-    WidgetPtr focus() const { return m_focus.lock(); }
+    void add(Widget& child);
+
+    void set_focus(Widget& child) { m_focus = &child; }
+    void reset_focus() { m_focus = nullptr; }
+    Widget* focus() const { return m_focus; }
 
     // impl Widget
     bool contains(const ViewportCoords& point) const override;
 
-    void update(View& view, std::chrono::nanoseconds elapsed) override;
     void resize(View& view) override;
-    void draw(View& view, State state) override;
+    void update(View& view, State state) override;
+    void draw(View& view) override;
     bool key_event(View& view, const KeyEvent& ev) override;
     void char_event(View& view, const CharEvent& ev) override;
     void mouse_pos_event(View& view, const MousePosEvent& ev) override;
@@ -140,10 +139,10 @@ public:
     void partial_dump(std::ostream& stream, const std::string& nl_prefix) override;
 
 protected:
-    std::vector<WidgetPtr> m_child;
+    std::vector<Widget*> m_child;
 
 private:
-    WidgetRef m_focus;  // a child with keyboard focus
+    Widget* m_focus = nullptr;  // a child with keyboard focus
 };
 
 

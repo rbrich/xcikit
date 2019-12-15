@@ -1,35 +1,35 @@
 Coordinates
 ===========
 
-First, let's look how OpenGL transforms coordinates when rendering
+First, let's look how Vulkan transforms coordinates when rendering
 primitives.
 
 Then, we'll create a coordinate system focused on rendering scalable UI.
 
 
-OpenGL Coordinates
+Vulkan Coordinates
 ------------------
 
 ### Viewport coordinates
 
-OpenGL uses right handed coordinates:
+Vulkan uses following viewport coordinates:
 - X axis goes from left to right
-- Y axis goes from bottom to top
-- Z axis goes from far to near
+- Y axis goes from top to bottom
+- Z axis goes from near to far
 
-Note that Y axis is inverted when compared to usual window coordinates.
-Also note, that Z axis goes from the screen towards the eye.
+Note that Y axis is inverted in OpenGL, but that was fixed in Vulkan.
+It now goes the same direction as is usual in window coordinates.
 
 The coordinates are normalized to interval -1.0 .. 1.0:
-- Bottom left corner is X= -1.0, Y= -1.0
-- Top right corner is X= 1.0, Y= 1.0
-- Most distant point has Z= -1.0
-- The nearest point has Z= 1.0
+- Top left corner is X= -1.0, Y= -1.0
+- Bottom right corner is X= 1.0, Y= 1.0
+- Most distant point has Z= 1.0
+- The nearest point has Z= 0.0
 
 Anything outside these limits is clipped off.
 
-The normalized coordinates are mapped to actual viewport, so (-1.0, 1.0)
-becomes (0, 0) in pixels and (1.0, -1.0) becomes something like (799, 599).
+The normalized coordinates are mapped to actual viewport, so (-1.0, -1.0)
+becomes (0, 0) in pixels and (1.0, 1.0) becomes something like (799, 599).
 
 ### Projection Matrix
 
@@ -55,7 +55,7 @@ The matrix will be supplied as an uniform:
 
 This is identity matrix and as such, it does nothing to our vertices.
 
-Note, that OpenGL matrices are column-major, so they look transposed when
+Note, that Vulkan matrices are column-major, so they look transposed when
 compared to standard mathematical notation:
 
     GLfloat gl_matrix[] = {  //  In math:
@@ -97,15 +97,16 @@ a square, regardless of actual viewport size.
 XCI Coordinates
 ---------------
 
-For the purpose of rendering UI and text, we'll stay with the OpenGL
-coordinates, with two modifications:
-
-- The Y axis is inverted, so it goes from top to bottom. This is more natural
-  when drawing text or widgets, because we usually write from top to bottom.
+For the purpose of rendering UI and text, we'll stay with the Vulkan
+coordinates, with one modification:
 
 - One of the X/Y axis is expanded, so the visible coordinates go beyond -1/1.
   This is the aspect ratio correction.
 
+We no longer need to flip Y coordinate as we did in OpenGL.
+Vulkan Y coordinate is well suited for drawing text or widgets, because
+we usually write from top to bottom.
+ 
 The diagram shows that the square of (-1,-1) .. (1,1) is always completely
 covered by the view. Depending on actual ratio of width and height,
 it is expanded either horizontally or vertically.
@@ -121,7 +122,7 @@ it is expanded either horizontally or vertically.
                           |    +    |
                           +---------+
 
-Same as with OpenGL coordinates, origin (0,0) is in the center of the screen.
+Same as with Vulkan coordinates, origin (0,0) is in the center of the screen.
 
 These coordinates are used for positioning text and widgets in the viewport.
 There is always the same amount of elements, disregarding the actual size

@@ -15,32 +15,22 @@
 
 #include "Shape.h"
 #include "Renderer.h"
-#include <xci/config.h>
 #include <xci/core/log.h>
 
-#ifdef XCI_EMBED_SHADERS
-#define INCBIN_PREFIX g_
-#define INCBIN_STYLE INCBIN_STYLE_SNAKE
-#include <incbin.h>
-INCBIN(line_vert, XCI_SHARE_DIR "/shaders/line.vert");
-INCBIN(line_frag, XCI_SHARE_DIR "/shaders/line.frag");
-INCBIN(rectangle_vert, XCI_SHARE_DIR "/shaders/rectangle.vert");
-INCBIN(rectangle_frag, XCI_SHARE_DIR "/shaders/rectangle.frag");
-INCBIN(ellipse_vert, XCI_SHARE_DIR "/shaders/ellipse.vert");
-INCBIN(ellipse_frag, XCI_SHARE_DIR "/shaders/ellipse.frag");
-#endif
 
 namespace xci::graphics {
 
 using namespace xci::core::log;
 
 
-Shape::Shape(const Color& fill_color, const Color& outline_color,
-             Renderer& renderer)
+Shape::Shape(Renderer& renderer, const Color& fill_color, const Color& outline_color)
         : m_fill_color(fill_color), m_outline_color(outline_color),
-          m_lines(renderer.create_primitives(VertexFormat::V2t2, PrimitiveType::TriFans)),
-          m_rectangles(renderer.create_primitives(VertexFormat::V2c4t22, PrimitiveType::TriFans)),
-          m_ellipses(renderer.create_primitives(VertexFormat::V2t22, PrimitiveType::TriFans))
+          m_lines(renderer, VertexFormat::V2t2, PrimitiveType::TriFans),
+          m_rectangles(renderer, VertexFormat::V2c4t22, PrimitiveType::TriFans),
+          m_ellipses(renderer, VertexFormat::V2t22, PrimitiveType::TriFans),
+          m_line_shader(renderer.get_shader(ShaderId::Line)),
+          m_rectangle_shader(renderer.get_shader(ShaderId::Rectangle)),
+          m_ellipse_shader(renderer.get_shader(ShaderId::Ellipse))
 {}
 
 
@@ -67,12 +57,12 @@ void Shape::add_line_slice(const ViewportRect& slice,
     auto t2 = rotate(ax, by);
     auto t3 = rotate(bx, by);
     auto t4 = rotate(bx, ay);
-    m_lines->begin_primitive();
-    m_lines->add_vertex({x1, y1}, t1.x, t1.y);
-    m_lines->add_vertex({x1, y2}, t2.x, t2.y);
-    m_lines->add_vertex({x2, y2}, t3.x, t3.y);
-    m_lines->add_vertex({x2, y1}, t4.x, t4.y);
-    m_lines->end_primitive();
+    m_lines.begin_primitive();
+    m_lines.add_vertex({x1, y1}, t1.x, t1.y);
+    m_lines.add_vertex({x1, y2}, t2.x, t2.y);
+    m_lines.add_vertex({x2, y2}, t3.x, t3.y);
+    m_lines.add_vertex({x2, y1}, t4.x, t4.y);
+    m_lines.end_primitive();
 }
 
 
@@ -87,12 +77,12 @@ void Shape::add_rectangle(const ViewportRect& rect, ViewportUnits outline_thickn
     float ix = 1.0f + tx / (1.0f - tx);
     float iy = 1.0f + ty / (1.0f - ty);
 
-    m_rectangles->begin_primitive();
-    m_rectangles->add_vertex({x1, y1}, m_fill_color, -ix, -iy, -1.0f, -1.0f);
-    m_rectangles->add_vertex({x1, y2}, m_fill_color, -ix, +iy, -1.0f, +1.0f);
-    m_rectangles->add_vertex({x2, y2}, m_fill_color, +ix, +iy, +1.0f, +1.0f);
-    m_rectangles->add_vertex({x2, y1}, m_fill_color, +ix, -iy, +1.0f, -1.0f);
-    m_rectangles->end_primitive();
+    m_rectangles.begin_primitive();
+    m_rectangles.add_vertex({x1, y1}, m_fill_color, -ix, -iy, -1.0f, -1.0f);
+    m_rectangles.add_vertex({x1, y2}, m_fill_color, -ix, +iy, -1.0f, +1.0f);
+    m_rectangles.add_vertex({x2, y2}, m_fill_color, +ix, +iy, +1.0f, +1.0f);
+    m_rectangles.add_vertex({x2, y1}, m_fill_color, +ix, -iy, +1.0f, -1.0f);
+    m_rectangles.end_primitive();
 }
 
 
@@ -115,12 +105,12 @@ void Shape::add_rectangle_slice(const ViewportRect& slice, const ViewportRect& r
     float cy = ay * (1.0f + ty / (1-ty));
     float dx = bx * (1.0f + tx / (1-tx));
     float dy = by * (1.0f + ty / (1-ty));
-    m_rectangles->begin_primitive();
-    m_rectangles->add_vertex({x1, y1}, m_fill_color, cx, cy, ax, ay);
-    m_rectangles->add_vertex({x1, y2}, m_fill_color, cx, dy, ax, by);
-    m_rectangles->add_vertex({x2, y2}, m_fill_color, dx, dy, bx, by);
-    m_rectangles->add_vertex({x2, y1}, m_fill_color, dx, cy, bx, ay);
-    m_rectangles->end_primitive();
+    m_rectangles.begin_primitive();
+    m_rectangles.add_vertex({x1, y1}, m_fill_color, cx, cy, ax, ay);
+    m_rectangles.add_vertex({x1, y2}, m_fill_color, cx, dy, ax, by);
+    m_rectangles.add_vertex({x2, y2}, m_fill_color, dx, dy, bx, by);
+    m_rectangles.add_vertex({x2, y1}, m_fill_color, dx, cy, bx, ay);
+    m_rectangles.end_primitive();
 }
 
 
@@ -134,12 +124,12 @@ void Shape::add_ellipse(const ViewportRect& rect, ViewportUnits outline_thicknes
     float ty = (2.0f * outline_thickness / rect.h).value;
     float ix = 1.0f + tx / (1-tx);
     float iy = 1.0f + ty / (1-ty);
-    m_ellipses->begin_primitive();
-    m_ellipses->add_vertex({x1, y1}, -ix, -iy, -1.0f, -1.0f);
-    m_ellipses->add_vertex({x1, y2}, -ix, +iy, -1.0f, +1.0f);
-    m_ellipses->add_vertex({x2, y2}, +ix, +iy, +1.0f, +1.0f);
-    m_ellipses->add_vertex({x2, y1}, +ix, -iy, +1.0f, -1.0f);
-    m_ellipses->end_primitive();
+    m_ellipses.begin_primitive();
+    m_ellipses.add_vertex({x1, y1}, -ix, -iy, -1.0f, -1.0f);
+    m_ellipses.add_vertex({x1, y2}, -ix, +iy, -1.0f, +1.0f);
+    m_ellipses.add_vertex({x2, y2}, +ix, +iy, +1.0f, +1.0f);
+    m_ellipses.add_vertex({x2, y1}, +ix, -iy, +1.0f, -1.0f);
+    m_ellipses.end_primitive();
 }
 
 
@@ -160,12 +150,12 @@ void Shape::add_ellipse_slice(const ViewportRect& slice, const ViewportRect& ell
     float cy = ay * (1.0f + ty / (1-ty));
     float dx = bx * (1.0f + tx / (1-tx));
     float dy = by * (1.0f + ty / (1-ty));
-    m_ellipses->begin_primitive();
-    m_ellipses->add_vertex({x1, y1}, cx, cy, ax, ay);
-    m_ellipses->add_vertex({x1, y2}, cx, dy, ax, by);
-    m_ellipses->add_vertex({x2, y2}, dx, dy, bx, by);
-    m_ellipses->add_vertex({x2, y1}, dx, cy, bx, ay);
-    m_ellipses->end_primitive();
+    m_ellipses.begin_primitive();
+    m_ellipses.add_vertex({x1, y1}, cx, cy, ax, ay);
+    m_ellipses.add_vertex({x1, y2}, cx, dy, ax, by);
+    m_ellipses.add_vertex({x2, y2}, dx, dy, bx, by);
+    m_ellipses.add_vertex({x2, y1}, dx, cy, bx, ay);
+    m_ellipses.end_primitive();
 }
 
 
@@ -192,135 +182,67 @@ Shape::add_rounded_rectangle(const ViewportRect& rect, ViewportUnits radius,
 
 void Shape::clear()
 {
-    m_lines->clear();
-    m_rectangles->clear();
-    m_ellipses->clear();
+    m_lines.clear();
+    m_rectangles.clear();
+    m_ellipses.clear();
 }
 
 
 void Shape::reserve(size_t lines, size_t rectangles, size_t ellipses)
 {
-    m_lines->reserve(lines, 4 * lines);
-    m_rectangles->reserve(rectangles, 4 * rectangles);
-    m_ellipses->reserve(ellipses, 4 * ellipses);
+    m_lines.reserve(4 * lines);
+    m_rectangles.reserve(4 * rectangles);
+    m_ellipses.reserve(4 * ellipses);
+}
+
+
+void Shape::update()
+{
+    // lines
+    if (!m_lines.empty()) {
+        m_lines.clear_uniforms();
+        m_lines.add_uniform(1, m_fill_color, m_outline_color);
+        m_lines.add_uniform(2, m_softness, m_antialiasing);
+        m_lines.set_shader(m_line_shader);
+        m_lines.set_blend(BlendFunc::AlphaBlend);
+        m_lines.update();
+    }
+
+    // rectangles
+    if (!m_rectangles.empty()) {
+        m_rectangles.clear_uniforms();
+        m_rectangles.add_uniform(1, m_outline_color);
+        m_rectangles.add_uniform(2, m_softness, m_antialiasing);
+        m_rectangles.set_shader(m_rectangle_shader);
+        m_rectangles.set_blend(BlendFunc::AlphaBlend);
+        m_rectangles.update();
+    }
+
+    // ellipses
+    if (!m_ellipses.empty()) {
+        m_ellipses.clear_uniforms();
+        m_ellipses.add_uniform(1, m_fill_color, m_outline_color);
+        m_ellipses.add_uniform(2, m_softness, m_antialiasing);
+        m_ellipses.set_shader(m_ellipse_shader);
+        m_ellipses.set_blend(BlendFunc::AlphaBlend);
+        m_ellipses.update();
+    }
 }
 
 
 void Shape::draw(View& view, const ViewportCoords& pos)
 {
     // lines
-    if (!m_lines->empty()) {
-        init_line_shader();
-        m_line_shader->set_uniform("u_fill_color",
-                                   m_fill_color.red_f(), m_fill_color.green_f(),
-                                   m_fill_color.blue_f(), m_fill_color.alpha_f());
-        m_line_shader->set_uniform("u_outline_color",
-                                   m_outline_color.red_f(), m_outline_color.green_f(),
-                                   m_outline_color.blue_f(), m_outline_color.alpha_f());
-        m_line_shader->set_uniform("u_softness", m_softness);
-        m_line_shader->set_uniform("u_antialiasing", m_antialiasing);
-        m_lines->set_shader(m_line_shader);
-        m_lines->set_blend(Primitives::BlendFunc::AlphaBlend);
-        m_lines->draw(view, pos);
-    }
+    if (!m_lines.empty())
+        m_lines.draw(view, pos);
 
     // rectangles
-    if (!m_rectangles->empty()) {
-        init_rectangle_shader();
-        m_rectangle_shader->set_uniform("u_outline_color",
-                                        m_outline_color.red_f(), m_outline_color.green_f(),
-                                        m_outline_color.blue_f(), m_outline_color.alpha_f());
-        m_rectangle_shader->set_uniform("u_softness", m_softness);
-        m_rectangle_shader->set_uniform("u_antialiasing", m_antialiasing);
-        m_rectangles->set_shader(m_rectangle_shader);
-        m_rectangles->set_blend(Primitives::BlendFunc::AlphaBlend);
-        m_rectangles->draw(view, pos);
-    }
+    if (!m_rectangles.empty())
+        m_rectangles.draw(view, pos);
 
     // ellipses
-    if (!m_ellipses->empty()) {
-        init_ellipse_shader();
-        m_ellipse_shader->set_uniform("u_fill_color",
-                                      m_fill_color.red_f(), m_fill_color.green_f(),
-                                      m_fill_color.blue_f(), m_fill_color.alpha_f());
-        m_ellipse_shader->set_uniform("u_outline_color",
-                                      m_outline_color.red_f(), m_outline_color.green_f(),
-                                      m_outline_color.blue_f(), m_outline_color.alpha_f());
-        m_ellipse_shader->set_uniform("u_softness", m_softness);
-        m_ellipse_shader->set_uniform("u_antialiasing", m_antialiasing);
-        m_ellipses->set_shader(m_ellipse_shader);
-        m_ellipses->set_blend(Primitives::BlendFunc::AlphaBlend);
-        m_ellipses->draw(view, pos);
-    }
-}
-
-
-void Shape::init_line_shader()
-{
-    if (m_line_shader)
-        return;
-    auto& renderer = Renderer::default_instance();
-    m_line_shader = renderer.get_or_create_shader(ShaderId::Line);
-    if (m_line_shader->is_ready())
-        return;
-
-#ifdef XCI_EMBED_SHADERS
-    bool res = m_line_shader->load_from_memory(
-                (const char*)g_line_vert_data, g_line_vert_size,
-                (const char*)g_line_frag_data, g_line_frag_size);
-#else
-    bool res = m_line_shader->load_from_vfs(
-            "shaders/line.vert", "shaders/line.frag");
-#endif
-    if (!res) {
-        log_error("Line shader not loaded!");
-    }
-}
-
-
-void Shape::init_rectangle_shader()
-{
-    if (m_rectangle_shader)
-        return;
-    auto& renderer = Renderer::default_instance();
-    m_rectangle_shader = renderer.get_or_create_shader(ShaderId::Rectangle);
-    if (m_rectangle_shader->is_ready())
-        return;
-
-#ifdef XCI_EMBED_SHADERS
-    bool res = m_rectangle_shader->load_from_memory(
-                (const char*)g_rectangle_vert_data, g_rectangle_vert_size,
-                (const char*)g_rectangle_frag_data, g_rectangle_frag_size);
-#else
-    bool res = m_rectangle_shader->load_from_vfs(
-            "shaders/rectangle.vert", "shaders/rectangle.frag");
-#endif
-    if (!res) {
-        log_error("Rectangle shader not loaded!");
-    }
-}
-
-
-void Shape::init_ellipse_shader()
-{
-    if (m_ellipse_shader)
-        return;
-    auto& renderer = Renderer::default_instance();
-    m_ellipse_shader = renderer.get_or_create_shader(ShaderId::Ellipse);
-    if (m_ellipse_shader->is_ready())
-        return;
-
-#ifdef XCI_EMBED_SHADERS
-    bool res = m_ellipse_shader->load_from_memory(
-                (const char*)g_ellipse_vert_data, g_ellipse_vert_size,
-                (const char*)g_ellipse_frag_data, g_ellipse_frag_size);
-#else
-    bool res = m_ellipse_shader->load_from_vfs(
-            "shaders/ellipse.vert", "shaders/ellipse.frag");
-#endif
-    if (!res) {
-        log_error("Ellipse shader not loaded!");
-    }
+    if (!m_ellipses.empty())
+        m_ellipses.draw(view, pos);
 }
 
 

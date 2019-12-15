@@ -7,6 +7,7 @@ BUILD_TYPE=MinSizeRel
 GENERATOR="Unix Makefiles"
 which ninja >/dev/null && GENERATOR="Ninja"
 JOBS=
+CMAKE_ARGS=()
 
 print_usage()
 {
@@ -34,6 +35,9 @@ while [[ $# > 0 ]] ; do
             shift 2 ;;
         -j )
             JOBS="-j $2"
+            shift 2 ;;
+        -D )
+            CMAKE_ARGS+=(-D "$2")
             shift 2 ;;
         * )
             printf "Error: Unsupported option ${1}.\n\n"
@@ -83,7 +87,8 @@ if phase config; then
         cmake "${ROOT_DIR}" \
             -G "${GENERATOR}" \
             -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-            -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
+            -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+            "${CMAKE_ARGS[@]}"
     )
     echo
 fi

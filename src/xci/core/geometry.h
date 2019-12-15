@@ -217,8 +217,8 @@ std::ostream& operator <<(std::ostream& s, Rect<T> r) {
                     << r.w << ", " << r.h << "}";
 }
 
-using Rect_i = Rect<int>;
-using Rect_u = Rect<unsigned int>;
+using Rect_i = Rect<int32_t>;
+using Rect_u = Rect<uint32_t>;
 using Rect_f = Rect<float>;
 
 

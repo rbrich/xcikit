@@ -57,6 +57,8 @@ struct Color {
     static constexpr Color Black() { return {0, 0, 0}; }
     static constexpr Color White() { return {255, 255, 255}; }
     static constexpr Color Red() { return {255, 0, 0}; }
+    static constexpr Color Green() { return {0, 255, 0}; }
+    static constexpr Color Blue() { return {0, 0, 255}; }
     static constexpr Color Yellow() { return {255, 255, 0}; }
 
     // Access components as float values (0.0 .. 1.0)

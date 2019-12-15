@@ -19,19 +19,18 @@
 #include <xci/widgets/Widget.h>
 #include <xci/text/Text.h>
 
-namespace xci {
-namespace widgets {
+namespace xci::widgets {
 
 
 class Label: public Widget {
 public:
-    Label();
-    explicit Label(const std::string &string);
+    explicit Label(Theme& theme);
+    explicit Label(Theme& theme, const std::string &string);
 
     text::Text& text() { return m_text; }
 
     void resize(View& view) override;
-    void draw(View& view, State state) override;
+    void draw(View& view) override;
 
 private:
     text::Text m_text;
@@ -39,6 +38,6 @@ private:
 };
 
 
-}} // namespace xci::widgets
+} // namespace xci::widgets
 
 #endif // XCIKIT_LABEL_H
