@@ -53,9 +53,10 @@ void check_interpreter(const string& input, const string& expected_output)
 
     if (!sys_module) {
         Logger::init(Logger::Level::Warning);
-        Vfs::default_instance().mount(XCI_SHARE_DIR);
+        Vfs vfs;
+        vfs.mount(XCI_SHARE_DIR);
 
-        auto f = Vfs::default_instance().read_file("script/sys.ys");
+        auto f = vfs.read_file("script/sys.ys");
         auto content = f.content();
         sys_module = interpreter.build_module("sys", content->string_view());
     }

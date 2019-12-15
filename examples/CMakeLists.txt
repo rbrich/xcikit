@@ -2,6 +2,8 @@ set(INST_EXAMPLES share/xcikit/examples)
 
 add_subdirectory(plugin)
 add_subdirectory(script)
+add_subdirectory(graphics)
+add_subdirectory(widgets)
 
 # core
 
@@ -26,24 +28,6 @@ install(TARGETS demo_vfs EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 add_executable(demo_reflect reflect/demo_reflect.cpp)
 target_link_libraries(demo_reflect xci-data)
 
-# graphics
-
-add_executable(demo_vulkan demo_vulkan.cpp)
-target_link_libraries(demo_vulkan xci-graphics)
-install(TARGETS demo_vulkan EXPORT xcikit DESTINATION ${INST_EXAMPLES})
-
-add_executable(demo_coords demo_coords.cpp)
-target_link_libraries(demo_coords xci-text xci-graphics)
-install(TARGETS demo_coords EXPORT xcikit DESTINATION ${INST_EXAMPLES})
-
-add_executable(demo_fps demo_fps.cpp)
-target_link_libraries(demo_fps xci-widgets xci-text xci-graphics)
-install(TARGETS demo_fps EXPORT xcikit DESTINATION ${INST_EXAMPLES})
-
-add_executable(demo_shapes demo_shapes.cpp)
-target_link_libraries(demo_shapes xci-text xci-graphics)
-install(TARGETS demo_shapes EXPORT xcikit DESTINATION ${INST_EXAMPLES})
-
 # text
 
 add_executable(demo_font demo_font.cpp)
@@ -53,7 +37,3 @@ install(TARGETS demo_font EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 add_executable(demo_layout demo_layout.cpp)
 target_link_libraries(demo_layout xci-text xci-graphics)
 install(TARGETS demo_layout EXPORT xcikit DESTINATION ${INST_EXAMPLES})
-
-# widgets
-
-add_subdirectory(widgets)

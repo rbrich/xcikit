@@ -1,8 +1,16 @@
 # ------------ #
-# Sources      #
+# Dependencies #
 # ------------ #
 
-set(XCI_GRAPHICS_SOURCES
+find_package(glfw3 3.2 REQUIRED)
+find_package(Vulkan REQUIRED)
+
+
+# ------------ #
+# Libraries    #
+# ------------ #
+
+add_library(xci-graphics
     Color.cpp
     Primitives.cpp
     Renderer.cpp
@@ -16,25 +24,12 @@ set(XCI_GRAPHICS_SOURCES
     vulkan/DeviceMemory.cpp
     )
 
-
-# ------------ #
-# Dependencies #
-# ------------ #
-
-find_package(glfw3 3.2 REQUIRED)
-find_package(Vulkan REQUIRED)
-
-
-# ------------ #
-# Libraries    #
-# ------------ #
-
-add_library(xci-graphics ${XCI_GRAPHICS_SOURCES})
 target_include_directories(xci-graphics
     PUBLIC
         ${XCI_INCLUDE_DIRS}
     PRIVATE
         ${CONAN_INCLUDE_DIRS_INCBIN})
+
 target_link_libraries(xci-graphics
     PUBLIC
         xci-core
@@ -57,5 +52,4 @@ if (BUILD_FRAMEWORKS)
         )
 endif()
 
-install(TARGETS xci-graphics
-    EXPORT xcikit DESTINATION lib)
+install(TARGETS xci-graphics EXPORT xcikit DESTINATION lib)

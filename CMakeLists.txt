@@ -26,34 +26,6 @@ if (EXISTS ${CMAKE_BINARY_DIR}/conan_paths.cmake)
     include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
 endif()
 
-# ------------ #
-# Sources      #
-# ------------ #
-
-set(XCI_TEXT_SOURCES
-    src/xci/text/FontLibrary.cpp
-    src/xci/text/FontTexture.cpp
-    src/xci/text/Font.cpp
-    src/xci/text/Text.cpp
-    src/xci/text/Layout.cpp
-    src/xci/text/Markup.cpp
-    src/xci/text/Style.cpp
-    src/xci/text/layout/Page.cpp
-    src/xci/text/freetype/FtFontLibrary.cpp
-    src/xci/text/freetype/FtFontFace.cpp)
-
-set(XCI_WIDGETS_SOURCES
-    src/xci/widgets/Button.cpp
-    src/xci/widgets/Checkbox.cpp
-    src/xci/widgets/FpsDisplay.cpp
-    src/xci/widgets/Icon.cpp
-    src/xci/widgets/Theme.cpp
-    src/xci/widgets/Widget.cpp
-    src/xci/widgets/TextInput.cpp
-    src/xci/widgets/Form.cpp
-    src/xci/widgets/Label.cpp
-    src/xci/widgets/TextTerminal.cpp)
-
 
 # ------------ #
 # Dependencies #
@@ -69,7 +41,6 @@ include(FindFreetype)
 
 # RectangleBinPack
 add_subdirectory(ext/rbp)
-set(RBP_LIBRARY rbp)
 
 # PEGTL
 find_package(pegtl REQUIRED)
@@ -119,74 +90,8 @@ if (XCI_WITH_VULKAN)
     add_subdirectory(src/xci/graphics)
 endif()
 
-add_library(xci-text ${XCI_TEXT_SOURCES}
-    $<TARGET_OBJECTS:${RBP_LIBRARY}>)
-target_include_directories(xci-text
-    PUBLIC
-        ${XCI_INCLUDE_DIRS}
-        ${FREETYPE_INCLUDE_DIRS}
-    PRIVATE
-        ext
-        # NOTE: We cannot link `taocpp::pegtl` directly, because it would become
-        #       dependency in exported target and the whole xcikit would have to
-        #       externally depend on PEGTL while it is used only in implementation.
-        #       See: https://gitlab.kitware.com/cmake/cmake/issues/18049
-        $<TARGET_PROPERTY:taocpp::pegtl,INTERFACE_INCLUDE_DIRECTORIES>
-    )
-target_link_libraries(xci-text
-    PUBLIC
-        xci-core
-        xci-graphics
-    PRIVATE
-        ${FREETYPE_LIBRARIES})
-
-if (APPLE)
-    set_target_properties(xci-text PROPERTIES
-        LINK_FLAGS "-undefined dynamic_lookup")
-endif()
-
-if (BUILD_FRAMEWORKS)
-    set_target_properties(xci-text PROPERTIES
-        FRAMEWORK TRUE
-        FRAMEWORK_VERSION A
-        MACOSX_FRAMEWORK_IDENTIFIER cz.xci.xci-text
-        # "current version" in semantic format in Mach-O binary file
-        VERSION 1.0.0
-        # "compatibility version" in semantic format in Mach-O binary file
-        SOVERSION 1.0.0
-        PUBLIC_HEADER xci-text.h
-        )
-endif()
-
-install(TARGETS xci-text EXPORT xcikit DESTINATION lib)
-
-add_library(xci-widgets ${XCI_WIDGETS_SOURCES})
-target_link_libraries(xci-widgets
-    xci-text)
-target_include_directories(xci-widgets
-    PRIVATE
-        ${CONAN_INCLUDE_DIRS_INCBIN}
-)
-
-if (APPLE)
-    set_target_properties(xci-widgets PROPERTIES
-        LINK_FLAGS "-undefined dynamic_lookup")
-endif()
-
-if (BUILD_FRAMEWORKS)
-    set_target_properties(xci-widgets PROPERTIES
-        FRAMEWORK TRUE
-        FRAMEWORK_VERSION A
-        MACOSX_FRAMEWORK_IDENTIFIER cz.xci.widgets
-        # "current version" in semantic format in Mach-O binary file
-        VERSION 1.0.0
-        # "compatibility version" in semantic format in Mach-O binary file
-        SOVERSION 1.0.0
-        PUBLIC_HEADER xci-widgets.h
-        )
-endif()
-
-install(TARGETS xci-widgets EXPORT xcikit DESTINATION lib)
+add_subdirectory(src/xci/text)
+add_subdirectory(src/xci/widgets)
 
 
 # ------------ #
