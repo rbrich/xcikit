@@ -4,7 +4,9 @@ os: osx
 osx_image: xcode11
 
 env:
-  - MACOSX_DEPLOYMENT_TARGET=10.12
+  global:
+    - MACOSX_DEPLOYMENT_TARGET=10.14
+    - VK_SDK_VER=1.1.126.0
 
 addons:
   homebrew:
@@ -17,10 +19,11 @@ addons:
 
 before_script:
   - |
-    SDKVER=1.1.126.0
-    curl -O https://sdk.lunarg.com/sdk/download/$SDKVER/mac/vulkansdk-macos-$SDKVER.tar.gz
-    tar xf vulkansdk-macos-$SDKVER.tar.gz && rm vulkansdk-macos-$SDKVER.tar.gz
-    export VULKAN_SDK=$PWD/vulkansdk-macos-$SDKVER/macOS
+    export VULKAN_SDK="$PWD/vulkansdk-macos-$VK_SDK_VER/macOS"
+    if [ ! -d "$VULKAN_SDK" ]; then
+      curl -O https://sdk.lunarg.com/sdk/download/$VK_SDK_VER/mac/vulkansdk-macos-$VK_SDK_VER.tar.gz
+      tar xf vulkansdk-macos-$VK_SDK_VER.tar.gz && rm vulkansdk-macos-$VK_SDK_VER.tar.gz
+    fi
   - ./bootstrap.sh -y
   - ./build.sh deps
 
@@ -32,6 +35,8 @@ after_failure:
 
 cache:
   ccache: true
+  directories:
+    - vulkansdk-macos-$VK_SDK_VER
 
 deploy:
   provider: releases

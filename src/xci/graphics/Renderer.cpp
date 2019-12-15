@@ -400,9 +400,10 @@ void Renderer::create_device()
         // check supported queue families
         if (choose) {
             auto family = query_queue_families(device);
-            choose = bool(family);
             if (family)
                 graphics_queue_family = family.value();
+            else
+                choose = false;
         }
 
         // check support of required extensions
