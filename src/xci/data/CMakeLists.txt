@@ -1,3 +1,14 @@
+# ------------ #
+# Dependencies #
+# ------------ #
+
+find_package(ZLIB REQUIRED)
+
+
+# ------------ #
+# Libraries    #
+# ------------ #
+
 add_library(xci-data
     BinaryWriter.cpp
     BinaryReader.cpp

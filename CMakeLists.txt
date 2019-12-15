@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.7)
 cmake_policy(VERSION 3.7)
 project(xcikit C CXX)
 
-option(XCI_WITH_VULKAN "Link with GLFW and build libxci-graphics-vulkan." ON)
+option(XCI_WITH_VULKAN "Build libxci-graphics. Requires Vulkan and GLFW." ON)
 option(XCI_WITH_TINFO "Link with TInfo (from NCurses) and use it for TTY control sequences." OFF)
 option(XCI_WITH_ZIP "Link xci-core with libzip and use it for ZIP format in VFS." OFF)
 option(XCI_BENCHMARK "Enable benchmarks. Requires Google benchmark to be installed and in CMake path." OFF)
@@ -31,16 +31,10 @@ endif()
 # Dependencies #
 # ------------ #
 
-find_package(Threads REQUIRED)
-
-# FreeType
-find_package(ZLIB REQUIRED)
-
-# FreeType
-include(FindFreetype)
-
-# RectangleBinPack
-add_subdirectory(ext/rbp)
+if (XCI_WITH_VULKAN)
+    # RectangleBinPack (xci-text)
+    add_subdirectory(ext/rbp)
+endif()
 
 # PEGTL
 find_package(pegtl REQUIRED)
@@ -88,10 +82,9 @@ add_subdirectory(src/xci/script)
 
 if (XCI_WITH_VULKAN)
     add_subdirectory(src/xci/graphics)
+    add_subdirectory(src/xci/text)
+    add_subdirectory(src/xci/widgets)
 endif()
-
-add_subdirectory(src/xci/text)
-add_subdirectory(src/xci/widgets)
 
 
 # ------------ #

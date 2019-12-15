@@ -2,8 +2,11 @@ set(INST_EXAMPLES share/xcikit/examples)
 
 add_subdirectory(plugin)
 add_subdirectory(script)
-add_subdirectory(graphics)
-add_subdirectory(widgets)
+
+if (XCI_WITH_VULKAN)
+    add_subdirectory(graphics)
+    add_subdirectory(widgets)
+endif()
 
 # core
 
@@ -30,10 +33,12 @@ target_link_libraries(demo_reflect xci-data)
 
 # text
 
-add_executable(demo_font demo_font.cpp)
-target_link_libraries(demo_font xci-text xci-graphics)
-install(TARGETS demo_font EXPORT xcikit DESTINATION ${INST_EXAMPLES})
+if (XCI_WITH_VULKAN)
+    add_executable(demo_font demo_font.cpp)
+    target_link_libraries(demo_font xci-text xci-graphics)
+    install(TARGETS demo_font EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 
-add_executable(demo_layout demo_layout.cpp)
-target_link_libraries(demo_layout xci-text xci-graphics)
-install(TARGETS demo_layout EXPORT xcikit DESTINATION ${INST_EXAMPLES})
+    add_executable(demo_layout demo_layout.cpp)
+    target_link_libraries(demo_layout xci-text xci-graphics)
+    install(TARGETS demo_layout EXPORT xcikit DESTINATION ${INST_EXAMPLES})
+endif()

@@ -14,14 +14,16 @@ add_executable(test_serialization test_serialization.cpp)
 target_link_libraries(test_serialization Catch2::Catch2 xci-data)
 add_test(NAME test_serialization COMMAND test_serialization)
 
-add_executable(test_graphics test_graphics.cpp)
-target_link_libraries(test_graphics Catch2::Catch2 xci-graphics)
-add_test(NAME test_graphics COMMAND test_graphics)
-
-add_executable(test_widgets test_widgets.cpp)
-target_link_libraries(test_widgets Catch2::Catch2 xci-widgets xci-text xci-graphics)
-add_test(NAME test_widgets COMMAND test_widgets)
-
 add_executable(test_script test_script.cpp)
 target_link_libraries(test_script Catch2::Catch2 xci-script)
 add_test(NAME test_script COMMAND test_script)
+
+if (XCI_WITH_VULKAN)
+    add_executable(test_graphics test_graphics.cpp)
+    target_link_libraries(test_graphics Catch2::Catch2 xci-graphics)
+    add_test(NAME test_graphics COMMAND test_graphics)
+
+    add_executable(test_widgets test_widgets.cpp)
+    target_link_libraries(test_widgets Catch2::Catch2 xci-widgets xci-text xci-graphics)
+    add_test(NAME test_widgets COMMAND test_widgets)
+endif()
