@@ -44,9 +44,16 @@ void Icon::set_font_size(float size)
 }
 
 
+void Icon::set_icon_color(const graphics::Color& color)
+{
+    m_icon_color = color;
+}
+
+
 void Icon::set_color(const graphics::Color& color)
 {
     m_layout.set_default_color(color);
+    m_needs_refresh = true;
 }
 
 
@@ -65,9 +72,9 @@ void Icon::resize(View& view)
         m_layout.set_font(&theme().font());
         m_layout.add_space();
         m_layout.add_word(m_text);
+        m_layout.typeset(view);
         m_needs_refresh = false;
     }
-    m_layout.typeset(view);
     m_layout.update(view);
     auto rect = m_layout.bbox();
     set_size(rect.size());

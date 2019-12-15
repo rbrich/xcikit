@@ -40,9 +40,9 @@ void Widget::partial_dump(std::ostream& stream, const std::string& nl_prefix)
 }
 
 
-void Composite::add(WidgetPtr child)
+void Composite::add(Widget& child)
 {
-    m_child.push_back(std::move(child));
+    m_child.push_back(&child);
 }
 
 
@@ -65,7 +65,7 @@ void Composite::resize(View& view)
 void Composite::update(View& view, State state)
 {
     for (auto& child : m_child) {
-        state.focused = (m_focus.lock() == child);
+        state.focused = (m_focus == child);
         child->update(view, state);
     }
 }
@@ -84,9 +84,10 @@ void Composite::draw(View& view)
 bool Composite::key_event(View& view, const KeyEvent& ev)
 {
     // Propagate the event to the focused child
-    if (!m_focus.expired())
-        if (m_focus.lock()->key_event(view, ev))
+    if (m_focus != nullptr) {
+        if (m_focus->key_event(view, ev))
             return true;
+    }
 
     // Not handled
     return false;
@@ -95,8 +96,8 @@ bool Composite::key_event(View& view, const KeyEvent& ev)
 
 void Composite::char_event(View& view, const CharEvent& ev)
 {
-    if (!m_focus.expired())
-        m_focus.lock()->char_event(view, ev);
+    if (m_focus != nullptr)
+        m_focus->char_event(view, ev);
 }
 
 
@@ -135,7 +136,7 @@ void Composite::scroll_event(View& view, const ScrollEvent& ev)
 bool Composite::click_focus(View& view, ViewportCoords pos)
 {
     bool handled = false;
-    auto original_focus = std::move(m_focus);
+    auto* original_focus = m_focus;
     for (auto& child : m_child) {
         // Propagate the event
         if (child->click_focus(view, pos - position())) {
@@ -144,7 +145,7 @@ bool Composite::click_focus(View& view, ViewportCoords pos)
             break;
         }
     }
-    if (original_focus.lock() != m_focus.lock()) {
+    if (original_focus != m_focus) {
         resize(view);
         view.refresh();
     }
@@ -159,7 +160,7 @@ bool Composite::tab_focus(View& view, int& step)
         return false;
 
     // No focus child - change to first or last focusable child
-    if (m_focus.expired()) {
+    if (m_focus == nullptr) {
         if (step >= 0) {
             auto it = std::find_if(m_child.begin(), m_child.end(), [&view, &step](auto& w) {
                 return w->tab_focus(view, step);
@@ -181,13 +182,13 @@ bool Composite::tab_focus(View& view, int& step)
     }
 
     // Current focus child - propagate event, give it chance to consume the step
-    bool res = m_focus.lock()->tab_focus(view, step);
+    bool res = m_focus->tab_focus(view, step);
     if (res && step == 0)
         return true;
 
     // Step to next focusable child
     if (step > 0) {
-        auto it = std::find(m_child.begin(), m_child.end(), m_focus.lock());
+        auto it = std::find(m_child.begin(), m_child.end(), m_focus);
         assert(it != m_child.end());
         it = std::find_if(it+1, m_child.end(), [&view, &step](auto& w) {
             return w->tab_focus(view, step);
@@ -196,11 +197,11 @@ bool Composite::tab_focus(View& view, int& step)
             m_focus = *it;
             --step;
         } else {
-            m_focus.reset();
+            reset_focus();
         }
     }
     if (step < 0)  {
-        auto it = std::find(m_child.rbegin(), m_child.rend(), m_focus.lock());
+        auto it = std::find(m_child.rbegin(), m_child.rend(), m_focus);
         assert(it != m_child.rend());
         it = std::find_if(it+1, m_child.rend(), [&view, &step](auto& w) {
             return w->tab_focus(view, step);
@@ -209,13 +210,13 @@ bool Composite::tab_focus(View& view, int& step)
             m_focus = *it;
             ++step;
         } else {
-            m_focus.reset();
+            reset_focus();
         }
     }
 
     resize(view);
     view.refresh();
-    return !m_focus.expired();
+    return m_focus != nullptr;
 }
 
 
@@ -223,7 +224,7 @@ void Composite::partial_dump(std::ostream& stream, const std::string& nl_prefix)
 {
     Widget::partial_dump(stream, nl_prefix);
     for (auto& child : m_child) {
-        bool focus = (m_focus.lock() == child);
+        bool focus = (m_focus == child);
         stream << std::endl << nl_prefix;
         if (child != m_child.back()) {
             // intermediate child

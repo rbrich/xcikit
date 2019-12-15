@@ -39,6 +39,8 @@ INCBIN(ellipse_vert, XCI_SHARE_DIR "/shaders/ellipse.vert.spv");
 INCBIN(ellipse_frag, XCI_SHARE_DIR "/shaders/ellipse.frag.spv");
 INCBIN(fps_vert, XCI_SHARE_DIR "/shaders/fps.vert.spv");
 INCBIN(fps_frag, XCI_SHARE_DIR "/shaders/fps.frag.spv");
+INCBIN(cursor_vert, XCI_SHARE_DIR "/shaders/cursor.vert.spv");
+INCBIN(cursor_frag, XCI_SHARE_DIR "/shaders/cursor.frag.spv");
 #endif
 
 namespace xci::graphics {
@@ -270,6 +272,10 @@ bool Renderer::load_shader(ShaderId shader_id, Shader& shader)
              return shader.load_from_memory(
                     (const char*) g_fps_vert_data, g_fps_vert_size,
                     (const char*) g_fps_frag_data, g_fps_frag_size);
+        case ShaderId::Fps:
+             return shader.load_from_memory(
+                    (const char*)g_cursor_vert_data, g_cursor_vert_size,
+                    (const char*)g_cursor_frag_data, g_cursor_frag_size);
         case ShaderId::_NumItems_:
             return false;
     }
@@ -299,6 +305,10 @@ bool Renderer::load_shader(ShaderId shader_id, Shader& shader)
             return shader.load_from_vfs(vfs(),
                     "shaders/fps.vert.spv",
                     "shaders/fps.frag.spv");
+        case ShaderId::Cursor:
+            return shader.load_from_vfs(vfs(),
+                    "shaders/cursor.vert.spv",
+                    "shaders/cursor.frag.spv");
         case ShaderId::_NumItems_:
             return false;
     }

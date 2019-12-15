@@ -228,6 +228,8 @@ void Primitives::set_blend(BlendFunc func)
 
 void Primitives::update()
 {
+    if (empty())
+        return;
     if (m_pipeline == VK_NULL_HANDLE)
         create_pipeline();
     if (m_texture.ptr)
@@ -237,6 +239,9 @@ void Primitives::update()
 
 void Primitives::draw(View& view)
 {
+    if (empty())
+        return;
+
     if (m_pipeline == VK_NULL_HANDLE) {
         assert(!"Primitives: call update before draw!");
         return;

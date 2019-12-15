@@ -14,9 +14,6 @@
 // limitations under the License.
 
 #include "Form.h"
-#include <xci/widgets/Label.h>
-#include <xci/widgets/TextInput.h>
-#include <xci/widgets/Checkbox.h>
 #include <utility>
 
 namespace xci::widgets {
@@ -25,16 +22,16 @@ namespace xci::widgets {
 void Form::add_input(const std::string& label, std::string& text_input)
 {
     // Label
-    auto w_label = std::make_shared<Label>(label);
-    add(w_label);
+    m_labels.emplace_back(theme(), label);
+    add(m_labels.back());
     add_hint(Form::Hint::NextColumn);
     // TextInput
-    auto w_text_input = std::make_shared<TextInput>(text_input);
-    auto* rawptr = w_text_input.get();
-    w_text_input->on_change([rawptr, &text_input](View&) {
-        text_input = rawptr->string();
+    m_text_inputs.emplace_back(theme(), text_input);
+    auto* p_text_input = &m_text_inputs.back();
+    m_text_inputs.back().on_change([p_text_input, &text_input](View&) {
+        text_input = p_text_input->string();
     });
-    add(w_text_input);
+    add(m_text_inputs.back());
     add_hint(Form::Hint::NextRow);
 }
 
@@ -42,17 +39,17 @@ void Form::add_input(const std::string& label, std::string& text_input)
 void Form::add_input(const std::string& label, bool& checkbox)
 {
     // Label
-    auto w_label = std::make_shared<Label>(label);
-    add(w_label);
+    m_labels.emplace_back(theme(), label);
+    add(m_labels.back());
     add_hint(Form::Hint::NextColumn);
     // Checkbox
-    auto w_checkbox = std::make_shared<Checkbox>();
-    w_checkbox->set_checked(checkbox);
-    auto* rawptr = w_checkbox.get();
-    w_checkbox->on_click([rawptr, &checkbox](View&) {
-        checkbox = rawptr->checked();
+    m_checkboxes.emplace_back(theme());
+    m_checkboxes.back().set_checked(checkbox);
+    auto* p_checkbox = &m_checkboxes.back();
+    m_checkboxes.back().on_change([p_checkbox, &checkbox]() {
+        checkbox = p_checkbox->checked();
     });
-    add(w_checkbox);
+    add(m_checkboxes.back());
     add_hint(Form::Hint::NextRow);
 }
 

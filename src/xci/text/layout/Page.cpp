@@ -389,7 +389,7 @@ void Page::foreach_word(const std::function<void(Word& word)>& cb)
 void Page::foreach_word(const std::function<void(const Word& word)>& cb) const
 {
     if (!cb) return;
-    for (auto& word : m_words) {
+    for (const auto& word : m_words) {
         cb(word);
     }
 }

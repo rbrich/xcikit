@@ -160,17 +160,17 @@ public:
     }
 
     /// Convert coords in viewport units into framebuffer coords.
-    /// Framebuffer has zero coords in bottom-left corner, inverted Y axis.
+    /// Framebuffer has zero coords in bottom-left corner.
     FramebufferCoords coords_to_framebuffer(const ViewportCoords& coords) const {
         auto c = size_to_framebuffer(coords + 0.5f * viewport_size());
-        return {c.x, framebuffer_size().y - c.y};
+        return {c.x, c.y};
     }
 
     /// Convert rectangle in viewport space into framebuffer space.
     FramebufferRect rect_to_framebuffer(const ViewportRect& rect) const {
         auto xy = coords_to_framebuffer(rect.top_left());
         auto size = size_to_framebuffer(rect.size());
-        return {xy.x, xy.y - size.y, size.x, size.y};
+        return {xy.x, xy.y, size.x, size.y};
     }
 
     // Convert units to viewport:

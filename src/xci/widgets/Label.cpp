@@ -34,6 +34,7 @@ Label::Label(Theme& theme, const std::string& string)
 
 void Label::resize(View& view)
 {
+    view.finish_draw();
     m_text.resize(view);
     auto rect = m_text.layout().bbox();
     rect.enlarge(m_padding);

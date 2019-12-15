@@ -35,12 +35,16 @@ public:
     void set_checked(bool checked);
     bool checked() const { return m_checked; }
 
+    using ChangeCallback = std::function<void()>;
+    void on_change(ChangeCallback cb) { m_change_cb = std::move(cb); }
+
     bool key_event(View& view, const KeyEvent& ev) override;
     void mouse_pos_event(View& view, const MousePosEvent& ev) override;
     bool mouse_button_event(View& view, const MouseBtnEvent& ev) override;
 
 private:
     bool m_checked = false;
+    ChangeCallback m_change_cb;
 };
 
 

@@ -43,6 +43,8 @@ void Checkbox::set_checked(bool checked)
     m_checked = checked;
     set_icon(m_checked ? IconId::CheckBoxChecked
                        : IconId::CheckBoxUnchecked);
+    if (m_change_cb)
+        m_change_cb();
 }
 
 
@@ -65,7 +67,7 @@ void Checkbox::mouse_pos_event(View& view, const MousePosEvent& ev)
 bool Checkbox::mouse_button_event(View& view, const MouseBtnEvent& ev)
 {
     if (ev.action == Action::Press && ev.button == MouseButton::Left
-        && contains(ev.pos - view.offset())) {
+    && contains(ev.pos - view.offset())) {
         do_click(view);
         return true;
     }

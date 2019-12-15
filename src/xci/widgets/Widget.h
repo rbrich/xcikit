@@ -109,18 +109,17 @@ private:
 };
 
 
-using WidgetPtr = std::shared_ptr<Widget>;
-using WidgetRef = std::weak_ptr<Widget>;
-
-
 // Manages list of child widgets and forwards events to them
 
 class Composite: public Widget {
 public:
-    void add(WidgetPtr child);
+    explicit Composite(Theme& theme) : Widget(theme) {}
 
-    void set_focus(WidgetRef child) { m_focus = std::move(child); }
-    WidgetPtr focus() const { return m_focus.lock(); }
+    void add(Widget& child);
+
+    void set_focus(Widget& child) { m_focus = &child; }
+    void reset_focus() { m_focus = nullptr; }
+    Widget* focus() const { return m_focus; }
 
     // impl Widget
     bool contains(const ViewportCoords& point) const override;
@@ -140,10 +139,10 @@ public:
     void partial_dump(std::ostream& stream, const std::string& nl_prefix) override;
 
 protected:
-    std::vector<WidgetPtr> m_child;
+    std::vector<Widget*> m_child;
 
 private:
-    WidgetRef m_focus;  // a child with keyboard focus
+    Widget* m_focus = nullptr;  // a child with keyboard focus
 };
 
 

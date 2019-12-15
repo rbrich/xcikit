@@ -17,12 +17,18 @@
 #define XCI_WIDGETS_FORM_H
 
 #include <xci/widgets/Widget.h>
+#include <xci/widgets/Label.h>
+#include <xci/widgets/TextInput.h>
+#include <xci/widgets/Checkbox.h>
+#include <list>
 
 namespace xci::widgets {
 
 
 class Form: public Composite {
 public:
+    explicit Form(Theme& theme) : Composite(theme) {}
+
     // High-level interface
     void add_input(const std::string& label, std::string& text_input);
     void add_input(const std::string& label, bool& checkbox);
@@ -36,7 +42,7 @@ public:
     void add_hint(Hint hint) { add_hint(m_child.size(), hint); }
     void add_hint(size_t child_index, Hint hint);
 
-    // Override Composite
+    // override Composite
     void resize(View& view) override;
 
 private:
@@ -51,6 +57,9 @@ private:
         }
     };
     std::vector<ChildHint> m_hint;
+    std::list<Label> m_labels;
+    std::list<TextInput> m_text_inputs;
+    std::list<Checkbox> m_checkboxes;
 };
 
 
