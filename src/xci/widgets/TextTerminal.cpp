@@ -17,14 +17,6 @@
 #include <xci/core/string.h>
 #include <xci/core/log.h>
 
-#ifdef XCI_EMBED_SHADERS
-#define INCBIN_PREFIX g_
-#define INCBIN_STYLE INCBIN_STYLE_SNAKE
-#include <incbin.h>
-INCBIN(cursor_vert, XCI_SHARE_DIR "/shaders/cursor.vert");
-INCBIN(cursor_frag, XCI_SHARE_DIR "/shaders/cursor.frag");
-#endif
-
 namespace xci::widgets {
 
 using namespace graphics;
@@ -485,8 +477,10 @@ void terminal::Buffer::remove_lines(size_t start, size_t count)
 // ------------------------------------------------------------------------
 
 
-void terminal::Cursor::update(View& view, const ViewportRect& rect)
+void terminal::Caret::update(View& view, const ViewportRect& rect)
 {
+    view.finish_draw();
+
     auto x1 = rect.x;
     auto y1 = rect.y;
     auto x2 = rect.x + rect.w;
@@ -497,63 +491,45 @@ void terminal::Cursor::update(View& view, const ViewportRect& rect)
     float ix = 1.0f + tx / (1.0f - tx);
     float iy = 1.0f + ty / (1.0f - ty);
 
-    m_prim->clear();
-    m_prim->begin_primitive();
-    m_prim->add_vertex({x1, y1}, -ix, -iy);
-    m_prim->add_vertex({x1, y2}, -ix, +iy);
-    m_prim->add_vertex({x2, y2}, +ix, +iy);
-    m_prim->add_vertex({x2, y1}, +ix, -iy);
-    m_prim->end_primitive();
-}
+    m_quad.clear();
+    m_quad.begin_primitive();
+    m_quad.add_vertex({x1, y1}, -ix, -iy);
+    m_quad.add_vertex({x1, y2}, -ix, +iy);
+    m_quad.add_vertex({x2, y2}, +ix, +iy);
+    m_quad.add_vertex({x2, y1}, +ix, -iy);
+    m_quad.end_primitive();
 
-
-void terminal::Cursor::draw(View& view, const ViewportCoords& pos)
-{
     // pure white
-    constexpr Color fill_color(0.7, 0.7, 0.7);
-    constexpr Color outline_color(0.7, 0.7, 0.7);
+    m_quad.add_uniform(1, {0.7, 0.7, 0.7}, {0.7, 0.7, 0.7});
     // green
-    //constexpr Color fill_color(0.0, 0.7, 0.3);
-    //constexpr Color outline_color(0.0, 1.0, 0.0);
+    //m_quad.add_uniform(1, {0.0, 0.7, 0.3}, Color::Green());
     // yellow
-    //constexpr Color fill_color(0.7, 0.7, 0.3);
-    //constexpr Color outline_color(1.0, 1.0, 0.0);
-    init_shader();
-    m_shader->set_uniform("u_fill_color",
-                          fill_color.red_f(), fill_color.green_f(),
-                          fill_color.blue_f(), fill_color.alpha_f());
-    m_shader->set_uniform("u_outline_color",
-                          outline_color.red_f(), outline_color.green_f(),
-                          outline_color.blue_f(), outline_color.alpha_f());
-    m_prim->set_shader(m_shader);
-    m_prim->set_blend(Primitives::BlendFunc::InverseVideo);
-    m_prim->draw(view, pos);
+    //m_quad.add_uniform(1, {0.7, 0.7, 0.3}, Color::Yellow());
+
+    m_quad.set_shader(m_shader);
+    m_quad.set_blend(BlendFunc::InverseVideo);
+    m_quad.update();
 }
 
 
-void terminal::Cursor::init_shader()
+void terminal::Caret::draw(View& view, const ViewportCoords& pos)
 {
-    if (m_shader)
-        return;
-    auto& renderer = graphics::Renderer::default_instance();
-    m_shader = renderer.get_or_create_shader(ShaderId::Cursor);
-    if (m_shader->is_ready())
-        return;
-
-#ifdef XCI_EMBED_SHADERS
-    bool res = m_shader->load_from_memory(
-                (const char*)g_cursor_vert_data, g_cursor_vert_size,
-                (const char*)g_cursor_frag_data, g_cursor_frag_size);
-#else
-    bool res = m_shader->load_from_vfs("shaders/cursor.vert", "shaders/cursor.frag");
-#endif
-    if (!res) {
-        log_error("Cursor shader not loaded!");
-    }
+    m_quad.draw(view, pos);
 }
 
 
 // ------------------------------------------------------------------------
+
+
+TextTerminal::TextTerminal(Theme& theme)
+        : Widget(theme),
+          m_sprites(theme.renderer(), theme.font().texture(), Color(7)),
+          m_boxes(theme.renderer(), Color(0)),
+          m_caret(theme.renderer()),
+          m_frame(theme.renderer(), Color::Transparent(), Color::Transparent())
+{
+    set_focusable(true);
+}
 
 
 void TextTerminal::set_font_size(ViewportUnits size)
@@ -758,42 +734,36 @@ void TextTerminal::cancel_scrollback()
 }
 
 
-void TextTerminal::update(View& view, std::chrono::nanoseconds elapsed)
-{
-    if (m_bell_time > 0ns) {
-        m_bell_time -= elapsed;
-        // Request new draw and wakeup event loop immediately
-        view.refresh();
-        view.window()->wakeup();
-    }
-}
-
-
 void TextTerminal::resize(View& view)
 {
     auto& font = theme().font();
     m_font_size = view.size_to_framebuffer(m_font_size_requested);
     font.set_size(m_font_size.as<unsigned>());
     m_cell_size = view.size_to_viewport(FramebufferSize{
-        font.max_advance(), font.line_height()});
+            font.max_advance(), font.line_height()});
     if (m_resize_cells) {
         m_cells = {(size().x / m_cell_size.x).as<unsigned>(),
                    (size().y / m_cell_size.y).as<unsigned>()};
     }
+
+    m_frame.clear();
+    m_frame.add_rectangle({{0, 0}, size()}, 0.01f);
+    m_frame.update();
 }
 
 
-void TextTerminal::draw(View& view, State state)
+void TextTerminal::update(View& view, State state)
 {
+    view.finish_draw();
+
     auto& font = theme().font();
     font.set_size(m_font_size.as<unsigned>());
 
-    graphics::ColoredSprites sprites(font.texture(), Color(7));
-    graphics::Shape boxes(Color(0));
-
     size_t expected_num_cells = m_cells.x * m_cells.y / 2;
-    sprites.reserve(expected_num_cells);
-    boxes.reserve(0, expected_num_cells, 0);
+    m_sprites.clear();
+    m_sprites.reserve(expected_num_cells);
+    m_boxes.clear();
+    m_boxes.reserve(0, expected_num_cells, 0);
 
     ViewportCoords pen;
     size_t buffer_first, buffer_last;
@@ -813,20 +783,20 @@ void TextTerminal::draw(View& view, State state)
 
         // Reset attributes
         font.set_style(text::FontStyle::Regular);
-        sprites.set_color(Color(7));
-        boxes.set_fill_color(Color(0));
+        m_sprites.set_color(Color(7));
+        m_boxes.set_fill_color(Color(0));
         auto ascender = font.ascender();
 
         class LineRenderer: public terminal::Renderer {
         public:
             // capture by ref
             LineRenderer(ViewportCoords& pen, size_t& column,
-                         graphics::ColoredSprites& sprites, graphics::Shape& boxes,
-                         text::Font& font, float& ascender,
-                         const ViewportSize& cell_size, View& view)
-            : pen(pen), column(column), sprites(sprites), boxes(boxes),
-              font(font), ascender(ascender),
-              cell_size(cell_size), view(view)
+                    graphics::ColoredSprites& sprites, graphics::Shape& boxes,
+                    text::Font& font, float& ascender,
+                    const ViewportSize& cell_size, View& view)
+                    : pen(pen), column(column), sprites(sprites), boxes(boxes),
+                      font(font), ascender(ascender),
+                      cell_size(cell_size), view(view)
             {}
 
             void set_font_style(FontStyle font_style) override {
@@ -861,7 +831,7 @@ void TextTerminal::draw(View& view, State state)
                         pen.y + (ascender_vp - bearing.y),
                         glyph_size.x,
                         glyph_size.y
-                    }, glyph->tex_coords());
+                }, glyph->tex_coords());
 
                 boxes.add_rectangle({pen, cell_size});
 
@@ -878,45 +848,56 @@ void TextTerminal::draw(View& view, State state)
             float& ascender;
             const ViewportSize& cell_size;
             View& view;
-        } line_renderer(pen, column, sprites, boxes, font, ascender,
-                        m_cell_size, view);
+        } line_renderer(pen, column, m_sprites, m_boxes, font, ascender,
+                m_cell_size, view);
 
         line.render(line_renderer);
 
         // draw rest of blanked line
         if (line.is_blanked()) {
             ViewportRect rect {
-                pen.x, pen.y,
-                m_cell_size.x * (m_cells.x - column), m_cell_size.y };
-            boxes.add_rectangle(rect);
+                    pen.x, pen.y,
+                    m_cell_size.x * (m_cells.x - column), m_cell_size.y };
+            m_boxes.add_rectangle(rect);
         }
 
         // draw rest of blanked page
         if (line.is_page_blanked()) {
             ViewportRect rect {
-                0, pen.y + m_cell_size.y,
-                m_cell_size.x * m_cells.x, m_cell_size.y * (m_cells.y - row - 1) };
-            boxes.add_rectangle(rect);
+                    0, pen.y + m_cell_size.y,
+                    m_cell_size.x * m_cells.x, m_cell_size.y * (m_cells.y - row - 1) };
+            m_boxes.add_rectangle(rect);
         }
 
         pen.x = 0;
         pen.y += m_cell_size.y;
     }
+    m_boxes.update();
+    m_sprites.update();
 
-    boxes.draw(view, position());
-    sprites.draw(view, position());
-
-    // draw the cursor
-    terminal::Cursor cursor;
-    cursor.update(view, {m_cell_size.x * m_cursor.x, m_cell_size.y * m_cursor.y,
-                         m_cell_size.x, m_cell_size.y});
-    cursor.draw(view, position());
+    m_caret.update(view, {m_cell_size.x * m_cursor.x, m_cell_size.y * m_cursor.y,
+                          m_cell_size.x, m_cell_size.y});
 
     if (m_bell_time > 0ns) {
-        auto x = (float) duration_cast<milliseconds>(m_bell_time).count() / 500.f;
-        graphics::Shape frame(Color::Transparent(), Color(1.f, 0.f, 0.f, x));
-        frame.add_rectangle({{0, 0}, size()}, 0.01f);
-        frame.draw(view, position());
+        m_bell_time -= state.elapsed;
+        auto alpha = (float) duration_cast<milliseconds>(m_bell_time).count() / 500.f;
+        m_frame.set_outline_color(Color(1.f, 0.f, 0.f, alpha));
+        m_frame.update();
+        // Request new draw and wakeup event loop immediately
+        view.refresh();
+        view.window()->wakeup();
+    }
+}
+
+
+void TextTerminal::draw(View& view)
+{
+    m_boxes.draw(view, position());
+    m_sprites.draw(view, position());
+    m_caret.draw(view, position());
+
+    if (m_bell_time > 0ns) {
+        m_frame.draw(view, position());
         // Request new draw and wakeup event loop immediately
         view.refresh();
         view.window()->wakeup();

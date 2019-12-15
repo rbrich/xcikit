@@ -56,15 +56,17 @@ int main()
     Vfs vfs;
     vfs.mount(XCI_SHARE_DIR);
 
-    Window& window = Window::default_instance();
+    Renderer renderer {vfs};
+    Window window {renderer};
     window.create({800, 600}, "XCI TextTerminal + Dispatch demo");
 
-    if (!Theme::load_default_theme())
+    Theme theme(renderer);
+    if (!theme.load_default())
         return EXIT_FAILURE;
 
     const char* cmd = "while true ; do date ; sleep 1; done";
 
-    TextTerminal terminal;
+    TextTerminal terminal {theme};
     terminal.add_text(get_cwd() + "> ");
     terminal.set_font_style(TextTerminal::FontStyle::Bold);
     terminal.add_text(std::string(cmd) + "\n");

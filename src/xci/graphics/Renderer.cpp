@@ -272,7 +272,7 @@ bool Renderer::load_shader(ShaderId shader_id, Shader& shader)
              return shader.load_from_memory(
                     (const char*) g_fps_vert_data, g_fps_vert_size,
                     (const char*) g_fps_frag_data, g_fps_frag_size);
-        case ShaderId::Fps:
+        case ShaderId::Cursor:
              return shader.load_from_memory(
                     (const char*)g_cursor_vert_data, g_cursor_vert_size,
                     (const char*)g_cursor_frag_data, g_cursor_frag_size);
@@ -287,8 +287,8 @@ bool Renderer::load_shader(ShaderId shader_id, Shader& shader)
                     "shaders/sprite.frag.spv");
         case ShaderId::SpriteC:
             return shader.load_from_vfs(vfs(),
-                    "shaders/sprite_c.vert",
-                    "shaders/sprite_c.frag");
+                    "shaders/sprite_c.vert.spv",
+                    "shaders/sprite_c.frag.spv");
         case ShaderId::Line:
             return shader.load_from_vfs(vfs(),
                     "shaders/line.vert.spv",
