@@ -33,7 +33,8 @@ public:
     void set_color(const graphics::Color& color);
 
     void resize(View& view) override;
-    void draw(View& view, State state) override;
+    void update(View& view, State state) override;
+    void draw(View& view) override;
 
 private:
     IconId m_icon_id = IconId::None;

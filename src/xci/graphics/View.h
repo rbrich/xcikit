@@ -231,6 +231,10 @@ public:
     void refresh() { m_needs_refresh = true; }
     bool pop_refresh();
 
+    // Wait for asynchronous draw commands to finish.
+    // This needs to be called before recreating objects that are being drawn.
+    void finish_draw();
+
     // ------------------------------------------------------------------------
     // Visual debugging
 

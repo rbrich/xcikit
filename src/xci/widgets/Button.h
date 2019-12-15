@@ -37,7 +37,8 @@ public:
     void set_text_color(const graphics::Color& color);
 
     void resize(View& view) override;
-    void draw(View& view, State state) override;
+    void update(View& view, State state) override;
+    void draw(View& view) override;
     bool key_event(View& view, const KeyEvent& ev) override;
     void mouse_pos_event(View& view, const MousePosEvent& ev) override;
     bool mouse_button_event(View& view, const MouseBtnEvent& ev) override;

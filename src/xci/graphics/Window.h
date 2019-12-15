@@ -203,7 +203,9 @@ public:
 
     void set_debug_flags(View::DebugFlags flags);
 
-    void reset_command_buffers();
+    /// Wait for asynchronous draw commands to finish.
+    /// This needs to be called before recreating objects that are being drawn.
+    void finish_draw();
 
     // GLFW handles
     GLFWwindow* glfw_window() const { return m_window; }
@@ -229,6 +231,7 @@ private:
     Vec2i m_window_size;
     std::chrono::microseconds m_timeout {0};
     bool m_clear_timeout = false;
+    bool m_draw_finished = true;
 
     VkCommandBuffer m_command_buffers[cmd_buf_count] {};
     VkFence m_cmd_buf_fences[cmd_buf_count] {};

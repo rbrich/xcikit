@@ -88,20 +88,27 @@ void TextInput::resize(View& view)
 }
 
 
-void TextInput::draw(View& view, State state)
+void TextInput::update(View& view, State state)
 {
-    auto rect = m_layout.bbox();
-    auto pos = position() + ViewportCoords{m_padding - rect.x - m_content_pos,
-                                           m_padding - rect.y};
     if (last_hover() == LastHover::Inside) {
         m_bg_rect.set_outline_color(theme().color(ColorId::Hover));
     } else {
         m_bg_rect.set_outline_color(theme().color(ColorId::Default));
     }
+    m_bg_rect.update();
+    m_draw_cursor = state.focused;
+}
+
+
+void TextInput::draw(View& view)
+{
+    auto rect = m_layout.bbox();
+    auto pos = position() + ViewportCoords{m_padding - rect.x - m_content_pos,
+                                           m_padding - rect.y};
     m_bg_rect.draw(view, position());
     view.push_crop(aabb().enlarged(-m_outline_thickness));
     m_layout.draw(view, pos);
-    if (state.focused)
+    if (m_draw_cursor)
         m_cursor_shape.draw(view, pos);
     view.pop_crop();
 }

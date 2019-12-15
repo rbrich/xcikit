@@ -140,8 +140,7 @@ void Primitives::clear()
     destroy_pipeline();
     m_vertex_data.clear();
     m_index_data.clear();
-    m_uniform_data.clear();
-    m_uniforms.clear();
+    clear_uniforms();
     m_closed_vertices = 0;
     m_open_vertices = -1;
     m_texture.ptr = nullptr;
@@ -164,9 +163,21 @@ void Primitives::set_texture(uint32_t binding, Texture& texture)
 }
 
 
-void Primitives::set_uniform_data(uint32_t binding, const void* data, size_t size)
+void Primitives::clear_uniforms()
+{
+    m_uniform_data.clear();
+    m_uniforms.clear();
+    destroy_pipeline();
+}
+
+
+void Primitives::add_uniform_data(uint32_t binding, const void* data, size_t size)
 {
     assert(binding > 0);  // zero is reserved for MVP matrix
+    assert(std::find_if(m_uniforms.cbegin(), m_uniforms.cend(),
+            [binding](const Uniform& u) { return u.binding == binding; })
+            == m_uniforms.cend());  // the binding was already added
+
     auto offset = align_uniform(m_uniform_data.size());
     m_uniform_data.resize(offset + size);
     std::memcpy(&m_uniform_data[offset], data, size);
@@ -187,24 +198,24 @@ namespace {
 }
 
 
-void Primitives::set_uniform(uint32_t binding, float f1, float f2)
+void Primitives::add_uniform(uint32_t binding, float f1, float f2)
 {
     struct { float f1, f2; } buf { f1, f2 };
-    set_uniform_data(binding, &buf, sizeof(buf));
+    add_uniform_data(binding, &buf, sizeof(buf));
 }
 
 
-void Primitives::set_uniform(uint32_t binding, const Color& color)
+void Primitives::add_uniform(uint32_t binding, const Color& color)
 {
     FloatColor buf {color};
-    set_uniform_data(binding, &buf, sizeof(buf));
+    add_uniform_data(binding, &buf, sizeof(buf));
 }
 
 
-void Primitives::set_uniform(uint32_t binding, const Color& color1, const Color& color2)
+void Primitives::add_uniform(uint32_t binding, const Color& color1, const Color& color2)
 {
     struct { FloatColor c1, c2; } buf { color1, color2 };
-    set_uniform_data(binding, &buf, sizeof(buf));
+    add_uniform_data(binding, &buf, sizeof(buf));
 }
 
 

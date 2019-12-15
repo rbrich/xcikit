@@ -328,8 +328,12 @@ void Window::create_command_buffers()
 }
 
 
-void Window::reset_command_buffers()
+void Window::finish_draw()
 {
+    if (m_draw_finished)
+        return;
+    m_draw_finished = true;
+
     vkDeviceWaitIdle(m_renderer.vk_device());
 
     for (auto & com_buf : m_command_buffers) {
@@ -432,6 +436,7 @@ void Window::draw()
         log_error("vkQueuePresentKHR failed: {}", rc);
 
     m_current_cmd_buf = (m_current_cmd_buf + 1) % cmd_buf_count;
+    m_draw_finished = false;
 }
 
 

@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "View.h"
+#include "Window.h"
 #include <cassert>
 
 namespace xci::graphics {
@@ -118,6 +119,12 @@ bool View::pop_refresh()
     bool res = m_needs_refresh;
     m_needs_refresh = false;
     return res;
+}
+
+
+void View::finish_draw()
+{
+    window()->finish_draw();
 }
 
 

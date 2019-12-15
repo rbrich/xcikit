@@ -75,7 +75,7 @@ int main()
     });
 
     window.set_update_callback([&](View& view, std::chrono::nanoseconds elapsed){
-        fps_display.update(view, elapsed);
+        fps_display.update(view, State{ elapsed });
         if (!mouse_pos_str.empty()) {
             mouse_pos.set_fixed_string("Mouse: " + mouse_pos_str);
             mouse_pos.update(view);
@@ -89,7 +89,7 @@ int main()
         rts_px.draw(view, {-0.45f, -0.45f});
 
         help_text.draw(view, {-1.2f, -0.9f});
-        fps_display.draw(view, {});
+        fps_display.draw(view);
         mouse_pos.draw(view, {-1.2f, 0.9f});
     });
 

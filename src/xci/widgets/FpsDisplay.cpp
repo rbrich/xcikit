@@ -42,7 +42,17 @@ FpsDisplay::FpsDisplay(Theme& theme)
 }
 
 
-void FpsDisplay::update(View& view, std::chrono::nanoseconds elapsed)
+void FpsDisplay::resize(View& view)
+{
+    m_quad.clear();
+    create_sprite();
+
+    m_text.set_font(theme().font());
+    m_text.set_font_size(size().y / 2);
+}
+
+
+void FpsDisplay::update(View& view, State state)
 {
     if (!m_frozen) {
         update_texture();
@@ -53,7 +63,7 @@ void FpsDisplay::update(View& view, std::chrono::nanoseconds elapsed)
         m_quad.update();
     }
 
-    if (elapsed > 400ms && !m_frozen) {
+    if (state.elapsed > 400ms && !m_frozen) {
         // Almost 1 seconds since last refresh - freeze the counter
         m_frozen = true;
         view.refresh();
@@ -66,18 +76,7 @@ void FpsDisplay::update(View& view, std::chrono::nanoseconds elapsed)
 }
 
 
-void FpsDisplay::resize(View& view)
-{
-    m_quad.clear();
-    create_sprite();
-
-
-    m_text.set_font(theme().font());
-    m_text.set_font_size(size().y / 2);
-}
-
-
-void FpsDisplay::draw(View& view, State state)
+void FpsDisplay::draw(View& view)
 {
     // Measure time from previous frame
     auto now = std::chrono::steady_clock::now();

@@ -42,7 +42,7 @@ void Label::resize(View& view)
 }
 
 
-void Label::draw(View& view, State state)
+void Label::draw(View& view)
 {
     view.push_offset(position());
     auto rect = m_text.layout().bbox();

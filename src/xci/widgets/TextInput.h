@@ -42,7 +42,8 @@ public:
     void on_change(ChangeCallback cb) { m_change_cb = std::move(cb); }
 
     void resize(View& view) override;
-    void draw(View& view, State state) override;
+    void update(View& view, State state) override;
+    void draw(View& view) override;
     bool key_event(View& view, const KeyEvent& ev) override;
     void char_event(View& view, const CharEvent& ev) override;
     void mouse_pos_event(View& view, const MousePosEvent& ev) override;
@@ -59,6 +60,7 @@ private:
     ViewportUnits m_content_pos = 0;
     ViewportUnits m_outline_thickness = 0.005f;
     ChangeCallback m_change_cb;
+    bool m_draw_cursor = false;
 };
 
 

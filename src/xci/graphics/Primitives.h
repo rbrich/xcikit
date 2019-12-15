@@ -65,11 +65,12 @@ public:
 
     void set_shader(Shader& shader);
 
-    void set_uniform_data(uint32_t binding, const void* data, size_t size);
-    void set_uniform(uint32_t binding, float f) { set_uniform_data(binding, &f, sizeof(f)); }
-    void set_uniform(uint32_t binding, float f1, float f2);
-    void set_uniform(uint32_t binding, const Color& color);
-    void set_uniform(uint32_t binding, const Color& color1, const Color& color2);
+    void clear_uniforms();
+    void add_uniform_data(uint32_t binding, const void* data, size_t size);
+    void add_uniform(uint32_t binding, float f) { add_uniform_data(binding, &f, sizeof(f)); }
+    void add_uniform(uint32_t binding, float f1, float f2);
+    void add_uniform(uint32_t binding, const Color& color);
+    void add_uniform(uint32_t binding, const Color& color1, const Color& color2);
 
     void set_texture(uint32_t binding, Texture& texture);
 

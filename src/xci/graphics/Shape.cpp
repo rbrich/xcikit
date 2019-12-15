@@ -200,8 +200,9 @@ void Shape::update()
 {
     // lines
     if (!m_lines.empty()) {
-        m_lines.set_uniform(1, m_fill_color, m_outline_color);
-        m_lines.set_uniform(2, m_softness, m_antialiasing);
+        m_lines.clear_uniforms();
+        m_lines.add_uniform(1, m_fill_color, m_outline_color);
+        m_lines.add_uniform(2, m_softness, m_antialiasing);
         m_lines.set_shader(m_line_shader);
         m_lines.set_blend(BlendFunc::AlphaBlend);
         m_lines.update();
@@ -209,8 +210,9 @@ void Shape::update()
 
     // rectangles
     if (!m_rectangles.empty()) {
-        m_rectangles.set_uniform(1, m_outline_color);
-        m_rectangles.set_uniform(2, m_softness, m_antialiasing);
+        m_rectangles.clear_uniforms();
+        m_rectangles.add_uniform(1, m_outline_color);
+        m_rectangles.add_uniform(2, m_softness, m_antialiasing);
         m_rectangles.set_shader(m_rectangle_shader);
         m_rectangles.set_blend(BlendFunc::AlphaBlend);
         m_rectangles.update();
@@ -218,8 +220,9 @@ void Shape::update()
 
     // ellipses
     if (!m_ellipses.empty()) {
-        m_ellipses.set_uniform(1, m_fill_color, m_outline_color);
-        m_ellipses.set_uniform(2, m_softness,m_antialiasing);
+        m_ellipses.clear_uniforms();
+        m_ellipses.add_uniform(1, m_fill_color, m_outline_color);
+        m_ellipses.add_uniform(2, m_softness, m_antialiasing);
         m_ellipses.set_shader(m_ellipse_shader);
         m_ellipses.set_blend(BlendFunc::AlphaBlend);
         m_ellipses.update();

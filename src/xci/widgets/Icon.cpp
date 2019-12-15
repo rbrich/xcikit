@@ -52,6 +52,7 @@ void Icon::set_color(const graphics::Color& color)
 
 void Icon::resize(View& view)
 {
+    view.finish_draw();
     if (m_needs_refresh) {
         // Refresh
         m_layout.clear();
@@ -67,17 +68,25 @@ void Icon::resize(View& view)
         m_needs_refresh = false;
     }
     m_layout.typeset(view);
+    m_layout.update(view);
     auto rect = m_layout.bbox();
     set_size(rect.size());
     set_baseline(-rect.y);
 }
 
 
-void Icon::draw(View& view, State state)
+void Icon::update(View& view, State state)
 {
+    view.finish_draw();
     m_layout.get_span("icon")->adjust_style([this, &state](Style& s) {
         s.set_color(state.focused ? theme().color(ColorId::Focus) : m_icon_color);
     });
+    m_layout.update(view);
+}
+
+
+void Icon::draw(View& view)
+{
     auto rect = m_layout.bbox();
     m_layout.draw(view, position() - rect.top_left());
 }

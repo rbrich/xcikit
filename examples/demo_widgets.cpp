@@ -35,28 +35,32 @@ int main()
     Vfs vfs;
     vfs.mount(XCI_SHARE_DIR);
 
-    Window& window = Window::default_instance();
+    Renderer renderer {vfs};
+    Window window {renderer};
     window.create({800, 600}, "XCI widgets demo");
 
-    if (!Theme::load_default_theme())
+    Theme theme(renderer);
+    if (!theme.load_default())
         return EXIT_FAILURE;
 
-    Button button_default("Default button");
+    Button button_default(theme, "Default button");
     button_default.set_position({0, -0.2f});
 
-    Button button_styled("Styled button");
+    Button button_styled(theme, "Styled button");
     button_styled.set_font_size(0.07);
     button_styled.set_padding(0.05);
     button_styled.set_decoration_color(Color(10, 20, 100), Color(20, 50, 150));
     button_styled.set_text_color(Color(255, 255, 50));
 
-    Icon checkbox;
+    Icon checkbox(theme);
     checkbox.set_position({0, 0.4f});
     checkbox.set_icon(IconId::CheckBoxChecked);
     checkbox.set_text("Checkbox");
     checkbox.set_font_size(0.08);
     checkbox.set_color(Color(150, 200, 200));
     bool checkbox_state = true;
+    bool checkbox_active = false;
+    bool refresh_checkbox = true;
 
     window.set_size_callback([&](View& view) {
         //view.set_debug_flag(View::Debug::WordBasePoint);
@@ -67,10 +71,22 @@ int main()
         checkbox.resize(view);
     });
 
+    window.set_update_callback([&](View& view, std::chrono::nanoseconds elapsed) {
+        if (refresh_checkbox) {
+            refresh_checkbox = false;
+            checkbox.set_icon(checkbox_state
+                    ? IconId::CheckBoxChecked
+                    : IconId::CheckBoxUnchecked);
+            checkbox.resize(view);
+            checkbox.update(view, State{ .focused = checkbox_active });
+            view.refresh();
+        }
+    });
+
     window.set_draw_callback([&](View& view) {
-        button_default.draw(view, {});
-        button_styled.draw(view, {});
-        checkbox.draw(view, {});
+        button_default.draw(view);
+        button_styled.draw(view);
+        checkbox.draw(view);
     });
 
     window.set_mouse_button_callback([&](View& view, const MouseBtnEvent& ev) {
@@ -80,22 +96,17 @@ int main()
             if (checkbox.contains(ev.pos - view.offset())) {
                 checkbox_state = !checkbox_state;
                 log_debug("checkbox state {}", checkbox_state);
-                checkbox.set_icon(checkbox_state ? IconId::CheckBoxChecked
-                                                 : IconId::CheckBoxUnchecked);
-                checkbox.resize(view);
-                view.refresh();
+                refresh_checkbox = true;
             }
         }
     });
 
-    window.set_mouse_position_callback([&checkbox](View& view, const MousePosEvent& ev) {
-        if (checkbox.contains(ev.pos - view.offset())) {
-            checkbox.set_color(Color::White());
-        } else {
-            checkbox.set_color(Color(150, 200, 200));
+    window.set_mouse_position_callback([&](View& view, const MousePosEvent& ev) {
+        bool mouse_in = checkbox.contains(ev.pos - view.offset());
+        if (mouse_in != checkbox_active) {
+            checkbox_active = mouse_in;
+            refresh_checkbox = true;
         }
-        checkbox.resize(view);
-        view.refresh();
     });
 
     window.display();

@@ -55,13 +55,6 @@ bool Composite::contains(const ViewportCoords& point) const
 }
 
 
-void Composite::update(View& view, std::chrono::nanoseconds elapsed)
-{
-    for (auto& child : m_child)
-        child->update(view, elapsed);
-}
-
-
 void Composite::resize(View& view)
 {
     for (auto& child : m_child)
@@ -69,12 +62,20 @@ void Composite::resize(View& view)
 }
 
 
-void Composite::draw(View& view, State state)
+void Composite::update(View& view, State state)
+{
+    for (auto& child : m_child) {
+        state.focused = (m_focus.lock() == child);
+        child->update(view, state);
+    }
+}
+
+
+void Composite::draw(View& view)
 {
     view.push_offset(position());
     for (auto& child : m_child) {
-        state.focused = (m_focus.lock() == child);
-        child->draw(view, state);
+        child->draw(view);
     }
     view.pop_offset();
 }
@@ -266,7 +267,7 @@ Bind::Bind(graphics::Window& window, Widget& root)
     window.set_update_callback([&](View& v, std::chrono::nanoseconds t) {
         if (m_update_cb)
             m_update_cb(v, t);
-        root.update(v, t);
+        root.update(v, State{ .elapsed = t });
     });
 
     m_size_cb = window.size_callback();
@@ -280,7 +281,7 @@ Bind::Bind(graphics::Window& window, Widget& root)
     window.set_draw_callback([&](View& v) {
         if (m_draw_cb)
             m_draw_cb(v);
-        root.draw(v, {});
+        root.draw(v);
     });
 
     m_key_cb = window.key_callback();

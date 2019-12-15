@@ -30,7 +30,7 @@ public:
     text::Text& text() { return m_text; }
 
     void resize(View& view) override;
-    void draw(View& view, State state) override;
+    void draw(View& view) override;
 
 private:
     text::Text m_text;

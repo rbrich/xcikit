@@ -38,6 +38,7 @@ using graphics::ViewportRect;
 
 
 struct State {
+    std::chrono::nanoseconds elapsed;
     bool focused = false;
 };
 
@@ -78,9 +79,9 @@ public:
     // Events need to be injected into root widget.
     // This can be set up using Bind helper or manually by calling these methods.
 
-    virtual void update(View& view, std::chrono::nanoseconds elapsed) {}
     virtual void resize(View& view) {}
-    virtual void draw(View& view, State state) = 0;
+    virtual void update(View& view, State state) {}
+    virtual void draw(View& view) = 0;
     virtual bool key_event(View& view, const KeyEvent& ev) { return false; }
     virtual void char_event(View& view, const CharEvent& ev) {}
     virtual void mouse_pos_event(View& view, const MousePosEvent& ev) {}
@@ -124,9 +125,9 @@ public:
     // impl Widget
     bool contains(const ViewportCoords& point) const override;
 
-    void update(View& view, std::chrono::nanoseconds elapsed) override;
     void resize(View& view) override;
-    void draw(View& view, State state) override;
+    void update(View& view, State state) override;
+    void draw(View& view) override;
     bool key_event(View& view, const KeyEvent& ev) override;
     void char_event(View& view, const CharEvent& ev) override;
     void mouse_pos_event(View& view, const MousePosEvent& ev) override;

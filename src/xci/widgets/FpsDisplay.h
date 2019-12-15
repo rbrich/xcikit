@@ -29,9 +29,9 @@ class FpsDisplay: public Widget {
 public:
     explicit FpsDisplay(Theme& theme);
 
-    void update(View& view, std::chrono::nanoseconds elapsed) override;
     void resize(View& view) override;
-    void draw(View& view, State state) override;
+    void update(View& view, State state) override;
+    void draw(View& view) override;
 
 private:
     void create_sprite();
