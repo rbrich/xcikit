@@ -60,7 +60,8 @@ public:
 
     void clear_shader_cache();
 
-    void init(GLFWwindow* m_window);
+    void create_surface(GLFWwindow* window);
+    void destroy_surface();
     void reset_framebuffer(VkExtent2D new_size = {0, 0});
 
     // Vulkan handles
@@ -77,10 +78,12 @@ public:
 
 private:
     void create_device();
+    void destroy_device();
     void create_swapchain();
-    void create_renderpass();
-    void create_framebuffers();
     void destroy_swapchain();
+    void create_renderpass();
+    void destroy_renderpass();
+    void create_framebuffers();
     void destroy_framebuffers();
 
     std::optional<uint32_t> query_queue_families(VkPhysicalDevice device);

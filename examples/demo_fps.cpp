@@ -58,10 +58,7 @@ int main()
                          "[e] on event\t[m] mailbox\n");
     Text mouse_pos(font, "Mouse: ");
     mouse_pos.set_color(Color(255, 150, 50));
-
-    window.set_update_callback([&](View& view, std::chrono::nanoseconds elapsed){
-        fps_display.update(view, elapsed);
-    });
+    std::string mouse_pos_str;
 
     window.set_size_callback([&](View& view) {
         rts.update();
@@ -75,6 +72,16 @@ int main()
         fps_display.resize(view);
         help_text.resize(view);
         mouse_pos.resize(view);
+    });
+
+    window.set_update_callback([&](View& view, std::chrono::nanoseconds elapsed){
+        fps_display.update(view, elapsed);
+        if (!mouse_pos_str.empty()) {
+            mouse_pos.set_fixed_string("Mouse: " + mouse_pos_str);
+            mouse_pos.update(view);
+            view.refresh();
+            mouse_pos_str.clear();
+        }
     });
 
     window.set_draw_callback([&](View& view) {
@@ -114,9 +121,7 @@ int main()
     });
 
     window.set_mouse_position_callback([&](View& view, const MousePosEvent& ev) {
-        mouse_pos.set_string("Mouse: " +
-                             format("({}, {})", ev.pos.x, ev.pos.y));
-        view.refresh();
+        mouse_pos_str = format("({}, {})", ev.pos.x, ev.pos.y);
     });
 
     window.set_refresh_mode(RefreshMode::Periodic);

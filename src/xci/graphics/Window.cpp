@@ -27,6 +27,9 @@ Window::~Window()
         vkDestroySemaphore(m_renderer.vk_device(), sem, nullptr);
     for (auto* sem : m_image_semaphore)
         vkDestroySemaphore(m_renderer.vk_device(), sem, nullptr);
+
+    m_renderer.destroy_surface();
+
     if (m_window != nullptr)
         glfwDestroyWindow(m_window);
 }
@@ -44,7 +47,7 @@ void Window::create(const Vec2u& size, const std::string& title)
     }
     glfwSetWindowUserPointer(m_window, this);
 
-    m_renderer.init(m_window);
+    m_renderer.create_surface(m_window);
 }
 
 

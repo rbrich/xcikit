@@ -217,14 +217,8 @@ Renderer::Renderer(core::Vfs& vfs)
 
 Renderer::~Renderer()
 {
-    clear_shader_cache();
-    destroy_framebuffers();
-    vkDestroyRenderPass(m_device, m_render_pass, nullptr);
-    destroy_swapchain();
-    vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
-    vkDestroyCommandPool(m_device, m_command_pool, nullptr);
-    vkDestroyCommandPool(m_device, m_transient_command_pool, nullptr);
-    vkDestroyDevice(m_device, nullptr);
+    destroy_surface();
+
 #ifdef XCI_DEBUG_VULKAN
     auto vkDestroyDebugUtilsMessengerEXT = (PFN_vkDestroyDebugUtilsMessengerEXT)
             vkGetInstanceProcAddr(m_instance, "vkDestroyDebugUtilsMessengerEXT");
@@ -320,7 +314,7 @@ void Renderer::clear_shader_cache()
 }
 
 
-void Renderer::init(GLFWwindow* window)
+void Renderer::create_surface(GLFWwindow* window)
 {
     VK_TRY("glfwCreateWindowSurface",
             glfwCreateWindowSurface(m_instance, window, nullptr, &m_surface));
@@ -333,6 +327,22 @@ void Renderer::init(GLFWwindow* window)
     create_swapchain();
     create_renderpass();
     create_framebuffers();
+}
+
+
+void Renderer::destroy_surface()
+{
+    if (m_surface == VK_NULL_HANDLE)
+        return;
+
+    clear_shader_cache();
+    destroy_framebuffers();
+    destroy_renderpass();
+    destroy_swapchain();
+    destroy_device();
+
+    vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+    m_surface = VK_NULL_HANDLE;
 }
 
 
@@ -479,6 +489,14 @@ void Renderer::create_device()
 }
 
 
+void Renderer::destroy_device()
+{
+    vkDestroyCommandPool(m_device, m_command_pool, nullptr);
+    vkDestroyCommandPool(m_device, m_transient_command_pool, nullptr);
+    vkDestroyDevice(m_device, nullptr);
+}
+
+
 void Renderer::create_swapchain()
 {
     VkSwapchainCreateInfoKHR swapchain_create_info {
@@ -533,6 +551,15 @@ void Renderer::create_swapchain()
 }
 
 
+void Renderer::destroy_swapchain()
+{
+    for (auto image_view : m_image_views | ranges::views::take(m_image_count)) {
+        vkDestroyImageView(m_device, image_view, nullptr);
+    }
+    vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
+}
+
+
 void Renderer::create_renderpass()
 {
     VkAttachmentDescription color_attachment = {
@@ -584,6 +611,12 @@ void Renderer::create_renderpass()
 }
 
 
+void Renderer::destroy_renderpass()
+{
+    vkDestroyRenderPass(m_device, m_render_pass, nullptr);
+}
+
+
 void Renderer::create_framebuffers()
 {
     for (size_t i = 0; i < m_image_count; i++) {
@@ -602,6 +635,14 @@ void Renderer::create_framebuffers()
         VK_TRY("vkCreateFramebuffer",
                 vkCreateFramebuffer(m_device, &framebuffer_ci,
                         nullptr, &m_framebuffers[i]));
+    }
+}
+
+
+void Renderer::destroy_framebuffers()
+{
+    for (auto framebuffer : m_framebuffers | ranges::views::take(m_image_count)) {
+        vkDestroyFramebuffer(m_device, framebuffer, nullptr);
     }
 }
 
@@ -682,23 +723,6 @@ bool Renderer::query_swapchain(VkPhysicalDevice device)
     }
 
     return format_count > 0 && mode_count > 0;
-}
-
-
-void Renderer::destroy_swapchain()
-{
-    for (auto image_view : m_image_views) {
-        vkDestroyImageView(m_device, image_view, nullptr);
-    }
-    vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
-}
-
-
-void Renderer::destroy_framebuffers()
-{
-    for (auto framebuffer : m_framebuffers) {
-        vkDestroyFramebuffer(m_device, framebuffer, nullptr);
-    }
 }
 
 
