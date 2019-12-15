@@ -13,8 +13,14 @@ addons:
       - conan
       - ccache
       - ninja
+      - doxygen
 
 before_script:
+  - |
+    SDKVER=1.1.126.0
+    curl -O https://sdk.lunarg.com/sdk/download/$SDKVER/mac/vulkansdk-macos-$SDKVER.tar.gz
+    tar xf vulkansdk-macos-$SDKVER.tar.gz && rm vulkansdk-macos-$SDKVER.tar.gz
+    export VULKAN_SDK=$PWD/vulkansdk-macos-$SDKVER/macOS
   - ./bootstrap.sh -y
   - ./build.sh deps
 
