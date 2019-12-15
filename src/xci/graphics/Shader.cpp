@@ -99,17 +99,16 @@ bool Shader::load_from_memory(
         const char* vertex_data, int vertex_size,
         const char* fragment_data, int fragment_size)
 {
-    // copy data to properly aligned memory (we cannot be sure with char* args)
-    assert(vertex_size % sizeof(uint32_t) == 0);
-    assert(fragment_size % sizeof(uint32_t) == 0);
-    auto* vertex_code = new uint32_t[vertex_size / sizeof(uint32_t)];
-    auto* fragment_code = new uint32_t[fragment_size / sizeof(uint32_t)];
-    std::memcpy(vertex_code, vertex_data, vertex_size);
-    std::memcpy(fragment_code, fragment_data, fragment_size);
+    assert(intptr_t(vertex_data) % 4 == 0);  // must have 4-byte alignment
+    assert(intptr_t(fragment_data) % 4 == 0);  // must have 4-byte alignment
+    assert(vertex_size % sizeof(uint32_t) == 0);  // size must be divisible by 4
+    assert(fragment_size % sizeof(uint32_t) == 0);  // size must be divisible by 4
 
     clear();
-    m_vertex_module = create_module( vertex_code, vertex_size);
-    m_fragment_module = create_module(fragment_code, fragment_size);
+    m_vertex_module = create_module(
+            reinterpret_cast<const uint32_t*>(vertex_data), vertex_size);
+    m_fragment_module = create_module(
+            reinterpret_cast<const uint32_t*>(fragment_data), fragment_size);
     return true;
 }
 

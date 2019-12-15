@@ -54,6 +54,7 @@ public:
             const std::string& vertex, const std::string& fragment);
 
     /// Load program directly from memory
+    /// Note that the memory MUST be aligned to at least 4 bytes.
     bool load_from_memory(
             const char* vertex_data, int vertex_size,
             const char* fragment_data, int fragment_size);

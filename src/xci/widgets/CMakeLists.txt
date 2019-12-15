@@ -15,11 +15,6 @@ add_library(xci-widgets
     TextTerminal.cpp
     )
 
-target_include_directories(xci-widgets
-    PRIVATE
-        ${CONAN_INCLUDE_DIRS_INCBIN}
-    )
-
 target_link_libraries(xci-widgets
     xci-text)
 

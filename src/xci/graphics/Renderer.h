@@ -7,9 +7,7 @@
 #ifndef XCI_GRAPHICS_RENDERER_H
 #define XCI_GRAPHICS_RENDERER_H
 
-#include "Texture.h"
 #include "Shader.h"
-#include "Primitives.h"
 #include <xci/core/geometry.h>
 #include <xci/core/Vfs.h>
 #include <xci/config.h>

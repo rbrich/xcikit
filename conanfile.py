@@ -7,8 +7,8 @@ class XcikitConan(ConanFile):
     license = "Apache-2.0"
     author = "Radek Brich"
     url = "https://github.com/rbrich/xcikit"
-    description = "Toolkit for rendering text and simple UI with OpenGL."
-    topics = ("OpenGL", "text-rendering", "UI")
+    description = "Collection of C++ libraries for drawing 2D graphics, rendering text and more."
+    topics = ("text-rendering", "ui", "scripting-language", "vulkan", "glsl", "freetype")
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False]}
     build_requires = ('Catch2/2.6.1@catchorg/stable',

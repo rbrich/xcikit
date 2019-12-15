@@ -5,9 +5,6 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Renderer.h"
-#include "Texture.h"
-#include "Primitives.h"
-#include "Shader.h"
 #include "vulkan/VulkanError.h"
 
 #include <xci/config.h>

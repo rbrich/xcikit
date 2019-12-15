@@ -4,7 +4,7 @@
 
 find_package(glfw3 3.2 REQUIRED)
 find_package(Vulkan REQUIRED)
-
+find_path(INCBIN_INCLUDE_DIR incbin.h)
 
 # ------------ #
 # Libraries    #
@@ -28,7 +28,7 @@ target_include_directories(xci-graphics
     PUBLIC
         ${XCI_INCLUDE_DIRS}
     PRIVATE
-        ${CONAN_INCLUDE_DIRS_INCBIN})
+        ${INCBIN_INCLUDE_DIR})
 
 target_link_libraries(xci-graphics
     PUBLIC

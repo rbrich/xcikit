@@ -1,4 +1,4 @@
-// demo_opengl.cpp created on 2019-10-22 as part of xcikit project
+// demo_vulkan.cpp created on 2019-10-22 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
 // Copyright 2019 Radek Brich
