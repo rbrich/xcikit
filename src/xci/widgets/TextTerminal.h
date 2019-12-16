@@ -22,12 +22,12 @@
 #include <xci/graphics/Shape.h>
 #include <xci/graphics/Primitives.h>
 #include <xci/graphics/View.h>
+#include <xci/graphics/Shader.h>
 #include <xci/core/geometry.h>
 #include <string_view>
 #include <vector>
 #include <chrono>
 #include <bitset>
-#include <xci/graphics/Shader.h>
 
 namespace xci::widgets {
 
