@@ -34,7 +34,7 @@ struct Vec2 {
                 cast_to_numeric(y)));
     }
 
-    const Vec2<T> norm() const {
+    Vec2<T> norm() const {
         auto l = length();
         return { x / l, y / l };
     }
