@@ -2,10 +2,6 @@ xcikit
 ======
 Collection of C++ libraries for drawing 2D graphics, rendering text and more.
 
-![Font Texture](http://xci.cz/toolkit/img/xci-text.png)
-
-*The text on the right side was rendered from the texture on the left side*
-
 - [About](#about)
 - [Features](#features)
 - [Contents of the libraries](#contents-of-the-libraries)

@@ -49,5 +49,6 @@ deploy:
   file: artifacts/*.zip
   on:
     repo: rbrich/xcikit
+    branch: master
   skip_cleanup: true
   draft: true
