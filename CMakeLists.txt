@@ -1,5 +1,4 @@
-cmake_minimum_required(VERSION 3.7)
-cmake_policy(VERSION 3.7)
+cmake_minimum_required(VERSION 3.9)
 project(xcikit C CXX)
 
 option(XCI_WITH_VULKAN "Build libxci-graphics. Requires Vulkan and GLFW." ON)
