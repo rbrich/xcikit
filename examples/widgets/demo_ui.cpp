@@ -23,6 +23,7 @@
 #include <xci/core/format.h>
 #include <xci/config.h>
 #include <random>
+#include <deque>
 #include <cstdlib>
 
 // this brings in all required namespaces
@@ -49,14 +50,14 @@ int main()
     std::uniform_int_distribution<int> runi(0, 255);
     auto random_color = [&](){ return Color(runi(re), runi(re), runi(re)); };
 
-    std::list<TextInput> text_inputs;
+    std::deque<TextInput> text_inputs;
     for (auto i : {0,1,2,3,4}) {
         text_inputs.emplace_back(theme, "input");
         text_inputs.back().set_position({-1.0f, -0.5f + i * 0.12f});
         root.add(text_inputs.back());
     }
 
-    std::list<Button> buttons;
+    std::deque<Button> buttons;
     for (auto i : {0,1,2,3,4}) {
         buttons.emplace_back(theme, std::to_string(i+1) + ". click me!");
         buttons.back().set_position({-0.2f, -0.5f + i * 0.12f});
@@ -69,7 +70,7 @@ int main()
         root.add(buttons.back());
     }
 
-    std::list<Checkbox> checkboxes;
+    std::deque<Checkbox> checkboxes;
     for (auto i : {0,1,2,3,4}) {
         checkboxes.emplace_back(theme);
         checkboxes.back().set_text("Checkbox " + std::to_string(i+1));

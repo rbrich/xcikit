@@ -23,7 +23,7 @@
 
 #include <string>
 #include <vector>
-#include <list>
+#include <deque>
 #include <optional>
 
 namespace xci::graphics { class View; }
@@ -71,7 +71,7 @@ private:
     ViewportUnits m_baseline = 0;  // relative to bbox top
 
     mutable std::optional<graphics::Sprites> m_sprites;
-    mutable std::list<graphics::Shape> m_debug_shapes;
+    mutable std::deque<graphics::Shape> m_debug_shapes;
 };
 
 
@@ -221,7 +221,7 @@ private:
     std::vector<ViewportUnits> m_tab_stops;
 
     // page content
-    std::list<Word> m_words;
+    std::deque<Word> m_words;
     std::vector<Line> m_lines;
     std::map<std::string, Span> m_spans;
 };

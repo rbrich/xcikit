@@ -28,6 +28,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <deque>
 
 namespace xci::text {
 namespace layout {
@@ -138,7 +139,7 @@ private:
     Style m_default_style;
     ViewportUnits m_default_width = 0;
 
-    mutable std::list<graphics::Shape> m_debug_shapes;
+    mutable std::deque<graphics::Shape> m_debug_shapes;
 };
 
 

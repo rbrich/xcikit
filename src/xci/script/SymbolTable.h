@@ -19,7 +19,7 @@
 #define XCI_SCRIPT_SYMBOLTABLE_H
 
 #include <vector>
-#include <list>
+#include <deque>
 #include <string>
 
 namespace xci::script {
@@ -186,7 +186,7 @@ public:
     public:
         explicit Children(const SymbolTable& symtab) : m_symtab(symtab) {}
 
-        using const_iterator = typename std::list<SymbolTable>::const_iterator;
+        using const_iterator = typename std::deque<SymbolTable>::const_iterator;
         const_iterator begin() const { return m_symtab.m_children.begin(); }
         const_iterator end() const { return m_symtab.m_children.end(); }
 
@@ -202,7 +202,7 @@ private:
     Function* m_function = nullptr;
     Class* m_class = nullptr;
     Module* m_module = nullptr;
-    std::list<SymbolTable> m_children;  // NOTE: member addresses must not change
+    std::deque<SymbolTable> m_children;  // NOTE: member addresses must not change
     std::vector<Symbol> m_symbols;
 };
 
