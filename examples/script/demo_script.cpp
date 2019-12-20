@@ -33,6 +33,7 @@
 #include <vector>
 #include <stack>
 #include <algorithm>
+#include <regex>
 
 using namespace xci::core;
 using namespace xci::script;
@@ -214,7 +215,7 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
             cout << e.file() << ": ";
         cout << t.red().bold() << "Error: " << e.what() << t.normal() ;
         if (!e.detail().empty())
-            cout << std::endl << t.yellow() << e.detail() << t.normal();
+            cout << std::endl << t.magenta() << e.detail() << t.normal();
         cout << endl;
         return false;
     }
@@ -331,6 +332,73 @@ struct Action<identifier> {
 }  // namespace cmd_parser
 
 
+namespace replxx_hook {
+
+
+using cl = Replxx::Color;
+static std::pair<std::regex, cl> regex_color[] {
+        // single chars
+        {std::regex{"\\("}, cl::WHITE},
+        {std::regex{"\\)"}, cl::WHITE},
+        {std::regex{"\\["}, cl::WHITE},
+        {std::regex{"\\]"}, cl::WHITE},
+        {std::regex{"\\{"}, cl::WHITE},
+        {std::regex{"\\}"}, cl::WHITE},
+
+        // special variables
+        {std::regex{R"(\b_[0-9]+\b)"}, cl::MAGENTA},
+
+        // keywords
+        {std::regex{"\\b(if|then|else)\\b"}, cl::BROWN},
+        {std::regex{"\\b(true|false)\\b"}, cl::BRIGHTBLUE},
+        {std::regex{"\\bfun\\b"}, cl::BRIGHTMAGENTA},
+
+        // commands
+        {std::regex{"^ *\\.h(elp)? *$"}, cl::YELLOW},
+        {std::regex{"^ *\\.q(uit)? *$"}, cl::YELLOW},
+        {std::regex{"^ *\\.(dm|dump_module) *.*$"}, cl::YELLOW},
+
+        // numbers
+        {std::regex{R"(\b[0-9]+\b)"}, cl::BRIGHTCYAN}, // integer
+        {std::regex{R"(\b[0-9]*(\.[0-9]|[0-9]\.)[0-9]*\b)"}, cl::CYAN}, // float
+
+        // strings
+        {std::regex{"\".*?\""}, cl::BRIGHTGREEN}, // double quotes
+        {std::regex{"\'.*?\'"}, cl::GREEN}, // single quotes
+
+        // comments
+        {std::regex{"//.*$"}, cl::GRAY},
+        {std::regex{R"(/\*.*?\*/)"}, cl::GRAY},
+};
+
+
+void highlighter(std::string const& context, Replxx::colors_t& colors)
+{
+    // highlight matching regex sequences
+    for (auto const& e : regex_color) {
+        size_t pos{0};
+        std::string str = context;
+        std::smatch match;
+
+        while (std::regex_search(str, match, e.first)) {
+            std::string c{match[0]};
+            std::string prefix(match.prefix().str());
+            pos += utf8_length(prefix);
+            int len(utf8_length(c));
+
+            for (int i = 0; i < len; ++i) {
+                colors.at(pos + i) = e.second;
+            }
+
+            pos += len;
+            str = match.suffix();
+        }
+    }
+}
+
+} // namespace replxx_hook
+
+
 int main(int argc, char* argv[])
 {
     Environment env;
@@ -398,6 +466,7 @@ int main(int argc, char* argv[])
     std::string history_file = "./.xci_script_history";
     rx.history_load(history_file);
     rx.set_max_history_size(1000);
+    rx.set_highlighter_callback(replxx_hook::highlighter);
 
     while (!g_done) {
         const char* input;
@@ -406,7 +475,7 @@ int main(int argc, char* argv[])
         } while (input == nullptr && errno == EAGAIN);
 
         if (input == nullptr) {
-            cout << ".quit" << endl;
+            cout << t.format("{bold}{yellow}.quit{normal}") << endl;
             break;
         }
 
