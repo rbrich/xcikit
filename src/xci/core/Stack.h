@@ -68,7 +68,8 @@ public:
 
     void swap(Stack& other) noexcept;
 
-    static constexpr size_type initial_capacity = 16;  // size of first bucket
+    static constexpr uint32_t initial_capacity = 8;  // size of first bucket
+    static constexpr uint32_t grow_coefficient = 2;
     size_type capacity() const noexcept;
     void reserve(size_type new_capacity);
     void shrink_to_fit();
@@ -161,7 +162,7 @@ private:
         Bucket* next;       // ptr to next bucket or nullptr if this is the tail
         uint32_t capacity;  // number of reserved items
         uint32_t count;     // number of initialized items
-        T items[];          // C99 flexible array member (GNU extension in C++)
+        T items[0];         // C99 flexible array member (GNU extension in C++)
 
         static Bucket* allocate(uint32_t capacity);
         static void deallocate(Bucket* bucket);
@@ -277,7 +278,7 @@ void Stack<T>::reserve(Stack::size_type new_capacity)
     }
 
     // add new bucket
-    auto tail_cap = std::max(uint32_t(new_capacity - cap), m_tail->capacity * 2);
+    auto tail_cap = std::max(uint32_t(new_capacity - cap), m_tail->capacity * grow_coefficient);
     m_tail->next = Bucket::allocate(tail_cap);
     m_tail = m_tail->next;
 }
@@ -481,7 +482,7 @@ void Stack<T>::grow()
         m_head = Bucket::allocate(initial_capacity);
         m_tail = m_head;
     } else {
-        m_tail->next = Bucket::allocate(m_tail->capacity * 2);
+        m_tail->next = Bucket::allocate(m_tail->capacity * grow_coefficient);
         m_tail = m_tail->next;
     }
 }
