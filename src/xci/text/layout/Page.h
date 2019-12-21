@@ -20,10 +20,10 @@
 #include <xci/graphics/Sprites.h>
 #include <xci/graphics/Shape.h>
 #include <xci/core/geometry.h>
+#include <xci/core/Stack.h>
 
 #include <string>
 #include <vector>
-#include <deque>
 #include <optional>
 
 namespace xci::graphics { class View; }
@@ -71,7 +71,7 @@ private:
     ViewportUnits m_baseline = 0;  // relative to bbox top
 
     mutable std::optional<graphics::Sprites> m_sprites;
-    mutable std::deque<graphics::Shape> m_debug_shapes;
+    mutable core::Stack<graphics::Shape> m_debug_shapes;
 };
 
 
@@ -221,7 +221,7 @@ private:
     std::vector<ViewportUnits> m_tab_stops;
 
     // page content
-    std::deque<Word> m_words;
+    core::Stack<Word> m_words;
     std::vector<Line> m_lines;
     std::map<std::string, Span> m_spans;
 };

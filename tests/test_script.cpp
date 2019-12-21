@@ -135,7 +135,7 @@ TEST_CASE( "Disambiguation", "[script][parser]" )
 
 TEST_CASE( "Stack grow", "[script][machine]" )
 {
-    Stack stack(4);
+    xci::script::Stack stack(4);
     CHECK(stack.capacity() == 4);
     CHECK(stack.size() == 0);
 
@@ -161,7 +161,7 @@ TEST_CASE( "Stack grow", "[script][machine]" )
 
 TEST_CASE( "Stack push/pull", "[script][machine]" )
 {
-    Stack stack;
+    xci::script::Stack stack;
 
     CHECK(stack.empty());
     stack.push(value::Bool{true});
@@ -174,7 +174,7 @@ TEST_CASE( "Stack push/pull", "[script][machine]" )
 
     CHECK(stack.pull<value::String>().value() == "hello");
     CHECK(stack.pull<value::Int32>().value() == 73);
-    CHECK(stack.pull<value::Bool>().value() == true);
+    CHECK(stack.pull<value::Bool>().value() == true);  // NOLINT
 }
 
 

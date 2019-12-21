@@ -24,11 +24,11 @@
 #include <xci/graphics/Color.h>
 #include <xci/graphics/Shape.h>
 #include <xci/core/geometry.h>
+#include <xci/core/Stack.h>
 
 #include <string>
 #include <utility>
 #include <vector>
-#include <deque>
 
 namespace xci::text {
 namespace layout {
@@ -139,7 +139,7 @@ private:
     Style m_default_style;
     ViewportUnits m_default_width = 0;
 
-    mutable std::deque<graphics::Shape> m_debug_shapes;
+    mutable core::Stack<graphics::Shape> m_debug_shapes;
 };
 
 
