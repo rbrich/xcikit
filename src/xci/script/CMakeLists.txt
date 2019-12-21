@@ -20,8 +20,9 @@ add_library(xci-script
     dump.cpp)
 
 target_link_libraries(xci-script
-    PRIVATE
+    PUBLIC
         xci-core
+    PRIVATE
         range-v3
     )
 

@@ -186,18 +186,6 @@ void Primitives::add_uniform_data(uint32_t binding, const void* data, size_t siz
 }
 
 
-namespace {
-    struct FloatColor {
-        float r, g, b, a;
-        FloatColor(const Color& color)  // NOLINT
-                : r(color.red_f())
-                , g(color.green_f())
-                , b(color.blue_f())
-                , a(color.alpha_f()) {}
-    };
-}
-
-
 void Primitives::add_uniform(uint32_t binding, float f1, float f2)
 {
     struct { float f1, f2; } buf { f1, f2 };
