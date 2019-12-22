@@ -15,7 +15,7 @@ using namespace xci::core;
 TEST_CASE( "Stack of ints", "[stack]" )
 {
     Stack<int> stack;
-    constexpr auto init_cap = Stack<int>::initial_capacity;
+    constexpr auto init_cap = Stack<int>::initial_capacity();
 
     stack.clear();  // clear empty stack -> NOOP
     CHECK(stack.empty());
@@ -38,7 +38,7 @@ TEST_CASE( "Stack of ints", "[stack]" )
 
     for (size_t i = 0; i < 2*init_cap; ++i)
         stack.push(i);
-    CHECK(stack.capacity() == init_cap * 3);
+    CHECK(stack.capacity() > init_cap);
 
     int expected = 0;
     for (int i : stack) {
@@ -73,7 +73,7 @@ TEST_CASE( "Stack of ints", "[stack]" )
 TEST_CASE( "Stack of strings", "[stack]" )
 {
     Stack<std::string> stack;
-    constexpr auto init_cap = Stack<std::string>::initial_capacity;
+    constexpr auto init_cap = Stack<std::string>::initial_capacity();
 
     stack.clear();  // clear empty stack -> NOOP
     CHECK(stack.empty());

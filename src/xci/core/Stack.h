@@ -65,8 +65,7 @@ public:
 
     void swap(Stack& other) noexcept;
 
-    static constexpr uint32_t initial_capacity = 8;  // size of first bucket
-    static constexpr uint32_t grow_coefficient = 2;
+    static constexpr uint32_t initial_capacity() { return Bucket::project_capacity(0); }
     size_type capacity() const noexcept;
     void reserve(size_type new_capacity);
     void shrink_to_fit();
@@ -154,6 +153,9 @@ public:
     const_iterator end() const      { return {}; }
     const_iterator cend() const     { return {}; }
 
+    // dump current allocation info (the sizes and usage of buckets)
+    template <class S> void alloc_info(S& stream);
+
 private:
     struct Bucket {
         Bucket* next;       // ptr to next bucket or nullptr if this is the tail
@@ -164,6 +166,7 @@ private:
         static Bucket* allocate(uint32_t capacity, uint32_t count);
         static void deallocate(Bucket* bucket);
         static void destroy(Bucket* bucket);  // deallocate chain of buckets
+        static constexpr uint32_t project_capacity(uint32_t prev_cap);
 
         bool full() const { return count == capacity; }
         Bucket* prev(Bucket* head) const;
@@ -290,7 +293,8 @@ void Stack<T>::reserve(Stack::size_type new_capacity)
     }
 
     // add new bucket as reserve after tail
-    auto alloc_cap = std::max(uint32_t(new_capacity - cap), m_tail->capacity * grow_coefficient);
+    auto alloc_cap = std::max(uint32_t(new_capacity - cap),
+            Bucket::project_capacity(m_tail->capacity));
     m_tail->next = Bucket::allocate(alloc_cap, 0);
 }
 
@@ -392,29 +396,21 @@ void Stack<T>::push(T&& value)
 template<class T>
 void Stack<T>::pop()
 {
-#ifndef NDEBUG
-    if (empty())
-        throw std::logic_error("Stack::pop(): stack is empty");
-#endif
-    if (m_tail->count != 0) {
-        // pop from tail
-        std::destroy_at(&m_tail->items[--m_tail->count]);
-        return;
-    }
-    // pop from pre-tail
-    Bucket* b = m_tail->prev(m_head);
-    std::destroy_at(&b->items[--b->count]);
-    // if this was last item, deallocate the pre-tail bucket
-    if (b->count == 0) {
-        if (b == m_head) {
-            // only two buckets
-            m_head = m_tail;
-        } else {
-            // three or more
-            Bucket* pp = b->prev(m_head);
-            pp->next = m_tail;
+    assert(!empty());
+    assert(m_tail);
+    assert(m_tail->count != 0);
+    std::destroy_at(&m_tail->items[--m_tail->count]);
+    if (m_tail->count == 0) {
+        // move tail back
+        if (m_tail->next) {
+            Bucket::deallocate(m_tail->next);
+            m_tail->next = nullptr;
         }
-        Bucket::deallocate(b);
+        if (m_tail != m_head) {
+            Bucket* b = m_tail->prev(m_head);
+            b->next = m_tail;
+            m_tail = b;
+        }
     }
 }
 
@@ -440,6 +436,21 @@ auto Stack<T>::const_iterator::operator++() -> const_iterator&
         m_item = 0;
     }
     return *this;
+}
+
+
+template <class T>
+template<class S>
+void Stack<T>::alloc_info(S& stream)
+{
+    for (auto* b = m_head; b; b = b->next) {
+        stream << "cap " << b->capacity << " used " << b->count;
+        if (b == m_head)
+            stream << " [head]";
+        if (b == m_tail)
+            stream << " [tail]";
+        stream << "\n";
+    }
 }
 
 
@@ -474,14 +485,14 @@ T& Stack<T>::push_uninitialized()
 {
     if (!m_tail) {
         // empty, no allocation yet
-        m_head = Bucket::allocate(initial_capacity, 1);
+        m_head = Bucket::allocate(Bucket::project_capacity(0), 1);
         m_tail = m_head;
         return m_tail->items[0];
     }
     if (m_tail->full()) {
         // tail full, move to next bucket
         if (!m_tail->next) {
-            m_tail->next = Bucket::allocate(m_tail->capacity * grow_coefficient, 1);
+            m_tail->next = Bucket::allocate(Bucket::project_capacity(m_tail->capacity), 1);
             m_tail = m_tail->next;
         } else {
             m_tail = m_tail->next;
@@ -503,6 +514,29 @@ void Stack<T>::Bucket::destroy(Bucket* bucket)
         nb = b->next;
         Bucket::deallocate(b);
     }
+}
+
+
+template<class T>
+constexpr uint32_t Stack<T>::Bucket::project_capacity(uint32_t prev_cap)
+{
+    constexpr auto fstep = [](size_t cap_req) {
+        return (cap_req * sizeof(T) - sizeof(Bucket)) / sizeof(T);
+    };
+    constexpr uint32_t step0 = fstep(16);
+    constexpr uint32_t step1 = fstep(64);
+    constexpr uint32_t step2 = fstep(256);
+    constexpr uint32_t step3 = fstep(1024);
+    constexpr uint32_t step4 = fstep(4096);
+    if (prev_cap < step0)
+        return step0;
+    if (prev_cap < step1)
+        return step1;
+    if (prev_cap < step2)
+        return step2;
+    if (prev_cap < step3)
+        return step3;
+    return step4;
 }
 
 
