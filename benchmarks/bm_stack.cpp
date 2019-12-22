@@ -34,6 +34,17 @@ static void bm_xci_stack_reserve(benchmark::State& state)
 BENCHMARK(bm_xci_stack_reserve)->Range(8, 8<<10);
 
 
+static void bm_std_deque(benchmark::State& state)
+{
+    std::deque<int> stack;
+    for (auto _ : state) {
+        for (int i = 0; i < state.range(0); ++i)
+            stack.push_back(i);
+    }
+}
+BENCHMARK(bm_std_deque)->Range(8, 8<<10);
+
+
 static void bm_xci_stack_foreach(benchmark::State& state)
 {
     Stack<int> stack;
@@ -45,17 +56,6 @@ static void bm_xci_stack_foreach(benchmark::State& state)
     }
 }
 BENCHMARK(bm_xci_stack_foreach)->Range(8, 8<<10);
-
-
-static void bm_std_deque(benchmark::State& state)
-{
-    std::deque<int> stack;
-    for (auto _ : state) {
-        for (int i = 0; i < state.range(0); ++i)
-            stack.push_back(i);
-    }
-}
-BENCHMARK(bm_std_deque)->Range(8, 8<<10);
 
 
 static void bm_std_deque_foreach(benchmark::State& state)

@@ -10,10 +10,7 @@
 #include <memory>
 #include <algorithm>
 #include <cstdint>
-
-#ifndef NDEBUG
-#include <stdexcept>
-#endif
+#include <cassert>
 
 namespace xci::core {
 
@@ -38,7 +35,7 @@ namespace xci::core {
 ///     - bucket size is configurable
 ///     - reserve() allocates single bucket of requested size
 /// - debug mode checks
-///     - throws std::logic_error on invalid operations, e.g. top() with empty stack
+///     - asserts on invalid operations, e.g. top() with empty stack
 ///     - #define NDEBUG to disable the checks (i.e. switch to Release)
 /// - standard behaviour
 ///     - all methods behave the same as on std::stack or std::deque
@@ -59,12 +56,12 @@ public:
     Stack() = default;
     Stack(const Stack& other);
     Stack(Stack&& other) noexcept;
-    ~Stack() { destroy(); }
+    ~Stack() { Bucket::destroy(m_head); }
 
     Stack& operator=(const Stack& other);
     Stack& operator=(Stack&& other) noexcept;
-    //bool operator==(const Stack& other) const;
-    //bool operator!=(const Stack& other) const;
+    bool operator==(const Stack& other) const;
+    bool operator!=(const Stack& other) const { return !(*this == other); }
 
     void swap(Stack& other) noexcept;
 
@@ -162,18 +159,17 @@ private:
         Bucket* next;       // ptr to next bucket or nullptr if this is the tail
         uint32_t capacity;  // number of reserved items
         uint32_t count;     // number of initialized items
-        T items[0];         // C99 flexible array member (GNU extension in C++)
+        T items[0];         // flexible array member (GNU extension in C++)
 
-        static Bucket* allocate(uint32_t capacity);
+        static Bucket* allocate(uint32_t capacity, uint32_t count);
         static void deallocate(Bucket* bucket);
+        static void destroy(Bucket* bucket);  // deallocate chain of buckets
 
         bool full() const { return count == capacity; }
         Bucket* prev(Bucket* head) const;
     };
 
     T& push_uninitialized();
-    void grow();
-    void destroy();  // deallocate all buckets (doesn't change head/tail ptrs)
 
     // handles to allocated storage:
     // - default ctor doesn't create any buckets
@@ -181,7 +177,7 @@ private:
     // - popping the last item from the non-last bucket causes deallocation
     //   of the tail, effectively shrinking the container
     Bucket* m_head = nullptr;  // first bucket
-    Bucket* m_tail = nullptr;  // last bucket, may be the same as first
+    Bucket* m_tail = nullptr;  // last active bucket (the one containing top item)
 };
 
 
@@ -191,7 +187,7 @@ private:
 
 template<class T>
 Stack<T>::Stack(const Stack& other)
-    : m_head{Bucket::allocate(other.size())}, m_tail{m_head}
+    : m_head{Bucket::allocate(other.size(), other.size())}, m_tail{m_head}
 {
     std::uninitialized_copy(other.cbegin(), other.cend(), m_head->items);
 }
@@ -211,8 +207,8 @@ Stack<T>& Stack<T>::operator=(const Stack& other)  // NOLINT
 {
     if (m_head == other.m_head)
         return *this;  // self-assignment or empty-to-empty
-    destroy();
-    m_head = Bucket::allocate(other.size());
+    Bucket::destroy(m_head);
+    m_head = Bucket::allocate(other.size(), other.size());
     m_tail = m_head;
     std::uninitialized_copy(other.cbegin(), other.cend(), m_head->items);
     return *this;
@@ -227,6 +223,14 @@ Stack<T>& Stack<T>::operator=(Stack&& other) noexcept
     other.m_head = nullptr;
     other.m_tail = nullptr;
     return *this;
+}
+
+
+template<class T>
+bool Stack<T>::operator==(const Stack& other) const
+{
+    return size() == other.size() &&
+        std::equal(cbegin(), cend(), other.cbegin());
 }
 
 
@@ -253,34 +257,41 @@ template<class T>
 void Stack<T>::reserve(Stack::size_type new_capacity)
 {
     if (!m_head) {
-        m_head = Bucket::allocate(new_capacity);
+        // no allocation yet
+        assert(!m_tail);
+        m_head = Bucket::allocate(new_capacity, 0);
         m_tail = m_head;
         return;
     }
 
     auto cap = capacity();
     if (cap >= new_capacity)
-        return;  // already satisfied
+        // already satisfied
+        return;
 
-    if (m_tail->count == 0) {
-        // tail bucket is empty, reallocate it
-        auto tail_cap = new_capacity - (cap - m_tail->capacity);
-        if (m_tail == m_head) {
-            Bucket::deallocate(m_head);
-            m_head = Bucket::allocate(tail_cap);
-            m_tail = m_head;
-        } else {
-            auto* prev = m_tail->prev(m_head);
-            m_tail = Bucket::allocate(tail_cap);
-            prev->next = m_tail;
-        }
+    assert(m_tail);
+    if (m_tail->next) {
+        // some space already reserved after tail
+        assert(m_tail->count != 0);
+        const auto alloc_cap = new_capacity - (cap - m_tail->next->capacity);
+        Bucket::deallocate(m_tail->next);
+        m_tail->next = Bucket::allocate(alloc_cap, 0);
         return;
     }
 
-    // add new bucket
-    auto tail_cap = std::max(uint32_t(new_capacity - cap), m_tail->capacity * grow_coefficient);
-    m_tail->next = Bucket::allocate(tail_cap);
-    m_tail = m_tail->next;
+    if (m_tail->count == 0) {
+        // tail bucket is last and empty, reallocate it
+        assert(m_head == m_tail);
+        auto alloc_cap = new_capacity - (cap - m_tail->capacity);
+        Bucket::deallocate(m_tail);
+        m_tail = Bucket::allocate(alloc_cap, 0);
+        m_head = m_tail;
+        return;
+    }
+
+    // add new bucket as reserve after tail
+    auto alloc_cap = std::max(uint32_t(new_capacity - cap), m_tail->capacity * grow_coefficient);
+    m_tail->next = Bucket::allocate(alloc_cap, 0);
 }
 
 
@@ -291,10 +302,10 @@ void Stack<T>::shrink_to_fit()
     if (m_head && m_head == m_tail && cap == m_head->capacity)
         return;  // already at one bucket which fits exactly
     // prepare new bucket at tail
-    m_tail = Bucket::allocate(cap);
+    m_tail = Bucket::allocate(cap, cap);
     std::uninitialized_copy(cbegin(), cend(), m_tail->items);
-    // destroy old buckets (doesn't use or touch the tail)
-    destroy();
+    // destroy old buckets
+    Bucket::destroy(m_head);
     m_head = m_tail;
 }
 
@@ -320,35 +331,36 @@ auto Stack<T>::size() const -> Stack::size_type
 template<class T>
 void Stack<T>::clear() noexcept
 {
+    size_t total_cap = 0;
     for (auto* b = m_head; b; b = b->next) {
         std::destroy_n(b->items, b->count);
         b->count = 0;
+        total_cap += b->capacity;
     }
+    if (m_head && m_head->next) {
+        // deallocate old chain, allocate single bucket with same total capacity
+        Bucket::destroy(m_head);
+        m_head = Bucket::allocate(total_cap, 0);
+    }
+    m_tail = m_head;
 }
 
 
 template<class T>
 auto Stack<T>::top() -> reference
 {
-#ifndef NDEBUG
-    if (empty())
-        throw std::logic_error("Stack::top(): stack is empty");
-#endif
-    // non-empty stack has a tail -> not testing for null
-    if (m_tail->count != 0)
-        return m_tail->items[m_tail->count - 1];
-    // tail is empty, walk from head
-    // (only single empty bucket on tail is allowed,
-    // so the bucket before tail must contain the item)
-    Bucket *b = m_tail->prev(m_head);
-    return b->items[b->count - 1];
+    assert(!empty());
+    assert(m_tail);
+    return m_tail->items[m_tail->count - 1];
 }
 
 
 template<class T>
 auto Stack<T>::top() const -> const_reference
 {
-    return const_cast<Stack*>(this)->top();
+    assert(!empty());
+    assert(m_tail);
+    return m_tail->items[m_tail->count - 1];
 }
 
 
@@ -432,11 +444,11 @@ auto Stack<T>::const_iterator::operator++() -> const_iterator&
 
 
 template<class T>
-auto Stack<T>::Bucket::allocate(uint32_t capacity) -> Stack::Bucket*
+auto Stack<T>::Bucket::allocate(uint32_t capacity, uint32_t count) -> Stack::Bucket*
 {
-    size_t size = sizeof(Bucket) + capacity * sizeof(T);
+    const size_t size = sizeof(Bucket) + capacity * sizeof(T);
     char* buf = new char[size];
-    return new(buf) Bucket {nullptr, capacity, 0};
+    return new(buf) Bucket {nullptr, capacity, count};
 }
 
 
@@ -460,40 +472,35 @@ auto Stack<T>::Bucket::prev(Bucket* head) const -> Bucket*
 template<class T>
 T& Stack<T>::push_uninitialized()
 {
-    if (!m_tail || m_tail->full())
-        grow();
-    // find last non-full bucket
-    Bucket* b;
-    if (m_head != m_tail && m_tail->count == 0) {
-        b = m_tail->prev(m_head);
-        if (b->full())
-            b = m_tail;
-    } else {
-        b = m_tail;
-    }
-    return b->items[b->count++];
-}
-
-
-template<class T>
-void Stack<T>::grow()
-{
-    if (!m_head) {
-        m_head = Bucket::allocate(initial_capacity);
+    if (!m_tail) {
+        // empty, no allocation yet
+        m_head = Bucket::allocate(initial_capacity, 1);
         m_tail = m_head;
-    } else {
-        m_tail->next = Bucket::allocate(m_tail->capacity * grow_coefficient);
-        m_tail = m_tail->next;
+        return m_tail->items[0];
     }
+    if (m_tail->full()) {
+        // tail full, move to next bucket
+        if (!m_tail->next) {
+            m_tail->next = Bucket::allocate(m_tail->capacity * grow_coefficient, 1);
+            m_tail = m_tail->next;
+        } else {
+            m_tail = m_tail->next;
+            assert(m_tail->count == 0);
+            m_tail->count = 1;
+        }
+        return m_tail->items[0];
+    }
+    // push to tail
+    return m_tail->items[m_tail->count++];
 }
 
 
 template<class T>
-void Stack<T>::destroy()
+void Stack<T>::Bucket::destroy(Bucket* bucket)
 {
-    Bucket* next;
-    for (auto* b = m_head; b; b = next) {
-        next = b->next;
+    Bucket* nb;
+    for (auto* b = bucket; b; b = nb) {
+        nb = b->next;
         Bucket::deallocate(b);
     }
 }

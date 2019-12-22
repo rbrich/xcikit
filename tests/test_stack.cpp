@@ -51,6 +51,22 @@ TEST_CASE( "Stack of ints", "[stack]" )
     auto prev = it++;
     CHECK(*prev == 1);
     CHECK(*it == 2);
+
+    // copy
+    auto stack2 { stack };
+    CHECK(stack2.capacity() == stack.size());
+    CHECK(stack2.size() == stack.size());
+    CHECK(stack2 == stack);
+
+    stack.shrink_to_fit();
+    CHECK(stack.size() == stack.capacity());
+    stack.push(42);
+    stack.shrink_to_fit();
+    stack.shrink_to_fit();
+    CHECK(stack.top() == 42);
+    CHECK(stack.size() == stack.capacity());
+    stack.pop();
+    CHECK(stack.top() == 2*init_cap - 1);
 }
 
 
