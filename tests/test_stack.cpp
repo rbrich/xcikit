@@ -14,13 +14,13 @@ using namespace xci::core;
 
 TEST_CASE( "Stack of ints", "[stack]" )
 {
-    Stack<int> stack;
-    constexpr auto init_cap = Stack<int>::initial_capacity();
+    constexpr uint32_t init_cap = 10;
+    Stack<int> stack(init_cap);
 
     stack.clear();  // clear empty stack -> NOOP
     CHECK(stack.empty());
     CHECK(stack.size() == 0);  // NOLINT: not same as empty()
-    CHECK(stack.capacity() == 0);
+    CHECK(stack.capacity() == init_cap);
 
     stack.emplace(-1);
     stack.push(-2);
@@ -72,13 +72,13 @@ TEST_CASE( "Stack of ints", "[stack]" )
 
 TEST_CASE( "Stack of strings", "[stack]" )
 {
-    Stack<std::string> stack;
-    constexpr auto init_cap = Stack<std::string>::initial_capacity();
+    constexpr uint32_t init_cap = 10;
+    Stack<std::string> stack(init_cap);
 
     stack.clear();  // clear empty stack -> NOOP
     CHECK(stack.empty());
     CHECK(stack.size() == 0);  // NOLINT: not same as empty()
-    CHECK(stack.capacity() == 0);
+    CHECK(stack.capacity() == init_cap);
 
     stack.emplace("no small string optimization please");
     stack.push("bar");

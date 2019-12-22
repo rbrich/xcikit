@@ -61,8 +61,7 @@ int main()
     log_info("Stack of 10000 ints (reserved)");
     mem_before = mallinfo().uordblks;
     {
-        Stack<int> d;
-        d.reserve(10000);
+        Stack<int> d(10000);
         for (int i = 0; i < 10000; ++i)
             d.push_back(i);
         log_info("used malloc bytes: {}", mallinfo().uordblks - mem_before);

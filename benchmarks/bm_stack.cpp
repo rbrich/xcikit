@@ -25,8 +25,7 @@ BENCHMARK(bm_xci_stack)->Range(8, 8<<10);
 static void bm_xci_stack_reserve(benchmark::State& state)
 {
     for (auto _ : state) {
-        Stack<int> stack;
-        stack.reserve(state.range(0));
+        Stack<int> stack(state.range(0));
         for (int i = 0; i < state.range(0); ++i)
             stack.push(i);
     }
