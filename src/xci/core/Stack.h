@@ -12,6 +12,12 @@
 #include <cstdint>
 #include <cassert>
 
+#ifdef __linux__
+#include <malloc.h>
+#elif defined(__APPLE__)
+#include <malloc/malloc.h>
+#endif
+
 namespace xci::core {
 
 
@@ -417,7 +423,15 @@ template<class S>
 void Stack<T>::alloc_info(S& stream)
 {
     for (auto* b = head();; b = b->next) {
-        stream << "cap " << b->capacity << " used " << b->count;
+        stream
+            << "cap " << b->capacity
+            << " used " << b->count
+            << " size " << sizeof(Bucket) + sizeof(T) * b->capacity
+#ifdef __linux__
+            << " malloc " << malloc_usable_size(b);
+#elif defined(__APPLE__)
+            << " malloc " << malloc_size(b);
+#endif
         if (b == head())
             stream << " [head]";
         if (b == m_tail) {
