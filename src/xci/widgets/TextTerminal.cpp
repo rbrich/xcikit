@@ -322,7 +322,7 @@ void terminal::Line::add_text(size_t pos, string_view sv, Attributes attr, bool 
     // Now we are at `pos` (or content end), but there might be some attribute
     Attributes attr_end(attr_start);
     auto end = start;
-    if (Attributes::is_introducer(m_content[end]))
+    if (end < m_content.size() && Attributes::is_introducer(m_content[end]))
         end += attr_end.decode({content_begin() + end, m_content.size() - end});
 
     // Replace mode - find end of the place for new text (same length as `sv`)
@@ -332,7 +332,7 @@ void terminal::Line::add_text(size_t pos, string_view sv, Attributes attr, bool 
 
         // Read also attributes after replace span
         // and unify them with attr_end
-        if (Attributes::is_introducer(m_content[end]))
+        if (end < m_content.size() && Attributes::is_introducer(m_content[end]))
             end += attr_end.decode({content_begin() + end, m_content.size() - end});
     }
 
@@ -373,7 +373,7 @@ void terminal::Line::delete_text(size_t first, size_t num)
 
     // Read also attributes after delete span
     // and unify them with attr_end
-    if (Attributes::is_introducer(m_content[end]))
+    if (end < m_content.size() && Attributes::is_introducer(m_content[end]))
         end += attr_end.decode({content_begin() + end, m_content.size() - end});
 
     attr_end.preceded_by(attr_start);
@@ -394,7 +394,7 @@ void terminal::Line::erase_text(size_t first, size_t num, Attributes attr)
 
     // Read also attributes after delete span
     // and unify them with attr_end
-    if (Attributes::is_introducer(m_content[end]))
+    if (end < m_content.size() && Attributes::is_introducer(m_content[end]))
         end += attr_end.decode({content_begin() + end, m_content.size() - end});
 
     attr.preceded_by(attr_start);

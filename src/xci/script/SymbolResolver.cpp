@@ -199,7 +199,7 @@ public:
         for (auto& p : v.type.params) {
             p.identifier.symbol = fn_symtab.add({p.identifier.name, Symbol::Parameter, par_idx++});
         }
-        // add function itself, pospone body compilation
+        // add function itself, postpone body compilation
         auto fn = make_unique<Function>(module(), fn_symtab);
         m_postponed_blocks.push_back({*fn, v.body});
         v.body.symtab = &fn_symtab;

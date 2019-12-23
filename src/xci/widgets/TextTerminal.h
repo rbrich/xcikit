@@ -167,6 +167,7 @@ private:
 
 class Line {
 public:
+    Line() { m_content.reserve(100); }
 
     /// Clear the line and set initial attributes.
     void clear(const Attributes& attr);
@@ -228,7 +229,7 @@ private:
 
 class Buffer {
 public:
-    Buffer() : m_lines(1) {}
+    Buffer() : m_lines(1) { m_lines.reserve(100); }
 
     void add_line();
     void remove_lines(size_t start, size_t count);
