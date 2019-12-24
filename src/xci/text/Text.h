@@ -54,6 +54,7 @@ public:
     Layout& layout() { return m_layout; }
 
     void resize(graphics::View& view);
+    void update(graphics::View& view);
     void draw(graphics::View& view, const ViewportCoords& pos);
 
 private:

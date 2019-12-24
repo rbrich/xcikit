@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "View.h"
+#include "Window.h"
 #include <cassert>
 
 namespace xci::graphics {
@@ -31,9 +32,9 @@ std::array<float, 16> View::projection_matrix() const
     }
     return {{
             xs,   0.0f, 0.0f, 0.0f,
-            0.0f, -ys,  0.0f, 0.0f,
+            0.0f, ys,  0.0f, 0.0f,
             0.0f, 0.0f, 1.0f, 0.0f,
-            xt,   -yt,  0.0f, 1.0f,
+            xt,   yt,  0.0f, 1.0f,
     }};
 }
 
@@ -44,13 +45,13 @@ bool View::set_screen_size(ScreenCoords size)
     m_screen_size = size;
 
     // Set framebuffer to same size, if not set explicitly (by set_framebuffer_size)
-    if (m_framebuffer_size.x.value == 0) {
+    if (m_framebuffer_size.x.value == 0.0) {
         m_framebuffer_size.x.value = size.x.value;
         m_framebuffer_size.y.value = size.y.value;
         changed = true;
     }
 
-    if (changed || m_viewport_size.x.value == 0) {
+    if (changed || m_viewport_size.x.value == 0.0) {
         rescale_viewport();
         changed = true;
     }
@@ -118,6 +119,12 @@ bool View::pop_refresh()
     bool res = m_needs_refresh;
     m_needs_refresh = false;
     return res;
+}
+
+
+void View::finish_draw()
+{
+    window()->finish_draw();
 }
 
 

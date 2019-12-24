@@ -9,6 +9,7 @@
 #include <xci/core/dispatch.h>
 #include <xci/core/string.h>
 #include <xci/core/chrono.h>
+#include <xci/core/memory.h>
 
 #include <fstream>
 #include <string>
@@ -281,4 +282,15 @@ TEST_CASE( "rstrip", "[string]" )
     CHECK(s == "/ab/cdef/");
     s = "/ab/cdef/"; rstrip(s, "/fedc");
     CHECK(s == "/ab");
+}
+
+
+TEST_CASE( "align_to", "[memory]" )
+{
+    CHECK(align_to(0, 4) == 0);
+    CHECK(align_to(1, 4) == 4);
+    CHECK(align_to(3, 4) == 4);
+    CHECK(align_to(4, 4) == 4);
+    CHECK(align_to(5, 4) == 8);
+    CHECK(align_to(1000, 16) == 1008);
 }

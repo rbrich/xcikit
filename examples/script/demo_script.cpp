@@ -13,6 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "repl/cmd_parser.h"
+#include "repl/context.h"
+
 #include <xci/script/Interpreter.h>
 #include <xci/script/Error.h>
 #include <xci/script/Value.h>
@@ -27,15 +30,16 @@
 
 #include <docopt.h>
 #include <replxx.hxx>
-#include <tao/pegtl.hpp>
 
 #include <iostream>
 #include <vector>
 #include <stack>
 #include <algorithm>
+#include <regex>
 
 using namespace xci::core;
 using namespace xci::script;
+using namespace xci::script::repl;
 using Replxx = replxx::Replxx;
 using std::string;
 using std::cin;
@@ -58,18 +62,24 @@ struct Options {
     uint32_t compiler_flags = 0;
 };
 
-
-static bool g_done {false};
-
-std::vector<std::unique_ptr<Module>>& modules()
+Context& context()
 {
-    static std::vector<std::unique_ptr<Module>> modules;
-    return modules;
+    static Context ctx;
+    return ctx;
 }
 
-bool evaluate(const string& line, const Options& opts, int input_number=-1)
+struct Environment {
+    Vfs vfs;
+
+    Environment() {
+        Logger::init(Logger::Level::Warning);
+        vfs.mount(XCI_SHARE_DIR);
+    }
+};
+
+bool evaluate(Environment& env, const string& line, const Options& opts, int input_number=-1)
 {
-    static TermCtl& t = TermCtl::stdout_instance();
+    TermCtl& t = context().term_out;
     static Interpreter interpreter;
 
     auto& parser = interpreter.parser();
@@ -77,15 +87,15 @@ bool evaluate(const string& line, const Options& opts, int input_number=-1)
     auto& machine = interpreter.machine();
 
     try {
-        if (modules().empty()) {
+        if (context().modules.empty()) {
             interpreter.configure(opts.compiler_flags);
-            modules().push_back(std::make_unique<BuiltinModule>());
+            context().modules.push_back(std::make_unique<BuiltinModule>());
 
             if (opts.with_std_lib) {
-                auto f = Vfs::default_instance().read_file("script/sys.ys");
+                auto f = env.vfs.read_file("script/sys.ys");
                 auto content = f.content();
                 auto sys_module = interpreter.build_module("sys", content->string_view());
-                modules().push_back(move(sys_module));
+                context().modules.push_back(move(sys_module));
             }
         }
 
@@ -100,7 +110,7 @@ bool evaluate(const string& line, const Options& opts, int input_number=-1)
         // compile
         std::string module_name = input_number >= 0 ? format("input_{}", input_number) : "<input>";
         auto module = std::make_unique<Module>(module_name);
-        for (auto& m : modules())
+        for (auto& m : context().modules)
             module->add_imported_module(*m);
         Function func {*module, module->symtab()};
         compiler.compile(func, ast);
@@ -134,7 +144,7 @@ bool evaluate(const string& line, const Options& opts, int input_number=-1)
                     cout << ' ' << f.dump_instruction_at(it) << endl;
                 }
             });
-            machine.set_call_exit_cb([&codelines_stack, &opts](const Function& function) {
+            machine.set_call_exit_cb([&t, &codelines_stack, &opts](const Function& function) {
                 if (opts.trace_bytecode) {
                     cout
                         << t.move_up(codelines_stack.top().size() + 1)
@@ -145,7 +155,7 @@ bool evaluate(const string& line, const Options& opts, int input_number=-1)
         }
         bool erase = true;
         if (opts.trace_bytecode) {
-            machine.set_bytecode_trace_cb([&erase, &codelines_stack, &machine]
+            machine.set_bytecode_trace_cb([&t, &erase, &codelines_stack, &machine]
             (const Function& f, Code::const_iterator ipos) {
                 if (erase)
                     cout << t.move_up(codelines_stack.top().size());
@@ -182,7 +192,7 @@ bool evaluate(const string& line, const Options& opts, int input_number=-1)
                 }
             });
         }
-        machine.call(func, [](const Value& invoked) {
+        machine.call(func, [&](const Value& invoked) {
             if (!invoked.is_void()) {
                 cout << t.bold().yellow() << invoked << t.normal() << endl;
             }
@@ -198,134 +208,90 @@ bool evaluate(const string& line, const Options& opts, int input_number=-1)
         auto result_idx = module->add_value(std::move(result));
         module->symtab().add({"_" + std::to_string(input_number), result_idx});
 
-        modules().push_back(move(module));
+        context().modules.push_back(move(module));
         return true;
     } catch (const Error& e) {
         if (!e.file().empty())
             cout << e.file() << ": ";
         cout << t.red().bold() << "Error: " << e.what() << t.normal() ;
         if (!e.detail().empty())
-            cout << std::endl << t.yellow() << e.detail() << t.normal();
+            cout << std::endl << t.magenta() << e.detail() << t.normal();
         cout << endl;
         return false;
     }
 }
 
 
-namespace cmd_parser {
-using namespace tao::pegtl;
+namespace replxx_hook {
 
-// ----------------------------------------------------------------------------
-// Grammar
 
-struct Unsigned: seq< plus<digit> > {};
+using cl = Replxx::Color;
+static std::pair<std::regex, cl> regex_color[] {
+        // single chars
+        {std::regex{"\\("}, cl::WHITE},
+        {std::regex{"\\)"}, cl::WHITE},
+        {std::regex{"\\["}, cl::WHITE},
+        {std::regex{"\\]"}, cl::WHITE},
+        {std::regex{"\\{"}, cl::WHITE},
+        {std::regex{"\\}"}, cl::WHITE},
 
-struct Quit: sor<TAO_PEGTL_KEYWORD("q"), TAO_PEGTL_KEYWORD("quit")> {};
-struct Help: sor<TAO_PEGTL_KEYWORD("h"), TAO_PEGTL_KEYWORD("help")> {};
-struct DumpModule: seq<
-            sor<TAO_PEGTL_KEYWORD("dm"), TAO_PEGTL_KEYWORD("dump_module")>,
-            star<space>,
-            opt<sor< Unsigned, identifier> >
-        > {};
+        // special variables
+        {std::regex{R"(\b_[0-9]+\b)"}, cl::MAGENTA},
 
-struct CmdGrammar: seq<
-            one<'.'>,
-            sor<Quit, Help, DumpModule>,
-            eof
-        > {};
+        // keywords
+        {std::regex{"\\b(if|then|else)\\b"}, cl::BROWN},
+        {std::regex{"\\b(true|false)\\b"}, cl::BRIGHTBLUE},
+        {std::regex{"\\bfun\\b"}, cl::BRIGHTMAGENTA},
 
-// ----------------------------------------------------------------------------
-// Actions
+        // commands
+        {std::regex{"^ *\\.h(elp)? *$"}, cl::YELLOW},
+        {std::regex{"^ *\\.q(uit)? *$"}, cl::YELLOW},
+        {std::regex{"^ *\\.(dm|dump_module) *.*$"}, cl::YELLOW},
 
-struct Args {
-    size_t num = 0;
-    unsigned u1;
-    std::string s1;
+        // numbers
+        {std::regex{R"(\b[0-9]+\b)"}, cl::BRIGHTCYAN}, // integer
+        {std::regex{R"(\b[0-9]*(\.[0-9]|[0-9]\.)[0-9]*\b)"}, cl::CYAN}, // float
+
+        // strings
+        {std::regex{"\".*?\""}, cl::BRIGHTGREEN}, // double quotes
+        {std::regex{"\'.*?\'"}, cl::GREEN}, // single quotes
+
+        // comments
+        {std::regex{"//.*$"}, cl::GRAY},
+        {std::regex{R"(/\*.*?\*/)"}, cl::GRAY},
 };
 
-template<typename Rule>
-struct Action : nothing<Rule> {};
 
-template<>
-struct Action<Quit> {
-    static void apply0() {
-        g_done = true;
-    }
-};
+void highlighter(std::string const& context, Replxx::colors_t& colors)
+{
+    // highlight matching regex sequences
+    for (auto const& e : regex_color) {
+        size_t pos{0};
+        std::string str = context;
+        std::smatch match;
 
-template<>
-struct Action<Help> {
-    static void apply0() {
-        cout << ".q, .quit                      quit" << endl;
-        cout << ".h, .help                      show all accepted commands" << endl;
-        cout << ".dm, .dump_module [#|name]     print contents of last compiled module (or module by index or by name)" << endl;
-    }
-};
+        while (std::regex_search(str, match, e.first)) {
+            std::string c{match[0]};
+            std::string prefix(match.prefix().str());
+            pos += utf8_length(prefix);
+            int len(utf8_length(c));
 
-template<>
-struct Action<DumpModule> : change_states< Args > {
-    template<typename Input>
-    static void success(const Input &in, Args& args) {
-        TermCtl& t = TermCtl::stdout_instance();
-        if (modules().empty()) {
-            cout << t.red().bold() << "Error: no modules available" << t.normal() << endl;
-            return;
-        }
-
-        unsigned mod = 0;
-        if (args.num == 1) {
-            if (!args.s1.empty()) {
-                size_t n = 0;
-                for (const auto& m : modules()) {
-                    if (m->name() == args.s1) {
-                        cout << "Module [" << n << "] " << args.s1 << ":" << endl << *m << endl;
-                        return;
-                    }
-                    ++n;
-                }
-            } else {
-                mod = args.u1;
-                if (mod >= modules().size()) {
-                    cout << t.red().bold() << "Error: module index out of range: "
-                         << mod << t.normal() << endl;
-                    return;
-                }
+            for (int i = 0; i < len; ++i) {
+                colors.at(pos + i) = e.second;
             }
-        } else {
-            mod = modules().size() - 1;
+
+            pos += len;
+            str = match.suffix();
         }
-        const auto& m = *modules()[mod];
-        cout << "Module [" << mod << "] " << m.name() << ":" << endl << m << endl;
     }
-};
+}
 
-template<>
-struct Action<Unsigned> {
-    template<typename Input>
-    static void apply(const Input &in, Args& args) {
-        ++args.num;
-        args.u1 = atoi(in.string().c_str());
-    }
-};
-
-template<>
-struct Action<identifier> {
-    template<typename Input>
-    static void apply(const Input &in, Args& args) {
-        ++args.num;
-        args.s1 = in.string();
-    }
-};
-
-// ----------------------------------------------------------------------------
-
-}  // namespace cmd_parser
+} // namespace replxx_hook
 
 
 int main(int argc, char* argv[])
 {
-    Logger::init(Logger::Level::Warning);
-    Vfs::default_instance().mount(XCI_SHARE_DIR);
+    Environment env;
 
     map<string, docopt::value> args = docopt::docopt(
             "Usage:\n"
@@ -368,7 +334,7 @@ int main(int argc, char* argv[])
         opts.compiler_flags |= Compiler::PPTypes;
 
     if (args["--eval"]) {
-        evaluate(args["--eval"].asString(), opts);
+        evaluate(env, args["--eval"].asString(), opts);
         return 0;
     }
 
@@ -379,26 +345,27 @@ int main(int argc, char* argv[])
                 std::cerr << "cannot read file: " << input << std::endl;
                 exit(1);
             }
-            evaluate(*content, opts);
+            evaluate(env, *content, opts);
         }
         return 0;
     }
 
-    TermCtl& t = TermCtl::stdout_instance();
+    TermCtl& t = context().term_out;
     Replxx rx;
     int input_number = 0;
     std::string history_file = "./.xci_script_history";
     rx.history_load(history_file);
     rx.set_max_history_size(1000);
+    rx.set_highlighter_callback(replxx_hook::highlighter);
 
-    while (!g_done) {
+    while (!context().done) {
         const char* input;
         do {
             input = rx.input(t.format("{green}_{}> {normal}", input_number));
         } while (input == nullptr && errno == EAGAIN);
 
         if (input == nullptr) {
-            cout << ".quit" << endl;
+            cout << t.format("{bold}{yellow}.quit{normal}") << endl;
             break;
         }
 
@@ -411,23 +378,11 @@ int main(int argc, char* argv[])
 
         if (line[0] == '.') {
             // control commands
-            using cmd_parser::CmdGrammar;
-            using cmd_parser::Action;
-
-            tao::pegtl::memory_input<> in(line, "command");
-            try {
-                if (!tao::pegtl::parse< CmdGrammar, Action >( in )) {
-                    // not matched at all
-                    cout << t.red().bold() << "Error: unknown command: " << line << " (try .help)" << t.normal() << endl;
-                }
-            } catch (tao::pegtl::parse_error&) {
-                // partially matched, encountered error - possibly wrong argument
-                cout << t.red().bold() << "Error: unknown command: " << line << " (try .help)" << t.normal() << endl;
-            }
+            repl::parse_command(line, context());
             continue;
         }
 
-        if (evaluate(line, opts, input_number))
+        if (evaluate(env, line, opts, input_number))
             ++input_number;
     }
 

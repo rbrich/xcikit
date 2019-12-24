@@ -19,6 +19,7 @@
 #include "Value.h"
 #include "SymbolTable.h"
 #include "Class.h"
+#include <string>
 #include <cstdint>
 
 namespace xci::script {

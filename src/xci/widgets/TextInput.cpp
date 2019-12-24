@@ -24,14 +24,15 @@ using namespace xci::text;
 using namespace xci::core;
 
 
-TextInput::TextInput(const std::string& string)
-    : m_text(string),
-      m_bg_rect(Color(10, 20, 40), theme().color(ColorId::Default)),
-      m_cursor_shape(Color::Yellow(), Color::Transparent()),
+TextInput::TextInput(Theme& theme, const std::string& string)
+    : Widget(theme),
+      m_text(string),
+      m_bg_rect(theme.renderer(), Color(10, 20, 40), theme.color(ColorId::Default)),
+      m_cursor_shape(theme.renderer(), Color::Yellow(), Color::Transparent()),
       m_cursor(string.size())
 {
     set_focusable(true);
-    m_layout.set_default_font(&theme().font());
+    m_layout.set_default_font(&theme.font());
 }
 
 
@@ -42,14 +43,16 @@ void TextInput::set_string(const std::string& string)
 
 
 void TextInput::set_decoration_color(const graphics::Color& fill,
-                                     const graphics::Color& border)
+                                     const graphics::Color& outline)
 {
-    m_bg_rect = Shape(fill, border);
+    m_bg_rect.set_fill_color(fill);
+    m_bg_rect.set_outline_color(outline);
 }
 
 
 void TextInput::resize(View& view)
 {
+    view.finish_draw();
     m_layout.clear();
     // Text before cursor
     m_layout.add_word(m_text.substr(0, m_cursor));
@@ -60,6 +63,7 @@ void TextInput::resize(View& view)
     // Text after cursor
     m_layout.add_word(m_text.substr(m_cursor));
     m_layout.typeset(view);
+    m_layout.update(view);
 
     // Cursor rect
     layout::Span* cursor_span = m_layout.get_span("cursor");
@@ -71,6 +75,7 @@ void TextInput::resize(View& view)
     if (cursor_box.x > m_content_pos + m_width)
         m_content_pos = cursor_box.x - m_width;
     m_cursor_shape.add_rectangle(cursor_box);
+    m_cursor_shape.update();
 
     auto rect = m_layout.bbox();
     rect.w = m_width;
@@ -83,23 +88,35 @@ void TextInput::resize(View& view)
     rect.y = 0;
     m_bg_rect.clear();
     m_bg_rect.add_rectangle(rect, m_outline_thickness);
+    m_bg_rect.update();
 }
 
 
-void TextInput::draw(View& view, State state)
+void TextInput::update(View& view, State state)
 {
-    auto rect = m_layout.bbox();
-    auto pos = position() + ViewportCoords{m_padding - rect.x - m_content_pos,
-                                           m_padding - rect.y};
+    view.finish_draw();
+    m_layout.update(view);
     if (last_hover() == LastHover::Inside) {
         m_bg_rect.set_outline_color(theme().color(ColorId::Hover));
     } else {
         m_bg_rect.set_outline_color(theme().color(ColorId::Default));
     }
+    m_bg_rect.update();
+    m_draw_cursor = state.focused;
+    if (m_draw_cursor)
+        m_cursor_shape.update();
+}
+
+
+void TextInput::draw(View& view)
+{
+    auto rect = m_layout.bbox();
+    auto pos = position() + ViewportCoords{m_padding - rect.x - m_content_pos,
+                                           m_padding - rect.y};
     m_bg_rect.draw(view, position());
     view.push_crop(aabb().enlarged(-m_outline_thickness));
     m_layout.draw(view, pos);
-    if (state.focused)
+    if (m_draw_cursor)
         m_cursor_shape.draw(view, pos);
     view.pop_crop();
 }

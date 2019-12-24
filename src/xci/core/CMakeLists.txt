@@ -1,3 +1,14 @@
+# ------------ #
+# Dependencies #
+# ------------ #
+
+find_package(Threads REQUIRED)
+
+
+# ------------ #
+# Libraries    #
+# ------------ #
+
 add_library(xci-core
     chrono.cpp
     file.cpp

@@ -53,9 +53,10 @@ void check_interpreter(const string& input, const string& expected_output)
 
     if (!sys_module) {
         Logger::init(Logger::Level::Warning);
-        Vfs::default_instance().mount(XCI_SHARE_DIR);
+        Vfs vfs;
+        vfs.mount(XCI_SHARE_DIR);
 
-        auto f = Vfs::default_instance().read_file("script/sys.ys");
+        auto f = vfs.read_file("script/sys.ys");
         auto content = f.content();
         sys_module = interpreter.build_module("sys", content->string_view());
     }
@@ -134,7 +135,7 @@ TEST_CASE( "Disambiguation", "[script][parser]" )
 
 TEST_CASE( "Stack grow", "[script][machine]" )
 {
-    Stack stack(4);
+    xci::script::Stack stack(4);
     CHECK(stack.capacity() == 4);
     CHECK(stack.size() == 0);
 
@@ -160,7 +161,7 @@ TEST_CASE( "Stack grow", "[script][machine]" )
 
 TEST_CASE( "Stack push/pull", "[script][machine]" )
 {
-    Stack stack;
+    xci::script::Stack stack;
 
     CHECK(stack.empty());
     stack.push(value::Bool{true});
@@ -173,7 +174,7 @@ TEST_CASE( "Stack push/pull", "[script][machine]" )
 
     CHECK(stack.pull<value::String>().value() == "hello");
     CHECK(stack.pull<value::Int32>().value() == 73);
-    CHECK(stack.pull<value::Bool>().value() == true);
+    CHECK(stack.pull<value::Bool>().value() == true);  // NOLINT
 }
 
 

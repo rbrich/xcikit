@@ -21,21 +21,22 @@
 #include <xci/graphics/Color.h>
 #include <xci/graphics/View.h>
 #include <xci/core/geometry.h>
+#include <xci/core/NonCopyable.h>
 
 namespace xci::graphics {
 
 using xci::core::Rect_f;
 using xci::core::Vec2f;
 
-// A collection of basic shapes: rectangles, ellipses.
-// Each shape may have different size and outline width,
-// but colors are uniform.
 
-class Shape {
+/// A collection of one of basic shapes: rectangles, ellipses, lines.
+/// Each shape may have different size and outline width,
+/// but colors are uniform.
+class Shape: private core::NonCopyable {
 public:
-    explicit Shape(const Color& fill_color = Color::Black(),
-                   const Color& outline_color = Color::White(),
-                   Renderer& renderer = Renderer::default_instance());
+    explicit Shape(Renderer& renderer,
+                   const Color& fill_color = Color::Black(),
+                   const Color& outline_color = Color::White());
 
     void set_fill_color(const Color& fill_color) { m_fill_color = fill_color; }
     void set_outline_color(const Color& outline_color) { m_outline_color = outline_color; }
@@ -86,17 +87,15 @@ public:
     // Reserve memory for a number of `lines`, `rectangles`, `ellipses`.
     void reserve(size_t lines, size_t rectangles, size_t ellipses);
 
-    // Remove all shapes
+    // Remove all shapes and clear all state (colors etc.)
     void clear();
+
+    // Update shapes attributes according to settings (color etc.)
+    void update();
 
     // Draw all shapes to `view` at `pos`.
     // Final shape position is `pos` + shapes's relative position
     void draw(View& view, const ViewportCoords& pos);
-
-private:
-    void init_line_shader();
-    void init_rectangle_shader();
-    void init_ellipse_shader();
 
 private:
     Color m_fill_color;
@@ -104,13 +103,13 @@ private:
     float m_antialiasing = 0;
     float m_softness = 0;
 
-    PrimitivesPtr m_lines;
-    PrimitivesPtr m_rectangles;
-    PrimitivesPtr m_ellipses;
+    Primitives m_lines;
+    Primitives m_rectangles;
+    Primitives m_ellipses;
 
-    ShaderPtr m_line_shader;
-    ShaderPtr m_rectangle_shader;
-    ShaderPtr m_ellipse_shader;
+    Shader& m_line_shader;
+    Shader& m_rectangle_shader;
+    Shader& m_ellipse_shader;
 };
 
 

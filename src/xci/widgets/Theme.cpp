@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "Theme.h"
+#include <xci/graphics/Renderer.h>
 
 namespace xci::widgets {
 
@@ -21,49 +22,48 @@ namespace xci::widgets {
 #define TRY(stmt)  do { auto res = stmt; if (!res) return false; } while(0)
 
 
-bool Theme::load_default_theme()
+Theme::Theme(graphics::Renderer& renderer)
+        : m_renderer(renderer),
+          m_font(renderer), m_icon_font(renderer)
+{}
+
+
+bool Theme::load_default()
 {
-    Theme& theme = Theme::default_theme();
+    core::Vfs& vfs = m_renderer.vfs();
 
     // Base font
-    TRY(theme.load_font_face("fonts/Hack/Hack-Regular.ttf", 0));
-    TRY(theme.load_font_face("fonts/Hack/Hack-Bold.ttf", 0));
-    TRY(theme.load_font_face("fonts/Hack/Hack-Italic.ttf", 0));
-    TRY(theme.load_font_face("fonts/Hack/Hack-BoldItalic.ttf", 0));
+    TRY(load_font_face(vfs, "fonts/Hack/Hack-Regular.ttf", 0));
+    TRY(load_font_face(vfs, "fonts/Hack/Hack-Bold.ttf", 0));
+    TRY(load_font_face(vfs, "fonts/Hack/Hack-Italic.ttf", 0));
+    TRY(load_font_face(vfs, "fonts/Hack/Hack-BoldItalic.ttf", 0));
 
     // Material Icons
-    TRY(theme.load_icon_font_face("fonts/MaterialIcons/MaterialIcons-Regular.woff", 0));
-    theme.set_icon_codepoint(IconId::None, L' ');
-    theme.set_icon_codepoint(IconId::CheckBoxUnchecked, L'\ue835');
-    theme.set_icon_codepoint(IconId::CheckBoxChecked, L'\ue834');
-    theme.set_icon_codepoint(IconId::RadioButtonUnchecked, L'\ue836');
-    theme.set_icon_codepoint(IconId::RadioButtonChecked, L'\ue837');
+    TRY(load_icon_font_face(vfs, "fonts/MaterialIcons/MaterialIcons-Regular.woff", 0));
+    set_icon_codepoint(IconId::None, L' ');
+    set_icon_codepoint(IconId::CheckBoxUnchecked, L'\ue835');
+    set_icon_codepoint(IconId::CheckBoxChecked, L'\ue834');
+    set_icon_codepoint(IconId::RadioButtonUnchecked, L'\ue836');
+    set_icon_codepoint(IconId::RadioButtonChecked, L'\ue837');
 
     // Colors
-    theme.set_color(ColorId::Default, {180, 180, 180});
-    theme.set_color(ColorId::Hover, graphics::Color::White());
-    theme.set_color(ColorId::Focus, graphics::Color::Yellow());
+    set_color(ColorId::Default, {180, 180, 180});
+    set_color(ColorId::Hover, graphics::Color::White());
+    set_color(ColorId::Focus, graphics::Color::Yellow());
 
     return true;
 }
 
 
-Theme& Theme::default_theme()
+bool Theme::load_font_face(const core::Vfs& vfs, const char* file_path, int face_index)
 {
-    static Theme theme;
-    return theme;
+    return m_font.add_face(vfs, file_path, face_index);
 }
 
 
-bool Theme::load_font_face(const char* file_path, int face_index)
+bool Theme::load_icon_font_face(const core::Vfs& vfs, const char* file_path, int face_index)
 {
-    return m_font.add_face(file_path, face_index);
-}
-
-
-bool Theme::load_icon_font_face(const char* file_path, int face_index)
-{
-    return m_icon_font.add_face(file_path, face_index);
+    return m_icon_font.add_face(vfs, file_path, face_index);
 }
 
 

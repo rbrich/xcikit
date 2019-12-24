@@ -1,11 +1,10 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.9)
 
-set(RBP_SOURCES
+add_library(rbp OBJECT
     MaxRectsBinPack.cpp
     MaxRectsBinPack.h
     Rect.cpp
-    Rect.h)
+    Rect.h
+    )
 
-set(RBP_LIBRARY rbp)
-add_library(${RBP_LIBRARY} OBJECT ${RBP_SOURCES})
-target_include_directories(${RBP_LIBRARY} INTERFACE ${CMAKE_CURRENT_LIST_DIR})
+target_include_directories(rbp INTERFACE ${CMAKE_CURRENT_LIST_DIR}/..)

@@ -22,7 +22,9 @@
 #include "Style.h"
 #include <xci/graphics/View.h>
 #include <xci/graphics/Color.h>
+#include <xci/graphics/Shape.h>
 #include <xci/core/geometry.h>
+#include <xci/core/Stack.h>
 
 #include <string>
 #include <utility>
@@ -119,6 +121,9 @@ public:
     // and after addition of new elements.
     void typeset(const graphics::View& target);
 
+    // Recreate graphics objects. Must be called at least once before draw.
+    void update(const graphics::View& target);
+
     // Draw whole layout to target
     void draw(graphics::View& target, const ViewportCoords& pos) const;
 
@@ -133,6 +138,8 @@ private:
 
     Style m_default_style;
     ViewportUnits m_default_width = 0;
+
+    mutable core::Stack<graphics::Shape> m_debug_shapes;
 };
 
 

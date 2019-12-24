@@ -2,5 +2,6 @@
 /*build*/
 /test_package/build/
 /share/fonts/Hack/
+/share/shaders/*.spv
 /share.dar
 /share.zip

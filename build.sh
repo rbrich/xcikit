@@ -7,10 +7,11 @@ BUILD_TYPE=MinSizeRel
 GENERATOR="Unix Makefiles"
 which ninja >/dev/null && GENERATOR="Ninja"
 JOBS=
+CMAKE_ARGS=()
 
 print_usage()
 {
-    echo "Usage: ./build.sh [<phase>, ...] [-G <cmake_generator>] [-j <jobs>]"
+    echo "Usage: ./build.sh [<phase>, ...] [-G <cmake_generator>] [-j <jobs>] [-D <cmake_def>, ...]"
     echo "Where: <phase> = deps | config | build | test | install | package (default: deps..install)"
     echo "       <cmake_generator> = \"Unix Makefiles\" | Ninja | ... (default: Ninja if available, Unix Makefiles otherwise)"
 }
@@ -35,6 +36,9 @@ while [[ $# > 0 ]] ; do
         -j )
             JOBS="-j $2"
             shift 2 ;;
+        -D )
+            CMAKE_ARGS+=(-D "$2")
+            shift 2 ;;
         * )
             printf "Error: Unsupported option ${1}.\n\n"
             print_usage
@@ -47,7 +51,7 @@ echo "=== Settings ==="
 ARCH="$(uname -m)"
 PLATFORM="$(uname)"
 [[ ${PLATFORM} = "Darwin" ]] && PLATFORM="macos${MACOSX_DEPLOYMENT_TARGET}"
-VERSION="0.0+$(git rev-parse --short HEAD)"
+VERSION=$(conan inspect . --raw version)$(git rev-parse --short HEAD 2>/dev/null | sed 's/^/+/' ; :)
 BUILD_CONFIG="${PLATFORM}-${ARCH}-${BUILD_TYPE}"
 [[ "${GENERATOR}" != "Unix Makefiles" ]] && BUILD_CONFIG="${BUILD_CONFIG}_${GENERATOR}"
 BUILD_DIR="${ROOT_DIR}/build/${BUILD_CONFIG}"
@@ -83,7 +87,8 @@ if phase config; then
         cmake "${ROOT_DIR}" \
             -G "${GENERATOR}" \
             -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-            -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
+            -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+            "${CMAKE_ARGS[@]}"
     )
     echo
 fi

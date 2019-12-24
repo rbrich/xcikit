@@ -18,9 +18,10 @@
 
 #include "Value.h"
 #include "Function.h"
+#include <xci/core/Stack.h>
 #include <xci/compat/utility.h>
 #include <xci/compat/bit.h>
-#include <stack>
+#include <vector>
 
 namespace xci::script {
 
@@ -120,7 +121,7 @@ private:
     size_t m_stack_pointer = m_stack_capacity;
     std::unique_ptr<byte[]> m_stack = std::make_unique<byte[]>(m_stack_capacity);
     std::vector<TypeInfo> m_stack_types;
-    std::stack<Frame> m_frame;
+    core::Stack<Frame> m_frame;
 };
 
 

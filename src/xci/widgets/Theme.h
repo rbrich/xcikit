@@ -18,10 +18,12 @@
 
 #include <xci/text/Font.h>
 #include <xci/graphics/Color.h>
+#include <xci/core/Vfs.h>
 #include <array>
 
-namespace xci {
-namespace widgets {
+namespace xci::graphics { class Renderer; }
+
+namespace xci::widgets {
 
 enum class IconId {
     None,
@@ -51,15 +53,19 @@ using ColorMap = std::array<graphics::Color, ColorMapSize>;
 
 class Theme {
 public:
-    static bool load_default_theme();
-    static Theme& default_theme();
+    explicit Theme(graphics::Renderer& renderer);
+
+    graphics::Renderer& renderer() const { return m_renderer; }
+
+    // default theme
+    bool load_default();
 
     // base font
-    bool load_font_face(const char* file_path, int face_index);
+    bool load_font_face(const core::Vfs& vfs, const char* file_path, int face_index);
     text::Font& font() { return m_font; }
 
     // icons
-    bool load_icon_font_face(const char* file_path, int face_index);
+    bool load_icon_font_face(const core::Vfs& vfs, const char* file_path, int face_index);
     text::Font& icon_font() { return m_icon_font; }
     void set_icon_codepoint(IconId icon_id, text::CodePoint codepoint);
     text::CodePoint icon_codepoint(IconId icon_id);
@@ -69,16 +75,17 @@ public:
     graphics::Color color(ColorId color_id);
 
 private:
+    graphics::Renderer& m_renderer;
     // base font
     text::Font m_font;
     // icons
     text::Font m_icon_font;
-    IconMap m_icon_map;
+    IconMap m_icon_map {};
     // colors
     ColorMap m_color_map;
 };
 
 
-}} // namespace xci::widgets
+} // namespace xci::widgets
 
 #endif // XCI_WIDGETS_THEME_H

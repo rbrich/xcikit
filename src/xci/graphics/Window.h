@@ -1,23 +1,16 @@
-// Window.h created on 2018-03-04, part of XCI toolkit
+// Window.h created on 2018-03-04 as part of xcikit project
+// https://github.com/rbrich/xcikit
+//
 // Copyright 2018, 2019 Radek Brich
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_WINDOW_H
 #define XCI_GRAPHICS_WINDOW_H
 
-#include <xci/graphics/View.h>
+#include "View.h"
 #include <xci/core/geometry.h>
+
+#include <vulkan/vulkan.h>
 
 #include <string>
 #include <memory>
@@ -25,11 +18,13 @@
 #include <utility>
 #include <chrono>
 
+struct GLFWwindow;
+
 namespace xci::graphics {
 
 using xci::core::Vec2u;
 using xci::core::Vec2f;
-
+using xci::core::Vec2i;
 
 enum class Key {
     Unknown = 0,
@@ -122,35 +117,39 @@ struct ScrollEvent {
 
 
 enum class RefreshMode {
-    OnDemand,  // got refresh event from system or called View::refresh()
-    OnEvent,   // got any event from system
+    OnDemand,   // got refresh event from system or called View::refresh()
+    OnEvent,    // got any event from system
     Periodic,   // continuous refresh
 };
 
 
+class Renderer;
+
+
 class Window {
 public:
-    static Window& default_instance();
+    explicit Window(Renderer& renderer);
+    ~Window();
 
-    virtual ~Window() = default;
+    Renderer& renderer();
 
     // Create the window.
-    virtual void create(const Vec2u& size, const std::string& title) = 0;
+    void create(const Vec2u& size, const std::string& title);
 
     // Run main loop. Doesn't exit until the window is closed.
-    virtual void display() = 0;
+    void display();
 
     // When in OnDemand or OnEvent refresh mode, call this to wake up
     // event loop. Put custom handler into UpdateCallback.
     // (thread-safe)
-    virtual void wakeup() const = 0;
+    void wakeup() const;
 
     // Stop the main loop and close the window.
     // (thread-safe)
-    virtual void close() const = 0;
+    void close() const;
 
-    virtual void set_clipboard_string(const std::string& s) const = 0;
-    virtual std::string get_clipboard_string() const = 0;
+    void set_clipboard_string(const std::string& s) const;
+    std::string get_clipboard_string() const;
 
     using UpdateCallback = std::function<void(View&, std::chrono::nanoseconds elapsed)>;
     using SizeCallback = std::function<void(View&)>;
@@ -163,35 +162,29 @@ public:
 
     // The original callback is replaced. To cascade callbacks,
     // you have to get and wrap original callback manually.
-    virtual void set_update_callback(UpdateCallback update_cb) { m_update_cb = std::move(update_cb); }
-    virtual void set_size_callback(SizeCallback size_cb) { m_size_cb = std::move(size_cb); }
-    virtual void set_draw_callback(DrawCallback draw_cb) { m_draw_cb = std::move(draw_cb); }
-    virtual void set_key_callback(KeyCallback key_cb) { m_key_cb = std::move(key_cb); }
-    virtual void set_char_callback(CharCallback char_cb) { m_char_cb = std::move(char_cb); }
-    virtual void set_mouse_position_callback(MousePosCallback mpos_cb) { m_mpos_cb = std::move(mpos_cb); }
-    virtual void set_mouse_button_callback(MouseBtnCallback mbtn_cb) { m_mbtn_cb = std::move(mbtn_cb); }
-    virtual void set_scroll_callback(ScrollCallback scroll_cb) { m_scroll_cb = std::move(scroll_cb); }
+    void set_update_callback(UpdateCallback update_cb) { m_update_cb = std::move(update_cb); }
+    void set_size_callback(SizeCallback size_cb) { m_size_cb = std::move(size_cb); }
+    void set_draw_callback(DrawCallback draw_cb);
+    void set_key_callback(KeyCallback key_cb) { m_key_cb = std::move(key_cb); }
+    void set_char_callback(CharCallback char_cb) { m_char_cb = std::move(char_cb); }
+    void set_mouse_position_callback(MousePosCallback mpos_cb);
+    void set_mouse_button_callback(MouseBtnCallback mbtn_cb);
+    void set_scroll_callback(ScrollCallback scroll_cb);
 
-    UpdateCallback get_update_callback() { return m_update_cb; }
-    SizeCallback get_size_callback() { return m_size_cb; }
-    DrawCallback get_draw_callback() { return m_draw_cb; }
-    KeyCallback get_key_callback() { return m_key_cb; }
-    CharCallback get_char_callback() { return m_char_cb; }
-    MousePosCallback get_mouse_position_callback() { return m_mpos_cb; }
-    MouseBtnCallback get_mouse_button_callback() { return m_mbtn_cb; }
-    ScrollCallback get_scroll_callback() { return m_scroll_cb; }
+    UpdateCallback update_callback() { return m_update_cb; }
+    SizeCallback size_callback() { return m_size_cb; }
+    DrawCallback draw_callback() { return m_draw_cb; }
+    KeyCallback key_callback() { return m_key_cb; }
+    CharCallback char_callback() { return m_char_cb; }
+    MousePosCallback mouse_position_callback() { return m_mpos_cb; }
+    MouseBtnCallback mouse_button_callback() { return m_mbtn_cb; }
+    ScrollCallback scroll_callback() { return m_scroll_cb; }
 
     // Refresh mode:
     // - OnDemand is energy-saving mode, good for normal GUI applications (forms etc.)
     // - OnEvent is similar, but does not require explicit calls to View::refresh()
     // - Periodic is good for games (continuous animations)
-    virtual void set_refresh_mode(RefreshMode mode) = 0;
-
-    // Refresh interval. This helps limiting framerate.
-    // - 0: do not wait for screen update
-    // - 1: wait for screen update (vsync)
-    // - 2: wait for 2nd screen update (vsync with halved FPS)
-    virtual void set_refresh_interval(int interval) = 0;
+    void set_refresh_mode(RefreshMode mode)  { m_refresh_mode = mode; }
 
     /// Set refresh timeout. This is useful for OnDemand/OnEvent modes,
     /// where no update events are generated unless an event occurs.
@@ -200,17 +193,52 @@ public:
     /// \param timeout      The timeout in usecs. Zero disables the timeout.
     /// \param periodic     False = one-shot (timeout is cleared after next update).
     ///                     True = periodic (no clear).
-    virtual void set_refresh_timeout(std::chrono::microseconds timeout, bool periodic) = 0;
+    void set_refresh_timeout(std::chrono::microseconds timeout, bool periodic);
 
     /// Select kind of viewport units to be used throughout the program
     /// for all placing and sizes of elements in view.
     /// \param origin       The position of (0,0) coordinates. Default is Center.
     /// \param scale        The scale of the units. Default is ScalingWithAspectCorrection.
-    virtual void set_view_mode(ViewOrigin origin, ViewScale scale) = 0;
+    void set_view_mode(ViewOrigin origin, ViewScale scale);
 
-    virtual void set_debug_flags(View::DebugFlags flags) = 0;
+    void set_debug_flags(View::DebugFlags flags);
 
-protected:
+    /// Wait for asynchronous draw commands to finish.
+    /// This needs to be called before recreating objects that are being drawn.
+    void finish_draw();
+
+    // GLFW handles
+    GLFWwindow* glfw_window() const { return m_window; }
+
+    // Vulkan - current command buffer
+    VkCommandBuffer vk_command_buffer() const { return m_command_buffers[m_current_cmd_buf]; }
+    uint32_t vk_command_buffer_index() const { return m_current_cmd_buf; }
+
+private:
+    void setup_view();
+    void create_command_buffers();
+    void draw();
+
+public:
+    static constexpr uint32_t cmd_buf_count = 2;
+
+private:
+    Renderer& m_renderer;
+    GLFWwindow* m_window = nullptr;
+    View m_view {this};
+    RefreshMode m_refresh_mode = RefreshMode::OnDemand;
+    Vec2i m_window_pos;
+    Vec2i m_window_size;
+    std::chrono::microseconds m_timeout {0};
+    bool m_clear_timeout = false;
+    bool m_draw_finished = true;
+
+    VkCommandBuffer m_command_buffers[cmd_buf_count] {};
+    VkFence m_cmd_buf_fences[cmd_buf_count] {};
+    VkSemaphore m_image_semaphore[cmd_buf_count] {};   // image available
+    VkSemaphore m_render_semaphore[cmd_buf_count] {};  // render finished
+    uint32_t m_current_cmd_buf = 0;
+
     UpdateCallback m_update_cb;
     SizeCallback m_size_cb;
     DrawCallback m_draw_cb;
@@ -224,4 +252,4 @@ protected:
 
 } // namespace xci::graphics
 
-#endif // XCI_GRAPHICS_WINDOW_H
+#endif // include guard

@@ -17,18 +17,20 @@
 #define XCI_TEXT_FONT_H
 
 #include <xci/text/FontFace.h>
+#include <xci/graphics/Renderer.h>
 #include <xci/graphics/Texture.h>
 #include <xci/core/geometry.h>
+#include <xci/core/Vfs.h>
 
 #include <vector>
 #include <map>
 #include <cassert>
 
-namespace xci {
-namespace text {
+namespace xci::text {
 
 using core::Rect_u;
-using graphics::TexturePtr;
+using graphics::Renderer;
+using graphics::Texture;
 
 
 class FontTexture;
@@ -37,7 +39,7 @@ class FontTexture;
 // Encapsulates faces, styles and glyph caches for a font
 class Font {
 public:
-    Font();
+    explicit Font(Renderer& renderer);
     ~Font();
 
     // non-copyable
@@ -49,9 +51,9 @@ public:
     void add_face(std::unique_ptr<FontFace> face);
 
     // The same as above, but constructs FontFace object for you
-    // (using default FontLibrary and default Vfs).
+    // (using default FontLibrary).
     // Returns false when FontFace load operation fails.
-    bool add_face(std::string path, int face_index);
+    bool add_face(const core::Vfs& vfs, std::string path, int face_index);
 
     // Get currently selected face.
     FontFace& face() { check_face(); return *m_faces[m_current_face].get(); }
@@ -98,7 +100,7 @@ public:
     float max_advance() { return face().max_advance(); }
     float ascender() const { return face().ascender(); }
     float descender() const { return face().descender(); }
-    TexturePtr& get_texture();
+    Texture& texture();
 
     // Throw away any rendered glyphs
     void clear_cache();
@@ -108,6 +110,7 @@ private:
     void check_face() const { assert(!m_faces.empty());  }
 
 private:
+    Renderer& m_renderer;
     unsigned m_size = 10;
     size_t m_current_face = 0;
     std::vector<std::unique_ptr<FontFace>> m_faces;  // faces for different strokes (eg. normal, bold, italic)
@@ -116,6 +119,6 @@ private:
 };
 
 
-}} // namespace xci::text
+} // namespace xci::text
 
 #endif // XCI_TEXT_FONT_H

@@ -110,15 +110,26 @@ void Text::set_color(const graphics::Color& color)
 
 void Text::resize(graphics::View& view)
 {
+    view.finish_draw();
     m_layout.typeset(view);
+    m_layout.update(view);
     m_need_typeset = false;
+}
+
+
+void Text::update(graphics::View& view)
+{
+    view.finish_draw();
+    if (m_need_typeset) {
+        m_layout.typeset(view);
+        m_need_typeset = false;
+    }
+    m_layout.update(view);
 }
 
 
 void Text::draw(graphics::View& view, const ViewportCoords& pos)
 {
-    if (m_need_typeset)
-        m_layout.typeset(view);
     m_layout.draw(view, pos);
 }
 

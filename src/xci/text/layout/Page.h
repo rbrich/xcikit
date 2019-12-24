@@ -17,11 +17,14 @@
 #define XCI_TEXT_LAYOUT_PAGE_H
 
 #include <xci/text/Style.h>
+#include <xci/graphics/Sprites.h>
+#include <xci/graphics/Shape.h>
 #include <xci/core/geometry.h>
+#include <xci/core/Stack.h>
 
 #include <string>
 #include <vector>
-#include <list>
+#include <optional>
 
 namespace xci::graphics { class View; }
 namespace xci::text { class Font; }
@@ -57,6 +60,7 @@ public:
     ViewportUnits baseline() const { return m_baseline; }
     Style& style() { return m_style; }
 
+    void update(const graphics::View& target);
     void draw(graphics::View& target, const ViewportCoords& pos) const;
 
 private:
@@ -65,6 +69,9 @@ private:
     ViewportCoords m_pos;  // relative to page origin (top-left corner)
     ViewportRect m_bbox;
     ViewportUnits m_baseline = 0;  // relative to bbox top
+
+    mutable std::optional<graphics::Sprites> m_sprites;
+    mutable core::Stack<graphics::Shape> m_debug_shapes;
 };
 
 
@@ -192,6 +199,7 @@ public:
 
     // ------------------------------------------------------------------------
 
+    void foreach_word(const std::function<void(Word& word)>& cb);
     void foreach_word(const std::function<void(const Word& word)>& cb) const;
     void foreach_line(const std::function<void(const Line& line)>& cb) const;
     void foreach_span(const std::function<void(const Span& span)>& cb) const;
@@ -213,7 +221,7 @@ private:
     std::vector<ViewportUnits> m_tab_stops;
 
     // page content
-    std::list<Word> m_words;
+    core::Stack<Word> m_words;
     std::vector<Line> m_lines;
     std::map<std::string, Span> m_spans;
 };

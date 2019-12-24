@@ -112,7 +112,7 @@ public:
     explicit View(Window* m_window) : m_window(m_window) {}
 
     // Window might be nullptr if the View was created directly
-    Window* window() { return m_window; }
+    Window* window() const { return m_window; }
 
     // Compute projection matrix based on viewport size and offset
     std::array<float, 16> projection_matrix() const;
@@ -160,17 +160,17 @@ public:
     }
 
     /// Convert coords in viewport units into framebuffer coords.
-    /// Framebuffer has zero coords in bottom-left corner, inverted Y axis.
+    /// Framebuffer has zero coords in bottom-left corner.
     FramebufferCoords coords_to_framebuffer(const ViewportCoords& coords) const {
         auto c = size_to_framebuffer(coords + 0.5f * viewport_size());
-        return {c.x, framebuffer_size().y - c.y};
+        return {c.x, c.y};
     }
 
     /// Convert rectangle in viewport space into framebuffer space.
     FramebufferRect rect_to_framebuffer(const ViewportRect& rect) const {
         auto xy = coords_to_framebuffer(rect.top_left());
         auto size = size_to_framebuffer(rect.size());
-        return {xy.x, xy.y - size.y, size.x, size.y};
+        return {xy.x, xy.y, size.x, size.y};
     }
 
     // Convert units to viewport:
@@ -231,6 +231,10 @@ public:
     void refresh() { m_needs_refresh = true; }
     bool pop_refresh();
 
+    // Wait for asynchronous draw commands to finish.
+    // This needs to be called before recreating objects that are being drawn.
+    void finish_draw();
+
     // ------------------------------------------------------------------------
     // Visual debugging
 
@@ -259,7 +263,7 @@ private:
     ViewOrigin m_origin = ViewOrigin::Center;
     ViewScale m_scale = ViewScale::ScalingWithAspectCorrection;
     DebugFlags m_debug = 0;
-    bool m_needs_refresh = false;
+    bool m_needs_refresh = true;  // start with dirty state to force first refresh
     std::vector<ViewportRect> m_crop;  // Crop region stack (current crop region on back)
     std::vector<ViewportCoords> m_offset;  // Offset stack (current offset on back)
 };

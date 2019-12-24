@@ -1,31 +1,38 @@
-#version 330
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
 
-in vec4 v_fill_color;
-uniform vec4 u_outline_color;
-uniform float u_softness;
-uniform float u_antialiasing;
+layout(binding = 1) uniform Color {
+    vec4 outline;
+} color;
+
+layout(binding = 2) uniform Attr {
+    float softness;
+    float antialiasing;
+} attr;
+
+layout(location = 0) in vec4 in_fill_color;
 
 // The colored outline is bounded by inner and outer border.
 // Each border is defined by rectangle (-1,-1)..(+1,+1)
 // in its corresponding lineary interpolated coordinates.
-in vec2 v_border_inner;
-in vec2 v_border_outer;
+layout(location = 1) in vec2 in_border_inner;
+layout(location = 2) in vec2 in_border_outer;
 
-out vec4 o_color;
+layout(location = 0) out vec4 out_color;
 
 void main() {
-    float ri = max(abs(v_border_inner.x), abs(v_border_inner.y));
-    float ro = max(abs(v_border_outer.x), abs(v_border_outer.y));
-    if (u_antialiasing > 0 || u_softness > 0) {
-        float f = fwidth(ri) * u_antialiasing + (ri/ro - 1) * u_softness;
+    float ri = max(abs(in_border_inner.x), abs(in_border_inner.y));
+    float ro = max(abs(in_border_outer.x), abs(in_border_outer.y));
+    if (attr.antialiasing > 0 || attr.softness > 0) {
+        float f = fwidth(ri) * attr.antialiasing + (ri/ro - 1) * attr.softness;
         float alpha = smoothstep(1-f/2, 1+f/2, ri);
-        o_color = mix(v_fill_color, u_outline_color, alpha);
-        f = fwidth(ro) * u_antialiasing + (1 - ro/ri) * u_softness;
+        out_color = mix(in_fill_color, color.outline, alpha);
+        f = fwidth(ro) * attr.antialiasing + (1 - ro/ri) * attr.softness;
         alpha = smoothstep(1-f/2, 1+f/2, ro);
-        o_color = mix(o_color, vec4(0,0,0,0), alpha);
+        out_color = mix(out_color, vec4(0,0,0,0), alpha);
     } else {
         float eps = 1e-6;
-        o_color = mix(v_fill_color, u_outline_color, step(1 - eps, ri));
-        o_color = mix(o_color, vec4(0,0,0,0), step(1, ro));
+        out_color = mix(in_fill_color, color.outline, step(1 - eps, ri));
+        out_color = mix(out_color, vec4(0,0,0,0), step(1, ro));
     }
 }

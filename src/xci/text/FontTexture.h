@@ -18,14 +18,14 @@
 
 #include <rbp/MaxRectsBinPack.h>
 #include <xci/graphics/Renderer.h>
+#include <xci/graphics/Texture.h>
 #include <xci/core/geometry.h>
 
-namespace xci {
-namespace text {
+namespace xci::text {
 
 using core::Vec2u;
 using core::Rect_u;
-using graphics::TexturePtr;
+using graphics::Texture;
 using graphics::Renderer;
 
 
@@ -35,8 +35,7 @@ class FontTexture {
 public:
     // The size is fixed. If the size request cannot be satisfied by HW,
     // smaller size will be used (HW maximum texture size).
-    explicit FontTexture(unsigned int size=512,
-                         Renderer& renderer = Renderer::default_instance());
+    explicit FontTexture(Renderer& renderer, unsigned int size=512);
 
     // non-copyable
     FontTexture(const FontTexture&) = delete;
@@ -51,16 +50,16 @@ public:
 
     // Get the whole texture (cut the coords returned by `insert`
     // and you'll get your glyph picture).
-    TexturePtr& get_texture() { return m_texture; }
+    Texture& texture() { return m_texture; }
 
     void clear();
 
 private:
     Renderer& m_renderer;
-    TexturePtr m_texture;
+    Texture m_texture;
     rbp::MaxRectsBinPack m_binpack;
 };
 
-}} // namespace xci::text
+} // namespace xci::text
 
 #endif // XCI_TEXT_FONTTEXTURE_H

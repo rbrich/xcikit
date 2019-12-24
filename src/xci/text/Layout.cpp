@@ -17,6 +17,7 @@
 
 #include <xci/graphics/Shape.h>
 #include <xci/graphics/View.h>
+#include <xci/graphics/Window.h>
 
 #include <cassert>
 
@@ -61,7 +62,6 @@ void Layout::set_default_color(const graphics::Color& color)
     m_page.clear();
 }
 
-
 void Layout::typeset(const graphics::View& target)
 {
     m_page.clear();
@@ -74,48 +74,69 @@ void Layout::typeset(const graphics::View& target)
     }
 }
 
-
-void Layout::draw(View& target, const ViewportCoords& pos) const
+void Layout::update(const graphics::View& target)
 {
+    m_page.foreach_word([&](Word& word) {
+        word.update(target);
+    });
+
+    // setup debug rectangles
+
+    auto& renderer = target.window()->renderer();
     const auto sc_1px = target.size_to_viewport(1_sc);
+    m_debug_shapes.clear();
 
     // Debug: page bbox
     if (target.has_debug_flag(View::Debug::PageBBox)) {
-        graphics::Shape bbox_rect(Color(150, 150, 0, 128), Color(200, 200, 50));
-        bbox_rect.add_rectangle(bbox(), sc_1px);
-        bbox_rect.draw(target, pos);
+        m_debug_shapes.emplace_back(renderer,
+                Color(150, 150, 0, 128),
+                Color(200, 200, 50));
+        m_debug_shapes.back().add_rectangle(bbox(), sc_1px);
+        m_debug_shapes.back().update();
     }
 
     // Debug: span bboxes
     if (target.has_debug_flag(View::Debug::SpanBBox)) {
-        graphics::Shape bboxes(Color(100, 0, 150, 128), Color(200, 50, 250));
+        m_debug_shapes.emplace_back(renderer,
+                Color(100, 0, 150, 128),
+                Color(200, 50, 250));
         m_page.foreach_span([&](const Span& span) {
             for (auto& part : span.parts()) {
-                bboxes.add_rectangle(part.bbox(), sc_1px);
+                m_debug_shapes.back().add_rectangle(part.bbox(), sc_1px);
             }
         });
-        bboxes.draw(target, pos);
+        m_debug_shapes.back().update();
     }
 
     // Debug: line bboxes
     if (target.has_debug_flag(View::Debug::LineBBox)) {
-        graphics::Shape bboxes(Color(0, 50, 150, 128), Color(50, 50, 250));
+        m_debug_shapes.emplace_back(renderer,
+                Color(0, 50, 150, 128),
+                Color(50, 50, 250));
         m_page.foreach_line([&](const Line& line) {
-            bboxes.add_rectangle(line.bbox(), sc_1px);
+            m_debug_shapes.back().add_rectangle(line.bbox(), sc_1px);
         });
-        bboxes.draw(target, pos);
+        m_debug_shapes.back().update();
     }
 
-    // Debug line baselines
+    // Debug: line baselines
     if (target.has_debug_flag(View::Debug::LineBaseLine)) {
-        graphics::Shape baselines(Color(255, 50, 150));
+        m_debug_shapes.emplace_back(renderer, Color(255, 50, 150));
         m_page.foreach_line([&](const Line& line) {
             auto rect = line.bbox();
             rect.y += line.baseline();
             rect.h = sc_1px;
-            baselines.add_rectangle(rect);
+            m_debug_shapes.back().add_rectangle(rect);
         });
-        baselines.draw(target, pos);
+        m_debug_shapes.back().update();
+    }
+}
+
+
+void Layout::draw(View& target, const ViewportCoords& pos) const
+{
+    for (auto& shape : m_debug_shapes) {
+        shape.draw(target, pos);
     }
 
     m_page.foreach_word([&](const Word& word) {

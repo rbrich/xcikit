@@ -22,6 +22,7 @@
 #include <xci/graphics/Shape.h>
 #include <xci/graphics/Primitives.h>
 #include <xci/graphics/View.h>
+#include <xci/graphics/Shader.h>
 #include <xci/core/geometry.h>
 #include <string_view>
 #include <vector>
@@ -166,6 +167,7 @@ private:
 
 class Line {
 public:
+    Line() { m_content.reserve(100); }
 
     /// Clear the line and set initial attributes.
     void clear(const Attributes& attr);
@@ -227,7 +229,7 @@ private:
 
 class Buffer {
 public:
-    Buffer() : m_lines(1) {}
+    Buffer() : m_lines(1) { m_lines.reserve(100); }
 
     void add_line();
     void remove_lines(size_t start, size_t count);
@@ -241,21 +243,19 @@ private:
 };
 
 
-class Cursor {
+class Caret {
 public:
-    explicit Cursor(graphics::Renderer& renderer = graphics::Renderer::default_instance())
-    : m_prim(renderer.create_primitives(graphics::VertexFormat::V2t2,
-                                        graphics::PrimitiveType::TriFans)) {}
+    explicit Caret(graphics::Renderer& renderer)
+    : m_quad(renderer, graphics::VertexFormat::V2t2,
+             graphics::PrimitiveType::TriFans),
+      m_shader(renderer.get_shader(graphics::ShaderId::Cursor)) {}
 
     void update(View& view, const ViewportRect& rect);
     void draw(View& view, const ViewportCoords& pos);
 
 private:
-    void init_shader();
-
-private:
-    graphics::PrimitivesPtr m_prim;
-    graphics::ShaderPtr m_shader;
+    graphics::Primitives m_quad;
+    graphics::Shader& m_shader;
 };
 
 
@@ -265,7 +265,7 @@ private:
 class TextTerminal: public Widget {
 public:
 
-    TextTerminal() { set_focusable(true); }
+    explicit TextTerminal(Theme& theme);
 
     // ------------------------------------------------------------------------
     // Font size, number of cells
@@ -391,9 +391,9 @@ public:
     // ------------------------------------------------------------------------
     // impl Widget
 
-    void update(View& view, std::chrono::nanoseconds elapsed) override;
+    void update(View& view, State state) override;
     void resize(View& view) override;
-    void draw(View& view, State state) override;
+    void draw(View& view) override;
 
 private:
     static constexpr double c_scroll_end = std::numeric_limits<double>::infinity();
@@ -409,6 +409,11 @@ private:
     core::Vec2u m_cursor;  // x/y of cursor on screen
     terminal::Attributes m_attrs;  // current attributes
     std::chrono::nanoseconds m_bell_time {0};
+
+    graphics::ColoredSprites m_sprites;
+    graphics::Shape m_boxes;
+    terminal::Caret m_caret;  // visual indicator of cursor position
+    graphics::Shape m_frame;  // for visual bell
 };
 
 

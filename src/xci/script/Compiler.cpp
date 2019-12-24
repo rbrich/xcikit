@@ -27,7 +27,6 @@
 #include <range/v3/view/reverse.hpp>
 #include <range/v3/action/reverse.hpp>
 
-#include <stack>
 #include <sstream>
 #include <cassert>
 

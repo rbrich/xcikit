@@ -32,13 +32,15 @@ using namespace xci::core;
 
 int main()
 {
-    Vfs::default_instance().mount(XCI_SHARE_DIR);
+    Vfs vfs;
+    vfs.mount(XCI_SHARE_DIR);
 
-    Window& window = Window::default_instance();
+    Renderer renderer {vfs};
+    Window window {renderer};
     window.create({800, 600}, "XCI coords demo");
 
-    Font font;
-    if (!font.add_face("fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
+    Font font {renderer};
+    if (!font.add_face(vfs, "fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
         return EXIT_FAILURE;
 
     Text coords_center(font, "(0, 0)");
@@ -56,12 +58,14 @@ int main()
     size_font.set_color(Color(70, 150, 255));
     Text mouse_pos(font, "Mouse position:    ");
     mouse_pos.set_color(Color(255, 150, 50));
+    std::string mouse_pos_str;
 
     Text help_text(font, "Units:     \tOrigin:\n"
                          "[s] scaling\t[c] center\n"
                          "[f] fixed  \t[t] top-left\n");
 
-    Shape unit_square(Color::Transparent(), Color(0.7, 0.7, 0.7));
+    Shape unit_square(renderer, Color::Transparent(),
+        Color(0.7, 0.7, 0.7));
 
     ViewScale view_scale = ViewScale::ScalingWithAspectCorrection;
     ViewOrigin view_origin = ViewOrigin::Center;
@@ -109,16 +113,20 @@ int main()
                                     "  (" + format("{} x {}", fs.x.value/vs.x.value, fs.y.value/vs.y.value) + ")");
         size_frame.resize(view);
 
+        size_font.set_fixed_string(format("Font size:         {}", font.size()));
+        size_font.resize(view);
+
+        mouse_pos.resize(view);
+
         unit_square.clear();
         if (view_origin == ViewOrigin::Center)
             unit_square.add_rectangle({-1, -1, 2, 2}, view.size_to_viewport(1_sc));
         else
             unit_square.add_rectangle({0, 0, 2, 2}, view.size_to_viewport(1_sc));
+        unit_square.update();
     });
 
     window.set_draw_callback([&](View& view) {
-        size_font.set_fixed_string(format("Font size:         {}", font.size()));
-
         if (view_scale == ViewScale::ScalingWithAspectCorrection)
             unit_square.draw(view, {0,0});
 
@@ -163,26 +171,26 @@ int main()
                 view_scale = ViewScale::ScalingWithAspectCorrection;
                 font_size = 0.05;
                 window.set_view_mode(view_origin, view_scale);
-                window.get_size_callback()(view);
+                window.size_callback()(view);
                 view.refresh();
                 break;
             case Key::F:
                 view_scale = ViewScale::FixedScreenPixels;
                 font_size = 15.0;
                 window.set_view_mode(view_origin, view_scale);
-                window.get_size_callback()(view);
+                window.size_callback()(view);
                 view.refresh();
                 break;
             case Key::C:
                 view_origin = ViewOrigin::Center;
                 window.set_view_mode(view_origin, view_scale);
-                window.get_size_callback()(view);
+                window.size_callback()(view);
                 view.refresh();
                 break;
             case Key::T:
                 view_origin = ViewOrigin::TopLeft;
                 window.set_view_mode(view_origin, view_scale);
-                window.get_size_callback()(view);
+                window.size_callback()(view);
                 view.refresh();
                 break;
             default:
@@ -190,11 +198,17 @@ int main()
         }
     });
 
+    window.set_update_callback([&](View& view, std::chrono::nanoseconds) {
+        if (!mouse_pos_str.empty()) {
+            mouse_pos.set_fixed_string("Mouse position:    " + mouse_pos_str);
+            mouse_pos.update(view);
+            view.refresh();
+            mouse_pos_str.clear();
+        }
+    });
+
     window.set_mouse_position_callback([&](View& view, const MousePosEvent& ev) {
-        mouse_pos.set_fixed_string("Mouse position:    " +
-                                   format("({}, {})", ev.pos.x, ev.pos.y));
-        mouse_pos.resize(view);
-        view.refresh();
+        mouse_pos_str = format("({}, {})", ev.pos.x, ev.pos.y);
     });
 
     window.display();

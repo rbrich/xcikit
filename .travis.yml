@@ -4,7 +4,9 @@ os: osx
 osx_image: xcode11
 
 env:
-  - MACOSX_DEPLOYMENT_TARGET=10.12
+  global:
+    - MACOSX_DEPLOYMENT_TARGET=10.14
+    - VK_SDK_VER=1.1.126.0
 
 addons:
   homebrew:
@@ -13,8 +15,15 @@ addons:
       - conan
       - ccache
       - ninja
+      - doxygen
 
 before_script:
+  - |
+    export VULKAN_SDK="$PWD/vulkansdk-macos-$VK_SDK_VER/macOS"
+    if [ ! -d "$VULKAN_SDK" ]; then
+      curl -O https://sdk.lunarg.com/sdk/download/$VK_SDK_VER/mac/vulkansdk-macos-$VK_SDK_VER.tar.gz
+      tar xf vulkansdk-macos-$VK_SDK_VER.tar.gz && rm vulkansdk-macos-$VK_SDK_VER.tar.gz
+    fi
   - ./bootstrap.sh -y
   - ./build.sh deps
 
@@ -26,14 +35,20 @@ after_failure:
 
 cache:
   ccache: true
+  directories:
+    - vulkansdk-macos-$VK_SDK_VER
+
+before_deploy:
+  - conan user -p $CONAN_PASSWORD -r xcikit rbrich
+  - conan upload replxx/*@rbrich/stable --all --no-overwrite --check --confirm -r=xcikit
 
 deploy:
   provider: releases
-  api_key:
-    secure: UsZbVmTy8zcx1eyfck70Nn4IZ2MKFjI7H9WxVja/ymBjs8ptqFjkgGf2cmMIa37YVQ9eOw6zqmrN8ZV1vRj6mMdBOP7aAMdrFevL2ZcjVVw/2xQf0PGj3TiRVCBcOxY1yNLwrPye/GZ/uZUFY+EkGWF/N573eT6fgy7P6lH2+HPQWxGWhXlJ8n0NE3zS07fePeMEGFyLVXGISf8kjoUwxBogI2eXq8a70Vq7X8DTBrzbx/ECEy3f6MWJCA9fdH653u6fqYOZ381kTfbJ35aMRP+u3Y+765Evl3/JKA1HBKArYlX1sE0vgc4cpDWGvVT/FhbP0+wLr9JM88Hqza1bF1unE8Mhxxfu0dwKiGjjPCBWxI0jfJScc5B95o7ZE3DeFdbBm5lLA3QqAgO9XJIYE6NwgPTvuPDTbiX+XCVzUVRbpUKWxa9Zrvh17pvxdb4RGtxMXrUCTsrYj8hLyf/8CYaCwGhGlaz3Yqi8pqJsV/IMexADmKppwAiDM+8ONff+fOBCFV6/lxve5FQP7DYkp/STonGS+G3Z47T05UjOF7gIt+Ulp5JRnMA3ovgkQGQljRF6D9pXMwV7sccRgpUoU3Mgj2cH6G/o+r/QNIe3rD766/zZDcZ1D4IJRS1e8/5Ck3Fspvm1CiLsFVPTgipM+Y5F3olKQxjqqRwE2rbmDHI=
+  api_key: $GITHUB_TOKEN
   file_glob: true
   file: artifacts/*.zip
   on:
     repo: rbrich/xcikit
+    branch: master
   skip_cleanup: true
   draft: true
