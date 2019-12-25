@@ -44,7 +44,7 @@ public:
         m_definition = nullptr;
 
         if (m_class) {
-            // export symbol to outer scoupe
+            // export symbol to outer scope
             auto outer_sym = symtab().parent()->add({dfn.variable.identifier.name,
                                                      Symbol::Method, m_class->index});
             outer_sym->set_ref(dfn.variable.identifier.symbol);

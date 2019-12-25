@@ -243,9 +243,9 @@ const char* builtin::op_to_function_name(ast::Operator::Op op)
 
 BuiltinModule::BuiltinModule() : Module("builtin")
 {
-    symtab().add({"void", add_value(std::make_unique<value::Void>())});
-    symtab().add({"false", add_value(std::make_unique<value::Bool>(false))});
-    symtab().add({"true", add_value(std::make_unique<value::Bool>(true))});
+    symtab().add({"void", Symbol::StaticValue, add_value(std::make_unique<value::Void>())});
+    symtab().add({"false", Symbol::StaticValue, add_value(std::make_unique<value::Bool>(false))});
+    symtab().add({"true", Symbol::StaticValue, add_value(std::make_unique<value::Bool>(true))});
     add_logical_op_function("or", Opcode::LogicalOr);
     add_logical_op_function("and", Opcode::LogicalAnd);
     add_bitwise_op_function("bit_or", Opcode::BitwiseOr_8);

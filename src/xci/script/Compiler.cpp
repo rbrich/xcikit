@@ -183,19 +183,18 @@ public:
                 });
                 break;
             }
-            case Symbol::Value: {
-                if (symtab.module() != nullptr) {
-                    // static value
-                    auto idx = sym.index();
-                    if (symtab.module() != &module()) {
-                        // copy static value into this module if it's from builtin or another module
-                        auto& val = symtab.module()->get_value(sym.index());
-                        idx = module().add_value(val.make_copy());
-                    }
-                    // LOAD_STATIC <static_idx>
-                    m_function.code().add_opcode(Opcode::LoadStatic, idx);
-                    break;
+            case Symbol::StaticValue: {
+                auto idx = sym.index();
+                if (symtab.module() != &module()) {
+                    // copy static value into this module if it's from builtin or another module
+                    auto& val = symtab.module()->get_value(sym.index());
+                    idx = module().add_value(val.make_copy());
                 }
+                // LOAD_STATIC <static_idx>
+                m_function.code().add_opcode(Opcode::LoadStatic, idx);
+                break;
+            }
+            case Symbol::Value: {
                 assert(sym.depth() == 0);
                 // COPY_VARIABLE <frame_offset> <size>
                 const auto& ti = m_function.get_value(sym.index());

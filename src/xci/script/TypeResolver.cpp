@@ -276,13 +276,11 @@ public:
             case Symbol::Parameter:
                 m_value_type = m_function.get_parameter(sym.index());
                 break;
+            case Symbol::StaticValue:
+                m_value_type = symtab.module()->get_value(sym.index()).type_info();
+                break;
             case Symbol::Value:
-                if (symtab.module() != nullptr) {
-                    // static value
-                    m_value_type = symtab.module()->get_value(sym.index()).type_info();
-                } else {
-                    m_value_type = m_function.get_value(sym.index());
-                }
+                m_value_type = m_function.get_value(sym.index());
                 break;
             case Symbol::TypeName:
             case Symbol::TypeVar:

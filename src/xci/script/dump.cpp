@@ -580,6 +580,7 @@ std::ostream& operator<<(std::ostream& os, Symbol::Type v)
         case Symbol::Value:         return os << "Value";
         case Symbol::Parameter:     return os << "Parameter";
         case Symbol::Nonlocal:      return os << "Nonlocal";
+        case Symbol::StaticValue:   return os << "StaticValue";
         case Symbol::Function:      return os << "Function";
         case Symbol::Module:        return os << "Module";
         case Symbol::Instruction:   return os << "Instruction";
