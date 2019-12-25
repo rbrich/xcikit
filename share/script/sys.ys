@@ -1,13 +1,13 @@
 class Eq T {
-    eq : |T T| -> Bool;
-    ne : |T T| -> Bool; // = |x y| { not (eq x y) };
+    eq : T T -> Bool;
+    ne : T T -> Bool; // = fun x y { not (eq x y) };
 };
 
 class Ord T (Eq T) {
-    lt : |T T| -> Bool;
-    gt : |T T| -> Bool;
-    le : |T T| -> Bool;
-    ge : |T T| -> Bool;
+    lt : T T -> Bool;
+    gt : T T -> Bool;
+    le : T T -> Bool;
+    ge : T T -> Bool;
 };
 
 
@@ -48,7 +48,7 @@ instance Eq Float64 {
 
 /*
 instance Eq [T] ( Eq T ) {
-    eq = |x y| {
+    eq = fun x y {
         match x, y {
             [], [] -> true
             [], [...] -> false
@@ -103,6 +103,6 @@ instance Ord Float64 {
 };
 
 /*
-f : |T T| -> T with (Ord T) = |x y| { x < y }
-f = |x:T y:T| -> T lazy with (Ord T) { x < y }
+f : fun T T -> T with (Ord T) = |x y| { x < y }
+f = fun x:T y:T -> T lazy with (Ord T) { x < y }
 */

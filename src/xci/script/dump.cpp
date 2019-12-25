@@ -251,13 +251,9 @@ std::ostream& operator<<(std::ostream& os, const FunctionType& v)
         return os << less_indent;
     } else {
         if (!v.params.empty()) {
-            os << "|";
             for (const auto& prm : v.params) {
-                if (&prm != &v.params.front())
-                    os << ' ';
-                os << prm;
+                os << prm << ' ';
             }
-            os << "| ";
         }
         if (v.result_type) {
             os << "-> " << *v.result_type << " ";
@@ -369,7 +365,7 @@ std::ostream& operator<<(std::ostream& os, const Function& v)
         os << put_indent << "Function(Expression)" << endl;
         return os << more_indent << v.type << v.body << less_indent;
     } else {
-        return os << "(" << v.type << "{" << v.body << "})";
+        return os << "fun " << v.type << "{" << v.body << "}";
     }
 }
 
