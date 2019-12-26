@@ -15,6 +15,7 @@
 
 #include "Value.h"
 #include "Function.h"
+#include "Error.h"
 #include <xci/core/string.h>
 #include <numeric>
 
@@ -74,7 +75,7 @@ std::ostream& operator<<(std::ostream& os, const Value& o)
     struct StreamVisitor: public value::Visitor {
         std::ostream& os;
         explicit StreamVisitor(std::ostream& os) : os(os) {}
-        void visit(const value::Void&) override { os << "Void"; }
+        void visit(const value::Void&) override { os << "void"; }
         void visit(const value::Bool& v) override { os << std::boolalpha << v.value(); }
         void visit(const value::Byte& v) override { os << v.value() << ":Byte"; }
         void visit(const value::Char& v) override { os << v.value() << ":Char"; }

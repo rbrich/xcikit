@@ -15,11 +15,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCIKIT_AST_H
-#define XCIKIT_AST_H
+#ifndef XCI_SCRIPT_AST_H
+#define XCI_SCRIPT_AST_H
 
 #include "SymbolTable.h"
-#include "Error.h"
+#include "SourceInfo.h"
 #include <cstdint>
 #include <vector>
 #include <string>

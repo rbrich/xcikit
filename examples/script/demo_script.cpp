@@ -200,13 +200,16 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
 
         // returned value of last statement
         auto result = machine.stack().pull(func.signature().return_type);
+        auto result_name = "_" + std::to_string(input_number);
         if (!result->is_void()) {
-            cout << t.bold() << *result << t.normal() << endl;
+            cout << t.bold().magenta() << result_name
+                 << t.normal() << " = "
+                 << t.bold() << *result << t.normal() << endl;
         }
 
         // save result as static value `_<N>` in the module
         auto result_idx = module->add_value(std::move(result));
-        module->symtab().add({"_" + std::to_string(input_number), result_idx});
+        module->symtab().add({result_name, Symbol::StaticValue, result_idx});
 
         context().modules.push_back(move(module));
         return true;

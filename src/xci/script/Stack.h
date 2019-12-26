@@ -18,6 +18,7 @@
 
 #include "Value.h"
 #include "Function.h"
+#include "Error.h"
 #include <xci/core/Stack.h>
 #include <xci/compat/utility.h>
 #include <xci/compat/bit.h>

@@ -17,6 +17,9 @@
 #include "Function.h"
 #include "Module.h"
 #include <xci/core/string.h>
+#include <xci/compat/macros.h>
+#include <iomanip>
+#include <sstream>
 
 namespace xci::script {
 
@@ -568,6 +571,51 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
     os << less_indent;
 
     return os;
+}
+
+
+// Type
+
+std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
+{
+    switch (v.type()) {
+        case Type::Unknown:     return os << "?";
+        case Type::Void:        return os << "Void";
+        case Type::Bool:        return os << "Bool";
+        case Type::Byte:        return os << "Byte";
+        case Type::Char:        return os << "Char";
+        case Type::Int32:       return os << "Int32";
+        case Type::Int64:       return os << "Int64";
+        case Type::Float32:     return os << "Float32";
+        case Type::Float64:     return os << "Float64";
+        case Type::String:      return os << "String";
+        case Type::List:
+            return os << "[" << v.subtypes()[0] << "]";
+        case Type::Tuple: {
+            os << "(";
+            for (const auto& ti : v.subtypes()) {
+                os << ti;
+                if (&ti != &v.subtypes().back())
+                    os << ", ";
+            }
+            return os << ")";
+        }
+        case Type::Function:    return os << v.signature();
+        case Type::Module:      return os << "Module";
+    }
+    UNREACHABLE;
+}
+
+
+std::ostream& operator<<(std::ostream& os, const Signature& v)
+{
+    if (!v.params.empty()) {
+        for (auto& param : v.params) {
+            os << param << " ";
+        }
+        os << "-> ";
+    }
+    return os << v.return_type;
 }
 
 

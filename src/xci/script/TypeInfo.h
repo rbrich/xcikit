@@ -97,8 +97,6 @@ private:
     std::vector<TypeInfo> m_subtypes;
 };
 
-std::ostream& operator<<(std::ostream& os, const TypeInfo& v);
-
 
 struct Signature {
     std::vector<TypeInfo> params;
@@ -116,8 +114,6 @@ struct Signature {
     }
     bool operator!=(const Signature& rhs) const { return !(rhs == *this); }
 };
-
-std::ostream& operator<<(std::ostream& os, const Signature& v);
 
 
 } // namespace xci::script

@@ -17,7 +17,7 @@
 #include "Function.h"
 #include "Module.h"
 #include "Builtin.h"
-#include "dump.h"
+#include "Error.h"
 #include <vector>
 
 using namespace std;

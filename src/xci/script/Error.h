@@ -13,31 +13,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCIKIT_ERROR_H
-#define XCIKIT_ERROR_H
+#ifndef XCI_SCRIPT_ERROR_H
+#define XCI_SCRIPT_ERROR_H
 
 #include "Value.h"
+#include "SourceInfo.h"
+#include "dump.h"
 #include <xci/core/format.h>
 
 namespace xci::script {
-
-
-struct SourceInfo {
-    size_t line_number = 0;
-    size_t byte_in_line = 0;
-    const char* line_begin = nullptr;
-    const char* line_end = nullptr;
-    const char* source = nullptr;
-
-    template <typename Input, typename Position>
-    void load(const Input &in, const Position& pos) {
-        line_begin = in.begin_of_line(pos);
-        line_end = in.end_of_line(pos);
-        line_number = pos.line;
-        byte_in_line = pos.byte_in_line;
-        source = in.source();
-    }
-};
 
 
 class Error : public std::exception {
