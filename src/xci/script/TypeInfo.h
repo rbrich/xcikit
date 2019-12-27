@@ -70,7 +70,6 @@ public:
     size_t size() const;
     void foreach_heap_slot(std::function<void(size_t offset)> cb) const;
 
-    // Actual type
     Type type() const { return m_type; }
     bool is_callable() const { return type() == Type::Function; }
 
@@ -81,6 +80,8 @@ public:
     Signature& signature() { return *m_signature; }
     const Signature& signature() const { return *m_signature; }
     std::shared_ptr<Signature> signature_ptr() const { return m_signature; }
+
+    TypeInfo effective_type() const;
 
     const std::vector<TypeInfo>& subtypes() const { return m_subtypes; }
     const TypeInfo& elem_type() const;

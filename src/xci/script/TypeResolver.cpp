@@ -73,14 +73,15 @@ public:
         if (m_instance != nullptr)
             return;
 
-        Index idx = m_function.add_value(move(m_value_type));
-        dfn.variable.identifier.symbol->set_index(idx);
-        // if the function was just a parameterless block, change symbol type to a value
-        if (dfn.variable.identifier.symbol->type() == Symbol::Type::Function
-        && !m_value_type.is_callable()) {
-            dfn.variable.identifier.symbol->set_type(Symbol::Type::Value);
-            dfn.variable.identifier.symbol->set_callable(false);
-        }
+       // Index idx = m_function.add_value(move(m_value_type));
+       // dfn.variable.identifier.symbol->set_index(idx);
+
+        Function& func = module().get_function(dfn.symbol()->index());
+        if (m_value_type.is_callable())
+            func.signature() = m_value_type.signature();
+        else
+            func.signature().resolve_return_type(m_value_type);
+        m_value_type = {};
     }
 
     void visit(ast::Invocation& inv) override {
@@ -201,11 +202,9 @@ public:
                     inst_psym = inst_psym->next();
                 }
                 stringstream o_args;
-                o_args << "| ";
                 for (const auto& arg : m_call_args) {
                     o_args << arg.type_info << ' ';
                 }
-                o_args << '|';
                 throw FunctionNotFound(v.identifier.name, o_args.str(), o_candidates.str());
             }
             case Symbol::Function: {
@@ -250,11 +249,9 @@ public:
                     symptr = symptr->next();
                 }
                 stringstream o_args;
-                o_args << "| ";
                 for (const auto& arg : m_call_args) {
                     o_args << arg.type_info << ' ';
                 }
-                o_args << '|';
                 throw FunctionNotFound(v.identifier.name, o_args.str(), o_candidates.str());
             }
             case Symbol::Module:
@@ -289,6 +286,8 @@ public:
             case Symbol::Unresolved:
                 UNREACHABLE;
         }
+        if (sym.type() == Symbol::Function)
+            m_value_type = m_value_type.effective_type();
         v.identifier.symbol->set_callable(m_value_type.is_callable());
     }
 
@@ -368,12 +367,20 @@ public:
         fn.set_signature(m_value_type.signature_ptr());
         if (fn.is_generic()) {
             // instantiate the specialization
-            auto fspec = resolve_specialization(fn);
-            m_processor.process_block(*fspec, v.body);
-            m_value_type = TypeInfo{fspec->signature_ptr()};
-            v.index = module().add_function(move(fspec));
+            if (m_call_args.size() == fn.signature().params.size()) {
+                auto fspec = resolve_specialization(fn);
+                m_processor.process_block(*fspec, v.body);
+                m_value_type = TypeInfo{fspec->signature_ptr()};
+                v.index = module().add_function(move(fspec));
+            }
         } else {
             // compile body and resolve return type
+            if (v.definition) {
+                // in case the function is recursive, propagate the type upwards
+                auto symptr = v.definition->variable.identifier.symbol;
+                auto& fn_dfn = module().get_function(symptr->index());
+                fn_dfn.set_signature(m_value_type.signature_ptr());
+            }
             m_processor.process_block(fn, v.body);
             m_value_type = TypeInfo{fn.signature_ptr()};
         }

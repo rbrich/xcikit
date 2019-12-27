@@ -216,6 +216,7 @@ TEST_CASE( "Blocks and lambdas", "[script][interpreter]" )
     check_interpreter("{}",         "");
     check_interpreter("{1+2}",      "3");
     check_interpreter("{{{1+2}}}",  "3");
+    check_interpreter("x=4; b = 3 + {x+1}; b", "8");
 
     // blocks can be assigned to a name
     check_interpreter("b = {1+2}; b", "3");
@@ -224,6 +225,7 @@ TEST_CASE( "Blocks and lambdas", "[script][interpreter]" )
     // immediately called lambda
     check_interpreter("fun x:Int {x+1} 2", "3");
     check_interpreter("fun x {x+1} 2", "3");  // generic lambda
+    check_interpreter("b = 3 + fun x {2*x} 2; b", "7");
 
     // argument propagation: `f` returns a function which consumes the second arg
     check_interpreter("f = fun a:Int { fun b:Int { a+b } }; f 1 2",     "3");

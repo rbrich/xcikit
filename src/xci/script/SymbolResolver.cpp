@@ -31,21 +31,26 @@ public:
 
     void visit(ast::Definition& dfn) override {
         // check for name collision
-        if (symtab().find_by_name(dfn.variable.identifier.name))
-            throw MultipleDeclarationError(dfn.variable.identifier.name);
+        const auto& name = dfn.variable.identifier.name;
+        if (symtab().find_by_name(name))
+            throw MultipleDeclarationError(name);
 
-        // add new symbol
-        dfn.variable.identifier.symbol = symtab().add({dfn.variable.identifier.name, Symbol::Value, no_index});
-        m_definition = &dfn;
+        // add new function, symbol
+        SymbolTable& fn_symtab = symtab().add_child(name);
+        auto fn = make_unique<Function>(module(), fn_symtab);
+        auto idx = module().add_function(move(fn));
+        dfn.variable.identifier.symbol = symtab().add({name, Symbol::Function, idx});
+        dfn.variable.identifier.symbol->set_callable(true);
         if (dfn.variable.type)
             dfn.variable.type->apply(*this);
-        if (dfn.expression)
+        if (dfn.expression) {
+            dfn.expression->definition = &dfn;
             dfn.expression->apply(*this);
-        m_definition = nullptr;
+        }
 
         if (m_class) {
             // export symbol to outer scope
-            auto outer_sym = symtab().parent()->add({dfn.variable.identifier.name,
+            auto outer_sym = symtab().parent()->add({name,
                                                      Symbol::Method, m_class->index});
             outer_sym->set_ref(dfn.variable.identifier.symbol);
             return;
@@ -187,26 +192,35 @@ public:
         // (in both parameters and result)
         v.type.apply(*this);
         // add symbol table for the function, fill in parameters
-        std::string name = "<lambda>";
-        if (v.type.params.empty())
-            name = "<block>";
-        if (m_definition != nullptr) {
-            name = m_definition->variable.identifier.name;
-            m_definition->variable.identifier.symbol->set_callable(true);
+        /*if (v.definition != nullptr) {
+            // use Definition's symtab and function
+            v.index = v.definition->symbol()->index();
+            Function& fn = module().get_function(v.index);
+            size_t par_idx = 0;
+            for (auto& p : v.type.params) {
+                p.identifier.symbol = fn.symtab().add({p.identifier.name, Symbol::Parameter, par_idx++});
+            }
+            m_postponed_blocks.push_back({fn, v.body});
+            v.body.symtab = &fn.symtab();
+        } else*/ {
+            std::string name = "<lambda>";
+            if (v.type.params.empty())
+                name = "<block>";
+            SymbolTable& fn_symtab = symtab().add_child(name);
+            size_t par_idx = 0;
+            for (auto& p : v.type.params) {
+                p.identifier.symbol = fn_symtab.add({p.identifier.name, Symbol::Parameter, par_idx++});
+            }
+            // add function itself, postpone body compilation
+            auto fn = make_unique<Function>(module(), fn_symtab);
+            m_postponed_blocks.push_back({*fn, v.body});
+            v.body.symtab = &fn_symtab;
+            v.index = module().add_function(move(fn));
         }
-        SymbolTable& fn_symtab = symtab().add_child(name);
-        size_t par_idx = 0;
-        for (auto& p : v.type.params) {
-            p.identifier.symbol = fn_symtab.add({p.identifier.name, Symbol::Parameter, par_idx++});
-        }
-        // add function itself, postpone body compilation
-        auto fn = make_unique<Function>(module(), fn_symtab);
-        m_postponed_blocks.push_back({*fn, v.body});
-        v.body.symtab = &fn_symtab;
-        v.index = module().add_function(move(fn));
-        if (m_definition != nullptr && m_instance != nullptr) {
-            m_definition->variable.identifier.symbol->set_type(Symbol::Function);
-            m_definition->variable.identifier.symbol->set_index(v.index);
+
+        if (v.definition != nullptr && m_instance != nullptr) {
+            v.definition->symbol()->set_type(Symbol::Function);
+            v.definition->symbol()->set_index(v.index);
         }
     }
 
@@ -255,11 +269,11 @@ private:
             // lookup in this and parent scopes
             size_t depth = 0;
             for (auto p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
-                if (p_symtab->name() == name && p_symtab->parent() != nullptr) {
-                    // recursion - unwrap the function
-                    auto symptr = p_symtab->parent()->find_by_name(name);
-                    return symtab().add({symptr, Symbol::Function, depth + 1});
-                }
+//                if (p_symtab->name() == name && p_symtab->parent() != nullptr) {
+//                    // recursion - unwrap the function
+//                    auto symptr = p_symtab->parent()->find_by_name(name);
+//                    return symtab().add({symptr, Symbol::Function, depth + 1});
+//                }
 
                 auto symptr = p_symtab->find_by_name(name);
                 if (symptr) {
@@ -317,7 +331,6 @@ private:
     std::vector<PostponedBlock> m_postponed_blocks;
     Function& m_function;
     SymbolTable* m_symtab = &m_function.symtab();
-    ast::Definition* m_definition = nullptr;  // symbol being currently defined
     ast::Class* m_class = nullptr;
     Instance* m_instance = nullptr;
 };
@@ -343,9 +356,7 @@ public:
         : m_processor(processor), m_function(func) {}
 
     void visit(ast::Definition& dfn) override {
-        m_definition = &dfn;
         dfn.expression->apply(*this);
-        m_definition = nullptr;
     }
 
     void visit(ast::Invocation& inv) override {
@@ -412,11 +423,6 @@ public:
                 sym.set_index(sym.ref()->index());
             }
         }
-        if (m_definition != nullptr && func.symtab().count_nonlocals() == 0) {
-            auto& sym = m_definition->variable.identifier.symbol;
-            sym->set_type(Symbol::Function);
-            sym->set_index(v.index);
-        }
     }
 
     void visit(ast::TypeName& t) final {}
@@ -429,7 +435,6 @@ private:
 private:
     NonlocalResolver& m_processor;
     Function& m_function;
-    ast::Definition* m_definition = nullptr;  // symbol being currently defined
 };
 
 

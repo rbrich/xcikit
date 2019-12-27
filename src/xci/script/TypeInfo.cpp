@@ -98,6 +98,14 @@ void TypeInfo::replace_var(uint8_t idx, const TypeInfo& ti)
 }
 
 
+TypeInfo TypeInfo::effective_type() const
+{
+    if (is_callable() && signature().params.empty())
+        return signature().return_type.effective_type();
+    return *this;
+}
+
+
 const TypeInfo& TypeInfo::elem_type() const
 {
     assert(m_type == Type::List);
@@ -125,6 +133,7 @@ void Signature::resolve_return_type(const TypeInfo& t)
         if (!t)
             throw MissingExplicitType();
         return_type = t;
+        return;
     }
     if (return_type != t)
         throw UnexpectedReturnType(return_type, t);

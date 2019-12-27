@@ -178,12 +178,12 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
                         getline(cin, cmd);
                         if (cmd == "n" || cmd.empty()) {
                             break;
-                        } else if (cmd == "ss") {
+                        } else if (cmd == "s") {
                             cout << "Stack content:" << endl;
                             cout << machine.stack() << endl;
                             erase = false;
                         } else {
-                            cout << "Help:\nn    next step\nss   show stack" << endl;
+                            cout << "Help:\nn    next step\ns    show stack" << endl;
                             erase = false;
                         }
                     }

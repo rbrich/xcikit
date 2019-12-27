@@ -41,13 +41,16 @@ public:
         : m_compiler(compiler), m_function(function) {}
 
     void visit(ast::Definition& dfn) override {
+        Function& func = module().get_function(dfn.symbol()->index());
+        auto* orig_code = m_code;
+        m_code = &func.code();
         dfn.expression->apply(*this);
-        // local value is on stack
+        m_code = orig_code;
     }
 
     void visit(ast::Invocation& inv) override {
         inv.expression->apply(*this);
-        m_function.code().add_opcode(Opcode::Invoke, inv.type_index);
+        code().add_opcode(Opcode::Invoke, inv.type_index);
     }
 
     void visit(ast::Return& ret) override {
@@ -62,33 +65,33 @@ public:
 
         auto skip = m_function.signature().return_type.size();
         auto drop = m_function.raw_size_of_parameters()
-                  + m_function.raw_size_of_nonlocals()
-                  + m_function.raw_size_of_values();
+                  + m_function.raw_size_of_nonlocals();
         if (drop > 0) {
             Stack::StackRel pos = skip;
+            /*
             for (const auto& ti : ranges::views::reverse(m_function.values())) {
                 ti.foreach_heap_slot([this, pos](size_t offset) {
                     // DEC_REF <addr in locals>
-                    m_function.code().add_opcode(Opcode::DecRef, pos + offset);
+                    code().add_opcode(Opcode::DecRef, pos + offset);
                 });
                 pos += ti.size();
-            }
+            }*/
             for (const auto& ti : m_function.nonlocals() | ranges::actions::reverse) {
                 ti.foreach_heap_slot([this, pos](size_t offset) {
                     // DEC_REF <addr in nonlocals>
-                    m_function.code().add_opcode(Opcode::DecRef, pos + offset);
+                    code().add_opcode(Opcode::DecRef, pos + offset);
                 });
                 pos += ti.size();
             }
             for (const auto& ti : ranges::views::reverse(m_function.parameters())) {
                 ti.foreach_heap_slot([this, pos](size_t offset) {
                     // DEC_REF <addr in params>
-                    m_function.code().add_opcode(Opcode::DecRef, pos + offset);
+                    code().add_opcode(Opcode::DecRef, pos + offset);
                 });
                 pos += ti.size();
             }
             // DROP <ret_value> <params + locals + nonlocals>
-            m_function.code().add_opcode(Opcode::Drop, skip, drop);
+            code().add_opcode(Opcode::Drop, skip, drop);
         }
         // return value left on stack
     }
@@ -97,21 +100,21 @@ public:
         // add to static values
         auto idx = module().add_value(std::make_unique<value::Int32>(v.value));
         // LOAD_STATIC <static_idx>
-        m_function.code().add_opcode(Opcode::LoadStatic, idx);
+        code().add_opcode(Opcode::LoadStatic, idx);
     }
 
     void visit(ast::Float& v) override {
         // add to static values
         auto idx = module().add_value(std::make_unique<value::Float32>(v.value));
         // LOAD_STATIC <static_idx>
-        m_function.code().add_opcode(Opcode::LoadStatic, idx);
+        code().add_opcode(Opcode::LoadStatic, idx);
     }
 
     void visit(ast::String& v) override {
         // add to static values
         auto idx = module().add_value(std::make_unique<value::String>(v.value));
         // LOAD_STATIC <static_idx>
-        m_function.code().add_opcode(Opcode::LoadStatic, idx);
+        code().add_opcode(Opcode::LoadStatic, idx);
     }
 
     void visit(ast::Tuple& v) override {
@@ -127,7 +130,7 @@ public:
             item->apply(*this);
         }
         // MAKE_LIST <length> <elem_size>
-        m_function.code().add_opcode(Opcode::MakeList, v.items.size(), v.item_size);
+        code().add_opcode(Opcode::MakeList, v.items.size(), v.item_size);
     }
 
     void visit(ast::Reference& v) override {
@@ -143,20 +146,20 @@ public:
                 break;
             case Symbol::Method: {
                 // this module
-                if (v.module == &m_function.module()) {
+                if (v.module == &module()) {
                     // CALL0 <function_idx>
-                    m_function.code().add_opcode(Opcode::Call0, v.index);
+                    code().add_opcode(Opcode::Call0, v.index);
                     break;
                 }
                 // builtin module or imported module
-                auto mod_idx = m_function.module().get_imported_module_index(v.module);
+                auto mod_idx = module().get_imported_module_index(v.module);
                 assert(mod_idx != no_index);
                 if (mod_idx == 0) {
                     // CALL1 <function_idx>
-                    m_function.code().add_opcode(Opcode::Call1, v.index);
+                    code().add_opcode(Opcode::Call1, v.index);
                 } else {
                     // CALL <module_idx> <function_idx>
-                    m_function.code().add_opcode(Opcode::Call, mod_idx, v.index);
+                    code().add_opcode(Opcode::Call, mod_idx, v.index);
                 }
                 break;
             }
@@ -168,18 +171,18 @@ public:
             case Symbol::Module: {
                 assert(sym.depth() == 0);
                 // LOAD_MODULE <module_idx>
-                m_function.code().add_opcode(Opcode::LoadModule, sym.index());
+                code().add_opcode(Opcode::LoadModule, sym.index());
                 break;
             }
             case Symbol::Nonlocal: {
                 // Non-locals are captured in closure - read from closure
                 auto ofs_ti = m_function.nonlocal_offset_and_type(sym.index());
                 // COPY_ARGUMENT <frame_offset>
-                m_function.code().add_opcode(Opcode::CopyArgument,
+                code().add_opcode(Opcode::CopyArgument,
                                              ofs_ti.first, ofs_ti.second.size());
                 ofs_ti.second.foreach_heap_slot([this](size_t offset) {
                     // INC_REF <stack_offset>
-                    m_function.code().add_opcode(Opcode::IncRef, offset);
+                    code().add_opcode(Opcode::IncRef, offset);
                 });
                 break;
             }
@@ -191,18 +194,18 @@ public:
                     idx = module().add_value(val.make_copy());
                 }
                 // LOAD_STATIC <static_idx>
-                m_function.code().add_opcode(Opcode::LoadStatic, idx);
+                code().add_opcode(Opcode::LoadStatic, idx);
                 break;
             }
             case Symbol::Value: {
                 assert(sym.depth() == 0);
                 // COPY_VARIABLE <frame_offset> <size>
                 const auto& ti = m_function.get_value(sym.index());
-                m_function.code().add_opcode(Opcode::CopyVariable,
+                code().add_opcode(Opcode::CopyVariable,
                                              m_function.value_offset(sym.index()),
                                              ti.size());
                 ti.foreach_heap_slot([this](size_t offset) {
-                    m_function.code().add_opcode(Opcode::IncRef, offset);
+                    code().add_opcode(Opcode::IncRef, offset);
                 });
                 break;
             }
@@ -211,30 +214,30 @@ public:
                 // COPY_ARGUMENT <frame_offset> <size>
                 auto nonlocals_size = m_function.raw_size_of_nonlocals();
                 const auto& ti = m_function.get_parameter(sym.index());
-                m_function.code().add_opcode(Opcode::CopyArgument,
-                                             m_function.parameter_offset(sym.index()) + nonlocals_size,
-                                             ti.size());
+                code().add_opcode(Opcode::CopyArgument,
+                        m_function.parameter_offset(sym.index()) + nonlocals_size,
+                        ti.size());
                 ti.foreach_heap_slot([this](size_t offset) {
-                    m_function.code().add_opcode(Opcode::IncRef, offset);
+                    code().add_opcode(Opcode::IncRef, offset);
                 });
                 break;
             }
             case Symbol::Function: {
                 // this module
-                if (symtab.module() == nullptr || symtab.module() == &m_function.module()) {
+                if (symtab.module() == nullptr || symtab.module() == &module()) {
                     // CALL0 <function_idx>
-                    m_function.code().add_opcode(Opcode::Call0, sym.index());
+                    code().add_opcode(Opcode::Call0, sym.index());
                     break;
                 }
                 // builtin module or imported module
-                auto mod_idx = m_function.module().get_imported_module_index(symtab.module());
+                auto mod_idx = module().get_imported_module_index(symtab.module());
                 assert(mod_idx != no_index);
                 if (mod_idx == 0) {
                     // CALL1 <function_idx>
-                    m_function.code().add_opcode(Opcode::Call1, sym.index());
+                    code().add_opcode(Opcode::Call1, sym.index());
                 } else {
                     // CALL <module_idx> <function_idx>
-                    m_function.code().add_opcode(Opcode::Call, mod_idx, sym.index());
+                    code().add_opcode(Opcode::Call, mod_idx, sym.index());
                 }
                 break;
             }
@@ -249,23 +252,25 @@ public:
         if (sym.type() != Symbol::Function
         &&  sym.type() != Symbol::Method
         &&  sym.is_callable()) {
-            m_function.code().add_opcode(Opcode::Execute);
+            code().add_opcode(Opcode::Execute);
         }
     }
 
     void visit(ast::Call& v) override {
+        // call the function or push the value
+
         // evaluate each arg
+        m_imm_call = true;
         for (auto& arg : ranges::views::reverse(v.args)) {
             arg->apply(*this);
         }
-        // call the function or push the value
-        m_imm_call = true;
+
         v.callable->apply(*this);
         m_imm_call = false;
 
         // add executes for each call that results in function which consumes more args
         while (v.wrapped_execs > 0) {
-            m_function.code().add_opcode(Opcode::Execute);
+            code().add_opcode(Opcode::Execute);
             -- v.wrapped_execs;
         }
     }
@@ -278,24 +283,24 @@ public:
         // evaluate condition
         v.cond->apply(*this);
         // add jump instruction
-        m_function.code().add_opcode(Opcode::JumpIfNot, 0);
-        auto jump1_arg_pos = m_function.code().this_instruction_address();
+        code().add_opcode(Opcode::JumpIfNot, 0);
+        auto jump1_arg_pos = code().this_instruction_address();
         // then branch
         v.then_expr->apply(*this);
-        m_function.code().add_opcode(Opcode::Jump, 0);
-        auto jump2_arg_pos = m_function.code().this_instruction_address();
+        code().add_opcode(Opcode::Jump, 0);
+        auto jump2_arg_pos = code().this_instruction_address();
         // else branch
-        m_function.code().set_arg(jump1_arg_pos,
-                m_function.code().this_instruction_address() - jump1_arg_pos);
+        code().set_arg(jump1_arg_pos,
+                code().this_instruction_address() - jump1_arg_pos);
         v.else_expr->apply(*this);
         // end
-        m_function.code().set_arg(jump2_arg_pos,
-                m_function.code().this_instruction_address() - jump2_arg_pos);
+        code().set_arg(jump2_arg_pos,
+                code().this_instruction_address() - jump2_arg_pos);
     }
 
     void visit(ast::Function& v) override {
         // compile body
-        Function& func = m_function.module().get_function(v.index);
+        Function& func = module().get_function(v.index);
         m_compiler.compile_block(func, v.body);
         if (func.symtab().parent() != &m_function.symtab())
             return;  // instance function -> just compile it
@@ -314,32 +319,32 @@ public:
                                     // COPY_ARGUMENT <frame_offset> <size>
                                     auto ofs_ti = m_function.nonlocal_offset_and_type(psym.index());
                                     assert(ofs_ti.first < 256);
-                                    m_function.code().add_opcode(Opcode::CopyArgument,
+                                    code().add_opcode(Opcode::CopyArgument,
                                         ofs_ti.first, ofs_ti.second.size());
                                     ofs_ti.second.foreach_heap_slot([this](size_t offset) {
-                                        m_function.code().add_opcode(Opcode::IncRef, offset);
+                                        code().add_opcode(Opcode::IncRef, offset);
                                     });
                                     break;
                                 }
                                 case Symbol::Parameter: {
                                     // COPY_ARGUMENT <frame_offset> <size>
                                     const auto& ti = m_function.get_parameter(psym.index());
-                                    m_function.code().add_opcode(Opcode::CopyArgument,
+                                    code().add_opcode(Opcode::CopyArgument,
                                         m_function.parameter_offset(psym.index()) + nonlocals_size,
                                         ti.size());
                                     ti.foreach_heap_slot([this](size_t offset) {
-                                        m_function.code().add_opcode(Opcode::IncRef, offset);
+                                        code().add_opcode(Opcode::IncRef, offset);
                                     });
                                     break;
                                 }
                                 case Symbol::Value: {
                                     // COPY_VARIABLE <frame_offset> <size>
                                     const auto& ti = m_function.get_value(psym.index());
-                                    m_function.code().add_opcode(Opcode::CopyVariable,
+                                    code().add_opcode(Opcode::CopyVariable,
                                         m_function.value_offset(psym.index()),
                                         ti.size());
                                     ti.foreach_heap_slot([this](size_t offset) {
-                                        m_function.code().add_opcode(Opcode::IncRef, offset);
+                                        code().add_opcode(Opcode::IncRef, offset);
                                     });
                                     break;
                                 }
@@ -352,22 +357,23 @@ public:
                 }
             }
             // MAKE_CLOSURE <function_idx>
-            m_function.code().add_opcode(Opcode::MakeClosure, v.index);
+            code().add_opcode(Opcode::MakeClosure, v.index);
             if (m_imm_call || !func.has_parameters()) {
                 // parameterless closure is executed immediately
                 // EXECUTE
-                m_function.code().add_opcode(Opcode::Execute);
+                code().add_opcode(Opcode::Execute);
             }
         } else {
-            if (func.has_parameters()) {
+            /*if (func.has_parameters()) {
                 // LOAD_FUNCTION <function_idx>
-                m_function.code().add_opcode(Opcode::LoadFunction, v.index);
+                code().add_opcode(Opcode::LoadFunction, v.index);
                 if (m_imm_call)
-                    m_function.code().add_opcode(Opcode::Execute);
-            } else {
+                    // EXECUTE
+                    code().add_opcode(Opcode::Execute);
+            } else {*/
                 // CALL0 <function_idx>
-                m_function.code().add_opcode(Opcode::Call0, v.index);
-            }
+                code().add_opcode(Opcode::Call0, v.index);
+            //}
         }
     }
 
@@ -386,10 +392,12 @@ public:
 
 private:
     Module& module() { return m_function.module(); }
+    Code& code() { return m_code == nullptr ? m_function.code() : *m_code; };
 
 private:
     Compiler& m_compiler;
     Function& m_function;
+    Code* m_code = nullptr;
     bool m_imm_call = false;
 };
 

@@ -243,6 +243,9 @@ struct Expression {
     virtual void apply(Visitor& visitor) = 0;
 
     SourceInfo source_info;
+
+    // set when this expression is direct child of a Definition
+    Definition* definition = nullptr;
 };
 
 struct Integer: public Expression {
@@ -394,6 +397,8 @@ struct Statement {
 struct Definition: public Statement {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
+    SymbolPointer& symbol() { return variable.identifier.symbol; }
+
     Variable variable;
     std::unique_ptr<Expression> expression;
 };

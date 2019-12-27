@@ -547,7 +547,7 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
                 os << ' ' << sym.name() << endl << more_indent;
                 continue;
             }
-            assert(sym.type() == Symbol::Value);
+            assert(sym.type() == Symbol::Function);
             os << put_indent << sym.name() << ": "
                << cls.get_function_type(sym.index()) << endl;
         }
