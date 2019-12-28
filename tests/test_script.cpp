@@ -192,7 +192,7 @@ TEST_CASE( "Expressions", "[script][interpreter]" )
     check_interpreter("1 + 2 / 3 == 1 + (2 / 3)",  "true");
     check_interpreter("-(1 + 2)",       "-3");
     check_interpreter("1+1, {2+2}",       "(2, 4)");
-    check_interpreter("f=fun a:Int {a+1}; [1, f 2]",       "[1, 3]");
+    check_interpreter("f=fun a:Int {a+1}; [1, f 2]", "[1, 3]");
 }
 
 
@@ -209,8 +209,7 @@ TEST_CASE( "Types", "[script][interpreter]" )
     // check_interpreter("f : Int Int -> Int = add ; f 1 2",        "3");
 }
 
-
-TEST_CASE( "Blocks and lambdas", "[script][interpreter]" )
+TEST_CASE( "Blocks", "[script][interpreter]" )
 {
     // blocks are evaluated and return a value
     check_interpreter("{}",         "");
@@ -221,7 +220,10 @@ TEST_CASE( "Blocks and lambdas", "[script][interpreter]" )
     // blocks can be assigned to a name
     check_interpreter("b = {1+2}; b", "3");
     check_interpreter("b:Int = {1+2}; b", "3");
+}
 
+TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
+{
     // immediately called lambda
     check_interpreter("fun x:Int {x+1} 2", "3");
     check_interpreter("fun x {x+1} 2", "3");  // generic lambda
@@ -232,6 +234,21 @@ TEST_CASE( "Blocks and lambdas", "[script][interpreter]" )
 
     // partial call: `(add 1)` returns a lambda which takes single argument
     //check_interpreter("(add 1) 2",     "3");
+}
+
+
+TEST_CASE( "Generic functions", "[.][script][interpreter]" )
+{
+    // `f` is a generic function, instantiated to Int->Int by the call
+    check_interpreter("f=fun x {x + 1}; f (f (f 2))", "5");
+    // generic functions can capture from outer scope
+    check_interpreter("a=3; f=fun x {a + x}; f 4", "7");
+    // generic type declaration
+    check_interpreter("f : T T -> Bool with (Any T) = fun x y -> Bool { x == y }; f 1 1", "true");
+    // equivalent: generic type in lambda declaration
+    check_interpreter("f = fun x:T y:T -> Bool with (Any T) { x == y }; f 1 2", "false");
+    // also equivalent, ut redundant (both sides must match exactly)
+    check_interpreter("f : T T -> Bool with (Any T) = fun x:T y:T -> Bool with (Any T) { x == y }; f 2 2", "true");
 }
 
 

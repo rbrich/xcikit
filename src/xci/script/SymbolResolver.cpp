@@ -192,7 +192,7 @@ public:
         // (in both parameters and result)
         v.type.apply(*this);
         // add symbol table for the function, fill in parameters
-        /*if (v.definition != nullptr) {
+        if (v.definition != nullptr) {
             // use Definition's symtab and function
             v.index = v.definition->symbol()->index();
             Function& fn = module().get_function(v.index);
@@ -202,7 +202,7 @@ public:
             }
             m_postponed_blocks.push_back({fn, v.body});
             v.body.symtab = &fn.symtab();
-        } else*/ {
+        } else {
             std::string name = "<lambda>";
             if (v.type.params.empty())
                 name = "<block>";
@@ -216,11 +216,6 @@ public:
             m_postponed_blocks.push_back({*fn, v.body});
             v.body.symtab = &fn_symtab;
             v.index = module().add_function(move(fn));
-        }
-
-        if (v.definition != nullptr && m_instance != nullptr) {
-            v.definition->symbol()->set_type(Symbol::Function);
-            v.definition->symbol()->set_index(v.index);
         }
     }
 

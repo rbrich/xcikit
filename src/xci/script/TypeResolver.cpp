@@ -73,9 +73,6 @@ public:
         if (m_instance != nullptr)
             return;
 
-       // Index idx = m_function.add_value(move(m_value_type));
-       // dfn.variable.identifier.symbol->set_index(idx);
-
         Function& func = module().get_function(dfn.symbol()->index());
         if (m_value_type.is_callable())
             func.signature() = m_value_type.signature();

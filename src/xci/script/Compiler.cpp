@@ -364,6 +364,7 @@ public:
                 code().add_opcode(Opcode::Execute);
             }
         } else {
+            if (!v.definition) {
             /*if (func.has_parameters()) {
                 // LOAD_FUNCTION <function_idx>
                 code().add_opcode(Opcode::LoadFunction, v.index);
@@ -374,6 +375,7 @@ public:
                 // CALL0 <function_idx>
                 code().add_opcode(Opcode::Call0, v.index);
             //}
+            }
         }
     }
 
