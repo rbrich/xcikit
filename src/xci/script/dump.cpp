@@ -249,8 +249,13 @@ std::ostream& operator<<(std::ostream& os, const FunctionType& v)
         os << more_indent;
         for (const auto& prm : v.params)
             os << prm;
-        if (v.result_type)
-            os << *v.result_type << endl;
+        if (v.result_type) {
+            os << put_indent << "Result" << endl;
+            os << more_indent << *v.result_type << less_indent << endl;
+        }
+        for (const auto& ctx : v.context) {
+            os << ctx << endl;
+        }
         return os << less_indent;
     } else {
         if (!v.params.empty()) {
@@ -261,6 +266,15 @@ std::ostream& operator<<(std::ostream& os, const FunctionType& v)
         if (v.result_type) {
             os << "-> " << *v.result_type << " ";
         }
+        if (!v.context.empty()) {
+            os << "with (";
+            for (const auto& ctx : v.context) {
+                os << ctx;
+                if (&ctx != &v.context.back())
+                    os << ", ";
+            }
+            os << ") ";
+        }
         return os;
     }
 }
@@ -268,7 +282,7 @@ std::ostream& operator<<(std::ostream& os, const FunctionType& v)
 std::ostream& operator<<(std::ostream& os, const ListType& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "ListType(Type) " << endl;
+        os << put_indent << "ListType(Type)" << endl;
         if (v.elem_type)
             os << more_indent << *v.elem_type << less_indent;
         return os;
@@ -283,7 +297,8 @@ std::ostream& operator<<(std::ostream& os, const ListType& v)
 std::ostream& operator<<(std::ostream& os, const TypeConstraint& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "TypeConstraint " << v.type_class << ' ' << v.type_name << endl;
+        os << put_indent << "TypeConstraint" << endl
+           << more_indent << v.type_class << endl << v.type_name << less_indent;
         return os;
     } else {
         return os << v.type_class << ' ' << v.type_name;

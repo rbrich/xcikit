@@ -369,6 +369,9 @@ public:
                 m_processor.process_block(*fspec, v.body);
                 m_value_type = TypeInfo{fspec->signature_ptr()};
                 v.index = module().add_function(move(fspec));
+            } else {
+                // mark as generic, uncompiled
+                fn.set_ast(&v.body);
             }
         } else {
             // compile body and resolve return type
@@ -459,7 +462,11 @@ private:
             }
         }
         fn->values() = orig_fn.values();
-        fn->code() = orig_fn.code();
+        if (orig_fn.has_ast()) {
+            m_processor.process_block(*fn, *orig_fn.ast());
+            fn->set_ast(orig_fn.ast());
+        } else
+            fn->code() = orig_fn.code();
         return fn;
     }
 

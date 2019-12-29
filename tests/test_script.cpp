@@ -236,21 +236,15 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     //check_interpreter("(add 1) 2",     "3");
 }
 
-
-TEST_CASE( "Generic functions", "[.][script][interpreter]" )
+TEST_CASE( "Generic functions", "[script][interpreter]" )
 {
     // `f` is a generic function, instantiated to Int->Int by the call
     check_interpreter("f=fun x {x + 1}; f (f (f 2))", "5");
     // generic functions can capture from outer scope
     check_interpreter("a=3; f=fun x {a + x}; f 4", "7");
     // generic type declaration
-    check_interpreter("f : T T -> Bool with (Any T) = fun x y -> Bool { x == y }; f 1 1", "true");
-    // equivalent: generic type in lambda declaration
-    check_interpreter("f = fun x:T y:T -> Bool with (Any T) { x == y }; f 1 2", "false");
-    // also equivalent, ut redundant (both sides must match exactly)
-    check_interpreter("f : T T -> Bool with (Any T) = fun x:T y:T -> Bool with (Any T) { x == y }; f 2 2", "true");
+    check_interpreter("f = fun x:T y:T -> Bool with (Eq T) { x == y }; f 1 2", "false");
 }
-
 
 TEST_CASE( "Lexical scope", "[script][interpreter]" )
 {

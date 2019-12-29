@@ -188,35 +188,32 @@ public:
     }
 
     void visit(ast::Function& v) override {
-        // resolve TypeNames and composite types to symbols
-        // (in both parameters and result)
-        v.type.apply(*this);
-        // add symbol table for the function, fill in parameters
         if (v.definition != nullptr) {
             // use Definition's symtab and function
             v.index = v.definition->symbol()->index();
-            Function& fn = module().get_function(v.index);
-            size_t par_idx = 0;
-            for (auto& p : v.type.params) {
-                p.identifier.symbol = fn.symtab().add({p.identifier.name, Symbol::Parameter, par_idx++});
-            }
-            m_postponed_blocks.push_back({fn, v.body});
-            v.body.symtab = &fn.symtab();
         } else {
+            // add new symbol table for the function
             std::string name = "<lambda>";
             if (v.type.params.empty())
                 name = "<block>";
             SymbolTable& fn_symtab = symtab().add_child(name);
-            size_t par_idx = 0;
-            for (auto& p : v.type.params) {
-                p.identifier.symbol = fn_symtab.add({p.identifier.name, Symbol::Parameter, par_idx++});
-            }
-            // add function itself, postpone body compilation
             auto fn = make_unique<Function>(module(), fn_symtab);
-            m_postponed_blocks.push_back({*fn, v.body});
-            v.body.symtab = &fn_symtab;
             v.index = module().add_function(move(fn));
         }
+        Function& fn = module().get_function(v.index);
+
+        v.body.symtab = &fn.symtab();
+        m_symtab = v.body.symtab;
+
+        // resolve TypeNames and composite types to symbols
+        // (in both parameters and result)
+        v.type.apply(*this);
+
+        m_symtab = v.body.symtab->parent();
+
+        // postpone body compilation
+        m_postponed_blocks.push_back({fn, v.body});
+
     }
 
     void visit(ast::TypeName& t) final {
@@ -229,9 +226,16 @@ public:
     }
 
     void visit(ast::FunctionType& t) final {
-        for (const auto& p : t.params) {
+        size_t type_idx = 0;
+        for (auto& tc : t.context) {
+            tc.type_class.apply(*this);
+            symtab().add({tc.type_name.name, Symbol::TypeVar, ++type_idx});
+        }
+        size_t par_idx = 0;
+        for (auto& p : t.params) {
             if (p.type)
                 p.type->apply(*this);
+            p.identifier.symbol = symtab().add({p.identifier.name, Symbol::Parameter, par_idx++});
         }
         if (t.result_type)
             t.result_type->apply(*this);

@@ -72,6 +72,10 @@ public:
     Code& code() { return m_code; }
     const Code& code() const { return m_code; }
 
+    bool has_ast() const { return m_ast != nullptr; }
+    ast::Block* ast() const { return m_ast; }
+    void set_ast(ast::Block* body) { m_ast = body; }
+
     Index add_value(TypeInfo&& type_info);
     const TypeInfo& get_value(Index idx) const { return m_values[idx]; }
     void set_value(Index idx, TypeInfo&& ti) { m_values[idx] = std::move(ti); }
@@ -114,6 +118,8 @@ private:
     std::vector<TypeInfo> m_values;
     // Function code
     Code m_code;
+    // AST of function body (only for generic function)
+    ast::Block* m_ast = nullptr;
     // Counter for instructions from intrinsics
     size_t m_intrinsics = 0;
 };

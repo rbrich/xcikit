@@ -225,6 +225,14 @@ public:
             case Symbol::Function: {
                 // this module
                 if (symtab.module() == nullptr || symtab.module() == &module()) {
+                    {
+                        // specialization might not be compiled yet - compile it now
+                        Function& func = module().get_function(sym.index());
+                        if (func.has_ast()) {
+                            m_compiler.compile_block(func, *func.ast());
+                            func.set_ast(nullptr);
+                        }
+                    }
                     // CALL0 <function_idx>
                     code().add_opcode(Opcode::Call0, sym.index());
                     break;
