@@ -67,9 +67,7 @@ void check_interpreter(const string& input, const string& expected_output)
         auto result = interpreter.eval(input, [&os](const Value& invoked) {
             os << invoked << '\n';
         });
-        if (!result->is_void()) {
-            os << *result;
-        }
+        os << *result;
     } catch (const Error& e) {
         INFO(e.what());
         INFO(e.detail());
@@ -188,6 +186,11 @@ TEST_CASE( "SymbolTable", "[script][compiler]" )
 TEST_CASE( "Expressions", "[script][interpreter]" )
 {
     check_interpreter("add 1 2",        "3");
+    check_interpreter("sub (add 1 2) 3",        "0");
+    check_interpreter("sub (1 + 2) 3",        "0");
+    check_interpreter("(1 + 2) - 3",        "0");
+    check_interpreter("1 + 2 - 3",        "0");
+
     check_interpreter("1 + 6/5",        "2");
     check_interpreter("1 + 2 / 3 == 1 + (2 / 3)",  "true");
     check_interpreter("-(1 + 2)",       "-3");
@@ -212,13 +215,14 @@ TEST_CASE( "Types", "[script][interpreter]" )
 TEST_CASE( "Blocks", "[script][interpreter]" )
 {
     // blocks are evaluated and return a value
-    check_interpreter("{}",         "");
+    check_interpreter("{}",         "void");
     check_interpreter("{1+2}",      "3");
     check_interpreter("{{{1+2}}}",  "3");
     check_interpreter("x=4; b = 3 + {x+1}; b", "8");
 
     // blocks can be assigned to a name
     check_interpreter("b = {1+2}; b", "3");
+    check_interpreter("b = { a = 1; a }; b", "1");
     check_interpreter("b:Int = {1+2}; b", "3");
 }
 
@@ -248,6 +252,10 @@ TEST_CASE( "Generic functions", "[script][interpreter]" )
 
 TEST_CASE( "Lexical scope", "[script][interpreter]" )
 {
+    check_interpreter("{a=1; b=2}",     "void");
+    CHECK_THROWS_AS(Interpreter{0}.eval("{a=1; b=2} a"), UndefinedName);
+
+    check_interpreter("x=1; y = { x + 2 }; y",     "3");
     check_interpreter("a=1; {b=2; {a + b}}",     "3");
     check_interpreter("a=1; f=fun b:Int {a + b}; f 2",  "3");
 

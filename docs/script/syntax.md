@@ -30,7 +30,7 @@ Syntax Elements
 ### Scoped block
 
     // define some names in a scope:
-    { a = 1; b = 2 }    // the whole expression evaluates to `none`  
+    { a = 1; b = 2 }    // the whole expression evaluates to `void`  
     a                   // ERROR - `a` is not defined in outer scope
     
     // block returns `a`, `c` evaluates to `1`
@@ -203,7 +203,7 @@ If-condition:
 Block is a function with zero arguments:
 
     block1 = { c = add2 a b; }    // returns c (the semicolon is not important)
-    block2 = { c = add2 a b; none }  // returns none
+    block2 = { c = add2 a b; void }  // returns `void`
     block1  // evaluate the block (actually, it might have been evaluated above - that's up to compiler)
     block3 = { a + b }      // block with free variables: a, b
     block3      // the value is still { a + b } - variables are not bound, cannot be evaluated
@@ -256,8 +256,8 @@ Types must begin with uppercase letter (this is enforced part of the syntax):
     MyTuple = (String, Int)
     MyRecord = (String name, Int age)    // just a tuple with named fields
     MyBool = false | true
-    MyVariant = int Int | string String | none   // discriminated variant type
-    MyOptional = some v | none
+    MyVariant = int Int | string String | void   // discriminated variant type
+    MyOptional = some v | void
 
 Function types:
 
