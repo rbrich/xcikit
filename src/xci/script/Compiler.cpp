@@ -169,9 +169,9 @@ public:
             case Symbol::Nonlocal: {
                 // Non-locals are captured in closure - read from closure
                 auto ofs_ti = m_function.nonlocal_offset_and_type(sym.index());
-                // COPY_ARGUMENT <frame_offset>
+                // COPY <frame_offset>
                 code().add_opcode(Opcode::Copy,
-                                             ofs_ti.first, ofs_ti.second.size());
+                        ofs_ti.first, ofs_ti.second.size());
                 ofs_ti.second.foreach_heap_slot([this](size_t offset) {
                     // INC_REF <stack_offset>
                     code().add_opcode(Opcode::IncRef, offset);
@@ -191,7 +191,7 @@ public:
             }
             case Symbol::Parameter: {
                 assert(sym.depth() == 0);
-                // COPY_ARGUMENT <frame_offset> <size>
+                // COPY <frame_offset> <size>
                 auto nonlocals_size = m_function.raw_size_of_nonlocals();
                 const auto& ti = m_function.get_parameter(sym.index());
                 code().add_opcode(Opcode::Copy,
@@ -304,7 +304,7 @@ public:
                             // found it
                             switch (psym.type()) {
                                 case Symbol::Nonlocal: {
-                                    // COPY_ARGUMENT <frame_offset> <size>
+                                    // COPY <frame_offset> <size>
                                     auto ofs_ti = m_function.nonlocal_offset_and_type(psym.index());
                                     assert(ofs_ti.first < 256);
                                     code().add_opcode(Opcode::Copy,
@@ -315,7 +315,7 @@ public:
                                     break;
                                 }
                                 case Symbol::Parameter: {
-                                    // COPY_ARGUMENT <frame_offset> <size>
+                                    // COPY <frame_offset> <size>
                                     const auto& ti = m_function.get_parameter(psym.index());
                                     code().add_opcode(Opcode::Copy,
                                         m_function.parameter_offset(psym.index()) + nonlocals_size,

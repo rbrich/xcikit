@@ -259,10 +259,8 @@ public:
                 auto& nl_sym = *sym.ref();
                 auto* nl_func = sym.ref().symtab()->function();
                 assert(nl_func != nullptr);
-                if (nl_sym.type() == Symbol::Parameter)
-                    m_value_type = nl_func->get_parameter(nl_sym.index());
-                else
-                    assert(!"Bad nonlocal reference.");
+                assert(nl_sym.type() == Symbol::Parameter);   // non-local must reference a parameter
+                m_value_type = nl_func->get_parameter(nl_sym.index());
                 break;
             }
             case Symbol::Parameter:
@@ -291,11 +289,12 @@ public:
             assert(arg->source_info.source != nullptr);
             args.push_back({move(m_value_type), arg->source_info});
         }
+        // append args to m_call_args (note that m_call_args might be used
+        // when evaluating each argument, so we cannot push to them above)
+        std::move(args.begin(), args.end(), std::back_inserter(m_call_args));
 
         // using resolved args, resolve the callable itself
         // (it may use args types for overload resolution)
-        assert(m_call_args.empty());
-        m_call_args = move(args);
         v.callable->apply(*this);
 
         if (!m_value_type.is_callable() && !m_call_args.empty()) {

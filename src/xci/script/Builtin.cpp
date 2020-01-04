@@ -505,8 +505,7 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__partial0", Symbol::Instruction, Index(Opcode::Partial0)});
     symtab().add({"__partial1", Symbol::Instruction, Index(Opcode::Partial1)});
     symtab().add({"__make_list", Symbol::Instruction, Index(Opcode::MakeList)});
-    symtab().add({"__copy_variable", Symbol::Instruction, Index(Opcode::CopyVariable)});
-    symtab().add({"__copy_argument", Symbol::Instruction, Index(Opcode::CopyArgument)});
+    symtab().add({"__copy", Symbol::Instruction, Index(Opcode::Copy)});
     symtab().add({"__drop", Symbol::Instruction, Index(Opcode::Drop)});
     symtab().add({"__partial", Symbol::Instruction, Index(Opcode::Partial)});
     */

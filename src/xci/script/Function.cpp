@@ -69,10 +69,8 @@ std::vector<TypeInfo> Function::nonlocals() const
             auto& nl_sym = *sym.ref();
             auto* nl_func = sym.ref().symtab()->function();
             assert(nl_func != nullptr);
-            if (nl_sym.type() == Symbol::Parameter)
-                res.push_back(nl_func->get_parameter(nl_sym.index()));
-            else
-                assert(!"Bad nonlocal reference.");
+            assert(nl_sym.type() == Symbol::Parameter);  // non-local must reference a parameter
+            res.push_back(nl_func->get_parameter(nl_sym.index()));
         }
     }
     return res;

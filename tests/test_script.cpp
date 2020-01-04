@@ -236,8 +236,25 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     // argument propagation: `f` returns a function which consumes the second arg
     check_interpreter("f = fun a:Int { fun b:Int { a+b } }; f 1 2",     "3");
 
+    // closure: inner function uses outer function's parameter
+//    check_interpreter("f = fun a:Int b:Int c:Int { "
+//                      "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 + b}; "
+//                      "w=fun b1:Int c1:Int {a + u b1 + v c1}; "
+//                      "w b c }; f 1 2 3", "9");
+}
+
+TEST_CASE( "Partial function call", "[script][interpreter]" )
+{
     // partial call: `(add 1)` returns a lambda which takes single argument
-    //check_interpreter("(add 1) 2",     "3");
+    check_interpreter("(add 1) 2",     "3");
+
+//    check_interpreter("f = fun a:Int b:Int { "
+//                      "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 + b}; "
+//                      "w=fun b1:Int c1:Int {a + u b1 + v c1}; "
+//                      "w b }; f 1 2 3", "9");
+//    check_interpreter("f = fun a:Int { "
+//                      "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 + a}; "
+//                      "fun b1:Int c1:Int {a + u b1 + v c1} }; f 1 2 3", "8");
 }
 
 TEST_CASE( "Generic functions", "[script][interpreter]" )
