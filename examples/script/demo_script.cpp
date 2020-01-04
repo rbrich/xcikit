@@ -209,7 +209,7 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
 
         // save result as static value `_<N>` in the module
         auto result_idx = module->add_value(std::move(result));
-        module->symtab().add({result_name, Symbol::StaticValue, result_idx});
+        module->symtab().add({result_name, Symbol::Value, result_idx});
 
         context().modules.push_back(move(module));
         return true;

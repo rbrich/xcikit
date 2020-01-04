@@ -259,9 +259,7 @@ public:
                 auto& nl_sym = *sym.ref();
                 auto* nl_func = sym.ref().symtab()->function();
                 assert(nl_func != nullptr);
-                if (nl_sym.type() == Symbol::Value)
-                    m_value_type = nl_func->get_value(nl_sym.index());
-                else if (nl_sym.type() == Symbol::Parameter)
+                if (nl_sym.type() == Symbol::Parameter)
                     m_value_type = nl_func->get_parameter(nl_sym.index());
                 else
                     assert(!"Bad nonlocal reference.");
@@ -270,11 +268,8 @@ public:
             case Symbol::Parameter:
                 m_value_type = m_function.get_parameter(sym.index());
                 break;
-            case Symbol::StaticValue:
-                m_value_type = symtab.module()->get_value(sym.index()).type_info();
-                break;
             case Symbol::Value:
-                m_value_type = m_function.get_value(sym.index());
+                m_value_type = symtab.module()->get_value(sym.index()).type_info();
                 break;
             case Symbol::TypeName:
             case Symbol::TypeVar:
@@ -461,7 +456,6 @@ private:
                     ret_type = arg.type_info;
             }
         }
-        fn->values() = orig_fn.values();
         if (orig_fn.has_ast()) {
             m_processor.process_block(*fn, *orig_fn.ast());
             fn->set_ast(orig_fn.ast());

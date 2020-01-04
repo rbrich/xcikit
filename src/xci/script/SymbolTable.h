@@ -67,22 +67,24 @@ class Symbol {
 public:
     enum Type {
         Unresolved,
-        Value,              // local value in function scope
-        Parameter,          // function parameter in function scope
-        Nonlocal,           // non-local value in function scope, i.e. a capture from outer scope
-        StaticValue,        // static value (module-level)
-        Function,           // static function (module-level)
-        Module,             // imported module (module-level)
-        Instruction,        // intrinsics (e.g. __equal_32) resolve to this, index is Opcode
+
+        // module-level
+        Module,             // imported module
+        Function,           // static function
+        Value,              // static value
+        TypeName,           // type information
         Class,              // type class
-        Method,             // method declaration: index = class index, ref = symbol in class scope
         Instance,           // instance of type class
-        TypeName,           // type
-        TypeVar,            // type variable
+        Method,             // method declaration: index = class index, ref = symbol in class scope
+
+        // function scope
+        Parameter,          // function parameter
+        Nonlocal,           // non-local parameter, i.e. a capture from outer scope
+        Instruction,        // intrinsics resolve to this, the index is Opcode
+        TypeVar,            // type variable in generic function
     };
 
     explicit Symbol(std::string name) : m_name(std::move(name)) {}
-    Symbol(std::string name, Index idx) : m_name(std::move(name)), m_type(Value), m_index(idx) {}
     Symbol(std::string name, Type type) : m_name(std::move(name)), m_type(type) {}
     Symbol(std::string name, Type type, Index idx) : m_name(std::move(name)), m_type(type), m_index(idx) {}
     Symbol(std::string name, Type type, Index idx, size_t depth)

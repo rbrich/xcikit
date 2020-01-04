@@ -265,7 +265,7 @@ Function types:
     Int Int -> Int -> Int               // without parameter names
     Int Int Int -> Int                  // compact form
     Int -> Int -> Int -> Int            // normalized form
-    (Int, Int, Int) -> Int              // signle tuple argument
+    (Int, Int, Int) -> Int              // single tuple argument
     (Int, Int) Int -> Int               // two arguments, first is tuple
 
 - All of the above types are equivalent - they all describe the same function.

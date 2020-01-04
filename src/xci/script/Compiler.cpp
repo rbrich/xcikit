@@ -186,7 +186,7 @@ public:
                 });
                 break;
             }
-            case Symbol::StaticValue: {
+            case Symbol::Value: {
                 auto idx = sym.index();
                 if (symtab.module() != &module()) {
                     // copy static value into this module if it's from builtin or another module
@@ -195,18 +195,6 @@ public:
                 }
                 // LOAD_STATIC <static_idx>
                 code().add_opcode(Opcode::LoadStatic, idx);
-                break;
-            }
-            case Symbol::Value: {
-                assert(sym.depth() == 0);
-                // COPY_VARIABLE <frame_offset> <size>
-                const auto& ti = m_function.get_value(sym.index());
-                code().add_opcode(Opcode::CopyVariable,
-                                             m_function.value_offset(sym.index()),
-                                             ti.size());
-                ti.foreach_heap_slot([this](size_t offset) {
-                    code().add_opcode(Opcode::IncRef, offset);
-                });
                 break;
             }
             case Symbol::Parameter: {
@@ -339,17 +327,6 @@ public:
                                     const auto& ti = m_function.get_parameter(psym.index());
                                     code().add_opcode(Opcode::CopyArgument,
                                         m_function.parameter_offset(psym.index()) + nonlocals_size,
-                                        ti.size());
-                                    ti.foreach_heap_slot([this](size_t offset) {
-                                        code().add_opcode(Opcode::IncRef, offset);
-                                    });
-                                    break;
-                                }
-                                case Symbol::Value: {
-                                    // COPY_VARIABLE <frame_offset> <size>
-                                    const auto& ti = m_function.get_value(psym.index());
-                                    code().add_opcode(Opcode::CopyVariable,
-                                        m_function.value_offset(psym.index()),
                                         ti.size());
                                     ti.foreach_heap_slot([this](size_t offset) {
                                         code().add_opcode(Opcode::IncRef, offset);

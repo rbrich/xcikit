@@ -75,15 +75,11 @@ public:
                 //m_value = {};
                 assert(!"not implemented");
                 return;
-            case Symbol::StaticValue: {
+            case Symbol::Value: {
                 auto& val = symtab.module()->get_value(sym.index());
                 set_const_value(val.make_copy());
                 return;
             }
-            case Symbol::Value:
-                //m_value = m_function.scope().values().get(sym.index());
-                assert(!"not implemented");
-                return;
             case Symbol::Parameter:
                 //m_value = m_function.scope().parameters().get(sym.index());
                 assert(!"not implemented");
@@ -97,9 +93,7 @@ public:
             case Symbol::Method:
             case Symbol::TypeName:
             case Symbol::TypeVar:
-                break;
             case Symbol::Function:
-                // fallthrough
                 break;
         }
     }

@@ -16,7 +16,6 @@
 #ifndef XCI_SCRIPT_FUNCTION_H
 #define XCI_SCRIPT_FUNCTION_H
 
-#include "Value.h"
 #include "Code.h"
 #include "AST.h"
 #include "Module.h"
@@ -53,9 +52,10 @@ public:
     // module containing this function
     Module& module() const { return m_module; }
 
-    // symbol table with names used in this block
+    // symbol table with names used in function scope
     SymbolTable& symtab() const { return m_symtab; }
 
+    // parameters
     void add_parameter(std::string name, TypeInfo&& type_info);
     bool has_parameters() const { return !m_signature->params.empty(); }
     const TypeInfo& get_parameter(Index idx) const { return m_signature->params[idx]; }
@@ -64,26 +64,22 @@ public:
     size_t raw_size_of_parameters() const;
     size_t parameter_offset(Index idx) const;
 
+    // function signature
     void set_signature(const std::shared_ptr<Signature>& newsig) { m_signature = newsig; }
     std::shared_ptr<Signature> signature_ptr() const { return m_signature; }
     Signature& signature() { return *m_signature; }
     const Signature& signature() const { return *m_signature; }
 
+    // compiled function body
     Code& code() { return m_code; }
     const Code& code() const { return m_code; }
 
+    // AST of function body
     bool has_ast() const { return m_ast != nullptr; }
     ast::Block* ast() const { return m_ast; }
     void set_ast(ast::Block* body) { m_ast = body; }
 
-    Index add_value(TypeInfo&& type_info);
-    const TypeInfo& get_value(Index idx) const { return m_values[idx]; }
-    void set_value(Index idx, TypeInfo&& ti) { m_values[idx] = std::move(ti); }
-    std::vector<TypeInfo>& values() { return m_values; }
-    const std::vector<TypeInfo>& values() const { return m_values; }
-    size_t raw_size_of_values() const;
-    size_t value_offset(Index idx) const;
-
+    // non-locals
     std::vector<TypeInfo> nonlocals() const;
     // return size of all nonlocals (whole closure) in bytes
     size_t raw_size_of_nonlocals() const;
@@ -114,9 +110,7 @@ private:
     SymbolTable& m_symtab;
     // Function signature
     std::shared_ptr<Signature> m_signature;
-    // Local definitions
-    std::vector<TypeInfo> m_values;
-    // Function code
+    // Compiled function body
     Code m_code;
     // AST of function body (only for generic function)
     ast::Block* m_ast = nullptr;
