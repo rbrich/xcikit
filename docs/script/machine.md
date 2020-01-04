@@ -15,7 +15,7 @@ There are really two stacks:
             +---------------+
             |   1st local   |
     base    +===============+ 
-            | * non-locals  |
+            |   non-locals  |
     (args)  +===============+ 
             | 1st argument  |
             +---------------+
@@ -23,6 +23,7 @@ There are really two stacks:
     (ret)   +---------------+  (higher address)
 
 Data stack grows down, to lower addresses.
+
 Arguments are pushed in reversed order, which has two benefits:
 
 - functions can consume arguments from top - pull first arg, pull second arg,
@@ -30,9 +31,10 @@ Arguments are pushed in reversed order, which has two benefits:
 - tuple arguments are equivalent to unpacked fields - it doesn't matter
   if each argument is passed separately or all of them in tuple
 
-Non-locals are kept on heap, a pointer is pushed to stack.
+Non-locals are pushed as a tuple, above the arguments. They are effectively
+pushed in reversed order, the same way as the arguments.
 
-Only the `base` address is actually saved in Call Stack, the others are
+Only the `base` address is actually saved in the Call Stack, the others are
 computed by compiler and encoded directly into instructions.
 For example, when compiling the function, compiler knows if it has
 any non-locals, so it can compute `(args)` offset from `base` and use that
@@ -55,7 +57,7 @@ Frame contains:
 - base pointer: parameters and non-locals are below, local values above
 
 The base pointer is accessible to program via instructions which take offset
-from current base as parameter.
+from current base as their parameter.
 
 
 ### Calling convention

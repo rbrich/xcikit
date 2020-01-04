@@ -274,15 +274,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                 break;
             }
 
-            case Opcode::CopyVariable: {
-                auto arg1 = *it++;
-                auto size = *it++; // arg2
-                auto addr = m_stack.to_rel(m_stack.frame().base) - arg1 - size;
-                m_stack.copy(addr, size);
-                break;
-            }
-
-            case Opcode::CopyArgument: {
+            case Opcode::Copy: {
                 auto arg1 = *it++;
                 auto size = *it++; // arg2
                 auto addr = m_stack.to_rel(m_stack.frame().base) + arg1;

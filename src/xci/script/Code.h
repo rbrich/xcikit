@@ -130,9 +130,7 @@ enum class Opcode: uint8_t {
 
     MakeList,               // arg1 = number of elements, arg2 = size of each element, pulls number*size bytes from stack, creates list on heap, pushes list handle back to stack
 
-    CopyVariable,           // arg1 => offset from base (0 = base - size = first local), arg2 => size, copy bytes from stack and push back on top
-    CopyArgument,           // arg1 => offset from base (0 = base = first arg), arg2 => size, copy bytes from stack and push back on top
-
+    Copy,                   // arg1 => offset from base (0 = base = first arg), copy <arg2> bytes from stack and push them back on top
     Drop,                   // drop <arg2> bytes from stack, skipping top <arg1> bytes
 
     // --------------------------------------------------------------
