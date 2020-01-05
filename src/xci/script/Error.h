@@ -156,6 +156,13 @@ struct FunctionNotFound : public Error {
 };
 
 
+struct FunctionConflict : public Error {
+    explicit FunctionConflict(const std::string& name, const std::string& args,
+                              const std::string& candidates)
+            : Error(core::format("function cannot be uniquely resolved: {} {}\n   Candidates:\n{}", name, args, candidates)) {}
+};
+
+
 struct FunctionNotFoundInClass : public Error {
     explicit FunctionNotFoundInClass(const std::string& fn, const std::string& cls)
             : Error(core::format("instance function '{}' not found in class '{}'",

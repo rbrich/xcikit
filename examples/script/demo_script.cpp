@@ -199,7 +199,7 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
         });
 
         // returned value of last statement
-        auto result = machine.stack().pull(func.signature().return_type);
+        auto result = machine.stack().pull(func.effective_return_type());
         auto result_name = "_" + std::to_string(input_number);
         if (!result->is_void()) {
             cout << t.bold().magenta() << result_name

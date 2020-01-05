@@ -39,7 +39,7 @@ std::unique_ptr<Value> Value::create(const TypeInfo& type_info)
         case Type::String: return std::make_unique<value::String>();
         case Type::List: return std::make_unique<value::List>(type_info.elem_type());
         case Type::Tuple: return std::make_unique<value::Tuple>(type_info);
-        case Type::Function: return std::make_unique<value::Lambda>();
+        case Type::Function: return std::make_unique<value::Closure>();
         case Type::Module: return std::make_unique<value::Module>();
     }
     return nullptr;
@@ -103,7 +103,7 @@ std::ostream& operator<<(std::ostream& os, const Value& o)
             }
             os << ")";
         }
-        void visit(const value::Lambda& v) override {
+        void visit(const value::Closure& v) override {
             auto closure = v.closure();
             const auto& nonlocals = closure.values();
             os << "<function> " << v.function().signature() << " (";
@@ -263,25 +263,25 @@ TypeInfo Tuple::type_info() const
 }
 
 
-Lambda::Lambda(Function& v) : m_function(&v) {}
+Closure::Closure(Function& v) : m_function(&v) {}
 
 
-Lambda::Lambda(Function& v, Values&& nonlocals)
+Closure::Closure(Function& v, Values&& values)
         : m_function(&v), m_closure(v.raw_size_of_nonlocals())
 {
-    assert(m_function->nonlocals().size() == nonlocals.size());
-    Tuple closure(move(nonlocals));
+    assert(m_function->nonlocals().size() == values.size());
+    Tuple closure(move(values));
     closure.write(m_closure.data());
 }
 
 
-std::unique_ptr<Value> Lambda::make_copy() const
+std::unique_ptr<Value> Closure::make_copy() const
 {
-    return std::make_unique<Lambda>(*m_function, m_closure);
+    return std::make_unique<Closure>(*m_function, m_closure);
 }
 
 
-void Lambda::write(byte* buffer) const
+void Closure::write(byte* buffer) const
 {
     const byte* slot = m_closure.slot();
     std::memcpy(buffer, &slot, sizeof(slot));
@@ -290,7 +290,7 @@ void Lambda::write(byte* buffer) const
 }
 
 
-void Lambda::read(const byte* buffer)
+void Closure::read(const byte* buffer)
 {
     byte *slot = nullptr;
     std::memcpy(&slot, buffer, sizeof(slot));
@@ -299,7 +299,7 @@ void Lambda::read(const byte* buffer)
 }
 
 
-TypeInfo Lambda::type_info() const
+TypeInfo Closure::type_info() const
 {
     if (m_function == nullptr)
         return TypeInfo{Type::Function};
@@ -307,7 +307,7 @@ TypeInfo Lambda::type_info() const
 }
 
 
-Tuple Lambda::closure() const
+Tuple Closure::closure() const
 {
     Tuple closure{TypeInfo{m_function->nonlocals()}};
     closure.read(m_closure.data());

@@ -237,21 +237,33 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     check_interpreter("f = fun a:Int { fun b:Int { a+b } }; f 1 2",     "3");
 
     // closure: inner function uses outer function's parameter
-//    check_interpreter("f = fun a:Int b:Int c:Int { "
-//                      "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 + b}; "
-//                      "w=fun b1:Int c1:Int {a + u b1 + v c1}; "
-//                      "w b c }; f 1 2 3", "9");
+    check_interpreter("f = fun a:Int b:Int c:Int { "
+                      "w=fun c1:Int {a / b - c1}; w c }; f 10 2 3", "2");
+    // closure: outer closure used by inner function
+    check_interpreter("f = fun a:Int b:Int c:Int { "
+                      "g=fun c1:Int {a * b - c1}; "
+                      "h=fun c1:Int {g c1}; "
+                      "h c }; f 1 2 3", "-1");
+    check_interpreter("f = fun a:Int b:Int c:Int { "
+                      "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 + b}; "
+                      "w=fun b1:Int c1:Int {a + u b1 + v c1}; "
+                      "w b c }; f 1 2 3", "9");
 }
 
 TEST_CASE( "Partial function call", "[script][interpreter]" )
 {
-    // partial call: `(add 1)` returns a lambda which takes single argument
+    // partial call: `add 1` returns a lambda which takes single argument
     check_interpreter("(add 1) 2",     "3");
+    check_interpreter("{add 1} 2",     "3");
+    check_interpreter("f={add 1}; f 2",     "3");
+    check_interpreter("f=fun x:Int {add x}; f 2 1", "3");
+    check_interpreter("f=fun x:Int {add 3}; f 2 1", "4");
+    check_interpreter("f=fun x:Int y:Int z:Int { (x - y) * z}; g=fun x1:Int { f 3 x1 }; g 4 5", "-5");
 
 //    check_interpreter("f = fun a:Int b:Int { "
-//                      "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 + b}; "
-//                      "w=fun b1:Int c1:Int {a + u b1 + v c1}; "
-//                      "w b }; f 1 2 3", "9");
+//                      "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 - b}; "
+//                      "w=fun b1:Int c1:Int {a * u b1 / v c1}; "
+//                      "w b }; f 1 2 3", "3");
 //    check_interpreter("f = fun a:Int { "
 //                      "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 + a}; "
 //                      "fun b1:Int c1:Int {a + u b1 + v c1} }; f 1 2 3", "8");

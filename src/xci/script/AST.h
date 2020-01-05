@@ -308,6 +308,8 @@ struct Call: public Expression {
 
     // resolved:
     size_t wrapped_execs = 0;
+    size_t partial_size = 0;
+    Index partial_index = no_index;
 };
 
 struct Operator {

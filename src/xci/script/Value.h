@@ -49,7 +49,7 @@ class Float64;
 class String;
 class List;
 class Tuple;
-class Lambda;
+class Closure;
 class Module;
 
 class Visitor {
@@ -65,7 +65,7 @@ public:
     virtual void visit(const String&) = 0;
     virtual void visit(const List&) = 0;
     virtual void visit(const Tuple&) = 0;
-    virtual void visit(const Lambda&) = 0;
+    virtual void visit(const Closure&) = 0;
     virtual void visit(const Module&) = 0;
 };
 
@@ -398,12 +398,12 @@ private:
 };
 
 
-class Lambda: public Value {
+class Closure: public Value {
 public:
-    Lambda() : m_function(nullptr) {}
-    explicit Lambda(Function& v);
-    explicit Lambda(Function& v, Values&& nonlocals);
-    explicit Lambda(Function& v, const HeapSlot& slot) : m_function(&v), m_closure(slot) {}
+    Closure() : m_function(nullptr) {}
+    explicit Closure(Function& v);
+    explicit Closure(Function& v, Values&& values);
+    explicit Closure(Function& v, HeapSlot slot) : m_function(&v), m_closure(std::move(slot)) {}
 
     std::unique_ptr<Value> make_copy() const override;
 

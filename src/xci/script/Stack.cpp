@@ -150,10 +150,13 @@ void Stack::drop(StackRel first, size_t size)
 std::ostream& operator<<(std::ostream& os, const Stack& v)
 {
     Stack::StackRel pos = 0;
+    auto frame = v.n_frames() - 1;
     auto base = v.to_rel(v.frame().base);
-    auto check_print_base = [base, &pos] {
+    auto check_print_base = [&] {
         if (base == pos) {
-            cout << setw(4) << right << pos << " ---  (frame base)" << endl;
+            cout << setw(4) << right << pos << " ---  (frame " << frame << ")" << endl;
+            if (frame > 0)
+                base = v.to_rel(v.frame(--frame).base);
         }
     };
     for (const auto& ti : ranges::views::reverse(v.m_stack_types)) {

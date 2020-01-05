@@ -96,11 +96,8 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::Call:              return os << "CALL";
         case Opcode::Execute:           return os << "EXECUTE";
         case Opcode::MakeClosure:       return os << "MAKE_CLOSURE";
-        case Opcode::Partial0:          return os << "PARTIAL0";
-        case Opcode::Partial1:          return os << "PARTIAL1";
-        case Opcode::Partial:           return os << "PARTIAL";
-        case Opcode::PartialExecute:    return os << "PARTIAL_EXECUTE";
         case Opcode::MakeList:          return os << "MAKE_LIST";
+        case Opcode::SetBase:           return os << "SET_BASE";
         case Opcode::IncRef:            return os << "INC_REF";
         case Opcode::DecRef:            return os << "DEC_REF";
         case Opcode::Jump:              return os << "JUMP";

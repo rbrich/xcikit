@@ -18,6 +18,7 @@
 #include "Value.h"
 #include "Error.h"
 #include <xci/core/format.h>
+#include <range/v3/view/reverse.hpp>
 #include <stack>
 #include <sstream>
 #include <cassert>
@@ -33,10 +34,12 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
 {
     const Function* cur_fun = &function;
     auto it = function.code().begin();
-    auto call_fun = [this, &it, &cur_fun](const Function& fn) {
+    auto base = m_stack.size();
+    auto call_fun = [this, &cur_fun, &it, &base](const Function& fn) {
         m_stack.push_frame(cur_fun, it - cur_fun->code().begin());
         cur_fun = &fn;
         it = cur_fun->code().begin();
+        base = m_stack.frame().base;
         if (m_call_enter_cb)
             m_call_enter_cb(*cur_fun);
     };
@@ -66,6 +69,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
             cur_fun = m_stack.frame().function;
             it = cur_fun->code().begin() + m_stack.frame().instruction;
             m_stack.pop_frame();
+            base = m_stack.frame().base;
             continue;
         }
 
@@ -251,9 +255,9 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
             }
 
             case Opcode::Execute: {
-                auto o = m_stack.pull<value::Lambda>();
+                auto o = m_stack.pull<value::Closure>();
                 auto closure = o.closure();
-                for (const auto& nl : closure.values()) {
+                for (const auto& nl : ranges::views::reverse(closure.values())) {
                     m_stack.push(*nl);
                 }
                 call_fun(o.function());
@@ -270,14 +274,20 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
             case Opcode::LoadFunction: {
                 auto arg = *it++;
                 auto& fn = cur_fun->module().get_function(arg);
-                m_stack.push(value::Lambda(fn));
+                m_stack.push(value::Closure(fn));
+                break;
+            }
+
+            case Opcode::SetBase: {
+                auto level = *it++;
+                base = m_stack.frame(m_stack.n_frames() - 1 - level).base;
                 break;
             }
 
             case Opcode::Copy: {
                 auto arg1 = *it++;
                 auto size = *it++; // arg2
-                auto addr = m_stack.to_rel(m_stack.frame().base) + arg1;
+                auto addr = m_stack.to_rel(base) + arg1;
                 m_stack.copy(addr, size);
                 break;
             }
@@ -291,8 +301,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
 
             case Opcode::Call0:
             case Opcode::Call1:
-            case Opcode::Call:
-            {
+            case Opcode::Call: {
                 // get the function's module
                 Module* module;
                 if (opcode == Opcode::Call0) {
@@ -313,7 +322,43 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                 call_fun(fn);
                 break;
             }
-
+/*
+            case Opcode::Partial0:
+            case Opcode::Partial1:
+            case Opcode::Partial: {
+                // get the function's module
+                Module* module;
+                if (opcode == Opcode::Partial0) {
+                    module = &cur_fun->module();
+                } else {
+                    size_t idx;
+                    if (opcode == Opcode::Partial1) {
+                        idx = 0;
+                    } else {
+                        // read arg1
+                        idx = *it++;
+                    }
+                    module = &cur_fun->module().get_imported_module(idx);
+                    // get function
+                    auto fn_idx = *it++;
+                    auto& fn = module->get_function(fn_idx);
+                    // pull partial args
+                    auto partial_size = *it++;
+                    Values closure;
+                    closure.reserve(partial_size);
+                    for (const auto & ti : fn.parameters()) {
+                        assert(ti.size() <= partial_size);
+                        closure.add(m_stack.pull(ti));
+                        partial_size -= ti.size();
+                        if (partial_size == 0)
+                            break;
+                    }
+                    // push closure
+                    m_stack.push(value::Lambda{fn, move(closure)});
+                }
+                break;
+            }
+*/
             case Opcode::MakeList: {
                 const auto num_elems = *it++;
                 const auto size_of_elem = *it++;
@@ -333,13 +378,13 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                 auto& fn = cur_fun->module().get_function(arg1);
                 // pull nonlocals
                 auto nl_types = fn.nonlocals();
-                Values nonlocals;
-                nonlocals.reserve(nl_types.size());
+                Values closure;
+                closure.reserve(nl_types.size());
                 for (const auto & ti : nl_types) {
-                    nonlocals.add(m_stack.pull(ti));
+                    closure.add(m_stack.pull(ti));
                 }
                 // push closure
-                m_stack.push(value::Lambda{fn, move(nonlocals)});
+                m_stack.push(value::Closure{fn, move(closure)});
                 break;
             }
 

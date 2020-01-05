@@ -61,28 +61,16 @@ size_t Function::parameter_offset(Index idx) const
 }
 
 
-std::vector<TypeInfo> Function::nonlocals() const
+void Function::add_nonlocal(TypeInfo&& type_info)
 {
-    std::vector<TypeInfo> res;
-    for (const auto& sym : m_symtab) {
-        if (sym.type() == Symbol::Nonlocal) {
-            auto& nl_sym = *sym.ref();
-            auto* nl_func = sym.ref().symtab()->function();
-            assert(nl_func != nullptr);
-            assert(nl_sym.type() == Symbol::Parameter);  // non-local must reference a parameter
-            res.push_back(nl_func->get_parameter(nl_sym.index()));
-        }
-    }
-    return res;
+    signature().add_nonlocal(std::move(type_info));
 }
 
 
 size_t Function::raw_size_of_nonlocals() const
 {
-    const auto nl = nonlocals();
-    return std::accumulate(nl.begin(), nl.end(), 0,
-                           [](size_t init, const TypeInfo& ti) { return init + ti.size(); });
-
+    return std::accumulate(nonlocals().begin(), nonlocals().end(), 0,
+            [](size_t init, const TypeInfo& ti) { return init + ti.size(); });
 }
 
 
@@ -107,24 +95,6 @@ bool Function::is_generic() const
     });
 }
 
-
-/*
-Function Function::partial_call(vector<Value>& args) const
-{
-    Function fn {m_module, m_parent};
-    fn.signature().return_type = m_signature->return_type;
-    fn.signature().params = {m_signature->params.begin() + args.size(),
-                             m_signature->params.end()};
-    fn.scope() = scope();
-    fn.code() = m_code;
-    // apply args - add them to namespace
-    for (auto& arg : args) {
-        fn.scope().set_first_unknown(move(arg));
-    }
-    args.clear();
-    return fn;
-}
-*/
 
 ostream& operator<<(ostream& os, const Function& v)
 {
@@ -178,23 +148,6 @@ std::ostream& operator<<(std::ostream& os, Function::DumpInstruction f)
             default:
                 break;
         }
-    }
-    if (opcode >= Opcode::ThreeArgFirst && opcode <= Opcode::ThreeArgLast) {
-        // 3 args
-        Index arg1 = *(++f.pos);
-        Index arg2 = *(++f.pos);
-        Index arg3 = *(++f.pos);
-        os << static_cast<int>(arg1) << ' ' << static_cast<int>(arg2);
-        switch (opcode) {
-            case Opcode::Partial: {
-                const auto& fn = f.func.module().get_imported_module(arg1).get_function(arg2);
-                os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
-                break;
-            }
-            default:
-                break;
-        }
-        os << ' ' << static_cast<int>(arg3);
     }
     return os;
 }

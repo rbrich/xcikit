@@ -61,7 +61,7 @@ public:
     explicit TypeInfo(std::shared_ptr<Signature> signature)
         : m_type(Type::Function), m_signature(std::move(signature)) {}
     // Tuple
-    explicit TypeInfo(std::vector<TypeInfo>&& subtypes)
+    explicit TypeInfo(std::vector<TypeInfo> subtypes)
         : m_type(Type::Tuple), m_subtypes(std::move(subtypes)) {}
     // List
     explicit TypeInfo(Type type, TypeInfo elem_type)
@@ -100,11 +100,13 @@ private:
 
 
 struct Signature {
+    std::vector<TypeInfo> nonlocals;
     std::vector<TypeInfo> params;
     TypeInfo return_type;
 
-    void add_parameter(TypeInfo&& p) { params.emplace_back(p); }
-    void set_return_type(TypeInfo t) { return_type = std::move(t); }
+    void add_nonlocal(TypeInfo&& ti) { nonlocals.emplace_back(ti); }
+    void add_parameter(TypeInfo&& ti) { params.emplace_back(ti); }
+    void set_return_type(TypeInfo ti) { return_type = std::move(ti); }
 
     // Check return type matches and set it to concrete type if it's generic.
     void resolve_return_type(const TypeInfo& t);

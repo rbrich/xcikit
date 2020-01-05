@@ -89,6 +89,10 @@ public:
 
     void pop();
 
+    // random access
+    reference operator[](size_type pos);
+    const_reference operator[](size_type pos) const;
+
     // deque compatibility
     reference back() { return top(); }
     const_reference back() const { return top(); }
@@ -393,6 +397,34 @@ void Stack<T>::pop()
         deallocate(m_tail);
         m_tail = b;
     }
+}
+
+
+template<class T>
+auto Stack<T>::operator[](size_type pos) -> reference
+{
+    assert(!empty());
+    assert(pos < size());
+    auto* b = head();
+    while (pos > b->count) {
+        pos -= b->count;
+        b = b->next;
+    }
+    return b->items[pos];
+}
+
+
+template<class T>
+auto Stack<T>::operator[](size_type pos) const -> const_reference
+{
+    assert(!empty());
+    assert(pos < size());
+    auto* b = head();
+    while (pos > b->count) {
+        pos -= b->count;
+        b = b->next;
+    }
+    return b->items[pos];
 }
 
 

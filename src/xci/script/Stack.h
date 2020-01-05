@@ -110,6 +110,9 @@ public:
     void push_frame(const Function* fun, Index ins) { m_frame.emplace(fun, ins, size()); }
     void pop_frame() { m_frame.pop(); }
     const Frame& frame() const { return m_frame.top(); }
+    const Frame& frame(size_t pos) const { return m_frame[pos]; }
+    size_t n_frames() const { return m_frame.size(); }
+
 
     friend std::ostream& operator<<(std::ostream& os, const Stack& v);
 

@@ -80,6 +80,7 @@ public:
         // function scope
         Parameter,          // function parameter
         Nonlocal,           // non-local parameter, i.e. a capture from outer scope
+        Fragment,           // code fragment (inlined function)
         Instruction,        // intrinsics resolve to this, the index is Opcode
         TypeVar,            // type variable in generic function
     };

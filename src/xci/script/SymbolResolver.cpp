@@ -193,10 +193,7 @@ public:
             v.index = v.definition->symbol()->index();
         } else {
             // add new symbol table for the function
-            std::string name = "<lambda>";
-            if (v.type.params.empty())
-                name = "<block>";
-            SymbolTable& fn_symtab = symtab().add_child(name);
+            SymbolTable& fn_symtab = symtab().add_child("<lambda>");
             auto fn = make_unique<Function>(module(), fn_symtab);
             v.index = module().add_function(move(fn));
         }
@@ -213,7 +210,6 @@ public:
 
         // postpone body compilation
         m_postponed_blocks.push_back({fn, v.body});
-
     }
 
     void visit(ast::TypeName& t) final {
@@ -276,7 +272,7 @@ private:
 
                 auto symptr = p_symtab->find_by_name(name);
                 if (symptr) {
-                    if (depth > 0) {
+                    if (depth > 0 && symptr->type() != Symbol::Function) {
                         // add Nonlocal symbol
                         return symtab().add({symptr, Symbol::Nonlocal, depth});
                     } else {
@@ -410,10 +406,12 @@ public:
         for (auto& sym : func.symtab()) {
             if (sym.type() == Symbol::Nonlocal) {
                 if (sym.ref() && sym.ref()->type() == Symbol::Function) {
-                    // unfrap reference to non-value function
+                    // unwrap reference to non-value function
                     sym = *sym.ref();
                 } else if (sym.depth() > 1) {
                     // not direct parent -> add intermediate Nonlocal
+                    auto ti = sym.ref().symtab()->function()->get_parameter(sym.ref()->index());
+                    m_function.add_nonlocal(std::move(ti));
                     m_function.symtab().add({sym.ref(), Symbol::Nonlocal, sym.depth() - 1});
                 }
             }

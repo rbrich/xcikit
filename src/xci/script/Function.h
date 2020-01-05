@@ -70,6 +70,9 @@ public:
     Signature& signature() { return *m_signature; }
     const Signature& signature() const { return *m_signature; }
 
+    // effective return type
+    TypeInfo effective_return_type() const { return m_signature->return_type.effective_type(); }
+
     // compiled function body
     Code& code() { return m_code; }
     const Code& code() const { return m_code; }
@@ -80,22 +83,26 @@ public:
     void set_ast(ast::Block* body) { m_ast = body; }
 
     // non-locals
-    std::vector<TypeInfo> nonlocals() const;
+    void add_nonlocal(TypeInfo&& type_info);
+    bool has_nonlocals() const { return !m_signature->nonlocals.empty(); }
+    const std::vector<TypeInfo>& nonlocals() const { return m_signature->nonlocals; }
     // return size of all nonlocals (whole closure) in bytes
     size_t raw_size_of_nonlocals() const;
     std::pair<size_t, TypeInfo> nonlocal_offset_and_type(Index idx) const;
+
+    // Nonlocals view - when set, use parent scope for COPY
+    void set_view() { m_view = true; }
+    bool has_view() const { return m_view; }
 
     // true if this function is generic
     bool is_generic() const;
 
     // Special intrinsics function cannot contain any compiled code and is always inlined.
     // This counter helps to check no other code was generated.
-    void add_intrinsic(uint8_t code) { m_intrinsics++; m_code.add_arg(code); }
+    void add_intrinsic(uint8_t code) { m_intrinsics++;
+        m_code.add(code); }
     size_t intrinsics() const { return m_intrinsics; }
     bool has_intrinsics() const { return m_intrinsics > 0; }
-
-    // return new function with applied args (args are drained, left empty)
-    //Function partial_call(std::vector<Value>& args) const;
 
     bool operator==(const Function& rhs) const;
 
@@ -116,6 +123,8 @@ private:
     ast::Block* m_ast = nullptr;
     // Counter for instructions from intrinsics
     size_t m_intrinsics = 0;
+    // Nonlocals view - when set, use parent scope for COPY
+    bool m_view = false;
 };
 
 

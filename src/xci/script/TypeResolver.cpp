@@ -120,7 +120,7 @@ public:
         subtypes.reserve(v.items.size());
         for (auto& item : v.items) {
             item->apply(*this);
-            subtypes.push_back(move(m_value_type));
+            subtypes.push_back(m_value_type.effective_type());
         }
         m_value_type = TypeInfo(move(subtypes));
     }
@@ -207,7 +207,9 @@ public:
             case Symbol::Function: {
                 // find matching instance
                 auto symptr = v.identifier.symbol;
-                bool found = false;
+                struct Item { Module* module; SymbolPointer symptr; TypeInfo type; };
+                std::vector<Item> candidates_match; // match ok
+                std::vector<Item> candidates;  // match failed
                 while (symptr) {
                     auto* symmod = symptr.symtab()->module();
                     if (symmod == nullptr)
@@ -215,40 +217,53 @@ public:
                     auto& fn = symmod->get_function(symptr->index());
                     auto sig_ptr = fn.signature_ptr();
                     if (fn.is_generic()) {
+                        if (m_call_args.empty()) {
+                            symptr = symptr->next();
+                            continue;
+                        }
                         // instantiate the specialization
                         auto fspec = resolve_specialization(fn);
                         sig_ptr = fspec->signature_ptr();
                         Symbol sym_copy {*symptr};
                         sym_copy.set_index(module().add_function(move(fspec)));
-                        v.identifier.symbol = module().symtab().add(move(sym_copy));
-                        m_value_type = TypeInfo{sig_ptr};
-                        found = true;
-                        break;
+                        candidates_match.push_back({symmod,
+                                module().symtab().add(move(sym_copy)),
+                                TypeInfo{sig_ptr}});
                     } else if (match_params(*sig_ptr)) {
-                        v.identifier.symbol = symptr;
-                        m_value_type = TypeInfo{sig_ptr};
-                        found = true;
-                        break;
+                        candidates_match.push_back({symmod, symptr, TypeInfo{sig_ptr}});
+                    } else {
+                        candidates.push_back({symmod, symptr, TypeInfo{sig_ptr}});
                     }
                     symptr = symptr->next();
                 }
-                if (found)
+
+                // OK (exactly one match)
+                if (candidates_match.size() == 1) {
+                    v.identifier.symbol = candidates_match.back().symptr;
+                    m_value_type = candidates_match.back().type;
                     break;
-                // ERROR couldn't find matching function for `args`
+                }
+
+                // format the error message (candidates)
                 stringstream o_candidates;
-                symptr = v.identifier.symbol;
-                while (symptr) {
-                    auto* symmod = symptr.symtab()->module();
-                    if (symmod == nullptr)
-                        symmod = &module();
-                    auto& fn = symmod->get_function(symptr->index());
-                    o_candidates << "   " << fn.signature() << endl;
-                    symptr = symptr->next();
+                for (const auto& m : candidates_match) {
+                    auto& fn = m.module->get_function(m.symptr->index());
+                    o_candidates << "   * matched: " << fn.signature() << endl;
+                }
+                for (const auto& m : candidates) {
+                    auto& fn = m.module->get_function(m.symptr->index());
+                    o_candidates << "   * ignored: " << fn.signature() << endl;
                 }
                 stringstream o_args;
                 for (const auto& arg : m_call_args) {
                     o_args << arg.type_info << ' ';
                 }
+
+                // ERROR found multiple matching functions
+                if (candidates_match.size() > 1) {
+                    throw FunctionConflict(v.identifier.name, o_args.str(), o_candidates.str());
+                }
+                // ERROR couldn't find matching function for `args`
                 throw FunctionNotFound(v.identifier.name, o_args.str(), o_candidates.str());
             }
             case Symbol::Module:
@@ -261,6 +276,7 @@ public:
                 assert(nl_func != nullptr);
                 assert(nl_sym.type() == Symbol::Parameter);   // non-local must reference a parameter
                 m_value_type = nl_func->get_parameter(nl_sym.index());
+                m_function.add_nonlocal(TypeInfo{m_value_type});
                 break;
             }
             case Symbol::Parameter:
@@ -276,8 +292,8 @@ public:
             case Symbol::Unresolved:
                 UNREACHABLE;
         }
-        if (sym.type() == Symbol::Function)
-            m_value_type = m_value_type.effective_type();
+//        if (sym.type() == Symbol::Function)
+//            m_value_type = m_value_type.effective_type();
         v.identifier.symbol->set_callable(m_value_type.is_callable());
     }
 
@@ -287,7 +303,7 @@ public:
         for (auto& arg : v.args) {
             arg->apply(*this);
             assert(arg->source_info.source != nullptr);
-            args.push_back({move(m_value_type), arg->source_info});
+            args.push_back({m_value_type.effective_type(), arg->source_info});
         }
         // append args to m_call_args (note that m_call_args might be used
         // when evaluating each argument, so we cannot push to them above)
@@ -303,12 +319,30 @@ public:
 
         if (m_value_type.is_callable()) {
             // result is new signature with args removed (applied)
-            auto new_signature = resolve_params(m_value_type.signature(), v.wrapped_execs);
-            if (new_signature->params.empty())
+            auto new_signature = resolve_params(m_value_type.signature(), v);
+            if (new_signature->params.empty()) {
                 // effective type of zero-arg function is its return type
                 m_value_type = new_signature->return_type;
-            else
+                v.partial_size = 0;
+            } else {
+                if (v.partial_size != 0) {
+                    // partial function call
+                    if (v.definition != nullptr) {
+                        v.partial_index = v.definition->symbol()->index();
+                    } else {
+                        SymbolTable& fn_symtab = m_function.symtab().add_child("<partial>");
+                        auto fn = make_unique<Function>(module(), fn_symtab);
+                        v.partial_index = module().add_function(move(fn));
+                    }
+                    auto& fn = module().get_function(v.partial_index);
+                    fn.signature() = *new_signature;
+                    fn.signature().nonlocals.clear();
+                    for (const auto& arg : m_call_args) {
+                        fn.add_nonlocal(TypeInfo{arg.type_info});
+                    }
+                }
                 m_value_type = TypeInfo{new_signature};
+            }
         }
         m_call_args.clear();
     }
@@ -380,9 +414,9 @@ public:
         }
 
         // parameterless function is equivalent to its return type (eager evaluation)
-        while (m_value_type.is_callable() && m_value_type.signature().params.empty()) {
+       /* while (m_value_type.is_callable() && m_value_type.signature().params.empty()) {
             m_value_type = m_value_type.signature().return_type;
-        }
+        }*/
         // check specified type again - in case it wasn't Function
         if (!m_value_type.is_callable() && specified_type) {
             if (m_value_type != specified_type)
@@ -436,7 +470,6 @@ private:
     {
         auto fn = make_unique<Function>(orig_fn.module(), orig_fn.symtab());
         fn->signature() = orig_fn.signature();
-        assert(m_call_args.size() == fn->signature().params.size());
         for (size_t i = 0; i < fn->signature().params.size(); i++) {
             const auto& arg = m_call_args[i];
             auto& out_type = fn->signature().params[i];
@@ -464,7 +497,7 @@ private:
     }
 
     // Consume params from `orig_signature` according to `m_call_args`, creating new signature
-    std::shared_ptr<Signature> resolve_params(const Signature& orig_signature, size_t& wrapped_execs) const
+    std::shared_ptr<Signature> resolve_params(const Signature& orig_signature, ast::Call& v) const
     {
         auto res = std::make_shared<Signature>(orig_signature);
         int i = 0;
@@ -475,7 +508,8 @@ private:
                 if (res->return_type.type() == Type::Function) {
                     // collapse returned function, start consuming its params
                     res = std::make_unique<Signature>(res->return_type.signature());
-                    ++wrapped_execs;
+                    ++v.wrapped_execs;
+                    v.partial_size = 0;
                 } else {
                     throw UnexpectedArgument(i, arg.source_info);
                 }
@@ -485,6 +519,7 @@ private:
                 throw UnexpectedArgumentType(i, res->params[0], arg.type_info, arg.source_info);
             }
             // consume next param
+            v.partial_size += arg.type_info.size();
             res->params.erase(res->params.begin());
         }
         return res;

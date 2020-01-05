@@ -25,7 +25,6 @@
 #include <xci/compat/macros.h>
 
 #include <range/v3/view/reverse.hpp>
-#include <range/v3/action/reverse.hpp>
 
 #include <sstream>
 #include <cassert>
@@ -63,27 +62,27 @@ public:
             return;
         }
 
-        auto skip = m_function.signature().return_type.size();
+        auto skip = m_function.signature().return_type.effective_type().size();
         auto drop = m_function.raw_size_of_parameters()
                   + m_function.raw_size_of_nonlocals();
         if (drop > 0) {
             Stack::StackRel pos = skip;
-            for (const auto& ti : m_function.nonlocals() | ranges::actions::reverse) {
+            for (const auto& ti : ranges::views::reverse(m_function.nonlocals())) {
                 ti.foreach_heap_slot([this, pos](size_t offset) {
                     // DEC_REF <addr in nonlocals>
-                    code().add_opcode(Opcode::DecRef, pos + offset);
+                    m_function.code().add_opcode(Opcode::DecRef, pos + offset);
                 });
                 pos += ti.size();
             }
             for (const auto& ti : ranges::views::reverse(m_function.parameters())) {
                 ti.foreach_heap_slot([this, pos](size_t offset) {
                     // DEC_REF <addr in params>
-                    code().add_opcode(Opcode::DecRef, pos + offset);
+                    m_function.code().add_opcode(Opcode::DecRef, pos + offset);
                 });
                 pos += ti.size();
             }
-            // DROP <ret_value> <params + locals + nonlocals>
-            code().add_opcode(Opcode::Drop, skip, drop);
+            // DROP <ret_value> <params + nonlocals>
+            m_function.code().add_opcode(Opcode::Drop, skip, drop);
         }
         // return value left on stack
     }
@@ -205,13 +204,11 @@ public:
             case Symbol::Function: {
                 // this module
                 if (symtab.module() == nullptr || symtab.module() == &module()) {
-                    {
-                        // specialization might not be compiled yet - compile it now
-                        Function& func = module().get_function(sym.index());
-                        if (func.has_ast()) {
-                            m_compiler.compile_block(func, *func.ast());
-                            func.set_ast(nullptr);
-                        }
+                    // specialization might not be compiled yet - compile it now
+                    Function& func = module().get_function(sym.index());
+                    if (func.has_ast()) {
+                        m_compiler.compile_block(func, *func.ast());
+                        func.set_ast(nullptr);
                     }
                     // CALL0 <function_idx>
                     code().add_opcode(Opcode::Call0, sym.index());
@@ -226,6 +223,27 @@ public:
                 } else {
                     // CALL <module_idx> <function_idx>
                     code().add_opcode(Opcode::Call, mod_idx, sym.index());
+                }
+                break;
+            }
+            case Symbol::Fragment: {
+                assert(symtab.module() == nullptr || symtab.module() == &module());
+                Function& func = module().get_function(sym.index());
+                assert(func.has_view());
+                // inline the code
+                int levels = 0;
+                auto* scope = &m_function.symtab();
+                while (scope != func.symtab().parent()) {
+                    scope = scope->parent();
+                    ++levels;
+                }
+                if (levels != 0) {
+                    // SET_BASE <levels>
+                    code().add_opcode(Opcode::SetBase, levels);
+                }
+                // copy the code
+                for (auto instr : func.code()) {
+                    code().add(instr);
                 }
                 break;
             }
@@ -247,13 +265,39 @@ public:
     void visit(ast::Call& v) override {
         // call the function or push the value
 
-        // evaluate each arg
         m_imm_call = true;
         for (auto& arg : ranges::views::reverse(v.args)) {
             arg->apply(*this);
         }
 
-        v.callable->apply(*this);
+        if (v.partial_index != no_index) {
+            // partial function call
+            auto& fn = module().get_function(v.partial_index);
+            // generate inner code
+            auto* orig_code = m_code;
+            m_code = &fn.code();
+            v.callable->apply(*this);
+            m_code = orig_code;
+            /*if (v.definition == nullptr) {
+                // MAKE_CLOSURE <function_idx>
+                code().add_opcode(Opcode::MakeClosure, v.partial_index);
+                // COPY <frame_offset> <size>
+                code().add_opcode(Opcode::Copy, 0, v.partial_size);
+                // EXECUTE
+                code().add_opcode(Opcode::Execute);
+            }*/
+            //make_closure(fn);
+            if (!v.definition) {
+                // MAKE_CLOSURE <function_idx>
+                code().add_opcode(Opcode::MakeClosure, v.partial_index);
+                if (!fn.has_parameters()) {
+                    // EXECUTE
+                    code().add_opcode(Opcode::Execute);
+                }
+            }
+        } else {
+            v.callable->apply(*this);
+        }
         m_imm_call = false;
 
         // add executes for each call that results in function which consumes more args
@@ -292,53 +336,39 @@ public:
         m_compiler.compile_block(func, v.body);
         if (func.symtab().parent() != &m_function.symtab())
             return;  // instance function -> just compile it
-        auto n_nonlocals = func.symtab().count_nonlocals();
-        auto nonlocals_size = m_function.raw_size_of_nonlocals();
-        if (n_nonlocals > 0) {
-            // make closure
-            for (const auto& sym : func.symtab()) {
-                if (sym.type() == Symbol::Nonlocal) {
-                    // find symbol in parent (which is m_function)
-                    for (const auto& psym : m_function.symtab()) {
-                        if (psym.name() == sym.name()) {
-                            // found it
-                            switch (psym.type()) {
-                                case Symbol::Nonlocal: {
-                                    // COPY <frame_offset> <size>
-                                    auto ofs_ti = m_function.nonlocal_offset_and_type(psym.index());
-                                    assert(ofs_ti.first < 256);
-                                    code().add_opcode(Opcode::Copy,
-                                        ofs_ti.first, ofs_ti.second.size());
-                                    ofs_ti.second.foreach_heap_slot([this](size_t offset) {
-                                        code().add_opcode(Opcode::IncRef, offset);
-                                    });
-                                    break;
-                                }
-                                case Symbol::Parameter: {
-                                    // COPY <frame_offset> <size>
-                                    const auto& ti = m_function.get_parameter(psym.index());
-                                    code().add_opcode(Opcode::Copy,
-                                        m_function.parameter_offset(psym.index()) + nonlocals_size,
-                                        ti.size());
-                                    ti.foreach_heap_slot([this](size_t offset) {
-                                        code().add_opcode(Opcode::IncRef, offset);
-                                    });
-                                    break;
-                                }
-                                default:
-                                    break;
-                            }
-                            break;
-                        }
-                    }
+        //bool has_closure = func.symtab().count_nonlocals() != 0;
+        if (func.has_nonlocals()) {
+            if (v.definition) {
+                // create wrapping function for the closure
+                SymbolTable& fn_symtab = m_function.symtab().add_child(func.symtab().name() + "/closure");
+                auto wfn = make_unique<Function>(module(), fn_symtab);
+                wfn->set_view();
+                wfn->signature().return_type = TypeInfo{func.signature_ptr()};
+
+                auto* orig_code = m_code;
+                m_code = &wfn->code();
+                make_closure(func);
+                // MAKE_CLOSURE <function_idx>
+                code().add_opcode(Opcode::MakeClosure, v.index);
+                if (m_imm_call || !func.has_parameters()) {
+                    // parameterless closure is executed immediately
+                    // EXECUTE
+                    code().add_opcode(Opcode::Execute);
                 }
-            }
-            // MAKE_CLOSURE <function_idx>
-            code().add_opcode(Opcode::MakeClosure, v.index);
-            if (m_imm_call || !func.has_parameters()) {
-                // parameterless closure is executed immediately
-                // EXECUTE
-                code().add_opcode(Opcode::Execute);
+                m_code = orig_code;
+
+                v.index = module().add_function(move(wfn));
+                v.definition->symbol()->set_index(v.index);
+                v.definition->symbol()->set_type(Symbol::Fragment);
+            } else {
+                make_closure(func);
+                // MAKE_CLOSURE <function_idx>
+                code().add_opcode(Opcode::MakeClosure, v.index);
+                if (m_imm_call || !func.has_parameters()) {
+                    // parameterless closure is executed immediately
+                    // EXECUTE
+                    code().add_opcode(Opcode::Execute);
+                }
             }
         } else {
             if (!v.definition) {
@@ -364,6 +394,51 @@ public:
 private:
     Module& module() { return m_function.module(); }
     Code& code() { return m_code == nullptr ? m_function.code() : *m_code; };
+
+    void make_closure(Function& func) {
+        // m_function is parent
+        assert(&m_function.symtab() == func.symtab().parent());
+        auto nonlocals_size = m_function.raw_size_of_nonlocals();
+        //auto parent_offset = func.raw_size_of_nonlocals() + func.raw_size_of_parameters();
+        // make closure
+        for (const auto& sym : ranges::views::reverse(func.symtab())) {
+            if (sym.type() == Symbol::Nonlocal) {
+                // find symbol in parent (which is m_function)
+                for (const auto& psym : m_function.symtab()) {
+                    if (psym.name() == sym.name()) {
+                        // found it
+                        switch (psym.type()) {
+                            case Symbol::Nonlocal: {
+                                // COPY <frame_offset> <size>
+                                auto ofs_ti = m_function.nonlocal_offset_and_type(psym.index());
+                                assert(ofs_ti.first < 256);
+                                code().add_opcode(Opcode::Copy,
+                                        ofs_ti.first, ofs_ti.second.size());
+                                ofs_ti.second.foreach_heap_slot([this](size_t offset) {
+                                    code().add_opcode(Opcode::IncRef, offset);
+                                });
+                                break;
+                            }
+                            case Symbol::Parameter: {
+                                // COPY <frame_offset> <size>
+                                const auto& ti = m_function.get_parameter(psym.index());
+                                code().add_opcode(Opcode::Copy,
+                                        m_function.parameter_offset(psym.index()) + nonlocals_size,
+                                        ti.size());
+                                ti.foreach_heap_slot([this](size_t offset) {
+                                    code().add_opcode(Opcode::IncRef, offset);
+                                });
+                                break;
+                            }
+                            default:
+                                break;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+    }
 
 private:
     Compiler& m_compiler;

@@ -246,7 +246,7 @@ private:
             void visit(const value::String& v) override { collapsed = make_unique<ast::String>(v.value()); }
             void visit(const value::List& v) override {}
             void visit(const value::Tuple& v) override {}
-            void visit(const value::Lambda&) override {}
+            void visit(const value::Closure&) override {}
             void visit(const value::Module& v) override {}
         };
         ValueVisitor visitor(m_collapsed);
