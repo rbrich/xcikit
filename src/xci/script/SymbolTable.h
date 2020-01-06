@@ -80,7 +80,7 @@ public:
         // function scope
         Parameter,          // function parameter
         Nonlocal,           // non-local parameter, i.e. a capture from outer scope
-        Fragment,           // code fragment (inlined function)
+        Fragment,           // code fragment (inline function)
         Instruction,        // intrinsics resolve to this, the index is Opcode
         TypeVar,            // type variable in generic function
     };
@@ -136,6 +136,7 @@ public:
     explicit SymbolTable(std::string name, SymbolTable* parent = nullptr)
         : m_name(std::move(name)), m_parent(parent) {}
 
+    void set_name(const std::string& name) { m_name = name; }
     const std::string& name() const { return m_name; }
 
     SymbolTable& add_child(const std::string& name);

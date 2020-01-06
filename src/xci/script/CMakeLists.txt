@@ -9,6 +9,7 @@ add_library(xci-script
     Interpreter.cpp
     Machine.cpp
     Module.cpp
+    NonlocalResolver.cpp
     Value.cpp
     Optimizer.cpp
     Parser.cpp

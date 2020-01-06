@@ -376,11 +376,13 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                 auto arg1 = *it++;
                 // get function
                 auto& fn = cur_fun->module().get_function(arg1);
-                // pull nonlocals
-                auto nl_types = fn.nonlocals();
+                // pull nonlocals + partial args
                 Values closure;
-                closure.reserve(nl_types.size());
-                for (const auto & ti : nl_types) {
+                closure.reserve(fn.nonlocals().size() + fn.partial().size());
+                for (const auto & ti : fn.nonlocals()) {
+                    closure.add(m_stack.pull(ti));
+                }
+                for (const auto & ti : fn.partial()) {
                     closure.add(m_stack.pull(ti));
                 }
                 // push closure

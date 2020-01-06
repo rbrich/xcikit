@@ -624,9 +624,23 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
 
 std::ostream& operator<<(std::ostream& os, const Signature& v)
 {
+    if (!v.nonlocals.empty()) {
+        os << "{ ";
+        for (auto& ti : v.nonlocals) {
+            os << ti << " ";
+        }
+        os << "} ";
+    }
+    if (!v.partial.empty()) {
+        os << "( ";
+        for (auto& ti : v.partial) {
+            os << ti << " ";
+        }
+        os << ") ";
+    }
     if (!v.params.empty()) {
-        for (auto& param : v.params) {
-            os << param << " ";
+        for (auto& ti : v.params) {
+            os << ti << " ";
         }
         os << "-> ";
     }
@@ -644,6 +658,7 @@ std::ostream& operator<<(std::ostream& os, Symbol::Type v)
         case Symbol::Parameter:     return os << "Parameter";
         case Symbol::Nonlocal:      return os << "Nonlocal";
         case Symbol::Function:      return os << "Function";
+        case Symbol::Fragment:      return os << "Fragment";
         case Symbol::Module:        return os << "Module";
         case Symbol::Instruction:   return os << "Instruction";
         case Symbol::Class:         return os << "Class";

@@ -267,9 +267,9 @@ Closure::Closure(Function& v) : m_function(&v) {}
 
 
 Closure::Closure(Function& v, Values&& values)
-        : m_function(&v), m_closure(v.raw_size_of_nonlocals())
+        : m_function(&v), m_closure(v.raw_size_of_closure())
 {
-    assert(m_function->nonlocals().size() == values.size());
+    assert(m_function->closure_size() == values.size());
     Tuple closure(move(values));
     closure.write(m_closure.data());
 }
@@ -309,7 +309,7 @@ TypeInfo Closure::type_info() const
 
 Tuple Closure::closure() const
 {
-    Tuple closure{TypeInfo{m_function->nonlocals()}};
+    Tuple closure{TypeInfo{m_function->closure()}};
     closure.read(m_closure.data());
     return closure;
 }

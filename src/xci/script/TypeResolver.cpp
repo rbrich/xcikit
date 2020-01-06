@@ -330,15 +330,16 @@ public:
                     if (v.definition != nullptr) {
                         v.partial_index = v.definition->symbol()->index();
                     } else {
-                        SymbolTable& fn_symtab = m_function.symtab().add_child("<partial>");
+                        SymbolTable& fn_symtab = m_function.symtab().add_child("?/partial");
                         auto fn = make_unique<Function>(module(), fn_symtab);
                         v.partial_index = module().add_function(move(fn));
                     }
                     auto& fn = module().get_function(v.partial_index);
                     fn.signature() = *new_signature;
                     fn.signature().nonlocals.clear();
+                    fn.signature().partial.clear();
                     for (const auto& arg : m_call_args) {
-                        fn.add_nonlocal(TypeInfo{arg.type_info});
+                        fn.add_partial(TypeInfo{arg.type_info});
                     }
                 }
                 m_value_type = TypeInfo{new_signature};

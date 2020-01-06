@@ -101,10 +101,12 @@ private:
 
 struct Signature {
     std::vector<TypeInfo> nonlocals;
+    std::vector<TypeInfo> partial;
     std::vector<TypeInfo> params;
     TypeInfo return_type;
 
     void add_nonlocal(TypeInfo&& ti) { nonlocals.emplace_back(ti); }
+    void add_partial(TypeInfo&& ti) { partial.emplace_back(ti); }
     void add_parameter(TypeInfo&& ti) { params.emplace_back(ti); }
     void set_return_type(TypeInfo ti) { return_type = std::move(ti); }
 
@@ -112,8 +114,10 @@ struct Signature {
     void resolve_return_type(const TypeInfo& t);
 
     bool operator==(const Signature& rhs) const {
-        return params == rhs.params &&
-               return_type == rhs.return_type;
+        return params == rhs.params
+            && partial == rhs.partial
+            && nonlocals == rhs.nonlocals
+            && return_type == rhs.return_type;
     }
     bool operator!=(const Signature& rhs) const { return !(rhs == *this); }
 };

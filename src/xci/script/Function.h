@@ -86,13 +86,18 @@ public:
     void add_nonlocal(TypeInfo&& type_info);
     bool has_nonlocals() const { return !m_signature->nonlocals.empty(); }
     const std::vector<TypeInfo>& nonlocals() const { return m_signature->nonlocals; }
-    // return size of all nonlocals (whole closure) in bytes
-    size_t raw_size_of_nonlocals() const;
+    size_t raw_size_of_nonlocals() const;  // size of all nonlocals in bytes
     std::pair<size_t, TypeInfo> nonlocal_offset_and_type(Index idx) const;
 
-    // Nonlocals view - when set, use parent scope for COPY
-    void set_view() { m_view = true; }
-    bool has_view() const { return m_view; }
+    // partial call (bound args)
+    void add_partial(TypeInfo&& type_info);
+    const std::vector<TypeInfo>& partial() const { return m_signature->partial; }
+    size_t raw_size_of_partial() const;
+
+    // whole closure = nonlocals + partial
+    size_t raw_size_of_closure() const { return raw_size_of_nonlocals() + raw_size_of_partial(); }
+    size_t closure_size() const { return nonlocals().size() + partial().size(); }
+    std::vector<TypeInfo> closure() const;
 
     // true if this function is generic
     bool is_generic() const;
@@ -103,6 +108,10 @@ public:
         m_code.add(code); }
     size_t intrinsics() const { return m_intrinsics; }
     bool has_intrinsics() const { return m_intrinsics > 0; }
+
+    // number of EXECUTEs required to completely evaluate the function
+    void add_exec() { ++m_execs; }
+    size_t execs() const { return m_execs; }
 
     bool operator==(const Function& rhs) const;
 
@@ -123,8 +132,8 @@ private:
     ast::Block* m_ast = nullptr;
     // Counter for instructions from intrinsics
     size_t m_intrinsics = 0;
-    // Nonlocals view - when set, use parent scope for COPY
-    bool m_view = false;
+    // Counter for required EXECUTES to completely evaluate the function
+    size_t m_execs = 0;
 };
 
 

@@ -14,9 +14,11 @@ There are really two stacks:
             |   2nd local   |
             +---------------+
             |   1st local   |
-    base    +===============+ 
-            |   non-locals  |
-    (args)  +===============+ 
+    base    +===============+
+            | 1st non-local |
+            +---------------+
+            | 2nd non-local |
+    (args)  +===============+
             | 1st argument  |
             +---------------+
             | 2nd argument  |

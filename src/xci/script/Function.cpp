@@ -88,6 +88,27 @@ std::pair<size_t, TypeInfo> Function::nonlocal_offset_and_type(Index idx) const
 }
 
 
+void Function::add_partial(TypeInfo&& type_info)
+{
+    signature().add_partial(std::move(type_info));
+}
+
+
+size_t Function::raw_size_of_partial() const
+{
+    return std::accumulate(partial().begin(), partial().end(), 0,
+            [](size_t init, const TypeInfo& ti) { return init + ti.size(); });
+}
+
+
+std::vector<TypeInfo> Function::closure() const
+{
+    auto closure = nonlocals();
+    std::copy(partial().cbegin(), partial().cend(), std::back_inserter(closure));
+    return closure;
+}
+
+
 bool Function::is_generic() const
 {
     return ranges::any_of(signature().params, [](const TypeInfo& type_info) {

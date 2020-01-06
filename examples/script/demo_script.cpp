@@ -167,29 +167,28 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
                     }
                 }
                 if (ipos == f.code().end()) {
-                    cout << "---" << endl;
+                    cout << t.yellow() << "> --- RETURN ---" << t.normal() << endl;
                     codelines_stack.top().push_back(9999);
-                } else {
-                    // pause
-                    erase = true;
-                    for (;;) {
-                        cout << "dbg> " << flush;
-                        string cmd;
-                        getline(cin, cmd);
-                        if (cmd == "n" || cmd.empty()) {
-                            break;
-                        } else if (cmd == "s") {
-                            cout << "Stack content:" << endl;
-                            cout << machine.stack() << endl;
-                            erase = false;
-                        } else {
-                            cout << "Help:\nn    next step\ns    show stack" << endl;
-                            erase = false;
-                        }
-                    }
-                    if (erase)
-                        cout << t.move_up(1);
                 }
+                // pause
+                erase = true;
+                for (;;) {
+                    cout << "dbg> " << flush;
+                    string cmd;
+                    getline(cin, cmd);
+                    if (cmd == "n" || cmd.empty()) {
+                        break;
+                    } else if (cmd == "s") {
+                        cout << "Stack content:" << endl;
+                        cout << machine.stack() << endl;
+                        erase = false;
+                    } else {
+                        cout << "Help:\nn    next step\ns    show stack" << endl;
+                        erase = false;
+                    }
+                }
+                if (erase)
+                    cout << t.move_up(1);
             });
         }
         machine.call(func, [&](const Value& invoked) {
