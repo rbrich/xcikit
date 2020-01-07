@@ -109,10 +109,6 @@ public:
     size_t intrinsics() const { return m_intrinsics; }
     bool has_intrinsics() const { return m_intrinsics > 0; }
 
-    // number of EXECUTEs required to completely evaluate the function
-    void add_exec() { ++m_execs; }
-    size_t execs() const { return m_execs; }
-
     bool operator==(const Function& rhs) const;
 
     friend std::ostream& operator<<(std::ostream& os, const Function& v);
@@ -132,8 +128,6 @@ private:
     ast::Block* m_ast = nullptr;
     // Counter for instructions from intrinsics
     size_t m_intrinsics = 0;
-    // Counter for required EXECUTES to completely evaluate the function
-    size_t m_execs = 0;
 };
 
 

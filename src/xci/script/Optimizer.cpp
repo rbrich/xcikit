@@ -94,6 +94,7 @@ public:
             case Symbol::TypeName:
             case Symbol::TypeVar:
             case Symbol::Function:
+            case Symbol::Fragment:
                 break;
         }
     }

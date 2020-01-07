@@ -21,8 +21,6 @@
 #include "TypeResolver.h"
 #include "NonlocalResolver.h"
 #include "Stack.h"
-#include <xci/core/format.h>
-#include <xci/core/Vfs.h>
 #include <xci/compat/macros.h>
 
 #include <range/v3/view/reverse.hpp>
@@ -176,6 +174,10 @@ public:
                 break;
             }
             case Symbol::Nonlocal: {
+                if (!m_function.partial().empty() && sym.ref()->type() == Symbol::Fragment) {
+                    break;
+                }
+
                 // Non-locals are captured in closure - read from closure
                 auto ofs_ti = m_function.nonlocal_offset_and_type(sym.index());
                 // COPY <frame_offset>
@@ -284,19 +286,17 @@ public:
 
             // generate inner code
             compile_subroutine(fn, *v.callable);
-            for (size_t i = 0; i < fn.execs(); ++i) {
-                // EXECUTE
-                fn.code().add_opcode(Opcode::Execute);
+            for (const auto& nl : fn.nonlocals()) {
+                if (nl.is_callable() && nl.signature().has_closure()) {
+                    // DEC_REF
+                    nl.foreach_heap_slot([&fn](size_t offset) {
+                        fn.code().add_opcode(Opcode::DecRef, offset);
+                    });
+                    // EXECUTE
+                    fn.code().add_opcode(Opcode::Execute);
+                }
             }
 
-            /*if (v.definition == nullptr) {
-                // MAKE_CLOSURE <function_idx>
-                code().add_opcode(Opcode::MakeClosure, v.partial_index);
-                // COPY <frame_offset> <size>
-                code().add_opcode(Opcode::Copy, 0, v.partial_size);
-                // EXECUTE
-                code().add_opcode(Opcode::Execute);
-            }*/
             make_closure(fn);
             if (!v.definition) {
                 // MAKE_CLOSURE <function_idx>

@@ -289,6 +289,7 @@ public:
             case Symbol::TypeVar:
                 // TODO
                 return;
+            case Symbol::Fragment:
             case Symbol::Unresolved:
                 UNREACHABLE;
         }

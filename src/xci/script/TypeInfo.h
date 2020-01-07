@@ -110,6 +110,8 @@ struct Signature {
     void add_parameter(TypeInfo&& ti) { params.emplace_back(ti); }
     void set_return_type(TypeInfo ti) { return_type = std::move(ti); }
 
+    bool has_closure() const { return !nonlocals.empty() || !partial.empty(); }
+
     // Check return type matches and set it to concrete type if it's generic.
     void resolve_return_type(const TypeInfo& t);
 

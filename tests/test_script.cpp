@@ -259,8 +259,7 @@ TEST_CASE( "Partial function call", "[script][interpreter]" )
     check_interpreter("f=fun x:Int {add x}; f 2 1", "3");
     check_interpreter("f=fun x:Int {add 3}; f 2 1", "4");
     check_interpreter("f=fun x:Int y:Int z:Int { (x - y) * z}; g=fun x1:Int { f 3 x1 }; g 4 5", "-5");
-
-//    check_interpreter("f=fun x:Int y:Int { g=fun x1:Int z1:Int { (y - x1) / z1 }; g x }; f 1 10 2", "5");
+    check_interpreter("f=fun x:Int y:Int { g=fun x1:Int z1:Int { (y - x1) / z1 }; g x }; f 1 10 3", "3");
 //    check_interpreter("f = fun a:Int b:Int { "
 //                      "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 - b}; "
 //                      "w=fun b1:Int c1:Int {a * u b1 / v c1}; "
