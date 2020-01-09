@@ -9,10 +9,10 @@
 
 #include "context.h"
 
-namespace xci::script::repl {
+namespace xci::script::tool {
 
 void parse_command(const std::string& line, Context& ctx);
 
-}  // namespace xci::script::repl
+}  // namespace xci::script::tool
 
 #endif // include guard

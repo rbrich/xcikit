@@ -239,12 +239,12 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                 auto rhs = m_stack.pull<value::Int32>();
                 auto idx = rhs.value();
                 auto len = lhs.length();
+                lhs.decref();
                 if (idx < 0)
                     idx += len;
                 if (idx < 0 || (size_t) idx >= len)
                     throw IndexOutOfBounds(idx, len);
                 m_stack.push(*lhs.get(idx));
-                lhs.decref();
                 break;
             }
 

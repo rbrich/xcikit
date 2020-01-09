@@ -13,8 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "repl/cmd_parser.h"
-#include "repl/context.h"
+#include "cmd_parser.h"
+#include "context.h"
+#include "BytecodeTracer.h"
 
 #include <xci/script/Interpreter.h>
 #include <xci/script/Error.h>
@@ -33,13 +34,12 @@
 
 #include <iostream>
 #include <vector>
-#include <stack>
 #include <algorithm>
 #include <regex>
 
 using namespace xci::core;
 using namespace xci::script;
-using namespace xci::script::repl;
+using namespace xci::script::tool;
 using Replxx = replxx::Replxx;
 using std::string;
 using std::cin;
@@ -134,78 +134,9 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
         if ((opts.compiler_flags & Compiler::PPMask) != 0)
             return false;
 
-        stack<size_t> codelines_stack;
-        bool erase = true;
-        if (opts.print_bytecode || opts.trace_bytecode) {
-            machine.set_call_enter_cb([&erase, &codelines_stack, &machine](const Function& f) {
-                auto frame = machine.stack().n_frames() - 1;
-                cout << "[" << frame << "] " << f.name() << " " << f.signature() << endl;
-                codelines_stack.emplace(0);
-                for (auto it = f.code().begin(); it != f.code().end(); it++) {
-                    ++ codelines_stack.top();
-                    cout << ' ' << f.dump_instruction_at(it) << endl;
-                }
-                erase = true;
-            });
-            if (opts.trace_bytecode) {
-                machine.set_call_exit_cb([&t, &erase, &codelines_stack, &machine](const Function&) {
-                    auto frame = machine.stack().n_frames() - 1;
-                    if (frame == 0) {
-                        cout << t.clear_screen_down();
-                    } else {
-                        --frame;
-                        const auto& f = *machine.stack().frame().function;
-                        cout << "[" << frame << "] " << f.name() << " " << f.signature() << endl;
-                        for (auto it = f.code().begin(); it != f.code().end(); it++) {
-                            cout << ' ' << f.dump_instruction_at(it) << endl;
-                        }
-                        erase = true;
-                    }
-                    codelines_stack.pop();
-                });
-          }
-        }
-        if (opts.trace_bytecode) {
-            machine.set_bytecode_trace_cb([&t, &erase, &codelines_stack, &machine]
-            (const Function& f, Code::const_iterator ipos) {
-                if (erase) {
-                    cout << t.move_up(codelines_stack.top());
-                } else {
-                    auto frame = codelines_stack.size() - 1;
-                    cout << "[" << frame << "] " << f.name() << " " << f.signature() << endl;
-                }
-                for (auto it = f.code().begin(); it != f.code().end(); it++) {
-                    if (it == ipos) {
-                        cout << t.yellow() << '>' << f.dump_instruction_at(it) << t.normal() << endl;
-                    } else {
-                        cout << ' ' << f.dump_instruction_at(it) << endl;
-                    }
-                }
-                if (ipos == f.code().end()) {
-                    cout << t.yellow() << "> --- RETURN ---" << t.normal() << endl;
-                    ++ codelines_stack.top();
-                }
-                // pause
-                erase = true;
-                for (;;) {
-                    cout << "dbg> " << flush;
-                    string cmd;
-                    getline(cin, cmd);
-                    if (cmd == "n" || cmd.empty()) {
-                        break;
-                    } else if (cmd == "s") {
-                        cout << "Stack content:" << endl;
-                        cout << machine.stack() << endl;
-                        erase = false;
-                    } else {
-                        cout << "Help:\nn    next step\ns    show stack" << endl;
-                        erase = false;
-                    }
-                }
-                if (erase)
-                    cout << t.move_up(1);
-            });
-        }
+        BytecodeTracer tracer(machine, t);
+        tracer.setup(opts.print_bytecode, opts.trace_bytecode);
+
         machine.call(func, [&](const Value& invoked) {
             if (!invoked.is_void()) {
                 cout << t.bold().yellow() << invoked << t.normal() << endl;
@@ -402,7 +333,7 @@ int main(int argc, char* argv[])
 
         if (line[0] == '.') {
             // control commands
-            repl::parse_command(line, context());
+            tool::parse_command(line, context());
             continue;
         }
 
