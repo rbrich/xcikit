@@ -274,8 +274,17 @@ public:
                 auto& nl_sym = *sym.ref();
                 auto* nl_func = sym.ref().symtab()->function();
                 assert(nl_func != nullptr);
-                assert(nl_sym.type() == Symbol::Parameter);   // non-local must reference a parameter
-                m_value_type = nl_func->get_parameter(nl_sym.index());
+                switch (nl_sym.type()) {
+                    case Symbol::Parameter:
+                        m_value_type = nl_func->get_parameter(nl_sym.index());
+                        break;
+                    case Symbol::Function:
+                        m_value_type = TypeInfo(nl_func->module().get_function(nl_sym.index()).signature_ptr());
+                        break;
+                    default:
+                        assert(!"non-local must reference a parameter or a function");
+                        return;
+                }
                 m_function.add_nonlocal(TypeInfo{m_value_type});
                 break;
             }

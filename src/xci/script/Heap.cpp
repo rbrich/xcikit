@@ -30,8 +30,7 @@ void HeapSlot::incref() const
 {
     if (m_slot == nullptr)
         return;
-    auto refs = bit_read<uint32_t>(m_slot);
-    refs++;
+    const auto refs = bit_read<uint32_t>(m_slot) + 1;
     memcpy(m_slot, &refs, sizeof(refs));
 }
 
@@ -40,41 +39,29 @@ void HeapSlot::decref() const
 {
     if (m_slot == nullptr)
         return;
-    auto refs = bit_read<uint32_t>(m_slot);;
-    refs--;
+    const auto refs = bit_read<uint32_t>(m_slot) - 1;
     memcpy(m_slot, &refs, sizeof(refs));
 }
 
 
-void HeapSlot::decref_gc()
+uint32_t HeapSlot::refcount() const
+{
+    if (m_slot == nullptr)
+        return 0;
+    return bit_read<uint32_t>(m_slot);
+}
+
+
+void HeapSlot::gc()
 {
     if (m_slot == nullptr)
         return;
-    auto refs = bit_read<uint32_t>(m_slot);
-    refs--;
+    const auto refs = bit_read<uint32_t>(m_slot);
     if (refs == 0) {
         delete[] m_slot;
         m_slot = nullptr;
         return;
     }
-    memcpy(m_slot, &refs, sizeof(refs));
-}
-
-
-void HeapSlot::reset(byte* slot)
-{
-    decref_gc();
-    m_slot = slot;
-    incref();
-}
-
-
-void HeapSlot::reset(size_t size)
-{
-    decref_gc();
-    uint32_t refs = 1;
-    m_slot = new byte[sizeof(refs) + size];
-    memcpy(m_slot, &refs, sizeof(refs));
 }
 
 

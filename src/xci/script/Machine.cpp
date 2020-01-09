@@ -244,6 +244,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                 if (idx < 0 || (size_t) idx >= len)
                     throw IndexOutOfBounds(idx, len);
                 m_stack.push(*lhs.get(idx));
+                lhs.decref();
                 break;
             }
 
@@ -261,6 +262,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                     m_stack.push(*nl);
                 }
                 call_fun(o.function());
+                o.decref();
                 break;
             }
 
@@ -268,6 +270,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                 auto arg = *it++;
                 auto& o = cur_fun->module().get_value(arg);
                 m_stack.push(o);
+                o.incref();
                 break;
             }
 
@@ -322,43 +325,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                 call_fun(fn);
                 break;
             }
-/*
-            case Opcode::Partial0:
-            case Opcode::Partial1:
-            case Opcode::Partial: {
-                // get the function's module
-                Module* module;
-                if (opcode == Opcode::Partial0) {
-                    module = &cur_fun->module();
-                } else {
-                    size_t idx;
-                    if (opcode == Opcode::Partial1) {
-                        idx = 0;
-                    } else {
-                        // read arg1
-                        idx = *it++;
-                    }
-                    module = &cur_fun->module().get_imported_module(idx);
-                    // get function
-                    auto fn_idx = *it++;
-                    auto& fn = module->get_function(fn_idx);
-                    // pull partial args
-                    auto partial_size = *it++;
-                    Values closure;
-                    closure.reserve(partial_size);
-                    for (const auto & ti : fn.parameters()) {
-                        assert(ti.size() <= partial_size);
-                        closure.add(m_stack.pull(ti));
-                        partial_size -= ti.size();
-                        if (partial_size == 0)
-                            break;
-                    }
-                    // push closure
-                    m_stack.push(value::Lambda{fn, move(closure)});
-                }
-                break;
-            }
-*/
+
             case Opcode::MakeList: {
                 const auto num_elems = *it++;
                 const auto size_of_elem = *it++;
@@ -368,7 +335,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                 std::memcpy(slot.data(), m_stack.data(), total_size);
                 m_stack.drop(0, total_size);
                 // push list handle back to stack
-                m_stack.push(value::List{{}, num_elems, slot});
+                m_stack.push(value::List{TypeInfo{Type::Int32}, num_elems, move(slot)});
                 break;
             }
 
@@ -401,6 +368,9 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                 auto arg = *it++;
                 HeapSlot slot {static_cast<byte*>(m_stack.get_ptr(arg))};
                 slot.decref();
+                // needed for stack dump:
+                if (slot.refcount() == 0)
+                    m_stack.clear_ptr(arg);
                 break;
             }
 

@@ -68,6 +68,7 @@ void check_interpreter(const string& input, const string& expected_output)
             os << invoked << '\n';
         });
         os << *result;
+        result->decref();
     } catch (const Error& e) {
         INFO(e.what());
         INFO(e.detail());
@@ -156,13 +157,16 @@ TEST_CASE( "Stack push/pull", "[script][machine]" )
     CHECK(stack.size() == 1);
     stack.push(value::Int32{73});
     CHECK(stack.size() == 1+4);
-    stack.push(value::String{"hello"});
+    value::String str{"hello"};
+    stack.push(str);
     CHECK(stack.size() == 1+4 + sizeof(size_t) + sizeof(void*));
     CHECK(stack.n_values() == 3);
 
     CHECK(stack.pull<value::String>().value() == "hello");
     CHECK(stack.pull<value::Int32>().value() == 73);
     CHECK(stack.pull<value::Bool>().value() == true);  // NOLINT
+
+    str.decref();
 }
 
 
@@ -260,10 +264,10 @@ TEST_CASE( "Partial function call", "[script][interpreter]" )
     check_interpreter("f=fun x:Int {add 3}; f 2 1", "4");
     check_interpreter("f=fun x:Int y:Int z:Int { (x - y) * z}; g=fun x1:Int { f 3 x1 }; g 4 5", "-5");
     check_interpreter("f=fun x:Int y:Int { g=fun x1:Int z1:Int { (y - x1) / z1 }; g x }; f 1 10 3", "3");
-//    check_interpreter("f = fun a:Int b:Int { "
-//                      "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 - b}; "
-//                      "w=fun b1:Int c1:Int {a * u b1 / v c1}; "
-//                      "w b }; f 1 2 3", "3");
+    check_interpreter("f = fun a:Int b:Int { "
+                      "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 - b}; "
+                      "w=fun b1:Int c1:Int {a * u b1 / v c1}; "
+                      "w b }; f 1 2 3", "3");
 //    check_interpreter("f = fun a:Int { "
 //                      "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 + a}; "
 //                      "fun b1:Int c1:Int {a + u b1 + v c1} }; f 1 2 3", "8");

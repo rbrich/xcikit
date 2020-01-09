@@ -68,7 +68,7 @@ public:
                   + m_function.raw_size_of_partial();
         if (drop > 0) {
             Stack::StackRel pos = skip;
-            for (const auto& ti : ranges::views::reverse(m_function.nonlocals())) {
+            for (const auto& ti : m_function.nonlocals()) {
                 ti.foreach_heap_slot([this, pos](size_t offset) {
                     // DEC_REF <addr in nonlocals>
                     m_function.code().add_opcode(Opcode::DecRef, pos + offset);
@@ -289,9 +289,9 @@ public:
             for (const auto& nl : fn.nonlocals()) {
                 if (nl.is_callable() && nl.signature().has_closure()) {
                     // DEC_REF
-                    nl.foreach_heap_slot([&fn](size_t offset) {
-                        fn.code().add_opcode(Opcode::DecRef, offset);
-                    });
+//                    nl.foreach_heap_slot([&fn](size_t offset) {
+//                        fn.code().add_opcode(Opcode::DecRef, offset);
+//                    });
                     // EXECUTE
                     fn.code().add_opcode(Opcode::Execute);
                 }
@@ -343,6 +343,9 @@ public:
     void visit(ast::Function& v) override {
         // compile body
         Function& func = module().get_function(v.index);
+        if (func.has_ast())
+            return;  // generic function -> compiled on call
+
         m_compiler.compile_block(func, v.body);
         if (func.symtab().parent() != &m_function.symtab())
             return;  // instance function -> just compile it
@@ -399,8 +402,7 @@ private:
     void make_closure(Function& func) {
         // m_function is parent
         assert(&m_function.symtab() == func.symtab().parent());
-        auto parent_closure_size = m_function.raw_size_of_closure();
-        //auto parent_offset = func.raw_size_of_nonlocals() + func.raw_size_of_parameters();
+        auto closure_size = m_function.raw_size_of_closure();
         // make closure
         for (const auto& sym : ranges::views::reverse(func.symtab())) {
             if (sym.type() == Symbol::Nonlocal) {
@@ -424,7 +426,7 @@ private:
                                 // COPY <frame_offset> <size>
                                 const auto& ti = m_function.get_parameter(psym.index());
                                 code().add_opcode(Opcode::Copy,
-                                        m_function.parameter_offset(psym.index()) + parent_closure_size,
+                                        m_function.parameter_offset(psym.index()) + closure_size,
                                         ti.size());
                                 ti.foreach_heap_slot([this](size_t offset) {
                                     code().add_opcode(Opcode::IncRef, offset);

@@ -264,15 +264,15 @@ private:
             // lookup in this and parent scopes
             size_t depth = 0;
             for (auto p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
-//                if (p_symtab->name() == name && p_symtab->parent() != nullptr) {
-//                    // recursion - unwrap the function
-//                    auto symptr = p_symtab->parent()->find_by_name(name);
-//                    return symtab().add({symptr, Symbol::Function, depth + 1});
-//                }
+                if (p_symtab->name() == name && p_symtab->parent() != nullptr) {
+                    // recursion - unwrap the function
+                    auto symptr = p_symtab->parent()->find_by_name(name);
+                    return symtab().add({symptr, Symbol::Function, depth + 1});
+                }
 
                 auto symptr = p_symtab->find_by_name(name);
                 if (symptr) {
-                    if (depth > 0 && symptr->type() != Symbol::Function) {
+                    if (depth > 0) {
                         // add Nonlocal symbol
                         return symtab().add({symptr, Symbol::Nonlocal, depth});
                     } else {

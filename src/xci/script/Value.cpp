@@ -147,12 +147,18 @@ String& String::operator=(String&& rhs) noexcept
 }
 
 
+std::unique_ptr<Value> String::make_copy() const
+{
+    incref();
+    return std::make_unique<String>(m_size, m_value);
+}
+
+
 void String::write(byte* buffer) const
 {
     const byte* slot = m_value.slot();
     std::memcpy(buffer, &slot, sizeof(slot));
     std::memcpy(buffer + sizeof(slot), &m_size, sizeof(m_size));
-    m_value.incref();
 }
 
 
@@ -161,7 +167,7 @@ void String::read(const byte* buffer)
     byte *slot = nullptr;
     std::memcpy(&slot, buffer, sizeof(slot));
     std::memcpy(&m_size, buffer + sizeof(slot), sizeof(m_size));
-    m_value.reset(slot);
+    m_value = HeapSlot{slot};
 }
 
 
@@ -172,7 +178,7 @@ List::List(const Values& values)
         return;  // default initialized empty list
     m_elem_type = values[0].type_info();
     auto elem_size = m_elem_type.size();
-    m_elements.reset(m_length * elem_size);
+    m_elements = HeapSlot{m_length * elem_size};
     auto* dataptr = m_elements.data();
     for (const auto& value : values) {
         if (value->type_info() != m_elem_type)
@@ -182,12 +188,18 @@ List::List(const Values& values)
     }
 }
 
+std::unique_ptr<Value> List::make_copy() const
+{
+    incref();
+    return std::make_unique<List>(m_elem_type, m_length, m_elements);
+}
+
+
 void List::write(byte* buffer) const
 {
     const byte* slot = m_elements.slot();
     std::memcpy(buffer, &slot, sizeof(slot));
     std::memcpy(buffer + sizeof(slot), &m_length, sizeof(m_length));
-    m_elements.incref();
 }
 
 
@@ -196,7 +208,7 @@ void List::read(const byte* buffer)
     byte *slot = nullptr;
     std::memcpy(&slot, buffer, sizeof(slot));
     std::memcpy(&m_length, buffer + sizeof(slot), sizeof(m_length));
-    m_elements.reset(slot);
+    m_elements = HeapSlot{slot};
 }
 
 
@@ -277,6 +289,7 @@ Closure::Closure(Function& v, Values&& values)
 
 std::unique_ptr<Value> Closure::make_copy() const
 {
+    incref();
     return std::make_unique<Closure>(*m_function, m_closure);
 }
 
@@ -286,7 +299,6 @@ void Closure::write(byte* buffer) const
     const byte* slot = m_closure.slot();
     std::memcpy(buffer, &slot, sizeof(slot));
     std::memcpy(buffer + sizeof(slot), &m_function, sizeof(m_function));
-    m_closure.incref();
 }
 
 
@@ -295,7 +307,7 @@ void Closure::read(const byte* buffer)
     byte *slot = nullptr;
     std::memcpy(&slot, buffer, sizeof(slot));
     std::memcpy(&m_function, buffer + sizeof(slot), sizeof(m_function));
-    m_closure.reset(slot);
+    m_closure = HeapSlot{slot};
 }
 
 

@@ -62,7 +62,6 @@ public:
             throw StackUnderflow{};
         // read value from stack
         v.read(&m_stack[m_stack_pointer]);
-        v.decref();
         m_stack_pointer += s;
         // check type on stack (allow casts - only size have to match)
         assert(v.type_info().size() == m_stack_types.back().size());
@@ -72,6 +71,7 @@ public:
 
     std::unique_ptr<Value> get(StackRel pos, const TypeInfo& ti) const;
     void* get_ptr(StackRel pos) const;
+    void clear_ptr(StackRel pos);
 
     // Copy `size` bytes from `addr` to top of the stack
     void copy(StackRel pos, size_t size);
