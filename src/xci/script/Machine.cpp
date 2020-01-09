@@ -288,17 +288,16 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
             }
 
             case Opcode::Copy: {
-                auto arg1 = *it++;
-                auto size = *it++; // arg2
-                auto addr = m_stack.to_rel(base) + arg1;
+                const auto addr = *it++ + m_stack.to_rel(base); // arg1 + base
+                const auto size = *it++; // arg2
                 m_stack.copy(addr, size);
                 break;
             }
 
             case Opcode::Drop: {
-                auto arg1 = *it++;
-                auto arg2 = *it++;
-                m_stack.drop(arg1, arg2);
+                const auto addr = *it++;
+                const auto size = *it++;
+                m_stack.drop(addr, size);
                 break;
             }
 

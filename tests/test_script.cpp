@@ -216,6 +216,7 @@ TEST_CASE( "Types", "[script][interpreter]" )
     // check_interpreter("f : Int Int -> Int = add ; f 1 2",        "3");
 }
 
+
 TEST_CASE( "Blocks", "[script][interpreter]" )
 {
     // blocks are evaluated and return a value
@@ -229,6 +230,7 @@ TEST_CASE( "Blocks", "[script][interpreter]" )
     check_interpreter("b = { a = 1; a }; b", "1");
     check_interpreter("b:Int = {1+2}; b", "3");
 }
+
 
 TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
 {
@@ -254,6 +256,7 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
                       "w b c }; f 1 2 3", "9");
 }
 
+
 TEST_CASE( "Partial function call", "[script][interpreter]" )
 {
     // partial call: `add 1` returns a lambda which takes single argument
@@ -268,10 +271,12 @@ TEST_CASE( "Partial function call", "[script][interpreter]" )
                       "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 - b}; "
                       "w=fun b1:Int c1:Int {a * u b1 / v c1}; "
                       "w b }; f 1 2 3", "3");
-//    check_interpreter("f = fun a:Int { "
-//                      "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 + a}; "
-//                      "fun b1:Int c1:Int {a + u b1 + v c1} }; f 1 2 3", "8");
+    // [closure.ys] return closure with captured closures, propagate arguments into the closure
+    check_interpreter("f = fun a:Int { "
+                      "u=fun b2:Int {a / b2}; v=fun c2:Int {c2 - a}; "
+                      "fun b1:Int c1:Int {a + u b1 + v c1} }; f 4 2 3", "5");
 }
+
 
 TEST_CASE( "Generic functions", "[script][interpreter]" )
 {
@@ -282,6 +287,7 @@ TEST_CASE( "Generic functions", "[script][interpreter]" )
     // generic type declaration
     check_interpreter("f = fun x:T y:T -> Bool with (Eq T) { x == y }; f 1 2", "false");
 }
+
 
 TEST_CASE( "Lexical scope", "[script][interpreter]" )
 {

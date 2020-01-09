@@ -288,10 +288,6 @@ public:
             compile_subroutine(fn, *v.callable);
             for (const auto& nl : fn.nonlocals()) {
                 if (nl.is_callable() && nl.signature().has_closure()) {
-                    // DEC_REF
-//                    nl.foreach_heap_slot([&fn](size_t offset) {
-//                        fn.code().add_opcode(Opcode::DecRef, offset);
-//                    });
                     // EXECUTE
                     fn.code().add_opcode(Opcode::Execute);
                 }

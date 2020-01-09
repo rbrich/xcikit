@@ -106,7 +106,7 @@ std::ostream& operator<<(std::ostream& os, const Value& o)
         void visit(const value::Closure& v) override {
             auto closure = v.closure();
             const auto& nonlocals = closure.values();
-            os << "<function> " << v.function().signature() << " (";
+            os << v.function().name() << " (";
             for (const auto& item : nonlocals) {
                 os << *item;
                 if (item.get() != nonlocals.back().get())
@@ -149,7 +149,6 @@ String& String::operator=(String&& rhs) noexcept
 
 std::unique_ptr<Value> String::make_copy() const
 {
-    incref();
     return std::make_unique<String>(m_size, m_value);
 }
 
@@ -190,7 +189,6 @@ List::List(const Values& values)
 
 std::unique_ptr<Value> List::make_copy() const
 {
-    incref();
     return std::make_unique<List>(m_elem_type, m_length, m_elements);
 }
 
@@ -289,7 +287,6 @@ Closure::Closure(Function& v, Values&& values)
 
 std::unique_ptr<Value> Closure::make_copy() const
 {
-    incref();
     return std::make_unique<Closure>(*m_function, m_closure);
 }
 

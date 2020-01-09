@@ -377,7 +377,10 @@ public:
 
     void visit(ast::Function& v) override {
         // specified type (left hand side of '=')
-        TypeInfo specified_type = move(m_type_info);
+        TypeInfo specified_type;
+        if (v.definition) {
+            specified_type = move(m_type_info);
+        }
         // lambda type (right hand side of '=')
         v.type.apply(*this);
         // fill in / check type from specified type
@@ -462,7 +465,7 @@ public:
         else
             m_type_info = TypeInfo{Type::Unknown};
         signature->set_return_type(m_type_info);
-        m_type_info = TypeInfo{signature};
+        m_type_info = TypeInfo{std::move(signature)};
     }
 
     void visit(ast::ListType& t) final {

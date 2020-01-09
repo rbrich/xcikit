@@ -159,11 +159,13 @@ std::ostream& operator<<(std::ostream& os, const Stack& v)
     auto frame = v.n_frames() - 1;
     auto base = v.to_rel(v.frame().base);
     auto check_print_base = [&] {
-        if (base == pos) {
+        // print frame boundary (only on exact match, note that
+        // it may point to middle of a value after DROP)
+        if (base == pos)
             cout << " --- ---  (frame " << frame << ")" << endl;
-            if (frame > 0)
-                base = v.to_rel(v.frame(--frame).base);
-        }
+        // recompute base, frame for following stack values
+        if (base <= pos && frame > 0)
+            base = v.to_rel(v.frame(--frame).base);
     };
     // header
     cout << right << setw(4) << "pos" << setw(4) << "siz"

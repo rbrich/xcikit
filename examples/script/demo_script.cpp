@@ -134,31 +134,46 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
         if ((opts.compiler_flags & Compiler::PPMask) != 0)
             return false;
 
-        stack<vector<size_t>> codelines_stack;
+        stack<size_t> codelines_stack;
+        bool erase = true;
         if (opts.print_bytecode || opts.trace_bytecode) {
-            machine.set_call_enter_cb([&codelines_stack](const Function& f) {
-                cout << "[" << codelines_stack.size() << "] " << f.signature() << endl;
-                codelines_stack.emplace();
+            machine.set_call_enter_cb([&erase, &codelines_stack, &machine](const Function& f) {
+                auto frame = machine.stack().n_frames() - 1;
+                cout << "[" << frame << "] " << f.name() << " " << f.signature() << endl;
+                codelines_stack.emplace(0);
                 for (auto it = f.code().begin(); it != f.code().end(); it++) {
-                    codelines_stack.top().push_back(it - f.code().begin());
+                    ++ codelines_stack.top();
                     cout << ' ' << f.dump_instruction_at(it) << endl;
                 }
+                erase = true;
             });
-            machine.set_call_exit_cb([&t, &codelines_stack, &opts](const Function& function) {
-                if (opts.trace_bytecode) {
-                    cout
-                        << t.move_up(codelines_stack.top().size() + 1)
-                        << t.clear_screen_down();
-                }
-                codelines_stack.pop();
-            });
+            if (opts.trace_bytecode) {
+                machine.set_call_exit_cb([&t, &erase, &codelines_stack, &machine](const Function&) {
+                    auto frame = machine.stack().n_frames() - 1;
+                    if (frame == 0) {
+                        cout << t.clear_screen_down();
+                    } else {
+                        --frame;
+                        const auto& f = *machine.stack().frame().function;
+                        cout << "[" << frame << "] " << f.name() << " " << f.signature() << endl;
+                        for (auto it = f.code().begin(); it != f.code().end(); it++) {
+                            cout << ' ' << f.dump_instruction_at(it) << endl;
+                        }
+                        erase = true;
+                    }
+                    codelines_stack.pop();
+                });
+          }
         }
-        bool erase = true;
         if (opts.trace_bytecode) {
             machine.set_bytecode_trace_cb([&t, &erase, &codelines_stack, &machine]
             (const Function& f, Code::const_iterator ipos) {
-                if (erase)
-                    cout << t.move_up(codelines_stack.top().size());
+                if (erase) {
+                    cout << t.move_up(codelines_stack.top());
+                } else {
+                    auto frame = codelines_stack.size() - 1;
+                    cout << "[" << frame << "] " << f.name() << " " << f.signature() << endl;
+                }
                 for (auto it = f.code().begin(); it != f.code().end(); it++) {
                     if (it == ipos) {
                         cout << t.yellow() << '>' << f.dump_instruction_at(it) << t.normal() << endl;
@@ -168,7 +183,7 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
                 }
                 if (ipos == f.code().end()) {
                     cout << t.yellow() << "> --- RETURN ---" << t.normal() << endl;
-                    codelines_stack.top().push_back(9999);
+                    ++ codelines_stack.top();
                 }
                 // pause
                 erase = true;
@@ -199,18 +214,25 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
 
         // returned value of last statement
         auto result = machine.stack().pull(func.effective_return_type());
-        auto result_name = "_" + std::to_string(input_number);
-        if (!result->is_void()) {
-            cout << t.bold().magenta() << result_name
-                 << t.normal() << " = "
-                 << t.bold() << *result << t.normal() << endl;
+        if (input_number != -1) {
+            // REPL mode
+            auto result_name = "_" + std::to_string(input_number);
+            if (!result->is_void()) {
+                cout << t.bold().magenta() << result_name << " = "
+                     << t.normal()
+                     << t.bold() << *result << t.normal() << endl;
+            }
+            // save result as static value `_<N>` in the module
+            auto result_idx = module->add_value(std::move(result));
+            module->symtab().add({result_name, Symbol::Value, result_idx});
+
+            context().modules.push_back(move(module));
+        } else {
+            // single input mode
+            if (!result->is_void()) {
+                cout << t.bold() << *result << t.normal() << endl;
+            }
         }
-
-        // save result as static value `_<N>` in the module
-        auto result_idx = module->add_value(std::move(result));
-        module->symtab().add({result_name, Symbol::Value, result_idx});
-
-        context().modules.push_back(move(module));
         return true;
     } catch (const Error& e) {
         if (!e.file().empty())
@@ -363,7 +385,7 @@ int main(int argc, char* argv[])
     while (!context().done) {
         const char* input;
         do {
-            input = rx.input(t.format("{green}_{}> {normal}", input_number));
+            input = rx.input(t.format("{green}_{} = {normal}", input_number));
         } while (input == nullptr && errno == EAGAIN);
 
         if (input == nullptr) {
