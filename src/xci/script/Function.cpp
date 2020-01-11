@@ -180,7 +180,11 @@ bool Function::operator==(const Function& rhs) const
            &m_symtab == &rhs.m_symtab &&
            *m_signature == *rhs.m_signature &&
            m_code == rhs.m_code &&
-           m_ast == rhs.m_ast;
+           m_kind == rhs.m_kind && (
+                m_kind == Kind::Native
+                    ? m_native == rhs.m_native
+                    : m_ast == rhs.m_ast
+           );
 }
 
 

@@ -6,6 +6,7 @@
 
 #include "NonlocalResolver.h"
 #include "Function.h"
+#include "Module.h"
 
 namespace xci::script {
 
@@ -56,7 +57,7 @@ public:
             case Symbol::Function: {
                 auto* symmod = symtab.module() == nullptr ? &module() : symtab.module();
                 auto& fn = symmod->get_function(sym.index());
-                if (fn.has_ast()) {
+                if (!fn.is_native() && fn.has_ast()) {
                     process_function(fn, *fn.ast());
                 }
                 break;
@@ -122,6 +123,7 @@ public:
             // create wrapping function for the closure
             SymbolTable& wfn_symtab = m_function.symtab().add_child(func.symtab().name() + "/closure");
             auto wfn = make_unique<Function>(module(), wfn_symtab);
+            wfn->set_kind(Function::Kind::Inline);
             wfn->set_signature(func.signature_ptr());
             auto wfn_index = module().add_function(move(wfn));
             v.definition->symbol()->set_index(wfn_index);
@@ -159,7 +161,7 @@ private:
                     sym = *sym.ref();
                 } else if (sym.depth() > 1) {
                     // not direct parent -> add intermediate Nonlocal
-                    auto ti = sym.ref().symtab()->function()->get_parameter(sym.ref()->index());
+                    auto ti = sym.ref().symtab()->function()->parameter(sym.ref()->index());
                     m_function.add_nonlocal(std::move(ti));
                     m_function.symtab().add({sym.ref(), Symbol::Nonlocal, sym.depth() - 1});
                 }

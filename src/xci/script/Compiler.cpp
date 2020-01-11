@@ -204,7 +204,7 @@ public:
                 assert(sym.depth() == 0);
                 // COPY <frame_offset> <size>
                 auto closure_size = m_function.raw_size_of_closure();
-                const auto& ti = m_function.get_parameter(sym.index());
+                const auto& ti = m_function.parameter(sym.index());
                 code().add_opcode(Opcode::Copy,
                         m_function.parameter_offset(sym.index()) + closure_size,
                         ti.size());
@@ -218,7 +218,7 @@ public:
                 if (symtab.module() == nullptr || symtab.module() == &module()) {
                     // specialization might not be compiled yet - compile it now
                     Function& func = module().get_function(sym.index());
-                    if (func.has_ast()) {
+                    if (!func.is_native() && func.has_ast()) {
                         m_compiler.compile_block(func, *func.ast());
                         func.set_ast(nullptr);
                     }
@@ -420,7 +420,7 @@ private:
                             }
                             case Symbol::Parameter: {
                                 // COPY <frame_offset> <size>
-                                const auto& ti = m_function.get_parameter(psym.index());
+                                const auto& ti = m_function.parameter(psym.index());
                                 code().add_opcode(Opcode::Copy,
                                         m_function.parameter_offset(psym.index()) + closure_size,
                                         ti.size());

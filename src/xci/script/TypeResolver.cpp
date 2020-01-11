@@ -276,7 +276,7 @@ public:
                 assert(nl_func != nullptr);
                 switch (nl_sym.type()) {
                     case Symbol::Parameter:
-                        m_value_type = nl_func->get_parameter(nl_sym.index());
+                        m_value_type = nl_func->parameter(nl_sym.index());
                         break;
                     case Symbol::Function:
                         m_value_type = TypeInfo(nl_func->module().get_function(nl_sym.index()).signature_ptr());
@@ -289,7 +289,7 @@ public:
                 break;
             }
             case Symbol::Parameter:
-                m_value_type = m_function.get_parameter(sym.index());
+                m_value_type = m_function.parameter(sym.index());
                 break;
             case Symbol::Value:
                 m_value_type = symtab.module()->get_value(sym.index()).type_info();
@@ -333,9 +333,9 @@ public:
             if (new_signature->params.empty()) {
                 // effective type of zero-arg function is its return type
                 m_value_type = new_signature->return_type;
-                v.partial_size = 0;
+                v.partial_args = 0;
             } else {
-                if (v.partial_size != 0) {
+                if (v.partial_args != 0) {
                     // partial function call
                     if (v.definition != nullptr) {
                         v.partial_index = v.definition->symbol()->index();
@@ -413,6 +413,7 @@ public:
                 v.index = module().add_function(move(fspec));
             } else {
                 // mark as generic, uncompiled
+                fn.set_kind(Function::Kind::Generic);
                 fn.set_ast(&v.body);
             }
         } else {
@@ -523,7 +524,7 @@ private:
                     // collapse returned function, start consuming its params
                     res = std::make_unique<Signature>(res->return_type.signature());
                     ++v.wrapped_execs;
-                    v.partial_size = 0;
+                    v.partial_args = 0;
                 } else {
                     throw UnexpectedArgument(i, arg.source_info);
                 }
@@ -533,7 +534,7 @@ private:
                 throw UnexpectedArgumentType(i, res->params[0], arg.type_info, arg.source_info);
             }
             // consume next param
-            v.partial_size += arg.type_info.size();
+            ++ v.partial_args;
             res->params.erase(res->params.begin());
         }
         return res;

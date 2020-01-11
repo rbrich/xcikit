@@ -19,6 +19,7 @@
 #include "Value.h"
 #include "SymbolTable.h"
 #include "Class.h"
+#include "Function.h"
 #include <string>
 #include <cstdint>
 
@@ -33,6 +34,10 @@ public:
     Module() : Module("<module>") {}
 
     const std::string& name() const { return m_symtab.name(); }
+
+    Index add_native_function(std::string&& name,
+            std::vector<TypeInfo>&& params, TypeInfo&& retval,
+            Function::NativeWrapper native_fn);
 
     // Imported modules
     void add_imported_module(Module& module) { m_modules.push_back(&module); }

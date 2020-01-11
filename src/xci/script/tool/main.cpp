@@ -1,23 +1,13 @@
-// demo_script.cpp created on 2019-05-15, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// main.cpp created on 2019-05-15 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019, 2020 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#include "cmd_parser.h"
-#include "context.h"
+#include "Context.h"
 #include "BytecodeTracer.h"
+#include "ReplCommand.h"
 
-#include <xci/script/Interpreter.h>
 #include <xci/script/Error.h>
 #include <xci/script/Value.h>
 #include <xci/script/dump.h>
@@ -27,6 +17,7 @@
 #include <xci/core/log.h>
 #include <xci/core/format.h>
 #include <xci/core/string.h>
+#include <xci/core/sys.h>
 #include <xci/config.h>
 
 #include <docopt.h>
@@ -62,11 +53,6 @@ struct Options {
     uint32_t compiler_flags = 0;
 };
 
-Context& context()
-{
-    static Context ctx;
-    return ctx;
-}
 
 struct Environment {
     Vfs vfs;
@@ -80,21 +66,20 @@ struct Environment {
 bool evaluate(Environment& env, const string& line, const Options& opts, int input_number=-1)
 {
     TermCtl& t = context().term_out;
-    static Interpreter interpreter;
 
-    auto& parser = interpreter.parser();
-    auto& compiler = interpreter.compiler();
-    auto& machine = interpreter.machine();
+    auto& parser = context().interpreter.parser();
+    auto& compiler = context().interpreter.compiler();
+    auto& machine = context().interpreter.machine();
 
     try {
         if (context().modules.empty()) {
-            interpreter.configure(opts.compiler_flags);
+            context().interpreter.configure(opts.compiler_flags);
             context().modules.push_back(std::make_unique<BuiltinModule>());
 
             if (opts.with_std_lib) {
                 auto f = env.vfs.read_file("script/sys.ys");
                 auto content = f.content();
-                auto sys_module = interpreter.build_module("sys", content->string_view());
+                auto sys_module = context().interpreter.build_module("sys", content->string_view());
                 context().modules.push_back(move(sys_module));
             }
         }
@@ -168,7 +153,7 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
     } catch (const Error& e) {
         if (!e.file().empty())
             cout << e.file() << ": ";
-        cout << t.red().bold() << "Error: " << e.what() << t.normal() ;
+        cout << t.red().bold() << "Error: " << e.what() << t.normal();
         if (!e.detail().empty())
             cout << std::endl << t.magenta() << e.detail() << t.normal();
         cout << endl;
@@ -199,9 +184,10 @@ static std::pair<std::regex, cl> regex_color[] {
         {std::regex{"\\bfun\\b"}, cl::BRIGHTMAGENTA},
 
         // commands
-        {std::regex{"^ *\\.h(elp)? *$"}, cl::YELLOW},
-        {std::regex{"^ *\\.q(uit)? *$"}, cl::YELLOW},
-        {std::regex{"^ *\\.(dm|dump_module) *.*$"}, cl::YELLOW},
+        {std::regex{R"(^ *\.h(elp)?\b)"}, cl::YELLOW},
+        {std::regex{R"(^ *\.q(uit)?\b)"}, cl::YELLOW},
+        {std::regex{R"(^ *\.(dm|dump_module)\b)"}, cl::YELLOW},
+        {std::regex{R"(^ *\.(df|dump_function)\b)"}, cl::YELLOW},
 
         // numbers
         {std::regex{R"(\b[0-9]+\b)"}, cl::BRIGHTCYAN}, // integer
@@ -308,15 +294,18 @@ int main(int argc, char* argv[])
     TermCtl& t = context().term_out;
     Replxx rx;
     int input_number = 0;
-    std::string history_file = "./.xci_script_history";
+    std::string history_file = xci::core::get_home_dir() + "/.xci_script_history";
     rx.history_load(history_file);
     rx.set_max_history_size(1000);
     rx.set_highlighter_callback(replxx_hook::highlighter);
 
+    // standalone interpreter for the control commands
+    ReplCommand cmd;
+
     while (!context().done) {
         const char* input;
         do {
-            input = rx.input(t.format("{green}_{} = {normal}", input_number));
+            input = rx.input(t.format("{green}_{} ? {normal}", input_number));
         } while (input == nullptr && errno == EAGAIN);
 
         if (input == nullptr) {
@@ -333,7 +322,14 @@ int main(int argc, char* argv[])
 
         if (line[0] == '.') {
             // control commands
-            tool::parse_command(line, context());
+            try {
+                cmd.interpreter().eval(line.substr(1));
+            } catch (const Error& e) {
+                cout << t.red() << "Error: " << t.bold().red() << e.what() << t.normal() << std::endl;
+                if (!e.detail().empty())
+                    cout << t.magenta() << e.detail() << t.normal() << std::endl;
+                cout << t.yellow() << "Help: .h | .help" << t.normal() << endl;
+            }
             continue;
         }
 

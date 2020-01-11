@@ -4,8 +4,8 @@
 // Copyright 2020 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#ifndef XCIKIT_BYTECODETRACER_H
-#define XCIKIT_BYTECODETRACER_H
+#ifndef XCI_SCRIPT_TOOL_BYTECODE_TRACER_H
+#define XCI_SCRIPT_TOOL_BYTECODE_TRACER_H
 
 #include <xci/script/Machine.h>
 #include <xci/core/TermCtl.h>

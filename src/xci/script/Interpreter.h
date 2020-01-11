@@ -39,7 +39,7 @@ public:
     void add_imported_module(Module& module) { m_main.add_imported_module(module); }
 
     using InvokeCallback = Machine::InvokeCallback;
-    std::unique_ptr<Value> eval(std::string_view input, const InvokeCallback& cb = {});
+    std::unique_ptr<Value> eval(std::string_view input, const InvokeCallback& cb = [](const Value&){});
 
     // low-level component access
     Parser& parser() { return m_parser; }

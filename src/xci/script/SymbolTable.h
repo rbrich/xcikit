@@ -167,6 +167,11 @@ public:
     size_t count_nonlocals() const;
     void update_nonlocal_indices();
 
+    /// Check symbol table for overloaded function name
+    /// and connect the symbols using `next` pointer
+    /// (making the overloads visible to SymbolResolver)
+    void detect_overloads(const std::string& name);
+
     // FIXME: use Pointer<T> / ConstPointer<T> directly as iterator
     using const_iterator = typename std::vector<Symbol>::const_iterator;
     const_iterator begin() const { return m_symbols.begin(); }
