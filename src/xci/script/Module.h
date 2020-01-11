@@ -60,6 +60,7 @@ public:
     Class& get_class(size_t idx) const { return *m_classes[idx]; }
     size_t num_classes() const { return m_classes.size(); }
 
+    // Instances
     Index add_instance(std::unique_ptr<Instance>&& inst);
     Instance& get_instance(size_t idx) const { return *m_instances[idx]; }
     size_t num_instances() const { return m_instances.size(); }

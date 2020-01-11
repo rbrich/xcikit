@@ -1,3 +1,7 @@
+# ------------ #
+# Libraries    #
+# ------------ #
+
 add_library(xci-script
     AST.cpp
     Builtin.cpp
@@ -9,6 +13,7 @@ add_library(xci-script
     Interpreter.cpp
     Machine.cpp
     Module.cpp
+    NonlocalResolver.cpp
     Value.cpp
     Optimizer.cpp
     Parser.cpp
@@ -32,3 +37,12 @@ target_include_directories(xci-script
     PRIVATE
         $<TARGET_PROPERTY:taocpp::pegtl,INTERFACE_INCLUDE_DIRECTORIES>
     )
+
+install(TARGETS xci-script EXPORT xcikit DESTINATION lib)
+
+
+# ------------ #
+# Programs     #
+# ------------ #
+
+add_subdirectory(tool)

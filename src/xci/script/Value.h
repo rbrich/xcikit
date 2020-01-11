@@ -49,7 +49,7 @@ class Float64;
 class String;
 class List;
 class Tuple;
-class Lambda;
+class Closure;
 class Module;
 
 class Visitor {
@@ -65,7 +65,7 @@ public:
     virtual void visit(const String&) = 0;
     virtual void visit(const List&) = 0;
     virtual void visit(const Tuple&) = 0;
-    virtual void visit(const Lambda&) = 0;
+    virtual void visit(const Closure&) = 0;
     virtual void visit(const Module&) = 0;
 };
 
@@ -86,6 +86,11 @@ public:
     // you MUST also call incref.
     virtual void write(byte* buffer) const = 0;
     virtual void read(const byte* buffer) = 0;
+
+    // Set when the value lives on heap
+    virtual const HeapSlot* heapslot() const { return nullptr; }
+
+    // Reference count management
     virtual void incref() const {}
     virtual void decref() const {}
 
@@ -308,18 +313,18 @@ public:
     explicit String(const char* cstr, size_t size);
     explicit String(size_t size, const HeapSlot& slot) : m_size(size), m_value(slot) {}
     String(const String& other) = default;
-    String(String&& other) noexcept : m_size(other.m_size), m_value(other.m_value) {
+    String(String&& other) noexcept : m_size(other.m_size), m_value(std::move(other.m_value)) {
         other.m_size = 0;
-        other.m_value = HeapSlot{};
     }
     String& operator =(const String& rhs) = default;
     String& operator =(String&& rhs) noexcept;
-    std::unique_ptr<Value> make_copy() const override { return std::make_unique<String>(m_size, m_value); }
+    std::unique_ptr<Value> make_copy() const override;
 
     void write(byte* buffer) const override;
     void read(const byte* buffer) override;
     void incref() const override { m_value.incref(); }
     void decref() const override { m_value.decref(); }
+    const HeapSlot* heapslot() const override { return &m_value; }
 
     TypeInfo type_info() const override { return TypeInfo{Type::String}; }
 
@@ -345,12 +350,13 @@ public:
     List(const List& other) = default;
     List(List&& other) noexcept = default;
 
-    std::unique_ptr<Value> make_copy() const override { return std::make_unique<List>(m_elem_type, m_length, m_elements); }
+    std::unique_ptr<Value> make_copy() const override;
 
     void write(byte* buffer) const override;
     void read(const byte* buffer) override;
     void incref() const override { m_elements.incref(); }
     void decref() const override { m_elements.decref(); }
+    const HeapSlot* heapslot() const override { return &m_elements; }
 
     TypeInfo type_info() const override { return TypeInfo{Type::List, m_elem_type}; }
 
@@ -398,12 +404,12 @@ private:
 };
 
 
-class Lambda: public Value {
+class Closure: public Value {
 public:
-    Lambda() : m_function(nullptr) {}
-    explicit Lambda(Function& v);
-    explicit Lambda(Function& v, Values&& nonlocals);
-    explicit Lambda(Function& v, const HeapSlot& slot) : m_function(&v), m_closure(slot) {}
+    Closure() : m_function(nullptr) {}
+    explicit Closure(Function& v);
+    explicit Closure(Function& v, Values&& values);
+    explicit Closure(Function& v, HeapSlot slot) : m_function(&v), m_closure(std::move(slot)) {}
 
     std::unique_ptr<Value> make_copy() const override;
 
@@ -411,6 +417,7 @@ public:
     void read(const byte* buffer) override;
     void incref() const override { m_closure.incref(); }
     void decref() const override { m_closure.decref(); }
+    const HeapSlot* heapslot() const override { return &m_closure; }
 
     TypeInfo type_info() const override;
 

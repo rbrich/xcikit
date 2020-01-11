@@ -16,7 +16,6 @@
 #ifndef XCI_SCRIPT_FUNCTION_H
 #define XCI_SCRIPT_FUNCTION_H
 
-#include "Value.h"
 #include "Code.h"
 #include "AST.h"
 #include "Module.h"
@@ -53,9 +52,10 @@ public:
     // module containing this function
     Module& module() const { return m_module; }
 
-    // symbol table with names used in this block
+    // symbol table with names used in function scope
     SymbolTable& symtab() const { return m_symtab; }
 
+    // parameters
     void add_parameter(std::string name, TypeInfo&& type_info);
     bool has_parameters() const { return !m_signature->params.empty(); }
     const TypeInfo& get_parameter(Index idx) const { return m_signature->params[idx]; }
@@ -64,38 +64,50 @@ public:
     size_t raw_size_of_parameters() const;
     size_t parameter_offset(Index idx) const;
 
+    // function signature
     void set_signature(const std::shared_ptr<Signature>& newsig) { m_signature = newsig; }
     std::shared_ptr<Signature> signature_ptr() const { return m_signature; }
     Signature& signature() { return *m_signature; }
     const Signature& signature() const { return *m_signature; }
 
+    // effective return type
+    TypeInfo effective_return_type() const { return m_signature->return_type.effective_type(); }
+
+    // compiled function body
     Code& code() { return m_code; }
     const Code& code() const { return m_code; }
 
-    Index add_value(TypeInfo&& type_info);
-    const TypeInfo& get_value(Index idx) const { return m_values[idx]; }
-    void set_value(Index idx, TypeInfo&& ti) { m_values[idx] = std::move(ti); }
-    std::vector<TypeInfo>& values() { return m_values; }
-    const std::vector<TypeInfo>& values() const { return m_values; }
-    size_t raw_size_of_values() const;
-    size_t value_offset(Index idx) const;
+    // AST of function body
+    bool has_ast() const { return m_ast != nullptr; }
+    ast::Block* ast() const { return m_ast; }
+    void set_ast(ast::Block* body) { m_ast = body; }
 
-    std::vector<TypeInfo> nonlocals() const;
-    // return size of all nonlocals (whole closure) in bytes
-    size_t raw_size_of_nonlocals() const;
+    // non-locals
+    void add_nonlocal(TypeInfo&& type_info);
+    bool has_nonlocals() const { return !m_signature->nonlocals.empty(); }
+    const std::vector<TypeInfo>& nonlocals() const { return m_signature->nonlocals; }
+    size_t raw_size_of_nonlocals() const;  // size of all nonlocals in bytes
     std::pair<size_t, TypeInfo> nonlocal_offset_and_type(Index idx) const;
+
+    // partial call (bound args)
+    void add_partial(TypeInfo&& type_info);
+    const std::vector<TypeInfo>& partial() const { return m_signature->partial; }
+    size_t raw_size_of_partial() const;
+
+    // whole closure = nonlocals + partial
+    size_t raw_size_of_closure() const { return raw_size_of_nonlocals() + raw_size_of_partial(); }
+    size_t closure_size() const { return nonlocals().size() + partial().size(); }
+    std::vector<TypeInfo> closure() const;
 
     // true if this function is generic
     bool is_generic() const;
 
     // Special intrinsics function cannot contain any compiled code and is always inlined.
     // This counter helps to check no other code was generated.
-    void add_intrinsic(uint8_t code) { m_intrinsics++; m_code.add_arg(code); }
+    void add_intrinsic(uint8_t code) { m_intrinsics++;
+        m_code.add(code); }
     size_t intrinsics() const { return m_intrinsics; }
     bool has_intrinsics() const { return m_intrinsics > 0; }
-
-    // return new function with applied args (args are drained, left empty)
-    //Function partial_call(std::vector<Value>& args) const;
 
     bool operator==(const Function& rhs) const;
 
@@ -110,10 +122,10 @@ private:
     SymbolTable& m_symtab;
     // Function signature
     std::shared_ptr<Signature> m_signature;
-    // Local definitions
-    std::vector<TypeInfo> m_values;
-    // Function code
+    // Compiled function body
     Code m_code;
+    // AST of function body (only for generic function)
+    ast::Block* m_ast = nullptr;
     // Counter for instructions from intrinsics
     size_t m_intrinsics = 0;
 };

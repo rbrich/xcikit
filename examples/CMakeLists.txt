@@ -1,7 +1,6 @@
 set(INST_EXAMPLES share/xcikit/examples)
 
 add_subdirectory(plugin)
-add_subdirectory(script)
 
 if (XCI_WITH_VULKAN)
     add_subdirectory(graphics)

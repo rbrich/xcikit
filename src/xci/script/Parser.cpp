@@ -22,6 +22,14 @@
 #include <tao/pegtl/contrib/raw_string.hpp>
 #include <iostream>
 
+// Enable for detailed trace of Grammar rules being matched
+// #define XCI_SCRIPT_PARSER_TRACE
+
+#ifdef XCI_SCRIPT_PARSER_TRACE
+#include <xci/core/string.h>
+#include <xci/core/Stack.h>
+#endif
+
 namespace xci::script {
 
 namespace parser {
@@ -40,6 +48,7 @@ struct ExprArgSafe;
 struct ExprOperand;
 struct ExprInfix;
 struct Type;
+struct UnsafeType;
 
 // Spaces and comments
 struct LineComment: if_must< two<'/'>, until<eolf> > {};
@@ -64,6 +73,7 @@ struct InfixOperator: sor< two<'&'>, two<'|'>, two<'='>, string<'!','='>,
                            one<'&'>, one<'|'>, one<'^'> > {};
 
 // Keywords
+struct KeywordFun: TAO_PEGTL_KEYWORD("fun") {};
 struct KeywordIf: TAO_PEGTL_KEYWORD("if") {};
 struct KeywordThen: TAO_PEGTL_KEYWORD("then") {};
 struct KeywordElse: TAO_PEGTL_KEYWORD("else") {};
@@ -71,8 +81,8 @@ struct KeywordClass: TAO_PEGTL_KEYWORD("class") {};
 struct KeywordInstance: TAO_PEGTL_KEYWORD("instance") {};
 struct KeywordWith: TAO_PEGTL_KEYWORD("with") {};
 struct KeywordMatch: TAO_PEGTL_KEYWORD("match") {};
-struct Keyword: sor<KeywordIf, KeywordThen, KeywordElse, KeywordClass, KeywordInstance,
-                    KeywordWith, KeywordMatch> {};
+struct Keyword: sor<KeywordFun, KeywordIf, KeywordThen, KeywordElse,
+        KeywordClass, KeywordInstance, KeywordWith, KeywordMatch> {};
 
 // Literals
 struct Integer: seq< opt<one<'-','+'>>, plus<digit> > {};
@@ -82,23 +92,26 @@ struct RawString : raw_string< '$', '-', '$' > {};  // raw_string = $$ raw text!
 struct Literal: sor< Float, Integer, String, RawString > {};
 
 // Expressions
-struct Variable: seq< Identifier, opt<SC, one<':'>, SC, must<Type> > > {};
-struct Parameter: sor< Type, Variable > {};
-struct DeclParams: seq< one<'|'>, SC, plus<Parameter, SC>, one<'|'> > {};  // do not fail if '|' matches but the rest doesn't - it may be |-operator instead
+struct Variable: seq< Identifier, opt<SC, one<':'>, SC, must<UnsafeType> > > {};
+struct Parameter: sor< Type, seq< Identifier, opt<SC, one<':'>, SC, must<Type> > > > {};
+struct DeclParams: seq< plus<Parameter, SC> > {};
 struct DeclResult: if_must< string<'-', '>'>, SC, Type > {};
 struct TypeConstraint: seq<TypeName, RSC, TypeName> {};
 struct TypeContext: if_must< one<'('>, SC, TypeConstraint, SC, star_must<one<','>, SC, TypeConstraint, SC>, one<')'> > {};
-struct FunctionType: seq< DeclParams, SC, opt<DeclResult>, SC, opt<if_must<KeywordWith, SC, TypeContext>> > {};
+struct FunctionType: seq< DeclParams, SC, DeclResult > {};
+struct FunctionDecl: seq< DeclParams, SC, opt<DeclResult>, SC, opt<if_must<KeywordWith, SC, TypeContext>> > {};
 struct ListType: if_must< one<'['>, SC, Type, SC, one<']'> > {};
-struct Type: sor< TypeName, ListType, FunctionType > {};
+struct UnsafeType: sor<FunctionType, ListType, TypeName> {};   // usable in context where Type is already expected
+struct BracedType: if_must< one<'('>, SC, UnsafeType, SC, one<')'> > {};
+struct Type: sor< BracedType, ListType, TypeName > {};
 struct Block: if_must< one<'{'>, SC, sor< one<'}'>, seq<SSList<Statement>, SC, one<'}'>> > > {};
-struct Function: seq< opt<FunctionType>, SC, Block> {};
+struct Function: sor< Block, if_must< KeywordFun, SC, FunctionDecl, SC, Block> > {};
 struct BracedExpr: if_must< one<'('>, SC, Expression, SC, one<')'> > {};
 struct ExprPrefix: if_must< PrefixOperator, SC, ExprOperand, SC > {};
 struct Reference: seq< Identifier > {};
 struct List: if_must< one<'['>, SC, sor<one<']'>, seq<ExprInfix, SC, until<one<']'>, one<','>, SC, ExprInfix, SC>>> > {};
-struct ExprCallable: sor< BracedExpr, Reference, Function> {};
-struct ExprArgSafe: sor< BracedExpr, List, Literal, Reference, Function > {};  // expressions which can be used as args in Call
+struct ExprCallable: sor< BracedExpr, Function, Reference> {};
+struct ExprArgSafe: sor< BracedExpr, List, Function, Literal, Reference > {};  // expressions which can be used as args in Call
 struct Call: seq< ExprCallable, plus<RSC, ExprArgSafe> > {};
 struct ExprOperand: sor<Call, ExprArgSafe, ExprPrefix> {};
 struct ExprInfixRight: if_must<InfixOperator, SC, ExprOperand, SC, opt<ExprInfixRight>> {};
@@ -465,6 +478,11 @@ struct Action<Identifier> {
     }
 
     template<typename Input>
+    static void apply(const Input &in, ast::Parameter& par) {
+        par.identifier.name = in.string();
+    }
+
+    template<typename Input>
     static void apply(const Input &in, ast::Reference& ref) {
         ref.identifier.name = in.string();
     }
@@ -483,6 +501,18 @@ struct Action<Function> : change_states< std::unique_ptr<ast::Function> > {
         expr = std::move(fn);
     }
 };
+
+
+template<>
+struct Action<FunctionDecl> : change_states< ast::FunctionType > {
+    template<typename Input>
+    static void success(const Input &in, ast::FunctionType& ftype, std::unique_ptr<ast::Function>& fn) {
+        if (!fn)
+            fn = std::make_unique<ast::Function>();
+        fn->type = std::move(ftype);
+    }
+};
+
 
 
 template<>
@@ -546,13 +576,6 @@ struct Action<TypeConstraint> : change_states< ast::TypeConstraint > {
 template<>
 struct Action<FunctionType> : change_states< ast::FunctionType > {
     template<typename Input>
-    static void success(const Input &in, ast::FunctionType& ftype, std::unique_ptr<ast::Function>& fn) {
-        if (!fn)
-            fn = std::make_unique<ast::Function>();
-        fn->type = std::move(ftype);
-    }
-
-    template<typename Input>
     static void success(const Input &in, ast::FunctionType& ftype, std::unique_ptr<ast::Type>& type) {
         type = std::make_unique<ast::FunctionType>(std::move(ftype));
     }
@@ -572,11 +595,6 @@ struct Action<Type> : change_states< std::unique_ptr<ast::Type> >  {
     }
 
     template<typename Input>
-    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::Variable& var) {
-        var.type = std::move(type);
-    }
-
-    template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::Parameter& par) {
         par.type = std::move(type);
     }
@@ -587,17 +605,26 @@ struct Action<Type> : change_states< std::unique_ptr<ast::Type> >  {
     }
 };
 
+
+template<>
+struct Action<UnsafeType> : change_states< std::unique_ptr<ast::Type> >  {
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Type>& inner, std::unique_ptr<ast::Type>& outer) {
+        outer = std::move(inner);
+    }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::Variable& var) {
+        var.type = std::move(type);
+    }
+};
+
+
 template<>
 struct Action<Variable> : change_states< ast::Variable > {
     template<typename Input>
     static void success(const Input &in, ast::Variable& var, ast::Definition& def) {
         def.variable = std::move(var);
-    }
-
-    template<typename Input>
-    static void success(const Input &in, ast::Variable& var, ast::Parameter& par) {
-        par.identifier = std::move(var.identifier);
-        par.type = std::move(var.type);
     }
 };
 
@@ -702,6 +729,15 @@ struct Action<RawString::content> {
 // ----------------------------------------------------------------------------
 // Control (error reporting)
 
+#ifdef XCI_SCRIPT_PARSER_TRACE
+static core::Stack<std::string> g_untraced;
+
+inline bool do_not_trace(const std::string& rule) {
+    return rule == "xci::script::parser::SC"
+        || rule == "xci::script::parser::Identifier";
+}
+#endif
+
 template< typename Rule >
 struct Control : normal< Rule >
 {
@@ -711,6 +747,90 @@ struct Control : normal< Rule >
     static void raise( const Input& in, States&&... /*unused*/ ) {
         throw parse_error( errmsg, in );
     }
+
+#ifdef XCI_SCRIPT_PARSER_TRACE
+    template< typename Input >
+    static void print_input( const Input& in )
+    {
+        size_t size = in.size();
+        if (size > 20)
+            std::cerr << '"' << xci::core::escape({in.current(), 20}) << "\"...";
+        else
+            std::cerr << '"' << xci::core::escape({in.current(), size}) << "\"$";
+    }
+
+    template< typename Input, typename... States >
+    static void start( const Input& in, States&&... st )
+    {
+        std::string rule = internal::demangle< Rule >();
+        if (do_not_trace(rule)) {
+            if (g_untraced.empty()) {
+                std::cerr << in.position() << "  start  " << rule << " (untraced)" << "; current ";
+                print_input( in );
+                std::cerr << std::endl;
+            }
+            g_untraced.push(rule);
+        }
+        if (!g_untraced.empty()) {
+            normal< Rule >::start( in, st... );
+            return;
+        }
+
+        std::cerr << in.position() << "  start  " << rule << "; current ";
+        print_input( in );
+        std::cerr << std::endl;
+        normal< Rule >::start( in, st... );
+    }
+
+    template< typename Input, typename... States >
+    static void success( const Input& in, States&&... st )
+    {
+        std::string rule = internal::demangle< Rule >();
+        if (!g_untraced.empty() && g_untraced.top() == rule)
+            g_untraced.pop();
+        if (!g_untraced.empty()) {
+            normal< Rule >::success( in, st... );
+            return;
+        }
+
+        std::cerr << in.position() << " success " << rule << "; next ";
+        print_input( in );
+        std::cerr << std::endl;
+        normal< Rule >::success( in, st... );
+    }
+
+    template< typename Input, typename... States >
+    static void failure( const Input& in, States&&... st )
+    {
+        std::string rule = internal::demangle< Rule >();
+        if (!g_untraced.empty() && g_untraced.top() == rule)
+            g_untraced.pop();
+        if (!g_untraced.empty()) {
+            normal< Rule >::failure( in, st... );
+            return;
+        }
+
+        std::cerr << in.position() << " failure " << rule << std::endl;
+        normal< Rule >::failure( in, st... );
+    }
+
+    template< template< typename... > class Action, typename Iterator, typename Input, typename... States >
+    static auto apply( const Iterator& begin, const Input& in, States&&... st )
+    -> decltype( normal< Rule >::template apply< Action >( begin, in, st... ) )
+    {
+        std::cerr << in.position() << "  apply  " << internal::demangle< Rule >() << std::endl;
+        return normal< Rule >::template apply< Action >( begin, in, st... );
+    }
+
+    template< template< typename... > class Action, typename Input, typename... States >
+    static auto apply0( const Input& in, States&&... st )
+    -> decltype( normal< Rule >::template apply0< Action >( in, st... ) )
+    {
+        std::cerr << in.position() << "  apply0 " << internal::demangle< Rule >() << std::endl;
+        return normal< Rule >::template apply0< Action >( in, st... );
+    }
+
+#endif
 };
 
 template<> const std::string Control<eof>::errmsg = "unexpected statement (missing semicolon?)";

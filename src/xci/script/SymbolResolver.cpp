@@ -17,7 +17,7 @@
 #include "Function.h"
 #include "Module.h"
 #include "Builtin.h"
-#include "dump.h"
+#include "Error.h"
 #include <vector>
 
 using namespace std;
@@ -31,21 +31,26 @@ public:
 
     void visit(ast::Definition& dfn) override {
         // check for name collision
-        if (symtab().find_by_name(dfn.variable.identifier.name))
-            throw MultipleDeclarationError(dfn.variable.identifier.name);
+        const auto& name = dfn.variable.identifier.name;
+        if (symtab().find_by_name(name))
+            throw MultipleDeclarationError(name);
 
-        // add new symbol
-        dfn.variable.identifier.symbol = symtab().add({dfn.variable.identifier.name, Symbol::Value, no_index});
-        m_definition = &dfn;
+        // add new function, symbol
+        SymbolTable& fn_symtab = symtab().add_child(name);
+        auto fn = make_unique<Function>(module(), fn_symtab);
+        auto idx = module().add_function(move(fn));
+        dfn.variable.identifier.symbol = symtab().add({name, Symbol::Function, idx});
+        dfn.variable.identifier.symbol->set_callable(true);
         if (dfn.variable.type)
             dfn.variable.type->apply(*this);
-        if (dfn.expression)
+        if (dfn.expression) {
+            dfn.expression->definition = &dfn;
             dfn.expression->apply(*this);
-        m_definition = nullptr;
+        }
 
         if (m_class) {
-            // export symbol to outer scoupe
-            auto outer_sym = symtab().parent()->add({dfn.variable.identifier.name,
+            // export symbol to outer scope
+            auto outer_sym = symtab().parent()->add({name,
                                                      Symbol::Method, m_class->index});
             outer_sym->set_ref(dfn.variable.identifier.symbol);
             return;
@@ -183,31 +188,28 @@ public:
     }
 
     void visit(ast::Function& v) override {
+        if (v.definition != nullptr) {
+            // use Definition's symtab and function
+            v.index = v.definition->symbol()->index();
+        } else {
+            // add new symbol table for the function
+            SymbolTable& fn_symtab = symtab().add_child("<lambda>");
+            auto fn = make_unique<Function>(module(), fn_symtab);
+            v.index = module().add_function(move(fn));
+        }
+        Function& fn = module().get_function(v.index);
+
+        v.body.symtab = &fn.symtab();
+        m_symtab = v.body.symtab;
+
         // resolve TypeNames and composite types to symbols
         // (in both parameters and result)
         v.type.apply(*this);
-        // add symbol table for the function, fill in parameters
-        std::string name = "<lambda>";
-        if (v.type.params.empty())
-            name = "<block>";
-        if (m_definition != nullptr) {
-            name = m_definition->variable.identifier.name;
-            m_definition->variable.identifier.symbol->set_callable(true);
-        }
-        SymbolTable& fn_symtab = symtab().add_child(name);
-        size_t par_idx = 0;
-        for (auto& p : v.type.params) {
-            p.identifier.symbol = fn_symtab.add({p.identifier.name, Symbol::Parameter, par_idx++});
-        }
-        // add function itself, pospone body compilation
-        auto fn = make_unique<Function>(module(), fn_symtab);
-        m_postponed_blocks.push_back({*fn, v.body});
-        v.body.symtab = &fn_symtab;
-        v.index = module().add_function(move(fn));
-        if (m_definition != nullptr && m_instance != nullptr) {
-            m_definition->variable.identifier.symbol->set_type(Symbol::Function);
-            m_definition->variable.identifier.symbol->set_index(v.index);
-        }
+
+        m_symtab = v.body.symtab->parent();
+
+        // postpone body compilation
+        m_postponed_blocks.push_back({fn, v.body});
     }
 
     void visit(ast::TypeName& t) final {
@@ -220,9 +222,16 @@ public:
     }
 
     void visit(ast::FunctionType& t) final {
-        for (const auto& p : t.params) {
+        size_t type_idx = 0;
+        for (auto& tc : t.context) {
+            tc.type_class.apply(*this);
+            symtab().add({tc.type_name.name, Symbol::TypeVar, ++type_idx});
+        }
+        size_t par_idx = 0;
+        for (auto& p : t.params) {
             if (p.type)
                 p.type->apply(*this);
+            p.identifier.symbol = symtab().add({p.identifier.name, Symbol::Parameter, par_idx++});
         }
         if (t.result_type)
             t.result_type->apply(*this);
@@ -317,7 +326,6 @@ private:
     std::vector<PostponedBlock> m_postponed_blocks;
     Function& m_function;
     SymbolTable* m_symtab = &m_function.symtab();
-    ast::Definition* m_definition = nullptr;  // symbol being currently defined
     ast::Class* m_class = nullptr;
     Instance* m_instance = nullptr;
 };
@@ -334,112 +342,6 @@ void SymbolResolver::process_block(Function& func, const ast::Block& block)
     for (const auto& blk : visitor.postponed_blocks()) {
         process_block(blk.func, blk.block);
     }
-}
-
-
-class NonlocalResolverVisitor: public ast::Visitor {
-public:
-    explicit NonlocalResolverVisitor(NonlocalResolver& processor, Function& func)
-        : m_processor(processor), m_function(func) {}
-
-    void visit(ast::Definition& dfn) override {
-        m_definition = &dfn;
-        dfn.expression->apply(*this);
-        m_definition = nullptr;
-    }
-
-    void visit(ast::Invocation& inv) override {
-        inv.expression->apply(*this);
-    }
-
-    void visit(ast::Return& ret) override {
-        ret.expression->apply(*this);
-    }
-
-    void visit(ast::Class& v) override {}
-    void visit(ast::Instance& v) override {}
-
-    void visit(ast::Integer& v) override {}
-    void visit(ast::Float& v) override {}
-    void visit(ast::String& v) override {}
-
-    void visit(ast::Tuple& v) override {
-        for (auto& item : v.items) {
-            item->apply(*this);
-        }
-    }
-
-    void visit(ast::List& v) override {
-        for (auto& item : v.items) {
-            item->apply(*this);
-        }
-    }
-
-    void visit(ast::Reference& v) override {}
-
-    void visit(ast::Call& v) override {
-        v.callable->apply(*this);
-        for (auto& arg : v.args) {
-            arg->apply(*this);
-        }
-    }
-
-    void visit(ast::OpCall& v) override {
-        visit(*static_cast<ast::Call*>(&v));
-    }
-
-    void visit(ast::Condition& v) override {
-        v.cond->apply(*this);
-        v.then_expr->apply(*this);
-        v.else_expr->apply(*this);
-    }
-
-    void visit(ast::Function& v) override {
-        Function& func = m_function.module().get_function(v.index);
-        m_processor.process_block(func, v.body);
-        for (auto& sym : func.symtab()) {
-            if (sym.type() == Symbol::Nonlocal) {
-                if (sym.ref() && sym.ref()->type() == Symbol::Function) {
-                    // unfrap reference to non-value function
-                    sym = *sym.ref();
-                } else if (sym.depth() > 1) {
-                    // not direct parent -> add intermediate Nonlocal
-                    m_function.symtab().add({sym.ref(), Symbol::Nonlocal, sym.depth() - 1});
-                }
-            }
-            if (sym.type() == Symbol::Function && sym.ref() && sym.ref()->type() == Symbol::Function) {
-                // unwrap function (self-)reference
-                sym.set_index(sym.ref()->index());
-            }
-        }
-        if (m_definition != nullptr && func.symtab().count_nonlocals() == 0) {
-            auto& sym = m_definition->variable.identifier.symbol;
-            sym->set_type(Symbol::Function);
-            sym->set_index(v.index);
-        }
-    }
-
-    void visit(ast::TypeName& t) final {}
-    void visit(ast::FunctionType& t) final {}
-    void visit(ast::ListType& t) final {}
-
-private:
-    Module& module() { return m_function.module(); }
-
-private:
-    NonlocalResolver& m_processor;
-    Function& m_function;
-    ast::Definition* m_definition = nullptr;  // symbol being currently defined
-};
-
-
-void NonlocalResolver::process_block(Function& func, const ast::Block& block)
-{
-    NonlocalResolverVisitor visitor {*this, func};
-    for (const auto& stmt : block.statements) {
-        stmt->apply(visitor);
-    }
-    func.symtab().update_nonlocal_indices();
 }
 
 

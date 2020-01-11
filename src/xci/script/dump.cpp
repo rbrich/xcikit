@@ -17,6 +17,9 @@
 #include "Function.h"
 #include "Module.h"
 #include <xci/core/string.h>
+#include <xci/compat/macros.h>
+#include <iomanip>
+#include <sstream>
 
 namespace xci::script {
 
@@ -246,21 +249,31 @@ std::ostream& operator<<(std::ostream& os, const FunctionType& v)
         os << more_indent;
         for (const auto& prm : v.params)
             os << prm;
-        if (v.result_type)
-            os << *v.result_type << endl;
+        if (v.result_type) {
+            os << put_indent << "Result" << endl;
+            os << more_indent << *v.result_type << less_indent << endl;
+        }
+        for (const auto& ctx : v.context) {
+            os << ctx << endl;
+        }
         return os << less_indent;
     } else {
         if (!v.params.empty()) {
-            os << "|";
             for (const auto& prm : v.params) {
-                if (&prm != &v.params.front())
-                    os << ' ';
-                os << prm;
+                os << prm << ' ';
             }
-            os << "| ";
         }
         if (v.result_type) {
             os << "-> " << *v.result_type << " ";
+        }
+        if (!v.context.empty()) {
+            os << "with (";
+            for (const auto& ctx : v.context) {
+                os << ctx;
+                if (&ctx != &v.context.back())
+                    os << ", ";
+            }
+            os << ") ";
         }
         return os;
     }
@@ -269,7 +282,7 @@ std::ostream& operator<<(std::ostream& os, const FunctionType& v)
 std::ostream& operator<<(std::ostream& os, const ListType& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "ListType(Type) " << endl;
+        os << put_indent << "ListType(Type)" << endl;
         if (v.elem_type)
             os << more_indent << *v.elem_type << less_indent;
         return os;
@@ -284,7 +297,8 @@ std::ostream& operator<<(std::ostream& os, const ListType& v)
 std::ostream& operator<<(std::ostream& os, const TypeConstraint& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "TypeConstraint " << v.type_class << ' ' << v.type_name << endl;
+        os << put_indent << "TypeConstraint" << endl
+           << more_indent << v.type_class << endl << v.type_name << less_indent;
         return os;
     } else {
         return os << v.type_class << ' ' << v.type_name;
@@ -369,7 +383,7 @@ std::ostream& operator<<(std::ostream& os, const Function& v)
         os << put_indent << "Function(Expression)" << endl;
         return os << more_indent << v.type << v.body << less_indent;
     } else {
-        return os << "(" << v.type << "{" << v.body << "})";
+        return os << "fun " << v.type << "{" << v.body << "}";
     }
 }
 
@@ -548,7 +562,7 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
                 os << ' ' << sym.name() << endl << more_indent;
                 continue;
             }
-            assert(sym.type() == Symbol::Value);
+            assert(sym.type() == Symbol::Function);
             os << put_indent << sym.name() << ": "
                << cls.get_function_type(sym.index()) << endl;
         }
@@ -575,6 +589,65 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
 }
 
 
+// Type
+
+std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
+{
+    switch (v.type()) {
+        case Type::Unknown:     return os << "?";
+        case Type::Void:        return os << "Void";
+        case Type::Bool:        return os << "Bool";
+        case Type::Byte:        return os << "Byte";
+        case Type::Char:        return os << "Char";
+        case Type::Int32:       return os << "Int32";
+        case Type::Int64:       return os << "Int64";
+        case Type::Float32:     return os << "Float32";
+        case Type::Float64:     return os << "Float64";
+        case Type::String:      return os << "String";
+        case Type::List:
+            return os << "[" << v.subtypes()[0] << "]";
+        case Type::Tuple: {
+            os << "(";
+            for (const auto& ti : v.subtypes()) {
+                os << ti;
+                if (&ti != &v.subtypes().back())
+                    os << ", ";
+            }
+            return os << ")";
+        }
+        case Type::Function:    return os << v.signature();
+        case Type::Module:      return os << "Module";
+    }
+    UNREACHABLE;
+}
+
+
+std::ostream& operator<<(std::ostream& os, const Signature& v)
+{
+    if (!v.nonlocals.empty()) {
+        os << "{ ";
+        for (auto& ti : v.nonlocals) {
+            os << ti << " ";
+        }
+        os << "} ";
+    }
+    if (!v.partial.empty()) {
+        os << "( ";
+        for (auto& ti : v.partial) {
+            os << ti << " ";
+        }
+        os << ") ";
+    }
+    if (!v.params.empty()) {
+        for (auto& ti : v.params) {
+            os << ti << " ";
+        }
+        os << "-> ";
+    }
+    return os << v.return_type;
+}
+
+
 // SymbolTable
 
 std::ostream& operator<<(std::ostream& os, Symbol::Type v)
@@ -585,6 +658,7 @@ std::ostream& operator<<(std::ostream& os, Symbol::Type v)
         case Symbol::Parameter:     return os << "Parameter";
         case Symbol::Nonlocal:      return os << "Nonlocal";
         case Symbol::Function:      return os << "Function";
+        case Symbol::Fragment:      return os << "Fragment";
         case Symbol::Module:        return os << "Module";
         case Symbol::Instruction:   return os << "Instruction";
         case Symbol::Class:         return os << "Class";

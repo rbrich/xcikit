@@ -18,6 +18,7 @@
 
 #include "AST.h"
 #include "SymbolTable.h"
+#include "TypeInfo.h"
 #include <ostream>
 
 namespace xci::script {
@@ -61,6 +62,10 @@ std::ostream& operator<<(std::ostream& os, const Module& v);
 
 // Module
 std::ostream& operator<<(std::ostream& os, const Module& v);
+
+// Type
+std::ostream& operator<<(std::ostream& os, const TypeInfo& v);
+std::ostream& operator<<(std::ostream& os, const Signature& v);
 
 // SymbolTable
 std::ostream& operator<<(std::ostream& os, Symbol::Type v);

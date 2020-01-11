@@ -59,7 +59,6 @@ std::unique_ptr<Value> Stack::pull(const TypeInfo& ti)
     // create Value with TypeInfo, read contents from stack
     auto value = Value::create(ti);
     value->read(&m_stack[m_stack_pointer]);
-    value->decref();
     m_stack_pointer += s;
     return value;
 }
@@ -80,6 +79,13 @@ void* Stack::get_ptr(Stack::StackRel pos) const
     assert(pos + sizeof(value) <= size());
     std::memcpy(&value, &m_stack[m_stack_pointer + pos], sizeof(value));
     return value;
+}
+
+
+void Stack::clear_ptr(StackRel pos)
+{
+    assert(pos + sizeof(void*) <= size());
+    std::memset(&m_stack[m_stack_pointer + pos], 0, sizeof(void*));
 }
 
 
@@ -150,18 +156,41 @@ void Stack::drop(StackRel first, size_t size)
 std::ostream& operator<<(std::ostream& os, const Stack& v)
 {
     Stack::StackRel pos = 0;
+    auto frame = v.n_frames() - 1;
     auto base = v.to_rel(v.frame().base);
-    auto check_print_base = [base, &pos] {
-        if (base == pos) {
-            cout << setw(4) << right << pos << " ---  (frame base)" << endl;
-        }
+    auto check_print_base = [&] {
+        // print frame boundary (only on exact match, note that
+        // it may point to middle of a value after DROP)
+        if (base == pos)
+            cout << " --- ---  (frame " << frame << ")" << endl;
+        // recompute base, frame for following stack values
+        if (base <= pos && frame > 0)
+            base = v.to_rel(v.frame(--frame).base);
     };
+    // header
+    cout << right << setw(4) << "pos" << setw(4) << "siz"
+         << "  value" << endl;
+    // stack data
     for (const auto& ti : ranges::views::reverse(v.m_stack_types)) {
         check_print_base();
+
         const auto size = ti.size();
         cout << setw(4) << right << pos;
         cout << setw(4) << right << size;
-        cout << "  " << *v.get(pos, ti) << endl;
+
+        auto value = v.get(pos, ti);
+        const auto* hs = value->heapslot();
+        if (hs) {
+            cout << "  heap:" << std::hex << (intptr_t) hs->data() << std::dec
+                 << " refs:" << hs->refcount();
+            if (*hs)
+                cout << "  " << *value << endl;
+            else
+                cout << endl;
+        } else {
+            cout << "  " << *value << endl;
+        }
+
         pos += size;
     }
     check_print_base();

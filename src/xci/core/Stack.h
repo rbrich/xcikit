@@ -89,6 +89,10 @@ public:
 
     void pop();
 
+    // random access
+    reference operator[](size_type pos);
+    const_reference operator[](size_type pos) const;
+
     // deque compatibility
     reference back() { return top(); }
     const_reference back() const { return top(); }
@@ -119,7 +123,8 @@ public:
         pointer operator->() const { return &m_bucket->items[m_item]; }
 
     private:
-        explicit iterator(Bucket* head) : m_head(head), m_bucket{head} {}
+        explicit iterator(Bucket* head)
+            : m_head(head), m_bucket{head->count == 0 ? nullptr : head} {}
 
         Bucket* const m_head = nullptr;
         Bucket* m_bucket = nullptr;
@@ -147,19 +152,20 @@ public:
         pointer operator->() const { return &m_bucket->items[m_item]; }
 
     private:
-        explicit const_iterator(Bucket* head) : m_head(head), m_bucket{head} {}
+        explicit const_iterator(Bucket* head)
+            : m_head(head), m_bucket{head->count == 0 ? nullptr : head} {}
 
-        Bucket* const m_head = nullptr;
-        Bucket* m_bucket = nullptr;
+        const Bucket* const m_head = nullptr;
+        const Bucket* m_bucket = nullptr;
         uint32_t m_item = 0;
     };
 
     iterator begin()                { return iterator{head()}; }
     const_iterator begin() const    { return const_iterator{head()}; }
     const_iterator cbegin() const   { return const_iterator{head()}; }
-    iterator end()                  { return {}; }
-    const_iterator end() const      { return {}; }
-    const_iterator cend() const     { return {}; }
+    iterator end()                  { return iterator{}; }
+    const_iterator end() const      { return const_iterator{}; }
+    const_iterator cend() const     { return const_iterator{}; }
 
     // dump current allocation info (the sizes and usage of buckets)
     template <class S> void alloc_info(S& stream);
@@ -395,6 +401,34 @@ void Stack<T>::pop()
 
 
 template<class T>
+auto Stack<T>::operator[](size_type pos) -> reference
+{
+    assert(!empty());
+    assert(pos < size());
+    auto* b = head();
+    while (pos > b->count) {
+        pos -= b->count;
+        b = b->next;
+    }
+    return b->items[pos];
+}
+
+
+template<class T>
+auto Stack<T>::operator[](size_type pos) const -> const_reference
+{
+    assert(!empty());
+    assert(pos < size());
+    auto* b = head();
+    while (pos > b->count) {
+        pos -= b->count;
+        b = b->next;
+    }
+    return b->items[pos];
+}
+
+
+template<class T>
 auto Stack<T>::iterator::operator++() -> iterator&
 {
     ++m_item;
@@ -447,7 +481,7 @@ template<class T>
 auto Stack<T>::allocate(Bucket* next, uint32_t capacity, uint32_t count) -> Bucket*
 {
     const size_t size = sizeof(Bucket) + capacity * sizeof(T);
-    char* buf = new char[size];
+    char* buf = new(std::align_val_t{alignof(Bucket)}) char[size];
     return new(buf) Bucket {next, capacity, count};
 }
 
@@ -456,7 +490,8 @@ template<class T>
 void Stack<T>::deallocate(Stack::Bucket* bucket)
 {
     std::destroy_n(bucket->items, bucket->count);
-    delete[] reinterpret_cast<char*>(bucket);
+    char* buf = reinterpret_cast<char*>(bucket);
+    ::operator delete[](buf, std::align_val_t{alignof(Bucket)});
 }
 
 

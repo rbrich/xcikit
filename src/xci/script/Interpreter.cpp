@@ -60,7 +60,7 @@ std::unique_ptr<Value> Interpreter::eval(std::string_view input, const InvokeCal
     m_machine.call(func, cb);
 
     // get result from stack
-    return m_machine.stack().pull(func.signature().return_type);
+    return m_machine.stack().pull(func.effective_return_type());
 }
 
 

@@ -35,8 +35,8 @@ public:
         // parse & process only, do no compile into bytecode
         PPMask      = 3 << 24,
         PPSymbols   = 1 << 24,    // stop after SymbolResolver pass
-        PPNonlocals = 2 << 24,    // stop after NonlocalSymbolResolver pass
-        PPTypes     = 3 << 24,    // stop after TypeResolver pass
+        PPTypes     = 2 << 24,    // stop after TypeResolver pass
+        PPNonlocals = 3 << 24,    // stop after NonlocalSymbolResolver pass
     };
 
     Compiler() = default;
@@ -54,6 +54,7 @@ public:
 
 private:
     std::vector<std::unique_ptr<ast::BlockProcessor>> m_ast_passes;  // preprocessing & optimization passes
+    bool m_compile = false;
 };
 
 

@@ -13,7 +13,7 @@
 #include <vector>
 #include <memory>
 
-namespace xci::script::repl {
+namespace xci::script::tool {
 
 
 struct Context {

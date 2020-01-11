@@ -15,11 +15,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCIKIT_AST_H
-#define XCIKIT_AST_H
+#ifndef XCI_SCRIPT_AST_H
+#define XCI_SCRIPT_AST_H
 
 #include "SymbolTable.h"
-#include "Error.h"
+#include "SourceInfo.h"
 #include <cstdint>
 #include <vector>
 #include <string>
@@ -243,6 +243,9 @@ struct Expression {
     virtual void apply(Visitor& visitor) = 0;
 
     SourceInfo source_info;
+
+    // set when this expression is direct child of a Definition
+    Definition* definition = nullptr;
 };
 
 struct Integer: public Expression {
@@ -305,6 +308,8 @@ struct Call: public Expression {
 
     // resolved:
     size_t wrapped_execs = 0;
+    size_t partial_size = 0;
+    Index partial_index = no_index;
 };
 
 struct Operator {
@@ -394,6 +399,8 @@ struct Statement {
 struct Definition: public Statement {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
+    SymbolPointer& symbol() { return variable.identifier.symbol; }
+
     Variable variable;
     std::unique_ptr<Expression> expression;
 };

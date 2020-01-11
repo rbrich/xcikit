@@ -15,6 +15,7 @@
 
 #include "Value.h"
 #include "Function.h"
+#include "Error.h"
 #include <xci/core/string.h>
 #include <numeric>
 
@@ -38,7 +39,7 @@ std::unique_ptr<Value> Value::create(const TypeInfo& type_info)
         case Type::String: return std::make_unique<value::String>();
         case Type::List: return std::make_unique<value::List>(type_info.elem_type());
         case Type::Tuple: return std::make_unique<value::Tuple>(type_info);
-        case Type::Function: return std::make_unique<value::Lambda>();
+        case Type::Function: return std::make_unique<value::Closure>();
         case Type::Module: return std::make_unique<value::Module>();
     }
     return nullptr;
@@ -74,7 +75,7 @@ std::ostream& operator<<(std::ostream& os, const Value& o)
     struct StreamVisitor: public value::Visitor {
         std::ostream& os;
         explicit StreamVisitor(std::ostream& os) : os(os) {}
-        void visit(const value::Void&) override { os << "Void"; }
+        void visit(const value::Void&) override { os << "void"; }
         void visit(const value::Bool& v) override { os << std::boolalpha << v.value(); }
         void visit(const value::Byte& v) override { os << v.value() << ":Byte"; }
         void visit(const value::Char& v) override { os << v.value() << ":Char"; }
@@ -102,10 +103,10 @@ std::ostream& operator<<(std::ostream& os, const Value& o)
             }
             os << ")";
         }
-        void visit(const value::Lambda& v) override {
+        void visit(const value::Closure& v) override {
             auto closure = v.closure();
             const auto& nonlocals = closure.values();
-            os << "<function> " << v.function().signature() << " (";
+            os << v.function().name() << " (";
             for (const auto& item : nonlocals) {
                 os << *item;
                 if (item.get() != nonlocals.back().get())
@@ -146,12 +147,17 @@ String& String::operator=(String&& rhs) noexcept
 }
 
 
+std::unique_ptr<Value> String::make_copy() const
+{
+    return std::make_unique<String>(m_size, m_value);
+}
+
+
 void String::write(byte* buffer) const
 {
     const byte* slot = m_value.slot();
     std::memcpy(buffer, &slot, sizeof(slot));
     std::memcpy(buffer + sizeof(slot), &m_size, sizeof(m_size));
-    m_value.incref();
 }
 
 
@@ -160,7 +166,7 @@ void String::read(const byte* buffer)
     byte *slot = nullptr;
     std::memcpy(&slot, buffer, sizeof(slot));
     std::memcpy(&m_size, buffer + sizeof(slot), sizeof(m_size));
-    m_value.reset(slot);
+    m_value = HeapSlot{slot};
 }
 
 
@@ -171,7 +177,7 @@ List::List(const Values& values)
         return;  // default initialized empty list
     m_elem_type = values[0].type_info();
     auto elem_size = m_elem_type.size();
-    m_elements.reset(m_length * elem_size);
+    m_elements = HeapSlot{m_length * elem_size};
     auto* dataptr = m_elements.data();
     for (const auto& value : values) {
         if (value->type_info() != m_elem_type)
@@ -181,12 +187,17 @@ List::List(const Values& values)
     }
 }
 
+std::unique_ptr<Value> List::make_copy() const
+{
+    return std::make_unique<List>(m_elem_type, m_length, m_elements);
+}
+
+
 void List::write(byte* buffer) const
 {
     const byte* slot = m_elements.slot();
     std::memcpy(buffer, &slot, sizeof(slot));
     std::memcpy(buffer + sizeof(slot), &m_length, sizeof(m_length));
-    m_elements.incref();
 }
 
 
@@ -195,7 +206,7 @@ void List::read(const byte* buffer)
     byte *slot = nullptr;
     std::memcpy(&slot, buffer, sizeof(slot));
     std::memcpy(&m_length, buffer + sizeof(slot), sizeof(m_length));
-    m_elements.reset(slot);
+    m_elements = HeapSlot{slot};
 }
 
 
@@ -262,43 +273,42 @@ TypeInfo Tuple::type_info() const
 }
 
 
-Lambda::Lambda(Function& v) : m_function(&v) {}
+Closure::Closure(Function& v) : m_function(&v) {}
 
 
-Lambda::Lambda(Function& v, Values&& nonlocals)
-        : m_function(&v), m_closure(v.raw_size_of_nonlocals())
+Closure::Closure(Function& v, Values&& values)
+        : m_function(&v), m_closure(v.raw_size_of_closure())
 {
-    assert(m_function->nonlocals().size() == nonlocals.size());
-    Tuple closure(move(nonlocals));
+    assert(m_function->closure_size() == values.size());
+    Tuple closure(move(values));
     closure.write(m_closure.data());
 }
 
 
-std::unique_ptr<Value> Lambda::make_copy() const
+std::unique_ptr<Value> Closure::make_copy() const
 {
-    return std::make_unique<Lambda>(*m_function, m_closure);
+    return std::make_unique<Closure>(*m_function, m_closure);
 }
 
 
-void Lambda::write(byte* buffer) const
+void Closure::write(byte* buffer) const
 {
     const byte* slot = m_closure.slot();
     std::memcpy(buffer, &slot, sizeof(slot));
     std::memcpy(buffer + sizeof(slot), &m_function, sizeof(m_function));
-    m_closure.incref();
 }
 
 
-void Lambda::read(const byte* buffer)
+void Closure::read(const byte* buffer)
 {
     byte *slot = nullptr;
     std::memcpy(&slot, buffer, sizeof(slot));
     std::memcpy(&m_function, buffer + sizeof(slot), sizeof(m_function));
-    m_closure.reset(slot);
+    m_closure = HeapSlot{slot};
 }
 
 
-TypeInfo Lambda::type_info() const
+TypeInfo Closure::type_info() const
 {
     if (m_function == nullptr)
         return TypeInfo{Type::Function};
@@ -306,9 +316,9 @@ TypeInfo Lambda::type_info() const
 }
 
 
-Tuple Lambda::closure() const
+Tuple Closure::closure() const
 {
-    Tuple closure{TypeInfo{m_function->nonlocals()}};
+    Tuple closure{TypeInfo{m_function->closure()}};
     closure.read(m_closure.data());
     return closure;
 }

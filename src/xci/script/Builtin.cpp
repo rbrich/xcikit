@@ -243,9 +243,9 @@ const char* builtin::op_to_function_name(ast::Operator::Op op)
 
 BuiltinModule::BuiltinModule() : Module("builtin")
 {
-    symtab().add({"void", add_value(std::make_unique<value::Void>())});
-    symtab().add({"false", add_value(std::make_unique<value::Bool>(false))});
-    symtab().add({"true", add_value(std::make_unique<value::Bool>(true))});
+    symtab().add({"void", Symbol::Value, add_value(std::make_unique<value::Void>())});
+    symtab().add({"false", Symbol::Value, add_value(std::make_unique<value::Bool>(false))});
+    symtab().add({"true", Symbol::Value, add_value(std::make_unique<value::Bool>(true))});
     add_logical_op_function("or", Opcode::LogicalOr);
     add_logical_op_function("and", Opcode::LogicalAnd);
     add_bitwise_op_function("bit_or", Opcode::BitwiseOr_8);
@@ -505,8 +505,7 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__partial0", Symbol::Instruction, Index(Opcode::Partial0)});
     symtab().add({"__partial1", Symbol::Instruction, Index(Opcode::Partial1)});
     symtab().add({"__make_list", Symbol::Instruction, Index(Opcode::MakeList)});
-    symtab().add({"__copy_variable", Symbol::Instruction, Index(Opcode::CopyVariable)});
-    symtab().add({"__copy_argument", Symbol::Instruction, Index(Opcode::CopyArgument)});
+    symtab().add({"__copy", Symbol::Instruction, Index(Opcode::Copy)});
     symtab().add({"__drop", Symbol::Instruction, Index(Opcode::Drop)});
     symtab().add({"__partial", Symbol::Instruction, Index(Opcode::Partial)});
     */

@@ -61,7 +61,7 @@ public:
     explicit TypeInfo(std::shared_ptr<Signature> signature)
         : m_type(Type::Function), m_signature(std::move(signature)) {}
     // Tuple
-    explicit TypeInfo(std::vector<TypeInfo>&& subtypes)
+    explicit TypeInfo(std::vector<TypeInfo> subtypes)
         : m_type(Type::Tuple), m_subtypes(std::move(subtypes)) {}
     // List
     explicit TypeInfo(Type type, TypeInfo elem_type)
@@ -70,7 +70,6 @@ public:
     size_t size() const;
     void foreach_heap_slot(std::function<void(size_t offset)> cb) const;
 
-    // Actual type
     Type type() const { return m_type; }
     bool is_callable() const { return type() == Type::Function; }
 
@@ -81,6 +80,8 @@ public:
     Signature& signature() { return *m_signature; }
     const Signature& signature() const { return *m_signature; }
     std::shared_ptr<Signature> signature_ptr() const { return m_signature; }
+
+    TypeInfo effective_type() const;
 
     const std::vector<TypeInfo>& subtypes() const { return m_subtypes; }
     const TypeInfo& elem_type() const;
@@ -97,27 +98,31 @@ private:
     std::vector<TypeInfo> m_subtypes;
 };
 
-std::ostream& operator<<(std::ostream& os, const TypeInfo& v);
-
 
 struct Signature {
+    std::vector<TypeInfo> nonlocals;
+    std::vector<TypeInfo> partial;
     std::vector<TypeInfo> params;
     TypeInfo return_type;
 
-    void add_parameter(TypeInfo&& p) { params.emplace_back(p); }
-    void set_return_type(TypeInfo t) { return_type = std::move(t); }
+    void add_nonlocal(TypeInfo&& ti) { nonlocals.emplace_back(ti); }
+    void add_partial(TypeInfo&& ti) { partial.emplace_back(ti); }
+    void add_parameter(TypeInfo&& ti) { params.emplace_back(ti); }
+    void set_return_type(TypeInfo ti) { return_type = std::move(ti); }
+
+    bool has_closure() const { return !nonlocals.empty() || !partial.empty(); }
 
     // Check return type matches and set it to concrete type if it's generic.
     void resolve_return_type(const TypeInfo& t);
 
     bool operator==(const Signature& rhs) const {
-        return params == rhs.params &&
-               return_type == rhs.return_type;
+        return params == rhs.params
+            && partial == rhs.partial
+            && nonlocals == rhs.nonlocals
+            && return_type == rhs.return_type;
     }
     bool operator!=(const Signature& rhs) const { return !(rhs == *this); }
 };
-
-std::ostream& operator<<(std::ostream& os, const Signature& v);
 
 
 } // namespace xci::script

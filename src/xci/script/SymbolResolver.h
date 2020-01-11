@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_SCRIPT_SYMBOLRESOLVER_H
-#define XCI_SCRIPT_SYMBOLRESOLVER_H
+#ifndef XCI_SCRIPT_SYMBOL_RESOLVER_H
+#define XCI_SCRIPT_SYMBOL_RESOLVER_H
 
 #include "AST.h"
 
@@ -30,19 +30,6 @@ namespace xci::script {
 ///   preceding the block syntactically)
 
 class SymbolResolver: public ast::BlockProcessor {
-public:
-    void process_block(Function& func, const ast::Block& block) final;
-};
-
-
-/// Simplify non-local symbol references
-/// - multi-level references are flattened to single-level references
-///   (by adding the non-locals also to the parent and referencing those)
-/// - non-locals referencing functions without closure
-///   (those that don't capture anything by themselves)
-///   are replaced with locals (the function is referenced directly)
-
-class NonlocalResolver: public ast::BlockProcessor {
 public:
     void process_block(Function& func, const ast::Block& block) final;
 };

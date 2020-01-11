@@ -18,6 +18,7 @@
 
 #include "Value.h"
 #include "Function.h"
+#include "Error.h"
 #include <xci/core/Stack.h>
 #include <xci/compat/utility.h>
 #include <xci/compat/bit.h>
@@ -61,7 +62,6 @@ public:
             throw StackUnderflow{};
         // read value from stack
         v.read(&m_stack[m_stack_pointer]);
-        v.decref();
         m_stack_pointer += s;
         // check type on stack (allow casts - only size have to match)
         assert(v.type_info().size() == m_stack_types.back().size());
@@ -71,6 +71,7 @@ public:
 
     std::unique_ptr<Value> get(StackRel pos, const TypeInfo& ti) const;
     void* get_ptr(StackRel pos) const;
+    void clear_ptr(StackRel pos);
 
     // Copy `size` bytes from `addr` to top of the stack
     void copy(StackRel pos, size_t size);
@@ -109,6 +110,9 @@ public:
     void push_frame(const Function* fun, Index ins) { m_frame.emplace(fun, ins, size()); }
     void pop_frame() { m_frame.pop(); }
     const Frame& frame() const { return m_frame.top(); }
+    const Frame& frame(size_t pos) const { return m_frame[pos]; }
+    size_t n_frames() const { return m_frame.size(); }
+
 
     friend std::ostream& operator<<(std::ostream& os, const Stack& v);
 

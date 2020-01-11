@@ -10,7 +10,7 @@
 #include <tao/pegtl.hpp>
 #include <iostream>
 
-namespace xci::script::repl {
+namespace xci::script::tool {
 
 using std::cout;
 using std::endl;
@@ -147,4 +147,4 @@ void parse_command(const std::string& line, Context& ctx)
 }
 
 
-}  // namespace xci::script::repl
+}  // namespace xci::script::tool

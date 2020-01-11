@@ -1,4 +1,4 @@
-Lambda Script v0.2
+Lambda Script v0.3
 ==================
 ***Syntax reference***
 
@@ -27,23 +27,23 @@ See `xci::script` in [xcikit](https://github.com/rbrich/xcikit) codebase.
 Syntax Elements
 ---------------
 
-C++ style comments:
-
-    // inline comment
-    /* possibly multiline comment */
-
-Scoped blocks:
+### Scoped block
 
     // define some names in a scope:
-    { a = 1; b = 2 }    // the whole expression is evaluated to `none`  
+    { a = 1; b = 2 }    // the whole expression evaluates to `void`  
     a                   // ERROR - `a` is not defined in outer scope
-    c = { a = 1; a }    // block returns `a`, `c` evaluates to `1`
+    
+    // block returns `a`, `c` evaluates to `1`
+    c = { a = 1; a }
+    
+    // the outer scope is visible inside the block
+    x = 1; y = { x + 2 }
 
 - Semicolons are separators, not required after last expression and before EOL/EOF
-- The block has a return value which is the result of last expression.
-- Definitions don't return the value - explicit expression is required instead.
+- The block has a return value which is the result of the last expression.
+- Definitions don't return a value - explicit expression is required instead.
 
-Function call:
+### Function call
 
     add 1 2
     sub (1 + 2) 3   // => 0
@@ -53,62 +53,108 @@ Function call:
 - Parens can be used around each single argument.
 - Infix operators and other function calls require parens around them.
 
-About infix function calls:
-- left-hand side expression is passed as first argument, right-hand side
-  expressions are passed as following arguments (zero or more of them)
-- spaces around the dot are optional, but numbers might need parenthesis:
+### Infix function call
 
-      one = 1
-      one.add 2
-      1.add 2  // syntax error!
-      (1).add 2  // ok
-      one. add 2  // ok, but bad style
-      1 . add 2   // ok, but bad style
-      "{} {}" .format "hello" 91
-      "string".len
+Any function can be used as "infix operator", or when comparing to object-oriented languages,
+as a method call, giving the first argument is the "object" on which it operates:
 
-- unlike infix operators, functions have no precedence - they are always
-  evaluated from left to right:
+    foo .do bar
+    "string".len
+
+The evaluation rule is simple:
+The left-hand side expression is passed as the first argument and
+zero or more right-hand side expressions are passed as the following arguments.
+
+Spaces around the dot are optional, but numbers might need parenthesis,
+depending if the dot is preceded by a space or not:
+
+    one = 1; one.add 2    // ok, but bad style
+    1.add 2               // wrong and misleading, parsed as `(1.) add (2)`
+    (1).add 2             // ok, but better add a space before the dot
+    one. add 2            // ok, but bad style
+    1 . add 2             // ok, but bad style
+
+Putting the first argument on left-hand side improves readability in some cases:
+
+    "{} {}" .format "hello" 91
+    "string".len
+
+Unlike infix operators, functions have no precedence - they are always
+evaluated from left to right:
   
-      1 .add 2 .mul 3  // => 9
-      (1 .add 2).mul 3  // => 9
-      1 .add (2 .mul 3)  // => 7
+    1 .add 2 .mul 3  // => 9
+    (1 .add 2).mul 3  // => 9
+    1 .add (2 .mul 3)  // => 7
+
+The dot operator breaks the argument list. Single argument calls can be chained:
+
+    // all these lines are equivalent
+    uniq (sort (a_list))        // forced right-to-left evaluation
+    a_list .sort .uniq          // implicit left-to-right evaluation
+    ((a_list) .sort) .uniq      // the same, explicit
+
+    // also equivalent, the general rule still applies
+    list_1 .cat list_2 list_3 .sort .uniq
+    cat list_1 list_2 list_3 .sort .uniq
+    
+    // might be more readable with explicit parens
+    (cat list_1 list_2 list_3) .sort .uniq
+
+Generally, the dot operator has weaker binding than a function call.
+
+### Operators
 
 Infix and prefix operators, operator precedence:
 
     1 + 2 / 3 == 1 + (2 / 3)
     -(1 + 2)
 
-Definition (naming a value) can occur only once for each name in a scope:
+### Variables
 
-    i = 1               // auto type
+Variables are named values. They are always immutable - the name can be
+assigned only once in each scope. But it's possible to override the name
+in inner scope:
+
+    // variable type is inferred
+    i = 1               
+    
+    // right-hand side can be any expression
     j = 1 + 2
-    i = j               // ERROR - redefinition of a name
     k = add2 1 2
-    l:Int32 = k         // definition with type declaration
-    s:String = "XCI"    // UTF-8 string
+    
+    // error, redefinition of a name
+    k = 1; k = k + 1       
+    
+    // ok, inner `m` has value `2` 
+    m = 1; { m = m + 1 }   
+    
+    // variable type can be explicitly declared
+    l:Int32 = k
+    s:String = "XCI"
+
+### Function definition
 
 Define a function with parameters:
 
-    add2 = |a b| {a + b}   // generic function - works with any type supported by op+
-    add2 = |a:t b:t| -> t {a + b}  // same as above, but with explicit type variable
-    add2 = |a:Int b:Int|->Int {a + b}   // specific, with type declarations
-    add2 : |Int Int|->Int = |a b|{a + b}   // type declaration on left side (i.e. disable type inference)
+    add2 = fun a b {a + b}   // generic function - works with any type supported by op+
+    add2 = fun a:t b:t -> t {a + b}  // same as above, but with explicit type variable
+    add2 = fun a:Int b:Int -> Int {a + b}   // specific, with type declarations
+    add2 : Int Int -> Int = fun a b {a + b}   // type declaration on left side (i.e. disable type inference)
     
     // function definition can span multiple lines
-    add2 = | a:Int b:Int | -> Int
+    add2 = fun a:Int b:Int -> Int
     {
         a + b
     }
     
     // possible program main function
-    main = | args:[String] | -> Void {
+    main = fun args:[String] -> Void {
         print "Hello World!"
     }
 
 Function call can explicitly name the arguments:
 
-    make_book = | name:String author:String isbn:Int | -> MyBook
+    make_book = fun name:String author:String isbn:Int -> MyBook
         { MyBook(name, author, isbn) }
     make_book name="Title" author="Karel IV" isbn=12345
 
@@ -120,14 +166,14 @@ prototype.
 
 Pass a function as an argument:
 
-    eval2 = | f a b | { f a b }
+    eval2 = fun f a b { f a b }
     eval2 add2 1 2                  // calls `add2 1 2`
-    eval2 |a b|{a + b} 1 2          // calls anonymous function
+    eval2 fun a b {a + b} 1 2        // calls anonymous function
 
 Return a function from a function:
 
-    sub2 = | a b | { a - b }
-    choose = |x| { if (x == "add") add2 sub2 }
+    sub2 = fun a b { a - b }
+    choose = fun x { if (x == "add") add2 sub2 }
     choose "add" 1 2
     choose "sub" 1 2
 
@@ -157,15 +203,15 @@ If-condition:
 Block is a function with zero arguments:
 
     block1 = { c = add2 a b; }    // returns c (the semicolon is not important)
-    block2 = { c = add2 a b; none }  // returns none
+    block2 = { c = add2 a b; void }  // returns `void`
     block1  // evaluate the block (actually, it might have been evaluated above - that's up to compiler)
     block3 = { a + b }      // block with free variables: a, b
     block3      // the value is still { a + b } - variables are not bound, cannot be evaluated
     block3_bound = bind a=1 b=2 block3
     block3_bound    // returns 3
     
-    a = {f = |x|{ 5 } }; f    // ERROR - block creates new scope - f is undefined outside
-    a = (f = |x|{ 5 } ); f    // ok - f is declared in outer scope
+    a = {f = fun x {5}}; f    // ERROR - block creates new scope - f is undefined outside
+    a = (f = fun x {5}); f    // ok - f is declared in outer scope
 
 Infix operators:
 
@@ -174,12 +220,6 @@ Infix operators:
     1 + 2 * 3 ** 4 == 1 + (2 * (3 ** 4))
     // Bitwise operators
     1 | 2 & 3 >> 1 == 1 | (2 & (3 >> 1))
-
-The BitwiseOr operator has lower precedence that lambda operator:
-
-    a | b | c       // ok, bitwise
-    a | b | {c}     // calls 'a' with lambda '|b|{c}' as an argument
-    a | b | ({c})   // now the '{c}' block is an arg in bitwise-or
 
 Record field lookup:
 
@@ -216,15 +256,17 @@ Types must begin with uppercase letter (this is enforced part of the syntax):
     MyTuple = (String, Int)
     MyRecord = (String name, Int age)    // just a tuple with named fields
     MyBool = false | true
-    MyVariant = int Int | string String | none   // discriminated variant type
-    MyOptional = some v | none
+    MyVariant = int Int | string String | void   // discriminated variant type
+    MyOptional = some v | void
 
 Function types:
 
-    |a:Int b:Int| -> |c:Int| -> Int
-    |Int Int| -> |Int| -> Int           // without parameter names
-    |Int Int Int| -> Int                // Compact form
-    |Int| -> |Int| -> |Int| -> Int      // Normalized form
+    a:Int b:Int -> c:Int -> Int         // with parameter names
+    Int Int -> Int -> Int               // without parameter names
+    Int Int Int -> Int                  // compact form
+    Int -> Int -> Int -> Int            // normalized form
+    (Int, Int, Int) -> Int              // single tuple argument
+    (Int, Int) Int -> Int               // two arguments, first is tuple
 
 - All of the above types are equivalent - they all describe the same function.
 - The normalized form describes how the partial evaluation works.
@@ -234,7 +276,7 @@ Function types:
 
 ### Lists
 
-Lists are homogenous data types:
+Lists are homogeneous data types:
 
     nums = [1, 2, 3, 4, 5]
     chars = ['a', 'b', 'c', 'd', 'e']
@@ -285,6 +327,18 @@ Comprehensions:
     [2*x | x <= [1..10], x > 3]
 
 
+### Other syntax
+
+C++ style comments:
+
+    // comment line
+    
+    print "hello " /* inline comment */ "world"
+    
+    /* multiline
+       comment */
+
+
 Modules
 -------
 
@@ -305,8 +359,8 @@ Given this source file:
 Imagine that it's executed like this:
 
     _0 = void
-    _1 = executor (|_|{ 1 + 2 } _0)
-    _2 = executor (|_|{ 3 * _ } _1)
+    _1 = executor (fun _{ 1 + 2 } _0)
+    _2 = executor (fun _{ 3 * _ } _1)
 
 The Executor can do anything with the results, for example:
 
@@ -363,7 +417,7 @@ Appendix
 
 List of Keywords:
 
-    else if then
+    else fun if then
 
 Precedence table:
 
@@ -382,8 +436,9 @@ Precedence table:
     9    |  power             |  **
     10   |  subscript         |  x ! y
     
-    (11) |  unary ops         |  -  +  !  ~
-    (12) |  function call     |  f [<arg> ...]
+    (11) |  dot function call |  <arg1> . name [<arg2> ...]
+    (12) |  unary ops         |  -  +  !  ~
+    (13) |  function call     |  name [<arg> ...]
 
 Higher precedence means tighter binding.
 

@@ -75,16 +75,11 @@ public:
                 //m_value = {};
                 assert(!"not implemented");
                 return;
-            case Symbol::Value:
-                if (symtab.module() != nullptr) {
-                    // static value
-                    auto& val = symtab.module()->get_value(sym.index());
-                    set_const_value(val.make_copy());
-                    return;
-                }
-                //m_value = m_function.scope().values().get(sym.index());
-                assert(!"not implemented");
+            case Symbol::Value: {
+                auto& val = symtab.module()->get_value(sym.index());
+                set_const_value(val.make_copy());
                 return;
+            }
             case Symbol::Parameter:
                 //m_value = m_function.scope().parameters().get(sym.index());
                 assert(!"not implemented");
@@ -98,9 +93,8 @@ public:
             case Symbol::Method:
             case Symbol::TypeName:
             case Symbol::TypeVar:
-                break;
             case Symbol::Function:
-                // fallthrough
+            case Symbol::Fragment:
                 break;
         }
     }
@@ -253,7 +247,7 @@ private:
             void visit(const value::String& v) override { collapsed = make_unique<ast::String>(v.value()); }
             void visit(const value::List& v) override {}
             void visit(const value::Tuple& v) override {}
-            void visit(const value::Lambda&) override {}
+            void visit(const value::Closure&) override {}
             void visit(const value::Module& v) override {}
         };
         ValueVisitor visitor(m_collapsed);

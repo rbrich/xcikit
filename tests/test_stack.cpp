@@ -94,3 +94,59 @@ TEST_CASE( "Stack of strings", "[stack]" )
     CHECK(*prev == "bar");
     CHECK(it->length() == 5);
 }
+
+
+TEST_CASE( "Stack of structs", "[stack]" )
+{
+    struct TestT {
+        std::string name;
+        void* address = nullptr;
+
+        explicit TestT(const char* name) : name(name) {}
+    };
+    static_assert(alignof(TestT) == 8);
+
+    constexpr uint32_t init_cap = 10;
+    Stack<TestT> stack(init_cap);
+
+    stack.clear();  // clear empty stack -> NOOP
+    CHECK(stack.empty());
+    CHECK(stack.size() == 0);  // NOLINT: not same as empty()
+    CHECK(stack.capacity() == init_cap);
+
+    stack.emplace("no small string optimization please");
+    stack.push(TestT{"bar"});
+    TestT x{"third"};
+    stack.push(x);
+    CHECK(!stack.empty());
+    CHECK(stack.size() == 3);
+    CHECK(stack.capacity() == init_cap);
+
+    auto it = stack.cbegin();
+    ++it;
+    auto prev = it++;
+    CHECK(prev->name == "bar");
+    CHECK(prev->address == nullptr);
+    CHECK(it->name.length() == 5);
+}
+
+
+TEST_CASE( "Iterators", "[stack]" )
+{
+    Stack<int> stack;
+    CHECK(stack.begin() == stack.end());
+    CHECK(stack.cbegin() == stack.cend());
+    CHECK(stack.begin() == Stack<int>::iterator{});
+    CHECK(stack.cbegin() == Stack<int>::const_iterator{});
+
+    stack.push(1);
+    CHECK(stack.begin() != stack.end());
+    CHECK(stack.cbegin() != stack.cend());
+    CHECK(stack.begin() != Stack<int>::iterator{});
+    CHECK(stack.cbegin() != Stack<int>::const_iterator{});
+    auto it = stack.begin();
+    CHECK(++it == stack.end());
+    auto cit = stack.cbegin();
+    (void) cit++;
+    CHECK(cit == stack.cend());
+}

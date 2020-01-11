@@ -61,59 +61,16 @@ size_t Function::parameter_offset(Index idx) const
 }
 
 
-Index Function::add_value(TypeInfo&& type_info)
+void Function::add_nonlocal(TypeInfo&& type_info)
 {
-    m_values.push_back(move(type_info));
-    return m_values.size() - 1;
+    signature().add_nonlocal(std::move(type_info));
 }
 
-
-size_t Function::raw_size_of_values() const
-{
-    return std::accumulate(m_values.begin(), m_values.end(), 0,
-                [](size_t init, const TypeInfo& ti) { return init + ti.size(); });
-}
-
-
-size_t Function::value_offset(Index idx) const
-{
-    size_t ofs = 0;
-    for (const auto& ti : m_values) {
-        if (idx == 0)
-            return ofs;
-        ofs += ti.size();
-        idx --;
-    }
-    assert(!"value index out of range");
-    return 0;
-}
-
-
-std::vector<TypeInfo> Function::nonlocals() const
-{
-    std::vector<TypeInfo> res;
-    for (const auto& sym : m_symtab) {
-        if (sym.type() == Symbol::Nonlocal) {
-            auto& nl_sym = *sym.ref();
-            auto* nl_func = sym.ref().symtab()->function();
-            assert(nl_func != nullptr);
-            if (nl_sym.type() == Symbol::Value)
-                res.push_back(nl_func->get_value(nl_sym.index()));
-            else if (nl_sym.type() == Symbol::Parameter)
-                res.push_back(nl_func->get_parameter(nl_sym.index()));
-            else
-                assert(!"Bad nonlocal reference.");
-        }
-    }
-    return res;
-}
 
 size_t Function::raw_size_of_nonlocals() const
 {
-    const auto nl = nonlocals();
-    return std::accumulate(nl.begin(), nl.end(), 0,
-                           [](size_t init, const TypeInfo& ti) { return init + ti.size(); });
-
+    return std::accumulate(nonlocals().begin(), nonlocals().end(), 0,
+            [](size_t init, const TypeInfo& ti) { return init + ti.size(); });
 }
 
 
@@ -131,6 +88,27 @@ std::pair<size_t, TypeInfo> Function::nonlocal_offset_and_type(Index idx) const
 }
 
 
+void Function::add_partial(TypeInfo&& type_info)
+{
+    signature().add_partial(std::move(type_info));
+}
+
+
+size_t Function::raw_size_of_partial() const
+{
+    return std::accumulate(partial().begin(), partial().end(), 0,
+            [](size_t init, const TypeInfo& ti) { return init + ti.size(); });
+}
+
+
+std::vector<TypeInfo> Function::closure() const
+{
+    auto closure = nonlocals();
+    std::copy(partial().cbegin(), partial().cend(), std::back_inserter(closure));
+    return closure;
+}
+
+
 bool Function::is_generic() const
 {
     return ranges::any_of(signature().params, [](const TypeInfo& type_info) {
@@ -138,24 +116,6 @@ bool Function::is_generic() const
     });
 }
 
-
-/*
-Function Function::partial_call(vector<Value>& args) const
-{
-    Function fn {m_module, m_parent};
-    fn.signature().return_type = m_signature->return_type;
-    fn.signature().params = {m_signature->params.begin() + args.size(),
-                             m_signature->params.end()};
-    fn.scope() = scope();
-    fn.code() = m_code;
-    // apply args - add them to namespace
-    for (auto& arg : args) {
-        fn.scope().set_first_unknown(move(arg));
-    }
-    args.clear();
-    return fn;
-}
-*/
 
 ostream& operator<<(ostream& os, const Function& v)
 {
@@ -210,23 +170,6 @@ std::ostream& operator<<(std::ostream& os, Function::DumpInstruction f)
                 break;
         }
     }
-    if (opcode >= Opcode::ThreeArgFirst && opcode <= Opcode::ThreeArgLast) {
-        // 3 args
-        Index arg1 = *(++f.pos);
-        Index arg2 = *(++f.pos);
-        Index arg3 = *(++f.pos);
-        os << static_cast<int>(arg1) << ' ' << static_cast<int>(arg2);
-        switch (opcode) {
-            case Opcode::Partial: {
-                const auto& fn = f.func.module().get_imported_module(arg1).get_function(arg2);
-                os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
-                break;
-            }
-            default:
-                break;
-        }
-        os << ' ' << static_cast<int>(arg3);
-    }
     return os;
 }
 
@@ -236,8 +179,8 @@ bool Function::operator==(const Function& rhs) const
     return &m_module == &rhs.m_module &&
            &m_symtab == &rhs.m_symtab &&
            *m_signature == *rhs.m_signature &&
-           m_values == rhs.m_values &&
-           m_code == rhs.m_code;
+           m_code == rhs.m_code &&
+           m_ast == rhs.m_ast;
 }
 
 

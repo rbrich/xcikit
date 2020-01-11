@@ -23,40 +23,37 @@
 namespace xci::script {
 
 
-// Reference counted heap slot
-// Each instance holds 1 refcount
-// Every push to stack increases refcount, pop from stack decreases refcount.
+// Manually reference-counted heap slot
+// Every instance on the stack should increase refcount by one.
+// Single instance pulled of the stack retains one refcount, which needs to be
+// manually decreased before destroying the object.
 class HeapSlot {
 public:
     // new uninitialized slot
     HeapSlot() : m_slot(nullptr) {}
-    // initialized slot, just this one ref
+    // bind to existing slot
+    explicit HeapSlot(byte* slot) : m_slot(slot) {}
+    // create new slot with refcount = 1
     explicit HeapSlot(size_t size);
-    // use existing slot, +1 ref
-    explicit HeapSlot(byte* slot) : m_slot(slot) { incref(); }
+    // free the object only when refcount = 0
+    ~HeapSlot() { gc(); }
     // copy existing slot
-    HeapSlot(const HeapSlot& other) : m_slot(other.m_slot) { incref(); }
+    HeapSlot(const HeapSlot& other) = default;
     HeapSlot(HeapSlot&& other) noexcept : m_slot(other.m_slot) { other.m_slot = nullptr; }
-    HeapSlot& operator =(const HeapSlot& rhs) { reset(rhs.m_slot); return *this; }
+    HeapSlot& operator =(const HeapSlot& rhs) = default;
     HeapSlot& operator =(HeapSlot&& rhs) noexcept { std::swap(m_slot, rhs.m_slot); return *this; }
-    // delete instance, -1 refcount
-    ~HeapSlot() { decref_gc(); }
 
     void write(byte* buffer) const { std::memcpy(buffer, &m_slot, sizeof(m_slot)); }
     void read(const byte* buffer) { std::memcpy(&m_slot, buffer, sizeof(m_slot)); }
 
     void incref() const;
     void decref() const;
-
-    // decref + delete slot if refs=0
-    void decref_gc();
+    uint32_t refcount() const;
+    void gc();  // delete slot if refs=0
 
     byte* data() { return m_slot == nullptr ? nullptr : m_slot + 4; }
     const byte* data() const { return m_slot == nullptr ? nullptr : m_slot + 4; }
     const byte* slot() const { return m_slot; }
-
-    void reset(byte* slot);
-    void reset(size_t size);
 
     explicit operator bool() const { return m_slot != nullptr; }
 

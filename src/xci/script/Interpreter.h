@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCIKIT_INTERPRETER_H
-#define XCIKIT_INTERPRETER_H
+#ifndef XCI_SCRIPT_INTERPRETER_H
+#define XCI_SCRIPT_INTERPRETER_H
 
 #include "Parser.h"
 #include "Compiler.h"
