@@ -32,6 +32,7 @@ class Module {
 public:
     explicit Module(std::string name) : m_symtab(move(name)) { m_symtab.set_module(this); }
     Module() : Module("<module>") {}
+    ~Module();
 
     const std::string& name() const { return m_symtab.name(); }
 

@@ -33,6 +33,13 @@ install(TARGETS demo_vfs EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 
 add_executable(demo_reflect reflect/demo_reflect.cpp)
 target_link_libraries(demo_reflect xci-data)
+install(TARGETS demo_reflect EXPORT xcikit DESTINATION ${INST_EXAMPLES})
+
+# script
+
+add_executable(demo_script script/demo_script.cpp)
+target_link_libraries(demo_script xci-script)
+install(TARGETS demo_script EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 
 # text
 

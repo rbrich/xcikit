@@ -22,6 +22,14 @@ namespace xci::script {
 using namespace std;
 
 
+Module::~Module()
+{
+    for (auto& val : m_values) {
+        val->decref();
+    }
+}
+
+
 Index Module::add_native_function(
         std::string&& name, std::vector<TypeInfo>&& params, TypeInfo&& retval,
         Function::NativeWrapper native_fn)

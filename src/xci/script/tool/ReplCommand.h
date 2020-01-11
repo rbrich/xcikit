@@ -28,7 +28,7 @@ private:
     void add_cmd_s(std::string&& name, std::string&& alias, Function::NativeWrapper native_fn);
 
 private:
-    Interpreter m_interpreter {0};
+    Interpreter m_interpreter;
     Module m_module {"cmd"};
 };
 
