@@ -248,8 +248,8 @@ int main(int argc, char* argv[])
             "   -m --module            Print compiled module content\n"
             "   --trace                Trace bytecode\n"
             "   --pp-symbols           Stop after symbols pass\n"
-            "   --pp-nonlocals         Stop after nonlocals pass\n"
             "   --pp-types             Stop after typecheck pass\n"
+            "   --pp-nonlocals         Stop after nonlocals pass\n"
             "   --no-std               Do not load standard library\n"
             "   -h --help              Show help\n",
             { argv + 1, argv + argc },
@@ -269,10 +269,10 @@ int main(int argc, char* argv[])
         opts.compiler_flags |= Compiler::O1;
     if (args["--pp-symbols"].asBool())
         opts.compiler_flags |= Compiler::PPSymbols;
-    if (args["--pp-nonlocals"].asBool())
-        opts.compiler_flags |= Compiler::PPNonlocals;
     if (args["--pp-types"].asBool())
         opts.compiler_flags |= Compiler::PPTypes;
+    if (args["--pp-nonlocals"].asBool())
+        opts.compiler_flags |= Compiler::PPNonlocals;
 
     if (args["--eval"]) {
         evaluate(env, args["--eval"].asString(), opts);

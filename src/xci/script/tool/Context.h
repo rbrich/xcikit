@@ -17,6 +17,7 @@
 namespace xci::script::tool {
 
 
+// globals, basically
 struct Context {
     bool done {false};
     Interpreter interpreter;

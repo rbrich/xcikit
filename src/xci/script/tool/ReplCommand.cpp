@@ -17,6 +17,15 @@ using std::cout;
 using std::endl;
 
 
+static Module& cmd_module(Module* module = nullptr)
+{
+    static Module* s_module = nullptr;
+    if (module)
+        s_module = module;
+    return *s_module;
+}
+
+
 static void cmd_quit(xci::script::Stack& stack) {
     stack.push(value::Void{});  // return void
     context().done = true;
@@ -33,6 +42,12 @@ static void cmd_help(xci::script::Stack& stack) {
 
 
 static void dump_module(unsigned mod_idx) {
+    // dump command module itself
+    if (mod_idx == unsigned(-1)) {
+        cout << "Command module:" << endl << cmd_module() << endl;
+        return;
+    }
+
     auto& ctx = context();
     TermCtl& t = TermCtl::stdout_instance();
     if (ctx.modules.empty()) {
@@ -77,6 +92,12 @@ static void cmd_dump_module_s(xci::script::Stack& stack) {
         ++n;
     }
 
+    // dump command module itself
+    if (mod_name == "." || mod_name == "cmd") {
+        dump_module(-1);
+        return;
+    }
+
     TermCtl& t = TermCtl::stdout_instance();
     cout << t.red().bold() << "Error: module not found: " << mod_name
          << t.normal() << endl;
@@ -86,6 +107,7 @@ static void cmd_dump_module_s(xci::script::Stack& stack) {
 ReplCommand::ReplCommand()
 {
     m_interpreter.add_imported_module(m_module);
+    cmd_module(&m_module);
     add_cmd("quit", "q", cmd_quit);
     add_cmd("help", "h", cmd_help);
     add_cmd("dump_module", "dm", cmd_dump_module);
