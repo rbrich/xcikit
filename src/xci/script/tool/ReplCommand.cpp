@@ -50,6 +50,7 @@ static void dump_module(unsigned mod_idx) {
          << module << endl;
 }
 
+
 static void cmd_dump_module(xci::script::Stack& stack) {
     stack.push(value::Void{});  // return void
     dump_module(context().modules.size() - 1);

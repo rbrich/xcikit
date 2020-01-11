@@ -207,9 +207,13 @@ public:
             case Symbol::Function: {
                 // find matching instance
                 auto symptr = v.identifier.symbol;
-                struct Item { Module* module; SymbolPointer symptr; TypeInfo type; };
-                std::vector<Item> candidates_match; // match ok
-                std::vector<Item> candidates;  // match failed
+                struct Item {
+                    Module* module;
+                    SymbolPointer symptr;
+                    TypeInfo type;
+                    Match match;
+                };
+                std::vector<Item> candidates;
                 while (symptr) {
                     auto* symmod = symptr.symtab()->module();
                     if (symmod == nullptr)
@@ -226,45 +230,77 @@ public:
                         sig_ptr = fspec->signature_ptr();
                         Symbol sym_copy {*symptr};
                         sym_copy.set_index(module().add_function(move(fspec)));
-                        candidates_match.push_back({symmod,
-                                module().symtab().add(move(sym_copy)),
-                                TypeInfo{sig_ptr}});
-                    } else if (match_params(*sig_ptr)) {
-                        candidates_match.push_back({symmod, symptr, TypeInfo{sig_ptr}});
+                        candidates.push_back({
+                            symmod,
+                            module().symtab().add(move(sym_copy)),
+                            TypeInfo{sig_ptr},
+                            sig_ptr->params.size() == m_call_args.size() ? Match::Exact : Match::Partial});
                     } else {
-                        candidates.push_back({symmod, symptr, TypeInfo{sig_ptr}});
+                        auto m = match_params(*sig_ptr);
+                        candidates.push_back({symmod, symptr, TypeInfo{sig_ptr}, m});
                     }
                     symptr = symptr->next();
                 }
 
-                // OK (exactly one match)
-                if (candidates_match.size() == 1) {
-                    v.identifier.symbol = candidates_match.back().symptr;
-                    m_value_type = candidates_match.back().type;
+                // check for single exact match
+                bool conflict = false;
+                Item* found = nullptr;
+                for (auto& item : candidates) {
+                    if (item.match == Match::Exact) {
+                        if (!found)
+                            found = &item;
+                        else
+                            conflict = true;
+                    }
+                }
+                if (found && !conflict) {
+                    v.identifier.symbol = found->symptr;
+                    m_value_type = found->type;
                     break;
+                }
+
+                // check for single partial match
+                if (!conflict) {
+                    for (auto& item : candidates) {
+                        if (item.match == Match::Partial) {
+                            if (!found)
+                                found = &item;
+                            else
+                                conflict = true;
+                        }
+                    }
+                    if (found && !conflict) {
+                        v.identifier.symbol = found->symptr;
+                        m_value_type = found->type;
+                        break;
+                    }
                 }
 
                 // format the error message (candidates)
                 stringstream o_candidates;
-                for (const auto& m : candidates_match) {
-                    auto& fn = m.module->get_function(m.symptr->index());
-                    o_candidates << "   * matched: " << fn.signature() << endl;
-                }
                 for (const auto& m : candidates) {
                     auto& fn = m.module->get_function(m.symptr->index());
-                    o_candidates << "   * ignored: " << fn.signature() << endl;
+                    o_candidates << "   * " << [&m]() {
+                        switch (m.match) {
+                            case Match::None: return "ignored";
+                            case Match::Partial: return "partial";
+                            case Match::Exact: return "matched";
+                        }
+                        UNREACHABLE;
+                    }() << ": " << fn.signature() << endl;
                 }
                 stringstream o_args;
                 for (const auto& arg : m_call_args) {
                     o_args << arg.type_info << ' ';
                 }
 
-                // ERROR found multiple matching functions
-                if (candidates_match.size() > 1) {
+                if (conflict) {
+                    // ERROR found multiple matching functions
                     throw FunctionConflict(v.identifier.name, o_args.str(), o_candidates.str());
+                } else {
+                    // ERROR couldn't find matching function for `args`
+                    throw FunctionNotFound(v.identifier.name, o_args.str(), o_candidates.str());
                 }
-                // ERROR couldn't find matching function for `args`
-                throw FunctionNotFound(v.identifier.name, o_args.str(), o_candidates.str());
             }
             case Symbol::Module:
                 m_value_type = TypeInfo{Type::Module};
@@ -541,7 +577,13 @@ private:
     }
 
     // Check params from `signature` against `m_call_args`
-    bool match_params(const Signature& signature) const
+    //
+    enum class Match {
+        None,
+        Partial,
+        Exact,
+    };
+    Match match_params(const Signature& signature) const
     {
         auto sig = std::make_unique<Signature>(signature);
         int i = 0;
@@ -554,17 +596,17 @@ private:
                     sig = std::make_unique<Signature>(sig->return_type.signature());
                 } else {
                     // unexpected argument
-                    return false;
+                    return Match::None;
                 }
             }
             // check type of next param
             if (sig->params[0] != arg.type_info) {
-                return false;
+                return Match::None;
             }
             // consume next param
             sig->params.erase(sig->params.begin());
         }
-        return true;
+        return sig->params.empty() ? Match::Exact : Match::Partial;
     }
 
     // match call args with signature (which contains generic type T)
