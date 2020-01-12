@@ -336,3 +336,51 @@ TEST_CASE( "Compiler intrinsics", "[script][interpreter]" )
     // alternative style - essentially the same
     check_interpreter("my_eq : Int32 Int32 -> Bool = { __equal_32 }; my_eq 42 43", "false");
 }
+
+
+int test_fun1(int a, int b, int c) { return (a - b) / c; }
+
+TEST_CASE( "Native functions: free function", "[script][module]" )
+{
+    Interpreter interpreter;
+    Module module;
+    interpreter.add_imported_module(module);
+
+    // free function
+    module.add_native_function("test_fun1a", &test_fun1);
+    module.add_native_function("test_fun1b", test_fun1);  // function pointer is deduced
+
+    auto result = interpreter.eval(R"(
+        (test_fun1a 10 4 2) +  //  3
+        (test_fun1b 0 6 3)     // -2
+    )");
+    CHECK(result->type() == Type::Int32);
+    CHECK(result->as<value::Int32>().value() == 1);
+}
+
+
+TEST_CASE( "Native functions: lambda", "[script][module]" )
+{
+    Interpreter interpreter;
+    Module module;
+    interpreter.add_imported_module(module);
+
+    // lambdas
+    module.add_native_function("add1", [](int a, int b) { return a + b; });
+
+    // lambda with capture must be owned until evaluated by the script
+    // (it can't be passed as temporary!)
+    auto l2 = [v=1](int a, int b) { return a + b + v; };
+    module.add_native_function("add2", l2);
+    auto l3 = [v=1](int a, int b) mutable { return a + b + v++; };
+    module.add_native_function("add3", l3);
+
+    auto result = interpreter.eval(R"(
+        (add1 1 6) +           //  7
+        (add2 3 4) +           //  8
+        (add3 5 5) +           //  11
+        (add3 5 5)             //  12
+    )");
+    CHECK(result->type() == Type::Int32);
+    CHECK(result->as<value::Int32>().value() == 38);
+}

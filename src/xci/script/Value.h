@@ -104,7 +104,7 @@ public:
     bool is_bool() const { return type_info().type() == Type::Bool; }
     bool is_callable() const { return type_info().type() == Type::Function; }
 
-    // Cast to subtype, e.g.: `v.as<value::Int32>()-value()`
+    // Cast to subtype, e.g.: `v.as<value::Int32>()->value()`
     template <class T> T& as() { return *dynamic_cast<T*>(this); }
 };
 

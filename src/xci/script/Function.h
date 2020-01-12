@@ -20,6 +20,7 @@
 #include "AST.h"
 #include "SymbolTable.h"
 #include "TypeInfo.h"
+#include "NativeDelegate.h"
 #include <map>
 #include <string>
 
@@ -110,8 +111,7 @@ public:
     size_t intrinsics() const { return m_intrinsics; }
     bool has_intrinsics() const { return m_intrinsics > 0; }
 
-    using NativeWrapper = void (*)(Stack& stack);
-    void set_native(NativeWrapper native) { m_kind = Kind::Native; m_native = native; }
+    void set_native(NativeDelegate native) { m_kind = Kind::Native; m_native = native; }
     void call_native(Stack& stack) const { assert(m_kind == Kind::Native); m_native(stack); }
 
     // Flags
@@ -122,7 +122,7 @@ public:
         Native,     // function wraps native function (C++ binding)
     };
     void set_kind(Kind kind) { m_kind = kind; }
-    Kind kind() { return m_kind; }
+    Kind kind() const { return m_kind; }
     bool is_native() const { return m_kind == Kind::Native; }
 
     bool operator==(const Function& rhs) const;
@@ -143,7 +143,7 @@ private:
     union {
         // AST of function body (only for generic function)
         ast::Block* m_ast = nullptr;
-        NativeWrapper m_native;
+        NativeDelegate m_native;
     };
     // Counter for instructions from intrinsics
     size_t m_intrinsics = 0;

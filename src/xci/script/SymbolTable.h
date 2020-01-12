@@ -1,5 +1,3 @@
-#include <utility>
-
 // SymbolTable.h created on 2019-07-14, part of XCI toolkit
 // Copyright 2019 Radek Brich
 //
@@ -15,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef XCI_SCRIPT_SYMBOLTABLE_H
-#define XCI_SCRIPT_SYMBOLTABLE_H
+#ifndef XCI_SCRIPT_SYMBOL_TABLE_H
+#define XCI_SCRIPT_SYMBOL_TABLE_H
 
 #include <xci/core/Stack.h>
 #include <vector>

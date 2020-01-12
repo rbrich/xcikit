@@ -32,12 +32,12 @@ Module::~Module()
 
 Index Module::add_native_function(
         std::string&& name, std::vector<TypeInfo>&& params, TypeInfo&& retval,
-        Function::NativeWrapper native_fn)
+        NativeDelegate native)
 {
     auto fn = std::make_unique<Function>(*this, symtab().add_child(name));
     fn->signature().params = move(params);
     fn->signature().return_type = move(retval);
-    fn->set_native(native_fn);
+    fn->set_native(native);
     Index index = add_function(move(fn));
     symtab().add({move(name), Symbol::Function, index});
     return index;

@@ -523,6 +523,20 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
 }  // namespace ast
 
 
+// Function
+
+std::ostream& operator<<(std::ostream& os, Function::Kind v)
+{
+    switch (v) {
+        case Function::Kind::Normal:  return os << "normal";
+        case Function::Kind::Inline:  return os << "inline";
+        case Function::Kind::Generic: return os << "generic";
+        case Function::Kind::Native:  return os << "native";
+    }
+    UNREACHABLE;
+}
+
+
 // Module
 
 std::ostream& operator<<(std::ostream& os, const Module& v)
@@ -535,7 +549,10 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
     os << "* " << v.num_functions() << " functions" << endl << more_indent;
     for (size_t i = 0; i < v.num_functions(); ++i) {
         const auto& f = v.get_function(i);
-        os << put_indent << '[' << i << "] " << f.name() << ": " << f.signature() << endl;
+        os << put_indent << '[' << i << "] ";
+        if (f.kind() != Function::Kind::Normal)
+            os << '(' << f.kind() << ") ";
+        os << f.name() << ": " << f.signature() << endl;
     }
     os << less_indent;
 
