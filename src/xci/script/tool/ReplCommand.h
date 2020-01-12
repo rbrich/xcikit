@@ -20,12 +20,21 @@ public:
     Interpreter& interpreter() { return m_interpreter; }
 
 private:
-    // Void
-    void add_cmd(std::string&& name, std::string&& alias, Function::NativeWrapper native_fn);
-    // Int -> Void
-    void add_cmd_i(std::string&& name, std::string&& alias, Function::NativeWrapper native_fn);
-    // String -> Void
-    void add_cmd_s(std::string&& name, std::string&& alias, Function::NativeWrapper native_fn);
+    template<class F>
+    void add_cmd(std::string&& name, std::string&& alias, F&& fun) {
+        auto index = m_module.add_native_function(move(name), std::forward<F>(fun));
+        m_module.symtab().add({move(alias), Symbol::Function, index});
+    }
+    template<class F>
+    void add_cmd(std::string&& name, std::string&& alias, F&& fun, void* arg) {
+        auto index = m_module.add_native_function(move(name), std::forward<F>(fun), arg);
+        m_module.symtab().add({move(alias), Symbol::Function, index});
+    }
+
+    void dump_module(unsigned mod_idx);
+    void cmd_dump_module();
+    void cmd_dump_module(int32_t mod_idx);
+    void cmd_dump_module(std::string mod_name);
 
 private:
     Interpreter m_interpreter;

@@ -9,6 +9,7 @@
 #include <xci/script/dump.h>
 #include <xci/core/TermCtl.h>
 #include <iostream>
+#include <utility>
 
 namespace xci::script::tool {
 
@@ -17,23 +18,12 @@ using std::cout;
 using std::endl;
 
 
-static Module& cmd_module(Module* module = nullptr)
-{
-    static Module* s_module = nullptr;
-    if (module)
-        s_module = module;
-    return *s_module;
-}
-
-
-static void cmd_quit(xci::script::Stack& stack) {
-    stack.push(value::Void{});  // return void
+static void cmd_quit() {
     context().done = true;
 }
 
 
-static void cmd_help(xci::script::Stack& stack) {
-    stack.push(value::Void{});  // return void
+static void cmd_help() {
     cout << ".q, .quit                                  quit" << endl;
     cout << ".h, .help                                  show all accepted commands" << endl;
     cout << ".dm, .dump_module [#|name]                 print contents of last compiled module (or module by index or by name)" << endl;
@@ -41,10 +31,10 @@ static void cmd_help(xci::script::Stack& stack) {
 }
 
 
-static void dump_module(unsigned mod_idx) {
+void ReplCommand::dump_module(unsigned mod_idx) {
     // dump command module itself
     if (mod_idx == unsigned(-1)) {
-        cout << "Command module:" << endl << cmd_module() << endl;
+        cout << "Command module:" << endl << m_module << endl;
         return;
     }
 
@@ -66,23 +56,17 @@ static void dump_module(unsigned mod_idx) {
 }
 
 
-static void cmd_dump_module(xci::script::Stack& stack) {
-    stack.push(value::Void{});  // return void
+void ReplCommand::cmd_dump_module() {
     dump_module(context().modules.size() - 1);
 }
 
 
-static void cmd_dump_module_i(xci::script::Stack& stack) {
-    auto mod_idx = stack.pull<value::Int32>().value();  // 1st arg
-    stack.push(value::Void{});  // return void
+void ReplCommand::cmd_dump_module(int32_t mod_idx) {
     dump_module(mod_idx);
 }
 
 
-static void cmd_dump_module_s(xci::script::Stack& stack) {
-    auto mod_name = stack.pull<value::String>().value();  // 1st arg
-    stack.push(value::Void{});  // return void
-
+void ReplCommand::cmd_dump_module(std::string mod_name) {
     size_t n = 0;
     for (const auto& m : context().modules) {
         if (m->name() == mod_name) {
@@ -107,44 +91,13 @@ static void cmd_dump_module_s(xci::script::Stack& stack) {
 ReplCommand::ReplCommand()
 {
     m_interpreter.add_imported_module(m_module);
-    cmd_module(&m_module);
     add_cmd("quit", "q", cmd_quit);
     add_cmd("help", "h", cmd_help);
-    add_cmd("dump_module", "dm", cmd_dump_module);
-    add_cmd_i("dump_module", "dm", cmd_dump_module_i);
-    add_cmd_s("dump_module", "dm", cmd_dump_module_s);
+    add_cmd("dump_module", "dm", [](void* self){ ((ReplCommand*)self)->cmd_dump_module(); }, this);
+    add_cmd("dump_module", "dm", [](void* self, int32_t i){ ((ReplCommand*)self)->cmd_dump_module(i); }, this);
+    add_cmd("dump_module", "dm", [](void* self, std::string s){ ((ReplCommand*)self)->cmd_dump_module(std::move(s)); }, this);
     m_module.symtab().detect_overloads("dump_module");
     m_module.symtab().detect_overloads("dm");
-}
-
-
-void ReplCommand::add_cmd(std::string&& name, std::string&& alias,
-        Function::NativeWrapper native_fn)
-{
-    auto index = m_module.add_native_function(move(name),
-            {}, TypeInfo{Type::Void},
-            native_fn);
-    m_module.symtab().add({move(alias), Symbol::Function, index});
-}
-
-
-void ReplCommand::add_cmd_i(std::string&& name, std::string&& alias,
-        Function::NativeWrapper native_fn)
-{
-    auto index = m_module.add_native_function(move(name),
-            {TypeInfo{Type::Int32}}, TypeInfo{Type::Void},
-            native_fn);
-    m_module.symtab().add({move(alias), Symbol::Function, index});
-}
-
-
-void ReplCommand::add_cmd_s(std::string&& name, std::string&& alias,
-        Function::NativeWrapper native_fn)
-{
-    auto index = m_module.add_native_function(move(name),
-            {TypeInfo{Type::String}}, TypeInfo{Type::Void},
-            native_fn);
-    m_module.symtab().add({move(alias), Symbol::Function, index});
 }
 
 

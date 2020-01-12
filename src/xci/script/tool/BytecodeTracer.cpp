@@ -5,6 +5,7 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "BytecodeTracer.h"
+#include <xci/script/dump.h>
 
 #include <string>
 #include <stack>

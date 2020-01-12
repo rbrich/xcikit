@@ -44,7 +44,20 @@ public:
     Index add_native_function(std::string&& name, F&& fun)
     {
         auto fn = std::make_unique<Function>(*this, symtab().add_child(name));
-        auto s = native::AutoWrap{std::forward<F>(fun)};
+        auto s = native::AutoWrap{native::ToFunctionPtr(std::forward<F>(fun))};
+        fn->signature().params = s.param_types();
+        fn->signature().return_type = s.return_type();
+        fn->set_native(s.native_wrapper());
+        Index index = add_function(move(fn));
+        symtab().add({move(name), Symbol::Function, index});
+        return index;
+    }
+
+    template<class F>
+    Index add_native_function(std::string&& name, F&& fun, void* arg0)
+    {
+        auto fn = std::make_unique<Function>(*this, symtab().add_child(name));
+        auto s = native::AutoWrap(native::ToFunctionPtr(std::forward<F>(fun)), arg0);
         fn->signature().params = s.param_types();
         fn->signature().return_type = s.return_type();
         fn->set_native(s.native_wrapper());

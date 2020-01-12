@@ -368,19 +368,16 @@ TEST_CASE( "Native functions: lambda", "[script][module]" )
     // lambdas
     module.add_native_function("add1", [](int a, int b) { return a + b; });
 
-    // lambda with capture must be owned until evaluated by the script
-    // (it can't be passed as temporary!)
-    auto l2 = [v=1](int a, int b) { return a + b + v; };
-    module.add_native_function("add2", l2);
-    auto l3 = [v=1](int a, int b) mutable { return a + b + v++; };
-    module.add_native_function("add3", l3);
+    // lambda with state (can't use capture)
+    int state = 10;
+    module.add_native_function("add2",
+            [](void* s, int a, int b) { return a + b + *(int*)(s); },
+            &state);
 
     auto result = interpreter.eval(R"(
         (add1 1 6) +           //  7
-        (add2 3 4) +           //  8
-        (add3 5 5) +           //  11
-        (add3 5 5)             //  12
+        (add2 3 4)             //  8  (+10 from state)
     )");
     CHECK(result->type() == Type::Int32);
-    CHECK(result->as<value::Int32>().value() == 38);
+    CHECK(result->as<value::Int32>().value() == 24);
 }

@@ -12,7 +12,7 @@
 using namespace xci::script;
 
 
-void hello_fun(Stack& stack, void*)
+void hello_fun(Stack& stack, void*, void*)
 {
     // pull arguments according to function signature
     auto arg = stack.pull<value::String>();
@@ -42,7 +42,7 @@ static std::string toupper_at(std::string word, uint32_t index)
 }
 
 
-void toupper_at_wrapped(Stack& stack, void*)
+void toupper_at_wrapped(Stack& stack, void*, void*)
 {
     auto arg1 = stack.pull<value::String>();
     auto arg2 = stack.pull<value::Int32>();
@@ -81,14 +81,15 @@ int main()
     // (which is essentially the same as our manually written `toupper_at_wrapped`)
     module.add_native_function("toupper_at", toupper_at);
 
-    // almost any callable should work, including lambdas
-    // (note that the callable is only referenced, ownership is not taken)
+    // capture-less lambda works, too
     module.add_native_function("add2", [](int a, int b) { return a + b; });
 
-    // lambdas with captures and other function objects need to live until
-    // being called by the interpreter -> don't pass them as temporaries!)
+    // lambda with capture and other function objects can't be passed directly,
+    // but they can be wrapped in captureless lambda
     auto lambda_with_capture = [v=1](int a, int b) { return a + b + v; };
-    module.add_native_function("addv", lambda_with_capture);
+    module.add_native_function("add_v", [](void* l, int a, int b)
+        { return (*static_cast<decltype(lambda_with_capture)*>(l)) (a, b); },
+        &lambda_with_capture);
 
     // add our module as if it was imported by the script
     // (another possibility is to inject the function directly into `main_module`)
