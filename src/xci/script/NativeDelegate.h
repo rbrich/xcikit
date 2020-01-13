@@ -22,7 +22,7 @@ namespace xci::script {
 /// The types of args and return value are specified in function signature.
 /// Failing to read/write exact number of bytes may lead to hard-to-track errors.
 ///
-/// See `native::AutoWrap` template below, which can generate the delegate
+/// See `AutoWrap` template below, which can generate the delegate
 /// from C functions and lambdas.
 
 class NativeDelegate final {
@@ -50,7 +50,7 @@ public:
 private:
     WrapperFunction m_func;  // function that operates on stack, may call wrapped function
     void* m_data_1;    // may be used to store wrapped function pointer
-    void* m_data_2;    // may be used for this pointer when the wrapped function is a method
+    void* m_data_2;    // may be used for `this` pointer when the wrapped function is a method
 };
 
 
@@ -169,10 +169,10 @@ void decref_each(Tuple&& t, std::index_sequence<Is...>)
 
 /// AutoWrap - generate NativeDelegate from a C++ callable
 ///
-///     auto s = native::AutoWrap{std::forward<F>(f)};
-///     fn->signature().params = s.param_types();
-///     fn->signature().return_type = s.return_type();
-///     fn->set_native(s.native_wrapper());
+///     auto w = AutoWrap{ToFunctionPtr(std::forward<F>(f))};
+///     fn->signature().params = w.param_types();
+///     fn->signature().return_type = w.return_type();
+///     fn->set_native(w.native_wrapper());
 ///
 /// Primary template parameters:
 /// \tparam FPtr        struct ToFunctionPtr (see the template below)

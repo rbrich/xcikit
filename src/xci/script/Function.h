@@ -127,12 +127,6 @@ public:
 
     bool operator==(const Function& rhs) const;
 
-    friend std::ostream& operator<<(std::ostream& os, const Function& v);
-
-    struct DumpInstruction { const Function& func; Code::const_iterator& pos; };
-    DumpInstruction dump_instruction_at(Code::const_iterator& pos) const { return {*this, pos}; }
-    friend std::ostream& operator<<(std::ostream& os, DumpInstruction f);
-
 private:
     Module& m_module;
     SymbolTable& m_symtab;

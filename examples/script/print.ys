@@ -1,0 +1,6 @@
+// TODO: not yet implemented
+//       (will require variadic functions)
+
+"number: {} color: {}"
+.format 42 "red"
+.print;
