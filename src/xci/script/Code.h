@@ -163,6 +163,7 @@ public:
     const_iterator begin() const { return m_ops.begin(); }
     const_iterator end() const { return m_ops.end(); }
     size_t size() const { return m_ops.size(); }
+    bool empty() const { return m_ops.empty(); }
 
     bool operator==(const Code& rhs) const { return m_ops == rhs.m_ops; }
 

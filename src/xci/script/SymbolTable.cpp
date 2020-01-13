@@ -121,4 +121,18 @@ SymbolPointer SymbolTable::find_last_of(const std::string& name,
 }
 
 
+void SymbolTable::detect_overloads(const std::string& name)
+{
+    Symbol* prev = nullptr;
+    for (size_t i = 0; i != m_symbols.size(); ++i) {
+        if (m_symbols[i].name() == name) {
+            if (prev) {
+                prev->set_next({*this, i});
+            }
+            prev = &m_symbols[i];
+        }
+    }
+}
+
+
 } // namespace xci::script

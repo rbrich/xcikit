@@ -22,6 +22,28 @@ namespace xci::script {
 using namespace std;
 
 
+Module::~Module()
+{
+    for (auto& val : m_values) {
+        val->decref();
+    }
+}
+
+
+Index Module::add_native_function(
+        std::string&& name, std::vector<TypeInfo>&& params, TypeInfo&& retval,
+        NativeDelegate native)
+{
+    auto fn = std::make_unique<Function>(*this, symtab().add_child(name));
+    fn->signature().params = move(params);
+    fn->signature().return_type = move(retval);
+    fn->set_native(native);
+    Index index = add_function(move(fn));
+    symtab().add({move(name), Symbol::Function, index});
+    return index;
+}
+
+
 Index Module::get_imported_module_index(Module* module) const
 {
     auto it = find(m_modules.begin(), m_modules.end(), module);

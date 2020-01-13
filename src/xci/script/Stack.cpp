@@ -43,19 +43,7 @@ void Stack::push(const Value& o)
 std::unique_ptr<Value> Stack::pull(const TypeInfo& ti)
 {
     auto s = ti.size();
-    if (Stack::size() < s)
-        throw StackUnderflow{};
-    // check type(s) on stack
-    if (ti.type() == Type::Tuple) {
-        for (const auto& subtype : ti.subtypes()) {
-            assert(subtype == m_stack_types.back());
-            (void) subtype;
-            m_stack_types.pop_back();
-        }
-    } else {
-        assert(ti == m_stack_types.back());
-        m_stack_types.pop_back();
-    }
+    pop_type(ti, s);
     // create Value with TypeInfo, read contents from stack
     auto value = Value::create(ti);
     value->read(&m_stack[m_stack_pointer]);
@@ -218,6 +206,26 @@ size_t Stack::grow()
     m_stack_pointer += newcap - m_stack_capacity;
     m_stack_capacity = newcap;
     return m_stack_pointer;
+}
+
+
+void Stack::pop_type(const TypeInfo& ti, size_t s)
+{
+    if (Stack::size() < s)
+        throw StackUnderflow{};
+
+    // check type(s) on stack
+    if (ti.type() == Type::Tuple) {
+        for (const auto& subtype : ti.subtypes()) {
+            assert(subtype == m_stack_types.back());
+            (void) subtype;
+            m_stack_types.pop_back();
+        }
+    } else {
+        // allow casts - only size have to match
+        assert(ti.size() == m_stack_types.back().size());
+        m_stack_types.pop_back();
+    }
 }
 
 

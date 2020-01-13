@@ -19,6 +19,7 @@
 #include "AST.h"
 #include "SymbolTable.h"
 #include "TypeInfo.h"
+#include "Function.h"
 #include <ostream>
 
 namespace xci::script {
@@ -59,6 +60,12 @@ std::ostream& operator<<(std::ostream& os, const Instance& v);
 std::ostream& operator<<(std::ostream& os, const Block& v);
 std::ostream& operator<<(std::ostream& os, const Module& v);
 } // namespace ast
+
+// Function
+std::ostream& operator<<(std::ostream& os, const Function& f);
+std::ostream& operator<<(std::ostream& os, Function::Kind v);
+struct DumpInstruction { const Function& func; Code::const_iterator& pos; };
+std::ostream& operator<<(std::ostream& os, DumpInstruction&& v);
 
 // Module
 std::ostream& operator<<(std::ostream& os, const Module& v);

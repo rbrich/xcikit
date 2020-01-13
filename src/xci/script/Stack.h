@@ -17,14 +17,14 @@
 #define XCI_SCRIPT_STACK_H
 
 #include "Value.h"
-#include "Function.h"
-#include "Error.h"
 #include <xci/core/Stack.h>
 #include <xci/compat/utility.h>
 #include <xci/compat/bit.h>
 #include <vector>
 
 namespace xci::script {
+
+class Function;
 
 
 /// Call stack
@@ -44,6 +44,7 @@ public:
 
     using StackAbs = size_t;  // address into stack, zero is the bottom (this is basically negative address, bad for reasoning, but it's stable when stack grows)
     using StackRel = size_t;  // address into stack, zero is stack pointer (top of the stack, address grows to the bottom)
+    using CodeOffs = size_t;  // instruction pointer (bytecode offset from beginning of the function)
 
     StackRel to_rel(StackAbs abs) const { return size() - abs; }
     StackAbs to_abs(StackRel rel) const { return size() - rel; }
@@ -57,15 +58,12 @@ public:
     T pull() {
         // create empty value
         T v;
-        auto s = v.size();
-        if (size() < s)
-            throw StackUnderflow{};
+        auto ti = v.type_info();
+        auto s = ti.size();
+        pop_type(ti, s);
         // read value from stack
         v.read(&m_stack[m_stack_pointer]);
         m_stack_pointer += s;
-        // check type on stack (allow casts - only size have to match)
-        assert(v.type_info().size() == m_stack_types.back().size());
-        m_stack_types.pop_back();
         return v;
     }
 
@@ -101,13 +99,13 @@ public:
 
     struct Frame {
         const Function* function;
-        Index instruction;
+        CodeOffs instruction;
         StackAbs base;  // parameters are below base, local variables above
-        explicit Frame(const Function* fun, Index ins, size_t base)
+        explicit Frame(const Function* fun, CodeOffs ins, size_t base)
             : function(fun), instruction(ins), base(base) {}
     };
 
-    void push_frame(const Function* fun, Index ins) { m_frame.emplace(fun, ins, size()); }
+    void push_frame(const Function* fun, CodeOffs ins) { m_frame.emplace(fun, ins, size()); }
     void pop_frame() { m_frame.pop(); }
     const Frame& frame() const { return m_frame.top(); }
     const Frame& frame(size_t pos) const { return m_frame[pos]; }
@@ -118,6 +116,11 @@ public:
 
     // reserve more space for stack, returning new free space
     size_t grow();
+
+private:
+    // throw if the stack would underflow
+    // or when the top isn't compatible with the type
+    void pop_type(const TypeInfo& ti, size_t s);
 
 private:
     static constexpr size_t m_stack_max = 100*1024*1024;

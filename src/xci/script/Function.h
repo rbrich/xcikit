@@ -18,13 +18,16 @@
 
 #include "Code.h"
 #include "AST.h"
-#include "Module.h"
 #include "SymbolTable.h"
+#include "TypeInfo.h"
+#include "NativeDelegate.h"
 #include <map>
 #include <string>
 
 namespace xci::script {
 
+class Module;
+class Stack;
 
 // Scope of names and values
 //
@@ -58,8 +61,7 @@ public:
     // parameters
     void add_parameter(std::string name, TypeInfo&& type_info);
     bool has_parameters() const { return !m_signature->params.empty(); }
-    const TypeInfo& get_parameter(Index idx) const { return m_signature->params[idx]; }
-    void set_parameter(Index idx, TypeInfo&& ti) { m_signature->params[idx] = std::move(ti); }
+    const TypeInfo& parameter(Index idx) const { return m_signature->params[idx]; }
     const std::vector<TypeInfo>& parameters() const { return m_signature->params; }
     size_t raw_size_of_parameters() const;
     size_t parameter_offset(Index idx) const;
@@ -78,9 +80,9 @@ public:
     const Code& code() const { return m_code; }
 
     // AST of function body
-    bool has_ast() const { return m_ast != nullptr; }
-    ast::Block* ast() const { return m_ast; }
-    void set_ast(ast::Block* body) { m_ast = body; }
+    bool has_ast() const { assert(m_kind != Kind::Native); return m_ast != nullptr; }
+    ast::Block* ast() const { assert(m_kind != Kind::Native); return m_ast; }
+    void set_ast(ast::Block* body) { assert(m_kind != Kind::Native); m_ast = body; }
 
     // non-locals
     void add_nonlocal(TypeInfo&& type_info);
@@ -99,7 +101,7 @@ public:
     size_t closure_size() const { return nonlocals().size() + partial().size(); }
     std::vector<TypeInfo> closure() const;
 
-    // true if this function is generic
+    // true if this function is generic (i.e. signature contains a type variable)
     bool is_generic() const;
 
     // Special intrinsics function cannot contain any compiled code and is always inlined.
@@ -109,13 +111,21 @@ public:
     size_t intrinsics() const { return m_intrinsics; }
     bool has_intrinsics() const { return m_intrinsics > 0; }
 
+    void set_native(NativeDelegate native) { m_kind = Kind::Native; m_native = native; }
+    void call_native(Stack& stack) const { assert(m_kind == Kind::Native); m_native(stack); }
+
+    // Flags
+    enum class Kind {
+        Normal,     // function has code and will be called
+        Inline,     // function will be inlined at call site
+        Generic,    // function is a template, signature contains type variables
+        Native,     // function wraps native function (C++ binding)
+    };
+    void set_kind(Kind kind) { m_kind = kind; }
+    Kind kind() const { return m_kind; }
+    bool is_native() const { return m_kind == Kind::Native; }
+
     bool operator==(const Function& rhs) const;
-
-    friend std::ostream& operator<<(std::ostream& os, const Function& v);
-
-    struct DumpInstruction { const Function& func; Code::const_iterator& pos; };
-    DumpInstruction dump_instruction_at(Code::const_iterator& pos) const { return {*this, pos}; }
-    friend std::ostream& operator<<(std::ostream& os, DumpInstruction f);
 
 private:
     Module& m_module;
@@ -124,10 +134,15 @@ private:
     std::shared_ptr<Signature> m_signature;
     // Compiled function body
     Code m_code;
-    // AST of function body (only for generic function)
-    ast::Block* m_ast = nullptr;
+    union {
+        // AST of function body (only for generic function)
+        ast::Block* m_ast = nullptr;
+        NativeDelegate m_native;
+    };
     // Counter for instructions from intrinsics
     size_t m_intrinsics = 0;
+    // Kind of function
+    Kind m_kind = Kind::Normal;
 };
 
 

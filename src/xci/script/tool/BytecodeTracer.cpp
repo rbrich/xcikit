@@ -5,6 +5,7 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "BytecodeTracer.h"
+#include <xci/script/dump.h>
 
 #include <string>
 #include <stack>
@@ -52,9 +53,9 @@ void BytecodeTracer::setup(bool print_bytecode, bool trace_bytecode)
             }
             for (auto it = f.code().begin(); it != f.code().end(); it++) {
                 if (it == ipos) {
-                    cout << t.yellow() << '>' << f.dump_instruction_at(it) << t.normal() << endl;
+                    cout << t.yellow() << '>' << DumpInstruction{f, it} << t.normal() << endl;
                 } else {
-                    cout << ' ' << f.dump_instruction_at(it) << endl;
+                    cout << ' ' << DumpInstruction{f, it} << endl;
                 }
             }
             if (ipos == f.code().end()) {
@@ -90,7 +91,7 @@ void BytecodeTracer::print_code(size_t frame, const Function& f)
     cout << "[" << frame << "] " << f.name() << " " << f.signature() << endl;
     for (auto it = f.code().begin(); it != f.code().end(); ++it) {
         ++ m_lines_to_erase;
-        cout << ' ' << f.dump_instruction_at(it) << endl;
+        cout << ' ' << DumpInstruction{f, it} << endl;
     }
 }
 

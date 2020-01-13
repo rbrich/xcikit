@@ -25,6 +25,7 @@ namespace xci::script {
 
 using std::endl;
 using std::left;
+using std::right;
 using std::setw;
 using std::string;
 using std::ostringstream;
@@ -523,6 +524,77 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
 }  // namespace ast
 
 
+// Function
+
+std::ostream& operator<<(std::ostream& os, const Function& f)
+{
+    os << f.signature() << endl;
+    for (auto it = f.code().begin(); it != f.code().end(); it++) {
+        os << ' ' << DumpInstruction{f, it} << endl;
+    }
+    return os;
+}
+
+
+std::ostream& operator<<(std::ostream& os, Function::Kind v)
+{
+    switch (v) {
+        case Function::Kind::Normal:  return os << "normal";
+        case Function::Kind::Inline:  return os << "inline";
+        case Function::Kind::Generic: return os << "generic";
+        case Function::Kind::Native:  return os << "native";
+    }
+    UNREACHABLE;
+}
+
+
+std::ostream& operator<<(std::ostream& os, DumpInstruction&& v)
+{
+    auto inum = v.pos - v.func.code().begin();
+    auto opcode = static_cast<Opcode>(*v.pos);
+    os << right << setw(3) << inum << "  " << left << setw(20) << opcode;
+    if (opcode >= Opcode::OneArgFirst && opcode <= Opcode::OneArgLast) {
+        // 1 arg
+        Index arg = *(++v.pos);
+        os << static_cast<int>(arg);
+        switch (opcode) {
+            case Opcode::LoadStatic:
+                os << " (" << v.func.module().get_value(arg) << ")";
+                break;
+            case Opcode::LoadFunction:
+            case Opcode::Call0: {
+                const auto& fn = v.func.module().get_function(arg);
+                os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
+                break;
+            }
+            case Opcode::Call1: {
+                const auto& fn = v.func.module().get_imported_module(0).get_function(arg);
+                os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
+                break;
+            }
+            default:
+                break;
+        }
+    }
+    if (opcode >= Opcode::TwoArgFirst && opcode <= Opcode::TwoArgLast) {
+        // 2 args
+        Index arg1 = *(++v.pos);
+        Index arg2 = *(++v.pos);
+        os << static_cast<int>(arg1) << ' ' << static_cast<int>(arg2);
+        switch (opcode) {
+            case Opcode::Call: {
+                const auto& fn = v.func.module().get_imported_module(arg1).get_function(arg2);
+                os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
+                break;
+            }
+            default:
+                break;
+        }
+    }
+    return os;
+}
+
+
 // Module
 
 std::ostream& operator<<(std::ostream& os, const Module& v)
@@ -535,7 +607,10 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
     os << "* " << v.num_functions() << " functions" << endl << more_indent;
     for (size_t i = 0; i < v.num_functions(); ++i) {
         const auto& f = v.get_function(i);
-        os << put_indent << '[' << i << "] " << f.name() << ": " << f.signature() << endl;
+        os << put_indent << '[' << i << "] ";
+        if (f.kind() != Function::Kind::Normal)
+            os << '(' << f.kind() << ") ";
+        os << f.name() << ": " << f.signature() << endl;
     }
     os << less_indent;
 
@@ -557,14 +632,24 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
     for (size_t i = 0; i < v.num_classes(); ++i) {
         const auto& cls = v.get_class(i);
         os << put_indent << '[' << i << "] " << cls.name();
+        bool first = true;
         for (const auto& sym : cls.symtab()) {
-            if (sym.type() == Symbol::TypeVar) {
-                os << ' ' << sym.name() << endl << more_indent;
-                continue;
+            switch (sym.type()) {
+                case Symbol::Parameter:
+                    break;
+                case Symbol::TypeVar:
+                    assert(first);
+                    first = false;
+                    os << ' ' << sym.name() << endl << more_indent;
+                    break;
+                case Symbol::Function:
+                    os << put_indent << sym.name() << ": "
+                       << cls.get_function_type(sym.index()) << endl;
+                    break;
+                default:
+                    assert(!"unexpected symbol type");
+                    break;
             }
-            assert(sym.type() == Symbol::Function);
-            os << put_indent << sym.name() << ": "
-               << cls.get_function_type(sym.index()) << endl;
         }
         os << less_indent;
     }

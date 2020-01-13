@@ -36,6 +36,10 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
     auto it = function.code().begin();
     auto base = m_stack.size();
     auto call_fun = [this, &cur_fun, &it, &base](const Function& fn) {
+        if (fn.is_native()) {
+            fn.call_native(m_stack);
+            return;
+        }
         m_stack.push_frame(cur_fun, it - cur_fun->code().begin());
         cur_fun = &fn;
         it = cur_fun->code().begin();
@@ -60,8 +64,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
             // no more stack frames?
             if (m_stack.frame().function == nullptr) {
                 m_stack.pop_frame();
-                assert(m_stack.n_values() == std::max(size_t(1),
-                        function.signature().return_type.subtypes().size()));
+                assert(m_stack.size() == function.signature().return_type.effective_type().size());
                 break;
             }
 
