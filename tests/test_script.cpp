@@ -21,6 +21,7 @@
 #include <xci/script/Error.h>
 #include <xci/script/Stack.h>
 #include <xci/script/SymbolTable.h>
+#include <xci/script/NativeDelegate.h>
 #include <xci/script/dump.h>
 #include <xci/core/Vfs.h>
 #include <xci/core/log.h>
@@ -338,9 +339,43 @@ TEST_CASE( "Compiler intrinsics", "[script][interpreter]" )
 }
 
 
+TEST_CASE( "Native to TypeInfo mapping", "[script][native]" )
+{
+    CHECK(native::make_type_info<void>().type() == Type::Void);
+    CHECK(native::make_type_info<bool>().type() == Type::Bool);
+    CHECK(native::make_type_info<uint8_t>().type() == Type::Byte);
+    CHECK(native::make_type_info<char>().type() == Type::Char);
+    CHECK(native::make_type_info<char16_t>().type() == Type::Char);
+    CHECK(native::make_type_info<char32_t>().type() == Type::Char);
+    CHECK(native::make_type_info<int>().type() == Type::Int32);  // depends on sizeof(int)
+    CHECK(native::make_type_info<long>().type() == Type::Int64);  // depends on sizeof(long)
+    CHECK(native::make_type_info<int32_t>().type() == Type::Int32);
+    CHECK(native::make_type_info<int64_t>().type() == Type::Int64);
+    CHECK(native::make_type_info<float>().type() == Type::Float32);
+    CHECK(native::make_type_info<double>().type() == Type::Float64);
+    CHECK(native::make_type_info<std::string>().type() == Type::String);
+    CHECK(native::make_type_info<char*>().type() == Type::String);
+    CHECK(native::make_type_info<const char*>().type() == Type::String);
+}
+
+
+TEST_CASE( "Native to Value mapping", "[script][native]" )
+{
+    CHECK(native::ValueType<void>().type() == Type::Void);
+    CHECK(native::ValueType<bool>{true}.value() == true);
+    CHECK(native::ValueType<uint8_t>(255).value() == 255);
+    CHECK(native::ValueType<char>('y').value() == 'y');
+    CHECK(native::ValueType<int32_t>(-1).value() == -1);
+    CHECK(native::ValueType<int64_t>(1l << 60).value() == 1l << 60);
+    CHECK(native::ValueType<float>(3.14f).value() == 3.14f);
+    CHECK(native::ValueType<double>(2./3).value() == 2./3);
+    CHECK(native::ValueType<std::string>("test"s).value() == "test"s);
+}
+
+
 int test_fun1(int a, int b, int c) { return (a - b) / c; }
 
-TEST_CASE( "Native functions: free function", "[script][module]" )
+TEST_CASE( "Native functions: free function", "[script][native]" )
 {
     Interpreter interpreter;
     Module module;
@@ -359,7 +394,7 @@ TEST_CASE( "Native functions: free function", "[script][module]" )
 }
 
 
-TEST_CASE( "Native functions: lambda", "[script][module]" )
+TEST_CASE( "Native functions: lambda", "[script][native]" )
 {
     Interpreter interpreter;
     Module module;

@@ -7,9 +7,10 @@
 #ifndef XCI_SCRIPT_NATIVE_DELEGATE_H
 #define XCI_SCRIPT_NATIVE_DELEGATE_H
 
-#include <tuple>
 #include "Value.h"
 #include "Stack.h"
+#include <tuple>
+#include <string>
 
 namespace xci::script {
 
@@ -63,16 +64,40 @@ namespace native {
 ///
 
 template<class T>
-typename std::enable_if_t<std::is_same_v<T, void>, TypeInfo>
+typename std::enable_if_t<std::is_void_v<T>, TypeInfo>
 make_type_info() { return TypeInfo{Type::Void}; }
 
 template<class T>
-typename std::enable_if_t<std::is_same_v<T, std::string>, TypeInfo>
-make_type_info() { return TypeInfo{Type::String}; }
+typename std::enable_if_t<std::is_same_v<T, bool>, TypeInfo>
+make_type_info() { return TypeInfo{Type::Bool}; }
 
 template<class T>
-typename std::enable_if_t<std::is_integral_v<T> && sizeof(T) == 4, TypeInfo>
+typename std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, char16_t> || std::is_same_v<T, char32_t>, TypeInfo>
+make_type_info() { return TypeInfo{Type::Char}; }
+
+template<class T>
+typename std::enable_if_t<std::is_integral_v<T> && sizeof(T) == 1 && !std::is_same_v<T, char> && !std::is_same_v<T, bool>, TypeInfo>
+make_type_info() { return TypeInfo{Type::Byte}; }
+
+template<class T>
+typename std::enable_if_t<std::is_integral_v<T> && sizeof(T) == 4 && !std::is_same_v<T, char32_t>, TypeInfo>
 make_type_info() { return TypeInfo{Type::Int32}; }
+
+template<class T>
+typename std::enable_if_t<std::is_integral_v<T> && sizeof(T) == 8, TypeInfo>
+make_type_info() { return TypeInfo{Type::Int64}; }
+
+template<class T>
+typename std::enable_if_t<std::is_floating_point_v<T> && sizeof(T) == 4, TypeInfo>
+make_type_info() { return TypeInfo{Type::Float32}; }
+
+template<class T>
+typename std::enable_if_t<std::is_floating_point_v<T> && sizeof(T) == 8, TypeInfo>
+make_type_info() { return TypeInfo{Type::Float64}; }
+
+template<class T>
+typename std::enable_if_t<std::is_constructible_v<value::String, T>, TypeInfo>
+make_type_info() { return TypeInfo{Type::String}; }
 
 
 /// Convert native type to `script::Value` subtype:
@@ -89,14 +114,45 @@ struct ValueType_s<void> {
 };
 
 template<>
+struct ValueType_s<bool> {
+    using type = value::Bool;
+};
+
+template<class T>
+struct ValueType_s<T, typename std::enable_if_t<std::is_same_v<T, char> || std::is_same_v<T, char16_t> || std::is_same_v<T, char32_t>>> {
+    using type = value::Char;
+};
+
+template<class T>
+struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && sizeof(T) == 1 && !std::is_same_v<T, char> && !std::is_same_v<T, bool>>> {
+    using type = value::Byte;
+};
+
+template<class T>
+struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && sizeof(T) == 4 && !std::is_same_v<T, char32_t>>> {
+    using type = value::Int32;
+};
+
+template<class T>
+struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && sizeof(T) == 8>> {
+    using type = value::Int64;
+};
+
+template<class T>
+struct ValueType_s<T, typename std::enable_if_t<std::is_floating_point_v<T> && sizeof(T) == 4>> {
+    using type = value::Float32;
+};
+
+template<class T>
+struct ValueType_s<T, typename std::enable_if_t<std::is_floating_point_v<T> && sizeof(T) == 8>> {
+    using type = value::Float64;
+};
+
+template<>
 struct ValueType_s<std::string> {
     using type = value::String;
 };
 
-template<class T>
-struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && sizeof(T) == 4>> {
-    using type = value::Int32;
-};
 
 template<class T>
 using ValueType = typename ValueType_s<T>::type;
@@ -118,10 +174,17 @@ void decref_each(Tuple&& t, std::index_sequence<Is...>)
 ///     fn->signature().return_type = s.return_type();
 ///     fn->set_native(s.native_wrapper());
 ///
+/// Primary template parameters:
+/// \tparam FPtr        struct ToFunctionPtr (see the template below)
+/// \tparam Signature   function pointer signature: same as `typename FPtr::Type`
+///                     (the Signature is expanded using the below specializations)
+/// \tparam Arg0        type of "user data" argument to be passed as first argument
+///                     when calling the function pointer, or void if not used
 
 template<class FPtr, class Signature, class Arg0>
 struct AutoWrap;
 
+// specialization for wrapping pure function - no user data argument (Arg0)
 template <class FPtr, class Ret, class... Args>
 struct AutoWrap<FPtr, Ret(*)(Args...), void> {
     using FunctionPointer = typename FPtr::Type;
@@ -169,6 +232,7 @@ struct AutoWrap<FPtr, Ret(*)(Args...), void> {
 };
 
 
+// specialization for wrapping method-like function - it gets user data argument (Arg0)
 template <class FPtr, class Ret, class Arg0, class... Args>
 struct AutoWrap<FPtr, Ret(*)(Arg0, Args...), Arg0> {
     using FunctionPointer = typename FPtr::Type;
@@ -218,33 +282,38 @@ struct AutoWrap<FPtr, Ret(*)(Arg0, Args...), Arg0> {
     }
 };
 
-
-template <class Callable, class FType>
-struct ToFunctionPtr {
-    using Type = FType;
-    FType ptr;
-    ToFunctionPtr(Callable&& f) : ptr(static_cast<FType>(f)) {}
-};
-
-
-// *** deduction guides ***
-
+// FPtr is instance of ToFunctionPtr template
 template <class FPtr> AutoWrap(FPtr&& fp)
     -> AutoWrap<FPtr, typename FPtr::Type, void>;
 template <class FPtr, class TArg> AutoWrap(FPtr&& fp, TArg)
     -> AutoWrap<FPtr, typename FPtr::Type, TArg>;
 
+
+/// This template together with its deduction guides is used to force conversion
+/// of lambda object to a function pointer. It also remembers the function signature,
+/// which is then passed to AutoWrap.
+
+template <class Callable, class FType>
+struct ToFunctionPtr {
+    using Type = FType;
+    const FType ptr;
+    constexpr explicit ToFunctionPtr(Callable&& f) : ptr(static_cast<FType>(f)) {}
+};
+
 // free function
 template <class Ret, class... Args> ToFunctionPtr(Ret (*f)(Args...))
     -> ToFunctionPtr<decltype(f), Ret (*)(Args...)>;
 
-// member function (just for lambda signature, members are not supported by AutoWrap)
+// member function (just for lambda signature,
+// members are not otherwise supported by ToFunctionPtr)
 template <class Ret, class Cls, class... Args> ToFunctionPtr(Ret (Cls::*f)(Args...))
     -> ToFunctionPtr<decltype(f), Ret (*)(Args...)>;
 template <class Ret, class Cls, class... Args> ToFunctionPtr(Ret (Cls::*f)(Args...) const)
     -> ToFunctionPtr<decltype(f), Ret (*)(Args...)>;
 
 // generic callable -> obtain function type from operator()
+// (the callable must be convertible to plain function pointer,
+// method pointer won't work)
 template <class Fun, class X = decltype(ToFunctionPtr{&std::decay_t<Fun>::operator()})> ToFunctionPtr(Fun&&)
     -> ToFunctionPtr<Fun, typename X::Type>;
 

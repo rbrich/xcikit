@@ -156,6 +156,7 @@ public:
     void read(const byte* buffer) override {}
     TypeInfo type_info() const override { return TypeInfo{Type::Void}; }
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
+    void value() const {}
 };
 
 

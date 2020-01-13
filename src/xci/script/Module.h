@@ -41,29 +41,17 @@ public:
             NativeDelegate native);
 
     template<class F>
-    Index add_native_function(std::string&& name, F&& fun)
-    {
-        auto fn = std::make_unique<Function>(*this, symtab().add_child(name));
-        auto s = native::AutoWrap{native::ToFunctionPtr(std::forward<F>(fun))};
-        fn->signature().params = s.param_types();
-        fn->signature().return_type = s.return_type();
-        fn->set_native(s.native_wrapper());
-        Index index = add_function(move(fn));
-        symtab().add({move(name), Symbol::Function, index});
-        return index;
+    Index add_native_function(std::string&& name, F&& fun) {
+        auto w = native::AutoWrap{native::ToFunctionPtr(std::forward<F>(fun))};
+        return add_native_function(std::move(name),
+                w.param_types(), w.return_type(), w.native_wrapper());
     }
 
     template<class F>
-    Index add_native_function(std::string&& name, F&& fun, void* arg0)
-    {
-        auto fn = std::make_unique<Function>(*this, symtab().add_child(name));
-        auto s = native::AutoWrap(native::ToFunctionPtr(std::forward<F>(fun)), arg0);
-        fn->signature().params = s.param_types();
-        fn->signature().return_type = s.return_type();
-        fn->set_native(s.native_wrapper());
-        Index index = add_function(move(fn));
-        symtab().add({move(name), Symbol::Function, index});
-        return index;
+    Index add_native_function(std::string&& name, F&& fun, void* arg0) {
+        auto w = native::AutoWrap(native::ToFunctionPtr(std::forward<F>(fun)), arg0);
+        return add_native_function(std::move(name),
+                w.param_types(), w.return_type(), w.native_wrapper());
     }
 
     // Imported modules
