@@ -494,14 +494,13 @@ void Compiler::compile(Function& func, ast::Module& ast)
     if ((m_flags & PPMask) == PPTypes)
         return;
 
+    if ((m_flags & OConstFold) == OConstFold) {
+        fold_const_expr(func, ast.body);
+    }
+
     resolve_nonlocals(func, ast.body);
     if ((m_flags & PPMask) == PPNonlocals)
         return;
-
-    if (m_flags & OConstFold) {
-        // FIXME: update Optimizer
-        //fold_const_expr(func, ast.body);
-    }
 
     // Compile - only if mandatory passes were enabled
     compile_block(func, ast.body);

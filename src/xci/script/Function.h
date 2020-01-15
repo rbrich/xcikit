@@ -123,6 +123,7 @@ public:
     };
     void set_kind(Kind kind) { m_kind = kind; }
     Kind kind() const { return m_kind; }
+    bool is_normal() const { return m_kind == Kind::Normal; }
     bool is_native() const { return m_kind == Kind::Native; }
 
     bool operator==(const Function& rhs) const;

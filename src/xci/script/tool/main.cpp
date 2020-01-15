@@ -298,6 +298,7 @@ int main(int argc, char* argv[])
     // standalone interpreter for the control commands
     ReplCommand cmd;
 
+    cout << t.format("{bold}{magenta}λ script v0.3{normal}") << endl;
     while (!context().done) {
         const char* input;
         do {
