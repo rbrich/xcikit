@@ -16,7 +16,7 @@ using namespace std;
 namespace xci::script {
 
 
-class TypeCheckerVisitor: public ast::Visitor {
+class TypeCheckerVisitor final: public ast::Visitor {
     struct CallArg {
         TypeInfo type_info;
         SourceInfo source_info;

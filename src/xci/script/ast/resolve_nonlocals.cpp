@@ -13,7 +13,7 @@ namespace xci::script {
 using namespace std;
 
 
-class NonlocalResolverVisitor: public ast::Visitor {
+class NonlocalResolverVisitor final: public ast::Visitor {
 public:
     explicit NonlocalResolverVisitor(Function& func)
             : m_function(func) {}

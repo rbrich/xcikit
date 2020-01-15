@@ -16,7 +16,7 @@ using namespace std;
 namespace xci::script {
 
 
-class SymbolResolverVisitor: public ast::Visitor {
+class SymbolResolverVisitor final: public ast::Visitor {
 public:
     explicit SymbolResolverVisitor(Function& func) : m_function(func) {}
 

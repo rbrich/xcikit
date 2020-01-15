@@ -15,7 +15,7 @@ namespace xci::script {
 using namespace std;
 
 
-class OptimizationVisitor: public ast::Visitor {
+class OptimizationVisitor final: public ast::Visitor {
 public:
     explicit OptimizationVisitor(Function& func)
         : m_function(func) {}

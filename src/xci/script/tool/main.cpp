@@ -32,14 +32,7 @@ using namespace xci::core;
 using namespace xci::script;
 using namespace xci::script::tool;
 using Replxx = replxx::Replxx;
-using std::string;
-using std::cin;
-using std::cout;
-using std::endl;
-using std::flush;
-using std::stack;
-using std::vector;
-using std::map;
+using namespace std;
 
 
 struct Options {
@@ -97,8 +90,9 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
         auto module = std::make_unique<Module>(module_name);
         for (auto& m : context().modules)
             module->add_imported_module(*m);
-        Function func {*module, module->symtab()};
-        compiler.compile(func, ast);
+        auto func_name = input_number == -1 ? "_" : "_" + to_string(input_number);
+        auto func = make_unique<Function>(*module, module->symtab().add_child(func_name));
+        compiler.compile(*func, ast);
 
         // print AST with Compiler modifications
         if (opts.print_ast) {
@@ -122,25 +116,24 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
         BytecodeTracer tracer(machine, t);
         tracer.setup(opts.print_bytecode, opts.trace_bytecode);
 
-        machine.call(func, [&](const Value& invoked) {
+        machine.call(*func, [&](const Value& invoked) {
             if (!invoked.is_void()) {
                 cout << t.bold().yellow() << invoked << t.normal() << endl;
             }
         });
 
         // returned value of last statement
-        auto result = machine.stack().pull(func.effective_return_type());
+        auto result = machine.stack().pull(func->effective_return_type());
         if (input_number != -1) {
             // REPL mode
-            auto result_name = "_" + std::to_string(input_number);
             if (!result->is_void()) {
-                cout << t.bold().magenta() << result_name << " = "
+                cout << t.bold().magenta() << func_name << " = "
                      << t.normal()
                      << t.bold() << *result << t.normal() << endl;
             }
-            // save result as static value `_<N>` in the module
-            auto result_idx = module->add_value(std::move(result));
-            module->symtab().add({result_name, Symbol::Value, result_idx});
+            // save result as function `_<N>` in the module
+            auto func_idx = module->add_function(move(func));
+            module->symtab().add({move(func_name), Symbol::Function, func_idx});
 
             context().modules.push_back(move(module));
         } else {
@@ -155,7 +148,7 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
             cout << e.file() << ": ";
         cout << t.red().bold() << "Error: " << e.what() << t.normal();
         if (!e.detail().empty())
-            cout << std::endl << t.magenta() << e.detail() << t.normal();
+            cout << endl << t.magenta() << e.detail() << t.normal();
         cout << endl;
         return false;
     }

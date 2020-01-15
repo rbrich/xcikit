@@ -13,7 +13,7 @@ namespace xci::script {
 using namespace std;
 
 
-class FoldDotCallVisitor: public ast::Visitor {
+class FoldDotCallVisitor final: public ast::Visitor {
 public:
     explicit FoldDotCallVisitor(Function& func)
         : m_function(func) {}
