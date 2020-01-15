@@ -33,7 +33,7 @@ public:
     explicit Interpreter(uint32_t flags);
 
     // `flags` are Compiler::Flags
-    void configure(uint32_t flags) { m_compiler.configure(flags); }
+    void configure(uint32_t flags) { m_compiler.set_flags(flags); }
 
     std::unique_ptr<Module> build_module(const std::string& name, std::string_view content);
     void add_imported_module(Module& module) { m_main.add_imported_module(module); }

@@ -1,25 +1,14 @@
-#include <utility>
-
-// AST.h created on 2019-05-15, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// AST.h created on 2019-05-15 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019, 2020 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_AST_H
 #define XCI_SCRIPT_AST_H
 
-#include "SymbolTable.h"
-#include "SourceInfo.h"
+#include <xci/script/SymbolTable.h>
+#include <xci/script/SourceInfo.h>
 #include <cstdint>
 #include <vector>
 #include <string>
@@ -152,13 +141,6 @@ public:
     void visit(OpCall&) final {}
     void visit(Condition&) final {}
     void visit(Function&) final {}
-};
-
-
-class BlockProcessor {
-public:
-    virtual ~BlockProcessor() = default;
-    virtual void process_block(script::Function& func, const ast::Block& block) = 0;
 };
 
 
@@ -336,6 +318,7 @@ struct Operator {
         Mod,            // x % y
         Exp,            // x ** y
         Subscript,      // x ! y
+        DotCall,        // x .f y
         // unary
         LogicalNot,     // !x
         BitwiseNot,     // ~x
@@ -344,12 +327,13 @@ struct Operator {
     };
 
     Operator() = default;
-    explicit Operator(Op op) : op(op) {}
+    Operator(Op op) : op(op) {}
     explicit Operator(const std::string& s, bool prefix=false);
     const char* to_cstr() const;
     int precedence() const;
     bool is_right_associative() const;
     bool is_undefined() const { return op == Undefined; }
+    bool is_dot_call() const { return op == DotCall; }
     bool operator==(const Operator& rhs) const { return op == rhs.op; }
     bool operator!=(const Operator& rhs) const { return op != rhs.op; }
 

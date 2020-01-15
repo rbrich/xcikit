@@ -3,7 +3,12 @@
 # ------------ #
 
 add_library(xci-script
-    AST.cpp
+    ast/AST.cpp
+    ast/fold_const_expr.cpp
+    ast/fold_dot_call.cpp
+    ast/resolve_nonlocals.cpp
+    ast/resolve_symbols.cpp
+    ast/resolve_types.cpp
     Builtin.cpp
     Class.cpp
     Code.cpp
@@ -13,14 +18,10 @@ add_library(xci-script
     Interpreter.cpp
     Machine.cpp
     Module.cpp
-    NonlocalResolver.cpp
     Value.cpp
-    Optimizer.cpp
     Parser.cpp
     Stack.cpp
-    SymbolResolver.cpp
     SymbolTable.cpp
-    TypeResolver.cpp
     TypeInfo.cpp
     dump.cpp)
 

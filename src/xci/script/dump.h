@@ -16,7 +16,7 @@
 #ifndef XCI_SCRIPT_DUMP_H
 #define XCI_SCRIPT_DUMP_H
 
-#include "AST.h"
+#include "ast/AST.h"
 #include "SymbolTable.h"
 #include "TypeInfo.h"
 #include "Function.h"

@@ -17,7 +17,7 @@
 #define XCI_SCRIPT_FUNCTION_H
 
 #include "Code.h"
-#include "AST.h"
+#include "ast/AST.h"
 #include "SymbolTable.h"
 #include "TypeInfo.h"
 #include "NativeDelegate.h"

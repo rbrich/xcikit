@@ -1,23 +1,14 @@
-// Optimizer.cpp created on 2019-06-13, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// fold_const_expr.cpp created on 2019-06-13 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019, 2020 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#include "Optimizer.h"
-#include "Value.h"
-#include "Builtin.h"
-#include "Function.h"
-#include "Error.h"
+#include "fold_const_expr.h"
+#include <xci/script/Value.h>
+#include <xci/script/Builtin.h>
+#include <xci/script/Function.h>
+#include <xci/script/Error.h>
 
 namespace xci::script {
 
@@ -26,8 +17,8 @@ using namespace std;
 
 class OptimizationVisitor: public ast::Visitor {
 public:
-    explicit OptimizationVisitor(Optimizer& processor, Function& func)
-        : m_processor(processor), m_function(func) {}
+    explicit OptimizationVisitor(Function& func)
+        : m_function(func) {}
 
     void visit(ast::Definition& dfn) override {
         dfn.expression->apply(*this);
@@ -204,7 +195,7 @@ public:
         }
 
         Function& func = m_function.module().get_function(v.index);
-        m_processor.process_block(func, v.body);
+        fold_const_expr(func, v.body);
 
         set_variable_value(TypeInfo{Type::Unknown});
     }
@@ -255,7 +246,6 @@ private:
     }
 
 private:
-    Optimizer& m_processor;
     Function& m_function;
     BuiltinModule m_builtin_module;
     unique_ptr<Value> m_value;
@@ -265,9 +255,9 @@ private:
 };
 
 
-void Optimizer::process_block(Function& func, const ast::Block& block)
+void fold_const_expr(Function& func, const ast::Block& block)
 {
-    OptimizationVisitor visitor {*this, func};
+    OptimizationVisitor visitor {func};
     for (const auto& stmt : block.statements) {
         stmt->apply(visitor);
     }

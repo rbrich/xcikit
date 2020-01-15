@@ -16,7 +16,7 @@
 #ifndef XCI_SCRIPT_PARSER_H
 #define XCI_SCRIPT_PARSER_H
 
-#include "AST.h"
+#include "ast/AST.h"
 
 #include <string_view>
 

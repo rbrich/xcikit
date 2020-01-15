@@ -1,12 +1,12 @@
-// NonlocalResolver.cpp created on 2020-01-05 as part of xcikit project
+// resolve_nonlocals.cpp created on 2020-01-05 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019 Radek Brich
+// Copyright 2019, 2020 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#include "NonlocalResolver.h"
-#include "Function.h"
-#include "Module.h"
+#include "resolve_nonlocals.h"
+#include <xci/script/Function.h>
+#include <xci/script/Module.h>
 
 namespace xci::script {
 
@@ -15,8 +15,8 @@ using namespace std;
 
 class NonlocalResolverVisitor: public ast::Visitor {
 public:
-    explicit NonlocalResolverVisitor(NonlocalResolver& processor, Function& func)
-            : m_processor(processor), m_function(func) {}
+    explicit NonlocalResolverVisitor(Function& func)
+            : m_function(func) {}
 
     void visit(ast::Definition& dfn) override {
         dfn.expression->apply(*this);
@@ -139,12 +139,12 @@ private:
     Module& module() { return m_function.module(); }
 
     void process_subroutine(Function& func, ast::Expression& expression) {
-        NonlocalResolverVisitor visitor(m_processor, func);
+        NonlocalResolverVisitor visitor(func);
         expression.apply(visitor);
     }
 
     void process_function(Function& func, ast::Block& body) {
-        m_processor.process_block(func, body);
+        resolve_nonlocals(func, body);
 
         auto& nonlocals = func.signature().nonlocals;
         if (nonlocals.empty())
@@ -174,14 +174,13 @@ private:
     }
 
 private:
-    NonlocalResolver& m_processor;
     Function& m_function;
 };
 
 
-void NonlocalResolver::process_block(Function& func, const ast::Block& block)
+void resolve_nonlocals(Function& func, const ast::Block& block)
 {
-    NonlocalResolverVisitor visitor {*this, func};
+    NonlocalResolverVisitor visitor {func};
     for (const auto& stmt : block.statements) {
         stmt->apply(visitor);
     }

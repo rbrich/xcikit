@@ -1,23 +1,14 @@
-// TypeResolver.cpp created on 2019-06-13, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// resolve_types.cpp created on 2019-06-13 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019, 2020 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#include "TypeResolver.h"
-#include "Value.h"
-#include "Builtin.h"
-#include "Function.h"
-#include "Error.h"
+#include "resolve_types.h"
+#include <xci/script/Value.h>
+#include <xci/script/Builtin.h>
+#include <xci/script/Function.h>
+#include <xci/script/Error.h>
 #include <xci/compat/macros.h>
 
 using namespace std;
@@ -33,8 +24,8 @@ class TypeCheckerVisitor: public ast::Visitor {
     using CallArgs = std::vector<CallArg>;
 
 public:
-    explicit TypeCheckerVisitor(TypeResolver& processor, Function& func)
-        : m_processor(processor), m_function(func) {}
+    explicit TypeCheckerVisitor(Function& func)
+        : m_function(func) {}
 
     void visit(ast::Definition& dfn) override {
         // Evaluate specified type
@@ -444,7 +435,7 @@ public:
             // instantiate the specialization
             if (m_call_args.size() == fn.signature().params.size()) {
                 auto fspec = resolve_specialization(fn);
-                m_processor.process_block(*fspec, v.body);
+                resolve_types(*fspec, v.body);
                 m_value_type = TypeInfo{fspec->signature_ptr()};
                 v.index = module().add_function(move(fspec));
             } else {
@@ -460,7 +451,7 @@ public:
                 auto& fn_dfn = module().get_function(symptr->index());
                 fn_dfn.set_signature(m_value_type.signature_ptr());
             }
-            m_processor.process_block(fn, v.body);
+            resolve_types(fn, v.body);
             m_value_type = TypeInfo{fn.signature_ptr()};
         }
 
@@ -540,7 +531,7 @@ private:
             }
         }
         if (orig_fn.has_ast()) {
-            m_processor.process_block(*fn, *orig_fn.ast());
+            resolve_types(*fn, *orig_fn.ast());
             fn->set_ast(orig_fn.ast());
         } else
             fn->code() = orig_fn.code();
@@ -650,7 +641,6 @@ private:
     }
 
 private:
-    TypeResolver& m_processor;
     Function& m_function;
     TypeInfo m_type_info;
     TypeInfo m_value_type;
@@ -660,9 +650,9 @@ private:
 };
 
 
-void TypeResolver::process_block(Function& func, const ast::Block& block)
+void resolve_types(Function& func, const ast::Block& block)
 {
-    TypeCheckerVisitor visitor {*this, func};
+    TypeCheckerVisitor visitor {func};
     for (const auto& stmt : block.statements) {
         stmt->apply(visitor);
     }

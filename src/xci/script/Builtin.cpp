@@ -202,6 +202,7 @@ const char* builtin::op_to_name(ast::Operator::Op op)
         case Op::BitwiseNot:    return "~";
         case Op::UnaryPlus:     return "+";
         case Op::UnaryMinus:    return "-";
+        case Op::DotCall:       return ".";
     }
     UNREACHABLE;
 }
@@ -236,6 +237,7 @@ const char* builtin::op_to_function_name(ast::Operator::Op op)
         case Op::BitwiseNot:    return "bit_not";
         case Op::UnaryMinus:    return "neg";
         case Op::UnaryPlus:     return nullptr;
+        case Op::DotCall:       return nullptr;
     }
     UNREACHABLE;
 }

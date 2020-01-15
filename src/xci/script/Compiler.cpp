@@ -16,10 +16,11 @@
 #include "Compiler.h"
 #include "Builtin.h"
 #include "Error.h"
-#include "Optimizer.h"
-#include "SymbolResolver.h"
-#include "TypeResolver.h"
-#include "NonlocalResolver.h"
+#include "ast/resolve_symbols.h"
+#include "ast/resolve_nonlocals.h"
+#include "ast/resolve_types.h"
+#include "ast/fold_const_expr.h"
+#include "ast/fold_dot_call.h"
 #include "Stack.h"
 #include <xci/compat/macros.h>
 
@@ -470,33 +471,6 @@ private:
 };
 
 
-void Compiler::configure(uint32_t flags)
-{
-    // each pass processes and modifies the AST - see documentation on each class
-    m_ast_passes.clear();
-    m_compile = false;
-
-    m_ast_passes.push_back(make_unique<SymbolResolver>());
-    if ((flags & PPMask) == PPSymbols)
-        return;
-
-    m_ast_passes.push_back(make_unique<TypeResolver>());
-    if ((flags & PPMask) == PPTypes)
-        return;
-
-    m_ast_passes.push_back(make_unique<NonlocalResolver>());
-    if ((flags & PPMask) == PPNonlocals)
-        return;
-
-    if (flags & OConstFold) {
-        // FIXME: update Optimizer
-        //m_ast_passes.push_back(make_unique<Optimizer>());
-    }
-
-    m_compile = true;
-}
-
-
 void Compiler::compile(Function& func, ast::Module& ast)
 {
     func.signature().set_return_type(TypeInfo{Type::Unknown});
@@ -506,13 +480,31 @@ void Compiler::compile(Function& func, ast::Module& ast)
     // - resolve symbols (SymbolResolver)
     // - infer and check types (TypeResolver)
     // - apply optimizations - const fold etc. (Optimizer)
-    for (auto& proc : m_ast_passes) {
-        proc->process_block(func, ast.body);
+    // See documentation on each function.
+
+    fold_dot_call(func, ast.body);
+    if ((m_flags & PPMask) == PPDotCall)
+        return;
+
+    resolve_symbols(func, ast.body);
+    if ((m_flags & PPMask) == PPSymbols)
+        return;
+
+    resolve_types(func, ast.body);
+    if ((m_flags & PPMask) == PPTypes)
+        return;
+
+    resolve_nonlocals(func, ast.body);
+    if ((m_flags & PPMask) == PPNonlocals)
+        return;
+
+    if (m_flags & OConstFold) {
+        // FIXME: update Optimizer
+        //fold_const_expr(func, ast.body);
     }
 
     // Compile - only if mandatory passes were enabled
-    if (m_compile)
-        compile_block(func, ast.body);
+    compile_block(func, ast.body);
 }
 
 

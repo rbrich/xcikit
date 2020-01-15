@@ -247,9 +247,10 @@ int main(int argc, char* argv[])
             "   -s --symtab            Print symbol table\n"
             "   -m --module            Print compiled module content\n"
             "   --trace                Trace bytecode\n"
-            "   --pp-symbols           Stop after symbols pass\n"
-            "   --pp-types             Stop after typecheck pass\n"
-            "   --pp-nonlocals         Stop after nonlocals pass\n"
+            "   --pp-dotcall           Stop after fold_dot_call pass\n"
+            "   --pp-symbols           Stop after resolve_symbols pass\n"
+            "   --pp-types             Stop after resolve_types pass\n"
+            "   --pp-nonlocals         Stop after resolve_nonlocals pass\n"
             "   --no-std               Do not load standard library\n"
             "   -h --help              Show help\n",
             { argv + 1, argv + argc },
@@ -267,6 +268,8 @@ int main(int argc, char* argv[])
 
     if (args["--optimize"].asBool())
         opts.compiler_flags |= Compiler::O1;
+    if (args["--pp-dotcall"].asBool())
+        opts.compiler_flags |= Compiler::PPDotCall;
     if (args["--pp-symbols"].asBool())
         opts.compiler_flags |= Compiler::PPSymbols;
     if (args["--pp-types"].asBool())
