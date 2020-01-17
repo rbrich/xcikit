@@ -529,18 +529,25 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
 std::ostream& operator<<(std::ostream& os, const Function& f)
 {
     os << f.signature() << endl;
-    for (auto it = f.code().begin(); it != f.code().end(); it++) {
-        os << ' ' << DumpInstruction{f, it} << endl;
+    switch (f.kind()) {
+        case Function::Kind::Normal:
+            for (auto it = f.code().begin(); it != f.code().end(); it++) {
+                os << ' ' << DumpInstruction{f, it} << endl;
+            }
+            return os;
+        case Function::Kind::Generic:   return os << dump_tree << f.ast() << endl;
+        case Function::Kind::Native:    return os << "<native>" << endl;
+        case Function::Kind::Undefined: return os << "<undefined>" << endl;
     }
-    return os;
+    UNREACHABLE;
 }
 
 
 std::ostream& operator<<(std::ostream& os, Function::Kind v)
 {
     switch (v) {
+        case Function::Kind::Undefined:  return os << "undefined";
         case Function::Kind::Normal:  return os << "normal";
-        case Function::Kind::Inline:  return os << "inline";
         case Function::Kind::Generic: return os << "generic";
         case Function::Kind::Native:  return os << "native";
     }

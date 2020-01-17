@@ -159,6 +159,7 @@ struct Type {
     virtual ~Type() = default;
     virtual void apply(ConstVisitor& visitor) const = 0;
     virtual void apply(Visitor& visitor) = 0;
+    virtual std::unique_ptr<ast::Type> copy() const = 0;
 };
 
 
@@ -167,6 +168,8 @@ struct TypeName: public Type {
     explicit TypeName(std::string  s) : name(std::move(s)) {}
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Type> copy() const override { return std::make_unique<TypeName>(*this); };
+
     std::string name;
 
     // resolved symbol:
@@ -177,11 +180,15 @@ struct TypeName: public Type {
 struct ListType: public Type {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Type> copy() const override;
+
     std::unique_ptr<Type> elem_type;
 };
 
 
 struct Parameter {
+    Parameter copy() const { return {identifier, type->copy()}; }
+
     Identifier identifier;  // optional
     std::unique_ptr<Type> type;
 };
@@ -195,6 +202,9 @@ struct TypeConstraint {
 struct FunctionType: public Type {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Type> copy() const override;
+    void copy_to(FunctionType& r) const;
+
     std::vector<Parameter> params;
     std::unique_ptr<Type> result_type;
     std::vector<TypeConstraint> context;
@@ -202,12 +212,16 @@ struct FunctionType: public Type {
 
 
 struct Variable {
+    Variable copy() const { return {identifier, type->copy()}; }
+
     Identifier identifier;  // required
     std::unique_ptr<Type> type;
 };
 
 
 struct Block {
+    Block copy() const;
+
     // finish block - convert last Invocation into ReturnStatement
     // (no Invocation -> throw error)
     void finish();
@@ -223,6 +237,7 @@ struct Expression {
     virtual ~Expression() = default;
     virtual void apply(ConstVisitor& visitor) const = 0;
     virtual void apply(Visitor& visitor) = 0;
+    virtual std::unique_ptr<ast::Expression> copy() const = 0;
 
     SourceInfo source_info;
 
@@ -235,6 +250,8 @@ struct Integer: public Expression {
     explicit Integer(const std::string& s);
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Expression> copy() const override { return std::make_unique<Integer>(*this); };
+
     int32_t value;
 };
 
@@ -243,6 +260,8 @@ struct Float: public Expression {
     explicit Float(const std::string& s);
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Expression> copy() const override { return std::make_unique<Float>(*this); };
+
     float value;
 };
 
@@ -251,18 +270,24 @@ struct String: public Expression {
     explicit String(std::string_view sv) : value(sv) {}
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Expression> copy() const override { return std::make_unique<String>(*this); };
+
     std::string value;
 };
 
 struct Tuple: public Expression {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Expression> copy() const override;
+
     std::vector<std::unique_ptr<Expression>> items;
 };
 
 struct List: public Expression {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Expression> copy() const override;
+
     std::vector<std::unique_ptr<Expression>> items;
     size_t item_size = 0;
 };
@@ -273,6 +298,7 @@ struct Reference: public Expression {
     explicit Reference(Identifier&& s) : identifier(std::move(s)) {}
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Expression> copy() const override;
 
     Identifier identifier;
 
@@ -285,6 +311,9 @@ struct Reference: public Expression {
 struct Call: public Expression {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Expression> copy() const override;
+    void copy_to(Call& r) const;
+
     std::unique_ptr<Expression> callable;
     std::vector<std::unique_ptr<Expression>> args;
 
@@ -347,6 +376,8 @@ struct OpCall: public Call {
     explicit OpCall(Operator::Op op) : op(op) {}
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Expression> copy() const override;
+
     Operator op;
     std::unique_ptr<OpCall> right_tmp;  // used during parsing, cleared when finished
 };
@@ -355,6 +386,8 @@ struct OpCall: public Call {
 struct Function: public Expression {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Expression> copy() const override;
+
     FunctionType type;
     Block body;
 
@@ -368,6 +401,8 @@ struct Condition: public Expression {
     Condition() = default;
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Expression> copy() const override;
+
     std::unique_ptr<Expression> cond;
     std::unique_ptr<Expression> then_expr;
     std::unique_ptr<Expression> else_expr;
@@ -378,11 +413,14 @@ struct Statement {
     virtual ~Statement() = default;
     virtual void apply(ConstVisitor& visitor) const = 0;
     virtual void apply(Visitor& visitor) = 0;
+    virtual std::unique_ptr<ast::Statement> copy() const = 0;
 };
 
 struct Definition: public Statement {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Statement> copy() const override;
+    void copy_to(Definition& r) const;
     SymbolPointer& symbol() { return variable.identifier.symbol; }
 
     Variable variable;
@@ -392,6 +430,8 @@ struct Definition: public Statement {
 struct Invocation: public Statement {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Statement> copy() const override;
+
     std::unique_ptr<Expression> expression;
 
     // resolved:
@@ -402,6 +442,8 @@ struct Return: public Statement {
     explicit Return(std::unique_ptr<Expression> expr) : expression(std::move(expr)) {}
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Statement> copy() const override;
+
     std::unique_ptr<Expression> expression;
 };
 
@@ -409,6 +451,8 @@ struct Return: public Statement {
 struct Class: public Statement {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Statement> copy() const override;
+
     TypeName class_name;
     TypeName type_var;
     std::vector<TypeConstraint> context;
@@ -423,6 +467,8 @@ struct Class: public Statement {
 struct Instance: public Statement {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Statement> copy() const override;
+
     TypeName class_name;
     std::unique_ptr<Type> type_inst;
     std::vector<TypeConstraint> context;

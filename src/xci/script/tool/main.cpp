@@ -70,10 +70,10 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
             context().modules.push_back(std::make_unique<BuiltinModule>());
 
             if (opts.with_std_lib) {
-                auto f = env.vfs.read_file("script/sys.ys");
+                auto f = env.vfs.read_file("script/std.ys");
                 auto content = f.content();
-                auto sys_module = context().interpreter.build_module("sys", content->string_view());
-                context().modules.push_back(move(sys_module));
+                auto std_module = context().interpreter.build_module("std", content->string_view());
+                context().modules.push_back(move(std_module));
             }
         }
 

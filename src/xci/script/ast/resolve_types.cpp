@@ -217,7 +217,11 @@ public:
                             continue;
                         }
                         // instantiate the specialization
-                        auto fspec = resolve_specialization(fn);
+                        auto fspec = make_unique<Function>(fn.module(), fn.symtab());
+                        fspec->set_signature(fn.signature_ptr());
+                        fspec->copy_ast(fn.ast());
+                        specialize_to_call_args(*fspec);
+                        resolve_types(*fspec, fspec->ast());
                         sig_ptr = fspec->signature_ptr();
                         Symbol sym_copy {*symptr};
                         sym_copy.set_index(module().add_function(move(fspec)));
@@ -378,6 +382,8 @@ public:
                     for (const auto& arg : m_call_args) {
                         fn.add_partial(TypeInfo{arg.type_info});
                     }
+                    assert(!fn.detect_generic());
+                    fn.set_normal();
                 }
                 m_value_type = TypeInfo{new_signature};
             }
@@ -431,19 +437,20 @@ public:
 
         Function& fn = module().get_function(v.index);
         fn.set_signature(m_value_type.signature_ptr());
-        if (fn.is_generic()) {
-            // instantiate the specialization
+        if (fn.detect_generic()) {
+            // try to instantiate the specialization
             if (m_call_args.size() == fn.signature().params.size()) {
-                auto fspec = resolve_specialization(fn);
-                resolve_types(*fspec, v.body);
-                m_value_type = TypeInfo{fspec->signature_ptr()};
-                v.index = module().add_function(move(fspec));
+                // immediately called generic function -> specialize to normal function
+                specialize_to_call_args(fn);
+                fn.set_normal();
+                resolve_types(fn, v.body);
+                m_value_type = TypeInfo{fn.signature_ptr()};
             } else {
                 // mark as generic, uncompiled
-                fn.set_kind(Function::Kind::Generic);
-                fn.set_ast(&v.body);
+                fn.copy_ast(v.body);
             }
         } else {
+            fn.set_normal();
             // compile body and resolve return type
             if (v.definition) {
                 // in case the function is recursive, propagate the type upwards
@@ -508,34 +515,26 @@ private:
 
     // return new function according to requested signature
     // throw when the signature doesn't match
-    std::unique_ptr<Function> resolve_specialization(const Function& orig_fn) const
+    void specialize_to_call_args(Function& fn) const
     {
-        auto fn = make_unique<Function>(orig_fn.module(), orig_fn.symtab());
-        fn->signature() = orig_fn.signature();
-        for (size_t i = 0; i < fn->signature().params.size(); i++) {
+        for (size_t i = 0; i < fn.signature().params.size(); i++) {
             const auto& arg = m_call_args[i];
-            auto& out_type = fn->signature().params[i];
+            auto& out_type = fn.signature().params[i];
             if (arg.type_info.is_unknown())
                 continue;
             if (out_type.is_unknown()) {
                 auto var = out_type.generic_var();
                 // resolve this generic var to received type
-                for (size_t j = i; j < fn->signature().params.size(); j++) {
-                    auto& outj_type = fn->signature().params[j];
+                for (size_t j = i; j < fn.signature().params.size(); j++) {
+                    auto& outj_type = fn.signature().params[j];
                     if (outj_type.is_unknown() && outj_type.generic_var() == var)
                         outj_type = arg.type_info;
                 }
-                auto& ret_type = fn->signature().return_type;
+                auto& ret_type = fn.signature().return_type;
                 if (ret_type.is_unknown() && ret_type.generic_var() == var)
                     ret_type = arg.type_info;
             }
         }
-        if (orig_fn.has_ast()) {
-            resolve_types(*fn, *orig_fn.ast());
-            fn->set_ast(orig_fn.ast());
-        } else
-            fn->code() = orig_fn.code();
-        return fn;
     }
 
     // Consume params from `orig_signature` according to `m_call_args`, creating new signature

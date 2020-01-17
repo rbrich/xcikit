@@ -47,7 +47,7 @@ void check_parser(const string& input, const string& expected_output)
 }
 
 
-void check_interpreter(const string& input, const string& expected_output)
+void check_interpreter(const string& input, const string& expected_output="true")
 {
     static std::unique_ptr<Module> sys_module;
     Interpreter interpreter;
@@ -57,7 +57,7 @@ void check_interpreter(const string& input, const string& expected_output)
         Vfs vfs;
         vfs.mount(XCI_SHARE_DIR);
 
-        auto f = vfs.read_file("script/sys.ys");
+        auto f = vfs.read_file("script/std.ys");
         auto content = f.content();
         sys_module = interpreter.build_module("sys", content->string_view());
     }
@@ -120,6 +120,16 @@ TEST_CASE( "Operator precedence", "[script][parser]" )
     // functions
     check_parser("a fun b {} c", "a fun b {void} c");
     check_parser("a (fun b {}) c", "a fun b {void} c");
+    // function calls
+//    check_interpreter("succ 9 + max 5 4 + 1", "16");
+//    check_interpreter("(succ 9) + (max 5 4) + 1", "16");
+//    check_interpreter("succ 9 + 5 .max 4 + 1", "16");
+    check_interpreter("1 .add 2 .mul 3", "9");
+    check_interpreter("(1 .add 2).mul 3", "9");
+    check_interpreter("1 .add (2 .mul 3)", "7");
+//    check_interpreter("hex (succ (neg (14)))", "-0xd");
+//    check_interpreter("14 .neg .succ .hex", "-0xd");
+//    check_interpreter("(((14) .neg) .succ) .hex", "-0xd");
 }
 
 
@@ -230,6 +240,10 @@ TEST_CASE( "Blocks", "[script][interpreter]" )
     check_interpreter("b = {1+2}; b", "3");
     check_interpreter("b = { a = 1; a }; b", "1");
     check_interpreter("b:Int = {1+2}; b", "3");
+
+    // blocks are evaluated after all definitions in the scope,
+    // which means they can use names from parent scope that are defined later
+    check_interpreter("y={x}; x=7; y", "7");
 }
 
 
@@ -369,7 +383,9 @@ TEST_CASE( "Native to Value mapping", "[script][native]" )
     CHECK(native::ValueType<int64_t>(1l << 60).value() == 1l << 60);
     CHECK(native::ValueType<float>(3.14f).value() == 3.14f);
     CHECK(native::ValueType<double>(2./3).value() == 2./3);
-    CHECK(native::ValueType<std::string>("test"s).value() == "test"s);
+    native::ValueType<std::string>str ("test"s);
+    CHECK(str.value() == "test"s);
+    str.decref();
 }
 
 

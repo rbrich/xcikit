@@ -55,7 +55,6 @@ public:
 
 private:
     uint32_t m_flags = 0;
-    bool m_compile = false;
 };
 
 

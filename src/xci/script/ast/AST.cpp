@@ -18,6 +18,208 @@
 
 namespace xci::script::ast {
 
+using namespace std;
+
+
+template <class T>
+auto copy_vector(const std::vector<T>& s)
+{
+    std::vector<T> r;
+    r.reserve(s.size());
+    for (const auto& item : s)
+        r.emplace_back(item.copy());
+    return r;
+}
+
+
+template <class T>
+auto copy_ptr_vector(const std::vector<std::unique_ptr<T>>& s)
+{
+    std::vector<std::unique_ptr<T>> r;
+    r.reserve(s.size());
+    for (const auto& item : s)
+        r.emplace_back(item->copy());
+    return r;
+}
+
+
+
+Block Block::copy() const
+{
+    Block r;
+    r.statements = copy_ptr_vector(statements);
+    r.symtab = symtab;
+    return r;
+}
+
+
+std::unique_ptr<ast::Expression> Function::copy() const
+{
+    auto r = std::make_unique<Function>();
+    type.copy_to(r->type);
+    r->source_info = source_info;
+    r->body = body.copy();
+    r->index = index;
+    return r;
+}
+
+
+std::unique_ptr<ast::Expression> Condition::copy() const
+{
+    auto r = std::make_unique<Condition>();
+    r->source_info = source_info;
+    r->cond = cond->copy();
+    r->then_expr = then_expr->copy();
+    r->else_expr = else_expr->copy();
+    return r;
+}
+
+
+std::unique_ptr<ast::Statement> Definition::copy() const
+{
+    auto r = std::make_unique<Definition>();
+    copy_to(*r);
+    return r;
+}
+
+
+void Definition::copy_to(Definition& r) const
+{
+    r.variable = variable.copy();
+    r.expression = expression->copy();
+}
+
+
+std::unique_ptr<ast::Statement> Invocation::copy() const
+{
+    auto r = std::make_unique<Invocation>();
+    r->expression = expression->copy();
+    r->type_index = type_index;
+    return r;
+}
+
+
+std::unique_ptr<ast::Statement> Return::copy() const
+{
+    return std::make_unique<Return>(expression->copy());
+}
+
+
+std::unique_ptr<ast::Statement> Class::copy() const
+{
+    auto r = std::make_unique<Class>();
+    r->class_name = class_name;
+    r->type_var = type_var;
+    r->context = context;
+    r->defs.reserve(defs.size());
+    for (const auto& d : defs) {
+        r->defs.emplace_back();
+        d.copy_to(r->defs.back());
+    }
+    r->index = index;
+    r->symtab = symtab;
+    return r;
+}
+
+std::unique_ptr<ast::Statement> Instance::copy() const
+{
+    auto r = std::make_unique<Instance>();
+    r->class_name = class_name;
+    r->type_inst = type_inst->copy();
+    r->context = context;
+    for (const auto& d : defs) {
+        r->defs.emplace_back();
+        d.copy_to(r->defs.back());
+    }
+    r->index = index;
+    r->symtab = symtab;
+    return r;
+}
+
+
+std::unique_ptr<ast::Expression> Reference::copy() const
+{
+    auto r = std::make_unique<Reference>();
+    r->source_info = source_info;
+    r->identifier = identifier;
+    r->chain = chain;
+    r->module = module;
+    r->index = index;
+    return r;
+}
+
+
+void Call::copy_to(Call& r) const
+{
+    if (callable)
+        r.callable = callable->copy();
+    r.source_info = source_info;
+    r.args = copy_ptr_vector(args);
+    r.wrapped_execs = wrapped_execs;
+    r.partial_args = partial_args;
+    r.partial_index = partial_index;
+}
+
+
+std::unique_ptr<ast::Expression> Call::copy() const
+{
+    auto r = std::make_unique<Call>();
+    copy_to(*r);
+    return r;
+}
+
+
+std::unique_ptr<ast::Expression> OpCall::copy() const
+{
+    auto r = std::make_unique<OpCall>();
+    Call::copy_to(*r);
+    r->op = op;
+    return r;
+}
+
+
+std::unique_ptr<ast::Type> ListType::copy() const
+{
+    auto r = std::make_unique<ListType>();
+    r->elem_type = elem_type->copy();
+    return r;
+}
+
+
+std::unique_ptr<ast::Type> FunctionType::copy() const
+{
+    auto r = std::make_unique<FunctionType>();
+    copy_to(*r);
+    return r;
+}
+
+
+void FunctionType::copy_to(FunctionType& r) const
+{
+    r.params = copy_vector(params);
+    r.result_type = result_type->copy();
+    r.context = context;
+}
+
+
+std::unique_ptr<ast::Expression> Tuple::copy() const
+{
+    auto r = std::make_unique<Tuple>();
+    r->source_info = source_info;
+    r->items = copy_ptr_vector(items);
+    return r;
+}
+
+
+std::unique_ptr<ast::Expression> List::copy() const
+{
+    auto r = std::make_unique<List>();
+    r->source_info = source_info;
+    r->items = copy_ptr_vector(items);
+    r->item_size = item_size;
+    return r;
+}
+
 
 void Block::finish()
 {

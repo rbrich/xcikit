@@ -276,6 +276,7 @@ BuiltinModule::add_logical_op_function(const std::string& name, Opcode opcode)
     fn->signature().return_type = TypeInfo{Type::Bool};
     fn->add_parameter("lhs", TypeInfo{Type::Bool});
     fn->add_parameter("rhs", TypeInfo{Type::Bool});
+    fn->set_normal();
     fn->code().add_opcode(opcode);  // call operator
     symtab().add({name, Symbol::Function, add_function(std::move(fn))});
 }
@@ -288,6 +289,7 @@ BuiltinModule::add_bitwise_op_function(const std::string& name, Opcode opcode)
     fn8->signature().return_type = TypeInfo{Type::Byte};
     fn8->add_parameter("lhs", TypeInfo{Type::Byte});
     fn8->add_parameter("rhs", TypeInfo{Type::Byte});
+    fn8->set_normal();
     fn8->code().add_opcode(opcode);
     auto p8 = symtab().add({name, Symbol::Function, add_function(std::move(fn8))});
 
@@ -295,6 +297,7 @@ BuiltinModule::add_bitwise_op_function(const std::string& name, Opcode opcode)
     fn32->signature().return_type = TypeInfo{Type::Int32};
     fn32->add_parameter("lhs", TypeInfo{Type::Int32});
     fn32->add_parameter("rhs", TypeInfo{Type::Int32});
+    fn32->set_normal();
     fn32->code().add_opcode(opcode + 1);
     auto p32 = symtab().add({name, Symbol::Function, add_function(std::move(fn32))});
 
@@ -302,6 +305,7 @@ BuiltinModule::add_bitwise_op_function(const std::string& name, Opcode opcode)
     fn64->signature().return_type = TypeInfo{Type::Int64};
     fn64->add_parameter("lhs", TypeInfo{Type::Int64});
     fn64->add_parameter("rhs", TypeInfo{Type::Int64});
+    fn64->set_normal();
     fn64->code().add_opcode(opcode + 2);
     auto p64 = symtab().add({name, Symbol::Function, add_function(std::move(fn64))});
 
@@ -317,6 +321,7 @@ BuiltinModule::add_arithmetic_op_function(const std::string& name, Opcode opcode
     fn8->signature().return_type = TypeInfo{Type::Byte};
     fn8->add_parameter("lhs", TypeInfo{Type::Byte});
     fn8->add_parameter("rhs", TypeInfo{Type::Byte});
+    fn8->set_normal();
     fn8->code().add_opcode(opcode);
     auto p8 = symtab().add({name, Symbol::Function, add_function(std::move(fn8))});
 
@@ -324,6 +329,7 @@ BuiltinModule::add_arithmetic_op_function(const std::string& name, Opcode opcode
     fn32->signature().return_type = TypeInfo{Type::Int32};
     fn32->add_parameter("lhs", TypeInfo{Type::Int32});
     fn32->add_parameter("rhs", TypeInfo{Type::Int32});
+    fn32->set_normal();
     fn32->code().add_opcode(opcode + 1);
     auto p32 = symtab().add({name, Symbol::Function, add_function(std::move(fn32))});
 
@@ -331,6 +337,7 @@ BuiltinModule::add_arithmetic_op_function(const std::string& name, Opcode opcode
     fn64->signature().return_type = TypeInfo{Type::Int64};
     fn64->add_parameter("lhs", TypeInfo{Type::Int64});
     fn64->add_parameter("rhs", TypeInfo{Type::Int64});
+    fn64->set_normal();
     fn64->code().add_opcode(opcode + 2);
     auto p64 = symtab().add({name, Symbol::Function, add_function(std::move(fn64))});
 
@@ -350,6 +357,7 @@ BuiltinModule::add_unary_op_functions()
         auto fn = std::make_unique<Function>(*this, symtab().add_child(name));
         fn->signature().return_type = TypeInfo{Type::Bool};
         fn->add_parameter("rhs", TypeInfo{Type::Bool});
+        fn->set_normal();
         fn->code().add_opcode(opcode);
         symtab().add({name, Symbol::Function, add_function(std::move(fn))});
     }
@@ -362,18 +370,21 @@ BuiltinModule::add_unary_op_functions()
         auto fn8 = std::make_unique<Function>(*this, symtab().add_child(name));
         fn8->signature().return_type = TypeInfo{Type::Byte};
         fn8->add_parameter("rhs", TypeInfo{Type::Byte});
+        fn8->set_normal();
         fn8->code().add_opcode(opcode);
         auto p8 = symtab().add({name, Symbol::Function, add_function(std::move(fn8))});
 
         auto fn32 = std::make_unique<Function>(*this, symtab().add_child(name));
         fn32->signature().return_type = TypeInfo{Type::Int32};
         fn32->add_parameter("rhs", TypeInfo{Type::Int32});
+        fn32->set_normal();
         fn32->code().add_opcode(opcode + 1);
         auto p32 = symtab().add({name, Symbol::Function, add_function(std::move(fn32))});
 
         auto fn64 = std::make_unique<Function>(*this, symtab().add_child(name));
         fn64->signature().return_type = TypeInfo{Type::Int64};
         fn64->add_parameter("rhs", TypeInfo{Type::Int64});
+        fn64->set_normal();
         fn64->code().add_opcode(opcode + 2);
         auto p64 = symtab().add({name, Symbol::Function, add_function(std::move(fn64))});
 
@@ -389,18 +400,21 @@ BuiltinModule::add_unary_op_functions()
         auto fn8 = std::make_unique<Function>(*this, symtab().add_child(name));
         fn8->signature().return_type = TypeInfo{Type::Byte};
         fn8->add_parameter("rhs", TypeInfo{Type::Byte});
+        fn8->set_normal();
         fn8->code().add_opcode(opcode);
         auto p8 = symtab().add({name, Symbol::Function, add_function(std::move(fn8))});
 
         auto fn32 = std::make_unique<Function>(*this, symtab().add_child(name));
         fn32->signature().return_type = TypeInfo{Type::Int32};
         fn32->add_parameter("rhs", TypeInfo{Type::Int32});
+        fn32->set_normal();
         fn32->code().add_opcode(opcode + 1);
         auto p32 = symtab().add({name, Symbol::Function, add_function(std::move(fn32))});
 
         auto fn64 = std::make_unique<Function>(*this, symtab().add_child(name));
         fn64->signature().return_type = TypeInfo{Type::Int64};
         fn64->add_parameter("rhs", TypeInfo{Type::Int64});
+        fn64->set_normal();
         fn64->code().add_opcode(opcode + 2);
         auto p64 = symtab().add({name, Symbol::Function, add_function(std::move(fn64))});
 
@@ -419,6 +433,7 @@ BuiltinModule::add_subscript_function()
     fn->signature().return_type = TypeInfo{Type::Int32};
     fn->add_parameter("lhs", TypeInfo{Type::List, TypeInfo{Type::Int32}});
     fn->add_parameter("rhs", TypeInfo{Type::Int32});
+    fn->set_normal();
     fn->code().add_opcode(Opcode::Subscript_32);
     symtab().add({name, Symbol::Function, add_function(std::move(fn))});
 }

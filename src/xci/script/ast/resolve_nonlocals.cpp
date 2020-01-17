@@ -57,8 +57,8 @@ public:
             case Symbol::Function: {
                 auto* symmod = symtab.module() == nullptr ? &module() : symtab.module();
                 auto& fn = symmod->get_function(sym.index());
-                if (!fn.is_native() && fn.has_ast()) {
-                    process_function(fn, *fn.ast());
+                if (fn.is_generic()) {
+                    process_function(fn, fn.ast());
                 }
                 break;
             }
@@ -123,7 +123,7 @@ public:
             // create wrapping function for the closure
             SymbolTable& wfn_symtab = m_function.symtab().add_child(func.symtab().name() + "/closure");
             auto wfn = make_unique<Function>(module(), wfn_symtab);
-            wfn->set_kind(Function::Kind::Inline);
+            wfn->set_fragment();
             wfn->set_signature(func.signature_ptr());
             auto wfn_index = module().add_function(move(wfn));
             v.definition->symbol()->set_index(wfn_index);

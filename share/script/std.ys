@@ -106,3 +106,8 @@ instance Ord Float64 {
 f : fun T T -> T with (Ord T) = |x y| { x < y }
 f = fun x:T y:T -> T lazy with (Ord T) { x < y }
 */
+
+
+succ = fun x { x + 1 };
+pred = fun x { x - 1 };
+max = fun x y { if x > y then x else y };
