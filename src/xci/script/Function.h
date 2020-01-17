@@ -121,7 +121,7 @@ public:
         // Compiled function body
         Code code;
         // Counter for instructions from intrinsics
-        size_t intrinsics = 0;
+        unsigned intrinsics = 0;
         // If function should be inlined at call site
         bool is_fragment = false;
     };

@@ -91,7 +91,7 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
         for (auto& m : context().modules)
             module->add_imported_module(*m);
         auto func_name = input_number == -1 ? "_" : "_" + to_string(input_number);
-        auto func = make_unique<Function>(*module, module->symtab().add_child(func_name));
+        auto func = make_unique<Function>(*module, module->symtab());
         compiler.compile(*func, ast);
 
         // print AST with Compiler modifications
@@ -181,6 +181,7 @@ static std::pair<std::regex, cl> regex_color[] {
         {std::regex{R"(^ *\.q(uit)?\b)"}, cl::YELLOW},
         {std::regex{R"(^ *\.(dm|dump_module)\b)"}, cl::YELLOW},
         {std::regex{R"(^ *\.(df|dump_function)\b)"}, cl::YELLOW},
+        {std::regex{R"(^ *\.(di|dump_info)\b)"}, cl::YELLOW},
 
         // numbers
         {std::regex{R"(\b[0-9]+\b)"}, cl::BRIGHTCYAN}, // integer
@@ -298,7 +299,7 @@ int main(int argc, char* argv[])
     // standalone interpreter for the control commands
     ReplCommand cmd;
 
-    cout << t.format("{bold}{magenta}λ script v0.3{normal}") << endl;
+    cout << t.format("{bold}{magenta}λ script{normal} {magenta}v0.3{normal}") << endl;
     while (!context().done) {
         const char* input;
         do {

@@ -28,6 +28,16 @@ static void cmd_help() {
     cout << ".h, .help                                  show all accepted commands" << endl;
     cout << ".dm, .dump_module [#|name]                 print contents of last compiled module (or module by index or by name)" << endl;
     cout << ".df, .dump_function [#|name] [#|module]    print contents of last compiled function (or function by index/name from specified module)" << endl;
+    cout << ".di, .dump_info                            print info about interpreter attributes on this machine" << endl;
+}
+
+
+static void cmd_dump_info() {
+    cout << "Bloat:" << endl;
+    cout << "  sizeof(Function) = " << sizeof(Function) << endl;
+    cout << "  sizeof(Function::NormalBody) = " << sizeof(Function::NormalBody) << endl;
+    cout << "  sizeof(Function::GenericBody) = " << sizeof(Function::GenericBody) << endl;
+    cout << "  sizeof(Function::NativeBody) = " << sizeof(Function::NativeBody) << endl;
 }
 
 
@@ -204,6 +214,7 @@ ReplCommand::ReplCommand()
     m_interpreter.add_imported_module(m_module);
     add_cmd("quit", "q", cmd_quit);
     add_cmd("help", "h", cmd_help);
+    add_cmd("dump_info", "di", cmd_dump_info);
     add_cmd("dump_module", "dm",
             [](void* self)
             { ((ReplCommand*)self)->cmd_dump_module(); },
