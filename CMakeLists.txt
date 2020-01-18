@@ -4,6 +4,7 @@ project(xcikit C CXX)
 option(XCI_WITH_VULKAN "Build libxci-graphics. Requires Vulkan and GLFW." ON)
 option(XCI_WITH_TINFO "Link with TInfo (from NCurses) and use it for TTY control sequences." OFF)
 option(XCI_WITH_ZIP "Link xci-core with libzip and use it for ZIP format in VFS." OFF)
+option(XCI_WITH_BENCHMARK "Build benchmarks. Requires Google Benchmark." OFF)
 
 set(XCI_SHARE_DIR "${CMAKE_CURRENT_LIST_DIR}/share" CACHE PATH "Location of share dir (runtime data)")
 option(XCI_DEBUG_VULKAN "Log info about Vulkan calls and errors." OFF)
@@ -14,8 +15,6 @@ option(XCI_DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra \
-    -Wno-unused-parameter -Wno-missing-field-initializers")
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(XciBuildOptions)
@@ -47,7 +46,9 @@ find_package(Docopt REQUIRED)
 find_package(Catch2)
 
 # Google Benchmark
-find_package(benchmark)
+if (XCI_WITH_BENCHMARK)
+    find_package(benchmark)
+endif ()
 
 # Doxygen
 find_package(Doxygen)

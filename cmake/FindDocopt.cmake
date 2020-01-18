@@ -9,7 +9,8 @@
 
 find_path(docopt_INCLUDE_DIR
     NAMES docopt.h
-    PATHS ${docopt_ROOT_DIR})
+    PATHS ${docopt_ROOT_DIR}
+    PATH_SUFFIXES docopt)
 mark_as_advanced(docopt_INCLUDE_DIR)
 
 find_library(docopt_LIBRARY

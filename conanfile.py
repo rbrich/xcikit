@@ -16,7 +16,7 @@ class XcikitConan(ConanFile):
                       'pegtl/2.8.0@taocpp/stable',
                       'range-v3/0.9.0@ericniebler/stable',
                       'incbin/20180413@rbrich/stable',
-                      'docopt/0.6.2@conan/stable',
+                      'docopt.cpp/0.6.2',
                       'replxx/20190926@rbrich/stable',)
     generators = "cmake_paths"
     scm = {
@@ -24,6 +24,10 @@ class XcikitConan(ConanFile):
         "url": "auto",
         "revision": "auto"
     }
+
+    def requirements(self):
+        if self.settings.os == "Windows":
+            self.requires("zlib/1.2.11")
 
     def build(self):
         self.run("./bootstrap.sh --no-conan-remotes")
