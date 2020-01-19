@@ -39,7 +39,7 @@ void ReplCommand::dump_module(unsigned mod_idx) {
     }
 
     auto& ctx = context();
-    TermCtl& t = TermCtl::stdout_instance();
+    TermCtl& t = TermCtl::static_instance();
     if (ctx.modules.empty()) {
         cout << t.red().bold() << "Error: no modules available" << t.normal() << endl;
         return;
@@ -82,7 +82,7 @@ void ReplCommand::cmd_dump_module(std::string mod_name) {
         return;
     }
 
-    TermCtl& t = TermCtl::stdout_instance();
+    TermCtl& t = TermCtl::static_instance();
     cout << t.red().bold() << "Error: module not found: " << mod_name
          << t.normal() << endl;
 }
@@ -90,7 +90,7 @@ void ReplCommand::cmd_dump_module(std::string mod_name) {
 
 void ReplCommand::dump_function(unsigned mod_idx, unsigned fun_idx) {
     auto& ctx = context();
-    TermCtl& t = TermCtl::stdout_instance();
+    TermCtl& t = TermCtl::static_instance();
 
     if (mod_idx != unsigned(-1) && mod_idx >= ctx.modules.size()) {
         cout << t.red().bold() << "Error: module index out of range: "
@@ -113,7 +113,7 @@ void ReplCommand::dump_function(unsigned mod_idx, unsigned fun_idx) {
 
 
 void ReplCommand::cmd_dump_function() {
-    TermCtl& t = TermCtl::stdout_instance();
+    TermCtl& t = TermCtl::static_instance();
     if (context().modules.empty()) {
         cout << t.red().bold() << "Error: no modules available" << t.normal() << endl;
         return;
@@ -131,7 +131,7 @@ void ReplCommand::cmd_dump_function() {
 
 
 void ReplCommand::cmd_dump_function(std::string fun_name) {
-    TermCtl& t = TermCtl::stdout_instance();
+    TermCtl& t = TermCtl::static_instance();
     if (context().modules.empty()) {
         cout << t.red().bold() << "Error: no modules available" << t.normal() << endl;
         return;
@@ -151,7 +151,7 @@ void ReplCommand::cmd_dump_function(std::string fun_name) {
 
 
 void ReplCommand::cmd_dump_function(std::string fun_name, std::string mod_name) {
-    TermCtl& t = TermCtl::stdout_instance();
+    TermCtl& t = TermCtl::static_instance();
 
     // lookup module
     size_t mod_idx = 0;
@@ -183,7 +183,7 @@ void ReplCommand::cmd_dump_function(std::string fun_name, std::string mod_name) 
 
 void ReplCommand::cmd_dump_function(int32_t fun_idx)
 {
-    TermCtl& t = TermCtl::stdout_instance();
+    TermCtl& t = TermCtl::static_instance();
     if (context().modules.empty()) {
         cout << t.red().bold() << "Error: no modules available" << t.normal() << endl;
         return;

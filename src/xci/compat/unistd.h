@@ -22,6 +22,7 @@ using ssize_t = long;
 #define isatty _isatty
 #define open _open
 #define close _close
+#define read _read
 
 inline char *getcwd(char *buf, size_t size) {
      return _getcwd(buf, (int)size);

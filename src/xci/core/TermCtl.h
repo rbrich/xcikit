@@ -1,17 +1,8 @@
-// TermCtl.h created on 2018-07-09, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// TermCtl.h created on 2018-07-09 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018, 2020 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_TERM_H
 #define XCI_CORE_TERM_H
@@ -29,15 +20,15 @@ namespace xci::core {
 
 class TermCtl {
 public:
-    // Static instances for standard streams
-    static TermCtl& stdout_instance();
-    static TermCtl& stderr_instance();
+    // Static instance for standard output
+    static TermCtl& static_instance();
 
     // Constructor for custom streams
-    explicit TermCtl(int fd);
+    explicit TermCtl();
+    ~TermCtl();
 
     // Is the output stream connected to TTY?
-    bool is_tty() const { return m_fd != -1; }
+    [[nodiscard]] bool is_tty() const { return m_state != State::NoTTY; }
 
     // Following methods are appending the capability codes
     // to a copy of TermCtl instance, which can then be send to stream
@@ -73,10 +64,19 @@ public:
     TermCtl normal() const;  // reset all attributes
 
     // cursor movement
-    TermCtl move_up(int n_lines) const;
+    TermCtl move_up() const;
+    TermCtl move_up(unsigned n_lines) const;
+    TermCtl move_down() const;
+    TermCtl move_down(unsigned n_lines) const;
+    TermCtl move_left() const;
+    TermCtl move_left(unsigned n_cols) const;
+    TermCtl move_right() const;
+    TermCtl move_right(unsigned n_cols) const;
 
     // clear screen content
     TermCtl clear_screen_down() const;
+
+    TermCtl soft_reset() const;
 
     // Output cached seq
     const std::string& seq() const { return m_seq; }
@@ -93,17 +93,28 @@ public:
     // (no echo, no buffering, no special processing)
     // NOTE: Signal processing is enabled, so Ctrl-C still works
     void with_raw_mode(const std::function<void()>& cb);
-    int raw_getch();
+    std::string raw_input();
 
 private:
     // Copy TermCtl and append seq to new instance
-    TermCtl(const TermCtl& term, const std::string& seq) : m_fd(term.m_fd), m_seq(term.m_seq + seq) {}
+    TermCtl(const TermCtl& term, const std::string& seq)
+        : m_state(term.m_state == State::NoTTY ? State::NoTTY : State::CopyOk)
+        , m_seq(term.m_seq + seq) {}
 
     std::string format_cb(const format_impl::Context& ctx);
 
 private:
-    int m_fd = -1;  // terminal attached to this FD
+    enum class State {
+        NoTTY,      // initialization failed
+        InitOk,     // main instance (it will reset the term when destroyed)
+        CopyOk,      // a copy created by chained method
+    };
+    State m_state = State::NoTTY;
     std::string m_seq;  // cached capability sequences
+
+#ifdef WIN32
+    unsigned long m_orig_out_mode = 0;
+#endif
 };
 
 } // namespace xci::core

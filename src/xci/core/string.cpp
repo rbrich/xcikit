@@ -64,12 +64,13 @@ std::string escape(string_view str)
             case '"': out += "\\\""; break;
             case '\'': out += "\\'"; break;
             default: {
-                if (std::isprint(ch))
+                auto chnum = (int)(unsigned char)(ch);
+                if (std::isprint(chnum))
                     out += ch;
                 else if (ch >= 0 && ch < 8)
-                    out += format("\\{}", (int)(unsigned char)(ch));
+                    out += format("\\{}", chnum);
                 else
-                    out += format("\\x{:02x}", (int)(unsigned char)(ch));
+                    out += format("\\x{:02x}", chnum);
                 break;
             }
         }

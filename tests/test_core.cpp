@@ -119,7 +119,7 @@ TEST_CASE( "to_utf32", "[string]" )
 
 TEST_CASE( "to_utf8", "[string]" )
 {
-    CHECK(to_utf8(0x1F99E) == u8"🦞");
+    CHECK(to_utf8(0x1F99E) == "🦞");
 }
 
 

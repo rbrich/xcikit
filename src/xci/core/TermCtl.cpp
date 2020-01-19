@@ -1,84 +1,126 @@
-// TermCtl.cpp created on 2018-07-09, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// TermCtl.cpp created on 2018-07-09 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+// Copyright 2018, 2020 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
+
 // References:
 // - https://en.wikipedia.org/wiki/POSIX_terminal_interface
 // - https://en.wikipedia.org/wiki/ANSI_escape_code
+// - https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
 
 #include "TermCtl.h"
-#include "log.h"
 #include <xci/compat/unistd.h>
 #include <xci/config.h>
 
-#include <termios.h>
-#include <cassert>
+#ifdef WIN32
+    #include <windows.h>
+#else
+    #include <termios.h>
+#endif
 
 #ifdef XCI_WITH_TINFO
-#include <term.h>
-#include <cassert>
+    #include <term.h>
+    #include <cassert>
 #endif
+
+#include <cassert>
 
 namespace xci::core {
 
-using namespace log;
+#define ESC     "\033"
+#define CSI     ESC "["
 
 // When building without TInfo, emit ANSI escape sequences directly
 #ifndef XCI_WITH_TINFO
-static constexpr auto enter_bold_mode = "\033[1m";
-static constexpr auto enter_underline_mode = "\033[4m";
-static constexpr auto exit_attribute_mode = "\033[0m";
-static constexpr auto set_a_foreground = "\033[3{}m";
-static constexpr auto set_a_background = "\033[4{}m";
-static constexpr auto parm_up_cursor = "\033[{}A";  // move cursor up N lines
-static constexpr auto clr_eos = "\033[J";  // clear screen from cursor down
+static constexpr auto cursor_up = CSI "A";
+static constexpr auto cursor_down = CSI "B";
+static constexpr auto cursor_right = CSI "C";
+static constexpr auto cursor_left = CSI "D";
+static constexpr auto enter_bold_mode = CSI "1m";
+static constexpr auto enter_underline_mode = CSI "4m";
+static constexpr auto exit_attribute_mode = CSI "0m";
+static constexpr auto set_a_foreground = CSI "3{}m";
+static constexpr auto set_a_background = CSI "4{}m";
+static constexpr auto parm_up_cursor = CSI "{}A";  // move cursor up N lines
+static constexpr auto parm_down_cursor = CSI "{}B";  // move cursor down N lines
+static constexpr auto parm_right_cursor = CSI "{}C";  // move cursor right N spaces
+static constexpr auto parm_left_cursor = CSI "{}D";  // move cursor left N spaces
+static constexpr auto clr_eos = CSI "J";  // clear screen from cursor down
 inline constexpr const char* tparm(const char* seq) { return seq; }
 template<typename ...Args>
 inline std::string tparm(const char* seq, Args... args) { return format(seq, args...); }
 #endif // XCI_WITH_TINFO
 
-// not in Terminfo DB:
-static constexpr auto enter_overline_mode = "\033[53m";
+// not found in Terminfo DB:
+static constexpr auto enter_overline_mode = CSI "53m";
+static constexpr auto send_soft_reset = CSI "!p";
 
 
-TermCtl& TermCtl::stdout_instance()
+#ifdef WIN32
+// returns orig mode or bad_mode on failure
+static constexpr unsigned long bad_mode = ~0ul;
+static DWORD set_console_mode(DWORD hid, DWORD req_mode)
 {
-    static TermCtl term(STDOUT_FILENO);
-    return term;
+    HANDLE h = GetStdHandle(hid);
+    if (h == INVALID_HANDLE_VALUE)
+        return bad_mode;
+    DWORD orig_mode = 0;
+    if (!GetConsoleMode(h, &orig_mode))
+        return bad_mode;
+    if (!SetConsoleMode(h, orig_mode | req_mode))
+        return bad_mode;
+    return orig_mode;
 }
-
-
-TermCtl& TermCtl::stderr_instance()
+static void reset_console_mode(DWORD hid, DWORD mode)
 {
-    static TermCtl term(STDERR_FILENO);
-    return term;
+    HANDLE h = GetStdHandle(hid);
+    if (h != INVALID_HANDLE_VALUE)
+        SetConsoleMode(h, mode);
 }
-
-
-TermCtl::TermCtl(int fd)
-{
-    // Do not even try if not TTY (ie. pipes)
-    if (isatty(fd) != 1)
-        return;
-#ifdef XCI_WITH_TINFO
-    // Setup terminfo
-    int err = 0;
-    if (setupterm(nullptr, fd, &err) != 0)
-        return;
 #endif
-    // All ok
-    m_fd = fd;
+
+
+TermCtl& TermCtl::static_instance()
+{
+    static TermCtl term;
+    return term;
+}
+
+
+TermCtl::TermCtl()
+{
+#ifdef WIN32
+    m_orig_out_mode = set_console_mode(STD_OUTPUT_HANDLE,
+                         ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    if (m_orig_out_mode == bad_mode)
+        return;
+#else
+    // Do not even try if not TTY (e.g. when piping to other command)
+    if (isatty(STDOUT_FILENO) != 1)
+        return;
+
+    #ifdef XCI_WITH_TINFO
+        // Setup terminfo
+        int err = 0;
+        if (setupterm(nullptr, STDOUT_FILENO, &err) != 0)
+            return;
+    #endif
+#endif
+
+    m_state = State::InitOk;
+}
+
+
+TermCtl::~TermCtl() {
+#ifdef WIN32
+    if (m_state == State::InitOk) {
+        assert(m_orig_out_mode != bad_mode);
+        reset_console_mode(STD_OUTPUT_HANDLE, m_orig_out_mode);
+    }
+#else
+    (void)0;
+#endif
 }
 
 
@@ -101,10 +143,18 @@ TermCtl TermCtl::underline() const { return TERM_APPEND(enter_underline_mode); }
 TermCtl TermCtl::overline() const { return TERM_APPEND(enter_overline_mode); }
 TermCtl TermCtl::normal() const { return TERM_APPEND(exit_attribute_mode); }
 
-
-TermCtl TermCtl::move_up(int n_lines) const { return TERM_APPEND(parm_up_cursor, n_lines); }
+TermCtl TermCtl::move_up() const { return TERM_APPEND(cursor_up); }
+TermCtl TermCtl::move_up(unsigned n_lines) const { return TERM_APPEND(parm_up_cursor, n_lines); }
+TermCtl TermCtl::move_down() const { return TERM_APPEND(cursor_down); }
+TermCtl TermCtl::move_down(unsigned n_lines) const { return TERM_APPEND(parm_down_cursor, n_lines); }
+TermCtl TermCtl::move_left() const { return TERM_APPEND(cursor_left); }
+TermCtl TermCtl::move_left(unsigned n_cols) const { return TERM_APPEND(parm_left_cursor, n_cols); }
+TermCtl TermCtl::move_right() const { return TERM_APPEND(cursor_right); }
+TermCtl TermCtl::move_right(unsigned n_cols) const { return TERM_APPEND(parm_right_cursor, n_cols); }
 
 TermCtl TermCtl::clear_screen_down() const { return TERM_APPEND(clr_eos); }
+
+TermCtl TermCtl::soft_reset() const { return TERM_APPEND(send_soft_reset); }
 
 
 std::ostream& operator<<(std::ostream& os, const TermCtl& term)
@@ -146,6 +196,21 @@ std::string TermCtl::format_cb(const format_impl::Context& ctx)
 
 void TermCtl::with_raw_mode(const std::function<void()>& cb)
 {
+#ifdef WIN32
+    HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
+    if (h == INVALID_HANDLE_VALUE)
+        return;
+    DWORD orig_mode = 0;
+    if (!GetConsoleMode(h, &orig_mode))
+        return;
+    if (!SetConsoleMode(h,ENABLE_VIRTUAL_TERMINAL_INPUT |
+            ENABLE_PROCESSED_INPUT ))
+        return;
+
+    cb();
+
+    SetConsoleMode(h, orig_mode);
+#else
     struct termios origtc = {};
     if (tcgetattr(0, &origtc) < 0) {
         assert(!"tcgetattr failed");
@@ -166,14 +231,16 @@ void TermCtl::with_raw_mode(const std::function<void()>& cb)
         assert(!"tcsetattr failed");
         return;
     }
+#endif
 }
 
 
-int TermCtl::raw_getch()
+std::string TermCtl::raw_input()
 {
-    char buf = 0;
+    char buf[20] {};
     with_raw_mode([&buf] {
-        while (read(0, &buf, 1) < 0 && (errno == EINTR || errno == EAGAIN));
+        while (::read(STDIN_FILENO, buf, sizeof buf) < 0
+           && (errno == EINTR || errno == EAGAIN));
     });
     return buf;
 }
