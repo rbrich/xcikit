@@ -10,7 +10,6 @@
 #include <xci/core/chrono.h>
 #include <xci/core/memory.h>
 
-#include <fstream>
 #include <string>
 #include <cstdio>
 #include <sys/stat.h>

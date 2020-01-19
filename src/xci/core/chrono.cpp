@@ -16,6 +16,10 @@
 #include "chrono.h"
 #include <ctime>
 
+#ifdef WIN32
+#define timegm _mkgmtime
+#endif
+
 namespace xci::core {
 
 
@@ -23,7 +27,7 @@ std::chrono::system_clock::time_point localtime_now()
 {
     // UTC (secs since epoch)
     time_t t = time(nullptr);
-    // convert to local time struct, then present is as UTC and convert back
+    // convert to local time struct, then present it as UTC and convert back
     t = timegm(localtime(&t));
     // t is local time (secs since "local time" epoch)
     return std::chrono::system_clock::from_time_t(t);

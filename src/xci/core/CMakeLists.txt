@@ -89,7 +89,8 @@ endif()
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     target_compile_definitions(xci-core PRIVATE
-        _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING)
+        _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
+        _CRT_SECURE_NO_WARNINGS)
 endif()
 
 install(TARGETS xci-core

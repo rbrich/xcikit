@@ -14,14 +14,12 @@
 // limitations under the License.
 
 #include "file.h"
-#include "dispatch.h"
 #include <xci/compat/unistd.h>
 #include <xci/config.h>
 
 #include <fstream>
-#include <libgen.h>  // dirname, basename
 #include <cassert>
-#include <sys/param.h>
+#include <climits>
 #include <cstring>
 
 namespace xci::core {
@@ -108,7 +106,7 @@ std::string path_join(const std::string &part1, const std::string &part2)
 
 std::string get_cwd()
 {
-    std::string result(MAXPATHLEN, ' ');
+    std::string result(PATH_MAX, ' ');
     if (getcwd(&result[0], result.size()) == nullptr) {
         return std::string();
     }

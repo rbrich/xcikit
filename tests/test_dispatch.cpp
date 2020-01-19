@@ -8,12 +8,13 @@
 #include <catch2/catch.hpp>
 
 #include <xci/core/dispatch.h>
+#include <xci/core/log.h>
+#include <xci/core/chrono.h>
+#include <xci/compat/unistd.h>
 
 #include <fstream>
 #include <string>
 #include <cstdio>
-#include <unistd.h>
-#include <sys/stat.h>
 
 using namespace xci::core;
 using std::this_thread::sleep_for;
