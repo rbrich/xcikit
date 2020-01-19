@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "format.h"
+#include <xci/config.h>
 
 #include <tao/pegtl.hpp>
 

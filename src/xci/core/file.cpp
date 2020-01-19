@@ -15,10 +15,10 @@
 
 #include "file.h"
 #include "dispatch.h"
+#include <xci/compat/unistd.h>
 #include <xci/config.h>
 
 #include <fstream>
-#include <unistd.h>
 #include <libgen.h>  // dirname, basename
 #include <cassert>
 #include <sys/param.h>

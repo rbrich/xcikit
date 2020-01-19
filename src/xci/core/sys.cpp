@@ -15,7 +15,6 @@
 
 #include "sys.h"
 
-#include <unistd.h>
 #include <sys/types.h>
 #include <pwd.h>
 
@@ -24,6 +23,7 @@
     #include <unistd.h>
     #include <sys/syscall.h>
 #elif defined(__APPLE__)
+    #include <unistd.h>
     #include <pthread.h>
 #endif
 

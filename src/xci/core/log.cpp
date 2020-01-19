@@ -1,15 +1,12 @@
 // Logger.h created on 2018-03-01, part of XCI toolkit
 
-#include <xci/core/log.h>
+#include "log.h"
 #include <xci/core/TermCtl.h>
 #include <xci/core/sys.h>
+#include <xci/compat/unistd.h>
 
-#include <iostream>
-#include <iomanip>
 #include <ctime>
 #include <cassert>
-#include <unistd.h>
-#include "log.h"
 
 
 namespace xci::core {

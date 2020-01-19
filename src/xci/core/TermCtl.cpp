@@ -19,16 +19,15 @@
 
 #include "TermCtl.h"
 #include "log.h"
+#include <xci/compat/unistd.h>
 #include <xci/config.h>
 
-#include <unistd.h>
 #include <termios.h>
 #include <cassert>
 
 #ifdef XCI_WITH_TINFO
 #include <term.h>
 #include <cassert>
-
 #endif
 
 namespace xci::core {

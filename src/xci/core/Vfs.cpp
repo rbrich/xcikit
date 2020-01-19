@@ -20,6 +20,7 @@
 #include <xci/compat/bit.h>
 #include <xci/compat/endian.h>
 #include <xci/compat/macros.h>
+#include <xci/compat/unistd.h>
 
 #ifdef XCI_WITH_ZIP
 #include <zip.h>
@@ -27,7 +28,6 @@
 
 #include <algorithm>
 #include <fcntl.h>
-#include <unistd.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 
