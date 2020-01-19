@@ -131,51 +131,65 @@ std::string to_utf8(char32_t codepoint)
 }
 
 
-const char* utf8_next(const char* pos)
+template <class I>
+I utf8_next(I iter)
 {
-    auto first = (unsigned char) *pos;
+    auto first = (unsigned char) *iter;
     if (first == 0) {
-        return pos;
+        return iter;
     } else
     if ((first & 0b10000000) == 0) {
         // 0xxxxxxx -> 1 byte
-        return pos + 1;
+        return iter + 1;
     } else
     if ((first & 0b11100000) == 0b11000000) {
         // 110xxxxx -> 2 bytes
-        return pos + 2;
+        return iter + 2;
     } else
     if ((first & 0b11110000) == 0b11100000) {
         // 1110xxxx -> 3 bytes
-        return pos + 3;
+        return iter + 3;
     } else
     if ((first & 0b11111000) == 0b11110000) {
         // 11110xxx -> 4 bytes
-        return pos + 4;
+        return iter + 4;
     } else {
-        log_error("utf8_next: Invalid UTF8 string, encountered code 0x{:02x}", int(first));
-        return pos + 1;
+        //log_error("utf8_next: Invalid UTF8 string, encountered code 0x{:02x}", int(first));
+        return iter + 1;
     }
 }
 
+// instantiate the template (these are the only supported types)
+template std::string::const_iterator utf8_next(std::string::const_iterator);
+template std::string_view::const_iterator utf8_next(std::string_view::const_iterator);
 
-std::string::const_reverse_iterator
-utf8_prev(std::string::const_reverse_iterator pos)
+
+template <class I>
+I utf8_prev(I riter)
 {
-    while ((*pos & 0b11000000) == 0b10000000)
-        ++pos;
-    return pos + 1;
+    while ((*riter & 0b11000000) == 0b10000000)
+        ++riter;
+    return riter + 1;
 }
 
+// instantiate the template (these are the only supported types)
+template std::string::const_reverse_iterator utf8_prev(std::string::const_reverse_iterator);
+template std::string_view::const_reverse_iterator utf8_prev(std::string_view::const_reverse_iterator);
 
-size_t utf8_length(string_view str)
+
+template <class S, class SSize>
+SSize utf8_length(const S& str)
 {
-    size_t length = 0;
+    SSize length = 0;
     for (auto pos = str.cbegin(); pos != str.cend(); pos = utf8_next(pos)) {
         ++length;
     }
     return length;
 }
+
+// instantiate the template (these are the only supported types)
+template std::string::size_type utf8_length<std::string>(const std::string&);
+template std::string_view::size_type utf8_length<std::string_view>(const std::string_view&);
 
 
 string_view utf8_substr(string_view str, size_t pos, size_t count)

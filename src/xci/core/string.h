@@ -61,12 +61,11 @@ std::u32string to_utf32(std::string_view utf8);
 // Convert single UTF32 char to UTF8 string. Can't fail.
 std::string to_utf8(char32_t codepoint);
 
-const char* utf8_next(const char* pos);
+template <class I> I utf8_next(I iter);
+template <class I> I utf8_prev(I riter);
 
-std::string::const_reverse_iterator
-utf8_prev(std::string::const_reverse_iterator pos);
-
-size_t utf8_length(std::string_view str);
+template <class S, class SSize = typename S::size_type>
+SSize utf8_length(const S& str);
 
 std::string_view utf8_substr(std::string_view str, size_t pos, size_t count);
 
