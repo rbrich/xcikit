@@ -2,6 +2,10 @@ add_executable(test_core test_core.cpp)
 target_link_libraries(test_core Catch2::Catch2 xci-core)
 add_test(NAME test_core COMMAND test_core)
 
+add_executable(test_dispatch test_dispatch.cpp)
+target_link_libraries(test_dispatch Catch2::Catch2 xci-core)
+add_test(NAME test_dispatch COMMAND test_dispatch)
+
 add_executable(test_geometry test_geometry.cpp)
 target_link_libraries(test_geometry Catch2::Catch2 xci-core)
 add_test(NAME test_geometry COMMAND test_geometry)
