@@ -111,7 +111,7 @@ bool parse_placeholder(Context& ctx)
 
     try {
         return tao::pegtl::parse< Grammar, Action >( in, ctx );
-    } catch (tao::pegtl::parse_error& error) {
+    } catch (tao::pegtl::parse_error&) {
         return false;
     }
 }
@@ -119,14 +119,19 @@ bool parse_placeholder(Context& ctx)
 
 std::ostream& strerror(std::ostream& stream)
 {
-    char buf[100] = {};
-#if _GNU_SOURCE
+    char buf[200] = {};
+#if defined(HAVE_GNU_STRERROR_R)
     return stream << strerror_r(errno, buf, sizeof buf);
-#else
+#elif defined(HAVE_XSI_STRERROR_R)
     if (strerror_r(errno, buf, sizeof buf) == 0) {
         stream << buf;
+    } else {
+        stream << "<unknown error>";
     }
     return stream;
+#else
+    (void) strerror_s(buf, sizeof buf, errno);
+    return stream << buf;
 #endif
 }
 

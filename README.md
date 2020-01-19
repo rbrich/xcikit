@@ -14,6 +14,7 @@ Collection of C++ libraries for drawing 2D graphics, rendering text and more.
 - [How to build](#how-to-build)
     - [Using build script](#using-build-script)
     - [Manual build with CMake](#manual-build-with-cmake)
+    - [Porting to Windows](#porting-to-windows)
 - [How to use in client program](#how-to-use-in-client-program)
     - [Linking with client using only CMake](#linking-with-client-using-only-cmake)
     - [Linking with client using CMake and Conan](#linking-with-client-using-cmake-and-conan)

@@ -35,7 +35,7 @@ if (APPLE)
         event/kqueue/TimerWatch.cpp
         )
     target_compile_definitions(xci-core PUBLIC XCI_WITH_KQUEUE)
-else()
+elseif(NOT WIN32)
     target_sources(xci-core PRIVATE
         event/epoll/EventLoop.cpp
         event/epoll/EventWatch.cpp
@@ -85,6 +85,11 @@ if (BUILD_FRAMEWORKS)
         SOVERSION 1.0.0
         PUBLIC_HEADER xci-core.h
         )
+endif()
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    target_compile_definitions(xci-core PRIVATE
+        _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING)
 endif()
 
 install(TARGETS xci-core

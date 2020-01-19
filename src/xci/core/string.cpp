@@ -116,9 +116,9 @@ std::u32string to_utf32(string_view utf8)
 {
     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert_utf32;
     try {
-        return convert_utf32.from_bytes(utf8.cbegin(), utf8.cend());
+        return convert_utf32.from_bytes(utf8.data(), utf8.data() + utf8.size());
     } catch (const std::range_error& e) {
-        log_error("to_utf32: Invalid UTF8 string: {}", utf8);
+        log_error("to_utf32: Invalid UTF8 string: {} ({})", utf8, e.what());
         return std::u32string();
     }
 }
@@ -204,7 +204,7 @@ string_view utf8_substr(string_view str, size_t pos, size_t count)
         end = utf8_next(end);
         --count;
     }
-    return {begin, size_t(end - begin)};
+    return {&*begin, size_t(end - begin)};
 }
 
 

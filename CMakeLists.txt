@@ -59,6 +59,9 @@ if (XCI_WITH_TINFO)
     pkg_check_modules(TINFO REQUIRED tinfo)
 endif ()
 
+# Run checks
+include(XciBuildChecks)
+
 # Generate config.h
 configure_file(config.h.in include/xci/config.h)
 

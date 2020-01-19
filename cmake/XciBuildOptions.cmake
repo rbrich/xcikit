@@ -11,7 +11,6 @@ option(BUILD_WITH_TSAN "Build with ThreadSanitizer." OFF)
 
 # Build type options
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo" "")
-set(CMAKE_CXX_FLAGS_DEBUG "-g -Og")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 if (BUILD_FRAMEWORKS)
