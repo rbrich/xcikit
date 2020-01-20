@@ -1,6 +1,6 @@
 # Test build in Docker:
-#   docker build -t xcikit-build-test .
-#   docker run --rm -it xcikit-build-test
+#   docker build -t xcikit-build .
+#   docker run --rm -it xcikit-build
 
 FROM rbrich/xcikit-debian:buster
 
