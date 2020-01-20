@@ -1,30 +1,29 @@
-// sys.cpp created on 2018-08-17, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// sys.cpp created on 2018-08-17 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018, 2020 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "sys.h"
 
-#include <sys/types.h>
-#include <pwd.h>
-
-
+// get_thread_id
 #if defined(__linux__)
-    #include <unistd.h>
     #include <sys/syscall.h>
 #elif defined(__APPLE__)
-    #include <unistd.h>
     #include <pthread.h>
+#elif defined(WIN32)
+    #include <windows.h>
+#endif
+
+// get_home_dir, *_signals
+#ifdef WIN32
+    #include <ShlObj.h>
+    #include <ShlObj_core.h>
+    #include <cassert>
+#else
+    #include <sys/types.h>
+    #include <pwd.h>
+    #include <unistd.h>
 #endif
 
 namespace xci::core {
@@ -38,6 +37,8 @@ ThreadId get_thread_id()
     uint64_t tid = 0;
     pthread_threadid_np(pthread_self(), &tid);
     return tid;
+#elif defined(WIN32)
+    return GetCurrentThreadId();
 #else
     #error "Unsupported OS"
 #endif
@@ -47,16 +48,21 @@ ThreadId get_thread_id()
 
 void block_signals(std::initializer_list<int> signums)
 {
+#ifndef WIN32
     sigset_t sigset;
     sigemptyset(&sigset);
     for (const auto signum : signums)
         sigaddset(&sigset, signum);
     pthread_sigmask(SIG_BLOCK, &sigset, nullptr);
+#else
+    assert(!"block_signals: Not implemented");
+#endif
 }
 
 
 int pending_signals(std::initializer_list<int> signums)
 {
+#ifndef WIN32
     sigset_t sigset;
     if (sigpending(&sigset) < 0)
         return -1;
@@ -64,11 +70,25 @@ int pending_signals(std::initializer_list<int> signums)
         if (sigismember(&sigset, signum))
             return signum;
     return 0;
+#else
+    assert(!"block_signals: Not implemented");
+    return 0;
+#endif
 }
 
 
 std::string get_home_dir()
 {
+#ifdef WIN32
+    std::string homedir(MAX_PATH, '\0');
+    if (SUCCEEDED(SHGetFolderPathA(nullptr, CSIDL_PROFILE, nullptr, 0, homedir.data()))) {
+        homedir.resize(strlen(homedir.data()));
+    } else {
+        homedir.clear();
+    }
+    homedir.shrink_to_fit();
+    return homedir;
+#else
     struct passwd pwd {};
     struct passwd *result;
     constexpr size_t bufsize = 16384;
@@ -82,6 +102,7 @@ std::string get_home_dir()
     }
 
     return {result->pw_dir};
+#endif
 }
 
 

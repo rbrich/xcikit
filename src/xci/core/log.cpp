@@ -13,10 +13,10 @@ namespace xci::core {
 
 
 static const char* level_format[] = {
-        "{:19} {cyan}{}{normal}  {bold}DEBUG{normal}  {white}{}{normal}\n",
-        "{:19} {cyan}{}{normal}  {bold}INFO {normal}  {bold}{white}{}{normal}\n",
-        "{:19} {cyan}{}{normal}  {bold}WARN {normal}  {bold}{yellow}{}{normal}\n",
-        "{:19} {cyan}{}{normal}  {bold}ERROR{normal}  {bold}{red}{}{normal}\n",
+        "{:19} {cyan}{:5}{normal}  {bold}DEBUG{normal}  {white}{}{normal}\n",
+        "{:19} {cyan}{:5}{normal}  {bold}INFO {normal}  {bold}{white}{}{normal}\n",
+        "{:19} {cyan}{:5}{normal}  {bold}WARN {normal}  {bold}{yellow}{}{normal}\n",
+        "{:19} {cyan}{:5}{normal}  {bold}ERROR{normal}  {bold}{red}{}{normal}\n",
 };
 
 

@@ -33,6 +33,8 @@ namespace xci::core {
     using ThreadId = pid_t;
 #elif defined(__APPLE__)
     using ThreadId = uint64_t;
+#elif defined(WIN32)
+    using ThreadId = unsigned long;
 #endif
 
 /// Get integral thread ID of this thread

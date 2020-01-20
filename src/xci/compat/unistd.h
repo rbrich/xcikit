@@ -32,9 +32,9 @@ inline ssize_t write(int fd, const void *buf, size_t count) {
      return (ssize_t)_write(fd, buf, (unsigned int)count);
 }
 
-inline char *dirname(char *path) {
+inline const char *dirname(char *path) {
     if (strchr(path, '/') == nullptr && strchr(path, '\\') == nullptr) {
-        static char* dot = ".";
+        static const char* dot = ".";
         return dot;
     }
     char* last = &path[strlen(path) - 1];
@@ -50,7 +50,7 @@ inline char *dirname(char *path) {
     return path;
 }
 
-inline char *basename(char *path) {
+inline const char *basename(char *path) {
     auto len = strlen(path);
     if (!len)
         return path;

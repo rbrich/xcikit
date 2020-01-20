@@ -1,4 +1,4 @@
-// ex_term.cpp created on 2018-07-11 as part of xcikit project
+// demo_termctl.cpp created on 2018-07-11 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
 // Copyright 2018, 2020 Radek Brich
