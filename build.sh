@@ -117,7 +117,7 @@ if phase package; then
         cd "${INSTALL_DIR}/.."
         mv "${INSTALL_DIR}" "${PACKAGE_DIR}"
         rm -f "${PACKAGE_NAME}"
-        zip --move -r "${PACKAGE_NAME}" ${PACKAGE_DIR}
+        zip --move -r "${PACKAGE_NAME}" "${PACKAGE_DIR}"
     )
     echo
 fi

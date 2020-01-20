@@ -5,6 +5,20 @@
 
 cd $(dirname "$0")
 
+PYTHON_LAUNCHER=
+if command -v py >/dev/null ; then
+    PYTHON_LAUNCHER="py -3"
+fi
+
+ZIP_CREATE=
+if command -v zip >/dev/null ; then
+    ZIP_CREATE="zip -r"
+elif [[ -z "$PYTHON_LAUNCHER" ]] ; then
+    ZIP_CREATE="python3 -m zipfile -c"
+else
+    ZIP_CREATE="$PYTHON_LAUNCHER -m zipfile -c"
+fi
+
 YES=0
 NO_CONAN_REMOTES=0
 if [[ $1 = '-y' ]] ; then
@@ -33,9 +47,6 @@ if [[ ${NO_CONAN_REMOTES} -eq 0 ]] ; then
     echo "=== Check Conan remotes ==="
     conan_remotes=$(conan remote list)
     echo "${conan_remotes}"
-    if ! echo "${conan_remotes}" | grep -q '^bincrafters:' && ask 'Add conan remote "bincrafters"?'; then
-        run conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan
-    fi
     if ! echo "${conan_remotes}" | grep -q '^xcikit:' && ask 'Add conan remote "xcikit"?'; then
         run conan remote add xcikit https://api.bintray.com/conan/rbrich/xcikit
     fi
@@ -62,12 +73,12 @@ fi
 if [[ ! -e "share.dar" ]] ; then
     echo "=== Create share.dar archive ==="
     (cd share; find shaders fonts -type f > file_list.txt)
-    tools/pack_assets.py share.dar share/file_list.txt
+    $PYTHON_LAUNCHER tools/pack_assets.py share.dar share/file_list.txt
     rm share/file_list.txt
 fi
 
 # Needed for demo_vfs
 if [[ ! -e "share.zip" ]] ; then
     echo "=== Create share.zip archive ==="
-    (cd share; zip -r ../share.zip shaders fonts)
+    (cd share; $ZIP_CREATE ../share.zip shaders fonts)
 fi

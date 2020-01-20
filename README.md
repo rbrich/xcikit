@@ -234,21 +234,22 @@ is not yet decided, but at least the xci-script should eventually work.
 1) Install build tools via their Windows installers: Git, CMake, Conan
    (`git`, `cmake` and `conan` commands should now work in cmd.exe)
 
-2) Prepare build dir with dependencies:
+2) Open *Git Bash* and run `./bootstrap.sh`
+
+3) Prepare build dir with dependencies:
    ```
    mkdir build
    cd build
-   conan remote add xcikit https://api.bintray.com/conan/rbrich/xcikit
    conan install .. --build missing
    ```
 
-3) Configure and try build with CMake:
+4) Configure and try build with CMake:
    ```
    cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Debug -DXCI_WITH_VULKAN=0 -DBUILD_WARNINGS=0
    cmake --build .
    ```
 
-4) Expect LOTS of build errors. TODO: Port the code.
+5) Expect LOTS of build errors. TODO: Port the code.
 
 
 How to use in client program
