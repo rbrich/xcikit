@@ -21,6 +21,7 @@
 #include <xci/compat/endian.h>
 #include <xci/compat/macros.h>
 #include <xci/compat/unistd.h>
+#include <xci/compat/mman.h>
 
 #ifdef XCI_WITH_ZIP
 #include <zip.h>
@@ -28,7 +29,6 @@
 
 #include <algorithm>
 #include <fcntl.h>
-#include <sys/mman.h>
 #include <sys/stat.h>
 
 namespace xci::core {
@@ -347,35 +347,32 @@ Vfs::Vfs(Loaders loaders)
 
 bool Vfs::mount(const std::string& real_path, std::string target_path)
 {
-    // Open the file or directory
-    int fd = ::open(real_path.c_str(), O_RDONLY);
-    if (fd == -1) {
-        log_warning("Vfs: couldn't mount {}: {m}", real_path);
-        return false;
-    }
-
     // Check path type
     struct stat st = {};
     if (::stat(real_path.c_str(), &st) == -1) {
         log_warning("Vfs: couldn't mount {}: {m}", real_path);
-        ::close(fd);
         return false;
     }
-    bool is_dir = (st.st_mode & S_IFDIR) == S_IFDIR;
 
     // Read magic bytes in case of regular file
     VfsLoader::Magic magic {};
     if ((st.st_mode & S_IFREG) == S_IFREG) {
-        if (::read(fd, magic.data(), magic.size()) != magic.size()) {
+        int fd = ::open(real_path.c_str(), O_RDONLY);
+        if (fd == -1) {
+            log_warning("Vfs: couldn't mount {}: {m}", real_path);
+            return false;
+        }
+        auto r = ::read(fd, magic.data(), magic.size());
+        ::close(fd);
+        if (r != magic.size()) {
             log_warning("Vfs: couldn't mount {}: archive file is smaller than {} bytes",
                 real_path, magic.size());
-            ::close(fd);
             return false;
         }
     }
-    ::close(fd);
 
     // Try each loader
+    bool is_dir = (st.st_mode & S_IFDIR) == S_IFDIR;
     std::shared_ptr<VfsDirectory> vfs_directory;
     for (auto& loader : m_loaders) {
         vfs_directory = loader->try_load(real_path, is_dir, magic);

@@ -16,16 +16,19 @@
 #include <io.h>
 #include <direct.h>
 
-using ssize_t = long;
+using ssize_t = long long;
 
 #define chdir _chdir
 #define isatty _isatty
 #define open _open
 #define close _close
-#define read _read
 
 inline char *getcwd(char *buf, size_t size) {
      return _getcwd(buf, (int)size);
+}
+
+inline ssize_t read(int fd, void *buf, size_t count) {
+    return (ssize_t)_read(fd, buf, (unsigned int)count);
 }
 
 inline ssize_t write(int fd, const void *buf, size_t count) {
@@ -66,7 +69,10 @@ inline const char *basename(char *path) {
 #define STDIN_FILENO 0
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2
+
+#ifndef PATH_MAX
 #define PATH_MAX _MAX_PATH
+#endif
 
 #endif
 

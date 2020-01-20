@@ -1,4 +1,5 @@
 option(BUILD_SHARED_LIBS "Build shared libs instead of static libs." OFF)
+option(BUILD_TESTS "Disable to skip building tests." ON)
 option(BUILD_FRAMEWORKS "Build shared libs as OSX frameworks. Implies BUILD_SHARED_LIBS." OFF)
 option(BUILD_LTO "Enable link-time, whole-program optimizations." OFF)
 option(BUILD_WITH_CCACHE "Use ccache as compiler launcher, when available." ON)

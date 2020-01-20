@@ -35,7 +35,9 @@ if (APPLE)
         event/kqueue/TimerWatch.cpp
         )
     target_compile_definitions(xci-core PUBLIC XCI_WITH_KQUEUE)
-elseif(NOT WIN32)
+elseif(WIN32)
+    target_link_libraries(xci-core PRIVATE mman-win32)
+else()
     target_sources(xci-core PRIVATE
         event/epoll/EventLoop.cpp
         event/epoll/EventWatch.cpp

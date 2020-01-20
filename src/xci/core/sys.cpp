@@ -18,7 +18,6 @@
 // get_home_dir, *_signals
 #ifdef WIN32
     #include <ShlObj.h>
-    #include <ShlObj_core.h>
     #include <cassert>
 #else
     #include <sys/types.h>

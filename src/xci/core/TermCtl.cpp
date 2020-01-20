@@ -203,7 +203,7 @@ void TermCtl::with_raw_mode(const std::function<void()>& cb)
     DWORD orig_mode = 0;
     if (!GetConsoleMode(h, &orig_mode))
         return;
-    if (!SetConsoleMode(h,ENABLE_VIRTUAL_TERMINAL_INPUT |
+    if (!SetConsoleMode(h, ENABLE_VIRTUAL_TERMINAL_INPUT |
             ENABLE_PROCESSED_INPUT ))
         return;
 

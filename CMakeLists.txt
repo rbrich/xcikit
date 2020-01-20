@@ -43,7 +43,9 @@ find_package(range-v3 REQUIRED)
 find_package(Docopt REQUIRED)
 
 # Catch
-find_package(Catch2)
+if (BUILD_TESTS)
+    find_package(Catch2)
+endif()
 
 # Google Benchmark
 if (XCI_WITH_BENCHMARK)
@@ -58,6 +60,10 @@ if (XCI_WITH_TINFO)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(TINFO REQUIRED tinfo)
 endif ()
+
+if (WIN32)
+    add_subdirectory(ext/mman-win32)
+endif()
 
 # Run checks
 include(XciBuildChecks)
