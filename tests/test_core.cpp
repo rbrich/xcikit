@@ -77,7 +77,7 @@ TEST_CASE( "path_dirname", "[file]" )
     CHECK(path_dirname(".") == ".");
     CHECK(path_dirname("..") == ".");
     CHECK(path_dirname("/name") == "/");
-#ifdef WIN32
+#ifdef _WIN32
     CHECK(path_dirname("C:\\xyz\\fsd") == "C:\\xyz");
     CHECK(path_dirname("C:\\xyz\\") == "C:\\");
 #endif

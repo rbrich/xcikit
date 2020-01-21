@@ -16,7 +16,7 @@
 #include "chrono.h"
 #include <ctime>
 
-#ifdef WIN32
+#ifdef _WIN32
 #define timegm _mkgmtime
 #endif
 

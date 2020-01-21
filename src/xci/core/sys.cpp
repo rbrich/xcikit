@@ -5,18 +5,19 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "sys.h"
+#include <xci/compat/macros.h>
 
 // get_thread_id
 #if defined(__linux__)
     #include <sys/syscall.h>
 #elif defined(__APPLE__)
     #include <pthread.h>
-#elif defined(WIN32)
+#elif defined(_WIN32)
     #include <windows.h>
 #endif
 
 // get_home_dir, *_signals
-#ifdef WIN32
+#ifdef _WIN32
     #include <ShlObj.h>
     #include <cassert>
 #else
@@ -36,7 +37,7 @@ ThreadId get_thread_id()
     uint64_t tid = 0;
     pthread_threadid_np(pthread_self(), &tid);
     return tid;
-#elif defined(WIN32)
+#elif defined(_WIN32)
     return GetCurrentThreadId();
 #else
     #error "Unsupported OS"
@@ -47,13 +48,14 @@ ThreadId get_thread_id()
 
 void block_signals(std::initializer_list<int> signums)
 {
-#ifndef WIN32
+#ifndef _WIN32
     sigset_t sigset;
     sigemptyset(&sigset);
     for (const auto signum : signums)
         sigaddset(&sigset, signum);
     pthread_sigmask(SIG_BLOCK, &sigset, nullptr);
 #else
+    UNUSED signums;
     assert(!"block_signals: Not implemented");
 #endif
 }
@@ -61,7 +63,7 @@ void block_signals(std::initializer_list<int> signums)
 
 int pending_signals(std::initializer_list<int> signums)
 {
-#ifndef WIN32
+#ifndef _WIN32
     sigset_t sigset;
     if (sigpending(&sigset) < 0)
         return -1;
@@ -70,6 +72,7 @@ int pending_signals(std::initializer_list<int> signums)
             return signum;
     return 0;
 #else
+    UNUSED signums;
     assert(!"block_signals: Not implemented");
     return 0;
 #endif
@@ -78,7 +81,7 @@ int pending_signals(std::initializer_list<int> signums)
 
 std::string get_home_dir()
 {
-#ifdef WIN32
+#ifdef _WIN32
     std::string homedir(MAX_PATH, '\0');
     if (SUCCEEDED(SHGetFolderPathA(nullptr, CSIDL_PROFILE, nullptr, 0, homedir.data()))) {
         homedir.resize(strlen(homedir.data()));

@@ -72,7 +72,7 @@ BufferPtr read_binary_file(std::istream& stream)
         return {};
     }
 
-    return {new Buffer{content, file_size}, [content](auto p){ delete[] content; }};
+    return {new Buffer{content, file_size}, [content](auto){ delete[] content; }};
 }
 
 

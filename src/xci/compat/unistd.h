@@ -7,21 +7,21 @@
 #ifndef XCI_COMPAT_UNISTD_H
 #define XCI_COMPAT_UNISTD_H
 
-#ifndef WIN32
+#ifndef _WIN32
 #include <unistd.h>
 #include <libgen.h>  // dirname, basename
 #else
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <io.h>
 #include <direct.h>
+#include <windows.h>
+
+#pragma warning( disable : 4996 )  // The POSIX name for this item is deprecated.
 
 using ssize_t = long long;
 
-#define chdir _chdir
-#define isatty _isatty
-#define open _open
-#define close _close
+inline unsigned int sleep(unsigned int seconds) { Sleep(seconds * 1000); return 0; }
 
 inline char *getcwd(char *buf, size_t size) {
      return _getcwd(buf, (int)size);

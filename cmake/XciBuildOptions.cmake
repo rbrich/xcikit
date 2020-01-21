@@ -50,8 +50,15 @@ if (BUILD_WITH_IWYU)
 endif()
 
 if (BUILD_WARNINGS)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra \
-        -Wno-unused-parameter -Wno-missing-field-initializers")
+    if(MSVC)
+        # see: https://gitlab.kitware.com/cmake/cmake/issues/19084
+        string(REGEX REPLACE "/W[0-4]" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+        add_compile_options(/W4)
+    else()
+        add_compile_options(-Wall -Wextra
+            -Wno-unused-parameter
+            -Wno-missing-field-initializers)
+    endif()
 endif()
 
 if (BUILD_PEDANTIC)

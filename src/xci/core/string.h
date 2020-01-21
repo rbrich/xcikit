@@ -1,4 +1,4 @@
-// string.h created on 2018-03-23 belongs to XCI Toolkit
+// string.h created on 2018-03-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
 // Copyright 2018, 2019 Radek Brich

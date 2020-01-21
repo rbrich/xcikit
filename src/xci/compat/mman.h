@@ -7,7 +7,7 @@
 #ifndef XCI_COMPAT_MMAP_H
 #define XCI_COMPAT_MMAP_H
 
-#ifndef WIN32
+#ifndef _WIN32
     #include <sys/mman.h>
 #else
     #include <mman-win32/mman.h>  // see ext/mman-win32

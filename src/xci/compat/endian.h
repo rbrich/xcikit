@@ -36,7 +36,7 @@
     #define be64toh(x) OSSwapBigToHostInt64(x)
     #define le64toh(x) OSSwapLittleToHostInt64(x)
 
-#elif defined(WIN32)
+#elif defined(_WIN32)
 
     #include <cstdlib>
 

@@ -13,7 +13,7 @@
 #include <xci/compat/unistd.h>
 #include <xci/config.h>
 
-#ifdef WIN32
+#ifdef _WIN32
     #include <windows.h>
 #else
     #include <termios.h>
@@ -57,7 +57,7 @@ static constexpr auto enter_overline_mode = CSI "53m";
 static constexpr auto send_soft_reset = CSI "!p";
 
 
-#ifdef WIN32
+#ifdef _WIN32
 // returns orig mode or bad_mode on failure
 static constexpr unsigned long bad_mode = ~0ul;
 static DWORD set_console_mode(DWORD hid, DWORD req_mode)
@@ -90,7 +90,7 @@ TermCtl& TermCtl::static_instance()
 
 TermCtl::TermCtl()
 {
-#ifdef WIN32
+#ifdef _WIN32
     m_orig_out_mode = set_console_mode(STD_OUTPUT_HANDLE,
                          ENABLE_VIRTUAL_TERMINAL_PROCESSING);
     if (m_orig_out_mode == bad_mode)
@@ -113,7 +113,7 @@ TermCtl::TermCtl()
 
 
 TermCtl::~TermCtl() {
-#ifdef WIN32
+#ifdef _WIN32
     if (m_state == State::InitOk) {
         assert(m_orig_out_mode != bad_mode);
         reset_console_mode(STD_OUTPUT_HANDLE, m_orig_out_mode);
@@ -196,7 +196,7 @@ std::string TermCtl::format_cb(const format_impl::Context& ctx)
 
 void TermCtl::with_raw_mode(const std::function<void()>& cb)
 {
-#ifdef WIN32
+#ifdef _WIN32
     HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
     if (h == INVALID_HANDLE_VALUE)
         return;

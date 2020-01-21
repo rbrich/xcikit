@@ -112,7 +112,7 @@ private:
     State m_state = State::NoTTY;
     std::string m_seq;  // cached capability sequences
 
-#ifdef WIN32
+#ifdef _WIN32
     unsigned long m_orig_out_mode = 0;
 #endif
 };

@@ -465,6 +465,8 @@ void Stack<T>::alloc_info(S& stream)
             << " malloc " << malloc_usable_size(b);
 #elif defined(__APPLE__)
             << " malloc " << malloc_size(b);
+#else
+            /* malloc size unknown */;
 #endif
         if (b == head())
             stream << " [head]";

@@ -38,7 +38,7 @@ using xci::bit_read;
 
 
 std::shared_ptr<VfsDirectory>
-vfs::RealDirectoryLoader::try_load(const std::string& path, bool is_dir, Magic magic)
+vfs::RealDirectoryLoader::try_load(const std::string& path, bool is_dir, Magic)
 {
     if (!is_dir)
         return {};
@@ -160,7 +160,7 @@ VfsFile vfs::DarArchive::read_file(const std::string& path) const
     auto this_ptr = shared_from_this();
     auto content = std::make_shared<Buffer>(
             m_addr + entry_it->offset, entry_it->size,
-            [this_ptr](byte* d, size_t s) {});
+            [this_ptr](byte*, size_t) {});
     return VfsFile("", std::move(content));
 }
 
@@ -318,6 +318,7 @@ VfsFile vfs::ZipArchive::read_file(const std::string& path) const
         /*deleter*/ [](byte* d, size_t s) { delete[] d; });
     return VfsFile("", std::move(content));
 #else
+    UNUSED path;
     log_error("ZipArchive: Not supported (not compiled with XCI_WITH_ZIP)");
     return {};
 #endif
@@ -364,7 +365,7 @@ bool Vfs::mount(const std::string& real_path, std::string target_path)
         }
         auto r = ::read(fd, magic.data(), magic.size());
         ::close(fd);
-        if (r != magic.size()) {
+        if (r != (ssize_t) magic.size()) {
             log_warning("Vfs: couldn't mount {}: archive file is smaller than {} bytes",
                 real_path, magic.size());
             return false;
