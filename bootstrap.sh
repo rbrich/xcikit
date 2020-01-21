@@ -66,7 +66,12 @@ fi
 # Compile shaders to SPIR-V
 if [[ ! -e "share/shaders/test_vk.frag.spv" ]] ; then
     echo "=== Compile shaders to SPIR-V ==="
-    ( cd share/shaders; make )
+    if ! make -q -C share/shaders; then
+        # some shaders have been modified
+        make -C share/shaders
+        # archives need rebuild
+        rm -f share.dar share.zip
+    fi
 fi
 
 # Needed for demo_vfs

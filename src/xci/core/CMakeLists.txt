@@ -34,8 +34,15 @@ if (APPLE)
         event/kqueue/SignalWatch.cpp
         event/kqueue/TimerWatch.cpp
         )
-    target_compile_definitions(xci-core PUBLIC XCI_WITH_KQUEUE)
 elseif(WIN32)
+    target_sources(xci-core PRIVATE
+        event/iocp/EventLoop.cpp
+        event/iocp/IOWatch.cpp
+        event/iocp/EventWatch.cpp
+        event/iocp/FSWatch.cpp
+        event/iocp/SignalWatch.cpp
+        event/iocp/TimerWatch.cpp
+        )
     target_link_libraries(xci-core PRIVATE mman-win32)
 else()
     target_sources(xci-core PRIVATE
@@ -46,7 +53,6 @@ else()
         event/epoll/SignalWatch.cpp
         event/epoll/TimerWatch.cpp
         )
-    target_compile_definitions(xci-core PUBLIC XCI_WITH_EPOLL)
 endif()
 
 target_link_libraries(xci-core

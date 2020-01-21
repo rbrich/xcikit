@@ -21,7 +21,6 @@
 
 #ifdef XCI_WITH_TINFO
     #include <term.h>
-    #include <cassert>
 #endif
 
 #include <cassert>
@@ -101,10 +100,10 @@ TermCtl::TermCtl()
         return;
 
     #ifdef XCI_WITH_TINFO
-        // Setup terminfo
-        int err = 0;
-        if (setupterm(nullptr, STDOUT_FILENO, &err) != 0)
-            return;
+    // Setup terminfo
+    int err = 0;
+    if (setupterm(nullptr, STDOUT_FILENO, &err) != 0)
+        return;
     #endif
 #endif
 

@@ -13,7 +13,7 @@
 
 #include <windows.h>
 
-#define RTLD_LAZY 0
+#define RTLD_LAZY 1
 
 inline void *dlopen(const char *filename, int flags) {
     (void) flags;

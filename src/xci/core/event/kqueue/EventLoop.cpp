@@ -17,7 +17,6 @@
 #include <xci/core/file.h>
 #include <xci/core/log.h>
 
-#include <vector>
 #include <cassert>
 #include <unistd.h>
 #include <sys/types.h>
