@@ -8,11 +8,6 @@
 #include <xci/core/file.h>
 #include <xci/core/log.h>
 
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/event.h>
-#include <fcntl.h>
-#include <dirent.h>
 
 namespace xci::core {
 
@@ -42,7 +37,7 @@ bool FSWatch::remove(const std::string& pathname)
 }
 
 
-void FSWatch::_notify(const struct kevent& event)
+void FSWatch::_notify(LPOVERLAPPED overlapped)
 {
 
 }
@@ -51,7 +46,7 @@ void FSWatch::_notify(const struct kevent& event)
 int FSWatch::register_kevent(const std::string& path, uint32_t fflags, bool no_exist_ok)
 {
 
-    return fd;
+    return 0;
 }
 
 

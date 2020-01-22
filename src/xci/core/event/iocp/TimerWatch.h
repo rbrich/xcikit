@@ -36,7 +36,7 @@ public:
     void stop();
     void restart();
 
-    void _notify(const struct kevent& event) override;
+    void _notify(LPOVERLAPPED overlapped) override;
 
 private:
     std::chrono::milliseconds m_interval;

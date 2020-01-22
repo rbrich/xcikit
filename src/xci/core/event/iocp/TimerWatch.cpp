@@ -30,7 +30,7 @@ void TimerWatch::restart()
 }
 
 
-void TimerWatch::_notify(const struct kevent& event)
+void TimerWatch::_notify(LPOVERLAPPED overlapped)
 {
     if (m_cb)
         m_cb();

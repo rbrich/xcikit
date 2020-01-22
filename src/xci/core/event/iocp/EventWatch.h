@@ -13,7 +13,7 @@
 namespace xci::core {
 
 
-/// `EventWatch` implementation for kqueue(2) using EVFILT_USER
+/// `EventWatch` implementation for IOCP using PostQueuedCompletionStatus
 
 class EventWatch: public Watch {
 public:
@@ -21,11 +21,9 @@ public:
     //using EventId = uint64_t;
     using Callback = std::function<void()>;
 
-    /// Watch for wake event.
-    /// \param cb       Called in reaction to matched wake() call
-    /// \return         New watch handle on success, -1 on error.
+    /// Watch for custom event.
+    /// \param cb       Called in reaction to matched fire() call
     EventWatch(EventLoop& loop, Callback cb);
-    ~EventWatch() override;
 
     /// Fire the event. Wakes running loop.
     ///
@@ -34,7 +32,10 @@ public:
     /// The loop receives the wake event and runs registered callback (in thread A).
     void fire();
 
-    void _notify(const struct kevent& event) override;
+    // -------------------------------------------------------------------------
+    // Methods called by EventLoop
+
+    void _notify(LPOVERLAPPED overlapped) override;
 
 private:
     Callback m_cb;

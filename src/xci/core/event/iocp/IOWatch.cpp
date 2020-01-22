@@ -23,7 +23,7 @@ IOWatch::~IOWatch()
 }
 
 
-void IOWatch::_notify(const struct kevent& event)
+void IOWatch::_notify(LPOVERLAPPED overlapped)
 {
 
 }

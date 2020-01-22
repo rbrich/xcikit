@@ -13,6 +13,10 @@ add_executable(demo_log demo_log.cpp)
 target_link_libraries(demo_log xci-core)
 install(TARGETS demo_log EXPORT xcikit DESTINATION ${INST_EXAMPLES})
 
+add_executable(demo_event demo_event.cpp)
+target_link_libraries(demo_event xci-core)
+install(TARGETS demo_event EXPORT xcikit DESTINATION ${INST_EXAMPLES})
+
 add_executable(demo_filewatch demo_filewatch.cpp)
 target_link_libraries(demo_filewatch xci-core)
 install(TARGETS demo_filewatch EXPORT xcikit DESTINATION ${INST_EXAMPLES})

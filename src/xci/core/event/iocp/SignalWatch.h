@@ -24,12 +24,12 @@ public:
     SignalWatch(EventLoop& loop, std::initializer_list<int> signums, Callback cb);
     ~SignalWatch() override;
 
-    void _notify(const struct kevent& event) override;
+    void _notify(LPOVERLAPPED overlapped) override;
 
 private:
     struct Signal {
         int signum;
-        sig_t func;
+      //  sig_t func;
     };
     std::vector<Signal> m_signals;
     Callback m_cb;

@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "format.h"
+#include <xci/core/sys.h>
 #include <xci/config.h>
 
 #include <tao/pegtl.hpp>
@@ -118,25 +119,6 @@ bool parse_placeholder(Context& ctx)
 }
 
 
-std::ostream& strerror(std::ostream& stream)
-{
-    char buf[200] = {};
-#if defined(HAVE_GNU_STRERROR_R)
-    return stream << strerror_r(errno, buf, sizeof buf);
-#elif defined(HAVE_XSI_STRERROR_R)
-    if (strerror_r(errno, buf, sizeof buf) == 0) {
-        stream << buf;
-    } else {
-        stream << "<unknown error>";
-    }
-    return stream;
-#else
-    (void) strerror_s(buf, sizeof buf, errno);
-    return stream << buf;
-#endif
-}
-
-
 bool partial_format(const char*& fmt, Context& ctx)
 {
     ctx.clear();
@@ -148,7 +130,10 @@ bool partial_format(const char*& fmt, Context& ctx)
                 ++fmt;
                 if (ctx.placeholder == "m") {
                     // "{m}" -> strerror
-                    ctx.stream << strerror;
+                    ctx.stream << errno_str;
+                } if (ctx.placeholder == "mm") {
+                    // "{mm}" -> strerror / GetLastError
+                    ctx.stream << last_error_str;
                 } else {
                     // Leave other placeholders for processing by caller
                     parse_placeholder(ctx);

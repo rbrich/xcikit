@@ -12,27 +12,19 @@ namespace xci::core {
 
 
 EventWatch::EventWatch(EventLoop& loop, Callback cb)
-        : Watch(loop), m_cb(std::move(cb))
-{
-
-}
-
-
-EventWatch::~EventWatch()
-{
-
-}
+    : Watch(loop), m_cb(std::move(cb))
+{}
 
 
 void EventWatch::fire()
 {
-
+    m_loop._post(*this, nullptr);
 }
 
 
-void EventWatch::_notify(const struct kevent& event)
+void EventWatch::_notify(LPOVERLAPPED)
 {
-
+    m_cb();
 }
 
 

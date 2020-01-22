@@ -39,7 +39,7 @@ public:
     IOWatch(EventLoop& loop, int fd, Flags flags, Callback cb);
     ~IOWatch() override;
 
-    void _notify(const struct kevent& event) override;
+    void _notify(LPOVERLAPPED overlapped) override;
 
 private:
     int m_fd;

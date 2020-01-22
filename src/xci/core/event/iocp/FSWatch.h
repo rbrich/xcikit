@@ -48,7 +48,7 @@ public:
     /// \param pathname File or directory to remove. Must be same path as given to `add`.
     bool remove(const std::string& pathname);
 
-    void _notify(const struct kevent& event) override;
+    void _notify(LPOVERLAPPED overlapped) override;
 
 private:
     int register_kevent(const std::string& path, uint32_t fflags, bool no_exist_ok=false);

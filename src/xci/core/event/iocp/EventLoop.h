@@ -7,9 +7,9 @@
 #ifndef XCI_CORE_IOCP_EVENTLOOP_H
 #define XCI_CORE_IOCP_EVENTLOOP_H
 
+#include <windows.h>
 
 namespace xci::core {
-
 
 class EventLoop;
 
@@ -22,15 +22,20 @@ public:
     // -------------------------------------------------------------------------
     // Methods called by EventLoop
 
-    virtual void _notify(const struct kevent& event) = 0;
+    virtual void _notify(LPOVERLAPPED overlapped) = 0;
 
 protected:
     EventLoop& m_loop;
 };
 
 
-/// System event loop. Uses BSD kqueue(2) API.
-/// Generally not thread-safe, inter-thread signalling can be implemented using EventWatch.
+/// System event loop. Uses Windows I/O Completion Ports API.
+/// This implementation is single-threaded - the event loop runs
+/// in a single thread. Do not try to run this in a threadpool.
+/// Inter-thread signalling can be implemented using EventWatch.
+///
+/// References:
+/// - https://docs.microsoft.com/en-us/windows/win32/fileio/i-o-completion-ports
 
 class EventLoop {
 public:
@@ -50,12 +55,11 @@ public:
     // -------------------------------------------------------------------------
     // Methods called by Watch sub-classes
 
-    // register / unregister / fire event (depending on flags inside struct kevent)
-    bool _kevent(struct kevent& event) { return _kevent(&event, 1); }
-    bool _kevent(struct kevent* evlist, size_t nevents);
+    void _register(HANDLE handle, Watch& watch);
+    void _post(Watch& watch, LPOVERLAPPED overlapped);
 
 private:
-    HANDLE m_iocp;
+    HANDLE m_port;
 };
 
 

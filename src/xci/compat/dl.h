@@ -4,6 +4,10 @@
 // Copyright 2020 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
+// References:
+// - a more complete version of dlfcn for win32:
+//   https://github.com/dlfcn-win32/dlfcn-win32/blob/master/dlfcn.c
+
 #ifndef XCI_COMPAT_DL_H
 #define XCI_COMPAT_DL_H
 

@@ -7,7 +7,6 @@
 #include "SignalWatch.h"
 #include <xci/core/log.h>
 #include <csignal>
-#include <sys/event.h>
 
 namespace xci::core {
 
@@ -26,10 +25,10 @@ SignalWatch::~SignalWatch()
 }
 
 
-void SignalWatch::_notify(const struct kevent& event)
+void SignalWatch::_notify(LPOVERLAPPED overlapped)
 {
     if (m_cb)
-        m_cb(event.ident);
+        m_cb(0);
 }
 
 

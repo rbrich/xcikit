@@ -72,6 +72,13 @@ int pending_signals(std::initializer_list<int> signums);
 /// \return             the home dir or in case of error "/tmp"
 std::string get_home_dir();
 
+/// Calls a variant of strerror(errno) and writes the obtained message
+/// into the stream.
+std::ostream& errno_str(std::ostream& stream);
+
+/// Same as `errno_str`, but on Windows, this version uses GetLastError
+/// to obtain the error code.
+std::ostream& last_error_str(std::ostream& stream);
 
 }  // namespace xci::core
 
