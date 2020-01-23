@@ -15,9 +15,8 @@
 
 #include <xci/core/log.h>
 #include <xci/core/event.h>
-#include <atomic>
 #include <csignal>
-#include <unistd.h>
+#include <cstdlib>
 
 using namespace xci::core;
 
@@ -56,7 +55,8 @@ int main(int argc, char** argv)
     if (!ok)
         return EXIT_FAILURE;
 
-    SignalWatch signal_watch(loop, {SIGTERM}, [&loop](int signum){
+    SignalWatch signal_watch(loop, {SIGTERM}, [&loop](int signum) {
+        (void) signum;
         loop.terminate();
     });
 

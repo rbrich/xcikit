@@ -66,13 +66,15 @@ void EventLoop::terminate()
 }
 
 
-void EventLoop::_register(HANDLE handle, Watch& watch)
+bool EventLoop::_associate(HANDLE handle, Watch& watch)
 {
     auto ret = CreateIoCompletionPort(handle,m_port,
             (ULONG_PTR) &watch,0);
     if (!ret) {
         log_error("EventLoop: CreateIoCompletionPort(associate): {mm}");
+        return false;
     }
+    return true;
 }
 
 

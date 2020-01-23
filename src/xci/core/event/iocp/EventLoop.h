@@ -55,7 +55,7 @@ public:
     // -------------------------------------------------------------------------
     // Methods called by Watch sub-classes
 
-    void _register(HANDLE handle, Watch& watch);
+    bool _associate(HANDLE handle, Watch& watch);
     void _post(Watch& watch, LPOVERLAPPED overlapped);
 
 private:

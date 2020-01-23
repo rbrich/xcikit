@@ -9,6 +9,7 @@
 #include <xci/compat/unistd.h>
 #include <thread>
 #include <csignal>
+#include <cstdlib>
 
 using namespace xci::core;
 
@@ -22,6 +23,7 @@ int main(int argc, char** argv)
     });
 
     SignalWatch signal_watch(loop, {SIGTERM}, [&loop](int signum) {
+        (void) signum;
         loop.terminate();
     });
 

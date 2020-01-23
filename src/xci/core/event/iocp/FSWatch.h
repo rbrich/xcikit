@@ -16,7 +16,7 @@
 namespace xci::core {
 
 
-/// Kqueue based filesystem watcher (using EVFILT_VNODE)
+/// IOCP-based filesystem watcher (using ReadDirectoryChangesW)
 class FSWatch: public Watch {
 public:
 
@@ -38,8 +38,6 @@ public:
 
     /// Watch file or directory for changes and run a callback when an event occurs.
     /// It's not an error if the file does not exist (yet).
-    /// Note that this might add watch for parent directory, which will trigger
-    /// events in main Callback.
     /// \param pathname File or directory to be watched.
     /// \param cb       Callback function called for each event.
     bool add(const std::string& pathname, PathCallback cb);
@@ -51,23 +49,26 @@ public:
     void _notify(LPOVERLAPPED overlapped) override;
 
 private:
-    int register_kevent(const std::string& path, uint32_t fflags, bool no_exist_ok=false);
-    void unregister_kevent(int fd);
+    struct Dir;
+    static bool _request_notification(Dir& dir);
 
 private:
     Callback m_main_cb;
 
     struct File {
-        int fd;
-        int dir_fd;
+        HANDLE dir_h;
         std::string name;  // filename without dir part
         PathCallback cb;
     };
     std::list<File> m_file;
 
-    struct Dir {
-        int fd;
+    // inherit OVERLAPPED to get a pointer to Dir from the notification
+    struct Dir: public OVERLAPPED {
+        Dir(HANDLE h, const std::string& name) : OVERLAPPED{}, h(h), name(name) {}  // NOLINT
+
+        HANDLE h;   // directory handle
         std::string name;  // watched directory
+        DWORD notif_buffer[4000] = {};
     };
     std::list<Dir> m_dir;
 };
