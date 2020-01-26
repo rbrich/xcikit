@@ -6,6 +6,7 @@
 
 #include "FSWatch.h"
 #include <xci/core/file.h>
+#include <xci/core/string.h>
 #include <xci/core/log.h>
 #include <algorithm>
 #include <cassert>
@@ -127,7 +128,34 @@ void FSWatch::_notify(LPOVERLAPPED overlapped)
 {
     Dir* dir = static_cast<Dir*>(overlapped);
 
-    log_info("FSWatch: notified: {}", dir->name);
+    std::byte* buf = dir->notif_buffer;
+    for (;;) {
+        auto& fni = reinterpret_cast<FILE_NOTIFY_INFORMATION&>(*buf);
+        std::wstring filename(fni.FileName, fni.FileNameLength/sizeof(wchar_t));
+        auto name = to_utf8(filename);
+
+        TRACE("{} / {} (action: {})", dir->name, name, fni.Action);
+
+        // Lookup file callback
+        auto it_file = std::find_if(m_file.begin(), m_file.end(),
+            [&name, dir](const File& f) {
+                return f.dir_h == dir->h && f.name == name;
+            });
+        if (it_file != m_file.end() && it_file->cb) {
+            auto& cb = it_file->cb;
+            switch (fni.Action) {
+                case FILE_ACTION_ADDED: cb(Event::Create); break;
+                case FILE_ACTION_REMOVED: cb(Event::Delete); break;
+                case FILE_ACTION_MODIFIED: cb(Event::Modify); break;
+                case FILE_ACTION_RENAMED_OLD_NAME: cb(Event::Delete); break;
+                case FILE_ACTION_RENAMED_NEW_NAME: cb(Event::Create); break;
+            }
+        }
+
+        if (!fni.NextEntryOffset)
+            break;
+        buf += fni.NextEntryOffset;
+    }
 
     // reissue the notification request
     _request_notification(*dir);

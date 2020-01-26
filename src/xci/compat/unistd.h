@@ -58,12 +58,10 @@ inline const char *basename(char *path) {
     if (!len)
         return path;
     if (path[len-1] == '/' || path[len-1] == '\\')
-        path[len-1] = 0;
+        path[--len] = 0;
     char fname[_MAX_FNAME], ext[_MAX_EXT];
     _splitpath(path, nullptr, nullptr, fname, ext);
-    strncpy(path, fname, _MAX_FNAME);
-    strncat(path, ext, _MAX_EXT);
-    return path;
+    return path + (len - strlen(fname) - strlen(ext));
 }
 
 #define STDIN_FILENO 0

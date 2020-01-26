@@ -131,7 +131,7 @@ bool partial_format(const char*& fmt, Context& ctx)
                 if (ctx.placeholder == "m") {
                     // "{m}" -> strerror
                     ctx.stream << errno_str;
-                } if (ctx.placeholder == "mm") {
+                } else if (ctx.placeholder == "mm") {
                     // "{mm}" -> strerror / GetLastError
                     ctx.stream << last_error_str;
                 } else {

@@ -68,7 +68,7 @@ private:
 
         HANDLE h;   // directory handle
         std::string name;  // watched directory
-        DWORD notif_buffer[4000] = {};
+        std::byte notif_buffer[4000] = {};
     };
     std::list<Dir> m_dir;
 };

@@ -108,7 +108,7 @@ std::string to_lower(std::string_view str)
     std::string result(str.size(), '\0');
     std::transform(
         str.begin(), str.end(),
-        result.begin(), [](char c){ return std::tolower(c); });
+        result.begin(), [](char c){ return (char) std::tolower(c); });
     return result;
 }
 
@@ -124,6 +124,21 @@ std::u32string to_utf32(string_view utf8)
     }
 }
 
+
+template <class Elem>
+std::string _to_utf8(std::basic_string_view<Elem> wstr)
+{
+    std::wstring_convert<std::codecvt_utf8<Elem>, Elem> convert;
+    try {
+        return convert.to_bytes(wstr.data(), wstr.data() + wstr.size());
+    } catch (const std::range_error& e) {
+        log_error("to_utf8: Invalid UTF16/32 string ({})", e.what());
+        return {};
+    }
+}
+
+std::string to_utf8(std::u16string_view wstr) { return _to_utf8(wstr); }
+std::string to_utf8(std::wstring_view wstr) { return _to_utf8(wstr); }
 
 std::string to_utf8(char32_t codepoint)
 {
