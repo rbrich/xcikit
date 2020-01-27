@@ -1,5 +1,4 @@
 name: C/C++ CI
-
 on: [push]
 
 jobs:
@@ -23,7 +22,7 @@ jobs:
       run: ./build.sh deps
       
     - name: configure
-      run: ./build.sh config -DXCI_WITH_VULKAN=0
+      run: ./build.sh config -D XCI_WITH_VULKAN=0
       
     - name: build
       run: ./build.sh build
