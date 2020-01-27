@@ -3,6 +3,7 @@
 # Download/generate files required for build or runtime
 #
 
+set -e
 cd $(dirname "$0")
 
 YES=0

@@ -9,10 +9,13 @@ jobs:
     
     steps:
     - uses: actions/checkout@v1
-      
+
+    - name: install tools
+      run: pip3 --no-cache-dir install conan
+
     - name: bootstrap
       run: ./bootstrap.sh -y
-      
+
     - name: deps
       run: ./build.sh deps
       
