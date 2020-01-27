@@ -17,13 +17,13 @@ jobs:
       run: pip3 --no-cache-dir install conan
 
     - name: bootstrap
-      run: ./bootstrap.sh -y
+      run: ./bootstrap.sh -y --no-shaders
 
     - name: deps
       run: ./build.sh deps
       
     - name: configure
-      run: ./build.sh config
+      run: ./build.sh config -DXCI_WITH_VULKAN=0
       
     - name: build
       run: ./build.sh build

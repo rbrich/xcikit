@@ -8,12 +8,14 @@ cd $(dirname "$0")
 
 YES=0
 NO_CONAN_REMOTES=0
-if [[ $1 = '-y' ]] ; then
-    YES=1
-fi
-if [[ $1 = '--no-conan-remotes' ]] ; then
-    NO_CONAN_REMOTES=1
-fi
+NO_SHADERS=0
+while [[ $# > 0 ]] ; do
+    case "$1" in
+        -y )                    YES=1;                  shift;;
+        --no-conan-remotes)     NO_CONAN_REMOTES=1;     shift;;
+        --no-shaders)           NO_SHADERS=1;           shift;;
+    esac
+done
 
 function ask {
     [[ $YES -eq 1 ]] && return 0
@@ -54,7 +56,7 @@ if [[ ! -e "share/fonts/Hack/Hack-Regular.ttf" ]] ; then
 fi
 
 # Compile shaders to SPIR-V
-if [[ ! -e "share/shaders/test_vk.frag.spv" ]] ; then
+if [[ ${NO_SHADERS} -eq 0 && ! -e "share/shaders/test_vk.frag.spv" ]] ; then
     echo "=== Compile shaders to SPIR-V ==="
     ( cd share/shaders; make )
 fi
