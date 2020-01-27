@@ -1,0 +1,32 @@
+name: C/C++ CI
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v1
+      
+    - name: bootstrap
+      run: ./bootstrap.sh -y
+      
+    - name: deps
+      run: ./build.sh deps
+      
+    - name: configure
+      run: ./build.sh config
+      
+    - name: build
+      run: ./build.sh build
+      
+    - name: test
+      run: ./build.sh test
+      
+    - name: install
+      run: ./build.sh install
+      
+    - name: package
+      run: ./build.sh package
