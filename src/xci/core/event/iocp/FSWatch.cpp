@@ -4,6 +4,9 @@
 // Copyright 2020 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
+// References:
+// - https://github.com/jimbeveridge/readdirectorychanges
+
 #include "FSWatch.h"
 #include <xci/core/file.h>
 #include <xci/core/string.h>

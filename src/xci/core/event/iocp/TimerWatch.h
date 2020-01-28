@@ -14,9 +14,8 @@
 namespace xci::core {
 
 
-/// Run callback periodically
-/// `TimerWatch` implementation for kqueue(2) using EVFILT_TIMER
-
+/// Run a callback periodically
+/// IOCP-based timer (using the GetQueuedCompletionStatus' timeout parameter)
 class TimerWatch: public Watch {
 public:
     using Callback = std::function<void()>;
@@ -25,8 +24,8 @@ public:
     /// Creates new monotonic timer, which will start immediately.
     /// \param  loop        EventLoop which will run the timer
     /// \param  interval    Timer will trigger after this interval expires
-    /// \param  type        Periodic timer restarts automatically. OneShot timer has to be restarted
-    ///                     by calling `restart()` explicitly
+    /// \param  type        Periodic timer restarts automatically.
+    ///                     OneShot timer may be restarted with explicit `restart()`
     /// \param  cb          The callback run by timer.
     TimerWatch(EventLoop& loop, std::chrono::milliseconds interval, Type type, Callback cb);
     TimerWatch(EventLoop& loop, std::chrono::milliseconds interval, Callback cb)
@@ -36,7 +35,7 @@ public:
     void stop();
     void restart();
 
-    void _notify(LPOVERLAPPED overlapped) override;
+    void _notify(LPOVERLAPPED) override;
 
 private:
     std::chrono::milliseconds m_interval;

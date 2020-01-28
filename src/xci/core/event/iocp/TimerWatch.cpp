@@ -20,20 +20,22 @@ TimerWatch::TimerWatch(EventLoop& loop, std::chrono::milliseconds interval, Type
 
 void TimerWatch::stop()
 {
-
+    m_loop._remove_timer(*this);
 }
 
 
 void TimerWatch::restart()
 {
-
+    m_loop._add_timer(m_interval, *this);
 }
 
 
-void TimerWatch::_notify(LPOVERLAPPED overlapped)
+void TimerWatch::_notify(LPOVERLAPPED)
 {
     if (m_cb)
         m_cb();
+    if (m_type == Periodic)
+        restart();
 }
 
 

@@ -8,8 +8,11 @@
 #include <xci/core/log.h>
 
 #include <cassert>
+#include <algorithm>
 
 namespace xci::core {
+
+using namespace std::chrono;
 
 
 EventLoop::EventLoop()
@@ -42,7 +45,9 @@ void EventLoop::run()
                 &num_bytes_transferred,
                 &completion_key,
                 &overlapped,
-                INFINITE);
+                next_timeout());
+        if (!res && GetLastError() == WAIT_TIMEOUT)
+            continue;
         if (!res) {
             log_error("EventLoop: GetQueuedCompletionStatus: {mm}");
             return;
@@ -82,6 +87,48 @@ void EventLoop::_post(Watch& watch, LPOVERLAPPED overlapped)
 {
     PostQueuedCompletionStatus(m_port, 0,
             (ULONG_PTR) &watch, overlapped);
+}
+
+
+void EventLoop::_add_timer(std::chrono::milliseconds timeout, Watch& watch)
+{
+    auto t = steady_clock::now() + timeout;
+    m_timer_queue.emplace_back(Timer{t, &watch});
+    std::sort(m_timer_queue.begin(), m_timer_queue.end());
+}
+
+
+void EventLoop::_remove_timer(Watch& watch)
+{
+    m_timer_queue.erase(
+            std::remove_if(
+                    m_timer_queue.begin(), m_timer_queue.end(),
+                    [&watch](const Timer& t) { return t.watch == &watch; }),
+            m_timer_queue.end());
+}
+
+
+DWORD EventLoop::next_timeout()
+{
+    if (m_timer_queue.empty())
+        return INFINITE;
+
+    auto now = steady_clock::now();
+    for(;;) {
+        const auto& front = m_timer_queue.front();
+        if (front.time_point <= now) {
+            // remove expired Timer before notifying it to allow the callback
+            // to add new Timer to the queue (i.e. restart)
+            auto* watch = front.watch;
+            m_timer_queue.pop_front();
+            watch->_notify(nullptr);
+        } else
+            break;
+        if (m_timer_queue.empty())
+            return INFINITE;
+    }
+    return duration_cast<milliseconds>(
+            m_timer_queue.front().time_point - now).count();
 }
 
 

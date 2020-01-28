@@ -8,6 +8,8 @@
 #define XCI_CORE_IOCP_EVENTLOOP_H
 
 #include <windows.h>
+#include <chrono>
+#include <deque>
 
 namespace xci::core {
 
@@ -58,8 +60,27 @@ public:
     bool _associate(HANDLE handle, Watch& watch);
     void _post(Watch& watch, LPOVERLAPPED overlapped);
 
+    // Add the Watch to timer queue, notify it after `timeout` milliseconds.
+    // (This emulates timers in IOCP, which is missing the feature.)
+    void _add_timer(std::chrono::milliseconds timeout, Watch& watch);
+
+    // Remove the Watch from timer queue.
+    void _remove_timer(Watch& watch);
+
 private:
+    DWORD next_timeout();
+
     HANDLE m_port;
+
+    struct Timer {
+        std::chrono::steady_clock::time_point time_point;
+        Watch* watch;
+
+        bool operator<(const Timer& rhs) const {
+            return time_point < rhs.time_point;
+        }
+    };
+    std::deque<Timer> m_timer_queue;
 };
 
 
