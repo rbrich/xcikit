@@ -250,7 +250,8 @@ public:
                 }
                 if (levels != 0) {
                     // SET_BASE <levels>
-                    code().add_opcode(Opcode::SetBase, levels);
+                    assert(levels <= 255);
+                    code().add_opcode(Opcode::SetBase, (uint8_t) levels);
                 }
                 // copy the code
                 for (auto instr : func.code()) {
@@ -321,11 +322,11 @@ public:
         // evaluate condition
         v.cond->apply(*this);
         // add jump instruction
-        code().add_opcode(Opcode::JumpIfNot, 0);
+        code().add_opcode(Opcode::JumpIfNot, uint8_t(0));
         auto jump1_arg_pos = code().this_instruction_address();
         // then branch
         v.then_expr->apply(*this);
-        code().add_opcode(Opcode::Jump, 0);
+        code().add_opcode(Opcode::Jump, uint8_t(0));
         auto jump2_arg_pos = code().this_instruction_address();
         // else branch
         code().set_arg(jump1_arg_pos,
@@ -440,7 +441,8 @@ private:
                                 }
                                 if (levels != 0) {
                                     // SET_BASE <levels>
-                                    code().add_opcode(Opcode::SetBase, levels);
+                                    assert(levels <= 255);
+                                    code().add_opcode(Opcode::SetBase, (uint8_t) levels);
                                 }
                                 // copy the code
                                 for (auto instr : fragment.code()) {

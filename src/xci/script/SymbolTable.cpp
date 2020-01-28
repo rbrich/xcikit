@@ -14,6 +14,7 @@
 // limitations under the License.
 
 #include "SymbolTable.h"
+#include "Module.h"
 #include <cassert>
 #include <algorithm>
 #include <ostream>
@@ -61,8 +62,7 @@ SymbolPointer SymbolTable::add(Symbol&& symbol)
 
 SymbolTable& SymbolTable::add_child(const std::string& name)
 {
-    m_children.emplace_back(name, this);
-    return m_children.back();
+    return m_module->add_symtab(name, this);
 }
 
 

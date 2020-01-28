@@ -36,7 +36,7 @@ TEST_CASE( "Stack of ints", "[stack]" )
     CHECK(stack.empty());
     CHECK(stack.capacity() == init_cap);
 
-    for (size_t i = 0; i < 2*init_cap; ++i)
+    for (int i = 0; i < 2*init_cap; ++i)
         stack.push(i);
     CHECK(stack.capacity() > init_cap);
 

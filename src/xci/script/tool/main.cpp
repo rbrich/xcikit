@@ -24,7 +24,6 @@
 #include <replxx.hxx>
 
 #include <iostream>
-#include <vector>
 #include <algorithm>
 #include <regex>
 
@@ -38,7 +37,6 @@ using std::cout;
 using std::endl;
 using std::flush;
 using std::stack;
-using std::vector;
 using std::map;
 
 
@@ -215,9 +213,9 @@ void highlighter(std::string const& context, Replxx::colors_t& colors)
             std::string c{match[0]};
             std::string prefix(match.prefix().str());
             pos += utf8_length(prefix);
-            int len(utf8_length(c));
+            size_t len(utf8_length(c));
 
-            for (int i = 0; i < len; ++i) {
+            for (size_t i = 0; i < len; ++i) {
                 colors.at(pos + i) = e.second;
             }
 
@@ -236,7 +234,7 @@ int main(int argc, char* argv[])
 
     map<string, docopt::value> args = docopt::docopt(
             "Usage:\n"
-            "    demo_script [options] [INPUT ...]\n"
+            "    lasci [options] [INPUT ...]\n"
             "\n"
             "Options:\n"
             "   -e EXPR --eval EXPR    Load EXPR as it was a module, run it and exit\n"

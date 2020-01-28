@@ -58,7 +58,8 @@ struct exp_emul {
     constexpr auto operator()( T&& lhs, U&& rhs ) const
     noexcept(noexcept(std::forward<T>(lhs) + std::forward<U>(rhs)))
     -> decltype(std::forward<T>(lhs) + std::forward<U>(rhs))
-    { return std::pow(std::forward<T>(lhs), std::forward<U>(rhs)); }
+    { return (decltype(std::forward<T>(lhs) + std::forward<U>(rhs)))
+        std::pow(std::forward<T>(lhs), std::forward<U>(rhs)); }
 };
 
 

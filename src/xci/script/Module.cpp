@@ -22,6 +22,13 @@ namespace xci::script {
 using namespace std;
 
 
+Module::Module(std::string name)
+    : m_symtabs{SymbolTable{move(name)}}
+{
+    m_symtabs.front().set_module(this);
+}
+
+
 Module::~Module()
 {
     for (auto& val : m_values) {
@@ -85,6 +92,14 @@ Index Module::add_instance(std::unique_ptr<Instance>&& inst)
 {
     m_instances.push_back(move(inst));
     return m_instances.size() - 1;
+}
+
+
+SymbolTable& Module::add_symtab(std::string name, SymbolTable* parent)
+{
+    auto& st = m_symtabs.emplace_back(move(name), parent);
+    st.set_module(this);
+    return st;
 }
 
 

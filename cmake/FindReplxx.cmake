@@ -13,7 +13,7 @@ find_path(replxx_INCLUDE_DIR
 mark_as_advanced(replxx_INCLUDE_DIR)
 
 find_library(replxx_LIBRARY
-    NAMES replxx replxx-static
+    NAMES replxx replxx-static replxx-static-d
     PATHS ${replxx_ROOT_DIR})
 mark_as_advanced(replxx_LIBRARY)
 
@@ -28,6 +28,7 @@ if (replxx_FOUND)
         add_library(replxx::replxx INTERFACE IMPORTED)
         set_target_properties(replxx::replxx PROPERTIES
             INTERFACE_LINK_LIBRARIES "${replxx_LIBRARIES}"
-            INTERFACE_INCLUDE_DIRECTORIES "${replxx_INCLUDE_DIRS}")
+            INTERFACE_INCLUDE_DIRECTORIES "${replxx_INCLUDE_DIRS}"
+            INTERFACE_COMPILE_DEFINITIONS "REPLXX_STATIC")
     endif()
 endif()

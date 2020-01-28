@@ -50,10 +50,14 @@ if (BUILD_WITH_IWYU)
 endif()
 
 if (BUILD_WARNINGS)
-    if(MSVC)
+    if (MSVC)
         # see: https://gitlab.kitware.com/cmake/cmake/issues/19084
         string(REGEX REPLACE "/W[0-4]" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-        add_compile_options(/W4)
+        string(REGEX REPLACE "/W[0-4]" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+        # Suppressed warnings:
+        # - C4100: unreferenced formal parameter (noisy)
+        # - C4244: conversion from 'int' to 'uint8_t' ... (FP)
+        add_compile_options(/W4 /wd4100 /wd4244)
     else()
         add_compile_options(-Wall -Wextra
             -Wno-unused-parameter

@@ -105,7 +105,7 @@ struct MultipleDeclarationError : public Error {
 
 
 struct UnexpectedArgument : public Error {
-    explicit UnexpectedArgument(int idx, const SourceInfo& si)
+    explicit UnexpectedArgument(size_t idx, const SourceInfo& si)
             : Error(core::format("unexpected argument #{}", idx), si) {}
 };
 
@@ -117,7 +117,7 @@ struct UnsupportedOperandsError : public Error {
 
 
 struct UnexpectedArgumentCount : public Error {
-    explicit UnexpectedArgumentCount(int exp, int got)
+    explicit UnexpectedArgumentCount(size_t exp, size_t got)
             : Error(core::format("function expects {} args, called with {} args",
                     exp, got)) {}
 };
@@ -130,7 +130,7 @@ struct UnknownTypeName : public Error {
 
 
 struct UnexpectedArgumentType : public Error {
-    explicit UnexpectedArgumentType(int idx, const TypeInfo& exp, const TypeInfo& got, const SourceInfo& si)
+    explicit UnexpectedArgumentType(size_t idx, const TypeInfo& exp, const TypeInfo& got, const SourceInfo& si)
             : Error(core::format("function expects {} for arg #{}, called with {}",
                                  exp, idx, got), si) {}
 };
@@ -189,7 +189,7 @@ struct DefinitionTypeMismatch : public Error {
 
 
 struct DefinitionParamTypeMismatch : public Error {
-    explicit DefinitionParamTypeMismatch(int idx, const TypeInfo& exp, const TypeInfo& got)
+    explicit DefinitionParamTypeMismatch(size_t idx, const TypeInfo& exp, const TypeInfo& got)
             : Error(core::format("definition type mismatch: specified {} for param #{}, inferred {}",
                                  exp, idx, got)) {}
 };
