@@ -63,21 +63,10 @@ if [[ ! -e "share/fonts/Hack/Hack-Regular.ttf" ]] ; then
     rm ${HACK_ARCHIVE}
 fi
 
-# Compile shaders to SPIR-V
-if [[ ! -e "share/shaders/test_vk.frag.spv" ]] ; then
-    echo "=== Compile shaders to SPIR-V ==="
-    if ! make -q -C share/shaders; then
-        # some shaders have been modified
-        make -C share/shaders
-        # archives need rebuild
-        rm -f share.dar share.zip
-    fi
-fi
-
 # Needed for demo_vfs
 if [[ ! -e "share.dar" ]] ; then
     echo "=== Create share.dar archive ==="
-    (cd share; find shaders fonts -type f > file_list.txt)
+    (cd share; find shaders fonts script -type f > file_list.txt)
     $PYTHON_LAUNCHER tools/pack_assets.py share.dar share/file_list.txt
     rm share/file_list.txt
 fi
@@ -85,5 +74,5 @@ fi
 # Needed for demo_vfs
 if [[ ! -e "share.zip" ]] ; then
     echo "=== Create share.zip archive ==="
-    (cd share; $ZIP_CREATE ../share.zip shaders fonts)
+    (cd share; $ZIP_CREATE ../share.zip shaders fonts script)
 fi

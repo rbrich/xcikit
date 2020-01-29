@@ -71,6 +71,20 @@ include(XciBuildChecks)
 # Generate config.h
 configure_file(config.h.in include/xci/config.h)
 
+
+# ------------ #
+# Assets       #
+# ------------ #
+
+if (XCI_WITH_VULKAN)
+    add_subdirectory(share/shaders)
+endif()
+
+# Data (share)
+install(DIRECTORY share/fonts DESTINATION share/xcikit)
+install(DIRECTORY share/script DESTINATION share/xcikit)
+
+
 # ------------ #
 # Libraries    #
 # ------------ #
@@ -178,7 +192,3 @@ install(FILES
 
 # Make our CMake modules available to clients
 install(FILES cmake/XciBuildOptions.cmake DESTINATION lib/cmake/xcikit)
-
-# Data (share)
-install(DIRECTORY share/fonts DESTINATION share/xcikit)
-install(DIRECTORY share/shaders DESTINATION share/xcikit)
