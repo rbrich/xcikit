@@ -16,19 +16,29 @@ int main(int argc, const char* argv[])
     bool verbose = false;
     int optimize = -1;
     std::vector<std::string> files;
+    const char** rest = nullptr;
     ArgParser {
 
         Option("-h, --help", "Show help", show_help),
         Option("-v, --verbose", "Enable verbosity", verbose),
         Option("-O, --optimize LEVEL", "Optimization level", optimize),
         Option("FILE...", "Input files", [&files](std::string_view arg){ files.emplace_back(arg); return true; }),
+        Option("-- ...", "Passthrough rest of the args", [&rest](const char** args){ rest = args; }),
 
-    } .parse_args(argc, argv);
+    } (argc, argv);
 
     cout << "OK: verbose=" << boolalpha << verbose << ", optimize=" << optimize << endl;
     cout << "  files:";
     for (const auto& f : files)
         cout << ' ' << f << ';';
     cout << endl;
+    if (rest) {
+        cout << "  passthrough:";
+        while (*rest) {
+            cout << ' ' << *rest << ';';
+            ++rest;
+        }
+        cout << endl;
+    }
     return 0;
 }

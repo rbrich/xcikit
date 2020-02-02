@@ -18,8 +18,8 @@ namespace xci::core::argparser {
 using namespace std;
 
 
-Option::Option(const char* desc, const char* help, Setter setter, int flags)
-    : m_desc(desc), m_help(help), m_setter(move(setter)), m_flags(flags)
+Option::Option(const char* desc, const char* help, Callback cb, int flags)
+    : m_desc(desc), m_help(help), m_cb(move(cb)), m_flags(flags)
 {
     for (;;) {
         auto p = parse_desc(desc);
@@ -196,20 +196,19 @@ void ArgParser::parse_env()
 }
 
 
-ArgParser& ArgParser::parse_args(int argc, const char** argv)
+ArgParser::ParseResult ArgParser::parse_args(int argc, const char** argv)
 {
-    if (argc > 0) {
-        m_progname = path_basename(*argv);
-    }
+    if (argc < 1)
+        throw BadArgument("missing program name (argv[0])");
+    m_progname = path_basename(*argv);
     while (--argc) {
-        try {
-            parse_arg(*++argv);
-        } catch (const BadArgument& e) {
-            cerr << e.what() << endl;
-            exit(1);
+        switch (parse_arg(++argv)) {
+            case Continue:  continue;
+            case Stop:      return Stop;
+            case Exit:      return Exit;
         }
     }
-    return *this;
+    return Continue;
 }
 
 
@@ -251,9 +250,10 @@ void ArgParser::validate() const
 }
 
 
-ArgParser& ArgParser::parse_arg(const char* arg)
+ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
 {
     int dashes = 0;  // 0 = positional, 1 = short, 2 = long
+    const char* arg = *argv;
     const char* p = arg;
     while (*p == '-') {
         ++p;
@@ -262,6 +262,15 @@ ArgParser& ArgParser::parse_arg(const char* arg)
     if (dashes > 2)
         throw BadArgument(format("Too many dashes: {}", arg));
     if (dashes == 2) {
+        // stop parsing (--)
+        if (*p == 0) {
+            auto it = find_if(m_opts.begin(), m_opts.end(),
+                    [](const Option& opt) { return opt.is_stop(); });
+            if (it == m_opts.end())
+                throw BadArgument(format("Unknown option: {}", arg));
+            (*it)(argv + 1);
+            return Stop;
+        }
         // long option
         auto it = find_if(m_opts.begin(), m_opts.end(),
                 [p](const Option& opt) { return opt.has_long(p); });
@@ -270,16 +279,16 @@ ArgParser& ArgParser::parse_arg(const char* arg)
         if (!it->has_args()) {
             if (it->is_print_help()) {
                 print_help();
-                exit(0);
+                return Exit;
             }
             if (! (*it)("1") )
                 throw BadArgument(format("Wrong value to option: {}: 1", arg));
-            return *this;
+            return Continue;
         }
         if (!it->can_receive_arg())
             throw BadArgument(format("Too many occurrences of an option: {}", arg));
         m_curopt = &*it;
-        return *this;
+        return Continue;
     }
     if (dashes == 1) {
         // short option
@@ -292,7 +301,7 @@ ArgParser& ArgParser::parse_arg(const char* arg)
             if (!it->has_args()) {
                 if (it->is_print_help()) {
                     print_help();
-                    exit(0);
+                    return Exit;
                 }
                 if (! (*it)("1") )
                     throw BadArgument(format("Wrong value to option: {}: 1", arg));
@@ -308,7 +317,7 @@ ArgParser& ArgParser::parse_arg(const char* arg)
             m_curopt = &*it;
             break;
         }
-        return *this;
+        return Continue;
     }
     assert(dashes == 0);
     if (m_curopt && m_curopt->can_receive_arg()) {
@@ -317,10 +326,33 @@ ArgParser& ArgParser::parse_arg(const char* arg)
     } else {
         auto it = find_if(m_opts.begin(), m_opts.end(),
                 [](const Option& opt) { return opt.is_positional() && opt.can_receive_arg(); });
-        if (it == m_opts.end())
-            throw BadArgument(format("Unexpected positional argument: {}", arg));
-        if (! (*it)(p) )
+        if (it == m_opts.end()) {
+            auto it_stop = find_if(m_opts.begin(), m_opts.end(),
+                    [](const Option& opt) { return opt.is_stop(); });
+            if (it_stop == m_opts.end())
+                throw BadArgument(format("Unexpected positional argument: {}", arg));
+            (*it_stop)(argv);
+            return Stop;
+        } if (! (*it)(p) )
             throw BadArgument(format("Wrong positional argument: {}", p));
+    }
+    return Continue;
+}
+
+
+ArgParser& ArgParser::operator()(int argc, const char* argv[])
+{
+    try {
+        switch (parse_args(argc, argv)) {
+            case Exit:
+                exit(0);
+            case Continue:
+            case Stop:
+                break;
+        }
+    } catch (const BadArgument& e) {
+        cerr << e.what() << endl;
+        exit(1);
     }
     return *this;
 }

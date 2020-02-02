@@ -8,6 +8,7 @@
 #include <catch2/catch.hpp>
 
 #include <xci/core/ArgParser.h>
+#include <array>
 
 using namespace xci::core;
 using namespace xci::core::argparser;
@@ -174,6 +175,9 @@ TEST_CASE( "Invalid option descriptions", "[ArgParser][Option]" )
 }
 
 
+#define ARGV(...)   std::array{__VA_ARGS__, (const char*)nullptr}.data()
+
+
 TEST_CASE( "Parse arg", "[ArgParser][parse_arg]" )
 {
     {
@@ -187,12 +191,12 @@ TEST_CASE( "Parse arg", "[ArgParser][parse_arg]" )
             Option("-O, --optimize LEVEL", "Optimization level", optimize),
         };
 
-        CHECK_THROWS_AS(ap.parse_arg("-x"), BadArgument);
-        CHECK_THROWS_AS(ap.parse_arg("---v"), BadArgument);
-        CHECK_THROWS_AS(ap.parse_arg("--v"), BadArgument);
-        CHECK_THROWS_AS(ap.parse_arg("-verbose"), BadArgument);
-        CHECK_THROWS_AS(ap.parse_arg("-vx"), BadArgument);
-        CHECK_THROWS_AS(ap.parse_arg("file"), BadArgument);
+        CHECK_THROWS_AS(ap.parse_arg(ARGV("-x")), BadArgument);
+        CHECK_THROWS_AS(ap.parse_arg(ARGV("---v")), BadArgument);
+        CHECK_THROWS_AS(ap.parse_arg(ARGV("--v")), BadArgument);
+        CHECK_THROWS_AS(ap.parse_arg(ARGV("-verbose")), BadArgument);
+        CHECK_THROWS_AS(ap.parse_arg(ARGV("-vx")), BadArgument);
+        CHECK_THROWS_AS(ap.parse_arg(ARGV("file")), BadArgument);
     }
 
     {
@@ -206,16 +210,14 @@ TEST_CASE( "Parse arg", "[ArgParser][parse_arg]" )
                 Option("-O, --optimize LEVEL", "Optimization level", optimize),
                 Option("FILE...", "Input files", files),
         };
-        ap.parse_arg("-vwO3");
-        ap.parse_arg("file1");
-        ap.parse_arg("file2");
+        ap.parse_args(4, ARGV("0", "-vwO3", "file1", "file2"));
         CHECK(verbose);
         CHECK(warn);
         CHECK(optimize == 3);
         CHECK(files == std::vector<const char*>{"file1", "file2"});
 
-        INFO("option given again");
-        CHECK_THROWS_AS(ap.parse_arg("--optimize").parse_arg("4"), BadArgument);
+        INFO("same option given again");
+        CHECK_THROWS_AS(ap.parse_arg(ARGV("--optimize")), BadArgument);
     }
 }
 
@@ -231,16 +233,63 @@ TEST_CASE( "Option argument", "[ArgParser][parse_arg]" )
     };
 
     SECTION("a") {
-        ap.parse_arg("-ta");
+        ap.parse_arg(ARGV("-ta"));
         CHECK(t == 'a');
     }
 
     SECTION("b") {
-        ap.parse_arg("-t").parse_arg("b");
+        ap.parse_args(3, ARGV("0", "-t", "b"));
         CHECK(t == 'b');
     }
 
     SECTION("c") {
-        CHECK_THROWS_AS(ap.parse_arg("-tc"), BadArgument);
+        CHECK_THROWS_AS(ap.parse_arg(ARGV("-tc")), BadArgument);
+    }
+}
+
+
+TEST_CASE( "Gather rest of args", "[ArgParser]" )
+{
+    bool verbose = false;
+    const char** rest = nullptr;
+    ArgParser ap {
+        Option("-v, --verbose", "Enable verbosity", verbose),
+        Option("--...", "Passthrough args", [&rest](const char** args){ rest = args; }),
+    };
+
+    SECTION("passthrough all") {
+        const char* args[] = {"0", "aa", "bb", nullptr};
+        CHECK(ap.parse_args(sizeof(args)-1, args) == ArgParser::Stop);
+        CHECK(rest[0] == args[1]);
+    }
+
+    SECTION("passthrough the rest") {
+        const char* args[] = {"0", "-v", "aa", "bb", nullptr};
+        CHECK(ap.parse_args(sizeof(args)-1, args) == ArgParser::Stop);
+        CHECK(rest[0] == args[2]);
+    }
+
+    SECTION("after initial passthrough-arg, no more options are processed") {
+        const char* args[] = {"0", "aa", "-v", "bb", nullptr};
+        CHECK(ap.parse_args(sizeof(args)-1, args) == ArgParser::Stop);
+        CHECK(rest[0] == args[1]);
+        CHECK(rest[1] == args[2]);
+    }
+
+    SECTION("explicit passthrough 1") {
+        const char* args[] = {"0", "--", "aa", "bb", nullptr};
+        CHECK(ap.parse_args(sizeof(args)-1, args) == ArgParser::Stop);
+        CHECK(rest[0] == args[2]);
+    }
+
+    std::vector<const char*> files;
+    ap.add_option(Option("FILE...", "Input files", files));
+
+    SECTION("explicit passthrough 2") {
+        const char* args[] = {"0", "f1", "f2", "--", "aa", "bb", nullptr};
+        CHECK(ap.parse_args(sizeof(args)-1, args) == ArgParser::Stop);
+        CHECK(files[0] == args[1]);
+        CHECK(files.size() == 2);
+        CHECK(rest[0] == args[4]);
     }
 }

@@ -90,24 +90,36 @@ struct DefaultHelp {};
 constexpr DefaultHelp show_help{};
 
 struct Option {
-    using Setter = std::function<bool(const char* arg)>;
+    /// \param arg      current argument, or part of it, to be processed
+    /// \param rest     the rest of args following arg being currently processed
+    /// \return         true if the arg was accepted, false if rejected
+    using Callback = std::function<bool(const char* arg, const char* rest[])>;
+
+    // simplified callbacks for special cases (process simple flag,
+    // process arg, pass the rest of args)
+    using FlagCallback = std::function<void()>;
+    using ArgCallback = std::function<bool(const char* arg)>;
+    using RestCallback = std::function<void(const char* rest[])>;
 
     /// \param desc     comma-separated short and long names,
     ///                 e.g. "-v, --verbose"
-    Option(const char* desc, const char* help, Setter setter, int flags);
+    Option(const char* desc, const char* help, Callback cb, int flags);
 
     Option(const char* desc, const char* help, DefaultHelp)
             : Option(desc, help, nullptr, FPrintHelp) {}
 
-    Option(const char* desc, const char* help, Setter setter)
-            : Option(desc, help, std::move(setter), 0) {}
+    Option(const char* desc, const char* help, FlagCallback flag_cb)
+            : Option(desc, help, [cb = std::move(flag_cb)](const char*, const char**){ cb(); return true; }, 0) {}
 
-    Option(const char* desc, const char* help, std::function<void()> flag_setter)
-            : Option(desc, help, [&](const char* arg){ flag_setter(); return true; }, 0) {}
+    Option(const char* desc, const char* help, ArgCallback arg_cb)
+            : Option(desc, help, [cb = std::move(arg_cb)](const char* arg, const char**){ return cb(arg); }, 0) {}
+
+    Option(const char* desc, const char* help, RestCallback rest_cb)
+            : Option(desc, help, [cb = std::move(rest_cb)](const char*, const char** rest){ cb(rest); return true; }, 0) {}
 
     template <class T>
     Option(const char* desc, const char* help, T& value)
-            : Option(desc, help, [&value](const char* arg){ return value_from_cstr<T>(arg, value); }, 0) {}
+            : Option(desc, help, [&value](const char* arg, const char**){ return value_from_cstr<T>(arg, value); }, 0) {}
 
     bool has_short(char arg) const;
     bool has_long(const char* arg) const;
@@ -125,7 +137,8 @@ struct Option {
     std::string usage() const;
     std::string formatted_desc(size_t width) const;
 
-    bool operator() (const char* arg) { ++m_received; return m_setter(arg); }
+    bool operator() (const char* arg) { ++m_received; return m_cb(arg, nullptr); }
+    bool operator() (const char* rest[]) { ++m_received; return m_cb(nullptr, rest); }
 
 private:
     struct NamePos {
@@ -146,7 +159,7 @@ private:
 private:
     const char* m_desc;
     const char* m_help;
-    Setter m_setter;
+    Callback m_cb;
     enum Flags {
         FShort      = (1 << 0),
         FLong       = (1 << 1),
@@ -167,16 +180,24 @@ class ArgParser {
 public:
     explicit ArgParser(std::initializer_list<Option> options);
 
-    /// Parse command-line arguments
-    ArgParser& parse_args(int argc, const char* argv[]);
-    ArgParser& parse_args(int argc, char* argv[]) { return parse_args(argc, (const char**) argv); }
-
-    // ------------------------------------------------------------------------
-    // Semi-private methods
-    // (normally not needed in client code)
-
-    /// Add option to the parser
+    /// Add option to the parser (prefer passing all options to constructor)
     ArgParser& add_option(Option&& opt);
+
+    /// Main - process command-line arguments, exit on error or after showing help
+    ArgParser& operator()(int argc, const char* argv[]);
+    ArgParser& operator()(int argc, char* argv[]) { return operator()(argc, (const char**) argv); }
+
+    enum ParseResult {
+        Continue,
+        Stop,
+        Exit,
+    };
+
+    /// Parse command-line arguments, throw on errors
+    ParseResult parse_args(int argc, const char* argv[]);
+
+    /// Parse a single argument
+    ParseResult parse_arg(const char* argv[]);
 
     /// Print short usage information
     void print_usage() const;
@@ -190,9 +211,6 @@ public:
     /// TODO: Parse environment variables
     /// This is called internally before `parse_args` (env has lower priority)
     void parse_env();
-
-    /// Parse a single argument
-    ArgParser& parse_arg(const char* arg);
 
 private:
     std::string m_progname;
