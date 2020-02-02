@@ -18,13 +18,6 @@ namespace xci::core::argparser {
 using namespace std;
 
 
-template <class... Ts>
-static void die(Ts... args) {
-    cerr << format(args...) << endl;
-    exit(1);
-}
-
-
 Option::Option(const char* desc, const char* help, Setter setter, int flags)
     : m_desc(desc), m_help(help), m_setter(move(setter)), m_flags(flags)
 {
@@ -33,20 +26,31 @@ Option::Option(const char* desc, const char* help, Setter setter, int flags)
         if (!p)
             break;
 
-        if (p.dashes >= 2) {
-            assert(p.dashes == 2);
-            m_flags |= FLong;
+        // sanity check
+        if ((m_flags & FPositional) && p.dashes > 0)
+            throw BadOptionDescription("short/long option after positional name", desc + p.pos);
+
+        if (p.dashes > 2)
+            throw BadOptionDescription("too many dashes", desc + p.pos);
+        else if (p.dashes == 2) {
+            if (p.len == 0) {
+                m_flags |= FStop;
+            } else
+                m_flags |= FLong;
         } else if (p.dashes == 1) {
-            assert(p.len == 1);
+            if (p.len != 1)
+                throw BadOptionDescription("short option must contain a single character", desc + p.pos);
             m_flags |= FShort;
         } else {
             assert(p.dashes == 0);
             if (desc[p.pos] == '.') {
-                assert(p.len == 3);
+                if (p.len != 3)
+                    throw BadOptionDescription("use three dots for ellipsis", desc + p.pos);
                 m_flags |= FDots;
             } else if ((m_flags & (FShort | FLong)) == 0) {
                 assert(!m_args);
                 m_flags |= FPositional;
+                m_args = 1;
             } else {
                 ++ m_args;
             }
@@ -100,6 +104,8 @@ std::pair<const char*, int> Option::skip_dashes(const char* desc) const
 
 bool Option::has_short(char arg) const
 {
+    if (!is_short())
+        return false;
     auto* desc = m_desc;
     for (;;) {
         auto p = parse_desc(desc);
@@ -115,6 +121,8 @@ bool Option::has_short(char arg) const
 
 bool Option::has_long(const char* arg) const
 {
+    if (!is_long())
+        return false;
     auto* desc = m_desc;
     for (;;) {
         auto p = parse_desc(desc);
@@ -194,7 +202,12 @@ ArgParser& ArgParser::parse_args(int argc, const char** argv)
         m_progname = path_basename(*argv);
     }
     while (--argc) {
-        parse_arg(*++argv);
+        try {
+            parse_arg(*++argv);
+        } catch (const BadArgument& e) {
+            cerr << e.what() << endl;
+            exit(1);
+        }
     }
     return *this;
 }
@@ -238,7 +251,7 @@ void ArgParser::validate() const
 }
 
 
-void ArgParser::parse_arg(const char* arg)
+ArgParser& ArgParser::parse_arg(const char* arg)
 {
     int dashes = 0;  // 0 = positional, 1 = short, 2 = long
     const char* p = arg;
@@ -247,25 +260,26 @@ void ArgParser::parse_arg(const char* arg)
         ++dashes;
     }
     if (dashes > 2)
-        die("Too many dashes: {}", arg);
+        throw BadArgument(format("Too many dashes: {}", arg));
     if (dashes == 2) {
         // long option
         auto it = find_if(m_opts.begin(), m_opts.end(),
                 [p](const Option& opt) { return opt.has_long(p); });
         if (it == m_opts.end())
-            die("Unknown option: {}", arg);
+            throw BadArgument(format("Unknown option: {}", arg));
         if (!it->has_args()) {
             if (it->is_print_help()) {
                 print_help();
                 exit(0);
             }
-            bool set_flag_success = (*it)("1");
-            assert(set_flag_success);
-            (void) set_flag_success;
-            return;
+            if (! (*it)("1") )
+                throw BadArgument(format("Wrong value to option: {}: 1", arg));
+            return *this;
         }
+        if (!it->can_receive_arg())
+            throw BadArgument(format("Too many occurrences of an option: {}", arg));
         m_curopt = &*it;
-        return;
+        return *this;
     }
     if (dashes == 1) {
         // short option
@@ -273,43 +287,42 @@ void ArgParser::parse_arg(const char* arg)
             auto it = find_if(m_opts.begin(), m_opts.end(),
                     [p](const Option& opt) { return opt.has_short(*p); });
             if (it == m_opts.end())
-                die("Unknown option: -{} (in {})", p, arg);
+                throw BadArgument(format("Unknown option: -{} (in {})", p, arg));
             ++p;
             if (!it->has_args()) {
                 if (it->is_print_help()) {
                     print_help();
                     exit(0);
                 }
-                bool set_flag_success = (*it)("1");
-                assert(set_flag_success);
-                (void) set_flag_success;
+                if (! (*it)("1") )
+                    throw BadArgument(format("Wrong value to option: {}: 1", arg));
                 continue;
             }
             // has args
+            if (!it->can_receive_arg())
+                throw BadArgument(format("Too many occurrences of an option: -{} (in {})", p[-1], arg));
             if (*p) {
-                bool set_flag_success = (*it)(p);
-                assert(set_flag_success);
-                (void) set_flag_success;
+                if (! (*it)(p) )
+                    throw BadArgument(format("Wrong value to option: {}: {}", p[-1], p));
             }
             m_curopt = &*it;
             break;
         }
-        return;
+        return *this;
     }
     assert(dashes == 0);
-    if (m_curopt && m_curopt->can_receive()) {
+    if (m_curopt && m_curopt->can_receive_arg()) {
         // open option -> pass it the arg
         (*m_curopt)(arg);
     } else {
         auto it = find_if(m_opts.begin(), m_opts.end(),
-                [](const Option& opt) { return opt.is_positional() && opt.can_receive(); });
+                [](const Option& opt) { return opt.is_positional() && opt.can_receive_arg(); });
         if (it == m_opts.end())
-            die("Unexpected positional argument: {}", arg);
-        bool set_flag_success = (*it)(p);
-        assert(set_flag_success);
-        (void) set_flag_success;
-        return;
+            throw BadArgument(format("Unexpected positional argument: {}", arg));
+        if (! (*it)(p) )
+            throw BadArgument(format("Wrong positional argument: {}", p));
     }
+    return *this;
 }
 
 
