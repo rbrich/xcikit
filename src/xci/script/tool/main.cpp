@@ -151,7 +151,7 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
             }
         }
         return true;
-    } catch (const Error& e) {
+    } catch (const ScriptError& e) {
         if (!e.file().empty())
             cout << e.file() << ": ";
         cout << t.red().bold() << "Error: " << e.what() << t.normal();
@@ -307,7 +307,7 @@ int main(int argc, char* argv[])
             // control commands
             try {
                 cmd.interpreter().eval(line.substr(1));
-            } catch (const Error& e) {
+            } catch (const ScriptError& e) {
                 cout << t.red() << "Error: " << t.bold().red() << e.what() << t.normal() << std::endl;
                 if (!e.detail().empty())
                     cout << t.magenta() << e.detail() << t.normal() << std::endl;

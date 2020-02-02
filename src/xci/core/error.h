@@ -12,14 +12,14 @@ namespace xci::core {
 
 class Error: public std::exception {
 public:
-    explicit Error(std::string detail) : m_detail(std::move(detail)) {}
+    explicit Error(std::string msg) : m_msg(std::move(msg)) {}
 
     const char* what() const noexcept override {
-        return m_detail.c_str();
+        return m_msg.c_str();
     }
 
 private:
-    std::string m_detail;
+    std::string m_msg;
 };
 
 
