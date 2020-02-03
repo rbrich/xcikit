@@ -23,9 +23,9 @@ int main(int argc, const char* argv[])
         Option("-v, --verbose", "Enable verbosity", verbose),
         Option("-O, --optimize LEVEL", "Optimization level", optimize),
         Option("FILE...", "Input files", [&files](std::string_view arg){ files.emplace_back(arg); return true; }),
-        Option("-- ...", "Passthrough rest of the args", [&rest](const char** args){ rest = args; }),
+        Option("-- ...", "Gather remaining arguments", [&rest](const char** args){ rest = args; }),
 
-    } (argc, argv);
+    } (argv);
 
     cout << "OK: verbose=" << boolalpha << verbose << ", optimize=" << optimize << endl;
     cout << "  files:";

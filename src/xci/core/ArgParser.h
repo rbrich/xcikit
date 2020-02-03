@@ -184,8 +184,8 @@ public:
     ArgParser& add_option(Option&& opt);
 
     /// Main - process command-line arguments, exit on error or after showing help
-    ArgParser& operator()(int argc, const char* argv[]);
-    ArgParser& operator()(int argc, char* argv[]) { return operator()(argc, (const char**) argv); }
+    ArgParser& operator()(const char* argv[]);
+    ArgParser& operator()(char* argv[]) { return operator()((const char**) argv); }
 
     enum ParseResult {
         Continue,
@@ -194,7 +194,7 @@ public:
     };
 
     /// Parse command-line arguments, throw on errors
-    ParseResult parse_args(int argc, const char* argv[]);
+    ParseResult parse_args(const char* argv[]);
 
     /// Parse a single argument
     ParseResult parse_arg(const char* argv[]);
@@ -213,6 +213,8 @@ public:
     void parse_env();
 
 private:
+    bool invoke_stop(const char** argv);
+
     std::string m_progname;
     std::vector<Option> m_opts;
     Option* m_curopt = nullptr;

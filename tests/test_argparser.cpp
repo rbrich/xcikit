@@ -210,7 +210,7 @@ TEST_CASE( "Parse arg", "[ArgParser][parse_arg]" )
                 Option("-O, --optimize LEVEL", "Optimization level", optimize),
                 Option("FILE...", "Input files", files),
         };
-        ap.parse_args(4, ARGV("0", "-vwO3", "file1", "file2"));
+        ap.parse_args(ARGV("0", "-vwO3", "file1", "file2"));
         CHECK(verbose);
         CHECK(warn);
         CHECK(optimize == 3);
@@ -238,7 +238,7 @@ TEST_CASE( "Option argument", "[ArgParser][parse_arg]" )
     }
 
     SECTION("b") {
-        ap.parse_args(3, ARGV("0", "-t", "b"));
+        ap.parse_args(ARGV("0", "-t", "b"));
         CHECK(t == 'b');
     }
 
@@ -259,26 +259,33 @@ TEST_CASE( "Gather rest of args", "[ArgParser]" )
 
     SECTION("passthrough all") {
         const char* args[] = {"0", "aa", "bb", nullptr};
-        CHECK(ap.parse_args(sizeof(args)-1, args) == ArgParser::Stop);
+        CHECK(ap.parse_args(args) == ArgParser::Stop);
         CHECK(rest[0] == args[1]);
     }
 
     SECTION("passthrough the rest") {
         const char* args[] = {"0", "-v", "aa", "bb", nullptr};
-        CHECK(ap.parse_args(sizeof(args)-1, args) == ArgParser::Stop);
+        CHECK(ap.parse_args(args) == ArgParser::Stop);
         CHECK(rest[0] == args[2]);
     }
 
     SECTION("after initial passthrough-arg, no more options are processed") {
         const char* args[] = {"0", "aa", "-v", "bb", nullptr};
-        CHECK(ap.parse_args(sizeof(args)-1, args) == ArgParser::Stop);
+        CHECK(ap.parse_args(args) == ArgParser::Stop);
+        CHECK(rest[0] == args[1]);
+        CHECK(rest[1] == args[2]);
+    }
+
+    SECTION("first unrecognized arg starts passthrough") {
+        const char* args[] = {"0", "-x", "-v", "bb", nullptr};
+        CHECK(ap.parse_args(args) == ArgParser::Stop);
         CHECK(rest[0] == args[1]);
         CHECK(rest[1] == args[2]);
     }
 
     SECTION("explicit passthrough 1") {
         const char* args[] = {"0", "--", "aa", "bb", nullptr};
-        CHECK(ap.parse_args(sizeof(args)-1, args) == ArgParser::Stop);
+        CHECK(ap.parse_args(args) == ArgParser::Stop);
         CHECK(rest[0] == args[2]);
     }
 
@@ -287,7 +294,7 @@ TEST_CASE( "Gather rest of args", "[ArgParser]" )
 
     SECTION("explicit passthrough 2") {
         const char* args[] = {"0", "f1", "f2", "--", "aa", "bb", nullptr};
-        CHECK(ap.parse_args(sizeof(args)-1, args) == ArgParser::Stop);
+        CHECK(ap.parse_args(args) == ArgParser::Stop);
         CHECK(files[0] == args[1]);
         CHECK(files.size() == 2);
         CHECK(rest[0] == args[4]);

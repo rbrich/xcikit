@@ -196,13 +196,13 @@ void ArgParser::parse_env()
 }
 
 
-ArgParser::ParseResult ArgParser::parse_args(int argc, const char** argv)
+ArgParser::ParseResult ArgParser::parse_args(const char** argv)
 {
-    if (argc < 1)
+    if (argv[0] == nullptr)
         throw BadArgument("missing program name (argv[0])");
-    m_progname = path_basename(*argv);
-    while (--argc) {
-        switch (parse_arg(++argv)) {
+    m_progname = path_basename(*argv++);
+    while (*argv) {
+        switch (parse_arg(argv++)) {
             case Continue:  continue;
             case Stop:      return Stop;
             case Exit:      return Exit;
@@ -264,18 +264,18 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
     if (dashes == 2) {
         // stop parsing (--)
         if (*p == 0) {
-            auto it = find_if(m_opts.begin(), m_opts.end(),
-                    [](const Option& opt) { return opt.is_stop(); });
-            if (it == m_opts.end())
-                throw BadArgument(format("Unknown option: {}", arg));
-            (*it)(argv + 1);
-            return Stop;
+            if (invoke_stop(argv + 1))
+                return Stop;
+            throw BadArgument(format("Unknown option: {}", arg));
         }
         // long option
         auto it = find_if(m_opts.begin(), m_opts.end(),
                 [p](const Option& opt) { return opt.has_long(p); });
-        if (it == m_opts.end())
+        if (it == m_opts.end()) {
+            if (invoke_stop(argv))
+                return Stop;
             throw BadArgument(format("Unknown option: {}", arg));
+        }
         if (!it->has_args()) {
             if (it->is_print_help()) {
                 print_help();
@@ -295,8 +295,11 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
         while (*p) {
             auto it = find_if(m_opts.begin(), m_opts.end(),
                     [p](const Option& opt) { return opt.has_short(*p); });
-            if (it == m_opts.end())
+            if (it == m_opts.end()) {
+                if (p == arg + 1 && invoke_stop(argv))
+                    return Stop;
                 throw BadArgument(format("Unknown option: -{} (in {})", p, arg));
+            }
             ++p;
             if (!it->has_args()) {
                 if (it->is_print_help()) {
@@ -327,12 +330,9 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
         auto it = find_if(m_opts.begin(), m_opts.end(),
                 [](const Option& opt) { return opt.is_positional() && opt.can_receive_arg(); });
         if (it == m_opts.end()) {
-            auto it_stop = find_if(m_opts.begin(), m_opts.end(),
-                    [](const Option& opt) { return opt.is_stop(); });
-            if (it_stop == m_opts.end())
-                throw BadArgument(format("Unexpected positional argument: {}", arg));
-            (*it_stop)(argv);
-            return Stop;
+            if (invoke_stop(argv))
+                return Stop;
+            throw BadArgument(format("Unexpected positional argument: {}", arg));
         } if (! (*it)(p) )
             throw BadArgument(format("Wrong positional argument: {}", p));
     }
@@ -340,10 +340,10 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
 }
 
 
-ArgParser& ArgParser::operator()(int argc, const char* argv[])
+ArgParser& ArgParser::operator()(const char* argv[])
 {
     try {
-        switch (parse_args(argc, argv)) {
+        switch (parse_args(argv)) {
             case Exit:
                 exit(0);
             case Continue:
@@ -355,6 +355,16 @@ ArgParser& ArgParser::operator()(int argc, const char* argv[])
         exit(1);
     }
     return *this;
+}
+
+
+bool ArgParser::invoke_stop(const char** argv)
+{
+    auto it = find_if(m_opts.begin(), m_opts.end(),
+            [](const Option& opt) { return opt.is_stop(); });
+    if (it == m_opts.end())
+        return false;
+    return (*it)(argv);
 }
 
 
