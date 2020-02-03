@@ -184,6 +184,12 @@ public:
     ArgParser& add_option(Option&& opt);
 
     /// Main - process command-line arguments, exit on error or after showing help
+    /// This methods expects complete set of arguments in one go.
+    /// It will fail on missing arguments of trailing options.
+    /// For incremental parsing, see `parse_args` below.
+    ///
+    /// \param argv     argv argument from main() function, i.e. program name,
+    ///                 followed by args, followed by NULL terminator
     ArgParser& operator()(const char* argv[]);
     ArgParser& operator()(char* argv[]) { return operator()((const char**) argv); }
 
@@ -193,8 +199,15 @@ public:
         Exit,
     };
 
-    /// Parse command-line arguments, throw on errors
-    ParseResult parse_args(const char* argv[]);
+    bool parse_program_name(const char* arg0);
+
+    /// Incrementally parse command-line arguments, throw on errors
+    /// \param argv     NULL-terminated arguments, without main's argv[0]
+    ///                 (the program name)
+    /// \param finish   true = expect all (or the rest) of args given to this call,
+    ///                 false = partial parse, do not throw if the last option
+    ///                 requires an argument (but there is no more args to parse).
+    ParseResult parse_args(const char* argv[], bool finish = true);
 
     /// Parse a single argument
     ParseResult parse_arg(const char* argv[]);
@@ -218,6 +231,7 @@ private:
     std::string m_progname;
     std::vector<Option> m_opts;
     Option* m_curopt = nullptr;
+    bool m_awaiting_arg = false;
 };
 
 

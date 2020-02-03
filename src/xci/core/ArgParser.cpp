@@ -196,11 +196,8 @@ void ArgParser::parse_env()
 }
 
 
-ArgParser::ParseResult ArgParser::parse_args(const char** argv)
+ArgParser::ParseResult ArgParser::parse_args(const char** argv, bool finish)
 {
-    if (argv[0] == nullptr)
-        throw BadArgument("missing program name (argv[0])");
-    m_progname = path_basename(*argv++);
     while (*argv) {
         switch (parse_arg(argv++)) {
             case Continue:  continue;
@@ -208,6 +205,8 @@ ArgParser::ParseResult ArgParser::parse_args(const char** argv)
             case Exit:      return Exit;
         }
     }
+    if (finish && m_awaiting_arg)
+        throw BadArgument(format("Missing value to option: {}", *(argv-1)));
     return Continue;
 }
 
@@ -254,6 +253,16 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
 {
     int dashes = 0;  // 0 = positional, 1 = short, 2 = long
     const char* arg = *argv;
+
+    if (m_awaiting_arg) {
+        // open option -> pass it the arg
+        assert(m_curopt->can_receive_arg());  // already checked
+        if (!(*m_curopt)(arg))
+            throw BadArgument(format("Wrong value to option: {}: {}", *(argv-1), arg));
+        m_awaiting_arg = false;
+        return Continue;
+    }
+
     const char* p = arg;
     while (*p == '-') {
         ++p;
@@ -288,6 +297,7 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
         if (!it->can_receive_arg())
             throw BadArgument(format("Too many occurrences of an option: {}", arg));
         m_curopt = &*it;
+        m_awaiting_arg = true;
         return Continue;
     }
     if (dashes == 1) {
@@ -313,11 +323,13 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
             // has args
             if (!it->can_receive_arg())
                 throw BadArgument(format("Too many occurrences of an option: -{} (in {})", p[-1], arg));
+            m_curopt = &*it;
             if (*p) {
                 if (! (*it)(p) )
                     throw BadArgument(format("Wrong value to option: {}: {}", p[-1], p));
+                break;
             }
-            m_curopt = &*it;
+            m_awaiting_arg = true;
             break;
         }
         return Continue;
@@ -340,10 +352,24 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
 }
 
 
+bool ArgParser::parse_program_name(const char* arg0)
+{
+    if (!arg0)
+        return false;
+    m_progname = path_basename(arg0);
+    return true;
+}
+
+
 ArgParser& ArgParser::operator()(const char* argv[])
 {
+    if (!parse_program_name(argv[0])) {
+        // this should not occur
+        cerr << "missing program name (argv[0])" << endl;
+        exit(1);
+    }
     try {
-        switch (parse_args(argv)) {
+        switch (parse_args(argv + 1, true)) {
             case Exit:
                 exit(0);
             case Continue:

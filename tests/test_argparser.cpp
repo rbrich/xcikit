@@ -4,6 +4,7 @@
 // Copyright 2020 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
+#define CATCH_CONFIG_FAST_COMPILE
 #define CATCH_CONFIG_MAIN
 #include <catch2/catch.hpp>
 
@@ -210,7 +211,7 @@ TEST_CASE( "Parse arg", "[ArgParser][parse_arg]" )
                 Option("-O, --optimize LEVEL", "Optimization level", optimize),
                 Option("FILE...", "Input files", files),
         };
-        ap.parse_args(ARGV("0", "-vwO3", "file1", "file2"));
+        ap.parse_args(ARGV("-vwO3", "file1", "file2"));
         CHECK(verbose);
         CHECK(warn);
         CHECK(optimize == 3);
@@ -225,30 +226,46 @@ TEST_CASE( "Parse arg", "[ArgParser][parse_arg]" )
 TEST_CASE( "Option argument", "[ArgParser][parse_arg]" )
 {
     char t;
+    int v;
     ArgParser ap {
         Option("-t VALUE", "Test choices: a,b", [&t](const char* arg){
             t = arg[0];
             return (t == 'a' || t == 'b') && arg[1] == 0;
         }),
+        Option("-v NUM", "Signed integer", v),
     };
 
-    SECTION("a") {
+    SECTION("choice: a") {
         ap.parse_arg(ARGV("-ta"));
         CHECK(t == 'a');
     }
 
-    SECTION("b") {
-        ap.parse_args(ARGV("0", "-t", "b"));
+    SECTION("choice: b") {
+        ap.parse_args(ARGV("-t", "b"));
         CHECK(t == 'b');
     }
 
-    SECTION("c") {
+    SECTION("wrong choice: c") {
         CHECK_THROWS_AS(ap.parse_arg(ARGV("-tc")), BadArgument);
+    }
+
+    SECTION("int: 1") {
+        ap.parse_args(ARGV("-v", "1"));
+        CHECK(v == 1);
+    }
+
+    SECTION("int: -1 (ignore dash when parsing option argument)") {
+        ap.parse_args(ARGV("-v", "-1"));
+        CHECK(v == -1);
+    }
+
+    SECTION("int: missing value") {
+        CHECK_THROWS_AS(ap.parse_args(ARGV("-v")), BadArgument);
     }
 }
 
 
-TEST_CASE( "Gather rest of args", "[ArgParser]" )
+TEST_CASE( "Gather rest of the args", "[ArgParser]" )
 {
     bool verbose = false;
     const char** rest = nullptr;
@@ -258,45 +275,45 @@ TEST_CASE( "Gather rest of args", "[ArgParser]" )
     };
 
     SECTION("passthrough all") {
-        const char* args[] = {"0", "aa", "bb", nullptr};
+        const char* args[] = {"aa", "bb", nullptr};
         CHECK(ap.parse_args(args) == ArgParser::Stop);
-        CHECK(rest[0] == args[1]);
+        CHECK(rest[0] == args[0]);
     }
 
     SECTION("passthrough the rest") {
-        const char* args[] = {"0", "-v", "aa", "bb", nullptr};
+        const char* args[] = {"-v", "aa", "bb", nullptr};
         CHECK(ap.parse_args(args) == ArgParser::Stop);
-        CHECK(rest[0] == args[2]);
+        CHECK(rest[0] == args[1]);
     }
 
     SECTION("after initial passthrough-arg, no more options are processed") {
-        const char* args[] = {"0", "aa", "-v", "bb", nullptr};
+        const char* args[] = {"aa", "-v", "bb", nullptr};
         CHECK(ap.parse_args(args) == ArgParser::Stop);
-        CHECK(rest[0] == args[1]);
-        CHECK(rest[1] == args[2]);
+        CHECK(rest[0] == args[0]);
+        CHECK(rest[1] == args[1]);
     }
 
     SECTION("first unrecognized arg starts passthrough") {
-        const char* args[] = {"0", "-x", "-v", "bb", nullptr};
+        const char* args[] = {"-x", "-v", "bb", nullptr};
         CHECK(ap.parse_args(args) == ArgParser::Stop);
-        CHECK(rest[0] == args[1]);
-        CHECK(rest[1] == args[2]);
+        CHECK(rest[0] == args[0]);
+        CHECK(rest[1] == args[1]);
     }
 
     SECTION("explicit passthrough 1") {
-        const char* args[] = {"0", "--", "aa", "bb", nullptr};
+        const char* args[] = {"--", "aa", "bb", nullptr};
         CHECK(ap.parse_args(args) == ArgParser::Stop);
-        CHECK(rest[0] == args[2]);
+        CHECK(rest[0] == args[1]);
     }
 
     std::vector<const char*> files;
     ap.add_option(Option("FILE...", "Input files", files));
 
     SECTION("explicit passthrough 2") {
-        const char* args[] = {"0", "f1", "f2", "--", "aa", "bb", nullptr};
+        const char* args[] = {"f1", "f2", "--", "aa", "bb", nullptr};
         CHECK(ap.parse_args(args) == ArgParser::Stop);
-        CHECK(files[0] == args[1]);
+        CHECK(files[0] == args[0]);
         CHECK(files.size() == 2);
-        CHECK(rest[0] == args[4]);
+        CHECK(rest[0] == args[3]);
     }
 }
