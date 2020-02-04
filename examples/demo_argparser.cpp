@@ -20,7 +20,7 @@ int main(int argc, const char* argv[])
     ArgParser {
 
         Option("-h, --help", "Show help", show_help),
-        Option("-v, --verbose", "Enable verbosity", verbose),
+        Option("-v, --verbose", "Enable verbosity", verbose).env("VERBOSE"),
         Option("-O, --optimize LEVEL", "Optimization level", optimize),
         Option("FILE...", "Input files", [&files](std::string_view arg){ files.emplace_back(arg); return true; }),
         Option("-- ...", "Gather remaining arguments", [&rest](const char** args){ rest = args; }),

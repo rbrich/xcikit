@@ -22,7 +22,7 @@ constexpr const char* whitespace_chars = "\t\n\v\f\r ";
 /// \param sub      String to be looked up (length should be shorter or same)
 bool starts_with(const std::string& str, const std::string& sub);
 
-std::vector<std::string_view> split(std::string_view str, char delim);
+std::vector<std::string_view> split(std::string_view str, char delim, int maxsplit = -1);
 
 // Strip chars from start of a string
 template <typename T>

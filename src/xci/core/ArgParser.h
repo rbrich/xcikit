@@ -121,9 +121,12 @@ struct Option {
     Option(const char* desc, const char* help, T& value)
             : Option(desc, help, [&value](const char* arg, const char**){ return value_from_cstr<T>(arg, value); }, 0) {}
 
+    Option& env(const char* env) { m_env = env; return *this; }
+
     bool has_short(char arg) const;
     bool has_long(const char* arg) const;
     bool has_args() const { return m_args != 0; }
+    bool has_env(std::string_view env) const { return env == m_env; }
     bool is_short() const { return m_flags & FShort; }
     bool is_long() const { return m_flags & FLong; }
     bool is_positional() const { return m_flags & FPositional; }
@@ -134,11 +137,13 @@ struct Option {
     int required_args() const { return m_args; }
     const char* desc() const { return m_desc; }
     const char* help() const { return m_help; }
+    const char* env() const { return m_env; }
     std::string usage() const;
     std::string formatted_desc(size_t width) const;
 
     bool operator() (const char* arg) { ++m_received; return m_cb(arg, nullptr); }
     bool operator() (const char* rest[]) { ++m_received; return m_cb(nullptr, rest); }
+    void eval_env(const char* env) { m_cb(env, nullptr); }
 
 private:
     struct NamePos {
@@ -159,6 +164,7 @@ private:
 private:
     const char* m_desc;
     const char* m_help;
+    const char* m_env = nullptr;
     Callback m_cb;
     enum Flags {
         FShort      = (1 << 0),
@@ -183,7 +189,8 @@ public:
     /// Add option to the parser (prefer passing all options to constructor)
     ArgParser& add_option(Option&& opt);
 
-    /// Main - process command-line arguments, exit on error or after showing help
+    /// Main - process env variables and command-line arguments,
+    /// exit on error or after showing help.
     /// This methods expects complete set of arguments in one go.
     /// It will fail on missing arguments of trailing options.
     /// For incremental parsing, see `parse_args` below.
@@ -199,7 +206,13 @@ public:
         Exit,
     };
 
+    /// Parse argv[0] which contains full name (path) to this program.
+    /// The basename is remembered and used in help message.
     bool parse_program_name(const char* arg0);
+
+    /// Lookup for declared options in `environ` (see Option::env).
+    /// This is called internally before `parse_args` (env has lower priority)
+    void parse_env();
 
     /// Incrementally parse command-line arguments, throw on errors
     /// \param argv     NULL-terminated arguments, without main's argv[0]
@@ -220,10 +233,6 @@ public:
 
     /// Validate correctness of entered options (e.g. doubled flags)
     void validate() const;
-
-    /// TODO: Parse environment variables
-    /// This is called internally before `parse_args` (env has lower priority)
-    void parse_env();
 
 private:
     bool invoke_stop(const char** argv);

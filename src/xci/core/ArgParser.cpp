@@ -8,10 +8,13 @@
 #include "file.h"
 #include "format.h"
 #include "TermCtl.h"
+#include "string.h"
 #include <iostream>
 #include <utility>
 #include <cstring>
 #include <cassert>
+
+extern char **environ;
 
 namespace xci::core::argparser {
 
@@ -192,7 +195,21 @@ ArgParser::ArgParser(initializer_list<Option> options)
 
 void ArgParser::parse_env()
 {
-    // TODO
+    char** env = environ;
+    while (*env) {
+        auto s = split(*env, '=', 1);
+        if (s.size() != 2)
+            continue;
+        auto key = s[0];
+        auto val = s[1];
+        auto it = find_if(m_opts.begin(), m_opts.end(),
+                [&key](const Option& opt) { return opt.has_env(key); });
+        if (it != m_opts.end()) {
+            assert(!it->is_print_help());  // help can't be invoked via env
+            it->eval_env(val.data());
+        }
+        ++env;
+    }
 }
 
 
@@ -369,6 +386,7 @@ ArgParser& ArgParser::operator()(const char* argv[])
         exit(1);
     }
     try {
+        parse_env();
         switch (parse_args(argv + 1, true)) {
             case Exit:
                 exit(0);
