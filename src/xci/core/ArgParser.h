@@ -24,8 +24,8 @@ namespace xci::core::argparser {
 
 class BadOptionDescription: public xci::core::Error {
 public:
-    explicit BadOptionDescription(const char* detail, const char* desc)
-            : Error(std::string(detail) + ": " + desc) {}
+    explicit BadOptionDescription(const std::string& detail, const char* desc)
+            : Error(detail + ": " + desc) {}
 };
 
 class BadArgument: public xci::core::Error {
@@ -141,6 +141,10 @@ struct Option {
     std::string usage() const;
     std::string formatted_desc(size_t width) const;
 
+    /// Call `cb` for each declared name (either shortopt or longopt will be passed,
+    /// never both - missing one will be 0/empty)
+    void foreach_name(const std::function<void(char shortopt, std::string_view longopt)>& cb) const;
+
     bool operator() (const char* arg) { ++m_received; return m_cb(arg, nullptr); }
     bool operator() (const char* rest[]) { ++m_received; return m_cb(nullptr, rest); }
     void eval_env(const char* env) { m_cb(env, nullptr); }
@@ -189,6 +193,9 @@ public:
     /// Add option to the parser (prefer passing all options to constructor)
     ArgParser& add_option(Option&& opt);
 
+    /// Validate correctness of entered options (e.g. doubled flags)
+    void validate() const;
+
     /// Main - process env variables and command-line arguments,
     /// exit on error or after showing help.
     /// This methods expects complete set of arguments in one go.
@@ -230,9 +237,6 @@ public:
 
     /// Print help text
     void print_help() const;
-
-    /// Validate correctness of entered options (e.g. doubled flags)
-    void validate() const;
 
 private:
     bool invoke_stop(const char** argv);

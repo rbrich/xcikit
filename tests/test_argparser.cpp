@@ -176,6 +176,55 @@ TEST_CASE( "Invalid option descriptions", "[ArgParser][Option]" )
 }
 
 
+
+TEST_CASE( "Validation of the set of options", "[ArgParser][validate]" )
+{
+    int x;
+    ArgParser ap {
+        Option("--dummy", "", x),
+        Option("-t, --test VALUE", "", x).env("TEST"),
+        Option("-v, --verbose, -w, --whatever", "", x).env("VERBOSE"),
+        Option("positional...", "", x).env("POSITIONAL"),
+        Option("-- ...", "", x),
+    };
+
+    SECTION("repeat short name") {
+        ap.add_option({"-t", "", x});
+        CHECK_THROWS_AS(ap.validate(), BadOptionDescription);
+    }
+
+    SECTION("repeat short name (alias)") {
+        ap.add_option({"-w", "", x});
+        CHECK_THROWS_AS(ap.validate(), BadOptionDescription);
+    }
+
+    SECTION("repeat long name") {
+        ap.add_option({"--test", "", x});
+        CHECK_THROWS_AS(ap.validate(), BadOptionDescription);
+    }
+
+    SECTION("repeat long name (alias)") {
+        ap.add_option({"--whatever", "", x});
+        CHECK_THROWS_AS(ap.validate(), BadOptionDescription);
+    }
+
+    SECTION("repeat env (first)") {
+        ap.add_option(std::move(Option{"-x", "", x}.env("TEST")));
+        CHECK_THROWS_AS(ap.validate(), BadOptionDescription);
+    }
+
+    SECTION("repeat env (middle)") {
+        ap.add_option(std::move(Option{"-x", "", x}.env("VERBOSE")));
+        CHECK_THROWS_AS(ap.validate(), BadOptionDescription);
+    }
+
+    SECTION("repeat env (last)") {
+        ap.add_option(std::move(Option{"-x", "", x}.env("POSITIONAL")));
+        CHECK_THROWS_AS(ap.validate(), BadOptionDescription);
+    }
+}
+
+
 #define ARGV(...)   std::array{__VA_ARGS__, (const char*)nullptr}.data()
 
 

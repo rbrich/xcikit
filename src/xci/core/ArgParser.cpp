@@ -63,48 +63,6 @@ Option::Option(const char* desc, const char* help, Callback cb, int flags)
 }
 
 
-Option::NamePos Option::parse_desc(const char* desc) const
-{
-    // skip spaces and commas
-    int pos = 0;
-    while (*desc == ',' || *desc == ' ') {
-        ++desc;
-        ++pos;
-    }
-
-    // handle ellipsis as special kind of name
-    int len = 0;
-    while (*desc == '.') {
-        ++desc;
-        ++len;
-    }
-    if (len > 0)
-        return {pos, 0, len};
-
-    // count dashes
-    auto p = skip_dashes(desc);
-    desc = p.first;
-
-    // keyword
-    while (*desc && *desc != ',' && *desc != ' ' && *desc != '.') {
-        ++desc;
-        ++len;
-    }
-    return {pos, p.second, len};
-}
-
-
-std::pair<const char*, int> Option::skip_dashes(const char* desc) const
-{
-    int dashes = 0;
-    while (*desc == '-') {
-        ++desc;
-        ++dashes;
-    }
-    return {desc, dashes};
-}
-
-
 bool Option::has_short(char arg) const
 {
     if (!is_short())
@@ -186,10 +144,142 @@ std::string Option::formatted_desc(size_t width) const
 }
 
 
+void Option::foreach_name(const std::function<void(char shortopt, std::string_view longopt)>& cb) const
+{
+    auto* desc = m_desc;
+    for (;;) {
+        auto p = parse_desc(desc);
+        if (!p)
+            break;
+        auto* name = desc + p.pos + p.dashes;
+        if (p.dashes == 1 && p.len == 1)
+            cb(name[0], nullptr);
+        if (p.dashes == 2 && p.len > 0)
+            cb(0, std::string_view(name, p.len));
+        desc += p.end();
+    }
+}
+
+
+Option::NamePos Option::parse_desc(const char* desc) const
+{
+    // skip spaces and commas
+    int pos = 0;
+    while (*desc == ',' || *desc == ' ') {
+        ++desc;
+        ++pos;
+    }
+
+    // handle ellipsis as special kind of name
+    int len = 0;
+    while (*desc == '.') {
+        ++desc;
+        ++len;
+    }
+    if (len > 0)
+        return {pos, 0, len};
+
+    // count dashes
+    auto p = skip_dashes(desc);
+    desc = p.first;
+
+    // keyword
+    while (*desc && *desc != ',' && *desc != ' ' && *desc != '.') {
+        ++desc;
+        ++len;
+    }
+    return {pos, p.second, len};
+}
+
+
+std::pair<const char*, int> Option::skip_dashes(const char* desc) const
+{
+    int dashes = 0;
+    while (*desc == '-') {
+        ++desc;
+        ++dashes;
+    }
+    return {desc, dashes};
+}
+
+
+// ----------------------------------------------------------------------------
+
+
 ArgParser::ArgParser(initializer_list<Option> options)
     : m_opts(options)
 {
     validate();
+}
+
+
+ArgParser& ArgParser::add_option(Option&& opt)
+{
+    m_opts.push_back(move(opt));
+    return *this;
+}
+
+
+void ArgParser::validate() const
+{
+    std::vector<char> shorts;
+    std::vector<string_view> longs;
+    std::vector<const char*> envs;
+    for (const auto& opt : m_opts) {
+        opt.foreach_name([&opt, &shorts, &longs](char shortopt, string_view longopt) {
+            if (shortopt != 0) {
+                if (std::find_if(shorts.cbegin(), shorts.cend(),
+                        [shortopt](char v){ return shortopt == v; }) != shorts.cend())
+                    throw BadOptionDescription(format("name -{} repeated", shortopt), opt.desc());
+                shorts.push_back(shortopt);
+            } else {
+                assert(!longopt.empty());
+                if (std::find_if(longs.cbegin(), longs.cend(),
+                        [longopt](string_view v){ return longopt == v; }) != longs.cend())
+                    throw BadOptionDescription(format("name --{} repeated", longopt), opt.desc());
+                longs.push_back(longopt);
+            }
+        });
+        if (opt.env()) {
+            if (std::find_if(envs.cbegin(), envs.cend(),
+                    [&opt](const char* v){ return !strcmp(v, opt.env()); }) != envs.cend())
+                throw BadOptionDescription("env name repeated", opt.env());
+            envs.push_back(opt.env());
+        }
+    }
+}
+
+
+ArgParser& ArgParser::operator()(const char* argv[])
+{
+    if (!parse_program_name(argv[0])) {
+        // this should not occur
+        cerr << "missing program name (argv[0])" << endl;
+        exit(1);
+    }
+    try {
+        parse_env();
+        switch (parse_args(argv + 1, true)) {
+            case Exit:
+                exit(0);
+            case Continue:
+            case Stop:
+                break;
+        }
+    } catch (const BadArgument& e) {
+        cerr << e.what() << endl;
+        exit(1);
+    }
+    return *this;
+}
+
+
+bool ArgParser::parse_program_name(const char* arg0)
+{
+    if (!arg0)
+        return false;
+    m_progname = path_basename(arg0);
+    return true;
 }
 
 
@@ -225,44 +315,6 @@ ArgParser::ParseResult ArgParser::parse_args(const char** argv, bool finish)
     if (finish && m_awaiting_arg)
         throw BadArgument(format("Missing value to option: {}", *(argv-1)));
     return Continue;
-}
-
-
-ArgParser& ArgParser::add_option(Option&& opt)
-{
-    m_opts.push_back(move(opt));
-    return *this;
-}
-
-
-void ArgParser::print_usage() const
-{
-    auto& t = TermCtl::stdout_instance();
-    cout << t.format("Usage: {bold}{}{normal} ", m_progname);
-    for (const auto& opt : m_opts) {
-        cout << '[' << opt.usage() << "] ";
-    }
-    cout << endl;
-}
-
-
-void ArgParser::print_help() const
-{
-    size_t desc_cols = 0;
-    for (const auto& opt : m_opts)
-        desc_cols = max(desc_cols, strlen(opt.desc()));
-    print_usage();
-    cout << endl << "Options:" << endl;
-    for (const auto& opt : m_opts) {
-        cout << "  " << opt.formatted_desc(desc_cols)
-             << "  " << opt.help() << endl;
-    }
-}
-
-
-void ArgParser::validate() const
-{
-    // TODO
 }
 
 
@@ -369,36 +421,28 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
 }
 
 
-bool ArgParser::parse_program_name(const char* arg0)
+void ArgParser::print_usage() const
 {
-    if (!arg0)
-        return false;
-    m_progname = path_basename(arg0);
-    return true;
+    auto& t = TermCtl::stdout_instance();
+    cout << t.format("Usage: {bold}{}{normal} ", m_progname);
+    for (const auto& opt : m_opts) {
+        cout << '[' << opt.usage() << "] ";
+    }
+    cout << endl;
 }
 
 
-ArgParser& ArgParser::operator()(const char* argv[])
+void ArgParser::print_help() const
 {
-    if (!parse_program_name(argv[0])) {
-        // this should not occur
-        cerr << "missing program name (argv[0])" << endl;
-        exit(1);
+    size_t desc_cols = 0;
+    for (const auto& opt : m_opts)
+        desc_cols = max(desc_cols, strlen(opt.desc()));
+    print_usage();
+    cout << endl << "Options:" << endl;
+    for (const auto& opt : m_opts) {
+        cout << "  " << opt.formatted_desc(desc_cols)
+             << "  " << opt.help() << endl;
     }
-    try {
-        parse_env();
-        switch (parse_args(argv + 1, true)) {
-            case Exit:
-                exit(0);
-            case Continue:
-            case Stop:
-                break;
-        }
-    } catch (const BadArgument& e) {
-        cerr << e.what() << endl;
-        exit(1);
-    }
-    return *this;
 }
 
 
