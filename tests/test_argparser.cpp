@@ -97,7 +97,7 @@ TEST_CASE( "Option description parsing", "[ArgParser][Option]" )
         CHECK(o.has_long("help"));
         CHECK(!o.has_args());
         CHECK(!o.is_positional());
-        CHECK(o.is_print_help());
+        CHECK(o.is_show_help());
         CHECK(!o.can_receive_arg());
     }
     {

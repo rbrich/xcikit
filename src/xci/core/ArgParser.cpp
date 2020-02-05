@@ -226,6 +226,7 @@ void ArgParser::validate() const
     std::vector<string_view> longs;
     std::vector<const char*> envs;
     for (const auto& opt : m_opts) {
+        // check short, long
         opt.foreach_name([&opt, &shorts, &longs](char shortopt, string_view longopt) {
             if (shortopt != 0) {
                 if (std::find_if(shorts.cbegin(), shorts.cend(),
@@ -240,6 +241,7 @@ void ArgParser::validate() const
                 longs.push_back(longopt);
             }
         });
+        // check env
         if (opt.env()) {
             if (std::find_if(envs.cbegin(), envs.cend(),
                     [&opt](const char* v){ return !strcmp(v, opt.env()); }) != envs.cend())
@@ -295,7 +297,7 @@ void ArgParser::parse_env()
         auto it = find_if(m_opts.begin(), m_opts.end(),
                 [&key](const Option& opt) { return opt.has_env(key); });
         if (it != m_opts.end()) {
-            assert(!it->is_print_help());  // help can't be invoked via env
+            assert(!it->is_show_help());  // help can't be invoked via env
             it->eval_env(val.data());
         }
         ++env;
@@ -355,7 +357,7 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
             throw BadArgument(format("Unknown option: {}", arg));
         }
         if (!it->has_args()) {
-            if (it->is_print_help()) {
+            if (it->is_show_help()) {
                 print_help();
                 return Exit;
             }
@@ -381,7 +383,7 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
             }
             ++p;
             if (!it->has_args()) {
-                if (it->is_print_help()) {
+                if (it->is_show_help()) {
                     print_help();
                     return Exit;
                 }
