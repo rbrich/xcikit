@@ -24,8 +24,8 @@ namespace xci::core::argparser {
 
 class BadOptionDescription: public xci::core::Error {
 public:
-    explicit BadOptionDescription(const std::string& detail, const char* desc)
-            : Error(detail + ": " + desc) {}
+    explicit BadOptionDescription(const std::string& detail, std::string_view desc)
+            : Error(detail + ": " + std::string(desc)) {}
 };
 
 class BadArgument: public xci::core::Error {
@@ -120,27 +120,30 @@ struct Option {
     /// \param flags    The only valid flag here is FShowHelp. Other flags are internal
     ///                 and should not be passed through constructor. They are set
     ///                 automatically according to given description (`desc`).
-    Option(const char* desc, const char* help, Callback cb, int flags);
+    Option(std::string desc, const char* help, Callback cb, int flags);
 
     /// Declare option to show help and exit.
-    Option(const char* desc, const char* help, ShowHelp)
-            : Option(desc, help, nullptr, FShowHelp) {}
+    Option(std::string desc, const char* help, ShowHelp)
+            : Option(std::move(desc), help, nullptr, FShowHelp) {}
 
     /// Declare option to set a custom flag via callback.
     /// `desc` should describe a simple flag, e.g.: "-f, --flag"
-    Option(const char* desc, const char* help, FlagCallback flag_cb)
-            : Option(desc, help, [cb = std::move(flag_cb)](const char*, const char**){ cb(); return true; }, 0) {}
+    Option(std::string desc, const char* help, FlagCallback flag_cb)
+            : Option(std::move(desc), help, [cb = std::move(flag_cb)](const char*, const char**)
+                     { cb(); return true; }, 0) {}
 
     /// Declare option to set a custom value via callback.
     /// The callback can limit the accepted values by returning false (not accepted).
     /// `desc` should describe an option with value, e.g.: "-o, --output FILE"
-    Option(const char* desc, const char* help, ArgCallback arg_cb)
-            : Option(desc, help, [cb = std::move(arg_cb)](const char* arg, const char**){ return cb(arg); }, 0) {}
+    Option(std::string desc, const char* help, ArgCallback arg_cb)
+            : Option(std::move(desc), help, [cb = std::move(arg_cb)](const char* arg, const char**)
+                     { return cb(arg); }, 0) {}
 
     /// Declare option to get the remaining arguments.
     /// `desc` should be "-- ..." (spaces between and around don't matter).
-    Option(const char* desc, const char* help, RestCallback rest_cb)
-            : Option(desc, help, [cb = std::move(rest_cb)](const char*, const char** rest){ cb(rest); return true; }, 0) {}
+    Option(std::string desc, const char* help, RestCallback rest_cb)
+            : Option(std::move(desc), help, [cb = std::move(rest_cb)](const char*, const char** rest)
+                     { cb(rest); return true; }, 0) {}
 
     /// Declare option to set value of given variable.
     /// `desc` can describe either a flag or an option with value.
@@ -148,9 +151,11 @@ struct Option {
     /// and how they parse the value. E.g. for bool type,
     /// many usual values are recognized: 1, 0, false, true, y, n, ...
     template <class T>
-    Option(const char* desc, const char* help, T& value)
-            : Option(desc, help, [&value](const char* arg, const char**){ return value_from_cstr<T>(arg, value); }, 0) {}
+    Option(std::string desc, const char* help, T& value)
+            : Option(std::move(desc), help, [&value](const char* arg, const char**)
+                     { return value_from_cstr<T>(arg, value); }, 0) {}
 
+    /// Attach env variable to this option
     Option& env(const char* env) { m_env = env; return *this; }
 
     bool has_short(char arg) const;
@@ -160,12 +165,13 @@ struct Option {
     bool is_short() const { return m_flags & FShort; }
     bool is_long() const { return m_flags & FLong; }
     bool is_positional() const { return m_flags & FPositional; }
+    bool is_remainder() const { return m_flags & FRemainder; }
     bool is_show_help() const { return m_flags & FShowHelp; }
-    bool is_stop() const { return m_flags & FStop; }
     bool can_receive_all_args() const { return (m_flags & FDots); }
     bool can_receive_arg() const { return can_receive_all_args() || m_received < m_args; }
-    int required_args() const { return m_args; }
-    const char* desc() const { return m_desc; }
+    int required_args() const { return m_required; }
+    int missing_args() const { return std::max(m_required - m_received, 0); }
+    std::string_view desc() const { return m_desc; }
     const char* help() const { return m_help; }
     const char* env() const { return m_env; }
     std::string usage() const;
@@ -196,7 +202,7 @@ private:
     std::pair<const char*, int> skip_dashes(const char* desc) const;
 
 private:
-    const char* m_desc;
+    std::string m_desc;
     const char* m_help;
     const char* m_env = nullptr;
     Callback m_cb;
@@ -206,11 +212,12 @@ private:
         FPositional = (1 << 2),
         FShowHelp   = (1 << 3),
         FDots       = (1 << 4),
-        FStop       = (1 << 5),
+        FRemainder  = (1 << 5),
     };
     int m_flags = 0;
-    int m_args = 0;
-    int m_received = 0;
+    int m_args = 0;     // number of expected args (infinite with FDots)
+    int m_required = 0; // number of required args
+    int m_received = 0; // number of actually received args
 };
 
 
@@ -269,7 +276,7 @@ public:
     void print_help() const;
 
 private:
-    bool invoke_stop(const char** argv);
+    bool invoke_remainder(const char** argv);
 
     std::string m_progname;
     std::vector<Option> m_opts;

@@ -90,9 +90,8 @@ TEST_CASE( "Other value conversion", "[ArgParser][value_from_cstr]" )
 TEST_CASE( "Option description parsing", "[ArgParser][Option]" )
 {
     bool flag;
-    {
+    SECTION("basic") {
         Option o("-h, --help", "Show help", show_help);
-        INFO("basic");
         CHECK(o.has_short('h'));
         CHECK(o.has_long("help"));
         CHECK(!o.has_args());
@@ -100,66 +99,97 @@ TEST_CASE( "Option description parsing", "[ArgParser][Option]" )
         CHECK(o.is_show_help());
         CHECK(!o.can_receive_arg());
     }
-    {
+    SECTION("1 short") {
         Option o("-h", "1 short", flag);
-        INFO("1 short");
         CHECK(o.has_short('h'));
         CHECK(!o.has_long("h"));
         CHECK(!o.has_args());
         CHECK(!o.is_positional());
     }
-    {
+    SECTION("2 shorts") {
         Option o("-a -b", "2 shorts", flag);
-        INFO("2 shorts");
         CHECK(o.has_short('a'));
         CHECK(o.has_short('b'));
         CHECK(!o.has_short('c'));
         CHECK(!o.has_args());
         CHECK(!o.is_positional());
     }
-    {
+    SECTION("1 long") {
         Option o("--help", "1 long", flag);
-        INFO("1 long");
         CHECK(o.has_long("help"));
         CHECK(!o.has_args());
         CHECK(!o.is_positional());
     }
-    {
+    SECTION("2 longs") {
         Option o("--a --b", "2 longs", flag);
-        INFO("2 longs");
         CHECK(o.has_long("a"));
         CHECK(o.has_long("b"));
         CHECK(!o.has_args());
         CHECK(!o.is_positional());
     }
-    {
+    SECTION("positional") {
         Option o("file", "positional", flag);
-        INFO("positional");
         CHECK(!o.is_short());
         CHECK(!o.is_long());
         CHECK(o.is_positional());
-        CHECK(o.has_args());
         CHECK(o.required_args() == 1);
     }
-    {
+    SECTION("all positional") {
         Option o("input...", "all positional", flag);
-        INFO("all positional");
         CHECK(!o.is_short());
         CHECK(!o.is_long());
         CHECK(o.is_positional());
-        CHECK(o.has_args());
         CHECK(o.required_args() == 1);
         CHECK(o.can_receive_all_args());
     }
-    {
-        // passthrough the rest of args
-        Option o("-- ...", "stop parsing", flag);
-        INFO("stop parsing");
+    SECTION("remainder") {
+        Option o("-- ...", "remaining arguments", flag);
         CHECK(!o.is_short());
         CHECK(!o.is_long());
         CHECK(!o.is_positional());
-        CHECK(o.is_stop());
+        CHECK(o.is_remainder());
         CHECK(o.can_receive_all_args());
+    }
+    SECTION("short with 1 arg") {
+        Option o("-h ARG1", "", flag);
+        CHECK(o.has_short('h'));
+        CHECK(!o.is_long());
+        CHECK(!o.is_positional());
+        CHECK(!o.is_remainder());
+        CHECK(o.has_args());
+        CHECK(o.required_args() == 1);
+    }
+    SECTION("short with 2 args") {
+        Option o("-h ARG1 ARG2", "", flag);
+        CHECK(o.has_short('h'));
+        CHECK(!o.is_long());
+        CHECK(!o.is_positional());
+        CHECK(o.has_args());
+        CHECK(o.required_args() == 2);
+    }
+    SECTION("long with 1 arg") {
+        Option o("--test ARG1", "", flag);
+        CHECK(!o.is_short());
+        CHECK(o.has_long("test"));
+        CHECK(!o.is_positional());
+        CHECK(o.has_args());
+        CHECK(o.required_args() == 1);
+    }
+    SECTION("long with 2 args") {
+        Option o("--test ARG1 ARG2", "", flag);
+        CHECK(!o.is_short());
+        CHECK(o.has_long("test"));
+        CHECK(!o.is_positional());
+        CHECK(o.has_args());
+        CHECK(o.required_args() == 2);
+    }
+    SECTION("short and long with 2 args") {
+        Option o("-t, --test ARG1 ARG2", "", flag);
+        CHECK(o.has_short('t'));
+        CHECK(o.has_long("test"));
+        CHECK(!o.is_positional());
+        CHECK(o.has_args());
+        CHECK(o.required_args() == 2);
     }
 }
 

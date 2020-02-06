@@ -253,7 +253,7 @@ int main(int argc, char* argv[])
             Option("--pp-types", "Stop after typecheck pass", [&opts]{ opts.compiler_flags |= Compiler::PPTypes; }),
             Option("--pp-nonlocals", "Stop after nonlocals pass", [&opts]{ opts.compiler_flags |= Compiler::PPNonlocals; }),
             Option("--no-std", "Do not load standard library", [&opts]{ opts.with_std_lib = false; }),
-            Option("INPUT ...", "Input files", [&input_files](const char* arg)
+            Option("[INPUT ...]", "Input files", [&input_files](const char* arg)
                 { input_files.emplace_back(arg); return true; }),
     } (argv);
 

@@ -21,34 +21,41 @@ namespace xci::core::argparser {
 using namespace std;
 
 
-Option::Option(const char* desc, const char* help, Callback cb, int flags)
-    : m_desc(desc), m_help(help), m_cb(move(cb)), m_flags(flags)
+Option::Option(std::string desc, const char* help, Callback cb, int flags)
+    : m_desc(move(desc)), m_help(help), m_cb(move(cb)), m_flags(flags)
 {
+    // check and remove brackets from both ends
+    strip(m_desc, ' ');
+    bool optional = (m_desc[0] == '[');
+    lstrip(m_desc, '[');
+    rstrip(m_desc, ']');
+
+    auto* dp = m_desc.c_str();
     for (;;) {
-        auto p = parse_desc(desc);
+        auto p = parse_desc(dp);
         if (!p)
             break;
 
         // sanity check
         if ((m_flags & FPositional) && p.dashes > 0)
-            throw BadOptionDescription("short/long option after positional name", desc + p.pos);
+            throw BadOptionDescription("short/long option after positional name", dp + p.pos);
 
         if (p.dashes > 2)
-            throw BadOptionDescription("too many dashes", desc + p.pos);
+            throw BadOptionDescription("too many dashes", dp + p.pos);
         else if (p.dashes == 2) {
             if (p.len == 0) {
-                m_flags |= FStop;
+                m_flags |= FRemainder;
             } else
                 m_flags |= FLong;
         } else if (p.dashes == 1) {
             if (p.len != 1)
-                throw BadOptionDescription("short option must contain a single character", desc + p.pos);
+                throw BadOptionDescription("short option must contain a single character", dp + p.pos);
             m_flags |= FShort;
         } else {
             assert(p.dashes == 0);
-            if (desc[p.pos] == '.') {
+            if (dp[p.pos] == '.') {
                 if (p.len != 3)
-                    throw BadOptionDescription("use three dots for ellipsis", desc + p.pos);
+                    throw BadOptionDescription("use three dots for ellipsis", dp + p.pos);
                 m_flags |= FDots;
             } else if ((m_flags & (FShort | FLong)) == 0) {
                 assert(!m_args);
@@ -58,8 +65,12 @@ Option::Option(const char* desc, const char* help, Callback cb, int flags)
                 ++ m_args;
             }
         }
-        desc += p.end();
+        dp += p.end();
     }
+
+    if (optional && !is_positional())
+        throw BadOptionDescription("non-positional argument can't be made optional", m_desc);
+    m_required = optional ? 0 : m_args;
 }
 
 
@@ -67,14 +78,14 @@ bool Option::has_short(char arg) const
 {
     if (!is_short())
         return false;
-    auto* desc = m_desc;
+    auto* dp = m_desc.c_str();
     for (;;) {
-        auto p = parse_desc(desc);
+        auto p = parse_desc(dp);
         if (!p.len)
             break;
-        if (p.dashes == 1 && desc[p.pos + p.dashes] == arg)
+        if (p.dashes == 1 && dp[p.pos + p.dashes] == arg)
             return true;
-        desc += p.end();
+        dp += p.end();
     }
     return false;
 }
@@ -84,14 +95,14 @@ bool Option::has_long(const char* arg) const
 {
     if (!is_long())
         return false;
-    auto* desc = m_desc;
+    auto* dp = m_desc.c_str();
     for (;;) {
-        auto p = parse_desc(desc);
+        auto p = parse_desc(dp);
         if (!p.len)
             break;
-        if (p.dashes == 2 && !strncmp(desc + p.pos + p.dashes, arg, p.len))
+        if (p.dashes == 2 && !strncmp(dp + p.pos + p.dashes, arg, p.len))
             return true;
-        desc += p.end();
+        dp += p.end();
     }
     return false;
 }
@@ -101,17 +112,25 @@ std::string Option::usage() const
 {
     auto& t = TermCtl::stdout_instance();
     string res;
-    auto* desc = m_desc;
+    bool required = is_positional() && required_args() != 0;
+    if (!required)
+        res += '[';
+    bool first = true;
+    auto* dp = m_desc.c_str();
     for (;;) {
-        auto p = parse_desc(desc);
+        auto p = parse_desc(dp);
         if (!p)
             break;
-        if (res.empty())
-            res = t.format("{bold}{green}{}{normal}", std::string(desc + p.pos, p.dashes + p.len));
-        else if (!p.dashes)
-            res += t.format(" {green}{}{normal}", std::string(desc + p.pos, p.len));
-        desc += p.end();
+        if (first) {
+            first = false;
+            res += t.format("{bold}{green}{}{normal}", std::string(dp + p.pos, p.dashes + p.len));
+        } else if (!p.dashes) {
+            res += t.format(" {green}{}{normal}", std::string(dp + p.pos, p.len));
+        }
+        dp += p.end();
     }
+    if (!required)
+        res += ']';
     return res;
 }
 
@@ -119,16 +138,16 @@ std::string Option::usage() const
 std::string Option::formatted_desc(size_t width) const
 {
     auto& t = TermCtl::stdout_instance();
-    string res = m_desc;
+    string res(m_desc);
     size_t res_pos = 0;
-    auto* desc = m_desc;
+    auto* dp = m_desc.c_str();
     for (;;) {
-        auto p = parse_desc(desc);
+        auto p = parse_desc(dp);
         if (!p)
             break;
         res_pos += p.pos;
 
-        const auto color = (p.dashes || ((m_flags & FPositional) && desc[p.pos] != '.'))
+        const auto color = (p.dashes || ((m_flags & FPositional) && dp[p.pos] != '.'))
                      ? t.bold().green().seq()
                      : t.green().seq();
         res.insert(res_pos, color);
@@ -138,25 +157,25 @@ std::string Option::formatted_desc(size_t width) const
         res.insert(res_pos, normal);
         res_pos += normal.length();
 
-        desc += p.end();
+        dp += p.end();
     }
-    return res + std::string(width - strlen(m_desc), ' ');
+    return res + std::string(width - m_desc.size(), ' ');
 }
 
 
 void Option::foreach_name(const std::function<void(char shortopt, std::string_view longopt)>& cb) const
 {
-    auto* desc = m_desc;
+    auto* dp = m_desc.c_str();
     for (;;) {
-        auto p = parse_desc(desc);
+        auto p = parse_desc(dp);
         if (!p)
             break;
-        auto* name = desc + p.pos + p.dashes;
+        auto* name = dp + p.pos + p.dashes;
         if (p.dashes == 1 && p.len == 1)
-            cb(name[0], nullptr);
+            cb(name[0], {});
         if (p.dashes == 2 && p.len > 0)
             cb(0, std::string_view(name, p.len));
-        desc += p.end();
+        dp += p.end();
     }
 }
 
@@ -256,7 +275,8 @@ ArgParser& ArgParser::operator()(const char* argv[])
 {
     if (!parse_program_name(argv[0])) {
         // this should not occur
-        cerr << "missing program name (argv[0])" << endl;
+        auto& t = TermCtl::stdout_instance();
+        cerr << t.bold().red() << "Missing program name (argv[0])" << t.normal() << endl;
         exit(1);
     }
     try {
@@ -269,7 +289,9 @@ ArgParser& ArgParser::operator()(const char* argv[])
                 break;
         }
     } catch (const BadArgument& e) {
-        cerr << e.what() << endl;
+        auto& t = TermCtl::stdout_instance();
+        cerr << t.bold().red() << e.what() << t.normal() << endl;
+        print_usage();
         exit(1);
     }
     return *this;
@@ -314,8 +336,14 @@ ArgParser::ParseResult ArgParser::parse_args(const char** argv, bool finish)
             case Exit:      return Exit;
         }
     }
-    if (finish && m_awaiting_arg)
-        throw BadArgument(format("Missing value to option: {}", *(argv-1)));
+    if (finish) {
+        if (m_awaiting_arg)
+            throw BadArgument(format("Missing value to option: {}", *(argv-1)));
+        for (const auto& opt : m_opts) {
+            if (opt.is_positional() && opt.missing_args() > 0)
+                throw BadArgument(format("Missing required arguments: {}", opt.desc()));
+        }
+    }
     return Continue;
 }
 
@@ -344,7 +372,7 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
     if (dashes == 2) {
         // stop parsing (--)
         if (*p == 0) {
-            if (invoke_stop(argv + 1))
+            if (invoke_remainder(argv + 1))
                 return Stop;
             throw BadArgument(format("Unknown option: {}", arg));
         }
@@ -352,7 +380,7 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
         auto it = find_if(m_opts.begin(), m_opts.end(),
                 [p](const Option& opt) { return opt.has_long(p); });
         if (it == m_opts.end()) {
-            if (invoke_stop(argv))
+            if (invoke_remainder(argv))
                 return Stop;
             throw BadArgument(format("Unknown option: {}", arg));
         }
@@ -377,7 +405,7 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
             auto it = find_if(m_opts.begin(), m_opts.end(),
                     [p](const Option& opt) { return opt.has_short(*p); });
             if (it == m_opts.end()) {
-                if (p == arg + 1 && invoke_stop(argv))
+                if (p == arg + 1 && invoke_remainder(argv))
                     return Stop;
                 throw BadArgument(format("Unknown option: -{} (in {})", p, arg));
             }
@@ -413,7 +441,7 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
         auto it = find_if(m_opts.begin(), m_opts.end(),
                 [](const Option& opt) { return opt.is_positional() && opt.can_receive_arg(); });
         if (it == m_opts.end()) {
-            if (invoke_stop(argv))
+            if (invoke_remainder(argv))
                 return Stop;
             throw BadArgument(format("Unexpected positional argument: {}", arg));
         } if (! (*it)(p) )
@@ -428,7 +456,7 @@ void ArgParser::print_usage() const
     auto& t = TermCtl::stdout_instance();
     cout << t.format("Usage: {bold}{}{normal} ", m_progname);
     for (const auto& opt : m_opts) {
-        cout << '[' << opt.usage() << "] ";
+        cout << opt.usage() << ' ';
     }
     cout << endl;
 }
@@ -438,7 +466,7 @@ void ArgParser::print_help() const
 {
     size_t desc_cols = 0;
     for (const auto& opt : m_opts)
-        desc_cols = max(desc_cols, strlen(opt.desc()));
+        desc_cols = max(desc_cols, opt.desc().size());
     print_usage();
     cout << endl << "Options:" << endl;
     for (const auto& opt : m_opts) {
@@ -448,10 +476,10 @@ void ArgParser::print_help() const
 }
 
 
-bool ArgParser::invoke_stop(const char** argv)
+bool ArgParser::invoke_remainder(const char** argv)
 {
     auto it = find_if(m_opts.begin(), m_opts.end(),
-            [](const Option& opt) { return opt.is_stop(); });
+            [](const Option& opt) { return opt.is_remainder(); });
     if (it == m_opts.end())
         return false;
     return (*it)(argv);
