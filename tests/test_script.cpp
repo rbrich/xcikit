@@ -70,7 +70,7 @@ void check_interpreter(const string& input, const string& expected_output)
         });
         os << *result;
         result->decref();
-    } catch (const Error& e) {
+    } catch (const ScriptError& e) {
         INFO(e.what());
         INFO(e.detail());
         FAIL("Exception thrown.");

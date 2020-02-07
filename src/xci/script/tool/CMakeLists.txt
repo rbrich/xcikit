@@ -10,7 +10,6 @@ add_executable(lasci
 target_link_libraries(lasci
     xci-core
     xci-script
-    docopt::docopt
     replxx::replxx
     )
 install(TARGETS lasci EXPORT xcikit DESTINATION bin)

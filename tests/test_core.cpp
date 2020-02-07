@@ -230,23 +230,10 @@ TEST_CASE( "utf8_partial_end", "[string]" )
 
 TEST_CASE( "split", "[string]" )
 {
-    {
-        std::string s = "one\ntwo\nthree";
-        auto res = split(s, '\n');
-        REQUIRE(res.size() == 3);
-        CHECK(res[0] == "one");
-        CHECK(res[1] == "two");
-        CHECK(res[2] == "three");
-    }
-    {
-        // empty substrings are skipped
-        std::string s = "\none\ntwo\n\nthree\n";
-        auto res = split(s, '\n');
-        REQUIRE(res.size() == 3);
-        CHECK(res[0] == "one");
-        CHECK(res[1] == "two");
-        CHECK(res[2] == "three");
-    }
+    using l = std::vector<std::string_view>;
+    CHECK(split("one\ntwo\nthree", '\n') == l{"one", "two", "three"});
+    CHECK(split("\none\ntwo\n\nthree\n", '\n') == l{"", "one", "two", "", "three", ""});
+    CHECK(split("one, two, three", ',', 1) == l{"one", " two, three"});
 }
 
 

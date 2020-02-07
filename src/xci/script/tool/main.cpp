@@ -11,6 +11,7 @@
 #include <xci/script/Error.h>
 #include <xci/script/Value.h>
 #include <xci/script/dump.h>
+#include <xci/core/ArgParser.h>
 #include <xci/core/TermCtl.h>
 #include <xci/core/file.h>
 #include <xci/core/Vfs.h>
@@ -20,7 +21,6 @@
 #include <xci/core/sys.h>
 #include <xci/config.h>
 
-#include <docopt.h>
 #include <replxx.hxx>
 
 #include <iostream>
@@ -29,6 +29,7 @@
 #include <regex>
 
 using namespace xci::core;
+using namespace xci::core::argparser;
 using namespace xci::script;
 using namespace xci::script::tool;
 using Replxx = replxx::Replxx;
@@ -150,7 +151,7 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
             }
         }
         return true;
-    } catch (const Error& e) {
+    } catch (const ScriptError& e) {
         if (!e.file().empty())
             cout << e.file() << ": ";
         cout << t.red().bold() << "Error: " << e.what() << t.normal();
@@ -233,54 +234,36 @@ void highlighter(std::string const& context, Replxx::colors_t& colors)
 int main(int argc, char* argv[])
 {
     Environment env;
-
-    map<string, docopt::value> args = docopt::docopt(
-            "Usage:\n"
-            "    demo_script [options] [INPUT ...]\n"
-            "\n"
-            "Options:\n"
-            "   -e EXPR --eval EXPR    Load EXPR as it was a module, run it and exit\n"
-            "   -O --optimize          Allow optimizations\n"
-            "   -r --raw-ast           Print raw AST\n"
-            "   -t --ast               Print processed AST\n"
-            "   -b --bytecode          Print bytecode\n"
-            "   -s --symtab            Print symbol table\n"
-            "   -m --module            Print compiled module content\n"
-            "   --trace                Trace bytecode\n"
-            "   --pp-symbols           Stop after symbols pass\n"
-            "   --pp-types             Stop after typecheck pass\n"
-            "   --pp-nonlocals         Stop after nonlocals pass\n"
-            "   --no-std               Do not load standard library\n"
-            "   -h --help              Show help\n",
-            { argv + 1, argv + argc },
-            /*help =*/ true,
-            "");
-
     Options opts;
-    opts.print_raw_ast = args["--raw-ast"].asBool();
-    opts.print_ast = args["--ast"].asBool();
-    opts.print_symtab = args["--symtab"].asBool();
-    opts.print_module = args["--module"].asBool();
-    opts.print_bytecode = args["--bytecode"].asBool();
-    opts.trace_bytecode = args["--trace"].asBool();
-    opts.with_std_lib = !args["--no-std"].asBool();
 
-    if (args["--optimize"].asBool())
-        opts.compiler_flags |= Compiler::O1;
-    if (args["--pp-symbols"].asBool())
-        opts.compiler_flags |= Compiler::PPSymbols;
-    if (args["--pp-types"].asBool())
-        opts.compiler_flags |= Compiler::PPTypes;
-    if (args["--pp-nonlocals"].asBool())
-        opts.compiler_flags |= Compiler::PPNonlocals;
+    std::vector<const char*> input_files;
+    const char* expr = nullptr;
 
-    if (args["--eval"]) {
-        evaluate(env, args["--eval"].asString(), opts);
+    ArgParser {
+            Option("-h, --help", "Show help", show_help),
+            Option("-e, --eval EXPR", "Execute EXPR as main input", expr),
+            Option("-O, --optimize", "Allow optimizations", [&opts]{ opts.compiler_flags |= Compiler::O1; }),
+            Option("-r, --raw-ast", "Print raw AST", opts.print_raw_ast),
+            Option("-t, --ast", "Print processed AST", opts.print_ast),
+            Option("-b, --bytecode", "Print bytecode", opts.print_bytecode),
+            Option("-s, --symtab", "Print symbol table", opts.print_symtab),
+            Option("-m, --module", "Print compiled module content", opts.print_module),
+            Option("--trace", "Trace bytecode", opts.trace_bytecode),
+            Option("--pp-symbols", "Stop after symbols pass", [&opts]{ opts.compiler_flags |= Compiler::PPSymbols; }),
+            Option("--pp-types", "Stop after typecheck pass", [&opts]{ opts.compiler_flags |= Compiler::PPTypes; }),
+            Option("--pp-nonlocals", "Stop after nonlocals pass", [&opts]{ opts.compiler_flags |= Compiler::PPNonlocals; }),
+            Option("--no-std", "Do not load standard library", [&opts]{ opts.with_std_lib = false; }),
+            Option("[INPUT ...]", "Input files", [&input_files](const char* arg)
+                { input_files.emplace_back(arg); return true; }),
+    } (argv);
+
+    if (expr) {
+        evaluate(env, expr, opts);
         return 0;
     }
 
-    if (!args["INPUT"].asStringList().empty()) {
-        for (const auto& input : args["INPUT"].asStringList()) {
+    if (!input_files.empty()) {
+        for (const char* input : input_files) {
             auto content = read_text_file(input);
             if (!content) {
                 std::cerr << "cannot read file: " << input << std::endl;
@@ -324,7 +307,7 @@ int main(int argc, char* argv[])
             // control commands
             try {
                 cmd.interpreter().eval(line.substr(1));
-            } catch (const Error& e) {
+            } catch (const ScriptError& e) {
                 cout << t.red() << "Error: " << t.bold().red() << e.what() << t.normal() << std::endl;
                 if (!e.detail().empty())
                     cout << t.magenta() << e.detail() << t.normal() << std::endl;

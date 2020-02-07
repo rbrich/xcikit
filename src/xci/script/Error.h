@@ -19,16 +19,17 @@
 #include "Value.h"
 #include "SourceInfo.h"
 #include "dump.h"
+#include <xci/core/error.h>
 #include <xci/core/format.h>
 
 namespace xci::script {
 
 
-class Error : public std::exception {
+class ScriptError : public core::Error {
 public:
-    explicit Error(std::string msg) : m_msg(std::move(msg)) {}
-    explicit Error(std::string msg, const SourceInfo& si) :
-        m_msg(std::move(msg)),
+    explicit ScriptError(std::string msg) : Error(std::move(msg)) {}
+    explicit ScriptError(std::string msg, const SourceInfo& si) :
+        Error(std::move(msg)),
         m_file(core::format("{}:{}:{}",
             si.source, si.line_number, si.byte_in_line)),
         m_detail(core::format("{}\n{}^",
@@ -36,18 +37,16 @@ public:
             std::string(si.byte_in_line, ' ')))
     {}
 
-    const char* what() const noexcept override { return m_msg.c_str(); }
-    const std::string& detail() const noexcept { return m_detail; }
     const std::string& file() const noexcept { return m_file; }
+    const std::string& detail() const noexcept { return m_detail; }
 
 private:
-    std::string m_msg;
     std::string m_file;
     std::string m_detail;
 };
 
 
-inline std::ostream& operator<<(std::ostream& os, const Error& e) noexcept
+inline std::ostream& operator<<(std::ostream& os, const ScriptError& e) noexcept
 {
     if (!e.file().empty())
         os << e.file() << ": ";
@@ -58,167 +57,167 @@ inline std::ostream& operator<<(std::ostream& os, const Error& e) noexcept
 }
 
 
-struct NotImplemented : public Error {
+struct NotImplemented : public ScriptError {
     explicit NotImplemented(const std::string& name)
-        : Error(core::format("not implemented: {}", name)) {}
+        : ScriptError(core::format("not implemented: {}", name)) {}
 };
 
 
-struct BadInstruction : public Error {
+struct BadInstruction : public ScriptError {
     explicit BadInstruction(uint8_t code)
-            : Error(core::format("bad instruction: {}", code)) {}
+            : ScriptError(core::format("bad instruction: {}", code)) {}
 };
 
 
-struct ParseError : public Error {
+struct ParseError : public ScriptError {
     explicit ParseError(const std::string& msg)
-            : Error(core::format("parse error: {}", msg)) {}
+            : ScriptError(core::format("parse error: {}", msg)) {}
 };
 
 
-struct StackUnderflow : public Error {
-    explicit StackUnderflow() : Error(core::format("stack underflow")) {}
+struct StackUnderflow : public ScriptError {
+    explicit StackUnderflow() : ScriptError(core::format("stack underflow")) {}
 };
 
 
-struct StackOverflow : public Error {
-    explicit StackOverflow() : Error(core::format("stack overflow")) {}
+struct StackOverflow : public ScriptError {
+    explicit StackOverflow() : ScriptError(core::format("stack overflow")) {}
 };
 
 
-struct UndefinedName : public Error {
+struct UndefinedName : public ScriptError {
     explicit UndefinedName(const std::string& name, const SourceInfo& si)
-        : Error(core::format("undefined name: {}", name), si) {}
+        : ScriptError(core::format("undefined name: {}", name), si) {}
 };
 
 
-struct UndefinedTypeName : public Error {
+struct UndefinedTypeName : public ScriptError {
     explicit UndefinedTypeName(const std::string& name)
-            : Error(core::format("undefined type name: {}", name)) {}
+            : ScriptError(core::format("undefined type name: {}", name)) {}
 };
 
 
-struct MultipleDeclarationError : public Error {
+struct MultipleDeclarationError : public ScriptError {
     explicit MultipleDeclarationError(const std::string& name)
-            : Error(core::format("multiple declaration of name: {}", name)) {}
+            : ScriptError(core::format("multiple declaration of name: {}", name)) {}
 };
 
 
-struct UnexpectedArgument : public Error {
+struct UnexpectedArgument : public ScriptError {
     explicit UnexpectedArgument(int idx, const SourceInfo& si)
-            : Error(core::format("unexpected argument #{}", idx), si) {}
+            : ScriptError(core::format("unexpected argument #{}", idx), si) {}
 };
 
 
-struct UnsupportedOperandsError : public Error {
+struct UnsupportedOperandsError : public ScriptError {
     explicit UnsupportedOperandsError(const std::string& op)
-            : Error(core::format("unsupported operands to '{}'", op)) {}
+            : ScriptError(core::format("unsupported operands to '{}'", op)) {}
 };
 
 
-struct UnexpectedArgumentCount : public Error {
+struct UnexpectedArgumentCount : public ScriptError {
     explicit UnexpectedArgumentCount(int exp, int got)
-            : Error(core::format("function expects {} args, called with {} args",
+            : ScriptError(core::format("function expects {} args, called with {} args",
                     exp, got)) {}
 };
 
 
-struct UnknownTypeName : public Error {
+struct UnknownTypeName : public ScriptError {
     explicit UnknownTypeName(const std::string& name)
-        : Error(core::format("unknown type name: {}", name)) {}
+        : ScriptError(core::format("unknown type name: {}", name)) {}
 };
 
 
-struct UnexpectedArgumentType : public Error {
+struct UnexpectedArgumentType : public ScriptError {
     explicit UnexpectedArgumentType(int idx, const TypeInfo& exp, const TypeInfo& got, const SourceInfo& si)
-            : Error(core::format("function expects {} for arg #{}, called with {}",
+            : ScriptError(core::format("function expects {} for arg #{}, called with {}",
                                  exp, idx, got), si) {}
 };
 
 
-struct UnexpectedReturnType : public Error {
+struct UnexpectedReturnType : public ScriptError {
     explicit UnexpectedReturnType(const TypeInfo& exp, const TypeInfo& got)
-            : Error(core::format("function returns {}, body evaluates to {}",
+            : ScriptError(core::format("function returns {}, body evaluates to {}",
                                  exp, got)) {}
 };
 
 
-struct MissingExplicitType : public Error {
+struct MissingExplicitType : public ScriptError {
     explicit MissingExplicitType()
-        : Error("type cannot be inferred and wasn't specified") {}
+        : ScriptError("type cannot be inferred and wasn't specified") {}
 };
 
 
-struct FunctionNotFound : public Error {
+struct FunctionNotFound : public ScriptError {
     explicit FunctionNotFound(const std::string& name, const std::string& args,
                               const std::string& candidates)
-        : Error(core::format("function not found: {} {}\n   Candidates:\n{}", name, args, candidates)) {}
+        : ScriptError(core::format("function not found: {} {}\n   Candidates:\n{}", name, args, candidates)) {}
 };
 
 
-struct FunctionConflict : public Error {
+struct FunctionConflict : public ScriptError {
     explicit FunctionConflict(const std::string& name, const std::string& args,
                               const std::string& candidates)
-            : Error(core::format("function cannot be uniquely resolved: {} {}\n   Candidates:\n{}", name, args, candidates)) {}
+            : ScriptError(core::format("function cannot be uniquely resolved: {} {}\n   Candidates:\n{}", name, args, candidates)) {}
 };
 
 
-struct FunctionNotFoundInClass : public Error {
+struct FunctionNotFoundInClass : public ScriptError {
     explicit FunctionNotFoundInClass(const std::string& fn, const std::string& cls)
-            : Error(core::format("instance function '{}' not found in class '{}'",
+            : ScriptError(core::format("instance function '{}' not found in class '{}'",
                                  fn, cls)) {}
 };
 
 
-struct TooManyLocalsError : public Error {
+struct TooManyLocalsError : public ScriptError {
     explicit TooManyLocalsError()
-            : Error(core::format("too many local values in function")) {}
+            : ScriptError(core::format("too many local values in function")) {}
 };
 
 
-struct ConditionNotBool : public Error {
-    explicit ConditionNotBool() : Error("condition doesn't evaluate to Bool") {}
+struct ConditionNotBool : public ScriptError {
+    explicit ConditionNotBool() : ScriptError("condition doesn't evaluate to Bool") {}
 };
 
 
-struct DefinitionTypeMismatch : public Error {
+struct DefinitionTypeMismatch : public ScriptError {
     explicit DefinitionTypeMismatch(const TypeInfo& exp, const TypeInfo& got)
-            : Error(core::format("definition type mismatch: specified {}, inferred {}",
+            : ScriptError(core::format("definition type mismatch: specified {}, inferred {}",
                                  exp, got)) {}
 };
 
 
-struct DefinitionParamTypeMismatch : public Error {
+struct DefinitionParamTypeMismatch : public ScriptError {
     explicit DefinitionParamTypeMismatch(int idx, const TypeInfo& exp, const TypeInfo& got)
-            : Error(core::format("definition type mismatch: specified {} for param #{}, inferred {}",
+            : ScriptError(core::format("definition type mismatch: specified {} for param #{}, inferred {}",
                                  exp, idx, got)) {}
 };
 
 
-struct BranchTypeMismatch : public Error {
+struct BranchTypeMismatch : public ScriptError {
     explicit BranchTypeMismatch(const TypeInfo& exp, const TypeInfo& got)
-            : Error(core::format("branch type mismatch: then branch {} else branch {}",
+            : ScriptError(core::format("branch type mismatch: then branch {} else branch {}",
                                  exp, got)) {}
 };
 
 
-struct ListElemTypeMismatch : public Error {
+struct ListElemTypeMismatch : public ScriptError {
     explicit ListElemTypeMismatch(const TypeInfo& exp, const TypeInfo& got)
-            : Error(core::format("list element type mismatch: got {} in list of {}",
+            : ScriptError(core::format("list element type mismatch: got {} in list of {}",
                                  got, exp)) {}
 };
 
 
-struct IndexOutOfBounds : public Error {
+struct IndexOutOfBounds : public ScriptError {
     explicit IndexOutOfBounds(int idx, size_t len)
-            : Error(core::format("list index out of bounds: {} not in [0..{}]",
+            : ScriptError(core::format("list index out of bounds: {} not in [0..{}]",
                                  idx, len-1)) {}
 };
 
 
-struct IntrinsicsFunctionError : public Error {
+struct IntrinsicsFunctionError : public ScriptError {
     explicit IntrinsicsFunctionError(const std::string& message)
-        : Error("intrinsics function: " + message) {}
+        : ScriptError("intrinsics function: " + message) {}
 };
 
 
