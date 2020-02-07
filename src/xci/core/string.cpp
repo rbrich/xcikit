@@ -26,23 +26,19 @@ bool starts_with(const std::string& str, const std::string& sub)
 }
 
 
-std::vector<string_view> split(string_view str, char delim)
+vector<string_view> split(string_view str, char delim, int maxsplit)
 {
     std::vector<string_view> res;
     size_t pos = 0;
-    size_t end = 0;
-    for (;;) {
-        end = str.find(delim, pos);
-        if (end != string_view::npos) {
-            if (end != pos)
-                res.push_back(str.substr(pos, end - pos));
-            pos = end + 1;
-        } else {
-            if (pos < str.size() - 1)
-                res.push_back(str.substr(pos, end - pos));
+    while (maxsplit != 0) {
+        size_t end = str.find(delim, pos);
+        if (end == string_view::npos)
             break;
-        }
+        res.push_back(str.substr(pos, end - pos));
+        pos = end + 1;
+        --maxsplit;
     }
+    res.push_back(str.substr(pos, str.size() - pos));
     return res;
 }
 

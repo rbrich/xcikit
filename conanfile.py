@@ -16,7 +16,6 @@ class XcikitConan(ConanFile):
                       'pegtl/2.8.0@taocpp/stable',
                       'range-v3/0.9.0@ericniebler/stable',
                       'incbin/20180413@rbrich/stable',
-                      'docopt.cpp/0.6.2',
                       'replxx/20190926@rbrich/stable',)
     generators = "cmake_paths"
     scm = {

@@ -39,9 +39,6 @@ find_package(pegtl REQUIRED)
 # range-v3
 find_package(range-v3 REQUIRED)
 
-# docopt
-find_package(Docopt REQUIRED)
-
 # Catch
 if (BUILD_TESTS)
     find_package(Catch2)

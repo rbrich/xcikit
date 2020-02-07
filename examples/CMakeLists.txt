@@ -9,6 +9,10 @@ endif()
 
 # core
 
+add_executable(demo_argparser demo_argparser.cpp)
+target_link_libraries(demo_argparser xci-core)
+install(TARGETS demo_argparser EXPORT xcikit DESTINATION ${INST_EXAMPLES})
+
 add_executable(demo_log demo_log.cpp)
 target_link_libraries(demo_log xci-core)
 install(TARGETS demo_log EXPORT xcikit DESTINATION ${INST_EXAMPLES})

@@ -10,6 +10,7 @@ find_package(Threads REQUIRED)
 # ------------ #
 
 add_library(xci-core
+    ArgParser.cpp
     chrono.cpp
     file.cpp
     dispatch.cpp
