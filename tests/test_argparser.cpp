@@ -18,8 +18,7 @@ using namespace xci::core::argparser;
 TEST_CASE( "Bool value conversion", "[ArgParser][value_from_cstr]" )
 {
     bool v = false;
-    {
-        INFO("bool supported input");
+    SECTION("bool supported input") {
         CHECK(value_from_cstr("true", v)); CHECK(v);
         CHECK(value_from_cstr("false", v)); CHECK(!v);
         CHECK(value_from_cstr("yes", v)); CHECK(v);
@@ -31,8 +30,7 @@ TEST_CASE( "Bool value conversion", "[ArgParser][value_from_cstr]" )
         CHECK(value_from_cstr("T", v)); CHECK(v);
         CHECK(value_from_cstr("F", v)); CHECK(!v);
     }
-    {
-        INFO("bool unsupported input");
+    SECTION("bool unsupported input") {
         CHECK(!value_from_cstr("abc", v));
         CHECK(!value_from_cstr("yesyes", v));
         CHECK(!value_from_cstr("nn", v));
@@ -47,29 +45,25 @@ TEST_CASE( "Int value conversion", "[ArgParser][value_from_cstr]" )
 {
     int v = 0;
     uint8_t u8 = 0;
-    {
-        INFO("int supported input");
+    SECTION("int supported input") {
         CHECK(value_from_cstr("1", v)); CHECK(v == 1);
         CHECK(value_from_cstr("0", v)); CHECK(v == 0);
         CHECK(value_from_cstr("-1", v)); CHECK(v == -1);
         CHECK(value_from_cstr("123456", v)); CHECK(v == 123456);
         CHECK(value_from_cstr("0xff", v)); CHECK(v == 0xff);
     }
-    {
-        INFO("int unsupported input");
+    SECTION("int unsupported input") {
         CHECK(!value_from_cstr("abc", v));
         CHECK(!value_from_cstr("1e3", v));
         CHECK(!value_from_cstr("11111111111111111111111111111111111", v));
     }
-    {
-        INFO("uint8 supported input");
+    SECTION("uint8 supported input") {
         CHECK(value_from_cstr("0", u8)); CHECK(u8 == 0);
         CHECK(value_from_cstr("255", u8)); CHECK(u8 == 255);
         CHECK(value_from_cstr("077", u8)); CHECK(u8 == 077);
         CHECK(value_from_cstr("0xff", u8)); CHECK(u8 == 0xff);
     }
-    {
-        INFO("uint8 out of range");
+    SECTION("uint8 out of range") {
         CHECK(!value_from_cstr("-1", u8));
         CHECK(!value_from_cstr("256", u8));
     }
@@ -78,10 +72,9 @@ TEST_CASE( "Int value conversion", "[ArgParser][value_from_cstr]" )
 
 TEST_CASE( "Other value conversion", "[ArgParser][value_from_cstr]" )
 {
-    {
+    SECTION("const char* -> original address returned unchanged") {
         const char* v;
         const char* sample = "test";
-        INFO("const char* -> original address returned unchanged");
         CHECK(value_from_cstr(sample, v)); CHECK(v == sample);
     }
 }
@@ -258,19 +251,20 @@ TEST_CASE( "Validation of the set of options", "[ArgParser][validate]" )
 #define ARGV(...)   std::array{__VA_ARGS__, (const char*)nullptr}.data()
 
 
-TEST_CASE( "Parse arg", "[ArgParser][parse_arg]" )
+TEST_CASE( "Parse args", "[ArgParser][parse_arg]" )
 {
-    {
-        bool verbose = false;
-        bool warn = false;
-        int optimize = 0;
-        std::vector<const char*> files;
-        ArgParser ap {
+    bool verbose = false;
+    bool warn = false;
+    int optimize = 0;
+    std::vector<const char*> files;
+
+    ArgParser ap {
             Option("-v, --verbose", "Enable verbosity", verbose),
             Option("-w, --warn", "Warn me", warn),
             Option("-O, --optimize LEVEL", "Optimization level", optimize),
-        };
-
+    };
+    
+    SECTION("bad input") {
         CHECK_THROWS_AS(ap.parse_arg(ARGV("-x")), BadArgument);
         CHECK_THROWS_AS(ap.parse_arg(ARGV("---v")), BadArgument);
         CHECK_THROWS_AS(ap.parse_arg(ARGV("--v")), BadArgument);
@@ -279,17 +273,8 @@ TEST_CASE( "Parse arg", "[ArgParser][parse_arg]" )
         CHECK_THROWS_AS(ap.parse_arg(ARGV("file")), BadArgument);
     }
 
-    {
-        bool verbose = false;
-        bool warn = false;
-        int optimize = 0;
-        std::vector<const char*> files;
-        ArgParser ap {
-                Option("-v, --verbose", "Enable verbosity", verbose),
-                Option("-w, --warn", "Warn me", warn),
-                Option("-O, --optimize LEVEL", "Optimization level", optimize),
-                Option("FILE...", "Input files", files),
-        };
+    SECTION("good input") {
+        ap.add_option(Option("FILE...", "Input files", files));
         ap.parse_args(ARGV("-vwO3", "file1", "file2"));
         CHECK(verbose);
         CHECK(warn);
@@ -298,6 +283,12 @@ TEST_CASE( "Parse arg", "[ArgParser][parse_arg]" )
 
         INFO("same option given again");
         CHECK_THROWS_AS(ap.parse_arg(ARGV("--optimize")), BadArgument);
+    }
+
+    SECTION("single hyphen is parsed as positional argument") {
+        ap.add_option(Option("FILE...", "Input files", files));
+        ap.parse_args(ARGV("-vwO3", "-", "file2"));
+        CHECK(files == std::vector<const char*>{"-", "file2"});
     }
 }
 

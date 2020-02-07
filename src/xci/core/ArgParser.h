@@ -221,7 +221,17 @@ private:
 };
 
 
-// Declarative parser for command-line arguments.
+/// Declarative parser for command-line arguments.
+///
+/// References:
+/// - https://www.gnu.org/software/libc/manual/html_node/Argument-Syntax.html
+///
+/// TODO:
+/// - conform to POSIX
+/// - support '=' between option and its argument
+/// - "--" should terminate option args, but otherwise not change parsing
+///   behaviour (i.e. the args should still be parsed as normal positional
+///   arguments, instead of only special remainder args)
 
 class ArgParser {
 public:

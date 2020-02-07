@@ -399,7 +399,7 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
         m_awaiting_arg = true;
         return Continue;
     }
-    if (dashes == 1) {
+    if (dashes == 1 && *p) {
         // short option
         while (*p) {
             auto it = find_if(m_opts.begin(), m_opts.end(),
@@ -433,7 +433,7 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
         }
         return Continue;
     }
-    assert(dashes == 0);
+    assert(dashes == 0 || (dashes == 1 && *p == 0));
     if (m_curopt && m_curopt->can_receive_arg()) {
         // open option -> pass it the arg
         (*m_curopt)(arg);
@@ -444,8 +444,8 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
             if (invoke_remainder(argv))
                 return Stop;
             throw BadArgument(format("Unexpected positional argument: {}", arg));
-        } if (! (*it)(p) )
-            throw BadArgument(format("Wrong positional argument: {}", p));
+        } if (! (*it)(arg) )
+            throw BadArgument(format("Wrong positional argument: {}", arg));
     }
     return Continue;
 }
