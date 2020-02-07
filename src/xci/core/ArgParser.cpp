@@ -13,8 +13,7 @@
 #include <utility>
 #include <cstring>
 #include <cassert>
-
-extern char **environ;
+#include <algorithm>
 
 namespace xci::core::argparser {
 
@@ -108,9 +107,15 @@ bool Option::has_long(const char* arg) const
 }
 
 
+int Option::missing_args() const
+{
+    return max(m_required - m_received, 0);
+}
+
+
 std::string Option::usage() const
 {
-    auto& t = TermCtl::stdout_instance();
+    auto& t = TermCtl::static_instance();
     string res;
     bool required = is_positional() && required_args() != 0;
     if (!required)
@@ -137,7 +142,7 @@ std::string Option::usage() const
 
 std::string Option::formatted_desc(size_t width) const
 {
-    auto& t = TermCtl::stdout_instance();
+    auto& t = TermCtl::static_instance();
     string res(m_desc);
     size_t res_pos = 0;
     auto* dp = m_desc.c_str();
@@ -275,7 +280,7 @@ ArgParser& ArgParser::operator()(const char* argv[])
 {
     if (!parse_program_name(argv[0])) {
         // this should not occur
-        auto& t = TermCtl::stdout_instance();
+        auto& t = TermCtl::static_instance();
         cerr << t.bold().red() << "Missing program name (argv[0])" << t.normal() << endl;
         exit(1);
     }
@@ -289,7 +294,7 @@ ArgParser& ArgParser::operator()(const char* argv[])
                 break;
         }
     } catch (const BadArgument& e) {
-        auto& t = TermCtl::stdout_instance();
+        auto& t = TermCtl::static_instance();
         cerr << t.bold().red() << e.what() << t.normal() << endl;
         print_usage();
         exit(1);
@@ -453,7 +458,7 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
 
 void ArgParser::print_usage() const
 {
-    auto& t = TermCtl::stdout_instance();
+    auto& t = TermCtl::static_instance();
     cout << t.format("Usage: {bold}{}{normal} ", m_progname);
     for (const auto& opt : m_opts) {
         cout << opt.usage() << ' ';

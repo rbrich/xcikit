@@ -59,8 +59,7 @@ public:
     typedef std::ptrdiff_t difference_type;
     typedef std::size_t size_type;
 
-    static constexpr size_t default_init_capacity = project_capacity(0);
-    explicit Stack(size_t init_capacity = default_init_capacity);
+    explicit Stack(size_t init_capacity = project_capacity(0));
 
     Stack(const Stack& other);
     Stack(Stack&& other) noexcept;

@@ -16,6 +16,7 @@
 #include "BinaryWriter.h"
 #include <zlib.h>
 #include <vector>
+#include <algorithm>
 
 namespace xci::data {
 
@@ -40,7 +41,7 @@ void BinaryWriter::write_header()
     flags |= Flags_LittleEndian;
 #endif
 #if BYTE_ORDER == BIG_ENDIAN
-    flags |= Flags_BigEndian
+    flags |= Flags_BigEndian;
 #endif
     write_with_crc(flags);
 }
@@ -163,7 +164,7 @@ void BinaryWriter::write_key(const char* key)
     // Is it new?
     if (item.second || m_pos - item.first->second > 0x7fff) {
         // Write raw key
-        auto len = uint8_t(std::max(127uL, strlen(key)));
+        auto len = uint8_t(std::max(size_t(127u), strlen(key)));
         write_with_crc(len);
         write_with_crc((const uint8_t*)key, len);
     } else {

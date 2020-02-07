@@ -8,6 +8,7 @@
 #define XCI_CORE_ARG_PARSER_H
 
 #include <xci/core/error.h>
+#include <xci/compat/unistd.h>
 #include <string>
 #include <utility>
 #include <vector>
@@ -15,7 +16,6 @@
 #include <sstream>
 #include <initializer_list>
 #include <iostream>
-#include <strings.h>
 #include <cstdlib>
 #include <limits>
 
@@ -161,7 +161,7 @@ struct Option {
     bool has_short(char arg) const;
     bool has_long(const char* arg) const;
     bool has_args() const { return m_args != 0; }
-    bool has_env(std::string_view env) const { return env == m_env; }
+    bool has_env(std::string_view env) const { return m_env && env == m_env; }
     bool is_short() const { return m_flags & FShort; }
     bool is_long() const { return m_flags & FLong; }
     bool is_positional() const { return m_flags & FPositional; }
@@ -170,7 +170,7 @@ struct Option {
     bool can_receive_all_args() const { return (m_flags & FDots); }
     bool can_receive_arg() const { return can_receive_all_args() || m_received < m_args; }
     int required_args() const { return m_required; }
-    int missing_args() const { return std::max(m_required - m_received, 0); }
+    int missing_args() const;
     std::string_view desc() const { return m_desc; }
     const char* help() const { return m_help; }
     const char* env() const { return m_env; }

@@ -10,8 +10,10 @@
 #ifndef _WIN32
 #include <unistd.h>
 #include <libgen.h>  // dirname, basename
+#include <strings.h>  // strcasecmp
 #else
 
+#define NOMINMAX
 #include <cstdlib>
 #include <io.h>
 #include <direct.h>
@@ -64,6 +66,9 @@ inline const char *basename(char *path) {
     return path + (len - strlen(fname) - strlen(ext));
 }
 
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
+
 #define STDIN_FILENO 0
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2
@@ -72,6 +77,11 @@ inline const char *basename(char *path) {
 #define PATH_MAX _MAX_PATH
 #endif
 
+#endif  // _WIN32
+
+#if defined(_WIN32)
+__declspec(dllimport)
 #endif
+extern char **environ;
 
 #endif // include guard
