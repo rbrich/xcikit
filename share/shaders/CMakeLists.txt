@@ -4,6 +4,9 @@
 
 find_program(GLSLC glslc)
 
+if (NOT GLSLC)
+    return()
+endif()
 
 # ------------ #
 # Functions    #

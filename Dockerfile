@@ -6,6 +6,7 @@ FROM rbrich/xcikit-debian:buster
 
 WORKDIR /opt/xcikit
 
+ADD benchmarks benchmarks/
 ADD cmake cmake/
 ADD examples examples/
 ADD ext ext/

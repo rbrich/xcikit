@@ -632,14 +632,15 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
     for (size_t i = 0; i < v.num_classes(); ++i) {
         const auto& cls = v.get_class(i);
         os << put_indent << '[' << i << "] " << cls.name();
-        bool first = true;
+        bool first_typevar = true;
         for (const auto& sym : cls.symtab()) {
             switch (sym.type()) {
                 case Symbol::Parameter:
                     break;
                 case Symbol::TypeVar:
-                    assert(first);
-                    first = false;
+                    assert(first_typevar);
+                    (void) first_typevar;
+                    first_typevar = false;
                     os << ' ' << sym.name() << endl << more_indent;
                     break;
                 case Symbol::Function:
