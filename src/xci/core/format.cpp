@@ -15,11 +15,8 @@
 
 #include "format.h"
 #include <xci/core/sys.h>
-#include <xci/config.h>
 
 #include <tao/pegtl.hpp>
-
-#include <cstring>
 
 namespace xci::core::format_impl {
 

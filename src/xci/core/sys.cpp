@@ -8,6 +8,7 @@
 #include <xci/compat/macros.h>
 #include <xci/config.h>
 #include <ostream>
+#include <cstring>
 
 // get_thread_id
 #if defined(__linux__)
@@ -26,7 +27,6 @@
     #include <sys/types.h>
     #include <pwd.h>
     #include <unistd.h>
-    #include <cstring>
 #endif
 
 namespace xci::core {
