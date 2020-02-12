@@ -227,12 +227,18 @@ Detailed build steps (these are examples, adjust parameters as needed):
 
 ### Porting to Windows
 
-The project is not yet ported to Windows, but the dependency management
-and build configuration should already work. The extent of the porting
-is not yet decided, but at least the xci-script should eventually work.
+The project is not yet fully ported to Windows. But the essential parts should
+already work:
+
+- dependencies via Conan
+- build scripts (using git-bash)
+- CMake configuration and build
+- core and script libraries + demos
+
+How to build:
 
 1) Install build tools via their Windows installers: Git, CMake, Conan
-   (`git`, `cmake` and `conan` commands should now work in cmd.exe)
+   (`git`, `cmake` and `conan` commands should now work in `cmd.exe`)
 
 2) Open *Git Bash* and run `./bootstrap.sh`
 
@@ -243,13 +249,11 @@ is not yet decided, but at least the xci-script should eventually work.
    conan install .. --build missing
    ```
 
-4) Configure and try build with CMake:
+4) Configure and build with CMake:
    ```
-   cmake .. -G Ninja -DCMAKE_BUILD_TYPE=Debug -DXCI_WITH_VULKAN=0 -DBUILD_WARNINGS=0
+   cmake .. -DCMAKE_BUILD_TYPE=Debug -DXCI_WITH_VULKAN=0 -DBUILD_BENCHMARKS=0
    cmake --build .
    ```
-
-5) Expect LOTS of build errors. TODO: Port the code.
 
 
 How to use in client program

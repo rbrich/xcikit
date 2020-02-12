@@ -130,8 +130,7 @@ private:
 class SymbolTable {
 public:
     SymbolTable() = default;
-    explicit SymbolTable(std::string name, SymbolTable* parent = nullptr)
-        : m_name(std::move(name)), m_parent(parent) {}
+    explicit SymbolTable(std::string name, SymbolTable* parent = nullptr);
 
     void set_name(const std::string& name) { m_name = name; }
     const std::string& name() const { return m_name; }
@@ -189,12 +188,27 @@ public:
     bool empty() const { return m_symbols.empty(); }
     size_t size() const { return m_symbols.size(); }
 
+    class Children {
+    public:
+        explicit Children(const SymbolTable& symtab) : m_symtab(symtab) {}
+
+        using const_iterator = typename core::Stack<SymbolTable>::const_iterator;
+        const_iterator begin() const { return m_symtab.m_children.cbegin(); }
+        const_iterator end() const { return m_symtab.m_children.cend(); }
+
+    private:
+        const SymbolTable& m_symtab;
+    };
+
+    Children children() const { return Children{*this}; }
+
 private:
     std::string m_name;   // only for debugging
     SymbolTable* m_parent = nullptr;
     Function* m_function = nullptr;
     Class* m_class = nullptr;
     Module* m_module = nullptr;
+    core::Stack<SymbolTable> m_children;  // NOTE: member addresses must not change
     std::vector<Symbol> m_symbols;
 };
 

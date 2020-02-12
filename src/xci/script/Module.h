@@ -30,11 +30,11 @@ namespace xci::script {
 
 class Module {
 public:
-    explicit Module(std::string name);
+    explicit Module(std::string name) : m_symtab(move(name)) { m_symtab.set_module(this); }
     Module() : Module("<module>") {}
     ~Module();
 
-    const std::string& name() const { return m_symtabs.front().name(); }
+    const std::string& name() const { return m_symtab.name(); }
 
     Index add_native_function(std::string&& name,
             std::vector<TypeInfo>&& params, TypeInfo&& retval,
@@ -86,9 +86,7 @@ public:
     size_t num_instances() const { return m_instances.size(); }
 
     // Top-level symbol table
-    SymbolTable& symtab() { return m_symtabs.front(); }
-    SymbolTable& add_symtab(std::string name, SymbolTable* parent);
-    const std::list<SymbolTable>& symtabs() { return m_symtabs; }
+    SymbolTable& symtab() { return m_symtab; }
 
     bool operator==(const Module& rhs) const;
 
@@ -99,7 +97,7 @@ private:
     std::vector<std::unique_ptr<Instance>> m_instances;
     std::vector<TypeInfo> m_types;
     Values m_values;
-    std::list<SymbolTable> m_symtabs;
+    SymbolTable m_symtab;
 };
 
 

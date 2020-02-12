@@ -14,7 +14,6 @@
 // limitations under the License.
 
 #include "SymbolTable.h"
-#include "Module.h"
 #include <cassert>
 #include <algorithm>
 #include <ostream>
@@ -23,6 +22,12 @@
 namespace xci::script {
 
 using namespace std;
+
+
+SymbolTable::SymbolTable(std::string name, SymbolTable* parent)
+        : m_name(std::move(name)), m_parent(parent),
+          m_module(parent ? parent->module() : nullptr)
+{}
 
 
 Symbol& SymbolPointer::operator*()
@@ -62,7 +67,8 @@ SymbolPointer SymbolTable::add(Symbol&& symbol)
 
 SymbolTable& SymbolTable::add_child(const std::string& name)
 {
-    return m_module->add_symtab(name, this);
+    m_children.emplace_back(name, this);
+    return m_children.back();
 }
 
 

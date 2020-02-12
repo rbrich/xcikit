@@ -791,9 +791,8 @@ std::ostream& operator<<(std::ostream& os, const SymbolTable& v)
     }
 
     os << more_indent;
-    for (const auto& child : v.module()->symtabs()) {
-        if (child.parent() == &v)
-            os << child << endl;
+    for (const auto& child : v.children()) {
+        os << child << endl;
     }
     os << less_indent;
     return os;

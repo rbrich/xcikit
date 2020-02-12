@@ -4,7 +4,6 @@ project(xcikit C CXX)
 option(XCI_WITH_VULKAN "Build libxci-graphics. Requires Vulkan and GLFW." ON)
 option(XCI_WITH_TINFO "Link with TInfo (from NCurses) and use it for TTY control sequences." OFF)
 option(XCI_WITH_ZIP "Link xci-core with libzip and use it for ZIP format in VFS." OFF)
-option(XCI_WITH_BENCHMARK "Build benchmarks. Requires Google Benchmark." OFF)
 
 set(XCI_SHARE_DIR "${CMAKE_CURRENT_LIST_DIR}/share" CACHE PATH "Location of share dir (runtime data)")
 option(XCI_DEBUG_VULKAN "Log info about Vulkan calls and errors." OFF)
@@ -45,7 +44,7 @@ if (BUILD_TESTS)
 endif()
 
 # Google Benchmark
-if (XCI_WITH_BENCHMARK)
+if (BUILD_BENCHMARKS)
     find_package(benchmark)
 endif ()
 
@@ -62,7 +61,7 @@ if (WIN32)
     add_subdirectory(ext/mman-win32)
 endif()
 
-# Run checks
+# Run configuration checks
 include(XciBuildChecks)
 
 # Generate config.h
@@ -113,8 +112,9 @@ endif()
 # Examples     #
 # ------------ #
 
-add_subdirectory(examples)
-
+if (BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()
 
 # ------------ #
 # Tests        #
