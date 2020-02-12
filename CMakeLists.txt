@@ -72,13 +72,7 @@ configure_file(config.h.in include/xci/config.h)
 # Assets       #
 # ------------ #
 
-if (XCI_WITH_VULKAN)
-    add_subdirectory(share/shaders)
-endif()
-
-# Data (share)
-install(DIRECTORY share/fonts DESTINATION share/xcikit)
-install(DIRECTORY share/script DESTINATION share/xcikit)
+add_subdirectory(share)
 
 
 # ------------ #

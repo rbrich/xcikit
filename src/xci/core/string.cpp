@@ -166,7 +166,7 @@ I utf8_next(I iter)
         // 11110xxx -> 4 bytes
         return iter + 4;
     } else {
-        //log_error("utf8_next: Invalid UTF8 string, encountered code 0x{:02x}", int(first));
+        log_error("utf8_next: Invalid UTF8 string, encountered code 0x{:02x}", int(first));
         return iter + 1;
     }
 }
