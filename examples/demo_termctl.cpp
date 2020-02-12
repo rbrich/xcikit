@@ -12,7 +12,7 @@ using namespace xci::core;
 
 int main()
 {
-    TermCtl& t = TermCtl::static_instance();
+    TermCtl& t = TermCtl::stdout_instance();
 
     cout << (t.is_tty() ? "terminal initialized" : "terminal not supported") << endl;
     cout << t.bold().red().on_blue() << "SUPER RED " << t.normal() << "<-----" << endl;

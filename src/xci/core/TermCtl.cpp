@@ -80,29 +80,38 @@ static void reset_console_mode(DWORD hid, DWORD mode)
 #endif
 
 
-TermCtl& TermCtl::static_instance()
+TermCtl& TermCtl::stdout_instance()
 {
-    static TermCtl term;
+    static TermCtl term(STDOUT_FILENO);
     return term;
 }
 
 
-TermCtl::TermCtl()
+TermCtl& TermCtl::stderr_instance()
+{
+    static TermCtl term(STDERR_FILENO);
+    return term;
+}
+
+
+TermCtl::TermCtl(int fd)
 {
 #ifdef _WIN32
-    m_orig_out_mode = set_console_mode(STD_OUTPUT_HANDLE,
+    assert(fd == STDOUT_FILENO || fd == STDERR_FILENO);
+    m_std_handle = (fd == STDOUT_FILENO) ? STD_OUTPUT_HANDLE : STD_ERROR_HANDLE;
+    m_orig_out_mode = set_console_mode(m_std_handle,
                          ENABLE_VIRTUAL_TERMINAL_PROCESSING);
     if (m_orig_out_mode == bad_mode)
         return;
 #else
     // Do not even try if not TTY (e.g. when piping to other command)
-    if (isatty(STDOUT_FILENO) != 1)
+    if (isatty(fd) != 1)
         return;
 
     #ifdef XCI_WITH_TINFO
     // Setup terminfo
     int err = 0;
-    if (setupterm(nullptr, STDOUT_FILENO, &err) != 0)
+    if (setupterm(nullptr, fd, &err) != 0)
         return;
     #endif
 #endif
@@ -115,10 +124,10 @@ TermCtl::~TermCtl() {
 #ifdef _WIN32
     if (m_state == State::InitOk) {
         assert(m_orig_out_mode != bad_mode);
-        reset_console_mode(STD_OUTPUT_HANDLE, m_orig_out_mode);
+        reset_console_mode(m_std_handle, m_orig_out_mode);
     }
 #else
-    (void)0;
+    (void) 0;
 #endif
 }
 

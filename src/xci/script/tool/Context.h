@@ -22,7 +22,7 @@ struct Context {
     bool done {false};
     Interpreter interpreter;
     std::vector<std::unique_ptr<xci::script::Module>> modules;
-    xci::core::TermCtl term_out = xci::core::TermCtl::static_instance();
+    xci::core::TermCtl term_out = xci::core::TermCtl::stdout_instance();
 };
 
 

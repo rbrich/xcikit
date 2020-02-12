@@ -21,10 +21,11 @@ namespace xci::core {
 class TermCtl {
 public:
     // Static instance for standard output
-    static TermCtl& static_instance();
+    static TermCtl& stdout_instance();
+    static TermCtl& stderr_instance();
 
     // Constructor for custom streams
-    explicit TermCtl();
+    explicit TermCtl(int fd);
     ~TermCtl();
 
     // Is the output stream connected to TTY?
@@ -107,13 +108,14 @@ private:
     enum class State {
         NoTTY,      // initialization failed
         InitOk,     // main instance (it will reset the term when destroyed)
-        CopyOk,      // a copy created by chained method
+        CopyOk,     // a copy created by chained method
     };
     State m_state = State::NoTTY;
     std::string m_seq;  // cached capability sequences
 
 #ifdef _WIN32
-    unsigned long m_orig_out_mode = 0;
+    DWORD m_std_handle = 0;
+    DWORD m_orig_out_mode = 0;
 #endif
 };
 
