@@ -2,9 +2,16 @@
 # Dependencies #
 # ------------ #
 
+# shader compiler - can use either glslc or glslangValidator
 find_program(GLSLC glslc)
+find_program(GLSLANG glslangValidator)
 
-if (NOT GLSLC)
+if (GLSLC)
+    set(GLSL_C ${GLSLC})
+elseif(GLSLANG)
+    set(GLSL_C ${GLSLANG} -V)
+else()
+    message(STATUS "No GLSL compiler found, won't compile shaders...")
     return()
 endif()
 
@@ -26,7 +33,7 @@ function(add_shaders)
         add_custom_command(
             OUTPUT "${src}.spv"
             MAIN_DEPENDENCY "${src}"
-            COMMAND ${GLSLC} "${CMAKE_CURRENT_SOURCE_DIR}/${src}" -o "${src}.spv"
+            COMMAND ${GLSL_C} "${CMAKE_CURRENT_SOURCE_DIR}/${src}" -o "${src}.spv"
             COMMENT "Compiling shader ${src}"
             VERBATIM
         )

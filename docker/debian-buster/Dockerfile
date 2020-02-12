@@ -9,7 +9,8 @@ RUN printf 'APT::Get::Install-Recommends "false";\nAPT::Get::Install-Suggests "f
     >> '/etc/apt/apt.conf.d/recommends'
 
 # Install development tools
-RUN apt-get install -y g++ git zip curl ca-certificates cmake ninja-build python3-pip
+RUN apt-get install -y g++ git zip curl ca-certificates \
+    cmake ninja-build python3-pip glslang-tools
 
 # Install xcikit dependencies
 RUN apt-get install -y libfreetype6-dev libglfw3-dev libbenchmark-dev

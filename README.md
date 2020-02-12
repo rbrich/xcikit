@@ -168,6 +168,8 @@ Dependencies (required):
 - PEGTL (xci-core)
 - FreeType (xci-text)
 - GLFW, Vulkan (xci-graphics)
+- [glslc](https://github.com/google/shaderc) or
+  [glslangValidator](https://github.com/KhronosGroup/glslang) (xci-graphics)
 
 Dependencies (optional):
 - libzip (XCI_WITH_ZIP)
