@@ -5,9 +5,12 @@ option(XCI_WITH_VULKAN "Build libxci-graphics. Requires Vulkan and GLFW." ON)
 option(XCI_WITH_TINFO "Link with TInfo (from NCurses) and use it for TTY control sequences." OFF)
 option(XCI_WITH_ZIP "Link xci-core with libzip and use it for ZIP format in VFS." OFF)
 
-set(XCI_SHARE_DIR "${CMAKE_CURRENT_LIST_DIR}/share" CACHE PATH "Location of share dir (runtime data)")
-option(XCI_DEBUG_VULKAN "Log info about Vulkan calls and errors." OFF)
+option(XCI_INSTALL_SHARE_DIR "Install runtime data as a directory (share/xcikit)" OFF)
+option(XCI_INSTALL_SHARE_DAR "Install runtime data as DAR archive (share.dar)" ON)
+option(XCI_INSTALL_SHARE_ZIP "Install runtime data as ZIP archive (share.zip)" OFF)
 option(XCI_EMBED_SHADERS "Embed shader files into binaries to avoid dependency on share dir." OFF)
+
+option(XCI_DEBUG_VULKAN "Log info about Vulkan calls and errors." OFF)
 option(XCI_DEBUG_TRACE "Enable trace log messages." OFF)
 option(XCI_DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
 
@@ -64,15 +67,20 @@ endif()
 # Run configuration checks
 include(XciBuildChecks)
 
-# Generate config.h
-configure_file(config.h.in include/xci/config.h)
-
 
 # ------------ #
 # Assets       #
 # ------------ #
 
 add_subdirectory(share)
+
+# Location of share dir / archives
+set(XCI_SHARE_DIR "${PROJECT_BINARY_DIR}/share")
+set(XCI_SHARE_DAR "${PROJECT_BINARY_DIR}/share/share.dar")
+set(XCI_SHARE_ZIP "${PROJECT_BINARY_DIR}/share/share.zip")
+
+# Generate config.h
+configure_file(config.h.in include/xci/config.h)
 
 
 # ------------ #

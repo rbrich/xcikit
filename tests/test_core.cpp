@@ -58,7 +58,7 @@ TEST_CASE( "Format char type", "[format]" )
 
 TEST_CASE( "read_binary_file", "[file]" )
 {
-    const char* filename = XCI_SHARE_DIR "/shaders/rectangle.vert";
+    const char* filename = XCI_SHARE_DIR "/shaders/rectangle.vert.spv";
     auto content = read_binary_file(filename);
     REQUIRE(bool(content));
 

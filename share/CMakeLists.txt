@@ -2,7 +2,11 @@
 # Dependencies #
 # ------------ #
 
-find_package(Python3)
+if (XCI_INSTALL_SHARE_DAR)
+    find_package(Python3 REQUIRED)
+else()
+    find_package(Python3)
+endif()
 
 
 # ------------ #
@@ -12,15 +16,12 @@ find_package(Python3)
 set(ASSETS
     fonts/Enriqueta/Enriqueta-Bold.ttf
     fonts/Enriqueta/Enriqueta-Regular.ttf
-    fonts/Enriqueta/OFL.txt
     fonts/Hack/Hack-Bold.ttf
     fonts/Hack/Hack-BoldItalic.ttf
     fonts/Hack/Hack-Italic.ttf
     fonts/Hack/Hack-Regular.ttf
     fonts/MaterialIcons/MaterialIcons-Regular.woff
-    fonts/MaterialIcons/LICENSE
     fonts/ShareTechMono/ShareTechMono-Regular.ttf
-    fonts/ShareTechMono/OFL.txt
     script/sys.ys
     )
 
@@ -38,9 +39,10 @@ foreach(file ${ASSETS})
     configure_file("${file}" "${file}" COPYONLY)
 endforeach()
 
-# Create data archive
+set(output_archives)
+
+# Create data archive: share.dar
 if (Python3_Interpreter_FOUND)
-    # share.dar
     set(output_dar "${CMAKE_CURRENT_BINARY_DIR}/share.dar")
     add_custom_command(
         OUTPUT "${output_dar}"
@@ -53,9 +55,14 @@ if (Python3_Interpreter_FOUND)
         COMMENT "Archiving assets (DAR archive)"
         VERBATIM
     )
-    install(FILES "${output_dar}" DESTINATION share/xcikit)
+    if (XCI_INSTALL_SHARE_DAR)
+        install(FILES "${output_dar}" DESTINATION share/xcikit)
+    endif()
+    list(APPEND output_archives ${output_dar})
+endif()
 
-    # share.zip
+# Create data archive: share.zip
+if (XCI_WITH_ZIP)
     set(output_zip "${CMAKE_CURRENT_BINARY_DIR}/share.zip")
     add_custom_command(
         OUTPUT "${output_zip}"
@@ -67,11 +74,16 @@ if (Python3_Interpreter_FOUND)
         COMMENT "Archiving assets (ZIP archive)"
         VERBATIM
     )
-    install(FILES "${output_zip}" DESTINATION share/xcikit)
-
-    add_custom_target(archives ALL DEPENDS ${output_dar} ${output_zip})
+    if (XCI_INSTALL_SHARE_ZIP)
+        install(FILES "${output_zip}" DESTINATION share/xcikit)
+    endif()
+    list(APPEND output_archives ${output_zip})
 endif()
 
-# Install data archives and also directories
-install(DIRECTORY fonts DESTINATION share/xcikit)
-install(DIRECTORY script DESTINATION share/xcikit)
+add_custom_target(archives ALL DEPENDS ${output_archives})
+
+
+if (XCI_INSTALL_SHARE_DIR)
+    install(DIRECTORY fonts DESTINATION share/xcikit)
+    install(DIRECTORY script DESTINATION share/xcikit)
+endif()

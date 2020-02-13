@@ -44,8 +44,10 @@ function(add_shaders)
         )
         list(APPEND outputs "${src}.spv")
         list(APPEND assets "shaders/${src}.spv")
-        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${src}.spv"
-            DESTINATION share/xcikit/shaders)
+        if (XCI_INSTALL_SHARE_DIR)
+            install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${src}.spv"
+                DESTINATION share/xcikit/shaders)
+        endif()
     endforeach()
 
     add_custom_target(shaders ALL DEPENDS ${outputs})
