@@ -307,7 +307,7 @@ bool ArgParser::parse_program_name(const char* arg0)
 {
     if (!arg0)
         return false;
-    m_progname = path::basename(arg0);
+    m_progname = path::base_name(arg0);
     return true;
 }
 

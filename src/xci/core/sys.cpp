@@ -13,6 +13,7 @@
 // get_thread_id, get_self_path
 #if defined(__linux__)
     #include <sys/syscall.h>
+    #include <linux/limits.h>
 #elif defined(__APPLE__)
     #include <pthread.h>
     #include <mach-o/dyld.h>
@@ -155,7 +156,14 @@ std::string get_self_path()
     // Reference:
     // - https://stackoverflow.com/questions/1023306/finding-current-executables-path-without-proc-self-exe
     // - https://stackoverflow.com/questions/933850/how-do-i-find-the-location-of-the-executable-in-c
-#ifdef __APPLE__
+#if defined(__linux__)
+    char path[PATH_MAX];
+    ssize_t len = ::readlink("/proc/self/exe", path, sizeof(path));
+    if (len == -1 || len == sizeof(path))
+        len = 0;
+    path[len] = '\0';
+    return path;
+#elif defined(__APPLE__)
     char path[PATH_MAX];
     uint32_t size = sizeof(path);
     if (_NSGetExecutablePath(path, &size) == 0)

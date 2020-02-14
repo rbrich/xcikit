@@ -68,7 +68,7 @@ bool FSWatch::add(const std::string& pathname, FSWatch::PathCallback cb)
     }
 
     // Directory is now watched, add the new watch to it
-    auto filename = path::basename(pathname);
+    auto filename = path::base_name(pathname);
     m_file.push_back({dir_h, filename, std::move(cb)});
     log_debug("FSWatch: Watching file {}/{}", dir, filename);
     return true;
@@ -91,7 +91,7 @@ bool FSWatch::remove(const std::string& pathname)
     }
 
     // Find file record
-    auto filename = path::basename(pathname);
+    auto filename = path::base_name(pathname);
     auto it = std::find_if(m_file.begin(), m_file.end(),
             [&filename, dir_h](const File& f) {
                 return f.dir_h == dir_h && f.name == filename;

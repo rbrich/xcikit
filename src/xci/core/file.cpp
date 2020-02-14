@@ -80,7 +80,7 @@ BufferPtr read_binary_file(std::istream& stream)
 namespace path {
 
 
-std::string dirname(std::string pathname)
+std::string dir_name(std::string pathname)
 {
     // dirname() may modify the argument, so we take it by value
     // (we also make sure that the internal value is null-terminated)
@@ -89,7 +89,7 @@ std::string dirname(std::string pathname)
 }
 
 
-std::string basename(std::string pathname)
+std::string base_name(std::string pathname)
 {
     assert(pathname.c_str() == &pathname[0]);
     return ::basename(&pathname[0]);
@@ -108,7 +108,7 @@ std::string join(const std::string &part1, const std::string &part2)
 }
 
 
-std::string getcwd()
+std::string get_cwd()
 {
     std::string result(PATH_MAX, ' ');
     if (::getcwd(&result[0], result.size()) == nullptr) {
@@ -119,7 +119,7 @@ std::string getcwd()
 }
 
 
-std::string realpath(const std::string& path)
+std::string real_path(const std::string& path)
 {
     char buffer[PATH_MAX];
     auto* res = ::realpath(path.c_str(), buffer);

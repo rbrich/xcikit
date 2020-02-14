@@ -356,7 +356,7 @@ bool Vfs::mount(const std::string& fs_path, std::string target_path)
         // or its parent, or its parent's parent. The nearest matched parent wins.
         std::string ups = "/";
         for (int parent = 0; parent < 3; ++parent) {
-            real_path = path::realpath(path::dirname(get_self_path()) + ups + fs_path);
+            real_path = path::real_path(path::dir_name(get_self_path()) + ups + fs_path);
             if (!real_path.empty())
                 break;
             ups += "../";

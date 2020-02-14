@@ -71,14 +71,14 @@ TEST_CASE( "read_binary_file", "[file]" )
 }
 
 
-TEST_CASE( "path::dirname", "[file]" )
+TEST_CASE( "path::dir_name", "[file]" )
 {
-    CHECK(path::dirname("/dir/name/") == "/dir");
-    CHECK(path::dirname("/dir/name") == "/dir");
-    CHECK(path::dirname("name") == ".");
-    CHECK(path::dirname(".") == ".");
-    CHECK(path::dirname("..") == ".");
-    CHECK(path::dirname("/name") == "/");
+    CHECK(path::dir_name("/dir/name/") == "/dir");
+    CHECK(path::dir_name("/dir/name") == "/dir");
+    CHECK(path::dir_name("name") == ".");
+    CHECK(path::dir_name(".") == ".");
+    CHECK(path::dir_name("..") == ".");
+    CHECK(path::dir_name("/name") == "/");
 #ifdef _WIN32
     CHECK(path::dirname("C:\\xyz\\fsd") == "C:\\xyz");
     CHECK(path::dirname("C:\\xyz\\") == "C:\\");
@@ -86,13 +86,13 @@ TEST_CASE( "path::dirname", "[file]" )
 }
 
 
-TEST_CASE( "path::basename", "[file]" )
+TEST_CASE( "path::base_name", "[file]" )
 {
-    CHECK(path::basename("/dir/name/") == "name");
-    CHECK(path::basename("/dir/name") == "name");
-    CHECK(path::basename("/name") == "name");
-    CHECK(path::basename("name") == "name");
-    CHECK(path::basename(".") == ".");
+    CHECK(path::base_name("/dir/name/") == "name");
+    CHECK(path::base_name("/dir/name") == "name");
+    CHECK(path::base_name("/name") == "name");
+    CHECK(path::base_name("name") == "name");
+    CHECK(path::base_name(".") == ".");
 }
 
 
