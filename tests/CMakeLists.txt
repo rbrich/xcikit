@@ -1,41 +1,51 @@
 add_executable(test_core test_core.cpp)
 target_link_libraries(test_core Catch2::Catch2 xci-core)
 add_test(NAME test_core COMMAND test_core)
+install(TARGETS test_core EXPORT xcikit DESTINATION tests)
 
 add_executable(test_dispatch test_dispatch.cpp)
 target_link_libraries(test_dispatch Catch2::Catch2 xci-core)
 add_test(NAME test_dispatch COMMAND test_dispatch)
+install(TARGETS test_dispatch EXPORT xcikit DESTINATION tests)
 
 add_executable(test_geometry test_geometry.cpp)
 target_link_libraries(test_geometry Catch2::Catch2 xci-core)
 add_test(NAME test_geometry COMMAND test_geometry)
+install(TARGETS test_geometry EXPORT xcikit DESTINATION tests)
 
 add_executable(test_eventloop test_eventloop.cpp)
 target_link_libraries(test_eventloop Catch2::Catch2 xci-core)
 add_test(NAME test_eventloop COMMAND test_eventloop)
+install(TARGETS test_eventloop EXPORT xcikit DESTINATION tests)
 
 add_executable(test_stack test_stack.cpp)
 target_link_libraries(test_stack Catch2::Catch2 xci-core)
 add_test(NAME test_stack COMMAND test_stack)
+install(TARGETS test_stack EXPORT xcikit DESTINATION tests)
 
 add_executable(test_argparser test_argparser.cpp)
 target_link_libraries(test_argparser Catch2::Catch2 xci-core)
 add_test(NAME test_argparser COMMAND test_argparser)
+install(TARGETS test_argparser EXPORT xcikit DESTINATION tests)
 
 add_executable(test_serialization test_serialization.cpp)
 target_link_libraries(test_serialization Catch2::Catch2 xci-data)
 add_test(NAME test_serialization COMMAND test_serialization)
+install(TARGETS test_serialization EXPORT xcikit DESTINATION tests)
 
 add_executable(test_script test_script.cpp)
 target_link_libraries(test_script Catch2::Catch2 xci-script)
 add_test(NAME test_script COMMAND test_script)
+install(TARGETS test_script EXPORT xcikit DESTINATION tests)
 
 if (XCI_WITH_VULKAN)
     add_executable(test_graphics test_graphics.cpp)
     target_link_libraries(test_graphics Catch2::Catch2 xci-graphics)
     add_test(NAME test_graphics COMMAND test_graphics)
+    install(TARGETS test_graphics EXPORT xcikit DESTINATION tests)
 
     add_executable(test_widgets test_widgets.cpp)
     target_link_libraries(test_widgets Catch2::Catch2 xci-widgets xci-text xci-graphics)
     add_test(NAME test_widgets COMMAND test_widgets)
+    install(TARGETS test_widgets EXPORT xcikit DESTINATION tests)
 endif()

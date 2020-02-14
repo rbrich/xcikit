@@ -43,7 +43,7 @@ set(output_archives)
 
 # Create data archive: share.dar
 if (Python3_Interpreter_FOUND)
-    set(output_dar "${CMAKE_CURRENT_BINARY_DIR}/share.dar")
+    set(output_dar "share.dar")
     add_custom_command(
         OUTPUT "${output_dar}"
         DEPENDS ${ASSETS} shaders
@@ -56,14 +56,15 @@ if (Python3_Interpreter_FOUND)
         VERBATIM
     )
     if (XCI_INSTALL_SHARE_DAR)
-        install(FILES "${output_dar}" DESTINATION share/xcikit)
+        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${output_dar}"
+            DESTINATION share/xcikit)
     endif()
     list(APPEND output_archives ${output_dar})
 endif()
 
 # Create data archive: share.zip
 if (XCI_WITH_ZIP)
-    set(output_zip "${CMAKE_CURRENT_BINARY_DIR}/share.zip")
+    set(output_zip "share.zip")
     add_custom_command(
         OUTPUT "${output_zip}"
         DEPENDS ${ASSETS} shaders
@@ -75,13 +76,16 @@ if (XCI_WITH_ZIP)
         VERBATIM
     )
     if (XCI_INSTALL_SHARE_ZIP)
-        install(FILES "${output_zip}" DESTINATION share/xcikit)
+        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${output_zip}"
+            DESTINATION share/xcikit)
     endif()
     list(APPEND output_archives ${output_zip})
 endif()
 
 add_custom_target(archives ALL DEPENDS ${output_archives})
 
+ADD_CUSTOM_TARGET(share_symlink ALL
+    COMMAND ${CMAKE_COMMAND} -E create_symlink . xcikit)
 
 if (XCI_INSTALL_SHARE_DIR)
     install(DIRECTORY fonts DESTINATION share/xcikit)

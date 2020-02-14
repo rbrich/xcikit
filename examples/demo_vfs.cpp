@@ -27,7 +27,7 @@ int main()
         Vfs vfs {Vfs::Loaders::NoArchives};
         vfs.add_loader(std::make_unique<vfs::RealDirectoryLoader>());
         vfs.mount("/does/not/exist");
-        vfs.mount(XCI_SHARE_DIR);
+        vfs.mount(XCI_SHARE);
 
         auto f = vfs.read_file("non/existent.file");
         log_info("demo: open result: {}", f.is_open());

@@ -75,9 +75,18 @@ include(XciBuildChecks)
 add_subdirectory(share)
 
 # Location of share dir / archives
-set(XCI_SHARE_DIR "${PROJECT_BINARY_DIR}/share")
-set(XCI_SHARE_DAR "${PROJECT_BINARY_DIR}/share/share.dar")
-set(XCI_SHARE_ZIP "${PROJECT_BINARY_DIR}/share/share.zip")
+set(XCI_SHARE_DIR "share/xcikit")
+set(XCI_SHARE_DAR "share/xcikit/share.dar")
+set(XCI_SHARE_ZIP "share/xcikit/share.zip")
+
+set(XCI_SHARE)
+if (XCI_INSTALL_SHARE_DIR)
+    set(XCI_SHARE "${XCI_SHARE_DIR}")
+elseif (XCI_INSTALL_SHARE_DAR)
+    set(XCI_SHARE "${XCI_SHARE_DAR}")
+elseif (XCI_INSTALL_SHARE_ZIP)
+    set(XCI_SHARE "${XCI_SHARE_ZIP}")
+endif()
 
 # Generate config.h
 configure_file(config.h.in include/xci/config.h)

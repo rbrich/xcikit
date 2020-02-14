@@ -44,7 +44,7 @@ FSWatch::~FSWatch()
 bool FSWatch::add(const std::string& pathname, FSWatch::PathCallback cb)
 {
     // Is the directory already watched?
-    auto dir = path_dirname(pathname);
+    auto dir = path::dirname(pathname);
     auto it = std::find_if(m_dir.begin(), m_dir.end(),
                            [&dir](const Dir& d) { return d.name == dir; });
     int dir_fd;
@@ -62,7 +62,7 @@ bool FSWatch::add(const std::string& pathname, FSWatch::PathCallback cb)
 
     // Directory is now watched, add watch for the file
     int fd = register_kevent(pathname, fflags_file, /*no_exist_ok=*/true);
-    auto filename = path_basename(pathname);
+    auto filename = path::basename(pathname);
     m_file.push_back(File{fd, dir_fd, filename, std::move(cb)});
     log_debug("EventLoop: Added watch {} / {} ({})", dir, filename, fd);
     return true;
@@ -72,7 +72,7 @@ bool FSWatch::add(const std::string& pathname, FSWatch::PathCallback cb)
 bool FSWatch::remove(const std::string& pathname)
 {
     // Find dir record
-    auto dir = path_dirname(pathname);
+    auto dir = path::dirname(pathname);
     int dir_fd;
     {
         auto it = std::find_if(m_dir.begin(), m_dir.end(),
@@ -85,7 +85,7 @@ bool FSWatch::remove(const std::string& pathname)
     }
 
     // Find file record
-    auto filename = path_basename(pathname);
+    auto filename = path::basename(pathname);
     auto it = std::find_if(m_file.begin(), m_file.end(),
                            [&filename, dir_fd](const File& w) {
                                return w.dir_fd == dir_fd && w.name == filename;
@@ -158,7 +158,7 @@ void FSWatch::_notify(const struct kevent& event)
                 if (w.dir_fd == fd) {
                     w.cb(Event::Stopped);
                     if (w.fd != -1)
-                        remove_list.push_back(path_join(dir, w.name));
+                        remove_list.push_back(path::join(dir, w.name));
                 }
             }
             for (const auto& path : remove_list) {

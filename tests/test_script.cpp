@@ -55,7 +55,7 @@ void check_interpreter(const string& input, const string& expected_output)
     if (!sys_module) {
         Logger::init(Logger::Level::Warning);
         Vfs vfs;
-        vfs.mount(XCI_SHARE_DIR);
+        vfs.mount(XCI_SHARE);
 
         auto f = vfs.read_file("script/sys.ys");
         auto content = f.content();

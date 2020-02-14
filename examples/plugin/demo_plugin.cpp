@@ -27,7 +27,7 @@ using namespace xci::core::log;
 #ifdef _WIN32
 static const char* filename = "./pluggable.dll";
 #else
-static const char* filename = XCI_DEMO_PLUGINS "/libpluggable.so";
+static const char* filename = "./libpluggable.so";
 #endif
 std::atomic_bool done {false};
 std::atomic_bool reload {false};

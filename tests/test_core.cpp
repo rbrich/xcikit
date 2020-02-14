@@ -9,6 +9,7 @@
 #include <xci/core/string.h>
 #include <xci/core/chrono.h>
 #include <xci/core/memory.h>
+#include <xci/core/sys.h>
 
 #include <string>
 #include <cstdio>
@@ -58,39 +59,40 @@ TEST_CASE( "Format char type", "[format]" )
 
 TEST_CASE( "read_binary_file", "[file]" )
 {
-    const char* filename = XCI_SHARE_DIR "/shaders/rectangle.vert.spv";
+    std::string filename = get_self_path();
+    INFO(filename);
     auto content = read_binary_file(filename);
     REQUIRE(bool(content));
 
     struct stat st = {};
-    ::stat(filename, &st);
+    ::stat(filename.c_str(), &st);
     CHECK(size_t(st.st_size) == content->size());
     CHECK(content.use_count() == 1);
 }
 
 
-TEST_CASE( "path_dirname", "[file]" )
+TEST_CASE( "path::dirname", "[file]" )
 {
-    CHECK(path_dirname("/dir/name/") == "/dir");
-    CHECK(path_dirname("/dir/name") == "/dir");
-    CHECK(path_dirname("name") == ".");
-    CHECK(path_dirname(".") == ".");
-    CHECK(path_dirname("..") == ".");
-    CHECK(path_dirname("/name") == "/");
+    CHECK(path::dirname("/dir/name/") == "/dir");
+    CHECK(path::dirname("/dir/name") == "/dir");
+    CHECK(path::dirname("name") == ".");
+    CHECK(path::dirname(".") == ".");
+    CHECK(path::dirname("..") == ".");
+    CHECK(path::dirname("/name") == "/");
 #ifdef _WIN32
-    CHECK(path_dirname("C:\\xyz\\fsd") == "C:\\xyz");
-    CHECK(path_dirname("C:\\xyz\\") == "C:\\");
+    CHECK(path::dirname("C:\\xyz\\fsd") == "C:\\xyz");
+    CHECK(path::dirname("C:\\xyz\\") == "C:\\");
 #endif
 }
 
 
-TEST_CASE( "path_basename", "[file]" )
+TEST_CASE( "path::basename", "[file]" )
 {
-    CHECK(path_basename("/dir/name/") == "name");
-    CHECK(path_basename("/dir/name") == "name");
-    CHECK(path_basename("/name") == "name");
-    CHECK(path_basename("name") == "name");
-    CHECK(path_basename(".") == ".");
+    CHECK(path::basename("/dir/name/") == "name");
+    CHECK(path::basename("/dir/name") == "name");
+    CHECK(path::basename("/name") == "name");
+    CHECK(path::basename("name") == "name");
+    CHECK(path::basename(".") == ".");
 }
 
 

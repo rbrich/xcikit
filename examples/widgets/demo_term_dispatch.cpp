@@ -54,7 +54,7 @@ int main()
 {
     Logger::init();
     Vfs vfs;
-    vfs.mount(XCI_SHARE_DIR);
+    vfs.mount(XCI_SHARE);
 
     Renderer renderer {vfs};
     Window window {renderer};
@@ -67,7 +67,7 @@ int main()
     const char* cmd = "while true ; do date ; sleep 1; done";
 
     TextTerminal terminal {theme};
-    terminal.add_text(get_cwd() + "> ");
+    terminal.add_text(path::getcwd() + "> ");
     terminal.set_font_style(TextTerminal::FontStyle::Bold);
     terminal.add_text(std::string(cmd) + "\n");
     terminal.set_font_style(TextTerminal::FontStyle::Regular);

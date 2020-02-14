@@ -17,6 +17,8 @@
 #include "file.h"
 #include <xci/core/log.h>
 #include <xci/core/string.h>
+#include <xci/core/sys.h>
+#include <xci/core/file.h>
 #include <xci/compat/bit.h>
 #include <xci/compat/endian.h>
 #include <xci/compat/macros.h>
@@ -48,7 +50,7 @@ vfs::RealDirectoryLoader::try_load(const std::string& path, bool is_dir, Magic)
 
 VfsFile vfs::RealDirectory::read_file(const std::string& path) const
 {
-    auto full_path = path_join(m_dir_path, path);
+    auto full_path = path::join(m_dir_path, path);
     log_debug("VfsDirLoader: open file: {}", full_path);
 
     // open the file
@@ -346,8 +348,23 @@ Vfs::Vfs(Loaders loaders)
 }
 
 
-bool Vfs::mount(const std::string& real_path, std::string target_path)
+bool Vfs::mount(const std::string& fs_path, std::string target_path)
 {
+    std::string real_path;
+    if (fs_path.empty() || fs_path[0] != '/') {
+        // handle relative path - it's relative to program binary,
+        // or its parent, or its parent's parent. The nearest matched parent wins.
+        std::string ups = "/";
+        for (int parent = 0; parent < 3; ++parent) {
+            real_path = path::realpath(path::dirname(get_self_path()) + ups + fs_path);
+            if (!real_path.empty())
+                break;
+            ups += "../";
+        }
+    } else {
+        real_path = fs_path;
+    }
+
     // Check path type
     struct stat st = {};
     if (::stat(real_path.c_str(), &st) == -1) {

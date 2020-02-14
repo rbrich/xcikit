@@ -21,6 +21,7 @@
 #include <cassert>
 #include <climits>
 #include <cstring>
+#include <cstdlib>
 
 namespace xci::core {
 
@@ -76,7 +77,10 @@ BufferPtr read_binary_file(std::istream& stream)
 }
 
 
-std::string path_dirname(std::string pathname)
+namespace path {
+
+
+std::string dirname(std::string pathname)
 {
     // dirname() may modify the argument, so we take it by value
     // (we also make sure that the internal value is null-terminated)
@@ -85,14 +89,14 @@ std::string path_dirname(std::string pathname)
 }
 
 
-std::string path_basename(std::string pathname)
+std::string basename(std::string pathname)
 {
     assert(pathname.c_str() == &pathname[0]);
     return ::basename(&pathname[0]);
 }
 
 
-std::string path_join(const std::string &part1, const std::string &part2)
+std::string join(const std::string &part1, const std::string &part2)
 {
     // Add separator between parts only if there is none already
     std::string sep = "/";
@@ -104,15 +108,25 @@ std::string path_join(const std::string &part1, const std::string &part2)
 }
 
 
-std::string get_cwd()
+std::string getcwd()
 {
     std::string result(PATH_MAX, ' ');
-    if (getcwd(&result[0], result.size()) == nullptr) {
+    if (::getcwd(&result[0], result.size()) == nullptr) {
         return std::string();
     }
     result.resize(strlen(result.data()));
     return result;
 }
 
+
+std::string realpath(const std::string& path)
+{
+    char buffer[PATH_MAX];
+    auto* res = ::realpath(path.c_str(), buffer);
+    return res == nullptr ? "" : res;
+}
+
+
+} // namespace path
 
 }  // namespace xci::core

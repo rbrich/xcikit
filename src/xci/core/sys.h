@@ -72,6 +72,9 @@ int pending_signals(std::initializer_list<int> signums);
 /// \return             the home dir or in case of error "/tmp"
 std::string get_home_dir();
 
+/// Retrieve absolute file path of currently running process.
+std::string get_self_path();
+
 /// Calls a variant of strerror(errno) and writes the obtained message
 /// into the stream.
 std::ostream& errno_str(std::ostream& stream);

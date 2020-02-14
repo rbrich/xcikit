@@ -33,7 +33,7 @@ using namespace xci::core;
 int main()
 {
     Vfs vfs;
-    vfs.mount(XCI_SHARE_DIR);
+    vfs.mount(XCI_SHARE);
 
     Renderer renderer {vfs};
     Window window {renderer};

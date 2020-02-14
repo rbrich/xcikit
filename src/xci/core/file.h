@@ -33,11 +33,15 @@ BufferPtr read_binary_file(const std::string& pathname);
 BufferPtr read_binary_file(std::istream& stream);
 
 
-std::string path_dirname(std::string pathname);
-std::string path_basename(std::string pathname);
-std::string path_join(const std::string &part1, const std::string &part2);
+namespace path {
 
-std::string get_cwd();
+std::string dirname(std::string pathname);
+std::string basename(std::string pathname);
+std::string join(const std::string &part1, const std::string &part2);
+std::string realpath(const std::string& path);
+std::string getcwd();
+
+} // namespace path
 
 
 }  // namespace xci::core
