@@ -75,6 +75,9 @@ std::string get_home_dir();
 /// Retrieve absolute file path of currently running process.
 std::string get_self_path();
 
+/// Get OS-specific temp directory (/tmp on Unix).
+std::string get_temp_path();
+
 /// Calls a variant of strerror(errno) and writes the obtained message
 /// into the stream.
 std::ostream& errno_str(std::ostream& stream);

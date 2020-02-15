@@ -11,6 +11,10 @@ add_executable(demo_argparser demo_argparser.cpp)
 target_link_libraries(demo_argparser xci-core)
 install(TARGETS demo_argparser EXPORT xcikit DESTINATION examples)
 
+add_executable(demo_dispatch demo_dispatch.cpp)
+target_link_libraries(demo_dispatch xci-core)
+install(TARGETS demo_dispatch EXPORT xcikit DESTINATION examples)
+
 add_executable(demo_log demo_log.cpp)
 target_link_libraries(demo_log xci-core)
 install(TARGETS demo_log EXPORT xcikit DESTINATION examples)

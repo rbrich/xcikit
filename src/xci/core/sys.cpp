@@ -148,6 +148,20 @@ std::ostream& last_error_str(std::ostream& stream)
 }
 
 
+std::string get_temp_path()
+{
+#ifdef _WIN32
+    char buffer[MAX_PATH];
+    auto ret = GetTempPath(MAX_PATH, buffer);
+    if (ret == 0)
+        return ".";
+    return buffer;
+#else
+    return "/tmp";
+#endif
+}
+
+
 std::string get_self_path()
 {
     // Reference:

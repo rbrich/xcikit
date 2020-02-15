@@ -15,6 +15,8 @@
 
 #define NOMINMAX
 #include <cstdlib>
+#include <fcntl.h>
+#include <sys/stat.h>
 #include <io.h>
 #include <direct.h>
 #include <windows.h>
@@ -22,6 +24,17 @@
 #pragma warning( disable : 4996 )  // The POSIX name for this item is deprecated.
 
 using ssize_t = long long;
+
+#define strcasecmp _stricmp
+#define strncasecmp _strnicmp
+
+#define STDIN_FILENO 0
+#define STDOUT_FILENO 1
+#define STDERR_FILENO 2
+
+#ifndef PATH_MAX
+#define PATH_MAX _MAX_PATH
+#endif
 
 inline unsigned int sleep(unsigned int seconds) { Sleep(seconds * 1000); return 0; }
 
@@ -35,6 +48,10 @@ inline ssize_t read(int fd, void *buf, size_t count) {
 
 inline ssize_t write(int fd, const void *buf, size_t count) {
      return (ssize_t)_write(fd, buf, (unsigned int)count);
+}
+
+inline int pipe(int pipefd[2]) {
+    return _pipe(pipefd, 4096, O_BINARY);
 }
 
 inline const char *dirname(char *path) {
@@ -66,16 +83,12 @@ inline const char *basename(char *path) {
     return path + (len - strlen(fname) - strlen(ext));
 }
 
-#define strcasecmp _stricmp
-#define strncasecmp _strnicmp
-
-#define STDIN_FILENO 0
-#define STDOUT_FILENO 1
-#define STDERR_FILENO 2
-
-#ifndef PATH_MAX
-#define PATH_MAX _MAX_PATH
-#endif
+inline int mkstemp(char *tmpl) {
+    if (_mktemp_s(tmpl, strlen(tmpl) + 1) != 0) {
+        return -1;
+    }
+    return open(tmpl, O_RDWR | O_CREAT | O_EXCL);
+}
 
 #endif  // _WIN32
 

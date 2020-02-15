@@ -66,9 +66,11 @@ private:
     struct Dir: public OVERLAPPED {
         Dir(HANDLE h, const std::string& name) : OVERLAPPED{}, h(h), name(name) {}  // NOLINT
 
-        HANDLE h;   // directory handle
+        HANDLE h;   // directory handle (INVALID_HANDLE_VALUE => invalid record)
         std::string name;  // watched directory
         std::byte notif_buffer[4000] = {};
+
+        bool is_invalid() const { return h == INVALID_HANDLE_VALUE; }
     };
     std::list<Dir> m_dir;
 };
