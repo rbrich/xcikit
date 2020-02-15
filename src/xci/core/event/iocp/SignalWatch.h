@@ -13,7 +13,9 @@
 namespace xci::core {
 
 
-/// `SignalWatch` implementation for kqueue(2) using EVFILT_SIGNAL
+/// `SignalWatch` implementation for IOCP using signal() handler
+/// This uses static storage, so there can be only a single
+/// instance per process.
 
 class SignalWatch: public Watch {
 public:
@@ -26,12 +28,10 @@ public:
 
     void _notify(LPOVERLAPPED overlapped) override;
 
+    EventLoop& _loop() const { return m_loop; }
+
 private:
-    struct Signal {
-        int signum;
-      //  sig_t func;
-    };
-    std::vector<Signal> m_signals;
+    std::vector<int> m_signals;
     Callback m_cb;
 };
 

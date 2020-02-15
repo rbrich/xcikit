@@ -58,6 +58,7 @@ void check_interpreter(const string& input, const string& expected_output)
         vfs.mount(XCI_SHARE);
 
         auto f = vfs.read_file("script/sys.ys");
+        REQUIRE(f.is_open());
         auto content = f.content();
         sys_module = interpreter.build_module("sys", content->string_view());
     }

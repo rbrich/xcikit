@@ -29,8 +29,8 @@ int main(int argc, char** argv)
         log_info("Timer: {} ms", elapsed.count());
     });
 
-    SignalWatch signal_watch(loop, {SIGTERM}, [&loop](int signum) {
-        (void) signum;
+    SignalWatch signal_watch(loop, {SIGTERM, SIGINT}, [&loop](int signum) {
+        log_info("Signal received: {}", signum);
         loop.terminate();
     });
 
