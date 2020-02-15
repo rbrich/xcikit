@@ -249,6 +249,8 @@ How to build:
 
 3) Still in *Git Bash*, run `./build.sh -D XCI_WITH_VULKAN=0`
 
+4) There will be errors. These are why the title says "Porting", not "How to build"...
+
 
 How to use in client program
 ----------------------------

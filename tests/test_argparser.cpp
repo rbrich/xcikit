@@ -256,7 +256,7 @@ TEST_CASE( "Parse args", "[ArgParser][parse_arg]" )
     bool verbose = false;
     bool warn = false;
     int optimize = 0;
-    std::vector<const char*> files;
+    std::vector<std::string_view> files;
 
     ArgParser ap {
             Option("-v, --verbose", "Enable verbosity", verbose),
@@ -279,7 +279,7 @@ TEST_CASE( "Parse args", "[ArgParser][parse_arg]" )
         CHECK(verbose);
         CHECK(warn);
         CHECK(optimize == 3);
-        CHECK(files == std::vector<const char*>{"file1", "file2"});
+        CHECK(files == std::vector<std::string_view>{"file1", "file2"});
 
         INFO("same option given again");
         CHECK_THROWS_AS(ap.parse_arg(ARGV("--optimize")), BadArgument);
@@ -288,7 +288,7 @@ TEST_CASE( "Parse args", "[ArgParser][parse_arg]" )
     SECTION("single hyphen is parsed as positional argument") {
         ap.add_option(Option("FILE...", "Input files", files));
         ap.parse_args(ARGV("-vwO3", "-", "file2"));
-        CHECK(files == std::vector<const char*>{"-", "file2"});
+        CHECK(files == std::vector<std::string_view>{"-", "file2"});
     }
 }
 

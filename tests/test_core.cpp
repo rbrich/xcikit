@@ -80,8 +80,8 @@ TEST_CASE( "path::dir_name", "[file]" )
     CHECK(path::dir_name("..") == ".");
     CHECK(path::dir_name("/name") == "/");
 #ifdef _WIN32
-    CHECK(path::dirname("C:\\xyz\\fsd") == "C:\\xyz");
-    CHECK(path::dirname("C:\\xyz\\") == "C:\\");
+    CHECK(path::dir_name("C:\\xyz\\fsd") == "C:\\xyz");
+    CHECK(path::dir_name("C:\\xyz\\") == "C:\\");
 #endif
 }
 
