@@ -40,7 +40,7 @@ cache:
 
 before_deploy:
   - conan user -p $CONAN_PASSWORD -r xcikit rbrich
-  - conan upload replxx/*@rbrich/stable --all --no-overwrite --check --confirm -r=xcikit
+  - conan upload '*/*@rbrich/stable' --all --no-overwrite --check --confirm -r=xcikit
 
 deploy:
   provider: releases
