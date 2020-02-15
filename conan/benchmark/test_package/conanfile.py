@@ -1,9 +1,10 @@
 from conans import ConanFile, CMake, tools
+import os
 
 
 class GoogleBenchmarkConanTest(ConanFile):
     settings = "os", "arch", "compiler", "build_type"
-    generators = "cmake_paths"
+    generators = "cmake"
 
     def build(self):
         cmake = CMake(self)
@@ -11,5 +12,4 @@ class GoogleBenchmarkConanTest(ConanFile):
         cmake.build()
 
     def test(self):
-        if not tools.cross_building(self.settings):
-            self.run("./example")
+        self.run(os.path.join("bin", "example"))

@@ -48,7 +48,8 @@ class GoogleBenchmarkConan(ConanFile):
         cmake.definitions["BENCHMARK_ENABLE_GTEST_TESTS"] = False
         cmake.definitions["BENCHMARK_ENABLE_LTO"] = self.options.enable_lto
         cmake.definitions["BENCHMARK_ENABLE_EXCEPTIONS"] = self.options.enable_exceptions
-        cmake.definitions["BENCHMARK_USE_LIBCXX"] = str(self.settings.compiler.libcxx) == "libc++"
+        cmake.definitions["BENCHMARK_USE_LIBCXX"] = \
+            self.settings.os != "Windows" and str(self.settings.compiler.libcxx) == "libc++"
         cmake.configure()
         return cmake
 

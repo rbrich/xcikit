@@ -225,6 +225,7 @@ private:
 ///
 /// References:
 /// - https://www.gnu.org/software/libc/manual/html_node/Argument-Syntax.html
+/// - https://github.com/CLIUtils/CLI11 (there are some similarities in concept)
 ///
 /// TODO:
 /// - conform to POSIX

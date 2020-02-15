@@ -173,12 +173,12 @@ Dependencies (required):
 
 Dependencies (optional):
 - libzip (XCI_WITH_ZIP)
-- Catch2 (for tests)
-- Google Benchmark (for benchmarks)
+- [Catch2](https://github.com/catchorg/Catch2) for tests
+- [Google Benchmark](https://github.com/google/benchmark)
 
-Installing dependencies:
-- Debian: `apt-get install libbenchmark-dev`
-- macOS (Homebrew): `brew install libzip google-benchmark`
+Installing optional dependencies:
+- Debian: `apt-get install libzip-dev`
+- macOS (Homebrew): `brew install libzip`
 
 
 ### Using build script
@@ -253,7 +253,7 @@ How to build:
 
 4) Configure and build with CMake:
    ```
-   cmake .. -DCMAKE_BUILD_TYPE=Debug -DXCI_WITH_VULKAN=0 -DBUILD_BENCHMARKS=0
+   cmake .. -DCMAKE_BUILD_TYPE=Debug -DXCI_WITH_VULKAN=0
    cmake --build .
    ```
 
