@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 
 set -e
-cd $(dirname $0)
+cd "$(dirname "$0")"
+
 ROOT_DIR="$PWD"
 BUILD_TYPE=MinSizeRel
 GENERATOR=
-which ninja >/dev/null && GENERATOR="Ninja"
-JOBS=
+command -v ninja >/dev/null && GENERATOR="Ninja"
+MAKE_ARGS=()
 CMAKE_ARGS=()
 
 print_usage()
@@ -24,7 +25,8 @@ phase()
 
 # parse args...
 phase_default=yes
-while [[ $# > 0 ]] ; do
+phase_all=
+while [[ $# -gt 0 ]] ; do
     case "$1" in
         all|deps|config|build|test|install|package )
             phase_default=
@@ -34,13 +36,13 @@ while [[ $# > 0 ]] ; do
             GENERATOR="$2"
             shift 2 ;;
         -j )
-            JOBS="-j $2"
+            MAKE_ARGS+=(-j "$2")
             shift 2 ;;
         -D )
             CMAKE_ARGS+=(-D "$2")
             shift 2 ;;
         * )
-            printf "Error: Unsupported option ${1}.\n\n"
+            printf "Error: Unsupported option: %s.\n\n" "$1"
             print_usage
             exit 1 ;;
     esac
@@ -70,13 +72,13 @@ mkdir -p "${BUILD_DIR}"
 
 if phase deps; then
     echo "=== Install Dependencies ==="
-    CONAN_SETTINGS=
+    CONAN_ARGS=(--build missing)
     if [[ -n "${MACOSX_DEPLOYMENT_TARGET}" ]]; then
-        CONAN_SETTINGS="-s os.version=${MACOSX_DEPLOYMENT_TARGET}"
+        CONAN_ARGS+=(-s "os.version=${MACOSX_DEPLOYMENT_TARGET}")
     fi
     (
         cd "${BUILD_DIR}"
-        conan install "${ROOT_DIR}" ${CONAN_SETTINGS} --build missing
+        conan install "${ROOT_DIR}" "${CONAN_ARGS[@]}"
     )
     echo
 fi
@@ -95,19 +97,19 @@ fi
 
 if phase build; then
     echo "=== Build ==="
-    cmake --build ${BUILD_DIR} -- ${JOBS}
+    cmake --build "${BUILD_DIR}" -- "${MAKE_ARGS[@]}"
     echo
 fi
 
 if phase test; then
     echo "=== Test ==="
-    cmake --build ${BUILD_DIR} --target test -- ${JOBS}
+    cmake --build "${BUILD_DIR}" --target test -- "${MAKE_ARGS[@]}"
     echo
 fi
 
 if phase install; then
     echo "=== Install ==="
-    cmake --build ${BUILD_DIR} --target install -- ${JOBS}
+    cmake --build "${BUILD_DIR}" --target install -- "${MAKE_ARGS[@]}"
     echo
 fi
 

@@ -3,7 +3,8 @@
 # Download/generate files required for build or runtime
 #
 
-cd $(dirname "$0")
+set -e
+cd "$(dirname "$0")"
 
 YES=0
 NO_CONAN_REMOTES=0
