@@ -6,19 +6,17 @@
 
 #include "sys.h"
 #include <xci/compat/macros.h>
+#include <xci/compat/unistd.h>
 #include <xci/config.h>
 #include <ostream>
 #include <cstring>
 
-// get_thread_id, get_self_path
+// get_thread_id
 #if defined(__linux__)
     #include <sys/syscall.h>
-    #include <linux/limits.h>
 #elif defined(__APPLE__)
     #include <pthread.h>
     #include <mach-o/dyld.h>
-#elif defined(_WIN32)
-    #include <windows.h>
 #endif
 
 // get_home_dir, *_signals
@@ -28,7 +26,6 @@
 #else
     #include <sys/types.h>
     #include <pwd.h>
-    #include <unistd.h>
 #endif
 
 namespace xci::core {
@@ -156,23 +153,29 @@ std::string get_self_path()
     // Reference:
     // - https://stackoverflow.com/questions/1023306/finding-current-executables-path-without-proc-self-exe
     // - https://stackoverflow.com/questions/933850/how-do-i-find-the-location-of-the-executable-in-c
-#if defined(__linux__)
     char path[PATH_MAX];
+#if defined(__linux__)
     ssize_t len = ::readlink("/proc/self/exe", path, sizeof(path));
     if (len == -1 || len == sizeof(path))
         len = 0;
     path[len] = '\0';
     return path;
 #elif defined(__APPLE__)
-    char path[PATH_MAX];
     uint32_t size = sizeof(path);
     if (_NSGetExecutablePath(path, &size) == 0)
         return path;
     else
-        return "";
+        return {};
+#elif defined(_WIN32)
+    if (GetModuleFileNameA(nullptr, path, sizeof(path)) != sizeof(path))
+        return path;
+    else {
+        assert(GetLastError() == ERROR_INSUFFICIENT_BUFFER);
+        return {};  // insufficient buffer size
+    }
 #else
-    // TODO
-    return std::string();
+    assert(!"get_self_path: not implemented for this platform");
+    return {};
 #endif
 }
 

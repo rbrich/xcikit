@@ -114,8 +114,8 @@ private:
     std::string m_seq;  // cached capability sequences
 
 #ifdef _WIN32
-    DWORD m_std_handle = 0;
-    DWORD m_orig_out_mode = 0;
+    unsigned long m_std_handle = 0;
+    unsigned long m_orig_out_mode = 0;
 #endif
 };
 

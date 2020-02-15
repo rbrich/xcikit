@@ -34,7 +34,7 @@ FSWatch::~FSWatch()
 bool FSWatch::add(const std::string& pathname, FSWatch::PathCallback cb)
 {
     // Is the directory already watched?
-    auto dir = path::dirname(pathname);
+    auto dir = path::dir_name(pathname);
     auto it = std::find_if(m_dir.begin(), m_dir.end(),
             [&dir](const Dir& d) { return d.name == dir; });
     HANDLE dir_h;
@@ -78,7 +78,7 @@ bool FSWatch::add(const std::string& pathname, FSWatch::PathCallback cb)
 bool FSWatch::remove(const std::string& pathname)
 {
     // Find dir record
-    auto dir = path::dirname(pathname);
+    auto dir = path::dir_name(pathname);
     HANDLE dir_h;
     {
         auto it = std::find_if(m_dir.begin(), m_dir.end(),

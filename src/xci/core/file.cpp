@@ -122,8 +122,31 @@ std::string get_cwd()
 std::string real_path(const std::string& path)
 {
     char buffer[PATH_MAX];
-    auto* res = ::realpath(path.c_str(), buffer);
+#ifdef _WIN32
+    auto h = CreateFileA(path.c_str(), 0,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            nullptr, OPEN_EXISTING,
+            FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+    if (h == INVALID_HANDLE_VALUE)
+        return {};  // path doesn't exist
+
+    auto len = GetFinalPathNameByHandleA(h, buffer, sizeof(buffer), FILE_NAME_NORMALIZED);
+    CloseHandle(h);
+
+    if (len == 0)
+        return {};  // unknown error
+    if (len > sizeof(buffer))
+        return {};  // buffer too small
+
+    // clean the path (the returned path uses the \?\ syntax)
+    if (strncmp(buffer, R"(\\?\)", 4) == 0)
+        return buffer + 4;
+    else
+        return buffer;
+#else
+    char* res = ::realpath(path.c_str(), buffer);
     return res == nullptr ? "" : res;
+#endif
 }
 
 

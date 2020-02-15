@@ -239,23 +239,15 @@ already work:
 
 How to build:
 
+0) Enable [Developer mode](https://docs.microsoft.com/en-us/windows/uwp/get-started/enable-your-device-for-development)
+   (required for ability to create symlinks)
+
 1) Install build tools via their Windows installers: Git, CMake, Conan
    (`git`, `cmake` and `conan` commands should now work in `cmd.exe`)
 
 2) Open *Git Bash* and run `./bootstrap.sh`
 
-3) Prepare build dir with dependencies:
-   ```
-   mkdir build
-   cd build
-   conan install .. --build missing
-   ```
-
-4) Configure and build with CMake:
-   ```
-   cmake .. -DCMAKE_BUILD_TYPE=Debug -DXCI_WITH_VULKAN=0
-   cmake --build .
-   ```
+3) Still in *Git Bash*, run `./build.sh -D XCI_WITH_VULKAN=0`
 
 
 How to use in client program
