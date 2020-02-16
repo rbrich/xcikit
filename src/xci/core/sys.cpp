@@ -75,7 +75,7 @@ int pending_signals(std::initializer_list<int> signums)
     return 0;
 #else
     UNUSED signums;
-    assert(!"block_signals: Not implemented");
+    assert(!"pending_signals: Not implemented");
     return 0;
 #endif
 }

@@ -207,7 +207,7 @@ public:
     ///
     /// If fs_path is relative (not begining with '/'), then it's translated
     /// to absolute path using simple lookup, starting with program's location,
-    /// then checking its parents (up to hardcoded limit, which is 3 levels
+    /// then checking its parents (up to hardcoded limit, which is 5 levels
     /// at this time).
     ///
     /// The path can point to an archive instead of directory.

@@ -68,9 +68,9 @@ SignalWatch::~SignalWatch()
 {
     for (int sig: m_signals) {
         if (sig == SIGINT) {
-            // register console handler for Ctrl-C
             auto ret = SetConsoleCtrlHandler(_console_handler, FALSE);
-            assert(ret != 0);  (void) ret;
+            assert(ret != 0);
+            (void) ret;
             continue;
         }
         signal(sig, SIG_DFL);
