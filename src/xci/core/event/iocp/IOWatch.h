@@ -14,6 +14,7 @@ namespace xci::core {
 
 
 /// Watch for read/write events
+/// THIS IS NOT IMPLEMENTED WITH IOCP
 
 class IOWatch: public Watch {
 public:

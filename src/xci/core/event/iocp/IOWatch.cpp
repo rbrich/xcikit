@@ -6,6 +6,7 @@
 
 #include "IOWatch.h"
 #include <xci/core/log.h>
+#include <cassert>
 
 namespace xci::core {
 
@@ -13,7 +14,10 @@ namespace xci::core {
 IOWatch::IOWatch(EventLoop& loop, int fd, Flags flags, Callback cb)
     : Watch(loop), m_fd(fd), m_cb(std::move(cb))
 {
-
+    // TODO: either translate fd to HANDLE (_get_osfhandle)
+    //       or change interface to more generic type
+    // TODO: use ReadFile / WriteFile with overlapped
+    assert(!"not implemented!");
 }
 
 

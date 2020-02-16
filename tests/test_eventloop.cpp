@@ -27,6 +27,7 @@ using namespace xci::core;
 using std::this_thread::sleep_for;
 
 
+#ifndef _WIN32
 TEST_CASE( "IO events", "[core][event][IOWatch]" )
 {
     EventLoop loop;
@@ -51,6 +52,7 @@ TEST_CASE( "IO events", "[core][event][IOWatch]" )
     ::close(pipe_rw[0]);
     ::close(pipe_rw[1]);
 }
+#endif
 
 
 TEST_CASE( "Timer events", "[.][core][event][TimerWatch]" )
