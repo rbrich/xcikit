@@ -6,12 +6,21 @@
 set -e
 cd "$(dirname "$0")"
 
+print_usage()
+{
+    echo "Usage: ./bootstrap.sh [-y] [--no-conan-remotes]"
+}
+
 YES=0
 NO_CONAN_REMOTES=0
 while [[ $# > 0 ]] ; do
     case "$1" in
         -y )                    YES=1;                  shift;;
-        --no-conan-remotes)     NO_CONAN_REMOTES=1;     shift;;
+        --no-conan-remotes )    NO_CONAN_REMOTES=1;     shift;;
+        * )
+            printf "Error: Unsupported option: %s.\n\n" "$1"
+            print_usage
+            exit 1 ;;
     esac
 done
 
