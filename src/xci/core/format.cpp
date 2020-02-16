@@ -14,10 +14,9 @@
 // limitations under the License.
 
 #include "format.h"
+#include <xci/core/sys.h>
 
 #include <tao/pegtl.hpp>
-
-#include <cstring>
 
 namespace xci::core::format_impl {
 
@@ -111,23 +110,9 @@ bool parse_placeholder(Context& ctx)
 
     try {
         return tao::pegtl::parse< Grammar, Action >( in, ctx );
-    } catch (tao::pegtl::parse_error& error) {
+    } catch (tao::pegtl::parse_error&) {
         return false;
     }
-}
-
-
-std::ostream& strerror(std::ostream& stream)
-{
-    char buf[100] = {};
-#if _GNU_SOURCE
-    return stream << strerror_r(errno, buf, sizeof buf);
-#else
-    if (strerror_r(errno, buf, sizeof buf) == 0) {
-        stream << buf;
-    }
-    return stream;
-#endif
 }
 
 
@@ -142,7 +127,10 @@ bool partial_format(const char*& fmt, Context& ctx)
                 ++fmt;
                 if (ctx.placeholder == "m") {
                     // "{m}" -> strerror
-                    ctx.stream << strerror;
+                    ctx.stream << errno_str;
+                } else if (ctx.placeholder == "mm") {
+                    // "{mm}" -> strerror / GetLastError
+                    ctx.stream << last_error_str;
                 } else {
                     // Leave other placeholders for processing by caller
                     parse_placeholder(ctx);

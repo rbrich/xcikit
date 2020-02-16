@@ -131,8 +131,8 @@ bool TextInput::key_event(View& view, const KeyEvent& ev)
     switch (ev.key) {
         case Key::Backspace:
             if (m_cursor > 0) {
-                auto pos = m_text.rbegin() + m_text.size() - m_cursor;
-                auto prev = m_text.rbegin() + m_text.size() - utf8_prev(pos);
+                auto pos = m_text.crbegin() + m_text.size() - m_cursor;
+                auto prev = m_text.crbegin() + m_text.size() - utf8_prev(pos);
                 m_text.erase(prev, m_cursor - prev);
                 m_cursor = prev;
                 break;
@@ -141,7 +141,7 @@ bool TextInput::key_event(View& view, const KeyEvent& ev)
 
         case Key::Delete:
             if (m_cursor < m_text.size()) {
-                auto next = utf8_next(m_text.data() + m_cursor) - m_text.data();
+                auto next = utf8_next(m_text.cbegin() + m_cursor) - m_text.cbegin();
                 m_text.erase(m_cursor, next - m_cursor);
                 break;
             }
@@ -149,15 +149,15 @@ bool TextInput::key_event(View& view, const KeyEvent& ev)
 
         case Key::Left:
             if (m_cursor > 0) {
-                auto pos = m_text.rbegin() + m_text.size() - m_cursor;
-                m_cursor = m_text.rbegin() + m_text.size() - utf8_prev(pos);
+                auto pos = m_text.crbegin() + m_text.size() - m_cursor;
+                m_cursor = m_text.crbegin() + m_text.size() - utf8_prev(pos);
                 break;
             }
             return true;
 
         case Key::Right:
             if (m_cursor < m_text.size()) {
-                m_cursor = utf8_next(m_text.data() + m_cursor) - m_text.data();
+                m_cursor = utf8_next(m_text.cbegin() + m_cursor) - m_text.cbegin();
                 break;
             }
             return true;

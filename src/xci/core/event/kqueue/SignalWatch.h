@@ -18,6 +18,7 @@
 
 #include "EventLoop.h"
 #include <functional>
+#include <vector>
 
 namespace xci::core {
 

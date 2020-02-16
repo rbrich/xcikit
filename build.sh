@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 
 set -e
-cd $(dirname $0)
+cd "$(dirname "$0")"
+
 ROOT_DIR="$PWD"
 BUILD_TYPE=MinSizeRel
-GENERATOR="Unix Makefiles"
-which ninja >/dev/null && GENERATOR="Ninja"
-JOBS=
+GENERATOR=
+command -v ninja >/dev/null && GENERATOR="Ninja"
+MAKE_ARGS=()
 CMAKE_ARGS=()
 
 print_usage()
@@ -24,7 +25,8 @@ phase()
 
 # parse args...
 phase_default=yes
-while [[ $# > 0 ]] ; do
+phase_all=
+while [[ $# -gt 0 ]] ; do
     case "$1" in
         all|deps|config|build|test|install|package )
             phase_default=
@@ -34,13 +36,13 @@ while [[ $# > 0 ]] ; do
             GENERATOR="$2"
             shift 2 ;;
         -j )
-            JOBS="-j $2"
+            MAKE_ARGS+=(-j "$2")
             shift 2 ;;
         -D )
             CMAKE_ARGS+=(-D "$2")
             shift 2 ;;
         * )
-            printf "Error: Unsupported option ${1}.\n\n"
+            printf "Error: Unsupported option: %s.\n\n" "$1"
             print_usage
             exit 1 ;;
     esac
@@ -53,11 +55,12 @@ PLATFORM="$(uname)"
 [[ ${PLATFORM} = "Darwin" ]] && PLATFORM="macos${MACOSX_DEPLOYMENT_TARGET}"
 VERSION=$(conan inspect . --raw version)$(git rev-parse --short HEAD 2>/dev/null | sed 's/^/+/' ; :)
 BUILD_CONFIG="${PLATFORM}-${ARCH}-${BUILD_TYPE}"
-[[ "${GENERATOR}" != "Unix Makefiles" ]] && BUILD_CONFIG="${BUILD_CONFIG}_${GENERATOR}"
+[[ -n "${GENERATOR}" ]] && BUILD_CONFIG="${BUILD_CONFIG}_${GENERATOR}"
 BUILD_DIR="${ROOT_DIR}/build/${BUILD_CONFIG}"
 INSTALL_DIR="${ROOT_DIR}/artifacts/${BUILD_CONFIG}"
 PACKAGE_DIR="xcikit-${VERSION}"
 PACKAGE_NAME="${PACKAGE_DIR}-${PLATFORM}-${ARCH}.zip"
+[[ -n "${GENERATOR}" ]] && CMAKE_ARGS+=(-G "${GENERATOR}")
 
 echo "BUILD_CONFIG: ${BUILD_CONFIG}"
 echo "BUILD_DIR:    ${BUILD_DIR}"
@@ -69,13 +72,13 @@ mkdir -p "${BUILD_DIR}"
 
 if phase deps; then
     echo "=== Install Dependencies ==="
-    CONAN_SETTINGS=
+    CONAN_ARGS=(--build missing)
     if [[ -n "${MACOSX_DEPLOYMENT_TARGET}" ]]; then
-        CONAN_SETTINGS="-s os.version=${MACOSX_DEPLOYMENT_TARGET}"
+        CONAN_ARGS+=(-s "os.version=${MACOSX_DEPLOYMENT_TARGET}")
     fi
     (
         cd "${BUILD_DIR}"
-        conan install "${ROOT_DIR}" ${CONAN_SETTINGS} --build missing
+        conan install "${ROOT_DIR}" "${CONAN_ARGS[@]}"
     )
     echo
 fi
@@ -85,29 +88,28 @@ if phase config; then
     (
         cd "${BUILD_DIR}"
         cmake "${ROOT_DIR}" \
-            -G "${GENERATOR}" \
+            "${CMAKE_ARGS[@]}" \
             -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-            -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-            "${CMAKE_ARGS[@]}"
+            -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
     )
     echo
 fi
 
 if phase build; then
     echo "=== Build ==="
-    cmake --build ${BUILD_DIR} -- ${JOBS}
+    cmake --build "${BUILD_DIR}" -- "${MAKE_ARGS[@]}"
     echo
 fi
 
 if phase test; then
     echo "=== Test ==="
-    cmake --build ${BUILD_DIR} --target test -- ${JOBS}
+    cmake --build "${BUILD_DIR}" --target test -- "${MAKE_ARGS[@]}"
     echo
 fi
 
 if phase install; then
     echo "=== Install ==="
-    cmake --build ${BUILD_DIR} --target install -- ${JOBS}
+    cmake --build "${BUILD_DIR}" --target install -- "${MAKE_ARGS[@]}"
     echo
 fi
 
@@ -117,7 +119,7 @@ if phase package; then
         cd "${INSTALL_DIR}/.."
         mv "${INSTALL_DIR}" "${PACKAGE_DIR}"
         rm -f "${PACKAGE_NAME}"
-        zip --move -r "${PACKAGE_NAME}" ${PACKAGE_DIR}
+        zip --move -r "${PACKAGE_NAME}" "${PACKAGE_DIR}"
     )
     echo
 fi

@@ -14,6 +14,7 @@ Collection of C++ libraries for drawing 2D graphics, rendering text and more.
 - [How to build](#how-to-build)
     - [Using build script](#using-build-script)
     - [Manual build with CMake](#manual-build-with-cmake)
+    - [Porting to Windows](#porting-to-windows)
 - [How to use in client program](#how-to-use-in-client-program)
     - [Linking with client using only CMake](#linking-with-client-using-only-cmake)
     - [Linking with client using CMake and Conan](#linking-with-client-using-cmake-and-conan)
@@ -167,15 +168,17 @@ Dependencies (required):
 - PEGTL (xci-core)
 - FreeType (xci-text)
 - GLFW, Vulkan (xci-graphics)
+- [glslc](https://github.com/google/shaderc) or
+  [glslangValidator](https://github.com/KhronosGroup/glslang) (xci-graphics)
 
 Dependencies (optional):
 - libzip (XCI_WITH_ZIP)
-- Catch2 (for tests)
-- Google Benchmark (for benchmarks)
+- [Catch2](https://github.com/catchorg/Catch2) for tests
+- [Google Benchmark](https://github.com/google/benchmark)
 
-Installing dependencies:
-- Debian: `apt-get install libbenchmark-dev`
-- macOS (Homebrew): `brew install libzip google-benchmark`
+Installing optional dependencies:
+- Debian: `apt-get install libzip-dev`
+- macOS (Homebrew): `brew install libzip`
 
 
 ### Using build script
@@ -222,6 +225,31 @@ Detailed build steps (these are examples, adjust parameters as needed):
     
     # Install (default prefix is /usr/local)
     cmake --build . --target install
+
+
+### Porting to Windows
+
+The project is not yet fully ported to Windows. But the essential parts should
+already work:
+
+- dependencies via Conan
+- build scripts (using git-bash)
+- CMake configuration and build
+- core and script libraries + demos
+
+How to build:
+
+0) Enable [Developer mode](https://docs.microsoft.com/en-us/windows/uwp/get-started/enable-your-device-for-development)
+   (required for ability to create symlinks)
+
+1) Install build tools via their Windows installers: Git, CMake, Conan
+   (`git`, `cmake` and `conan` commands should now work in `cmd.exe`)
+
+2) Open *Git Bash* and run `./bootstrap.sh`
+
+3) Still in *Git Bash*, run `./build.sh -D XCI_WITH_VULKAN=0`
+
+4) There will be errors. These are why the title says "Porting", not "How to build"...
 
 
 How to use in client program

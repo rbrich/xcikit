@@ -5,17 +5,18 @@ option(XCI_WITH_VULKAN "Build libxci-graphics. Requires Vulkan and GLFW." ON)
 option(XCI_WITH_TINFO "Link with TInfo (from NCurses) and use it for TTY control sequences." OFF)
 option(XCI_WITH_ZIP "Link xci-core with libzip and use it for ZIP format in VFS." OFF)
 
-set(XCI_SHARE_DIR "${CMAKE_CURRENT_LIST_DIR}/share" CACHE PATH "Location of share dir (runtime data)")
-option(XCI_DEBUG_VULKAN "Log info about Vulkan calls and errors." OFF)
+option(XCI_INSTALL_SHARE_DIR "Install runtime data as a directory (share/xcikit)" OFF)
+option(XCI_INSTALL_SHARE_DAR "Install runtime data as DAR archive (share.dar)" ON)
+option(XCI_INSTALL_SHARE_ZIP "Install runtime data as ZIP archive (share.zip)" OFF)
 option(XCI_EMBED_SHADERS "Embed shader files into binaries to avoid dependency on share dir." OFF)
+
+option(XCI_DEBUG_VULKAN "Log info about Vulkan calls and errors." OFF)
 option(XCI_DEBUG_TRACE "Enable trace log messages." OFF)
 option(XCI_DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra \
-    -Wno-unused-parameter -Wno-missing-field-initializers")
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(XciBuildOptions)
@@ -40,14 +41,15 @@ find_package(pegtl REQUIRED)
 # range-v3
 find_package(range-v3 REQUIRED)
 
-# docopt
-find_package(Docopt REQUIRED)
-
 # Catch
-find_package(Catch2)
+if (BUILD_TESTS)
+    find_package(Catch2)
+endif()
 
 # Google Benchmark
-find_package(benchmark)
+if (BUILD_BENCHMARKS)
+    find_package(benchmark)
+endif ()
 
 # Doxygen
 find_package(Doxygen)
@@ -58,8 +60,37 @@ if (XCI_WITH_TINFO)
     pkg_check_modules(TINFO REQUIRED tinfo)
 endif ()
 
+if (WIN32)
+    add_subdirectory(ext/mman-win32)
+endif()
+
+# Run configuration checks
+include(XciBuildChecks)
+
+
+# ------------ #
+# Assets       #
+# ------------ #
+
+add_subdirectory(share)
+
+# Location of share dir / archives
+set(XCI_SHARE_DIR "share/xcikit")
+set(XCI_SHARE_DAR "share/xcikit/share.dar")
+set(XCI_SHARE_ZIP "share/xcikit/share.zip")
+
+set(XCI_SHARE)
+if (XCI_INSTALL_SHARE_DIR)
+    set(XCI_SHARE "${XCI_SHARE_DIR}")
+elseif (XCI_INSTALL_SHARE_DAR)
+    set(XCI_SHARE "${XCI_SHARE_DAR}")
+elseif (XCI_INSTALL_SHARE_ZIP)
+    set(XCI_SHARE "${XCI_SHARE_ZIP}")
+endif()
+
 # Generate config.h
 configure_file(config.h.in include/xci/config.h)
+
 
 # ------------ #
 # Libraries    #
@@ -92,8 +123,9 @@ endif()
 # Examples     #
 # ------------ #
 
-add_subdirectory(examples)
-
+if (BUILD_EXAMPLES)
+    add_subdirectory(examples)
+endif()
 
 # ------------ #
 # Tests        #
@@ -168,7 +200,3 @@ install(FILES
 
 # Make our CMake modules available to clients
 install(FILES cmake/XciBuildOptions.cmake DESTINATION lib/cmake/xcikit)
-
-# Data (share)
-install(DIRECTORY share/fonts DESTINATION share/xcikit)
-install(DIRECTORY share/shaders DESTINATION share/xcikit)

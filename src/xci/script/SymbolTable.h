@@ -22,7 +22,6 @@
 
 namespace xci::script {
 
-
 class Symbol;
 class SymbolTable;
 class Function;
@@ -131,8 +130,7 @@ private:
 class SymbolTable {
 public:
     SymbolTable() = default;
-    explicit SymbolTable(std::string name, SymbolTable* parent = nullptr)
-        : m_name(std::move(name)), m_parent(parent) {}
+    explicit SymbolTable(std::string name, SymbolTable* parent = nullptr);
 
     void set_name(const std::string& name) { m_name = name; }
     const std::string& name() const { return m_name; }

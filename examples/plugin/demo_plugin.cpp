@@ -16,15 +16,19 @@
 #include <xci/core/SharedLibrary.h>
 #include <xci/core/dispatch.h>
 #include <xci/core/log.h>
+#include <xci/compat/unistd.h>
 #include <functional>
 #include <atomic>
 #include <csignal>
-#include <unistd.h>
 
 using namespace xci::core;
 using namespace xci::core::log;
 
-static const char* filename = XCI_DEMO_PLUGINS "/libpluggable.so";
+#ifdef _WIN32
+static const char* filename = "./pluggable.dll";
+#else
+static const char* filename = "./libpluggable.so";
+#endif
 std::atomic_bool done {false};
 std::atomic_bool reload {false};
 
@@ -39,6 +43,7 @@ int main()
 
     SharedLibrary lib;
 
+    log_info("Load: {}", filename);
     if (!lib.open(filename))
         return EXIT_FAILURE;
 

@@ -244,7 +244,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                 auto len = lhs.length();
                 lhs.decref();
                 if (idx < 0)
-                    idx += len;
+                    idx += (int) len;
                 if (idx < 0 || (size_t) idx >= len)
                     throw IndexOutOfBounds(idx, len);
                 m_stack.push(*lhs.get(idx));

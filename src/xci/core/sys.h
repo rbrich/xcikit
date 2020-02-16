@@ -33,6 +33,8 @@ namespace xci::core {
     using ThreadId = pid_t;
 #elif defined(__APPLE__)
     using ThreadId = uint64_t;
+#elif defined(_WIN32)
+    using ThreadId = unsigned long;
 #endif
 
 /// Get integral thread ID of this thread
@@ -70,6 +72,19 @@ int pending_signals(std::initializer_list<int> signums);
 /// \return             the home dir or in case of error "/tmp"
 std::string get_home_dir();
 
+/// Retrieve absolute file path of currently running process.
+std::string get_self_path();
+
+/// Get OS-specific temp directory (/tmp on Unix).
+std::string get_temp_path();
+
+/// Calls a variant of strerror(errno) and writes the obtained message
+/// into the stream.
+std::ostream& errno_str(std::ostream& stream);
+
+/// Same as `errno_str`, but on Windows, this version uses GetLastError
+/// to obtain the error code.
+std::ostream& last_error_str(std::ostream& stream);
 
 }  // namespace xci::core
 

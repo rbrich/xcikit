@@ -42,7 +42,7 @@ void Function::add_parameter(string name, TypeInfo&& type_info)
 
 size_t Function::raw_size_of_parameters() const
 {
-    return std::accumulate(m_signature->params.begin(), m_signature->params.end(), 0,
+    return std::accumulate(m_signature->params.begin(), m_signature->params.end(), size_t(0),
                [](size_t init, const TypeInfo& ti) { return init + ti.size(); });
 }
 
@@ -69,7 +69,7 @@ void Function::add_nonlocal(TypeInfo&& type_info)
 
 size_t Function::raw_size_of_nonlocals() const
 {
-    return std::accumulate(nonlocals().begin(), nonlocals().end(), 0,
+    return std::accumulate(nonlocals().begin(), nonlocals().end(), size_t(0),
             [](size_t init, const TypeInfo& ti) { return init + ti.size(); });
 }
 
@@ -96,7 +96,7 @@ void Function::add_partial(TypeInfo&& type_info)
 
 size_t Function::raw_size_of_partial() const
 {
-    return std::accumulate(partial().begin(), partial().end(), 0,
+    return std::accumulate(partial().begin(), partial().end(), size_t(0),
             [](size_t init, const TypeInfo& ti) { return init + ti.size(); });
 }
 

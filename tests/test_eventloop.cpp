@@ -18,14 +18,16 @@
 
 #include <xci/core/event.h>
 #include <xci/core/chrono.h>
+#include <xci/core/sys.h>
+#include <xci/compat/unistd.h>
 
 #include <thread>
-#include <unistd.h>
 
 using namespace xci::core;
 using std::this_thread::sleep_for;
 
 
+#ifndef _WIN32
 TEST_CASE( "IO events", "[core][event][IOWatch]" )
 {
     EventLoop loop;
@@ -42,7 +44,7 @@ TEST_CASE( "IO events", "[core][event][IOWatch]" )
     });
 
     char data[] = {1, 0};
-    ::write(pipe_rw[1], data, 1);
+    ::write(pipe_rw[1], data, 1u);
 
     loop.run();
 
@@ -50,6 +52,7 @@ TEST_CASE( "IO events", "[core][event][IOWatch]" )
     ::close(pipe_rw[0]);
     ::close(pipe_rw[1]);
 }
+#endif
 
 
 TEST_CASE( "Timer events", "[.][core][event][TimerWatch]" )
@@ -80,7 +83,10 @@ TEST_CASE( "FS events", "[.][core][event][FSWatch]" )
     EventLoop loop;
 
     FSWatch::Event expected_events[] = {
+            FSWatch::Event::Create,  // first open
+#ifndef _WIN32
             FSWatch::Event::Modify,  // one
+#endif
             FSWatch::Event::Modify,  // two
             FSWatch::Event::Modify,  // three
             FSWatch::Event::Delete,  // unlink
@@ -88,8 +94,8 @@ TEST_CASE( "FS events", "[.][core][event][FSWatch]" )
     size_t ev_ptr = 0;
     size_t ev_size = sizeof(expected_events) / sizeof(expected_events[0]);
 
-    std::string tmpname = "/tmp/xci_test_filewatch.XXXXXX";
-    close(mkstemp(&tmpname[0]));
+    std::string tmpname = get_temp_path() + "/xci_test_filewatch.XXXXXX";
+    mktemp(&tmpname[0]);
 
     FSWatch fs_watch(loop);
     fs_watch.add(tmpname,

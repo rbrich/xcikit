@@ -55,9 +55,10 @@ void check_interpreter(const string& input, const string& expected_output)
     if (!sys_module) {
         Logger::init(Logger::Level::Warning);
         Vfs vfs;
-        vfs.mount(XCI_SHARE_DIR);
+        vfs.mount(XCI_SHARE);
 
         auto f = vfs.read_file("script/sys.ys");
+        REQUIRE(f.is_open());
         auto content = f.content();
         sys_module = interpreter.build_module("sys", content->string_view());
     }
@@ -70,7 +71,7 @@ void check_interpreter(const string& input, const string& expected_output)
         });
         os << *result;
         result->decref();
-    } catch (const Error& e) {
+    } catch (const ScriptError& e) {
         INFO(e.what());
         INFO(e.detail());
         FAIL("Exception thrown.");
@@ -348,7 +349,7 @@ TEST_CASE( "Native to TypeInfo mapping", "[script][native]" )
     CHECK(native::make_type_info<char16_t>().type() == Type::Char);
     CHECK(native::make_type_info<char32_t>().type() == Type::Char);
     CHECK(native::make_type_info<int>().type() == Type::Int32);  // depends on sizeof(int)
-    CHECK(native::make_type_info<long>().type() == Type::Int64);  // depends on sizeof(long)
+    CHECK(native::make_type_info<long long>().type() == Type::Int64);  // depends on sizeof(long long)
     CHECK(native::make_type_info<int32_t>().type() == Type::Int32);
     CHECK(native::make_type_info<int64_t>().type() == Type::Int64);
     CHECK(native::make_type_info<float>().type() == Type::Float32);
@@ -366,7 +367,7 @@ TEST_CASE( "Native to Value mapping", "[script][native]" )
     CHECK(native::ValueType<uint8_t>(255).value() == 255);
     CHECK(native::ValueType<char>('y').value() == 'y');
     CHECK(native::ValueType<int32_t>(-1).value() == -1);
-    CHECK(native::ValueType<int64_t>(1l << 60).value() == 1l << 60);
+    CHECK(native::ValueType<int64_t>(1ll << 60).value() == 1ll << 60);
     CHECK(native::ValueType<float>(3.14f).value() == 3.14f);
     CHECK(native::ValueType<double>(2./3).value() == 2./3);
     CHECK(native::ValueType<std::string>("test"s).value() == "test"s);

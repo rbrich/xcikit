@@ -1,23 +1,24 @@
-# docker build -t rbrich/xcikit-debian:buster .
+# docker build -t xcikit-debian:buster .
+# docker run --rm -v $PWD/../..:/xcikit -it xcikit-debian:buster bash
 
 FROM debian:buster-slim
 
 # Setup APT
-RUN apt update
-RUN printf 'APT::Get::Install-Recommends "false";\nAPT::Get::Install-Suggests "false";\n' >> '/etc/apt/apt.conf.d/recommends'
+RUN apt-get update
+RUN printf 'APT::Get::Install-Recommends "false";\nAPT::Get::Install-Suggests "false";\n' \
+    >> '/etc/apt/apt.conf.d/recommends'
 
 # Install development tools
-RUN apt install -y g++ git zip curl ca-certificates cmake ninja-build python3
+RUN apt-get install -y g++ git zip curl ca-certificates \
+    cmake ninja-build python3-pip glslang-tools
 
 # Install xcikit dependencies
-RUN apt install -y libfreetype6-dev libglfw3-dev
+RUN apt-get install -y libfreetype6-dev libglfw3-dev libbenchmark-dev
 
-# Install Conan 1.17
-RUN curl -LO https://dl.bintray.com/conan/installers/conan-ubuntu-64_1_17_0.deb && \
-    dpkg -i conan-ubuntu-64_1_17_0.deb && \
-    rm conan-ubuntu-64_1_17_0.deb
+# Install Conan
+RUN pip3 --no-cache-dir install conan
 RUN conan profile new default --detect
 RUN conan profile update "settings.compiler.libcxx=libstdc++11" default
 
 # Cleanup
-RUN apt clean
+RUN apt-get clean

@@ -10,6 +10,9 @@
 
 // Location of share dir (runtime data)
 #cmakedefine XCI_SHARE_DIR "@XCI_SHARE_DIR@"
+#cmakedefine XCI_SHARE_DAR "@XCI_SHARE_DAR@"
+#cmakedefine XCI_SHARE_ZIP "@XCI_SHARE_ZIP@"
+#cmakedefine XCI_SHARE "@XCI_SHARE@"
 
 // Embed shader files into binaries to avoid dependency on share dir
 #cmakedefine XCI_EMBED_SHADERS
@@ -18,5 +21,9 @@
 #cmakedefine XCI_DEBUG_TRACE
 #cmakedefine XCI_DEBUG_MARKUP_DUMP_TOKENS
 #cmakedefine XCI_DEBUG_VULKAN
+
+// Compatibility checks
+#cmakedefine HAVE_GNU_STRERROR_R
+#cmakedefine HAVE_XSI_STRERROR_R
 
 #endif //XCI_CONFIG_H

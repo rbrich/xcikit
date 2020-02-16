@@ -37,7 +37,7 @@ size_t TypeInfo::size() const
         case Type::String:      return sizeof(byte*) + sizeof(size_t);
         case Type::List:        return sizeof(byte*) + sizeof(size_t);
         case Type::Tuple:
-            return accumulate(m_subtypes.begin(), m_subtypes.end(), 0,
+            return accumulate(m_subtypes.begin(), m_subtypes.end(), size_t(0),
                               [](size_t init, const TypeInfo& ti)
                               { return init + ti.size(); });
         case Type::Function:    return sizeof(byte*) + sizeof(void*);
