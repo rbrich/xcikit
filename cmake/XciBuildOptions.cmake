@@ -104,7 +104,9 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif ()
 
 # To get useful debuginfo, we need frame pointer
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer")
+if (NOT MSVC)
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer")
+endif()
 
 # Doh!
 if (MSVC)

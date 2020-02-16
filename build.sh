@@ -9,18 +9,19 @@ GENERATOR=
 command -v ninja >/dev/null && GENERATOR="Ninja"
 MAKE_ARGS=()
 CMAKE_ARGS=()
+CTEST_ARGS=()
 
 print_usage()
 {
     echo "Usage: ./build.sh [<phase>, ...] [-G <cmake_generator>] [-j <jobs>] [-D <cmake_def>, ...]"
-    echo "Where: <phase> = deps | config | build | test | install | package (default: deps..install)"
+    echo "Where: <phase> = clean | deps | config | build | test | install | package (default: deps..install)"
     echo "       <cmake_generator> = \"Unix Makefiles\" | Ninja | ... (default: Ninja if available, Unix Makefiles otherwise)"
 }
 
 phase()
 {
     local PHASE="phase_$1"
-    test -n "${!PHASE}" -o -n "${phase_all}" -o \( -n "${phase_default}" -a "$1" != "package" \)
+    test -n "${!PHASE}" -o -n "${phase_all}" -o \( -n "${phase_default}" -a "$1" != "clean" -a "$1" != "package" \)
 }
 
 # parse args...
@@ -28,7 +29,7 @@ phase_default=yes
 phase_all=
 while [[ $# -gt 0 ]] ; do
     case "$1" in
-        all|deps|config|build|test|install|package )
+        all|clean|deps|config|build|test|install|package )
             phase_default=
             declare "phase_$1=yes"
             shift 1 ;;
@@ -37,6 +38,7 @@ while [[ $# -gt 0 ]] ; do
             shift 2 ;;
         -j )
             MAKE_ARGS+=(-j "$2")
+            CTEST_ARGS+=(-j "$2")
             shift 2 ;;
         -D )
             CMAKE_ARGS+=(-D "$2")
@@ -68,6 +70,12 @@ echo "INSTALL_DIR:  ${INSTALL_DIR}"
 phase package && echo "PACKAGE_NAME: ${PACKAGE_NAME}"
 echo
 
+if phase clean; then
+    echo "=== Clean Previous Build ==="
+    rm -vrf "${BUILD_DIR}"
+    rm -vrf "${INSTALL_DIR}"
+fi
+
 mkdir -p "${BUILD_DIR}"
 
 if phase deps; then
@@ -92,7 +100,7 @@ if phase config; then
         cd "${BUILD_DIR}"
         cmake "${ROOT_DIR}" \
             "${CMAKE_ARGS[@]}" \
-            -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
+            -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
             -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
     )
     echo
@@ -100,19 +108,19 @@ fi
 
 if phase build; then
     echo "=== Build ==="
-    cmake --build "${BUILD_DIR}" -- "${MAKE_ARGS[@]}"
+    cmake --build "${BUILD_DIR}" --config "${BUILD_TYPE}" -- "${MAKE_ARGS[@]}"
     echo
 fi
 
 if phase test; then
     echo "=== Test ==="
-    cmake --build "${BUILD_DIR}" --target test -- "${MAKE_ARGS[@]}"
+    ( cd "${BUILD_DIR}" && ctest --build-config "${BUILD_TYPE}" "${CTEST_ARGS[@]}" )
     echo
 fi
 
 if phase install; then
     echo "=== Install ==="
-    cmake --build "${BUILD_DIR}" --target install -- "${MAKE_ARGS[@]}"
+    cmake --build "${BUILD_DIR}" --config "${BUILD_TYPE}" --target install -- "${MAKE_ARGS[@]}"
     echo
 fi
 
