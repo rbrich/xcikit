@@ -4,7 +4,7 @@ set -e
 cd $(dirname $0)
 ROOT_DIR="$PWD"
 BUILD_TYPE=MinSizeRel
-GENERATOR="Unix Makefiles"
+GENERATOR=
 which ninja >/dev/null && GENERATOR="Ninja"
 JOBS=
 CMAKE_ARGS=()
@@ -53,11 +53,12 @@ PLATFORM="$(uname)"
 [[ ${PLATFORM} = "Darwin" ]] && PLATFORM="macos${MACOSX_DEPLOYMENT_TARGET}"
 VERSION=$(conan inspect . --raw version)$(git rev-parse --short HEAD 2>/dev/null | sed 's/^/+/' ; :)
 BUILD_CONFIG="${PLATFORM}-${ARCH}-${BUILD_TYPE}"
-[[ "${GENERATOR}" != "Unix Makefiles" ]] && BUILD_CONFIG="${BUILD_CONFIG}_${GENERATOR}"
+[[ -n "${GENERATOR}" ]] && BUILD_CONFIG="${BUILD_CONFIG}_${GENERATOR}"
 BUILD_DIR="${ROOT_DIR}/build/${BUILD_CONFIG}"
 INSTALL_DIR="${ROOT_DIR}/artifacts/${BUILD_CONFIG}"
 PACKAGE_DIR="xcikit-${VERSION}"
 PACKAGE_NAME="${PACKAGE_DIR}-${PLATFORM}-${ARCH}.zip"
+[[ -n "${GENERATOR}" ]] && CMAKE_ARGS+=(-G "${GENERATOR}")
 
 echo "BUILD_CONFIG: ${BUILD_CONFIG}"
 echo "BUILD_DIR:    ${BUILD_DIR}"
@@ -85,10 +86,9 @@ if phase config; then
     (
         cd "${BUILD_DIR}"
         cmake "${ROOT_DIR}" \
-            -G "${GENERATOR}" \
+            "${CMAKE_ARGS[@]}" \
             -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
-            -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-            "${CMAKE_ARGS[@]}"
+            -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
     )
     echo
 fi
@@ -117,7 +117,7 @@ if phase package; then
         cd "${INSTALL_DIR}/.."
         mv "${INSTALL_DIR}" "${PACKAGE_DIR}"
         rm -f "${PACKAGE_NAME}"
-        zip --move -r "${PACKAGE_NAME}" ${PACKAGE_DIR}
+        zip --move -r "${PACKAGE_NAME}" "${PACKAGE_DIR}"
     )
     echo
 fi

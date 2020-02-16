@@ -151,13 +151,40 @@ std::ostream& operator<<(std::ostream& os, Opcode v);
 class Code {
 public:
     using OpIdx = size_t;
-    void add_opcode(Opcode opcode, uint8_t arg) { add_opcode(opcode); add(arg); }
-    void add_opcode(Opcode opcode, uint8_t arg1, uint8_t arg2) { add_opcode(opcode); add(arg1); add(arg2); }
-    void add_opcode(Opcode opcode) { m_ops.push_back(static_cast<uint8_t>(opcode)); }
+
+    // convenience
+    void add_opcode(Opcode opcode) {
+        add(static_cast<uint8_t>(opcode));
+    }
+    void add_opcode(Opcode opcode, uint8_t arg) {
+        add_opcode(opcode);
+        add(arg);
+    }
+    void add_opcode(Opcode opcode, size_t arg) {
+        assert(arg <= 255);
+        add_opcode(opcode);
+        add((uint8_t) arg);
+    }
+    void add_opcode(Opcode opcode, uint8_t arg1, uint8_t arg2) {
+        add_opcode(opcode);
+        add(arg1);
+        add(arg2);
+    }
+    void add_opcode(Opcode opcode, size_t arg1, size_t arg2) {
+        assert(arg1 <= 255);
+        assert(arg2 <= 255);
+        add_opcode(opcode);
+        add((uint8_t) arg1);
+        add((uint8_t) arg2);
+    }
+    void set_arg(OpIdx pos, size_t arg) {
+        assert(arg <= 255);
+        set_arg(pos, (uint8_t) arg);
+    }
+
     void add(uint8_t b) { m_ops.push_back(b); }
     void set_arg(OpIdx pos, uint8_t arg) { m_ops[pos] = arg; }
     OpIdx this_instruction_address() const { return m_ops.size() - 1; }
-    OpIdx next_instruction_address() const { return m_ops.size(); }
 
     using const_iterator = std::vector<uint8_t>::const_iterator;
     const_iterator begin() const { return m_ops.begin(); }

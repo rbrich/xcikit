@@ -1,25 +1,22 @@
 // Logger.h created on 2018-03-01, part of XCI toolkit
 
-#include <xci/core/log.h>
+#include "log.h"
 #include <xci/core/TermCtl.h>
 #include <xci/core/sys.h>
+#include <xci/compat/unistd.h>
 
-#include <iostream>
-#include <iomanip>
 #include <ctime>
 #include <cassert>
-#include <unistd.h>
-#include "log.h"
 
 
 namespace xci::core {
 
 
 static const char* level_format[] = {
-        "{:19} {cyan}{}{normal}  {bold}DEBUG{normal}  {white}{}{normal}\n",
-        "{:19} {cyan}{}{normal}  {bold}INFO {normal}  {bold}{white}{}{normal}\n",
-        "{:19} {cyan}{}{normal}  {bold}WARN {normal}  {bold}{yellow}{}{normal}\n",
-        "{:19} {cyan}{}{normal}  {bold}ERROR{normal}  {bold}{red}{}{normal}\n",
+        "{:19} {cyan}{:5}{normal}  {bold}DEBUG{normal}  {white}{}{normal}\n",
+        "{:19} {cyan}{:5}{normal}  {bold}INFO {normal}  {bold}{white}{}{normal}\n",
+        "{:19} {cyan}{:5}{normal}  {bold}WARN {normal}  {bold}{yellow}{}{normal}\n",
+        "{:19} {cyan}{:5}{normal}  {bold}ERROR{normal}  {bold}{red}{}{normal}\n",
 };
 
 

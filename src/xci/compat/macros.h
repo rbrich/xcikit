@@ -24,7 +24,14 @@
 #endif
 
 
-#define UNREACHABLE     __builtin_unreachable()
+#ifdef _MSC_VER
+    #define UNREACHABLE     __assume(0)
+#else
+    #define UNREACHABLE     __builtin_unreachable()
+#endif
 
+
+// because [[maybe_unused]] can't be applied to a statement
+#define UNUSED      (void)
 
 #endif // include guard

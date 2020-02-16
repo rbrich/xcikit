@@ -50,7 +50,7 @@ template < class T >
 class Stack {
 
     struct Bucket;  // fwd for iterators
-    static constexpr uint32_t project_capacity(uint32_t prev_cap);
+    static constexpr size_t project_capacity(uint32_t prev_cap);
 
 public:
     typedef T value_type;
@@ -59,8 +59,7 @@ public:
     typedef std::ptrdiff_t difference_type;
     typedef std::size_t size_type;
 
-    static constexpr uint32_t default_init_capacity = project_capacity(0);
-    explicit Stack(uint32_t init_capacity = default_init_capacity);
+    explicit Stack(size_t init_capacity = project_capacity(0));
 
     Stack(const Stack& other);
     Stack(Stack&& other) noexcept;
@@ -172,16 +171,19 @@ public:
 
 private:
     struct Bucket {
+        Bucket() = default;
+        Bucket(Bucket* next, size_t capacity, size_t count)
+            : next(next), capacity(uint32_t(capacity)), count(uint32_t(count)), items{} {}
+        bool full() const { return count == capacity; }
+        Bucket* prev();
+
         Bucket* next;       // ptr to next bucket or head if this is the tail
         uint32_t capacity;  // number of reserved items
         uint32_t count;     // number of initialized items
         T items[0];         // flexible array member (GNU extension in C++)
-
-        bool full() const { return count == capacity; }
-        Bucket* prev();
     };
 
-    static Bucket* allocate(Bucket* next, uint32_t capacity, uint32_t count);
+    static Bucket* allocate(Bucket* next, size_t capacity, size_t count);
     static void deallocate(Bucket* bucket);
     void destroy();  // deallocate all buckets
 
@@ -202,16 +204,16 @@ private:
 
 
 template<class T>
-constexpr uint32_t Stack<T>::project_capacity(uint32_t prev_cap)
+constexpr size_t Stack<T>::project_capacity(uint32_t prev_cap)
 {
     constexpr auto fstep = [](size_t cap_req) {
         return (cap_req * sizeof(T) - sizeof(Bucket)) / sizeof(T);
     };
-    constexpr uint32_t step0 = fstep(16);
-    constexpr uint32_t step1 = fstep(64);
-    constexpr uint32_t step2 = fstep(256);
-    constexpr uint32_t step3 = fstep(1024);
-    constexpr uint32_t step4 = fstep(4096);
+    constexpr size_t step0 = fstep(16);
+    constexpr size_t step1 = fstep(64);
+    constexpr size_t step2 = fstep(256);
+    constexpr size_t step3 = fstep(1024);
+    constexpr size_t step4 = fstep(4096);
     if (prev_cap < step0)
         return step0;
     if (prev_cap < step1)
@@ -225,7 +227,7 @@ constexpr uint32_t Stack<T>::project_capacity(uint32_t prev_cap)
 
 
 template<class T>
-Stack<T>::Stack(uint32_t init_capacity)
+Stack<T>::Stack(size_t init_capacity)
         : m_tail{allocate(nullptr, init_capacity, 0)}
 {
     m_tail->next = m_tail;
@@ -465,6 +467,8 @@ void Stack<T>::alloc_info(S& stream)
             << " malloc " << malloc_usable_size(b);
 #elif defined(__APPLE__)
             << " malloc " << malloc_size(b);
+#else
+            /* malloc size unknown */;
 #endif
         if (b == head())
             stream << " [head]";
@@ -478,11 +482,11 @@ void Stack<T>::alloc_info(S& stream)
 
 
 template<class T>
-auto Stack<T>::allocate(Bucket* next, uint32_t capacity, uint32_t count) -> Bucket*
+auto Stack<T>::allocate(Bucket* next, size_t capacity, size_t count) -> Bucket*
 {
     const size_t size = sizeof(Bucket) + capacity * sizeof(T);
-    char* buf = new(std::align_val_t{alignof(Bucket)}) char[size];
-    return new(buf) Bucket {next, capacity, count};
+    char* buf = new char[size];
+    return new(buf) Bucket (next, capacity, count);
 }
 
 
@@ -491,7 +495,7 @@ void Stack<T>::deallocate(Stack::Bucket* bucket)
 {
     std::destroy_n(bucket->items, bucket->count);
     char* buf = reinterpret_cast<char*>(bucket);
-    ::operator delete[](buf, std::align_val_t{alignof(Bucket)});
+    delete[] buf;
 }
 
 

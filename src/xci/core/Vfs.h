@@ -201,18 +201,23 @@ public:
     ///
     /// Multiple dirs can overlap - they will be searched in order of addition.
     ///
-    /// The real_path doesn't have to exists at time of addition,
+    /// The fs_path doesn't have to exists at time of addition,
     /// but can be created later. In that case, it will be tried as a directory
     /// every time when opening a file.
+    ///
+    /// If fs_path is relative (not begining with '/'), then it's translated
+    /// to absolute path using simple lookup, starting with program's location,
+    /// then checking its parents (up to hardcoded limit, which is 5 levels
+    /// at this time).
     ///
     /// The path can point to an archive instead of directory.
     /// Supported archive formats:
     /// - DAR - see `tools/pack_assets.py`
     /// - ZIP - when linked with libzip (in cmake: XCI_WITH_ZIP)
     ///
-    /// \param real_path        FS path to a directory or archive.
+    /// \param fs_path          FS path to a directory or archive.
     /// \param target_path      The target path inside the VFS
-    bool mount(const std::string& real_path, std::string target_path="");
+    bool mount(const std::string& fs_path, std::string target_path="");
 
     VfsFile read_file(std::string path) const;
 

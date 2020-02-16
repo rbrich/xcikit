@@ -27,7 +27,7 @@ private:
     Machine& m_machine;
     core::TermCtl& m_term;
     // lines of code that need to be erased before rendering next step
-    size_t m_lines_to_erase = 0;
+    unsigned int m_lines_to_erase = 0;
 };
 
 

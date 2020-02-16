@@ -64,7 +64,7 @@ Values& Values::operator=(const Values& rhs)
 
 size_t Values::raw_size() const
 {
-    return std::accumulate(m_items.begin(), m_items.end(), 0,
+    return std::accumulate(m_items.begin(), m_items.end(), size_t(0),
         [](size_t init, const unique_ptr<Value>& value)
         { return init + value->size(); });
 }

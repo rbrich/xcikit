@@ -14,15 +14,14 @@
 // limitations under the License.
 
 #include "file.h"
-#include "dispatch.h"
+#include <xci/compat/unistd.h>
 #include <xci/config.h>
 
 #include <fstream>
-#include <unistd.h>
-#include <libgen.h>  // dirname, basename
 #include <cassert>
-#include <sys/param.h>
+#include <climits>
 #include <cstring>
+#include <cstdlib>
 
 namespace xci::core {
 
@@ -74,11 +73,14 @@ BufferPtr read_binary_file(std::istream& stream)
         return {};
     }
 
-    return {new Buffer{content, file_size}, [content](auto p){ delete[] content; }};
+    return {new Buffer{content, file_size}, [content](auto){ delete[] content; }};
 }
 
 
-std::string path_dirname(std::string pathname)
+namespace path {
+
+
+std::string dir_name(std::string pathname)
 {
     // dirname() may modify the argument, so we take it by value
     // (we also make sure that the internal value is null-terminated)
@@ -87,14 +89,14 @@ std::string path_dirname(std::string pathname)
 }
 
 
-std::string path_basename(std::string pathname)
+std::string base_name(std::string pathname)
 {
     assert(pathname.c_str() == &pathname[0]);
     return ::basename(&pathname[0]);
 }
 
 
-std::string path_join(const std::string &part1, const std::string &part2)
+std::string join(const std::string &part1, const std::string &part2)
 {
     // Add separator between parts only if there is none already
     std::string sep = "/";
@@ -108,13 +110,46 @@ std::string path_join(const std::string &part1, const std::string &part2)
 
 std::string get_cwd()
 {
-    std::string result(MAXPATHLEN, ' ');
-    if (getcwd(&result[0], result.size()) == nullptr) {
+    std::string result(PATH_MAX, ' ');
+    if (::getcwd(&result[0], result.size()) == nullptr) {
         return std::string();
     }
     result.resize(strlen(result.data()));
     return result;
 }
 
+
+std::string real_path(const std::string& path)
+{
+    char buffer[PATH_MAX];
+#ifdef _WIN32
+    auto h = CreateFileA(path.c_str(), 0,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            nullptr, OPEN_EXISTING,
+            FILE_FLAG_BACKUP_SEMANTICS, nullptr);
+    if (h == INVALID_HANDLE_VALUE)
+        return {};  // path doesn't exist
+
+    auto len = GetFinalPathNameByHandleA(h, buffer, sizeof(buffer), FILE_NAME_NORMALIZED);
+    CloseHandle(h);
+
+    if (len == 0)
+        return {};  // unknown error
+    if (len > sizeof(buffer))
+        return {};  // buffer too small
+
+    // clean the path (the returned path uses the \?\ syntax)
+    if (strncmp(buffer, R"(\\?\)", 4) == 0)
+        return buffer + 4;
+    else
+        return buffer;
+#else
+    char* res = ::realpath(path.c_str(), buffer);
+    return res == nullptr ? "" : res;
+#endif
+}
+
+
+} // namespace path
 
 }  // namespace xci::core

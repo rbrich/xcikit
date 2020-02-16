@@ -104,7 +104,7 @@ struct MultipleDeclarationError : public ScriptError {
 
 
 struct UnexpectedArgument : public ScriptError {
-    explicit UnexpectedArgument(int idx, const SourceInfo& si)
+    explicit UnexpectedArgument(size_t idx, const SourceInfo& si)
             : ScriptError(core::format("unexpected argument #{}", idx), si) {}
 };
 
@@ -116,7 +116,7 @@ struct UnsupportedOperandsError : public ScriptError {
 
 
 struct UnexpectedArgumentCount : public ScriptError {
-    explicit UnexpectedArgumentCount(int exp, int got)
+    explicit UnexpectedArgumentCount(size_t exp, size_t got)
             : ScriptError(core::format("function expects {} args, called with {} args",
                     exp, got)) {}
 };
@@ -129,7 +129,7 @@ struct UnknownTypeName : public ScriptError {
 
 
 struct UnexpectedArgumentType : public ScriptError {
-    explicit UnexpectedArgumentType(int idx, const TypeInfo& exp, const TypeInfo& got, const SourceInfo& si)
+    explicit UnexpectedArgumentType(size_t idx, const TypeInfo& exp, const TypeInfo& got, const SourceInfo& si)
             : ScriptError(core::format("function expects {} for arg #{}, called with {}",
                                  exp, idx, got), si) {}
 };
@@ -188,7 +188,7 @@ struct DefinitionTypeMismatch : public ScriptError {
 
 
 struct DefinitionParamTypeMismatch : public ScriptError {
-    explicit DefinitionParamTypeMismatch(int idx, const TypeInfo& exp, const TypeInfo& got)
+    explicit DefinitionParamTypeMismatch(size_t idx, const TypeInfo& exp, const TypeInfo& got)
             : ScriptError(core::format("definition type mismatch: specified {} for param #{}, inferred {}",
                                  exp, idx, got)) {}
 };

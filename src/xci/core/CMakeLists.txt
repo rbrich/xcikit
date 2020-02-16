@@ -35,7 +35,16 @@ if (APPLE)
         event/kqueue/SignalWatch.cpp
         event/kqueue/TimerWatch.cpp
         )
-    target_compile_definitions(xci-core PUBLIC XCI_WITH_KQUEUE)
+elseif(WIN32)
+    target_sources(xci-core PRIVATE
+        event/iocp/EventLoop.cpp
+        event/iocp/IOWatch.cpp
+        event/iocp/EventWatch.cpp
+        event/iocp/FSWatch.cpp
+        event/iocp/SignalWatch.cpp
+        event/iocp/TimerWatch.cpp
+        )
+    target_link_libraries(xci-core PRIVATE mman-win32)
 else()
     target_sources(xci-core PRIVATE
         event/epoll/EventLoop.cpp
@@ -45,7 +54,6 @@ else()
         event/epoll/SignalWatch.cpp
         event/epoll/TimerWatch.cpp
         )
-    target_compile_definitions(xci-core PUBLIC XCI_WITH_EPOLL)
 endif()
 
 target_link_libraries(xci-core
@@ -86,6 +94,12 @@ if (BUILD_FRAMEWORKS)
         SOVERSION 1.0.0
         PUBLIC_HEADER xci-core.h
         )
+endif()
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    target_compile_definitions(xci-core PRIVATE
+        _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
+        _CRT_SECURE_NO_WARNINGS)
 endif()
 
 install(TARGETS xci-core

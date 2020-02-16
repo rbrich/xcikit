@@ -13,8 +13,7 @@
 #include <utility>
 #include <cstring>
 #include <cassert>
-
-extern char **environ;
+#include <algorithm>
 
 namespace xci::core::argparser {
 
@@ -105,6 +104,12 @@ bool Option::has_long(const char* arg) const
         dp += p.end();
     }
     return false;
+}
+
+
+int Option::missing_args() const
+{
+    return max(m_required - m_received, 0);
 }
 
 
@@ -275,7 +280,7 @@ ArgParser& ArgParser::operator()(const char* argv[])
 {
     if (!parse_program_name(argv[0])) {
         // this should not occur
-        auto& t = TermCtl::stdout_instance();
+        auto& t = TermCtl::stderr_instance();
         cerr << t.bold().red() << "Missing program name (argv[0])" << t.normal() << endl;
         exit(1);
     }
@@ -289,7 +294,7 @@ ArgParser& ArgParser::operator()(const char* argv[])
                 break;
         }
     } catch (const BadArgument& e) {
-        auto& t = TermCtl::stdout_instance();
+        auto& t = TermCtl::stderr_instance();
         cerr << t.bold().red() << e.what() << t.normal() << endl;
         print_usage();
         exit(1);
@@ -302,7 +307,7 @@ bool ArgParser::parse_program_name(const char* arg0)
 {
     if (!arg0)
         return false;
-    m_progname = path_basename(arg0);
+    m_progname = path::base_name(arg0);
     return true;
 }
 

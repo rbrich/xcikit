@@ -17,9 +17,13 @@
 #include "file.h"
 #include <xci/core/log.h>
 #include <xci/core/string.h>
+#include <xci/core/sys.h>
+#include <xci/core/file.h>
 #include <xci/compat/bit.h>
 #include <xci/compat/endian.h>
 #include <xci/compat/macros.h>
+#include <xci/compat/unistd.h>
+#include <xci/compat/mman.h>
 
 #ifdef XCI_WITH_ZIP
 #include <zip.h>
@@ -27,8 +31,6 @@
 
 #include <algorithm>
 #include <fcntl.h>
-#include <unistd.h>
-#include <sys/mman.h>
 #include <sys/stat.h>
 
 namespace xci::core {
@@ -38,7 +40,7 @@ using xci::bit_read;
 
 
 std::shared_ptr<VfsDirectory>
-vfs::RealDirectoryLoader::try_load(const std::string& path, bool is_dir, Magic magic)
+vfs::RealDirectoryLoader::try_load(const std::string& path, bool is_dir, Magic)
 {
     if (!is_dir)
         return {};
@@ -48,7 +50,7 @@ vfs::RealDirectoryLoader::try_load(const std::string& path, bool is_dir, Magic m
 
 VfsFile vfs::RealDirectory::read_file(const std::string& path) const
 {
-    auto full_path = path_join(m_dir_path, path);
+    auto full_path = path::join(m_dir_path, path);
     log_debug("VfsDirLoader: open file: {}", full_path);
 
     // open the file
@@ -160,7 +162,7 @@ VfsFile vfs::DarArchive::read_file(const std::string& path) const
     auto this_ptr = shared_from_this();
     auto content = std::make_shared<Buffer>(
             m_addr + entry_it->offset, entry_it->size,
-            [this_ptr](byte* d, size_t s) {});
+            [this_ptr](byte*, size_t) {});
     return VfsFile("", std::move(content));
 }
 
@@ -318,6 +320,7 @@ VfsFile vfs::ZipArchive::read_file(const std::string& path) const
         /*deleter*/ [](byte* d, size_t s) { delete[] d; });
     return VfsFile("", std::move(content));
 #else
+    UNUSED path;
     log_error("ZipArchive: Not supported (not compiled with XCI_WITH_ZIP)");
     return {};
 #endif
@@ -345,37 +348,49 @@ Vfs::Vfs(Loaders loaders)
 }
 
 
-bool Vfs::mount(const std::string& real_path, std::string target_path)
+bool Vfs::mount(const std::string& fs_path, std::string target_path)
 {
-    // Open the file or directory
-    int fd = ::open(real_path.c_str(), O_RDONLY);
-    if (fd == -1) {
-        log_warning("Vfs: couldn't mount {}: {m}", real_path);
-        return false;
+    std::string real_path;
+    if (fs_path.empty() || fs_path[0] != '/') {
+        // handle relative path - it's relative to program binary,
+        // or its parent, or its parent's parent. The nearest matched parent wins.
+        std::string ups = "/";
+        for (int parent = 0; parent < 5; ++parent) {
+            real_path = path::real_path(path::dir_name(get_self_path()) + ups + fs_path);
+            if (!real_path.empty())
+                break;
+            ups += "../";
+        }
+    } else {
+        real_path = fs_path;
     }
 
     // Check path type
     struct stat st = {};
     if (::stat(real_path.c_str(), &st) == -1) {
         log_warning("Vfs: couldn't mount {}: {m}", real_path);
-        ::close(fd);
         return false;
     }
-    bool is_dir = (st.st_mode & S_IFDIR) == S_IFDIR;
 
     // Read magic bytes in case of regular file
     VfsLoader::Magic magic {};
     if ((st.st_mode & S_IFREG) == S_IFREG) {
-        if (::read(fd, magic.data(), magic.size()) != magic.size()) {
+        int fd = ::open(real_path.c_str(), O_RDONLY);
+        if (fd == -1) {
+            log_warning("Vfs: couldn't mount {}: {m}", real_path);
+            return false;
+        }
+        auto r = ::read(fd, magic.data(), magic.size());
+        ::close(fd);
+        if (r != (ssize_t) magic.size()) {
             log_warning("Vfs: couldn't mount {}: archive file is smaller than {} bytes",
                 real_path, magic.size());
-            ::close(fd);
             return false;
         }
     }
-    ::close(fd);
 
     // Try each loader
+    bool is_dir = (st.st_mode & S_IFDIR) == S_IFDIR;
     std::shared_ptr<VfsDirectory> vfs_directory;
     for (auto& loader : m_loaders) {
         vfs_directory = loader->try_load(real_path, is_dir, magic);

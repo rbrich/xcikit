@@ -23,7 +23,7 @@ jobs:
 
       - run:
           name: Build
-          command: ./build.sh build
+          command: ./build.sh build -j 2
 
       - run:
           name: Run tests

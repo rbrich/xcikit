@@ -6,7 +6,7 @@ osx_image: xcode11
 env:
   global:
     - MACOSX_DEPLOYMENT_TARGET=10.14
-    - VK_SDK_VER=1.1.126.0
+    - VK_SDK_VER=1.2.131.2
 
 addons:
   homebrew:
@@ -40,7 +40,7 @@ cache:
 
 before_deploy:
   - conan user -p $CONAN_PASSWORD -r xcikit rbrich
-  - conan upload replxx/*@rbrich/stable --all --no-overwrite --check --confirm -r=xcikit
+  - conan upload '*/*@rbrich/stable' --all --no-overwrite --check --confirm -r=xcikit
 
 deploy:
   provider: releases

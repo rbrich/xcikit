@@ -8,6 +8,7 @@
 #define XCI_CORE_ARG_PARSER_H
 
 #include <xci/core/error.h>
+#include <xci/compat/unistd.h>
 #include <string>
 #include <utility>
 #include <vector>
@@ -15,7 +16,6 @@
 #include <sstream>
 #include <initializer_list>
 #include <iostream>
-#include <strings.h>
 #include <cstdlib>
 #include <limits>
 
@@ -70,7 +70,11 @@ value_from_cstr(const char* s, T& value) {
 
 // const char* (original, unparsed C string)
 template <class T>
-typename std::enable_if_t<std::is_same_v<T, const char*>, bool>
+typename std::enable_if_t<
+            std::is_same_v<T, const char*> ||
+            std::is_same_v<T, std::string> ||
+            std::is_same_v<T, std::string_view>,
+        bool>
 value_from_cstr(const char* s, T& value) {
     value = s;
     return true;
@@ -79,9 +83,11 @@ value_from_cstr(const char* s, T& value) {
 
 // vector of unparsed args
 template <class T>
-typename std::enable_if_t<std::is_same_v<T, std::vector<const char*>>, bool>
-value_from_cstr(const char* s, T& value) {
-    value.push_back(s);
+bool value_from_cstr(const char* s, std::vector<T>& value) {
+    T v;
+    if (!value_from_cstr(s, v))
+        return false;
+    value.push_back(std::move(v));
     return true;
 }
 
@@ -153,7 +159,7 @@ struct Option {
     template <class T>
     Option(std::string desc, const char* help, T& value)
             : Option(std::move(desc), help, [&value](const char* arg, const char**)
-                     { return value_from_cstr<T>(arg, value); }, 0) {}
+                     { return value_from_cstr(arg, value); }, 0) {}
 
     /// Attach env variable to this option
     Option& env(const char* env) { m_env = env; return *this; }
@@ -161,7 +167,7 @@ struct Option {
     bool has_short(char arg) const;
     bool has_long(const char* arg) const;
     bool has_args() const { return m_args != 0; }
-    bool has_env(std::string_view env) const { return env == m_env; }
+    bool has_env(std::string_view env) const { return m_env && env == m_env; }
     bool is_short() const { return m_flags & FShort; }
     bool is_long() const { return m_flags & FLong; }
     bool is_positional() const { return m_flags & FPositional; }
@@ -170,7 +176,7 @@ struct Option {
     bool can_receive_all_args() const { return (m_flags & FDots); }
     bool can_receive_arg() const { return can_receive_all_args() || m_received < m_args; }
     int required_args() const { return m_required; }
-    int missing_args() const { return std::max(m_required - m_received, 0); }
+    int missing_args() const;
     std::string_view desc() const { return m_desc; }
     const char* help() const { return m_help; }
     const char* env() const { return m_env; }
@@ -225,6 +231,7 @@ private:
 ///
 /// References:
 /// - https://www.gnu.org/software/libc/manual/html_node/Argument-Syntax.html
+/// - https://github.com/CLIUtils/CLI11 (there are some similarities in concept)
 ///
 /// TODO:
 /// - conform to POSIX

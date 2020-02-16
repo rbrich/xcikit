@@ -33,9 +33,6 @@ if [[ ${NO_CONAN_REMOTES} -eq 0 ]] ; then
     echo "=== Check Conan remotes ==="
     conan_remotes=$(conan remote list)
     echo "${conan_remotes}"
-    if ! echo "${conan_remotes}" | grep -q '^bincrafters:' && ask 'Add conan remote "bincrafters"?'; then
-        run conan remote add bincrafters https://api.bintray.com/conan/bincrafters/public-conan
-    fi
     if ! echo "${conan_remotes}" | grep -q '^xcikit:' && ask 'Add conan remote "xcikit"?'; then
         run conan remote add xcikit https://api.bintray.com/conan/rbrich/xcikit
     fi
@@ -50,24 +47,4 @@ if [[ ! -e "share/fonts/Hack/Hack-Regular.ttf" ]] ; then
     tar xf ${HACK_ARCHIVE} -C share/fonts
     mv share/fonts/ttf share/fonts/Hack
     rm ${HACK_ARCHIVE}
-fi
-
-# Compile shaders to SPIR-V
-if [[ ! -e "share/shaders/test_vk.frag.spv" ]] ; then
-    echo "=== Compile shaders to SPIR-V ==="
-    ( cd share/shaders; make )
-fi
-
-# Needed for demo_vfs
-if [[ ! -e "share.dar" ]] ; then
-    echo "=== Create share.dar archive ==="
-    (cd share; find shaders fonts -type f > file_list.txt)
-    tools/pack_assets.py share.dar share/file_list.txt
-    rm share/file_list.txt
-fi
-
-# Needed for demo_vfs
-if [[ ! -e "share.zip" ]] ; then
-    echo "=== Create share.zip archive ==="
-    (cd share; zip -r ../share.zip shaders fonts)
 fi

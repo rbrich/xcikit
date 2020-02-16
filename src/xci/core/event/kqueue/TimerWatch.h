@@ -1,5 +1,3 @@
-#include <utility>
-
 // TimerWatch.h created on 2019-04-01, part of XCI toolkit
 // Copyright 2019 Radek Brich
 //
@@ -14,7 +12,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 
 #ifndef XCI_CORE_KQUEUE_TIMERWATCH_H
 #define XCI_CORE_KQUEUE_TIMERWATCH_H

@@ -31,17 +31,17 @@ private:
         m_module.symtab().add({move(alias), Symbol::Function, index});
     }
 
-    void dump_module(unsigned mod_idx);
+    void dump_module(size_t mod_idx);
     void cmd_dump_module();
-    void cmd_dump_module(int32_t mod_idx);
+    void cmd_dump_module(size_t mod_idx);
     void cmd_dump_module(std::string mod_name);
 
-    void dump_function(unsigned mod_idx, unsigned fun_idx);
+    void dump_function(size_t mod_idx, size_t fun_idx);
     void cmd_dump_function();
     void cmd_dump_function(std::string fun_name);
     void cmd_dump_function(std::string fun_name, std::string mod_name);
-    void cmd_dump_function(int32_t fun_idx);
-    void cmd_dump_function(int32_t fun_idx, int32_t mod_idx);
+    void cmd_dump_function(size_t fun_idx);
+    void cmd_dump_function(size_t fun_idx, size_t mod_idx);
 
 private:
     Interpreter m_interpreter;
