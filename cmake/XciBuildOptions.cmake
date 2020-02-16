@@ -108,7 +108,7 @@ if (NOT MSVC)
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer")
 endif()
 
-# Doh!
+# Disable min/max macros (very bad in C++)
 if (MSVC)
     add_compile_definitions(NOMINMAX)
 endif()
