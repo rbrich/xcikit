@@ -3,8 +3,10 @@
 # ------------ #
 
 # shader compiler - can use either glslc or glslangValidator
-find_program(GLSLC glslc)
-find_program(GLSLANG glslangValidator)
+find_program(GLSLC glslc
+    HINTS ENV VULKAN_SDK)
+find_program(GLSLANG glslangValidator
+    HINTS ENV VULKAN_SDK)
 
 if (GLSLC)
     set(GLSL_C ${GLSLC})

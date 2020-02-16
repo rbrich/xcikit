@@ -35,10 +35,16 @@
 #include <cstdlib>
 
 #ifndef _WIN32
+
 #include <unistd.h>
 #include <libgen.h>   // dirname, basename
 #include <strings.h>  // strcasecmp, strncasecmp
 #include <climits>    // PATH_MAX
+
+#ifndef _GNU_SOURCE
+extern char **environ;
+#endif
+
 #else
 
 #include <fcntl.h>

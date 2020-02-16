@@ -39,7 +39,9 @@ define_property(TARGET
 
 if (XCI_WITH_VULKAN)
     add_subdirectory(shaders)
-else()
+endif()
+
+if (NOT TARGET shaders)
     # dummy target (it's easier to create a target than adding special conditions below)
     add_custom_target(shaders ALL)
     set_property(TARGET shaders PROPERTY ASSETS)
