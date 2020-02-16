@@ -4,29 +4,51 @@
 // Copyright 2020 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
+///=========================================================================///
+///                                                                         ///
+/// Minimal Unix compatibility header for WIN32                             ///
+///                                                                         ///
+/// Program compiled with this header should also disable some warnings:    ///
+///                                                                         ///
+/// -D_CRT_NONSTDC_NO_WARNINGS (because we can't redeclare all the names,   ///
+///                             especially with stuff like `struct stats`   ///
+///                             it's almost impossible)                     ///
+///                                                                         ///
+/// -D_CRT_SECURE_NO_WARNINGS  (don't give me warning when I use `open`,    ///
+///                             I know what I'm doing and I don't really    ///
+///                             care how secure my program is on this       ///
+///                             platform, sorry...)                         ///
+///                                                                         ///
+/// And also some unwanted features:                                        ///
+///                                                                         ///
+/// -DNOMINMAX                                                              ///
+///                                                                         ///
+/// This header doesn't add to macro hell, it uses inline functions         ///
+/// whenever possible, even for 1:1 mapping. Because nobody likes to fight  ///
+/// lower case macros...                                                    ///
+///                                                                         ///
+///=========================================================================///
+
 #ifndef XCI_COMPAT_UNISTD_H
 #define XCI_COMPAT_UNISTD_H
 
+#include <cstdlib>
+
 #ifndef _WIN32
 #include <unistd.h>
-#include <libgen.h>  // dirname, basename
-#include <strings.h>  // strcasecmp
+#include <libgen.h>   // dirname, basename
+#include <strings.h>  // strcasecmp, strncasecmp
+#include <climits>    // PATH_MAX
 #else
 
-#define NOMINMAX
-#include <cstdlib>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <io.h>
 #include <direct.h>
 #include <windows.h>
 
-#pragma warning( disable : 4996 )  // The POSIX name for this item is deprecated.
 
 using ssize_t = long long;
-
-#define strcasecmp _stricmp
-#define strncasecmp _strnicmp
 
 #define STDIN_FILENO 0
 #define STDOUT_FILENO 1
@@ -36,7 +58,11 @@ using ssize_t = long long;
 #define PATH_MAX _MAX_PATH
 #endif
 
-inline unsigned int sleep(unsigned int seconds) { Sleep(seconds * 1000); return 0; }
+
+inline unsigned int sleep(unsigned int seconds) {
+    Sleep(seconds * 1000);
+    return 0;
+}
 
 inline char *getcwd(char *buf, size_t size) {
      return _getcwd(buf, (int)size);
@@ -90,11 +116,14 @@ inline int mkstemp(char *tmpl) {
     return open(tmpl, O_RDWR | O_CREAT | O_EXCL);
 }
 
-#endif  // _WIN32
+inline int strcasecmp(const char *s1, const char *s2) {
+    return _stricmp(s1, s2);
+}
 
-#if defined(_WIN32)
-__declspec(dllimport)
-#endif
-extern char **environ;
+inline int strncasecmp(const char *s1, const char *s2, size_t n) {
+    return _strnicmp(s1, s2, n);
+}
+
+#endif  // _WIN32
 
 #endif // include guard

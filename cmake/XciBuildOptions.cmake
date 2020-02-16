@@ -61,6 +61,11 @@ if (BUILD_WARNINGS)
         # - C4200: nonstandard extension used: zero-sized array in struct/union (intentional)
         # - C4244: conversion from 'int' to 'uint8_t' ... (FP)
         add_compile_options(/W4 /wd4100 /wd4200 /wd4244)
+        # https://docs.microsoft.com/en-us/cpp/c-runtime-library/compatibility?view=vs-2019
+        add_compile_definitions(
+            _CRT_NONSTDC_NO_WARNINGS
+            _CRT_SECURE_NO_WARNINGS
+            _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1)
     else()
         add_compile_options(-Wall -Wextra
             -Wno-unused-parameter
@@ -93,3 +98,8 @@ endif ()
 
 # To get useful debuginfo, we need frame pointer
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer")
+
+# Doh!
+if (MSVC)
+    add_compile_definitions(NOMINMAX)
+endif()
