@@ -77,6 +77,27 @@ BufferPtr read_binary_file(std::istream& stream)
 }
 
 
+bool write(int fd, std::string s)
+{
+    size_t written = 0;
+    while (written != s.size()) {
+        ssize_t r = ::write(STDERR_FILENO,
+                s.data() + written,
+                s.size() - written);
+        if (r == -1) {
+            if (errno == EINTR)
+                continue;
+            return false;
+        }
+        assert(r > 0);
+        if (r == 0)
+            return false;
+        written += r;
+    }
+    return true;
+}
+
+
 namespace path {
 
 

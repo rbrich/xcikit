@@ -44,7 +44,7 @@ TEST_CASE( "IO events", "[core][event][IOWatch]" )
     });
 
     char data[] = {1, 0};
-    ::write(pipe_rw[1], data, 1u);
+    (void) ::write(pipe_rw[1], data, 1u);
 
     loop.run();
 

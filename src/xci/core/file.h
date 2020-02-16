@@ -32,6 +32,9 @@ std::optional<std::string> read_text_file(std::istream& stream);
 BufferPtr read_binary_file(const std::string& pathname);
 BufferPtr read_binary_file(std::istream& stream);
 
+/// Write string to FD (in a loop, handling EINTR).
+/// \returns false on error (check errno), true on success
+bool write(int fd, std::string s);
 
 namespace path {
 
