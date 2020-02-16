@@ -1,11 +1,15 @@
-name: C/C++ CI
+name: CI
 on: [push]
 
 jobs:
   build:
 
-    runs-on: ubuntu-latest
-    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
+
     steps:
     - uses: actions/checkout@v1
     - uses: actions/setup-python@v1
@@ -17,21 +21,28 @@ jobs:
 
     - name: bootstrap
       run: ./bootstrap.sh -y
+      shell: bash
 
     - name: deps
       run: ./build.sh deps
+      shell: bash
       
     - name: configure
       run: ./build.sh config -D XCI_WITH_VULKAN=0
+      shell: bash
       
     - name: build
       run: ./build.sh build
+      shell: bash
       
     - name: test
       run: ./build.sh test
+      shell: bash
       
     - name: install
       run: ./build.sh install
+      shell: bash
       
     - name: package
       run: ./build.sh package
+      shell: bash
