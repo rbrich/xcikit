@@ -1,16 +1,23 @@
-option(BUILD_SHARED_LIBS "Build shared libs instead of static libs." OFF)
+# basic build options
 option(BUILD_TESTS "Disable to skip building tests." ON)
 option(BUILD_EXAMPLES "Disable to skip building examples." ON)
 option(BUILD_BENCHMARKS "Disable to skip building benchmarks." ON)
+option(BUILD_SHARED_LIBS "Build shared libs instead of static libs." OFF)
 option(BUILD_FRAMEWORKS "Build shared libs as OSX frameworks. Implies BUILD_SHARED_LIBS." OFF)
-option(BUILD_LTO "Enable link-time, whole-program optimizations." OFF)
-option(BUILD_WITH_CCACHE "Use ccache as compiler launcher, when available." ON)
-option(BUILD_WITH_IWYU "Run iwyu (Include What You Use) on each compiled file, when available." OFF)
-option(BUILD_WARNINGS "Enable compiler warnings: -Wall -Wextra ..." ON)
-option(BUILD_PEDANTIC "Build with -Wpedantic -Werror." OFF)
+
+# sanitizers (runtime checking tools)
 option(BUILD_WITH_ASAN "Build with AddressSanitizer." OFF)
 option(BUILD_WITH_UBSAN "Build with UndefinedBehaviorSanitizer." OFF)
 option(BUILD_WITH_TSAN "Build with ThreadSanitizer." OFF)
+
+# warnings (+ compile time checking tools)
+option(ENABLE_WARNINGS "Enable compiler warnings: -Wall -Wextra ..." ON)
+option(ENABLE_PEDANTIC "Build with -Wpedantic -Werror." OFF)
+option(ENABLE_IWYU "Run iwyu (Include What You Use) on each compiled file, when available." OFF)
+
+# optimizations
+option(ENABLE_LTO "Enable link-time, whole-program optimizations." OFF)
+option(ENABLE_CCACHE "Use ccache as compiler launcher, when available." ON)
 
 # Build type options
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo" "")
@@ -20,7 +27,7 @@ if (BUILD_FRAMEWORKS)
     set(BUILD_SHARED_LIBS ON)
 endif()
 
-if (BUILD_LTO)
+if (ENABLE_LTO)
     # check for LTO (fail when unavailable) and enable it globally
     include(CheckIPOSupported)
     check_ipo_supported()
@@ -34,7 +41,7 @@ if (BUILD_LTO)
     endif()
 endif()
 
-if (BUILD_WITH_CCACHE)
+if (ENABLE_CCACHE)
     find_program(CCACHE_EXECUTABLE ccache)
     if (CCACHE_EXECUTABLE)
         message(STATUS "Found ccache: ${CCACHE_EXECUTABLE}")
@@ -43,7 +50,7 @@ if (BUILD_WITH_CCACHE)
     endif()
 endif()
 
-if (BUILD_WITH_IWYU)
+if (ENABLE_IWYU)
     find_program(IWYU_EXECUTABLE iwyu)
     message(STATUS "Found iwyu: ${IWYU_EXECUTABLE}")
     if (IWYU_EXECUTABLE)
@@ -51,7 +58,7 @@ if (BUILD_WITH_IWYU)
     endif()
 endif()
 
-if (BUILD_WARNINGS)
+if (ENABLE_WARNINGS)
     if (MSVC)
         # see: https://gitlab.kitware.com/cmake/cmake/issues/19084
         string(REGEX REPLACE "/W[0-4]" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
@@ -73,7 +80,7 @@ if (BUILD_WARNINGS)
     endif()
 endif()
 
-if (BUILD_PEDANTIC)
+if (ENABLE_PEDANTIC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wpedantic -Werror")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-gnu-zero-variadic-macro-arguments")
 endif()

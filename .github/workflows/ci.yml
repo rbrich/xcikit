@@ -28,7 +28,7 @@ jobs:
       shell: bash
       
     - name: configure
-      run: ./build.sh config -D XCI_WITH_VULKAN=0
+      run: ./build.sh config -D XCI_GRAPHICS=0 -D XCI_DATA=0
       shell: bash
       
     - name: build

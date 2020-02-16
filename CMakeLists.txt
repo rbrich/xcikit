@@ -1,7 +1,16 @@
 cmake_minimum_required(VERSION 3.9)
 project(xcikit C CXX)
 
-option(XCI_WITH_VULKAN "Build libxci-graphics. Requires Vulkan and GLFW." ON)
+# optional components (only xci-core is required)
+include(CMakeDependentOption)
+option(XCI_DATA "Enable component: xci-data" ON)
+option(XCI_SCRIPT "Enable component: xci-script" ON)
+option(XCI_GRAPHICS "Enable component: xci-graphics (requires Vulkan and GLFW)" ON)
+CMAKE_DEPENDENT_OPTION(XCI_TEXT "Enable component: xci-text" ON
+    "XCI_GRAPHICS" OFF)
+CMAKE_DEPENDENT_OPTION(XCI_WIDGETS "Enable component: xci-widgets" ON
+    "XCI_GRAPHICS;XCI_TEXT" OFF)
+
 option(XCI_WITH_TINFO "Link with TInfo (from NCurses) and use it for TTY control sequences." OFF)
 option(XCI_WITH_ZIP "Link xci-core with libzip and use it for ZIP format in VFS." OFF)
 
@@ -30,7 +39,7 @@ endif()
 # Dependencies #
 # ------------ #
 
-if (XCI_WITH_VULKAN)
+if (XCI_TEXT)
     # RectangleBinPack (xci-text)
     add_subdirectory(ext/rbp)
 endif()
@@ -109,12 +118,24 @@ else()
 endif()
 
 add_subdirectory(src/xci/core)
-add_subdirectory(src/xci/data)
-add_subdirectory(src/xci/script)
 
-if (XCI_WITH_VULKAN)
+if (XCI_DATA)
+    add_subdirectory(src/xci/data)
+endif()
+
+if (XCI_SCRIPT)
+    add_subdirectory(src/xci/script)
+endif()
+
+if (XCI_GRAPHICS)
     add_subdirectory(src/xci/graphics)
+endif()
+
+if (XCI_TEXT)
     add_subdirectory(src/xci/text)
+endif()
+
+if (XCI_WIDGETS)
     add_subdirectory(src/xci/widgets)
 endif()
 
