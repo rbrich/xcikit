@@ -72,13 +72,16 @@ mkdir -p "${BUILD_DIR}"
 
 if phase deps; then
     echo "=== Install Dependencies ==="
-    CONAN_ARGS=(--build missing)
+    CONAN_ARGS=()
     if [[ -n "${MACOSX_DEPLOYMENT_TARGET}" ]]; then
         CONAN_ARGS+=(-s "os.version=${MACOSX_DEPLOYMENT_TARGET}")
     fi
     (
         cd "${BUILD_DIR}"
-        conan install "${ROOT_DIR}" "${CONAN_ARGS[@]}"
+        conan install "${ROOT_DIR}" \
+            --build missing \
+            -s "build_type=${BUILD_TYPE}" \
+            "${CONAN_ARGS[@]}"
     )
     echo
 fi
