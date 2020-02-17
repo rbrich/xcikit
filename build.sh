@@ -64,6 +64,7 @@ INSTALL_DIR="${ROOT_DIR}/artifacts/${BUILD_CONFIG}"
 PACKAGE_DIR="xcikit-${VERSION}"
 PACKAGE_NAME="${PACKAGE_DIR}-${PLATFORM}-${ARCH}.zip"
 [[ -n "${GENERATOR}" ]] && CMAKE_ARGS+=(-G "${GENERATOR}")
+[[ "${GENERATOR}" = "Ninja" && isatty ]] && CMAKE_ARGS+=(-D FORCE_COLORS=1)
 
 echo "BUILD_CONFIG: ${BUILD_CONFIG}"
 echo "BUILD_DIR:    ${BUILD_DIR}"

@@ -19,6 +19,9 @@ option(ENABLE_IWYU "Run iwyu (Include What You Use) on each compiled file, when 
 option(ENABLE_LTO "Enable link-time, whole-program optimizations." OFF)
 option(ENABLE_CCACHE "Use ccache as compiler launcher, when available." ON)
 
+# cosmetics
+option(FORCE_COLORS "Force colored compiler output." OFF)
+
 # Build type options
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo" "")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
@@ -111,4 +114,12 @@ endif()
 # Disable min/max macros (very bad in C++)
 if (MSVC)
     add_compile_definitions(NOMINMAX)
+endif()
+
+if (FORCE_COLORS)
+    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+        add_compile_options (-fdiagnostics-color=always)
+    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        add_compile_options (-fcolor-diagnostics)
+    endif ()
 endif()
