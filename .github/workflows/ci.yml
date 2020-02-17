@@ -11,7 +11,6 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     env:
-      CONAN_USER: ${{ secrets.CONAN_USER }}
       CONAN_PASSWORD: ${{ secrets.CONAN_PASSWORD }}
 
     steps:
@@ -22,7 +21,13 @@ jobs:
         architecture: 'x64'
 
     - name: install tools
-      run: pip3 --no-cache-dir install conan
+      run: |
+        pip3 --no-cache-dir install conan
+        conan profile new default --detect
+
+    - name: special setup for Conan
+      if: matrix.os == 'ubuntu-latest'
+      run: conan profile update "settings.compiler.libcxx=libstdc++11" default
 
     - name: bootstrap
       run: ./bootstrap.sh -y
@@ -31,7 +36,7 @@ jobs:
     - name: deps
       run: |
         ./build.sh deps
-        conan user -p $CONAN_PASSWORD -r xcikit $CONAN_USER
+        conan user -p $CONAN_PASSWORD -r xcikit rbrich
         conan upload "*/*@rbrich/stable" --all --no-overwrite --check --confirm -r=xcikit
       shell: bash
       
