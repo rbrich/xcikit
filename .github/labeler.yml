@@ -18,11 +18,7 @@ xci-text:
 xci-widgets:
   - src/xci/widgets/*.+(cpp|h)
   - src/xci/widgets/**/*.+(cpp|h)
-tests:
-  - tests/*.cpp
-benchmarks:
-  - benchmarks/*.cpp
-build:
+build/ci:
   - ./*.sh
   - CMakeLists.txt
   - ./**/CMakeLists.txt
@@ -30,7 +26,6 @@ build:
   - config.h.in
   - conan/**/*
   - xcikitConfig.cmake.in
-ci/actions:
   - Dockerfile
   - docker/**/*
   - .circleci/*

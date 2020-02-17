@@ -7,9 +7,8 @@ ROOT_DIR="$PWD"
 BUILD_TYPE=MinSizeRel
 GENERATOR=
 command -v ninja >/dev/null && GENERATOR="Ninja"
-MAKE_ARGS=()
+JOBS_ARGS=()
 CMAKE_ARGS=()
-CTEST_ARGS=()
 
 print_usage()
 {
@@ -37,12 +36,14 @@ while [[ $# -gt 0 ]] ; do
             GENERATOR="$2"
             shift 2 ;;
         -j )
-            MAKE_ARGS+=(-j "$2")
-            CTEST_ARGS+=(-j "$2")
+            JOBS_ARGS+=(-j "$2")
             shift 2 ;;
         -D )
             CMAKE_ARGS+=(-D "$2")
             shift 2 ;;
+        -D* )
+            CMAKE_ARGS+=("$1")
+            shift 1 ;;
         * )
             printf "Error: Unsupported option: %s.\n\n" "$1"
             print_usage
@@ -108,19 +109,19 @@ fi
 
 if phase build; then
     echo "=== Build ==="
-    cmake --build "${BUILD_DIR}" --config "${BUILD_TYPE}" -- "${MAKE_ARGS[@]}"
+    cmake --build "${BUILD_DIR}" --config "${BUILD_TYPE}" "${JOBS_ARGS[@]}"
     echo
 fi
 
 if phase test; then
     echo "=== Test ==="
-    ( cd "${BUILD_DIR}" && ctest --build-config "${BUILD_TYPE}" "${CTEST_ARGS[@]}" )
+    ( cd "${BUILD_DIR}" && ctest --build-config "${BUILD_TYPE}" "${JOBS_ARGS[@]}" )
     echo
 fi
 
 if phase install; then
     echo "=== Install ==="
-    cmake --build "${BUILD_DIR}" --config "${BUILD_TYPE}" --target install -- "${MAKE_ARGS[@]}"
+    cmake --build "${BUILD_DIR}" --config "${BUILD_TYPE}" "${JOBS_ARGS[@]}" --target install
     echo
 fi
 
