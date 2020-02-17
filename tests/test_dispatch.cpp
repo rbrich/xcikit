@@ -22,7 +22,7 @@ using std::this_thread::sleep_for;
 using namespace std::string_literals;
 
 
-TEST_CASE( "File watch", "[FSDispatch]" )
+TEST_CASE( "File watch", "[.][FSDispatch]" )
 {
     Logger::init(Logger::Level::Error);
     FSDispatch fw;

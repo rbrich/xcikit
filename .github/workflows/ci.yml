@@ -32,7 +32,7 @@ jobs:
       run: |
         ./build.sh deps
         conan user -p $CONAN_PASSWORD -r xcikit $CONAN_USER
-        conan upload "*/*@$CONAN_USER/stable" --all --no-overwrite --check --confirm -r=xcikit
+        conan upload "*/*@rbrich/stable" --all --no-overwrite --check --confirm -r=xcikit
       shell: bash
       
     - name: configure
