@@ -28,7 +28,8 @@ TEST_CASE( "File watch", "[FSDispatch]" )
     FSDispatch fw;
 
     std::string tmpname = get_temp_path() + "/xci_test_filewatch.XXXXXX";
-    mktemp(&tmpname[0]);
+    // race condition not important - would use mktemp, but that causes a warning with glibc
+    close(mkstemp(&tmpname[0]));
     std::ofstream f(tmpname);
 
     FSDispatch::Event expected_events[] = {
