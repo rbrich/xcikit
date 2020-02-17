@@ -68,7 +68,7 @@ while [[ $# -gt 0 ]] ; do
             CMAKE_ARGS+=("$1")
             shift 1 ;;
         * )
-            printf "Error: Unsupported option: %s.\n\n" "$1"
+            printf 'Error: Unsupported option: %s\n\n' "$1"
             print_usage
             exit 1 ;;
     esac
@@ -134,7 +134,7 @@ fi
 # Ninja: enable colors, if the output goes to terminal (only for build step)
 if [[ -t 1 && "${GENERATOR}" = "Ninja" ]]; then
     export NINJA_STATUS="${CSI}1m[${CSI}32m%p ${CSI}0;32m%f${CSI}0m/${CSI}32m%t ${CSI}36m%es${CSI}0m ${CSI}1m]${CSI}0m "
-    CMAKE_ARGS+=(-D FORCE_COLORS=1)
+    CMAKE_ARGS+=(-D 'FORCE_COLORS=1')
 fi
 
 if phase build; then
