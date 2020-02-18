@@ -143,6 +143,7 @@ fi
 if phase build; then
     header "Build"
     cmake --build "${BUILD_DIR}" --config "${BUILD_TYPE}" "${JOBS_ARGS[@]}"
+    [[ "${GENERATOR}" = "Ninja" ]] && ninja -C "${BUILD_DIR}" -t cleandead
     echo
 fi
 
