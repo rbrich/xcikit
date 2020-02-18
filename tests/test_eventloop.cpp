@@ -44,7 +44,7 @@ TEST_CASE( "IO events", "[core][event][IOWatch]" )
     });
 
     char data[] = {1, 0};
-    ::write(pipe_rw[1], data, 1u);
+    (void) ::write(pipe_rw[1], data, 1u);
 
     loop.run();
 
@@ -95,7 +95,8 @@ TEST_CASE( "FS events", "[.][core][event][FSWatch]" )
     size_t ev_size = sizeof(expected_events) / sizeof(expected_events[0]);
 
     std::string tmpname = get_temp_path() + "/xci_test_filewatch.XXXXXX";
-    mktemp(&tmpname[0]);
+    // race condition not important - would use mktemp, but that causes a warning with glibc
+    close(mkstemp(&tmpname[0]));
 
     FSWatch fs_watch(loop);
     fs_watch.add(tmpname,

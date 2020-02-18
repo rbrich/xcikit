@@ -47,7 +47,7 @@ EventWatch::~EventWatch()
 void EventWatch::fire()
 {
     uint64_t value = 1;
-    ::write(m_fd, &value, sizeof(value));
+    while (::write(m_fd, &value, sizeof(value)) == -1 && errno == EINTR);
 }
 
 

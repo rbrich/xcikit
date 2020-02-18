@@ -22,8 +22,6 @@
 
 namespace xci::script {
 
-using namespace std;
-
 
 Function::Function(Module& module, SymbolTable& symtab)
       : m_module(module), m_symtab(symtab),
@@ -33,7 +31,7 @@ Function::Function(Module& module, SymbolTable& symtab)
 }
 
 
-void Function::add_parameter(string name, TypeInfo&& type_info)
+void Function::add_parameter(std::string name, TypeInfo&& type_info)
 {
     m_symtab.add({std::move(name), Symbol::Parameter, parameters().size()});
     signature().add_parameter(std::move(type_info));

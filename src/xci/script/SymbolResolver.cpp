@@ -20,9 +20,10 @@
 #include "Error.h"
 #include <vector>
 
-using namespace std;
-
 namespace xci::script {
+
+using std::make_unique;
+using std::string;
 
 
 class SymbolResolverVisitor: public ast::Visitor {

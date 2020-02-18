@@ -247,9 +247,9 @@ How to build:
 
 2) Open *Git Bash* and run `./bootstrap.sh`
 
-3) Still in *Git Bash*, run `./build.sh -D XCI_WITH_VULKAN=0`
+3) Still in *Git Bash*, run `./build.sh -D XCI_DATA=0 -D XCI_GRAPHICS=0`
 
-4) There will be errors. These are why the title says "Porting", not "How to build"...
+4) There might be errors. These are why the title says "Porting", not "How to build"...
 
 
 How to use in client program

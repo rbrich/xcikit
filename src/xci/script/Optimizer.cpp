@@ -21,7 +21,9 @@
 
 namespace xci::script {
 
-using namespace std;
+using std::unique_ptr;
+using std::make_unique;
+using std::move;
 
 
 class OptimizationVisitor: public ast::Visitor {

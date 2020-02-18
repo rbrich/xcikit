@@ -1,10 +1,3 @@
-add_subdirectory(plugin)
-
-if (XCI_WITH_VULKAN)
-    add_subdirectory(graphics)
-    add_subdirectory(widgets)
-endif()
-
 # core
 
 add_executable(demo_argparser demo_argparser.cpp)
@@ -39,21 +32,34 @@ add_executable(demo_vfs demo_vfs.cpp)
 target_link_libraries(demo_vfs xci-core)
 install(TARGETS demo_vfs EXPORT xcikit DESTINATION examples)
 
+add_subdirectory(plugin)
+
 # data
 
-add_executable(demo_reflect reflect/demo_reflect.cpp)
-target_link_libraries(demo_reflect xci-data)
-install(TARGETS demo_reflect EXPORT xcikit DESTINATION examples)
+if (XCI_DATA)
+    add_executable(demo_reflect reflect/demo_reflect.cpp)
+    target_link_libraries(demo_reflect xci-data)
+    install(TARGETS demo_reflect EXPORT xcikit DESTINATION examples)
+endif()
 
 # script
 
-add_executable(demo_script script/demo_script.cpp)
-target_link_libraries(demo_script xci-script)
-install(TARGETS demo_script EXPORT xcikit DESTINATION examples)
+if (XCI_SCRIPT)
+    add_executable(demo_script script/demo_script.cpp)
+    target_link_libraries(demo_script xci-script)
+    install(TARGETS demo_script EXPORT xcikit DESTINATION examples)
+endif()
+
+
+# graphics
+
+if (XCI_GRAPHICS)
+    add_subdirectory(graphics)
+endif()
 
 # text
 
-if (XCI_WITH_VULKAN)
+if (XCI_TEXT)
     add_executable(demo_font demo_font.cpp)
     target_link_libraries(demo_font xci-text xci-graphics)
     install(TARGETS demo_font EXPORT xcikit DESTINATION examples)
@@ -61,4 +67,10 @@ if (XCI_WITH_VULKAN)
     add_executable(demo_layout demo_layout.cpp)
     target_link_libraries(demo_layout xci-text xci-graphics)
     install(TARGETS demo_layout EXPORT xcikit DESTINATION examples)
+endif()
+
+# widgets
+
+if (XCI_WIDGETS)
+    add_subdirectory(widgets)
 endif()

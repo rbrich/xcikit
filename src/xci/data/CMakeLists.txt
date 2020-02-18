@@ -24,3 +24,5 @@ target_include_directories(xci-data
         ${CMAKE_SOURCE_DIR}/ext
         ${XCI_INCLUDE_DIRS}
     )
+
+#install(TARGETS xci-data EXPORT xcikit DESTINATION lib)

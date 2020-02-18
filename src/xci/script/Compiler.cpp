@@ -30,7 +30,7 @@
 
 namespace xci::script {
 
-using namespace std;
+using std::make_unique;
 
 
 class CompilerVisitor: public ast::Visitor {
