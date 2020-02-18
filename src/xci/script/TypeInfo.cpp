@@ -17,8 +17,6 @@
 #include "Error.h"
 #include <numeric>
 
-using namespace std;
-
 namespace xci::script {
 
 
@@ -79,7 +77,7 @@ void TypeInfo::replace_var(uint8_t idx, const TypeInfo& ti)
             break;
         case Type::Function: {
             // work on copy of signature
-            auto sig_copy = make_shared<Signature>(*m_signature);
+            auto sig_copy = std::make_shared<Signature>(*m_signature);
             for (auto& prm : sig_copy->params) {
                 prm.replace_var(idx, ti);
             }

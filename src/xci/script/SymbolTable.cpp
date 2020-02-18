@@ -16,12 +16,8 @@
 #include "SymbolTable.h"
 #include <cassert>
 #include <algorithm>
-#include <ostream>
-#include <iomanip>
 
 namespace xci::script {
-
-using namespace std;
 
 
 SymbolTable::SymbolTable(std::string name, SymbolTable* parent)

@@ -18,7 +18,7 @@
 
 namespace xci::script {
 
-using namespace std;
+using std::move;
 
 
 Class::Class(SymbolTable& symtab)

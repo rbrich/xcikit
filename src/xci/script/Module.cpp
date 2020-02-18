@@ -19,7 +19,7 @@
 
 namespace xci::script {
 
-using namespace std;
+using std::move;
 
 
 Module::~Module()

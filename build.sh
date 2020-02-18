@@ -12,7 +12,7 @@ CSI=$'\x1b['
 
 print_usage()
 {
-    echo "Usage: ./build.sh [<phase>, ...] [-G <cmake_generator>] [-j <jobs>] [-D <cmake_def>, ...]"
+    echo "Usage: ./build.sh [<phase>, ...] [-G <cmake_generator>] [-j <jobs>] [-D <cmake_def>, ...] [--unity]"
     echo "Where: <phase> = clean | deps | config | build | test | install | package (default: deps..install)"
     echo "       <cmake_generator> = \"Unix Makefiles\" | Ninja | ... (default: Ninja if available, Unix Makefiles otherwise)"
 }
@@ -66,6 +66,9 @@ while [[ $# -gt 0 ]] ; do
             shift 2 ;;
         -D* )
             CMAKE_ARGS+=("$1")
+            shift 1 ;;
+        --unity )
+            CMAKE_ARGS+=(-D "CMAKE_UNITY_BUILD=1" -D "UNITY_BUILD_BATCH_SIZE=4")
             shift 1 ;;
         * )
             printf 'Error: Unsupported option: %s\n\n' "$1"

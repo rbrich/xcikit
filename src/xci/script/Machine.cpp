@@ -19,15 +19,12 @@
 #include "Error.h"
 #include <xci/core/format.h>
 #include <range/v3/view/reverse.hpp>
-#include <stack>
-#include <sstream>
 #include <cassert>
-#include <iostream>
 #include <functional>
 
 namespace xci::script {
 
-using namespace std;
+using std::move;
 
 
 void Machine::call(const Function& function, const InvokeCallback& cb)
