@@ -5,6 +5,7 @@ osx_image: xcode11
 
 env:
   global:
+    - CONAN_REVISIONS_ENABLED=1
     - MACOSX_DEPLOYMENT_TARGET=10.14
     - VK_SDK_VER=1.2.131.2
 

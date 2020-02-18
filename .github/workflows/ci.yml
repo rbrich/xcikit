@@ -13,6 +13,7 @@ jobs:
 
     env:
       CONAN_PASSWORD: ${{ secrets.CONAN_PASSWORD }}
+      CONAN_REVISIONS_ENABLED: 1
 
     steps:
     - uses: actions/checkout@v2

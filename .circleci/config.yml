@@ -6,6 +6,9 @@ jobs:
     docker:
       - image: rbrich/xcikit-debian:buster
 
+    environment:
+      CONAN_REVISIONS_ENABLED: 1
+
     steps:
       - checkout
 
