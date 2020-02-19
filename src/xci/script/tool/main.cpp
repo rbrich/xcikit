@@ -52,7 +52,7 @@ struct Environment {
 
     Environment() {
         Logger::init(Logger::Level::Warning);
-        vfs.mount(XCI_SHARE_DIR);
+        vfs.mount(XCI_SHARE);
     }
 };
 

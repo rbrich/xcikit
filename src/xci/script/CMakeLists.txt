@@ -39,6 +39,8 @@ target_include_directories(xci-script
         $<TARGET_PROPERTY:taocpp::pegtl,INTERFACE_INCLUDE_DIRECTORIES>
     )
 
+add_dependencies(xci-script share)
+
 install(TARGETS xci-script EXPORT xcikit DESTINATION lib)
 
 
