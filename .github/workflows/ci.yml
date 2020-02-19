@@ -1,0 +1,63 @@
+name: CI
+on: [push]
+
+jobs:
+  build:
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        # macos-latest - handled by Travis
+
+    runs-on: ${{ matrix.os }}
+
+    env:
+      CONAN_PASSWORD: ${{ secrets.CONAN_PASSWORD }}
+      CONAN_REVISIONS_ENABLED: 1
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v1
+      with:
+        python-version: '3.x'
+        architecture: 'x64'
+
+    - name: install tools
+      run: |
+        pip3 --no-cache-dir install conan
+        conan profile new default --detect
+
+    - name: additional Conan setup for Linux
+      if: matrix.os == 'ubuntu-latest'
+      run: conan profile update "settings.compiler.libcxx=libstdc++11" default
+
+    - name: bootstrap
+      run: ./bootstrap.sh -y
+      shell: bash
+
+    - name: deps
+      run: |
+        ./build.sh deps
+        conan user -p $CONAN_PASSWORD -r xcikit rbrich
+        conan upload "*/*@rbrich/stable" --all --no-overwrite --check --confirm -r=xcikit
+      shell: bash
+      
+    - name: configure
+      run: ./build.sh config -D XCI_GRAPHICS=0 -D XCI_DATA=0
+      shell: bash
+      
+    - name: build
+      run: ./build.sh build
+      shell: bash
+      
+    - name: test
+      run: ./build.sh test
+      shell: bash
+      
+    - name: install
+      run: ./build.sh install
+      shell: bash
+      
+    - name: package
+      run: ./build.sh package
+      shell: bash

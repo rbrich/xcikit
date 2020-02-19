@@ -10,8 +10,6 @@
 
 namespace xci::script {
 
-using namespace std;
-
 
 class NonlocalResolverVisitor final: public ast::Visitor {
 public:
@@ -122,7 +120,7 @@ public:
         if (v.definition) {
             // create wrapping function for the closure
             SymbolTable& wfn_symtab = m_function.symtab().add_child(func.symtab().name() + "/closure");
-            auto wfn = make_unique<Function>(module(), wfn_symtab);
+            auto wfn = std::make_unique<Function>(module(), wfn_symtab);
             wfn->set_fragment();
             wfn->set_signature(func.signature_ptr());
             auto wfn_index = module().add_function(move(wfn));

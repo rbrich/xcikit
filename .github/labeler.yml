@@ -1,0 +1,34 @@
+xci-compat:
+  - src/xci/compat/*.h
+xci-core:
+  - src/xci/core/*.+(cpp|h)
+  - src/xci/core/**/*.+(cpp|h)
+xci-data:
+  - src/xci/data/*.+(cpp|h)
+  - src/xci/data/**/*.+(cpp|h)
+xci-graphics:
+  - src/xci/graphics/*.+(cpp|h)
+  - src/xci/graphics/**/*.+(cpp|h)
+xci-script:
+  - src/xci/script/*.+(cpp|h)
+  - src/xci/script/**/*.+(cpp|h)
+xci-text:
+  - src/xci/text/*.+(cpp|h)
+  - src/xci/text/**/*.+(cpp|h)
+xci-widgets:
+  - src/xci/widgets/*.+(cpp|h)
+  - src/xci/widgets/**/*.+(cpp|h)
+build/ci:
+  - ./*.sh
+  - CMakeLists.txt
+  - ./**/CMakeLists.txt
+  - conanfile.py
+  - config.h.in
+  - conan/**/*
+  - xcikitConfig.cmake.in
+  - Dockerfile
+  - docker/**/*
+  - .circleci/*
+  - .travis.yml
+  - .github/*
+  - .github/**/*

@@ -13,7 +13,9 @@
 
 namespace xci::script {
 
-using namespace std;
+using std::unique_ptr;
+using std::make_unique;
+using std::move;
 
 
 class OptimizationVisitor final: public ast::Visitor {
@@ -63,7 +65,7 @@ public:
                 auto& symmod = symtab.module() == nullptr ? module() : *symtab.module();
                 Function& fn = symmod.get_function(sym.index());
                 if (fn.is_normal()) {
-                    m_const_value = std::make_unique<value::Closure>(fn);
+                    m_const_value = make_unique<value::Closure>(fn);
                     return;
                 }
                 break;
@@ -83,7 +85,7 @@ public:
         for (auto& arg : v.args) {
             apply_and_fold(arg);
             if (all_const && m_const_value) {
-                args.add(std::move(m_const_value));
+                args.add(move(m_const_value));
             } else {
                 all_const = false;
             }
@@ -185,7 +187,7 @@ public:
 private:
     Module& module() { return m_function.module(); }
 
-    void apply_and_fold(std::unique_ptr<ast::Expression>& expr) {
+    void apply_and_fold(unique_ptr<ast::Expression>& expr) {
         expr->apply(*this);
         convert_const_object_to_expression();
         if (m_collapsed) {

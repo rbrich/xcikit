@@ -32,12 +32,22 @@ std::optional<std::string> read_text_file(std::istream& stream);
 BufferPtr read_binary_file(const std::string& pathname);
 BufferPtr read_binary_file(std::istream& stream);
 
+/// Write string to FD (in a loop, handling EINTR).
+/// \returns false on error (check errno), true on success
+bool write(int fd, std::string s);
 
-std::string path_dirname(std::string pathname);
-std::string path_basename(std::string pathname);
-std::string path_join(const std::string &part1, const std::string &part2);
+namespace path {
 
+// C++ wrappers for well known Unix functions
+// (the names are intentionally adjusted a little to avoid collision
+// with possible macros, e.g. `basename` on Linux)
+std::string dir_name(std::string pathname);
+std::string base_name(std::string pathname);
+std::string join(const std::string &part1, const std::string &part2);
+std::string real_path(const std::string& path);
 std::string get_cwd();
+
+} // namespace path
 
 
 }  // namespace xci::core

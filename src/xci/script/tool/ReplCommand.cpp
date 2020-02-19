@@ -41,9 +41,9 @@ static void cmd_dump_info() {
 }
 
 
-void ReplCommand::dump_module(unsigned mod_idx) {
+void ReplCommand::dump_module(size_t mod_idx) {
     // dump command module itself
-    if (mod_idx == unsigned(-1)) {
+    if (mod_idx == size_t(-1)) {
         cout << "Command module:" << endl << m_module << endl;
         return;
     }
@@ -71,7 +71,7 @@ void ReplCommand::cmd_dump_module() {
 }
 
 
-void ReplCommand::cmd_dump_module(int32_t mod_idx) {
+void ReplCommand::cmd_dump_module(size_t mod_idx) {
     dump_module(mod_idx);
 }
 
@@ -88,7 +88,7 @@ void ReplCommand::cmd_dump_module(std::string mod_name) {
 
     // dump command module itself
     if (mod_name == "." || mod_name == "cmd") {
-        dump_module(-1);
+        dump_module(size_t(-1));
         return;
     }
 
@@ -98,16 +98,16 @@ void ReplCommand::cmd_dump_module(std::string mod_name) {
 }
 
 
-void ReplCommand::dump_function(unsigned mod_idx, unsigned fun_idx) {
+void ReplCommand::dump_function(size_t mod_idx, size_t fun_idx) {
     auto& ctx = context();
     TermCtl& t = TermCtl::stdout_instance();
 
-    if (mod_idx != unsigned(-1) && mod_idx >= ctx.modules.size()) {
+    if (mod_idx != size_t(-1) && mod_idx >= ctx.modules.size()) {
         cout << t.red().bold() << "Error: module index out of range: "
              << mod_idx << t.normal() << endl;
         return;
     }
-    const auto& module = mod_idx == unsigned(-1)? m_module : *ctx.modules[mod_idx];
+    const auto& module = mod_idx == size_t(-1)? m_module : *ctx.modules[mod_idx];
 
     if (fun_idx >= module.num_functions()) {
         cout << t.red().bold() << "Error: function index out of range: "
@@ -128,7 +128,7 @@ void ReplCommand::cmd_dump_function() {
         cout << t.red().bold() << "Error: no modules available" << t.normal() << endl;
         return;
     }
-    int32_t mod_idx = context().modules.size() - 1;
+    size_t mod_idx = context().modules.size() - 1;
     const auto& module = *context().modules[mod_idx];
 
     if (module.num_functions() == 0) {
@@ -146,7 +146,7 @@ void ReplCommand::cmd_dump_function(std::string fun_name) {
         cout << t.red().bold() << "Error: no modules available" << t.normal() << endl;
         return;
     }
-    int32_t mod_idx = context().modules.size() - 1;
+    size_t mod_idx = context().modules.size() - 1;
     const auto& module = *context().modules[mod_idx];
 
     for (size_t i = 0; i != module.num_functions(); ++i) {
@@ -191,19 +191,19 @@ void ReplCommand::cmd_dump_function(std::string fun_name, std::string mod_name) 
 }
 
 
-void ReplCommand::cmd_dump_function(int32_t fun_idx)
+void ReplCommand::cmd_dump_function(size_t fun_idx)
 {
     TermCtl& t = TermCtl::stdout_instance();
     if (context().modules.empty()) {
         cout << t.red().bold() << "Error: no modules available" << t.normal() << endl;
         return;
     }
-    int32_t mod_idx = context().modules.size() - 1;
+    size_t mod_idx = context().modules.size() - 1;
     dump_function(mod_idx, fun_idx);
 }
 
 
-void ReplCommand::cmd_dump_function(int32_t fun_idx, int32_t mod_idx)
+void ReplCommand::cmd_dump_function(size_t fun_idx, size_t mod_idx)
 {
     dump_function(mod_idx, fun_idx);
 }

@@ -32,7 +32,7 @@ int main()
         auto f = vfs.read_file("non/existent.file");
         log_info("demo: open result: {}", f.is_open());
 
-        f = vfs.read_file("shaders/fps.frag");
+        f = vfs.read_file("shaders/fps.frag.spv");
         log_info("demo: open result: {}", f.is_open());
         auto content = f.content();
         if (content)
@@ -47,8 +47,8 @@ int main()
         {
             Vfs vfs {Vfs::Loaders::NoZip};
 
-            // Don't forget to run bootstrap.sh to create share.dar archive
-            vfs.mount(XCI_SHARE_DIR ".dar");
+            // share.dar archive, generated during build by CMake
+            vfs.mount(XCI_SHARE_DAR);
             // Directory overlapping the archive, will be tried after the archive
             vfs.mount(XCI_SHARE_DIR);
             auto f = vfs.read_file("fonts/Hack/Hack-Regular.ttf");
@@ -68,8 +68,8 @@ int main()
         {
             Vfs vfs;
 
-            // Don't forget to run bootstrap.sh to create share.zip archive
-            vfs.mount(XCI_SHARE_DIR ".zip");
+            // share.zip archive, generated during build by CMake
+            vfs.mount(XCI_SHARE_ZIP);
             auto f = vfs.read_file("fonts/Hack/Hack-Regular.ttf");
             content = f.content();
         }
@@ -88,7 +88,7 @@ int main()
         // Same as above:
         //vfs.mount(XCI_SHARE_DIR "/shaders", "/shaders");
         // This applies to all VFS paths:
-        auto f = vfs.read_file("/shaders/fps.frag");
+        auto f = vfs.read_file("/shaders/fps.frag.spv");
         log_info("demo: open result: {}", f.is_open());
         auto content = f.content();
         if (content)

@@ -20,9 +20,9 @@
 
 #include <iomanip>
 
-using namespace std;
-
 namespace xci::script {
+
+using std::move;
 
 
 void Stack::push(const Value& o)
@@ -143,6 +143,8 @@ void Stack::drop(StackRel first, size_t size)
 
 std::ostream& operator<<(std::ostream& os, const Stack& v)
 {
+    using namespace std;
+
     Stack::StackRel pos = 0;
     auto frame = v.n_frames() - 1;
     auto base = v.to_rel(v.frame().base);

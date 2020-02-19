@@ -26,23 +26,19 @@ bool starts_with(const std::string& str, const std::string& sub)
 }
 
 
-std::vector<string_view> split(string_view str, char delim)
+vector<string_view> split(string_view str, char delim, int maxsplit)
 {
     std::vector<string_view> res;
     size_t pos = 0;
-    size_t end = 0;
-    for (;;) {
-        end = str.find(delim, pos);
-        if (end != string_view::npos) {
-            if (end != pos)
-                res.push_back(str.substr(pos, end - pos));
-            pos = end + 1;
-        } else {
-            if (pos < str.size() - 1)
-                res.push_back(str.substr(pos, end - pos));
+    while (maxsplit != 0) {
+        size_t end = str.find(delim, pos);
+        if (end == string_view::npos)
             break;
-        }
+        res.push_back(str.substr(pos, end - pos));
+        pos = end + 1;
+        --maxsplit;
     }
+    res.push_back(str.substr(pos, str.size() - pos));
     return res;
 }
 
@@ -64,12 +60,13 @@ std::string escape(string_view str)
             case '"': out += "\\\""; break;
             case '\'': out += "\\'"; break;
             default: {
-                if (std::isprint(ch))
+                auto chnum = (int)(unsigned char)(ch);
+                if (std::isprint(chnum))
                     out += ch;
                 else if (ch >= 0 && ch < 8)
-                    out += format("\\{}", (int)(unsigned char)(ch));
+                    out += format("\\{}", chnum);
                 else
-                    out += format("\\x{:02x}", (int)(unsigned char)(ch));
+                    out += format("\\x{:02x}", chnum);
                 break;
             }
         }
@@ -107,7 +104,7 @@ std::string to_lower(std::string_view str)
     std::string result(str.size(), '\0');
     std::transform(
         str.begin(), str.end(),
-        result.begin(), [](char c){ return std::tolower(c); });
+        result.begin(), [](char c){ return (char) std::tolower(c); });
     return result;
 }
 
@@ -116,13 +113,28 @@ std::u32string to_utf32(string_view utf8)
 {
     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert_utf32;
     try {
-        return convert_utf32.from_bytes(utf8.cbegin(), utf8.cend());
+        return convert_utf32.from_bytes(utf8.data(), utf8.data() + utf8.size());
     } catch (const std::range_error& e) {
-        log_error("to_utf32: Invalid UTF8 string: {}", utf8);
+        log_error("to_utf32: Invalid UTF8 string: {} ({})", utf8, e.what());
         return std::u32string();
     }
 }
 
+
+template <class Elem>
+std::string _to_utf8(std::basic_string_view<Elem> wstr)
+{
+    std::wstring_convert<std::codecvt_utf8<Elem>, Elem> convert;
+    try {
+        return convert.to_bytes(wstr.data(), wstr.data() + wstr.size());
+    } catch (const std::range_error& e) {
+        log_error("to_utf8: Invalid UTF16/32 string ({})", e.what());
+        return {};
+    }
+}
+
+std::string to_utf8(std::u16string_view wstr) { return _to_utf8(wstr); }
+std::string to_utf8(std::wstring_view wstr) { return _to_utf8(wstr); }
 
 std::string to_utf8(char32_t codepoint)
 {
@@ -131,51 +143,65 @@ std::string to_utf8(char32_t codepoint)
 }
 
 
-const char* utf8_next(const char* pos)
+template <class I>
+I utf8_next(I iter)
 {
-    auto first = (unsigned char) *pos;
+    auto first = (unsigned char) *iter;
     if (first == 0) {
-        return pos;
+        return iter;
     } else
     if ((first & 0b10000000) == 0) {
         // 0xxxxxxx -> 1 byte
-        return pos + 1;
+        return iter + 1;
     } else
     if ((first & 0b11100000) == 0b11000000) {
         // 110xxxxx -> 2 bytes
-        return pos + 2;
+        return iter + 2;
     } else
     if ((first & 0b11110000) == 0b11100000) {
         // 1110xxxx -> 3 bytes
-        return pos + 3;
+        return iter + 3;
     } else
     if ((first & 0b11111000) == 0b11110000) {
         // 11110xxx -> 4 bytes
-        return pos + 4;
+        return iter + 4;
     } else {
         log_error("utf8_next: Invalid UTF8 string, encountered code 0x{:02x}", int(first));
-        return pos + 1;
+        return iter + 1;
     }
 }
 
+// instantiate the template (these are the only supported types)
+template std::string::const_iterator utf8_next(std::string::const_iterator);
+template std::string_view::const_iterator utf8_next(std::string_view::const_iterator);
 
-std::string::const_reverse_iterator
-utf8_prev(std::string::const_reverse_iterator pos)
+
+template <class I>
+I utf8_prev(I riter)
 {
-    while ((*pos & 0b11000000) == 0b10000000)
-        ++pos;
-    return pos + 1;
+    while ((*riter & 0b11000000) == 0b10000000)
+        ++riter;
+    return riter + 1;
 }
 
+// instantiate the template (these are the only supported types)
+template std::string::const_reverse_iterator utf8_prev(std::string::const_reverse_iterator);
+template std::string_view::const_reverse_iterator utf8_prev(std::string_view::const_reverse_iterator);
 
-size_t utf8_length(string_view str)
+
+template <class S, class SSize>
+SSize utf8_length(const S& str)
 {
-    size_t length = 0;
+    SSize length = 0;
     for (auto pos = str.cbegin(); pos != str.cend(); pos = utf8_next(pos)) {
         ++length;
     }
     return length;
 }
+
+// instantiate the template (these are the only supported types)
+template std::string::size_type utf8_length<std::string>(const std::string&);
+template std::string_view::size_type utf8_length<std::string_view>(const std::string_view&);
 
 
 string_view utf8_substr(string_view str, size_t pos, size_t count)
@@ -190,7 +216,7 @@ string_view utf8_substr(string_view str, size_t pos, size_t count)
         end = utf8_next(end);
         --count;
     }
-    return {begin, size_t(end - begin)};
+    return {&*begin, size_t(end - begin)};
 }
 
 

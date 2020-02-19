@@ -1,6 +1,5 @@
-import os
-
 from conans import ConanFile, CMake, tools
+import os
 
 
 class ReplxxTestConan(ConanFile):
@@ -13,6 +12,4 @@ class ReplxxTestConan(ConanFile):
         cmake.build()
 
     def test(self):
-        if not tools.cross_building(self.settings):
-            os.chdir("bin")
-            self.run(".%sexample" % os.sep)
+        self.run(os.path.join("bin", "example"))

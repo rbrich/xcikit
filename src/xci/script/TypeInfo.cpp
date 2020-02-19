@@ -17,8 +17,6 @@
 #include "Error.h"
 #include <numeric>
 
-using namespace std;
-
 namespace xci::script {
 
 
@@ -37,7 +35,7 @@ size_t TypeInfo::size() const
         case Type::String:      return sizeof(byte*) + sizeof(size_t);
         case Type::List:        return sizeof(byte*) + sizeof(size_t);
         case Type::Tuple:
-            return accumulate(m_subtypes.begin(), m_subtypes.end(), 0,
+            return accumulate(m_subtypes.begin(), m_subtypes.end(), size_t(0),
                               [](size_t init, const TypeInfo& ti)
                               { return init + ti.size(); });
         case Type::Function:    return sizeof(byte*) + sizeof(void*);
@@ -79,7 +77,7 @@ void TypeInfo::replace_var(uint8_t idx, const TypeInfo& ti)
             break;
         case Type::Function: {
             // work on copy of signature
-            auto sig_copy = make_shared<Signature>(*m_signature);
+            auto sig_copy = std::make_shared<Signature>(*m_signature);
             for (auto& prm : sig_copy->params) {
                 prm.replace_var(idx, ti);
             }

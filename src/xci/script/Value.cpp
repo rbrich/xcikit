@@ -21,26 +21,28 @@
 
 namespace xci::script {
 
-using namespace std;
+using std::move;
+using std::unique_ptr;
+using std::make_unique;
 
 
 std::unique_ptr<Value> Value::create(const TypeInfo& type_info)
 {
     switch (type_info.type()) {
         case Type::Unknown: assert(!"Cannot create Value of Unknown type"); break;
-        case Type::Void: return std::make_unique<value::Void>();
-        case Type::Bool: return std::make_unique<value::Bool>();
-        case Type::Byte: return std::make_unique<value::Byte>();
-        case Type::Char: return std::make_unique<value::Char>();
-        case Type::Int32: return std::make_unique<value::Int32>();
-        case Type::Int64: return std::make_unique<value::Int64>();
-        case Type::Float32: return std::make_unique<value::Float32>();
-        case Type::Float64: return std::make_unique<value::Float64>();
-        case Type::String: return std::make_unique<value::String>();
-        case Type::List: return std::make_unique<value::List>(type_info.elem_type());
-        case Type::Tuple: return std::make_unique<value::Tuple>(type_info);
-        case Type::Function: return std::make_unique<value::Closure>();
-        case Type::Module: return std::make_unique<value::Module>();
+        case Type::Void: return make_unique<value::Void>();
+        case Type::Bool: return make_unique<value::Bool>();
+        case Type::Byte: return make_unique<value::Byte>();
+        case Type::Char: return make_unique<value::Char>();
+        case Type::Int32: return make_unique<value::Int32>();
+        case Type::Int64: return make_unique<value::Int64>();
+        case Type::Float32: return make_unique<value::Float32>();
+        case Type::Float64: return make_unique<value::Float64>();
+        case Type::String: return make_unique<value::String>();
+        case Type::List: return make_unique<value::List>(type_info.elem_type());
+        case Type::Tuple: return make_unique<value::Tuple>(type_info);
+        case Type::Function: return make_unique<value::Closure>();
+        case Type::Module: return make_unique<value::Module>();
     }
     return nullptr;
 }
@@ -64,7 +66,7 @@ Values& Values::operator=(const Values& rhs)
 
 size_t Values::raw_size() const
 {
-    return std::accumulate(m_items.begin(), m_items.end(), 0,
+    return std::accumulate(m_items.begin(), m_items.end(), size_t(0),
         [](size_t init, const unique_ptr<Value>& value)
         { return init + value->size(); });
 }

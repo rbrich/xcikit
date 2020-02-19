@@ -6,6 +6,9 @@ jobs:
     docker:
       - image: rbrich/xcikit-debian:buster
 
+    environment:
+      CONAN_REVISIONS_ENABLED: 1
+
     steps:
       - checkout
 
@@ -23,7 +26,7 @@ jobs:
 
       - run:
           name: Build
-          command: ./build.sh build
+          command: ./build.sh build -j 2
 
       - run:
           name: Run tests

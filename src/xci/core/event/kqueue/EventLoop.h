@@ -16,7 +16,6 @@
 #ifndef XCI_CORE_KQUEUE_EVENTLOOP_H
 #define XCI_CORE_KQUEUE_EVENTLOOP_H
 
-#include <vector>
 #include <sys/event.h>
 
 namespace xci::core {

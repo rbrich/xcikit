@@ -1,25 +1,23 @@
 // Logger.h created on 2018-03-01, part of XCI toolkit
 
-#include <xci/core/log.h>
+#include "log.h"
 #include <xci/core/TermCtl.h>
 #include <xci/core/sys.h>
+#include <xci/core/file.h>
+#include <xci/compat/unistd.h>
 
-#include <iostream>
-#include <iomanip>
 #include <ctime>
 #include <cassert>
-#include <unistd.h>
-#include "log.h"
 
 
 namespace xci::core {
 
 
 static const char* level_format[] = {
-        "{:19} {cyan}{}{normal}  {bold}DEBUG{normal}  {white}{}{normal}\n",
-        "{:19} {cyan}{}{normal}  {bold}INFO {normal}  {bold}{white}{}{normal}\n",
-        "{:19} {cyan}{}{normal}  {bold}WARN {normal}  {bold}{yellow}{}{normal}\n",
-        "{:19} {cyan}{}{normal}  {bold}ERROR{normal}  {bold}{red}{}{normal}\n",
+        "{:19} {cyan}{:5}{normal}  {bold}DEBUG{normal}  {white}{}{normal}\n",
+        "{:19} {cyan}{:5}{normal}  {bold}INFO {normal}  {bold}{white}{}{normal}\n",
+        "{:19} {cyan}{:5}{normal}  {bold}WARN {normal}  {bold}{yellow}{}{normal}\n",
+        "{:19} {cyan}{:5}{normal}  {bold}ERROR{normal}  {bold}{red}{}{normal}\n",
 };
 
 
@@ -35,7 +33,9 @@ Logger::Logger(Level level) : m_level(level)
     if (m_level <= Level::Info) {
         TermCtl& t = TermCtl::stderr_instance();
         auto msg = t.format("{underline}   Date      Time    TID   Level  Message   {normal}\n");
-        ::write(STDERR_FILENO, msg.data(), msg.size());
+        auto res = write(STDERR_FILENO, msg);
+        assert(res);  // write to stderr should not fail
+        (void) res;
     }
 }
 
@@ -45,7 +45,9 @@ Logger::~Logger()
     if (m_level <= Level::Info) {
         TermCtl& t = TermCtl::stderr_instance();
         auto msg = t.format("{overline}                 End of Log                 {normal}\n");
-        ::write(STDERR_FILENO, msg.data(), msg.size());
+        auto res = write(STDERR_FILENO, msg);
+        assert(res);  // write to stderr should not fail
+        (void) res;
     }
 }
 
@@ -66,7 +68,9 @@ void Logger::default_handler(Logger::Level lvl, const std::string& msg)
     TermCtl& t = TermCtl::stderr_instance();
     auto lvl_num = static_cast<int>(lvl);
     auto formatted_msg = t.format(level_format[lvl_num], format_current_time(), get_thread_id(), msg);
-    ::write(STDERR_FILENO, formatted_msg.data(), formatted_msg.size());
+    auto res = write(STDERR_FILENO, formatted_msg);
+    assert(res);  // write to stderr should not fail
+    (void) res;
 }
 
 

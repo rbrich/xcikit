@@ -1,4 +1,4 @@
-// string.h created on 2018-03-23 belongs to XCI Toolkit
+// string.h created on 2018-03-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
 // Copyright 2018, 2019 Radek Brich
@@ -22,25 +22,41 @@ constexpr const char* whitespace_chars = "\t\n\v\f\r ";
 /// \param sub      String to be looked up (length should be shorter or same)
 bool starts_with(const std::string& str, const std::string& sub);
 
-std::vector<std::string_view> split(std::string_view str, char delim);
+std::vector<std::string_view> split(std::string_view str, char delim, int maxsplit = -1);
 
 // Strip chars from start of a string
-template <typename T>
+template <class T>
 void lstrip(std::string &str, T strip_chars) {
     str.erase(0, str.find_first_not_of(strip_chars));
 }
-inline
-void lstrip(std::string &str) { return lstrip(str, whitespace_chars); }
+
+template <class T>
+void lstrip(std::string_view &str, T strip_chars) {
+    str.remove_prefix(std::min(str.find_first_not_of(strip_chars), str.size()));
+}
+
+template <class S>
+void lstrip(S& str) { return lstrip(str, whitespace_chars); }
 
 // Strip chars from end of a string
-template <typename T>
+template <class T>
 void rstrip(std::string &str, T strip_chars) {
     str.erase(str.find_last_not_of(strip_chars) + 1);
 }
-inline
-void rstrip(std::string &str) { return rstrip(str, whitespace_chars); }
 
-inline void strip(std::string &str) { lstrip(str); rstrip(str); }
+template <class T>
+void rstrip(std::string_view &str, T strip_chars) {
+    str.remove_suffix(str.size() - std::min(str.find_last_not_of(strip_chars) + 1, str.size()));
+}
+
+template <class S>
+void rstrip(S& str) { return rstrip(str, whitespace_chars); }
+
+template <class S, class T>
+void strip(S& str, T strip_chars) { lstrip(str, strip_chars); rstrip(str, strip_chars); }
+
+template <class S>
+void strip(S& str) { lstrip(str); rstrip(str); }
 
 // Escape non-printable characters with C escape sequences (eg. '\n')
 std::string escape(std::string_view str);
@@ -58,15 +74,18 @@ std::string to_lower(std::string_view str);
 // In case of invalid source string, logs error and returns empty string.
 std::u32string to_utf32(std::string_view utf8);
 
+// Convert UTF16/32 string to UTF8
+std::string to_utf8(std::u16string_view wstr);
+std::string to_utf8(std::wstring_view wstr);
+
 // Convert single UTF32 char to UTF8 string. Can't fail.
 std::string to_utf8(char32_t codepoint);
 
-const char* utf8_next(const char* pos);
+template <class I> I utf8_next(I iter);
+template <class I> I utf8_prev(I riter);
 
-std::string::const_reverse_iterator
-utf8_prev(std::string::const_reverse_iterator pos);
-
-size_t utf8_length(std::string_view str);
+template <class S, class SSize = typename S::size_type>
+SSize utf8_length(const S& str);
 
 std::string_view utf8_substr(std::string_view str, size_t pos, size_t count);
 

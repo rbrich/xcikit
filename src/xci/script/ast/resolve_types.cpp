@@ -11,9 +11,12 @@
 #include <xci/script/Error.h>
 #include <xci/compat/macros.h>
 
-using namespace std;
-
 namespace xci::script {
+
+using std::move;
+using std::make_unique;
+using std::stringstream;
+using std::endl;
 
 
 class TypeCheckerVisitor final: public ast::Visitor {

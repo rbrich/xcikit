@@ -10,7 +10,8 @@
 
 namespace xci::script {
 
-using namespace std;
+using std::unique_ptr;
+using std::move;
 
 
 class FoldDotCallVisitor final: public ast::Visitor {
@@ -50,7 +51,7 @@ public:
             m_collapsed = move(v.args[1]);
             auto* call = dynamic_cast<ast::Call*>(m_collapsed.get());
             assert(call != nullptr);
-            call->args.insert(call->args.begin(), std::move(v.args[0]));
+            call->args.insert(call->args.begin(), move(v.args[0]));
         }
     }
 
@@ -84,7 +85,7 @@ private:
     Module& module() { return m_function.module(); }
 
 private:
-    void apply_and_fold(std::unique_ptr<ast::Expression>& expr) {
+    void apply_and_fold(unique_ptr<ast::Expression>& expr) {
         expr->apply(*this);
         if (m_collapsed) {
             expr = move(m_collapsed);

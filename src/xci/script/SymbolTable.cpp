@@ -16,12 +16,14 @@
 #include "SymbolTable.h"
 #include <cassert>
 #include <algorithm>
-#include <ostream>
-#include <iomanip>
 
 namespace xci::script {
 
-using namespace std;
+
+SymbolTable::SymbolTable(std::string name, SymbolTable* parent)
+        : m_name(std::move(name)), m_parent(parent),
+          m_module(parent ? parent->module() : nullptr)
+{}
 
 
 Symbol& SymbolPointer::operator*()
