@@ -1,10 +1,10 @@
-Lambda Script v0.3
-==================
+Fire Script v0.3
+================
 ***Syntax reference***
 
 [TOC]
 
-Lambda Script is a functional language, strongly and statically typed,
+Fire Script is a functional language, strongly and statically typed,
 with function overloading and generics (type variables).
 
 The language is designed to allow small and easily embeddable implementation,
@@ -55,7 +55,7 @@ Syntax Elements
 
 ### Infix function call
 
-Any function can be used as "infix operator", or when comparing to object-oriented languages,
+Any function can be used as "infix operator", or when comparing to object-oriented languages,``
 as a method call, giving the first argument is the "object" on which it operates:
 
     foo .do bar
