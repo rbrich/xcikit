@@ -88,9 +88,10 @@ public:
     bool has_intrinsics() const { return std::get<CompiledBody>(m_body).intrinsics > 0; }
 
     // Generic function: AST of function body
-    const ast::Block& ast() const { return std::get<GenericBody>(m_body).ast; }
-    ast::Block& ast() { return std::get<GenericBody>(m_body).ast; }
-    void copy_ast(const ast::Block& body) { m_body = GenericBody{body.copy()}; }
+    const ast::Block& ast() const { return std::get<GenericBody>(m_body).ast(); }
+    void set_ast(const ast::Block& body) { m_body = GenericBody{&body}; }
+    bool is_ast_copied() const { return std::get<GenericBody>(m_body).ast_ref == nullptr; }
+    void ensure_ast_copy() { std::get<GenericBody>(m_body).ensure_copy(); }
 
     // non-locals
     void add_nonlocal(TypeInfo&& type_info);
@@ -130,8 +131,22 @@ public:
     struct GenericBody {
         bool operator==(const GenericBody& rhs) const;
 
-        // AST of function body (only for generic function)
-        ast::Block ast;
+        // AST of function body - reference
+        const ast::Block* ast_ref = nullptr;
+
+        // frozen copy of AST (when ast_ref == nullptr)
+        ast::Block ast_copy;
+
+        // obtain read-only AST
+        const ast::Block& ast() const { return ast_ref ? *ast_ref : ast_copy; }
+
+        // copy AST if referenced
+        void ensure_copy() {
+            if (ast_ref) {
+                ast_copy = ast_ref->copy();
+                ast_ref = nullptr;
+            }
+        }
     };
 
     // function wraps native function (C++ binding)

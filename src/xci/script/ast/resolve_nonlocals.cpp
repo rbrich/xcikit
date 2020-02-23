@@ -56,6 +56,7 @@ public:
                 auto* symmod = symtab.module() == nullptr ? &module() : symtab.module();
                 auto& fn = symmod->get_function(sym.index());
                 if (fn.is_generic()) {
+                    assert(!fn.is_ast_copied());   // AST is referenced
                     process_function(fn, fn.ast());
                 }
                 break;
@@ -141,7 +142,7 @@ private:
         expression.apply(visitor);
     }
 
-    void process_function(Function& func, ast::Block& body) {
+    void process_function(Function& func, const ast::Block& body) {
         resolve_nonlocals(func, body);
 
         auto& nonlocals = func.signature().nonlocals;

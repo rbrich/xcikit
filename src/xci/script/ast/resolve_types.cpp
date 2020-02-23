@@ -222,7 +222,7 @@ public:
                         // instantiate the specialization
                         auto fspec = make_unique<Function>(fn.module(), fn.symtab());
                         fspec->set_signature(fn.signature_ptr());
-                        fspec->copy_ast(fn.ast());
+                        fspec->set_ast(fn.ast());
                         specialize_to_call_args(*fspec);
                         resolve_types(*fspec, fspec->ast());
                         sig_ptr = fspec->signature_ptr();
@@ -450,7 +450,7 @@ public:
                 m_value_type = TypeInfo{fn.signature_ptr()};
             } else {
                 // mark as generic, uncompiled
-                fn.copy_ast(v.body);
+                fn.set_ast(v.body);
             }
         } else {
             fn.set_compiled();

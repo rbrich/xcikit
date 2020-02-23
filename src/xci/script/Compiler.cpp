@@ -41,6 +41,7 @@ public:
     void visit(ast::Definition& dfn) override {
         Function& func = module().get_function(dfn.symbol()->index());
         if (func.is_generic()) {
+            func.ensure_ast_copy();
             return;
         }
         if (func.is_undefined())
@@ -219,7 +220,10 @@ public:
                     // specialization might not be compiled yet - compile it now
                     Function& func = module().get_function(sym.index());
                     if (func.is_generic()) {
-                        auto ast = std::move(func.ast());
+                        assert(!func.detect_generic());  // fully specialized
+                        assert(!func.is_ast_copied());   // AST is referenced
+                        auto& ast = func.ast();
+                        //auto ast = std::move(func.ast_copy());
                         func.set_compiled();
                         m_compiler.compile_block(func, ast);
                     }
@@ -347,8 +351,10 @@ public:
     void visit(ast::Function& v) override {
         // compile body
         Function& func = module().get_function(v.index);
-        if (func.is_generic())
+        if (func.is_generic()) {
+            func.ensure_ast_copy();
             return;  // generic function -> compiled on call
+        }
 
         m_compiler.compile_block(func, v.body);
         if (func.symtab().parent() != &m_function.symtab())
