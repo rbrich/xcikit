@@ -45,6 +45,8 @@ class BuiltinModule : public Module {
 public:
     BuiltinModule();
 
+    static BuiltinModule& static_instance();
+
 private:
     void add_logical_op_function(const std::string& name, Opcode opcode);
     void add_bitwise_op_function(const std::string& name, Opcode opcode);

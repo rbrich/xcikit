@@ -45,14 +45,12 @@ public:
     Parser& parser() { return m_parser; }
     Compiler& compiler() { return m_compiler; }
     Machine& machine() { return m_machine; }
-    Module& builtin_module() { return m_builtin; }
     Module& main_module() { return m_main; }
 
 private:
     Parser m_parser;
     Compiler m_compiler;
     Machine m_machine;
-    BuiltinModule m_builtin;
     Module m_main;
 };
 

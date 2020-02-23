@@ -55,6 +55,10 @@ public:
     }
 
     // Imported modules
+    // - lookup is reversed, first module is checked last
+    // - index 0 should be builtin
+    // - index 1 should be std
+    // - imported modules are added in import order
     void add_imported_module(Module& module) { m_modules.push_back(&module); }
     Module& get_imported_module(size_t idx) const { return *m_modules[idx]; }
     Index get_imported_module_index(Module* module) const;
@@ -87,6 +91,7 @@ public:
 
     // Top-level symbol table
     SymbolTable& symtab() { return m_symtab; }
+    const SymbolTable& symtab() const { return m_symtab; }
 
     bool operator==(const Module& rhs) const;
 

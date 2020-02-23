@@ -161,6 +161,7 @@ public:
                 bool found = false;
                 auto inst_psym = v.chain;
                 while (inst_psym) {
+                    assert(inst_psym->type() == Symbol::Instance);
                     auto* inst_mod = inst_psym.symtab()->module();
                     if (inst_mod == nullptr)
                         inst_mod = &module();

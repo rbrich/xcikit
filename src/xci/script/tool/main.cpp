@@ -64,17 +64,13 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
     auto& compiler = context().interpreter.compiler();
     auto& machine = context().interpreter.machine();
 
-    try {
-        if (context().modules.empty()) {
-            context().interpreter.configure(opts.compiler_flags);
-            context().modules.push_back(std::make_unique<BuiltinModule>());
+    context().interpreter.configure(opts.compiler_flags);
 
-            if (opts.with_std_lib) {
-                auto f = env.vfs.read_file("script/std.ys");
-                auto content = f.content();
-                auto std_module = context().interpreter.build_module("std", content->string_view());
-                context().modules.push_back(move(std_module));
-            }
+    try {
+        if (opts.with_std_lib && !context().std_module) {
+            auto f = env.vfs.read_file("script/std.ys");
+            auto content = f.content();
+            context().std_module = context().interpreter.build_module("std", content->string_view());
         }
 
         // parse
@@ -88,7 +84,9 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
         // compile
         std::string module_name = input_number >= 0 ? format("input_{}", input_number) : "<input>";
         auto module = std::make_unique<Module>(module_name);
-        for (auto& m : context().modules)
+        module->add_imported_module(BuiltinModule::static_instance());
+        module->add_imported_module(*context().std_module);
+        for (auto& m : context().input_modules)
             module->add_imported_module(*m);
         auto func_name = input_number == -1 ? "_" : "_" + to_string(input_number);
         auto func = make_unique<Function>(*module, module->symtab());
@@ -135,7 +133,7 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
             auto func_idx = module->add_function(move(func));
             module->symtab().add({move(func_name), Symbol::Function, func_idx});
 
-            context().modules.push_back(move(module));
+            context().input_modules.push_back(move(module));
         } else {
             // single input mode
             if (!result->is_void()) {

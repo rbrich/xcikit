@@ -769,7 +769,8 @@ std::ostream& operator<<(std::ostream& os, const SymbolPointer& v)
     if (v->index() != no_index)
         os << " #" << v->index();
     if (v.symtab() != nullptr)
-        os << " @" << std::hex << v.symtab() << std::dec;
+        os << " @" << v.symtab()->name() << " ("
+           << std::hex << intptr_t(v.symtab()) << ')' << std::dec;
     if (v->ref())
         os << " -> " << v->ref();
     return os;

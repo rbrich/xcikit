@@ -49,10 +49,10 @@ void check_parser(const string& input, const string& expected_output)
 
 void check_interpreter(const string& input, const string& expected_output="true")
 {
-    static std::unique_ptr<Module> sys_module;
+    static std::unique_ptr<Module> std_module;
     Interpreter interpreter;
 
-    if (!sys_module) {
+    if (!std_module) {
         Logger::init(Logger::Level::Warning);
         Vfs vfs;
         vfs.mount(XCI_SHARE);
@@ -60,9 +60,9 @@ void check_interpreter(const string& input, const string& expected_output="true"
         auto f = vfs.read_file("script/std.ys");
         REQUIRE(f.is_open());
         auto content = f.content();
-        sys_module = interpreter.build_module("sys", content->string_view());
+        std_module = interpreter.build_module("std", content->string_view());
     }
-    interpreter.add_imported_module(*sys_module);
+    interpreter.add_imported_module(*std_module);
 
     ostringstream os;
     try {
@@ -130,7 +130,7 @@ TEST_CASE( "Operator precedence", "[script][parser]" )
     check_interpreter("1 .add (2 .mul 3)", "7");
     check_interpreter("pred (neg (succ (14)))", "-16");
     check_interpreter("14 .succ .neg .pred", "-16");
-    check_interpreter("(((14) .succ) .neg) .pred", "-0xd");
+    check_interpreter("(((14) .succ) .neg) .pred", "-16");
 }
 
 

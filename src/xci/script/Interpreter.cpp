@@ -23,7 +23,7 @@ using std::move;
 Interpreter::Interpreter(uint32_t flags)
     : m_compiler(flags)
 {
-    add_imported_module(m_builtin);
+    add_imported_module(BuiltinModule::static_instance());
 }
 
 
@@ -31,7 +31,7 @@ std::unique_ptr<Module> Interpreter::build_module(const std::string& name, std::
 {
     // setup module
     auto module = std::make_unique<Module>(name);
-    module->add_imported_module(m_builtin);
+    module->add_imported_module(BuiltinModule::static_instance());
 
     // parse
     ast::Module ast;
@@ -40,6 +40,15 @@ std::unique_ptr<Module> Interpreter::build_module(const std::string& name, std::
     // compile
     Function func {*module, module->symtab()};
     m_compiler.compile(func, ast);
+
+    // sanity check (no AST references)
+    for (Index idx = 0; idx != module->num_functions(); ++idx) {
+        auto& fn = module->get_function(idx);
+        if (fn.is_generic()) {
+            assert(fn.is_ast_copied());
+            fn.ensure_ast_copy();
+        }
+    }
 
     return module;
 }

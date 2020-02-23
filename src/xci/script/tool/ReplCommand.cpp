@@ -41,33 +41,83 @@ static void cmd_dump_info() {
 }
 
 
-void ReplCommand::dump_module(size_t mod_idx) {
-    // dump command module itself
+static void print_module_header(const Module& module)
+{
+    cout << "Module \"" << module.name() << '"'
+         << " (" << std::hex << intptr_t(&module.symtab()) << std::dec << ')' << endl;
+}
+
+
+const Module* ReplCommand::module_by_idx(size_t mod_idx) {
+    TermCtl& t = TermCtl::stdout_instance();
+    auto& ctx = context();
+
     if (mod_idx == size_t(-1)) {
-        cout << "Command module:" << endl << m_module << endl;
-        return;
+        if (!ctx.std_module) {
+            cout << t.red().bold() << "Error: std module not loaded"
+                 << t.normal() << endl;
+            return nullptr;
+        }
+        return ctx.std_module.get();
+    }
+    if (mod_idx == size_t(-2))
+        return &BuiltinModule::static_instance();
+
+    if (mod_idx == size_t(-3))
+        return &m_module;
+
+    if (mod_idx >= ctx.input_modules.size()) {
+        cout << t.red().bold() << "Error: module index out of range: "
+             << mod_idx << t.normal() << endl;
+        return nullptr;
+    }
+    return ctx.input_modules[mod_idx].get();
+}
+
+
+const Module* ReplCommand::module_by_name(const std::string& mod_name) {
+    size_t n = 0;
+    for (const auto& m : context().input_modules) {
+        if (m->name() == mod_name)
+            return m.get();
+        ++n;
     }
 
     auto& ctx = context();
     TermCtl& t = TermCtl::stdout_instance();
-    if (ctx.modules.empty()) {
-        cout << t.red().bold() << "Error: no modules available" << t.normal() << endl;
-        return;
-    }
-    if (mod_idx >= ctx.modules.size()) {
-        cout << t.red().bold() << "Error: module index out of range: "
-             << mod_idx << t.normal() << endl;
-        return;
+
+    if (mod_name == "std") {
+        if (!ctx.std_module) {
+            cout << t.red().bold() << "Error: std module not loaded"
+                 << t.normal() << endl;
+            return nullptr;
+        }
+        return ctx.std_module.get();
     }
 
-    const auto& module = *ctx.modules[mod_idx];
-    cout << "Module [" << mod_idx << "] " << module.name() << ":" << endl
-         << module << endl;
+    if (mod_name == "builtin")
+        return &BuiltinModule::static_instance();
+
+    if (mod_name == "." || mod_name == "cmd")
+        return &m_module;
+
+    cout << t.red().bold() << "Error: module not found: " << mod_name
+         << t.normal() << endl;
+    return nullptr;
+}
+
+
+void ReplCommand::dump_module(size_t mod_idx) {
+    auto* module = module_by_idx(mod_idx);
+    if (!module)
+        return;
+    print_module_header(*module);
+    cout << *module << endl;
 }
 
 
 void ReplCommand::cmd_dump_module() {
-    dump_module(context().modules.size() - 1);
+    dump_module(context().input_modules.size() - 1);
 }
 
 
@@ -77,81 +127,60 @@ void ReplCommand::cmd_dump_module(size_t mod_idx) {
 
 
 void ReplCommand::cmd_dump_module(std::string mod_name) {
-    size_t n = 0;
-    for (const auto& m : context().modules) {
-        if (m->name() == mod_name) {
-            dump_module(n);
-            return;
-        }
-        ++n;
-    }
-
-    // dump command module itself
-    if (mod_name == "." || mod_name == "cmd") {
-        dump_module(size_t(-1));
+    auto* module = module_by_name(mod_name);
+    if (!module)
         return;
-    }
-
-    TermCtl& t = TermCtl::stdout_instance();
-    cout << t.red().bold() << "Error: module not found: " << mod_name
-         << t.normal() << endl;
+    print_module_header(*module);
+    cout << *module << endl;
 }
 
 
-void ReplCommand::dump_function(size_t mod_idx, size_t fun_idx) {
-    auto& ctx = context();
+void ReplCommand::dump_function(const Module& module, size_t fun_idx) {
     TermCtl& t = TermCtl::stdout_instance();
-
-    if (mod_idx != size_t(-1) && mod_idx >= ctx.modules.size()) {
-        cout << t.red().bold() << "Error: module index out of range: "
-             << mod_idx << t.normal() << endl;
-        return;
-    }
-    const auto& module = mod_idx == size_t(-1)? m_module : *ctx.modules[mod_idx];
 
     if (fun_idx >= module.num_functions()) {
         cout << t.red().bold() << "Error: function index out of range: "
-             << mod_idx << t.normal() << endl;
+             << fun_idx << t.normal() << endl;
         return;
     }
     const auto& function = module.get_function(fun_idx);
 
-    cout << "Module [" << mod_idx << "] " << module.name() << ":" << endl
-         << "Function [" << fun_idx << "] " << function.name() << ": "
+    print_module_header(module);
+    cout << "Function [" << fun_idx << "] " << function.name() << ": "
          << function << endl;
 }
 
 
 void ReplCommand::cmd_dump_function() {
     TermCtl& t = TermCtl::stdout_instance();
-    if (context().modules.empty()) {
-        cout << t.red().bold() << "Error: no modules available" << t.normal() << endl;
+    if (context().input_modules.empty()) {
+        cout << t.red().bold() << "Error: no input modules available" << t.normal() << endl;
         return;
     }
-    size_t mod_idx = context().modules.size() - 1;
-    const auto& module = *context().modules[mod_idx];
+    size_t mod_idx = context().input_modules.size() - 1;
+    const auto& module = *context().input_modules[mod_idx];
 
     if (module.num_functions() == 0) {
         cout << t.red().bold() << "Error: no functions available" << t.normal() << endl;
         return;
     }
 
-    dump_function(mod_idx, module.num_functions() - 1);
+    dump_function(module, module.num_functions() - 1);
 }
 
 
 void ReplCommand::cmd_dump_function(std::string fun_name) {
     TermCtl& t = TermCtl::stdout_instance();
-    if (context().modules.empty()) {
-        cout << t.red().bold() << "Error: no modules available" << t.normal() << endl;
+    if (context().input_modules.empty()) {
+        cout << t.red().bold() << "Error: no input modules available" << t.normal() << endl;
         return;
     }
-    size_t mod_idx = context().modules.size() - 1;
-    const auto& module = *context().modules[mod_idx];
+    size_t mod_idx = context().input_modules.size() - 1;
+    const auto& module = *context().input_modules[mod_idx];
 
     for (size_t i = 0; i != module.num_functions(); ++i) {
         if (module.get_function(i).name() == fun_name) {
-            dump_function(mod_idx, i);
+            dump_function(module, i);
             return;
         }
     }
@@ -164,25 +193,14 @@ void ReplCommand::cmd_dump_function(std::string fun_name, std::string mod_name) 
     TermCtl& t = TermCtl::stdout_instance();
 
     // lookup module
-    size_t mod_idx = 0;
-    Module* module = nullptr;
-    for (const auto& m : context().modules) {
-        if (m->name() == mod_name) {
-            module = m.get();
-            break;
-        }
-        ++mod_idx;
-    }
-    if (mod_idx >= context().modules.size()) {
-        cout << t.red().bold() << "Error: module not found: " << mod_name
-             << t.normal() << endl;
+    auto* module = module_by_name(mod_name);
+    if (!module)
         return;
-    }
 
     // lookup function
     for (size_t i = 0; i != module->num_functions(); ++i) {
         if (module->get_function(i).name() == fun_name) {
-            dump_function(mod_idx, i);
+            dump_function(*module, i);
             return;
         }
     }
@@ -194,18 +212,21 @@ void ReplCommand::cmd_dump_function(std::string fun_name, std::string mod_name) 
 void ReplCommand::cmd_dump_function(size_t fun_idx)
 {
     TermCtl& t = TermCtl::stdout_instance();
-    if (context().modules.empty()) {
+    if (context().input_modules.empty()) {
         cout << t.red().bold() << "Error: no modules available" << t.normal() << endl;
         return;
     }
-    size_t mod_idx = context().modules.size() - 1;
-    dump_function(mod_idx, fun_idx);
+    size_t mod_idx = context().input_modules.size() - 1;
+    dump_function(*context().input_modules[mod_idx], fun_idx);
 }
 
 
 void ReplCommand::cmd_dump_function(size_t fun_idx, size_t mod_idx)
 {
-    dump_function(mod_idx, fun_idx);
+    auto* module = module_by_idx(mod_idx);
+    if (!module)
+        return;
+    dump_function(*module, fun_idx);
 }
 
 

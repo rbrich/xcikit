@@ -298,10 +298,10 @@ struct Reference: public Expression {
 
     Identifier identifier;
 
-    // resolved:
+    // resolved Method:
     SymbolPointer chain;  // tip of chain of Instances in case of Method
-    Module* module = nullptr;
-    Index index = no_index;
+    Module* module = nullptr;   // module with instance function
+    Index index = no_index;     // index of (instance) function in module
 };
 
 struct Call: public Expression {

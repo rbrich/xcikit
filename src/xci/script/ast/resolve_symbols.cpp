@@ -31,6 +31,7 @@ public:
         SymbolTable& fn_symtab = symtab().add_child(name);
         auto fn = make_unique<Function>(module(), fn_symtab);
         auto idx = module().add_function(move(fn));
+        assert(symtab().module() == &module());
         dfn.variable.identifier.symbol = symtab().add({name, Symbol::Function, idx});
         dfn.variable.identifier.symbol->set_callable(true);
         if (dfn.variable.type)
@@ -247,7 +248,9 @@ private:
         // lookup intrinsics in builtin module first
         // (this is just an optimization, the same lookup is repeated below)
         if (name.size() > 3 && name[0] == '_' && name[1] == '_') {
-            auto symptr = module().get_imported_module(0).symtab().find_by_name(name);
+            auto& builtin_mod = module().get_imported_module(0);
+            assert(builtin_mod.name() == "builtin");
+            auto symptr = builtin_mod.symtab().find_by_name(name);
             if (symptr)
                 return symptr;
         }
@@ -281,7 +284,7 @@ private:
                 return symptr;
         }
         // imported modules
-        for (size_t i = 0; i < module().num_imported_modules(); i++) {
+        for (size_t i = module().num_imported_modules() - 1; i != size_t(-1); --i) {
             auto symptr = module().get_imported_module(i).symtab().find_by_name(name);
             if (symptr)
                 return symptr;
@@ -304,7 +307,7 @@ private:
                 return symptr;
         }
         // imported modules
-        for (size_t i = 0; i < module().num_imported_modules(); i++) {
+        for (size_t i = module().num_imported_modules() - 1; i != size_t(-1); --i) {
             auto symptr = module().get_imported_module(
                     i).symtab().find_last_of(name, type);
             if (symptr)

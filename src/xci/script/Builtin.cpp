@@ -268,6 +268,12 @@ BuiltinModule::BuiltinModule() : Module("builtin")
     add_types();
 }
 
+BuiltinModule& BuiltinModule::static_instance()
+{
+    static BuiltinModule instance;
+    return instance;
+}
+
 
 void
 BuiltinModule::add_logical_op_function(const std::string& name, Opcode opcode)
