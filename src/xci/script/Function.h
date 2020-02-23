@@ -77,15 +77,15 @@ public:
     TypeInfo effective_return_type() const { return m_signature->return_type.effective_type(); }
 
     // compiled function body
-    Code& code() { return std::get<NormalBody>(m_body).code; }
-    const Code& code() const { return std::get<NormalBody>(m_body).code; }
+    Code& code() { return std::get<CompiledBody>(m_body).code; }
+    const Code& code() const { return std::get<CompiledBody>(m_body).code; }
 
     // Special intrinsics function cannot contain any compiled code and is always inlined.
     // This counter helps to check no other code was generated.
-    void add_intrinsic(uint8_t code) { std::get<NormalBody>(m_body).intrinsics++;
-        std::get<NormalBody>(m_body).code.add(code); }
-    size_t intrinsics() const { return std::get<NormalBody>(m_body).intrinsics; }
-    bool has_intrinsics() const { return std::get<NormalBody>(m_body).intrinsics > 0; }
+    void add_intrinsic(uint8_t code) { std::get<CompiledBody>(m_body).intrinsics++;
+        std::get<CompiledBody>(m_body).code.add(code); }
+    size_t intrinsics() const { return std::get<CompiledBody>(m_body).intrinsics; }
+    bool has_intrinsics() const { return std::get<CompiledBody>(m_body).intrinsics > 0; }
 
     // Generic function: AST of function body
     const ast::Block& ast() const { return std::get<GenericBody>(m_body).ast; }
@@ -114,9 +114,9 @@ public:
 
     // Kind of function body
 
-    // function has code and will be called or inlined
-    struct NormalBody {
-        bool operator==(const NormalBody& rhs) const;
+    // function has compiled bytecode and will be called or inlined
+    struct CompiledBody {
+        bool operator==(const CompiledBody& rhs) const;
 
         // Compiled function body
         Code code;
@@ -141,23 +141,23 @@ public:
         NativeDelegate native;
     };
 
-    void set_normal() { m_body = NormalBody{}; }
-    void set_fragment() { m_body = NormalBody{{}, 0, true}; }
+    void set_compiled() { m_body = CompiledBody{}; }
+    void set_fragment() { m_body = CompiledBody{{}, 0, true}; }
 
     void set_native(NativeDelegate native) { m_body = NativeBody{native}; }
     void call_native(Stack& stack) const { std::get<NativeBody>(m_body).native(stack); }
 
     bool is_undefined() const { return std::holds_alternative<std::monostate>(m_body); }
-    bool is_normal() const { return std::holds_alternative<NormalBody>(m_body); }
-    bool is_fragment() const { return std::holds_alternative<NormalBody>(m_body) && std::get<NormalBody>(m_body).is_fragment; }
+    bool is_compiled() const { return std::holds_alternative<CompiledBody>(m_body); }
+    bool is_fragment() const { return std::holds_alternative<CompiledBody>(m_body) && std::get<CompiledBody>(m_body).is_fragment; }
     bool is_generic() const { return std::holds_alternative<GenericBody>(m_body); }
     bool is_native() const { return std::holds_alternative<NativeBody>(m_body); }
 
     enum class Kind {
-        Undefined,
-        Normal,
-        Generic,
-        Native,
+        Undefined,  // not yet compiled
+        Compiled,   // compiled into bytecode
+        Generic,    // generic function in AST representation
+        Native,     // wrapped native function (C++ binding)
     };
     Kind kind() const { return Kind(m_body.index()); }
 
@@ -169,7 +169,7 @@ private:
     // Function signature
     std::shared_ptr<Signature> m_signature;
     // Function body (depending on kind of function)
-    std::variant<std::monostate, NormalBody, GenericBody, NativeBody> m_body;
+    std::variant<std::monostate, CompiledBody, GenericBody, NativeBody> m_body;
 };
 
 

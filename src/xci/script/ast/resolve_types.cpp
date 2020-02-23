@@ -386,7 +386,7 @@ public:
                         fn.add_partial(TypeInfo{arg.type_info});
                     }
                     assert(!fn.detect_generic());
-                    fn.set_normal();
+                    fn.set_compiled();
                 }
                 m_value_type = TypeInfo{new_signature};
             }
@@ -445,7 +445,7 @@ public:
             if (m_call_args.size() == fn.signature().params.size()) {
                 // immediately called generic function -> specialize to normal function
                 specialize_to_call_args(fn);
-                fn.set_normal();
+                fn.set_compiled();
                 resolve_types(fn, v.body);
                 m_value_type = TypeInfo{fn.signature_ptr()};
             } else {
@@ -453,7 +453,7 @@ public:
                 fn.copy_ast(v.body);
             }
         } else {
-            fn.set_normal();
+            fn.set_compiled();
             // compile body and resolve return type
             if (v.definition) {
                 // in case the function is recursive, propagate the type upwards

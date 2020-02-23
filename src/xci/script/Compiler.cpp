@@ -44,8 +44,8 @@ public:
             return;
         }
         if (func.is_undefined())
-            func.set_normal();
-        assert(func.is_normal());
+            func.set_compiled();
+        assert(func.is_compiled());
         auto* orig_code = m_code;
         m_code = &func.code();
         dfn.expression->apply(*this);
@@ -220,7 +220,7 @@ public:
                     Function& func = module().get_function(sym.index());
                     if (func.is_generic()) {
                         auto ast = std::move(func.ast());
-                        func.set_normal();
+                        func.set_compiled();
                         m_compiler.compile_block(func, ast);
                     }
                     // CALL0 <function_idx>
@@ -481,7 +481,7 @@ private:
 
 void Compiler::compile(Function& func, ast::Module& ast)
 {
-    func.set_normal();
+    func.set_compiled();
     func.signature().set_return_type(TypeInfo{Type::Unknown});
     ast.body.symtab = &func.symtab();
 

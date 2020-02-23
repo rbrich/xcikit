@@ -35,7 +35,7 @@ static void cmd_help() {
 static void cmd_dump_info() {
     cout << "Bloat:" << endl;
     cout << "  sizeof(Function) = " << sizeof(Function) << endl;
-    cout << "  sizeof(Function::NormalBody) = " << sizeof(Function::NormalBody) << endl;
+    cout << "  sizeof(Function::CompiledBody) = " << sizeof(Function::CompiledBody) << endl;
     cout << "  sizeof(Function::GenericBody) = " << sizeof(Function::GenericBody) << endl;
     cout << "  sizeof(Function::NativeBody) = " << sizeof(Function::NativeBody) << endl;
 }

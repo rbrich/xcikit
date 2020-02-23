@@ -124,7 +124,7 @@ bool Function::operator==(const Function& rhs) const
 }
 
 
-bool Function::NormalBody::operator==(const Function::NormalBody& rhs) const {
+bool Function::CompiledBody::operator==(const Function::CompiledBody& rhs) const {
     return code == rhs.code &&
            is_fragment == rhs.is_fragment;
 }

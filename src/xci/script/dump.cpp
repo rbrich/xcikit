@@ -530,7 +530,7 @@ std::ostream& operator<<(std::ostream& os, const Function& f)
 {
     os << f.signature() << endl;
     switch (f.kind()) {
-        case Function::Kind::Normal:
+        case Function::Kind::Compiled:
             for (auto it = f.code().begin(); it != f.code().end(); it++) {
                 os << ' ' << DumpInstruction{f, it} << endl;
             }
@@ -547,7 +547,7 @@ std::ostream& operator<<(std::ostream& os, Function::Kind v)
 {
     switch (v) {
         case Function::Kind::Undefined:  return os << "undefined";
-        case Function::Kind::Normal:  return os << "normal";
+        case Function::Kind::Compiled:    return os << "compiled";
         case Function::Kind::Generic: return os << "generic";
         case Function::Kind::Native:  return os << "native";
     }
@@ -615,7 +615,7 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
     for (size_t i = 0; i < v.num_functions(); ++i) {
         const auto& f = v.get_function(i);
         os << put_indent << '[' << i << "] ";
-        if (f.kind() != Function::Kind::Normal)
+        if (f.kind() != Function::Kind::Compiled)
             os << '(' << f.kind() << ") ";
         os << f.name() << ": " << f.signature() << endl;
     }

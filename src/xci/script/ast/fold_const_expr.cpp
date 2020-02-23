@@ -64,7 +64,7 @@ public:
             case Symbol::Function: {
                 auto& symmod = symtab.module() == nullptr ? module() : *symtab.module();
                 Function& fn = symmod.get_function(sym.index());
-                if (fn.is_normal()) {
+                if (fn.is_compiled()) {
                     m_const_value = make_unique<value::Closure>(fn);
                     return;
                 }
