@@ -122,15 +122,15 @@ TEST_CASE( "Operator precedence", "[script][parser]" )
     check_parser("a fun b {} c", "a fun b {void} c");
     check_parser("a (fun b {}) c", "a fun b {void} c");
     // function calls
-//    check_interpreter("succ 9 + max 5 4 + 1", "16");
-//    check_interpreter("(succ 9) + (max 5 4) + 1", "16");
-//    check_interpreter("succ 9 + 5 .max 4 + 1", "16");
+    check_interpreter("succ 9 + max 5 4 + 1", "16");
+    check_interpreter("(succ 9) + (max 5 4) + 1", "16");
+    check_interpreter("succ 9 + 5 .max 4 + 1", "16");
     check_interpreter("1 .add 2 .mul 3", "9");
     check_interpreter("(1 .add 2).mul 3", "9");
     check_interpreter("1 .add (2 .mul 3)", "7");
-//    check_interpreter("hex (succ (neg (14)))", "-0xd");
-//    check_interpreter("14 .neg .succ .hex", "-0xd");
-//    check_interpreter("(((14) .neg) .succ) .hex", "-0xd");
+    check_interpreter("pred (neg (succ (14)))", "-16");
+    check_interpreter("14 .succ .neg .pred", "-16");
+    check_interpreter("(((14) .succ) .neg) .pred", "-0xd");
 }
 
 
@@ -224,7 +224,7 @@ TEST_CASE( "Types", "[script][interpreter]" )
     check_interpreter("f = fun a:Int b:Int -> Int {a+b}; f 1 2", "3");
     check_interpreter("f : Int Int -> Int = fun a b {a+b}; f 1 2", "3");
 
-    // narrowing type of polymorphic function (`f 1.0 2.0` would be error, while `add 1.0 2.0` still works)
+    // TODO: narrowing type of polymorphic function (`f 1.0 2.0` would be error, while `add 1.0 2.0` still works)
     // check_interpreter("f : Int Int -> Int = add ; f 1 2",        "3");
 }
 
@@ -270,6 +270,16 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
                       "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 + b}; "
                       "w=fun b1:Int c1:Int {a + u b1 + v c1}; "
                       "w b c }; f 1 2 3", "9");
+
+    check_interpreter("outer = fun y:Int {"
+                      "inner = fun x:Int { x + y }; inner y "
+                      "}; outer 2", "4");
+    check_interpreter("outer = fun y:Int {"
+                      "inner = fun x:Int { x + y }; alias = inner; alias y "
+                      "}; outer 2", "4");
+    check_interpreter("outer = fun y {"
+                      "inner = fun x:Int { x + y }; alias = fun x:Int { inner x }; alias y "
+                      "}; outer 2", "4");
 }
 
 

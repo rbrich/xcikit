@@ -52,6 +52,24 @@ public:
         const auto& symtab = *v.identifier.symbol.symtab();
         const auto& sym = *v.identifier.symbol;
         switch (sym.type()) {
+            case Symbol::Nonlocal: {
+                auto& nl_sym = *sym.ref();
+                auto* nl_func = sym.ref().symtab()->function();
+                assert(nl_func != nullptr);
+                switch (nl_sym.type()) {
+                    case Symbol::Function: {
+                        auto& ref_fn = nl_func->module().get_function(nl_sym.index());
+                        if (!ref_fn.has_nonlocals()) {
+                            // eliminate nonlocal function without closure
+                            v.identifier.symbol = sym.ref();
+                        }
+                        break;
+                    }
+                    default:
+                        break;
+                }
+                break;
+            }
             case Symbol::Function: {
                 auto* symmod = symtab.module() == nullptr ? &module() : symtab.module();
                 auto& fn = symmod->get_function(sym.index());
@@ -87,15 +105,6 @@ public:
         if (v.partial_index != no_index) {
             auto& fn = module().get_function(v.partial_index);
             process_subroutine(fn, *v.callable);
-
-            /*auto it = m_function.symtab().begin();
-            for (const auto& nl : fn.nonlocals()) {
-                while (it->type() != Symbol::Parameter) {
-                    ++it;
-                }
-                fn.symtab().add({{m_function.symtab(), Index(it - m_function.symtab().begin())},
-                                 Symbol::Nonlocal, 1});
-            }*/
         } else {
             v.callable->apply(*this);
         }

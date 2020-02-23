@@ -17,7 +17,7 @@ namespace xci::script {
 ///   (by adding the non-locals also to the parent and referencing those)
 /// - non-locals referencing functions without closure
 ///   (those that don't capture anything by themselves)
-///   are replaced with locals (the function is referenced directly)
+///   are replaced with direct references
 
 void resolve_nonlocals(Function& func, const ast::Block& block);
 

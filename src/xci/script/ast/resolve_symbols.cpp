@@ -264,7 +264,7 @@ private:
 
                 auto symptr = p_symtab->find_by_name(name);
                 if (symptr) {
-                    if (depth > 0) {
+                    if (depth > 0 && symptr->type() != Symbol::Method) {
                         // add Nonlocal symbol
                         return symtab().add({symptr, Symbol::Nonlocal, depth});
                     } else {
