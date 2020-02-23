@@ -482,8 +482,8 @@ struct Module {
 
 
 std::unique_ptr<Type> copy(const std::unique_ptr<Type>& v);
-Variable copy(const Variable& v) { return {v.identifier, copy(v.type)}; }
-Parameter copy(const Parameter& v) { return {v.identifier, copy(v.type)}; }
+inline Variable copy(const Variable& v) { return {v.identifier, copy(v.type)}; }
+inline Parameter copy(const Parameter& v) { return {v.identifier, copy(v.type)}; }
 
 
 } // namespace ast

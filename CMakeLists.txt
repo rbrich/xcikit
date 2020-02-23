@@ -11,6 +11,10 @@ CMAKE_DEPENDENT_OPTION(XCI_TEXT "Enable component: xci-text" ON
 CMAKE_DEPENDENT_OPTION(XCI_WIDGETS "Enable component: xci-widgets" ON
     "XCI_GRAPHICS;XCI_TEXT" OFF)
 
+option(XCI_BUILD_TESTS "Disable to skip building tests." ON)
+option(XCI_BUILD_EXAMPLES "Disable to skip building examples." ON)
+option(XCI_BUILD_BENCHMARKS "Disable to skip building benchmarks." ON)
+
 option(XCI_WITH_TINFO "Link with TInfo (from NCurses) and use it for TTY control sequences." OFF)
 option(XCI_WITH_ZIP "Link xci-core with libzip and use it for ZIP format in VFS." OFF)
 
@@ -51,12 +55,12 @@ find_package(pegtl REQUIRED)
 find_package(range-v3 REQUIRED)
 
 # Catch
-if (BUILD_TESTS)
+if (XCI_BUILD_TESTS)
     find_package(Catch2)
 endif()
 
 # Google Benchmark
-if (BUILD_BENCHMARKS)
+if (XCI_BUILD_BENCHMARKS)
     find_package(benchmark)
 endif ()
 
@@ -144,7 +148,7 @@ endif()
 # Examples     #
 # ------------ #
 
-if (BUILD_EXAMPLES)
+if (XCI_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
 

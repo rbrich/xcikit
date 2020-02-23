@@ -1,7 +1,4 @@
 # basic build options
-option(BUILD_TESTS "Disable to skip building tests." ON)
-option(BUILD_EXAMPLES "Disable to skip building examples." ON)
-option(BUILD_BENCHMARKS "Disable to skip building benchmarks." ON)
 option(BUILD_SHARED_LIBS "Build shared libs instead of static libs." OFF)
 option(BUILD_FRAMEWORKS "Build shared libs as OSX frameworks. Implies BUILD_SHARED_LIBS." OFF)
 
