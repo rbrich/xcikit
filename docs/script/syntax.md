@@ -55,7 +55,7 @@ Syntax Elements
 
 ### Infix function call
 
-Any function can be used as "infix operator", or when comparing to object-oriented languages,``
+Any function can be used as "infix operator", or when comparing to object-oriented languages,
 as a method call, giving the first argument is the "object" on which it operates:
 
     foo .do bar
