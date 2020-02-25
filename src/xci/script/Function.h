@@ -143,7 +143,7 @@ public:
         // copy AST if referenced
         void ensure_copy() {
             if (ast_ref) {
-                ast_copy = ast_ref->copy();
+                ast_copy = ast::copy(*ast_ref);
                 ast_ref = nullptr;
             }
         }

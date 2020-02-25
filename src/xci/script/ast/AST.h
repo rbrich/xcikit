@@ -216,8 +216,6 @@ struct Variable {
 
 
 struct Block {
-    Block copy() const;
-
     // finish block - convert last Invocation into ReturnStatement
     // (no Invocation -> throw error)
     void finish();
@@ -481,9 +479,11 @@ struct Module {
 };
 
 
+template <class T> T copy(const T& v) { T r; v.copy_to(r); return r; }
 std::unique_ptr<Type> copy(const std::unique_ptr<Type>& v);
 inline Variable copy(const Variable& v) { return {v.identifier, copy(v.type)}; }
 inline Parameter copy(const Parameter& v) { return {v.identifier, copy(v.type)}; }
+Block copy(const Block& v);
 
 
 } // namespace ast

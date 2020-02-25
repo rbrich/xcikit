@@ -43,22 +43,12 @@ auto copy_ptr_vector(const std::vector<std::unique_ptr<T>>& s)
 }
 
 
-
-Block Block::copy() const
-{
-    Block r;
-    r.statements = copy_ptr_vector(statements);
-    r.symtab = symtab;
-    return r;
-}
-
-
 std::unique_ptr<ast::Expression> Function::make_copy() const
 {
     auto r = std::make_unique<Function>();
-    type.copy_to(r->type);
+    r->type = copy(type);
     r->source_info = source_info;
-    r->body = body.copy();
+    r->body = copy(body);
     r->index = index;
     return r;
 }
@@ -163,9 +153,7 @@ void Call::copy_to(Call& r) const
 
 std::unique_ptr<ast::Expression> Call::make_copy() const
 {
-    auto r = std::make_unique<Call>();
-    copy_to(*r);
-    return r;
+    return std::make_unique<Call>(copy(*this));
 }
 
 
@@ -188,9 +176,7 @@ std::unique_ptr<ast::Type> ListType::make_copy() const
 
 std::unique_ptr<ast::Type> FunctionType::make_copy() const
 {
-    auto r = std::make_unique<FunctionType>();
-    copy_to(*r);
-    return r;
+    return std::make_unique<FunctionType>(copy(*this));
 }
 
 
@@ -398,6 +384,12 @@ std::unique_ptr<Type> copy(const std::unique_ptr<Type>& v)
     if (v)
         return v->make_copy();
     return {};
+}
+
+
+Block copy(const Block& v)
+{
+    return {copy_ptr_vector(v.statements)};
 }
 
 
