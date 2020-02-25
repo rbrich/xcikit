@@ -18,9 +18,9 @@ using std::make_unique;
 using std::move;
 
 
-class OptimizationVisitor final: public ast::Visitor {
+class FoldConstExprVisitor final: public ast::Visitor {
 public:
-    explicit OptimizationVisitor(Function& func)
+    explicit FoldConstExprVisitor(Function& func)
         : m_function(func) {}
 
     void visit(ast::Definition& dfn) override {
@@ -149,8 +149,10 @@ public:
     }
 
     void visit(ast::Function& v) override {
+        Function& func = module().get_function(v.index);
+
         // collapse block with single statement
-        if (v.body.statements.size() == 1) {
+        if (!func.has_parameters() && v.body.statements.size() == 1) {
             auto* ret = dynamic_cast<ast::Return*>(v.body.statements[0].get());
             assert(ret != nullptr);
             apply_and_fold(ret->expression);
@@ -158,7 +160,6 @@ public:
             return;
         }
 
-        Function& func = m_function.module().get_function(v.index);
         fold_const_expr(func, v.body);
         m_const_value.reset();
     }
@@ -229,7 +230,7 @@ private:
 
 void fold_const_expr(Function& func, const ast::Block& block)
 {
-    OptimizationVisitor visitor {func};
+    FoldConstExprVisitor visitor {func};
     for (const auto& stmt : block.statements) {
         stmt->apply(visitor);
     }

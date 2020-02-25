@@ -85,7 +85,8 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
         std::string module_name = input_number >= 0 ? format("input_{}", input_number) : "<input>";
         auto module = std::make_unique<Module>(module_name);
         module->add_imported_module(BuiltinModule::static_instance());
-        module->add_imported_module(*context().std_module);
+        if (context().std_module)
+            module->add_imported_module(*context().std_module);
         for (auto& m : context().input_modules)
             module->add_imported_module(*m);
         auto func_name = input_number == -1 ? "_" : "_" + to_string(input_number);
