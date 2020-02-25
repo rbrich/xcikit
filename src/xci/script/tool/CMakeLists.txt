@@ -1,15 +1,15 @@
 find_package(Replxx REQUIRED)
 
-# "Lambda Script Interpreter" tool
-add_executable(lasci
+# Fire Script compiler/interpreter
+add_executable(fire
     BytecodeTracer.cpp
     Context.cpp
     ReplCommand.cpp
     main.cpp
     )
-target_link_libraries(lasci
+target_link_libraries(fire
     xci-core
     xci-script
     replxx::replxx
     )
-install(TARGETS lasci EXPORT xcikit DESTINATION bin)
+install(TARGETS fire EXPORT xcikit DESTINATION bin)

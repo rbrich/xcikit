@@ -1,23 +1,14 @@
-// SymbolResolver.cpp created on 2019-06-14, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// resolve_symbols.cpp created on 2019-06-14 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019, 2020 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#include "SymbolResolver.h"
-#include "Function.h"
-#include "Module.h"
-#include "Builtin.h"
-#include "Error.h"
+#include "resolve_symbols.h"
+#include <xci/script/Function.h>
+#include <xci/script/Module.h>
+#include <xci/script/Builtin.h>
+#include <xci/script/Error.h>
 #include <vector>
 
 namespace xci::script {
@@ -26,7 +17,7 @@ using std::make_unique;
 using std::string;
 
 
-class SymbolResolverVisitor: public ast::Visitor {
+class SymbolResolverVisitor final: public ast::Visitor {
 public:
     explicit SymbolResolverVisitor(Function& func) : m_function(func) {}
 
@@ -40,6 +31,7 @@ public:
         SymbolTable& fn_symtab = symtab().add_child(name);
         auto fn = make_unique<Function>(module(), fn_symtab);
         auto idx = module().add_function(move(fn));
+        assert(symtab().module() == &module());
         dfn.variable.identifier.symbol = symtab().add({name, Symbol::Function, idx});
         dfn.variable.identifier.symbol->set_callable(true);
         if (dfn.variable.type)
@@ -256,7 +248,9 @@ private:
         // lookup intrinsics in builtin module first
         // (this is just an optimization, the same lookup is repeated below)
         if (name.size() > 3 && name[0] == '_' && name[1] == '_') {
-            auto symptr = module().get_imported_module(0).symtab().find_by_name(name);
+            auto& builtin_mod = module().get_imported_module(0);
+            assert(builtin_mod.name() == "builtin");
+            auto symptr = builtin_mod.symtab().find_by_name(name);
             if (symptr)
                 return symptr;
         }
@@ -273,7 +267,7 @@ private:
 
                 auto symptr = p_symtab->find_by_name(name);
                 if (symptr) {
-                    if (depth > 0) {
+                    if (depth > 0 && symptr->type() != Symbol::Method) {
                         // add Nonlocal symbol
                         return symtab().add({symptr, Symbol::Nonlocal, depth});
                     } else {
@@ -290,7 +284,7 @@ private:
                 return symptr;
         }
         // imported modules
-        for (size_t i = 0; i < module().num_imported_modules(); i++) {
+        for (size_t i = module().num_imported_modules() - 1; i != size_t(-1); --i) {
             auto symptr = module().get_imported_module(i).symtab().find_by_name(name);
             if (symptr)
                 return symptr;
@@ -313,7 +307,7 @@ private:
                 return symptr;
         }
         // imported modules
-        for (size_t i = 0; i < module().num_imported_modules(); i++) {
+        for (size_t i = module().num_imported_modules() - 1; i != size_t(-1); --i) {
             auto symptr = module().get_imported_module(
                     i).symtab().find_last_of(name, type);
             if (symptr)
@@ -332,7 +326,7 @@ private:
 };
 
 
-void SymbolResolver::process_block(Function& func, const ast::Block& block)
+void resolve_symbols(Function& func, const ast::Block& block)
 {
     SymbolResolverVisitor visitor {func};
     for (const auto& stmt : block.statements) {
@@ -341,7 +335,7 @@ void SymbolResolver::process_block(Function& func, const ast::Block& block)
 
     // process postponed blocks
     for (const auto& blk : visitor.postponed_blocks()) {
-        process_block(blk.func, blk.block);
+        resolve_symbols(blk.func, blk.block);
     }
 }
 

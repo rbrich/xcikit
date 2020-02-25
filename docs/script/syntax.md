@@ -1,10 +1,10 @@
-Lambda Script v0.3
-==================
+Fire Script v0.3
+================
 ***Syntax reference***
 
 [TOC]
 
-Lambda Script is a functional language, strongly and statically typed,
+Fire Script is a functional language, strongly and statically typed,
 with function overloading and generics (type variables).
 
 The language is designed to allow small and easily embeddable implementation,

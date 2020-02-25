@@ -18,7 +18,7 @@
 
 #include "Value.h"
 #include "Module.h"
-#include "AST.h"
+#include "ast/AST.h"
 #include "Code.h"
 #include <functional>
 
@@ -44,6 +44,8 @@ namespace builtin {
 class BuiltinModule : public Module {
 public:
     BuiltinModule();
+
+    static BuiltinModule& static_instance();
 
 private:
     void add_logical_op_function(const std::string& name, Opcode opcode);

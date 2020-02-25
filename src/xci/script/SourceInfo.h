@@ -10,6 +10,8 @@
 namespace xci::script {
 
 
+// Offset into source code, used to print error context
+// Possibly better name: SourceLocation, SourceContext
 struct SourceInfo {
     size_t line_number = 0;
     size_t byte_in_line = 0;

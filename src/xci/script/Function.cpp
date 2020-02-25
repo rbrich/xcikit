@@ -107,7 +107,7 @@ std::vector<TypeInfo> Function::closure() const
 }
 
 
-bool Function::is_generic() const
+bool Function::detect_generic() const
 {
     return ranges::any_of(signature().params, [](const TypeInfo& type_info) {
         return type_info.type() == Type::Unknown;
@@ -120,12 +120,25 @@ bool Function::operator==(const Function& rhs) const
     return &m_module == &rhs.m_module &&
            &m_symtab == &rhs.m_symtab &&
            *m_signature == *rhs.m_signature &&
-           m_code == rhs.m_code &&
-           m_kind == rhs.m_kind && (
-                m_kind == Kind::Native
-                    ? m_native == rhs.m_native
-                    : m_ast == rhs.m_ast
-           );
+           m_body == rhs.m_body;
+}
+
+
+bool Function::CompiledBody::operator==(const Function::CompiledBody& rhs) const {
+    return code == rhs.code &&
+           is_fragment == rhs.is_fragment;
+}
+
+
+bool Function::GenericBody::operator==(const Function::GenericBody& rhs) const
+{
+    return false;
+}
+
+
+bool Function::NativeBody::operator==(const Function::NativeBody& rhs) const
+{
+    return native == rhs.native;
 }
 
 

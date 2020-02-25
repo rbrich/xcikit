@@ -22,7 +22,7 @@ set(ASSETS
     fonts/Hack/Hack-Regular.ttf
     fonts/MaterialIcons/MaterialIcons-Regular.woff
     fonts/ShareTechMono/ShareTechMono-Regular.ttf
-    script/sys.ys
+    script/std.ys
     )
 
 
@@ -95,10 +95,15 @@ if (XCI_WITH_ZIP)
     list(APPEND output_archives ${output_zip})
 endif()
 
-add_custom_target(archives ALL DEPENDS ${output_archives})
+add_custom_command(
+    OUTPUT xcikit
+    COMMAND ${CMAKE_COMMAND} -E create_symlink . xcikit
+    COMMENT "Creating share symlink"
+    VERBATIM
+)
 
-ADD_CUSTOM_TARGET(share_symlink ALL
-    COMMAND ${CMAKE_COMMAND} -E create_symlink . xcikit)
+add_custom_target(share ALL
+    DEPENDS ${output_archives} xcikit)
 
 if (XCI_INSTALL_SHARE_DIR)
     install(DIRECTORY fonts DESTINATION share/xcikit)

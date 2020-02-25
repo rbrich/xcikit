@@ -8,6 +8,7 @@ Collection of C++ libraries for drawing 2D graphics, rendering text and more.
     - [xci::widgets](#xciwidgets)
     - [xci::text](#xcitext)
     - [xci::graphics](#xcigraphics)
+    - [xci::script](#xciscript)
     - [xci::data](#xcidata)
     - [xci::core](#xcicore)
     - [xci::compat](#xcicompat)
@@ -23,18 +24,21 @@ Collection of C++ libraries for drawing 2D graphics, rendering text and more.
 About
 -----
 
-XCI Toolkit contains basic elements needed for creating simple graphical demos
+Xcikit contains basic elements needed for creating 2D graphical applications
 and games. The focus is on text rendering and closely related UI rendering.
+There is also a hidden gem - a fully featured programming language!
 
-With this toolkit, it should be easy to:
+With xcikit you can:
 
 - render a few paragraphs of text,
 - style some parts of the text differently (colored highlights),
 - respond to mouse hover, click on the highlighted parts (spans),
-- add some buttons, checkboxes, combo-boxes.
+- create basic UI with buttons, checkboxes, combo-boxes,
+- support scripting, provide sandboxed API for user scripts.
 
-This should be enough for a game to render:
+This should be enough for a program to render:
 
+- 2D sprites,
 - menu,
 - settings screen,
 - dialogs.
@@ -45,32 +49,31 @@ The library uses GLFW and Vulkan for graphics.
 Features
 --------
 
-Note that the toolkit is still under development and mostly experimental.
-There is no stable API. There are no releases. The features below are partially planned, but already
-implemented to some degree. In short, this is one-man show, I did not announce it
-anywhere, so nobody probably even knows about it. The development is expected
-to be slow but steady.
+Note that xcikit is still under development and mostly experimental.
+There is no stable API. There are no releases. The features below are partially planned,
+but already implemented to some degree.
 
-The target features:
+The planned features:
 
-- advanced text rendering
-- some UI widgets (not meant to replace Qt)
 - GPU oriented 2D graphics
+- advanced text rendering
+- UI widgets (not meant to replace Qt, but should be good enough for indie games)
 - data file management (VFS)
+- custom scripting language (it wasn't planned originally, but it's fun to design and implement)
 - support library (logging, eventloop etc.)
 
-These features are implemented by a set of libraries:
+The features are divided into a set of libraries:
 
 - `xci-widgets`
 - `xci-text`
 - `xci-graphics`
+- `xci-script`
 - `xci-data`
 - `xci-core`
 
-The separation of the code into libraries also helps to create layers
-and avoid bi-directional dependencies. As listed above, each library
-depends only on the libraries listed after it. (But nothing depends
-on `xci-data` - that one is completely optional.)
+The separation of the code into libraries helps to create layers
+and avoid bi-directional dependencies. Basically, each library can depend only
+on the libraries listed below it. (TODO: draw a dependency graph)
 
 The top-level `xci-widgets` provides UI components with event processing.
 It uses text layout engine `xci-text`, which can also be used separately.

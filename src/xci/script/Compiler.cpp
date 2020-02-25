@@ -14,12 +14,12 @@
 // limitations under the License.
 
 #include "Compiler.h"
-#include "Builtin.h"
 #include "Error.h"
-#include "Optimizer.h"
-#include "SymbolResolver.h"
-#include "TypeResolver.h"
-#include "NonlocalResolver.h"
+#include "ast/resolve_symbols.h"
+#include "ast/resolve_nonlocals.h"
+#include "ast/resolve_types.h"
+#include "ast/fold_const_expr.h"
+#include "ast/fold_dot_call.h"
 #include "Stack.h"
 #include <xci/compat/macros.h>
 
@@ -40,6 +40,13 @@ public:
 
     void visit(ast::Definition& dfn) override {
         Function& func = module().get_function(dfn.symbol()->index());
+        if (func.is_generic()) {
+            func.ensure_ast_copy();
+            return;
+        }
+        if (func.is_undefined())
+            func.set_compiled();
+        assert(func.is_compiled());
         auto* orig_code = m_code;
         m_code = &func.code();
         dfn.expression->apply(*this);
@@ -137,31 +144,6 @@ public:
         auto& symtab = *v.identifier.symbol.symtab();
         auto& sym = *v.identifier.symbol;
         switch (sym.type()) {
-            case Symbol::Class:
-                assert(!"Class cannot be called.");
-                break;
-            case Symbol::Instance:
-                assert(!"Instance cannot be called.");
-                break;
-            case Symbol::Method: {
-                // this module
-                if (v.module == &module()) {
-                    // CALL0 <function_idx>
-                    code().add_opcode(Opcode::Call0, v.index);
-                    break;
-                }
-                // builtin module or imported module
-                auto mod_idx = module().get_imported_module_index(v.module);
-                assert(mod_idx != no_index);
-                if (mod_idx == 0) {
-                    // CALL1 <function_idx>
-                    code().add_opcode(Opcode::Call1, v.index);
-                } else {
-                    // CALL <module_idx> <function_idx>
-                    code().add_opcode(Opcode::Call, mod_idx, v.index);
-                }
-                break;
-            }
             case Symbol::Instruction:
                 // intrinsics - just output the requested instruction
                 assert(sym.index() < 256);
@@ -213,14 +195,37 @@ public:
                 });
                 break;
             }
+            case Symbol::Method: {
+                // this module
+                if (v.module == &module()) {
+                    // CALL0 <function_idx>
+                    code().add_opcode(Opcode::Call0, v.index);
+                    break;
+                }
+                // builtin module or imported module
+                auto mod_idx = module().get_imported_module_index(v.module);
+                assert(mod_idx != no_index);
+                if (mod_idx == 0) {
+                    // CALL1 <function_idx>
+                    code().add_opcode(Opcode::Call1, v.index);
+                } else {
+                    // CALL <module_idx> <function_idx>
+                    code().add_opcode(Opcode::Call, mod_idx, v.index);
+                }
+                break;
+            }
             case Symbol::Function: {
                 // this module
                 if (symtab.module() == nullptr || symtab.module() == &module()) {
                     // specialization might not be compiled yet - compile it now
                     Function& func = module().get_function(sym.index());
-                    if (!func.is_native() && func.has_ast()) {
-                        m_compiler.compile_block(func, *func.ast());
-                        func.set_ast(nullptr);
+                    if (func.is_generic()) {
+                        assert(!func.detect_generic());  // fully specialized
+                        assert(!func.is_ast_copied());   // AST is referenced
+                        auto& ast = func.ast();
+                        //auto ast = std::move(func.ast_copy());
+                        func.set_compiled();
+                        m_compiler.compile_block(func, ast);
                     }
                     // CALL0 <function_idx>
                     code().add_opcode(Opcode::Call0, sym.index());
@@ -259,6 +264,12 @@ public:
                 }
                 break;
             }
+            case Symbol::Class:
+                assert(!"Class cannot be called.");
+                break;
+            case Symbol::Instance:
+                assert(!"Instance cannot be called.");
+                break;
             case Symbol::TypeName:
             case Symbol::TypeVar:
                 // TODO
@@ -340,8 +351,10 @@ public:
     void visit(ast::Function& v) override {
         // compile body
         Function& func = module().get_function(v.index);
-        if (func.has_ast())
+        if (func.is_generic()) {
+            func.ensure_ast_copy();
             return;  // generic function -> compiled on call
+        }
 
         m_compiler.compile_block(func, v.body);
         if (func.symtab().parent() != &m_function.symtab())
@@ -472,35 +485,9 @@ private:
 };
 
 
-void Compiler::configure(uint32_t flags)
-{
-    // each pass processes and modifies the AST - see documentation on each class
-    m_ast_passes.clear();
-    m_compile = false;
-
-    m_ast_passes.push_back(make_unique<SymbolResolver>());
-    if ((flags & PPMask) == PPSymbols)
-        return;
-
-    m_ast_passes.push_back(make_unique<TypeResolver>());
-    if ((flags & PPMask) == PPTypes)
-        return;
-
-    m_ast_passes.push_back(make_unique<NonlocalResolver>());
-    if ((flags & PPMask) == PPNonlocals)
-        return;
-
-    if (flags & OConstFold) {
-        // FIXME: update Optimizer
-        //m_ast_passes.push_back(make_unique<Optimizer>());
-    }
-
-    m_compile = true;
-}
-
-
 void Compiler::compile(Function& func, ast::Module& ast)
 {
+    func.set_compiled();
     func.signature().set_return_type(TypeInfo{Type::Unknown});
     ast.body.symtab = &func.symtab();
 
@@ -508,13 +495,30 @@ void Compiler::compile(Function& func, ast::Module& ast)
     // - resolve symbols (SymbolResolver)
     // - infer and check types (TypeResolver)
     // - apply optimizations - const fold etc. (Optimizer)
-    for (auto& proc : m_ast_passes) {
-        proc->process_block(func, ast.body);
+    // See documentation on each function.
+
+    fold_dot_call(func, ast.body);
+    if ((m_flags & PPMask) == PPDotCall)
+        return;
+
+    resolve_symbols(func, ast.body);
+    if ((m_flags & PPMask) == PPSymbols)
+        return;
+
+    resolve_types(func, ast.body);
+    if ((m_flags & PPMask) == PPTypes)
+        return;
+
+    if ((m_flags & OConstFold) == OConstFold) {
+        fold_const_expr(func, ast.body);
     }
 
+    resolve_nonlocals(func, ast.body);
+    if ((m_flags & PPMask) == PPNonlocals)
+        return;
+
     // Compile - only if mandatory passes were enabled
-    if (m_compile)
-        compile_block(func, ast.body);
+    compile_block(func, ast.body);
 }
 
 

@@ -17,6 +17,7 @@
 #define XCI_SCRIPT_SYMBOL_TABLE_H
 
 #include <xci/core/Stack.h>
+#include <xci/core/NonCopyable.h>
 #include <vector>
 #include <string>
 
@@ -127,7 +128,7 @@ private:
 /// Count and indexes of actual local variables are computed from symbol table
 /// (by skipping unused symbols).
 
-class SymbolTable {
+class SymbolTable: public core::NonCopyable {
 public:
     SymbolTable() = default;
     explicit SymbolTable(std::string name, SymbolTable* parent = nullptr);

@@ -1,33 +1,210 @@
-// AST.cpp created on 2019-05-15, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// AST.cpp created on 2019-05-15 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019, 2020 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "AST.h"
-#include "Error.h"
+#include <xci/script/Error.h>
 #include <xci/compat/macros.h>
 
 #include <range/v3/view/reverse.hpp>
 
 #include <string>
 #include <stdexcept>
-#include <iostream>
 #include <sstream>
-#include <iomanip>
 #include <cstdlib>
 #include <cassert>
 
 namespace xci::script::ast {
+
+using namespace std;
+
+
+template <class T>
+auto copy_vector(const std::vector<T>& s)
+{
+    std::vector<T> r;
+    r.reserve(s.size());
+    for (const auto& item : s)
+        r.emplace_back(copy(item));
+    return r;
+}
+
+
+template <class T>
+auto copy_ptr_vector(const std::vector<std::unique_ptr<T>>& s)
+{
+    std::vector<std::unique_ptr<T>> r;
+    r.reserve(s.size());
+    for (const auto& item : s)
+        r.emplace_back(item->make_copy());
+    return r;
+}
+
+
+std::unique_ptr<ast::Expression> Function::make_copy() const
+{
+    auto r = std::make_unique<Function>();
+    r->type = copy(type);
+    r->source_info = source_info;
+    r->body = copy(body);
+    r->index = index;
+    return r;
+}
+
+
+std::unique_ptr<ast::Expression> Condition::make_copy() const
+{
+    auto r = std::make_unique<Condition>();
+    r->source_info = source_info;
+    r->cond = cond->make_copy();
+    r->then_expr = then_expr->make_copy();
+    r->else_expr = else_expr->make_copy();
+    return r;
+}
+
+
+std::unique_ptr<ast::Statement> Definition::make_copy() const
+{
+    auto r = std::make_unique<Definition>();
+    copy_to(*r);
+    return r;
+}
+
+
+void Definition::copy_to(Definition& r) const
+{
+    r.variable = copy(variable);
+    r.expression = expression->make_copy();
+}
+
+
+std::unique_ptr<ast::Statement> Invocation::make_copy() const
+{
+    auto r = std::make_unique<Invocation>();
+    r->expression = expression->make_copy();
+    r->type_index = type_index;
+    return r;
+}
+
+
+std::unique_ptr<ast::Statement> Return::make_copy() const
+{
+    return std::make_unique<Return>(expression->make_copy());
+}
+
+
+std::unique_ptr<ast::Statement> Class::make_copy() const
+{
+    auto r = std::make_unique<Class>();
+    r->class_name = class_name;
+    r->type_var = type_var;
+    r->context = context;
+    r->defs.reserve(defs.size());
+    for (const auto& d : defs) {
+        r->defs.emplace_back();
+        d.copy_to(r->defs.back());
+    }
+    r->index = index;
+    r->symtab = symtab;
+    return r;
+}
+
+std::unique_ptr<ast::Statement> Instance::make_copy() const
+{
+    auto r = std::make_unique<Instance>();
+    r->class_name = class_name;
+    r->type_inst = type_inst->make_copy();
+    r->context = context;
+    for (const auto& d : defs) {
+        r->defs.emplace_back();
+        d.copy_to(r->defs.back());
+    }
+    r->index = index;
+    r->symtab = symtab;
+    return r;
+}
+
+
+std::unique_ptr<ast::Expression> Reference::make_copy() const
+{
+    auto r = std::make_unique<Reference>();
+    r->source_info = source_info;
+    r->identifier = identifier;
+    r->chain = chain;
+    r->module = module;
+    r->index = index;
+    return r;
+}
+
+
+void Call::copy_to(Call& r) const
+{
+    if (callable)
+        r.callable = callable->make_copy();
+    r.source_info = source_info;
+    r.args = copy_ptr_vector(args);
+    r.wrapped_execs = wrapped_execs;
+    r.partial_args = partial_args;
+    r.partial_index = partial_index;
+}
+
+
+std::unique_ptr<ast::Expression> Call::make_copy() const
+{
+    return std::make_unique<Call>(copy(*this));
+}
+
+
+std::unique_ptr<ast::Expression> OpCall::make_copy() const
+{
+    auto r = std::make_unique<OpCall>();
+    Call::copy_to(*r);
+    r->op = op;
+    return r;
+}
+
+
+std::unique_ptr<ast::Type> ListType::make_copy() const
+{
+    auto r = std::make_unique<ListType>();
+    r->elem_type = copy(elem_type);
+    return r;
+}
+
+
+std::unique_ptr<ast::Type> FunctionType::make_copy() const
+{
+    return std::make_unique<FunctionType>(copy(*this));
+}
+
+
+void FunctionType::copy_to(FunctionType& r) const
+{
+    r.params = copy_vector(params);
+    r.result_type = copy(result_type);
+    r.context = context;
+}
+
+
+std::unique_ptr<ast::Expression> Tuple::make_copy() const
+{
+    auto r = std::make_unique<Tuple>();
+    r->source_info = source_info;
+    r->items = copy_ptr_vector(items);
+    return r;
+}
+
+
+std::unique_ptr<ast::Expression> List::make_copy() const
+{
+    auto r = std::make_unique<List>();
+    r->source_info = source_info;
+    r->items = copy_ptr_vector(items);
+    r->item_size = item_size;
+    return r;
+}
 
 
 void Block::finish()
@@ -152,10 +329,11 @@ int Operator::precedence() const
         case Mod:           return 8;
         case Exp:           return 9;
         case Subscript:     return 10;
-        case LogicalNot:    return 11;
-        case BitwiseNot:    return 11;
-        case UnaryPlus:     return 11;
-        case UnaryMinus:    return 11;
+        case DotCall:       return 11;
+        case LogicalNot:    return 12;
+        case BitwiseNot:    return 12;
+        case UnaryPlus:     return 12;
+        case UnaryMinus:    return 12;
     }
     UNREACHABLE;
 }
@@ -195,8 +373,23 @@ const char* Operator::to_cstr() const
         case Operator::UnaryPlus:   return "+";
         case Operator::UnaryMinus:  return "-";
         case Operator::Subscript:   return "!";
+        case Operator::DotCall:     return ".";
     }
     UNREACHABLE;
+}
+
+
+std::unique_ptr<Type> copy(const std::unique_ptr<Type>& v)
+{
+    if (v)
+        return v->make_copy();
+    return {};
+}
+
+
+Block copy(const Block& v)
+{
+    return {copy_ptr_vector(v.statements)};
 }
 
 

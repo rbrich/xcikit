@@ -17,12 +17,13 @@
 #define XCI_SCRIPT_FUNCTION_H
 
 #include "Code.h"
-#include "AST.h"
+#include "ast/AST.h"
 #include "SymbolTable.h"
 #include "TypeInfo.h"
 #include "NativeDelegate.h"
 #include <map>
 #include <string>
+#include <variant>
 
 namespace xci::script {
 
@@ -76,13 +77,21 @@ public:
     TypeInfo effective_return_type() const { return m_signature->return_type.effective_type(); }
 
     // compiled function body
-    Code& code() { return m_code; }
-    const Code& code() const { return m_code; }
+    Code& code() { return std::get<CompiledBody>(m_body).code; }
+    const Code& code() const { return std::get<CompiledBody>(m_body).code; }
 
-    // AST of function body
-    bool has_ast() const { assert(m_kind != Kind::Native); return m_ast != nullptr; }
-    ast::Block* ast() const { assert(m_kind != Kind::Native); return m_ast; }
-    void set_ast(ast::Block* body) { assert(m_kind != Kind::Native); m_ast = body; }
+    // Special intrinsics function cannot contain any compiled code and is always inlined.
+    // This counter helps to check no other code was generated.
+    void add_intrinsic(uint8_t code) { std::get<CompiledBody>(m_body).intrinsics++;
+        std::get<CompiledBody>(m_body).code.add(code); }
+    size_t intrinsics() const { return std::get<CompiledBody>(m_body).intrinsics; }
+    bool has_intrinsics() const { return std::get<CompiledBody>(m_body).intrinsics > 0; }
+
+    // Generic function: AST of function body
+    const ast::Block& ast() const { return std::get<GenericBody>(m_body).ast(); }
+    void set_ast(const ast::Block& body) { m_body = GenericBody{&body}; }
+    bool is_ast_copied() const { return std::get<GenericBody>(m_body).ast_ref == nullptr; }
+    void ensure_ast_copy() { std::get<GenericBody>(m_body).ensure_copy(); }
 
     // non-locals
     void add_nonlocal(TypeInfo&& type_info);
@@ -101,29 +110,71 @@ public:
     size_t closure_size() const { return nonlocals().size() + partial().size(); }
     std::vector<TypeInfo> closure() const;
 
-    // true if this function is generic (i.e. signature contains a type variable)
-    bool is_generic() const;
+    // true if this function should be generic (i.e. signature contains a type variable)
+    bool detect_generic() const;
 
-    // Special intrinsics function cannot contain any compiled code and is always inlined.
-    // This counter helps to check no other code was generated.
-    void add_intrinsic(uint8_t code) { m_intrinsics++;
-        m_code.add(code); }
-    size_t intrinsics() const { return m_intrinsics; }
-    bool has_intrinsics() const { return m_intrinsics > 0; }
+    // Kind of function body
 
-    void set_native(NativeDelegate native) { m_kind = Kind::Native; m_native = native; }
-    void call_native(Stack& stack) const { assert(m_kind == Kind::Native); m_native(stack); }
+    // function has compiled bytecode and will be called or inlined
+    struct CompiledBody {
+        bool operator==(const CompiledBody& rhs) const;
 
-    // Flags
-    enum class Kind {
-        Normal,     // function has code and will be called
-        Inline,     // function will be inlined at call site
-        Generic,    // function is a template, signature contains type variables
-        Native,     // function wraps native function (C++ binding)
+        // Compiled function body
+        Code code;
+        // Counter for instructions from intrinsics
+        unsigned intrinsics = 0;
+        // If function should be inlined at call site
+        bool is_fragment = false;
     };
-    void set_kind(Kind kind) { m_kind = kind; }
-    Kind kind() const { return m_kind; }
-    bool is_native() const { return m_kind == Kind::Native; }
+
+    // function is a template, signature contains type variables
+    struct GenericBody {
+        bool operator==(const GenericBody& rhs) const;
+
+        // AST of function body - reference
+        const ast::Block* ast_ref = nullptr;
+
+        // frozen copy of AST (when ast_ref == nullptr)
+        ast::Block ast_copy;
+
+        // obtain read-only AST
+        const ast::Block& ast() const { return ast_ref ? *ast_ref : ast_copy; }
+
+        // copy AST if referenced
+        void ensure_copy() {
+            if (ast_ref) {
+                ast_copy = ast::copy(*ast_ref);
+                ast_ref = nullptr;
+            }
+        }
+    };
+
+    // function wraps native function (C++ binding)
+    struct NativeBody {
+        bool operator==(const NativeBody& rhs) const;
+
+        NativeDelegate native;
+    };
+
+    void set_compiled() { m_body = CompiledBody{}; }
+    void set_fragment() { m_body = CompiledBody{{}, 0, true}; }
+
+    void set_native(NativeDelegate native) { m_body = NativeBody{native}; }
+    void call_native(Stack& stack) const { std::get<NativeBody>(m_body).native(stack); }
+
+    bool is_undefined() const { return std::holds_alternative<std::monostate>(m_body); }
+    bool is_compiled() const { return std::holds_alternative<CompiledBody>(m_body); }
+    bool is_fragment() const { return std::holds_alternative<CompiledBody>(m_body) && std::get<CompiledBody>(m_body).is_fragment; }
+    bool is_generic() const { return std::holds_alternative<GenericBody>(m_body); }
+    bool is_native() const { return std::holds_alternative<NativeBody>(m_body); }
+
+    enum class Kind {
+        Undefined,  // not yet compiled
+        Compiled,   // compiled into bytecode
+        Generic,    // generic function in AST representation
+        Native,     // wrapped native function (C++ binding)
+    };
+    Kind kind() const { return Kind(m_body.index()); }
 
     bool operator==(const Function& rhs) const;
 
@@ -132,17 +183,8 @@ private:
     SymbolTable& m_symtab;
     // Function signature
     std::shared_ptr<Signature> m_signature;
-    // Compiled function body
-    Code m_code;
-    union {
-        // AST of function body (only for generic function)
-        ast::Block* m_ast = nullptr;
-        NativeDelegate m_native;
-    };
-    // Counter for instructions from intrinsics
-    size_t m_intrinsics = 0;
-    // Kind of function
-    Kind m_kind = Kind::Normal;
+    // Function body (depending on kind of function)
+    std::variant<std::monostate, CompiledBody, GenericBody, NativeBody> m_body;
 };
 
 

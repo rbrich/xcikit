@@ -1,23 +1,14 @@
-// TypeResolver.cpp created on 2019-06-13, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// resolve_types.cpp created on 2019-06-13 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019, 2020 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#include "TypeResolver.h"
-#include "Value.h"
-#include "Builtin.h"
-#include "Function.h"
-#include "Error.h"
+#include "resolve_types.h"
+#include <xci/script/Value.h>
+#include <xci/script/Builtin.h>
+#include <xci/script/Function.h>
+#include <xci/script/Error.h>
 #include <xci/compat/macros.h>
 
 namespace xci::script {
@@ -28,7 +19,7 @@ using std::stringstream;
 using std::endl;
 
 
-class TypeCheckerVisitor: public ast::Visitor {
+class TypeCheckerVisitor final: public ast::Visitor {
     struct CallArg {
         TypeInfo type_info;
         SourceInfo source_info;
@@ -36,8 +27,8 @@ class TypeCheckerVisitor: public ast::Visitor {
     using CallArgs = std::vector<CallArg>;
 
 public:
-    explicit TypeCheckerVisitor(TypeResolver& processor, Function& func)
-        : m_processor(processor), m_function(func) {}
+    explicit TypeCheckerVisitor(Function& func)
+        : m_function(func) {}
 
     void visit(ast::Definition& dfn) override {
         // Evaluate specified type
@@ -170,6 +161,7 @@ public:
                 bool found = false;
                 auto inst_psym = v.chain;
                 while (inst_psym) {
+                    assert(inst_psym->type() == Symbol::Instance);
                     auto* inst_mod = inst_psym.symtab()->module();
                     if (inst_mod == nullptr)
                         inst_mod = &module();
@@ -229,7 +221,11 @@ public:
                             continue;
                         }
                         // instantiate the specialization
-                        auto fspec = resolve_specialization(fn);
+                        auto fspec = make_unique<Function>(fn.module(), fn.symtab());
+                        fspec->set_signature(fn.signature_ptr());
+                        fspec->set_ast(fn.ast());
+                        specialize_to_call_args(*fspec);
+                        resolve_types(*fspec, fspec->ast());
                         sig_ptr = fspec->signature_ptr();
                         Symbol sym_copy {*symptr};
                         sym_copy.set_index(module().add_function(move(fspec)));
@@ -390,6 +386,8 @@ public:
                     for (const auto& arg : m_call_args) {
                         fn.add_partial(TypeInfo{arg.type_info});
                     }
+                    assert(!fn.detect_generic());
+                    fn.set_compiled();
                 }
                 m_value_type = TypeInfo{new_signature};
             }
@@ -443,19 +441,20 @@ public:
 
         Function& fn = module().get_function(v.index);
         fn.set_signature(m_value_type.signature_ptr());
-        if (fn.is_generic()) {
-            // instantiate the specialization
+        if (fn.detect_generic()) {
+            // try to instantiate the specialization
             if (m_call_args.size() == fn.signature().params.size()) {
-                auto fspec = resolve_specialization(fn);
-                m_processor.process_block(*fspec, v.body);
-                m_value_type = TypeInfo{fspec->signature_ptr()};
-                v.index = module().add_function(move(fspec));
+                // immediately called generic function -> specialize to normal function
+                specialize_to_call_args(fn);
+                fn.set_compiled();
+                resolve_types(fn, v.body);
+                m_value_type = TypeInfo{fn.signature_ptr()};
             } else {
                 // mark as generic, uncompiled
-                fn.set_kind(Function::Kind::Generic);
-                fn.set_ast(&v.body);
+                fn.set_ast(v.body);
             }
         } else {
+            fn.set_compiled();
             // compile body and resolve return type
             if (v.definition) {
                 // in case the function is recursive, propagate the type upwards
@@ -463,7 +462,7 @@ public:
                 auto& fn_dfn = module().get_function(symptr->index());
                 fn_dfn.set_signature(m_value_type.signature_ptr());
             }
-            m_processor.process_block(fn, v.body);
+            resolve_types(fn, v.body);
             m_value_type = TypeInfo{fn.signature_ptr()};
         }
 
@@ -520,34 +519,26 @@ private:
 
     // return new function according to requested signature
     // throw when the signature doesn't match
-    std::unique_ptr<Function> resolve_specialization(const Function& orig_fn) const
+    void specialize_to_call_args(Function& fn) const
     {
-        auto fn = make_unique<Function>(orig_fn.module(), orig_fn.symtab());
-        fn->signature() = orig_fn.signature();
-        for (size_t i = 0; i < fn->signature().params.size(); i++) {
+        for (size_t i = 0; i < fn.signature().params.size(); i++) {
             const auto& arg = m_call_args[i];
-            auto& out_type = fn->signature().params[i];
+            auto& out_type = fn.signature().params[i];
             if (arg.type_info.is_unknown())
                 continue;
             if (out_type.is_unknown()) {
                 auto var = out_type.generic_var();
                 // resolve this generic var to received type
-                for (size_t j = i; j < fn->signature().params.size(); j++) {
-                    auto& outj_type = fn->signature().params[j];
+                for (size_t j = i; j < fn.signature().params.size(); j++) {
+                    auto& outj_type = fn.signature().params[j];
                     if (outj_type.is_unknown() && outj_type.generic_var() == var)
                         outj_type = arg.type_info;
                 }
-                auto& ret_type = fn->signature().return_type;
+                auto& ret_type = fn.signature().return_type;
                 if (ret_type.is_unknown() && ret_type.generic_var() == var)
                     ret_type = arg.type_info;
             }
         }
-        if (orig_fn.has_ast()) {
-            m_processor.process_block(*fn, *orig_fn.ast());
-            fn->set_ast(orig_fn.ast());
-        } else
-            fn->code() = orig_fn.code();
-        return fn;
     }
 
     // Consume params from `orig_signature` according to `m_call_args`, creating new signature
@@ -653,7 +644,6 @@ private:
     }
 
 private:
-    TypeResolver& m_processor;
     Function& m_function;
     TypeInfo m_type_info;
     TypeInfo m_value_type;
@@ -663,9 +653,9 @@ private:
 };
 
 
-void TypeResolver::process_block(Function& func, const ast::Block& block)
+void resolve_types(Function& func, const ast::Block& block)
 {
-    TypeCheckerVisitor visitor {*this, func};
+    TypeCheckerVisitor visitor {func};
     for (const auto& stmt : block.statements) {
         stmt->apply(visitor);
     }

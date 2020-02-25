@@ -21,7 +21,8 @@ namespace xci::script::tool {
 struct Context {
     bool done {false};
     Interpreter interpreter;
-    std::vector<std::unique_ptr<xci::script::Module>> modules;
+    std::unique_ptr<xci::script::Module> std_module;
+    std::vector<std::unique_ptr<xci::script::Module>> input_modules;
     xci::core::TermCtl term_out = xci::core::TermCtl::stdout_instance();
 };
 

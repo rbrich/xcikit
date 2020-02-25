@@ -113,8 +113,11 @@ struct List: if_must< one<'['>, SC, sor<one<']'>, seq<ExprInfix, SC, until<one<'
 struct ExprCallable: sor< BracedExpr, Function, Reference> {};
 struct ExprArgSafe: sor< BracedExpr, List, Function, Literal, Reference > {};  // expressions which can be used as args in Call
 struct Call: seq< ExprCallable, plus<RSC, ExprArgSafe> > {};
+struct DotCall: seq< ExprCallable, star<RSC, ExprArgSafe> > {};
 struct ExprOperand: sor<Call, ExprArgSafe, ExprPrefix> {};
-struct ExprInfixRight: if_must<InfixOperator, SC, ExprOperand, SC, opt<ExprInfixRight>> {};
+struct ExprInfixRightI: if_must<InfixOperator, SC, ExprOperand> {};
+struct ExprDotCallRightI: if_must<one<'.'>, SC, DotCall> {};
+struct ExprInfixRight: seq<sor<ExprDotCallRightI, ExprInfixRightI>, SC, opt<ExprInfixRight>> {};
 struct ExprInfix: seq< ExprOperand, SC, opt<ExprInfixRight> > {};
 struct ExprCond: if_must< KeywordIf, SC, ExprInfix, SC, KeywordThen, SC, Expression, SC, KeywordElse, SC, Expression> {};
 struct ExprTuple: if_must< seq<ExprInfix, SC, one<','>>, SC, ExprInfix, star<SC, one<','>, SC, ExprInfix> > {};
@@ -469,6 +472,23 @@ struct Action<Call> : change_states< ast::Call > {
         outer_opc.args.push_back(std::move(expr));
     }
 };
+
+
+template<>
+struct Action<DotCall> : change_states< ast::Call > {
+    template<typename Input>
+    static void apply(const Input &in, ast::Call& call) {
+        call.source_info.load(in.input(), in.position());
+    }
+
+    template<typename Input>
+    static void success(const Input &in, ast::Call& call, ast::OpCall& outer_opc) {
+        auto expr = std::make_unique<ast::Call>(std::move(call));
+        outer_opc.args.push_back(std::move(expr));
+        outer_opc.op = ast::Operator::DotCall;
+    }
+};
+
 
 template<>
 struct Action<Identifier> {

@@ -96,6 +96,13 @@ TEST_CASE( "path::base_name", "[file]" )
 }
 
 
+TEST_CASE( "path::real_path, path::get_cwd", "[file]" )
+{
+    auto cwd = path::get_cwd();
+    CHECK(path::real_path(cwd + "/././.") == cwd);
+}
+
+
 TEST_CASE( "utf8_length", "[string]" )
 {
     std::string s = "河北梆子";

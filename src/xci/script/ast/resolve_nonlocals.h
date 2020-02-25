@@ -1,11 +1,11 @@
-// NonlocalResolver.h created on 2020-01-05 as part of xcikit project
+// resolve_nonlocals.h created on 2020-01-05 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019 Radek Brich
+// Copyright 2019, 2020 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#ifndef XCI_SCRIPT_NONLOCAL_RESOLVER_H
-#define XCI_SCRIPT_NONLOCAL_RESOLVER_H
+#ifndef XCI_SCRIPT_AST_RESOLVE_NONLOCALS_H
+#define XCI_SCRIPT_AST_RESOLVE_NONLOCALS_H
 
 #include "AST.h"
 
@@ -17,12 +17,9 @@ namespace xci::script {
 ///   (by adding the non-locals also to the parent and referencing those)
 /// - non-locals referencing functions without closure
 ///   (those that don't capture anything by themselves)
-///   are replaced with locals (the function is referenced directly)
+///   are replaced with direct references
 
-class NonlocalResolver: public ast::BlockProcessor {
-public:
-    void process_block(Function& func, const ast::Block& block) final;
-};
+void resolve_nonlocals(Function& func, const ast::Block& block);
 
 
 } // namespace xci::script

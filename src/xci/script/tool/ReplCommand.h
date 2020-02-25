@@ -31,12 +31,15 @@ private:
         m_module.symtab().add({move(alias), Symbol::Function, index});
     }
 
+    const Module* module_by_idx(size_t mod_idx);
+    const Module* module_by_name(const std::string& mod_name);
+
     void dump_module(size_t mod_idx);
     void cmd_dump_module();
     void cmd_dump_module(size_t mod_idx);
     void cmd_dump_module(std::string mod_name);
 
-    void dump_function(size_t mod_idx, size_t fun_idx);
+    void dump_function(const Module& module, size_t fun_idx);
     void cmd_dump_function();
     void cmd_dump_function(std::string fun_name);
     void cmd_dump_function(std::string fun_name, std::string mod_name);

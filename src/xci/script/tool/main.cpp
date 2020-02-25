@@ -32,13 +32,7 @@ using namespace xci::core::argparser;
 using namespace xci::script;
 using namespace xci::script::tool;
 using Replxx = replxx::Replxx;
-using std::string;
-using std::cin;
-using std::cout;
-using std::endl;
-using std::flush;
-using std::stack;
-using std::map;
+using namespace std;
 
 
 struct Options {
@@ -58,7 +52,7 @@ struct Environment {
 
     Environment() {
         Logger::init(Logger::Level::Warning);
-        vfs.mount(XCI_SHARE_DIR);
+        vfs.mount(XCI_SHARE);
     }
 };
 
@@ -70,17 +64,13 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
     auto& compiler = context().interpreter.compiler();
     auto& machine = context().interpreter.machine();
 
-    try {
-        if (context().modules.empty()) {
-            context().interpreter.configure(opts.compiler_flags);
-            context().modules.push_back(std::make_unique<BuiltinModule>());
+    context().interpreter.configure(opts.compiler_flags);
 
-            if (opts.with_std_lib) {
-                auto f = env.vfs.read_file("script/sys.ys");
-                auto content = f.content();
-                auto sys_module = context().interpreter.build_module("sys", content->string_view());
-                context().modules.push_back(move(sys_module));
-            }
+    try {
+        if (opts.with_std_lib && !context().std_module) {
+            auto f = env.vfs.read_file("script/std.ys");
+            auto content = f.content();
+            context().std_module = context().interpreter.build_module("std", content->string_view());
         }
 
         // parse
@@ -94,10 +84,14 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
         // compile
         std::string module_name = input_number >= 0 ? format("input_{}", input_number) : "<input>";
         auto module = std::make_unique<Module>(module_name);
-        for (auto& m : context().modules)
+        module->add_imported_module(BuiltinModule::static_instance());
+        if (context().std_module)
+            module->add_imported_module(*context().std_module);
+        for (auto& m : context().input_modules)
             module->add_imported_module(*m);
-        Function func {*module, module->symtab()};
-        compiler.compile(func, ast);
+        auto func_name = input_number == -1 ? "_" : "_" + to_string(input_number);
+        auto func = make_unique<Function>(*module, module->symtab());
+        compiler.compile(*func, ast);
 
         // print AST with Compiler modifications
         if (opts.print_ast) {
@@ -121,27 +115,26 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
         BytecodeTracer tracer(machine, t);
         tracer.setup(opts.print_bytecode, opts.trace_bytecode);
 
-        machine.call(func, [&](const Value& invoked) {
+        machine.call(*func, [&](const Value& invoked) {
             if (!invoked.is_void()) {
                 cout << t.bold().yellow() << invoked << t.normal() << endl;
             }
         });
 
         // returned value of last statement
-        auto result = machine.stack().pull(func.effective_return_type());
+        auto result = machine.stack().pull(func->effective_return_type());
         if (input_number != -1) {
             // REPL mode
-            auto result_name = "_" + std::to_string(input_number);
             if (!result->is_void()) {
-                cout << t.bold().magenta() << result_name << " = "
+                cout << t.bold().magenta() << func_name << " = "
                      << t.normal()
                      << t.bold() << *result << t.normal() << endl;
             }
-            // save result as static value `_<N>` in the module
-            auto result_idx = module->add_value(std::move(result));
-            module->symtab().add({result_name, Symbol::Value, result_idx});
+            // save result as function `_<N>` in the module
+            auto func_idx = module->add_function(move(func));
+            module->symtab().add({move(func_name), Symbol::Function, func_idx});
 
-            context().modules.push_back(move(module));
+            context().input_modules.push_back(move(module));
         } else {
             // single input mode
             if (!result->is_void()) {
@@ -154,7 +147,7 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
             cout << e.file() << ": ";
         cout << t.red().bold() << "Error: " << e.what() << t.normal();
         if (!e.detail().empty())
-            cout << std::endl << t.magenta() << e.detail() << t.normal();
+            cout << endl << t.magenta() << e.detail() << t.normal();
         cout << endl;
         return false;
     }
@@ -187,6 +180,7 @@ static std::pair<std::regex, cl> regex_color[] {
         {std::regex{R"(^ *\.q(uit)?\b)"}, cl::YELLOW},
         {std::regex{R"(^ *\.(dm|dump_module)\b)"}, cl::YELLOW},
         {std::regex{R"(^ *\.(df|dump_function)\b)"}, cl::YELLOW},
+        {std::regex{R"(^ *\.(di|dump_info)\b)"}, cl::YELLOW},
 
         // numbers
         {std::regex{R"(\b[0-9]+\b)"}, cl::BRIGHTCYAN}, // integer
@@ -247,9 +241,10 @@ int main(int argc, char* argv[])
             Option("-s, --symtab", "Print symbol table", opts.print_symtab),
             Option("-m, --module", "Print compiled module content", opts.print_module),
             Option("--trace", "Trace bytecode", opts.trace_bytecode),
-            Option("--pp-symbols", "Stop after symbols pass", [&opts]{ opts.compiler_flags |= Compiler::PPSymbols; }),
-            Option("--pp-types", "Stop after typecheck pass", [&opts]{ opts.compiler_flags |= Compiler::PPTypes; }),
-            Option("--pp-nonlocals", "Stop after nonlocals pass", [&opts]{ opts.compiler_flags |= Compiler::PPNonlocals; }),
+            Option("--pp-dotcall", "Stop after fold_dot_call pass", [&opts]{ opts.compiler_flags |= Compiler::PPDotCall; }),
+            Option("--pp-symbols", "Stop after resolve_symbols pass", [&opts]{ opts.compiler_flags |= Compiler::PPSymbols; }),
+            Option("--pp-types", "Stop after resolve_types pass", [&opts]{ opts.compiler_flags |= Compiler::PPTypes; }),
+            Option("--pp-nonlocals", "Stop after resolve_nonlocals pass", [&opts]{ opts.compiler_flags |= Compiler::PPNonlocals; }),
             Option("--no-std", "Do not load standard library", [&opts]{ opts.with_std_lib = false; }),
             Option("[INPUT ...]", "Input files", [&input_files](const char* arg)
                 { input_files.emplace_back(arg); return true; }),
@@ -283,6 +278,7 @@ int main(int argc, char* argv[])
     // standalone interpreter for the control commands
     ReplCommand cmd;
 
+    cout << t.format("{bold}{magenta}🔥 fire script{normal} {magenta}v0.3{normal}") << endl;
     while (!context().done) {
         const char* input;
         do {

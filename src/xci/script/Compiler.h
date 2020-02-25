@@ -16,7 +16,7 @@
 #ifndef XCI_SCRIPT_COMPILER_H
 #define XCI_SCRIPT_COMPILER_H
 
-#include "AST.h"
+#include "ast/AST.h"
 #include "Function.h"
 #include "Module.h"
 #include <vector>
@@ -33,17 +33,18 @@ public:
         O1 = OConstFold,
 
         // parse & process only, do no compile into bytecode
-        PPMask      = 3 << 24,
-        PPSymbols   = 1 << 24,    // stop after SymbolResolver pass
-        PPTypes     = 2 << 24,    // stop after TypeResolver pass
-        PPNonlocals = 3 << 24,    // stop after NonlocalSymbolResolver pass
+        PPMask      = 7 << 24,
+        PPDotCall   = 1 << 24,    // stop after fold_dot_call pass
+        PPSymbols   = 2 << 24,    // stop after resolve_symbols pass
+        PPTypes     = 3 << 24,    // stop after resolve_types pass
+        PPNonlocals = 4 << 24,    // stop after resolve_nonlocals pass
     };
 
     Compiler() = default;
-    explicit Compiler(uint32_t flags) : Compiler() { configure(flags); }
+    explicit Compiler(uint32_t flags) : m_flags(flags) {}
 
-    void configure(uint32_t flags);
-    bool is_configured() const { return !m_ast_passes.empty(); }
+    void set_flags(uint32_t flags) { m_flags = flags; }
+    uint32_t flags() const { return m_flags; }
 
     // Compile AST into Function object, which contains objects in scope + code
     // (module is special kind of function, with predefined parameters)
@@ -53,8 +54,7 @@ public:
     void compile_block(Function& func, const ast::Block& block);
 
 private:
-    std::vector<std::unique_ptr<ast::BlockProcessor>> m_ast_passes;  // preprocessing & optimization passes
-    bool m_compile = false;
+    uint32_t m_flags = 0;
 };
 
 

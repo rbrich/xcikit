@@ -1,20 +1,20 @@
-// NonlocalResolver.cpp created on 2020-01-05 as part of xcikit project
+// resolve_nonlocals.cpp created on 2020-01-05 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019 Radek Brich
+// Copyright 2019, 2020 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#include "NonlocalResolver.h"
-#include "Function.h"
-#include "Module.h"
+#include "resolve_nonlocals.h"
+#include <xci/script/Function.h>
+#include <xci/script/Module.h>
 
 namespace xci::script {
 
 
-class NonlocalResolverVisitor: public ast::Visitor {
+class NonlocalResolverVisitor final: public ast::Visitor {
 public:
-    explicit NonlocalResolverVisitor(NonlocalResolver& processor, Function& func)
-            : m_processor(processor), m_function(func) {}
+    explicit NonlocalResolverVisitor(Function& func)
+            : m_function(func) {}
 
     void visit(ast::Definition& dfn) override {
         dfn.expression->apply(*this);
@@ -52,11 +52,30 @@ public:
         const auto& symtab = *v.identifier.symbol.symtab();
         const auto& sym = *v.identifier.symbol;
         switch (sym.type()) {
+            case Symbol::Nonlocal: {
+                auto& nl_sym = *sym.ref();
+                auto* nl_func = sym.ref().symtab()->function();
+                assert(nl_func != nullptr);
+                switch (nl_sym.type()) {
+                    case Symbol::Function: {
+                        auto& ref_fn = nl_func->module().get_function(nl_sym.index());
+                        if (!ref_fn.has_nonlocals()) {
+                            // eliminate nonlocal function without closure
+                            v.identifier.symbol = sym.ref();
+                        }
+                        break;
+                    }
+                    default:
+                        break;
+                }
+                break;
+            }
             case Symbol::Function: {
                 auto* symmod = symtab.module() == nullptr ? &module() : symtab.module();
                 auto& fn = symmod->get_function(sym.index());
-                if (!fn.is_native() && fn.has_ast()) {
-                    process_function(fn, *fn.ast());
+                if (fn.is_generic()) {
+                    assert(!fn.is_ast_copied());   // AST is referenced
+                    process_function(fn, fn.ast());
                 }
                 break;
             }
@@ -86,15 +105,6 @@ public:
         if (v.partial_index != no_index) {
             auto& fn = module().get_function(v.partial_index);
             process_subroutine(fn, *v.callable);
-
-            /*auto it = m_function.symtab().begin();
-            for (const auto& nl : fn.nonlocals()) {
-                while (it->type() != Symbol::Parameter) {
-                    ++it;
-                }
-                fn.symtab().add({{m_function.symtab(), Index(it - m_function.symtab().begin())},
-                                 Symbol::Nonlocal, 1});
-            }*/
         } else {
             v.callable->apply(*this);
         }
@@ -121,7 +131,7 @@ public:
             // create wrapping function for the closure
             SymbolTable& wfn_symtab = m_function.symtab().add_child(func.symtab().name() + "/closure");
             auto wfn = std::make_unique<Function>(module(), wfn_symtab);
-            wfn->set_kind(Function::Kind::Inline);
+            wfn->set_fragment();
             wfn->set_signature(func.signature_ptr());
             auto wfn_index = module().add_function(move(wfn));
             v.definition->symbol()->set_index(wfn_index);
@@ -137,12 +147,12 @@ private:
     Module& module() { return m_function.module(); }
 
     void process_subroutine(Function& func, ast::Expression& expression) {
-        NonlocalResolverVisitor visitor(m_processor, func);
+        NonlocalResolverVisitor visitor(func);
         expression.apply(visitor);
     }
 
-    void process_function(Function& func, ast::Block& body) {
-        m_processor.process_block(func, body);
+    void process_function(Function& func, const ast::Block& body) {
+        resolve_nonlocals(func, body);
 
         auto& nonlocals = func.signature().nonlocals;
         if (nonlocals.empty())
@@ -172,14 +182,13 @@ private:
     }
 
 private:
-    NonlocalResolver& m_processor;
     Function& m_function;
 };
 
 
-void NonlocalResolver::process_block(Function& func, const ast::Block& block)
+void resolve_nonlocals(Function& func, const ast::Block& block)
 {
-    NonlocalResolverVisitor visitor {*this, func};
+    NonlocalResolverVisitor visitor {func};
     for (const auto& stmt : block.statements) {
         stmt->apply(visitor);
     }

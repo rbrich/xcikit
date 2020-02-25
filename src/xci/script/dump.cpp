@@ -529,18 +529,25 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
 std::ostream& operator<<(std::ostream& os, const Function& f)
 {
     os << f.signature() << endl;
-    for (auto it = f.code().begin(); it != f.code().end(); it++) {
-        os << ' ' << DumpInstruction{f, it} << endl;
+    switch (f.kind()) {
+        case Function::Kind::Compiled:
+            for (auto it = f.code().begin(); it != f.code().end(); it++) {
+                os << ' ' << DumpInstruction{f, it} << endl;
+            }
+            return os;
+        case Function::Kind::Generic:   return os << dump_tree << f.ast() << endl;
+        case Function::Kind::Native:    return os << "<native>" << endl;
+        case Function::Kind::Undefined: return os << "<undefined>" << endl;
     }
-    return os;
+    UNREACHABLE;
 }
 
 
 std::ostream& operator<<(std::ostream& os, Function::Kind v)
 {
     switch (v) {
-        case Function::Kind::Normal:  return os << "normal";
-        case Function::Kind::Inline:  return os << "inline";
+        case Function::Kind::Undefined:  return os << "undefined";
+        case Function::Kind::Compiled:    return os << "compiled";
         case Function::Kind::Generic: return os << "generic";
         case Function::Kind::Native:  return os << "native";
     }
@@ -608,7 +615,7 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
     for (size_t i = 0; i < v.num_functions(); ++i) {
         const auto& f = v.get_function(i);
         os << put_indent << '[' << i << "] ";
-        if (f.kind() != Function::Kind::Normal)
+        if (f.kind() != Function::Kind::Compiled)
             os << '(' << f.kind() << ") ";
         os << f.name() << ": " << f.signature() << endl;
     }
@@ -632,14 +639,13 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
     for (size_t i = 0; i < v.num_classes(); ++i) {
         const auto& cls = v.get_class(i);
         os << put_indent << '[' << i << "] " << cls.name();
-        bool first_typevar = true;
+        [[maybe_unused]] bool first_typevar = true;
         for (const auto& sym : cls.symtab()) {
             switch (sym.type()) {
                 case Symbol::Parameter:
                     break;
                 case Symbol::TypeVar:
                     assert(first_typevar);
-                    (void) first_typevar;
                     first_typevar = false;
                     os << ' ' << sym.name() << endl << more_indent;
                     break;
@@ -763,7 +769,8 @@ std::ostream& operator<<(std::ostream& os, const SymbolPointer& v)
     if (v->index() != no_index)
         os << " #" << v->index();
     if (v.symtab() != nullptr)
-        os << " @" << std::hex << v.symtab() << std::dec;
+        os << " @" << v.symtab()->name() << " ("
+           << std::hex << intptr_t(v.symtab()) << ')' << std::dec;
     if (v->ref())
         os << " -> " << v->ref();
     return os;

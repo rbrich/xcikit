@@ -61,7 +61,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
             // no more stack frames?
             if (m_stack.frame().function == nullptr) {
                 m_stack.pop_frame();
-                assert(m_stack.size() == function.signature().return_type.effective_type().size());
+                assert(m_stack.size() == function.effective_return_type().size());
                 break;
             }
 

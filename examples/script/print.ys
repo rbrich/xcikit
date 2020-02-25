@@ -1,6 +1,9 @@
 // TODO: not yet implemented
-//       (will require variadic functions)
 
+// format - will require variadic functions
 "number: {} color: {}"
 .format 42 "red"
 .print;
+
+// C++-style streams - won't require variadic functions
+stream << "number: " << 42 .hex .pad_left 10 << " color: " << "red\n";

@@ -1,7 +1,7 @@
 language: cpp
 compiler: clang
 os: osx
-osx_image: xcode11
+osx_image: xcode11.2
 
 env:
   global:
@@ -11,6 +11,7 @@ env:
 
 addons:
   homebrew:
+    update: true
     packages:
       - glfw
       - conan
@@ -22,7 +23,7 @@ before_script:
   - |
     export VULKAN_SDK="$PWD/vulkansdk-macos-$VK_SDK_VER/macOS"
     if [ ! -d "$VULKAN_SDK" ]; then
-      curl -O https://sdk.lunarg.com/sdk/download/$VK_SDK_VER/mac/vulkansdk-macos-$VK_SDK_VER.tar.gz
+      curl -fsSLO https://sdk.lunarg.com/sdk/download/$VK_SDK_VER/mac/vulkansdk-macos-$VK_SDK_VER.tar.gz
       tar xf vulkansdk-macos-$VK_SDK_VER.tar.gz && rm vulkansdk-macos-$VK_SDK_VER.tar.gz
     fi
   - ./bootstrap.sh -y
@@ -34,10 +35,15 @@ script:
 after_failure:
   - cat build/*/Testing/Temporary/LastTest.log
 
+before_cache:
+  - brew cleanup -s
+
 cache:
   ccache: true
   directories:
     - vulkansdk-macos-$VK_SDK_VER
+    - $HOME/Library/Caches/Homebrew
+    - /usr/local/Homebrew
 
 before_deploy:
   - conan user -p $CONAN_PASSWORD -r xcikit rbrich

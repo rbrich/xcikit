@@ -131,19 +131,36 @@ std::string join(const std::string &part1, const std::string &part2)
 
 std::string get_cwd()
 {
-    std::string result(PATH_MAX, ' ');
-    if (::getcwd(&result[0], result.size()) == nullptr) {
-        return std::string();
-    }
-    result.resize(strlen(result.data()));
+#ifdef _GNU_SOURCE
+    // GNU-specific, not limited by PATH_MAX
+    char* buf = get_current_dir_name();
+    if (buf == nullptr)
+        return {};
+    std::string result(buf);
+    free(buf);
     return result;
+#else
+    char buffer[PATH_MAX];
+    if (::getcwd(buffer, sizeof(buffer)) == nullptr) {
+        return {};
+    }
+    return buffer;
+#endif
 }
 
 
 std::string real_path(const std::string& path)
 {
+#ifdef _GNU_SOURCE
+    // GNU-specific, not limited by PATH_MAX
+    char* buf = canonicalize_file_name(path.c_str());
+    if (buf == nullptr)
+        return {};
+    std::string result(buf);
+    free(buf);
+    return result;
+#elif defined( _WIN32 )
     char buffer[PATH_MAX];
-#ifdef _WIN32
     auto h = CreateFileA(path.c_str(), 0,
             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
             nullptr, OPEN_EXISTING,
@@ -165,6 +182,7 @@ std::string real_path(const std::string& path)
     else
         return buffer;
 #else
+    char buffer[PATH_MAX];
     char* res = ::realpath(path.c_str(), buffer);
     return res == nullptr ? "" : res;
 #endif

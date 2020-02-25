@@ -47,22 +47,22 @@ void check_parser(const string& input, const string& expected_output)
 }
 
 
-void check_interpreter(const string& input, const string& expected_output)
+void check_interpreter(const string& input, const string& expected_output="true")
 {
-    static std::unique_ptr<Module> sys_module;
+    static std::unique_ptr<Module> std_module;
     Interpreter interpreter;
 
-    if (!sys_module) {
+    if (!std_module) {
         Logger::init(Logger::Level::Warning);
         Vfs vfs;
         vfs.mount(XCI_SHARE);
 
-        auto f = vfs.read_file("script/sys.ys");
+        auto f = vfs.read_file("script/std.ys");
         REQUIRE(f.is_open());
         auto content = f.content();
-        sys_module = interpreter.build_module("sys", content->string_view());
+        std_module = interpreter.build_module("std", content->string_view());
     }
-    interpreter.add_imported_module(*sys_module);
+    interpreter.add_imported_module(*std_module);
 
     ostringstream os;
     try {
@@ -121,6 +121,16 @@ TEST_CASE( "Operator precedence", "[script][parser]" )
     // functions
     check_parser("a fun b {} c", "a fun b {void} c");
     check_parser("a (fun b {}) c", "a fun b {void} c");
+    // function calls
+    check_interpreter("succ 9 + max 5 4 + 1", "16");
+    check_interpreter("(succ 9) + (max 5 4) + 1", "16");
+    check_interpreter("succ 9 + 5 .max 4 + 1", "16");
+    check_interpreter("1 .add 2 .mul 3", "9");
+    check_interpreter("(1 .add 2).mul 3", "9");
+    check_interpreter("1 .add (2 .mul 3)", "7");
+    check_interpreter("pred (neg (succ (14)))", "-16");
+    check_interpreter("14 .succ .neg .pred", "-16");
+    check_interpreter("(((14) .succ) .neg) .pred", "-16");
 }
 
 
@@ -214,7 +224,7 @@ TEST_CASE( "Types", "[script][interpreter]" )
     check_interpreter("f = fun a:Int b:Int -> Int {a+b}; f 1 2", "3");
     check_interpreter("f : Int Int -> Int = fun a b {a+b}; f 1 2", "3");
 
-    // narrowing type of polymorphic function (`f 1.0 2.0` would be error, while `add 1.0 2.0` still works)
+    // TODO: narrowing type of polymorphic function (`f 1.0 2.0` would be error, while `add 1.0 2.0` still works)
     // check_interpreter("f : Int Int -> Int = add ; f 1 2",        "3");
 }
 
@@ -231,6 +241,10 @@ TEST_CASE( "Blocks", "[script][interpreter]" )
     check_interpreter("b = {1+2}; b", "3");
     check_interpreter("b = { a = 1; a }; b", "1");
     check_interpreter("b:Int = {1+2}; b", "3");
+
+    // blocks are evaluated after all definitions in the scope,
+    // which means they can use names from parent scope that are defined later
+    check_interpreter("y={x}; x=7; y", "7");
 }
 
 
@@ -256,6 +270,16 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
                       "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 + b}; "
                       "w=fun b1:Int c1:Int {a + u b1 + v c1}; "
                       "w b c }; f 1 2 3", "9");
+
+    check_interpreter("outer = fun y:Int {"
+                      "inner = fun x:Int { x + y }; inner y "
+                      "}; outer 2", "4");
+    check_interpreter("outer = fun y:Int {"
+                      "inner = fun x:Int { x + y }; alias = inner; alias y "
+                      "}; outer 2", "4");
+    check_interpreter("outer = fun y {"
+                      "inner = fun x:Int { x + y }; alias = fun x:Int { inner x }; alias y "
+                      "}; outer 2", "4");
 }
 
 
@@ -370,7 +394,9 @@ TEST_CASE( "Native to Value mapping", "[script][native]" )
     CHECK(native::ValueType<int64_t>(1ll << 60).value() == 1ll << 60);
     CHECK(native::ValueType<float>(3.14f).value() == 3.14f);
     CHECK(native::ValueType<double>(2./3).value() == 2./3);
-    CHECK(native::ValueType<std::string>("test"s).value() == "test"s);
+    native::ValueType<std::string>str ("test"s);
+    CHECK(str.value() == "test"s);
+    str.decref();
 }
 
 

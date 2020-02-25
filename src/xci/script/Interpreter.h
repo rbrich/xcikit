@@ -33,7 +33,7 @@ public:
     explicit Interpreter(uint32_t flags);
 
     // `flags` are Compiler::Flags
-    void configure(uint32_t flags) { m_compiler.configure(flags); }
+    void configure(uint32_t flags) { m_compiler.set_flags(flags); }
 
     std::unique_ptr<Module> build_module(const std::string& name, std::string_view content);
     void add_imported_module(Module& module) { m_main.add_imported_module(module); }
@@ -45,14 +45,12 @@ public:
     Parser& parser() { return m_parser; }
     Compiler& compiler() { return m_compiler; }
     Machine& machine() { return m_machine; }
-    Module& builtin_module() { return m_builtin; }
     Module& main_module() { return m_main; }
 
 private:
     Parser m_parser;
     Compiler m_compiler;
     Machine m_machine;
-    BuiltinModule m_builtin;
     Module m_main;
 };
 
