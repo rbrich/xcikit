@@ -68,7 +68,7 @@ bool evaluate(Environment& env, const string& line, const Options& opts, int inp
 
     try {
         if (opts.with_std_lib && !context().std_module) {
-            auto f = env.vfs.read_file("script/std.ys");
+            auto f = env.vfs.read_file("script/std.fire");
             auto content = f.content();
             context().std_module = context().interpreter.build_module("std", content->string_view());
         }

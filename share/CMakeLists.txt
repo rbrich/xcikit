@@ -22,7 +22,7 @@ set(ASSETS
     fonts/Hack/Hack-Regular.ttf
     fonts/MaterialIcons/MaterialIcons-Regular.woff
     fonts/ShareTechMono/ShareTechMono-Regular.ttf
-    script/std.ys
+    script/std.fire
     )
 
 

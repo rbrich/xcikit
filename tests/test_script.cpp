@@ -57,7 +57,7 @@ void check_interpreter(const string& input, const string& expected_output="true"
         Vfs vfs;
         vfs.mount(XCI_SHARE);
 
-        auto f = vfs.read_file("script/std.ys");
+        auto f = vfs.read_file("script/std.fire");
         REQUIRE(f.is_open());
         auto content = f.content();
         std_module = interpreter.build_module("std", content->string_view());
@@ -297,7 +297,7 @@ TEST_CASE( "Partial function call", "[script][interpreter]" )
                       "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 - b}; "
                       "w=fun b1:Int c1:Int {a * u b1 / v c1}; "
                       "w b }; f 1 2 3", "3");
-    // [closure.ys] return closure with captured closures, propagate arguments into the closure
+    // [closure.fire] return closure with captured closures, propagate arguments into the closure
     check_interpreter("f = fun a:Int { "
                       "u=fun b2:Int {a / b2}; v=fun c2:Int {c2 - a}; "
                       "fun b1:Int c1:Int {a + u b1 + v c1} }; f 4 2 3", "5");
