@@ -14,12 +14,19 @@
 
 namespace xci::script::tool {
 
+enum class EvalMode {
+    Repl,
+    SingleInput,
+    Compile,
+};
+
 class Repl {
 public:
     Repl(Context& ctx, const ReplOptions& opts, const core::Vfs & vfs)
         : m_ctx(ctx), m_opts(opts), m_vfs(vfs) {}
 
-    bool evaluate(std::string_view line);
+    // FIXME: This class is no longer "REPL", needs refactoring
+    bool evaluate(std::string module_name, std::string module_source, EvalMode mode);
 
 private:
     Context& m_ctx;

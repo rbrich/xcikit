@@ -92,6 +92,9 @@ public:
     void add_spec_function(SymbolPointer gen_fn, Index spec_fn_idx);
     std::vector<Index> get_spec_functions(SymbolPointer gen_fn);
 
+    // Serialization
+    bool save(const std::string& filename);
+
     bool operator==(const Module& rhs) const;
 
 private:

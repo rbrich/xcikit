@@ -138,4 +138,11 @@ bool Module::operator==(const Module& rhs) const
 }
 
 
+bool Module::save(const std::string& filename)
+{
+    // TODO
+    return false;
+}
+
+
 } // namespace xci::script

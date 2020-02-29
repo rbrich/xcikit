@@ -22,7 +22,7 @@ namespace xci::script::tool {
 using std::endl;
 
 
-bool Repl::evaluate(std::string_view line)
+bool Repl::evaluate(std::string module_name, std::string module_source, EvalMode mode)
 {
     core::TermCtl& t = m_ctx.term_out;
     auto& source_manager = m_ctx.interpreter.source_manager();
@@ -32,15 +32,14 @@ bool Repl::evaluate(std::string_view line)
 
     m_ctx.interpreter.configure(m_opts.compiler_flags);
 
-    std::string module_name = m_ctx.input_number >= 0 ? fmt::format("input_{}", m_ctx.input_number) : "<input>";
-    auto src_id = source_manager.add_source(module_name, std::string(line));
+    auto src_id = source_manager.add_source(module_name, std::move(module_source));
 
     try {
         if (m_opts.with_std_lib && !m_ctx.std_module) {
             const char* path = "script/std.fire";
             auto f = m_vfs.read_file(path);
             auto content = f.content();
-            auto file_id = source_manager.add_source(path, std::string(content->string_view()));
+            auto file_id = source_manager.add_source(path, content->string());
             m_ctx.std_module = m_ctx.interpreter.build_module("std", file_id);
         }
 
@@ -60,8 +59,7 @@ bool Repl::evaluate(std::string_view line)
         for (auto& m : m_ctx.input_modules)
             module->add_imported_module(*m);
 
-        // add main function to the module as `_<N>`
-        auto fn_name = m_ctx.input_number == -1 ? "_" : "_" + std::to_string(m_ctx.input_number);
+        // add main function to the module
         auto fn_idx = module->add_function(std::make_unique<Function>(*module, module->symtab()));
         auto& fn = module->get_function(fn_idx);
 
@@ -88,9 +86,16 @@ bool Repl::evaluate(std::string_view line)
             s << "Module content:" << endl << *module << endl;
         }
 
-        // stop if we were only processing the AST, without actual compilation
+        // Only requested to compile
+        if (mode == EvalMode::Compile) {
+            assert(is_compiled);
+            m_ctx.input_modules.push_back(move(module));
+            return true;
+        }
+
+        // Stop if we were only processing the AST, without actual compilation
         if (!is_compiled)
-            return false;
+            return true;
 
         BytecodeTracer tracer(machine, t);
         tracer.setup(m_opts.print_bytecode, m_opts.trace_bytecode);
@@ -106,18 +111,19 @@ bool Repl::evaluate(std::string_view line)
 
         // returned value of last statement
         auto result = machine.stack().pull_typed(fn.effective_return_type());
-        if (m_ctx.input_number != -1) {
+        if (mode == EvalMode::Repl) {
             // REPL mode
             if (!result.is_void()) {
                 t.print("{t:bold}{fg:magenta}{}:{} = {fg:default}{}{t:normal}\n",
-                        fn_name, result.type_info(), result);
+                        module_name, result.type_info(), result);
             }
             // add symbol for main function so it will be visible by following input,
             // which imports this module
-            module->symtab().add({fn_name, Symbol::Function, fn_idx});
+            module->symtab().add({module_name, Symbol::Function, fn_idx});
             m_ctx.input_modules.push_back(move(module));
         } else {
             // single input mode
+            assert(mode == EvalMode::SingleInput);
             if (!result.is_void()) {
                 t.print("{t:bold}{}{t:normal}\n", result);
             }
