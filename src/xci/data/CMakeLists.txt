@@ -3,6 +3,7 @@
 # ------------ #
 
 find_package(ZLIB REQUIRED)
+find_package(magic_get REQUIRED)
 
 
 # ------------ #

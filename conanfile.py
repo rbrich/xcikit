@@ -17,7 +17,8 @@ class XcikitConan(ConanFile):
                       'range-v3/0.10.0@ericniebler/stable',
                       'incbin/20180413@rbrich/stable',
                       'replxx/20200217@rbrich/stable',
-                      'benchmark/1.5.0@rbrich/stable',)
+                      'benchmark/1.5.0@rbrich/stable',
+                      'magic_get/1.0.0@rbrich/stable')
     generators = "cmake_paths"
     scm = {
         "type": "git",
