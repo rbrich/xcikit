@@ -60,7 +60,7 @@ bool Repl::evaluate(std::string module_name, std::string module_source, EvalMode
             module->add_imported_module(*m);
 
         // add main function to the module
-        auto fn_idx = module->add_function(std::make_unique<Function>(*module, module->symtab()));
+        auto fn_idx = module->add_function(Function{*module, module->symtab()}).index;
         auto& fn = module->get_function(fn_idx);
 
         // compile

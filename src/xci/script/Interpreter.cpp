@@ -57,7 +57,7 @@ TypedValue Interpreter::eval(SourceId source_id, const InvokeCallback& cb)
     // compile
     auto source_name = m_source_manager.get_source(source_id).name();
     auto& symtab = m_main.symtab().add_child(source_name);
-    auto fn_idx = m_main.add_function(std::make_unique<Function>(m_main, symtab));
+    auto fn_idx = m_main.add_function(Function{m_main, symtab}).index;
     auto& fn = m_main.get_function(fn_idx);
     m_compiler.compile(fn, ast);
 

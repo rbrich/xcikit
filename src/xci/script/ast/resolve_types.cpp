@@ -580,8 +580,8 @@ public:
                         v.partial_index = v.definition->symbol()->index();
                     } else {
                         SymbolTable& fn_symtab = m_function.symtab().add_child("?/partial");
-                        auto fn = make_unique<Function>(module(), fn_symtab);
-                        v.partial_index = module().add_function(move(fn));
+                        Function fn {module(), fn_symtab};
+                        v.partial_index = module().add_function(move(fn)).index;
                     }
                     auto& fn = module().get_function(v.partial_index);
                     fn.signature() = *new_signature;
@@ -968,14 +968,14 @@ private:
             return {};  // not generic, nothing to specialize
         if (fn.signature().params.size() > m_call_args.size())
             return {};  // not enough call args
-        auto fspec = make_unique<Function>(module(), fn.symtab());
-        fspec->set_signature(std::make_shared<Signature>(fn.signature()));  // copy, not ref
-        fspec->set_ast(fn.ast());
-        fspec->ensure_ast_copy();
-        specialize_to_call_args(*fspec, fspec->ast(), loc);
-        auto fspec_sig = fspec->signature_ptr();
+        Function fspec(module(), fn.symtab());
+        fspec.set_signature(std::make_shared<Signature>(fn.signature()));  // copy, not ref
+        fspec.set_ast(fn.ast());
+        fspec.ensure_ast_copy();
+        specialize_to_call_args(fspec, fspec.ast(), loc);
+        auto fspec_sig = fspec.signature_ptr();
         // Copy original symbol and set it to the specialized function
-        auto fspec_idx = module().add_function(move(fspec));
+        auto fspec_idx = module().add_function(move(fspec)).index;
         auto res = std::make_optional<Specialized>({
                 TypeInfo{fspec_sig},
                 fspec_idx

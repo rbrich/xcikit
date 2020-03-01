@@ -11,17 +11,24 @@
 #include "SymbolTable.h"
 #include "Class.h"
 #include "Function.h"
+#include <xci/core/container/IndexedMap.h>
 #include <string>
 #include <map>
 #include <cstdint>
 
 namespace xci::script {
 
+using xci::core::IndexedMap;
+
 
 /// Module is the translation unit - it contains functions and constants
 
 class Module {
 public:
+    using FunctionId = IndexedMap<Function>::WeakIndex;
+    using ClassId = IndexedMap<Class>::WeakIndex;
+    using InstanceId = IndexedMap<Instance>::WeakIndex;
+
     explicit Module(std::string name) : m_symtab(move(name)) { m_symtab.set_module(this); }
     Module() : Module("<module>") {}
     ~Module();
@@ -57,8 +64,9 @@ public:
     size_t num_imported_modules() const { return m_modules.size(); }
 
     // Functions
-    Index add_function(std::unique_ptr<Function>&& fn);
-    Function& get_function(size_t idx) const { return *m_functions[idx]; }
+    FunctionId add_function(Function&& fn);
+    const Function& get_function(Index id) const { return m_functions[id]; }
+    Function& get_function(Index id) { return m_functions[id]; }
     size_t num_functions() const { return m_functions.size(); }
 
     // Static values
@@ -75,13 +83,15 @@ public:
     size_t num_types() const { return m_types.size(); }
 
     // Type classes
-    Index add_class(std::unique_ptr<Class>&& cls);
-    Class& get_class(size_t idx) const { return *m_classes[idx]; }
+    ClassId add_class(Class&& cls);
+    const Class& get_class(size_t idx) const { return m_classes[idx]; }
+    Class& get_class(size_t idx) { return m_classes[idx]; }
     size_t num_classes() const { return m_classes.size(); }
 
     // Instances
-    Index add_instance(std::unique_ptr<Instance>&& inst);
-    Instance& get_instance(size_t idx) const { return *m_instances[idx]; }
+    InstanceId add_instance(Instance&& inst);
+    const Instance& get_instance(size_t idx) const { return m_instances[idx]; }
+    Instance& get_instance(size_t idx) { return m_instances[idx]; }
     size_t num_instances() const { return m_instances.size(); }
 
     // Top-level symbol table
@@ -99,9 +109,9 @@ public:
 
 private:
     std::vector<Module*> m_modules;
-    std::vector<std::unique_ptr<Function>> m_functions;
-    std::vector<std::unique_ptr<Class>> m_classes;
-    std::vector<std::unique_ptr<Instance>> m_instances;
+    IndexedMap<Function> m_functions;
+    IndexedMap<Class> m_classes;
+    IndexedMap<Instance> m_instances;
     std::vector<TypeInfo> m_types;
     TypedValues m_values;
     SymbolTable m_symtab;

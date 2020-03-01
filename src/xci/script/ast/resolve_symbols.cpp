@@ -32,10 +32,10 @@ public:
         if (!symptr) {
             // add new function, symbol
             SymbolTable& fn_symtab = symtab().add_child(name);
-            auto fn = make_unique<Function>(module(), fn_symtab);
-            auto idx = module().add_function(move(fn));
+            Function fn {module(), fn_symtab};
+            auto fn_id = module().add_function(move(fn));
             assert(symtab().module() == &module());
-            symptr = symtab().add({name, Symbol::Function, idx});
+            symptr = symtab().add({name, Symbol::Function, fn_id.index});
         } else {
             if (symptr->is_defined())
                 throw RedefinedName(name, dfn.variable.identifier.source_loc);
@@ -87,8 +87,8 @@ public:
             cls_symtab.add({type_var.name, Symbol::TypeVar, i + 1});
 
         // add new class to the module
-        auto cls = make_unique<Class>(cls_symtab);
-        v.index = module().add_class(move(cls));
+        Class cls {cls_symtab};
+        v.index = module().add_class(move(cls)).index;
         v.symtab = &cls_symtab;
 
         m_class = &v;
@@ -133,15 +133,15 @@ public:
 
         // add new instance to the module
         auto& cls = module().get_class(sym_class->index());
-        auto inst = make_unique<Instance>(cls, inst_symtab);
-        m_instance = inst.get();
+        Instance inst {cls, inst_symtab};
+        m_instance = &inst;
 
         for (auto& dfn : v.defs)
             dfn.apply(*this);
 
         m_instance = nullptr;
         m_symtab = inst_symtab.parent();
-        v.index = module().add_instance(move(inst));
+        v.index = module().add_instance(move(inst)).index;
         v.symtab = &inst_symtab;
         v.class_name.symbol->set_index(v.index);
     }
@@ -252,8 +252,8 @@ public:
             if (v.type.params.empty())
                 name = "<block>";
             SymbolTable& fn_symtab = symtab().add_child(name);
-            auto fn = make_unique<Function>(module(), fn_symtab);
-            v.index = module().add_function(move(fn));
+            Function fn {module(), fn_symtab};
+            v.index = module().add_function(move(fn)).index;
         }
         Function& fn = module().get_function(v.index);
 

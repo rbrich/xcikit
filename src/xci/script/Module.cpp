@@ -28,12 +28,12 @@ SymbolPointer Module::add_native_function(
         std::string&& name, std::vector<TypeInfo>&& params, TypeInfo&& retval,
         NativeDelegate native)
 {
-    auto fn = std::make_unique<Function>(*this, symtab().add_child(name));
-    fn->signature().params = move(params);
-    fn->signature().return_type = move(retval);
-    fn->set_native(native);
-    Index index = add_function(move(fn));
-    return symtab().add({move(name), Symbol::Function, index});
+    Function fn {*this, symtab().add_child(name)};
+    fn.signature().params = move(params);
+    fn.signature().return_type = move(retval);
+    fn.set_native(native);
+    FunctionId fn_id = add_function(move(fn));
+    return symtab().add({move(name), Symbol::Function, fn_id.index});
 }
 
 
@@ -46,10 +46,9 @@ Index Module::get_imported_module_index(Module* module) const
 }
 
 
-Index Module::add_function(std::unique_ptr<Function>&& fn)
+auto Module::add_function(Function&& fn) -> FunctionId
 {
-    m_functions.push_back(move(fn));
-    return m_functions.size() - 1;
+    return m_functions.add(move(fn));
 }
 
 
@@ -98,17 +97,15 @@ Index Module::find_type(const TypeInfo& type_info) const
 }
 
 
-Index Module::add_class(std::unique_ptr<Class>&& cls)
+auto Module::add_class(Class&& cls) -> ClassId
 {
-    m_classes.push_back(move(cls));
-    return m_classes.size() - 1;
+    return m_classes.add(move(cls));
 }
 
 
-Index Module::add_instance(std::unique_ptr<Instance>&& inst)
+auto Module::add_instance(Instance&& inst) -> InstanceId
 {
-    m_instances.push_back(move(inst));
-    return m_instances.size() - 1;
+    return m_instances.add(move(inst));
 }
 
 
