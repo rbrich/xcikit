@@ -24,7 +24,7 @@
 #include <xci/graphics/Color.h>
 #include <xci/graphics/Shape.h>
 #include <xci/core/geometry.h>
-#include <xci/core/Stack.h>
+#include <xci/core/container/ChunkedStack.h>
 
 #include <string>
 #include <utility>
@@ -139,7 +139,7 @@ private:
     Style m_default_style;
     ViewportUnits m_default_width = 0;
 
-    mutable core::Stack<graphics::Shape> m_debug_shapes;
+    mutable core::ChunkedStack<graphics::Shape> m_debug_shapes;
 };
 
 

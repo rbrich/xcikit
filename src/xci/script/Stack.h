@@ -17,7 +17,7 @@
 #define XCI_SCRIPT_STACK_H
 
 #include "Value.h"
-#include <xci/core/Stack.h>
+#include <xci/core/container/ChunkedStack.h>
 #include <xci/compat/utility.h>
 #include <xci/compat/bit.h>
 #include <vector>
@@ -128,7 +128,7 @@ private:
     size_t m_stack_pointer = m_stack_capacity;
     std::unique_ptr<byte[]> m_stack = std::make_unique<byte[]>(m_stack_capacity);
     std::vector<TypeInfo> m_stack_types;
-    core::Stack<Frame> m_frame;
+    core::ChunkedStack<Frame> m_frame;
 };
 
 

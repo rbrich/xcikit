@@ -1,11 +1,11 @@
-// Stack.h created on 2019-12-21 as part of xcikit project
+// ChunkedStack.h created on 2019-12-21 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019 Radek Brich
+// Copyright 2019, 2020 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#ifndef XCI_CORE_STACK_H
-#define XCI_CORE_STACK_H
+#ifndef XCI_CORE_CHUNKED_STACK_H
+#define XCI_CORE_CHUNKED_STACK_H
 
 #include <memory>
 #include <algorithm>
@@ -47,7 +47,7 @@ namespace xci::core {
 ///     - (at least, that's the intention, there might be bugs)
 
 template < class T >
-class Stack {
+class ChunkedStack {
 
     struct Bucket;  // fwd for iterators
     static constexpr size_t project_capacity(uint32_t prev_cap);
@@ -59,18 +59,18 @@ public:
     using difference_type = std::ptrdiff_t;
     using size_type = std::size_t;
 
-    explicit Stack(size_t init_capacity = project_capacity(0));
+    explicit ChunkedStack(size_t init_capacity = project_capacity(0));
 
-    Stack(const Stack& other);
-    Stack(Stack&& other) noexcept;
-    ~Stack() { destroy(); }
+    ChunkedStack(const ChunkedStack& other);
+    ChunkedStack(ChunkedStack&& other) noexcept;
+    ~ChunkedStack() { destroy(); }
 
-    Stack& operator=(const Stack& other);
-    Stack& operator=(Stack&& other) noexcept;
-    bool operator==(const Stack& other) const;
-    bool operator!=(const Stack& other) const { return !(*this == other); }
+    ChunkedStack& operator=(const ChunkedStack& other);
+    ChunkedStack& operator=(ChunkedStack&& other) noexcept;
+    bool operator==(const ChunkedStack& other) const;
+    bool operator!=(const ChunkedStack& other) const { return !(*this == other); }
 
-    void swap(Stack& other) noexcept;
+    void swap(ChunkedStack& other) noexcept;
 
     size_type capacity() const noexcept;
     void shrink_to_fit();  // optimize storage, invalidates references
@@ -102,10 +102,10 @@ public:
     void pop_back() { pop(); }
 
     class iterator {
-        friend Stack;
+        friend ChunkedStack;
     public:
-        using difference_type = typename Stack<T>::difference_type;
-        using value_type = typename Stack<T>::value_type;
+        using difference_type = typename ChunkedStack<T>::difference_type;
+        using value_type = typename ChunkedStack<T>::value_type;
         using reference = T&;
         using pointer = T*;
         using iterator_category = std::forward_iterator_tag;
@@ -131,10 +131,10 @@ public:
     };
 
     class const_iterator {
-        friend Stack;
+        friend ChunkedStack;
     public:
-        using difference_type = typename Stack<T>::difference_type;
-        using value_type = typename Stack<T>::value_type;
+        using difference_type = typename ChunkedStack<T>::difference_type;
+        using value_type = typename ChunkedStack<T>::value_type;
         using reference = const T&;
         using pointer = const T*;
         using iterator_category = std::forward_iterator_tag;
@@ -204,7 +204,7 @@ private:
 
 
 template<class T>
-constexpr size_t Stack<T>::project_capacity(uint32_t prev_cap)
+constexpr size_t ChunkedStack<T>::project_capacity(uint32_t prev_cap)
 {
     constexpr auto fstep = [](size_t cap_req) {
         return (cap_req * sizeof(T) - sizeof(Bucket)) / sizeof(T);
@@ -227,7 +227,7 @@ constexpr size_t Stack<T>::project_capacity(uint32_t prev_cap)
 
 
 template<class T>
-Stack<T>::Stack(size_t init_capacity)
+ChunkedStack<T>::ChunkedStack(size_t init_capacity)
         : m_tail{allocate(nullptr, init_capacity, 0)}
 {
     m_tail->next = m_tail;
@@ -235,7 +235,7 @@ Stack<T>::Stack(size_t init_capacity)
 
 
 template<class T>
-Stack<T>::Stack(const Stack& other)
+ChunkedStack<T>::ChunkedStack(const ChunkedStack& other)
     : m_tail{allocate(nullptr, other.size(), other.size())}
 {
     m_tail->next = m_tail;
@@ -244,14 +244,14 @@ Stack<T>::Stack(const Stack& other)
 
 
 template<class T>
-Stack<T>::Stack(Stack&& other) noexcept
+ChunkedStack<T>::ChunkedStack(ChunkedStack&& other) noexcept
 {
     std::swap(m_tail, other.m_tail);
 }
 
 
 template<class T>
-Stack<T>& Stack<T>::operator=(const Stack& other)  // NOLINT
+ChunkedStack<T>& ChunkedStack<T>::operator=(const ChunkedStack& other)  // NOLINT
 {
     if (m_tail == other.m_tail)
         return *this;  // self-assignment
@@ -264,7 +264,7 @@ Stack<T>& Stack<T>::operator=(const Stack& other)  // NOLINT
 
 
 template<class T>
-Stack<T>& Stack<T>::operator=(Stack&& other) noexcept
+ChunkedStack<T>& ChunkedStack<T>::operator=(ChunkedStack&& other) noexcept
 {
     std::swap(m_tail, other.m_tail);
     return *this;
@@ -272,7 +272,7 @@ Stack<T>& Stack<T>::operator=(Stack&& other) noexcept
 
 
 template<class T>
-bool Stack<T>::operator==(const Stack& other) const
+bool ChunkedStack<T>::operator==(const ChunkedStack& other) const
 {
     return size() == other.size() &&
         std::equal(cbegin(), cend(), other.cbegin());
@@ -280,14 +280,14 @@ bool Stack<T>::operator==(const Stack& other) const
 
 
 template<class T>
-void Stack<T>::swap(Stack& other) noexcept
+void ChunkedStack<T>::swap(ChunkedStack& other) noexcept
 {
     std::swap(m_tail, other.m_tail);
 }
 
 
 template<class T>
-auto Stack<T>::capacity() const noexcept -> size_type
+auto ChunkedStack<T>::capacity() const noexcept -> size_type
 {
     size_type res = m_tail->capacity;
     for (auto* b = m_tail->next; b != m_tail; b = b->next) {
@@ -298,7 +298,7 @@ auto Stack<T>::capacity() const noexcept -> size_type
 
 
 template<class T>
-void Stack<T>::shrink_to_fit()
+void ChunkedStack<T>::shrink_to_fit()
 {
     auto new_cap = size();
     if (head() == m_tail && new_cap == m_tail->capacity)
@@ -314,14 +314,14 @@ void Stack<T>::shrink_to_fit()
 
 
 template<class T>
-bool Stack<T>::empty() const
+bool ChunkedStack<T>::empty() const
 {
     return m_tail->count == 0;
 }
 
 
 template<class T>
-auto Stack<T>::size() const -> Stack::size_type
+auto ChunkedStack<T>::size() const -> ChunkedStack::size_type
 {
     size_type res = m_tail->count;
     for (auto* b = m_tail->next; b != m_tail; b = b->next) {
@@ -332,7 +332,7 @@ auto Stack<T>::size() const -> Stack::size_type
 
 
 template<class T>
-void Stack<T>::clear() noexcept
+void ChunkedStack<T>::clear() noexcept
 {
     // remove all buckets except tail
     for (auto* b = head(); b != m_tail;) {
@@ -348,7 +348,7 @@ void Stack<T>::clear() noexcept
 
 
 template<class T>
-auto Stack<T>::top() -> reference
+auto ChunkedStack<T>::top() -> reference
 {
     assert(!empty());
     return m_tail->items[m_tail->count - 1];
@@ -356,7 +356,7 @@ auto Stack<T>::top() -> reference
 
 
 template<class T>
-auto Stack<T>::top() const -> const_reference
+auto ChunkedStack<T>::top() const -> const_reference
 {
     assert(!empty());
     return m_tail->items[m_tail->count - 1];
@@ -365,7 +365,7 @@ auto Stack<T>::top() const -> const_reference
 
 template<class T>
 template<class... Args>
-void Stack<T>::emplace(Args&& ... args)
+void ChunkedStack<T>::emplace(Args&& ... args)
 {
     T& item = push_uninitialized();
     ::new (&item) T(std::forward<Args>(args)...);
@@ -373,7 +373,7 @@ void Stack<T>::emplace(Args&& ... args)
 
 
 template<class T>
-void Stack<T>::push(const T& value)
+void ChunkedStack<T>::push(const T& value)
 {
     T& item = push_uninitialized();
     ::new (&item) T(value);
@@ -381,7 +381,7 @@ void Stack<T>::push(const T& value)
 
 
 template<class T>
-void Stack<T>::push(T&& value)
+void ChunkedStack<T>::push(T&& value)
 {
     T& item = push_uninitialized();
     ::new (&item) T(std::move(value));
@@ -389,7 +389,7 @@ void Stack<T>::push(T&& value)
 
 
 template<class T>
-void Stack<T>::pop()
+void ChunkedStack<T>::pop()
 {
     assert(!empty());
     std::destroy_at(&m_tail->items[--m_tail->count]);
@@ -403,7 +403,7 @@ void Stack<T>::pop()
 
 
 template<class T>
-auto Stack<T>::operator[](size_type pos) -> reference
+auto ChunkedStack<T>::operator[](size_type pos) -> reference
 {
     assert(!empty());
     assert(pos < size());
@@ -417,7 +417,7 @@ auto Stack<T>::operator[](size_type pos) -> reference
 
 
 template<class T>
-auto Stack<T>::operator[](size_type pos) const -> const_reference
+auto ChunkedStack<T>::operator[](size_type pos) const -> const_reference
 {
     assert(!empty());
     assert(pos < size());
@@ -431,7 +431,7 @@ auto Stack<T>::operator[](size_type pos) const -> const_reference
 
 
 template<class T>
-auto Stack<T>::iterator::operator++() -> iterator&
+auto ChunkedStack<T>::iterator::operator++() -> iterator&
 {
     ++m_item;
     if (m_item >= m_bucket->count) {
@@ -443,7 +443,7 @@ auto Stack<T>::iterator::operator++() -> iterator&
 
 
 template<class T>
-auto Stack<T>::const_iterator::operator++() -> const_iterator&
+auto ChunkedStack<T>::const_iterator::operator++() -> const_iterator&
 {
     ++m_item;
     if (m_item >= m_bucket->count) {
@@ -456,7 +456,7 @@ auto Stack<T>::const_iterator::operator++() -> const_iterator&
 
 template <class T>
 template<class S>
-void Stack<T>::alloc_info(S& stream)
+void ChunkedStack<T>::alloc_info(S& stream)
 {
     for (auto* b = head();; b = b->next) {
         stream
@@ -482,7 +482,7 @@ void Stack<T>::alloc_info(S& stream)
 
 
 template<class T>
-auto Stack<T>::allocate(Bucket* next, size_t capacity, size_t count) -> Bucket*
+auto ChunkedStack<T>::allocate(Bucket* next, size_t capacity, size_t count) -> Bucket*
 {
     const size_t size = sizeof(Bucket) + capacity * sizeof(T);
     char* buf = new char[size];
@@ -491,7 +491,7 @@ auto Stack<T>::allocate(Bucket* next, size_t capacity, size_t count) -> Bucket*
 
 
 template<class T>
-void Stack<T>::deallocate(Stack::Bucket* bucket)
+void ChunkedStack<T>::deallocate(ChunkedStack::Bucket* bucket)
 {
     std::destroy_n(bucket->items, bucket->count);
     char* buf = reinterpret_cast<char*>(bucket);
@@ -500,7 +500,7 @@ void Stack<T>::deallocate(Stack::Bucket* bucket)
 
 
 template<class T>
-void Stack<T>::destroy()
+void ChunkedStack<T>::destroy()
 {
     for (auto* b = m_tail;;) {
         Bucket* next = b->next;
@@ -513,7 +513,7 @@ void Stack<T>::destroy()
 
 
 template<class T>
-auto Stack<T>::Bucket::prev() -> Bucket*
+auto ChunkedStack<T>::Bucket::prev() -> Bucket*
 {
     auto* b = this;
     while (b->next != this)
@@ -523,7 +523,7 @@ auto Stack<T>::Bucket::prev() -> Bucket*
 
 
 template<class T>
-T& Stack<T>::push_uninitialized()
+T& ChunkedStack<T>::push_uninitialized()
 {
     if (m_tail->full()) {
         Bucket* b = allocate(head(), project_capacity(m_tail->capacity), 1);

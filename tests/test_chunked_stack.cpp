@@ -1,4 +1,4 @@
-// test_stack.cpp created on 2019-12-21 as part of xcikit project
+// test_chunked_stack.cpp created on 2019-12-21 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
 // Copyright 2019 Radek Brich
@@ -7,15 +7,15 @@
 #define CATCH_CONFIG_FAST_COMPILE
 #include <catch2/catch.hpp>
 
-#include <xci/core/Stack.h>
+#include <xci/core/container/ChunkedStack.h>
 #include <string>
 
 using namespace xci::core;
 
-TEST_CASE( "Stack of ints", "[stack]" )
+TEST_CASE( "ChunkedStack<int>", "[ChunkedStack]" )
 {
     constexpr uint32_t init_cap = 10;
-    Stack<int> stack(init_cap);
+    ChunkedStack<int> stack(init_cap);
 
     stack.clear();  // clear empty stack -> NOOP
     CHECK(stack.empty());
@@ -70,10 +70,10 @@ TEST_CASE( "Stack of ints", "[stack]" )
 }
 
 
-TEST_CASE( "Stack of strings", "[stack]" )
+TEST_CASE( "ChunkedStack<string>", "[ChunkedStack]" )
 {
     constexpr uint32_t init_cap = 10;
-    Stack<std::string> stack(init_cap);
+    ChunkedStack<std::string> stack(init_cap);
 
     stack.clear();  // clear empty stack -> NOOP
     CHECK(stack.empty());
@@ -96,7 +96,7 @@ TEST_CASE( "Stack of strings", "[stack]" )
 }
 
 
-TEST_CASE( "Stack of structs", "[stack]" )
+TEST_CASE( "ChunkedStack<struct>", "[ChunkedStack]" )
 {
     struct TestT {
         std::string name;
@@ -107,7 +107,7 @@ TEST_CASE( "Stack of structs", "[stack]" )
     static_assert(alignof(TestT) == 8);
 
     constexpr uint32_t init_cap = 10;
-    Stack<TestT> stack(init_cap);
+    ChunkedStack<TestT> stack(init_cap);
 
     stack.clear();  // clear empty stack -> NOOP
     CHECK(stack.empty());
@@ -131,19 +131,15 @@ TEST_CASE( "Stack of structs", "[stack]" )
 }
 
 
-TEST_CASE( "Iterators", "[stack]" )
+TEST_CASE( "Iterators", "[ChunkedStack]" )
 {
-    Stack<int> stack;
+    ChunkedStack<int> stack;
     CHECK(stack.begin() == stack.end());
     CHECK(stack.cbegin() == stack.cend());
-    CHECK(stack.begin() == Stack<int>::iterator{});
-    CHECK(stack.cbegin() == Stack<int>::const_iterator{});
 
     stack.push(1);
     CHECK(stack.begin() != stack.end());
     CHECK(stack.cbegin() != stack.cend());
-    CHECK(stack.begin() != Stack<int>::iterator{});
-    CHECK(stack.cbegin() != Stack<int>::const_iterator{});
     auto it = stack.begin();
     CHECK(++it == stack.end());
     auto cit = stack.cbegin();

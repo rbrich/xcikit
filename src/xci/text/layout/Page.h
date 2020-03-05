@@ -20,7 +20,7 @@
 #include <xci/graphics/Sprites.h>
 #include <xci/graphics/Shape.h>
 #include <xci/core/geometry.h>
-#include <xci/core/Stack.h>
+#include <xci/core/container/ChunkedStack.h>
 
 #include <string>
 #include <vector>
@@ -71,7 +71,7 @@ private:
     ViewportUnits m_baseline = 0;  // relative to bbox top
 
     mutable std::optional<graphics::Sprites> m_sprites;
-    mutable core::Stack<graphics::Shape> m_debug_shapes;
+    mutable core::ChunkedStack<graphics::Shape> m_debug_shapes;
 };
 
 
@@ -221,7 +221,7 @@ private:
     std::vector<ViewportUnits> m_tab_stops;
 
     // page content
-    core::Stack<Word> m_words;
+    core::ChunkedStack<Word> m_words;
     std::vector<Line> m_lines;
     std::map<std::string, Span> m_spans;
 };

@@ -20,9 +20,9 @@ add_executable(demo_filewatch demo_filewatch.cpp)
 target_link_libraries(demo_filewatch xci-core)
 install(TARGETS demo_filewatch EXPORT xcikit DESTINATION examples)
 
-add_executable(demo_stack demo_stack.cpp)
-target_link_libraries(demo_stack xci-core)
-install(TARGETS demo_stack EXPORT xcikit DESTINATION examples)
+add_executable(demo_chunked_stack demo_chunked_stack.cpp)
+target_link_libraries(demo_chunked_stack xci-core)
+install(TARGETS demo_chunked_stack EXPORT xcikit DESTINATION examples)
 
 add_executable(demo_termctl demo_termctl.cpp)
 target_link_libraries(demo_termctl xci-core)

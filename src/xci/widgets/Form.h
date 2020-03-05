@@ -20,7 +20,7 @@
 #include <xci/widgets/Label.h>
 #include <xci/widgets/TextInput.h>
 #include <xci/widgets/Checkbox.h>
-#include <xci/core/Stack.h>
+#include <xci/core/container/ChunkedStack.h>
 
 namespace xci::widgets {
 
@@ -57,9 +57,9 @@ private:
         }
     };
     std::vector<ChildHint> m_hint;
-    core::Stack<Label> m_labels;
-    core::Stack<TextInput> m_text_inputs;
-    core::Stack<Checkbox> m_checkboxes;
+    core::ChunkedStack<Label> m_labels;
+    core::ChunkedStack<TextInput> m_text_inputs;
+    core::ChunkedStack<Checkbox> m_checkboxes;
 };
 
 

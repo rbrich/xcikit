@@ -16,7 +16,7 @@
 #ifndef XCI_SCRIPT_SYMBOL_TABLE_H
 #define XCI_SCRIPT_SYMBOL_TABLE_H
 
-#include <xci/core/Stack.h>
+#include <xci/core/container/ChunkedStack.h>
 #include <xci/core/NonCopyable.h>
 #include <vector>
 #include <string>
@@ -193,7 +193,7 @@ public:
     public:
         explicit Children(const SymbolTable& symtab) : m_symtab(symtab) {}
 
-        using const_iterator = typename core::Stack<SymbolTable>::const_iterator;
+        using const_iterator = typename core::ChunkedStack<SymbolTable>::const_iterator;
         const_iterator begin() const { return m_symtab.m_children.cbegin(); }
         const_iterator end() const { return m_symtab.m_children.cend(); }
 
@@ -209,7 +209,7 @@ private:
     Function* m_function = nullptr;
     Class* m_class = nullptr;
     Module* m_module = nullptr;
-    core::Stack<SymbolTable> m_children;  // NOTE: member addresses must not change
+    core::ChunkedStack<SymbolTable> m_children;  // NOTE: member addresses must not change
     std::vector<Symbol> m_symbols;
 };
 
