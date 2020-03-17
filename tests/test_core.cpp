@@ -99,7 +99,7 @@ TEST_CASE( "path::base_name", "[file]" )
 
 TEST_CASE( "path::real_path, path::get_cwd", "[file]" )
 {
-    auto cwd = path::get_cwd();
+    auto cwd = path::cwd();
     CHECK(path::real_path(cwd + "/././.") == cwd);
 }
 

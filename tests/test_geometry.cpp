@@ -21,7 +21,7 @@
 using namespace xci::core;
 
 
-TEST_CASE( "to_utf8", "[string]" )
+TEST_CASE( "Vec2", "[geometry]" )
 {
     Vec2f vf1 {3.0, 4.0};
     CHECK(vf1.length() == 5.0);
