@@ -58,7 +58,7 @@ public:
             if (type == Type_Checksum && len == sizeof(m_crc) && m_depth == 0)
                 break;
 
-            auto* key = read_key();
+            const auto * key = read_key();
             switch (type) {
                 case Type_Master:
                     // enter member object (read a sub-object)

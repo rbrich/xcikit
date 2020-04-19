@@ -30,7 +30,7 @@ public:
     EnumConstant(const char* name, TEnum value) : m_name(name), m_value(value) {}
 
     const char* name() const { return m_name; }
-    const TEnum value() const { return m_value; }
+    TEnum value() const { return m_value; }
 
 private:
     const char* m_name;

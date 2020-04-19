@@ -7,6 +7,8 @@
 #ifndef XCI_SCRIPT_SOURCEINFO_H
 #define XCI_SCRIPT_SOURCEINFO_H
 
+#include <cstddef>
+
 namespace xci::script {
 
 

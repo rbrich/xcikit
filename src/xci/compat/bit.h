@@ -21,6 +21,7 @@
 
 namespace xci {
 
+
 /// C++20 bit_cast emulation.
 ///
 /// Example:

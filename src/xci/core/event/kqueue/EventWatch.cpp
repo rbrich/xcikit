@@ -16,6 +16,7 @@
 #include "EventWatch.h"
 #include <xci/core/log.h>
 
+#include <cassert>
 #include <unistd.h>
 #include <sys/event.h>
 

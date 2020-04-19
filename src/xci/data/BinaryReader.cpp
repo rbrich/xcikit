@@ -132,15 +132,14 @@ const char* BinaryReader::read_key()
         auto offset = ((len1 << 7) | (len & 0x7f));
         auto key_pos = startpos - offset;
         return m_pos_to_key[key_pos].c_str();
-    } else {
-        // Read key
-        std::string key(len, 0);
-        read_with_crc((uint8_t*)&key[0], len);
-        // Save key
-        auto& slot = m_pos_to_key[startpos];
-        slot = std::move(key);
-        return slot.c_str();
     }
+    // Read key
+    std::string key(len, 0);
+    read_with_crc((uint8_t*)&key[0], len);
+    // Save key
+    auto& slot = m_pos_to_key[startpos];
+    slot = std::move(key);
+    return slot.c_str();
 }
 
 

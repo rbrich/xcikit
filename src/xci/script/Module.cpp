@@ -24,7 +24,7 @@ using std::move;
 
 Module::~Module()
 {
-    for (auto& val : m_values) {
+    for (const auto& val : m_values) {
         val->decref();
     }
 }

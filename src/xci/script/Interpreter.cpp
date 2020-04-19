@@ -17,8 +17,6 @@
 
 namespace xci::script {
 
-using std::move;
-
 
 Interpreter::Interpreter(uint32_t flags)
     : m_compiler(flags)

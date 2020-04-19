@@ -421,6 +421,7 @@ public:
         }
         // lambda type (right hand side of '=')
         v.type.apply(*this);
+        assert(m_type_info);
         // fill in / check type from specified type
         if (specified_type.is_callable()) {
             if (!m_type_info.signature().return_type && specified_type.signature().return_type)

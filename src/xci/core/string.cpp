@@ -152,26 +152,25 @@ I utf8_next(I iter)
     auto first = (unsigned char) *iter;
     if (first == 0) {
         return iter;
-    } else
+    }
     if ((first & 0b10000000) == 0) {
         // 0xxxxxxx -> 1 byte
         return iter + 1;
-    } else
+    }
     if ((first & 0b11100000) == 0b11000000) {
         // 110xxxxx -> 2 bytes
         return iter + 2;
-    } else
+    }
     if ((first & 0b11110000) == 0b11100000) {
         // 1110xxxx -> 3 bytes
         return iter + 3;
-    } else
+    }
     if ((first & 0b11111000) == 0b11110000) {
         // 11110xxx -> 4 bytes
         return iter + 4;
-    } else {
-        log_error("utf8_next: Invalid UTF8 string, encountered code 0x{:02x}", int(first));
-        return iter + 1;
     }
+    log_error("utf8_next: Invalid UTF8 string, encountered code 0x{:02x}", int(first));
+    return iter + 1;
 }
 
 // instantiate the template (these are the only supported types)
@@ -209,12 +208,12 @@ template std::string_view::size_type utf8_length<std::string_view>(const std::st
 
 string_view utf8_substr(string_view str, size_t pos, size_t count)
 {
-    auto begin = str.cbegin();
+    auto begin = str.cbegin();  // NOLINT(readability-qualified-auto)
     while (pos > 0 && begin != str.cend()) {
         begin = utf8_next(begin);
         --pos;
     }
-    auto end = begin;
+    auto end = begin;  // NOLINT(readability-qualified-auto)
     while (count > 0 && end != str.cend()) {
         end = utf8_next(end);
         --count;
@@ -229,22 +228,21 @@ char32_t utf8_codepoint(const char* utf8)
     if ((c0 & 0x80) == 0) {
         // 0xxxxxxx -> 1 byte
         return char32_t(c0 & 0x7f);
-    } else
+    }
     if ((c0 & 0xe0) == 0xc0) {
         // 110xxxxx -> 2 bytes
         return char32_t(((c0 & 0x1f) << 6) | (utf8[1] & 0x3f));
-    } else
+    }
     if ((c0 & 0xf0) == 0xe0) {
         // 1110xxxx -> 3 bytes
         return char32_t(((c0 & 0x0f) << 12) | ((utf8[1] & 0x3f) << 6) | (utf8[2] & 0x3f));
-    } else
+    }
     if ((c0 & 0xf8) == 0xf0) {
         // 11110xxx -> 4 bytes
         return char32_t(((c0 & 0x07) << 18) | ((utf8[1] & 0x3f) << 12) | ((utf8[2] & 0x3f) << 6) | (utf8[3] & 0x3f));
-    } else {
-        log_error("utf8_codepoint: Invalid UTF8 string, encountered code {:02x}", int(c0));
-        return 0;
     }
+    log_error("utf8_codepoint: Invalid UTF8 string, encountered code {:02x}", int(c0));
+    return 0;
 }
 
 

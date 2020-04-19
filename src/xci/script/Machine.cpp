@@ -269,7 +269,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
 
             case Opcode::LoadStatic: {
                 auto arg = *it++;
-                auto& o = cur_fun->module().get_value(arg);
+                const auto& o = cur_fun->module().get_value(arg);
                 m_stack.push(o);
                 o.incref();
                 break;

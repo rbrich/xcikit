@@ -4,7 +4,7 @@ set -e
 cd "$(dirname "$0")"
 
 ROOT_DIR="$PWD"
-BUILD_TYPE=MinSizeRel
+BUILD_TYPE=Release
 GENERATOR=
 JOBS_ARGS=()
 CMAKE_ARGS=()
@@ -12,7 +12,7 @@ CSI=$'\x1b['
 
 print_usage()
 {
-    echo "Usage: ./build.sh [<phase>, ...] [-G <cmake_generator>] [-j <jobs>] [-D <cmake_def>, ...] [--unity]"
+    echo "Usage: ./build.sh [<phase>, ...] [-G <cmake_generator>] [-j <jobs>] [-D <cmake_def>, ...] [--debug|--minsize] [--unity] [--tidy]"
     echo "Where: <phase> = clean | deps | config | build | test | install | package (default: deps..install)"
     echo "       <cmake_generator> = \"Unix Makefiles\" | Ninja | ... (default: Ninja if available, Unix Makefiles otherwise)"
 }
@@ -67,11 +67,20 @@ while [[ $# -gt 0 ]] ; do
         -D* )
             CMAKE_ARGS+=("$1")
             shift 1 ;;
+        --debug )
+            BUILD_TYPE=Debug
+            shift 1 ;;
+        --minsize )
+            BUILD_TYPE=MinSizeRel
+            shift 1 ;;
         --unity )
-            CMAKE_ARGS+=(-D "CMAKE_UNITY_BUILD=1" -D "UNITY_BUILD_BATCH_SIZE=4")
+            CMAKE_ARGS+=(-D'CMAKE_UNITY_BUILD=1' -D'UNITY_BUILD_BATCH_SIZE=4')
+            shift 1 ;;
+        --tidy )
+            CMAKE_ARGS+=(-D'ENABLE_TIDY=1')
             shift 1 ;;
         * )
-            printf 'Error: Unsupported option: %s\n\n' "$1"
+            printf 'Error: Unknown option: %s\n\n' "$1"
             print_usage
             exit 1 ;;
     esac
@@ -84,8 +93,8 @@ PLATFORM="$(uname)"
 [[ ${PLATFORM} = "Darwin" ]] && PLATFORM="macos${MACOSX_DEPLOYMENT_TARGET}"
 VERSION=$(conan inspect . --raw version)$(git rev-parse --short HEAD 2>/dev/null | sed 's/^/+/' ; :)
 BUILD_CONFIG="${PLATFORM}-${ARCH}-${BUILD_TYPE}"
-[[ -z "${GENERATOR}" ]] && setup_ninja && GENERATOR="Ninja"
-[[ -n "${GENERATOR}" ]] && BUILD_CONFIG="${BUILD_CONFIG}-${GENERATOR}"
+[[ -z "${GENERATOR}" ]] && command -v ninja >/dev/null && GENERATOR="Ninja"
+[[ -n "${GENERATOR}" ]] && BUILD_CONFIG="${BUILD_CONFIG}-${GENERATOR// }"
 [[ -n "${GENERATOR}" ]] && CMAKE_ARGS+=(-G "${GENERATOR}")
 BUILD_DIR="${ROOT_DIR}/build/${BUILD_CONFIG}"
 INSTALL_DIR="${ROOT_DIR}/artifacts/${BUILD_CONFIG}"
@@ -128,8 +137,9 @@ if phase config; then
         cd "${BUILD_DIR}"
         cmake "${ROOT_DIR}" \
             "${CMAKE_ARGS[@]}" \
-            -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
-            -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
+            -D"CMAKE_BUILD_TYPE=${BUILD_TYPE}" \
+            -D"CMAKE_INSTALL_PREFIX=${INSTALL_DIR}" \
+            -D'CMAKE_EXPORT_COMPILE_COMMANDS=ON'
     )
     echo
 fi
@@ -137,7 +147,7 @@ fi
 # Ninja: enable colors, if the output goes to terminal (only for build step)
 if [[ -t 1 && "${GENERATOR}" = "Ninja" ]]; then
     export NINJA_STATUS="${CSI}1m[${CSI}32m%p ${CSI}0;32m%f${CSI}0m/${CSI}32m%t ${CSI}36m%es${CSI}0m ${CSI}1m]${CSI}0m "
-    CMAKE_ARGS+=(-D 'FORCE_COLORS=1')
+    CMAKE_ARGS+=(-D'FORCE_COLORS=1')
 fi
 
 if phase build; then

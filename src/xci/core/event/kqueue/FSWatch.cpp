@@ -17,6 +17,7 @@
 #include <xci/core/file.h>
 #include <xci/core/log.h>
 
+#include <cassert>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/event.h>
@@ -37,7 +38,10 @@ FSWatch::FSWatch(EventLoop& loop, FSWatch::Callback cb)
 
 FSWatch::~FSWatch()
 {
-
+    for (const auto& file : m_file)
+        unregister_kevent(file.fd);
+    for (const auto& dir : m_dir)
+        unregister_kevent(dir.fd);
 }
 
 

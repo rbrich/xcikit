@@ -39,9 +39,9 @@ void FpsCounter::foreach_sample(const std::function<void(float)>& cb) const
     float last_sample = 0.f;
     for (auto i = (m_idx+1 == m_samples.size()) ? 0 : m_idx+1;;
               i = (i+1 == m_samples.size()) ? 0 : i+1) {
-        auto& s = m_samples[i];
+        const auto& s = m_samples[i];
         if (s.num_frames > 0)
-            last_sample = s.total_time / s.num_frames;
+            last_sample = s.total_time / float(s.num_frames);
         cb(last_sample);
         if (i == m_idx)
             break;

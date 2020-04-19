@@ -183,7 +183,7 @@ public:
                 auto idx = sym.index();
                 if (symtab.module() != &module()) {
                     // copy static value into this module if it's from builtin or another module
-                    auto& val = symtab.module()->get_value(sym.index());
+                    const auto & val = symtab.module()->get_value(sym.index());
                     idx = module().add_value(val.make_copy());
                 }
                 // LOAD_STATIC <static_idx>
@@ -230,7 +230,7 @@ public:
                     if (func.is_generic()) {
                         assert(!func.detect_generic());  // fully specialized
                         assert(!func.is_ast_copied());   // AST is referenced
-                        auto& ast = func.ast();
+                        const auto & ast = func.ast();
                         //auto ast = std::move(func.ast_copy());
                         func.set_compiled();
                         m_compiler.compile_block(func, ast);

@@ -103,7 +103,7 @@ public:
             assert(!fn.has_nonlocals());
             assert(fn.parameters().size() == args.size());
             // push args on stack
-            for (auto& arg : reverse(args))
+            for (const auto& arg : reverse(args))
                 m_machine.stack().push(*arg);
             // run it
             bool invoked = false;

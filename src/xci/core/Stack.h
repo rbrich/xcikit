@@ -53,11 +53,11 @@ class Stack {
     static constexpr size_t project_capacity(uint32_t prev_cap);
 
 public:
-    typedef T value_type;
-    typedef T& reference;
-    typedef const T& const_reference;
-    typedef std::ptrdiff_t difference_type;
-    typedef std::size_t size_type;
+    using value_type = T;
+    using reference = T&;
+    using const_reference = const T&;
+    using difference_type = std::ptrdiff_t;
+    using size_type = std::size_t;
 
     explicit Stack(size_t init_capacity = project_capacity(0));
 
@@ -104,11 +104,11 @@ public:
     class iterator {
         friend Stack;
     public:
-        typedef typename Stack::difference_type difference_type;
-        typedef typename Stack::value_type value_type;
-        typedef T& reference;
-        typedef T* pointer;
-        typedef std::forward_iterator_tag iterator_category;
+        using difference_type = typename Stack<T>::difference_type;
+        using value_type = typename Stack<T>::value_type;
+        using reference = T&;
+        using pointer = T*;
+        using iterator_category = std::forward_iterator_tag;
 
         iterator() = default;
 
@@ -133,11 +133,11 @@ public:
     class const_iterator {
         friend Stack;
     public:
-        typedef typename Stack::difference_type difference_type;
-        typedef typename Stack::value_type value_type;
-        typedef const T& reference;
-        typedef const T* pointer;
-        typedef std::forward_iterator_tag iterator_category;
+        using difference_type = typename Stack<T>::difference_type;
+        using value_type = typename Stack<T>::value_type;
+        using reference = const T&;
+        using pointer = const T*;
+        using iterator_category = std::forward_iterator_tag;
 
         const_iterator() = default;
 

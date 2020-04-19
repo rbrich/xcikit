@@ -178,15 +178,12 @@ std::string get_self_path()
     uint32_t size = sizeof(path);
     if (_NSGetExecutablePath(path, &size) == 0)
         return path;
-    else
-        return {};
+    return {};
 #elif defined(_WIN32)
     if (GetModuleFileNameA(nullptr, path, sizeof(path)) != sizeof(path))
         return path;
-    else {
-        assert(GetLastError() == ERROR_INSUFFICIENT_BUFFER);
-        return {};  // insufficient buffer size
-    }
+    assert(GetLastError() == ERROR_INSUFFICIENT_BUFFER);
+    return {};  // insufficient buffer size
 #else
     assert(!"get_self_path: not implemented for this platform");
     return {};

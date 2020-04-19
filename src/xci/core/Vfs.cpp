@@ -184,7 +184,7 @@ bool vfs::DarArchive::read_index()
         return false;
     }
     // INDEX: NUMBER_OF_ENTRIES
-    auto addr = m_addr + index_offset;
+    auto* addr = m_addr + index_offset;
     auto num_entries = be32toh(bit_read<uint32_t>(addr));
     addr += 4;
     // INDEX: INDEX_ENTRY[]

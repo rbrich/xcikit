@@ -29,7 +29,7 @@ Option::Option(std::string desc, const char* help, Callback cb, int flags)
     lstrip(m_desc, '[');
     rstrip(m_desc, ']');
 
-    auto* dp = m_desc.c_str();
+    const char* dp = m_desc.c_str();
     for (;;) {
         auto p = parse_desc(dp);
         if (!p)
@@ -41,7 +41,7 @@ Option::Option(std::string desc, const char* help, Callback cb, int flags)
 
         if (p.dashes > 2)
             throw BadOptionDescription("too many dashes", dp + p.pos);
-        else if (p.dashes == 2) {
+        if (p.dashes == 2) {
             if (p.len == 0) {
                 m_flags |= FRemainder;
             } else
@@ -77,7 +77,7 @@ bool Option::has_short(char arg) const
 {
     if (!is_short())
         return false;
-    auto* dp = m_desc.c_str();
+    const char* dp = m_desc.c_str();
     for (;;) {
         auto p = parse_desc(dp);
         if (!p.len)
@@ -94,7 +94,7 @@ bool Option::has_long(const char* arg) const
 {
     if (!is_long())
         return false;
-    auto* dp = m_desc.c_str();
+    const char* dp = m_desc.c_str();
     for (;;) {
         auto p = parse_desc(dp);
         if (!p.len)
@@ -121,7 +121,7 @@ std::string Option::usage() const
     if (!required)
         res += '[';
     bool first = true;
-    auto* dp = m_desc.c_str();
+    const char* dp = m_desc.c_str();
     for (;;) {
         auto p = parse_desc(dp);
         if (!p)
@@ -145,7 +145,7 @@ std::string Option::formatted_desc(size_t width) const
     auto& t = TermCtl::stdout_instance();
     string res(m_desc);
     size_t res_pos = 0;
-    auto* dp = m_desc.c_str();
+    const char* dp = m_desc.c_str();
     for (;;) {
         auto p = parse_desc(dp);
         if (!p)
@@ -170,12 +170,12 @@ std::string Option::formatted_desc(size_t width) const
 
 void Option::foreach_name(const std::function<void(char shortopt, std::string_view longopt)>& cb) const
 {
-    auto* dp = m_desc.c_str();
+    const char* dp = m_desc.c_str();
     for (;;) {
         auto p = parse_desc(dp);
         if (!p)
             break;
-        auto* name = dp + p.pos + p.dashes;
+        const char* name = dp + p.pos + p.dashes;
         if (p.dashes == 1 && p.len == 1)
             cb(name[0], {});
         if (p.dashes == 2 && p.len > 0)

@@ -157,7 +157,7 @@ public:
             auto* symmod = symptr.symtab()->module();
             if (symmod == nullptr)
                 symmod = &module();
-            auto& class_name = symmod->get_class(symptr->index()).name();
+            const auto& class_name = symmod->get_class(symptr->index()).name();
             v.chain = resolve_symbol_of_type(class_name, Symbol::Instance);
         }
     }
@@ -259,7 +259,7 @@ private:
         {
             // lookup in this and parent scopes
             size_t depth = 0;
-            for (auto p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
+            for (auto* p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
                 if (p_symtab->name() == name && p_symtab->parent() != nullptr) {
                     // recursion - unwrap the function
                     auto symptr = p_symtab->parent()->find_by_name(name);
@@ -271,9 +271,8 @@ private:
                     if (depth > 0 && symptr->type() != Symbol::Method) {
                         // add Nonlocal symbol
                         return symtab().add({symptr, Symbol::Nonlocal, depth});
-                    } else {
-                        return symptr;
                     }
+                    return symptr;
                 }
                 depth ++;
             }
@@ -296,7 +295,7 @@ private:
 
     SymbolPointer resolve_symbol_of_type(const string& name, Symbol::Type type) {
         // lookup in this and parent scopes
-        for (auto p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
+        for (auto* p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
             auto symptr = p_symtab->find_last_of(name, type);
             if (symptr)
                 return symptr;

@@ -1,0 +1,40 @@
+# Full list: https://clang.llvm.org/extra/clang-tidy/
+Checks: >
+  bugprone-*,
+  -bugprone-branch-clone,
+  clang-analyzer-*,
+  misc-*,
+  -misc-unused-parameters,
+  -misc-non-private-member-variables-in-classes,
+  modernize-*,
+  -modernize-avoid-c-arrays,
+  -modernize-use-trailing-return-type,
+  -modernize-deprecated-headers,
+  -modernize-use-nodiscard,
+  performance-*,
+  portability-*,
+  readability-*,
+  -readability-implicit-bool-conversion,
+  -readability-magic-numbers,
+  -readability-braces-around-statements,
+  -readability-make-member-function-const,
+  -readability-redundant-access-specifiers,
+  -readability-uppercase-literal-suffix,
+  -readability-named-parameter,
+  -readability-convert-member-functions-to-static,
+  -readability-simplify-boolean-expr,
+  google-default-arguments,
+  google-runtime-operator
+
+#-bugprone-bool-pointer-implicit-conversion
+#-bugprone-exception-escape
+#-misc-bool-pointer-implicit-conversion
+#-misc-definitions-in-headers
+#-misc-unused-alias-decls
+#-misc-unused-using-decls
+#-modernize-use-default-member-init
+#-readability-function-size
+#-readability-identifier-naming
+#-readability-isolate-declaration
+#-readability-redundant-member-init
+#-readability-redundant-preprocessor

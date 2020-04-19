@@ -46,7 +46,7 @@ public:
     int frame_rate() const { return m_sum.num_frames; }
 
     /// Average frame time during last second
-    float avg_frame_time() const { return m_sum.total_time / m_sum.num_frames; }
+    float avg_frame_time() const { return m_sum.total_time / float(m_sum.num_frames); }
 
     // Export for FpsDisplay
     void foreach_sample(const std::function<void(float)>& cb) const;
