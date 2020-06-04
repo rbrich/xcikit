@@ -15,7 +15,14 @@ using std::move;
 Class::Class(SymbolTable& symtab)
         : m_symtab(symtab)
 {
-    symtab.set_class(this);
+    m_symtab.set_class(this);
+}
+
+
+Class::Class(Class&& rhs)
+        : m_symtab(rhs.m_symtab), m_functions(std::move(rhs.m_functions))
+{
+    m_symtab.set_class(this);
 }
 
 
@@ -29,7 +36,7 @@ Index Class::add_function_type(TypeInfo&& type_info)
 Instance::Instance(Class& cls, SymbolTable& symtab)
         : m_class(cls), m_symtab(symtab)
 {
-    symtab.set_class(&cls);
+    m_symtab.set_class(&cls);
 }
 
 

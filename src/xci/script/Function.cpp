@@ -13,10 +13,20 @@ namespace xci::script {
 
 
 Function::Function(Module& module, SymbolTable& symtab)
-      : m_module(module), m_symtab(symtab),
-        m_signature(std::make_shared<Signature>())
+        : m_module(module), m_symtab(symtab),
+          m_signature(std::make_shared<Signature>())
 {
-    symtab.set_function(this);
+    m_symtab.set_function(this);
+}
+
+
+Function::Function(Function&& rhs)
+        : m_module(rhs.m_module), m_symtab(rhs.m_symtab),
+          m_signature(std::move(rhs.m_signature)),
+          m_body(std::move(rhs.m_body)),
+          m_nonlocals_resolved(rhs.m_nonlocals_resolved)
+{
+    m_symtab.set_function(this);
 }
 
 

@@ -30,8 +30,10 @@ public:
     using InstanceId = IndexedMap<Instance>::WeakIndex;
 
     explicit Module(std::string name) : m_symtab(move(name)) { m_symtab.set_module(this); }
-    Module() : Module("<module>") {}
+    Module() : Module("<module>") { m_symtab.set_module(this); }
     ~Module();
+    Module(Module&&) = delete;
+    Module& operator =(Module&&) = delete;
 
     const std::string& name() const { return m_symtab.name(); }
 

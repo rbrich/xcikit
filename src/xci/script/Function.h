@@ -41,6 +41,10 @@ class Stack;
 class Function {
 public:
     explicit Function(Module& module, SymbolTable& symtab);
+    Function(Function&& rhs);
+    Function& operator =(Function&&) = delete;
+
+    bool operator==(const Function& rhs) const;
 
     const std::string& name() const { return m_symtab.name(); }
 
@@ -165,8 +169,6 @@ public:
         Native,     // wrapped native function (C++ binding)
     };
     Kind kind() const { return Kind(m_body.index()); }
-
-    bool operator==(const Function& rhs) const;
 
     bool test_and_set_nonlocals_resolved() { bool v = m_nonlocals_resolved; m_nonlocals_resolved = true; return v; }
 
