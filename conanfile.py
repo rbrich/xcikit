@@ -12,7 +12,7 @@ class XcikitConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {"shared": [True, False]}
     default_options = {"shared": False}
-    build_requires = ('Catch2/2.6.1@catchorg/stable',
+    build_requires = ('Catch2/2.12.2@rbrich/stable',
                       'pegtl/2.8.0@taocpp/stable',
                       'range-v3/0.10.0@ericniebler/stable',
                       'incbin/20180413@rbrich/stable',
