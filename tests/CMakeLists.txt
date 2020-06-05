@@ -9,11 +9,6 @@ target_link_libraries(test_core catch_main xci-core)
 catch_discover_tests(test_core)
 install(TARGETS test_core EXPORT xcikit DESTINATION tests)
 
-add_executable(test_dispatch test_dispatch.cpp)
-target_link_libraries(test_dispatch catch_main xci-core)
-catch_discover_tests(test_dispatch)
-install(TARGETS test_dispatch EXPORT xcikit DESTINATION tests)
-
 add_executable(test_geometry test_geometry.cpp)
 target_link_libraries(test_geometry catch_main xci-core)
 catch_discover_tests(test_geometry)
