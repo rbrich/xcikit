@@ -1,6 +1,6 @@
 // test_core.cpp created on 2018-03-30, part of XCI toolkit
 
-#define CATCH_CONFIG_MAIN
+#define CATCH_CONFIG_FAST_COMPILE
 #include <catch2/catch.hpp>
 
 #include <xci/core/format.h>

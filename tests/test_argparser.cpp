@@ -5,7 +5,6 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #define CATCH_CONFIG_FAST_COMPILE
-#define CATCH_CONFIG_MAIN
 #include <catch2/catch.hpp>
 
 #include <xci/core/ArgParser.h>

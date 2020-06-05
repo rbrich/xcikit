@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#define CATCH_CONFIG_MAIN
+#define CATCH_CONFIG_FAST_COMPILE
 #include <catch2/catch.hpp>
 
 #include <xci/widgets/TextTerminal.h>
