@@ -14,7 +14,7 @@ class XcikitConan(ConanFile):
     default_options = {"shared": False}
     build_requires = ('Catch2/2.6.1@catchorg/stable',
                       'pegtl/2.8.0@taocpp/stable',
-                      'range-v3/0.9.0@ericniebler/stable',
+                      'range-v3/0.10.0@ericniebler/stable',
                       'incbin/20180413@rbrich/stable',
                       'replxx/20200217@rbrich/stable',
                       'benchmark/1.5.0@rbrich/stable',)
