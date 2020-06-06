@@ -4,7 +4,6 @@
 #include <catch2/catch.hpp>
 
 #include <xci/core/format.h>
-#include <xci/core/log.h>
 #include <xci/core/file.h>
 #include <xci/core/string.h>
 #include <xci/core/chrono.h>
@@ -219,12 +218,55 @@ TEST_CASE( "split", "[string]" )
 
 TEST_CASE( "starts_with", "[string]" )
 {
-    CHECK(starts_with("/ab/cdef", "/ab") == true);
-    CHECK(starts_with("/ab/cdef", "/ab/cdef") == true);
-    CHECK(starts_with("/ab/cdef", "/ab/cdef/") == false);
-    CHECK(starts_with("", "") == true);
-    CHECK(starts_with("abc", "") == true);
-    CHECK(starts_with("", "abc") == false);
+    CHECK(starts_with("/ab/cdef", "/ab"));
+    CHECK(starts_with("/ab/cdef", "/ab/cdef"));
+    CHECK(!starts_with("/ab/cdef", "/ab/cdef/"));
+    CHECK(starts_with("", ""));
+    CHECK(starts_with("abc", ""));
+    CHECK(!starts_with("", "abc"));
+}
+
+
+TEST_CASE( "ends_with", "[string]" )
+{
+    CHECK(ends_with("/ab/cdef", "cdef"));
+    CHECK(ends_with("/ab/cdef", "/cdef"));
+    CHECK(ends_with("/ab/cdef", "/ab/cdef"));
+    CHECK(ends_with("", ""));
+    CHECK(ends_with("abc", ""));
+    CHECK(!ends_with("", "abc"));
+}
+
+
+TEST_CASE( "remove_prefix", "[string]" )
+{
+    std::string s;
+    s = "/ab/cdef/";
+    CHECK(remove_prefix(s, "/ab"));
+    CHECK(s == "/cdef/");
+
+    s = "/ab/cdef/";
+    CHECK(remove_prefix(s, s));
+    CHECK(s.empty());
+
+    s = "/ab/cdef/";
+    CHECK(!remove_prefix(s, "cdef/"));
+}
+
+
+TEST_CASE( "remove_suffix", "[string]" )
+{
+    std::string s;
+    s = "/ab/cdef/";
+    CHECK(remove_suffix(s, "cdef/"));
+    CHECK(s == "/ab/");
+
+    s = "/ab/cdef/";
+    CHECK(remove_suffix(s, s));
+    CHECK(s.empty());
+
+    s = "/ab/cdef/";
+    CHECK(!remove_suffix(s, "/ab"));
 }
 
 

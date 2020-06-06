@@ -22,6 +22,18 @@ constexpr const char* whitespace_chars = "\t\n\v\f\r ";
 /// \param sub      String to be looked up (length should be shorter or same)
 bool starts_with(const std::string& str, const std::string& sub);
 
+bool ends_with(const std::string& str, const std::string& sub);
+
+
+/// Remove prefix from string.
+/// \param str      String to be checked and modified
+/// \param prefix   String to be looked up
+/// \return         True if prefix was found and removed
+bool remove_prefix(std::string& str, const std::string& prefix);
+
+bool remove_suffix(std::string& str, const std::string& suffix);
+
+
 std::vector<std::string_view> split(std::string_view str, char delim, int maxsplit = -1);
 
 // Strip chars from start of a string
