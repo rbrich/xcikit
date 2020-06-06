@@ -98,16 +98,12 @@ enum class MouseButton { Left = 0, Right = 1, Middle = 2 };
 
 struct MousePosEvent {
     ViewportCoords pos;
-
-    MousePosEvent() = delete;
 };
 
 struct MouseBtnEvent {
     MouseButton button;
     Action action;
     ViewportCoords pos;
-
-    MouseBtnEvent() = delete;
 };
 
 

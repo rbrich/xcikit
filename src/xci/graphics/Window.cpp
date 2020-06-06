@@ -130,7 +130,7 @@ void Window::set_mouse_position_callback(Window::MousePosCallback mpos_cb)
         auto self = (Window*) glfwGetWindowUserPointer(window);
         if (self->m_mpos_cb) {
             auto pos = self->m_view.coords_to_viewport(ScreenCoords{float(xpos), float(ypos)});
-            self->m_mpos_cb(self->m_view, {pos});
+            self->m_mpos_cb(self->m_view, MousePosEvent{pos});
         }
     });
 }
@@ -145,8 +145,7 @@ void Window::set_mouse_button_callback(Window::MouseBtnCallback mbtn_cb)
             double xpos, ypos;
             glfwGetCursorPos(window, &xpos, &ypos);
             auto pos = self->m_view.coords_to_viewport(ScreenCoords{float(xpos), float(ypos)});
-            self->m_mbtn_cb(self->m_view,
-                            {(MouseButton) button, (Action) action, pos});
+            self->m_mbtn_cb(self->m_view, MouseBtnEvent{(MouseButton) button, (Action) action, pos});
         }
     });
 }
@@ -159,7 +158,7 @@ void Window::set_scroll_callback(Window::ScrollCallback scroll_cb)
         glfwSetScrollCallback(m_window, [](GLFWwindow* window, double xoffset,
                                            double yoffset) {
             auto self = (Window*) glfwGetWindowUserPointer(window);
-            self->m_scroll_cb(self->m_view, {{float(xoffset), float(yoffset)}});
+            self->m_scroll_cb(self->m_view, ScrollEvent{{float(xoffset), float(yoffset)}});
         });
     } else {
         glfwSetScrollCallback(m_window, nullptr);

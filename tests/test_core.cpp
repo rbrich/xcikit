@@ -122,7 +122,7 @@ TEST_CASE( "utf8_length", "[string]" )
 
 TEST_CASE( "to_utf32", "[string]" )
 {
-    CHECK(to_utf32(u8"Červeňoučký 🦞") == U"Červeňoučký 🦞");
+    CHECK(to_utf32("Červeňoučký 🦞") == U"Červeňoučký 🦞");
 }
 
 
