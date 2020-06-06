@@ -87,9 +87,10 @@ struct Keyword: sor<KeywordFun, KeywordIf, KeywordThen, KeywordElse,
 // Literals
 struct Integer: seq< opt<one<'-','+'>>, plus<digit> > {};
 struct Float: seq< opt<one<'-','+'>>, plus<digit>, one<'.'>, star<digit> > {};
+struct Char: if_must< one<'\''>, StringCh, one<'\''> > {};
 struct String: if_must< one<'"'>, until<one<'"'>, StringCh > > {};
 struct RawString : raw_string< '$', '-', '$' > {};  // raw_string = $$ raw text! $$
-struct Literal: sor< Float, Integer, String, RawString > {};
+struct Literal: sor< Float, Integer, Char, String, RawString > {};
 
 // Expressions
 struct Variable: seq< Identifier, opt<SC, one<':'>, SC, must<UnsafeType> > > {};
@@ -712,6 +713,20 @@ struct Action<Integer> {
         expr = std::make_unique<ast::Integer>(in.string());
         expr->source_info.load(in.input(), in.position());
     }
+};
+
+
+template<>
+struct Action<Char> : change_states< std::string > {
+  template<typename Input>
+  static void apply(const Input &in, std::unique_ptr<ast::Expression>& expr) {
+    expr->source_info.load(in.input(), in.position());
+  }
+
+  template<typename Input>
+  static void success(const Input &in, std::string& str, std::unique_ptr<ast::Expression>& expr) {
+    expr = std::make_unique<ast::Char>(str);
+  }
 };
 
 

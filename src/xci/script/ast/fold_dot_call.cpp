@@ -67,19 +67,20 @@ public:
         }
     }
 
-    void visit(ast::Integer& v) override {}
-    void visit(ast::Float& v) override {}
-    void visit(ast::String& v) override {}
-    void visit(ast::Tuple& v) override {}
-    void visit(ast::List& v) override {}
-    void visit(ast::Reference& v) override {}
+    void visit(ast::Integer&) override {}
+    void visit(ast::Float&) override {}
+    void visit(ast::Char&) override {}
+    void visit(ast::String&) override {}
+    void visit(ast::Tuple&) override {}
+    void visit(ast::List&) override {}
+    void visit(ast::Reference&) override {}
 
-    void visit(ast::Class& v) override {}
-    void visit(ast::Instance& v) override {}
+    void visit(ast::Class&) override {}
+    void visit(ast::Instance&) override {}
 
-    void visit(ast::TypeName& t) final {}
-    void visit(ast::FunctionType& t) final {}
-    void visit(ast::ListType& t) final {}
+    void visit(ast::TypeName&) final {}
+    void visit(ast::FunctionType&) final {}
+    void visit(ast::ListType&) final {}
 
 private:
     Module& module() { return m_function.module(); }

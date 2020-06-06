@@ -167,6 +167,7 @@ public:
 
     void visit(ast::Integer& v) override { m_const_value = make_unique<value::Int32>(v.value); }
     void visit(ast::Float& v) override { m_const_value = make_unique<value::Float32>(v.value); }
+    void visit(ast::Char& v) override { m_const_value = make_unique<value::Char>(v.value); }
     void visit(ast::String& v) override { m_const_value = make_unique<value::String>(v.value); }
 
     void visit(ast::Tuple& v) override {

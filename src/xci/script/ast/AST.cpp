@@ -7,6 +7,7 @@
 #include "AST.h"
 #include <xci/script/Error.h>
 #include <xci/compat/macros.h>
+#include <xci/core/string.h>
 
 #include <range/v3/view/reverse.hpp>
 
@@ -264,6 +265,13 @@ Float::Float(const std::string& s) : value(0.0)
         throw std::runtime_error("Float not fully parsed.");
     }
 }
+
+
+Char::Char(std::string_view sv)
+{
+    value = core::utf8_codepoint(sv.data());
+}
+
 
 Operator::Operator(const std::string& s, bool prefix)
 {

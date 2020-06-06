@@ -80,7 +80,7 @@ std::ostream& operator<<(std::ostream& os, const Value& o)
         void visit(const value::Void&) override { os << "void"; }
         void visit(const value::Bool& v) override { os << std::boolalpha << v.value(); }
         void visit(const value::Byte& v) override { os << v.value() << ":Byte"; }
-        void visit(const value::Char& v) override { os << v.value() << ":Char"; }
+        void visit(const value::Char& v) override { os << '\'' << core::escape(core::to_utf8(v.value())) << "'"; }
         void visit(const value::Int32& v) override { os << v.value(); }
         void visit(const value::Int64& v) override { os << v.value() << ":Int64"; }
         void visit(const value::Float32& v) override { os << v.value(); }

@@ -117,6 +117,13 @@ public:
         code().add_opcode(Opcode::LoadStatic, idx);
     }
 
+    void visit(ast::Char& v) override {
+        // add to static values
+        auto idx = module().add_value(std::make_unique<value::Char>(v.value));
+        // LOAD_STATIC <static_idx>
+        code().add_opcode(Opcode::LoadStatic, idx);
+    }
+
     void visit(ast::String& v) override {
         // add to static values
         auto idx = module().add_value(std::make_unique<value::String>(v.value));

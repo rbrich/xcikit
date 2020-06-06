@@ -28,12 +28,13 @@ public:
         ret.expression->apply(*this);
     }
 
-    void visit(ast::Class& v) override {}
-    void visit(ast::Instance& v) override {}
+    void visit(ast::Class&) override {}
+    void visit(ast::Instance&) override {}
 
-    void visit(ast::Integer& v) override {}
-    void visit(ast::Float& v) override {}
-    void visit(ast::String& v) override {}
+    void visit(ast::Integer&) override {}
+    void visit(ast::Float&) override {}
+    void visit(ast::Char&) override {}
+    void visit(ast::String&) override {}
 
     void visit(ast::Tuple& v) override {
         for (auto& item : v.items) {

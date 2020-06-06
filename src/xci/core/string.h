@@ -91,7 +91,7 @@ std::string_view utf8_substr(std::string_view str, size_t pos, size_t count);
 
 // Convert single UTF-8 character to Unicode code point.
 // Only the first UTF-8 character is used, rest of input is ignored.
-// In case of error, return 0.
+// In case of error, log error and return 0.
 char32_t utf8_codepoint(const char* utf8);
 
 /// Check if there is partial UTF-8 character at the end of string

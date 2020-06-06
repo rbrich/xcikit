@@ -35,6 +35,7 @@ struct Instance;
 
 struct Integer;
 struct Float;
+struct Char;
 struct String;
 struct Tuple;
 struct List;
@@ -60,6 +61,7 @@ public:
     // expression
     virtual void visit(const Integer&) = 0;
     virtual void visit(const Float&) = 0;
+    virtual void visit(const Char&) = 0;
     virtual void visit(const String&) = 0;
     virtual void visit(const Tuple&) = 0;
     virtual void visit(const List&) = 0;
@@ -85,6 +87,7 @@ public:
     // expression
     virtual void visit(Integer&) = 0;
     virtual void visit(Float&) = 0;
+    virtual void visit(Char&) = 0;
     virtual void visit(String&) = 0;
     virtual void visit(Tuple&) = 0;
     virtual void visit(List&) = 0;
@@ -106,6 +109,7 @@ public:
     // skip expression visits
     void visit(Integer&) final {}
     void visit(Float&) final {}
+    void visit(Char&) final {}
     void visit(String&) final {}
     void visit(Tuple&) final {}
     void visit(List&) final {}
@@ -133,6 +137,7 @@ public:
     // skip expression visits
     void visit(Integer&) final {}
     void visit(Float&) final {}
+    void visit(Char&) final {}
     void visit(String&) final {}
     void visit(Tuple&) final {}
     void visit(List&) final {}
@@ -257,6 +262,16 @@ struct Float: public Expression {
     std::unique_ptr<ast::Expression> make_copy() const override { return std::make_unique<Float>(*this); };
 
     float value;
+};
+
+struct Char: public Expression {
+  explicit Char(char32_t c) : value(c) {}
+  explicit Char(std::string_view sv);
+  void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
+  void apply(Visitor& visitor) override { visitor.visit(*this); }
+  std::unique_ptr<ast::Expression> make_copy() const override { return std::make_unique<Char>(*this); };
+
+  char32_t value;
 };
 
 struct String: public Expression {

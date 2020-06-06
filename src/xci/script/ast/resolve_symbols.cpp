@@ -129,9 +129,10 @@ public:
         v.class_name.symbol->set_index(v.index);
     }
 
-    void visit(ast::Integer& v) override {}
-    void visit(ast::Float& v) override {}
-    void visit(ast::String& v) override {}
+    void visit(ast::Integer&) override {}
+    void visit(ast::Float&) override {}
+    void visit(ast::Char&) override {}
+    void visit(ast::String&) override {}
 
     void visit(ast::Tuple& v) override {
         for (auto& item : v.items) {

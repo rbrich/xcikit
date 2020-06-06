@@ -34,6 +34,7 @@ std::ostream& less_indent(std::ostream& os);
 namespace ast {
 std::ostream& operator<<(std::ostream& os, const Integer& v);
 std::ostream& operator<<(std::ostream& os, const Float& v);
+std::ostream& operator<<(std::ostream& os, const Char& v);
 std::ostream& operator<<(std::ostream& os, const String& v);
 std::ostream& operator<<(std::ostream& os, const Tuple& v);
 std::ostream& operator<<(std::ostream& os, const List& v);

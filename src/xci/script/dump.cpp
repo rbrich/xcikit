@@ -83,6 +83,7 @@ public:
     void visit(const Instance& v) override { m_os << v; }
     void visit(const Integer& v) override { m_os << v; }
     void visit(const Float& v) override { m_os << v; }
+    void visit(const Char& v) override { m_os << v; }
     void visit(const String& v) override { m_os << v; }
     void visit(const Tuple& v) override { m_os << v; }
     void visit(const List& v) override { m_os << v; }
@@ -123,10 +124,19 @@ std::ostream& operator<<(std::ostream& os, const Float& v)
     }
 }
 
+std::ostream& operator<<(std::ostream& os, const Char& v)
+{
+  if (stream_options(os).enable_tree) {
+    return os << put_indent << "Char(Expression) " << '\'' << core::escape(core::to_utf8(v.value)) << '\'' << endl;
+  } else {
+    return os << '\'' << core::escape(core::to_utf8(v.value)) << '\'';
+  }
+}
+
 std::ostream& operator<<(std::ostream& os, const String& v)
 {
     if (stream_options(os).enable_tree) {
-        return os << put_indent << "String(Expression) " << core::escape(v.value) << endl;
+        return os << put_indent << "String(Expression) " << '"' << core::escape(v.value) << '"' << endl;
     } else {
         return os << '"' << core::escape(v.value) << '"';
     }

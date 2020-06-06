@@ -106,6 +106,7 @@ public:
 
     void visit(ast::Integer& v) override { m_value_type = TypeInfo{Type::Int32}; }
     void visit(ast::Float& v) override { m_value_type = TypeInfo{Type::Float32}; }
+    void visit(ast::Char& v) override { m_value_type = TypeInfo{Type::Char}; }
     void visit(ast::String& v) override { m_value_type = TypeInfo{Type::String}; }
 
     void visit(ast::Tuple& v) override {
