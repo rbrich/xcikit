@@ -10,6 +10,6 @@ add_executable(fire
 target_link_libraries(fire
     xci-core
     xci-script
-    replxx::replxx
+    Replxx::replxx
     )
 install(TARGETS fire EXPORT xcikit DESTINATION bin)
