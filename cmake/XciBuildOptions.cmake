@@ -119,9 +119,11 @@ if (NOT MSVC)
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer")
 endif()
 
-# Disable min/max macros (very bad in C++)
 if (MSVC)
+    # Disable min/max macros (very bad in C++)
     add_compile_definitions(NOMINMAX)
+    # Read all source files as utf-8
+    add_compile_options(/source-charset:utf-8)
 endif()
 
 if (FORCE_COLORS)
