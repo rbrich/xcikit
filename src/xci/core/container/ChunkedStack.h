@@ -33,10 +33,10 @@ namespace xci::core {
 /// - memory flexibility
 ///     - can start small and grow slowly
 ///     - with initial capacity, it can also start with big chunk of memory
-///       and avoid many further allocations
+///       and avoid further allocations
 /// - partial memory continuity
 ///     - memory is allocated in bigger chunks (buckets)
-///     - objects in each buckets are continuous
+///     - objects in each bucket are contiguous
 ///     - bucket size is configurable
 ///     - special constructor allocates a single bucket of requested size
 /// - debug mode checks
@@ -45,6 +45,8 @@ namespace xci::core {
 /// - standard behaviour
 ///     - all methods behave the same as on std::stack or std::deque
 ///     - (at least, that's the intention, there might be bugs)
+///
+/// \tparam T   the element type
 
 template < class T >
 class ChunkedStack {
@@ -110,8 +112,6 @@ public:
         using pointer = T*;
         using iterator_category = std::forward_iterator_tag;
 
-        iterator() = default;
-
         bool operator==(const iterator& rhs) const { return m_bucket == rhs.m_bucket && m_item == rhs.m_item; }
         bool operator!=(const iterator& rhs) const { return m_bucket != rhs.m_bucket || m_item != rhs.m_item; }
 
@@ -122,6 +122,7 @@ public:
         pointer operator->() const { return &m_bucket->items[m_item]; }
 
     private:
+        iterator() = default;
         explicit iterator(Bucket* head)
             : m_head(head), m_bucket{head->count == 0 ? nullptr : head} {}
 
@@ -139,8 +140,6 @@ public:
         using pointer = const T*;
         using iterator_category = std::forward_iterator_tag;
 
-        const_iterator() = default;
-
         bool operator==(const const_iterator& rhs) const { return m_bucket == rhs.m_bucket && m_item == rhs.m_item; }
         bool operator!=(const const_iterator& rhs) const { return m_bucket != rhs.m_bucket || m_item != rhs.m_item; }
 
@@ -151,6 +150,7 @@ public:
         pointer operator->() const { return &m_bucket->items[m_item]; }
 
     private:
+        const_iterator() = default;
         explicit const_iterator(Bucket* head)
             : m_head(head), m_bucket{head->count == 0 ? nullptr : head} {}
 

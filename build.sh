@@ -4,7 +4,7 @@ set -e
 cd "$(dirname "$0")"
 
 ROOT_DIR="$PWD"
-BUILD_TYPE=Release
+BUILD_TYPE="Release"
 GENERATOR=
 JOBS_ARGS=()
 CMAKE_ARGS=()
@@ -68,10 +68,10 @@ while [[ $# -gt 0 ]] ; do
             CMAKE_ARGS+=("$1")
             shift 1 ;;
         --debug )
-            BUILD_TYPE=Debug
+            BUILD_TYPE="Debug"
             shift 1 ;;
         --minsize )
-            BUILD_TYPE=MinSizeRel
+            BUILD_TYPE="MinSizeRel"
             shift 1 ;;
         --unity )
             CMAKE_ARGS+=(-D'CMAKE_UNITY_BUILD=1' -D'UNITY_BUILD_BATCH_SIZE=4')
@@ -93,7 +93,7 @@ PLATFORM="$(uname)"
 [[ ${PLATFORM} = "Darwin" ]] && PLATFORM="macos${MACOSX_DEPLOYMENT_TARGET}"
 VERSION=$(conan inspect . --raw version)$(git rev-parse --short HEAD 2>/dev/null | sed 's/^/+/' ; :)
 BUILD_CONFIG="${PLATFORM}-${ARCH}-${BUILD_TYPE}"
-[[ -z "${GENERATOR}" ]] && command -v ninja >/dev/null && GENERATOR="Ninja"
+[[ -z "${GENERATOR}" ]] && setup_ninja && GENERATOR="Ninja"
 [[ -n "${GENERATOR}" ]] && BUILD_CONFIG="${BUILD_CONFIG}-${GENERATOR// }"
 [[ -n "${GENERATOR}" ]] && CMAKE_ARGS+=(-G "${GENERATOR}")
 BUILD_DIR="${ROOT_DIR}/build/${BUILD_CONFIG}"
