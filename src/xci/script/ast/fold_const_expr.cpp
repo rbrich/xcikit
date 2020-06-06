@@ -13,6 +13,7 @@
 
 namespace xci::script {
 
+using ranges::cpp20::views::reverse;
 using std::unique_ptr;
 using std::make_unique;
 using std::move;
@@ -102,7 +103,7 @@ public:
             assert(!fn.has_nonlocals());
             assert(fn.parameters().size() == args.size());
             // push args on stack
-            for (auto& arg : ranges::views::reverse(args))
+            for (auto& arg : reverse(args))
                 m_machine.stack().push(*arg);
             // run it
             bool invoked = false;

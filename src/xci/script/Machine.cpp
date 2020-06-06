@@ -24,6 +24,7 @@
 
 namespace xci::script {
 
+using ranges::cpp20::views::reverse;
 using std::move;
 
 
@@ -258,7 +259,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
             case Opcode::Execute: {
                 auto o = m_stack.pull<value::Closure>();
                 auto closure = o.closure();
-                for (const auto& nl : ranges::views::reverse(closure.values())) {
+                for (const auto& nl : reverse(closure.values())) {
                     m_stack.push(*nl);
                 }
                 call_fun(o.function());

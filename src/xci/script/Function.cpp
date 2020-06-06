@@ -22,6 +22,8 @@
 
 namespace xci::script {
 
+using ranges::cpp20::any_of;
+
 
 Function::Function(Module& module, SymbolTable& symtab)
       : m_module(module), m_symtab(symtab),
@@ -109,7 +111,7 @@ std::vector<TypeInfo> Function::closure() const
 
 bool Function::detect_generic() const
 {
-    return ranges::any_of(signature().params, [](const TypeInfo& type_info) {
+    return any_of(signature().params, [](const TypeInfo& type_info) {
         return type_info.type() == Type::Unknown;
     });
 }

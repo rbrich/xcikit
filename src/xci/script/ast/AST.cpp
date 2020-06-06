@@ -18,7 +18,7 @@
 
 namespace xci::script::ast {
 
-using namespace std;
+using ranges::cpp20::views::reverse;
 
 
 template <class T>
@@ -228,7 +228,7 @@ void Block::finish()
     };
 
     FinishVisitor visitor;
-    for (auto& stmt : ranges::views::reverse(statements)) {
+    for (auto& stmt : reverse(statements)) {
         stmt->apply(visitor);
         if (visitor.is_return) {
             // found a Return statement - all is fine

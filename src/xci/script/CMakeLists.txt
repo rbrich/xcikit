@@ -29,7 +29,7 @@ target_link_libraries(xci-script
     PUBLIC
         xci-core
     PRIVATE
-        range-v3
+        range-v3::range-v3
     )
 
 target_include_directories(xci-script

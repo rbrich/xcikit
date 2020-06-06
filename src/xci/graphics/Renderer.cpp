@@ -47,6 +47,9 @@ namespace xci::graphics {
 
 using namespace xci::core;
 using namespace xci::core::log;
+using ranges::cpp20::views::take;
+using ranges::views::enumerate;
+using ranges::cpp20::any_of;
 using std::make_unique;
 
 
@@ -150,7 +153,7 @@ Renderer::Renderer(core::Vfs& vfs)
                 starts_with(props.layerName, "VK_LAYER_LUNARG_") ||
                 starts_with(props.layerName, "VK_LAYER_GOOGLE_") ||
                 starts_with(props.layerName, "VK_LAYER_KHRONOS_")
-            ) && !ranges::any_of(enabled_layers,[&](const char* name) {
+            ) && !any_of(enabled_layers,[&](const char* name) {
                 return strcmp(name, props.layerName) == 0;
             }) && strcmp(props.layerName, "VK_LAYER_LUNARG_api_dump") != 0
         )
@@ -190,7 +193,7 @@ Renderer::Renderer(core::Vfs& vfs)
     vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, ext_props.data());
     log_info("Vulkan: {} extensions available:", ext_count);
     for (const auto& props : ext_props) {
-        bool enable = ranges::any_of(extensions,[&](const char* name) {
+        bool enable = any_of(extensions,[&](const char* name) {
             return strcmp(name, props.extensionName) == 0;
         });
         log_info("[{}] {} (spec {})",
@@ -391,7 +394,7 @@ void Renderer::create_device()
     uint32_t graphics_queue_family = 0;
 
     log_info("Vulkan: {} devices available:", device_count);
-    for (const auto& device : devices | ranges::views::take(device_count)) {
+    for (const auto& device : devices | take(device_count)) {
         VkPhysicalDeviceProperties device_props;
         vkGetPhysicalDeviceProperties(device, &device_props);
         VkPhysicalDeviceFeatures device_features;
@@ -564,7 +567,7 @@ void Renderer::create_swapchain()
 
 void Renderer::destroy_swapchain()
 {
-    for (auto image_view : m_image_views | ranges::views::take(m_image_count)) {
+    for (auto image_view : m_image_views | take(m_image_count)) {
         vkDestroyImageView(m_device, image_view, nullptr);
     }
     vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
@@ -652,7 +655,7 @@ void Renderer::create_framebuffers()
 
 void Renderer::destroy_framebuffers()
 {
-    for (auto framebuffer : m_framebuffers | ranges::views::take(m_image_count)) {
+    for (auto framebuffer : m_framebuffers | take(m_image_count)) {
         vkDestroyFramebuffer(m_device, framebuffer, nullptr);
     }
 }
@@ -667,7 +670,7 @@ Renderer::query_queue_families(VkPhysicalDevice device)
     std::vector<VkQueueFamilyProperties> families(family_count);
     vkGetPhysicalDeviceQueueFamilyProperties(device, &family_count, families.data());
 
-    for (auto&& [i, family] : families | ranges::views::enumerate) {
+    for (auto&& [i, family] : families | enumerate) {
         // require that the queue supports both graphics and presentation
 
         if (!(family.queueFlags & VK_QUEUE_GRAPHICS_BIT))

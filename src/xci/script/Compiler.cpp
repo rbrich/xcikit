@@ -31,6 +31,7 @@
 namespace xci::script {
 
 using std::make_unique;
+using ranges::cpp20::views::reverse;
 
 
 class CompilerVisitor: public ast::Visitor {
@@ -82,14 +83,14 @@ public:
                 });
                 pos += ti.size();
             }
-            for (const auto& ti : ranges::views::reverse(m_function.partial())) {
+            for (const auto& ti : reverse(m_function.partial())) {
                 ti.foreach_heap_slot([this, pos](size_t offset) {
                     // DEC_REF <addr in partial>
                     m_function.code().add_opcode(Opcode::DecRef, pos + offset);
                 });
                 pos += ti.size();
             }
-            for (const auto& ti : ranges::views::reverse(m_function.parameters())) {
+            for (const auto& ti : reverse(m_function.parameters())) {
                 ti.foreach_heap_slot([this, pos](size_t offset) {
                     // DEC_REF <addr in params>
                     m_function.code().add_opcode(Opcode::DecRef, pos + offset);
@@ -125,14 +126,14 @@ public:
 
     void visit(ast::Tuple& v) override {
         // build tuple on stack
-        for (auto& item : ranges::views::reverse(v.items)) {
+        for (auto& item : reverse(v.items)) {
             item->apply(*this);
         }
     }
 
     void visit(ast::List& v) override {
         // build list
-        for (auto& item : ranges::views::reverse(v.items)) {
+        for (auto& item : reverse(v.items)) {
             item->apply(*this);
         }
         // MAKE_LIST <length> <elem_size>
@@ -288,7 +289,7 @@ public:
     void visit(ast::Call& v) override {
         // call the function or push the value
 
-        for (auto& arg : ranges::views::reverse(v.args)) {
+        for (auto& arg : reverse(v.args)) {
             arg->apply(*this);
         }
 
@@ -414,7 +415,7 @@ private:
         assert(&m_function.symtab() == func.symtab().parent());
         auto closure_size = m_function.raw_size_of_closure();
         // make closure
-        for (const auto& sym : ranges::views::reverse(func.symtab())) {
+        for (const auto& sym : reverse(func.symtab())) {
             if (sym.type() == Symbol::Nonlocal) {
                 // find symbol in parent (which is m_function)
                 for (const auto& psym : m_function.symtab()) {

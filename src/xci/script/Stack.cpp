@@ -22,6 +22,7 @@
 
 namespace xci::script {
 
+using ranges::cpp20::views::reverse;
 using std::move;
 
 
@@ -161,7 +162,7 @@ std::ostream& operator<<(std::ostream& os, const Stack& v)
     cout << right << setw(4) << "pos" << setw(4) << "siz"
          << "  value" << endl;
     // stack data
-    for (const auto& ti : ranges::views::reverse(v.m_stack_types)) {
+    for (const auto& ti : reverse(v.m_stack_types)) {
         check_print_base();
 
         const auto size = ti.size();
