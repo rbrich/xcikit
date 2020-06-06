@@ -18,6 +18,8 @@
 using namespace xci::core;
 using namespace std::string_literals;
 
+#define UTF8(l)  (const char*)u8 ## l
+
 
 TEST_CASE( "Format placeholders", "[format]" )
 {
@@ -105,7 +107,7 @@ TEST_CASE( "path::real_path, path::get_cwd", "[file]" )
 
 TEST_CASE( "utf8_length", "[string]" )
 {
-    std::string s = "河北梆子";
+    std::string s = UTF8("河北梆子");
     CHECK(s.size() == 4 * 3);
     CHECK(utf8_length(s) == 4);
 
@@ -122,29 +124,29 @@ TEST_CASE( "utf8_length", "[string]" )
 
 TEST_CASE( "to_utf32", "[string]" )
 {
-    CHECK(to_utf32("Červeňoučký 🦞") == U"Červeňoučký 🦞");
+    CHECK(to_utf32(UTF8("Červeňoučký 🦞")) == U"Červeňoučký 🦞");
 }
 
 
 TEST_CASE( "to_utf8", "[string]" )
 {
-    CHECK(to_utf8(0x1F99E) == "🦞");
+    CHECK(to_utf8(0x1F99E) == UTF8("🦞"));
 }
 
 
 TEST_CASE( "to_codepoint", "[string]" )
 {
-    CHECK(utf8_codepoint("\n") == 0xa);
-    CHECK(utf8_codepoint("#") == '#');
-    CHECK(utf8_codepoint("ž") == 0x017E);
-    CHECK(utf8_codepoint("€") == 0x20AC);
+    CHECK(utf8_codepoint(UTF8("\n")) == 0xa);
+    CHECK(utf8_codepoint(UTF8("#")) == '#');
+    CHECK(utf8_codepoint(UTF8("ž")) == 0x017E);
+    CHECK(utf8_codepoint(UTF8("€")) == 0x20AC);
 
-    std::string s3 = "人";
+    std::string s3 = UTF8("人");
     CHECK(s3.size() == 3);
     CHECK(utf8_length(s3) == 1);
     CHECK(utf8_codepoint(s3.data()) == 0x4EBA);
 
-    std::string s4 = "🦞";
+    std::string s4 = UTF8("🦞");
     CHECK(s4.size() == 4);
     CHECK(utf8_length(s4) == 1);
     CHECK(utf8_codepoint(s4.data()) == 0x1F99E);
@@ -182,22 +184,22 @@ TEST_CASE( "to_lower", "[string]" )
 
 TEST_CASE( "utf8_partial_end", "[string]" )
 {
-    CHECK(utf8_partial_end("") == 0);
-    CHECK(utf8_partial_end("hello") == 0);
+    CHECK(utf8_partial_end(UTF8("")) == 0);
+    CHECK(utf8_partial_end(UTF8("hello")) == 0);
 
-    std::string s = "fň";
+    std::string s = UTF8("fň");
     REQUIRE(s.size() == 3);  // 1 + 2
     CHECK(utf8_partial_end(s) == 0);
     CHECK(utf8_partial_end(s.substr(0, 2)) == 1);
     CHECK(utf8_partial_end(s.substr(0, 1)) == 0);
 
-    s = "€";
+    s = UTF8("€");
     REQUIRE(s.size() == 3);
     CHECK(utf8_partial_end(s) == 0);
     CHECK(utf8_partial_end(s.substr(0, 2)) == 2);
     CHECK(utf8_partial_end(s.substr(0, 1)) == 1);
 
-    s = "😈";  // F0 9F 98 88
+    s = UTF8("😈");  // F0 9F 98 88
     REQUIRE(s.size() == 4);
     CHECK(utf8_partial_end(s) == 0);
     CHECK(utf8_partial_end(s.substr(0, 3)) == 3);

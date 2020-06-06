@@ -76,7 +76,7 @@ std::u32string to_utf32(std::string_view utf8);
 
 // Convert UTF16/32 string to UTF8
 std::string to_utf8(std::u16string_view wstr);
-std::string to_utf8(std::wstring_view wstr);
+std::string to_utf8(std::u32string_view wstr);
 
 // Convert single UTF32 char to UTF8 string. Can't fail.
 std::string to_utf8(char32_t codepoint);
