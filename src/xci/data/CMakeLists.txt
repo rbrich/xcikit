@@ -13,6 +13,7 @@ find_package(magic_get REQUIRED)
 add_library(xci-data
     BinaryWriter.cpp
     BinaryReader.cpp
+    Crc32.cpp
     )
 
 target_link_libraries(xci-data
