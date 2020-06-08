@@ -14,3 +14,9 @@
 // limitations under the License.
 
 #include "BinaryBase.h"
+
+namespace xci::data {
+
+
+
+} // namespace xci::data
