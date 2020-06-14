@@ -41,8 +41,10 @@ namespace xci::data {
 
 class BinaryWriter : public BinaryBase<BinaryWriter> {
 public:
-    explicit BinaryWriter(std::ostream& os) : m_stream(os) { write_header(); }
-    ~BinaryWriter() { terminate_content(); }
+    using BufferType = std::vector<std::byte>;
+
+    explicit BinaryWriter(std::ostream& os, bool crc32 = false) : m_stream(os), m_crc32(crc32) {}
+    ~BinaryWriter() { write_content(); }
 
     void add(uint8_t key, std::nullptr_t) {
         write(uint8_t(Type::Null | key));
@@ -89,24 +91,31 @@ public:
         write(value);
     }
 
-    off_t enter(uint8_t key);
-    void leave(uint8_t key, off_t begin);
-
-    void terminate_content();
-    void write_crc32(uint32_t crc);
+    void enter_group(uint8_t key);
+    void leave_group(uint8_t key);
 
 private:
-    void write_header();
+    void write_content();
 
     template <typename T>
     void write(const T& value) {
-        write((const std::byte*) &value, sizeof(value));
+        add_to_buffer((const std::byte*) &value, sizeof(value));
     }
-    void write(const std::byte* buffer, size_t length);
+    void write(const std::byte* buffer, size_t length) {
+        add_to_buffer(buffer, length);
+    }
+
+    void add_to_buffer(const std::byte* data, size_t size) {
+        group_buffer().insert(group_buffer().end(), data, data + size);
+    }
+
+    auto buffer_inserter() {
+        return std::back_inserter(group_buffer());
+    }
 
 private:
     std::ostream& m_stream;
-    bool m_terminated = false;
+    bool m_crc32;  // enable CRC32
 };
 
 

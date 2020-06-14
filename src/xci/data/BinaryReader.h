@@ -17,30 +17,113 @@
 #define XCI_DATA_BINARY_READER_H
 
 #include "BinaryBase.h"
+#include <xci/data/coding/leb128.h>
 #include <xci/data/reflection.h>
 #include <xci/compat/endian.h>
 #include <xci/compat/macros.h>
 
 #include <istream>
+#include <iterator>
 #include <map>
+#include <functional>
 
 namespace xci::data {
 
 
-class BinaryReader : private BinaryBase {
+class BinaryReader : public BinaryBase<BinaryReader> {
 public:
-    explicit BinaryReader(std::istream& is) : m_stream(is) {}
+    struct Buffer {
+        //std::byte* data;
+        size_t size = 0;
+    };
+    using BufferType = Buffer;
 
-    template <class T>
-    void load(T& o) {
-        read_header();
-        read(o);
-        read_footer();
+    explicit BinaryReader(std::istream& is) : m_stream(is) { read_header(); }
+
+    void add(uint8_t key, std::nullptr_t) {
+        const auto chunk_type = read_chunk_head(key);
+        if (chunk_type != ChunkNotFound && chunk_type != Type::Null)
+            throw ArchiveBadChunkType();
     }
 
-    void read_header();
-    void read_footer();
+    void add(uint8_t key, bool& value) {
+        const auto chunk_type = read_chunk_head(key);
+        if (chunk_type == ChunkNotFound)
+            return;
+        if (chunk_type == Type::BoolFalse) {
+            value = false;
+            return;
+        }
+        if (chunk_type == Type::BoolTrue) {
+            value = true;
+            return;
+        }
+        throw ArchiveBadChunkType();
+    }
 
+    template <class T> requires ( std::is_same_v<T, std::byte> || (std::is_integral_v<T> && sizeof(T) == 1) )
+    void add(uint8_t key, T& value) {
+        const auto chunk_type = read_chunk_head(key);
+        if (chunk_type == Type::Byte)
+            read_with_crc(value);
+        else if (chunk_type != ChunkNotFound)
+            throw ArchiveBadChunkType();
+    }
+
+    void add(uint8_t key, uint32_t& value) {
+        const auto chunk_type = read_chunk_head(key);
+        if (chunk_type == Type::UInt32)
+           read_with_crc(value);
+        else if (chunk_type != ChunkNotFound)
+            throw ArchiveBadChunkType();
+    }
+
+    void add(uint8_t key, uint64_t& value) {
+        const auto chunk_type = read_chunk_head(key);
+        if (chunk_type == Type::UInt64)
+            read_with_crc(value);
+        else if (chunk_type != ChunkNotFound)
+            throw ArchiveBadChunkType();
+    }
+
+    void add(uint8_t key, int32_t& value) {
+        const auto chunk_type = read_chunk_head(key);
+        if (chunk_type == Type::Int32)
+            read_with_crc(value);
+        else if (chunk_type != ChunkNotFound)
+            throw ArchiveBadChunkType();
+    }
+
+    void add(uint8_t key, int64_t& value) {
+        const auto chunk_type = read_chunk_head(key);
+        if (chunk_type == Type::Int64)
+            read_with_crc(value);
+        else if (chunk_type != ChunkNotFound)
+            throw ArchiveBadChunkType();
+    }
+
+    void add(uint8_t key, float& value) {
+        const auto chunk_type = read_chunk_head(key);
+        if (chunk_type == Type::Float32)
+            read_with_crc(value);
+        else if (chunk_type != ChunkNotFound)
+            throw ArchiveBadChunkType();
+    }
+
+    void add(uint8_t key, double& value) {
+        const auto chunk_type = read_chunk_head(key);
+        if (chunk_type == Type::Float64)
+            read_with_crc(value);
+        else if (chunk_type != ChunkNotFound)
+            throw ArchiveBadChunkType();
+    }
+
+    void enter_group(uint8_t key);
+    void leave_group(uint8_t key);
+
+    void finish_and_check() { read_footer(); }
+
+/*
     template <class T, typename std::enable_if_t<meta::isRegistered<T>(), int> = 0>
     void read(T& o) {
         uint8_t type = 0;
@@ -53,10 +136,6 @@ public:
                 --m_depth;
                 break;
             }
-
-            // CRC32 at depth=0 ends the file
-            if (type == Type_Checksum && len == sizeof(m_crc) && m_depth == 0)
-                break;
 
             const auto * key = read_key();
             switch (type) {
@@ -98,7 +177,7 @@ public:
             }
         }
     }
-
+*/
     void read(std::string& value);
 
     template <class T, typename std::enable_if_t<meta::isRegistered<typename T::value_type>(), int> = 0>
@@ -122,45 +201,85 @@ public:
         out = T(value);
     }
 
-    enum class Error {
-        None,
-        BadMagic,
-        BadVersion,
-        BadFlags,
-        BadFieldType,
-        BadChecksum,
-    };
+private:
+    void read_header();
+    void read_footer();
 
-    Error get_error() const { return m_error; }
-    size_t get_last_pos() const { return m_pos; }
-    const char* get_error_cstr() const {
-        switch (m_error) {
-            case Error::None: return "None";
-            case Error::BadMagic: return "Bad magic";
-            case Error::BadVersion: return "Bad version";
-            case Error::BadFlags: return "Bad flags";
-            case Error::BadFieldType: return "Bad field type";
-            case Error::BadChecksum: return "Bad checksum";
-        }
-        UNREACHABLE;
+    void skip_unknown_chunk(uint8_t type, uint8_t key);
+
+    constexpr bool type_has_len(uint8_t type) {
+        return type == Varint || type == Array || type == String || type == Master;
     }
 
-private:
+    constexpr size_t size_by_type(uint8_t type) {
+        switch (type) {
+            case Null:
+            case BoolFalse:
+            case BoolTrue:
+            case Control:
+                return 0;
+            case Byte:
+                return 1;
+            case UInt32:
+            case Int32:
+            case Float32:
+                return 4;
+            case UInt64:
+            case Int64:
+            case Float64:
+                return 8;
+            default:
+                UNREACHABLE;
+        }
+    }
+
+    uint8_t read_chunk_head(uint8_t key) {
+        // Read ahead until key matches
+        while (group_buffer().size != 0) {
+            uint8_t b;
+            read_with_crc(b);
+            const uint8_t chunk_key = b & KeyMask;
+            const uint8_t chunk_type = b & TypeMask;
+            if (key != chunk_key) {
+                skip_unknown_chunk(chunk_type, chunk_key);
+                continue;
+            }
+            // success, pointer is at LEN or VALUE
+            return chunk_type;
+        }
+        return ChunkNotFound;
+    }
+
     template <typename T>
     void read_with_crc(T& value) {
-        read_with_crc((uint8_t*)&value, sizeof(value));
+        read_with_crc((std::byte*)&value, sizeof(value));
     }
-    void read_with_crc(uint8_t* buffer, size_t length);
+    void read_with_crc(std::byte* buffer, size_t length);
+    std::byte read_byte_with_crc();
+    std::byte peek_byte();
 
-    void read_type_len(uint8_t& type, uint64_t& len);
-    const char* read_key();
+    template<typename T>
+    T read_leb128() {
+        class ReadWithCrcIter {
+        public:
+            explicit ReadWithCrcIter(BinaryReader& reader) : m_reader(reader) {}
+            void operator++() { m_reader.read_byte_with_crc();}
+            std::byte operator*() { return m_reader.peek_byte(); }
+        private:
+            BinaryReader& m_reader;
+        };
+        auto iter = ReadWithCrcIter(*this);
+        return decode_leb128<size_t>(iter);
+    }
 
 private:
     std::istream& m_stream;
-    Error m_error = Error::None;
-    std::map<size_t, std::string> m_pos_to_key;
-    size_t m_pos = 0;
-    int m_depth = 0;
+
+    bool m_has_crc = false;
+    Crc32 m_crc;
+
+    using UnknownChunkCb = std::function<void(uint8_t type, uint8_t key, const std::byte* data, size_t size)>;
+    UnknownChunkCb m_unknown_chunk_cb;
 };
 
 

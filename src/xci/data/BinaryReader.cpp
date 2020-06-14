@@ -19,49 +19,110 @@
 namespace xci::data {
 
 #define CHECK_FAIL      if (m_stream.fail()) return;
-#define FAIL_IF(cond,err) \
-    if (cond) { m_stream.setstate(std::ios::failbit); m_error=err; return; }
+#define FAIL_IF(cond, err) \
+    do { if (cond) { m_stream.setstate(std::ios::failbit); throw err; } } while(0)
 
 
 void BinaryReader::read_header() {
-    // initialize CRC
-    m_crc = (uint32_t) crc32(0L, Z_NULL, 0);
-    m_pos = 0;
-    m_depth = 0;
+    // This size is decreased with every read.
+    // Initial value is used only for reading the header,
+    // then overwritten by actual value from the header.
+    group_buffer().size = 10;
+
+    uint8_t header[4];
+    read_with_crc((std::byte*)header, sizeof(header));
 
     // MAGIC:16
-    uint8_t magic[2];
-    read_with_crc(magic);
-    FAIL_IF(magic[0] != Magic_Byte0 || magic[1] != Magic_Byte1, Error::BadMagic);
+    FAIL_IF(header[0] != Magic0 || header[1] != Magic1, ArchiveBadMagic());
 
     // VERSION:8
-    uint8_t version = 0;
-    read_with_crc(version);
-    FAIL_IF(version != Version, Error::BadVersion);
+    FAIL_IF(header[2] != Version, ArchiveBadVersion());
 
     // FLAGS:8
-    uint8_t flags = 0;
-    read_with_crc(flags);
-    FAIL_IF(flags == 0, Error::BadFlags);
+    auto endianness = (header[3] & EndiannessMask);
+    FAIL_IF(endianness != LittleEndian, ArchiveBadFlags());
+    m_has_crc = (header[3] & ChecksumMask) == ChecksumCrc32;
+
+    // add header to CRC checksum
+    if (m_has_crc)
+        m_crc(header);
+
+    // SIZE:var
+    group_buffer().size = read_leb128<size_t>();
 }
 
 
 void BinaryReader::read_footer()
 {
-    uint32_t crc = 0;
-    m_stream.read((char*)&crc, sizeof(crc));
-    FAIL_IF(crc != m_crc, Error::BadChecksum)
+    // read chunks until Control/Metadata
+    for (;;) {
+        if (group_buffer().size == 0) {
+            if (m_has_crc)
+                throw ArchiveMissingChecksum();
+            return;  // no footer
+        }
+        uint8_t b;
+        read_with_crc(b);
+        const uint8_t chunk_key = b & KeyMask;
+        const uint8_t chunk_type = b & TypeMask;
+        if (chunk_type != Type::Control || chunk_key != Metadata) {
+            skip_unknown_chunk(chunk_type, chunk_key);
+            continue;
+        }
+        break;  // footer found
+    }
+    // read metadata chunks
+    while (group_buffer().size != 0) {
+        uint8_t b;
+        read_with_crc(b);
+        const uint8_t chunk_key = b & KeyMask;
+        const uint8_t chunk_type = b & TypeMask;
+        if (m_has_crc && chunk_key == 1 && chunk_type == UInt32) {
+            // stop feeding CRC
+            m_has_crc = false;
+            // check CRC
+            uint32_t stored_crc = 0;
+            read_with_crc(stored_crc);
+            FAIL_IF(stored_crc != m_crc.as_uint32(), ArchiveBadChecksum());
+            continue;
+        }
+        // unknown chunk
+        skip_unknown_chunk(chunk_type, chunk_key);
+    }
 }
 
 
-void BinaryReader::read_with_crc(uint8_t* buffer, size_t length)
+void BinaryReader::read_with_crc(std::byte* buffer, size_t length)
 {
+    if (length > group_buffer().size)
+        throw ArchiveUnexpectedEnd();
+    group_buffer().size -= length;
     m_stream.read((char*)buffer, length);
-    m_crc = (uint32_t) crc32(m_crc, buffer, (uInt)length);
-    m_pos += length;
+    if (m_has_crc)
+        m_crc.feed(buffer, length);
 }
 
 
+std::byte BinaryReader::read_byte_with_crc()
+{
+    if (m_group_stack.back().buffer.size-- == 0)
+        throw ArchiveUnexpectedEnd();
+    char c = m_stream.get();
+    if (m_has_crc)
+        m_crc(c);
+    return (std::byte) c;
+}
+
+
+std::byte BinaryReader::peek_byte()
+{
+    if (m_stream.eof())
+        throw ArchiveUnexpectedEnd();
+    return (std::byte) m_stream.peek();
+}
+
+
+/*
 void BinaryReader::read_type_len(uint8_t& type, uint64_t& len)
 {
     // TYPE:3 FLAG:1 LEN:4
@@ -118,34 +179,53 @@ void BinaryReader::read_type_len(uint8_t& type, uint64_t& len)
         len |= uint64_t(le32toh(len3)) << 34;
     }
 }
-
-
-const char* BinaryReader::read_key()
-{
-    auto startpos = m_pos;
-    uint8_t len = 0;
-    read_with_crc(len);
-    if (len & 0x80) {
-        // Read offset, lookup prev key
-        uint8_t len1 = 0;
-        read_with_crc(len1);
-        auto offset = ((len1 << 7) | (len & 0x7f));
-        auto key_pos = startpos - offset;
-        return m_pos_to_key[key_pos].c_str();
-    }
-    // Read key
-    std::string key(len, 0);
-    read_with_crc((uint8_t*)&key[0], len);
-    // Save key
-    auto& slot = m_pos_to_key[startpos];
-    slot = std::move(key);
-    return slot.c_str();
-}
+*/
 
 
 void BinaryReader::read(std::string& value)
 {
-    read_with_crc((uint8_t*)&value[0], value.size());
+    read_with_crc((std::byte*)&value[0], value.size());
+}
+
+
+void BinaryReader::skip_unknown_chunk(uint8_t type, uint8_t key)
+{
+    size_t length;
+    if (type_has_len(type)) {
+        length = read_leb128<size_t>();
+    } else {
+        length = size_by_type(type);
+    }
+    auto buf = std::make_unique<std::byte[]>(length);
+    read_with_crc(buf.get(), length);
+    if (m_unknown_chunk_cb) {
+        m_unknown_chunk_cb(type, key, buf.get(), length);
+    }
+}
+
+
+void BinaryReader::enter_group(uint8_t key)
+{
+    auto chunk_type = read_chunk_head(key);
+    size_t chunk_length = 0;  // ChunkNotFound -> size 0
+    if (chunk_type == Type::Master) {
+        chunk_length = read_leb128<size_t>();
+    } else if (chunk_type != ChunkNotFound)
+        throw ArchiveBadChunkType();
+    if (chunk_length > m_group_stack.size())
+        throw ArchiveUnexpectedEnd();
+    group_buffer().size -= chunk_type;
+    m_group_stack.emplace_back();
+    group_buffer().size = chunk_length;
+}
+
+
+void BinaryReader::leave_group(uint8_t key)
+{
+    auto chunk_type = read_chunk_head(ChunkNotFound);
+    (void) chunk_type;
+    assert(chunk_type == ChunkNotFound && group_buffer().size == 0);
+    m_group_stack.pop_back();
 }
 
 

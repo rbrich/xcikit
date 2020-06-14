@@ -5,78 +5,86 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "BinaryWriter.h"
+#include <xci/data/coding/leb128.h>
 
 namespace xci::data {
 
 
-void BinaryWriter::write_header()
+void BinaryWriter::write_content()
 {
-    // reset state
-    reset();
-    m_terminated = false;
-
-    // MAGIC:16
-    uint8_t magic[2] = {Magic_Byte0, Magic_Byte1};
-    write(magic);
-
-    // VERSION:8
-    uint8_t version = Version;
-    write(version);
-
-    // FLAGS:8
     uint8_t flags = 0;
+
 #if BYTE_ORDER == LITTLE_ENDIAN
-    flags |= Flags_LittleEndian;
+    flags |=LittleEndian;
 #endif
 #if BYTE_ORDER == BIG_ENDIAN
-    flags |= Flags_BigEndian;
+    flags |= BigEndian;
 #endif
-    write(flags);
-}
 
+    if (m_crc32)
+        flags |= ChecksumCrc32;
 
-void BinaryWriter::terminate_content()
-{
-    if (m_terminated)
-        return;
-    // TERMINATOR:8
-    write(uint8_t(Type::Terminator | 0xf));
+    // Prepare header:
+    // 4 bytes fixed header: MAGIC:16, VERSION:8, FLAGS:8
+    // 6 bytes for SIZE in LEB128 => up to 4TB of file content
+    uint8_t header[10] {
+        Magic0, Magic1,
+        Version,
+        flags
+    };
+
+    uint8_t* iter = header + 4;
     assert(is_root_group());
+    assert(group_buffer().size() < 0x400'0000'0000LLU);  // up to 4TB
+    encode_leb128(iter, group_buffer().size());
+
+    const size_t header_size = iter - header;
+    assert(header_size <= 10);
+
+    // Write header
+    m_stream.write((const char*)header, header_size);
+
+    // Write content
+    m_stream.write((const char*)group_buffer().data(), group_buffer().size());
+
+    if (!m_crc32)
+        return;  // no checksum -> we're done
+
+    // CRC-32: header + content
+    Crc32 crc;
+    crc.feed((const std::byte*)header, header_size);
+    crc(group_buffer());
+
+    // Write metadata intro (included in checksum)
+    const uint8_t meta_intro = (Type::Control | 0);
+    m_stream.put(meta_intro);
+    crc(meta_intro);
+
+    // Write checksum
+    const uint8_t crc_intro = (Type::UInt32 | 1);
+    m_stream.put(crc_intro);
+    crc(crc_intro);
+    m_stream.write((const char*)crc.data(), crc.size());
 }
 
 
-void BinaryWriter::write_crc32(uint32_t crc)
+void BinaryWriter::enter_group(uint8_t key)
 {
-    // CRC:32
-    write(uint8_t(Type::UInt32 | 1));
-    write(crc);
+    m_group_stack.emplace_back();
 }
 
 
-void BinaryWriter::write(const std::byte* buffer, size_t length)
+void BinaryWriter::leave_group(uint8_t key)
 {
-    m_stream.write((const char*)buffer, length);
-}
-
-
-off_t BinaryWriter::enter(uint8_t key)
-{
+    auto inner_buffer = std::move(group_buffer());
+    m_group_stack.pop_back();
+    // TYPE:4, KEY:4
     write(uint8_t(Type::Master | key));
-    write(uint32_t{});  // LEN:32
-    return m_stream.tellp();
-}
-
-
-void BinaryWriter::leave(uint8_t key, off_t begin)
-{
-    // seek back and write length of the content
-    auto end = m_stream.tellp();
-    auto length = end - begin;
-    m_stream.seekp(begin - 4);
-    write(uint32_t(length));  // LEN:32
-    // write terminator
-    m_stream.seekp(end);
-    write(uint8_t(Type::Terminator | key));
+    // LEN:32
+    auto out_iter = buffer_inserter();
+    encode_leb128<size_t, decltype(out_iter), std::byte>(out_iter, inner_buffer.size());
+    // VALUE
+    write(inner_buffer.data(), inner_buffer.size());
 }
 
 

@@ -24,7 +24,10 @@ public:
     Crc32();
 
     template<typename T> requires std::is_pod_v<T>
-    uint32_t operator() (const T& data) { feed(&data, sizeof(data)); return m_crc; }
+    uint32_t operator() (const T& data) { feed((const std::byte*)&data, sizeof(data)); return m_crc; }
+
+    template<typename T, size_t size> requires std::is_pod_v<T> && (sizeof(T) == 1)
+    uint32_t operator() (const T (&data)[size]) { feed((const std::byte*)data, size); return m_crc; }
 
     template<typename T> requires requires(T t) { t.data(); t.size(); }
     uint32_t operator() (const T& buffer) { feed(buffer.data(), buffer.size()); return m_crc; }

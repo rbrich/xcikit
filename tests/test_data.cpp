@@ -123,7 +123,7 @@ TEST_CASE( "BinaryWriter", "[serialization]" )
 #endif
 
     SECTION( "empty archive" ) {
-        expected.append(1, '\xFF');
+        expected.append(1, '\x00');  // SIZE=0
         {
             BinaryWriter writer(buf);
         }
@@ -131,6 +131,8 @@ TEST_CASE( "BinaryWriter", "[serialization]" )
     }
 
     SECTION( "POD values" ) {
+        expected.append(1, '\x12');  // SIZE=18 (5+9+1+1+2)
+
         uint32_t x = 123;
         expected.append(1, '\x40');  // TYPE=4, KEY=0
         expected.append((char*)&x, 4);
@@ -149,8 +151,6 @@ TEST_CASE( "BinaryWriter", "[serialization]" )
         expected.append(1, '\x34');  // TYPE=3, KEY=4
         expected.append((char*)&z, 1);
 
-        expected.append(1, '\xFF');  // Terminator
-
         {
             BinaryWriter writer(buf);
             writer(x, f, b, nullptr, z);
@@ -161,10 +161,11 @@ TEST_CASE( "BinaryWriter", "[serialization]" )
     SECTION( "Record" ) {
         Record rec;
 
+        // content size
+        expected.append(1, '\x08');  // SIZE=8 (6 + 2)
+
         // group start
-        expected.append(1, '\xE0');  // TYPE=14, KEY=0
-        uint32_t len = 6;
-        expected.append((char*)&len, 4);
+        expected.append("\xE0\x06");  // TYPE=14, KEY=0; LEN=6
 
         // int32_t id
         expected.append(1, '\x60');  // TYPE=6, KEY=0
@@ -173,11 +174,6 @@ TEST_CASE( "BinaryWriter", "[serialization]" )
         // bool flag
         expected.append(1, '\x11');  // TYPE=1, KEY=1
 
-        // group end
-        expected.append(1, '\xF0');  // TYPE=15, KEY=0
-
-        expected.append(1, '\xFF');  // Terminator
-
         {
             BinaryWriter writer(buf);
             writer(rec);
@@ -185,44 +181,37 @@ TEST_CASE( "BinaryWriter", "[serialization]" )
         CHECK(buf.str() == expected);
     }
 
-    SECTION( "MasterRecord" ) {
+    SECTION( "MasterRecord + CRC-32" ) {
         MasterRecord rec;
 
+        // add CRC32 to flags
+        expected.back() |= 4;
+
+        // content size
+        expected.append(1, '\x12');  // SIZE=18 (16 + 2)
+
         // MasterRecord: group start
-        expected.append(1, '\xE0');  // TYPE=14, KEY=0
-        uint32_t len = 2 * 12;
-        expected.append((char*)&len, 4);
+        expected.append("\xE0\x10");  // TYPE=14, KEY=0; LEN=16 (2*8)
 
         // rec1
-        len = 6;  // + 4 size, + 2 begin/end
-        expected.append(1, '\xE0');
-        expected.append((char*)&len, 4);
-        expected.append(1, '\x60');
+        expected.append("\xE0\x06\x60");
         expected.append((char*)&rec.rec1.id, 4);
-        expected.append("\x11\xF0");
+        expected.append("\x11");
 
         // rec2
-        len = 6;
-        expected.append(1, '\xE1');
-        expected.append((char*)&len, 4);
-        expected.append(1, '\x60');
+        expected.append("\xE1\x06\x60");
         expected.append((char*)&rec.rec2.id, 4);
-        expected.append("\x21\xF1");
+        expected.append("\x21");  // NOLINT
 
-        // MasterRecord: group end, file end
-        expected.append(1, '\xF0');  // TYPE=15, KEY=0
-        expected.append(1, '\xFF');  // Terminator
+        // Control: metadata (expecting CRC32)
+        expected.append("\xF0");
 
-
-        BinaryWriter writer(buf);
-        writer(rec);
-        writer.terminate_content();
+        {
+            BinaryWriter writer(buf, true);
+            writer(rec);
+        }
 
         Crc32 crc;
-        crc(buf.str());
-        writer.write_crc32(crc.as_uint32());
-
-        crc.reset();
         crc.feed(expected.data(), expected.size());
         expected.append(1, '\x41');
         expected.append((char*)&crc, sizeof(crc));
@@ -236,27 +225,34 @@ TEST_CASE( "BinaryReader", "[serialization]" )
 {
     std::stringstream buf("");
 
-    auto add_crc = [&buf] {
+    // header
+    #if BYTE_ORDER == LITTLE_ENDIAN
+        std::string input = "\xCB\xDF\x30\x01";
+    #else
+        std::string input = "\xCB\xDF\x30\x02";
+    #endif
+
+    auto add_crc = [&input] {
+        input.append("\xF0");  // Control: metadata (expecting CRC32)
         Crc32 crc;
-        crc.feed(buf.str().data(), buf.str().size());
-        buf.seekp(0, std::ios::seekdir::end);
-        buf.write((char*)&crc, sizeof(crc));
+        crc.feed(input.data(), input.size());
+        input.append((char*)&crc, sizeof(crc));
     };
 
     SECTION( "empty archive" ) {
-        buf.str("\xCB\xDF\x30\x01\xFF");
-        add_crc();
+        input.append(1, '\x00');  // SIZE=0
+        buf.str(input);
 
         uint32_t x = 123;
         try {
             BinaryReader reader(buf);
             reader(x);
-            CHECK(x == 123);  // not changed
-            reader.finish_and_check_crc();
+            reader.finish_and_check();
         } catch (const ArchiveError& e) {
             INFO(e.what());
             FAIL();
         }
+        CHECK(x == 123);  // not changed
         CHECK(buf);
     }
 
