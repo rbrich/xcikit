@@ -40,7 +40,7 @@ concept TypeWithArchiveSupport = requires(T& v, uint8_t k, TArchive& ar) { ar.ad
 template <typename T>
 struct BinaryKeyValue {
     uint8_t key;
-    const T& value;
+    T& value;
     const char* name = nullptr;
 };
 
@@ -105,7 +105,7 @@ public:
     BinaryBase() { m_group_stack.emplace_back(); }
 
     template<typename ...Args>
-    void operator() (Args... args) {
+    void operator() (Args&... args) {
         ((void) apply(args), ...);
     }
 
@@ -189,6 +189,27 @@ protected:
 
         ChunkNotFound = 0xFF,
     };
+
+    template<class T> requires std::is_same_v<T, std::byte> || (std::is_integral_v<T> && sizeof(T) == 1)
+    static constexpr Type to_chunk_type() { return Type::Byte; }
+
+    template<class T> requires std::is_same_v<T, std::uint32_t>
+    static constexpr Type to_chunk_type() { return Type::UInt32; }
+
+    template<class T> requires std::is_same_v<T, std::uint64_t>
+    static constexpr Type to_chunk_type() { return Type::UInt64; }
+
+    template<class T> requires std::is_same_v<T, std::int32_t>
+    static constexpr Type to_chunk_type() { return Type::Int32; }
+
+    template<class T> requires std::is_same_v<T, std::int64_t>
+    static constexpr Type to_chunk_type() { return Type::Int64; }
+
+    template<class T> requires std::is_same_v<T, float>
+    static constexpr Type to_chunk_type() { return Type::Float32; }
+
+    template<class T> requires std::is_same_v<T, double>
+    static constexpr Type to_chunk_type() { return Type::Float64; }
 
     enum ControlSubtype: uint8_t {
         Metadata    = 0,

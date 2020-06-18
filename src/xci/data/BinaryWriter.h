@@ -46,8 +46,16 @@ public:
     explicit BinaryWriter(std::ostream& os, bool crc32 = false) : m_stream(os), m_crc32(crc32) {}
     ~BinaryWriter() { write_content(); }
 
-    void add(uint8_t key, std::nullptr_t) {
-        write(uint8_t(Type::Null | key));
+    // raw and smart pointers
+    template <typename T>
+    requires std::is_pointer_v<T> || requires { typename T::pointer; }
+    void add(uint8_t key, T& value) {
+        if (!value) {
+            write(uint8_t(Type::Null | key));
+            return;
+        }
+        using ElemT = typename std::pointer_traits<T>::element_type;
+        apply(BinaryKeyValue<ElemT>{key, *value});
     }
 
     void add(uint8_t key, bool value) {
@@ -55,39 +63,10 @@ public:
         write(uint8_t(type | key));
     }
 
-    template <class T> requires ( std::is_same_v<T, std::byte> || (std::is_integral_v<T> && sizeof(T) == 1) )
+    template <typename T>
+    requires requires() { to_chunk_type<T>(); }
     void add(uint8_t key, T value) {
-        write(uint8_t(Type::Byte | key));
-        write(value);
-    }
-
-    void add(uint8_t key, uint32_t value) {
-        write(uint8_t(Type::UInt32 | key));
-        write(value);
-    }
-
-    void add(uint8_t key, uint64_t value) {
-        write(uint8_t(Type::UInt64 | key));
-        write(value);
-    }
-
-    void add(uint8_t key, int32_t value) {
-        write(uint8_t(Type::Int32 | key));
-        write(value);
-    }
-
-    void add(uint8_t key, int64_t value) {
-        write(uint8_t(Type::Int64 | key));
-        write(value);
-    }
-
-    void add(uint8_t key, float value) {
-        write(uint8_t(Type::Float32 | key));
-        write(value);
-    }
-
-    void add(uint8_t key, double value) {
-        write(uint8_t(Type::Float64 | key));
+        write(uint8_t(to_chunk_type<T>() | key));
         write(value);
     }
 

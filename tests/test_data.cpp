@@ -145,6 +145,7 @@ TEST_CASE( "BinaryWriter", "[serialization]" )
         expected.append(1, '\x22');  // TYPE=2, KEY=2
 
         // nullptr
+        int* n = nullptr;
         expected.append(1, '\x03');  // TYPE=0, KEY=3
 
         std::byte z {42};
@@ -153,7 +154,7 @@ TEST_CASE( "BinaryWriter", "[serialization]" )
 
         {
             BinaryWriter writer(buf);
-            writer(x, f, b, nullptr, z);
+            writer(x, f, b, n, z);
         }
         CHECK(buf.str() == expected);
     }
@@ -188,7 +189,7 @@ TEST_CASE( "BinaryWriter", "[serialization]" )
         expected.back() |= 4;
 
         // content size
-        expected.append(1, '\x12');  // SIZE=18 (16 + 2)
+        expected.append(1, '\x18');  // SIZE=18 (16 + 2 + 6)
 
         // MasterRecord: group start
         expected.append("\xE0\x10");  // TYPE=14, KEY=0; LEN=16 (2*8)
@@ -212,8 +213,8 @@ TEST_CASE( "BinaryWriter", "[serialization]" )
         }
 
         Crc32 crc;
-        crc.feed(expected.data(), expected.size());
         expected.append(1, '\x41');
+        crc.feed(expected.data(), expected.size());
         expected.append((char*)&crc, sizeof(crc));
 
         CHECK(buf.str() == expected);
@@ -232,13 +233,6 @@ TEST_CASE( "BinaryReader", "[serialization]" )
         std::string input = "\xCB\xDF\x30\x02";
     #endif
 
-    auto add_crc = [&input] {
-        input.append("\xF0");  // Control: metadata (expecting CRC32)
-        Crc32 crc;
-        crc.feed(input.data(), input.size());
-        input.append((char*)&crc, sizeof(crc));
-    };
-
     SECTION( "empty archive" ) {
         input.append(1, '\x00');  // SIZE=0
         buf.str(input);
@@ -256,19 +250,118 @@ TEST_CASE( "BinaryReader", "[serialization]" )
         CHECK(buf);
     }
 
-    SECTION( "POD values (in order)" ) {
+    SECTION( "POD values" ) {
+        // feed input
+        input.append(1, '\x12');  // SIZE=18 (5+9+1+1+2)
 
-    }
+        uint32_t in_x = 123;
+        input.append(1, '\x40');  // TYPE=4, KEY=0
+        input.append((char*)&in_x, 4);
 
-    SECTION( "POD values (out of order)" ) {
+        double in_f = 3.14;
+        input.append(1, '\x91');  // TYPE=9, KEY=1
+        input.append((char*)&in_f, 8);
 
+        input.append(1, '\x22');  // TYPE=2 (true), KEY=2
+        input.append(1, '\x03');  // TYPE=0 (null), KEY=3
+
+        std::byte in_z {42};
+        input.append(1, '\x34');  // TYPE=3, KEY=4
+        input.append((char*)&in_z, 1);
+        buf.str(input);
+
+        // read values from input
+        uint32_t x = 0;
+        double f = 0.0;
+        bool b = false;
+        int *n = nullptr;
+        std::byte z {0};
+        try {
+            BinaryReader reader(buf);
+            reader(x, f, b, n, z);
+            reader.finish_and_check();
+        } catch (const ArchiveError& e) {
+            INFO(e.what());
+            FAIL();
+        }
+        CHECK(x == in_x);
+        CHECK(f == in_f);
+        CHECK(b);
+        CHECK(z == in_z);
+        CHECK(buf);
     }
 
     SECTION( "Record" ) {
+        Record rec = {91, true};
 
+        // feed input
+        input.append("\x08\xE0\x06\x60", 4);  // SIZE=8, group 0 start, LEN=6, chunk Int32/0
+        input.append((char*)&rec.id, 4);
+        input.append(1, '\x21');  // flag = true
+        buf.str(input);
+
+        // read record from input
+        rec = {0, false};
+        try {
+            BinaryReader reader(buf);
+            reader(rec);
+            reader.finish_and_check();
+        } catch (const ArchiveError& e) {
+            INFO(e.what());
+            FAIL();
+        }
+        CHECK(rec.id == 91);
+        CHECK(rec.flag);
+        CHECK(buf);
     }
 
-    SECTION( "MasterRecord" ) {
+    SECTION( "MasterRecord + CRC-32" ) {
+        int32_t id1 = 111;
+        int32_t id2 = -222;
 
+        // add CRC32 to flags
+        input.back() |= 4;
+
+        // content size
+        input.append(1, '\x18');  // SIZE=18 (16 + 2 + 6)
+
+        // MasterRecord: group start
+        input.append("\xE0\x10");  // TYPE=14, KEY=0; LEN=16 (2*8)
+
+        // rec1
+        input.append("\xE0\x06\x60", 3);
+        input.append((char*)&id1, 4);
+        input.append("\x11");  // flag = false
+
+        // rec2
+        input.append("\xE1\x06\x60", 3);
+        input.append((char*)&id2, 4);
+        input.append("\x21");  // NOLINT; flag = true
+
+        // Control: metadata, CRC32 head
+        input.append("\xF0\x41", 2);
+
+        Crc32 crc;
+        crc.feed(input.data(), input.size());
+        input.append((char*)&crc, sizeof(crc));
+
+        buf.str(input);
+
+        // read record from input
+        MasterRecord rec;
+        try {
+            BinaryReader reader(buf);
+            reader(rec);
+            reader.finish_and_check();
+        } catch (const ArchiveError& e) {
+            INFO(e.what());
+            FAIL();
+        }
+        CHECK(rec.rec1.id == id1);
+        CHECK(!rec.rec1.flag);
+        CHECK(rec.rec2.id == id2);
+        CHECK(rec.rec2.flag);
+
+        CHECK(buf);
     }
 }

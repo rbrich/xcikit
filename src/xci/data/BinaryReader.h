@@ -1,17 +1,8 @@
-// BinaryReader.h created on 2019-03-14, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// BinaryReader.h created on 2019-03-14 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019, 2020 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_DATA_BINARY_READER_H
 #define XCI_DATA_BINARY_READER_H
@@ -26,6 +17,7 @@
 #include <iterator>
 #include <map>
 #include <functional>
+#include <memory>
 
 namespace xci::data {
 
@@ -40,10 +32,20 @@ public:
 
     explicit BinaryReader(std::istream& is) : m_stream(is) { read_header(); }
 
-    void add(uint8_t key, std::nullptr_t) {
-        const auto chunk_type = read_chunk_head(key);
-        if (chunk_type != ChunkNotFound && chunk_type != Type::Null)
-            throw ArchiveBadChunkType();
+    template <typename T>
+    requires std::is_pointer_v<T> || requires { typename T::pointer; }
+    void add(uint8_t key, T& value) {
+        const auto chunk_type = peek_chunk_head(key);
+        if (chunk_type == ChunkNotFound)
+            return;
+        if (chunk_type == Type::Null) {
+            (void) read_chunk_head(key);
+            value = nullptr;
+            return;
+        }
+        using ElemT = typename std::pointer_traits<T>::element_type;
+        value = new ElemT{};
+        apply(BinaryKeyValue<ElemT>{key, *value});
     }
 
     void add(uint8_t key, bool& value) {
@@ -61,58 +63,11 @@ public:
         throw ArchiveBadChunkType();
     }
 
-    template <class T> requires ( std::is_same_v<T, std::byte> || (std::is_integral_v<T> && sizeof(T) == 1) )
+    template <typename T>
+    requires requires() { to_chunk_type<T>(); }
     void add(uint8_t key, T& value) {
         const auto chunk_type = read_chunk_head(key);
-        if (chunk_type == Type::Byte)
-            read_with_crc(value);
-        else if (chunk_type != ChunkNotFound)
-            throw ArchiveBadChunkType();
-    }
-
-    void add(uint8_t key, uint32_t& value) {
-        const auto chunk_type = read_chunk_head(key);
-        if (chunk_type == Type::UInt32)
-           read_with_crc(value);
-        else if (chunk_type != ChunkNotFound)
-            throw ArchiveBadChunkType();
-    }
-
-    void add(uint8_t key, uint64_t& value) {
-        const auto chunk_type = read_chunk_head(key);
-        if (chunk_type == Type::UInt64)
-            read_with_crc(value);
-        else if (chunk_type != ChunkNotFound)
-            throw ArchiveBadChunkType();
-    }
-
-    void add(uint8_t key, int32_t& value) {
-        const auto chunk_type = read_chunk_head(key);
-        if (chunk_type == Type::Int32)
-            read_with_crc(value);
-        else if (chunk_type != ChunkNotFound)
-            throw ArchiveBadChunkType();
-    }
-
-    void add(uint8_t key, int64_t& value) {
-        const auto chunk_type = read_chunk_head(key);
-        if (chunk_type == Type::Int64)
-            read_with_crc(value);
-        else if (chunk_type != ChunkNotFound)
-            throw ArchiveBadChunkType();
-    }
-
-    void add(uint8_t key, float& value) {
-        const auto chunk_type = read_chunk_head(key);
-        if (chunk_type == Type::Float32)
-            read_with_crc(value);
-        else if (chunk_type != ChunkNotFound)
-            throw ArchiveBadChunkType();
-    }
-
-    void add(uint8_t key, double& value) {
-        const auto chunk_type = read_chunk_head(key);
-        if (chunk_type == Type::Float64)
+        if (chunk_type == to_chunk_type<T>())
             read_with_crc(value);
         else if (chunk_type != ChunkNotFound)
             throw ArchiveBadChunkType();
@@ -123,61 +78,6 @@ public:
 
     void finish_and_check() { read_footer(); }
 
-/*
-    template <class T, typename std::enable_if_t<meta::isRegistered<T>(), int> = 0>
-    void read(T& o) {
-        uint8_t type = 0;
-        uint64_t len = 0;
-        for (;;) {
-            read_type_len(type, len);
-
-            // Process end of member object (this is special, it has no key)
-            if (type == Type_Master && len == Master_Leave) {
-                --m_depth;
-                break;
-            }
-
-            const auto * key = read_key();
-            switch (type) {
-                case Type_Master:
-                    // enter member object (read a sub-object)
-                    if (len == Master_Enter) {
-                        ++m_depth;
-                        meta::doForAllMembers<T>(
-                            [this, key, &o](const auto& member) {
-                                if (!strcmp(key, member.getName())) {
-                                    this->read(member.getRef(o));
-                                }
-                            });
-                    } else {
-                        m_stream.setstate(std::ios::failbit);
-                        m_error = Error::BadFieldType;
-                        return;
-                    }
-                    break;
-                case Type_Float:
-                case Type_Integer:
-                    meta::doForAllMembers<T>(
-                            [this, key, &o](const auto& member) {
-                                if (!strcmp(key, member.getName())) {
-                                    this->read(member.getRef(o));
-                                }
-                            });
-                    break;
-                case Type_String: {
-                    std::string value(len, 0);
-                    read(value);
-                    meta::setMemberValue<std::string>(o, key, std::move(value));
-                    break;
-                }
-                default:
-                    m_stream.setstate(std::ios::failbit);
-                    m_error = Error::BadFieldType;
-                    return;
-            }
-        }
-    }
-*/
     void read(std::string& value);
 
     template <class T, typename std::enable_if_t<meta::isRegistered<typename T::value_type>(), int> = 0>
@@ -236,8 +136,7 @@ private:
     uint8_t read_chunk_head(uint8_t key) {
         // Read ahead until key matches
         while (group_buffer().size != 0) {
-            uint8_t b;
-            read_with_crc(b);
+            auto b = (uint8_t) read_byte_with_crc();
             const uint8_t chunk_key = b & KeyMask;
             const uint8_t chunk_type = b & TypeMask;
             if (key != chunk_key) {
@@ -245,6 +144,23 @@ private:
                 continue;
             }
             // success, pointer is at LEN or VALUE
+            return chunk_type;
+        }
+        return ChunkNotFound;
+    }
+
+    uint8_t peek_chunk_head(uint8_t key) {
+        // Read ahead until key matches
+        while (group_buffer().size != 0) {
+            auto b = (uint8_t) peek_byte();
+            const uint8_t chunk_key = b & KeyMask;
+            const uint8_t chunk_type = b & TypeMask;
+            if (key != chunk_key) {
+                (void) read_byte_with_crc();
+                skip_unknown_chunk(chunk_type, chunk_key);
+                continue;
+            }
+            // success, pointer is still at KEY/TYPE
             return chunk_type;
         }
         return ChunkNotFound;
