@@ -95,18 +95,18 @@ abstraction layer, but just provides what is available elsewhere.
 
 Technologies:
 
-- C++17 as main programming language
+- C++20 as main programming language
 - CMake as build system
 - Conan as dependency manager
 
 Tested compilers:
 
-- GCC 8.3 (Debian Buster)
-- AppleClang 11 (Travis CI)
+- GCC 10 (Debian 11 Bullseye)
+- Clang 10 (MacOS via Homebrew)
 
-Any Unix-like OS with C++17 compliant compiler should work. There is no direct Windows support,
+Any Unix-like OS with C++20 compliant compiler should work. There is no direct Windows support,
 but it's possible that the project will compile with some layer of Unix compatibility, e.g. WSL. 
-
+Some of the libraries already compile natively, see [Porting to Windows](#porting-to-windows).
 
 Contents of the libraries
 -------------------------
@@ -152,9 +152,11 @@ Core utilities. These have little or no dependencies. Mostly just stdlib + OS AP
 Fills gaps between different systems and compilers.
 
 - `bit.h` - C++20 `bit_cast` backport (+ custom `bit_read`)
+- `dl.h` - `dlopen` etc. for Windows
 - `endian.h` - Linux-like macros provided for MacOS
-- `macros.h` - C++17 `[[fallthrough]]` missing in GCC 6.3
-- `string_view.h` - C++17 `string_view` missing in GCC 6.3, but it has `experimental` impl
+- `macros.h` - `FALLTHROUGH`, `UNREACHABLE`, `UNUSED`
+- `mman.h` - delegates to `<sys/mman.h>` or its replacement on Windows
+- `unistd.h` - Minimal Unix compatibility header for Windows
 - `utility.h` - C++17 `byte` missing in GCC 6.3
 
 

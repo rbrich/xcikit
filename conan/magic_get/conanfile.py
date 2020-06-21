@@ -13,8 +13,12 @@ class MagicGetConan(ConanFile):
     author = "Radek Brich"
     generators = "cmake"
 
+    exports_sources = ["is_aggregate_initializable_n.patch"]
+    _source_dir = f"{name}-{version}"
+
     def source(self):
         tools.get(f"{self.homepage}/archive/{self.version}.tar.gz")
+        tools.patch(patch_file="is_aggregate_initializable_n.patch", base_path=self._source_dir)
 
     def package(self):
-        self.copy("*", src=f"{self.name}-{self.version}/include", dst="include")
+        self.copy("*", src=f"{self._source_dir}/include", dst="include")

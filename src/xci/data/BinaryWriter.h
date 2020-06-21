@@ -11,6 +11,7 @@
 #include <xci/compat/endian.h>
 #include <xci/compat/bit.h>
 #include <xci/data/coding/leb128.h>
+#include <memory>
 #include <ostream>
 
 namespace xci::data {

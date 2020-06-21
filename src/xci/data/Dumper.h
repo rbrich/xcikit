@@ -13,6 +13,7 @@
 
 #include <iostream>
 #include <vector>
+#include <memory>
 
 namespace xci::data {
 
