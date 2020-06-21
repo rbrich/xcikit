@@ -87,7 +87,7 @@ for serialization / deserialization of hierarchical data structures.
 Think of Json and Google Protobuf, but without the complexity and bloat.
 
 All of the above use `xci-core`, which contains miscellaneous utilities,
-This can also be used separately. 
+This can also be used separately.
 
 There is also header-only `compat` library, which is used to hide
 differences between compilers and OS's. It does not implement any
@@ -105,7 +105,7 @@ Tested compilers:
 - Clang 10 (MacOS via Homebrew)
 
 Any Unix-like OS with C++20 compliant compiler should work. There is no direct Windows support,
-but it's possible that the project will compile with some layer of Unix compatibility, e.g. WSL. 
+but it's possible that the project will compile with some layer of Unix compatibility, e.g. WSL.
 Some of the libraries already compile natively, see [Porting to Windows](#porting-to-windows).
 
 Contents of the libraries
@@ -195,9 +195,9 @@ This should be run once to download missing files etc.:
 The complete build process is handled by build script:
 
     ./build.sh
-    
+
 When finished, you'll find the temporary build files in `build/`
-and installation artifacts in `artifacts/`. 
+and installation artifacts in `artifacts/`.
 
 Both scripts are incremental, so it's safe to run them repeatably.
 They do only the required work and re-use what was done previously.
@@ -221,13 +221,13 @@ Detailed build steps (these are examples, adjust parameters as needed):
 
     # Adjust CMake configuration
     ccmake ..
-    
+
     # Build
     cmake --build .
 
     # Run unit tests
     cmake --build . --target test
-    
+
     # Install (default prefix is /usr/local)
     cmake --build . --target install
 
@@ -252,7 +252,7 @@ How to build:
 
 2) Open *Git Bash* and run `./bootstrap.sh`
 
-3) Still in *Git Bash*, run `./build.sh -D XCI_DATA=0 -D XCI_GRAPHICS=0`
+3) Still in *Git Bash*, run `./build.sh -D XCI_GRAPHICS=0`
 
 4) There might be errors. These are why the title says "Porting", not "How to build"...
 
@@ -268,13 +268,13 @@ then use installed `xcikitConfig.cmake` in your project's
 
     cmake_minimum_required(VERSION 3.7)
     project(example CXX)
-    
+
     set(CMAKE_CXX_STANDARD 17)
     set(CMAKE_POSITION_INDEPENDENT_CODE ON)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
 
     find_package(xcikit REQUIRED)
-    
+
     add_executable(example src/main.cpp)
     target_link_libraries(example xci-widgets)
 
@@ -290,12 +290,12 @@ Add xcikit as dependency to `conanfile.txt`:
 
     [requires]
     xcikit/0.1@rbrich/stable
-    
+
     [generators]
     cmake_paths
 
 Then include generated `conan_paths.cmake` from project's `CMakeLists.txt`:
-    
+
     if (EXISTS ${CMAKE_BINARY_DIR}/conan_paths.cmake)
         include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
     endif()

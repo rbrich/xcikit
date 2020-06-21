@@ -8,11 +8,12 @@ BUILD_TYPE="Release"
 GENERATOR=
 JOBS_ARGS=()
 CMAKE_ARGS=()
+CONAN_ARGS=()
 CSI=$'\x1b['
 
 print_usage()
 {
-    echo "Usage: ./build.sh [<phase>, ...] [-G <cmake_generator>] [-j <jobs>] [-D <cmake_def>, ...] [--debug|--minsize] [--unity] [--tidy]"
+    echo "Usage: ./build.sh [<phase>, ...] [-G <cmake_generator>] [-j <jobs>] [-D <cmake_def>, ...] [--debug|--minsize] [--unity] [--tidy] [--update]"
     echo "Where: <phase> = clean | deps | config | build | test | install | package (default: deps..install)"
     echo "       <cmake_generator> = \"Unix Makefiles\" | Ninja | ... (default: Ninja if available, Unix Makefiles otherwise)"
 }
@@ -79,6 +80,9 @@ while [[ $# -gt 0 ]] ; do
         --tidy )
             CMAKE_ARGS+=(-D'ENABLE_TIDY=1')
             shift 1 ;;
+        --update )
+            CONAN_ARGS+=('--update')
+            shift 1 ;;
         * )
             printf 'Error: Unknown option: %s\n\n' "$1"
             print_usage
@@ -117,7 +121,6 @@ mkdir -p "${BUILD_DIR}"
 
 if phase deps; then
     header "Install Dependencies"
-    CONAN_ARGS=()
     if [[ -n "${MACOSX_DEPLOYMENT_TARGET}" ]]; then
         CONAN_ARGS+=(-s "os.version=${MACOSX_DEPLOYMENT_TARGET}")
     fi

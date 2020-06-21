@@ -1,4 +1,6 @@
-from conans import ConanFile, CMake
+from conans import ConanFile, CMake, tools
+import tempfile
+import textwrap
 
 
 class XcikitConan(ConanFile):
@@ -10,14 +12,13 @@ class XcikitConan(ConanFile):
     description = "Collection of C++ libraries for drawing 2D graphics, rendering text and more."
     topics = ("text-rendering", "ui", "scripting-language", "vulkan", "glsl", "freetype")
     settings = "os", "compiler", "build_type", "arch"
-    options = {"shared": [True, False]}
-    default_options = {"shared": False}
+    options = {"shared": [True, False], "benchmarks": [True, False]}
+    default_options = {"shared": False, "benchmarks": True}
     build_requires = ('Catch2/2.12.2@rbrich/stable',
                       'pegtl/2.8.0@taocpp/stable',
                       'range-v3/0.10.0@ericniebler/stable',
                       'incbin/20180413@rbrich/stable',
                       'replxx/20200217@rbrich/stable',
-                      'benchmark/1.5.0@rbrich/stable',
                       'magic_get/1.0.0@rbrich/stable',
                       'magic_enum/0.6.6')
     generators = "cmake_paths"
@@ -26,6 +27,25 @@ class XcikitConan(ConanFile):
         "url": "auto",
         "revision": "auto"
     }
+
+    def _has_preinstalled_package(self, name, version=''):
+        print("Checking for preinstalled package:", name, version)
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            with tools.chdir(tmp_dir):
+                with open("CMakeLists.txt", 'w') as f:
+                    f.write(textwrap.dedent(f"""
+                        cmake_minimum_required(VERSION 3.9)
+                        project(SystemPackageFinder CXX)
+                        find_package({name} {version} REQUIRED)
+                    """))
+                if self.run(f"cmake . --log-level=NOTICE", ignore_errors=True) == 0:
+                    print("Found.")
+                    return True
+        return False
+
+    def build_requirements(self):
+        if self.options.benchmarks and not self._has_preinstalled_package("benchmark"):
+            self.build_requires('benchmark/1.5.0@rbrich/stable')
 
     def requirements(self):
         if self.settings.os == "Windows":
@@ -36,6 +56,7 @@ class XcikitConan(ConanFile):
         cmake = CMake(self)
         cmake.definitions["CMAKE_INSTALL_PREFIX"] = self.package_folder
         cmake.definitions["XCI_SHARE_DIR"] = self.package_folder + "/share/xcikit"
+        cmake.definitions["XCI_BUILD_BENCHMARKS"] = self.options.benchmarks
         cmake.configure()
         cmake.install()
 
