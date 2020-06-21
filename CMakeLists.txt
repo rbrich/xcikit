@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.9)
-project(xcikit C CXX)
+project(xcikit CXX)
 
 # optional components (only xci-core is required)
 include(CMakeDependentOption)
