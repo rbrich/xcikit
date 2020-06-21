@@ -1,6 +1,7 @@
 from conans import ConanFile, CMake, tools
 import tempfile
 import textwrap
+import io
 
 
 class XcikitConan(ConanFile):
@@ -28,8 +29,7 @@ class XcikitConan(ConanFile):
         "revision": "auto"
     }
 
-    def _has_preinstalled_package(self, name, version=''):
-        print("Checking for preinstalled package:", name, version)
+    def _is_preinstalled(self, name, version=''):
         with tempfile.TemporaryDirectory() as tmp_dir:
             with tools.chdir(tmp_dir):
                 with open("CMakeLists.txt", 'w') as f:
@@ -38,13 +38,15 @@ class XcikitConan(ConanFile):
                         project(SystemPackageFinder CXX)
                         find_package({name} {version} REQUIRED)
                     """))
-                if self.run(f"cmake . --log-level=NOTICE", ignore_errors=True) == 0:
-                    print("Found.")
+                out = io.StringIO()
+                if self.run("cmake . --log-level=NOTICE", output=out, ignore_errors=True) == 0:
+                    self.output.success(f"Found preinstalled dependency: {name}")
+                    # `out` is thrown away, it's generally just noise
                     return True
         return False
 
     def build_requirements(self):
-        if self.options.benchmarks and not self._has_preinstalled_package("benchmark"):
+        if self.options.benchmarks and not self._is_preinstalled("benchmark"):
             self.build_requires('benchmark/1.5.0@rbrich/stable')
 
     def requirements(self):
