@@ -7,8 +7,9 @@
 #define CATCH_CONFIG_FAST_COMPILE
 #include <catch2/catch.hpp>
 
-#include <xci/data/reflection.h>
-#include <xci/data/serialization.h>
+#include <xci/data/Dumper.h>
+#include <xci/data/BinaryWriter.h>
+#include <xci/data/BinaryReader.h>
 
 #include <sstream>
 #include <string>
@@ -21,7 +22,6 @@ enum class Option {
     ThatOne,
     OtherOne,
 };
-XCI_METAOBJECT_FOR_ENUM(Option, ThisOne, ThatOne, OtherOne);
 
 
 struct Node
@@ -39,53 +39,65 @@ struct Node
             child[i].check_equal(rhs.child[i]);
         }
     }
+
+    template <class Archive>
+    void serialize(Archive& ar) {
+        XCI_ARCHIVE(ar, name, option, child, f);
+    }
 };
-XCI_METAOBJECT(Node, name, option, child, f);
 
 
-TEST_CASE( "node tree", "[reflection]" )
+TEST_CASE( "node tree", "[data]" )
 {
     Node root{"root", Option::ThisOne, {
         Node{"child1", Option::ThatOne, {}, 1.1},
         Node{"child2", Option::OtherOne, {}, 2.2},
     }, 0.0};
-    const char* node_text = "name: \"root\"\n"
-                            "option: ThisOne\n"
-                            "child:\n"
-                            "    name: \"child1\"\n"
-                            "    option: ThatOne\n"
-                            "    f: 1.1\n"
-                            "child:\n"
-                            "    name: \"child2\"\n"
-                            "    option: OtherOne\n"
-                            "    f: 2.2\n"
-                            "f: 0\n";
+    const char* node_text =
+            "(0):\n"
+            "    (0) name: \"root\"\n"
+            "    (1) option: ThisOne\n"
+            "    (2) child:\n"
+            "        (0) name: \"child1\"\n"
+            "        (1) option: ThatOne\n"
+            "        (3) f: 1.1\n"
+            "    (2) child:\n"
+            "        (0) name: \"child2\"\n"
+            "        (1) option: OtherOne\n"
+            "        (3) f: 2.2\n"
+            "    (3) f: 0\n";
 
-    SECTION( "textual serialization" ) {
+    SECTION( "Dumper" ) {
         std::stringstream s("");
-        TextualWriter wtext(s);
-        wtext.write(root);
+        Dumper wtext(s);
+        wtext(root);
         CHECK(s.str() == node_text);
     }
-/*
-    SECTION( "binary serialization/deserialization" ) {
-        std::stringstream s("");
-        BinaryWriter wbin(s);
-        wbin(root);
 
-        //s.seekg(std::ios::beg);
+    SECTION( "BinaryWriter / BinaryReader" ) {
+        std::stringstream s("");
+        {
+            BinaryWriter wbin(s);
+            wbin(root);
+        }
+
         Node reconstructed_node;
-        BinaryReader rbin(s);
-        rbin.load(reconstructed_node);
-        INFO(rbin.get_error_cstr());
-        CHECK(!s.fail());
+        try {
+            s.seekg(std::ios::beg);
+            BinaryReader rbin(s);
+            rbin(reconstructed_node);
+            rbin.finish_and_check();
+        } catch (const ArchiveError& e) {
+            INFO(e.what());
+            FAIL();
+        }
+        CHECK(s);
 
         root.check_equal(reconstructed_node);
 
         std::stringstream st("");
-        TextualWriter wtext(st);
-        wtext.write(reconstructed_node);
+        Dumper wtext(st);
+        wtext(reconstructed_node);
         CHECK(st.str() == node_text);
     }
-    */
 }

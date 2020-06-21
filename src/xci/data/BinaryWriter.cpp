@@ -5,7 +5,6 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "BinaryWriter.h"
-#include <xci/data/coding/leb128.h>
 
 namespace xci::data {
 
@@ -69,21 +68,20 @@ void BinaryWriter::write_content()
 }
 
 
-void BinaryWriter::enter_group(uint8_t key)
+void BinaryWriter::enter_group(uint8_t key, const char* name)
 {
     m_group_stack.emplace_back();
 }
 
 
-void BinaryWriter::leave_group(uint8_t key)
+void BinaryWriter::leave_group(uint8_t key, const char* name)
 {
     auto inner_buffer = std::move(group_buffer());
     m_group_stack.pop_back();
     // TYPE:4, KEY:4
     write(uint8_t(Type::Master | key));
     // LEN:32
-    auto out_iter = buffer_inserter();
-    encode_leb128<size_t, decltype(out_iter), std::byte>(out_iter, inner_buffer.size());
+    write_leb128(inner_buffer.size());
     // VALUE
     write(inner_buffer.data(), inner_buffer.size());
 }

@@ -10,12 +10,13 @@
 #include "BinaryBase.h"
 #include <xci/compat/endian.h>
 #include <xci/compat/bit.h>
+#include <xci/data/coding/leb128.h>
 #include <ostream>
 
 namespace xci::data {
 
 
-/// Writes reflected objects to a binary stream.
+/// Writes serializable objects to a binary stream.
 ///
 /// The binary format is custom, see [docs](docs/data/binary_format.md].
 ///
@@ -39,41 +40,60 @@ namespace xci::data {
 /// XCI_DATA_ITEM also assigns name to the item, which is same as the member name.
 /// It can be customized as third argument: `XCI_DATA_ITEM(a, 0, "my_name")`
 
-class BinaryWriter : public BinaryBase<BinaryWriter> {
-public:
+class BinaryWriter : public ArchiveBase<BinaryWriter>, BinaryBase {
+    friend ArchiveBase<BinaryWriter>;
     using BufferType = std::vector<std::byte>;
 
+public:
     explicit BinaryWriter(std::ostream& os, bool crc32 = false) : m_stream(os), m_crc32(crc32) {}
     ~BinaryWriter() { write_content(); }
 
     // raw and smart pointers
     template <typename T>
-    requires std::is_pointer_v<T> || requires { typename T::pointer; }
-    void add(uint8_t key, T& value) {
-        if (!value) {
-            write(uint8_t(Type::Null | key));
+    requires std::is_pointer_v<T> || std::is_same_v<T, std::unique_ptr> || std::is_same_v<T, std::shared_ptr>
+    void add(ArchiveField<T>&& a) {
+        if (!a.value) {
+            write(uint8_t(Type::Null | a.key));
             return;
         }
         using ElemT = typename std::pointer_traits<T>::element_type;
-        apply(BinaryKeyValue<ElemT>{key, *value});
+        apply(ArchiveField<ElemT>{a.key, *a.value, a.name});
     }
 
-    void add(uint8_t key, bool value) {
-        uint8_t type = (value ? Type::BoolTrue : Type::BoolFalse);
-        write(uint8_t(type | key));
+    // bool
+    void add(ArchiveField<bool>&& a) {
+        uint8_t type = (a.value ? Type::BoolTrue : Type::BoolFalse);
+        write(uint8_t(type | a.key));
     }
 
+    // integers, floats, enums
     template <typename T>
     requires requires() { to_chunk_type<T>(); }
-    void add(uint8_t key, T value) {
-        write(uint8_t(to_chunk_type<T>() | key));
-        write(value);
+    void add(ArchiveField<T>&& a) {
+        write(uint8_t(to_chunk_type<T>() | a.key));
+        write(a.value);
     }
 
-    void enter_group(uint8_t key);
-    void leave_group(uint8_t key);
+    // string
+    void add(ArchiveField<std::string>&& a) {
+        write(uint8_t(Type::String | a.key));
+        write_leb128(a.value.size());
+        write((const std::byte*) a.value.data(), a.value.size());
+    }
+
+    // iterables
+    template <typename T>
+    requires requires { typename T::iterator; }
+    void add(ArchiveField<T>&& a) {
+        for (auto& item : a.value) {
+            apply(ArchiveField<typename T::value_type>{reuse_same_key(a.key), item, a.name});
+        }
+    }
 
 private:
+    void enter_group(uint8_t key, const char* name);
+    void leave_group(uint8_t key, const char* name);
+
     void write_content();
 
     template <typename T>
@@ -88,8 +108,10 @@ private:
         group_buffer().insert(group_buffer().end(), data, data + size);
     }
 
-    auto buffer_inserter() {
-        return std::back_inserter(group_buffer());
+    template<typename T>
+    void write_leb128(T value) {
+        auto out_iter = std::back_inserter(group_buffer());
+        encode_leb128<T, decltype(out_iter), std::byte>(out_iter, value);
     }
 
 private:

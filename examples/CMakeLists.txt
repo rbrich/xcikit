@@ -37,9 +37,9 @@ add_subdirectory(plugin)
 # data
 
 if (XCI_DATA)
-    add_executable(demo_reflect reflect/demo_reflect.cpp)
-    target_link_libraries(demo_reflect xci-data)
-    install(TARGETS demo_reflect EXPORT xcikit DESTINATION examples)
+    add_executable(demo_serialize data/demo_serialize.cpp)
+    target_link_libraries(demo_serialize xci-data)
+    install(TARGETS demo_serialize EXPORT xcikit DESTINATION examples)
 endif()
 
 # script

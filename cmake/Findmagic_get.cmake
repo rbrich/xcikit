@@ -7,7 +7,7 @@
 #   magic_get::magic_get (target)
 
 find_path(magic_get_INCLUDE_DIR
-    NAMES include/boost/pfr.hpp
+    NAMES boost/pfr.hpp
     PATHS ${magic_get_ROOT_DIR})
 mark_as_advanced(magic_get_INCLUDE_DIR)
 

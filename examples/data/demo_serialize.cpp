@@ -13,8 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <xci/data/reflection.h>
-#include <xci/data/serialization.h>
+#include <xci/data/Dumper.h>
 #include <xci/data/BinaryWriter.h>
 #include <xci/data/BinaryReader.h>
 
@@ -28,6 +27,11 @@ struct DialogReply
 {
     std::string text;
     unsigned int next;  // -> DialogState::id
+
+    template <class Archive>
+    void serialize(Archive& ar) {
+        XCI_ARCHIVE(ar, text, next);
+    }
 };
 
 
@@ -36,6 +40,11 @@ struct DialogState
     unsigned int id = 0;
     std::string text;
     std::vector<DialogReply> re;
+
+    template <class Archive>
+    void serialize(Archive& ar) {
+        XCI_ARCHIVE(ar, id, text, re);
+    }
 };
 
 
@@ -43,20 +52,19 @@ struct Dialog
 {
     std::string title;
     DialogState state;
+
+    template <class Archive>
+    void serialize(Archive& ar) {
+        XCI_ARCHIVE(ar, title, state);
+    }
 };
-
-
-XCI_METAOBJECT(DialogReply, text, next);
-XCI_METAOBJECT(DialogState, id, text, re);
-XCI_METAOBJECT(Dialog, title, state);
 
 
 enum class Option {
-    ThisOne,
-    ThatOne,
-    OtherOne,
+    Zero,
+    One,
+    Two,
 };
-XCI_METAOBJECT_FOR_ENUM(Option, ThisOne, ThatOne, OtherOne);
 
 
 struct Node
@@ -64,54 +72,52 @@ struct Node
     std::string name;
     Option option;
     std::vector<Node> child;
+
+    template <class Archive>
+    void serialize(Archive& ar) {
+        XCI_ARCHIVE(ar, name, option, child);
+    }
 };
-XCI_METAOBJECT(Node, name, option, child);
 
 
 int main()
 {
     Dialog dialog;
-    dialog.title = "Hello";
+    dialog.title = "Use the stabilizers!";
     dialog.state.id = 0;
-    dialog.state.text = "Nice day to you, sir!";
+    dialog.state.text = "";
 
-    dialog.state.re.push_back({"Please continue...", 1});
-    dialog.state.re.push_back({"Please stop!", 2});
+    dialog.state.re.push_back({"It doesn't have stabilizers!", 1});
+    dialog.state.re.push_back({"What is a stabilizer?", 2});
 
-    xci::data::TextualWriter wcout(std::cout);
-    std::cout << "BEGIN" << std::endl;
-    wcout.write(dialog);
-    std::cout << "END" << std::endl;
+    xci::data::Dumper wcout(std::cout);
+    std::cout << "=== Dialog ===\n";
+    wcout(dialog);
 
-    std::ofstream f("/tmp/xci-sertest.bin");
-    xci::data::BinaryWriter bw(f);
-    bw.dump(dialog);
-    f.close();
-
-    std::ifstream fi("/tmp/xci-sertest.bin");
-    xci::data::BinaryReader br(fi);
-    Dialog loaded_dialog;
-    br.load(loaded_dialog);
-
-    if (fi.fail()) {
-        std::cerr << "Load failed at " << br.get_last_pos() << ": "
-                  << br.get_error_cstr() << std::endl;
+    std::cout << "=== Dialog (after binary write / read) ===\n";
+    {
+        std::ofstream f("/tmp/xci-demo.bin");
+        xci::data::BinaryWriter bw(f);
+        bw(dialog);
     }
 
-    wcout.write(loaded_dialog);
+    std::ifstream fi("/tmp/xci-demo.bin");
+    xci::data::BinaryReader br(fi);
+    Dialog loaded_dialog;
+    br(loaded_dialog);
+    br.finish_and_check();
+
+    wcout(loaded_dialog);
 
     // ---------------
 
     std::cout << "=== Node ===\n";
-    Node root{"root", Option::ThisOne, {
-        Node{"child1", Option::ThatOne, {}},
-        Node{"child2", Option::OtherOne, {}},
+    Node root{"root", Option::Zero, {
+        Node{"child1", Option::One, {}},
+        Node{"child2", Option::Two, {}},
         }};
 
-    wcout.write(root);
-
-    std::cout << "Option::ThatOne = "
-        << (int) xci::data::metaobject::get_enum_constant_value<Option>("thatone") << std::endl;
+    wcout(root);
 
     return 0;
 }

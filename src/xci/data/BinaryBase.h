@@ -7,45 +7,13 @@
 #ifndef XCI_DATA_BINARY_BASE_H
 #define XCI_DATA_BINARY_BASE_H
 
-#include <xci/core/error.h>
+#include "ArchiveBase.h"
 #include "Crc32.h"
 #include <cstdint>
 #include <vector>
 #include <bitset>
 
 namespace xci::data {
-
-
-#ifdef __cpp_concepts
-
-template<typename T, typename TArchive>
-concept TypeWithSerialize = requires(T& v, TArchive& ar) { v.serialize(ar); };
-
-template<typename T, typename TArchive>
-concept TypeWithArchiveSupport = requires(T& v, uint8_t k, TArchive& ar) { ar.add(k, v); };
-
-#else
-    static_assert(false,"__cpp_concepts missing!");
-#endif
-
-template <typename T>
-struct BinaryKeyValue {
-    uint8_t key;
-    T& value;
-    const char* name = nullptr;
-};
-
-
-class ArchiveError : public core::Error {
-public:
-    explicit ArchiveError(std::string&& msg) : core::Error(std::move(msg)) {}
-};
-
-
-class ArchiveOutOfKeys : public ArchiveError {
-public:
-    ArchiveOutOfKeys() : ArchiveError("Tried to allocate more than 16 keys per object.") {}
-};
 
 
 class ArchiveBadMagic : public ArchiveError {
@@ -90,50 +58,8 @@ public:
 };
 
 
-template <class TImpl>
 class BinaryBase {
-public:
-    BinaryBase() { m_group_stack.emplace_back(); }
-
-    template<typename ...Args>
-    void operator() (Args&... args) {
-        ((void) apply(args), ...);
-    }
-
-    template <TypeWithSerialize<TImpl> T>
-    void apply(T& value) {
-        uint8_t key = draw_next_key();
-        static_cast<TImpl*>(this)->enter_group(key);
-        value.serialize(*static_cast<TImpl*>(this));
-        static_cast<TImpl*>(this)->leave_group(key);
-    }
-
-    template <TypeWithSerialize<TImpl> T>
-    void apply(BinaryKeyValue<T>&& kv) {
-        static_cast<TImpl*>(this)->enter_group(kv.key);
-        kv.value.serialize(*static_cast<TImpl*>(this));
-        static_cast<TImpl*>(this)->leave_group(kv.key);
-    }
-
-    template <TypeWithArchiveSupport<TImpl> T>
-    void apply(T& value) {
-        uint8_t key = draw_next_key();
-        static_cast<TImpl*>(this)->add(key, value);
-    }
-
-    template <TypeWithArchiveSupport<TImpl> T>
-    void apply(BinaryKeyValue<T>&& kv) {
-        static_cast<TImpl*>(this)->add(kv.key, kv.value);
-    }
-
 protected:
-
-    bool is_root_group() const {
-        return m_group_stack.size() == 1;
-    }
-
-    auto& group_buffer() { return m_group_stack.back().buffer; }
-
 
     enum Header: uint8_t {
         // magic: CBDF (Chunked Binary Data Format)
@@ -181,19 +107,22 @@ protected:
         ChunkNotFound = 0xFF,
     };
 
-    template<class T> requires std::is_same_v<T, std::byte> || (std::is_integral_v<T> && sizeof(T) == 1)
+    template<class T> requires std::is_enum_v<T>
+    static constexpr Type to_chunk_type() { return to_chunk_type<std::underlying_type_t<T>>(); }
+
+    template<class T> requires (sizeof(T) == 1) && std::is_integral_v<T>
     static constexpr Type to_chunk_type() { return Type::Byte; }
 
-    template<class T> requires std::is_same_v<T, std::uint32_t>
+    template<class T> requires (sizeof(T) == 4) && std::is_integral_v<T> && std::is_unsigned_v<T>
     static constexpr Type to_chunk_type() { return Type::UInt32; }
 
-    template<class T> requires std::is_same_v<T, std::uint64_t>
+    template<class T> requires (sizeof(T) == 8) && std::is_integral_v<T> && std::is_unsigned_v<T>
     static constexpr Type to_chunk_type() { return Type::UInt64; }
 
-    template<class T> requires std::is_same_v<T, std::int32_t>
+    template<class T> requires (sizeof(T) == 4) && std::is_integral_v<T> && std::is_signed_v<T>
     static constexpr Type to_chunk_type() { return Type::Int32; }
 
-    template<class T> requires std::is_same_v<T, std::int64_t>
+    template<class T> requires (sizeof(T) == 8) && std::is_integral_v<T> && std::is_signed_v<T>
     static constexpr Type to_chunk_type() { return Type::Int64; }
 
     template<class T> requires std::is_same_v<T, float>
@@ -206,29 +135,6 @@ protected:
         Metadata    = 0,
         Data        = 1,
     };
-
-    struct Group {
-        uint8_t next_key = 0;
-        std::bitset<16> used_keys;
-        typename TImpl::BufferType buffer {};
-    };
-    std::vector<Group> m_group_stack;
-
-private:
-    uint8_t draw_next_key() {
-        auto& chunk = m_group_stack.back();
-
-        // jump to next unused key
-        while (chunk.next_key < 16 && chunk.used_keys.test(chunk.next_key)) {
-            ++ chunk.next_key;
-        }
-
-        if (chunk.next_key == 16)
-            throw ArchiveOutOfKeys();
-
-        chunk.used_keys.set(chunk.next_key);
-        return chunk.next_key ++;
-    }
 };
 
 

@@ -113,12 +113,6 @@ std::byte BinaryReader::peek_byte()
 }
 
 
-void BinaryReader::read(std::string& value)
-{
-    read_with_crc((std::byte*)&value[0], value.size());
-}
-
-
 void BinaryReader::skip_unknown_chunk(uint8_t type, uint8_t key)
 {
     size_t length;
@@ -135,7 +129,7 @@ void BinaryReader::skip_unknown_chunk(uint8_t type, uint8_t key)
 }
 
 
-void BinaryReader::enter_group(uint8_t key)
+void BinaryReader::enter_group(uint8_t key, const char* name)
 {
     auto chunk_type = read_chunk_head(key);
     size_t chunk_length = 0;  // ChunkNotFound -> size 0
@@ -152,7 +146,7 @@ void BinaryReader::enter_group(uint8_t key)
 }
 
 
-void BinaryReader::leave_group(uint8_t key)
+void BinaryReader::leave_group(uint8_t key, const char* name)
 {
     // drain the rest of chunks in the group
     auto chunk_type = read_chunk_head(ChunkNotFound);
