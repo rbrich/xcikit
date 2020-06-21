@@ -23,6 +23,7 @@
 #include <sys/event.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <cassert>
 
 namespace xci::core {
 

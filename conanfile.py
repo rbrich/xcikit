@@ -20,6 +20,7 @@ class XcikitConan(ConanFile):
         'replxx/20200217@rbrich/stable',
         'magic_get/1.0.0@rbrich/stable',
         'magic_enum/0.6.6',
+        'fmt/7.0.1',
     )
     build_requires_or_preinstalled = (
         # <CMake name>, <min ver>,  <Conan reference>

@@ -29,3 +29,10 @@ install(TARGETS demo_termctl EXPORT xcikit DESTINATION examples)
 add_executable(demo_vfs demo_vfs.cpp)
 target_link_libraries(demo_vfs xci-core)
 install(TARGETS demo_vfs EXPORT xcikit DESTINATION examples)
+
+
+# ff (Find File) tool
+
+add_executable(ff ff.cpp)
+target_link_libraries(ff xci-core fmt::fmt)
+install(TARGETS ff EXPORT xcikit DESTINATION examples)

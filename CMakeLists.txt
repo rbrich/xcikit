@@ -58,6 +58,9 @@ find_package(pegtl CONFIG REQUIRED)
 # range-v3
 find_package(range-v3 CONFIG REQUIRED)
 
+# fmtlib
+find_package(fmt REQUIRED)
+
 # Catch
 if (XCI_BUILD_TESTS)
     find_package(Catch2)

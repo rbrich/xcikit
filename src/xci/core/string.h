@@ -50,6 +50,13 @@ void lstrip(std::string_view &str, T strip_chars) {
 template <class S>
 void lstrip(S& str) { return lstrip(str, whitespace_chars); }
 
+template <class T>
+std::string lstrip(const std::string &str, T strip_chars) {
+    std::string copy(str);
+    lstrip(copy, strip_chars);
+    return copy;
+}
+
 // Strip chars from end of a string
 template <class T>
 void rstrip(std::string &str, T strip_chars) {
@@ -64,11 +71,21 @@ void rstrip(std::string_view &str, T strip_chars) {
 template <class S>
 void rstrip(S& str) { return rstrip(str, whitespace_chars); }
 
+template <class T>
+std::string rstrip(const std::string &str, T strip_chars) {
+    std::string copy(str);
+    rstrip(copy, strip_chars);
+    return copy;
+}
+
+// Strip chars from both sides of a string
+
 template <class S, class T>
 void strip(S& str, T strip_chars) { lstrip(str, strip_chars); rstrip(str, strip_chars); }
 
 template <class S>
 void strip(S& str) { lstrip(str); rstrip(str); }
+
 
 // Escape non-printable characters with C escape sequences (eg. '\n')
 std::string escape(std::string_view str);

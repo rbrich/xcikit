@@ -1,4 +1,8 @@
-// Logger.h created on 2018-03-01, part of XCI toolkit
+// Logger.h created on 2018-03-01 as part of xcikit project
+// https://github.com/rbrich/xcikit
+//
+// Copyright 2018, 2020 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "log.h"
 #include <xci/core/TermCtl.h>

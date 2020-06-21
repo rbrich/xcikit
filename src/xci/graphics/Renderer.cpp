@@ -100,6 +100,7 @@ vulkan_debug_callback(
         const VkDebugUtilsMessengerCallbackDataEXT* data,
         void* user_data)
 {
+    (void) user_data;
     Logger::default_instance().log(
             vulkan_severity_to_log_level(severity),
             format("VK ({}): {}",
