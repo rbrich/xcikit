@@ -22,6 +22,7 @@ target_link_libraries(xci-data
     PRIVATE
         ZLIB::ZLIB
     PUBLIC
+        magic_get::magic_get
         magic_enum::magic_enum
     )
 

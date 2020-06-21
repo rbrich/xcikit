@@ -17,10 +17,10 @@
 using namespace xci::data;
 
 
-enum class Option {
-    ThisOne,
-    ThatOne,
-    OtherOne,
+enum class Option : uint8_t {
+    Zero,
+    One,
+    Two,
 };
 
 
@@ -47,23 +47,23 @@ struct Node
 };
 
 
-TEST_CASE( "node tree", "[data]" )
+TEST_CASE( "Node tree: dump/save/load", "[data]" )
 {
-    Node root{"root", Option::ThisOne, {
-        Node{"child1", Option::ThatOne, {}, 1.1},
-        Node{"child2", Option::OtherOne, {}, 2.2},
+    Node root{"root", Option::Zero, {
+        Node{"child1", Option::One, {}, 1.1},
+        Node{"child2", Option::Two, {}, 2.2},
     }, 0.0};
     const char* node_text =
             "(0):\n"
             "    (0) name: \"root\"\n"
-            "    (1) option: ThisOne\n"
+            "    (1) option: Zero\n"
             "    (2) child:\n"
             "        (0) name: \"child1\"\n"
-            "        (1) option: ThatOne\n"
+            "        (1) option: One\n"
             "        (3) f: 1.1\n"
             "    (2) child:\n"
             "        (0) name: \"child2\"\n"
-            "        (1) option: OtherOne\n"
+            "        (1) option: Two\n"
             "        (3) f: 2.2\n"
             "    (3) f: 0\n";
 
@@ -99,5 +99,63 @@ TEST_CASE( "node tree", "[data]" )
         Dumper wtext(st);
         wtext(reconstructed_node);
         CHECK(st.str() == node_text);
+    }
+}
+
+
+struct PlainRecord {
+    int id;
+    std::string name;
+    Option option;
+    bool flag;
+};
+
+
+TEST_CASE( "Magic save/load", "[data]")
+{
+    // This record has no special decoration, it's just a struct.
+    // Thanks to magic_get + magic_enum, it can be serialized/deserialized directly.
+    PlainRecord record { 7, "test", Option::Two, true};
+    std::string data;
+
+    // save
+    {
+        std::ostringstream s(data);
+        {
+            xci::data::BinaryWriter bw(s);
+            bw(record);
+        }
+        data = s.str();
+    }
+
+    // load
+    {
+        PlainRecord loaded;
+
+        std::istringstream s(data);
+        {
+            xci::data::BinaryReader br(s);
+            br(loaded);
+            br.finish_and_check();
+        }
+
+        CHECK(loaded.id == record.id);
+        CHECK(loaded.name == record.name);
+        CHECK(loaded.option == record.option);
+        CHECK(loaded.flag == record.flag);
+    }
+
+    // dump
+    {
+        std::ostringstream s("");
+        xci::data::Dumper dumper(s);
+        dumper(record);
+
+        // names are not available, but sequential keys are
+        CHECK(s.str() == "(0):\n"               // PlainRecord:
+                         "    (0): 7\n"         //   id
+                         "    (1): \"test\"\n"  //   name
+                         "    (2): Two\n"       //   option
+                         "    (3): true\n");    //   flag
     }
 }

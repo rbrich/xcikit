@@ -9,6 +9,7 @@
 
 #include <xci/core/error.h>
 #include <xci/core/macros/foreach.h>
+#include <boost/pfr/precise/core.hpp>
 #include <cstdint>
 
 namespace xci::data {
@@ -67,19 +68,19 @@ class ArchiveBase {
 public:
     ArchiveBase() { m_group_stack.emplace_back(); }
 
+    // convenience: ar(value, ...) -> ar.apply(value), ...
     template<typename ...Args>
     void operator() (Args&&... args) {
         ((void) apply(std::forward<Args>(args)), ...);
     }
 
-    template <TypeWithSerialize<TImpl> T>
+    // convenience: ar.apply(value) -> ar.apply(ArchiveField{key_auto, value})
+    template <typename T>
     void apply(T& value) {
-        uint8_t key = draw_next_key();
-        static_cast<TImpl*>(this)->enter_group(key, nullptr);
-        value.serialize(*static_cast<TImpl*>(this));
-        static_cast<TImpl*>(this)->leave_group(key, nullptr);
+        apply(ArchiveField<T>{key_auto, value});
     }
 
+    // when: the type has serialize() method
     template <TypeWithSerialize<TImpl> T>
     void apply(ArchiveField<T>&& kv) {
         kv.key = draw_next_key(kv.key);
@@ -88,16 +89,24 @@ public:
         static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
     }
 
-    template <TypeWithArchiveSupport<TImpl> T>
-    void apply(T& value) {
-        uint8_t key = draw_next_key();
-        static_cast<TImpl*>(this)->add(ArchiveField<T>{key, value});
-    }
-
+    // when: Archive implementation has add() method for the type
     template <TypeWithArchiveSupport<TImpl> T>
     void apply(ArchiveField<T>&& kv) {
         kv.key = draw_next_key(kv.key);
         static_cast<TImpl*>(this)->add(std::forward<ArchiveField<T>>(kv));
+    }
+
+    // when: other non-polymorphic structs - use magic_get
+    template <typename T>
+    requires (std::is_class_v<T> && !std::is_polymorphic_v<T> &&
+            !TypeWithSerialize<T, TImpl> && !TypeWithArchiveSupport<T, TImpl>)
+    void apply(ArchiveField<T>&& kv) {
+        kv.key = draw_next_key(kv.key);
+        static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
+        boost::pfr::for_each_field(kv.value, [&](auto& field) {
+            apply(field);
+        });
+        static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
     }
 
 protected:

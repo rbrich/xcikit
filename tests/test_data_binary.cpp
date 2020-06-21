@@ -38,7 +38,7 @@ struct MasterRecord {
 };
 
 
-TEST_CASE( "BinaryWriter", "[serialization]" )
+TEST_CASE( "BinaryWriter", "[data]" )
 {
     std::stringstream buf("");
 
@@ -149,7 +149,7 @@ TEST_CASE( "BinaryWriter", "[serialization]" )
 }
 
 
-TEST_CASE( "BinaryReader", "[serialization]" )
+TEST_CASE( "BinaryReader", "[data]" )
 {
     std::stringstream buf("");
 
