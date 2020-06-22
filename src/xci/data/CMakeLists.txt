@@ -32,4 +32,11 @@ target_include_directories(xci-data
         ${XCI_INCLUDE_DIRS}
     )
 
+if (MSVC)
+    # Fix passing __VA_ARGS__ between macros.
+    # Old behaviour was to pass all args in single arg, ignoring commas.
+    # https://stackoverflow.com/questions/5134523/msvc-doesnt-expand-va-args-correctly
+    target_compile_options(xci-data PUBLIC /Zc:preprocessor)
+endif()
+
 #install(TARGETS xci-data EXPORT xcikit DESTINATION lib)

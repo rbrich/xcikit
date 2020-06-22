@@ -20,7 +20,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
-#include <fstream>
+#include <sstream>
 
 
 struct DialogReply
@@ -95,18 +95,19 @@ int main()
     wcout(dialog);
 
     std::cout << "=== Dialog (after binary write / read) ===\n";
+    std::stringstream ss("");
     {
-        std::ofstream f("/tmp/xci-demo.bin");
-        xci::data::BinaryWriter bw(f);
+        xci::data::BinaryWriter bw(ss);
         bw(dialog);
     }
+    ss.seekg(std::ios::beg);
 
-    std::ifstream fi("/tmp/xci-demo.bin");
-    xci::data::BinaryReader br(fi);
     Dialog loaded_dialog;
-    br(loaded_dialog);
-    br.finish_and_check();
-
+    {
+        xci::data::BinaryReader br(ss);
+        br(loaded_dialog);
+        br.finish_and_check();
+    }
     wcout(loaded_dialog);
 
     // ---------------

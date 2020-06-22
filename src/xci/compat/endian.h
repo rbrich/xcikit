@@ -40,7 +40,12 @@
 
     #include <cstdlib>
 
-    #if BYTE_ORDER == LITTLE_ENDIAN
+    #define LITTLE_ENDIAN 1
+    #define BIG_ENDIAN 2
+
+    #if defined(_M_IX86) || defined(_M_X64) || defined(_M_ARM)
+
+        #define BYTE_ORDER LITTLE_ENDIAN
 
         #define htobe16(x) _byteswap_ushort(x)
         #define htole16(x) (x)
@@ -57,7 +62,9 @@
         #define be64toh(x) _byteswap_uint64(x)
         #define le64toh(x) (x)
 
-    #elif BYTE_ORDER == BIG_ENDIAN
+    #elif defined(_M_PPC)
+
+        #define BYTE_ORDER BIG_ENDIAN
 
         #define htobe16(x) (x)
         #define htole16(x) _byteswap_ushort(x)
@@ -76,7 +83,7 @@
 
     #else
 
-        #error Unsupported BYTE_ORDER
+        #error "Unsupported target machine"
 
     #endif
 
@@ -85,6 +92,12 @@
     // Linux
     #include <endian.h>
 
+#endif
+
+
+// Sanity check - order macros are defined:
+#if !defined(BYTE_ORDER) || !defined(LITTLE_ENDIAN) || !defined(BIG_ENDIAN)
+#error "Endian macros are not available!"
 #endif
 
 

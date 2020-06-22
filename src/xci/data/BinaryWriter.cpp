@@ -14,7 +14,7 @@ void BinaryWriter::write_content()
     uint8_t flags = 0;
 
 #if BYTE_ORDER == LITTLE_ENDIAN
-    flags |=LittleEndian;
+    flags |= LittleEndian;
 #endif
 #if BYTE_ORDER == BIG_ENDIAN
     flags |= BigEndian;
