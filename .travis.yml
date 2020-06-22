@@ -8,16 +8,20 @@ env:
     - CONAN_REVISIONS_ENABLED=1
     - MACOSX_DEPLOYMENT_TARGET=10.14
     - VK_SDK_VER=1.2.131.2
+    - CC=/usr/local/opt/llvm/bin/clang
+    - CXX=/usr/local/opt/llvm/bin/clang++
 
 addons:
   homebrew:
-    update: true
+    update: false
     packages:
-      - glfw
+      - llvm
       - conan
       - ccache
       - ninja
+      - glfw
       - doxygen
+      - google-benchmark
 
 before_script:
   - |
