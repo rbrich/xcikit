@@ -13,16 +13,22 @@ class XcikitConan(ConanFile):
     description = "Collection of C++ libraries for drawing 2D graphics, rendering text and more."
     topics = ("text-rendering", "ui", "scripting-language", "vulkan", "glsl", "freetype")
     settings = "os", "compiler", "build_type", "arch"
-    options = {"shared": [True, False], "benchmarks": [True, False]}
-    default_options = {"shared": False, "benchmarks": True}
-    build_requires = ('Catch2/2.12.2@rbrich/stable',
-                      'pegtl/2.8.1@taocpp/stable',
-                      'range-v3/0.10.0@ericniebler/stable',
-                      'incbin/20180413@rbrich/stable',
-                      'replxx/20200217@rbrich/stable',
-                      'magic_get/1.0.0@rbrich/stable',
-                      'magic_enum/0.6.6')
-    generators = "cmake_paths"
+    options = {"shared": [True, False]}
+    default_options = {"shared": False}
+    build_requires = (
+        'incbin/20180413@rbrich/stable',
+        'replxx/20200217@rbrich/stable',
+        'magic_get/1.0.0@rbrich/stable',
+        'magic_enum/0.6.6',
+    )
+    build_requires_or_preinstalled = (
+        # CMake find name, Conan reference
+        ('range-v3', 'range-v3/0.10.0@ericniebler/stable'),
+        ('Catch2', 'catch2/2.12.2'),
+        ('benchmark', 'benchmark/1.5.0'),
+        ('pegtl', 'pegtl/2.8.1@taocpp/stable'),
+    )
+    generators = ("cmake_paths", "cmake_find_package_multi")
     scm = {
         "type": "git",
         "url": "auto",
@@ -43,11 +49,13 @@ class XcikitConan(ConanFile):
                     self.output.success(f"Found preinstalled dependency: {name}")
                     # `out` is thrown away, it's generally just noise
                     return True
-        return False
+                self.output.info(f'Will get dependency via Conan: {name}')
+                return False
 
     def build_requirements(self):
-        if self.options.benchmarks and not self._is_preinstalled("benchmark"):
-            self.build_requires('benchmark/1.5.0@rbrich/stable')
+        for name, ref in self.build_requires_or_preinstalled:
+            if not self._is_preinstalled(name):
+                self.build_requires(ref)
 
     def requirements(self):
         if self.settings.os == "Windows":

@@ -25,7 +25,8 @@ ENV CMAKE_GENERATOR=Ninja
 
 # Install xcikit dependencies
 RUN apt-get install --no-install-recommends -y \
-    glslang-tools libvulkan-dev libfreetype6-dev libglfw3-dev libbenchmark-dev && \
+    glslang-tools libvulkan-dev libfreetype6-dev libglfw3-dev \
+    librange-v3-dev catch2 tao-pegtl-dev libbenchmark-dev && \
     apt-get clean
 
 # Install Conan

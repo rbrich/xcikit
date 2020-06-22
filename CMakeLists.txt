@@ -34,19 +34,24 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(XciBuildOptions)
 
-if (EXISTS ${CMAKE_BINARY_DIR}/conan_paths.cmake)
-    include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
-endif()
-
-
 # ------------ #
 # Dependencies #
 # ------------ #
+
+# Enable lookup for Conan dependencies:
+# cmake_paths first, cmake_find_package_multi second
+if (EXISTS ${CMAKE_BINARY_DIR}/conan_paths.cmake)
+    include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
+endif()
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
 
 if (XCI_TEXT)
     # RectangleBinPack (xci-text)
     add_subdirectory(ext/rbp)
 endif()
+
+# Threads (always from system)
+find_package(Threads REQUIRED)
 
 # PEGTL
 find_package(pegtl REQUIRED)

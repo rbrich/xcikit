@@ -1,4 +1,4 @@
-find_package(Replxx REQUIRED)
+find_package(replxx REQUIRED)
 
 # Fire Script compiler/interpreter
 add_executable(fire
@@ -10,6 +10,6 @@ add_executable(fire
 target_link_libraries(fire
     xci-core
     xci-script
-    Replxx::replxx
+    replxx::replxx
     )
 install(TARGETS fire EXPORT xcikit DESTINATION bin)
