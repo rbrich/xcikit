@@ -27,7 +27,10 @@ before_script:
   - |
     export VULKAN_SDK="$PWD/vulkansdk-macos-$VK_SDK_VER/macOS"
     if [ ! -d "$VULKAN_SDK" ]; then
-      curl -fsSLO https://sdk.lunarg.com/sdk/download/$VK_SDK_VER/mac/vulkansdk-macos-$VK_SDK_VER.tar.gz
+      # The original URL gives error 412 constantly. Replace with some other URL found with Google.
+      # Checksum matches: e28363ae0bdb3d881ebf93cdd7a721d052f6a2e5686d0fb3447e6edd585bb53f
+      #curl -fsSLO https://vulkan.lunarg.com/sdk/download/$VK_SDK_VER/mac/vulkansdk-macos-$VK_SDK_VER.tar.gz
+      curl -fsSLO https://github.com/gupascal/vulkan-sdk/releases/download/v$VK_SDK_VER/vulkansdk-macos-$VK_SDK_VER.tar.gz
       tar xf vulkansdk-macos-$VK_SDK_VER.tar.gz && rm vulkansdk-macos-$VK_SDK_VER.tar.gz
     fi
   - ./bootstrap.sh -y
