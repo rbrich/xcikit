@@ -28,7 +28,7 @@ class XcikitConan(ConanFile):
         ('benchmark', 'benchmark/1.5.0'),
         ('pegtl', 'pegtl/2.8.1@taocpp/stable'),
     )
-    generators = ("cmake_paths", "cmake_find_package_multi")
+    generators = ("cmake_paths", "cmake_find_package")
     scm = {
         "type": "git",
         "url": "auto",
@@ -45,7 +45,7 @@ class XcikitConan(ConanFile):
                         find_package({name} {version} REQUIRED)
                     """))
                 out = io.StringIO()
-                if self.run("cmake . --log-level=NOTICE", output=out, ignore_errors=True) == 0:
+                if self.run("cmake . -G Ninja --log-level=NOTICE", output=out, ignore_errors=True) == 0:
                     self.output.success(f"Found preinstalled dependency: {name}")
                     # `out` is thrown away, it's generally just noise
                     return True

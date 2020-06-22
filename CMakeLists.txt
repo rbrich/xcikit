@@ -54,10 +54,10 @@ endif()
 find_package(Threads REQUIRED)
 
 # PEGTL
-find_package(pegtl REQUIRED)
+find_package(pegtl CONFIG REQUIRED)
 
 # range-v3
-find_package(range-v3 REQUIRED)
+find_package(range-v3 CONFIG REQUIRED)
 
 # Catch
 if (XCI_BUILD_TESTS)
