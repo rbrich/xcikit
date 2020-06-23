@@ -38,8 +38,7 @@ include(XciBuildOptions)
 # Dependencies #
 # ------------ #
 
-# Enable lookup for Conan dependencies:
-# cmake_paths first, cmake_find_package_multi second
+# Enable lookup for Conan dependencies
 if (EXISTS ${CMAKE_BINARY_DIR}/conan_paths.cmake)
     include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
 endif()

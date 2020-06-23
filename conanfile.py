@@ -22,11 +22,12 @@ class XcikitConan(ConanFile):
         'magic_enum/0.6.6',
     )
     build_requires_or_preinstalled = (
-        # CMake find name, Conan reference
-        ('range-v3', 'range-v3/0.10.0@ericniebler/stable'),
-        ('Catch2', 'catch2/2.12.2'),
-        ('benchmark', 'benchmark/1.5.0'),
-        ('pegtl', 'pegtl/2.8.1@taocpp/stable'),
+        # <CMake find name>. <min version>, <Conan reference>
+        ('range-v3', '0.10.0', 'range-v3/0.10.0@ericniebler/stable'),
+        ('Catch2', '', 'catch2/2.12.2'),
+        ('benchmark', '', 'benchmark/1.5.0'),
+        ('pegtl', '2.8.1', 'pegtl/2.8.1@taocpp/stable'),
+        ('glfw3', '3.3.2', 'glfw/3.3.2@rbrich/stable'),
     )
     generators = ("cmake_paths", "cmake_find_package")
     scm = {
@@ -35,26 +36,39 @@ class XcikitConan(ConanFile):
         "revision": "auto"
     }
 
-    def _is_preinstalled(self, name, version=''):
+    def _check_preinstalled(self):
+        self.output.info(f'Checking for preinstalled dependencies...')
+        items = ';'.join(f"{name}/{ver}" for name, ver, _ in self.build_requires_or_preinstalled)
         with tempfile.TemporaryDirectory() as tmp_dir:
             with tools.chdir(tmp_dir):
                 with open("CMakeLists.txt", 'w') as f:
-                    f.write(textwrap.dedent(f"""
+                    f.write(textwrap.dedent("""
                         cmake_minimum_required(VERSION 3.9)
                         project(SystemPackageFinder CXX)
-                        find_package({name} {version} REQUIRED)
+                        foreach (ITEM IN LISTS DEPS)
+                            string(REPLACE "/" ";" ITEM ${ITEM})
+                            list(GET ITEM 0 NAME)
+                            list(GET ITEM 1 VERSION)
+                            find_package(${NAME} ${VERSION})
+                            if (${NAME}_FOUND)
+                                message(NOTICE "FOUND ${NAME} ${${NAME}_VERSION}")
+                            endif()
+                        endforeach()
                     """))
                 out = io.StringIO()
-                if self.run("cmake . -G Ninja --log-level=NOTICE", output=out, ignore_errors=True) == 0:
-                    self.output.success(f"Found preinstalled dependency: {name}")
-                    # `out` is thrown away, it's generally just noise
-                    return True
-                self.output.info(f'Will get dependency via Conan: {name}')
-                return False
+                if self.run(f"cmake . -G Ninja --log-level=NOTICE -DDEPS='{items}'", output=out, ignore_errors=True) != 0:
+                    self.output.error(f'Failed:\n{out.getvalue()}')
+                    return
+                for line in out.getvalue().splitlines():
+                    if line.startswith('FOUND '):
+                        _, name, version = line.split(' ')
+                        self.output.success(f"Found: {name} {version}")
+                        yield name
 
     def build_requirements(self):
-        for name, ref in self.build_requires_or_preinstalled:
-            if not self._is_preinstalled(name):
+        preinstalled = list(self._check_preinstalled())
+        for name, _, ref in self.build_requires_or_preinstalled:
+            if name not in preinstalled:
                 self.build_requires(ref)
 
     def requirements(self):
