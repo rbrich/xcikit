@@ -22,12 +22,12 @@ class XcikitConan(ConanFile):
         'magic_enum/0.6.6',
     )
     build_requires_or_preinstalled = (
-        # <CMake find name>. <min version>, <Conan reference>
-        ('range-v3', '0.10.0', 'range-v3/0.10.0@ericniebler/stable'),
-        ('Catch2', '', 'catch2/2.12.2'),
-        ('benchmark', '', 'benchmark/1.5.0'),
-        ('pegtl', '2.8.1', 'pegtl/2.8.1@taocpp/stable'),
-        ('glfw3', '3.3.2', 'glfw/3.3.2@rbrich/stable'),
+        # <CMake name>, <min ver>,  <Conan reference>
+        ('range-v3',    '0.10.0',   'range-v3/0.10.0@ericniebler/stable'),
+        ('Catch2',      '',         'catch2/2.12.2'),
+        ('benchmark',   '',         'benchmark/1.5.0'),
+        ('pegtl',       '2.8.1',    'pegtl/2.8.1@taocpp/stable'),
+        ('glfw3',       '3.3.2',    'glfw/3.3.2@rbrich/stable'),
     )
     generators = ("cmake_paths", "cmake_find_package")
     scm = {
@@ -80,7 +80,6 @@ class XcikitConan(ConanFile):
         cmake = CMake(self)
         cmake.definitions["CMAKE_INSTALL_PREFIX"] = self.package_folder
         cmake.definitions["XCI_SHARE_DIR"] = self.package_folder + "/share/xcikit"
-        cmake.definitions["XCI_BUILD_BENCHMARKS"] = self.options.benchmarks
         cmake.configure()
         cmake.install()
 
