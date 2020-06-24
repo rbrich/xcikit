@@ -12,6 +12,10 @@
 #include <boost/pfr/precise/core.hpp>
 #include <cstdint>
 
+#ifndef __cpp_concepts
+#error "xci::data reqire C++20 concepts"
+#endif
+
 namespace xci::data {
 
 
@@ -32,17 +36,12 @@ template<typename T> ArchiveField(uint8_t, T&, const char*) -> ArchiveField<T>;
     )
 
 
-#ifdef __cpp_concepts
-
 template<typename T, typename TArchive>
 concept TypeWithSerialize = requires(T& v, TArchive& ar) { v.serialize(ar); };
 
 template<typename T, typename TArchive>
 concept TypeWithArchiveSupport = requires(T& v, std::uint8_t k, TArchive& ar) { ar.add(ArchiveField<T>{k, v}); };
 
-#else
-    static_assert(false,"__cpp_concepts missing!");
-#endif
 
 
 class ArchiveError : public core::Error {

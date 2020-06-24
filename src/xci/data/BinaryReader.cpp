@@ -9,10 +9,6 @@
 
 namespace xci::data {
 
-#define CHECK_FAIL      if (m_stream.fail()) return;
-#define FAIL_IF(cond, err) \
-    do { if (cond) { m_stream.setstate(std::ios::failbit); throw err; } } while(0)
-
 
 void BinaryReader::read_header() {
     // This size is decreased with every read.
@@ -24,14 +20,17 @@ void BinaryReader::read_header() {
     read_with_crc((std::byte*)header, sizeof(header));
 
     // MAGIC:16
-    FAIL_IF(header[0] != Magic0 || header[1] != Magic1, ArchiveBadMagic());
+    if (header[0] != Magic0 || header[1] != Magic1)
+        throw ArchiveBadMagic();
 
     // VERSION:8
-    FAIL_IF(header[2] != Version, ArchiveBadVersion());
+    if (header[2] != Version)
+        throw ArchiveBadVersion();
 
     // FLAGS:8
     auto endianness = (header[3] & EndiannessMask);
-    FAIL_IF(endianness != LittleEndian, ArchiveBadFlags());
+    if (endianness != LittleEndian)
+        throw ArchiveBadFlags();
     m_has_crc = (header[3] & ChecksumMask) == ChecksumCrc32;
 
     // add header to CRC checksum
@@ -74,7 +73,8 @@ void BinaryReader::read_footer()
             // check CRC
             uint32_t stored_crc = 0;
             read_with_crc(stored_crc);
-            FAIL_IF(stored_crc != m_crc.as_uint32(), ArchiveBadChecksum());
+            if (stored_crc != m_crc.as_uint32())
+                throw ArchiveBadChecksum();
             continue;
         }
         // unknown chunk
@@ -89,6 +89,8 @@ void BinaryReader::read_with_crc(std::byte* buffer, size_t length)
         throw ArchiveUnexpectedEnd();
     group_buffer().size -= length;
     m_stream.read((char*)buffer, length);
+    if (!m_stream)
+        throw ArchiveReadError();
     if (m_has_crc)
         m_crc.feed(buffer, length);
 }
@@ -99,6 +101,8 @@ std::byte BinaryReader::read_byte_with_crc()
     if (group_buffer().size-- == 0)
         throw ArchiveUnexpectedEnd();
     char c = m_stream.get();
+    if (!m_stream)
+        throw ArchiveReadError();
     if (m_has_crc)
         m_crc(c);
     return (std::byte) c;

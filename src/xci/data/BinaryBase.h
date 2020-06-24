@@ -46,6 +46,12 @@ public:
 };
 
 
+class ArchiveReadError : public ArchiveError {
+public:
+    ArchiveReadError() : ArchiveError("Error reading from archive") {}
+};
+
+
 class ArchiveUnexpectedEnd : public ArchiveError {
 public:
     ArchiveUnexpectedEnd() : ArchiveError("Corrupted archive (chunk size larger than available data)") {}

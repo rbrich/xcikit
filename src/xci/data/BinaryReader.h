@@ -24,7 +24,6 @@ namespace xci::data {
 class BinaryReader : public ArchiveBase<BinaryReader>, BinaryBase {
     friend ArchiveBase<BinaryReader>;
     struct Buffer {
-        //std::byte* data;
         size_t size = 0;
     };
     using BufferType = Buffer;

@@ -36,10 +36,17 @@ namespace xci::data {
 ///
 /// The keys can be assigned explicitly:
 ///
-///     ar(XCI_DATA_ITEM(a, 0), XCI_DATA_ITEM(b, 1), XCI_DATA_ITEM(c, 2))
+///     ar(XCI_ARCHIVE_FIELD(0, a), XCI_ARCHIVE_FIELD(1, b), XCI_ARCHIVE_FIELD(2, c))
 ///
-/// XCI_DATA_ITEM also assigns name to the item, which is same as the member name.
-/// It can be customized as third argument: `XCI_DATA_ITEM(a, 0, "my_name")`
+/// XCI_ARCHIVE_FIELD also assigns name to the item, which is same as the member name.
+/// It can be customized by calling the constructor directly:
+///
+///     xci::data::ArchiveField{(0, a, "my_name")
+///
+/// As a shortcut, multiple named fields can be added at once:
+///
+///     XCI_ARCHIVE(ar, a, b, c)
+///
 
 class BinaryWriter : public ArchiveBase<BinaryWriter>, BinaryBase {
     friend ArchiveBase<BinaryWriter>;
