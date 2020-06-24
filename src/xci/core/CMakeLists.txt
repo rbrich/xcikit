@@ -1,11 +1,4 @@
 # ------------ #
-# Dependencies #
-# ------------ #
-
-find_package(Threads REQUIRED)
-
-
-# ------------ #
 # Libraries    #
 # ------------ #
 

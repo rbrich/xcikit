@@ -419,9 +419,8 @@ VfsFile Vfs::read_file(std::string path) const
     for (const auto& path_loader : m_mounted_dir) {
         // Is the loader applicable for requested path?
         if (!path_loader.path.empty()) {
-            if (!starts_with(path, path_loader.path))
+            if (!remove_prefix(path, path_loader.path))
                 continue;
-            path = path.substr(path_loader.path.size());
             if (path.front() != '/')
                 continue;
             lstrip(path, '/');

@@ -1,23 +1,23 @@
-// bit.h created on 2018-11-11, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// bit.h created on 2018-11-11 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Copyright 2018, 2020 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+// ------------------------------------------------------------------
+// Bitwise operations - <bit> header compatibility + goodies
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// References:
+// - https://en.cppreference.com/w/cpp/header/bit
+// - http://graphics.stanford.edu/~seander/bithacks.html
+// ------------------------------------------------------------------
 
 #ifndef XCI_COMPAT_BIT_H
 #define XCI_COMPAT_BIT_H
 
 #include <type_traits>
 #include <cstring>
+#include <cstdint>
 
 namespace xci {
 
@@ -66,6 +66,25 @@ bit_read(const From* src) noexcept
     To dst;
     std::memcpy(&dst, src, sizeof(To));
     return dst;
+}
+
+
+// C++20 bit operations
+//
+// Reference:
+// - https://en.cppreference.com/w/cpp/header/bit
+// - https://en.wikipedia.org/wiki/Find_first_set
+
+/// Count zero bits from left (MSB)
+/// (similar to C++20 std::countl_zero)
+constexpr int count_leading_zeros(uint64_t x) noexcept {
+    return x == 0 ? 64 : __builtin_clzll(x);
+}
+
+/// Count zero bits from right (LSB)
+/// (similar to C++20 std::countr_zero)
+constexpr int count_trailing_zeros(uint64_t x) noexcept {
+    return x == 0 ? 64 : __builtin_ctzll(x);
 }
 
 

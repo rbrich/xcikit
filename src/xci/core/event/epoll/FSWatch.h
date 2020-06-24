@@ -17,6 +17,7 @@
 #define XCI_CORE_EPOLL_FSWATCH_H
 
 #include "EventLoop.h"
+#include <string>
 #include <list>
 #include <map>
 #include <functional>

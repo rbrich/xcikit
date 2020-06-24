@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.9)
-project(xcikit C CXX)
+project(xcikit CXX)
 
 # optional components (only xci-core is required)
 include(CMakeDependentOption)
@@ -34,25 +34,29 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(XciBuildOptions)
 
-if (EXISTS ${CMAKE_BINARY_DIR}/conan_paths.cmake)
-    include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
-endif()
-
-
 # ------------ #
 # Dependencies #
 # ------------ #
+
+# Enable lookup for Conan dependencies
+if (EXISTS ${CMAKE_BINARY_DIR}/conan_paths.cmake)
+    include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
+endif()
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
 
 if (XCI_TEXT)
     # RectangleBinPack (xci-text)
     add_subdirectory(ext/rbp)
 endif()
 
+# Threads (always from system)
+find_package(Threads REQUIRED)
+
 # PEGTL
-find_package(pegtl REQUIRED)
+find_package(pegtl CONFIG REQUIRED)
 
 # range-v3
-find_package(range-v3 REQUIRED)
+find_package(range-v3 CONFIG REQUIRED)
 
 # Catch
 if (XCI_BUILD_TESTS)

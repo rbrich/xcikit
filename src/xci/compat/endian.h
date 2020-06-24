@@ -1,17 +1,8 @@
-// endian.h created on 2018-11-11, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// endian.h created on 2018-11-11 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018, 2020 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_COMPAT_ENDIAN_H
 #define XCI_COMPAT_ENDIAN_H
@@ -40,7 +31,12 @@
 
     #include <cstdlib>
 
-    #if BYTE_ORDER == LITTLE_ENDIAN
+    #define LITTLE_ENDIAN 1
+    #define BIG_ENDIAN 2
+
+    #if defined(_M_IX86) || defined(_M_X64) || defined(_M_ARM)
+
+        #define BYTE_ORDER LITTLE_ENDIAN
 
         #define htobe16(x) _byteswap_ushort(x)
         #define htole16(x) (x)
@@ -57,7 +53,9 @@
         #define be64toh(x) _byteswap_uint64(x)
         #define le64toh(x) (x)
 
-    #elif BYTE_ORDER == BIG_ENDIAN
+    #elif defined(_M_PPC)
+
+        #define BYTE_ORDER BIG_ENDIAN
 
         #define htobe16(x) (x)
         #define htole16(x) _byteswap_ushort(x)
@@ -76,7 +74,7 @@
 
     #else
 
-        #error Unsupported BYTE_ORDER
+        #error "Unsupported target machine"
 
     #endif
 
@@ -85,6 +83,12 @@
     // Linux
     #include <endian.h>
 
+#endif
+
+
+// Sanity check - order macros are defined:
+#if !defined(BYTE_ORDER) || !defined(LITTLE_ENDIAN) || !defined(BIG_ENDIAN)
+#error "Endian macros are not available!"
 #endif
 
 

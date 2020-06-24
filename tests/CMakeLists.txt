@@ -34,6 +34,16 @@ if (XCI_DATA)
     target_link_libraries(test_data catch_main xci-data)
     catch_discover_tests(test_data)
     install(TARGETS test_data EXPORT xcikit DESTINATION tests)
+
+    add_executable(test_data_binary test_data_binary.cpp)
+    target_link_libraries(test_data_binary catch_main xci-data)
+    catch_discover_tests(test_data_binary)
+    install(TARGETS test_data_binary EXPORT xcikit DESTINATION tests)
+
+    add_executable(test_coding test_coding.cpp)
+    target_link_libraries(test_coding catch_main xci-data)
+    catch_discover_tests(test_coding)
+    install(TARGETS test_coding EXPORT xcikit DESTINATION tests)
 endif()
 
 if (XCI_SCRIPT)

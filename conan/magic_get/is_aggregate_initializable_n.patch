@@ -1,0 +1,36 @@
+https://github.com/apolukhin/magic_get/issues/44
+
+--- include/boost/pfr/detail/fields_count.hpp	2020-06-21 15:16:25.000000000 +0200
++++ include/boost/pfr/detail/fields_count.hpp	2020-06-21 15:17:50.000000000 +0200
+@@ -53,6 +53,8 @@
+ 
+ 
+ ///////////////////// Hand-made is_aggregate_initializable_n<T> trait
++/* FIXME: doesn't work in GCC 10 with -std=c++20
++ * https://github.com/apolukhin/magic_get/issues/44
+ 
+ // `std::is_constructible<T, ubiq_constructor_except<T>>` consumes a lot of time, so we made a separate lazy trait for it.
+ template <std::size_t N, class T> struct is_single_field_and_aggregate_initializable: std::false_type {};
+@@ -79,6 +81,7 @@
+         || is_not_constructible_n(detail::make_index_sequence<N>{})
+     ;
+ };
++*/
+ 
+ ///////////////////// Helper for SFINAE on fields count
+ template <class T, std::size_t... I, class /*Enable*/ = typename std::enable_if<std::is_copy_constructible<T>::value>::type>
+@@ -228,12 +231,12 @@
+ 
+     constexpr std::size_t max_fields_count = (sizeof(type) * CHAR_BIT); // We multiply by CHAR_BIT because the type may have bitfields in T
+     constexpr std::size_t result = detail::detect_fields_count_dispatch<type>(size_t_<max_fields_count>{}, 1L, 1L);
+-
++/*
+     static_assert(
+         is_aggregate_initializable_n<type, result>::value,
+         "====================> Boost.PFR: Types with user specified constructors (non-aggregate initializable types) are not supported."
+     );
+-
++*/
+     static_assert(
+         result != 0 || std::is_empty<type>::value || std::is_fundamental<type>::value || std::is_reference<type>::value,
+         "====================> Boost.PFR: If there's no other failed static asserts then something went wrong. Please report this issue to the github along with the structure you're reflecting."

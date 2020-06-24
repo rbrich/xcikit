@@ -1,62 +1,146 @@
-// BinaryBase.h created on 2019-03-14, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// BinaryBase.h created on 2019-03-14 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019, 2020 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_DATA_BINARY_BASE_H
 #define XCI_DATA_BINARY_BASE_H
 
+#include "ArchiveBase.h"
+#include "Crc32.h"
 #include <cstdint>
+#include <vector>
+#include <bitset>
 
 namespace xci::data {
 
 
+class ArchiveBadMagic : public ArchiveError {
+public:
+    ArchiveBadMagic() : ArchiveError("Bad magic") {}
+};
+
+
+class ArchiveBadVersion : public ArchiveError {
+public:
+    ArchiveBadVersion() : ArchiveError("Bad version") {}
+};
+
+
+class ArchiveBadFlags: public ArchiveError {
+public:
+    ArchiveBadFlags() : ArchiveError("Bad flags") {}
+};
+
+
+class ArchiveBadChunkType : public ArchiveError {
+public:
+    ArchiveBadChunkType() : ArchiveError("Bad chunk type") {}
+};
+
+
+class ArchiveBadChecksum : public ArchiveError {
+public:
+    ArchiveBadChecksum() : ArchiveError("Bad checksum") {}
+};
+
+
+class ArchiveReadError : public ArchiveError {
+public:
+    ArchiveReadError() : ArchiveError("Error reading from archive") {}
+};
+
+
+class ArchiveUnexpectedEnd : public ArchiveError {
+public:
+    ArchiveUnexpectedEnd() : ArchiveError("Corrupted archive (chunk size larger than available data)") {}
+};
+
+
+class ArchiveMissingChecksum : public ArchiveError {
+public:
+    ArchiveMissingChecksum() : ArchiveError("Archive checksum not found") {}
+};
+
+
 class BinaryBase {
 protected:
-    enum {
-        // --- HEADER ---
-        // magic: CBDF (Chunked Binary Data Format)
-        Magic_Byte0         = 0xCB,
-        Magic_Byte1         = 0xDF,
-        // version: 0 (first version of the format)
-        Version             = 0,
-        // flags
-        Flags_LittleEndian  = 0b00000001, // bits 0,1 = endianness (values 00,11 - reserved)
-        Flags_BigEndian     = 0b00000010,
 
-        // --- CHUNK ---
-        // type
-        Type_Master         = 0b00000000, // VALUE is sequence of sub-chunks
-        Type_String         = 0b00100000, // 3 bits, UTF-8 string (000 - reserved)
-        Type_Integer        = 0b01000000, // any int/uint/enum/bool
-        Type_Float          = 0b01100000, // (100,101,110 - reserved)
-        Type_Checksum       = 0b11100000, // type of checksum depends on LEN
-        Type_Mask           = 0b11100000,
-        // length
-        Length41_Mask       = 0b00001111,
-        Length41_Flag       = 0b00010000,
-        Length62_Mask       = 0b00111111,
-        Length62_Flag0      = 0b00000000,
-        Length62_Flag1      = 0b01000000,
-        Length62_Flag2      = 0b10000000,
-        Length62_Flag3      = 0b11000000,
-        Length62_FlagMask   = 0b11000000,
-        // master chunk
-        Master_Enter        = 1,    // LEN field, enter/leave sub-chunks
-        Master_Leave        = 0,
+    enum Header: uint8_t {
+        // magic: CBDF (Chunked Binary Data Format)
+        Magic0              = 0xCB,
+        Magic1              = 0xDF,
+        // version: '0' (first version of the format)
+        Version             = 0x30,
     };
 
-    uint32_t m_crc = 0;
+    enum Endianness: uint8_t {
+        LittleEndian    = 0b00000001,
+        BigEndian       = 0b00000010,
+        EndiannessMask  = 0b00000011,
+    };
+
+    enum Checksum: uint8_t {
+        ChecksumCNone   = 0b00000000,
+        ChecksumCrc32   = 0b00000100,
+        ChecksumSha256  = 0b00001000,
+        ChecksumMask    = 0b00001100,
+    };
+
+    enum Type: uint8_t {
+        // chunk type, upper 4 bits
+        Null        =  0 << 4,
+        BoolFalse   =  1 << 4,
+        BoolTrue    =  2 << 4,
+        Byte        =  3 << 4,
+        UInt32      =  4 << 4,
+        UInt64      =  5 << 4,
+        Int32       =  6 << 4,
+        Int64       =  7 << 4,
+        Float32     =  8 << 4,
+        Float64     =  9 << 4,
+        Varint      = 10 << 4,
+        Array       = 11 << 4,
+        String      = 12 << 4,
+        Binary      = 13 << 4,
+        Master      = 14 << 4,
+        Control     = 15 << 4,
+
+        TypeMask    = 0xF0,
+        KeyMask     = 0x0F,
+
+        ChunkNotFound = 0xFF,
+    };
+
+    template<class T> requires std::is_enum_v<T>
+    static constexpr Type to_chunk_type() { return to_chunk_type<std::underlying_type_t<T>>(); }
+
+    template<class T> requires (sizeof(T) == 1) && std::is_integral_v<T>
+    static constexpr Type to_chunk_type() { return Type::Byte; }
+
+    template<class T> requires (sizeof(T) == 4) && std::is_integral_v<T> && std::is_unsigned_v<T>
+    static constexpr Type to_chunk_type() { return Type::UInt32; }
+
+    template<class T> requires (sizeof(T) == 8) && std::is_integral_v<T> && std::is_unsigned_v<T>
+    static constexpr Type to_chunk_type() { return Type::UInt64; }
+
+    template<class T> requires (sizeof(T) == 4) && std::is_integral_v<T> && std::is_signed_v<T>
+    static constexpr Type to_chunk_type() { return Type::Int32; }
+
+    template<class T> requires (sizeof(T) == 8) && std::is_integral_v<T> && std::is_signed_v<T>
+    static constexpr Type to_chunk_type() { return Type::Int64; }
+
+    template<class T> requires std::is_same_v<T, float>
+    static constexpr Type to_chunk_type() { return Type::Float32; }
+
+    template<class T> requires std::is_same_v<T, double>
+    static constexpr Type to_chunk_type() { return Type::Float64; }
+
+    enum ControlSubtype: uint8_t {
+        Metadata    = 0,
+        Data        = 1,
+    };
 };
 
 

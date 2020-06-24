@@ -5,9 +5,12 @@ jobs:
   build:
 
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        # macos-latest - handled by Travis
+        include:
+        - os: ubuntu-18.04
+        - os: windows-2019
+        #- os: macos-10.15 -- handled by Travis
 
     runs-on: ${{ matrix.os }}
 
@@ -22,13 +25,23 @@ jobs:
         python-version: '3.x'
         architecture: 'x64'
 
+    - name: install GCC
+      if: ${{ matrix.os == 'ubuntu-18.04' }}
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build g++-10
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 50
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 50
+        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++    50
+        sudo update-alternatives --install /usr/bin/cc cc /usr/bin/gcc      50
+
     - name: install tools
       run: |
         pip3 --no-cache-dir install conan
         conan profile new default --detect
 
     - name: additional Conan setup for Linux
-      if: matrix.os == 'ubuntu-latest'
+      if: matrix.os == 'ubuntu-18.04'
       run: conan profile update "settings.compiler.libcxx=libstdc++11" default
 
     - name: bootstrap
@@ -41,23 +54,23 @@ jobs:
         conan user -p $CONAN_PASSWORD -r xcikit rbrich
         conan upload "*/*@rbrich/stable" --all --no-overwrite --check --confirm -r=xcikit
       shell: bash
-      
+
     - name: configure
-      run: ./build.sh config -D XCI_GRAPHICS=0 -D XCI_DATA=0
+      run: ./build.sh config -D XCI_GRAPHICS=0
       shell: bash
-      
+
     - name: build
       run: ./build.sh build
       shell: bash
-      
+
     - name: test
       run: ./build.sh test
       shell: bash
-      
+
     - name: install
       run: ./build.sh install
       shell: bash
-      
+
     - name: package
       run: ./build.sh package
       shell: bash
