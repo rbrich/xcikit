@@ -19,7 +19,7 @@ class XcikitConan(ConanFile):
     build_requires = (
         'incbin/20180413@rbrich/stable',
         'replxx/20200217@rbrich/stable',
-        'magic_get/1.0.0@rbrich/stable',
+        'magic_get/1.0.1@rbrich/stable',
         'magic_enum/0.6.6',
         'fmt/7.0.1',
     )
