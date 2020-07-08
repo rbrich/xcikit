@@ -10,7 +10,7 @@
 #ifndef _WIN32
     #include <sys/mman.h>
 #else
-    #include <mman-win32/mman.h>  // see ext/mman-win32
+    #include <mman-win32/mman.h>  // see external/mman-win32
 #endif
 
 #endif // include guard

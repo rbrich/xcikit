@@ -51,7 +51,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
 
 if (XCI_TEXT)
     # RectangleBinPack (xci-text)
-    add_subdirectory(ext/rbp)
+    add_subdirectory(external/rbp)
 endif()
 
 # Threads (always from system)
@@ -86,7 +86,7 @@ if (XCI_WITH_TINFO)
 endif ()
 
 if (WIN32)
-    add_subdirectory(ext/mman-win32)
+    add_subdirectory(external/mman-win32)
 endif()
 
 # Run configuration checks

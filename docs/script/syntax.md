@@ -29,15 +29,17 @@ Syntax Elements
 
 ### Scoped block
 
-    // define some names in a scope:
-    { a = 1; b = 2 }    // the whole expression evaluates to `void`  
-    a                   // ERROR - `a` is not defined in outer scope
-    
-    // block returns `a`, `c` evaluates to `1`
-    c = { a = 1; a }
-    
-    // the outer scope is visible inside the block
-    x = 1; y = { x + 2 }
+```fire
+// define some names in a scope:
+{ a = 1; b = 2 }    // the whole expression evaluates to `void`  
+a                   // ERROR - `a` is not defined in outer scope
+
+// block returns `a`, `c` evaluates to `1`
+c = { a = 1; a }
+
+// the outer scope is visible inside the block
+x = 1; y = { x + 2 }
+```
 
 - Semicolons are separators, not required after last expression and before EOL/EOF
 - The block has a return value which is the result of the last expression.
@@ -45,9 +47,11 @@ Syntax Elements
 
 ### Function call
 
-    add 1 2
-    sub (1 + 2) 3   // => 0
-    1 .add 2        // infix style
+```fire
+add 1 2
+sub (1 + 2) 3   // => 0
+1 .add 2        // infix style
+```
 
 - Function call syntax is minimalistic - there are no commas or parens.
 - Parens can be used around each single argument.
@@ -58,8 +62,10 @@ Syntax Elements
 Any function can be used as "infix operator", or when comparing to object-oriented languages,
 as a method call, giving the first argument is the "object" on which it operates:
 
-    foo .do bar
-    "string".len
+```fire
+foo .push bar
+"string".len
+```
 
 The evaluation rule is simple:
 The left-hand side expression is passed as the first argument and
@@ -68,37 +74,45 @@ zero or more right-hand side expressions are passed as the following arguments.
 Spaces around the dot are optional, but numbers might need parenthesis,
 depending if the dot is preceded by a space or not:
 
-    one = 1; one.add 2    // ok, but bad style
-    1.add 2               // wrong and misleading, parsed as `(1.) add (2)`
-    (1).add 2             // ok, but better add a space before the dot
-    one. add 2            // ok, but bad style
-    1 . add 2             // ok, but bad style
+```fire
+one = 1; one.add 2    // ok, but bad style
+1.add 2               // wrong and misleading, parsed as `(1.) add (2)`
+(1).add 2             // ok, but better add a space before the dot
+one. add 2            // ok, but bad style
+1 . add 2             // ok, but bad style
+```
 
 Putting the first argument on left-hand side improves readability in some cases:
 
-    "{} {}" .format "hello" 91
-    "string".len
+```fire
+"{} {}" .format "hello" 91
+"string".len
+```
 
 Unlike infix operators, functions have no precedence - they are always
 evaluated from left to right:
-  
-    1 .add 2 .mul 3  // => 9
-    (1 .add 2).mul 3  // => 9
-    1 .add (2 .mul 3)  // => 7
+
+```fire
+1 .add 2 .mul 3  // => 9
+(1 .add 2).mul 3  // => 9
+1 .add (2 .mul 3)  // => 7
+```
 
 The dot operator breaks the argument list. Single argument calls can be chained:
 
-    // all these lines are equivalent
-    uniq (sort (a_list))        // forced right-to-left evaluation
-    a_list .sort .uniq          // implicit left-to-right evaluation
-    ((a_list) .sort) .uniq      // the same, explicit
+```fire
+// all these lines are equivalent
+uniq (sort (a_list))        // forced right-to-left evaluation
+a_list .sort .uniq          // implicit left-to-right evaluation
+((a_list) .sort) .uniq      // the same, explicit
 
-    // also equivalent, the general rule still applies
-    list_1 .cat list_2 list_3 .sort .uniq
-    cat list_1 list_2 list_3 .sort .uniq
-    
-    // might be more readable with explicit parens
-    (cat list_1 list_2 list_3) .sort .uniq
+// also equivalent, the general rule still applies
+list_1 .cat list_2 list_3 .sort .uniq
+cat list_1 list_2 list_3 .sort .uniq
+
+// might be more readable with explicit parens
+(cat list_1 list_2 list_3) .sort .uniq
+```
 
 Generally, the dot operator has weaker binding than a function call.
 
@@ -106,8 +120,10 @@ Generally, the dot operator has weaker binding than a function call.
 
 Infix and prefix operators, operator precedence:
 
-    1 + 2 / 3 == 1 + (2 / 3)
-    -(1 + 2)
+```fire
+1 + 2 / 3 == 1 + (2 / 3)
+-(1 + 2)
+```
 
 ### Variables
 
@@ -115,48 +131,54 @@ Variables are named values. They are always immutable - the name can be
 assigned only once in each scope. But it's possible to override the name
 in inner scope:
 
-    // variable type is inferred
-    i = 1               
-    
-    // right-hand side can be any expression
-    j = 1 + 2
-    k = add2 1 2
-    
-    // error, redefinition of a name
-    k = 1; k = k + 1       
-    
-    // ok, inner `m` has value `2` 
-    m = 1; { m = m + 1 }   
-    
-    // variable type can be explicitly declared
-    l:Int32 = k
-    s:String = "XCI"
+```fire
+// variable type is inferred
+i = 1               
+
+// right-hand side can be any expression
+j = 1 + 2
+k = add2 1 2
+
+// error, redefinition of a name
+k = 1; k = k + 1       
+
+// ok, inner `m` has value `2` 
+m = 1; { m = m + 1 }   
+
+// variable type can be explicitly declared
+l:Int32 = k
+s:String = "XCI"
+```
 
 ### Function definition
 
 Define a function with parameters:
 
-    add2 = fun a b {a + b}   // generic function - works with any type supported by op+
-    add2 = fun a:t b:t -> t {a + b}  // same as above, but with explicit type variable
-    add2 = fun a:Int b:Int -> Int {a + b}   // specific, with type declarations
-    add2 : Int Int -> Int = fun a b {a + b}   // type declaration on left side (i.e. disable type inference)
-    
-    // function definition can span multiple lines
-    add2 = fun a:Int b:Int -> Int
-    {
-        a + b
-    }
-    
-    // possible program main function
-    main = fun args:[String] -> Void {
-        print "Hello World!"
-    }
+```fire
+add2 = fun a b {a + b}   // generic function - works with any type supported by op+
+add2 = fun a:t b:t -> t {a + b}  // same as above, but with explicit type variable
+add2 = fun a:Int b:Int -> Int {a + b}   // specific, with type declarations
+add2 : Int Int -> Int = fun a b {a + b}   // type declaration on left side (i.e. disable type inference)
+
+// function definition can span multiple lines
+add2 = fun a:Int b:Int -> Int
+{
+    a + b
+}
+
+// possible program main function
+main = fun args:[String] -> Void {
+    print "Hello World!"
+}
+```
 
 Function call can explicitly name the arguments:
 
-    make_book = fun name:String author:String isbn:Int -> MyBook
-        { MyBook(name, author, isbn) }
-    make_book name="Title" author="Karel IV" isbn=12345
+```fire
+make_book = fun name:String author:String isbn:Int -> MyBook
+    { MyBook(name, author, isbn) }
+make_book name="Title" author="Karel IV" isbn=12345
+```
 
 This allows rearranging the arguments, but it doesn't allow skipping arguments
 in middle (the last arguments might be left out to make partial call).
@@ -166,31 +188,37 @@ prototype.
 
 Pass a function as an argument:
 
-    eval2 = fun f a b { f a b }
-    eval2 add2 1 2                  // calls `add2 1 2`
-    eval2 fun a b {a + b} 1 2        // calls anonymous function
+```fire
+eval2 = fun f a b { f a b }
+eval2 add2 1 2                   // calls `add2 1 2`
+eval2 fun a b {a + b} 1 2        // calls anonymous function
+```
 
 Return a function from a function:
 
-    sub2 = fun a b { a - b }
-    choose = fun x { if (x == "add") add2 sub2 }
-    choose "add" 1 2
-    choose "sub" 1 2
+```fire
+sub2 = fun a b { a - b }
+choose = fun x { if (x == "add") add2 sub2 }
+choose "add" 1 2
+choose "sub" 1 2
+```
 
 If-condition:
 
-    if x == "add" then add2 else sub2
-    
-    // possible multiline style
-    if (
-       x == "add"
-    )
-    then {
-        add2 
-    }
-    else { 
-        sub2
-    }
+```fire
+if x == "add" then add2 else sub2
+
+// possible multiline style
+if (
+   x == "add"
+)
+then {
+    add2 
+}
+else { 
+    sub2
+}
+```
 
 - Spec: `if <cond> then <true-branch> else <false-branch>`
 - The `else` keyword is not required, but it's good to use with longer
@@ -202,30 +230,36 @@ If-condition:
 
 Block is a function with zero arguments:
 
-    block1 = { c = add2 a b; }    // returns c (the semicolon is not important)
-    block2 = { c = add2 a b; void }  // returns `void`
-    block1  // evaluate the block (actually, it might have been evaluated above - that's up to compiler)
-    block3 = { a + b }      // block with free variables: a, b
-    block3      // the value is still { a + b } - variables are not bound, cannot be evaluated
-    block3_bound = bind a=1 b=2 block3
-    block3_bound    // returns 3
-    
-    a = {f = fun x {5}}; f    // ERROR - block creates new scope - f is undefined outside
-    a = (f = fun x {5}); f    // ok - f is declared in outer scope
+```fire
+block1 = { c = add2 a b; }    // returns c (the semicolon is not important)
+block2 = { c = add2 a b; void }  // returns `void`
+block1  // evaluate the block (actually, it might have been evaluated above - that's up to compiler)
+block3 = { a + b }      // block with free variables: a, b
+block3      // the value is still { a + b } - variables are not bound, cannot be evaluated
+block3_bound = bind a=1 b=2 block3
+block3_bound    // returns 3
+
+a = {f = fun x {5}}; f    // ERROR - block creates new scope - f is undefined outside
+a = (f = fun x {5}); f    // ok - f is declared in outer scope
+```
 
 Infix operators:
 
-    // C++ style operators, with similar precedence rules
-    // (exception is comparison operators)
-    1 + 2 * 3 ** 4 == 1 + (2 * (3 ** 4))
-    // Bitwise operators
-    1 | 2 & 3 >> 1 == 1 | (2 & (3 >> 1))
+```fire
+// C++ style operators, with similar precedence rules
+// (exception is comparison operators)
+1 + 2 * 3 ** 4 == 1 + (2 * (3 ** 4))
+// Bitwise operators
+1 | 2 & 3 >> 1 == 1 | (2 & (3 >> 1))
+```
 
 Record field lookup:
 
-    MyRecord = (String name, Int age) 
-    rec = MyRecord("A name", 42)
-    rec.name    // dot operator
+```fire
+MyRecord = (String name, Int age) 
+rec = MyRecord("A name", 42)
+rec.name    // dot operator
+```
 
 
 Types
@@ -233,16 +267,18 @@ Types
 
 Primitive types:
 
-    12                  // Int32 (alias Int)
-    12:Int64            // Int64
-    1.2                 // Float32 (alias Float)
-    1.2:Float64         // Floaf64
-    true    false       // Bool
-    'a'                 // Char
-    "Hello."            // String         -- UTF-8 string
-    ['a', 'b', 'c']     // [Char]         -- compatible with String, but not the same
-    ("Hello", 33)       // (String, Int)  -- a tuple
-    [1, 2, 3]           // [Int]          -- a list
+```fire
+12                  // Int32 (alias Int)
+12:Int64            // Int64
+1.2                 // Float32 (alias Float)
+1.2:Float64         // Floaf64
+true    false       // Bool
+'a'                 // Char
+"Hello."            // String         -- UTF-8 string
+['a', 'b', 'c']     // [Char]         -- compatible with String, but not the same
+("Hello", 33)       // (String, Int)  -- a tuple
+[1, 2, 3]           // [Int]          -- a list
+```
 
 Strings and lists have the same interface and can be handled universally in generic functions.
 List of chars has different underlying implementation than String: it stores 32bit characters,
@@ -252,21 +288,25 @@ is slower (linear-time), but it takes much less space.
 Custom types are made by composition of other types.
 Types must begin with uppercase letter (this is enforced part of the syntax):
 
-    MyType = Int
-    MyTuple = (String, Int)
-    MyRecord = (String name, Int age)    // just a tuple with named fields
-    MyBool = false | true
-    MyVariant = int Int | string String | void   // discriminated variant type
-    MyOptional = some v | void
+```fire
+MyType = Int
+MyTuple = (String, Int)
+MyRecord = (String name, Int age)    // just a tuple with named fields
+MyBool = false | true
+MyVariant = int Int | string String | void   // discriminated variant type
+MyOptional = some v | void
+```
 
 Function types:
 
-    a:Int b:Int -> c:Int -> Int         // with parameter names
-    Int Int -> Int -> Int               // without parameter names
-    Int Int Int -> Int                  // compact form
-    Int -> Int -> Int -> Int            // normalized form
-    (Int, Int, Int) -> Int              // single tuple argument
-    (Int, Int) Int -> Int               // two arguments, first is tuple
+```fire
+a:Int b:Int -> c:Int -> Int         // with parameter names
+Int Int -> Int -> Int               // without parameter names
+Int Int Int -> Int                  // compact form
+Int -> Int -> Int -> Int            // normalized form
+(Int, Int, Int) -> Int              // single tuple argument
+(Int, Int) Int -> Int               // two arguments, first is tuple
+```
 
 - All of the above types are equivalent - they all describe the same function.
 - The normalized form describes how the partial evaluation works.
@@ -278,65 +318,78 @@ Function types:
 
 Lists are homogeneous data types:
 
-    nums = [1, 2, 3, 4, 5]
-    chars = ['a', 'b', 'c', 'd', 'e']
+```fire
+nums = [1, 2, 3, 4, 5]
+chars = ['a', 'b', 'c', 'd', 'e']
+```
 
 List of chars is equivalent to a string.
 
 Basic operations:
 
-    len nums == 5
-    empty nums == false
-    
-    head nums == 1
-    tail nums == [2, 3, 4, 5]
-    last nums == 5
-    init nums == [1, 2, 3, 4]
-    
-    take 3 nums == [1, 2, 3]
-    take 10 nums == [1, 2, 3, 4, 5]
-    drop 3 nums == [4, 5]
-    drop 10 nums == []
-    
-    reverse nums == [5, 4, 3, 2, 1]
-    min nums == 1
-    max nums == 5
-    sum nums == 15
+```fire
+len nums == 5
+empty nums == false
+
+head nums == 1
+tail nums == [2, 3, 4, 5]
+last nums == 5
+init nums == [1, 2, 3, 4]
+
+take 3 nums == [1, 2, 3]
+take 10 nums == [1, 2, 3, 4, 5]
+drop 3 nums == [4, 5]
+drop 10 nums == []
+
+reverse nums == [5, 4, 3, 2, 1]
+min nums == 1
+max nums == 5
+sum nums == 15
+```
 
 Subscript (index) operator:
 
-    // zero-based index
-    nums ! 3 == 4
-    // note that this calls `nums` with list arg `[3]`
-    nums [3]   // not subscription!
+```fire
+// zero-based index
+nums ! 3 == 4
+// note that this calls `nums` with list arg `[3]`
+nums [3]   // not subscription!
+```
 
 Concatenation:
 
-    cat nums [6, 7]             // =>  [1, 2, 3, 4, 5, 6, 7]
-    cat "hello" [' '] "world"   // =>  "hello world"
-    cons 0 nums                 // =>  [0, 1, 2, 3, 4, 5]
+```fire
+cat nums [6, 7]             // =>  [1, 2, 3, 4, 5, 6, 7]
+cat "hello" [' '] "world"   // =>  "hello world"
+cons 0 nums                 // =>  [0, 1, 2, 3, 4, 5]
+```
 
 Ranges:
 
-    [1..10] == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    ['a'..'z']
+```fire
+[1..10] == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+['a'..'z']
+```
 
 Comprehensions:
 
-    [2*x for x in [1..10] if x > 3]
-    [2*x | x <= [1..10], x > 3]
-
+```fire
+[2*x for x in [1..10] if x > 3]
+[2*x | x <= [1..10], x > 3]
+```
 
 ### Other syntax
 
 C++ style comments:
 
-    // comment line
-    
-    print "hello " /* inline comment */ "world"
-    
-    /* multiline
-       comment */
+```fire
+// comment line
+
+print "hello " /* inline comment */ "world"
+
+/* multiline
+   comment */
+```
 
 
 Modules
@@ -353,14 +406,18 @@ This value can be accessed inside the Invocation under special name: `_`.
 
 Given this source file:
 
-    1 + 2
-    3 * _
+```fire
+1 + 2
+3 * _
+```
 
 Imagine that it's executed like this:
 
-    _0 = void
-    _1 = executor (fun _{ 1 + 2 } _0)
-    _2 = executor (fun _{ 3 * _ } _1)
+```fire
+_0 = void
+_1 = executor (fun _{ 1 + 2 } _0)
+_2 = executor (fun _{ 3 * _ } _1)
+```
 
 The Executor can do anything with the results, for example:
 
@@ -372,9 +429,11 @@ The Executor can do anything with the results, for example:
 
 Importing modules:
 
-    my_mod = import "my_mod"    // import only Declarations
-    my_mod.func                 // run function imported from module `my_mod`
-    my_mod                      // run all associated Invocations
+```fire
+my_mod = import "my_mod"    // import only Declarations
+my_mod.func                 // run function imported from module `my_mod`
+my_mod                      // run all associated Invocations
+```
 
 - In the last line, the whole module is executed.
 - The first Invocation from the module gets current '_' value.
@@ -417,7 +476,7 @@ Appendix
 
 List of Keywords:
 
-    else fun if then
+    else fun import in if module then
 
 Precedence table:
 
