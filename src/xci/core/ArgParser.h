@@ -282,6 +282,9 @@ public:
     /// Print help text
     void print_help() const;
 
+    /// Print information how to invoke help
+    void print_help_notice() const;
+
 private:
     bool invoke_remainder(const char** argv);
 

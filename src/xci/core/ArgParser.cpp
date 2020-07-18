@@ -176,7 +176,8 @@ std::string Option::formatted_desc(size_t width) const
 
         dp += p.end();
     }
-    return res + std::string(width - res_len, ' ');
+    const size_t padding = (width >= res_len) ? width - res_len : 0;
+    return res + std::string(padding, ' ');
 }
 
 
@@ -311,8 +312,9 @@ ArgParser& ArgParser::operator()(const char* argv[])
         }
     } catch (const BadArgument& e) {
         auto& t = TermCtl::stderr_instance();
-        cerr << t.bold().red() << e.what() << t.normal() << endl;
+        cerr << t.bold().yellow() << "Error: " << t.red() << e.what() << t.normal() << '\n' << endl;
         print_usage();
+        print_help_notice();
         exit(1);
     }
     return *this;
@@ -423,7 +425,7 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
             auto it = find_if(m_opts.begin(), m_opts.end(),
                     [p](const Option& opt) { return opt.has_short(*p); });
             if (it == m_opts.end())
-                throw BadArgument(format("Unknown option: -{} (in {})", p, arg));
+                throw BadArgument(format("Unknown option: -{} (in {})", p[0], arg));
             ++p;
             if (!it->has_args()) {
                 if (it->is_show_help()) {
@@ -468,7 +470,7 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
 void ArgParser::print_usage() const
 {
     auto& t = TermCtl::stdout_instance();
-    cout << t.format("Usage: {bold}{}{normal} ", m_progname);
+    cout << t.format("{bold}{yellow}Usage:{normal} {bold}{}{normal} ", m_progname);
     for (const auto& opt : m_opts) {
         cout << opt.usage() << ' ';
     }
@@ -482,11 +484,22 @@ void ArgParser::print_help() const
     for (const auto& opt : m_opts)
         desc_cols = max(desc_cols, opt.desc().size());
     print_usage();
-    cout << endl << "Options:" << endl;
+    auto& t = TermCtl::stdout_instance();
+    cout << endl << t.bold().yellow() << "Options:" << t.normal() << endl;
     for (const auto& opt : m_opts) {
         cout << "  " << opt.formatted_desc(desc_cols)
              << "  " << opt.help() << endl;
     }
+}
+
+
+void ArgParser::print_help_notice() const
+{
+    auto it = find_if(m_opts.begin(), m_opts.end(),
+            [](const Option& opt) { return opt.is_show_help(); });
+    if (it == m_opts.end())
+        return;  // no --help option
+    cout << endl << "Try " << it->formatted_desc(0) << " for more information." << endl;
 }
 
 
