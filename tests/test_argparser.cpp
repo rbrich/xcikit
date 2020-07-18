@@ -337,52 +337,74 @@ TEST_CASE( "Option argument", "[ArgParser][parse_arg]" )
 TEST_CASE( "Gather rest of the args", "[ArgParser]" )
 {
     bool verbose = false;
-    const char** rest = nullptr;
+    std::vector<std::string_view> rest;
     ArgParser ap {
         Option("-v, --verbose", "Enable verbosity", verbose),
-        Option("--...", "Passthrough args", [&rest](const char** args){ rest = args; }),
+        Option("-- ...", "Passthrough args", rest),
     };
 
-    SECTION("passthrough all") {
+    SECTION("passthrough all unconsumed positional args") {
         const char* args[] = {"aa", "bb", nullptr};
-        CHECK(ap.parse_args(args) == ArgParser::Stop);
-        CHECK(rest[0] == args[0]);
+        ap.parse_args(args);
+        CHECK(rest.size() == 2);
+        CHECK(rest[0] == "aa");
+        CHECK(rest[1] == "bb");
     }
 
     SECTION("passthrough the rest") {
         const char* args[] = {"-v", "aa", "bb", nullptr};
-        CHECK(ap.parse_args(args) == ArgParser::Stop);
-        CHECK(rest[0] == args[1]);
+        ap.parse_args(args);
+        CHECK(rest.size() == 2);
+        CHECK(rest[0] == "aa");
+        CHECK(rest[1] == "bb");
     }
 
-    SECTION("after initial passthrough-arg, no more options are processed") {
+    SECTION("passthrough args behave as normal positional args, flags are allowed in between") {
         const char* args[] = {"aa", "-v", "bb", nullptr};
-        CHECK(ap.parse_args(args) == ArgParser::Stop);
-        CHECK(rest[0] == args[0]);
-        CHECK(rest[1] == args[1]);
+        ap.parse_args(args);
+        CHECK(rest.size() == 2);
+        CHECK(rest[0] == "aa");
+        CHECK(rest[1] == "bb");
     }
 
-    SECTION("first unrecognized arg starts passthrough") {
+    SECTION("unrecognized flags are not passed through") {
         const char* args[] = {"-x", "-v", "bb", nullptr};
-        CHECK(ap.parse_args(args) == ArgParser::Stop);
-        CHECK(rest[0] == args[0]);
-        CHECK(rest[1] == args[1]);
+        CHECK_THROWS_AS(ap.parse_args(args), BadArgument);
     }
 
-    SECTION("explicit passthrough 1") {
-        const char* args[] = {"--", "aa", "bb", nullptr};
+    SECTION("explicit passthrough (all)") {
+        const char* args[] = {"--", "-v", "--verbose", "pos", nullptr};
         CHECK(ap.parse_args(args) == ArgParser::Stop);
-        CHECK(rest[0] == args[1]);
+        CHECK(rest.size() == 3);
+        CHECK(rest[0] == "-v");
+        CHECK(rest[1] == "--verbose");
+        CHECK(rest[2] == "pos");
     }
 
-    std::vector<const char*> files;
-    ap.add_option(Option("FILE...", "Input files", files));
-
-    SECTION("explicit passthrough 2") {
+    SECTION("explicit passthrough (with unconsumed positional)") {
         const char* args[] = {"f1", "f2", "--", "aa", "bb", nullptr};
         CHECK(ap.parse_args(args) == ArgParser::Stop);
-        CHECK(files[0] == args[0]);
+        CHECK(rest.size() == 4);
+        CHECK(rest[0] == "f1");
+        CHECK(rest[1] == "f2");
+        CHECK(rest[2] == "aa");
+        CHECK(rest[3] == "bb");
+    }
+
+    std::vector<std::string_view> files;
+    ap = ArgParser {
+            Option("FILE...", "Input files", files),
+            Option("-- REST ...", "Passthrough args", rest),
+    };
+
+    SECTION("explicit passthrough (with consumed positional)") {
+        const char* args[] = {"f1", "f2", "--", "aa", "bb", nullptr};
+        CHECK(ap.parse_args(args) == ArgParser::Stop);
         CHECK(files.size() == 2);
-        CHECK(rest[0] == args[3]);
+        CHECK(files[0] == "f1");
+        CHECK(files[1] == "f2");
+        CHECK(rest.size() == 2);
+        CHECK(rest[0] == "aa");
+        CHECK(rest[1] == "bb");
     }
 }

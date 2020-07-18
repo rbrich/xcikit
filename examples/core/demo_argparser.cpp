@@ -23,7 +23,7 @@ int main(int argc, const char* argv[])
     int optimize = -1;
     const char* color = nullptr;
     std::vector<const char*> files;
-    const char** rest = nullptr;
+    std::vector<const char*> rest;
     const char* pattern = nullptr;
     ArgParser {
 
@@ -41,7 +41,7 @@ int main(int argc, const char* argv[])
         // special option to gather remaining arguments - this will trigger anytime
         // when encountered unknown argument or explicitly with delimiter arg: "--"
         // (always optional, brackets not needed)
-        Option("-- ...", "Gather remaining arguments", [&rest](const char** args){ rest = args; }),
+        Option("-- ...", "Gather remaining arguments", rest),
 
     } (argv);
 
@@ -55,14 +55,10 @@ int main(int argc, const char* argv[])
         cout << " [not given]";
     cout << endl;
     cout << "    passthrough:";
-    if (rest) {
-        while (*rest) {
-            cout << ' ' << *rest << ';';
-            ++rest;
-        }
-    } else {
+    for (const auto& r : rest)
+        cout << ' ' << r << ';';
+    if (rest.empty())
         cout << " [not given]";
-    }
     cout << endl;
     return 0;
 }
