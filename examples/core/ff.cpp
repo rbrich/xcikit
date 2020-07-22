@@ -10,6 +10,7 @@
 #include <xci/core/sys.h>
 #include <xci/core/string.h>
 #include <xci/core/log.h>
+#include <xci/compat/macros.h>
 
 #include <fmt/core.h>
 
@@ -21,6 +22,7 @@
 #include <condition_variable>
 #include <cassert>
 #include <cstring>
+#include <utility>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -35,8 +37,8 @@ using namespace std;
 class FileTree {
 public:
     struct PathNode {
-        explicit PathNode(const std::string& component) : component(component) {}
-        PathNode(const char* component, const std::shared_ptr<PathNode>& parent) : component(component), parent(parent) {}
+        explicit PathNode(const std::string& component) : component(component) {}  // NOLINT
+        PathNode(const char* component, const std::shared_ptr<PathNode>& parent) : component(component), parent(parent) {}  // NOLINT
 
         std::string to_string() const {
             if (!parent || parent->component.empty())
@@ -56,7 +58,9 @@ public:
         OpenDirError,
         ReadDirError,
     };
-    using Callback = std::function<void(const PathNode&, Type)>;
+
+    /// for Directories, return true to descent, false to skip
+    using Callback = std::function<bool(const PathNode&, Type)>;
 
     /// \param max_threads      Number of threads FileTree can spawn.
     explicit FileTree(unsigned max_threads, unsigned queue_size, Callback&& cb) : m_max_threads(max_threads), m_cb(std::move(cb)) {
@@ -65,6 +69,7 @@ public:
         m_queue.reserve(queue_size);
         assert(m_queue.capacity() == queue_size);
     }
+
     ~FileTree() {
         // join threads
         for (auto& t : m_workers)
@@ -81,13 +86,19 @@ public:
                 m_cb(*path, File);
                 return;
             }
+            if (!m_cb(*path, Directory))
+                return;
             m_cb(*path, OpenError);
             return;
         }
         path->fd = fd;
 
-        if (!pathname.empty())
-            m_cb(*path, Directory);
+        if (!pathname.empty()) {
+            if (!m_cb(*path, Directory)) {
+                close(fd);
+                return;
+            }
+        }
         enqueue(std::move(path));
     }
 
@@ -181,12 +192,17 @@ private:
                         m_cb(*entry_path, File);
                         continue;
                     }
+                    if (!m_cb(*entry_path, Directory))
+                        continue;
                     m_cb(*entry_path, OpenError);
                     continue;
                 }
                 entry_path->fd = entry_fd;
 
-                m_cb(*entry_path, Directory);
+                if (!m_cb(*entry_path, Directory)) {
+                    close(entry_fd);
+                    continue;
+                }
                 enqueue(std::move(entry_path));
                 continue;
             }
@@ -207,20 +223,21 @@ private:
 
 int main(int argc, const char* argv[])
 {
-    bool verbose = false;
-    int jobs = 4;
+    bool show_hidden = false;
+    int jobs = 8;
     std::vector<const char*> files;
     const char* pattern = nullptr;
     ArgParser {
             Option("-h, --help", "Show help", show_help),
-            Option("-v, --verbose", "Enable verbosity", verbose).env("VERBOSE"),
             Option("-j, --jobs JOBS", "Number of worker threads", jobs).env("JOBS"),
+            Option("-H, --hidden", "Don't skip hidden files", show_hidden),
+            Option("-a, --all", "Don't skip any files, same as -H", show_hidden),
             Option("[PATTERN]", "File name pattern", pattern),
             Option("-- FILE ...", "Gather remaining arguments", files),
     } (argv);
 
 #ifndef NDEBUG
-    cout << "OK: verbose=" << boolalpha << verbose << endl;
+    cout << "OK: hidden=" << boolalpha << show_hidden << endl;
     cout << "    jobs=" << jobs << endl;
     cout << "    pattern: " << (pattern ? pattern : "[not given]") << endl;
     cout << "    files:";
@@ -231,24 +248,27 @@ int main(int argc, const char* argv[])
     cout << endl;
 #endif
 
-    FileTree ft(jobs-1, jobs, [](const FileTree::PathNode& path, FileTree::Type t) {
+    FileTree ft(jobs-1, jobs, [show_hidden](const FileTree::PathNode& path, FileTree::Type t) {
+        if (!show_hidden && path.component[0] == '.')
+            return false;
         switch (t) {
             case FileTree::Directory:
-                fmt::print("{}/\n", path.to_string());
-                return;
+                fmt::print("{}\n", path.to_string());
+                return true;
             case FileTree::File:
                 fmt::print("{}\n", path.to_string());
-                return;
+                return true;
             case FileTree::OpenError:
                 fmt::print(stderr,"ff: open({}): {}\n", path.to_string(), errno_str());
-                return;
+                return true;
             case FileTree::OpenDirError:
                 fmt::print(stderr,"ff: opendir({}): {}\n", path.to_string(), errno_str());
-                return;
+                return true;
             case FileTree::ReadDirError:
                 fmt::print(stderr,"ff: readdir({}): {}\n", path.to_string(), errno_str());
-                return;
+                return true;
         }
+        UNREACHABLE;
     });
     if (files.empty())
         ft.walk("");

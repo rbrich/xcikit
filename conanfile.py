@@ -57,7 +57,7 @@ class XcikitConan(ConanFile):
                         endforeach()
                     """))
                 out = io.StringIO()
-                if self.run(f"cmake . -G Ninja --log-level=NOTICE -DDEPS='{items}'", output=out, ignore_errors=True) != 0:
+                if self.run(f"cmake . -G Ninja -DDEPS='{items}'", output=out, ignore_errors=True) != 0:
                     self.output.error(f'Failed:\n{out.getvalue()}')
                     return
                 for line in out.getvalue().splitlines():
