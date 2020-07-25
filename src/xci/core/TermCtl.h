@@ -20,12 +20,18 @@ namespace xci::core {
 
 class TermCtl {
 public:
+    enum class Mode {
+        Auto,
+        Always,
+        Never,
+    };
+
     // Static instance for standard output
-    static TermCtl& stdout_instance();
-    static TermCtl& stderr_instance();
+    static TermCtl& stdout_instance(Mode mode = Mode::Auto);
+    static TermCtl& stderr_instance(Mode mode = Mode::Auto);
 
     // Constructor for custom streams
-    explicit TermCtl(int fd);
+    explicit TermCtl(int fd, Mode mode = Mode::Auto);
     ~TermCtl();
 
     // Is the output stream connected to TTY?

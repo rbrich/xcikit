@@ -10,6 +10,7 @@
 #include <xci/core/sys.h>
 #include <xci/core/string.h>
 #include <xci/core/log.h>
+#include <xci/core/TermCtl.h>
 #include <xci/compat/macros.h>
 
 #include <fmt/core.h>
@@ -44,6 +45,12 @@ public:
             if (!parent || parent->component.empty())
                 return component;
             return parent->to_string() + '/' + component;
+        }
+
+        std::string dir_to_string() const {
+            if (!parent || parent->component.empty())
+                return {};
+            return parent->to_string() + '/';
         }
 
         std::string component;
@@ -224,6 +231,7 @@ private:
 int main(int argc, const char* argv[])
 {
     bool show_hidden = false;
+    bool color = false;
     int jobs = 8;
     std::vector<const char*> files;
     const char* pattern = nullptr;
@@ -232,6 +240,7 @@ int main(int argc, const char* argv[])
             Option("-j, --jobs JOBS", "Number of worker threads", jobs).env("JOBS"),
             Option("-H, --hidden", "Don't skip hidden files", show_hidden),
             Option("-a, --all", "Don't skip any files, same as -H", show_hidden),
+            Option("-c, --color", "Force color output", color),
             Option("[PATTERN]", "File name pattern", pattern),
             Option("-- FILE ...", "Gather remaining arguments", files),
     } (argv);
@@ -248,7 +257,9 @@ int main(int argc, const char* argv[])
     cout << endl;
 #endif
 
-    FileTree ft(jobs-1, jobs, [show_hidden](const FileTree::PathNode& path, FileTree::Type t) {
+    TermCtl& term = TermCtl::stdout_instance(color ? TermCtl::Mode::Always : TermCtl::Mode::Auto);
+
+    FileTree ft(jobs-1, jobs, [show_hidden, &term](const FileTree::PathNode& path, FileTree::Type t) {
         if (!show_hidden && path.component[0] == '.')
             return false;
         switch (t) {
@@ -256,7 +267,8 @@ int main(int argc, const char* argv[])
                 fmt::print("{}\n", path.to_string());
                 return true;
             case FileTree::File:
-                fmt::print("{}\n", path.to_string());
+                puts(term.format("{}{cyan}{}{normal}", path.dir_to_string(), path.component).c_str());
+                //fmt::print("{}{}\n", path.dir_to_string(), path.component);
                 return true;
             case FileTree::OpenError:
                 fmt::print(stderr,"ff: open({}): {}\n", path.to_string(), errno_str());

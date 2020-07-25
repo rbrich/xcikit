@@ -81,21 +81,21 @@ static void reset_console_mode(DWORD hid, DWORD mode)
 #endif
 
 
-TermCtl& TermCtl::stdout_instance()
+TermCtl& TermCtl::stdout_instance(Mode mode)
 {
-    static TermCtl term(STDOUT_FILENO);
+    static TermCtl term(STDOUT_FILENO, mode);
     return term;
 }
 
 
-TermCtl& TermCtl::stderr_instance()
+TermCtl& TermCtl::stderr_instance(Mode mode)
 {
-    static TermCtl term(STDERR_FILENO);
+    static TermCtl term(STDERR_FILENO, mode);
     return term;
 }
 
 
-TermCtl::TermCtl(int fd)
+TermCtl::TermCtl(int fd, Mode mode)
 {
 #ifdef _WIN32
     assert(fd == STDOUT_FILENO || fd == STDERR_FILENO);
@@ -105,9 +105,18 @@ TermCtl::TermCtl(int fd)
     if (m_orig_out_mode == bad_mode)
         return;
 #else
-    // Do not even try if not TTY (e.g. when piping to other command)
-    if (isatty(fd) != 1)
-        return;
+    switch (mode) {
+        case Mode::Auto:
+            // Do not even try if not TTY (e.g. when piping to other command)
+            if (isatty(fd) != 1)
+                return;
+            break;
+        case Mode::Always:
+            break;
+        case Mode::Never:
+            return;
+    }
+
 
     #ifdef XCI_WITH_TINFO
     // Setup terminfo
