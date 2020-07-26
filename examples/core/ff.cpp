@@ -29,6 +29,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <regex.h>
 
 using namespace xci::core;
 using namespace xci::core::argparser;
@@ -230,19 +231,27 @@ private:
 
 int main(int argc, const char* argv[])
 {
+    bool fixed = false;
+    bool ignore_case = false;
+    bool ungreedy = false;
     bool show_hidden = false;
+    bool show_dirs = false;
     bool color = false;
     int jobs = 8;
     std::vector<const char*> files;
     const char* pattern = nullptr;
     ArgParser {
-            Option("-h, --help", "Show help", show_help),
-            Option("-j, --jobs JOBS", "Number of worker threads", jobs).env("JOBS"),
-            Option("-H, --hidden", "Don't skip hidden files", show_hidden),
-            Option("-a, --all", "Don't skip any files, same as -H", show_hidden),
+            Option("-F, --fixed", "Match literal string instead of (default) regex", fixed),
+            Option("-i, --ignore-case", "Enable case insensitive matching", ignore_case),
+            Option("-u, --ungreedy", "Use minimal (non-greedy) repetitions instead of the normal greedy ones", ungreedy),
+            Option("-H, --show-hidden", "Don't skip hidden files", show_hidden),
+            Option("-D, --show-dirs", "Don't skip directory entries", show_dirs),
+            Option("-a, --all", "Don't skip any files, same as -H -D", [&]{ show_hidden = true; show_dirs = true; }),
             Option("-c, --color", "Force color output", color),
-            Option("[PATTERN]", "File name pattern", pattern),
-            Option("-- FILE ...", "Gather remaining arguments", files),
+            Option("-j, --jobs JOBS", "Number of worker threads", jobs).env("JOBS"),
+            Option("-h, --help", "Show help", show_help),
+            Option("[PATTERN]", "File name pattern (Perl-style regex)", pattern),
+            Option("-- FILE ...", "Files and/or directories to scan", files),
     } (argv);
 
 #ifndef NDEBUG
@@ -259,16 +268,88 @@ int main(int argc, const char* argv[])
 
     TermCtl& term = TermCtl::stdout_instance(color ? TermCtl::Mode::Always : TermCtl::Mode::Auto);
 
-    FileTree ft(jobs-1, jobs, [show_hidden, &term](const FileTree::PathNode& path, FileTree::Type t) {
+    regex_t re;
+    if (pattern) {
+        int flags = fixed ? (REG_LITERAL) : (REG_EXTENDED | REG_ENHANCED);
+        if (ignore_case)
+            flags |= REG_ICASE;
+        if (!fixed && ungreedy)
+            flags |= REG_UNGREEDY;
+        auto r = regcomp(&re, pattern, flags);
+        if (r != 0) {
+            size_t size = regerror(r, &re, nullptr, 0);
+            std::string buffer (size, '\0');
+            regerror(r, &re, buffer.data(), buffer.size());
+            fmt::print(stderr,"ff: regcomp({}): {}\n", pattern, buffer);
+            exit(1);
+        }
+    }
+
+    struct Theme {
+        std::string normal;
+        std::string dir;
+        std::string dir_last;
+        std::string file;
+        std::string highlight;
+    };
+
+    Theme theme {
+        .normal = term.normal().seq(),
+        .dir = term.magenta().seq(),
+        .dir_last = term.cyan().seq(),
+        .file = term.normal().seq(),
+        .highlight = term.bold().yellow().seq(),
+    };
+
+    FileTree ft(jobs-1, jobs, [show_hidden, show_dirs, pattern, &re, &theme](const FileTree::PathNode& path, FileTree::Type t) {
         if (!show_hidden && path.component[0] == '.')
             return false;
         switch (t) {
             case FileTree::Directory:
-                fmt::print("{}\n", path.to_string());
-                return true;
+                if (!show_dirs)
+                    return true;
+                FALLTHROUGH;
             case FileTree::File:
-                puts(term.format("{}{cyan}{}{normal}", path.dir_to_string(), path.component).c_str());
-                //fmt::print("{}{}\n", path.dir_to_string(), path.component);
+                if (pattern) {
+                    regmatch_t m;
+                    auto* name = path.component.c_str();
+                    auto r = regexec(&re, name, 1, &m, 0);
+                    if (r == REG_NOMATCH)
+                        return true;  // not matched
+                    if (r != 0) {
+                        size_t size = regerror(r, &re, nullptr, 0);
+                        std::string buffer (size, '\0');
+                        regerror(r, &re, buffer.data(), buffer.size());
+                        fmt::print(stderr,"ff: regexec({}): {}\n", pattern, buffer);
+                        return true;
+                    }
+                    std::string out = theme.dir;
+                    out += path.dir_to_string();
+                    if (t == FileTree::Directory)
+                        out += theme.dir_last;
+                    else
+                        out += theme.file;
+                    out += std::string_view(name, m.rm_so);
+                    out += theme.highlight;
+                    out += std::string_view(name + m.rm_so, m.rm_eo - m.rm_so);
+                    if (t == FileTree::Directory)
+                        out += theme.dir_last;
+                    else
+                        out += theme.file;
+                    out += std::string_view(name + m.rm_eo);
+                    out += theme.normal;
+                    puts(out.c_str());
+                } else {
+                    std::string out = theme.dir;
+                    out += path.dir_to_string();
+                    if (t == FileTree::Directory)
+                        out += theme.dir_last;
+                    else
+                        out += theme.file;
+                    out += path.component;
+                    out += theme.normal;
+                    puts(out.c_str());
+                }
                 return true;
             case FileTree::OpenError:
                 fmt::print(stderr,"ff: open({}): {}\n", path.to_string(), errno_str());
@@ -289,5 +370,7 @@ int main(int argc, const char* argv[])
 
     ft.worker();
 
+    if (pattern)
+        regfree(&re);
     return 0;
 }
