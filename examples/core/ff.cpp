@@ -9,6 +9,7 @@
 #include <xci/core/ArgParser.h>
 #include <xci/core/sys.h>
 #include <xci/core/string.h>
+#include <xci/core/file.h>
 #include <xci/core/log.h>
 #include <xci/core/TermCtl.h>
 #include <xci/compat/macros.h>
@@ -24,6 +25,7 @@
 #include <cassert>
 #include <cstring>
 #include <utility>
+#include <string_view>
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -39,8 +41,8 @@ using namespace std;
 class FileTree {
 public:
     struct PathNode {
-        explicit PathNode(const std::string& component) : component(component) {}  // NOLINT
-        PathNode(const char* component, const std::shared_ptr<PathNode>& parent) : component(component), parent(parent) {}  // NOLINT
+        explicit PathNode(std::string_view component) : component(component) {}  // NOLINT
+        PathNode(std::string_view component, const std::shared_ptr<PathNode>& parent) : component(component), parent(parent) {}  // NOLINT
 
         std::string to_string() const {
             if (!parent || parent->component.empty())
@@ -85,17 +87,30 @@ public:
     }
 
     void walk(const std::string& pathname) {
-        auto path = std::make_shared<PathNode>(rstrip(pathname, '/'));
+        // create PathNode also for parent, so the reporting is consistent
+        // (component in each reported PathNode is always cleaned basename)
+        auto pathname_clean = rstrip(pathname, '/');
+        auto components = rsplit(pathname_clean, '/', 1);
+        std::shared_ptr<PathNode> path;
+        if (components.size() == 2) {
+            auto parent = std::make_shared<PathNode>(components[0]);
+            path = std::make_shared<PathNode>(components[1], parent);
+        } else {
+            path = std::make_shared<PathNode>(pathname_clean);
+        }
         // try to open as directory, if it fails with ENOTDIR, it is a file
         int fd = open(pathname.empty() ? "." : pathname.c_str(), O_DIRECTORY | O_NOFOLLOW | O_NOCTTY, O_RDONLY);
         if (fd == -1) {
             if (errno == ENOTDIR) {
                 // it's a file - report it
-                m_cb(*path, File);
+                if (!pathname.empty())
+                    m_cb(*path, File);
                 return;
             }
-            if (!m_cb(*path, Directory))
-                return;
+            if (!pathname.empty()) {
+                if (!m_cb(*path, Directory))
+                    return;
+            }
             m_cb(*path, OpenError);
             return;
         }
