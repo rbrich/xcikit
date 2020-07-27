@@ -35,6 +35,7 @@ bool remove_suffix(std::string& str, const std::string& suffix);
 
 
 std::vector<std::string_view> split(std::string_view str, char delim, int maxsplit = -1);
+std::vector<std::string_view> rsplit(std::string_view str, char delim, int maxsplit = -1);
 
 // Strip chars from start of a string
 template <class T>

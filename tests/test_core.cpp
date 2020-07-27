@@ -216,6 +216,15 @@ TEST_CASE( "split", "[string]" )
 }
 
 
+TEST_CASE( "rsplit", "[string]" )
+{
+    using l = std::vector<std::string_view>;
+    CHECK(rsplit("one\ntwo\nthree", '\n') == l{"one", "two", "three"});
+    CHECK(rsplit("\none\ntwo\n\nthree\n", '\n') == l{"", "one", "two", "", "three", ""});
+    CHECK(rsplit("one, two, three", ',', 1) == l{"one, two", " three"});
+}
+
+
 TEST_CASE( "starts_with", "[string]" )
 {
     CHECK(starts_with("/ab/cdef", "/ab"));

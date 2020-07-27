@@ -68,6 +68,23 @@ vector<string_view> split(string_view str, char delim, int maxsplit)
 }
 
 
+vector<string_view> rsplit(string_view str, char delim, int maxsplit)
+{
+    std::vector<string_view> res;
+    size_t pos = str.size();
+    while (maxsplit != 0 && pos != 0) {
+        size_t beg = str.rfind(delim, pos - 1);
+        if (beg == string_view::npos)
+            break;
+        res.insert(res.begin(), str.substr(beg + 1, pos - beg - 1));
+        pos = beg;
+        --maxsplit;
+    }
+    res.insert(res.begin(), str.substr(0, pos));
+    return res;
+}
+
+
 std::string escape(string_view str)
 {
     std::string out;
