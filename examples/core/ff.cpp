@@ -5,6 +5,7 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 /// Find File (ff) command line tool
+/// A find-like tool using Hyperscan for regex matching.
 
 #include <xci/core/ArgParser.h>
 #include <xci/core/sys.h>
@@ -15,6 +16,7 @@
 #include <xci/compat/macros.h>
 
 #include <fmt/core.h>
+#include <hs/hs.h>
 
 #include <iostream>
 #include <memory>
@@ -31,11 +33,9 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <fcntl.h>
-#include <regex.h>
 
 using namespace xci::core;
 using namespace xci::core::argparser;
-using namespace std;
 
 
 class FileTree {
@@ -248,7 +248,6 @@ int main(int argc, const char* argv[])
 {
     bool fixed = false;
     bool ignore_case = false;
-    bool ungreedy = false;
     bool show_hidden = false;
     bool show_dirs = false;
     bool color = false;
@@ -258,7 +257,6 @@ int main(int argc, const char* argv[])
     ArgParser {
             Option("-F, --fixed", "Match literal string instead of (default) regex", fixed),
             Option("-i, --ignore-case", "Enable case insensitive matching", ignore_case),
-            Option("-u, --ungreedy", "Use minimal (non-greedy) repetitions instead of the normal greedy ones", ungreedy),
             Option("-H, --show-hidden", "Don't skip hidden files", show_hidden),
             Option("-D, --show-dirs", "Don't skip directory entries", show_dirs),
             Option("-a, --all", "Don't skip any files, same as -H -D", [&]{ show_hidden = true; show_dirs = true; }),
@@ -269,34 +267,23 @@ int main(int argc, const char* argv[])
             Option("-- FILE ...", "Files and/or directories to scan", files),
     } (argv);
 
-#ifndef NDEBUG
-    cout << "OK: hidden=" << boolalpha << show_hidden << endl;
-    cout << "    jobs=" << jobs << endl;
-    cout << "    pattern: " << (pattern ? pattern : "[not given]") << endl;
-    cout << "    files:";
-    for (const auto& f : files)
-        cout << ' ' << f << ';';
-    if (files.empty())
-        cout << " [not given]";
-    cout << endl;
-#endif
-
     TermCtl& term = TermCtl::stdout_instance(color ? TermCtl::Mode::Always : TermCtl::Mode::Auto);
 
-    regex_t re;
+    hs_database_t *re_db = nullptr;
     if (pattern) {
-        int flags = fixed ? (REG_LITERAL) : (REG_EXTENDED | REG_ENHANCED);
+        int flags = HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP;
         if (ignore_case)
-            flags |= REG_ICASE;
-        if (!fixed && ungreedy)
-            flags |= REG_UNGREEDY;
-        auto r = regcomp(&re, pattern, flags);
-        if (r != 0) {
-            size_t size = regerror(r, &re, nullptr, 0);
-            std::string buffer (size, '\0');
-            regerror(r, &re, buffer.data(), buffer.size());
-            fmt::print(stderr,"ff: regcomp({}): {}\n", pattern, buffer);
-            exit(1);
+            flags |= HS_FLAG_CASELESS;
+        // enable start offset only if we have color output
+        if (term.is_tty())
+            flags |= HS_FLAG_SOM_LEFTMOST;
+        // TODO: fixed -> hs_compile_lit (requires Hyperscan 5.2.0)
+        hs_compile_error_t *re_compile_err;
+        if (hs_compile(pattern, flags, HS_MODE_BLOCK, NULL, &re_db,
+                &re_compile_err) != HS_SUCCESS) {
+            fmt::print(stderr,"ff: hs_compile({}): {}\n", pattern, re_compile_err->message);
+            hs_free_compile_error(re_compile_err);
+            return 1;
         }
     }
 
@@ -316,7 +303,10 @@ int main(int argc, const char* argv[])
         .highlight = term.bold().yellow().seq(),
     };
 
-    FileTree ft(jobs-1, jobs, [show_hidden, show_dirs, pattern, &re, &theme](const FileTree::PathNode& path, FileTree::Type t) {
+    FileTree ft(jobs-1, jobs,
+                [show_hidden, show_dirs, pattern, &re_db, &theme]
+                (const FileTree::PathNode& path, FileTree::Type t)
+    {
         if (!show_hidden && path.component[0] == '.')
             return false;
         switch (t) {
@@ -326,32 +316,46 @@ int main(int argc, const char* argv[])
                 FALLTHROUGH;
             case FileTree::File:
                 if (pattern) {
-                    regmatch_t m;
                     auto* name = path.component.c_str();
-                    auto r = regexec(&re, name, 1, &m, 0);
-                    if (r == REG_NOMATCH)
-                        return true;  // not matched
-                    if (r != 0) {
-                        size_t size = regerror(r, &re, nullptr, 0);
-                        std::string buffer (size, '\0');
-                        regerror(r, &re, buffer.data(), buffer.size());
-                        fmt::print(stderr,"ff: regexec({}): {}\n", pattern, buffer);
+                    thread_local hs_scratch_t *re_scratch = nullptr;
+                    if (re_scratch == nullptr && hs_alloc_scratch(re_db, &re_scratch) != HS_SUCCESS) {
+                        fmt::print(stderr,"ff: hs_alloc_scratch: Unable to allocate scratch space.\n");
                         return true;
                     }
+                    // FIXME: thread cleanup: hs_free_scratch(re_scratch);
+
+                    std::vector<std::pair<int, int>> matches;
+                    auto r = hs_scan(re_db, path.component.data(), path.component.size(), 0, re_scratch,
+                            [] (unsigned int id, unsigned long long from,
+                                    unsigned long long to, unsigned int flags, void *ctx)
+                            {
+                                auto* m = static_cast<std::vector<std::pair<int, int>>*>(ctx);
+                                m->emplace_back(from, to);
+                                return 0;
+                            }, &matches);
+                    if (r != HS_SUCCESS) {
+                        fmt::print(stderr,"ff: hs_scan({}): Unable to scan ({})\n", path.component, r);
+                        return true;
+                    }
+                    if (matches.empty())
+                        return true;  // not matched
+                    const auto so = matches[0].first;
+                    const auto eo = matches[0].second;
+
                     std::string out = theme.dir;
                     out += path.dir_to_string();
                     if (t == FileTree::Directory)
                         out += theme.dir_last;
                     else
                         out += theme.file;
-                    out += std::string_view(name, m.rm_so);
+                    out += std::string_view(name, so);
                     out += theme.highlight;
-                    out += std::string_view(name + m.rm_so, m.rm_eo - m.rm_so);
+                    out += std::string_view(name + so, eo - so);
                     if (t == FileTree::Directory)
                         out += theme.dir_last;
                     else
                         out += theme.file;
-                    out += std::string_view(name + m.rm_eo);
+                    out += std::string_view(name + eo);
                     out += theme.normal;
                     puts(out.c_str());
                 } else {
@@ -385,7 +389,6 @@ int main(int argc, const char* argv[])
 
     ft.worker();
 
-    if (pattern)
-        regfree(&re);
+    hs_free_database(re_db);
     return 0;
 }

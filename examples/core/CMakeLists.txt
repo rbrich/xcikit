@@ -1,3 +1,13 @@
+# ------------ #
+# Dependencies #
+# ------------ #
+
+find_package(Hyperscan)
+
+# ------------ #
+#   Examples   #
+# ------------ #
+
 add_executable(demo_argparser demo_argparser.cpp)
 target_link_libraries(demo_argparser xci-core)
 install(TARGETS demo_argparser EXPORT xcikit DESTINATION examples)
@@ -32,7 +42,8 @@ install(TARGETS demo_vfs EXPORT xcikit DESTINATION examples)
 
 
 # ff (Find File) tool
-
-add_executable(ff ff.cpp)
-target_link_libraries(ff xci-core fmt::fmt)
-install(TARGETS ff EXPORT xcikit DESTINATION examples)
+if (Hyperscan_FOUND)
+    add_executable(ff ff.cpp)
+    target_link_libraries(ff xci-core fmt::fmt Hyperscan::hs)
+    install(TARGETS ff EXPORT xcikit DESTINATION bin)
+endif()

@@ -2,6 +2,7 @@ from conans import ConanFile, CMake, tools
 import tempfile
 import textwrap
 import io
+import os
 
 
 class XcikitConan(ConanFile):
@@ -28,7 +29,7 @@ class XcikitConan(ConanFile):
         ('Catch2',      '',         'catch2/2.12.2'),
         ('benchmark',   '',         'benchmark/1.5.0'),
         ('pegtl',       '2.8.1',    'pegtl/2.8.1@taocpp/stable'),
-        ('glfw3',       '3.3.2',    'glfw/3.3.2@rbrich/stable'),
+        ('glfw3',       '3.2.1',    'glfw/3.3.2@rbrich/stable'),
     )
     generators = ("cmake_paths", "cmake_find_package")
     scm = {
@@ -46,13 +47,14 @@ class XcikitConan(ConanFile):
                     f.write(textwrap.dedent("""
                         cmake_minimum_required(VERSION 3.9)
                         project(SystemPackageFinder CXX)
+                        list(APPEND CMAKE_MODULE_PATH """ + os.path.dirname(__file__) + """/cmake)
                         foreach (ITEM IN LISTS DEPS)
                             string(REPLACE "/" ";" ITEM ${ITEM})
                             list(GET ITEM 0 NAME)
                             list(GET ITEM 1 VERSION)
                             find_package(${NAME} ${VERSION})
                             if (${NAME}_FOUND)
-                                message(NOTICE "FOUND ${NAME} ${${NAME}_VERSION}")
+                                message("FOUND ${NAME} ${${NAME}_VERSION}")
                             endif()
                         endforeach()
                     """))
