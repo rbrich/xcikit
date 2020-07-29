@@ -290,16 +290,17 @@ int main(int argc, const char* argv[])
     struct Theme {
         std::string normal;
         std::string dir;
-        std::string dir_last;
-        std::string file;
+        std::string file_dir;
+        std::string file_name;
         std::string highlight;
     };
 
+    // "cyanide"
     Theme theme {
         .normal = term.normal().seq(),
-        .dir = term.magenta().seq(),
-        .dir_last = term.cyan().seq(),
-        .file = term.normal().seq(),
+        .dir = term.bold().cyan().seq(),
+        .file_dir = term.cyan().seq(),
+        .file_name = term.normal().seq(),
         .highlight = term.bold().yellow().seq(),
     };
 
@@ -342,30 +343,36 @@ int main(int argc, const char* argv[])
                     const auto so = matches[0].first;
                     const auto eo = matches[0].second;
 
-                    std::string out = theme.dir;
-                    out += path.dir_to_string();
-                    if (t == FileTree::Directory)
-                        out += theme.dir_last;
-                    else
-                        out += theme.file;
+                    std::string out;
+                    if (t == FileTree::Directory) {
+                        out += theme.dir;
+                        out += path.dir_to_string();
+                    } else {
+                        out += theme.file_dir;
+                        out += path.dir_to_string();
+                        out += theme.file_name;
+                    }
                     out += std::string_view(name, so);
                     out += theme.highlight;
                     out += std::string_view(name + so, eo - so);
                     if (t == FileTree::Directory)
-                        out += theme.dir_last;
+                        out += theme.dir;
                     else
-                        out += theme.file;
+                        out += theme.file_name;
                     out += std::string_view(name + eo);
                     out += theme.normal;
                     puts(out.c_str());
                 } else {
-                    std::string out = theme.dir;
-                    out += path.dir_to_string();
-                    if (t == FileTree::Directory)
-                        out += theme.dir_last;
-                    else
-                        out += theme.file;
-                    out += path.component;
+                    std::string out;
+                    if (t == FileTree::Directory) {
+                        out += theme.dir;
+                        out += path.to_string();
+                    } else {
+                        out += theme.file_dir;
+                        out += path.dir_to_string();
+                        out += theme.file_name;
+                        out += path.component;
+                    }
                     out += theme.normal;
                     puts(out.c_str());
                 }
