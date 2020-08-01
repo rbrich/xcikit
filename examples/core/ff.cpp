@@ -10,7 +10,6 @@
 #include <xci/core/ArgParser.h>
 #include <xci/core/sys.h>
 #include <xci/core/string.h>
-#include <xci/core/file.h>
 #include <xci/core/log.h>
 #include <xci/core/TermCtl.h>
 #include <xci/compat/macros.h>
@@ -18,7 +17,6 @@
 #include <fmt/core.h>
 #include <hs/hs.h>
 
-#include <iostream>
 #include <memory>
 #include <functional>
 #include <thread>
@@ -271,19 +269,30 @@ int main(int argc, const char* argv[])
 
     hs_database_t *re_db = nullptr;
     if (pattern) {
-        int flags = HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP;
+        int flags = 0;
         if (ignore_case)
             flags |= HS_FLAG_CASELESS;
         // enable start offset only if we have color output
         if (term.is_tty())
             flags |= HS_FLAG_SOM_LEFTMOST;
-        // TODO: fixed -> hs_compile_lit (requires Hyperscan 5.2.0)
         hs_compile_error_t *re_compile_err;
-        if (hs_compile(pattern, flags, HS_MODE_BLOCK, NULL, &re_db,
-                &re_compile_err) != HS_SUCCESS) {
-            fmt::print(stderr,"ff: hs_compile({}): {}\n", pattern, re_compile_err->message);
-            hs_free_compile_error(re_compile_err);
-            return 1;
+        if (fixed) {
+            // FIXME: requires Hyperscan 5.2.0
+            if (hs_compile_lit(pattern, flags,
+                    strlen(pattern), HS_MODE_BLOCK, nullptr,
+                    &re_db, &re_compile_err) != HS_SUCCESS) {
+                fmt::print(stderr,"ff: hs_compile_lit({}): {}\n", pattern, re_compile_err->message);
+                hs_free_compile_error(re_compile_err);
+                return 1;
+            }
+        } else {
+            if (hs_compile(pattern, flags | HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP,
+                    HS_MODE_BLOCK, nullptr,
+                    &re_db, &re_compile_err) != HS_SUCCESS) {
+                fmt::print(stderr,"ff: hs_compile({}): {}\n", pattern, re_compile_err->message);
+                hs_free_compile_error(re_compile_err);
+                return 1;
+            }
         }
     }
 
@@ -317,7 +326,7 @@ int main(int argc, const char* argv[])
                 FALLTHROUGH;
             case FileTree::File:
                 if (pattern) {
-                    auto* name = path.component.c_str();
+                    const auto* name = path.component.c_str();
                     thread_local hs_scratch_t *re_scratch = nullptr;
                     if (re_scratch == nullptr && hs_alloc_scratch(re_db, &re_scratch) != HS_SUCCESS) {
                         fmt::print(stderr,"ff: hs_alloc_scratch: Unable to allocate scratch space.\n");

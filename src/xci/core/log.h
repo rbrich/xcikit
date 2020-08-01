@@ -93,7 +93,7 @@ namespace log {
 #ifdef XCI_DEBUG_TRACE
 #define TRACE(fmt, ...)  log_debug("{}:{} ({}) " fmt, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
 #else
-#define TRACE(fmt, ...)
+#define TRACE(fmt, ...)  ((void)0)
 #endif
 
 
