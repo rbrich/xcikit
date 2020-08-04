@@ -1,6 +1,53 @@
 ## bm_chunked_stack
 
-MacOS - Intel Core i7, 2,2 GHz
+Linux / GCC 10 / Intel Core i5-4200U @ 1.60GHz
+
+    Run on (4 X 2600 MHz CPU s)
+    CPU Caches:
+      L1 Data 32K (x2)
+      L1 Instruction 32K (x2)
+      L2 Unified 256K (x2)
+      L3 Unified 3072K (x1)
+    ---------------------------------------------------------------------
+    Benchmark                              Time           CPU Iterations
+    ---------------------------------------------------------------------
+    bm_chunked_stack/8                    34 ns         34 ns   20545712
+    bm_chunked_stack/64                  203 ns        203 ns    3597564
+    bm_chunked_stack/512                1565 ns       1565 ns     452452
+    bm_chunked_stack/4096              11834 ns      11831 ns      58712
+    bm_chunked_stack/8192              23533 ns      23531 ns      29251
+    bm_chunked_stack_reserve/8            34 ns         34 ns   21278951
+    bm_chunked_stack_reserve/64          179 ns        179 ns    3930206
+    bm_chunked_stack_reserve/512        1459 ns       1459 ns     433837
+    bm_chunked_stack_reserve/4096      11910 ns      11905 ns      59276
+    bm_chunked_stack_reserve/8192      23571 ns      23570 ns      30096
+    bm_std_deque/8                        60 ns         60 ns   10748094
+    bm_std_deque/64                      239 ns        239 ns    3041533
+    bm_std_deque/512                    1641 ns       1641 ns     432623
+    bm_std_deque/4096                  14061 ns      14060 ns      50403
+    bm_std_deque/8192                  28812 ns      28809 ns      24605
+    bm_chunked_stack_foreach/8             6 ns          6 ns  100107674
+    bm_chunked_stack_foreach/64           45 ns         45 ns   15711439
+    bm_chunked_stack_foreach/512         252 ns        252 ns    2710235
+    bm_chunked_stack_foreach/4096       1675 ns       1675 ns     372127
+    bm_chunked_stack_foreach/8192       3295 ns       3295 ns     204129
+    bm_std_deque_foreach/8                 8 ns          8 ns   82854940
+    bm_std_deque_foreach/64               51 ns         51 ns   13046052
+    bm_std_deque_foreach/512             306 ns        304 ns    2307941
+    bm_std_deque_foreach/4096           2459 ns       2456 ns     291601
+    bm_std_deque_foreach/8192           4832 ns       4827 ns     139442
+    bm_chunked_stack_pump/8              559 ns        559 ns    1208602
+    bm_chunked_stack_pump/64            4321 ns       4317 ns     160040
+    bm_chunked_stack_pump/512          34302 ns      34268 ns      20980
+    bm_chunked_stack_pump/4096        271474 ns     271171 ns       2646
+    bm_chunked_stack_pump/8192        530942 ns     530875 ns       1261
+    bm_std_deque_pump/8                  640 ns        640 ns    1093669
+    bm_std_deque_pump/64                4248 ns       4247 ns     166817
+    bm_std_deque_pump/512              33567 ns      33565 ns      20034
+    bm_std_deque_pump/4096            270216 ns     270191 ns       2454
+    bm_std_deque_pump/8192            559680 ns     558439 ns       1234
+
+MacOS / Clang 10 / Intel Core i7 @ 2,2 GHz
 
     Run on (8 X 2200 MHz CPU s)
     CPU Caches:
