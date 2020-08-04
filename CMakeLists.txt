@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.9)
 project(xcikit CXX)
 
-# optional components (only xci-core is required)
+# Optional libraries (only xci-core is required)
 include(CMakeDependentOption)
 option(XCI_DATA "Enable component: xci-data" ON)
 option(XCI_SCRIPT "Enable component: xci-script" ON)
@@ -11,8 +11,10 @@ CMAKE_DEPENDENT_OPTION(XCI_TEXT "Enable component: xci-text" ON
 CMAKE_DEPENDENT_OPTION(XCI_WIDGETS "Enable component: xci-widgets" ON
     "XCI_GRAPHICS;XCI_TEXT" OFF)
 
-option(XCI_BUILD_TESTS "Disable to skip building tests." ON)
+# Libraries are always built. The rest is optional:
+option(XCI_BUILD_TOOLS "Disable to skip building tools." ON)
 option(XCI_BUILD_EXAMPLES "Disable to skip building examples." ON)
+option(XCI_BUILD_TESTS "Disable to skip building tests." ON)
 option(XCI_BUILD_BENCHMARKS "Disable to skip building benchmarks." ON)
 
 option(XCI_WITH_TINFO "Link with TInfo (from NCurses) and use it for TTY control sequences." OFF)
@@ -35,6 +37,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(XciBuildOptions)
+
 
 # ------------ #
 # Dependencies #
@@ -154,12 +157,23 @@ endif()
 
 
 # ------------ #
-# Examples     #
+# Tools        #
 # ------------ #
 
 if (XCI_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
+
+
+# ------------ #
+# Examples     #
+# ------------ #
+
+if (XCI_BUILD_TOOLS)
+    add_subdirectory(tools/find_file)
+    add_subdirectory(tools/fire_script)
+endif()
+
 
 # ------------ #
 # Tests        #
@@ -168,7 +182,7 @@ endif()
 if (Catch2_FOUND)
     enable_testing()
     add_subdirectory(tests)
-endif ()
+endif()
 
 
 # ------------ #
@@ -177,7 +191,7 @@ endif ()
 
 if (benchmark_FOUND)
     add_subdirectory(benchmarks)
-endif ()
+endif()
 
 
 # ------------- #
@@ -198,7 +212,7 @@ if (DOXYGEN_FOUND AND NOT CMAKE_VERSION VERSION_LESS "3.9")
         docs
         README.md
         COMMENT "Generate documentation")
-endif ()
+endif()
 
 
 # ------------- #

@@ -1,10 +1,4 @@
 # ------------ #
-# Dependencies #
-# ------------ #
-
-find_package(Hyperscan)
-
-# ------------ #
 #   Examples   #
 # ------------ #
 
@@ -39,11 +33,3 @@ install(TARGETS demo_termctl EXPORT xcikit DESTINATION examples)
 add_executable(demo_vfs demo_vfs.cpp)
 target_link_libraries(demo_vfs xci-core)
 install(TARGETS demo_vfs EXPORT xcikit DESTINATION examples)
-
-
-# ff (Find File) tool
-if (Hyperscan_FOUND)
-    add_executable(ff ff.cpp)
-    target_link_libraries(ff xci-core fmt::fmt Hyperscan::hs)
-    install(TARGETS ff EXPORT xcikit DESTINATION bin)
-endif()
