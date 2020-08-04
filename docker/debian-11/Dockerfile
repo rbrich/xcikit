@@ -25,8 +25,8 @@ RUN echo "conan"; apt-get update && apt-mark manual $(apt-mark showauto) && \
 ENV CONAN_REVISIONS_ENABLED=1
 
 RUN echo "xcikit deps"; apt-get update && apt-get install --no-install-recommends -y \
-    glslang-tools libvulkan-dev libfreetype6-dev \
-    librange-v3-dev catch2 tao-pegtl-dev libbenchmark-dev && rm -rf /var/lib/apt/lists/*
+    glslang-tools libvulkan-dev libfreetype6-dev librange-v3-dev \
+    tao-pegtl-dev libhyperscan-dev catch2 libbenchmark-dev && rm -rf /var/lib/apt/lists/*
 
 ADD 'https://github.com/source-foundry/Hack/releases/download/v3.003/Hack-v3.003-ttf.tar.gz' /srv
 

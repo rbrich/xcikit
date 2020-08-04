@@ -18,12 +18,11 @@ xci-text:
 xci-widgets:
   - src/xci/widgets/*.+(cpp|h)
   - src/xci/widgets/**/*.+(cpp|h)
+tools:
+  - tools/**/*.+(cpp|h)
 build/ci:
   - ./*.sh
-  - CMakeLists.txt
-  - ./**/CMakeLists.txt
   - conanfile.py
-  - config.h.in
   - conan/**/*
   - xcikitConfig.cmake.in
   - Dockerfile

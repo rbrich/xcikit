@@ -4,7 +4,6 @@
 // Copyright 2020 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#define CATCH_CONFIG_FAST_COMPILE
 #include <catch2/catch.hpp>
 
 #include <xci/data/BinaryWriter.h>

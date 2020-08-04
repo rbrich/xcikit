@@ -2,6 +2,7 @@ from conans import ConanFile, CMake, tools
 import tempfile
 import textwrap
 import io
+import os
 
 
 class XcikitConan(ConanFile):
@@ -20,14 +21,15 @@ class XcikitConan(ConanFile):
         'replxx/20200217@rbrich/stable',
         'magic_get/1.0.0@rbrich/stable',
         'magic_enum/0.6.6',
+        'fmt/7.0.1',
     )
     build_requires_or_preinstalled = (
         # <CMake name>, <min ver>,  <Conan reference>
         ('range-v3',    '0.10.0',   'range-v3/0.10.0@ericniebler/stable'),
-        ('Catch2',      '',         'catch2/2.12.2'),
+        ('Catch2',      '',         'catch2/2.13.0'),
         ('benchmark',   '',         'benchmark/1.5.0'),
         ('pegtl',       '2.8.1',    'pegtl/2.8.1@taocpp/stable'),
-        ('glfw3',       '3.3.2',    'glfw/3.3.2@rbrich/stable'),
+        ('glfw3',       '3.2.1',    'glfw/3.3.2@rbrich/stable'),
     )
     generators = ("cmake_paths", "cmake_find_package")
     scm = {
@@ -45,18 +47,19 @@ class XcikitConan(ConanFile):
                     f.write(textwrap.dedent("""
                         cmake_minimum_required(VERSION 3.9)
                         project(SystemPackageFinder CXX)
+                        list(APPEND CMAKE_MODULE_PATH """ + os.path.dirname(__file__) + """/cmake)
                         foreach (ITEM IN LISTS DEPS)
                             string(REPLACE "/" ";" ITEM ${ITEM})
                             list(GET ITEM 0 NAME)
                             list(GET ITEM 1 VERSION)
                             find_package(${NAME} ${VERSION})
                             if (${NAME}_FOUND)
-                                message(NOTICE "FOUND ${NAME} ${${NAME}_VERSION}")
+                                message("FOUND ${NAME} ${${NAME}_VERSION}")
                             endif()
                         endforeach()
                     """))
                 out = io.StringIO()
-                if self.run(f"cmake . -G Ninja --log-level=NOTICE -DDEPS='{items}'", output=out, ignore_errors=True) != 0:
+                if self.run(f"cmake . -G Ninja -DDEPS='{items}'", output=out, ignore_errors=True) != 0:
                     self.output.error(f'Failed:\n{out.getvalue()}')
                     return
                 for line in out.getvalue().splitlines():

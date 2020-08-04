@@ -81,43 +81,23 @@ static void reset_console_mode(DWORD hid, DWORD mode)
 #endif
 
 
-TermCtl& TermCtl::stdout_instance()
+TermCtl& TermCtl::stdout_instance(Mode mode)
 {
-    static TermCtl term(STDOUT_FILENO);
+    static TermCtl term(STDOUT_FILENO, mode);
     return term;
 }
 
 
-TermCtl& TermCtl::stderr_instance()
+TermCtl& TermCtl::stderr_instance(Mode mode)
 {
-    static TermCtl term(STDERR_FILENO);
+    static TermCtl term(STDERR_FILENO, mode);
     return term;
 }
 
 
-TermCtl::TermCtl(int fd)
+TermCtl::TermCtl(int fd, Mode mode) : m_fd(fd)
 {
-#ifdef _WIN32
-    assert(fd == STDOUT_FILENO || fd == STDERR_FILENO);
-    m_std_handle = (fd == STDOUT_FILENO) ? STD_OUTPUT_HANDLE : STD_ERROR_HANDLE;
-    m_orig_out_mode = set_console_mode(m_std_handle,
-                         ENABLE_VIRTUAL_TERMINAL_PROCESSING);
-    if (m_orig_out_mode == bad_mode)
-        return;
-#else
-    // Do not even try if not TTY (e.g. when piping to other command)
-    if (isatty(fd) != 1)
-        return;
-
-    #ifdef XCI_WITH_TINFO
-    // Setup terminfo
-    int err = 0;
-    if (setupterm(nullptr, fd, &err) != 0)
-        return;
-    #endif
-#endif
-
-    m_state = State::InitOk;
+    set_mode(mode);
 }
 
 
@@ -125,10 +105,57 @@ TermCtl::~TermCtl() {
 #ifdef _WIN32
     if (m_state == State::InitOk) {
         assert(m_orig_out_mode != bad_mode);
-        reset_console_mode(m_std_handle, m_orig_out_mode);
+        unsigned long std_handle = (m_fd == STDOUT_FILENO) ? STD_OUTPUT_HANDLE : STD_ERROR_HANDLE;
+        reset_console_mode(std_handle, m_orig_out_mode);
     }
 #else
     (void) 0;
+#endif
+}
+
+
+void TermCtl::set_mode(Mode mode)
+{
+#ifdef _WIN32
+    assert(m_fd == STDOUT_FILENO || m_fd == STDERR_FILENO);
+    unsigned long std_handle = (m_fd == STDOUT_FILENO) ? STD_OUTPUT_HANDLE : STD_ERROR_HANDLE;
+
+    if (mode != Mode::Never && m_state == State::NoTTY) {
+        m_orig_out_mode = set_console_mode(std_handle, ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+        if (m_orig_out_mode == bad_mode)
+            return;
+        m_state = State::InitOk;
+    }
+    if (mode == Mode::Never && m_state == State::InitOk) {
+        assert(m_orig_out_mode != bad_mode);
+        reset_console_mode(std_handle, m_orig_out_mode);
+        m_orig_out_mode = 0;
+        m_state = State::NoTTY;
+    }
+#else
+    switch (mode) {
+        case Mode::Auto:
+            // Do not even try if not TTY (e.g. when piping to other command)
+            if (isatty(m_fd) != 1) {
+                m_state = State::NoTTY;
+                return;
+            }
+            break;  // go to setup below
+        case Mode::Always:
+            break;  // go to setup below
+        case Mode::Never:
+            m_state = State::NoTTY;
+            return;
+    }
+
+    #ifdef XCI_WITH_TINFO
+    // Setup terminfo
+    int err = 0;
+    if (setupterm(nullptr, fd, &err) != 0)
+        return;
+    #endif
+
+    m_state = State::InitOk;
 #endif
 }
 
@@ -252,6 +279,12 @@ std::string TermCtl::raw_input()
            && (errno == EINTR || errno == EAGAIN));
     });
     return buf;
+}
+
+
+void TermCtl::print(const std::string& buf)
+{
+    ::write(m_fd, buf.data(), buf.size());
 }
 
 

@@ -5,11 +5,12 @@ osx_image: xcode11.6
 
 env:
   global:
+    - CC=/usr/local/opt/llvm/bin/clang
+    - CXX=/usr/local/opt/llvm/bin/clang++
+    - CONAN_ENV_COMPILER_LIBCXX=libc++
     - CONAN_REVISIONS_ENABLED=1
     - MACOSX_DEPLOYMENT_TARGET=10.14
     - VK_SDK_VER=1.2.131.2
-    - CC=/usr/local/opt/llvm/bin/clang
-    - CXX=/usr/local/opt/llvm/bin/clang++
 
 addons:
   homebrew:
@@ -22,6 +23,7 @@ addons:
       - glfw
       - doxygen
       - google-benchmark
+      - hyperscan
 
 before_script:
   - |

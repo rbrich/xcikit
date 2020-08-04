@@ -25,5 +25,6 @@
 // Compatibility checks
 #cmakedefine HAVE_GNU_STRERROR_R
 #cmakedefine HAVE_XSI_STRERROR_R
+#cmakedefine HAVE_HS_COMPILE_LIT
 
 #endif //XCI_CONFIG_H

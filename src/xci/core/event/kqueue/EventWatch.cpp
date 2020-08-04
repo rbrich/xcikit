@@ -19,6 +19,7 @@
 #include <cassert>
 #include <unistd.h>
 #include <sys/event.h>
+#include <cassert>
 
 namespace xci::core {
 

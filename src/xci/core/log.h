@@ -1,4 +1,8 @@
-// Logger.h created on 2018-03-01, part of XCI toolkit
+// log.h created on 2018-03-01 as part of xcikit project
+// https://github.com/rbrich/xcikit
+//
+// Copyright 2018 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_LOG_H
 #define XCI_CORE_LOG_H
@@ -89,7 +93,7 @@ namespace log {
 #ifdef XCI_DEBUG_TRACE
 #define TRACE(fmt, ...)  log_debug("{}:{} ({}) " fmt, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
 #else
-#define TRACE(fmt, ...)
+#define TRACE(fmt, ...)  ((void)0)
 #endif
 
 

@@ -129,6 +129,25 @@ std::ostream& errno_str(std::ostream& stream)
 }
 
 
+std::string errno_str()
+{
+    char buf[200] = {};
+#if defined(HAVE_GNU_STRERROR_R)
+    return strerror_r(errno, buf, sizeof buf);
+#elif defined(HAVE_XSI_STRERROR_R)
+    if (strerror_r(errno, buf, sizeof buf) == 0) {
+        return buf;
+    } else {
+        return "<unknown error>";
+    }
+    return "";
+#else
+    (void) strerror_s(buf, sizeof buf, errno);
+    return buf;
+#endif
+}
+
+
 std::ostream& last_error_str(std::ostream& stream)
 {
 #ifdef _WIN32

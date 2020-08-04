@@ -97,15 +97,12 @@ constexpr ShowHelp show_help{};
 
 struct Option {
     /// \param arg      current argument, or part of it, to be processed
-    /// \param rest     the rest of args following arg being currently processed
     /// \return         true if the arg was accepted, false if rejected
-    using Callback = std::function<bool(const char* arg, const char* rest[])>;
+    using Callback = std::function<bool(const char* arg)>;
 
-    // simplified callbacks for special cases (process simple flag,
-    // process arg, pass the rest of args)
+    // simplified callbacks for special cases (process simple flag, process single arg)
     using FlagCallback = std::function<void()>;
     using ArgCallback = std::function<bool(const char* arg)>;
-    using RestCallback = std::function<void(const char* rest[])>;
 
     /// This is the real, non-convenient constructor. See other constructors
     /// for some more convenience (simpler callbacks, direct binding of values etc.)
@@ -135,21 +132,15 @@ struct Option {
     /// Declare option to set a custom flag via callback.
     /// `desc` should describe a simple flag, e.g.: "-f, --flag"
     Option(std::string desc, const char* help, FlagCallback flag_cb)
-            : Option(std::move(desc), help, [cb = std::move(flag_cb)](const char*, const char**)
+            : Option(std::move(desc), help, [cb = std::move(flag_cb)](const char*)
                      { cb(); return true; }, 0) {}
 
     /// Declare option to set a custom value via callback.
     /// The callback can limit the accepted values by returning false (not accepted).
     /// `desc` should describe an option with value, e.g.: "-o, --output FILE"
     Option(std::string desc, const char* help, ArgCallback arg_cb)
-            : Option(std::move(desc), help, [cb = std::move(arg_cb)](const char* arg, const char**)
+            : Option(std::move(desc), help, [cb = std::move(arg_cb)](const char* arg)
                      { return cb(arg); }, 0) {}
-
-    /// Declare option to get the remaining arguments.
-    /// `desc` should be "-- ..." (spaces between and around don't matter).
-    Option(std::string desc, const char* help, RestCallback rest_cb)
-            : Option(std::move(desc), help, [cb = std::move(rest_cb)](const char*, const char** rest)
-                     { cb(rest); return true; }, 0) {}
 
     /// Declare option to set value of given variable.
     /// `desc` can describe either a flag or an option with value.
@@ -158,7 +149,7 @@ struct Option {
     /// many usual values are recognized: 1, 0, false, true, y, n, ...
     template <class T>
     Option(std::string desc, const char* help, T& value)
-            : Option(std::move(desc), help, [&value](const char* arg, const char**)
+            : Option(std::move(desc), help, [&value](const char* arg)
                      { return value_from_cstr(arg, value); }, 0) {}
 
     /// Attach env variable to this option
@@ -187,9 +178,8 @@ struct Option {
     /// never both - missing one will be 0/empty)
     void foreach_name(const std::function<void(char shortopt, std::string_view longopt)>& cb) const;
 
-    bool operator() (const char* arg) { ++m_received; return m_cb(arg, nullptr); }
-    bool operator() (const char* rest[]) { ++m_received; return m_cb(nullptr, rest); }
-    void eval_env(const char* env) { m_cb(env, nullptr); }
+    bool operator() (const char* arg) { ++m_received; return m_cb(arg); }
+    void eval_env(const char* env) { m_cb(env); }
 
 private:
     struct NamePos {
@@ -202,10 +192,10 @@ private:
         int end() const { return pos + dashes + len; }
         operator bool() const { return dashes != 0 || len != 0; }
     };
-    NamePos parse_desc(const char* desc) const;
+    static NamePos parse_desc(const char* desc) ;
 
     // 0 = positional, 1 = short, 2 = long
-    std::pair<const char*, int> skip_dashes(const char* desc) const;
+    static std::pair<const char*, int> skip_dashes(const char* desc) ;
 
 private:
     std::string m_desc;
@@ -291,6 +281,9 @@ public:
 
     /// Print help text
     void print_help() const;
+
+    /// Print information how to invoke help
+    void print_help_notice() const;
 
 private:
     bool invoke_remainder(const char** argv);

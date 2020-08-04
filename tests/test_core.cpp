@@ -1,6 +1,5 @@
 // test_core.cpp created on 2018-03-30, part of XCI toolkit
 
-#define CATCH_CONFIG_FAST_COMPILE
 #include <catch2/catch.hpp>
 
 #include <xci/core/format.h>
@@ -99,7 +98,7 @@ TEST_CASE( "path::base_name", "[file]" )
 
 TEST_CASE( "path::real_path, path::get_cwd", "[file]" )
 {
-    auto cwd = path::get_cwd();
+    auto cwd = path::cwd();
     CHECK(path::real_path(cwd + "/././.") == cwd);
 }
 
@@ -133,7 +132,7 @@ TEST_CASE( "to_utf8", "[string]" )
 }
 
 
-TEST_CASE( "to_codepoint", "[string]" )
+TEST_CASE( "utf8_codepoint", "[string]" )
 {
     CHECK(utf8_codepoint(UTF8("\n")) == 0xa);
     CHECK(utf8_codepoint(UTF8("#")) == '#');
@@ -213,6 +212,15 @@ TEST_CASE( "split", "[string]" )
     CHECK(split("one\ntwo\nthree", '\n') == l{"one", "two", "three"});
     CHECK(split("\none\ntwo\n\nthree\n", '\n') == l{"", "one", "two", "", "three", ""});
     CHECK(split("one, two, three", ',', 1) == l{"one", " two, three"});
+}
+
+
+TEST_CASE( "rsplit", "[string]" )
+{
+    using l = std::vector<std::string_view>;
+    CHECK(rsplit("one\ntwo\nthree", '\n') == l{"one", "two", "three"});
+    CHECK(rsplit("\none\ntwo\n\nthree\n", '\n') == l{"", "one", "two", "", "three", ""});
+    CHECK(rsplit("one, two, three", ',', 1) == l{"one, two", " three"});
 }
 
 

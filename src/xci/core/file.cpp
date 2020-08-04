@@ -129,7 +129,7 @@ std::string join(const std::string &part1, const std::string &part2)
 }
 
 
-std::string get_cwd()
+std::string cwd()
 {
 #ifdef _GNU_SOURCE
     // GNU-specific, not limited by PATH_MAX

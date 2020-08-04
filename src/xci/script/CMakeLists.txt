@@ -42,10 +42,3 @@ target_include_directories(xci-script
 add_dependencies(xci-script share)
 
 install(TARGETS xci-script EXPORT xcikit DESTINATION lib)
-
-
-# ------------ #
-# Programs     #
-# ------------ #
-
-add_subdirectory(tool)

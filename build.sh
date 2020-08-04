@@ -83,6 +83,9 @@ while [[ $# -gt 0 ]] ; do
         --update )
             CONAN_ARGS+=('--update')
             shift 1 ;;
+        -pr|--profile )
+            CONAN_ARGS+=('--profile' "$2")
+            shift 2 ;;
         * )
             printf 'Error: Unknown option: %s\n\n' "$1"
             print_usage

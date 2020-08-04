@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#define CATCH_CONFIG_FAST_COMPILE
 #include <catch2/catch.hpp>
 
 #include <xci/core/geometry.h>
@@ -21,7 +20,7 @@
 using namespace xci::core;
 
 
-TEST_CASE( "to_utf8", "[string]" )
+TEST_CASE( "Vec2", "[geometry]" )
 {
     Vec2f vf1 {3.0, 4.0};
     CHECK(vf1.length() == 5.0);

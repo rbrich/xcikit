@@ -20,15 +20,28 @@ namespace xci::core {
 
 class TermCtl {
 public:
+    enum class Mode {
+        Auto,
+        Always,
+        Never,
+    };
+
     // Static instance for standard output
-    static TermCtl& stdout_instance();
-    static TermCtl& stderr_instance();
+    static TermCtl& stdout_instance(Mode mode = Mode::Auto);
+    static TermCtl& stderr_instance(Mode mode = Mode::Auto);
 
     // Constructor for custom streams
-    explicit TermCtl(int fd);
+    explicit TermCtl(int fd, Mode mode = Mode::Auto);
     ~TermCtl();
 
+    // Change mode (initial mode is set in constructor)
+    void set_mode(Mode mode);
+
     // Is the output stream connected to TTY?
+    // This respects chosen Mode:
+    // - Auto: true if connected to TTY
+    // - Always: true
+    // - Never: false
     [[nodiscard]] bool is_tty() const { return m_state != State::NoTTY; }
 
     // Following methods are appending the capability codes
@@ -90,6 +103,12 @@ public:
         }, args...);
     }
 
+    template<typename ...Args>
+    void print(const char *fmt, Args... args) {
+        auto buf = format(fmt, args...);
+        print(buf);
+    }
+
     // Temporarily change terminal mode to RAW mode
     // (no echo, no buffering, no special processing)
     // NOTE: Signal processing is enabled, so Ctrl-C still works
@@ -104,7 +123,8 @@ private:
 
     std::string format_cb(const format_impl::Context& ctx);
 
-private:
+    void print(const std::string& buf);
+
     enum class State {
         NoTTY,      // initialization failed
         InitOk,     // main instance (it will reset the term when destroyed)
@@ -112,9 +132,9 @@ private:
     };
     State m_state = State::NoTTY;
     std::string m_seq;  // cached capability sequences
+    int m_fd;
 
 #ifdef _WIN32
-    unsigned long m_std_handle = 0;
     unsigned long m_orig_out_mode = 0;
 #endif
 };

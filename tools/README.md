@@ -1,6 +1,19 @@
 XCI Tools
 =========
 
+Command Line Tools
+------------------
+
+* [Find File (ff)](find_file/README.md) - `find` alternative
+
+
+Fire Script (fire)
+------------------
+
+Fire Script compiler and interpreter.
+See [Syntax reference](../docs/script/syntax.md).
+
+
 DAR Packer (pack_assets.py)
 ---------------------------
 

@@ -26,8 +26,8 @@ Option::Option(std::string desc, const char* help, Callback cb, int flags)
     // check and remove brackets from both ends
     strip(m_desc, ' ');
     bool optional = (m_desc[0] == '[');
-    lstrip(m_desc, '[');
-    rstrip(m_desc, ']');
+    lstrip(m_desc, "[ ");
+    rstrip(m_desc, "] ");
 
     const char* dp = m_desc.c_str();
     for (;;) {
@@ -67,6 +67,8 @@ Option::Option(std::string desc, const char* help, Callback cb, int flags)
         dp += p.end();
     }
 
+    if (is_remainder() && is_positional())
+        optional = true;
     if (optional && !is_positional())
         throw BadOptionDescription("non-positional argument can't be made optional", m_desc);
     m_required = optional ? 0 : m_args;
@@ -117,7 +119,7 @@ std::string Option::usage() const
 {
     auto& t = TermCtl::stdout_instance();
     string res;
-    bool required = is_positional() && required_args() != 0;
+    bool required = (is_positional() && !is_remainder()) && required_args() != 0;
     if (!required)
         res += '[';
     bool first = true;
@@ -126,7 +128,9 @@ std::string Option::usage() const
         auto p = parse_desc(dp);
         if (!p)
             break;
-        if (first) {
+        if (is_remainder() && p.dashes == 2 && p.len == 0) {
+            res += t.format("[{green}{}{normal}] ", std::string(dp + p.pos, p.dashes));
+        } else if (first) {
             first = false;
             res += t.format("{bold}{green}{}{normal}", std::string(dp + p.pos, p.dashes + p.len));
         } else if (!p.dashes) {
@@ -143,28 +147,37 @@ std::string Option::usage() const
 std::string Option::formatted_desc(size_t width) const
 {
     auto& t = TermCtl::stdout_instance();
-    string res(m_desc);
-    size_t res_pos = 0;
+    string res;
+    size_t res_len = 0;  // length in visible characters (excluding escape seqs)
     const char* dp = m_desc.c_str();
     for (;;) {
         auto p = parse_desc(dp);
         if (!p)
             break;
-        res_pos += p.pos;
 
-        const auto color = (p.dashes || ((m_flags & FPositional) && dp[p.pos] != '.'))
+        if (is_remainder() && p.dashes == 2 && p.len == 0) {
+            // don't print "--" part of remainder options
+            dp += p.end();
+            continue;
+        }
+
+        // punctuation
+        if (!res.empty()) {
+            res += std::string(dp, p.pos);
+            res_len += p.pos;
+        }
+
+        const auto color = ((p.dashes && p.len != 0) ||
+                            ((m_flags & FPositional) && dp[p.pos] != '.' && dp[p.pos] != '-'))
                      ? t.bold().green().seq()
                      : t.green().seq();
-        res.insert(res_pos, color);
-        res_pos += color.length() + p.dashes + p.len;
-
-        const auto normal = t.normal().seq();
-        res.insert(res_pos, normal);
-        res_pos += normal.length();
+        res += color + std::string(dp + p.pos, p.dashes + p.len) + t.normal().seq();
+        res_len += p.dashes + p.len;
 
         dp += p.end();
     }
-    return res + std::string(width - m_desc.size(), ' ');
+    const size_t padding = (width >= res_len) ? width - res_len : 0;
+    return res + std::string(padding, ' ');
 }
 
 
@@ -185,7 +198,7 @@ void Option::foreach_name(const std::function<void(char shortopt, std::string_vi
 }
 
 
-Option::NamePos Option::parse_desc(const char* desc) const
+Option::NamePos Option::parse_desc(const char* desc)
 {
     // skip spaces and commas
     int pos = 0;
@@ -216,7 +229,7 @@ Option::NamePos Option::parse_desc(const char* desc) const
 }
 
 
-std::pair<const char*, int> Option::skip_dashes(const char* desc) const
+std::pair<const char*, int> Option::skip_dashes(const char* desc)
 {
     int dashes = 0;
     while (*desc == '-') {
@@ -272,6 +285,10 @@ void ArgParser::validate() const
                 throw BadOptionDescription("env name repeated", opt.env());
             envs.push_back(opt.env());
         }
+        // check that remainder is the last option
+        if (opt.is_remainder() && &opt != &m_opts.back()) {
+            throw BadOptionDescription("remainder option must be the last", opt.desc());
+        }
     }
 }
 
@@ -295,8 +312,9 @@ ArgParser& ArgParser::operator()(const char* argv[])
         }
     } catch (const BadArgument& e) {
         auto& t = TermCtl::stderr_instance();
-        cerr << t.bold().red() << e.what() << t.normal() << endl;
+        cerr << t.bold().yellow() << "Error: " << t.red() << e.what() << t.normal() << '\n' << endl;
         print_usage();
+        print_help_notice();
         exit(1);
     }
     return *this;
@@ -384,11 +402,8 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
         // long option
         auto it = find_if(m_opts.begin(), m_opts.end(),
                 [p](const Option& opt) { return opt.has_long(p); });
-        if (it == m_opts.end()) {
-            if (invoke_remainder(argv))
-                return Stop;
+        if (it == m_opts.end())
             throw BadArgument(format("Unknown option: {}", arg));
-        }
         if (!it->has_args()) {
             if (it->is_show_help()) {
                 print_help();
@@ -409,11 +424,8 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
         while (*p) {
             auto it = find_if(m_opts.begin(), m_opts.end(),
                     [p](const Option& opt) { return opt.has_short(*p); });
-            if (it == m_opts.end()) {
-                if (p == arg + 1 && invoke_remainder(argv))
-                    return Stop;
-                throw BadArgument(format("Unknown option: -{} (in {})", p, arg));
-            }
+            if (it == m_opts.end())
+                throw BadArgument(format("Unknown option: -{} (in {})", p[0], arg));
             ++p;
             if (!it->has_args()) {
                 if (it->is_show_help()) {
@@ -443,11 +455,10 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
         // open option -> pass it the arg
         (*m_curopt)(arg);
     } else {
-        auto it = find_if(m_opts.begin(), m_opts.end(),
-                [](const Option& opt) { return opt.is_positional() && opt.can_receive_arg(); });
+        auto it = find_if(m_opts.begin(), m_opts.end(),[](const Option& opt) {
+            return (opt.is_positional() && opt.can_receive_arg()) || opt.is_remainder();
+        });
         if (it == m_opts.end()) {
-            if (invoke_remainder(argv))
-                return Stop;
             throw BadArgument(format("Unexpected positional argument: {}", arg));
         } if (! (*it)(arg) )
             throw BadArgument(format("Wrong positional argument: {}", arg));
@@ -459,7 +470,7 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
 void ArgParser::print_usage() const
 {
     auto& t = TermCtl::stdout_instance();
-    cout << t.format("Usage: {bold}{}{normal} ", m_progname);
+    cout << t.format("{bold}{yellow}Usage:{normal} {bold}{}{normal} ", m_progname);
     for (const auto& opt : m_opts) {
         cout << opt.usage() << ' ';
     }
@@ -473,7 +484,8 @@ void ArgParser::print_help() const
     for (const auto& opt : m_opts)
         desc_cols = max(desc_cols, opt.desc().size());
     print_usage();
-    cout << endl << "Options:" << endl;
+    auto& t = TermCtl::stdout_instance();
+    cout << endl << t.bold().yellow() << "Options:" << t.normal() << endl;
     for (const auto& opt : m_opts) {
         cout << "  " << opt.formatted_desc(desc_cols)
              << "  " << opt.help() << endl;
@@ -481,13 +493,30 @@ void ArgParser::print_help() const
 }
 
 
+void ArgParser::print_help_notice() const
+{
+    auto it = find_if(m_opts.begin(), m_opts.end(),
+            [](const Option& opt) { return opt.is_show_help(); });
+    if (it == m_opts.end())
+        return;  // no --help option
+    cout << endl << "Try " << it->formatted_desc(0) << " for more information." << endl;
+}
+
+
 bool ArgParser::invoke_remainder(const char** argv)
 {
+    assert(argv != nullptr);
     auto it = find_if(m_opts.begin(), m_opts.end(),
             [](const Option& opt) { return opt.is_remainder(); });
     if (it == m_opts.end())
         return false;
-    return (*it)(argv);
+
+    while (*argv) {
+        if (!(*it)(*argv))
+            return false;
+        ++argv;
+    }
+    return true;
 }
 
 

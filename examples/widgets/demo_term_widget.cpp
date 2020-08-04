@@ -45,7 +45,7 @@ int main()
     const char* cmd = "uname -a";
 
     TextTerminal terminal {theme};
-    terminal.add_text(path::get_cwd() + "> ");
+    terminal.add_text(path::cwd() + "> ");
     terminal.set_font_style(TextTerminal::FontStyle::Bold);
     terminal.add_text(std::string(cmd) + "\n");
     terminal.set_font_style(TextTerminal::FontStyle::Regular);
@@ -65,7 +65,7 @@ int main()
     // Present some colors
     terminal.set_fg(TextTerminal::Color4bit::White);
     terminal.set_bg(TextTerminal::Color4bit::Black);
-    terminal.add_text(path::get_cwd() + "> ");
+    terminal.add_text(path::cwd() + "> ");
     terminal.set_font_style(TextTerminal::FontStyle::Bold);
     terminal.add_text("rainbow\n");
     terminal.set_font_style(TextTerminal::FontStyle::Regular);
@@ -120,7 +120,7 @@ int main()
     }
 
     terminal.reset_attrs();
-    terminal.add_text(path::get_cwd() + "> ");
+    terminal.add_text(path::cwd() + "> ");
     terminal.set_font_style(TextTerminal::FontStyle::Bold);
     terminal.add_text("Příliš žluťoučký kůň úpěl ďábelské ódy.");
 
