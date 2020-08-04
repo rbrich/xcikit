@@ -132,7 +132,7 @@ TEST_CASE( "to_utf8", "[string]" )
 }
 
 
-TEST_CASE( "to_codepoint", "[string]" )
+TEST_CASE( "utf8_codepoint", "[string]" )
 {
     CHECK(utf8_codepoint(UTF8("\n")) == 0xa);
     CHECK(utf8_codepoint(UTF8("#")) == '#');
