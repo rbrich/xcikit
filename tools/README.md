@@ -1,12 +1,10 @@
 XCI Tools
 =========
 
-Find File (ff)
---------------
+Command Line Tools
+------------------
 
-A find-like tool using Hyperscan for regex matching.
-
-TODO: screenshot
+* [Find File (ff)](find_file/README.md) - `find` alternative
 
 
 Fire Script (fire)
