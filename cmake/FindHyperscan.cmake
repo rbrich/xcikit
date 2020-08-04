@@ -6,6 +6,9 @@
 #   Hyperscan_INCLUDE_DIRS
 #   Hyperscan_LIBRARIES
 #   Hyperscan::Hyperscan target
+#
+# Feature tests:
+#   HAVE_HS_COMPILE_LIT
 
 find_path(Hyperscan_INCLUDE_DIR
     NAMES hs/hs.h
@@ -30,4 +33,9 @@ if (Hyperscan_FOUND)
             INTERFACE_LINK_LIBRARIES "${Hyperscan_LIBRARIES}"
             INTERFACE_INCLUDE_DIRECTORIES "${Hyperscan_INCLUDE_DIRS}")
     endif()
+
+    # hs_compile_lit available since Hyperscan 5.2.0
+    include(CheckCXXSymbolExists)
+    set(CMAKE_REQUIRED_LIBRARIES Hyperscan::hs)
+    check_cxx_symbol_exists(hs_compile_lit "hs/hs_compile.h" HAVE_HS_COMPILE_LIT)
 endif()

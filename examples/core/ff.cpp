@@ -249,23 +249,37 @@ int main(int argc, const char* argv[])
     bool show_hidden = false;
     bool show_dirs = false;
     bool color = false;
+    bool show_version = false;
     int jobs = 8;
     std::vector<const char*> files;
     const char* pattern = nullptr;
     ArgParser {
+#ifdef HAVE_HS_COMPILE_LIT
             Option("-F, --fixed", "Match literal string instead of (default) regex", fixed),
+#endif
             Option("-i, --ignore-case", "Enable case insensitive matching", ignore_case),
             Option("-H, --show-hidden", "Don't skip hidden files", show_hidden),
             Option("-D, --show-dirs", "Don't skip directory entries", show_dirs),
             Option("-a, --all", "Don't skip any files, same as -H -D", [&]{ show_hidden = true; show_dirs = true; }),
             Option("-c, --color", "Force color output", color),
             Option("-j, --jobs JOBS", "Number of worker threads", jobs).env("JOBS"),
+            Option("-V, --version", "Show version", show_version),
             Option("-h, --help", "Show help", show_help),
             Option("[PATTERN]", "File name pattern (Perl-style regex)", pattern),
             Option("-- FILE ...", "Files and/or directories to scan", files),
     } (argv);
 
     TermCtl& term = TermCtl::stdout_instance(color ? TermCtl::Mode::Always : TermCtl::Mode::Auto);
+
+    if (show_version) {
+        term.print("{bold}ff{normal} {}\n", "0.1");
+        term.print("using {bold}Hyperscan{normal} {}", hs_version());
+#ifndef HAVE_HS_COMPILE_LIT
+        term.print(" (hs_compile_lit not available, {bold}{green}--fixed{normal} option disabled)");
+#endif
+        puts("");
+        return 0;
+    }
 
     hs_database_t *re_db = nullptr;
     if (pattern) {
@@ -277,7 +291,7 @@ int main(int argc, const char* argv[])
             flags |= HS_FLAG_SOM_LEFTMOST;
         hs_compile_error_t *re_compile_err;
         if (fixed) {
-            // FIXME: requires Hyperscan 5.2.0
+#ifdef HAVE_HS_COMPILE_LIT
             if (hs_compile_lit(pattern, flags,
                     strlen(pattern), HS_MODE_BLOCK, nullptr,
                     &re_db, &re_compile_err) != HS_SUCCESS) {
@@ -285,6 +299,7 @@ int main(int argc, const char* argv[])
                 hs_free_compile_error(re_compile_err);
                 return 1;
             }
+#endif
         } else {
             if (hs_compile(pattern, flags | HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP,
                     HS_MODE_BLOCK, nullptr,

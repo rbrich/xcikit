@@ -95,7 +95,7 @@ TermCtl& TermCtl::stderr_instance(Mode mode)
 }
 
 
-TermCtl::TermCtl(int fd, Mode mode)
+TermCtl::TermCtl(int fd, Mode mode) : m_fd(fd)
 {
 #ifdef _WIN32
     assert(fd == STDOUT_FILENO || fd == STDERR_FILENO);
@@ -261,6 +261,12 @@ std::string TermCtl::raw_input()
            && (errno == EINTR || errno == EAGAIN));
     });
     return buf;
+}
+
+
+void TermCtl::print(const std::string& buf)
+{
+    ::write(m_fd, buf.data(), buf.size());
 }
 
 

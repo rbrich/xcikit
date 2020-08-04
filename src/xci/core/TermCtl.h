@@ -96,6 +96,12 @@ public:
         }, args...);
     }
 
+    template<typename ...Args>
+    void print(const char *fmt, Args... args) {
+        auto buf = format(fmt, args...);
+        print(buf);
+    }
+
     // Temporarily change terminal mode to RAW mode
     // (no echo, no buffering, no special processing)
     // NOTE: Signal processing is enabled, so Ctrl-C still works
@@ -110,7 +116,8 @@ private:
 
     std::string format_cb(const format_impl::Context& ctx);
 
-private:
+    void print(const std::string& buf);
+
     enum class State {
         NoTTY,      // initialization failed
         InitOk,     // main instance (it will reset the term when destroyed)
@@ -118,6 +125,7 @@ private:
     };
     State m_state = State::NoTTY;
     std::string m_seq;  // cached capability sequences
+    int m_fd;
 
 #ifdef _WIN32
     unsigned long m_std_handle = 0;
