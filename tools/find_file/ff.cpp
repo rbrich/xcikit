@@ -248,11 +248,13 @@ int main(int argc, const char* argv[])
     bool ignore_case = false;
     bool show_hidden = false;
     bool show_dirs = false;
-    bool color = false;
     bool show_version = false;
     int jobs = 8;
     std::vector<const char*> files;
     const char* pattern = nullptr;
+
+    TermCtl& term = TermCtl::stdout_instance();
+
     ArgParser {
 #ifdef HAVE_HS_COMPILE_LIT
             Option("-F, --fixed", "Match literal string instead of (default) regex", fixed),
@@ -261,15 +263,13 @@ int main(int argc, const char* argv[])
             Option("-H, --show-hidden", "Don't skip hidden files", show_hidden),
             Option("-D, --show-dirs", "Don't skip directory entries", show_dirs),
             Option("-a, --all", "Don't skip any files, same as -H -D", [&]{ show_hidden = true; show_dirs = true; }),
-            Option("-c, --color", "Force color output", color),
+            Option("-c, --color", "Force color output", [&]{ term.set_mode(TermCtl::Mode::Always); }),
             Option("-j, --jobs JOBS", "Number of worker threads", jobs).env("JOBS"),
             Option("-V, --version", "Show version", show_version),
             Option("-h, --help", "Show help", show_help),
             Option("[PATTERN]", "File name pattern (Perl-style regex)", pattern),
             Option("-- FILE ...", "Files and/or directories to scan", files),
     } (argv);
-
-    TermCtl& term = TermCtl::stdout_instance(color ? TermCtl::Mode::Always : TermCtl::Mode::Auto);
 
     if (show_version) {
         term.print("{bold}ff{normal} {}\n", "0.1");

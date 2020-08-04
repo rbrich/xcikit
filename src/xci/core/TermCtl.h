@@ -34,7 +34,14 @@ public:
     explicit TermCtl(int fd, Mode mode = Mode::Auto);
     ~TermCtl();
 
+    // Change mode (initial mode is set in constructor)
+    void set_mode(Mode mode);
+
     // Is the output stream connected to TTY?
+    // This respects chosen Mode:
+    // - Auto: true if connected to TTY
+    // - Always: true
+    // - Never: false
     [[nodiscard]] bool is_tty() const { return m_state != State::NoTTY; }
 
     // Following methods are appending the capability codes
@@ -128,7 +135,6 @@ private:
     int m_fd;
 
 #ifdef _WIN32
-    unsigned long m_std_handle = 0;
     unsigned long m_orig_out_mode = 0;
 #endif
 };
