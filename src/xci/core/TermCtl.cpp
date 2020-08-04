@@ -121,14 +121,14 @@ void TermCtl::set_mode(Mode mode)
     unsigned long std_handle = (m_fd == STDOUT_FILENO) ? STD_OUTPUT_HANDLE : STD_ERROR_HANDLE;
 
     if (mode != Mode::Never && m_state == State::NoTTY) {
-        m_orig_out_mode = set_console_mode(m_std_handle, ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+        m_orig_out_mode = set_console_mode(std_handle, ENABLE_VIRTUAL_TERMINAL_PROCESSING);
         if (m_orig_out_mode == bad_mode)
             return;
         m_state = State::InitOk;
     }
     if (mode == Mode::Never && m_state == State::InitOk) {
         assert(m_orig_out_mode != bad_mode);
-        reset_console_mode(m_std_handle, m_orig_out_mode);
+        reset_console_mode(std_handle, m_orig_out_mode);
         m_orig_out_mode = 0;
         m_state = State::NoTTY;
     }
