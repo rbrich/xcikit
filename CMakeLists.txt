@@ -157,7 +157,7 @@ endif()
 
 
 # ------------ #
-# Tools        #
+# Examples     #
 # ------------ #
 
 if (XCI_BUILD_EXAMPLES)
@@ -166,12 +166,14 @@ endif()
 
 
 # ------------ #
-# Examples     #
+# Tools     #
 # ------------ #
 
 if (XCI_BUILD_TOOLS)
     add_subdirectory(tools/find_file)
-    add_subdirectory(tools/fire_script)
+    if (XCI_SCRIPT)
+        add_subdirectory(tools/fire_script)
+    endif()
 endif()
 
 
@@ -213,6 +215,62 @@ if (DOXYGEN_FOUND AND NOT CMAKE_VERSION VERSION_LESS "3.9")
         README.md
         COMMENT "Generate documentation")
 endif()
+
+
+# ------------- #
+# Summary       #
+# ------------- #
+
+function(pr_flag msg flag)
+    if (ENABLE_COLORS)
+        string (ASCII 27 esc)
+        if (flag)
+            string(REPLACE "?" "${esc}[1\;32m✔" msg1 ${msg})
+        else()
+            string(REPLACE "?" "${esc}[90m " msg1 ${msg})
+        endif()
+        string(REPLACE "!" "${esc}[0m " msg ${msg1})
+    else()
+        if (flag)
+            string(REPLACE "?" "*" msg1 ${msg})
+        else()
+            string(REPLACE "?" " " msg1 ${msg})
+        endif()
+        string(REPLACE "!" " " msg ${msg1})
+    endif()
+    message(${msg})
+endfunction()
+
+function(pr_trgt msg target)
+    if (TARGET ${target})
+        pr_flag(${msg} ON)
+    else()
+        pr_flag(${msg} OFF)
+    endif()
+endfunction()
+
+message("┌────────────────────────────────┐")
+message("│  Build enabled:                │")
+pr_flag("│  ? libraries!                  │" ON)
+pr_flag("│  ? tools!                      │" ${XCI_BUILD_TOOLS})
+pr_flag("│  ? examples!                   │" ${XCI_BUILD_EXAMPLES})
+pr_flag("│  ? tests!                      │" ${XCI_BUILD_TESTS})
+pr_flag("│  ? benchmarks!                 │" ${XCI_BUILD_BENCHMARKS})
+message("├────────────────────────────────┤")
+message("│  Libraries:                    │")
+pr_flag("│  ? xci-core!                   │" ON)
+pr_flag("│  ? xci-data!                   │" ${XCI_DATA})
+pr_flag("│  ? xci-script!                 │" ${XCI_SCRIPT})
+pr_flag("│  ? xci-graphics!               │" ${XCI_GRAPHICS})
+pr_flag("│  ? xci-text!                   │" ${XCI_TEXT})
+pr_flag("│  ? xci-widgets!                │" ${XCI_WIDGETS})
+if (${XCI_BUILD_TOOLS})
+    message("├────────────────────────────────┤")
+    message("│  Tools:                        │")
+    pr_trgt("│  ? ff (req. Hyperscan)!        │" ff)
+    pr_trgt("│  ? fire (req. xci-script)!     │" fire)
+endif()
+message("└────────────────────────────────┘")
 
 
 # ------------- #
