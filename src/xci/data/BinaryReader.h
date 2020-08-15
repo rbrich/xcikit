@@ -26,6 +26,7 @@ class BinaryReader : public ArchiveBase<BinaryReader>, BinaryBase {
     struct Buffer {
         size_t size = 0;
     };
+    using Reader = std::true_type;
     using BufferType = Buffer;
 
 public:

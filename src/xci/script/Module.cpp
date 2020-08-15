@@ -8,6 +8,11 @@
 #include "Function.h"
 #include "Error.h"
 
+#include <xci/data/BinaryWriter.h>
+#include <xci/data/BinaryReader.h>
+
+#include <fstream>
+
 namespace xci::script {
 
 using std::move;
@@ -135,10 +140,12 @@ bool Module::operator==(const Module& rhs) const
 }
 
 
-bool Module::save(const std::string& filename)
+bool Module::save_to_file(const std::string& filename)
 {
-    // TODO
-    return false;
+    std::ofstream f(filename, std::ios::binary);
+    xci::data::BinaryWriter writer(f);
+    writer(m_modules);
+    return !f.fail();
 }
 
 

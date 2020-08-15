@@ -38,10 +38,26 @@ template<typename T> ArchiveField(uint8_t, T&, const char*) -> ArchiveField<T>;
 
 
 template<typename T, typename TArchive>
-concept TypeWithSerialize = requires(T& v, TArchive& ar) { v.serialize(ar); };
+concept TypeWithSerializeMethod = requires(T& v, TArchive& ar) { v.serialize(ar); };
+
+template<typename T, typename TArchive>
+concept TypeWithSaveMethod = requires(T& v, TArchive& ar) { typename TArchive::Writer; v.save(ar); };
+
+template<typename T, typename TArchive>
+concept TypeWithLoadMethod = requires(T& v, TArchive& ar) { typename TArchive::Reader; v.load(ar); };
 
 template<typename T, typename TArchive>
 concept TypeWithArchiveSupport = requires(T& v, std::uint8_t k, TArchive& ar) { ar.add(ArchiveField<T>{k, v}); };
+
+template<typename T, typename TArchive>
+concept TypeWithMagicSupport =
+        !TypeWithSerializeMethod<T, TArchive> &&
+        !TypeWithSaveMethod<T, TArchive> &&
+        !TypeWithLoadMethod<T, TArchive> &&
+        !TypeWithArchiveSupport<T, TArchive> &&
+        std::is_class_v<T> &&
+        !std::is_polymorphic_v<T> &&
+        std::is_copy_constructible_v<T>;
 
 template<typename T>
 concept FancyPointerType = requires(const T& v) { *v; typename std::pointer_traits<T>::pointer; };
@@ -83,11 +99,29 @@ public:
     }
 
     // when: the type has serialize() method
-    template <TypeWithSerialize<TImpl> T>
+    template <TypeWithSerializeMethod<TImpl> T>
     void apply(ArchiveField<T>&& kv) {
         kv.key = draw_next_key(kv.key);
         static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
         kv.value.serialize(*static_cast<TImpl*>(this));
+        static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
+    }
+
+    // when: the type has save() method and this is Writer
+    template <TypeWithSaveMethod<TImpl> T>
+    void apply(ArchiveField<T>&& kv) {
+        kv.key = draw_next_key(kv.key);
+        static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
+        kv.value.save(*static_cast<TImpl*>(this));
+        static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
+    }
+
+    // when: the type has load() method and this is Reader
+    template <TypeWithLoadMethod<TImpl> T>
+    void apply(ArchiveField<T>&& kv) {
+        kv.key = draw_next_key(kv.key);
+        static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
+        kv.value.load(*static_cast<TImpl*>(this));
         static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
     }
 
@@ -99,9 +133,7 @@ public:
     }
 
     // when: other non-polymorphic structs - use pfr
-    template <typename T>
-    requires (std::is_class_v<T> && !std::is_polymorphic_v<T> &&
-            !TypeWithSerialize<T, TImpl> && !TypeWithArchiveSupport<T, TImpl>)
+    template <TypeWithMagicSupport<TImpl> T>
     void apply(ArchiveField<T>&& kv) {
         kv.key = draw_next_key(kv.key);
         static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);

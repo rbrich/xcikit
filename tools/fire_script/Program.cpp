@@ -59,7 +59,9 @@ void Program::process_args(char* argv[])
                     else
                         out_path += ".firm";
                 }
-                if (!ctx.input_modules.back()->save(out_path))
+                if (opts.prog_opts.verbose)
+                    std::clog << "Writing module: " << out_path << std::endl;
+                if (!ctx.input_modules.back()->save_to_file(out_path))
                     exit(1);
             }
         }

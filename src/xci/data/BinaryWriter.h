@@ -30,6 +30,14 @@ namespace xci::data {
 ///         }
 ///     };
 ///
+/// Alternatively, it can implement save/load pair, so it can behave specifically
+/// depending on the data direction:
+///
+///     struct MyStruct {
+///         template <class TAr> void save(TAr& ar) { ar(a, b, c); }
+///         template <class TAr> void load(TAr& ar) { ar(a, b, c); }
+///     };
+///
 /// The numeric keys are auto-assigned: a=0, b=1, c=2.
 /// Maximum number of members serializable in this fashion is 16.
 ///
@@ -49,6 +57,7 @@ namespace xci::data {
 
 class BinaryWriter : public ArchiveBase<BinaryWriter>, BinaryBase {
     friend ArchiveBase<BinaryWriter>;
+    using Writer = std::true_type;
     using BufferType = std::vector<std::byte>;
 
 public:
@@ -63,7 +72,7 @@ public:
             return;
         }
         using ElemT = typename std::pointer_traits<T>::element_type;
-        apply(ArchiveField<ElemT>{a.key, *a.value, a.name});
+        apply(ArchiveField<ElemT>{reuse_same_key(a.key), *a.value, a.name});
     }
 
     // bool

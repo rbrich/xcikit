@@ -1,0 +1,4 @@
+// sample module
+
+foo = fun x: Int -> Int { x + 1 };
+bar = fun x y { x + y };

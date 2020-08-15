@@ -105,7 +105,22 @@ public:
     std::vector<Index> get_spec_functions(SymbolPointer gen_fn);
 
     // Serialization
-    bool save(const std::string& filename);
+    bool save_to_file(const std::string& filename);
+
+    template<class Archive>
+    void save(Archive& archive)
+    {
+        std::string module_name = name();
+        archive(module_name);
+    }
+
+    template<class Archive>
+    void load(Archive& archive)
+    {
+        std::string module_name;
+        archive(module_name);
+        // TODO: import the module
+    }
 
     bool operator==(const Module& rhs) const;
 
