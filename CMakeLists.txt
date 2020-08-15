@@ -10,7 +10,8 @@ project(xcikit
 # Optional libraries (only xci-core is required)
 include(CMakeDependentOption)
 option(XCI_DATA "Enable component: xci-data" ON)
-option(XCI_SCRIPT "Enable component: xci-script" ON)
+CMAKE_DEPENDENT_OPTION(XCI_SCRIPT "Enable component: xci-script" ON
+    "XCI_DATA" OFF)
 option(XCI_GRAPHICS "Enable component: xci-graphics (requires Vulkan and GLFW)" ON)
 cmake_dependent_option(XCI_TEXT "Enable component: xci-text" ON
     "XCI_GRAPHICS" OFF)

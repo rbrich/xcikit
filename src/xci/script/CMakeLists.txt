@@ -38,6 +38,7 @@ target_precompile_headers(xci-script PRIVATE
 target_link_libraries(xci-script
     PUBLIC
         xci-core
+        xci-data
     PRIVATE
         range-v3::concepts
     )
