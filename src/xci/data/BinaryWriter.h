@@ -55,7 +55,7 @@ namespace xci::data {
 ///     XCI_ARCHIVE(ar, a, b, c)
 ///
 
-class BinaryWriter : public ArchiveBase<BinaryWriter>, BinaryBase {
+class BinaryWriter : public ArchiveBase<BinaryWriter>, protected BinaryBase {
     friend ArchiveBase<BinaryWriter>;
     using Writer = std::true_type;
     using BufferType = std::vector<std::byte>;

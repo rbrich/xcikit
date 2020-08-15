@@ -64,8 +64,7 @@ public:
 };
 
 
-class BinaryBase {
-protected:
+struct BinaryBase {
 
     enum Header: uint8_t {
         // magic: CBDF (Chunked Binary Data Format)
@@ -136,6 +135,31 @@ protected:
 
     template<class T> requires std::is_same_v<T, double>
     static constexpr Type to_chunk_type() { return Type::Float64; }
+
+    static constexpr size_t size_by_type(uint8_t type) {
+        switch (type) {
+            case Null:
+            case BoolFalse:
+            case BoolTrue:
+                return 0;
+            case Byte:
+                return 1;
+            case UInt32:
+            case Int32:
+            case Float32:
+                return 4;
+            case UInt64:
+            case Int64:
+            case Float64:
+                return 8;
+            default:
+                return size_t(-1);
+        }
+    }
+
+    static constexpr bool type_has_len(uint8_t type) {
+        return type == Varint || type == Array || type == String || type == Master;
+    }
 
     enum ControlSubtype: uint8_t {
         Metadata    = 0,

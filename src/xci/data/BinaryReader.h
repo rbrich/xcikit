@@ -10,7 +10,6 @@
 #include "BinaryBase.h"
 #include <xci/data/coding/leb128.h>
 #include <xci/compat/endian.h>
-#include <xci/compat/macros.h>
 
 #include <istream>
 #include <iterator>
@@ -21,7 +20,7 @@
 namespace xci::data {
 
 
-class BinaryReader : public ArchiveBase<BinaryReader>, BinaryBase {
+class BinaryReader : public ArchiveBase<BinaryReader>, protected BinaryBase {
     friend ArchiveBase<BinaryReader>;
     struct Buffer {
         size_t size = 0;
@@ -31,6 +30,23 @@ class BinaryReader : public ArchiveBase<BinaryReader>, BinaryBase {
 
 public:
     explicit BinaryReader(std::istream& is) : m_stream(is) { read_header(); }
+
+    uint8_t flags() const { return m_flags; }
+    bool has_crc() const { return (m_flags & ChecksumMask) == ChecksumCrc32; }
+
+    // size of root group
+    size_t root_group_size() const { return m_group_stack.front().buffer.size; }
+
+    using UnknownChunkCb = std::function<void(uint8_t type, uint8_t key, const std::byte* data, size_t size)>;
+    void set_unknown_chunk_callback(UnknownChunkCb cb) { m_unknown_chunk_cb = std::move(cb); }
+
+    enum GenericNext {
+        GenericItem,
+        EnterGroup,
+        LeaveGroup,
+        EndOfFile,
+    };
+    GenericNext generic_next();
 
     void finish_and_check() { read_footer(); }
 
@@ -102,66 +118,16 @@ public:
     }
 
 private:
-    void enter_group(uint8_t key, const char* name);
-    void leave_group(uint8_t key, const char* name);
-
     void read_header();
     void read_footer();
 
+    void enter_group(uint8_t key, const char* name);
+    void leave_group(uint8_t key, const char* name);
+
     void skip_unknown_chunk(uint8_t type, uint8_t key);
 
-    constexpr bool type_has_len(uint8_t type) {
-        return type == Varint || type == Array || type == String || type == Master;
-    }
-
-    constexpr size_t size_by_type(uint8_t type) {
-        switch (type) {
-            case Null:
-            case BoolFalse:
-            case BoolTrue:
-            case Control:
-                return 0;
-            case Byte:
-                return 1;
-            case UInt32:
-            case Int32:
-            case Float32:
-                return 4;
-            case UInt64:
-            case Int64:
-            case Float64:
-                return 8;
-            default:
-                UNREACHABLE;
-        }
-    }
-
-    uint8_t peek_chunk_head(uint8_t key) {
-        // Read ahead until key matches
-        while (group_buffer().size != 0) {
-            auto b = (uint8_t) peek_byte();
-            const uint8_t chunk_key = b & KeyMask;
-            const uint8_t chunk_type = b & TypeMask;
-            if (chunk_key < key) {
-                (void) read_byte_with_crc();
-                skip_unknown_chunk(chunk_type, chunk_key);
-                continue;
-            }
-            if (chunk_key > key)
-                return ChunkNotFound;
-            // success, pointer is still at KEY/TYPE
-            return chunk_type;
-        }
-        return ChunkNotFound;
-    }
-
-    uint8_t read_chunk_head(uint8_t key) {
-        auto chunk_type = peek_chunk_head(key);
-        if (chunk_type == ChunkNotFound)
-            return ChunkNotFound;
-        read_byte_with_crc();
-        return chunk_type;
-    }
+    uint8_t peek_chunk_head(uint8_t key);
+    uint8_t read_chunk_head(uint8_t key);
 
     template <typename T>
     void read_with_crc(T& value) {
@@ -185,13 +151,11 @@ private:
         return leb128_decode<size_t>(iter);
     }
 
-private:
     std::istream& m_stream;
 
-    bool m_has_crc = false;
+    uint8_t m_flags = 0;
     Crc32 m_crc;
 
-    using UnknownChunkCb = std::function<void(uint8_t type, uint8_t key, const std::byte* data, size_t size)>;
     UnknownChunkCb m_unknown_chunk_cb;
 };
 
