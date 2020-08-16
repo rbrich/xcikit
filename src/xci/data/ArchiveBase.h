@@ -98,6 +98,12 @@ public:
         apply(ArchiveField<T>{key_auto, value});
     }
 
+    // convenience: ar.kv(key, value) -> ar.apply(ArchiveField{key, value})
+    template <typename T>
+    void kv(uint8_t key, T& value) {
+        apply(ArchiveField<T>{key, value});
+    }
+
     // when: the type has serialize() method
     template <TypeWithSerializeMethod<TImpl> T>
     void apply(ArchiveField<T>&& kv) {
@@ -147,21 +153,14 @@ protected:
 
     static constexpr uint8_t key_max = 15;
     static constexpr uint8_t key_auto = 255;
-    static constexpr uint8_t key_same = 128;
-    constexpr uint8_t reuse_same_key(uint8_t key) { return key + key_same; }
     uint8_t draw_next_key(uint8_t req = key_auto) {
         auto& group = m_group_stack.back();
 
-        // for arrays - do not draw new key, reuse the old one
-        if (req >= key_same && req <= key_same + key_max) {
-            req -= key_same;
-            if (req != group.next_key - 1)
-                throw ArchiveKeyNotInOrder();
-            return req;
-        }
-
         // specific key requested?
         if (req != key_auto) {
+            // request for same key as before - don't increment
+            if (req == group.next_key - 1)
+                return req;
             if (req < group.next_key)
                 throw ArchiveKeyNotInOrder();
             // respect the request, possibly skipping some keys

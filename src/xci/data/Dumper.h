@@ -89,7 +89,7 @@ public:
     requires requires { typename T::iterator; }
     void add(ArchiveField<T>&& a) {
         for (auto& item : a.value) {
-            apply(ArchiveField<typename T::value_type>{reuse_same_key(a.key), item, a.name});
+            apply(ArchiveField<typename T::value_type>{a.key, item, a.name});
         }
     }
 

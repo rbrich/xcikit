@@ -9,6 +9,7 @@
 #include <xci/data/BinaryReader.h>
 #include <xci/core/TermCtl.h>
 #include <xci/core/string.h>
+#include <xci/compat/macros.h>
 
 #include <fstream>
 
@@ -49,33 +50,33 @@ static void print_data(TermCtl& term, uint8_t type, const std::byte* data, size_
 {
     auto expected_size = BinaryBase::size_by_type(type);
     if (expected_size != size_t(-1) && size != expected_size) {
-        term.print("{red}bad size {}{normal}\n");
+        term.print("{fg:red}bad size {}{t:normal}", size);
         return;
     }
 
     switch (type) {
-        case BinaryBase::Null:      term.print("{yellow}null{normal}\n"); return;
-        case BinaryBase::BoolFalse: term.print("{yellow}false{normal}\n"); return;
-        case BinaryBase::BoolTrue:  term.print("{yellow}true{normal}\n"); return;
-        case BinaryBase::Byte:      term.print("{magenta}{}{normal}\n", int(*data)); return;
-        case BinaryBase::UInt32:    term.print("{magenta}{}{normal}\n", uint32_t(*data)); return;
-        case BinaryBase::UInt64:    term.print("{magenta}{}{normal}\n", uint64_t(*data)); return;
-        case BinaryBase::Int32:     term.print("{magenta}{}{normal}\n", int32_t(*data)); return;
-        case BinaryBase::Int64:     term.print("{magenta}{}{normal}\n", uint32_t(*data)); return;
-        case BinaryBase::Float32:   term.print("{magenta}{}{normal}\n", float(*data)); return;
-        case BinaryBase::Float64:   term.print("{magenta}{}{normal}\n", double(*data)); return;
-        case BinaryBase::Varint:    term.print("{yellow}varint{normal}\n"); return;
-        case BinaryBase::Array:     term.print("{yellow}array{normal}\n"); return;
+        case BinaryBase::Null:      term.print("{fg:yellow}null{t:normal}"); return;
+        case BinaryBase::BoolFalse: term.print("{fg:yellow}false{t:normal}"); return;
+        case BinaryBase::BoolTrue:  term.print("{fg:yellow}true{t:normal}"); return;
+        case BinaryBase::Byte:      term.print("{fg:magenta}{}{t:normal}", int(*data)); return;
+        case BinaryBase::UInt32:    term.print("{fg:magenta}{}{t:normal}", uint32_t(*data)); return;
+        case BinaryBase::UInt64:    term.print("{fg:magenta}{}{t:normal}", uint64_t(*data)); return;
+        case BinaryBase::Int32:     term.print("{fg:magenta}{}{t:normal}", int32_t(*data)); return;
+        case BinaryBase::Int64:     term.print("{fg:magenta}{}{t:normal}", uint32_t(*data)); return;
+        case BinaryBase::Float32:   term.print("{fg:magenta}{}{t:normal}", float(*data)); return;
+        case BinaryBase::Float64:   term.print("{fg:magenta}{}{t:normal}", double(*data)); return;
+        case BinaryBase::Varint:    term.print("{fg:yellow}varint{t:normal}"); return;
+        case BinaryBase::Array:     term.print("{fg:yellow}array{t:normal}"); return;
         case BinaryBase::String:
-            term.print("{green}\"{}\"{normal}\n",
+            term.print("{fg:green}\"{}\"{t:normal}",
                     escape(std::string((const char*) data, size)));
             return;
-        case BinaryBase::Binary:    term.print("{yellow}(size {}){normal}\n", size); return;
+        case BinaryBase::Binary:    term.print("{fg:yellow}(size {}){t:normal}", size); return;
         case BinaryBase::Master:
-            term.print("{yellow}(size {}){normal} {bold}{{{normal}\n", size); return;
-        case BinaryBase::Control:   term.print("{yellow}control{normal}\n"); return;
+            term.print("{fg:yellow}(size {}){t:normal} {t:bold}{{{t:normal}", size); return;
+        case BinaryBase::Control:   term.print("{fg:yellow}control{t:normal}"); return;
     }
-    term.print("{red}unknown{normal}\n");
+    term.print("{fg:red}unknown{t:normal}");
 }
 
 
@@ -91,11 +92,11 @@ int main(int argc, const char* argv[])
     } (argv);
 
     if (files.empty()) {
-        term.print("{bold}{yellow}No input files.{normal}\n");
+        term.print("{t:bold}{fg:yellow}No input files.{t:normal}\n");
     }
 
     for (const auto& filename : files) {
-        term.print("{yellow}{bold}{}{normal}\n", filename);
+        term.print("{fg:yellow}{t:bold}{}{t:normal}\n", filename);
         std::ifstream f(filename, std::ios::binary);
         try {
             xci::data::BinaryReader reader(f);
@@ -107,37 +108,50 @@ int main(int argc, const char* argv[])
             term.print("Size: {}\n", reader.root_group_size());
 
             int indent = 0;
-            reader.set_unknown_chunk_callback(
-                    [&term, &indent]
-                    (uint8_t type, uint8_t key, const std::byte* data, size_t size)
-            {
-                term.print("{}{bold}{cyan}{}{normal}: {} = ",
-                        std::string(indent * 4, ' '),
-                        int(key), type_to_str(type));
-                print_data(term, type, data, size);
-            });
-
             bool eof = false;
             while (!eof) {
-                switch (reader.generic_next()) {
-                    case BinaryReader::GenericItem:
-                        break;
-                    case BinaryReader::EnterGroup:
+                auto it = reader.generic_next();
+                using What = BinaryReader::GenericNext::What;
+                switch (it.what) {
+                    case What::EnterGroup:
                         ++ indent;
+                        FALLTHROUGH;
+                    case What::DataItem:
+                    case What::MetadataItem:
+                        term.print("{}{t:bold}{fg:cyan}{}{t:normal}: {} = ",
+                                std::string(indent * 4, ' '),
+                                int(it.key), type_to_str(it.type));
+                        print_data(term, it.type, it.data.get(), it.size);
+                        if (it.what == What::MetadataItem) {
+                            if (it.key == 1 && it.type == BinaryBase::UInt32) {
+                                uint32_t stored_crc = 0;
+                                std::memcpy(&stored_crc, it.data.get(), it.size);
+                                if (reader.crc() == stored_crc)
+                                    term.print(" {t:bold}{fg:green}(CRC32: OK){t:normal}");
+                                else
+                                    term.print(" {t:bold}{fg:red}(CRC32: expected {}){t:normal}",
+                                            reader.crc());
+                            }
+                        }
+                        term.print("\n");
                         break;
-                    case BinaryReader::LeaveGroup:
+                    case What::LeaveGroup:
                         -- indent;
-                        term.print("{bold}{}}{normal}\n", std::string(indent * 4, ' '));
+                        term.print("{t:bold}{}}}{t:normal}\n", std::string(indent * 4, ' '));
                         break;
-                    case BinaryReader::EndOfFile:
+                    case What::EnterMetadata:
+                        term.print("{t:bold}{}Metadata:{t:normal}\n", std::string(indent * 4, ' '));
+                        break;
+                    case What::LeaveMetadata:
+                        term.print("{t:bold}{}Data:{t:normal}\n", std::string(indent * 4, ' '));
+                        break;
+                    case What::EndOfFile:
                         eof = true;
                         break;
                 }
             }
-
-            reader.finish_and_check();
         } catch (const ArchiveError& e) {
-            term.print("{bold}{red}{}{normal}\n", e.what());
+            term.print("{t:bold}{fg:red}{}{t:normal}\n", e.what());
         }
     }
 

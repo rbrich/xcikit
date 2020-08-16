@@ -44,23 +44,6 @@ void BinaryReader::read_header() {
 
 void BinaryReader::read_footer()
 {
-    // read chunks until Control/Metadata
-    for (;;) {
-        if (group_buffer().size == 0) {
-            if (has_crc())
-                throw ArchiveMissingChecksum();
-            return;  // no footer
-        }
-        uint8_t b;
-        read_with_crc(b);
-        const uint8_t chunk_key = b & KeyMask;
-        const uint8_t chunk_type = b & TypeMask;
-        if (chunk_type != Type::Control || chunk_key != Metadata) {
-            skip_unknown_chunk(chunk_type, chunk_key);
-            continue;
-        }
-        break;  // footer found
-    }
     // read metadata chunks
     while (group_buffer().size != 0) {
         uint8_t b;
@@ -88,9 +71,9 @@ auto BinaryReader::generic_next() -> GenericNext
     if (group_buffer().size == 0) {
         // leave group
         if (is_root_group())
-            return EndOfFile;
+            return {GenericNext::EndOfFile};
         m_group_stack.pop_back();
-        return LeaveGroup;
+        return {GenericNext::LeaveGroup};
     }
 
     auto b = (uint8_t) read_byte_with_crc();
@@ -106,14 +89,27 @@ auto BinaryReader::generic_next() -> GenericNext
         group_buffer().size -= chunk_length;
         m_group_stack.emplace_back();
         group_buffer().size = chunk_length;
-        if (m_unknown_chunk_cb) {
-            m_unknown_chunk_cb(chunk_type, chunk_key, nullptr, chunk_length);
-        }
-        return EnterGroup;
+        return {GenericNext::EnterGroup,
+                chunk_type, chunk_key, {}, chunk_length};
     }
 
-    skip_unknown_chunk(chunk_type, chunk_key);
-    return GenericItem;
+    if (chunk_type == Type::Control && chunk_key == Metadata) {
+        group_buffer().metadata = true;
+        return {GenericNext::EnterMetadata, chunk_type, chunk_key};
+    }
+
+    if (chunk_type == Type::Control && chunk_key == Data) {
+        group_buffer().metadata = false;
+        return {GenericNext::LeaveMetadata, chunk_type, chunk_key};
+    }
+
+    if (group_buffer().metadata && has_crc() && chunk_key == 1 && chunk_type == UInt32) {
+        // stop feeding CRC
+        m_flags = 0;
+    }
+    auto&& [buf, length] = read_chunk_content(chunk_type, chunk_key);
+    return {group_buffer().metadata ? GenericNext::MetadataItem : GenericNext::DataItem,
+            chunk_type, chunk_key, std::move(buf), length};
 }
 
 
@@ -144,7 +140,39 @@ void BinaryReader::leave_group(uint8_t key, const char* name)
 }
 
 
+void BinaryReader::skip_until_metadata()
+{
+    // read chunks until Control/Metadata
+    for (;;) {
+        if (group_buffer().size == 0) {
+            if (has_crc())
+                throw ArchiveMissingChecksum();
+            return;  // no footer
+        }
+        uint8_t b;
+        read_with_crc(b);
+        const uint8_t chunk_key = b & KeyMask;
+        const uint8_t chunk_type = b & TypeMask;
+        if (chunk_type != Type::Control || chunk_key != Metadata) {
+            skip_unknown_chunk(chunk_type, chunk_key);
+            continue;
+        }
+        break;  // footer found
+    }
+}
+
+
 void BinaryReader::skip_unknown_chunk(uint8_t type, uint8_t key)
+{
+    auto&& [buf, length] = read_chunk_content(type, key);
+    if (m_unknown_chunk_cb) {
+        m_unknown_chunk_cb(type, key, buf.get(), length);
+    }
+}
+
+
+std::pair<std::unique_ptr<std::byte[]>, size_t>
+BinaryReader::read_chunk_content(uint8_t type, uint8_t key)
 {
     size_t length;
     if (type_has_len(type)) {
@@ -154,9 +182,7 @@ void BinaryReader::skip_unknown_chunk(uint8_t type, uint8_t key)
     }
     auto buf = std::make_unique<std::byte[]>(length);
     read_with_crc(buf.get(), length);
-    if (m_unknown_chunk_cb) {
-        m_unknown_chunk_cb(type, key, buf.get(), length);
-    }
+    return {std::move(buf), length};
 }
 
 

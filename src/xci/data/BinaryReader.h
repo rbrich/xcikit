@@ -23,7 +23,8 @@ namespace xci::data {
 class BinaryReader : public ArchiveBase<BinaryReader>, protected BinaryBase {
     friend ArchiveBase<BinaryReader>;
     struct Buffer {
-        size_t size = 0;
+        size_t size = 0;        // size of group content, in bytes
+        bool metadata = false;  // the next chunk in group is data or metadata?
     };
     using Reader = std::true_type;
     using BufferType = Buffer;
@@ -33,6 +34,7 @@ public:
 
     uint8_t flags() const { return m_flags; }
     bool has_crc() const { return (m_flags & ChecksumMask) == ChecksumCrc32; }
+    uint32_t crc() const { return m_crc.as_uint32(); }
 
     // size of root group
     size_t root_group_size() const { return m_group_stack.front().buffer.size; }
@@ -40,15 +42,26 @@ public:
     using UnknownChunkCb = std::function<void(uint8_t type, uint8_t key, const std::byte* data, size_t size)>;
     void set_unknown_chunk_callback(UnknownChunkCb cb) { m_unknown_chunk_cb = std::move(cb); }
 
-    enum GenericNext {
-        GenericItem,
-        EnterGroup,
-        LeaveGroup,
-        EndOfFile,
+    struct GenericNext {
+        enum What {
+            DataItem,
+            MetadataItem,
+            EnterGroup,  // Master chunk
+            LeaveGroup,
+            EnterMetadata,
+            LeaveMetadata,
+            EndOfFile,
+        };
+        What what;
+        // chunk:
+        uint8_t type = 0;
+        uint8_t key = 0;
+        std::unique_ptr<std::byte[]> data;
+        size_t size = 0;
     };
     GenericNext generic_next();
 
-    void finish_and_check() { read_footer(); }
+    void finish_and_check() { skip_until_metadata(); read_footer(); }
 
     // raw and smart pointers
     template <FancyPointerType T>
@@ -113,7 +126,7 @@ public:
             if (chunk_type == ChunkNotFound)
                 return;
             a.value.emplace_back();
-            apply(ArchiveField<typename T::value_type>{reuse_same_key(a.key), a.value.back(), a.name});
+            apply(ArchiveField<typename T::value_type>{a.key, a.value.back(), a.name});
         }
     }
 
@@ -124,7 +137,9 @@ private:
     void enter_group(uint8_t key, const char* name);
     void leave_group(uint8_t key, const char* name);
 
+    void skip_until_metadata();
     void skip_unknown_chunk(uint8_t type, uint8_t key);
+    std::pair<std::unique_ptr<std::byte[]>, size_t> read_chunk_content(uint8_t type, uint8_t key);
 
     uint8_t peek_chunk_head(uint8_t key);
     uint8_t read_chunk_head(uint8_t key);
