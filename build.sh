@@ -75,7 +75,10 @@ while [[ $# -gt 0 ]] ; do
             BUILD_TYPE="MinSizeRel"
             shift 1 ;;
         --unity )
-            CMAKE_ARGS+=(-D'CMAKE_UNITY_BUILD=1' -D'UNITY_BUILD_BATCH_SIZE=4')
+            # Batch all source files in each target together. This is best to be
+            # sure a unity build works. It might not be best for speed or memory
+            # consumption, but seems not worse then smaller batches in my tests.
+            CMAKE_ARGS+=(-D'CMAKE_UNITY_BUILD=1' -D'CMAKE_UNITY_BUILD_BATCH_SIZE=0')
             shift 1 ;;
         --tidy )
             CMAKE_ARGS+=(-D'ENABLE_TIDY=1')

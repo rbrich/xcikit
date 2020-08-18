@@ -27,7 +27,6 @@ using std::endl;
 using std::left;
 using std::right;
 using std::setw;
-using std::string;
 using std::ostringstream;
 
 
@@ -117,7 +116,7 @@ std::ostream& operator<<(std::ostream& os, const Float& v)
         ostringstream sbuf;
         sbuf << v.value;
         auto str = sbuf.str();
-        if (str.find('.') == string::npos)
+        if (str.find('.') == std::string::npos)
             return os << str << ".0";
         else
             return os << str;

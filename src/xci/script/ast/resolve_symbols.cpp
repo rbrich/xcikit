@@ -14,7 +14,6 @@
 namespace xci::script {
 
 using std::make_unique;
-using std::string;
 
 
 class SymbolResolverVisitor final: public ast::Visitor {
@@ -245,7 +244,7 @@ private:
     Module& module() { return m_function.module(); }
     SymbolTable& symtab() { return *m_symtab; }
 
-    SymbolPointer resolve_symbol(const string& name) {
+    SymbolPointer resolve_symbol(const std::string& name) {
         // lookup intrinsics in builtin module first
         // (this is just an optimization, the same lookup is repeated below)
         if (name.size() > 3 && name[0] == '_' && name[1] == '_') {
@@ -293,7 +292,7 @@ private:
         return {};
     }
 
-    SymbolPointer resolve_symbol_of_type(const string& name, Symbol::Type type) {
+    SymbolPointer resolve_symbol_of_type(const std::string& name, Symbol::Type type) {
         // lookup in this and parent scopes
         for (auto* p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
             auto symptr = p_symtab->find_last_of(name, type);
