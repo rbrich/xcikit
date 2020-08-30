@@ -9,7 +9,10 @@
 
 #include <xci/core/error.h>
 #include <xci/core/macros/foreach.h>
+
+#ifdef XCI_ARCHIVE_MAGIC
 #include <boost/pfr/core.hpp>
+#endif
 #include <vector>
 #include <cstdint>
 
@@ -22,6 +25,8 @@ namespace xci::data {
 
 template <typename Archive, typename T>
 struct ArchiveField {
+    struct archive_field_tag {};
+
     uint8_t key = 255;
     typename Archive::template FieldType<T> value;
     const char* name = nullptr;
@@ -63,7 +68,7 @@ template<typename T, typename TArchive>
 concept ArchiveIsReader = requires(T& v, std::uint8_t k, TArchive& ar) { typename TArchive::Reader; ArchiveField<TArchive, T>{k, v}; };
 
 template<typename T, typename TArchive>
-concept ArchiveIsWriter = requires(const T& v, std::uint8_t k, TArchive& ar) { typename TArchive::Writer; ArchiveField<TArchive, T>{k, v}; };
+concept ArchiveIsWriter = !requires { typename T::archive_field_tag; } && requires(const T& v, std::uint8_t k, TArchive& ar) { typename TArchive::Writer; ArchiveField<TArchive, T>{k, v}; };
 
 template<typename T, typename TArchive>
 concept TypeWithReaderSupport = requires(T& v, std::uint8_t k, TArchive& ar) { typename TArchive::Reader; ar.add(ArchiveField<TArchive, T>{k, v}); };
@@ -71,6 +76,7 @@ concept TypeWithReaderSupport = requires(T& v, std::uint8_t k, TArchive& ar) { t
 template<typename T, typename TArchive>
 concept TypeWithWriterSupport = requires(const T& v, std::uint8_t k, TArchive& ar) { typename TArchive::Writer; ar.add(ArchiveField<TArchive, T>{k, v}); };
 
+#ifdef XCI_ARCHIVE_MAGIC
 template<typename T, typename TArchive>
 concept TypeWithMagicSupport =
         !TypeWithSerializeMethod<T, TArchive> &&
@@ -84,6 +90,7 @@ concept TypeWithMagicSupport =
         std::is_class_v<T> &&
         !std::is_polymorphic_v<T> &&
         std::is_copy_constructible_v<T>;
+#endif
 
 template<typename T>
 concept FancyPointerType = requires(const T& v) { *v; typename std::pointer_traits<T>::pointer; };
@@ -204,6 +211,7 @@ public:
         static_cast<TImpl*>(this)->add(std::forward<ArchiveField<TImpl, T>>(kv));
     }
 
+#ifdef XCI_ARCHIVE_MAGIC
     // when: other non-polymorphic structs - use pfr
     template <TypeWithMagicSupport<TImpl> T>
     void apply(ArchiveField<TImpl, T>&& kv) {
@@ -214,6 +222,7 @@ public:
         });
         static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
     }
+#endif
 
 protected:
 

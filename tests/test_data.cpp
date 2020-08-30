@@ -6,6 +6,7 @@
 
 #include <catch2/catch.hpp>
 
+#define XCI_ARCHIVE_MAGIC
 #include <xci/data/Dumper.h>
 #include <xci/data/BinaryWriter.h>
 #include <xci/data/BinaryReader.h>
