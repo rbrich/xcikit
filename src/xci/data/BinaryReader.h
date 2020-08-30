@@ -22,14 +22,15 @@ namespace xci::data {
 
 class BinaryReader : public ArchiveBase<BinaryReader>, protected BinaryBase {
     friend ArchiveBase<BinaryReader>;
-    struct Buffer {
+    struct BufferType {
         size_t size = 0;        // size of group content, in bytes
         bool metadata = false;  // the next chunk in group is data or metadata?
     };
-    using Reader = std::true_type;
-    using BufferType = Buffer;
 
 public:
+    using Reader = std::true_type;
+    template<typename T> using FieldType = T&;
+
     explicit BinaryReader(std::istream& is) : m_stream(is) { read_header(); }
 
     uint8_t flags() const { return m_flags; }
@@ -65,7 +66,7 @@ public:
 
     // raw and smart pointers
     template <FancyPointerType T>
-    void add(ArchiveField<T>&& a) {
+    void add(ArchiveField<BinaryReader, T>&& a) {
         const auto chunk_type = peek_chunk_head(a.key);
         if (chunk_type == ChunkNotFound)
             return;
@@ -76,11 +77,11 @@ public:
         }
         using ElemT = typename std::pointer_traits<T>::element_type;
         a.value = new ElemT{};
-        apply(ArchiveField<ElemT>{a.key, *a.value, a.name});
+        apply(ArchiveField<BinaryReader, ElemT>{a.key, *a.value, a.name});
     }
 
     // bool
-    void add(ArchiveField<bool>&& a) {
+    void add(ArchiveField<BinaryReader, bool>&& a) {
         const auto chunk_type = read_chunk_head(a.key);
         if (chunk_type == ChunkNotFound)
             return;
@@ -98,7 +99,7 @@ public:
     // integers, floats, enums
     template <typename T>
     requires requires() { to_chunk_type<T>(); }
-    void add(ArchiveField<T>&& a) {
+    void add(ArchiveField<BinaryReader, T>&& a) {
         const auto chunk_type = read_chunk_head(a.key);
         if (chunk_type == to_chunk_type<T>())
             read_with_crc(a.value);
@@ -107,7 +108,7 @@ public:
     }
 
     // string
-    void add(ArchiveField<std::string>&& a) {
+    void add(ArchiveField<BinaryReader, std::string>&& a) {
         const auto chunk_type = read_chunk_head(a.key);
         if (chunk_type == Type::String) {
             auto length = read_leb128<size_t>();
@@ -120,13 +121,13 @@ public:
     // iterables
     template <typename T>
     requires requires (T& v) { v.emplace_back(); }
-    void add(ArchiveField<T>&& a) {
+    void add(ArchiveField<BinaryReader, T>&& a) {
         for (;;) {
             const auto chunk_type = peek_chunk_head(a.key);
             if (chunk_type == ChunkNotFound)
                 return;
             a.value.emplace_back();
-            apply(ArchiveField<typename T::value_type>{a.key, a.value.back(), a.name});
+            apply(ArchiveField<BinaryReader, typename T::value_type>{a.key, a.value.back(), a.name});
         }
     }
 

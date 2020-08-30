@@ -44,52 +44,54 @@ namespace xci::data {
 ///
 class Dumper : public ArchiveBase<Dumper> {
     friend ArchiveBase<Dumper>;
-    struct Buffer {};
-    using BufferType = Buffer;
+    struct BufferType {};
 
 public:
+    using Writer = std::true_type;
+    template<typename T> using FieldType = const T&;
+
     explicit Dumper(std::ostream& os) : m_stream(os) {}
 
     // raw and smart pointers
     template <FancyPointerType T>
-    void add(ArchiveField<T>&& a) {
+    void add(ArchiveField<Dumper, T>&& a) {
         if (!a.value) {
             write_key_name(a.key, a.name);
             return;
         }
         using ElemT = typename std::pointer_traits<T>::element_type;
-        apply(ArchiveField<ElemT>{a.key, *a.value, a.name});
+        apply(ArchiveField<Dumper, ElemT>{a.key, *a.value, a.name});
     }
 
-    void add(ArchiveField<bool>&& a) {
+    void add(ArchiveField<Dumper, bool>&& a) {
         write_key_name(a.key, a.name);
         m_stream << std::boolalpha << a.value << std::endl;
     }
 
     template <typename T>
     requires std::is_integral_v<T> || std::is_floating_point_v<T>
-    void add(ArchiveField<T>&& a) {
+    void add(ArchiveField<Dumper, T>&& a) {
         write_key_name(a.key, a.name);
         m_stream << a.value << std::endl;
     }
 
     template <typename T>
     requires std::is_enum_v<T>
-    void add(ArchiveField<T>&& a) {
+    void add(ArchiveField<Dumper, T>&& a) {
         write_key_name(a.key, a.name);
         m_stream << magic_enum::enum_name(a.value) << std::endl;
     }
 
-    void add(ArchiveField<std::string>&& a) {
+    void add(ArchiveField<Dumper, std::string>&& a) {
         write_key_name(a.key, a.name);
         m_stream << '"' << a.value << '"' << std::endl;
     }
 
     template <typename T>
     requires requires { typename T::iterator; }
-    void add(ArchiveField<T>&& a) {
+    void add(ArchiveField<Dumper, T>&& a) {
         for (auto& item : a.value) {
-            apply(ArchiveField<typename T::value_type>{a.key, item, a.name});
+            apply(ArchiveField<Dumper, typename T::value_type>{a.key, item, a.name});
         }
     }
 

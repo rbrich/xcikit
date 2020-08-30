@@ -20,41 +20,67 @@
 namespace xci::data {
 
 
-template <typename T>
+template <typename Archive, typename T>
 struct ArchiveField {
     uint8_t key = 255;
-    T& value;
+    typename Archive::template FieldType<T> value;
     const char* name = nullptr;
 };
-template<typename T> ArchiveField(uint8_t, T&) -> ArchiveField<T>;
-template<typename T> ArchiveField(uint8_t, T&, const char*) -> ArchiveField<T>;
 
 // Automatic named fields
-#define XCI_ARCHIVE_FIELD(i, mbr) xci::data::ArchiveField{i, mbr, #mbr}
+#define XCI_ARCHIVE_FIELD(i, mbr) xci::data::ArchiveField<Archive, decltype(mbr)>{i, mbr, #mbr}
 #define XCI_ARCHIVE(ar, ...)                                                                        \
     ar(                                                                                             \
         XCI_FOREACH(XCI_ARCHIVE_FIELD, 255, XCI_COMMA, __VA_ARGS__)                                 \
     )
 
 
+// in-class method: void serialize(Archive&)
 template<typename T, typename TArchive>
 concept TypeWithSerializeMethod = requires(T& v, TArchive& ar) { v.serialize(ar); };
 
+// out-of-class function: void serialize(Archive&, T&)
 template<typename T, typename TArchive>
-concept TypeWithSaveMethod = requires(T& v, TArchive& ar) { typename TArchive::Writer; v.save(ar); };
+concept TypeWithSerializeFunction = requires(T& v, TArchive& ar) { serialize(ar, v); };
 
+// in-class method: void save(Archive&) const
+template<typename T, typename TArchive>
+concept TypeWithSaveMethod = requires(const T& v, TArchive& ar) { typename TArchive::Writer; v.save(ar); };
+
+// out-of-class function: void save(Archive&, const T&)
+template<typename T, typename TArchive>
+concept TypeWithSaveFunction = requires(const T& v, TArchive& ar) { typename TArchive::Writer; save(ar, v); };
+
+// in-class method: void load(Archive&)
 template<typename T, typename TArchive>
 concept TypeWithLoadMethod = requires(T& v, TArchive& ar) { typename TArchive::Reader; v.load(ar); };
 
+// out-of-class function: void load(Archive&, T&)
 template<typename T, typename TArchive>
-concept TypeWithArchiveSupport = requires(T& v, std::uint8_t k, TArchive& ar) { ar.add(ArchiveField<T>{k, v}); };
+concept TypeWithLoadFunction = requires(T& v, TArchive& ar) { typename TArchive::Reader; load(ar, v); };
+
+template<typename T, typename TArchive>
+concept ArchiveIsReader = requires(T& v, std::uint8_t k, TArchive& ar) { typename TArchive::Reader; ArchiveField<TArchive, T>{k, v}; };
+
+template<typename T, typename TArchive>
+concept ArchiveIsWriter = requires(const T& v, std::uint8_t k, TArchive& ar) { typename TArchive::Writer; ArchiveField<TArchive, T>{k, v}; };
+
+template<typename T, typename TArchive>
+concept TypeWithReaderSupport = requires(T& v, std::uint8_t k, TArchive& ar) { typename TArchive::Reader; ar.add(ArchiveField<TArchive, T>{k, v}); };
+
+template<typename T, typename TArchive>
+concept TypeWithWriterSupport = requires(const T& v, std::uint8_t k, TArchive& ar) { typename TArchive::Writer; ar.add(ArchiveField<TArchive, T>{k, v}); };
 
 template<typename T, typename TArchive>
 concept TypeWithMagicSupport =
         !TypeWithSerializeMethod<T, TArchive> &&
+        !TypeWithSerializeFunction<T, TArchive> &&
         !TypeWithSaveMethod<T, TArchive> &&
+        !TypeWithSaveFunction<T, TArchive> &&
         !TypeWithLoadMethod<T, TArchive> &&
-        !TypeWithArchiveSupport<T, TArchive> &&
+        !TypeWithLoadFunction<T, TArchive> &&
+        !TypeWithReaderSupport<T, TArchive> &&
+        !TypeWithWriterSupport<T, TArchive> &&
         std::is_class_v<T> &&
         !std::is_polymorphic_v<T> &&
         std::is_copy_constructible_v<T>;
@@ -93,54 +119,94 @@ public:
     }
 
     // convenience: ar.apply(value) -> ar.apply(ArchiveField{key_auto, value})
-    template <typename T>
+    template <ArchiveIsReader<TImpl> T>
     void apply(T& value) {
-        apply(ArchiveField<T>{key_auto, value});
+        apply(ArchiveField<TImpl, T>{key_auto, value});
+    }
+    template <ArchiveIsWriter<TImpl> T>
+    void apply(const T& value) {
+        apply(ArchiveField<TImpl, T>{key_auto, value});
     }
 
     // convenience: ar.kv(key, value) -> ar.apply(ArchiveField{key, value})
-    template <typename T>
+    template <ArchiveIsReader<TImpl> T>
     void kv(uint8_t key, T& value) {
-        apply(ArchiveField<T>{key, value});
+        apply(ArchiveField<TImpl, T>{key, value});
+    }
+    template <ArchiveIsWriter<TImpl> T>
+    void kv(uint8_t key, const T& value) {
+        apply(ArchiveField<TImpl, T>{key, value});
     }
 
     // when: the type has serialize() method
     template <TypeWithSerializeMethod<TImpl> T>
-    void apply(ArchiveField<T>&& kv) {
+    void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = draw_next_key(kv.key);
         static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
-        kv.value.serialize(*static_cast<TImpl*>(this));
+        const_cast<T&>(kv.value).serialize(*static_cast<TImpl*>(this));
+        static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
+    }
+
+    // when: the type has out-of-class serialize() function
+    template <TypeWithSerializeFunction<TImpl> T>
+    void apply(ArchiveField<TImpl, T>&& kv) {
+        kv.key = draw_next_key(kv.key);
+        static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
+        serialize(*static_cast<TImpl*>(this), const_cast<T&>(kv.value));
         static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
     }
 
     // when: the type has save() method and this is Writer
     template <TypeWithSaveMethod<TImpl> T>
-    void apply(ArchiveField<T>&& kv) {
+    void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = draw_next_key(kv.key);
         static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
         kv.value.save(*static_cast<TImpl*>(this));
         static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
     }
 
+    // when: the type has out-of-class save() function and this is Writer
+    template <TypeWithSaveFunction<TImpl> T>
+    void apply(ArchiveField<TImpl, T>&& kv) {
+        kv.key = draw_next_key(kv.key);
+        static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
+        save(*static_cast<TImpl*>(this), kv.value);
+        static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
+    }
+
     // when: the type has load() method and this is Reader
     template <TypeWithLoadMethod<TImpl> T>
-    void apply(ArchiveField<T>&& kv) {
+    void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = draw_next_key(kv.key);
         static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
         kv.value.load(*static_cast<TImpl*>(this));
         static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
     }
 
-    // when: Archive implementation has add() method for the type
-    template <TypeWithArchiveSupport<TImpl> T>
-    void apply(ArchiveField<T>&& kv) {
+    // when: the type has out-of-class load() function and this is Reader
+    template <TypeWithLoadFunction<TImpl> T>
+    void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = draw_next_key(kv.key);
-        static_cast<TImpl*>(this)->add(std::forward<ArchiveField<T>>(kv));
+        static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
+        load(*static_cast<TImpl*>(this), kv.value);
+        static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
+    }
+
+    // when: Archive implementation has add() method for the type
+    template <TypeWithReaderSupport<TImpl> T>
+    void apply(ArchiveField<TImpl, T>&& kv) {
+        kv.key = draw_next_key(kv.key);
+        static_cast<TImpl*>(this)->add(std::forward<ArchiveField<TImpl, T>>(kv));
+    }
+    template <TypeWithWriterSupport<TImpl> T>
+    void apply(ArchiveField<TImpl, T>&& kv) {
+        kv.key = draw_next_key(kv.key);
+        static_cast<TImpl*>(this)->add(std::forward<ArchiveField<TImpl, T>>(kv));
     }
 
     // when: other non-polymorphic structs - use pfr
     template <TypeWithMagicSupport<TImpl> T>
-    void apply(ArchiveField<T>&& kv) {
+    void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = draw_next_key(kv.key);
         static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
         boost::pfr::for_each_field(kv.value, [&](auto& field) {
