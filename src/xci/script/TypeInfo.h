@@ -139,6 +139,19 @@ public:
     const NamedType& named_type() const { return *named_type_ptr(); }
     std::string name() const;
 
+    // -------------------------------------------------------------------------
+    // Serialization
+
+    template <class Archive>
+    void serialize(Archive& ar) {
+        ar(m_type);
+        if (is_unknown())
+            ar(generic_var());
+        if (is_callable())
+            ar(signature());
+        // TODO: subtypes
+    }
+
 private:
     Type m_type { Type::Unknown };
     std::variant<Var, Subtypes, StructItems, SignaturePtr, NamedTypePtr> m_info;
@@ -166,6 +179,11 @@ struct Signature {
 
     bool operator==(const Signature& rhs) const = default;
     bool operator!=(const Signature& rhs) const = default;
+
+    template <class Archive>
+    void serialize(Archive& ar) {
+        ar(nonlocals, partial, params, return_type);
+    }
 };
 
 

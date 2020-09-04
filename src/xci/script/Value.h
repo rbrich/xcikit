@@ -283,6 +283,10 @@ concept ValueT = requires(const T& v) {
 
 class Values {
 public:
+    using value_type = Value;
+    using reference = Value&;
+    using const_reference = const Value&;
+
     Values() = default;
     explicit Values(std::initializer_list<Value> values) : m_items(values) {}
 
@@ -297,7 +301,7 @@ public:
 
     void add(Value&& value) { m_items.emplace_back(std::forward<Value>(value)); }
 
-    const Value& operator[](size_t i) const { return m_items[i]; }
+    const_reference operator[](size_t i) const { return m_items[i]; }
 
     bool operator==(const Values& rhs) const { return m_items == rhs.m_items; }
     bool operator!=(const Values& rhs) const { return m_items != rhs.m_items; }
@@ -308,7 +312,7 @@ public:
     iterator end() { return m_items.end(); }
     const_iterator begin() const { return m_items.begin(); }
     const_iterator end() const { return m_items.end(); }
-    const Value& back() const { return m_items.back(); }
+    const_reference back() const { return m_items.back(); }
 
 private:
     std::vector<Value> m_items;
@@ -321,7 +325,7 @@ public:
 
     template <ValueWithTypeInfo T> explicit TypedValue(const T& v) : m_value(v), m_type_info(v.type_info()) {}
 
-    TypedValue(TypeInfo type_info) : m_value(create_value(type_info)), m_type_info(move(type_info)) {}
+    explicit TypedValue(TypeInfo type_info) : m_value(create_value(type_info)), m_type_info(move(type_info)) {}
     TypedValue(Value value, TypeInfo type_info);
 
     bool operator ==(const TypedValue& rhs) const { return m_value == rhs.m_value; }
@@ -348,6 +352,10 @@ private:
 
 class TypedValues {
 public:
+    using value_type = TypedValue;
+    using reference = TypedValue&;
+    using const_reference = const TypedValue&;
+
     // reserve number of values
     void reserve(size_t n) { m_items.reserve(n); }
     // get number of values
@@ -355,8 +363,10 @@ public:
     bool empty() const { return m_items.empty(); }
 
     void add(TypedValue&& value) { m_items.emplace_back(std::forward<TypedValue>(value)); }
+    reference emplace_back() { return m_items.emplace_back(); }
 
-    const TypedValue& operator[](size_t i) const { return m_items[i]; }
+    reference operator[](size_t i) { return m_items[i]; }
+    const_reference operator[](size_t i) const { return m_items[i]; }
 
     bool operator==(const TypedValues& rhs) const { return m_items == rhs.m_items; }
     bool operator!=(const TypedValues& rhs) const { return m_items != rhs.m_items; }
@@ -367,7 +377,8 @@ public:
     iterator end() { return m_items.end(); }
     const_iterator begin() const { return m_items.begin(); }
     const_iterator end() const { return m_items.end(); }
-    const TypedValue& back() const { return m_items.back(); }
+    const_reference back() const { return m_items.back(); }
+    reference back() { return m_items.back(); }
 
 private:
     std::vector<TypedValue> m_items;
@@ -487,13 +498,6 @@ public:
 // Complex types //
 // ------------- //
 
-//        bool* m_bools;
-//        uint8_t* m_bytes;
-//        int32_t* m_int32s;
-//        int64_t* m_int64s;
-//        float* m_float32s;
-//        double* m_float64s;
-
 
 class String: public Value {
 public:
@@ -581,6 +585,44 @@ public:
 };
 
 } // namespace value
+
+
+template<class Archive>
+void save(Archive& archive, const TypedValue& value)
+{
+    using namespace value;
+    class ArchiveVisitor : public Visitor {
+    public:
+        ArchiveVisitor(Archive& ar) : ar(ar) {}
+        void visit(void) override { ar(TypeInfo(Type::Void)); }
+        void visit(bool v) override { ar(TypeInfo(Type::Bool), v); }
+        void visit(byte v) override { ar(TypeInfo(Type::Byte), v); }
+        void visit(char32_t v) override { ar(TypeInfo(Type::Char), v); }
+        void visit(uint32_t v) override { ar(TypeInfo(Type::UInt32), v); }
+        void visit(uint64_t v) override { ar(TypeInfo(Type::UInt64), v); }
+        void visit(int32_t v) override { ar(TypeInfo(Type::Int32), v); }
+        void visit(int64_t v) override { ar(TypeInfo(Type::Int64), v); }
+        void visit(float v) override { ar(TypeInfo(Type::Float32), v); }
+        void visit(double v) override { ar(TypeInfo(Type::Float64), v); }
+        void visit(std::string_view&& v) override { ar(TypeInfo(Type::String), v); }
+        void visit(const ListV&) override {  }
+        void visit(const TupleV&) override {  }
+        void visit(const ClosureV&) override {  }
+        void visit(const script::Module*) override {  }
+        void visit(const script::Stream&) override {  }
+    private:
+        Archive& ar;
+    };
+    ArchiveVisitor visitor(archive);
+
+    value.apply(visitor);
+}
+
+template<class Archive>
+void load(Archive& archive, TypedValue& value)
+{
+    // TODO
+}
 
 
 std::ostream& operator<<(std::ostream& os, const TypedValue& o);

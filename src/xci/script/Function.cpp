@@ -20,7 +20,7 @@ Function::Function(Module& module, SymbolTable& symtab)
 }
 
 
-Function::Function(Function&& rhs)
+Function::Function(Function&& rhs) noexcept
         : m_module(rhs.m_module), m_symtab(rhs.m_symtab),
           m_signature(std::move(rhs.m_signature)),
           m_body(std::move(rhs.m_body)),

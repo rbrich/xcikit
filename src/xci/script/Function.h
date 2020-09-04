@@ -41,7 +41,7 @@ class Stack;
 class Function {
 public:
     explicit Function(Module& module, SymbolTable& symtab);
-    Function(Function&& rhs);
+    Function(Function&& rhs) noexcept;
     Function& operator =(Function&&) = delete;
 
     bool operator==(const Function& rhs) const;
@@ -171,6 +171,16 @@ public:
     Kind kind() const { return Kind(m_body.index()); }
 
     bool test_and_set_nonlocals_resolved() { bool v = m_nonlocals_resolved; m_nonlocals_resolved = true; return v; }
+
+    template<class Archive>
+    void save(Archive& ar) const {
+        ar(name(), m_signature);
+    }
+
+    template<class Archive>
+    void load(Archive& ar) {
+        // TODO
+    }
 
 private:
     Module& m_module;

@@ -106,19 +106,17 @@ public:
 
     // Serialization
     bool save_to_file(const std::string& filename);
+    bool load_from_file(const std::string& filename);
 
     template<class Archive>
-    void save(Archive& archive)
-    {
-        std::string module_name = name();
-        archive(module_name);
+    void save(Archive& ar) const {
+        ar(name());
     }
 
     template<class Archive>
-    void load(Archive& archive)
-    {
+    void load(Archive& ar) {
         std::string module_name;
-        archive(module_name);
+        ar(module_name);
         // TODO: import the module
     }
 

@@ -143,8 +143,17 @@ bool Module::operator==(const Module& rhs) const
 bool Module::save_to_file(const std::string& filename)
 {
     std::ofstream f(filename, std::ios::binary);
-    xci::data::BinaryWriter writer(f);
-    writer(m_modules);
+    xci::data::BinaryWriter writer(f, true);
+    writer(m_modules, m_values, m_functions);
+    return !f.fail();
+}
+
+
+bool Module::load_from_file(const std::string& filename)
+{
+    std::ifstream f(filename, std::ios::binary);
+    xci::data::BinaryReader reader(f);
+    reader(m_modules, m_values);
     return !f.fail();
 }
 

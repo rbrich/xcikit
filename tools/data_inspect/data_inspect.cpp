@@ -114,8 +114,6 @@ int main(int argc, const char* argv[])
                 using What = BinaryReader::GenericNext::What;
                 switch (it.what) {
                     case What::EnterGroup:
-                        ++ indent;
-                        FALLTHROUGH;
                     case What::DataItem:
                     case What::MetadataItem:
                         term.print("{}{t:bold}{fg:cyan}{}{t:normal}: {} = ",
@@ -134,6 +132,8 @@ int main(int argc, const char* argv[])
                             }
                         }
                         term.print("\n");
+                        if (it.what == What::EnterGroup)
+                            ++ indent;
                         break;
                     case What::LeaveGroup:
                         -- indent;

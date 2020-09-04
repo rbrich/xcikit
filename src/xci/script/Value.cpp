@@ -227,7 +227,7 @@ void Value::decref() const
 
 void Value::apply(value::Visitor& visitor) const
 {
-    std::visit([&visitor](auto& v) {
+    std::visit([&visitor](const auto& v) {
         using T = std::decay_t<decltype(v)>;
         if constexpr (std::is_same_v<T, std::monostate>)
             visitor.visit();  // Void
