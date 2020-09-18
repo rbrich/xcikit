@@ -86,7 +86,7 @@ if (ENABLE_WARNINGS)
             _CRT_SECURE_NO_WARNINGS
             _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1)
     else()
-        add_compile_options(-Wall -Wextra
+        add_compile_options(-Wall -Wextra -Wundef
             -Wno-unused-parameter
             -Wno-missing-field-initializers)
     endif()

@@ -19,23 +19,9 @@ namespace xci::core {
 using namespace std;
 
 
-bool starts_with(const std::string& str, const std::string& sub)
-{
-    // Note: don't use find(), that would be ineffective to decide negative result
-    return str.size() >= sub.size() && str.substr(0, sub.size()) == sub;
-}
-
-
-bool ends_with(const std::string& str, const std::string& sub)
-{
-    // Note: don't use find(), that would be ineffective to decide negative result
-    return str.size() >= sub.size() && str.substr(str.size() - sub.size(), sub.size()) == sub;
-}
-
-
 bool remove_prefix(string& str, const string& prefix)
 {
-    if (!starts_with(str, prefix))
+    if (!str.starts_with(prefix))
         return false;
     str.erase(0, prefix.size());
     return true;
@@ -44,7 +30,7 @@ bool remove_prefix(string& str, const string& prefix)
 
 bool remove_suffix(string& str, const string& suffix)
 {
-    if (!ends_with(str, suffix))
+    if (!str.ends_with(suffix))
         return false;
     str.erase(str.size() - suffix.size());
     return true;

@@ -224,28 +224,6 @@ TEST_CASE( "rsplit", "[string]" )
 }
 
 
-TEST_CASE( "starts_with", "[string]" )
-{
-    CHECK(starts_with("/ab/cdef", "/ab"));
-    CHECK(starts_with("/ab/cdef", "/ab/cdef"));
-    CHECK(!starts_with("/ab/cdef", "/ab/cdef/"));
-    CHECK(starts_with("", ""));
-    CHECK(starts_with("abc", ""));
-    CHECK(!starts_with("", "abc"));
-}
-
-
-TEST_CASE( "ends_with", "[string]" )
-{
-    CHECK(ends_with("/ab/cdef", "cdef"));
-    CHECK(ends_with("/ab/cdef", "/cdef"));
-    CHECK(ends_with("/ab/cdef", "/ab/cdef"));
-    CHECK(ends_with("", ""));
-    CHECK(ends_with("abc", ""));
-    CHECK(!ends_with("", "abc"));
-}
-
-
 TEST_CASE( "remove_prefix", "[string]" )
 {
     std::string s;

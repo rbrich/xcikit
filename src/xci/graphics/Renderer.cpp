@@ -151,9 +151,9 @@ Renderer::Renderer(core::Vfs& vfs)
     for (const auto& props : layer_props) {
         bool enable = false;
         if ((
-                starts_with(props.layerName, "VK_LAYER_LUNARG_") ||
-                starts_with(props.layerName, "VK_LAYER_GOOGLE_") ||
-                starts_with(props.layerName, "VK_LAYER_KHRONOS_")
+                props.layerName.starts_with("VK_LAYER_LUNARG_") ||
+                props.layerName.starts_with("VK_LAYER_GOOGLE_") ||
+                props.layerName.starts_with("VK_LAYER_KHRONOS_")
             ) && !any_of(enabled_layers,[&](const char* name) {
                 return strcmp(name, props.layerName) == 0;
             }) && strcmp(props.layerName, "VK_LAYER_LUNARG_api_dump") != 0
