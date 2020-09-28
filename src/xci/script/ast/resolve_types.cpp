@@ -11,6 +11,8 @@
 #include <xci/script/Error.h>
 #include <xci/compat/macros.h>
 
+#include <sstream>
+
 namespace xci::script {
 
 using std::move;

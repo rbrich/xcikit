@@ -15,11 +15,11 @@
 
 #include "Parser.h"
 #include "Error.h"
-#include <xci/core/format.h>
 #include <xci/core/parser/unescape_rules.h>
 
 #include <tao/pegtl.hpp>
 #include <tao/pegtl/contrib/raw_string.hpp>
+#include <fmt/core.h>
 #include <iostream>
 
 // Enable for detailed trace of Grammar rules being matched
@@ -902,7 +902,7 @@ void Parser::parse(std::string_view input, ast::Module& mod)
         mod.body.finish();
     } catch (tao::pegtl::parse_error& e) {
         const auto p = e.positions.front();
-        throw ParseError{core::format("{}\n{}\n{}^", e.what(), in.line_at(p),
+        throw ParseError{fmt::format("{}\n{}\n{}^", e.what(), in.line_at(p),
                                       std::string(p.byte_in_line, ' '))};
     } catch( const std::exception& e ) {
         throw ParseError{e.what()};

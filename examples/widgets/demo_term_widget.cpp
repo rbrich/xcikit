@@ -17,9 +17,10 @@
 #include <xci/graphics/Window.h>
 #include <xci/core/Vfs.h>
 #include <xci/core/file.h>
-#include <xci/core/format.h>
 #include <xci/core/log.h>
 #include <xci/config.h>
+
+#include <fmt/core.h>
 #include <cstdlib>
 #include <cstdio>
 #include <iostream>
@@ -27,6 +28,7 @@
 using namespace xci::widgets;
 using namespace xci::graphics;
 using namespace xci::core;
+using fmt::format;
 
 int main()
 {

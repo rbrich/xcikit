@@ -6,9 +6,9 @@
 
 #include "string.h"
 #include "parser/unescape.h"
-#include <xci/core/format.h>
 #include <xci/core/log.h>
 
+#include <fmt/core.h>
 #include <cctype>
 #include <locale>
 #include <codecvt>
@@ -19,6 +19,7 @@ namespace xci::core {
 using std::string;
 using std::vector;
 using std::string_view;
+using fmt::format;
 
 
 bool remove_prefix(string& str, const string& prefix)

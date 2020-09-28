@@ -10,10 +10,11 @@
 #include <xci/core/error.h>
 #include <xci/core/macros/foreach.h>
 #include <boost/pfr/precise/core.hpp>
+#include <vector>
 #include <cstdint>
 
 #ifndef __cpp_concepts
-#error "xci::data reqire C++20 concepts"
+#error "xci::data require C++20 concepts"
 #endif
 
 namespace xci::data {

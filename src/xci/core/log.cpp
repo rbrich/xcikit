@@ -18,11 +18,11 @@ namespace xci::core {
 
 
 static const char* level_format[] = {
-        "{:19} {cyan}{:5}{normal}  {bold}TRACE{normal}  {blue}{}{normal}\n",
-        "{:19} {cyan}{:5}{normal}  {bold}DEBUG{normal}  {white}{}{normal}\n",
-        "{:19} {cyan}{:5}{normal}  {bold}INFO {normal}  {bold}{white}{}{normal}\n",
-        "{:19} {cyan}{:5}{normal}  {bold}WARN {normal}  {bold}{yellow}{}{normal}\n",
-        "{:19} {cyan}{:5}{normal}  {bold}ERROR{normal}  {bold}{red}{}{normal}\n",
+        "{:19} {fg:cyan}{:5}{t:normal}  {t:bold}TRACE{t:normal}  {fg:blue}{}{t:normal}\n",
+        "{:19} {fg:cyan}{:5}{t:normal}  {t:bold}DEBUG{t:normal}  {fg:white}{}{t:normal}\n",
+        "{:19} {fg:cyan}{:5}{t:normal}  {t:bold}INFO {t:normal}  {t:bold}{fg:white}{}{t:normal}\n",
+        "{:19} {fg:cyan}{:5}{t:normal}  {t:bold}WARN {t:normal}  {t:bold}{fg:yellow}{}{t:normal}\n",
+        "{:19} {fg:cyan}{:5}{t:normal}  {t:bold}ERROR{t:normal}  {t:bold}{fg:red}{}{t:normal}\n",
 };
 
 
@@ -37,7 +37,7 @@ Logger::Logger(Level level) : m_level(level)
 {
     if (m_level <= Level::Info) {
         TermCtl& t = TermCtl::stderr_instance();
-        auto msg = t.format("{underline}   Date      Time    TID   Level  Message   {normal}\n");
+        auto msg = t.format("{t:underline}   Date      Time    TID   Level  Message   {t:normal}\n");
         auto res = write(STDERR_FILENO, msg);
         assert(res);  // write to stderr should not fail
         (void) res;
@@ -49,7 +49,7 @@ Logger::~Logger()
 {
     if (m_level <= Level::Info) {
         TermCtl& t = TermCtl::stderr_instance();
-        auto msg = t.format("{overline}                 End of Log                 {normal}\n");
+        auto msg = t.format("{t:overline}                 End of Log                 {t:normal}\n");
         auto res = write(STDERR_FILENO, msg);
         assert(res);  // write to stderr should not fail
         (void) res;
@@ -85,6 +85,19 @@ void Logger::log(Logger::Level lvl, std::string_view msg)
         return;
 
     m_handler(lvl, msg);
+}
+
+
+std::string log::LastErrorPlaceholder::message(bool use_last_error, bool error_code)
+{
+    if (error_code) {
+        if (use_last_error)
+            return std::to_string(last_error());
+        return std::to_string(errno);
+    }
+    if (use_last_error)
+        return last_error_str();
+    return errno_str();
 }
 
 

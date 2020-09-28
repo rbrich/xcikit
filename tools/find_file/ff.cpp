@@ -263,7 +263,7 @@ int main(int argc, const char* argv[])
             Option("-H, --show-hidden", "Don't skip hidden files", show_hidden),
             Option("-D, --show-dirs", "Don't skip directory entries", show_dirs),
             Option("-a, --all", "Don't skip any files, same as -H -D", [&]{ show_hidden = true; show_dirs = true; }),
-            Option("-c, --color", "Force color output", [&]{ term.set_mode(TermCtl::Mode::Always); }),
+            Option("-c, --color", "Force color output", [&]{ term.set_is_tty(TermCtl::IsTty::Always); }),
             Option("-j, --jobs JOBS", "Number of worker threads", jobs).env("JOBS"),
             Option("-V, --version", "Show version", show_version),
             Option("-h, --help", "Show help", show_help),
@@ -272,10 +272,10 @@ int main(int argc, const char* argv[])
     } (argv);
 
     if (show_version) {
-        term.print("{bold}ff{normal} {}\n", "0.1");
-        term.print("using {bold}Hyperscan{normal} {}", hs_version());
+        term.print("{t:bold}ff{t:normal} {}\n", "0.1");
+        term.print("using {t:bold}Hyperscan{t:normal} {}", hs_version());
 #ifndef HAVE_HS_COMPILE_LIT
-        term.print(" (hs_compile_lit not available, {bold}{green}--fixed{normal} option disabled)");
+        term.print(" (hs_compile_lit not available, {t:bold}{fg:green}--fixed{t:normal} option disabled)");
 #endif
         puts("");
         return 0;

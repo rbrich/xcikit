@@ -7,9 +7,9 @@
 #ifndef XCI_CORE_LOG_H
 #define XCI_CORE_LOG_H
 
-#include <xci/core/format.h>
 #include <xci/config.h>
 #include <string_view>
+#include <fmt/format.h>
 
 namespace xci::core {
 
@@ -58,9 +58,24 @@ private:
 
 namespace log {
 
+// Dummy type for custom formatting of last error message:
+// - {m} or {m:s}   strerror(errno)
+// - {m:d}          errno
+// - {m:l}          GetLastError on Windows, same as {m} elsewhere
+struct LastErrorPlaceholder {
+    static std::string message(bool use_last_error, bool error_code);
+};
+
+template<typename ...Args>
+inline std::string format(const char *fmt, Args&&... args)
+{
+    return fmt::format(fmt, std::forward<Args>(args)...,
+                       fmt::arg("m", LastErrorPlaceholder{}));
+}
+
 template<typename... Args>
 inline void message(Logger::Level lvl, const char *fmt, Args&&... args) {
-    Logger::default_instance().log(lvl, xci::core::format(fmt, std::forward<Args>(args)...));
+    Logger::default_instance().log(lvl, format(fmt, std::forward<Args>(args)...));
 }
 
 template<typename... Args>
@@ -97,6 +112,41 @@ inline void error(const char *fmt, Args&&... args) {
 #else
 #define TRACE(fmt, ...)  ((void)0)
 #endif
+
+
+template <>
+struct [[maybe_unused]] fmt::formatter<xci::core::log::LastErrorPlaceholder> {
+    bool last_error = false;    // l -> true
+    bool error_code = false;    // s -> false, d -> true
+
+    // Parses format specifications of the form ['l']['s' | 'd'].
+    constexpr auto parse(format_parse_context& ctx) {
+        auto it = ctx.begin();  // NOLINT
+        while (it != ctx.end() && *it != '}') {
+            switch (*it) {
+                case 'l':
+                    last_error = true;
+                    break;
+                case 's':
+                    error_code = false;
+                    break;
+                case 'd':
+                    error_code = true;
+                    break;
+                default:
+                    throw fmt::format_error("invalid format for last error, expected: [l][s|d]");
+            }
+            ++it;
+        }
+        return it;
+    }
+
+    template <typename FormatContext>
+    auto format(const xci::core::log::LastErrorPlaceholder& p, FormatContext& ctx) {
+        auto msg = xci::core::log::LastErrorPlaceholder::message(last_error, error_code);
+        return std::copy(msg.begin(), msg.end(), ctx.out());
+    }
+};
 
 
 #endif // XCI_CORE_LOG_H

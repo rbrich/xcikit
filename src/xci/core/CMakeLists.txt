@@ -7,7 +7,6 @@ add_library(xci-core
     chrono.cpp
     file.cpp
     dispatch.cpp
-    format.cpp
     FpsCounter.cpp
     log.cpp
     SharedLibrary.cpp
@@ -51,9 +50,11 @@ endif()
 
 target_link_libraries(xci-core
     PUBLIC
+        fmt::fmt
         Threads::Threads
     PRIVATE
-        ${CMAKE_DL_LIBS})
+        ${CMAKE_DL_LIBS}
+    )
 target_include_directories(xci-core
     PUBLIC
         ${XCI_INCLUDE_DIRS}

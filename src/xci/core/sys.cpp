@@ -148,6 +148,16 @@ std::string errno_str()
 }
 
 
+int last_error()
+{
+#ifdef _WIN32
+    return GetLastError();
+#else
+    return errno;
+#endif
+}
+
+
 std::ostream& last_error_str(std::ostream& stream)
 {
 #ifdef _WIN32
@@ -163,6 +173,25 @@ std::ostream& last_error_str(std::ostream& stream)
     return stream << buffer;
 #else
     return errno_str(stream);
+#endif
+}
+
+
+std::string last_error_str()
+{
+#ifdef _WIN32
+    char buffer[1000];
+    auto msg_id = GetLastError();
+    auto size = FormatMessageA(
+            FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+            nullptr, msg_id, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+            buffer, sizeof(buffer), nullptr);
+    if (!size) {
+        return "unknown error (" + std::to_string(msg_id) + ')';
+    }
+    return buffer;
+#else
+    return errno_str();
 #endif
 }
 

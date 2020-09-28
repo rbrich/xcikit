@@ -7,6 +7,7 @@
 #include "BytecodeTracer.h"
 #include <xci/script/dump.h>
 
+#include <iostream>
 #include <string>
 #include <stack>
 

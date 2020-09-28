@@ -15,6 +15,7 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
+#include <fmt/core.h>
 #include <range/v3/algorithm/any_of.hpp>
 #include <range/v3/view/enumerate.hpp>
 #include <range/v3/view/take.hpp>
@@ -49,6 +50,7 @@ using namespace xci::core;
 using ranges::cpp20::views::take;
 using ranges::views::enumerate;
 using ranges::cpp20::any_of;
+using fmt::format;
 using std::make_unique;
 
 
@@ -149,13 +151,14 @@ Renderer::Renderer(core::Vfs& vfs)
     enabled_layers.reserve(layer_count);
     for (const auto& props : layer_props) {
         bool enable = false;
+        std::string layer_name(props.layerName);
         if ((
-                props.layerName.starts_with("VK_LAYER_LUNARG_") ||
-                props.layerName.starts_with("VK_LAYER_GOOGLE_") ||
-                props.layerName.starts_with("VK_LAYER_KHRONOS_")
-            ) && !any_of(enabled_layers,[&](const char* name) {
-                return strcmp(name, props.layerName) == 0;
-            }) && strcmp(props.layerName, "VK_LAYER_LUNARG_api_dump") != 0
+                layer_name.starts_with("VK_LAYER_LUNARG_") ||
+                layer_name.starts_with("VK_LAYER_GOOGLE_") ||
+                layer_name.starts_with("VK_LAYER_KHRONOS_")
+            ) && !any_of(enabled_layers, [&](const char* name) {
+                return layer_name == name;
+            }) && layer_name != "VK_LAYER_LUNARG_api_dump"
         )
             enable = true;
         log::info("[{}] {} - {} (spec {}, impl {})",
@@ -193,7 +196,7 @@ Renderer::Renderer(core::Vfs& vfs)
     vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, ext_props.data());
     log::info("Vulkan: {} extensions available:", ext_count);
     for (const auto& props : ext_props) {
-        bool enable = any_of(extensions,[&](const char* name) {
+        bool enable = any_of(extensions, [&](const char* name) {
             return strcmp(name, props.extensionName) == 0;
         });
         log::info("[{}] {} (spec {})",

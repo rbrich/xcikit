@@ -19,6 +19,7 @@
 #include <xci/core/string.h>
 
 #include <tao/pegtl.hpp>
+#include <fmt/ostream.h>
 
 #include <iostream>
 

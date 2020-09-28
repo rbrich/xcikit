@@ -6,13 +6,15 @@
 
 #include <xci/core/log.h>
 #include <xci/core/sys.h>
+
+#include <fmt/ostream.h>  // for ArbitraryObject
+#include <iostream>
+#include <thread>
+
 using namespace xci::core;
 using namespace xci::core::log;
 
-#include <ostream>
 using std::ostream;
-
-#include <thread>
 
 
 class ArbitraryObject {};
@@ -51,6 +53,9 @@ int main()
     // Reinstall default handler
     Logger::default_instance().set_handler(Logger::default_handler);
     info("back to normal");
+
+    errno = ENOENT;
+    error("errno: ({m:d}) {m}");
 
     // Log from threads
     std::thread a(thread_run, "thread1");

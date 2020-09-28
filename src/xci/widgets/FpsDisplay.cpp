@@ -14,8 +14,8 @@
 // limitations under the License.
 
 #include "FpsDisplay.h"
-#include <xci/core/format.h>
 #include <xci/graphics/Renderer.h>
+#include <fmt/core.h>
 #include <chrono>
 
 namespace xci::widgets {
@@ -23,7 +23,7 @@ namespace xci::widgets {
 using namespace xci::graphics;
 using namespace xci::graphics::unit_literals;
 using namespace xci::core;
-using xci::core::format;
+using fmt::format;
 using namespace std::chrono_literals;
 
 

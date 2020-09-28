@@ -64,7 +64,7 @@ SignalWatch::~SignalWatch()
     // unblock signals
     for (const auto& sig: m_signals) {
         if (signal(sig.signum, sig.func) == SIG_ERR) {
-            log::error("SignalWatch: signal(%d, <orig>): {m}", sig.signum);
+            log::error("SignalWatch: signal({}, <orig>): {m}", sig.signum);
         }
     }
 }

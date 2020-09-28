@@ -2,7 +2,7 @@
 
 #include <catch2/catch.hpp>
 
-#include <xci/core/format.h>
+#include <xci/core/log.h>
 #include <xci/core/file.h>
 #include <xci/core/string.h>
 #include <xci/core/chrono.h>
@@ -15,45 +15,35 @@
 
 using namespace xci::core;
 using namespace std::string_literals;
+using xci::core::log::format;
 
 #define UTF8(l)  (const char*)u8 ## l
 
 
-TEST_CASE( "Format placeholders", "[format]" )
+TEST_CASE( "Format placeholders", "[log]" )
 {
-    CHECK(format("") == "");
+    CHECK(format("") == "");  // NOLINT
     CHECK(format("hello there") == "hello there");
-    CHECK(format("{unknown} placeholders {!!!}") == "{unknown} placeholders {!!!}");
 
     CHECK(format("number {} str {}", 123, "hello") == "number 123 str hello");
 
-    CHECK(format("surplus placeholder {}{}", "left as is") == "surplus placeholder left as is{}");
-
     CHECK(format("hex {:x} dec {}", 255, 255) == "hex ff dec 255");
     CHECK(format("hex {:02X} dec {:03}", 15, 15) == "hex 0F dec 015");
-
-    float f = 1.2345678f;
-    CHECK(format("float {} {:.2} {:.3f} {:.3f}", f, f, f, 1.2) ==
-                 "float 1.23457 1.2 1.235 1.200");
 
     errno = EACCES;
     CHECK(format("error: {m}") == "error: Permission denied");
 }
 
 
-TEST_CASE( "Format char type", "[format]" )
+TEST_CASE( "Format char type", "[log]" )
 {
-    // format uses std::ostream operator<<()
-    // -> there is overload for char type:
+    // only 'char' is special, other char-like types are just numbers
     CHECK(format("{}", char('c')) == "c");
-    CHECK(format("{}", (unsigned char)('c')) == "c");
-    CHECK(format("{}", int8_t('c')) == "c");
-    CHECK(format("{}", uint8_t('c')) == "c");
-    // 'x' format spec just sends std::hex, it does not convert char to int implicitly:
-    CHECK(format("{:02x}", uint8_t('c')) == "0c");
-    // -> if we want char's numeric value, it has to be cast:
-    CHECK(format("{}", int('c')) == "99");
-    CHECK(format("{:02x}", int('c')) == "63");
+    CHECK(format("{:c}", int('c')) == "c");
+    CHECK(format("{}", (unsigned char)('c')) == "99");
+    CHECK(format("{}", int8_t('c')) == "99");
+    CHECK(format("{}", uint8_t('c')) == "99");
+    CHECK(format("{:02x}", char('c')) == "63");
 }
 
 

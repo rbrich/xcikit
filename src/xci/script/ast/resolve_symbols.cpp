@@ -109,7 +109,7 @@ public:
         v.type_inst->apply(*this);
 
         // add child symbol table for the instance
-        SymbolTable& inst_symtab = symtab().add_child(core::format("{} ({})",
+        SymbolTable& inst_symtab = symtab().add_child(fmt::format("{} ({})",
                 v.class_name.name, *v.type_inst));
         m_symtab = &inst_symtab;
 

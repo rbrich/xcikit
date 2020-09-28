@@ -17,13 +17,16 @@
 
 #include <xci/widgets/TextTerminal.h>
 #include <xci/core/string.h>
-#include <xci/core/format.h>
+
+#include <fmt/core.h>
 
 using namespace xci::widgets;
 using namespace xci::text;
 using namespace xci::graphics;
 using namespace xci::core;
 using namespace xci::widgets::terminal::ctl;
+using fmt::format;
+
 
 class TestRenderer: public terminal::Renderer {
 public:
@@ -72,45 +75,45 @@ TEST_CASE( "Attributes", "[TextTerminal]" )
 
     attr.set_fg(7);
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}\x07", fg8bit)) );
+    CHECK( escape(enc) == escape(format("{:c}\x07", fg8bit)) );
     CHECK( attr2.decode(enc) == 2 );
     CHECK( escape(attr2.encode()) == escape(enc) );
 
     attr.set_bg(15);
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}\x07{}\x0f", fg8bit, bg8bit)) );
+    CHECK( escape(enc) == escape(format("{:c}\x07{:c}\x0f", fg8bit, bg8bit)) );
     CHECK( attr2.decode(enc) == 4 );
     CHECK( escape(attr2.encode()) == escape(enc) );
 
     attr.set_fg(terminal::Color24bit(0x40, 0x50, 0x60));
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}\x40\x50\x60{}\x0f", fg24bit, bg8bit)) );
+    CHECK( escape(enc) == escape(format("{:c}\x40\x50\x60{:c}\x0f", fg24bit, bg8bit)) );
     CHECK( attr2.decode(enc) == 6 );
     CHECK( escape(attr2.encode()) == escape(enc) );
 
     attr.set_bg(terminal::Color24bit(0x70, 0x80, 0x90));
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}\x40\x50\x60{}\x70\x80\x90", fg24bit, bg24bit)) );
+    CHECK( escape(enc) == escape(format("{:c}\x40\x50\x60{:c}\x70\x80\x90", fg24bit, bg24bit)) );
 
     attr.set_default_fg();
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}{}\x70\x80\x90", default_fg, bg24bit)) );
+    CHECK( escape(enc) == escape(format("{:c}{:c}\x70\x80\x90", default_fg, bg24bit)) );
 
     attr.set_default_bg();
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}{}", default_fg, default_bg)) );
+    CHECK( escape(enc) == escape(format("{:c}{:c}", default_fg, default_bg)) );
 
     attr.set_bold(true);
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}\x02{}{}", set_attrs, default_fg, default_bg)) );
+    CHECK( escape(enc) == escape(format("{:c}\x02{:c}{:c}", set_attrs, default_fg, default_bg)) );
 
     attr.set_italic(false);
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}\x02{}{}", set_attrs, default_fg, default_bg)) );
+    CHECK( escape(enc) == escape(format("{:c}\x02{:c}{:c}", set_attrs, default_fg, default_bg)) );
     
     attr.set_italic(true);
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{}\x03{}{}", set_attrs, default_fg, default_bg)) );
+    CHECK( escape(enc) == escape(format("{:c}\x03{:c}{:c}", set_attrs, default_fg, default_bg)) );
 }
 
 

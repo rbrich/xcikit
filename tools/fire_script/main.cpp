@@ -16,7 +16,6 @@
 #include <xci/core/file.h>
 #include <xci/core/Vfs.h>
 #include <xci/core/log.h>
-#include <xci/core/format.h>
 #include <xci/core/string.h>
 #include <xci/core/sys.h>
 #include <xci/config.h>
@@ -278,15 +277,15 @@ int main(int argc, char* argv[])
     // standalone interpreter for the control commands
     ReplCommand cmd;
 
-    cout << t.format("{bold}{magenta}🔥 fire script{normal} {magenta}v0.3{normal}") << endl;
+    cout << t.format("{t:bold}{fg:magenta}🔥 fire script{t:normal} {fg:magenta}v0.3{t:normal}") << endl;
     while (!context().done) {
         const char* input;
         do {
-            input = rx.input(t.format("{green}_{} ? {normal}", input_number));
+            input = rx.input(t.format("{fg:green}_{} ? {t:normal}", input_number));
         } while (input == nullptr && errno == EAGAIN);
 
         if (input == nullptr) {
-            cout << t.format("{bold}{yellow}.quit{normal}") << endl;
+            cout << t.format("{t:bold}{fg:yellow}.quit{t:normal}") << endl;
             break;
         }
 
