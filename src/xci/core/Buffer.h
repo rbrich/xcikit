@@ -24,22 +24,6 @@
 namespace xci::core {
 
 
-// Non-owned buffer. Data ownership is not transferred.
-// This could be specialization of C++20 span.
-class BufferView {
-public:
-    BufferView(byte* data, std::size_t size)
-        : m_data(data), m_size(size) {}
-
-    byte* data() const { return m_data; }
-    std::size_t size() const { return m_size; }
-
-private:
-    byte* m_data;
-    std::size_t m_size;
-};
-
-
 // Possibly owned buffer. Attach deleter when transferring ownership.
 class Buffer {
     using Deleter = std::function<void(byte*, std::size_t)>;
