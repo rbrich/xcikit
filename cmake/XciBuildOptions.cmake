@@ -18,7 +18,6 @@ option(ENABLE_LTO "Enable link-time, whole-program optimizations." OFF)
 option(ENABLE_CCACHE "Use ccache as compiler launcher, when available." ON)
 
 # cosmetics
-option(ENABLE_COLORS "Allow colored output in CMake messages." ON)
 option(FORCE_COLORS "Force colored compiler output." OFF)
 
 # Build type options

@@ -144,7 +144,7 @@ if phase config; then
     header "Configure"
     (
         cd "${BUILD_DIR}"
-        cmake "${ROOT_DIR}" \
+        XCI_CMAKE_COLORS=1 cmake "${ROOT_DIR}" \
             "${CMAKE_ARGS[@]}" \
             -D"CMAKE_BUILD_TYPE=${BUILD_TYPE}" \
             -D"CMAKE_INSTALL_PREFIX=${INSTALL_DIR}" \
