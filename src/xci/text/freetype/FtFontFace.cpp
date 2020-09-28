@@ -21,7 +21,7 @@
 namespace xci::text {
 
 using namespace std;
-using namespace core::log;
+using namespace xci::core;
 
 
 static inline float ft_to_float(FT_F26Dot6 ft_units) {
@@ -34,7 +34,7 @@ FtFontFace::~FtFontFace()
     if (m_face != nullptr) {
         auto err = FT_Done_Face(m_face);
         if (err) {
-            log_error("FT_Done_FreeType: {}", err);
+            log::error("FT_Done_FreeType: {}", err);
             return;
         }
     }
@@ -67,7 +67,7 @@ bool FtFontFace::set_size(unsigned pixel_size)
     auto err = FT_Request_Size(face, &size_req);*/
     auto err = FT_Set_Pixel_Sizes(m_face, pixel_size, pixel_size);
     if (err) {
-        log_error("FT_Set_Char_Size: {}", err);
+        log::error("FT_Set_Char_Size: {}", err);
         return false;
     }
 
@@ -81,7 +81,7 @@ bool FtFontFace::set_outline()
         // Create stroker
         auto err = FT_Stroker_New(static_cast<FtFontLibrary*>(m_library.get())->ft_library(), &m_stroker);
         if (err) {
-            log_error("FT_Stroker_New: {}", err);
+            log::error("FT_Stroker_New: {}", err);
             return false;
         }
     }
@@ -144,7 +144,7 @@ FT_GlyphSlot FtFontFace::load_glyph(GlyphIndex glyph_index)
 {
     int err = FT_Load_Glyph(m_face, glyph_index, FT_LOAD_DEFAULT | FT_LOAD_TARGET_LIGHT);
     if (err) {
-        log_error("FT_Load_Glyph error: {}", err);
+        log::error("FT_Load_Glyph error: {}", err);
         return nullptr;
     }
     return m_face->glyph;
@@ -160,7 +160,7 @@ bool FtFontFace::render_glyph(GlyphIndex glyph_index, Glyph& glyph)
 
     int err = FT_Render_Glyph(m_face->glyph, FT_RENDER_MODE_NORMAL);
     if (err) {
-        log_error("FT_Render_Glyph error: {}", err);
+        log::error("FT_Render_Glyph error: {}", err);
     }
     auto& bitmap = m_face->glyph->bitmap;
 
@@ -189,7 +189,7 @@ FT_Library FtFontFace::ft_library()
 bool FtFontFace::load_face(const char* file_path, const byte* buffer, size_t buffer_size, int face_index)
 {
     if (m_face != nullptr) {
-        log_error("FontFace: Reloading not supported! Create new instance instead.");
+        log::error("FontFace: Reloading not supported! Create new instance instead.");
         return false;
     }
     FT_Error err;
@@ -199,21 +199,21 @@ bool FtFontFace::load_face(const char* file_path, const byte* buffer, size_t buf
         err = FT_New_Face(ft_library(), file_path, face_index, &m_face);
     }
     if (err == FT_Err_Unknown_File_Format) {
-        log_error("FT_New_Face: Unknown file format");
+        log::error("FT_New_Face: Unknown file format");
         return false;
     }
     else if (err == FT_Err_Cannot_Open_Resource) {
-        log_error("FT_New_Face: Cannot open resource");
+        log::error("FT_New_Face: Cannot open resource");
         return false;
     }
     else if (err != 0) {
-        log_error("Cannot open font (FT_New_Face: {})", err);
+        log::error("Cannot open font (FT_New_Face: {})", err);
         return false;
     }
 
     // Our code points are in Unicode, make sure it's selected
     if (FT_Select_Charmap(m_face, FT_ENCODING_UNICODE) != 0) {
-        log_error("FT_Select_Charmap: Error setting to Unicode: {}", err);
+        log::error("FT_Select_Charmap: Error setting to Unicode: {}", err);
         FT_Done_Face(m_face);
         m_face = nullptr;
         return false;

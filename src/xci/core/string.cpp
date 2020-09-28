@@ -16,7 +16,9 @@
 
 namespace xci::core {
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::string_view;
 
 
 bool remove_prefix(string& str, const string& prefix)
@@ -143,7 +145,7 @@ std::u32string to_utf32(string_view utf8)
     try {
         return convert_utf32.from_bytes(utf8.data(), utf8.data() + utf8.size());
     } catch (const std::range_error& e) {
-        log_error("to_utf32: Invalid UTF8 string: {} ({})", utf8, e.what());
+        log::error("to_utf32: Invalid UTF8 string: {} ({})", utf8, e.what());
         return std::u32string();
     }
 }
@@ -156,7 +158,7 @@ std::string _to_utf8(std::basic_string_view<Elem> wstr)
     try {
         return convert.to_bytes(wstr.data(), wstr.data() + wstr.size());
     } catch (const std::range_error& e) {
-        log_error("to_utf8: Invalid UTF16/32 string ({})", e.what());
+        log::error("to_utf8: Invalid UTF16/32 string ({})", e.what());
         return {};
     }
 }
@@ -197,7 +199,7 @@ I utf8_next(I iter)
         // 11110xxx -> 4 bytes
         return iter + 4;
     }
-    log_error("utf8_next: Invalid UTF8 string, encountered code 0x{:02x}", int(first));
+    log::error("utf8_next: Invalid UTF8 string, encountered code 0x{:02x}", int(first));
     return iter + 1;
 }
 
@@ -269,7 +271,7 @@ char32_t utf8_codepoint(const char* utf8)
         // 11110xxx -> 4 bytes
         return char32_t(((c0 & 0x07) << 18) | ((utf8[1] & 0x3f) << 12) | ((utf8[2] & 0x3f) << 6) | (utf8[3] & 0x3f));
     }
-    log_error("utf8_codepoint: Invalid UTF8 string, encountered code {:02x}", int(c0));
+    log::error("utf8_codepoint: Invalid UTF8 string, encountered code {:02x}", int(c0));
     return 0;
 }
 

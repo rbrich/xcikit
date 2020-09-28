@@ -22,7 +22,7 @@ EventLoop::EventLoop()
             (ULONG_PTR) 0,
             1);
     if (m_port == nullptr) {
-        log_error("EventLoop: CreateIoCompletionPort: {mm}");
+        log::error("EventLoop: CreateIoCompletionPort: {mm}");
         return;
     }
 }
@@ -49,7 +49,7 @@ void EventLoop::run()
         if (!res && GetLastError() == WAIT_TIMEOUT)
             continue;
         if (!res) {
-            log_error("EventLoop: GetQueuedCompletionStatus: {mm}");
+            log::error("EventLoop: GetQueuedCompletionStatus: {mm}");
             return;
         }
 
@@ -76,7 +76,7 @@ bool EventLoop::_associate(HANDLE handle, Watch& watch)
     auto ret = CreateIoCompletionPort(handle,m_port,
             (ULONG_PTR) &watch,0);
     if (!ret) {
-        log_error("EventLoop: CreateIoCompletionPort(associate): {mm}");
+        log::error("EventLoop: CreateIoCompletionPort(associate): {mm}");
         return false;
     }
     return true;

@@ -14,6 +14,7 @@
 #include <fstream>
 
 using namespace xci::core;
+using namespace xci::core::log;
 using std::this_thread::sleep_for;
 using namespace std::string_literals;
 
@@ -29,23 +30,23 @@ int main()
     std::ofstream f(tmpname);
 
     fw.add_watch(tmpname, [] (FSDispatch::Event ev) {
-        log_info("Event received: {}", (int) ev);
+        info("Event received: {}", (int) ev);
     });
 
-    log_info("modify (one)");
+    info("modify (one)");
     f << "one" << std::endl;
     f.flush();
     sleep_for(100ms);
 
-    log_info("modify (two)");
+    info("modify (two)");
     f << "two" << std::endl;
     sleep_for(100ms);
 
-    log_info("close");
+    info("close");
     f.close();
     sleep_for(100ms);
 
-    log_info("reopen, modify (three), close");
+    info("reopen, modify (three), close");
     f.open(tmpname, std::ios::app);
     f << "three" << std::endl;
     f.close();

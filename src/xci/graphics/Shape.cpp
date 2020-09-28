@@ -15,12 +15,9 @@
 
 #include "Shape.h"
 #include "Renderer.h"
-#include <xci/core/log.h>
 
 
 namespace xci::graphics {
-
-using namespace xci::core::log;
 
 
 Shape::Shape(Renderer& renderer, const Color& fill_color, const Color& outline_color)

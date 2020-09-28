@@ -14,7 +14,7 @@
 
 namespace xci::graphics {
 
-using namespace xci::core::log;
+using namespace xci::core;
 using namespace std::chrono;
 
 
@@ -45,7 +45,7 @@ void Window::create(const Vec2u& size, const std::string& title)
     m_window = glfwCreateWindow(size.x, size.y, title.c_str(),
                                 nullptr, nullptr);
     if (!m_window) {
-        log_error("Couldn't create GLFW window...");
+        log::error("Couldn't create GLFW window...");
         exit(1);
     }
     glfwSetWindowUserPointer(m_window, this);
@@ -294,7 +294,7 @@ void Window::setup_view()
                     case GLFW_KEY_KP_DECIMAL: ev_key = Key::KeypadDecimalPoint; break;
                     case GLFW_KEY_KP_ENTER: ev_key = Key::KeypadEnter; break;
                     default:
-                        log_debug("GlWindow: unknown key: {}", key);
+                        log::debug("GlWindow: unknown key: {}", key);
                         ev_key = Key::Unknown; break;
                 }
             }
@@ -386,7 +386,7 @@ void Window::draw()
     }
     if (rc != VK_SUCCESS && rc != VK_SUBOPTIMAL_KHR) {
         // VK_SUBOPTIMAL_KHR handled later with vkQueuePresentKHR
-        log_error("vkAcquireNextImageKHR failed: {}", rc);
+        log::error("vkAcquireNextImageKHR failed: {}", rc);
         return;
     }
 
@@ -460,7 +460,7 @@ void Window::draw()
     if (rc == VK_ERROR_OUT_OF_DATE_KHR || rc == VK_SUBOPTIMAL_KHR)
         m_renderer.reset_framebuffer();
     else if (rc != VK_SUCCESS)
-        log_error("vkQueuePresentKHR failed: {}", rc);
+        log::error("vkQueuePresentKHR failed: {}", rc);
 
     m_current_cmd_buf = (m_current_cmd_buf + 1) % cmd_buf_count;
     m_draw_finished = false;

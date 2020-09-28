@@ -21,7 +21,7 @@
 
 namespace xci::text {
 
-using namespace core::log;
+using namespace xci::core;
 
 
 // ctor+dtor have to be implemented in cpp file
@@ -66,7 +66,7 @@ void Font::set_style(FontStyle style)
         ++m_current_face;
     }
     // Style not found, selected the first one
-    log_warning("Requested font style not found: {}", int(style));
+    log::warning("Requested font style not found: {}", int(style));
 }
 
 

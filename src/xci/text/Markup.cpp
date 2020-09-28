@@ -24,7 +24,7 @@
 
 namespace xci::text {
 
-using namespace core::log;
+using namespace xci::core;
 
 namespace parser {
 
@@ -52,7 +52,7 @@ template<typename T>
 void dump_token(const char *name, T& token)
 {
 #ifdef XCI_DEBUG_MARKUP_DUMP_TOKENS
-    log_debug("{}: \"{}\"", name, core::escape(token.string()).c_str());
+    log::debug("{}: \"{}\"", name, core::escape(token.string()).c_str());
 #endif
 }
 
@@ -85,7 +85,7 @@ struct Action<ControlSeq>
             ctx.get_layout().end_span(name);
             return;
         }
-        log_warning("Markup: Ignoring unknown control sequence {}", seq);
+        log::warning("Markup: Ignoring unknown control sequence {}", seq);
         return;
     }
 };
@@ -143,7 +143,7 @@ struct Control : normal< Rule >
     template< typename Input, typename... States >
     static void raise( const Input& in, States&&... /*unused*/ )
     {
-        log_error("{}: Parse error matching {} at [{}]",
+        log::error("{}: Parse error matching {} at [{}]",
                   in.position(),
                   internal::demangle< Rule >(),
                   std::string(in.current(), in.size()).substr(0, 10));

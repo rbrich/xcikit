@@ -16,11 +16,8 @@
 #include "Sprites.h"
 
 #include <xci/config.h>
-#include <xci/core/log.h>
 
 namespace xci::graphics {
-
-using namespace xci::core::log;
 
 
 Sprites::Sprites(Renderer& renderer, Texture& texture, const Color& color)

@@ -30,7 +30,7 @@ EventLoop::EventLoop()
 {
     m_kqueue_fd = kqueue();
     if (m_kqueue_fd == -1) {
-        log_error("EventLoop: kqueue: {m}");
+        log::error("EventLoop: kqueue: {m}");
         return;
     }
 }
@@ -54,7 +54,7 @@ void EventLoop::run()
                 continue;
             if (errno == EBADF)
                 break;  // kqueue is closed (terminate() was called)
-            log_error("EventLoop: kevent(): {m}");
+            log::error("EventLoop: kevent(): {m}");
             break;
         }
         for (int i = 0; i < rc; i++) {

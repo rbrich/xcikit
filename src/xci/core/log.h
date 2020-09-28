@@ -9,6 +9,7 @@
 
 #include <xci/core/format.h>
 #include <xci/config.h>
+#include <string_view>
 
 namespace xci::core {
 
@@ -17,6 +18,7 @@ class Logger
 {
 public:
     enum class Level {
+        Trace,
         Debug,
         Info,
         Warning,
@@ -27,9 +29,9 @@ public:
     // to make sure logger is created before it (and destroyed after).
     // If not called, default logger will be created lazily
     // (at the time of first use).
-    static void init(Level level = Level::Debug) { (void) default_instance(level); }
+    static void init(Level level = Level::Trace) { (void) default_instance(level); }
 
-    static Logger& default_instance(Logger::Level initial_level = Level::Debug);
+    static Logger& default_instance(Logger::Level initial_level = Level::Trace);
 
     explicit Logger(Level level);
     ~Logger();
@@ -42,11 +44,11 @@ public:
     // A function with same signature as `default_handler` can be used
     // instead of default handler. The function parameters are preformatted
     // messages and log level. The handler has to add timestamp by itself.
-    static void default_handler(Level lvl, const std::string& msg);
+    static void default_handler(Level lvl, std::string_view msg);
     using Handler = decltype(&default_handler);
     void set_handler(Handler handler) { m_handler = handler; }
 
-    void log(Level lvl, const std::string& msg);
+    void log(Level lvl, std::string_view msg);
 
 private:
     Level m_level;
@@ -54,49 +56,47 @@ private:
 };
 
 
-template<typename... Args>
-inline void log_error(const char *fmt, Args&&... args) {
-    Logger::default_instance().log(
-            Logger::Level::Error,
-            xci::core::format(fmt, std::forward<Args>(args)...));
-}
-
-template<typename... Args>
-inline void log_warning(const char *fmt, Args&&... args) {
-    Logger::default_instance().log(
-            Logger::Level::Warning,
-            xci::core::format(fmt, std::forward<Args>(args)...));
-}
-
-template<typename... Args>
-inline void log_info(const char *fmt, Args&&... args) {
-    Logger::default_instance().log(
-            Logger::Level::Info,
-            xci::core::format(fmt, std::forward<Args>(args)...));
-}
-
-template<typename... Args>
-inline void log_debug(const char *fmt, Args&&... args) {
-    Logger::default_instance().log(
-            Logger::Level::Debug,
-            xci::core::format(fmt, std::forward<Args>(args)...));
-}
-
 namespace log {
-    using xci::core::log_error;
-    using xci::core::log_warning;
-    using xci::core::log_info;
-    using xci::core::log_debug;
+
+template<typename... Args>
+inline void message(Logger::Level lvl, const char *fmt, Args&&... args) {
+    Logger::default_instance().log(lvl, xci::core::format(fmt, std::forward<Args>(args)...));
 }
+
+template<typename... Args>
+inline void trace(const char *fmt, Args&&... args) {
+    message(Logger::Level::Trace, fmt, std::forward<Args>(args)...);
+}
+
+template<typename... Args>
+inline void debug(const char *fmt, Args&&... args) {
+    message(Logger::Level::Debug, fmt, std::forward<Args>(args)...);
+}
+
+template<typename... Args>
+inline void info(const char *fmt, Args&&... args) {
+    message(Logger::Level::Info, fmt, std::forward<Args>(args)...);
+}
+
+template<typename... Args>
+inline void warning(const char *fmt, Args&&... args) {
+    message(Logger::Level::Warning, fmt, std::forward<Args>(args)...);
+}
+
+template<typename... Args>
+inline void error(const char *fmt, Args&&... args) {
+    message(Logger::Level::Error, fmt, std::forward<Args>(args)...);
+}
+
+}  // namespace log
+} // namespace xci::core
 
 
 #ifdef XCI_DEBUG_TRACE
-#define TRACE(fmt, ...)  log_debug("{}:{} ({}) " fmt, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
+#define TRACE(fmt, ...)  xci::core::log::trace("{}:{} ({}) " fmt, __FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__)
 #else
 #define TRACE(fmt, ...)  ((void)0)
 #endif
 
-
-} // namespace xci::core
 
 #endif // XCI_CORE_LOG_H

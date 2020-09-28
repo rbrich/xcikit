@@ -14,8 +14,6 @@
 
 namespace xci::graphics {
 
-using namespace xci::core::log;
-
 
 Texture::Texture(Renderer& renderer)
     : m_renderer(renderer),

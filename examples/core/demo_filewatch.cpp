@@ -19,35 +19,36 @@
 #include <cstdlib>
 
 using namespace xci::core;
+using namespace xci::core::log;
 
 
 int main(int argc, char** argv)
 {
     if (argc != 2) {
-        log_info("Usage: {} <file_to_watch>", argv[0]);
+        info("Usage: {} <file_to_watch>", argv[0]);
         return 1;
     }
     std::string filename = argv[1];
 
-    log_info("Demo: Watching {}", filename);
+    info("Demo: Watching {}", filename);
     EventLoop loop;
     FSWatch fs_watch(loop);
     bool ok = fs_watch.add(filename, [&loop](FSWatch::Event ev) {
         switch (ev) {
             case FSWatch::Event::Create:
-                log_info("File created / moved in");
+                info("File created / moved in");
                 break;
             case FSWatch::Event::Delete:
-                log_info("File deleted / moved away");
+                info("File deleted / moved away");
                 break;
             case FSWatch::Event::Modify:
-                log_info("File modified");
+                info("File modified");
                 break;
             case FSWatch::Event::Attrib:
-                log_info("File touched (attribs changed)");
+                info("File touched (attribs changed)");
                 break;
             case FSWatch::Event::Stopped:
-                log_info("File watching stopped (dir deleted / moved)");
+                info("File watching stopped (dir deleted / moved)");
                 loop.terminate();
                 break;
         }

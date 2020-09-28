@@ -23,7 +23,6 @@ namespace xci::widgets {
 using namespace xci::graphics;
 using namespace xci::graphics::unit_literals;
 using namespace xci::core;
-using namespace xci::core::log;
 using xci::core::format;
 using namespace std::chrono_literals;
 

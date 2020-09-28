@@ -91,11 +91,11 @@ int main()
 
     window.set_mouse_button_callback([&](View& view, const MouseBtnEvent& ev) {
         if (ev.action == Action::Press && ev.button == MouseButton::Left) {
-            log_debug("checkbox mouse {}", ev.pos - view.offset());
-            log_debug("checkbox bbox {}", checkbox.aabb());
+            debug("checkbox mouse {}", ev.pos - view.offset());
+            debug("checkbox bbox {}", checkbox.aabb());
             if (checkbox.contains(ev.pos - view.offset())) {
                 checkbox_state = !checkbox_state;
-                log_debug("checkbox state {}", checkbox_state);
+                debug("checkbox state {}", checkbox_state);
                 refresh_checkbox = true;
             }
         }

@@ -59,7 +59,7 @@ bool FSWatch::add(const std::string& pathname, FSWatch::PathCallback cb)
         if (fd == -1)
             return false;
         m_dir.push_back(Dir{fd, dir});
-        log_debug("EventLoop: Watching dir {} ({})", dir, fd);
+        log::debug("EventLoop: Watching dir {} ({})", dir, fd);
         dir_fd = fd;
     } else {
         dir_fd = it->fd;
@@ -69,7 +69,7 @@ bool FSWatch::add(const std::string& pathname, FSWatch::PathCallback cb)
     int fd = register_kevent(pathname, fflags_file, /*no_exist_ok=*/true);
     auto filename = path::base_name(pathname);
     m_file.push_back(File{fd, dir_fd, filename, std::move(cb)});
-    log_debug("EventLoop: Added watch {} / {} ({})", dir, filename, fd);
+    log::debug("EventLoop: Added watch {} / {} ({})", dir, filename, fd);
     return true;
 }
 
@@ -102,7 +102,7 @@ bool FSWatch::remove(const std::string& pathname)
 
     // Remove file record
     unregister_kevent(it->fd);
-    log_debug("FSWatch: Removed watch {} ({})", pathname, it->fd);
+    log::debug("FSWatch: Removed watch {} ({})", pathname, it->fd);
     m_file.erase(it);
 
     // If there are more watches on the same dir, we're finished
@@ -120,7 +120,7 @@ bool FSWatch::remove(const std::string& pathname)
     }
 
     unregister_kevent(dir_fd);
-    log_debug("FSWatch: Stopped watching dir {} ({})", dir, dir_fd);
+    log::debug("FSWatch: Stopped watching dir {} ({})", dir, dir_fd);
     return true;
 }
 
@@ -138,7 +138,7 @@ void FSWatch::_notify(const struct kevent& event)
             // Directory content has changed, look for newly created files
             DIR *dirp = opendir(dir.c_str());
             if (dirp == nullptr) {
-                log_error("FSWatch: opendir({}): {m}", dir);
+                log::error("FSWatch: opendir({}): {m}", dir);
                 return;
             }
             struct dirent *dp;
@@ -200,7 +200,7 @@ int FSWatch::register_kevent(const std::string& path, uint32_t fflags, bool no_e
     int fd = ::open(path.c_str(), O_EVTONLY);
     if (fd == -1) {
         if (!no_exist_ok)
-            log_error("FSWatch: open(\"{}\", O_EVTONLY): {m}", path.c_str());
+            log::error("FSWatch: open(\"{}\", O_EVTONLY): {m}", path.c_str());
         return -1;
     }
 
@@ -213,7 +213,7 @@ int FSWatch::register_kevent(const std::string& path, uint32_t fflags, bool no_e
     kev.udata = this;
 
     if (!m_loop._kevent(kev)) {
-        log_error("EventLoop: kevent(EV_ADD, {}): {m}", path.c_str());
+        log::error("EventLoop: kevent(EV_ADD, {}): {m}", path.c_str());
         ::close(fd);
         return -1;
     }
@@ -230,7 +230,7 @@ void FSWatch::unregister_kevent(int fd)
     kev.flags = EV_DELETE;
     if (!m_loop._kevent(kev)) {
         if (errno != EBADF)  // event already removed
-            log_error("EventLoop: kevent(EV_DELETE): {m}");
+            log::error("EventLoop: kevent(EV_DELETE): {m}");
     }
 
     ::close(fd);

@@ -19,11 +19,10 @@
 
 namespace xci::widgets {
 
-using namespace graphics;
-using namespace graphics::unit_literals;
-using namespace core;
-using namespace core::log;
-using text::CodePoint;
+using namespace xci::graphics;
+using namespace xci::graphics::unit_literals;
+using namespace xci::core;
+using xci::text::CodePoint;
 
 using namespace std;
 using namespace std::chrono;
@@ -218,7 +217,7 @@ size_t terminal::Attributes::decode(string_view sv)
                 m_bg_b = uint8_t(*++it);
                 break;
             default:
-                log_error("terminal decode attributes: Encountered invalid code: {:02x}", int(*it));
+                log::error("terminal decode attributes: Encountered invalid code: {:02x}", int(*it));
                 return it - sv.cbegin();
         }
         ++it;

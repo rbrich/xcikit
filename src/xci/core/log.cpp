@@ -18,6 +18,7 @@ namespace xci::core {
 
 
 static const char* level_format[] = {
+        "{:19} {cyan}{:5}{normal}  {bold}TRACE{normal}  {blue}{}{normal}\n",
         "{:19} {cyan}{:5}{normal}  {bold}DEBUG{normal}  {white}{}{normal}\n",
         "{:19} {cyan}{:5}{normal}  {bold}INFO {normal}  {bold}{white}{}{normal}\n",
         "{:19} {cyan}{:5}{normal}  {bold}WARN {normal}  {bold}{yellow}{}{normal}\n",
@@ -67,7 +68,7 @@ static inline std::string format_current_time()
 }
 
 
-void Logger::default_handler(Logger::Level lvl, const std::string& msg)
+void Logger::default_handler(Logger::Level lvl, std::string_view msg)
 {
     TermCtl& t = TermCtl::stderr_instance();
     auto lvl_num = static_cast<int>(lvl);
@@ -78,7 +79,7 @@ void Logger::default_handler(Logger::Level lvl, const std::string& msg)
 }
 
 
-void Logger::log(Logger::Level lvl, const std::string& msg)
+void Logger::log(Logger::Level lvl, std::string_view msg)
 {
     if (lvl < m_level)
         return;

@@ -22,9 +22,9 @@ namespace xci::core {
 Dispatch::Dispatch()
 {
     m_thread = std::thread([this]() {
-        log_debug("Dispatch: Thread starting");
+        log::debug("Dispatch: Thread starting");
         m_loop.run();
-        log_debug("Dispatch: Thread finished");
+        log::debug("Dispatch: Thread finished");
     });
 }
 

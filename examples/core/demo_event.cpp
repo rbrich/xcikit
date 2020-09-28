@@ -12,6 +12,7 @@
 #include <cstdlib>
 
 using namespace xci::core;
+using namespace xci::core::log;
 using namespace std::chrono;
 
 int main(int argc, char** argv)
@@ -19,18 +20,18 @@ int main(int argc, char** argv)
     EventLoop loop;
 
     EventWatch event_watch(loop, [] {
-        log_info("Event received.");
+        info("Event received.");
     });
 
     milliseconds elapsed {0};
     static constexpr milliseconds interval {500};
     TimerWatch timer_watch(loop, interval, [&elapsed] {
         elapsed += interval;
-        log_info("Timer: {} ms", elapsed.count());
+        info("Timer: {} ms", elapsed.count());
     });
 
     SignalWatch signal_watch(loop, {SIGTERM, SIGINT}, [&loop](int signum) {
-        log_info("Signal received: {}", signum);
+        info("Signal received: {}", signum);
         loop.terminate();
     });
 

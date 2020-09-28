@@ -48,14 +48,14 @@ SignalWatch::SignalWatch(EventLoop& loop, std::initializer_list<int> signums,
         if (sig == SIGINT) {
             // register console handler for Ctrl-C
             if (SetConsoleCtrlHandler(_console_handler, TRUE) == 0) {
-                log_error("SetConsoleCtrlHandler: {mm}");
+                log::error("SetConsoleCtrlHandler: {mm}");
             }
             continue;
         }
 
         auto ret = signal(sig, _signal_handler);
         if (ret == SIG_ERR) {
-            log_error("signal: {m}");
+            log::error("signal: {m}");
             continue;
         }
         assert(ret == SIG_DFL);  // previous signal handler

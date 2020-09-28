@@ -27,7 +27,7 @@ EventWatch::EventWatch(EventLoop& loop, Callback cb)
 {
     m_fd = eventfd(0, 0);
     if (m_fd == -1) {
-        log_error("EventWatch: eventfd: {m}");
+        log::error("EventWatch: eventfd: {m}");
         return;
     }
 
@@ -56,7 +56,7 @@ void EventWatch::_notify(uint32_t epoll_events)
     uint64_t value;
     ssize_t readlen = ::read(m_fd, &value, sizeof(value));
     if (readlen < 0) {
-        log_error("EventWatch: read: {m}");
+        log::error("EventWatch: read: {m}");
         return;
     }
     if (value > 0)

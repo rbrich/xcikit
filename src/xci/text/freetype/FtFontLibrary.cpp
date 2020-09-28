@@ -19,8 +19,7 @@
 
 namespace xci::text {
 
-using namespace core;
-using namespace core::log;
+using namespace xci::core;
 
 
 FtFontLibrary::FtFontLibrary()
@@ -36,7 +35,7 @@ FtFontLibrary::~FtFontLibrary()
 {
     auto err = FT_Done_FreeType(m_ft_library);
     if (err) {
-        log_error("FT_Done_FreeType: {}", err);
+        log::error("FT_Done_FreeType: {}", err);
         return;
     }
 }

@@ -15,7 +15,7 @@ bool SharedLibrary::open(const std::string& filename)
 {
     m_library = dlopen(filename.c_str(), RTLD_LAZY);
     if (m_library == nullptr) {
-        log_error("SharedLibrary: dlopen: {}", dlerror());
+        log::error("SharedLibrary: dlopen: {}", dlerror());
         return false;
     }
     return true;
@@ -28,7 +28,7 @@ bool SharedLibrary::close()
         return true;  // already closed
 
     if (dlclose(m_library) != 0) {
-        log_error("SharedLibrary: dlclose: {}", dlerror());
+        log::error("SharedLibrary: dlclose: {}", dlerror());
         return false;
     }
 
@@ -41,7 +41,7 @@ void* SharedLibrary::resolve(const std::string& symbol)
 {
     void* res = dlsym(m_library, symbol.c_str());
     if (res == nullptr) {
-        log_error("SharedLibrary: dlsym({}): {}", symbol, dlerror());
+        log::error("SharedLibrary: dlsym({}): {}", symbol, dlerror());
         return nullptr;
     }
     return res;

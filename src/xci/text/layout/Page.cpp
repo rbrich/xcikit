@@ -25,13 +25,10 @@ namespace xci::text { class Style; }
 
 namespace xci::text::layout {
 
-using namespace xci::core::log;
+using namespace xci::core;
 using namespace xci::graphics::unit_literals;
 using xci::graphics::View;
 using xci::graphics::Color;
-using xci::core::Rect_f;
-using xci::core::Vec2f;
-using xci::core::to_utf32;
 
 
 Word::Word(Page& page, std::string string)
@@ -53,7 +50,7 @@ Word::Word(Page& page, std::string string)
     ViewportCoords pen;
     m_bbox = {0, ViewportUnits{0} - m_baseline, 0, font_height};
     for (CodePoint code_point : to_utf32(m_string)) {
-        auto glyph = font->get_glyph(code_point);
+        auto* glyph = font->get_glyph(code_point);
         if (glyph == nullptr)
             continue;
 
@@ -118,7 +115,7 @@ void Word::update(const graphics::View& target)
 
     ViewportCoords pen = m_pos;
     for (CodePoint code_point : to_utf32(m_string)) {
-        auto glyph = font->get_glyph(code_point);
+        auto* glyph = font->get_glyph(code_point);
         if (glyph == nullptr)
             continue;
 
@@ -174,7 +171,7 @@ const ViewportRect& Line::bbox() const
         return m_bbox;
     // Refresh
     bool first = true;
-    for (auto& word : m_words) {
+    for (const auto& word : m_words) {
         if (first) {
             m_bbox = word->bbox();
             first = false;
@@ -336,7 +333,7 @@ ViewportUnits Page::space_width()
     auto* font = m_style.font();
     auto font_size = target().size_to_framebuffer(m_style.size());
     font->set_size(font_size.as<unsigned int>());
-    auto glyph = font->get_glyph(' ');
+    auto* glyph = font->get_glyph(' ');
     return target().size_to_viewport(FramebufferPixels{glyph->advance()});
 }
 
@@ -345,7 +342,7 @@ bool Page::begin_span(const std::string& name)
 {
     auto result = m_spans.emplace(name, Span());
     if (!result.second) {
-        log_error("Page: Span '{}' already exists!", name);
+        log::error("Page: Span '{}' already exists!", name);
         return false;
     }
     return true;
@@ -356,11 +353,11 @@ bool Page::end_span(const std::string& name)
 {
     auto iter = m_spans.find(name);
     if (iter == m_spans.end()) {
-        log_error("Page: Span '{}' does not exists!", name);
+        log::error("Page: Span '{}' does not exists!", name);
         return false;
     }
     if (!iter->second.is_open()) {
-        log_error("Page: Span '{}' is not open!", name);
+        log::error("Page: Span '{}' is not open!", name);
         return false;
     }
     iter->second.close();
@@ -398,7 +395,7 @@ void Page::foreach_word(const std::function<void(const Word& word)>& cb) const
 void Page::foreach_line(const std::function<void(const Line& line)>& cb) const
 {
     if (!cb) return;
-    for (auto& line : m_lines) {
+    for (const auto& line : m_lines) {
         cb(line);
     }
 }
@@ -407,7 +404,7 @@ void Page::foreach_line(const std::function<void(const Line& line)>& cb) const
 void Page::foreach_span(const std::function<void(const Span& span)>& cb) const
 {
     if (!cb) return;
-    for (auto& pair : m_spans) {
+    for (const auto& pair : m_spans) {
         cb(pair.second);
     }
 }
