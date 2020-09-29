@@ -60,7 +60,7 @@ bool FSWatch::add(const std::string& pathname, FSWatch::PathCallback cb)
                 FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
                 nullptr);
         if (dir->h == INVALID_HANDLE_VALUE) {
-            log::error("FSWatch: CreateFileA({}, FILE_LIST_DIRECTORY): {mm}", name);
+            log::error("FSWatch: CreateFileA({}, FILE_LIST_DIRECTORY): {m:l}", name);
             return false;
         }
 
@@ -186,7 +186,7 @@ bool FSWatch::_request_notification(Dir& dir)
             &dir,
             nullptr);
     if (!ok) {
-        log::error("FSWatch: ReadDirectoryChangesW({}): {mm}", dir.name);
+        log::error("FSWatch: ReadDirectoryChangesW({}): {m:l}", dir.name);
         return false;
     }
     return true;

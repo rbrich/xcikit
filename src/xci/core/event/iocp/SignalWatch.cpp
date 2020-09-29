@@ -48,7 +48,7 @@ SignalWatch::SignalWatch(EventLoop& loop, std::initializer_list<int> signums,
         if (sig == SIGINT) {
             // register console handler for Ctrl-C
             if (SetConsoleCtrlHandler(_console_handler, TRUE) == 0) {
-                log::error("SetConsoleCtrlHandler: {mm}");
+                log::error("SetConsoleCtrlHandler: {m:l}");
             }
             continue;
         }

@@ -120,11 +120,10 @@ public:
 
     template<typename ...Args>
     std::string format(const char *fmt, Args&&... args) {
-        // FIXME: color placeholders
         return fmt::format(fmt, std::forward<Args>(args)...,
-                fmt::arg("fg", FgPlaceholder{{{*this}}}),
-                fmt::arg("bg", BgPlaceholder{{{*this}}}),
-                fmt::arg("t",  ModePlaceholder{{*this}}));
+                        fmt::arg("fg", FgPlaceholder{*this}),
+                        fmt::arg("bg", BgPlaceholder{*this}),
+                        fmt::arg("t",  ModePlaceholder{*this}));
     }
 
     template<typename ...Args>

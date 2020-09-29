@@ -88,6 +88,11 @@ if (ENABLE_WARNINGS)
         add_compile_options(-Wall -Wextra -Wundef
             -Wno-unused-parameter
             -Wno-missing-field-initializers)
+        if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+            # Suppress (subjectively wrong):
+            # warning: suggest braces around initialization of subobject [-Wmissing-braces]
+            add_compile_options(-Wno-missing-braces)
+        endif()
     endif()
 endif()
 
