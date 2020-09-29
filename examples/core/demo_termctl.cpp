@@ -6,6 +6,7 @@
 
 #include <xci/core/TermCtl.h>
 #include <iostream>
+#include <iomanip>
 
 using namespace std;
 using namespace xci::core;

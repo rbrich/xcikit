@@ -34,7 +34,7 @@ FSWatch::FSWatch(EventLoop& loop, Callback cb)
 {
     m_inotify_fd = inotify_init();
     if (m_inotify_fd < 0 ) {
-        log_error("FSWatch: inotify_init: {m}");
+        log::error("FSWatch: inotify_init: {m}");
         return;
     }
     loop._register(m_inotify_fd, *this, POLLIN);
@@ -65,11 +65,11 @@ bool FSWatch::add(const std::string& pathname, FSWatch::PathCallback cb)
                                    IN_ATTRIB | IN_MOVED_FROM | IN_MOVED_TO |
                                    IN_DELETE_SELF | IN_MOVE_SELF | IN_ONLYDIR);
         if (wd < 0) {
-            log_error("FSWatch: inotify_add_watch({}): {m}", dir);
+            log::error("FSWatch: inotify_add_watch({}): {m}", dir);
             return false;
         }
         m_dir.push_back({wd, dir});
-        log_debug("FSWatch: Watching dir {} ({})", dir, wd);
+        log::debug("FSWatch: Watching dir {} ({})", dir, wd);
         dir_wd = wd;
     } else {
         dir_wd = it->wd;
@@ -78,7 +78,7 @@ bool FSWatch::add(const std::string& pathname, FSWatch::PathCallback cb)
     // Directory is now watched, add the new watch to it
     auto filename = path::base_name(pathname);
     m_file.push_back({dir_wd, filename, std::move(cb)});
-    log_debug("FSWatch: Watching file {}/{}", dir, filename);
+    log::debug("FSWatch: Watching file {}/{}", dir, filename);
     return true;
 }
 
@@ -110,7 +110,7 @@ bool FSWatch::remove(const std::string& pathname)
     }
 
     // Remove file record
-    log_debug("FSWatch: Removing watch {}/{}", dir, filename);
+    log::debug("FSWatch: Removing watch {}/{}", dir, filename);
     m_file.erase(it);
 
     // If there are more watches on the same dir, we're finished
@@ -128,7 +128,7 @@ bool FSWatch::remove(const std::string& pathname)
         m_dir.erase(it_dir);
     }
     inotify_rm_watch(m_inotify_fd, dir_wd);
-    log_debug("FSWatch: Stopped watching dir {} ({})", dir, dir_wd);
+    log::debug("FSWatch: Stopped watching dir {} ({})", dir, dir_wd);
     return true;
 }
 
@@ -140,7 +140,7 @@ void FSWatch::_notify(uint32_t epoll_events)
         char buffer[buflen];
         ssize_t readlen = read(m_inotify_fd, buffer, buflen);
         if (readlen < 0) {
-            log_error("FSWatch: read: {m}");
+            log::error("FSWatch: read: {m}");
             return;
         }
 
@@ -148,7 +148,7 @@ void FSWatch::_notify(uint32_t epoll_events)
         while (ofs < readlen) {
             auto* event = (inotify_event*) &buffer[ofs];
             std::string name(event->name);
-            //log_debug("FSWatch: event {:x} for {}",
+            //log::debug("FSWatch: event {:x} for {}",
             //          event->mask, name);
             handle_event(event->wd, event->mask, name);
             ofs += sizeof(inotify_event) + event->len;

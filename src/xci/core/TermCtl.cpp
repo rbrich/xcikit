@@ -11,6 +11,7 @@
 
 #include "TermCtl.h"
 #include <xci/compat/unistd.h>
+#include <xci/compat/macros.h>
 #include <xci/config.h>
 
 #ifdef _WIN32
@@ -24,6 +25,7 @@
     #include <term.h>
 #endif
 
+#include <fmt/format.h>
 #include <cassert>
 
 namespace xci::core {
@@ -49,7 +51,7 @@ static constexpr auto parm_left_cursor = CSI "{}D";  // move cursor left N space
 static constexpr auto clr_eos = CSI "J";  // clear screen from cursor down
 inline constexpr const char* tparm(const char* seq) { return seq; }
 template<typename ...Args>
-inline std::string tparm(const char* seq, Args... args) { return format(seq, args...); }
+inline std::string tparm(const char* seq, Args... args) { return fmt::format(seq, args...); }
 #endif // XCI_WITH_TINFO
 
 // not found in Terminfo DB:
@@ -81,23 +83,23 @@ static void reset_console_mode(DWORD hid, DWORD mode)
 #endif
 
 
-TermCtl& TermCtl::stdout_instance(Mode mode)
+TermCtl& TermCtl::stdout_instance(IsTty is_tty)
 {
-    static TermCtl term(STDOUT_FILENO, mode);
+    static TermCtl term(STDOUT_FILENO, is_tty);
     return term;
 }
 
 
-TermCtl& TermCtl::stderr_instance(Mode mode)
+TermCtl& TermCtl::stderr_instance(IsTty is_tty)
 {
-    static TermCtl term(STDERR_FILENO, mode);
+    static TermCtl term(STDERR_FILENO, is_tty);
     return term;
 }
 
 
-TermCtl::TermCtl(int fd, Mode mode) : m_fd(fd)
+TermCtl::TermCtl(int fd, IsTty is_tty) : m_fd(fd)
 {
-    set_mode(mode);
+    set_is_tty(is_tty);
 }
 
 
@@ -114,36 +116,36 @@ TermCtl::~TermCtl() {
 }
 
 
-void TermCtl::set_mode(Mode mode)
+void TermCtl::set_is_tty(IsTty is_tty)
 {
 #ifdef _WIN32
     assert(m_fd == STDOUT_FILENO || m_fd == STDERR_FILENO);
     unsigned long std_handle = (m_fd == STDOUT_FILENO) ? STD_OUTPUT_HANDLE : STD_ERROR_HANDLE;
 
-    if (mode != Mode::Never && m_state == State::NoTTY) {
+    if (is_tty != IsTty::Never && m_state == State::NoTTY) {
         m_orig_out_mode = set_console_mode(std_handle, ENABLE_VIRTUAL_TERMINAL_PROCESSING);
         if (m_orig_out_mode == bad_mode)
             return;
         m_state = State::InitOk;
     }
-    if (mode == Mode::Never && m_state == State::InitOk) {
+    if (is_tty == IsTty::Never && m_state == State::InitOk) {
         assert(m_orig_out_mode != bad_mode);
         reset_console_mode(std_handle, m_orig_out_mode);
         m_orig_out_mode = 0;
         m_state = State::NoTTY;
     }
 #else
-    switch (mode) {
-        case Mode::Auto:
+    switch (is_tty) {
+        case IsTty::Auto:
             // Do not even try if not TTY (e.g. when piping to other command)
             if (isatty(m_fd) != 1) {
                 m_state = State::NoTTY;
                 return;
             }
             break;  // go to setup below
-        case Mode::Always:
+        case IsTty::Always:
             break;  // go to setup below
-        case Mode::Never:
+        case IsTty::Never:
             m_state = State::NoTTY;
             return;
     }
@@ -164,14 +166,25 @@ void TermCtl::set_mode(Mode mode)
 // because the arguments must not be evaluated unless is_initialized() is true
 #define TERM_APPEND(...) TermCtl(*this, is_tty() ? tparm(__VA_ARGS__) : "")
 
-TermCtl TermCtl::fg(TermCtl::Color color) const
+TermCtl TermCtl::fg(Color color) const
 {
     return TERM_APPEND(set_a_foreground, static_cast<int>(color));
 }
 
-TermCtl TermCtl::bg(TermCtl::Color color) const
+TermCtl TermCtl::bg(Color color) const
 {
     return TERM_APPEND(set_a_background, static_cast<int>(color));
+}
+
+TermCtl TermCtl::mode(Mode mode) const
+{
+    switch (mode) {
+        case Mode::Normal: return normal();
+        case Mode::Bold: return bold();
+        case Mode::Underline: return underline();
+        case Mode::Overline: return overline();
+    }
+    UNREACHABLE;
 }
 
 TermCtl TermCtl::bold() const { return TERM_APPEND(enter_bold_mode); }
@@ -200,33 +213,45 @@ std::ostream& operator<<(std::ostream& os, const TermCtl& term)
 }
 
 
-std::string TermCtl::format_cb(const format_impl::Context& ctx)
+auto TermCtl::ColorPlaceholder::parse(std::string_view name) -> Color
 {
-    // mode
-    if (ctx.placeholder == "bold")      return bold().seq();
-    if (ctx.placeholder == "underline") return underline().seq();
-    if (ctx.placeholder == "overline")  return overline().seq();
-    if (ctx.placeholder == "normal")    return normal().seq();
-    // foreground
-    if (ctx.placeholder == "black")     return black().seq();
-    if (ctx.placeholder == "red")       return red().seq();
-    if (ctx.placeholder == "green")     return green().seq();
-    if (ctx.placeholder == "yellow")    return yellow().seq();
-    if (ctx.placeholder == "blue")      return blue().seq();
-    if (ctx.placeholder == "magenta")   return magenta().seq();
-    if (ctx.placeholder == "cyan")      return cyan().seq();
-    if (ctx.placeholder == "white")     return white().seq();
-    // background
-    if (ctx.placeholder == "on_black")   return on_black().seq();
-    if (ctx.placeholder == "on_red")     return on_red().seq();
-    if (ctx.placeholder == "on_green")   return on_green().seq();
-    if (ctx.placeholder == "on_yellow")  return on_yellow().seq();
-    if (ctx.placeholder == "on_blue")    return on_blue().seq();
-    if (ctx.placeholder == "on_magenta") return on_magenta().seq();
-    if (ctx.placeholder == "on_cyan")    return on_cyan().seq();
-    if (ctx.placeholder == "on_white")   return on_white().seq();
-    // unknown placeholder - leave as is
-    return format_impl::print_placeholder(ctx);
+    if (name == "black")     return Color::Black;
+    if (name == "red")       return Color::Red;
+    if (name == "green")     return Color::Green;
+    if (name == "yellow")    return Color::Yellow;
+    if (name == "blue")      return Color::Blue;
+    if (name == "magenta")   return Color::Magenta;
+    if (name == "cyan")      return Color::Cyan;
+    if (name == "white")     return Color::White;
+    throw fmt::format_error("invalid color name: " + std::string(name));
+}
+
+
+auto TermCtl::ModePlaceholder::parse(std::string_view name) -> Mode
+{
+    if (name == "bold")      return Mode::Bold;
+    if (name == "underline") return Mode::Underline;
+    if (name == "overline")  return Mode::Overline;
+    if (name == "normal")    return Mode::Normal;
+    throw fmt::format_error("invalid mode name: " + std::string(name));
+}
+
+
+std::string TermCtl::FgPlaceholder::seq(Color color) const
+{
+    return term_ctl.fg(color).seq();
+}
+
+
+std::string TermCtl::BgPlaceholder::seq(Color color) const
+{
+    return term_ctl.bg(color).seq();
+}
+
+
+std::string TermCtl::ModePlaceholder::seq(Mode mode) const
+{
+    return term_ctl.mode(mode).seq();
 }
 
 

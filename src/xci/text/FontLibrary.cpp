@@ -16,17 +16,16 @@
 #include "FontLibrary.h"
 #include "freetype/FtFontLibrary.h"
 #include "freetype/FtFontFace.h"
-#include <xci/core/format.h>
 
+#include <fmt/core.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-namespace xci {
-namespace text {
+namespace xci::text {
 
 
 FontError::FontError(int error_code, const char* detail) :
-    Error(core::format("FT_Error: {} detail: {}", error_code, detail)),
+    Error(fmt::format("FT_Error: {} detail: {}", error_code, detail)),
     m_error_code(error_code) {}
 
 
@@ -49,4 +48,4 @@ FontFacePtr FontLibrary::create_font_face()
 }
 
 
-}} // namespace xci::text
+} // namespace xci::text

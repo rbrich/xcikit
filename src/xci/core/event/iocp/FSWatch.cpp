@@ -60,7 +60,7 @@ bool FSWatch::add(const std::string& pathname, FSWatch::PathCallback cb)
                 FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
                 nullptr);
         if (dir->h == INVALID_HANDLE_VALUE) {
-            log_error("FSWatch: CreateFileA({}, FILE_LIST_DIRECTORY): {mm}", name);
+            log::error("FSWatch: CreateFileA({}, FILE_LIST_DIRECTORY): {m:l}", name);
             return false;
         }
 
@@ -74,13 +74,13 @@ bool FSWatch::add(const std::string& pathname, FSWatch::PathCallback cb)
             return false;
         }
 
-        log_debug("EventLoop: Watching dir {} ({})", name, (intptr_t) dir->h);
+        log::debug("EventLoop: Watching dir {} ({})", name, (intptr_t) dir->h);
     }
 
     // Directory is now watched, add the new watch to it
     auto filename = path::base_name(pathname);
     m_file.push_back({dir->h, filename, std::move(cb)});
-    log_debug("FSWatch: Watching file {}/{}", name, filename);
+    log::debug("FSWatch: Watching file {}/{}", name, filename);
     return true;
 }
 
@@ -110,7 +110,7 @@ bool FSWatch::remove(const std::string& pathname)
     }
 
     // Remove file record
-    log_debug("FSWatch: Removing watch {} / {}", dir_name, filename);
+    log::debug("FSWatch: Removing watch {} / {}", dir_name, filename);
     m_file.erase(it);
 
     // If there are more watches on the same dir, we're finished
@@ -125,7 +125,7 @@ bool FSWatch::remove(const std::string& pathname)
     CloseHandle(it_dir->h);
     it_dir->h = INVALID_HANDLE_VALUE;
 
-    log_debug("FSWatch: Stopped watching dir {} ({})", dir_name, (intptr_t) dir_h);
+    log::debug("FSWatch: Stopped watching dir {} ({})", dir_name, (intptr_t) dir_h);
     return true;
 }
 
@@ -186,7 +186,7 @@ bool FSWatch::_request_notification(Dir& dir)
             &dir,
             nullptr);
     if (!ok) {
-        log_error("FSWatch: ReadDirectoryChangesW({}): {mm}", dir.name);
+        log::error("FSWatch: ReadDirectoryChangesW({}): {m:l}", dir.name);
         return false;
     }
     return true;

@@ -6,9 +6,10 @@
 
 #include "ArgParser.h"
 #include "file.h"
-#include "format.h"
 #include "TermCtl.h"
 #include "string.h"
+
+#include <fmt/core.h>
 #include <iostream>
 #include <utility>
 #include <cstring>
@@ -18,6 +19,7 @@
 namespace xci::core::argparser {
 
 using namespace std;
+using fmt::format;
 
 
 Option::Option(std::string desc, const char* help, Callback cb, int flags)
@@ -129,12 +131,12 @@ std::string Option::usage() const
         if (!p)
             break;
         if (is_remainder() && p.dashes == 2 && p.len == 0) {
-            res += t.format("[{green}{}{normal}] ", std::string(dp + p.pos, p.dashes));
+            res += t.format("[{fg:green}{}{t:normal}] ", std::string(dp + p.pos, p.dashes));
         } else if (first) {
             first = false;
-            res += t.format("{bold}{green}{}{normal}", std::string(dp + p.pos, p.dashes + p.len));
+            res += t.format("{t:bold}{fg:green}{}{t:normal}", std::string(dp + p.pos, p.dashes + p.len));
         } else if (!p.dashes) {
-            res += t.format(" {green}{}{normal}", std::string(dp + p.pos, p.len));
+            res += t.format(" {fg:green}{}{t:normal}", std::string(dp + p.pos, p.len));
         }
         dp += p.end();
     }
@@ -470,7 +472,7 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
 void ArgParser::print_usage() const
 {
     auto& t = TermCtl::stdout_instance();
-    cout << t.format("{bold}{yellow}Usage:{normal} {bold}{}{normal} ", m_progname);
+    cout << t.format("{t:bold}{fg:yellow}Usage:{t:normal} {t:bold}{}{t:normal} ", m_progname);
     for (const auto& opt : m_opts) {
         cout << opt.usage() << ' ';
     }

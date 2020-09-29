@@ -32,7 +32,7 @@ void TimerWatch::stop()
     struct kevent kev = {};
     EV_SET(&kev, (uintptr_t)this, EVFILT_TIMER, EV_DELETE, 0, 0, this);
     if (!m_loop._kevent(kev)) {
-        log_error("TimerWatch: kevent(EVFILT_TIMER, EV_DELETE): {m}");
+        log::error("TimerWatch: kevent(EVFILT_TIMER, EV_DELETE): {m}");
         return;
     }
 }
@@ -44,7 +44,7 @@ void TimerWatch::restart()
     EV_SET(&kev, (uintptr_t)this, EVFILT_TIMER, EV_ADD,
            (m_type == Type::OneShot) ? EV_ONESHOT : 0, m_interval.count(), this);
     if (!m_loop._kevent(kev)) {
-        log_error("TimerWatch: kevent(EVFILT_TIMER, EV_ADD): {m}");
+        log::error("TimerWatch: kevent(EVFILT_TIMER, EV_ADD): {m}");
         return;
     }
 }

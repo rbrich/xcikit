@@ -17,14 +17,6 @@ namespace xci::core {
 constexpr const char* whitespace_chars = "\t\n\v\f\r ";
 
 
-/// Check if a string starts with another string
-/// \param str      String to be checked
-/// \param sub      String to be looked up (length should be shorter or same)
-bool starts_with(const std::string& str, const std::string& sub);
-
-bool ends_with(const std::string& str, const std::string& sub);
-
-
 /// Remove prefix from string.
 /// \param str      String to be checked and modified
 /// \param prefix   String to be looked up

@@ -4,8 +4,7 @@
 #define XCI_CORE_ERROR_H
 
 #include <exception>
-#include "format.h"
-#include "log.h"
+#include <string>
 
 namespace xci::core {
 

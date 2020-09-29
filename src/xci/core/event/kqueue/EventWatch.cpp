@@ -30,7 +30,7 @@ EventWatch::EventWatch(EventLoop& loop, Callback cb)
     struct kevent kev = {};
     EV_SET(&kev, (uintptr_t) this, EVFILT_USER, EV_ADD, NOTE_FFNOP, 0, this);
     if (!m_loop._kevent(kev)) {
-        log_error("EventWatch: kevent(EV_ADD): {m}");
+        log::error("EventWatch: kevent(EV_ADD): {m}");
     }
 }
 
@@ -40,7 +40,7 @@ EventWatch::~EventWatch()
     struct kevent kev = {};
     EV_SET(&kev, (uintptr_t) this, EVFILT_USER, EV_DELETE, 0, 0, this);
     if (!m_loop._kevent(kev)) {
-        log_error("EventWatch: kevent(EV_DELETE): {m}");
+        log::error("EventWatch: kevent(EV_DELETE): {m}");
     }
 }
 
@@ -50,7 +50,7 @@ void EventWatch::fire()
     struct kevent kev = {};
     EV_SET(&kev, (uintptr_t) this, EVFILT_USER, EV_ENABLE, NOTE_TRIGGER, 0, this);
     if (!m_loop._kevent(kev)) {
-        log_error("EventWatch: kevent(EV_ENABLE): {m}");
+        log::error("EventWatch: kevent(EV_ENABLE): {m}");
     }
 }
 
@@ -61,7 +61,7 @@ void EventWatch::_notify(const struct kevent& event)
     struct kevent kev = {};
     EV_SET(&kev, (uintptr_t) this, EVFILT_USER, EV_DISABLE, 0, 0, this);
     if (!m_loop._kevent(kev)) {
-        log_error("EventWatch: kevent(EV_DISABLE): {m}");
+        log::error("EventWatch: kevent(EV_DISABLE): {m}");
     }
 
     m_cb();

@@ -6,9 +6,9 @@
 
 #include "string.h"
 #include "parser/unescape.h"
-#include <xci/core/format.h>
 #include <xci/core/log.h>
 
+#include <fmt/core.h>
 #include <cctype>
 #include <locale>
 #include <codecvt>
@@ -16,26 +16,15 @@
 
 namespace xci::core {
 
-using namespace std;
-
-
-bool starts_with(const std::string& str, const std::string& sub)
-{
-    // Note: don't use find(), that would be ineffective to decide negative result
-    return str.size() >= sub.size() && str.substr(0, sub.size()) == sub;
-}
-
-
-bool ends_with(const std::string& str, const std::string& sub)
-{
-    // Note: don't use find(), that would be ineffective to decide negative result
-    return str.size() >= sub.size() && str.substr(str.size() - sub.size(), sub.size()) == sub;
-}
+using std::string;
+using std::vector;
+using std::string_view;
+using fmt::format;
 
 
 bool remove_prefix(string& str, const string& prefix)
 {
-    if (!starts_with(str, prefix))
+    if (!str.starts_with(prefix))
         return false;
     str.erase(0, prefix.size());
     return true;
@@ -44,7 +33,7 @@ bool remove_prefix(string& str, const string& prefix)
 
 bool remove_suffix(string& str, const string& suffix)
 {
-    if (!ends_with(str, suffix))
+    if (!str.ends_with(suffix))
         return false;
     str.erase(str.size() - suffix.size());
     return true;
@@ -157,7 +146,7 @@ std::u32string to_utf32(string_view utf8)
     try {
         return convert_utf32.from_bytes(utf8.data(), utf8.data() + utf8.size());
     } catch (const std::range_error& e) {
-        log_error("to_utf32: Invalid UTF8 string: {} ({})", utf8, e.what());
+        log::error("to_utf32: Invalid UTF8 string: {} ({})", utf8, e.what());
         return std::u32string();
     }
 }
@@ -170,7 +159,7 @@ std::string _to_utf8(std::basic_string_view<Elem> wstr)
     try {
         return convert.to_bytes(wstr.data(), wstr.data() + wstr.size());
     } catch (const std::range_error& e) {
-        log_error("to_utf8: Invalid UTF16/32 string ({})", e.what());
+        log::error("to_utf8: Invalid UTF16/32 string ({})", e.what());
         return {};
     }
 }
@@ -211,7 +200,7 @@ I utf8_next(I iter)
         // 11110xxx -> 4 bytes
         return iter + 4;
     }
-    log_error("utf8_next: Invalid UTF8 string, encountered code 0x{:02x}", int(first));
+    log::error("utf8_next: Invalid UTF8 string, encountered code 0x{:02x}", int(first));
     return iter + 1;
 }
 
@@ -283,7 +272,7 @@ char32_t utf8_codepoint(const char* utf8)
         // 11110xxx -> 4 bytes
         return char32_t(((c0 & 0x07) << 18) | ((utf8[1] & 0x3f) << 12) | ((utf8[2] & 0x3f) << 6) | (utf8[3] & 0x3f));
     }
-    log_error("utf8_codepoint: Invalid UTF8 string, encountered code {:02x}", int(c0));
+    log::error("utf8_codepoint: Invalid UTF8 string, encountered code {:02x}", int(c0));
     return 0;
 }
 

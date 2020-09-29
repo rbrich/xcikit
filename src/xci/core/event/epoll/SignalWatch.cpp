@@ -35,7 +35,7 @@ SignalWatch::SignalWatch(EventLoop& loop, std::initializer_list<int> signums,
     sigprocmask(SIG_BLOCK, &sigset, nullptr);
     m_fd = signalfd(-1, &sigset, 0);
     if (m_fd == -1) {
-        log_error("SignalWatch: signalfd: {m}");
+        log::error("SignalWatch: signalfd: {m}");
         return;
     }
     m_loop._register(m_fd, *this, EPOLLIN);
@@ -57,7 +57,7 @@ void SignalWatch::_notify(uint32_t epoll_events)
         signalfd_siginfo si = {};
         ssize_t readlen = read(m_fd, &si, sizeof(si));
         if (readlen < 0) {
-            log_error("SignalWatch: read: {m}");
+            log::error("SignalWatch: read: {m}");
             return;
         }
 

@@ -1,5 +1,5 @@
-#include <string>
 #include <xci/core/log.h>
+#include <string>
 
 using namespace xci::core::log;
 
@@ -15,8 +15,8 @@ BOOL WINAPI DllMain(
         _In_ LPVOID    lpvReserved [[maybe_unused]])
 {
     switch(fdwReason) {
-        case DLL_PROCESS_ATTACH: log_info("pluggable: load"); break;
-        case DLL_PROCESS_DETACH: log_info("pluggable: unload"); break;
+        case DLL_PROCESS_ATTACH: info("pluggable: load"); break;
+        case DLL_PROCESS_DETACH: info("pluggable: unload"); break;
         default: break;
     }
     return TRUE;
@@ -28,12 +28,12 @@ BOOL WINAPI DllMain(
 
 static void lib_load() __attribute__((constructor));
 static void lib_load() {
-    log_info("pluggable: load");
+    info("pluggable: load");
 }
 
 static void lib_unload() __attribute__((destructor));
 static void lib_unload() {
-    log_info("pluggable: unload");
+    info("pluggable: unload");
 }
 
 #endif

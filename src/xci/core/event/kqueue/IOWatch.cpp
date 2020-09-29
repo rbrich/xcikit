@@ -31,7 +31,7 @@ IOWatch::IOWatch(EventLoop& loop, int fd, Flags flags, Callback cb)
         EV_SET(&kev[nevents++], fd, EVFILT_WRITE, EV_ADD, 0, 0, this);
     }
     if (!m_loop._kevent(kev, nevents)) {
-        log_error("IOWatch: kevent: {m}");
+        log::error("IOWatch: kevent: {m}");
     }
 }
 
@@ -44,7 +44,7 @@ IOWatch::~IOWatch()
     EV_SET(&kev[1], m_fd, EVFILT_WRITE, EV_DELETE, 0, 0, this);
     if (!m_loop._kevent(kev, nevents)) {
         if (errno != EBADF)  // event already removed
-            log_error("IOWatch: kevent: {m}");
+            log::error("IOWatch: kevent: {m}");
     }
 }
 

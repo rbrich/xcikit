@@ -69,16 +69,15 @@ std::string get_self_path();
 /// Get OS-specific temp directory (/tmp on Unix).
 std::string get_temp_path();
 
-/// Calls a variant of strerror(errno) and writes the obtained message
-/// into the stream.
-std::ostream& errno_str(std::ostream& stream);
-
 /// Calls a variant of strerror(errno) and returns result as a string.
 std::string errno_str();
 
+/// Returns value of GetLastError on Windows, errno elsewhere;
+int last_error();
+
 /// Same as `errno_str`, but on Windows, this version uses GetLastError
 /// to obtain the error code.
-std::ostream& last_error_str(std::ostream& stream);
+std::string last_error_str();
 
 }  // namespace xci::core
 

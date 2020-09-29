@@ -16,7 +16,6 @@
 namespace xci::graphics {
 
 using namespace xci::core;
-using namespace xci::core::log;
 
 
 static std::vector<std::uint32_t> read_spirv_file(const std::string& pathname)
@@ -89,8 +88,8 @@ bool Shader::load_from_file(const std::string& vertex, const std::string& fragme
             fragment_code.data(),
             fragment_code.size() * sizeof(uint32_t));
 
-    log_info("Loaded vertex shader: {}", vertex);
-    log_info("Loaded fragment shader: {}", fragment);
+    log::info("Loaded vertex shader: {}", vertex);
+    log::info("Loaded fragment shader: {}", fragment);
     return true;
 }
 

@@ -10,6 +10,8 @@
 # Feature tests:
 #   HAVE_HS_COMPILE_LIT
 
+set(Hyperscan_ROOT_DIR CACHE PATH "custom installation root for Hyperscan")
+
 find_path(Hyperscan_INCLUDE_DIR
     NAMES hs/hs.h
     PATHS ${Hyperscan_ROOT_DIR})

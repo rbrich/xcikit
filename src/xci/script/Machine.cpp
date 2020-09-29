@@ -17,7 +17,8 @@
 #include "Builtin.h"
 #include "Value.h"
 #include "Error.h"
-#include <xci/core/format.h>
+
+#include <fmt/core.h>
 #include <range/v3/view/reverse.hpp>
 #include <cassert>
 #include <functional>
@@ -26,6 +27,7 @@ namespace xci::script {
 
 using ranges::cpp20::views::reverse;
 using std::move;
+using fmt::format;
 
 
 void Machine::call(const Function& function, const InvokeCallback& cb)
@@ -85,7 +87,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
             case Opcode::LogicalAnd: {
                 auto fn = builtin::logical_op_function(opcode);
                 if (!fn)
-                    throw NotImplemented(core::format("logical operator {}", opcode));
+                    throw NotImplemented(format("logical operator {}", opcode));
                 auto lhs = m_stack.pull<value::Bool>();
                 auto rhs = m_stack.pull<value::Bool>();
                 m_stack.push(fn(lhs, rhs));
@@ -100,7 +102,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
             case Opcode::GreaterThan_8: {
                 auto fn = builtin::comparison_op_function<value::Byte>(opcode);
                 if (!fn)
-                    throw NotImplemented(core::format("comparison operator {}", opcode));
+                    throw NotImplemented(format("comparison operator {}", opcode));
                 auto lhs = m_stack.pull<value::Byte>();
                 auto rhs = m_stack.pull<value::Byte>();
                 m_stack.push(fn(lhs, rhs));
@@ -115,7 +117,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
             case Opcode::GreaterThan_32: {
                 auto fn = builtin::comparison_op_function<value::Int32>(opcode);
                 if (!fn)
-                    throw NotImplemented(core::format("comparison operator {}", opcode));
+                    throw NotImplemented(format("comparison operator {}", opcode));
                 auto lhs = m_stack.pull<value::Int32>();
                 auto rhs = m_stack.pull<value::Int32>();
                 m_stack.push(fn(lhs, rhs));
@@ -130,7 +132,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
             case Opcode::GreaterThan_64: {
                 auto fn = builtin::comparison_op_function<value::Int64>(opcode);
                 if (!fn)
-                    throw NotImplemented(core::format("comparison operator {}", opcode));
+                    throw NotImplemented(format("comparison operator {}", opcode));
                 auto lhs = m_stack.pull<value::Int64>();
                 auto rhs = m_stack.pull<value::Int64>();
                 m_stack.push(fn(lhs, rhs));
@@ -150,7 +152,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
             case Opcode::Exp_8: {
                 auto fn = builtin::binary_op_function<value::Byte>(opcode);
                 if (!fn)
-                    throw NotImplemented(core::format("binary operator {}", opcode));
+                    throw NotImplemented(format("binary operator {}", opcode));
                 auto lhs = m_stack.pull<value::Byte>();
                 auto rhs = m_stack.pull<value::Byte>();
                 m_stack.push(fn(lhs, rhs));
@@ -170,7 +172,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
             case Opcode::Exp_32: {
                 auto fn = builtin::binary_op_function<value::Int32>(opcode);
                 if (!fn)
-                    throw NotImplemented(core::format("binary operator {}", opcode));
+                    throw NotImplemented(format("binary operator {}", opcode));
                 auto lhs = m_stack.pull<value::Int32>();
                 auto rhs = m_stack.pull<value::Int32>();
                 m_stack.push(fn(lhs, rhs));
@@ -190,7 +192,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
             case Opcode::Exp_64: {
                 auto fn = builtin::binary_op_function<value::Int64>(opcode);
                 if (!fn)
-                    throw NotImplemented(core::format("binary operator {}", opcode));
+                    throw NotImplemented(format("binary operator {}", opcode));
                 auto lhs = m_stack.pull<value::Int64>();
                 auto rhs = m_stack.pull<value::Int64>();
                 m_stack.push(fn(lhs, rhs));
@@ -209,7 +211,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
             case Opcode::Neg_8: {
                 auto fn = builtin::unary_op_function<value::Byte>(opcode);
                 if (!fn)
-                    throw NotImplemented(core::format("unary operator {}", opcode));
+                    throw NotImplemented(format("unary operator {}", opcode));
                 auto rhs = m_stack.pull<value::Byte>();
                 m_stack.push(fn(rhs));
                 break;
@@ -219,7 +221,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
             case Opcode::Neg_32: {
                 auto fn = builtin::unary_op_function<value::Int32>(opcode);
                 if (!fn)
-                    throw NotImplemented(core::format("unary operator {}", opcode));
+                    throw NotImplemented(format("unary operator {}", opcode));
                 auto rhs = m_stack.pull<value::Int32>();
                 m_stack.push(fn(rhs));
                 break;
@@ -229,7 +231,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
             case Opcode::Neg_64: {
                 auto fn = builtin::unary_op_function<value::Int64>(opcode);
                 if (!fn)
-                    throw NotImplemented(core::format("unary operator {}", opcode));
+                    throw NotImplemented(format("unary operator {}", opcode));
                 auto rhs = m_stack.pull<value::Int64>();
                 m_stack.push(fn(rhs));
                 break;
@@ -390,7 +392,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
             }
 
             default:
-                throw NotImplemented(core::format("opcode {}", opcode));
+                throw NotImplemented(format("opcode {}", opcode));
         }
     }
 }

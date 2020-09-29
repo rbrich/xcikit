@@ -30,7 +30,7 @@ TimerWatch::TimerWatch(EventLoop& loop, milliseconds interval,
 {
     m_timer_fd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
     if (m_timer_fd == -1) {
-        log_error("TimerWatch: timerfd_create: {m}");
+        log::error("TimerWatch: timerfd_create: {m}");
         return;
     }
     m_loop._register(m_timer_fd, *this, EPOLLIN);
@@ -51,7 +51,7 @@ void TimerWatch::stop()
 {
     struct itimerspec value = {};
     if (timerfd_settime(m_timer_fd, 0, &value, nullptr) == -1) {
-        log_error("TimerWatch: timerfd_settime(<reset>): {m}");
+        log::error("TimerWatch: timerfd_settime(<reset>): {m}");
     }
 }
 
@@ -68,7 +68,7 @@ void TimerWatch::restart()
     }
 
     if (timerfd_settime(m_timer_fd, 0, &value, nullptr) == -1) {
-        log_error("TimerWatch: timerfd_settime(<reset>): {m}");
+        log::error("TimerWatch: timerfd_settime(<reset>): {m}");
     }
 }
 
@@ -78,7 +78,7 @@ void TimerWatch::_notify(uint32_t epoll_events)
     uint64_t value;
     ssize_t readlen = ::read(m_timer_fd, &value, sizeof(value));
     if (readlen < 0) {
-        log_error("TimerWatch: read: {m}");
+        log::error("TimerWatch: read: {m}");
         return;
     }
     if (value > 0 && m_cb)

@@ -29,7 +29,7 @@ SignalWatch::SignalWatch(EventLoop& loop, std::initializer_list<int> signums,
     for (int sig: signums) {
         auto osig = signal(sig, SIG_IGN);
         if (osig == SIG_ERR) {
-            log_error("SignalWatch: signal(%d, SIG_IGN): {m}", sig);
+            log::error("SignalWatch: signal(%d, SIG_IGN): {m}", sig);
             return;
         }
         m_signals.push_back({sig, osig});
@@ -42,7 +42,7 @@ SignalWatch::SignalWatch(EventLoop& loop, std::initializer_list<int> signums,
         EV_SET(&*kev++, sig, EVFILT_SIGNAL, EV_ADD, 0, 0, this);
     }
     if (!m_loop._kevent(kevs.data(), kevs.size())) {
-        log_error("SignalWatch: kevent: {m}");
+        log::error("SignalWatch: kevent: {m}");
         return;
     }
 }
@@ -58,13 +58,13 @@ SignalWatch::~SignalWatch()
     }
     if (!m_loop._kevent(kevs.data(), kevs.size())) {
         if (errno != EBADF)  // event already removed
-            log_error("SignalWatch: kevent: {m}");
+            log::error("SignalWatch: kevent: {m}");
     }
 
     // unblock signals
     for (const auto& sig: m_signals) {
         if (signal(sig.signum, sig.func) == SIG_ERR) {
-            log_error("SignalWatch: signal(%d, <orig>): {m}", sig.signum);
+            log::error("SignalWatch: signal({}, <orig>): {m}", sig.signum);
         }
     }
 }

@@ -43,7 +43,7 @@ int main()
 
     SharedLibrary lib;
 
-    log_info("Load: {}", filename);
+    info("Load: {}", filename);
     if (!lib.open(filename))
         return EXIT_FAILURE;
 
@@ -65,7 +65,7 @@ int main()
 
     signal(SIGTERM, sigterm);
     while (!done) {
-        log_info("sample_text: {}", fn());
+        info("sample_text: {}", fn());
         sleep(1);
 
         if (reload) {

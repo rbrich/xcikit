@@ -18,7 +18,6 @@
 #include <xci/graphics/Window.h>
 #include <xci/core/Vfs.h>
 #include <xci/core/file.h>
-#include <xci/core/format.h>
 #include <xci/core/log.h>
 #include <xci/core/dispatch.h>
 #include <xci/config.h>

@@ -7,7 +7,7 @@
 #ifndef XCI_CORE_TERM_H
 #define XCI_CORE_TERM_H
 
-#include "format.h"
+#include <fmt/core.h>
 #include <string>
 #include <ostream>
 
@@ -20,22 +20,22 @@ namespace xci::core {
 
 class TermCtl {
 public:
-    enum class Mode {
+    enum class IsTty {
         Auto,
         Always,
         Never,
     };
 
     // Static instance for standard output
-    static TermCtl& stdout_instance(Mode mode = Mode::Auto);
-    static TermCtl& stderr_instance(Mode mode = Mode::Auto);
+    static TermCtl& stdout_instance(IsTty is_tty = IsTty::Auto);
+    static TermCtl& stderr_instance(IsTty is_tty = IsTty::Auto);
 
     // Constructor for custom streams
-    explicit TermCtl(int fd, Mode mode = Mode::Auto);
+    explicit TermCtl(int fd, IsTty is_tty = IsTty::Auto);
     ~TermCtl();
 
     // Change mode (initial mode is set in constructor)
-    void set_mode(Mode mode);
+    void set_is_tty(IsTty is_tty);
 
     // Is the output stream connected to TTY?
     // This respects chosen Mode:
@@ -48,6 +48,7 @@ public:
     // to a copy of TermCtl instance, which can then be send to stream
 
     enum class Color { Black, Red, Green, Yellow, Blue, Magenta, Cyan, White };
+    enum class Mode { Normal, Bold, Underline, Overline };
 
     // foreground
     TermCtl fg(Color color) const;
@@ -72,6 +73,7 @@ public:
     TermCtl on_white() const { return bg(Color::White); }
 
     // mode
+    TermCtl mode(Mode mode) const;
     TermCtl bold() const;
     TermCtl underline() const;
     TermCtl overline() const;
@@ -96,16 +98,37 @@ public:
     const std::string& seq() const { return m_seq; }
     friend std::ostream& operator<<(std::ostream& os, const TermCtl& term);
 
+    // Formatting helpers
+    struct Placeholder {
+        const TermCtl& term_ctl;
+    };
+    struct ColorPlaceholder: Placeholder {
+        using ValueType = Color;
+        static Color parse(std::string_view name);
+    };
+    struct FgPlaceholder: ColorPlaceholder {
+        std::string seq(Color color) const;
+    };
+    struct BgPlaceholder: ColorPlaceholder {
+        std::string seq(Color color) const;
+    };
+    struct ModePlaceholder: Placeholder {
+        using ValueType = Mode;
+        static Mode parse(std::string_view name);
+        std::string seq(Mode mode) const;
+    };
+
     template<typename ...Args>
-    std::string format(const char *fmt, Args... args) {
-        return fun_format(fmt, [this](const format_impl::Context& ctx) {
-            return format_cb(ctx);
-        }, args...);
+    std::string format(const char *fmt, Args&&... args) {
+        return fmt::format(fmt, std::forward<Args>(args)...,
+                        fmt::arg("fg", FgPlaceholder{*this}),
+                        fmt::arg("bg", BgPlaceholder{*this}),
+                        fmt::arg("t",  ModePlaceholder{*this}));
     }
 
     template<typename ...Args>
-    void print(const char *fmt, Args... args) {
-        auto buf = format(fmt, args...);
+    void print(const char *fmt, Args&&... args) {
+        auto buf = format(fmt, std::forward<Args>(args)...);
         print(buf);
     }
 
@@ -120,8 +143,6 @@ private:
     TermCtl(const TermCtl& term, const std::string& seq)
         : m_state(term.m_state == State::NoTTY ? State::NoTTY : State::CopyOk)
         , m_seq(term.m_seq + seq) {}
-
-    std::string format_cb(const format_impl::Context& ctx);
 
     void print(const std::string& buf);
 
@@ -140,5 +161,32 @@ private:
 };
 
 } // namespace xci::core
+
+
+template<typename T>
+concept TermCtlPlaceholder =
+        std::is_same_v<T, xci::core::TermCtl::FgPlaceholder> ||
+        std::is_same_v<T, xci::core::TermCtl::BgPlaceholder> ||
+        std::is_same_v<T, xci::core::TermCtl::ModePlaceholder>;
+
+template <TermCtlPlaceholder T, typename Char, typename Enable>
+struct [[maybe_unused]] fmt::formatter<T, Char, Enable> {
+    typename T::ValueType value;
+    constexpr auto parse(format_parse_context& ctx) {
+        auto it = ctx.begin();  // NOLINT
+        while (it != ctx.end() && *it != '}') {
+            ++it;
+        }
+        value = T::parse({ctx.begin(), size_t(it - ctx.begin())});
+        return it;
+    }
+
+    template <typename FormatContext>
+    auto format(const T& p, FormatContext& ctx) {
+        auto msg = p.seq(value);
+        return std::copy(msg.begin(), msg.end(), ctx.out());
+    }
+};
+
 
 #endif //XCI_CORE_TERM_H

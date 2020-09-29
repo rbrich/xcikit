@@ -6,12 +6,15 @@
 
 #include <xci/core/log.h>
 #include <xci/core/sys.h>
-using namespace xci::core;
 
-#include <ostream>
-using std::ostream;
-
+#include <fmt/ostream.h>  // for ArbitraryObject
+#include <iostream>
 #include <thread>
+
+using namespace xci::core;
+using namespace xci::core::log;
+
+using std::ostream;
 
 
 class ArbitraryObject {};
@@ -22,7 +25,7 @@ ostream& operator<<(ostream& stream, const ArbitraryObject&) {
 
 void thread_run(const std::string& thread_name)
 {
-    log_info("Log from {}", thread_name);
+    info("Log from {}", thread_name);
 }
 
 
@@ -30,33 +33,37 @@ int main()
 {
     ArbitraryObject obj;
 
-    log_debug("{} {}!", "Hello", "World");
-    log_info("float: {} int: {}!", 1.23f, 42);
-    log_warning("arbitrary object: {}", obj);
-    log_error("beware");
+    debug("{} {}!", "Hello", "World");
+    info("float: {} int: {}!", 1.23f, 42);
+    warning("arbitrary object: {}", obj);
+    error("beware");
 
     TRACE("trace message");
 
     // Custom handler
-    Logger::default_instance().set_handler([](Logger::Level lvl, const std::string& msg) {
+    Logger::default_instance().set_handler([](Logger::Level lvl, std::string_view msg) {
         std::cerr << "[custom handler] " << int(lvl) << ": " << msg << std::endl;
     });
 
-    log_debug("{} {}!", "Hello", "World");
-    log_info("float: {} int: {}!", 1.23f, 42);
-    log_warning("arbitrary object: {}", obj);
-    log_error("beware");
+    debug("{} {}!", "Hello", "World");
+    info("float: {} int: {}!", 1.23f, 42);
+    warning("arbitrary object: {}", obj);
+    error("beware");
 
     // Reinstall default handler
     Logger::default_instance().set_handler(Logger::default_handler);
-    log_info("back to normal");
-    
+    info("back to normal");
+
+    errno = ENOENT;
+    error("errno: ({m:d}) {m}");
+
     // Log from threads
-    std::thread a(thread_run, "thread1"), b(thread_run, "thread2");
+    std::thread a(thread_run, "thread1");
+    std::thread b(thread_run, "thread2");
     a.join();
     b.join();
 
-    log_info("[sys] HOME = {}", get_home_dir());
+    info("[sys] HOME = {}", get_home_dir());
 
     return EXIT_SUCCESS;
 }

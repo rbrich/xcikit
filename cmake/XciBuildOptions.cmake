@@ -18,7 +18,6 @@ option(ENABLE_LTO "Enable link-time, whole-program optimizations." OFF)
 option(ENABLE_CCACHE "Use ccache as compiler launcher, when available." ON)
 
 # cosmetics
-option(ENABLE_COLORS "Allow colored output in CMake messages." ON)
 option(FORCE_COLORS "Force colored compiler output." OFF)
 
 # Build type options
@@ -86,9 +85,14 @@ if (ENABLE_WARNINGS)
             _CRT_SECURE_NO_WARNINGS
             _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1)
     else()
-        add_compile_options(-Wall -Wextra
+        add_compile_options(-Wall -Wextra -Wundef
             -Wno-unused-parameter
             -Wno-missing-field-initializers)
+        if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+            # Suppress (subjectively wrong):
+            # warning: suggest braces around initialization of subobject [-Wmissing-braces]
+            add_compile_options(-Wno-missing-braces)
+        endif()
     endif()
 endif()
 

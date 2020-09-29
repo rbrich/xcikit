@@ -15,6 +15,7 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
+#include <fmt/core.h>
 #include <range/v3/algorithm/any_of.hpp>
 #include <range/v3/view/enumerate.hpp>
 #include <range/v3/view/take.hpp>
@@ -46,16 +47,16 @@ INCBIN(cursor_frag, XCI_SHARE_DIR "/shaders/cursor.frag.spv");
 namespace xci::graphics {
 
 using namespace xci::core;
-using namespace xci::core::log;
 using ranges::cpp20::views::take;
 using ranges::views::enumerate;
 using ranges::cpp20::any_of;
+using fmt::format;
 using std::make_unique;
 
 
 static void glfw_error_callback(int error, const char* description)
 {
-    log_error("GLFW error {}: {}", error, description);
+    log::error("GLFW error {}: {}", error, description);
 }
 
 
@@ -145,21 +146,22 @@ Renderer::Renderer(core::Vfs& vfs)
     vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
     std::vector<VkLayerProperties> layer_props(layer_count);
     vkEnumerateInstanceLayerProperties(&layer_count, layer_props.data());
-    log_info("Vulkan: {} validation layers available:", layer_count);
+    log::info("Vulkan: {} validation layers available:", layer_count);
     std::vector<const char*> enabled_layers;
     enabled_layers.reserve(layer_count);
     for (const auto& props : layer_props) {
         bool enable = false;
+        std::string layer_name(props.layerName);
         if ((
-                starts_with(props.layerName, "VK_LAYER_LUNARG_") ||
-                starts_with(props.layerName, "VK_LAYER_GOOGLE_") ||
-                starts_with(props.layerName, "VK_LAYER_KHRONOS_")
-            ) && !any_of(enabled_layers,[&](const char* name) {
-                return strcmp(name, props.layerName) == 0;
-            }) && strcmp(props.layerName, "VK_LAYER_LUNARG_api_dump") != 0
+                layer_name.starts_with("VK_LAYER_LUNARG_") ||
+                layer_name.starts_with("VK_LAYER_GOOGLE_") ||
+                layer_name.starts_with("VK_LAYER_KHRONOS_")
+            ) && !any_of(enabled_layers, [&](const char* name) {
+                return layer_name == name;
+            }) && layer_name != "VK_LAYER_LUNARG_api_dump"
         )
             enable = true;
-        log_info("[{}] {} - {} (spec {}, impl {})",
+        log::info("[{}] {} - {} (spec {}, impl {})",
                 enable ? 'x' : ' ',
                 props.layerName, props.description,
                 props.specVersion, props.implementationVersion);
@@ -192,12 +194,12 @@ Renderer::Renderer(core::Vfs& vfs)
     vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, nullptr);
     std::vector<VkExtensionProperties> ext_props(ext_count);
     vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, ext_props.data());
-    log_info("Vulkan: {} extensions available:", ext_count);
+    log::info("Vulkan: {} extensions available:", ext_count);
     for (const auto& props : ext_props) {
-        bool enable = any_of(extensions,[&](const char* name) {
+        bool enable = any_of(extensions, [&](const char* name) {
             return strcmp(name, props.extensionName) == 0;
         });
-        log_info("[{}] {} (spec {})",
+        log::info("[{}] {} (spec {})",
                  enable ? 'x' : ' ',
                  props.extensionName, props.specVersion);
     }
@@ -394,7 +396,7 @@ void Renderer::create_device()
     // queue family index - queried here, used later
     uint32_t graphics_queue_family = 0;
 
-    log_info("Vulkan: {} devices available:", device_count);
+    log::info("Vulkan: {} devices available:", device_count);
     for (const auto& device : devices | take(device_count)) {
         VkPhysicalDeviceProperties device_props;
         vkGetPhysicalDeviceProperties(device, &device_props);
@@ -441,7 +443,7 @@ void Renderer::create_device()
             m_physical_device = device;
         }
 
-        log_info("({}) {}: {} (api {})",
+        log::info("({}) {}: {} (api {})",
                 choose ? '*' : ' ',
                 device_props.deviceID,
                 device_props.deviceName, device_props.apiVersion);
@@ -733,7 +735,7 @@ bool Renderer::query_swapchain(VkPhysicalDevice device)
             found_mode = mode;
     }
     if (m_present_mode != found_mode) {
-        log_warning("vulkan: requested present mode not supported: {}", m_present_mode);
+        log::warning("vulkan: requested present mode not supported: {}", m_present_mode);
         m_present_mode = found_mode;
     }
 

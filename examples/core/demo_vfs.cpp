@@ -22,7 +22,7 @@ using namespace xci::core::log;
 
 int main()
 {
-    log_info("====== VFS with manually managed loaders ======");
+    info("====== VFS with manually managed loaders ======");
     {
         Vfs vfs {Vfs::Loaders::NoArchives};
         vfs.add_loader(std::make_unique<vfs::RealDirectoryLoader>());
@@ -30,16 +30,16 @@ int main()
         vfs.mount(XCI_SHARE_DIR);
 
         auto f = vfs.read_file("non/existent.file");
-        log_info("demo: open result: {}", f.is_open());
+        info("demo: open result: {}", f.is_open());
 
         f = vfs.read_file("shaders/fps.frag.spv");
-        log_info("demo: open result: {}", f.is_open());
+        info("demo: open result: {}", f.is_open());
         auto content = f.content();
         if (content)
-            log_info("demo: file size: {}", content->size());
+            info("demo: file size: {}", content->size());
     }
 
-    log_info("====== VFS with default loaders, load DAR archive ======");
+    info("====== VFS with default loaders, load DAR archive ======");
     {
         // Buffer can outlive Vfs object.
         // DarArchive(VfsDirectory) will also be kept alive (but no longer accessible).
@@ -57,11 +57,11 @@ int main()
             // but not the DarArchive or content Buffer
         }
         if (content)
-            log_info("demo: file size: {}", content->size());
+            info("demo: file size: {}", content->size());
         // content Buffer and DarArchive deleted here
     }
 
-    log_info("====== VFS with default loaders, load ZIP archive ======");
+    info("====== VFS with default loaders, load ZIP archive ======");
     {
         // Buffer can outlive Vfs object.
         BufferPtr content;
@@ -74,10 +74,10 @@ int main()
             content = f.content();
         }
         if (content)
-            log_info("demo: file size: {}", content->size());
+            info("demo: file size: {}", content->size());
     }
 
-    log_info("====== VFS leading slashes ======");
+    info("====== VFS leading slashes ======");
     {
         Vfs vfs {Vfs::Loaders::NoArchives};
         // Mount just a subfolder
@@ -89,10 +89,10 @@ int main()
         //vfs.mount(XCI_SHARE_DIR "/shaders", "/shaders");
         // This applies to all VFS paths:
         auto f = vfs.read_file("/shaders/fps.frag.spv");
-        log_info("demo: open result: {}", f.is_open());
+        info("demo: open result: {}", f.is_open());
         auto content = f.content();
         if (content)
-            log_info("demo: file size: {}", content->size());
+            info("demo: file size: {}", content->size());
     }
     return 0;
 }

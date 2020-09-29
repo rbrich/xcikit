@@ -8,8 +8,8 @@
 #include <xci/compat/macros.h>
 #include <xci/compat/unistd.h>
 #include <xci/config.h>
-#include <ostream>
 #include <cstring>
+#include <cerrno>
 
 // get_thread_id
 #if defined(__linux__)
@@ -110,25 +110,6 @@ std::string get_home_dir()
 }
 
 
-std::ostream& errno_str(std::ostream& stream)
-{
-    char buf[200] = {};
-#if defined(HAVE_GNU_STRERROR_R)
-    return stream << strerror_r(errno, buf, sizeof buf);
-#elif defined(HAVE_XSI_STRERROR_R)
-    if (strerror_r(errno, buf, sizeof buf) == 0) {
-        stream << buf;
-    } else {
-        stream << "<unknown error>";
-    }
-    return stream;
-#else
-    (void) strerror_s(buf, sizeof buf, errno);
-    return stream << buf;
-#endif
-}
-
-
 std::string errno_str()
 {
     char buf[200] = {};
@@ -137,10 +118,8 @@ std::string errno_str()
 #elif defined(HAVE_XSI_STRERROR_R)
     if (strerror_r(errno, buf, sizeof buf) == 0) {
         return buf;
-    } else {
-        return "<unknown error>";
     }
-    return "";
+    return "Unknown error (" + std::to_string(errno) + ')';
 #else
     (void) strerror_s(buf, sizeof buf, errno);
     return buf;
@@ -148,7 +127,17 @@ std::string errno_str()
 }
 
 
-std::ostream& last_error_str(std::ostream& stream)
+int last_error()
+{
+#ifdef _WIN32
+    return GetLastError();
+#else
+    return errno;
+#endif
+}
+
+
+std::string last_error_str()
 {
 #ifdef _WIN32
     char buffer[1000];
@@ -158,11 +147,11 @@ std::ostream& last_error_str(std::ostream& stream)
             nullptr, msg_id, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
             buffer, sizeof(buffer), nullptr);
     if (!size) {
-        return stream << "unknown error (" << msg_id << ')';
+        return "unknown error (" + std::to_string(msg_id) + ')';
     }
-    return stream << buffer;
+    return buffer;
 #else
-    return errno_str(stream);
+    return errno_str();
 #endif
 }
 

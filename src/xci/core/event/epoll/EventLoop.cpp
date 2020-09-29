@@ -27,7 +27,7 @@ EventLoop::EventLoop()
 {
     m_epoll_fd = epoll_create1(EPOLL_CLOEXEC);
     if (m_epoll_fd == -1) {
-        log_error("EventLoop: epoll_create1: {m}");
+        log::error("EventLoop: epoll_create1: {m}");
         return;
     }
 }
@@ -49,7 +49,7 @@ void EventLoop::run()
         if (rnum == -1) {
             if (errno == EINTR)
                 continue;
-            log_error("EventLoop: poll: {m}");
+            log::error("EventLoop: poll: {m}");
             break;
         }
 
@@ -75,7 +75,7 @@ void EventLoop::_register(int fd, Watch& watch, uint32_t epoll_events)
     ev.data.ptr = &watch;
     int rc = epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, fd, &ev);
     if (rc == -1) {
-        log_error("EventLoop: epoll_ctl(ADD): {m}");
+        log::error("EventLoop: epoll_ctl(ADD): {m}");
     }
 }
 
@@ -86,7 +86,7 @@ void EventLoop::_unregister(int fd, Watch& watch)
         return;
     int rc = epoll_ctl(m_epoll_fd, EPOLL_CTL_DEL, fd, nullptr);
     if (rc == -1 && errno != EBADF) {
-        log_error("EventLoop: epoll_ctl(DEL): {m}");
+        log::error("EventLoop: epoll_ctl(DEL): {m}");
     }
 }
 
