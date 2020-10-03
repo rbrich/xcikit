@@ -43,13 +43,11 @@ public:
         PathNode(std::string_view component, const std::shared_ptr<PathNode>& parent) : component(component), parent(parent) {}  // NOLINT
 
         std::string to_string() const {
-            if (!parent || parent->component.empty())
-                return component;
-            return parent->to_string() + '/' + component;
+            return dir_to_string() + component;
         }
 
         std::string dir_to_string() const {
-            if (!parent || parent->component.empty())
+            if (!parent)
                 return {};
             return parent->to_string() + '/';
         }
