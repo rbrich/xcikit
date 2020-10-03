@@ -94,29 +94,16 @@ public:
         } else {
             path = std::make_shared<PathNode>(pathname_clean);
         }
-        // try to open as directory, if it fails with ENOTDIR, it is a file
-        int fd = open(pathname.empty() ? "." : pathname.c_str(), O_DIRECTORY | O_NOFOLLOW | O_NOCTTY, O_RDONLY);
-        if (fd == -1) {
-            if (errno == ENOTDIR) {
-                // it's a file - report it
-                if (!pathname.empty())
-                    m_cb(*path, File);
+        if (pathname.empty()) {
+            int fd = open(".", O_DIRECTORY | O_NOFOLLOW | O_NOCTTY, O_RDONLY);
+            if (fd == -1) {
+                m_cb(*path, OpenError);
                 return;
             }
-            if (!pathname.empty()) {
-                if (!m_cb(*path, Directory))
-                    return;
-            }
-            m_cb(*path, OpenError);
-            return;
-        }
-        path->fd = fd;
-
-        if (!pathname.empty()) {
-            if (!m_cb(*path, Directory)) {
-                close(fd);
+            path->fd = fd;
+        } else {
+            if (!open_and_report(pathname.c_str(), *path))
                 return;
-            }
         }
         enqueue(std::move(path));
     }
@@ -203,31 +190,40 @@ private:
 
             if ((dir_entry->d_type & DT_DIR) == DT_DIR || dir_entry->d_type == DT_UNKNOWN) {
                 // readdir says it's a dir or it doesn't know
-                // try to open it as a dir, fallback to regular file on ENOTDIR
-                int entry_fd = openat(path->fd, dir_entry->d_name, O_DIRECTORY | O_NOFOLLOW | O_NOCTTY, O_RDONLY);
-                if (entry_fd == -1) {
-                    if (errno == ENOTDIR) {
-                        // it's a file - report it
-                        m_cb(*entry_path, File);
-                        continue;
-                    }
-                    if (!m_cb(*entry_path, Directory))
-                        continue;
-                    m_cb(*entry_path, OpenError);
-                    continue;
-                }
-                entry_path->fd = entry_fd;
-
-                if (!m_cb(*entry_path, Directory)) {
-                    close(entry_fd);
-                    continue;
-                }
-                enqueue(std::move(entry_path));
+                if (open_and_report(dir_entry->d_name, *entry_path, path->fd))
+                    enqueue(std::move(entry_path));
                 continue;
             }
             m_cb(*entry_path, File);
         }
         closedir(dirp);
+    }
+
+    /// \param pathname     path to open, may be relative
+    /// \param node         PathNode associated with the path, for reporting
+    /// \param at_fd        if path is relative, this can be open parent FD or AT_FDCWD
+    /// \return     true if opened as a directory and callback returned true (i.e. descend)
+    bool open_and_report(const char* pathname, PathNode& node, int at_fd = AT_FDCWD) {
+        // try to open as a directory, if it fails with ENOTDIR, it is a file
+        int fd = openat(at_fd, pathname, O_DIRECTORY | O_NOFOLLOW | O_NOCTTY, O_RDONLY);
+        if (fd == -1) {
+            if (errno == ENOTDIR) {
+                // it's a file - report it
+                m_cb(node, File);
+                return false;
+            }
+            if (!m_cb(node, Directory))
+                return false;
+            m_cb(node, OpenError);
+            return false;
+        }
+        node.fd = fd;
+
+        if (!m_cb(node, Directory)) {
+            close(fd);
+            return false;
+        }
+        return true;
     }
 
     const unsigned m_max_threads;
