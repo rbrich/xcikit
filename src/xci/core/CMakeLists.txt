@@ -6,6 +6,7 @@ add_library(xci-core
     ArgParser.cpp
     chrono.cpp
     file.cpp
+    FileTree.cpp
     dispatch.cpp
     FpsCounter.cpp
     log.cpp

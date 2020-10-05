@@ -8,6 +8,7 @@
 #include <xci/core/chrono.h>
 #include <xci/core/memory.h>
 #include <xci/core/sys.h>
+#include <xci/core/FileTree.h>
 
 #include <string>
 #include <cstdio>
@@ -279,3 +280,58 @@ TEST_CASE( "align_to", "[memory]" )
     CHECK(align_to(5, 4) == 8);
     CHECK(align_to(1000, 16) == 1008);
 }
+
+
+TEST_CASE( "PathNode::to_string", "[FileTree]" )
+{
+    auto parent = std::make_shared<FileTree::PathNode>("");
+    FileTree::PathNode node("");
+
+    SECTION("without parent") {
+        // no parent, component "" => ""
+        CHECK(node.to_string() == "");
+        // no parent, component "foo" => "foo"
+        node.component = "foo";
+        CHECK(node.to_string() == "foo");
+    };
+    SECTION("with parent") {
+        node.parent = parent;
+        node.component = "bar";
+        // parent "", component "bar" => "/bar"
+        CHECK(node.to_string() == "/bar");
+        // parent "foo", component "bar" => "foo/bar"
+        parent->component = "foo";
+        CHECK(node.to_string() == "foo/bar");
+        // parent "/foo", component "bar" => "/foo/bar"
+        parent->component = "/foo";
+        CHECK(node.to_string() == "/foo/bar");
+    };
+}
+
+
+TEST_CASE( "PathNode::dirname", "[FileTree]" )
+{
+    auto parent = std::make_shared<FileTree::PathNode>("");
+    FileTree::PathNode node("");
+
+    SECTION("without parent") {
+        // no parent, component "" => ""
+        CHECK(node.dirname() == "");
+        // no parent, component "foo" => "foo"
+        node.component = "foo";
+        CHECK(node.dirname() == "");
+    };
+    SECTION("with parent") {
+        node.parent = parent;
+        node.component = "bar";
+        // parent "", component "bar" => "/"
+        CHECK(node.dirname() == "/");
+        // parent "foo", component "bar" => "foo/"
+        parent->component = "foo";
+        CHECK(node.dirname() == "foo/");
+        // parent "/foo", component "bar" => "/foo/"
+        parent->component = "/foo";
+        CHECK(node.dirname() == "/foo/");
+    };
+}
+
