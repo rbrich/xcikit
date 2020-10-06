@@ -12,7 +12,7 @@
 #include <cstdint>
 #include <csignal>
 
-#ifdef __linux__
+#ifndef _WIN32
 #include <sys/types.h>
 #endif
 
@@ -62,6 +62,9 @@ int pending_signals(std::initializer_list<int> signums);
 /// Retrieve home dir of current user from password file (i.e. /etc/passwd).
 /// \return             the home dir or in case of error "/tmp"
 std::string get_home_dir();
+
+std::string uid_to_user_name(uid_t uid);
+std::string gid_to_group_name(gid_t gid);
 
 /// Retrieve absolute file path of currently running process.
 std::string get_self_path();

@@ -17,16 +17,95 @@
 #include <xci/compat/macros.h>
 
 #include <fmt/core.h>
+#include <fmt/locale.h>
 #include <hs/hs.h>
 
 #include <cstring>
 #include <utility>
 #include <string_view>
+#include <sstream>
 
-#include <sys/types.h>
+#include <unistd.h>
+#include <time.h>
 
 using namespace xci::core;
 using namespace xci::core::argparser;
+
+
+struct Theme {
+    std::string normal;
+    std::string dir;
+    std::string file_dir;
+    std::string file_name;
+    std::string highlight;
+};
+
+
+static char file_type_to_char(mode_t mode)
+{
+    switch (mode & S_IFMT) {
+        case S_IFBLK:   return 'b';
+        case S_IFCHR:   return 'c';
+        case S_IFDIR:   return 'd';
+        case S_IFIFO:   return 'p';
+        case S_IFREG:   return ' ';
+        case S_IFLNK:   return 'l';
+        case S_IFSOCK:  return 's';
+        default:        return '?';
+    }
+}
+
+
+template <>
+struct [[maybe_unused]] fmt::formatter<timespec> {
+    constexpr auto parse(format_parse_context& ctx) {
+        auto it = ctx.begin();  // NOLINT
+        if (it != ctx.end() && *it != '}')
+            throw fmt::format_error("invalid format for timespec");
+        return it;
+    }
+
+    template <typename FormatContext>
+    auto format(const timespec& ts, FormatContext& ctx) {
+        struct tm tm;
+        localtime_r(&ts.tv_sec, &tm);
+        char buf[100];
+        size_t size = strftime(buf, sizeof(buf), "%F %H:%M", &tm);
+        return std::copy(buf, buf + size, ctx.out());
+    }
+};
+
+
+static void print_path_with_attrs(const std::string& name, const FileTree::PathNode& path)
+{
+    struct stat st;
+    if (!path.stat(st)) {
+        fmt::print(stderr,"ff: stat({}): {}\n", path.file_name(), errno_str());
+        return;
+    }
+    std::string out = fmt::format(std::locale("en_US"),
+            "{:c}{:04o} {}:{} {:L} +{:L} {}  {}",
+            file_type_to_char(st.st_mode), st.st_mode & 07777,
+            uid_to_user_name(st.st_uid), gid_to_group_name(st.st_gid),
+            st.st_size, (st.st_blocks*512) - st.st_size,
+            st.st_mtimespec,
+            name
+            );
+    if (S_ISLNK(st.st_mode)) {
+        char buf[PATH_MAX];
+        ssize_t res;
+        if (path.parent && path.parent->fd != -1)
+            res = readlinkat(path.parent->fd, path.component.c_str(), buf, sizeof(buf));
+        else
+            res = readlink(path.file_name().c_str(), buf, sizeof(buf));
+        if (res < 0) {
+            fmt::print(stderr,"ff: readlink({}): {}\n", path.file_name(), errno_str());
+            return;
+        }
+        out += fmt::format(" -> {}", std::string_view(buf, res));
+    }
+    puts(out.c_str());
+}
 
 
 int main(int argc, const char* argv[])
@@ -37,6 +116,7 @@ int main(int argc, const char* argv[])
     bool show_dirs = false;
     bool search_in_special_dirs = false;
     bool single_device = false;
+    bool long_form = false;
     bool show_version = false;
     int jobs = 8;
     std::vector<const char*> files;
@@ -54,6 +134,7 @@ int main(int argc, const char* argv[])
             Option("-S, --search-in-special-dirs", "Allow descending into special directories: " + FileTree::default_ignore_list(", "), search_in_special_dirs),
             Option("-X, --single-device", "Don't descend into directories with different device number", single_device),
             Option("-a, --all", "Don't skip any files, same as -HDS", [&]{ show_hidden = true; show_dirs = true; search_in_special_dirs = true; }),
+            Option("-l, --long", "Print file attributes", long_form),
             Option("-c, --color", "Force color output", [&]{ term.set_is_tty(TermCtl::IsTty::Always); }),
             Option("-j, --jobs JOBS", "Number of worker threads", jobs).env("JOBS"),
             Option("-V, --version", "Show version", show_version),
@@ -71,6 +152,10 @@ int main(int argc, const char* argv[])
         puts("");
         return 0;
     }
+
+    // empty pattern -> show all files
+    if (pattern && *pattern == '\0')
+        pattern = nullptr;
 
     hs_database_t *re_db = nullptr;
     if (pattern) {
@@ -102,14 +187,6 @@ int main(int argc, const char* argv[])
         }
     }
 
-    struct Theme {
-        std::string normal;
-        std::string dir;
-        std::string file_dir;
-        std::string file_name;
-        std::string highlight;
-    };
-
     // "cyanide"
     Theme theme {
         .normal = term.normal().seq(),
@@ -122,7 +199,7 @@ int main(int argc, const char* argv[])
     FlatSet<dev_t> dev_ids;
 
     FileTree ft(jobs-1, jobs,
-                [show_hidden, show_dirs, single_device, pattern, &re_db, &theme, &dev_ids]
+                [show_hidden, show_dirs, single_device, pattern, &re_db, &theme, &dev_ids, &long_form]
                 (const FileTree::PathNode& path, FileTree::Type t)
     {
         if (!show_hidden && path.component[0] == '.')
@@ -190,7 +267,10 @@ int main(int argc, const char* argv[])
                         out += theme.file_name;
                     out += std::string_view(name + eo);
                     out += theme.normal;
-                    puts(out.c_str());
+                    if (long_form)
+                        print_path_with_attrs(out, path);
+                    else
+                        puts(out.c_str());
                 } else {
                     std::string out;
                     if (t == FileTree::Directory) {
@@ -203,7 +283,10 @@ int main(int argc, const char* argv[])
                         out += path.component;
                     }
                     out += theme.normal;
-                    puts(out.c_str());
+                    if (long_form)
+                        print_path_with_attrs(out, path);
+                    else
+                        puts(out.c_str());
                 }
                 return true;
             case FileTree::OpenError:
