@@ -1,4 +1,8 @@
-// geometry.h created on 2018-03-04, part of XCI toolkit
+// geometry.h created on 2018-03-04 as part of xcikit project
+// https://github.com/rbrich/xcikit
+//
+// Copyright 2018 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_GEOMETRY_H
 #define XCI_CORE_GEOMETRY_H

@@ -123,23 +123,23 @@ struct Option {
     /// \param flags    The only valid flag here is FShowHelp. Other flags are internal
     ///                 and should not be passed through constructor. They are set
     ///                 automatically according to given description (`desc`).
-    Option(std::string desc, const char* help, Callback cb, int flags);
+    Option(std::string&& desc, std::string&& help, Callback cb, int flags);
 
     /// Declare option to show help and exit.
-    Option(std::string desc, const char* help, ShowHelp)
-            : Option(std::move(desc), help, nullptr, FShowHelp) {}
+    Option(std::string desc, std::string help, ShowHelp)
+            : Option(std::move(desc), std::move(help), nullptr, FShowHelp) {}
 
     /// Declare option to set a custom flag via callback.
     /// `desc` should describe a simple flag, e.g.: "-f, --flag"
-    Option(std::string desc, const char* help, FlagCallback flag_cb)
-            : Option(std::move(desc), help, [cb = std::move(flag_cb)](const char*)
+    Option(std::string desc, std::string help, FlagCallback flag_cb)
+            : Option(std::move(desc), std::move(help), [cb = std::move(flag_cb)](const char*)
                      { cb(); return true; }, 0) {}
 
     /// Declare option to set a custom value via callback.
     /// The callback can limit the accepted values by returning false (not accepted).
     /// `desc` should describe an option with value, e.g.: "-o, --output FILE"
-    Option(std::string desc, const char* help, ArgCallback arg_cb)
-            : Option(std::move(desc), help, [cb = std::move(arg_cb)](const char* arg)
+    Option(std::string desc, std::string help, ArgCallback arg_cb)
+            : Option(std::move(desc), std::move(help), [cb = std::move(arg_cb)](const char* arg)
                      { return cb(arg); }, 0) {}
 
     /// Declare option to set value of given variable.
@@ -148,8 +148,8 @@ struct Option {
     /// and how they parse the value. E.g. for bool type,
     /// many usual values are recognized: 1, 0, false, true, y, n, ...
     template <class T>
-    Option(std::string desc, const char* help, T& value)
-            : Option(std::move(desc), help, [&value](const char* arg)
+    Option(std::string desc, std::string help, T& value)
+            : Option(std::move(desc), std::move(help), [&value](const char* arg)
                      { return value_from_cstr(arg, value); }, 0) {}
 
     /// Attach env variable to this option
@@ -168,8 +168,8 @@ struct Option {
     bool can_receive_arg() const { return can_receive_all_args() || m_received < m_args; }
     int required_args() const { return m_required; }
     int missing_args() const;
-    std::string_view desc() const { return m_desc; }
-    const char* help() const { return m_help; }
+    const std::string& desc() const { return m_desc; }
+    const std::string& help() const { return m_help; }
     const char* env() const { return m_env; }
     std::string usage() const;
     std::string formatted_desc(size_t width) const;
@@ -199,7 +199,7 @@ private:
 
 private:
     std::string m_desc;
-    const char* m_help;
+    std::string m_help;
     const char* m_env = nullptr;
     Callback m_cb;
     enum Flags {

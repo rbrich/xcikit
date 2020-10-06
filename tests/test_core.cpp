@@ -9,6 +9,10 @@
 #include <xci/core/memory.h>
 #include <xci/core/sys.h>
 
+#ifndef _WIN32
+#include <xci/core/FileTree.h>
+#endif
+
 #include <string>
 #include <cstdio>
 #include <sys/stat.h>
@@ -279,3 +283,62 @@ TEST_CASE( "align_to", "[memory]" )
     CHECK(align_to(5, 4) == 8);
     CHECK(align_to(1000, 16) == 1008);
 }
+
+
+#ifndef _WIN32
+TEST_CASE( "PathNode::dir_name", "[FileTree]" )
+{
+    auto parent = std::make_shared<FileTree::PathNode>("");
+    FileTree::PathNode node("");
+
+    SECTION("without parent") {
+        // no parent, component "" => "/"
+        CHECK(node.dir_name() == "/");
+        // no parent, component "." => ""
+        node.component = ".";
+        CHECK(node.dir_name() == "");
+        // no parent, component "foo" => "foo/"
+        node.component = "foo";
+        CHECK(node.dir_name() == "foo/");
+    };
+    SECTION("with parent") {
+        node.parent = parent;
+        node.component = "bar";
+        // parent "", component "bar" => "/bar/"
+        CHECK(node.dir_name() == "/bar/");
+        // parent "foo", component "bar" => "foo/bar/"
+        parent->component = "foo";
+        CHECK(node.dir_name() == "foo/bar/");
+        // parent "/foo", component "bar" => "/foo/bar/"
+        parent->component = "/foo";
+        CHECK(node.dir_name() == "/foo/bar/");
+    };
+}
+
+
+TEST_CASE( "PathNode::parent_dir_name", "[FileTree]" )
+{
+    auto parent = std::make_shared<FileTree::PathNode>("");
+    FileTree::PathNode node("");
+
+    SECTION("without parent") {
+        // no parent, component "" => ""
+        CHECK(node.parent_dir_name() == "");
+        // no parent, component "foo" => "foo"
+        node.component = "foo";
+        CHECK(node.parent_dir_name() == "");
+    };
+    SECTION("with parent") {
+        node.parent = parent;
+        node.component = "bar";
+        // parent "", component "bar" => "/"
+        CHECK(node.parent_dir_name() == "/");
+        // parent "foo", component "bar" => "foo/"
+        parent->component = "foo";
+        CHECK(node.parent_dir_name() == "foo/");
+        // parent "/foo", component "bar" => "/foo/"
+        parent->component = "/foo";
+        CHECK(node.parent_dir_name() == "/foo/");
+    };
+}
+#endif // _WIN32

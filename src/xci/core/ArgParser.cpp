@@ -22,8 +22,8 @@ using namespace std;
 using fmt::format;
 
 
-Option::Option(std::string desc, const char* help, Callback cb, int flags)
-    : m_desc(move(desc)), m_help(help), m_cb(move(cb)), m_flags(flags)
+Option::Option(std::string&& desc, std::string&& help, Callback cb, int flags)
+    : m_desc(move(desc)), m_help(std::move(help)), m_cb(move(cb)), m_flags(flags)
 {
     // check and remove brackets from both ends
     strip(m_desc, ' ');

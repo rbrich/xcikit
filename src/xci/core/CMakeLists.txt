@@ -17,6 +17,12 @@ add_library(xci-core
     Vfs.cpp
     )
 
+if (NOT WIN32)
+    target_sources(xci-core PRIVATE
+        FileTree.cpp
+        )
+endif()
+
 # Choose EventLoop implementation
 if (APPLE)
     target_sources(xci-core PRIVATE

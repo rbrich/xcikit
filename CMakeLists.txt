@@ -170,7 +170,9 @@ endif()
 # ------------ #
 
 if (XCI_BUILD_TOOLS)
-    add_subdirectory(tools/find_file)
+    if (NOT WIN32)
+        add_subdirectory(tools/find_file)
+    endif()
     if (XCI_SCRIPT)
         add_subdirectory(tools/fire_script)
     endif()
