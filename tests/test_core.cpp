@@ -8,7 +8,10 @@
 #include <xci/core/chrono.h>
 #include <xci/core/memory.h>
 #include <xci/core/sys.h>
+
+#ifndef _WIN32
 #include <xci/core/FileTree.h>
+#endif
 
 #include <string>
 #include <cstdio>
@@ -282,6 +285,7 @@ TEST_CASE( "align_to", "[memory]" )
 }
 
 
+#ifndef _WIN32
 TEST_CASE( "PathNode::dir_name", "[FileTree]" )
 {
     auto parent = std::make_shared<FileTree::PathNode>("");
@@ -337,4 +341,4 @@ TEST_CASE( "PathNode::parent_dir_name", "[FileTree]" )
         CHECK(node.parent_dir_name() == "/foo/");
     };
 }
-
+#endif // _WIN32

@@ -6,7 +6,6 @@ add_library(xci-core
     ArgParser.cpp
     chrono.cpp
     file.cpp
-    FileTree.cpp
     dispatch.cpp
     FpsCounter.cpp
     log.cpp
@@ -17,6 +16,12 @@ add_library(xci-core
     TermCtl.cpp
     Vfs.cpp
     )
+
+if (NOT WIN32)
+    target_sources(xci-core PRIVATE
+        FileTree.cpp
+        )
+endif()
 
 # Choose EventLoop implementation
 if (APPLE)
