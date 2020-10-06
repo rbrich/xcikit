@@ -3,7 +3,7 @@ Find File (ff)
 
 A find-like tool using Hyperscan for regex matching and threads for fast directory walk.
 
-![ff (screenshot)](screenshot.png)
+![ff (screenshot)](https://user-images.githubusercontent.com/6216152/95231266-39a57180-0803-11eb-90a2-f8de1bf49416.png)
 
 Inspired by [fd](https://github.com/sharkdp/fd).
 
