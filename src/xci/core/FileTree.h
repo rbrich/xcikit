@@ -37,26 +37,36 @@ public:
         explicit PathNode(std::string_view component) : component(component) {}  // NOLINT
         PathNode(std::string_view component, const std::shared_ptr<PathNode>& parent) : parent(parent), component(component) {}  // NOLINT
 
-        /// Convert contained path to string:
-        /// - no parent, component ""           => "" (meaning "/")
-        /// - no parent, component "foo"        => "foo"
-        /// - parent "", component "bar"        => "/bar"
-        /// - parent "foo", component "bar"     => "foo/bar"
-        /// - parent "/foo", component "bar"    => "/foo/bar"
-        std::string to_string() const {
-            return dirname() + component;
+        /// Convert contained directory path to a string:
+        /// - no parent, component "."          => ""
+        /// - no parent, component ""           => "/"
+        /// - no parent, component "foo"        => "foo/"
+        /// - parent "", component "bar"        => "/bar/"
+        /// - parent "foo", component "bar"     => "foo/bar/"
+        /// - parent "/foo", component "bar"    => "/foo/bar/"
+        std::string dir_name() const {
+            if (!parent && component == ".")
+                return {};
+            return parent_dir_name() + component + '/';
         }
 
-        /// Get dirname part of contained path:
+        /// Same as dir_name, but the first variant is invalid
+        /// and '/' is not appended.
+        std::string file_name() const {
+            assert(!component.empty());
+            return parent_dir_name() + component;
+        }
+
+        /// Get parent dir part of contained path:
         /// - no parent, component ""           => "" (meaning "/")
         /// - no parent, component "foo"        => ""
         /// - parent "", component "bar"        => "/"
         /// - parent "foo", component "bar"     => "foo/"
         /// - parent "/foo", component "bar"    => "/foo/"
-        std::string dirname() const {
+        std::string parent_dir_name() const {
             if (!parent)
                 return {};
-            return parent->to_string() + '/';
+            return parent->dir_name();
         }
 
         bool is_root() const {
@@ -74,9 +84,18 @@ public:
             return rc == 0;
         }
 
+        /// Is this a node from input, i.e. `walk()`?
+        bool is_input() const {
+            return flags & f_input;
+        }
+
         std::shared_ptr<PathNode> parent;
         std::string component;
         int fd = -1;
+
+        using Flags = unsigned int;
+        static constexpr Flags f_input = 1;
+        Flags flags = 0;
     };
 
     enum Type {
@@ -104,12 +123,34 @@ public:
             t.join();
     }
 
+    /// Allows disabling default ignored paths like /dev
+    void set_default_ignore(bool enabled) { m_default_ignore = enabled; }
+    static bool is_default_ignored(const std::string& path);
+    static std::string default_ignore_list(const char* sep);
+
+    void walk_cwd() {
+        auto path = std::make_shared<FileTree::PathNode>(".");
+        path->flags = PathNode::f_input;
+        int fd = open(".", O_DIRECTORY | O_NOFOLLOW | O_NOCTTY, O_RDONLY);
+        if (fd == -1) {
+            m_cb(*path, OpenError);
+            return;
+        }
+        path->fd = fd;
+        enqueue(std::move(path));
+    }
+
     void walk(const std::string& pathname) {
+        auto pathname_clean = rstripped(pathname, '/');
+        if (pathname.empty() || pathname_clean == ".") {
+            walk_cwd();
+            return;
+        }
+
         // create PathNode also for parent, so the reporting is consistent
         // (component in each reported PathNode is always cleaned basename)
-        auto pathname_clean = rstrip(pathname, '/');
-        auto components = rsplit(pathname_clean, '/', 1);
         std::shared_ptr<PathNode> path;
+        auto components = rsplit(pathname_clean, '/', 1);
         if (components.size() == 2) {
             // relative or absolute path, e.g.:
             // - relative "foo/bar/", processed to components ["foo", "bar"]
@@ -123,17 +164,10 @@ public:
             // - absolute root "/", cleaned to ""
             path = std::make_shared<PathNode>(pathname_clean);
         }
-        if (pathname.empty()) {
-            int fd = open(".", O_DIRECTORY | O_NOFOLLOW | O_NOCTTY, O_RDONLY);
-            if (fd == -1) {
-                m_cb(*path, OpenError);
-                return;
-            }
-            path->fd = fd;
-        } else {
-            if (!open_and_report(pathname.c_str(), *path))
-                return;
-        }
+        path->flags = PathNode::f_input;
+
+        if (!open_and_report(pathname.c_str(), *path))
+            return;
         enqueue(std::move(path));
     }
 
@@ -216,8 +250,8 @@ private:
                 continue;
 
             // Check ignore list
-            std::string entry_pathname = path->to_string() + "/" + dir_entry->d_name;
-            if (is_default_ignored(entry_pathname))
+            std::string entry_pathname = path->dir_name() + dir_entry->d_name;
+            if (m_default_ignore && is_default_ignored(entry_pathname))
                 continue;
 
             auto entry_path = std::make_shared<PathNode>(dir_entry->d_name, path);
@@ -260,15 +294,14 @@ private:
         return true;
     }
 
-    static bool is_default_ignored(const std::string& path);
-
     const unsigned m_max_threads;
     Callback m_cb;
     std::vector<std::shared_ptr<PathNode>> m_queue;
     std::vector<std::thread> m_workers;
-    int m_busy = 0;  // number of threads in `read`
     std::mutex m_mutex;  // for both queue and workers
     std::condition_variable m_cv;
+    int m_busy = 0;  // number of threads in `read`
+    bool m_default_ignore = true;
 };
 
 } // namespace xci::core

@@ -44,7 +44,8 @@ template <class S>
 void lstrip(S& str) { return lstrip(str, whitespace_chars); }
 
 template <class T>
-std::string lstrip(const std::string &str, T strip_chars) {
+[[nodiscard]] std::string
+lstripped(const std::string &str, T strip_chars) {
     std::string copy(str);
     lstrip(copy, strip_chars);
     return copy;
@@ -65,7 +66,8 @@ template <class S>
 void rstrip(S& str) { return rstrip(str, whitespace_chars); }
 
 template <class T>
-std::string rstrip(const std::string &str, T strip_chars) {
+[[nodiscard]] std::string
+rstripped(const std::string &str, T strip_chars) {
     std::string copy(str);
     rstrip(copy, strip_chars);
     return copy;

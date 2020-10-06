@@ -5,6 +5,7 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "FileTree.h"
+#include <fmt/format.h>
 
 namespace xci::core {
 
@@ -25,6 +26,11 @@ bool FileTree::is_default_ignored(const std::string& path)
 {
     return std::any_of(std::begin(s_default_ignore_list), std::end(s_default_ignore_list),
             [&path](const char* ignore_path) { return path == ignore_path; });
+}
+
+std::string FileTree::default_ignore_list(const char* sep)
+{
+    return fmt::format("{}", fmt::join(std::begin(s_default_ignore_list), std::end(s_default_ignore_list), sep));
 }
 
 } // namespace xci::core

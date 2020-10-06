@@ -51,10 +51,9 @@ int main(int argc, const char* argv[])
             Option("-i, --ignore-case", "Enable case insensitive matching", ignore_case),
             Option("-H, --search-hidden", "Don't skip hidden files", show_hidden),
             Option("-D, --search-dirnames", "Don't skip directory entries", show_dirs),
-            Option("-S, --search-in-special-dirs", "Allow descending into special directories like /dev", search_in_special_dirs),
-            Option("-X, --single-device", "Don't descend into directories with different device number. "
-                                          "This has similar effect to -S, but costs additional stat() call per directory.", single_device),
-            Option("-a, --all", "Don't skip any files, same as -HD", [&]{ show_hidden = true; show_dirs = true; }),
+            Option("-S, --search-in-special-dirs", "Allow descending into special directories: " + FileTree::default_ignore_list(", "), search_in_special_dirs),
+            Option("-X, --single-device", "Don't descend into directories with different device number", single_device),
+            Option("-a, --all", "Don't skip any files, same as -HDS", [&]{ show_hidden = true; show_dirs = true; search_in_special_dirs = true; }),
             Option("-c, --color", "Force color output", [&]{ term.set_is_tty(TermCtl::IsTty::Always); }),
             Option("-j, --jobs JOBS", "Number of worker threads", jobs).env("JOBS"),
             Option("-V, --version", "Show version", show_version),
@@ -64,7 +63,7 @@ int main(int argc, const char* argv[])
     } (argv);
 
     if (show_version) {
-        term.print("{t:bold}ff{t:normal} {}\n", "0.1");
+        term.print("{t:bold}ff{t:normal} {}\n", "0.2");
         term.print("using {t:bold}Hyperscan{t:normal} {}", hs_version());
 #ifndef HAVE_HS_COMPILE_LIT
         term.print(" (hs_compile_lit not available, {t:bold}{fg:green}--fixed{t:normal} option disabled)");
@@ -135,11 +134,14 @@ int main(int argc, const char* argv[])
                 if (single_device) {
                     struct stat st;
                     if (!path.stat(st)) {
-                        fmt::print(stderr,"ff: stat({}): {}\n", path.to_string(), errno_str());
+                        fmt::print(stderr,"ff: stat({}): {}\n", path.dir_name(), errno_str());
                         return true;
                     }
-                    if (!dev_ids.contains(st.st_dev))
+                    if (path.is_input()) {
+                        dev_ids.emplace(st.st_dev);
+                    } else if (!dev_ids.contains(st.st_dev)) {
                         return false;  // skip (different device ID)
+                    }
                 }
                 FALLTHROUGH;
             case FileTree::File:
@@ -173,10 +175,10 @@ int main(int argc, const char* argv[])
                     std::string out;
                     if (t == FileTree::Directory) {
                         out += theme.dir;
-                        out += path.dirname();
+                        out += path.parent_dir_name();
                     } else {
                         out += theme.file_dir;
-                        out += path.dirname();
+                        out += path.parent_dir_name();
                         out += theme.file_name;
                     }
                     out += std::string_view(name, so);
@@ -193,10 +195,10 @@ int main(int argc, const char* argv[])
                     std::string out;
                     if (t == FileTree::Directory) {
                         out += theme.dir;
-                        out += path.to_string();
+                        out += path.dir_name();
                     } else {
                         out += theme.file_dir;
-                        out += path.dirname();
+                        out += path.parent_dir_name();
                         out += theme.file_name;
                         out += path.component;
                     }
@@ -205,24 +207,26 @@ int main(int argc, const char* argv[])
                 }
                 return true;
             case FileTree::OpenError:
-                fmt::print(stderr,"ff: open({}): {}\n", path.to_string(), errno_str());
+                fmt::print(stderr,"ff: open({}): {}\n", path.dir_name(), errno_str());
                 return true;
             case FileTree::OpenDirError:
-                fmt::print(stderr,"ff: opendir({}): {}\n", path.to_string(), errno_str());
+                fmt::print(stderr,"ff: opendir({}): {}\n", path.dir_name(), errno_str());
                 return true;
             case FileTree::ReadDirError:
-                fmt::print(stderr,"ff: readdir({}): {}\n", path.to_string(), errno_str());
+                fmt::print(stderr,"ff: readdir({}): {}\n", path.dir_name(), errno_str());
                 return true;
         }
         UNREACHABLE;
     });
+
+    ft.set_default_ignore(!search_in_special_dirs);
+
     if (files.empty()) {
-        // TODO: add to dev_ids
-        ft.walk("");
-    }
-    for (const auto& f : files) {
-        // TODO: add to dev_ids
-        ft.walk(f);
+        ft.walk_cwd();
+    } else {
+        for (const char* f : files) {
+            ft.walk(f);
+        }
     }
 
     ft.worker();

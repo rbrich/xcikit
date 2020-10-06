@@ -282,56 +282,59 @@ TEST_CASE( "align_to", "[memory]" )
 }
 
 
-TEST_CASE( "PathNode::to_string", "[FileTree]" )
+TEST_CASE( "PathNode::dir_name", "[FileTree]" )
 {
     auto parent = std::make_shared<FileTree::PathNode>("");
     FileTree::PathNode node("");
 
     SECTION("without parent") {
-        // no parent, component "" => ""
-        CHECK(node.to_string() == "");
-        // no parent, component "foo" => "foo"
+        // no parent, component "" => "/"
+        CHECK(node.dir_name() == "/");
+        // no parent, component "." => ""
+        node.component = ".";
+        CHECK(node.dir_name() == "");
+        // no parent, component "foo" => "foo/"
         node.component = "foo";
-        CHECK(node.to_string() == "foo");
+        CHECK(node.dir_name() == "foo/");
     };
     SECTION("with parent") {
         node.parent = parent;
         node.component = "bar";
-        // parent "", component "bar" => "/bar"
-        CHECK(node.to_string() == "/bar");
-        // parent "foo", component "bar" => "foo/bar"
+        // parent "", component "bar" => "/bar/"
+        CHECK(node.dir_name() == "/bar/");
+        // parent "foo", component "bar" => "foo/bar/"
         parent->component = "foo";
-        CHECK(node.to_string() == "foo/bar");
-        // parent "/foo", component "bar" => "/foo/bar"
+        CHECK(node.dir_name() == "foo/bar/");
+        // parent "/foo", component "bar" => "/foo/bar/"
         parent->component = "/foo";
-        CHECK(node.to_string() == "/foo/bar");
+        CHECK(node.dir_name() == "/foo/bar/");
     };
 }
 
 
-TEST_CASE( "PathNode::dirname", "[FileTree]" )
+TEST_CASE( "PathNode::parent_dir_name", "[FileTree]" )
 {
     auto parent = std::make_shared<FileTree::PathNode>("");
     FileTree::PathNode node("");
 
     SECTION("without parent") {
         // no parent, component "" => ""
-        CHECK(node.dirname() == "");
+        CHECK(node.parent_dir_name() == "");
         // no parent, component "foo" => "foo"
         node.component = "foo";
-        CHECK(node.dirname() == "");
+        CHECK(node.parent_dir_name() == "");
     };
     SECTION("with parent") {
         node.parent = parent;
         node.component = "bar";
         // parent "", component "bar" => "/"
-        CHECK(node.dirname() == "/");
+        CHECK(node.parent_dir_name() == "/");
         // parent "foo", component "bar" => "foo/"
         parent->component = "foo";
-        CHECK(node.dirname() == "foo/");
+        CHECK(node.parent_dir_name() == "foo/");
         // parent "/foo", component "bar" => "/foo/"
         parent->component = "/foo";
-        CHECK(node.dirname() == "/foo/");
+        CHECK(node.parent_dir_name() == "/foo/");
     };
 }
 

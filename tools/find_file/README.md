@@ -1,8 +1,7 @@
 Find File (ff)
 ==============
 
-A find-like tool using Hyperscan for regex matching,
-threads for fast walk and minimum number of syscalls.
+A find-like tool using Hyperscan for regex matching and threads for fast directory walk.
 
 ![ff (screenshot)](screenshot.png)
 
@@ -14,9 +13,14 @@ Implementation:
 - no sorting, no `stat(2)` (dirs are detected using `O_DIRECTORY`)
 
 Default ignored files and directories:
-- special paths like `/mnt` and `/dev` are not search unless explicitly asked to,
-  e.g. `ff tty /` skips `/dev` while `ff tty / /dev` doesn't skip it
+- special paths like `/mnt`, `/dev`, `/proc` are not searched by default
+- to search in them, either add them explicitly to searched paths or use `-S, --search-in-special-dirs`
+- for example, `ff tty /` skips `/dev` while `ff tty / /dev` doesn't skip it
 - the list of ignored directories is presented in `--help`, under `--search-in-special-dirs` option
+
+Single device
+- allows skipping any mounted directories that are found during directory walk
+- this costs additional `stat(2)` call per directory (usually unnoticeable)
 
 Development
 -----------
