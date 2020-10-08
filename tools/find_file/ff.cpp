@@ -108,6 +108,24 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
 }
 
 
+class HyperscanScratch {
+public:
+    ~HyperscanScratch() { hs_free_scratch(m_scratch); }
+
+    hs_scratch_t* get(const hs_database_t* re_db) {
+        // this allocates new scratch space ONLY IF the previous one is NULL or no longer valid
+        if (hs_alloc_scratch(re_db, &m_scratch) != HS_SUCCESS) {
+            fmt::print(stderr,"ff: hs_alloc_scratch: Unable to allocate scratch space.\n");
+            m_scratch = nullptr;
+        }
+        return m_scratch;
+    }
+
+private:
+    hs_scratch_t* m_scratch = nullptr;
+};
+
+
 int main(int argc, const char* argv[])
 {
     bool fixed = false;
@@ -124,6 +142,9 @@ int main(int argc, const char* argv[])
 
     TermCtl& term = TermCtl::stdout_instance();
 
+    // enable HS_FLAG_SOM_LEFTMOST only if we have color output
+    bool highlight_match = term.is_tty();
+
     ArgParser {
 #ifdef HAVE_HS_COMPILE_LIT
             Option("-F, --fixed", "Match literal string instead of (default) regex", fixed),
@@ -135,7 +156,9 @@ int main(int argc, const char* argv[])
             Option("-X, --single-device", "Don't descend into directories with different device number", single_device),
             Option("-a, --all", "Don't skip any files, same as -HDS", [&]{ show_hidden = true; show_dirs = true; search_in_special_dirs = true; }),
             Option("-l, --long", "Print file attributes", long_form),
-            Option("-c, --color", "Force color output", [&]{ term.set_is_tty(TermCtl::IsTty::Always); }),
+            Option("-c, --color", "Force color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Always); }),
+            Option("-C, --no-color", "Disable color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Never); }),
+            Option("-M, --no-highlight", "Don't highlight matches (default: enabled for color output)", [&highlight_match]{ highlight_match = false; }),
             Option("-j, --jobs JOBS", "Number of worker threads", jobs).env("JOBS"),
             Option("-V, --version", "Show version", show_version),
             Option("-h, --help", "Show help", show_help),
@@ -162,25 +185,48 @@ int main(int argc, const char* argv[])
         int flags = 0;
         if (ignore_case)
             flags |= HS_FLAG_CASELESS;
-        // enable start offset only if we have color output
-        if (term.is_tty())
-            flags |= HS_FLAG_SOM_LEFTMOST;
         hs_compile_error_t *re_compile_err;
         if (fixed) {
 #ifdef HAVE_HS_COMPILE_LIT
-            if (hs_compile_lit(pattern, flags,
+            if (highlight_match)
+                flags |= HS_FLAG_SOM_LEFTMOST;
+            auto rc = hs_compile_lit(pattern, flags,
                     strlen(pattern), HS_MODE_BLOCK, nullptr,
-                    &re_db, &re_compile_err) != HS_SUCCESS) {
-                fmt::print(stderr,"ff: hs_compile_lit({}): {}\n", pattern, re_compile_err->message);
+                    &re_db, &re_compile_err);
+            if (rc != HS_SUCCESS) {
+                fmt::print(stderr,"ff: hs_compile_lit({}): ({}) {}\n", pattern, rc, re_compile_err->message);
                 hs_free_compile_error(re_compile_err);
                 return 1;
             }
 #endif
         } else {
-            if (hs_compile(pattern, flags | HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP,
+            flags |= HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP;
+
+            // analyze pattern
+            hs_expr_info_t* re_info = nullptr;
+            hs_error_t rc = hs_expression_info(pattern, flags, &re_info, &re_compile_err);
+            if (rc != HS_SUCCESS) {
+                fmt::print(stderr,"ff: hs_expression_info({}): ({}) {}\n", pattern, rc, re_compile_err->message);
+                hs_free_compile_error(re_compile_err);
+                return 1;
+            }
+            if (re_info->min_width == 0) {
+                // Pattern matches empty buffer
+                highlight_match = false;
+                flags |= HS_FLAG_ALLOWEMPTY;
+            }
+            free(re_info);
+
+            // compile pattern
+            if (highlight_match)
+                flags |= HS_FLAG_SOM_LEFTMOST;
+            else
+                flags |= HS_FLAG_SINGLEMATCH;
+            rc = hs_compile(pattern, flags,
                     HS_MODE_BLOCK, nullptr,
-                    &re_db, &re_compile_err) != HS_SUCCESS) {
-                fmt::print(stderr,"ff: hs_compile({}): {}\n", pattern, re_compile_err->message);
+                    &re_db, &re_compile_err);
+            if (rc != HS_SUCCESS) {
+                fmt::print(stderr,"ff: hs_compile({}): ({}) {}\n", pattern, rc, re_compile_err->message);
                 hs_free_compile_error(re_compile_err);
                 return 1;
             }
@@ -199,7 +245,7 @@ int main(int argc, const char* argv[])
     FlatSet<dev_t> dev_ids;
 
     FileTree ft(jobs-1, jobs,
-                [show_hidden, show_dirs, single_device, pattern, &re_db, &theme, &dev_ids, &long_form]
+                [show_hidden, show_dirs, single_device, pattern, &re_db, &theme, &dev_ids, &long_form, &highlight_match]
                 (const FileTree::PathNode& path, FileTree::Type t)
     {
         if (!show_hidden && path.component[0] == '.')
@@ -223,72 +269,92 @@ int main(int argc, const char* argv[])
                 FALLTHROUGH;
             case FileTree::File:
                 if (pattern) {
+                    std::string out;
                     const auto* name = path.component.c_str();
-                    thread_local hs_scratch_t *re_scratch = nullptr;
-                    if (re_scratch == nullptr && hs_alloc_scratch(re_db, &re_scratch) != HS_SUCCESS) {
-                        fmt::print(stderr,"ff: hs_alloc_scratch: Unable to allocate scratch space.\n");
+                    // FIXME: allow thread init/cleanup in FileTree and move this in there
+                    thread_local HyperscanScratch re_scratch_alloc;
+                    auto* re_scratch = re_scratch_alloc.get(re_db);
+                    if (re_scratch == nullptr)
                         return true;
-                    }
-                    // FIXME: thread cleanup: hs_free_scratch(re_scratch);
 
-                    std::vector<std::pair<int, int>> matches;
-                    auto r = hs_scan(re_db, path.component.data(), path.component.size(), 0, re_scratch,
-                            [] (unsigned int id, unsigned long long from,
+                    if (highlight_match) {
+                        // match, with highlight
+                        std::vector<std::pair<int, int>> matches;
+                        auto r = hs_scan(re_db, name, path.component.size(), 0, re_scratch,
+                                [] (unsigned int id, unsigned long long from,
                                     unsigned long long to, unsigned int flags, void *ctx)
-                            {
-                                auto* m = static_cast<std::vector<std::pair<int, int>>*>(ctx);
-                                m->emplace_back(from, to);
-                                return 0;
-                            }, &matches);
-                    if (r != HS_SUCCESS) {
-                        fmt::print(stderr,"ff: hs_scan({}): Unable to scan ({})\n", path.component, r);
+                                {
+                                    auto* m = static_cast<std::vector<std::pair<int, int>>*>(ctx);
+                                    m->emplace_back(from, to);
+                                    return 0;
+                                }, &matches);
+                        if (r != HS_SUCCESS) {
+                            fmt::print(stderr,"ff: hs_scan({}): Unable to scan ({})\n", path.component, r);
+                            return true;
+                        }
+                        if (matches.empty())
+                            return true;  // not matched
+                        const auto so = matches[0].first;
+                        const auto eo = matches[0].second;
+
+                        if (t == FileTree::Directory) {
+                            out += theme.dir;
+                            out += path.parent_dir_name();
+                        } else {
+                            out += theme.file_dir;
+                            out += path.parent_dir_name();
+                            out += theme.file_name;
+                        }
+                        out += std::string_view(name, so);
+                        out += theme.highlight;
+                        out += std::string_view(name + so, eo - so);
+                        if (t == FileTree::Directory)
+                            out += theme.dir;
+                        else
+                            out += theme.file_name;
+                        out += std::string_view(name + eo);
+                        out += theme.normal;
+                        if (long_form)
+                            print_path_with_attrs(out, path);
+                        else
+                            puts(out.c_str());
                         return true;
                     }
-                    if (matches.empty())
-                        return true;  // not matched
-                    const auto so = matches[0].first;
-                    const auto eo = matches[0].second;
 
-                    std::string out;
-                    if (t == FileTree::Directory) {
-                        out += theme.dir;
-                        out += path.parent_dir_name();
-                    } else {
-                        out += theme.file_dir;
-                        out += path.parent_dir_name();
-                        out += theme.file_name;
+                    // match, no highlight
+                    auto r = hs_scan(re_db, name, path.component.size(), 0, re_scratch,
+                            [] (unsigned int id, unsigned long long from,
+                                unsigned long long to, unsigned int flags, void *ctx)
+                            { return 1; }, nullptr);
+                    // returns HS_SCAN_TERMINATED on match (because callback returns 1)
+                    if (r == HS_SUCCESS)
+                        return true;  // not matched
+                    if (r != HS_SCAN_TERMINATED) {
+                        fmt::print(stderr,"ff: hs_scan({}): ({}) Unable to scan\n", path.component, r);
+                        return true;
                     }
-                    out += std::string_view(name, so);
-                    out += theme.highlight;
-                    out += std::string_view(name + so, eo - so);
-                    if (t == FileTree::Directory)
-                        out += theme.dir;
-                    else
-                        out += theme.file_name;
-                    out += std::string_view(name + eo);
-                    out += theme.normal;
-                    if (long_form)
-                        print_path_with_attrs(out, path);
-                    else
-                        puts(out.c_str());
-                } else {
-                    std::string out;
-                    if (t == FileTree::Directory) {
-                        out += theme.dir;
-                        out += path.dir_name();
-                    } else {
-                        out += theme.file_dir;
-                        out += path.parent_dir_name();
-                        out += theme.file_name;
-                        out += path.component;
-                    }
-                    out += theme.normal;
-                    if (long_form)
-                        print_path_with_attrs(out, path);
-                    else
-                        puts(out.c_str());
+                    // print path below
                 }
-                return true;
+
+                // no matching, just print, without highlight
+                {
+                    std::string out;
+                    if (t == FileTree::Directory) {
+                        out += theme.dir;
+                        out += path.parent_dir_name();
+                    } else {
+                        out += theme.file_dir;
+                        out += path.parent_dir_name();
+                        out += theme.file_name;
+                    }
+                    out += path.component;
+                    out += theme.normal;
+                    if (long_form)
+                        print_path_with_attrs(out, path);
+                    else
+                        puts(out.c_str());
+                    return true;
+                }
             case FileTree::OpenError:
                 fmt::print(stderr,"ff: open({}): {}\n", path.dir_name(), errno_str());
                 return true;
