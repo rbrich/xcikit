@@ -17,13 +17,12 @@
 #include <xci/compat/macros.h>
 
 #include <fmt/core.h>
-#include <fmt/locale.h>
 #include <hs/hs.h>
 
 #include <cstring>
 #include <utility>
 #include <string_view>
-#include <sstream>
+#include <locale>
 
 #include <unistd.h>
 #include <time.h>
@@ -83,14 +82,24 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
         fmt::print(stderr,"ff: stat({}): {}\n", path.file_name(), errno_str());
         return;
     }
-    std::string out = fmt::format(std::locale("en_US"),
-            "{:c}{:04o} {}:{} {:L} +{:L} {}  {}",
+    // Adaptive column width
+    auto user = uid_to_user_name(st.st_uid);
+    auto group = gid_to_group_name(st.st_gid);
+    auto unused = (st.st_blocks * 512) - st.st_size;  // unused bytes in allocated blocks
+    static size_t w_user = 0;
+    static size_t w_group = 0;
+    static size_t w_size = 0;
+    static size_t w_unused = 0;
+    w_user = std::max(w_user, user.length());
+    w_group = std::max(w_group, group.length());
+    w_size = std::max(w_size, fmt::formatted_size("{:L}", st.st_size));
+    w_unused = std::max(w_unused, fmt::formatted_size("{:L}", unused));
+    std::string out = fmt::format("{:c}{:04o} {:{}}:{:{}}  {:{}L} +{:{}L}  {}  {}",
             file_type_to_char(st.st_mode), st.st_mode & 07777,
-            uid_to_user_name(st.st_uid), gid_to_group_name(st.st_gid),
-            st.st_size, (st.st_blocks*512) - st.st_size,
+            user, w_user, group, w_group,
+            st.st_size, w_size, unused, w_unused,
             st.st_mtimespec,
-            name
-            );
+            name);
     if (S_ISLNK(st.st_mode)) {
         char buf[PATH_MAX];
         ssize_t res;
@@ -139,6 +148,8 @@ int main(int argc, const char* argv[])
     int jobs = 8;
     std::vector<const char*> files;
     const char* pattern = nullptr;
+
+    std::locale::global(std::locale("en_US.UTF-8"));
 
     TermCtl& term = TermCtl::stdout_instance();
 
