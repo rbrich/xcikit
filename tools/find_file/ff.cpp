@@ -22,7 +22,6 @@
 #include <cstring>
 #include <utility>
 #include <string_view>
-#include <locale>
 
 #include <unistd.h>
 #include <time.h>
@@ -75,6 +74,30 @@ struct [[maybe_unused]] fmt::formatter<timespec> {
 };
 
 
+static char next_size_unit(char unit)
+{
+    switch (unit) {
+        case 'B': return 'K';
+        case 'K': return 'M';
+        case 'M': return 'G';
+        case 'G': return 'T';
+        case 'T': return 'P';
+        default:  return '?';
+    }
+}
+
+
+static char round_size_to_unit(size_t& size)
+{
+    char unit = 'B';
+    while (size >= 10'000) {
+        size /= 1024;
+        unit = next_size_unit(unit);
+    }
+    return unit;
+}
+
+
 static void print_path_with_attrs(const std::string& name, const FileTree::PathNode& path)
 {
     struct stat st;
@@ -85,19 +108,18 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
     // Adaptive column width
     auto user = uid_to_user_name(st.st_uid);
     auto group = gid_to_group_name(st.st_gid);
-    auto unused = (st.st_blocks * 512) - st.st_size;  // unused bytes in allocated blocks
+    size_t size = st.st_size;
+    size_t unused = st.st_blocks * 512;  // allocated block size
+    char size_unit = round_size_to_unit(size);
+    char unused_unit = round_size_to_unit(unused);
     static size_t w_user = 0;
     static size_t w_group = 0;
-    static size_t w_size = 0;
-    static size_t w_unused = 0;
     w_user = std::max(w_user, user.length());
     w_group = std::max(w_group, group.length());
-    w_size = std::max(w_size, fmt::formatted_size("{:L}", st.st_size));
-    w_unused = std::max(w_unused, fmt::formatted_size("{:L}", unused));
-    std::string out = fmt::format("{:c}{:04o} {:{}}:{:{}}  {:{}L} +{:{}L}  {}  {}",
+    std::string out = fmt::format("{:c}{:04o} {:{}}:{:{}} {:4}{} {:4}{}  {}  {}",
             file_type_to_char(st.st_mode), st.st_mode & 07777,
             user, w_user, group, w_group,
-            st.st_size, w_size, unused, w_unused,
+            size, size_unit, unused, unused_unit,
             st.st_mtimespec,
             name);
     if (S_ISLNK(st.st_mode)) {
@@ -148,8 +170,6 @@ int main(int argc, const char* argv[])
     int jobs = 8;
     std::vector<const char*> files;
     const char* pattern = nullptr;
-
-    std::locale::global(std::locale("en_US.UTF-8"));
 
     TermCtl& term = TermCtl::stdout_instance();
 
