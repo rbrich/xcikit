@@ -1,7 +1,12 @@
-# docker build -t rbrich/xcikit:debian-11 docker/debian-11/
-# docker run --rm -v $PWD:/mnt/xcikit -it rbrich/xcikit:debian-11 bash
+# CI builder (public):
+#   docker build --target builder -t rbrich/xcikit:debian-11 docker/debian-11/
+#   docker run --rm -v $PWD:/xcikit -w /xcikit -it rbrich/xcikit:debian-11 bash
+# SSH builder (local, for Clion "Remote Host" toolchain):
+#   docker build --target builder-ssh --build-arg rootpw=pass1 -t xcikit-ssh:debian-11 docker/debian-11/
+#   docker run -p 222:22 -v $PWD:/xcikit --name xcikit-ssh -w /xcikit xcikit-ssh:debian-11
+#   ssh root@localhost -p 222
 
-FROM debian:bullseye-slim
+FROM debian:bullseye-slim AS builder
 
 RUN echo "gcc 10"; apt-get update && apt-get install --no-install-recommends -y \
     g++-10 && rm -rf /var/lib/apt/lists/* && \
@@ -30,4 +35,19 @@ RUN echo "xcikit deps"; apt-get update && apt-get install --no-install-recommend
 
 ADD 'https://github.com/source-foundry/Hack/releases/download/v3.003/Hack-v3.003-ttf.tar.gz' /srv
 
-WORKDIR /mnt/xcikit
+# https://docs.docker.com/engine/examples/running_ssh_service/
+FROM builder AS builder-ssh
+
+ARG rootpw
+
+RUN echo "ssh"; apt-get update && apt-get install --no-install-recommends -y openssh-server && \
+    echo "root:$rootpw" | chpasswd && mkdir /var/run/sshd && \
+    sed -i 's/#*PermitRootLogin prohibit-password/PermitRootLogin yes/g' /etc/ssh/sshd_config && \
+    sed -i 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' /etc/pam.d/sshd && \
+    printf '#!/bin/sh\nexit 0\n' > /usr/sbin/policy-rc.d
+
+# additional development tools
+RUN apt-get install --no-install-recommends -y git gdb make ca-certificates
+
+EXPOSE 22
+CMD ["/usr/sbin/sshd", "-D", "-d"]
