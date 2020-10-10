@@ -17,6 +17,7 @@ option(XCI_BUILD_EXAMPLES "Disable to skip building examples." ON)
 option(XCI_BUILD_TESTS "Disable to skip building tests." ON)
 option(XCI_BUILD_BENCHMARKS "Disable to skip building benchmarks." ON)
 
+# Dependencies
 option(XCI_WITH_TINFO "Link with TInfo (from NCurses) and use it for TTY control sequences." OFF)
 option(XCI_WITH_ZIP "Link xci-core with libzip and use it for ZIP format in VFS." OFF)
 
@@ -43,11 +44,7 @@ include(XciBuildOptions)
 # Dependencies #
 # ------------ #
 
-# Enable lookup for Conan dependencies
-if (EXISTS ${CMAKE_BINARY_DIR}/conan_paths.cmake)
-    include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
-endif()
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})
+include(ConanInit)
 
 if (XCI_TEXT)
     # RectangleBinPack (xci-text)
