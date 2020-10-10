@@ -1,5 +1,7 @@
 name: "CodeQL"
-on: [push]
+on:
+  push:
+  pull_request:
 
 jobs:
   analyze:
@@ -48,7 +50,7 @@ jobs:
 
     - name: Install Conan
       run: |
-        pip3 --no-cache-dir install conan setuptools
+        pip3 --no-cache-dir install setuptools conan
         conan profile new default --detect
         conan profile update "settings.compiler.libcxx=libstdc++11" default
 
