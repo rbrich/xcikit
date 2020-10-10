@@ -17,6 +17,7 @@
 #include <xci/compat/macros.h>
 
 #include <fmt/core.h>
+#include <fmt/chrono.h>
 #include <hs/hs.h>
 
 #include <cstring>
@@ -52,26 +53,6 @@ static char file_type_to_char(mode_t mode)
         default:        return '?';
     }
 }
-
-
-template <>
-struct [[maybe_unused]] fmt::formatter<timespec> {
-    constexpr auto parse(format_parse_context& ctx) {
-        auto it = ctx.begin();  // NOLINT
-        if (it != ctx.end() && *it != '}')
-            throw fmt::format_error("invalid format for timespec");
-        return it;
-    }
-
-    template <typename FormatContext>
-    auto format(const timespec& ts, FormatContext& ctx) {
-        struct tm tm;
-        localtime_r(&ts.tv_sec, &tm);
-        char buf[100];
-        size_t size = strftime(buf, sizeof(buf), "%F %H:%M", &tm);
-        return std::copy(buf, buf + size, ctx.out());
-    }
-};
 
 
 static char next_size_unit(char unit)
@@ -132,12 +113,12 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
     w_user = std::max(w_user, user.length());
     w_group = std::max(w_group, group.length());
     TermCtl& term = TermCtl::stdout_instance();
-    std::string out = fmt::format("{:c}{:04o} {:{}}:{:{}} {}{:4}{}{} {}{:4}{}{}  {}  {}",
+    std::string out = fmt::format("{:c}{:04o} {:{}}:{:{}} {}{:4}{}{} {}{:4}{}{}  {:%F %H:%M}  {}",
             file_type_to_char(st.st_mode), st.st_mode & 07777,
             user, w_user, group, w_group,
             term.fg(size_unit_to_color(size_unit)), size, size_unit, term.normal(),
             term.fg(size_unit_to_color(alloc_unit)), alloc, alloc_unit, term.normal(),
-            st.st_mtimespec,
+            fmt::localtime(st.st_mtime),
             name);
     if (S_ISLNK(st.st_mode)) {
         char buf[PATH_MAX];
