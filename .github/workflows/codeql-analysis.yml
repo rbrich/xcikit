@@ -48,6 +48,8 @@ jobs:
         sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++    50
         sudo update-alternatives --install /usr/bin/cc cc /usr/bin/gcc      50
 
+    - uses: actions/setup-python@v1
+
     - name: Install Conan
       run: |
         pip3 --no-cache-dir install setuptools
