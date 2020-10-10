@@ -98,6 +98,21 @@ static char round_size_to_unit(size_t& size)
 }
 
 
+static TermCtl::Color size_unit_to_color(char unit)
+{
+    using C = xci::core::TermCtl::Color;
+    switch (unit) {
+        case 'B': return C::Blue;
+        case 'K': return C::Green;
+        case 'M': return C::Yellow;
+        case 'G': return C::Magenta;
+        case 'T': return C::Red;
+        case 'P': return C::BrightRed;
+        default:  return C::White;
+    }
+}
+
+
 static void print_path_with_attrs(const std::string& name, const FileTree::PathNode& path)
 {
     struct stat st;
@@ -109,17 +124,19 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
     auto user = uid_to_user_name(st.st_uid);
     auto group = gid_to_group_name(st.st_gid);
     size_t size = st.st_size;
-    size_t unused = st.st_blocks * 512;  // allocated block size
+    size_t alloc = st.st_blocks * 512;  // size in allocated blocks
     char size_unit = round_size_to_unit(size);
-    char unused_unit = round_size_to_unit(unused);
+    char alloc_unit = round_size_to_unit(alloc);
     static size_t w_user = 0;
     static size_t w_group = 0;
     w_user = std::max(w_user, user.length());
     w_group = std::max(w_group, group.length());
-    std::string out = fmt::format("{:c}{:04o} {:{}}:{:{}} {:4}{} {:4}{}  {}  {}",
+    TermCtl& term = TermCtl::stdout_instance();
+    std::string out = fmt::format("{:c}{:04o} {:{}}:{:{}} {}{:4}{}{} {}{:4}{}{}  {}  {}",
             file_type_to_char(st.st_mode), st.st_mode & 07777,
             user, w_user, group, w_group,
-            size, size_unit, unused, unused_unit,
+            term.fg(size_unit_to_color(size_unit)), size, size_unit, term.normal(),
+            term.fg(size_unit_to_color(alloc_unit)), alloc, alloc_unit, term.normal(),
             st.st_mtimespec,
             name);
     if (S_ISLNK(st.st_mode)) {
