@@ -55,6 +55,8 @@ inline std::string tparm(const char* seq, Args... args) { return fmt::format(seq
 #endif // XCI_WITH_TINFO
 
 // not found in Terminfo DB:
+static constexpr auto set_bright_foreground = CSI "1;3{}m";
+static constexpr auto set_bright_background = CSI "1;4{}m";
 static constexpr auto enter_overline_mode = CSI "53m";
 static constexpr auto send_soft_reset = CSI "!p";
 
@@ -168,12 +170,18 @@ void TermCtl::set_is_tty(IsTty is_tty)
 
 TermCtl TermCtl::fg(Color color) const
 {
-    return TERM_APPEND(set_a_foreground, static_cast<int>(color));
+    if (color < Color::BrightBlack)
+        return TERM_APPEND(set_a_foreground, static_cast<int>(color));
+    // bright colors
+    return TERM_APPEND(set_bright_foreground, static_cast<int>(color) - static_cast<int>(Color::BrightBlack));
 }
 
 TermCtl TermCtl::bg(Color color) const
 {
-    return TERM_APPEND(set_a_background, static_cast<int>(color));
+    if (color < Color::BrightBlack)
+        return TERM_APPEND(set_a_background, static_cast<int>(color));
+    // bright colors
+    return TERM_APPEND(set_bright_background, static_cast<int>(color) - static_cast<int>(Color::BrightBlack));
 }
 
 TermCtl TermCtl::mode(Mode mode) const
