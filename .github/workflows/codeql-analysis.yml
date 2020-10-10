@@ -1,7 +1,9 @@
 name: "CodeQL"
 on:
   push:
+    branches: [master]
   pull_request:
+    branches: [master]
 
 jobs:
   analyze:
@@ -10,8 +12,6 @@ jobs:
 
     strategy:
       fail-fast: false
-      matrix:
-        language: ['cpp', 'python']
 
     env:
       CONAN_REVISIONS_ENABLED: 1
@@ -33,7 +33,7 @@ jobs:
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v1
       with:
-        languages: ${{ matrix.language }}
+        languages: cpp, python
         # If you wish to specify custom queries, you can do so here or in a config file.
         # By default, queries listed here will override any specified in a config file. 
         # Prefix the list here with "+" to use these queries and those in the config file.
@@ -50,7 +50,8 @@ jobs:
 
     - name: Install Conan
       run: |
-        pip3 --no-cache-dir install setuptools conan
+        pip3 --no-cache-dir install setuptools
+        pip3 --no-cache-dir install conan
         conan profile new default --detect
         conan profile update "settings.compiler.libcxx=libstdc++11" default
 
