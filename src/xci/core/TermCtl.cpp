@@ -40,6 +40,7 @@ static constexpr auto cursor_down = CSI "B";
 static constexpr auto cursor_right = CSI "C";
 static constexpr auto cursor_left = CSI "D";
 static constexpr auto enter_bold_mode = CSI "1m";
+static constexpr auto enter_dim_mode = CSI "2m";
 static constexpr auto enter_underline_mode = CSI "4m";
 static constexpr auto exit_attribute_mode = CSI "0m";
 static constexpr auto set_a_foreground = CSI "3{}m";
@@ -189,6 +190,7 @@ TermCtl TermCtl::mode(Mode mode) const
     switch (mode) {
         case Mode::Normal: return normal();
         case Mode::Bold: return bold();
+        case Mode::Dim: return dim();
         case Mode::Underline: return underline();
         case Mode::Overline: return overline();
     }
@@ -196,6 +198,7 @@ TermCtl TermCtl::mode(Mode mode) const
 }
 
 TermCtl TermCtl::bold() const { return TERM_APPEND(enter_bold_mode); }
+TermCtl TermCtl::dim() const { return TERM_APPEND(enter_dim_mode); }
 TermCtl TermCtl::underline() const { return TERM_APPEND(enter_underline_mode); }
 TermCtl TermCtl::overline() const { return TERM_APPEND(enter_overline_mode); }
 TermCtl TermCtl::normal() const { return TERM_APPEND(exit_attribute_mode); }

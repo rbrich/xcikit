@@ -52,7 +52,7 @@ public:
         BrightBlack, BrightRed, BrightGreen, BrightYellow,
         BrightBlue, BrightMagenta, BrightCyan, BrightWhite,
     };
-    enum class Mode { Normal, Bold, Underline, Overline };
+    enum class Mode { Normal, Bold, Dim, Underline, Overline };
 
     // foreground
     TermCtl fg(Color color) const;
@@ -78,7 +78,8 @@ public:
 
     // mode
     TermCtl mode(Mode mode) const;
-    TermCtl bold() const;
+    TermCtl bold() const;  // bold and/or increased intensity
+    TermCtl dim() const;  // decreased intensity
     TermCtl underline() const;
     TermCtl overline() const;
     TermCtl normal() const;  // reset all attributes

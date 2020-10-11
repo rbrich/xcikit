@@ -23,6 +23,7 @@
 #include <cstring>
 #include <utility>
 #include <string_view>
+#include <atomic>
 
 #include <unistd.h>
 #include <time.h>
@@ -43,14 +44,30 @@ struct Theme {
 static char file_type_to_char(mode_t mode)
 {
     switch (mode & S_IFMT) {
-        case S_IFBLK:   return 'b';
-        case S_IFCHR:   return 'c';
-        case S_IFDIR:   return 'd';
-        case S_IFIFO:   return 'p';
-        case S_IFREG:   return ' ';
-        case S_IFLNK:   return 'l';
-        case S_IFSOCK:  return 's';
+        case S_IFREG:   return (mode & (S_IXUSR | S_IXGRP | S_IXOTH)) ? '*' : ' ';
+        case S_IFDIR:   return '/';
+        case S_IFLNK:   return '@';
+        case S_IFSOCK:  return '=';
+        case S_IFIFO:   return '|';
+        case S_IFCHR:   return '-';
+        case S_IFBLK:   return '+';
         default:        return '?';
+    }
+}
+
+
+static TermCtl::Color file_mode_to_color(mode_t mode)
+{
+    using C = xci::core::TermCtl::Color;
+    switch (mode & S_IFMT) {
+        case S_IFREG:   return (mode & (S_IXUSR | S_IXGRP | S_IXOTH)) ? C::BrightGreen : C::White;
+        case S_IFDIR:   return C::BrightCyan;
+        case S_IFLNK:   return C::Cyan;
+        case S_IFSOCK:  return C::Green;
+        case S_IFIFO:   return C::BrightBlue;
+        case S_IFCHR:   return C::Magenta;
+        case S_IFBLK:   return C::BrightMagenta;
+        default:        return C::White;
     }
 }
 
@@ -83,8 +100,8 @@ static TermCtl::Color size_unit_to_color(char unit)
 {
     using C = xci::core::TermCtl::Color;
     switch (unit) {
-        case 'B': return C::Blue;
-        case 'K': return C::Green;
+        case 'B': return C::Green;
+        case 'K': return C::Cyan;
         case 'M': return C::Yellow;
         case 'G': return C::Magenta;
         case 'T': return C::Red;
@@ -101,23 +118,27 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
         fmt::print(stderr,"ff: stat({}): {}\n", path.file_name(), errno_str());
         return;
     }
-    // Adaptive column width
-    auto user = uid_to_user_name(st.st_uid);
-    auto group = gid_to_group_name(st.st_gid);
+    // Adaptive column width for user, group
+    static std::atomic<size_t> w_user = 0;
+    static std::atomic<size_t> w_group = 0;
+    const auto user = uid_to_user_name(st.st_uid);
+    const auto group = gid_to_group_name(st.st_gid);
+    const size_t w_user_new = std::max(w_user.load(std::memory_order_acquire), user.length());
+    w_user.store(w_user_new, std::memory_order_release);
+    const size_t w_group_new = std::max(w_group.load(std::memory_order_acquire), group.length());
+    w_group.store(w_group_new, std::memory_order_release);
+
     size_t size = st.st_size;
     size_t alloc = st.st_blocks * 512;  // size in allocated blocks
     char size_unit = round_size_to_unit(size);
     char alloc_unit = round_size_to_unit(alloc);
-    static size_t w_user = 0;
-    static size_t w_group = 0;
-    w_user = std::max(w_user, user.length());
-    w_group = std::max(w_group, group.length());
+    char file_type = file_type_to_char(st.st_mode);
     TermCtl& term = TermCtl::stdout_instance();
-    std::string out = fmt::format("{:c}{:04o} {:{}}:{:{}} {}{:4}{}{} {}{:4}{}{}  {:%F %H:%M}  {}",
-            file_type_to_char(st.st_mode), st.st_mode & 07777,
+    std::string out = fmt::format("{}{:c}{:04o}{} {:>{}}:{:{}} {}{:4}{}{}{} {}{:4}{}{}{}  {:%F %H:%M}  {}",
+            term.fg(file_mode_to_color(st.st_mode)), file_type, st.st_mode & 07777, term.normal(),
             user, w_user, group, w_group,
-            term.fg(size_unit_to_color(size_unit)), size, size_unit, term.normal(),
-            term.fg(size_unit_to_color(alloc_unit)), alloc, alloc_unit, term.normal(),
+            term.fg(size_unit_to_color(size_unit)), size, term.dim(), size_unit, term.normal(),
+            term.fg(size_unit_to_color(alloc_unit)), alloc, term.dim(), alloc_unit, term.normal(),
             fmt::localtime(st.st_mtime),
             name);
     if (S_ISLNK(st.st_mode)) {
