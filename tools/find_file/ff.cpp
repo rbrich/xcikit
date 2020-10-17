@@ -10,6 +10,7 @@
 #include <xci/core/ArgParser.h>
 #include <xci/core/FileTree.h>
 #include <xci/core/container/FlatSet.h>
+#include <xci/core/memoization.h>
 #include <xci/core/sys.h>
 #include <xci/core/string.h>
 #include <xci/core/log.h>
@@ -165,8 +166,10 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
     // Adaptive column width for user, group
     static std::atomic<size_t> w_user = 0;
     static std::atomic<size_t> w_group = 0;
-    const auto user = uid_to_user_name(st.st_uid);
-    const auto group = gid_to_group_name(st.st_gid);
+    thread_local auto memoized_uid_to_user_name = memoize(uid_to_user_name);
+    thread_local auto memoized_gid_to_group_name = memoize(gid_to_group_name);
+    const auto user = memoized_uid_to_user_name(st.st_uid);
+    const auto group = memoized_uid_to_user_name(st.st_gid);
     const size_t w_user_new = std::max(w_user.load(std::memory_order_acquire), user.length());
     w_user.store(w_user_new, std::memory_order_release);
     const size_t w_group_new = std::max(w_group.load(std::memory_order_acquire), group.length());
