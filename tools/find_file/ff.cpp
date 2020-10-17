@@ -129,24 +129,39 @@ static TermCtl::Color size_unit_to_color(char unit)
 }
 
 
-static bool check_type(const FileTree::PathNode& path, mode_t type_mask)
+static std::string highlight_path(FileTree::Type t, const FileTree::PathNode& path, const Theme& theme,
+                                  const int so=0, const int eo=0)
 {
-    struct stat st;
-    if (!path.stat(st)) {
-        fmt::print(stderr,"ff: stat({}): {}\n", path.file_name(), errno_str());
-        return false;
+    std::string out;
+    if (t == FileTree::Directory) {
+        out += theme.dir;
+        out += path.parent_dir_name();
+    } else {
+        out += theme.file_dir;
+        out += path.parent_dir_name();
+        out += theme.file_name;
     }
-    return st.st_mode & type_mask;
+    if (so != eo) {
+        const auto* name = path.component.c_str();
+        out += std::string_view(name, so);
+        out += theme.highlight;
+        out += std::string_view(name + so, eo - so);
+        if (t == FileTree::Directory)
+            out += theme.dir;
+        else
+            out += theme.file_name;
+        out += std::string_view(name + eo);
+    } else {
+        out += path.component;
+    }
+    out += theme.normal;
+    return out;
 }
 
 
-static void print_path_with_attrs(const std::string& name, const FileTree::PathNode& path)
+static void print_path_with_attrs(const std::string& name, const FileTree::PathNode& path,
+                                  struct stat& st)
 {
-    struct stat st;
-    if (!path.stat(st)) {
-        fmt::print(stderr,"ff: stat({}): {}\n", path.file_name(), errno_str());
-        return;
-    }
     // Adaptive column width for user, group
     static std::atomic<size_t> w_user = 0;
     static std::atomic<size_t> w_group = 0;
@@ -236,8 +251,8 @@ int main(int argc, const char* argv[])
             Option("-X, --single-device", "Don't descend into directories with different device number", single_device),
             Option("-a, --all", "Don't skip any files, same as -HDS", [&]{ show_hidden = true; show_dirs = true; search_in_special_dirs = true; }),
             Option("-l, --long", "Print file attributes", long_form),
-            Option("-t, --types TYPES", "Filter file types: r=regular, d=dir, l=link, s=sock, f=fifo, c=char, b=block, e.g. -tdl for dir+link",
-                    [&type_mask](const char* arg){ return parse_types(arg, type_mask); }),
+            Option("-t, --types TYPES", "Filter file types: r=regular, d=dir, l=link, s=sock, f=fifo, c=char, b=block, e.g. -tdl for dir+link (implies -D)",
+                    [&type_mask, &show_dirs](const char* arg){ show_dirs = true; return parse_types(arg, type_mask); }),
             Option("-c, --color", "Force color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Always); }),
             Option("-C, --no-color", "Disable color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Never); }),
             Option("-M, --no-highlight", "Don't highlight matches (default: enabled for color output)", [&highlight_match]{ highlight_match = false; }),
@@ -350,14 +365,9 @@ int main(int argc, const char* argv[])
                     }
                 }
                 FALLTHROUGH;
-            case FileTree::File:
-
-                if (type_mask && !check_type(path, type_mask))
-                    return true;
-
+            case FileTree::File: {
+                std::string out;
                 if (pattern) {
-                    std::string out;
-                    const auto* name = path.component.c_str();
                     // FIXME: allow thread init/cleanup in FileTree and move this in there
                     thread_local HyperscanScratch re_scratch_alloc;
                     auto* re_scratch = re_scratch_alloc.get(re_db);
@@ -367,7 +377,7 @@ int main(int argc, const char* argv[])
                     if (highlight_match) {
                         // match, with highlight
                         std::vector<std::pair<int, int>> matches;
-                        auto r = hs_scan(re_db, name, path.component.size(), 0, re_scratch,
+                        auto r = hs_scan(re_db, path.component.c_str(), path.component.size(), 0, re_scratch,
                                 [] (unsigned int id, unsigned long long from,
                                     unsigned long long to, unsigned int flags, void *ctx)
                                 {
@@ -381,67 +391,45 @@ int main(int argc, const char* argv[])
                         }
                         if (matches.empty())
                             return true;  // not matched
-                        const auto so = matches[0].first;
-                        const auto eo = matches[0].second;
-
-                        if (t == FileTree::Directory) {
-                            out += theme.dir;
-                            out += path.parent_dir_name();
-                        } else {
-                            out += theme.file_dir;
-                            out += path.parent_dir_name();
-                            out += theme.file_name;
-                        }
-                        out += std::string_view(name, so);
-                        out += theme.highlight;
-                        out += std::string_view(name + so, eo - so);
-                        if (t == FileTree::Directory)
-                            out += theme.dir;
-                        else
-                            out += theme.file_name;
-                        out += std::string_view(name + eo);
-                        out += theme.normal;
-                        if (long_form)
-                            print_path_with_attrs(out, path);
-                        else
-                            puts(out.c_str());
-                        return true;
-                    }
-
-                    // match, no highlight
-                    auto r = hs_scan(re_db, name, path.component.size(), 0, re_scratch,
-                            [] (unsigned int id, unsigned long long from,
-                                unsigned long long to, unsigned int flags, void *ctx)
-                            { return 1; }, nullptr);
-                    // returns HS_SCAN_TERMINATED on match (because callback returns 1)
-                    if (r == HS_SUCCESS)
-                        return true;  // not matched
-                    if (r != HS_SCAN_TERMINATED) {
-                        fmt::print(stderr,"ff: hs_scan({}): ({}) Unable to scan\n", path.component, r);
-                        return true;
-                    }
-                    // print path below
-                }
-
-                // no matching, just print, without highlight
-                {
-                    std::string out;
-                    if (t == FileTree::Directory) {
-                        out += theme.dir;
-                        out += path.parent_dir_name();
+                        out = highlight_path(t, path, theme, matches[0].first, matches[0].second);
                     } else {
-                        out += theme.file_dir;
-                        out += path.parent_dir_name();
-                        out += theme.file_name;
+                        // match, no highlight
+                        auto r = hs_scan(re_db, path.component.c_str(), path.component.size(), 0, re_scratch,
+                                [] (unsigned int id, unsigned long long from,
+                                    unsigned long long to, unsigned int flags, void *ctx)
+                                { return 1; }, nullptr);
+                        // returns HS_SCAN_TERMINATED on match (because callback returns 1)
+                        if (r == HS_SUCCESS)
+                            return true;  // not matched
+                        if (r != HS_SCAN_TERMINATED) {
+                            fmt::print(stderr,"ff: hs_scan({}): ({}) Unable to scan\n", path.component, r);
+                            return true;
+                        }
+                        out = highlight_path(t, path, theme);
                     }
-                    out += path.component;
-                    out += theme.normal;
-                    if (long_form)
-                        print_path_with_attrs(out, path);
-                    else
-                        puts(out.c_str());
-                    return true;
+                } else {
+                    // no matching, just print, without highlight
+                    out = highlight_path(t, path, theme);
                 }
+
+                struct stat st;
+                if (type_mask || long_form) {
+                    // need stat
+                    if (!path.stat(st)) {
+                        fmt::print(stderr,"ff: stat({}): {}\n", path.file_name(), errno_str());
+                        return true;
+                    }
+                }
+
+                if (type_mask && !(st.st_mode & type_mask))
+                    return true;
+
+                if (long_form)
+                    print_path_with_attrs(out, path, st);
+                else
+                    puts(out.c_str());
+                return true;
+            }
             case FileTree::OpenError:
                 fmt::print(stderr,"ff: open({}): {}\n", path.dir_name(), errno_str());
                 return true;
