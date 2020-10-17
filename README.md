@@ -4,7 +4,7 @@ Collection of C++ libraries for drawing 2D graphics, rendering text and more.
 
 - [About](#about)
 - [Features](#features)
-- [Contents of the libraries](#contents-of-the-libraries)
+- [Libraries](#libraries)
     - [xci::widgets](#xciwidgets)
     - [xci::text](#xcitext)
     - [xci::graphics](#xcigraphics)
@@ -12,6 +12,7 @@ Collection of C++ libraries for drawing 2D graphics, rendering text and more.
     - [xci::data](#xcidata)
     - [xci::core](#xcicore)
     - [xci::compat](#xcicompat)
+- [Tools](#tools)
 - [How to build](#how-to-build)
     - [Using build script](#using-build-script)
     - [Manual build with CMake](#manual-build-with-cmake)
@@ -24,9 +25,9 @@ Collection of C++ libraries for drawing 2D graphics, rendering text and more.
 About
 -----
 
-Xcikit contains basic elements needed for creating 2D graphical applications
-and games. The focus is on text rendering and closely related UI rendering.
-There is also a hidden gem - a fully featured programming language!
+Xcikit contains basic elements needed for creating 2D graphical applications.
+The focus is on text rendering and closely related UI rendering. Additional
+features are a custom scripting language and data serialization.
 
 With xcikit you can:
 
@@ -108,8 +109,8 @@ Any Unix-like OS with C++20 compliant compiler should work. There is no direct W
 but it's possible that the project will compile with some layer of Unix compatibility, e.g. WSL.
 Some of the libraries already compile natively, see [Porting to Windows](#porting-to-windows).
 
-Contents of the libraries
--------------------------
+Libraries
+---------
 
 ### xci::widgets
 
@@ -157,6 +158,16 @@ Fills gaps between different systems and compilers.
 - `macros.h` - `FALLTHROUGH`, `UNREACHABLE`, `UNUSED`
 - `unistd.h` - Minimal Unix compatibility header for Windows
 - `utility.h` - C++17 `byte` missing in GCC 6.3
+
+
+Tools
+-----
+
+Included are some tools build on top of the libraries.
+Check them on separate pages:
+ 
+- [XCI Tools](tools/README.md)
+    - [Find File (ff)](tools/find_file/README.md) - `find` alternative
 
 
 How to build
