@@ -26,7 +26,7 @@
 #include <atomic>
 
 #include <unistd.h>
-#include <time.h>
+#include <ctype.h>
 
 using namespace xci::core;
 using namespace xci::core::argparser;
@@ -72,6 +72,24 @@ static TermCtl::Color file_mode_to_color(mode_t mode)
 }
 
 
+static bool parse_types(const char* arg, mode_t& out_mask)
+{
+    for (const char* c = arg; *c; ++c) {
+        switch (tolower(*c)) {
+            case 'r':   out_mask |= S_IFREG; return true;
+            case 'd':   out_mask |= S_IFDIR; return true;
+            case 'l':   out_mask |= S_IFLNK; return true;
+            case 's':   out_mask |= S_IFSOCK; return true;
+            case 'f':   out_mask |= S_IFIFO; return true;
+            case 'c':   out_mask |= S_IFCHR; return true;
+            case 'b':   out_mask |= S_IFBLK; return true;
+            default: return false;
+        }
+    }
+    return true;
+}
+
+
 static char next_size_unit(char unit)
 {
     switch (unit) {
@@ -108,6 +126,17 @@ static TermCtl::Color size_unit_to_color(char unit)
         case 'P': return C::BrightRed;
         default:  return C::White;
     }
+}
+
+
+static bool check_type(const FileTree::PathNode& path, mode_t type_mask)
+{
+    struct stat st;
+    if (!path.stat(st)) {
+        fmt::print(stderr,"ff: stat({}): {}\n", path.file_name(), errno_str());
+        return false;
+    }
+    return st.st_mode & type_mask;
 }
 
 
@@ -188,6 +217,7 @@ int main(int argc, const char* argv[])
     bool show_version = false;
     int jobs = 8;
     std::vector<const char*> files;
+    mode_t type_mask = 0;
     const char* pattern = nullptr;
 
     TermCtl& term = TermCtl::stdout_instance();
@@ -206,6 +236,8 @@ int main(int argc, const char* argv[])
             Option("-X, --single-device", "Don't descend into directories with different device number", single_device),
             Option("-a, --all", "Don't skip any files, same as -HDS", [&]{ show_hidden = true; show_dirs = true; search_in_special_dirs = true; }),
             Option("-l, --long", "Print file attributes", long_form),
+            Option("-t, --types TYPES", "Filter file types: r=regular, d=dir, l=link, s=sock, f=fifo, c=char, b=block, e.g. -tdl for dir+link",
+                    [&type_mask](const char* arg){ return parse_types(arg, type_mask); }),
             Option("-c, --color", "Force color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Always); }),
             Option("-C, --no-color", "Disable color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Never); }),
             Option("-M, --no-highlight", "Don't highlight matches (default: enabled for color output)", [&highlight_match]{ highlight_match = false; }),
@@ -295,7 +327,8 @@ int main(int argc, const char* argv[])
     FlatSet<dev_t> dev_ids;
 
     FileTree ft(jobs-1, jobs,
-                [show_hidden, show_dirs, single_device, pattern, &re_db, &theme, &dev_ids, &long_form, &highlight_match]
+                [show_hidden, show_dirs, single_device, long_form, highlight_match, type_mask,
+                 pattern, &re_db, &theme, &dev_ids]
                 (const FileTree::PathNode& path, FileTree::Type t)
     {
         if (!show_hidden && path.component[0] == '.')
@@ -318,6 +351,10 @@ int main(int argc, const char* argv[])
                 }
                 FALLTHROUGH;
             case FileTree::File:
+
+                if (type_mask && !check_type(path, type_mask))
+                    return true;
+
                 if (pattern) {
                     std::string out;
                     const auto* name = path.component.c_str();
