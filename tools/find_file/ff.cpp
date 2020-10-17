@@ -13,9 +13,9 @@
 #include <xci/core/memoization.h>
 #include <xci/core/sys.h>
 #include <xci/core/string.h>
-#include <xci/core/log.h>
 #include <xci/core/TermCtl.h>
 #include <xci/compat/macros.h>
+#include <xci/config.h>  // HAVE_HS_COMPILE_LIT
 
 #include <fmt/core.h>
 #include <fmt/chrono.h>
@@ -31,6 +31,9 @@
 
 using namespace xci::core;
 using namespace xci::core::argparser;
+
+
+static constexpr auto c_version = "0.3";
 
 
 struct Theme {
@@ -267,7 +270,7 @@ int main(int argc, const char* argv[])
     } (argv);
 
     if (show_version) {
-        term.print("{t:bold}ff{t:normal} {}\n", "0.2");
+        term.print("{t:bold}ff{t:normal} {}\n", c_version);
         term.print("using {t:bold}Hyperscan{t:normal} {}", hs_version());
 #ifndef HAVE_HS_COMPILE_LIT
         term.print(" (hs_compile_lit not available, {t:bold}{fg:green}--fixed{t:normal} option disabled)");
