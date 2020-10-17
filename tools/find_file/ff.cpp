@@ -210,16 +210,15 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
 
 class HyperscanScratch {
 public:
+    HyperscanScratch(hs_scratch_t* prototype) {
+        if (hs_clone_scratch(prototype, &m_scratch) != HS_SUCCESS) {
+            fmt::print(stderr,"ff: hs_clone_scratch: Unable to allocate scratch space.\n");
+            exit(1);
+        }
+    }
     ~HyperscanScratch() { hs_free_scratch(m_scratch); }
 
-    hs_scratch_t* get(const hs_database_t* re_db) {
-        // this allocates new scratch space ONLY IF the previous one is NULL or no longer valid
-        if (hs_alloc_scratch(re_db, &m_scratch) != HS_SUCCESS) {
-            fmt::print(stderr,"ff: hs_alloc_scratch: Unable to allocate scratch space.\n");
-            m_scratch = nullptr;
-        }
-        return m_scratch;
-    }
+    operator hs_scratch_t*() { return m_scratch; }
 
 private:
     hs_scratch_t* m_scratch = nullptr;
@@ -283,7 +282,8 @@ int main(int argc, const char* argv[])
     if (pattern && *pattern == '\0')
         pattern = nullptr;
 
-    hs_database_t *re_db = nullptr;
+    hs_database_t* re_db = nullptr;
+    hs_scratch_t* re_scratch_prototype = nullptr;
     if (pattern) {
         int flags = 0;
         if (ignore_case)
@@ -334,6 +334,13 @@ int main(int argc, const char* argv[])
                 return 1;
             }
         }
+
+        // allocate scratch "prototype", to be cloned for each thread
+        hs_error_t rc = hs_alloc_scratch(re_db, &re_scratch_prototype);
+        if (rc != HS_SUCCESS) {
+            fmt::print(stderr,"ff: hs_alloc_scratch: Unable to allocate scratch space.\n");
+            return 1;
+        }
     }
 
     // "cyanide"
@@ -349,7 +356,7 @@ int main(int argc, const char* argv[])
 
     FileTree ft(jobs-1, jobs,
                 [show_hidden, show_dirs, single_device, long_form, highlight_match, type_mask,
-                 pattern, &re_db, &theme, &dev_ids]
+                 pattern, re_db, re_scratch_prototype, &theme, &dev_ids]
                 (const FileTree::PathNode& path, FileTree::Type t)
     {
         if (!show_hidden && path.component[0] == '.')
@@ -374,11 +381,7 @@ int main(int argc, const char* argv[])
             case FileTree::File: {
                 std::string out;
                 if (pattern) {
-                    // FIXME: allow thread init/cleanup in FileTree and move this in there
-                    thread_local HyperscanScratch re_scratch_alloc;
-                    auto* re_scratch = re_scratch_alloc.get(re_db);
-                    if (re_scratch == nullptr)
-                        return true;
+                    thread_local HyperscanScratch re_scratch(re_scratch_prototype);
 
                     if (highlight_match) {
                         // match, with highlight
@@ -461,6 +464,7 @@ int main(int argc, const char* argv[])
 
     ft.worker();
 
+    hs_free_scratch(re_scratch_prototype);
     hs_free_database(re_db);
     return 0;
 }
