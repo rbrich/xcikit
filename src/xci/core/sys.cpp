@@ -26,6 +26,7 @@
 #else
     #include <sys/types.h>
     #include <pwd.h>
+    #include <grp.h>
 #endif
 
 namespace xci::core {
@@ -108,6 +109,26 @@ std::string get_home_dir()
     return {result->pw_dir};
 #endif
 }
+
+
+#ifndef _WIN32
+std::string uid_to_user_name(uid_t uid)
+{
+    struct passwd* pwd = getpwuid(uid);
+    if (pwd == nullptr)
+        return std::to_string(uid);
+    return pwd->pw_name;
+}
+
+
+std::string gid_to_group_name(gid_t gid)
+{
+    struct group* grp = getgrgid(gid);
+    if (grp == nullptr)
+        return std::to_string(gid);
+    return grp->gr_name;
+}
+#endif  // _WIN32
 
 
 std::string errno_str()

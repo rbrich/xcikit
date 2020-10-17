@@ -40,6 +40,7 @@ static constexpr auto cursor_down = CSI "B";
 static constexpr auto cursor_right = CSI "C";
 static constexpr auto cursor_left = CSI "D";
 static constexpr auto enter_bold_mode = CSI "1m";
+static constexpr auto enter_dim_mode = CSI "2m";
 static constexpr auto enter_underline_mode = CSI "4m";
 static constexpr auto exit_attribute_mode = CSI "0m";
 static constexpr auto set_a_foreground = CSI "3{}m";
@@ -55,6 +56,8 @@ inline std::string tparm(const char* seq, Args... args) { return fmt::format(seq
 #endif // XCI_WITH_TINFO
 
 // not found in Terminfo DB:
+static constexpr auto set_bright_foreground = CSI "1;3{}m";
+static constexpr auto set_bright_background = CSI "1;4{}m";
 static constexpr auto enter_overline_mode = CSI "53m";
 static constexpr auto send_soft_reset = CSI "!p";
 
@@ -168,12 +171,18 @@ void TermCtl::set_is_tty(IsTty is_tty)
 
 TermCtl TermCtl::fg(Color color) const
 {
-    return TERM_APPEND(set_a_foreground, static_cast<int>(color));
+    if (color < Color::BrightBlack)
+        return TERM_APPEND(set_a_foreground, static_cast<int>(color));
+    // bright colors
+    return TERM_APPEND(set_bright_foreground, static_cast<int>(color) - static_cast<int>(Color::BrightBlack));
 }
 
 TermCtl TermCtl::bg(Color color) const
 {
-    return TERM_APPEND(set_a_background, static_cast<int>(color));
+    if (color < Color::BrightBlack)
+        return TERM_APPEND(set_a_background, static_cast<int>(color));
+    // bright colors
+    return TERM_APPEND(set_bright_background, static_cast<int>(color) - static_cast<int>(Color::BrightBlack));
 }
 
 TermCtl TermCtl::mode(Mode mode) const
@@ -181,6 +190,7 @@ TermCtl TermCtl::mode(Mode mode) const
     switch (mode) {
         case Mode::Normal: return normal();
         case Mode::Bold: return bold();
+        case Mode::Dim: return dim();
         case Mode::Underline: return underline();
         case Mode::Overline: return overline();
     }
@@ -188,6 +198,7 @@ TermCtl TermCtl::mode(Mode mode) const
 }
 
 TermCtl TermCtl::bold() const { return TERM_APPEND(enter_bold_mode); }
+TermCtl TermCtl::dim() const { return TERM_APPEND(enter_dim_mode); }
 TermCtl TermCtl::underline() const { return TERM_APPEND(enter_underline_mode); }
 TermCtl TermCtl::overline() const { return TERM_APPEND(enter_overline_mode); }
 TermCtl TermCtl::normal() const { return TERM_APPEND(exit_attribute_mode); }

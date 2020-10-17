@@ -6,9 +6,6 @@ jobs:
     docker:
       - image: rbrich/xcikit:debian-11
 
-    environment:
-      CONAN_REVISIONS_ENABLED: 1
-
     steps:
       - checkout
 

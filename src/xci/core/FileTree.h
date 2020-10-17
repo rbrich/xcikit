@@ -77,9 +77,12 @@ public:
             int rc;
             if (fd == -1) {
                 assert(parent);  // don't call stat on incomplete PathNode
-                rc = fstatat(parent->fd, component.c_str(), &st, AT_SYMLINK_NOFOLLOW);
+                if (parent->fd == -1)
+                    rc = ::lstat(file_name().c_str(), &st);
+                else
+                    rc = ::fstatat(parent->fd, component.c_str(), &st, AT_SYMLINK_NOFOLLOW);
             } else {
-                rc = fstat(fd, &st);
+                rc = ::fstat(fd, &st);
             }
             return rc == 0;
         }

@@ -7,7 +7,7 @@
 #ifndef XCI_CORE_TERM_H
 #define XCI_CORE_TERM_H
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <string>
 #include <ostream>
 
@@ -47,8 +47,12 @@ public:
     // Following methods are appending the capability codes
     // to a copy of TermCtl instance, which can then be send to stream
 
-    enum class Color { Black, Red, Green, Yellow, Blue, Magenta, Cyan, White };
-    enum class Mode { Normal, Bold, Underline, Overline };
+    enum class Color {
+        Black, Red, Green, Yellow, Blue, Magenta, Cyan, White,
+        BrightBlack, BrightRed, BrightGreen, BrightYellow,
+        BrightBlue, BrightMagenta, BrightCyan, BrightWhite,
+    };
+    enum class Mode { Normal, Bold, Dim, Underline, Overline };
 
     // foreground
     TermCtl fg(Color color) const;
@@ -74,7 +78,8 @@ public:
 
     // mode
     TermCtl mode(Mode mode) const;
-    TermCtl bold() const;
+    TermCtl bold() const;  // bold and/or increased intensity
+    TermCtl dim() const;  // decreased intensity
     TermCtl underline() const;
     TermCtl overline() const;
     TermCtl normal() const;  // reset all attributes
@@ -185,6 +190,23 @@ struct [[maybe_unused]] fmt::formatter<T, Char, Enable> {
     auto format(const T& p, FormatContext& ctx) {
         auto msg = p.seq(value);
         return std::copy(msg.begin(), msg.end(), ctx.out());
+    }
+};
+
+
+// support `term.bold()` etc. directly in format args
+template <>
+struct [[maybe_unused]] fmt::formatter<xci::core::TermCtl> {
+    constexpr auto parse(format_parse_context& ctx) {
+        auto it = ctx.begin();  // NOLINT
+        if (it != ctx.end() && *it != '}')
+            throw fmt::format_error("invalid format for TermCtl");
+        return it;
+    }
+
+    template <typename FormatContext>
+    auto format(const xci::core::TermCtl& term, FormatContext& ctx) {
+        return std::copy(term.seq().cbegin(), term.seq().cend(), ctx.out());
     }
 };
 
