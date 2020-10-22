@@ -24,7 +24,7 @@ int main()
     Logger::init();
     FSDispatch fw;
 
-    std::string tmpname = get_temp_path() + "/xci_test_filewatch.XXXXXX";
+    std::string tmpname = fs::temp_directory_path() / "xci_test_filewatch.XXXXXX";
     // race condition not important - would use mktemp, but that causes a warning with glibc
     close(mkstemp(&tmpname[0]));
     std::ofstream f(tmpname);
@@ -53,6 +53,7 @@ int main()
     sleep_for(100ms);
 
     // delete
+    info("delete");
     ::unlink(tmpname.c_str());
     sleep_for(100ms);
 

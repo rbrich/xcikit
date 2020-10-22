@@ -21,8 +21,11 @@
 #include <list>
 #include <map>
 #include <functional>
+#include <filesystem>
 
 namespace xci::core {
+
+namespace fs = std::filesystem;
 
 
 /// `FSWatch` implementation for epoll(7) using inotify(7)
@@ -52,11 +55,11 @@ public:
     /// events in main Callback.
     /// \param pathname File or directory to be watched.
     /// \param cb       Callback function called for each event.
-    bool add(const std::string& pathname, PathCallback cb);
+    bool add(const fs::path& pathname, PathCallback cb);
 
     /// Stop watching file or directory.
     /// \param pathname File or directory to remove. Must be same path as given to `add`.
-    bool remove(const std::string& pathname);
+    bool remove(const fs::path& pathname);
 
     void _notify(uint32_t epoll_events) override;
 
@@ -69,14 +72,14 @@ private:
 
     struct File {
         int dir_wd;
-        std::string name;  // filename without dir part
+        fs::path name;  // filename without dir part
         PathCallback cb;
     };
     std::list<File> m_file;
 
     struct Dir {
         int wd;   // inotify watch descriptor
-        std::string name;  // watched directory
+        fs::path name;  // watched directory
     };
     std::list<Dir> m_dir;
 };

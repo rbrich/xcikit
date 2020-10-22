@@ -46,10 +46,10 @@ FSWatch::~FSWatch()
 }
 
 
-bool FSWatch::add(const std::string& pathname, FSWatch::PathCallback cb)
+bool FSWatch::add(const fs::path& pathname, FSWatch::PathCallback cb)
 {
     // Is the directory already watched?
-    auto dir = path::dir_name(pathname);
+    auto dir = pathname.parent_path();
     auto it = std::find_if(m_dir.begin(), m_dir.end(),
                            [&dir](const Dir& d) { return d.name == dir; });
     int dir_fd;
@@ -67,17 +67,17 @@ bool FSWatch::add(const std::string& pathname, FSWatch::PathCallback cb)
 
     // Directory is now watched, add watch for the file
     int fd = register_kevent(pathname, fflags_file, /*no_exist_ok=*/true);
-    auto filename = path::base_name(pathname);
+    auto filename = pathname.filename();
     m_file.push_back(File{fd, dir_fd, filename, std::move(cb)});
     log::debug("EventLoop: Added watch {} / {} ({})", dir, filename, fd);
     return true;
 }
 
 
-bool FSWatch::remove(const std::string& pathname)
+bool FSWatch::remove(const fs::path& pathname)
 {
     // Find dir record
-    auto dir = path::dir_name(pathname);
+    auto dir = pathname.parent_path();
     int dir_fd;
     {
         auto it = std::find_if(m_dir.begin(), m_dir.end(),
@@ -90,7 +90,7 @@ bool FSWatch::remove(const std::string& pathname)
     }
 
     // Find file record
-    auto filename = path::base_name(pathname);
+    auto filename = pathname.filename();
     auto it = std::find_if(m_file.begin(), m_file.end(),
                            [&filename, dir_fd](const File& w) {
                                return w.dir_fd == dir_fd && w.name == filename;
@@ -101,7 +101,8 @@ bool FSWatch::remove(const std::string& pathname)
     }
 
     // Remove file record
-    unregister_kevent(it->fd);
+    if (it->fd != -1)
+        unregister_kevent(it->fd);
     log::debug("FSWatch: Removed watch {} ({})", pathname, it->fd);
     m_file.erase(it);
 
@@ -145,10 +146,9 @@ void FSWatch::_notify(const struct kevent& event)
             while ((dp = readdir(dirp)) != nullptr) {
                 if (dp->d_type != DT_REG)
                     continue;
-                std::string name(dp->d_name);
                 for (auto& w : m_file) {
-                    if (w.dir_fd == fd && w.name == name && w.fd == -1) {
-                        w.fd = register_kevent(dir + "/" + w.name, fflags_file);
+                    if (w.dir_fd == fd && w.name == dp->d_name && w.fd == -1) {
+                        w.fd = register_kevent(dir / w.name, fflags_file);
                         w.cb(Event::Create);
                     }
                 }
@@ -157,19 +157,23 @@ void FSWatch::_notify(const struct kevent& event)
             return;
         }
         if (event.fflags & NOTE_DELETE || event.fflags & NOTE_RENAME) {
-            // Directory itself is gone
-            std::vector<std::string> remove_list;
-            for (auto& w : m_file) {
-                if (w.dir_fd == fd) {
+            // Directory itself is gone - remove all file watches
+            std::erase_if(m_file, [this, fd](const auto& w) {
+                bool belongs_to_dir = (w.dir_fd == fd);
+                if (belongs_to_dir) {
                     w.cb(Event::Stopped);
                     if (w.fd != -1)
-                        remove_list.push_back(path::join(dir, w.name));
+                        unregister_kevent(w.fd);
+                    log::debug("FSWatch: Removed watch {} ({})", w.name, w.fd);
                 }
-            }
-            for (const auto& path : remove_list) {
-                remove(path);
-            }
+                return belongs_to_dir;
+            });
+            // Remove directory watch itself
+            unregister_kevent(fd);
+            log::debug("FSWatch: Stopped watching dir {} ({})", dir, fd);
+            m_dir.erase(it_dir);
         }
+        return;
     }
 
     // Is this a file?
@@ -195,12 +199,12 @@ void FSWatch::_notify(const struct kevent& event)
 }
 
 
-int FSWatch::register_kevent(const std::string& path, uint32_t fflags, bool no_exist_ok)
+int FSWatch::register_kevent(const fs::path& path, uint32_t fflags, bool no_exist_ok)
 {
     int fd = ::open(path.c_str(), O_EVTONLY);
     if (fd == -1) {
         if (!no_exist_ok)
-            log::error("FSWatch: open(\"{}\", O_EVTONLY): {m}", path.c_str());
+            log::error("FSWatch: open(\"{}\", O_EVTONLY): {m}", path);
         return -1;
     }
 
@@ -213,7 +217,7 @@ int FSWatch::register_kevent(const std::string& path, uint32_t fflags, bool no_e
     kev.udata = this;
 
     if (!m_loop._kevent(kev)) {
-        log::error("EventLoop: kevent(EV_ADD, {}): {m}", path.c_str());
+        log::error("EventLoop: kevent(EV_ADD, {}): {m}", path);
         ::close(fd);
         return -1;
     }
@@ -230,7 +234,7 @@ void FSWatch::unregister_kevent(int fd)
     kev.flags = EV_DELETE;
     if (!m_loop._kevent(kev)) {
         if (errno != EBADF)  // event already removed
-            log::error("EventLoop: kevent(EV_DELETE): {m}");
+            log::error("EventLoop: kevent(EV_DELETE, {}): {m}", fd);
     }
 
     ::close(fd);

@@ -82,7 +82,7 @@ int pending_signals(std::initializer_list<int> signums)
 }
 
 
-std::string get_home_dir()
+fs::path home_directory_path()
 {
 #ifdef _WIN32
     std::string homedir(MAX_PATH, '\0');
@@ -177,21 +177,7 @@ std::string last_error_str()
 }
 
 
-std::string get_temp_path()
-{
-#ifdef _WIN32
-    char buffer[MAX_PATH];
-    auto ret = GetTempPath(MAX_PATH, buffer);
-    if (ret == 0)
-        return ".";
-    return buffer;
-#else
-    return "/tmp";
-#endif
-}
-
-
-std::string get_self_path()
+fs::path self_executable_path()
 {
     // Reference:
     // - https://stackoverflow.com/questions/1023306/finding-current-executables-path-without-proc-self-exe

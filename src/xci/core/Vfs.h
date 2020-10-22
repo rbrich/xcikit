@@ -23,8 +23,11 @@
 #include <fstream>
 #include <utility>
 #include <array>
+#include <filesystem>
 
 namespace xci::core {
+
+namespace fs = std::filesystem;
 
 
 /// Holds the data loaded from file in memory until released
@@ -82,7 +85,7 @@ public:
 
     virtual const char* name() const = 0;
     virtual std::shared_ptr<VfsDirectory>
-        try_load(const std::string& path, bool is_dir, Magic magic) = 0;
+        try_load(const fs::path& path, bool is_dir, Magic magic) = 0;
 };
 
 
@@ -94,18 +97,18 @@ class RealDirectoryLoader: public VfsLoader {
 public:
     const char* name() const override { return "directory"; };
     std::shared_ptr<VfsDirectory>
-        try_load(const std::string& path, bool is_dir, Magic magic) override;
+        try_load(const fs::path& path, bool is_dir, Magic magic) override;
 };
 
 /// Lookup regular files in real directory, which is mapped to VFS path
 class RealDirectory: public VfsDirectory {
 public:
-    explicit RealDirectory(std::string dir_path) : m_dir_path(std::move(dir_path)) {}
+    explicit RealDirectory(fs::path dir_path) : m_dir_path(std::move(dir_path)) {}
 
     VfsFile read_file(const std::string& path) const override;
 
 private:
-    std::string m_dir_path;
+    fs::path m_dir_path;
 };
 
 
@@ -114,7 +117,7 @@ class DarArchiveLoader: public VfsLoader {
 public:
     const char* name() const override { return "DAR archive"; };
     std::shared_ptr<VfsDirectory>
-        try_load(const std::string& path, bool is_dir, Magic magic) override;
+        try_load(const fs::path& path, bool is_dir, Magic magic) override;
 };
 
 /// Lookup files in DAR archive, which is mapped to VFS path
@@ -122,7 +125,7 @@ public:
 /// Unlike ZipArchive, this has no external dependency and very simple implementation.
 class DarArchive: public VfsDirectory {
 public:
-    explicit DarArchive(std::string path);
+    explicit DarArchive(fs::path path);
     ~DarArchive() override { close_archive(); }
 
     VfsFile read_file(const std::string& path) const override;
@@ -132,7 +135,7 @@ private:
     void close_archive();
 
 private:
-    std::string m_archive_path;
+    fs::path m_archive_path;
 
     // mmapped archive:
     byte* m_addr = nullptr;
@@ -153,13 +156,13 @@ class ZipArchiveLoader: public VfsLoader {
 public:
     const char* name() const override { return "ZIP archive"; };
     std::shared_ptr<VfsDirectory>
-        try_load(const std::string& path, bool is_dir, Magic magic) override;
+        try_load(const fs::path& path, bool is_dir, Magic magic) override;
 };
 
 /// Lookup files in ZIP archive, which is mapped to VFS path
 class ZipArchive: public VfsDirectory {
 public:
-    explicit ZipArchive(std::string path);
+    explicit ZipArchive(fs::path path);
     ~ZipArchive() override;
 
     bool is_open() const { return m_zip != nullptr; }
@@ -167,7 +170,7 @@ public:
     VfsFile read_file(const std::string& path) const override;
 
 private:
-    std::string m_zip_path;
+    fs::path m_zip_path;
     void* m_zip = nullptr;
 };
 
@@ -217,7 +220,7 @@ public:
     ///
     /// \param fs_path          FS path to a directory or archive.
     /// \param target_path      The target path inside the VFS
-    bool mount(const std::string& fs_path, std::string target_path="");
+    bool mount(const fs::path& fs_path, std::string target_path="");
 
     VfsFile read_file(std::string path) const;
 

@@ -15,10 +15,12 @@
 #include <cstring>
 #include <cassert>
 #include <algorithm>
+#include <filesystem>
 
 namespace xci::core::argparser {
 
 using namespace std;
+namespace fs = std::filesystem;
 using fmt::format;
 
 
@@ -327,7 +329,7 @@ bool ArgParser::parse_program_name(const char* arg0)
 {
     if (!arg0)
         return false;
-    m_progname = path::base_name(arg0);
+    m_progname = fs::path(arg0).filename();
     return true;
 }
 

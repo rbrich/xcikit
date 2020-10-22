@@ -269,7 +269,7 @@ int main(int argc, char* argv[])
     TermCtl& t = context().term_out;
     Replxx rx;
     int input_number = 0;
-    std::string history_file = xci::core::get_home_dir() + "/.xci_script_history";
+    auto history_file = xci::core::home_directory_path() / ".xci_script_history";
     rx.history_load(history_file);
     rx.set_max_history_size(1000);
     rx.set_highlighter_callback(replxx_hook::highlighter);

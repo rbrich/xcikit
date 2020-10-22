@@ -48,13 +48,13 @@ FSWatch::~FSWatch()
 }
 
 
-bool FSWatch::add(const std::string& pathname, FSWatch::PathCallback cb)
+bool FSWatch::add(const fs::path& pathname, FSWatch::PathCallback cb)
 {
     if (m_inotify_fd < 0)
         return false;
 
     // Is the directory already watched?
-    auto dir = path::dir_name(pathname);
+    auto dir = pathname.parent_path();
     auto it = std::find_if(m_dir.begin(), m_dir.end(),
                            [&dir](const Dir& d) { return d.name == dir; });
     int dir_wd;
@@ -76,17 +76,17 @@ bool FSWatch::add(const std::string& pathname, FSWatch::PathCallback cb)
     }
 
     // Directory is now watched, add the new watch to it
-    auto filename = path::base_name(pathname);
+    auto filename = pathname.filename();
     m_file.push_back({dir_wd, filename, std::move(cb)});
     log::debug("FSWatch: Watching file {}/{}", dir, filename);
     return true;
 }
 
 
-bool FSWatch::remove(const std::string& pathname)
+bool FSWatch::remove(const fs::path& pathname)
 {
     // Find dir record
-    auto dir = path::dir_name(pathname);
+    auto dir = pathname.parent_path();
     int dir_wd;
     {
         auto it = std::find_if(m_dir.begin(), m_dir.end(),
@@ -99,7 +99,7 @@ bool FSWatch::remove(const std::string& pathname)
     }
 
     // Find file record
-    auto filename = path::base_name(pathname);
+    auto filename = pathname.filename();
     auto it = std::find_if(m_file.begin(), m_file.end(),
                            [&filename, dir_wd](const File& f) {
                                return f.dir_wd == dir_wd && f.name == filename;
@@ -191,7 +191,7 @@ void FSWatch::handle_event(int wd, uint32_t mask, const std::string& name)
                 if (w.cb) {
                     w.cb(Event::Stopped);
                 }
-                remove_list.push_back(path::join(it_dir->name, w.name));
+                remove_list.push_back(it_dir->name / w.name);
             }
         }
         for (auto& path : remove_list) {

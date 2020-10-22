@@ -57,13 +57,13 @@ public:
     /// \param pathname File to be watched.
     /// \param cb       Callback function called for each event.
     /// \return         New watch handle on success, -1 on error.
-    bool add_watch(const std::string& pathname, Callback cb);
+    bool add_watch(const fs::path& pathname, Callback cb);
 
     /// Remove previously added watch. Does nothing for handle -1.
     /// In case the same file has multiple callbacks installed, this removes
     /// just the one identified by `handle`.
     /// \param handle Handle to the watch as returned from add_watch.
-    bool remove_watch(const std::string& pathname);
+    bool remove_watch(const fs::path& pathname);
 
 private:
     FSWatch m_fs_watch { loop() };

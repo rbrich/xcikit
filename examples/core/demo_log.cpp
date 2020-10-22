@@ -63,7 +63,9 @@ int main()
     a.join();
     b.join();
 
-    info("[sys] HOME = {}", get_home_dir());
+    info("[sys] HOME = {}", home_directory_path());
+    info("[sys] TEMP = {}", fs::temp_directory_path());
+    info("[sys] self = {}", self_executable_path());
 
     return EXIT_SUCCESS;
 }

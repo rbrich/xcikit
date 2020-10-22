@@ -8,6 +8,7 @@
 #define XCI_CORE_SYS_H
 
 #include <initializer_list>
+#include <filesystem>
 #include <string>
 #include <cstdint>
 #include <csignal>
@@ -17,6 +18,9 @@
 #endif
 
 namespace xci::core {
+
+namespace fs = std::filesystem;
+
 
 // Integral thread ID
 // The actual type is system-dependent.
@@ -61,18 +65,15 @@ int pending_signals(std::initializer_list<int> signums);
 
 /// Retrieve home dir of current user from password file (i.e. /etc/passwd).
 /// \return             the home dir or in case of error "/tmp"
-std::string get_home_dir();
+fs::path home_directory_path();
+
+/// Retrieve absolute file path of currently running process.
+fs::path self_executable_path();
 
 #ifndef _WIN32
 std::string uid_to_user_name(uid_t uid);
 std::string gid_to_group_name(gid_t gid);
 #endif
-
-/// Retrieve absolute file path of currently running process.
-std::string get_self_path();
-
-/// Get OS-specific temp directory (/tmp on Unix).
-std::string get_temp_path();
 
 /// Calls a variant of strerror(errno) and returns result as a string.
 std::string errno_str();

@@ -40,7 +40,7 @@ using xci::bit_read;
 
 
 std::shared_ptr<VfsDirectory>
-vfs::RealDirectoryLoader::try_load(const std::string& path, bool is_dir, Magic)
+vfs::RealDirectoryLoader::try_load(const fs::path& path, bool is_dir, Magic)
 {
     if (!is_dir)
         return {};
@@ -50,20 +50,20 @@ vfs::RealDirectoryLoader::try_load(const std::string& path, bool is_dir, Magic)
 
 VfsFile vfs::RealDirectory::read_file(const std::string& path) const
 {
-    auto full_path = path::join(m_dir_path, path);
+    auto full_path = m_dir_path / path;
     log::debug("VfsDirLoader: open file: {}", full_path);
 
     // open the file
     int fd = ::open(full_path.c_str(), O_RDONLY);
     if (fd == -1) {
-        log::error("VfsDirLoader: Failed to open file: {}: {m}", full_path.c_str());
+        log::error("VfsDirLoader: Failed to open file: {}: {m}", full_path);
         return {};
     }
 
     // obtain file size
     struct stat st = {};
     if (::fstat(fd, &st) == -1) {
-        log::error("VfsDirLoader: Failed to stat file: {}: {m}", full_path.c_str());
+        log::error("VfsDirLoader: Failed to stat file: {}: {m}", full_path);
         ::close(fd);
         return {};
     }
@@ -72,7 +72,7 @@ VfsFile vfs::RealDirectory::read_file(const std::string& path) const
     // map file into memory
     void* addr = ::mmap(nullptr, size, PROT_READ, MAP_PRIVATE, fd, 0);
     if (addr == MAP_FAILED) {
-        log::error("VfsDirLoader: Failed to mmap file: {}: {m}", full_path.c_str());
+        log::error("VfsDirLoader: Failed to mmap file: {}: {m}", full_path);
         ::close(fd);
         return {};
     }
@@ -95,7 +95,7 @@ static constexpr std::array<char, 4> c_dar_magic = {{'d', 'a', 'r', '\n'}};
 
 
 std::shared_ptr<VfsDirectory>
-vfs::DarArchiveLoader::try_load(const std::string& path, bool is_dir, Magic magic)
+vfs::DarArchiveLoader::try_load(const fs::path& path, bool is_dir, Magic magic)
 {
     if (is_dir || magic != c_dar_magic)
         return {};
@@ -103,7 +103,7 @@ vfs::DarArchiveLoader::try_load(const std::string& path, bool is_dir, Magic magi
 }
 
 
-vfs::DarArchive::DarArchive(std::string path)
+vfs::DarArchive::DarArchive(fs::path path)
     : m_archive_path(std::move(path))
 {
     TRACE("Opening archive: {}", m_archive_path);
@@ -241,7 +241,7 @@ void vfs::DarArchive::close_archive()
 
 
 std::shared_ptr<VfsDirectory>
-vfs::ZipArchiveLoader::try_load(const std::string& path, bool is_dir, Magic magic)
+vfs::ZipArchiveLoader::try_load(const fs::path& path, bool is_dir, Magic magic)
 {
     if (is_dir || magic[0] != 'P' || magic[1] != 'K')
         return {};
@@ -253,7 +253,7 @@ vfs::ZipArchiveLoader::try_load(const std::string& path, bool is_dir, Magic magi
 }
 
 
-vfs::ZipArchive::ZipArchive(std::string path)
+vfs::ZipArchive::ZipArchive(fs::path path)
     : m_zip_path(std::move(path))
 {
     TRACE("ZipArchive: Opening archive: {}", m_zip_path);
@@ -348,18 +348,19 @@ Vfs::Vfs(Loaders loaders)
 }
 
 
-bool Vfs::mount(const std::string& fs_path, std::string target_path)
+bool Vfs::mount(const fs::path& fs_path, std::string target_path)
 {
-    std::string real_path;
-    if (fs_path.empty() || fs_path[0] != '/') {
-        // handle relative path - it's relative to program binary,
+    fs::path real_path;
+    if (fs_path.is_relative()) {
+        // handle relative path - it's relative to program executable,
         // or its parent, or its parent's parent. The nearest matched parent wins.
-        std::string ups = "/";
+        auto base_dir = self_executable_path().parent_path();
         for (int parent = 0; parent < 5; ++parent) {
-            real_path = path::real_path(path::dir_name(get_self_path()) + ups + fs_path);
-            if (!real_path.empty())
-                break;
-            ups += "../";
+            std::error_code err;
+            real_path = fs::canonical(base_dir / fs_path, err);
+            if (!err)
+                break;  // found an existing path
+            base_dir = base_dir.parent_path();
         }
     } else {
         real_path = fs_path;
