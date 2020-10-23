@@ -270,7 +270,7 @@ int main(int argc, char* argv[])
     Replxx rx;
     int input_number = 0;
     auto history_file = xci::core::home_directory_path() / ".xci_script_history";
-    rx.history_load(history_file);
+    rx.history_load(history_file.string());
     rx.set_max_history_size(1000);
     rx.set_highlighter_callback(replxx_hook::highlighter);
 
@@ -313,6 +313,6 @@ int main(int argc, char* argv[])
             ++input_number;
     }
 
-    rx.history_save(history_file);
+    rx.history_save(history_file.string());
     return 0;
 }

@@ -161,7 +161,7 @@ struct [[maybe_unused]] fmt::formatter<std::filesystem::path> {
 
     template <typename FormatContext>
     auto format(const std::filesystem::path& p, FormatContext& ctx) {
-        const auto& msg = p.native();
+        const auto& msg = p.string();
         return std::copy(msg.begin(), msg.end(), ctx.out());
     }
 };

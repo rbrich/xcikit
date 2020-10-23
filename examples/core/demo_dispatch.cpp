@@ -24,9 +24,7 @@ int main()
     Logger::init();
     FSDispatch fw;
 
-    std::string tmpname = fs::temp_directory_path() / "xci_test_filewatch.XXXXXX";
-    // race condition not important - would use mktemp, but that causes a warning with glibc
-    close(mkstemp(&tmpname[0]));
+    auto tmpname = fs::temp_directory_path() / "xci_demo_dispatch";
     std::ofstream f(tmpname);
 
     fw.add_watch(tmpname, [] (FSDispatch::Event ev) {
@@ -54,7 +52,7 @@ int main()
 
     // delete
     info("delete");
-    ::unlink(tmpname.c_str());
+    fs::remove(tmpname);
     sleep_for(100ms);
 
     // although the inotify watch is removed automatically after delete,

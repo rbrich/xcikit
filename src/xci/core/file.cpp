@@ -26,7 +26,7 @@
 namespace xci::core {
 
 
-std::optional<std::string> read_text_file(const std::string& pathname)
+std::optional<std::string> read_text_file(const fs::path& pathname)
 {
     std::ifstream f(pathname);
     return read_text_file(f);
@@ -50,7 +50,7 @@ std::optional<std::string> read_text_file(std::istream& stream)
 }
 
 
-BufferPtr read_binary_file(const std::string& pathname)
+BufferPtr read_binary_file(const fs::path& pathname)
 {
     std::ifstream f(pathname, std::ios::binary);
     return read_binary_file(f);

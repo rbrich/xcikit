@@ -44,16 +44,16 @@ FtFontFace::~FtFontFace()
 }
 
 
-bool FtFontFace::load_from_file(string_view file_path, int face_index)
+bool FtFontFace::load_from_file(const fs::path& file_path, int face_index)
 {
-    return load_face(file_path.data(), nullptr, 0, face_index);
+    return load_face(file_path, nullptr, 0, face_index);
 }
 
 
 bool FtFontFace::load_from_memory(core::BufferPtr buffer, int face_index)
 {
     m_memory_buffer = std::move(buffer);
-    return load_face(nullptr, m_memory_buffer->data(), m_memory_buffer->size(), face_index);
+    return load_face({}, m_memory_buffer->data(), m_memory_buffer->size(), face_index);
 }
 
 
@@ -186,7 +186,7 @@ FT_Library FtFontFace::ft_library()
 
 
 // Internal helper to avoid repeating error handling etc.
-bool FtFontFace::load_face(const char* file_path, const byte* buffer, size_t buffer_size, int face_index)
+bool FtFontFace::load_face(const fs::path& file_path, const byte* buffer, size_t buffer_size, int face_index)
 {
     if (m_face != nullptr) {
         log::error("FontFace: Reloading not supported! Create new instance instead.");
@@ -196,7 +196,7 @@ bool FtFontFace::load_face(const char* file_path, const byte* buffer, size_t buf
     if (buffer) {
         err = FT_New_Memory_Face(ft_library(), reinterpret_cast<const FT_Byte*>(buffer), buffer_size, face_index, &m_face);
     } else {
-        err = FT_New_Face(ft_library(), file_path, face_index, &m_face);
+        err = FT_New_Face(ft_library(), file_path.c_str(), face_index, &m_face);
     }
     if (err == FT_Err_Unknown_File_Format) {
         log::error("FT_New_Face: Unknown file format");

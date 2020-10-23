@@ -53,14 +53,12 @@ TEST_CASE( "Format char type", "[log]" )
 
 TEST_CASE( "read_binary_file", "[file]" )
 {
-    std::string filename = self_executable_path();
-    INFO(filename);
+    auto filename = self_executable_path();
+    INFO(filename.string());
     auto content = read_binary_file(filename);
     REQUIRE(bool(content));
 
-    struct stat st = {};
-    ::stat(filename.c_str(), &st);
-    CHECK(size_t(st.st_size) == content->size());
+    CHECK(fs::file_size(filename) == content->size());
     CHECK(content.use_count() == 1);
 }
 

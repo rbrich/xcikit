@@ -329,7 +329,7 @@ bool ArgParser::parse_program_name(const char* arg0)
 {
     if (!arg0)
         return false;
-    m_progname = fs::path(arg0).filename();
+    m_progname = fs::path(arg0).filename().string();
     return true;
 }
 

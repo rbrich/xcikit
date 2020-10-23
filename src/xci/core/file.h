@@ -19,15 +19,18 @@
 #include "Buffer.h"
 #include <string>
 #include <optional>
+#include <filesystem>
 
 namespace xci::core {
+
+namespace fs = std::filesystem;
 
 
 // Try to read whole content of a file.
 // Returns empty string in case of any error.
-std::optional<std::string> read_text_file(const std::string& pathname);
+std::optional<std::string> read_text_file(const fs::path& pathname);
 std::optional<std::string> read_text_file(std::istream& stream);
-BufferPtr read_binary_file(const std::string& pathname);
+BufferPtr read_binary_file(const fs::path& pathname);
 BufferPtr read_binary_file(std::istream& stream);
 
 /// Write string to FD (in a loop, handling EINTR).

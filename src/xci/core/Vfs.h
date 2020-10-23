@@ -1,17 +1,8 @@
-// Vfs.h created on 2018-09-01, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Vfs.h created on 2018-09-01 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018, 2020 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_VFS_H
 #define XCI_CORE_VFS_H
@@ -37,7 +28,7 @@ public:
     VfsFile() = default;
 
     // create file object with path and data
-    explicit VfsFile(std::string path, BufferPtr content)
+    explicit VfsFile(fs::path path, BufferPtr content)
         : m_path(std::move(path)), m_content(std::move(content)) {}
 
     // move only
@@ -51,14 +42,14 @@ public:
     bool is_real_file() { return !m_path.empty(); }
 
     /// path to file (only regular files, empty for archives)
-    const std::string& path() const { return m_path; }
+    const fs::path& path() const { return m_path; }
 
     /// memory buffer containing the file data
     /// or nullptr if there was error reading the file
     BufferPtr content() { return m_content; }
 
 private:
-    std::string m_path;   ///< path of the file or archive containing the file
+    fs::path m_path;   ///< path of the file or archive containing the file
     BufferPtr m_content;
 };
 
@@ -70,7 +61,7 @@ class VfsDirectory: public std::enable_shared_from_this<VfsDirectory> {
 public:
     virtual ~VfsDirectory() = default;
 
-    virtual VfsFile read_file(const std::string& path) const = 0;
+    virtual VfsFile read_file(const std::string& path) = 0;
 };
 
 
@@ -105,7 +96,7 @@ class RealDirectory: public VfsDirectory {
 public:
     explicit RealDirectory(fs::path dir_path) : m_dir_path(std::move(dir_path)) {}
 
-    VfsFile read_file(const std::string& path) const override;
+    VfsFile read_file(const std::string& path) override;
 
 private:
     fs::path m_dir_path;
@@ -128,18 +119,15 @@ public:
     explicit DarArchive(fs::path path);
     ~DarArchive() override { close_archive(); }
 
-    VfsFile read_file(const std::string& path) const override;
+    VfsFile read_file(const std::string& path) override;
 
 private:
-    bool read_index();
+    bool read_index(size_t size);
     void close_archive();
 
 private:
     fs::path m_archive_path;
-
-    // mmapped archive:
-    byte* m_addr = nullptr;
-    size_t m_size = 0;
+    std::ifstream m_archive;
 
     // index:
     struct IndexEntry {
@@ -167,7 +155,7 @@ public:
 
     bool is_open() const { return m_zip != nullptr; }
 
-    VfsFile read_file(const std::string& path) const override;
+    VfsFile read_file(const std::string& path) override;
 
 private:
     fs::path m_zip_path;

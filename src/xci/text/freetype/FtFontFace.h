@@ -23,7 +23,11 @@
 #include FT_FREETYPE_H
 #include FT_STROKER_H
 
+#include <filesystem>
+
 namespace xci::text {
+
+namespace fs = std::filesystem;
 
 
 class FtFontFace: public FontFace {
@@ -31,7 +35,7 @@ public:
     explicit FtFontFace(FontLibraryPtr library) : FontFace(std::move(library)) {}
     ~FtFontFace() override;
 
-    bool load_from_file(std::string_view file_path, int face_index) override;
+    bool load_from_file(const fs::path& file_path, int face_index) override;
     bool load_from_memory(core::BufferPtr buffer, int face_index) override;
 
     bool set_size(unsigned pixel_size) override;
@@ -50,7 +54,7 @@ public:
 
 private:
     FT_Library ft_library();
-    bool load_face(const char* file_path, const byte* buffer, size_t buffer_size, int face_index);
+    bool load_face(const fs::path& file_path, const byte* buffer, size_t buffer_size, int face_index);
 
     // Returns null on error
     FT_GlyphSlot load_glyph(GlyphIndex glyph_index);

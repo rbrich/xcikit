@@ -66,7 +66,7 @@ int main()
     const char* cmd = "while true ; do date ; sleep 1; done";
 
     TextTerminal terminal {theme};
-    terminal.add_text(fs::current_path().native() + "> ");
+    terminal.add_text(fs::current_path().string() + "> ");
     terminal.set_font_style(TextTerminal::FontStyle::Bold);
     terminal.add_text(std::string(cmd) + "\n");
     terminal.set_font_style(TextTerminal::FontStyle::Regular);

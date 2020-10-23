@@ -67,7 +67,7 @@ private:
 
     // inherit OVERLAPPED to get a pointer to Dir from the notification
     struct Dir: public OVERLAPPED {
-        Dir(HANDLE h, const std::string& name) : OVERLAPPED{}, h(h), name(name) {}  // NOLINT
+        Dir(HANDLE h, const fs::path& name) : OVERLAPPED{}, h(h), name(name) {}  // NOLINT
 
         HANDLE h;   // directory handle (INVALID_HANDLE_VALUE => invalid record)
         fs::path name;  // watched directory

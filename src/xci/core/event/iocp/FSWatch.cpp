@@ -54,7 +54,7 @@ bool FSWatch::add(const fs::path& pathname, FSWatch::PathCallback cb)
     // If not already watching, start now
     if (dir->h == INVALID_HANDLE_VALUE)
     {
-        dir->h = CreateFileA(name.c_str(), FILE_LIST_DIRECTORY,
+        dir->h = CreateFileW(name.c_str(), FILE_LIST_DIRECTORY,
                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                 nullptr, OPEN_EXISTING,
                 FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED,
@@ -146,8 +146,8 @@ void FSWatch::_notify(LPOVERLAPPED overlapped)
 
         // Lookup file callback
         auto it_file = std::find_if(m_file.begin(), m_file.end(),
-            [&name, dir](const File& f) {
-                return f.dir_h == dir->h && f.name == name;
+            [&filename, dir](const File& f) {
+                return f.dir_h == dir->h && f.name == filename;
             });
         if (it_file != m_file.end() && it_file->cb) {
             auto& cb = it_file->cb;
