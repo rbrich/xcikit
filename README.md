@@ -155,7 +155,6 @@ Fills gaps between different systems and compilers.
 - `dl.h` - `dlopen` etc. for Windows
 - `endian.h` - Linux-like macros provided for MacOS
 - `macros.h` - `FALLTHROUGH`, `UNREACHABLE`, `UNUSED`
-- `mman.h` - delegates to `<sys/mman.h>` or its replacement on Windows
 - `unistd.h` - Minimal Unix compatibility header for Windows
 - `utility.h` - C++17 `byte` missing in GCC 6.3
 

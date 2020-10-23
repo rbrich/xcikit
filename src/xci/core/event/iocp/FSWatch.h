@@ -12,8 +12,11 @@
 #include <list>
 #include <map>
 #include <functional>
+#include <filesystem>
 
 namespace xci::core {
+
+namespace fs = std::filesystem;
 
 
 /// IOCP-based filesystem watcher (using ReadDirectoryChangesW)
@@ -40,11 +43,11 @@ public:
     /// It's not an error if the file does not exist (yet).
     /// \param pathname File or directory to be watched.
     /// \param cb       Callback function called for each event.
-    bool add(const std::string& pathname, PathCallback cb);
+    bool add(const fs::path& pathname, PathCallback cb);
 
     /// Stop watching file or directory.
     /// \param pathname File or directory to remove. Must be same path as given to `add`.
-    bool remove(const std::string& pathname);
+    bool remove(const fs::path& pathname);
 
     void _notify(LPOVERLAPPED overlapped) override;
 
@@ -57,17 +60,17 @@ private:
 
     struct File {
         HANDLE dir_h;
-        std::string name;  // filename without dir part
+        fs::path name;  // filename without dir part
         PathCallback cb;
     };
     std::list<File> m_file;
 
     // inherit OVERLAPPED to get a pointer to Dir from the notification
     struct Dir: public OVERLAPPED {
-        Dir(HANDLE h, const std::string& name) : OVERLAPPED{}, h(h), name(name) {}  // NOLINT
+        Dir(HANDLE h, const fs::path& name) : OVERLAPPED{}, h(h), name(name) {}  // NOLINT
 
         HANDLE h;   // directory handle (INVALID_HANDLE_VALUE => invalid record)
-        std::string name;  // watched directory
+        fs::path name;  // watched directory
         std::byte notif_buffer[4000] = {};
 
         bool is_invalid() const { return h == INVALID_HANDLE_VALUE; }

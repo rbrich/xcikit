@@ -16,9 +16,11 @@
 #include <thread>
 #include <fstream>
 #include <string>
+#include <filesystem>
 
 using namespace xci::core;
 using std::this_thread::sleep_for;
+namespace fs = std::filesystem;
 
 
 #ifndef _WIN32
@@ -88,9 +90,7 @@ TEST_CASE( "FS events", "[.][core][event][FSWatch]" )
     size_t ev_ptr = 0;
     size_t ev_size = sizeof(expected_events) / sizeof(expected_events[0]);
 
-    std::string tmpname = get_temp_path() + "/xci_test_filewatch.XXXXXX";
-    // race condition not important - would use mktemp, but that causes a warning with glibc
-    close(mkstemp(&tmpname[0]));
+    auto tmpname = fs::temp_directory_path() / "xci_test_fswatch";
 
     FSWatch fs_watch(loop);
     fs_watch.add(tmpname,
@@ -108,6 +108,8 @@ TEST_CASE( "FS events", "[.][core][event][FSWatch]" )
     EventWatch quit_cond(loop, [&loop](){ loop.terminate(); });
 
     std::thread t([&quit_cond, &tmpname](){
+        sleep_for(50ms);
+
         // open
         std::ofstream f(tmpname);
         sleep_for(50ms);
@@ -129,7 +131,7 @@ TEST_CASE( "FS events", "[.][core][event][FSWatch]" )
         sleep_for(50ms);
 
         // delete
-        ::unlink(tmpname.c_str());
+        fs::remove(tmpname);
         sleep_for(50ms);
 
         quit_cond.fire();
@@ -147,9 +149,7 @@ TEST_CASE( "File watch", "[.][FSDispatch]" )
     Logger::init(Logger::Level::Error);
     FSDispatch fw;
 
-    std::string tmpname = get_temp_path() + "/xci_test_filewatch.XXXXXX";
-    // race condition not important - would use mktemp, but that causes a warning with glibc
-    close(mkstemp(&tmpname[0]));
+    auto tmpname = fs::temp_directory_path() / "xci_test_fsdispatch";
     std::ofstream f(tmpname);
 
     FSDispatch::Event expected_events[] = {
@@ -187,7 +187,7 @@ TEST_CASE( "File watch", "[.][FSDispatch]" )
     sleep_for(100ms);
 
     // delete
-    ::unlink(tmpname.c_str());
+    fs::remove(tmpname);
     sleep_for(100ms);
 
     // although the inotify watch is removed automatically after delete,

@@ -21,8 +21,11 @@
 #include <list>
 #include <map>
 #include <functional>
+#include <filesystem>
 
 namespace xci::core {
+
+namespace fs = std::filesystem;
 
 
 /// Kqueue based filesystem watcher (using EVFILT_VNODE)
@@ -51,32 +54,32 @@ public:
     /// events in main Callback.
     /// \param pathname File or directory to be watched.
     /// \param cb       Callback function called for each event.
-    bool add(const std::string& pathname, PathCallback cb);
+    bool add(const fs::path& pathname, PathCallback cb);
 
     /// Stop watching file or directory.
     /// \param pathname File or directory to remove. Must be same path as given to `add`.
-    bool remove(const std::string& pathname);
+    bool remove(const fs::path& pathname);
 
     void _notify(const struct kevent& event) override;
 
 private:
-    int register_kevent(const std::string& path, uint32_t fflags, bool no_exist_ok=false);
+    int register_kevent(const fs::path& path, uint32_t fflags, bool no_exist_ok=false);
     void unregister_kevent(int fd);
 
 private:
     Callback m_main_cb;
 
     struct File {
-        int fd;
+        int fd;         // -1 if the file is watched but doesn't exist yet (kevent not registered)
         int dir_fd;
-        std::string name;  // filename without dir part
+        fs::path name;  // filename without dir part
         PathCallback cb;
     };
     std::list<File> m_file;
 
     struct Dir {
         int fd;
-        std::string name;  // watched directory
+        fs::path name;  // watched directory
     };
     std::list<Dir> m_dir;
 };

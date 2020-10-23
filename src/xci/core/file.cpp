@@ -26,7 +26,7 @@
 namespace xci::core {
 
 
-std::optional<std::string> read_text_file(const std::string& pathname)
+std::optional<std::string> read_text_file(const fs::path& pathname)
 {
     std::ifstream f(pathname);
     return read_text_file(f);
@@ -50,7 +50,7 @@ std::optional<std::string> read_text_file(std::istream& stream)
 }
 
 
-BufferPtr read_binary_file(const std::string& pathname)
+BufferPtr read_binary_file(const fs::path& pathname)
 {
     std::ifstream f(pathname, std::ios::binary);
     return read_binary_file(f);
@@ -114,78 +114,6 @@ std::string base_name(std::string pathname)
 {
     assert(pathname.c_str() == &pathname[0]);
     return ::basename(&pathname[0]);
-}
-
-
-std::string join(const std::string &part1, const std::string &part2)
-{
-    // Add separator between parts only if there is none already
-    std::string sep = "/";
-    if (!part1.empty() && part1[part1.size() - 1] == '/')
-        sep.clear();
-    if (!part2.empty() && part2[0] == '/')
-        sep.clear();
-    return part1 + sep + part2;
-}
-
-
-std::string cwd()
-{
-#ifdef _GNU_SOURCE
-    // GNU-specific, not limited by PATH_MAX
-    char* buf = get_current_dir_name();
-    if (buf == nullptr)
-        return {};
-    std::string result(buf);
-    free(buf);
-    return result;
-#else
-    char buffer[PATH_MAX];
-    if (::getcwd(buffer, sizeof(buffer)) == nullptr) {
-        return {};
-    }
-    return buffer;
-#endif
-}
-
-
-std::string real_path(const std::string& path)
-{
-#ifdef _GNU_SOURCE
-    // GNU-specific, not limited by PATH_MAX
-    char* buf = canonicalize_file_name(path.c_str());
-    if (buf == nullptr)
-        return {};
-    std::string result(buf);
-    free(buf);
-    return result;
-#elif defined( _WIN32 )
-    char buffer[PATH_MAX];
-    auto h = CreateFileA(path.c_str(), 0,
-            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-            nullptr, OPEN_EXISTING,
-            FILE_FLAG_BACKUP_SEMANTICS, nullptr);
-    if (h == INVALID_HANDLE_VALUE)
-        return {};  // path doesn't exist
-
-    auto len = GetFinalPathNameByHandleA(h, buffer, sizeof(buffer), FILE_NAME_NORMALIZED);
-    CloseHandle(h);
-
-    if (len == 0)
-        return {};  // unknown error
-    if (len > sizeof(buffer))
-        return {};  // buffer too small
-
-    // clean the path (the returned path uses the \?\ syntax)
-    if (strncmp(buffer, R"(\\?\)", 4) == 0)
-        return buffer + 4;
-    else
-        return buffer;
-#else
-    char buffer[PATH_MAX];
-    char* res = ::realpath(path.c_str(), buffer);
-    return res == nullptr ? "" : res;
-#endif
 }
 
 

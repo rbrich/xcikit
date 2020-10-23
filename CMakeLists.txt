@@ -82,10 +82,6 @@ if (XCI_WITH_TINFO)
     pkg_check_modules(TINFO REQUIRED tinfo)
 endif ()
 
-if (WIN32)
-    add_subdirectory(external/mman-win32)
-endif()
-
 # Run configuration checks
 include(XciBuildChecks)
 

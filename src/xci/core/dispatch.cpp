@@ -37,13 +37,13 @@ Dispatch::~Dispatch()
 }
 
 
-bool FSDispatch::add_watch(const std::string& pathname, Callback cb)
+bool FSDispatch::add_watch(const fs::path& pathname, Callback cb)
 {
     return m_fs_watch.add(pathname, std::move(cb));
 }
 
 
-bool FSDispatch::remove_watch(const std::string& pathname)
+bool FSDispatch::remove_watch(const fs::path& pathname)
 {
     return m_fs_watch.remove(pathname);
 }

@@ -9,6 +9,7 @@
 
 #include <xci/config.h>
 #include <string_view>
+#include <filesystem>
 #include <fmt/format.h>
 
 namespace xci::core {
@@ -144,6 +145,23 @@ struct [[maybe_unused]] fmt::formatter<xci::core::log::LastErrorPlaceholder> {
     template <typename FormatContext>
     auto format(const xci::core::log::LastErrorPlaceholder& p, FormatContext& ctx) {
         auto msg = xci::core::log::LastErrorPlaceholder::message(last_error, error_code);
+        return std::copy(msg.begin(), msg.end(), ctx.out());
+    }
+};
+
+
+template <>
+struct [[maybe_unused]] fmt::formatter<std::filesystem::path> {
+    constexpr auto parse(format_parse_context& ctx) {
+        auto it = ctx.begin();  // NOLINT
+        if (it != ctx.end() && *it != '}')
+            throw fmt::format_error("invalid format for std::filesystem::path");
+        return it;
+    }
+
+    template <typename FormatContext>
+    auto format(const std::filesystem::path& p, FormatContext& ctx) {
+        const auto& msg = p.string();
         return std::copy(msg.begin(), msg.end(), ctx.out());
     }
 };

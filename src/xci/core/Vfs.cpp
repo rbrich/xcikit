@@ -1,17 +1,8 @@
-// Vfs.cpp created on 2018-09-01, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Vfs.cpp created on 2018-09-01 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018, 2020 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Vfs.h"
 #include "file.h"
@@ -23,7 +14,6 @@
 #include <xci/compat/endian.h>
 #include <xci/compat/macros.h>
 #include <xci/compat/unistd.h>
-#include <xci/compat/mman.h>
 
 #ifdef XCI_WITH_ZIP
 #include <zip.h>
@@ -40,7 +30,7 @@ using xci::bit_read;
 
 
 std::shared_ptr<VfsDirectory>
-vfs::RealDirectoryLoader::try_load(const std::string& path, bool is_dir, Magic)
+vfs::RealDirectoryLoader::try_load(const fs::path& path, bool is_dir, Magic)
 {
     if (!is_dir)
         return {};
@@ -48,43 +38,19 @@ vfs::RealDirectoryLoader::try_load(const std::string& path, bool is_dir, Magic)
 }
 
 
-VfsFile vfs::RealDirectory::read_file(const std::string& path) const
+VfsFile vfs::RealDirectory::read_file(const std::string& path)
 {
-    auto full_path = path::join(m_dir_path, path);
+    auto full_path = m_dir_path / path;
     log::debug("VfsDirLoader: open file: {}", full_path);
 
     // open the file
-    int fd = ::open(full_path.c_str(), O_RDONLY);
-    if (fd == -1) {
-        log::error("VfsDirLoader: Failed to open file: {}: {m}", full_path.c_str());
+    auto buffer_ptr = read_binary_file(full_path);
+    if (!buffer_ptr) {
+        log::error("VfsDirLoader: Failed to read file: {}: {m}", full_path);
         return {};
     }
 
-    // obtain file size
-    struct stat st = {};
-    if (::fstat(fd, &st) == -1) {
-        log::error("VfsDirLoader: Failed to stat file: {}: {m}", full_path.c_str());
-        ::close(fd);
-        return {};
-    }
-    auto size = static_cast<size_t>(st.st_size);
-
-    // map file into memory
-    void* addr = ::mmap(nullptr, size, PROT_READ, MAP_PRIVATE, fd, 0);
-    if (addr == MAP_FAILED) {
-        log::error("VfsDirLoader: Failed to mmap file: {}: {m}", full_path.c_str());
-        ::close(fd);
-        return {};
-    }
-
-    // close file (it's already mapped, so we no longer need FD)
-    ::close(fd);
-
-    auto content = std::make_shared<Buffer>(
-            static_cast<byte*>(addr), size,
-            [](byte* d, size_t s) { ::munmap(d, s); });
-
-    return VfsFile(std::move(full_path), std::move(content));
+    return VfsFile(std::move(full_path), std::move(buffer_ptr));
 }
 
 
@@ -95,7 +61,7 @@ static constexpr std::array<char, 4> c_dar_magic = {{'d', 'a', 'r', '\n'}};
 
 
 std::shared_ptr<VfsDirectory>
-vfs::DarArchiveLoader::try_load(const std::string& path, bool is_dir, Magic magic)
+vfs::DarArchiveLoader::try_load(const fs::path& path, bool is_dir, Magic magic)
 {
     if (is_dir || magic != c_dar_magic)
         return {};
@@ -103,47 +69,28 @@ vfs::DarArchiveLoader::try_load(const std::string& path, bool is_dir, Magic magi
 }
 
 
-vfs::DarArchive::DarArchive(std::string path)
+vfs::DarArchive::DarArchive(fs::path path)
     : m_archive_path(std::move(path))
 {
     TRACE("Opening archive: {}", m_archive_path);
-
-    // open archive file
-    int fd = ::open(m_archive_path.c_str(), O_RDONLY);
-    if (fd == -1) {
+    m_archive.open(m_archive_path, std::ios::in | std::ios::ate | std::ios::binary);
+    if (!m_archive) {
         log::error("VfsDarArchiveLoader: Failed to open file: {}: {m}", m_archive_path);
         return;
     }
 
     // obtain file size
-    struct stat st = {};
-    if (::fstat(fd, &st) == -1) {
-        log::error("VfsDarArchiveLoader: Failed to stat file: {}: {m}", m_archive_path);
-        ::close(fd);
-        return;
-    }
-    m_size = (size_t)(st.st_size);
-
-    // map whole archive into memory
-    m_addr = (byte*)::mmap(nullptr, m_size, PROT_READ, MAP_PRIVATE, fd, 0);
-    if (m_addr == MAP_FAILED) {
-        log::error("VfsDarArchiveLoader: Failed to mmap file: {}: {m}", m_archive_path);
-        ::close(fd);
-        close_archive();
-        return;
-    }
-
-    // close file (it's already mapped, so we no longer need FD)
-    ::close(fd);
+    size_t size = size_t(m_archive.tellg());
+    m_archive.seekg(0);
 
     // read archive index
-    if (!read_index()) {
+    if (!read_index(size)) {
         close_archive();
     }
 }
 
 
-VfsFile vfs::DarArchive::read_file(const std::string& path) const
+VfsFile vfs::DarArchive::read_file(const std::string& path)
 {
     // search for the entry
     auto entry_it = std::find_if(m_entries.cbegin(), m_entries.cend(), [&path](auto& entry){
@@ -159,68 +106,90 @@ VfsFile vfs::DarArchive::read_file(const std::string& path) const
 
     // Pass self to Buffer deleter, so the archive object lives
     // at least as long as the buffer.
-    auto this_ptr = shared_from_this();
-    auto content = std::make_shared<Buffer>(
-            m_addr + entry_it->offset, entry_it->size,
-            [this_ptr](byte*, size_t) {});
-    return VfsFile("", std::move(content));
+    auto* content = new byte[entry_it->size];
+    BufferPtr buffer_ptr(new Buffer{content, entry_it->size},
+            [this_ptr = shared_from_this()](Buffer* b){ delete[] b->data(); delete b; });
+
+    m_archive.seekg(entry_it->offset);
+    m_archive.read((char*) buffer_ptr->data(), buffer_ptr->size());
+    if (!m_archive) {
+        log::error("VfsDarArchiveLoader: Not found in archive: {}", path);
+        return {};
+    }
+
+    return VfsFile("", std::move(buffer_ptr));
 }
 
 
-bool vfs::DarArchive::read_index()
+bool vfs::DarArchive::read_index(size_t size)
 {
     // HEADER: ID
-    if (::memcmp(m_addr, c_dar_magic.data(), c_dar_magic.size()) != 0) {
+    std::array<char, c_dar_magic.size()> magic;
+    m_archive.read(magic.data(), magic.size());
+    if (!m_archive || magic != c_dar_magic) {
         log::error("VfsDarArchiveLoader: Corrupted archive: {} ({}).",
-                  m_archive_path, "ID");
+                m_archive_path, "ID");
         return false;
     }
+
     // HEADER: INDEX_OFFSET
-    auto index_offset = be32toh(bit_read<uint32_t>(m_addr + 4));
-    if (index_offset + 4 > m_size) {
+    uint32_t index_offset;
+    m_archive.read((char*)&index_offset, sizeof(index_offset));
+    if (!m_archive || be32toh(index_offset) + 4 > size) {
         // the offset must be inside archive, plus 4B for num_entries
         log::error("VfsDarArchiveLoader: Corrupted archive: {} ({}).",
                   m_archive_path, "INDEX_OFFSET");
         return false;
     }
+    index_offset = be32toh(index_offset);
+
     // INDEX: NUMBER_OF_ENTRIES
-    auto* addr = m_addr + index_offset;
-    auto num_entries = be32toh(bit_read<uint32_t>(addr));
-    addr += 4;
+    m_archive.seekg(index_offset);
+    uint32_t num_entries;
+    m_archive.read((char*)&num_entries, sizeof(num_entries));
+    if (!m_archive) {
+        log::error("VfsDarArchiveLoader: Corrupted archive: {} ({}).",
+                m_archive_path, "INDEX_ENTRY");
+        return false;
+    }
+    num_entries = be32toh(num_entries);
+
     // INDEX: INDEX_ENTRY[]
     m_entries.resize(num_entries);
-    for (unsigned i = 0; i < num_entries; i++) {
-        if ((size_t)(addr - m_addr) + 10 > m_size) {
-            // there must be space for the entry (4+4+2 bytes)
+    for (auto& entry : m_entries) {
+        struct {
+            uint32_t offset;
+            uint32_t size;
+            uint16_t name_size;
+        } entry_header;
+        m_archive.read((char*)&entry_header, 10);  // sizeof would be 12 due to padding
+        if (!m_archive) {
             log::error("VfsDarArchiveLoader: Corrupted archive: {} ({}).",
                       m_archive_path, "INDEX_ENTRY");
             return false;
         }
-        auto& entry = m_entries[i];
+
         // INDEX_ENTRY: CONTENT_OFFSET
-        entry.offset = be32toh(bit_read<uint32_t>(addr));
-        addr += 4;
+        entry.offset = be32toh(entry_header.offset);
         // INDEX_ENTRY: CONTENT_SIZE
-        entry.size = be32toh(bit_read<uint32_t>(addr));
-        addr += 4;
+        entry.size = be32toh(entry_header.size);
         if (entry.offset + entry.size > index_offset) {
             // there must be space for the name in archive
             log::error("VfsDarArchiveLoader: Corrupted archive: {} ({}).",
                       m_archive_path, "CONTENT_OFFSET + CONTENT_SIZE");
             return false;
         }
+
         // INDEX_ENTRY: NAME_SIZE
-        auto name_size = be16toh(bit_read<uint16_t>(addr));
-        addr += 2;
+        auto name_size = be16toh(entry_header.name_size);
         // INDEX_ENTRY: NAME
-        if ((size_t)(addr - m_addr) + name_size > m_size) {
-            // there must be space for the name in archive
+        entry.name.resize(name_size);
+        m_archive.read(&entry.name[0], name_size);
+        if (!m_archive) {
             log::error("VfsDarArchiveLoader: Corrupted archive: {} ({}).",
                       m_archive_path, "NAME");
             return false;
         }
-        entry.name.assign(reinterpret_cast<char*>(addr), name_size);
-        addr += name_size;
     }
     return true;
 }
@@ -228,12 +197,10 @@ bool vfs::DarArchive::read_index()
 
 void vfs::DarArchive::close_archive()
 {
-    if (m_addr != nullptr && m_addr != MAP_FAILED) {
+    if (m_archive.is_open()) {
         TRACE("Closing archive: {}", m_archive_path);
-        ::munmap(m_addr, m_size);
+        m_archive.close();
     }
-    m_addr = nullptr;
-    m_size = 0;
 }
 
 
@@ -241,7 +208,7 @@ void vfs::DarArchive::close_archive()
 
 
 std::shared_ptr<VfsDirectory>
-vfs::ZipArchiveLoader::try_load(const std::string& path, bool is_dir, Magic magic)
+vfs::ZipArchiveLoader::try_load(const fs::path& path, bool is_dir, Magic magic)
 {
     if (is_dir || magic[0] != 'P' || magic[1] != 'K')
         return {};
@@ -253,7 +220,7 @@ vfs::ZipArchiveLoader::try_load(const std::string& path, bool is_dir, Magic magi
 }
 
 
-vfs::ZipArchive::ZipArchive(std::string path)
+vfs::ZipArchive::ZipArchive(fs::path path)
     : m_zip_path(std::move(path))
 {
     TRACE("ZipArchive: Opening archive: {}", m_zip_path);
@@ -284,7 +251,7 @@ vfs::ZipArchive::~ZipArchive()
 }
 
 
-VfsFile vfs::ZipArchive::read_file(const std::string& path) const
+VfsFile vfs::ZipArchive::read_file(const std::string& path)
 {
 #ifdef XCI_WITH_ZIP
     struct zip_stat st = {};
@@ -304,6 +271,8 @@ VfsFile vfs::ZipArchive::read_file(const std::string& path) const
     }
 
     byte* data = new byte[st.size];
+    BufferPtr buffer_ptr(new Buffer{data, st.size},
+            [](Buffer* b){ delete[] b->data(); delete b; });
 
     zip_file* f = zip_fopen_index((zip_t*) m_zip, st.index, 0);
     zip_int64_t nbytes = zip_fread(f, data, st.size);
@@ -311,14 +280,10 @@ VfsFile vfs::ZipArchive::read_file(const std::string& path) const
     if (nbytes < 0 || (zip_uint64_t)nbytes != st.size) {
         log::error("ZipArchive: Cannot read: {}: Read {} bytes of {}",
                 path, nbytes, st.size);
-        delete[] data;
         return {};
     }
 
-    auto content = std::make_shared<Buffer>(
-        data, (size_t) st.size,
-        /*deleter*/ [](byte* d, size_t s) { delete[] d; });
-    return VfsFile("", std::move(content));
+    return VfsFile("", std::move(buffer_ptr));
 #else
     UNUSED path;
     log::error("ZipArchive: Not supported (not compiled with XCI_WITH_ZIP)");
@@ -348,49 +313,50 @@ Vfs::Vfs(Loaders loaders)
 }
 
 
-bool Vfs::mount(const std::string& fs_path, std::string target_path)
+bool Vfs::mount(const fs::path& fs_path, std::string target_path)
 {
-    std::string real_path;
-    if (fs_path.empty() || fs_path[0] != '/') {
-        // handle relative path - it's relative to program binary,
+    fs::path real_path;
+    if (fs_path.is_relative()) {
+        // handle relative path - it's relative to program executable,
         // or its parent, or its parent's parent. The nearest matched parent wins.
-        std::string ups = "/";
+        auto base_dir = self_executable_path().parent_path();
         for (int parent = 0; parent < 5; ++parent) {
-            real_path = path::real_path(path::dir_name(get_self_path()) + ups + fs_path);
-            if (!real_path.empty())
-                break;
-            ups += "../";
+            std::error_code err;
+            real_path = fs::canonical(base_dir / fs_path, err);
+            if (!err)
+                break;  // found an existing path
+            base_dir = base_dir.parent_path();
         }
     } else {
         real_path = fs_path;
     }
 
     // Check path type
-    struct stat st = {};
-    if (::stat(real_path.c_str(), &st) == -1) {
-        log::warning("Vfs: couldn't mount {}: {m}", real_path);
+    std::error_code err;
+    auto st = fs::status(real_path, err);
+    if (err) {
+        log::warning("Vfs: couldn't mount {}: {}", real_path, err.message());
         return false;
     }
 
     // Read magic bytes in case of regular file
     VfsLoader::Magic magic {};
-    if ((st.st_mode & S_IFREG) == S_IFREG) {
-        int fd = ::open(real_path.c_str(), O_RDONLY);
-        if (fd == -1) {
+    if (fs::is_regular_file(st)) {
+        std::ifstream f(real_path, std::ios::binary);
+        if (!f) {
             log::warning("Vfs: couldn't mount {}: {m}", real_path);
             return false;
         }
-        auto r = ::read(fd, magic.data(), magic.size());
-        ::close(fd);
-        if (r != (ssize_t) magic.size()) {
-            log::warning("Vfs: couldn't mount {}: archive file is smaller than {} bytes",
+        f.read(magic.data(), magic.size());
+        if (!f) {
+            log::warning("Vfs: couldn't mount {}: couldn't read magic bytes ({}B)",
                 real_path, magic.size());
             return false;
         }
     }
 
     // Try each loader
-    bool is_dir = (st.st_mode & S_IFDIR) == S_IFDIR;
+    bool is_dir = fs::is_directory(st);
     std::shared_ptr<VfsDirectory> vfs_directory;
     for (auto& loader : m_loaders) {
         vfs_directory = loader->try_load(real_path, is_dir, magic);

@@ -42,7 +42,6 @@ elseif(WIN32)
         event/iocp/SignalWatch.cpp
         event/iocp/TimerWatch.cpp
         )
-    target_link_libraries(xci-core PRIVATE mman-win32)
 else()
     target_sources(xci-core PRIVATE
         event/epoll/EventLoop.cpp

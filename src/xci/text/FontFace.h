@@ -24,12 +24,15 @@
 #include <memory>  // shared_ptr
 #include <vector>
 #include <string>
+#include <filesystem>
 
 namespace xci::text {
 
 
 using CodePoint = char32_t;
 using GlyphIndex = uint32_t;
+
+namespace fs = std::filesystem;
 
 
 // This enum can also be considered a bitset,
@@ -54,7 +57,7 @@ public:
     FontFace(const FontFace&) = delete;
     FontFace& operator =(const FontFace&) = delete;
 
-    virtual bool load_from_file(std::string_view file_path, int face_index) = 0;
+    virtual bool load_from_file(const fs::path& file_path, int face_index) = 0;
     virtual bool load_from_memory(core::BufferPtr buffer, int face_index) = 0;
 
     virtual bool set_size(unsigned pixel_size) = 0;

@@ -53,47 +53,13 @@ TEST_CASE( "Format char type", "[log]" )
 
 TEST_CASE( "read_binary_file", "[file]" )
 {
-    std::string filename = get_self_path();
-    INFO(filename);
+    auto filename = self_executable_path();
+    INFO(filename.string());
     auto content = read_binary_file(filename);
     REQUIRE(bool(content));
 
-    struct stat st = {};
-    ::stat(filename.c_str(), &st);
-    CHECK(size_t(st.st_size) == content->size());
+    CHECK(fs::file_size(filename) == content->size());
     CHECK(content.use_count() == 1);
-}
-
-
-TEST_CASE( "path::dir_name", "[file]" )
-{
-    CHECK(path::dir_name("/dir/name/") == "/dir");
-    CHECK(path::dir_name("/dir/name") == "/dir");
-    CHECK(path::dir_name("name") == ".");
-    CHECK(path::dir_name(".") == ".");
-    CHECK(path::dir_name("..") == ".");
-    CHECK(path::dir_name("/name") == "/");
-#ifdef _WIN32
-    CHECK(path::dir_name("C:\\xyz\\fsd") == "C:\\xyz");
-    CHECK(path::dir_name("C:\\xyz\\") == "C:\\");
-#endif
-}
-
-
-TEST_CASE( "path::base_name", "[file]" )
-{
-    CHECK(path::base_name("/dir/name/") == "name");
-    CHECK(path::base_name("/dir/name") == "name");
-    CHECK(path::base_name("/name") == "name");
-    CHECK(path::base_name("name") == "name");
-    CHECK(path::base_name(".") == ".");
-}
-
-
-TEST_CASE( "path::real_path, path::get_cwd", "[file]" )
-{
-    auto cwd = path::cwd();
-    CHECK(path::real_path(cwd + "/././.") == cwd);
 }
 
 
