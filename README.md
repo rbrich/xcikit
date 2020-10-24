@@ -157,7 +157,6 @@ Fills gaps between different systems and compilers.
 - `endian.h` - Linux-like macros provided for MacOS
 - `macros.h` - `FALLTHROUGH`, `UNREACHABLE`, `UNUSED`
 - `unistd.h` - Minimal Unix compatibility header for Windows
-- `utility.h` - C++17 `byte` missing in GCC 6.3
 
 
 Tools

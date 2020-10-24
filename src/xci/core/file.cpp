@@ -22,6 +22,7 @@
 #include <climits>
 #include <cstring>
 #include <cstdlib>
+#include <cstddef>  // byte
 
 namespace xci::core {
 
@@ -66,7 +67,7 @@ BufferPtr read_binary_file(std::istream& stream)
     auto file_size = size_t(stream.tellg());
     stream.seekg(0, std::ios::beg);
 
-    auto* content = new byte[file_size];
+    auto* content = new std::byte[file_size];
     stream.read(reinterpret_cast<char*>(content), file_size);
     if (!stream) {
         delete[] content;

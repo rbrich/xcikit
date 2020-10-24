@@ -10,23 +10,20 @@
 #include <xci/core/string.h>
 #include <xci/core/sys.h>
 #include <xci/core/file.h>
-#include <xci/compat/bit.h>
 #include <xci/compat/endian.h>
 #include <xci/compat/macros.h>
-#include <xci/compat/unistd.h>
 
 #ifdef XCI_WITH_ZIP
 #include <zip.h>
 #endif
 
 #include <algorithm>
+#include <cstddef>  // byte
 #include <fcntl.h>
-#include <sys/stat.h>
 
 namespace xci::core {
 
 using namespace core::log;
-using xci::bit_read;
 
 
 std::shared_ptr<VfsDirectory>
@@ -106,7 +103,7 @@ VfsFile vfs::DarArchive::read_file(const std::string& path)
 
     // Pass self to Buffer deleter, so the archive object lives
     // at least as long as the buffer.
-    auto* content = new byte[entry_it->size];
+    auto* content = new std::byte[entry_it->size];
     BufferPtr buffer_ptr(new Buffer{content, entry_it->size},
             [this_ptr = shared_from_this()](Buffer* b){ delete[] b->data(); delete b; });
 
@@ -257,7 +254,7 @@ VfsFile vfs::ZipArchive::read_file(const std::string& path)
     struct zip_stat st = {};
     zip_stat_init(&st);
     if (zip_stat((zip_t*) m_zip, path.c_str(), ZIP_FL_ENC_RAW, &st) == -1) {
-        auto err = zip_get_error((zip_t*) m_zip);
+        auto* err = zip_get_error((zip_t*) m_zip);
         if (err->zip_err == ZIP_ER_NOENT) {
             log::error("ZipArchive: Not found in archive: {}", path);
         } else {
@@ -270,11 +267,16 @@ VfsFile vfs::ZipArchive::read_file(const std::string& path)
         return {};
     }
 
-    byte* data = new byte[st.size];
+    auto* data = new std::byte[st.size];
     BufferPtr buffer_ptr(new Buffer{data, st.size},
             [](Buffer* b){ delete[] b->data(); delete b; });
 
     zip_file* f = zip_fopen_index((zip_t*) m_zip, st.index, 0);
+    if (f == nullptr) {
+        auto* err = zip_get_error((zip_t*) m_zip);
+        log::error("ZipArchive: zip_fopen_index({}): {}", path, err->str);
+        return {};
+    }
     zip_int64_t nbytes = zip_fread(f, data, st.size);
     zip_fclose(f);
     if (nbytes < 0 || (zip_uint64_t)nbytes != st.size) {
