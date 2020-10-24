@@ -81,7 +81,7 @@ bool write(int fd, std::string s)
 {
     size_t written = 0;
     while (written != s.size()) {
-        ssize_t r = ::write(STDERR_FILENO,
+        ssize_t r = ::write(fd,
                 s.data() + written,
                 s.size() - written);
         if (r == -1) {
@@ -97,26 +97,5 @@ bool write(int fd, std::string s)
     return true;
 }
 
-
-namespace path {
-
-
-std::string dir_name(std::string pathname)
-{
-    // dirname() may modify the argument, so we take it by value
-    // (we also make sure that the internal value is null-terminated)
-    assert(pathname.c_str() == &pathname[0]);
-    return ::dirname(&pathname[0]);
-}
-
-
-std::string base_name(std::string pathname)
-{
-    assert(pathname.c_str() == &pathname[0]);
-    return ::basename(&pathname[0]);
-}
-
-
-} // namespace path
 
 }  // namespace xci::core
