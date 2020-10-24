@@ -34,8 +34,9 @@ namespace xci::core {
 class FileTree {
 public:
     struct PathNode {
-        explicit PathNode(std::string_view component) : component(component) {}  // NOLINT
-        PathNode(std::string_view component, const std::shared_ptr<PathNode>& parent) : parent(parent), component(component) {}  // NOLINT
+        explicit PathNode(std::string_view component) : component(component) {}
+        PathNode(std::string_view component, const std::shared_ptr<PathNode>& parent)
+            : parent(parent), component(component), depth(parent->depth + 1) {}
 
         /// Convert contained directory path to a string:
         /// - no parent, component "."          => ""
@@ -89,16 +90,13 @@ public:
 
         /// Is this a node from input, i.e. `walk()`?
         bool is_input() const {
-            return flags & f_input;
+            return depth == 0;
         }
 
         std::shared_ptr<PathNode> parent;
         std::string component;
         int fd = -1;
-
-        using Flags = unsigned int;
-        static constexpr Flags f_input = 1;
-        Flags flags = 0;
+        int depth = 0;  // depth from input
     };
 
     enum Type {
@@ -133,7 +131,6 @@ public:
 
     void walk_cwd() {
         auto path = std::make_shared<FileTree::PathNode>(".");
-        path->flags = PathNode::f_input;
         int fd = open(".", O_DIRECTORY | O_NOFOLLOW | O_NOCTTY, O_RDONLY);
         if (fd == -1) {
             m_cb(*path, OpenError);
@@ -160,6 +157,7 @@ public:
             // - absolute "/foo/bar/", processed to components ["/foo", "bar"]
             // - absolute in root: "/foo/", processed to components ["", "bar"]
             auto parent = std::make_shared<PathNode>(components[0]);
+            parent->depth = -1;
             path = std::make_shared<PathNode>(components[1], parent);
         } else {
             // relative or absolute path, e.g.:
@@ -167,9 +165,8 @@ public:
             // - absolute root "/", cleaned to ""
             path = std::make_shared<PathNode>(pathname_clean);
         }
-        path->flags = PathNode::f_input;
 
-        if (!open_and_report(pathname.c_str(), *path))
+        if (!open_and_report(pathname_clean.c_str(), *path))
             return;
         enqueue(std::move(path));
     }

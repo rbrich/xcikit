@@ -33,7 +33,7 @@ using namespace xci::core;
 using namespace xci::core::argparser;
 
 
-static constexpr auto c_version = "0.3";
+static constexpr auto c_version = "0.4";
 
 
 struct Theme {
@@ -234,6 +234,7 @@ int main(int argc, const char* argv[])
     bool search_in_special_dirs = false;
     bool single_device = false;
     bool long_form = false;
+    int max_depth = -1;
     bool show_version = false;
     int jobs = 8;
     std::vector<const char*> files;
@@ -255,6 +256,7 @@ int main(int argc, const char* argv[])
             Option("-S, --search-in-special-dirs", "Allow descending into special directories: " + FileTree::default_ignore_list(", "), search_in_special_dirs),
             Option("-X, --single-device", "Don't descend into directories with different device number", single_device),
             Option("-a, --all", "Don't skip any files, same as -HDS", [&]{ show_hidden = true; show_dirs = true; search_in_special_dirs = true; }),
+            Option("-d, --max-depth N", "Descend at most N directory levels below input directories", max_depth),
             Option("-l, --long", "Print file attributes", long_form),
             Option("-t, --types TYPES", "Filter file types: r=regular, d=dir, l=link, s=sock, f=fifo, c=char, b=block, e.g. -tdl for dir+link (implies -D)",
                     [&type_mask, &show_dirs](const char* arg){ show_dirs = true; return parse_types(arg, type_mask); }),
@@ -355,21 +357,25 @@ int main(int argc, const char* argv[])
     FlatSet<dev_t> dev_ids;
 
     FileTree ft(jobs-1, jobs,
-                [show_hidden, show_dirs, single_device, long_form, highlight_match, type_mask,
+                [show_hidden, show_dirs, single_device, long_form, highlight_match, type_mask, max_depth,
                  pattern, re_db, re_scratch_prototype, &theme, &dev_ids]
                 (const FileTree::PathNode& path, FileTree::Type t)
     {
         if (!show_hidden && path.component[0] == '.')
             return false;
+        bool descent = true;
         switch (t) {
             case FileTree::Directory:
+                if (max_depth >= 0 && path.depth >= max_depth) {
+                    descent = false;
+                }
                 if (!show_dirs)
-                    return true;  // descent
+                    return descent;
                 if (single_device) {
                     struct stat st;
                     if (!path.stat(st)) {
                         fmt::print(stderr,"ff: stat({}): {}\n", path.dir_name(), errno_str());
-                        return true;
+                        return descent;
                     }
                     if (path.is_input()) {
                         dev_ids.emplace(st.st_dev);
@@ -396,10 +402,10 @@ int main(int argc, const char* argv[])
                                 }, &matches);
                         if (r != HS_SUCCESS) {
                             fmt::print(stderr,"ff: hs_scan({}): Unable to scan ({})\n", path.component, r);
-                            return true;
+                            return descent;
                         }
                         if (matches.empty())
-                            return true;  // not matched
+                            return descent;  // not matched
                         out = highlight_path(t, path, theme, matches[0].first, matches[0].second);
                     } else {
                         // match, no highlight
@@ -409,10 +415,10 @@ int main(int argc, const char* argv[])
                                 { return 1; }, nullptr);
                         // returns HS_SCAN_TERMINATED on match (because callback returns 1)
                         if (r == HS_SUCCESS)
-                            return true;  // not matched
+                            return descent;  // not matched
                         if (r != HS_SCAN_TERMINATED) {
                             fmt::print(stderr,"ff: hs_scan({}): ({}) Unable to scan\n", path.component, r);
-                            return true;
+                            return descent;
                         }
                         out = highlight_path(t, path, theme);
                     }
@@ -426,18 +432,18 @@ int main(int argc, const char* argv[])
                     // need stat
                     if (!path.stat(st)) {
                         fmt::print(stderr,"ff: stat({}): {}\n", path.file_name(), errno_str());
-                        return true;
+                        return descent;
                     }
                 }
 
                 if (type_mask && !(st.st_mode & type_mask))
-                    return true;
+                    return descent;
 
                 if (long_form)
                     print_path_with_attrs(out, path, st);
                 else
                     puts(out.c_str());
-                return true;
+                return descent;
             }
             case FileTree::OpenError:
                 fmt::print(stderr,"ff: open({}): {}\n", path.dir_name(), errno_str());
