@@ -237,7 +237,7 @@ int main(int argc, const char* argv[])
     int max_depth = -1;
     bool show_version = false;
     int jobs = 8;
-    std::vector<const char*> files;
+    std::vector<fs::path> directories;
     mode_t type_mask = 0;
     const char* pattern = nullptr;
 
@@ -267,7 +267,7 @@ int main(int argc, const char* argv[])
             Option("-V, --version", "Show version", show_version),
             Option("-h, --help", "Show help", show_help),
             Option("[PATTERN]", "File name pattern (Perl-style regex)", pattern),
-            Option("-- FILE ...", "Files and/or directories to scan", files),
+            Option("-- DIRECTORY ...", "Directories to search. These directories themselves are not matched, only their entries are.", directories),
     } (argv);
 
     if (show_version) {
@@ -361,30 +361,33 @@ int main(int argc, const char* argv[])
                  pattern, re_db, re_scratch_prototype, &theme, &dev_ids]
                 (const FileTree::PathNode& path, FileTree::Type t)
     {
-        if (!show_hidden && path.component[0] == '.')
-            return false;
-        bool descent = true;
         switch (t) {
             case FileTree::Directory:
-                if (max_depth >= 0 && path.depth >= max_depth) {
-                    descent = false;
-                }
-                if (!show_dirs)
-                    return descent;
-                if (single_device) {
-                    struct stat st;
-                    if (!path.stat(st)) {
-                        fmt::print(stderr,"ff: stat({}): {}\n", path.dir_name(), errno_str());
-                        return descent;
-                    }
-                    if (path.is_input()) {
-                        dev_ids.emplace(st.st_dev);
-                    } else if (!dev_ids.contains(st.st_dev)) {
-                        return false;  // skip (different device ID)
-                    }
-                }
-                FALLTHROUGH;
             case FileTree::File: {
+                if (!show_hidden && path.component[0] == '.')
+                    return false;
+
+                bool descent = true;
+                if (t == FileTree::Directory) {
+                    if (max_depth >= 0 && path.depth >= max_depth) {
+                        descent = false;
+                    }
+                    if (!show_dirs)
+                        return descent;
+                    if (single_device) {
+                        struct stat st;
+                        if (!path.stat(st)) {
+                            fmt::print(stderr,"ff: stat({}): {}\n", path.dir_name(), errno_str());
+                            return descent;
+                        }
+                        if (path.is_input()) {
+                            dev_ids.emplace(st.st_dev);
+                        } else if (!dev_ids.contains(st.st_dev)) {
+                            return false;  // skip (different device ID)
+                        }
+                    }
+                }
+
                 std::string out;
                 if (pattern) {
                     thread_local HyperscanScratch re_scratch(re_scratch_prototype);
@@ -446,13 +449,13 @@ int main(int argc, const char* argv[])
                 return descent;
             }
             case FileTree::OpenError:
-                fmt::print(stderr,"ff: open({}): {}\n", path.dir_name(), errno_str());
+                fmt::print(stderr,"ff: open({}): {}\n", path.file_name(), errno_str());
                 return true;
             case FileTree::OpenDirError:
-                fmt::print(stderr,"ff: opendir({}): {}\n", path.dir_name(), errno_str());
+                fmt::print(stderr,"ff: opendir({}): {}\n", path.file_name(), errno_str());
                 return true;
             case FileTree::ReadDirError:
-                fmt::print(stderr,"ff: readdir({}): {}\n", path.dir_name(), errno_str());
+                fmt::print(stderr,"ff: readdir({}): {}\n", path.file_name(), errno_str());
                 return true;
         }
         UNREACHABLE;
@@ -460,11 +463,11 @@ int main(int argc, const char* argv[])
 
     ft.set_default_ignore(!search_in_special_dirs);
 
-    if (files.empty()) {
+    if (directories.empty()) {
         ft.walk_cwd();
     } else {
-        for (const char* f : files) {
-            ft.walk(f);
+        for (const auto& d : directories) {
+            ft.walk(d);
         }
     }
 

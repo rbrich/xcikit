@@ -71,9 +71,10 @@ value_from_cstr(const char* s, T& value) {
 // const char* (original, unparsed C string)
 template <class T>
 typename std::enable_if_t<
-            std::is_same_v<T, const char*> ||
-            std::is_same_v<T, std::string> ||
-            std::is_same_v<T, std::string_view>,
+            std::is_same_v<T, const char*> || (
+                std::is_assignable_v<T&, const char*> &&            // types with `operator=(const char*)`
+                !std::is_trivially_assignable_v<T&, const char*>    // exclude `bool& v = const char* u` etc.
+            ),
         bool>
 value_from_cstr(const char* s, T& value) {
     value = s;
