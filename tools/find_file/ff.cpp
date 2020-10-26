@@ -237,7 +237,7 @@ int main(int argc, const char* argv[])
     int max_depth = -1;
     bool show_version = false;
     int jobs = 8;
-    std::vector<fs::path> directories;
+    std::vector<fs::path> paths;
     mode_t type_mask = 0;
     const char* pattern = nullptr;
 
@@ -267,7 +267,7 @@ int main(int argc, const char* argv[])
             Option("-V, --version", "Show version", show_version),
             Option("-h, --help", "Show help", show_help),
             Option("[PATTERN]", "File name pattern (Perl-style regex)", pattern),
-            Option("-- DIRECTORY ...", "Directories to search. These directories themselves are not matched, only their entries are.", directories),
+            Option("-- PATH ...", "Paths to search", paths),
     } (argv);
 
     if (show_version) {
@@ -364,7 +364,7 @@ int main(int argc, const char* argv[])
         switch (t) {
             case FileTree::Directory:
             case FileTree::File: {
-                if (!show_hidden && path.component[0] == '.')
+                if (!show_hidden && path.component[0] == '.' && path.component != "." && path.component != "..")
                     return false;
 
                 bool descent = true;
@@ -372,8 +372,10 @@ int main(int argc, const char* argv[])
                     if (max_depth >= 0 && path.depth >= max_depth) {
                         descent = false;
                     }
-                    if (!show_dirs)
+                    if (!show_dirs || path.component.empty()) {
+                        // path.component is empty when this is root report from walk_cwd()
                         return descent;
+                    }
                     if (single_device) {
                         struct stat st;
                         if (!path.stat(st)) {
@@ -463,11 +465,11 @@ int main(int argc, const char* argv[])
 
     ft.set_default_ignore(!search_in_special_dirs);
 
-    if (directories.empty()) {
+    if (paths.empty()) {
         ft.walk_cwd();
     } else {
-        for (const auto& d : directories) {
-            ft.walk(d);
+        for (const auto& path : paths) {
+            ft.walk(path);
         }
     }
 

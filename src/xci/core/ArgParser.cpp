@@ -365,7 +365,7 @@ ArgParser::ParseResult ArgParser::parse_args(const char** argv, bool finish)
     }
     if (finish) {
         if (m_awaiting_arg)
-            throw BadArgument(format("Missing value to option: {}", *(argv-1)));
+            throw BadArgument(format("Missing value for option: {}", *(argv-1)));
         for (const auto& opt : m_opts) {
             if (opt.is_positional() && opt.missing_args() > 0)
                 throw BadArgument(format("Missing required arguments: {}", opt.desc()));
@@ -384,7 +384,7 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
         // open option -> pass it the arg
         assert(m_curopt->can_receive_arg());  // already checked
         if (!(*m_curopt)(arg))
-            throw BadArgument(format("Wrong value to option: {}: {}", *(argv-1), arg));
+            throw BadArgument(format("Wrong value for option: {}: {}", *(argv-1), arg));
         m_awaiting_arg = false;
         return Continue;
     }

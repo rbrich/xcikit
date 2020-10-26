@@ -78,8 +78,7 @@ public:
         bool stat(struct stat& st) const {
             int rc;
             if (fd == -1) {
-                assert(parent);  // don't call stat on incomplete PathNode
-                if (parent->fd == -1)
+                if (!parent || parent->fd == -1)
                     rc = ::lstat(file_name().c_str(), &st);
                 else
                     rc = ::fstatat(parent->fd, component.c_str(), &st, AT_SYMLINK_NOFOLLOW);
@@ -150,12 +149,8 @@ public:
         // - absolute: "/foo/bar", "/foo", "/"
         auto node = std::make_shared<PathNode>(node_path);
         // open original, uncleaned path (required to support root "/")
-        int fd = open(open_path, O_DIRECTORY | O_NOFOLLOW | O_NOCTTY, O_RDONLY);
-        if (fd == -1) {
-            m_cb(*node, OpenError);
+        if (!open_and_report(open_path, *node, AT_FDCWD))
             return;
-        }
-        node->fd = fd;
         enqueue(std::move(node));
     }
 
