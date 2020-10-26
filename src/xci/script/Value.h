@@ -18,7 +18,6 @@
 
 #include "TypeInfo.h"
 #include "Heap.h"
-#include <xci/compat/utility.h>
 
 #include <ostream>
 #include <utility>
@@ -28,8 +27,11 @@
 #include <cassert>
 #include <cstring>
 #include <cstdint>
+#include <cstddef>  // byte
 
 namespace xci::script {
+
+using std::byte;
 
 class Values;
 class Function;

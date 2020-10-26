@@ -16,6 +16,7 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <filesystem>
 #include <cstring>
 #include <cassert>
 
@@ -31,38 +32,39 @@
 
 namespace xci::core {
 
+namespace fs = std::filesystem;
+
+
 class FileTree {
 public:
     struct PathNode {
-        explicit PathNode(std::string_view component) : component(component) {}  // NOLINT
-        PathNode(std::string_view component, const std::shared_ptr<PathNode>& parent) : parent(parent), component(component) {}  // NOLINT
+        explicit PathNode(std::string_view component) : component(component) {}
+        PathNode(std::string_view component, const std::shared_ptr<PathNode>& parent)
+            : parent(parent), component(component), depth(parent->depth + 1) {}
 
         /// Convert contained directory path to a string:
-        /// - no parent, component "."          => ""
-        /// - no parent, component ""           => "/"
+        /// - no parent, component ""           => ""
+        /// - no parent, component "."          => "./"
+        /// - no parent, component "/"          => "/"
         /// - no parent, component "foo"        => "foo/"
-        /// - parent "", component "bar"        => "/bar/"
+        /// - parent "", component "bar"        => "bar/"
+        /// - parent ".", component "bar"       => "./bar/"
+        /// - parent "/", component "bar"       => "/bar/"
         /// - parent "foo", component "bar"     => "foo/bar/"
         /// - parent "/foo", component "bar"    => "/foo/bar/"
         std::string dir_name() const {
-            if (!parent && component == ".")
-                return {};
+            if (!parent && (component.empty() || component == "/"))
+                return component;
             return parent_dir_name() + component + '/';
         }
 
         /// Same as dir_name, but the first variant is invalid
         /// and '/' is not appended.
         std::string file_name() const {
-            assert(!component.empty());
             return parent_dir_name() + component;
         }
 
-        /// Get parent dir part of contained path:
-        /// - no parent, component ""           => "" (meaning "/")
-        /// - no parent, component "foo"        => ""
-        /// - parent "", component "bar"        => "/"
-        /// - parent "foo", component "bar"     => "foo/"
-        /// - parent "/foo", component "bar"    => "/foo/"
+        /// Get parent dir part of contained path
         std::string parent_dir_name() const {
             if (!parent)
                 return {};
@@ -76,8 +78,7 @@ public:
         bool stat(struct stat& st) const {
             int rc;
             if (fd == -1) {
-                assert(parent);  // don't call stat on incomplete PathNode
-                if (parent->fd == -1)
+                if (!parent || parent->fd == -1)
                     rc = ::lstat(file_name().c_str(), &st);
                 else
                     rc = ::fstatat(parent->fd, component.c_str(), &st, AT_SYMLINK_NOFOLLOW);
@@ -89,16 +90,13 @@ public:
 
         /// Is this a node from input, i.e. `walk()`?
         bool is_input() const {
-            return flags & f_input;
+            return depth == 0;
         }
 
         std::shared_ptr<PathNode> parent;
         std::string component;
         int fd = -1;
-
-        using Flags = unsigned int;
-        static constexpr Flags f_input = 1;
-        Flags flags = 0;
+        int depth = 0;  // depth from input
     };
 
     enum Type {
@@ -132,46 +130,28 @@ public:
     static std::string default_ignore_list(const char* sep);
 
     void walk_cwd() {
-        auto path = std::make_shared<FileTree::PathNode>(".");
-        path->flags = PathNode::f_input;
-        int fd = open(".", O_DIRECTORY | O_NOFOLLOW | O_NOCTTY, O_RDONLY);
-        if (fd == -1) {
-            m_cb(*path, OpenError);
-            return;
-        }
-        path->fd = fd;
-        enqueue(std::move(path));
+        // open "." but show entries without "./" prefix in reporting
+        walk("", ".");
     }
 
-    void walk(const std::string& pathname) {
-        auto pathname_clean = rstripped(pathname, '/');
-        if (pathname.empty() || pathname_clean == ".") {
-            walk_cwd();
-            return;
-        }
+    void walk(const fs::path& pathname) {
+        walk(pathname, pathname.c_str());
+    }
 
-        // create PathNode also for parent, so the reporting is consistent
-        // (component in each reported PathNode is always cleaned basename)
-        std::shared_ptr<PathNode> path;
-        auto components = rsplit(pathname_clean, '/', 1);
-        if (components.size() == 2) {
-            // relative or absolute path, e.g.:
-            // - relative "foo/bar/", processed to components ["foo", "bar"]
-            // - absolute "/foo/bar/", processed to components ["/foo", "bar"]
-            // - absolute in root: "/foo/", processed to components ["", "bar"]
-            auto parent = std::make_shared<PathNode>(components[0]);
-            path = std::make_shared<PathNode>(components[1], parent);
-        } else {
-            // relative or absolute path, e.g.:
-            // - relative path "foo/", cleaned to "foo"
-            // - absolute root "/", cleaned to ""
-            path = std::make_shared<PathNode>(pathname_clean);
+    void walk(const fs::path& pathname, const char* open_path) {
+        // normalize and remove trailing slash
+        auto node_path = pathname.lexically_normal().string();
+        if (node_path.size() > 1) { // size of "/" is 1
+            rstrip(node_path, '/');
         }
-        path->flags = PathNode::f_input;
-
-        if (!open_and_report(pathname.c_str(), *path))
+        // create base node from relative or absolute path, e.g.:
+        // - relative: "foo/bar", "foo", ".", ".."
+        // - absolute: "/foo/bar", "/foo", "/"
+        auto node = std::make_shared<PathNode>(node_path);
+        // open original, uncleaned path (required to support root "/")
+        if (!open_and_report(open_path, *node, AT_FDCWD))
             return;
-        enqueue(std::move(path));
+        enqueue(std::move(node));
     }
 
     void worker() {
@@ -274,7 +254,7 @@ private:
     /// \param node         PathNode associated with the path, for reporting
     /// \param at_fd        if path is relative, this can be open parent FD or AT_FDCWD
     /// \return     true if opened as a directory and callback returned true (i.e. descend)
-    bool open_and_report(const char* pathname, PathNode& node, int at_fd = AT_FDCWD) {
+    bool open_and_report(const char* pathname, PathNode& node, int at_fd) {
         // try to open as a directory, if it fails with ENOTDIR, it is a file
         int fd = openat(at_fd, pathname, O_DIRECTORY | O_NOFOLLOW | O_NOCTTY, O_RDONLY);
         if (fd == -1) {
@@ -283,8 +263,6 @@ private:
                 m_cb(node, File);
                 return false;
             }
-            if (!m_cb(node, Directory))
-                return false;
             m_cb(node, OpenError);
             return false;
         }

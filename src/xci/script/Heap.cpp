@@ -19,7 +19,7 @@ namespace xci::script {
 
 
 HeapSlot::HeapSlot(size_t size)
-    : m_slot(new byte[sizeof(uint32_t) + size])
+    : m_slot(new std::byte[sizeof(uint32_t) + size])
 {
     uint32_t refs = 1;
     memcpy(m_slot, &refs, sizeof(refs));

@@ -18,8 +18,8 @@
 
 #include "Value.h"
 #include <xci/core/container/ChunkedStack.h>
-#include <xci/compat/utility.h>
 #include <xci/compat/bit.h>
+#include <cstddef>  // byte
 #include <vector>
 
 namespace xci::script {
@@ -88,7 +88,7 @@ public:
 
     // Get moving pointer to top of the stack (lowest valid address)
     // The address changes with each operation.
-    byte* data() const { return &m_stack[m_stack_pointer]; }
+    std::byte* data() const { return &m_stack[m_stack_pointer]; }
 
     // ------------------------------------------------------------------------
     // Type tracking
@@ -126,7 +126,7 @@ private:
     static constexpr size_t m_stack_max = 100*1024*1024;
     size_t m_stack_capacity = 1024;
     size_t m_stack_pointer = m_stack_capacity;
-    std::unique_ptr<byte[]> m_stack = std::make_unique<byte[]>(m_stack_capacity);
+    std::unique_ptr<std::byte[]> m_stack = std::make_unique<std::byte[]>(m_stack_capacity);
     std::vector<TypeInfo> m_stack_types;
     core::ChunkedStack<Frame> m_frame;
 };

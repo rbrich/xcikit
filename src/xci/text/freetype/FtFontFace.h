@@ -54,7 +54,7 @@ public:
 
 private:
     FT_Library ft_library();
-    bool load_face(const fs::path& file_path, const byte* buffer, size_t buffer_size, int face_index);
+    bool load_face(const fs::path& file_path, const std::byte* buffer, size_t buffer_size, int face_index);
 
     // Returns null on error
     FT_GlyphSlot load_glyph(GlyphIndex glyph_index);

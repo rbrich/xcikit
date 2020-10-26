@@ -20,7 +20,6 @@
 
 namespace xci::text {
 
-using namespace std;
 using namespace xci::core;
 
 
@@ -186,7 +185,7 @@ FT_Library FtFontFace::ft_library()
 
 
 // Internal helper to avoid repeating error handling etc.
-bool FtFontFace::load_face(const fs::path& file_path, const byte* buffer, size_t buffer_size, int face_index)
+bool FtFontFace::load_face(const fs::path& file_path, const std::byte* buffer, size_t buffer_size, int face_index)
 {
     if (m_face != nullptr) {
         log::error("FontFace: Reloading not supported! Create new instance instead.");
@@ -202,11 +201,11 @@ bool FtFontFace::load_face(const fs::path& file_path, const byte* buffer, size_t
         log::error("FT_New_Face: Unknown file format");
         return false;
     }
-    else if (err == FT_Err_Cannot_Open_Resource) {
+    if (err == FT_Err_Cannot_Open_Resource) {
         log::error("FT_New_Face: Cannot open resource");
         return false;
     }
-    else if (err != 0) {
+    if (err != 0) {
         log::error("Cannot open font (FT_New_Face: {})", err);
         return false;
     }

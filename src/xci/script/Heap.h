@@ -17,7 +17,7 @@
 #define XCI_SCRIPT_HEAP_H
 
 #include <xci/compat/bit.h>
-#include <xci/compat/utility.h>
+#include <cstddef>  // byte
 #include <cstdint>
 
 namespace xci::script {
@@ -32,7 +32,7 @@ public:
     // new uninitialized slot
     HeapSlot() : m_slot(nullptr) {}
     // bind to existing slot
-    explicit HeapSlot(byte* slot) : m_slot(slot) {}
+    explicit HeapSlot(std::byte* slot) : m_slot(slot) {}
     // create new slot with refcount = 1
     explicit HeapSlot(size_t size);
     // free the object only when refcount = 0
@@ -43,22 +43,22 @@ public:
     HeapSlot& operator =(const HeapSlot& rhs) = default;
     HeapSlot& operator =(HeapSlot&& rhs) noexcept { std::swap(m_slot, rhs.m_slot); return *this; }
 
-    void write(byte* buffer) const { std::memcpy(buffer, &m_slot, sizeof(m_slot)); }
-    void read(const byte* buffer) { std::memcpy(&m_slot, buffer, sizeof(m_slot)); }
+    void write(std::byte* buffer) const { std::memcpy(buffer, &m_slot, sizeof(m_slot)); }
+    void read(const std::byte* buffer) { std::memcpy(&m_slot, buffer, sizeof(m_slot)); }
 
     void incref() const;
     void decref() const;
     uint32_t refcount() const;
     void gc();  // delete slot if refs=0
 
-    byte* data() { return m_slot == nullptr ? nullptr : m_slot + 4; }
-    const byte* data() const { return m_slot == nullptr ? nullptr : m_slot + 4; }
-    const byte* slot() const { return m_slot; }
+    std::byte* data() { return m_slot == nullptr ? nullptr : m_slot + 4; }
+    const std::byte* data() const { return m_slot == nullptr ? nullptr : m_slot + 4; }
+    const std::byte* slot() const { return m_slot; }
 
     explicit operator bool() const { return m_slot != nullptr; }
 
 private:
-    byte* m_slot;
+    std::byte* m_slot;
 };
 
 

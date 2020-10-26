@@ -13,9 +13,9 @@
 #include <xci/core/memoization.h>
 #include <xci/core/sys.h>
 #include <xci/core/string.h>
-#include <xci/core/log.h>
 #include <xci/core/TermCtl.h>
 #include <xci/compat/macros.h>
+#include <xci/config.h>  // HAVE_HS_COMPILE_LIT
 
 #include <fmt/core.h>
 #include <fmt/chrono.h>
@@ -31,6 +31,9 @@
 
 using namespace xci::core;
 using namespace xci::core::argparser;
+
+
+static constexpr auto c_version = "0.4";
 
 
 struct Theme {
@@ -207,16 +210,15 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
 
 class HyperscanScratch {
 public:
+    HyperscanScratch(hs_scratch_t* prototype) {
+        if (hs_clone_scratch(prototype, &m_scratch) != HS_SUCCESS) {
+            fmt::print(stderr,"ff: hs_clone_scratch: Unable to allocate scratch space.\n");
+            exit(1);
+        }
+    }
     ~HyperscanScratch() { hs_free_scratch(m_scratch); }
 
-    hs_scratch_t* get(const hs_database_t* re_db) {
-        // this allocates new scratch space ONLY IF the previous one is NULL or no longer valid
-        if (hs_alloc_scratch(re_db, &m_scratch) != HS_SUCCESS) {
-            fmt::print(stderr,"ff: hs_alloc_scratch: Unable to allocate scratch space.\n");
-            m_scratch = nullptr;
-        }
-        return m_scratch;
-    }
+    operator hs_scratch_t*() { return m_scratch; }
 
 private:
     hs_scratch_t* m_scratch = nullptr;
@@ -232,9 +234,10 @@ int main(int argc, const char* argv[])
     bool search_in_special_dirs = false;
     bool single_device = false;
     bool long_form = false;
+    int max_depth = -1;
     bool show_version = false;
     int jobs = 8;
-    std::vector<const char*> files;
+    std::vector<fs::path> paths;
     mode_t type_mask = 0;
     const char* pattern = nullptr;
 
@@ -252,8 +255,10 @@ int main(int argc, const char* argv[])
             Option("-D, --search-dirnames", "Don't skip directory entries", show_dirs),
             Option("-S, --search-in-special-dirs", "Allow descending into special directories: " + FileTree::default_ignore_list(", "), search_in_special_dirs),
             Option("-X, --single-device", "Don't descend into directories with different device number", single_device),
-            Option("-a, --all", "Don't skip any files, same as -HDS", [&]{ show_hidden = true; show_dirs = true; search_in_special_dirs = true; }),
+            Option("-a, --all", "Don't skip any files. Alias for -HDS", [&]{ show_hidden = true; show_dirs = true; search_in_special_dirs = true; }),
+            Option("-d, --max-depth N", "Descend at most N directory levels below input directories", max_depth),
             Option("-l, --long", "Print file attributes", long_form),
+            Option("-L, --list-long", "Don't descend, print attributes. Similar to `ls -l`. Alias for -lDd1", [&]{ long_form = true; show_dirs = true; max_depth = 1; }),
             Option("-t, --types TYPES", "Filter file types: r=regular, d=dir, l=link, s=sock, f=fifo, c=char, b=block, e.g. -tdl for dir+link (implies -D)",
                     [&type_mask, &show_dirs](const char* arg){ show_dirs = true; return parse_types(arg, type_mask); }),
             Option("-c, --color", "Force color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Always); }),
@@ -263,11 +268,11 @@ int main(int argc, const char* argv[])
             Option("-V, --version", "Show version", show_version),
             Option("-h, --help", "Show help", show_help),
             Option("[PATTERN]", "File name pattern (Perl-style regex)", pattern),
-            Option("-- FILE ...", "Files and/or directories to scan", files),
+            Option("-- PATH ...", "Paths to search", paths),
     } (argv);
 
     if (show_version) {
-        term.print("{t:bold}ff{t:normal} {}\n", "0.2");
+        term.print("{t:bold}ff{t:normal} {}\n", c_version);
         term.print("using {t:bold}Hyperscan{t:normal} {}", hs_version());
 #ifndef HAVE_HS_COMPILE_LIT
         term.print(" (hs_compile_lit not available, {t:bold}{fg:green}--fixed{t:normal} option disabled)");
@@ -280,7 +285,8 @@ int main(int argc, const char* argv[])
     if (pattern && *pattern == '\0')
         pattern = nullptr;
 
-    hs_database_t *re_db = nullptr;
+    hs_database_t* re_db = nullptr;
+    hs_scratch_t* re_scratch_prototype = nullptr;
     if (pattern) {
         int flags = 0;
         if (ignore_case)
@@ -331,6 +337,13 @@ int main(int argc, const char* argv[])
                 return 1;
             }
         }
+
+        // allocate scratch "prototype", to be cloned for each thread
+        hs_error_t rc = hs_alloc_scratch(re_db, &re_scratch_prototype);
+        if (rc != HS_SUCCESS) {
+            fmt::print(stderr,"ff: hs_alloc_scratch: Unable to allocate scratch space.\n");
+            return 1;
+        }
     }
 
     // "cyanide"
@@ -345,37 +358,42 @@ int main(int argc, const char* argv[])
     FlatSet<dev_t> dev_ids;
 
     FileTree ft(jobs-1, jobs,
-                [show_hidden, show_dirs, single_device, long_form, highlight_match, type_mask,
-                 pattern, &re_db, &theme, &dev_ids]
+                [show_hidden, show_dirs, single_device, long_form, highlight_match, type_mask, max_depth,
+                 pattern, re_db, re_scratch_prototype, &theme, &dev_ids]
                 (const FileTree::PathNode& path, FileTree::Type t)
     {
-        if (!show_hidden && path.component[0] == '.')
-            return false;
         switch (t) {
             case FileTree::Directory:
-                if (!show_dirs)
-                    return true;  // descent
-                if (single_device) {
-                    struct stat st;
-                    if (!path.stat(st)) {
-                        fmt::print(stderr,"ff: stat({}): {}\n", path.dir_name(), errno_str());
-                        return true;
+            case FileTree::File: {
+                if (!show_hidden && path.component[0] == '.' && path.component != "." && path.component != "..")
+                    return false;
+
+                bool descend = true;
+                if (t == FileTree::Directory) {
+                    if (max_depth >= 0 && path.depth >= max_depth) {
+                        descend = false;
                     }
-                    if (path.is_input()) {
-                        dev_ids.emplace(st.st_dev);
-                    } else if (!dev_ids.contains(st.st_dev)) {
-                        return false;  // skip (different device ID)
+                    if (!show_dirs || path.component.empty()) {
+                        // path.component is empty when this is root report from walk_cwd()
+                        return descend;
+                    }
+                    if (single_device) {
+                        struct stat st;
+                        if (!path.stat(st)) {
+                            fmt::print(stderr,"ff: stat({}): {}\n", path.dir_name(), errno_str());
+                            return descend;
+                        }
+                        if (path.is_input()) {
+                            dev_ids.emplace(st.st_dev);
+                        } else if (!dev_ids.contains(st.st_dev)) {
+                            return false;  // skip (different device ID)
+                        }
                     }
                 }
-                FALLTHROUGH;
-            case FileTree::File: {
+
                 std::string out;
                 if (pattern) {
-                    // FIXME: allow thread init/cleanup in FileTree and move this in there
-                    thread_local HyperscanScratch re_scratch_alloc;
-                    auto* re_scratch = re_scratch_alloc.get(re_db);
-                    if (re_scratch == nullptr)
-                        return true;
+                    thread_local HyperscanScratch re_scratch(re_scratch_prototype);
 
                     if (highlight_match) {
                         // match, with highlight
@@ -390,10 +408,10 @@ int main(int argc, const char* argv[])
                                 }, &matches);
                         if (r != HS_SUCCESS) {
                             fmt::print(stderr,"ff: hs_scan({}): Unable to scan ({})\n", path.component, r);
-                            return true;
+                            return descend;
                         }
                         if (matches.empty())
-                            return true;  // not matched
+                            return descend;  // not matched
                         out = highlight_path(t, path, theme, matches[0].first, matches[0].second);
                     } else {
                         // match, no highlight
@@ -403,10 +421,10 @@ int main(int argc, const char* argv[])
                                 { return 1; }, nullptr);
                         // returns HS_SCAN_TERMINATED on match (because callback returns 1)
                         if (r == HS_SUCCESS)
-                            return true;  // not matched
+                            return descend;  // not matched
                         if (r != HS_SCAN_TERMINATED) {
                             fmt::print(stderr,"ff: hs_scan({}): ({}) Unable to scan\n", path.component, r);
-                            return true;
+                            return descend;
                         }
                         out = highlight_path(t, path, theme);
                     }
@@ -420,27 +438,27 @@ int main(int argc, const char* argv[])
                     // need stat
                     if (!path.stat(st)) {
                         fmt::print(stderr,"ff: stat({}): {}\n", path.file_name(), errno_str());
-                        return true;
+                        return descend;
                     }
                 }
 
                 if (type_mask && !(st.st_mode & type_mask))
-                    return true;
+                    return descend;
 
                 if (long_form)
                     print_path_with_attrs(out, path, st);
                 else
                     puts(out.c_str());
-                return true;
+                return descend;
             }
             case FileTree::OpenError:
-                fmt::print(stderr,"ff: open({}): {}\n", path.dir_name(), errno_str());
+                fmt::print(stderr,"ff: open({}): {}\n", path.file_name(), errno_str());
                 return true;
             case FileTree::OpenDirError:
-                fmt::print(stderr,"ff: opendir({}): {}\n", path.dir_name(), errno_str());
+                fmt::print(stderr,"ff: opendir({}): {}\n", path.file_name(), errno_str());
                 return true;
             case FileTree::ReadDirError:
-                fmt::print(stderr,"ff: readdir({}): {}\n", path.dir_name(), errno_str());
+                fmt::print(stderr,"ff: readdir({}): {}\n", path.file_name(), errno_str());
                 return true;
         }
         UNREACHABLE;
@@ -448,16 +466,17 @@ int main(int argc, const char* argv[])
 
     ft.set_default_ignore(!search_in_special_dirs);
 
-    if (files.empty()) {
+    if (paths.empty()) {
         ft.walk_cwd();
     } else {
-        for (const char* f : files) {
-            ft.walk(f);
+        for (const auto& path : paths) {
+            ft.walk(path);
         }
     }
 
     ft.worker();
 
+    hs_free_scratch(re_scratch_prototype);
     hs_free_database(re_db);
     return 0;
 }

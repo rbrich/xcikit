@@ -22,12 +22,17 @@ Single device
 - allows skipping any mounted directories that are found during directory walk
 - this costs additional `stat(2)` call per directory (usually unnoticeable)
 
+Long listing
+- `ff -l` show file attributes
+- `ff -L` is a shortcut for output similar to `ls -lh`
+- suggested shell alias: `alias lf='ff -L'`
+
 Development
 -----------
 
 Possible features to be added:
 - sorting would be nice, sometimes
-- option to `stat(2)` each found file and show or inspect some details, e.g. file size
+- filter files by attributes, e.g. file size (use case: search for large files)
 
 Not planned:
 - interpretation of `.gitignore`
