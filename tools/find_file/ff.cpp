@@ -368,20 +368,20 @@ int main(int argc, const char* argv[])
                 if (!show_hidden && path.component[0] == '.' && path.component != "." && path.component != "..")
                     return false;
 
-                bool descent = true;
+                bool descend = true;
                 if (t == FileTree::Directory) {
                     if (max_depth >= 0 && path.depth >= max_depth) {
-                        descent = false;
+                        descend = false;
                     }
                     if (!show_dirs || path.component.empty()) {
                         // path.component is empty when this is root report from walk_cwd()
-                        return descent;
+                        return descend;
                     }
                     if (single_device) {
                         struct stat st;
                         if (!path.stat(st)) {
                             fmt::print(stderr,"ff: stat({}): {}\n", path.dir_name(), errno_str());
-                            return descent;
+                            return descend;
                         }
                         if (path.is_input()) {
                             dev_ids.emplace(st.st_dev);
@@ -408,10 +408,10 @@ int main(int argc, const char* argv[])
                                 }, &matches);
                         if (r != HS_SUCCESS) {
                             fmt::print(stderr,"ff: hs_scan({}): Unable to scan ({})\n", path.component, r);
-                            return descent;
+                            return descend;
                         }
                         if (matches.empty())
-                            return descent;  // not matched
+                            return descend;  // not matched
                         out = highlight_path(t, path, theme, matches[0].first, matches[0].second);
                     } else {
                         // match, no highlight
@@ -421,10 +421,10 @@ int main(int argc, const char* argv[])
                                 { return 1; }, nullptr);
                         // returns HS_SCAN_TERMINATED on match (because callback returns 1)
                         if (r == HS_SUCCESS)
-                            return descent;  // not matched
+                            return descend;  // not matched
                         if (r != HS_SCAN_TERMINATED) {
                             fmt::print(stderr,"ff: hs_scan({}): ({}) Unable to scan\n", path.component, r);
-                            return descent;
+                            return descend;
                         }
                         out = highlight_path(t, path, theme);
                     }
@@ -438,18 +438,18 @@ int main(int argc, const char* argv[])
                     // need stat
                     if (!path.stat(st)) {
                         fmt::print(stderr,"ff: stat({}): {}\n", path.file_name(), errno_str());
-                        return descent;
+                        return descend;
                     }
                 }
 
                 if (type_mask && !(st.st_mode & type_mask))
-                    return descent;
+                    return descend;
 
                 if (long_form)
                     print_path_with_attrs(out, path, st);
                 else
                     puts(out.c_str());
-                return descent;
+                return descend;
             }
             case FileTree::OpenError:
                 fmt::print(stderr,"ff: open({}): {}\n", path.file_name(), errno_str());

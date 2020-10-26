@@ -275,7 +275,7 @@ Build and install XCI libraries (see "How to build" above),
 then use installed `xcikitConfig.cmake` in your project's
 `CMakeLists.txt`:
 
-    cmake_minimum_required(VERSION 3.7)
+    cmake_minimum_required(VERSION 3.15)
     project(example CXX)
 
     set(CMAKE_CXX_STANDARD 17)

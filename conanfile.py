@@ -45,7 +45,7 @@ class XcikitConan(ConanFile):
             with tools.chdir(tmp_dir):
                 with open("CMakeLists.txt", 'w') as f:
                     f.write(textwrap.dedent("""
-                        cmake_minimum_required(VERSION 3.9)
+                        cmake_minimum_required(VERSION 3.15)
                         project(SystemPackageFinder CXX)
                         list(APPEND CMAKE_MODULE_PATH """ + os.path.dirname(__file__) + """/cmake)
                         foreach (ITEM IN LISTS DEPS)
