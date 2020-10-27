@@ -297,6 +297,7 @@ int main(int argc, const char* argv[])
     bool long_form = false;
     int max_depth = -1;
     bool show_version = false;
+    bool show_stats = false;
     int jobs = 8;
     mode_t type_mask = 0;
     const char* pattern = nullptr;
@@ -326,6 +327,7 @@ int main(int argc, const char* argv[])
             Option("-C, --no-color", "Disable color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Never); }),
             Option("-M, --no-highlight", "Don't highlight matches (default: enabled for color output)", [&highlight_match]{ highlight_match = false; }),
             Option("-j, --jobs JOBS", "Number of worker threads", jobs).env("JOBS"),
+            Option("-s, --stats", "Print statistics (number of searched objects)", show_stats),
             Option("-V, --version", "Show version", show_version),
             Option("-h, --help", "Show help", show_help),
             Option("[PATTERN]", "File name pattern (Perl-style regex)", pattern),
@@ -416,20 +418,25 @@ int main(int argc, const char* argv[])
     };
 
     FlatSet<dev_t> dev_ids;
+    struct {
+        std::atomic_uint n_dirs {};
+        std::atomic_uint n_files {};
+    } counters;
 
     FileTree ft(jobs-1, jobs-1,
                 [show_hidden, show_dirs, single_device, long_form, highlight_match, type_mask, max_depth,
-                 &re_db, re_scratch_prototype, &theme, &dev_ids]
+                 &re_db, re_scratch_prototype, &theme, &dev_ids, &counters]
                 (const FileTree::PathNode& path, FileTree::Type t)
     {
         switch (t) {
             case FileTree::Directory:
             case FileTree::File: {
-                if (!show_hidden && path.component[0] == '.' && path.component != "." && path.component != "..")
+                if (!show_hidden && path.component[0] == '.' && (path.component.size() > 2 && path.component[1] != '.'))
                     return false;
 
                 bool descend = true;
                 if (t == FileTree::Directory) {
+                    counters.n_dirs.fetch_add(1, std::memory_order_relaxed);
                     if (max_depth >= 0 && path.depth >= max_depth) {
                         descend = false;
                     }
@@ -444,11 +451,16 @@ int main(int argc, const char* argv[])
                             return descend;
                         }
                         if (path.is_input()) {
+                            // This branch is only visited from main thread and it's the only place which writes
+                            // A race can occur between this write and the read below, but only when searching
+                            // multiple directories. FIXME: avoid the race or synchronize dev_ids
                             dev_ids.emplace(st.st_dev);
                         } else if (!dev_ids.contains(st.st_dev)) {
                             return false;  // skip (different device ID)
                         }
                     }
+                } else {
+                    counters.n_files.fetch_add(1, std::memory_order_relaxed);
                 }
 
                 std::string out;
@@ -535,6 +547,9 @@ int main(int argc, const char* argv[])
     }
 
     ft.worker();
+
+    if (show_stats)
+        fmt::print(stderr, "--> searched {} directories, {} files\n", counters.n_dirs, counters.n_files);
 
     hs_free_scratch(re_scratch_prototype);
     return 0;
