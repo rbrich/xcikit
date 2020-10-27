@@ -208,6 +208,22 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
 }
 
 
+static bool add_pattern_for_extension(hs_database_t** re_db, const char* ext, int flags)
+{
+    auto pattern = std::string("\\.") + ext + '$';
+    hs_compile_error_t *re_compile_err;
+    hs_error_t rc = hs_compile(pattern.c_str(), flags,
+            HS_MODE_BLOCK, nullptr,
+            re_db, &re_compile_err);
+    if (rc != HS_SUCCESS) {
+        fmt::print(stderr,"ff: hs_compile({}): ({}) {}\n", pattern, rc, re_compile_err->message);
+        hs_free_compile_error(re_compile_err);
+        return false;
+    }
+    return true;
+}
+
+
 class HyperscanScratch {
 public:
     HyperscanScratch(hs_scratch_t* prototype) {
@@ -237,9 +253,11 @@ int main(int argc, const char* argv[])
     int max_depth = -1;
     bool show_version = false;
     int jobs = 8;
-    std::vector<fs::path> paths;
     mode_t type_mask = 0;
     const char* pattern = nullptr;
+    std::vector<fs::path> paths;
+    std::vector<const char*> extensions;
+    std::vector<const char*> iextensions;
 
     TermCtl& term = TermCtl::stdout_instance();
 
@@ -250,6 +268,8 @@ int main(int argc, const char* argv[])
 #ifdef HAVE_HS_COMPILE_LIT
             Option("-F, --fixed", "Match literal string instead of (default) regex", fixed),
 #endif
+            Option("-e, --ext EXT", "Match only files with extension EXT", extensions),
+            Option("-E, --iext IEXT", "Match only files with extension EXT (case insensitive)", iextensions),
             Option("-i, --ignore-case", "Enable case insensitive matching", ignore_case),
             Option("-H, --search-hidden", "Don't skip hidden files", show_hidden),
             Option("-D, --search-dirnames", "Don't skip directory entries", show_dirs),
@@ -282,12 +302,14 @@ int main(int argc, const char* argv[])
     }
 
     // empty pattern -> show all files
+    bool have_pattern = false;
     if (pattern && *pattern == '\0')
         pattern = nullptr;
 
     hs_database_t* re_db = nullptr;
     hs_scratch_t* re_scratch_prototype = nullptr;
     if (pattern) {
+        have_pattern = true;
         int flags = 0;
         if (ignore_case)
             flags |= HS_FLAG_CASELESS;
@@ -296,6 +318,8 @@ int main(int argc, const char* argv[])
 #ifdef HAVE_HS_COMPILE_LIT
             if (highlight_match)
                 flags |= HS_FLAG_SOM_LEFTMOST;
+            else
+                flags |= HS_FLAG_SINGLEMATCH;
             auto rc = hs_compile_lit(pattern, flags,
                     strlen(pattern), HS_MODE_BLOCK, nullptr,
                     &re_db, &re_compile_err);
@@ -337,7 +361,27 @@ int main(int argc, const char* argv[])
                 return 1;
             }
         }
+    }
 
+    if (!extensions.empty() || !iextensions.empty()) {
+        have_pattern = true;
+        int flags = HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP;
+        if (highlight_match)
+            flags |= HS_FLAG_SOM_LEFTMOST;
+        else
+            flags |= HS_FLAG_SINGLEMATCH;
+        for (const char* ext : extensions) {
+            if (!add_pattern_for_extension(&re_db, ext, flags))
+                return 1;
+        }
+        flags |= HS_FLAG_CASELESS;
+        for (const char* ext : iextensions) {
+            if (!add_pattern_for_extension(&re_db, ext, flags))
+                return 1;
+        }
+    }
+
+    if (have_pattern) {
         // allocate scratch "prototype", to be cloned for each thread
         hs_error_t rc = hs_alloc_scratch(re_db, &re_scratch_prototype);
         if (rc != HS_SUCCESS) {
@@ -359,7 +403,7 @@ int main(int argc, const char* argv[])
 
     FileTree ft(jobs-1, jobs,
                 [show_hidden, show_dirs, single_device, long_form, highlight_match, type_mask, max_depth,
-                 pattern, re_db, re_scratch_prototype, &theme, &dev_ids]
+                 have_pattern, re_db, re_scratch_prototype, &theme, &dev_ids]
                 (const FileTree::PathNode& path, FileTree::Type t)
     {
         switch (t) {
@@ -392,7 +436,7 @@ int main(int argc, const char* argv[])
                 }
 
                 std::string out;
-                if (pattern) {
+                if (have_pattern) {
                     thread_local HyperscanScratch re_scratch(re_scratch_prototype);
 
                     if (highlight_match) {
