@@ -14,8 +14,8 @@
 #include <xci/core/sys.h>
 #include <xci/core/string.h>
 #include <xci/core/TermCtl.h>
+#include <xci/core/NonCopyable.h>
 #include <xci/compat/macros.h>
-#include <xci/config.h>  // HAVE_HS_COMPILE_LIT
 
 #include <fmt/core.h>
 #include <fmt/chrono.h>
@@ -208,23 +208,68 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
 }
 
 
-static bool add_pattern_for_extension(hs_database_t** re_db, const char* ext, int flags)
-{
-    auto pattern = std::string("\\.") + ext + '$';
-    hs_compile_error_t *re_compile_err;
-    hs_error_t rc = hs_compile(pattern.c_str(), flags,
-            HS_MODE_BLOCK, nullptr,
-            re_db, &re_compile_err);
-    if (rc != HS_SUCCESS) {
-        fmt::print(stderr,"ff: hs_compile({}): ({}) {}\n", pattern, rc, re_compile_err->message);
-        hs_free_compile_error(re_compile_err);
-        return false;
+class HyperscanDatabase: public NonCopyable {
+public:
+    ~HyperscanDatabase() { hs_free_database(m_db); }
+
+    operator bool() const { return m_db != nullptr; }
+    operator const hs_database_t *() const { return m_db; }
+
+    void add(const char* pattern, unsigned int flags) {
+        m_patterns.emplace_back(pattern);
+        m_flags.push_back(flags);
     }
-    return true;
-}
+
+    void add_literal(const char* literal, unsigned int flags) {
+        // Escape non-alphanumeric characters in literal to hex
+        // See: https://github.com/intel/hyperscan/issues/191
+        std::string pattern;
+        pattern.reserve(4 * strlen(literal));
+        auto it = std::back_inserter(pattern);
+        for (const char* ch = literal; *ch; ++ch) {
+            if (isalnum(*ch))
+                *it++ = *ch;
+            else
+                it = fmt::format_to(it, "\\x{:02x}", *ch);
+        }
+        m_patterns.push_back(std::move(pattern));
+        m_flags.push_back(flags);
+    }
+
+    void add_extension(const char* ext, unsigned int flags) {
+        // Match file extension, i.e. '.' + ext at end of filename
+        auto pattern = std::string("\\.") + ext + '$';
+        m_patterns.push_back(pattern);
+        m_flags.push_back(flags);
+    }
+
+    bool compile() {
+        if (m_patterns.empty())
+            return true;
+        std::vector<const char*> expressions;
+        expressions.reserve(m_patterns.size());
+        for (const auto& pat : m_patterns)
+            expressions.push_back(pat.c_str());
+        hs_compile_error_t *re_compile_err;
+        hs_error_t rc = hs_compile_multi(expressions.data(), m_flags.data(),
+                nullptr, expressions.size(),
+                HS_MODE_BLOCK, nullptr, &m_db, &re_compile_err);
+        if (rc != HS_SUCCESS) {
+            fmt::print(stderr,"ff: hs_compile_multi: ({}) {}\n", rc, re_compile_err->message);
+            hs_free_compile_error(re_compile_err);
+            return false;
+        }
+        return true;
+    }
+
+private:
+    hs_database_t* m_db = nullptr;
+    std::vector<std::string> m_patterns;
+    std::vector<unsigned int> m_flags;
+};
 
 
-class HyperscanScratch {
+class HyperscanScratch: public NonCopyable {
 public:
     HyperscanScratch(hs_scratch_t* prototype) {
         if (hs_clone_scratch(prototype, &m_scratch) != HS_SUCCESS) {
@@ -257,7 +302,6 @@ int main(int argc, const char* argv[])
     const char* pattern = nullptr;
     std::vector<fs::path> paths;
     std::vector<const char*> extensions;
-    std::vector<const char*> iextensions;
 
     TermCtl& term = TermCtl::stdout_instance();
 
@@ -265,20 +309,17 @@ int main(int argc, const char* argv[])
     bool highlight_match = term.is_tty();
 
     ArgParser {
-#ifdef HAVE_HS_COMPILE_LIT
             Option("-F, --fixed", "Match literal string instead of (default) regex", fixed),
-#endif
-            Option("-e, --ext EXT", "Match only files with extension EXT", extensions),
-            Option("-E, --iext IEXT", "Match only files with extension EXT (case insensitive)", iextensions),
             Option("-i, --ignore-case", "Enable case insensitive matching", ignore_case),
+            Option("-e, --ext EXT ...", "Match only files with extension EXT (shortcut for pattern '\\.EXT$')", extensions),
             Option("-H, --search-hidden", "Don't skip hidden files", show_hidden),
             Option("-D, --search-dirnames", "Don't skip directory entries", show_dirs),
             Option("-S, --search-in-special-dirs", "Allow descending into special directories: " + FileTree::default_ignore_list(", "), search_in_special_dirs),
             Option("-X, --single-device", "Don't descend into directories with different device number", single_device),
-            Option("-a, --all", "Don't skip any files. Alias for -HDS", [&]{ show_hidden = true; show_dirs = true; search_in_special_dirs = true; }),
+            Option("-a, --all", "Don't skip any files (alias for -HDS)", [&]{ show_hidden = true; show_dirs = true; search_in_special_dirs = true; }),
             Option("-d, --max-depth N", "Descend at most N directory levels below input directories", max_depth),
             Option("-l, --long", "Print file attributes", long_form),
-            Option("-L, --list-long", "Don't descend, print attributes. Similar to `ls -l`. Alias for -lDd1", [&]{ long_form = true; show_dirs = true; max_depth = 1; }),
+            Option("-L, --list-long", "Don't descend and print attributes, similar to `ls -l` (alias for -lDd1)", [&]{ long_form = true; show_dirs = true; max_depth = 1; }),
             Option("-t, --types TYPES", "Filter file types: r=regular, d=dir, l=link, s=sock, f=fifo, c=char, b=block, e.g. -tdl for dir+link (implies -D)",
                     [&type_mask, &show_dirs](const char* arg){ show_dirs = true; return parse_types(arg, type_mask); }),
             Option("-c, --color", "Force color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Always); }),
@@ -294,44 +335,28 @@ int main(int argc, const char* argv[])
     if (show_version) {
         term.print("{t:bold}ff{t:normal} {}\n", c_version);
         term.print("using {t:bold}Hyperscan{t:normal} {}", hs_version());
-#ifndef HAVE_HS_COMPILE_LIT
-        term.print(" (hs_compile_lit not available, {t:bold}{fg:green}--fixed{t:normal} option disabled)");
-#endif
         puts("");
         return 0;
     }
 
     // empty pattern -> show all files
-    bool have_pattern = false;
     if (pattern && *pattern == '\0')
         pattern = nullptr;
 
-    hs_database_t* re_db = nullptr;
+    HyperscanDatabase re_db;
     hs_scratch_t* re_scratch_prototype = nullptr;
     if (pattern) {
-        have_pattern = true;
-        int flags = 0;
+        int flags = HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP;
         if (ignore_case)
             flags |= HS_FLAG_CASELESS;
         hs_compile_error_t *re_compile_err;
         if (fixed) {
-#ifdef HAVE_HS_COMPILE_LIT
             if (highlight_match)
                 flags |= HS_FLAG_SOM_LEFTMOST;
             else
                 flags |= HS_FLAG_SINGLEMATCH;
-            auto rc = hs_compile_lit(pattern, flags,
-                    strlen(pattern), HS_MODE_BLOCK, nullptr,
-                    &re_db, &re_compile_err);
-            if (rc != HS_SUCCESS) {
-                fmt::print(stderr,"ff: hs_compile_lit({}): ({}) {}\n", pattern, rc, re_compile_err->message);
-                hs_free_compile_error(re_compile_err);
-                return 1;
-            }
-#endif
+            re_db.add_literal(pattern, flags);
         } else {
-            flags |= HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP;
-
             // analyze pattern
             hs_expr_info_t* re_info = nullptr;
             hs_error_t rc = hs_expression_info(pattern, flags, &re_info, &re_compile_err);
@@ -352,36 +377,27 @@ int main(int argc, const char* argv[])
                 flags |= HS_FLAG_SOM_LEFTMOST;
             else
                 flags |= HS_FLAG_SINGLEMATCH;
-            rc = hs_compile(pattern, flags,
-                    HS_MODE_BLOCK, nullptr,
-                    &re_db, &re_compile_err);
-            if (rc != HS_SUCCESS) {
-                fmt::print(stderr,"ff: hs_compile({}): ({}) {}\n", pattern, rc, re_compile_err->message);
-                hs_free_compile_error(re_compile_err);
-                return 1;
-            }
+            re_db.add(pattern, flags);
         }
     }
 
-    if (!extensions.empty() || !iextensions.empty()) {
-        have_pattern = true;
+    if (!extensions.empty()) {
         int flags = HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP;
+        if (ignore_case)
+            flags |= HS_FLAG_CASELESS;
         if (highlight_match)
             flags |= HS_FLAG_SOM_LEFTMOST;
         else
             flags |= HS_FLAG_SINGLEMATCH;
         for (const char* ext : extensions) {
-            if (!add_pattern_for_extension(&re_db, ext, flags))
-                return 1;
-        }
-        flags |= HS_FLAG_CASELESS;
-        for (const char* ext : iextensions) {
-            if (!add_pattern_for_extension(&re_db, ext, flags))
-                return 1;
+            re_db.add_extension(ext, flags);
         }
     }
 
-    if (have_pattern) {
+    if (!re_db.compile())
+        return 1;
+
+    if (re_db) {
         // allocate scratch "prototype", to be cloned for each thread
         hs_error_t rc = hs_alloc_scratch(re_db, &re_scratch_prototype);
         if (rc != HS_SUCCESS) {
@@ -403,7 +419,7 @@ int main(int argc, const char* argv[])
 
     FileTree ft(jobs-1, jobs,
                 [show_hidden, show_dirs, single_device, long_form, highlight_match, type_mask, max_depth,
-                 have_pattern, re_db, re_scratch_prototype, &theme, &dev_ids]
+                 &re_db, re_scratch_prototype, &theme, &dev_ids]
                 (const FileTree::PathNode& path, FileTree::Type t)
     {
         switch (t) {
@@ -436,7 +452,7 @@ int main(int argc, const char* argv[])
                 }
 
                 std::string out;
-                if (have_pattern) {
+                if (re_db) {
                     thread_local HyperscanScratch re_scratch(re_scratch_prototype);
 
                     if (highlight_match) {
@@ -521,6 +537,5 @@ int main(int argc, const char* argv[])
     ft.worker();
 
     hs_free_scratch(re_scratch_prototype);
-    hs_free_database(re_db);
     return 0;
 }
