@@ -8,6 +8,8 @@
 #define XCI_CORE_FILETREE_H
 
 #include <xci/core/string.h>
+#include <xci/core/listdir.h>
+#include <xci/config.h>
 
 #include <string>
 #include <string_view>
@@ -212,42 +214,49 @@ private:
     }
 
     void read(const std::shared_ptr<PathNode>& path) {
-        DIR* dirp = fdopendir(path->fd);
-        if (dirp == nullptr) {
+        thread_local DirEntryArena arena;
+        DirEntryArenaGuard arena_guard(arena);
+        std::vector<sys_dirent_t*> entries;
+
+#ifdef XCI_LISTDIR_GETDENTS
+        if (!list_dir_sys(path->fd, arena, entries)) {
             m_cb(*path, OpenDirError);
             close(path->fd);
             return;
         }
+#else
+        DIR* dirp;
+        if (!list_dir_posix(path->fd, dirp, arena, entries)) {
+            m_cb(*path, OpenDirError);
+            return;
+        }
+#endif
 
-        for (;;) {
-            errno = 0;
-            auto* dir_entry = readdir(dirp);
-            if (dir_entry == nullptr) {
-                // end or error
-                if (errno != 0) {
-                    m_cb(*path, ReadDirError);
-                }
-                break;
-            }
-            if (strcmp(dir_entry->d_name, ".") == 0 || strcmp(dir_entry->d_name, "..") == 0)
-                continue;
+        std::sort(entries.begin(), entries.end(),
+                [](const sys_dirent_t* a, const sys_dirent_t* b)
+                { return strcmp(a->d_name, b->d_name) < 0; });
 
+        for (const auto* entry : entries) {
             // Check ignore list
-            std::string entry_pathname = path->dir_name() + dir_entry->d_name;
+            std::string entry_pathname = path->dir_name() + entry->d_name;
             if (m_default_ignore && is_default_ignored(entry_pathname))
                 continue;
 
-            auto entry_path = std::make_shared<PathNode>(dir_entry->d_name, path);
+            auto entry_path = std::make_shared<PathNode>(entry->d_name, path);
 
-            if ((dir_entry->d_type & DT_DIR) == DT_DIR || dir_entry->d_type == DT_UNKNOWN) {
+            if ((entry->d_type & DT_DIR) == DT_DIR || entry->d_type == DT_UNKNOWN) {
                 // readdir says it's a dir or it doesn't know
-                if (open_and_report(dir_entry->d_name, *entry_path, path->fd))
+                if (open_and_report(entry->d_name, *entry_path, path->fd))
                     enqueue(std::move(entry_path));
                 continue;
             }
             m_cb(*entry_path, File);
         }
+#ifdef XCI_LISTDIR_GETDENTS
+        close(path->fd);
+#else
         closedir(dirp);
+#endif
     }
 
     /// \param pathname     path to open, may be relative
@@ -256,7 +265,11 @@ private:
     /// \return     true if opened as a directory and callback returned true (i.e. descend)
     bool open_and_report(const char* pathname, PathNode& node, int at_fd) {
         // try to open as a directory, if it fails with ENOTDIR, it is a file
-        int fd = openat(at_fd, pathname, O_DIRECTORY | O_NOFOLLOW | O_NOCTTY, O_RDONLY);
+        int flags = O_DIRECTORY | O_NOFOLLOW | O_NOCTTY | O_CLOEXEC;
+#ifdef __linux__
+        flags |= O_NOATIME;
+#endif
+        int fd = openat(at_fd, pathname, flags, O_RDONLY);
         if (fd == -1) {
             if (errno == ENOTDIR) {
                 // it's a file - report it

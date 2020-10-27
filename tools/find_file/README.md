@@ -10,7 +10,8 @@ Inspired by [fd](https://github.com/sharkdp/fd).
 Implementation:
 - fast file tree walk using `fdopendir(3)`, `openat(2)`
 - custom threadpool with simple locking queue
-- no sorting, no `stat(2)` (dirs are detected using `O_DIRECTORY`)
+- entries sorted lexically, but output from threads is interleaved (no thread output buffers)
+- no `stat(2)` by default, dirs are detected using `O_DIRECTORY`
 
 Default ignored files and directories:
 - special paths like `/mnt`, `/dev`, `/proc` are not searched by default
@@ -31,7 +32,6 @@ Development
 -----------
 
 Possible features to be added:
-- sorting would be nice, sometimes
 - filter files by attributes, e.g. file size (use case: search for large files)
 
 Not planned:

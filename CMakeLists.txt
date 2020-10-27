@@ -26,6 +26,8 @@ option(XCI_INSTALL_SHARE_DAR "Install runtime data as DAR archive (share.dar)" O
 option(XCI_INSTALL_SHARE_ZIP "Install runtime data as ZIP archive (share.zip)" OFF)
 option(XCI_EMBED_SHADERS "Embed shader files into binaries to avoid dependency on share dir." OFF)
 
+option(XCI_LISTDIR_GETDENTS "Use getdents syscall instead of readdir for tools/find_file." OFF)
+
 option(XCI_DEBUG_VULKAN "Log info about Vulkan calls and errors." OFF)
 option(XCI_DEBUG_TRACE "Enable trace log messages." OFF)
 option(XCI_DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
@@ -105,6 +107,11 @@ elseif (XCI_INSTALL_SHARE_DAR)
 elseif (XCI_INSTALL_SHARE_ZIP)
     set(XCI_SHARE "${XCI_SHARE_ZIP}")
 endif()
+
+
+# ------------ #
+# config.h     #
+# ------------ #
 
 # Generate config.h
 configure_file(config.h.in include/xci/config.h)
