@@ -265,10 +265,7 @@ private:
     /// \return     true if opened as a directory and callback returned true (i.e. descend)
     bool open_and_report(const char* pathname, PathNode& node, int at_fd) {
         // try to open as a directory, if it fails with ENOTDIR, it is a file
-        int flags = O_DIRECTORY | O_NOFOLLOW | O_NOCTTY | O_CLOEXEC;
-#ifdef __linux__
-        flags |= O_NOATIME;
-#endif
+        constexpr int flags = O_DIRECTORY | O_NOFOLLOW | O_NOCTTY | O_CLOEXEC;
         int fd = openat(at_fd, pathname, flags, O_RDONLY);
         if (fd == -1) {
             if (errno == ENOTDIR) {

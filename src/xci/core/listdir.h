@@ -18,6 +18,7 @@
 
 #ifndef XCI_LISTDIR_GETDENTS
     #include <cerrno>
+    #include <cstring>
     #include <dirent.h>
     #include <unistd.h>
 
@@ -149,7 +150,12 @@ inline bool list_dir_posix(int dir_fd, DIR*& dirp, DirEntryArena& arena,
         if (is_dots_entry(entry->d_name))
             continue;
 
-        const size_t entry_size = entry->d_namlen + 2;  // 1 for d_type, 1 for d_name terminator
+#ifdef __APPLE__
+        const size_t namelen = entry->d_namlen;
+#else
+        const size_t namelen = strlen(entry->d_name);
+#endif
+        const size_t entry_size = namelen + 2;  // 1 for d_type, 1 for d_name terminator
         if (buf_pos + entry_size > DirEntryArena::block_size) {
             buf = arena.get_block();
             buf_pos = 0;
