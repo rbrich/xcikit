@@ -234,7 +234,7 @@ private:
 
         std::sort(entries.begin(), entries.end(),
                 [](const sys_dirent_t* a, const sys_dirent_t* b)
-                { return strcmp(a->d_name, b->d_name) < 0; });
+                { return a->d_type < b->d_type || (a->d_type == b->d_type && strcmp(a->d_name, b->d_name) < 0); });
 
         for (const auto* entry : entries) {
             // Check ignore list

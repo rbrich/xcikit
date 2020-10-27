@@ -417,7 +417,7 @@ int main(int argc, const char* argv[])
 
     FlatSet<dev_t> dev_ids;
 
-    FileTree ft(jobs-1, jobs,
+    FileTree ft(jobs-1, jobs-1,
                 [show_hidden, show_dirs, single_device, long_form, highlight_match, type_mask, max_depth,
                  &re_db, re_scratch_prototype, &theme, &dev_ids]
                 (const FileTree::PathNode& path, FileTree::Type t)

@@ -19,12 +19,13 @@
 #ifndef XCI_LISTDIR_GETDENTS
     #include <cerrno>
     #include <cstring>
+    #include <climits>
     #include <dirent.h>
     #include <unistd.h>
 
     struct sys_dirent_t {
         uint8_t   d_type;
-        char      d_name[];
+        char      d_name[NAME_MAX];
     };
 #else
     #ifdef __APPLE__
