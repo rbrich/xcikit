@@ -9,7 +9,6 @@
 
 #include <xci/core/string.h>
 #include <xci/core/listdir.h>
-#include <xci/core/sys.h>  // get_thread_id
 #include <xci/config.h>
 
 #include <string>
@@ -17,6 +16,7 @@
 #include <memory>
 #include <functional>
 #include <thread>
+#include <atomic>
 #include <mutex>
 #include <condition_variable>
 #include <filesystem>
@@ -27,11 +27,6 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-
-#ifndef TRACE
-#define TRACE(fmt, ...)  ((void)0)
-#define NO_TRACE_PROVIDED
-#endif
 
 namespace xci::core {
 
@@ -115,7 +110,9 @@ public:
 
     /// \param num_threads      Number of threads FileTree should spawn.
     ///                         Can be zero, but don't forget to call worker() from main thread.
-    explicit FileTree(unsigned num_threads, Callback&& cb) : m_cb(std::move(cb)), m_busy(1) {
+    explicit FileTree(unsigned num_threads, Callback&& cb)
+        : m_cb(std::move(cb)), m_busy_max((int)num_threads + 1)
+    {
         assert(m_cb);
         m_workers.reserve(num_threads);
         for (unsigned i = 0; i != num_threads; ++i) {
@@ -160,57 +157,33 @@ public:
     }
 
     void main_worker() {
-        worker(true);
+        m_busy.fetch_sub(1, std::memory_order_release);  // main worker is counted as busy from start (see ctor)
+        worker();
     }
 
 private:
     void enqueue(std::shared_ptr<PathNode>&& path) {
+        // Skip locking and queuing if all workers are (apparently) busy.
+        if (m_busy.load(std::memory_order_relaxed) >= m_busy_max) {
+            read(std::move(path));
+            return;
+        }
+
         std::unique_lock lock(m_mutex);
         if (!m_job) {
+            m_busy.fetch_add(1, std::memory_order_release);
             m_job = std::move(path);
             lock.unlock();
             m_cv.notify_one();
         } else {
             // process the item in this thread
             // (better than blocking and doing nothing)
-            process_job("enqueue", lock, std::move(path));
+            lock.unlock();
+            read(std::move(path));
         }
     }
 
-    void worker(bool main = false) {
-        TRACE("[{}] worker start", get_thread_id());
-        std::unique_lock lock(m_mutex);
-        if (main)
-            --m_busy;  // main worker is counted as busy from start (see ctor)
-        while(m_job || m_busy != 0) {
-            while (!m_job) {
-                m_cv.wait(lock);
-                if (m_busy == 0 && !m_job)
-                    goto finish;
-            }
-            // clear m_job by moving it away - it's important to move into temp variable
-            auto path = std::move(m_job);
-            assert(!m_job);  // cleared
-            process_job("worker", lock, std::move(path));
-        }
-    finish:
-        lock.unlock();
-        m_cv.notify_all();
-        TRACE("[{}] worker finish", get_thread_id());
-    }
-
-    void process_job(const char* label, std::unique_lock<std::mutex>& lock, std::shared_ptr<PathNode>&& path) {
-        // suppress warnings in case of disabled TRACE
-        (void) label;
-        (void) get_thread_id();
-        TRACE("[{}] {} read start ({} recursively reading)", get_thread_id(), label, m_busy);
-        ++m_busy;
-        lock.unlock();
-        read(std::move(path));
-        lock.lock();
-        --m_busy;
-        TRACE("[{}] {} read finish ({} recursively reading)", get_thread_id(), label, m_busy);
-    }
+    void worker();
 
     void read(std::shared_ptr<PathNode>&& path) {
         thread_local DirEntryArena arena;
@@ -285,19 +258,29 @@ private:
     }
 
     Callback m_cb;
+
     std::shared_ptr<PathNode> m_job;
     std::vector<std::thread> m_workers;
-    std::mutex m_mutex;  // for both queue and workers
+    std::mutex m_mutex;  // sync access to job from workers and CV
     std::condition_variable m_cv;
-    int m_busy = 0;  // number of threads in `read`
+
+    // busy counter has three purposes:
+    // * to keep workers alive while main thread submits work via walk()
+    //   - the counter starts at 1 and main_worker() decrements it
+    // * to keep workers alive when a job is posted via m_job
+    //   - it's incremented when posting a job
+    // * to keep workers alive while other workers are processing jobs
+    //   - more jobs might be added by the processing
+    //   - when worker finishes processing, it decrements the counter
+    //     (this pairs with job posting)
+    std::atomic_int m_busy {1};
+
+    // total workers, including the main one
+    int m_busy_max;
+
     bool m_default_ignore = true;
 };
 
 } // namespace xci::core
-
-#ifdef NO_TRACE_PROVIDED
-#undef TRACE
-#undef NO_TRACE_PROVIDED
-#endif
 
 #endif // include guard
