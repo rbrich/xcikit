@@ -10,6 +10,7 @@
 #define XCI_CORE_MEMOIZATION_H
 
 #include <tuple>
+#include <xci/core/metatype/ToFunctionPtr.h>
 
 namespace xci::core {
 
@@ -17,51 +18,66 @@ namespace xci::core {
 /// Represents memoized function. Stores the function itself
 /// and `n` cells for memoization of different function args.
 /// Do not construct directly, use memoize() function instead.
-template <unsigned n, typename Func, typename Ret, typename... Args>
-class Memoized {
+template<unsigned n, typename FPtr, typename Signature>
+class Memoized;
+
+template <unsigned n, typename FPtr, typename Ret, typename... Args>
+class Memoized<n, FPtr, Ret(*)(Args...)> {
+    using FunctionPointer = typename FPtr::Type;
+    using ArgsTuple = std::tuple<Args...>;
+    using ArgsStorage = typename std::aligned_storage<sizeof(ArgsTuple), alignof(ArgsTuple)>::type;
+
 public:
-    explicit Memoized(Func func): func(func) {}
+    explicit Memoized(FunctionPointer func): func(func) {}
 
     Ret operator() (Args... args)
     {
         // On first call:
-        // - field #0 is initialized to result of calling func with default-constructed args
-        // - reading starts with this pre-initialized field #0
-        // - if not matched, new item is written to field #1
+        // - last_written > valid ==> nothing memoized yet
+        // - new item is written to field #0
         // On following calls:
         // - check recent items (backwards)
-        // - write new items to uninitialized fields
-        // - field #0 (default value) is overwritten last
-        // - until all items are overwritten, lookup always goes through default in field #0
+        // - write new items to uninitialized fields (forwards)
+        // - until all items are overwritten, lookup always ends in field #0
 
-        int i = last_read_i;
-        do {
-            if (memo_args[i] == std::tuple<Args...>{args...})
+        ArgsTuple args_tuple{args...};
+        int i = last_written;
+        while (i <= valid) {
+            if (std::memcmp(&memo_args[i], &args_tuple, sizeof(ArgsTuple)) == 0)
                 return memo_result[i];
             i = (i - 1 + n) % n;
-        } while (i != last_read_i);
+            if (i == last_written)
+                break;  // cycled through the whole cache
+        }
 
-        i = (last_written_i + 1) % n;
-        last_read_i = last_written_i = i;
-        memo_args[i] = {args...};
+        i = (last_written + 1) % n;
+        last_written = i;
+        if (valid < i)
+            valid = i;
+        std::memcpy(&memo_args[i], &args_tuple, sizeof(ArgsTuple));
         return memo_result[i] = func(args...);
     }
 
 private:
-    Func func;
-    std::tuple<Args...> memo_args[n] {};
-    Ret memo_result[n] {func(Args{}...)};
-    int last_read_i = 0;
-    int last_written_i = 0;
+    FunctionPointer func;
+    ArgsStorage memo_args[n];   // store and compare as bit image, no actual objects are constructed here
+    Ret memo_result[n];
+    int last_written = n - 1;
+    int valid = -1;
 };
 
 
 /// Make function object for memoization of `func`.
 /// \tparam n       How many most-recent results should be remembered.
 /// \param func     The function to be memoized and called by Memoized function object.
-template<unsigned n = 8, typename Ret, typename... Args>
-auto memoize(Ret (*func)(Args...)) {
-    return Memoized<n, decltype(func), Ret, Args...>{func};
+/// TODO: Restrict to trivial types in arguments
+///       They are compared bit-by-bit, so it won't work for std::string etc.
+///       Pointers are also quite dangerous, because the value can be recycled
+template<unsigned n = 8, typename Func>
+auto memoize(Func&& func) {
+    auto fptr = ToFunctionPtr(std::forward<Func>(func));
+    using FPtr = decltype(fptr);
+    return Memoized<n, FPtr, typename FPtr::Type>{fptr.ptr};
 }
 
 

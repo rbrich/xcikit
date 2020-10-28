@@ -10,7 +10,8 @@ Inspired by [fd](https://github.com/sharkdp/fd).
 Implementation:
 - fast file tree walk using `fdopendir(3)`, `openat(2)`
 - custom threadpool with simple locking queue
-- no sorting, no `stat(2)` (dirs are detected using `O_DIRECTORY`)
+- entries sorted lexically, but output from threads is interleaved (no thread output buffers)
+- no `stat(2)` by default, dirs are detected using `O_DIRECTORY`
 
 Default ignored files and directories:
 - special paths like `/mnt`, `/dev`, `/proc` are not searched by default
@@ -27,11 +28,31 @@ Long listing
 - `ff -L` is a shortcut for output similar to `ls -lh`
 - suggested shell alias: `alias lf='ff -L'`
 
+Use cases
+---------
+
+### Count file sizes
+
+Use `--stats` in combination with `-l` or `-t<TYPE>` (both imply `stat(2)` calls) to print sum of file sizes.
+
+Example:
+- `-s` is `--stats`
+- ~~-tr~~ `-tf` filters regular files and also enables size statistics
+- `-e 'cpp|h'` filters C++ sources
+- no matching pattern is used, so we need `--` before the list of paths
+
+![ff_stats_part_1](https://user-images.githubusercontent.com/6216152/97462585-2d628f00-193f-11eb-9c82-8030c4944a02.png)
+
+... more files, clipped ...
+
+![ff_stats_part_2](https://user-images.githubusercontent.com/6216152/97462870-76b2de80-193f-11eb-8eb4-c73b30c4c999.png)
+
+Whoa, 1 megabyte of code! Almost full 💾.
+
 Development
 -----------
 
 Possible features to be added:
-- sorting would be nice, sometimes
 - filter files by attributes, e.g. file size (use case: search for large files)
 
 Not planned:

@@ -7,15 +7,14 @@
 /// Find File (ff) command line tool
 /// A find-like tool using Hyperscan for regex matching.
 
-#include <xci/core/ArgParser.h>
 #include <xci/core/FileTree.h>
+#include <xci/core/ArgParser.h>
 #include <xci/core/container/FlatSet.h>
 #include <xci/core/memoization.h>
 #include <xci/core/sys.h>
-#include <xci/core/string.h>
 #include <xci/core/TermCtl.h>
+#include <xci/core/NonCopyable.h>
 #include <xci/compat/macros.h>
-#include <xci/config.h>  // HAVE_HS_COMPILE_LIT
 
 #include <fmt/core.h>
 #include <fmt/chrono.h>
@@ -42,6 +41,16 @@ struct Theme {
     std::string file_dir;
     std::string file_name;
     std::string highlight;
+};
+
+
+struct Counters {
+    std::atomic_uint64_t total_size {};
+    std::atomic_uint64_t total_blocks {};
+    std::atomic_uint seen_dirs {};
+    std::atomic_uint seen_files {};
+    std::atomic_uint matched_dirs {};
+    std::atomic_uint matched_files {};
 };
 
 
@@ -80,14 +89,19 @@ static bool parse_types(const char* arg, mode_t& out_mask)
 {
     for (const char* c = arg; *c; ++c) {
         switch (tolower(*c)) {
-            case 'r':   out_mask |= S_IFREG; return true;
-            case 'd':   out_mask |= S_IFDIR; return true;
-            case 'l':   out_mask |= S_IFLNK; return true;
-            case 's':   out_mask |= S_IFSOCK; return true;
-            case 'f':   out_mask |= S_IFIFO; return true;
-            case 'c':   out_mask |= S_IFCHR; return true;
-            case 'b':   out_mask |= S_IFBLK; return true;
-            default: return false;
+            // the symbols are accepted because they represent file types in `-l` output
+            // 'r' (for regular) is accepted because why not ('f' is used by find)
+            case 'x': case '*':   out_mask |= (S_IXUSR | S_IXGRP | S_IXOTH); break;
+            case 'r':
+            case 'f': case ' ':   out_mask |= S_IFREG; break;
+            case 'd': case '/':   out_mask |= S_IFDIR; break;
+            case 'l': case '@':   out_mask |= S_IFLNK; break;
+            case 's': case '=':   out_mask |= S_IFSOCK; break;
+            case 'p': case '|':   out_mask |= S_IFIFO; break;
+            case 'c': case '-':   out_mask |= S_IFCHR; break;
+            case 'b': case '+':   out_mask |= S_IFBLK; break;
+            default:
+                return false;
         }
     }
     return true;
@@ -208,7 +222,89 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
 }
 
 
-class HyperscanScratch {
+static void print_stats(const Counters& counters)
+{
+    TermCtl& term = TermCtl::stdout_instance();
+    fmt::print(stderr, "----------------------------------------------\n"
+                       " Searched {:8} directories {:8} files\n"
+                       " Matched  {:8} directories {:8} files\n",
+            counters.seen_dirs, counters.seen_files, counters.matched_dirs, counters.matched_files);
+    if (counters.total_size || counters.total_blocks) {
+        size_t size = counters.total_size;
+        size_t alloc = counters.total_blocks * 512;
+        char size_unit = round_size_to_unit(size);
+        char alloc_unit = round_size_to_unit(alloc);
+        fmt::print(stderr,
+                " Size    {}{:8}{}{:c}{} used   {}{:8}{}{:c}{} allocated\n",
+                term.fg(size_unit_to_color(size_unit)), size, term.dim(), size_unit, term.normal(),
+                term.fg(size_unit_to_color(alloc_unit)), alloc, term.dim(), alloc_unit, term.normal());
+    }
+    fmt::print(stderr, "----------------------------------------------\n");
+}
+
+
+class HyperscanDatabase: public NonCopyable {
+public:
+    ~HyperscanDatabase() { hs_free_database(m_db); }
+
+    operator bool() const { return m_db != nullptr; }
+    operator const hs_database_t *() const { return m_db; }
+
+    void add(const char* pattern, unsigned int flags) {
+        m_patterns.emplace_back(pattern);
+        m_flags.push_back(flags);
+    }
+
+    void add_literal(const char* literal, unsigned int flags) {
+        // Escape non-alphanumeric characters in literal to hex
+        // See: https://github.com/intel/hyperscan/issues/191
+        std::string pattern;
+        pattern.reserve(4 * strlen(literal));
+        auto it = std::back_inserter(pattern);
+        for (const char* ch = literal; *ch; ++ch) {
+            if (isalnum(*ch))
+                *it++ = *ch;
+            else
+                it = fmt::format_to(it, "\\x{:02x}", *ch);
+        }
+        m_patterns.push_back(std::move(pattern));
+        m_flags.push_back(flags);
+    }
+
+    void add_extension(const char* ext, unsigned int flags) {
+        // Match file extension, i.e. '.' + ext at end of filename
+        auto pattern = std::string("\\.") + ext + '$';
+        m_patterns.push_back(pattern);
+        m_flags.push_back(flags);
+    }
+
+    bool compile() {
+        if (m_patterns.empty())
+            return true;
+        std::vector<const char*> expressions;
+        expressions.reserve(m_patterns.size());
+        for (const auto& pat : m_patterns)
+            expressions.push_back(pat.c_str());
+        hs_compile_error_t *re_compile_err;
+        hs_error_t rc = hs_compile_multi(expressions.data(), m_flags.data(),
+                nullptr, expressions.size(),
+                HS_MODE_BLOCK, nullptr, &m_db, &re_compile_err);
+        if (rc != HS_SUCCESS) {
+            fmt::print(stderr,"ff: hs_compile_multi: ({}) {}\n", rc, re_compile_err->message);
+            hs_free_compile_error(re_compile_err);
+            return false;
+        }
+        return true;
+    }
+
+private:
+    hs_database_t* m_db = nullptr;
+    std::vector<std::string> m_patterns;
+    std::vector<unsigned int> m_flags;
+};
+
+
+class HyperscanScratch: public NonCopyable {
 public:
     HyperscanScratch(hs_scratch_t* prototype) {
         if (hs_clone_scratch(prototype, &m_scratch) != HS_SUCCESS) {
@@ -236,10 +332,12 @@ int main(int argc, const char* argv[])
     bool long_form = false;
     int max_depth = -1;
     bool show_version = false;
-    int jobs = 8;
-    std::vector<fs::path> paths;
+    bool show_stats = false;
+    int jobs = 2 * cpu_count();
     mode_t type_mask = 0;
     const char* pattern = nullptr;
+    std::vector<fs::path> paths;
+    std::vector<const char*> extensions;
 
     TermCtl& term = TermCtl::stdout_instance();
 
@@ -247,24 +345,24 @@ int main(int argc, const char* argv[])
     bool highlight_match = term.is_tty();
 
     ArgParser {
-#ifdef HAVE_HS_COMPILE_LIT
             Option("-F, --fixed", "Match literal string instead of (default) regex", fixed),
-#endif
             Option("-i, --ignore-case", "Enable case insensitive matching", ignore_case),
+            Option("-e, --ext EXT ...", "Match only files with extension EXT (shortcut for pattern '\\.EXT$')", extensions),
             Option("-H, --search-hidden", "Don't skip hidden files", show_hidden),
             Option("-D, --search-dirnames", "Don't skip directory entries", show_dirs),
             Option("-S, --search-in-special-dirs", "Allow descending into special directories: " + FileTree::default_ignore_list(", "), search_in_special_dirs),
             Option("-X, --single-device", "Don't descend into directories with different device number", single_device),
-            Option("-a, --all", "Don't skip any files. Alias for -HDS", [&]{ show_hidden = true; show_dirs = true; search_in_special_dirs = true; }),
+            Option("-a, --all", "Don't skip any files (alias for -HDS)", [&]{ show_hidden = true; show_dirs = true; search_in_special_dirs = true; }),
             Option("-d, --max-depth N", "Descend at most N directory levels below input directories", max_depth),
             Option("-l, --long", "Print file attributes", long_form),
-            Option("-L, --list-long", "Don't descend, print attributes. Similar to `ls -l`. Alias for -lDd1", [&]{ long_form = true; show_dirs = true; max_depth = 1; }),
-            Option("-t, --types TYPES", "Filter file types: r=regular, d=dir, l=link, s=sock, f=fifo, c=char, b=block, e.g. -tdl for dir+link (implies -D)",
+            Option("-L, --list-long", "Don't descend and print attributes, similar to `ls -l` (alias for -lDd1)", [&]{ long_form = true; show_dirs = true; max_depth = 1; }),
+            Option("-t, --types TYPES", "Filter file types: f=regular, d=dir, l=link, s=sock, p=fifo, c=char, b=block, x=exec, e.g. -tdl for dir+link (implies -D)",
                     [&type_mask, &show_dirs](const char* arg){ show_dirs = true; return parse_types(arg, type_mask); }),
             Option("-c, --color", "Force color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Always); }),
             Option("-C, --no-color", "Disable color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Never); }),
             Option("-M, --no-highlight", "Don't highlight matches (default: enabled for color output)", [&highlight_match]{ highlight_match = false; }),
-            Option("-j, --jobs JOBS", "Number of worker threads", jobs).env("JOBS"),
+            Option("-j, --jobs JOBS", fmt::format("Number of worker threads (default: 2*ncpu = {})", jobs), jobs).env("JOBS"),
+            Option("-s, --stats", "Print statistics (number of searched objects)", show_stats),
             Option("-V, --version", "Show version", show_version),
             Option("-h, --help", "Show help", show_help),
             Option("[PATTERN]", "File name pattern (Perl-style regex)", pattern),
@@ -273,11 +371,7 @@ int main(int argc, const char* argv[])
 
     if (show_version) {
         term.print("{t:bold}ff{t:normal} {}\n", c_version);
-        term.print("using {t:bold}Hyperscan{t:normal} {}", hs_version());
-#ifndef HAVE_HS_COMPILE_LIT
-        term.print(" (hs_compile_lit not available, {t:bold}{fg:green}--fixed{t:normal} option disabled)");
-#endif
-        puts("");
+        term.print("using {t:bold}Hyperscan{t:normal} {}\n", hs_version());
         return 0;
     }
 
@@ -285,29 +379,20 @@ int main(int argc, const char* argv[])
     if (pattern && *pattern == '\0')
         pattern = nullptr;
 
-    hs_database_t* re_db = nullptr;
+    HyperscanDatabase re_db;
     hs_scratch_t* re_scratch_prototype = nullptr;
     if (pattern) {
-        int flags = 0;
+        int flags = HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP;
         if (ignore_case)
             flags |= HS_FLAG_CASELESS;
         hs_compile_error_t *re_compile_err;
         if (fixed) {
-#ifdef HAVE_HS_COMPILE_LIT
             if (highlight_match)
                 flags |= HS_FLAG_SOM_LEFTMOST;
-            auto rc = hs_compile_lit(pattern, flags,
-                    strlen(pattern), HS_MODE_BLOCK, nullptr,
-                    &re_db, &re_compile_err);
-            if (rc != HS_SUCCESS) {
-                fmt::print(stderr,"ff: hs_compile_lit({}): ({}) {}\n", pattern, rc, re_compile_err->message);
-                hs_free_compile_error(re_compile_err);
-                return 1;
-            }
-#endif
+            else
+                flags |= HS_FLAG_SINGLEMATCH;
+            re_db.add_literal(pattern, flags);
         } else {
-            flags |= HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP;
-
             // analyze pattern
             hs_expr_info_t* re_info = nullptr;
             hs_error_t rc = hs_expression_info(pattern, flags, &re_info, &re_compile_err);
@@ -328,16 +413,27 @@ int main(int argc, const char* argv[])
                 flags |= HS_FLAG_SOM_LEFTMOST;
             else
                 flags |= HS_FLAG_SINGLEMATCH;
-            rc = hs_compile(pattern, flags,
-                    HS_MODE_BLOCK, nullptr,
-                    &re_db, &re_compile_err);
-            if (rc != HS_SUCCESS) {
-                fmt::print(stderr,"ff: hs_compile({}): ({}) {}\n", pattern, rc, re_compile_err->message);
-                hs_free_compile_error(re_compile_err);
-                return 1;
-            }
+            re_db.add(pattern, flags);
         }
+    }
 
+    if (!extensions.empty()) {
+        int flags = HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP;
+        if (ignore_case)
+            flags |= HS_FLAG_CASELESS;
+        if (highlight_match)
+            flags |= HS_FLAG_SOM_LEFTMOST;
+        else
+            flags |= HS_FLAG_SINGLEMATCH;
+        for (const char* ext : extensions) {
+            re_db.add_extension(ext, flags);
+        }
+    }
+
+    if (!re_db.compile())
+        return 1;
+
+    if (re_db) {
         // allocate scratch "prototype", to be cloned for each thread
         hs_error_t rc = hs_alloc_scratch(re_db, &re_scratch_prototype);
         if (rc != HS_SUCCESS) {
@@ -356,16 +452,24 @@ int main(int argc, const char* argv[])
     };
 
     FlatSet<dev_t> dev_ids;
+    Counters counters;
 
-    FileTree ft(jobs-1, jobs,
+    FileTree ft(jobs-1,
                 [show_hidden, show_dirs, single_device, long_form, highlight_match, type_mask, max_depth,
-                 pattern, re_db, re_scratch_prototype, &theme, &dev_ids]
+                 &re_db, re_scratch_prototype, &theme, &dev_ids, &counters]
                 (const FileTree::PathNode& path, FileTree::Type t)
     {
         switch (t) {
             case FileTree::Directory:
             case FileTree::File: {
-                if (!show_hidden && path.component[0] == '.' && path.component != "." && path.component != "..")
+                if (t == FileTree::Directory) {
+                    counters.seen_dirs.fetch_add(1, std::memory_order_relaxed);
+                } else {
+                    counters.seen_files.fetch_add(1, std::memory_order_relaxed);
+                }
+
+                // skip hidden files (".", ".." not considered hidden - if passed as PATH arg)
+                if (!show_hidden && path.component[0] == '.' && !is_dots_entry(path.component.c_str()))
                     return false;
 
                 bool descend = true;
@@ -375,6 +479,7 @@ int main(int argc, const char* argv[])
                     }
                     if (!show_dirs || path.component.empty()) {
                         // path.component is empty when this is root report from walk_cwd()
+                        counters.seen_dirs.fetch_sub(1, std::memory_order_relaxed);  // small correction - don't count implicitly searched CWD
                         return descend;
                     }
                     if (single_device) {
@@ -384,6 +489,9 @@ int main(int argc, const char* argv[])
                             return descend;
                         }
                         if (path.is_input()) {
+                            // This branch is only visited from main thread and it's the only place which writes
+                            // A race can occur between this write and the read below, but only when searching
+                            // multiple directories. FIXME: avoid the race or synchronize dev_ids
                             dev_ids.emplace(st.st_dev);
                         } else if (!dev_ids.contains(st.st_dev)) {
                             return false;  // skip (different device ID)
@@ -392,7 +500,7 @@ int main(int argc, const char* argv[])
                 }
 
                 std::string out;
-                if (pattern) {
+                if (re_db) {
                     thread_local HyperscanScratch re_scratch(re_scratch_prototype);
 
                     if (highlight_match) {
@@ -440,10 +548,24 @@ int main(int argc, const char* argv[])
                         fmt::print(stderr,"ff: stat({}): {}\n", path.file_name(), errno_str());
                         return descend;
                     }
+                    counters.total_size.fetch_add(st.st_size, std::memory_order_relaxed);
+                    counters.total_blocks.fetch_add(st.st_blocks, std::memory_order_relaxed);
                 }
 
-                if (type_mask && !(st.st_mode & type_mask))
-                    return descend;
+                if (type_mask) {
+                    // match type
+                    if (!(st.st_mode & type_mask & S_IFMT))
+                        return descend;
+                    // match rights
+                    if ((type_mask & 07777) && !(st.st_mode & type_mask & 07777))
+                        return descend;
+                }
+
+                if (t == FileTree::Directory) {
+                    counters.matched_dirs.fetch_add(1, std::memory_order_relaxed);
+                } else {
+                    counters.matched_files.fetch_add(1, std::memory_order_relaxed);
+                }
 
                 if (long_form)
                     print_path_with_attrs(out, path, st);
@@ -474,9 +596,13 @@ int main(int argc, const char* argv[])
         }
     }
 
-    ft.worker();
+    ft.main_worker();
+
+    if (show_stats) {
+        print_stats(counters);
+    }
+
 
     hs_free_scratch(re_scratch_prototype);
-    hs_free_database(re_db);
     return 0;
 }

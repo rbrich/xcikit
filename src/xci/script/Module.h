@@ -42,14 +42,14 @@ public:
 
     template<class F>
     Index add_native_function(std::string&& name, F&& fun) {
-        auto w = native::AutoWrap{native::ToFunctionPtr(std::forward<F>(fun))};
+        auto w = native::AutoWrap{core::ToFunctionPtr(std::forward<F>(fun))};
         return add_native_function(std::move(name),
                 w.param_types(), w.return_type(), w.native_wrapper());
     }
 
     template<class F>
     Index add_native_function(std::string&& name, F&& fun, void* arg0) {
-        auto w = native::AutoWrap(native::ToFunctionPtr(std::forward<F>(fun)), arg0);
+        auto w = native::AutoWrap(core::ToFunctionPtr(std::forward<F>(fun)), arg0);
         return add_native_function(std::move(name),
                 w.param_types(), w.return_type(), w.native_wrapper());
     }

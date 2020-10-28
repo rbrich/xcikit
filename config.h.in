@@ -17,6 +17,9 @@
 // Embed shader files into binaries to avoid dependency on share dir
 #cmakedefine XCI_EMBED_SHADERS
 
+// Alternative implementations
+#cmakedefine XCI_LISTDIR_GETDENTS
+
 // Debugging
 #cmakedefine XCI_DEBUG_TRACE
 #cmakedefine XCI_DEBUG_MARKUP_DUMP_TOKENS
@@ -25,6 +28,5 @@
 // Compatibility checks
 #cmakedefine HAVE_GNU_STRERROR_R
 #cmakedefine HAVE_XSI_STRERROR_R
-#cmakedefine HAVE_HS_COMPILE_LIT
 
 #endif //XCI_CONFIG_H

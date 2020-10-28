@@ -8,12 +8,15 @@
 #define XCI_CORE_FILETREE_H
 
 #include <xci/core/string.h>
+#include <xci/core/listdir.h>
+#include <xci/config.h>
 
 #include <string>
 #include <string_view>
 #include <memory>
 #include <functional>
 #include <thread>
+#include <atomic>
 #include <mutex>
 #include <condition_variable>
 #include <filesystem>
@@ -24,11 +27,6 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <sys/stat.h>
-
-#ifndef TRACE
-#define TRACE(fmt, ...)  ((void)0)
-#define NO_TRACE_PROVIDED
-#endif
 
 namespace xci::core {
 
@@ -110,12 +108,16 @@ public:
     /// for Directories, return true to descend, false to skip
     using Callback = std::function<bool(const PathNode&, Type)>;
 
-    /// \param max_threads      Number of threads FileTree can spawn.
-    explicit FileTree(unsigned max_threads, unsigned queue_size, Callback&& cb) : m_max_threads(max_threads), m_cb(std::move(cb)) {
+    /// \param num_threads      Number of threads FileTree should spawn.
+    ///                         Can be zero, but don't forget to call worker() from main thread.
+    explicit FileTree(unsigned num_threads, Callback&& cb)
+        : m_cb(std::move(cb)), m_busy_max((int)num_threads + 1)
+    {
         assert(m_cb);
-        m_workers.reserve(max_threads);
-        m_queue.reserve(queue_size);
-        assert(m_queue.capacity() == queue_size);
+        m_workers.reserve(num_threads);
+        for (unsigned i = 0; i != num_threads; ++i) {
+            m_workers.emplace_back([this, i]{ worker(i + 1); });
+        }
     }
 
     ~FileTree() {
@@ -154,100 +156,60 @@ public:
         enqueue(std::move(node));
     }
 
-    void worker() {
-        TRACE("[{}] worker start", get_thread_id());
-        std::unique_lock lock(m_mutex);
-        while(!m_queue.empty() || m_busy != 0) {
-            while (m_queue.empty()) {
-                m_cv.wait(lock);
-                if (m_busy == 0 && m_queue.empty()) {
-                    lock.unlock();
-                    m_cv.notify_all();
-                    TRACE("[{}] worker finish", get_thread_id());
-                    return;
-                }
-            }
-
-            auto path = std::move(m_queue.back());
-            m_queue.pop_back();
-            TRACE("[{}] worker read start ({} busy, {} queue)", get_thread_id(), m_busy, m_queue.size());
-            ++m_busy;
-            lock.unlock();
-            read(path);
-            lock.lock();
-            --m_busy;
-            TRACE("[{}] worker read finish ({} busy, {} queue)", get_thread_id(), m_busy, m_queue.size());
-        }
-        lock.unlock();
-        m_cv.notify_all();
-        TRACE("[{}] worker finish", get_thread_id());
+    void main_worker() {
+        m_busy.fetch_sub(1, std::memory_order_release);  // main worker is counted as busy from start (see ctor)
+        worker(0);
     }
 
 private:
-    void start_worker() {
-        m_workers.emplace_back(std::thread{[this]{
-            worker();
-        }});
-    }
+    void enqueue(std::shared_ptr<PathNode>&& path);
 
-    void enqueue(std::shared_ptr<PathNode>&& path) {
-        std::unique_lock lock(m_mutex);
-        if (m_queue.size() < m_queue.capacity()) {
-            m_queue.emplace_back(std::move(path));
-            lock.unlock();
-            m_cv.notify_one();
-        } else {
-            if (m_workers.size() < m_max_threads)
-                start_worker();
-            // process the item in this thread
-            // (better than blocking and doing nothing)
-            TRACE("[{}] enqueue read start ({} busy, {} queue)", get_thread_id(), m_busy, m_queue.size());
-            ++m_busy;
-            lock.unlock();
-            read(path);
-            lock.lock();
-            --m_busy;
-            TRACE("[{}] enqueue read finish ({} busy, {} queue)", get_thread_id(), m_busy, m_queue.size());
-        }
-    }
+    void worker(int num);
 
-    void read(const std::shared_ptr<PathNode>& path) {
-        DIR* dirp = fdopendir(path->fd);
-        if (dirp == nullptr) {
+    void read(std::shared_ptr<PathNode>&& path) {
+        thread_local DirEntryArena arena;
+        DirEntryArenaGuard arena_guard(arena);
+        std::vector<sys_dirent_t*> entries;
+
+#ifdef XCI_LISTDIR_GETDENTS
+        if (!list_dir_sys(path->fd, arena, entries)) {
             m_cb(*path, OpenDirError);
             close(path->fd);
             return;
         }
+#else
+        DIR* dirp;
+        if (!list_dir_posix(path->fd, dirp, arena, entries)) {
+            m_cb(*path, OpenDirError);
+            return;
+        }
+#endif
 
-        for (;;) {
-            errno = 0;
-            auto* dir_entry = readdir(dirp);
-            if (dir_entry == nullptr) {
-                // end or error
-                if (errno != 0) {
-                    m_cb(*path, ReadDirError);
-                }
-                break;
-            }
-            if (strcmp(dir_entry->d_name, ".") == 0 || strcmp(dir_entry->d_name, "..") == 0)
-                continue;
+        std::sort(entries.begin(), entries.end(),
+                [](const sys_dirent_t* a, const sys_dirent_t* b)
+                { return a->d_type < b->d_type || (a->d_type == b->d_type && strcmp(a->d_name, b->d_name) < 0); });
 
+        for (const auto* entry : entries) {
             // Check ignore list
-            std::string entry_pathname = path->dir_name() + dir_entry->d_name;
+            std::string entry_pathname = path->dir_name() + entry->d_name;
             if (m_default_ignore && is_default_ignored(entry_pathname))
                 continue;
 
-            auto entry_path = std::make_shared<PathNode>(dir_entry->d_name, path);
+            auto entry_path = std::make_shared<PathNode>(entry->d_name, path);
 
-            if ((dir_entry->d_type & DT_DIR) == DT_DIR || dir_entry->d_type == DT_UNKNOWN) {
+            if ((entry->d_type & DT_DIR) == DT_DIR || entry->d_type == DT_UNKNOWN) {
                 // readdir says it's a dir or it doesn't know
-                if (open_and_report(dir_entry->d_name, *entry_path, path->fd))
+                if (open_and_report(entry->d_name, *entry_path, path->fd))
                     enqueue(std::move(entry_path));
                 continue;
             }
             m_cb(*entry_path, File);
         }
+#ifdef XCI_LISTDIR_GETDENTS
+        close(path->fd);
+#else
         closedir(dirp);
+#endif
     }
 
     /// \param pathname     path to open, may be relative
@@ -256,7 +218,8 @@ private:
     /// \return     true if opened as a directory and callback returned true (i.e. descend)
     bool open_and_report(const char* pathname, PathNode& node, int at_fd) {
         // try to open as a directory, if it fails with ENOTDIR, it is a file
-        int fd = openat(at_fd, pathname, O_DIRECTORY | O_NOFOLLOW | O_NOCTTY, O_RDONLY);
+        constexpr int flags = O_DIRECTORY | O_NOFOLLOW | O_NOCTTY | O_CLOEXEC;
+        int fd = openat(at_fd, pathname, flags, O_RDONLY);
         if (fd == -1) {
             if (errno == ENOTDIR) {
                 // it's a file - report it
@@ -275,21 +238,30 @@ private:
         return true;
     }
 
-    const unsigned m_max_threads;
     Callback m_cb;
-    std::vector<std::shared_ptr<PathNode>> m_queue;
+
+    std::shared_ptr<PathNode> m_job;
     std::vector<std::thread> m_workers;
-    std::mutex m_mutex;  // for both queue and workers
+    std::mutex m_mutex;  // sync access to job from workers and CV
     std::condition_variable m_cv;
-    int m_busy = 0;  // number of threads in `read`
+
+    // busy counter has three purposes:
+    // * to keep workers alive while main thread submits work via walk()
+    //   - the counter starts at 1 and main_worker() decrements it
+    // * to keep workers alive when a job is posted via m_job
+    //   - it's incremented when posting a job
+    // * to keep workers alive while other workers are processing jobs
+    //   - more jobs might be added by the processing
+    //   - when worker finishes processing, it decrements the counter
+    //     (this pairs with job posting)
+    std::atomic_int m_busy {1};
+
+    // total workers, including the main one
+    int m_busy_max;
+
     bool m_default_ignore = true;
 };
 
 } // namespace xci::core
-
-#ifdef NO_TRACE_PROVIDED
-#undef TRACE
-#undef NO_TRACE_PROVIDED
-#endif
 
 #endif // include guard

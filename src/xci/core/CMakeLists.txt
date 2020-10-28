@@ -12,7 +12,7 @@ add_library(xci-core
     SharedLibrary.cpp
     string.cpp
     sys.cpp
-    rtti.cc
+    rtti.cpp
     TermCtl.cpp
     Vfs.cpp
     )
