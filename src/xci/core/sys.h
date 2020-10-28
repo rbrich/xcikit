@@ -22,6 +22,13 @@ namespace xci::core {
 namespace fs = std::filesystem;
 
 
+// Get number of CPUs.
+// Equivalent to:
+// - Mac: sysctl -n hw.ncpu
+// - Linux: grep processor /proc/cpuinfo | wc -l
+int cpu_count();
+
+
 // Integral thread ID
 // The actual type is system-dependent.
 #if defined(__linux__)

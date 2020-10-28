@@ -16,12 +16,15 @@
     #include <sys/syscall.h>
 #elif defined(__APPLE__)
     #include <pthread.h>
+    #include <sys/types.h>
+    #include <sys/sysctl.h>
     #include <mach-o/dyld.h>
 #endif
 
 // get_home_dir, *_signals
 #ifdef _WIN32
     #include <ShlObj.h>
+    #include <sysinfoapi.h>
     #include <cassert>
 #else
     #include <sys/types.h>
@@ -203,6 +206,25 @@ fs::path self_executable_path()
     assert(!"get_self_path: not implemented for this platform");
     return {};
 #endif
+}
+
+
+int cpu_count()
+{
+#ifdef _WIN32
+    SYSTEM_INFO sysinfo;
+    GetSystemInfo(&sysinfo);
+    return sysinfo.dwNumberOfProcessors;
+#elif defined(__linux__)
+    return (int) sysconf(_SC_NPROCESSORS_ONLN);
+#elif defined(__APPLE__)
+    int mib[2] { CTL_HW, HW_NCPU };
+    int value;
+    size_t len = sizeof(int);
+    if (sysctl(mib, 2, &value, &len, nullptr, 0) == 0)
+        return value;
+#endif
+    return 2;  // generic default
 }
 
 

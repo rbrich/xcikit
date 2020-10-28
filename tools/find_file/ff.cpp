@@ -7,13 +7,11 @@
 /// Find File (ff) command line tool
 /// A find-like tool using Hyperscan for regex matching.
 
-#include <xci/core/log.h>  // TRACE for FileTree - must be included first
 #include <xci/core/FileTree.h>
 #include <xci/core/ArgParser.h>
 #include <xci/core/container/FlatSet.h>
 #include <xci/core/memoization.h>
 #include <xci/core/sys.h>
-#include <xci/core/string.h>
 #include <xci/core/TermCtl.h>
 #include <xci/core/NonCopyable.h>
 #include <xci/compat/macros.h>
@@ -299,7 +297,7 @@ int main(int argc, const char* argv[])
     int max_depth = -1;
     bool show_version = false;
     bool show_stats = false;
-    int jobs = 8;
+    int jobs = 2 * cpu_count();
     mode_t type_mask = 0;
     const char* pattern = nullptr;
     std::vector<fs::path> paths;
@@ -327,7 +325,7 @@ int main(int argc, const char* argv[])
             Option("-c, --color", "Force color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Always); }),
             Option("-C, --no-color", "Disable color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Never); }),
             Option("-M, --no-highlight", "Don't highlight matches (default: enabled for color output)", [&highlight_match]{ highlight_match = false; }),
-            Option("-j, --jobs JOBS", "Number of worker threads", jobs).env("JOBS"),
+            Option("-j, --jobs JOBS", fmt::format("Number of worker threads (default: 2*ncpu = {})", jobs), jobs).env("JOBS"),
             Option("-s, --stats", "Print statistics (number of searched objects)", show_stats),
             Option("-V, --version", "Show version", show_version),
             Option("-h, --help", "Show help", show_help),
