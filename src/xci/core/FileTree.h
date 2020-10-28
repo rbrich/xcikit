@@ -116,7 +116,7 @@ public:
         assert(m_cb);
         m_workers.reserve(num_threads);
         for (unsigned i = 0; i != num_threads; ++i) {
-            m_workers.emplace_back([this]{ worker(); });
+            m_workers.emplace_back([this, i]{ worker(i + 1); });
         }
     }
 
@@ -158,32 +158,13 @@ public:
 
     void main_worker() {
         m_busy.fetch_sub(1, std::memory_order_release);  // main worker is counted as busy from start (see ctor)
-        worker();
+        worker(0);
     }
 
 private:
-    void enqueue(std::shared_ptr<PathNode>&& path) {
-        // Skip locking and queuing if all workers are (apparently) busy.
-        if (m_busy.load(std::memory_order_relaxed) >= m_busy_max) {
-            read(std::move(path));
-            return;
-        }
+    void enqueue(std::shared_ptr<PathNode>&& path);
 
-        std::unique_lock lock(m_mutex);
-        if (!m_job) {
-            m_busy.fetch_add(1, std::memory_order_release);
-            m_job = std::move(path);
-            lock.unlock();
-            m_cv.notify_one();
-        } else {
-            // process the item in this thread
-            // (better than blocking and doing nothing)
-            lock.unlock();
-            read(std::move(path));
-        }
-    }
-
-    void worker();
+    void worker(int num);
 
     void read(std::shared_ptr<PathNode>&& path) {
         thread_local DirEntryArena arena;

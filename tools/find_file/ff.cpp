@@ -371,8 +371,7 @@ int main(int argc, const char* argv[])
 
     if (show_version) {
         term.print("{t:bold}ff{t:normal} {}\n", c_version);
-        term.print("using {t:bold}Hyperscan{t:normal} {}", hs_version());
-        puts("");
+        term.print("using {t:bold}Hyperscan{t:normal} {}\n", hs_version());
         return 0;
     }
 
