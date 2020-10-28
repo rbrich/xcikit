@@ -44,6 +44,16 @@ struct Theme {
 };
 
 
+struct Counters {
+    std::atomic_uint64_t total_size {};
+    std::atomic_uint64_t total_blocks {};
+    std::atomic_uint seen_dirs {};
+    std::atomic_uint seen_files {};
+    std::atomic_uint matched_dirs {};
+    std::atomic_uint matched_files {};
+};
+
+
 static char file_type_to_char(mode_t mode)
 {
     switch (mode & S_IFMT) {
@@ -204,6 +214,27 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
         out += fmt::format(" -> {}", std::string_view(buf, res));
     }
     puts(out.c_str());
+}
+
+
+static void print_stats(const Counters& counters)
+{
+    TermCtl& term = TermCtl::stdout_instance();
+    fmt::print(stderr, "----------------------------------------------\n"
+                       " Searched {:8} directories {:8} files\n"
+                       " Matched  {:8} directories {:8} files\n",
+            counters.seen_dirs, counters.seen_files, counters.matched_dirs, counters.matched_files);
+    if (counters.total_size || counters.total_blocks) {
+        size_t size = counters.total_size;
+        size_t alloc = counters.total_blocks * 512;
+        char size_unit = round_size_to_unit(size);
+        char alloc_unit = round_size_to_unit(alloc);
+        fmt::print(stderr,
+                " Size    {}{:8}{}{:c}{} used   {}{:8}{}{:c}{} allocated\n",
+                term.fg(size_unit_to_color(size_unit)), size, term.dim(), size_unit, term.normal(),
+                term.fg(size_unit_to_color(alloc_unit)), alloc, term.dim(), alloc_unit, term.normal());
+    }
+    fmt::print(stderr, "----------------------------------------------\n");
 }
 
 
@@ -417,10 +448,7 @@ int main(int argc, const char* argv[])
     };
 
     FlatSet<dev_t> dev_ids;
-    struct {
-        std::atomic_uint n_dirs {};
-        std::atomic_uint n_files {};
-    } counters;
+    Counters counters;
 
     FileTree ft(jobs-1,
                 [show_hidden, show_dirs, single_device, long_form, highlight_match, type_mask, max_depth,
@@ -430,17 +458,24 @@ int main(int argc, const char* argv[])
         switch (t) {
             case FileTree::Directory:
             case FileTree::File: {
-                if (!show_hidden && path.component[0] == '.' && (path.component.size() > 2 && path.component[1] != '.'))
+                if (t == FileTree::Directory) {
+                    counters.seen_dirs.fetch_add(1, std::memory_order_relaxed);
+                } else {
+                    counters.seen_files.fetch_add(1, std::memory_order_relaxed);
+                }
+
+                // skip hidden files (".", ".." not considered hidden - if passed as PATH arg)
+                if (!show_hidden && path.component[0] == '.' && !is_dots_entry(path.component.c_str()))
                     return false;
 
                 bool descend = true;
                 if (t == FileTree::Directory) {
-                    counters.n_dirs.fetch_add(1, std::memory_order_relaxed);
                     if (max_depth >= 0 && path.depth >= max_depth) {
                         descend = false;
                     }
                     if (!show_dirs || path.component.empty()) {
                         // path.component is empty when this is root report from walk_cwd()
+                        counters.seen_dirs.fetch_sub(1, std::memory_order_relaxed);  // small correction - don't count implicitly searched CWD
                         return descend;
                     }
                     if (single_device) {
@@ -458,8 +493,6 @@ int main(int argc, const char* argv[])
                             return false;  // skip (different device ID)
                         }
                     }
-                } else {
-                    counters.n_files.fetch_add(1, std::memory_order_relaxed);
                 }
 
                 std::string out;
@@ -511,10 +544,18 @@ int main(int argc, const char* argv[])
                         fmt::print(stderr,"ff: stat({}): {}\n", path.file_name(), errno_str());
                         return descend;
                     }
+                    counters.total_size.fetch_add(st.st_size, std::memory_order_relaxed);
+                    counters.total_blocks.fetch_add(st.st_blocks, std::memory_order_relaxed);
                 }
 
                 if (type_mask && !(st.st_mode & type_mask))
                     return descend;
+
+                if (t == FileTree::Directory) {
+                    counters.matched_dirs.fetch_add(1, std::memory_order_relaxed);
+                } else {
+                    counters.matched_files.fetch_add(1, std::memory_order_relaxed);
+                }
 
                 if (long_form)
                     print_path_with_attrs(out, path, st);
@@ -547,8 +588,10 @@ int main(int argc, const char* argv[])
 
     ft.main_worker();
 
-    if (show_stats)
-        fmt::print(stderr, "--> searched {} directories, {} files\n", counters.n_dirs, counters.n_files);
+    if (show_stats) {
+        print_stats(counters);
+    }
+
 
     hs_free_scratch(re_scratch_prototype);
     return 0;
