@@ -7,8 +7,9 @@
 /// Find File (ff) command line tool
 /// A find-like tool using Hyperscan for regex matching.
 
-#include <xci/core/ArgParser.h>
+#include <xci/core/log.h>  // TRACE for FileTree - must be included first
 #include <xci/core/FileTree.h>
+#include <xci/core/ArgParser.h>
 #include <xci/core/container/FlatSet.h>
 #include <xci/core/memoization.h>
 #include <xci/core/sys.h>
@@ -423,7 +424,7 @@ int main(int argc, const char* argv[])
         std::atomic_uint n_files {};
     } counters;
 
-    FileTree ft(jobs-1, jobs-1,
+    FileTree ft(jobs-1,
                 [show_hidden, show_dirs, single_device, long_form, highlight_match, type_mask, max_depth,
                  &re_db, re_scratch_prototype, &theme, &dev_ids, &counters]
                 (const FileTree::PathNode& path, FileTree::Type t)
@@ -546,7 +547,7 @@ int main(int argc, const char* argv[])
         }
     }
 
-    ft.worker();
+    ft.main_worker();
 
     if (show_stats)
         fmt::print(stderr, "--> searched {} directories, {} files\n", counters.n_dirs, counters.n_files);

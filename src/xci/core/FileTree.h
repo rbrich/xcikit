@@ -9,6 +9,7 @@
 
 #include <xci/core/string.h>
 #include <xci/core/listdir.h>
+#include <xci/core/sys.h>  // get_thread_id
 #include <xci/config.h>
 
 #include <string>
@@ -112,12 +113,14 @@ public:
     /// for Directories, return true to descend, false to skip
     using Callback = std::function<bool(const PathNode&, Type)>;
 
-    /// \param max_threads      Number of threads FileTree can spawn.
-    explicit FileTree(unsigned max_threads, unsigned queue_size, Callback&& cb) : m_max_threads(max_threads), m_cb(std::move(cb)) {
+    /// \param num_threads      Number of threads FileTree should spawn.
+    ///                         Can be zero, but don't forget to call worker() from main thread.
+    explicit FileTree(unsigned num_threads, Callback&& cb) : m_cb(std::move(cb)), m_busy(1) {
         assert(m_cb);
-        m_workers.reserve(max_threads);
-        m_queue.reserve(queue_size);
-        assert(m_queue.capacity() == queue_size);
+        m_workers.reserve(num_threads);
+        for (unsigned i = 0; i != num_threads; ++i) {
+            m_workers.emplace_back([this]{ worker(); });
+        }
     }
 
     ~FileTree() {
@@ -156,64 +159,60 @@ public:
         enqueue(std::move(node));
     }
 
-    void worker() {
+    void main_worker() {
+        worker(true);
+    }
+
+private:
+    void enqueue(std::shared_ptr<PathNode>&& path) {
+        std::unique_lock lock(m_mutex);
+        if (!m_job) {
+            m_job = std::move(path);
+            lock.unlock();
+            m_cv.notify_one();
+        } else {
+            // process the item in this thread
+            // (better than blocking and doing nothing)
+            process_job("enqueue", lock, std::move(path));
+        }
+    }
+
+    void worker(bool main = false) {
         TRACE("[{}] worker start", get_thread_id());
         std::unique_lock lock(m_mutex);
-        while(!m_queue.empty() || m_busy != 0) {
-            while (m_queue.empty()) {
+        if (main)
+            --m_busy;  // main worker is counted as busy from start (see ctor)
+        while(m_job || m_busy != 0) {
+            while (!m_job) {
                 m_cv.wait(lock);
-                if (m_busy == 0 && m_queue.empty()) {
-                    lock.unlock();
-                    m_cv.notify_all();
-                    TRACE("[{}] worker finish", get_thread_id());
-                    return;
-                }
+                if (m_busy == 0 && !m_job)
+                    goto finish;
             }
-
-            auto path = std::move(m_queue.back());
-            m_queue.pop_back();
-            TRACE("[{}] worker read start ({} busy, {} queue)", get_thread_id(), m_busy, m_queue.size());
-            ++m_busy;
-            lock.unlock();
-            read(path);
-            lock.lock();
-            --m_busy;
-            TRACE("[{}] worker read finish ({} busy, {} queue)", get_thread_id(), m_busy, m_queue.size());
+            // clear m_job by moving it away - it's important to move into temp variable
+            auto path = std::move(m_job);
+            assert(!m_job);  // cleared
+            process_job("worker", lock, std::move(path));
         }
+    finish:
         lock.unlock();
         m_cv.notify_all();
         TRACE("[{}] worker finish", get_thread_id());
     }
 
-private:
-    void start_worker() {
-        m_workers.emplace_back(std::thread{[this]{
-            worker();
-        }});
+    void process_job(const char* label, std::unique_lock<std::mutex>& lock, std::shared_ptr<PathNode>&& path) {
+        // suppress warnings in case of disabled TRACE
+        (void) label;
+        (void) get_thread_id();
+        TRACE("[{}] {} read start ({} recursively reading)", get_thread_id(), label, m_busy);
+        ++m_busy;
+        lock.unlock();
+        read(std::move(path));
+        lock.lock();
+        --m_busy;
+        TRACE("[{}] {} read finish ({} recursively reading)", get_thread_id(), label, m_busy);
     }
 
-    void enqueue(std::shared_ptr<PathNode>&& path) {
-        std::unique_lock lock(m_mutex);
-        if (m_queue.size() < m_queue.capacity()) {
-            m_queue.emplace_back(std::move(path));
-            lock.unlock();
-            m_cv.notify_one();
-        } else {
-            if (m_workers.size() < m_max_threads)
-                start_worker();
-            // process the item in this thread
-            // (better than blocking and doing nothing)
-            TRACE("[{}] enqueue read start ({} busy, {} queue)", get_thread_id(), m_busy, m_queue.size());
-            ++m_busy;
-            lock.unlock();
-            read(path);
-            lock.lock();
-            --m_busy;
-            TRACE("[{}] enqueue read finish ({} busy, {} queue)", get_thread_id(), m_busy, m_queue.size());
-        }
-    }
-
-    void read(const std::shared_ptr<PathNode>& path) {
+    void read(std::shared_ptr<PathNode>&& path) {
         thread_local DirEntryArena arena;
         DirEntryArenaGuard arena_guard(arena);
         std::vector<sys_dirent_t*> entries;
@@ -285,9 +284,8 @@ private:
         return true;
     }
 
-    const unsigned m_max_threads;
     Callback m_cb;
-    std::vector<std::shared_ptr<PathNode>> m_queue;
+    std::shared_ptr<PathNode> m_job;
     std::vector<std::thread> m_workers;
     std::mutex m_mutex;  // for both queue and workers
     std::condition_variable m_cv;
