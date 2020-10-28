@@ -89,14 +89,19 @@ static bool parse_types(const char* arg, mode_t& out_mask)
 {
     for (const char* c = arg; *c; ++c) {
         switch (tolower(*c)) {
-            case 'r':   out_mask |= S_IFREG; return true;
-            case 'd':   out_mask |= S_IFDIR; return true;
-            case 'l':   out_mask |= S_IFLNK; return true;
-            case 's':   out_mask |= S_IFSOCK; return true;
-            case 'f':   out_mask |= S_IFIFO; return true;
-            case 'c':   out_mask |= S_IFCHR; return true;
-            case 'b':   out_mask |= S_IFBLK; return true;
-            default: return false;
+            // the symbols are accepted because they represent file types in `-l` output
+            // 'r' (for regular) is accepted because why not ('f' is used by find)
+            case 'x': case '*':   out_mask |= (S_IXUSR | S_IXGRP | S_IXOTH); break;
+            case 'r':
+            case 'f': case ' ':   out_mask |= S_IFREG; break;
+            case 'd': case '/':   out_mask |= S_IFDIR; break;
+            case 'l': case '@':   out_mask |= S_IFLNK; break;
+            case 's': case '=':   out_mask |= S_IFSOCK; break;
+            case 'p': case '|':   out_mask |= S_IFIFO; break;
+            case 'c': case '-':   out_mask |= S_IFCHR; break;
+            case 'b': case '+':   out_mask |= S_IFBLK; break;
+            default:
+                return false;
         }
     }
     return true;
@@ -351,7 +356,7 @@ int main(int argc, const char* argv[])
             Option("-d, --max-depth N", "Descend at most N directory levels below input directories", max_depth),
             Option("-l, --long", "Print file attributes", long_form),
             Option("-L, --list-long", "Don't descend and print attributes, similar to `ls -l` (alias for -lDd1)", [&]{ long_form = true; show_dirs = true; max_depth = 1; }),
-            Option("-t, --types TYPES", "Filter file types: r=regular, d=dir, l=link, s=sock, f=fifo, c=char, b=block, e.g. -tdl for dir+link (implies -D)",
+            Option("-t, --types TYPES", "Filter file types: f=regular, d=dir, l=link, s=sock, p=fifo, c=char, b=block, x=exec, e.g. -tdl for dir+link (implies -D)",
                     [&type_mask, &show_dirs](const char* arg){ show_dirs = true; return parse_types(arg, type_mask); }),
             Option("-c, --color", "Force color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Always); }),
             Option("-C, --no-color", "Disable color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Never); }),
@@ -548,8 +553,14 @@ int main(int argc, const char* argv[])
                     counters.total_blocks.fetch_add(st.st_blocks, std::memory_order_relaxed);
                 }
 
-                if (type_mask && !(st.st_mode & type_mask))
-                    return descend;
+                if (type_mask) {
+                    // match type
+                    if (!(st.st_mode & type_mask & S_IFMT))
+                        return descend;
+                    // match rights
+                    if ((type_mask & 07777) && !(st.st_mode & type_mask & 07777))
+                        return descend;
+                }
 
                 if (t == FileTree::Directory) {
                     counters.matched_dirs.fetch_add(1, std::memory_order_relaxed);
