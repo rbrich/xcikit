@@ -147,10 +147,20 @@ static TermCtl::Color size_unit_to_color(char unit)
 }
 
 
-static std::string highlight_path(FileTree::Type t, const FileTree::PathNode& path, const Theme& theme,
-                                  const int so=0, const int eo=0)
+/// Basically puts(3)
+static void synced_writeln(const std::string& out)
 {
-    std::string out;
+    flockfile(stdout);
+    ::write(STDOUT_FILENO, out.data(), out.size());
+    ::write(STDOUT_FILENO, "\n", 1);
+    funlockfile(stdout);
+}
+
+
+static void highlight_path(std::string& out, FileTree::Type t, const FileTree::PathNode& path, const Theme& theme,
+                           const int so=0, const int eo=0)
+{
+    out.reserve(path.path.size() + 30);  // reserve some space also for escape sequences
     if (t == FileTree::Directory) {
         out += theme.dir;
         out += path.parent_dir_name();
@@ -160,7 +170,7 @@ static std::string highlight_path(FileTree::Type t, const FileTree::PathNode& pa
         out += theme.file_name;
     }
     if (so != eo) {
-        const auto* name = path.component.c_str();
+        const auto* name = path.component();
         out += std::string_view(name, so);
         out += theme.highlight;
         out += std::string_view(name + so, eo - so);
@@ -170,10 +180,9 @@ static std::string highlight_path(FileTree::Type t, const FileTree::PathNode& pa
             out += theme.file_name;
         out += std::string_view(name + eo);
     } else {
-        out += path.component;
+        out += path.component();
     }
     out += theme.normal;
-    return out;
 }
 
 
@@ -198,7 +207,10 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
     char alloc_unit = round_size_to_unit(alloc);
     char file_type = file_type_to_char(st.st_mode);
     TermCtl& term = TermCtl::stdout_instance();
-    std::string out = fmt::format("{}{:c}{:04o}{} {:>{}}:{:{}} {}{:4}{}{}{} {}{:4}{}{}{}  {:%F %H:%M}  {}",
+    std::string out;
+    out.reserve(name.size() + 64);
+    auto out_it = std::back_inserter(out);
+    fmt::format_to(out_it, "{}{:c}{:04o}{} {:>{}}:{:{}} {}{:4}{}{}{} {}{:4}{}{}{}  {:%F %H:%M}  {}",
             term.fg(file_mode_to_color(st.st_mode)), file_type, st.st_mode & 07777, term.normal(),
             user, w_user, group, w_group,
             term.fg(size_unit_to_color(size_unit)), size, term.dim(), size_unit, term.normal(),
@@ -209,16 +221,16 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
         char buf[PATH_MAX];
         ssize_t res;
         if (path.parent && path.parent->fd != -1)
-            res = readlinkat(path.parent->fd, path.component.c_str(), buf, sizeof(buf));
+            res = readlinkat(path.parent->fd, path.component(), buf, sizeof(buf));
         else
             res = readlink(path.file_name().c_str(), buf, sizeof(buf));
         if (res < 0) {
             fmt::print(stderr,"ff: readlink({}): {}\n", path.file_name(), errno_str());
             return;
         }
-        out += fmt::format(" -> {}", std::string_view(buf, res));
+        fmt::format_to(out_it, " -> {}", std::string_view(buf, res));
     }
-    puts(out.c_str());
+    synced_writeln(out);
 }
 
 
@@ -469,7 +481,7 @@ int main(int argc, const char* argv[])
                 }
 
                 // skip hidden files (".", ".." not considered hidden - if passed as PATH arg)
-                if (!show_hidden && path.component[0] == '.' && !is_dots_entry(path.component.c_str()))
+                if (!show_hidden && path.component()[0] == '.' && !is_dots_entry(path.component()))
                     return false;
 
                 bool descend = true;
@@ -477,7 +489,7 @@ int main(int argc, const char* argv[])
                     if (max_depth >= 0 && path.depth >= max_depth) {
                         descend = false;
                     }
-                    if (!show_dirs || path.component.empty()) {
+                    if (!show_dirs || path.component_empty()) {
                         // path.component is empty when this is root report from walk_cwd()
                         counters.seen_dirs.fetch_sub(1, std::memory_order_relaxed);  // small correction - don't count implicitly searched CWD
                         return descend;
@@ -485,7 +497,7 @@ int main(int argc, const char* argv[])
                     if (single_device) {
                         struct stat st;
                         if (!path.stat(st)) {
-                            fmt::print(stderr,"ff: stat({}): {}\n", path.dir_name(), errno_str());
+                            fmt::print(stderr,"ff: stat({}): {}\n", path.file_name(), errno_str());
                             return descend;
                         }
                         if (path.is_input()) {
@@ -506,7 +518,7 @@ int main(int argc, const char* argv[])
                     if (highlight_match) {
                         // match, with highlight
                         std::vector<std::pair<int, int>> matches;
-                        auto r = hs_scan(re_db, path.component.c_str(), path.component.size(), 0, re_scratch,
+                        auto r = hs_scan(re_db, path.component(), path.component_size(), 0, re_scratch,
                                 [] (unsigned int id, unsigned long long from,
                                     unsigned long long to, unsigned int flags, void *ctx)
                                 {
@@ -515,15 +527,15 @@ int main(int argc, const char* argv[])
                                     return 0;
                                 }, &matches);
                         if (r != HS_SUCCESS) {
-                            fmt::print(stderr,"ff: hs_scan({}): Unable to scan ({})\n", path.component, r);
+                            fmt::print(stderr,"ff: hs_scan({}): Unable to scan ({})\n", path.component(), r);
                             return descend;
                         }
                         if (matches.empty())
                             return descend;  // not matched
-                        out = highlight_path(t, path, theme, matches[0].first, matches[0].second);
+                        highlight_path(out, t, path, theme, matches[0].first, matches[0].second);
                     } else {
                         // match, no highlight
-                        auto r = hs_scan(re_db, path.component.c_str(), path.component.size(), 0, re_scratch,
+                        auto r = hs_scan(re_db, path.component(), path.component_size(), 0, re_scratch,
                                 [] (unsigned int id, unsigned long long from,
                                     unsigned long long to, unsigned int flags, void *ctx)
                                 { return 1; }, nullptr);
@@ -531,14 +543,14 @@ int main(int argc, const char* argv[])
                         if (r == HS_SUCCESS)
                             return descend;  // not matched
                         if (r != HS_SCAN_TERMINATED) {
-                            fmt::print(stderr,"ff: hs_scan({}): ({}) Unable to scan\n", path.component, r);
+                            fmt::print(stderr,"ff: hs_scan({}): ({}) Unable to scan\n", path.component(), r);
                             return descend;
                         }
-                        out = highlight_path(t, path, theme);
+                        highlight_path(out, t, path, theme);
                     }
                 } else {
                     // no matching, just print, without highlight
-                    out = highlight_path(t, path, theme);
+                    highlight_path(out, t, path, theme);
                 }
 
                 struct stat st;
@@ -570,7 +582,7 @@ int main(int argc, const char* argv[])
                 if (long_form)
                     print_path_with_attrs(out, path, st);
                 else
-                    puts(out.c_str());
+                    synced_writeln(out);
                 return descend;
             }
             case FileTree::OpenError:

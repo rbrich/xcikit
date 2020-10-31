@@ -36,41 +36,45 @@ namespace fs = std::filesystem;
 class FileTree {
 public:
     struct PathNode {
-        explicit PathNode(std::string_view component) : component(component) {}
-        PathNode(std::string_view component, const std::shared_ptr<PathNode>& parent)
-            : parent(parent), component(component), depth(parent->depth + 1) {}
+        PathNode(const fs::path& path, unsigned int baselen)
+            : path(path), component_length(baselen) {}
+        PathNode(const fs::path& path, unsigned int baselen, const std::shared_ptr<PathNode>& parent)
+            : parent(parent), path(path), component_length(baselen), depth(parent->depth + 1) {}
 
         /// Convert contained directory path to a string:
-        /// - no parent, component ""           => ""
-        /// - no parent, component "."          => "./"
-        /// - no parent, component "/"          => "/"
-        /// - no parent, component "foo"        => "foo/"
-        /// - parent "", component "bar"        => "bar/"
-        /// - parent ".", component "bar"       => "./bar/"
-        /// - parent "/", component "bar"       => "/bar/"
-        /// - parent "foo", component "bar"     => "foo/bar/"
-        /// - parent "/foo", component "bar"    => "/foo/bar/"
+        /// - path ""         => ""
+        /// - path "."        => "./"
+        /// - path "/"        => "/"
+        /// - path "foo"      => "foo/"
+        /// - path "./bar"    => "./bar/"
+        /// - path "/foo/bar" => "/foo/bar/"
         std::string dir_name() const {
-            if (!parent && (component.empty() || component == "/"))
-                return component;
-            return parent_dir_name() + component + '/';
+            if (path.length() == 0 || (path.length() == 1 && path.front() == '/'))
+                return path;
+            return path + '/';
         }
 
         /// Same as dir_name, but the first variant is invalid
         /// and '/' is not appended.
-        std::string file_name() const {
-            return parent_dir_name() + component;
+        const std::string& file_name() const {
+            return path;
         }
 
         /// Get parent dir part of contained path
         std::string parent_dir_name() const {
-            if (!parent)
-                return {};
-            return parent->dir_name();
+            return path.substr(0, path.size() - component_length);
         }
 
-        bool is_root() const {
-            return !parent && component.empty();
+        const char* component() const {
+            return path.c_str() + path.size() - component_length;
+        }
+
+        bool component_empty() const {
+            return component_length == 0;
+        }
+
+        unsigned int component_size() const {
+            return component_length;
         }
 
         bool stat(struct stat& st) const {
@@ -79,7 +83,7 @@ public:
                 if (!parent || parent->fd == -1)
                     rc = ::lstat(file_name().c_str(), &st);
                 else
-                    rc = ::fstatat(parent->fd, component.c_str(), &st, AT_SYMLINK_NOFOLLOW);
+                    rc = ::fstatat(parent->fd, component(), &st, AT_SYMLINK_NOFOLLOW);
             } else {
                 rc = ::fstat(fd, &st);
             }
@@ -92,7 +96,8 @@ public:
         }
 
         std::shared_ptr<PathNode> parent;
-        std::string component;
+        std::string path;
+        unsigned int component_length = 0;
         int fd = -1;
         int depth = 0;  // depth from input
     };
@@ -146,10 +151,12 @@ public:
         if (node_path.size() > 1) { // size of "/" is 1
             rstrip(node_path, '/');
         }
+        auto pos = node_path.rfind('/');
+        unsigned int component_length = (pos == std::string::npos) ? 0 : node_path.length() - pos - 1;
         // create base node from relative or absolute path, e.g.:
         // - relative: "foo/bar", "foo", ".", ".."
         // - absolute: "/foo/bar", "/foo", "/"
-        auto node = std::make_shared<PathNode>(node_path);
+        auto node = std::make_shared<PathNode>(node_path, component_length);
         // open original, uncleaned path (required to support root "/")
         if (!open_and_report(open_path, *node, AT_FDCWD))
             return;
@@ -195,7 +202,7 @@ private:
             if (m_default_ignore && is_default_ignored(entry_pathname))
                 continue;
 
-            auto entry_path = std::make_shared<PathNode>(entry->d_name, path);
+            auto entry_path = std::make_shared<PathNode>(entry_pathname, strlen(entry->d_name), path);
 
             if ((entry->d_type & DT_DIR) == DT_DIR || entry->d_type == DT_UNKNOWN) {
                 // readdir says it's a dir or it doesn't know

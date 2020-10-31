@@ -37,7 +37,7 @@ Use `--stats` in combination with `-l` or `-t<TYPE>` (both imply `stat(2)` calls
 
 Example:
 - `-s` is `--stats`
-- ~~-tr~~ `-tf` filters regular files and also enables size statistics
+- `-tf` filters regular files and also enables size statistics
 - `-e 'cpp|h'` filters C++ sources
 - no matching pattern is used, so we need `--` before the list of paths
 
@@ -47,7 +47,7 @@ Example:
 
 ![ff_stats_part_2](https://user-images.githubusercontent.com/6216152/97462870-76b2de80-193f-11eb-8eb4-c73b30c4c999.png)
 
-Whoa, 1 megabyte of code! Almost full 💾.
+Whoa! One megabyte of code. Almost full 💾.
 
 Development
 -----------

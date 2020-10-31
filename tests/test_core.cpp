@@ -252,41 +252,53 @@ TEST_CASE( "align_to", "[memory]" )
 
 
 #ifndef _WIN32
-TEST_CASE( "PathNode::dir_name", "[FileTree]" )
+TEST_CASE( "PathNode", "[FileTree]" )
 {
-    auto parent = std::make_shared<FileTree::PathNode>("");
-    FileTree::PathNode node("");
+    FileTree::PathNode node("", 0);
 
-    SECTION("without parent") {
-        // component "" => ""
+    SECTION("dir_name") {
+        // "" => ""
         CHECK(node.dir_name() == "");
-        // component "." => "./"
-        node.component = ".";
+        // "." => "./"
+        node.path = ".";
+        node.component_length = 1;
         CHECK(node.dir_name() == "./");
-        // component "/" => "/"
-        node.component = "/";
+        // "/" => "/"
+        node.path = "/";
+        node.component_length = 0;
         CHECK(node.dir_name() == "/");
-        // component "foo" => "foo/"
-        node.component = "foo";
+        // "foo" => "foo/"
+        node.path = "foo";
+        node.component_length = strlen("foo");
         CHECK(node.dir_name() == "foo/");
-    };
-    SECTION("with parent") {
-        node.parent = parent;
-        node.component = "bar";
-        // parent "" => "bar/"
-        CHECK(node.dir_name() == "bar/");
-        // parent "." => "./bar/"
-        parent->component = "/";
-        CHECK(node.dir_name() == "/bar/");
-        // parent "/" => "/bar/"
-        parent->component = "/";
-        CHECK(node.dir_name() == "/bar/");
-        // parent "foo" => "foo/bar/"
-        parent->component = "foo";
-        CHECK(node.dir_name() == "foo/bar/");
-        // parent "/foo" => "/foo/bar/"
-        parent->component = "/foo";
+        // "/foo/bar" => "/foo/bar/"
+        node.path = "/foo/bar";
+        node.component_length = strlen("bar");
         CHECK(node.dir_name() == "/foo/bar/");
+    };
+    SECTION("parent_dir_name") {
+        // "" => ""
+        CHECK(node.parent_dir_name() == "");
+        // "." => ""
+        node.path = ".";
+        node.component_length = 1;
+        CHECK(node.parent_dir_name() == "");
+        // "/" => "/"
+        node.path = "/";
+        node.component_length = 0;
+        CHECK(node.parent_dir_name() == "/");
+        // "foo" => ""
+        node.path = "foo";
+        node.component_length = strlen("foo");
+        CHECK(node.parent_dir_name() == "");
+        // "./bar" => "./"
+        node.path = "./bar";
+        node.component_length = strlen("bar");
+        CHECK(node.parent_dir_name() == "./");
+        // "/foo/bar" => "/foo/"
+        node.path = "/foo/bar";
+        node.component_length = strlen("bar");
+        CHECK(node.parent_dir_name() == "/foo/");
     };
 }
 #endif // _WIN32
