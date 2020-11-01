@@ -54,6 +54,31 @@ struct Counters {
 };
 
 
+static constinit const char* s_default_ignore_list[] = {
+#if defined(__APPLE__)
+        "/dev",
+        "/System/Volumes",
+#elif defined(__linux__)
+        "/dev",
+        "/proc",
+        "/sys",
+        "/mnt",
+        "/media",
+#endif
+};
+
+static bool is_default_ignored(std::string_view path)
+{
+    return std::any_of(std::begin(s_default_ignore_list), std::end(s_default_ignore_list),
+            [&path](const char* ignore_path) { return path == ignore_path; });
+}
+
+static std::string default_ignore_list(const char* sep)
+{
+    return fmt::format("{}", fmt::join(std::begin(s_default_ignore_list), std::end(s_default_ignore_list), sep));
+}
+
+
 static char file_type_to_char(mode_t mode)
 {
     switch (mode & S_IFMT) {
@@ -362,7 +387,7 @@ int main(int argc, const char* argv[])
             Option("-e, --ext EXT ...", "Match only files with extension EXT (shortcut for pattern '\\.EXT$')", extensions),
             Option("-H, --search-hidden", "Don't skip hidden files", show_hidden),
             Option("-D, --search-dirnames", "Don't skip directory entries", show_dirs),
-            Option("-S, --search-in-special-dirs", "Allow descending into special directories: " + FileTree::default_ignore_list(", "), search_in_special_dirs),
+            Option("-S, --search-in-special-dirs", "Allow descending into special directories: " + default_ignore_list(", "), search_in_special_dirs),
             Option("-X, --single-device", "Don't descend into directories with different device number", single_device),
             Option("-a, --all", "Don't skip any files (alias for -HDS)", [&]{ show_hidden = true; show_dirs = true; search_in_special_dirs = true; }),
             Option("-d, --max-depth N", "Descend at most N directory levels below input directories", max_depth),
@@ -467,7 +492,8 @@ int main(int argc, const char* argv[])
     Counters counters;
 
     FileTree ft(jobs-1,
-                [show_hidden, show_dirs, single_device, long_form, highlight_match, type_mask, max_depth,
+                [show_hidden, show_dirs, single_device, long_form, highlight_match,
+                 type_mask, max_depth, search_in_special_dirs,
                  &re_db, re_scratch_prototype, &theme, &dev_ids, &counters]
                 (const FileTree::PathNode& path, FileTree::Type t)
     {
@@ -487,6 +513,10 @@ int main(int argc, const char* argv[])
                 bool descend = true;
                 if (t == FileTree::Directory) {
                     if (max_depth >= 0 && path.depth() >= max_depth) {
+                        descend = false;
+                    }
+                    // Check ignore list
+                    if (!search_in_special_dirs && is_default_ignored(path.file_path())) {
                         descend = false;
                     }
                     if (!show_dirs || path.name_empty()) {
@@ -597,8 +627,6 @@ int main(int argc, const char* argv[])
         }
         UNREACHABLE;
     });
-
-    ft.set_default_ignore(!search_in_special_dirs);
 
     if (paths.empty()) {
         ft.walk_cwd();

@@ -224,11 +224,6 @@ public:
             t.join();
     }
 
-    /// Allows disabling default ignored paths like /dev
-    void set_default_ignore(bool enabled) { m_default_ignore = enabled; }
-    static bool is_default_ignored(std::string_view path);
-    static std::string default_ignore_list(const char* sep);
-
     void walk_cwd() {
         // open "." but show entries without "./" prefix in reporting
         walk("", ".");
@@ -289,12 +284,6 @@ private:
 
         for (const auto* entry : entries) {
             auto* entry_node = PathNode::make(*path, {entry->d_name, strlen(entry->d_name)});
-
-            // Check ignore list
-            if (m_default_ignore && is_default_ignored(entry_node->file_path())) {
-                entry_node->decref();
-                continue;
-            }
 
             if ((entry->d_type & DT_DIR) == DT_DIR || entry->d_type == DT_UNKNOWN) {
                 // readdir says it's a dir or it doesn't know
@@ -361,8 +350,6 @@ private:
 
     // total workers, including the main one
     int m_busy_max;
-
-    bool m_default_ignore = true;
 };
 
 } // namespace xci::core

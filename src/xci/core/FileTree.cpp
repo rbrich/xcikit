@@ -6,33 +6,8 @@
 
 #include "FileTree.h"
 #include <xci/core/log.h>
-#include <fmt/format.h>
 
 namespace xci::core {
-
-static constinit const char* s_default_ignore_list[] = {
-    #if defined(__APPLE__)
-        "/dev",
-        "/System/Volumes",
-    #elif defined(__linux__)
-        "/dev",
-        "/proc",
-        "/sys",
-        "/mnt",
-        "/media",
-    #endif
-};
-
-bool FileTree::is_default_ignored(std::string_view path)
-{
-    return std::any_of(std::begin(s_default_ignore_list), std::end(s_default_ignore_list),
-            [&path](const char* ignore_path) { return path == ignore_path; });
-}
-
-std::string FileTree::default_ignore_list(const char* sep)
-{
-    return fmt::format("{}", fmt::join(std::begin(s_default_ignore_list), std::end(s_default_ignore_list), sep));
-}
 
 
 void FileTree::enqueue(PathNode* path_node)
