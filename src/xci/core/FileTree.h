@@ -9,6 +9,7 @@
 
 #include <xci/core/string.h>
 #include <xci/core/listdir.h>
+#include <xci/core/NonCopyable.h>
 #include <xci/config.h>
 
 #include <string>
@@ -35,71 +36,113 @@ namespace fs = std::filesystem;
 
 class FileTree {
 public:
-    struct PathNode {
-        PathNode(const fs::path& path, unsigned int baselen)
-            : path(path), component_length(baselen) {}
-        PathNode(const fs::path& path, unsigned int baselen, const std::shared_ptr<PathNode>& parent)
-            : parent(parent), path(path), component_length(baselen), depth(parent->depth + 1) {}
+    class PathNode: public NonCopyable {
+    public:
+        /// Basic constructor. Copies path to internal storage.
+        explicit PathNode(std::string path)
+        {
+            // remove trailing slashes
+            while (path.size() > 1 && path.back() == '/') {
+                path.pop_back();
+            }
 
-        /// Convert contained directory path to a string:
-        /// - path ""         => ""
-        /// - path "."        => "./"
-        /// - path "/"        => "/"
-        /// - path "foo"      => "foo/"
-        /// - path "./bar"    => "./bar/"
-        /// - path "/foo/bar" => "/foo/bar/"
-        std::string dir_name() const {
-            if (path.length() == 0 || (path.length() == 1 && path.front() == '/'))
-                return path;
-            return path + '/';
+            // split to dir and name parts
+            auto last_slash_pos = path.rfind('/');
+            m_name_len = (last_slash_pos == std::string::npos) ? path.size() : path.size() - last_slash_pos - 1;
+            m_dir_len = path.size() - m_name_len;
+
+            // allocate storage
+            const bool need_trailing_slash = m_name_len != 0;
+            m_path_ptr.reset(new char[path.size() + int(need_trailing_slash)]);
+
+            // write to storage
+            std::memcpy(m_path_ptr.get(), path.data(), path.size());
+            if (need_trailing_slash)
+                m_path_ptr[path.size()] = '/';
         }
 
-        /// Same as dir_name, but the first variant is invalid
-        /// and '/' is not appended.
-        const std::string& file_name() const {
-            return path;
+        /// Advanced constructor. Storage for path is allocated by caller.
+        /// \param path         Char storage for the path, it must have (at least) dir_len + name_len chars (+ 1 for slash)
+        ///                     If name_len is not 0, a single slash character needs to be appended at the end
+        ///                     (This avoids string concatenation in `dir_name` method).
+        /// \param dir_len      Length of directory part of the path, including trailing slash,
+        ///                     e.g. "/", "/etc/", "./" or "" (blank directory is alternative for "./")
+        /// \param name_len     Length of name part of the path, not including any slashes or nul terminator
+        ///                     e.g. "foo", ".", "" (blank name is alternative for ".")
+        PathNode(std::unique_ptr<char[]>&& path, unsigned int dir_len, unsigned int name_len,
+                 const std::shared_ptr<PathNode>& parent)
+            : m_parent(parent), m_path_ptr(std::move(path)), m_dir_len(dir_len), m_name_len(name_len), m_depth(parent->m_depth + 1) {}
+
+        /// Get contained path as directory path with trailing slash
+        std::string_view dir_path() const {
+            if (m_name_len == 0)
+                return {m_path_ptr.get(), m_dir_len};
+            return {m_path_ptr.get(), m_dir_len + m_name_len + 1};  // 1 for trailing slash
+        }
+
+        /// Get contained path as file path (no trailing slash with exception of root "/")
+        std::string_view file_path() const {
+            return {m_path_ptr.get(), m_dir_len + m_name_len};
         }
 
         /// Get parent dir part of contained path
-        std::string parent_dir_name() const {
-            return path.substr(0, path.size() - component_length);
+        std::string_view parent_dir_path() const {
+            return {m_path_ptr.get(), m_dir_len};
         }
 
-        const char* component() const {
-            return path.c_str() + path.size() - component_length;
+        std::string_view name() const {
+            return {m_path_ptr.get() + m_dir_len, m_name_len};
         }
 
-        bool component_empty() const {
-            return component_length == 0;
+        /// To be used together with name_len().
+        /// NOT null-terminated.
+        const char* name_data() const {
+            return m_path_ptr.get() + m_dir_len;
         }
 
-        unsigned int component_size() const {
-            return component_length;
-        }
+        unsigned int name_len() const { return m_name_len; }
+        bool name_empty() const { return m_name_len == 0; }
+        unsigned int size() const { return m_dir_len + m_name_len; }
+
+        bool has_parent() const { return bool(m_parent); }
+        int parent_fd() const { return m_parent->m_fd; }
+
+        int depth() const { return m_depth; }
+        int fd() const { return m_fd; }
+        void set_fd(int fd) { m_fd = fd; }
 
         bool stat(struct stat& st) const {
             int rc;
-            if (fd == -1) {
-                if (!parent || parent->fd == -1)
-                    rc = ::lstat(file_name().c_str(), &st);
-                else
-                    rc = ::fstatat(parent->fd, component(), &st, AT_SYMLINK_NOFOLLOW);
+            if (m_fd == -1) {
+                if (!m_parent || m_parent->m_fd == -1) {
+                    rc = ::lstat(std::string(file_path()).c_str(), &st);
+                } else {
+                    rc = ::fstatat(m_parent->m_fd, std::string(name()).c_str(), &st, AT_SYMLINK_NOFOLLOW);
+                }
             } else {
-                rc = ::fstat(fd, &st);
+                rc = ::fstat(m_fd, &st);
             }
             return rc == 0;
         }
 
         /// Is this a node from input, i.e. `walk()`?
-        bool is_input() const {
-            return depth == 0;
+        bool is_input() const { return m_depth == 0; }
+
+        /// Name starts with '.'
+        bool is_hidden() const { return m_name_len != 0 && m_path_ptr[m_dir_len] == '.'; }
+
+        /// Name is "." or ".."
+        bool is_dots_entry() const {
+            return is_hidden() && (m_name_len == 1 || (m_name_len == 2 && m_path_ptr[m_dir_len + 1] == '.'));
         }
 
-        std::shared_ptr<PathNode> parent;
-        std::string path;
-        unsigned int component_length = 0;
-        int fd = -1;
-        int depth = 0;  // depth from input
+    private:
+        std::shared_ptr<PathNode> m_parent;
+        std::unique_ptr<char[]> m_path_ptr;
+        unsigned int m_dir_len = 0;
+        unsigned int m_name_len = 0;
+        int m_fd = -1;
+        int m_depth = 0;  // depth from input
     };
 
     enum Type {
@@ -133,7 +176,7 @@ public:
 
     /// Allows disabling default ignored paths like /dev
     void set_default_ignore(bool enabled) { m_default_ignore = enabled; }
-    static bool is_default_ignored(const std::string& path);
+    static bool is_default_ignored(std::string_view path);
     static std::string default_ignore_list(const char* sep);
 
     void walk_cwd() {
@@ -146,17 +189,11 @@ public:
     }
 
     void walk(const fs::path& pathname, const char* open_path) {
-        // normalize and remove trailing slash
-        auto node_path = pathname.lexically_normal().string();
-        if (node_path.size() > 1) { // size of "/" is 1
-            rstrip(node_path, '/');
-        }
-        auto pos = node_path.rfind('/');
-        unsigned int component_length = (pos == std::string::npos) ? 0 : node_path.length() - pos - 1;
-        // create base node from relative or absolute path, e.g.:
+        // Create base node from relative or absolute path, e.g.:
         // - relative: "foo/bar", "foo", ".", ".."
         // - absolute: "/foo/bar", "/foo", "/"
-        auto node = std::make_shared<PathNode>(node_path, component_length);
+        // Trailing slash is normalized in PathNode constructor.
+        auto node = std::make_shared<PathNode>(pathname.lexically_normal().string());
         // open original, uncleaned path (required to support root "/")
         if (!open_and_report(open_path, *node, AT_FDCWD))
             return;
@@ -179,14 +216,14 @@ private:
         std::vector<sys_dirent_t*> entries;
 
 #ifdef XCI_LISTDIR_GETDENTS
-        if (!list_dir_sys(path->fd, arena, entries)) {
+        if (!list_dir_sys(path->fd(), arena, entries)) {
             m_cb(*path, OpenDirError);
-            close(path->fd);
+            close(path->fd());
             return;
         }
 #else
         DIR* dirp;
-        if (!list_dir_posix(path->fd, dirp, arena, entries)) {
+        if (!list_dir_posix(path->fd(), dirp, arena, entries)) {
             m_cb(*path, OpenDirError);
             return;
         }
@@ -197,23 +234,30 @@ private:
                 { return a->d_type < b->d_type || (a->d_type == b->d_type && strcmp(a->d_name, b->d_name) < 0); });
 
         for (const auto* entry : entries) {
+            // entry_pathname = path->dir_name() + entry->d_name + '/';
+            auto parent_dir = path->dir_path();
+            auto name_len = strlen(entry->d_name);
+            auto entry_pathname = std::unique_ptr<char[]>(new char[parent_dir.size() + name_len + 1]);
+            std::memcpy(entry_pathname.get(), parent_dir.data(), parent_dir.size());
+            std::memcpy(entry_pathname.get() + parent_dir.size(), entry->d_name, name_len);
+            entry_pathname[parent_dir.size() + name_len] = '/';
+
             // Check ignore list
-            std::string entry_pathname = path->dir_name() + entry->d_name;
-            if (m_default_ignore && is_default_ignored(entry_pathname))
+            if (m_default_ignore && is_default_ignored({entry_pathname.get(), parent_dir.size() + name_len}))
                 continue;
 
-            auto entry_path = std::make_shared<PathNode>(entry_pathname, strlen(entry->d_name), path);
+            auto entry_path = std::make_shared<PathNode>(std::move(entry_pathname), parent_dir.size(), name_len, path);
 
             if ((entry->d_type & DT_DIR) == DT_DIR || entry->d_type == DT_UNKNOWN) {
                 // readdir says it's a dir or it doesn't know
-                if (open_and_report(entry->d_name, *entry_path, path->fd))
+                if (open_and_report(entry->d_name, *entry_path, path->fd()))
                     enqueue(std::move(entry_path));
                 continue;
             }
             m_cb(*entry_path, File);
         }
 #ifdef XCI_LISTDIR_GETDENTS
-        close(path->fd);
+        close(path->fd());
 #else
         closedir(dirp);
 #endif
@@ -236,7 +280,7 @@ private:
             m_cb(node, OpenError);
             return false;
         }
-        node.fd = fd;
+        node.set_fd(fd);
 
         if (!m_cb(node, Directory)) {
             close(fd);

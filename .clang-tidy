@@ -1,4 +1,6 @@
 # Full list: https://clang.llvm.org/extra/clang-tidy/
+# Disabled because...
+# * readability-container-size-empty -- in Catch2 tests, comparing with empty string produces better failed test message
 Checks: >
   bugprone-*,
   -bugprone-branch-clone,
@@ -24,6 +26,7 @@ Checks: >
   -readability-named-parameter,
   -readability-convert-member-functions-to-static,
   -readability-simplify-boolean-expr,
+  -readability-container-size-empty,
   google-default-arguments,
   google-runtime-operator
 

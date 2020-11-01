@@ -23,7 +23,7 @@ static constinit const char* s_default_ignore_list[] = {
     #endif
 };
 
-bool FileTree::is_default_ignored(const std::string& path)
+bool FileTree::is_default_ignored(std::string_view path)
 {
     return std::any_of(std::begin(s_default_ignore_list), std::end(s_default_ignore_list),
             [&path](const char* ignore_path) { return path == ignore_path; });

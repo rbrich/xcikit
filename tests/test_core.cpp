@@ -254,51 +254,22 @@ TEST_CASE( "align_to", "[memory]" )
 #ifndef _WIN32
 TEST_CASE( "PathNode", "[FileTree]" )
 {
-    FileTree::PathNode node("", 0);
-
-    SECTION("dir_name") {
-        // "" => ""
-        CHECK(node.dir_name() == "");
-        // "." => "./"
-        node.path = ".";
-        node.component_length = 1;
-        CHECK(node.dir_name() == "./");
-        // "/" => "/"
-        node.path = "/";
-        node.component_length = 0;
-        CHECK(node.dir_name() == "/");
-        // "foo" => "foo/"
-        node.path = "foo";
-        node.component_length = strlen("foo");
-        CHECK(node.dir_name() == "foo/");
-        // "/foo/bar" => "/foo/bar/"
-        node.path = "/foo/bar";
-        node.component_length = strlen("bar");
-        CHECK(node.dir_name() == "/foo/bar/");
+    SECTION("dir_path") {
+        CHECK(FileTree::PathNode("").dir_path() == "");
+        CHECK(FileTree::PathNode(".").dir_path() == "./");
+        CHECK(FileTree::PathNode("/").dir_path() == "/");
+        CHECK(FileTree::PathNode("foo").dir_path() == "foo/");
+        CHECK(FileTree::PathNode("/foo/bar").dir_path() == "/foo/bar/");
+        CHECK(FileTree::PathNode("/foo/bar/").dir_path() == "/foo/bar/");
     };
     SECTION("parent_dir_name") {
-        // "" => ""
-        CHECK(node.parent_dir_name() == "");
-        // "." => ""
-        node.path = ".";
-        node.component_length = 1;
-        CHECK(node.parent_dir_name() == "");
-        // "/" => "/"
-        node.path = "/";
-        node.component_length = 0;
-        CHECK(node.parent_dir_name() == "/");
-        // "foo" => ""
-        node.path = "foo";
-        node.component_length = strlen("foo");
-        CHECK(node.parent_dir_name() == "");
-        // "./bar" => "./"
-        node.path = "./bar";
-        node.component_length = strlen("bar");
-        CHECK(node.parent_dir_name() == "./");
-        // "/foo/bar" => "/foo/"
-        node.path = "/foo/bar";
-        node.component_length = strlen("bar");
-        CHECK(node.parent_dir_name() == "/foo/");
+        CHECK(FileTree::PathNode("").parent_dir_path() == "");
+        CHECK(FileTree::PathNode(".").parent_dir_path() == "");
+        CHECK(FileTree::PathNode("/").parent_dir_path() == "/");
+        CHECK(FileTree::PathNode("foo").parent_dir_path() == "");
+        CHECK(FileTree::PathNode("./foo").parent_dir_path() == "./");
+        CHECK(FileTree::PathNode("foo/bar").parent_dir_path() == "foo/");
+        CHECK(FileTree::PathNode("/foo/bar").parent_dir_path() == "/foo/");
     };
 }
 #endif // _WIN32

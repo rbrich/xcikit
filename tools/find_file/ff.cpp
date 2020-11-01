@@ -160,27 +160,27 @@ static void synced_writeln(const std::string& out)
 static void highlight_path(std::string& out, FileTree::Type t, const FileTree::PathNode& path, const Theme& theme,
                            const int so=0, const int eo=0)
 {
-    out.reserve(path.path.size() + 30);  // reserve some space also for escape sequences
+    out.reserve(path.size() + 30);  // reserve some space also for escape sequences
     if (t == FileTree::Directory) {
         out += theme.dir;
-        out += path.parent_dir_name();
+        out += path.parent_dir_path();
     } else {
         out += theme.file_dir;
-        out += path.parent_dir_name();
+        out += path.parent_dir_path();
         out += theme.file_name;
     }
     if (so != eo) {
-        const auto* name = path.component();
-        out += std::string_view(name, so);
+        std::string_view name = path.name();
+        out += name.substr(0, so);
         out += theme.highlight;
-        out += std::string_view(name + so, eo - so);
+        out += name.substr(so, eo - so);
         if (t == FileTree::Directory)
             out += theme.dir;
         else
             out += theme.file_name;
-        out += std::string_view(name + eo);
+        out += name.substr(eo);
     } else {
-        out += path.component();
+        out += path.name();
     }
     out += theme.normal;
 }
@@ -220,12 +220,12 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
     if (S_ISLNK(st.st_mode)) {
         char buf[PATH_MAX];
         ssize_t res;
-        if (path.parent && path.parent->fd != -1)
-            res = readlinkat(path.parent->fd, path.component(), buf, sizeof(buf));
+        if (path.has_parent() && path.parent_fd() != -1)
+            res = ::readlinkat(path.parent_fd(), std::string(path.name()).c_str(), buf, sizeof(buf));
         else
-            res = readlink(path.file_name().c_str(), buf, sizeof(buf));
+            res = readlink(std::string(path.file_path()).c_str(), buf, sizeof(buf));
         if (res < 0) {
-            fmt::print(stderr,"ff: readlink({}): {}\n", path.file_name(), errno_str());
+            fmt::print(stderr,"ff: readlink({}): {}\n", path.file_path(), errno_str());
             return;
         }
         fmt::format_to(out_it, " -> {}", std::string_view(buf, res));
@@ -481,15 +481,15 @@ int main(int argc, const char* argv[])
                 }
 
                 // skip hidden files (".", ".." not considered hidden - if passed as PATH arg)
-                if (!show_hidden && path.component()[0] == '.' && !is_dots_entry(path.component()))
+                if (!show_hidden && path.is_hidden() && !path.is_dots_entry())
                     return false;
 
                 bool descend = true;
                 if (t == FileTree::Directory) {
-                    if (max_depth >= 0 && path.depth >= max_depth) {
+                    if (max_depth >= 0 && path.depth() >= max_depth) {
                         descend = false;
                     }
-                    if (!show_dirs || path.component_empty()) {
+                    if (!show_dirs || path.name_empty()) {
                         // path.component is empty when this is root report from walk_cwd()
                         counters.seen_dirs.fetch_sub(1, std::memory_order_relaxed);  // small correction - don't count implicitly searched CWD
                         return descend;
@@ -497,7 +497,7 @@ int main(int argc, const char* argv[])
                     if (single_device) {
                         struct stat st;
                         if (!path.stat(st)) {
-                            fmt::print(stderr,"ff: stat({}): {}\n", path.file_name(), errno_str());
+                            fmt::print(stderr,"ff: stat({}): {}\n", path.file_path(), errno_str());
                             return descend;
                         }
                         if (path.is_input()) {
@@ -518,7 +518,7 @@ int main(int argc, const char* argv[])
                     if (highlight_match) {
                         // match, with highlight
                         std::vector<std::pair<int, int>> matches;
-                        auto r = hs_scan(re_db, path.component(), path.component_size(), 0, re_scratch,
+                        auto r = hs_scan(re_db, path.name_data(), path.name_len(), 0, re_scratch,
                                 [] (unsigned int id, unsigned long long from,
                                     unsigned long long to, unsigned int flags, void *ctx)
                                 {
@@ -527,7 +527,7 @@ int main(int argc, const char* argv[])
                                     return 0;
                                 }, &matches);
                         if (r != HS_SUCCESS) {
-                            fmt::print(stderr,"ff: hs_scan({}): Unable to scan ({})\n", path.component(), r);
+                            fmt::print(stderr,"ff: hs_scan({}): Unable to scan ({})\n", path.name(), r);
                             return descend;
                         }
                         if (matches.empty())
@@ -535,7 +535,7 @@ int main(int argc, const char* argv[])
                         highlight_path(out, t, path, theme, matches[0].first, matches[0].second);
                     } else {
                         // match, no highlight
-                        auto r = hs_scan(re_db, path.component(), path.component_size(), 0, re_scratch,
+                        auto r = hs_scan(re_db, path.name_data(), path.name_len(), 0, re_scratch,
                                 [] (unsigned int id, unsigned long long from,
                                     unsigned long long to, unsigned int flags, void *ctx)
                                 { return 1; }, nullptr);
@@ -543,7 +543,7 @@ int main(int argc, const char* argv[])
                         if (r == HS_SUCCESS)
                             return descend;  // not matched
                         if (r != HS_SCAN_TERMINATED) {
-                            fmt::print(stderr,"ff: hs_scan({}): ({}) Unable to scan\n", path.component(), r);
+                            fmt::print(stderr,"ff: hs_scan({}): ({}) Unable to scan\n", path.name(), r);
                             return descend;
                         }
                         highlight_path(out, t, path, theme);
@@ -557,7 +557,7 @@ int main(int argc, const char* argv[])
                 if (type_mask || long_form) {
                     // need stat
                     if (!path.stat(st)) {
-                        fmt::print(stderr,"ff: stat({}): {}\n", path.file_name(), errno_str());
+                        fmt::print(stderr,"ff: stat({}): {}\n", path.file_path(), errno_str());
                         return descend;
                     }
                     counters.total_size.fetch_add(st.st_size, std::memory_order_relaxed);
@@ -586,13 +586,13 @@ int main(int argc, const char* argv[])
                 return descend;
             }
             case FileTree::OpenError:
-                fmt::print(stderr,"ff: open({}): {}\n", path.file_name(), errno_str());
+                fmt::print(stderr,"ff: open({}): {}\n", path.file_path(), errno_str());
                 return true;
             case FileTree::OpenDirError:
-                fmt::print(stderr,"ff: opendir({}): {}\n", path.file_name(), errno_str());
+                fmt::print(stderr,"ff: opendir({}): {}\n", path.file_path(), errno_str());
                 return true;
             case FileTree::ReadDirError:
-                fmt::print(stderr,"ff: readdir({}): {}\n", path.file_name(), errno_str());
+                fmt::print(stderr,"ff: readdir({}): {}\n", path.file_path(), errno_str());
                 return true;
         }
         UNREACHABLE;
