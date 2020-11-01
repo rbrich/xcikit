@@ -252,41 +252,25 @@ TEST_CASE( "align_to", "[memory]" )
 
 
 #ifndef _WIN32
-TEST_CASE( "PathNode::dir_name", "[FileTree]" )
+TEST_CASE( "PathNode", "[FileTree]" )
 {
-    auto parent = std::make_shared<FileTree::PathNode>("");
-    FileTree::PathNode node("");
-
-    SECTION("without parent") {
-        // component "" => ""
-        CHECK(node.dir_name() == "");
-        // component "." => "./"
-        node.component = ".";
-        CHECK(node.dir_name() == "./");
-        // component "/" => "/"
-        node.component = "/";
-        CHECK(node.dir_name() == "/");
-        // component "foo" => "foo/"
-        node.component = "foo";
-        CHECK(node.dir_name() == "foo/");
+    using PathNode = FileTree::PathNode;
+    SECTION("dir_path") {
+        CHECK(PathNode::make("")->dir_path() == "");
+        CHECK(PathNode::make(".")->dir_path() == "./");
+        CHECK(PathNode::make("/")->dir_path() == "/");
+        CHECK(PathNode::make("foo")->dir_path() == "foo/");
+        CHECK(PathNode::make("/foo/bar")->dir_path() == "/foo/bar/");
+        CHECK(PathNode::make("/foo/bar/")->dir_path() == "/foo/bar/");
     };
-    SECTION("with parent") {
-        node.parent = parent;
-        node.component = "bar";
-        // parent "" => "bar/"
-        CHECK(node.dir_name() == "bar/");
-        // parent "." => "./bar/"
-        parent->component = "/";
-        CHECK(node.dir_name() == "/bar/");
-        // parent "/" => "/bar/"
-        parent->component = "/";
-        CHECK(node.dir_name() == "/bar/");
-        // parent "foo" => "foo/bar/"
-        parent->component = "foo";
-        CHECK(node.dir_name() == "foo/bar/");
-        // parent "/foo" => "/foo/bar/"
-        parent->component = "/foo";
-        CHECK(node.dir_name() == "/foo/bar/");
+    SECTION("parent_dir_name") {
+        CHECK(PathNode::make("")->parent_dir_path() == "");
+        CHECK(PathNode::make(".")->parent_dir_path() == "");
+        CHECK(PathNode::make("/")->parent_dir_path() == "/");
+        CHECK(PathNode::make("foo")->parent_dir_path() == "");
+        CHECK(PathNode::make("./foo")->parent_dir_path() == "./");
+        CHECK(PathNode::make("foo/bar")->parent_dir_path() == "foo/");
+        CHECK(PathNode::make("/foo/bar")->parent_dir_path() == "/foo/");
     };
 }
 #endif // _WIN32

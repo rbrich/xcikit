@@ -9,11 +9,11 @@
 
 #include <xci/core/string.h>
 #include <xci/core/listdir.h>
+#include <xci/core/NonCopyable.h>
 #include <xci/config.h>
 
 #include <string>
 #include <string_view>
-#include <memory>
 #include <functional>
 #include <thread>
 #include <atomic>
@@ -35,66 +35,188 @@ namespace fs = std::filesystem;
 
 class FileTree {
 public:
-    struct PathNode {
-        explicit PathNode(std::string_view component) : component(component) {}
-        PathNode(std::string_view component, const std::shared_ptr<PathNode>& parent)
-            : parent(parent), component(component), depth(parent->depth + 1) {}
 
-        /// Convert contained directory path to a string:
-        /// - no parent, component ""           => ""
-        /// - no parent, component "."          => "./"
-        /// - no parent, component "/"          => "/"
-        /// - no parent, component "foo"        => "foo/"
-        /// - parent "", component "bar"        => "bar/"
-        /// - parent ".", component "bar"       => "./bar/"
-        /// - parent "/", component "bar"       => "/bar/"
-        /// - parent "foo", component "bar"     => "foo/bar/"
-        /// - parent "/foo", component "bar"    => "/foo/bar/"
-        std::string dir_name() const {
-            if (!parent && (component.empty() || component == "/"))
-                return component;
-            return parent_dir_name() + component + '/';
+    // Simplified smart pointer for PathNode.
+    // Supports only move and calls decref when destroyed and content not moved away.
+    // Doesn't check for move-into-self (that would be logic error, so it's fine if it crashes)
+    template <typename T>
+    class RcPtr {
+    public:
+        RcPtr() = default;
+        explicit RcPtr(T* ptr) : ptr(ptr) {}
+        RcPtr(RcPtr&& rhs) noexcept : ptr(rhs.ptr) { rhs.ptr = nullptr; }
+
+        ~RcPtr() {
+            if (ptr != nullptr)
+                ptr->decref();
         }
 
-        /// Same as dir_name, but the first variant is invalid
-        /// and '/' is not appended.
-        std::string file_name() const {
-            return parent_dir_name() + component;
+        RcPtr& operator=(RcPtr&& rhs) noexcept {
+            this->ptr = rhs.ptr;
+            rhs.ptr = nullptr;
+            return *this;
+        }
+
+        T* operator->() const { return ptr; }
+        T& operator*() const { return *ptr; }
+
+        operator bool() const { return ptr != nullptr; }
+
+    private:
+        T* ptr = nullptr;
+    };
+
+    // Internal hierarchical storage for found files and directories.
+    // Manual memory management:
+    // - an instance can be created only on heap using make() function
+    // - the instance starts with refcount = 1
+    // - when copied, call incref()
+    // - when done with it, call decref()
+    // Users of FileTree don't need to bother, the get only a reference,
+    // which is not expected to live outside the callback body.
+    class PathNode: public NonCopyable {
+        /// Internal constructor. Storage for path is allocated by caller.
+        /// \param path         Char storage for the path, it must have (at least) dir_len + name_len chars (+ 1 for slash)
+        ///                     If name_len is not 0, a single slash character needs to be appended at the end
+        ///                     (This avoids string concatenation in `dir_name` method).
+        /// \param dir_len      Length of directory part of the path, including trailing slash,
+        ///                     e.g. "/", "/etc/", "./" or "" (blank directory is alternative for "./")
+        /// \param name_len     Length of name part of the path, not including any slashes or nul terminator
+        ///                     e.g. "foo", ".", "" (blank name is alternative for ".")
+        PathNode(unsigned int dir_len, unsigned int name_len, PathNode& parent)
+                : m_parent(&parent), m_dir_len(dir_len), m_name_len(name_len), m_depth(parent.depth() + 1)
+        {
+            parent.incref();
+        }
+
+        PathNode(unsigned int dir_len, unsigned int name_len) : m_dir_len(dir_len), m_name_len(name_len) {}
+
+    public:
+        /// Factory function. Copies path to internal storage of PathNode.
+        static RcPtr<PathNode> make(std::string path)
+        {
+            // remove trailing slashes
+            while (path.size() > 1 && path.back() == '/') {
+                path.pop_back();
+            }
+
+            // split to dir and name parts
+            auto last_slash_pos = path.rfind('/');
+            const unsigned int name_len = (last_slash_pos == std::string::npos) ? path.size() : path.size() - last_slash_pos - 1;
+            const unsigned int dir_len = path.size() - name_len;
+
+            // allocate storage
+            const bool need_trailing_slash = name_len != 0;
+            char* buffer = new char[sizeof(PathNode) + path.size() + int(need_trailing_slash)];
+            auto* path_node = new(buffer) PathNode(dir_len, name_len);
+
+            // write path to storage
+            std::memcpy(path_node->m_path_storage, path.data(), path.size());
+            if (need_trailing_slash)
+                path_node->m_path_storage[path.size()] = '/';
+            return RcPtr{path_node};
+        }
+
+        static RcPtr<PathNode> make(PathNode& parent, std::string_view name)
+        {
+            auto parent_dir = parent.dir_path();
+
+            // allocate storage for (parent_dir + name + '/')
+            const unsigned int dir_len = parent_dir.size();
+            const unsigned int name_len = name.size();
+            char* buffer = new char[sizeof(PathNode) + dir_len + name_len + 1];
+            auto* path_node = new(buffer) PathNode(dir_len, name_len, parent);
+
+            // write path to storage
+            std::memcpy(path_node->m_path_storage, parent_dir.data(), dir_len);
+            std::memcpy(path_node->m_path_storage + dir_len, name.data(), name_len);
+            path_node->m_path_storage[dir_len + name_len] = '/';
+            return RcPtr{path_node};
+        }
+
+        void incref() {
+            ++m_refcount;
+        }
+
+        void decref() {
+            if (--m_refcount == 0) {
+                this->~PathNode();
+                char* buffer = reinterpret_cast<char*>(this);
+                delete[] buffer;
+            }
+        }
+
+        /// Get contained path as directory path with trailing slash
+        std::string_view dir_path() const {
+            if (m_name_len == 0)
+                return {m_path_storage, m_dir_len};
+            return {m_path_storage, m_dir_len + m_name_len + 1};  // 1 for trailing slash
+        }
+
+        /// Get contained path as file path (no trailing slash with exception of root "/")
+        std::string_view file_path() const {
+            return {m_path_storage, m_dir_len + m_name_len};
         }
 
         /// Get parent dir part of contained path
-        std::string parent_dir_name() const {
-            if (!parent)
-                return {};
-            return parent->dir_name();
+        std::string_view parent_dir_path() const {
+            return {m_path_storage, m_dir_len};
         }
 
-        bool is_root() const {
-            return !parent && component.empty();
+        std::string_view name() const {
+            return {m_path_storage + m_dir_len, m_name_len};
         }
+
+        /// To be used together with name_len().
+        /// NOT null-terminated.
+        const char* name_data() const {
+            return m_path_storage + m_dir_len;
+        }
+
+        unsigned int name_len() const { return m_name_len; }
+        bool name_empty() const { return m_name_len == 0; }
+        unsigned int size() const { return m_dir_len + m_name_len; }
+
+        bool has_parent() const { return bool(m_parent); }
+        int parent_fd() const { return m_parent->fd(); }
+
+        int depth() const { return m_depth; }
+        int fd() const { return m_fd; }
+        void set_fd(int fd) { m_fd = fd; }
 
         bool stat(struct stat& st) const {
             int rc;
-            if (fd == -1) {
-                if (!parent || parent->fd == -1)
-                    rc = ::lstat(file_name().c_str(), &st);
-                else
-                    rc = ::fstatat(parent->fd, component.c_str(), &st, AT_SYMLINK_NOFOLLOW);
+            if (m_fd == -1) {
+                if (!m_parent || m_parent->fd() == -1) {
+                    rc = ::lstat(std::string(file_path()).c_str(), &st);
+                } else {
+                    rc = ::fstatat(m_parent->fd(), std::string(name()).c_str(), &st, AT_SYMLINK_NOFOLLOW);
+                }
             } else {
-                rc = ::fstat(fd, &st);
+                rc = ::fstat(m_fd, &st);
             }
             return rc == 0;
         }
 
         /// Is this a node from input, i.e. `walk()`?
-        bool is_input() const {
-            return depth == 0;
+        bool is_input() const { return m_depth == 0; }
+
+        /// Name starts with '.'
+        bool is_hidden() const { return m_name_len != 0 && m_path_storage[m_dir_len] == '.'; }
+
+        /// Name is "." or ".."
+        bool is_dots_entry() const {
+            return is_hidden() && (m_name_len == 1 || (m_name_len == 2 && m_path_storage[m_dir_len + 1] == '.'));
         }
 
-        std::shared_ptr<PathNode> parent;
-        std::string component;
-        int fd = -1;
-        int depth = 0;  // depth from input
+    private:
+        RcPtr<PathNode> m_parent;
+        std::atomic_int m_refcount {1};
+        unsigned int m_dir_len = 0;
+        unsigned int m_name_len = 0;
+        int m_fd = -1;
+        int m_depth = 0;  // depth from input
+        char m_path_storage[0];
     };
 
     enum Type {
@@ -110,12 +232,12 @@ public:
 
     /// \param num_threads      Number of threads FileTree should spawn.
     ///                         Can be zero, but don't forget to call worker() from main thread.
-    explicit FileTree(unsigned num_threads, Callback&& cb)
-        : m_cb(std::move(cb)), m_busy_max((int)num_threads + 1)
+    explicit FileTree(int num_threads, Callback&& cb)
+        : m_cb(std::move(cb)), m_busy_max(num_threads + 1)
     {
         assert(m_cb);
         m_workers.reserve(num_threads);
-        for (unsigned i = 0; i != num_threads; ++i) {
+        for (int i = 0; i != num_threads; ++i) {
             m_workers.emplace_back([this, i]{ worker(i + 1); });
         }
     }
@@ -125,11 +247,6 @@ public:
         for (auto& t : m_workers)
             t.join();
     }
-
-    /// Allows disabling default ignored paths like /dev
-    void set_default_ignore(bool enabled) { m_default_ignore = enabled; }
-    static bool is_default_ignored(const std::string& path);
-    static std::string default_ignore_list(const char* sep);
 
     void walk_cwd() {
         // open "." but show entries without "./" prefix in reporting
@@ -141,15 +258,11 @@ public:
     }
 
     void walk(const fs::path& pathname, const char* open_path) {
-        // normalize and remove trailing slash
-        auto node_path = pathname.lexically_normal().string();
-        if (node_path.size() > 1) { // size of "/" is 1
-            rstrip(node_path, '/');
-        }
-        // create base node from relative or absolute path, e.g.:
+        // Create base node from relative or absolute path, e.g.:
         // - relative: "foo/bar", "foo", ".", ".."
         // - absolute: "/foo/bar", "/foo", "/"
-        auto node = std::make_shared<PathNode>(node_path);
+        // Trailing slash is normalized in PathNode constructor.
+        auto node = PathNode::make(pathname.lexically_normal().string());
         // open original, uncleaned path (required to support root "/")
         if (!open_and_report(open_path, *node, AT_FDCWD))
             return;
@@ -162,24 +275,24 @@ public:
     }
 
 private:
-    void enqueue(std::shared_ptr<PathNode>&& path);
+    void enqueue(RcPtr<PathNode> path_node);
 
     void worker(int num);
 
-    void read(std::shared_ptr<PathNode>&& path) {
+    void read(RcPtr<PathNode> path) {
         thread_local DirEntryArena arena;
         DirEntryArenaGuard arena_guard(arena);
         std::vector<sys_dirent_t*> entries;
 
 #ifdef XCI_LISTDIR_GETDENTS
-        if (!list_dir_sys(path->fd, arena, entries)) {
+        if (!list_dir_sys(path->fd(), arena, entries)) {
             m_cb(*path, OpenDirError);
-            close(path->fd);
+            close(path->fd());
             return;
         }
 #else
         DIR* dirp;
-        if (!list_dir_posix(path->fd, dirp, arena, entries)) {
+        if (!list_dir_posix(path->fd(), dirp, arena, entries)) {
             m_cb(*path, OpenDirError);
             return;
         }
@@ -190,23 +303,18 @@ private:
                 { return a->d_type < b->d_type || (a->d_type == b->d_type && strcmp(a->d_name, b->d_name) < 0); });
 
         for (const auto* entry : entries) {
-            // Check ignore list
-            std::string entry_pathname = path->dir_name() + entry->d_name;
-            if (m_default_ignore && is_default_ignored(entry_pathname))
-                continue;
-
-            auto entry_path = std::make_shared<PathNode>(entry->d_name, path);
+            auto entry_node = PathNode::make(*path, {entry->d_name, strlen(entry->d_name)});
 
             if ((entry->d_type & DT_DIR) == DT_DIR || entry->d_type == DT_UNKNOWN) {
                 // readdir says it's a dir or it doesn't know
-                if (open_and_report(entry->d_name, *entry_path, path->fd))
-                    enqueue(std::move(entry_path));
+                if (open_and_report(entry->d_name, *entry_node, path->fd()))
+                    enqueue(std::move(entry_node));
                 continue;
             }
-            m_cb(*entry_path, File);
+            m_cb(*entry_node, File);
         }
 #ifdef XCI_LISTDIR_GETDENTS
-        close(path->fd);
+        close(path->fd());
 #else
         closedir(dirp);
 #endif
@@ -229,7 +337,7 @@ private:
             m_cb(node, OpenError);
             return false;
         }
-        node.fd = fd;
+        node.set_fd(fd);
 
         if (!m_cb(node, Directory)) {
             close(fd);
@@ -240,7 +348,7 @@ private:
 
     Callback m_cb;
 
-    std::shared_ptr<PathNode> m_job;
+    RcPtr<PathNode> m_job;
     std::vector<std::thread> m_workers;
     std::mutex m_mutex;  // sync access to job from workers and CV
     std::condition_variable m_cv;
@@ -258,8 +366,6 @@ private:
 
     // total workers, including the main one
     int m_busy_max;
-
-    bool m_default_ignore = true;
 };
 
 } // namespace xci::core

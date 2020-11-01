@@ -54,6 +54,31 @@ struct Counters {
 };
 
 
+static constinit const char* s_default_ignore_list[] = {
+#if defined(__APPLE__)
+        "/dev",
+        "/System/Volumes",
+#elif defined(__linux__)
+        "/dev",
+        "/proc",
+        "/sys",
+        "/mnt",
+        "/media",
+#endif
+};
+
+static bool is_default_ignored(std::string_view path)
+{
+    return std::any_of(std::begin(s_default_ignore_list), std::end(s_default_ignore_list),
+            [&path](const char* ignore_path) { return path == ignore_path; });
+}
+
+static std::string default_ignore_list(const char* sep)
+{
+    return fmt::format("{}", fmt::join(std::begin(s_default_ignore_list), std::end(s_default_ignore_list), sep));
+}
+
+
 static char file_type_to_char(mode_t mode)
 {
     switch (mode & S_IFMT) {
@@ -147,33 +172,42 @@ static TermCtl::Color size_unit_to_color(char unit)
 }
 
 
-static std::string highlight_path(FileTree::Type t, const FileTree::PathNode& path, const Theme& theme,
-                                  const int so=0, const int eo=0)
+/// Basically puts(3)
+static void synced_writeln(const std::string& out)
 {
-    std::string out;
+    flockfile(stdout);
+    ::write(STDOUT_FILENO, out.data(), out.size());
+    ::write(STDOUT_FILENO, "\n", 1);
+    funlockfile(stdout);
+}
+
+
+static void highlight_path(std::string& out, FileTree::Type t, const FileTree::PathNode& path, const Theme& theme,
+                           const int so=0, const int eo=0)
+{
+    out.reserve(path.size() + 30);  // reserve some space also for escape sequences
     if (t == FileTree::Directory) {
         out += theme.dir;
-        out += path.parent_dir_name();
+        out += path.parent_dir_path();
     } else {
         out += theme.file_dir;
-        out += path.parent_dir_name();
+        out += path.parent_dir_path();
         out += theme.file_name;
     }
     if (so != eo) {
-        const auto* name = path.component.c_str();
-        out += std::string_view(name, so);
+        std::string_view name = path.name();
+        out += name.substr(0, so);
         out += theme.highlight;
-        out += std::string_view(name + so, eo - so);
+        out += name.substr(so, eo - so);
         if (t == FileTree::Directory)
             out += theme.dir;
         else
             out += theme.file_name;
-        out += std::string_view(name + eo);
+        out += name.substr(eo);
     } else {
-        out += path.component;
+        out += path.name();
     }
     out += theme.normal;
-    return out;
 }
 
 
@@ -198,7 +232,10 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
     char alloc_unit = round_size_to_unit(alloc);
     char file_type = file_type_to_char(st.st_mode);
     TermCtl& term = TermCtl::stdout_instance();
-    std::string out = fmt::format("{}{:c}{:04o}{} {:>{}}:{:{}} {}{:4}{}{}{} {}{:4}{}{}{}  {:%F %H:%M}  {}",
+    std::string out;
+    out.reserve(name.size() + 64);
+    auto out_it = std::back_inserter(out);
+    fmt::format_to(out_it, "{}{:c}{:04o}{} {:>{}}:{:{}} {}{:4}{}{}{} {}{:4}{}{}{}  {:%F %H:%M}  {}",
             term.fg(file_mode_to_color(st.st_mode)), file_type, st.st_mode & 07777, term.normal(),
             user, w_user, group, w_group,
             term.fg(size_unit_to_color(size_unit)), size, term.dim(), size_unit, term.normal(),
@@ -208,17 +245,17 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
     if (S_ISLNK(st.st_mode)) {
         char buf[PATH_MAX];
         ssize_t res;
-        if (path.parent && path.parent->fd != -1)
-            res = readlinkat(path.parent->fd, path.component.c_str(), buf, sizeof(buf));
+        if (path.has_parent() && path.parent_fd() != -1)
+            res = ::readlinkat(path.parent_fd(), std::string(path.name()).c_str(), buf, sizeof(buf));
         else
-            res = readlink(path.file_name().c_str(), buf, sizeof(buf));
+            res = readlink(std::string(path.file_path()).c_str(), buf, sizeof(buf));
         if (res < 0) {
-            fmt::print(stderr,"ff: readlink({}): {}\n", path.file_name(), errno_str());
+            fmt::print(stderr,"ff: readlink({}): {}\n", path.file_path(), errno_str());
             return;
         }
-        out += fmt::format(" -> {}", std::string_view(buf, res));
+        fmt::format_to(out_it, " -> {}", std::string_view(buf, res));
     }
-    puts(out.c_str());
+    synced_writeln(out);
 }
 
 
@@ -350,7 +387,7 @@ int main(int argc, const char* argv[])
             Option("-e, --ext EXT ...", "Match only files with extension EXT (shortcut for pattern '\\.EXT$')", extensions),
             Option("-H, --search-hidden", "Don't skip hidden files", show_hidden),
             Option("-D, --search-dirnames", "Don't skip directory entries", show_dirs),
-            Option("-S, --search-in-special-dirs", "Allow descending into special directories: " + FileTree::default_ignore_list(", "), search_in_special_dirs),
+            Option("-S, --search-in-special-dirs", "Allow descending into special directories: " + default_ignore_list(", "), search_in_special_dirs),
             Option("-X, --single-device", "Don't descend into directories with different device number", single_device),
             Option("-a, --all", "Don't skip any files (alias for -HDS)", [&]{ show_hidden = true; show_dirs = true; search_in_special_dirs = true; }),
             Option("-d, --max-depth N", "Descend at most N directory levels below input directories", max_depth),
@@ -455,7 +492,8 @@ int main(int argc, const char* argv[])
     Counters counters;
 
     FileTree ft(jobs-1,
-                [show_hidden, show_dirs, single_device, long_form, highlight_match, type_mask, max_depth,
+                [show_hidden, show_dirs, single_device, long_form, highlight_match,
+                 type_mask, max_depth, search_in_special_dirs,
                  &re_db, re_scratch_prototype, &theme, &dev_ids, &counters]
                 (const FileTree::PathNode& path, FileTree::Type t)
     {
@@ -469,15 +507,19 @@ int main(int argc, const char* argv[])
                 }
 
                 // skip hidden files (".", ".." not considered hidden - if passed as PATH arg)
-                if (!show_hidden && path.component[0] == '.' && !is_dots_entry(path.component.c_str()))
+                if (!show_hidden && path.is_hidden() && !path.is_dots_entry())
                     return false;
 
                 bool descend = true;
                 if (t == FileTree::Directory) {
-                    if (max_depth >= 0 && path.depth >= max_depth) {
+                    if (max_depth >= 0 && path.depth() >= max_depth) {
                         descend = false;
                     }
-                    if (!show_dirs || path.component.empty()) {
+                    // Check ignore list
+                    if (!search_in_special_dirs && is_default_ignored(path.file_path())) {
+                        descend = false;
+                    }
+                    if (!show_dirs || path.name_empty()) {
                         // path.component is empty when this is root report from walk_cwd()
                         counters.seen_dirs.fetch_sub(1, std::memory_order_relaxed);  // small correction - don't count implicitly searched CWD
                         return descend;
@@ -485,7 +527,7 @@ int main(int argc, const char* argv[])
                     if (single_device) {
                         struct stat st;
                         if (!path.stat(st)) {
-                            fmt::print(stderr,"ff: stat({}): {}\n", path.dir_name(), errno_str());
+                            fmt::print(stderr,"ff: stat({}): {}\n", path.file_path(), errno_str());
                             return descend;
                         }
                         if (path.is_input()) {
@@ -506,7 +548,7 @@ int main(int argc, const char* argv[])
                     if (highlight_match) {
                         // match, with highlight
                         std::vector<std::pair<int, int>> matches;
-                        auto r = hs_scan(re_db, path.component.c_str(), path.component.size(), 0, re_scratch,
+                        auto r = hs_scan(re_db, path.name_data(), path.name_len(), 0, re_scratch,
                                 [] (unsigned int id, unsigned long long from,
                                     unsigned long long to, unsigned int flags, void *ctx)
                                 {
@@ -515,15 +557,15 @@ int main(int argc, const char* argv[])
                                     return 0;
                                 }, &matches);
                         if (r != HS_SUCCESS) {
-                            fmt::print(stderr,"ff: hs_scan({}): Unable to scan ({})\n", path.component, r);
+                            fmt::print(stderr,"ff: hs_scan({}): Unable to scan ({})\n", path.name(), r);
                             return descend;
                         }
                         if (matches.empty())
                             return descend;  // not matched
-                        out = highlight_path(t, path, theme, matches[0].first, matches[0].second);
+                        highlight_path(out, t, path, theme, matches[0].first, matches[0].second);
                     } else {
                         // match, no highlight
-                        auto r = hs_scan(re_db, path.component.c_str(), path.component.size(), 0, re_scratch,
+                        auto r = hs_scan(re_db, path.name_data(), path.name_len(), 0, re_scratch,
                                 [] (unsigned int id, unsigned long long from,
                                     unsigned long long to, unsigned int flags, void *ctx)
                                 { return 1; }, nullptr);
@@ -531,21 +573,21 @@ int main(int argc, const char* argv[])
                         if (r == HS_SUCCESS)
                             return descend;  // not matched
                         if (r != HS_SCAN_TERMINATED) {
-                            fmt::print(stderr,"ff: hs_scan({}): ({}) Unable to scan\n", path.component, r);
+                            fmt::print(stderr,"ff: hs_scan({}): ({}) Unable to scan\n", path.name(), r);
                             return descend;
                         }
-                        out = highlight_path(t, path, theme);
+                        highlight_path(out, t, path, theme);
                     }
                 } else {
                     // no matching, just print, without highlight
-                    out = highlight_path(t, path, theme);
+                    highlight_path(out, t, path, theme);
                 }
 
                 struct stat st;
                 if (type_mask || long_form) {
                     // need stat
                     if (!path.stat(st)) {
-                        fmt::print(stderr,"ff: stat({}): {}\n", path.file_name(), errno_str());
+                        fmt::print(stderr,"ff: stat({}): {}\n", path.file_path(), errno_str());
                         return descend;
                     }
                     counters.total_size.fetch_add(st.st_size, std::memory_order_relaxed);
@@ -570,23 +612,21 @@ int main(int argc, const char* argv[])
                 if (long_form)
                     print_path_with_attrs(out, path, st);
                 else
-                    puts(out.c_str());
+                    synced_writeln(out);
                 return descend;
             }
             case FileTree::OpenError:
-                fmt::print(stderr,"ff: open({}): {}\n", path.file_name(), errno_str());
+                fmt::print(stderr,"ff: open({}): {}\n", path.file_path(), errno_str());
                 return true;
             case FileTree::OpenDirError:
-                fmt::print(stderr,"ff: opendir({}): {}\n", path.file_name(), errno_str());
+                fmt::print(stderr,"ff: opendir({}): {}\n", path.file_path(), errno_str());
                 return true;
             case FileTree::ReadDirError:
-                fmt::print(stderr,"ff: readdir({}): {}\n", path.file_name(), errno_str());
+                fmt::print(stderr,"ff: readdir({}): {}\n", path.file_path(), errno_str());
                 return true;
         }
         UNREACHABLE;
     });
-
-    ft.set_default_ignore(!search_in_special_dirs);
 
     if (paths.empty()) {
         ft.walk_cwd();

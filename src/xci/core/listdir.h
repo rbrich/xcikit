@@ -12,6 +12,7 @@
 #define XCI_CORE_LISTDIR_H
 
 #include <xci/config.h>
+#include <xci/core/log.h>
 
 #include <vector>
 #include <memory>
@@ -56,8 +57,10 @@ public:
     static constexpr size_t block_size = 16 << 10;
 
     char* get_block() {
-        if (m_next == m_blocks.size())
+        if (m_next == m_blocks.size()) {
+            TRACE("arena {:x} alloc {}", (uintptr_t)this, m_next);
             m_blocks.emplace_back(new char[block_size]);
+        }
         return m_blocks[m_next++].get();
     }
 
@@ -75,9 +78,11 @@ class DirEntryArenaGuard {
 public:
     DirEntryArenaGuard(DirEntryArena& arena) : m_arena(arena) {
         m_next = m_arena.next_block();
+        TRACE("arena {:x} push {}", (uintptr_t)&m_arena, m_next);
     }
     ~DirEntryArenaGuard() {
         m_arena.set_next_block(m_next);
+        TRACE("arena {:x} pop {}", (uintptr_t)&m_arena, m_next);
     }
 private:
     DirEntryArena& m_arena;
