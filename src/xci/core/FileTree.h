@@ -14,7 +14,6 @@
 
 #include <string>
 #include <string_view>
-#include <memory>
 #include <functional>
 #include <thread>
 #include <atomic>
@@ -36,6 +35,37 @@ namespace fs = std::filesystem;
 
 class FileTree {
 public:
+
+    // Simplified smart pointer for PathNode.
+    // Supports only move and calls decref when destroyed and content not moved away.
+    // Doesn't check for move-into-self (that would be logic error, so it's fine if it crashes)
+    template <typename T>
+    class RcPtr {
+    public:
+        RcPtr() = default;
+        explicit RcPtr(T* ptr) : ptr(ptr) {}
+        RcPtr(RcPtr&& rhs) noexcept : ptr(rhs.ptr) { rhs.ptr = nullptr; }
+
+        ~RcPtr() {
+            if (ptr != nullptr)
+                ptr->decref();
+        }
+
+        RcPtr& operator=(RcPtr&& rhs) noexcept {
+            this->ptr = rhs.ptr;
+            rhs.ptr = nullptr;
+            return *this;
+        }
+
+        T* operator->() const { return ptr; }
+        T& operator*() const { return *ptr; }
+
+        operator bool() const { return ptr != nullptr; }
+
+    private:
+        T* ptr = nullptr;
+    };
+
     // Internal hierarchical storage for found files and directories.
     // Manual memory management:
     // - an instance can be created only on heap using make() function
@@ -61,15 +91,9 @@ public:
 
         PathNode(unsigned int dir_len, unsigned int name_len) : m_dir_len(dir_len), m_name_len(name_len) {}
 
-        ~PathNode()
-        {
-            if (m_parent != nullptr)
-                m_parent->decref();
-        }
-
     public:
         /// Factory function. Copies path to internal storage of PathNode.
-        static PathNode* make(std::string path)
+        static RcPtr<PathNode> make(std::string path)
         {
             // remove trailing slashes
             while (path.size() > 1 && path.back() == '/') {
@@ -90,10 +114,10 @@ public:
             std::memcpy(path_node->m_path_storage, path.data(), path.size());
             if (need_trailing_slash)
                 path_node->m_path_storage[path.size()] = '/';
-            return path_node;
+            return RcPtr{path_node};
         }
 
-        static PathNode* make(PathNode& parent, std::string_view name)
+        static RcPtr<PathNode> make(PathNode& parent, std::string_view name)
         {
             auto parent_dir = parent.dir_path();
 
@@ -107,7 +131,7 @@ public:
             std::memcpy(path_node->m_path_storage, parent_dir.data(), dir_len);
             std::memcpy(path_node->m_path_storage + dir_len, name.data(), name_len);
             path_node->m_path_storage[dir_len + name_len] = '/';
-            return path_node;
+            return RcPtr{path_node};
         }
 
         void incref() {
@@ -153,7 +177,7 @@ public:
         bool name_empty() const { return m_name_len == 0; }
         unsigned int size() const { return m_dir_len + m_name_len; }
 
-        bool has_parent() const { return m_parent != nullptr; }
+        bool has_parent() const { return bool(m_parent); }
         int parent_fd() const { return m_parent->fd(); }
 
         int depth() const { return m_depth; }
@@ -186,7 +210,7 @@ public:
         }
 
     private:
-        PathNode* m_parent = nullptr;
+        RcPtr<PathNode> m_parent;
         std::atomic_int m_refcount {1};
         unsigned int m_dir_len = 0;
         unsigned int m_name_len = 0;
@@ -208,12 +232,12 @@ public:
 
     /// \param num_threads      Number of threads FileTree should spawn.
     ///                         Can be zero, but don't forget to call worker() from main thread.
-    explicit FileTree(unsigned num_threads, Callback&& cb)
-        : m_cb(std::move(cb)), m_busy_max((int)num_threads + 1)
+    explicit FileTree(int num_threads, Callback&& cb)
+        : m_cb(std::move(cb)), m_busy_max(num_threads + 1)
     {
         assert(m_cb);
         m_workers.reserve(num_threads);
-        for (unsigned i = 0; i != num_threads; ++i) {
+        for (int i = 0; i != num_threads; ++i) {
             m_workers.emplace_back([this, i]{ worker(i + 1); });
         }
     }
@@ -238,13 +262,11 @@ public:
         // - relative: "foo/bar", "foo", ".", ".."
         // - absolute: "/foo/bar", "/foo", "/"
         // Trailing slash is normalized in PathNode constructor.
-        auto* node = PathNode::make(pathname.lexically_normal().string());
+        auto node = PathNode::make(pathname.lexically_normal().string());
         // open original, uncleaned path (required to support root "/")
-        if (!open_and_report(open_path, *node, AT_FDCWD)) {
-            node->decref();
+        if (!open_and_report(open_path, *node, AT_FDCWD))
             return;
-        }
-        enqueue(node);
+        enqueue(std::move(node));
     }
 
     void main_worker() {
@@ -253,11 +275,11 @@ public:
     }
 
 private:
-    void enqueue(PathNode* path_node);
+    void enqueue(RcPtr<PathNode> path_node);
 
     void worker(int num);
 
-    void read(PathNode* path) {
+    void read(RcPtr<PathNode> path) {
         thread_local DirEntryArena arena;
         DirEntryArenaGuard arena_guard(arena);
         std::vector<sys_dirent_t*> entries;
@@ -266,14 +288,12 @@ private:
         if (!list_dir_sys(path->fd(), arena, entries)) {
             m_cb(*path, OpenDirError);
             close(path->fd());
-            path->decref();
             return;
         }
 #else
         DIR* dirp;
         if (!list_dir_posix(path->fd(), dirp, arena, entries)) {
             m_cb(*path, OpenDirError);
-            path->decref();
             return;
         }
 #endif
@@ -283,25 +303,21 @@ private:
                 { return a->d_type < b->d_type || (a->d_type == b->d_type && strcmp(a->d_name, b->d_name) < 0); });
 
         for (const auto* entry : entries) {
-            auto* entry_node = PathNode::make(*path, {entry->d_name, strlen(entry->d_name)});
+            auto entry_node = PathNode::make(*path, {entry->d_name, strlen(entry->d_name)});
 
             if ((entry->d_type & DT_DIR) == DT_DIR || entry->d_type == DT_UNKNOWN) {
                 // readdir says it's a dir or it doesn't know
                 if (open_and_report(entry->d_name, *entry_node, path->fd()))
-                    enqueue(entry_node);
-                else
-                    entry_node->decref();
+                    enqueue(std::move(entry_node));
                 continue;
             }
             m_cb(*entry_node, File);
-            entry_node->decref();
         }
 #ifdef XCI_LISTDIR_GETDENTS
         close(path->fd());
 #else
         closedir(dirp);
 #endif
-        path->decref();
     }
 
     /// \param pathname     path to open, may be relative
@@ -332,7 +348,7 @@ private:
 
     Callback m_cb;
 
-    PathNode* m_job = nullptr;
+    RcPtr<PathNode> m_job;
     std::vector<std::thread> m_workers;
     std::mutex m_mutex;  // sync access to job from workers and CV
     std::condition_variable m_cv;
