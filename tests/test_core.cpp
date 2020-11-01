@@ -254,22 +254,23 @@ TEST_CASE( "align_to", "[memory]" )
 #ifndef _WIN32
 TEST_CASE( "PathNode", "[FileTree]" )
 {
+    using PathNode = FileTree::PathNode;
     SECTION("dir_path") {
-        CHECK(FileTree::PathNode("").dir_path() == "");
-        CHECK(FileTree::PathNode(".").dir_path() == "./");
-        CHECK(FileTree::PathNode("/").dir_path() == "/");
-        CHECK(FileTree::PathNode("foo").dir_path() == "foo/");
-        CHECK(FileTree::PathNode("/foo/bar").dir_path() == "/foo/bar/");
-        CHECK(FileTree::PathNode("/foo/bar/").dir_path() == "/foo/bar/");
+        CHECK(PathNode::make("")->dir_path() == "");
+        CHECK(PathNode::make(".")->dir_path() == "./");
+        CHECK(PathNode::make("/")->dir_path() == "/");
+        CHECK(PathNode::make("foo")->dir_path() == "foo/");
+        CHECK(PathNode::make("/foo/bar")->dir_path() == "/foo/bar/");
+        CHECK(PathNode::make("/foo/bar/")->dir_path() == "/foo/bar/");
     };
     SECTION("parent_dir_name") {
-        CHECK(FileTree::PathNode("").parent_dir_path() == "");
-        CHECK(FileTree::PathNode(".").parent_dir_path() == "");
-        CHECK(FileTree::PathNode("/").parent_dir_path() == "/");
-        CHECK(FileTree::PathNode("foo").parent_dir_path() == "");
-        CHECK(FileTree::PathNode("./foo").parent_dir_path() == "./");
-        CHECK(FileTree::PathNode("foo/bar").parent_dir_path() == "foo/");
-        CHECK(FileTree::PathNode("/foo/bar").parent_dir_path() == "/foo/");
+        CHECK(PathNode::make("")->parent_dir_path() == "");
+        CHECK(PathNode::make(".")->parent_dir_path() == "");
+        CHECK(PathNode::make("/")->parent_dir_path() == "/");
+        CHECK(PathNode::make("foo")->parent_dir_path() == "");
+        CHECK(PathNode::make("./foo")->parent_dir_path() == "./");
+        CHECK(PathNode::make("foo/bar")->parent_dir_path() == "foo/");
+        CHECK(PathNode::make("/foo/bar")->parent_dir_path() == "/foo/");
     };
 }
 #endif // _WIN32

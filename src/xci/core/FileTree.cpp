@@ -35,26 +35,26 @@ std::string FileTree::default_ignore_list(const char* sep)
 }
 
 
-void FileTree::enqueue(std::shared_ptr<PathNode>&& path)
+void FileTree::enqueue(PathNode* path_node)
 {
     // Skip locking and queuing if all workers are (apparently) busy.
     if (m_busy.load(std::memory_order_relaxed) >= m_busy_max) {
         TRACE("skip lock ({} busy)", m_busy);
-        read(std::move(path));
+        read(path_node);
         return;
     }
 
     std::unique_lock lock(m_mutex);
     if (!m_job) {
         m_busy.fetch_add(1, std::memory_order_release);
-        m_job = std::move(path);
+        m_job = path_node;
         lock.unlock();
         m_cv.notify_one();
     } else {
         // process the item in this thread
         // (better than blocking and doing nothing)
         lock.unlock();
-        read(std::move(path));
+        read(path_node);
     }
 }
 
@@ -72,12 +72,12 @@ void FileTree::worker(int num)
             }
         }
         // clear m_job by moving it away - it's important to move into temp variable
-        auto path = std::move(m_job);
-        assert(!m_job);  // cleared
+        auto* path = m_job;
+        m_job = nullptr;
         lock.unlock();
 
         TRACE("[{}] worker read ({} busy)", num, m_busy);
-        read(std::move(path));
+        read(path);
         m_busy.fetch_sub(1, std::memory_order_release);
     }
 finish:
