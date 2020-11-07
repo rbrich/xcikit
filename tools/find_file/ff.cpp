@@ -24,6 +24,7 @@
 #include <utility>
 #include <string_view>
 #include <atomic>
+#include <charconv>
 
 #include <unistd.h>
 #include <ctype.h>
@@ -32,7 +33,7 @@ using namespace xci::core;
 using namespace xci::core::argparser;
 
 
-static constexpr auto c_version = "0.4";
+static constexpr auto c_version = "0.5";
 
 
 struct Theme {
@@ -172,6 +173,54 @@ static TermCtl::Color size_unit_to_color(char unit)
 }
 
 
+static int size_unit_to_shift(char unit)
+{
+    switch (toupper(unit)) {
+        case 'B': return 0;
+        case 'K': return 10;
+        case 'M': return 20;
+        case 'G': return 30;
+        case 'T': return 40;
+        case 'P': return 50;
+        default:  return -1;
+    }
+}
+
+
+static bool parse_size_filter(const char* arg, size_t& size_from, size_t& size_to)
+{
+    const char* end = arg + strlen(arg);
+    auto res = std::from_chars(arg, end, size_from);
+    arg = res.ptr;
+    int shift;
+    if (size_from != 0 && (shift = size_unit_to_shift(*arg)) != -1) {
+        size_from <<= shift;
+        ++arg;
+    }
+    if (arg == end)
+        return true;
+    if (end - arg < 2 || arg[0] != '.' || arg[1] != '.') {
+        fmt::print(stderr,"ff: error parsing size at {}: expected '..'\n", arg);
+        return false;
+    }
+    arg += 2;
+    res = std::from_chars(arg, end, size_to);
+    arg = res.ptr;
+    if (size_to != 0 && (shift = size_unit_to_shift(*arg)) != -1) {
+        size_to <<= shift;
+        ++arg;
+    }
+    if (arg != end) {
+        fmt::print(stderr,"ff: error parsing size at {}: unexpected characters\n", arg);
+        return false;
+    }
+    if (size_to != 0 && size_to < size_from) {
+        fmt::print(stderr,"ff: invalid range, min is greater than max: {} .. {}\n", size_from, size_to);
+        return false;
+    }
+    return (arg == end);
+}
+
 /// Basically puts(3)
 static void synced_writeln(const std::string& out)
 {
@@ -272,7 +321,7 @@ static void print_stats(const Counters& counters)
         char size_unit = round_size_to_unit(size);
         char alloc_unit = round_size_to_unit(alloc);
         fmt::print(stderr,
-                " Size    {}{:8}{}{:c}{} used   {}{:8}{}{:c}{} allocated\n",
+                " Size    {}{:8}{}{:c}{} total  {}{:8}{}{:c}{} allocated\n",
                 term.fg(size_unit_to_color(size_unit)), size, term.dim(), size_unit, term.normal(),
                 term.fg(size_unit_to_color(alloc_unit)), alloc, term.dim(), alloc_unit, term.normal());
     }
@@ -371,6 +420,8 @@ int main(int argc, const char* argv[])
     bool show_version = false;
     bool show_stats = false;
     int jobs = 2 * cpu_count();
+    size_t size_from = 0;
+    size_t size_to = 0;
     mode_t type_mask = 0;
     const char* pattern = nullptr;
     std::vector<fs::path> paths;
@@ -395,6 +446,8 @@ int main(int argc, const char* argv[])
             Option("-L, --list-long", "Don't descend and print attributes, similar to `ls -l` (alias for -lDd1)", [&]{ long_form = true; show_dirs = true; max_depth = 1; }),
             Option("-t, --types TYPES", "Filter file types: f=regular, d=dir, l=link, s=sock, p=fifo, c=char, b=block, x=exec, e.g. -tdl for dir+link (implies -D)",
                     [&type_mask, &show_dirs](const char* arg){ show_dirs = true; return parse_types(arg, type_mask); }),
+            Option("--size BETWEEN", "Filter files by size: [MIN]..[MAX], each site is optional, e.g. 1M..2M, 42K (eq. 42K..), ..1G",
+                    [&size_from, &size_to](const char* arg){ return parse_size_filter(arg, size_from, size_to); }),
             Option("-c, --color", "Force color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Always); }),
             Option("-C, --no-color", "Disable color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Never); }),
             Option("-M, --no-highlight", "Don't highlight matches (default: enabled for color output)", [&highlight_match]{ highlight_match = false; }),
@@ -493,7 +546,7 @@ int main(int argc, const char* argv[])
 
     FileTree ft(jobs-1,
                 [show_hidden, show_dirs, single_device, long_form, highlight_match,
-                 type_mask, max_depth, search_in_special_dirs,
+                 type_mask, size_from, size_to, max_depth, search_in_special_dirs,
                  &re_db, re_scratch_prototype, &theme, &dev_ids, &counters]
                 (const FileTree::PathNode& path, FileTree::Type t)
     {
@@ -584,7 +637,7 @@ int main(int argc, const char* argv[])
                 }
 
                 struct stat st;
-                if (type_mask || long_form) {
+                if (long_form || type_mask || size_from || size_to) {
                     // need stat
                     if (!path.stat(st)) {
                         fmt::print(stderr,"ff: stat({}): {}\n", path.file_path(), errno_str());
@@ -602,6 +655,11 @@ int main(int argc, const char* argv[])
                     if ((type_mask & 07777) && !(st.st_mode & type_mask & 07777))
                         return descend;
                 }
+
+                if (size_from && size_t(st.st_size) < size_from)
+                    return descend;
+                if (size_to && size_t(st.st_size) > size_to)
+                    return descend;
 
                 if (t == FileTree::Directory) {
                     counters.matched_dirs.fetch_add(1, std::memory_order_relaxed);
