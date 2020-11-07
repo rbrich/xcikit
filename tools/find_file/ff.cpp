@@ -33,7 +33,7 @@ using namespace xci::core;
 using namespace xci::core::argparser;
 
 
-static constexpr auto c_version = "0.4";
+static constexpr auto c_version = "0.5";
 
 
 struct Theme {
