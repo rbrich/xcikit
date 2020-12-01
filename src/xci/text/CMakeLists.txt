@@ -2,7 +2,7 @@
 # Dependencies #
 # ------------ #
 
-include(FindFreetype)
+find_package(Freetype REQUIRED)
 
 
 # ------------ #
@@ -26,7 +26,6 @@ add_library(xci-text
 target_include_directories(xci-text
     PUBLIC
         ${XCI_INCLUDE_DIRS}
-        ${FREETYPE_INCLUDE_DIRS}
     PRIVATE
         $<TARGET_PROPERTY:rbp,INTERFACE_INCLUDE_DIRECTORIES>
         # NOTE: We cannot link `taocpp::pegtl` directly, because it would become
@@ -41,7 +40,7 @@ target_link_libraries(xci-text
         xci-core
         xci-graphics
         PRIVATE
-        ${FREETYPE_LIBRARIES}
+        Freetype::Freetype
     )
 
 if (APPLE)
