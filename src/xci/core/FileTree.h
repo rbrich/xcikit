@@ -70,11 +70,11 @@ public:
     // Manual memory management:
     // - an instance can be created only on heap using make() function
     // - the instance starts with refcount = 1
-    // - when copied, call incref()
-    // - when done with it, call decref()
-    // Users of FileTree don't need to bother, the get only a reference,
+    // - when a pointer is copied, call incref()
+    // - when releasing a pointer, call decref()
+    // Users of FileTree don't need to bother, they get only a reference,
     // which is not expected to live outside the callback body.
-    class PathNode: public NonCopyable {
+    class PathNode: NonCopyable, NonMovable {
         /// Internal constructor. Storage for path is allocated by caller.
         /// \param path         Char storage for the path, it must have (at least) dir_len + name_len chars (+ 1 for slash)
         ///                     If name_len is not 0, a single slash character needs to be appended at the end
@@ -183,6 +183,12 @@ public:
         int depth() const { return m_depth; }
         int fd() const { return m_fd; }
         void set_fd(int fd) { m_fd = fd; }
+        void close_fd() {
+            if (m_fd != -1) {
+                close(m_fd);
+                m_fd = -1;
+            }
+        }
 
         bool stat(struct stat& st) const {
             int rc;
@@ -228,11 +234,11 @@ public:
     };
 
     /// for Directories, return true to descend, false to skip
-    using Callback = std::function<bool(const PathNode&, Type)>;
+    using NodeCallback = std::function<bool(int tn, const PathNode&, Type)>;
 
     /// \param num_threads      Number of threads FileTree should spawn.
     ///                         Can be zero, but don't forget to call worker() from main thread.
-    explicit FileTree(int num_threads, Callback&& cb)
+    explicit FileTree(int num_threads, NodeCallback&& cb)
         : m_cb(std::move(cb)), m_busy_max(num_threads + 1)
     {
         assert(m_cb);
@@ -264,9 +270,9 @@ public:
         // Trailing slash is normalized in PathNode constructor.
         auto node = PathNode::make(pathname.lexically_normal().string());
         // open original, uncleaned path (required to support root "/")
-        if (!open_and_report(open_path, *node, AT_FDCWD))
+        if (!open_and_report(0, open_path, *node, AT_FDCWD))
             return;
-        enqueue(std::move(node));
+        enqueue(0, std::move(node));
     }
 
     void main_worker() {
@@ -275,25 +281,26 @@ public:
     }
 
 private:
-    void enqueue(RcPtr<PathNode> path_node);
+    void enqueue(int tn, RcPtr<PathNode> path_node);
 
-    void worker(int num);
+    void worker(int tn);
 
-    void read(RcPtr<PathNode> path) {
+    void read(int tn, RcPtr<PathNode> path) {
         thread_local DirEntryArena arena;
         DirEntryArenaGuard arena_guard(arena);
         std::vector<sys_dirent_t*> entries;
 
 #ifdef XCI_LISTDIR_GETDENTS
         if (!list_dir_sys(path->fd(), arena, entries)) {
-            m_cb(*path, OpenDirError);
-            close(path->fd());
+            m_cb(tn, *path, OpenDirError);
+            path->close_fd();
             return;
         }
 #else
         DIR* dirp;
         if (!list_dir_posix(path->fd(), dirp, arena, entries)) {
-            m_cb(*path, OpenDirError);
+            m_cb(tn, *path, OpenDirError);
+            path->set_fd(-1);  // ownership moved to dirp, closed together with it
             return;
         }
 #endif
@@ -307,15 +314,21 @@ private:
 
             if ((entry->d_type & DT_DIR) == DT_DIR || entry->d_type == DT_UNKNOWN) {
                 // readdir says it's a dir or it doesn't know
-                if (open_and_report(entry->d_name, *entry_node, path->fd()))
-                    enqueue(std::move(entry_node));
+                if (open_and_report(tn, entry->d_name, *entry_node, path->fd()))
+                    enqueue(tn, std::move(entry_node));
                 continue;
             }
-            m_cb(*entry_node, File);
+            m_cb(tn, *entry_node, File);
         }
+
+        // Close parent directory FD - it was already used in open_and_report() above
+        // Note that the PathNode itself can stay alive, as parent in children nodes.
+        // The FD needs to be closed here to save FDs - closing when destroying PathNode
+        // would be too late, there would be too many open FDs at the same time.
 #ifdef XCI_LISTDIR_GETDENTS
-        close(path->fd());
+        path->close_fd();
 #else
+        path->set_fd(-1);  // ownership moved to dirp, closed together with it
         closedir(dirp);
 #endif
     }
@@ -324,29 +337,29 @@ private:
     /// \param node         PathNode associated with the path, for reporting
     /// \param at_fd        if path is relative, this can be open parent FD or AT_FDCWD
     /// \return     true if opened as a directory and callback returned true (i.e. descend)
-    bool open_and_report(const char* pathname, PathNode& node, int at_fd) {
+    bool open_and_report(int tn, const char* pathname, PathNode& node, int at_fd) {
         // try to open as a directory, if it fails with ENOTDIR, it is a file
         constexpr int flags = O_DIRECTORY | O_NOFOLLOW | O_NOCTTY | O_CLOEXEC;
         int fd = openat(at_fd, pathname, flags, O_RDONLY);
         if (fd == -1) {
             if (errno == ENOTDIR) {
                 // it's a file - report it
-                m_cb(node, File);
+                m_cb(tn, node, File);
                 return false;
             }
-            m_cb(node, OpenError);
+            m_cb(tn, node, OpenError);
             return false;
         }
         node.set_fd(fd);
 
-        if (!m_cb(node, Directory)) {
-            close(fd);
+        if (!m_cb(tn, node, Directory)) {
+            node.close_fd();
             return false;
         }
         return true;
     }
 
-    Callback m_cb;
+    NodeCallback m_cb;
 
     RcPtr<PathNode> m_job;
     std::vector<std::thread> m_workers;

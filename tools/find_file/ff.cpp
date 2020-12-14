@@ -548,7 +548,7 @@ int main(int argc, const char* argv[])
                 [show_hidden, show_dirs, single_device, long_form, highlight_match,
                  type_mask, size_from, size_to, max_depth, search_in_special_dirs,
                  &re_db, re_scratch_prototype, &theme, &dev_ids, &counters]
-                (const FileTree::PathNode& path, FileTree::Type t)
+                (int tn, const FileTree::PathNode& path, FileTree::Type t)
     {
         switch (t) {
             case FileTree::Directory:

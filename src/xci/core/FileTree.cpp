@@ -10,12 +10,12 @@
 namespace xci::core {
 
 
-void FileTree::enqueue(RcPtr<PathNode> path_node)
+void FileTree::enqueue(int tn, RcPtr<PathNode> path_node)
 {
     // Skip locking and queuing if all workers are (apparently) busy.
     if (m_busy.load(std::memory_order_relaxed) >= m_busy_max) {
         TRACE("skip lock ({} busy)", m_busy);
-        read(std::move(path_node));
+        read(tn, std::move(path_node));
         return;
     }
 
@@ -29,14 +29,14 @@ void FileTree::enqueue(RcPtr<PathNode> path_node)
         // process the item in this thread
         // (better than blocking and doing nothing)
         lock.unlock();
-        read(std::move(path_node));
+        read(tn, std::move(path_node));
     }
 }
 
 
-void FileTree::worker(int num)
+void FileTree::worker(int tn)
 {
-    TRACE("[{}] worker start", num);
+    TRACE("[{}] worker start", tn);
     while(m_busy.load(std::memory_order_acquire) != 0) {
         std::unique_lock lock(m_mutex);
         while (!m_job) {
@@ -51,13 +51,13 @@ void FileTree::worker(int num)
         assert(!m_job);  // cleared
         lock.unlock();
 
-        TRACE("[{}] worker read ({} busy)", num, m_busy);
-        read(std::move(path));
+        TRACE("[{}] worker read ({} busy)", tn, m_busy);
+        read(tn, std::move(path));
         m_busy.fetch_sub(1, std::memory_order_release);
     }
 finish:
     m_cv.notify_all();
-    TRACE("[{}] worker finish", num);
+    TRACE("[{}] worker finish", tn);
 }
 
 

@@ -20,6 +20,16 @@ protected:
 };
 
 
+class NonMovable {
+public:
+    NonMovable(NonCopyable&&) = delete;
+    NonMovable& operator =(NonMovable&&) = delete;
+
+protected:
+    NonMovable() = default;
+};
+
+
 } // namespace xci::core
 
 #endif // include guard
