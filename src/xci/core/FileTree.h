@@ -204,6 +204,19 @@ public:
             return rc == 0;
         }
 
+        bool readlink(std::string& target) const {
+            target.resize(PATH_MAX);
+            ssize_t res;
+            if (has_parent() && parent_fd() != -1)
+                res = ::readlinkat(parent_fd(), std::string(name()).c_str(), target.data(), target.size());
+            else
+                res = ::readlink(std::string(file_path()).c_str(), target.data(), target.size());
+            if (res < 0)
+                return false;
+            target.resize(res);
+            return true;
+        }
+
         /// Is this a node from input, i.e. `walk()`?
         bool is_input() const { return m_depth == 0; }
 

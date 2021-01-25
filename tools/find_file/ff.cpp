@@ -18,6 +18,7 @@
 
 #include <fmt/core.h>
 #include <fmt/chrono.h>
+#include <fmt/ostream.h>
 #include <hs/hs.h>
 
 #include <cstring>
@@ -221,15 +222,6 @@ static bool parse_size_filter(const char* arg, size_t& size_from, size_t& size_t
     return (arg == end);
 }
 
-/// Basically puts(3)
-static void synced_writeln(const std::string& out)
-{
-    flockfile(stdout);
-    ::write(STDOUT_FILENO, out.data(), out.size());
-    ::write(STDOUT_FILENO, "\n", 1);
-    funlockfile(stdout);
-}
-
 
 static void highlight_path(std::string& out, FileTree::Type t, const FileTree::PathNode& path, const Theme& theme,
                            const int so=0, const int eo=0)
@@ -281,30 +273,21 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
     char alloc_unit = round_size_to_unit(alloc);
     char file_type = file_type_to_char(st.st_mode);
     TermCtl& term = TermCtl::stdout_instance();
-    std::string out;
-    out.reserve(name.size() + 64);
-    auto out_it = std::back_inserter(out);
-    fmt::format_to(out_it, "{}{:c}{:04o}{} {:>{}}:{:{}} {}{:4}{}{}{} {}{:4}{}{}{}  {:%F %H:%M}  {}",
+    fmt::print(std::cout, "{}{:c}{:04o}{} {:>{}}:{:{}} {}{:4}{}{}{} {}{:4}{}{}{}  {:%F %H:%M}  ",
             term.fg(file_mode_to_color(st.st_mode)), file_type, st.st_mode & 07777, term.normal(),
             user, w_user, group, w_group,
             term.fg(size_unit_to_color(size_unit)), size, term.dim(), size_unit, term.normal(),
             term.fg(size_unit_to_color(alloc_unit)), alloc, term.dim(), alloc_unit, term.normal(),
-            fmt::localtime(st.st_mtime),
-            name);
+            fmt::localtime(st.st_mtime));
+    ::write(STDOUT_FILENO, name.data(), name.size());
     if (S_ISLNK(st.st_mode)) {
-        char buf[PATH_MAX];
-        ssize_t res;
-        if (path.has_parent() && path.parent_fd() != -1)
-            res = ::readlinkat(path.parent_fd(), std::string(path.name()).c_str(), buf, sizeof(buf));
-        else
-            res = readlink(std::string(path.file_path()).c_str(), buf, sizeof(buf));
-        if (res < 0) {
+        std::string target;
+        if (!path.readlink(target)) {
             fmt::print(stderr,"ff: readlink({}): {}\n", path.file_path(), errno_str());
             return;
         }
-        fmt::format_to(out_it, " -> {}", std::string_view(buf, res));
+        fmt::print(std::cout, " -> {}", target);
     }
-    synced_writeln(out);
 }
 
 
@@ -327,6 +310,34 @@ static void print_stats(const Counters& counters)
     }
     fmt::print(stderr, "----------------------------------------------\n");
 }
+
+
+class HyperscanScratch: public NonCopyable {
+public:
+    ~HyperscanScratch() { hs_free_scratch(m_scratch); }
+
+    bool reallocate_for(hs_database_t* db) {
+        hs_error_t rc = hs_alloc_scratch(db, &m_scratch);
+        if (rc != HS_SUCCESS) {
+            fmt::print(stderr,"ff: hs_alloc_scratch: Unable to allocate scratch space.\n");
+            return false;
+        }
+        return true;
+    }
+
+    bool clone(hs_scratch_t* prototype) {
+        if (hs_clone_scratch(prototype, &m_scratch) != HS_SUCCESS) {
+            fmt::print(stderr,"ff: hs_clone_scratch: Unable to allocate scratch space.\n");
+            return false;
+        }
+        return true;
+    }
+
+    operator hs_scratch_t*() const { return m_scratch; }
+
+private:
+    hs_scratch_t* m_scratch = nullptr;
+};
 
 
 class HyperscanDatabase: public NonCopyable {
@@ -364,7 +375,13 @@ public:
         m_flags.push_back(flags);
     }
 
-    bool compile() {
+    bool allocate_scratch(HyperscanScratch& scratch) {
+        if (!m_db)
+            return true;
+        return scratch.reallocate_for(m_db);
+    }
+
+    bool compile(unsigned int mode) {
         if (m_patterns.empty())
             return true;
         std::vector<const char*> expressions;
@@ -374,7 +391,7 @@ public:
         hs_compile_error_t *re_compile_err;
         hs_error_t rc = hs_compile_multi(expressions.data(), m_flags.data(),
                 nullptr, expressions.size(),
-                HS_MODE_BLOCK, nullptr, &m_db, &re_compile_err);
+                mode, nullptr, &m_db, &re_compile_err);
         if (rc != HS_SUCCESS) {
             fmt::print(stderr,"ff: hs_compile_multi: ({}) {}\n", rc, re_compile_err->message);
             hs_free_compile_error(re_compile_err);
@@ -387,23 +404,6 @@ private:
     hs_database_t* m_db = nullptr;
     std::vector<std::string> m_patterns;
     std::vector<unsigned int> m_flags;
-};
-
-
-class HyperscanScratch: public NonCopyable {
-public:
-    HyperscanScratch(hs_scratch_t* prototype) {
-        if (hs_clone_scratch(prototype, &m_scratch) != HS_SUCCESS) {
-            fmt::print(stderr,"ff: hs_clone_scratch: Unable to allocate scratch space.\n");
-            exit(1);
-        }
-    }
-    ~HyperscanScratch() { hs_free_scratch(m_scratch); }
-
-    operator hs_scratch_t*() { return m_scratch; }
-
-private:
-    hs_scratch_t* m_scratch = nullptr;
 };
 
 
@@ -470,7 +470,6 @@ int main(int argc, const char* argv[])
         pattern = nullptr;
 
     HyperscanDatabase re_db;
-    hs_scratch_t* re_scratch_prototype = nullptr;
     if (pattern) {
         int flags = HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP;
         if (ignore_case)
@@ -498,7 +497,7 @@ int main(int argc, const char* argv[])
             }
             free(re_info);
 
-            // compile pattern
+            // add pattern
             if (highlight_match)
                 flags |= HS_FLAG_SOM_LEFTMOST;
             else
@@ -520,15 +519,19 @@ int main(int argc, const char* argv[])
         }
     }
 
-    if (!re_db.compile())
+    if (!re_db.compile(HS_MODE_BLOCK | HS_MODE_SOM_HORIZON_SMALL))
         return 1;
 
+    // allocate scratch "prototype", to be cloned for each thread
+    std::vector<HyperscanScratch> re_scratch(jobs);
     if (re_db) {
-        // allocate scratch "prototype", to be cloned for each thread
-        hs_error_t rc = hs_alloc_scratch(re_db, &re_scratch_prototype);
-        if (rc != HS_SUCCESS) {
-            fmt::print(stderr,"ff: hs_alloc_scratch: Unable to allocate scratch space.\n");
+        // prototype for main thread
+        if (!re_db.allocate_scratch(re_scratch[0]))
             return 1;
+        // clone for other threads
+        for (int i = 1; i != jobs; ++i) {
+            if (!re_scratch[i].clone(re_scratch[0]))
+                return 1;
         }
     }
 
@@ -547,7 +550,7 @@ int main(int argc, const char* argv[])
     FileTree ft(jobs-1,
                 [show_hidden, show_dirs, single_device, long_form, highlight_match,
                  type_mask, size_from, size_to, max_depth, search_in_special_dirs,
-                 &re_db, re_scratch_prototype, &theme, &dev_ids, &counters]
+                 &re_db, &re_scratch, &theme, &dev_ids, &counters]
                 (int tn, const FileTree::PathNode& path, FileTree::Type t)
     {
         switch (t) {
@@ -596,12 +599,10 @@ int main(int argc, const char* argv[])
 
                 std::string out;
                 if (re_db) {
-                    thread_local HyperscanScratch re_scratch(re_scratch_prototype);
-
                     if (highlight_match) {
                         // match, with highlight
                         std::vector<std::pair<int, int>> matches;
-                        auto r = hs_scan(re_db, path.name_data(), path.name_len(), 0, re_scratch,
+                        auto r = hs_scan(re_db, path.name_data(), path.name_len(), 0, re_scratch[tn],
                                 [] (unsigned int id, unsigned long long from,
                                     unsigned long long to, unsigned int flags, void *ctx)
                                 {
@@ -618,7 +619,7 @@ int main(int argc, const char* argv[])
                         highlight_path(out, t, path, theme, matches[0].first, matches[0].second);
                     } else {
                         // match, no highlight
-                        auto r = hs_scan(re_db, path.name_data(), path.name_len(), 0, re_scratch,
+                        auto r = hs_scan(re_db, path.name_data(), path.name_len(), 0, re_scratch[tn],
                                 [] (unsigned int id, unsigned long long from,
                                     unsigned long long to, unsigned int flags, void *ctx)
                                 { return 1; }, nullptr);
@@ -667,10 +668,13 @@ int main(int argc, const char* argv[])
                     counters.matched_files.fetch_add(1, std::memory_order_relaxed);
                 }
 
+                flockfile(stdout);
                 if (long_form)
                     print_path_with_attrs(out, path, st);
                 else
-                    synced_writeln(out);
+                    ::write(STDOUT_FILENO, out.data(), out.size());
+                ::write(STDOUT_FILENO, "\n", 1);
+                funlockfile(stdout);
                 return descend;
             }
             case FileTree::OpenError:
@@ -700,7 +704,5 @@ int main(int argc, const char* argv[])
         print_stats(counters);
     }
 
-
-    hs_free_scratch(re_scratch_prototype);
     return 0;
 }

@@ -27,6 +27,7 @@ Checks: >
   -readability-convert-member-functions-to-static,
   -readability-simplify-boolean-expr,
   -readability-container-size-empty,
+  -readability-function-cognitive-complexity,
   google-default-arguments,
   google-runtime-operator
 
