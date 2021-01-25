@@ -14,7 +14,7 @@ CSI=$'\x1b['
 print_usage()
 {
     echo "Usage: ./build.sh [<phase>, ...] [-G <cmake_generator>] [-j <jobs>] [-D <cmake_def>, ...] [--debug|--minsize] [--unity] [--tidy] [--update]"
-    echo "Where: <phase> = clean | deps | config | build | test | install | package (default: deps..install)"
+    echo "Where: <phase> = clean | deps | config | build | test | install | package | graphviz (default: deps..install)"
     echo "       <cmake_generator> = \"Unix Makefiles\" | Ninja | ... (default: Ninja if available, Unix Makefiles otherwise)"
 }
 
@@ -52,7 +52,7 @@ phase_default=yes
 phase_all=
 while [[ $# -gt 0 ]] ; do
     case "$1" in
-        all|clean|deps|config|build|test|install|package )
+        all|clean|deps|config|build|test|install|package|graphviz )
             phase_default=
             declare "phase_$1=yes"
             shift 1 ;;
@@ -189,6 +189,17 @@ if phase package; then
         echo "${PACKAGE_NAME}"
         cmake -E tar cf "${PACKAGE_NAME}" --format=zip "${PACKAGE_DIR}"
         mv "${PACKAGE_DIR}" "${INSTALL_DIR}"
+    )
+    echo
+fi
+
+if phase graphviz; then
+    header "Graphviz"
+    (
+        cd "${BUILD_DIR}"
+        cmake --graphviz=deps.dot "${ROOT_DIR}"
+        dot -T svg -o deps.svg deps.dot
+        command -v open >/dev/null && open deps.svg
     )
     echo
 fi
