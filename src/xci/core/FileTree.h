@@ -217,6 +217,12 @@ public:
             return true;
         }
 
+        int open(int oflag = O_RDONLY | O_NOFOLLOW | O_CLOEXEC) const {
+            if (has_parent() && parent_fd() != -1)
+                return ::openat(parent_fd(), std::string(name()).c_str(), oflag);
+            return ::open(std::string(file_path()).c_str(), oflag);
+        }
+
         /// Is this a node from input, i.e. `walk()`?
         bool is_input() const { return m_depth == 0; }
 
