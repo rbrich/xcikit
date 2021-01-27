@@ -1,7 +1,7 @@
 // ff.cpp created on 2020-03-17 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020 Radek Brich
+// Copyright 2020, 2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 /// Find File (ff) command line tool
@@ -34,7 +34,7 @@ using namespace xci::core;
 using namespace xci::core::argparser;
 
 
-static constexpr auto c_version = "0.5";
+static constexpr auto c_version = "0.6";
 
 
 struct Theme {
