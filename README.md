@@ -152,7 +152,7 @@ Core utilities. These have little or no dependencies. Mostly just stdlib + OS AP
 
 Fills gaps between different systems and compilers.
 
-- `bit.h` - C++20 `bit_cast` backport (+ custom `bit_read`)
+- `bit.h` - custom `bit_read`, similar to C++20 `bit_cast`
 - `dl.h` - `dlopen` etc. for Windows
 - `endian.h` - Linux-like macros provided for MacOS
 - `macros.h` - `FALLTHROUGH`, `UNREACHABLE`, `UNUSED`
@@ -164,7 +164,7 @@ Tools
 
 Included are some tools build on top of the libraries.
 Check them on separate pages:
- 
+
 - [XCI Tools](tools/README.md)
     - [Find File (ff)](tools/find_file/README.md) - `find` alternative
 

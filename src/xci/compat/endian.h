@@ -78,6 +78,11 @@
 
     #endif
 
+#elif defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__DragonFly__)
+
+    #include <sys/types.h>
+    #include <sys/endian.h>
+
 #else
 
     // Linux
