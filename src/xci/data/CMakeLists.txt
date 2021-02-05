@@ -3,7 +3,7 @@
 # ------------ #
 
 find_package(ZLIB REQUIRED)
-find_package(magic_get REQUIRED)
+find_package(pfr REQUIRED)
 find_package(magic_enum REQUIRED)
 
 
@@ -22,7 +22,7 @@ target_link_libraries(xci-data
     PRIVATE
         ZLIB::ZLIB
     PUBLIC
-        magic_get::magic_get
+        pfr::pfr
         magic_enum::magic_enum
     )
 

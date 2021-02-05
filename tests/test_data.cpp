@@ -113,7 +113,7 @@ struct PlainRecord {
 TEST_CASE( "Magic save/load", "[data]")
 {
     // This record has no special decoration, it's just a struct.
-    // Thanks to magic_get + magic_enum, it can be serialized/deserialized directly.
+    // Thanks to pfr + magic_enum, it can be serialized/deserialized directly.
     PlainRecord record { 7, "test", Option::Two, true};
     std::string data;
 

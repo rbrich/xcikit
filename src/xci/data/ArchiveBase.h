@@ -96,7 +96,7 @@ public:
         static_cast<TImpl*>(this)->add(std::forward<ArchiveField<T>>(kv));
     }
 
-    // when: other non-polymorphic structs - use magic_get
+    // when: other non-polymorphic structs - use pfr
     template <typename T>
     requires (std::is_class_v<T> && !std::is_polymorphic_v<T> &&
             !TypeWithSerialize<T, TImpl> && !TypeWithArchiveSupport<T, TImpl>)
