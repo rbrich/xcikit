@@ -21,7 +21,7 @@ print_usage()
 phase()
 {
     local PHASE="phase_$1"
-    test -n "${!PHASE}" -o -n "${phase_all}" -o \( -n "${phase_default}" -a "$1" != "clean" -a "$1" != "package" \)
+    test -n "${!PHASE}" -o -n "${phase_all}" -o \( -n "${phase_default}" -a "$1" != "clean" -a "$1" != "package" -a "$1" != "graphviz" \)
 }
 
 setup_ninja()
