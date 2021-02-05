@@ -18,7 +18,7 @@ class XcikitConan(ConanFile):
     default_options = {"shared": False}
     build_requires = (
         'incbin/20180413@rbrich/stable',
-        'replxx/20200217@rbrich/stable',
+        'replxx/0.0.3',
         'pfr/1.0.4',
         'magic_enum/0.7.2',
         'fmt/7.1.3',
