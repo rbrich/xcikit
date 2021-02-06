@@ -17,9 +17,9 @@ Collection of C++ libraries for drawing 2D graphics, rendering text and more.
     - [Using build script](#using-build-script)
     - [Manual build with CMake](#manual-build-with-cmake)
     - [Porting to Windows](#porting-to-windows)
-- [How to use in client program](#how-to-use-in-client-program)
-    - [Linking with client using only CMake](#linking-with-client-using-only-cmake)
-    - [Linking with client using CMake and Conan](#linking-with-client-using-cmake-and-conan)
+- [How to use in client program](#how-to-use-in-a-client-program)
+    - [Linking with client using only CMake](#linking-with-a-client-using-only-cmake)
+    - [Linking with client using CMake and Conan](#linking-with-a-client-using-cmake-and-conan)
 
 
 About
@@ -34,7 +34,7 @@ With xcikit you can:
 - render a few paragraphs of text,
 - style some parts of the text differently (colored highlights),
 - respond to mouse hover, click on the highlighted parts (spans),
-- create basic UI with buttons, checkboxes, combo-boxes,
+- create a basic UI with buttons, checkboxes, combo-boxes,
 - support scripting, provide sandboxed API for user scripts.
 
 This should be enough for a program to render:
@@ -124,6 +124,10 @@ Text rendering and text layout.
 
 The basic building blocks for rendering of text and UI elements.
 
+### xci::script
+
+A scripting language.
+
 ### xci::data
 
 Serialization and deserialization of structured data.
@@ -152,7 +156,7 @@ Core utilities. These have little or no dependencies. Mostly just stdlib + OS AP
 
 Fills gaps between different systems and compilers.
 
-- `bit.h` - C++20 `bit_cast` backport (+ custom `bit_read`)
+- `bit.h` - custom `bit_read`, similar to C++20 `bit_cast`
 - `dl.h` - `dlopen` etc. for Windows
 - `endian.h` - Linux-like macros provided for MacOS
 - `macros.h` - `FALLTHROUGH`, `UNREACHABLE`, `UNUSED`
@@ -164,7 +168,7 @@ Tools
 
 Included are some tools build on top of the libraries.
 Check them on separate pages:
- 
+
 - [XCI Tools](tools/README.md)
     - [Find File (ff)](tools/find_file/README.md) - `find` alternative
 
@@ -266,10 +270,10 @@ How to build:
 4) There might be errors. These are why the title says "Porting", not "How to build"...
 
 
-How to use in client program
-----------------------------
+How to use in a client program
+------------------------------
 
-### Linking with client using only CMake
+### Linking with a client using only CMake
 
 Build and install XCI libraries (see "How to build" above),
 then use installed `xcikitConfig.cmake` in your project's
@@ -293,7 +297,7 @@ for example `~/sdk/xcikit`, you need to setup `CMAKE_PREFIX_PATH` appropriately:
     cmake -DCMAKE_PREFIX_PATH="~/sdk/xcikit" ..
 
 
-### Linking with client using CMake and Conan
+### Linking with a client using CMake and Conan
 
 Add xcikit as dependency to `conanfile.txt`:
 

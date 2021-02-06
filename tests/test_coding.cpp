@@ -7,7 +7,8 @@
 #include <catch2/catch.hpp>
 
 #include <xci/data/coding/leb128.h>
-#include <xci/compat/bit.h>
+
+#include <bit>
 
 using namespace xci::data;
 using namespace xci;
@@ -32,7 +33,7 @@ TEST_CASE( "LEB128", "[coding]" )
     SECTION( "encode & decode big value" ) {
         uint64_t v_in = GENERATE(0x80llu, 0xFFllu, 0xAAAllu, 0xABCDEF12llu, 0xFFFFFFFFllu,
                                std::numeric_limits<uint64_t>::max());
-        unsigned v_bits = 64 - count_leading_zeros(v_in);
+        unsigned v_bits = 64 - std::countl_zero(v_in);
         CAPTURE(v_in, v_bits);
         CHECK(v_bits >= 8);
         auto* iter = buffer;
@@ -51,7 +52,7 @@ TEST_CASE( "LEB128", "[coding]" )
         uint64_t v_in = GENERATE(00llu, 1llu, 0x0Fllu, 0x7Fllu, 0x80llu, 0xFFllu, 0xAAAllu,
                 0xABCDEF12llu, 0xFFFFFFFFllu, std::numeric_limits<uint64_t>::max());
         unsigned skip_bits = GENERATE(0, 1, 2, 4, 6);
-        unsigned v_bits = 64 - count_leading_zeros(v_in);
+        unsigned v_bits = 64 - std::countl_zero(v_in);
         std::byte check = skip_bits == 0 ? std::byte(0) :
                           skip_bits == 1 ? std::byte(GENERATE(0, 0x80)) :
                           /* else */       std::byte(GENERATE(0, 0x55, 0xFF) << (8-skip_bits));

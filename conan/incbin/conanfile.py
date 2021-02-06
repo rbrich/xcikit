@@ -5,12 +5,12 @@ class IncbinConan(ConanFile):
     name = "incbin"
     description = "Include binary files in C/C++"
     homepage = "https://github.com/graphitemaster/incbin.git"
-    version = "20180413"
+    version = "20200420"
     license = "Unlicense"
     scm = {
         "type": "git",
         "url": homepage,
-        "revision": "c61cae60e3d47fd3d59e937693c0c4787dcc55ea",
+        "revision": "8cefe46d5380bf5ae4b4d87832d811f6692aae44",
     }
 
     # package info

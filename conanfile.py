@@ -18,17 +18,17 @@ class XcikitConan(ConanFile):
     default_options = {"shared": False}
     build_requires = (
         'incbin/20180413@rbrich/stable',
-        'replxx/20200217@rbrich/stable',
-        'magic_get/1.0.1@rbrich/stable',
-        'magic_enum/0.6.6',
-        'fmt/7.0.3',
+        'replxx/0.0.3',
+        'pfr/1.0.4',
+        'magic_enum/0.7.2',
+        'fmt/7.1.3',
     )
     build_requires_or_preinstalled = (
         # <CMake name>, <min ver>,  <Conan reference>
-        ('range-v3',    '0.10.0',   'range-v3/0.10.0@ericniebler/stable'),
-        ('Catch2',      '',         'catch2/2.13.0'),
-        ('benchmark',   '',         'benchmark/1.5.0'),
-        ('pegtl',       '2.8.1',    'taocpp-pegtl/2.8.3'),
+        ('range-v3',    '0.10.0',   'range-v3/0.11.0'),
+        ('Catch2',      '',         'catch2/2.13.4'),
+        ('benchmark',   '',         'benchmark/1.5.2'),
+        ('pegtl',       '3.1.0',    'taocpp-pegtl/3.1.0'),
         ('glfw3',       '3.2.1',    'glfw/3.3.2@rbrich/stable'),
     )
     generators = ("cmake_paths", "cmake_find_package")

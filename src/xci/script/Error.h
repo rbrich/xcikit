@@ -36,10 +36,10 @@ public:
     explicit ScriptError(std::string msg, const SourceInfo& si) :
         Error(std::move(msg)),
         m_file(format("{}:{}:{}",
-            si.source, si.line_number, si.byte_in_line)),
+            si.source, si.line_number, si.column)),
         m_detail(format("{}\n{}^",
             std::string{si.line_begin, si.line_end},
-            std::string(si.byte_in_line, ' ')))
+            std::string(si.column - 1, ' ')))
     {}
 
     const std::string& file() const noexcept { return m_file; }

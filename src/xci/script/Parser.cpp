@@ -1,17 +1,8 @@
-// Parser.cpp created on 2019-05-15, part of XCI toolkit
+// Parser.cpp created on 2019-05-15 as part of xcikit project
+// https://github.com/rbrich/xcikit
+//
 // Copyright 2019 Radek Brich
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Parser.h"
 #include "Error.h"
@@ -27,7 +18,7 @@
 
 #ifdef XCI_SCRIPT_PARSER_TRACE
 #include <xci/core/string.h>
-#include <xci/core/Stack.h>
+#include <xci/core/container/ChunkedStack.h>
 #endif
 
 namespace xci::script {
@@ -765,9 +756,9 @@ struct Action<RawString::content> {
 // Control (error reporting)
 
 #ifdef XCI_SCRIPT_PARSER_TRACE
-static core::Stack<std::string> g_untraced;
+static core::ChunkedStack<std::string> g_untraced;
 
-inline bool do_not_trace(const std::string& rule) {
+inline bool do_not_trace(std::string_view rule) {
     return rule == "xci::script::parser::SC"
         || rule == "xci::script::parser::Identifier";
 }
@@ -797,72 +788,72 @@ struct Control : normal< Rule >
     template< typename Input, typename... States >
     static void start( const Input& in, States&&... st )
     {
-        std::string rule = internal::demangle< Rule >();
+        auto rule = tao::demangle<Rule>();
         if (do_not_trace(rule)) {
             if (g_untraced.empty()) {
                 std::cerr << in.position() << "  start  " << rule << " (untraced)" << "; current ";
                 print_input( in );
                 std::cerr << std::endl;
             }
-            g_untraced.push(rule);
+            g_untraced.push(std::string(rule));
         }
         if (!g_untraced.empty()) {
-            normal< Rule >::start( in, st... );
+            normal<Rule>::start( in, st... );
             return;
         }
 
         std::cerr << in.position() << "  start  " << rule << "; current ";
         print_input( in );
         std::cerr << std::endl;
-        normal< Rule >::start( in, st... );
+        normal<Rule>::start( in, st... );
     }
 
     template< typename Input, typename... States >
     static void success( const Input& in, States&&... st )
     {
-        std::string rule = internal::demangle< Rule >();
+        auto rule = tao::demangle<Rule>();
         if (!g_untraced.empty() && g_untraced.top() == rule)
             g_untraced.pop();
         if (!g_untraced.empty()) {
-            normal< Rule >::success( in, st... );
+            normal<Rule>::success( in, st... );
             return;
         }
 
         std::cerr << in.position() << " success " << rule << "; next ";
         print_input( in );
         std::cerr << std::endl;
-        normal< Rule >::success( in, st... );
+        normal<Rule>::success( in, st... );
     }
 
     template< typename Input, typename... States >
     static void failure( const Input& in, States&&... st )
     {
-        std::string rule = internal::demangle< Rule >();
+        auto rule = tao::demangle<Rule>();
         if (!g_untraced.empty() && g_untraced.top() == rule)
             g_untraced.pop();
         if (!g_untraced.empty()) {
-            normal< Rule >::failure( in, st... );
+            normal<Rule>::failure( in, st... );
             return;
         }
 
         std::cerr << in.position() << " failure " << rule << std::endl;
-        normal< Rule >::failure( in, st... );
+        normal<Rule>::failure( in, st... );
     }
 
     template< template< typename... > class Action, typename Iterator, typename Input, typename... States >
     static auto apply( const Iterator& begin, const Input& in, States&&... st )
-    -> decltype( normal< Rule >::template apply< Action >( begin, in, st... ) )
+    -> decltype( normal<Rule>::template apply< Action >( begin, in, st... ) )
     {
-        std::cerr << in.position() << "  apply  " << internal::demangle< Rule >() << std::endl;
-        return normal< Rule >::template apply< Action >( begin, in, st... );
+        std::cerr << in.position() << "  apply  " << tao::demangle<Rule>() << std::endl;
+        return normal<Rule>::template apply< Action >( begin, in, st... );
     }
 
     template< template< typename... > class Action, typename Input, typename... States >
     static auto apply0( const Input& in, States&&... st )
-    -> decltype( normal< Rule >::template apply0< Action >( in, st... ) )
+    -> decltype( normal<Rule>::template apply0< Action >( in, st... ) )
     {
-        std::cerr << in.position() << "  apply0 " << internal::demangle< Rule >() << std::endl;
-        return normal< Rule >::template apply0< Action >( in, st... );
+        std::cerr << in.position() << "  apply0 " << tao::demangle<Rule>() << std::endl;
+        return normal<Rule>::template apply0< Action >( in, st... );
     }
 
 #endif
@@ -876,7 +867,7 @@ template<> const std::string Control<Variable>::errmsg = "expected variable name
 
 // default message
 template< typename T >
-const std::string Control< T >::errmsg = "parse error matching " + internal::demangle< T >();
+const std::string Control< T >::errmsg = "parse error matching " + std::string(tao::demangle< T >());
 
 
 // ----------------------------------------------------------------------------
@@ -901,9 +892,9 @@ void Parser::parse(std::string_view input, ast::Module& mod)
             throw ParseError{"input not matched"};
         mod.body.finish();
     } catch (tao::pegtl::parse_error& e) {
-        const auto p = e.positions.front();
+        const auto p = e.positions().front();
         throw ParseError{fmt::format("{}\n{}\n{}^", e.what(), in.line_at(p),
-                                      std::string(p.byte_in_line, ' '))};
+                                      std::string(p.column, ' '))};
     } catch( const std::exception& e ) {
         throw ParseError{e.what()};
     }
