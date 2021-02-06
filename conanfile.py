@@ -28,7 +28,7 @@ class XcikitConan(ConanFile):
         ('range-v3',    '0.10.0',   'range-v3/0.11.0'),
         ('Catch2',      '',         'catch2/2.13.4'),
         ('benchmark',   '',         'benchmark/1.5.2'),
-        ('pegtl',       '2.8.1',    'taocpp-pegtl/3.1.0'),
+        ('pegtl',       '3.1.0',    'taocpp-pegtl/3.1.0'),
         ('glfw3',       '3.2.1',    'glfw/3.3.2@rbrich/stable'),
     )
     generators = ("cmake_paths", "cmake_find_package")
