@@ -1,9 +1,19 @@
-# core
+# ------------ #
+# Dependencies #
+# ------------ #
+
+find_path(INCBIN_INCLUDE_DIR incbin.h)
+
+# ------------ #
+# Examples     #
+# ------------ #
+
+# xci-core
 
 add_subdirectory(core)
 add_subdirectory(plugin)
 
-# data
+# xci-data
 
 if (XCI_DATA)
     add_executable(demo_serialize data/demo_serialize.cpp)
@@ -11,7 +21,7 @@ if (XCI_DATA)
     install(TARGETS demo_serialize EXPORT xcikit DESTINATION examples)
 endif()
 
-# script
+# xci-script
 
 if (XCI_SCRIPT)
     add_executable(demo_script script/demo_script.cpp)
@@ -19,14 +29,13 @@ if (XCI_SCRIPT)
     install(TARGETS demo_script EXPORT xcikit DESTINATION examples)
 endif()
 
-
-# graphics
+# xci-graphics
 
 if (XCI_GRAPHICS)
     add_subdirectory(graphics)
 endif()
 
-# text
+# xci-text
 
 if (XCI_TEXT)
     add_executable(demo_font demo_font.cpp)
@@ -38,7 +47,7 @@ if (XCI_TEXT)
     install(TARGETS demo_layout EXPORT xcikit DESTINATION examples)
 endif()
 
-# widgets
+# xci-widgets
 
 if (XCI_WIDGETS)
     add_subdirectory(widgets)
