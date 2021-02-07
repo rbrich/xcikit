@@ -17,9 +17,14 @@
 #endif
 
 #include <algorithm>
-#include <strstream>
 #include <cstddef>  // byte
 #include <fcntl.h>
+
+// Deprecated, but not easily replaceable - need to convert existing buffer to a stream, without copying
+// GCC: pragma diagnostic ignored doesn't disable the warning, let's use this ugly hack...
+#define _BACKWARD_BACKWARD_WARNING_H 1
+#include <strstream>
+#undef _BACKWARD_BACKWARD_WARNING_H
 
 namespace xci::core {
 

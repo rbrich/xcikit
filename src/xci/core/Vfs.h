@@ -73,7 +73,7 @@ public:
     virtual ~VfsLoader() = default;
 
     /// Name of the loader for logging
-    virtual constexpr const char* name() const = 0;
+    virtual const char* name() const = 0;
 
     /// Check if loading from the FS directory is supported
     /// \param path     The FS directory to be checked.
@@ -105,7 +105,7 @@ namespace vfs {
 /// Lookup regular files in real directory, which is mapped to VFS path
 class RealDirectoryLoader: public VfsLoader {
 public:
-    constexpr const char* name() const override { return "directory"; };
+    const char* name() const override { return "directory"; };
     bool can_load_fs_dir(const fs::path& path) override { return true; }
     auto load_fs_dir(const fs::path& path) -> std::shared_ptr<VfsDirectory> override;
 };
@@ -125,7 +125,7 @@ private:
 /// Lookup files in DAR archive, which is mapped to VFS path
 class DarArchiveLoader: public VfsLoader {
 public:
-    constexpr const char* name() const override { return "DAR archive"; };
+    const char* name() const override { return "DAR archive"; };
     bool can_load_stream(std::istream& stream) override;
     auto load_stream(std::string&& path, std::unique_ptr<std::istream>&& stream) -> std::shared_ptr<VfsDirectory> override;
 };
