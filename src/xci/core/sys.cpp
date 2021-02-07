@@ -223,8 +223,8 @@ int cpu_count()
     size_t len = sizeof(int);
     if (sysctl(mib, 2, &value, &len, nullptr, 0) == 0)
         return value;
-#endif
     return 2;  // generic default
+#endif
 }
 
 

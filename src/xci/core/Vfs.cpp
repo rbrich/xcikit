@@ -21,7 +21,9 @@
 #include <fcntl.h>
 
 // Deprecated, but not easily replaceable - need to convert existing buffer to a stream, without copying
-// GCC: pragma diagnostic ignored doesn't disable the warning, let's use this ugly hack...
+// Possible future C++ replacement is "spanstream",
+// see http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/p2139r2.html#3.12
+// GCC: pragma diagnostic doesn't disable the warning, let's use this ugly hack...
 #define _BACKWARD_BACKWARD_WARNING_H 1
 #include <strstream>
 #undef _BACKWARD_BACKWARD_WARNING_H
@@ -472,7 +474,6 @@ bool Vfs::mount(const fs::path& fs_path, std::string target_path)
     std::shared_ptr<VfsDirectory> vfs_directory;
     const char* loader_name = nullptr;
 
-    // Real directory?
     if (fs::is_directory(real_path)) {
         // Real directory - try each loader
         for (auto& loader : m_loaders) {

@@ -8,7 +8,6 @@
 
 #include <xci/core/Vfs.h>
 #include <xci/core/log.h>
-#include <xci/config.h>
 
 #define INCBIN_PREFIX g_
 #define INCBIN_STYLE INCBIN_STYLE_SNAKE
