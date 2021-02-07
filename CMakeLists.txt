@@ -24,7 +24,6 @@ option(XCI_WITH_ZIP "Link xci-core with libzip and use it for ZIP format in VFS.
 option(XCI_INSTALL_SHARE_DIR "Install runtime data as a directory (share/xcikit)" OFF)
 option(XCI_INSTALL_SHARE_DAR "Install runtime data as DAR archive (share.dar)" ON)
 option(XCI_INSTALL_SHARE_ZIP "Install runtime data as ZIP archive (share.zip)" OFF)
-option(XCI_EMBED_SHADERS "Embed shader files into binaries to avoid dependency on share dir." OFF)
 
 option(XCI_LISTDIR_GETDENTS "Use getdents syscall instead of readdir for tools/find_file." ON)
 
