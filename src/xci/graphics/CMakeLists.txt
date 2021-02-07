@@ -4,7 +4,6 @@
 
 find_package(glfw3 3.2 REQUIRED)
 find_package(Vulkan REQUIRED)
-find_path(INCBIN_INCLUDE_DIR incbin.h)
 
 # ------------ #
 # Libraries    #
@@ -22,13 +21,12 @@ add_library(xci-graphics
     Window.cpp
     vulkan/CommandBuffer.cpp
     vulkan/DeviceMemory.cpp
-    )
+)
 
 target_include_directories(xci-graphics
     PUBLIC
         ${XCI_INCLUDE_DIRS}
-    PRIVATE
-        ${INCBIN_INCLUDE_DIR})
+)
 
 target_link_libraries(xci-graphics
     PUBLIC
@@ -37,7 +35,8 @@ target_link_libraries(xci-graphics
         Vulkan::Vulkan
     PRIVATE
         range-v3::range-v3
-        glfw)
+        glfw
+)
 
 if (BUILD_FRAMEWORKS)
     set_target_properties(xci-graphics PROPERTIES
@@ -49,7 +48,7 @@ if (BUILD_FRAMEWORKS)
         # "compatibility version" in semantic format in Mach-O binary file
         SOVERSION 1.0.0
         PUBLIC_HEADER xci-graphics.h
-        )
+    )
 endif()
 
 install(TARGETS xci-graphics EXPORT xcikit DESTINATION lib)

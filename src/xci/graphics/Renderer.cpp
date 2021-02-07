@@ -24,26 +24,6 @@
 #include <bitset>
 #include <array>
 
-#ifdef XCI_EMBED_SHADERS
-#define INCBIN_PREFIX g_
-#define INCBIN_STYLE INCBIN_STYLE_SNAKE
-#include <incbin.h>
-INCBIN(sprite_vert, XCI_SHARE_DIR "/shaders/sprite.vert.spv");
-INCBIN(sprite_frag, XCI_SHARE_DIR "/shaders/sprite.frag.spv");
-INCBIN(sprite_c_vert, XCI_SHARE_DIR "/shaders/sprite_c.vert.spv");
-INCBIN(sprite_c_frag, XCI_SHARE_DIR "/shaders/sprite_c.frag.spv");
-INCBIN(line_vert, XCI_SHARE_DIR "/shaders/line.vert.spv");
-INCBIN(line_frag, XCI_SHARE_DIR "/shaders/line.frag.spv");
-INCBIN(rectangle_vert, XCI_SHARE_DIR "/shaders/rectangle.vert.spv");
-INCBIN(rectangle_frag, XCI_SHARE_DIR "/shaders/rectangle.frag.spv");
-INCBIN(ellipse_vert, XCI_SHARE_DIR "/shaders/ellipse.vert.spv");
-INCBIN(ellipse_frag, XCI_SHARE_DIR "/shaders/ellipse.frag.spv");
-INCBIN(fps_vert, XCI_SHARE_DIR "/shaders/fps.vert.spv");
-INCBIN(fps_frag, XCI_SHARE_DIR "/shaders/fps.frag.spv");
-INCBIN(cursor_vert, XCI_SHARE_DIR "/shaders/cursor.vert.spv");
-INCBIN(cursor_frag, XCI_SHARE_DIR "/shaders/cursor.frag.spv");
-#endif
-
 namespace xci::graphics {
 
 using namespace xci::core;
@@ -252,40 +232,6 @@ Shader& Renderer::get_shader(ShaderId shader_id)
 
 bool Renderer::load_shader(ShaderId shader_id, Shader& shader)
 {
-#ifdef XCI_EMBED_SHADERS
-    switch (shader_id) {
-        case ShaderId::Sprite:
-            return shader.load_from_memory(
-                    (const char*) g_sprite_vert_data, g_sprite_vert_size,
-                    (const char*) g_sprite_frag_data, g_sprite_frag_size);
-        case ShaderId::SpriteC:
-            return shader.load_from_memory(
-                    (const char*) g_sprite_c_vert_data, g_sprite_c_vert_size,
-                    (const char*) g_sprite_c_frag_data, g_sprite_c_frag_size);
-        case ShaderId::Line:
-            return shader.load_from_memory(
-                    (const char*) g_line_vert_data, g_line_vert_size,
-                    (const char*) g_line_frag_data, g_line_frag_size);
-        case ShaderId::Rectangle:
-             return shader.load_from_memory(
-                    (const char*) g_rectangle_vert_data, g_rectangle_vert_size,
-                    (const char*) g_rectangle_frag_data, g_rectangle_frag_size);
-        case ShaderId::Ellipse:
-             return shader.load_from_memory(
-                    (const char*) g_ellipse_vert_data, g_ellipse_vert_size,
-                    (const char*) g_ellipse_frag_data, g_ellipse_frag_size);
-        case ShaderId::Fps:
-             return shader.load_from_memory(
-                    (const char*) g_fps_vert_data, g_fps_vert_size,
-                    (const char*) g_fps_frag_data, g_fps_frag_size);
-        case ShaderId::Cursor:
-             return shader.load_from_memory(
-                    (const char*)g_cursor_vert_data, g_cursor_vert_size,
-                    (const char*)g_cursor_frag_data, g_cursor_frag_size);
-        case ShaderId::_NumItems_:
-            return false;
-    }
-#else
     switch (shader_id) {
         case ShaderId::Sprite:
             return shader.load_from_vfs(vfs(),
@@ -318,7 +264,6 @@ bool Renderer::load_shader(ShaderId shader_id, Shader& shader)
         case ShaderId::_NumItems_:
             return false;
     }
-#endif
     UNREACHABLE;
 }
 

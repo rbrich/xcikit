@@ -14,9 +14,6 @@
 #cmakedefine XCI_SHARE_ZIP "@XCI_SHARE_ZIP@"
 #cmakedefine XCI_SHARE "@XCI_SHARE@"
 
-// Embed shader files into binaries to avoid dependency on share dir
-#cmakedefine XCI_EMBED_SHADERS
-
 // Alternative implementations
 #cmakedefine XCI_LISTDIR_GETDENTS
 
