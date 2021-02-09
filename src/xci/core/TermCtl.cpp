@@ -1,7 +1,7 @@
 // TermCtl.cpp created on 2018-07-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2020 Radek Brich
+// Copyright 2018, 2020, 2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 // References:
@@ -322,6 +322,40 @@ void TermCtl::print(const std::string& buf)
 {
     ::write(m_fd, buf.data(), buf.size());
 }
+
+
+unsigned int TermCtl::stripped_length(std::string_view s)
+{
+    enum State {
+        Visible,
+        Esc,
+        Csi,
+    } state = Visible;
+    unsigned int length = 0;
+    for (const auto c : s) {
+        switch (state) {
+            case Visible:
+                if (c == '\033')
+                    state = Esc;
+                else
+                    ++length;
+                break;
+
+            case Esc:
+                if (c == '[')
+                    state = Csi;
+                else
+                    state = Visible;
+                break;
+
+            case Csi:
+                if (isalpha(c))
+                    state = Visible;
+                break;
+        }
+    }
+    return length;
+};
 
 
 } // namespace xci::core

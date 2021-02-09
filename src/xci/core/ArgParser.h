@@ -1,7 +1,7 @@
 // ArgParser.h created on 2019-06-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019, 2020 Radek Brich
+// Copyright 2019, 2020, 2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_ARG_PARSER_H
@@ -278,10 +278,12 @@ public:
     ParseResult parse_arg(const char* argv[]);
 
     /// Print short usage information
-    void print_usage() const;
+    /// \param max_width    Wrap lines when reaching this number of columns. 0 = no wrapping
+    void print_usage(unsigned max_width = 100) const;
 
     /// Print help text
-    void print_help() const;
+    /// \param max_width    Wrap lines when reaching this number of columns. 0 = no wrapping
+    void print_help(unsigned max_width = 100) const;
 
     /// Print information how to invoke help
     void print_help_notice() const;

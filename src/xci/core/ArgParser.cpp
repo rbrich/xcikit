@@ -1,7 +1,7 @@
 // ArgParser.cpp created on 2019-06-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019, 2020 Radek Brich
+// Copyright 2019, 2020, 2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "ArgParser.h"
@@ -471,28 +471,75 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
 }
 
 
-void ArgParser::print_usage() const
+/// Check if word `s` fits in the line, possibly wrap to next line and then print the word
+/// \param s            The word to be printed.
+/// \param indent       Indent to output after newline (when wrapping).
+/// \param start        Column after indent where to print. Actual terminal column is indent + start.
+/// \param max_width    Total width, including indent, that the content should fit into. 0 = unlimited
+/// \return             New start position for next call.
+static int wrapping_print_word(const std::string& s, unsigned indent, int start, unsigned max_width)
+{
+    if (max_width == 0)
+        max_width = ~0u;
+    assert(indent < max_width);
+    auto l = TermCtl::stripped_length(s);
+    if (start > 0 && start + l + 1 >= max_width - indent) {
+        // wrap
+        cout << '\n' << std::string(indent, ' ');
+        start = 0;
+    }
+    if (start != 0) {
+        cout << ' ';
+        ++start;
+    }
+    cout << s;
+    return start + l;
+};
+
+
+/// Print text `s` right of `indent` columns, fitting into total `max_width`.
+/// First line starts at indent + start.
+/// Effectively split `s` into words and calls `wrapping_print_word` on each word.
+static void wrapping_print(const std::string& s, unsigned indent, int start, unsigned max_width)
+{
+    istringstream iss(s);
+    for (auto it = istream_iterator<string>(iss); it != istream_iterator<string>(); ++it) {
+        start = wrapping_print_word(*it, indent, start, max_width);
+    }
+}
+
+
+void ArgParser::print_usage(unsigned max_width) const
 {
     auto& t = TermCtl::stdout_instance();
-    cout << t.format("{t:bold}{fg:yellow}Usage:{t:normal} {t:bold}{}{t:normal} ", m_progname);
+
+    unsigned indent = 0;
+    {
+        auto head = t.format("{t:bold}{fg:yellow}Usage:{t:normal} {t:bold}{}{t:normal} ", m_progname);
+        indent = TermCtl::stripped_length(head);
+        cout << head;
+    }
+
+    int start = 0;
     for (const auto& opt : m_opts) {
-        cout << opt.usage() << ' ';
+        start = wrapping_print_word(opt.usage(), indent, start, max_width);
     }
     cout << endl;
 }
 
 
-void ArgParser::print_help() const
+void ArgParser::print_help(unsigned max_width) const
 {
     size_t desc_cols = 0;
     for (const auto& opt : m_opts)
         desc_cols = max(desc_cols, opt.desc().size());
-    print_usage();
+    print_usage(max_width);
     auto& t = TermCtl::stdout_instance();
     cout << endl << t.bold().yellow() << "Options:" << t.normal() << endl;
     for (const auto& opt : m_opts) {
-        cout << "  " << opt.formatted_desc(desc_cols)
-             << "  " << opt.help() << endl;
+        cout << "  " << opt.formatted_desc(desc_cols) << "  ";
+        wrapping_print(opt.help(), desc_cols + 4, 0, max_width);
+        cout << endl;
     }
 }
 
