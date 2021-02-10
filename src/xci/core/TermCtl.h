@@ -1,7 +1,7 @@
 // TermCtl.h created on 2018-07-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2020 Radek Brich
+// Copyright 2018, 2020, 2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_TERM_H
@@ -43,6 +43,13 @@ public:
     // - Always: true
     // - Never: false
     [[nodiscard]] bool is_tty() const { return m_state != State::NoTTY; }
+
+    // Detect terminal size, return {0,0} if not detected
+    struct Size {
+        unsigned short rows;
+        unsigned short cols;
+    };
+    Size size() const;
 
     // Following methods are appending the capability codes
     // to a copy of TermCtl instance, which can then be send to stream
@@ -136,6 +143,9 @@ public:
         auto buf = format(fmt, std::forward<Args>(args)...);
         print(buf);
     }
+
+    /// Compute length of `s` when stripped of terminal control sequences and invisible characters
+    static unsigned int stripped_length(std::string_view s);
 
     // Temporarily change terminal mode to RAW mode
     // (no echo, no buffering, no special processing)

@@ -1,7 +1,7 @@
 // ArgParser.h created on 2019-06-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019, 2020 Radek Brich
+// Copyright 2019, 2020, 2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_ARG_PARSER_H
@@ -247,9 +247,14 @@ public:
     /// It will fail on missing arguments of trailing options.
     /// For incremental parsing, see `parse_args` below.
     ///
-    /// \param argv     argv argument from main() function, i.e. program name,
-    ///                 followed by args, followed by NULL terminator
-    ArgParser& operator()(const char* argv[]);
+    /// \param argv         Pass argv from main() function, i.e. program name,
+    ///                     followed by args, followed by NULL terminator.
+    /// \param detect_width When enabled, try to detect actual terminal width
+    ///                     and further limit max_width to the detected width.
+    ///                     If the detected width is less than 80, limit to 80.
+    /// \param max_width    Max width in columns for help and usage text.
+    ///                     Set to 0 to disable wrapping.
+    ArgParser& operator()(const char* argv[], bool detect_width = true, unsigned max_width = 120);
     ArgParser& operator()(char* argv[]) { return operator()((const char**) argv); }
 
     enum ParseResult {
@@ -292,6 +297,7 @@ private:
     std::string m_progname;
     std::vector<Option> m_opts;
     Option* m_curopt = nullptr;
+    unsigned m_max_width = ~0u;
     bool m_awaiting_arg = false;
 };
 

@@ -1,7 +1,7 @@
 // TermCtl.cpp created on 2018-07-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2020 Radek Brich
+// Copyright 2018, 2020, 2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 // References:
@@ -19,6 +19,7 @@
     static_assert(sizeof(unsigned long) == sizeof(DWORD));
 #else
     #include <termios.h>
+    #include <sys/ioctl.h>
 #endif
 
 #ifdef XCI_WITH_TINFO
@@ -161,6 +162,20 @@ void TermCtl::set_is_tty(IsTty is_tty)
     #endif
 
     m_state = State::InitOk;
+#endif
+}
+
+
+auto TermCtl::size() const -> Size
+{
+#ifndef _WIN32
+    struct winsize ws;
+    if (ioctl(m_fd, TIOCGWINSZ, &ws) == -1) {
+        return {0, 0};
+    }
+    return {ws.ws_row, ws.ws_col};
+#else
+    return {0, 0};
 #endif
 }
 
@@ -321,6 +336,40 @@ std::string TermCtl::raw_input()
 void TermCtl::print(const std::string& buf)
 {
     ::write(m_fd, buf.data(), buf.size());
+}
+
+
+unsigned int TermCtl::stripped_length(std::string_view s)
+{
+    enum State {
+        Visible,
+        Esc,
+        Csi,
+    } state = Visible;
+    unsigned int length = 0;
+    for (const auto c : s) {
+        switch (state) {
+            case Visible:
+                if (c == '\033')
+                    state = Esc;
+                else
+                    ++length;
+                break;
+
+            case Esc:
+                if (c == '[')
+                    state = Csi;
+                else
+                    state = Visible;
+                break;
+
+            case Csi:
+                if (isalpha(c))
+                    state = Visible;
+                break;
+        }
+    }
+    return length;
 }
 
 
