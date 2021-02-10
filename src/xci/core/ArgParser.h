@@ -247,9 +247,14 @@ public:
     /// It will fail on missing arguments of trailing options.
     /// For incremental parsing, see `parse_args` below.
     ///
-    /// \param argv     argv argument from main() function, i.e. program name,
-    ///                 followed by args, followed by NULL terminator
-    ArgParser& operator()(const char* argv[]);
+    /// \param argv         Pass argv from main() function, i.e. program name,
+    ///                     followed by args, followed by NULL terminator.
+    /// \param detect_width When enabled, try to detect actual terminal width
+    ///                     and further limit max_width to the detected width.
+    ///                     If the detected width is less than 80, limit to 80.
+    /// \param max_width    Max width in columns for help and usage text.
+    ///                     Set to 0 to disable wrapping.
+    ArgParser& operator()(const char* argv[], bool detect_width = true, unsigned max_width = 120);
     ArgParser& operator()(char* argv[]) { return operator()((const char**) argv); }
 
     enum ParseResult {
@@ -278,12 +283,10 @@ public:
     ParseResult parse_arg(const char* argv[]);
 
     /// Print short usage information
-    /// \param max_width    Wrap lines when reaching this number of columns. 0 = no wrapping
-    void print_usage(unsigned max_width = 100) const;
+    void print_usage() const;
 
     /// Print help text
-    /// \param max_width    Wrap lines when reaching this number of columns. 0 = no wrapping
-    void print_help(unsigned max_width = 100) const;
+    void print_help() const;
 
     /// Print information how to invoke help
     void print_help_notice() const;
@@ -294,6 +297,7 @@ private:
     std::string m_progname;
     std::vector<Option> m_opts;
     Option* m_curopt = nullptr;
+    unsigned m_max_width = ~0u;
     bool m_awaiting_arg = false;
 };
 

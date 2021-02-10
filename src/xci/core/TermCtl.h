@@ -44,6 +44,13 @@ public:
     // - Never: false
     [[nodiscard]] bool is_tty() const { return m_state != State::NoTTY; }
 
+    // Detect terminal size, return {0,0} if not detected
+    struct Size {
+        unsigned short rows;
+        unsigned short cols;
+    };
+    Size size() const;
+
     // Following methods are appending the capability codes
     // to a copy of TermCtl instance, which can then be send to stream
 

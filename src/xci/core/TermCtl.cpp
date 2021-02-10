@@ -19,6 +19,7 @@
     static_assert(sizeof(unsigned long) == sizeof(DWORD));
 #else
     #include <termios.h>
+    #include <sys/ioctl.h>
 #endif
 
 #ifdef XCI_WITH_TINFO
@@ -161,6 +162,20 @@ void TermCtl::set_is_tty(IsTty is_tty)
     #endif
 
     m_state = State::InitOk;
+#endif
+}
+
+
+auto TermCtl::size() const -> Size
+{
+#ifndef _WIN32
+    struct winsize ws;
+    if (ioctl(m_fd, TIOCGWINSZ, &ws) == -1) {
+        return {0, 0};
+    }
+    return {ws.ws_row, ws.ws_col};
+#else
+    return {0, 0};
 #endif
 }
 
@@ -355,7 +370,7 @@ unsigned int TermCtl::stripped_length(std::string_view s)
         }
     }
     return length;
-};
+}
 
 
 } // namespace xci::core

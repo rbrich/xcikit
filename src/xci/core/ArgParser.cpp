@@ -297,8 +297,15 @@ void ArgParser::validate() const
 }
 
 
-ArgParser& ArgParser::operator()(const char* argv[])
+ArgParser& ArgParser::operator()(const char* argv[], bool detect_width, unsigned max_width)
 {
+    m_max_width = max_width == 0 ? ~0u : max_width;
+    if (detect_width) {
+        int detected_width = TermCtl::stdout_instance().size().cols;
+        if (detected_width != 0)
+            m_max_width = std::min(m_max_width, (unsigned) std::max(detected_width, 80));
+    }
+
     if (!parse_program_name(argv[0])) {
         // this should not occur
         auto& t = TermCtl::stderr_instance();
@@ -483,7 +490,7 @@ static int wrapping_print_word(const std::string& s, unsigned indent, int start,
         max_width = ~0u;
     assert(indent < max_width);
     auto l = TermCtl::stripped_length(s);
-    if (start > 0 && start + l + 1 >= max_width - indent) {
+    if (start > 0 && start + l + 1 > max_width - indent) {
         // wrap
         cout << '\n' << std::string(indent, ' ');
         start = 0;
@@ -509,7 +516,7 @@ static void wrapping_print(const std::string& s, unsigned indent, int start, uns
 }
 
 
-void ArgParser::print_usage(unsigned max_width) const
+void ArgParser::print_usage() const
 {
     auto& t = TermCtl::stdout_instance();
 
@@ -522,23 +529,23 @@ void ArgParser::print_usage(unsigned max_width) const
 
     int start = 0;
     for (const auto& opt : m_opts) {
-        start = wrapping_print_word(opt.usage(), indent, start, max_width);
+        start = wrapping_print_word(opt.usage(), indent, start, m_max_width);
     }
     cout << endl;
 }
 
 
-void ArgParser::print_help(unsigned max_width) const
+void ArgParser::print_help() const
 {
     size_t desc_cols = 0;
     for (const auto& opt : m_opts)
         desc_cols = max(desc_cols, opt.desc().size());
-    print_usage(max_width);
+    print_usage();
     auto& t = TermCtl::stdout_instance();
     cout << endl << t.bold().yellow() << "Options:" << t.normal() << endl;
     for (const auto& opt : m_opts) {
         cout << "  " << opt.formatted_desc(desc_cols) << "  ";
-        wrapping_print(opt.help(), desc_cols + 4, 0, max_width);
+        wrapping_print(opt.help(), desc_cols + 4, 0, m_max_width);
         cout << endl;
     }
 }
