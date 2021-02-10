@@ -254,57 +254,118 @@ static void highlight_path(std::string& out, FileTree::Type t, const FileTree::P
 }
 
 
+struct ScanFileBuffers {
+    // Two buffers, each is a moving window into the file
+    // Buffer 1 always has lower offset than buffer 2
+    struct Buffer {
+        const char* data;
+        size_t size;
+        size_t offset;  // offset of the buffer from beginning of the stream
+    };
+    Buffer buffer[2];
+};
+
+
 struct GrepContext {
     const Theme& theme;
-
-    // previous pattern or newline match
-    const char* prev_data = nullptr;  // data buffer
-    size_t prev_size = 0;  // size of the buffer
-    size_t offset = 0;  // offset of the buffer from beginning of the stream
     size_t last_end = 0;  // offset to end of last match or newline
-
     int lineno = 1;
-    bool after_match = false;  // there was a match on current line
 
-    void highlight_line(std::string& out, const char* data,
-                               const int from, const int to)
+    enum State {
+        CountLines,
+        PrintMatch,
+    };
+    State state = CountLines;
+
+    void print_line_number(std::string& out)
     {
-        if (!after_match) {
-            out += theme.grep_lineno;
-            out += std::to_string(lineno);
-            out += ':';
-            out += theme.normal;
-        }
-
-        print_rest_of_line(out, data, from);
-
-        out += theme.grep_highlight;
-        out.append(data + from - offset, to - from);
+        out += theme.grep_lineno;
+        out += std::to_string(lineno);
+        out += ':';
         out += theme.normal;
     }
 
-    // print rest of the line, from
-    void print_rest_of_line(std::string& out, const char* data, uint32_t end)
+    void highlight_line(std::string& out, const ScanFileBuffers& bufs,
+                        const size_t from, const size_t to)
     {
-        if (prev_data == nullptr) {
-            // no newline yet encounter / the last match was on 1st line
-            out.append(data + last_end, end - last_end);
-        } else if (prev_data != data) {
-            // the buffer did not contain any newline after the match
-            // print rest of old buffer and start of new one, up to the newline
-            print_rest_of_buffer(out);
-            out.append(data, end - offset - prev_size);
-        } else {
-            // the normal scenario - same buffer
-            // print rest of the line after match
-            out.append(data + last_end - offset, end - last_end);
+        if (state == CountLines)
+            print_line_number(out);
+        state = PrintMatch;
+
+        // print everything from last end (newline or last match) upto current match start
+        const auto& buf0 = bufs.buffer[0];
+        const auto& buf1 = bufs.buffer[1];
+        if (last_end < buf0.offset) {
+            // we've missed the start of line - it's not in the previous buffer
+            out += theme.grep_lineno;
+            out += "...";
+            out += theme.normal;
+            last_end = buf0.offset;
+        }
+
+        if (last_end < buf1.offset) {
+            const auto end0 = last_end - buf0.offset;
+            if (from < buf1.offset) {
+                // special case - the match is split between buffers
+                out.append(buf0.data + end0, buf0.size - end0 - (buf1.offset - from));
+                out += theme.grep_highlight;
+                const auto from0 = from - buf0.offset;
+                out.append(buf0.data + from0, buf0.size - from0);
+                out.append(buf1.data, to - buf1.offset);
+                out += theme.normal;
+                last_end = to;
+                return;
+            } else {
+                out.append(buf0.data + end0, buf0.size - end0);
+            }
+            last_end = buf1.offset;
+        }
+
+        out.append(buf1.data + last_end - buf1.offset, from - last_end);
+
+        // print the highlighted match
+        out += theme.grep_highlight;
+        out.append(buf1.data + from - buf1.offset, to - from);
+        out += theme.normal;
+
+        last_end = to;
+    }
+
+    void finish_line(std::string& out, const ScanFileBuffers& bufs, uint32_t end)
+    {
+        if (state == PrintMatch) {
+            const auto& buf1 = bufs.buffer[1];
+            out.append(buf1.data + last_end - buf1.offset, end - last_end);
+            state = CountLines;
+        }
+        last_end = end;
+        ++ lineno;
+    }
+
+    void finish_buffer0(std::string& out, const ScanFileBuffers& bufs)
+    {
+        if (state == PrintMatch) {
+            // print rest of previous buffer
+            const auto& buf0 = bufs.buffer[0];
+            const auto& buf1 = bufs.buffer[1];
+            if (last_end < buf1.offset) {
+                const auto end0 = last_end - buf0.offset;
+                out.append(buf0.data + end0, buf0.size - end0);
+                last_end = buf1.offset;
+            }
         }
     }
 
-    void print_rest_of_buffer(std::string& out)
+    void finish_buffer1(std::string& out, const ScanFileBuffers& bufs)
     {
-        const auto from = last_end - offset;
-        out.append(prev_data + from, prev_size - from);
+        if (state == PrintMatch) {
+            const auto& buf1 = bufs.buffer[1];
+            if (last_end < buf1.offset + buf1.size) {
+                const auto end1 = last_end - buf1.offset;
+                out.append(buf1.data + end1, buf1.size - end1);
+                last_end = buf1.offset + buf1.size;
+            }
+        }
     }
 };
 
@@ -336,7 +397,7 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
             term.fg(size_unit_to_color(size_unit)), size, term.dim(), size_unit, term.normal(),
             term.fg(size_unit_to_color(alloc_unit)), alloc, term.dim(), alloc_unit, term.normal(),
             fmt::localtime(st.st_mtime));
-    ::write(STDOUT_FILENO, name.data(), name.size());
+    std::cout << name;
     if (S_ISLNK(st.st_mode)) {
         std::string target;
         if (!path.readlink(target)) {
@@ -469,7 +530,7 @@ public:
     // The reader maintains two buffers, so the previous one can be saved
     // and used together with current one to complete lines that span through buffer boundary.
     // \return 1 to stop matching, 0 to continue
-    using ScanFileCallback = std::function<int(const char* data, ssize_t size,
+    using ScanFileCallback = std::function<int(const ScanFileBuffers& bufs,
                                                unsigned int id, uint64_t from, uint64_t to)>;
 
     ScanResult scan_file(const FileTree::PathNode& path, hs_scratch_t* scratch,
@@ -481,27 +542,29 @@ public:
             return {false};
         }
 
-        constexpr size_t bufsize = 4096;
         struct Context {
             const ScanFileCallback& cb;
-            ssize_t size;
-            char data[2][bufsize];
-            int current_buffer = 0;
+            ScanFileBuffers bufs;
         };
         Context ctx { .cb = cb };
 
         auto handler = [] (unsigned int id, unsigned long long from,
                            unsigned long long to, unsigned int flags, void *ctx_p) {
             auto& ctx = *static_cast<struct Context*>(ctx_p);
-            return ctx.cb(ctx.data[ctx.current_buffer], ctx.size, id, from, to);
+            return ctx.cb(ctx.bufs, id, from, to);
         };
+
+        constexpr size_t bufsize = 4096;
+        char buffers[2][bufsize];
+        unsigned int current_buffer = 1u;
 
         hs_stream_t* hs_stream;
         auto r = hs_open_stream(m_db, 0, &hs_stream);
         while (r == HS_SUCCESS) {
+            // Read into the other buffer
+            current_buffer ^= 1u;
             // Blocking read - not optimal
-            const auto buf_i = ctx.current_buffer ^1;
-            auto size = ::read(fd, ctx.data[buf_i], bufsize);
+            auto size = ::read(fd, buffers[current_buffer], bufsize);
             if (size == -1) {
                 fmt::print(stderr,"ff: read({}): {}\n", path.file_path(), errno_str());
                 ::close(fd);
@@ -511,13 +574,24 @@ public:
             if (size == 0)
                 break;
 
-            ctx.current_buffer = buf_i;
-            ctx.size = size;
-            r = hs_scan_stream(hs_stream, ctx.data[buf_i], unsigned(size),
+            // Pass the buffers to the callback
+            auto& buf0 = ctx.bufs.buffer[0];
+            auto& buf1 = ctx.bufs.buffer[1];
+            buf0 = buf1;
+            buf1.data = buffers[current_buffer];
+            buf1.size = size;
+            buf1.offset += buf0.size;
+
+            r = hs_scan_stream(hs_stream, buffers[current_buffer], unsigned(size),
                     0, scratch, handler, &ctx);
+
+            // notify: swapping buffers
+            (void) ctx.cb(ctx.bufs, 11, 0, 0);
         }
         if (r == HS_SUCCESS) {
             r = hs_close_stream(hs_stream, scratch, handler, &ctx);
+            // notify: end of stream
+            (void) ctx.cb(ctx.bufs, 12, 0, 0);
         } else {
             // no longer interested in matches or errors, just close it
             hs_close_stream(hs_stream, scratch, nullptr, nullptr);
@@ -858,35 +932,48 @@ int main(int argc, const char* argv[])
                     GrepContext ctx {.theme = theme};
                     auto [read_ok, hs_res] = grep_db.scan_file(path, re_scratch[tn],
                             [silent_grep, &matched, &content, &ctx]
-                            (const char* data, size_t size, unsigned id, uint32_t from, uint32_t to)
+                            (const ScanFileBuffers& bufs, unsigned id, uint32_t from, uint32_t to)
                             {
+                                // id  0    -> match
+                                // id 10    -> newline pattern, for counting lines
+                                // id 11    -> finish buffer
+                                // id 12    -> end of stream
+
                                 if (silent_grep) {
-                                    // stop (matched) if not newline
-                                    return id == 10 ? 0 : 1;
+                                    // stop if a match was found
+                                    return id == 0 ? 1 : 0;
                                 }
 
-                                if (id == 10) {
-                                    // special newline pattern, for counting lines
-                                    if (ctx.after_match) {
-                                        ctx.print_rest_of_line(content, data, from);
-                                        content += '\n';
-                                        ctx.after_match = false;
-                                    }
-                                    if (ctx.prev_data != data) {
-                                        ctx.prev_data = data;
-                                        ctx.offset += ctx.prev_size;
-                                        ctx.prev_size = size;
-                                    }
-                                    ctx.last_end = to;
-                                    ++ ctx.lineno;
-                                    return 0;
-                                }
+                                switch (id) {
+                                    // match found
+                                    case 0:
+                                        ctx.highlight_line(content, bufs, from, to);
+                                        matched = true;
+                                        return 0;
 
-                                ctx.highlight_line(content, data, from, to);
-                                ctx.after_match = true;
-                                ctx.last_end = to;
-                                matched = true;
-                                return 0;
+                                    // newline found
+                                    case 10:
+                                        // special newline pattern, for counting lines
+                                        ctx.finish_buffer0(content, bufs);
+                                        ctx.finish_line(content, bufs, to);
+                                        return 0;
+
+                                    // buffers will be swapped
+                                    case 11:
+                                        // there are two buffers, new data are read to the other buffer
+                                        ctx.finish_buffer0(content, bufs);
+                                        return 0;
+
+                                    // end of stream
+                                    case 12:
+                                        ctx.finish_buffer0(content, bufs);
+                                        ctx.finish_buffer1(content, bufs);
+                                        return 0;
+
+                                    default:
+                                        assert(!"pattern ID not handled");
+                                        return 0;
+                                }
                             });
                     if (!read_ok)
                         return false;
@@ -896,21 +983,15 @@ int main(int argc, const char* argv[])
                         fmt::print(stderr,"ff: {}: scan failed ({})\n", path.name(), hs_res);
                         return false;
                     }
-                    if (ctx.after_match) {
-                        // file ended after the match without any newline
-                        // print rest of the last line
-                        ctx.print_rest_of_buffer(content);
-                    }
                 }
                 flockfile(stdout);
                 if (long_form)
                     print_path_with_attrs(out, path, st);
                 else
-                    ::write(STDOUT_FILENO, out.data(), out.size());
-                ::write(STDOUT_FILENO, "\n", 1);
+                    std::cout << out;
+                std::cout << '\n';
                 if (!content.empty()) {
-                    ::write(STDOUT_FILENO, content.data(), content.size());
-                    ::write(STDOUT_FILENO, "\n", 1);
+                    std::cout << content << '\n';
                 }
                 funlockfile(stdout);
                 return descend;

@@ -363,6 +363,9 @@ ZipArchive::ZipArchive(std::string&& path, std::unique_ptr<std::istream>&& strea
     m_zip = f;
 #else
     log::error("ZipArchive: Not supported (not compiled with XCI_WITH_ZIP)");
+    (void) m_size;
+    (void) m_last_zip_err;
+    (void) m_last_sys_err;
 #endif
 }
 
