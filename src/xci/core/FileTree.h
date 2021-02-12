@@ -9,7 +9,7 @@
 
 #include <xci/core/string.h>
 #include <xci/core/listdir.h>
-#include <xci/core/NonCopyable.h>
+#include <xci/core/mixin.h>
 #include <xci/config.h>
 
 #include <string>

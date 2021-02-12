@@ -21,7 +21,7 @@
 #include <xci/graphics/Color.h>
 #include <xci/graphics/View.h>
 #include <xci/core/geometry.h>
-#include <xci/core/NonCopyable.h>
+#include <xci/core/mixin.h>
 
 namespace xci::graphics {
 

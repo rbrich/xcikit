@@ -13,7 +13,7 @@
 #include <xci/core/memoization.h>
 #include <xci/core/sys.h>
 #include <xci/core/TermCtl.h>
-#include <xci/core/NonCopyable.h>
+#include <xci/core/mixin.h>
 #include <xci/compat/macros.h>
 
 #include <fmt/core.h>
@@ -430,7 +430,7 @@ static void print_stats(const Counters& counters)
 }
 
 
-class HyperscanScratch: public NonCopyable {
+class HyperscanScratch: private NonCopyable {
 public:
     ~HyperscanScratch() { hs_free_scratch(m_scratch); }
 
@@ -458,7 +458,7 @@ private:
 };
 
 
-class HyperscanDatabase: public NonCopyable {
+class HyperscanDatabase: private NonCopyable {
 public:
     ~HyperscanDatabase() { hs_free_database(m_db); }
 

@@ -14,7 +14,7 @@
 #include "Texture.h"
 #include "vulkan/DeviceMemory.h"
 #include <xci/core/geometry.h>
-#include <xci/core/NonCopyable.h>
+#include <xci/core/mixin.h>
 
 #include <vulkan/vulkan.h>
 
