@@ -41,11 +41,7 @@ Example:
 - `-e 'cpp|h'` filters C++ sources
 - no matching pattern is used, so we need `--` before the list of paths
 
-![ff_stats_part_1](https://user-images.githubusercontent.com/6216152/97462585-2d628f00-193f-11eb-9c82-8030c4944a02.png)
-
-... more files, clipped ...
-
-![ff_stats_part_2](https://user-images.githubusercontent.com/6216152/97462870-76b2de80-193f-11eb-8eb4-c73b30c4c999.png)
+<img width="512" alt="ff_stats" src="https://user-images.githubusercontent.com/6216152/107156217-5b636080-697d-11eb-9836-8ed936fd1b2a.png">
 
 Whoa! One megabyte of code. Almost full 💾.
 

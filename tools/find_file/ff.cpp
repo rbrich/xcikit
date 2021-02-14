@@ -1,7 +1,7 @@
 // ff.cpp created on 2020-03-17 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020 Radek Brich
+// Copyright 2020, 2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 /// Find File (ff) command line tool
@@ -13,11 +13,12 @@
 #include <xci/core/memoization.h>
 #include <xci/core/sys.h>
 #include <xci/core/TermCtl.h>
-#include <xci/core/NonCopyable.h>
+#include <xci/core/mixin.h>
 #include <xci/compat/macros.h>
 
 #include <fmt/core.h>
 #include <fmt/chrono.h>
+#include <fmt/ostream.h>
 #include <hs/hs.h>
 
 #include <cstring>
@@ -33,7 +34,7 @@ using namespace xci::core;
 using namespace xci::core::argparser;
 
 
-static constexpr auto c_version = "0.5";
+static constexpr auto c_version = "0.6";
 
 
 struct Theme {
@@ -42,6 +43,8 @@ struct Theme {
     std::string file_dir;
     std::string file_name;
     std::string highlight;
+    std::string grep_highlight;
+    std::string grep_lineno;
 };
 
 
@@ -221,15 +224,6 @@ static bool parse_size_filter(const char* arg, size_t& size_from, size_t& size_t
     return (arg == end);
 }
 
-/// Basically puts(3)
-static void synced_writeln(const std::string& out)
-{
-    flockfile(stdout);
-    ::write(STDOUT_FILENO, out.data(), out.size());
-    ::write(STDOUT_FILENO, "\n", 1);
-    funlockfile(stdout);
-}
-
 
 static void highlight_path(std::string& out, FileTree::Type t, const FileTree::PathNode& path, const Theme& theme,
                            const int so=0, const int eo=0)
@@ -260,6 +254,122 @@ static void highlight_path(std::string& out, FileTree::Type t, const FileTree::P
 }
 
 
+struct ScanFileBuffers {
+    // Two buffers, each is a moving window into the file
+    // Buffer 1 always has lower offset than buffer 2
+    struct Buffer {
+        const char* data;
+        size_t size;
+        size_t offset;  // offset of the buffer from beginning of the stream
+    };
+    Buffer buffer[2];
+};
+
+
+struct GrepContext {
+    const Theme& theme;
+    size_t last_end = 0;  // offset to end of last match or newline
+    int lineno = 1;
+
+    enum State {
+        CountLines,
+        PrintMatch,
+    };
+    State state = CountLines;
+
+    void print_line_number(std::string& out)
+    {
+        out += theme.grep_lineno;
+        out += std::to_string(lineno);
+        out += ':';
+        out += theme.normal;
+    }
+
+    void highlight_line(std::string& out, const ScanFileBuffers& bufs,
+                        const size_t from, const size_t to)
+    {
+        if (state == CountLines)
+            print_line_number(out);
+        state = PrintMatch;
+
+        // print everything from last end (newline or last match) upto current match start
+        const auto& buf0 = bufs.buffer[0];
+        const auto& buf1 = bufs.buffer[1];
+        if (last_end < buf0.offset) {
+            // we've missed the start of line - it's not in the previous buffer
+            out += theme.grep_lineno;
+            out += "...";
+            out += theme.normal;
+            last_end = buf0.offset;
+        }
+
+        if (last_end < buf1.offset) {
+            const auto end0 = last_end - buf0.offset;
+            if (from < buf1.offset) {
+                // special case - the match is split between buffers
+                out.append(buf0.data + end0, buf0.size - end0 - (buf1.offset - from));
+                out += theme.grep_highlight;
+                const auto from0 = from - buf0.offset;
+                out.append(buf0.data + from0, buf0.size - from0);
+                out.append(buf1.data, to - buf1.offset);
+                out += theme.normal;
+                last_end = to;
+                return;
+            } else {
+                out.append(buf0.data + end0, buf0.size - end0);
+            }
+            last_end = buf1.offset;
+        }
+
+        out.append(buf1.data + last_end - buf1.offset, from - last_end);
+
+        // print the highlighted match
+        out += theme.grep_highlight;
+        out.append(buf1.data + from - buf1.offset, to - from);
+        out += theme.normal;
+
+        last_end = to;
+    }
+
+    void finish_line(std::string& out, const ScanFileBuffers& bufs, uint32_t end)
+    {
+        if (state == PrintMatch) {
+            const auto& buf1 = bufs.buffer[1];
+            out.append(buf1.data + last_end - buf1.offset, end - last_end);
+            state = CountLines;
+        }
+        last_end = end;
+        ++ lineno;
+    }
+
+    void finish_buffer0(std::string& out, const ScanFileBuffers& bufs)
+    {
+        if (state == PrintMatch) {
+            // print rest of previous buffer
+            const auto& buf0 = bufs.buffer[0];
+            const auto& buf1 = bufs.buffer[1];
+            if (last_end < buf1.offset) {
+                const auto end0 = last_end - buf0.offset;
+                out.append(buf0.data + end0, buf0.size - end0);
+                last_end = buf1.offset;
+            }
+        }
+    }
+
+    void finish_buffer1(std::string& out, const ScanFileBuffers& bufs)
+    {
+        if (state == PrintMatch) {
+            const auto& buf1 = bufs.buffer[1];
+            if (last_end < buf1.offset + buf1.size) {
+                const auto end1 = last_end - buf1.offset;
+                out.append(buf1.data + end1, buf1.size - end1);
+                last_end = buf1.offset + buf1.size;
+            }
+        }
+    }
+};
+
+
 static void print_path_with_attrs(const std::string& name, const FileTree::PathNode& path,
                                   struct stat& st)
 {
@@ -281,30 +391,21 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
     char alloc_unit = round_size_to_unit(alloc);
     char file_type = file_type_to_char(st.st_mode);
     TermCtl& term = TermCtl::stdout_instance();
-    std::string out;
-    out.reserve(name.size() + 64);
-    auto out_it = std::back_inserter(out);
-    fmt::format_to(out_it, "{}{:c}{:04o}{} {:>{}}:{:{}} {}{:4}{}{}{} {}{:4}{}{}{}  {:%F %H:%M}  {}",
+    fmt::print(std::cout, "{}{:c}{:04o}{} {:>{}}:{:{}} {}{:4}{}{}{} {}{:4}{}{}{}  {:%F %H:%M}  ",
             term.fg(file_mode_to_color(st.st_mode)), file_type, st.st_mode & 07777, term.normal(),
             user, w_user, group, w_group,
             term.fg(size_unit_to_color(size_unit)), size, term.dim(), size_unit, term.normal(),
             term.fg(size_unit_to_color(alloc_unit)), alloc, term.dim(), alloc_unit, term.normal(),
-            fmt::localtime(st.st_mtime),
-            name);
+            fmt::localtime(st.st_mtime));
+    std::cout << name;
     if (S_ISLNK(st.st_mode)) {
-        char buf[PATH_MAX];
-        ssize_t res;
-        if (path.has_parent() && path.parent_fd() != -1)
-            res = ::readlinkat(path.parent_fd(), std::string(path.name()).c_str(), buf, sizeof(buf));
-        else
-            res = readlink(std::string(path.file_path()).c_str(), buf, sizeof(buf));
-        if (res < 0) {
+        std::string target;
+        if (!path.readlink(target)) {
             fmt::print(stderr,"ff: readlink({}): {}\n", path.file_path(), errno_str());
             return;
         }
-        fmt::format_to(out_it, " -> {}", std::string_view(buf, res));
+        fmt::print(std::cout, " -> {}", target);
     }
-    synced_writeln(out);
 }
 
 
@@ -329,19 +430,48 @@ static void print_stats(const Counters& counters)
 }
 
 
-class HyperscanDatabase: public NonCopyable {
+class HyperscanScratch: private NonCopyable {
+public:
+    ~HyperscanScratch() { hs_free_scratch(m_scratch); }
+
+    bool reallocate_for(hs_database_t* db) {
+        hs_error_t rc = hs_alloc_scratch(db, &m_scratch);
+        if (rc != HS_SUCCESS) {
+            fmt::print(stderr,"ff: hs_alloc_scratch: Unable to allocate scratch space.\n");
+            return false;
+        }
+        return true;
+    }
+
+    bool clone(hs_scratch_t* prototype) {
+        if (hs_clone_scratch(prototype, &m_scratch) != HS_SUCCESS) {
+            fmt::print(stderr,"ff: hs_clone_scratch: Unable to allocate scratch space.\n");
+            return false;
+        }
+        return true;
+    }
+
+    operator hs_scratch_t*() const { return m_scratch; }
+
+private:
+    hs_scratch_t* m_scratch = nullptr;
+};
+
+
+class HyperscanDatabase: private NonCopyable {
 public:
     ~HyperscanDatabase() { hs_free_database(m_db); }
 
     operator bool() const { return m_db != nullptr; }
     operator const hs_database_t *() const { return m_db; }
 
-    void add(const char* pattern, unsigned int flags) {
+    void add(const char* pattern, unsigned int flags, unsigned int id=0) {
         m_patterns.emplace_back(pattern);
         m_flags.push_back(flags);
+        m_ids.push_back(id);
     }
 
-    void add_literal(const char* literal, unsigned int flags) {
+    void add_literal(const char* literal, unsigned int flags, unsigned int id=0) {
         // Escape non-alphanumeric characters in literal to hex
         // See: https://github.com/intel/hyperscan/issues/191
         std::string pattern;
@@ -355,16 +485,24 @@ public:
         }
         m_patterns.push_back(std::move(pattern));
         m_flags.push_back(flags);
+        m_ids.push_back(id);
     }
 
-    void add_extension(const char* ext, unsigned int flags) {
+    void add_extension(const char* ext, unsigned int flags, unsigned int id=0) {
         // Match file extension, i.e. '.' + ext at end of filename
         auto pattern = std::string("\\.") + ext + '$';
         m_patterns.push_back(pattern);
         m_flags.push_back(flags);
+        m_ids.push_back(id);
     }
 
-    bool compile() {
+    bool allocate_scratch(HyperscanScratch& scratch) {
+        if (!m_db)
+            return true;
+        return scratch.reallocate_for(m_db);
+    }
+
+    bool compile(unsigned int mode) {
         if (m_patterns.empty())
             return true;
         std::vector<const char*> expressions;
@@ -373,8 +511,8 @@ public:
             expressions.push_back(pat.c_str());
         hs_compile_error_t *re_compile_err;
         hs_error_t rc = hs_compile_multi(expressions.data(), m_flags.data(),
-                nullptr, expressions.size(),
-                HS_MODE_BLOCK, nullptr, &m_db, &re_compile_err);
+                m_ids.data(), expressions.size(),
+                mode, nullptr, &m_db, &re_compile_err);
         if (rc != HS_SUCCESS) {
             fmt::print(stderr,"ff: hs_compile_multi: ({}) {}\n", rc, re_compile_err->message);
             hs_free_compile_error(re_compile_err);
@@ -383,27 +521,91 @@ public:
         return true;
     }
 
+    struct ScanResult {
+        bool read_ok;
+        hs_error_t hs_result = HS_INVALID;
+    };
+
+    // id == 10 is special pattern for matching newlines
+    // The reader maintains two buffers, so the previous one can be saved
+    // and used together with current one to complete lines that span through buffer boundary.
+    // \return 1 to stop matching, 0 to continue
+    using ScanFileCallback = std::function<int(const ScanFileBuffers& bufs,
+                                               unsigned int id, uint64_t from, uint64_t to)>;
+
+    ScanResult scan_file(const FileTree::PathNode& path, hs_scratch_t* scratch,
+                         const ScanFileCallback& cb) {
+        int fd = path.open();
+        if (fd == -1) {
+            if (errno != ELOOP)  // O_NOFOLLOW -> it's a symlink
+                fmt::print(stderr,"ff: open({}): {}\n", path.file_path(), errno_str());
+            return {false};
+        }
+
+        struct Context {
+            const ScanFileCallback& cb;
+            ScanFileBuffers bufs;
+        };
+        Context ctx { .cb = cb };
+
+        auto handler = [] (unsigned int id, unsigned long long from,
+                           unsigned long long to, unsigned int flags, void *ctx_p) {
+            auto& ctx = *static_cast<struct Context*>(ctx_p);
+            return ctx.cb(ctx.bufs, id, from, to);
+        };
+
+        constexpr size_t bufsize = 4096;
+        char buffers[2][bufsize];
+        unsigned int current_buffer = 1u;
+
+        hs_stream_t* hs_stream;
+        auto r = hs_open_stream(m_db, 0, &hs_stream);
+        while (r == HS_SUCCESS) {
+            // Read into the other buffer
+            current_buffer ^= 1u;
+            // Blocking read - not optimal
+            auto size = ::read(fd, buffers[current_buffer], bufsize);
+            if (size == -1) {
+                fmt::print(stderr,"ff: read({}): {}\n", path.file_path(), errno_str());
+                ::close(fd);
+                hs_close_stream(hs_stream, scratch, nullptr, nullptr);
+                return {false};
+            }
+            if (size == 0)
+                break;
+
+            // Pass the buffers to the callback
+            auto& buf0 = ctx.bufs.buffer[0];
+            auto& buf1 = ctx.bufs.buffer[1];
+            buf0 = buf1;
+            buf1.data = buffers[current_buffer];
+            buf1.size = size;
+            buf1.offset += buf0.size;
+
+            r = hs_scan_stream(hs_stream, buffers[current_buffer], unsigned(size),
+                    0, scratch, handler, &ctx);
+
+            // notify: swapping buffers
+            (void) ctx.cb(ctx.bufs, 11, 0, 0);
+        }
+        if (r == HS_SUCCESS) {
+            r = hs_close_stream(hs_stream, scratch, handler, &ctx);
+            // notify: end of stream
+            (void) ctx.cb(ctx.bufs, 12, 0, 0);
+        } else {
+            // no longer interested in matches or errors, just close it
+            hs_close_stream(hs_stream, scratch, nullptr, nullptr);
+        }
+
+        ::close(fd);
+        return {true, r};
+    }
+
 private:
     hs_database_t* m_db = nullptr;
     std::vector<std::string> m_patterns;
     std::vector<unsigned int> m_flags;
-};
-
-
-class HyperscanScratch: public NonCopyable {
-public:
-    HyperscanScratch(hs_scratch_t* prototype) {
-        if (hs_clone_scratch(prototype, &m_scratch) != HS_SUCCESS) {
-            fmt::print(stderr,"ff: hs_clone_scratch: Unable to allocate scratch space.\n");
-            exit(1);
-        }
-    }
-    ~HyperscanScratch() { hs_free_scratch(m_scratch); }
-
-    operator hs_scratch_t*() { return m_scratch; }
-
-private:
-    hs_scratch_t* m_scratch = nullptr;
+    std::vector<unsigned int> m_ids;
 };
 
 
@@ -419,11 +621,14 @@ int main(int argc, const char* argv[])
     int max_depth = -1;
     bool show_version = false;
     bool show_stats = false;
+    bool grep_mode = false;
+    bool silent_grep = false;
     int jobs = 2 * cpu_count();
     size_t size_from = 0;
     size_t size_to = 0;
     mode_t type_mask = 0;
     const char* pattern = nullptr;
+    const char* grep_pattern = nullptr;
     std::vector<fs::path> paths;
     std::vector<const char*> extensions;
 
@@ -448,6 +653,9 @@ int main(int argc, const char* argv[])
                     [&type_mask, &show_dirs](const char* arg){ show_dirs = true; return parse_types(arg, type_mask); }),
             Option("--size BETWEEN", "Filter files by size: [MIN]..[MAX], each site is optional, e.g. 1M..2M, 42K (eq. 42K..), ..1G",
                     [&size_from, &size_to](const char* arg){ return parse_size_filter(arg, size_from, size_to); }),
+            Option("-g, --grep PATTERN", "Filter files by content, i.e. \"grep\"", grep_pattern),
+            Option("-G, --grep-mode", "Switch to grep mode (positional arg PATTERN is searched in content instead of file names)", grep_mode),
+            Option("-Q, --silent-grep", "Grep: filter files, don't show matched lines. Stops of first match, making it faster.", silent_grep),
             Option("-c, --color", "Force color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Always); }),
             Option("-C, --no-color", "Disable color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Never); }),
             Option("-M, --no-highlight", "Don't highlight matches (default: enabled for color output)", [&highlight_match]{ highlight_match = false; }),
@@ -465,12 +673,16 @@ int main(int argc, const char* argv[])
         return 0;
     }
 
+    if (grep_mode) {
+        grep_pattern = pattern;
+        pattern = nullptr;
+    }
+
     // empty pattern -> show all files
     if (pattern && *pattern == '\0')
         pattern = nullptr;
 
     HyperscanDatabase re_db;
-    hs_scratch_t* re_scratch_prototype = nullptr;
     if (pattern) {
         int flags = HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP;
         if (ignore_case)
@@ -498,7 +710,7 @@ int main(int argc, const char* argv[])
             }
             free(re_info);
 
-            // compile pattern
+            // add pattern
             if (highlight_match)
                 flags |= HS_FLAG_SOM_LEFTMOST;
             else
@@ -520,15 +732,59 @@ int main(int argc, const char* argv[])
         }
     }
 
-    if (!re_db.compile())
+    if (!re_db.compile(HS_MODE_BLOCK))
         return 1;
 
-    if (re_db) {
-        // allocate scratch "prototype", to be cloned for each thread
-        hs_error_t rc = hs_alloc_scratch(re_db, &re_scratch_prototype);
-        if (rc != HS_SUCCESS) {
-            fmt::print(stderr,"ff: hs_alloc_scratch: Unable to allocate scratch space.\n");
+    HyperscanDatabase grep_db;
+    if (grep_pattern) {
+        int flags = HS_FLAG_UTF8 | HS_FLAG_UCP;
+        if (ignore_case)
+            flags |= HS_FLAG_CASELESS;
+        if (highlight_match)
+            flags |= HS_FLAG_SOM_LEFTMOST;
+        else
+            flags |= HS_FLAG_SINGLEMATCH;
+        hs_compile_error_t *re_compile_err;
+        // count newlines
+        grep_db.add_literal("\n", flags, 10);
+        if (fixed) {
+            grep_db.add_literal(grep_pattern, flags);
+        } else {
+            // analyze pattern
+            hs_expr_info_t* re_info = nullptr;
+            hs_error_t rc = hs_expression_info(grep_pattern, flags, &re_info, &re_compile_err);
+            if (rc != HS_SUCCESS) {
+                fmt::print(stderr,"ff: hs_expression_info({}): ({}) {}\n", grep_pattern, rc, re_compile_err->message);
+                hs_free_compile_error(re_compile_err);
+                return 1;
+            }
+            if (re_info->min_width == 0) {
+                // Pattern matches empty buffer
+                fmt::print(stderr,"ff: grep pattern matches empty buffer: {}\n", grep_pattern);
+                hs_free_compile_error(re_compile_err);
+                free(re_info);
+                return 1;
+            }
+            free(re_info);
+
+            // add pattern
+            grep_db.add(grep_pattern, flags);
+        }
+    }
+
+    if (!grep_db.compile(HS_MODE_STREAM | HS_MODE_SOM_HORIZON_MEDIUM))
+        return 1;
+
+    // allocate scratch "prototype", to be cloned for each thread
+    std::vector<HyperscanScratch> re_scratch(jobs);
+    if (re_db || grep_db) {
+        // prototype for main thread
+        if (!re_db.allocate_scratch(re_scratch[0]) || !grep_db.allocate_scratch(re_scratch[0]))
             return 1;
+        // clone for other threads
+        for (int i = 1; i != jobs; ++i) {
+            if (!re_scratch[i].clone(re_scratch[0]))
+                return 1;
         }
     }
 
@@ -539,6 +795,8 @@ int main(int argc, const char* argv[])
         .file_dir = term.cyan().seq(),
         .file_name = term.normal().seq(),
         .highlight = term.bold().yellow().seq(),
+        .grep_highlight = term.bold().red().seq(),
+        .grep_lineno = term.green().seq(),
     };
 
     FlatSet<dev_t> dev_ids;
@@ -546,9 +804,9 @@ int main(int argc, const char* argv[])
 
     FileTree ft(jobs-1,
                 [show_hidden, show_dirs, single_device, long_form, highlight_match,
-                 type_mask, size_from, size_to, max_depth, search_in_special_dirs,
-                 &re_db, re_scratch_prototype, &theme, &dev_ids, &counters]
-                (const FileTree::PathNode& path, FileTree::Type t)
+                 type_mask, size_from, size_to, max_depth, search_in_special_dirs, silent_grep,
+                 &re_db, &grep_db, &re_scratch, &theme, &dev_ids, &counters]
+                (int tn, const FileTree::PathNode& path, FileTree::Type t)
     {
         switch (t) {
             case FileTree::Directory:
@@ -596,12 +854,10 @@ int main(int argc, const char* argv[])
 
                 std::string out;
                 if (re_db) {
-                    thread_local HyperscanScratch re_scratch(re_scratch_prototype);
-
                     if (highlight_match) {
                         // match, with highlight
                         std::vector<std::pair<int, int>> matches;
-                        auto r = hs_scan(re_db, path.name_data(), path.name_len(), 0, re_scratch,
+                        auto r = hs_scan(re_db, path.name_data(), path.name_len(), 0, re_scratch[tn],
                                 [] (unsigned int id, unsigned long long from,
                                     unsigned long long to, unsigned int flags, void *ctx)
                                 {
@@ -618,10 +874,13 @@ int main(int argc, const char* argv[])
                         highlight_path(out, t, path, theme, matches[0].first, matches[0].second);
                     } else {
                         // match, no highlight
-                        auto r = hs_scan(re_db, path.name_data(), path.name_len(), 0, re_scratch,
+                        auto r = hs_scan(re_db, path.name_data(), path.name_len(), 0, re_scratch[tn],
                                 [] (unsigned int id, unsigned long long from,
                                     unsigned long long to, unsigned int flags, void *ctx)
-                                { return 1; }, nullptr);
+                                {
+                                    // stop scanning on first match
+                                    return 1;
+                                }, nullptr);
                         // returns HS_SCAN_TERMINATED on match (because callback returns 1)
                         if (r == HS_SUCCESS)
                             return descend;  // not matched
@@ -667,10 +926,74 @@ int main(int argc, const char* argv[])
                     counters.matched_files.fetch_add(1, std::memory_order_relaxed);
                 }
 
+                std::string content;
+                if (t == FileTree::File && grep_db) {
+                    bool matched = false;
+                    GrepContext ctx {.theme = theme};
+                    auto [read_ok, hs_res] = grep_db.scan_file(path, re_scratch[tn],
+                            [silent_grep, &matched, &content, &ctx]
+                            (const ScanFileBuffers& bufs, unsigned id, uint32_t from, uint32_t to)
+                            {
+                                // id  0    -> match
+                                // id 10    -> newline pattern, for counting lines
+                                // id 11    -> finish buffer
+                                // id 12    -> end of stream
+
+                                if (silent_grep) {
+                                    // stop if a match was found
+                                    return id == 0 ? 1 : 0;
+                                }
+
+                                switch (id) {
+                                    // match found
+                                    case 0:
+                                        ctx.highlight_line(content, bufs, from, to);
+                                        matched = true;
+                                        return 0;
+
+                                    // newline found
+                                    case 10:
+                                        // special newline pattern, for counting lines
+                                        ctx.finish_buffer0(content, bufs);
+                                        ctx.finish_line(content, bufs, to);
+                                        return 0;
+
+                                    // buffers will be swapped
+                                    case 11:
+                                        // there are two buffers, new data are read to the other buffer
+                                        ctx.finish_buffer0(content, bufs);
+                                        return 0;
+
+                                    // end of stream
+                                    case 12:
+                                        ctx.finish_buffer0(content, bufs);
+                                        ctx.finish_buffer1(content, bufs);
+                                        return 0;
+
+                                    default:
+                                        assert(!"pattern ID not handled");
+                                        return 0;
+                                }
+                            });
+                    if (!read_ok)
+                        return false;
+                    if ((silent_grep && hs_res == HS_SUCCESS) || (!silent_grep && !matched))
+                        return false;  // not matched
+                    if ((silent_grep && hs_res != HS_SCAN_TERMINATED) || (!silent_grep && hs_res != HS_SUCCESS)) {
+                        fmt::print(stderr,"ff: {}: scan failed ({})\n", path.name(), hs_res);
+                        return false;
+                    }
+                }
+                flockfile(stdout);
                 if (long_form)
                     print_path_with_attrs(out, path, st);
                 else
-                    synced_writeln(out);
+                    std::cout << out;
+                std::cout << '\n';
+                if (!content.empty()) {
+                    std::cout << content << '\n';
+                }
+                funlockfile(stdout);
                 return descend;
             }
             case FileTree::OpenError:
@@ -700,7 +1023,5 @@ int main(int argc, const char* argv[])
         print_stats(counters);
     }
 
-
-    hs_free_scratch(re_scratch_prototype);
     return 0;
 }

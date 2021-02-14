@@ -13,15 +13,16 @@ CSI=$'\x1b['
 
 print_usage()
 {
-    echo "Usage: ./build.sh [<phase>, ...] [-G <cmake_generator>] [-j <jobs>] [-D <cmake_def>, ...] [--debug|--minsize] [--unity] [--tidy] [--update]"
-    echo "Where: <phase> = clean | deps | config | build | test | install | package | graphviz (default: deps..install)"
-    echo "       <cmake_generator> = \"Unix Makefiles\" | Ninja | ... (default: Ninja if available, Unix Makefiles otherwise)"
+    echo "Usage: ./build.sh [PHASE, ...] [COMPONENT, ...] [-G CMAKE_GENERATOR] [-j JOBS] [-D CMAKE_DEF, ...] [--debug|--minsize] [--unity] [--tidy] [--update]"
+    echo "Where: PHASE = clean | deps | config | build | test | install | package | graphviz (default: deps..install)"
+    echo "       COMPONENT = core | data | script | graphics | text | widgets | all (default: all)"
+    echo "       CMAKE_GENERATOR = Unix Makefiles | Ninja | ... (default: Ninja if available, Unix Makefiles otherwise)"
 }
 
 phase()
 {
     local PHASE="phase_$1"
-    test -n "${!PHASE}" -o -n "${phase_all}" -o \( -n "${phase_default}" -a "$1" != "clean" -a "$1" != "package" -a "$1" != "graphviz" \)
+    test -n "${!PHASE}" -o \( -n "${phase_default}" -a "$1" != "clean" -a "$1" != "package" -a "$1" != "graphviz" \)
 }
 
 setup_ninja()
@@ -49,12 +50,17 @@ header()
 
 # parse args...
 phase_default=yes
-phase_all=
+component_default=yes
+component_all=
 while [[ $# -gt 0 ]] ; do
     case "$1" in
-        all|clean|deps|config|build|test|install|package|graphviz )
+        clean | deps | config | build | test | install | package | graphviz )
             phase_default=
             declare "phase_$1=yes"
+            shift 1 ;;
+        core | data | script | graphics | text | widgets | all )
+            component_default=
+            declare "component_$1=yes"
             shift 1 ;;
         -G )
             GENERATOR="$2"
@@ -86,9 +92,12 @@ while [[ $# -gt 0 ]] ; do
         --update )
             CONAN_ARGS+=('--update')
             shift 1 ;;
-        -pr|--profile )
+        -pr | --profile )
             CONAN_ARGS+=('--profile' "$2")
             shift 2 ;;
+        -h | --help )
+            print_usage
+            exit 0 ;;
         * )
             printf 'Error: Unknown option: %s\n\n' "$1"
             print_usage
@@ -111,6 +120,15 @@ INSTALL_DIR="${ROOT_DIR}/artifacts/${BUILD_CONFIG}"
 PACKAGE_DIR="xcikit-${VERSION}"
 PACKAGE_NAME="${PACKAGE_DIR}-${PLATFORM}-${ARCH}.zip"
 
+if [[ -z "$component_default" && -z "$component_all" ]]; then
+    # Disable components that were not selected
+    for name in data script graphics text widgets ; do
+        component_var="component_$name"
+        [[ -z "${!component_var}" ]] && CMAKE_ARGS+=(-D "XCI_${name^^}=OFF")
+    done
+fi
+
+echo "CMAKE_ARGS:   ${CMAKE_ARGS[*]}"
 echo "BUILD_CONFIG: ${BUILD_CONFIG}"
 echo "BUILD_DIR:    ${BUILD_DIR}"
 echo "INSTALL_DIR:  ${INSTALL_DIR}"
