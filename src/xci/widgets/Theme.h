@@ -32,10 +32,10 @@ enum class IconId {
     RadioButtonUnchecked,
     RadioButtonChecked,
 
-    _NumItems_,
+    NumItems_,
 };
 
-constexpr size_t IconMapSize = static_cast<size_t>(IconId::_NumItems_);
+constexpr size_t IconMapSize = static_cast<size_t>(IconId::NumItems_);
 using IconMap = std::array<text::CodePoint, IconMapSize>;
 
 
@@ -44,10 +44,10 @@ enum class ColorId {
     Hover,
     Focus,
 
-    _NumItems_,
+    NumItems_,
 };
 
-constexpr size_t ColorMapSize = static_cast<size_t>(ColorId::_NumItems_);
+constexpr size_t ColorMapSize = static_cast<size_t>(ColorId::NumItems_);
 using ColorMap = std::array<graphics::Color, ColorMapSize>;
 
 

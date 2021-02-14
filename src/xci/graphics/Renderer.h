@@ -89,7 +89,7 @@ private:
 
 private:
     core::Vfs& m_vfs;
-    static constexpr auto c_num_shaders = (size_t) ShaderId::_NumItems_;
+    static constexpr auto c_num_shaders = (size_t) ShaderId::NumItems_;
     std::array<std::unique_ptr<Shader>, c_num_shaders> m_shader = {};
 
     VkInstance m_instance {};
