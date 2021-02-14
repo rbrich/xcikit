@@ -1,5 +1,11 @@
-:toc: macro
 :sectnums:
+ifdef::env-github[]
+:toc: macro
+:!toc-title:
+endif::[]
+ifndef::env-github[]
+:toc: left
+endif::[]
 
 = xcikit
 
@@ -225,10 +231,10 @@ ccmake ..
 cmake --build .
 
 # Run unit tests
-cmake --build . --target test
+cmake --build . --target 'test'
 
 # Install (default prefix is /usr/local)
-cmake --build . --target install
+cmake --build . --target 'install'
 ----
 
 [#porting-to-windows]
