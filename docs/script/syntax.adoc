@@ -4,7 +4,7 @@ ifdef::env-github[]
 :!toc-title:
 endif::[]
 
-= Fire Script v0.3
+= Fire Script v0.4
 
 *_Syntax reference_*
 
@@ -216,7 +216,7 @@ Return a function from a function:
 [source,fire]
 ----
 sub2 = fun a b { a - b }
-choose = fun x { if (x == "add") add2 sub2 }
+choose = fun x { if (x == "add") then add2 else sub2 }
 choose "add" 1 2
 choose "sub" 1 2
 ----
@@ -240,12 +240,8 @@ else {
 ----
 
 * Spec: `if &lt;cond&gt; then &lt;true-branch&gt; else &lt;false-branch&gt;`
-* The `else` keyword is not required, but it's good to use with longer
- then/else branches for better readability and aesthetics.
-* The parens around condition are not part of syntax, but are required
- around infix operators, including comparison operators.
-* If statement has otherwise same syntax as a function call. The parser
- doesn't even need to know about `if` as a keyword.
+* The parens around condition are optional.
+* The if-expression evaluates to a value -> both branches must have the same type.
 
 Block is a function with zero arguments:
 
@@ -281,6 +277,41 @@ Record field lookup:
 MyRecord = (String name, Int age)
 rec = MyRecord("A name", 42)
 rec.name    // dot operator
+----
+
+=== Pattern matching
+
+Match expression can simplify nested ifs.
+
+Used as simple C-style switch:
+
+[source,fire]
+----
+match an_int {
+    1         => "one"
+    2         => "two"
+    3 | 4 | 5 => "three to five"
+    _         => "other"
+}
+----
+
+Or in combination with destructuring:
+
+[source,fire]
+----
+match a_list {
+    []     => 0
+    [x]    => x
+    [x, y] => x + y
+    [*z]   => sum(z)
+}
+----
+
+Standalone destructuring:
+
+[source,fire]
+----
+let [first, *rest] = a_list
 ----
 
 == Types
