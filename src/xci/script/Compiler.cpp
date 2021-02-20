@@ -20,6 +20,7 @@
 #include "ast/resolve_types.h"
 #include "ast/fold_const_expr.h"
 #include "ast/fold_dot_call.h"
+#include "ast/fold_tuple.h"
 #include "Stack.h"
 #include <xci/compat/macros.h>
 
@@ -129,6 +130,10 @@ public:
         auto idx = module().add_value(std::make_unique<value::String>(v.value));
         // LOAD_STATIC <static_idx>
         code().add_opcode(Opcode::LoadStatic, idx);
+    }
+
+    void visit(ast::Braced& v) override {
+        v.expression->apply(*this);
     }
 
     void visit(ast::Tuple& v) override {
@@ -504,6 +509,10 @@ void Compiler::compile(Function& func, ast::Module& ast)
     // - infer and check types (TypeResolver)
     // - apply optimizations - const fold etc. (Optimizer)
     // See documentation on each function.
+
+    fold_tuple(ast.body);
+    if ((m_flags & PPMask) == PPTuple)
+        return;
 
     fold_dot_call(func, ast.body);
     if ((m_flags & PPMask) == PPDotCall)

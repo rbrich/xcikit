@@ -189,6 +189,15 @@ void FunctionType::copy_to(FunctionType& r) const
 }
 
 
+std::unique_ptr<ast::Expression> Braced::make_copy() const
+{
+    auto r = std::make_unique<Braced>();
+    r->source_info = source_info;
+    r->expression = expression->make_copy();
+    return r;
+}
+
+
 std::unique_ptr<ast::Expression> Tuple::make_copy() const
 {
     auto r = std::make_unique<Tuple>();
@@ -279,6 +288,7 @@ Operator::Operator(const std::string& s, bool prefix)
     char c1 = s[0];
     char c2 = s.c_str()[1];
     switch (c1) {
+        case ',':    op = Comma; break;
         case '|':    op = (c2 == '|')? LogicalOr : BitwiseOr; break;
         case '&':    op = (c2 == '&')? LogicalAnd : BitwiseAnd; break;
         case '^':    op = BitwiseXor; break;
@@ -317,31 +327,32 @@ int Operator::precedence() const
 {
     switch (op) {
         case Undefined:     return 0;
-        case LogicalOr:     return 1;
-        case LogicalAnd:    return 2;
-        case Equal:         return 3;
-        case NotEqual:      return 3;
-        case LessEqual:     return 3;
-        case GreaterEqual:  return 3;
-        case LessThan:      return 3;
-        case GreaterThan:   return 3;
-        case BitwiseOr:     return 4;
-        case BitwiseXor:    return 4;
-        case BitwiseAnd:    return 5;
-        case ShiftLeft:     return 6;
-        case ShiftRight:    return 6;
-        case Add:           return 7;
-        case Sub:           return 7;
-        case Mul:           return 8;
-        case Div:           return 8;
-        case Mod:           return 8;
-        case Exp:           return 9;
-        case Subscript:     return 10;
-        case DotCall:       return 11;
-        case LogicalNot:    return 12;
-        case BitwiseNot:    return 12;
-        case UnaryPlus:     return 12;
-        case UnaryMinus:    return 12;
+        case Comma:         return 2;
+        case LogicalOr:     return 3;
+        case LogicalAnd:    return 4;
+        case Equal:         return 5;
+        case NotEqual:      return 5;
+        case LessEqual:     return 5;
+        case GreaterEqual:  return 5;
+        case LessThan:      return 5;
+        case GreaterThan:   return 5;
+        case BitwiseOr:     return 6;
+        case BitwiseXor:    return 6;
+        case BitwiseAnd:    return 7;
+        case ShiftLeft:     return 8;
+        case ShiftRight:    return 8;
+        case Add:           return 9;
+        case Sub:           return 9;
+        case Mul:           return 10;
+        case Div:           return 10;
+        case Mod:           return 10;
+        case Exp:           return 11;
+        case Subscript:     return 12;
+        case DotCall:       return 13;
+        case LogicalNot:    return 14;
+        case BitwiseNot:    return 14;
+        case UnaryPlus:     return 14;
+        case UnaryMinus:    return 14;
     }
     UNREACHABLE;
 }
@@ -357,6 +368,7 @@ const char* Operator::to_cstr() const
 {
     switch (op) {
         case Operator::Undefined:   return "<undef>";
+        case Operator::Comma:       return ",";
         case Operator::LogicalOr:   return "||";
         case Operator::LogicalAnd:  return "&&";
         case Operator::Equal:       return "==";

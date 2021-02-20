@@ -56,7 +56,7 @@ template <class T> struct SSList: list_tail<T, one<';'>, SpaceOrComment> {};  //
 struct Identifier: seq< not_at<Keyword>, star<one<'_'>>, sor<seq<lower, star<identifier_other>>, plus<digit>> > {};
 struct TypeName: seq< upper, star< identifier_other > > {};
 struct PrefixOperator: sor< one<'-'>, one<'+'>, one<'!'>, one<'~'> > {};
-struct InfixOperator: sor< two<'&'>, two<'|'>, two<'='>, string<'!','='>,
+struct InfixOperator: sor< one<','>, two<'&'>, two<'|'>, two<'='>, string<'!','='>,
                            string<'<','='>, string<'>','='>,
                            two<'<'>, two<'>'>, one<'<'>, one<'>'>,
                            one<'+'>, one<'-'>, two<'*'>, one<'*'>,
@@ -112,8 +112,7 @@ struct ExprDotCallRightI: if_must<one<'.'>, SC, DotCall> {};
 struct ExprInfixRight: seq<sor<ExprDotCallRightI, ExprInfixRightI>, SC, opt<ExprInfixRight>> {};
 struct ExprInfix: seq< ExprOperand, SC, opt<ExprInfixRight> > {};
 struct ExprCond: if_must< KeywordIf, SC, ExprInfix, SC, KeywordThen, SC, Expression, SC, KeywordElse, SC, Expression> {};
-struct ExprTuple: if_must< seq<ExprInfix, SC, one<','>>, SC, ExprInfix, star<SC, one<','>, SC, ExprInfix> > {};
-struct Expression: sor< ExprCond, ExprTuple, ExprInfix > {};
+struct Expression: sor< ExprCond, ExprInfix > {};
 
 // Statements
 struct Definition: seq< Variable, SC, seq<one<'='>, not_at<one<'='>>, SC, must<Expression>> > {};  // must not match `var == ...`
@@ -200,9 +199,8 @@ struct Action<Expression> : change_states< std::unique_ptr<ast::Expression> > {
     }
 
     template<typename Input>
-    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, std::unique_ptr<ast::Expression>& outer_expr) {
-        // outer is BracedExpr
-        outer_expr = std::move(expr);
+    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Braced& braced_expr) {
+        braced_expr.expression = std::move(expr);
     }
 };
 
@@ -321,11 +319,6 @@ struct Action<ExprInfix> : change_states< ast::OpCall > {
     }
 
     template<typename Input>
-    static void success(const Input &in, ast::OpCall& opc, ast::Tuple& tpl) {
-        tpl.items.emplace_back(prepare_expression(opc));
-    }
-
-    template<typename Input>
     static void success(const Input &in, ast::OpCall& opc, ast::List& lst) {
         lst.items.emplace_back(prepare_expression(opc));
     }
@@ -361,15 +354,15 @@ struct Action<ExprCond> : change_states< ast::Condition > {
 
 
 template<>
-struct Action<ExprTuple> : change_states< ast::Tuple > {
+struct Action<BracedExpr> : change_states< ast::Braced > {
     template<typename Input>
-    static void apply(const Input &in, ast::Tuple& tpl) {
-        tpl.source_info.load(in.input(), in.position());
+    static void apply(const Input &in, ast::Braced& braced) {
+        braced.source_info.load(in.input(), in.position());
     }
 
     template<typename Input>
-    static void success(const Input &in, ast::Tuple& tpl, std::unique_ptr<ast::Expression>& expr) {
-        expr = std::make_unique<ast::Tuple>(std::move(tpl));
+    static void success(const Input &in, ast::Braced& braced, std::unique_ptr<ast::Expression>& expr) {
+        expr = std::make_unique<ast::Braced>(std::move(braced));
     }
 };
 

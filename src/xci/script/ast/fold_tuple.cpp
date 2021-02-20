@@ -1,10 +1,10 @@
-// fold_dot_call.cpp created on 2020-01-15 as part of xcikit project
+// fold_tuple.cpp created on 2021-02-20 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020 Radek Brich
+// Copyright 2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#include "fold_dot_call.h"
+#include "fold_tuple.h"
 #include <xci/script/Function.h>
 #include <xci/script/Module.h>
 
@@ -14,11 +14,8 @@ using std::unique_ptr;
 using std::move;
 
 
-class FoldDotCallVisitor final: public ast::Visitor {
+class FoldTupleVisitor final: public ast::Visitor {
 public:
-    explicit FoldDotCallVisitor(Function& func)
-        : m_function(func) {}
-
     void visit(ast::Definition& dfn) override {
         apply_and_fold(dfn.expression);
     }
@@ -44,14 +41,21 @@ public:
         }
         assert(!v.callable);
 
-        if (v.op.is_dot_call()) {
-            // collapse inner Call into outer OpCall (with op=DotCall)
+        if (v.op.is_comma()) {
+            // collapse comma operator to tuple items
             assert(!v.right_tmp);
-            assert(v.args.size() == 2);
-            m_collapsed = move(v.args[1]);
-            auto* call = dynamic_cast<ast::Call*>(m_collapsed.get());
-            assert(call != nullptr);
-            call->args.insert(call->args.begin(), move(v.args[0]));
+            m_collapsed = std::make_unique<ast::Tuple>();
+            for (auto& expr : v.args) {
+                auto* tuple = dynamic_cast<ast::Tuple*>(expr.get());
+                if (tuple == nullptr) {
+                    // subexpr is not a tuple
+                    m_collapsed->items.push_back(std::move(expr));
+                } else {
+                    // it is a tuple, fold it
+                    std::move(std::begin(tuple->items), std::end(tuple->items),
+                            std::back_inserter(m_collapsed->items));
+                }
+            }
         }
     }
 
@@ -68,7 +72,18 @@ public:
     }
 
     void visit(ast::Braced& v) override {
-        v.expression->apply(*this);
+        apply_and_fold(v.expression);
+    }
+
+    void visit(ast::List& v) override {
+        assert(v.items.size() <= 1);
+        for (auto& item : v.items) {
+            item->apply(*this);
+            if (m_collapsed) {
+                v.items = std::move(m_collapsed->items);
+                m_collapsed.reset();
+            }
+        }
     }
 
     void visit(ast::Integer&) override {}
@@ -76,7 +91,6 @@ public:
     void visit(ast::Char&) override {}
     void visit(ast::String&) override {}
     void visit(ast::Tuple&) override {}
-    void visit(ast::List&) override {}
     void visit(ast::Reference&) override {}
 
     void visit(ast::Class&) override {}
@@ -87,9 +101,6 @@ public:
     void visit(ast::ListType&) final {}
 
 private:
-    Module& module() { return m_function.module(); }
-
-private:
     void apply_and_fold(unique_ptr<ast::Expression>& expr) {
         expr->apply(*this);
         if (m_collapsed) {
@@ -98,14 +109,13 @@ private:
     }
 
 private:
-    Function& m_function;
-    unique_ptr<ast::Expression> m_collapsed;
+    unique_ptr<ast::Tuple> m_collapsed;
 };
 
 
-void fold_dot_call(Function& func, const ast::Block& block)
+void fold_tuple(const ast::Block& block)
 {
-    FoldDotCallVisitor visitor {func};
+    FoldTupleVisitor visitor;
     for (const auto& stmt : block.statements) {
         stmt->apply(visitor);
     }

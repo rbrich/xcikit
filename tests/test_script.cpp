@@ -21,6 +21,7 @@
 #include <xci/script/Stack.h>
 #include <xci/script/SymbolTable.h>
 #include <xci/script/NativeDelegate.h>
+#include <xci/script/ast/fold_tuple.h>
 #include <xci/script/dump.h>
 #include <xci/core/Vfs.h>
 #include <xci/core/log.h>
@@ -40,6 +41,7 @@ void check_parser(const string& input, const string& expected_output)
     Parser parser;
     ast::Module ast;
     parser.parse(input, ast);
+    fold_tuple(ast.body);
     ostringstream os;
     os << ast;
     CHECK( os.str() == expected_output );
@@ -97,9 +99,11 @@ TEST_CASE( "Values", "[script][parser]" )
     check_parser("\"string literal\"", "\"string literal\"");
     check_parser("\"escape sequences: \\\"\\n\\0\\x12 \"", "\"escape sequences: \\\"\\n\\0\\x12 \"");
     check_parser("$$ raw \n\r\t\" string $$", "\" raw \\n\\r\\t\\\" string \"");
-    check_parser("1,2,3", "(1, 2, 3)");  // comma operator makes tuple, braces are optional
-    check_parser("(1,2,\"str\")", "(1, 2, \"str\")");
-    check_parser("[1,2,3]", "[1, 2, 3]");
+    check_parser("1,2,3", "1, 2, 3");  // naked tuple
+    check_parser("(1,2,\"str\")", "(1, 2, \"str\")");  // braced tuple
+    check_parser("[1,2,3]", "[1, 2, 3]");  // list
+    check_parser("[(1,2,3,4)]", "[(1, 2, 3, 4)]");  // list with a tuple item
+    check_parser("[(1,2,3,4), 5]", "[(1, 2, 3, 4), 5]");
 }
 
 
@@ -119,7 +123,7 @@ TEST_CASE( "Operator precedence", "[script][parser]" )
     check_parser("a ** b ** c ** d", "(a ** (b ** (c ** d)))");
     // functions
     check_parser("a fun b {} c", "a fun b {void} c");
-    check_parser("a (fun b {}) c", "a fun b {void} c");
+    check_parser("a (fun b {}) c", "a (fun b {void}) c");
     // function calls
     check_interpreter("succ 9 + max 5 4 + 1", "16");
     check_interpreter("(succ 9) + (max 5 4) + 1", "16");

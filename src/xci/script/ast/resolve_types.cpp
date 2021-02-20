@@ -111,6 +111,10 @@ public:
     void visit(ast::Char& v) override { m_value_type = TypeInfo{Type::Char}; }
     void visit(ast::String& v) override { m_value_type = TypeInfo{Type::String}; }
 
+    void visit(ast::Braced& v) override {
+        v.expression->apply(*this);
+    }
+
     void visit(ast::Tuple& v) override {
         // build TypeInfo from subtypes
         std::vector<TypeInfo> subtypes;

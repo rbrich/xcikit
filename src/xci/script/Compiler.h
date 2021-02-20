@@ -34,10 +34,11 @@ public:
 
         // parse & process only, do no compile into bytecode
         PPMask      = 7 << 24,
-        PPDotCall   = 1 << 24,    // stop after fold_dot_call pass
-        PPSymbols   = 2 << 24,    // stop after resolve_symbols pass
-        PPTypes     = 3 << 24,    // stop after resolve_types pass
-        PPNonlocals = 4 << 24,    // stop after resolve_nonlocals pass
+        PPTuple     = 1 << 24,    // stop after fold_tuple pass
+        PPDotCall   = 2 << 24,    // stop after fold_dot_call pass
+        PPSymbols   = 3 << 24,    // stop after resolve_symbols pass
+        PPTypes     = 4 << 24,    // stop after resolve_types pass
+        PPNonlocals = 5 << 24,    // stop after resolve_nonlocals pass
     };
 
     Compiler() = default;

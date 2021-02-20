@@ -179,6 +179,7 @@ const char* builtin::op_to_name(ast::Operator::Op op)
     using Op = ast::Operator;
     switch (op) {
         case Op::Undefined:     return nullptr;
+        case Op::Comma:         return ",";
         case Op::LogicalOr:     return "||";
         case Op::LogicalAnd:    return "&&";
         case Op::Equal:         return "==";
@@ -214,6 +215,7 @@ const char* builtin::op_to_function_name(ast::Operator::Op op)
     using Op = ast::Operator;
     switch (op) {
         case Op::Undefined:     return nullptr;
+        case Op::Comma:         return nullptr;
         case Op::LogicalOr:     return "or";
         case Op::LogicalAnd:    return "and";
         case Op::Equal:         return "eq";

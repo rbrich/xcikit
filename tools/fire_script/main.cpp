@@ -240,6 +240,7 @@ int main(int argc, char* argv[])
             Option("-s, --symtab", "Print symbol table", opts.print_symtab),
             Option("-m, --module", "Print compiled module content", opts.print_module),
             Option("--trace", "Trace bytecode", opts.trace_bytecode),
+            Option("--pp-tuple", "Stop after fold_tuple pass", [&opts]{ opts.compiler_flags |= Compiler::PPTuple; }),
             Option("--pp-dotcall", "Stop after fold_dot_call pass", [&opts]{ opts.compiler_flags |= Compiler::PPDotCall; }),
             Option("--pp-symbols", "Stop after resolve_symbols pass", [&opts]{ opts.compiler_flags |= Compiler::PPSymbols; }),
             Option("--pp-types", "Stop after resolve_types pass", [&opts]{ opts.compiler_flags |= Compiler::PPTypes; }),
