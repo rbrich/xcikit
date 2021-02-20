@@ -1,10 +1,7 @@
 :sectnums:
-ifdef::env-github[]
 :toc: macro
+ifdef::env-github[]
 :!toc-title:
-endif::[]
-ifndef::env-github[]
-:toc: left
 endif::[]
 
 = xcikit
@@ -91,7 +88,7 @@ Technologies:
 Tested compilers:
 
 * GCC 10 (Debian 11 Bullseye)
-* Clang 10 (MacOS via Homebrew)
+* Clang 10 (macOS via Homebrew)
 
 Any Unix-like OS with C++20 compliant compiler should work. There is no direct Windows support, but it's possible that the project will compile with some layer of Unix compatibility, e.g. WSL. Some of the libraries already compile natively, see <<porting-to-windows,Porting to Windows>>.
 
@@ -111,7 +108,17 @@ The basic building blocks for rendering of text and UI elements.
 
 === xci::script
 
-A scripting language.
+Experimental scripting language with bytecode interpreter and C transpiler.
+
+Docs:
+
+* link:docs/script/syntax.adoc[Fire Script Syntax Reference]
++
+It's not fully implemented, so it's more precisely a design document at this time. It will become actual reference in version 1.0.
+
+* link:docs/script/machine.adoc[Fire Script Virtual Machine]
+
+The C transpiler is not yet available.
 
 === xci::data
 

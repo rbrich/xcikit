@@ -4,7 +4,7 @@ ifdef::env-github[]
 :!toc-title:
 endif::[]
 
-= Script Virtual Machine
+= Fire Script Virtual Machine
 
 toc::[]
 
