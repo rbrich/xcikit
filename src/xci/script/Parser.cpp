@@ -101,7 +101,7 @@ struct Function: sor< Block, if_must< KeywordFun, SC, FunctionDecl, SC, Block> >
 struct BracedExpr: if_must< one<'('>, SC, Expression, SC, one<')'> > {};
 struct ExprPrefix: if_must< PrefixOperator, SC, ExprOperand, SC > {};
 struct Reference: seq< Identifier > {};
-struct List: if_must< one<'['>, SC, sor<one<']'>, seq<ExprInfix, SC, until<one<']'>, one<','>, SC, ExprInfix, SC>>> > {};
+struct List: if_must< one<'['>, SC, opt<ExprInfix, SC>, one<']'> > {};
 struct ExprCallable: sor< BracedExpr, Function, Reference> {};
 struct ExprArgSafe: sor< BracedExpr, List, Function, Literal, Reference > {};  // expressions which can be used as args in Call
 struct Call: seq< ExprCallable, plus<RSC, ExprArgSafe> > {};
