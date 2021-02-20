@@ -9,6 +9,7 @@ Checks: >
   misc-*,
   -misc-unused-parameters,
   -misc-non-private-member-variables-in-classes,
+  -misc-no-recursion,
   modernize-*,
   -modernize-avoid-c-arrays,
   -modernize-deprecated-headers,

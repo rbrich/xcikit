@@ -30,7 +30,7 @@ namespace xci::script {
 class HeapSlot {
 public:
     // new uninitialized slot
-    HeapSlot() : m_slot(nullptr) {}
+    HeapSlot() = default;
     // bind to existing slot
     explicit HeapSlot(std::byte* slot) : m_slot(slot) {}
     // create new slot with refcount = 1
@@ -58,7 +58,7 @@ public:
     explicit operator bool() const { return m_slot != nullptr; }
 
 private:
-    std::byte* m_slot;
+    std::byte* m_slot = nullptr;
 };
 
 

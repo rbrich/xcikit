@@ -24,7 +24,7 @@
 // Possible future C++ replacement is "spanstream",
 // see http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/p2139r2.html#3.12
 // GCC: pragma diagnostic doesn't disable the warning, let's use this ugly hack...
-#define _BACKWARD_BACKWARD_WARNING_H 1
+#define _BACKWARD_BACKWARD_WARNING_H 1  // NOLINT
 #include <strstream>
 #undef _BACKWARD_BACKWARD_WARNING_H
 

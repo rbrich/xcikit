@@ -27,9 +27,9 @@ class FireLexer(CLexer):
     .. versionadded:: 2.0
     """
     name = 'Fire'
-    aliases = ['fire']
-    filenames = ['*.fire']
-    mimetypes = ['text/x-fire-script']
+    aliases = ('fire',)
+    filenames = ('*.fire',)
+    mimetypes = ('text/x-fire-script',)
 
     tokens = {
         'statements': [

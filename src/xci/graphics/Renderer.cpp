@@ -261,7 +261,7 @@ bool Renderer::load_shader(ShaderId shader_id, Shader& shader)
             return shader.load_from_vfs(vfs(),
                     "shaders/cursor.vert.spv",
                     "shaders/cursor.frag.spv");
-        case ShaderId::_NumItems_:
+        case ShaderId::NumItems_:
             return false;
     }
     UNREACHABLE;

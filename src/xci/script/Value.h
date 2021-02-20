@@ -169,7 +169,7 @@ public:
 
 class Bool: public Value {
 public:
-    Bool() : m_value(false) {}
+    Bool() = default;
     explicit Bool(bool v) : m_value(v) {}
     std::unique_ptr<Value> make_copy() const override { return std::make_unique<Bool>(m_value); }
 
@@ -182,13 +182,13 @@ public:
     bool value() const { return m_value; }
 
 private:
-    bool m_value;
+    bool m_value = false;
 };
 
 
 class Byte: public Value {
 public:
-    Byte() : m_value(0) {}
+    Byte() = default;
     explicit Byte(uint8_t v) : m_value(v) {}
     std::unique_ptr<Value> make_copy() const override { return std::make_unique<Byte>(m_value); }
 
@@ -201,13 +201,13 @@ public:
     uint8_t value() const { return m_value; }
 
 private:
-    uint8_t m_value;
+    uint8_t m_value = 0;
 };
 
 
 class Char: public Value {
 public:
-    Char() : m_value(0) {}
+    Char() = default;
     explicit Char(char32_t v) : m_value(v) {}
     std::unique_ptr<Value> make_copy() const override { return std::make_unique<Char>(m_value); }
 
@@ -220,13 +220,13 @@ public:
     char32_t value() const { return m_value; }
 
 private:
-    char32_t m_value;
+    char32_t m_value = 0;
 };
 
 
 class Int32: public Value {
 public:
-    Int32() : m_value(0) {}
+    Int32() = default;
     explicit Int32(int32_t v) : m_value(v) {}
     std::unique_ptr<Value> make_copy() const override { return std::make_unique<Int32>(m_value); }
 
@@ -239,13 +239,13 @@ public:
     int32_t value() const { return m_value; }
 
 private:
-    int32_t m_value;
+    int32_t m_value = 0;
 };
 
 
 class Int64: public Value {
 public:
-    Int64() : m_value(0) {}
+    Int64() = default;
     explicit Int64(int64_t v) : m_value(v) {}
     std::unique_ptr<Value> make_copy() const override { return std::make_unique<Int64>(m_value); }
 
@@ -258,13 +258,13 @@ public:
     int64_t value() const { return m_value; }
 
 private:
-    int64_t m_value;
+    int64_t m_value = 0;
 };
 
 
 class Float32: public Value {
 public:
-    Float32() : m_value(0.0f) {}
+    Float32() = default;
     explicit Float32(float v) : m_value(v) {}
     std::unique_ptr<Value> make_copy() const override { return std::make_unique<Float32>(m_value); }
 
@@ -277,13 +277,13 @@ public:
     float value() const { return m_value; }
 
 private:
-    float m_value;
+    float m_value = 0.0f;
 };
 
 
 class Float64: public Value {
 public:
-    Float64() : m_value(0.0) {}
+    Float64() = default;
     explicit Float64(double v) : m_value(v) {}
     std::unique_ptr<Value> make_copy() const override { return std::make_unique<Float64>(m_value); }
 
@@ -296,7 +296,7 @@ public:
     double value() const { return m_value; }
 
 private:
-    double m_value;
+    double m_value = 0.0;
 };
 
 
@@ -412,7 +412,7 @@ private:
 
 class Closure: public Value {
 public:
-    Closure() : m_function(nullptr) {}
+    Closure() = default;
     explicit Closure(Function& v);
     explicit Closure(Function& v, Values&& values);
     explicit Closure(Function& v, HeapSlot slot) : m_function(&v), m_closure(std::move(slot)) {}
@@ -434,14 +434,14 @@ public:
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
 
 private:
-    Function* m_function;
+    Function* m_function = nullptr;
     HeapSlot m_closure;
 };
 
 
 class Module: public Value {
 public:
-    Module() : m_module(nullptr) {}
+    Module() = default;
     explicit Module(script::Module& v) : m_module(&v) {}
     std::unique_ptr<Value> make_copy() const override { return std::make_unique<Module>(*m_module); }
 
@@ -456,7 +456,7 @@ public:
     const script::Module& module() const { return *m_module; }
 
 private:
-    script::Module* m_module;
+    script::Module* m_module = nullptr;
 };
 
 

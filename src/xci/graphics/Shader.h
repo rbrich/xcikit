@@ -30,7 +30,7 @@ enum class ShaderId {
     Fps,
     Cursor,
 
-    _NumItems_
+    NumItems_
 };
 
 
