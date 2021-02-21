@@ -48,9 +48,10 @@ struct UnsafeType;
 // Spaces and comments
 struct LineComment: if_must< two<'/'>, until<eolf> > {};
 struct BlockComment: if_must< string<'/', '*'>, until< string<'*', '/'>, any > > {};
-struct SemicolonOrNewline: sor<one<';', '\n', '\r'>, LineComment> {};
-struct SpaceOrComment: sor< blank, BlockComment> {};
-struct NlSpaceOrComment: sor< space, LineComment, BlockComment > {};
+struct EscapedNewline: seq< one<'\\'>, eol> {};
+struct SpaceOrComment: sor< blank, EscapedNewline, BlockComment> {};
+struct NlSpaceOrComment: sor< space, EscapedNewline, LineComment, BlockComment > {};
+struct SemicolonOrNewline: sor<one<';'>, eol, LineComment> {};
 struct SC: star< SpaceOrComment > {};  // optional space or comments
 struct NSC: star< NlSpaceOrComment > {};  // optional newlines, space or comments
 struct RS: at<space> {};  // require space
@@ -124,7 +125,7 @@ struct ExprOperand: sor<Call, ExprArgSafe, ExprPrefix> {};
 struct ExprCond: if_must< KeywordIf, NSC, ExprInfix<NSC>, NSC, KeywordThen, NSC, Expression<SC>, NSC, KeywordElse, NSC, Expression<SC>> {};
 
 // Statements
-struct Definition: seq< Variable, SC, seq<one<'='>, not_at<one<'='>>, SC, must<Expression<SC>>> > {};  // must not match `var == ...`
+struct Definition: seq< Variable, SC, seq<one<'='>, not_at<one<'='>>, NSC, must<Expression<SC>>> > {};  // must not match `var == ...`
 struct Statement: sor< Definition, Expression<SC> > {};
 
 // Module-level definitions
