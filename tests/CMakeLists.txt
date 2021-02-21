@@ -7,11 +7,7 @@ include(Catch)
 
 add_library(catch_main STATIC catch_main.cpp)
 target_link_libraries(catch_main Catch2::Catch2)
-target_compile_definitions(catch_main
-    PUBLIC
-        CATCH_CONFIG_FAST_COMPILE
-    INTERFACE
-        CATCH_CONFIG_DISABLE_MATCHERS)
+target_compile_definitions(catch_main PUBLIC CATCH_CONFIG_FAST_COMPILE)
 
 macro(add_catch_test name source)
     add_executable(${name} ${source})

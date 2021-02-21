@@ -10,8 +10,12 @@
 
 #include <tao/pegtl.hpp>
 #include <tao/pegtl/contrib/raw_string.hpp>
+
+#ifndef NDEBUG
+#include <tao/pegtl/contrib/analyze.hpp>
+#endif
+
 #include <fmt/core.h>
-#include <iostream>
 
 // Enable for detailed trace of Grammar rules being matched
 // #define XCI_SCRIPT_PARSER_TRACE
@@ -33,34 +37,38 @@ using namespace xci::core::parser::unescape;
 // Grammar
 
 struct Keyword;
-struct Expression;
+struct ExprCond;
 struct Statement;
 struct ExprArgSafe;
 struct ExprOperand;
-struct ExprInfix;
+struct ExprCallable;
 struct Type;
 struct UnsafeType;
 
 // Spaces and comments
 struct LineComment: if_must< two<'/'>, until<eolf> > {};
 struct BlockComment: if_must< string<'/', '*'>, until< string<'*', '/'>, any > > {};
-struct SpaceOrComment: sor< space, LineComment, BlockComment> {};
-struct SC: star< SpaceOrComment > {};
-struct RSC: seq<space, SC> {};  // required at least one space
+struct EscapedNewline: seq< one<'\\'>, eol> {};
+struct SpaceOrComment: sor< blank, EscapedNewline, BlockComment> {};
+struct NlSpaceOrComment: sor< space, EscapedNewline, LineComment, BlockComment > {};
+struct SemicolonOrNewline: sor<one<';'>, eol, LineComment> {};
+struct SC: star< SpaceOrComment > {};  // optional space or comments
+struct NSC: star< NlSpaceOrComment > {};  // optional newlines, space or comments
+struct RS: at<space> {};  // require space
 
 // Aux templates
-template <class T> struct SSList: list_tail<T, one<';'>, SpaceOrComment> {};  // semicolon-separated list
+template<class T> struct SepList: list_tail<T, seq<SC, SemicolonOrNewline, NSC> > {};  // list separated by either semicolon or newline
 
 // Basic tokens
 //                 underscore* (lower identifier_other* | digit+)
 struct Identifier: seq< not_at<Keyword>, star<one<'_'>>, sor<seq<lower, star<identifier_other>>, plus<digit>> > {};
 struct TypeName: seq< upper, star< identifier_other > > {};
 struct PrefixOperator: sor< one<'-'>, one<'+'>, one<'!'>, one<'~'> > {};
-struct InfixOperator: sor< two<'&'>, two<'|'>, two<'='>, string<'!','='>,
+struct InfixOperator: sor< one<','>, two<'&'>, two<'|'>, two<'='>, string<'!','='>,
                            string<'<','='>, string<'>','='>,
                            two<'<'>, two<'>'>, one<'<'>, one<'>'>,
                            one<'+'>, one<'-'>, two<'*'>, one<'*'>,
-                           one<'/'>, one<'%'>, one<'!'>,
+                           seq<one<'/'>, not_at<one<'/'>>>, one<'%'>, one<'!'>,
                            one<'&'>, one<'|'>, one<'^'> > {};
 
 // Keywords
@@ -84,11 +92,19 @@ struct RawString : raw_string< '$', '-', '$' > {};  // raw_string = $$ raw text!
 struct Literal: sor< Float, Integer, Char, String, RawString > {};
 
 // Expressions
+// * some rules are parametrized with S (space type), choose either SC or NSC (allow newline)
+// * in general, rules inside braces use NSC, rules outside braces use SC
+// * this allows leaving out semicolons but still support multiline expressions
+template<class S> struct DotCall: if_must< one<'.'>, SC, seq< ExprCallable, star<RS, S, ExprArgSafe> > > {};
+template<class S> struct ExprInfixRight: seq< sor< DotCall<S>, if_must<InfixOperator, S, ExprOperand> >, S, opt< ExprInfixRight<S> > > {};
+template<class S> struct ExprInfix: seq< ExprOperand, S, opt<ExprInfixRight<S> > > {};
+template<> struct ExprInfix<SC>: seq< ExprOperand, sor< seq<NSC, at< one<'.'> > >, SC>, opt<ExprInfixRight<SC> > > {};  // specialization to allow newline before dotcall even outside braces
+template<class S> struct Expression: sor< ExprCond, ExprInfix<S> > {};
 struct Variable: seq< Identifier, opt<SC, one<':'>, SC, must<UnsafeType> > > {};
 struct Parameter: sor< Type, seq< Identifier, opt<SC, one<':'>, SC, must<Type> > > > {};
 struct DeclParams: seq< plus<Parameter, SC> > {};
 struct DeclResult: if_must< string<'-', '>'>, SC, Type > {};
-struct TypeConstraint: seq<TypeName, RSC, TypeName> {};
+struct TypeConstraint: seq<TypeName, RS, SC, TypeName> {};
 struct TypeContext: if_must< one<'('>, SC, TypeConstraint, SC, star_must<one<','>, SC, TypeConstraint, SC>, one<')'> > {};
 struct FunctionType: seq< DeclParams, SC, DeclResult > {};
 struct FunctionDecl: seq< DeclParams, SC, opt<DeclResult>, SC, opt<if_must<KeywordWith, SC, TypeContext>> > {};
@@ -96,40 +112,32 @@ struct ListType: if_must< one<'['>, SC, Type, SC, one<']'> > {};
 struct UnsafeType: sor<FunctionType, ListType, TypeName> {};   // usable in context where Type is already expected
 struct BracedType: if_must< one<'('>, SC, UnsafeType, SC, one<')'> > {};
 struct Type: sor< BracedType, ListType, TypeName > {};
-struct Block: if_must< one<'{'>, SC, sor< one<'}'>, seq<SSList<Statement>, SC, one<'}'>> > > {};
-struct Function: sor< Block, if_must< KeywordFun, SC, FunctionDecl, SC, Block> > {};
-struct BracedExpr: if_must< one<'('>, SC, Expression, SC, one<')'> > {};
+struct Block: if_must< one<'{'>, NSC, sor< one<'}'>, seq<SepList<Statement>, NSC, one<'}'>> > > {};
+struct Function: sor< Block, if_must< KeywordFun, NSC, FunctionDecl, NSC, Block> > {};
+struct BracedExpr: if_must< one<'('>, NSC, Expression<NSC>, NSC, one<')'> > {};
 struct ExprPrefix: if_must< PrefixOperator, SC, ExprOperand, SC > {};
 struct Reference: seq< Identifier > {};
-struct List: if_must< one<'['>, SC, sor<one<']'>, seq<ExprInfix, SC, until<one<']'>, one<','>, SC, ExprInfix, SC>>> > {};
+struct List: if_must< one<'['>, NSC, opt<ExprInfix<NSC>, NSC>, one<']'> > {};
 struct ExprCallable: sor< BracedExpr, Function, Reference> {};
 struct ExprArgSafe: sor< BracedExpr, List, Function, Literal, Reference > {};  // expressions which can be used as args in Call
-struct Call: seq< ExprCallable, plus<RSC, ExprArgSafe> > {};
-struct DotCall: seq< ExprCallable, star<RSC, ExprArgSafe> > {};
+struct Call: seq< ExprCallable, plus<RS, SC, ExprArgSafe> > {};
 struct ExprOperand: sor<Call, ExprArgSafe, ExprPrefix> {};
-struct ExprInfixRightI: if_must<InfixOperator, SC, ExprOperand> {};
-struct ExprDotCallRightI: if_must<one<'.'>, SC, DotCall> {};
-struct ExprInfixRight: seq<sor<ExprDotCallRightI, ExprInfixRightI>, SC, opt<ExprInfixRight>> {};
-struct ExprInfix: seq< ExprOperand, SC, opt<ExprInfixRight> > {};
-struct ExprCond: if_must< KeywordIf, SC, ExprInfix, SC, KeywordThen, SC, Expression, SC, KeywordElse, SC, Expression> {};
-struct ExprTuple: if_must< seq<ExprInfix, SC, one<','>>, SC, ExprInfix, star<SC, one<','>, SC, ExprInfix> > {};
-struct Expression: sor< ExprCond, ExprTuple, ExprInfix > {};
+struct ExprCond: if_must< KeywordIf, NSC, ExprInfix<NSC>, NSC, KeywordThen, NSC, Expression<SC>, NSC, KeywordElse, NSC, Expression<SC>> {};
 
 // Statements
-struct Definition: seq< Variable, SC, seq<one<'='>, not_at<one<'='>>, SC, must<Expression>> > {};  // must not match `var == ...`
-struct Invocation: seq< Expression > {};
-struct Statement: sor< Definition, Invocation > {};
+struct Definition: seq< Variable, SC, seq<one<'='>, not_at<one<'='>>, NSC, must<Expression<SC>>> > {};  // must not match `var == ...`
+struct Statement: sor< Definition, Expression<SC> > {};
 
 // Module-level definitions
-struct ClassDefinition: seq< Variable, SC, opt_must<one<'='>, SC, Expression> > {};
-struct DefClass: if_must< KeywordClass, SC, TypeName, RSC, TypeName, SC, opt<TypeContext>, SC,
-        one<'{'>, SC, sor< one<'}'>, must<SSList<ClassDefinition>, SC, one<'}'>> > > {};
-struct DefInstance: if_must< KeywordInstance, SC, TypeName, RSC, Type, SC, opt<TypeContext>, SC,
-        one<'{'>, SC, sor< one<'}'>, must<SSList<Definition>, SC, one<'}'>> > > {};
+struct ClassDefinition: seq< Variable, SC, opt_must<one<'='>, SC, Expression<SC>> > {};
+struct DefClass: if_must< KeywordClass, NSC, TypeName, RS, SC, TypeName, SC, opt<TypeContext>, NSC,
+        one<'{'>, NSC, sor< one<'}'>, must<SepList<ClassDefinition>, NSC, one<'}'>> > > {};
+struct DefInstance: if_must< KeywordInstance, NSC, TypeName, RS, SC, Type, SC, opt<TypeContext>, NSC,
+        one<'{'>, NSC, sor< one<'}'>, must<SepList<Definition>, NSC, one<'}'>> > > {};
 struct TopLevelStatement: sor<DefClass, DefInstance, Statement> {};
 
 // Source module
-struct Module: must<SC, SSList<TopLevelStatement>, SC, eof> {};
+struct Module: must<NSC, SepList<TopLevelStatement>, NSC, eof> {};
 
 
 // ----------------------------------------------------------------------------
@@ -158,35 +166,26 @@ struct Action<Definition> : change_states< ast::Definition > {
 };
 
 
-template<>
-struct Action<Invocation> : change_states< ast::Invocation > {
-    template<typename Input>
-    static void success(const Input &in, ast::Invocation& inv, ast::Module& mod) {
-        mod.body.statements.push_back(std::make_unique<ast::Invocation>(std::move(inv)));
-    }
-
-    template<typename Input>
-    static void success(const Input &in, ast::Invocation& inv, ast::Block& block) {
-        block.statements.push_back(std::make_unique<ast::Invocation>(std::move(inv)));
-    }
-};
-
-
-template<>
-struct Action<Expression> : change_states< std::unique_ptr<ast::Expression> > {
+template<class S>
+struct Action<Expression<S>> : change_states< std::unique_ptr<ast::Expression> > {
     template<typename Input>
     static void apply(const Input &in, std::unique_ptr<ast::Expression>& expr) {
         expr->source_info.load(in.input(), in.position());
     }
 
     template<typename Input>
-    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Definition& def) {
-        def.expression = std::move(expr);
+    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Module& mod) {
+        mod.body.statements.push_back(std::make_unique<ast::Invocation>(std::move(expr)));
     }
 
     template<typename Input>
-    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Invocation& inv) {
-        inv.expression = std::move(expr);
+    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Block& block) {
+        block.statements.push_back(std::make_unique<ast::Invocation>(std::move(expr)));
+    }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Definition& def) {
+        def.expression = std::move(expr);
     }
 
     template<typename Input>
@@ -200,9 +199,8 @@ struct Action<Expression> : change_states< std::unique_ptr<ast::Expression> > {
     }
 
     template<typename Input>
-    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, std::unique_ptr<ast::Expression>& outer_expr) {
-        // outer is BracedExpr
-        outer_expr = std::move(expr);
+    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Braced& braced_expr) {
+        braced_expr.expression = std::move(expr);
     }
 };
 
@@ -251,8 +249,8 @@ struct Action<InfixOperator> {
 };
 
 
-template<>
-struct Action<ExprInfixRight> : change_states< ast::OpCall > {
+template<class S>
+struct Action<ExprInfixRight<S>> : change_states< ast::OpCall > {
     template<typename Input>
     static void apply(const Input &in, ast::OpCall& opc) {
         opc.source_info.load(in.input(), in.position());
@@ -303,8 +301,8 @@ struct Action<ExprInfixRight> : change_states< ast::OpCall > {
 };
 
 
-template<>
-struct Action<ExprInfix> : change_states< ast::OpCall > {
+template<class S>
+struct Action<ExprInfix<S>> : change_states< ast::OpCall > {
     template<typename Input>
     static void apply(const Input &in, ast::OpCall& opc) {
         opc.source_info.load(in.input(), in.position());
@@ -318,11 +316,6 @@ struct Action<ExprInfix> : change_states< ast::OpCall > {
     template<typename Input>
     static void success(const Input &in, ast::OpCall& opc, ast::Condition& cnd) {
         cnd.cond = prepare_expression(opc);
-    }
-
-    template<typename Input>
-    static void success(const Input &in, ast::OpCall& opc, ast::Tuple& tpl) {
-        tpl.items.emplace_back(prepare_expression(opc));
     }
 
     template<typename Input>
@@ -361,15 +354,15 @@ struct Action<ExprCond> : change_states< ast::Condition > {
 
 
 template<>
-struct Action<ExprTuple> : change_states< ast::Tuple > {
+struct Action<BracedExpr> : change_states< ast::Braced > {
     template<typename Input>
-    static void apply(const Input &in, ast::Tuple& tpl) {
-        tpl.source_info.load(in.input(), in.position());
+    static void apply(const Input &in, ast::Braced& braced) {
+        braced.source_info.load(in.input(), in.position());
     }
 
     template<typename Input>
-    static void success(const Input &in, ast::Tuple& tpl, std::unique_ptr<ast::Expression>& expr) {
-        expr = std::make_unique<ast::Tuple>(std::move(tpl));
+    static void success(const Input &in, ast::Braced& braced, std::unique_ptr<ast::Expression>& expr) {
+        expr = std::make_unique<ast::Braced>(std::move(braced));
     }
 };
 
@@ -466,8 +459,8 @@ struct Action<Call> : change_states< ast::Call > {
 };
 
 
-template<>
-struct Action<DotCall> : change_states< ast::Call > {
+template<class S>
+struct Action<DotCall<S>> : change_states< ast::Call > {
     template<typename Input>
     static void apply(const Input &in, ast::Call& call) {
         call.source_info.load(in.input(), in.position());
@@ -859,10 +852,12 @@ struct Control : normal< Rule >
 #endif
 };
 
-template<> const std::string Control<eof>::errmsg = "unexpected statement (missing semicolon?)";
-template<> const std::string Control<Expression>::errmsg = "expected Expression";
+template<> const std::string Control<eof>::errmsg = "invalid syntax";
+template<> const std::string Control<Expression<SC>>::errmsg = "expected Expression";
+template<> const std::string Control<Expression<NSC>>::errmsg = "expected Expression";
 template<> const std::string Control<DeclParams>::errmsg = "expected function parameter declaration";
-template<> const std::string Control<ExprInfixRight>::errmsg = "expected infix operator";
+template<> const std::string Control<ExprInfixRight<SC>>::errmsg = "expected infix operator";
+template<> const std::string Control<ExprInfixRight<NSC>>::errmsg = "expected infix operator";
 template<> const std::string Control<Variable>::errmsg = "expected variable name";
 
 // default message
@@ -893,12 +888,21 @@ void Parser::parse(std::string_view input, ast::Module& mod)
         mod.body.finish();
     } catch (tao::pegtl::parse_error& e) {
         const auto p = e.positions().front();
-        throw ParseError{fmt::format("{}\n{}\n{}^", e.what(), in.line_at(p),
-                                      std::string(p.column, ' '))};
+        throw ParseError{fmt::format("{}\n{}\n{:>{}}", e.what(), in.line_at(p), '^', p.column)};
     } catch( const std::exception& e ) {
         throw ParseError{e.what()};
     }
 }
+
+
+#ifndef NDEBUG
+int Parser::analyze_grammar()
+{
+    using parser::Module;
+
+    return tao::pegtl::analyze< Module >(1);
+}
+#endif
 
 
 } // namespace xci::script

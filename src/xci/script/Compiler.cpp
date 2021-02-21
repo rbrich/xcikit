@@ -20,6 +20,7 @@
 #include "ast/resolve_types.h"
 #include "ast/fold_const_expr.h"
 #include "ast/fold_dot_call.h"
+#include "ast/fold_tuple.h"
 #include "Stack.h"
 #include <xci/compat/macros.h>
 
@@ -129,6 +130,10 @@ public:
         auto idx = module().add_value(std::make_unique<value::String>(v.value));
         // LOAD_STATIC <static_idx>
         code().add_opcode(Opcode::LoadStatic, idx);
+    }
+
+    void visit(ast::Braced& v) override {
+        v.expression->apply(*this);
     }
 
     void visit(ast::Tuple& v) override {
@@ -505,28 +510,43 @@ void Compiler::compile(Function& func, ast::Module& ast)
     // - apply optimizations - const fold etc. (Optimizer)
     // See documentation on each function.
 
-    fold_dot_call(func, ast.body);
-    if ((m_flags & PPMask) == PPDotCall)
-        return;
-
-    resolve_symbols(func, ast.body);
-    if ((m_flags & PPMask) == PPSymbols)
-        return;
-
-    resolve_types(func, ast.body);
-    if ((m_flags & PPMask) == PPTypes)
-        return;
-
-    if ((m_flags & OConstFold) == OConstFold) {
-        fold_const_expr(func, ast.body);
+    if ((m_flags & PPMask) == 0) {
+        // no post-processing selected by default -> enable all
+        m_flags |= PPMask;
     }
+    // only if all mandatory passes were enabled
+    bool can_compile = true;
 
-    resolve_nonlocals(func, ast.body);
-    if ((m_flags & PPMask) == PPNonlocals)
-        return;
+    if ((m_flags & PPTuple) == PPTuple)
+        fold_tuple(ast.body);
+    else
+        can_compile = false;
 
-    // Compile - only if mandatory passes were enabled
-    compile_block(func, ast.body);
+    if ((m_flags & PPDotCall) == PPDotCall)
+        fold_dot_call(func, ast.body);
+    else
+        can_compile = false;
+
+    if ((m_flags & PPSymbols) == PPSymbols)
+        resolve_symbols(func, ast.body);
+    else
+        can_compile = false;
+
+    if ((m_flags & PPTypes) == PPTypes)
+        resolve_types(func, ast.body);
+    else
+        can_compile = false;
+
+    if ((m_flags & OConstFold) == OConstFold)
+        fold_const_expr(func, ast.body);
+
+    if ((m_flags & PPNonlocals) == PPNonlocals)
+        resolve_nonlocals(func, ast.body);
+    else
+        can_compile = false;
+
+    if (can_compile)
+        compile_block(func, ast.body);
 }
 
 

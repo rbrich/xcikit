@@ -36,6 +36,10 @@ public:
     void visit(ast::Char&) override {}
     void visit(ast::String&) override {}
 
+    void visit(ast::Braced& v) override {
+        v.expression->apply(*this);
+    }
+
     void visit(ast::Tuple& v) override {
         for (auto& item : v.items) {
             item->apply(*this);

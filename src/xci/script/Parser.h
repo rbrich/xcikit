@@ -16,7 +16,16 @@ namespace xci::script {
 
 class Parser {
 public:
+    // TODO: support incremental parsing
+
     void parse(std::string_view input, ast::Module& mod);
+
+#ifndef NDEBUG
+    /// Check that the grammar is built correctly.
+    /// This is useful only during development.
+    /// \returns 0 if grammar is OK
+    static int analyze_grammar();
+#endif
 };
 
 

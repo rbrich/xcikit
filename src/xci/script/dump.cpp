@@ -84,6 +84,7 @@ public:
     void visit(const Float& v) override { m_os << v; }
     void visit(const Char& v) override { m_os << v; }
     void visit(const String& v) override { m_os << v; }
+    void visit(const Braced& v) override { m_os << v; }
     void visit(const Tuple& v) override { m_os << v; }
     void visit(const List& v) override { m_os << v; }
     void visit(const Reference& v) override { m_os << v; }
@@ -141,6 +142,16 @@ std::ostream& operator<<(std::ostream& os, const String& v)
     }
 }
 
+std::ostream& operator<<(std::ostream& os, const Braced& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << put_indent << "Braced(Expression)" << endl;
+        return os << more_indent << *v.expression << less_indent;
+    } else {
+        return os << "(" << *v.expression << ")";
+    }
+}
+
 std::ostream& operator<<(std::ostream& os, const Tuple& v)
 {
     if (stream_options(os).enable_tree) {
@@ -150,13 +161,12 @@ std::ostream& operator<<(std::ostream& os, const Tuple& v)
             os << *item;
         return os << less_indent;
     } else {
-        os << "(";
         for (const auto& item : v.items) {
             os << *item;
             if (&item != &v.items.back())
                 os << ", ";
         }
-        return os << ")";
+        return os;
     }
 }
 
@@ -357,8 +367,12 @@ std::ostream& operator<<(std::ostream& os, const OpCall& v)
     } else {
         os << "(";
         for (const auto& arg : v.args) {
-            if (&arg != &v.args.front())
-                os << ' ' << v.op << ' ';
+            if (&arg != &v.args.front()) {
+                if (v.op.is_comma())
+                    os << ", ";  // no leading space
+                else
+                    os << ' ' << v.op << ' ';
+            }
             os << *arg;
         }
         return os << ")";

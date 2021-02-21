@@ -37,6 +37,7 @@ struct Integer;
 struct Float;
 struct Char;
 struct String;
+struct Braced;
 struct Tuple;
 struct List;
 struct Reference;
@@ -63,6 +64,7 @@ public:
     virtual void visit(const Float&) = 0;
     virtual void visit(const Char&) = 0;
     virtual void visit(const String&) = 0;
+    virtual void visit(const Braced&) = 0;
     virtual void visit(const Tuple&) = 0;
     virtual void visit(const List&) = 0;
     virtual void visit(const Reference&) = 0;
@@ -89,6 +91,7 @@ public:
     virtual void visit(Float&) = 0;
     virtual void visit(Char&) = 0;
     virtual void visit(String&) = 0;
+    virtual void visit(Braced&) = 0;
     virtual void visit(Tuple&) = 0;
     virtual void visit(List&) = 0;
     virtual void visit(Reference&) = 0;
@@ -111,6 +114,7 @@ public:
     void visit(Float&) final {}
     void visit(Char&) final {}
     void visit(String&) final {}
+    void visit(Braced&) final {}
     void visit(Tuple&) final {}
     void visit(List&) final {}
     void visit(Reference&) final {}
@@ -140,6 +144,7 @@ public:
     void visit(Char&) final {}
     void visit(String&) final {}
     void visit(Tuple&) final {}
+    void visit(Braced&) final {}
     void visit(List&) final {}
     void visit(Reference&) final {}
     void visit(Call&) final {}
@@ -284,6 +289,14 @@ struct String: public Expression {
     std::string value;
 };
 
+struct Braced: public Expression {
+    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
+    void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Expression> make_copy() const override;
+
+    std::unique_ptr<Expression> expression;
+};
+
 struct Tuple: public Expression {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
@@ -336,6 +349,7 @@ struct Operator {
     enum Op {
         Undefined,
         // binary
+        Comma,          // x, y
         LogicalOr,      // x || y
         LogicalAnd,     // x && y
         Equal,          // x == y
@@ -372,6 +386,7 @@ struct Operator {
     bool is_right_associative() const;
     bool is_undefined() const { return op == Undefined; }
     bool is_dot_call() const { return op == DotCall; }
+    bool is_comma() const { return op == Comma; }
     bool operator==(const Operator& rhs) const { return op == rhs.op; }
     bool operator!=(const Operator& rhs) const { return op != rhs.op; }
 
@@ -437,6 +452,8 @@ struct Definition: public Statement {
 };
 
 struct Invocation: public Statement {
+    Invocation(std::unique_ptr<Expression>&& expr) : expression(std::move(expr)) {}
+
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Statement> make_copy() const override;

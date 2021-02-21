@@ -543,22 +543,22 @@ Precedence table:
 ----
 (-2) |  definition        |  =
 (-1) |  condition         |  if <cond> then <tru-branch> else <false-branch>
-(-0) |  comma             |  ,
 
-1    |  logical or        |  ||
-2    |  logical and       |  &&
-3    |  comparison        |  ==  !=  <=  >=  <  >
-4    |  bitwise or, xor   |  |  ^
-5    |  bitwise and       |  &
-6    |  bitwise shift     |  <<  >>
-7    |  add, subtract     |  +  -
-8    |  multiply, divide  |  *  /  %
-9    |  power             |  **
-10   |  subscript         |  x ! y
+1    |  comma             |  ,
+2    |  logical or        |  ||
+3    |  logical and       |  &&
+4    |  comparison        |  ==  !=  <=  >=  <  >
+5    |  bitwise or, xor   |  |  ^
+6    |  bitwise and       |  &
+7    |  bitwise shift     |  <<  >>
+8    |  add, subtract     |  +  -
+9    |  multiply, divide  |  *  /  %
+10   |  power             |  **
+11   |  subscript         |  x ! y
+12   |  dot function call |  <arg1> . name [<arg2> ...]
 
-(11) |  dot function call |  <arg1> . name [<arg2> ...]
-(12) |  unary ops         |  -  +  !  ~
-(13) |  function call     |  name [<arg> ...]
+(13) |  unary ops         |  -  +  !  ~
+(14) |  function call     |  name [<arg> ...]
 ----
 
 Higher precedence means tighter binding.
