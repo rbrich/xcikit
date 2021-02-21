@@ -83,8 +83,7 @@ void Definition::copy_to(Definition& r) const
 
 std::unique_ptr<ast::Statement> Invocation::make_copy() const
 {
-    auto r = std::make_unique<Invocation>();
-    r->expression = expression->make_copy();
+    auto r = std::make_unique<Invocation>(expression->make_copy());
     r->type_index = type_index;
     return r;
 }
@@ -323,36 +322,37 @@ Operator::Operator(const std::string& s, bool prefix)
     }
 }
 
+
 int Operator::precedence() const
 {
     switch (op) {
         case Undefined:     return 0;
-        case Comma:         return 2;
-        case LogicalOr:     return 3;
-        case LogicalAnd:    return 4;
-        case Equal:         return 5;
-        case NotEqual:      return 5;
-        case LessEqual:     return 5;
-        case GreaterEqual:  return 5;
-        case LessThan:      return 5;
-        case GreaterThan:   return 5;
-        case BitwiseOr:     return 6;
-        case BitwiseXor:    return 6;
-        case BitwiseAnd:    return 7;
-        case ShiftLeft:     return 8;
-        case ShiftRight:    return 8;
-        case Add:           return 9;
-        case Sub:           return 9;
-        case Mul:           return 10;
-        case Div:           return 10;
-        case Mod:           return 10;
-        case Exp:           return 11;
-        case Subscript:     return 12;
-        case DotCall:       return 13;
-        case LogicalNot:    return 14;
-        case BitwiseNot:    return 14;
-        case UnaryPlus:     return 14;
-        case UnaryMinus:    return 14;
+        case Comma:         return 1;
+        case LogicalOr:     return 2;
+        case LogicalAnd:    return 3;
+        case Equal:         return 4;
+        case NotEqual:      return 4;
+        case LessEqual:     return 4;
+        case GreaterEqual:  return 4;
+        case LessThan:      return 4;
+        case GreaterThan:   return 4;
+        case BitwiseOr:     return 5;
+        case BitwiseXor:    return 5;
+        case BitwiseAnd:    return 6;
+        case ShiftLeft:     return 7;
+        case ShiftRight:    return 7;
+        case Add:           return 8;
+        case Sub:           return 8;
+        case Mul:           return 9;
+        case Div:           return 9;
+        case Mod:           return 9;
+        case Exp:           return 10;
+        case Subscript:     return 11;
+        case DotCall:       return 12;
+        case LogicalNot:    return 13;
+        case BitwiseNot:    return 13;
+        case UnaryPlus:     return 13;
+        case UnaryMinus:    return 13;
     }
     UNREACHABLE;
 }

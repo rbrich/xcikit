@@ -44,9 +44,9 @@ struct UnsafeType;
 // Spaces and comments
 struct LineComment: if_must< two<'/'>, until<eolf> > {};
 struct BlockComment: if_must< string<'/', '*'>, until< string<'*', '/'>, any > > {};
-struct SpaceOrComment: sor< space, LineComment, BlockComment> {};
+struct SpaceOrComment: sor< one<' ', '\t', '\n', '\r'>, LineComment, BlockComment> {};
 struct SC: star< SpaceOrComment > {};
-struct RSC: seq<space, SC> {};  // required at least one space
+struct RSC: seq<one<' ', '\t'>, SC> {};  // required at least one space
 
 // Aux templates
 template <class T> struct SSList: list_tail<T, one<';'>, SpaceOrComment> {};  // semicolon-separated list
@@ -116,8 +116,7 @@ struct Expression: sor< ExprCond, ExprInfix > {};
 
 // Statements
 struct Definition: seq< Variable, SC, seq<one<'='>, not_at<one<'='>>, SC, must<Expression>> > {};  // must not match `var == ...`
-struct Invocation: seq< Expression > {};
-struct Statement: sor< Definition, Invocation > {};
+struct Statement: sor< Definition, Expression > {};
 
 // Module-level definitions
 struct ClassDefinition: seq< Variable, SC, opt_must<one<'='>, SC, Expression> > {};
@@ -158,20 +157,6 @@ struct Action<Definition> : change_states< ast::Definition > {
 
 
 template<>
-struct Action<Invocation> : change_states< ast::Invocation > {
-    template<typename Input>
-    static void success(const Input &in, ast::Invocation& inv, ast::Module& mod) {
-        mod.body.statements.push_back(std::make_unique<ast::Invocation>(std::move(inv)));
-    }
-
-    template<typename Input>
-    static void success(const Input &in, ast::Invocation& inv, ast::Block& block) {
-        block.statements.push_back(std::make_unique<ast::Invocation>(std::move(inv)));
-    }
-};
-
-
-template<>
 struct Action<Expression> : change_states< std::unique_ptr<ast::Expression> > {
     template<typename Input>
     static void apply(const Input &in, std::unique_ptr<ast::Expression>& expr) {
@@ -179,13 +164,18 @@ struct Action<Expression> : change_states< std::unique_ptr<ast::Expression> > {
     }
 
     template<typename Input>
-    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Definition& def) {
-        def.expression = std::move(expr);
+    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Module& mod) {
+        mod.body.statements.push_back(std::make_unique<ast::Invocation>(std::move(expr)));
     }
 
     template<typename Input>
-    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Invocation& inv) {
-        inv.expression = std::move(expr);
+    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Block& block) {
+        block.statements.push_back(std::make_unique<ast::Invocation>(std::move(expr)));
+    }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Definition& def) {
+        def.expression = std::move(expr);
     }
 
     template<typename Input>

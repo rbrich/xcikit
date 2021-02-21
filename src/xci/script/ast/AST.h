@@ -452,6 +452,8 @@ struct Definition: public Statement {
 };
 
 struct Invocation: public Statement {
+    Invocation(std::unique_ptr<Expression>&& expr) : expression(std::move(expr)) {}
+
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Statement> make_copy() const override;
