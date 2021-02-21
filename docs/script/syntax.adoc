@@ -11,7 +11,7 @@ endif::[]
 toc::[]
 
 Fire Script is a functional language, strongly and statically typed,
-with function overloading and generics (type variables).
+with Haskell-like generics (type classes and type variables).
 
 The language is designed to allow small and easily embeddable implementation,
 with possibility of compilation to native code.
@@ -21,13 +21,15 @@ This document presents the syntax and semantics by example.
 An interpreter is being developed in {cpp} together with this description.
 The interpreter consists of a {cpp} static library (`libxci-script`)
 and a REPL interpreter (`demo_script`). The implementation is a little behind
-this document and not everything described here has to be implemented.
-This is design document, with the ideas. The design may change during implementation.
+this document, and it's also possible that not everything described here will actually
+be implemented. This is a design document, containing miscellaneous ideas.
+The language may change during implementation.
 
-The implementation should completely match the specification when it reaches
-version 1.0.
+The plan is that the implementation will completely match the specification
+when it reaches version 1.0.
 
 See `xci::script` in https://github.com/rbrich/xcikit[xcikit] codebase.
+
 
 == Syntax Elements
 
@@ -520,7 +522,7 @@ in local cache.
 
 == Compilation
 
-The complete program is composed from main source plus all imported modules,
+The complete program is composed of main source plus all imported modules,
 each of which is precompiled into bitcode. After this phase, we have a big blob of bitcode.
 
 The whole precompiled blob is then passed either to interpreter, which can execute it as is,
@@ -529,6 +531,53 @@ to machine code.
 
 The resulting machine binary will have a main entry point, which will run a default Executor
 (that will be compiled in too, for efficiency).
+
+
+== Syntax decisions
+
+=== Semicolons separate statements on one line
+
+Decision:
+
+- Semicolons are used to separate statements (not terminate them).
+
+- Line-break also separates statements, in most cases. While having one statement per line,
+semicolons are optional.
+
+Reasoning:
+
+- Mandatory semicolons would allow slightly simpler grammar for parsing the language,
+but semicolon-free code is a little easier to write, and it looks cleaner--semicolons
+before line-breaks are mostly just noise.
+
+- The main drawback is when a statement spans multiple lines, it needs either a special guide
+(e.g. escaping newlines), or the grammar needs special rules (parenthesised expression, continuation
+of expression when a line begins or ends with an operator).
+
+- Example of a function call spanning multiple lines:
++
+[source,fire]
+----
+// with mandatory semicolons
+some_fun 1 2 3
+    b 4;
+
+// with optional semicolon, using a guide
+some_fun 1 2 3 \
+    b 4
+
+// with optional semicolon, using parentheses
+(some_fun 1 2 3
+    b 4)
+----
+
+- Depending on how you look at the example, you may find some of the example snippets more readable.
+But it's mostly just matter of taste. Note that you can always add the semicolon, even when it's
+optional.
+
+- Some languages, like Python or Haskell, use code layout (indent) to recognize continuation.
+This doesn't help to make the language easier to parse either.
+
 
 == Appendix
 
