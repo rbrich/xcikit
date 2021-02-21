@@ -74,6 +74,14 @@ void check_interpreter(const string& input, const string& expected_output="true"
 }
 
 
+#ifndef NDEBUG
+TEST_CASE( "Analyze grammar", "[script][parser]" )
+{
+   REQUIRE(Parser::analyze_grammar() == 0);
+}
+#endif
+
+
 TEST_CASE( "Comments", "[script][parser]" )
 {
     check_parser("a  // C-style comment", "a");

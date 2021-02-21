@@ -10,6 +10,11 @@
 
 #include <tao/pegtl.hpp>
 #include <tao/pegtl/contrib/raw_string.hpp>
+
+#ifndef NDEBUG
+#include <tao/pegtl/contrib/analyze.hpp>
+#endif
+
 #include <fmt/core.h>
 #include <iostream>
 
@@ -882,6 +887,16 @@ void Parser::parse(std::string_view input, ast::Module& mod)
         throw ParseError{e.what()};
     }
 }
+
+
+#ifndef NDEBUG
+int Parser::analyze_grammar()
+{
+    using parser::Module;
+
+    return tao::pegtl::analyze< Module >(1);
+}
+#endif
 
 
 } // namespace xci::script
