@@ -41,7 +41,7 @@ struct ExprCond;
 struct Statement;
 struct ExprArgSafe;
 struct ExprOperand;
-struct ExprDotCallRightI;
+struct ExprCallable;
 struct Type;
 struct UnsafeType;
 
@@ -52,9 +52,8 @@ struct SemicolonOrNewline: sor<one<';', '\n', '\r'>, LineComment> {};
 struct SpaceOrComment: sor< blank, BlockComment> {};
 struct NlSpaceOrComment: sor< space, LineComment, BlockComment > {};
 struct SC: star< SpaceOrComment > {};  // optional space or comments
-struct RSC: plus< SpaceOrComment > {};  // required at least one space or comment
 struct NSC: star< NlSpaceOrComment > {};  // optional newlines, space or comments
-struct RNSC: plus< NlSpaceOrComment > {};  // required at lease one newline, space or comment
+struct RS: at<space> {};  // require space
 
 // Aux templates
 template<class T> struct SepList: list_tail<T, seq<SC, SemicolonOrNewline, NSC> > {};  // list separated by either semicolon or newline
@@ -95,15 +94,16 @@ struct Literal: sor< Float, Integer, Char, String, RawString > {};
 // * some rules are parametrized with S (space type), choose either SC or NSC (allow newline)
 // * in general, rules inside braces use NSC, rules outside braces use SC
 // * this allows leaving out semicolons but still support multiline expressions
-template<class S> struct ExprInfixRightI: if_must<InfixOperator, S, ExprOperand> {};
-template<class S> struct ExprInfixRight: seq<sor<ExprDotCallRightI, ExprInfixRightI<S>>, S, opt<ExprInfixRight<S>>> {};
-template<class S> struct ExprInfix: seq< ExprOperand, S, opt<ExprInfixRight<S>> > {};
+template<class S> struct DotCall: if_must< one<'.'>, SC, seq< ExprCallable, star<RS, S, ExprArgSafe> > > {};
+template<class S> struct ExprInfixRight: seq< sor< DotCall<S>, if_must<InfixOperator, S, ExprOperand> >, S, opt< ExprInfixRight<S> > > {};
+template<class S> struct ExprInfix: seq< ExprOperand, S, opt<ExprInfixRight<S> > > {};
+template<> struct ExprInfix<SC>: seq< ExprOperand, sor< seq<NSC, at< one<'.'> > >, SC>, opt<ExprInfixRight<SC> > > {};  // specialization to allow newline before dotcall even outside braces
 template<class S> struct Expression: sor< ExprCond, ExprInfix<S> > {};
 struct Variable: seq< Identifier, opt<SC, one<':'>, SC, must<UnsafeType> > > {};
 struct Parameter: sor< Type, seq< Identifier, opt<SC, one<':'>, SC, must<Type> > > > {};
 struct DeclParams: seq< plus<Parameter, SC> > {};
 struct DeclResult: if_must< string<'-', '>'>, SC, Type > {};
-struct TypeConstraint: seq<TypeName, RSC, TypeName> {};
+struct TypeConstraint: seq<TypeName, RS, SC, TypeName> {};
 struct TypeContext: if_must< one<'('>, SC, TypeConstraint, SC, star_must<one<','>, SC, TypeConstraint, SC>, one<')'> > {};
 struct FunctionType: seq< DeclParams, SC, DeclResult > {};
 struct FunctionDecl: seq< DeclParams, SC, opt<DeclResult>, SC, opt<if_must<KeywordWith, SC, TypeContext>> > {};
@@ -119,10 +119,8 @@ struct Reference: seq< Identifier > {};
 struct List: if_must< one<'['>, NSC, opt<ExprInfix<NSC>, NSC>, one<']'> > {};
 struct ExprCallable: sor< BracedExpr, Function, Reference> {};
 struct ExprArgSafe: sor< BracedExpr, List, Function, Literal, Reference > {};  // expressions which can be used as args in Call
-struct Call: seq< ExprCallable, plus<RSC, ExprArgSafe> > {};
-struct DotCall: seq< ExprCallable, star<RSC, ExprArgSafe> > {};
+struct Call: seq< ExprCallable, plus<RS, SC, ExprArgSafe> > {};
 struct ExprOperand: sor<Call, ExprArgSafe, ExprPrefix> {};
-struct ExprDotCallRightI: if_must<one<'.'>, SC, DotCall> {};
 struct ExprCond: if_must< KeywordIf, NSC, ExprInfix<NSC>, NSC, KeywordThen, NSC, Expression<SC>, NSC, KeywordElse, NSC, Expression<SC>> {};
 
 // Statements
@@ -131,9 +129,9 @@ struct Statement: sor< Definition, Expression<SC> > {};
 
 // Module-level definitions
 struct ClassDefinition: seq< Variable, SC, opt_must<one<'='>, SC, Expression<SC>> > {};
-struct DefClass: if_must< KeywordClass, NSC, TypeName, RSC, TypeName, SC, opt<TypeContext>, NSC,
+struct DefClass: if_must< KeywordClass, NSC, TypeName, RS, SC, TypeName, SC, opt<TypeContext>, NSC,
         one<'{'>, NSC, sor< one<'}'>, must<SepList<ClassDefinition>, NSC, one<'}'>> > > {};
-struct DefInstance: if_must< KeywordInstance, NSC, TypeName, RSC, Type, SC, opt<TypeContext>, NSC,
+struct DefInstance: if_must< KeywordInstance, NSC, TypeName, RS, SC, Type, SC, opt<TypeContext>, NSC,
         one<'{'>, NSC, sor< one<'}'>, must<SepList<Definition>, NSC, one<'}'>> > > {};
 struct TopLevelStatement: sor<DefClass, DefInstance, Statement> {};
 
@@ -460,8 +458,8 @@ struct Action<Call> : change_states< ast::Call > {
 };
 
 
-template<>
-struct Action<DotCall> : change_states< ast::Call > {
+template<class S>
+struct Action<DotCall<S>> : change_states< ast::Call > {
     template<typename Input>
     static void apply(const Input &in, ast::Call& call) {
         call.source_info.load(in.input(), in.position());

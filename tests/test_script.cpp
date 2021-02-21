@@ -116,6 +116,7 @@ TEST_CASE( "Optional semicolon", "[script][parser]" )
     check_parser_eq("a = 1\nb = 2\n", "a = 1; b = 2;");
     check_parser_eq("(\n 1\n  + \n2\n)\n\na = 1  // nl still counted\nb=2\nc=3",
             "(1+2); a=1; b=2; c=3");  // newlines are allowed inside braces
+    check_parser_eq("40\n.add 2\n50\n.sub 8", "40 .add 2; 50 .sub 8;");  // dotcall can continue after line break
     check_parser_error("a=1;;", "parse error: <input>:1:5: invalid syntax");  // empty statement is not allowed, semicolon is only used as a separator
 }
 
