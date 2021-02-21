@@ -37,9 +37,9 @@ public:
         Error(std::move(msg)),
         m_file(format("{}:{}:{}",
             si.source, si.line_number, si.column)),
-        m_detail(format("{}\n{}^",
+        m_detail(format("{}\n{:>{}}",
             std::string{si.line_begin, si.line_end},
-            std::string(si.column - 1, ' ')))
+            '^', si.column))
     {}
 
     const std::string& file() const noexcept { return m_file; }

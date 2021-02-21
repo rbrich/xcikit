@@ -1,10 +1,10 @@
 f = fun a:Int
 {
-    u = fun b2:Int {a / b2};    // 4 / 2 =>  2
-    v = fun c2:Int {c2 - a};    // 3 - 4 => -1
+    u = fun b2:Int {a / b2}    // 4 / 2 =>  2
+    v = fun c2:Int {c2 - a}    // 3 - 4 => -1
 
     // 4 + 2 - 1  => 5
     fun b1:Int c1:Int {a + u b1 + v c1}
-};
+}
 
 f 4 2 1

@@ -38,6 +38,27 @@ void check_parser(const string& input, const string& expected_output)
     CHECK( os.str() == expected_output );
 }
 
+// Check that parsing the two inputs gives the same result
+void check_parser_eq(const string& input1, const string& input2)
+{
+    Parser parser;
+    ast::Module ast1;
+    ast::Module ast2;
+    parser.parse(input1, ast1);
+    parser.parse(input1, ast2);
+    ostringstream os1;
+    ostringstream os2;
+    os1 << ast1;
+    os2 << ast2;
+    CHECK( os1.str() == os2.str() );
+}
+
+void check_parser_error(const string& input, const char* starts_with)
+{
+    Parser parser;
+    ast::Module ast;
+    REQUIRE_THROWS_WITH(parser.parse(input, ast), Catch::Matchers::StartsWith(starts_with));
+}
 
 void check_interpreter(const string& input, const string& expected_output="true")
 {
@@ -86,6 +107,16 @@ TEST_CASE( "Comments", "[script][parser]" )
 {
     check_parser("a  // C-style comment", "a");
     check_parser("/**/a/*C++-style\n \ncomment*/+b/*\n*/", "(a + b)");
+}
+
+
+TEST_CASE( "Optional semicolon", "[script][parser]" )
+{
+    check_parser_eq("a = 1", "a = 1;");
+    check_parser_eq("a = 1\nb = 2\n", "a = 1; b = 2;");
+    check_parser_eq("(\n 1\n  + \n2\n)\n\na = 1  // nl still counted\nb=2\nc=3",
+            "(1+2); a=1; b=2; c=3");  // newlines are allowed inside braces
+    check_parser_error("a=1;;", "parse error: <input>:1:5: invalid syntax");  // empty statement is not allowed, semicolon is only used as a separator
 }
 
 
@@ -415,8 +446,8 @@ TEST_CASE( "Native functions: free function", "[script][native]" )
     module.add_native_function("test_fun1b", test_fun1);  // function pointer is deduced
 
     auto result = interpreter.eval(R"(
-        (test_fun1a 10 4 2) +  //  3
-        (test_fun1b 0 6 3)     // -2
+        ((test_fun1a 10 4 2)     //  3
+        + (test_fun1b 0 6 3))    // -2
     )");
     CHECK(result->type() == Type::Int32);
     CHECK(result->as<value::Int32>().value() == 1);
@@ -439,8 +470,8 @@ TEST_CASE( "Native functions: lambda", "[script][native]" )
             &state);
 
     auto result = interpreter.eval(R"(
-        (add1 1 6) +           //  7
-        (add2 3 4)             //  8  (+10 from state)
+        ((add1 1 6) +          //  7
+        (add2 3 4))            //  8  (+10 from state)
     )");
     CHECK(result->type() == Type::Int32);
     CHECK(result->as<value::Int32>().value() == 24);
