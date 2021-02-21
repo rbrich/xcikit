@@ -5,52 +5,52 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 class Eq T {
-    eq : T T -> Bool;
-    ne : T T -> Bool; // = fun x y { not (eq x y) };
-};
+    eq : T T -> Bool
+    ne : T T -> Bool // = fun x y { not (eq x y) };
+}
 
 class Ord T (Eq T) {
-    lt : T T -> Bool;
-    gt : T T -> Bool;
-    le : T T -> Bool;
-    ge : T T -> Bool;
-};
+    lt : T T -> Bool
+    gt : T T -> Bool
+    le : T T -> Bool
+    ge : T T -> Bool
+}
 
 
 instance Eq Bool {
-    eq = { __equal_8 };
-    ne = { __not_equal_8 };
-};
+    eq = { __equal_8 }
+    ne = { __not_equal_8 }
+}
 
 instance Eq Byte {
-    eq = { __equal_8 };
-    ne = { __not_equal_8 };
-};
+    eq = { __equal_8 }
+    ne = { __not_equal_8 }
+}
 
 instance Eq Char {
-    eq = { __equal_32 };
-    ne = { __not_equal_32 };
-};
+    eq = { __equal_32 }
+    ne = { __not_equal_32 }
+}
 
 instance Eq Int32 {
-    eq = { __equal_32 };
-    ne = { __not_equal_32 };
-};
+    eq = { __equal_32 }
+    ne = { __not_equal_32 }
+}
 
 instance Eq Int64 {
-    eq = { __equal_64 };
-    ne = { __not_equal_64 };
-};
+    eq = { __equal_64 }
+    ne = { __not_equal_64 }
+}
 
 instance Eq Float32 {
-    eq = { __equal_32 };
-    ne = { __not_equal_32 };
-};
+    eq = { __equal_32 }
+    ne = { __not_equal_32 }
+}
 
 instance Eq Float64 {
-    eq = { __equal_64 };
-    ne = { __not_equal_64 };
-};
+    eq = { __equal_64 }
+    ne = { __not_equal_64 }
+}
 
 /*
 instance Eq [T] ( Eq T ) {
@@ -67,46 +67,46 @@ instance Eq [T] ( Eq T ) {
 
 
 instance Ord Byte {
-    lt = { __less_than_8 };
-    gt = { __greater_than_8 };
-    le = { __less_equal_8 };
-    ge = { __greater_equal_8 };
-};
+    lt = { __less_than_8 }
+    gt = { __greater_than_8 }
+    le = { __less_equal_8 }
+    ge = { __greater_equal_8 }
+}
 
 instance Ord Char {
-    lt = { __less_than_32 };
-    gt = { __greater_than_32 };
-    le = { __less_equal_32 };
-    ge = { __greater_equal_32 };
-};
+    lt = { __less_than_32 }
+    gt = { __greater_than_32 }
+    le = { __less_equal_32 }
+    ge = { __greater_equal_32 }
+}
 
 instance Ord Int32 {
-    lt = { __less_than_32 };
-    gt = { __greater_than_32 };
-    le = { __less_equal_32 };
-    ge = { __greater_equal_32 };
-};
+    lt = { __less_than_32 }
+    gt = { __greater_than_32 }
+    le = { __less_equal_32 }
+    ge = { __greater_equal_32 }
+}
 
 instance Ord Int64 {
-    lt = { __less_than_64 };
-    gt = { __greater_than_64 };
-    le = { __less_equal_64 };
-    ge = { __greater_equal_64 };
-};
+    lt = { __less_than_64 }
+    gt = { __greater_than_64 }
+    le = { __less_equal_64 }
+    ge = { __greater_equal_64 }
+}
 
 instance Ord Float32 {
-    lt = { __less_than_32 };
-    gt = { __greater_than_32 };
-    le = { __less_equal_32 };
-    ge = { __greater_equal_32 };
-};
+    lt = { __less_than_32 }
+    gt = { __greater_than_32 }
+    le = { __less_equal_32 }
+    ge = { __greater_equal_32 }
+}
 
 instance Ord Float64 {
-    lt = { __less_than_64 };
-    gt = { __greater_than_64 };
-    le = { __less_equal_64 };
-    ge = { __greater_equal_64 };
-};
+    lt = { __less_than_64 }
+    gt = { __greater_than_64 }
+    le = { __less_equal_64 }
+    ge = { __greater_equal_64 }
+}
 
 /*
 f : fun T T -> T with (Ord T) = |x y| { x < y }
@@ -114,6 +114,6 @@ f = fun x:T y:T -> T lazy with (Ord T) { x < y }
 */
 
 
-succ = fun x { x + 1 };
-pred = fun x { x - 1 };
-max = fun x y { if x > y then x else y };
+succ = fun x { x + 1 }
+pred = fun x { x - 1 }
+max = fun x y { if x > y then x else y }
