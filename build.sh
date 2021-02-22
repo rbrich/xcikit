@@ -143,7 +143,13 @@ if [[ -z "$component_default" && -z "$component_all" ]]; then
     # Disable components that were not selected
     for name in data script graphics text widgets ; do
         component_var="component_$name"
-        [[ -z "${!component_var}" ]] && CMAKE_ARGS+=(-D "XCI_${name^^}=OFF")
+        if [[ -z "${!component_var}" ]] ; then
+            CMAKE_ARGS+=(-D "XCI_${name^^}=OFF")
+            CONAN_ARGS+=(-o "xcikit:${name}=False")
+        else
+            CMAKE_ARGS+=(-D "XCI_${name^^}=ON")
+            CONAN_ARGS+=(-o "xcikit:${name}=True")
+        fi
     done
 fi
 
