@@ -6,6 +6,7 @@ cd "$(dirname "$0")"
 ROOT_DIR="$PWD"
 BUILD_TYPE="Release"
 GENERATOR=
+EMSCRIPTEN=0
 JOBS_ARGS=()
 CMAKE_ARGS=()
 CONAN_ARGS=()
@@ -13,10 +14,19 @@ CSI=$'\x1b['
 
 print_usage()
 {
-    echo "Usage: ./build.sh [PHASE, ...] [COMPONENT, ...] [-G CMAKE_GENERATOR] [-j JOBS] [-D CMAKE_DEF, ...] [--debug|--minsize] [--unity] [--tidy] [--update]"
+    echo "Usage: ./build.sh [PHASE, ...] [COMPONENT, ...] [-G CMAKE_GENERATOR] [-j JOBS] [-D CMAKE_DEF, ...]"
+    echo "                  [--debug|--minsize] [--emscripten] [--unity] [--tidy] [--update]"
     echo "Where: PHASE = clean | deps | config | build | test | install | package | graphviz (default: deps..install)"
     echo "       COMPONENT = core | data | script | graphics | text | widgets | all (default: all)"
-    echo "       CMAKE_GENERATOR = Unix Makefiles | Ninja | ... (default: Ninja if available, Unix Makefiles otherwise)"
+    echo "Other options:"
+    echo "      -G CMAKE_GENERATOR      Unix Makefiles | Ninja | ... (default: Ninja if available, Unix Makefiles otherwise)"
+    echo "      -j JOBS                 Parallel jobs for build and test phases"
+    echo "      -D CMAKE_DEF            Passed to cmake"
+    echo "      --debug, --minsize      Sets CMAKE_BUILD_TYPE"
+    echo "      --emscripten            Target Emscripten (wrap with 'emcmake')"
+    echo "      --unity                 CMAKE_UNITY_BUILD - batch all source files in each target together"
+    echo "      --tidy                  Run clang-tidy on each compiled file"
+    echo "      --update                Passed to conan - update dependencies"
 }
 
 phase()
@@ -80,6 +90,9 @@ while [[ $# -gt 0 ]] ; do
         --minsize )
             BUILD_TYPE="MinSizeRel"
             shift 1 ;;
+        --emscripten )
+            EMSCRIPTEN=1
+            shift 1 ;;
         --unity )
             # Batch all source files in each target together. This is best to be
             # sure a unity build works. It might not be best for speed or memory
@@ -109,7 +122,13 @@ header "Settings"
 
 ARCH="$(uname -m)"
 PLATFORM="$(uname)"
-[[ ${PLATFORM} = "Darwin" ]] && PLATFORM="macos${MACOSX_DEPLOYMENT_TARGET}"
+if [[ "${EMSCRIPTEN}" -eq 1 ]] ; then
+    PLATFORM="emscripten"
+    ARCH="wasm"
+elif [[ ${PLATFORM} = "Darwin" ]] ; then
+    PLATFORM="macos${MACOSX_DEPLOYMENT_TARGET}"
+fi
+
 VERSION=$(conan inspect . --raw version)$(git rev-parse --short HEAD 2>/dev/null | sed 's/^/+/' ; :)
 BUILD_CONFIG="${PLATFORM}-${ARCH}-${BUILD_TYPE}"
 [[ -z "${GENERATOR}" ]] && setup_ninja && GENERATOR="Ninja"
@@ -161,8 +180,10 @@ fi
 if phase config; then
     header "Configure"
     (
+        WRAPPER=
+        [[ "$EMSCRIPTEN" -eq 1 ]] && WRAPPER=emcmake
         cd "${BUILD_DIR}"
-        XCI_CMAKE_COLORS=1 cmake "${ROOT_DIR}" \
+        XCI_CMAKE_COLORS=1 ${WRAPPER} cmake "${ROOT_DIR}" \
             "${CMAKE_ARGS[@]}" \
             -D"CMAKE_BUILD_TYPE=${BUILD_TYPE}" \
             -D"CMAKE_INSTALL_PREFIX=${INSTALL_DIR}" \
@@ -179,7 +200,9 @@ fi
 
 if phase build; then
     header "Build"
-    cmake --build "${BUILD_DIR}" --config "${BUILD_TYPE}" "${JOBS_ARGS[@]}"
+    WRAPPER=
+    [[ "$EMSCRIPTEN" -eq 1 ]] && WRAPPER=emmake
+    ${WRAPPER} cmake --build "${BUILD_DIR}" --config "${BUILD_TYPE}" "${JOBS_ARGS[@]}"
     [[ "${GENERATOR}" = "Ninja" ]] && ninja -C "${BUILD_DIR}" -t cleandead
     echo
 fi

@@ -34,9 +34,12 @@ endmacro()
 
 add_catch_test(test_core test_core.cpp xci-core)
 add_catch_test(test_geometry test_geometry.cpp xci-core)
-add_catch_test(test_eventloop test_eventloop.cpp xci-core)
 add_catch_test(test_chunked_stack test_chunked_stack.cpp xci-core)
 add_catch_test(test_argparser test_argparser.cpp xci-core)
+
+if (NOT EMSCRIPTEN)
+    add_catch_test(test_eventloop test_eventloop.cpp xci-core)
+endif()
 
 if (XCI_DATA)
     add_catch_test(test_data test_data.cpp xci-data)

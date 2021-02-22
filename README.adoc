@@ -269,6 +269,38 @@ How to build:
 
 5. There might be errors.These are why the title says "Porting", not "How to build"…
 
+=== Porting to Emscripten
+
+The non-graphical components should build with Emscripten.
+
+Use Conan profile with `os=Emscripten`, for example:
+
+[source,ini]
+----
+[settings]
+os=Emscripten
+arch=wasm
+compiler=clang
+compiler.version=11
+compiler.libcxx=libc++
+build_type=Release
+[options]
+[build_requires]
+[env]
+# copy from CMake command line (when called with emcmake)
+CONAN_CMAKE_TOOLCHAIN_FILE=.../cmake/Modules/Platform/Emscripten.cmake
+CONAN_CMAKE_CROSSCOMPILING_EMULATOR=/usr/bin/node
+----
+
+See: https://docs.conan.io/en/latest/integrations/cross_platform/emscripten.html[]
+
+Build scripts have basic support for Emscripten target:
+
+[source,bash]
+----
+./build.sh --debug --emscripten core script
+----
+
 == How to use in a client program
 
 === Linking with a client using only CMake

@@ -6,9 +6,9 @@ include(CMakeDependentOption)
 option(XCI_DATA "Enable component: xci-data" ON)
 option(XCI_SCRIPT "Enable component: xci-script" ON)
 option(XCI_GRAPHICS "Enable component: xci-graphics (requires Vulkan and GLFW)" ON)
-CMAKE_DEPENDENT_OPTION(XCI_TEXT "Enable component: xci-text" ON
+cmake_dependent_option(XCI_TEXT "Enable component: xci-text" ON
     "XCI_GRAPHICS" OFF)
-CMAKE_DEPENDENT_OPTION(XCI_WIDGETS "Enable component: xci-widgets" ON
+cmake_dependent_option(XCI_WIDGETS "Enable component: xci-widgets" ON
     "XCI_GRAPHICS;XCI_TEXT" OFF)
 
 # Libraries are always built. The rest is optional:
@@ -25,7 +25,11 @@ option(XCI_INSTALL_SHARE_DIR "Install runtime data as a directory (share/xcikit)
 option(XCI_INSTALL_SHARE_DAR "Install runtime data as DAR archive (share.dar)" ON)
 option(XCI_INSTALL_SHARE_ZIP "Install runtime data as ZIP archive (share.zip)" OFF)
 
-option(XCI_LISTDIR_GETDENTS "Use getdents syscall instead of readdir for tools/find_file." ON)
+if (NOT EMSCRIPTEN)
+    option(XCI_LISTDIR_GETDENTS "Use getdents syscall instead of readdir for tools/find_file." ON)
+else()
+    set(XCI_LISTDIR_GETDENTS OFF)
+endif()
 
 option(XCI_DEBUG_VULKAN "Log info about Vulkan calls and errors." OFF)
 option(XCI_DEBUG_TRACE "Enable trace log messages." OFF)
@@ -40,6 +44,8 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(XciBuildOptions)
 
+
+message(STATUS "CMAKE_TOOLCHAIN_FILE ${CMAKE_TOOLCHAIN_FILE}")
 
 # ------------ #
 # Dependencies #
