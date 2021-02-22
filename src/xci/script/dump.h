@@ -36,7 +36,7 @@ std::ostream& operator<<(std::ostream& os, const Integer& v);
 std::ostream& operator<<(std::ostream& os, const Float& v);
 std::ostream& operator<<(std::ostream& os, const Char& v);
 std::ostream& operator<<(std::ostream& os, const String& v);
-std::ostream& operator<<(std::ostream& os, const Braced& v);
+std::ostream& operator<<(std::ostream& os, const Bracketed& v);
 std::ostream& operator<<(std::ostream& os, const Tuple& v);
 std::ostream& operator<<(std::ostream& os, const List& v);
 std::ostream& operator<<(std::ostream& os, const Variable& v);

@@ -37,7 +37,7 @@ struct Integer;
 struct Float;
 struct Char;
 struct String;
-struct Braced;
+struct Bracketed;
 struct Tuple;
 struct List;
 struct Reference;
@@ -64,7 +64,7 @@ public:
     virtual void visit(const Float&) = 0;
     virtual void visit(const Char&) = 0;
     virtual void visit(const String&) = 0;
-    virtual void visit(const Braced&) = 0;
+    virtual void visit(const Bracketed&) = 0;
     virtual void visit(const Tuple&) = 0;
     virtual void visit(const List&) = 0;
     virtual void visit(const Reference&) = 0;
@@ -91,7 +91,7 @@ public:
     virtual void visit(Float&) = 0;
     virtual void visit(Char&) = 0;
     virtual void visit(String&) = 0;
-    virtual void visit(Braced&) = 0;
+    virtual void visit(Bracketed&) = 0;
     virtual void visit(Tuple&) = 0;
     virtual void visit(List&) = 0;
     virtual void visit(Reference&) = 0;
@@ -114,7 +114,7 @@ public:
     void visit(Float&) final {}
     void visit(Char&) final {}
     void visit(String&) final {}
-    void visit(Braced&) final {}
+    void visit(Bracketed&) final {}
     void visit(Tuple&) final {}
     void visit(List&) final {}
     void visit(Reference&) final {}
@@ -144,7 +144,7 @@ public:
     void visit(Char&) final {}
     void visit(String&) final {}
     void visit(Tuple&) final {}
-    void visit(Braced&) final {}
+    void visit(Bracketed&) final {}
     void visit(List&) final {}
     void visit(Reference&) final {}
     void visit(Call&) final {}
@@ -289,7 +289,8 @@ struct String: public Expression {
     std::string value;
 };
 
-struct Braced: public Expression {
+/// An expression in round brackets, e.g. (1 + 2)
+struct Bracketed: public Expression {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;

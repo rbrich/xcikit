@@ -67,7 +67,7 @@ public:
         }
     }
 
-    void visit(ast::Braced& v) override {
+    void visit(ast::Bracketed& v) override {
         v.expression->apply(*this);
     }
 

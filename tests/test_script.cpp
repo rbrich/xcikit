@@ -115,7 +115,7 @@ TEST_CASE( "Optional semicolon", "[script][parser]" )
     check_parser_eq("a = 1", "a = 1;");
     check_parser_eq("a = 1\nb = 2\n", "a = 1; b = 2;");
     check_parser_eq("(\n 1\n  + \n2\n)\n\na = 1  // nl still counted\nb=2\nc=3",
-            "(1+2); a=1; b=2; c=3");  // newlines are allowed inside braces
+            "(1+2); a=1; b=2; c=3");  // newlines are allowed inside brackets
     check_parser_eq("40\n.add 2\n50\n.sub 8", "40 .add 2; 50 .sub 8;");  // dotcall can continue after linebreak
     check_parser_eq("a =\n1", "a=1");  // linebreak is allowed after '=' in definition
     check_parser_eq("1 + \\\n 2", "1+2");  // newline can be escaped
@@ -134,7 +134,7 @@ TEST_CASE( "Values", "[script][parser]" )
     check_parser("\"escape sequences: \\\"\\n\\0\\x12 \"", "\"escape sequences: \\\"\\n\\0\\x12 \"");
     check_parser("$$ raw \n\r\t\" string $$", "\" raw \\n\\r\\t\\\" string \"");
     check_parser("1,2,3", "1, 2, 3");  // naked tuple
-    check_parser("(1,2,\"str\")", "(1, 2, \"str\")");  // braced tuple
+    check_parser("(1,2,\"str\")", "(1, 2, \"str\")");  // bracketed tuple
     check_parser("[1,2,3]", "[1, 2, 3]");  // list
     check_parser("[(1,2,3,4)]", "[(1, 2, 3, 4)]");  // list with a tuple item
     check_parser("[(1,2,3,4), 5]", "[(1, 2, 3, 4), 5]");

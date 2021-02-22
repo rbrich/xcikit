@@ -170,7 +170,7 @@ public:
     void visit(ast::Char& v) override { m_const_value = make_unique<value::Char>(v.value); }
     void visit(ast::String& v) override { m_const_value = make_unique<value::String>(v.value); }
 
-    void visit(ast::Braced& v) override {
+    void visit(ast::Bracketed& v) override {
         v.expression->apply(*this);
     }
 

@@ -93,12 +93,12 @@ struct Literal: sor< Float, Integer, Char, String, RawString > {};
 
 // Expressions
 // * some rules are parametrized with S (space type), choose either SC or NSC (allow newline)
-// * in general, rules inside braces use NSC, rules outside braces use SC
+// * in general, rules inside brackets (round or square) use NSC, rules outside brackets use SC
 // * this allows leaving out semicolons but still support multiline expressions
 template<class S> struct DotCall: if_must< one<'.'>, SC, seq< ExprCallable, star<RS, S, ExprArgSafe> > > {};
 template<class S> struct ExprInfixRight: seq< sor< DotCall<S>, if_must<InfixOperator, S, ExprOperand> >, S, opt< ExprInfixRight<S> > > {};
 template<class S> struct ExprInfix: seq< ExprOperand, S, opt<ExprInfixRight<S> > > {};
-template<> struct ExprInfix<SC>: seq< ExprOperand, sor< seq<NSC, at< one<'.'> > >, SC>, opt<ExprInfixRight<SC> > > {};  // specialization to allow newline before dotcall even outside braces
+template<> struct ExprInfix<SC>: seq< ExprOperand, sor< seq<NSC, at< one<'.'> > >, SC>, opt<ExprInfixRight<SC> > > {};  // specialization to allow newline before dotcall even outside brackets
 template<class S> struct Expression: sor< ExprCond, ExprInfix<S> > {};
 struct Variable: seq< Identifier, opt<SC, one<':'>, SC, must<UnsafeType> > > {};
 struct Parameter: sor< Type, seq< Identifier, opt<SC, one<':'>, SC, must<Type> > > > {};
@@ -110,16 +110,16 @@ struct FunctionType: seq< DeclParams, SC, DeclResult > {};
 struct FunctionDecl: seq< DeclParams, SC, opt<DeclResult>, SC, opt<if_must<KeywordWith, SC, TypeContext>> > {};
 struct ListType: if_must< one<'['>, SC, Type, SC, one<']'> > {};
 struct UnsafeType: sor<FunctionType, ListType, TypeName> {};   // usable in context where Type is already expected
-struct BracedType: if_must< one<'('>, SC, UnsafeType, SC, one<')'> > {};
-struct Type: sor< BracedType, ListType, TypeName > {};
+struct BracketedType: if_must< one<'('>, SC, UnsafeType, SC, one<')'> > {};
+struct Type: sor< BracketedType, ListType, TypeName > {};
 struct Block: if_must< one<'{'>, NSC, sor< one<'}'>, seq<SepList<Statement>, NSC, one<'}'>> > > {};
 struct Function: sor< Block, if_must< KeywordFun, NSC, FunctionDecl, NSC, Block> > {};
-struct BracedExpr: if_must< one<'('>, NSC, Expression<NSC>, NSC, one<')'> > {};
+struct BracketedExpr: if_must< one<'('>, NSC, Expression<NSC>, NSC, one<')'> > {};
 struct ExprPrefix: if_must< PrefixOperator, SC, ExprOperand, SC > {};
 struct Reference: seq< Identifier > {};
 struct List: if_must< one<'['>, NSC, opt<ExprInfix<NSC>, NSC>, one<']'> > {};
-struct ExprCallable: sor< BracedExpr, Function, Reference> {};
-struct ExprArgSafe: sor< BracedExpr, List, Function, Literal, Reference > {};  // expressions which can be used as args in Call
+struct ExprCallable: sor< BracketedExpr, Function, Reference> {};
+struct ExprArgSafe: sor< BracketedExpr, List, Function, Literal, Reference > {};  // expressions which can be used as args in Call
 struct Call: seq< ExprCallable, plus<RS, SC, ExprArgSafe> > {};
 struct ExprOperand: sor<Call, ExprArgSafe, ExprPrefix> {};
 struct ExprCond: if_must< KeywordIf, NSC, ExprInfix<NSC>, NSC, KeywordThen, NSC, Expression<SC>, NSC, KeywordElse, NSC, Expression<SC>> {};
@@ -199,8 +199,8 @@ struct Action<Expression<S>> : change_states< std::unique_ptr<ast::Expression> >
     }
 
     template<typename Input>
-    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Braced& braced_expr) {
-        braced_expr.expression = std::move(expr);
+    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Bracketed& bracketed) {
+        bracketed.expression = std::move(expr);
     }
 };
 
@@ -354,15 +354,15 @@ struct Action<ExprCond> : change_states< ast::Condition > {
 
 
 template<>
-struct Action<BracedExpr> : change_states< ast::Braced > {
+struct Action<BracketedExpr> : change_states< ast::Bracketed > {
     template<typename Input>
-    static void apply(const Input &in, ast::Braced& braced) {
-        braced.source_info.load(in.input(), in.position());
+    static void apply(const Input &in, ast::Bracketed& bracketed) {
+        bracketed.source_info.load(in.input(), in.position());
     }
 
     template<typename Input>
-    static void success(const Input &in, ast::Braced& braced, std::unique_ptr<ast::Expression>& expr) {
-        expr = std::make_unique<ast::Braced>(std::move(braced));
+    static void success(const Input &in, ast::Bracketed& bracketed, std::unique_ptr<ast::Expression>& expr) {
+        expr = std::make_unique<ast::Bracketed>(std::move(bracketed));
     }
 };
 

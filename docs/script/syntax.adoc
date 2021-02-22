@@ -62,9 +62,9 @@ sub (1 + 2) 3   // => 0
 1 .add 2        // infix style
 ----
 
-* Function call syntax is minimalistic - there are no commas or parens.
-* Parens can be used around each single argument.
-* Infix operators and other function calls require parens around them.
+* Function call syntax is minimalistic - there are no commas or brackets.
+* Round brackets can be used around each single argument.
+* Infix operators and other function calls require round brackets around them.
 
 === Infix function call
 
@@ -81,8 +81,8 @@ The evaluation rule is simple:
 The left-hand side expression is passed as the first argument and
 zero or more right-hand side expressions are passed as the following arguments.
 
-Spaces around the dot are optional, but numbers might need parenthesis,
-depending if the dot is preceded by a space or not:
+Spaces around the dot are optional, but numbers might need bracketing
+if the dot is not preceded by a space:
 
 [source,fire]
 ----
@@ -124,7 +124,7 @@ a_list .sort .uniq          // implicit left-to-right evaluation
 list_1 .cat list_2 list_3 .sort .uniq
 cat list_1 list_2 list_3 .sort .uniq
 
-// might be more readable with explicit parens
+// might be more readable with explicit round brackets
 (cat list_1 list_2 list_3) .sort .uniq
 ----
 
@@ -242,7 +242,7 @@ else {
 ----
 
 * Spec: `if &lt;cond&gt; then &lt;true-branch&gt; else &lt;false-branch&gt;`
-* The parens around condition are optional.
+* The round brackets around condition are optional.
 * The if-expression evaluates to a value -> both branches must have the same type.
 
 Block is a function with zero arguments:
@@ -551,7 +551,7 @@ but semicolon-free code is a little easier to write, and it looks cleaner--semic
 before line-breaks are mostly just noise.
 
 - The main drawback is when a statement spans multiple lines, it needs either a special guide
-(e.g. escaping newlines), or the grammar needs special rules (parenthesised expression, continuation
+(e.g. escaping newlines), or the grammar needs special rules (bracketed expression, continuation
 of expression when a line begins or ends with an operator).
 
 - Example of a function call spanning multiple lines:
@@ -566,7 +566,7 @@ some_fun 1 2 3
 some_fun 1 2 3 \
     b 4
 
-// with optional semicolon, using parentheses
+// with optional semicolon, using round brackets
 (some_fun 1 2 3
     b 4)
 ----
@@ -581,13 +581,13 @@ This doesn't help to make the language easier to parse either.
 
 == Appendix
 
-List of Keywords:
+=== List of Keywords
 
 ----
 else fun import in if module then
 ----
 
-Precedence table:
+=== Precedence table
 
 ----
 (-2) |  definition        |  =
@@ -614,3 +614,21 @@ Higher precedence means tighter binding.
 
 Infix operators have numbered precedence, which can be easily changed in compiler implementation.
 The other precedences are hard-coded in parser grammar.
+
+=== Terminology
+
+=== Braces, brackets
+
+In this document and in the code, all brackets are called either *brackets* (round, square or angle) or *braces* (curly).
+The word parentheses, meaning round brackets, is not used here. I know it's a nice long word, but after needing to write
+_parenthesizing_ a few times, I gave up.
+
+.Brackets
+|===
+| Type  | Name             | Usage
+
+| {}    | (curly) braces   | blocks of code
+| ()    | round brackets   | bracketing of expressions, tuples
+| []    | square brackets  | lists
+| <>    | angle brackets   | _currently none_
+|===
