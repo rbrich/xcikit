@@ -2,12 +2,12 @@
 # https://circleci.com/docs/2.0/sample-config/
 # https://circleci.com/docs/2.0/custom-images/
 
-version: 2
+version: 2.1
 
 jobs:
   build-debian-11:
     docker:
-      - image: rbrich/xcikit:debian-11
+      - image: rbrich/xcikit-debian:latest
 
     steps:
       - checkout
@@ -44,6 +44,9 @@ jobs:
         default: "--emscripten core script"
     steps:
       - checkout
+      - run:
+          name: Bootstrap
+          command: ./bootstrap.sh -y
       - run:
           name: Deps
           command: ./build.sh deps << parameters.build-args >>

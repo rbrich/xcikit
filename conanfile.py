@@ -30,9 +30,9 @@ class XcikitConan(ConanFile):
         "shared": False,
         "data": True,
         "script": True,
-        "graphics": False,
-        "text": False,
-        "widgets": False,
+        "graphics": True,
+        "text": True,
+        "widgets": True,
         "benchmarks": True,
         "tests": True,
     }

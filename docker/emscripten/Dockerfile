@@ -1,4 +1,4 @@
-# CI builder with Emscripten
+# CI builder with Emscripten (DockerHub public image)
 #   docker build -t rbrich/xcikit-emscripten docker/emscripten/
 #   docker run --rm -v $PWD:/xcikit -w /xcikit -it rbrich/xcikit-emscripten bash
 

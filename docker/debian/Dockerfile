@@ -1,11 +1,11 @@
-# CI builder (public)
-#   docker build --target builder -t rbrich/xcikit:debian-11 docker/debian-11/
-#   docker run --rm -v $PWD:/xcikit -w /xcikit -it rbrich/xcikit:debian-11 bash
+# CI builder (DockerHub public image)
+#   docker build --target builder -t rbrich/xcikit-debian docker/debian/
+#   docker run --rm -v $PWD:/xcikit -w /xcikit -it rbrich/xcikit-debian bash
 #
 # SSH builder (for Clion "Remote Host" toolchain)
 # see https://blog.jetbrains.com/clion/2020/01/using-docker-with-clion/)
-#   docker build --target builder-ssh --build-arg rootpw=pass1 -t xcikit-ssh:debian-11 docker/debian-11/
-#   docker run -p 127.0.0.1:222:22 --cap-add sys_ptrace --name xcikit-ssh xcikit-ssh:debian-11
+#   docker build --target builder-ssh --build-arg rootpw=pass1 -t xcikit-debian-ssh docker/debian/
+#   docker run -p 127.0.0.1:222:22 --cap-add sys_ptrace --name xcikit-ssh xcikit-debian-ssh
 #   ssh root@localhost -p 222
 # Cleanup known hosts:
 #   ssh-keygen -f "$HOME/.ssh/known_hosts" -R "[localhost]:222"
@@ -35,7 +35,7 @@ RUN echo "conan"; apt-get update && apt-mark manual $(apt-mark showauto) && \
     rm -rf /var/lib/apt/lists/*
 
 RUN echo "xcikit deps"; apt-get update && apt-get install --no-install-recommends -y \
-    glslang-tools libvulkan-dev libfreetype6-dev librange-v3-dev \
+    librange-v3-dev libglfw3-dev glslang-tools libvulkan-dev libfreetype6-dev \
     libhyperscan-dev catch2 libbenchmark-dev && rm -rf /var/lib/apt/lists/*
 
 
