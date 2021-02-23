@@ -100,12 +100,19 @@ include(XciBuildChecks)
 add_subdirectory(share)
 
 # Location of share dir / archives
-set(XCI_SHARE_DIR "share/xcikit")
-set(XCI_SHARE_DAR "share/xcikit/share.dar")
-set(XCI_SHARE_ZIP "share/xcikit/share.zip")
+if (EMSCRIPTEN)
+    # Directory inside Emscripten VFS
+    set(XCI_SHARE_DIR "share")
+    set(XCI_SHARE_DAR "share.dar")
+    set(XCI_SHARE_ZIP "share.zip")
+else()
+    set(XCI_SHARE_DIR "share/xcikit")
+    set(XCI_SHARE_DAR "share/xcikit/share.dar")
+    set(XCI_SHARE_ZIP "share/xcikit/share.zip")
+endif()
 
 set(XCI_SHARE)
-if (XCI_INSTALL_SHARE_DIR)
+if (XCI_INSTALL_SHARE_DIR OR EMSCRIPTEN)
     set(XCI_SHARE "${XCI_SHARE_DIR}")
 elseif (XCI_INSTALL_SHARE_DAR)
     set(XCI_SHARE "${XCI_SHARE_DAR}")

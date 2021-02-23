@@ -131,6 +131,11 @@ if (MSVC)
     add_compile_options(/source-charset:utf-8)
 endif()
 
+if (EMSCRIPTEN)
+    add_compile_options(-sDISABLE_EXCEPTION_CATCHING=0)
+    add_link_options(-sDISABLE_EXCEPTION_CATCHING=0 -sEXIT_RUNTIME=1)
+endif()
+
 if (FORCE_COLORS)
     if (CMAKE_CXX_COMPILER_ID MATCHES "GNU")
         add_compile_options (-fdiagnostics-color=always)

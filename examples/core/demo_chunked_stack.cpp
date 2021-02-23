@@ -11,21 +11,20 @@
 
 using namespace xci::core;
 using namespace xci::core::log;
-using namespace std;
 
 int main()
 {
     // contained type doesn't matter:
     info("sizeof(deque<int>)    = {}", sizeof(std::deque<int>));
-    info("sizeof(deque<string>) = {}", sizeof(deque<string>));
+    info("sizeof(deque<string>) = {}", sizeof(std::deque<std::string>));
     info("sizeof(ChunkedStack<int>)    = {}", sizeof(ChunkedStack<int>));
-    info("sizeof(ChunkedStack<string>) = {}", sizeof(ChunkedStack<string>));
+    info("sizeof(ChunkedStack<string>) = {}", sizeof(ChunkedStack<std::string>));
 
     info("Stack of 1 int");
     {
         ChunkedStack<int> d;
         d.push_back(1);
-        d.alloc_info(cerr);
+        d.alloc_info(std::cerr);
     }
 
     info("Stack of 10000 ints");
@@ -33,7 +32,7 @@ int main()
         ChunkedStack<int> d;
         for (int i = 0; i < 10000; ++i)
             d.push_back(i);
-        d.alloc_info(cerr);
+        d.alloc_info(std::cerr);
     }
 
     info("Stack of 10000 ints (reserved)");
@@ -41,6 +40,6 @@ int main()
         ChunkedStack<int> d(10000);
         for (int i = 0; i < 10000; ++i)
             d.push_back(i);
-        d.alloc_info(cerr);
+        d.alloc_info(std::cerr);
     }
 }

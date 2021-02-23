@@ -19,6 +19,8 @@
     #include <sys/types.h>
     #include <sys/sysctl.h>
     #include <mach-o/dyld.h>
+#elif defined(__EMSCRIPTEN_PTHREADS__)
+    #include <pthread.h>
 #endif
 
 // get_home_dir, *_signals
@@ -39,8 +41,10 @@ ThreadId get_thread_id()
 {
 #if defined(__linux__)
     return (ThreadId) syscall(SYS_gettid);
-#elif defined(__EMSCRIPTEN__)
+#elif defined(__EMSCRIPTEN_PTHREADS__)
     return static_cast<uintptr_t>(pthread_self());
+#elif defined(__EMSCRIPTEN__)
+    return 0;
 #elif defined(__APPLE__)
     uint64_t tid = 0;
     pthread_threadid_np(pthread_self(), &tid);
@@ -98,6 +102,8 @@ fs::path home_directory_path()
     }
     homedir.shrink_to_fit();
     return homedir;
+#elif defined(__EMSCRIPTEN__)
+    return "/home/web_user";
 #else
     struct passwd pwd {};
     struct passwd *result;
