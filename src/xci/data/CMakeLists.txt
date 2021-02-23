@@ -28,7 +28,7 @@ target_link_libraries(xci-data
 
 target_include_directories(xci-data
     PUBLIC
-        ${CMAKE_SOURCE_DIR}/external
+        ${CMAKE_SOURCE_DIR}/third_party
         ${XCI_INCLUDE_DIRS}
     )
 

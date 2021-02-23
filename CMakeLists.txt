@@ -55,7 +55,7 @@ include(ConanInit)
 
 if (XCI_TEXT)
     # RectangleBinPack (xci-text)
-    add_subdirectory(external/rbp)
+    add_subdirectory(third_party/rbp)
 endif()
 
 # Threads (always from system)
