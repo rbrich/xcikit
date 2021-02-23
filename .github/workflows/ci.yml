@@ -17,6 +17,7 @@ jobs:
     env:
       CONAN_PASSWORD: ${{ secrets.CONAN_PASSWORD }}
       CONAN_REVISIONS_ENABLED: 1
+      BUILD_ARGS: core data script
 
     steps:
     - uses: actions/checkout@v2
@@ -35,6 +36,11 @@ jobs:
         sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++    50
         sudo update-alternatives --install /usr/bin/cc cc /usr/bin/gcc      50
 
+    - name: install dev libs
+      if: ${{ matrix.os == 'ubuntu-18.04' }}
+      run: |
+        sudo apt-get install -y libhyperscan-dev
+
     - name: install tools
       run: |
         pip3 --no-cache-dir install conan
@@ -50,27 +56,27 @@ jobs:
 
     - name: deps
       run: |
-        ./build.sh deps
+        ./build.sh deps $BUILD_ARGS
         conan user -p $CONAN_PASSWORD -r xcikit rbrich
         conan upload "*/*@rbrich/stable" --all --no-overwrite --check --confirm -r=xcikit
       shell: bash
 
     - name: configure
-      run: ./build.sh config -D XCI_GRAPHICS=0
+      run: ./build.sh config $BUILD_ARGS
       shell: bash
 
     - name: build
-      run: ./build.sh build
+      run: ./build.sh build $BUILD_ARGS
       shell: bash
 
     - name: test
-      run: ./build.sh test
+      run: ./build.sh test $BUILD_ARGS
       shell: bash
 
     - name: install
-      run: ./build.sh install
+      run: ./build.sh install $BUILD_ARGS
       shell: bash
 
     - name: package
-      run: ./build.sh package
+      run: ./build.sh package $BUILD_ARGS
       shell: bash

@@ -10,9 +10,6 @@ jobs:
     name: Analyze
     runs-on: ubuntu-latest
 
-    strategy:
-      fail-fast: false
-
     env:
       CONAN_REVISIONS_ENABLED: 1
 
@@ -55,7 +52,7 @@ jobs:
     - name: Build
       run: |
         ./bootstrap.sh -y
-        ./build.sh deps config build -D XCI_GRAPHICS=0
+        ./build.sh  deps config build  core data script
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
