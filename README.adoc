@@ -273,7 +273,9 @@ How to build:
 
 The non-graphical components should build with Emscripten.
 
-Use Conan profile with `os=Emscripten`, for example:
+Install and link https://emscripten.org/[Emscripten] so that this command works: `emcc -v`
+
+Create a https://docs.conan.io/en/latest/integrations/cross_platform/emscripten.html[Conan profile for Emscripten], for example:
 
 [source,ini]
 ----
@@ -292,9 +294,14 @@ CONAN_CMAKE_TOOLCHAIN_FILE=.../cmake/Modules/Platform/Emscripten.cmake
 CONAN_CMAKE_CROSSCOMPILING_EMULATOR=/usr/bin/node
 ----
 
-See: https://docs.conan.io/en/latest/integrations/cross_platform/emscripten.html[]
+Set this profile to be used by default:
 
-Build scripts have basic support for Emscripten target:
+[source,bash]
+----
+export CONAN_DEFAULT_PROFILE_PATH=emscripten
+----
+
+Run the build (only 'core' and 'script' components work at this time):
 
 [source,bash]
 ----

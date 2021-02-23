@@ -1,0 +1,12 @@
+[settings]
+os=Emscripten
+arch=wasm
+compiler=clang
+compiler.version=13.0
+compiler.libcxx=libc++
+build_type=Release
+[options]
+[build_requires]
+[env]
+CONAN_CMAKE_TOOLCHAIN_FILE=/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake
+CONAN_CMAKE_CROSSCOMPILING_EMULATOR=/usr/bin/node

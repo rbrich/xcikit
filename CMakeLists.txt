@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.13)
 project(xcikit CXX)
 
 # Optional libraries (only xci-core is required)
@@ -263,12 +263,15 @@ function(print_trgt msg target)
     endif()
 endfunction()
 
+# CMAKE_MESSAGE_INDENT is supported since CMake 3.16, ignored in older versions
 macro(push_indent)
     list(APPEND CMAKE_MESSAGE_INDENT "    ")
 endmacro()
 
 macro(pop_indent)
-    list(POP_BACK CMAKE_MESSAGE_INDENT)
+    if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.15.0")
+        list(POP_BACK CMAKE_MESSAGE_INDENT)
+    endif()
 endmacro()
 
 message("Optional components:")

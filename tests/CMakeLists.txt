@@ -39,7 +39,7 @@ endmacro()
 
 add_catch_test(test_core test_core.cpp xci-core)
 if (EMSCRIPTEN)
-    target_link_options(test_core PRIVATE --embed-file=include/xci/config.h)
+    target_link_options(test_core PRIVATE --embed-file=${CMAKE_BINARY_DIR}/include/xci/config.h@test_file)
 endif()
 
 add_catch_test(test_geometry test_geometry.cpp xci-core)
@@ -59,7 +59,7 @@ endif()
 if (XCI_SCRIPT)
     add_catch_test(test_script test_script.cpp xci-script)
     if (EMSCRIPTEN)
-        target_link_options(test_script PRIVATE --embed-file=share/script)
+        target_link_options(test_script PRIVATE --embed-file=${CMAKE_BINARY_DIR}/share/script@share/script)
     endif()
 endif()
 

@@ -56,7 +56,7 @@ TEST_CASE( "read_binary_file", "[file]" )
 #ifndef __EMSCRIPTEN__
     auto filename = self_executable_path();
 #else
-    fs::path filename = "include/xci/config.h";
+    fs::path filename = "test_file";
 #endif
     INFO(filename.string());
     auto content = read_binary_file(filename);
