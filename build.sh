@@ -23,7 +23,7 @@ print_usage()
     echo "      -j JOBS                 Parallel jobs for build and test phases"
     echo "      -D CMAKE_DEF            Passed to cmake"
     echo "      --debug, --minsize      Sets CMAKE_BUILD_TYPE"
-    echo "      --emscripten            Target Emscripten (wrap with 'emcmake')"
+    echo "      --emscripten            Target Emscripten (i.e. wrap with 'emcmake')"
     echo "      --unity                 CMAKE_UNITY_BUILD - batch all source files in each target together"
     echo "      --tidy                  Run clang-tidy on each compiled file"
     echo "      --update                Passed to conan - update dependencies"

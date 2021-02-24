@@ -289,10 +289,11 @@ build_type=Release
 [options]
 [build_requires]
 [env]
-# copy from CMake command line (when called with emcmake)
+# Find actual path Emscripten installation (or check CMake command line, when called with emcmake)
 CONAN_CMAKE_TOOLCHAIN_FILE=.../cmake/Modules/Platform/Emscripten.cmake
-CONAN_CMAKE_CROSSCOMPILING_EMULATOR=/usr/bin/node
 ----
+
+See a working example of such profile in the link:docker/emscripten/conan/profile[docker/emscripten] directory.
 
 Set this profile to be used by default:
 

@@ -1,3 +1,5 @@
+# 3.16 introduced CMAKE_MESSAGE_INDENT
+# 3.13 is current version in Emscripten Docker image
 cmake_minimum_required(VERSION 3.13)
 project(xcikit CXX)
 
@@ -44,8 +46,6 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(XciBuildOptions)
 
-
-message(STATUS "CMAKE_TOOLCHAIN_FILE ${CMAKE_TOOLCHAIN_FILE}")
 
 # ------------ #
 # Dependencies #
@@ -252,7 +252,15 @@ function(print_flag msg flag)
         endif()
         string(REPLACE "!" " " msg ${msg1})
     endif()
-    message(${msg})
+    if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
+        message(${msg})
+    else()
+        set(INDENT "")
+        foreach(i RANGE 1 ${MESSAGE_INDENT})
+            string(APPEND INDENT "    ")
+        endforeach()
+        message(${INDENT}${msg})
+    endif()
 endfunction()
 
 function(print_trgt msg target)
@@ -263,16 +271,22 @@ function(print_trgt msg target)
     endif()
 endfunction()
 
-# CMAKE_MESSAGE_INDENT is supported since CMake 3.16, ignored in older versions
-macro(push_indent)
-    list(APPEND CMAKE_MESSAGE_INDENT "    ")
-endmacro()
-
-macro(pop_indent)
-    if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.15.0")
+if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
+    macro(push_indent)
+        list(APPEND CMAKE_MESSAGE_INDENT "    ")
+    endmacro()
+    macro(pop_indent)
         list(POP_BACK CMAKE_MESSAGE_INDENT)
-    endif()
-endmacro()
+    endmacro()
+else()
+    set(MESSAGE_INDENT 0)
+    macro(push_indent)
+        math(EXPR MESSAGE_INDENT "${MESSAGE_INDENT}+1")
+    endmacro()
+    macro(pop_indent)
+        math(EXPR MESSAGE_INDENT "${MESSAGE_INDENT}-1")
+    endmacro()
+endif()
 
 message("Optional components:")
 push_indent()

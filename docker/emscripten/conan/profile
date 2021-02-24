@@ -9,4 +9,3 @@ build_type=Release
 [build_requires]
 [env]
 CONAN_CMAKE_TOOLCHAIN_FILE=/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake
-CONAN_CMAKE_CROSSCOMPILING_EMULATOR=/usr/bin/node

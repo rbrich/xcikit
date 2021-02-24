@@ -93,8 +93,7 @@ class XcikitConan(ConanFile):
                         endforeach()
                     """))
                 out = io.StringIO()
-                if self.run(f"{'emcmake' if self.settings.os == 'Emscripten' else ''} "
-                            f"cmake . -G Ninja -DDEPS='{items}'",
+                if self.run(f"cmake . -G Ninja -DDEPS='{items}'",
                             output=out, ignore_errors=True) != 0:
                     self.output.error(f'Failed:\n{out.getvalue()}')
                     return

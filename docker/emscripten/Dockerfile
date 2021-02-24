@@ -5,7 +5,7 @@
 FROM emscripten/emsdk:latest
 
 RUN echo "dev tools"; apt-get update && apt-get install --no-install-recommends -y \
-    python3-setuptools && rm -rf /var/lib/apt/lists/*
+    ninja-build python3-setuptools && rm -rf /var/lib/apt/lists/*
 
 COPY conan/profile /root/.conan/profiles/default
 COPY conan/settings.yml /root/.conan/settings.yml

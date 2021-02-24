@@ -589,26 +589,24 @@ else fun import in if module then
 
 === Precedence table
 
-----
-(-2) |  definition        |  =
-(-1) |  condition         |  if <cond> then <tru-branch> else <false-branch>
-
-1    |  comma             |  ,
-2    |  logical or        |  ||
-3    |  logical and       |  &&
-4    |  comparison        |  ==  !=  <=  >=  <  >
-5    |  bitwise or, xor   |  |  ^
-6    |  bitwise and       |  &
-7    |  bitwise shift     |  <<  >>
-8    |  add, subtract     |  +  -
-9    |  multiply, divide  |  *  /  %
-10   |  power             |  **
-11   |  subscript         |  x ! y
-12   |  dot function call |  <arg1> . name [<arg2> ...]
-
-(13) |  unary ops         |  -  +  !  ~
-(14) |  function call     |  name [<arg> ...]
-----
+|===
+| (-2) |  definition        |  =
+| (-1) |  condition         |  if ...
+| 1    |  comma             |  ,
+| 2    |  logical or        |  \|\|
+| 3    |  logical and       |  &&
+| 4    |  comparison        |  ==  !=  \<=  >=  <  >
+| 5    |  bitwise or, xor   |  \|  ^
+| 6    |  bitwise and       |  &
+| 7    |  bitwise shift     |  <<  >>
+| 8    |  add, subtract     |  +  -
+| 9    |  multiply, divide  |  *  /  %
+| 10   |  power             |  **
+| 11   |  subscript         |  x ! y
+| 12   |  dot function call |  <arg1> . name [<arg2> ...]
+| (13) |  unary ops         |  -  +  !  ~
+| (14) |  function call     |  name [<arg> ...]
+|===
 
 Higher precedence means tighter binding.
 
