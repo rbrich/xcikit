@@ -1,17 +1,14 @@
 # ------------ #
-# Dependencies #
-# ------------ #
-
-find_path(INCBIN_INCLUDE_DIR incbin.h)
-
-# ------------ #
 # Examples     #
 # ------------ #
 
 # xci-core
 
 add_subdirectory(core)
-add_subdirectory(plugin)
+
+if (NOT EMSCRIPTEN)
+    add_subdirectory(plugin)
+endif()
 
 # xci-data
 

@@ -188,9 +188,9 @@ void FunctionType::copy_to(FunctionType& r) const
 }
 
 
-std::unique_ptr<ast::Expression> Braced::make_copy() const
+std::unique_ptr<ast::Expression> Bracketed::make_copy() const
 {
-    auto r = std::make_unique<Braced>();
+    auto r = std::make_unique<Bracketed>();
     r->source_info = source_info;
     r->expression = expression->make_copy();
     return r;

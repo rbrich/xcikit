@@ -11,7 +11,7 @@ endif::[]
 toc::[]
 
 Fire Script is a functional language, strongly and statically typed,
-with function overloading and generics (type variables).
+with Haskell-like generics (type classes and type variables).
 
 The language is designed to allow small and easily embeddable implementation,
 with possibility of compilation to native code.
@@ -21,13 +21,15 @@ This document presents the syntax and semantics by example.
 An interpreter is being developed in {cpp} together with this description.
 The interpreter consists of a {cpp} static library (`libxci-script`)
 and a REPL interpreter (`demo_script`). The implementation is a little behind
-this document and not everything described here has to be implemented.
-This is design document, with the ideas. The design may change during implementation.
+this document, and it's also possible that not everything described here will actually
+be implemented. This is a design document, containing miscellaneous ideas.
+The language may change during implementation.
 
-The implementation should completely match the specification when it reaches
-version 1.0.
+The plan is that the implementation will completely match the specification
+when it reaches version 1.0.
 
 See `xci::script` in https://github.com/rbrich/xcikit[xcikit] codebase.
+
 
 == Syntax Elements
 
@@ -60,9 +62,9 @@ sub (1 + 2) 3   // => 0
 1 .add 2        // infix style
 ----
 
-* Function call syntax is minimalistic - there are no commas or parens.
-* Parens can be used around each single argument.
-* Infix operators and other function calls require parens around them.
+* Function call syntax is minimalistic - there are no commas or brackets.
+* Round brackets can be used around each single argument.
+* Infix operators and other function calls require round brackets around them.
 
 === Infix function call
 
@@ -79,8 +81,8 @@ The evaluation rule is simple:
 The left-hand side expression is passed as the first argument and
 zero or more right-hand side expressions are passed as the following arguments.
 
-Spaces around the dot are optional, but numbers might need parenthesis,
-depending if the dot is preceded by a space or not:
+Spaces around the dot are optional, but numbers might need bracketing
+if the dot is not preceded by a space:
 
 [source,fire]
 ----
@@ -122,7 +124,7 @@ a_list .sort .uniq          // implicit left-to-right evaluation
 list_1 .cat list_2 list_3 .sort .uniq
 cat list_1 list_2 list_3 .sort .uniq
 
-// might be more readable with explicit parens
+// might be more readable with explicit round brackets
 (cat list_1 list_2 list_3) .sort .uniq
 ----
 
@@ -240,7 +242,7 @@ else {
 ----
 
 * Spec: `if &lt;cond&gt; then &lt;true-branch&gt; else &lt;false-branch&gt;`
-* The parens around condition are optional.
+* The round brackets around condition are optional.
 * The if-expression evaluates to a value -> both branches must have the same type.
 
 Block is a function with zero arguments:
@@ -520,7 +522,7 @@ in local cache.
 
 == Compilation
 
-The complete program is composed from main source plus all imported modules,
+The complete program is composed of main source plus all imported modules,
 each of which is precompiled into bitcode. After this phase, we have a big blob of bitcode.
 
 The whole precompiled blob is then passed either to interpreter, which can execute it as is,
@@ -530,38 +532,101 @@ to machine code.
 The resulting machine binary will have a main entry point, which will run a default Executor
 (that will be compiled in too, for efficiency).
 
+
+== Syntax decisions
+
+=== Semicolons separate statements on one line
+
+Decision:
+
+- Semicolons are used to separate statements (not terminate them).
+
+- Line-break also separates statements, in most cases. While having one statement per line,
+semicolons are optional.
+
+Reasoning:
+
+- Mandatory semicolons would allow slightly simpler grammar for parsing the language,
+but semicolon-free code is a little easier to write, and it looks cleaner--semicolons
+before line-breaks are mostly just noise.
+
+- The main drawback is when a statement spans multiple lines, it needs either a special guide
+(e.g. escaping newlines), or the grammar needs special rules (bracketed expression, continuation
+of expression when a line begins or ends with an operator).
+
+- Example of a function call spanning multiple lines:
++
+[source,fire]
+----
+// with mandatory semicolons
+some_fun 1 2 3
+    b 4;
+
+// with optional semicolon, using a guide
+some_fun 1 2 3 \
+    b 4
+
+// with optional semicolon, using round brackets
+(some_fun 1 2 3
+    b 4)
+----
+
+- Depending on how you look at the example, you may find some of the example snippets more readable.
+But it's mostly just matter of taste. Note that you can always add the semicolon, even when it's
+optional.
+
+- Some languages, like Python or Haskell, use code layout (indent) to recognize continuation.
+This doesn't help to make the language easier to parse either.
+
+
 == Appendix
 
-List of Keywords:
+=== List of Keywords
 
 ----
 else fun import in if module then
 ----
 
-Precedence table:
+=== Precedence table
 
-----
-(-2) |  definition        |  =
-(-1) |  condition         |  if <cond> then <tru-branch> else <false-branch>
-
-1    |  comma             |  ,
-2    |  logical or        |  ||
-3    |  logical and       |  &&
-4    |  comparison        |  ==  !=  <=  >=  <  >
-5    |  bitwise or, xor   |  |  ^
-6    |  bitwise and       |  &
-7    |  bitwise shift     |  <<  >>
-8    |  add, subtract     |  +  -
-9    |  multiply, divide  |  *  /  %
-10   |  power             |  **
-11   |  subscript         |  x ! y
-12   |  dot function call |  <arg1> . name [<arg2> ...]
-
-(13) |  unary ops         |  -  +  !  ~
-(14) |  function call     |  name [<arg> ...]
-----
+|===
+| (-2) |  definition        |  =
+| (-1) |  condition         |  if ...
+| 1    |  comma             |  ,
+| 2    |  logical or        |  \|\|
+| 3    |  logical and       |  &&
+| 4    |  comparison        |  ==  !=  \<=  >=  <  >
+| 5    |  bitwise or, xor   |  \|  ^
+| 6    |  bitwise and       |  &
+| 7    |  bitwise shift     |  <<  >>
+| 8    |  add, subtract     |  +  -
+| 9    |  multiply, divide  |  *  /  %
+| 10   |  power             |  **
+| 11   |  subscript         |  x ! y
+| 12   |  dot function call |  <arg1> . name [<arg2> ...]
+| (13) |  unary ops         |  -  +  !  ~
+| (14) |  function call     |  name [<arg> ...]
+|===
 
 Higher precedence means tighter binding.
 
 Infix operators have numbered precedence, which can be easily changed in compiler implementation.
 The other precedences are hard-coded in parser grammar.
+
+=== Terminology
+
+=== Braces, brackets
+
+In this document and in the code, all brackets are called either *brackets* (round, square or angle) or *braces* (curly).
+The word parentheses, meaning round brackets, is not used here. I know it's a nice long word, but after needing to write
+_parenthesizing_ a few times, I gave up.
+
+.Brackets
+|===
+| Type  | Name             | Usage
+
+| {}    | (curly) braces   | blocks of code
+| ()    | round brackets   | bracketing of expressions, tuples
+| []    | square brackets  | lists
+| <>    | angle brackets   | _currently none_
+|===

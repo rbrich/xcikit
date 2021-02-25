@@ -84,7 +84,7 @@ public:
     void visit(const Float& v) override { m_os << v; }
     void visit(const Char& v) override { m_os << v; }
     void visit(const String& v) override { m_os << v; }
-    void visit(const Braced& v) override { m_os << v; }
+    void visit(const Bracketed& v) override { m_os << v; }
     void visit(const Tuple& v) override { m_os << v; }
     void visit(const List& v) override { m_os << v; }
     void visit(const Reference& v) override { m_os << v; }
@@ -142,10 +142,10 @@ std::ostream& operator<<(std::ostream& os, const String& v)
     }
 }
 
-std::ostream& operator<<(std::ostream& os, const Braced& v)
+std::ostream& operator<<(std::ostream& os, const Bracketed& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "Braced(Expression)" << endl;
+        os << put_indent << "Bracketed(Expression)" << endl;
         return os << more_indent << *v.expression << less_indent;
     } else {
         return os << "(" << *v.expression << ")";

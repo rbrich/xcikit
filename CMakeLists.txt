@@ -1,4 +1,6 @@
-cmake_minimum_required(VERSION 3.15)
+# 3.16 introduced CMAKE_MESSAGE_INDENT
+# 3.13 is current version in Emscripten Docker image
+cmake_minimum_required(VERSION 3.13)
 project(xcikit CXX)
 
 # Optional libraries (only xci-core is required)
@@ -6,9 +8,9 @@ include(CMakeDependentOption)
 option(XCI_DATA "Enable component: xci-data" ON)
 option(XCI_SCRIPT "Enable component: xci-script" ON)
 option(XCI_GRAPHICS "Enable component: xci-graphics (requires Vulkan and GLFW)" ON)
-CMAKE_DEPENDENT_OPTION(XCI_TEXT "Enable component: xci-text" ON
+cmake_dependent_option(XCI_TEXT "Enable component: xci-text" ON
     "XCI_GRAPHICS" OFF)
-CMAKE_DEPENDENT_OPTION(XCI_WIDGETS "Enable component: xci-widgets" ON
+cmake_dependent_option(XCI_WIDGETS "Enable component: xci-widgets" ON
     "XCI_GRAPHICS;XCI_TEXT" OFF)
 
 # Libraries are always built. The rest is optional:
@@ -25,7 +27,11 @@ option(XCI_INSTALL_SHARE_DIR "Install runtime data as a directory (share/xcikit)
 option(XCI_INSTALL_SHARE_DAR "Install runtime data as DAR archive (share.dar)" ON)
 option(XCI_INSTALL_SHARE_ZIP "Install runtime data as ZIP archive (share.zip)" OFF)
 
-option(XCI_LISTDIR_GETDENTS "Use getdents syscall instead of readdir for tools/find_file." ON)
+if (NOT EMSCRIPTEN)
+    option(XCI_LISTDIR_GETDENTS "Use getdents syscall instead of readdir for tools/find_file." ON)
+else()
+    set(XCI_LISTDIR_GETDENTS OFF)
+endif()
 
 option(XCI_DEBUG_VULKAN "Log info about Vulkan calls and errors." OFF)
 option(XCI_DEBUG_TRACE "Enable trace log messages." OFF)
@@ -49,7 +55,7 @@ include(ConanInit)
 
 if (XCI_TEXT)
     # RectangleBinPack (xci-text)
-    add_subdirectory(external/rbp)
+    add_subdirectory(third_party/rbp)
 endif()
 
 # Threads (always from system)
@@ -94,12 +100,19 @@ include(XciBuildChecks)
 add_subdirectory(share)
 
 # Location of share dir / archives
-set(XCI_SHARE_DIR "share/xcikit")
-set(XCI_SHARE_DAR "share/xcikit/share.dar")
-set(XCI_SHARE_ZIP "share/xcikit/share.zip")
+if (EMSCRIPTEN)
+    # Directory inside Emscripten VFS
+    set(XCI_SHARE_DIR "share")
+    set(XCI_SHARE_DAR "share.dar")
+    set(XCI_SHARE_ZIP "share.zip")
+else()
+    set(XCI_SHARE_DIR "share/xcikit")
+    set(XCI_SHARE_DAR "share/xcikit/share.dar")
+    set(XCI_SHARE_ZIP "share/xcikit/share.zip")
+endif()
 
 set(XCI_SHARE)
-if (XCI_INSTALL_SHARE_DIR)
+if (XCI_INSTALL_SHARE_DIR OR EMSCRIPTEN)
     set(XCI_SHARE "${XCI_SHARE_DIR}")
 elseif (XCI_INSTALL_SHARE_DAR)
     set(XCI_SHARE "${XCI_SHARE_DAR}")
@@ -239,7 +252,15 @@ function(print_flag msg flag)
         endif()
         string(REPLACE "!" " " msg ${msg1})
     endif()
-    message(${msg})
+    if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
+        message(${msg})
+    else()
+        set(INDENT "")
+        foreach(i RANGE 1 ${MESSAGE_INDENT})
+            string(APPEND INDENT "    ")
+        endforeach()
+        message(${INDENT}${msg})
+    endif()
 endfunction()
 
 function(print_trgt msg target)
@@ -250,13 +271,22 @@ function(print_trgt msg target)
     endif()
 endfunction()
 
-macro(push_indent)
-    list(APPEND CMAKE_MESSAGE_INDENT "    ")
-endmacro()
-
-macro(pop_indent)
-    list(POP_BACK CMAKE_MESSAGE_INDENT)
-endmacro()
+if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
+    macro(push_indent)
+        list(APPEND CMAKE_MESSAGE_INDENT "    ")
+    endmacro()
+    macro(pop_indent)
+        list(POP_BACK CMAKE_MESSAGE_INDENT)
+    endmacro()
+else()
+    set(MESSAGE_INDENT 0)
+    macro(push_indent)
+        math(EXPR MESSAGE_INDENT "${MESSAGE_INDENT}+1")
+    endmacro()
+    macro(pop_indent)
+        math(EXPR MESSAGE_INDENT "${MESSAGE_INDENT}-1")
+    endmacro()
+endif()
 
 message("Optional components:")
 push_indent()

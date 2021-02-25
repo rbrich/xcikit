@@ -132,7 +132,7 @@ public:
         code().add_opcode(Opcode::LoadStatic, idx);
     }
 
-    void visit(ast::Braced& v) override {
+    void visit(ast::Bracketed& v) override {
         v.expression->apply(*this);
     }
 

@@ -33,10 +33,14 @@ int cpu_count();
 // The actual type is system-dependent.
 #if defined(__linux__)
     using ThreadId = pid_t;
+#elif defined(__EMSCRIPTEN__)
+    using ThreadId = uintptr_t;
 #elif defined(__APPLE__)
     using ThreadId = uint64_t;
 #elif defined(_WIN32)
     using ThreadId = unsigned long;
+#else
+    #error "Unsupported platform"
 #endif
 
 /// Get integral thread ID of this thread

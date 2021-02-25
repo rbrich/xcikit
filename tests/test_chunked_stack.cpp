@@ -103,7 +103,11 @@ TEST_CASE( "ChunkedStack<struct>", "[ChunkedStack]" )
 
         explicit TestT(const char* name) : name(name) {}
     };
+#ifdef __EMSCRIPTEN__
+    static_assert(alignof(TestT) == 4);
+#else
     static_assert(alignof(TestT) == 8);
+#endif
 
     constexpr uint32_t init_cap = 10;
     ChunkedStack<TestT> stack(init_cap);

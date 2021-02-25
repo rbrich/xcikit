@@ -57,15 +57,15 @@ int main()
     errno = ENOENT;
     error("errno: ({m:d}) {m}");
 
+    info("[sys] HOME = {}", home_directory_path());
+    info("[sys] TEMP = {}", fs::temp_directory_path());
+    info("[sys] self = {}", self_executable_path());
+
     // Log from threads
     std::thread a(thread_run, "thread1");
     std::thread b(thread_run, "thread2");
     a.join();
     b.join();
-
-    info("[sys] HOME = {}", home_directory_path());
-    info("[sys] TEMP = {}", fs::temp_directory_path());
-    info("[sys] self = {}", self_executable_path());
 
     return EXIT_SUCCESS;
 }

@@ -114,7 +114,7 @@ if (BUILD_WITH_TSAN)
 endif ()
 
 # Strip dead-code
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT EMSCRIPTEN)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-dead_strip")
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-dead_strip")
 endif ()
@@ -129,6 +129,11 @@ if (MSVC)
     add_compile_definitions(NOMINMAX)
     # Read all source files as utf-8
     add_compile_options(/source-charset:utf-8)
+endif()
+
+if (EMSCRIPTEN)
+    add_compile_options(-sDISABLE_EXCEPTION_CATCHING=0)
+    add_link_options(-sDISABLE_EXCEPTION_CATCHING=0 -sEXIT_RUNTIME=1)
 endif()
 
 if (FORCE_COLORS)

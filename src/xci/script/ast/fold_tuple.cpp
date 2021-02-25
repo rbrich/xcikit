@@ -71,7 +71,7 @@ public:
         }
     }
 
-    void visit(ast::Braced& v) override {
+    void visit(ast::Bracketed& v) override {
         apply_and_fold(v.expression);
     }
 

@@ -1,41 +1,76 @@
-# CircleCI + Docker howto: https://circleci.com/docs/2.0/custom-images/
+# CircleCI + Docker howto:
+# https://circleci.com/docs/2.0/sample-config/
+# https://circleci.com/docs/2.0/custom-images/
 
-version: 2
+version: 2.1
+
 jobs:
-  build:
+  build-debian-11:
     docker:
-      - image: rbrich/xcikit:debian-11
+      - image: rbrich/xcikit-debian:latest
 
     steps:
       - checkout
-
       - run:
           name: Bootstrap
           command: ./bootstrap.sh -y
-
       - run:
           name: Deps
           command: ./build.sh deps
-
       - run:
           name: Configure
           command: ./build.sh config
-
       - run:
           name: Build
           command: ./build.sh build -j 2
-
       - run:
           name: Run tests
           command: ./build.sh test
-
       - run:
           name: Install
           command: ./build.sh install
-
       - run:
           name: Package
           command: ./build.sh package
-
       - store_artifacts:
           path: artifacts
+
+  build-emscripten:
+    docker:
+      - image: rbrich/xcikit-emscripten:latest
+    parameters:
+      build-args:
+        type: string
+        default: "--emscripten core script"
+    steps:
+      - checkout
+      - run:
+          name: Bootstrap
+          command: ./bootstrap.sh -y
+      - run:
+          name: Deps
+          command: ./build.sh deps << parameters.build-args >>
+      - run:
+          name: Configure
+          command: ./build.sh config << parameters.build-args >>
+      - run:
+          name: Build
+          command: ./build.sh build << parameters.build-args >>
+      - run:
+          name: Run tests
+          command: ./build.sh test << parameters.build-args >>
+      - run:
+          name: Install
+          command: ./build.sh install << parameters.build-args >>
+      - run:
+          name: Package
+          command: ./build.sh package << parameters.build-args >>
+      - store_artifacts:
+          path: artifacts
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - build-debian-11
+      - build-emscripten

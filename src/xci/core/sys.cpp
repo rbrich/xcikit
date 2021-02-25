@@ -19,6 +19,8 @@
     #include <sys/types.h>
     #include <sys/sysctl.h>
     #include <mach-o/dyld.h>
+#elif defined(__EMSCRIPTEN_PTHREADS__)
+    #include <pthread.h>
 #endif
 
 // get_home_dir, *_signals
@@ -39,6 +41,10 @@ ThreadId get_thread_id()
 {
 #if defined(__linux__)
     return (ThreadId) syscall(SYS_gettid);
+#elif defined(__EMSCRIPTEN_PTHREADS__)
+    return static_cast<uintptr_t>(pthread_self());
+#elif defined(__EMSCRIPTEN__)
+    return 0;
 #elif defined(__APPLE__)
     uint64_t tid = 0;
     pthread_threadid_np(pthread_self(), &tid);
@@ -46,7 +52,7 @@ ThreadId get_thread_id()
 #elif defined(_WIN32)
     return GetCurrentThreadId();
 #else
-    #error "Unsupported OS"
+    #error "Unsupported platform"
 #endif
 }
 
@@ -96,6 +102,8 @@ fs::path home_directory_path()
     }
     homedir.shrink_to_fit();
     return homedir;
+#elif defined(__EMSCRIPTEN__)
+    return "/home/web_user";
 #else
     struct passwd pwd {};
     struct passwd *result;
@@ -186,7 +194,7 @@ fs::path self_executable_path()
     // - https://stackoverflow.com/questions/1023306/finding-current-executables-path-without-proc-self-exe
     // - https://stackoverflow.com/questions/933850/how-do-i-find-the-location-of-the-executable-in-c
     char path[PATH_MAX];
-#if defined(__linux__)
+#if defined(__linux__) || defined(__EMSCRIPTEN__)
     ssize_t len = ::readlink("/proc/self/exe", path, sizeof(path));
     if (len == -1 || len == sizeof(path))
         len = 0;
@@ -215,7 +223,7 @@ int cpu_count()
     SYSTEM_INFO sysinfo;
     GetSystemInfo(&sysinfo);
     return sysinfo.dwNumberOfProcessors;
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__EMSCRIPTEN__)
     return (int) sysconf(_SC_NPROCESSORS_ONLN);
 #elif defined(__APPLE__)
     int mib[2] { CTL_HW, HW_NCPU };
@@ -223,8 +231,8 @@ int cpu_count()
     size_t len = sizeof(int);
     if (sysctl(mib, 2, &value, &len, nullptr, 0) == 0)
         return value;
-    return 2;  // generic default
 #endif
+    return 2;  // generic default
 }
 
 

@@ -36,7 +36,7 @@ public:
     void visit(ast::Char&) override {}
     void visit(ast::String&) override {}
 
-    void visit(ast::Braced& v) override {
+    void visit(ast::Bracketed& v) override {
         v.expression->apply(*this);
     }
 
