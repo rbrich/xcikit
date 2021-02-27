@@ -19,7 +19,7 @@ class EditBuffer {
 public:
     EditBuffer() = default;
     explicit EditBuffer(std::string initial_content)
-        : m_content(std::move(initial_content)), m_cursor(initial_content.size()) {}
+        : m_content(std::move(initial_content)), m_cursor(m_content.size()) {}
 
     void clear() { m_content.clear(); m_cursor = 0; }
     void set_content(std::string content) { m_content = std::move(content); m_cursor = content.size(); }
