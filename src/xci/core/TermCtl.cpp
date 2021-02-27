@@ -87,6 +87,13 @@ static void reset_console_mode(DWORD hid, DWORD mode)
 #endif
 
 
+TermCtl& TermCtl::stdin_instance(IsTty is_tty)
+{
+    static TermCtl term(STDIN_FILENO, is_tty);
+    return term;
+}
+
+
 TermCtl& TermCtl::stdout_instance(IsTty is_tty)
 {
     static TermCtl term(STDOUT_FILENO, is_tty);
@@ -123,11 +130,27 @@ TermCtl::~TermCtl() {
 void TermCtl::set_is_tty(IsTty is_tty)
 {
 #ifdef _WIN32
-    assert(m_fd == STDOUT_FILENO || m_fd == STDERR_FILENO);
-    unsigned long std_handle = (m_fd == STDOUT_FILENO) ? STD_OUTPUT_HANDLE : STD_ERROR_HANDLE;
+    unsigned long std_handle;
+    DWORD req_mode;
+    switch (m_fd) {
+        case STDIN_FILENO:
+            std_handle = STD_INPUT_HANDLE;
+            req_mode = ENABLE_VIRTUAL_TERMINAL_INPUT;
+            break;
+        case STDOUT_FILENO:
+            std_handle = STD_OUTPUT_HANDLE;
+            req_mode = ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+            break;
+        case STDERR_FILENO:
+            std_handle = STD_ERROR_HANDLE;
+            req_mode = ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+            break;
+        default:
+            return;
+    }
 
     if (is_tty != IsTty::Never && m_state == State::NoTTY) {
-        m_orig_out_mode = set_console_mode(std_handle, ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+        m_orig_out_mode = set_console_mode(std_handle, req_mode);
         if (m_orig_out_mode == bad_mode)
             return;
         m_state = State::InitOk;
@@ -283,6 +306,7 @@ std::string TermCtl::ModePlaceholder::seq(Mode mode) const
 
 void TermCtl::with_raw_mode(const std::function<void()>& cb)
 {
+    assert(m_fd == STDIN_FILENO);
 #ifdef _WIN32
     HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
     if (h == INVALID_HANDLE_VALUE)

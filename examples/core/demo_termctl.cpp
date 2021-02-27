@@ -20,7 +20,7 @@ int main()
 
     cout << t.move_up().move_right(6).bold().green() << "GREEN" <<t.normal() << endl;
 
-    std::string in = t.raw_input();
+    std::string in = TermCtl::stdin_instance().raw_input();
     cout << "Key pressed: ";
     for (const auto c : in)
         cout << std::hex << std::setw(2) << std::setfill('0')

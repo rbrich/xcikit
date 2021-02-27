@@ -26,7 +26,8 @@ public:
         Never,
     };
 
-    // Static instance for standard output
+    // Static instance for standard input / output / error
+    static TermCtl& stdin_instance(IsTty is_tty = IsTty::Auto);
     static TermCtl& stdout_instance(IsTty is_tty = IsTty::Auto);
     static TermCtl& stderr_instance(IsTty is_tty = IsTty::Auto);
 
