@@ -14,6 +14,7 @@ add_library(xci-widgets
     Label.cpp
     TextTerminal.cpp
     )
+add_library(xcikit::xci-widgets ALIAS xci-widgets)
 
 target_link_libraries(xci-widgets
     xci-text)

@@ -7,6 +7,7 @@ add_library(xci-core
     chrono.cpp
     file.cpp
     dispatch.cpp
+    EditBuffer.cpp
     FpsCounter.cpp
     log.cpp
     SharedLibrary.cpp
@@ -16,6 +17,7 @@ add_library(xci-core
     TermCtl.cpp
     Vfs.cpp
     )
+add_library(xcikit::xci-core ALIAS xci-core)
 
 if (NOT WIN32)
     target_sources(xci-core PRIVATE

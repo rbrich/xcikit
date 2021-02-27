@@ -22,6 +22,7 @@ add_library(xci-text
     freetype/FtFontFace.cpp
     $<TARGET_OBJECTS:rbp>
     )
+add_library(xcikit::xci-text ALIAS xci-text)
 
 target_include_directories(xci-text
     PUBLIC

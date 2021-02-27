@@ -19,6 +19,7 @@
 #include <xci/widgets/Widget.h>
 #include <xci/text/Layout.h>
 #include <xci/graphics/Shape.h>
+#include <xci/core/EditBuffer.h>
 
 namespace xci::widgets {
 
@@ -28,7 +29,7 @@ public:
     explicit TextInput(Theme& theme, const std::string& string);
 
     void set_string(const std::string& string);
-    const std::string& string() const { return m_text; }
+    const std::string& string() const { return m_buffer.content(); }
 
     void set_font_size(ViewportUnits size) { m_layout.set_default_font_size(size); }
     void set_width(ViewportUnits width) { m_width = width; }
@@ -50,11 +51,10 @@ public:
     bool mouse_button_event(View& view, const MouseBtnEvent& ev) override;
 
 private:
-    std::string m_text;
+    core::EditBuffer m_buffer;
     text::Layout m_layout;
     graphics::Shape m_bg_rect;
     graphics::Shape m_cursor_shape;
-    size_t m_cursor = 0;
     ViewportUnits m_width = 0.4f;
     ViewportUnits m_padding = 0.02f;
     ViewportUnits m_content_pos = 0;
