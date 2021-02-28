@@ -34,14 +34,19 @@ int main()
             cout << "* seq: ";
             for (const auto c : in) {
                 cout << std::hex << std::setw(2) << std::setfill('0')
-                     << (int) c << " ";
+                     << (int) (unsigned char) c << " ";
             }
             cout << '"' << escape(in) << '"' << "\r\n";
 
             auto decoded = tin.decode_input(in);
             cout << "* decoded: " << decoded.input_len << " bytes\r\n";
-            cout << "* key: " << magic_enum::enum_name(decoded.key) << "\r\n";
-            cout << "* unicode: " << uint32_t(decoded.unicode) << "\r\n";
+            if (decoded.key != TermCtl::Key::UnicodeChar)
+                cout << "* key: " << magic_enum::enum_name(decoded.key) << "\r\n";
+            if (decoded.alt)
+                cout << "* modifiers: Alt\r\n";
+            if (decoded.unicode != 0)
+                cout << "* unicode: " << uint32_t(decoded.unicode)
+                     << " '" << to_utf8(decoded.unicode) << "'\r\n";
         }
     });
     return 0;

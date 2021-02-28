@@ -162,6 +162,7 @@ public:
         Unknown = 0,
 
         F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12,
+        Escape,
         Enter,
         Backspace,
         Tab,
@@ -176,6 +177,7 @@ public:
     struct DecodedInput {
         uint16_t input_len = 0;  // length of input sequence (chars consumed)
         Key key = Key::Unknown;
+        bool alt : 1 = false;
         char32_t unicode = 0;
     };
 

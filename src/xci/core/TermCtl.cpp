@@ -589,6 +589,8 @@ auto TermCtl::decode_input(std::string_view input_buffer) -> DecodedInput
     }
 
     // Ascii codes
+    bool alt = false;
+    unsigned offset = 0;
     switch (input_buffer[0]) {
         case '\n':
         case '\r':
@@ -596,18 +598,28 @@ auto TermCtl::decode_input(std::string_view input_buffer) -> DecodedInput
         case '\b':
         case '\x7f':
             return {1, Key::Backspace};
+        case '\x1b':
+            if (input_buffer.size() == 1)   // ESC
+                return {1, Key::Escape};
+            else if (input_buffer[1] == '\x1b')  // ESC ESC
+                return {2, Key::Escape, true};
+            else { // ESC char
+                alt = true;
+                offset = 1;
+            }
+            break;
         default:
             break;
     }
 
     // UTF-8
-    const auto [len, unicode] = utf8_codepoint_and_length(input_buffer);
+    const auto [len, unicode] = utf8_codepoint_and_length(input_buffer.substr(offset));
     if (len > 0)
-        return {uint16_t(len), Key::UnicodeChar, unicode};
+        return {uint16_t(len + offset), Key::UnicodeChar, alt, unicode};
     if (len == 0)
         return {};  // incomplete UTF-8 char
     assert(len == -1);
-    return {1};  // consume the first byte of corrupted UTF-8
+    return {uint16_t(1 + offset)};  // consume the first byte of corrupted UTF-8
 }
 
 
