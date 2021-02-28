@@ -5,8 +5,13 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <xci/core/TermCtl.h>
+#include <xci/core/string.h>
+
+#include <magic_enum.hpp>
+
 #include <iostream>
 #include <iomanip>
+#include <cctype>
 
 using namespace std;
 using namespace xci::core;
@@ -20,11 +25,24 @@ int main()
 
     cout << t.move_up().move_right(6).bold().green() << "GREEN" <<t.normal() << endl;
 
-    std::string in = TermCtl::stdin_instance().raw_input();
-    cout << "Key pressed: ";
-    for (const auto c : in)
-        cout << std::hex << std::setw(2) << std::setfill('0')
-             << (int) c << " ";
-    cout << endl;
+    TermCtl& tin = TermCtl::stdin_instance();
+    tin.with_raw_mode([&tin] {
+        for (;;) {
+            std::string in = tin.input();
+            cout << "\r\nKey pressed:\r\n";
+
+            cout << "* seq: ";
+            for (const auto c : in) {
+                cout << std::hex << std::setw(2) << std::setfill('0')
+                     << (int) c << " ";
+            }
+            cout << '"' << escape(in) << '"' << "\r\n";
+
+            auto decoded = tin.decode_input(in);
+            cout << "* decoded: " << decoded.input_len << " bytes\r\n";
+            cout << "* key: " << magic_enum::enum_name(decoded.key) << "\r\n";
+            cout << "* unicode: " << uint32_t(decoded.unicode) << "\r\n";
+        }
+    });
     return 0;
 }

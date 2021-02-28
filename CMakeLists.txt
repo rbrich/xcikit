@@ -70,6 +70,9 @@ find_package(range-v3 REQUIRED)
 # fmtlib
 find_package(fmt REQUIRED)
 
+# magic enum
+find_package(magic_enum REQUIRED)
+
 # Catch
 if (XCI_BUILD_TESTS)
     find_package(Catch2)

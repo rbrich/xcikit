@@ -277,6 +277,37 @@ char32_t utf8_codepoint(const char* utf8)
 }
 
 
+std::pair<int, char32_t> utf8_codepoint_and_length(std::string_view utf8)
+{
+    if (utf8.empty())
+        return {0, 0};
+    char c0 = utf8[0];
+    if ((c0 & 0x80) == 0) {
+        // 0xxxxxxx -> 1 byte
+        return {1, char32_t(c0 & 0x7f)};
+    }
+    if (utf8.size() == 1)
+        return {0, 0};
+    if ((c0 & 0xe0) == 0xc0) {
+        // 110xxxxx -> 2 bytes
+        return {2, char32_t(((c0 & 0x1f) << 6) | (utf8[1] & 0x3f))};
+    }
+    if (utf8.size() == 2)
+        return {0, 0};
+    if ((c0 & 0xf0) == 0xe0) {
+        // 1110xxxx -> 3 bytes
+        return {3, char32_t(((c0 & 0x0f) << 12) | ((utf8[1] & 0x3f) << 6) | (utf8[2] & 0x3f))};
+    }
+    if (utf8.size() == 3)
+        return {0, 0};
+    if ((c0 & 0xf8) == 0xf0) {
+        // 11110xxx -> 4 bytes
+        return {4, char32_t(((c0 & 0x07) << 18) | ((utf8[1] & 0x3f) << 12) | ((utf8[2] & 0x3f) << 6) | (utf8[3] & 0x3f))};
+    }
+    return {0, -1};
+}
+
+
 size_t utf8_partial_end(string_view str)
 {
     // Single byte from multi-byte UTF-8 char?

@@ -4,7 +4,6 @@
 
 find_package(ZLIB REQUIRED)
 find_package(pfr REQUIRED)
-find_package(magic_enum REQUIRED)
 
 
 # ------------ #

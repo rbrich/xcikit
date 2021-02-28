@@ -116,10 +116,15 @@ SSize utf8_length(const S& str);
 
 std::string_view utf8_substr(std::string_view str, size_t pos, size_t count);
 
-// Convert single UTF-8 character to Unicode code point.
-// Only the first UTF-8 character is used, rest of input is ignored.
-// In case of error, log error and return 0.
+/// Convert a single UTF-8 character to Unicode code point.
+/// Only the first UTF-8 character is used, rest of input is ignored.
+/// In case of error, log error and return 0.
 char32_t utf8_codepoint(const char* utf8);
+
+/// Convert a single UTF-8 character to Unicode code point and return number of bytes used.
+/// In case of incomplete UTF-8 sequence (input too short), returns {0, 0}.
+/// In case of error, returns {0, -1}.
+std::pair<int, char32_t> utf8_codepoint_and_length(std::string_view utf8);
 
 /// Check if there is partial UTF-8 character at the end of string
 /// \param str  string to be checked

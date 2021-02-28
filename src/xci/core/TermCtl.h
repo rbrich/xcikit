@@ -101,9 +101,11 @@ public:
     TermCtl move_left(unsigned n_cols) const;
     TermCtl move_right() const;
     TermCtl move_right(unsigned n_cols) const;
+    TermCtl move_to_column(unsigned column) const;
 
     // clear screen content
     TermCtl clear_screen_down() const;
+    TermCtl clear_line_to_end() const;
 
     TermCtl soft_reset() const;
 
@@ -152,7 +154,41 @@ public:
     // (no echo, no buffering, no special processing)
     // NOTE: Signal processing is enabled, so Ctrl-C still works
     void with_raw_mode(const std::function<void()>& cb);
+
+    std::string input();
     std::string raw_input();
+
+    enum class Key : uint8_t {
+        Unknown = 0,
+
+        F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12,
+        Enter,
+        Backspace,
+        Tab,
+        Insert, Delete,
+        Home, End,
+        PageUp, PageDown,
+        Left, Right, Up, Down,
+
+        UnicodeChar,
+    };
+
+    struct DecodedInput {
+        uint16_t input_len = 0;  // length of input sequence (chars consumed)
+        Key key = Key::Unknown;
+        char32_t unicode = 0;
+    };
+
+    /// Try to decode input key or char from byte sequence
+    /// \param input_buffer     Raw bytes as read from TTY (see raw_input above)
+    /// \returns DecodedInput:
+    /// * input_len == 0    -- incomplete input, read more chars into the buffer
+    /// * input_len > 0     -- this number of bytes was used
+    /// * key               -- Unknown if input_len == 0 or corrupted UTF-8,
+    ///                        otherwise either a special key or UnicodeChar (see `unicode` for actual char)
+    /// * unicode           -- Unicode character decoded from the input (only when key=UnicodeChar)
+    ///                        or zero in case of special cases (nothing decoded or a non-unicode key)
+    DecodedInput decode_input(std::string_view input_buffer);
 
 private:
     // Copy TermCtl and append seq to new instance
