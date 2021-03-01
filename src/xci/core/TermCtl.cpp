@@ -23,8 +23,7 @@
     #include <sys/ioctl.h>
 #endif
 
-//#define XCI_WITH_TINFO
-#ifdef XCI_WITH_TINFO
+#ifdef XCI_WITH_TERMINFO
     #include <term.h>
 #endif
 
@@ -39,7 +38,7 @@ namespace xci::core {
 #define SS3     ESC "O"
 
 // When building without TInfo, emit ANSI escape sequences directly
-#ifndef XCI_WITH_TINFO
+#ifndef XCI_WITH_TERMINFO
 static constexpr auto cursor_up = CSI "A";
 static constexpr auto cursor_down = CSI "B";
 static constexpr auto cursor_right = CSI "C";
@@ -57,38 +56,7 @@ static constexpr auto parm_left_cursor = CSI "{}D";  // move cursor left N space
 static constexpr auto clr_eos = CSI "J";  // clear screen from cursor down
 static constexpr auto clr_eol = CSI "K";  // clear line from cursor to end
 static constexpr auto column_address = CSI "{}G";  // horizontal position, absolute
-
-// input sequences:
-static constexpr auto key_enter = "\r";
-static constexpr auto tab = "\t";
-static constexpr auto key_backspace = "\b";
-static constexpr auto key_ic = CSI "2~";    // insert character
-static constexpr auto key_dc = CSI "3~";    // delete character
-static constexpr auto key_home = CSI "H";
-static constexpr auto key_end = CSI "F";
-static constexpr auto key_ppage = CSI "5~";   // prev page (PgUp)
-static constexpr auto key_npage = CSI "6~";   // next page (PgDown)
-static constexpr auto key_up = CSI "A";
-static constexpr auto key_down = CSI "B";
-static constexpr auto key_right = CSI "C";
-static constexpr auto key_left = CSI "D";
-static constexpr auto key_f1 = SS3 "P";
-static constexpr auto key_f2 = SS3 "Q";
-static constexpr auto key_f3 = SS3 "R";
-static constexpr auto key_f4 = SS3 "S";
-static constexpr auto key_f5 = CSI "15~";
-static constexpr auto key_f6 = CSI "17~";
-static constexpr auto key_f7 = CSI "18~";
-static constexpr auto key_f8 = CSI "19~";
-static constexpr auto key_f9 = CSI "20~";
-static constexpr auto key_f10 = CSI "21~";
-static constexpr auto key_f11 = CSI "23~";
-static constexpr auto key_f12 = CSI "24~";
-
-inline constexpr const char* tparm(const char* seq) { return seq; }
-template<typename ...Args>
-inline std::string tparm(const char* seq, Args... args) { return fmt::format(seq, args...); }
-#endif // XCI_WITH_TINFO
+#endif // XCI_WITH_TERMINFO
 
 // not found in Terminfo DB:
 static constexpr auto set_bright_foreground = CSI "1;3{}m";
@@ -96,15 +64,149 @@ static constexpr auto set_bright_background = CSI "1;4{}m";
 static constexpr auto enter_overline_mode = CSI "53m";
 static constexpr auto send_soft_reset = CSI "!p";
 
-class KeySeqLookup {
+
+inline constexpr const char* xci_tparm(const char* seq) { return seq; }
+template<typename ...Args>
+inline std::string xci_tparm(const char* seq, Args... args) { return fmt::format(seq, args...); }
+
+// Note that this cannot be implemented with variadic template,
+// because the arguments must not be evaluated unless is_initialized() is true
+#define XCI_TERM_APPEND(...) TermCtl(*this, is_tty() ? xci_tparm(__VA_ARGS__) : "")
+
+#ifdef XCI_WITH_TERMINFO
+    // delegate to TermInfo
+    #define TERM_APPEND(...) TermCtl(*this, is_tty() ? tparm(__VA_ARGS__) : "")
+#else
+    // delegate to our implementation
+    #define TERM_APPEND(...) XCI_TERM_APPEND(__VA_ARGS__)
+#endif
+
+
+class TermInputSeq {
 public:
-    explicit KeySeqLookup(std::initializer_list<std::pair<const char*, TermCtl::Key>> seqs) {
+
+    static std::pair<uint16_t, TermCtl::Key> lookup(std::string_view input_buffer) {
+        return instance()._lookup(input_buffer);
+    }
+
+#ifdef XCI_WITH_TERMINFO
+    static void populate_terminfo() {
+        std::initializer_list<std::pair<const char*, TermCtl::Key>> seqs = {
+                {key_enter, TermCtl::Key::Enter},
+                {tab, TermCtl::Key::Tab},
+                {key_backspace, TermCtl::Key::Backspace},
+                {key_ic, TermCtl::Key::Insert},  // insert character
+                {key_dc, TermCtl::Key::Delete},  // delete character
+                {key_home, TermCtl::Key::Home},
+                {key_end, TermCtl::Key::End},
+                {key_ppage, TermCtl::Key::PageUp},  // prev page
+                {key_npage, TermCtl::Key::PageDown},  // next page
+                {key_up, TermCtl::Key::Up},
+                {key_down, TermCtl::Key::Down},
+                {key_right, TermCtl::Key::Right},
+                {key_left, TermCtl::Key::Left},
+                {key_f1, TermCtl::Key::F1},
+                {key_f2, TermCtl::Key::F2},
+                {key_f3, TermCtl::Key::F3},
+                {key_f4, TermCtl::Key::F4},
+                {key_f5, TermCtl::Key::F5},
+                {key_f6, TermCtl::Key::F6},
+                {key_f7, TermCtl::Key::F7},
+                {key_f8, TermCtl::Key::F8},
+                {key_f9, TermCtl::Key::F9},
+                {key_f10, TermCtl::Key::F10},
+                {key_f11, TermCtl::Key::F11},
+                {key_f12, TermCtl::Key::F12},
+        };
+        for (const auto& [seq, key] : seqs) {
+            instance().add(seq, key);
+        }
+    }
+#endif
+
+private:
+    static TermInputSeq& instance() {
+        static TermInputSeq instance {
+            {"\n", TermCtl::Key::Enter},
+            {"\r", TermCtl::Key::Enter},
+            {"\t", TermCtl::Key::Tab},
+            {"\b", TermCtl::Key::Backspace},
+            {"\x7f", TermCtl::Key::Backspace},
+            {CSI "2~", TermCtl::Key::Insert},
+            {CSI "3~", TermCtl::Key::Delete},
+            {CSI "H", TermCtl::Key::Home},
+            {CSI "F", TermCtl::Key::End},
+            {CSI "5~", TermCtl::Key::PageUp},
+            {CSI "6~", TermCtl::Key::PageDown},
+            {CSI "A", TermCtl::Key::Up},
+            {CSI "B", TermCtl::Key::Down},
+            {CSI "C", TermCtl::Key::Right},
+            {CSI "D", TermCtl::Key::Left},
+            {SS3 "P", TermCtl::Key::F1},
+            {SS3 "Q", TermCtl::Key::F2},
+            {SS3 "R", TermCtl::Key::F3},
+            {SS3 "S", TermCtl::Key::F4},
+            {CSI "15~", TermCtl::Key::F5},
+            {CSI "17~", TermCtl::Key::F6},
+            {CSI "18~", TermCtl::Key::F7},
+            {CSI "19~", TermCtl::Key::F8},
+            {CSI "20~", TermCtl::Key::F9},
+            {CSI "21~", TermCtl::Key::F10},
+            {CSI "23~", TermCtl::Key::F11},
+            {CSI "24~", TermCtl::Key::F12},
+        };
+        return instance;
+    };
+
+    explicit TermInputSeq(std::initializer_list<std::pair<const char*, TermCtl::Key>> seqs) {
         for (const auto& [seq, key] : seqs) {
             add(seq, key);
         }
     }
 
-    std::pair<uint16_t, TermCtl::Key> lookup(std::string_view input_buffer) {
+    void add(const char* seq, TermCtl::Key key) {
+        const auto c0 = seq[0];
+        const auto c1 = seq[1];
+        if (c1 == 0) {
+            // single byte
+            if (c0 == '\x7f') {
+                m_map_7f = key;
+                return;
+            }
+            assert(c0 >= 8 && c0 <= 13);
+            m_lookup_8to13[c0 - 8] = key;
+            return;
+        }
+        if (c0 == '\033') {
+            // ESC-sequence
+            const auto c2 = seq[2];
+            if (c1 == '[') {  // CSI
+                if (isdigit(c2)) { // 0x7e
+                    char* str_end;
+                    long arg = strtol(seq + 2, &str_end, 10);
+                    assert(arg > 0);
+                    assert(str_end != seq + 2);
+                    assert(str_end[0] == '~');
+                    assert(str_end[1] == 0);
+                    m_lookup_csi7e[arg - 1] = key;
+                    return;
+                }
+                assert(seq[3] == 0);
+                assert(c2 >= 'A' && c2 <= 'Z');
+                m_lookup_csi_AtoZ[c2 - 'A'] = key;
+                return;
+            }
+            if (c1 == 'O') {  // SS3
+                assert(seq[3] == 0);
+                assert(c2 >= 'A' && c2 <= 'Z');
+                m_lookup_ss3_AtoZ[c2 - 'A'] = key;
+                return;
+            }
+        }
+        assert(!"No rule to save seq");
+    }
+
+    std::pair<uint16_t, TermCtl::Key> _lookup(std::string_view input_buffer) {
         enum { Start, Esc, Csi, Ss3 } state = Start;
         unsigned len = 0;
         unsigned arg = 0;
@@ -112,12 +214,14 @@ public:
             ++ len;
             switch (state) {
                 case Start:
-                    if (c >= 8 && c <= 13)
-                        return {len, m_lookup_8to13[c - 8]};
                     if (c == '\x1b') {
                         state = Esc;
                         continue;
                     }
+                    if (c == '\x7f')
+                        return {len, m_map_7f};
+                    if (c >= 8 && c <= 13)
+                        return {len, m_lookup_8to13[c - 8]};
                     break;  // unknown
                 case Esc:
                     if (c == '[') {
@@ -153,82 +257,12 @@ public:
         return {0, TermCtl::Key::Unknown};
     }
 
-private:
-    void add(const char* seq, TermCtl::Key key) {
-        const auto c0 = seq[0];
-        const auto c1 = seq[1];
-        if (c1 == 0) {
-            // single byte
-            assert(c0 >= 8 && c0 <= 13);
-            assert(m_lookup_8to13[c0 - 8] == TermCtl::Key::Unknown);
-            m_lookup_8to13[c0 - 8] = key;
-            return;
-        }
-        if (c0 == '\033') {
-            // ESC-sequence
-            const auto c2 = seq[2];
-            if (c1 == '[') {  // CSI
-                if (isdigit(c2)) { // 0x7e
-                    char* str_end;
-                    long arg = strtol(seq + 2, &str_end, 10);
-                    assert(arg > 0);
-                    assert(str_end != seq + 2);
-                    assert(str_end[0] == '~');
-                    assert(str_end[1] == 0);
-                    assert( m_lookup_csi7e[arg - 1] == TermCtl::Key::Unknown);
-                    m_lookup_csi7e[arg - 1] = key;
-                    return;
-                }
-                assert(seq[3] == 0);
-                assert(c2 >= 'A' && c2 <= 'Z');
-                assert(m_lookup_csi_AtoZ[c2 - 'A'] == TermCtl::Key::Unknown);
-                m_lookup_csi_AtoZ[c2 - 'A'] = key;
-                return;
-            }
-            if (c1 == 'O') {  // SS3
-                assert(seq[3] == 0);
-                assert(c2 >= 'A' && c2 <= 'Z');
-                assert(m_lookup_ss3_AtoZ[c2 - 'A'] == TermCtl::Key::Unknown);
-                m_lookup_ss3_AtoZ[c2 - 'A'] = key;
-                return;
-            }
-        }
-        assert(!"No rule to save seq");
-    }
-
     // 82 bytes in total
+    TermCtl::Key m_map_7f {};
     std::array<TermCtl::Key, 6> m_lookup_8to13 {};
     std::array<TermCtl::Key, 26> m_lookup_ss3_AtoZ {};
     std::array<TermCtl::Key, 26> m_lookup_csi_AtoZ {};
     std::array<TermCtl::Key, 24> m_lookup_csi7e {};  // lookup CSI arg minus 1, e.g. "2~" is [1]
-};
-
-static KeySeqLookup key_seq_lookup {
-        {key_enter, TermCtl::Key::Enter},
-        {tab, TermCtl::Key::Tab},
-        {key_backspace, TermCtl::Key::Backspace},
-        {key_ic, TermCtl::Key::Insert},
-        {key_dc, TermCtl::Key::Delete},
-        {key_home, TermCtl::Key::Home},
-        {key_end, TermCtl::Key::End},
-        {key_ppage, TermCtl::Key::PageUp},
-        {key_npage, TermCtl::Key::PageDown},
-        {key_up, TermCtl::Key::Up},
-        {key_down, TermCtl::Key::Down},
-        {key_right, TermCtl::Key::Right},
-        {key_left, TermCtl::Key::Left},
-        {key_f1, TermCtl::Key::F1},
-        {key_f2, TermCtl::Key::F2},
-        {key_f3, TermCtl::Key::F3},
-        {key_f4, TermCtl::Key::F4},
-        {key_f5, TermCtl::Key::F5},
-        {key_f6, TermCtl::Key::F6},
-        {key_f7, TermCtl::Key::F7},
-        {key_f8, TermCtl::Key::F8},
-        {key_f9, TermCtl::Key::F9},
-        {key_f10, TermCtl::Key::F10},
-        {key_f11, TermCtl::Key::F11},
-        {key_f12, TermCtl::Key::F12},
 };
 
 
@@ -346,11 +380,13 @@ void TermCtl::set_is_tty(IsTty is_tty)
             return;
     }
 
-    #ifdef XCI_WITH_TINFO
+    #ifdef XCI_WITH_TERMINFO
     // Setup terminfo
     int err = 0;
-    if (setupterm(nullptr, fd, &err) != 0)
+    if (setupterm(nullptr, m_fd, &err) != 0)
         return;
+    if (m_fd == STDIN_FILENO)
+        TermInputSeq::populate_terminfo();
     #endif
 
     m_state = State::InitOk;
@@ -372,16 +408,12 @@ auto TermCtl::size() const -> Size
 }
 
 
-// Note that this cannot be implemented with variadic template,
-// because the arguments must not be evaluated unless is_initialized() is true
-#define TERM_APPEND(...) TermCtl(*this, is_tty() ? tparm(__VA_ARGS__) : "")
-
 TermCtl TermCtl::fg(Color color) const
 {
     if (color < Color::BrightBlack)
         return TERM_APPEND(set_a_foreground, static_cast<int>(color));
     // bright colors
-    return TERM_APPEND(set_bright_foreground, static_cast<int>(color) - static_cast<int>(Color::BrightBlack));
+    return XCI_TERM_APPEND(set_bright_foreground, static_cast<int>(color) - static_cast<int>(Color::BrightBlack));
 }
 
 TermCtl TermCtl::bg(Color color) const
@@ -389,7 +421,7 @@ TermCtl TermCtl::bg(Color color) const
     if (color < Color::BrightBlack)
         return TERM_APPEND(set_a_background, static_cast<int>(color));
     // bright colors
-    return TERM_APPEND(set_bright_background, static_cast<int>(color) - static_cast<int>(Color::BrightBlack));
+    return XCI_TERM_APPEND(set_bright_background, static_cast<int>(color) - static_cast<int>(Color::BrightBlack));
 }
 
 TermCtl TermCtl::mode(Mode mode) const
@@ -407,7 +439,7 @@ TermCtl TermCtl::mode(Mode mode) const
 TermCtl TermCtl::bold() const { return TERM_APPEND(enter_bold_mode); }
 TermCtl TermCtl::dim() const { return TERM_APPEND(enter_dim_mode); }
 TermCtl TermCtl::underline() const { return TERM_APPEND(enter_underline_mode); }
-TermCtl TermCtl::overline() const { return TERM_APPEND(enter_overline_mode); }
+TermCtl TermCtl::overline() const { return XCI_TERM_APPEND(enter_overline_mode); }
 TermCtl TermCtl::normal() const { return TERM_APPEND(exit_attribute_mode); }
 
 TermCtl TermCtl::move_up() const { return TERM_APPEND(cursor_up); }
@@ -423,7 +455,7 @@ TermCtl TermCtl::move_to_column(unsigned column) const { return TERM_APPEND(colu
 TermCtl TermCtl::clear_screen_down() const { return TERM_APPEND(clr_eos); }
 TermCtl TermCtl::clear_line_to_end() const { return TERM_APPEND(clr_eol); }
 
-TermCtl TermCtl::soft_reset() const { return TERM_APPEND(send_soft_reset); }
+TermCtl TermCtl::soft_reset() const { return XCI_TERM_APPEND(send_soft_reset); }
 
 
 std::ostream& operator<<(std::ostream& os, const TermCtl& term)
@@ -583,33 +615,23 @@ auto TermCtl::decode_input(std::string_view input_buffer) -> DecodedInput
 
     // Lookup escape sequences
     {
-        const auto [len, key] = key_seq_lookup.lookup(input_buffer);
+        const auto [len, key] = TermInputSeq::lookup(input_buffer);
         if (len != 0)
             return {len, key};
     }
 
-    // Ascii codes
+    // Special handling of ESC
     bool alt = false;
     unsigned offset = 0;
-    switch (input_buffer[0]) {
-        case '\n':
-        case '\r':
-            return {1, Key::Enter};
-        case '\b':
-        case '\x7f':
-            return {1, Key::Backspace};
-        case '\x1b':
-            if (input_buffer.size() == 1)   // ESC
-                return {1, Key::Escape};
-            else if (input_buffer[1] == '\x1b')  // ESC ESC
-                return {2, Key::Escape, true};
-            else { // ESC char
-                alt = true;
-                offset = 1;
-            }
-            break;
-        default:
-            break;
+    if (input_buffer[0] == '\x1b') {
+        if (input_buffer.size() == 1)   // ESC
+            return {1, Key::Escape};
+        else if (input_buffer[1] == '\x1b')  // ESC ESC
+            return {2, Key::Escape, true};
+        else { // ESC char
+            alt = true;
+            offset = 1;
+        }
     }
 
     // UTF-8

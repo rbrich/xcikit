@@ -20,7 +20,7 @@ option(XCI_BUILD_TESTS "Disable to skip building tests." ON)
 option(XCI_BUILD_BENCHMARKS "Disable to skip building benchmarks." ON)
 
 # Dependencies
-option(XCI_WITH_TINFO "Link with TInfo (from NCurses) and use it for TTY control sequences." OFF)
+option(XCI_WITH_TERMINFO "Link with TermInfo and use it for TTY control sequences." OFF)
 option(XCI_WITH_ZIP "Link xci-core with libzip and use it for ZIP format in VFS." OFF)
 
 option(XCI_INSTALL_SHARE_DIR "Install runtime data as a directory (share/xcikit)" OFF)
@@ -87,9 +87,14 @@ endif ()
 find_package(Doxygen)
 
 # TInfo (ncurses)
-if (XCI_WITH_TINFO)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(TINFO REQUIRED tinfo)
+if (XCI_WITH_TERMINFO)
+    find_library(TERMINFO_LIBRARY NAMES terminfo tinfo curses ncurses ncursesw)
+    if (TERMINFO_LIBRARY)
+        message(STATUS "Found terminfo: ${TERMINFO_LIBRARY}")
+        add_library(terminfo::terminfo INTERFACE IMPORTED)
+        set_target_properties(terminfo::terminfo PROPERTIES
+            INTERFACE_LINK_LIBRARIES "${TERMINFO_LIBRARY}")
+    endif()
 endif ()
 
 # Run configuration checks

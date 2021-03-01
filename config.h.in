@@ -6,7 +6,7 @@
 #define XCI_CONFIG_H
 
 // Optional libraries
-#cmakedefine XCI_WITH_TINFO
+#cmakedefine XCI_WITH_TERMINFO
 
 // Location of share dir (runtime data)
 #cmakedefine XCI_SHARE_DIR "@XCI_SHARE_DIR@"
