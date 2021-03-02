@@ -38,24 +38,27 @@ namespace xci::core {
 #define SS3     ESC "O"
 
 // When building without TInfo, emit ANSI escape sequences directly
+// Note that these needs to be macros, to match compiler behaviour with <term.h>
 #ifndef XCI_WITH_TERMINFO
-static constexpr auto cursor_up = CSI "A";
-static constexpr auto cursor_down = CSI "B";
-static constexpr auto cursor_right = CSI "C";
-static constexpr auto cursor_left = CSI "D";
-static constexpr auto enter_bold_mode = CSI "1m";
-static constexpr auto enter_dim_mode = CSI "2m";
-static constexpr auto enter_underline_mode = CSI "4m";
-static constexpr auto exit_attribute_mode = CSI "0m";
-static constexpr auto set_a_foreground = CSI "3{}m";
-static constexpr auto set_a_background = CSI "4{}m";
-static constexpr auto parm_up_cursor = CSI "{}A";  // move cursor up N lines
-static constexpr auto parm_down_cursor = CSI "{}B";  // move cursor down N lines
-static constexpr auto parm_right_cursor = CSI "{}C";  // move cursor right N spaces
-static constexpr auto parm_left_cursor = CSI "{}D";  // move cursor left N spaces
-static constexpr auto clr_eos = CSI "J";  // clear screen from cursor down
-static constexpr auto clr_eol = CSI "K";  // clear line from cursor to end
-static constexpr auto column_address = CSI "{}G";  // horizontal position, absolute
+#define cursor_up               CSI "A"
+#define cursor_down             CSI "B"
+#define cursor_right            CSI "C"
+#define cursor_left             CSI "D"
+#define enter_bold_mode         CSI "1m"
+#define enter_dim_mode          CSI "2m"
+#define enter_underline_mode    CSI "4m"
+#define exit_attribute_mode     CSI "0m"
+#define set_a_foreground        CSI "3{}m"
+#define set_a_background        CSI "4{}m"
+#define parm_up_cursor          CSI "{}A"   // move cursor up N lines
+#define parm_down_cursor        CSI "{}B"   // move cursor down N lines
+#define parm_right_cursor       CSI "{}C"   // move cursor right N spaces
+#define parm_left_cursor        CSI "{}D"   // move cursor left N spaces
+#define clr_eos                 CSI "J"     // clear screen from cursor down
+#define clr_eol                 CSI "K"     // clear line from cursor to end
+#define column_address          CSI "{}G"   // horizontal position, absolute
+#define save_cursor             ESC "7"
+#define restore_cursor          ESC "8"
 #endif // XCI_WITH_TERMINFO
 
 // not found in Terminfo DB:
@@ -76,9 +79,11 @@ inline std::string xci_tparm(const char* seq, Args... args) { return fmt::format
 #ifdef XCI_WITH_TERMINFO
     // delegate to TermInfo
     #define TERM_APPEND(...) TermCtl(*this, is_tty() ? tparm(__VA_ARGS__) : "")
+    static unsigned _plus_one(unsigned arg) { return arg; };  // already corrected with Terminfo -> noop
 #else
     // delegate to our implementation
     #define TERM_APPEND(...) XCI_TERM_APPEND(__VA_ARGS__)
+    static unsigned _plus_one(unsigned arg) { return arg + 1; };
 #endif
 
 
@@ -450,7 +455,9 @@ TermCtl TermCtl::move_left() const { return TERM_APPEND(cursor_left); }
 TermCtl TermCtl::move_left(unsigned n_cols) const { return TERM_APPEND(parm_left_cursor, n_cols); }
 TermCtl TermCtl::move_right() const { return TERM_APPEND(cursor_right); }
 TermCtl TermCtl::move_right(unsigned n_cols) const { return TERM_APPEND(parm_right_cursor, n_cols); }
-TermCtl TermCtl::move_to_column(unsigned column) const { return TERM_APPEND(column_address, column); }
+TermCtl TermCtl::move_to_column(unsigned column) const { return TERM_APPEND(column_address, _plus_one(column)); }
+TermCtl TermCtl::_save_cursor() const { return TERM_APPEND(save_cursor); }
+TermCtl TermCtl::_restore_cursor() const { return TERM_APPEND(restore_cursor); }
 
 TermCtl TermCtl::clear_screen_down() const { return TERM_APPEND(clr_eos); }
 TermCtl TermCtl::clear_line_to_end() const { return TERM_APPEND(clr_eol); }
@@ -576,10 +583,13 @@ void TermCtl::print(const std::string& buf)
 
 unsigned int TermCtl::stripped_length(std::string_view s)
 {
+    // Reference of the escape sequences:
+    // https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
     enum State {
         Visible,
         Esc,
         Csi,
+        ConsumeOne,
     } state = Visible;
     unsigned int length = 0;
     for (const auto c : s) {
@@ -594,6 +604,9 @@ unsigned int TermCtl::stripped_length(std::string_view s)
             case Esc:
                 if (c == '[')
                     state = Csi;
+                else if (strchr(" #%()*+-./", c) != nullptr)
+                    // two-char ESC controls, e.g. ESC # 3
+                    state = ConsumeOne;
                 else
                     state = Visible;
                 break;
@@ -601,6 +614,11 @@ unsigned int TermCtl::stripped_length(std::string_view s)
             case Csi:
                 if (isalpha(c))
                     state = Visible;
+                break;
+
+            case ConsumeOne:
+                // consume one character and switch back to normal state
+                state = Visible;
                 break;
         }
     }

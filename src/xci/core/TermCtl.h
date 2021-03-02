@@ -101,7 +101,9 @@ public:
     TermCtl move_left(unsigned n_cols) const;
     TermCtl move_right() const;
     TermCtl move_right(unsigned n_cols) const;
-    TermCtl move_to_column(unsigned column) const;
+    TermCtl move_to_column(unsigned column) const;  // column is 0-based
+    TermCtl save_cursor() const { return _save_cursor(); }
+    TermCtl restore_cursor() const { return _restore_cursor(); }
 
     // clear screen content
     TermCtl clear_screen_down() const;
@@ -199,6 +201,10 @@ private:
         , m_seq(term.m_seq + seq) {}
 
     void print(const std::string& buf);
+
+    // Aliases needed to avoid macro collision
+    TermCtl _save_cursor() const;
+    TermCtl _restore_cursor() const;
 
     enum class State {
         NoTTY,      // initialization failed

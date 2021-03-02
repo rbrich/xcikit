@@ -8,6 +8,7 @@
 #include <xci/core/chrono.h>
 #include <xci/core/memory.h>
 #include <xci/core/sys.h>
+#include <xci/core/TermCtl.h>
 
 #ifndef _WIN32
 #include <xci/core/FileTree.h>
@@ -278,3 +279,12 @@ TEST_CASE( "PathNode", "[FileTree]" )
     };
 }
 #endif // _WIN32
+
+
+TEST_CASE( "stripped_length", "[TermCtl]" )
+{
+    CHECK(TermCtl::stripped_length("test") == 4);
+    TermCtl t(1, TermCtl::IsTty::Always);
+    CHECK(TermCtl::stripped_length(t.format("{fg:green}test{t:normal}")) == 4);
+    CHECK(TermCtl::stripped_length("\x1b[32mtest\x1b(B\x1b[m") == 4);
+}
