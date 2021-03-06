@@ -90,7 +90,7 @@ inline std::string xci_tparm(const char* seq, Args... args) { return fmt::format
 class TermInputSeq {
 public:
 
-    static std::pair<uint16_t, TermCtl::Key> lookup(std::string_view input_buffer) {
+    static TermCtl::DecodedInput lookup(std::string_view input_buffer) {
         return instance()._lookup(input_buffer);
     }
 
@@ -211,10 +211,11 @@ private:
         assert(!"No rule to save seq");
     }
 
-    std::pair<uint16_t, TermCtl::Key> _lookup(std::string_view input_buffer) {
+    TermCtl::DecodedInput _lookup(std::string_view input_buffer) {
         enum { Start, Esc, Csi, Ss3 } state = Start;
-        unsigned len = 0;
-        unsigned arg = 0;
+        uint16_t len = 0;
+        unsigned arg[10] {};
+        unsigned arg_i = 0;
         for (const auto c : input_buffer) {
             ++ len;
             switch (state) {
@@ -240,17 +241,17 @@ private:
                     break;  // unknown
                 case Csi:
                     if (isdigit(c)) {
-                        arg = 10 * arg + (c - '0');
+                        arg[arg_i] = 10 * arg[arg_i] + (c - '0');
                         continue;
                     }
                     if (c == ';') {
-                        arg *= 100;
+                        ++arg_i;
                         continue;
                     }
-                    if (c == '~' && arg != 0 && arg <= 24)
-                        return {len, m_lookup_csi7e[arg - 1]};
+                    if (c == '~' && arg[0] != 0 && arg[0] <= 24)
+                        return {len, m_lookup_csi7e[arg[0] - 1]};
                     if (c >= 'A' && c <= 'Z')
-                        return {len, m_lookup_csi_AtoZ[c - 'A']};
+                        return {len, m_lookup_csi_AtoZ[c - 'A'], arg[1] == 9};
                     return {len, TermCtl::Key::Unknown};
                 case Ss3:
                     if (c >= 'A' && c <= 'Z')
@@ -633,9 +634,9 @@ auto TermCtl::decode_input(std::string_view input_buffer) -> DecodedInput
 
     // Lookup escape sequences
     {
-        const auto [len, key] = TermInputSeq::lookup(input_buffer);
-        if (len != 0)
-            return {len, key};
+        const auto decoded = TermInputSeq::lookup(input_buffer);
+        if (decoded.input_len != 0)
+            return decoded;
     }
 
     // Special handling of ESC
@@ -647,6 +648,14 @@ auto TermCtl::decode_input(std::string_view input_buffer) -> DecodedInput
         else if (input_buffer[1] == '\x1b')  // ESC ESC
             return {2, Key::Escape, true};
         else { // ESC char
+            // try to decode non-ESC keys like Enter, Tab, Backspace
+            auto decoded = TermInputSeq::lookup(input_buffer.substr(1));
+            if (decoded.input_len != 0) {
+                decoded.input_len += 1;
+                decoded.alt = true;
+                return decoded;
+            }
+            // remember Alt, continue to UTF-8 with offset
             alt = true;
             offset = 1;
         }
