@@ -16,6 +16,7 @@ add_library(xci-core
     rtti.cpp
     TermCtl.cpp
     Vfs.cpp
+    EditLine.cpp
     )
 add_library(xcikit::xci-core ALIAS xci-core)
 
