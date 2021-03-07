@@ -73,3 +73,26 @@ TEST_CASE( "utf-8", "[EditBuffer]" )
     CHECK(eb.move_right());
     CHECK(eb.cursor() == strlen(UTF8("①")));
 }
+
+
+TEST_CASE( "word boundaries", "[EditBuffer]" )
+{
+    EditBuffer eb("/some/path an_identifier  123.42");
+    CHECK(eb.cursor() == eb.content_view().size());
+    CHECK(eb.skip_word_left());
+    CHECK(eb.content_from_cursor() == "42");
+    CHECK(eb.delete_word_left());
+    CHECK(eb.content() == "/some/path an_identifier  42");
+    CHECK(eb.skip_word_left());
+    CHECK(eb.content_from_cursor() == "identifier  42");
+    CHECK(eb.delete_word_left());
+    CHECK(eb.content_upto_cursor() == "/some/path ");
+    CHECK(eb.content_from_cursor() == "identifier  42");
+    CHECK(eb.skip_word_left());
+    CHECK(eb.skip_word_left());
+    CHECK(eb.content_from_cursor() == "some/path identifier  42");
+    CHECK(eb.delete_word_right());
+    CHECK(eb.content_from_cursor() == "/path identifier  42");
+    CHECK(eb.delete_word_right());
+    CHECK(eb.content() == "/ identifier  42");
+}

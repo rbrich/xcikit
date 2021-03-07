@@ -76,4 +76,61 @@ bool EditBuffer::move_to_end()
 }
 
 
+static bool is_word_char(wint_t c)
+{
+    return iswalnum(c);
+}
+
+
+bool EditBuffer::skip_word_left()
+{
+    if (m_cursor == 0)
+        return false;
+    // first skip non-word chars, then word chars
+    while (!is_word_char_left_of_cursor() && move_left()) {}
+    while (is_word_char_left_of_cursor() && move_left()) {}
+    return true;
+}
+
+
+bool EditBuffer::skip_word_right()
+{
+    if (m_cursor >= m_content.size())
+        return false;
+    // first skip non-word chars, then word chars
+    while (!is_word_char(utf8_codepoint(m_content.c_str() + m_cursor)) && move_right()) {}
+    while (is_word_char(utf8_codepoint(m_content.c_str() + m_cursor)) && move_right()) {}
+    return true;
+}
+
+
+bool EditBuffer::delete_word_left()
+{
+    const auto orig_cursor = m_cursor;
+    if (!skip_word_left())
+        return false;
+    m_content.erase(m_cursor, orig_cursor - m_cursor);
+    return true;
+}
+
+
+bool EditBuffer::delete_word_right()
+{
+    const auto orig_cursor = m_cursor;
+    if (!skip_word_right())
+        return false;
+    m_content.erase(orig_cursor, m_cursor - orig_cursor);
+    m_cursor = orig_cursor;
+    return true;
+}
+
+
+bool EditBuffer::is_word_char_left_of_cursor() const
+{
+    const auto rlast = m_content.crbegin() + m_content.size();
+    const auto new_cursor = rlast - utf8_prev(rlast - m_cursor);
+    return is_word_char(utf8_codepoint(m_content.c_str() + new_cursor));
+}
+
+
 } // namespace xci::core

@@ -56,44 +56,79 @@ const char* EditLine::input(std::string_view prompt)
             }
 
             // process the decoded input
-            if (di.alt)
-                // Alt + key  -> ignored
-                continue;
-            switch (di.key) {
-                case TermCtl::Key::Enter:
-                    write("\n\r");
-                    done = true;
-                    continue;
-                case TermCtl::Key::Backspace:
-                    if (!m_edit_buffer.delete_left())
+            if (!di.alt) {
+                // normal
+                switch (di.key) {
+                    case TermCtl::Key::Enter:
+                        write("\n\r");
+                        done = true;
                         continue;
-                    break;
-                case TermCtl::Key::Delete:
-                    if (!m_edit_buffer.delete_right())
+                    case TermCtl::Key::Backspace:
+                        if (!m_edit_buffer.delete_left())
+                            continue;
+                        break;
+                    case TermCtl::Key::Delete:
+                        if (!m_edit_buffer.delete_right())
+                            continue;
+                        break;
+                    case TermCtl::Key::Home:
+                        if (!m_edit_buffer.move_to_home())
+                            continue;
+                        break;
+                    case TermCtl::Key::End:
+                        if (!m_edit_buffer.move_to_end())
+                            continue;
+                        break;
+                    case TermCtl::Key::Left:
+                        if (!m_edit_buffer.move_left())
+                            continue;
+                        break;
+                    case TermCtl::Key::Right:
+                        if (!m_edit_buffer.move_right())
+                            continue;
+                        break;
+                    case TermCtl::Key::UnicodeChar:
+                        m_edit_buffer.insert(to_utf8(di.unicode));
+                        break;
+                    default:
+                        // other control keys -> ignored
                         continue;
-                    break;
-                case TermCtl::Key::Home:
-                    if (!m_edit_buffer.move_to_home())
+                }
+            } else {
+                // with Alt
+                switch (di.key) {
+                    case TermCtl::Key::Enter:
+                        // multi-line edit - next line
+                        m_edit_buffer.insert("\n");
+                        break;
+                    case TermCtl::Key::Backspace:
+                        if (!m_edit_buffer.delete_word_left())
+                            continue;
+                        break;
+                    case TermCtl::Key::Delete:
+                        if (!m_edit_buffer.delete_word_right())
+                            continue;
+                        break;
+                    case TermCtl::Key::Home:
+                        if (!m_edit_buffer.move_to_home())
+                            continue;
+                        break;
+                    case TermCtl::Key::End:
+                        if (!m_edit_buffer.move_to_end())
+                            continue;
+                        break;
+                    case TermCtl::Key::Left:
+                        if (!m_edit_buffer.skip_word_left())
+                            continue;
+                        break;
+                    case TermCtl::Key::Right:
+                        if (!m_edit_buffer.skip_word_right())
+                            continue;
+                        break;
+                    default:
+                        // other control keys -> ignored
                         continue;
-                    break;
-                case TermCtl::Key::End:
-                    if (!m_edit_buffer.move_to_end())
-                        continue;
-                    break;
-                case TermCtl::Key::Left:
-                    if (!m_edit_buffer.move_left())
-                        continue;
-                    break;
-                case TermCtl::Key::Right:
-                    if (!m_edit_buffer.move_right())
-                        continue;
-                    break;
-                case TermCtl::Key::UnicodeChar:
-                    m_edit_buffer.insert(to_utf8(di.unicode));
-                    break;
-                default:
-                    // other control keys -> ignored
-                    continue;
+                }
             }
             write(tout.move_to_column(prompt_end).seq());
             auto cursor = prompt_end + tout.stripped_length(m_edit_buffer.content_upto_cursor());
