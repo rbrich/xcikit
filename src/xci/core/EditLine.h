@@ -17,18 +17,31 @@
 #include <functional>
 #include <mutex>
 #include <condition_variable>
+#include <ctime>
+#include <deque>
 
 namespace xci::core {
 
 namespace fs = std::filesystem;
 
 /// Command line editor, like readline / libedit
+///
+/// Features:
+/// * history: managed in memory, new items appended to a file and loaded next time
 class EditLine {
 public:
 
-    // TODO
+    /// Open the file for appending (add_history writes the item immediately)
+    /// and load previous history to memory
     void open_history_file(const fs::path& path);
 
+    /// Add history item to memory, and if the history file is open,
+    /// write it also to the file.
+    void add_history(std::string_view input);
+
+    /// Show prompt, start line editor and return the input when done
+    /// \param prompt   Prompt text, will be shown on the line with editor.
+    ///                 May contain escape sequences (esp. color).
     const char* input(std::string_view prompt);
 
     // These functions allow to redirect input/output to something else
@@ -52,6 +65,9 @@ private:
     /// \returns    false on EOF or error
     bool read_input();
 
+    bool history_previous();
+    bool history_next();
+
     // editing
     EditBuffer m_edit_buffer;
 
@@ -67,6 +83,9 @@ private:
 
     // history
     std::fstream m_history_file;
+    std::deque<std::string> m_history;
+    int m_history_cursor = -1;
+    std::string m_history_orig_buffer;  // saved original buffer before descended into history
 };
 
 } // namespace xci::core

@@ -21,7 +21,63 @@ namespace xci::core {
 
 void EditLine::open_history_file(const fs::path& path)
 {
-    m_history_file.open(path, std::ios::in | std::ios::app);
+    m_history_file.open(path, std::ios::in);
+    if (m_history_file) {
+        std::string line;
+        while (std::getline(m_history_file, line)) {
+            switch (line[0]) {
+                case ' ':
+                case '~':
+                    m_history.push_back(line.substr(1));
+                    break;
+                case '|':
+                    line[0] = '\n';
+                    m_history.back().append(line);
+                    break;
+            }
+        }
+        m_history_file.close();
+    }
+    // reopen for appending
+    m_history_file.open(path, std::ios::out | std::ios::app);
+}
+
+
+void EditLine::add_history(std::string_view input)
+{
+    // don't add if same as the last item
+    if (!m_history.empty() && m_history.back() == input)
+        return;
+    // add to memory
+    m_history.emplace_back(input);
+    // append to history file, if open
+    if (!m_history_file)
+        return;
+    // file format: first char on each line indicates single- or multi-line item:
+    // ' ' single-line
+    // '~' multi-line first line
+    // '|' multi-line following lines
+    if (std::find(input.cbegin(), input.cend(), '\n') == input.end()) {
+        // single-line
+        m_history_file << ' ' << input << '\n';
+        m_history_file.flush();
+    } else {
+        // multi-line
+        auto begin = input.begin();
+        auto end = input.end();
+        auto pos = begin;
+        do {
+            pos = std::find(begin, end, '\n');
+            if (begin == input.begin())
+                m_history_file << '~';
+            else
+                m_history_file << '|';
+            const auto line = input.substr(begin - input.begin(), pos - begin);
+            m_history_file << line << '\n';
+            begin = pos + 1;
+        } while (pos != end);
+        m_history_file.flush();
+    }
 }
 
 
@@ -90,6 +146,14 @@ const char* EditLine::input(std::string_view prompt)
                             break;
                         case TermCtl::Key::Right:
                             if (!m_edit_buffer.move_right())
+                                continue;
+                            break;
+                        case TermCtl::Key::Up:
+                            if (!history_previous())
+                                continue;
+                            break;
+                        case TermCtl::Key::Down:
+                            if (!history_next())
                                 continue;
                             break;
                         case TermCtl::Key::UnicodeChar:
@@ -194,6 +258,10 @@ const char* EditLine::input(std::string_view prompt)
         }
     });
 
+    // reset history cursor in case we were editing an item from history
+    m_history_cursor = -1;
+    m_history_orig_buffer.clear();
+
     return m_edit_buffer.content().c_str();
 }
 
@@ -233,6 +301,45 @@ bool EditLine::read_input()
 
     // read from custom feed
     m_input_cv.wait(lock, [this]{ return !m_input_buffer.empty(); });
+    return true;
+}
+
+
+bool EditLine::history_previous()
+{
+    if (m_history_cursor == 0)
+        return false;  // already at the first item
+    if (m_history_cursor == -1) {
+        // not yet browsing history -> start now
+        if (m_history.empty())
+            return false;
+        m_history_cursor = m_history.size();
+        m_history_orig_buffer = m_edit_buffer.content();
+    } else {
+        // replace history item in case it was edited
+        m_history[m_history_cursor] = m_edit_buffer.content();
+    }
+    -- m_history_cursor;
+    m_edit_buffer.set_content(m_history[m_history_cursor]);
+    return true;
+}
+
+
+bool EditLine::history_next()
+{
+    if (m_history_cursor == -1)
+        return false;  // already out of history
+    // replace history item in case it was edited
+    m_history[m_history_cursor] = m_edit_buffer.content();
+    // move to next item
+    ++ m_history_cursor;
+    if (size_t(m_history_cursor) >= m_history.size()) {
+        // leaving history
+        m_history_cursor = -1;
+        m_edit_buffer.set_content(std::move(m_history_orig_buffer));
+        return true;
+    }
+    m_edit_buffer.set_content(m_history[m_history_cursor]);
     return true;
 }
 

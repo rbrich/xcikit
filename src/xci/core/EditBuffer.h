@@ -22,7 +22,7 @@ public:
         : m_content(std::move(initial_content)), m_cursor(m_content.size()) {}
 
     void clear() { m_content.clear(); m_cursor = 0; }
-    void set_content(std::string content) { m_content = std::move(content); m_cursor = content.size(); }
+    void set_content(std::string content) { m_content = std::move(content); m_cursor = m_content.size(); }
 
     /// Cursor position, valid range is:
     /// * from 0 - at beginning, before first char
