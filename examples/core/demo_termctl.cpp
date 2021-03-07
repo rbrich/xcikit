@@ -35,7 +35,7 @@ int main()
             cout << std::hex << std::setw(2) << std::setfill('0')
                  << (int) (unsigned char) c << " ";
         }
-        cout << '"' << escape(in) << '"' << "\n";
+        cout << '"' << escape(in, true) << '"' << "\n";
 
         auto decoded = tin.decode_input(in);
         cout << "* decoded: " << decoded.input_len << " bytes\n";

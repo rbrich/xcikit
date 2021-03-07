@@ -82,8 +82,11 @@ template <class S>
 void strip(S& str) { lstrip(str); rstrip(str); }
 
 
-// Escape non-printable characters with C escape sequences (eg. '\n')
-std::string escape(std::string_view str);
+/// Escape non-printable characters with C escape sequences (eg. '\n')
+/// \param str          The string to be escaped. May contains '\0'.
+/// \param extended     Enable non-standard extension:
+///                     * replace ESC with '\e' instead of '\x1b'
+std::string escape(std::string_view str, bool extended = false);
 
 // Unescape (expand) C escape sequences (i.e. "\\n" -> "\n")
 // This expects the input is well-formatted:

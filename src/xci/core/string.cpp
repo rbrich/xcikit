@@ -74,7 +74,7 @@ vector<string_view> rsplit(string_view str, char delim, int maxsplit)
 }
 
 
-std::string escape(string_view str)
+std::string escape(string_view str, bool extended)
 {
     std::string out;
     out.reserve(str.size());
@@ -91,6 +91,10 @@ std::string escape(string_view str)
             case '"': out += "\\\""; break;
             case '\'': out += "\\'"; break;
             default: {
+                if (extended && ch == '\x1b') {
+                    out += "\\e";
+                    break;
+                }
                 auto chnum = (int)(unsigned char)(ch);
                 if (std::isprint(chnum))
                     out += ch;
