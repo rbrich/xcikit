@@ -56,8 +56,9 @@ public:
     // to a copy of TermCtl instance, which can then be send to stream
 
     enum class Color {
-        Black, Red, Green, Yellow, Blue, Magenta, Cyan, White,
-        BrightBlack, BrightRed, BrightGreen, BrightYellow,
+        Default = 9,
+        Black = 0, Red, Green, Yellow, Blue, Magenta, Cyan, White,
+        BrightBlack = 10, BrightRed, BrightGreen, BrightYellow,
         BrightBlue, BrightMagenta, BrightCyan, BrightWhite,
     };
     enum class Mode { Normal, Bold, Dim, Underline, Overline };
@@ -72,6 +73,7 @@ public:
     TermCtl magenta() const { return fg(Color::Magenta); }
     TermCtl cyan() const { return fg(Color::Cyan); }
     TermCtl white() const { return fg(Color::White); }
+    TermCtl default_fg() const { return fg(Color::Default); }
 
     // background
     TermCtl bg(Color color) const;
@@ -83,6 +85,7 @@ public:
     TermCtl on_magenta() const { return bg(Color::Magenta); }
     TermCtl on_cyan() const { return bg(Color::Cyan); }
     TermCtl on_white() const { return bg(Color::White); }
+    TermCtl default_bg() const { return bg(Color::Default); }
 
     // mode
     TermCtl mode(Mode mode) const;

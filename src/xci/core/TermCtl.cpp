@@ -62,8 +62,10 @@ namespace xci::core {
 #endif // XCI_WITH_TERMINFO
 
 // not found in Terminfo DB:
-static constexpr auto set_bright_foreground = CSI "1;3{}m";
-static constexpr auto set_bright_background = CSI "1;4{}m";
+static constexpr auto set_default_foreground = CSI "39m";
+static constexpr auto set_default_background = CSI "49m";
+static constexpr auto set_bright_foreground = CSI "9{}m";
+static constexpr auto set_bright_background = CSI "10{}m";
 static constexpr auto enter_overline_mode = CSI "53m";
 static constexpr auto send_soft_reset = CSI "!p";
 
@@ -416,7 +418,9 @@ auto TermCtl::size() const -> Size
 
 TermCtl TermCtl::fg(Color color) const
 {
-    if (color < Color::BrightBlack)
+    if (color == Color::Default)
+        return XCI_TERM_APPEND(set_default_foreground);
+    else if (color < Color::BrightBlack)
         return TERM_APPEND(set_a_foreground, static_cast<int>(color));
     // bright colors
     return XCI_TERM_APPEND(set_bright_foreground, static_cast<int>(color) - static_cast<int>(Color::BrightBlack));
@@ -424,7 +428,9 @@ TermCtl TermCtl::fg(Color color) const
 
 TermCtl TermCtl::bg(Color color) const
 {
-    if (color < Color::BrightBlack)
+    if (color == Color::Default)
+        return XCI_TERM_APPEND(set_default_background);
+    else if (color < Color::BrightBlack)
         return TERM_APPEND(set_a_background, static_cast<int>(color));
     // bright colors
     return XCI_TERM_APPEND(set_bright_background, static_cast<int>(color) - static_cast<int>(Color::BrightBlack));
