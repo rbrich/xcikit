@@ -155,13 +155,17 @@ public:
     /// Compute length of `s` when stripped of terminal control sequences and invisible characters
     static unsigned int stripped_length(std::string_view s);
 
-    // Temporarily change terminal mode to RAW mode
-    // (no echo, no buffering, no special processing)
-    // NOTE: Signal processing is enabled, so Ctrl-C still works
-    void with_raw_mode(const std::function<void()>& cb);
+    /// Temporarily change terminal mode to RAW mode
+    /// (no echo, no buffering, no special processing, only signal processing allowed by default)
+    /// \param isig     ISIG flag. Set to false to also disable signal processing (Ctrl-C etc.)
+    void with_raw_mode(const std::function<void()>& cb, bool isig = true);
 
+    /// Read input from stdin
+    /// \returns    The input data, empty string on error or EOF
     std::string input();
-    std::string raw_input();
+
+    /// Combination of `with_raw_mode` and `input`
+    std::string raw_input(bool isig = true);
 
     enum class Key : uint8_t {
         Unknown = 0,
@@ -179,10 +183,17 @@ public:
         UnicodeChar,
     };
 
+    enum class Modifier : uint8_t {
+        None,
+        Alt,
+        Ctrl,  // "Ctrl" is a common name for the Control key
+        CtrlAlt,  // Ctrl + Alt
+    };
+
     struct DecodedInput {
         uint16_t input_len = 0;  // length of input sequence (chars consumed)
         Key key = Key::Unknown;
-        bool alt : 1 = false;
+        Modifier mod = Modifier::None;
         char32_t unicode = 0;
     };
 

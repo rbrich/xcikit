@@ -228,8 +228,11 @@ private:
                     }
                     if (c == '\x7f')
                         return {len, m_map_7f};
-                    if (c >= 8 && c <= 13)
-                        return {len, m_lookup_8to13[c - 8]};
+                    if (c >= 8 && c <= 13) {
+                        const auto key = m_lookup_8to13[c - 8];
+                        if (key != TermCtl::Key::Unknown)
+                            return {len, key};
+                    }
                     break;  // unknown
                 case Esc:
                     if (c == '[') {
@@ -252,8 +255,12 @@ private:
                     }
                     if (c == '~' && arg[0] != 0 && arg[0] <= 24)
                         return {len, m_lookup_csi7e[arg[0] - 1]};
-                    if (c >= 'A' && c <= 'Z')
-                        return {len, m_lookup_csi_AtoZ[c - 'A'], arg[1] == 9};
+                    if (c >= 'A' && c <= 'Z') {
+                        auto mod = TermCtl::Modifier::None;
+                        if (arg[1] == 9)
+                            mod = TermCtl::Modifier::Alt;
+                        return {len, m_lookup_csi_AtoZ[c - 'A'], mod};
+                    }
                     return {len, TermCtl::Key::Unknown};
                 case Ss3:
                     if (c >= 'A' && c <= 'Z')
@@ -521,7 +528,7 @@ std::string TermCtl::ModePlaceholder::seq(Mode mode) const
 }
 
 
-void TermCtl::with_raw_mode(const std::function<void()>& cb)
+void TermCtl::with_raw_mode(const std::function<void()>& cb, bool isig)
 {
     assert(m_fd == STDIN_FILENO);
 #ifdef _WIN32
@@ -547,7 +554,8 @@ void TermCtl::with_raw_mode(const std::function<void()>& cb)
 
     struct termios newtc = origtc;
     cfmakeraw(&newtc);
-    newtc.c_lflag |= ISIG;
+    if (isig)
+        newtc.c_lflag |= ISIG;
     if (tcsetattr(0, TCSANOW, &newtc) < 0)  {
         assert(!"tcsetattr failed");
         return;
@@ -565,19 +573,23 @@ void TermCtl::with_raw_mode(const std::function<void()>& cb)
 
 std::string TermCtl::input()
 {
-    char buf[20] {};
-    while (::read(STDIN_FILENO, buf, sizeof buf) < 0
-       && (errno == EINTR || errno == EAGAIN));
-    return buf;
+    char buf[100] {};
+    int res;
+    do {
+        res = ::read(STDIN_FILENO, buf, sizeof buf);
+    } while (res < 0 && (errno == EINTR || errno == EAGAIN));
+    if (res < 0)
+        return {};  // error
+    return {buf, size_t(res)};
 }
 
 
-std::string TermCtl::raw_input()
+std::string TermCtl::raw_input(bool isig)
 {
     std::string res;
     with_raw_mode([this, &res] {
         res = input();
-    });
+    }, isig);
     return res;
 }
 
@@ -646,31 +658,37 @@ auto TermCtl::decode_input(std::string_view input_buffer) -> DecodedInput
     }
 
     // Special handling of ESC
-    bool alt = false;
+    Modifier mod = Modifier::None;
     unsigned offset = 0;
     if (input_buffer[0] == '\x1b') {
         if (input_buffer.size() == 1)   // ESC
             return {1, Key::Escape};
         else if (input_buffer[1] == '\x1b')  // ESC ESC
-            return {2, Key::Escape, true};
-        else { // ESC char
+            return {2, Key::Escape, Modifier::Alt};
+        else { // ESC <char>
             // try to decode non-ESC keys like Enter, Tab, Backspace
             auto decoded = TermInputSeq::lookup(input_buffer.substr(1));
             if (decoded.input_len != 0) {
                 decoded.input_len += 1;
-                decoded.alt = true;
+                decoded.mod = Modifier::Alt;
                 return decoded;
             }
             // remember Alt, continue to UTF-8 with offset
-            alt = true;
+            mod = Modifier::Alt;
             offset = 1;
         }
+    }
+    if (input_buffer[offset] >= 0 && input_buffer[offset] < 32) {
+        // Ctrl + <char>
+        mod = (mod == Modifier::Alt)? Modifier::CtrlAlt : Modifier::Ctrl;
+        return {uint16_t(offset + 1), Key::UnicodeChar, mod,
+                char32_t(tolower('@' + input_buffer[offset]))};
     }
 
     // UTF-8
     const auto [len, unicode] = utf8_codepoint_and_length(input_buffer.substr(offset));
     if (len > 0)
-        return {uint16_t(len + offset), Key::UnicodeChar, alt, unicode};
+        return {uint16_t(len + offset), Key::UnicodeChar, mod, unicode};
     if (len == 0)
         return {};  // incomplete UTF-8 char
     assert(len == -1);
