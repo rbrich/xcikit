@@ -6,8 +6,16 @@
 
 #include "EditBuffer.h"
 #include "string.h"
+#include <algorithm>
+#include <wctype.h>
 
 namespace xci::core {
+
+
+void EditBuffer::set_cursor(unsigned long absolute_position)
+{
+    m_cursor = std::min(absolute_position, m_content.size());
+}
 
 
 void EditBuffer::insert(std::string_view text)

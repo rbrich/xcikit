@@ -95,4 +95,10 @@ TEST_CASE( "word boundaries", "[EditBuffer]" )
     CHECK(eb.content_from_cursor() == "/path identifier  42");
     CHECK(eb.delete_word_right());
     CHECK(eb.content() == "/ identifier  42");
+
+    eb.set_content("/some/path");
+    eb.set_cursor(0);
+    eb.delete_word_right();
+    eb.delete_word_right();
+    CHECK(eb.content() == "");
 }
