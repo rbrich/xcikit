@@ -138,6 +138,10 @@ public:
         std::string seq(Mode mode) const;
     };
 
+    /// Format string, adding colors via special placeholders:
+    /// {fg:COLOR} where COLOR is default | red | *red ... ("*" = bright)
+    /// {bg:COLOR} where COLOR is the same as for fg
+    /// {t:MODE} where MODE is bold | underline | normal ...
     template<typename ...Args>
     std::string format(const char *fmt, Args&&... args) {
         return fmt::format(fmt, std::forward<Args>(args)...,
@@ -146,6 +150,7 @@ public:
                         fmt::arg("t",  ModePlaceholder{*this}));
     }
 
+    /// Print string with special color/mode placeholders, see `format` above.
     template<typename ...Args>
     void print(const char *fmt, Args&&... args) {
         auto buf = format(fmt, std::forward<Args>(args)...);
@@ -227,10 +232,10 @@ private:
     };
     State m_state = State::NoTTY;
     std::string m_seq;  // cached capability sequences
-    int m_fd;
+    int m_fd;   // FD (on Windows mapped to handle)
 
 #ifdef _WIN32
-    unsigned long m_orig_out_mode = 0;
+    unsigned long m_orig_mode = 0;  // original console mode of the handle
 #endif
 };
 

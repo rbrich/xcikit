@@ -335,9 +335,20 @@ TermCtl::TermCtl(int fd, IsTty is_tty) : m_fd(fd)
 TermCtl::~TermCtl() {
 #ifdef _WIN32
     if (m_state == State::InitOk) {
-        assert(m_orig_out_mode != bad_mode);
-        unsigned long std_handle = (m_fd == STDOUT_FILENO) ? STD_OUTPUT_HANDLE : STD_ERROR_HANDLE;
-        reset_console_mode(std_handle, m_orig_out_mode);
+        assert(m_orig_mode != bad_mode);
+        switch (m_fd) {
+            case STDIN_FILENO:
+                reset_console_mode(STD_INPUT_HANDLE, m_orig_mode);
+                break;
+            case STDOUT_FILENO:
+                reset_console_mode(STD_OUTPUT_HANDLE, m_orig_mode);
+                break;
+            case STDERR_FILENO:
+                reset_console_mode(STD_ERROR_HANDLE, m_orig_mode);
+                break;
+            default:
+                return;
+        }
     }
 #else
     (void) 0;
@@ -368,15 +379,15 @@ void TermCtl::set_is_tty(IsTty is_tty)
     }
 
     if (is_tty != IsTty::Never && m_state == State::NoTTY) {
-        m_orig_out_mode = set_console_mode(std_handle, req_mode);
-        if (m_orig_out_mode == bad_mode)
+        m_orig_mode = set_console_mode(std_handle, req_mode);
+        if (m_orig_mode == bad_mode)
             return;
         m_state = State::InitOk;
     }
     if (is_tty == IsTty::Never && m_state == State::InitOk) {
-        assert(m_orig_out_mode != bad_mode);
-        reset_console_mode(std_handle, m_orig_out_mode);
-        m_orig_out_mode = 0;
+        assert(m_orig_mode != bad_mode);
+        reset_console_mode(std_handle, m_orig_mode);
+        m_orig_mode = 0;
         m_state = State::NoTTY;
     }
 #else
@@ -488,6 +499,7 @@ std::ostream& operator<<(std::ostream& os, const TermCtl& term)
 
 auto TermCtl::ColorPlaceholder::parse(std::string_view name) -> Color
 {
+    if (name == "default")   return Color::Default;
     if (name == "black")     return Color::Black;
     if (name == "red")       return Color::Red;
     if (name == "green")     return Color::Green;
@@ -496,6 +508,14 @@ auto TermCtl::ColorPlaceholder::parse(std::string_view name) -> Color
     if (name == "magenta")   return Color::Magenta;
     if (name == "cyan")      return Color::Cyan;
     if (name == "white")     return Color::White;
+    if (name == "*black")    return Color::BrightBlack;
+    if (name == "*red")      return Color::BrightRed;
+    if (name == "*green")    return Color::BrightGreen;
+    if (name == "*yellow")   return Color::BrightYellow;
+    if (name == "*blue")     return Color::BrightBlue;
+    if (name == "*magenta")  return Color::BrightMagenta;
+    if (name == "*cyan")     return Color::BrightCyan;
+    if (name == "*white")    return Color::BrightWhite;
     throw fmt::format_error("invalid color name: " + std::string(name));
 }
 
@@ -503,6 +523,7 @@ auto TermCtl::ColorPlaceholder::parse(std::string_view name) -> Color
 auto TermCtl::ModePlaceholder::parse(std::string_view name) -> Mode
 {
     if (name == "bold")      return Mode::Bold;
+    if (name == "dim")       return Mode::Dim;
     if (name == "underline") return Mode::Underline;
     if (name == "overline")  return Mode::Overline;
     if (name == "normal")    return Mode::Normal;
@@ -530,7 +551,9 @@ std::string TermCtl::ModePlaceholder::seq(Mode mode) const
 
 void TermCtl::with_raw_mode(const std::function<void()>& cb, bool isig)
 {
-    assert(m_fd == STDIN_FILENO);
+    if (m_fd != STDIN_FILENO)
+        return;
+
 #ifdef _WIN32
     HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
     if (h == INVALID_HANDLE_VALUE)
@@ -538,8 +561,7 @@ void TermCtl::with_raw_mode(const std::function<void()>& cb, bool isig)
     DWORD orig_mode = 0;
     if (!GetConsoleMode(h, &orig_mode))
         return;
-    if (!SetConsoleMode(h, ENABLE_VIRTUAL_TERMINAL_INPUT |
-            ENABLE_PROCESSED_INPUT ))
+    if (!SetConsoleMode(h, ENABLE_VIRTUAL_TERMINAL_INPUT | ENABLE_PROCESSED_INPUT))
         return;
 
     cb();
@@ -547,7 +569,7 @@ void TermCtl::with_raw_mode(const std::function<void()>& cb, bool isig)
     SetConsoleMode(h, orig_mode);
 #else
     struct termios origtc = {};
-    if (tcgetattr(0, &origtc) < 0) {
+    if (tcgetattr(m_fd, &origtc) < 0) {
         assert(!"tcgetattr failed");
         return;
     }
@@ -556,14 +578,14 @@ void TermCtl::with_raw_mode(const std::function<void()>& cb, bool isig)
     cfmakeraw(&newtc);
     if (isig)
         newtc.c_lflag |= ISIG;
-    if (tcsetattr(0, TCSANOW, &newtc) < 0)  {
+    if (tcsetattr(m_fd, TCSANOW, &newtc) < 0)  {
         assert(!"tcsetattr failed");
         return;
     }
 
     cb();
 
-    if (tcsetattr(0, TCSANOW, &origtc) < 0) {
+    if (tcsetattr(m_fd, TCSANOW, &origtc) < 0) {
         assert(!"tcsetattr failed");
         return;
     }
@@ -576,7 +598,7 @@ std::string TermCtl::input()
     char buf[100] {};
     int res;
     do {
-        res = ::read(STDIN_FILENO, buf, sizeof buf);
+        res = ::read(m_fd, buf, sizeof buf);
     } while (res < 0 && (errno == EINTR || errno == EAGAIN));
     if (res < 0)
         return {};  // error
