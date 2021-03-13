@@ -68,7 +68,7 @@ struct InfixOperator: sor< one<','>, two<'&'>, two<'|'>, two<'='>, string<'!','=
                            string<'<','='>, string<'>','='>,
                            two<'<'>, two<'>'>, one<'<'>, one<'>'>,
                            one<'+'>, one<'-'>, two<'*'>, one<'*'>,
-                           seq<one<'/'>, not_at<one<'/'>>>, one<'%'>, one<'!'>,
+                           seq<one<'/'>, not_at<one<'/', '*'>>>, one<'%'>, one<'!'>,
                            one<'&'>, one<'|'>, one<'^'> > {};
 
 // Keywords
@@ -137,7 +137,7 @@ struct DefInstance: if_must< KeywordInstance, NSC, TypeName, RS, SC, Type, SC, o
 struct TopLevelStatement: sor<DefClass, DefInstance, Statement> {};
 
 // Source module
-struct Module: must<NSC, SepList<TopLevelStatement>, NSC, eof> {};
+struct Module: must<NSC, opt<SepList<TopLevelStatement>, NSC>, eof> {};
 
 
 // ----------------------------------------------------------------------------

@@ -8,6 +8,8 @@
 
 #include <xci/core/EditBuffer.h>
 
+#include <cstring>
+
 using namespace xci::core;
 
 #define UTF8(l)  (const char*)u8 ## l

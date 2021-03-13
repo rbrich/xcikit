@@ -4,6 +4,8 @@ os:
     Macos:
     FreeBSD:
     SunOS:
+    Android:
+    iOS:
     Emscripten:
 
 arch: [asm.js, wasm]

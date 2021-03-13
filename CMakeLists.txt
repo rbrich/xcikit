@@ -1,7 +1,9 @@
 # 3.16 introduced CMAKE_MESSAGE_INDENT
 # 3.13 is current version in Emscripten Docker image
 cmake_minimum_required(VERSION 3.13)
-project(xcikit CXX)
+project(xcikit
+    VERSION 0.2.0
+    LANGUAGES CXX)
 
 # Optional libraries (only xci-core is required)
 include(CMakeDependentOption)
@@ -39,7 +41,11 @@ option(XCI_DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
 
 option(XCI_PCH_CATCH2 "Precompile <catch2/catch.hpp> header." OFF)
 
+# The C++20 standard will stay as minimal requirement until C++23 is well established among compilers.
+# That means at least until year 2024. By that time, xcikit should have an actual release branch.
+# Another major version will be created before bumping the requirement.
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -346,7 +352,6 @@ configure_package_config_file(xcikitConfig.cmake.in xcikitConfig.cmake
     INSTALL_DESTINATION lib/cmake/xcikit
     PATH_VARS XCI_INCLUDE_DIRS)
 write_basic_package_version_file(xcikitConfigVersion.cmake
-    VERSION 0.1.0
     COMPATIBILITY SameMajorVersion)
 install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/xcikitConfig.cmake
@@ -355,3 +360,19 @@ install(FILES
 
 # Make our CMake modules available to clients
 install(FILES cmake/XciBuildOptions.cmake DESTINATION lib/cmake/xcikit)
+
+
+# ------------- #
+# Packaging     #
+# ------------- #
+
+include(CPack)
+
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Collection of C++ libraries for drawing 2D graphics, rendering text and more.")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/rbrich/xcikit")
+set(CPACK_PACKAGE_VENDOR "xci.cz")
+set(CPACK_PACKAGE_CONTACT "radek.brich@devl.cz")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_DESCRIPTION_FILE "${PROJECT_SOURCE_DIR}/README.adoc")
+set(CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE")
+set(CPACK_STRIP_FILES "ON")
