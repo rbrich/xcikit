@@ -27,9 +27,27 @@ namespace fs = std::filesystem;
 /// Command line editor, like readline / libedit
 ///
 /// Features:
+/// * highlighting and completion hints: a user callback can add arbitrary escape sequences
+///   or append arbitrary text after end of a line (the original text layout must stay unchanged)
+/// * multi-line editing: can be triggered by unclosed brackets or by Alt-Enter
 /// * history: managed in memory, new items appended to a file and loaded next time
+/// * feed input and receive output programmatically
+///   (this allows connecting to a virtual terminal without redirecting FDs nor using PTY,
+///   which is useful if you have a graphical terminal widget in the same program)
+///
+/// * TODO: multi-line - remember original column-in-line in up/down movement
+/// * TODO: remove duplicate history lines (consequential)
+/// * NICE TO HAVE: minimal output to the terminal, i.e. don't clear and refresh everything on each keypress
+///   (this can be achieved by comparing already colorized output to previous one and print just
+///   the difference - the tail)
 class EditLine {
 public:
+    enum Flags : uint8_t {
+        Multiline = 0x01,
+    };
+    explicit EditLine(uint8_t flags = 0) : m_flags(flags) {}
+
+    bool is_multiline() const { return m_flags & Multiline; }
 
     /// Open the file for appending (add_history writes the item immediately)
     /// and load previous history to memory
@@ -51,15 +69,17 @@ public:
     void set_feed_only() { m_input_fd = -1; }
     void feed_input(std::string_view data);
 
-    using OutputCallback = std::function<void(std::string_view data)>;
+    using OutputCallback = std::function<void(std::string_view data, bool flush)>;
     void set_output_callback(OutputCallback cb) { m_output_cb = std::move(cb); }
 
-    using HighlightCallback = std::function<void(std::string_view data, unsigned cursor)>;
+    /// \return true if ENTER should continue to a new line (unclosed bracket etc.)
+    struct HighlightResult { std::string hl_data; bool is_open; };
+    using HighlightCallback = std::function<HighlightResult(std::string_view data, unsigned cursor)>;
     void set_highlight_callback(HighlightCallback cb) { m_highlight_cb = std::move(cb); }
 
 private:
-    void write(std::string_view data) { m_output_cb(data); }
-    void write_highlight(std::string_view data, unsigned cursor) { m_highlight_cb(data, cursor); }
+    void write(std::string_view data, bool flush = false) { m_output_cb(data, flush); }
+    HighlightResult highlight(std::string_view data, unsigned cursor) { return m_highlight_cb(data, cursor); }
 
     /// Obtain more input data from terminal
     /// \returns    false on EOF or error
@@ -70,6 +90,11 @@ private:
 
     // editing
     EditBuffer m_edit_buffer;
+    int m_cursor_up = 0;  // multi-line: how many lines below the prompt is the cursor
+    bool m_edit_continue_nl = false;
+
+    // settings
+    const uint8_t m_flags = 0;
 
     // feed input
     int m_input_fd = 0;
@@ -78,8 +103,12 @@ private:
     std::condition_variable m_input_cv;
 
     // output
-    OutputCallback m_output_cb = [](std::string_view data){ std::cout << data << std::flush; };
-    HighlightCallback m_highlight_cb = [](std::string_view data, unsigned cursor){ std::cout << data << std::flush; };
+    OutputCallback m_output_cb = [](std::string_view data, bool flush) {
+        std::cout << data;
+        if (flush)
+            std::cout.flush();
+    };
+    HighlightCallback m_highlight_cb;
 
     // history
     std::fstream m_history_file;

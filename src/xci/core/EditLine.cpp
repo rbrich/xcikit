@@ -15,6 +15,7 @@
 
 #include <string>
 #include <unistd.h>
+#include <cassert>
 
 namespace xci::core {
 
@@ -86,12 +87,13 @@ const char* EditLine::input(std::string_view prompt)
     auto& tin = TermCtl::stdin_instance();
     auto& tout = TermCtl::stdout_instance();
 
-    auto prompt_end = tout.stripped_length(prompt);
+    auto prompt_len = tout.stripped_length(prompt);
     write("\r");
-    write(prompt);
+    write(prompt, true);
     m_edit_buffer.clear();
 
-    tin.with_raw_mode([this, prompt_end] {
+    bool control_break = false;
+    tin.with_raw_mode([this, prompt_len, &control_break] {
         auto& tout = TermCtl::stdout_instance();
         bool done = false;
         bool need_more_input = true;
@@ -121,7 +123,13 @@ const char* EditLine::input(std::string_view prompt)
                     // normal
                     switch (di.key) {
                         case TermCtl::Key::Enter:
-                            write("\n\r");
+                            if (is_multiline() && m_edit_continue_nl) {
+                                // multi-line edit - continue to next line (unclosed bracket etc.)
+                                m_edit_buffer.insert("\n");
+                                break;
+                            }
+                            // finish input
+                            write("\n\r", true);
                             done = true;
                             continue;
                         case TermCtl::Key::Backspace:
@@ -133,11 +141,11 @@ const char* EditLine::input(std::string_view prompt)
                                 continue;
                             break;
                         case TermCtl::Key::Home:
-                            if (!m_edit_buffer.move_to_home())
+                            if (!m_edit_buffer.move_to_line_beginning())
                                 continue;
                             break;
                         case TermCtl::Key::End:
-                            if (!m_edit_buffer.move_to_end())
+                            if (!m_edit_buffer.move_to_line_end())
                                 continue;
                             break;
                         case TermCtl::Key::Left:
@@ -169,7 +177,8 @@ const char* EditLine::input(std::string_view prompt)
                     switch (di.key) {
                         case TermCtl::Key::Enter:
                             // multi-line edit - next line
-                            m_edit_buffer.insert("\n");
+                            if (is_multiline())
+                                m_edit_buffer.insert("\n");
                             break;
                         case TermCtl::Key::Backspace:
                             if (!m_edit_buffer.delete_word_left())
@@ -180,11 +189,11 @@ const char* EditLine::input(std::string_view prompt)
                                 continue;
                             break;
                         case TermCtl::Key::Home:
-                            if (!m_edit_buffer.move_to_home())
+                            if (!m_edit_buffer.move_to_line_beginning())
                                 continue;
                             break;
                         case TermCtl::Key::End:
-                            if (!m_edit_buffer.move_to_end())
+                            if (!m_edit_buffer.move_to_line_end())
                                 continue;
                             break;
                         case TermCtl::Key::Left:
@@ -193,6 +202,14 @@ const char* EditLine::input(std::string_view prompt)
                             break;
                         case TermCtl::Key::Right:
                             if (!m_edit_buffer.skip_word_right())
+                                continue;
+                            break;
+                        case TermCtl::Key::Up:
+                            if (!m_edit_buffer.move_up())
+                                continue;
+                            break;
+                        case TermCtl::Key::Down:
+                            if (!m_edit_buffer.move_down())
                                 continue;
                             break;
                         case TermCtl::Key::UnicodeChar:
@@ -218,14 +235,19 @@ const char* EditLine::input(std::string_view prompt)
                     // with Ctrl
                     if (di.key == TermCtl::Key::UnicodeChar) {
                         switch (tolower(di.unicode)) {
+                            case 'c':
+                            case 'd':
+                                control_break = true;
+                                done = true;
+                                break;
                             case 'a':
                                 // Ctrl-a (beginning-of-line)
-                                if (!m_edit_buffer.move_to_home())
+                                if (!m_edit_buffer.move_to_line_beginning())
                                     continue;
                                 break;
                             case 'e':
                                 // Ctrl-e (end-of-line)
-                                if (!m_edit_buffer.move_to_end())
+                                if (!m_edit_buffer.move_to_line_end())
                                     continue;
                                 break;
                             case 'b':
@@ -251,18 +273,63 @@ const char* EditLine::input(std::string_view prompt)
                     // ignored
                     continue;
             }
-            write(tout.move_to_column(prompt_end).seq());
-            auto cursor = prompt_end + tout.stripped_length(m_edit_buffer.content_upto_cursor());
-            write_highlight(m_edit_buffer.content_view(), m_edit_buffer.cursor());
-            write(tout.clear_line_to_end().move_to_column(cursor).seq());
+            if (m_cursor_up > 0) {
+                // move back to prompt line
+                write(tout.move_up(m_cursor_up).seq());
+                m_cursor_up = 0;
+            }
+            write(tout.move_to_column(prompt_len).clear_screen_down().seq());
+            auto cursor = tout.stripped_length(m_edit_buffer.content_upto_cursor());
+
+            // Optionally highlight the content
+            std::string_view content;  // pointer to content, either original or highlighted
+            std::string content_store;  // helper for owning the highlighted string
+            if (m_highlight_cb) {
+                auto r = m_highlight_cb(m_edit_buffer.content_view(), m_edit_buffer.cursor());
+                m_edit_continue_nl = r.is_open;
+                content_store = std::move(r.hl_data);
+                content = content_store;
+            } else {
+                content = m_edit_buffer.content_view();
+            }
+
+            if (is_multiline()) {
+                bool cursor_saved = false;
+                for (const auto line : xci::core::split(content, '\n')) {
+                    if (line.data() != content.data()) {
+                        // not the first line
+                        write("\r\n" + std::string(prompt_len, ' '));
+                        if (!cursor_saved) {
+                            ++m_cursor_up;
+                        }
+                    }
+                    write(line);
+                    auto part_len = tout.stripped_length(line);
+                    if (!cursor_saved) {
+                        if (cursor > part_len) {
+                            cursor -= part_len + 1;  // add 1 for '\n'
+                        } else {
+                            write(tout.move_to_column(prompt_len + cursor).save_cursor().seq());
+                            cursor_saved = true;
+                        }
+                    }
+                }
+                assert(cursor_saved);
+                write(tout.restore_cursor().seq(), true);
+
+            } else {
+                // no multi-line
+                write(content);
+                write(tout.move_to_column(prompt_len + cursor).seq(), true);
+            }
         }
-    });
+    }, false);
 
     // reset history cursor in case we were editing an item from history
     m_history_cursor = -1;
     m_history_orig_buffer.clear();
 
-    return m_edit_buffer.content().c_str();
+    return control_break ? nullptr : m_edit_buffer.content().c_str();
 }
 
 

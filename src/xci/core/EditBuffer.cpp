@@ -66,7 +66,86 @@ bool EditBuffer::move_right()
 }
 
 
-bool EditBuffer::move_to_home()
+bool EditBuffer::move_up()
+{
+    if (m_cursor == 0)
+        return false;
+    // find end of the previous line
+    auto nl_end = m_content.rfind('\n', m_cursor - 1);
+    if (nl_end == std::string::npos)  // no newline before cursor
+        return false;
+    auto col_in_line = utf8_length(m_content.substr(nl_end, m_cursor - nl_end));
+    // find start of the previous line
+    auto nl_start = m_content.rfind('\n', nl_end - 1);
+    if (nl_start == std::string::npos)
+        // moving to the first line
+        m_cursor = utf8_offset(m_content, std::min(nl_end, col_in_line - 1));
+    else
+        // jump to a corresponding column (if the line is long enough)
+        m_cursor = nl_start + utf8_offset({m_content.data() + nl_start, m_content.size() - nl_start},
+                std::min(nl_end - nl_start, col_in_line));
+    return true;
+}
+
+
+bool EditBuffer::move_down()
+{
+    if (m_cursor >= m_content.size())
+        return false;
+    // find start of the next line
+    auto nl_start = m_content.find('\n', m_cursor);
+    if (nl_start == std::string::npos)  // no newline after cursor
+        return false;
+    // compute the current col_in_line
+    size_t col_in_line = 0;
+    if (m_cursor != 0) {
+        auto nl_prev = m_content.rfind('\n', m_cursor - 1);
+        col_in_line = (nl_prev == std::string::npos)
+                ? utf8_length(m_content.substr(0, m_cursor))
+                : utf8_length(m_content.substr(nl_prev + 1, m_cursor - nl_prev - 1));
+    }
+    // find end of the next line
+    auto nl_end = m_content.find('\n', nl_start + 1);
+    if (nl_end == std::string::npos)
+        // moving to the last line
+        nl_end = m_content.size();
+    m_cursor = nl_start + utf8_offset({m_content.data() + nl_start, m_content.size() - nl_start},
+            std::min(nl_end - nl_start, col_in_line + 1));
+    return true;
+}
+
+
+bool EditBuffer::move_to_line_beginning()
+{
+    if (m_cursor == 0)
+        return false;
+    auto nl = m_content.rfind('\n', m_cursor - 1);
+    if (nl == std::string::npos)  // no newline before cursor
+        m_cursor = 0;
+    else if (nl + 1 == m_cursor)  // cursor already on the char right after newline
+        return false;
+    else
+        m_cursor = nl + 1;
+    return true;
+}
+
+
+bool EditBuffer::move_to_line_end()
+{
+    if (m_cursor >= m_content.size())
+        return false;
+    auto nl = m_content.find('\n', m_cursor);
+    if (nl == std::string::npos)  // no newline before cursor
+        m_cursor = m_content.size();
+    else if (nl == m_cursor)  // cursor already on the line end
+        return false;
+    else
+        m_cursor = nl;
+    return true;
+}
+
+
+bool EditBuffer::move_to_beginning()
 {
     if (m_cursor == 0)
         return false;

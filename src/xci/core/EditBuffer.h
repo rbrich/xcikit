@@ -39,16 +39,20 @@ public:
     void insert(std::string_view text);
 
     // Keyboard actions - returns true when buffer was modified (action succeeded)
-    bool delete_left();         // backspace
-    bool delete_right();        // delete
-    bool move_left();           // left
-    bool move_right();          // right
-    bool move_to_home();        // home
-    bool move_to_end();         // end
-    bool skip_word_left();      // alt + left
-    bool skip_word_right();     // alt + right
-    bool delete_word_left();    // alt + backspace
-    bool delete_word_right();   // alt + delete
+    bool delete_left();             // Backspace
+    bool delete_right();            // Delete
+    bool move_left();               // Left
+    bool move_right();              // Right
+    bool move_up();                 // Up
+    bool move_down();               // Down
+    bool move_to_line_beginning();  // Home
+    bool move_to_line_end();        // End
+    bool move_to_beginning();       // PgUp, Alt + Home
+    bool move_to_end();             // PgDown, Alt + End
+    bool skip_word_left();          // Alt + Left
+    bool skip_word_right();         // Alt + Right
+    bool delete_word_left();        // Alt + Backspace
+    bool delete_word_right();       // Alt + Delete
 
     bool is_word_char_left_of_cursor() const;
 

@@ -149,12 +149,12 @@ bool TextInput::key_event(View& view, const KeyEvent& ev)
             break;
 
         case Key::Home:
-            if (!m_buffer.move_to_home())
+            if (!m_buffer.move_to_line_beginning())
                 return true;
             break;
 
         case Key::End:
-            if (!m_buffer.move_to_end())
+            if (!m_buffer.move_to_line_end())
                 return true;
             break;
 

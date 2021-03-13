@@ -241,18 +241,16 @@ template std::string::size_type utf8_length<std::string>(const std::string&);
 template std::string_view::size_type utf8_length<std::string_view>(const std::string_view&);
 
 
+size_t utf8_offset(std::string_view str, size_t n_chars)
+{
+    return utf8_offset_iter(str.cbegin(), str.cend(), n_chars) - str.cbegin();
+}
+
+
 string_view utf8_substr(string_view str, size_t pos, size_t count)
 {
-    auto begin = str.cbegin();  // NOLINT(readability-qualified-auto)
-    while (pos > 0 && begin != str.cend()) {
-        begin = utf8_next(begin);
-        --pos;
-    }
-    auto end = begin;  // NOLINT(readability-qualified-auto)
-    while (count > 0 && end != str.cend()) {
-        end = utf8_next(end);
-        --count;
-    }
+    auto begin = utf8_offset_iter(str.cbegin(), str.cend(), pos);
+    auto end = utf8_offset_iter(begin, str.cend(), count);
     return {&*begin, size_t(end - begin)};
 }
 

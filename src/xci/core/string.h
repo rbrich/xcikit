@@ -117,6 +117,18 @@ template <class I> I utf8_prev(I riter);
 template <class S, class SSize = typename S::size_type>
 SSize utf8_length(const S& str);
 
+/// Convert character offset to byte offset
+size_t utf8_offset(std::string_view str, size_t n_chars);
+
+template <class TIter>
+TIter utf8_offset_iter(TIter begin, TIter end, size_t n_chars) {
+    while (n_chars != 0 && begin != end) {
+        begin = utf8_next(begin);
+        --n_chars;
+    }
+    return begin;
+}
+
 std::string_view utf8_substr(std::string_view str, size_t pos, size_t count);
 
 /// Convert a single UTF-8 character to Unicode code point.
