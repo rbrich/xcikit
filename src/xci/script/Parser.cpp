@@ -896,7 +896,7 @@ void Parser::parse(std::string_view input, ast::Module& mod)
 
 
 #ifndef NDEBUG
-int Parser::analyze_grammar()
+size_t Parser::analyze_grammar()
 {
     using parser::Module;
 

@@ -27,8 +27,8 @@ public:
     /// Cursor position, valid range is:
     /// * from 0 - at beginning, before first char
     /// * to content.size() - at end, after last char
-    unsigned long cursor() const { return m_cursor; }
-    void set_cursor(unsigned long absolute_position);
+    size_t cursor() const { return m_cursor; }
+    void set_cursor(size_t absolute_position);
 
     const std::string& content() const { return m_content; }
     std::string_view content_view() const { return m_content; }
@@ -58,7 +58,7 @@ public:
 
 private:
     std::string m_content;
-    unsigned long m_cursor = 0;
+    size_t m_cursor = 0;
 };
 
 

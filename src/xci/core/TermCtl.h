@@ -154,7 +154,7 @@ public:
     template<typename ...Args>
     void print(const char *fmt, Args&&... args) {
         auto buf = format(fmt, std::forward<Args>(args)...);
-        print(buf);
+        _print(buf);
     }
 
     /// Compute length of `s` when stripped of terminal control sequences and invisible characters
@@ -219,7 +219,7 @@ private:
         : m_state(term.m_state == State::NoTTY ? State::NoTTY : State::CopyOk)
         , m_seq(term.m_seq + seq) {}
 
-    void print(const std::string& buf);
+    void _print(const std::string& buf);
 
     // Aliases needed to avoid macro collision
     TermCtl _save_cursor() const;

@@ -12,9 +12,9 @@
 #include "TermCtl.h"
 #include "string.h"
 #include "log.h"
+#include <xci/compat/unistd.h>
 
 #include <string>
-#include <unistd.h>
 #include <cassert>
 
 namespace xci::core {
@@ -380,7 +380,7 @@ bool EditLine::history_previous()
         // not yet browsing history -> start now
         if (m_history.empty())
             return false;
-        m_history_cursor = m_history.size();
+        m_history_cursor = (int) m_history.size();
         m_history_orig_buffer = m_edit_buffer.content();
     } else {
         // replace history item in case it was edited

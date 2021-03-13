@@ -12,7 +12,7 @@
 namespace xci::core {
 
 
-void EditBuffer::set_cursor(unsigned long absolute_position)
+void EditBuffer::set_cursor(size_t absolute_position)
 {
     m_cursor = std::min(absolute_position, m_content.size());
 }

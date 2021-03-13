@@ -616,7 +616,7 @@ std::string TermCtl::raw_input(bool isig)
 }
 
 
-void TermCtl::print(const std::string& buf)
+void TermCtl::_print(const std::string& buf)
 {
     ::write(m_fd, buf.data(), buf.size());
 }

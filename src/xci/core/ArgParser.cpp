@@ -537,9 +537,9 @@ void ArgParser::print_usage() const
 
 void ArgParser::print_help() const
 {
-    size_t desc_cols = 0;
+    unsigned desc_cols = 0;
     for (const auto& opt : m_opts)
-        desc_cols = max(desc_cols, opt.desc().size());
+        desc_cols = max(desc_cols, (unsigned) opt.desc().size());
     print_usage();
     auto& t = TermCtl::stdout_instance();
     cout << endl << t.bold().yellow() << "Options:" << t.normal() << endl;

@@ -24,7 +24,7 @@ public:
     /// Check that the grammar is built correctly.
     /// This is useful only during development.
     /// \returns 0 if grammar is OK
-    static int analyze_grammar();
+    static size_t analyze_grammar();
 #endif
 };
 

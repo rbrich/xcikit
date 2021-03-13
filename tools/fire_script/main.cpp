@@ -209,7 +209,7 @@ int main(int argc, char* argv[])
     // standalone interpreter for the control commands
     ReplCommand cmd;
 
-    cout << t.format("{t:bold}{fg:magenta}🔥 fire script{t:normal} {fg:magenta}v0.4{t:normal}\n");
+    cout << t.format((const char*)u8"{t:bold}{fg:magenta}🔥 fire script{t:normal} {fg:magenta}v0.4{t:normal}\n");
     while (!context().done) {
         const char* input;
         input = edit_line.input(t.format("{fg:green}_{} ?{t:normal} ", input_number));
