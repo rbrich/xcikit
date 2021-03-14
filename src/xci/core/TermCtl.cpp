@@ -7,7 +7,10 @@
 // References:
 // - https://en.wikipedia.org/wiki/POSIX_terminal_interface
 // - https://en.wikipedia.org/wiki/ANSI_escape_code
+// - https://www.ecma-international.org/wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
+// - https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
 // - https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
+// - terminfo(5), https://linux.die.net/man/5/terminfo
 
 #include "TermCtl.h"
 #include <xci/compat/unistd.h>
@@ -153,6 +156,10 @@ private:
             {SS3 "Q", TermCtl::Key::F2},
             {SS3 "R", TermCtl::Key::F3},
             {SS3 "S", TermCtl::Key::F4},
+            {CSI "P", TermCtl::Key::F1},  // Ctrl+ sends CSI instead of SS3
+            {CSI "Q", TermCtl::Key::F2},
+            {CSI "R", TermCtl::Key::F3},
+            {CSI "S", TermCtl::Key::F4},
             {CSI "15~", TermCtl::Key::F5},
             {CSI "17~", TermCtl::Key::F6},
             {CSI "18~", TermCtl::Key::F7},
@@ -254,13 +261,9 @@ private:
                         continue;
                     }
                     if (c == '~' && arg[0] != 0 && arg[0] <= 24)
-                        return {len, m_lookup_csi7e[arg[0] - 1]};
-                    if (c >= 'A' && c <= 'Z') {
-                        auto mod = TermCtl::Modifier::None;
-                        if (arg[1] == 9)
-                            mod = TermCtl::Modifier::Alt;
-                        return {len, m_lookup_csi_AtoZ[c - 'A'], mod};
-                    }
+                        return {len, m_lookup_csi7e[arg[0] - 1], decode_mod(arg[1])};
+                    if (c >= 'A' && c <= 'Z')
+                        return {len, m_lookup_csi_AtoZ[c - 'A'], decode_mod(arg[1])};
                     return {len, TermCtl::Key::Unknown};
                 case Ss3:
                     if (c >= 'A' && c <= 'Z')
@@ -270,6 +273,12 @@ private:
             break;  // unknown
         }
         return {0, TermCtl::Key::Unknown};
+    }
+
+    static auto decode_mod(unsigned arg) -> TermCtl::Modifier {
+        if (arg == 0)
+            return {};
+        return TermCtl::Modifier{uint8_t(arg - 1)};
     }
 
     // 82 bytes in total
@@ -624,8 +633,6 @@ void TermCtl::_print(const std::string& buf)
 
 unsigned int TermCtl::stripped_length(std::string_view s)
 {
-    // Reference of the escape sequences:
-    // https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
     enum State {
         Visible,
         Esc,
@@ -667,6 +674,32 @@ unsigned int TermCtl::stripped_length(std::string_view s)
 }
 
 
+std::ostream& operator<<(std::ostream& s, TermCtl::Modifier v)
+{
+    using Mod = TermCtl::Modifier;
+    if (v.flags == 0) {
+        s << "None";
+        return s;
+    }
+    if (v.flags & Mod::Shift)  s << "Shift";
+    if (v.flags & Mod::Ctrl)   s << "Ctrl";
+    if (v.flags & Mod::Alt)    s << "Alt";
+    if (v.flags & Mod::Meta)   s << "Meta";
+    return s;
+}
+
+
+auto TermCtl::Modifier::normalized() const -> Modifier
+{
+    Modifier res;
+    if (flags & Ctrl)
+        res.set_ctrl();
+    if (flags & (Alt | Meta))
+        res.set_alt();
+    return res;
+}
+
+
 auto TermCtl::decode_input(std::string_view input_buffer) -> DecodedInput
 {
     if (input_buffer.empty())
@@ -680,29 +713,31 @@ auto TermCtl::decode_input(std::string_view input_buffer) -> DecodedInput
     }
 
     // Special handling of ESC
-    Modifier mod = Modifier::None;
+    Modifier mod;
     unsigned offset = 0;
     if (input_buffer[0] == '\x1b') {
         if (input_buffer.size() == 1)   // ESC
             return {1, Key::Escape};
-        else if (input_buffer[1] == '\x1b')  // ESC ESC
-            return {2, Key::Escape, Modifier::Alt};
-        else { // ESC <char>
-            // try to decode non-ESC keys like Enter, Tab, Backspace
-            auto decoded = TermInputSeq::lookup(input_buffer.substr(1));
-            if (decoded.input_len != 0) {
-                decoded.input_len += 1;
-                decoded.mod = Modifier::Alt;
-                return decoded;
-            }
-            // remember Alt, continue to UTF-8 with offset
-            mod = Modifier::Alt;
-            offset = 1;
+        // ESC + <seq>
+        auto decoded = TermInputSeq::lookup(input_buffer.substr(1));
+        if (decoded.input_len != 0) {
+            decoded.input_len += 1;
+            decoded.mod.set_alt();
+            return decoded;
         }
+        // ESC + ESC
+        if (input_buffer[1] == '\x1b') {
+            mod.set_alt();
+            return {2, Key::Escape, mod};
+        }
+        // ESC + <char>
+        // remember Alt, continue to UTF-8 with offset
+        mod.set_alt();
+        offset = 1;
     }
     if (input_buffer[offset] >= 0 && input_buffer[offset] < 32) {
         // Ctrl + <char>
-        mod = (mod == Modifier::Alt)? Modifier::CtrlAlt : Modifier::Ctrl;
+        mod.set_ctrl();
         return {uint16_t(offset + 1), Key::UnicodeChar, mod,
                 char32_t(tolower('@' + input_buffer[offset]))};
     }

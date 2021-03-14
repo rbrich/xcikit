@@ -195,12 +195,12 @@ using Mode = Highlighter::Mode;
 // NOTE: Don't forget to add each type to HighlightSelector above
 static std::pair<const char*, HighlightColor> highlight_color[] {
         // brackets - bg color applied only for brackets under cursor
-        {":RoundBracketOpen", {Color::BrightWhite, Mode::Normal, Color::Yellow}},
-        {":RoundBracketClose", {Color::BrightWhite, Mode::Normal, Color::Yellow}},
-        {":SquareBracketOpen", {Color::BrightWhite, Mode::Normal, Color::Yellow}},
-        {":SquareBracketClose", {Color::BrightWhite, Mode::Normal, Color::Yellow}},
-        {":BraceOpen", {Color::BrightWhite, Mode::Bold, Color::Yellow}},
-        {":BraceClose", {Color::BrightWhite, Mode::Bold, Color::Yellow}},
+        {":RoundBracketOpen", {Color::BrightWhite, Mode::Normal, Color::BrightBlack}},
+        {":RoundBracketClose", {Color::BrightWhite, Mode::Normal, Color::BrightBlack}},
+        {":SquareBracketOpen", {Color::BrightWhite, Mode::Normal, Color::BrightBlack}},
+        {":SquareBracketClose", {Color::BrightWhite, Mode::Normal, Color::BrightBlack}},
+        {":BraceOpen", {Color::BrightWhite, Mode::Normal, Color::BrightBlack}},
+        {":BraceClose", {Color::BrightWhite, Mode::Normal, Color::BrightBlack}},
         {":InvalidCloseBracket", {Color::BrightRed}},
         {":InvalidCloseBrace", {Color::BrightRed, Mode::Bold}},
 
@@ -238,12 +238,19 @@ static HighlightColor select_highlight_color(std::string_view node_type, bool hl
 {
     for (auto const& [type, c] : highlight_color) {
         if (node_type.ends_with(type)) {
-            HighlightColor res{
+            // highlight brackets
+            if (hl_bracket)
+                return HighlightColor{
+                    .fg = Color::White,
+                    .mode = Mode::Normal,
+                    .bg = c.bg
+                };
+            // normal
+            return HighlightColor{
                 .fg = c.fg,
                 .mode = c.mode,
-                .bg = hl_bracket ? c.bg : Color::Default
+                .bg = Color::Default
             };
-            return res;
         }
     }
     return {};
@@ -253,14 +260,14 @@ static HighlightColor select_highlight_color(std::string_view node_type, bool hl
 void Highlighter::switch_color(const HighlightColor& from, const HighlightColor& to)
 {
     if (from.mode != to.mode) {
-        if (to.mode == Mode::Normal)
-            m_output += m_term.normal().seq();
-        else
-            m_output += m_term.normal().mode(to.mode).seq();
+        // reset all attributes, fg/bg needs to be set again (below)
+        m_output += m_term.normal().seq();
+        if (to.mode != Mode::Normal)
+            m_output += m_term.mode(to.mode).seq();
     }
-    if (from.fg != to.fg)
+    if (from.fg != to.fg || from.mode != to.mode)
         m_output += m_term.fg(to.fg).seq();
-    if (from.bg != to.bg)
+    if (from.bg != to.bg || from.mode != to.mode)
         m_output += m_term.bg(to.bg).seq();
 }
 
@@ -270,7 +277,13 @@ HighlightColor Highlighter::highlight_node(
         const HighlightColor& prev_color,
         unsigned cursor, bool hl_bracket)
 {
-    auto pos = node.m_begin.data;
+    // Highlight only open/close brackets, not the content
+    hl_bracket = hl_bracket && (node.type.ends_with("Open") || node.type.ends_with("Close"));
+
+    // Workaround: parse_tree node doesn't expose its begin/end char* directly.
+    // I've tried to use `node.string_view()`, but it makes the iterating more complicated
+    // and less readable, so let's do this instead, for now.
+    const auto *pos = node.m_begin.data;
     auto color = select_highlight_color(node.type, hl_bracket);
     switch_color(prev_color, color);
 

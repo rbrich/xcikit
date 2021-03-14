@@ -118,7 +118,7 @@ const char* EditLine::input(std::string_view prompt)
             }
 
             // process the decoded input
-            switch (di.mod) {
+            switch (di.mod.normalized_flags()) {
                 case TermCtl::Modifier::None:
                     // normal
                     switch (di.key) {
@@ -162,6 +162,14 @@ const char* EditLine::input(std::string_view prompt)
                             break;
                         case TermCtl::Key::Down:
                             if (!history_next())
+                                continue;
+                            break;
+                        case TermCtl::Key::PageUp:
+                            if (!m_edit_buffer.move_to_beginning())
+                                continue;
+                            break;
+                        case TermCtl::Key::PageDown:
+                            if (!m_edit_buffer.move_to_end())
                                 continue;
                             break;
                         case TermCtl::Key::UnicodeChar:
@@ -234,7 +242,7 @@ const char* EditLine::input(std::string_view prompt)
                 case TermCtl::Modifier::Ctrl:
                     // with Ctrl
                     if (di.key == TermCtl::Key::UnicodeChar) {
-                        switch (tolower(di.unicode)) {
+                        switch (towlower(di.unicode)) {
                             case 'c':
                             case 'd':
                                 control_break = true;
@@ -269,7 +277,8 @@ const char* EditLine::input(std::string_view prompt)
                         continue;
                     }
                     break;
-                case TermCtl::Modifier::CtrlAlt:
+                case (TermCtl::Modifier::Ctrl | TermCtl::Modifier::Alt):
+                default:
                     // ignored
                     continue;
             }

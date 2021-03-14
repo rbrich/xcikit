@@ -188,17 +188,38 @@ public:
         UnicodeChar,
     };
 
-    enum class Modifier : uint8_t {
-        None,
-        Alt,
-        Ctrl,  // "Ctrl" is a common name for the Control key
-        CtrlAlt,  // Ctrl + Alt
+    struct Modifier {
+        uint8_t flags = 0;
+        enum {
+            None = 0,
+            Shift = 1,
+            Alt = 2,
+            Ctrl = 4,
+            Meta = 8,
+        };
+        explicit operator bool() const { return flags != 0; }
+        friend std::ostream& operator<<(std::ostream& os, Modifier v);
+
+        void set_shift() { flags |= Shift; }
+        void set_alt() { flags |= Alt; }
+        void set_ctrl() { flags |= Ctrl; }
+        void set_meta() { flags |= Meta; }
+
+        // ignore Shift, translate Meta to Alt, leaving only three combinations: Ctrl, Alt, Ctrl|Alt
+        Modifier normalized() const;
+        uint8_t normalized_flags() const { return normalized().flags; }
+
+        bool is_shift() const { return flags == Shift; }
+        bool is_alt() const { return flags == Alt; }
+        bool is_ctrl() const { return flags == Ctrl; }
+        bool is_meta() const { return flags == Meta; }
+        bool is_ctrl_alt() const { return flags == (Ctrl | Alt); }
     };
 
     struct DecodedInput {
         uint16_t input_len = 0;  // length of input sequence (chars consumed)
         Key key = Key::Unknown;
-        Modifier mod = Modifier::None;
+        Modifier mod;
         char32_t unicode = 0;
     };
 

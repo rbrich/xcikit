@@ -11,7 +11,7 @@
 
 #include <iostream>
 #include <iomanip>
-#include <cctype>
+#include <cwctype>
 
 using namespace std;
 using namespace xci::core;
@@ -42,14 +42,14 @@ int main()
         cout << "* decoded: " << decoded.input_len << " bytes\n";
         if (decoded.key != TermCtl::Key::UnicodeChar)
             cout << "* key: " << magic_enum::enum_name(decoded.key) << "\n";
-        if (decoded.mod != TermCtl::Modifier::None)
-            cout << "* modifiers: " << magic_enum::enum_name(decoded.mod) << "\n";
+        if (decoded.mod)
+            cout << "* modifiers: " << decoded.mod << "\n";
         if (decoded.unicode != 0)
             cout << "* unicode: " << uint32_t(decoded.unicode)
                  << " '" << to_utf8(decoded.unicode) << "'\n";
         // handle Ctrl-C
-        if (decoded.mod == TermCtl::Modifier::Ctrl && decoded.key == TermCtl::Key::UnicodeChar) {
-            switch (toupper(decoded.unicode)) {
+        if (decoded.mod.is_ctrl() && decoded.key == TermCtl::Key::UnicodeChar) {
+            switch (towupper(decoded.unicode)) {
                 case 'C':
                 case 'D':
                 case 'Z':
