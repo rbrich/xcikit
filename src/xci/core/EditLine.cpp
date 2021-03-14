@@ -9,7 +9,6 @@
 // * https://www.gnu.org/savannah-checkouts/gnu/bash/manual/bash.html#Commands-For-Moving
 
 #include "EditLine.h"
-#include "TermCtl.h"
 #include "string.h"
 #include "log.h"
 #include <xci/compat/unistd.h>
@@ -79,6 +78,31 @@ void EditLine::add_history(std::string_view input)
             begin = pos + 1;
         } while (pos != end);
         m_history_file.flush();
+    }
+}
+
+
+bool EditLine::process_alt_key(TermCtl::Key key)
+{
+    switch (key) {
+        case TermCtl::Key::Enter:
+            // multi-line edit - next line
+            if (is_multiline()) {
+                m_edit_buffer.insert("\n");
+                return true;
+            }
+            return false;
+        case TermCtl::Key::Backspace:   return m_edit_buffer.delete_word_left();
+        case TermCtl::Key::Delete:      return m_edit_buffer.delete_word_right();
+        case TermCtl::Key::Home:        return m_edit_buffer.move_to_line_beginning();
+        case TermCtl::Key::End:         return m_edit_buffer.move_to_line_end();
+        case TermCtl::Key::Left:        return m_edit_buffer.skip_word_left();
+        case TermCtl::Key::Right:       return m_edit_buffer.skip_word_right();
+        case TermCtl::Key::Up:          return m_edit_buffer.move_up();
+        case TermCtl::Key::Down:        return m_edit_buffer.move_down();
+        default:
+            // other keys -> ignored
+            return false;
     }
 }
 
@@ -183,65 +207,26 @@ const char* EditLine::input(std::string_view prompt)
                     break;
                 case TermCtl::Modifier::Alt:
                     // with Alt
-                    switch (di.key) {
-                        case TermCtl::Key::Enter:
-                            // multi-line edit - next line
-                            if (is_multiline())
-                                m_edit_buffer.insert("\n");
-                            break;
-                        case TermCtl::Key::Backspace:
-                            if (!m_edit_buffer.delete_word_left())
-                                continue;
-                            break;
-                        case TermCtl::Key::Delete:
-                            if (!m_edit_buffer.delete_word_right())
-                                continue;
-                            break;
-                        case TermCtl::Key::Home:
-                            if (!m_edit_buffer.move_to_line_beginning())
-                                continue;
-                            break;
-                        case TermCtl::Key::End:
-                            if (!m_edit_buffer.move_to_line_end())
-                                continue;
-                            break;
-                        case TermCtl::Key::Left:
-                            if (!m_edit_buffer.skip_word_left())
-                                continue;
-                            break;
-                        case TermCtl::Key::Right:
-                            if (!m_edit_buffer.skip_word_right())
-                                continue;
-                            break;
-                        case TermCtl::Key::Up:
-                            if (!m_edit_buffer.move_up())
-                                continue;
-                            break;
-                        case TermCtl::Key::Down:
-                            if (!m_edit_buffer.move_down())
-                                continue;
-                            break;
-                        case TermCtl::Key::UnicodeChar:
-                            switch (di.unicode) {
-                                case 'b':
-                                    // Alt-b (backward-word)
-                                    if (!m_edit_buffer.skip_word_left())
-                                        continue;
-                                    break;
-                                case 'f':
-                                    // Alt-f (forward-word)
-                                    if (!m_edit_buffer.skip_word_right())
-                                        continue;
-                                    break;
-                                case 'd':
-                                    // Alt-d (kill-word)
-                                    if (!m_edit_buffer.delete_word_right())
-                                        continue;
-                                    break;
-                            }
-                            break;
-                        default:
-                            // other keys -> ignored
+                    if (di.key == TermCtl::Key::UnicodeChar) {
+                        switch (di.unicode) {
+                            case 'b':
+                                // Alt-b (backward-word)
+                                if (!m_edit_buffer.skip_word_left())
+                                    continue;
+                                break;
+                            case 'f':
+                                // Alt-f (forward-word)
+                                if (!m_edit_buffer.skip_word_right())
+                                    continue;
+                                break;
+                            case 'd':
+                                // Alt-d (kill-word)
+                                if (!m_edit_buffer.delete_word_right())
+                                    continue;
+                                break;
+                        }
+                    } else {
+                        if (!process_alt_key(di.key))
                             continue;
                     }
                     break;
@@ -299,8 +284,9 @@ const char* EditLine::input(std::string_view prompt)
                                 continue;
                         }
                     } else {
-                        // other keys -> ignored
-                        continue;
+                        // Ctrl + Left etc. mirrors Alt + Left etc. (Windows-style shortcuts)
+                        if (!process_alt_key(di.key))
+                            continue;
                     }
                     break;
                 case (TermCtl::Modifier::Ctrl | TermCtl::Modifier::Alt):

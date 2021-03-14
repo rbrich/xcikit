@@ -8,6 +8,7 @@
 #define XCI_CORE_EDITLINE_H
 
 #include <xci/core/EditBuffer.h>
+#include <xci/core/TermCtl.h>
 
 #include <filesystem>
 #include <iostream>
@@ -86,6 +87,9 @@ private:
     /// Obtain more input data from terminal
     /// \returns    false on EOF or error
     bool read_input();
+
+    /// \returns    true if consumed and buffer state has changed
+    bool process_alt_key(TermCtl::Key key);
 
     bool history_previous();
     bool history_next();

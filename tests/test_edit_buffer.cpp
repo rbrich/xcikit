@@ -97,6 +97,18 @@ TEST_CASE( "word boundaries", "[EditBuffer]" )
     CHECK(eb.content_from_cursor() == "/path identifier  42");
     CHECK(eb.delete_word_right());
     CHECK(eb.content() == "/ identifier  42");
+    CHECK(eb.delete_word_right());
+    CHECK(eb.content() == "/  42");
+    CHECK(eb.delete_word_left());
+    CHECK(eb.content() == "  42");
+    CHECK(eb.delete_word_left() == false);
+    CHECK(eb.delete_word_right());
+    CHECK(eb.empty());
+    CHECK(eb.delete_word_right() == false);
+    eb.insert("//");
+    eb.set_cursor(0);
+    CHECK(eb.delete_word_right());
+    CHECK(eb.empty());
 
     eb.set_content("/some/path");
     eb.set_cursor(0);
