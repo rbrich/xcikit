@@ -138,7 +138,7 @@ struct InvalidCloseBrace: one< '}' > {};
 
 // Statements
 struct PartialExpr: sor< FullyBracketed, OpenBracket, OpenBrace, PrimaryExpr > {};
-struct Expression: plus< PartialExpr, SC > {};
+struct Expression: plus< PartialExpr, NSC > {};
 struct InvalidExpr: plus< sor< InvalidCloseBracket, InvalidCloseBrace, PartialExpr > > {};
 struct Statement: sor< seq<Expression, star<SC, InvalidExpr>>, InvalidExpr > {};
 

@@ -29,7 +29,7 @@ namespace fs = std::filesystem;
 ///
 /// Features:
 /// * highlighting and completion hints: a user callback can add arbitrary escape sequences
-///   or append arbitrary text after end of a line (the original text layout must stay unchanged)
+///   or append arbitrary text after the line end (the original text layout must stay unchanged)
 /// * multi-line editing: can be triggered by unclosed brackets or by Alt-Enter
 /// * history: managed in memory, new items appended to a file and loaded next time
 /// * feed input and receive output programmatically
@@ -89,7 +89,10 @@ private:
     bool read_input();
 
     /// \returns    true if consumed and buffer state has changed
+    bool process_key(TermCtl::Key key);
     bool process_alt_key(TermCtl::Key key);
+    bool process_alt_char(char32_t unicode);
+    bool process_ctrl_char(char32_t unicode, bool& control_break);
 
     bool history_previous();
     bool history_next();
