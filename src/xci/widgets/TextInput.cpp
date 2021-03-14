@@ -26,10 +26,9 @@ using namespace xci::core;
 
 TextInput::TextInput(Theme& theme, const std::string& string)
     : Widget(theme),
-      m_text(string),
+      m_buffer(string),
       m_bg_rect(theme.renderer(), Color(10, 20, 40), theme.color(ColorId::Default)),
-      m_cursor_shape(theme.renderer(), Color::Yellow(), Color::Transparent()),
-      m_cursor(string.size())
+      m_cursor_shape(theme.renderer(), Color::Yellow(), Color::Transparent())
 {
     set_focusable(true);
     m_layout.set_default_font(&theme.font());
@@ -38,7 +37,7 @@ TextInput::TextInput(Theme& theme, const std::string& string)
 
 void TextInput::set_string(const std::string& string)
 {
-    m_text = string;
+    m_buffer.set_content(string);
 }
 
 
@@ -55,13 +54,13 @@ void TextInput::resize(View& view)
     view.finish_draw();
     m_layout.clear();
     // Text before cursor
-    m_layout.add_word(m_text.substr(0, m_cursor));
+    m_layout.add_word(m_buffer.content_upto_cursor());
     // Cursor placing
     m_layout.begin_span("cursor");
     m_layout.add_word("");
     m_layout.end_span("cursor");
     // Text after cursor
-    m_layout.add_word(m_text.substr(m_cursor));
+    m_layout.add_word(m_buffer.content_from_cursor());
     m_layout.typeset(view);
     m_layout.update(view);
 
@@ -130,51 +129,34 @@ bool TextInput::key_event(View& view, const KeyEvent& ev)
 
     switch (ev.key) {
         case Key::Backspace:
-            if (m_cursor > 0) {
-                auto pos = m_text.crbegin() + m_text.size() - m_cursor;
-                auto prev = m_text.crbegin() + m_text.size() - utf8_prev(pos);
-                m_text.erase(prev, m_cursor - prev);
-                m_cursor = prev;
-                break;
-            }
-            return true;
+            if (!m_buffer.delete_left())
+                return true;
+            break;
 
         case Key::Delete:
-            if (m_cursor < m_text.size()) {
-                auto next = utf8_next(m_text.cbegin() + m_cursor) - m_text.cbegin();
-                m_text.erase(m_cursor, next - m_cursor);
-                break;
-            }
-            return true;
+            if (!m_buffer.delete_right())
+                return true;
+            break;
 
         case Key::Left:
-            if (m_cursor > 0) {
-                auto pos = m_text.crbegin() + m_text.size() - m_cursor;
-                m_cursor = m_text.crbegin() + m_text.size() - utf8_prev(pos);
-                break;
-            }
-            return true;
+            if (!m_buffer.move_left())
+                return true;
+            break;
 
         case Key::Right:
-            if (m_cursor < m_text.size()) {
-                m_cursor = utf8_next(m_text.cbegin() + m_cursor) - m_text.cbegin();
-                break;
-            }
-            return true;
+            if (!m_buffer.move_right())
+                return true;
+            break;
 
         case Key::Home:
-            if (m_cursor > 0) {
-                m_cursor = 0;
-                break;
-            }
-            return true;
+            if (!m_buffer.move_to_line_beginning())
+                return true;
+            break;
 
         case Key::End:
-            if (m_cursor < m_text.size()) {
-                m_cursor = m_text.size();
-                break;
-            }
-            return true;
+            if (!m_buffer.move_to_line_end())
+                return true;
+            break;
 
         default:
             return false;
@@ -191,8 +173,7 @@ bool TextInput::key_event(View& view, const KeyEvent& ev)
 void TextInput::char_event(View& view, const CharEvent& ev)
 {
     auto ch = to_utf8(ev.code_point);
-    m_text.insert(m_cursor, ch);
-    m_cursor += ch.size();
+    m_buffer.insert(ch);
     resize(view);
     view.refresh();
     if (m_change_cb)

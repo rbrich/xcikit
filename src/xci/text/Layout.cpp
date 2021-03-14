@@ -199,9 +199,9 @@ void Layout::reset_color()
 }
 
 
-void Layout::add_word(const std::string& string)
+void Layout::add_word(std::string_view word)
 {
-    m_elements.push_back(std::make_unique<AddWord>(string));
+    m_elements.push_back(std::make_unique<AddWord>(std::string(word)));
 }
 
 

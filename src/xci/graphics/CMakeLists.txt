@@ -22,6 +22,7 @@ add_library(xci-graphics
     vulkan/CommandBuffer.cpp
     vulkan/DeviceMemory.cpp
 )
+add_library(xcikit::xci-graphics ALIAS xci-graphics)
 
 target_include_directories(xci-graphics
     PUBLIC

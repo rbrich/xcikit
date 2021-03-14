@@ -26,7 +26,8 @@ public:
         Never,
     };
 
-    // Static instance for standard output
+    // Static instance for standard input / output / error
+    static TermCtl& stdin_instance(IsTty is_tty = IsTty::Auto);
     static TermCtl& stdout_instance(IsTty is_tty = IsTty::Auto);
     static TermCtl& stderr_instance(IsTty is_tty = IsTty::Auto);
 
@@ -55,8 +56,9 @@ public:
     // to a copy of TermCtl instance, which can then be send to stream
 
     enum class Color {
-        Black, Red, Green, Yellow, Blue, Magenta, Cyan, White,
-        BrightBlack, BrightRed, BrightGreen, BrightYellow,
+        Default = 9,
+        Black = 0, Red, Green, Yellow, Blue, Magenta, Cyan, White,
+        BrightBlack = 10, BrightRed, BrightGreen, BrightYellow,
         BrightBlue, BrightMagenta, BrightCyan, BrightWhite,
     };
     enum class Mode { Normal, Bold, Dim, Underline, Overline };
@@ -71,6 +73,7 @@ public:
     TermCtl magenta() const { return fg(Color::Magenta); }
     TermCtl cyan() const { return fg(Color::Cyan); }
     TermCtl white() const { return fg(Color::White); }
+    TermCtl default_fg() const { return fg(Color::Default); }
 
     // background
     TermCtl bg(Color color) const;
@@ -82,6 +85,7 @@ public:
     TermCtl on_magenta() const { return bg(Color::Magenta); }
     TermCtl on_cyan() const { return bg(Color::Cyan); }
     TermCtl on_white() const { return bg(Color::White); }
+    TermCtl default_bg() const { return bg(Color::Default); }
 
     // mode
     TermCtl mode(Mode mode) const;
@@ -100,9 +104,13 @@ public:
     TermCtl move_left(unsigned n_cols) const;
     TermCtl move_right() const;
     TermCtl move_right(unsigned n_cols) const;
+    TermCtl move_to_column(unsigned column) const;  // column is 0-based
+    TermCtl save_cursor() const { return _save_cursor(); }
+    TermCtl restore_cursor() const { return _restore_cursor(); }
 
     // clear screen content
     TermCtl clear_screen_down() const;
+    TermCtl clear_line_to_end() const;
 
     TermCtl soft_reset() const;
 
@@ -130,6 +138,10 @@ public:
         std::string seq(Mode mode) const;
     };
 
+    /// Format string, adding colors via special placeholders:
+    /// {fg:COLOR} where COLOR is default | red | *red ... ("*" = bright)
+    /// {bg:COLOR} where COLOR is the same as for fg
+    /// {t:MODE} where MODE is bold | underline | normal ...
     template<typename ...Args>
     std::string format(const char *fmt, Args&&... args) {
         return fmt::format(fmt, std::forward<Args>(args)...,
@@ -138,20 +150,89 @@ public:
                         fmt::arg("t",  ModePlaceholder{*this}));
     }
 
+    /// Print string with special color/mode placeholders, see `format` above.
     template<typename ...Args>
     void print(const char *fmt, Args&&... args) {
         auto buf = format(fmt, std::forward<Args>(args)...);
-        print(buf);
+        _print(buf);
     }
 
     /// Compute length of `s` when stripped of terminal control sequences and invisible characters
     static unsigned int stripped_length(std::string_view s);
 
-    // Temporarily change terminal mode to RAW mode
-    // (no echo, no buffering, no special processing)
-    // NOTE: Signal processing is enabled, so Ctrl-C still works
-    void with_raw_mode(const std::function<void()>& cb);
-    std::string raw_input();
+    /// Temporarily switch the terminal to raw mode
+    /// (no echo, no buffering, no special processing, no signal processing)
+    /// \param isig     ISIG flag. Set to true to enable signal processing (Ctrl-C etc.)
+    void with_raw_mode(const std::function<void()>& cb, bool isig = false);
+
+    /// Read input from stdin
+    /// \returns    The input data, empty string on error or EOF
+    std::string input();
+
+    /// Combination of `with_raw_mode` and `input`
+    std::string raw_input(bool isig = false);
+
+    enum class Key : uint8_t {
+        Unknown = 0,
+
+        F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12,
+        Escape,
+        Enter,
+        Backspace,
+        Tab,
+        Insert, Delete,
+        Home, End,
+        PageUp, PageDown,
+        Left, Right, Up, Down,
+
+        UnicodeChar,
+    };
+
+    struct Modifier {
+        uint8_t flags = 0;
+        enum {
+            None = 0,
+            Shift = 1,
+            Alt = 2,
+            Ctrl = 4,
+            Meta = 8,
+        };
+        explicit operator bool() const { return flags != 0; }
+        friend std::ostream& operator<<(std::ostream& os, Modifier v);
+
+        void set_shift() { flags |= Shift; }
+        void set_alt() { flags |= Alt; }
+        void set_ctrl() { flags |= Ctrl; }
+        void set_meta() { flags |= Meta; }
+
+        // ignore Shift, translate Meta to Alt, leaving only three combinations: Ctrl, Alt, Ctrl|Alt
+        Modifier normalized() const;
+        uint8_t normalized_flags() const { return normalized().flags; }
+
+        bool is_shift() const { return flags == Shift; }
+        bool is_alt() const { return flags == Alt; }
+        bool is_ctrl() const { return flags == Ctrl; }
+        bool is_meta() const { return flags == Meta; }
+        bool is_ctrl_alt() const { return flags == (Ctrl | Alt); }
+    };
+
+    struct DecodedInput {
+        uint16_t input_len = 0;  // length of input sequence (chars consumed)
+        Key key = Key::Unknown;
+        Modifier mod;
+        char32_t unicode = 0;
+    };
+
+    /// Try to decode input key or char from byte sequence
+    /// \param input_buffer     Raw bytes as read from TTY (see raw_input above)
+    /// \returns DecodedInput:
+    /// * input_len == 0    -- incomplete input, read more chars into the buffer
+    /// * input_len > 0     -- this number of bytes was used
+    /// * key               -- Unknown if input_len == 0 or corrupted UTF-8,
+    ///                        otherwise either a special key or UnicodeChar (see `unicode` for actual char)
+    /// * unicode           -- Unicode character decoded from the input (only when key=UnicodeChar)
+    ///                        or zero in case of special cases (nothing decoded or a non-unicode key)
+    DecodedInput decode_input(std::string_view input_buffer);
 
 private:
     // Copy TermCtl and append seq to new instance
@@ -159,7 +240,11 @@ private:
         : m_state(term.m_state == State::NoTTY ? State::NoTTY : State::CopyOk)
         , m_seq(term.m_seq + seq) {}
 
-    void print(const std::string& buf);
+    void _print(const std::string& buf);
+
+    // Aliases needed to avoid macro collision
+    TermCtl _save_cursor() const;
+    TermCtl _restore_cursor() const;
 
     enum class State {
         NoTTY,      // initialization failed
@@ -168,10 +253,10 @@ private:
     };
     State m_state = State::NoTTY;
     std::string m_seq;  // cached capability sequences
-    int m_fd;
+    int m_fd;   // FD (on Windows mapped to handle)
 
 #ifdef _WIN32
-    unsigned long m_orig_out_mode = 0;
+    unsigned long m_orig_mode = 0;  // original console mode of the handle
 #endif
 };
 

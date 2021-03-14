@@ -82,8 +82,11 @@ template <class S>
 void strip(S& str) { lstrip(str); rstrip(str); }
 
 
-// Escape non-printable characters with C escape sequences (eg. '\n')
-std::string escape(std::string_view str);
+/// Escape non-printable characters with C escape sequences (eg. '\n')
+/// \param str          The string to be escaped. May contains '\0'.
+/// \param extended     Enable non-standard extension:
+///                     * replace ESC with '\e' instead of '\x1b'
+std::string escape(std::string_view str, bool extended = false);
 
 // Unescape (expand) C escape sequences (i.e. "\\n" -> "\n")
 // This expects the input is well-formatted:
@@ -114,12 +117,29 @@ template <class I> I utf8_prev(I riter);
 template <class S, class SSize = typename S::size_type>
 SSize utf8_length(const S& str);
 
+/// Convert character offset to byte offset
+size_t utf8_offset(std::string_view str, size_t n_chars);
+
+template <class TIter>
+TIter utf8_offset_iter(TIter begin, TIter end, size_t n_chars) {
+    while (n_chars != 0 && begin != end) {
+        begin = utf8_next(begin);
+        --n_chars;
+    }
+    return begin;
+}
+
 std::string_view utf8_substr(std::string_view str, size_t pos, size_t count);
 
-// Convert single UTF-8 character to Unicode code point.
-// Only the first UTF-8 character is used, rest of input is ignored.
-// In case of error, log error and return 0.
+/// Convert a single UTF-8 character to Unicode code point.
+/// Only the first UTF-8 character is used, rest of input is ignored.
+/// In case of error, log error and return 0.
 char32_t utf8_codepoint(const char* utf8);
+
+/// Convert a single UTF-8 character to Unicode code point and return number of bytes used.
+/// In case of incomplete UTF-8 sequence (input too short), returns {0, 0}.
+/// In case of error, returns {0, -1}.
+std::pair<int, char32_t> utf8_codepoint_and_length(std::string_view utf8);
 
 /// Check if there is partial UTF-8 character at the end of string
 /// \param str  string to be checked

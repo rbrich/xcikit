@@ -38,7 +38,7 @@ target_link_libraries(demo_chunked_stack xci-core)
 install(TARGETS demo_chunked_stack EXPORT xcikit DESTINATION examples)
 
 add_executable(demo_termctl demo_termctl.cpp)
-target_link_libraries(demo_termctl xci-core)
+target_link_libraries(demo_termctl xci-core magic_enum::magic_enum)
 install(TARGETS demo_termctl EXPORT xcikit DESTINATION examples)
 
 add_executable(demo_vfs demo_vfs.cpp)

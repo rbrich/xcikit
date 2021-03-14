@@ -4,7 +4,6 @@
 
 find_package(ZLIB REQUIRED)
 find_package(pfr REQUIRED)
-find_package(magic_enum REQUIRED)
 
 
 # ------------ #
@@ -17,6 +16,7 @@ add_library(xci-data
     Dumper.cpp
     Crc32.cpp
     )
+add_library(xcikit::xci-data ALIAS xci-data)
 
 target_link_libraries(xci-data
     PRIVATE

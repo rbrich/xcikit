@@ -74,7 +74,7 @@ vector<string_view> rsplit(string_view str, char delim, int maxsplit)
 }
 
 
-std::string escape(string_view str)
+std::string escape(string_view str, bool extended)
 {
     std::string out;
     out.reserve(str.size());
@@ -91,6 +91,10 @@ std::string escape(string_view str)
             case '"': out += "\\\""; break;
             case '\'': out += "\\'"; break;
             default: {
+                if (extended && ch == '\x1b') {
+                    out += "\\e";
+                    break;
+                }
                 auto chnum = (int)(unsigned char)(ch);
                 if (std::isprint(chnum))
                     out += ch;
@@ -237,18 +241,16 @@ template std::string::size_type utf8_length<std::string>(const std::string&);
 template std::string_view::size_type utf8_length<std::string_view>(const std::string_view&);
 
 
+size_t utf8_offset(std::string_view str, size_t n_chars)
+{
+    return utf8_offset_iter(str.cbegin(), str.cend(), n_chars) - str.cbegin();
+}
+
+
 string_view utf8_substr(string_view str, size_t pos, size_t count)
 {
-    auto begin = str.cbegin();  // NOLINT(readability-qualified-auto)
-    while (pos > 0 && begin != str.cend()) {
-        begin = utf8_next(begin);
-        --pos;
-    }
-    auto end = begin;  // NOLINT(readability-qualified-auto)
-    while (count > 0 && end != str.cend()) {
-        end = utf8_next(end);
-        --count;
-    }
+    auto begin = utf8_offset_iter(str.cbegin(), str.cend(), pos);
+    auto end = utf8_offset_iter(begin, str.cend(), count);
     return {&*begin, size_t(end - begin)};
 }
 
@@ -274,6 +276,37 @@ char32_t utf8_codepoint(const char* utf8)
     }
     log::error("utf8_codepoint: Invalid UTF8 string, encountered code {:02x}", int(c0));
     return 0;
+}
+
+
+std::pair<int, char32_t> utf8_codepoint_and_length(std::string_view utf8)
+{
+    if (utf8.empty())
+        return {0, 0};
+    char c0 = utf8[0];
+    if ((c0 & 0x80) == 0) {
+        // 0xxxxxxx -> 1 byte
+        return {1, char32_t(c0 & 0x7f)};
+    }
+    if (utf8.size() == 1)
+        return {0, 0};
+    if ((c0 & 0xe0) == 0xc0) {
+        // 110xxxxx -> 2 bytes
+        return {2, char32_t(((c0 & 0x1f) << 6) | (utf8[1] & 0x3f))};
+    }
+    if (utf8.size() == 2)
+        return {0, 0};
+    if ((c0 & 0xf0) == 0xe0) {
+        // 1110xxxx -> 3 bytes
+        return {3, char32_t(((c0 & 0x0f) << 12) | ((utf8[1] & 0x3f) << 6) | (utf8[2] & 0x3f))};
+    }
+    if (utf8.size() == 3)
+        return {0, 0};
+    if ((c0 & 0xf8) == 0xf0) {
+        // 11110xxx -> 4 bytes
+        return {4, char32_t(((c0 & 0x07) << 18) | ((utf8[1] & 0x3f) << 12) | ((utf8[2] & 0x3f) << 6) | (utf8[3] & 0x3f))};
+    }
+    return {0, -1};
 }
 
 

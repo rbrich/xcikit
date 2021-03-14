@@ -25,6 +25,7 @@ add_library(xci-script
     SymbolTable.cpp
     TypeInfo.cpp
     dump.cpp)
+add_library(xcikit::xci-script ALIAS xci-script)
 
 target_link_libraries(xci-script
     PUBLIC

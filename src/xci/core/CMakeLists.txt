@@ -7,6 +7,7 @@ add_library(xci-core
     chrono.cpp
     file.cpp
     dispatch.cpp
+    EditBuffer.cpp
     FpsCounter.cpp
     log.cpp
     SharedLibrary.cpp
@@ -15,7 +16,9 @@ add_library(xci-core
     rtti.cpp
     TermCtl.cpp
     Vfs.cpp
+    EditLine.cpp
     )
+add_library(xcikit::xci-core ALIAS xci-core)
 
 if (NOT WIN32)
     target_sources(xci-core PRIVATE
@@ -68,10 +71,8 @@ target_include_directories(xci-core
     )
 
 # Link with tinfo if available
-if (XCI_WITH_TINFO)
-    target_link_libraries(xci-core PRIVATE ${TINFO_LIBRARIES})
-    target_include_directories(xci-core PRIVATE ${TINFO_INCLUDE_DIRS})
-    target_compile_options(xci-core PRIVATE ${TINFO_CFLAGS})
+if (XCI_WITH_TERMINFO)
+    target_link_libraries(xci-core PRIVATE terminfo::terminfo)
 endif()
 
 # ZIP support in VFS requires libzip

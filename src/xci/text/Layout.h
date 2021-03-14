@@ -27,6 +27,7 @@
 #include <xci/core/container/ChunkedStack.h>
 
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -87,7 +88,7 @@ public:
     // Word should be actual word. Punctuation can be attached to it
     // or pushed separately as another "word". No whitespace should be contained
     // in the word, unless it is meant to behave as hard, unbreakable space.
-    void add_word(const std::string& string);
+    void add_word(std::string_view word);
 
     // Add a space after last word. Does nothing if current line is empty.
     void add_space();
