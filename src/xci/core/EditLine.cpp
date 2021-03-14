@@ -22,16 +22,17 @@ namespace xci::core {
 
 void EditLine::open_history_file(const fs::path& path)
 {
+    // load previous history
     m_history_file.open(path, std::ios::in);
     if (m_history_file) {
         std::string line;
         while (std::getline(m_history_file, line)) {
             switch (line[0]) {
                 case ' ':
-                case '~':
+                case '~':  // ~ starts multi-line item
                     m_history.push_back(line.substr(1));
                     break;
-                case '|':
+                case '|':  // append another line to a multi-line item
                     line[0] = '\n';
                     m_history.back().append(line);
                     break;
@@ -357,7 +358,7 @@ const char* EditLine::input(std::string_view prompt)
                 write(tout.move_to_column(prompt_len + cursor).seq(), true);
             }
         }
-    }, false);
+    });
 
     // reset history cursor in case we were editing an item from history
     m_history_cursor = -1;

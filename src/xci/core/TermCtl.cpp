@@ -5,12 +5,15 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 // References:
-// - https://en.wikipedia.org/wiki/POSIX_terminal_interface
-// - https://en.wikipedia.org/wiki/ANSI_escape_code
-// - https://www.ecma-international.org/wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
-// - https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
-// - https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
-// - terminfo(5), https://linux.die.net/man/5/terminfo
+// * terminal control sequences:
+//   - https://en.wikipedia.org/wiki/ANSI_escape_code
+//   - https://www.ecma-international.org/wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
+//   - https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
+//   - https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
+//   - terminfo(5), https://linux.die.net/man/5/terminfo
+// * raw mode:
+//   - https://en.wikipedia.org/wiki/POSIX_terminal_interface
+//   - termios(4)
 
 #include "TermCtl.h"
 #include <xci/compat/unistd.h>
@@ -41,7 +44,7 @@ namespace xci::core {
 #define SS3     ESC "O"
 
 // When building without TInfo, emit ANSI escape sequences directly
-// Note that these needs to be macros, to match compiler behaviour with <term.h>
+// Note that these need to be macros, to match compiler behaviour with <term.h>
 #ifndef XCI_WITH_TERMINFO
 #define cursor_up               CSI "A"
 #define cursor_down             CSI "B"

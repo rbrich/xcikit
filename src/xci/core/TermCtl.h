@@ -160,17 +160,17 @@ public:
     /// Compute length of `s` when stripped of terminal control sequences and invisible characters
     static unsigned int stripped_length(std::string_view s);
 
-    /// Temporarily change terminal mode to RAW mode
-    /// (no echo, no buffering, no special processing, only signal processing allowed by default)
-    /// \param isig     ISIG flag. Set to false to also disable signal processing (Ctrl-C etc.)
-    void with_raw_mode(const std::function<void()>& cb, bool isig = true);
+    /// Temporarily switch the terminal to raw mode
+    /// (no echo, no buffering, no special processing, no signal processing)
+    /// \param isig     ISIG flag. Set to true to enable signal processing (Ctrl-C etc.)
+    void with_raw_mode(const std::function<void()>& cb, bool isig = false);
 
     /// Read input from stdin
     /// \returns    The input data, empty string on error or EOF
     std::string input();
 
     /// Combination of `with_raw_mode` and `input`
-    std::string raw_input(bool isig = true);
+    std::string raw_input(bool isig = false);
 
     enum class Key : uint8_t {
         Unknown = 0,

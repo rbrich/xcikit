@@ -36,7 +36,6 @@ namespace fs = std::filesystem;
 ///   which is useful if you have a graphical terminal widget in the same program)
 ///
 /// * TODO: multi-line - remember original column-in-line in up/down movement
-/// * TODO: remove duplicate history lines (consequential)
 /// * TODO: minimal output to the terminal, i.e. don't clear and refresh everything on each keypress
 ///   (this can be achieved by comparing already colorized output to previous one and print just
 ///   the difference - the tail)
