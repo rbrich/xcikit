@@ -29,7 +29,7 @@ namespace fs = std::filesystem;
 ///
 /// Features:
 /// * highlighting and completion hints: a user callback can add arbitrary escape sequences
-///   or append arbitrary text after the line end (the original text layout must stay unchanged)
+///   or append arbitrary text at the end (the original text layout must stay unchanged)
 /// * multi-line editing: can be triggered by unclosed brackets or by Alt-Enter
 /// * history: managed in memory, new items appended to a file and loaded next time
 /// * feed input and receive output programmatically
@@ -99,7 +99,7 @@ private:
 
     // editing
     EditBuffer m_edit_buffer;
-    int m_cursor_up = 0;  // multi-line: how many lines below the prompt is the cursor
+    unsigned m_cursor_line = 0;  // multi-line: how many lines below the prompt is the cursor
     bool m_edit_continue_nl = false;
 
     // settings

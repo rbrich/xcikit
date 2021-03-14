@@ -150,12 +150,12 @@ bool EditLine::process_ctrl_char(char32_t unicode, bool& control_break)
     switch (unicode) {
         case 'c':
             control_break = true;
-            return false;
+            return true; // force redraw before exiting, to position cursor to the bottom
         case 'd':
             // Ctrl-d (end-of-file) - when the line is empty
             if (m_edit_buffer.empty()) {
                 control_break = true;
-                return false;
+                return true;
             }
             // Ctrl-d (delete-char)
             return m_edit_buffer.delete_right();
@@ -194,7 +194,7 @@ const char* EditLine::input(std::string_view prompt)
     write(prompt, true);
     m_edit_buffer.clear();
     m_edit_continue_nl = false;
-    m_cursor_up = 0;
+    m_cursor_line = 0;
 
     bool control_break = false;
     tin.with_raw_mode([this, prompt_len, &control_break] {
@@ -233,9 +233,8 @@ const char* EditLine::input(std::string_view prompt)
                                 break;
                             }
                             // finish input
-                            write("\n\r", true);
                             done = true;
-                            continue;
+                            break;  // force redraw before exiting, to position cursor to the bottom
                         case TermCtl::Key::UnicodeChar:
                             m_edit_buffer.insert(to_utf8(di.unicode));
                             break;
@@ -257,11 +256,10 @@ const char* EditLine::input(std::string_view prompt)
                 case TermCtl::Modifier::Ctrl:
                     // with Ctrl
                     if (di.key == TermCtl::Key::UnicodeChar) {
-                        auto changed = process_ctrl_char(di.unicode, control_break);
+                        if (!process_ctrl_char(di.unicode, control_break))
+                            continue;
                         if (control_break)
                             done = true;
-                        if (!changed)
-                            continue;
                     } else {
                         // Ctrl + Left etc. mirrors Alt + Left etc. (Windows-style shortcuts)
                         if (!process_alt_key(di.key))
@@ -273,10 +271,10 @@ const char* EditLine::input(std::string_view prompt)
                     // ignored
                     continue;
             }
-            if (m_cursor_up > 0) {
+            if (m_cursor_line != 0) {
                 // move back to prompt line
-                write(tout.move_up(m_cursor_up).seq());
-                m_cursor_up = 0;
+                write(tout.move_up(m_cursor_line).seq());
+                m_cursor_line = 0;
             }
             write(tout.move_to_column(prompt_len).clear_screen_down().seq());
             auto cursor = tout.stripped_length(m_edit_buffer.content_upto_cursor());
@@ -294,33 +292,50 @@ const char* EditLine::input(std::string_view prompt)
             }
 
             if (is_multiline()) {
-                bool cursor_saved = false;
+                bool cursor_found = false;
+                unsigned cursor_row = 0;
+                unsigned cursor_col = 0;
                 for (const auto line : xci::core::split(content, '\n')) {
                     if (line.data() != content.data()) {
                         // not the first line
                         write("\r\n" + std::string(prompt_len, ' '));
-                        if (!cursor_saved) {
-                            ++m_cursor_up;
-                        }
+                        ++m_cursor_line;
                     }
                     write(line);
-                    auto part_len = tout.stripped_length(line);
-                    if (!cursor_saved) {
+                    if (!cursor_found) {
+                        auto part_len = tout.stripped_length(line);
                         if (cursor > part_len) {
                             cursor -= part_len + 1;  // add 1 for '\n'
                         } else {
-                            write(tout.move_to_column(prompt_len + cursor).save_cursor().seq());
-                            cursor_saved = true;
+                            // cursor position found
+                            cursor_row = m_cursor_line;
+                            cursor_col = prompt_len + cursor;
+                            cursor_found = true;
                         }
                     }
                 }
-                assert(cursor_saved);
-                write(tout.restore_cursor().seq(), true);
-
+                if (!done) {
+                    // move cursor to position, only if not
+                    if (cursor_row != m_cursor_line) {
+                        write(tout.move_up(m_cursor_line - cursor_row).seq());
+                        m_cursor_line = cursor_row;
+                    }
+                    write(tout.move_to_column(cursor_col).seq(), true);
+                } else {
+                    // after Enter or Ctrl+C, leave cursor at the bottom
+                    if (control_break)
+                        // Ctrl+C - just flush
+                        write("", true);
+                    else
+                        // Enter - add line break before following output
+                        write("\r\n", true);
+                }
             } else {
                 // no multi-line
                 write(content);
                 write(tout.move_to_column(prompt_len + cursor).seq(), true);
+                if (done && !control_break)
+                    write("\r\n", true);
             }
         }
     });
