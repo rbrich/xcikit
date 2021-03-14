@@ -37,9 +37,12 @@ namespace fs = std::filesystem;
 ///
 /// * TODO: multi-line - remember original column-in-line in up/down movement
 /// * TODO: remove duplicate history lines (consequential)
-/// * NICE TO HAVE: minimal output to the terminal, i.e. don't clear and refresh everything on each keypress
+/// * TODO: minimal output to the terminal, i.e. don't clear and refresh everything on each keypress
 ///   (this can be achieved by comparing already colorized output to previous one and print just
 ///   the difference - the tail)
+/// * TODO: support transpose-chars (C-t), transpose-words (M-t)
+/// * TODO: maybe support also upcase/downcase/capitalize shortcuts
+/// * TODO: support Bracketed Paste Mode - don't interpret the pasted text
 class EditLine {
 public:
     enum Flags : uint8_t {

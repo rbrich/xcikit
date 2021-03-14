@@ -32,6 +32,7 @@ public:
 
     const std::string& content() const { return m_content; }
     std::string_view content_view() const { return m_content; }
+    bool empty() const { return m_content.empty(); }
 
     std::string_view content_upto_cursor() const { return std::string_view(m_content).substr(0, m_cursor); }
     std::string_view content_from_cursor() const { return std::string_view(m_content).substr(m_cursor); }

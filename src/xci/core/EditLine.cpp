@@ -232,6 +232,11 @@ const char* EditLine::input(std::string_view prompt)
                                     if (!m_edit_buffer.skip_word_right())
                                         continue;
                                     break;
+                                case 'd':
+                                    // Alt-d (kill-word)
+                                    if (!m_edit_buffer.delete_word_right())
+                                        continue;
+                                    break;
                             }
                             break;
                         default:
@@ -244,9 +249,19 @@ const char* EditLine::input(std::string_view prompt)
                     if (di.key == TermCtl::Key::UnicodeChar) {
                         switch (towlower(di.unicode)) {
                             case 'c':
-                            case 'd':
                                 control_break = true;
                                 done = true;
+                                break;
+                            case 'd':
+                                // Ctrl-d (end-of-file) - when the line is empty
+                                if (m_edit_buffer.empty()) {
+                                    control_break = true;
+                                    done = true;
+                                    break;
+                                }
+                                // Ctrl-d (delete-char)
+                                if (!m_edit_buffer.delete_right())
+                                    continue;
                                 break;
                             case 'a':
                                 // Ctrl-a (beginning-of-line)
@@ -266,6 +281,16 @@ const char* EditLine::input(std::string_view prompt)
                             case 'f':
                                 // Ctrl-f (forward-char)
                                 if (!m_edit_buffer.move_right())
+                                    continue;
+                                break;
+                            case 'p':
+                                // Ctrl-p (previous-history)
+                                if (!history_previous())
+                                    continue;
+                                break;
+                            case 'n':
+                                // Ctrl-n (next-history)
+                                if (!history_next())
                                     continue;
                                 break;
                             default:
