@@ -9,7 +9,6 @@
 
 #include <xci/config.h>
 #include <xci/core/log.h>
-#include <xci/core/string.h>
 #include <xci/compat/macros.h>
 
 #define GLFW_INCLUDE_NONE

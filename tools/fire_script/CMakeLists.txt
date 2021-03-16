@@ -1,7 +1,7 @@
 # Fire Script compiler/interpreter
 add_executable(fire
     BytecodeTracer.cpp
-    Context.cpp
+    Repl.cpp
     ReplCommand.cpp
     Highlighter.cpp
     main.cpp
