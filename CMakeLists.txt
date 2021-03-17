@@ -1,8 +1,9 @@
 # 3.16 introduced CMAKE_MESSAGE_INDENT
 # 3.13 is current version in Emscripten Docker image
 cmake_minimum_required(VERSION 3.13)
+file(STRINGS "VERSION" VERSION)
 project(xcikit
-    VERSION 0.2.0
+    VERSION "${VERSION}"
     LANGUAGES CXX)
 
 # Optional libraries (only xci-core is required)

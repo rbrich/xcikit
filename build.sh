@@ -136,8 +136,9 @@ BUILD_CONFIG="${PLATFORM}-${ARCH}-${BUILD_TYPE}"
 [[ -n "${GENERATOR}" ]] && CMAKE_ARGS+=(-G "${GENERATOR}")
 BUILD_DIR="${ROOT_DIR}/build/${BUILD_CONFIG}"
 INSTALL_DIR="${ROOT_DIR}/artifacts/${BUILD_CONFIG}"
-PACKAGE_DIR="xcikit-${VERSION}"
-PACKAGE_NAME="${PACKAGE_DIR}-${PLATFORM}-${ARCH}.zip"
+PACKAGE_OUTPUT_DIR="${ROOT_DIR}/artifacts"
+PACKAGE_FILENAME="xcikit-${VERSION}-${PLATFORM}-${ARCH}"
+[[ ${BUILD_TYPE} != "Release" ]] && PACKAGE_FILENAME="${PACKAGE_FILENAME}-${BUILD_TYPE}"
 
 if [[ -z "$component_default" && -z "$component_all" ]]; then
     # Disable components that were not selected
@@ -230,12 +231,9 @@ fi
 if phase package; then
     header "Package"
     (
-        cd "${INSTALL_DIR}/.."
-        mv "${INSTALL_DIR}" "${PACKAGE_DIR}"
-        rm -f "${PACKAGE_NAME}"
-        echo "${PACKAGE_NAME}"
-        cmake -E tar cf "${PACKAGE_NAME}" --format=zip "${PACKAGE_DIR}"
-        mv "${PACKAGE_DIR}" "${INSTALL_DIR}"
+        cd "${BUILD_DIR}" && \
+        cpack -G "TGZ;ZIP" -D "CPACK_PACKAGE_FILE_NAME=${PACKAGE_FILENAME}" -C "${BUILD_TYPE}" && \
+        mv -v "${BUILD_DIR}/${PACKAGE_FILENAME}"* "${PACKAGE_OUTPUT_DIR}"
     )
     echo
 fi
