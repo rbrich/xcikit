@@ -23,11 +23,11 @@ using std::endl;
 void Repl::print_intro(const char* version)
 {
     auto & t = m_ctx.term_out;
-    cout << t.format((const char*)u8"{t:bold}{fg:magenta}🔥 fire script{t:normal} {fg:magenta}v{}{t:normal}\n", version);
+    t.print((const char*)u8"{t:bold}{fg:magenta}🔥 fire script{t:normal} {fg:magenta}v{}{t:normal}\n", version);
 }
 
 
-bool Repl::evaluate(const std::string& line, int input_number)
+bool Repl::evaluate(std::string_view line, int input_number)
 {
     core::TermCtl& t = m_ctx.term_out;
     auto& parser = m_ctx.interpreter.parser();

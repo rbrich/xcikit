@@ -87,7 +87,6 @@ int main(int argc, char* argv[])
 
     TermCtl& t = ctx.term_out;
     EditLine edit_line{EditLine::Multiline};
-    int input_number = 0;
     auto history_file = xci::core::home_directory_path() / ".xci_fire_history";
     edit_line.open_history_file(history_file);
     edit_line.set_highlight_callback([&t](std::string_view data, unsigned cursor) {
@@ -99,21 +98,20 @@ int main(int argc, char* argv[])
     ReplCommand cmd(ctx);
 
     repl.print_intro(version);
-    while (!ctx.done) {
-        const char* input;
-        input = edit_line.input(t.format("{fg:green}_{} ?{t:normal} ", input_number));
 
-        if (input == nullptr) {
+    int input_number = 0;
+    while (!ctx.done) {
+        auto [ok, line] = edit_line.input(t.format("{fg:green}_{} ?{t:normal} ", input_number));
+        if (!ok) {
             cout << endl;
             break;
         }
 
-        std::string line{input};
         strip(line);
         if (line.empty())
             continue;
 
-        edit_line.add_history(input);
+        edit_line.add_history(line);
 
         if (line[0] == '.') {
             // control commands

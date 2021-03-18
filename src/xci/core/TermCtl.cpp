@@ -16,6 +16,7 @@
 //   - termios(4)
 
 #include "TermCtl.h"
+#include "log.h"
 #include <xci/compat/unistd.h>
 #include <xci/compat/macros.h>
 #include <xci/core/string.h>
@@ -608,12 +609,17 @@ void TermCtl::with_raw_mode(const std::function<void()>& cb, bool isig)
 std::string TermCtl::input()
 {
     char buf[100] {};
-    int res;
+    ssize_t res;
     do {
         res = ::read(m_fd, buf, sizeof buf);
     } while (res < 0 && (errno == EINTR || errno == EAGAIN));
-    if (res < 0)
-        return {};  // error
+    if (res < 0) {
+        log::error("read: {m}");
+        return {};
+    }
+    if (res == 0) {
+        return {};  // eof
+    }
     return {buf, size_t(res)};
 }
 
@@ -628,9 +634,12 @@ std::string TermCtl::raw_input(bool isig)
 }
 
 
-void TermCtl::_print(const std::string& buf)
+void TermCtl::write(std::string_view buf)
 {
-    ::write(m_fd, buf.data(), buf.size());
+    if (m_write_cb)
+        m_write_cb(buf);
+    else
+        ::write(m_fd, buf.data(), buf.size());
 }
 
 

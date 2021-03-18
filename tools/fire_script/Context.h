@@ -23,7 +23,7 @@ struct Context {
     Interpreter interpreter;
     std::unique_ptr<xci::script::Module> std_module;
     std::vector<std::unique_ptr<xci::script::Module>> input_modules;
-    xci::core::TermCtl term_out = xci::core::TermCtl::stdout_instance();
+    xci::core::TermCtl& term_out = xci::core::TermCtl::stdout_instance();
 };
 
 

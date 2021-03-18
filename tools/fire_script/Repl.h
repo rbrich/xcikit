@@ -21,7 +21,7 @@ public:
 
     void print_intro(const char* version);
 
-    bool evaluate(const std::string& line, int input_number=-1);
+    bool evaluate(std::string_view line, int input_number=-1);
 
 private:
     Context& m_ctx;

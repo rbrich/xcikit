@@ -14,7 +14,6 @@
 #include <xci/compat/unistd.h>
 
 #include <string>
-#include <cassert>
 
 namespace xci::core {
 
@@ -145,16 +144,16 @@ bool EditLine::process_alt_char(char32_t unicode)
 }
 
 
-bool EditLine::process_ctrl_char(char32_t unicode, bool& control_break)
+bool EditLine::process_ctrl_char(char32_t unicode)
 {
     switch (unicode) {
         case 'c':
-            control_break = true;
+            m_state = State::ControlBreak;
             return true; // force redraw before exiting, to position cursor to the bottom
         case 'd':
             // Ctrl-d (end-of-file) - when the line is empty
             if (m_edit_buffer.empty()) {
-                control_break = true;
+                m_state = State::ControlBreak;
                 return true;
             }
             // Ctrl-d (delete-char)
@@ -184,205 +183,211 @@ bool EditLine::process_ctrl_char(char32_t unicode, bool& control_break)
 }
 
 
-const char* EditLine::input(std::string_view prompt)
+auto EditLine::input(std::string_view prompt) -> std::pair<bool, std::string_view>
 {
+    start_input(prompt);
+
     auto& tin = TermCtl::stdin_instance();
-    auto& tout = TermCtl::stdout_instance();
-
-    auto prompt_len = tout.stripped_length(prompt);
-    write("\r");
-    write(prompt, true);
-    m_edit_buffer.clear();
-    m_edit_continue_nl = false;
-    m_cursor_line = 0;
-
-    bool control_break = false;
-    tin.with_raw_mode([this, prompt_len, &control_break] {
-        auto& tout = TermCtl::stdout_instance();
-        bool done = false;
-        bool need_more_input = true;
-        while (!done) {
-            // obtain more input from terminal
-            if (need_more_input) {
+    tin.with_raw_mode([this] {
+        if (!read_input())
+            return;
+        for (;;) {
+            process_input();
+            if (m_state == State::Continue)
+                continue;
+            if (m_state == State::NeedMoreInputData) {
+                // obtain more input from terminal
                 if (!read_input())
-                    break;
-                need_more_input = false;
+                    return;
+                continue;
             }
-
-            // decode the head of input data
-            TermCtl::DecodedInput di;
-            {
-                std::unique_lock lock(m_input_mutex);
-                di = tout.decode_input(m_input_buffer);
-                if (di.input_len == 0) {
-                    need_more_input = true;
-                    continue;
-                }
-                m_input_buffer.erase(0, di.input_len);
-            }
-
-            // process the decoded input
-            switch (di.mod.normalized_flags()) {
-                case TermCtl::Modifier::None:
-                    // normal
-                    switch (di.key) {
-                        case TermCtl::Key::Enter:
-                            if (is_multiline() && m_edit_continue_nl) {
-                                // multi-line edit - continue to next line (unclosed bracket etc.)
-                                m_edit_buffer.insert("\n");
-                                break;
-                            }
-                            // finish input
-                            done = true;
-                            break;  // force redraw before exiting, to position cursor to the bottom
-                        case TermCtl::Key::UnicodeChar:
-                            m_edit_buffer.insert(to_utf8(di.unicode));
-                            break;
-                        default:
-                            if (!process_key(di.key))
-                                continue;
-                    }
-                    break;
-                case TermCtl::Modifier::Alt:
-                    // with Alt
-                    if (di.key == TermCtl::Key::UnicodeChar) {
-                        if (!process_alt_char(di.unicode))
-                            continue;
-                    } else {
-                        if (!process_alt_key(di.key))
-                            continue;
-                    }
-                    break;
-                case TermCtl::Modifier::Ctrl:
-                    // with Ctrl
-                    if (di.key == TermCtl::Key::UnicodeChar) {
-                        if (!process_ctrl_char(di.unicode, control_break))
-                            continue;
-                        if (control_break)
-                            done = true;
-                    } else {
-                        // Ctrl + Left etc. mirrors Alt + Left etc. (Windows-style shortcuts)
-                        if (!process_alt_key(di.key))
-                            continue;
-                    }
-                    break;
-                case (TermCtl::Modifier::Ctrl | TermCtl::Modifier::Alt):
-                default:
-                    // ignored
-                    continue;
-            }
-            if (m_cursor_line != 0) {
-                // move back to prompt line
-                write(tout.move_up(m_cursor_line).seq());
-                m_cursor_line = 0;
-            }
-            write(tout.move_to_column(prompt_len).clear_screen_down().seq());
-            auto cursor = tout.stripped_length(m_edit_buffer.content_upto_cursor());
-
-            // Optionally highlight the content
-            std::string_view content;  // pointer to content, either original or highlighted
-            std::string content_store;  // helper for owning the highlighted string
-            if (m_highlight_cb) {
-                auto r = m_highlight_cb(m_edit_buffer.content_view(), m_edit_buffer.cursor());
-                m_edit_continue_nl = r.is_open;
-                content_store = std::move(r.hl_data);
-                content = content_store;
-            } else {
-                content = m_edit_buffer.content_view();
-            }
-
-            if (is_multiline()) {
-                bool cursor_found = false;
-                unsigned cursor_row = 0;
-                unsigned cursor_col = 0;
-                for (const auto line : xci::core::split(content, '\n')) {
-                    if (line.data() != content.data()) {
-                        // not the first line
-                        write("\r\n" + std::string(prompt_len, ' '));
-                        ++m_cursor_line;
-                    }
-                    write(line);
-                    if (!cursor_found) {
-                        auto part_len = tout.stripped_length(line);
-                        if (cursor > part_len) {
-                            cursor -= part_len + 1;  // add 1 for '\n'
-                        } else {
-                            // cursor position found
-                            cursor_row = m_cursor_line;
-                            cursor_col = prompt_len + cursor;
-                            cursor_found = true;
-                        }
-                    }
-                }
-                if (!done) {
-                    // move cursor to position, only if not
-                    if (cursor_row != m_cursor_line) {
-                        write(tout.move_up(m_cursor_line - cursor_row).seq());
-                        m_cursor_line = cursor_row;
-                    }
-                    write(tout.move_to_column(cursor_col).seq(), true);
-                } else {
-                    // after Enter or Ctrl+C, leave cursor at the bottom
-                    if (control_break)
-                        // Ctrl+C - just flush
-                        write("", true);
-                    else
-                        // Enter - add line break before following output
-                        write("\r\n", true);
-                }
-            } else {
-                // no multi-line
-                write(content);
-                write(tout.move_to_column(prompt_len + cursor).seq(), true);
-                if (done && !control_break)
-                    write("\r\n", true);
-            }
+            // Finished, ControlBreak
+            return;
         }
     });
 
+    return finish_input();
+}
+
+
+void EditLine::start_input(std::string_view prompt)
+{
+    auto& tout = TermCtl::stdout_instance();
+
+    m_prompt_len = tout.stripped_length(prompt);
+    write("\r");
+    write(prompt);
+    flush();
+    m_edit_buffer.clear();
+    m_edit_continue_nl = false;
+    m_cursor_line = 0;
+}
+
+
+void EditLine::process_input()
+{
+    auto& tout = TermCtl::stdout_instance();
+
+    // decode the head of input data
+    TermCtl::DecodedInput di;
+    {
+        di = tout.decode_input(m_input_buffer);
+        if (di.input_len == 0) {
+            m_state = State::NeedMoreInputData;
+            return;
+        }
+        m_input_buffer.erase(0, di.input_len);
+    }
+
+    // process the decoded input
+    m_state = State::Continue;
+    switch (di.mod.normalized_flags()) {
+        case TermCtl::Modifier::None:
+            // normal
+            switch (di.key) {
+                case TermCtl::Key::Enter:
+                    if (is_multiline() && m_edit_continue_nl) {
+                        // multi-line edit - continue to next line (unclosed bracket etc.)
+                        m_edit_buffer.insert("\n");
+                        break;
+                    }
+                    // finish input
+                    m_state = State::Finished;
+                    break;  // force redraw before exiting, to position cursor to the bottom
+                case TermCtl::Key::UnicodeChar:
+                    m_edit_buffer.insert(to_utf8(di.unicode));
+                    break;
+                default:
+                    if (!process_key(di.key))
+                        return;  // Continue
+            }
+            break;
+        case TermCtl::Modifier::Alt:
+            // with Alt
+            if (di.key == TermCtl::Key::UnicodeChar) {
+                if (!process_alt_char(di.unicode))
+                    return;  // Continue
+            } else {
+                if (!process_alt_key(di.key))
+                    return;  // Continue
+            }
+            break;
+        case TermCtl::Modifier::Ctrl:
+            // with Ctrl
+            if (di.key == TermCtl::Key::UnicodeChar) {
+                if (!process_ctrl_char(di.unicode))
+                    return;  // Continue
+            } else {
+                // Ctrl + Left etc. mirrors Alt + Left etc. (Windows-style shortcuts)
+                if (!process_alt_key(di.key))
+                    return;  // Continue
+            }
+            break;
+        case (TermCtl::Modifier::Ctrl | TermCtl::Modifier::Alt):
+        default:
+            // ignored
+            return;  // Continue
+    }
+    if (m_cursor_line != 0) {
+        // move back to prompt line
+        write(tout.move_up(m_cursor_line).seq());
+        m_cursor_line = 0;
+    }
+    write(tout.move_to_column(m_prompt_len).clear_screen_down().seq());
+    auto cursor = tout.stripped_length(m_edit_buffer.content_upto_cursor());
+
+    // Optionally highlight the content
+    std::string_view content;  // pointer to content, either original or highlighted
+    std::string content_store;  // helper for owning the highlighted string
+    if (m_highlight_cb) {
+        auto r = m_highlight_cb(m_edit_buffer.content_view(), m_edit_buffer.cursor());
+        m_edit_continue_nl = r.is_open;
+        content_store = std::move(r.hl_data);
+        content = content_store;
+    } else {
+        content = m_edit_buffer.content_view();
+    }
+
+    if (is_multiline()) {
+        bool cursor_found = false;
+        unsigned cursor_row = 0;
+        unsigned cursor_col = 0;
+        for (const auto line : xci::core::split(content, '\n')) {
+            if (line.data() != content.data()) {
+                // not the first line
+                write("\r\n" + std::string(m_prompt_len, ' '));
+                ++m_cursor_line;
+            }
+            write(line);
+            if (!cursor_found) {
+                auto part_len = tout.stripped_length(line);
+                if (cursor > part_len) {
+                    cursor -= part_len + 1;  // add 1 for '\n'
+                } else {
+                    // cursor position found
+                    cursor_row = m_cursor_line;
+                    cursor_col = m_prompt_len + cursor;
+                    cursor_found = true;
+                }
+            }
+        }
+        if (m_state == State::Continue) {
+            // move cursor to position, only if not
+            if (cursor_row != m_cursor_line) {
+                write(tout.move_up(m_cursor_line - cursor_row).seq());
+                m_cursor_line = cursor_row;
+            }
+            write(tout.move_to_column(cursor_col).seq());
+        } else {
+            // after Enter or Ctrl+C, leave cursor at the bottom
+            if (m_state != State::ControlBreak) {
+                // Enter - add line break before following output
+                write("\r\n");
+            }
+        }
+    } else {
+        // no multi-line
+        write(content);
+        write(tout.move_to_column(m_prompt_len + cursor).seq());
+        if (m_state == State::Finished)
+            write("\r\n");
+    }
+    flush();
+}
+
+
+auto EditLine::finish_input() -> std::pair<bool, std::string_view>
+{
     // reset history cursor in case we were editing an item from history
     m_history_cursor = -1;
     m_history_orig_buffer.clear();
 
-    return control_break ? nullptr : m_edit_buffer.content().c_str();
+    return {m_state != State::ControlBreak,m_edit_buffer.content_view()};
 }
 
 
-void EditLine::feed_input(std::string_view data)
+bool EditLine::feed_input(std::string_view data)
 {
-    {
-        std::unique_lock lock(m_input_mutex);
-        m_input_buffer += data;
+    m_input_buffer += data;
+    for (;;) {
+        process_input();
+        if (m_state == State::Continue)
+            continue;
+        if (m_state == State::NeedMoreInputData)
+            return true;
+        // Finished, ControlBreak
+        return false;
     }
-    m_input_cv.notify_one();
 }
 
 
 bool EditLine::read_input()
 {
-    std::unique_lock lock(m_input_mutex);
-
-    // read from FD (stdin or custom)
-    if (m_input_fd >= 0) {
-        char buf[100];
-        ssize_t rc;
-        while ((rc = ::read(m_input_fd, buf, sizeof(buf))) < 0
-               && (errno == EINTR || errno == EAGAIN));
-        if (rc > 0) {
-            // ok
-            m_input_buffer.append(buf, rc);
-            return true;
-        }
-        if (rc < 0) {
-            log::error("read: {m}");
-            return false;
-        }
-        // 0 = eof
-        return false;
-    }
-
-    // read from custom feed
-    m_input_cv.wait(lock, [this]{ return !m_input_buffer.empty(); });
+    auto& tin = TermCtl::stdin_instance();
+    auto data = tin.input();
+    if (data.empty())
+        return false;  // eof or error
+    m_input_buffer += data;
     return true;
 }
 
@@ -423,6 +428,20 @@ bool EditLine::history_next()
     }
     m_edit_buffer.set_content(m_history[m_history_cursor]);
     return true;
+}
+
+
+void EditLine::write(std::string_view data)
+{
+    m_output_buffer += data;
+}
+
+
+void EditLine::flush()
+{
+    auto& tout = TermCtl::stdout_instance();
+    tout.write(m_output_buffer);
+    m_output_buffer.clear();
 }
 
 

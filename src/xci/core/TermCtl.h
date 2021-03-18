@@ -153,9 +153,12 @@ public:
     /// Print string with special color/mode placeholders, see `format` above.
     template<typename ...Args>
     void print(const char *fmt, Args&&... args) {
-        auto buf = format(fmt, std::forward<Args>(args)...);
-        _print(buf);
+        write(format(fmt, std::forward<Args>(args)...));
     }
+    void write(std::string_view buf);
+
+    using WriteCallback = std::function<void(std::string_view data)>;
+    void set_write_callback(WriteCallback cb) { m_write_cb = std::move(cb); }
 
     /// Compute length of `s` when stripped of terminal control sequences and invisible characters
     static unsigned int stripped_length(std::string_view s);
@@ -237,23 +240,23 @@ public:
 private:
     // Copy TermCtl and append seq to new instance
     TermCtl(const TermCtl& term, const std::string& seq)
-        : m_state(term.m_state == State::NoTTY ? State::NoTTY : State::CopyOk)
-        , m_seq(term.m_seq + seq) {}
-
-    void _print(const std::string& buf);
+        : m_seq(term.m_seq + seq)
+        , m_state(term.m_state == State::NoTTY ? State::NoTTY : State::CopyOk) {}
 
     // Aliases needed to avoid macro collision
     TermCtl _save_cursor() const;
     TermCtl _restore_cursor() const;
 
+    WriteCallback m_write_cb;
+
+    std::string m_seq;  // cached capability sequences
+    int m_fd;   // FD (on Windows mapped to handle)
     enum class State {
         NoTTY,      // initialization failed
         InitOk,     // main instance (it will reset the term when destroyed)
         CopyOk,     // a copy created by chained method
     };
     State m_state = State::NoTTY;
-    std::string m_seq;  // cached capability sequences
-    int m_fd;   // FD (on Windows mapped to handle)
 
 #ifdef _WIN32
     unsigned long m_orig_mode = 0;  // original console mode of the handle
