@@ -1,16 +1,15 @@
 // file.cpp created on 2018-03-29 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "file.h"
 #include <xci/compat/unistd.h>
-#include <xci/config.h>
+#include <xci/core/log.h>
 
 #include <fstream>
 #include <cassert>
-#include <climits>
 #include <cstring>
 #include <cstdlib>
 #include <cstddef>  // byte
@@ -69,22 +68,20 @@ BufferPtr read_binary_file(std::istream& stream)
 }
 
 
-bool write(int fd, std::string s)
+bool write(int fd, std::string_view s)
 {
-    size_t written = 0;
-    while (written != s.size()) {
-        ssize_t r = ::write(fd,
-                s.data() + written,
-                s.size() - written);
+    while (!s.empty()) {
+        ssize_t r = ::write(fd, s.data(), s.size());
         if (r == -1) {
             if (errno == EINTR)
                 continue;
+            log::error("write({}, {} bytes): {m}", fd, s.size());
             return false;
         }
         assert(r > 0);
         if (r == 0)
             return false;
-        written += r;
+        s = s.substr(r);
     }
     return true;
 }

@@ -1,7 +1,7 @@
 // file.h created on 2018-03-29 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018, 2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_FILE_H
@@ -9,6 +9,7 @@
 
 #include "Buffer.h"
 #include <string>
+#include <string_view>
 #include <optional>
 #include <filesystem>
 
@@ -26,7 +27,7 @@ BufferPtr read_binary_file(std::istream& stream);
 
 /// Write string to FD (in a loop, handling EINTR).
 /// \returns false on error (check errno), true on success
-bool write(int fd, std::string s);
+bool write(int fd, std::string_view s);
 
 
 }  // namespace xci::core

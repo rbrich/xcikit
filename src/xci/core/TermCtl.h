@@ -10,6 +10,7 @@
 #include <fmt/format.h>
 #include <string>
 #include <ostream>
+#include <array>
 
 namespace xci::core {
 
@@ -155,7 +156,52 @@ public:
     void print(const char *fmt, Args&&... args) {
         write(format(fmt, std::forward<Args>(args)...));
     }
+
     void write(std::string_view buf);
+
+    class StreamBuf : public std::streambuf {
+    public:
+        explicit StreamBuf(TermCtl& t) : m_tout(t) {}
+
+    protected:
+        std::streamsize xsputn(const char_type* s, std::streamsize n) override {
+            sync();
+            m_tout.write(std::string_view{s, (size_t)n});
+            return n;
+        };
+
+        int_type overflow(int_type ch) override {
+            if (traits_type::eq_int_type(ch, traits_type::eof()))
+                return 0;
+            if (m_buf_pos == m_buf.size())
+                sync();
+            m_buf[m_buf_pos] = traits_type::to_char_type(ch);
+            ++m_buf_pos;
+            return 1;
+        }
+
+        int sync() override {
+            if (m_buf_pos != 0) {
+                m_tout.write(std::string_view{m_buf.data(), m_buf_pos});
+                m_buf_pos = 0;
+            }
+            return 0;
+        }
+
+    private:
+        TermCtl& m_tout;
+        std::array<char, 500> m_buf;
+        unsigned m_buf_pos = 0;
+    };
+
+    class Stream : public std::ostream {
+    public:
+        Stream(TermCtl& t) : std::ostream(&m_sbuf), m_sbuf(t) {}
+    private:
+        StreamBuf m_sbuf;
+    };
+
+    Stream stream() { return Stream{*this}; }
 
     using WriteCallback = std::function<void(std::string_view data)>;
     void set_write_callback(WriteCallback cb) { m_write_cb = std::move(cb); }

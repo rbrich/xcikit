@@ -20,6 +20,7 @@
 #include <xci/compat/unistd.h>
 #include <xci/compat/macros.h>
 #include <xci/core/string.h>
+#include <xci/core/file.h>
 #include <xci/config.h>
 
 #ifdef _WIN32
@@ -639,7 +640,7 @@ void TermCtl::write(std::string_view buf)
     if (m_write_cb)
         m_write_cb(buf);
     else
-        ::write(m_fd, buf.data(), buf.size());
+        core::write(m_fd, buf);
 }
 
 
