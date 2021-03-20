@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.13)
 
 add_library(widechar_width OBJECT widechar_width.cpp)
 add_library(third_party::widechar_width ALIAS widechar_width)
