@@ -7,9 +7,12 @@
 #ifndef XCI_SCRIPT_TOOL_OPTIONS_H
 #define XCI_SCRIPT_TOOL_OPTIONS_H
 
+#include <cstdint>
+#include <vector>
+
 namespace xci::script::tool {
 
-struct Options {
+struct ReplOptions {
     bool print_raw_ast = false;
     bool print_ast = false;
     bool print_symtab = false;
@@ -20,6 +23,18 @@ struct Options {
     uint32_t compiler_flags = 0;
 };
 
-} // namespace xci::script::repl
+struct ProgramOptions {
+    std::vector<const char*> input_files;
+    const char* expr = nullptr;
+};
+
+struct Options {
+    ReplOptions repl_opts;
+    ProgramOptions prog_opts;
+
+    void parse(char* argv[]);
+};
+
+} // namespace xci::script::tool
 
 #endif // include guard

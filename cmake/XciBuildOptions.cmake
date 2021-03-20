@@ -133,7 +133,7 @@ endif()
 
 if (EMSCRIPTEN)
     add_compile_options(-sDISABLE_EXCEPTION_CATCHING=0)
-    add_link_options(-sDISABLE_EXCEPTION_CATCHING=0 -sEXIT_RUNTIME=1)
+    add_link_options(-sDISABLE_EXCEPTION_CATCHING=0)
 endif()
 
 if (FORCE_COLORS)

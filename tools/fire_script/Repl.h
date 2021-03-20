@@ -16,16 +16,14 @@ namespace xci::script::tool {
 
 class Repl {
 public:
-    Repl(Context& ctx, const Options& opts, const core::Vfs & vfs)
+    Repl(Context& ctx, const ReplOptions& opts, const core::Vfs & vfs)
         : m_ctx(ctx), m_opts(opts), m_vfs(vfs) {}
 
-    void print_intro(const char* version);
-
-    bool evaluate(std::string_view line, int input_number=-1);
+    bool evaluate(std::string_view line);
 
 private:
     Context& m_ctx;
-    const Options& m_opts;
+    const ReplOptions& m_opts;
     const core::Vfs& m_vfs;
 };
 

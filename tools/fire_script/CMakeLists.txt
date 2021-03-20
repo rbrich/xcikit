@@ -1,6 +1,8 @@
 # Fire Script compiler/interpreter
 add_executable(fire
     BytecodeTracer.cpp
+    Options.cpp
+    Program.cpp
     Repl.cpp
     ReplCommand.cpp
     Highlighter.cpp
@@ -14,7 +16,9 @@ target_link_libraries(fire
 )
 
 if (EMSCRIPTEN)
-    target_link_options(fire PRIVATE --embed-file=${CMAKE_BINARY_DIR}/share/script@share/script)
+    target_link_options(fire PRIVATE
+        --bind --closure=1 -sMODULARIZE=1 -sEXPORT_NAME=fire_script
+        --embed-file=${CMAKE_BINARY_DIR}/share/script@share/script)
 endif()
 
 install(TARGETS fire EXPORT xcikit DESTINATION bin)

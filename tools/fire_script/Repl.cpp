@@ -19,14 +19,7 @@ namespace xci::script::tool {
 using std::endl;
 
 
-void Repl::print_intro(const char* version)
-{
-    auto & t = m_ctx.term_out;
-    t.print((const char*)u8"{t:bold}{fg:magenta}🔥 fire script{t:normal} {fg:magenta}v{}{t:normal}\n", version);
-}
-
-
-bool Repl::evaluate(std::string_view line, int input_number)
+bool Repl::evaluate(std::string_view line)
 {
     core::TermCtl& t = m_ctx.term_out;
     auto& parser = m_ctx.interpreter.parser();
@@ -51,14 +44,14 @@ bool Repl::evaluate(std::string_view line, int input_number)
         }
 
         // compile
-        std::string module_name = input_number >= 0 ? format("input_{}", input_number) : "<input>";
+        std::string module_name = m_ctx.input_number >= 0 ? format("input_{}", m_ctx.input_number) : "<input>";
         auto module = std::make_unique<Module>(module_name);
         module->add_imported_module(BuiltinModule::static_instance());
         if (m_ctx.std_module)
             module->add_imported_module(*m_ctx.std_module);
         for (auto& m : m_ctx.input_modules)
             module->add_imported_module(*m);
-        auto func_name = input_number == -1 ? "_" : "_" + std::to_string(input_number);
+        auto func_name = m_ctx.input_number == -1 ? "_" : "_" + std::to_string(m_ctx.input_number);
         auto func = std::make_unique<Function>(*module, module->symtab());
         compiler.compile(*func, ast);
 
@@ -92,7 +85,7 @@ bool Repl::evaluate(std::string_view line, int input_number)
 
         // returned value of last statement
         auto result = machine.stack().pull(func->effective_return_type());
-        if (input_number != -1) {
+        if (m_ctx.input_number != -1) {
             // REPL mode
             if (!result->is_void()) {
                 t.print("{t:bold}{fg:magenta}{} = {fg:default}{}{t:normal}\n",

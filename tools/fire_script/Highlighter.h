@@ -45,6 +45,6 @@ private:
 };
 
 
-} // namespace xci::script::repl
+} // namespace xci::script::tool
 
 #endif // include guard

@@ -343,4 +343,4 @@ auto Highlighter::highlight(std::string_view input, unsigned cursor) -> HlResult
 }
 
 
-} // namespace xci::script::repl
+} // namespace xci::script::tool
