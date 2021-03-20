@@ -213,7 +213,7 @@ void EditLine::start_input(std::string_view prompt)
 {
     auto& tout = TermCtl::stdout_instance();
 
-    m_prompt_len = tout.stripped_length(prompt);
+    m_prompt_len = tout.stripped_width(prompt);
     write("\r");
     write(prompt);
     flush();
@@ -293,7 +293,7 @@ void EditLine::process_input()
         m_cursor_line = 0;
     }
     write(tout.move_to_column(m_prompt_len).clear_screen_down().seq());
-    auto cursor = tout.stripped_length(m_edit_buffer.content_upto_cursor());
+    auto cursor = tout.stripped_width(m_edit_buffer.content_upto_cursor());
 
     // Optionally highlight the content
     std::string_view content;  // pointer to content, either original or highlighted
@@ -319,7 +319,7 @@ void EditLine::process_input()
             }
             write(line);
             if (!cursor_found) {
-                auto part_len = tout.stripped_length(line);
+                auto part_len = tout.stripped_width(line);
                 if (cursor > part_len) {
                     cursor -= part_len + 1;  // add 1 for '\n'
                 } else {

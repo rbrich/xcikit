@@ -36,8 +36,9 @@
 #endif
 
 #include <fmt/format.h>
-#include <cassert>
+
 #include <array>
+#include <cassert>
 
 namespace xci::core {
 
@@ -644,7 +645,7 @@ void TermCtl::write(std::string_view buf)
 }
 
 
-unsigned int TermCtl::stripped_length(std::string_view s)
+unsigned int TermCtl::stripped_width(std::string_view s)
 {
     enum State {
         Visible,
@@ -653,13 +654,14 @@ unsigned int TermCtl::stripped_length(std::string_view s)
         ConsumeOne,
     } state = Visible;
     unsigned int length = 0;
-    for (const auto c : s) {
+    for (auto it = s.cbegin(); it != s.cend(); it = utf8_next(it)) {
+        auto c = utf8_codepoint(&*it);
         switch (state) {
             case Visible:
                 if (c == '\033')
                     state = Esc;
                 else
-                    ++length;
+                    length += c32_width(c);
                 break;
 
             case Esc:

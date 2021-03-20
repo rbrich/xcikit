@@ -206,8 +206,10 @@ public:
     using WriteCallback = std::function<void(std::string_view data)>;
     void set_write_callback(WriteCallback cb) { m_write_cb = std::move(cb); }
 
-    /// Compute length of `s` when stripped of terminal control sequences and invisible characters
-    static unsigned int stripped_length(std::string_view s);
+    /// Compute number of columns required to print the string `s`.
+    /// Control sequences and invisible characters are stripped,
+    /// double-width UTF-8 characters are counted as two columns.
+    static unsigned int stripped_width(std::string_view s);
 
     /// Temporarily switch the terminal to raw mode
     /// (no echo, no buffering, no special processing, no signal processing)

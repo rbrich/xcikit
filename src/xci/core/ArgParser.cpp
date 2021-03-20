@@ -489,7 +489,7 @@ static int wrapping_print_word(const std::string& s, unsigned indent, int start,
     if (max_width == 0)
         max_width = ~0u;
     assert(indent < max_width);
-    auto l = TermCtl::stripped_length(s);
+    auto l = TermCtl::stripped_width(s);
     if (start > 0 && start + l + 1 > max_width - indent) {
         // wrap
         cout << '\n' << std::string(indent, ' ');
@@ -523,7 +523,7 @@ void ArgParser::print_usage() const
     unsigned indent = 0;
     {
         auto head = t.format("{t:bold}{fg:yellow}Usage:{t:normal} {t:bold}{}{t:normal} ", m_progname);
-        indent = TermCtl::stripped_length(head);
+        indent = TermCtl::stripped_width(head);
         cout << head;
     }
 

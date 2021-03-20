@@ -146,6 +146,9 @@ std::pair<int, char32_t> utf8_codepoint_and_length(std::string_view utf8);
 /// \returns    length of the partial char, 0 if there is none
 size_t utf8_partial_end(std::string_view str);
 
+/// An implementation of well-known `wcwidth` function.
+/// Returns width of Unicode char in fixed-width font cells. Useful for terminals.
+int c32_width(char32_t c);
 
 } // namespace xci::core
 

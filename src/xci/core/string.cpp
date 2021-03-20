@@ -9,6 +9,8 @@
 #include <xci/core/log.h>
 
 #include <fmt/core.h>
+#include <widechar_width/widechar_width.h>
+
 #include <cctype>
 #include <locale>
 #include <codecvt>
@@ -338,6 +340,29 @@ size_t utf8_partial_end(string_view str)
 
     // The UTF-8 sequence is properly closed.
     return 0;
+}
+
+
+int c32_width(char32_t c)
+{
+    using namespace wcw;
+    int w = widechar_wcwidth(c);
+    switch (w) {
+        case widechar_nonprint:
+        case widechar_combining:
+            return 0;
+
+        case widechar_ambiguous:
+        case widechar_private_use:
+        case widechar_unassigned:
+            return 1;
+
+        case widechar_widened_in_9:
+            return 2;
+
+        default:
+            return w;
+    }
 }
 
 

@@ -17,6 +17,7 @@ add_library(xci-core
     TermCtl.cpp
     Vfs.cpp
     EditLine.cpp
+    $<TARGET_OBJECTS:third_party::widechar_width>
     )
 add_library(xcikit::xci-core ALIAS xci-core)
 
@@ -67,6 +68,7 @@ target_include_directories(xci-core
     PUBLIC
         ${XCI_INCLUDE_DIRS}
     PRIVATE
+        $<TARGET_PROPERTY:third_party::widechar_width,INTERFACE_INCLUDE_DIRECTORIES>
         $<TARGET_PROPERTY:taocpp::pegtl,INTERFACE_INCLUDE_DIRECTORIES>
     )
 

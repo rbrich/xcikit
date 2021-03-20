@@ -60,6 +60,8 @@ include(XciBuildOptions)
 
 include(ConanInit)
 
+add_subdirectory(third_party/widechar_width)
+
 if (XCI_TEXT)
     # RectangleBinPack (xci-text)
     add_subdirectory(third_party/rbp)
