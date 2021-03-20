@@ -11,7 +11,6 @@
 #include "EditLine.h"
 #include "string.h"
 #include "log.h"
-#include <xci/compat/unistd.h>
 
 #include <string>
 

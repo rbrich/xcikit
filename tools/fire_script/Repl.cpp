@@ -16,7 +16,6 @@
 
 namespace xci::script::tool {
 
-using std::cout;
 using std::endl;
 
 
@@ -48,7 +47,7 @@ bool Repl::evaluate(std::string_view line, int input_number)
         parser.parse(line, ast);
 
         if (m_opts.print_raw_ast) {
-            cout << "Raw AST:" << endl << dump_tree << ast << endl;
+            t.stream() << "Raw AST:" << endl << dump_tree << ast << endl;
         }
 
         // compile
@@ -65,17 +64,17 @@ bool Repl::evaluate(std::string_view line, int input_number)
 
         // print AST with Compiler modifications
         if (m_opts.print_ast) {
-            cout << "Processed AST:" << endl << dump_tree << ast << endl;
+            t.stream() << "Processed AST:" << endl << dump_tree << ast << endl;
         }
 
         // print symbol table
         if (m_opts.print_symtab) {
-            cout << "Symbol table:" << endl << module->symtab() << endl;
+            t.stream() << "Symbol table:" << endl << module->symtab() << endl;
         }
 
         // print compiled module content
         if (m_opts.print_module) {
-            cout << "Module content:" << endl << *module << endl;
+            t.stream() << "Module content:" << endl << *module << endl;
         }
 
         // stop if we were only processing the AST, without actual compilation
@@ -87,7 +86,7 @@ bool Repl::evaluate(std::string_view line, int input_number)
 
         machine.call(*func, [&](const Value& invoked) {
             if (!invoked.is_void()) {
-                cout << t.bold().yellow() << invoked << t.normal() << endl;
+                t.print("{t:bold}{fg:yellow}{}{t:normal}\n", invoked);
             }
         });
 
@@ -96,9 +95,8 @@ bool Repl::evaluate(std::string_view line, int input_number)
         if (input_number != -1) {
             // REPL mode
             if (!result->is_void()) {
-                cout << t.bold().magenta() << func_name << " = "
-                     << t.normal()
-                     << t.bold() << *result << t.normal() << endl;
+                t.print("{t:bold}{fg:magenta}{} = {fg:default}{}{t:normal}\n",
+                        func_name, *result);
             }
             // save result as function `_<N>` in the module
             auto func_idx = module->add_function(move(func));
@@ -108,17 +106,17 @@ bool Repl::evaluate(std::string_view line, int input_number)
         } else {
             // single input mode
             if (!result->is_void()) {
-                cout << t.bold() << *result << t.normal() << endl;
+                t.print("{t:bold}{}{t:normal}\n", *result);
             }
         }
         return true;
     } catch (const ScriptError& e) {
         if (!e.file().empty())
-            cout << e.file() << ": ";
-        cout << t.red().bold() << "Error: " << e.what() << t.normal();
+            t.stream() << e.file() << ": ";
+        t.stream() << t.red().bold() << "Error: " << e.what() << t.normal();
         if (!e.detail().empty())
-            cout << endl << t.magenta() << e.detail() << t.normal();
-        cout << endl;
+            t.stream() << endl << t.magenta() << e.detail() << t.normal();
+        t.stream() << endl;
         return false;
     }
 }

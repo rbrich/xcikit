@@ -70,7 +70,7 @@ struct SquareBracketClose: one<']'> {};
 struct BraceOpen: one<'{'> {};
 struct BraceClose: one<'}'> {};
 
-struct SpecialVariable: seq< one<'_'>, plus<digit> > {};
+struct SpecialVariable: seq< one<'_'>, star<digit>, not_at<identifier_other> > {};
 
 // Keywords
 struct KeywordFun: TAO_PEGTL_KEYWORD("fun") {};

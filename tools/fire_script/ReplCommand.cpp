@@ -14,8 +14,6 @@
 namespace xci::script::tool {
 
 using namespace xci::core;
-using std::cout;
-using std::endl;
 
 
 void ReplCommand::cmd_quit() {
@@ -24,27 +22,30 @@ void ReplCommand::cmd_quit() {
 
 
 static void cmd_help() {
-    cout << ".q, .quit                                  quit" << endl;
-    cout << ".h, .help                                  show all accepted commands" << endl;
-    cout << ".dm, .dump_module [#|name]                 print contents of last compiled module (or module by index or by name)" << endl;
-    cout << ".df, .dump_function [#|name] [#|module]    print contents of last compiled function (or function by index/name from specified module)" << endl;
-    cout << ".di, .dump_info                            print info about interpreter attributes on this machine" << endl;
+    TermCtl& t = xci::core::TermCtl::stdout_instance();
+    t.write(".q, .quit                                  quit\n");
+    t.write(".h, .help                                  show all accepted commands\n");
+    t.write(".dm, .dump_module [#|name]                 print contents of last compiled module (or module by index or by name)\n");
+    t.write(".df, .dump_function [#|name] [#|module]    print contents of last compiled function (or function by index/name from specified module)\n");
+    t.write(".di, .dump_info                            print info about interpreter attributes on this machine\n");
 }
 
 
 static void cmd_dump_info() {
-    cout << "Bloat:" << endl;
-    cout << "  sizeof(Function) = " << sizeof(Function) << endl;
-    cout << "  sizeof(Function::CompiledBody) = " << sizeof(Function::CompiledBody) << endl;
-    cout << "  sizeof(Function::GenericBody) = " << sizeof(Function::GenericBody) << endl;
-    cout << "  sizeof(Function::NativeBody) = " << sizeof(Function::NativeBody) << endl;
+    TermCtl& t = xci::core::TermCtl::stdout_instance();
+    t.write("Bloat:\n");
+    t.print("  sizeof(Function) = {}\n", sizeof(Function));
+    t.print("  sizeof(Function::CompiledBody) = {}\n", sizeof(Function::CompiledBody));
+    t.print("  sizeof(Function::GenericBody) = {}\n", sizeof(Function::GenericBody));
+    t.print("  sizeof(Function::NativeBody) = {}\n", sizeof(Function::NativeBody));
 }
 
 
 static void print_module_header(const Module& module)
 {
-    cout << "Module \"" << module.name() << '"'
-         << " (" << std::hex << intptr_t(&module.symtab()) << std::dec << ')' << endl;
+    TermCtl& t = xci::core::TermCtl::stdout_instance();
+    t.stream() << "Module \"" << module.name() << '"'
+         << " (" << std::hex << intptr_t(&module.symtab()) << std::dec << ')' << std::endl;
 }
 
 
@@ -53,8 +54,7 @@ const Module* ReplCommand::module_by_idx(size_t mod_idx) {
 
     if (mod_idx == size_t(-1)) {
         if (!m_ctx.std_module) {
-            cout << t.red().bold() << "Error: std module not loaded"
-                 << t.normal() << endl;
+            t.print("{t:bold}{fg:red}Error: std module not loaded{t:normal}\n");
             return nullptr;
         }
         return m_ctx.std_module.get();
@@ -66,8 +66,8 @@ const Module* ReplCommand::module_by_idx(size_t mod_idx) {
         return &m_module;
 
     if (mod_idx >= m_ctx.input_modules.size()) {
-        cout << t.red().bold() << "Error: module index out of range: "
-             << mod_idx << t.normal() << endl;
+        t.print("{t:bold}{fg:red}Error: module index out of range: {}{t:normal}\n",
+                mod_idx);
         return nullptr;
     }
     return m_ctx.input_modules[mod_idx].get();
@@ -87,8 +87,7 @@ const Module* ReplCommand::module_by_name(const std::string& mod_name) {
 
     if (mod_name == "std") {
         if (!ctx.std_module) {
-            cout << t.red().bold() << "Error: std module not loaded"
-                 << t.normal() << endl;
+            t.print("{t:bold}{fg:red}Error: std module not loaded{t:normal}\n");
             return nullptr;
         }
         return ctx.std_module.get();
@@ -100,8 +99,8 @@ const Module* ReplCommand::module_by_name(const std::string& mod_name) {
     if (mod_name == "." || mod_name == "cmd")
         return &m_module;
 
-    cout << t.red().bold() << "Error: module not found: " << mod_name
-         << t.normal() << endl;
+    t.print("{t:bold}{fg:red}Error: module not found: {}{t:normal}\n",
+            mod_name);
     return nullptr;
 }
 
@@ -111,7 +110,7 @@ void ReplCommand::dump_module(size_t mod_idx) {
     if (!module)
         return;
     print_module_header(*module);
-    cout << *module << endl;
+    m_ctx.term_out.stream() << *module << std::endl;
 }
 
 
@@ -130,7 +129,7 @@ void ReplCommand::cmd_dump_module(std::string mod_name) {
     if (!module)
         return;
     print_module_header(*module);
-    cout << *module << endl;
+    m_ctx.term_out.stream() << *module << std::endl;
 }
 
 
@@ -138,29 +137,29 @@ void ReplCommand::dump_function(const Module& module, size_t fun_idx) {
     TermCtl& t = m_ctx.term_out;
 
     if (fun_idx >= module.num_functions()) {
-        cout << t.red().bold() << "Error: function index out of range: "
-             << fun_idx << t.normal() << endl;
+        t.print("{t:bold}{fg:red}Error: function index out of range: {}{t:normal}\n",
+                fun_idx);
         return;
     }
     const auto& function = module.get_function(fun_idx);
 
     print_module_header(module);
-    cout << "Function [" << fun_idx << "] " << function.name() << ": "
-         << function << endl;
+    t.print("Function [{}] {}: ", fun_idx, function.name());
+    t.stream() << function << std::endl;
 }
 
 
 void ReplCommand::cmd_dump_function() {
     TermCtl& t = m_ctx.term_out;
     if (m_ctx.input_modules.empty()) {
-        cout << t.red().bold() << "Error: no input modules available" << t.normal() << endl;
+        t.print("{t:bold}{fg:red}Error: no input modules available{t:normal}\n");
         return;
     }
     size_t mod_idx = m_ctx.input_modules.size() - 1;
     const auto& module = *m_ctx.input_modules[mod_idx];
 
     if (module.num_functions() == 0) {
-        cout << t.red().bold() << "Error: no functions available" << t.normal() << endl;
+        t.print("{t:bold}{fg:red}Error: no functions available{t:normal}\n");
         return;
     }
 
@@ -171,7 +170,7 @@ void ReplCommand::cmd_dump_function() {
 void ReplCommand::cmd_dump_function(std::string fun_name) {
     TermCtl& t = m_ctx.term_out;
     if (m_ctx.input_modules.empty()) {
-        cout << t.red().bold() << "Error: no input modules available" << t.normal() << endl;
+        t.print("{t:bold}{fg:red}Error: no input modules available{t:normal}\n");
         return;
     }
     size_t mod_idx = m_ctx.input_modules.size() - 1;
@@ -183,8 +182,8 @@ void ReplCommand::cmd_dump_function(std::string fun_name) {
             return;
         }
     }
-    cout << t.red().bold() << "Error: function not found: " << fun_name
-         << t.normal() << endl;
+    t.print("{t:bold}{fg:red}Error: function not found: {}{t:normal}\n",
+            fun_name);
 }
 
 
@@ -203,8 +202,8 @@ void ReplCommand::cmd_dump_function(std::string fun_name, std::string mod_name) 
             return;
         }
     }
-    cout << t.red().bold() << "Error: function not found: " << fun_name
-         << t.normal() << endl;
+    t.print("{t:bold}{fg:red}Error: function not found: {}{t:normal}\n",
+            fun_name);
 }
 
 
@@ -212,7 +211,7 @@ void ReplCommand::cmd_dump_function(size_t fun_idx)
 {
     TermCtl& t = m_ctx.term_out;
     if (m_ctx.input_modules.empty()) {
-        cout << t.red().bold() << "Error: no modules available" << t.normal() << endl;
+        t.print("{t:bold}{fg:red}Error: no modules available{t:normal}\n");
         return;
     }
     size_t mod_idx = m_ctx.input_modules.size() - 1;
