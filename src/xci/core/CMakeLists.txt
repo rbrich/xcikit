@@ -105,7 +105,9 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
         _CRT_SECURE_NO_WARNINGS)
 endif()
 
-install(TARGETS xci-core
-    EXPORT xcikit
-    DESTINATION lib
-    INCLUDES DESTINATION include)
+if (BUILD_SHARED_LIBS OR XCI_INSTALL_DEVEL)
+    install(TARGETS xci-core
+        EXPORT xcikit
+        DESTINATION lib
+        INCLUDES DESTINATION include)
+endif()

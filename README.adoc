@@ -90,7 +90,9 @@ Tested compilers:
 * GCC 10 (Debian 11 Bullseye)
 * Clang 10 (macOS via Homebrew)
 
-Any Unix-like OS with C++20 compliant compiler should work. There is no direct Windows support, but it's possible that the project will compile with some layer of Unix compatibility, e.g. WSL. Some of the libraries already compile natively, see <<porting-to-windows,Porting to Windows>>.
+Any Unix-like OS with C++20 compliant compiler should work. There is no direct Windows support,
+but it's possible that the project will compile with some layer of Unix compatibility, e.g. WSL.
+Some of the libraries already compile natively, see <<windows,Porting to Windows>>.
 
 == Libraries
 
@@ -244,7 +246,7 @@ cmake --build . --target 'test'
 cmake --build . --target 'install'
 ----
 
-[#porting-to-windows]
+[#windows]
 === Porting to Windows
 
 The project is not yet fully ported to Windows.But the essential parts should
@@ -269,6 +271,7 @@ How to build:
 
 5. There might be errors.These are why the title says "Porting", not "How to build"…
 
+[#emscripten]
 === Porting to Emscripten
 
 The non-graphical components should build with Emscripten.

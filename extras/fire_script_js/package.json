@@ -1,0 +1,20 @@
+{
+  "dependencies": {
+    "xterm": "^4.10.0",
+    "xterm-addon-fit": "^0.5.0",
+    "xterm-addon-web-links": "^0.4.0"
+  },
+  "devDependencies": {
+    "webpack": "^5.27.0",
+    "webpack-cli": "^4.5.0"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build-fire": "../../build.sh --emscripten script -DXCI_BUILD_EXAMPLES=OFF -DXCI_BUILD_TESTS=OFF -DXCI_BUILD_BENCHMARKS=OFF -DXCI_INSTALL_DEVEL=OFF --build-dir $PWD/build --install-dir $PWD/dist",
+    "copy-to-dist": "cp node_modules/xterm/css/xterm.css dist && cp index.html dist",
+    "webpack-devel": "webpack ./main.js --output-filename=bundle.js --mode=development",
+    "webpack-prod": "webpack ./main.js --output-filename=bundle.js --mode=production",
+    "devel": "npm run build-fire && npm run copy-to-dist && npm run webpack-devel",
+    "build": "npm run build-fire && npm run copy-to-dist && npm run webpack-prod"
+  }
+}

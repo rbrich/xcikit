@@ -27,6 +27,8 @@ print_usage()
     echo "      --unity                 CMAKE_UNITY_BUILD - batch all source files in each target together"
     echo "      --tidy                  Run clang-tidy on each compiled file"
     echo "      --update                Passed to conan - update dependencies"
+    echo "      --build-dir             Build directory (default: ./build/<build-config>)"
+    echo "      --install-dir           Installation directory (default: ./artifacts/<build-config>)"
 }
 
 phase()
@@ -105,6 +107,12 @@ while [[ $# -gt 0 ]] ; do
         --update )
             CONAN_ARGS+=('--update')
             shift 1 ;;
+        --build-dir )
+            BUILD_DIR="$2"
+            shift 2 ;;
+        --install-dir )
+            INSTALL_DIR="$2"
+            shift 2 ;;
         -pr | --profile )
             CONAN_ARGS+=('--profile' "$2")
             shift 2 ;;
@@ -134,8 +142,8 @@ BUILD_CONFIG="${PLATFORM}-${ARCH}-${BUILD_TYPE}"
 [[ -z "${GENERATOR}" ]] && setup_ninja && GENERATOR="Ninja"
 [[ -n "${GENERATOR}" ]] && BUILD_CONFIG="${BUILD_CONFIG}-${GENERATOR// }"
 [[ -n "${GENERATOR}" ]] && CMAKE_ARGS+=(-G "${GENERATOR}")
-BUILD_DIR="${ROOT_DIR}/build/${BUILD_CONFIG}"
-INSTALL_DIR="${ROOT_DIR}/artifacts/${BUILD_CONFIG}"
+BUILD_DIR=${BUILD_DIR:-"${ROOT_DIR}/build/${BUILD_CONFIG}"}
+INSTALL_DIR=${INSTALL_DIR:-"${ROOT_DIR}/artifacts/${BUILD_CONFIG}"}
 PACKAGE_OUTPUT_DIR="${ROOT_DIR}/artifacts"
 PACKAGE_FILENAME="xcikit-${VERSION}-${PLATFORM}-${ARCH}"
 [[ ${BUILD_TYPE} != "Release" ]] && PACKAGE_FILENAME="${PACKAGE_FILENAME}-${BUILD_TYPE}"

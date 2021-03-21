@@ -52,4 +52,6 @@ if (BUILD_FRAMEWORKS)
     )
 endif()
 
-install(TARGETS xci-graphics EXPORT xcikit DESTINATION lib)
+if (BUILD_SHARED_LIBS OR XCI_INSTALL_DEVEL)
+    install(TARGETS xci-graphics EXPORT xcikit DESTINATION lib)
+endif()
