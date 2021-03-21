@@ -19,7 +19,6 @@ namespace xci::script::tool {
 
 // globals, basically
 struct Context {
-    bool done {false};
     int input_number = -1;  // -1 = batch mode, 0..N = REPL mode
     Interpreter interpreter;
     std::unique_ptr<xci::script::Module> std_module;

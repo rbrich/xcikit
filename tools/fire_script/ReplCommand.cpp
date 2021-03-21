@@ -17,7 +17,8 @@ using namespace xci::core;
 
 
 void ReplCommand::cmd_quit() {
-    m_ctx.done = true;
+    if (m_quit_cb)
+        m_quit_cb();
 }
 
 

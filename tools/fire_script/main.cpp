@@ -27,6 +27,14 @@ static void prog_set_term_output_cb(Program& prog, val write_cb) {
     });
 }
 
+static void prog_set_quit_cb(Program& prog, val quit_cb) {
+    if (quit_cb.isNull())
+        return;
+    prog.repl_command().set_quit_cb([quit_cb] {
+        quit_cb();
+    });
+}
+
 // Translate string to string_view (embind doesn't know string_view)
 static void prog_repl_step(Program& prog, const std::string& input) {
     prog.repl_step(input);
@@ -36,6 +44,7 @@ EMSCRIPTEN_BINDINGS(fire_script) {
     class_<Program>("FireScript")
         .constructor<>()
         .function("set_term_output_cb", &prog_set_term_output_cb)
+        .function("set_quit_cb", &prog_set_quit_cb)
         .function("repl_init", &Program::repl_init)
         .function("repl_prompt", &Program::repl_prompt)
         .function("repl_step", &prog_repl_step)

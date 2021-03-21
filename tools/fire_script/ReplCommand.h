@@ -20,6 +20,9 @@ public:
 
     Interpreter& interpreter() { return m_interpreter; }
 
+    using Callback = std::function<void()>;
+    void set_quit_cb(Callback cb) { m_quit_cb = std::move(cb); }
+
 private:
     template<class F>
     void add_cmd(std::string&& name, std::string&& alias, F&& fun) {
@@ -52,6 +55,7 @@ private:
     Context& m_ctx;
     Interpreter m_interpreter;  // second interpreter, just for the commands
     Module m_module {"cmd"};
+    Callback m_quit_cb;
 };
 
 
