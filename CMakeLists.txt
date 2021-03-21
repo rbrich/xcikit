@@ -29,11 +29,18 @@ option(XCI_INSTALL_DEVEL "Install headers, CMake config, static libs." ON)
 option(XCI_WITH_TERMINFO "Link with TermInfo and use it for TTY control sequences." OFF)
 option(XCI_WITH_ZIP "Link xci-core with libzip and use it for ZIP format in VFS." OFF)
 
+# negate it for use as option() initial value
+if (EMSCRIPTEN)
+    set(NOT_EMSCRIPTEN OFF)
+else()
+    set(NOT_EMSCRIPTEN ON)
+endif()
+
 option(XCI_INSTALL_SHARE_DIR "Install runtime data as a directory (share/xcikit)" OFF)
-option(XCI_INSTALL_SHARE_DAR "Install runtime data as DAR archive (share.dar)" $<NOT:EMSCRIPTEN>)
+option(XCI_INSTALL_SHARE_DAR "Install runtime data as DAR archive (share.dar)" ${NOT_EMSCRIPTEN})
 option(XCI_INSTALL_SHARE_ZIP "Install runtime data as ZIP archive (share.zip)" OFF)
 
-option(XCI_LISTDIR_GETDENTS "Use getdents syscall instead of readdir for tools/find_file." $<NOT:EMSCRIPTEN>)
+option(XCI_LISTDIR_GETDENTS "Use getdents syscall instead of readdir for tools/find_file." ${NOT_EMSCRIPTEN})
 
 option(XCI_DEBUG_VULKAN "Log info about Vulkan calls and errors." OFF)
 option(XCI_DEBUG_TRACE "Enable trace log messages." OFF)

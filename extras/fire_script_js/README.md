@@ -3,7 +3,9 @@ Fire Script JavaScript App
 
 A web app which uses the Emscripten build of `tools/fire_script`.
 
-## Requirements
+It runs here: https://fire.xci.cz
+
+## Build requirements
 
 * Emscripten
 * Node.js, npm
@@ -22,15 +24,14 @@ Then run the build:
 npm run build
 ````
 
-This will build the Fire script tool for Emscripten and then run Webpack on `main.js`.
+This will build the Fire script tool with Emscripten and then run Webpack on `main.js`.
 
-The webapp is now ready in `dist` directory.
+The web app is now ready in `dist` directory.
 
 Test it locally:
 ```bash
 emrun --browser firefox dist/index.html
 ````
 
-## Public URL
-
-It runs here: https://fire.xci.cz
+To serve it, copy the content of `dist` to a web server and point some URL to it.
+It's completely client-side web application, so it can be served easily by Nginx, Apache etc.
