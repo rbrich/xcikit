@@ -4,7 +4,6 @@
 
 add_library(xci-core
     ArgParser.cpp
-    chrono.cpp
     file.cpp
     dispatch.cpp
     EditBuffer.cpp

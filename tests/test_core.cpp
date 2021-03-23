@@ -5,7 +5,6 @@
 #include <xci/core/log.h>
 #include <xci/core/file.h>
 #include <xci/core/string.h>
-#include <xci/core/chrono.h>
 #include <xci/core/memory.h>
 #include <xci/core/sys.h>
 #include <xci/core/TermCtl.h>
@@ -16,7 +15,6 @@
 
 #include <string>
 #include <cstdio>
-#include <sys/stat.h>
 
 using namespace xci::core;
 using namespace std::string_literals;

@@ -6,15 +6,16 @@
 
 #include <xci/core/dispatch.h>
 #include <xci/core/log.h>
-#include <xci/core/chrono.h>
 
 #include <string>
 #include <fstream>
+#include <chrono>
 
 using namespace xci::core;
 using namespace xci::core::log;
 using std::this_thread::sleep_for;
 using namespace std::string_literals;
+using namespace std::chrono_literals;
 
 
 int main()
