@@ -23,9 +23,9 @@ static constexpr const char8_t* intro = u8"{t:bold}{fg:magenta}🔥 fire script{
 static constexpr const char* prompt = "{fg:green}_{} ?{t:normal} ";
 
 
-Program::Program()
+Program::Program(bool log_debug)
 {
-    Logger::init(Logger::Level::Warning);
+    Logger::init(log_debug ? Logger::Level::Trace : Logger::Level::Warning);
     vfs.mount(XCI_SHARE);
 }
 

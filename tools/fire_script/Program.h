@@ -20,7 +20,7 @@ namespace xci::script::tool {
 
 
 struct Program {
-    Program();
+    Program(bool log_debug = false);
 
     /// Parse and evaluate program args
     /// Exits if done (--help, --eval etc.), returns control otherwise

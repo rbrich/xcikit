@@ -18,10 +18,20 @@ using namespace xci::script::tool;
 using namespace emscripten;
 
 // Translate JS callback function to C++
-static void prog_set_term_output_cb(Program& prog, val write_cb) {
+static void prog_set_term_out_cb(Program& prog, val write_cb) {
     if (write_cb.isNull())
         return;
     prog.ctx.term_out.set_write_callback([write_cb](std::string_view sv) {
+        std::string str{sv};
+        write_cb(str);
+    });
+}
+
+static void prog_set_term_err_cb([[maybe_unused]] Program& prog, val write_cb) {
+    if (write_cb.isNull())
+        return;
+    auto& terr = xci::core::TermCtl::stderr_instance();
+    terr.set_write_callback([write_cb](std::string_view sv) {
         std::string str{sv};
         write_cb(str);
     });
@@ -43,7 +53,9 @@ static void prog_repl_step(Program& prog, const std::string& input) {
 EMSCRIPTEN_BINDINGS(fire_script) {
     class_<Program>("FireScript")
         .constructor<>()
-        .function("set_term_output_cb", &prog_set_term_output_cb)
+        .constructor<bool>()
+        .function("set_term_out_cb", &prog_set_term_out_cb)
+        .function("set_term_err_cb", &prog_set_term_err_cb)
         .function("set_quit_cb", &prog_set_quit_cb)
         .function("repl_init", &Program::repl_init)
         .function("repl_prompt", &Program::repl_prompt)

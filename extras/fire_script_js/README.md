@@ -35,3 +35,7 @@ emrun --browser firefox dist/index.html
 
 To serve it, copy the content of `dist` to a web server and point some URL to it.
 It's completely client-side web application, so it can be served easily by Nginx, Apache etc.
+
+## URL parameters
+
+* `debug=1` Enable debug logging.

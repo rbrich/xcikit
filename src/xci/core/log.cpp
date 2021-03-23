@@ -8,7 +8,6 @@
 #include <xci/core/TermCtl.h>
 #include <xci/core/sys.h>
 #include <xci/core/file.h>
-#include <xci/compat/unistd.h>
 
 #include <ctime>
 #include <cassert>
@@ -37,10 +36,7 @@ Logger::Logger(Level level) : m_level(level)
 {
     if (m_level <= Level::Info) {
         TermCtl& t = TermCtl::stderr_instance();
-        auto msg = t.format("{t:underline}   Date      Time    TID   Level  Message   {t:normal}\n");
-        auto res = write(STDERR_FILENO, msg);
-        assert(res);  // write to stderr should not fail
-        (void) res;
+        t.print("{t:underline}   Date      Time    TID   Level  Message   {t:normal}\n");
     }
 }
 
@@ -49,10 +45,7 @@ Logger::~Logger()
 {
     if (m_level <= Level::Info) {
         TermCtl& t = TermCtl::stderr_instance();
-        auto msg = t.format("{t:overline}                 End of Log                 {t:normal}\n");
-        auto res = write(STDERR_FILENO, msg);
-        assert(res);  // write to stderr should not fail
-        (void) res;
+        t.print("{t:overline}                 End of Log                 {t:normal}\n");
     }
 }
 
@@ -72,10 +65,7 @@ void Logger::default_handler(Logger::Level lvl, std::string_view msg)
 {
     TermCtl& t = TermCtl::stderr_instance();
     auto lvl_num = static_cast<int>(lvl);
-    auto formatted_msg = t.format(level_format[lvl_num], format_current_time(), get_thread_id(), msg);
-    auto res = write(STDERR_FILENO, formatted_msg);
-    assert(res);  // write to stderr should not fail
-    (void) res;
+    t.print(level_format[lvl_num], format_current_time(), get_thread_id(), msg);
 }
 
 
