@@ -5,6 +5,7 @@ cd "$(dirname "$0")"
 
 ROOT_DIR="$PWD"
 BUILD_TYPE="Release"
+INSTALL_DEVEL=0
 GENERATOR=
 EMSCRIPTEN=0
 JOBS_ARGS=()
@@ -23,6 +24,7 @@ print_usage()
     echo "      -j JOBS                 Parallel jobs for build and test phases"
     echo "      -D CMAKE_DEF            Passed to cmake"
     echo "      --debug, --minsize      Sets CMAKE_BUILD_TYPE"
+    echo "      --devel                 Install/package headers, CMake config, static libs."
     echo "      --emscripten            Target Emscripten (i.e. wrap with 'emcmake')"
     echo "      --unity                 CMAKE_UNITY_BUILD - batch all source files in each target together"
     echo "      --tidy                  Run clang-tidy on each compiled file"
@@ -91,6 +93,9 @@ while [[ $# -gt 0 ]] ; do
             shift 1 ;;
         --minsize )
             BUILD_TYPE="MinSizeRel"
+            shift 1 ;;
+        --devel )
+            INSTALL_DEVEL=1
             shift 1 ;;
         --emscripten )
             EMSCRIPTEN=1
@@ -162,6 +167,13 @@ if [[ -z "$component_default" && -z "$component_all" ]]; then
     done
 fi
 
+CMAKE_ARGS+=(-D"XCI_INSTALL_DEVEL=${INSTALL_DEVEL}")
+
+# Ninja: force compiler colors, if the output goes to terminal
+if [[ -t 1 && "${GENERATOR}" = "Ninja" ]]; then
+    CMAKE_ARGS+=(-D'FORCE_COLORS=1')
+fi
+
 echo "CMAKE_ARGS:   ${CMAKE_ARGS[*]}"
 echo "BUILD_CONFIG: ${BUILD_CONFIG}"
 echo "BUILD_DIR:    ${BUILD_DIR}"
@@ -207,10 +219,9 @@ if phase config; then
     echo
 fi
 
-# Ninja: enable colors, if the output goes to terminal (only for build step)
+# Enable colored Ninja status, if the output goes to terminal (only for build step)
 if [[ -t 1 && "${GENERATOR}" = "Ninja" ]]; then
     export NINJA_STATUS="${CSI}1m[${CSI}32m%p ${CSI}0;32m%f${CSI}0m/${CSI}32m%t ${CSI}36m%es${CSI}0m ${CSI}1m]${CSI}0m "
-    CMAKE_ARGS+=(-D'FORCE_COLORS=1')
 fi
 
 if phase build; then
