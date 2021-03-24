@@ -30,11 +30,47 @@ The web app is now ready in `dist` directory.
 
 Test it locally:
 ```bash
-emrun --browser firefox dist/index.html
+emrun --browser firefox dist/v*/index.html
 ````
 
-To serve it, copy the content of `dist` to a web server and point some URL to it.
-It's completely client-side web application, so it can be served easily by Nginx, Apache etc.
+## Serving with NGINX
+
+To serve teh app, copy the content of `dist` to a web server and point some URL to it.
+It's completely client-side web application, so the server can be completely static.
+
+Example NGINX config:
+
+```
+server {
+    listen 80;
+    listen 443 ssl;
+    server_name fire.xci.cz;
+
+    # redirect / -> /latest/
+    location = / {
+        return 301 $scheme://$host/latest/;
+    }
+
+    # redirect /latest -> /latest/, /v1.0.0 -> /v1.0.0/
+    location ~ ^/([^/]+)$ {
+        return 301 $scheme://$host$uri/;
+    }
+
+    # lookup files in root
+    location / {
+        root /var/www/html/fire.xci.cz;
+        gzip_static on;
+        disable_symlinks if_not_owner;
+    }
+}
+```
+
+This expects that you have a symlink named `latest` which points to latest `vX.Y.Z` directory.
+
+GZIP files should be generated statically:
+```bash
+gzip -k -r *
+````
 
 ## URL parameters
 

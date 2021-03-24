@@ -9,12 +9,13 @@
     "webpack-cli": "^4.5.0"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build-fire": "../../build.sh --emscripten script -DXCI_BUILD_EXAMPLES=OFF -DXCI_BUILD_TESTS=OFF -DXCI_BUILD_BENCHMARKS=OFF -DXCI_INSTALL_DEVEL=OFF --build-dir $PWD/build --install-dir $PWD/dist",
-    "copy-to-dist": "cp node_modules/xterm/css/xterm.css dist && cp index.html dist",
-    "webpack-devel": "webpack ./main.js --output-filename=bundle.js --mode=development",
-    "webpack-prod": "webpack ./main.js --output-filename=bundle.js --mode=production",
-    "devel": "npm run build-fire && npm run copy-to-dist && npm run webpack-devel",
-    "build": "npm run build-fire && npm run copy-to-dist && npm run webpack-prod"
+    "clean": "rm -rf build",
+    "distclean": "rm -rf dist",
+    "build-fire": "../../build.sh script --emscripten --minsize -DXCI_BUILD_EXAMPLES=OFF -DXCI_BUILD_TESTS=OFF -DXCI_BUILD_BENCHMARKS=OFF -DXCI_INSTALL_DEVEL=OFF --build-dir $PWD/build --install-dir $PWD/dist && mv dist/bin dist/v$(cat $PWD/../../VERSION)",
+    "copy-to-dist": "cp node_modules/xterm/css/xterm.css dist/v$(cat ../../VERSION) && cp index.html dist/v$(cat ../../VERSION)",
+    "webpack-devel": "webpack ./main.js -o dist/v$(cat ../../VERSION) --output-filename=bundle.js --mode=development",
+    "webpack-prod": "webpack ./main.js -o dist/v$(cat ../../VERSION) --output-filename=bundle.js --mode=production",
+    "devel": "npm run distclean && npm run build-fire && npm run copy-to-dist && npm run webpack-devel",
+    "build": "npm run distclean && npm run build-fire && npm run copy-to-dist && npm run webpack-prod"
   }
 }

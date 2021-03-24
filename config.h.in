@@ -5,6 +5,8 @@
 #ifndef XCI_CONFIG_H
 #define XCI_CONFIG_H
 
+#cmakedefine XCI_VERSION "@XCI_VERSION@"
+
 // Optional libraries
 #cmakedefine XCI_WITH_TERMINFO
 

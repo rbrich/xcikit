@@ -18,8 +18,12 @@ target_link_libraries(fire
 if (EMSCRIPTEN)
     target_link_options(fire PRIVATE
         --bind --closure=1 -sMODULARIZE=1 -sEXPORT_NAME=fire_script
-        --embed-file=${CMAKE_BINARY_DIR}/share/script@share/script)
-    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/fire.wasm DESTINATION bin)
+        --preload-file=${CMAKE_BINARY_DIR}/share/script@share/script)
+    install(
+        FILES
+            ${CMAKE_CURRENT_BINARY_DIR}/fire.wasm
+            ${CMAKE_CURRENT_BINARY_DIR}/fire.data
+        DESTINATION bin)
 endif()
 
 install(TARGETS fire EXPORT xcikit DESTINATION bin)

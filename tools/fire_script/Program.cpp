@@ -17,7 +17,6 @@ namespace xci::script::tool {
 
 using namespace xci::core;
 
-static constexpr const char* version = "0.4";
 static constexpr const char8_t* intro = u8"{t:bold}{fg:magenta}🔥 fire script{t:normal} {fg:magenta}v{}{t:normal}\n"
                                         "Type {t:bold}{fg:yellow}.h{t:normal} for help, {t:bold}{fg:yellow}.q{t:normal} to quit.\n";
 static constexpr const char* prompt = "{fg:green}_{} ?{t:normal} ";
@@ -63,7 +62,7 @@ void Program::repl_init()
         return EditLine::HighlightResult{hl_data, is_open};
     });
 
-    t.print((const char*)intro, version);
+    t.print((const char*)intro, XCI_VERSION);
     ctx.input_number = 0;
 }
 

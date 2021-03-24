@@ -14,7 +14,12 @@ option(ENABLE_TIDY "Run clang-tidy on each compiled file, when available." OFF)
 option(ENABLE_IWYU "Run iwyu (Include What You Use) on each compiled file, when available." OFF)
 
 # optimizations
-option(ENABLE_LTO "Enable link-time, whole-program optimizations." OFF)
+if(CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
+    set(MINSIZE ON)
+else()
+    set(MINSIZE OFF)
+endif()
+option(ENABLE_LTO "Enable link-time, whole-program optimizations." ${MINSIZE})
 option(ENABLE_CCACHE "Use ccache as compiler launcher, when available." ON)
 
 # cosmetics
