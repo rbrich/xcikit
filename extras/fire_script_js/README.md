@@ -35,8 +35,8 @@ emrun --browser firefox dist/v*/index.html
 
 ## Serving with NGINX
 
-To serve teh app, copy the content of `dist` to a web server and point some URL to it.
-It's completely client-side web application, so the server can be completely static.
+To serve the app, copy the content of `dist` to a web server and point some URL to it.
+It's a client-side web application, so the server can be completely static.
 
 Example NGINX config:
 
@@ -69,7 +69,7 @@ This expects that you have a symlink named `latest` which points to latest `vX.Y
 
 GZIP files should be generated statically:
 ```bash
-gzip -k -r *
+gzip -k9 -r *
 ````
 
 ## URL parameters

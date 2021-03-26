@@ -2,45 +2,49 @@ import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 
-fire_script().then(Module => {
-    const termContainer = document.getElementById('terminal');
-    const termLogContainer = document.getElementById('terminal_log');
+const termContainer = document.getElementById('terminal');
+const termLogContainer = document.getElementById('terminal_log');
 
-    const term = new Terminal({
-        convertEol: true,
-        rightClickSelectsWord: false,
-        theme: {
-            foreground: '#999',
-        }
-    });
-    term.open(termContainer);
+const term = new Terminal({
+    convertEol: true,
+    rightClickSelectsWord: false,
+    theme: {
+        foreground: '#999',
+    }
+});
+term.open(termContainer);
 
-    const termLog = new Terminal({
-        disableStdin: true,
-        convertEol: true,
-        rightClickSelectsWord: false,
-        theme: {
-            background: '#111',
-            cursor: '#111',
-        }
-    });
-    termLog.open(termLogContainer);
+const termLog = new Terminal({
+    disableStdin: true,
+    convertEol: true,
+    rightClickSelectsWord: false,
+    theme: {
+        background: '#111',
+        cursor: '#111',
+    }
+});
+termLog.open(termLogContainer);
 
-    const termFit = new FitAddon();
-    term.loadAddon(termFit);
+const termFit = new FitAddon();
+term.loadAddon(termFit);
+termFit.fit();
+
+const termLogFit = new FitAddon();
+termLog.loadAddon(termLogFit);
+termLogFit.fit();
+
+window.onresize = function () {
     termFit.fit();
-
-    const termLogFit = new FitAddon();
-    termLog.loadAddon(termLogFit);
     termLogFit.fit();
+};
 
-    window.onresize = function () {
-        termFit.fit();
-        termLogFit.fit();
-    };
+term.loadAddon(new WebLinksAddon());
 
-    term.loadAddon(new WebLinksAddon());
+termLog.write("Loading...\n");
 
+fire_script().then(Module => {
+    termLog.clear();
+    termLog.write("\x1b[J");  // clear screen from cursor down
     const url_args = new URLSearchParams(window.location.search);
     const debug = Boolean(parseInt(url_args.get('debug')));
     const prog = new Module.FireScript(debug);
