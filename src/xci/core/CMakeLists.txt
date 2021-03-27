@@ -56,6 +56,13 @@ else()
         )
 endif()
 
+# Choose Logger::default_handler implementation
+if (EMSCRIPTEN)
+    target_sources(xci-core PRIVATE log_emscripten.cpp)
+else()
+    target_sources(xci-core PRIVATE log_termctl.cpp)
+endif()
+
 target_link_libraries(xci-core
     PUBLIC
         fmt::fmt
