@@ -168,6 +168,7 @@ public:
     void visit(ast::Integer& v) override { m_const_value = make_unique<value::Int32>(v.value); }
     void visit(ast::Float& v) override { m_const_value = make_unique<value::Float32>(v.value); }
     void visit(ast::Char& v) override { m_const_value = make_unique<value::Char>(v.value); }
+    void visit(ast::Bytes& v) override { m_const_value = make_unique<value::Bytes>(v.value); }
     void visit(ast::String& v) override { m_const_value = make_unique<value::String>(v.value); }
 
     void visit(ast::Bracketed& v) override {
@@ -216,6 +217,7 @@ private:
             void visit(const value::Int64& v) override {}
             void visit(const value::Float32& v) override { collapsed = make_unique<ast::Float>(v.value()); }
             void visit(const value::Float64&) override {}
+            void visit(const value::Bytes& v) override { collapsed = make_unique<ast::Bytes>(v.value()); }
             void visit(const value::String& v) override { collapsed = make_unique<ast::String>(v.value()); }
             void visit(const value::List& v) override {}
             void visit(const value::Tuple& v) override {}

@@ -30,7 +30,11 @@ std::unique_ptr<Value> Value::create(const TypeInfo& type_info)
         case Type::Float32: return make_unique<value::Float32>();
         case Type::Float64: return make_unique<value::Float64>();
         case Type::String: return make_unique<value::String>();
-        case Type::List: return make_unique<value::List>(type_info.elem_type());
+        case Type::List:
+            if (type_info.elem_type() == TypeInfo{Type::Byte})
+                return make_unique<value::Bytes>();  // List subclass, with special output formatting
+            else
+                return make_unique<value::List>(type_info.elem_type());
         case Type::Tuple: return make_unique<value::Tuple>(type_info);
         case Type::Function: return make_unique<value::Closure>();
         case Type::Module: return make_unique<value::Module>();
@@ -76,6 +80,7 @@ std::ostream& operator<<(std::ostream& os, const Value& o)
         void visit(const value::Int64& v) override { os << v.value() << ":Int64"; }
         void visit(const value::Float32& v) override { os << v.value(); }
         void visit(const value::Float64& v) override { os << v.value() << ":Float64"; }
+        void visit(const value::Bytes& v) override { os << "b\"" << core::escape({(const char*)v.value().data(), v.value().size()}) << '"'; }
         void visit(const value::String& v) override { os << '"' << core::escape(v.value()) << '"'; }
         void visit(const value::List& v) override {
             os << "[";
@@ -209,6 +214,13 @@ std::unique_ptr<Value> List::get(size_t idx) const
     auto elem = Value::create(m_elem_type);
     elem->read(m_elements.data() + idx * m_elem_type.size());
     return elem;
+}
+
+
+Bytes::Bytes(std::span<const std::byte> v)
+        : List(TypeInfo{Type::Byte}, v.size(), HeapSlot{v.size()})
+{
+    std::memcpy(heapslot_ref().data(), v.data(), v.size());
 }
 
 

@@ -15,6 +15,7 @@
 #include <vector>
 #include <map>
 #include <string_view>
+#include <span>
 #include <cassert>
 #include <cstring>
 #include <cstdint>
@@ -39,6 +40,7 @@ class Int32;
 class Int64;
 class Float32;
 class Float64;
+class Bytes;
 class String;
 class List;
 class Tuple;
@@ -55,6 +57,7 @@ public:
     virtual void visit(const Int64&) = 0;
     virtual void visit(const Float32&) = 0;
     virtual void visit(const Float64&) = 0;
+    virtual void visit(const Bytes&) = 0;
     virtual void visit(const String&) = 0;
     virtual void visit(const List&) = 0;
     virtual void visit(const Tuple&) = 0;
@@ -362,6 +365,9 @@ public:
     size_t length() const { return m_length; }
     std::unique_ptr<Value> get(size_t idx) const;
 
+protected:
+    HeapSlot& heapslot_ref() { return m_elements; }
+
 private:
     TypeInfo m_elem_type;
     size_t m_length = 0;  // number of elements
@@ -369,7 +375,20 @@ private:
 };
 
 
-struct Int32List: public List {
+// [Bytes] has some special handling, e.g. it's dumped as b"abc", not [1,2,3]
+class Bytes: public List {
+public:
+    Bytes() : List(TypeInfo{Type::Byte}) {}
+    explicit Bytes(std::span<const std::byte> v);
+    explicit Bytes(size_t size, const HeapSlot& slot) : List(TypeInfo{Type::Byte}, size, slot) {}
+
+    void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
+
+    std::span<const std::byte> value() const { return {heapslot()->data(), length()}; }
+};
+
+
+class Int32List: public List {
 public:
     Int32List() : List(TypeInfo{Type::Int32}) {}
 };

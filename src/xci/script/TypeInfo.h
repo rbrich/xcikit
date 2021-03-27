@@ -58,6 +58,9 @@ public:
     explicit TypeInfo(Type type, TypeInfo elem_type)
         : m_type(type), m_subtypes({std::move(elem_type)}) {}
 
+    // shortcuts
+    static TypeInfo bytes() { return TypeInfo{Type::List, TypeInfo{Type::Byte}}; }
+
     size_t size() const;
     void foreach_heap_slot(std::function<void(size_t offset)> cb) const;
 

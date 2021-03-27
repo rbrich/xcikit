@@ -281,6 +281,13 @@ Char::Char(std::string_view sv)
 }
 
 
+Bytes::Bytes(std::string_view sv)
+{
+    value.resize(sv.size());
+    std::memcpy(value.data(), sv.data(), sv.size());
+}
+
+
 Operator::Operator(const std::string& s, bool prefix)
 {
     assert(!s.empty());

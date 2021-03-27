@@ -74,6 +74,7 @@ public:
     void visit(const Integer& v) override { m_os << v; }
     void visit(const Float& v) override { m_os << v; }
     void visit(const Char& v) override { m_os << v; }
+    void visit(const Bytes& v) override { m_os << v; }
     void visit(const String& v) override { m_os << v; }
     void visit(const Bracketed& v) override { m_os << v; }
     void visit(const Tuple& v) override { m_os << v; }
@@ -122,6 +123,16 @@ std::ostream& operator<<(std::ostream& os, const Char& v)
   } else {
     return os << '\'' << core::escape(core::to_utf8(v.value)) << '\'';
   }
+}
+
+std::ostream& operator<<(std::ostream& os, const Bytes& v)
+{
+    std::string_view value_sv{(const char*)v.value.data(), v.value.size()};
+    if (stream_options(os).enable_tree) {
+        return os << put_indent << "Bytes(Expression) " << '"' << core::escape(value_sv) << '"' << endl;
+    } else {
+        return os << "b\"" << core::escape(value_sv) << '"';
+    }
 }
 
 std::ostream& operator<<(std::ostream& os, const String& v)

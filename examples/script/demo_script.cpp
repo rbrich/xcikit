@@ -6,7 +6,7 @@
 
 #include <xci/script/Interpreter.h>
 #include <xci/script/NativeDelegate.h>
-#include <iostream>
+#include <fmt/core.h>
 #include <cassert>
 
 using namespace xci::script;
@@ -23,7 +23,7 @@ void hello_fun(Stack& stack, void*, void*)
     stack.push(value::Int32{42});
 
     // here comes our native code
-    std::cout << "Hello, " << arg.value() << "!\n";
+    fmt::print("Hello, {}!\n", arg.value());
 
     // some values live on heap - they need to be explicitly released
     // - normally, only the instances on the stack are counted

@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <vector>
 #include <string>
+#include <span>
 #include <memory>
 #include <utility>
 
@@ -36,6 +37,7 @@ struct Instance;
 struct Integer;
 struct Float;
 struct Char;
+struct Bytes;
 struct String;
 struct Bracketed;
 struct Tuple;
@@ -63,6 +65,7 @@ public:
     virtual void visit(const Integer&) = 0;
     virtual void visit(const Float&) = 0;
     virtual void visit(const Char&) = 0;
+    virtual void visit(const Bytes&) = 0;
     virtual void visit(const String&) = 0;
     virtual void visit(const Bracketed&) = 0;
     virtual void visit(const Tuple&) = 0;
@@ -90,6 +93,7 @@ public:
     virtual void visit(Integer&) = 0;
     virtual void visit(Float&) = 0;
     virtual void visit(Char&) = 0;
+    virtual void visit(Bytes&) = 0;
     virtual void visit(String&) = 0;
     virtual void visit(Bracketed&) = 0;
     virtual void visit(Tuple&) = 0;
@@ -113,6 +117,7 @@ public:
     void visit(Integer&) final {}
     void visit(Float&) final {}
     void visit(Char&) final {}
+    void visit(Bytes&) final {}
     void visit(String&) final {}
     void visit(Bracketed&) final {}
     void visit(Tuple&) final {}
@@ -277,6 +282,16 @@ struct Char: public Expression {
   std::unique_ptr<ast::Expression> make_copy() const override { return std::make_unique<Char>(*this); };
 
   char32_t value;
+};
+
+struct Bytes: public Expression {
+    explicit Bytes(std::span<const std::byte> s) : value(s.begin(), s.end()) {}
+    explicit Bytes(std::string_view sv);
+    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
+    void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Expression> make_copy() const override { return std::make_unique<Bytes>(*this); };
+
+    std::vector<std::byte> value;
 };
 
 struct String: public Expression {

@@ -87,9 +87,10 @@ struct Keyword: sor<KeywordFun, KeywordIf, KeywordThen, KeywordElse,
 struct Integer: seq< opt<one<'-','+'>>, plus<digit> > {};
 struct Float: seq< opt<one<'-','+'>>, plus<digit>, one<'.'>, star<digit> > {};
 struct Char: if_must< one<'\''>, StringCh, one<'\''> > {};
+struct Bytes: if_must< seq<one<'b'>, one<'"'>>, until<one<'"'>, StringCh > > {};
 struct String: if_must< one<'"'>, until<one<'"'>, StringCh > > {};
 struct RawString : raw_string< '$', '-', '$' > {};  // raw_string = $$ raw text! $$
-struct Literal: sor< Float, Integer, Char, String, RawString > {};
+struct Literal: sor< Float, Integer, Char, Bytes, String, RawString > {};
 
 // Expressions
 // * some rules are parametrized with S (space type), choose either SC or NSC (allow newline)
@@ -116,7 +117,7 @@ struct Block: if_must< one<'{'>, NSC, sor< one<'}'>, seq<SepList<Statement>, NSC
 struct Function: sor< Block, if_must< KeywordFun, NSC, FunctionDecl, NSC, Block> > {};
 struct BracketedExpr: if_must< one<'('>, NSC, Expression<NSC>, NSC, one<')'> > {};
 struct ExprPrefix: if_must< PrefixOperator, SC, ExprOperand, SC > {};
-struct Reference: seq< Identifier > {};
+struct Reference: seq<Identifier, not_at<one<'"'>>> {};
 struct List: if_must< one<'['>, NSC, opt<ExprInfix<NSC>, NSC>, one<']'> > {};
 struct ExprCallable: sor< BracketedExpr, Function, Reference> {};
 struct ExprArgSafe: sor< BracketedExpr, List, Function, Literal, Reference > {};  // expressions which can be used as args in Call
@@ -711,6 +712,21 @@ struct Action<Char> : change_states< std::string > {
   static void success(const Input &in, std::string& str, std::unique_ptr<ast::Expression>& expr) {
     expr = std::make_unique<ast::Char>(str);
   }
+};
+
+
+template<>
+struct Action<Bytes> : change_states< std::string > {
+    template<typename Input>
+    static void apply(const Input &in, std::unique_ptr<ast::Expression>& expr) {
+        expr->source_info.load(in.input(), in.position());
+    }
+
+    template<typename Input>
+    static void success(const Input &in, std::string& str, std::unique_ptr<ast::Expression>& expr) {
+        str.shrink_to_fit();
+        expr = std::make_unique<ast::Bytes>(str);
+    }
 };
 
 
