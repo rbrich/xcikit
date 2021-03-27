@@ -26,8 +26,7 @@ term.loadAddon(new WebLinksAddon());
 term.write("Loading...\n");
 
 fire_script().then(Module => {
-    term.clear();
-    term.write("\x1b[J");  // clear screen from cursor down
+    term.write("\r\x1b[A\x1b[2J");  // clear viewport
     const url_args = new URLSearchParams(window.location.search);
     const debug = Boolean(parseInt(url_args.get('debug')));
     const prog = new Module.FireScript(debug);
