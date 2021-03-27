@@ -5,10 +5,12 @@
 # SSH builder (for Clion "Remote Host" toolchain)
 # see https://blog.jetbrains.com/clion/2020/01/using-docker-with-clion/)
 #   docker build --target builder-ssh --build-arg rootpw=pass1 -t xcikit-debian-ssh docker/debian/
-#   docker run -p 127.0.0.1:222:22 --cap-add sys_ptrace --name xcikit-ssh xcikit-debian-ssh
-#   ssh root@localhost -p 222
+#   docker run -p 127.0.0.1:2222:22 --cap-add sys_ptrace --name xcikit-debian-ssh xcikit-debian-ssh
+#   ssh root@localhost -p 2222
 # Cleanup known hosts:
-#   ssh-keygen -f "$HOME/.ssh/known_hosts" -R "[localhost]:222"
+#   ssh-keygen -f "$HOME/.ssh/known_hosts" -R "[localhost]:2222"
+# Example cmake arguments:
+#   -DRUN_CONAN=1 -DFORCE_COLORS=1
 
 FROM debian:bullseye-slim AS builder
 
