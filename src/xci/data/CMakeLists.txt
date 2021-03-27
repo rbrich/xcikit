@@ -39,4 +39,6 @@ if (MSVC)
     target_compile_options(xci-data PUBLIC /Zc:preprocessor)
 endif()
 
-#install(TARGETS xci-data EXPORT xcikit DESTINATION lib)
+if (BUILD_SHARED_LIBS OR XCI_INSTALL_DEVEL)
+    #install(TARGETS xci-data EXPORT xcikit DESTINATION lib)
+endif()

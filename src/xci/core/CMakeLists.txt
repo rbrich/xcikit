@@ -4,7 +4,6 @@
 
 add_library(xci-core
     ArgParser.cpp
-    chrono.cpp
     file.cpp
     dispatch.cpp
     EditBuffer.cpp
@@ -17,6 +16,7 @@ add_library(xci-core
     TermCtl.cpp
     Vfs.cpp
     EditLine.cpp
+    $<TARGET_OBJECTS:third_party::widechar_width>
     )
 add_library(xcikit::xci-core ALIAS xci-core)
 
@@ -56,6 +56,13 @@ else()
         )
 endif()
 
+# Choose Logger::default_handler implementation
+if (EMSCRIPTEN)
+    target_sources(xci-core PRIVATE log_emscripten.cpp)
+else()
+    target_sources(xci-core PRIVATE log_termctl.cpp)
+endif()
+
 target_link_libraries(xci-core
     PUBLIC
         fmt::fmt
@@ -67,6 +74,7 @@ target_include_directories(xci-core
     PUBLIC
         ${XCI_INCLUDE_DIRS}
     PRIVATE
+        $<TARGET_PROPERTY:third_party::widechar_width,INTERFACE_INCLUDE_DIRECTORIES>
         $<TARGET_PROPERTY:taocpp::pegtl,INTERFACE_INCLUDE_DIRECTORIES>
     )
 
@@ -103,7 +111,9 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
         _CRT_SECURE_NO_WARNINGS)
 endif()
 
-install(TARGETS xci-core
-    EXPORT xcikit
-    DESTINATION lib
-    INCLUDES DESTINATION include)
+if (BUILD_SHARED_LIBS OR XCI_INSTALL_DEVEL)
+    install(TARGETS xci-core
+        EXPORT xcikit
+        DESTINATION lib
+        INCLUDES DESTINATION include)
+endif()

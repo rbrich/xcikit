@@ -16,9 +16,11 @@
 //   - termios(4)
 
 #include "TermCtl.h"
+#include "log.h"
 #include <xci/compat/unistd.h>
 #include <xci/compat/macros.h>
 #include <xci/core/string.h>
+#include <xci/core/file.h>
 #include <xci/config.h>
 
 #ifdef _WIN32
@@ -34,8 +36,9 @@
 #endif
 
 #include <fmt/format.h>
-#include <cassert>
+
 #include <array>
+#include <cassert>
 
 namespace xci::core {
 
@@ -608,12 +611,17 @@ void TermCtl::with_raw_mode(const std::function<void()>& cb, bool isig)
 std::string TermCtl::input()
 {
     char buf[100] {};
-    int res;
+    ssize_t res;
     do {
         res = ::read(m_fd, buf, sizeof buf);
     } while (res < 0 && (errno == EINTR || errno == EAGAIN));
-    if (res < 0)
-        return {};  // error
+    if (res < 0) {
+        log::error("read: {m}");
+        return {};
+    }
+    if (res == 0) {
+        return {};  // eof
+    }
     return {buf, size_t(res)};
 }
 
@@ -628,13 +636,16 @@ std::string TermCtl::raw_input(bool isig)
 }
 
 
-void TermCtl::_print(const std::string& buf)
+void TermCtl::write(std::string_view buf)
 {
-    ::write(m_fd, buf.data(), buf.size());
+    if (m_write_cb)
+        m_write_cb(buf);
+    else
+        core::write(m_fd, buf);
 }
 
 
-unsigned int TermCtl::stripped_length(std::string_view s)
+unsigned int TermCtl::stripped_width(std::string_view s)
 {
     enum State {
         Visible,
@@ -643,13 +654,14 @@ unsigned int TermCtl::stripped_length(std::string_view s)
         ConsumeOne,
     } state = Visible;
     unsigned int length = 0;
-    for (const auto c : s) {
+    for (auto it = s.cbegin(); it != s.cend(); it = utf8_next(it)) {
+        auto c = utf8_codepoint(&*it);
         switch (state) {
             case Visible:
                 if (c == '\033')
                     state = Esc;
                 else
-                    ++length;
+                    length += c32_width(c);
                 break;
 
             case Esc:

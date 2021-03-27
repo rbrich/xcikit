@@ -1,3 +1,7 @@
+if (EMSCRIPTEN)
+    add_link_options(-sEXIT_RUNTIME=1)
+endif()
+
 # ------------ #
 # Examples     #
 # ------------ #

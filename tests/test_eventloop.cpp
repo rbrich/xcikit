@@ -9,17 +9,17 @@
 #include <xci/core/event.h>
 #include <xci/core/dispatch.h>
 #include <xci/core/log.h>
-#include <xci/core/chrono.h>
-#include <xci/core/sys.h>
 #include <xci/compat/unistd.h>
 
 #include <thread>
 #include <fstream>
 #include <string>
 #include <filesystem>
+#include <chrono>
 
 using namespace xci::core;
 using std::this_thread::sleep_for;
+using namespace std::chrono_literals;
 namespace fs = std::filesystem;
 
 

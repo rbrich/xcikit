@@ -40,6 +40,7 @@ endmacro()
 add_catch_test(test_core test_core.cpp xci-core)
 if (EMSCRIPTEN)
     target_link_options(test_core PRIVATE --embed-file=${CMAKE_BINARY_DIR}/include/xci/config.h@test_file)
+    add_link_options(-sEXIT_RUNTIME=1)
 endif()
 
 add_catch_test(test_geometry test_geometry.cpp xci-core)

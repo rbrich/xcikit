@@ -43,4 +43,6 @@ target_include_directories(xci-script
 
 add_dependencies(xci-script share)
 
-install(TARGETS xci-script EXPORT xcikit DESTINATION lib)
+if (BUILD_SHARED_LIBS OR XCI_INSTALL_DEVEL)
+    install(TARGETS xci-script EXPORT xcikit DESTINATION lib)
+endif()

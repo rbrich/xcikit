@@ -5,6 +5,7 @@ cd "$(dirname "$0")"
 
 ROOT_DIR="$PWD"
 BUILD_TYPE="Release"
+INSTALL_DEVEL=0
 GENERATOR=
 EMSCRIPTEN=0
 JOBS_ARGS=()
@@ -23,10 +24,13 @@ print_usage()
     echo "      -j JOBS                 Parallel jobs for build and test phases"
     echo "      -D CMAKE_DEF            Passed to cmake"
     echo "      --debug, --minsize      Sets CMAKE_BUILD_TYPE"
+    echo "      --devel                 Install/package headers, CMake config, static libs."
     echo "      --emscripten            Target Emscripten (i.e. wrap with 'emcmake')"
     echo "      --unity                 CMAKE_UNITY_BUILD - batch all source files in each target together"
     echo "      --tidy                  Run clang-tidy on each compiled file"
     echo "      --update                Passed to conan - update dependencies"
+    echo "      --build-dir             Build directory (default: ./build/<build-config>)"
+    echo "      --install-dir           Installation directory (default: ./artifacts/<build-config>)"
 }
 
 phase()
@@ -90,6 +94,9 @@ while [[ $# -gt 0 ]] ; do
         --minsize )
             BUILD_TYPE="MinSizeRel"
             shift 1 ;;
+        --devel )
+            INSTALL_DEVEL=1
+            shift 1 ;;
         --emscripten )
             EMSCRIPTEN=1
             shift 1 ;;
@@ -105,6 +112,12 @@ while [[ $# -gt 0 ]] ; do
         --update )
             CONAN_ARGS+=('--update')
             shift 1 ;;
+        --build-dir )
+            BUILD_DIR="$2"
+            shift 2 ;;
+        --install-dir )
+            INSTALL_DIR="$2"
+            shift 2 ;;
         -pr | --profile )
             CONAN_ARGS+=('--profile' "$2")
             shift 2 ;;
@@ -134,10 +147,11 @@ BUILD_CONFIG="${PLATFORM}-${ARCH}-${BUILD_TYPE}"
 [[ -z "${GENERATOR}" ]] && setup_ninja && GENERATOR="Ninja"
 [[ -n "${GENERATOR}" ]] && BUILD_CONFIG="${BUILD_CONFIG}-${GENERATOR// }"
 [[ -n "${GENERATOR}" ]] && CMAKE_ARGS+=(-G "${GENERATOR}")
-BUILD_DIR="${ROOT_DIR}/build/${BUILD_CONFIG}"
-INSTALL_DIR="${ROOT_DIR}/artifacts/${BUILD_CONFIG}"
-PACKAGE_DIR="xcikit-${VERSION}"
-PACKAGE_NAME="${PACKAGE_DIR}-${PLATFORM}-${ARCH}.zip"
+BUILD_DIR=${BUILD_DIR:-"${ROOT_DIR}/build/${BUILD_CONFIG}"}
+INSTALL_DIR=${INSTALL_DIR:-"${ROOT_DIR}/artifacts/${BUILD_CONFIG}"}
+PACKAGE_OUTPUT_DIR="${ROOT_DIR}/artifacts"
+PACKAGE_FILENAME="xcikit-${VERSION}-${PLATFORM}-${ARCH}"
+[[ ${BUILD_TYPE} != "Release" ]] && PACKAGE_FILENAME="${PACKAGE_FILENAME}-${BUILD_TYPE}"
 
 if [[ -z "$component_default" && -z "$component_all" ]]; then
     # Disable components that were not selected
@@ -151,6 +165,13 @@ if [[ -z "$component_default" && -z "$component_all" ]]; then
             CONAN_ARGS+=(-o "xcikit:${name}=True")
         fi
     done
+fi
+
+CMAKE_ARGS+=(-D"XCI_INSTALL_DEVEL=${INSTALL_DEVEL}")
+
+# Ninja: force compiler colors, if the output goes to terminal
+if [[ -t 1 && "${GENERATOR}" = "Ninja" ]]; then
+    CMAKE_ARGS+=(-D'FORCE_COLORS=1')
 fi
 
 echo "CMAKE_ARGS:   ${CMAKE_ARGS[*]}"
@@ -198,10 +219,9 @@ if phase config; then
     echo
 fi
 
-# Ninja: enable colors, if the output goes to terminal (only for build step)
+# Enable colored Ninja status, if the output goes to terminal (only for build step)
 if [[ -t 1 && "${GENERATOR}" = "Ninja" ]]; then
     export NINJA_STATUS="${CSI}1m[${CSI}32m%p ${CSI}0;32m%f${CSI}0m/${CSI}32m%t ${CSI}36m%es${CSI}0m ${CSI}1m]${CSI}0m "
-    CMAKE_ARGS+=(-D'FORCE_COLORS=1')
 fi
 
 if phase build; then
@@ -230,12 +250,9 @@ fi
 if phase package; then
     header "Package"
     (
-        cd "${INSTALL_DIR}/.."
-        mv "${INSTALL_DIR}" "${PACKAGE_DIR}"
-        rm -f "${PACKAGE_NAME}"
-        echo "${PACKAGE_NAME}"
-        cmake -E tar cf "${PACKAGE_NAME}" --format=zip "${PACKAGE_DIR}"
-        mv "${PACKAGE_DIR}" "${INSTALL_DIR}"
+        cd "${BUILD_DIR}" && \
+        cpack -G "TGZ;ZIP" -D "CPACK_PACKAGE_FILE_NAME=${PACKAGE_FILENAME}" -C "${BUILD_TYPE}" && \
+        mv -v "${BUILD_DIR}/${PACKAGE_FILENAME}"* "${PACKAGE_OUTPUT_DIR}"
     )
     echo
 fi

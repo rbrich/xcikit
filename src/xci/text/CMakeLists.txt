@@ -20,7 +20,7 @@ add_library(xci-text
     layout/Page.cpp
     freetype/FtFontLibrary.cpp
     freetype/FtFontFace.cpp
-    $<TARGET_OBJECTS:rbp>
+    $<TARGET_OBJECTS:third_party::rbp>
     )
 add_library(xcikit::xci-text ALIAS xci-text)
 
@@ -28,7 +28,7 @@ target_include_directories(xci-text
     PUBLIC
         ${XCI_INCLUDE_DIRS}
     PRIVATE
-        $<TARGET_PROPERTY:rbp,INTERFACE_INCLUDE_DIRECTORIES>
+        $<TARGET_PROPERTY:third_party::rbp,INTERFACE_INCLUDE_DIRECTORIES>
         # NOTE: We cannot link `taocpp::pegtl` directly, because it would become
         #       dependency in exported target and the whole xcikit would have to
         #       externally depend on PEGTL while it is used only in implementation.
@@ -62,4 +62,6 @@ if (BUILD_FRAMEWORKS)
         )
 endif()
 
-install(TARGETS xci-text EXPORT xcikit DESTINATION lib)
+if (BUILD_SHARED_LIBS OR XCI_INSTALL_DEVEL)
+    install(TARGETS xci-text EXPORT xcikit DESTINATION lib)
+endif()

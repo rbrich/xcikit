@@ -8,6 +8,7 @@
 #define XCI_CORE_EDITLINE_H
 
 #include <xci/core/EditBuffer.h>
+#include <xci/core/TermCtl.h>
 
 #include <filesystem>
 #include <iostream>
@@ -15,8 +16,6 @@
 #include <string>
 #include <string_view>
 #include <functional>
-#include <mutex>
-#include <condition_variable>
 #include <ctime>
 #include <deque>
 
@@ -28,7 +27,7 @@ namespace fs = std::filesystem;
 ///
 /// Features:
 /// * highlighting and completion hints: a user callback can add arbitrary escape sequences
-///   or append arbitrary text after end of a line (the original text layout must stay unchanged)
+///   or append arbitrary text at the end (the original text layout must stay unchanged)
 /// * multi-line editing: can be triggered by unclosed brackets or by Alt-Enter
 /// * history: managed in memory, new items appended to a file and loaded next time
 /// * feed input and receive output programmatically
@@ -59,20 +58,30 @@ public:
     /// write it also to the file.
     void add_history(std::string_view input);
 
+    // -------------------------------------------------------------------------
+    // Blocking input
+
     /// Show prompt, start line editor and return the input when done
     /// \param prompt   Prompt text, will be shown on the line with editor.
     ///                 May contain escape sequences (esp. color).
-    const char* input(std::string_view prompt);
+    /// \returns (ok, content)   !ok when cancelled (Ctrl-C)
+    std::pair<bool, std::string_view> input(std::string_view prompt);
 
-    // These functions allow to redirect input/output to something else
-    // than the default stdin/stdout
+    // -------------------------------------------------------------------------
+    // Non-blocking (incremental) input
 
-    void set_input_fd(int fd) { m_input_fd = fd; }
-    void set_feed_only() { m_input_fd = -1; }
-    void feed_input(std::string_view data);
+    /// Show prompt and start incremental input
+    void start_input(std::string_view prompt);
 
-    using OutputCallback = std::function<void(std::string_view data, bool flush)>;
-    void set_output_callback(OutputCallback cb) { m_output_cb = std::move(cb); }
+    /// Feed input data, process them and advance input state
+    /// \returns true = continue feeding, false = done, call finish_input
+    bool feed_input(std::string_view data);
+
+    /// Finish editing and return result
+    /// \returns (ok, content)   !ok when cancelled (Ctrl-C)
+    std::pair<bool, std::string_view> finish_input();
+
+    // -------------------------------------------------------------------------
 
     /// \return true if ENTER should continue to a new line (unclosed bracket etc.)
     struct HighlightResult { std::string hl_data; bool is_open; };
@@ -80,36 +89,45 @@ public:
     void set_highlight_callback(HighlightCallback cb) { m_highlight_cb = std::move(cb); }
 
 private:
-    void write(std::string_view data, bool flush = false) { m_output_cb(data, flush); }
+    void write(std::string_view data);
+    void flush();
     HighlightResult highlight(std::string_view data, unsigned cursor) { return m_highlight_cb(data, cursor); }
 
     /// Obtain more input data from terminal
     /// \returns    false on EOF or error
     bool read_input();
 
+    void process_input();
+
+    /// \returns    true if consumed and buffer state has changed
+    bool process_key(TermCtl::Key key);
+    bool process_alt_key(TermCtl::Key key);
+    bool process_alt_char(char32_t unicode);
+    bool process_ctrl_char(char32_t unicode);
+
     bool history_previous();
     bool history_next();
 
     // editing
     EditBuffer m_edit_buffer;
-    int m_cursor_up = 0;  // multi-line: how many lines below the prompt is the cursor
+    unsigned m_prompt_len = 0;
+    unsigned m_cursor_line = 0;  // multi-line: how many lines below the prompt is the cursor
     bool m_edit_continue_nl = false;
+
+    enum class State: uint8_t {
+        NeedMoreInputData,  // read more input into buffer and call again
+        Continue,       // call again, buffer not yet empty
+        ControlBreak,   // cancelled editing (Ctrl-C)
+        Finished,       // finished editing (Enter)
+    };
+    State m_state = State::NeedMoreInputData;
 
     // settings
     const uint8_t m_flags = 0;
 
-    // feed input
-    int m_input_fd = 0;
+    // input/output
     std::string m_input_buffer;
-    std::mutex m_input_mutex;
-    std::condition_variable m_input_cv;
-
-    // output
-    OutputCallback m_output_cb = [](std::string_view data, bool flush) {
-        std::cout << data;
-        if (flush)
-            std::cout.flush();
-    };
+    std::string m_output_buffer;
     HighlightCallback m_highlight_cb;
 
     // history

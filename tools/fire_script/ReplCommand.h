@@ -7,6 +7,7 @@
 #ifndef XCI_SCRIPT_TOOL_REPL_COMMAND_H
 #define XCI_SCRIPT_TOOL_REPL_COMMAND_H
 
+#include "Context.h"
 #include <xci/script/Interpreter.h>
 
 namespace xci::script::tool {
@@ -15,9 +16,12 @@ namespace xci::script::tool {
 // Interpret REPL commands, e.q. ".quit"
 class ReplCommand {
 public:
-    ReplCommand();
+    ReplCommand(Context& ctx);
 
     Interpreter& interpreter() { return m_interpreter; }
+
+    using Callback = std::function<void()>;
+    void set_quit_cb(Callback cb) { m_quit_cb = std::move(cb); }
 
 private:
     template<class F>
@@ -30,6 +34,8 @@ private:
         auto index = m_module.add_native_function(move(name), std::forward<F>(fun), arg);
         m_module.symtab().add({move(alias), Symbol::Function, index});
     }
+
+    void cmd_quit();
 
     const Module* module_by_idx(size_t mod_idx);
     const Module* module_by_name(const std::string& mod_name);
@@ -46,9 +52,10 @@ private:
     void cmd_dump_function(size_t fun_idx);
     void cmd_dump_function(size_t fun_idx, size_t mod_idx);
 
-private:
-    Interpreter m_interpreter;
+    Context& m_ctx;
+    Interpreter m_interpreter;  // second interpreter, just for the commands
     Module m_module {"cmd"};
+    Callback m_quit_cb;
 };
 
 

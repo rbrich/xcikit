@@ -4,9 +4,9 @@ ifdef::env-github[]
 :!toc-title:
 endif::[]
 
-= Fire Script v0.4
+= Fire Script
 
-*_Syntax reference_*
+*_Language specification, v0.4_*
 
 toc::[]
 
@@ -20,13 +20,14 @@ This document presents the syntax and semantics by example.
 
 An interpreter is being developed in {cpp} together with this description.
 The interpreter consists of a {cpp} static library (`libxci-script`)
-and a REPL interpreter (`demo_script`). The implementation is a little behind
+and a REPL interpreter (`fire`). The implementation is a little behind
 this document, and it's also possible that not everything described here will actually
 be implemented. This is a design document, containing miscellaneous ideas.
 The language may change during implementation.
 
 The plan is that the implementation will completely match the specification
-when it reaches version 1.0.
+when its version reaches 1.0.
+(Note that the implementation is versioned independently from this document.)
 
 See `xci::script` in https://github.com/rbrich/xcikit[xcikit] codebase.
 

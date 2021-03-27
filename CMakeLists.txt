@@ -1,8 +1,9 @@
 # 3.16 introduced CMAKE_MESSAGE_INDENT
 # 3.13 is current version in Emscripten Docker image
 cmake_minimum_required(VERSION 3.13)
+file(STRINGS "VERSION" XCI_VERSION)
 project(xcikit
-    VERSION 0.2.0
+    VERSION "${XCI_VERSION}"
     LANGUAGES CXX)
 
 # Optional libraries (only xci-core is required)
@@ -21,19 +22,25 @@ option(XCI_BUILD_EXAMPLES "Disable to skip building examples." ON)
 option(XCI_BUILD_TESTS "Disable to skip building tests." ON)
 option(XCI_BUILD_BENCHMARKS "Disable to skip building benchmarks." ON)
 
+# Optional installation artifacts:
+option(XCI_INSTALL_DEVEL "Install headers, CMake config, static libs." ON)
+
 # Dependencies
 option(XCI_WITH_TERMINFO "Link with TermInfo and use it for TTY control sequences." OFF)
 option(XCI_WITH_ZIP "Link xci-core with libzip and use it for ZIP format in VFS." OFF)
 
+# negate it for use as option() initial value
+if (EMSCRIPTEN)
+    set(NOT_EMSCRIPTEN OFF)
+else()
+    set(NOT_EMSCRIPTEN ON)
+endif()
+
 option(XCI_INSTALL_SHARE_DIR "Install runtime data as a directory (share/xcikit)" OFF)
-option(XCI_INSTALL_SHARE_DAR "Install runtime data as DAR archive (share.dar)" ON)
+option(XCI_INSTALL_SHARE_DAR "Install runtime data as DAR archive (share.dar)" ${NOT_EMSCRIPTEN})
 option(XCI_INSTALL_SHARE_ZIP "Install runtime data as ZIP archive (share.zip)" OFF)
 
-if (NOT EMSCRIPTEN)
-    option(XCI_LISTDIR_GETDENTS "Use getdents syscall instead of readdir for tools/find_file." ON)
-else()
-    set(XCI_LISTDIR_GETDENTS OFF)
-endif()
+option(XCI_LISTDIR_GETDENTS "Use getdents syscall instead of readdir for tools/find_file." ${NOT_EMSCRIPTEN})
 
 option(XCI_DEBUG_VULKAN "Log info about Vulkan calls and errors." OFF)
 option(XCI_DEBUG_TRACE "Enable trace log messages." OFF)
@@ -58,6 +65,8 @@ include(XciBuildOptions)
 # ------------ #
 
 include(ConanInit)
+
+add_subdirectory(third_party/widechar_width)
 
 if (XCI_TEXT)
     # RectangleBinPack (xci-text)
@@ -332,34 +341,36 @@ pop_indent()
 # Installation  #
 # ------------- #
 
-# Headers
-install(DIRECTORY src/xci DESTINATION include
-    FILES_MATCHING
-    REGEX "xci/(graphics)/[a-z]+$" EXCLUDE  # internal headers
-    PATTERN "*.h")
+if (XCI_INSTALL_DEVEL)
+    # Headers
+    install(DIRECTORY src/xci DESTINATION include
+        FILES_MATCHING
+        REGEX "xci/(graphics)/[a-z]+$" EXCLUDE  # internal headers
+        PATTERN "*.h")
 
-# config.h
-install(DIRECTORY ${CMAKE_BINARY_DIR}/include/xci DESTINATION include)
+    # config.h
+    install(DIRECTORY ${CMAKE_BINARY_DIR}/include/xci DESTINATION include)
 
-install(EXPORT xcikit
-    NAMESPACE xcikit::
-    DESTINATION lib/cmake/xcikit
-    FILE "xcikitTargets.cmake")
+    install(EXPORT xcikit
+        NAMESPACE xcikit::
+        DESTINATION lib/cmake/xcikit
+        FILE "xcikitTargets.cmake")
 
-set(XCI_INCLUDE_DIRS include)
-include(CMakePackageConfigHelpers)
-configure_package_config_file(xcikitConfig.cmake.in xcikitConfig.cmake
-    INSTALL_DESTINATION lib/cmake/xcikit
-    PATH_VARS XCI_INCLUDE_DIRS)
-write_basic_package_version_file(xcikitConfigVersion.cmake
-    COMPATIBILITY SameMajorVersion)
-install(FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/xcikitConfig.cmake
-    ${CMAKE_CURRENT_BINARY_DIR}/xcikitConfigVersion.cmake
-    DESTINATION lib/cmake/xcikit)
+    set(XCI_INCLUDE_DIRS include)
+    include(CMakePackageConfigHelpers)
+    configure_package_config_file(xcikitConfig.cmake.in xcikitConfig.cmake
+        INSTALL_DESTINATION lib/cmake/xcikit
+        PATH_VARS XCI_INCLUDE_DIRS)
+    write_basic_package_version_file(xcikitConfigVersion.cmake
+        COMPATIBILITY SameMajorVersion)
+    install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/xcikitConfig.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/xcikitConfigVersion.cmake
+        DESTINATION lib/cmake/xcikit)
 
-# Make our CMake modules available to clients
-install(FILES cmake/XciBuildOptions.cmake DESTINATION lib/cmake/xcikit)
+    # Make our CMake modules available to clients
+    install(FILES cmake/XciBuildOptions.cmake DESTINATION lib/cmake/xcikit)
+endif()
 
 
 # ------------- #

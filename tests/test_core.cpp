@@ -5,7 +5,6 @@
 #include <xci/core/log.h>
 #include <xci/core/file.h>
 #include <xci/core/string.h>
-#include <xci/core/chrono.h>
 #include <xci/core/memory.h>
 #include <xci/core/sys.h>
 #include <xci/core/TermCtl.h>
@@ -16,7 +15,6 @@
 
 #include <string>
 #include <cstdio>
-#include <sys/stat.h>
 
 using namespace xci::core;
 using namespace std::string_literals;
@@ -281,10 +279,11 @@ TEST_CASE( "PathNode", "[FileTree]" )
 #endif // _WIN32
 
 
-TEST_CASE( "stripped_length", "[TermCtl]" )
+TEST_CASE( "stripped_width", "[TermCtl]" )
 {
-    CHECK(TermCtl::stripped_length("test") == 4);
+    CHECK(TermCtl::stripped_width("test") == 4);
+    CHECK(TermCtl::stripped_width(UTF8("❓")) == 2);
     TermCtl t(1, TermCtl::IsTty::Always);
-    CHECK(TermCtl::stripped_length(t.format("{fg:green}test{t:normal}")) == 4);
-    CHECK(TermCtl::stripped_length("\x1b[32mtest\x1b(B\x1b[m") == 4);
+    CHECK(TermCtl::stripped_width(t.format("{fg:green}test{t:normal}")) == 4);
+    CHECK(TermCtl::stripped_width("\x1b[32mtest\x1b(B\x1b[m") == 4);
 }

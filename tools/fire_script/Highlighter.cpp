@@ -70,7 +70,7 @@ struct SquareBracketClose: one<']'> {};
 struct BraceOpen: one<'{'> {};
 struct BraceClose: one<'}'> {};
 
-struct SpecialVariable: seq< one<'_'>, plus<digit> > {};
+struct SpecialVariable: seq< one<'_'>, star<digit>, not_at<identifier_other> > {};
 
 // Keywords
 struct KeywordFun: TAO_PEGTL_KEYWORD("fun") {};
@@ -138,7 +138,7 @@ struct InvalidCloseBrace: one< '}' > {};
 
 // Statements
 struct PartialExpr: sor< FullyBracketed, OpenBracket, OpenBrace, PrimaryExpr > {};
-struct Expression: plus< PartialExpr, SC > {};
+struct Expression: plus< PartialExpr, NSC > {};
 struct InvalidExpr: plus< sor< InvalidCloseBracket, InvalidCloseBrace, PartialExpr > > {};
 struct Statement: sor< seq<Expression, star<SC, InvalidExpr>>, InvalidExpr > {};
 
@@ -343,4 +343,4 @@ auto Highlighter::highlight(std::string_view input, unsigned cursor) -> HlResult
 }
 
 
-} // namespace xci::script::repl
+} // namespace xci::script::tool

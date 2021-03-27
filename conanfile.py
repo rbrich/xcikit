@@ -7,7 +7,7 @@ import os
 
 class XcikitConan(ConanFile):
     name = "xcikit"
-    version = "0.1"
+    version = tools.load("VERSION").strip()
     license = "Apache-2.0"
     author = "Radek Brich"
     url = "https://github.com/rbrich/xcikit"
@@ -53,6 +53,7 @@ class XcikitConan(ConanFile):
         ('glfw3',       '3.2.1',    'glfw/3.3.2',           'graphics'),
     )
     generators = ("cmake_paths", "cmake_find_package")
+    exports = "VERSION"
     scm = {
         "type": "git",
         "url": "auto",

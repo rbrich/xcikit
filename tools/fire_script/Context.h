@@ -4,8 +4,8 @@
 // Copyright 2019, 2020 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#ifndef XCI_SCRIPT_REPL_CONTEXT_H
-#define XCI_SCRIPT_REPL_CONTEXT_H
+#ifndef XCI_SCRIPT_TOOL_CONTEXT_H
+#define XCI_SCRIPT_TOOL_CONTEXT_H
 
 #include <xci/script/Interpreter.h>
 #include <xci/script/Module.h>
@@ -19,17 +19,14 @@ namespace xci::script::tool {
 
 // globals, basically
 struct Context {
-    bool done {false};
+    int input_number = -1;  // -1 = batch mode, 0..N = REPL mode
     Interpreter interpreter;
     std::unique_ptr<xci::script::Module> std_module;
     std::vector<std::unique_ptr<xci::script::Module>> input_modules;
-    xci::core::TermCtl term_out = xci::core::TermCtl::stdout_instance();
+    xci::core::TermCtl& term_out = xci::core::TermCtl::stdout_instance();
 };
 
 
-Context& context();
-
-
-} // namespace xci::script::repl
+} // namespace xci::script::tool
 
 #endif // include guard

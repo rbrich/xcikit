@@ -174,8 +174,8 @@ bool EditBuffer::skip_word_left()
     if (m_cursor == 0)
         return false;
     // first skip non-word chars, then word chars
-    while (!is_word_char_left_of_cursor() && move_left()) {}
-    while (is_word_char_left_of_cursor() && move_left()) {}
+    while (m_cursor != 0 && !is_word_char_left_of_cursor() && move_left()) {}
+    while (m_cursor != 0 && is_word_char_left_of_cursor() && move_left()) {}
     return true;
 }
 

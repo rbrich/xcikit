@@ -42,9 +42,8 @@ public:
     void set_level(Level level) { m_level = level; }
 
     // Customizable log handler
-    // A function with same signature as `default_handler` can be used
-    // instead of default handler. The function parameters are preformatted
-    // messages and log level. The handler has to add timestamp by itself.
+    // The function parameters are preformatted messages and log level.
+    // The handler has to add a timestamp by itself.
     static void default_handler(Level lvl, std::string_view msg);
     using Handler = decltype(&default_handler);
     void set_handler(Handler handler) { m_handler = handler; }

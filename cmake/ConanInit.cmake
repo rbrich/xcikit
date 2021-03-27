@@ -1,6 +1,7 @@
 option(RUN_CONAN "Run 'conan install' from CMake (this may be more convenient than separate command)" OFF)
 
 # Run conan install directly
+# See https://github.com/conan-io/cmake-conan
 if (RUN_CONAN)
     if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
         message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
@@ -18,16 +19,30 @@ if (RUN_CONAN)
 
     include(${CMAKE_BINARY_DIR}/conan.cmake)
 
-    if (APPLE)
-        conan_cmake_run(
-            CONANFILE conanfile.py
-            SETTINGS os.version=${CMAKE_OSX_DEPLOYMENT_TARGET}
-            BUILD missing)
-    else()
-        conan_cmake_run(
-            CONANFILE conanfile.py
-            BUILD missing)
-    endif()
+    macro(opt_to_conan OPT CONAN_VAL)
+        if (OPT)
+            set(${CONAN_VAL} True)
+        else()
+            set(${CONAN_VAL} False)
+        endif()
+    endmacro()
+    opt_to_conan(XCI_DATA OPT_DATA)
+    opt_to_conan(XCI_SCRIPT OPT_SCRIPT)
+    opt_to_conan(XCI_GRAPHICS OPT_GRAPHICS)
+    opt_to_conan(XCI_TEXT OPT_TEXT)
+    opt_to_conan(XCI_WIDGETS OPT_WIDGETS)
+
+    conan_cmake_install(
+        CONANFILE conanfile.py
+        PROFILE default
+        PROFILE_AUTO build_type
+        OPTIONS
+            xcikit:data=${OPT_DATA}
+            xcikit:script=${OPT_SCRIPT}
+            xcikit:graphics=${OPT_GRAPHICS}
+            xcikit:text=${OPT_TEXT}
+            xcikit:widgets=${OPT_WIDGETS}
+        BUILD missing)
 endif()
 
 # Enable lookup for Conan dependencies

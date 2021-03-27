@@ -10,6 +10,7 @@
 #include <fmt/format.h>
 #include <string>
 #include <ostream>
+#include <array>
 
 namespace xci::core {
 
@@ -153,12 +154,62 @@ public:
     /// Print string with special color/mode placeholders, see `format` above.
     template<typename ...Args>
     void print(const char *fmt, Args&&... args) {
-        auto buf = format(fmt, std::forward<Args>(args)...);
-        _print(buf);
+        write(format(fmt, std::forward<Args>(args)...));
     }
 
-    /// Compute length of `s` when stripped of terminal control sequences and invisible characters
-    static unsigned int stripped_length(std::string_view s);
+    void write(std::string_view buf);
+
+    class StreamBuf : public std::streambuf {
+    public:
+        explicit StreamBuf(TermCtl& t) : m_tout(t) {}
+
+    protected:
+        std::streamsize xsputn(const char_type* s, std::streamsize n) override {
+            sync();
+            m_tout.write(std::string_view{s, (size_t)n});
+            return n;
+        };
+
+        int_type overflow(int_type ch) override {
+            if (traits_type::eq_int_type(ch, traits_type::eof()))
+                return 0;
+            if (m_buf_pos == m_buf.size())
+                sync();
+            m_buf[m_buf_pos] = traits_type::to_char_type(ch);
+            ++m_buf_pos;
+            return 1;
+        }
+
+        int sync() override {
+            if (m_buf_pos != 0) {
+                m_tout.write(std::string_view{m_buf.data(), m_buf_pos});
+                m_buf_pos = 0;
+            }
+            return 0;
+        }
+
+    private:
+        TermCtl& m_tout;
+        std::array<char, 500> m_buf;
+        unsigned m_buf_pos = 0;
+    };
+
+    class Stream : public std::ostream {
+    public:
+        Stream(TermCtl& t) : std::ostream(&m_sbuf), m_sbuf(t) {}
+    private:
+        StreamBuf m_sbuf;
+    };
+
+    Stream stream() { return Stream{*this}; }
+
+    using WriteCallback = std::function<void(std::string_view data)>;
+    void set_write_callback(WriteCallback cb) { m_write_cb = std::move(cb); }
+
+    /// Compute number of columns required to print the string `s`.
+    /// Control sequences and invisible characters are stripped,
+    /// double-width UTF-8 characters are counted as two columns.
+    static unsigned int stripped_width(std::string_view s);
 
     /// Temporarily switch the terminal to raw mode
     /// (no echo, no buffering, no special processing, no signal processing)
@@ -237,23 +288,23 @@ public:
 private:
     // Copy TermCtl and append seq to new instance
     TermCtl(const TermCtl& term, const std::string& seq)
-        : m_state(term.m_state == State::NoTTY ? State::NoTTY : State::CopyOk)
-        , m_seq(term.m_seq + seq) {}
-
-    void _print(const std::string& buf);
+        : m_seq(term.m_seq + seq)
+        , m_state(term.m_state == State::NoTTY ? State::NoTTY : State::CopyOk) {}
 
     // Aliases needed to avoid macro collision
     TermCtl _save_cursor() const;
     TermCtl _restore_cursor() const;
 
+    WriteCallback m_write_cb;
+
+    std::string m_seq;  // cached capability sequences
+    int m_fd;   // FD (on Windows mapped to handle)
     enum class State {
         NoTTY,      // initialization failed
         InitOk,     // main instance (it will reset the term when destroyed)
         CopyOk,     // a copy created by chained method
     };
     State m_state = State::NoTTY;
-    std::string m_seq;  // cached capability sequences
-    int m_fd;   // FD (on Windows mapped to handle)
 
 #ifdef _WIN32
     unsigned long m_orig_mode = 0;  // original console mode of the handle
