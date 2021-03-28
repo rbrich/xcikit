@@ -7,6 +7,7 @@
 #include "Builtin.h"
 #include "Function.h"
 #include "Error.h"
+#include <xci/core/file.h>
 #include <xci/compat/macros.h>
 #include <functional>
 #include <cmath>
@@ -259,6 +260,7 @@ BuiltinModule::BuiltinModule() : Module("builtin")
     add_subscript_function();
     add_intrinsics();
     add_types();
+    add_io_functions();
 }
 
 BuiltinModule& BuiltinModule::static_instance()
@@ -546,6 +548,37 @@ void BuiltinModule::add_types()
     symtab().add({"Float32", Symbol::TypeName, add_type(Type::Float32)});
     symtab().add({"Float64", Symbol::TypeName, add_type(Type::Float64)});
     symtab().add({"String", Symbol::TypeName, add_type(Type::String)});
+}
+
+
+static void write_bytes(Stack& stack, void*, void*)
+{
+    auto arg = stack.pull<value::Bytes>();
+    stack.streams().out << std::string_view{(const char*) arg.value().data(), arg.value().size()};
+    arg.decref();
+}
+
+
+static void write_string(Stack& stack, void*, void*)
+{
+    auto arg = stack.pull<value::String>();
+    stack.streams().out << arg.value();
+    arg.decref();
+}
+
+
+static void flush_out(Stack& stack, void*, void*)
+{
+    stack.streams().out.flush();
+}
+
+
+void BuiltinModule::add_io_functions()
+{
+    auto ps = add_native_function("write", {TypeInfo{Type::String}}, TypeInfo{Type::Void}, write_string);
+    auto pb = add_native_function("write", {TypeInfo::bytes()}, TypeInfo{Type::Void}, write_bytes);
+    ps->set_next(pb);
+    add_native_function("flush", {}, TypeInfo{Type::Void}, flush_out);
 }
 
 

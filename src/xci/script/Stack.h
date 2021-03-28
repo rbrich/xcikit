@@ -12,6 +12,7 @@
 #include <xci/compat/bit.h>
 #include <cstddef>  // byte
 #include <vector>
+#include <iostream>
 
 namespace xci::script {
 
@@ -23,10 +24,11 @@ class Function;
 /// The main stack is down-growing, with small initial size,
 /// but resized when full (up to maximum allowed size).
 ///
-/// Includes two auxiliary stacks:
+/// Includes three auxiliary stacks:
 /// - TypeInfo stack for keeping record of types of data on main stack
 ///   (this is optional, might be disabled for non-debug programs)
 /// - Frame stack for keeping record of called functions and return addresses
+/// - Stream stack for keeping record of current set of I/O streams
 
 class Stack {
 public:
@@ -102,6 +104,19 @@ public:
     const Frame& frame(size_t pos) const { return m_frame[pos]; }
     size_t n_frames() const { return m_frame.size(); }
 
+    // ------------------------------------------------------------------------
+
+    struct Streams {
+        std::istream& in;
+        std::ostream& out;
+        std::ostream& err;
+    };
+
+    void push_streams(Streams&& streams) { m_streams.push(std::move(streams)); }
+    void pop_streams() { m_streams.pop(); }
+    const Streams& streams() const { return m_streams.top(); }
+
+    // ------------------------------------------------------------------------
 
     friend std::ostream& operator<<(std::ostream& os, const Stack& v);
 
@@ -122,6 +137,7 @@ private:
     std::unique_ptr<std::byte[]> m_stack = std::make_unique<std::byte[]>(m_stack_capacity);
     std::vector<Type> m_stack_types;
     core::ChunkedStack<Frame> m_frame;
+    core::ChunkedStack<Streams> m_streams;
 };
 
 

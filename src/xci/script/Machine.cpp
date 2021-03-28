@@ -22,6 +22,18 @@ using std::move;
 using fmt::format;
 
 
+Machine::Machine()
+{
+    m_stack.push_streams({std::cin, std::cout, std::cerr});
+}
+
+
+Machine::Machine(Stack::Streams&& streams)
+{
+    m_stack.push_streams(std::move(streams));
+}
+
+
 void Machine::call(const Function& function, const InvokeCallback& cb)
 {
     const Function* cur_fun = &function;

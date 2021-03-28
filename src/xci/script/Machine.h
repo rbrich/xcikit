@@ -1,7 +1,7 @@
 // Machine.h created on 2019-05-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019 Radek Brich
+// Copyright 2019–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_MACHINE_H
@@ -19,6 +19,9 @@ namespace xci::script {
 
 class Machine {
 public:
+    Machine();
+    explicit Machine(Stack::Streams&& streams);
+
     // Run all Invocations in a function or module:
     // - evaluate each invoked value (possibly concurrently)
     // - pass results to cb
