@@ -42,8 +42,9 @@
 
 namespace xci::core {
 
-#define ESC     "\033"
-#define CSI     ESC "["
+#define ESC     "\x1b"  // 01/11
+#define CSI8    "\x9b"  // 09/11
+#define CSI     ESC "[" // "[" == 05/11
 #define SS3     ESC "O"
 
 // When building without TInfo, emit ANSI escape sequences directly
@@ -71,12 +72,15 @@ namespace xci::core {
 #endif // XCI_WITH_TERMINFO
 
 // not found in Terminfo DB:
+namespace seq {
 static constexpr auto set_default_foreground = CSI "39m";
 static constexpr auto set_default_background = CSI "49m";
 static constexpr auto set_bright_foreground = CSI "9{}m";
 static constexpr auto set_bright_background = CSI "10{}m";
 static constexpr auto enter_overline_mode = CSI "53m";
 static constexpr auto send_soft_reset = CSI "!p";
+static constexpr auto request_cursor_position = CSI "6n";
+}
 
 
 inline constexpr const char* xci_tparm(const char* seq) { return seq; }
@@ -452,21 +456,21 @@ auto TermCtl::size() const -> Size
 TermCtl TermCtl::fg(Color color) const
 {
     if (color == Color::Default)
-        return XCI_TERM_APPEND(set_default_foreground);
+        return XCI_TERM_APPEND(seq::set_default_foreground);
     else if (color < Color::BrightBlack)
         return TERM_APPEND(set_a_foreground, static_cast<int>(color));
     // bright colors
-    return XCI_TERM_APPEND(set_bright_foreground, static_cast<int>(color) - static_cast<int>(Color::BrightBlack));
+    return XCI_TERM_APPEND(seq::set_bright_foreground, static_cast<int>(color) - static_cast<int>(Color::BrightBlack));
 }
 
 TermCtl TermCtl::bg(Color color) const
 {
     if (color == Color::Default)
-        return XCI_TERM_APPEND(set_default_background);
+        return XCI_TERM_APPEND(seq::set_default_background);
     else if (color < Color::BrightBlack)
         return TERM_APPEND(set_a_background, static_cast<int>(color));
     // bright colors
-    return XCI_TERM_APPEND(set_bright_background, static_cast<int>(color) - static_cast<int>(Color::BrightBlack));
+    return XCI_TERM_APPEND(seq::set_bright_background, static_cast<int>(color) - static_cast<int>(Color::BrightBlack));
 }
 
 TermCtl TermCtl::mode(Mode mode) const
@@ -484,7 +488,7 @@ TermCtl TermCtl::mode(Mode mode) const
 TermCtl TermCtl::bold() const { return TERM_APPEND(enter_bold_mode); }
 TermCtl TermCtl::dim() const { return TERM_APPEND(enter_dim_mode); }
 TermCtl TermCtl::underline() const { return TERM_APPEND(enter_underline_mode); }
-TermCtl TermCtl::overline() const { return XCI_TERM_APPEND(enter_overline_mode); }
+TermCtl TermCtl::overline() const { return XCI_TERM_APPEND(seq::enter_overline_mode); }
 TermCtl TermCtl::normal() const { return TERM_APPEND(exit_attribute_mode); }
 
 TermCtl TermCtl::move_up() const { return TERM_APPEND(cursor_up); }
@@ -498,11 +502,12 @@ TermCtl TermCtl::move_right(unsigned n_cols) const { return TERM_APPEND(parm_rig
 TermCtl TermCtl::move_to_column(unsigned column) const { return TERM_APPEND(column_address, _plus_one(column)); }
 TermCtl TermCtl::_save_cursor() const { return TERM_APPEND(save_cursor); }
 TermCtl TermCtl::_restore_cursor() const { return TERM_APPEND(restore_cursor); }
+TermCtl TermCtl::request_cursor_position() const { return XCI_TERM_APPEND(seq::request_cursor_position); }
 
 TermCtl TermCtl::clear_screen_down() const { return TERM_APPEND(clr_eos); }
 TermCtl TermCtl::clear_line_to_end() const { return TERM_APPEND(clr_eol); }
 
-TermCtl TermCtl::soft_reset() const { return XCI_TERM_APPEND(send_soft_reset); }
+TermCtl TermCtl::soft_reset() const { return XCI_TERM_APPEND(seq::send_soft_reset); }
 
 
 std::ostream& operator<<(std::ostream& os, const TermCtl& term)
@@ -765,6 +770,69 @@ auto TermCtl::decode_input(std::string_view input_buffer) -> DecodedInput
         return {};  // incomplete UTF-8 char
     assert(len == -1);
     return {uint16_t(1 + offset)};  // consume the first byte of corrupted UTF-8
+}
+
+
+auto TermCtl::decode_seq(std::string_view input_buffer) -> ControlSequence
+{
+    // Control Sequence Introducer
+    if (input_buffer.starts_with(CSI)) {
+        input_buffer = input_buffer.substr(2);
+    } else if (input_buffer.starts_with(CSI8)) {
+        input_buffer = input_buffer.substr(1);
+    } else {
+        // no known introducer
+        return {};
+    }
+
+    ControlSequence res;
+    int arg = -1;
+    for (const auto c : input_buffer) {
+        ++ res.input_len;
+        if (isdigit(c)) {
+            if (arg == -1)
+                arg = c - '0';
+            else
+                arg = 10 * arg + (c - '0');
+            continue;
+        }
+        if (c == ';') {
+            res.par.push_back(arg);
+            arg = -1;
+            continue;
+        }
+        if (c >= '\x40' && c <= '\x7e') {
+            // final byte
+            res.fun = c;
+            if (arg != -1)
+                res.par.push_back(arg);
+            return res;
+        }
+        break;
+    }
+    // parse error or input too short
+    return {};
+}
+
+
+std::string TermCtl::query(std::string_view request, TermCtl& in)
+{
+    std::string res;
+    in.with_raw_mode([this, request, &res] {
+        write(request);
+        res = input();
+    });
+    return res;
+}
+
+
+std::pair<int, int> TermCtl::get_cursor_position()
+{
+    auto res = query(request_cursor_position().seq());
+    auto seq = decode_seq(res);
+    if (seq.input_len != 0 && seq.fun == 'R' && seq.par.size() == 2)
+        return {seq.par[0] - 1, seq.par[1] - 1};
+    return {-1, -1};
 }
 
 

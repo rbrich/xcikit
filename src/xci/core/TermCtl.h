@@ -108,6 +108,11 @@ public:
     TermCtl move_to_column(unsigned column) const;  // column is 0-based
     TermCtl save_cursor() const { return _save_cursor(); }
     TermCtl restore_cursor() const { return _restore_cursor(); }
+    TermCtl request_cursor_position() const;
+
+    /// Returns cursor position (row, col), 0-based
+    /// On failure, returns (-1, -1)
+    std::pair<int, int> get_cursor_position();
 
     // clear screen content
     TermCtl clear_screen_down() const;
@@ -223,6 +228,13 @@ public:
     /// Combination of `with_raw_mode` and `input`
     std::string raw_input(bool isig = false);
 
+    /// Query terminal
+    /// Send request, read response from `in`.
+    /// \param request      a control sequence to send as a request
+    /// \param in           TermCtl which is connected to the response channel
+    /// \returns            raw response from the terminal
+    std::string query(std::string_view request, TermCtl& in = stdin_instance());
+
     enum class Key : uint8_t {
         Unknown = 0,
 
@@ -284,6 +296,13 @@ public:
     /// * unicode           -- Unicode character decoded from the input (only when key=UnicodeChar)
     ///                        or zero in case of special cases (nothing decoded or a non-unicode key)
     DecodedInput decode_input(std::string_view input_buffer);
+
+    struct ControlSequence {
+        std::vector<int> par;  // parameters, default value is -1 (empty parameter)
+        char fun = 0;  // function
+        uint16_t input_len = 0;  // length of input sequence (chars consumed)
+    };
+    ControlSequence decode_seq(std::string_view input_buffer);
 
 private:
     // Copy TermCtl and append seq to new instance
