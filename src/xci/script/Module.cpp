@@ -21,7 +21,7 @@ Module::~Module()
 }
 
 
-Index Module::add_native_function(
+SymbolPointer Module::add_native_function(
         std::string&& name, std::vector<TypeInfo>&& params, TypeInfo&& retval,
         NativeDelegate native)
 {
@@ -30,8 +30,7 @@ Index Module::add_native_function(
     fn->signature().return_type = move(retval);
     fn->set_native(native);
     Index index = add_function(move(fn));
-    symtab().add({move(name), Symbol::Function, index});
-    return index;
+    return symtab().add({move(name), Symbol::Function, index});
 }
 
 

@@ -26,13 +26,13 @@ public:
 private:
     template<class F>
     void add_cmd(std::string&& name, std::string&& alias, F&& fun) {
-        auto index = m_module.add_native_function(move(name), std::forward<F>(fun));
-        m_module.symtab().add({move(alias), Symbol::Function, index});
+        auto p = m_module.add_native_function(move(name), std::forward<F>(fun));
+        m_module.symtab().add({move(alias), Symbol::Function, p->index()});
     }
     template<class F>
     void add_cmd(std::string&& name, std::string&& alias, F&& fun, void* arg) {
-        auto index = m_module.add_native_function(move(name), std::forward<F>(fun), arg);
-        m_module.symtab().add({move(alias), Symbol::Function, index});
+        auto p = m_module.add_native_function(move(name), std::forward<F>(fun), arg);
+        m_module.symtab().add({move(alias), Symbol::Function, p->index()});
     }
 
     void cmd_quit();
