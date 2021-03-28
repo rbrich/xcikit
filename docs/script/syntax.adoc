@@ -323,21 +323,41 @@ Primitive types:
 
 [source,fire]
 ----
-12                  // Int32 (alias Int)
-12:Int64            // Int64
-1.2                 // Float32 (alias Float)
-1.2:Float64         // Floaf64
-true    false       // Bool
-'a'                 // Char
+12     12:Int32     // Int32 (alias Int)
+12l    12:Int64     // Int64
+1.2f   1.2:Float32  // Float32 (alias Float)
+1.2    1.2:Float64  // Floaf64
+true   false        // Bool
+b'a'   'a':Byte     // Byte           -- ASCII
+27b    27:Byte      // Byte           -- binary 0..255
+b"abc"              // [Byte]
+[10b, 11b, 13b]     // [Byte]         -- equivalent to the "bytes" literal
+'a'                 // Char           -- Unicode
 "Hello."            // String         -- UTF-8 string
 ['a', 'b', 'c']     // [Char]         -- compatible with String, but not the same
 ("Hello", 33)       // (String, Int)  -- a tuple
 [1, 2, 3]           // [Int]          -- a list
 ----
 
-Strings and lists have the same interface and can be handled universally in generic functions.
-List of chars has different underlying implementation than String: it stores 32bit characters,
-allowing constant-time indexing, but taking more space. String is UTF-8 encoded, random access
+The type of value is inferred from the literal. Assigning literal of a type with
+smaller range is fine. Assigning a value of bigger range is find if it fits,
+compile-time error otherwise.
+
+[source,fire]
+----
+ok = true       // inferred type Bool
+c = 'a'         // inferred type Char
+byte = 27b      // inferred type Byte
+b1:Byte = 12    // ok
+b2:Byte = 300   // error
+b3 = c          // error, not a literal, must be casted explicitly
+b4 = c:Byte     // cast ok, value clipped
+----
+
+Strings and lists have the same interface and can be handled universally
+in generic functions. List of chars has different underlying implementation
+than String: it stores 32bit characters, allowing constant-time indexing,
+but taking more space. String is UTF-8 encoded, random access
 is slower (linear-time), but it takes much less space.
 
 Custom types are made by composition of other types.
@@ -582,13 +602,13 @@ This doesn't help to make the language easier to parse either.
 
 == Appendix
 
-=== List of Keywords
+=== List of keywords
 
 ----
 else fun import in if module then
 ----
 
-=== Precedence table
+=== Operator precedence table
 
 |===
 | (-2) |  definition        |  =

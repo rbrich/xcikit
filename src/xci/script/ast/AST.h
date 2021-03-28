@@ -9,10 +9,11 @@
 
 #include <xci/script/SymbolTable.h>
 #include <xci/script/SourceInfo.h>
+#include <xci/script/Value.h>
 #include <cstdint>
 #include <vector>
 #include <string>
-#include <span>
+#include <string_view>
 #include <memory>
 #include <utility>
 
@@ -34,11 +35,7 @@ struct Return;
 struct Class;
 struct Instance;
 
-struct Integer;
-struct Float;
-struct Char;
-struct Bytes;
-struct String;
+struct Literal;
 struct Bracketed;
 struct Tuple;
 struct List;
@@ -62,11 +59,7 @@ public:
     virtual void visit(const Class&) = 0;
     virtual void visit(const Instance&) = 0;
     // expression
-    virtual void visit(const Integer&) = 0;
-    virtual void visit(const Float&) = 0;
-    virtual void visit(const Char&) = 0;
-    virtual void visit(const Bytes&) = 0;
-    virtual void visit(const String&) = 0;
+    virtual void visit(const Literal&) = 0;
     virtual void visit(const Bracketed&) = 0;
     virtual void visit(const Tuple&) = 0;
     virtual void visit(const List&) = 0;
@@ -90,11 +83,7 @@ public:
     virtual void visit(Class&) = 0;
     virtual void visit(Instance&) = 0;
     // expression
-    virtual void visit(Integer&) = 0;
-    virtual void visit(Float&) = 0;
-    virtual void visit(Char&) = 0;
-    virtual void visit(Bytes&) = 0;
-    virtual void visit(String&) = 0;
+    virtual void visit(Literal&) = 0;
     virtual void visit(Bracketed&) = 0;
     virtual void visit(Tuple&) = 0;
     virtual void visit(List&) = 0;
@@ -114,11 +103,7 @@ public:
 class StatementVisitor: public Visitor {
 public:
     // skip expression visits
-    void visit(Integer&) final {}
-    void visit(Float&) final {}
-    void visit(Char&) final {}
-    void visit(Bytes&) final {}
-    void visit(String&) final {}
+    void visit(Literal&) final {}
     void visit(Bracketed&) final {}
     void visit(Tuple&) final {}
     void visit(List&) final {}
@@ -144,10 +129,7 @@ public:
     void visit(Class&) final {}
     void visit(Instance&) final {}
     // skip expression visits
-    void visit(Integer&) final {}
-    void visit(Float&) final {}
-    void visit(Char&) final {}
-    void visit(String&) final {}
+    void visit(Literal&) final {}
     void visit(Tuple&) final {}
     void visit(Bracketed&) final {}
     void visit(List&) final {}
@@ -180,7 +162,7 @@ struct Type {
 
 struct TypeName: public Type {
     TypeName() = default;
-    explicit TypeName(std::string  s) : name(std::move(s)) {}
+    explicit TypeName(std::string s) : name(std::move(s)) {}
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Type> make_copy() const override { return std::make_unique<TypeName>(*this); };
@@ -254,54 +236,14 @@ struct Expression {
     Definition* definition = nullptr;
 };
 
-struct Integer: public Expression {
-    explicit Integer(int32_t v) : value(v) {}
-    explicit Integer(const std::string& s);
+struct Literal: public Expression {
+    explicit Literal(const Value& v) : value(v.make_copy()) {}
+    explicit Literal(std::unique_ptr<Value>&& v) : value(std::move(v)) {}
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
-    std::unique_ptr<ast::Expression> make_copy() const override { return std::make_unique<Integer>(*this); };
+    std::unique_ptr<ast::Expression> make_copy() const override;
 
-    int32_t value;
-};
-
-struct Float: public Expression {
-    explicit Float(float v) : value(v) {}
-    explicit Float(const std::string& s);
-    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
-    void apply(Visitor& visitor) override { visitor.visit(*this); }
-    std::unique_ptr<ast::Expression> make_copy() const override { return std::make_unique<Float>(*this); };
-
-    float value;
-};
-
-struct Char: public Expression {
-  explicit Char(char32_t c) : value(c) {}
-  explicit Char(std::string_view sv);
-  void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
-  void apply(Visitor& visitor) override { visitor.visit(*this); }
-  std::unique_ptr<ast::Expression> make_copy() const override { return std::make_unique<Char>(*this); };
-
-  char32_t value;
-};
-
-struct Bytes: public Expression {
-    explicit Bytes(std::span<const std::byte> s) : value(s.begin(), s.end()) {}
-    explicit Bytes(std::string_view sv);
-    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
-    void apply(Visitor& visitor) override { visitor.visit(*this); }
-    std::unique_ptr<ast::Expression> make_copy() const override { return std::make_unique<Bytes>(*this); };
-
-    std::vector<std::byte> value;
-};
-
-struct String: public Expression {
-    explicit String(std::string s) : value(std::move(s)) {}
-    explicit String(std::string_view sv) : value(sv) {}
-    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
-    void apply(Visitor& visitor) override { visitor.visit(*this); }
-    std::unique_ptr<ast::Expression> make_copy() const override { return std::make_unique<String>(*this); };
-
-    std::string value;
+    std::unique_ptr<Value> value;
 };
 
 /// An expression in round brackets, e.g. (1 + 2)
@@ -396,7 +338,7 @@ struct Operator {
 
     Operator() = default;
     Operator(Op op) : op(op) {}
-    explicit Operator(const std::string& s, bool prefix=false);
+    explicit Operator(std::string_view s, bool prefix=false);
     const char* to_cstr() const;
     int precedence() const;
     bool is_right_associative() const;

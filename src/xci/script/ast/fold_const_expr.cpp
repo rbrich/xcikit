@@ -165,11 +165,7 @@ public:
         m_const_value.reset();
     }
 
-    void visit(ast::Integer& v) override { m_const_value = make_unique<value::Int32>(v.value); }
-    void visit(ast::Float& v) override { m_const_value = make_unique<value::Float32>(v.value); }
-    void visit(ast::Char& v) override { m_const_value = make_unique<value::Char>(v.value); }
-    void visit(ast::Bytes& v) override { m_const_value = make_unique<value::Bytes>(v.value); }
-    void visit(ast::String& v) override { m_const_value = make_unique<value::String>(v.value); }
+    void visit(ast::Literal& v) override { m_const_value = v.value->make_copy(); }
 
     void visit(ast::Bracketed& v) override {
         v.expression->apply(*this);
@@ -199,7 +195,10 @@ private:
         expr->apply(*this);
         convert_const_object_to_expression();
         if (m_collapsed) {
+            auto source_info = expr->source_info;
             expr = move(m_collapsed);
+            if (!expr->source_info)
+                expr->source_info = source_info;
         }
     }
 
@@ -210,15 +209,15 @@ private:
             unique_ptr<ast::Expression>& collapsed;
             explicit ValueVisitor(unique_ptr<ast::Expression>& collapsed) : collapsed(collapsed) {}
             void visit(const value::Void&) override {}
-            void visit(const value::Bool&) override {}
-            void visit(const value::Byte&) override {}
-            void visit(const value::Char&) override {}
-            void visit(const value::Int32& v) override { collapsed = make_unique<ast::Integer>(v.value()); }
-            void visit(const value::Int64& v) override {}
-            void visit(const value::Float32& v) override { collapsed = make_unique<ast::Float>(v.value()); }
-            void visit(const value::Float64&) override {}
-            void visit(const value::Bytes& v) override { collapsed = make_unique<ast::Bytes>(v.value()); }
-            void visit(const value::String& v) override { collapsed = make_unique<ast::String>(v.value()); }
+            void visit(const value::Bool& v) override { collapsed = make_unique<ast::Literal>(v); }
+            void visit(const value::Byte& v) override { collapsed = make_unique<ast::Literal>(v); }
+            void visit(const value::Char& v) override { collapsed = make_unique<ast::Literal>(v); }
+            void visit(const value::Int32& v) override { collapsed = make_unique<ast::Literal>(v); }
+            void visit(const value::Int64& v) override { collapsed = make_unique<ast::Literal>(v); }
+            void visit(const value::Float32& v) override { collapsed = make_unique<ast::Literal>(v); }
+            void visit(const value::Float64& v) override { collapsed = make_unique<ast::Literal>(v); }
+            void visit(const value::Bytes& v) override { collapsed = make_unique<ast::Literal>(v); }
+            void visit(const value::String& v) override { collapsed = make_unique<ast::Literal>(v); }
             void visit(const value::List& v) override {}
             void visit(const value::Tuple& v) override {}
             void visit(const value::Closure&) override {}
@@ -228,7 +227,6 @@ private:
         m_const_value->apply(visitor);
     }
 
-private:
     Function& m_function;
     Machine m_machine;  // VM for evaluation of constant functions
     unique_ptr<Value> m_const_value;

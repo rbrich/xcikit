@@ -10,7 +10,6 @@
 #include <xci/core/string.h>
 #include <xci/compat/macros.h>
 #include <iomanip>
-#include <sstream>
 
 namespace xci::script {
 
@@ -18,7 +17,6 @@ using std::endl;
 using std::left;
 using std::right;
 using std::setw;
-using std::ostringstream;
 
 
 // stream manipulators
@@ -71,11 +69,7 @@ public:
     void visit(const Return& v) override { m_os << v; }
     void visit(const Class& v) override { m_os << v; }
     void visit(const Instance& v) override { m_os << v; }
-    void visit(const Integer& v) override { m_os << v; }
-    void visit(const Float& v) override { m_os << v; }
-    void visit(const Char& v) override { m_os << v; }
-    void visit(const Bytes& v) override { m_os << v; }
-    void visit(const String& v) override { m_os << v; }
+    void visit(const Literal& v) override { m_os << v; }
     void visit(const Bracketed& v) override { m_os << v; }
     void visit(const Tuple& v) override { m_os << v; }
     void visit(const List& v) override { m_os << v; }
@@ -92,57 +86,15 @@ private:
     std::ostream& m_os;
 };
 
-std::ostream& operator<<(std::ostream& os, const Integer& v)
+std::ostream& operator<<(std::ostream& os, const Literal& v)
 {
     if (stream_options(os).enable_tree) {
-        return os << put_indent << "Integer(Expression) " << v.value << endl;
+        return os << put_indent << "Literal(Expression) " << *v.value << endl;
     } else {
-        return os << v.value;
+        return os << *v.value;
     }
 }
 
-std::ostream& operator<<(std::ostream& os, const Float& v)
-{
-    if (stream_options(os).enable_tree) {
-        return os << put_indent << "Float(Expression) " << v.value << endl;
-    } else {
-        ostringstream sbuf;
-        sbuf << v.value;
-        auto str = sbuf.str();
-        if (str.find('.') == std::string::npos)
-            return os << str << ".0";
-        else
-            return os << str;
-    }
-}
-
-std::ostream& operator<<(std::ostream& os, const Char& v)
-{
-  if (stream_options(os).enable_tree) {
-    return os << put_indent << "Char(Expression) " << '\'' << core::escape(core::to_utf8(v.value)) << '\'' << endl;
-  } else {
-    return os << '\'' << core::escape(core::to_utf8(v.value)) << '\'';
-  }
-}
-
-std::ostream& operator<<(std::ostream& os, const Bytes& v)
-{
-    std::string_view value_sv{(const char*)v.value.data(), v.value.size()};
-    if (stream_options(os).enable_tree) {
-        return os << put_indent << "Bytes(Expression) " << '"' << core::escape(value_sv) << '"' << endl;
-    } else {
-        return os << "b\"" << core::escape(value_sv) << '"';
-    }
-}
-
-std::ostream& operator<<(std::ostream& os, const String& v)
-{
-    if (stream_options(os).enable_tree) {
-        return os << put_indent << "String(Expression) " << '"' << core::escape(v.value) << '"' << endl;
-    } else {
-        return os << '"' << core::escape(v.value) << '"';
-    }
-}
 
 std::ostream& operator<<(std::ostream& os, const Bracketed& v)
 {
@@ -153,6 +105,7 @@ std::ostream& operator<<(std::ostream& os, const Bracketed& v)
         return os << "(" << *v.expression << ")";
     }
 }
+
 
 std::ostream& operator<<(std::ostream& os, const Tuple& v)
 {

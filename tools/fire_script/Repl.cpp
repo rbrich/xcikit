@@ -88,8 +88,8 @@ bool Repl::evaluate(std::string_view line)
         if (m_ctx.input_number != -1) {
             // REPL mode
             if (!result->is_void()) {
-                t.print("{t:bold}{fg:magenta}{} = {fg:default}{}{t:normal}\n",
-                        func_name, *result);
+                t.print("{t:bold}{fg:magenta}{}:{} = {fg:default}{}{t:normal}\n",
+                        func_name, result->type_info(), *result);
             }
             // save result as function `_<N>` in the module
             auto func_idx = module->add_function(move(func));

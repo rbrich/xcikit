@@ -31,11 +31,7 @@ public:
     void visit(ast::Class&) override {}
     void visit(ast::Instance&) override {}
 
-    void visit(ast::Integer&) override {}
-    void visit(ast::Float&) override {}
-    void visit(ast::Char&) override {}
-    void visit(ast::Bytes&) override {}
-    void visit(ast::String&) override {}
+    void visit(ast::Literal&) override {}
 
     void visit(ast::Bracketed& v) override {
         v.expression->apply(*this);

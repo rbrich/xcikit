@@ -9,6 +9,7 @@
 #include "Error.h"
 #include <xci/core/string.h>
 #include <numeric>
+#include <sstream>
 
 namespace xci::script {
 
@@ -67,6 +68,19 @@ size_t Values::raw_size() const
 }
 
 
+// make sure float values don't look like integers (append .0 if needed)
+static void dump_float(std::ostream& os, auto value)
+{
+    std::ostringstream sbuf;
+    sbuf << value;
+    auto str = sbuf.str();
+    if (str.find('.') == std::string::npos)
+        os << str << ".0";
+    else
+        os << str;
+}
+
+
 std::ostream& operator<<(std::ostream& os, const Value& o)
 {
     struct StreamVisitor: public value::Visitor {
@@ -74,14 +88,28 @@ std::ostream& operator<<(std::ostream& os, const Value& o)
         explicit StreamVisitor(std::ostream& os) : os(os) {}
         void visit(const value::Void&) override { os << "void"; }
         void visit(const value::Bool& v) override { os << std::boolalpha << v.value(); }
-        void visit(const value::Byte& v) override { os << v.value() << ":Byte"; }
-        void visit(const value::Char& v) override { os << '\'' << core::escape(core::to_utf8(v.value())) << "'"; }
+        void visit(const value::Byte& v) override {
+            os << "b'" << core::escape(core::to_utf8(v.value())) << "'";
+        }
+        void visit(const value::Char& v) override {
+            os << '\'' << core::escape(core::to_utf8(v.value())) << "'";
+        }
         void visit(const value::Int32& v) override { os << v.value(); }
-        void visit(const value::Int64& v) override { os << v.value() << ":Int64"; }
-        void visit(const value::Float32& v) override { os << v.value(); }
-        void visit(const value::Float64& v) override { os << v.value() << ":Float64"; }
-        void visit(const value::Bytes& v) override { os << "b\"" << core::escape({(const char*)v.value().data(), v.value().size()}) << '"'; }
-        void visit(const value::String& v) override { os << '"' << core::escape(v.value()) << '"'; }
+        void visit(const value::Int64& v) override { os << v.value() << 'L'; }
+        void visit(const value::Float32& v) override {
+            dump_float(os, v.value());
+            os << 'f';
+        }
+        void visit(const value::Float64& v) override {
+            dump_float(os, v.value());
+        }
+        void visit(const value::Bytes& v) override {
+            const std::string_view sv{(const char*)v.value().data(), v.value().size()};
+            os << "b\"" << core::escape(sv) << '"';
+        }
+        void visit(const value::String& v) override {
+            os << '"' << core::escape(v.value()) << '"';
+        }
         void visit(const value::List& v) override {
             os << "[";
             for (size_t idx = 0; idx < v.length(); idx++) {
@@ -123,17 +151,24 @@ std::ostream& operator<<(std::ostream& os, const Value& o)
 namespace value {
 
 
-String::String(const std::string& v)
-    : m_size(v.size()), m_value(v.size())
+Byte::Byte(std::string_view utf8)
 {
-    std::memcpy(m_value.data(), v.data(), v.size());
+    auto c = (uint32_t) core::utf8_codepoint(utf8.data());
+    if (c > 255)
+        throw std::runtime_error("byte value out of range");
+    m_value = (uint8_t) c;
 }
 
 
-String::String(const char* data, size_t size)
-    : m_size(size), m_value(size)
+Char::Char(std::string_view utf8)
+    : m_value(core::utf8_codepoint(utf8.data()))
+{}
+
+
+String::String(std::string_view v)
+    : m_size(v.size()), m_value(v.size())
 {
-    std::memcpy(m_value.data(), data, size);
+    std::memcpy(m_value.data(), v.data(), v.size());
 }
 
 

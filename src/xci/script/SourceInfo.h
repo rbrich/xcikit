@@ -30,6 +30,10 @@ struct SourceInfo {
         column = pos.column;
         source = in.source();
     }
+
+    explicit operator bool() const {
+        return line_begin != nullptr;
+    }
 };
 
 

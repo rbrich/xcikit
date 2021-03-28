@@ -102,6 +102,7 @@ public:
 
     // Cast to subtype, e.g.: `v.as<value::Int32>()->value()`
     template <class T> T& as() { return *dynamic_cast<T*>(this); }
+    template <class T> const T& as() const { return *dynamic_cast<const T*>(this); }
 };
 
 
@@ -184,6 +185,7 @@ class Byte: public Value {
 public:
     Byte() = default;
     explicit Byte(uint8_t v) : m_value(v) {}
+    explicit Byte(std::string_view utf8);
     std::unique_ptr<Value> make_copy() const override { return std::make_unique<Byte>(m_value); }
 
     void write(byte* buffer) const override { *buffer = byte(m_value); }
@@ -203,6 +205,7 @@ class Char: public Value {
 public:
     Char() = default;
     explicit Char(char32_t v) : m_value(v) {}
+    explicit Char(std::string_view utf8);
     std::unique_ptr<Value> make_copy() const override { return std::make_unique<Char>(m_value); }
 
     void write(byte* buffer) const override { std::memcpy(buffer, &m_value, sizeof(m_value)); }
@@ -309,8 +312,7 @@ private:
 class String: public Value {
 public:
     String() = default;
-    explicit String(const std::string& v);
-    explicit String(const char* cstr, size_t size);
+    explicit String(std::string_view v);
     explicit String(size_t size, const HeapSlot& slot) : m_size(size), m_value(slot) {}
     String(const String& other) = default;
     String(String&& other) noexcept : m_size(other.m_size), m_value(std::move(other.m_value)) {

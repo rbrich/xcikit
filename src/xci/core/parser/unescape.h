@@ -1,4 +1,4 @@
-// unescape.h created on 2019-11-29 belongs to XCI Toolkit
+// unescape.h created on 2019-11-29 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
 // Copyright 2019 Radek Brich

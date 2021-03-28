@@ -106,11 +106,7 @@ public:
         m_instance = nullptr;
     }
 
-    void visit(ast::Integer& v) override { m_value_type = TypeInfo{Type::Int32}; }
-    void visit(ast::Float& v) override { m_value_type = TypeInfo{Type::Float32}; }
-    void visit(ast::Char& v) override { m_value_type = TypeInfo{Type::Char}; }
-    void visit(ast::Bytes& v) override { m_value_type = TypeInfo::bytes(); }
-    void visit(ast::String& v) override { m_value_type = TypeInfo{Type::String}; }
+    void visit(ast::Literal& v) override { m_value_type = v.value->type_info(); }
 
     void visit(ast::Bracketed& v) override {
         v.expression->apply(*this);
@@ -355,7 +351,7 @@ public:
         CallArgs args;
         for (auto& arg : v.args) {
             arg->apply(*this);
-            assert(arg->source_info.source != nullptr);
+            assert(arg->source_info);
             args.push_back({m_value_type.effective_type(), arg->source_info});
         }
         // append args to m_call_args (note that m_call_args might be used

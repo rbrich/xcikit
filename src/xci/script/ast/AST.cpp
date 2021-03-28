@@ -188,6 +188,15 @@ void FunctionType::copy_to(FunctionType& r) const
 }
 
 
+std::unique_ptr<ast::Expression> Literal::make_copy() const
+{
+    auto r = std::make_unique<Literal>(*value);
+    r->source_info = source_info;
+    r->definition = definition;
+    return r;
+}
+
+
 std::unique_ptr<ast::Expression> Bracketed::make_copy() const
 {
     auto r = std::make_unique<Bracketed>();
@@ -255,44 +264,11 @@ void Block::finish()
 }
 
 
-Integer::Integer(const std::string& s)
-{
-    char* end = nullptr;
-    value = std::strtol(s.c_str(), &end, 10);
-    if (end == nullptr || *end != '\0') {
-        throw std::runtime_error("Integer not fully parsed.");
-    }
-}
-
-
-Float::Float(const std::string& s) : value(0.0)
-{
-    std::istringstream is(s);
-    is >> value;
-    if (!is.eof()) {
-        throw std::runtime_error("Float not fully parsed.");
-    }
-}
-
-
-Char::Char(std::string_view sv)
-{
-    value = core::utf8_codepoint(sv.data());
-}
-
-
-Bytes::Bytes(std::string_view sv)
-{
-    value.resize(sv.size());
-    std::memcpy(value.data(), sv.data(), sv.size());
-}
-
-
-Operator::Operator(const std::string& s, bool prefix)
+Operator::Operator(std::string_view s, bool prefix)
 {
     assert(!s.empty());
     char c1 = s[0];
-    char c2 = s.c_str()[1];
+    char c2 = s.size() >= 2 ? s[1] : 0;
     switch (c1) {
         case ',':    op = Comma; break;
         case '|':    op = (c2 == '|')? LogicalOr : BitwiseOr; break;
