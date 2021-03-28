@@ -401,6 +401,56 @@ Standalone destructuring:
 let [first, *rest] = a_list
 ----
 
+=== I/O streams
+
+See <<side-effects,Side Effects>> below for information on how this works.
+
+[source,fire]
+----
+with out = (open "file.txt" "w") {
+    // output stream is now redirected to a file
+    write "this goes to file.txt"
+}
+
+with err = (tee (open "file.txt" "w") cerr) {
+    log "this goes to cerr stream and also to the file"
+}
+----
+
+
+=== Exceptions
+
+See <<side-effects,Side Effects>> below for information on how this works.
+
+[source,fire]
+----
+try {
+    throw (Exception "Catch me!")
+} catch ex:Exception {
+    log "Exception caught!"
+}
+----
+
+Braces can be omitted in case of single statement:
+
+[source,fire]
+----
+try this_may_throw
+catch ex:Exception
+    log "Exception caught!"
+----
+The parser looks for a single expression after `try`, which may be a braced block.
+Then it expects `catch` keyword followed by a variable and again a single expression.
+
+Catch all possible exceptions - use generic type T:
+[source,fire]
+----
+try
+    this_may_throw
+catch ex:T
+    log "Exception caught!"
+----
+
 == Types
 
 Primitive types:
@@ -639,6 +689,82 @@ print "hello " /* inline comment */ "world"
 /* multiline
    comment */
 ----
+
+[#side-effects]
+== Side Effects
+
+Each function may have side effects. Writing to a disk or throwing an exception
+are examples of such side effects. The effects are gathered from any called functions,
+and the parent function is flagged. The effects are visible in the function prototype,
+and they can be declared also explicitly (this is needed only for native functions).
+The effects may be used for optimizations - a pure function can be automatically memoized,
+for example.
+
+Side effects supported at the moment:
+
+* `in`, `out`, `err` - I/O streams
+* `exc` - Exceptions
+
+Other side effects:
+
+* `random` - random function, the return value is not deterministically linked
+   to parameters
+* `noreturn` - may not return, e.g. exec, exit
+
+At all times, each function has three streams at disposal: `in`, `out`, `err`.
+If it touches one of these streams, it's flagged accordingly (the effects have
+the same names).
+
+The streams are always pointed somewhere. It may be the default character stream
+(stdout etc.), a file, a socket or even a special null stream. When a function
+sets the `out` stream to a null stream, and then calls some other function which
+is flagged with the `out` effect, the calling function is not flagged and can be
+still considered pure and optimized accordingly.
+
+You can think about streams as three hidden parameters and return values. They
+might be returned untouched or processed in the function body and returned
+modified.
+
+Another effect is `exc`, which allows throwing exceptions. This is basically
+a hidden return value. It's implicitly handled (imagine an `if` condition and early
+return with the same hidden value), but it can also be handled explicitly by
+a try-catch construct.
+
+By catching all exceptions, the `exc` effect is no longer propagated.
+Note that it's not possible to track a set of actually thrown exceptions,
+so the only way to prevent automatically adding the `exc` effect to the calling
+function is to catch all possible exceptions thrown by any called function
+with the `exc` effect.
+
+Declaring the side effects explicitly:
+
+[source,fire]
+----
+f = fun msg:String | out exc
+{
+    write msg   // this may throw
+}
+
+// type of f: String -> Void | out exc
+----
+
+Undeclaring the side effects (if compiler adds them but you want to override it):
+[source,fire]
+----
+f = fun msg:String | !out !exc { write msg }
+// type of f: String -> Void
+f  // this call can be removed by the compiler, because it has no effect
+   // according to the type of `f`
+----
+
+The `write` function will still use the out stream and possibly throw an exception.
+But the compiler is now free to ignore the side effects and optimize-out the `f`
+function completely, because it returns Void and does not have any (declared)
+side effects.
+
+In an imaginative C transpiler, the effects would be implemented as global
+or thread-local pointers to the current streams and the currently thrown
+exception.
 
 == Modules
 
