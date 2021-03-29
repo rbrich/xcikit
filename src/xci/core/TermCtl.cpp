@@ -29,6 +29,7 @@
 #else
     #include <termios.h>
     #include <sys/ioctl.h>
+    #include <sys/select.h>
 #endif
 
 #ifdef XCI_WITH_TERMINFO
@@ -613,11 +614,28 @@ void TermCtl::with_raw_mode(const std::function<void()>& cb, bool isig)
 }
 
 
-std::string TermCtl::input()
+std::string TermCtl::input(std::chrono::microseconds timeout)
 {
     char buf[100] {};
     ssize_t res;
+
+    auto timeout_secs = std::chrono::floor<std::chrono::seconds>(timeout);
+    struct timeval tv = {(time_t) timeout_secs.count(), (suseconds_t) (timeout - timeout_secs).count()};
+    struct timeval* ptv = timeout == std::chrono::microseconds{} ? nullptr : &tv;
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(m_fd,&fds);
+
     do {
+        res = ::select(m_fd + 1, &fds, nullptr, nullptr, ptv);
+        if (res == 0)
+            return {};  // timeout
+        if (res == -1) {
+            if (errno == EINTR)
+                continue;  // FIXME: adjust tv
+            log::error("select: {m}");
+            return {};
+        }
         res = ::read(m_fd, buf, sizeof buf);
     } while (res < 0 && (errno == EINTR || errno == EAGAIN));
     if (res < 0) {
@@ -820,7 +838,7 @@ std::string TermCtl::query(std::string_view request, TermCtl& in)
     std::string res;
     in.with_raw_mode([this, request, &res] {
         write(request);
-        res = input();
+        res = input(std::chrono::milliseconds{100});
     });
     return res;
 }

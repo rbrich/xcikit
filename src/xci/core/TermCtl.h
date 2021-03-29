@@ -11,6 +11,7 @@
 #include <string>
 #include <ostream>
 #include <array>
+#include <chrono>
 
 namespace xci::core {
 
@@ -222,8 +223,9 @@ public:
     void with_raw_mode(const std::function<void()>& cb, bool isig = false);
 
     /// Read input from stdin
-    /// \returns    The input data, empty string on error or EOF
-    std::string input();
+    /// \param timeout  Return after timeout if no input comes (default = infinite)
+    /// \returns        The input data, empty string on error, timeout or EOF
+    std::string input(std::chrono::microseconds timeout = {});
 
     /// Combination of `with_raw_mode` and `input`
     std::string raw_input(bool isig = false);
