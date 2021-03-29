@@ -79,7 +79,8 @@ public:
 
     void visit(ast::Invocation& inv) override {
         inv.expression->apply(*this);
-        inv.type_index = module().add_type(move(m_value_type));
+        if (!m_value_type.effective_type().is_void())
+            inv.type_index = module().add_type(move(m_value_type));
     }
 
     void visit(ast::Return& ret) override {
@@ -468,6 +469,9 @@ public:
                 fn_dfn.set_signature(m_value_type.signature_ptr());
             }
             resolve_types(fn, v.body);
+            // if the return type is still Unknown, change it to Void (the body is empty)
+            if (fn.signature().return_type.is_unknown())
+                fn.signature().set_return_type(TypeInfo{Type::Void});
             m_value_type = TypeInfo{fn.signature_ptr()};
         }
 
@@ -664,6 +668,8 @@ void resolve_types(Function& func, const ast::Block& block)
     for (const auto& stmt : block.statements) {
         stmt->apply(visitor);
     }
+    if (func.is_compiled() && func.signature().return_type.is_unknown())
+        func.signature().return_type = TypeInfo{Type::Void};
 }
 
 

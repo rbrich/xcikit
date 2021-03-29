@@ -159,8 +159,8 @@ TEST_CASE( "Operator precedence", "[script][parser]" )
     // right associative:
     check_parser("a ** b ** c ** d", "(a ** (b ** (c ** d)))");
     // functions
-    check_parser("a fun b {} c", "a fun b {void} c");
-    check_parser("a (fun b {}) c", "a (fun b {void}) c");
+    check_parser("a fun b {} c", "a fun b {} c");
+    check_parser("a (fun b {}) c", "a (fun b {}) c");
     // function calls
     check_interpreter("succ 9 + max 5 4 + 1", "16");
     check_interpreter("(succ 9) + (max 5 4) + 1", "16");
@@ -272,12 +272,16 @@ TEST_CASE( "Types", "[script][interpreter]" )
 TEST_CASE( "Blocks", "[script][interpreter]" )
 {
     // blocks are evaluated and return a value
-    check_interpreter("{}",         "void");
-    check_interpreter("{1+2}",      "3");
-    check_interpreter("{{{1+2}}}",  "3");
+    check_interpreter("{}",         "");  // empty function (has Void type)
+    check_interpreter("{{}}",       "");  // empty function in empty function
+    check_interpreter("{};{};{}",   "");  // three empty functions
+    check_interpreter("{1+2}",      "3"); // non-empty
+    check_interpreter("{{{1+2}}}",  "3"); // three wrapped functions, each returns the result of inner one
+    check_interpreter("{1+2;4;{}}", "3\n4\n");  // {} as the last statement changes function result to Void, intermediate results are "invoked"
     check_interpreter("x=4; b = 3 + {x+1}; b", "8");
 
     // blocks can be assigned to a name
+    check_interpreter("a = {}; a", "");  // empty block can be named too, `a` is a named function of Void type
     check_interpreter("b = {1+2}; b", "3");
     check_interpreter("b = { a = 1; a }; b", "1");
     check_interpreter("b:Int = {1+2}; b", "3");
@@ -357,7 +361,7 @@ TEST_CASE( "Generic functions", "[script][interpreter]" )
 
 TEST_CASE( "Lexical scope", "[script][interpreter]" )
 {
-    check_interpreter("{a=1; b=2}",     "void");
+    check_interpreter("{a=1; b=2}",     "");
     CHECK_THROWS_AS(Interpreter{0}.eval("{a=1; b=2} a"), UndefinedName);
 
     check_interpreter("x=1; y = { x + 2 }; y",     "3");

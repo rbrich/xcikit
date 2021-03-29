@@ -258,9 +258,6 @@ void Block::finish()
             return;
         }
     }
-
-    // Missing return statement - insert `return void` automatically
-    statements.push_back(std::make_unique<Return>(std::make_unique<Reference>(Identifier{"void"})));
 }
 
 

@@ -86,7 +86,7 @@ std::ostream& operator<<(std::ostream& os, const Value& o)
     struct StreamVisitor: public value::Visitor {
         std::ostream& os;
         explicit StreamVisitor(std::ostream& os) : os(os) {}
-        void visit(const value::Void&) override { os << "void"; }
+        void visit(const value::Void&) override { os << ""; }
         void visit(const value::Bool& v) override { os << std::boolalpha << v.value(); }
         void visit(const value::Byte& v) override {
             os << "b'" << core::escape(core::to_utf8(v.value())) << "'";

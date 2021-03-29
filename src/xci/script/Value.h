@@ -149,7 +149,7 @@ namespace value {
 class Void: public Value {
 public:
     std::unique_ptr<Value> make_copy() const override { return std::make_unique<Void>(); }
-    void write(byte* buffer) const override { *buffer = byte{0}; }
+    void write(byte* buffer) const override {}
     void read(const byte* buffer) override {}
     TypeInfo type_info() const override { return TypeInfo{Type::Void}; }
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }

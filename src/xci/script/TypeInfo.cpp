@@ -15,7 +15,7 @@ size_t TypeInfo::size() const
 {
     switch (type()) {
         case Type::Unknown:     return 0;
-        case Type::Void:        return 1;
+        case Type::Void:        return 0;
         case Type::Bool:        return 1;
         case Type::Byte:        return 1;
         case Type::Char:        return 4;

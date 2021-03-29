@@ -24,7 +24,8 @@ void Stack::push(const Value& o)
 {
     auto ti = o.type_info();
     auto size = ti.size();
-    assert(size > 0);
+    if (size == 0)
+        return;  // Void
     if (m_stack_pointer < size) {
         if (grow() < size)
             throw StackOverflow();
@@ -37,6 +38,8 @@ void Stack::push(const Value& o)
 
 std::unique_ptr<Value> Stack::pull(const TypeInfo& ti)
 {
+    if (ti.is_void())
+        return std::make_unique<value::Void>();
     auto s = ti.size();
     pop_type(ti, s);
     // create Value with TypeInfo, read contents from stack

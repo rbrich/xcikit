@@ -49,7 +49,8 @@ public:
 
     void visit(ast::Invocation& inv) override {
         inv.expression->apply(*this);
-        code().add_opcode(Opcode::Invoke, inv.type_index);
+        if (inv.type_index != no_index)
+            code().add_opcode(Opcode::Invoke, inv.type_index);
     }
 
     void visit(ast::Return& ret) override {
