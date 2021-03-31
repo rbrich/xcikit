@@ -441,6 +441,52 @@ Int -> Int -> Int -> Int            // normalized form
 * But any of the above might describe what is really happening after compilation
  (it depends only on the compiler how many intermediate functions it creates).
 
+=== Casting
+
+Any expression can be casted to another type.
+The syntax is similar as in variable definition with explicit type.
+
+[source,fire]
+----
+42:Int64
+a = 42; a:Byte
+(1 + 2):Int64
+[1,2,3]:String   // -> "\x01\x02\x03"
+----
+
+Effectively, this calls a `cast` function:
+
+[source,fire]
+----
+a = 42:Int64
+// is equivalent to
+a = (cast 42):Int64
+// also equivalent to
+a:Int64 = cast 42
+// this won't work - the target type has to be specified somehow
+a = cast 42
+----
+
+The `cast` function can be implemented for custom types like this:
+
+[source,fire]
+----
+inst Cast MyType Int {
+    cast = fun x:MyType { /* convert MyType to Int */ }
+}
+
+inst Cast Int MyType {
+    cast = fun x:Int { /* convert Int to MyType }
+}
+----
+
+=== Coercion
+
+The values of the same kind can coerce to a bigger type.
+For example, Int32 or Byte can be used in a function accepting only Int64.
+When resolving overloads, the most specific one and the closest one is used.
+For a Byte value, an Int32 overload is used if it exists, otherwise Int64 etc.
+
 === Lists
 
 Lists are homogeneous data types:
@@ -676,8 +722,9 @@ else fun import in if module then
 | 10   |  power             |  **
 | 11   |  subscript         |  x ! y
 | 12   |  dot function call |  <arg1> . name [<arg2> ...]
-| (13) |  unary ops         |  -  +  !  ~
-| (14) |  function call     |  name [<arg> ...]
+| (13) |  cast              |  <val> : Type
+| (14) |  unary ops         |  -  +  !  ~
+| (15) |  function call     |  name [<arg> ...]
 |===
 
 Higher precedence means tighter binding.

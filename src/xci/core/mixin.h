@@ -25,7 +25,7 @@ protected:
 
 class NonMovable {
 public:
-    NonMovable(NonCopyable&&) = delete;
+    NonMovable(NonMovable&&) = delete;
     NonMovable& operator =(NonMovable&&) = delete;
 
 protected:
