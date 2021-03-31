@@ -174,24 +174,25 @@ Package manager (optional):
 
 - Conan (eg. `pip3 install conan`)
 
-Dependencies (required):
+Dependencies:
 
 - PEGTL (xci-core)
+- libzip (xci-core/XCI_WITH_ZIP)
 - FreeType (xci-text)
 - GLFW, Vulkan (xci-graphics)
 - https://github.com/google/shaderc[glslc] or
 https://github.com/KhronosGroup/glslang[glslangValidator] (xci-graphics)
-
-Dependencies (optional):
-
-- libzip (XCI_WITH_ZIP)
 - https://github.com/catchorg/Catch2[Catch2] for tests
 - https://github.com/google/benchmark[Google Benchmark]
 
-Installing optional dependencies:
+Some of the dependencies are installed by Conan if not found in the system
+(e.g. PEGTL, range-v3, GLFW). Others must be provided by the system (Vulkan).
+
+Installing the dependencies:
 
 - Debian: `apt-get install libzip-dev`
 - macOS (Homebrew): `brew install libzip`
+- macOS (MacPorts): `port install vulkan-* MoltenVK glfw-devel freetype hyperscan cmake ninja`
 
 === Using build script
 
@@ -244,6 +245,30 @@ cmake --build . --target 'test'
 
 # Install (default prefix is /usr/local)
 cmake --build . --target 'install'
+----
+
+=== Building on macOS older than Catalina (10.15)
+
+Using [MacPorts](https://www.macports.org/), install Clang 11 and libc++:
+
+----
+port install clang-11 macports-libcxx
+----
+
+Then create a `clang11-toolchain.cmake` file with content like this:
+
+[source,cmake]
+----
+set(CMAKE_CXX_COMPILER /opt/local/bin/clang++-mp-11)
+add_compile_options(-nostdinc++ -I/opt/local/include/libcxx/v1 -D_LIBCPP_DISABLE_AVAILABILITY)
+add_link_options(-L/opt/local/lib/libcxx)
+----
+
+Run the build with this toolchain:
+
+[source,bash]
+----
+./build.sh --toolchain clang11-toolchain.cmake
 ----
 
 [#windows]
