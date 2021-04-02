@@ -282,6 +282,57 @@ rec = MyRecord("A name", 42)
 rec.name    // dot operator
 ----
 
+=== Type classes
+
+A type class contains a set of functions for a type.
+
+[source,fire]
+----
+class MyEq T {
+    my_eq : T T -> Bool
+    my_ne : T T -> Bool
+}
+----
+
+A type class can be specialized to create another, more specific, type class:
+
+[source,fire]
+----
+class MyOrd T (MyEq T) {
+    my_lt : T T -> Bool
+    my_gt : T T -> Bool
+    my_le : T T -> Bool
+    my_ge : T T -> Bool
+}
+----
+
+Instantiating a type class means to define all functions it contains
+for a specific type:
+
+[source,fire]
+----
+inst MyEq Int32 {
+    my_eq = fun a b { a == b }
+    my_ne = fun a b { a != b }
+}
+----
+
+The contained function can now be called directly on Int32:
+
+[source,fire]
+----
+my_eq 3 4
+----
+
+Similar classes are part of std module, but the actual implementation
+is different, because the equality operator translates to a call to `eq` function.
+Using the actual operator in the implementation would lead to a recursion.
+
+The function names that are declared by a class and implemented by the instances
+are in global name space. That means that no other function with the same name
+and no other class declaring the same function name can be visible in the same
+module.
+
 === Pattern matching
 
 Match expression can simplify nested ifs.
