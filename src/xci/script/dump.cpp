@@ -419,15 +419,19 @@ std::ostream& operator<<(std::ostream& os, const Class& v)
 {
     if (stream_options(os).enable_tree) {
         os << "Class" << endl;
-        os << more_indent << put_indent << v.class_name << endl;
-        os << put_indent << v.type_var << endl;
+        os << more_indent
+           << put_indent << "name: " << v.class_name << endl;
+        for (const auto& type_var : v.type_vars)
+            os << put_indent << "var: " << type_var << endl;
         for (const auto& cst : v.context)
             os << put_indent << cst;
         for (const auto& def : v.defs)
             os << put_indent << def;
         return os << less_indent;
     } else {
-        os << "class " << v.class_name << ' ' << v.type_var;
+        os << "class " << v.class_name;
+        for (const auto& type_var : v.type_vars)
+           os << ' ' << type_var;
         if (!v.context.empty()) {
             os << " (";
             for (const auto& cst : v.context) {
@@ -449,14 +453,17 @@ std::ostream& operator<<(std::ostream& os, const Instance& v)
     if (stream_options(os).enable_tree) {
         os << "Instance" << endl;
         os << more_indent << put_indent << v.class_name << endl;
-        os << put_indent << *v.type_inst << endl;
+        for (const auto& t : v.type_inst)
+            os << put_indent << *t << endl;
         for (const auto& cst : v.context)
             os << put_indent << cst;
         for (const auto& def : v.defs)
             os << put_indent << def;
         return os << less_indent;
     } else {
-        os << "instance " << v.class_name << ' ' << *v.type_inst;
+        os << "instance " << v.class_name;
+        for (const auto& t : v.type_inst)
+            os << ' ' << *t;
         if (!v.context.empty()) {
             os << " (";
             for (const auto& cst : v.context) {
@@ -651,9 +658,10 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
     os << "* " << v.num_instances() << " instances" << endl << more_indent;
     for (size_t i = 0; i < v.num_instances(); ++i) {
         const auto& inst = v.get_instance(i);
-        os << put_indent << '[' << i << "] " << inst.class_().name()
-           << ' ' << inst.type() << endl;
-        os << more_indent;
+        os << put_indent << '[' << i << "] " << inst.class_().name();
+        for (const auto& t : inst.types())
+            os << ' ' << t;
+        os << endl << more_indent;
         for (size_t j = 0; j < inst.num_functions(); ++j) {
             const auto fi = inst.get_function(j);
             const auto& f = v.get_function(fi);

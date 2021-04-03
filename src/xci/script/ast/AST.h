@@ -438,7 +438,7 @@ struct Class: public Statement {
     std::unique_ptr<ast::Statement> make_copy() const override;
 
     TypeName class_name;
-    TypeName type_var;
+    std::vector<TypeName> type_vars;
     std::vector<TypeConstraint> context;
     std::vector<ast::Definition> defs;  // functions in class
 
@@ -454,7 +454,7 @@ struct Instance: public Statement {
     std::unique_ptr<ast::Statement> make_copy() const override;
 
     TypeName class_name;
-    std::unique_ptr<Type> type_inst;
+    std::vector<std::unique_ptr<Type>> type_inst;
     std::vector<TypeConstraint> context;
     std::vector<ast::Definition> defs;  // functions in class
 

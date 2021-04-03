@@ -11,6 +11,8 @@
 #include <xci/script/Error.h>
 #include <xci/compat/macros.h>
 
+#include <range/v3/view/enumerate.hpp>
+
 #include <sstream>
 
 namespace xci::script {
@@ -19,6 +21,8 @@ using std::move;
 using std::make_unique;
 using std::stringstream;
 using std::endl;
+
+using ranges::views::enumerate;
 
 
 class TypeCheckerVisitor final: public ast::Visitor {
@@ -47,10 +51,11 @@ public:
         }
 
         if (m_instance != nullptr) {
-            // evaluate type according to class and type var
+            // evaluate type according to class and type vars
             auto& psym = dfn.variable.identifier.symbol;
             TypeInfo eval_type = m_instance->class_().get_function_type(psym->ref()->index());
-            eval_type.replace_var(1, m_instance->type());
+            for (const auto&& [i, t] : m_instance->types() | enumerate)
+                eval_type.replace_var(i + 1, t);
 
             // specified type is basically useless here, let's just check
             // it matches evaluated type from class instance
@@ -97,9 +102,11 @@ public:
 
     void visit(ast::Instance& v) override {
         m_instance = &module().get_instance(v.index);
-        // resolve instance type
-        v.type_inst->apply(*this);
-        m_instance->set_type(move(m_type_info));
+        // resolve instance types
+        for (auto& t : v.type_inst) {
+            t->apply(*this);
+            m_instance->add_type(move(m_type_info));
+        }
         // resolve each Definition from the class,
         // fill-in FunctionType, match with possible named arguments and body
         for (auto& dfn : v.defs)
@@ -160,8 +167,8 @@ public:
                 if (symmod == nullptr)
                     symmod = &module();
                 auto& cls = symmod->get_class(sym.index());
-                auto& cls_fn = cls.get_function_type(sym.ref()->index());
-                auto inst_type = resolve_instance_type(cls_fn.signature());
+                const auto& cls_fn = cls.get_function_type(sym.ref()->index());
+                auto inst_types = resolve_instance_types(cls_fn.signature());
                 // find instance using resolved T
                 bool found = false;
                 auto inst_psym = v.chain;
@@ -171,7 +178,7 @@ public:
                     if (inst_mod == nullptr)
                         inst_mod = &module();
                     auto& inst = inst_mod->get_instance(inst_psym->index());
-                    if (inst.type() == inst_type) {
+                    if (inst.types() == inst_types) {
                         // find instance function
                         auto fn_idx = inst.get_function(sym.ref()->index());
                         auto& inst_fn = inst_mod->get_function(fn_idx);
@@ -198,11 +205,15 @@ public:
                     o_candidates << "   " << inst_fn.signature() << endl;
                     inst_psym = inst_psym->next();
                 }
-                stringstream o_args;
+                stringstream o_ftype;
                 for (const auto& arg : m_call_args) {
-                    o_args << arg.type_info << ' ';
+                    if (&arg != &m_call_args.front())
+                        o_ftype << ' ';
+                    o_ftype << arg.type_info;
                 }
-                throw FunctionNotFound(v.identifier.name, o_args.str(), o_candidates.str());
+                if (m_call_ret)
+                    o_ftype << " -> " << m_call_ret;
+                throw FunctionNotFound(v.identifier.name, o_ftype.str(), o_candidates.str());
             }
             case Symbol::Function: {
                 // find matching instance
@@ -612,14 +623,27 @@ private:
         return sig->params.empty() ? Match::Exact : Match::Partial;
     }
 
-    // match call args with signature (which contains generic type T)
-    // throw if unmatched, return resolved type for T if matched
-    TypeInfo resolve_instance_type(const Signature& signature) const
+    // Match call args with signature (which contains type vars T, U...)
+    // Throw if unmatched, return resolved types for T, U... if matched
+    // The result types are in the same order as the matched type vars in signature,
+    // e.g. for `class MyClass T U V { my V U -> T }` it will return actual types [T, U, V].
+    std::vector<TypeInfo> resolve_instance_types(const Signature& signature) const
     {
-        auto* sig = &signature;
+        const auto* sig = &signature;
         size_t i_arg = 0;
         size_t i_prm = 0;
-        TypeInfo res;
+        std::vector<TypeInfo> res;
+        // resolve variable return type
+        // (doing this first allows to skip checking the content of `res`
+        // and it also resizes `res` to final size, because return type is usually the last type var)
+        if (signature.return_type.is_unknown()) {
+            auto var = signature.return_type.generic_var();
+            assert(var != 0);
+            // make space for additional type var in the result
+            res.resize(var);
+            res[var-1] = m_call_ret;  // may be Unknown - it doesn't matter
+        }
+        // resolve args
         for (const auto& arg : m_call_args) {
             i_arg += 1;
             // check there are more params to consume
@@ -634,16 +658,22 @@ private:
                 }
             }
             // resolve T (only from original signature)
-            if (sig->params[i_prm].is_unknown() && sig == &signature) {
-                if (res.is_unknown())
-                    res = arg.type_info;
-                else if (res != arg.type_info)
-                    throw UnexpectedArgumentType(i_arg, res, arg.type_info,
+            const auto& prm = sig->params[i_prm];
+            if (prm.is_unknown() && sig == &signature) {
+                auto var = prm.generic_var();
+                assert(var != 0);
+                // make space for additional type var in the result
+                if (var > res.size())
+                    res.resize(var);
+                if (res[var-1].is_unknown())
+                    res[var-1] = arg.type_info;
+                else if (res[var-1] != arg.type_info)
+                    throw UnexpectedArgumentType(i_arg, res[var-1], arg.type_info,
                             arg.source_info);
             }
             // check type of next param
-            if (sig->params[i_prm] != arg.type_info) {
-                throw UnexpectedArgumentType(i_arg, sig->params[i_prm],
+            if (prm != arg.type_info) {
+                throw UnexpectedArgumentType(i_arg, prm,
                         arg.type_info, arg.source_info);
             }
             // consume next param
@@ -654,9 +684,13 @@ private:
 
 private:
     Function& m_function;
-    TypeInfo m_type_info;
+    TypeInfo m_type_info;  // resolved ast::Type
     TypeInfo m_value_type;
-    CallArgs m_call_args;
+
+    // signature for resolving overloaded functions and templates
+    CallArgs m_call_args;  // actual argument types
+    TypeInfo m_call_ret;   // expected return type
+
     Class* m_class = nullptr;
     Instance* m_instance = nullptr;
 };

@@ -88,7 +88,7 @@ public:
 
 private:
     Type m_type { Type::Unknown };
-    uint8_t m_var {0};  // for unknown type, specifies which type variable this represents
+    uint8_t m_var {0};  // for unknown type, specifies which type variable this represents (counted from 1, none = 0)
     std::shared_ptr<Signature> m_signature;
     std::vector<TypeInfo> m_subtypes;
 };

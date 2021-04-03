@@ -99,7 +99,7 @@ std::unique_ptr<ast::Statement> Class::make_copy() const
 {
     auto r = std::make_unique<Class>();
     r->class_name = class_name;
-    r->type_var = type_var;
+    r->type_vars = type_vars;
     r->context = context;
     r->defs.reserve(defs.size());
     for (const auto& d : defs) {
@@ -115,7 +115,8 @@ std::unique_ptr<ast::Statement> Instance::make_copy() const
 {
     auto r = std::make_unique<Instance>();
     r->class_name = class_name;
-    r->type_inst = type_inst->make_copy();
+    for (const auto& t : r->type_inst)
+        r->type_inst.push_back(t->make_copy());
     r->context = context;
     for (const auto& d : defs) {
         r->defs.emplace_back();

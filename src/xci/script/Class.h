@@ -42,9 +42,9 @@ public:
 
     SymbolTable& symtab() const { return m_symtab; }
 
-    // instantiation type
-    void set_type(TypeInfo&& ti) { m_type = std::move(ti); }
-    const TypeInfo& type() const { return m_type; }
+    // instantiation types
+    void add_type(TypeInfo&& ti) { m_types.push_back(std::move(ti)); }
+    const std::vector<TypeInfo>& types() const { return m_types; }
 
     Class& class_() const { return m_class; }
 
@@ -56,8 +56,8 @@ public:
 private:
     Class& m_class;
     SymbolTable& m_symtab;
-    // instantiation type
-    TypeInfo m_type;
+    // instantiation types
+    std::vector<TypeInfo> m_types;
     // functions in the instance - map of class function idx -> module function idx
     std::vector<Index> m_functions;
 };

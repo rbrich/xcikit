@@ -148,9 +148,9 @@ struct Statement: sor< Definition, Expression<SC> > {};
 
 // Module-level definitions
 struct ClassDefinition: seq< Variable, SC, opt_must<one<'='>, SC, Expression<SC>> > {};
-struct DefClass: if_must< KeywordClass, NSC, TypeName, RS, SC, TypeName, SC, opt<TypeContext>, NSC,
+struct DefClass: if_must< KeywordClass, NSC, TypeName, RS, SC, plus<TypeName, SC>, opt<TypeContext>, NSC,
         one<'{'>, NSC, sor< one<'}'>, must<SepList<ClassDefinition>, NSC, one<'}'>> > > {};
-struct DefInstance: if_must< KeywordInstance, NSC, TypeName, RS, SC, Type, SC, opt<TypeContext>, NSC,
+struct DefInstance: if_must< KeywordInstance, NSC, TypeName, RS, SC, plus<Type, SC>, opt<TypeContext>, NSC,
         one<'{'>, NSC, sor< one<'}'>, must<SepList<Definition>, NSC, one<'}'>> > > {};
 struct TopLevelStatement: sor<DefClass, DefInstance, Statement> {};
 
@@ -568,7 +568,7 @@ struct Action<TypeName> {
         if (cls.class_name.name.empty())
             cls.class_name.name = in.string();
         else
-            cls.type_var.name = in.string();
+            cls.type_vars.emplace_back(in.string());
     }
 
     template<typename Input>
@@ -634,7 +634,7 @@ struct Action<Type> : change_states< std::unique_ptr<ast::Type> >  {
 
     template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::Instance& inst) {
-        inst.type_inst = std::move(type);
+        inst.type_inst.push_back(std::move(type));
     }
 };
 
