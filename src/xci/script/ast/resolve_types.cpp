@@ -114,7 +114,9 @@ public:
         m_instance = nullptr;
     }
 
-    void visit(ast::Literal& v) override { m_value_type = v.value->type_info(); }
+    void visit(ast::Literal& v) override {
+        m_value_type = v.value->type_info();
+    }
 
     void visit(ast::Bracketed& v) override {
         v.expression->apply(*this);
@@ -495,6 +497,30 @@ public:
             if (m_value_type != specified_type)
                 throw DefinitionTypeMismatch(specified_type, m_value_type);
         }
+    }
+
+    // The cast expression is translated to a call to `cast` method from the Cast class.
+    // The inner expression type and the cast type are used to lookup the instance of Cast.
+    void visit(ast::Cast& v) override {
+        // resolve the inner expression -> m_value_type
+        v.expression->apply(*this);
+        // resolve the target type -> m_type_info
+        v.type->apply(*this);
+        // cast to Void -> don't call the cast function, just drop the expression result from stack
+        if (m_type_info.is_void()) {
+            v.drop_size = m_value_type.size();
+            v.cast_function.reset();
+            m_value_type = move(m_type_info);
+            return;
+        }
+        // lookup the cast function with the resolved arg/return types
+        m_call_args.push_back({m_value_type, v.expression->source_info});
+        m_call_ret = move(m_type_info);
+        v.cast_function->apply(*this);
+        // set the effective type of the Cast expression and clean the call types
+        m_value_type = std::move(m_call_ret);
+        m_call_args.clear();
+        m_call_ret = {};
     }
 
     void visit(ast::TypeName& t) final {

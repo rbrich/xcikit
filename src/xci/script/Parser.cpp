@@ -136,8 +136,9 @@ struct BracketedExpr: if_must< one<'('>, NSC, Expression<NSC>, NSC, one<')'> > {
 struct ExprPrefix: if_must< PrefixOperator, SC, ExprOperand, SC > {};
 struct Reference: seq<Identifier, not_at<one<'"'>>> {};
 struct List: if_must< one<'['>, NSC, opt<ExprInfix<NSC>, NSC>, one<']'> > {};
+struct Cast: seq<SC, one<':'>, SC, Type> {};
 struct ExprCallable: sor< BracketedExpr, Function, Reference> {};
-struct ExprArgSafe: sor< BracketedExpr, List, Function, Literal, Reference > {};  // expressions which can be used as args in Call
+struct ExprArgSafe: seq< sor< BracketedExpr, List, Function, Literal, Reference >, opt<Cast>> {};  // expressions which can be used as args in Call
 struct Call: seq< ExprCallable, plus<RS, SC, ExprArgSafe> > {};
 struct ExprOperand: sor<Call, ExprArgSafe, ExprPrefix> {};
 struct ExprCond: if_must< KeywordIf, NSC, ExprInfix<NSC>, NSC, KeywordThen, NSC, Expression<SC>, NSC, KeywordElse, NSC, Expression<SC>> {};
@@ -636,6 +637,15 @@ struct Action<Type> : change_states< std::unique_ptr<ast::Type> >  {
     static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::Instance& inst) {
         inst.type_inst.push_back(std::move(type));
     }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, std::unique_ptr<ast::Expression>& expr) {
+        // Cast
+        auto cast = std::make_unique<ast::Cast>();
+        cast->expression = std::move(expr);
+        cast->type = std::move(type);
+        expr = std::move(cast);
+    }
 };
 
 
@@ -722,8 +732,10 @@ struct Action<Literal> : change_states< LiteralHelper > {
                 const auto v = std::get<int64_t>(helper.content);
                 using l = std::numeric_limits<int32_t>;
                 if (v < l::min() || v > l::max())
-                    throw parse_error("Int32 literal out of range. Did you forgot the L suffix?", in);
-                value = std::make_unique<value::Int32>((int32_t) v);
+                    // The value can't fit in Int32, make it Int64 instead
+                    value = std::make_unique<value::Int64>(v);
+                else
+                    value = std::make_unique<value::Int32>((int32_t) v);
                 break;
             }
             case ValueType::Int64:

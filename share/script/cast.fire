@@ -1,0 +1,16 @@
+class Cast T R {
+    cast : T -> R
+}
+
+// Note: Cast to Void is handled by the compiler, instances with R=Void are ignored.
+
+instance Cast Int64 Byte {
+    cast = fun x { b'\0' }  // __cast_int_64_to_32
+}
+
+instance Cast Int64 Int32 {
+    cast = fun x { 11 }  // __cast_int_64_to_32 or __drop 4 4
+}
+
+"drop this":Void
+42L:Int32

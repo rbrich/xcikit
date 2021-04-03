@@ -75,6 +75,7 @@ public:
     void visit(ast::Tuple&) override {}
     void visit(ast::List&) override {}
     void visit(ast::Reference&) override {}
+    void visit(ast::Cast&) override {}
 
     void visit(ast::Class&) override {}
     void visit(ast::Instance&) override {}

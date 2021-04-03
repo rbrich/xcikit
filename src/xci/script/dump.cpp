@@ -78,6 +78,7 @@ public:
     void visit(const OpCall& v) override { m_os << v; }
     void visit(const Condition& v) override { m_os << v; }
     void visit(const Function& v) override { m_os << v; }
+    void visit(const Cast& v) override { m_os << v; }
     void visit(const TypeName& v) override { m_os << v; }
     void visit(const FunctionType& v) override { m_os << v; }
     void visit(const ListType& v) override { m_os << v; }
@@ -369,6 +370,21 @@ std::ostream& operator<<(std::ostream& os, const Function& v)
                   << less_indent;
     } else {
         return os << "fun " << v.type << "{" << v.body << "}";
+    }
+}
+
+std::ostream& operator<<(std::ostream& os, const Cast& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << "Cast(Expression)" << endl;
+        os << more_indent
+           << put_indent << *v.expression
+           << put_indent << *v.type << endl;
+        if (v.cast_function)
+            os << put_indent << *v.cast_function;
+        return os << less_indent;
+    } else {
+        return os << *v.expression << ":" << *v.type;
     }
 }
 

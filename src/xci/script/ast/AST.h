@@ -35,6 +35,7 @@ struct Return;
 struct Class;
 struct Instance;
 
+struct Cast;
 struct Literal;
 struct Bracketed;
 struct Tuple;
@@ -68,6 +69,7 @@ public:
     virtual void visit(const OpCall&) = 0;
     virtual void visit(const Condition&) = 0;
     virtual void visit(const Function&) = 0;
+    virtual void visit(const Cast&) = 0;
     // type
     virtual void visit(const TypeName&) = 0;
     virtual void visit(const FunctionType&) = 0;
@@ -92,6 +94,7 @@ public:
     virtual void visit(OpCall&) = 0;
     virtual void visit(Condition&) = 0;
     virtual void visit(Function&) = 0;
+    virtual void visit(Cast&) = 0;
     // type
     virtual void visit(TypeName&) = 0;
     virtual void visit(FunctionType&) = 0;
@@ -112,6 +115,7 @@ public:
     void visit(OpCall&) final {}
     void visit(Condition&) final {}
     void visit(Function&) final {}
+    void visit(Cast&) final {}
     // skip type visits
     void visit(TypeName&) final {}
     void visit(FunctionType&) final {}
@@ -138,6 +142,7 @@ public:
     void visit(OpCall&) final {}
     void visit(Condition&) final {}
     void visit(Function&) final {}
+    void visit(Cast&) final {}
 };
 
 
@@ -225,10 +230,15 @@ struct Block {
 
 
 struct Expression {
+    Expression() = default;
+    Expression(Expression&&) = default;
+    Expression& operator=(Expression&&) = default;
     virtual ~Expression() = default;
     virtual void apply(ConstVisitor& visitor) const = 0;
     virtual void apply(Visitor& visitor) = 0;
     virtual std::unique_ptr<ast::Expression> make_copy() const = 0;
+
+    void copy_to(Expression& r) const;
 
     SourceInfo source_info;
 
@@ -289,6 +299,9 @@ struct Reference: public Expression {
 };
 
 struct Call: public Expression {
+    Call() = default;
+    Call(Call&& r) = default;
+    Call& operator=(Call&&) = default;
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;
@@ -355,6 +368,8 @@ struct Operator {
 // infix operators -> mirrors FunCall
 struct OpCall: public Call {
     OpCall() = default;
+    OpCall(OpCall&&) = default;
+    OpCall& operator=(OpCall&&) = default;
     explicit OpCall(Operator::Op op) : op(op) {}
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
@@ -388,6 +403,20 @@ struct Condition: public Expression {
     std::unique_ptr<Expression> cond;
     std::unique_ptr<Expression> then_expr;
     std::unique_ptr<Expression> else_expr;
+};
+
+
+struct Cast: public Expression {
+    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
+    void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Expression> make_copy() const override;
+
+    std::unique_ptr<Expression> expression;
+    std::unique_ptr<Type> type;
+    std::unique_ptr<Reference> cast_function;  // none for cast to Void
+
+    // resolved:
+    size_t drop_size = 0;  // cast to Void: size of expression result type
 };
 
 
@@ -469,7 +498,7 @@ struct Module {
 };
 
 
-template <class T> T copy(const T& v) { T r; v.copy_to(r); return r; }
+template <class T> std::unique_ptr<T> pcopy(const T& v) { auto r = std::make_unique<T>(); v.copy_to(*r); return r; }
 std::unique_ptr<Type> copy(const std::unique_ptr<Type>& v);
 inline Variable copy(const Variable& v) { return {v.identifier, copy(v.type)}; }
 inline Parameter copy(const Parameter& v) { return {v.identifier, copy(v.type)}; }

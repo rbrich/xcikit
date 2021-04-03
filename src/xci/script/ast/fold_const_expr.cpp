@@ -165,7 +165,9 @@ public:
         m_const_value.reset();
     }
 
-    void visit(ast::Literal& v) override { m_const_value = v.value->make_copy(); }
+    void visit(ast::Literal& v) override {
+        m_const_value = v.value->make_copy();
+    }
 
     void visit(ast::Bracketed& v) override {
         v.expression->apply(*this);

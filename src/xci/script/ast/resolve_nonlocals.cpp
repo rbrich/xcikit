@@ -30,8 +30,8 @@ public:
 
     void visit(ast::Class&) override {}
     void visit(ast::Instance&) override {}
-
     void visit(ast::Literal&) override {}
+    void visit(ast::Cast&) override {}
 
     void visit(ast::Bracketed& v) override {
         v.expression->apply(*this);

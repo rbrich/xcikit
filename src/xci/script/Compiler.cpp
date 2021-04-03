@@ -97,6 +97,8 @@ public:
     }
 
     void visit(ast::Literal& v) override {
+        if (v.value->is_void())
+            return;  // Void value
         // add to static values
         auto idx = module().add_value(v.value->make_copy());
         // LOAD_STATIC <static_idx>
@@ -373,6 +375,17 @@ public:
                 // CALL0 <function_idx>
                 code().add_opcode(Opcode::Call0, v.index);
             }
+        }
+    }
+
+    void visit(ast::Cast& v) override {
+        v.expression->apply(*this);
+        if (v.cast_function)
+            v.cast_function->apply(*this);
+        else {
+            // cast to Void - remove the expression result from stack
+            // DROP <skip> <size>
+            m_function.code().add_opcode(Opcode::Drop, 0, v.drop_size);
         }
     }
 

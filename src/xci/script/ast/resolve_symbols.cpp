@@ -216,6 +216,14 @@ public:
         m_postponed_blocks.push_back({fn, v.body});
     }
 
+    void visit(ast::Cast& v) override {
+        v.expression->apply(*this);
+        v.type->apply(*this);
+        v.cast_function = make_unique<ast::Reference>(ast::Identifier{"cast"});
+        v.cast_function->source_info = v.source_info;
+        visit(*v.cast_function);
+    }
+
     void visit(ast::TypeName& t) final {
         if (t.name.empty())
             //  TypeInfo(Type::Unknown); ?

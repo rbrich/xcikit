@@ -41,6 +41,7 @@ std::ostream& operator<<(std::ostream& os, const OpCall& v);
 std::ostream& operator<<(std::ostream& os, const Condition& v);
 std::ostream& operator<<(std::ostream& os, const Operator& v);
 std::ostream& operator<<(std::ostream& os, const Function& v);
+std::ostream& operator<<(std::ostream& os, const Cast& v);
 std::ostream& operator<<(std::ostream& os, const Expression& v);
 std::ostream& operator<<(std::ostream& os, const Definition& v);
 std::ostream& operator<<(std::ostream& os, const Invocation& v);
