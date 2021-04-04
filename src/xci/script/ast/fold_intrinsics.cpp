@@ -19,10 +19,12 @@ public:
     void visit(ast::Reference& v) override {
         assert(v.identifier.symbol);
         if (v.identifier.symbol->type() == Symbol::Instruction)
-            m_reference = &v;
+            m_instr_ref = &v;
     }
 
     void visit(ast::Literal& v) override {
+        if (!m_instr_ref)
+            return;
         struct ValueVisitor: public value::PartialVisitor {
             uint8_t & val;
             const SourceInfo& si;
@@ -44,10 +46,10 @@ public:
         unsigned arg_i = 0;
         for (auto& arg : v.args) {
             arg->apply(*this);
-            if (m_reference)
-                m_reference->instruction_args[arg_i] = m_arg_value;
+            if (m_instr_ref)
+                m_instr_ref->instruction_args[arg_i] = m_arg_value;
         }
-        if (m_reference) {
+        if (m_instr_ref) {
             v.args.clear();
             reset();
         }
@@ -94,10 +96,11 @@ public:
     void visit(ast::ListType&) final {}
 
 private:
-    void reset() { m_reference = nullptr; }
+    void reset() {
+        m_instr_ref = nullptr; }
 
     uint8_t m_arg_value = 0;
-    ast::Reference* m_reference = nullptr;
+    ast::Reference* m_instr_ref = nullptr;  // set if inside a Reference to an Instruction
 };
 
 

@@ -385,7 +385,7 @@ const char* Operator::to_cstr() const
         case Operator::Div:         return "/";
         case Operator::Mod:         return "%";
         case Operator::Exp:         return "**";
-        case Operator::LogicalNot:  return "-";
+        case Operator::LogicalNot:  return "!";
         case Operator::BitwiseNot:  return "~";
         case Operator::UnaryPlus:   return "+";
         case Operator::UnaryMinus:  return "-";

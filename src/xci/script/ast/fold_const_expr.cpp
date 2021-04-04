@@ -190,6 +190,8 @@ public:
             m_const_value = Value::create(TypeInfo{Type::Void});
             return;
         }
+        if (!m_const_value)
+            return;
         // cast to the same type?
         if (m_const_value->type_info() == v.type_info) {
             // keep m_const_value -> eliminate the cast

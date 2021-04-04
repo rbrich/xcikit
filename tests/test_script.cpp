@@ -67,8 +67,8 @@ std::string interpret(const string& input, bool import_std=false)
         os << *result;
         result->decref();
     } catch (const ScriptError& e) {
-        FAIL_CHECK("Exception thrown: " << e.what() << "\n" << e.detail());
-        return "!!! exception thrown !!!";
+        UNSCOPED_INFO("Exception: " << e.what() << "\n" << e.detail());
+        throw;
     }
     return os.str();
 }
@@ -363,6 +363,31 @@ TEST_CASE( "Lexical scope", "[script][interpreter]" )
                         "f=fun n:Int->Int { fi 1 1 n }; f 7") == "5040");  // factorial
     CHECK(interpret_std("fi=fun a:Int b:Int n:Int -> Int { if n==0 then b else fi (a+b) a (n-1) };\n"
                         "f=fun n:Int->Int { fi 1 0 n }; f 7") == "13");    // Fibonacci number
+}
+
+
+TEST_CASE( "Casting", "[script][interpreter]" )
+{
+    CHECK(interpret_std("\"drop this\":Void") == "");
+    CHECK(interpret_std("42:Int64") == "42L");
+    CHECK(interpret_std("42L:Int32") == "42");
+    CHECK(interpret_std("42:Float32") == "42.0f");
+    CHECK(interpret_std("42:Float64") == "42.0");
+    CHECK(interpret_std("12.9:Int") == "12");
+    CHECK(interpret_std("-12.9:Int") == "-12");
+    CHECK(interpret_std("a = 42; a:Byte") == "b'*'");
+    CHECK(interpret_std("(1 + 2):Int64") == "3L");
+    CHECK(interpret_std("0:Bool") == "false");
+    CHECK(interpret_std("42:Bool") == "true");
+    CHECK(interpret_std("(42:Bool):Int") == "1");
+    CHECK(interpret_std("!42:Bool") == "false");  // '!' is prefix operator, cast has higher precedence
+    CHECK(interpret_std("-42:Bool") == "true");  // '-' is part of Int literal, not an operator
+    CHECK_THROWS_AS(interpret_std("- 42:Bool"), FunctionNotFound);  // now it's operator and that's an error: "neg Bool" not defined
+    CHECK(interpret_std("(- 42):Bool") == "true");
+    //CHECK(interpret_std("['a', 'b', 'c']:String") == "abc");
+    CHECK(interpret_std("(cast 42):Int64") == "42L");
+    CHECK(interpret_std("a:Int64 = cast 42; a") == "42L");
+    CHECK_THROWS_AS(interpret_std("cast 42"), FunctionNotFound);  // must specify the result type
 }
 
 

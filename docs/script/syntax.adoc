@@ -311,7 +311,7 @@ for a specific type:
 
 [source,fire]
 ----
-inst MyEq Int32 {
+instance MyEq Int32 {
     my_eq = fun a b { a == b }
     my_ne = fun a b { a != b }
 }
@@ -451,7 +451,7 @@ The syntax is similar as in variable definition with explicit type.
 42:Int64
 a = 42; a:Byte
 (1 + 2):Int64
-[1,2,3]:String   // -> "\x01\x02\x03"
+['a', 'b', 'c']:String   // -> "abc"
 ----
 
 Effectively, this calls a `cast` function:
@@ -471,11 +471,11 @@ The `cast` function can be implemented for custom types like this:
 
 [source,fire]
 ----
-inst Cast MyType Int {
+instance Cast MyType Int {
     cast = fun x:MyType { /* convert MyType to Int */ }
 }
 
-inst Cast Int MyType {
+instance Cast Int MyType {
     cast = fun x:Int { /* convert Int to MyType }
 }
 ----
@@ -702,7 +702,19 @@ This doesn't help to make the language easier to parse either.
 === List of keywords
 
 ----
-else fun import in if module then
+catch
+class
+else
+fun
+if
+import
+instance
+in
+match
+module
+then
+try
+with
 ----
 
 === Operator precedence table
@@ -722,8 +734,8 @@ else fun import in if module then
 | 10   |  power             |  **
 | 11   |  subscript         |  x ! y
 | 12   |  dot function call |  <arg1> . name [<arg2> ...]
-| (13) |  cast              |  <val> : Type
-| (14) |  unary ops         |  -  +  !  ~
+| (13) |  unary ops         |  -  +  !  ~
+| (14) |  cast              |  <val> : Type
 | (15) |  function call     |  name [<arg> ...]
 |===
 

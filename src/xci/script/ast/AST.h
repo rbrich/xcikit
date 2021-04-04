@@ -419,7 +419,7 @@ struct Cast: public Expression {
     std::unique_ptr<Reference> cast_function;  // none for cast to Void
 
     // resolved:
-    TypeInfo type_info;   // resolved Type
+    TypeInfo type_info;  // resolved Type
     size_t drop_size = 0;  // cast to Void: size of expression result type
 };
 

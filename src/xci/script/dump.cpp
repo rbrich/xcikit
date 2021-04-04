@@ -401,7 +401,7 @@ std::ostream& operator<<(std::ostream& os, const Definition& v)
         os << "Definition(Statement)" << endl;
         os << more_indent << put_indent << v.variable;
         if (v.expression)
-            os << put_indent << *v.expression;
+            os << endl << put_indent << *v.expression;
         return os << less_indent;
     } else {
         os << "/*def*/ " << v.variable;

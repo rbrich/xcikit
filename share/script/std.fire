@@ -120,12 +120,39 @@ class Cast T R {
 
 // Note: Cast to Void is handled by the compiler, instances with R=Void are ignored.
 
+instance Cast Bool Bool { cast = { __noop } }
+instance Cast Bool Byte { cast = { __noop } }
+instance Cast Bool Int32 { cast = { __cast 0x18 } }
+instance Cast Bool Int64 { cast = { __cast 0x19 } }
+
+instance Cast Byte Bool { cast = fun x { x != b'\0' } }
+instance Cast Byte Byte { cast = { __noop } }
+instance Cast Byte Int32 { cast = { __cast 0x18 } }
+instance Cast Byte Int64 { cast = { __cast 0x19 } }
+
+instance Cast Int32 Bool { cast = fun x { x != 0 } }
+instance Cast Int32 Byte { cast = { __cast 0x81 } }
+instance Cast Int32 Int32 { cast = { __noop } }
+instance Cast Int32 Int64 { cast = { __cast 0x89 } }
+instance Cast Int32 Float32 { cast = { __cast 0x8c } }
+instance Cast Int32 Float64 { cast = { __cast 0x8d } }
+
+instance Cast Int64 Bool { cast = fun x { x != 0L } }
 instance Cast Int64 Byte { cast = { __cast 0x91 } }
 instance Cast Int64 Int32 { cast = { __cast 0x98 } }
 instance Cast Int64 Int64 { cast = { __noop } }
-instance Cast Int32 Int32 { cast = { __noop } }
-instance Cast Int32 Int64 { cast = { __cast 0x89 } }
+instance Cast Int64 Float32 { cast = { __cast 0x9C } }
+instance Cast Int64 Float64 { cast = { __cast 0x9D } }
 
+instance Cast Float32 Int32 { cast = { __cast 0xC8 } }
+instance Cast Float32 Int64 { cast = { __cast 0xC9 } }
+instance Cast Float32 Float32 { cast = { __noop } }
+instance Cast Float32 Float64 { cast = { __cast 0xCD } }
+
+instance Cast Float64 Int32 { cast = { __cast 0xD8 } }
+instance Cast Float64 Int64 { cast = { __cast 0xD9 } }
+instance Cast Float64 Float32 { cast = { __cast 0xDC } }
+instance Cast Float64 Float64 { cast = { __noop } }
 
 succ = fun x { x + 1 }
 pred = fun x { x - 1 }
