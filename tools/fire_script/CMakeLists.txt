@@ -13,6 +13,7 @@ target_link_libraries(fire
     xci-core
     xci-script
     taocpp::pegtl
+    range-v3::range-v3
 )
 
 if (EMSCRIPTEN)

@@ -183,6 +183,28 @@ public:
         m_const_value.reset();
     }
 
+    void visit(ast::Cast& v) override {
+        v.expression->apply(*this);
+        // cast to Void?
+        if (v.type_info.is_void()) {
+            m_const_value = Value::create(TypeInfo{Type::Void});
+            return;
+        }
+        // cast to the same type?
+        if (m_const_value->type_info() == v.type_info) {
+            // keep m_const_value -> eliminate the cast
+            return;
+        }
+        // FIXME: evaluate the actual (possibly user-defined) cast function
+        auto cast_result = Value::create(v.type_info);
+        if (cast_result->cast_from(*m_const_value)) {
+            // fold the cast into value
+            m_const_value = move(cast_result);
+            return;
+        }
+        m_const_value.reset();
+    }
+
     void visit(ast::Class& v) override { m_const_value.reset(); }
     void visit(ast::Instance& v) override { m_const_value.reset(); }
 

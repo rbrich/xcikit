@@ -495,7 +495,7 @@ private:
 };
 
 
-void Compiler::compile(Function& func, ast::Module& ast)
+bool Compiler::compile(Function& func, ast::Module& ast)
 {
     func.set_compiled();
     func.signature().set_return_type(TypeInfo{Type::Unknown});
@@ -507,48 +507,49 @@ void Compiler::compile(Function& func, ast::Module& ast)
     // - apply optimizations - const fold etc. (Optimizer)
     // See documentation on each function.
 
-    if ((m_flags & MandatoryMask) == 0) {
+    if ((m_flags & Flags::MandatoryMask) == Flags::Default) {
         // no post-processing selected by default -> enable all
-        m_flags |= MandatoryMask;
+        m_flags |= Flags::MandatoryMask;
     }
     // only if all mandatory passes were enabled
     bool can_compile = true;
 
-    if ((m_flags & FoldTuple) == FoldTuple)
+    if ((m_flags & Flags::FoldTuple) == Flags::FoldTuple)
         fold_tuple(ast.body);
     else
         can_compile = false;
 
-    if ((m_flags & FoldDotCall) == FoldDotCall)
+    if ((m_flags & Flags::FoldDotCall) == Flags::FoldDotCall)
         fold_dot_call(func, ast.body);
     else
         can_compile = false;
 
-    if ((m_flags & ResolveSymbols) == ResolveSymbols)
+    if ((m_flags & Flags::ResolveSymbols) == Flags::ResolveSymbols)
         resolve_symbols(func, ast.body);
     else
         can_compile = false;
 
-    if ((m_flags & ResolveTypes) == ResolveTypes)
+    if ((m_flags & Flags::ResolveTypes) == Flags::ResolveTypes)
         resolve_types(func, ast.body);
     else
         can_compile = false;
 
-    if ((m_flags & FoldIntrinsics) == FoldIntrinsics)
+    if ((m_flags & Flags::FoldIntrinsics) == Flags::FoldIntrinsics)
         fold_intrinsics(ast.body);
     else
         can_compile = false;
 
-    if ((m_flags & FoldConstExpr) == FoldConstExpr)
+    if ((m_flags & Flags::FoldConstExpr) == Flags::FoldConstExpr)
         fold_const_expr(func, ast.body);
 
-    if ((m_flags & ResolveNonlocals) == ResolveNonlocals)
+    if ((m_flags & Flags::ResolveNonlocals) == Flags::ResolveNonlocals)
         resolve_nonlocals(func, ast.body);
     else
         can_compile = false;
 
     if (can_compile)
         compile_block(func, ast.body);
+    return can_compile;
 }
 
 

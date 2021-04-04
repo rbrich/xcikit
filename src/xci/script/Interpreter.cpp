@@ -9,7 +9,7 @@
 namespace xci::script {
 
 
-Interpreter::Interpreter(uint32_t flags)
+Interpreter::Interpreter(Compiler::Flags flags)
     : m_compiler(flags)
 {
     add_imported_module(BuiltinModule::static_instance());
@@ -28,7 +28,8 @@ std::unique_ptr<Module> Interpreter::build_module(const std::string& name, std::
 
     // compile
     Function func {*module, module->symtab()};
-    m_compiler.compile(func, ast);
+    if (!m_compiler.compile(func, ast))
+        return module;  // requested to only preprocess AST
 
     // sanity check (no AST references)
     for (Index idx = 0; idx != module->num_functions(); ++idx) {

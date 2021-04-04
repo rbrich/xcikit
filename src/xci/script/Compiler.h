@@ -17,7 +17,7 @@ namespace xci::script {
 
 class Compiler {
 public:
-    enum Flags {
+    enum class Flags {
         // All compiler passes
         // UNSAFE: Don't use these flags directly - the wrong set of flags
         //         can crash the compiler (asserts in Debug mode).
@@ -47,23 +47,31 @@ public:
         // Optimization
         O0 = 0,
         O1 = MandatoryMask | FoldConstExpr,
+
+        Default = 0,
     };
 
+    // Allow basic arithmetic on OpCode
+    friend inline Flags operator|(Flags a, Flags b) { return Flags(int32_t(a) | int32_t(b)); }
+    friend inline Flags operator&(Flags a, Flags b) { return Flags(int32_t(a) & int32_t(b)); }
+    friend inline Flags operator|=(Flags& a, Flags b) { return a = a | b; }
+
     Compiler() = default;
-    explicit Compiler(uint32_t flags) : m_flags(flags) {}
+    explicit Compiler(Flags flags) : m_flags(flags) {}
 
-    void set_flags(uint32_t flags) { m_flags = flags; }
-    uint32_t flags() const { return m_flags; }
+    void set_flags(Flags flags) { m_flags = flags; }
+    Flags flags() const { return m_flags; }
 
-    // Compile AST into Function object, which contains objects in scope + code
-    // (module is special kind of function, with predefined parameters)
-    void compile(Function& func, ast::Module& ast);
+    /// Compile AST into Function object, which contains objects in scope + code
+    /// (module is a special kind of function, with predefined parameters)
+    /// \returns true if actually compiled (depends on Flags)
+    bool compile(Function& func, ast::Module& ast);
 
     // Compile block, return type of its return value
     void compile_block(Function& func, const ast::Block& block);
 
 private:
-    uint32_t m_flags = 0;
+    Flags m_flags = Flags::Default;
 };
 
 

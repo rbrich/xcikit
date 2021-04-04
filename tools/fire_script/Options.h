@@ -7,6 +7,7 @@
 #ifndef XCI_SCRIPT_TOOL_OPTIONS_H
 #define XCI_SCRIPT_TOOL_OPTIONS_H
 
+#include <xci/script/Compiler.h>
 #include <cstdint>
 #include <vector>
 
@@ -20,7 +21,7 @@ struct ReplOptions {
     bool print_bytecode = false;
     bool trace_bytecode = false;
     bool with_std_lib = true;
-    uint32_t compiler_flags = 0;
+    Compiler::Flags compiler_flags = Compiler::Flags::Default;
 };
 
 struct ProgramOptions {

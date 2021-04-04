@@ -228,7 +228,7 @@ public:
                     auto& inst = inst_mod->get_instance(inst_psym->index());
                     auto fn_idx = inst.get_function(sym.ref()->index());
                     auto& inst_fn = inst_mod->get_function(fn_idx);
-                    o_candidates << "   " << inst_fn.signature() << endl;
+                    o_candidates << "      " << inst_fn.signature() << endl;
                     inst_psym = inst_psym->next();
                 }
                 stringstream o_ftype;
@@ -321,7 +321,7 @@ public:
                 stringstream o_candidates;
                 for (const auto& m : candidates) {
                     auto& fn = m.module->get_function(m.symptr->index());
-                    o_candidates << "   * " << [&m]() {
+                    o_candidates << "      " << [&m]() {
                         switch (m.match) {
                             case Match::None: return "ignored";
                             case Match::Partial: return "partial";
