@@ -6,6 +6,7 @@ add_library(xci-script
     ast/AST.cpp
     ast/fold_const_expr.cpp
     ast/fold_dot_call.cpp
+    ast/fold_intrinsics.cpp
     ast/fold_tuple.cpp
     ast/resolve_nonlocals.cpp
     ast/resolve_symbols.cpp

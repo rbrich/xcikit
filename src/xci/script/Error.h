@@ -99,28 +99,28 @@ struct MultipleDeclarationError : public ScriptError {
 };
 
 
-struct UnexpectedArgument : public ScriptError {
-    explicit UnexpectedArgument(size_t idx, const SourceInfo& si)
-            : ScriptError(format("unexpected argument #{}", idx), si) {}
-};
-
-
 struct UnsupportedOperandsError : public ScriptError {
     explicit UnsupportedOperandsError(const std::string& op)
             : ScriptError(format("unsupported operands to '{}'", op)) {}
 };
 
 
-struct UnexpectedArgumentCount : public ScriptError {
-    explicit UnexpectedArgumentCount(size_t exp, size_t got)
-            : ScriptError(format("function expects {} args, called with {} args",
-                    exp, got)) {}
-};
-
-
 struct UnknownTypeName : public ScriptError {
     explicit UnknownTypeName(const std::string& name)
         : ScriptError(format("unknown type name: {}", name)) {}
+};
+
+
+struct UnexpectedArgumentCount : public ScriptError {
+    explicit UnexpectedArgumentCount(size_t exp, size_t got, const SourceInfo& si)
+            : ScriptError(format("function expects {} args, called with {} args",
+                    exp, got), si) {}
+};
+
+
+struct UnexpectedArgument : public ScriptError {
+    explicit UnexpectedArgument(size_t idx, const SourceInfo& si)
+            : ScriptError(format("unexpected argument #{}", idx), si) {}
 };
 
 
@@ -212,8 +212,8 @@ struct IndexOutOfBounds : public ScriptError {
 
 
 struct IntrinsicsFunctionError : public ScriptError {
-    explicit IntrinsicsFunctionError(const std::string& message)
-        : ScriptError("intrinsics function: " + message) {}
+    explicit IntrinsicsFunctionError(const std::string& message, const SourceInfo& si)
+        : ScriptError("intrinsics function: " + message, si) {}
 };
 
 

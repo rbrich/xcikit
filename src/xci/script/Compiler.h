@@ -18,18 +18,35 @@ namespace xci::script {
 class Compiler {
 public:
     enum Flags {
-        // enable optimizations
-        OConstFold = 0x1,
-        O0 = 0,
-        O1 = OConstFold,
+        // All compiler passes
+        // UNSAFE: Don't use these flags directly - the wrong set of flags
+        //         can crash the compiler (asserts in Debug mode).
+        //         Use PP* flags below.
+        FoldTuple           = 0x0001,
+        FoldDotCall         = 0x0002,
+        ResolveSymbols      = 0x0004,
+        ResolveTypes        = 0x0008,
+        FoldIntrinsics      = 0x0010,
+        ResolveNonlocals    = 0x0020,
+        FoldConstExpr       = 0x0001 << 16,
 
-        // parse & post-process only, do not compile into bytecode
-        PPMask          = 7 << 24,
-        PPTuple         = 1 << 24,    // enable fold_tuple pass
-        PPDotCall       = 2 << 24,    // enable fold_dot_call pass
-        PPSymbols       = 3 << 24,    // enable resolve_symbols pass
-        PPTypes         = 4 << 24,    // enable resolve_types pass
-        PPNonlocals     = 5 << 24,    // enable resolve_nonlocals pass
+        // Bit masks
+        MandatoryMask       = 0xffff,
+        OptimizationMask    = 0xffff << 16,
+
+        // Mandatory AST passes
+        // - if none of the flags are set, all passes will be enabled
+        // - these flags solve passes have internal dependencies, these flags
+        PPTuple         = FoldTuple,
+        PPDotCall       = FoldDotCall,
+        PPSymbols       = ResolveSymbols,
+        PPTypes         = ResolveTypes | PPSymbols,
+        PPIntrinsics    = FoldIntrinsics | PPTypes,
+        PPNonlocals     = ResolveNonlocals,
+
+        // Optimization
+        O0 = 0,
+        O1 = MandatoryMask | FoldConstExpr,
     };
 
     Compiler() = default;

@@ -65,6 +65,23 @@ public:
     virtual void visit(const Module&) = 0;
 };
 
+class PartialVisitor : public Visitor {
+    void visit(const Void&) override {}
+    void visit(const Bool&) override {}
+    void visit(const Byte&) override {}
+    void visit(const Char&) override {}
+    void visit(const Int32&) override {}
+    void visit(const Int64&) override {}
+    void visit(const Float32&) override {}
+    void visit(const Float64&) override {}
+    void visit(const Bytes&) override {}
+    void visit(const String&) override {}
+    void visit(const List&) override {}
+    void visit(const Tuple&) override {}
+    void visit(const Closure&) override {}
+    void visit(const Module&) override {}
+};
+
 } // namespace value
 
 
@@ -99,6 +116,10 @@ public:
     bool is_void() const { return type_info().type() == Type::Void; }
     bool is_bool() const { return type_info().type() == Type::Bool; }
     bool is_callable() const { return type_info().type() == Type::Function; }
+
+    // Load value from `v` and return true if the value is compatible
+    // (can be statically casted). Return false otherwise.
+    virtual bool cast_from(Value& v) { return false; }
 
     // Cast to subtype, e.g.: `v.as<value::Int32>()->value()`
     template <class T> T& as() { return *dynamic_cast<T*>(this); }
@@ -145,7 +166,6 @@ namespace value {
 
 
 // Empty value, doesn't carry any information
-// But it still needs to have some size, so it's written to stack as single 0 byte
 class Void: public Value {
 public:
     std::unique_ptr<Value> make_copy() const override { return std::make_unique<Void>(); }
@@ -191,10 +211,12 @@ public:
     void write(byte* buffer) const override { *buffer = byte(m_value); }
     void read(const byte* buffer) override { m_value = uint8_t(*buffer); }
     TypeInfo type_info() const override { return TypeInfo{Type::Byte}; }
+    bool cast_from(Value& v) override;
 
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
 
     uint8_t value() const { return m_value; }
+    void set_value(uint8_t v) { m_value = v; }
 
 private:
     uint8_t m_value = 0;
@@ -230,10 +252,12 @@ public:
     void write(byte* buffer) const override { std::memcpy(buffer, &m_value, sizeof(m_value)); }
     void read(const byte* buffer) override { std::memcpy(&m_value, buffer, sizeof(m_value)); }
     TypeInfo type_info() const override { return TypeInfo{Type::Int32}; }
+    bool cast_from(Value& v) override;
 
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
 
     int32_t value() const { return m_value; }
+    void set_value(int32_t v) { m_value = v; }
 
 private:
     int32_t m_value = 0;
@@ -249,10 +273,12 @@ public:
     void write(byte* buffer) const override { std::memcpy(buffer, &m_value, sizeof(m_value)); }
     void read(const byte* buffer) override { std::memcpy(&m_value, buffer, sizeof(m_value)); }
     TypeInfo type_info() const override { return TypeInfo{Type::Int64}; }
+    bool cast_from(Value& v) override;
 
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
 
     int64_t value() const { return m_value; }
+    void set_value(int64_t v) { m_value = v; }
 
 private:
     int64_t m_value = 0;
@@ -268,10 +294,12 @@ public:
     void write(byte* buffer) const override { std::memcpy(buffer, &m_value, sizeof(m_value)); }
     void read(const byte* buffer) override { std::memcpy(&m_value, buffer, sizeof(m_value)); }
     TypeInfo type_info() const override { return TypeInfo{Type::Float32}; }
+    bool cast_from(Value& v) override;
 
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
 
     float value() const { return m_value; }
+    void set_value(float v) { m_value = v; }
 
 private:
     float m_value = 0.0f;
@@ -287,10 +315,12 @@ public:
     void write(byte* buffer) const override { std::memcpy(buffer, &m_value, sizeof(m_value)); }
     void read(const byte* buffer) override { std::memcpy(&m_value, buffer, sizeof(m_value)); }
     TypeInfo type_info() const override { return TypeInfo{Type::Float64}; }
+    bool cast_from(Value& v) override;
 
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
 
     double value() const { return m_value; }
+    void set_value(double v) { m_value = v; }
 
 private:
     double m_value = 0.0;

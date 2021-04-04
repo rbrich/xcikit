@@ -73,8 +73,10 @@ public:
 
     // Special intrinsics function cannot contain any compiled code and is always inlined.
     // This counter helps to check no other code was generated.
-    void add_intrinsic(uint8_t code) { std::get<CompiledBody>(m_body).intrinsics++;
-        std::get<CompiledBody>(m_body).code.add(code); }
+    void add_intrinsic(uint8_t code) {
+        std::get<CompiledBody>(m_body).intrinsics++;
+        std::get<CompiledBody>(m_body).code.add(code);
+    }
     size_t intrinsics() const { return std::get<CompiledBody>(m_body).intrinsics; }
     bool has_intrinsics() const { return std::get<CompiledBody>(m_body).intrinsics > 0; }
 

@@ -12,6 +12,7 @@
 #include "ast/fold_const_expr.h"
 #include "ast/fold_dot_call.h"
 #include "ast/fold_tuple.h"
+#include "ast/fold_intrinsics.h"
 #include "Stack.h"
 #include <xci/compat/macros.h>
 
@@ -22,7 +23,6 @@
 
 namespace xci::script {
 
-using std::make_unique;
 using ranges::cpp20::views::reverse;
 
 
@@ -58,7 +58,9 @@ public:
 
         if (m_function.has_intrinsics()) {
             if (m_function.intrinsics() != m_function.code().size())
-                throw IntrinsicsFunctionError("cannot mix compiled code with intrinsics");
+                throw IntrinsicsFunctionError(
+                        "cannot mix compiled code with intrinsics",
+                        ret.expression->source_info);
             // no DROP for intrinsics function
             return;
         }
@@ -130,11 +132,22 @@ public:
         auto& symtab = *v.identifier.symbol.symtab();
         auto& sym = *v.identifier.symbol;
         switch (sym.type()) {
-            case Symbol::Instruction:
+            case Symbol::Instruction: {
                 // intrinsics - just output the requested instruction
-                assert(sym.index() < 256);
-                m_function.add_intrinsic(uint8_t(sym.index()));
+                auto opcode = Opcode(sym.index());
+                // add the opcode
+                m_function.add_intrinsic(uint8_t(opcode));
+                if (opcode <= Opcode::ZeroArgLast)
+                    break;
+                // add first arg
+                m_function.add_intrinsic(v.instruction_args[0]);
+                if (opcode <= Opcode::OneArgLast)
+                    break;
+                // add second arg
+                m_function.add_intrinsic(uint8_t(v.instruction_args[1]));
+                assert(opcode <= Opcode::TwoArgLast);
                 break;
+            }
             case Symbol::Module: {
                 assert(sym.depth() == 0);
                 // LOAD_MODULE <module_idx>
@@ -272,7 +285,7 @@ public:
     }
 
     void visit(ast::Call& v) override {
-        // call the function or push the value
+        // call the function or push the function as value
 
         for (auto& arg : reverse(v.args)) {
             arg->apply(*this);
@@ -494,37 +507,42 @@ void Compiler::compile(Function& func, ast::Module& ast)
     // - apply optimizations - const fold etc. (Optimizer)
     // See documentation on each function.
 
-    if ((m_flags & PPMask) == 0) {
+    if ((m_flags & MandatoryMask) == 0) {
         // no post-processing selected by default -> enable all
-        m_flags |= PPMask;
+        m_flags |= MandatoryMask;
     }
     // only if all mandatory passes were enabled
     bool can_compile = true;
 
-    if ((m_flags & PPTuple) == PPTuple)
+    if ((m_flags & FoldTuple) == FoldTuple)
         fold_tuple(ast.body);
     else
         can_compile = false;
 
-    if ((m_flags & PPDotCall) == PPDotCall)
+    if ((m_flags & FoldDotCall) == FoldDotCall)
         fold_dot_call(func, ast.body);
     else
         can_compile = false;
 
-    if ((m_flags & PPSymbols) == PPSymbols)
+    if ((m_flags & ResolveSymbols) == ResolveSymbols)
         resolve_symbols(func, ast.body);
     else
         can_compile = false;
 
-    if ((m_flags & PPTypes) == PPTypes)
+    if ((m_flags & ResolveTypes) == ResolveTypes)
         resolve_types(func, ast.body);
     else
         can_compile = false;
 
-    if ((m_flags & OConstFold) == OConstFold)
+    if ((m_flags & FoldIntrinsics) == FoldIntrinsics)
+        fold_intrinsics(ast.body);
+    else
+        can_compile = false;
+
+    if ((m_flags & FoldConstExpr) == FoldConstExpr)
         fold_const_expr(func, ast.body);
 
-    if ((m_flags & PPNonlocals) == PPNonlocals)
+    if ((m_flags & ResolveNonlocals) == ResolveNonlocals)
         resolve_nonlocals(func, ast.body);
     else
         can_compile = false;

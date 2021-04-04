@@ -114,6 +114,19 @@ f = fun x:T y:T -> T lazy with (Ord T) { x < y }
 */
 
 
+class Cast T R {
+    cast : T -> R
+}
+
+// Note: Cast to Void is handled by the compiler, instances with R=Void are ignored.
+
+instance Cast Int64 Byte { cast = { __cast 0x91 } }
+instance Cast Int64 Int32 { cast = { __cast 0x98 } }
+instance Cast Int64 Int64 { cast = { __noop } }
+instance Cast Int32 Int32 { cast = { __noop } }
+instance Cast Int32 Int64 { cast = { __cast 0x89 } }
+
+
 succ = fun x { x + 1 }
 pred = fun x { x - 1 }
 max = fun x y { if x > y then x else y }

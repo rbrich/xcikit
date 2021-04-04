@@ -80,6 +80,7 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::LoadStatic:        return os << "LOAD_STATIC";
         case Opcode::LoadModule:        return os << "LOAD_MODULE";
         case Opcode::LoadFunction:      return os << "LOAD_FUNCTION";
+        case Opcode::Cast:              return os << "CAST";
         case Opcode::Copy:              return os << "COPY";
         case Opcode::Drop:              return os << "DROP";
         case Opcode::Call0:             return os << "CALL0";

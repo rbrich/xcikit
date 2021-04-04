@@ -296,6 +296,9 @@ struct Reference: public Expression {
     SymbolPointer chain;  // tip of chain of Instances in case of Method
     Module* module = nullptr;   // module with instance function
     Index index = no_index;     // index of (instance) function in module
+
+    // resolved Instruction:
+    uint8_t instruction_args[2];
 };
 
 struct Call: public Expression {
@@ -311,8 +314,8 @@ struct Call: public Expression {
     std::vector<std::unique_ptr<Expression>> args;
 
     // resolved:
-    size_t wrapped_execs = 0;
-    size_t partial_args = 0;
+    unsigned wrapped_execs = 0;
+    unsigned partial_args = 0;
     Index partial_index = no_index;
 };
 
@@ -416,6 +419,7 @@ struct Cast: public Expression {
     std::unique_ptr<Reference> cast_function;  // none for cast to Void
 
     // resolved:
+    TypeInfo type_info;   // resolved Type
     size_t drop_size = 0;  // cast to Void: size of expression result type
 };
 

@@ -11,6 +11,19 @@
 namespace xci::script {
 
 
+Type decode_arg_type(uint8_t arg)
+{
+    switch (arg) {
+        case 1: return Type::Byte;
+        case 8: return Type::Int32;
+        case 9: return Type::Int64;
+        case 0xC: return Type::Float32;
+        case 0xD: return Type::Float64;
+        default: return Type::Unknown;
+    }
+}
+
+
 size_t TypeInfo::size() const
 {
     switch (type()) {

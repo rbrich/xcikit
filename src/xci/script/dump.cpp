@@ -571,8 +571,11 @@ std::ostream& operator<<(std::ostream& os, DumpInstruction&& v)
     os << right << setw(3) << inum << "  " << left << setw(20) << opcode;
     if (opcode >= Opcode::OneArgFirst && opcode <= Opcode::OneArgLast) {
         // 1 arg
-        Index arg = *(++v.pos);
-        os << static_cast<int>(arg);
+        auto arg = *(++v.pos);
+        if (opcode == Opcode::Cast)
+            os << std::hex << "0x" << static_cast<int>(arg) << std::dec;
+        else
+            os << static_cast<int>(arg);
         switch (opcode) {
             case Opcode::LoadStatic:
                 os << " (" << v.func.module().get_value(arg) << ")";
@@ -586,6 +589,12 @@ std::ostream& operator<<(std::ostream& os, DumpInstruction&& v)
             case Opcode::Call1: {
                 const auto& fn = v.func.module().get_imported_module(0).get_function(arg);
                 os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
+                break;
+            }
+            case Opcode::Cast: {
+                const auto from_type = decode_arg_type(arg >> 4);
+                const auto to_type = decode_arg_type(arg & 0xf);
+                os << " (" << TypeInfo{from_type} << " -> " << TypeInfo{to_type} << ")";
                 break;
             }
             default:
@@ -728,20 +737,20 @@ std::ostream& operator<<(std::ostream& os, const Signature& v)
 {
     if (!v.nonlocals.empty()) {
         os << "{ ";
-        for (auto& ti : v.nonlocals) {
+        for (const auto& ti : v.nonlocals) {
             os << ti << " ";
         }
         os << "} ";
     }
     if (!v.partial.empty()) {
         os << "( ";
-        for (auto& ti : v.partial) {
+        for (const auto& ti : v.partial) {
             os << ti << " ";
         }
         os << ") ";
     }
     if (!v.params.empty()) {
-        for (auto& ti : v.params) {
+        for (const auto& ti : v.params) {
             os << ti << " ";
         }
         os << "-> ";

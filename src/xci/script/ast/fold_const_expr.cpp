@@ -194,39 +194,15 @@ private:
     Module& module() { return m_function.module(); }
 
     void apply_and_fold(unique_ptr<ast::Expression>& expr) {
-        expr->apply(*this);
-        convert_const_object_to_expression();
+        expr->apply(*this);  // may set either m_const_value or m_collapsed
+        if (m_const_value)
+            m_collapsed = make_unique<ast::Literal>(*m_const_value);
         if (m_collapsed) {
             auto source_info = expr->source_info;
             expr = move(m_collapsed);
             if (!expr->source_info)
                 expr->source_info = source_info;
         }
-    }
-
-    void convert_const_object_to_expression() {
-        if (!m_const_value)
-            return;
-        struct ValueVisitor: public value::Visitor {
-            unique_ptr<ast::Expression>& collapsed;
-            explicit ValueVisitor(unique_ptr<ast::Expression>& collapsed) : collapsed(collapsed) {}
-            void visit(const value::Void&) override {}
-            void visit(const value::Bool& v) override { collapsed = make_unique<ast::Literal>(v); }
-            void visit(const value::Byte& v) override { collapsed = make_unique<ast::Literal>(v); }
-            void visit(const value::Char& v) override { collapsed = make_unique<ast::Literal>(v); }
-            void visit(const value::Int32& v) override { collapsed = make_unique<ast::Literal>(v); }
-            void visit(const value::Int64& v) override { collapsed = make_unique<ast::Literal>(v); }
-            void visit(const value::Float32& v) override { collapsed = make_unique<ast::Literal>(v); }
-            void visit(const value::Float64& v) override { collapsed = make_unique<ast::Literal>(v); }
-            void visit(const value::Bytes& v) override { collapsed = make_unique<ast::Literal>(v); }
-            void visit(const value::String& v) override { collapsed = make_unique<ast::Literal>(v); }
-            void visit(const value::List& v) override {}
-            void visit(const value::Tuple& v) override {}
-            void visit(const value::Closure&) override {}
-            void visit(const value::Module& v) override {}
-        };
-        ValueVisitor visitor(m_collapsed);
-        m_const_value->apply(visitor);
     }
 
     Function& m_function;

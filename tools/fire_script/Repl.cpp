@@ -71,7 +71,7 @@ bool Repl::evaluate(std::string_view line)
         }
 
         // stop if we were only processing the AST, without actual compilation
-        if ((m_opts.compiler_flags & Compiler::PPMask) != 0)
+        if ((m_opts.compiler_flags & Compiler::MandatoryMask) != 0)
             return false;
 
         BytecodeTracer tracer(machine, t);

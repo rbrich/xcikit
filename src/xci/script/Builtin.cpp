@@ -441,6 +441,7 @@ BuiltinModule::add_subscript_function()
 
 void BuiltinModule::add_intrinsics()
 {
+    // no args
     symtab().add({"__noop", Symbol::Instruction, Index(Opcode::Noop)});
     symtab().add({"__logical_not", Symbol::Instruction, Index(Opcode::LogicalNot)});
     symtab().add({"__logical_or", Symbol::Instruction, Index(Opcode::LogicalOr)});
@@ -503,8 +504,13 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__exp_32", Symbol::Instruction, Index(Opcode::Exp_32)});
     symtab().add({"__exp_64", Symbol::Instruction, Index(Opcode::Exp_64)});
     symtab().add({"__subscript_32", Symbol::Instruction, Index(Opcode::Subscript_32)});
+    // one arg
+    symtab().add({"__cast", Symbol::Instruction, Index(Opcode::Cast)});
+    // two args
+    symtab().add({"__copy", Symbol::Instruction, Index(Opcode::Copy)});
+    symtab().add({"__drop", Symbol::Instruction, Index(Opcode::Drop)});
     /*
-    // these instructions need args, it doesn't make sense to provide them at this time
+    // not yet found any use for these, uncomment when needed
     symtab().add({"__execute", Symbol::Instruction, Index(Opcode::Execute)});
     symtab().add({"__load_static", Symbol::Instruction, Index(Opcode::LoadStatic)});
     symtab().add({"__load_module", Symbol::Instruction, Index(Opcode::LoadModule)});
@@ -522,8 +528,6 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__partial0", Symbol::Instruction, Index(Opcode::Partial0)});
     symtab().add({"__partial1", Symbol::Instruction, Index(Opcode::Partial1)});
     symtab().add({"__make_list", Symbol::Instruction, Index(Opcode::MakeList)});
-    symtab().add({"__copy", Symbol::Instruction, Index(Opcode::Copy)});
-    symtab().add({"__drop", Symbol::Instruction, Index(Opcode::Drop)});
     symtab().add({"__partial", Symbol::Instruction, Index(Opcode::Partial)});
     */
 }

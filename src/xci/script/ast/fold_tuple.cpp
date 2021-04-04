@@ -89,7 +89,10 @@ public:
     void visit(ast::Literal&) override {}
     void visit(ast::Tuple&) override {}
     void visit(ast::Reference&) override {}
-    void visit(ast::Cast&) override {}
+
+    void visit(ast::Cast& v) override {
+        apply_and_fold(v.expression);
+    }
 
     void visit(ast::Class&) override {}
     void visit(ast::Instance&) override {}

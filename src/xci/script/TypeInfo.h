@@ -41,6 +41,11 @@ enum class Type : uint8_t {
 };
 
 
+/// Decode Type from half-byte argument of an Opcode
+/// See Opcode::Cast
+Type decode_arg_type(uint8_t arg);
+
+
 struct Signature;
 
 class TypeInfo {

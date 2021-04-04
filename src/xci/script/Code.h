@@ -98,6 +98,15 @@ enum class Opcode: uint8_t {
     LoadModule,             // arg => idx of imported module, push it as value on stack
     LoadFunction,           // arg => idx of function in module, push on stack
 
+    /// Cast Int/Float value to another type.
+    /// Arg: 4/4 bit split, high half = from type, low half = to type
+    /// Types:
+    /// * unsigned integers: 1 = 8bit, (2 = 16bit), 3 = 32bit, 4 = 64bit, (5 = 128bit)
+    /// * signed integers: 6 = 8bit, (7 = 16bit), 8 = 32bit, 9 = 64bit, (A = 128bit)
+    /// * floats: (B = 16bit), C = 32bit, D = 64bit, (E = 128bit)
+    /// Casting rules are based on the C++ implementation (static_cast).
+    Cast,
+
     Call0,                  // arg = idx of function in current module, call it, pull args from stack, push result back
     Call1,                  // arg = idx of function in builtin module, call it, pull args from stack, push result back
 
@@ -120,7 +129,7 @@ enum class Opcode: uint8_t {
     MakeList,               // arg1 = number of elements, arg2 = size of each element, pulls number*size bytes from stack, creates list on heap, pushes list handle back to stack
 
     Copy,                   // arg1 => offset from base (0 = base = first arg), copy <arg2> bytes from stack and push them back on top
-    Drop,                   // drop <arg2> bytes from stack, skipping top <arg1> bytes
+    Drop,                   // remove a value from stack: drop <arg2> bytes, skipping top <arg1> bytes
 
     // --------------------------------------------------------------
     // Auxiliary aliases

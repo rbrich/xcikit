@@ -156,9 +156,33 @@ public:
         const auto& symtab = *v.identifier.symbol.symtab();
         const auto& sym = *v.identifier.symbol;
         switch (sym.type()) {
-            case Symbol::Instruction:
+            case Symbol::Instruction: {
+                // the instructions are low-level, untyped - set return type to Unknown
                 m_value_type = {};
+                // check number of args - it depends on Opcode
+                auto opcode = (Opcode) sym.index();
+                if (opcode <= Opcode::ZeroArgLast) {
+                    if (!m_call_args.empty())
+                        throw UnexpectedArgumentCount(0, m_call_args.size(), v.source_info);
+                } else if (opcode <= Opcode::OneArgLast) {
+                    if (m_call_args.size() != 1)
+                        throw UnexpectedArgumentCount(1, m_call_args.size(), v.source_info);
+                } else {
+                    assert(opcode <= Opcode::TwoArgLast);
+                    if (m_call_args.size() != 2)
+                        throw UnexpectedArgumentCount(2, m_call_args.size(), v.source_info);
+                }
+                // check type of args (they must be Int or Byte)
+                for (const auto&& [i, arg] : m_call_args | enumerate) {
+                    Type t = arg.type_info.type();
+                    if (t != Type::Byte && t != Type::Int32)
+                        throw UnexpectedArgumentType(i+1, TypeInfo{Type::Int32},
+                                                     arg.type_info, arg.source_info);
+                }
+                // cleanup - args are now fully processed
+                m_call_args.clear();
                 return;
+            }
             case Symbol::Class:
             case Symbol::Instance:
                 // TODO
@@ -506,6 +530,7 @@ public:
         v.expression->apply(*this);
         // resolve the target type -> m_type_info
         v.type->apply(*this);
+        v.type_info = m_type_info;  // save for fold_const_expr
         // cast to Void -> don't call the cast function, just drop the expression result from stack
         if (m_type_info.is_void()) {
             v.drop_size = m_value_type.size();
