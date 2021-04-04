@@ -12,9 +12,9 @@ namespace xci::script {
 
 class FoldIntrinsicsVisitor final: public ast::Visitor {
 public:
-    void visit(ast::Definition& v) override { v.expression->apply(*this); }
-    void visit(ast::Invocation& v) override { v.expression->apply(*this); }
-    void visit(ast::Return& v) override { v.expression->apply(*this); }
+    void visit(ast::Definition& v) override { v.expression->apply(*this); reset(); }
+    void visit(ast::Invocation& v) override { v.expression->apply(*this); reset(); }
+    void visit(ast::Return& v) override { v.expression->apply(*this); reset(); }
 
     void visit(ast::Reference& v) override {
         assert(v.identifier.symbol);
@@ -49,19 +49,21 @@ public:
         }
         if (m_reference) {
             v.args.clear();
-            m_reference = nullptr;
+            reset();
         }
     }
 
     void visit(ast::OpCall& v) override {
         for (auto& arg : v.args)
             arg->apply(*this);
+        reset();
     }
 
     void visit(ast::Condition& v) override {
         v.cond->apply(*this);
         v.then_expr->apply(*this);
         v.else_expr->apply(*this);
+        reset();
     }
 
     void visit(ast::Function& v) override {
@@ -92,6 +94,8 @@ public:
     void visit(ast::ListType&) final {}
 
 private:
+    void reset() { m_reference = nullptr; }
+
     uint8_t m_arg_value = 0;
     ast::Reference* m_reference = nullptr;
 };

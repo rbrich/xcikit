@@ -27,7 +27,7 @@ using namespace xci::core;
 
 
 // Check parsing into AST and dumping back to code
-void check_parser(const string& input, const string& expected_output)
+std::string parse(const string& input)
 {
     Parser parser;
     ast::Module ast;
@@ -35,63 +35,48 @@ void check_parser(const string& input, const string& expected_output)
     fold_tuple(ast.body);
     ostringstream os;
     os << ast;
-    CHECK( os.str() == expected_output );
+    return os.str();
 }
 
-// Check that parsing the two inputs gives the same result
-void check_parser_eq(const string& input1, const string& input2)
-{
-    Parser parser;
-    ast::Module ast1;
-    ast::Module ast2;
-    parser.parse(input1, ast1);
-    parser.parse(input1, ast2);
-    ostringstream os1;
-    ostringstream os2;
-    os1 << ast1;
-    os2 << ast2;
-    CHECK( os1.str() == os2.str() );
-}
 
-void check_parser_error(const string& input, const char* starts_with)
+std::string interpret(const string& input, bool import_std=false)
 {
-    Parser parser;
-    ast::Module ast;
-    REQUIRE_THROWS_WITH(parser.parse(input, ast), Catch::Matchers::StartsWith(starts_with));
-}
-
-void check_interpreter(const string& input, const string& expected_output="true")
-{
-    static std::unique_ptr<Module> std_module;
     Interpreter interpreter;
 
-    if (!std_module) {
-        Logger::init(Logger::Level::Warning);
-        Vfs vfs;
-        vfs.mount(XCI_SHARE);
+    if (import_std) {
+        static std::unique_ptr<Module> std_module;
+        if (!std_module) {
+            Logger::init(Logger::Level::Warning);
+            Vfs vfs;
+            vfs.mount(XCI_SHARE);
 
-        auto f = vfs.read_file("script/std.fire");
-        REQUIRE(f.is_open());
-        auto content = f.content();
-        std_module = interpreter.build_module("std", content->string_view());
+            auto f = vfs.read_file("script/std.fire");
+            REQUIRE(f.is_open());
+            auto content = f.content();
+            std_module = interpreter.build_module("std", content->string_view());
+        }
+        interpreter.add_imported_module(*std_module);
     }
-    interpreter.add_imported_module(*std_module);
 
+    UNSCOPED_INFO(input);
     ostringstream os;
     try {
         auto result = interpreter.eval(input, [&os](const Value& invoked) {
-            os << invoked << '\n';
+            os << invoked << ';';
         });
         os << *result;
         result->decref();
     } catch (const ScriptError& e) {
-        INFO(e.what());
-        INFO(e.detail());
-        FAIL("Exception thrown.");
+        FAIL_CHECK("Exception thrown: " << e.what() << "\n" << e.detail());
+        return "!!! exception thrown !!!";
     }
+    return os.str();
+}
 
-    INFO(input);
-    CHECK( os.str() == expected_output );
+
+std::string interpret_std(const string& input)
+{
+    return interpret(input, true);
 }
 
 
@@ -105,72 +90,73 @@ TEST_CASE( "Analyze grammar", "[script][parser]" )
 
 TEST_CASE( "Comments", "[script][parser]" )
 {
-    check_parser("a  // C-style comment", "a");
-    check_parser("/**/a/*C++-style\n \ncomment*/+b/*\n*/", "(a + b)");
+    CHECK(parse("a  // C-style comment") == "a");
+    CHECK(parse("/**/a/*C++-style\n \ncomment*/+b/*\n*/") == "(a + b)");
 }
 
 
 TEST_CASE( "Optional semicolon", "[script][parser]" )
 {
-    check_parser_eq("a = 1", "a = 1;");
-    check_parser_eq("a = 1\nb = 2\n", "a = 1; b = 2;");
-    check_parser_eq("(\n 1\n  + \n2\n)\n\na = 1  // nl still counted\nb=2\nc=3",
-            "(1+2); a=1; b=2; c=3");  // newlines are allowed inside brackets
-    check_parser_eq("40\n.add 2\n50\n.sub 8", "40 .add 2; 50 .sub 8;");  // dotcall can continue after linebreak
-    check_parser_eq("a =\n1", "a=1");  // linebreak is allowed after '=' in definition
-    check_parser_eq("1 + \\\n 2", "1+2");  // newline can be escaped
-    check_parser_eq("(1 + \\\n 2)", "(1+2)");
-    check_parser_error("a=1;;", "parse error: <input>:1:5: invalid syntax");  // empty statement is not allowed, semicolon is only used as a separator
+    CHECK(parse("a = 1") == parse("a = 1;"));
+    CHECK(parse("a = 1\nb = 2\n") == parse("a = 1; b = 2;"));
+    CHECK(parse("(\n 1\n  + \n2\n)\n\na = 1  // nl still counted\nb=2\nc=3") ==
+          parse("(1+2); a=1; b=2; c=3"));  // newlines are allowed inside brackets
+    CHECK(parse("40\n.add 2\n50\n.sub 8") == parse("40 .add 2; 50 .sub 8;"));  // dotcall can continue after linebreak
+    CHECK(parse("a =\n1") == parse("a=1"));  // linebreak is allowed after '=' in definition
+    CHECK(parse("1 + \\\n 2") == parse("1+2"));  // newline can be escaped
+    CHECK(parse("(1 + \\\n 2)") == parse("(1+2)"));
+    REQUIRE_THROWS_WITH(parse("a=1;;"),  // empty statement is not allowed, semicolon is only used as a separator
+            Catch::Matchers::StartsWith("parse error: <input>:1:5: invalid syntax"));
 }
 
 
 TEST_CASE( "Values", "[script][parser]" )
 {
-    check_parser("identifier", "identifier");
-    check_parser("123", "123");
-    check_parser("1.", "1.0");
-    check_parser("1.23", "1.23");
-    check_parser("b'B'", "b'B'");
-    check_parser("b\"bytes literal\"", "b\"bytes literal\"");
-    check_parser("'c'", "'c'");
-    check_parser("\"string literal\"", "\"string literal\"");
-    check_parser("\"escape sequences: \\\"\\n\\0\\x12 \"", "\"escape sequences: \\\"\\n\\0\\x12 \"");
-    check_parser("$$ raw \n\r\t\" string $$", "\" raw \\n\\r\\t\\\" string \"");
-    check_parser("1,2,3", "1, 2, 3");  // naked tuple
-    check_parser("(1,2,\"str\")", "(1, 2, \"str\")");  // bracketed tuple
-    check_parser("[1,2,3]", "[1, 2, 3]");  // list
-    check_parser("[(1,2,3,4)]", "[(1, 2, 3, 4)]");  // list with a tuple item
-    check_parser("[(1,2,3,4), 5]", "[(1, 2, 3, 4), 5]");
+    CHECK(parse("identifier") == "identifier");
+    CHECK(parse("123") == "123");
+    CHECK(parse("1.") == "1.0");
+    CHECK(parse("1.23") == "1.23");
+    CHECK(parse("b'B'") == "b'B'");
+    CHECK(parse("b\"bytes literal\"") == "b\"bytes literal\"");
+    CHECK(parse("'c'") == "'c'");
+    CHECK(parse("\"string literal\"") == "\"string literal\"");
+    CHECK(parse(R"("escape sequences: \"\n\0\x12 ")") == R"("escape sequences: \"\n\0\x12 ")");
+    CHECK(parse("$$ raw \n\r\t\" string $$") == R"(" raw \n\r\t\" string ")");
+    CHECK(parse("1,2,3") == "1, 2, 3");  // naked tuple
+    CHECK(parse("(1,2,\"str\")") == "(1, 2, \"str\")");  // bracketed tuple
+    CHECK(parse("[1,2,3]") == "[1, 2, 3]");  // list
+    CHECK(parse("[(1,2,3,4)]") == "[(1, 2, 3, 4)]");  // list with a tuple item
+    CHECK(parse("[(1,2,3,4), 5]") == "[(1, 2, 3, 4), 5]");
 }
 
 
 TEST_CASE( "Operator precedence", "[script][parser]" )
 {
-    check_parser("a+b", "(a + b)");
-    check_parser("a + b*c", "(a + (b * c))");
-    check_parser("a*b + c", "((a * b) + c)");
-    check_parser("a + b*c + d", "((a + (b * c)) + d)");
-    check_parser("a || b && c | d << e + f * g ** h", "(a || (b && (c | (d << (e + (f * (g ** h)))))))");
-    check_parser("a ** b * c + d << e | f && g || h", "(((((((a ** b) * c) + d) << e) | f) && g) || h)");
-    check_parser("a * b + c | d || e & f - g * h / i", "((((a * b) + c) | d) || (e & (f - ((g * h) / i))))");
-    check_parser("a || b & c + d * e + f & g && h / i", "(a || (((b & ((c + (d * e)) + f)) & g) && (h / i)))");
+    CHECK(parse("a+b") == "(a + b)");
+    CHECK(parse("a + b*c") == "(a + (b * c))");
+    CHECK(parse("a*b + c") == "((a * b) + c)");
+    CHECK(parse("a + b*c + d") == "((a + (b * c)) + d)");
+    CHECK(parse("a || b && c | d << e + f * g ** h") == "(a || (b && (c | (d << (e + (f * (g ** h)))))))");
+    CHECK(parse("a ** b * c + d << e | f && g || h") == "(((((((a ** b) * c) + d) << e) | f) && g) || h)");
+    CHECK(parse("a * b + c | d || e & f - g * h / i") == "((((a * b) + c) | d) || (e & (f - ((g * h) / i))))");
+    CHECK(parse("a || b & c + d * e + f & g && h / i") == "(a || (((b & ((c + (d * e)) + f)) & g) && (h / i)))");
     // left associative:
-    check_parser("a + b + c + d", "(((a + b) + c) + d)");
+    CHECK(parse("a + b + c + d") == "(((a + b) + c) + d)");
     // right associative:
-    check_parser("a ** b ** c ** d", "(a ** (b ** (c ** d)))");
+    CHECK(parse("a ** b ** c ** d") == "(a ** (b ** (c ** d)))");
     // functions
-    check_parser("a fun b {} c", "a fun b {} c");
-    check_parser("a (fun b {}) c", "a (fun b {}) c");
+    CHECK(parse("a fun b {} c") == "a fun b {} c");
+    CHECK(parse("a (fun b {}) c") == "a (fun b {}) c");
     // function calls
-    check_interpreter("succ 9 + max 5 4 + 1", "16");
-    check_interpreter("(succ 9) + (max 5 4) + 1", "16");
-    check_interpreter("succ 9 + 5 .max 4 + 1", "16");
-    check_interpreter("1 .add 2 .mul 3", "9");
-    check_interpreter("(1 .add 2).mul 3", "9");
-    check_interpreter("1 .add (2 .mul 3)", "7");
-    check_interpreter("pred (neg (succ (14)))", "-16");
-    check_interpreter("14 .succ .neg .pred", "-16");
-    check_interpreter("(((14) .succ) .neg) .pred", "-16");
+    CHECK(interpret_std("succ 9 + max 5 4 + 1") == "16");
+    CHECK(interpret_std("(succ 9) + (max 5 4) + 1") == "16");
+    CHECK(interpret_std("succ 9 + 5 .max 4 + 1") == "16");
+    CHECK(interpret("1 .add 2 .mul 3") == "9");
+    CHECK(interpret("(1 .add 2).mul 3") == "9");
+    CHECK(interpret("1 .add (2 .mul 3)") == "7");
+    CHECK(interpret_std("pred (neg (succ (14)))") == "-16");
+    CHECK(interpret_std("14 .succ .neg .pred") == "-16");
+    CHECK(interpret_std("(((14) .succ) .neg) .pred") == "-16");
 }
 
 
@@ -241,159 +227,159 @@ TEST_CASE( "SymbolTable", "[script][compiler]" )
 
 TEST_CASE( "Expressions", "[script][interpreter]" )
 {
-    check_interpreter("add 1 2",        "3");
-    check_interpreter("sub (add 1 2) 3",        "0");
-    check_interpreter("sub (1 + 2) 3",        "0");
-    check_interpreter("(1 + 2) - 3",        "0");
-    check_interpreter("1 + 2 - 3",        "0");
+    CHECK(interpret("add 1 2") == "3");
+    CHECK(interpret("sub (add 1 2) 3") == "0");
+    CHECK(interpret("sub (1 + 2) 3") == "0");
+    CHECK(interpret("(1 + 2) - 3") == "0");
+    CHECK(interpret("1 + 2 - 3") == "0");
 
-    check_interpreter("1 + 6/5",        "2");
-    check_interpreter("1 + 2 / 3 == 1 + (2 / 3)",  "true");
-    check_interpreter("-(1 + 2)",       "-3");
-    check_interpreter("1+1, {2+2}",       "(2, 4)");
-    check_interpreter("f=fun a:Int {a+1}; [1, f 2]", "[1, 3]");
+    CHECK(interpret("1 + 6/5") == "2");
+    CHECK(interpret_std("1 + 2 / 3 == 1 + (2 / 3)") == "true");
+    CHECK(interpret("-(1 + 2)") == "-3");
+    CHECK(interpret("1+1, {2+2}") == "(2, 4)");
+    CHECK(interpret("f=fun a:Int {a+1}; [1, f 2]") == "[1, 3]");
 }
 
 
 TEST_CASE( "Types", "[script][interpreter]" )
 {
     // each definition can have explicit type
-    check_interpreter("a:Int = 1 ; a",        "1");
+    CHECK(interpret("a:Int = 1 ; a") == "1");
 
     // function type can be specified in lambda or specified explicitly
-    check_interpreter("f = fun a:Int b:Int -> Int {a+b}; f 1 2", "3");
-    check_interpreter("f : Int Int -> Int = fun a b {a+b}; f 1 2", "3");
+    CHECK(interpret("f = fun a:Int b:Int -> Int {a+b}; f 1 2") == "3");
+    CHECK(interpret("f : Int Int -> Int = fun a b {a+b}; f 1 2") == "3");
 
     // TODO: narrowing type of polymorphic function (`f 1.0 2.0` would be error, while `add 1.0 2.0` still works)
-    // check_interpreter("f : Int Int -> Int = add ; f 1 2",        "3");
+    // CHECK(interpret("f : Int Int -> Int = add ; f 1 2") == "3");
 }
 
 
 TEST_CASE( "Blocks", "[script][interpreter]" )
 {
     // blocks are evaluated and return a value
-    check_interpreter("{}",         "");  // empty function (has Void type)
-    check_interpreter("{{}}",       "");  // empty function in empty function
-    check_interpreter("{};{};{}",   "");  // three empty functions
-    check_interpreter("{1+2}",      "3"); // non-empty
-    check_interpreter("{{{1+2}}}",  "3"); // three wrapped functions, each returns the result of inner one
-    check_interpreter("{1+2;4;{}}", "3\n4\n");  // {} as the last statement changes function result to Void, intermediate results are "invoked"
-    check_interpreter("x=4; b = 3 + {x+1}; b", "8");
+    CHECK(interpret("{}") == "");  // empty function (has Void type)
+    CHECK(interpret("{{}}") == "");  // empty function in empty function
+    CHECK(interpret("{};{};{}") == "");  // three empty functions
+    CHECK(interpret("{1+2}") == "3"); // non-empty
+    CHECK(interpret("{{{1+2}}}") == "3"); // three wrapped functions, each returns the result of inner one
+    CHECK(interpret("{1+2;4;{}}") == "3;4;");  // {} as the last statement changes function result to Void, intermediate results are "invoked"
+    CHECK(interpret("x=4; b = 3 + {x+1}; b") == "8");
 
     // blocks can be assigned to a name
-    check_interpreter("a = {}; a", "");  // empty block can be named too, `a` is a named function of Void type
-    check_interpreter("b = {1+2}; b", "3");
-    check_interpreter("b = { a = 1; a }; b", "1");
-    check_interpreter("b:Int = {1+2}; b", "3");
+    CHECK(interpret("a = {}; a") == "");  // empty block can be named too, `a` is a named function of Void type
+    CHECK(interpret("b = {1+2}; b") == "3");
+    CHECK(interpret("b = { a = 1; a }; b") == "1");
+    CHECK(interpret("b:Int = {1+2}; b") == "3");
 
     // blocks are evaluated after all definitions in the scope,
     // which means they can use names from parent scope that are defined later
-    check_interpreter("y={x}; x=7; y", "7");
+    CHECK(interpret("y={x}; x=7; y") == "7");
 }
 
 
 TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
 {
     // immediately called lambda
-    check_interpreter("fun x:Int {x+1} 2", "3");
-    check_interpreter("fun x {x+1} 2", "3");  // generic lambda
-    check_interpreter("b = 3 + fun x {2*x} 2; b", "7");
+    CHECK(interpret("fun x:Int {x+1} 2") == "3");
+    CHECK(interpret("fun x {x+1} 2") == "3");  // generic lambda
+    CHECK(interpret("b = 3 + fun x {2*x} 2; b") == "7");
 
     // argument propagation: `f` returns a function which consumes the second arg
-    check_interpreter("f = fun a:Int { fun b:Int { a+b } }; f 1 2",     "3");
+    CHECK(interpret("f = fun a:Int { fun b:Int { a+b } }; f 1 2") == "3");
 
     // closure: inner function uses outer function's parameter
-    check_interpreter("f = fun a:Int b:Int c:Int { "
-                      "w=fun c1:Int {a / b - c1}; w c }; f 10 2 3", "2");
+    CHECK(interpret("f = fun a:Int b:Int c:Int { "
+                      "w=fun c1:Int {a / b - c1}; w c }; f 10 2 3") == "2");
     // closure: outer closure used by inner function
-    check_interpreter("f = fun a:Int b:Int c:Int { "
+    CHECK(interpret("f = fun a:Int b:Int c:Int { "
                       "g=fun c1:Int {a * b - c1}; "
                       "h=fun c1:Int {g c1}; "
-                      "h c }; f 1 2 3", "-1");
-    check_interpreter("f = fun a:Int b:Int c:Int { "
+                      "h c }; f 1 2 3") == "-1");
+    CHECK(interpret("f = fun a:Int b:Int c:Int { "
                       "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 + b}; "
                       "w=fun b1:Int c1:Int {a + u b1 + v c1}; "
-                      "w b c }; f 1 2 3", "9");
+                      "w b c }; f 1 2 3") == "9");
 
-    check_interpreter("outer = fun y:Int {"
+    CHECK(interpret("outer = fun y:Int {"
                       "inner = fun x:Int { x + y }; inner y "
-                      "}; outer 2", "4");
-    check_interpreter("outer = fun y:Int {"
+                      "}; outer 2") == "4");
+    CHECK(interpret("outer = fun y:Int {"
                       "inner = fun x:Int { x + y }; alias = inner; alias y "
-                      "}; outer 2", "4");
-    check_interpreter("outer = fun y {"
+                      "}; outer 2") == "4");
+    CHECK(interpret("outer = fun y {"
                       "inner = fun x:Int { x + y }; alias = fun x:Int { inner x }; alias y "
-                      "}; outer 2", "4");
+                      "}; outer 2") == "4");
 }
 
 
 TEST_CASE( "Partial function call", "[script][interpreter]" )
 {
     // partial call: `add 1` returns a lambda which takes single argument
-    check_interpreter("(add 1) 2",     "3");
-    check_interpreter("{add 1} 2",     "3");
-    check_interpreter("f={add 1}; f 2",     "3");
-    check_interpreter("f=fun x:Int {add x}; f 2 1", "3");
-    check_interpreter("f=fun x:Int {add 3}; f 2 1", "4");
-    check_interpreter("f=fun x:Int y:Int z:Int { (x - y) * z}; g=fun x1:Int { f 3 x1 }; g 4 5", "-5");
-    check_interpreter("f=fun x:Int y:Int { g=fun x1:Int z1:Int { (y - x1) / z1 }; g x }; f 1 10 3", "3");
-    check_interpreter("f = fun a:Int b:Int { "
+    CHECK(interpret("(add 1) 2") == "3");
+    CHECK(interpret("{add 1} 2") == "3");
+    CHECK(interpret("f={add 1}; f 2") == "3");
+    CHECK(interpret("f=fun x:Int {add x}; f 2 1") == "3");
+    CHECK(interpret("f=fun x:Int {add 3}; f 2 1") == "4");
+    CHECK(interpret("f=fun x:Int y:Int z:Int { (x - y) * z}; g=fun x1:Int { f 3 x1 }; g 4 5") == "-5");
+    CHECK(interpret("f=fun x:Int y:Int { g=fun x1:Int z1:Int { (y - x1) / z1 }; g x }; f 1 10 3") == "3");
+    CHECK(interpret("f = fun a:Int b:Int { "
                       "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 - b}; "
                       "w=fun b1:Int c1:Int {a * u b1 / v c1}; "
-                      "w b }; f 1 2 3", "3");
+                      "w b }; f 1 2 3") == "3");
     // [closure.fire] return closure with captured closures, propagate arguments into the closure
-    check_interpreter("f = fun a:Int { "
+    CHECK(interpret("f = fun a:Int { "
                       "u=fun b2:Int {a / b2}; v=fun c2:Int {c2 - a}; "
-                      "fun b1:Int c1:Int {a + u b1 + v c1} }; f 4 2 3", "5");
+                      "fun b1:Int c1:Int {a + u b1 + v c1} }; f 4 2 3") == "5");
 }
 
 
 TEST_CASE( "Generic functions", "[script][interpreter]" )
 {
     // `f` is a generic function, instantiated to Int->Int by the call
-    check_interpreter("f=fun x {x + 1}; f (f (f 2))", "5");
+    CHECK(interpret("f=fun x {x + 1}; f (f (f 2))") == "5");
     // generic functions can capture from outer scope
-    check_interpreter("a=3; f=fun x {a + x}; f 4", "7");
+    CHECK(interpret("a=3; f=fun x {a + x}; f 4") == "7");
     // generic type declaration
-    check_interpreter("f = fun x:T y:T -> Bool with (Eq T) { x == y }; f 1 2", "false");
+    CHECK(interpret_std("f = fun x:T y:T -> Bool with (Eq T) { x == y }; f 1 2") == "false");
 }
 
 
 TEST_CASE( "Lexical scope", "[script][interpreter]" )
 {
-    check_interpreter("{a=1; b=2}",     "");
-    CHECK_THROWS_AS(Interpreter{0}.eval("{a=1; b=2} a"), UndefinedName);
+    CHECK(interpret("{a=1; b=2}") == "");
+    CHECK_THROWS_AS(Interpreter().eval("{a=1; b=2} a"), UndefinedName);
 
-    check_interpreter("x=1; y = { x + 2 }; y",     "3");
-    check_interpreter("a=1; {b=2; {a + b}}",     "3");
-    check_interpreter("a=1; f=fun b:Int {a + b}; f 2",  "3");
+    CHECK(interpret("x=1; y = { x + 2 }; y") == "3");
+    CHECK(interpret("a=1; {b=2; {a + b}}") == "3");
+    CHECK(interpret("a=1; f=fun b:Int {a + b}; f 2") == "3");
 
     // recursion
-    check_interpreter("f=fun n:Int->Int { if n == 1 then 1 else n * f (n-1) }; f 7",  "5040");      // factorial
-    check_interpreter("f=fun x:Int->Int { if x < 2 then x else f (x-1) + f (x-2) }; f 7",  "13");   // Fibonacci number
+    CHECK(interpret_std("f=fun n:Int->Int { if n == 1 then 1 else n * f (n-1) }; f 7") == "5040");      // factorial
+    CHECK(interpret_std("f=fun x:Int->Int { if x < 2 then x else f (x-1) + f (x-2) }; f 7") == "13");   // Fibonacci number
 
     // iteration (with tail-recursive functions)
-    check_interpreter("fi=fun prod:Int cnt:Int max:Int -> Int { if cnt > max then prod else fi (cnt*prod) (cnt+1) max };\n"
-                      "f=fun n:Int->Int { fi 1 1 n }; f 7",  "5040");  // factorial
-    check_interpreter("fi=fun a:Int b:Int n:Int -> Int { if n==0 then b else fi (a+b) a (n-1) };\n"
-                      "f=fun n:Int->Int { fi 1 0 n }; f 7",  "13");    // Fibonacci number
+    CHECK(interpret_std("fi=fun prod:Int cnt:Int max:Int -> Int { if cnt > max then prod else fi (cnt*prod) (cnt+1) max };\n"
+                        "f=fun n:Int->Int { fi 1 1 n }; f 7") == "5040");  // factorial
+    CHECK(interpret_std("fi=fun a:Int b:Int n:Int -> Int { if n==0 then b else fi (a+b) a (n-1) };\n"
+                        "f=fun n:Int->Int { fi 1 0 n }; f 7") == "13");    // Fibonacci number
 }
 
 
 TEST_CASE( "Lists", "[script][interpreter]" )
 {
-    check_interpreter("[1,2,3] ! 2", "3");
-    CHECK_THROWS_AS(Interpreter{0}.eval("[1,2,3]!3"), IndexOutOfBounds);
-    //check_interpreter("[[1,2],[3,4],[5,6]] @ 1 @ 0", "3");
-    check_interpreter("head = fun l:[Int] -> Int { l!0 }; head [1,2,3]", "1");
+    CHECK(interpret("[1,2,3] ! 2") == "3");
+    CHECK_THROWS_AS(Interpreter().eval("[1,2,3]!3"), IndexOutOfBounds);
+    //CHECK(interpret("[[1,2],[3,4],[5,6]] ! 1 ! 0") == "3");
+    CHECK(interpret("head = fun l:[Int] -> Int { l!0 }; head [1,2,3]") == "1");
 }
 
 
 TEST_CASE( "Type classes", "[script][interpreter]" )
 {
-    check_interpreter("class XEq T { xeq : T T -> Bool }; "
-                      "instance XEq Int32 { xeq = { __equal_32 } }; "
-                      "xeq 1 2", "false");
+    CHECK(interpret("class XEq T { xeq : T T -> Bool }; "
+                    "instance XEq Int32 { xeq = { __equal_32 } }; "
+                    "xeq 1 2") == "false");
 }
 
 
@@ -402,9 +388,11 @@ TEST_CASE( "Compiler intrinsics", "[script][interpreter]" )
     // function signature must be explicitly declared, it's never inferred from intrinsics
     // parameter names are not needed (and not used), intrinsics work directly with stack
     // e.g. __equal_32 pulls two 32bit values and pushes 8bit Bool value back
-    check_interpreter("my_eq = fun Int32 Int32 -> Bool { __equal_32 }; my_eq 42 (2*21)", "true");
+    CHECK(interpret("my_eq = fun Int32 Int32 -> Bool { __equal_32 }; my_eq 42 (2*21)") == "true");
     // alternative style - essentially the same
-    check_interpreter("my_eq : Int32 Int32 -> Bool = { __equal_32 }; my_eq 42 43", "false");
+    CHECK(interpret("my_eq : Int32 Int32 -> Bool = { __equal_32 }; my_eq 42 43") == "false");
+    // intrinsic with arguments
+    CHECK(interpret("my_cast : Int32 -> Int64 = { __cast 0x89 }; my_cast 42") == "42L");
 }
 
 
