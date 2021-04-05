@@ -34,6 +34,39 @@ See `xci::script` in https://github.com/rbrich/xcikit[xcikit] codebase.
 
 == Syntax Elements
 
+=== Literals
+
+Literal syntax is derived from C++ and Python.
+
+[source,fire]
+----
+123        // integer (32bit)
+123u       // unsigned integer
+0b101101   // binary integer
+0o765      // octal integer
+0xBEEFED   // hexadecimal integer
+42L        // 64bit integer
+12.3       // floating point (64bit)
+12.3f      // floating point (32bit)
+'@'        // unicode character
+b'@'       // byte / ASCII character
+42b        // byte (8bit integer, unsigned)
+"lava"     // string (UTF-8)
+b"lava"    // bytes (ASCII string)
+r"raw\n"   // raw string
+rb"raw"    // raw bytes
+"""abc"""  // multi-line string
+r"""abc""" // raw multi-line string
+[1, 2, 3]  // list
+[]:[Byte]  // empty list (type can be specified or inferred from context)
+{}         // empty block, effectively Void
+void       // empty statement, returns Void -> noop
+----
+
+Raw strings are not completely raw, quotes still need to be escaped, by doubling them.
+The multi-line raw string is completely raw, but can't contain a sequence of three quotes.
+It can contain a sequence of less or more than three quotes, though.
+
 === Scoped block
 
 [source,fire]

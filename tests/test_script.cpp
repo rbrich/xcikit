@@ -116,6 +116,7 @@ TEST_CASE( "Values", "[script][parser]" )
     CHECK(parse("123") == "123");
     CHECK(parse("1.") == "1.0");
     CHECK(parse("1.23") == "1.23");
+    CHECK(parse("42b") == "b'*'");  // byte (8-bit integer)
     CHECK(parse("b'B'") == "b'B'");
     CHECK(parse("b\"bytes literal\"") == "b\"bytes literal\"");
     CHECK(parse("'c'") == "'c'");

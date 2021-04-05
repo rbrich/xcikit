@@ -99,7 +99,7 @@ struct DecNum: seq< plus<digit>, opt<DecNumFrac> > {};
 struct HexNum: if_must<one<'x'>, plus<xdigit>> {};
 struct Sign: one<'-','+'> {};
 struct ZeroPrefixNum: seq< one<'0'>, sor<HexNum, OctNum, BinNum, DecNum> > {};
-struct NumSuffix: one<'l', 'L', 'f', 'F'> {};
+struct NumSuffix: one<'l', 'L', 'f', 'F', 'b', 'B'> {};
 struct Number: seq< opt<Sign>, sor<ZeroPrefixNum, DecNum>, opt<NumSuffix> > {};
 
 struct Char: if_must< one<'\''>, StringCh, one<'\''> > {};
@@ -756,9 +756,19 @@ struct Action<Literal> : change_states< LiteralHelper > {
                 else
                     value = std::make_unique<value::String>( std::get<std::string_view>(helper.content) );
                 break;
-            case ValueType::Byte:
-                value = std::make_unique<value::Byte>( std::get<std::string>(helper.content) );
+            case ValueType::Byte: {
+                if (std::holds_alternative<std::string>(helper.content))
+                    value = std::make_unique<value::Byte>( std::get<std::string>(helper.content) );
+                else {
+                    const auto v = std::get<int64_t>(helper.content);
+                    using l = std::numeric_limits<uint8_t>;
+                    if (v < l::min() || v > l::max())
+                        throw parse_error("Byte literal out of range", in);
+                    value = std::make_unique<value::Byte>((uint8_t) v);
+                    break;
+                }
                 break;
+            }
             case ValueType::List: {  // [Byte]
                 std::string& str = std::get<std::string>(helper.content);
                 std::span data{(const std::byte*) str.data(), str.size()};
@@ -856,7 +866,18 @@ struct Action<Number> : change_states< NumberHelper > {
             lit.type = (n.suffix == 'f') ? ValueType::Float32 : ValueType::Float64;
             lit.content = std::get<double>(n.num);
         } else {
-            lit.type = (n.suffix == 'l') ? ValueType::Int64 : ValueType::Int32;
+            switch (n.suffix) {
+                default:
+                case 0:
+                    lit.type = ValueType::Int32;
+                    break;
+                case 'l':
+                    lit.type = ValueType::Int64;
+                    break;
+                case 'b':
+                    lit.type = ValueType::Byte;
+                    break;
+            }
             lit.content = std::get<int64_t>(n.num);
         }
     }
