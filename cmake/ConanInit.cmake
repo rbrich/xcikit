@@ -1,8 +1,9 @@
-option(RUN_CONAN "Run 'conan install' from CMake (this may be more convenient than separate command)" OFF)
+option(CONAN_INSTALL "Run 'conan install' from CMake (this may be more convenient than separate command)" OFF)
+set(CONAN_PROFILE "default" CACHE STRING "Conan profile ot use in 'conan install'")
 
 # Run conan install directly
 # See https://github.com/conan-io/cmake-conan
-if (RUN_CONAN)
+if (CONAN_INSTALL)
     if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
         message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
         file(DOWNLOAD "https://github.com/conan-io/cmake-conan/raw/v0.16.1/conan.cmake"
@@ -34,7 +35,7 @@ if (RUN_CONAN)
 
     conan_cmake_install(
         PATH_OR_REFERENCE ${CMAKE_SOURCE_DIR}
-        PROFILE default
+        PROFILE ${CONAN_PROFILE}
         SETTINGS
             build_type=${CMAKE_BUILD_TYPE}
         OPTIONS
