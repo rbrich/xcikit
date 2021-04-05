@@ -151,23 +151,24 @@ struct PartialLiteral: seq< opt<one<'b'>>, sor<PartialStringLiteral, PartialChar
 // Invalid expressions
 struct InvalidCloseBracket: one< ')', ']' > {};
 struct InvalidCloseBrace: one< '}' > {};
-struct InvalidLiteral: plus<one<'\'', '"', '.'>, identifier_other> {};
+struct InvalidLiteral: plus<sor<one<'\'', '"', '.'>, identifier_other>> {};
+struct InvalidCh: plus<sor< one<'\\', '@', '#', '$', '`', '?'>, utf8::range<128, 0x10FFFF> >> {};
 
 // Statements
 struct PartialExpr: sor< FullyBracketed, OpenBracket, OpenBrace, PrimaryExpr, PartialLiteral > {};
 struct Expression: plus< PartialExpr, NSC > {};
-struct InvalidExpr: plus< sor< InvalidCloseBracket, InvalidCloseBrace, PartialExpr, InvalidLiteral> > {};
-struct Statement: sor< seq<Expression, star<SC, InvalidExpr>>, InvalidExpr > {};
+struct InvalidExpr: plus< sor< InvalidCloseBracket, InvalidCloseBrace, PartialExpr, InvalidLiteral, InvalidCh> > {};
+struct Statement: sor< seq<Expression, star<SC, InvalidExpr>>, plus<InvalidExpr, SC> > {};
 
 // Statements in a Block (in braces)
 struct PartialExprB: sor< FullyBracketed, OpenBracket, PrimaryExpr, PartialLiteral > {};
 struct ExpressionB: plus< PartialExprB, SC > {};
-struct InvalidExprB: plus< sor< InvalidCloseBracket, PartialExprB, InvalidLiteral > > {};
-struct StatementB: sor< seq<ExpressionB, star<SC, InvalidExprB>>, InvalidExprB > {};
+struct InvalidExprB: plus< sor< InvalidCloseBracket, PartialExprB, InvalidLiteral, InvalidCh > > {};
+struct StatementB: sor< seq<ExpressionB, star<SC, InvalidExprB>>, plus<InvalidExprB, SC> > {};
 struct Block: seq< BraceOpen, NSC, opt<SepList<StatementB>, NSC>, BraceClose > {};
 
 // The main rule, grammar entry point
-struct Main: must< NSC, sor<ReplCommand, SepList<Statement>, InvalidExpr, success>, NSC, eof > {};
+struct Main: must< NSC, sor<ReplCommand, SepList<Statement>, success>, NSC, eof > {};
 
 // ----------------------------------------------------------------------------
 
@@ -203,6 +204,7 @@ using HighlightSelector = tao::pegtl::parse_tree::selector< Rule,
                 PartialStringLiteral,
                 InvalidCloseBracket,
                 InvalidCloseBrace,
+                InvalidCh,
                 LineComment,
                 BlockComment,
                 OpenBlockComment > >;
@@ -251,6 +253,9 @@ static std::pair<const char*, HighlightColor> highlight_color[] {
         {":String", {Color::BrightGreen}},
         {":PartialStringLiteral", {Color::BrightGreen, Mode::Underline}},
         {":RawString", {Color::BrightGreen}},
+
+        // invalid expressions
+        {":InvalidCh", {Color::BrightRed, Mode::Bold}},
 
         // comments
         {":LineComment", {Color::BrightBlack}},
