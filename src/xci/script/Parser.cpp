@@ -841,12 +841,12 @@ struct Action<Number> : change_states< NumberHelper > {
             assert(end == last);
 
             using l = std::numeric_limits<int64_t>;
-            if (!minus_sign && val > l::max())
+            if (!minus_sign && val > uint64_t(l::max()))
                 throw parse_error("Int64 literal out of range", in);
             if (minus_sign && val > uint64_t(-l::min()))
                 throw parse_error("Int64 literal out of range", in);
 
-            n.num = int64_t(minus_sign? -val : val);
+            n.num = minus_sign ? -int64_t(val) : int64_t(val);
         }
     }
 

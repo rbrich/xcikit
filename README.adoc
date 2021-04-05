@@ -275,8 +275,8 @@ Run the build with the toolchain:
 [#windows]
 === Porting to Windows
 
-The project is not yet fully ported to Windows.But the essential parts should
-already work:
+The project is not yet fully ported to Windows.
+But the essential parts should already work:
 
 * dependencies via Conan
 * build scripts (using git-bash)
@@ -293,7 +293,7 @@ How to build:
 
 3. Open _Git Bash_ and run `./bootstrap.sh`
 
-4. Still in _Git Bash_, run `./build.sh -D XCI_GRAPHICS=0`
+4. Still in _Git Bash_, run `./build.sh core data script`
 
 5. There might be errors.These are why the title says "Porting", not "How to build"…
 

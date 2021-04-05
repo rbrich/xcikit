@@ -5,7 +5,7 @@ option(RUN_CONAN "Run 'conan install' from CMake (this may be more convenient th
 if (RUN_CONAN)
     if(NOT EXISTS "${CMAKE_BINARY_DIR}/conan.cmake")
         message(STATUS "Downloading conan.cmake from https://github.com/conan-io/cmake-conan")
-        file(DOWNLOAD "https://github.com/conan-io/cmake-conan/raw/v0.15/conan.cmake"
+        file(DOWNLOAD "https://github.com/conan-io/cmake-conan/raw/v0.16.1/conan.cmake"
             "${CMAKE_BINARY_DIR}/conan.cmake"
             TLS_VERIFY ON
             LOG dl_log
@@ -33,9 +33,10 @@ if (RUN_CONAN)
     opt_to_conan(XCI_WIDGETS OPT_WIDGETS)
 
     conan_cmake_install(
-        CONANFILE conanfile.py
+        PATH_OR_REFERENCE ${CMAKE_SOURCE_DIR}
         PROFILE default
-        PROFILE_AUTO build_type
+        SETTINGS
+            build_type=${CMAKE_BUILD_TYPE}
         OPTIONS
             xcikit:data=${OPT_DATA}
             xcikit:script=${OPT_SCRIPT}

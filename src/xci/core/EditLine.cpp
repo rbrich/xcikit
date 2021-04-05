@@ -299,7 +299,7 @@ void EditLine::process_input()
     std::string_view content;  // pointer to content, either original or highlighted
     std::string content_store;  // helper for owning the highlighted string
     if (m_highlight_cb) {
-        auto r = m_highlight_cb(m_edit_buffer.content_view(), m_edit_buffer.cursor());
+        auto r = m_highlight_cb(m_edit_buffer.content_view(), (unsigned) m_edit_buffer.cursor());
         m_edit_continue_nl = r.is_open;
         content_store = std::move(r.hl_data);
         content = content_store;

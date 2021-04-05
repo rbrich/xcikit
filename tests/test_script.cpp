@@ -120,8 +120,9 @@ TEST_CASE( "Values", "[script][parser]" )
     CHECK(parse("b\"bytes literal\"") == "b\"bytes literal\"");
     CHECK(parse("'c'") == "'c'");
     CHECK(parse("\"string literal\"") == "\"string literal\"");
-    CHECK(parse(R"("escape sequences: \"\n\0\x12 ")") == R"("escape sequences: \"\n\0\x12 ")");
-    CHECK(parse("$$ raw \n\r\t\" string $$") == R"(" raw \n\r\t\" string ")");
+    // Note: don't use raw string literal, it causes MSVC Error C2017 due to stringize operation in Catch2
+    CHECK(parse("\"escape sequences: \\\"\\n\\0\\x12 \"") == "\"escape sequences: \\\"\\n\\0\\x12 \"");
+    CHECK(parse("$$ raw \n\r\t\" string $$") == "\" raw \\n\\r\\t\\\" string \"");
     CHECK(parse("1,2,3") == "1, 2, 3");  // naked tuple
     CHECK(parse("(1,2,\"str\")") == "(1, 2, \"str\")");  // bracketed tuple
     CHECK(parse("[1,2,3]") == "[1, 2, 3]");  // list
@@ -222,6 +223,21 @@ TEST_CASE( "SymbolTable", "[script][compiler]" )
     CHECK(gamma == symtab.find_last_of("Gamma", Symbol::Instance));
     CHECK(delta == symtab.find_last_of("delta", Symbol::Value));
     CHECK(! symtab.find_last_of("zeta", Symbol::Value));
+}
+
+
+TEST_CASE( "Literals", "[script][interpreter]" )
+{
+    // Integer literal out of 32bit range is promoted to Int64
+    CHECK(interpret("2147483647") == "2147483647");
+    CHECK(interpret("2147483648") == "2147483648L");
+    CHECK(interpret("-2147483648") == "-2147483648");
+    CHECK(interpret("-2147483649") == "-2147483649L");
+    // Integer literal out of 64bit range doesn't compile
+    CHECK(interpret("9223372036854775807L") == "9223372036854775807L");
+    CHECK_THROWS_AS(interpret("9223372036854775808L"), ParseError);
+    CHECK(interpret("-9223372036854775808L") == "-9223372036854775808L");
+    CHECK_THROWS_AS(interpret("-9223372036854775809L"), ParseError);
 }
 
 

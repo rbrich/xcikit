@@ -69,7 +69,7 @@ size_t Values::raw_size() const
 
 
 // make sure float values don't look like integers (append .0 if needed)
-static void dump_float(std::ostream& os, auto value)
+static void dump_float(std::ostream& os, /*std::floating_point*/ auto value)
 {
     std::ostringstream sbuf;
     sbuf << value;
