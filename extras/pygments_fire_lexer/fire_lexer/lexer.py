@@ -33,19 +33,21 @@ class FireLexer(CLexer):
 
     tokens = {
         'statements': [
-            (r'(L?)(")', bygroups(String.Affix, String), 'string'),
-            (r"(L?)(')(\\.|\\[0-7]{1,3}|\\x[a-fA-F0-9]{1,2}|[^\\\'\n])(')",
+            (r'([br]*)(")', bygroups(String.Affix, String), 'string'),
+            (r"(b?)(')(\\.|\\[0-7]{1,3}|\\x[a-fA-F0-9]{1,2}|[^\\\'\n])(')",
              bygroups(String.Affix, String.Char, String.Char, String.Char)),
             (r'(\d+\.\d*|\.\d+|\d+)[eE][+-]?\d+[LlUu]*', Number.Float),
             (r'(\d+\.\d*|\.\d+|\d+[fF])[fF]?', Number.Float),
-            (r'0x[0-9a-fA-F]+[LlUu]*', Number.Hex),
-            (r'0[0-7]+[LlUu]*', Number.Oct),
-            (r'\d+[LlUu]*', Number.Integer),
+            (r'0x[0-9a-fA-F]+[LlUuBb]*', Number.Hex),
+            (r'0o[0-7]+[LlUuBb]*', Number.Oct),
+            (r'0b[01]+[LlUuBb]*', Number.Bin),
+            (r'\d+[LlUuBb]*', Number.Integer),
             (r'\*/', Error),
             (r'[~!%^&*+=|?:<>/-]', Operator),
             (r'[()\[\],.]', Punctuation),
             (words((
-                'else', 'fun', 'import', 'in', 'if', 'then', 'module',
+                'catch', 'class', 'else', 'fun', 'if', 'import',
+                'instance', 'in', 'match', 'module', 'then', 'try', 'with',
                 ), suffix=r'\b'),
              Keyword),
             (words(('Void', 'Bool', 'Byte', 'Char', 'Int', 'Int32', 'Int64',
