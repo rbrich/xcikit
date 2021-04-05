@@ -107,12 +107,25 @@ struct ValueKeyword: sor<KeywordVoid, KeywordFalse, KeywordTrue> {};
 struct Keyword: sor<FunnyKeyword, ControlKeyword, TypeKeyword, ValueKeyword> {};
 
 // Literals
-struct Integer: seq< opt<one<'-','+'>>, plus<digit> > {};
-struct Float: seq< opt<one<'-','+'>>, plus<digit>, one<'.'>, star<digit> > {};
-struct Char: if_must< one<'\''>, StringCh, one<'\''> > {};
-struct String: if_must< one<'"'>, until<one<'"'>, StringCh > > {};
+struct BinDigit : one< '0', '1' > {};
+struct OctDigit : range< '0', '7' > {};
+struct BinNum: seq<one<'b'>, plus<BinDigit>> {};
+struct OctNum: seq<one<'o'>, plus<OctDigit>> {};
+struct HexNum: seq<one<'x'>, plus<xdigit>> {};
+struct DecNum: seq< plus<digit> > {};
+struct Sign: one<'-','+'> {};
+struct ZeroPrefixNum: seq< one<'0'>, sor<HexNum, OctNum, BinNum, DecNum> > {};
+struct IntSuffix: one<'l', 'L', 'b', 'B'> {};
+struct FloatSuffix: one<'f', 'F'> {};
+struct Integer: seq< opt<Sign>, sor<ZeroPrefixNum, DecNum>, opt<IntSuffix> > {};
+struct Float: seq< opt<Sign>, plus<digit>, one<'.'>, star<digit>, opt<FloatSuffix> > {};
+
+struct Char: seq< one<'\''>, StringCh, one<'\''> > {};
+struct String: seq< one<'"'>, until<one<'"'>, StringCh > > {};
+struct Byte: seq< one<'b'>, Char > {};
+struct Bytes: seq< one<'b'>, String > {};
 struct RawString : raw_string< '$', '-', '$' > {};  // raw_string = $$ raw text! $$
-struct Literal: sor< Float, Integer, Char, String, RawString > {};
+struct Literal: seq< sor< Char, String, Byte, Bytes, Float, Integer, RawString >, not_at<identifier_other> > {};
 
 // REPL commands
 struct ShortCommand: seq< sor<one<'h', 'q'>, seq<one<'d'>, one<'m', 'f', 'i'>>>, not_at<identifier_other>> {};
@@ -131,26 +144,30 @@ struct PrimaryExpr: sor< Operator, Literal, Keyword, SpecialVariable, Identifier
 // Incomplete expressions
 struct OpenBracket: one< '(', '[' > {};
 struct OpenBrace: one< '{' > {};
+struct PartialCharLiteral: seq< one<'\''>, sor<StringCh, one<'\\'>> > {};
+struct PartialStringLiteral: seq< one<'"'>, star<sor<StringCh, one<'\\'>>> > {};
+struct PartialLiteral: seq< opt<one<'b'>>, sor<PartialStringLiteral, PartialCharLiteral> > {};
 
 // Invalid expressions
 struct InvalidCloseBracket: one< ')', ']' > {};
 struct InvalidCloseBrace: one< '}' > {};
+struct InvalidLiteral: plus<one<'\'', '"', '.'>, identifier_other> {};
 
 // Statements
-struct PartialExpr: sor< FullyBracketed, OpenBracket, OpenBrace, PrimaryExpr > {};
+struct PartialExpr: sor< FullyBracketed, OpenBracket, OpenBrace, PrimaryExpr, PartialLiteral > {};
 struct Expression: plus< PartialExpr, NSC > {};
-struct InvalidExpr: plus< sor< InvalidCloseBracket, InvalidCloseBrace, PartialExpr > > {};
+struct InvalidExpr: plus< sor< InvalidCloseBracket, InvalidCloseBrace, PartialExpr, InvalidLiteral> > {};
 struct Statement: sor< seq<Expression, star<SC, InvalidExpr>>, InvalidExpr > {};
 
 // Statements in a Block (in braces)
-struct PartialExprB: sor< FullyBracketed, OpenBracket, PrimaryExpr > {};
+struct PartialExprB: sor< FullyBracketed, OpenBracket, PrimaryExpr, PartialLiteral > {};
 struct ExpressionB: plus< PartialExprB, SC > {};
-struct InvalidExprB: plus< sor< InvalidCloseBracket, PartialExprB > > {};
+struct InvalidExprB: plus< sor< InvalidCloseBracket, PartialExprB, InvalidLiteral > > {};
 struct StatementB: sor< seq<ExpressionB, star<SC, InvalidExprB>>, InvalidExprB > {};
 struct Block: seq< BraceOpen, NSC, opt<SepList<StatementB>, NSC>, BraceClose > {};
 
 // The main rule, grammar entry point
-struct Main: must< NSC, sor<ReplCommand, SepList<Statement>, success>, NSC, eof > {};
+struct Main: must< NSC, sor<ReplCommand, SepList<Statement>, InvalidExpr, success>, NSC, eof > {};
 
 // ----------------------------------------------------------------------------
 
@@ -168,7 +185,9 @@ using HighlightSelector = tao::pegtl::parse_tree::selector< Rule,
                 TypeName,
                 Integer,
                 Float,
+                Byte,
                 Char,
+                Bytes,
                 String,
                 RawString,
                 FullyBracketed,
@@ -180,6 +199,8 @@ using HighlightSelector = tao::pegtl::parse_tree::selector< Rule,
                 BraceClose,
                 OpenBracket,
                 OpenBrace,
+                PartialCharLiteral,
+                PartialStringLiteral,
                 InvalidCloseBracket,
                 InvalidCloseBrace,
                 LineComment,
@@ -223,8 +244,12 @@ static std::pair<const char*, HighlightColor> highlight_color[] {
         {":Float", {Color::Cyan}},
 
         // strings
+        {":Byte", {Color::Green}},
         {":Char", {Color::Green}},
+        {":PartialCharLiteral", {Color::Green, Mode::Underline}},
+        {":Bytes", {Color::BrightGreen}},
         {":String", {Color::BrightGreen}},
+        {":PartialStringLiteral", {Color::BrightGreen, Mode::Underline}},
         {":RawString", {Color::BrightGreen}},
 
         // comments
