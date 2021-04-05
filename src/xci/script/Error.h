@@ -27,8 +27,8 @@ public:
     explicit ScriptError(std::string msg, const SourceInfo& si) :
         Error(std::move(msg)),
         m_file(format("{}:{}:{}",
-            si.source == nullptr ? "<no-source-file>" : si.source, si.line_number, si.column)),
-        m_detail(si.line_begin == nullptr ? "" : format("{}\n{:>{}}",
+            !si.source ? "<no-source-file>" : si.source, si.line_number, si.column)),
+        m_detail(!si ? "" : format("{}\n{:>{}}",
             std::string{si.line_begin, si.line_end},
             '^', si.column))
     {}

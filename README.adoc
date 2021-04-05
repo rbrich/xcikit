@@ -177,13 +177,13 @@ Package manager (optional):
 Dependencies:
 
 - PEGTL (xci-core)
-- libzip (xci-core/XCI_WITH_ZIP)
+- libzip (xci-core + XCI_WITH_ZIP)
 - FreeType (xci-text)
 - GLFW, Vulkan (xci-graphics)
 - https://github.com/google/shaderc[glslc] or
 https://github.com/KhronosGroup/glslang[glslangValidator] (xci-graphics)
-- https://github.com/catchorg/Catch2[Catch2] for tests
-- https://github.com/google/benchmark[Google Benchmark]
+- https://github.com/catchorg/Catch2[Catch2] (tests)
+- https://github.com/google/benchmark[Google Benchmark] (benchmarks)
 
 Some of the dependencies are installed by Conan if not found in the system
 (e.g. PEGTL, range-v3, GLFW). Others must be provided by the system (Vulkan).
@@ -249,8 +249,9 @@ cmake --build . --target 'install'
 
 === Building on macOS older than Catalina (10.15)
 
-Using [MacPorts](https://www.macports.org/), install Clang 11 and libc++:
+Using https://www.macports.org/[MacPorts], install Clang 11 and libc++:
 
+[source,bash]
 ----
 port install clang-11 macports-libcxx
 ----
@@ -264,7 +265,7 @@ add_compile_options(-nostdinc++ -I/opt/local/include/libcxx/v1 -D_LIBCPP_DISABLE
 add_link_options(-L/opt/local/lib/libcxx)
 ----
 
-Run the build with this toolchain:
+Run the build with the toolchain:
 
 [source,bash]
 ----

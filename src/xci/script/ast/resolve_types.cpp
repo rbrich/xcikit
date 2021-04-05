@@ -614,8 +614,6 @@ public:
         m_type_info = TypeInfo{Type::List, move(m_type_info)};
     }
 
-    TypeInfo value_type() const { return m_value_type; }
-
 private:
     Module& module() { return m_function.module(); }
 
