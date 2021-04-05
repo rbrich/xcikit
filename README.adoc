@@ -174,24 +174,25 @@ Package manager (optional):
 
 - Conan (eg. `pip3 install conan`)
 
-Dependencies (required):
+Dependencies:
 
 - PEGTL (xci-core)
+- libzip (xci-core + XCI_WITH_ZIP)
 - FreeType (xci-text)
 - GLFW, Vulkan (xci-graphics)
 - https://github.com/google/shaderc[glslc] or
 https://github.com/KhronosGroup/glslang[glslangValidator] (xci-graphics)
+- https://github.com/catchorg/Catch2[Catch2] (tests)
+- https://github.com/google/benchmark[Google Benchmark] (benchmarks)
 
-Dependencies (optional):
+Some of the dependencies are installed by Conan if not found in the system
+(e.g. PEGTL, range-v3, GLFW). Others must be provided by the system (Vulkan).
 
-- libzip (XCI_WITH_ZIP)
-- https://github.com/catchorg/Catch2[Catch2] for tests
-- https://github.com/google/benchmark[Google Benchmark]
-
-Installing optional dependencies:
+Installing the dependencies:
 
 - Debian: `apt-get install libzip-dev`
 - macOS (Homebrew): `brew install libzip`
+- macOS (MacPorts): `port install vulkan-* MoltenVK glfw-devel freetype hyperscan cmake ninja`
 
 === Using build script
 
@@ -246,11 +247,36 @@ cmake --build . --target 'test'
 cmake --build . --target 'install'
 ----
 
+=== Building on macOS older than Catalina (10.15)
+
+Using https://www.macports.org/[MacPorts], install Clang 11 and libc++:
+
+[source,bash]
+----
+port install clang-11 macports-libcxx
+----
+
+Then create a `clang11-toolchain.cmake` file with content like this:
+
+[source,cmake]
+----
+set(CMAKE_CXX_COMPILER /opt/local/bin/clang++-mp-11)
+add_compile_options(-nostdinc++ -I/opt/local/include/libcxx/v1 -D_LIBCPP_DISABLE_AVAILABILITY)
+add_link_options(-L/opt/local/lib/libcxx)
+----
+
+Run the build with the toolchain:
+
+[source,bash]
+----
+./build.sh --toolchain clang11-toolchain.cmake
+----
+
 [#windows]
 === Porting to Windows
 
-The project is not yet fully ported to Windows.But the essential parts should
-already work:
+The project is not yet fully ported to Windows.
+But the essential parts should already work:
 
 * dependencies via Conan
 * build scripts (using git-bash)
@@ -267,7 +293,7 @@ How to build:
 
 3. Open _Git Bash_ and run `./bootstrap.sh`
 
-4. Still in _Git Bash_, run `./build.sh -D XCI_GRAPHICS=0`
+4. Still in _Git Bash_, run `./build.sh core data script`
 
 5. There might be errors.These are why the title says "Porting", not "How to build"…
 

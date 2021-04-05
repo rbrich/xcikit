@@ -11,11 +11,24 @@
 namespace xci::script {
 
 
+Type decode_arg_type(uint8_t arg)
+{
+    switch (arg) {
+        case 1: return Type::Byte;
+        case 8: return Type::Int32;
+        case 9: return Type::Int64;
+        case 0xC: return Type::Float32;
+        case 0xD: return Type::Float64;
+        default: return Type::Unknown;
+    }
+}
+
+
 size_t TypeInfo::size() const
 {
     switch (type()) {
         case Type::Unknown:     return 0;
-        case Type::Void:        return 1;
+        case Type::Void:        return 0;
         case Type::Bool:        return 1;
         case Type::Byte:        return 1;
         case Type::Char:        return 4;
@@ -23,12 +36,16 @@ size_t TypeInfo::size() const
         case Type::Int64:       return 8;
         case Type::Float32:     return 4;
         case Type::Float64:     return 8;
-        case Type::String:      return sizeof(byte*) + sizeof(size_t);
-        case Type::List:        return sizeof(byte*) + sizeof(size_t);
+
+        case Type::String:
+        case Type::List:
+            return sizeof(byte*) + sizeof(size_t);
+
         case Type::Tuple:
             return accumulate(m_subtypes.begin(), m_subtypes.end(), size_t(0),
                               [](size_t init, const TypeInfo& ti)
                               { return init + ti.size(); });
+
         case Type::Function:    return sizeof(byte*) + sizeof(void*);
         case Type::Module:      return 0;  // TODO
     }

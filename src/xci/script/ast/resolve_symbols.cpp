@@ -9,11 +9,14 @@
 #include <xci/script/Module.h>
 #include <xci/script/Builtin.h>
 #include <xci/script/Error.h>
+#include <range/v3/view/enumerate.hpp>
 #include <vector>
+#include <sstream>
 
 namespace xci::script {
 
 using std::make_unique;
+using ranges::views::enumerate;
 
 
 class SymbolResolverVisitor final: public ast::Visitor {
@@ -72,7 +75,8 @@ public:
 
         // add child symbol table for the class
         SymbolTable& cls_symtab = symtab().add_child(v.class_name.name);
-        cls_symtab.add({v.type_var.name, Symbol::TypeVar, 1});
+        for (auto&& [i, type_var] : v.type_vars | enumerate)
+            cls_symtab.add({type_var.name, Symbol::TypeVar, i + 1});
 
         // add new class to the module
         auto cls = make_unique<Class>(cls_symtab);
@@ -106,11 +110,17 @@ public:
         v.class_name.symbol->set_next(next);
 
         // resolve type_inst
-        v.type_inst->apply(*this);
+        std::stringstream inst_names;
+        for (auto& t : v.type_inst) {
+            t->apply(*this);
+            if (t.get() != v.type_inst.front().get())  // not first
+                inst_names << ' ';
+            inst_names << *t;
+        }
 
         // add child symbol table for the instance
         SymbolTable& inst_symtab = symtab().add_child(fmt::format("{} ({})",
-                v.class_name.name, *v.type_inst));
+                v.class_name.name, inst_names.str()));
         m_symtab = &inst_symtab;
 
         // add new instance to the module
@@ -128,10 +138,7 @@ public:
         v.class_name.symbol->set_index(v.index);
     }
 
-    void visit(ast::Integer&) override {}
-    void visit(ast::Float&) override {}
-    void visit(ast::Char&) override {}
-    void visit(ast::String&) override {}
+    void visit(ast::Literal&) override {}
 
     void visit(ast::Bracketed& v) override {
         v.expression->apply(*this);
@@ -207,6 +214,14 @@ public:
 
         // postpone body compilation
         m_postponed_blocks.push_back({fn, v.body});
+    }
+
+    void visit(ast::Cast& v) override {
+        v.expression->apply(*this);
+        v.type->apply(*this);
+        v.cast_function = make_unique<ast::Reference>(ast::Identifier{"cast"});
+        v.cast_function->source_info = v.source_info;
+        visit(*v.cast_function);
     }
 
     void visit(ast::TypeName& t) final {

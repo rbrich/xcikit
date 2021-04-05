@@ -8,6 +8,7 @@
 #include "Builtin.h"
 #include "Value.h"
 #include "Error.h"
+#include "dump.h"
 
 #include <fmt/core.h>
 #include <range/v3/view/reverse.hpp>
@@ -73,6 +74,8 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
 
         auto opcode = static_cast<Opcode>(*it++);
         switch (opcode) {
+            case Opcode::Noop:
+                break;
 
             case Opcode::LogicalOr:
             case Opcode::LogicalAnd: {
@@ -239,6 +242,26 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                 if (idx < 0 || (size_t) idx >= len)
                     throw IndexOutOfBounds(idx, len);
                 m_stack.push(*lhs.get(idx));
+                break;
+            }
+
+            case Opcode::Cast: {
+                // TODO: possible optimization when truncating integers
+                //       or extending unsigned integers: do not pull the value,
+                //       but truncate or extend it directly in the stack
+                const auto arg = *it++;
+                const auto from_type = decode_arg_type(arg >> 4);
+                const auto to_type = decode_arg_type(arg & 0xf);
+                if (from_type == Type::Unknown)
+                    throw NotImplemented(format("cast from: {:x}", arg >> 4));
+                if (to_type == Type::Unknown)
+                    throw NotImplemented(format("cast to: {:x}", arg & 0xf));
+                auto from = m_stack.pull(TypeInfo{from_type});
+                auto to = Value::create(TypeInfo{to_type});
+                if (!to->cast_from(*from))
+                    throw NotImplemented(format("cast {} to {}",
+                                         TypeInfo{from_type}, TypeInfo{to_type}));
+                m_stack.push(*to);
                 break;
             }
 

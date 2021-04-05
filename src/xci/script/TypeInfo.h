@@ -41,6 +41,11 @@ enum class Type : uint8_t {
 };
 
 
+/// Decode Type from half-byte argument of an Opcode
+/// See Opcode::Cast
+Type decode_arg_type(uint8_t arg);
+
+
 struct Signature;
 
 class TypeInfo {
@@ -58,6 +63,9 @@ public:
     explicit TypeInfo(Type type, TypeInfo elem_type)
         : m_type(type), m_subtypes({std::move(elem_type)}) {}
 
+    // shortcuts
+    static TypeInfo bytes() { return TypeInfo{Type::List, TypeInfo{Type::Byte}}; }
+
     size_t size() const;
     void foreach_heap_slot(std::function<void(size_t offset)> cb) const;
 
@@ -65,6 +73,7 @@ public:
     bool is_callable() const { return type() == Type::Function; }
 
     bool is_unknown() const { return m_type == Type::Unknown; }
+    bool is_void() const { return m_type == Type::Void; }
     uint8_t generic_var() const { return m_var; }
     void replace_var(uint8_t idx, const TypeInfo& ti);
 
@@ -84,7 +93,7 @@ public:
 
 private:
     Type m_type { Type::Unknown };
-    uint8_t m_var {0};  // for unknown type, specifies which type variable this represents
+    uint8_t m_var {0};  // for unknown type, specifies which type variable this represents (counted from 1, none = 0)
     std::shared_ptr<Signature> m_signature;
     std::vector<TypeInfo> m_subtypes;
 };

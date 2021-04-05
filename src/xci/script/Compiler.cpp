@@ -12,6 +12,7 @@
 #include "ast/fold_const_expr.h"
 #include "ast/fold_dot_call.h"
 #include "ast/fold_tuple.h"
+#include "ast/fold_intrinsics.h"
 #include "Stack.h"
 #include <xci/compat/macros.h>
 
@@ -22,7 +23,6 @@
 
 namespace xci::script {
 
-using std::make_unique;
 using ranges::cpp20::views::reverse;
 
 
@@ -49,7 +49,8 @@ public:
 
     void visit(ast::Invocation& inv) override {
         inv.expression->apply(*this);
-        code().add_opcode(Opcode::Invoke, inv.type_index);
+        if (inv.type_index != no_index)
+            code().add_opcode(Opcode::Invoke, inv.type_index);
     }
 
     void visit(ast::Return& ret) override {
@@ -57,7 +58,9 @@ public:
 
         if (m_function.has_intrinsics()) {
             if (m_function.intrinsics() != m_function.code().size())
-                throw IntrinsicsFunctionError("cannot mix compiled code with intrinsics");
+                throw IntrinsicsFunctionError(
+                        "cannot mix compiled code with intrinsics",
+                        ret.expression->source_info);
             // no DROP for intrinsics function
             return;
         }
@@ -95,30 +98,11 @@ public:
         // return value left on stack
     }
 
-    void visit(ast::Integer& v) override {
+    void visit(ast::Literal& v) override {
+        if (v.value->is_void())
+            return;  // Void value
         // add to static values
-        auto idx = module().add_value(std::make_unique<value::Int32>(v.value));
-        // LOAD_STATIC <static_idx>
-        code().add_opcode(Opcode::LoadStatic, idx);
-    }
-
-    void visit(ast::Float& v) override {
-        // add to static values
-        auto idx = module().add_value(std::make_unique<value::Float32>(v.value));
-        // LOAD_STATIC <static_idx>
-        code().add_opcode(Opcode::LoadStatic, idx);
-    }
-
-    void visit(ast::Char& v) override {
-        // add to static values
-        auto idx = module().add_value(std::make_unique<value::Char>(v.value));
-        // LOAD_STATIC <static_idx>
-        code().add_opcode(Opcode::LoadStatic, idx);
-    }
-
-    void visit(ast::String& v) override {
-        // add to static values
-        auto idx = module().add_value(std::make_unique<value::String>(v.value));
+        auto idx = module().add_value(v.value->make_copy());
         // LOAD_STATIC <static_idx>
         code().add_opcode(Opcode::LoadStatic, idx);
     }
@@ -148,11 +132,22 @@ public:
         auto& symtab = *v.identifier.symbol.symtab();
         auto& sym = *v.identifier.symbol;
         switch (sym.type()) {
-            case Symbol::Instruction:
+            case Symbol::Instruction: {
                 // intrinsics - just output the requested instruction
-                assert(sym.index() < 256);
-                m_function.add_intrinsic(uint8_t(sym.index()));
+                auto opcode = Opcode(sym.index());
+                // add the opcode
+                m_function.add_intrinsic(uint8_t(opcode));
+                if (opcode <= Opcode::ZeroArgLast)
+                    break;
+                // add first arg
+                m_function.add_intrinsic(v.instruction_args[0]);
+                if (opcode <= Opcode::OneArgLast)
+                    break;
+                // add second arg
+                m_function.add_intrinsic(uint8_t(v.instruction_args[1]));
+                assert(opcode <= Opcode::TwoArgLast);
                 break;
+            }
             case Symbol::Module: {
                 assert(sym.depth() == 0);
                 // LOAD_MODULE <module_idx>
@@ -290,7 +285,7 @@ public:
     }
 
     void visit(ast::Call& v) override {
-        // call the function or push the value
+        // call the function or push the function as value
 
         for (auto& arg : reverse(v.args)) {
             arg->apply(*this);
@@ -396,6 +391,17 @@ public:
         }
     }
 
+    void visit(ast::Cast& v) override {
+        v.expression->apply(*this);
+        if (v.cast_function)
+            v.cast_function->apply(*this);
+        else {
+            // cast to Void - remove the expression result from stack
+            // DROP <skip> <size>
+            m_function.code().add_opcode(Opcode::Drop, 0, v.drop_size);
+        }
+    }
+
     void visit(ast::Class& v) override {
         // TODO
     }
@@ -489,7 +495,7 @@ private:
 };
 
 
-void Compiler::compile(Function& func, ast::Module& ast)
+bool Compiler::compile(Function& func, ast::Module& ast)
 {
     func.set_compiled();
     func.signature().set_return_type(TypeInfo{Type::Unknown});
@@ -501,43 +507,49 @@ void Compiler::compile(Function& func, ast::Module& ast)
     // - apply optimizations - const fold etc. (Optimizer)
     // See documentation on each function.
 
-    if ((m_flags & PPMask) == 0) {
+    if ((m_flags & Flags::MandatoryMask) == Flags::Default) {
         // no post-processing selected by default -> enable all
-        m_flags |= PPMask;
+        m_flags |= Flags::MandatoryMask;
     }
     // only if all mandatory passes were enabled
     bool can_compile = true;
 
-    if ((m_flags & PPTuple) == PPTuple)
+    if ((m_flags & Flags::FoldTuple) == Flags::FoldTuple)
         fold_tuple(ast.body);
     else
         can_compile = false;
 
-    if ((m_flags & PPDotCall) == PPDotCall)
+    if ((m_flags & Flags::FoldDotCall) == Flags::FoldDotCall)
         fold_dot_call(func, ast.body);
     else
         can_compile = false;
 
-    if ((m_flags & PPSymbols) == PPSymbols)
+    if ((m_flags & Flags::ResolveSymbols) == Flags::ResolveSymbols)
         resolve_symbols(func, ast.body);
     else
         can_compile = false;
 
-    if ((m_flags & PPTypes) == PPTypes)
+    if ((m_flags & Flags::ResolveTypes) == Flags::ResolveTypes)
         resolve_types(func, ast.body);
     else
         can_compile = false;
 
-    if ((m_flags & OConstFold) == OConstFold)
+    if ((m_flags & Flags::FoldIntrinsics) == Flags::FoldIntrinsics)
+        fold_intrinsics(ast.body);
+    else
+        can_compile = false;
+
+    if ((m_flags & Flags::FoldConstExpr) == Flags::FoldConstExpr)
         fold_const_expr(func, ast.body);
 
-    if ((m_flags & PPNonlocals) == PPNonlocals)
+    if ((m_flags & Flags::ResolveNonlocals) == Flags::ResolveNonlocals)
         resolve_nonlocals(func, ast.body);
     else
         can_compile = false;
 
     if (can_compile)
         compile_block(func, ast.body);
+    return can_compile;
 }
 
 

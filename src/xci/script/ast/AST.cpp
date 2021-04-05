@@ -47,8 +47,8 @@ auto copy_ptr_vector(const std::vector<std::unique_ptr<T>>& s)
 std::unique_ptr<ast::Expression> Function::make_copy() const
 {
     auto r = std::make_unique<Function>();
-    r->type = copy(type);
-    r->source_info = source_info;
+    Expression::copy_to(*r);
+    type.copy_to(r->type);
     r->body = copy(body);
     r->index = index;
     return r;
@@ -58,7 +58,7 @@ std::unique_ptr<ast::Expression> Function::make_copy() const
 std::unique_ptr<ast::Expression> Condition::make_copy() const
 {
     auto r = std::make_unique<Condition>();
-    r->source_info = source_info;
+    Expression::copy_to(*r);
     r->cond = cond->make_copy();
     r->then_expr = then_expr->make_copy();
     r->else_expr = else_expr->make_copy();
@@ -99,7 +99,7 @@ std::unique_ptr<ast::Statement> Class::make_copy() const
 {
     auto r = std::make_unique<Class>();
     r->class_name = class_name;
-    r->type_var = type_var;
+    r->type_vars = type_vars;
     r->context = context;
     r->defs.reserve(defs.size());
     for (const auto& d : defs) {
@@ -115,7 +115,8 @@ std::unique_ptr<ast::Statement> Instance::make_copy() const
 {
     auto r = std::make_unique<Instance>();
     r->class_name = class_name;
-    r->type_inst = type_inst->make_copy();
+    for (const auto& t : r->type_inst)
+        r->type_inst.push_back(t->make_copy());
     r->context = context;
     for (const auto& d : defs) {
         r->defs.emplace_back();
@@ -127,10 +128,17 @@ std::unique_ptr<ast::Statement> Instance::make_copy() const
 }
 
 
+void Expression::copy_to(Expression& r) const
+{
+    r.source_info = source_info;
+    r.definition = definition;
+}
+
+
 std::unique_ptr<ast::Expression> Reference::make_copy() const
 {
     auto r = std::make_unique<Reference>();
-    r->source_info = source_info;
+    Expression::copy_to(*r);
     r->identifier = identifier;
     r->chain = chain;
     r->module = module;
@@ -141,9 +149,9 @@ std::unique_ptr<ast::Expression> Reference::make_copy() const
 
 void Call::copy_to(Call& r) const
 {
+    Expression::copy_to(r);
     if (callable)
         r.callable = callable->make_copy();
-    r.source_info = source_info;
     r.args = copy_ptr_vector(args);
     r.wrapped_execs = wrapped_execs;
     r.partial_args = partial_args;
@@ -153,7 +161,7 @@ void Call::copy_to(Call& r) const
 
 std::unique_ptr<ast::Expression> Call::make_copy() const
 {
-    return std::make_unique<Call>(copy(*this));
+    return pcopy(*this);
 }
 
 
@@ -176,7 +184,7 @@ std::unique_ptr<ast::Type> ListType::make_copy() const
 
 std::unique_ptr<ast::Type> FunctionType::make_copy() const
 {
-    return std::make_unique<FunctionType>(copy(*this));
+    return pcopy(*this);
 }
 
 
@@ -188,10 +196,18 @@ void FunctionType::copy_to(FunctionType& r) const
 }
 
 
+std::unique_ptr<ast::Expression> Literal::make_copy() const
+{
+    auto r = std::make_unique<Literal>(*value);
+    Expression::copy_to(*r);
+    return r;
+}
+
+
 std::unique_ptr<ast::Expression> Bracketed::make_copy() const
 {
     auto r = std::make_unique<Bracketed>();
-    r->source_info = source_info;
+    Expression::copy_to(*r);
     r->expression = expression->make_copy();
     return r;
 }
@@ -200,7 +216,7 @@ std::unique_ptr<ast::Expression> Bracketed::make_copy() const
 std::unique_ptr<ast::Expression> Tuple::make_copy() const
 {
     auto r = std::make_unique<Tuple>();
-    r->source_info = source_info;
+    Expression::copy_to(*r);
     r->items = copy_ptr_vector(items);
     return r;
 }
@@ -209,9 +225,19 @@ std::unique_ptr<ast::Expression> Tuple::make_copy() const
 std::unique_ptr<ast::Expression> List::make_copy() const
 {
     auto r = std::make_unique<List>();
-    r->source_info = source_info;
+    Expression::copy_to(*r);
     r->items = copy_ptr_vector(items);
     r->item_size = item_size;
+    return r;
+}
+
+
+std::unique_ptr<ast::Expression> Cast::make_copy() const
+{
+    auto r = std::make_unique<Cast>();
+    Expression::copy_to(*r);
+    r->expression = expression->make_copy();
+    r->type = type->make_copy();
     return r;
 }
 
@@ -249,43 +275,14 @@ void Block::finish()
             return;
         }
     }
-
-    // Missing return statement - insert `return void` automatically
-    statements.push_back(std::make_unique<Return>(std::make_unique<Reference>(Identifier{"void"})));
 }
 
 
-Integer::Integer(const std::string& s)
-{
-    char* end = nullptr;
-    value = std::strtol(s.c_str(), &end, 10);
-    if (end == nullptr || *end != '\0') {
-        throw std::runtime_error("Integer not fully parsed.");
-    }
-}
-
-
-Float::Float(const std::string& s) : value(0.0)
-{
-    std::istringstream is(s);
-    is >> value;
-    if (!is.eof()) {
-        throw std::runtime_error("Float not fully parsed.");
-    }
-}
-
-
-Char::Char(std::string_view sv)
-{
-    value = core::utf8_codepoint(sv.data());
-}
-
-
-Operator::Operator(const std::string& s, bool prefix)
+Operator::Operator(std::string_view s, bool prefix)
 {
     assert(!s.empty());
     char c1 = s[0];
-    char c2 = s.c_str()[1];
+    char c2 = s.size() >= 2 ? s[1] : 0;
     switch (c1) {
         case ',':    op = Comma; break;
         case '|':    op = (c2 == '|')? LogicalOr : BitwiseOr; break;
@@ -388,7 +385,7 @@ const char* Operator::to_cstr() const
         case Operator::Div:         return "/";
         case Operator::Mod:         return "%";
         case Operator::Exp:         return "**";
-        case Operator::LogicalNot:  return "-";
+        case Operator::LogicalNot:  return "!";
         case Operator::BitwiseNot:  return "~";
         case Operator::UnaryPlus:   return "+";
         case Operator::UnaryMinus:  return "-";

@@ -53,7 +53,7 @@ bool Repl::evaluate(std::string_view line)
             module->add_imported_module(*m);
         auto func_name = m_ctx.input_number == -1 ? "_" : "_" + std::to_string(m_ctx.input_number);
         auto func = std::make_unique<Function>(*module, module->symtab());
-        compiler.compile(*func, ast);
+        bool is_compiled = compiler.compile(*func, ast);
 
         // print AST with Compiler modifications
         if (m_opts.print_ast) {
@@ -71,7 +71,7 @@ bool Repl::evaluate(std::string_view line)
         }
 
         // stop if we were only processing the AST, without actual compilation
-        if ((m_opts.compiler_flags & Compiler::PPMask) != 0)
+        if (!is_compiled)
             return false;
 
         BytecodeTracer tracer(machine, t);
@@ -88,8 +88,8 @@ bool Repl::evaluate(std::string_view line)
         if (m_ctx.input_number != -1) {
             // REPL mode
             if (!result->is_void()) {
-                t.print("{t:bold}{fg:magenta}{} = {fg:default}{}{t:normal}\n",
-                        func_name, *result);
+                t.print("{t:bold}{fg:magenta}{}:{} = {fg:default}{}{t:normal}\n",
+                        func_name, result->type_info(), *result);
             }
             // save result as function `_<N>` in the module
             auto func_idx = module->add_function(move(func));

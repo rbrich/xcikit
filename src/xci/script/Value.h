@@ -15,6 +15,7 @@
 #include <vector>
 #include <map>
 #include <string_view>
+#include <span>
 #include <cassert>
 #include <cstring>
 #include <cstdint>
@@ -39,6 +40,7 @@ class Int32;
 class Int64;
 class Float32;
 class Float64;
+class Bytes;
 class String;
 class List;
 class Tuple;
@@ -55,11 +57,29 @@ public:
     virtual void visit(const Int64&) = 0;
     virtual void visit(const Float32&) = 0;
     virtual void visit(const Float64&) = 0;
+    virtual void visit(const Bytes&) = 0;
     virtual void visit(const String&) = 0;
     virtual void visit(const List&) = 0;
     virtual void visit(const Tuple&) = 0;
     virtual void visit(const Closure&) = 0;
     virtual void visit(const Module&) = 0;
+};
+
+class PartialVisitor : public Visitor {
+    void visit(const Void&) override {}
+    void visit(const Bool&) override {}
+    void visit(const Byte&) override {}
+    void visit(const Char&) override {}
+    void visit(const Int32&) override {}
+    void visit(const Int64&) override {}
+    void visit(const Float32&) override {}
+    void visit(const Float64&) override {}
+    void visit(const Bytes&) override {}
+    void visit(const String&) override {}
+    void visit(const List&) override {}
+    void visit(const Tuple&) override {}
+    void visit(const Closure&) override {}
+    void visit(const Module&) override {}
 };
 
 } // namespace value
@@ -97,8 +117,13 @@ public:
     bool is_bool() const { return type_info().type() == Type::Bool; }
     bool is_callable() const { return type_info().type() == Type::Function; }
 
+    // Load value from `v` and return true if the value is compatible
+    // (can be statically casted). Return false otherwise.
+    virtual bool cast_from(Value& v) { return false; }
+
     // Cast to subtype, e.g.: `v.as<value::Int32>()->value()`
     template <class T> T& as() { return *dynamic_cast<T*>(this); }
+    template <class T> const T& as() const { return *dynamic_cast<const T*>(this); }
 };
 
 
@@ -141,11 +166,10 @@ namespace value {
 
 
 // Empty value, doesn't carry any information
-// But it still needs to have some size, so it's written to stack as single 0 byte
 class Void: public Value {
 public:
     std::unique_ptr<Value> make_copy() const override { return std::make_unique<Void>(); }
-    void write(byte* buffer) const override { *buffer = byte{0}; }
+    void write(byte* buffer) const override {}
     void read(const byte* buffer) override {}
     TypeInfo type_info() const override { return TypeInfo{Type::Void}; }
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
@@ -181,15 +205,18 @@ class Byte: public Value {
 public:
     Byte() = default;
     explicit Byte(uint8_t v) : m_value(v) {}
+    explicit Byte(std::string_view utf8);
     std::unique_ptr<Value> make_copy() const override { return std::make_unique<Byte>(m_value); }
 
     void write(byte* buffer) const override { *buffer = byte(m_value); }
     void read(const byte* buffer) override { m_value = uint8_t(*buffer); }
     TypeInfo type_info() const override { return TypeInfo{Type::Byte}; }
+    bool cast_from(Value& v) override;
 
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
 
     uint8_t value() const { return m_value; }
+    void set_value(uint8_t v) { m_value = v; }
 
 private:
     uint8_t m_value = 0;
@@ -200,6 +227,7 @@ class Char: public Value {
 public:
     Char() = default;
     explicit Char(char32_t v) : m_value(v) {}
+    explicit Char(std::string_view utf8);
     std::unique_ptr<Value> make_copy() const override { return std::make_unique<Char>(m_value); }
 
     void write(byte* buffer) const override { std::memcpy(buffer, &m_value, sizeof(m_value)); }
@@ -224,10 +252,12 @@ public:
     void write(byte* buffer) const override { std::memcpy(buffer, &m_value, sizeof(m_value)); }
     void read(const byte* buffer) override { std::memcpy(&m_value, buffer, sizeof(m_value)); }
     TypeInfo type_info() const override { return TypeInfo{Type::Int32}; }
+    bool cast_from(Value& v) override;
 
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
 
     int32_t value() const { return m_value; }
+    void set_value(int32_t v) { m_value = v; }
 
 private:
     int32_t m_value = 0;
@@ -243,10 +273,12 @@ public:
     void write(byte* buffer) const override { std::memcpy(buffer, &m_value, sizeof(m_value)); }
     void read(const byte* buffer) override { std::memcpy(&m_value, buffer, sizeof(m_value)); }
     TypeInfo type_info() const override { return TypeInfo{Type::Int64}; }
+    bool cast_from(Value& v) override;
 
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
 
     int64_t value() const { return m_value; }
+    void set_value(int64_t v) { m_value = v; }
 
 private:
     int64_t m_value = 0;
@@ -262,10 +294,12 @@ public:
     void write(byte* buffer) const override { std::memcpy(buffer, &m_value, sizeof(m_value)); }
     void read(const byte* buffer) override { std::memcpy(&m_value, buffer, sizeof(m_value)); }
     TypeInfo type_info() const override { return TypeInfo{Type::Float32}; }
+    bool cast_from(Value& v) override;
 
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
 
     float value() const { return m_value; }
+    void set_value(float v) { m_value = v; }
 
 private:
     float m_value = 0.0f;
@@ -281,10 +315,12 @@ public:
     void write(byte* buffer) const override { std::memcpy(buffer, &m_value, sizeof(m_value)); }
     void read(const byte* buffer) override { std::memcpy(&m_value, buffer, sizeof(m_value)); }
     TypeInfo type_info() const override { return TypeInfo{Type::Float64}; }
+    bool cast_from(Value& v) override;
 
     void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
 
     double value() const { return m_value; }
+    void set_value(double v) { m_value = v; }
 
 private:
     double m_value = 0.0;
@@ -306,8 +342,7 @@ private:
 class String: public Value {
 public:
     String() = default;
-    explicit String(const std::string& v);
-    explicit String(const char* cstr, size_t size);
+    explicit String(std::string_view v);
     explicit String(size_t size, const HeapSlot& slot) : m_size(size), m_value(slot) {}
     String(const String& other) = default;
     String(String&& other) noexcept : m_size(other.m_size), m_value(std::move(other.m_value)) {
@@ -362,6 +397,9 @@ public:
     size_t length() const { return m_length; }
     std::unique_ptr<Value> get(size_t idx) const;
 
+protected:
+    HeapSlot& heapslot_ref() { return m_elements; }
+
 private:
     TypeInfo m_elem_type;
     size_t m_length = 0;  // number of elements
@@ -369,7 +407,20 @@ private:
 };
 
 
-struct Int32List: public List {
+// [Bytes] has some special handling, e.g. it's dumped as b"abc", not [1,2,3]
+class Bytes: public List {
+public:
+    Bytes() : List(TypeInfo{Type::Byte}) {}
+    explicit Bytes(std::span<const std::byte> v);
+    explicit Bytes(size_t size, const HeapSlot& slot) : List(TypeInfo{Type::Byte}, size, slot) {}
+
+    void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
+
+    std::span<const std::byte> value() const { return {heapslot()->data(), length()}; }
+};
+
+
+class Int32List: public List {
 public:
     Int32List() : List(TypeInfo{Type::Int32}) {}
 };

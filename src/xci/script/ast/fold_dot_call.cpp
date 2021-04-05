@@ -71,13 +71,14 @@ public:
         v.expression->apply(*this);
     }
 
-    void visit(ast::Integer&) override {}
-    void visit(ast::Float&) override {}
-    void visit(ast::Char&) override {}
-    void visit(ast::String&) override {}
+    void visit(ast::Literal&) override {}
     void visit(ast::Tuple&) override {}
     void visit(ast::List&) override {}
     void visit(ast::Reference&) override {}
+
+    void visit(ast::Cast& v) override {
+        v.expression->apply(*this);
+    }
 
     void visit(ast::Class&) override {}
     void visit(ast::Instance&) override {}

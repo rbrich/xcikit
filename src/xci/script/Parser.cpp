@@ -6,6 +6,7 @@
 
 #include "Parser.h"
 #include "Error.h"
+#include "TypeInfo.h"
 #include <xci/core/parser/unescape_rules.h>
 
 #include <tao/pegtl.hpp>
@@ -16,6 +17,10 @@
 #endif
 
 #include <fmt/core.h>
+
+#include <limits>
+#include <charconv>
+#include <variant>
 
 // Enable for detailed trace of Grammar rules being matched
 // #define XCI_SCRIPT_PARSER_TRACE
@@ -31,6 +36,7 @@ namespace parser {
 
 using namespace tao::pegtl;
 using namespace xci::core::parser::unescape;
+using ValueType = xci::script::Type;
 
 
 // ----------------------------------------------------------------------------
@@ -84,12 +90,24 @@ struct Keyword: sor<KeywordFun, KeywordIf, KeywordThen, KeywordElse,
         KeywordClass, KeywordInstance, KeywordWith, KeywordMatch> {};
 
 // Literals
-struct Integer: seq< opt<one<'-','+'>>, plus<digit> > {};
-struct Float: seq< opt<one<'-','+'>>, plus<digit>, one<'.'>, star<digit> > {};
+struct BinDigit : one< '0', '1' > {};
+struct OctDigit : range< '0', '7' > {};
+struct BinNum: if_must<one<'b'>, plus<BinDigit>> {};
+struct OctNum: if_must<one<'o'>, plus<OctDigit>> {};
+struct DecNumFrac: seq< one<'.'>, star<digit> > {};
+struct DecNum: seq< plus<digit>, opt<DecNumFrac> > {};
+struct HexNum: if_must<one<'x'>, plus<xdigit>> {};
+struct Sign: one<'-','+'> {};
+struct ZeroPrefixNum: seq< one<'0'>, sor<HexNum, OctNum, BinNum, DecNum> > {};
+struct NumSuffix: one<'l', 'L', 'f', 'F', 'b', 'B'> {};
+struct Number: seq< opt<Sign>, sor<ZeroPrefixNum, DecNum>, opt<NumSuffix> > {};
+
 struct Char: if_must< one<'\''>, StringCh, one<'\''> > {};
 struct String: if_must< one<'"'>, until<one<'"'>, StringCh > > {};
+struct Byte: seq< one<'b'>, Char > {};
+struct Bytes: seq< one<'b'>, String > {};
 struct RawString : raw_string< '$', '-', '$' > {};  // raw_string = $$ raw text! $$
-struct Literal: sor< Float, Integer, Char, String, RawString > {};
+struct Literal: sor< Char, String, Byte, Bytes, Number, RawString > {};
 
 // Expressions
 // * some rules are parametrized with S (space type), choose either SC or NSC (allow newline)
@@ -116,10 +134,11 @@ struct Block: if_must< one<'{'>, NSC, sor< one<'}'>, seq<SepList<Statement>, NSC
 struct Function: sor< Block, if_must< KeywordFun, NSC, FunctionDecl, NSC, Block> > {};
 struct BracketedExpr: if_must< one<'('>, NSC, Expression<NSC>, NSC, one<')'> > {};
 struct ExprPrefix: if_must< PrefixOperator, SC, ExprOperand, SC > {};
-struct Reference: seq< Identifier > {};
+struct Reference: seq<Identifier, not_at<one<'"'>>> {};
 struct List: if_must< one<'['>, NSC, opt<ExprInfix<NSC>, NSC>, one<']'> > {};
+struct Cast: seq<SC, one<':'>, SC, Type> {};
 struct ExprCallable: sor< BracketedExpr, Function, Reference> {};
-struct ExprArgSafe: sor< BracketedExpr, List, Function, Literal, Reference > {};  // expressions which can be used as args in Call
+struct ExprArgSafe: seq< sor< BracketedExpr, List, Function, Literal, Reference >, opt<Cast>> {};  // expressions which can be used as args in Call
 struct Call: seq< ExprCallable, plus<RS, SC, ExprArgSafe> > {};
 struct ExprOperand: sor<Call, ExprArgSafe, ExprPrefix> {};
 struct ExprCond: if_must< KeywordIf, NSC, ExprInfix<NSC>, NSC, KeywordThen, NSC, Expression<SC>, NSC, KeywordElse, NSC, Expression<SC>> {};
@@ -130,14 +149,29 @@ struct Statement: sor< Definition, Expression<SC> > {};
 
 // Module-level definitions
 struct ClassDefinition: seq< Variable, SC, opt_must<one<'='>, SC, Expression<SC>> > {};
-struct DefClass: if_must< KeywordClass, NSC, TypeName, RS, SC, TypeName, SC, opt<TypeContext>, NSC,
+struct DefClass: if_must< KeywordClass, NSC, TypeName, RS, SC, plus<TypeName, SC>, opt<TypeContext>, NSC,
         one<'{'>, NSC, sor< one<'}'>, must<SepList<ClassDefinition>, NSC, one<'}'>> > > {};
-struct DefInstance: if_must< KeywordInstance, NSC, TypeName, RS, SC, Type, SC, opt<TypeContext>, NSC,
+struct DefInstance: if_must< KeywordInstance, NSC, TypeName, RS, SC, plus<Type, SC>, opt<TypeContext>, NSC,
         one<'{'>, NSC, sor< one<'}'>, must<SepList<Definition>, NSC, one<'}'>> > > {};
 struct TopLevelStatement: sor<DefClass, DefInstance, Statement> {};
 
 // Source module
 struct Module: must<NSC, opt<SepList<TopLevelStatement>, NSC>, eof> {};
+
+
+// ----------------------------------------------------------------------------
+// Helper data structs
+
+struct LiteralHelper {
+    std::variant<std::string_view, std::string, double, int64_t> content;
+    ValueType type = ValueType::Unknown;
+};
+
+struct NumberHelper {
+    std::variant<double, int64_t> num;
+    bool is_float = false;
+    char suffix = 0;
+};
 
 
 // ----------------------------------------------------------------------------
@@ -209,7 +243,7 @@ template<>
 struct Action<PrefixOperator> {
     template<typename Input>
     static void apply(const Input &in, ast::OpCall& opc) {
-        ast::Operator op{in.string(), true};
+        ast::Operator op{in.string_view(), true};
         opc.op = op;
     }
 };
@@ -243,7 +277,7 @@ template<>
 struct Action<InfixOperator> {
     template<typename Input>
     static void apply(const Input &in, ast::OpCall& opc) {
-        ast::Operator op{in.string()};
+        ast::Operator op{in.string_view()};
         opc.op = op;
     }
 };
@@ -411,11 +445,6 @@ struct Action<ExprArgSafe> : change_states< std::unique_ptr<ast::Expression> > {
     static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::OpCall& opc) {
         opc.args.push_back(std::move(expr));
     }
-
-    template<typename Input>
-    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, std::unique_ptr<ast::Expression>& outer_expr) {
-        outer_expr = std::move(expr);
-    }
 };
 
 
@@ -540,7 +569,7 @@ struct Action<TypeName> {
         if (cls.class_name.name.empty())
             cls.class_name.name = in.string();
         else
-            cls.type_var.name = in.string();
+            cls.type_vars.emplace_back(in.string());
     }
 
     template<typename Input>
@@ -606,7 +635,16 @@ struct Action<Type> : change_states< std::unique_ptr<ast::Type> >  {
 
     template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::Instance& inst) {
-        inst.type_inst = std::move(type);
+        inst.type_inst.push_back(std::move(type));
+    }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, std::unique_ptr<ast::Expression>& expr) {
+        // Cast
+        auto cast = std::make_unique<ast::Cast>();
+        cast->expression = std::move(expr);
+        cast->type = std::move(type);
+        expr = std::move(cast);
     }
 };
 
@@ -681,50 +719,205 @@ struct Action<DefInstance> : change_states< ast::Instance > {
 
 
 template<>
-struct Action<Float> {
+struct Action<Literal> : change_states< LiteralHelper > {
     template<typename Input>
-    static void apply(const Input &in, std::unique_ptr<ast::Expression>& expr) {
-        expr = std::make_unique<ast::Float>(in.string());
-        expr->source_info.load(in.input(), in.position());
+    static void success(const Input &in, LiteralHelper& helper, std::unique_ptr<ast::Expression>& expr) {
+        std::unique_ptr<Value> value;
+        switch (helper.type) {
+            default:
+            case ValueType::Unknown:
+                assert(!"Literal value not handled");
+                abort();
+            case ValueType::Int32: {
+                const auto v = std::get<int64_t>(helper.content);
+                using l = std::numeric_limits<int32_t>;
+                if (v < l::min() || v > l::max())
+                    // The value can't fit in Int32, make it Int64 instead
+                    value = std::make_unique<value::Int64>(v);
+                else
+                    value = std::make_unique<value::Int32>((int32_t) v);
+                break;
+            }
+            case ValueType::Int64:
+                value = std::make_unique<value::Int64>( std::get<int64_t>(helper.content) );
+                break;
+            case ValueType::Float32:
+                value = std::make_unique<value::Float32>( std::get<double>(helper.content) );
+                break;
+            case ValueType::Float64:
+                value = std::make_unique<value::Float64>( std::get<double>(helper.content) );
+                break;
+            case ValueType::Char:
+                value = std::make_unique<value::Char>( std::get<std::string>(helper.content) );
+                break;
+            case ValueType::String:
+                if (std::holds_alternative<std::string>(helper.content))
+                    value = std::make_unique<value::String>( std::get<std::string>(helper.content) );
+                else
+                    value = std::make_unique<value::String>( std::get<std::string_view>(helper.content) );
+                break;
+            case ValueType::Byte: {
+                if (std::holds_alternative<std::string>(helper.content))
+                    value = std::make_unique<value::Byte>( std::get<std::string>(helper.content) );
+                else {
+                    const auto v = std::get<int64_t>(helper.content);
+                    using l = std::numeric_limits<uint8_t>;
+                    if (v < l::min() || v > l::max())
+                        throw parse_error("Byte literal out of range", in);
+                    value = std::make_unique<value::Byte>((uint8_t) v);
+                    break;
+                }
+                break;
+            }
+            case ValueType::List: {  // [Byte]
+                std::string& str = std::get<std::string>(helper.content);
+                std::span data{(const std::byte*) str.data(), str.size()};
+                value = std::make_unique<value::Bytes>(data);
+                break;
+            }
+        }
+        expr = std::make_unique<ast::Literal>(std::move(value));
     }
 };
 
 
 template<>
-struct Action<Integer> {
+struct Action<DecNumFrac> {
     template<typename Input>
-    static void apply(const Input &in, std::unique_ptr<ast::Expression>& expr) {
-        expr = std::make_unique<ast::Integer>(in.string());
-        expr->source_info.load(in.input(), in.position());
+    static void apply(const Input &in, NumberHelper& n) {
+        n.is_float = true;
+    }
+};
+
+
+template<>
+struct Action<NumSuffix> {
+    template<typename Input>
+    static void apply(const Input &in, NumberHelper& n) {
+        n.suffix = tolower(in.peek_char());
+        if (n.suffix == 'f')
+            n.is_float = true;
+    }
+};
+
+
+template<>
+struct Action<Number> : change_states< NumberHelper > {
+    template<typename Input>
+    static void apply(const Input &in, NumberHelper& n) {
+        if (n.is_float) {
+            auto s = in.string();
+            if (n.suffix)
+                s.pop_back();
+            std::istringstream is(s);
+            double val;
+            is >> val;
+            if (!is.eof()) {
+                throw std::runtime_error("Float not fully parsed.");
+            }
+            n.num = val;
+        } else {
+            const auto sv = in.string_view();
+            const char* first = &sv.front();
+            const char* last = &sv.back() + 1;
+
+            // skip optional + sign, which is not recognized by from_chars()
+            if (*first == '+')
+                ++first;
+
+            // skip suffix
+            if (n.suffix)
+                --last;
+
+            bool minus_sign = false;
+            if (*first == '-') {
+                minus_sign = true;
+                ++first;
+            }
+
+            int base = 10;
+            if (last - first >= 2 && first[0] == '0') {
+                switch (first[1]) {
+                    case 'b': base = 2; first += 2; break;
+                    case 'o': base = 8; first += 2; break;
+                    case 'x': base = 16; first += 2; break;
+                }
+            }
+
+            uint64_t val;
+            auto [end, ec] = std::from_chars(first, last, val, base);
+            if (ec == std::errc::result_out_of_range)
+                throw parse_error("Int64 literal out of range", in);
+            assert(end == last);
+
+            using l = std::numeric_limits<int64_t>;
+            if (!minus_sign && val > uint64_t(l::max()))
+                throw parse_error("Int64 literal out of range", in);
+            if (minus_sign && val > uint64_t(-l::min()))
+                throw parse_error("Int64 literal out of range", in);
+
+            n.num = minus_sign ? -int64_t(val) : int64_t(val);
+        }
+    }
+
+    template<typename Input>
+    static void success(const Input &in, NumberHelper& n, LiteralHelper& lit) {
+        if (n.is_float) {
+            lit.type = (n.suffix == 'f') ? ValueType::Float32 : ValueType::Float64;
+            lit.content = std::get<double>(n.num);
+        } else {
+            switch (n.suffix) {
+                default:
+                case 0:
+                    lit.type = ValueType::Int32;
+                    break;
+                case 'l':
+                    lit.type = ValueType::Int64;
+                    break;
+                case 'b':
+                    lit.type = ValueType::Byte;
+                    break;
+            }
+            lit.content = std::get<int64_t>(n.num);
+        }
     }
 };
 
 
 template<>
 struct Action<Char> : change_states< std::string > {
-  template<typename Input>
-  static void apply(const Input &in, std::unique_ptr<ast::Expression>& expr) {
-    expr->source_info.load(in.input(), in.position());
-  }
-
-  template<typename Input>
-  static void success(const Input &in, std::string& str, std::unique_ptr<ast::Expression>& expr) {
-    expr = std::make_unique<ast::Char>(str);
-  }
+    template<typename Input>
+    static void success(const Input &in, std::string& str, LiteralHelper& helper) {
+        helper.content = std::move(str);
+        helper.type = ValueType::Char;
+    }
 };
 
 
 template<>
 struct Action<String> : change_states< std::string > {
     template<typename Input>
-    static void apply(const Input &in, std::unique_ptr<ast::Expression>& expr) {
-        expr->source_info.load(in.input(), in.position());
+    static void success(const Input &in, std::string& str, LiteralHelper& helper) {
+        helper.content = std::move(str);
+        helper.type = ValueType::String;
     }
+};
 
+
+template<>
+struct Action<Byte> {
     template<typename Input>
-    static void success(const Input &in, std::string& str, std::unique_ptr<ast::Expression>& expr) {
-        str.shrink_to_fit();
-        expr = std::make_unique<ast::String>(std::move(str));
+    static void apply(const Input &in, LiteralHelper& helper) {
+        helper.type = ValueType::Byte;
+    }
+};
+
+
+template<>
+struct Action<Bytes> {
+    template<typename Input>
+    static void apply(const Input &in, LiteralHelper& helper) {
+        helper.type = ValueType::List;  // [Byte]
     }
 };
 
@@ -738,9 +931,9 @@ template<> struct Action<StringChEscOct> : StringAppendEscOct {};
 template<>
 struct Action<RawString::content> {
     template<typename Input, typename States>
-    static void apply(const Input &in, const States& /* raw_string states */, std::unique_ptr<ast::Expression>& expr) {
-        expr = std::make_unique<ast::String>(in.string());
-        expr->source_info.load(in.input(), in.position());
+    static void apply(const Input &in, const States& /* raw_string states */, LiteralHelper& helper) {
+        helper.content = in.string_view();
+        helper.type = ValueType::String;
     }
 };
 

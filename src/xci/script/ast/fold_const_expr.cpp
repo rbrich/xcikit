@@ -165,10 +165,9 @@ public:
         m_const_value.reset();
     }
 
-    void visit(ast::Integer& v) override { m_const_value = make_unique<value::Int32>(v.value); }
-    void visit(ast::Float& v) override { m_const_value = make_unique<value::Float32>(v.value); }
-    void visit(ast::Char& v) override { m_const_value = make_unique<value::Char>(v.value); }
-    void visit(ast::String& v) override { m_const_value = make_unique<value::String>(v.value); }
+    void visit(ast::Literal& v) override {
+        m_const_value = v.value->make_copy();
+    }
 
     void visit(ast::Bracketed& v) override {
         v.expression->apply(*this);
@@ -184,6 +183,30 @@ public:
         m_const_value.reset();
     }
 
+    void visit(ast::Cast& v) override {
+        v.expression->apply(*this);
+        // cast to Void?
+        if (v.type_info.is_void()) {
+            m_const_value = Value::create(TypeInfo{Type::Void});
+            return;
+        }
+        if (!m_const_value)
+            return;
+        // cast to the same type?
+        if (m_const_value->type_info() == v.type_info) {
+            // keep m_const_value -> eliminate the cast
+            return;
+        }
+        // FIXME: evaluate the actual (possibly user-defined) cast function
+        auto cast_result = Value::create(v.type_info);
+        if (cast_result->cast_from(*m_const_value)) {
+            // fold the cast into value
+            m_const_value = move(cast_result);
+            return;
+        }
+        m_const_value.reset();
+    }
+
     void visit(ast::Class& v) override { m_const_value.reset(); }
     void visit(ast::Instance& v) override { m_const_value.reset(); }
 
@@ -195,38 +218,17 @@ private:
     Module& module() { return m_function.module(); }
 
     void apply_and_fold(unique_ptr<ast::Expression>& expr) {
-        expr->apply(*this);
-        convert_const_object_to_expression();
+        expr->apply(*this);  // may set either m_const_value or m_collapsed
+        if (m_const_value)
+            m_collapsed = make_unique<ast::Literal>(*m_const_value);
         if (m_collapsed) {
+            auto source_info = expr->source_info;
             expr = move(m_collapsed);
+            if (!expr->source_info)
+                expr->source_info = source_info;
         }
     }
 
-    void convert_const_object_to_expression() {
-        if (!m_const_value)
-            return;
-        struct ValueVisitor: public value::Visitor {
-            unique_ptr<ast::Expression>& collapsed;
-            explicit ValueVisitor(unique_ptr<ast::Expression>& collapsed) : collapsed(collapsed) {}
-            void visit(const value::Void&) override {}
-            void visit(const value::Bool&) override {}
-            void visit(const value::Byte&) override {}
-            void visit(const value::Char&) override {}
-            void visit(const value::Int32& v) override { collapsed = make_unique<ast::Integer>(v.value()); }
-            void visit(const value::Int64& v) override {}
-            void visit(const value::Float32& v) override { collapsed = make_unique<ast::Float>(v.value()); }
-            void visit(const value::Float64&) override {}
-            void visit(const value::String& v) override { collapsed = make_unique<ast::String>(v.value()); }
-            void visit(const value::List& v) override {}
-            void visit(const value::Tuple& v) override {}
-            void visit(const value::Closure&) override {}
-            void visit(const value::Module& v) override {}
-        };
-        ValueVisitor visitor(m_collapsed);
-        m_const_value->apply(visitor);
-    }
-
-private:
     Function& m_function;
     Machine m_machine;  // VM for evaluation of constant functions
     unique_ptr<Value> m_const_value;

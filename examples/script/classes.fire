@@ -1,0 +1,26 @@
+class MyEq T {
+    my_eq : T T -> Bool
+    my_ne : T T -> Bool
+}
+
+class MyOrd T (MyEq T) {
+    my_lt : T T -> Bool
+    my_gt : T T -> Bool
+    my_le : T T -> Bool
+    my_ge : T T -> Bool
+}
+
+instance MyEq Int32 {
+    my_eq = fun a b { a == b }
+    my_ne = fun a b { a != b }
+}
+
+instance MyOrd Int32 {
+    my_lt = fun a b { a < b }
+    my_gt = fun a b { a > b }
+    my_le = fun a b { a <= b }
+    my_ge = fun a b { a >= b }
+}
+
+my_eq 3 4
+my_lt 3 4

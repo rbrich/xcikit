@@ -11,6 +11,10 @@
 #include <xci/script/Error.h>
 #include <xci/compat/macros.h>
 
+#include <range/v3/view/enumerate.hpp>
+#include <range/v3/view/filter.hpp>
+#include <range/v3/algorithm.hpp>
+
 #include <sstream>
 
 namespace xci::script {
@@ -19,6 +23,11 @@ using std::move;
 using std::make_unique;
 using std::stringstream;
 using std::endl;
+
+using ranges::views::enumerate;
+using ranges::views::filter;
+using ranges::any_of;
+using ranges::to;
 
 
 class TypeCheckerVisitor final: public ast::Visitor {
@@ -47,10 +56,11 @@ public:
         }
 
         if (m_instance != nullptr) {
-            // evaluate type according to class and type var
+            // evaluate type according to class and type vars
             auto& psym = dfn.variable.identifier.symbol;
             TypeInfo eval_type = m_instance->class_().get_function_type(psym->ref()->index());
-            eval_type.replace_var(1, m_instance->type());
+            for (const auto&& [i, t] : m_instance->types() | enumerate)
+                eval_type.replace_var(i + 1, t);
 
             // specified type is basically useless here, let's just check
             // it matches evaluated type from class instance
@@ -79,7 +89,8 @@ public:
 
     void visit(ast::Invocation& inv) override {
         inv.expression->apply(*this);
-        inv.type_index = module().add_type(move(m_value_type));
+        if (!m_value_type.effective_type().is_void())
+            inv.type_index = module().add_type(move(m_value_type));
     }
 
     void visit(ast::Return& ret) override {
@@ -96,9 +107,11 @@ public:
 
     void visit(ast::Instance& v) override {
         m_instance = &module().get_instance(v.index);
-        // resolve instance type
-        v.type_inst->apply(*this);
-        m_instance->set_type(move(m_type_info));
+        // resolve instance types
+        for (auto& t : v.type_inst) {
+            t->apply(*this);
+            m_instance->add_type(move(m_type_info));
+        }
         // resolve each Definition from the class,
         // fill-in FunctionType, match with possible named arguments and body
         for (auto& dfn : v.defs)
@@ -106,10 +119,9 @@ public:
         m_instance = nullptr;
     }
 
-    void visit(ast::Integer& v) override { m_value_type = TypeInfo{Type::Int32}; }
-    void visit(ast::Float& v) override { m_value_type = TypeInfo{Type::Float32}; }
-    void visit(ast::Char& v) override { m_value_type = TypeInfo{Type::Char}; }
-    void visit(ast::String& v) override { m_value_type = TypeInfo{Type::String}; }
+    void visit(ast::Literal& v) override {
+        m_value_type = v.value->type_info();
+    }
 
     void visit(ast::Bracketed& v) override {
         v.expression->apply(*this);
@@ -149,9 +161,33 @@ public:
         const auto& symtab = *v.identifier.symbol.symtab();
         const auto& sym = *v.identifier.symbol;
         switch (sym.type()) {
-            case Symbol::Instruction:
+            case Symbol::Instruction: {
+                // the instructions are low-level, untyped - set return type to Unknown
                 m_value_type = {};
+                // check number of args - it depends on Opcode
+                auto opcode = (Opcode) sym.index();
+                if (opcode <= Opcode::ZeroArgLast) {
+                    if (!m_call_args.empty())
+                        throw UnexpectedArgumentCount(0, m_call_args.size(), v.source_info);
+                } else if (opcode <= Opcode::OneArgLast) {
+                    if (m_call_args.size() != 1)
+                        throw UnexpectedArgumentCount(1, m_call_args.size(), v.source_info);
+                } else {
+                    assert(opcode <= Opcode::TwoArgLast);
+                    if (m_call_args.size() != 2)
+                        throw UnexpectedArgumentCount(2, m_call_args.size(), v.source_info);
+                }
+                // check type of args (they must be Int or Byte)
+                for (const auto&& [i, arg] : m_call_args | enumerate) {
+                    Type t = arg.type_info.type();
+                    if (t != Type::Byte && t != Type::Int32)
+                        throw UnexpectedArgumentType(i+1, TypeInfo{Type::Int32},
+                                                     arg.type_info, arg.source_info);
+                }
+                // cleanup - args are now fully processed
+                m_call_args.clear();
                 return;
+            }
             case Symbol::Class:
             case Symbol::Instance:
                 // TODO
@@ -162,10 +198,15 @@ public:
                 if (symmod == nullptr)
                     symmod = &module();
                 auto& cls = symmod->get_class(sym.index());
-                auto& cls_fn = cls.get_function_type(sym.ref()->index());
-                auto inst_type = resolve_instance_type(cls_fn.signature());
+                const auto& cls_fn = cls.get_function_type(sym.ref()->index());
+                auto inst_types = resolve_instance_types(cls_fn.signature());
                 // find instance using resolved T
-                bool found = false;
+                struct Candidate {
+                    Module* module;
+                    Index index;
+                    Match match;
+                };
+                std::vector<Candidate> candidates;
                 auto inst_psym = v.chain;
                 while (inst_psym) {
                     assert(inst_psym->type() == Symbol::Instance);
@@ -173,38 +214,65 @@ public:
                     if (inst_mod == nullptr)
                         inst_mod = &module();
                     auto& inst = inst_mod->get_instance(inst_psym->index());
-                    if (inst.type() == inst_type) {
+                    auto fn_idx = inst.get_function(sym.ref()->index());
+                    if (inst.types() == inst_types) {
                         // find instance function
-                        auto fn_idx = inst.get_function(sym.ref()->index());
-                        auto& inst_fn = inst_mod->get_function(fn_idx);
-                        v.module = inst_mod;
-                        v.index = fn_idx;
-                        m_value_type = TypeInfo{inst_fn.signature_ptr()};
-                        found = true;
-                        break;
+                        Match m = (ranges::any_of(inst_types, [](const TypeInfo& t) { return t.is_unknown(); }))
+                                  ? Match::Partial : Match::Exact;
+                        candidates.push_back({inst_mod, fn_idx, m});
+                    } else {
+                        candidates.push_back({inst_mod, fn_idx, Match::None});
                     }
                     inst_psym = inst_psym->next();
                 }
-                if (found)
+
+                // check for single exact match
+                const auto exact_candidates = candidates
+                        | filter([](const Candidate& c){ return c.match == Match::Exact; })
+                        | to<std::vector>();
+                if (exact_candidates.size() == 1) {
+                    const auto& c = exact_candidates.front();
+                    auto& fn = c.module->get_function(c.index);
+                    v.module = c.module;
+                    v.index = c.index;
+                    m_value_type = TypeInfo{fn.signature_ptr()};
                     break;
-                // ERROR couldn't find matching instance for `args`
+                }
+
+                // check for single partial match
+                if (exact_candidates.empty()) {
+                    const auto partial_candidates = candidates
+                          | filter([](const Candidate& c){ return c.match == Match::Partial; })
+                          | to<std::vector>();
+                    if (partial_candidates.size() == 1) {
+                        const auto& c = partial_candidates.front();
+                        auto& fn = c.module->get_function(c.index);
+                        v.module = c.module;
+                        v.index = c.index;
+                        m_value_type = TypeInfo{fn.signature_ptr()};
+                        break;
+                    }
+                }
+
+                // ERROR couldn't find single matching instance for `args`
                 stringstream o_candidates;
-                inst_psym = v.chain;
-                while (inst_psym) {
-                    auto* inst_mod = inst_psym.symtab()->module();
-                    if (inst_mod == nullptr)
-                        inst_mod = &module();
-                    auto& inst = inst_mod->get_instance(inst_psym->index());
-                    auto fn_idx = inst.get_function(sym.ref()->index());
-                    auto& inst_fn = inst_mod->get_function(fn_idx);
-                    o_candidates << "   " << inst_fn.signature() << endl;
-                    inst_psym = inst_psym->next();
+                for (const auto& c : candidates) {
+                    auto& fn = c.module->get_function(c.index);
+                    o_candidates << "   " << match_to_cstr(c.match) << "  "
+                                 << fn.signature() << endl;
                 }
-                stringstream o_args;
+                stringstream o_ftype;
                 for (const auto& arg : m_call_args) {
-                    o_args << arg.type_info << ' ';
+                    if (&arg != &m_call_args.front())
+                        o_ftype << ' ';
+                    o_ftype << arg.type_info;
                 }
-                throw FunctionNotFound(v.identifier.name, o_args.str(), o_candidates.str());
+                if (m_call_ret)
+                    o_ftype << " -> " << m_call_ret;
+                if (exact_candidates.empty())
+                    throw FunctionNotFound(v.identifier.name, o_ftype.str(), o_candidates.str());
+                else
+                    throw FunctionConflict(v.identifier.name, o_ftype.str(), o_candidates.str());
             }
             case Symbol::Function: {
                 // find matching instance
@@ -284,16 +352,10 @@ public:
 
                 // format the error message (candidates)
                 stringstream o_candidates;
-                for (const auto& m : candidates) {
-                    auto& fn = m.module->get_function(m.symptr->index());
-                    o_candidates << "   * " << [&m]() {
-                        switch (m.match) {
-                            case Match::None: return "ignored";
-                            case Match::Partial: return "partial";
-                            case Match::Exact: return "matched";
-                        }
-                        UNREACHABLE;
-                    }() << ": " << fn.signature() << endl;
+                for (const auto& c : candidates) {
+                    auto& fn = c.module->get_function(c.symptr->index());
+                    o_candidates << "   " << match_to_cstr(c.match) << "  "
+                                 << fn.signature() << endl;
                 }
                 stringstream o_args;
                 for (const auto& arg : m_call_args) {
@@ -350,16 +412,19 @@ public:
     }
 
     void visit(ast::Call& v) override {
+        auto specified_type = m_type_info;
+
         // resolve each argument
         CallArgs args;
         for (auto& arg : v.args) {
             arg->apply(*this);
-            assert(arg->source_info.source != nullptr);
+            assert(arg->source_info);
             args.push_back({m_value_type.effective_type(), arg->source_info});
         }
         // append args to m_call_args (note that m_call_args might be used
         // when evaluating each argument, so we cannot push to them above)
         std::move(args.begin(), args.end(), std::back_inserter(m_call_args));
+        m_call_ret = specified_type;
 
         // using resolved args, resolve the callable itself
         // (it may use args types for overload resolution)
@@ -471,6 +536,9 @@ public:
                 fn_dfn.set_signature(m_value_type.signature_ptr());
             }
             resolve_types(fn, v.body);
+            // if the return type is still Unknown, change it to Void (the body is empty)
+            if (fn.signature().return_type.is_unknown())
+                fn.signature().set_return_type(TypeInfo{Type::Void});
             m_value_type = TypeInfo{fn.signature_ptr()};
         }
 
@@ -483,6 +551,32 @@ public:
             if (m_value_type != specified_type)
                 throw DefinitionTypeMismatch(specified_type, m_value_type);
         }
+    }
+
+    // The cast expression is translated to a call to `cast` method from the Cast class.
+    // The inner expression type and the cast type are used to lookup the instance of Cast.
+    void visit(ast::Cast& v) override {
+        // resolve the target type -> m_type_info
+        v.type->apply(*this);
+        v.type_info = m_type_info;  // save for fold_const_expr
+        // resolve the inner expression -> m_value_type
+        // (the Expression might use the specified type from `m_type_info`)
+        v.expression->apply(*this);
+        // cast to Void -> don't call the cast function, just drop the expression result from stack
+        if (v.type_info.is_void()) {
+            v.drop_size = m_value_type.size();
+            v.cast_function.reset();
+            m_value_type = v.type_info;
+            return;
+        }
+        // lookup the cast function with the resolved arg/return types
+        m_call_args.push_back({m_value_type, v.expression->source_info});
+        m_call_ret = v.type_info;
+        v.cast_function->apply(*this);
+        // set the effective type of the Cast expression and clean the call types
+        m_value_type = std::move(m_call_ret);
+        m_call_args.clear();
+        m_call_ret = {};
     }
 
     void visit(ast::TypeName& t) final {
@@ -519,8 +613,6 @@ public:
         t.elem_type->apply(*this);
         m_type_info = TypeInfo{Type::List, move(m_type_info)};
     }
-
-    TypeInfo value_type() const { return m_value_type; }
 
 private:
     Module& module() { return m_function.module(); }
@@ -585,6 +677,16 @@ private:
         Partial,
         Exact,
     };
+
+    static const char* match_to_cstr(Match m) {
+        switch (m) {
+            case Match::None: return "[ ]";
+            case Match::Partial: return "[~]";
+            case Match::Exact: return "[x]";
+        }
+        UNREACHABLE;
+    }
+
     Match match_params(const Signature& signature) const
     {
         auto sig = std::make_unique<Signature>(signature);
@@ -611,14 +713,27 @@ private:
         return sig->params.empty() ? Match::Exact : Match::Partial;
     }
 
-    // match call args with signature (which contains generic type T)
-    // throw if unmatched, return resolved type for T if matched
-    TypeInfo resolve_instance_type(const Signature& signature) const
+    // Match call args with signature (which contains type vars T, U...)
+    // Throw if unmatched, return resolved types for T, U... if matched
+    // The result types are in the same order as the matched type vars in signature,
+    // e.g. for `class MyClass T U V { my V U -> T }` it will return actual types [T, U, V].
+    std::vector<TypeInfo> resolve_instance_types(const Signature& signature) const
     {
-        auto* sig = &signature;
+        const auto* sig = &signature;
         size_t i_arg = 0;
         size_t i_prm = 0;
-        TypeInfo res;
+        std::vector<TypeInfo> res;
+        // resolve variable return type
+        // (doing this first allows to skip checking the content of `res`
+        // and it also resizes `res` to final size, because return type is usually the last type var)
+        if (signature.return_type.is_unknown()) {
+            auto var = signature.return_type.generic_var();
+            assert(var != 0);
+            // make space for additional type var in the result
+            res.resize(var);
+            res[var-1] = m_call_ret;  // may be Unknown - it doesn't matter
+        }
+        // resolve args
         for (const auto& arg : m_call_args) {
             i_arg += 1;
             // check there are more params to consume
@@ -633,16 +748,23 @@ private:
                 }
             }
             // resolve T (only from original signature)
-            if (sig->params[i_prm].is_unknown() && sig == &signature) {
-                if (res.is_unknown())
-                    res = arg.type_info;
-                else if (res != arg.type_info)
-                    throw UnexpectedArgumentType(i_arg, res, arg.type_info,
+            const auto& prm = sig->params[i_prm];
+            if (prm.is_unknown() && sig == &signature) {
+                auto var = prm.generic_var();
+                assert(var != 0);
+                // make space for additional type var in the result
+                if (var > res.size())
+                    res.resize(var);
+                auto arg_type = arg.type_info.effective_type();
+                if (res[var-1].is_unknown())
+                    res[var-1] = arg_type;
+                else if (res[var-1] != arg_type)
+                    throw UnexpectedArgumentType(i_arg, res[var-1], arg_type,
                             arg.source_info);
             }
             // check type of next param
-            if (sig->params[i_prm] != arg.type_info) {
-                throw UnexpectedArgumentType(i_arg, sig->params[i_prm],
+            if (prm != arg.type_info) {
+                throw UnexpectedArgumentType(i_arg, prm,
                         arg.type_info, arg.source_info);
             }
             // consume next param
@@ -653,9 +775,13 @@ private:
 
 private:
     Function& m_function;
-    TypeInfo m_type_info;
+    TypeInfo m_type_info;  // resolved ast::Type
     TypeInfo m_value_type;
-    CallArgs m_call_args;
+
+    // signature for resolving overloaded functions and templates
+    CallArgs m_call_args;  // actual argument types
+    TypeInfo m_call_ret;   // expected return type
+
     Class* m_class = nullptr;
     Instance* m_instance = nullptr;
 };
@@ -667,6 +793,8 @@ void resolve_types(Function& func, const ast::Block& block)
     for (const auto& stmt : block.statements) {
         stmt->apply(visitor);
     }
+    if (func.is_compiled() && func.signature().return_type.is_unknown())
+        func.signature().return_type = TypeInfo{Type::Void};
 }
 
 

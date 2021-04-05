@@ -29,8 +29,10 @@ print_usage()
     echo "      --unity                 CMAKE_UNITY_BUILD - batch all source files in each target together"
     echo "      --tidy                  Run clang-tidy on each compiled file"
     echo "      --update                Passed to conan - update dependencies"
+    echo "      --profile, -pr PROFILE  Passed to conan - use the profile"
     echo "      --build-dir             Build directory (default: ./build/<build-config>)"
     echo "      --install-dir           Installation directory (default: ./artifacts/<build-config>)"
+    echo "      --toolchain FILE        CMAKE_TOOLCHAIN_FILE - select build toolchain"
 }
 
 phase()
@@ -120,6 +122,9 @@ while [[ $# -gt 0 ]] ; do
             shift 2 ;;
         -pr | --profile )
             CONAN_ARGS+=('--profile' "$2")
+            shift 2 ;;
+        --toolchain )
+            CMAKE_ARGS+=(-D"CMAKE_TOOLCHAIN_FILE=$2")
             shift 2 ;;
         -h | --help )
             print_usage

@@ -23,10 +23,7 @@ std::ostream& less_indent(std::ostream& os);
 
 // AST
 namespace ast {
-std::ostream& operator<<(std::ostream& os, const Integer& v);
-std::ostream& operator<<(std::ostream& os, const Float& v);
-std::ostream& operator<<(std::ostream& os, const Char& v);
-std::ostream& operator<<(std::ostream& os, const String& v);
+std::ostream& operator<<(std::ostream& os, const Literal& v);
 std::ostream& operator<<(std::ostream& os, const Bracketed& v);
 std::ostream& operator<<(std::ostream& os, const Tuple& v);
 std::ostream& operator<<(std::ostream& os, const List& v);
@@ -44,6 +41,7 @@ std::ostream& operator<<(std::ostream& os, const OpCall& v);
 std::ostream& operator<<(std::ostream& os, const Condition& v);
 std::ostream& operator<<(std::ostream& os, const Operator& v);
 std::ostream& operator<<(std::ostream& os, const Function& v);
+std::ostream& operator<<(std::ostream& os, const Cast& v);
 std::ostream& operator<<(std::ostream& os, const Expression& v);
 std::ostream& operator<<(std::ostream& os, const Definition& v);
 std::ostream& operator<<(std::ostream& os, const Invocation& v);

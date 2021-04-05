@@ -9,6 +9,7 @@
 #include "Error.h"
 #include <xci/core/string.h>
 #include <numeric>
+#include <sstream>
 
 namespace xci::script {
 
@@ -30,7 +31,11 @@ std::unique_ptr<Value> Value::create(const TypeInfo& type_info)
         case Type::Float32: return make_unique<value::Float32>();
         case Type::Float64: return make_unique<value::Float64>();
         case Type::String: return make_unique<value::String>();
-        case Type::List: return make_unique<value::List>(type_info.elem_type());
+        case Type::List:
+            if (type_info.elem_type() == TypeInfo{Type::Byte})
+                return make_unique<value::Bytes>();  // List subclass, with special output formatting
+            else
+                return make_unique<value::List>(type_info.elem_type());
         case Type::Tuple: return make_unique<value::Tuple>(type_info);
         case Type::Function: return make_unique<value::Closure>();
         case Type::Module: return make_unique<value::Module>();
@@ -63,20 +68,48 @@ size_t Values::raw_size() const
 }
 
 
+// make sure float values don't look like integers (append .0 if needed)
+static void dump_float(std::ostream& os, /*std::floating_point*/ auto value)
+{
+    std::ostringstream sbuf;
+    sbuf << value;
+    auto str = sbuf.str();
+    if (str.find('.') == std::string::npos)
+        os << str << ".0";
+    else
+        os << str;
+}
+
+
 std::ostream& operator<<(std::ostream& os, const Value& o)
 {
     struct StreamVisitor: public value::Visitor {
         std::ostream& os;
         explicit StreamVisitor(std::ostream& os) : os(os) {}
-        void visit(const value::Void&) override { os << "void"; }
+        void visit(const value::Void&) override { os << ""; }
         void visit(const value::Bool& v) override { os << std::boolalpha << v.value(); }
-        void visit(const value::Byte& v) override { os << v.value() << ":Byte"; }
-        void visit(const value::Char& v) override { os << '\'' << core::escape(core::to_utf8(v.value())) << "'"; }
+        void visit(const value::Byte& v) override {
+            os << "b'" << core::escape(core::to_utf8(v.value())) << "'";
+        }
+        void visit(const value::Char& v) override {
+            os << '\'' << core::escape(core::to_utf8(v.value())) << "'";
+        }
         void visit(const value::Int32& v) override { os << v.value(); }
-        void visit(const value::Int64& v) override { os << v.value() << ":Int64"; }
-        void visit(const value::Float32& v) override { os << v.value(); }
-        void visit(const value::Float64& v) override { os << v.value() << ":Float64"; }
-        void visit(const value::String& v) override { os << '"' << core::escape(v.value()) << '"'; }
+        void visit(const value::Int64& v) override { os << v.value() << 'L'; }
+        void visit(const value::Float32& v) override {
+            dump_float(os, v.value());
+            os << 'f';
+        }
+        void visit(const value::Float64& v) override {
+            dump_float(os, v.value());
+        }
+        void visit(const value::Bytes& v) override {
+            const std::string_view sv{(const char*)v.value().data(), v.value().size()};
+            os << "b\"" << core::escape(sv) << '"';
+        }
+        void visit(const value::String& v) override {
+            os << '"' << core::escape(v.value()) << '"';
+        }
         void visit(const value::List& v) override {
             os << "[";
             for (size_t idx = 0; idx < v.length(); idx++) {
@@ -118,17 +151,81 @@ std::ostream& operator<<(std::ostream& os, const Value& o)
 namespace value {
 
 
-String::String(const std::string& v)
-    : m_size(v.size()), m_value(v.size())
+template <typename TReal, typename TVal>
+bool numeric_cast(Value& v, TVal& to)
 {
-    std::memcpy(m_value.data(), v.data(), v.size());
+    struct ValueVisitor: public value::Visitor {
+        TVal& to;
+        bool res = true;
+        explicit ValueVisitor(TVal& to) : to(to) {}
+        void visit(const value::Void&) override { res = false; }
+        void visit(const value::Bool& v) override { to.set_value(static_cast<TReal>(v.value())); }
+        void visit(const value::Byte& v) override { to.set_value(static_cast<TReal>(v.value())); }
+        void visit(const value::Char& v) override { to.set_value(static_cast<TReal>(v.value())); }
+        void visit(const value::Int32& v) override { to.set_value(static_cast<TReal>(v.value())); }
+        void visit(const value::Int64& v) override { to.set_value(static_cast<TReal>(v.value())); }
+        void visit(const value::Float32& v) override { to.set_value(static_cast<TReal>(v.value())); }
+        void visit(const value::Float64& v) override { to.set_value(static_cast<TReal>(v.value())); }
+        void visit(const value::Bytes& v) override { res = false; }
+        void visit(const value::String& v) override { res = false; }
+        void visit(const value::List& v) override { res = false; }
+        void visit(const value::Tuple& v) override { res = false; }
+        void visit(const value::Closure&) override { res = false; }
+        void visit(const value::Module& v) override { res = false; }
+    };
+    ValueVisitor visitor(to);
+    v.apply(visitor);
+    return visitor.res;
 }
 
 
-String::String(const char* data, size_t size)
-    : m_size(size), m_value(size)
+Byte::Byte(std::string_view utf8)
 {
-    std::memcpy(m_value.data(), data, size);
+    auto c = (uint32_t) core::utf8_codepoint(utf8.data());
+    if (c > 255)
+        throw std::runtime_error("byte value out of range");
+    m_value = (uint8_t) c;
+}
+
+bool Byte::cast_from(Value& v)
+{
+    return numeric_cast<uint8_t>(v, *this);
+}
+
+
+Char::Char(std::string_view utf8)
+    : m_value(core::utf8_codepoint(utf8.data()))
+{}
+
+
+bool Int32::cast_from(Value& v)
+{
+    return numeric_cast<int32_t>(v, *this);
+}
+
+
+bool Int64::cast_from(Value& v)
+{
+    return numeric_cast<int64_t>(v, *this);
+}
+
+
+bool Float32::cast_from(Value& v)
+{
+    return numeric_cast<float>(v, *this);
+}
+
+
+bool Float64::cast_from(Value& v)
+{
+    return numeric_cast<double>(v, *this);
+}
+
+
+String::String(std::string_view v)
+    : m_size(v.size()), m_value(v.size())
+{
+    std::memcpy(m_value.data(), v.data(), v.size());
 }
 
 
@@ -212,6 +309,13 @@ std::unique_ptr<Value> List::get(size_t idx) const
 }
 
 
+Bytes::Bytes(std::span<const std::byte> v)
+        : List(TypeInfo{Type::Byte}, v.size(), HeapSlot{v.size()})
+{
+    std::memcpy(heapslot_ref().data(), v.data(), v.size());
+}
+
+
 Tuple::Tuple(const TypeInfo& type_info)
 {
     for (const TypeInfo& subtype : type_info.subtypes()) {
@@ -231,7 +335,7 @@ void Tuple::write(byte* buffer) const
 
 void Tuple::read(const byte* buffer)
 {
-    for (auto& v : m_values) {
+    for (const auto& v : m_values) {
         v->read(buffer);
         buffer += v->size();
     }
@@ -240,7 +344,7 @@ void Tuple::read(const byte* buffer)
 
 void Tuple::incref() const
 {
-    for (auto& v : m_values) {
+    for (const auto& v : m_values) {
         v->incref();
     }
 }
@@ -248,7 +352,7 @@ void Tuple::incref() const
 
 void Tuple::decref() const
 {
-    for (auto& v : m_values) {
+    for (const auto& v : m_values) {
         v->decref();
     }
 }
@@ -259,7 +363,7 @@ TypeInfo Tuple::type_info() const
     // build TypeInfo from subtypes
     std::vector<TypeInfo> subtypes;
     subtypes.reserve(m_values.size());
-    for (auto& v : m_values) {
+    for (const auto& v : m_values) {
         subtypes.push_back(v->type_info());
     }
     return TypeInfo(move(subtypes));
@@ -288,7 +392,7 @@ void Closure::write(byte* buffer) const
 {
     const byte* slot = m_closure.slot();
     std::memcpy(buffer, &slot, sizeof(slot));
-    std::memcpy(buffer + sizeof(slot), &m_function, sizeof(m_function));
+    std::memcpy(buffer + sizeof(slot), &m_function, sizeof(Function*));
 }
 
 
@@ -296,7 +400,7 @@ void Closure::read(const byte* buffer)
 {
     byte *slot = nullptr;
     std::memcpy(&slot, buffer, sizeof(slot));
-    std::memcpy(&m_function, buffer + sizeof(slot), sizeof(m_function));
+    std::memcpy(&m_function, buffer + sizeof(slot), sizeof(Function*));
     m_closure = HeapSlot{slot};
 }
 

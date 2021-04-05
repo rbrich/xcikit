@@ -34,6 +34,39 @@ See `xci::script` in https://github.com/rbrich/xcikit[xcikit] codebase.
 
 == Syntax Elements
 
+=== Literals
+
+Literal syntax is derived from C++ and Python.
+
+[source,fire]
+----
+123        // integer (32bit)
+123u       // unsigned integer
+0b101101   // binary integer
+0o765      // octal integer
+0xBEEFED   // hexadecimal integer
+42L        // 64bit integer
+12.3       // floating point (64bit)
+12.3f      // floating point (32bit)
+'@'        // unicode character
+b'@'       // byte / ASCII character
+42b        // byte (8bit integer, unsigned)
+"lava"     // string (UTF-8)
+b"lava"    // bytes (ASCII string)
+r"raw\n"   // raw string
+rb"raw"    // raw bytes
+"""abc"""  // multi-line string
+r"""abc""" // raw multi-line string
+[1, 2, 3]  // list
+[]:[Byte]  // empty list (type can be specified or inferred from context)
+{}         // empty block, effectively Void
+void       // empty statement, returns Void -> noop
+----
+
+Raw strings are not completely raw, quotes still need to be escaped, by doubling them.
+The multi-line raw string is completely raw, but can't contain a sequence of three quotes.
+It can contain a sequence of less or more than three quotes, though.
+
 === Scoped block
 
 [source,fire]
@@ -282,6 +315,57 @@ rec = MyRecord("A name", 42)
 rec.name    // dot operator
 ----
 
+=== Type classes
+
+A type class contains a set of functions for a type.
+
+[source,fire]
+----
+class MyEq T {
+    my_eq : T T -> Bool
+    my_ne : T T -> Bool
+}
+----
+
+A type class can be specialized to create another, more specific, type class:
+
+[source,fire]
+----
+class MyOrd T (MyEq T) {
+    my_lt : T T -> Bool
+    my_gt : T T -> Bool
+    my_le : T T -> Bool
+    my_ge : T T -> Bool
+}
+----
+
+Instantiating a type class means to define all functions it contains
+for a specific type:
+
+[source,fire]
+----
+instance MyEq Int32 {
+    my_eq = fun a b { a == b }
+    my_ne = fun a b { a != b }
+}
+----
+
+The contained function can now be called directly on Int32:
+
+[source,fire]
+----
+my_eq 3 4
+----
+
+Similar classes are part of std module, but the actual implementation
+is different, because the equality operator translates to a call to `eq` function.
+Using the actual operator in the implementation would lead to a recursion.
+
+The function names that are declared by a class and implemented by the instances
+are in global name space. That means that no other function with the same name
+and no other class declaring the same function name can be visible in the same
+module.
+
 === Pattern matching
 
 Match expression can simplify nested ifs.
@@ -323,21 +407,41 @@ Primitive types:
 
 [source,fire]
 ----
-12                  // Int32 (alias Int)
-12:Int64            // Int64
-1.2                 // Float32 (alias Float)
-1.2:Float64         // Floaf64
-true    false       // Bool
-'a'                 // Char
+12     12:Int32     // Int32 (alias Int)
+12l    12:Int64     // Int64
+1.2f   1.2:Float32  // Float32 (alias Float)
+1.2    1.2:Float64  // Floaf64
+true   false        // Bool
+b'a'   'a':Byte     // Byte           -- ASCII
+27b    27:Byte      // Byte           -- binary 0..255
+b"abc"              // [Byte]
+[10b, 11b, 13b]     // [Byte]         -- equivalent to the "bytes" literal
+'a'                 // Char           -- Unicode
 "Hello."            // String         -- UTF-8 string
 ['a', 'b', 'c']     // [Char]         -- compatible with String, but not the same
 ("Hello", 33)       // (String, Int)  -- a tuple
 [1, 2, 3]           // [Int]          -- a list
 ----
 
-Strings and lists have the same interface and can be handled universally in generic functions.
-List of chars has different underlying implementation than String: it stores 32bit characters,
-allowing constant-time indexing, but taking more space. String is UTF-8 encoded, random access
+The type of value is inferred from the literal. Assigning literal of a type with
+smaller range is fine. Assigning a value of bigger range is find if it fits,
+compile-time error otherwise.
+
+[source,fire]
+----
+ok = true       // inferred type Bool
+c = 'a'         // inferred type Char
+byte = 27b      // inferred type Byte
+b1:Byte = 12    // ok
+b2:Byte = 300   // error
+b3 = c          // error, not a literal, must be casted explicitly
+b4 = c:Byte     // cast ok, value clipped
+----
+
+Strings and lists have the same interface and can be handled universally
+in generic functions. List of chars has different underlying implementation
+than String: it stores 32bit characters, allowing constant-time indexing,
+but taking more space. String is UTF-8 encoded, random access
 is slower (linear-time), but it takes much less space.
 
 Custom types are made by composition of other types.
@@ -369,6 +473,52 @@ Int -> Int -> Int -> Int            // normalized form
 * The normalized form describes how the partial evaluation works.
 * But any of the above might describe what is really happening after compilation
  (it depends only on the compiler how many intermediate functions it creates).
+
+=== Casting
+
+Any expression can be casted to another type.
+The syntax is similar as in variable definition with explicit type.
+
+[source,fire]
+----
+42:Int64
+a = 42; a:Byte
+(1 + 2):Int64
+['a', 'b', 'c']:String   // -> "abc"
+----
+
+Effectively, this calls a `cast` function:
+
+[source,fire]
+----
+a = 42:Int64
+// is equivalent to
+a = (cast 42):Int64
+// also equivalent to
+a:Int64 = cast 42
+// this won't work - the target type has to be specified somehow
+a = cast 42
+----
+
+The `cast` function can be implemented for custom types like this:
+
+[source,fire]
+----
+instance Cast MyType Int {
+    cast = fun x:MyType { /* convert MyType to Int */ }
+}
+
+instance Cast Int MyType {
+    cast = fun x:Int { /* convert Int to MyType }
+}
+----
+
+=== Coercion
+
+The values of the same kind can coerce to a bigger type.
+For example, Int32 or Byte can be used in a function accepting only Int64.
+When resolving overloads, the most specific one and the closest one is used.
+For a Byte value, an Int32 overload is used if it exists, otherwise Int64 etc.
 
 === Lists
 
@@ -582,13 +732,25 @@ This doesn't help to make the language easier to parse either.
 
 == Appendix
 
-=== List of Keywords
+=== List of keywords
 
 ----
-else fun import in if module then
+catch
+class
+else
+fun
+if
+import
+instance
+in
+match
+module
+then
+try
+with
 ----
 
-=== Precedence table
+=== Operator precedence table
 
 |===
 | (-2) |  definition        |  =
@@ -606,7 +768,8 @@ else fun import in if module then
 | 11   |  subscript         |  x ! y
 | 12   |  dot function call |  <arg1> . name [<arg2> ...]
 | (13) |  unary ops         |  -  +  !  ~
-| (14) |  function call     |  name [<arg> ...]
+| (14) |  cast              |  <val> : Type
+| (15) |  function call     |  name [<arg> ...]
 |===
 
 Higher precedence means tighter binding.
