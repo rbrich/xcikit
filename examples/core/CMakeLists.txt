@@ -1,13 +1,4 @@
 # ------------ #
-# Dependencies #
-# ------------ #
-
-if (NOT WIN32 AND NOT EMSCRIPTEN)
-    find_package(incbin)
-endif()
-
-
-# ------------ #
 #   Examples   #
 # ------------ #
 

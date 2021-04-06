@@ -40,7 +40,6 @@ class XcikitConan(ConanFile):
         'fmt/7.1.3',
     )
     build_requires = (
-        'incbin/20180413@rbrich/stable',
         'pfr/1.0.4',
         'magic_enum/0.7.2',
     )

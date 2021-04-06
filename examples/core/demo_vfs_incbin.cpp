@@ -25,7 +25,7 @@ int main()
     Vfs vfs;
     vfs.mount_memory((const std::byte*) g_share_file_data, g_share_file_size);
 
-    auto f = vfs.read_file("shaders/fps.frag.spv");
+    auto f = vfs.read_file("script/std.fire");
     info("demo: open result: {}", f.is_open());
     auto content = f.content();
     if (content)

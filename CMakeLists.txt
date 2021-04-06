@@ -66,12 +66,7 @@ include(XciBuildOptions)
 
 include(ConanInit)
 
-add_subdirectory(third_party/widechar_width)
-
-if (XCI_TEXT)
-    # RectangleBinPack (xci-text)
-    add_subdirectory(third_party/rbp)
-endif()
+add_subdirectory(third_party)
 
 # Threads (always from system)
 find_package(Threads REQUIRED)
