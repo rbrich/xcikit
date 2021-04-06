@@ -220,7 +220,7 @@ Detailed build steps (these are examples, adjust parameters as needed):
 
 [source,bash]
 ----
-# Configure Conan remotes, download additional assets
+# Download additional assets
 ./bootstrap.sh
 
 # Prepare build directory

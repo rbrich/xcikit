@@ -128,7 +128,7 @@ class XcikitConan(ConanFile):
         return self._cmake
 
     def build(self):
-        self.run("./bootstrap.sh --no-conan-remotes")
+        self.run("./bootstrap.sh")
         cmake = self._configure_cmake()
         cmake.build()
 

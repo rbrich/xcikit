@@ -51,14 +51,11 @@ jobs:
       run: conan profile update "settings.compiler.libcxx=libstdc++11" default
 
     - name: bootstrap
-      run: ./bootstrap.sh -y
+      run: ./bootstrap.sh
       shell: bash
 
     - name: deps
-      run: |
-        ./build.sh deps $BUILD_ARGS
-        conan user -p $CONAN_PASSWORD -r xcikit rbrich
-        conan upload "*/*@rbrich/stable" --all --no-overwrite --check --confirm -r=xcikit
+      run: ./build.sh deps $BUILD_ARGS
       shell: bash
 
     - name: configure
@@ -80,3 +77,11 @@ jobs:
     - name: package
       run: ./build.sh package $BUILD_ARGS
       shell: bash
+
+#    - name: deploy conan package
+#      if: github.ref == 'refs/heads/master'
+#      run: |
+#        conan remote add xcikit https://api.bintray.com/conan/rbrich/xcikit
+#        conan user -p $CONAN_PASSWORD -r xcikit rbrich
+#        conan upload "xcikit/*@rbrich/stable" --all --no-overwrite --check --confirm -r=xcikit
+#      shell: bash

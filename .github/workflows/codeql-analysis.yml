@@ -52,7 +52,7 @@ jobs:
 
     - name: Build
       run: |
-        ./bootstrap.sh -y
+        ./bootstrap.sh
         ./build.sh deps config build $BUILD_ARGS
 
     - name: Perform CodeQL Analysis
