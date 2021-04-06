@@ -53,11 +53,10 @@ class XcikitConan(ConanFile):
     )
     generators = ("cmake_paths", "cmake_find_package")
     exports = "VERSION"
-    scm = {
-        "type": "git",
-        "url": "auto",
-        "revision": "auto"
-    }
+    exports_sources = ("bootstrap.sh", "CMakeLists.txt", "config.h.in", "xcikitConfig.cmake.in",
+                       "cmake/**", "src/**", "examples/**", "tests/**", "benchmarks/**", "tools/**",
+                       "share/**", "third_party/**")
+    revision_mode = "scm"
 
     _cmake = None
 
