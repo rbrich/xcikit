@@ -103,8 +103,9 @@ TEST_CASE( "Optional semicolon", "[script][parser]" )
           parse("(1+2); a=1; b=2; c=3"));  // newlines are allowed inside brackets
     CHECK(parse("40\n.add 2\n50\n.sub 8") == parse("40 .add 2; 50 .sub 8;"));  // dotcall can continue after linebreak
     CHECK(parse("a =\n1") == parse("a=1"));  // linebreak is allowed after '=' in definition
-    CHECK(parse("1 + \\\n 2") == parse("1+2"));  // newline can be escaped
-    CHECK(parse("(1 + \\\n 2)") == parse("(1+2)"));
+    CHECK(parse("1 + \n 2") == parse("1+2"));  // linebreak is allowed after infix operator
+    CHECK(parse("add 1 \\\n 2") == parse("add 1 2"));  // newline can be escaped
+    CHECK(parse("(add 1 \\\n 2)") == parse("(add 1 2)"));
     REQUIRE_THROWS_WITH(parse("a=1;;"),  // empty statement is not allowed, semicolon is only used as a separator
             Catch::Matchers::StartsWith("parse error: <input>:1:5: invalid syntax"));
 }
@@ -129,6 +130,26 @@ TEST_CASE( "Values", "[script][parser]" )
     CHECK(parse("[1,2,3]") == "[1, 2, 3]");  // list
     CHECK(parse("[(1,2,3,4)]") == "[(1, 2, 3, 4)]");  // list with a tuple item
     CHECK(parse("[(1,2,3,4), 5]") == "[(1, 2, 3, 4), 5]");
+}
+
+
+TEST_CASE( "Trailing comma", "[script][parser]" )
+{
+    CHECK(parse("1,2,3,") == "1, 2, 3");
+    CHECK(parse("[1,2,3,]") == "[1, 2, 3]");
+    CHECK(parse("(1,2,3,)") == "(1, 2, 3)");
+    CHECK_THROWS_AS(parse("1,2,3,,"), ParseError);  // two commas not allowed
+    CHECK_THROWS_AS(parse("1,2,,3"), ParseError);
+    CHECK_THROWS_AS(parse("(1,2,3,,)"), ParseError);
+    CHECK_THROWS_AS(parse("[1,2,3,,]"), ParseError);
+    CHECK_THROWS_AS(parse("[,]"), ParseError);
+    CHECK(parse("([1,],[2,],[1,2,],)") == "([1], [2], [1, 2])");
+    // multiline
+    CHECK(parse("1,\n2,\n3,\n") == "1, 2, 3");  // expression continues on next line after operator
+    CHECK(parse("1,;\n2,\n3,\n") == "1\n2, 3");  // semicolon splits the multiline expression
+    CHECK(parse("(\n1,\n2,\n3,\n)") == "(1, 2, 3)");
+    CHECK(parse("[\n1,\n2,\n3,\n]") == "[1, 2, 3]");
+    CHECK(parse("[\n1\n,\n2\n,\n3\n,\n]") == "[1, 2, 3]");
 }
 
 
