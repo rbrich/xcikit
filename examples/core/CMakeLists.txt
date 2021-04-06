@@ -37,7 +37,7 @@ target_link_libraries(demo_vfs xci-core)
 install(TARGETS demo_vfs EXPORT xcikit DESTINATION examples)
 
 if (incbin_FOUND)
-    set(SHARE_ARCHIVE "${CMAKE_BINARY_DIR}/share/share.dar")
+    set(SHARE_ARCHIVE "${CMAKE_BINARY_DIR}/${XCI_SHARE_DAR}")
     add_executable(demo_vfs_incbin demo_vfs_incbin.cpp)
     target_link_libraries(demo_vfs_incbin PRIVATE xci-core incbin::incbin)
     target_compile_definitions(demo_vfs_incbin PRIVATE SHARE_ARCHIVE="${SHARE_ARCHIVE}")

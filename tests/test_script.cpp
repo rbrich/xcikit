@@ -393,6 +393,7 @@ TEST_CASE( "Lexical scope", "[script][interpreter]" )
     CHECK(interpret("a=1; f=fun b:Int {a + b}; f 2") == "3");
 
     // recursion
+    CHECK(interpret_std("f=fun x:Int->Int { x; if x <= 1 then 0 else f (x-1) }; f 5") == "5;4;3;2;1;0");      // yield intermediate steps
     CHECK(interpret_std("f=fun n:Int->Int { if n == 1 then 1 else n * f (n-1) }; f 7") == "5040");      // factorial
     CHECK(interpret_std("f=fun x:Int->Int { if x < 2 then x else f (x-1) + f (x-2) }; f 7") == "13");   // Fibonacci number
 

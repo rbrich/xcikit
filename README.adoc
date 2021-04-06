@@ -274,7 +274,7 @@ Run the build with the toolchain:
 === Porting to Windows
 
 The project is not yet fully ported to Windows.
-But the essential parts should already work:
+The essential parts should already work, though:
 
 * dependencies via Conan
 * build scripts (using git-bash)
@@ -283,8 +283,7 @@ But the essential parts should already work:
 
 How to build:
 
-1. Enable https://docs.microsoft.com/en-us/windows/uwp/get-started/enable-your-device-for-development[Developer mode]
-(required for ability to create symlinks)
+1. (Optional) Enable https://docs.microsoft.com/en-us/windows/uwp/get-started/enable-your-device-for-development[Developer mode] to obtain ability to create symlinks
 
 2. Install build tools via their Windows installers: Git, CMake, Conan
 (`git`, `cmake` and `conan` commands should now work in `cmd.exe`)

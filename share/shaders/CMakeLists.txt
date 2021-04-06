@@ -30,17 +30,18 @@ function(add_shaders)
     set(outputs)
     set(assets)
     foreach(src ${ARG_SOURCES})
+        set(output "../xcikit/shaders/${src}.spv")
         add_custom_command(
-            OUTPUT "${src}.spv"
+            OUTPUT ${output}
             MAIN_DEPENDENCY "${src}"
-            COMMAND ${GLSLC_COMMAND} "${CMAKE_CURRENT_SOURCE_DIR}/${src}" -o "${src}.spv"
+            COMMAND ${GLSLC_COMMAND} "${CMAKE_CURRENT_SOURCE_DIR}/${src}" -o ${output}
             COMMENT "Compiling shader ${src}"
             VERBATIM
         )
-        list(APPEND outputs "${src}.spv")
+        list(APPEND outputs ${output})
         list(APPEND assets "shaders/${src}.spv")
         if (XCI_INSTALL_SHARE_DIR)
-            install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${src}.spv"
+            install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${output}"
                 DESTINATION share/xcikit/shaders)
         endif()
     endforeach()

@@ -61,7 +61,7 @@ endif()
 if (XCI_SCRIPT)
     add_catch_test(test_script test_script.cpp xci-script)
     if (EMSCRIPTEN)
-        target_link_options(test_script PRIVATE --embed-file=${CMAKE_BINARY_DIR}/share/script@share/script)
+        target_link_options(test_script PRIVATE --embed-file=${CMAKE_BINARY_DIR}/share/xcikit/script@share/script)
     endif()
 endif()
 

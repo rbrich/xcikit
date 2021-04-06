@@ -49,7 +49,7 @@ endif()
 
 # Copy asset files to binary dir
 foreach(file ${ASSETS})
-    configure_file("${file}" "${file}" COPYONLY)
+    configure_file("${file}" "xcikit/${file}" COPYONLY)
 endforeach()
 
 set(output_archives)
@@ -65,11 +65,12 @@ if (Python3_Interpreter_FOUND)
             "${output_dar}"
             ${ASSETS} $<TARGET_PROPERTY:shaders,ASSETS>
         COMMAND_EXPAND_LISTS
+        WORKING_DIRECTORY xcikit
         COMMENT "Archiving assets (DAR archive)"
         VERBATIM
     )
     if (XCI_INSTALL_SHARE_DAR)
-        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${output_dar}"
+        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/xcikit/${output_dar}"
             DESTINATION share/xcikit)
     endif()
     list(APPEND output_archives ${output_dar})
@@ -85,25 +86,18 @@ if (XCI_WITH_ZIP)
             ${CMAKE_COMMAND} -E tar cf "${output_zip}" --format=zip
             ${ASSETS} $<TARGET_PROPERTY:shaders,ASSETS>
         COMMAND_EXPAND_LISTS
+        WORKING_DIRECTORY xcikit
         COMMENT "Archiving assets (ZIP archive)"
         VERBATIM
     )
     if (XCI_INSTALL_SHARE_ZIP)
-        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${output_zip}"
+        install(FILES "${CMAKE_CURRENT_BINARY_DIR}/xcikit/${output_zip}"
             DESTINATION share/xcikit)
     endif()
     list(APPEND output_archives ${output_zip})
 endif()
 
-add_custom_command(
-    OUTPUT xcikit
-    COMMAND ${CMAKE_COMMAND} -E create_symlink . xcikit
-    COMMENT "Creating share symlink"
-    VERBATIM
-)
-
-add_custom_target(share ALL
-    DEPENDS ${output_archives} xcikit)
+add_custom_target(share ALL DEPENDS ${output_archives})
 
 if (XCI_INSTALL_SHARE_DIR)
     install(DIRECTORY fonts DESTINATION share/xcikit)
