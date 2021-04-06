@@ -215,6 +215,7 @@ public:
     /// Compute number of columns required to print the string `s`.
     /// Control sequences and invisible characters are stripped,
     /// double-width UTF-8 characters are counted as two columns.
+    /// Newlines (\n) are counted as 1 column to allow multiline handling in EditLine.
     static unsigned int stripped_width(std::string_view s);
 
     /// Temporarily switch the terminal to raw mode

@@ -683,6 +683,8 @@ unsigned int TermCtl::stripped_width(std::string_view s)
             case Visible:
                 if (c == '\033')
                     state = Esc;
+                else if (c == '\n')
+                    length += 1;
                 else
                     length += c32_width(c);
                 break;

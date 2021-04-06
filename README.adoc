@@ -110,17 +110,15 @@ The basic building blocks for rendering of text and UI elements.
 
 === xci::script
 
-Experimental scripting language with bytecode interpreter and C transpiler.
+Experimental scripting language with bytecode interpreter.
+
+https://fire.xci.cz/[Online REPL]
 
 Docs:
 
-* link:docs/script/syntax.adoc[Fire Script Syntax Reference]
-+
-It's not fully implemented, so it's more precisely a design document at this time. It will become actual reference in version 1.0.
+* link:https://xci.cz/fire-script/syntax[Fire Script Syntax] (link:docs/script/syntax.adoc[source])
 
-* link:docs/script/machine.adoc[Fire Script Virtual Machine]
-
-The C transpiler is not yet available.
+* link:https://xci.cz/fire-script/machine[Fire Script Virtual Machine] (link:docs/script/machine.adoc[source])
 
 === xci::data
 
