@@ -572,8 +572,7 @@ std::string TermCtl::ModePlaceholder::seq(Mode mode) const
 
 void TermCtl::with_raw_mode(const std::function<void()>& cb, bool isig)
 {
-    if (m_fd != STDIN_FILENO)
-        return;
+    assert(m_fd == STDIN_FILENO);
 
 #ifdef _WIN32
     HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
@@ -582,7 +581,10 @@ void TermCtl::with_raw_mode(const std::function<void()>& cb, bool isig)
     DWORD orig_mode = 0;
     if (!GetConsoleMode(h, &orig_mode))
         return;
-    if (!SetConsoleMode(h, ENABLE_VIRTUAL_TERMINAL_INPUT | ENABLE_PROCESSED_INPUT))
+    DWORD new_mode = ENABLE_VIRTUAL_TERMINAL_INPUT;
+    if (isig)
+        new_mode |= ENABLE_PROCESSED_INPUT;
+    if (!SetConsoleMode(h, new_mode))
         return;
 
     cb();
@@ -616,9 +618,23 @@ void TermCtl::with_raw_mode(const std::function<void()>& cb, bool isig)
 
 std::string TermCtl::input(std::chrono::microseconds timeout)
 {
+    assert(m_fd == STDIN_FILENO);
     char buf[100] {};
-    ssize_t res;
 
+#ifdef _WIN32
+    HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
+    if (h == INVALID_HANDLE_VALUE) {
+        log::error("GetStdHandle: {m:l}");
+        return {};
+    }
+    DWORD num_chars_read = 0;
+    BOOL res = ReadConsole(h, buf, sizeof buf, &num_chars_read, nullptr);
+    if (res == 0) {
+        log::error("ReadConsole: {m:l}");
+        return {};
+    }
+    return {buf, size_t(num_chars_read)};
+#else
     auto timeout_secs = std::chrono::floor<std::chrono::seconds>(timeout);
     struct timeval tv = {(time_t) timeout_secs.count(), (suseconds_t) (timeout - timeout_secs).count()};
     struct timeval* ptv = timeout == std::chrono::microseconds{} ? nullptr : &tv;
@@ -626,6 +642,7 @@ std::string TermCtl::input(std::chrono::microseconds timeout)
     FD_ZERO(&fds);
     FD_SET(m_fd,&fds);
 
+    ssize_t res;
     do {
         res = ::select(m_fd + 1, &fds, nullptr, nullptr, ptv);
         if (res == 0)
@@ -639,13 +656,14 @@ std::string TermCtl::input(std::chrono::microseconds timeout)
         res = ::read(m_fd, buf, sizeof buf);
     } while (res < 0 && (errno == EINTR || errno == EAGAIN));
     if (res < 0) {
-        log::error("read: {m}");
+        log::error("read({}): {m}", m_fd);
         return {};
     }
     if (res == 0) {
         return {};  // eof
     }
     return {buf, size_t(res)};
+#endif
 }
 
 
@@ -835,12 +853,12 @@ auto TermCtl::decode_seq(std::string_view input_buffer) -> ControlSequence
 }
 
 
-std::string TermCtl::query(std::string_view request, TermCtl& in)
+std::string TermCtl::query(std::string_view request, TermCtl& tin)
 {
     std::string res;
-    in.with_raw_mode([this, request, &res] {
+    tin.with_raw_mode([this, request, &tin, &res] {
         write(request);
-        res = input(std::chrono::milliseconds{100});
+        res = tin.input(std::chrono::milliseconds{100});
     });
     return res;
 }

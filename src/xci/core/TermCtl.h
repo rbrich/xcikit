@@ -236,7 +236,7 @@ public:
     /// \param request      a control sequence to send as a request
     /// \param in           TermCtl which is connected to the response channel
     /// \returns            raw response from the terminal
-    std::string query(std::string_view request, TermCtl& in = stdin_instance());
+    std::string query(std::string_view request, TermCtl& tin = stdin_instance());
 
     enum class Key : uint8_t {
         Unknown = 0,
