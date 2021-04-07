@@ -585,7 +585,7 @@ public:
                 m_type_info = TypeInfo{ Type(t.symbol->index()) };
                 break;
             case Symbol::TypeVar:
-                m_type_info = TypeInfo{ Type::Unknown, uint8_t(t.symbol->index()) };
+                m_type_info = TypeInfo{ TypeInfo::Var(t.symbol->index()) };
                 break;
             default:
                 break;

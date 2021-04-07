@@ -42,7 +42,7 @@ size_t TypeInfo::size() const
             return sizeof(byte*) + sizeof(size_t);
 
         case Type::Tuple:
-            return accumulate(m_subtypes.begin(), m_subtypes.end(), size_t(0),
+            return accumulate(subtypes().begin(), subtypes().end(), size_t(0),
                               [](size_t init, const TypeInfo& ti)
                               { return init + ti.size(); });
 
@@ -61,7 +61,7 @@ void TypeInfo::foreach_heap_slot(std::function<void(size_t offset)> cb) const
         case Type::List:        cb(0); break;
         case Type::Tuple: {
             size_t pos = 0;
-            for (const auto& ti : m_subtypes) {
+            for (const auto& ti : subtypes()) {
                 ti.foreach_heap_slot([&cb, pos](size_t offset) {
                     cb(pos + offset);
                 });
@@ -80,27 +80,54 @@ void TypeInfo::replace_var(uint8_t idx, const TypeInfo& ti)
         return;
     switch (m_type) {
         case Type::Unknown:
-            if (m_var == idx)
+            if (generic_var() == idx)
                 *this = ti;
             break;
         case Type::Function: {
             // work on copy of signature
-            auto sig_copy = std::make_shared<Signature>(*m_signature);
+            auto sig_copy = std::make_shared<Signature>(signature());
             for (auto& prm : sig_copy->params) {
                 prm.replace_var(idx, ti);
             }
             sig_copy->return_type.replace_var(idx, ti);
-            m_signature = move(sig_copy);
+            m_info = move(sig_copy);
             break;
         }
         case Type::Tuple:
         case Type::List:
-            for (auto& sub : m_subtypes)
+            assert(std::holds_alternative<Subtypes>(m_info));
+            for (auto& sub : std::get<Subtypes>(m_info))
                 sub.replace_var(idx, ti);
             break;
         default:
             break;
     }
+}
+
+
+TypeInfo::TypeInfo(Type type) : m_type(type)
+{
+    switch (type) {
+        case Type::Unknown:
+            m_info = Var(0);
+            break;
+        case Type::List:
+        case Type::Tuple:
+            m_info = Subtypes();
+            break;
+        case Type::Function:
+            m_info = SignaturePtr();
+            break;
+        default:
+            break;
+    }
+}
+
+
+TypeInfo::TypeInfo(Type type, TypeInfo list_elem)
+        : m_type(Type::List), m_info(std::vector{std::move(list_elem)})
+{
+    assert(type == Type::List);
 }
 
 
@@ -112,10 +139,35 @@ TypeInfo TypeInfo::effective_type() const
 }
 
 
-const TypeInfo& TypeInfo::elem_type() const
+auto TypeInfo::generic_var() const -> Var
+{
+    assert(m_type == Type::Unknown);
+    assert(std::holds_alternative<Var>(m_info));
+    return std::get<Var>(m_info);
+}
+
+
+auto TypeInfo::elem_type() const -> const TypeInfo&
 {
     assert(m_type == Type::List);
-    return m_subtypes[0];
+    assert(std::holds_alternative<Subtypes>(m_info));
+    return std::get<Subtypes>(m_info)[0];
+}
+
+
+auto TypeInfo::subtypes() const -> const Subtypes&
+{
+    assert(m_type == Type::Tuple);
+    assert(std::holds_alternative<Subtypes>(m_info));
+    return std::get<Subtypes>(m_info);
+}
+
+
+auto TypeInfo::signature_ptr() const -> const SignaturePtr&
+{
+    assert(m_type == Type::Function);
+    assert(std::holds_alternative<SignaturePtr>(m_info));
+    return std::get<SignaturePtr>(m_info);
 }
 
 
@@ -126,10 +178,8 @@ bool TypeInfo::operator==(const TypeInfo& rhs) const
     if (m_type != rhs.type())
         return false;
     if (m_type == Type::Function)
-        return *m_signature == *rhs.m_signature;
-    if (m_type == Type::Tuple || m_type == Type::List)
-        return m_subtypes == rhs.m_subtypes;
-    return true;
+        return signature() == rhs.signature();  // compare content, not pointer
+    return m_info == rhs.m_info;
 }
 
 
