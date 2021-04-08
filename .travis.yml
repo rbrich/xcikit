@@ -3,6 +3,9 @@ compiler: clang
 os: osx
 osx_image: xcode12.2
 
+git:
+  submodules: false
+
 env:
   global:
     - CC=/usr/local/opt/llvm/bin/clang
