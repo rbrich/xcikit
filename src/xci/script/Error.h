@@ -144,6 +144,12 @@ struct MissingExplicitType : public ScriptError {
 };
 
 
+struct UnexpectedGenericFunction : public ScriptError {
+    explicit UnexpectedGenericFunction(const SourceInfo& si)
+            : ScriptError("generic function must be named or immediately called", si) {}
+};
+
+
 struct FunctionNotFound : public ScriptError {
     explicit FunctionNotFound(const std::string& name, const std::string& args,
                               const std::string& candidates)
@@ -165,8 +171,8 @@ struct FunctionNotFoundInClass : public ScriptError {
 };
 
 
-struct TooManyLocalsError : public ScriptError {
-    explicit TooManyLocalsError()
+struct TooManyLocals : public ScriptError {
+    explicit TooManyLocals()
             : ScriptError(format("too many local values in function")) {}
 };
 

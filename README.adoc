@@ -193,7 +193,7 @@ Obtaining dependencies:
 
 * Install them into *_system_* or otherwise make them visible to CMake's `find_*` functions.
   - This works for almost all deps, except *fmt*, *pfr*, *magic_enum*.
-  - Must be installed this way: *vulkan*, *libzip*, *hyperscan*.
+  - Deps that must be installed this way: *vulkan*, *libzip*, *hyperscan*.
 * Install them via *_Conan_*. Pass `-DCONAN_INSTALL=ON` to `cmake` or build with `build.sh`
   which runs conan automatically.
   - Always installs *fmt*, *pfr*, *magic_enum*.

@@ -117,6 +117,7 @@ struct TupleV {
     explicit TupleV(const TypeInfo::Subtypes& subtypes);
     bool operator ==(const TupleV& rhs) const { return values == rhs.values; }
 
+    bool empty() const;
     size_t length() const;
     const Value& value_at(size_t idx) const { return values[idx]; }
     void foreach(const std::function<void(const Value&)>& cb) const;
@@ -468,6 +469,7 @@ public:
     explicit Tuple(const Values& values) : Value(values) {}
     explicit Tuple(const TypeInfo::Subtypes& subtypes) : Value(subtypes) {}
 
+    bool empty() const { return get<TupleV>().empty(); }
     size_t length() const { return get<TupleV>().length(); }
     const Value& value_at(size_t idx) const { return get<TupleV>().value_at(idx); }
 };

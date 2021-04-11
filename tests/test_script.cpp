@@ -334,36 +334,43 @@ TEST_CASE( "Blocks", "[script][interpreter]" )
 
 TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
 {
+    // returned lambda
+    CHECK(interpret("fun x:Int->Int { x + 1 }") == "<lambda> Int32 -> Int32");
+    CHECK_THROWS_AS(interpret("fun x { x + 1 }"), UnexpectedGenericFunction);  // generic lambda must be either assigned or resolved by calling
+
     // immediately called lambda
     CHECK(interpret("fun x:Int {x+1} 2") == "3");
     CHECK(interpret("fun x {x+1} 2") == "3");  // generic lambda
     CHECK(interpret("b = 3 + fun x {2*x} 2; b") == "7");
 
-    // argument propagation: `f` returns a function which consumes the second arg
-    CHECK(interpret("f = fun a:Int { fun b:Int { a+b } }; f 1 2") == "3");
+    // argument propagation:
+    CHECK(interpret("f = fun a:Int { fun b:Int { a+b } }; f 1 2") == "3");  //  `f` returns a function which consumes the second arg
+    CHECK(interpret("f = fun a:Int { fun b:Int { fun c:Int { a+b+c } } }; f 1 2 3") == "6");
+    CHECK(interpret("{ fun x:Int {x*2} } 3") == "6");  // lambda propagates through wrapped blocks and is then called
+    CHECK(interpret("{{{ fun x:Int {x*2} }}} 3") == "6");  // lambda propagates through wrapped blocks and is then called
 
     // closure: inner function uses outer function's parameter
     CHECK(interpret("f = fun a:Int b:Int c:Int { "
-                      "w=fun c1:Int {a / b - c1}; w c }; f 10 2 3") == "2");
+                    "w=fun c1:Int {a / b - c1}; w c }; f 10 2 3") == "2");
     // closure: outer closure used by inner function
     CHECK(interpret("f = fun a:Int b:Int c:Int { "
-                      "g=fun c1:Int {a * b - c1}; "
-                      "h=fun c1:Int {g c1}; "
-                      "h c }; f 1 2 3") == "-1");
+                    "g=fun c1:Int {a * b - c1}; "
+                    "h=fun c1:Int {g c1}; "
+                    "h c }; f 1 2 3") == "-1");
     CHECK(interpret("f = fun a:Int b:Int c:Int { "
-                      "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 + b}; "
-                      "w=fun b1:Int c1:Int {a + u b1 + v c1}; "
-                      "w b c }; f 1 2 3") == "9");
+                    "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 + b}; "
+                    "w=fun b1:Int c1:Int {a + u b1 + v c1}; "
+                    "w b c }; f 1 2 3") == "9");
 
     CHECK(interpret("outer = fun y:Int {"
-                      "inner = fun x:Int { x + y }; inner y "
-                      "}; outer 2") == "4");
+                    "inner = fun x:Int { x + y }; inner y "
+                    "}; outer 2") == "4");
     CHECK(interpret("outer = fun y:Int {"
-                      "inner = fun x:Int { x + y }; alias = inner; alias y "
-                      "}; outer 2") == "4");
+                    "inner = fun x:Int { x + y }; alias = inner; alias y "
+                    "}; outer 2") == "4");
     CHECK(interpret("outer = fun y {"
-                      "inner = fun x:Int { x + y }; alias = fun x:Int { inner x }; alias y "
-                      "}; outer 2") == "4");
+                    "inner = fun x:Int { x + y }; alias = fun x:Int { inner x }; alias y "
+                    "}; outer 2") == "4");
 }
 
 
@@ -378,13 +385,13 @@ TEST_CASE( "Partial function call", "[script][interpreter]" )
     CHECK(interpret("f=fun x:Int y:Int z:Int { (x - y) * z}; g=fun x1:Int { f 3 x1 }; g 4 5") == "-5");
     CHECK(interpret("f=fun x:Int y:Int { g=fun x1:Int z1:Int { (y - x1) / z1 }; g x }; f 1 10 3") == "3");
     CHECK(interpret("f = fun a:Int b:Int { "
-                      "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 - b}; "
-                      "w=fun b1:Int c1:Int {a * u b1 / v c1}; "
-                      "w b }; f 1 2 3") == "3");
+                    "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 - b}; "
+                    "w=fun b1:Int c1:Int {a * u b1 / v c1}; "
+                    "w b }; f 1 2 3") == "3");
     // [closure.fire] return closure with captured closures, propagate arguments into the closure
     CHECK(interpret("f = fun a:Int { "
-                      "u=fun b2:Int {a / b2}; v=fun c2:Int {c2 - a}; "
-                      "fun b1:Int c1:Int {a + u b1 + v c1} }; f 4 2 3") == "5");
+                    "u=fun b2:Int {a / b2}; v=fun c2:Int {c2 - a}; "
+                    "fun b1:Int c1:Int {a + u b1 + v c1} }; f 4 2 3") == "5");
 }
 
 

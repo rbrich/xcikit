@@ -511,6 +511,7 @@ public:
             }
         }
         m_value_type = move(m_type_info);
+        v.call_args = m_call_args.size();
 
         Function& fn = module().get_function(v.index);
         fn.set_signature(m_value_type.signature_ptr());
@@ -522,10 +523,11 @@ public:
                 fn.set_compiled();
                 resolve_types(fn, v.body);
                 m_value_type = TypeInfo{fn.signature_ptr()};
-            } else {
+            } else if (v.definition) {
                 // mark as generic, uncompiled
                 fn.set_ast(v.body);
-            }
+            } else
+                throw UnexpectedGenericFunction(v.source_info);
         } else {
             fn.set_compiled();
             // compile body and resolve return type
@@ -665,6 +667,8 @@ private:
             }
             // consume next param
             ++ v.partial_args;
+            if (v.wrapped_execs != 0 && !res->has_closure())
+                v.wrapped_execs = 1;
             res->params.erase(res->params.begin());
         }
         return res;

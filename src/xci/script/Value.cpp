@@ -349,6 +349,12 @@ TupleV::TupleV(const TypeInfo::Subtypes& subtypes)
 }
 
 
+bool TupleV::empty() const
+{
+    return values[0].is_void();;
+}
+
+
 size_t TupleV::length() const
 {
     size_t i = 0;
@@ -494,16 +500,20 @@ public:
         os << ")";
     }
     void visit(const ClosureV& v) override {
+        const auto& fn = *v.function();
+        os << fn.name() << ' ' << fn.signature();
         const auto& nonlocals = v.closure();
-        auto closure_types = v.function()->closure_types();
-        auto ti_iter = closure_types.begin();
-        os << v.function()->name() << " (";
-        nonlocals.tuple_foreach([&](const Value& item){
-            if (ti_iter != closure_types.begin())
-                os << ", ";
-            os << TypedValue(item, *ti_iter++);
-        });
-        os << ")";
+        if (!nonlocals.empty()) {
+            auto closure_types = fn.closure_types();
+            auto ti_iter = closure_types.begin();
+            os << " (";
+            nonlocals.tuple_foreach([&](const Value& item){
+                if (ti_iter != closure_types.begin())
+                    os << ", ";
+                os << TypedValue(item, *ti_iter++);
+            });
+            os << ")";
+        }
     }
     void visit(const script::Module* v) override { fmt::print(os, "<module:{:x}>", uintptr_t(v)); }
 private:

@@ -393,6 +393,7 @@ struct Function: public Expression {
 
     // resolved:
     Index index = no_index;
+    size_t call_args = 0;  // number of args if the function is inside Call
 };
 
 

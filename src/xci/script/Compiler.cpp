@@ -383,10 +383,16 @@ public:
                     code().add_opcode(Opcode::Execute);
                 }
             }
-        } else {
-            if (!v.definition) {
+        } else if (!v.definition) {
+            // call the function only if it's inside a Call which applies all required parameters (might be zero)
+            if (v.call_args >= func.parameters().size()) {
                 // CALL0 <function_idx>
                 code().add_opcode(Opcode::Call0, v.index);
+            } else {
+                // push closure on stack (it may be EXECUTEd later by outer Call)
+                make_closure(func);
+                // MAKE_CLOSURE <function_idx>
+                code().add_opcode(Opcode::MakeClosure, v.index);
             }
         }
     }
