@@ -24,32 +24,40 @@ Type decode_arg_type(uint8_t arg)
 }
 
 
-size_t TypeInfo::size() const
+size_t type_size_on_stack(Type type)
 {
-    switch (type()) {
-        case Type::Unknown:     return 0;
-        case Type::Void:        return 0;
-        case Type::Bool:        return 1;
-        case Type::Byte:        return 1;
-        case Type::Char:        return 4;
-        case Type::Int32:       return 4;
-        case Type::Int64:       return 8;
-        case Type::Float32:     return 4;
-        case Type::Float64:     return 8;
-
+    switch (type) {
+        case Type::Unknown:
+        case Type::Void:
+        case Type::Tuple:
+            return 0;
+        case Type::Bool:
+        case Type::Byte:
+            return 1;
+        case Type::Char:
+        case Type::Int32:
+        case Type::Float32:
+            return 4;
+        case Type::Int64:
+        case Type::Float64:
+            return 8;
         case Type::String:
         case Type::List:
-            return sizeof(byte*) + sizeof(size_t);
-
-        case Type::Tuple:
-            return accumulate(subtypes().begin(), subtypes().end(), size_t(0),
-                              [](size_t init, const TypeInfo& ti)
-                              { return init + ti.size(); });
-
-        case Type::Function:    return sizeof(byte*) + sizeof(void*);
-        case Type::Module:      return 0;  // TODO
+        case Type::Function:
+        case Type::Module:
+            return sizeof(void*);
     }
     return 0;
+}
+
+
+size_t TypeInfo::size() const
+{
+    if (type() == Type::Tuple) {
+        return accumulate(subtypes().begin(), subtypes().end(), size_t(0),
+                [](size_t init, const TypeInfo& ti) { return init + ti.size(); });
+    }
+    return type_size_on_stack(type());
 }
 
 

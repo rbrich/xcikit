@@ -38,17 +38,17 @@ private:
     void cmd_quit();
 
     const Module* module_by_idx(size_t mod_idx);
-    const Module* module_by_name(const std::string& mod_name);
+    const Module* module_by_name(std::string_view mod_name);
 
     void dump_module(size_t mod_idx);
     void cmd_dump_module();
     void cmd_dump_module(size_t mod_idx);
-    void cmd_dump_module(std::string mod_name);
+    void cmd_dump_module(std::string_view mod_name);
 
     void dump_function(const Module& module, size_t fun_idx);
     void cmd_dump_function();
-    void cmd_dump_function(std::string fun_name);
-    void cmd_dump_function(std::string fun_name, std::string mod_name);
+    void cmd_dump_function(std::string_view fun_name);
+    void cmd_dump_function(std::string_view fun_name, std::string_view mod_name);
     void cmd_dump_function(size_t fun_idx);
     void cmd_dump_function(size_t fun_idx, size_t mod_idx);
 

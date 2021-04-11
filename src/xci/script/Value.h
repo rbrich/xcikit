@@ -16,6 +16,7 @@
 #include <map>
 #include <string_view>
 #include <span>
+#include <variant>
 #include <cassert>
 #include <cstring>
 #include <cstdint>
@@ -24,7 +25,12 @@
 namespace xci::script {
 
 using std::byte;
+using std::move;
 
+class Value;
+struct ListV;
+struct TupleV;
+struct ClosureV;
 class Values;
 class Function;
 class Module;
@@ -49,92 +55,181 @@ class Module;
 
 class Visitor {
 public:
-    virtual void visit(const Void&) = 0;
-    virtual void visit(const Bool&) = 0;
-    virtual void visit(const Byte&) = 0;
-    virtual void visit(const Char&) = 0;
-    virtual void visit(const Int32&) = 0;
-    virtual void visit(const Int64&) = 0;
-    virtual void visit(const Float32&) = 0;
-    virtual void visit(const Float64&) = 0;
-    virtual void visit(const Bytes&) = 0;
-    virtual void visit(const String&) = 0;
-    virtual void visit(const List&) = 0;
-    virtual void visit(const Tuple&) = 0;
-    virtual void visit(const Closure&) = 0;
-    virtual void visit(const Module&) = 0;
+    virtual void visit(void) = 0;
+    virtual void visit(bool) = 0;
+    virtual void visit(byte) = 0;
+    virtual void visit(char32_t) = 0;
+    virtual void visit(int32_t) = 0;
+    virtual void visit(int64_t) = 0;
+    virtual void visit(float) = 0;
+    virtual void visit(double) = 0;
+    virtual void visit(std::string_view&&) = 0;
+    virtual void visit(const ListV&) = 0;
+    virtual void visit(const TupleV&) = 0;
+    virtual void visit(const ClosureV&) = 0;
+    virtual void visit(const script::Module*) = 0;
 };
 
 class PartialVisitor : public Visitor {
-    void visit(const Void&) override {}
-    void visit(const Bool&) override {}
-    void visit(const Byte&) override {}
-    void visit(const Char&) override {}
-    void visit(const Int32&) override {}
-    void visit(const Int64&) override {}
-    void visit(const Float32&) override {}
-    void visit(const Float64&) override {}
-    void visit(const Bytes&) override {}
-    void visit(const String&) override {}
-    void visit(const List&) override {}
-    void visit(const Tuple&) override {}
-    void visit(const Closure&) override {}
-    void visit(const Module&) override {}
+    void visit(void) override {}
+    void visit(bool) override {}
+    void visit(byte) override {}
+    void visit(char32_t) override {}
+    void visit(int32_t) override {}
+    void visit(int64_t) override {}
+    void visit(float) override {}
+    void visit(double) override {}
+    void visit(std::string_view&&) override {}
+    void visit(const ListV&) override {}
+    void visit(const TupleV&) override {}
+    void visit(const ClosureV&) override {}
+    void visit(const script::Module*) override {}
 };
 
 } // namespace value
 
 
+struct StringV {
+    explicit StringV(std::string_view v);
+    bool operator ==(const StringV& rhs) const { return value() == rhs.value(); }
+    std::string_view value() const;
+
+    HeapSlot slot;
+};
+
+
+struct ListV {
+    explicit ListV(size_t length, TypeInfo elem_type);
+    explicit ListV(HeapSlot&& slot) : slot(move(slot)) {}
+    bool operator ==(const ListV& rhs) const { return slot.slot() == rhs.slot.slot(); }  // same slot - cannot compare content without elem_type
+    size_t length() const;
+    Value value_at(size_t idx, TypeInfo elem_type) const;
+
+    HeapSlot slot;
+};
+
+
+struct TupleV {
+    TupleV(const TupleV& other);
+    TupleV& operator =(const TupleV& other);
+
+    explicit TupleV(const Values& vs);
+    explicit TupleV(const TypeInfo::Subtypes& subtypes);
+    bool operator ==(const TupleV& rhs) const { return values == rhs.values; }
+
+    size_t length() const;
+    const Value& value_at(size_t idx) const { return values[idx]; }
+    void foreach(const std::function<void(const Value&)>& cb) const;
+
+    std::unique_ptr<Value[]> values;  // Void-terminated
+};
+
+
+struct ClosureV {
+    explicit ClosureV();
+    explicit ClosureV(const Function& fn);
+    explicit ClosureV(const Function& fn, Values&& values);
+    bool operator ==(const ClosureV& rhs) const { return slot.slot() == rhs.slot.slot(); }  // same slot - cannot compare content without elem_type
+
+    Function* function() const;
+    value::Tuple closure() const;
+
+    HeapSlot slot;
+};
+
+
 class Value {
 public:
-    static std::unique_ptr<Value> create(const TypeInfo& type_info);
+    struct ListTag {};
+    struct ClosureTag {};
+    struct ModuleTag {};
 
-    virtual ~Value() = default;
+    Value() = default;  // Void
+    explicit Value(bool v) : m_value(v) {}  // Bool
+    explicit Value(byte v) : m_value(v) {}  // Byte
+    explicit Value(char32_t v) : m_value(v) {}  // Char
+    explicit Value(int32_t v) : m_value(v) {}  // Int32
+    explicit Value(int64_t v) : m_value(v) {}  // Int64
+    explicit Value(float v) : m_value(v) {}  // Float32
+    explicit Value(double v) : m_value(v) {}  // Float64
+    explicit Value(std::string_view v) : m_value(StringV{v}) {}  // String
+    explicit Value(size_t length, TypeInfo elem_type) : m_value(ListV{length, elem_type}) {}  // List
+    explicit Value(ListTag, HeapSlot&& slot) : m_value(ListV{move(slot)}) {}  // List
+    explicit Value(const TypeInfo::Subtypes& subtypes) : m_value(TupleV{subtypes}) {}  // Tuple
+    explicit Value(const Values& values) : m_value(TupleV{values}) {}  // Tuple
+    explicit Value(ClosureTag) : m_value(ClosureV{}) {}  // Closure
+    explicit Value(const Function& fn) : m_value(ClosureV{fn}) {}  // Closure
+    explicit Value(const Function& fn, Values&& values) : m_value(ClosureV{fn, move(values)}) {}  // Closure
+    explicit Value(ModuleTag) : m_value((script::Module*) nullptr) {}  // Module
+    explicit Value(script::Module& v) : m_value(&v) {}  // Module
 
-    virtual std::unique_ptr<Value> make_copy() const = 0;
+    bool operator ==(const Value& rhs) const;
 
     // Serialize/deserialize the value
     // Note that if the value lives on Heap, this also affects refcount
     // To read value and also keep it in original location,
     // you MUST also call incref.
-    virtual void write(byte* buffer) const = 0;
-    virtual void read(const byte* buffer) = 0;
+    // Returns number of bytes written/read
+    size_t write(byte* buffer) const;
+    size_t read(const byte* buffer);
+    size_t size_on_stack() const;
 
     // Set when the value lives on heap
-    virtual const HeapSlot* heapslot() const { return nullptr; }
+    const HeapSlot* heapslot() const;
 
     // Reference count management
-    virtual void incref() const {}
-    virtual void decref() const {}
+    void incref() const;
+    void decref() const;
 
-    size_t size() const { return type_info().size(); }
+    void apply(value::Visitor& visitor) const;
 
-    virtual void apply(value::Visitor& visitor) const = 0;
+    Type type() const;
+    bool is_void() const { return type() == Type::Void; }
+    bool is_bool() const { return type() == Type::Bool; }
+    bool is_callable() const { return type() == Type::Function; }
 
-    virtual TypeInfo type_info() const = 0;
-    Type type() const { return type_info().type(); }
-    bool is_void() const { return type_info().type() == Type::Void; }
-    bool is_bool() const { return type_info().type() == Type::Bool; }
-    bool is_callable() const { return type_info().type() == Type::Function; }
-
-    // Load value from `v` and return true if the value is compatible
+    // Load value from `other` and return true if the value is compatible
     // (can be statically casted). Return false otherwise.
-    virtual bool cast_from(Value& v) { return false; }
+    bool cast_from(const Value& src);
 
-    // Cast to subtype, e.g.: `v.as<value::Int32>()->value()`
-    template <class T> T& as() { return *dynamic_cast<T*>(this); }
-    template <class T> const T& as() const { return *dynamic_cast<const T*>(this); }
+    // Cast to subtype, e.g.: `v.get<bool>()`
+    template <class T> T& get() { return std::get<T>(m_value); }
+    template <class T> const T& get() const { return std::get<T>(m_value); }
+
+    std::string_view get_string() const { return get<StringV>().value(); }
+    void tuple_foreach(const std::function<void(const Value&)>& cb) const { return get<TupleV>().foreach(cb); }
+    const script::Module& get_module() const { return *get<script::Module*>(); }
+
+protected:
+    using ValueVariant = std::variant<
+            std::monostate,
+            bool, byte, char32_t, int32_t, int64_t, float, double,
+            StringV, ListV, TupleV, ClosureV,
+            script::Module*
+        >;
+    ValueVariant m_value;
+};
+
+
+Value create_value(const TypeInfo& type_info);
+Value create_value(Type type);
+
+
+template<typename T>
+concept ValueWithTypeInfo = requires(const T& v) {
+    std::is_base_of_v<Value, T>;
+    v.type_info();
+};
+
+
+template<typename T>
+concept ValueT = requires(const T& v) {
+    std::is_base_of_v<Value, T>;
 };
 
 
 class Values {
 public:
-    Values() = default;
-    Values(Values&&) = default;
-    Values(const Values& other);
-    Values& operator =(const Values& rhs);
-    Values& operator =(Values&& rhs) noexcept = default;
-
     // reserve number of values
     void reserve(size_t n) { m_items.reserve(n); }
     // get number of values
@@ -142,188 +237,173 @@ public:
     bool empty() const { return m_items.empty(); }
 
     // get size of all values in bytes
-    size_t raw_size() const;
+    size_t size_on_stack() const;
 
-    void add(std::unique_ptr<Value>&& value) { m_items.emplace_back(std::forward<std::unique_ptr<Value>>(value)); }
+    void add(Value&& value) { m_items.emplace_back(std::forward<Value>(value)); }
 
-    std::unique_ptr<Value>& operator[](size_t i) { return m_items[i]; }
-    const Value& operator[](size_t i) const { return *m_items[i]; }
+    const Value& operator[](size_t i) const { return m_items[i]; }
 
     bool operator==(const Values& rhs) const { return m_items == rhs.m_items; }
     bool operator!=(const Values& rhs) const { return m_items != rhs.m_items; }
 
-    using const_iterator = std::vector<std::unique_ptr<Value>>::const_iterator;
+    using iterator = std::vector<Value>::iterator;
+    using const_iterator = std::vector<Value>::const_iterator;
+    iterator begin() { return m_items.begin(); }
+    iterator end() { return m_items.end(); }
     const_iterator begin() const { return m_items.begin(); }
     const_iterator end() const { return m_items.end(); }
-    const std::unique_ptr<Value>& back() const { return m_items.back(); }
+    const Value& back() const { return m_items.back(); }
 
 private:
-    std::vector<std::unique_ptr<Value>> m_items;
+    std::vector<Value> m_items;
+};
+
+
+class TypedValue {
+public:
+    TypedValue() = default;
+
+    template <ValueWithTypeInfo T> explicit TypedValue(const T& v) : m_value(v), m_type_info(v.type_info()) {}
+
+    TypedValue(TypeInfo&& type_info) : m_value(create_value(type_info)), m_type_info(move(type_info)) {}
+    TypedValue(Value value, TypeInfo type_info)
+            : m_value(move(value)), m_type_info(move(type_info)) { assert(m_value.type() == m_type_info.type()); }
+
+    bool operator ==(const TypedValue& rhs) const { return m_value == rhs.m_value; }
+
+    const Value& value() const { return m_value; }
+    const TypeInfo& type_info() const { return m_type_info; }
+    Type type() const { return m_type_info.type(); }
+
+    void incref() const { m_value.incref(); }
+    void decref() const { m_value.decref(); }
+
+    void apply(value::Visitor& visitor) const { m_value.apply(visitor); }
+
+    bool is_void() const { return type() == Type::Void; }
+
+    template <class T> const T& get() const { return m_value.get<T>(); }
+
+private:
+    Value m_value;
+    TypeInfo m_type_info;
+};
+
+
+class TypedValues {
+public:
+    // reserve number of values
+    void reserve(size_t n) { m_items.reserve(n); }
+    // get number of values
+    size_t size() const { return m_items.size(); }
+    bool empty() const { return m_items.empty(); }
+
+    void add(TypedValue&& value) { m_items.emplace_back(std::forward<TypedValue>(value)); }
+
+    const TypedValue& operator[](size_t i) const { return m_items[i]; }
+
+    bool operator==(const TypedValues& rhs) const { return m_items == rhs.m_items; }
+    bool operator!=(const TypedValues& rhs) const { return m_items != rhs.m_items; }
+
+    using iterator = std::vector<TypedValue>::iterator;
+    using const_iterator = std::vector<TypedValue>::const_iterator;
+    iterator begin() { return m_items.begin(); }
+    iterator end() { return m_items.end(); }
+    const_iterator begin() const { return m_items.begin(); }
+    const_iterator end() const { return m_items.end(); }
+    const TypedValue& back() const { return m_items.back(); }
+
+private:
+    std::vector<TypedValue> m_items;
 };
 
 
 namespace value {
-
-
-// Empty value, doesn't carry any information
-class Void: public Value {
-public:
-    std::unique_ptr<Value> make_copy() const override { return std::make_unique<Void>(); }
-    void write(byte* buffer) const override {}
-    void read(const byte* buffer) override {}
-    TypeInfo type_info() const override { return TypeInfo{Type::Void}; }
-    void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
-    void value() const {}
-};
-
 
 // ----------- //
 // Plain types //
 // ----------- //
 
 
+// Empty value, doesn't carry any information
+class Void: public Value {
+public:
+    void value() const {}
+    TypeInfo type_info() const { return TypeInfo{Type::Void}; }
+};
+
+
 class Bool: public Value {
 public:
-    Bool() = default;
-    explicit Bool(bool v) : m_value(v) {}
-    std::unique_ptr<Value> make_copy() const override { return std::make_unique<Bool>(m_value); }
-
-    void write(byte* buffer) const override { *buffer = byte(m_value); }
-    void read(const byte* buffer) override { m_value = bool(*buffer); }
-    TypeInfo type_info() const override { return TypeInfo{Type::Bool}; }
-
-    void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
-
-    bool value() const { return m_value; }
-
-private:
-    bool m_value = false;
+    Bool() : Value(false) {}
+    explicit Bool(bool v) : Value(v) {}
+    TypeInfo type_info() const { return TypeInfo{Type::Bool}; }
+    bool value() const { return std::get<bool>(m_value); }
+    void set_value(bool v) { m_value = v; }
 };
 
 
 class Byte: public Value {
 public:
-    Byte() = default;
-    explicit Byte(uint8_t v) : m_value(v) {}
+    Byte() : Value(byte(0)) {}
+    explicit Byte(byte v) : Value(v) {}
+    explicit Byte(uint8_t v) : Value(byte(v)) {}
     explicit Byte(std::string_view utf8);
-    std::unique_ptr<Value> make_copy() const override { return std::make_unique<Byte>(m_value); }
-
-    void write(byte* buffer) const override { *buffer = byte(m_value); }
-    void read(const byte* buffer) override { m_value = uint8_t(*buffer); }
-    TypeInfo type_info() const override { return TypeInfo{Type::Byte}; }
-    bool cast_from(Value& v) override;
-
-    void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
-
-    uint8_t value() const { return m_value; }
-    void set_value(uint8_t v) { m_value = v; }
-
-private:
-    uint8_t m_value = 0;
+    TypeInfo type_info() const { return TypeInfo{Type::Byte}; }
+    uint8_t value() const { return (uint8_t) std::get<byte>(m_value); }
+    void set_value(byte v) { m_value = v; }
+    void set_value(uint8_t v) { m_value = byte(v); }
 };
 
 
 class Char: public Value {
 public:
-    Char() = default;
-    explicit Char(char32_t v) : m_value(v) {}
+    Char() : Value(char32_t(0)) {}
+    explicit Char(char32_t v) : Value(v) {}
     explicit Char(std::string_view utf8);
-    std::unique_ptr<Value> make_copy() const override { return std::make_unique<Char>(m_value); }
-
-    void write(byte* buffer) const override { std::memcpy(buffer, &m_value, sizeof(m_value)); }
-    void read(const byte* buffer) override { std::memcpy(&m_value, buffer, sizeof(m_value)); }
-    TypeInfo type_info() const override { return TypeInfo{Type::Char}; }
-
-    void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
-
-    char32_t value() const { return m_value; }
-
-private:
-    char32_t m_value = 0;
+    TypeInfo type_info() const { return TypeInfo{Type::Char}; }
+    char32_t value() const { return std::get<char32_t>(m_value); }
+    void set_value(char32_t v) { m_value = v; }
 };
 
 
 class Int32: public Value {
 public:
-    Int32() = default;
-    explicit Int32(int32_t v) : m_value(v) {}
-    std::unique_ptr<Value> make_copy() const override { return std::make_unique<Int32>(m_value); }
-
-    void write(byte* buffer) const override { std::memcpy(buffer, &m_value, sizeof(m_value)); }
-    void read(const byte* buffer) override { std::memcpy(&m_value, buffer, sizeof(m_value)); }
-    TypeInfo type_info() const override { return TypeInfo{Type::Int32}; }
-    bool cast_from(Value& v) override;
-
-    void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
-
-    int32_t value() const { return m_value; }
+    Int32() : Value(int32_t(0)) {}
+    explicit Int32(int32_t v) : Value(v) {}
+    TypeInfo type_info() const { return TypeInfo{Type::Int32}; }
+    int32_t value() const { return std::get<int32_t>(m_value); }
     void set_value(int32_t v) { m_value = v; }
-
-private:
-    int32_t m_value = 0;
 };
 
 
 class Int64: public Value {
 public:
-    Int64() = default;
-    explicit Int64(int64_t v) : m_value(v) {}
-    std::unique_ptr<Value> make_copy() const override { return std::make_unique<Int64>(m_value); }
-
-    void write(byte* buffer) const override { std::memcpy(buffer, &m_value, sizeof(m_value)); }
-    void read(const byte* buffer) override { std::memcpy(&m_value, buffer, sizeof(m_value)); }
-    TypeInfo type_info() const override { return TypeInfo{Type::Int64}; }
-    bool cast_from(Value& v) override;
-
-    void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
-
-    int64_t value() const { return m_value; }
+    Int64() : Value(int64_t(0)) {}
+    explicit Int64(int64_t v) : Value(v) {}
+    TypeInfo type_info() const { return TypeInfo{Type::Int64}; }
+    int64_t value() const { return std::get<int64_t>(m_value); }
     void set_value(int64_t v) { m_value = v; }
-
-private:
-    int64_t m_value = 0;
 };
 
 
 class Float32: public Value {
 public:
-    Float32() = default;
-    explicit Float32(float v) : m_value(v) {}
-    std::unique_ptr<Value> make_copy() const override { return std::make_unique<Float32>(m_value); }
-
-    void write(byte* buffer) const override { std::memcpy(buffer, &m_value, sizeof(m_value)); }
-    void read(const byte* buffer) override { std::memcpy(&m_value, buffer, sizeof(m_value)); }
-    TypeInfo type_info() const override { return TypeInfo{Type::Float32}; }
-    bool cast_from(Value& v) override;
-
-    void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
-
-    float value() const { return m_value; }
+    Float32() : Value(0.0f) {}
+    explicit Float32(float v) : Value(v) {}
+    TypeInfo type_info() const { return TypeInfo{Type::Float32}; }
+    float value() const { return std::get<float>(m_value); }
     void set_value(float v) { m_value = v; }
-
-private:
-    float m_value = 0.0f;
 };
 
 
 class Float64: public Value {
 public:
-    Float64() = default;
-    explicit Float64(double v) : m_value(v) {}
-    std::unique_ptr<Value> make_copy() const override { return std::make_unique<Float64>(m_value); }
-
-    void write(byte* buffer) const override { std::memcpy(buffer, &m_value, sizeof(m_value)); }
-    void read(const byte* buffer) override { std::memcpy(&m_value, buffer, sizeof(m_value)); }
-    TypeInfo type_info() const override { return TypeInfo{Type::Float64}; }
-    bool cast_from(Value& v) override;
-
-    void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
-
-    double value() const { return m_value; }
+    Float64() : Value(0.0) {}
+    explicit Float64(double v) : Value(v) {}
+    TypeInfo type_info() const { return TypeInfo{Type::Float64}; }
+    double value() const { return std::get<double>(m_value); }
     void set_value(double v) { m_value = v; }
-
-private:
-    double m_value = 0.0;
 };
 
 
@@ -341,170 +421,81 @@ private:
 
 class String: public Value {
 public:
-    String() = default;
-    explicit String(std::string_view v);
-    explicit String(size_t size, const HeapSlot& slot) : m_size(size), m_value(slot) {}
-    String(const String& other) = default;
-    String(String&& other) noexcept : m_size(other.m_size), m_value(std::move(other.m_value)) {
-        other.m_size = 0;
-    }
-    String& operator =(const String& rhs) = default;
-    String& operator =(String&& rhs) noexcept;
-    std::unique_ptr<Value> make_copy() const override;
-
-    void write(byte* buffer) const override;
-    void read(const byte* buffer) override;
-    void incref() const override { m_value.incref(); }
-    void decref() const override { m_value.decref(); }
-    const HeapSlot* heapslot() const override { return &m_value; }
-
-    TypeInfo type_info() const override { return TypeInfo{Type::String}; }
-
-    void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
-
-    std::string value() const { return {reinterpret_cast<const char*>(m_value.data()), m_size}; }
-
-private:
-    // UTF-8 encoded (size here is in bytes, not Chars!)
-    size_t m_size = 0;
-    HeapSlot m_value;
+    String() : Value(std::string_view{}) {}
+    explicit String(std::string_view v) : Value(v) {}
+    TypeInfo type_info() const { return TypeInfo{Type::String}; }
+    std::string_view value() const { return get_string(); }
+    void set_value(std::string_view v) { m_value = StringV(v); }
 };
 
 
 class List: public Value {
 public:
-    List() = default;
-    explicit List(const Values& values);  // all values must have same type!
-    explicit List(TypeInfo elem_type) : m_elem_type(std::move(elem_type)) {}
-    explicit List(TypeInfo elem_type, size_t length, HeapSlot slot)
-            : m_elem_type(std::move(elem_type)), m_length(length), m_elements(std::move(slot)) {}
+    List() : Value(0, TypeInfo{Type::Void}) {}
+    List(size_t length, TypeInfo elem_type) : Value(length, elem_type) {}
+    List(HeapSlot&& slot) : Value(Value::ListTag{}, move(slot)) {}
 
-    List(const List& other) = default;
-    List(List&& other) noexcept = default;
-
-    std::unique_ptr<Value> make_copy() const override;
-
-    void write(byte* buffer) const override;
-    void read(const byte* buffer) override;
-    void incref() const override { m_elements.incref(); }
-    void decref() const override { m_elements.decref(); }
-    const HeapSlot* heapslot() const override { return &m_elements; }
-
-    TypeInfo type_info() const override { return TypeInfo{Type::List, m_elem_type}; }
-
-    void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
-
-    size_t length() const { return m_length; }
-    std::unique_ptr<Value> get(size_t idx) const;
-
-protected:
-    HeapSlot& heapslot_ref() { return m_elements; }
-
-private:
-    TypeInfo m_elem_type;
-    size_t m_length = 0;  // number of elements
-    HeapSlot m_elements;
+    size_t length() const { return get<ListV>().length(); }
+    Value value_at(size_t idx, TypeInfo elem_type) const { return get<ListV>().value_at(idx, elem_type); }
+    TypedValue typed_value_at(size_t idx, TypeInfo elem_type) const { return {value_at(idx, elem_type), elem_type}; }
 };
 
 
 // [Bytes] has some special handling, e.g. it's dumped as b"abc", not [1,2,3]
 class Bytes: public List {
 public:
-    Bytes() : List(TypeInfo{Type::Byte}) {}
-    explicit Bytes(std::span<const std::byte> v);
-    explicit Bytes(size_t size, const HeapSlot& slot) : List(TypeInfo{Type::Byte}, size, slot) {}
+    Bytes() : List(0, TypeInfo{Type::Byte}) {}
+    explicit Bytes(std::span<const byte> v);
 
-    void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
+    TypeInfo type_info() const { return TypeInfo{Type::List, TypeInfo(Type::Byte)}; }
 
-    std::span<const std::byte> value() const { return {heapslot()->data(), length()}; }
+    std::span<const byte> value() const { return {heapslot()->data() + sizeof(uint32_t), length()}; }
 };
 
 
 class Int32List: public List {
 public:
-    Int32List() : List(TypeInfo{Type::Int32}) {}
+    Int32List() : List(0, TypeInfo{Type::Int32}) {}
+
+    TypeInfo type_info() const { return TypeInfo{Type::List, TypeInfo(Type::Int32)}; }
 };
 
 
 // Frozen vector of values - cannot add/modify items
 class Tuple: public Value {
 public:
-    Tuple() = default;
-    explicit Tuple(Values values) : m_values(std::move(values)) {}
-    explicit Tuple(const TypeInfo& type_info);
-    Tuple(const Tuple& other) : Tuple(other.values()) {}
+    Tuple() : Value(Values{}) {}
+    explicit Tuple(const Values& values) : Value(values) {}
+    explicit Tuple(const TypeInfo::Subtypes& subtypes) : Value(subtypes) {}
 
-    std::unique_ptr<Value> make_copy() const override { return std::make_unique<Tuple>(m_values); }
-
-    void write(byte* buffer) const override;
-    void read(const byte* buffer) override;
-    void incref() const override;
-    void decref() const override;
-
-    TypeInfo type_info() const override;
-
-    void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
-
-    const Values& values() const { return m_values; }
-
-private:
-    Values m_values;
+    size_t length() const { return get<TupleV>().length(); }
+    const Value& value_at(size_t idx) const { return get<TupleV>().value_at(idx); }
 };
 
 
 class Closure: public Value {
 public:
-    Closure() = default;
-    explicit Closure(Function& v);
-    explicit Closure(Function& v, Values&& values);
-    explicit Closure(Function& v, HeapSlot slot) : m_function(&v), m_closure(std::move(slot)) {}
+    Closure() : Value(Value::ClosureTag{}) {}
+    explicit Closure(const Function& fn) : Value(fn) {}
+    explicit Closure(const Function& fn, Values&& values) : Value(fn, move(values)) {}
+    TypeInfo type_info() const { return TypeInfo{Type::Function}; }
 
-    std::unique_ptr<Value> make_copy() const override;
-
-    void write(byte* buffer) const override;
-    void read(const byte* buffer) override;
-    void incref() const override { m_closure.incref(); }
-    void decref() const override { m_closure.decref(); }
-    const HeapSlot* heapslot() const override { return &m_closure; }
-
-    TypeInfo type_info() const override;
-
-    Function& function() { return *m_function; }
-    const Function& function() const { return *m_function; }
-    Tuple closure() const;
-
-    void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
-
-private:
-    Function* m_function = nullptr;
-    HeapSlot m_closure;
+    Function* function() const { return get<ClosureV>().function(); }
+    value::Tuple closure() const { return get<ClosureV>().closure(); }
 };
 
 
 class Module: public Value {
 public:
-    Module() = default;
-    explicit Module(script::Module& v) : m_module(&v) {}
-    std::unique_ptr<Value> make_copy() const override { return std::make_unique<Module>(*m_module); }
-
-    // TODO
-    void write(byte* buffer) const override {}
-    void read(const byte* buffer) override {}
-
-    TypeInfo type_info() const override { return TypeInfo{Type::Module}; }
-
-    void apply(value::Visitor& visitor) const override { visitor.visit(*this); }
-
-    const script::Module& module() const { return *m_module; }
-
-private:
-    script::Module* m_module = nullptr;
+    Module() : Value(Value::ModuleTag{}) {}
+    explicit Module(script::Module& v) : Value(v) {}
 };
 
 
 } // namespace value
 
 
+std::ostream& operator<<(std::ostream& os, const TypedValue& o);
 std::ostream& operator<<(std::ostream& os, const Value& o);
 
 

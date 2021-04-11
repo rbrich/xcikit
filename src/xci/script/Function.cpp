@@ -92,7 +92,7 @@ size_t Function::raw_size_of_partial() const
 }
 
 
-std::vector<TypeInfo> Function::closure() const
+std::vector<TypeInfo> Function::closure_types() const
 {
     auto closure = nonlocals();
     std::copy(partial().cbegin(), partial().cend(), std::back_inserter(closure));

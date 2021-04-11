@@ -22,7 +22,7 @@ public:
     // Run all Invocations in a function or module:
     // - evaluate each invoked value (possibly concurrently)
     // - pass results to cb
-    using InvokeCallback = std::function<void (const Value&)>;
+    using InvokeCallback = std::function<void (const TypedValue&)>;
     void call(const Function& function, const InvokeCallback& cb);
 
     Stack& stack() { return m_stack; }

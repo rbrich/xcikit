@@ -99,10 +99,10 @@ public:
     }
 
     void visit(ast::Literal& v) override {
-        if (v.value->is_void())
+        if (v.value.value().is_void())
             return;  // Void value
         // add to static values
-        auto idx = module().add_value(v.value->make_copy());
+        auto idx = module().add_value(TypedValue(v.value));
         // LOAD_STATIC <static_idx>
         code().add_opcode(Opcode::LoadStatic, idx);
     }
@@ -175,7 +175,7 @@ public:
                 if (symtab.module() != &module()) {
                     // copy static value into this module if it's from builtin or another module
                     const auto & val = symtab.module()->get_value(sym.index());
-                    idx = module().add_value(val.make_copy());
+                    idx = module().add_value(TypedValue(val));
                 }
                 // LOAD_STATIC <static_idx>
                 code().add_opcode(Opcode::LoadStatic, idx);

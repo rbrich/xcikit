@@ -247,13 +247,13 @@ struct Expression {
 };
 
 struct Literal: public Expression {
-    explicit Literal(const Value& v) : value(v.make_copy()) {}
-    explicit Literal(std::unique_ptr<Value>&& v) : value(std::move(v)) {}
+    explicit Literal(const TypedValue& v) : value(v) {}
+    explicit Literal(TypedValue&& v) : value(std::move(v)) {}
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;
 
-    std::unique_ptr<Value> value;
+    TypedValue value;
 };
 
 /// An expression in round brackets, e.g. (1 + 2)

@@ -241,7 +241,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                     idx += (int) len;
                 if (idx < 0 || (size_t) idx >= len)
                     throw IndexOutOfBounds(idx, len);
-                m_stack.push(*lhs.get(idx));
+                m_stack.push(lhs.value_at(idx, TypeInfo(Type::Int32)));
                 break;
             }
 
@@ -257,28 +257,28 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                 if (to_type == Type::Unknown)
                     throw NotImplemented(format("cast to: {:x}", arg & 0xf));
                 auto from = m_stack.pull(TypeInfo{from_type});
-                auto to = Value::create(TypeInfo{to_type});
-                if (!to->cast_from(*from))
+                auto to = create_value(TypeInfo{to_type});
+                if (!to.cast_from(from))
                     throw NotImplemented(format("cast {} to {}",
                                          TypeInfo{from_type}, TypeInfo{to_type}));
-                m_stack.push(*to);
+                m_stack.push(to);
                 break;
             }
 
             case Opcode::Invoke: {
                 const auto type_index = *it++;
                 const auto& type_info = cur_fun->module().get_type(type_index);
-                cb(*m_stack.pull(type_info));
+                cb(m_stack.pull_typed(type_info));
                 break;
             }
 
             case Opcode::Execute: {
                 auto o = m_stack.pull<value::Closure>();
                 auto closure = o.closure();
-                for (const auto& nl : reverse(closure.values())) {
-                    m_stack.push(*nl);
+                for (unsigned i = closure.length(); i != 0;) {
+                    m_stack.push(closure.value_at(--i));
                 }
-                call_fun(o.function());
+                call_fun(*o.function());
                 o.decref();
                 break;
             }
@@ -347,11 +347,13 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                 const auto size_of_elem = *it++;
                 const size_t total_size = num_elems * size_of_elem;
                 // move list contents from stack to heap
-                HeapSlot slot{total_size};
-                std::memcpy(slot.data(), m_stack.data(), total_size);
+                HeapSlot slot{total_size + sizeof(uint32_t)};
+                uint32_t count_b = (uint32_t) num_elems;
+                std::memcpy(slot.data(), &count_b, sizeof(uint32_t));
+                std::memcpy(slot.data() + sizeof(uint32_t), m_stack.data(), total_size);
                 m_stack.drop(0, total_size);
                 // push list handle back to stack
-                m_stack.push(value::List{TypeInfo{Type::Int32}, num_elems, move(slot)});
+                m_stack.push(value::List{move(slot)});
                 break;
             }
 

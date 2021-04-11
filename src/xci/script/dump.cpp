@@ -90,9 +90,9 @@ private:
 std::ostream& operator<<(std::ostream& os, const Literal& v)
 {
     if (stream_options(os).enable_tree) {
-        return os << "Literal(Expression) " << *v.value << endl;
+        return os << "Literal(Expression) " << v.value << endl;
     } else {
-        return os << *v.value;
+        return os << v.value;
     }
 }
 
@@ -716,7 +716,7 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
         case Type::Float64:     return os << "Float64";
         case Type::String:      return os << "String";
         case Type::List:
-            return os << "[" << v.subtypes()[0] << "]";
+            return os << "[" << v.elem_type() << "]";
         case Type::Tuple: {
             os << "(";
             for (const auto& ti : v.subtypes()) {

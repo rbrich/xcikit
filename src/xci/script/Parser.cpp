@@ -723,7 +723,7 @@ template<>
 struct Action<Literal> : change_states< LiteralHelper > {
     template<typename Input>
     static void success(const Input &in, LiteralHelper& helper, std::unique_ptr<ast::Expression>& expr) {
-        std::unique_ptr<Value> value;
+        TypedValue value;
         switch (helper.type) {
             default:
             case ValueType::Unknown:
@@ -734,38 +734,38 @@ struct Action<Literal> : change_states< LiteralHelper > {
                 using l = std::numeric_limits<int32_t>;
                 if (v < l::min() || v > l::max())
                     // The value can't fit in Int32, make it Int64 instead
-                    value = std::make_unique<value::Int64>(v);
+                    value = TypedValue{value::Int64(v)};
                 else
-                    value = std::make_unique<value::Int32>((int32_t) v);
+                    value = TypedValue{value::Int32((int32_t) v)};
                 break;
             }
             case ValueType::Int64:
-                value = std::make_unique<value::Int64>( std::get<int64_t>(helper.content) );
+                value = TypedValue{value::Int64( std::get<int64_t>(helper.content) )};
                 break;
             case ValueType::Float32:
-                value = std::make_unique<value::Float32>( std::get<double>(helper.content) );
+                value = TypedValue{value::Float32( std::get<double>(helper.content) )};
                 break;
             case ValueType::Float64:
-                value = std::make_unique<value::Float64>( std::get<double>(helper.content) );
+                value = TypedValue{value::Float64( std::get<double>(helper.content) )};
                 break;
             case ValueType::Char:
-                value = std::make_unique<value::Char>( std::get<std::string>(helper.content) );
+                value = TypedValue{value::Char( std::get<std::string>(helper.content) )};
                 break;
             case ValueType::String:
                 if (std::holds_alternative<std::string>(helper.content))
-                    value = std::make_unique<value::String>( std::get<std::string>(helper.content) );
+                    value = TypedValue{value::String( std::get<std::string>(helper.content) )};
                 else
-                    value = std::make_unique<value::String>( std::get<std::string_view>(helper.content) );
+                    value = TypedValue{value::String( std::get<std::string_view>(helper.content) )};
                 break;
             case ValueType::Byte: {
                 if (std::holds_alternative<std::string>(helper.content))
-                    value = std::make_unique<value::Byte>( std::get<std::string>(helper.content) );
+                    value = TypedValue{value::Byte( std::get<std::string>(helper.content) )};
                 else {
                     const auto v = std::get<int64_t>(helper.content);
                     using l = std::numeric_limits<uint8_t>;
                     if (v < l::min() || v > l::max())
                         throw parse_error("Byte literal out of range", in);
-                    value = std::make_unique<value::Byte>((uint8_t) v);
+                    value = TypedValue{value::Byte((uint8_t) v)};
                     break;
                 }
                 break;
@@ -773,7 +773,7 @@ struct Action<Literal> : change_states< LiteralHelper > {
             case ValueType::List: {  // [Byte]
                 std::string& str = std::get<std::string>(helper.content);
                 std::span data{(const std::byte*) str.data(), str.size()};
-                value = std::make_unique<value::Bytes>(data);
+                value = TypedValue{value::Bytes(data)};
                 break;
             }
         }

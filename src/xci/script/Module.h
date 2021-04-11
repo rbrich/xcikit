@@ -61,8 +61,8 @@ public:
     size_t num_functions() const { return m_functions.size(); }
 
     // Static values
-    Index add_value(std::unique_ptr<Value>&& value);
-    const Value& get_value(Index idx) const { return m_values[idx]; }
+    Index add_value(TypedValue&& value);
+    const TypedValue& get_value(Index idx) const { return m_values[idx]; }
     size_t num_values() const { return m_values.size(); }
 
     // Type information
@@ -92,7 +92,7 @@ private:
     std::vector<std::unique_ptr<Class>> m_classes;
     std::vector<std::unique_ptr<Instance>> m_instances;
     std::vector<TypeInfo> m_types;
-    Values m_values;
+    TypedValues m_values;
     SymbolTable m_symtab;
 };
 

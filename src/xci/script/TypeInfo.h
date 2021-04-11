@@ -46,6 +46,10 @@ enum class Type : uint8_t {
 /// See Opcode::Cast
 Type decode_arg_type(uint8_t arg);
 
+/// Return how many bytes a type occupies on the stack.
+/// Returns 0 for Tuple -> cannot tell just from Type, need full TypeInfo for that.
+size_t type_size_on_stack(Type type);
+
 
 struct Signature;
 

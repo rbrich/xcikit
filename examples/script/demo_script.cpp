@@ -7,6 +7,7 @@
 #include <xci/script/Interpreter.h>
 #include <xci/script/NativeDelegate.h>
 #include <fmt/core.h>
+#include <string_view>
 #include <cassert>
 
 using namespace xci::script;
@@ -34,11 +35,13 @@ void hello_fun(Stack& stack, void*, void*)
 }
 
 
-static std::string toupper_at(std::string word, uint32_t index)
+static std::string toupper_at(std::string_view word, int32_t index)
 {
-    if (index < word.size())
-        word[index] = toupper(word[index]);
-    return word;
+    std::string res(word);
+    auto i = unsigned(index);
+    if (i < word.size())
+        res[i] = toupper(res[i]);
+    return res;
 }
 
 
@@ -100,8 +103,8 @@ int main()
     auto result = interpreter.eval(R"(hello (toupper_at "world" 0))");
 
     // result contains value of the last expression in the script
-    assert(result->type() == Type::Int32);
-    assert(result->as<value::Int32>().value() == 42);
+    assert(result.type() == Type::Int32);
+    assert(result.get<int32_t>() == 42);
 
     return 0;
 }

@@ -61,11 +61,11 @@ std::string interpret(const string& input, bool import_std=false)
     UNSCOPED_INFO(input);
     ostringstream os;
     try {
-        auto result = interpreter.eval(input, [&os](const Value& invoked) {
+        auto result = interpreter.eval(input, [&os](const TypedValue& invoked) {
             os << invoked << ';';
         });
-        os << *result;
-        result->decref();
+        os << result;
+        result.decref();
     } catch (const ScriptError& e) {
         UNSCOPED_INFO("Exception: " << e.what() << "\n" << e.detail());
         throw;
@@ -183,6 +183,22 @@ TEST_CASE( "Operator precedence", "[script][parser]" )
 }
 
 
+TEST_CASE( "Value size on stack", "[script][machine]" )
+{
+    CHECK(Value().size_on_stack() == type_size_on_stack(Type::Void));
+    CHECK(Value(false).size_on_stack() == type_size_on_stack(Type::Bool));
+    CHECK(Value(0).size_on_stack() == type_size_on_stack(Type::Int32));
+    CHECK(Value(int64_t{0}).size_on_stack() == type_size_on_stack(Type::Int64));
+    CHECK(Value(0.0f).size_on_stack() == type_size_on_stack(Type::Float32));
+    CHECK(Value(0.0).size_on_stack() == type_size_on_stack(Type::Float64));
+    CHECK(Value("aaa"sv).size_on_stack() == type_size_on_stack(Type::String));
+    CHECK(Value(10, TypeInfo{Type::Int32}).size_on_stack() == type_size_on_stack(Type::List));
+    CHECK(Value(TypeInfo::Subtypes{}).size_on_stack() == type_size_on_stack(Type::Tuple));
+    CHECK(Value(Value::ClosureTag{}).size_on_stack() == type_size_on_stack(Type::Function));
+    CHECK(Value(Value::ModuleTag{}).size_on_stack() == type_size_on_stack(Type::Module));
+}
+
+
 TEST_CASE( "Stack grow", "[script][machine]" )
 {
     xci::script::Stack stack(4);
@@ -220,7 +236,7 @@ TEST_CASE( "Stack push/pull", "[script][machine]" )
     CHECK(stack.size() == 1+4);
     value::String str{"hello"};
     stack.push(str);
-    CHECK(stack.size() == 1+4 + sizeof(size_t) + sizeof(void*));
+    CHECK(stack.size() == 1+4 + sizeof(void*));
     CHECK(stack.n_values() == 3);
 
     CHECK(stack.pull<value::String>().value() == "hello");
@@ -484,7 +500,7 @@ TEST_CASE( "Native to Value mapping", "[script][native]" )
 {
     CHECK(native::ValueType<void>().type() == Type::Void);
     CHECK(native::ValueType<bool>{true}.value() == true);
-    CHECK(native::ValueType<uint8_t>(255).value() == 255);
+    CHECK(native::ValueType<byte>(255).value() == 255);
     CHECK(native::ValueType<char>('y').value() == 'y');
     CHECK(native::ValueType<int32_t>(-1).value() == -1);
     CHECK(native::ValueType<int64_t>(1ll << 60).value() == 1ll << 60);
@@ -512,8 +528,8 @@ TEST_CASE( "Native functions: free function", "[script][native]" )
         ((test_fun1a 10 4 2)     //  3
         + (test_fun1b 0 6 3))    // -2
     )");
-    CHECK(result->type() == Type::Int32);
-    CHECK(result->as<value::Int32>().value() == 1);
+    CHECK(result.type() == Type::Int32);
+    CHECK(result.get<int32_t>() == 1);
 }
 
 
@@ -536,6 +552,6 @@ TEST_CASE( "Native functions: lambda", "[script][native]" )
         ((add1 1 6) +          //  7
         (add2 3 4))            //  8  (+10 from state)
     )");
-    CHECK(result->type() == Type::Int32);
-    CHECK(result->as<value::Int32>().value() == 24);
+    CHECK(result.type() == Type::Int32);
+    CHECK(result.get<int32_t>() == 24);
 }

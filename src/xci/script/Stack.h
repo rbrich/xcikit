@@ -40,25 +40,24 @@ public:
     StackRel to_rel(StackAbs abs) const { return size() - abs; }
     StackAbs to_abs(StackRel rel) const { return size() - rel; }
 
-    void push(const Value& o);
+    void push(const Value& v);
+    void push(const TypedValue& v) { push(v.value()); }
 
-    std::unique_ptr<Value> pull(const TypeInfo& type_info);
+    Value pull(const TypeInfo& type_info);
+    TypedValue pull_typed(const TypeInfo& type_info) { return TypedValue(pull(type_info), type_info); }
 
-    template <typename T,
-              typename = std::enable_if_t<std::is_base_of<Value, T>::value>>
+    template <ValueT T>
     T pull() {
         // create empty value
         T v;
-        auto ti = v.type_info();
-        auto s = ti.size();
-        pop_type(ti, s);
+        pop_type(v);
         // read value from stack
-        v.read(&m_stack[m_stack_pointer]);
-        m_stack_pointer += s;
+        m_stack_pointer += v.read(&m_stack[m_stack_pointer]);
         return v;
     }
 
-    std::unique_ptr<Value> get(StackRel pos, const TypeInfo& ti) const;
+    Value get(StackRel pos, const TypeInfo& ti) const;
+    Value get(StackRel pos, Type type) const;  // cannot be used for Tuple
     void* get_ptr(StackRel pos) const;
     void clear_ptr(StackRel pos);
 
@@ -85,6 +84,7 @@ public:
     // Type tracking
 
     size_t n_values() const { return m_stack_types.size(); }
+    Type top_type() const { return m_stack_types.back(); }
 
     // ------------------------------------------------------------------------
 
@@ -109,16 +109,18 @@ public:
     size_t grow();
 
 private:
+    void push_type(const Value& v);
+
     // throw if the stack would underflow
     // or when the top isn't compatible with the type
-    void pop_type(const TypeInfo& ti, size_t s);
+    void pop_type(const Value& v);
 
 private:
     static constexpr size_t m_stack_max = 100*1024*1024;
     size_t m_stack_capacity = 1024;
     size_t m_stack_pointer = m_stack_capacity;
     std::unique_ptr<std::byte[]> m_stack = std::make_unique<std::byte[]>(m_stack_capacity);
-    std::vector<TypeInfo> m_stack_types;
+    std::vector<Type> m_stack_types;
     core::ChunkedStack<Frame> m_frame;
 };
 

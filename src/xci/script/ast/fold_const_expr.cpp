@@ -10,6 +10,7 @@
 #include <xci/script/Function.h>
 #include <xci/script/Machine.h>
 #include <range/v3/view/reverse.hpp>
+#include <optional>
 
 namespace xci::script {
 
@@ -17,6 +18,7 @@ using ranges::cpp20::views::reverse;
 using std::unique_ptr;
 using std::make_unique;
 using std::move;
+using std::optional;
 
 
 class FoldConstExprVisitor final: public ast::Visitor {
@@ -49,7 +51,7 @@ public:
             case Symbol::Nonlocal:
                 break;
             case Symbol::Value: {
-                m_const_value = symtab.module()->get_value(sym.index()).make_copy();
+                m_const_value = symtab.module()->get_value(sym.index());
                 return;
             }
             case Symbol::Parameter:
@@ -66,7 +68,7 @@ public:
                 auto& symmod = symtab.module() == nullptr ? module() : *symtab.module();
                 Function& fn = symmod.get_function(sym.index());
                 if (fn.is_compiled()) {
-                    m_const_value = make_unique<value::Closure>(fn);
+                    m_const_value = TypedValue(value::Closure(fn), TypeInfo{fn.signature_ptr()});
                     return;
                 }
                 break;
@@ -81,12 +83,13 @@ public:
     }
 
     void visit(ast::Call& v) override {
-        Values args;
+        TypedValues args;
         bool all_const = true;
         for (auto& arg : v.args) {
             apply_and_fold(arg);
             if (all_const && m_const_value) {
-                args.add(move(m_const_value));
+                args.add(move(*m_const_value));
+                m_const_value.reset();
             } else {
                 all_const = false;
             }
@@ -97,20 +100,21 @@ public:
             // prepare to run the function in compile-time
             // + sanity checks
             assert(m_const_value->type() == Type::Function);
-            auto& fnval = m_const_value->as<value::Closure>();
-            assert(!*fnval.heapslot());  // no values in closure
-            auto& fn = fnval.function();
+            auto& fnval = m_const_value->value().get<ClosureV>();
+            assert(!fnval.slot);  // no values in closure
+            auto& fn = *fnval.function();
             assert(!fn.has_nonlocals());
             assert(fn.parameters().size() == args.size());
             // push args on stack
             for (const auto& arg : reverse(args))
-                m_machine.stack().push(*arg);
+                m_machine.stack().push(arg);
             // run it
             bool invoked = false;
-            m_machine.call(fn, [&invoked](const Value&){ invoked = true; });
+            m_machine.call(fn, [&invoked](const TypedValue&){ invoked = true; });
             if (!invoked) {
-                assert(m_machine.stack().size() == fn.effective_return_type().size());
-                m_const_value = m_machine.stack().pull(fn.effective_return_type());
+                auto reti = fn.effective_return_type();
+                assert(m_machine.stack().size() == reti.size());
+                m_const_value = m_machine.stack().pull_typed(reti);
             } else {
                 // backoff - can't process invocations in compile-time
                 m_const_value.reset();
@@ -139,8 +143,8 @@ public:
         }
 
         // collapse const if-expr
-        assert(m_const_value->is_bool());
-        if (m_const_value->as<value::Bool>().value()) {
+        assert(m_const_value->value().is_bool());
+        if (m_const_value->get<bool>()) {
             apply_and_fold(v.then_expr);
             m_collapsed = move(v.then_expr);
         } else {
@@ -166,7 +170,7 @@ public:
     }
 
     void visit(ast::Literal& v) override {
-        m_const_value = v.value->make_copy();
+        m_const_value = v.value;
     }
 
     void visit(ast::Bracketed& v) override {
@@ -187,7 +191,7 @@ public:
         v.expression->apply(*this);
         // cast to Void?
         if (v.type_info.is_void()) {
-            m_const_value = Value::create(TypeInfo{Type::Void});
+            m_const_value = TypedValue(value::Void{});
             return;
         }
         if (!m_const_value)
@@ -198,10 +202,10 @@ public:
             return;
         }
         // FIXME: evaluate the actual (possibly user-defined) cast function
-        auto cast_result = Value::create(v.type_info);
-        if (cast_result->cast_from(*m_const_value)) {
+        auto cast_result = create_value(v.type_info);
+        if (cast_result.cast_from(m_const_value->value())) {
             // fold the cast into value
-            m_const_value = move(cast_result);
+            m_const_value = TypedValue(move(cast_result), v.type_info);
             return;
         }
         m_const_value.reset();
@@ -231,7 +235,7 @@ private:
 
     Function& m_function;
     Machine m_machine;  // VM for evaluation of constant functions
-    unique_ptr<Value> m_const_value;
+    optional<TypedValue> m_const_value;
     unique_ptr<ast::Expression> m_collapsed;
 };
 

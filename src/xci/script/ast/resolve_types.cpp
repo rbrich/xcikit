@@ -120,7 +120,7 @@ public:
     }
 
     void visit(ast::Literal& v) override {
-        m_value_type = v.value->type_info();
+        m_value_type = v.value.type_info();
     }
 
     void visit(ast::Bracketed& v) override {

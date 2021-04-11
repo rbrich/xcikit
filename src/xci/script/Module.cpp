@@ -16,7 +16,7 @@ using std::move;
 Module::~Module()
 {
     for (const auto& val : m_values) {
-        val->decref();
+        val.decref();
     }
 }
 
@@ -50,7 +50,7 @@ Index Module::add_function(std::unique_ptr<Function>&& fn)
 }
 
 
-Index Module::add_value(std::unique_ptr<Value>&& value)
+Index Module::add_value(TypedValue&& value)
 {
     m_values.add(move(value));
     return m_values.size() - 1;
