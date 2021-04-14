@@ -23,6 +23,7 @@ add_library(xci-script
     Value.cpp
     Parser.cpp
     Stack.cpp
+    Stream.cpp
     SymbolTable.cpp
     TypeInfo.cpp
     dump.cpp)

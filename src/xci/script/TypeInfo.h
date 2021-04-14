@@ -39,6 +39,7 @@ enum class Type : uint8_t {
     //Variant,    // discriminated union (A|B|C)
     Function,   // function type, has signature (parameters, return type) and code
     Module,     // module type, carries global names, constants, functions
+    Stream,     // I/O stream
 
     // Custom types
     Named,    // type NewType = ... (all other types are anonymous)

@@ -45,6 +45,7 @@ size_t type_size_on_stack(Type type)
         case Type::String:
         case Type::List:
         case Type::Function:
+        case Type::Stream:
         case Type::Module:
             return sizeof(void*);
     }

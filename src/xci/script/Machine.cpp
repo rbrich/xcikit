@@ -7,6 +7,7 @@
 #include "Machine.h"
 #include "Builtin.h"
 #include "Value.h"
+#include "Stream.h"
 #include "Error.h"
 #include "dump.h"
 
@@ -24,7 +25,7 @@ using fmt::format;
 
 Machine::Machine()
 {
-    m_stack.push_streams({std::cin, std::cout, std::cerr});
+    m_stack.push_streams({Stream::c_stdin(), Stream::c_stdout(), Stream::c_stderr()});
 }
 
 

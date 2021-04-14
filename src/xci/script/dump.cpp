@@ -778,6 +778,7 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
         }
         case Type::Function:    return os << v.signature();
         case Type::Module:      return os << "Module";
+        case Type::Stream:      return os << "Stream";
         case Type::Named:       return os << v.name();
     }
     UNREACHABLE;

@@ -554,7 +554,7 @@ void BuiltinModule::add_types()
 static void write_bytes(Stack& stack, void*, void*)
 {
     auto arg = stack.pull<value::Bytes>();
-    stack.streams().out << std::string_view{(const char*) arg.value().data(), arg.value().size()};
+    stack.streams().out.write(arg.value());
     arg.decref();
 }
 
@@ -562,7 +562,7 @@ static void write_bytes(Stack& stack, void*, void*)
 static void write_string(Stack& stack, void*, void*)
 {
     auto arg = stack.pull<value::String>();
-    stack.streams().out << arg.value();
+    stack.streams().out.write(arg.value());
     arg.decref();
 }
 
@@ -573,12 +573,30 @@ static void flush_out(Stack& stack, void*, void*)
 }
 
 
+static void write_error(Stack& stack, void*, void*)
+{
+    auto arg = stack.pull<value::String>();
+    stack.streams().err.write(arg.value());
+    arg.decref();
+}
+
+
+static void read_string(Stack& stack, void*, void*)
+{
+    auto arg = stack.pull<value::Int32>();
+    auto s = stack.streams().in.read(arg.value());
+    stack.push(value::String(s));
+}
+
+
 void BuiltinModule::add_io_functions()
 {
     auto ps = add_native_function("write", {TypeInfo{Type::String}}, TypeInfo{Type::Void}, write_string);
     auto pb = add_native_function("write", {TypeInfo::bytes()}, TypeInfo{Type::Void}, write_bytes);
     ps->set_next(pb);
     add_native_function("flush", {}, TypeInfo{Type::Void}, flush_out);
+    add_native_function("error", {TypeInfo{Type::String}}, TypeInfo{Type::Void}, write_error);
+    add_native_function("read", {TypeInfo{Type::Int32}}, TypeInfo{Type::String}, read_string);
 }
 
 

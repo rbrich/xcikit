@@ -59,6 +59,7 @@ Value create_value(Type type)
         case Type::List: return value::List{};
         case Type::Tuple: return value::Tuple{};
         case Type::Function: return value::Closure{};
+        case Type::Stream: return value::Stream{};
         case Type::Module: return value::Module{};
         case Type::Named: assert(!"Cannot create empty Value of Named type"); break;
     }
@@ -203,7 +204,7 @@ void Value::apply(value::Visitor& visitor) const
         using T = std::decay_t<decltype(v)>;
         if constexpr (std::is_same_v<T, std::monostate>)
             visitor.visit();  // Void
-        else if constexpr (std::is_same_v<T, StringV>)
+        else if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, StreamV>)
             visitor.visit(v.value());
         else
             visitor.visit(v);
@@ -226,6 +227,7 @@ Type Value::type() const
             [](const ListV&) { return Type::List; },
             [](const TupleV&) { return Type::Tuple; },
             [](const ClosureV&) { return Type::Function; },
+            [](const StreamV&) { return Type::Stream; },
             [](const script::Module*) { return Type::Module; },
     }, m_value);
 }
@@ -413,6 +415,19 @@ value::Tuple ClosureV::closure() const
 }
 
 
+StreamV::StreamV(const Stream& v) : slot(sizeof(Stream*))
+{
+    const Stream* ptr = &v;
+    std::memcpy(slot.data(), &ptr, sizeof(Stream*));
+}
+
+
+const Stream& StreamV::value() const
+{
+    return *reinterpret_cast<Stream*>(bit_read<intptr_t>(slot.data()));
+}
+
+
 size_t Values::size_on_stack() const
 {
     return std::accumulate(m_items.begin(), m_items.end(), size_t(0),
@@ -517,6 +532,7 @@ public:
         }
     }
     void visit(const script::Module* v) override { fmt::print(os, "<module:{:x}>", uintptr_t(v)); }
+    void visit(const script::Stream& v) override { fmt::print(os, "<stream:{:x}>", uintptr_t(&v)); }
 private:
     std::ostream& os;
     const TypeInfo& type_info;

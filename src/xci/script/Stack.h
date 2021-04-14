@@ -8,6 +8,7 @@
 #define XCI_SCRIPT_STACK_H
 
 #include "Value.h"
+#include "Stream.h"
 #include <xci/core/container/ChunkedStack.h>
 #include <xci/compat/bit.h>
 #include <cstddef>  // byte
@@ -107,9 +108,9 @@ public:
     // ------------------------------------------------------------------------
 
     struct Streams {
-        std::istream& in;
-        std::ostream& out;
-        std::ostream& err;
+        Stream& in;
+        Stream& out;
+        Stream& err;
     };
 
     void push_streams(Streams&& streams) { m_streams.push(std::move(streams)); }

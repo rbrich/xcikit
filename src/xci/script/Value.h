@@ -9,6 +9,7 @@
 
 #include "TypeInfo.h"
 #include "Heap.h"
+#include "Stream.h"
 
 #include <ostream>
 #include <utility>
@@ -68,6 +69,7 @@ public:
     virtual void visit(const TupleV&) = 0;
     virtual void visit(const ClosureV&) = 0;
     virtual void visit(const script::Module*) = 0;
+    virtual void visit(const script::Stream&) = 0;
 };
 
 class PartialVisitor : public Visitor {
@@ -84,6 +86,7 @@ class PartialVisitor : public Visitor {
     void visit(const TupleV&) override {}
     void visit(const ClosureV&) override {}
     void visit(const script::Module*) override {}
+    void visit(const script::Stream&) override {}
 };
 
 } // namespace value
@@ -139,10 +142,22 @@ struct ClosureV {
 };
 
 
+struct StreamV {
+    explicit StreamV() : StreamV(Stream::null()) {}
+    explicit StreamV(const Stream& v);
+
+    bool operator ==(const StreamV& rhs) const { return slot.slot() == rhs.slot.slot(); }  // same slot - cannot compare content without elem_type
+    const Stream& value() const;
+
+    HeapSlot slot;
+};
+
+
 class Value {
 public:
     struct ListTag {};
     struct ClosureTag {};
+    struct StreamTag {};
     struct ModuleTag {};
 
     Value() = default;  // Void
@@ -161,6 +176,8 @@ public:
     explicit Value(ClosureTag) : m_value(ClosureV{}) {}  // Closure
     explicit Value(const Function& fn) : m_value(ClosureV{fn}) {}  // Closure
     explicit Value(const Function& fn, Values&& values) : m_value(ClosureV{fn, move(values)}) {}  // Closure
+    explicit Value(StreamTag) : m_value(StreamV{}) {}  // Stream
+    explicit Value(script::Stream& v) : m_value(StreamV{v}) {}  // Stream
     explicit Value(ModuleTag) : m_value((script::Module*) nullptr) {}  // Module
     explicit Value(script::Module& v) : m_value(&v) {}  // Module
 
@@ -205,7 +222,7 @@ protected:
     using ValueVariant = std::variant<
             std::monostate,
             bool, byte, char32_t, int32_t, int64_t, float, double,
-            StringV, ListV, TupleV, ClosureV,
+            StringV, ListV, TupleV, ClosureV, StreamV,
             script::Module*
         >;
     ValueVariant m_value;
@@ -488,12 +505,18 @@ public:
 };
 
 
+class Stream: public Value {
+public:
+    Stream() : Value(Value::StreamTag{}) {}
+    explicit Stream(script::Stream& v) : Value(v) {}
+};
+
+
 class Module: public Value {
 public:
     Module() : Value(Value::ModuleTag{}) {}
     explicit Module(script::Module& v) : Value(v) {}
 };
-
 
 } // namespace value
 
