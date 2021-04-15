@@ -31,7 +31,11 @@ void HeapSlot::decref() const
     if (m_slot == nullptr)
         return;
     const auto refs = bit_read<uint32_t>(m_slot) - 1;
-    memcpy(m_slot, &refs, sizeof(refs));
+    if (refs == 0) {
+        delete[] m_slot;
+    } else {
+        memcpy(m_slot, &refs, sizeof(refs));
+    }
 }
 
 
@@ -40,19 +44,6 @@ uint32_t HeapSlot::refcount() const
     if (m_slot == nullptr)
         return 0;
     return bit_read<uint32_t>(m_slot);
-}
-
-
-void HeapSlot::gc()
-{
-    if (m_slot == nullptr)
-        return;
-    const auto refs = bit_read<uint32_t>(m_slot);
-    if (refs == 0) {
-        delete[] m_slot;
-        m_slot = nullptr;
-        return;
-    }
 }
 
 

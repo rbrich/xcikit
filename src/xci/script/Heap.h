@@ -26,8 +26,6 @@ public:
     explicit HeapSlot(std::byte* slot) : m_slot(slot) {}
     // create new slot with refcount = 1
     explicit HeapSlot(size_t size);
-    // free the object only when refcount = 0
-    ~HeapSlot() { gc(); }
     // copy existing slot
     HeapSlot(const HeapSlot& other) = default;
     HeapSlot(HeapSlot&& other) noexcept : m_slot(other.m_slot) { other.m_slot = nullptr; }
@@ -38,9 +36,8 @@ public:
     void read(const std::byte* buffer) { std::memcpy(&m_slot, buffer, sizeof(m_slot)); }
 
     void incref() const;
-    void decref() const;
+    void decref() const;  // free the object when refcount = 0
     uint32_t refcount() const;
-    void gc();  // delete slot if refs=0
 
     std::byte* data() { return m_slot == nullptr ? nullptr : m_slot + 4; }
     const std::byte* data() const { return m_slot == nullptr ? nullptr : m_slot + 4; }
