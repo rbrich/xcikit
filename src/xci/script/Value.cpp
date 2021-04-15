@@ -60,6 +60,7 @@ Value create_value(Type type)
         case Type::Tuple: return value::Tuple{};
         case Type::Function: return value::Closure{};
         case Type::Module: return value::Module{};
+        case Type::Named: assert(!"Cannot create empty Value of Named type"); break;
     }
     return {};
 }

@@ -535,17 +535,17 @@ void BuiltinModule::add_intrinsics()
 
 void BuiltinModule::add_types()
 {
-    symtab().add({"Void", Symbol::TypeName, Index(Type::Void)});
-    symtab().add({"Bool", Symbol::TypeName, Index(Type::Bool)});
-    symtab().add({"Byte", Symbol::TypeName, Index(Type::Byte)});
-    symtab().add({"Char", Symbol::TypeName, Index(Type::Char)});
-    symtab().add({"Int", Symbol::TypeName, Index(Type::Int32)});
-    symtab().add({"Int32", Symbol::TypeName, Index(Type::Int32)});
-    symtab().add({"Int64", Symbol::TypeName, Index(Type::Int64)});
-    symtab().add({"Float", Symbol::TypeName, Index(Type::Float32)});
-    symtab().add({"Float32", Symbol::TypeName, Index(Type::Float32)});
-    symtab().add({"Float64", Symbol::TypeName, Index(Type::Float64)});
-    symtab().add({"String", Symbol::TypeName, Index(Type::String)});
+    symtab().add({"Void", Symbol::TypeName, add_type(Type::Void)});
+    symtab().add({"Bool", Symbol::TypeName, add_type(Type::Bool)});
+    symtab().add({"Byte", Symbol::TypeName, add_type(Type::Byte)});
+    symtab().add({"Char", Symbol::TypeName, add_type(Type::Char)});
+    symtab().add({"Int", Symbol::TypeName, add_type(Type::Int32)});
+    symtab().add({"Int32", Symbol::TypeName, add_type(Type::Int32)});
+    symtab().add({"Int64", Symbol::TypeName, add_type(Type::Int64)});
+    symtab().add({"Float", Symbol::TypeName, add_type(Type::Float32)});
+    symtab().add({"Float32", Symbol::TypeName, add_type(Type::Float32)});
+    symtab().add({"Float64", Symbol::TypeName, add_type(Type::Float64)});
+    symtab().add({"String", Symbol::TypeName, add_type(Type::String)});
 }
 
 

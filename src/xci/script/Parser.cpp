@@ -84,10 +84,11 @@ struct KeywordThen: TAO_PEGTL_KEYWORD("then") {};
 struct KeywordElse: TAO_PEGTL_KEYWORD("else") {};
 struct KeywordClass: TAO_PEGTL_KEYWORD("class") {};
 struct KeywordInstance: TAO_PEGTL_KEYWORD("instance") {};
+struct KeywordType: TAO_PEGTL_KEYWORD("type") {};
 struct KeywordWith: TAO_PEGTL_KEYWORD("with") {};
 struct KeywordMatch: TAO_PEGTL_KEYWORD("match") {};
 struct Keyword: sor<KeywordFun, KeywordIf, KeywordThen, KeywordElse,
-        KeywordClass, KeywordInstance, KeywordWith, KeywordMatch> {};
+        KeywordClass, KeywordInstance, KeywordType, KeywordWith, KeywordMatch> {};
 
 // Literals
 struct BinDigit : one< '0', '1' > {};
@@ -154,7 +155,8 @@ struct DefClass: if_must< KeywordClass, NSC, TypeName, RS, SC, plus<TypeName, SC
         one<'{'>, NSC, sor< one<'}'>, must<SepList<ClassDefinition>, NSC, one<'}'>> > > {};
 struct DefInstance: if_must< KeywordInstance, NSC, TypeName, RS, SC, plus<Type, SC>, opt<TypeContext>, NSC,
         one<'{'>, NSC, sor< one<'}'>, must<SepList<Definition>, NSC, one<'}'>> > > {};
-struct TopLevelStatement: sor<DefClass, DefInstance, Statement> {};
+struct DefType: if_must< KeywordType, NSC, TypeName, NSC, one<'='>, not_at<one<'='>>, NSC, UnsafeType > {};
+struct TopLevelStatement: sor<DefClass, DefInstance, DefType, Statement> {};
 
 // Source module
 struct Module: must<NSC, opt<SepList<TopLevelStatement>, NSC>, eof> {};
@@ -577,6 +579,11 @@ struct Action<TypeName> {
     static void apply(const Input &in, ast::Instance& inst) {
         inst.class_name.name = in.string();
     }
+
+    template<typename Input>
+    static void apply(const Input &in, ast::TypeDef& def) {
+        def.type_name.name = in.string();
+    }
 };
 
 
@@ -661,6 +668,11 @@ struct Action<UnsafeType> : change_states< std::unique_ptr<ast::Type> >  {
     static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::Variable& var) {
         var.type = std::move(type);
     }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::TypeDef& def) {
+        def.type = std::move(type);
+    }
 };
 
 
@@ -715,6 +727,15 @@ struct Action<DefInstance> : change_states< ast::Instance > {
     template<typename Input>
     static void success(const Input &in, ast::Instance& inst, ast::Module& mod) {
         mod.body.statements.emplace_back(std::make_unique<ast::Instance>(std::move(inst)));
+    }
+};
+
+
+template<>
+struct Action<DefType> : change_states< ast::TypeDef > {
+    template<typename Input>
+    static void success(const Input &in, ast::TypeDef& def, ast::Module& mod) {
+        mod.body.statements.emplace_back(std::make_unique<ast::TypeDef>(std::move(def)));
     }
 };
 

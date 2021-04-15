@@ -48,6 +48,7 @@ std::ostream& operator<<(std::ostream& os, const Invocation& v);
 std::ostream& operator<<(std::ostream& os, const Return& v);
 std::ostream& operator<<(std::ostream& os, const Class& v);
 std::ostream& operator<<(std::ostream& os, const Instance& v);
+std::ostream& operator<<(std::ostream& os, const TypeDef& v);
 std::ostream& operator<<(std::ostream& os, const Block& v);
 std::ostream& operator<<(std::ostream& os, const Module& v);
 } // namespace ast

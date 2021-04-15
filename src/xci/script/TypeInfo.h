@@ -23,7 +23,7 @@ enum class Type : uint8_t {
     Unknown,    // type not known at this time (might be inferred or generic)
     Void,       // void type - has no value
 
-    // Plain types
+    // Primitive types
     Bool,
     Byte,       // uint8
     Char,       // Unicode codepoint (char32)
@@ -36,9 +36,13 @@ enum class Type : uint8_t {
     String,     // special kind of list, behaves like [Char] but is compressed (UTF-8)
     List,       // list of same element type (elem type is part of type, size is part of value)
     Tuple,      // tuple of different value types
+    //Variant,    // discriminated union (A|B|C)
     Function,   // function type, has signature (parameters, return type) and code
     Module,     // module type, carries global names, constants, functions
-    //Data,       // user defined data type
+
+    // Custom types
+    Named,    // type NewType = ... (all other types are anonymous)
+    //Struct,   // a tuple with named members, basically a C-like struct
 };
 
 
@@ -52,6 +56,8 @@ size_t type_size_on_stack(Type type);
 
 
 struct Signature;
+struct NamedType;
+
 
 class TypeInfo {
 public:
@@ -59,7 +65,7 @@ public:
     TypeInfo() : m_type(Type::Unknown), m_info(Var(0)) {}
     explicit TypeInfo(uint8_t var) : m_type(Type::Unknown), m_info(var) {}
     // Plain types
-    explicit TypeInfo(Type type);
+    TypeInfo(Type type);
     // Function
     explicit TypeInfo(std::shared_ptr<Signature> signature)
         : m_type(Type::Function), m_info(std::move(signature)) {}
@@ -95,6 +101,7 @@ public:
     using Var = uint8_t;  // for unknown type, specifies which type variable this represents (counted from 1, none = 0)
     using Subtypes = std::vector<TypeInfo>;
     using SignaturePtr = std::shared_ptr<Signature>;
+    using NamedTypePtr = std::shared_ptr<NamedType>;
 
     Var generic_var() const;  // type = Unknown
     const TypeInfo& elem_type() const;  // type = List (Subtypes[0])
@@ -102,10 +109,13 @@ public:
     const SignaturePtr& signature_ptr() const;  // type = Function
     const Signature& signature() const { return *signature_ptr(); }
     Signature& signature() { return *signature_ptr(); }
+    const NamedTypePtr& named_type_ptr() const;   // type = Named
+    const NamedType& named_type() const { return *named_type_ptr(); }
+    std::string name() const;
 
 private:
     Type m_type { Type::Unknown };
-    std::variant<std::monostate, Var, Subtypes, SignaturePtr> m_info;
+    std::variant<std::monostate, Var, Subtypes, SignaturePtr, NamedTypePtr> m_info;
 };
 
 
@@ -125,13 +135,17 @@ struct Signature {
     // Check return type matches and set it to concrete type if it's generic.
     void resolve_return_type(const TypeInfo& t);
 
-    bool operator==(const Signature& rhs) const {
-        return params == rhs.params
-            && partial == rhs.partial
-            && nonlocals == rhs.nonlocals
-            && return_type == rhs.return_type;
-    }
-    bool operator!=(const Signature& rhs) const { return !(rhs == *this); }
+    bool operator==(const Signature& rhs) const = default;
+    bool operator!=(const Signature& rhs) const = default;
+};
+
+
+struct NamedType {
+    std::string name;
+    TypeInfo type_info;
+
+    bool operator==(const NamedType& rhs) const = default;
+    bool operator!=(const NamedType& rhs) const = default;
 };
 
 

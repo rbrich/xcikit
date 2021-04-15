@@ -96,6 +96,7 @@ public:
 
     void visit(ast::Class&) override {}
     void visit(ast::Instance&) override {}
+    void visit(ast::TypeDef&) override {}
 
     void visit(ast::TypeName&) final {}
     void visit(ast::FunctionType&) final {}

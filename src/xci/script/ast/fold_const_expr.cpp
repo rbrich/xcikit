@@ -213,6 +213,7 @@ public:
 
     void visit(ast::Class& v) override { m_const_value.reset(); }
     void visit(ast::Instance& v) override { m_const_value.reset(); }
+    void visit(ast::TypeDef& v) override { m_const_value.reset(); }
 
     void visit(ast::TypeName& t) final {}
     void visit(ast::FunctionType& t) final {}

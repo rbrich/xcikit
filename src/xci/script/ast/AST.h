@@ -34,6 +34,7 @@ struct Invocation;
 struct Return;
 struct Class;
 struct Instance;
+struct TypeDef;
 
 struct Cast;
 struct Literal;
@@ -59,6 +60,7 @@ public:
     virtual void visit(const Return&) = 0;
     virtual void visit(const Class&) = 0;
     virtual void visit(const Instance&) = 0;
+    virtual void visit(const TypeDef&) = 0;
     // expression
     virtual void visit(const Literal&) = 0;
     virtual void visit(const Bracketed&) = 0;
@@ -84,6 +86,7 @@ public:
     virtual void visit(Return&) = 0;
     virtual void visit(Class&) = 0;
     virtual void visit(Instance&) = 0;
+    virtual void visit(TypeDef&) = 0;
     // expression
     virtual void visit(Literal&) = 0;
     virtual void visit(Bracketed&) = 0;
@@ -126,12 +129,13 @@ public:
 // Inherit this and add `using TypeVisitor::visit;` to skip other visits
 class TypeVisitor: public Visitor {
 public:
-    // statement
+    // skip statement visits
     void visit(Definition&) final {}
     void visit(Invocation&) final {}
     void visit(Return&) final {}
     void visit(Class&) final {}
     void visit(Instance&) final {}
+    void visit(TypeDef&) final {}
     // skip expression visits
     void visit(Literal&) final {}
     void visit(Tuple&) final {}
@@ -495,6 +499,16 @@ struct Instance: public Statement {
     // resolved:
     Index index = no_index;
     SymbolTable* symtab = nullptr;
+};
+
+
+struct TypeDef: public Statement {
+    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
+    void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Statement> make_copy() const override;
+
+    TypeName type_name;
+    std::unique_ptr<Type> type;
 };
 
 

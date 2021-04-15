@@ -30,6 +30,7 @@ size_t type_size_on_stack(Type type)
         case Type::Unknown:
         case Type::Void:
         case Type::Tuple:
+        case Type::Named:
             return 0;
         case Type::Bool:
         case Type::Byte:
@@ -147,6 +148,18 @@ TypeInfo TypeInfo::effective_type() const
 }
 
 
+bool TypeInfo::operator==(const TypeInfo& rhs) const
+{
+    if (m_type == Type::Unknown || rhs.type() == Type::Unknown)
+        return true;  // unknown type matches all other types
+    if (m_type != rhs.type())
+        return false;
+    if (m_type == Type::Function)
+        return signature() == rhs.signature();  // compare content, not pointer
+    return m_info == rhs.m_info;
+}
+
+
 auto TypeInfo::generic_var() const -> Var
 {
     assert(m_type == Type::Unknown);
@@ -179,15 +192,17 @@ auto TypeInfo::signature_ptr() const -> const SignaturePtr&
 }
 
 
-bool TypeInfo::operator==(const TypeInfo& rhs) const
+const TypeInfo::NamedTypePtr& TypeInfo::named_type_ptr() const
 {
-    if (m_type == Type::Unknown || rhs.type() == Type::Unknown)
-        return true;  // unknown type matches all other types
-    if (m_type != rhs.type())
-        return false;
-    if (m_type == Type::Function)
-        return signature() == rhs.signature();  // compare content, not pointer
-    return m_info == rhs.m_info;
+    assert(m_type == Type::Named);
+    assert(std::holds_alternative<NamedTypePtr>(m_info));
+    return std::get<NamedTypePtr>(m_info);
+}
+
+
+std::string TypeInfo::name() const
+{
+    return named_type().name;
 }
 
 

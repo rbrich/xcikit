@@ -271,7 +271,6 @@ public:
                 break;
             case Symbol::TypeName:
             case Symbol::TypeVar:
-                // TODO
                 break;
             case Symbol::Unresolved:
                 UNREACHABLE;
@@ -408,15 +407,13 @@ public:
         }
     }
 
-    void visit(ast::Class& v) override {
-        // TODO
-    }
-
     void visit(ast::Instance& v) override {
         for (auto& dfn : v.defs)
             dfn.apply(*this);
     }
 
+    void visit(ast::Class& v) override {}
+    void visit(ast::TypeDef& v) override {}
     void visit(ast::TypeName& t) final {}
     void visit(ast::FunctionType& t) final {}
     void visit(ast::ListType& t) final {}

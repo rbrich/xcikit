@@ -449,12 +449,13 @@ Types must begin with uppercase letter (this is enforced part of the syntax):
 
 [source,fire]
 ----
-MyType = Int
-MyTuple = (String, Int)
-MyRecord = (String name, Int age)    // just a tuple with named fields
-MyBool = false | true
-MyVariant = int Int | string String | void   // discriminated variant type
-MyOptional = some v | void
+type MyType = Int
+type MyTuple = (String, Int)
+type MyStruct = (String name, Int age)    // just a tuple with named fields
+type MyBool = false | true  // enum
+type MyUnion = Int | String | Void   // tagged union
+type MyVariant = int Int | string String | none   // tagged union with explicit names
+type MyOptional = some T | void
 ----
 
 Function types:
@@ -747,6 +748,7 @@ match
 module
 then
 try
+type
 with
 ----
 

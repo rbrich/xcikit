@@ -69,6 +69,7 @@ public:
     void visit(const Return& v) override { m_os << v; }
     void visit(const Class& v) override { m_os << v; }
     void visit(const Instance& v) override { m_os << v; }
+    void visit(const TypeDef& v) override { m_os << v; }
     void visit(const Literal& v) override { m_os << v; }
     void visit(const Bracketed& v) override { m_os << v; }
     void visit(const Tuple& v) override { m_os << v; }
@@ -496,6 +497,20 @@ std::ostream& operator<<(std::ostream& os, const Instance& v)
     }
 }
 
+std::ostream& operator<<(std::ostream& os, const TypeDef& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << "TypeDef" << endl;
+        os << more_indent
+           << put_indent << v.type_name << endl
+           << put_indent << *v.type
+           << less_indent;
+        return os;
+    } else {
+        return os << "type " << v.type_name << " = " << *v.type;
+    }
+}
+
 std::ostream& operator<<(std::ostream& os, const Block& v)
 {
     DumpVisitor visitor(os);
@@ -728,6 +743,7 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
         }
         case Type::Function:    return os << v.signature();
         case Type::Module:      return os << "Module";
+        case Type::Named:       return os << v.name();
     }
     UNREACHABLE;
 }

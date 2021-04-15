@@ -119,6 +119,12 @@ public:
         m_instance = nullptr;
     }
 
+    void visit(ast::TypeDef& v) override {
+        v.type->apply(*this);
+        Index index = v.type_name.symbol->index();
+        module().set_type(index, move(m_type_info));
+    }
+
     void visit(ast::Literal& v) override {
         m_value_type = v.value.type_info();
     }
@@ -584,7 +590,7 @@ public:
     void visit(ast::TypeName& t) final {
         switch (t.symbol->type()) {
             case Symbol::TypeName:
-                m_type_info = TypeInfo{ Type(t.symbol->index()) };
+                m_type_info = t.symbol.symtab()->module()->get_type(t.symbol->index());
                 break;
             case Symbol::TypeVar:
                 m_type_info = TypeInfo{ TypeInfo::Var(t.symbol->index()) };
