@@ -107,7 +107,7 @@ TEST_CASE( "Optional semicolon", "[script][parser]" )
     CHECK(parse("add 1 \\\n 2") == parse("add 1 2"));  // newline can be escaped
     CHECK(parse("(add 1 \\\n 2)") == parse("(add 1 2)"));
     REQUIRE_THROWS_WITH(parse("a=1;;"),  // empty statement is not allowed, semicolon is only used as a separator
-            Catch::Matchers::StartsWith("parse error: <input>:1:5: invalid syntax"));
+            Catch::Matchers::StartsWith("parse error: invalid syntax"));
 }
 
 

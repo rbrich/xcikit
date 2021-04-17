@@ -12,12 +12,13 @@
 namespace xci::script {
 
 
+// Source location
 // Offset into source code, used to print error context
 // Possibly better name: SourceLocation, SourceContext
 struct SourceInfo {
     // both line_number and column start at 1
-    size_t line_number = 0;
-    size_t column = 0;
+    unsigned line_number = 0;
+    unsigned column = 0;
     const char* line_begin = nullptr;
     const char* line_end = nullptr;
     const char* source = nullptr;

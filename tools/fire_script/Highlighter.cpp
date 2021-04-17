@@ -76,7 +76,8 @@ struct SpecialVariable: seq< one<'_'>, star<digit>, not_at<identifier_other> > {
 struct KeywordFun: TAO_PEGTL_KEYWORD("fun") {};
 struct KeywordClass: TAO_PEGTL_KEYWORD("class") {};
 struct KeywordInstance: TAO_PEGTL_KEYWORD("instance") {};
-struct FunnyKeyword: sor<KeywordFun, KeywordClass, KeywordInstance> {};
+struct KeywordType: TAO_PEGTL_KEYWORD("type") {};
+struct FunnyKeyword: sor<KeywordFun, KeywordClass, KeywordInstance, KeywordType> {};
 
 struct KeywordIf: TAO_PEGTL_KEYWORD("if") {};
 struct KeywordThen: TAO_PEGTL_KEYWORD("then") {};

@@ -100,7 +100,7 @@ public:
         // lookup class
         auto sym_class = resolve_symbol_of_type(v.class_name.name, Symbol::Class);
         if (!sym_class)
-            throw UndefinedTypeName(v.class_name.name);
+            throw UndefinedTypeName(v.class_name.name, v.class_name.source_info);
 
         // find next instance of the class (if any)
         auto next = resolve_symbol_of_type(v.class_name.name, Symbol::Instance);
@@ -257,10 +257,10 @@ public:
     void visit(ast::TypeName& t) final {
         if (t.name.empty())
             //  TypeInfo(Type::Unknown); ?
-            throw UndefinedTypeName(t.name);
+            throw UndefinedTypeName(t.name, t.source_info);
         t.symbol = resolve_symbol(t.name);
         if (!t.symbol)
-            throw UndefinedTypeName(t.name);
+            throw UndefinedTypeName(t.name, t.source_info);
     }
 
     void visit(ast::FunctionType& t) final {

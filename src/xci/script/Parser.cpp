@@ -576,6 +576,7 @@ struct Action<TypeName> {
     template<typename Input>
     static void apply(const Input &in, std::unique_ptr<ast::Type>& type) {
         type = std::make_unique<ast::TypeName>(in.string());
+        type->source_info.load(in.input(), in.position());
     }
 
     template<typename Input>
@@ -614,6 +615,11 @@ struct Action<TypeName> {
 template<>
 struct Action<ListType> : change_states< ast::ListType > {
     template<typename Input>
+    static void apply(const Input &in, ast::ListType& ltype) {
+        ltype.source_info.load(in.input(), in.position());
+    }
+
+    template<typename Input>
     static void success(const Input &in, ast::ListType& ltype, std::unique_ptr<ast::Type>& type) {
         type = std::make_unique<ast::ListType>(std::move(ltype));
     }
@@ -622,6 +628,11 @@ struct Action<ListType> : change_states< ast::ListType > {
 
 template<>
 struct Action<TupleType> : change_states< ast::TupleType > {
+    template<typename Input>
+    static void apply(const Input &in, ast::TupleType& ltype) {
+        ltype.source_info.load(in.input(), in.position());
+    }
+
     template<typename Input>
     static void success(const Input &in, ast::TupleType& ltype, std::unique_ptr<ast::Type>& type) {
         type = std::make_unique<ast::TupleType>(std::move(ltype));
@@ -651,6 +662,11 @@ struct Action<TypeConstraint> : change_states< ast::TypeConstraint > {
 template<>
 struct Action<FunctionType> : change_states< ast::FunctionType > {
     template<typename Input>
+    static void apply(const Input &in, ast::FunctionType& ftype) {
+        ftype.source_info.load(in.input(), in.position());
+    }
+
+    template<typename Input>
     static void success(const Input &in, ast::FunctionType& ftype, std::unique_ptr<ast::Type>& type) {
         type = std::make_unique<ast::FunctionType>(std::move(ftype));
     }
@@ -659,6 +675,11 @@ struct Action<FunctionType> : change_states< ast::FunctionType > {
 
 template<>
 struct Action<Type> : change_states< std::unique_ptr<ast::Type> >  {
+    template<typename Input>
+    static void apply(const Input &in, std::unique_ptr<ast::Type>& type) {
+        type->source_info.load(in.input(), in.position());
+    }
+
     template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::FunctionType& ftype) {
         ftype.result_type = std::move(type);
@@ -692,6 +713,11 @@ struct Action<Type> : change_states< std::unique_ptr<ast::Type> >  {
 
 template<>
 struct Action<UnsafeType> : change_states< std::unique_ptr<ast::Type> >  {
+    template<typename Input>
+    static void apply(const Input &in, std::unique_ptr<ast::Type>& type) {
+        type->source_info.load(in.input(), in.position());
+    }
+
     template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Type>& inner, std::unique_ptr<ast::Type>& outer) {
         outer = std::move(inner);
@@ -1111,12 +1137,15 @@ struct Control : normal< Rule >
 };
 
 template<> const std::string Control<eof>::errmsg = "invalid syntax";
-template<> const std::string Control<Expression<SC>>::errmsg = "expected Expression";
-template<> const std::string Control<Expression<NSC>>::errmsg = "expected Expression";
+template<> const std::string Control<Expression<SC>>::errmsg = "expected expression";
+template<> const std::string Control<Expression<NSC>>::errmsg = "expected expression";
 template<> const std::string Control<DeclParams>::errmsg = "expected function parameter declaration";
 template<> const std::string Control<ExprInfixRight<SC>>::errmsg = "expected infix operator";
 template<> const std::string Control<ExprInfixRight<NSC>>::errmsg = "expected infix operator";
 template<> const std::string Control<Variable>::errmsg = "expected variable name";
+template<> const std::string Control<UnsafeType>::errmsg = "expected type";
+template<> const std::string Control<Type>::errmsg = "expected type";
+template<> const std::string Control<TypeName>::errmsg = "expected type name";
 
 // default message
 template< typename T >
@@ -1142,13 +1171,14 @@ void Parser::parse(std::string_view input, ast::Module& mod)
 
     try {
         if (!tao::pegtl::parse< Module, Action, Control >( in, mod ))
-            throw ParseError{"input not matched"};
+            throw ParseError("input not matched");
         mod.body.finish();
     } catch (tao::pegtl::parse_error& e) {
-        const auto p = e.positions().front();
-        throw ParseError{fmt::format("{}\n{}\n{:>{}}", e.what(), in.line_at(p), '^', p.column)};
+        SourceInfo si;
+        si.load(in, e.positions().front());
+        throw ParseError(e.message(), si);
     } catch( const std::exception& e ) {
-        throw ParseError{e.what()};
+        throw ParseError(e.what());
     }
 }
 

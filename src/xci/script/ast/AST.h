@@ -188,6 +188,8 @@ struct Type {
     virtual void apply(ConstVisitor& visitor) const = 0;
     virtual void apply(Visitor& visitor) = 0;
     virtual std::unique_ptr<ast::Type> make_copy() const = 0;
+
+    SourceInfo source_info;
 };
 
 
