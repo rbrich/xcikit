@@ -70,6 +70,7 @@ public:
     void visit(const Class& v) override { m_os << v; }
     void visit(const Instance& v) override { m_os << v; }
     void visit(const TypeDef& v) override { m_os << v; }
+    void visit(const TypeAlias& v) override { m_os << v; }
     void visit(const Literal& v) override { m_os << v; }
     void visit(const Bracketed& v) override { m_os << v; }
     void visit(const Tuple& v) override { m_os << v; }
@@ -171,7 +172,7 @@ std::ostream& operator<<(std::ostream& os, const Parameter& v)
         if (v.identifier)
             os << put_indent << v.identifier;
         if (v.type)
-            os << put_indent << *v.type << endl;
+            os << put_indent << *v.type;
         return os << less_indent;
     } else {
         if (v.identifier) {
@@ -214,7 +215,7 @@ std::ostream& operator<<(std::ostream& os, const TypeName& v)
                 os << " [" << v.symbol << "]";
             }
         }
-        return os;
+        return os << endl;
     } else {
         return os << v.name;
     }
@@ -228,9 +229,9 @@ std::ostream& operator<<(std::ostream& os, const FunctionType& v)
         for (const auto& prm : v.params)
             os << put_indent << prm;
         if (v.result_type)
-            os << put_indent << "result: " << *v.result_type << endl;
+            os << put_indent << "result: " << *v.result_type;
         for (const auto& ctx : v.context) {
-            os << put_indent << ctx << endl;
+            os << put_indent << ctx;
         }
         return os << less_indent;
     } else {
@@ -275,7 +276,7 @@ std::ostream& operator<<(std::ostream& os, const TupleType& v)
     if (stream_options(os).enable_tree) {
         os << "TupleType(Type)" << endl << more_indent;
         for (const auto& t : v.subtypes)
-            os << put_indent << *t << endl;
+            os << put_indent << *t;
         return os << less_indent;
     } else {
         os << '(';
@@ -293,8 +294,9 @@ std::ostream& operator<<(std::ostream& os, const TypeConstraint& v)
     if (stream_options(os).enable_tree) {
         os << "TypeConstraint" << endl
            << more_indent
-           << put_indent << v.type_class << endl
-           << put_indent << v.type_name << less_indent;
+           << put_indent << v.type_class
+           << put_indent << v.type_name
+           << less_indent;
         return os;
     } else {
         return os << v.type_class << ' ' << v.type_name;
@@ -399,7 +401,7 @@ std::ostream& operator<<(std::ostream& os, const Cast& v)
         os << "Cast(Expression)" << endl;
         os << more_indent
            << put_indent << *v.expression
-           << put_indent << *v.type << endl;
+           << put_indent << *v.type;
         if (v.cast_function)
             os << put_indent << *v.cast_function;
         return os << less_indent;
@@ -421,7 +423,7 @@ std::ostream& operator<<(std::ostream& os, const Definition& v)
         os << "Definition(Statement)" << endl;
         os << more_indent << put_indent << v.variable;
         if (v.expression)
-            os << endl << put_indent << *v.expression;
+            os << put_indent << *v.expression;
         return os << less_indent;
     } else {
         os << "/*def*/ " << v.variable;
@@ -456,9 +458,9 @@ std::ostream& operator<<(std::ostream& os, const Class& v)
     if (stream_options(os).enable_tree) {
         os << "Class" << endl;
         os << more_indent
-           << put_indent << "name: " << v.class_name << endl;
+           << put_indent << "name: " << v.class_name;
         for (const auto& type_var : v.type_vars)
-            os << put_indent << "var: " << type_var << endl;
+            os << put_indent << "var: " << type_var;
         for (const auto& cst : v.context)
             os << put_indent << cst;
         for (const auto& def : v.defs)
@@ -488,9 +490,9 @@ std::ostream& operator<<(std::ostream& os, const Instance& v)
 {
     if (stream_options(os).enable_tree) {
         os << "Instance" << endl;
-        os << more_indent << put_indent << v.class_name << endl;
+        os << more_indent << put_indent << v.class_name;
         for (const auto& t : v.type_inst)
-            os << put_indent << *t << endl;
+            os << put_indent << *t;
         for (const auto& cst : v.context)
             os << put_indent << cst;
         for (const auto& def : v.defs)
@@ -521,7 +523,7 @@ std::ostream& operator<<(std::ostream& os, const TypeDef& v)
     if (stream_options(os).enable_tree) {
         os << "TypeDef" << endl;
         os << more_indent
-           << put_indent << v.type_name << endl
+           << put_indent << v.type_name
            << put_indent << *v.type
            << less_indent;
         return os;
