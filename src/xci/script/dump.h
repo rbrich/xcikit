@@ -34,6 +34,7 @@ std::ostream& operator<<(std::ostream& os, const Type& v);
 std::ostream& operator<<(std::ostream& os, const TypeName& v);
 std::ostream& operator<<(std::ostream& os, const FunctionType& v);
 std::ostream& operator<<(std::ostream& os, const ListType& v);
+std::ostream& operator<<(std::ostream& os, const TupleType& v);
 std::ostream& operator<<(std::ostream& os, const TypeConstraint& v);
 std::ostream& operator<<(std::ostream& os, const Reference& v);
 std::ostream& operator<<(std::ostream& os, const Call& v);

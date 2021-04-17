@@ -83,6 +83,7 @@ public:
     void visit(const TypeName& v) override { m_os << v; }
     void visit(const FunctionType& v) override { m_os << v; }
     void visit(const ListType& v) override { m_os << v; }
+    void visit(const TupleType& v) override { m_os << v; }
 
 private:
     std::ostream& m_os;
@@ -266,6 +267,24 @@ std::ostream& operator<<(std::ostream& os, const ListType& v)
         if (v.elem_type)
             os << *v.elem_type;
         return os << "]";
+    }
+}
+
+std::ostream& operator<<(std::ostream& os, const TupleType& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << "TupleType(Type)" << endl << more_indent;
+        for (const auto& t : v.subtypes)
+            os << put_indent << *t << endl;
+        return os << less_indent;
+    } else {
+        os << '(';
+        for (const auto& t : v.subtypes) {
+            os << *t;
+            if (t.get() != v.subtypes.back().get())
+                os << ", ";
+        }
+        return os << ')';
     }
 }
 

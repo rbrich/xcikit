@@ -10,8 +10,10 @@
 namespace xci::script {
 
 
-class FoldIntrinsicsVisitor final: public ast::Visitor {
+class FoldIntrinsicsVisitor final: public ast::VisitorExclTypes {
 public:
+    using VisitorExclTypes::visit;
+
     void visit(ast::Definition& v) override { v.expression->apply(*this); reset(); }
     void visit(ast::Invocation& v) override { v.expression->apply(*this); reset(); }
     void visit(ast::Return& v) override { v.expression->apply(*this); reset(); }
@@ -90,10 +92,6 @@ public:
         for (auto& d : v.defs)
             visit(d);
     }
-
-    void visit(ast::TypeName&) final {}
-    void visit(ast::FunctionType&) final {}
-    void visit(ast::ListType&) final {}
 
 private:
     void reset() {

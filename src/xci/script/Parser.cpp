@@ -110,6 +110,21 @@ struct Bytes: seq< one<'b'>, String > {};
 struct RawString : raw_string< '$', '-', '$' > {};  // raw_string = $$ raw text! $$
 struct Literal: sor< Char, String, Byte, Bytes, Number, RawString > {};
 
+// Types
+struct Parameter: sor< Type, seq< Identifier, opt<SC, one<':'>, SC, must<Type> > > > {};
+struct DeclParams: seq< plus<Parameter, SC> > {};
+struct DeclResult: if_must< string<'-', '>'>, SC, Type > {};
+struct TypeConstraint: seq<TypeName, RS, SC, TypeName> {};
+struct TypeContext: if_must< one<'('>, SC, TypeConstraint, SC, star_must<one<','>, SC, TypeConstraint, SC>, one<')'> > {};
+struct FunctionType: seq< DeclParams, SC, DeclResult > {};
+struct FunctionDecl: seq< DeclParams, SC, opt<DeclResult>, SC, opt<if_must<KeywordWith, SC, TypeContext>> > {};
+struct ListType: if_must< one<'['>, SC, UnsafeType, SC, one<']'> > {};
+struct TupleType: seq< Type, plus<SC, one<','>, SC, Type> > {};
+struct BracketedType: if_must< one<'('>, SC, UnsafeType, SC, one<')'> > {};
+struct SafeType: sor< BracketedType, ListType, TypeName > {};
+struct UnsafeType: sor<FunctionType, TupleType, SafeType> {};   // usable in context where Type is already expected
+struct Type: SafeType {};
+
 // Expressions
 // * some rules are parametrized with S (space type), choose either SC or NSC (allow newline)
 // * in general, rules inside brackets (round or square) use NSC, rules outside brackets use SC
@@ -121,17 +136,6 @@ template<class S> struct ExprInfix: seq< ExprOperand, S, opt<ExprInfixRight<S>>,
 template<> struct ExprInfix<SC>: seq< ExprOperand, sor< seq<NSC, at< one<'.'> > >, SC>, opt<ExprInfixRight<SC>>, TrailingComma<SC> > {};  // specialization to allow newline before dotcall even outside brackets
 template<class S> struct Expression: sor< ExprCond, ExprInfix<S> > {};
 struct Variable: seq< Identifier, opt<SC, one<':'>, SC, must<UnsafeType> > > {};
-struct Parameter: sor< Type, seq< Identifier, opt<SC, one<':'>, SC, must<Type> > > > {};
-struct DeclParams: seq< plus<Parameter, SC> > {};
-struct DeclResult: if_must< string<'-', '>'>, SC, Type > {};
-struct TypeConstraint: seq<TypeName, RS, SC, TypeName> {};
-struct TypeContext: if_must< one<'('>, SC, TypeConstraint, SC, star_must<one<','>, SC, TypeConstraint, SC>, one<')'> > {};
-struct FunctionType: seq< DeclParams, SC, DeclResult > {};
-struct FunctionDecl: seq< DeclParams, SC, opt<DeclResult>, SC, opt<if_must<KeywordWith, SC, TypeContext>> > {};
-struct ListType: if_must< one<'['>, SC, Type, SC, one<']'> > {};
-struct UnsafeType: sor<FunctionType, ListType, TypeName> {};   // usable in context where Type is already expected
-struct BracketedType: if_must< one<'('>, SC, UnsafeType, SC, one<')'> > {};
-struct Type: sor< BracketedType, ListType, TypeName > {};
 struct Block: if_must< one<'{'>, NSC, sor< one<'}'>, seq<SepList<Statement>, NSC, one<'}'>> > > {};
 struct Function: sor< Block, if_must< KeywordFun, NSC, FunctionDecl, NSC, Block> > {};
 struct BracketedExpr: if_must< one<'('>, NSC, Expression<NSC>, NSC, one<')'> > {};
@@ -597,6 +601,15 @@ struct Action<ListType> : change_states< ast::ListType > {
 
 
 template<>
+struct Action<TupleType> : change_states< ast::TupleType > {
+    template<typename Input>
+    static void success(const Input &in, ast::TupleType& ltype, std::unique_ptr<ast::Type>& type) {
+        type = std::make_unique<ast::TupleType>(std::move(ltype));
+    }
+};
+
+
+template<>
 struct Action<TypeConstraint> : change_states< ast::TypeConstraint > {
     template<typename Input>
     static void success(const Input &in, ast::TypeConstraint& tcst, ast::FunctionType& ftype) {
@@ -632,8 +645,8 @@ struct Action<Type> : change_states< std::unique_ptr<ast::Type> >  {
     }
 
     template<typename Input>
-    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::ListType& ltype) {
-        ltype.elem_type = std::move(type);
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::TupleType& tuple) {
+        tuple.subtypes.push_back(std::move(type));
     }
 
     template<typename Input>
@@ -662,6 +675,11 @@ struct Action<UnsafeType> : change_states< std::unique_ptr<ast::Type> >  {
     template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Type>& inner, std::unique_ptr<ast::Type>& outer) {
         outer = std::move(inner);
+    }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::ListType& ltype) {
+        ltype.elem_type = std::move(type);
     }
 
     template<typename Input>

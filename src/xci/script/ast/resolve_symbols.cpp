@@ -27,7 +27,7 @@ public:
         // check for name collision
         const auto& name = dfn.variable.identifier.name;
         if (symtab().find_by_name(name))
-            throw MultipleDeclarationError(name);
+            throw RedefinedName(name);
 
         // add new function, symbol
         SymbolTable& fn_symtab = symtab().add_child(name);
@@ -71,7 +71,7 @@ public:
     void visit(ast::Class& v) override {
         // check for name collision
         if (symtab().find_by_name(v.class_name.name))
-            throw MultipleDeclarationError(v.class_name.name);
+            throw RedefinedName(v.class_name.name);
 
         // add child symbol table for the class
         SymbolTable& cls_symtab = symtab().add_child(v.class_name.name);
@@ -141,7 +141,7 @@ public:
     void visit(ast::TypeDef& v) override {
         // check for name collision
         if (symtab().find_by_name(v.type_name.name))
-            throw MultipleDeclarationError(v.type_name.name);
+            throw RedefinedName(v.type_name.name);
 
         // resolve the type
         v.type->apply(*this);
@@ -266,6 +266,11 @@ public:
 
     void visit(ast::ListType& t) final {
         t.elem_type->apply(*this);
+    }
+
+    void visit(ast::TupleType& t) final {
+        for (auto& st : t.subtypes)
+            st->apply(*this);
     }
 
     struct PostponedBlock {

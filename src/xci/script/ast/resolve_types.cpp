@@ -622,6 +622,15 @@ public:
         m_type_info = TypeInfo{Type::List, move(m_type_info)};
     }
 
+    void visit(ast::TupleType& t) final {
+        std::vector<TypeInfo> subtypes;
+        for (auto& st : t.subtypes) {
+            st->apply(*this);
+            subtypes.push_back(move(m_type_info));
+        }
+        m_type_info = TypeInfo{move(subtypes)};
+    }
+
 private:
     Module& module() { return m_function.module(); }
 

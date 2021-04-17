@@ -50,6 +50,7 @@ struct Function;
 struct TypeName;
 struct FunctionType;
 struct ListType;
+struct TupleType;
 
 
 class ConstVisitor {
@@ -76,6 +77,7 @@ public:
     virtual void visit(const TypeName&) = 0;
     virtual void visit(const FunctionType&) = 0;
     virtual void visit(const ListType&) = 0;
+    virtual void visit(const TupleType&) = 0;
 };
 
 class Visitor {
@@ -102,6 +104,7 @@ public:
     virtual void visit(TypeName&) = 0;
     virtual void visit(FunctionType&) = 0;
     virtual void visit(ListType&) = 0;
+    virtual void visit(TupleType&) = 0;
 };
 
 
@@ -123,6 +126,7 @@ public:
     void visit(TypeName&) final {}
     void visit(FunctionType&) final {}
     void visit(ListType&) final {}
+    void visit(TupleType&) final {}
 };
 
 
@@ -147,6 +151,17 @@ public:
     void visit(Condition&) final {}
     void visit(Function&) final {}
     void visit(Cast&) final {}
+};
+
+
+// Inherit this and add `using VisitorExclTypes::visit;` to skip other visits
+class VisitorExclTypes: public Visitor {
+public:
+    // skip type visits
+    void visit(TypeName&) final {}
+    void visit(FunctionType&) final {}
+    void visit(ListType&) final {}
+    void visit(TupleType&) final {}
 };
 
 
@@ -189,6 +204,15 @@ struct ListType: public Type {
     std::unique_ptr<ast::Type> make_copy() const override;
 
     std::unique_ptr<Type> elem_type;
+};
+
+
+struct TupleType: public Type {
+    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
+    void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Type> make_copy() const override;
+
+    std::vector<std::unique_ptr<Type>> subtypes;
 };
 
 

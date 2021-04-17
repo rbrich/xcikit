@@ -191,6 +191,15 @@ std::unique_ptr<ast::Type> ListType::make_copy() const
 }
 
 
+std::unique_ptr<ast::Type> TupleType::make_copy() const
+{
+    auto r = std::make_unique<TupleType>();
+    for (const auto& t : r->subtypes)
+        r->subtypes.push_back(t->make_copy());
+    return r;
+}
+
+
 std::unique_ptr<ast::Type> FunctionType::make_copy() const
 {
     return pcopy(*this);

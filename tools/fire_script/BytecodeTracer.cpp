@@ -83,6 +83,10 @@ void BytecodeTracer::setup(bool print_bytecode, bool trace_bytecode)
                 cout << t.move_up(1);
         });
     }
+
+    if (print_bytecode) {
+        m_term.print("Bytecode trace:\n");
+    }
 }
 
 

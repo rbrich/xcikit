@@ -133,6 +133,17 @@ TEST_CASE( "Values", "[script][parser]" )
 }
 
 
+TEST_CASE( "Parsing types", "[script][parser]")
+{
+    CHECK(parse("type MyInt = Int") == "type MyInt = Int");
+    CHECK(parse("type MyList = [Int]") == "type MyList = [Int]");
+    CHECK(parse("type MyTuple = (String, Int)") == "type MyTuple = (String, Int)");
+    CHECK(parse("type MyTuple = String, Int") == "type MyTuple = (String, Int)");  // The round brackets are optional, added in AST dump for clarity
+    CHECK(parse("type MyListOfTuples = [String, Int]") == "type MyListOfTuples = [(String, Int)]");
+    CHECK(parse("type MyListOfTuples2 = [(String, Int), Int]") == "type MyListOfTuples2 = [((String, Int), Int)]");
+}
+
+
 TEST_CASE( "Trailing comma", "[script][parser]" )
 {
     CHECK(parse("1,2,3,") == "1, 2, 3");

@@ -21,8 +21,10 @@ using std::move;
 using std::optional;
 
 
-class FoldConstExprVisitor final: public ast::Visitor {
+class FoldConstExprVisitor final: public ast::VisitorExclTypes {
 public:
+    using VisitorExclTypes::visit;
+
     explicit FoldConstExprVisitor(Function& func)
         : m_function(func) {}
 
@@ -214,10 +216,6 @@ public:
     void visit(ast::Class& v) override { m_const_value.reset(); }
     void visit(ast::Instance& v) override { m_const_value.reset(); }
     void visit(ast::TypeDef& v) override { m_const_value.reset(); }
-
-    void visit(ast::TypeName& t) final {}
-    void visit(ast::FunctionType& t) final {}
-    void visit(ast::ListType& t) final {}
 
 private:
     Module& module() { return m_function.module(); }

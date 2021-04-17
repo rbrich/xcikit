@@ -93,9 +93,9 @@ struct UndefinedTypeName : public ScriptError {
 };
 
 
-struct MultipleDeclarationError : public ScriptError {
-    explicit MultipleDeclarationError(const std::string& name)
-            : ScriptError(format("multiple declaration of name: {}", name)) {}
+struct RedefinedName : public ScriptError {
+    explicit RedefinedName(const std::string& name)
+            : ScriptError(format("redefined name: {}", name)) {}
 };
 
 

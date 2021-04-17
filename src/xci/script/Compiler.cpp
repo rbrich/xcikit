@@ -26,8 +26,10 @@ namespace xci::script {
 using ranges::cpp20::views::reverse;
 
 
-class CompilerVisitor: public ast::Visitor {
+class CompilerVisitor: public ast::VisitorExclTypes {
 public:
+    using VisitorExclTypes::visit;
+
     explicit CompilerVisitor(Compiler& compiler, Function& function)
         : m_compiler(compiler), m_function(function) {}
 
@@ -414,9 +416,6 @@ public:
 
     void visit(ast::Class& v) override {}
     void visit(ast::TypeDef& v) override {}
-    void visit(ast::TypeName& t) final {}
-    void visit(ast::FunctionType& t) final {}
-    void visit(ast::ListType& t) final {}
 
 private:
     Module& module() { return m_function.module(); }

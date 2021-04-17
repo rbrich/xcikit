@@ -6,7 +6,7 @@ endif::[]
 
 = Fire Script
 
-*_Language specification, v0.4_*
+*_Language specification, v0.5_*
 
 toc::[]
 
@@ -414,9 +414,15 @@ Primitive types:
 true   false        // Bool
 b'a'   'a':Byte     // Byte           -- ASCII
 27b    27:Byte      // Byte           -- binary 0..255
+'a'    97:Char      // Char           -- Unicode
+----
+
+Composite types:
+
+[source,fire]
+----
 b"abc"              // [Byte]
 [10b, 11b, 13b]     // [Byte]         -- equivalent to the "bytes" literal
-'a'                 // Char           -- Unicode
 "Hello."            // String         -- UTF-8 string
 ['a', 'b', 'c']     // [Char]         -- compatible with String, but not the same
 ("Hello", 33)       // (String, Int)  -- a tuple
@@ -442,21 +448,50 @@ Strings and lists have the same interface and can be handled universally
 in generic functions. List of chars has different underlying implementation
 than String: it stores 32bit characters, allowing constant-time indexing,
 but taking more space. String is UTF-8 encoded, random access
-is slower (linear-time), but it takes much less space.
+is slower (linear-time), but it takes less space.
 
-Custom types are made by composition of other types.
-Types must begin with uppercase letter (this is enforced part of the syntax):
+=== User-defined types
+
+User-defined types are made by giving a name to a type, or to a composition of types.
+All type names must begin with uppercase letter (this is enforced by the compiler):
 
 [source,fire]
 ----
-type MyType = Int
+type MyType = Int    // make new type by giving other type a new name
 type MyTuple = (String, Int)
-type MyStruct = (String name, Int age)    // just a tuple with named fields
-type MyBool = false | true  // enum
+type MyStruct = (String name, Int age)    // tuple with named fields
+type MyBool = false | true   // enum
 type MyUnion = Int | String | Void   // tagged union
 type MyVariant = int Int | string String | none   // tagged union with explicit names
-type MyOptional = some T | void
+type MyOptional T = some T | void   // generic type (a kind?)
+type MyOptionalInt = MyOptional Int   // instance of the generic type
+type MyFunction = [Int] Int -> Int
 ----
+
+The `type` definition creates a new type known to a compiler.
+The original type can be cast to the new type (and vice versa),
+but it does not coerce.
+
+For example:
+
+[source,fire]
+----
+type Number = Int
+f = fun a:Number b:Number -> Number { a+b }  // `add` must be implemented for Number
+f 11 22   // Error: `f` expects Number, not Int
+f 11:Number 22:Number  // OK, returns 33:Number
+----
+
+It's also possible to make an alias of a type:
+
+[source,fire]
+----
+MyInt = Int
+MyFun = String -> String
+----
+
+The *alias* can be used in place of the actual type. It's basically replaced
+by the actual type anywhere it's used.
 
 Function types:
 
@@ -470,7 +505,7 @@ Int -> Int -> Int -> Int            // normalized form
 (Int, Int) Int -> Int               // two arguments, first is tuple
 ----
 
-* All of the above types are equivalent - they all describe the same function.
+* All the above types are equivalent - they all describe the same function.
 * The normalized form describes how the partial evaluation works.
 * But any of the above might describe what is really happening after compilation
  (it depends only on the compiler how many intermediate functions it creates).
