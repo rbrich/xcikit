@@ -118,12 +118,12 @@ struct TypeConstraint: seq<TypeName, RS, SC, TypeName> {};
 struct TypeContext: if_must< one<'('>, SC, TypeConstraint, SC, star_must<one<','>, SC, TypeConstraint, SC>, one<')'> > {};
 struct FunctionType: seq< DeclParams, SC, DeclResult > {};
 struct FunctionDecl: seq< DeclParams, SC, opt<DeclResult>, SC, opt<if_must<KeywordWith, SC, TypeContext>> > {};
+struct PlainTypeName: seq< TypeName, not_at<SC, one<','>> > {};  // not followed by comma (would be TupleType)
 struct ListType: if_must< one<'['>, SC, UnsafeType, SC, one<']'> > {};
 struct TupleType: seq< Type, plus<SC, one<','>, SC, Type> > {};
 struct BracketedType: if_must< one<'('>, SC, UnsafeType, SC, one<')'> > {};
-struct SafeType: sor< BracketedType, ListType, TypeName > {};
-struct UnsafeType: sor<FunctionType, TupleType, SafeType> {};   // usable in context where Type is already expected
-struct Type: SafeType {};
+struct UnsafeType: sor<FunctionType, PlainTypeName, TupleType, BracketedType, ListType> {};   // usable in context where Type is already expected
+struct Type: sor< BracketedType, ListType, TypeName > {};
 
 // Expressions
 // * some rules are parametrized with S (space type), choose either SC or NSC (allow newline)
