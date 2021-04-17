@@ -212,6 +212,11 @@ public:
     using WriteCallback = std::function<void(std::string_view data)>;
     void set_write_callback(WriteCallback cb) { m_write_cb = std::move(cb); }
 
+    /// This function makes sure the cursor is at line beginning (col 0).
+    /// When the last output didn't end with a newline,
+    /// it prints a "missing newline" marker (⏎) and adds the newline.
+    void sanitize_newline();
+
     /// Compute number of columns required to print the string `s`.
     /// Control sequences and invisible characters are stripped,
     /// double-width UTF-8 characters are counted as two columns.
@@ -326,7 +331,8 @@ private:
         InitOk,     // main instance (it will reset the term when destroyed)
         CopyOk,     // a copy created by chained method
     };
-    State m_state = State::NoTTY;
+    State m_state : 7 = State::NoTTY;
+    bool m_at_newline : 1 = true;
 
 #ifdef _WIN32
     unsigned long m_orig_mode = 0;  // original console mode of the handle

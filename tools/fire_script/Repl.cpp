@@ -19,21 +19,6 @@ namespace xci::script::tool {
 using std::endl;
 
 
-// When a function outputs some characters to stdout but doesn't finish with a newline,
-// our following output or prompt would break or hide the output.
-// This function makes sure the cursor is at line beginning (col 0).
-// If it isn't, it prints a "missing newline" marker and adds the newline.
-static void sanitize_newline(core::TermCtl& t)
-{
-    auto [row, col] = t.get_cursor_position();
-    if (col == -1)
-        return;
-    if (col != 0) {
-        t.write((const char*)u8"⏎\n");
-    }
-}
-
-
 bool Repl::evaluate(std::string_view line)
 {
     core::TermCtl& t = m_ctx.term_out;
@@ -94,11 +79,11 @@ bool Repl::evaluate(std::string_view line)
 
         machine.call(*func, [&](const TypedValue& invoked) {
             if (!invoked.is_void()) {
-                sanitize_newline(t);
+                t.sanitize_newline();
                 t.print("{t:bold}{fg:yellow}{}{t:normal}\n", invoked);
             }
         });
-        sanitize_newline(t);
+        t.sanitize_newline();
 
         // returned value of last statement
         auto result = machine.stack().pull_typed(func->effective_return_type());

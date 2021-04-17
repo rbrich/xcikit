@@ -679,10 +679,18 @@ std::string TermCtl::raw_input(bool isig)
 
 void TermCtl::write(std::string_view buf)
 {
+    m_at_newline = buf.ends_with('\n');
     if (m_write_cb)
         m_write_cb(buf);
     else
         core::write(m_fd, buf);
+}
+
+
+void TermCtl::sanitize_newline()
+{
+    if (!m_at_newline)
+        write((const char*)u8"⏎\n");
 }
 
 
