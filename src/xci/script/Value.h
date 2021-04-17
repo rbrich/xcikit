@@ -282,6 +282,7 @@ public:
     void apply(value::Visitor& visitor) const { m_value.apply(visitor); }
 
     bool is_void() const { return type() == Type::Void; }
+    bool is_bool() const { return type() == Type::Bool; }
 
     template <class T> const T& get() const { return m_value.get<T>(); }
 

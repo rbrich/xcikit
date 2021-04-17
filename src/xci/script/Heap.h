@@ -36,7 +36,7 @@ public:
     void read(const std::byte* buffer) { std::memcpy(&m_slot, buffer, sizeof(m_slot)); }
 
     void incref() const;
-    void decref() const;  // free the object when refcount = 0
+    bool decref() const;  // free the object and return true when refcount = 0
     uint32_t refcount() const;
 
     std::byte* data() { return m_slot == nullptr ? nullptr : m_slot + 4; }

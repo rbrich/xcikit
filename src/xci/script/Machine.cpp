@@ -236,12 +236,15 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                 auto rhs = m_stack.pull<value::Int32>();
                 auto idx = rhs.value();
                 auto len = lhs.length();
-                lhs.decref();
                 if (idx < 0)
                     idx += (int) len;
-                if (idx < 0 || (size_t) idx >= len)
+                if (idx < 0 || (size_t) idx >= len) {
+                    lhs.decref();
                     throw IndexOutOfBounds(idx, len);
-                m_stack.push(lhs.value_at(idx, TypeInfo(Type::Int32)));
+                }
+                Value item = lhs.value_at(idx, TypeInfo(Type::Int32));
+                lhs.decref();
+                m_stack.push(item);
                 break;
             }
 
@@ -385,10 +388,8 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
             case Opcode::DecRef: {
                 auto arg = *it++;
                 HeapSlot slot {static_cast<byte*>(m_stack.get_ptr(arg))};
-                slot.decref();
-                // needed for stack dump:
-                if (slot.refcount() == 0)
-                    m_stack.clear_ptr(arg);
+                if (slot.decref())
+                    m_stack.clear_ptr(arg);  // without this, stack dump would read after use
                 break;
             }
 

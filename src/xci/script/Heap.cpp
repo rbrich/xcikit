@@ -26,15 +26,17 @@ void HeapSlot::incref() const
 }
 
 
-void HeapSlot::decref() const
+bool HeapSlot::decref() const
 {
     if (m_slot == nullptr)
-        return;
+        return false;  // caller's pointer is already null
     const auto refs = bit_read<uint32_t>(m_slot) - 1;
     if (refs == 0) {
         delete[] m_slot;
+        return true;  // freed, the caller may want to clear the pointer
     } else {
         memcpy(m_slot, &refs, sizeof(refs));
+        return false;
     }
 }
 

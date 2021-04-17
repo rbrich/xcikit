@@ -101,7 +101,7 @@ public:
     }
 
     void visit(ast::Literal& v) override {
-        if (v.value.value().is_void())
+        if (v.value.is_void())
             return;  // Void value
         // add to static values
         auto idx = module().add_value(TypedValue(v.value));

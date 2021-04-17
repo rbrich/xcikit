@@ -145,7 +145,7 @@ public:
         }
 
         // collapse const if-expr
-        assert(m_const_value->value().is_bool());
+        assert(m_const_value->is_bool());
         if (m_const_value->get<bool>()) {
             apply_and_fold(v.then_expr);
             m_collapsed = move(v.then_expr);

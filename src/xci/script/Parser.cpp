@@ -944,10 +944,10 @@ struct Action<Number> : change_states< NumberHelper > {
             using l = std::numeric_limits<int64_t>;
             if (!minus_sign && val > uint64_t(l::max()))
                 throw parse_error("Int64 literal out of range", in);
-            if (minus_sign && val > uint64_t(-l::min()))
+            if (minus_sign && val > uint64_t(l::max()) + 1)
                 throw parse_error("Int64 literal out of range", in);
 
-            n.num = minus_sign ? -int64_t(val) : int64_t(val);
+            n.num = minus_sign ? int64_t(~val+1) : int64_t(val);
         }
     }
 
