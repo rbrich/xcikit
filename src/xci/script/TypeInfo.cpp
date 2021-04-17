@@ -146,6 +146,22 @@ TypeInfo::TypeInfo(std::string name, TypeInfo&& type_info)
 {}
 
 
+TypeInfo::TypeInfo(TypeInfo&& other)
+        : m_type(move(other.m_type)), m_info(move(other.m_info))
+{
+    other.m_type = Type::Unknown;
+}
+
+
+TypeInfo& TypeInfo::operator=(TypeInfo&& other)
+{
+    m_type = move(other.m_type);
+    m_info = move(other.m_info);
+    other.m_type = Type::Unknown;
+    return *this;
+}
+
+
 TypeInfo TypeInfo::effective_type() const
 {
     if (is_callable() && signature().params.empty())

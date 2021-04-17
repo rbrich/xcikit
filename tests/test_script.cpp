@@ -312,6 +312,7 @@ TEST_CASE( "Types", "[script][interpreter]" )
 {
     // each definition can have explicit type
     CHECK(interpret("a:Int = 1 ; a") == "1");
+    CHECK_THROWS_AS(interpret("a:Int = 1.0 ; a"), DefinitionTypeMismatch);
 
     // function type can be specified in lambda or specified explicitly
     CHECK(interpret("f = fun a:Int b:Int -> Int {a+b}; f 1 2") == "3");
@@ -324,8 +325,11 @@ TEST_CASE( "Types", "[script][interpreter]" )
 
 TEST_CASE( "User-defined types", "[script][interpreter]" )
 {
-    CHECK(interpret("type MyTuple = (String, Int); a:MyTuple = \"hello\", 42; a") == "(\"hello\", 42)");
-    //CHECK_THROWS_AS(interpret("type MyTuple = (String, Int); a:MyTuple = 1, 2; a"), ScriptError);  // TODO: TypeMismatch?
+    CHECK(interpret("TupleAlias = (String, Int); a:TupleAlias = \"hello\", 42; a") == "(\"hello\", 42)");
+    CHECK_THROWS_AS(interpret("type MyTuple = (String, Int); a:MyTuple = \"hello\", 42; a"), DefinitionTypeMismatch);
+    // TODO: cast from underlying type
+    //CHECK(interpret_std("type MyTuple = (String, Int); a = (\"hello\", 42):MyTuple; a") == "(\"hello\", 42)");
+    CHECK_THROWS_AS(interpret_std("type MyTuple = (String, Int); (1, 2):MyTuple"), FunctionNotFound);  // bad cast
 }
 
 

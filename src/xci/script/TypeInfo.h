@@ -80,6 +80,11 @@ public:
     // shortcuts
     static TypeInfo bytes() { return TypeInfo{Type::List,TypeInfo{Type::Byte}}; }
 
+    TypeInfo(const TypeInfo&) = default;
+    TypeInfo& operator =(const TypeInfo&) = default;
+    TypeInfo(TypeInfo&& other);
+    TypeInfo& operator =(TypeInfo&& other);
+
     size_t size() const;
     void foreach_heap_slot(std::function<void(size_t offset)> cb) const;
 

@@ -183,9 +183,9 @@ struct ConditionNotBool : public ScriptError {
 
 
 struct DefinitionTypeMismatch : public ScriptError {
-    explicit DefinitionTypeMismatch(const TypeInfo& exp, const TypeInfo& got)
+    explicit DefinitionTypeMismatch(const TypeInfo& exp, const TypeInfo& got, const SourceInfo& si)
             : ScriptError(format("definition type mismatch: specified {}, inferred {}",
-                                 exp, got)) {}
+                                 exp, got), si) {}
 };
 
 
