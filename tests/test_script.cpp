@@ -61,11 +61,11 @@ std::string interpret(const string& input, bool import_std=false)
     UNSCOPED_INFO(input);
     ostringstream os;
     try {
-        auto result = interpreter.eval(input, [&os](const Value& invoked) {
+        auto result = interpreter.eval(input, [&os](const TypedValue& invoked) {
             os << invoked << ';';
         });
-        os << *result;
-        result->decref();
+        os << result;
+        result.decref();
     } catch (const ScriptError& e) {
         UNSCOPED_INFO("Exception: " << e.what() << "\n" << e.detail());
         throw;
@@ -103,10 +103,11 @@ TEST_CASE( "Optional semicolon", "[script][parser]" )
           parse("(1+2); a=1; b=2; c=3"));  // newlines are allowed inside brackets
     CHECK(parse("40\n.add 2\n50\n.sub 8") == parse("40 .add 2; 50 .sub 8;"));  // dotcall can continue after linebreak
     CHECK(parse("a =\n1") == parse("a=1"));  // linebreak is allowed after '=' in definition
-    CHECK(parse("1 + \\\n 2") == parse("1+2"));  // newline can be escaped
-    CHECK(parse("(1 + \\\n 2)") == parse("(1+2)"));
+    CHECK(parse("1 + \n 2") == parse("1+2"));  // linebreak is allowed after infix operator
+    CHECK(parse("add 1 \\\n 2") == parse("add 1 2"));  // newline can be escaped
+    CHECK(parse("(add 1 \\\n 2)") == parse("(add 1 2)"));
     REQUIRE_THROWS_WITH(parse("a=1;;"),  // empty statement is not allowed, semicolon is only used as a separator
-            Catch::Matchers::StartsWith("parse error: <input>:1:5: invalid syntax"));
+            Catch::Matchers::StartsWith("parse error: invalid syntax"));
 }
 
 
@@ -129,6 +130,39 @@ TEST_CASE( "Values", "[script][parser]" )
     CHECK(parse("[1,2,3]") == "[1, 2, 3]");  // list
     CHECK(parse("[(1,2,3,4)]") == "[(1, 2, 3, 4)]");  // list with a tuple item
     CHECK(parse("[(1,2,3,4), 5]") == "[(1, 2, 3, 4), 5]");
+}
+
+
+TEST_CASE( "Parsing types", "[script][parser]")
+{
+    CHECK(parse("type MyInt = Int") == "type MyInt = Int");
+    CHECK(parse("type MyList = [Int]") == "type MyList = [Int]");
+    CHECK(parse("type MyTuple = (String, Int)") == "type MyTuple = (String, Int)");
+    CHECK(parse("type MyTuple = String, Int") == "type MyTuple = (String, Int)");  // The round brackets are optional, added in AST dump for clarity
+    CHECK(parse("type MyListOfTuples = [String, Int]") == "type MyListOfTuples = [(String, Int)]");
+    CHECK(parse("type MyListOfTuples2 = [(String, Int), Int]") == "type MyListOfTuples2 = [((String, Int), Int)]");
+    CHECK(parse("MyAlias = Int") == "MyAlias = Int");
+    CHECK(parse("MyAlias2 = [Int]") == "MyAlias2 = [Int]");
+}
+
+
+TEST_CASE( "Trailing comma", "[script][parser]" )
+{
+    CHECK(parse("1,2,3,") == "1, 2, 3");
+    CHECK(parse("[1,2,3,]") == "[1, 2, 3]");
+    CHECK(parse("(1,2,3,)") == "(1, 2, 3)");
+    CHECK_THROWS_AS(parse("1,2,3,,"), ParseError);  // two commas not allowed
+    CHECK_THROWS_AS(parse("1,2,,3"), ParseError);
+    CHECK_THROWS_AS(parse("(1,2,3,,)"), ParseError);
+    CHECK_THROWS_AS(parse("[1,2,3,,]"), ParseError);
+    CHECK_THROWS_AS(parse("[,]"), ParseError);
+    CHECK(parse("([1,],[2,],[1,2,],)") == "([1], [2], [1, 2])");
+    // multiline
+    CHECK(parse("1,\n2,\n3,\n") == "1, 2, 3");  // expression continues on next line after operator
+    CHECK(parse("1,;\n2,\n3,\n") == "1\n2, 3");  // semicolon splits the multiline expression
+    CHECK(parse("(\n1,\n2,\n3,\n)") == "(1, 2, 3)");
+    CHECK(parse("[\n1,\n2,\n3,\n]") == "[1, 2, 3]");
+    CHECK(parse("[\n1\n,\n2\n,\n3\n,\n]") == "[1, 2, 3]");
 }
 
 
@@ -159,6 +193,22 @@ TEST_CASE( "Operator precedence", "[script][parser]" )
     CHECK(interpret_std("pred (neg (succ (14)))") == "-16");
     CHECK(interpret_std("14 .succ .neg .pred") == "-16");
     CHECK(interpret_std("(((14) .succ) .neg) .pred") == "-16");
+}
+
+
+TEST_CASE( "Value size on stack", "[script][machine]" )
+{
+    CHECK(Value().size_on_stack() == type_size_on_stack(Type::Void));
+    CHECK(Value(false).size_on_stack() == type_size_on_stack(Type::Bool));
+    CHECK(Value(0).size_on_stack() == type_size_on_stack(Type::Int32));
+    CHECK(Value(int64_t{0}).size_on_stack() == type_size_on_stack(Type::Int64));
+    CHECK(Value(0.0f).size_on_stack() == type_size_on_stack(Type::Float32));
+    CHECK(Value(0.0).size_on_stack() == type_size_on_stack(Type::Float64));
+    CHECK(Value("aaa"sv).size_on_stack() == type_size_on_stack(Type::String));
+    CHECK(Value(10, TypeInfo{Type::Int32}).size_on_stack() == type_size_on_stack(Type::List));
+    CHECK(Value(TypeInfo::Subtypes{}).size_on_stack() == type_size_on_stack(Type::Tuple));
+    CHECK(Value(Value::ClosureTag{}).size_on_stack() == type_size_on_stack(Type::Function));
+    CHECK(Value(Value::ModuleTag{}).size_on_stack() == type_size_on_stack(Type::Module));
 }
 
 
@@ -199,7 +249,7 @@ TEST_CASE( "Stack push/pull", "[script][machine]" )
     CHECK(stack.size() == 1+4);
     value::String str{"hello"};
     stack.push(str);
-    CHECK(stack.size() == 1+4 + sizeof(size_t) + sizeof(void*));
+    CHECK(stack.size() == 1+4 + sizeof(void*));
     CHECK(stack.n_values() == 3);
 
     CHECK(stack.pull<value::String>().value() == "hello");
@@ -262,6 +312,7 @@ TEST_CASE( "Types", "[script][interpreter]" )
 {
     // each definition can have explicit type
     CHECK(interpret("a:Int = 1 ; a") == "1");
+    CHECK_THROWS_AS(interpret("a:Int = 1.0 ; a"), DefinitionTypeMismatch);
 
     // function type can be specified in lambda or specified explicitly
     CHECK(interpret("f = fun a:Int b:Int -> Int {a+b}; f 1 2") == "3");
@@ -269,6 +320,16 @@ TEST_CASE( "Types", "[script][interpreter]" )
 
     // TODO: narrowing type of polymorphic function (`f 1.0 2.0` would be error, while `add 1.0 2.0` still works)
     // CHECK(interpret("f : Int Int -> Int = add ; f 1 2") == "3");
+}
+
+
+TEST_CASE( "User-defined types", "[script][interpreter]" )
+{
+    CHECK(interpret("TupleAlias = (String, Int); a:TupleAlias = \"hello\", 42; a") == "(\"hello\", 42)");
+    CHECK_THROWS_AS(interpret("type MyTuple = (String, Int); a:MyTuple = \"hello\", 42; a"), DefinitionTypeMismatch);
+    // TODO: cast from underlying type
+    //CHECK(interpret_std("type MyTuple = (String, Int); a = (\"hello\", 42):MyTuple; a") == "(\"hello\", 42)");
+    CHECK_THROWS_AS(interpret_std("type MyTuple = (String, Int); (1, 2):MyTuple"), FunctionNotFound);  // bad cast
 }
 
 
@@ -297,36 +358,43 @@ TEST_CASE( "Blocks", "[script][interpreter]" )
 
 TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
 {
+    // returned lambda
+    CHECK(interpret("fun x:Int->Int { x + 1 }") == "<lambda> Int32 -> Int32");
+    CHECK_THROWS_AS(interpret("fun x { x + 1 }"), UnexpectedGenericFunction);  // generic lambda must be either assigned or resolved by calling
+
     // immediately called lambda
     CHECK(interpret("fun x:Int {x+1} 2") == "3");
     CHECK(interpret("fun x {x+1} 2") == "3");  // generic lambda
     CHECK(interpret("b = 3 + fun x {2*x} 2; b") == "7");
 
-    // argument propagation: `f` returns a function which consumes the second arg
-    CHECK(interpret("f = fun a:Int { fun b:Int { a+b } }; f 1 2") == "3");
+    // argument propagation:
+    CHECK(interpret("f = fun a:Int { fun b:Int { a+b } }; f 1 2") == "3");  //  `f` returns a function which consumes the second arg
+    CHECK(interpret("f = fun a:Int { fun b:Int { fun c:Int { a+b+c } } }; f 1 2 3") == "6");
+    CHECK(interpret("{ fun x:Int {x*2} } 3") == "6");  // lambda propagates through wrapped blocks and is then called
+    CHECK(interpret("{{{ fun x:Int {x*2} }}} 3") == "6");  // lambda propagates through wrapped blocks and is then called
 
     // closure: inner function uses outer function's parameter
     CHECK(interpret("f = fun a:Int b:Int c:Int { "
-                      "w=fun c1:Int {a / b - c1}; w c }; f 10 2 3") == "2");
+                    "w=fun c1:Int {a / b - c1}; w c }; f 10 2 3") == "2");
     // closure: outer closure used by inner function
     CHECK(interpret("f = fun a:Int b:Int c:Int { "
-                      "g=fun c1:Int {a * b - c1}; "
-                      "h=fun c1:Int {g c1}; "
-                      "h c }; f 1 2 3") == "-1");
+                    "g=fun c1:Int {a * b - c1}; "
+                    "h=fun c1:Int {g c1}; "
+                    "h c }; f 1 2 3") == "-1");
     CHECK(interpret("f = fun a:Int b:Int c:Int { "
-                      "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 + b}; "
-                      "w=fun b1:Int c1:Int {a + u b1 + v c1}; "
-                      "w b c }; f 1 2 3") == "9");
+                    "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 + b}; "
+                    "w=fun b1:Int c1:Int {a + u b1 + v c1}; "
+                    "w b c }; f 1 2 3") == "9");
 
     CHECK(interpret("outer = fun y:Int {"
-                      "inner = fun x:Int { x + y }; inner y "
-                      "}; outer 2") == "4");
+                    "inner = fun x:Int { x + y }; inner y "
+                    "}; outer 2") == "4");
     CHECK(interpret("outer = fun y:Int {"
-                      "inner = fun x:Int { x + y }; alias = inner; alias y "
-                      "}; outer 2") == "4");
+                    "inner = fun x:Int { x + y }; alias = inner; alias y "
+                    "}; outer 2") == "4");
     CHECK(interpret("outer = fun y {"
-                      "inner = fun x:Int { x + y }; alias = fun x:Int { inner x }; alias y "
-                      "}; outer 2") == "4");
+                    "inner = fun x:Int { x + y }; alias = fun x:Int { inner x }; alias y "
+                    "}; outer 2") == "4");
 }
 
 
@@ -341,13 +409,13 @@ TEST_CASE( "Partial function call", "[script][interpreter]" )
     CHECK(interpret("f=fun x:Int y:Int z:Int { (x - y) * z}; g=fun x1:Int { f 3 x1 }; g 4 5") == "-5");
     CHECK(interpret("f=fun x:Int y:Int { g=fun x1:Int z1:Int { (y - x1) / z1 }; g x }; f 1 10 3") == "3");
     CHECK(interpret("f = fun a:Int b:Int { "
-                      "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 - b}; "
-                      "w=fun b1:Int c1:Int {a * u b1 / v c1}; "
-                      "w b }; f 1 2 3") == "3");
+                    "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 - b}; "
+                    "w=fun b1:Int c1:Int {a * u b1 / v c1}; "
+                    "w b }; f 1 2 3") == "3");
     // [closure.fire] return closure with captured closures, propagate arguments into the closure
     CHECK(interpret("f = fun a:Int { "
-                      "u=fun b2:Int {a / b2}; v=fun c2:Int {c2 - a}; "
-                      "fun b1:Int c1:Int {a + u b1 + v c1} }; f 4 2 3") == "5");
+                    "u=fun b2:Int {a / b2}; v=fun c2:Int {c2 - a}; "
+                    "fun b1:Int c1:Int {a + u b1 + v c1} }; f 4 2 3") == "5");
 }
 
 
@@ -372,6 +440,7 @@ TEST_CASE( "Lexical scope", "[script][interpreter]" )
     CHECK(interpret("a=1; f=fun b:Int {a + b}; f 2") == "3");
 
     // recursion
+    CHECK(interpret_std("f=fun x:Int->Int { x; if x <= 1 then 0 else f (x-1) }; f 5") == "5;4;3;2;1;0");      // yield intermediate steps
     CHECK(interpret_std("f=fun n:Int->Int { if n == 1 then 1 else n * f (n-1) }; f 7") == "5040");      // factorial
     CHECK(interpret_std("f=fun x:Int->Int { if x < 2 then x else f (x-1) + f (x-2) }; f 7") == "13");   // Fibonacci number
 
@@ -462,7 +531,7 @@ TEST_CASE( "Native to Value mapping", "[script][native]" )
 {
     CHECK(native::ValueType<void>().type() == Type::Void);
     CHECK(native::ValueType<bool>{true}.value() == true);
-    CHECK(native::ValueType<uint8_t>(255).value() == 255);
+    CHECK(native::ValueType<byte>(255).value() == 255);
     CHECK(native::ValueType<char>('y').value() == 'y');
     CHECK(native::ValueType<int32_t>(-1).value() == -1);
     CHECK(native::ValueType<int64_t>(1ll << 60).value() == 1ll << 60);
@@ -490,8 +559,8 @@ TEST_CASE( "Native functions: free function", "[script][native]" )
         ((test_fun1a 10 4 2)     //  3
         + (test_fun1b 0 6 3))    // -2
     )");
-    CHECK(result->type() == Type::Int32);
-    CHECK(result->as<value::Int32>().value() == 1);
+    CHECK(result.type() == Type::Int32);
+    CHECK(result.get<int32_t>() == 1);
 }
 
 
@@ -514,6 +583,6 @@ TEST_CASE( "Native functions: lambda", "[script][native]" )
         ((add1 1 6) +          //  7
         (add2 3 4))            //  8  (+10 from state)
     )");
-    CHECK(result->type() == Type::Int32);
-    CHECK(result->as<value::Int32>().value() == 24);
+    CHECK(result.type() == Type::Int32);
+    CHECK(result.get<int32_t>() == 24);
 }

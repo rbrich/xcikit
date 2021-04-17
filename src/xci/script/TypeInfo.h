@@ -14,6 +14,7 @@
 #include <memory>
 #include <functional>
 #include <utility>
+#include <variant>
 
 namespace xci::script {
 
@@ -22,7 +23,7 @@ enum class Type : uint8_t {
     Unknown,    // type not known at this time (might be inferred or generic)
     Void,       // void type - has no value
 
-    // Plain types
+    // Primitive types
     Bool,
     Byte,       // uint8
     Char,       // Unicode codepoint (char32)
@@ -35,9 +36,13 @@ enum class Type : uint8_t {
     String,     // special kind of list, behaves like [Char] but is compressed (UTF-8)
     List,       // list of same element type (elem type is part of type, size is part of value)
     Tuple,      // tuple of different value types
+    //Variant,    // discriminated union (A|B|C)
     Function,   // function type, has signature (parameters, return type) and code
     Module,     // module type, carries global names, constants, functions
-    //Data,       // user defined data type
+
+    // Custom types
+    Named,    // type NewType = ... (all other types are anonymous)
+    //Struct,   // a tuple with named members, basically a C-like struct
 };
 
 
@@ -45,57 +50,79 @@ enum class Type : uint8_t {
 /// See Opcode::Cast
 Type decode_arg_type(uint8_t arg);
 
+/// Return how many bytes a type occupies on the stack.
+/// Returns 0 for Tuple -> cannot tell just from Type, need full TypeInfo for that.
+size_t type_size_on_stack(Type type);
+
 
 struct Signature;
+struct NamedType;
+
 
 class TypeInfo {
 public:
-    TypeInfo() = default;
-    explicit TypeInfo(Type type) : m_type(type) {}
-    explicit TypeInfo(Type type, uint8_t var) : m_type(type), m_var(var) {}
+    // Unknown / generic
+    TypeInfo() : m_type(Type::Unknown), m_info(Var(0)) {}
+    explicit TypeInfo(uint8_t var) : m_type(Type::Unknown), m_info(var) {}
+    // Plain types
+    TypeInfo(Type type);
     // Function
     explicit TypeInfo(std::shared_ptr<Signature> signature)
-        : m_type(Type::Function), m_signature(std::move(signature)) {}
+        : m_type(Type::Function), m_info(std::move(signature)) {}
     // Tuple
-    explicit TypeInfo(std::vector<TypeInfo> subtypes)
-        : m_type(Type::Tuple), m_subtypes(std::move(subtypes)) {}
+    explicit TypeInfo(std::vector<TypeInfo> tuple_subtypes)
+        : m_type(Type::Tuple), m_info(std::move(tuple_subtypes)) {}
     // List
-    explicit TypeInfo(Type type, TypeInfo elem_type)
-        : m_type(type), m_subtypes({std::move(elem_type)}) {}
+    explicit TypeInfo(Type t, TypeInfo list_elem);
+    // Named
+    explicit TypeInfo(std::string name, TypeInfo&& type_info);
 
     // shortcuts
-    static TypeInfo bytes() { return TypeInfo{Type::List, TypeInfo{Type::Byte}}; }
+    static TypeInfo bytes() { return TypeInfo{Type::List,TypeInfo{Type::Byte}}; }
+
+    TypeInfo(const TypeInfo&) = default;
+    TypeInfo& operator =(const TypeInfo&) = default;
+    TypeInfo(TypeInfo&& other);
+    TypeInfo& operator =(TypeInfo&& other);
 
     size_t size() const;
     void foreach_heap_slot(std::function<void(size_t offset)> cb) const;
 
     Type type() const { return m_type; }
-    bool is_callable() const { return type() == Type::Function; }
-
+    bool is_callable() const { return m_type == Type::Function; }
     bool is_unknown() const { return m_type == Type::Unknown; }
     bool is_void() const { return m_type == Type::Void; }
-    uint8_t generic_var() const { return m_var; }
+
     void replace_var(uint8_t idx, const TypeInfo& ti);
 
-    Signature& signature() { return *m_signature; }
-    const Signature& signature() const { return *m_signature; }
-    std::shared_ptr<Signature> signature_ptr() const { return m_signature; }
-
     TypeInfo effective_type() const;
-
-    const std::vector<TypeInfo>& subtypes() const { return m_subtypes; }
-    const TypeInfo& elem_type() const;
 
     bool operator==(const TypeInfo& rhs) const;
     bool operator!=(const TypeInfo& rhs) const { return !(*this == rhs); }
 
     explicit operator bool() const { return m_type != Type::Unknown; }
 
+    // -------------------------------------------------------------------------
+    // Additional info, subtypes
+
+    using Var = uint8_t;  // for unknown type, specifies which type variable this represents (counted from 1, none = 0)
+    using Subtypes = std::vector<TypeInfo>;
+    using SignaturePtr = std::shared_ptr<Signature>;
+    using NamedTypePtr = std::shared_ptr<NamedType>;
+
+    Var generic_var() const;  // type = Unknown
+    const TypeInfo& elem_type() const;  // type = List (Subtypes[0])
+    const Subtypes& subtypes() const;  // type = Tuple
+    const SignaturePtr& signature_ptr() const;  // type = Function
+    const Signature& signature() const { return *signature_ptr(); }
+    Signature& signature() { return *signature_ptr(); }
+    const NamedTypePtr& named_type_ptr() const;   // type = Named
+    const NamedType& named_type() const { return *named_type_ptr(); }
+    std::string name() const;
+
 private:
     Type m_type { Type::Unknown };
-    uint8_t m_var {0};  // for unknown type, specifies which type variable this represents (counted from 1, none = 0)
-    std::shared_ptr<Signature> m_signature;
-    std::vector<TypeInfo> m_subtypes;
+    std::variant<std::monostate, Var, Subtypes, SignaturePtr, NamedTypePtr> m_info;
 };
 
 
@@ -115,13 +142,17 @@ struct Signature {
     // Check return type matches and set it to concrete type if it's generic.
     void resolve_return_type(const TypeInfo& t);
 
-    bool operator==(const Signature& rhs) const {
-        return params == rhs.params
-            && partial == rhs.partial
-            && nonlocals == rhs.nonlocals
-            && return_type == rhs.return_type;
-    }
-    bool operator!=(const Signature& rhs) const { return !(rhs == *this); }
+    bool operator==(const Signature& rhs) const = default;
+    bool operator!=(const Signature& rhs) const = default;
+};
+
+
+struct NamedType {
+    std::string name;
+    TypeInfo type_info;
+
+    bool operator==(const NamedType& rhs) const = default;
+    bool operator!=(const NamedType& rhs) const = default;
 };
 
 

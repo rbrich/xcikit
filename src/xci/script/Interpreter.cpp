@@ -44,7 +44,7 @@ std::unique_ptr<Module> Interpreter::build_module(const std::string& name, std::
 }
 
 
-std::unique_ptr<Value> Interpreter::eval(std::string_view input, const InvokeCallback& cb)
+TypedValue Interpreter::eval(std::string_view input, const InvokeCallback& cb)
 {
     // parse
     ast::Module ast;
@@ -59,7 +59,8 @@ std::unique_ptr<Value> Interpreter::eval(std::string_view input, const InvokeCal
     m_machine.call(func, cb);
 
     // get result from stack
-    return m_machine.stack().pull(func.effective_return_type());
+    auto ti = func.effective_return_type();
+    return m_machine.stack().pull_typed(ti);
 }
 
 

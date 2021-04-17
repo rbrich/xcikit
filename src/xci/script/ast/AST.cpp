@@ -128,6 +128,24 @@ std::unique_ptr<ast::Statement> Instance::make_copy() const
 }
 
 
+std::unique_ptr<ast::Statement> TypeDef::make_copy() const
+{
+    auto r = std::make_unique<TypeDef>();
+    r->type_name = type_name;
+    r->type = type->make_copy();
+    return r;
+}
+
+
+std::unique_ptr<ast::Statement> TypeAlias::make_copy() const
+{
+    auto r = std::make_unique<TypeAlias>();
+    r->type_name = type_name;
+    r->type = type->make_copy();
+    return r;
+}
+
+
 void Expression::copy_to(Expression& r) const
 {
     r.source_info = source_info;
@@ -182,6 +200,15 @@ std::unique_ptr<ast::Type> ListType::make_copy() const
 }
 
 
+std::unique_ptr<ast::Type> TupleType::make_copy() const
+{
+    auto r = std::make_unique<TupleType>();
+    for (const auto& t : r->subtypes)
+        r->subtypes.push_back(t->make_copy());
+    return r;
+}
+
+
 std::unique_ptr<ast::Type> FunctionType::make_copy() const
 {
     return pcopy(*this);
@@ -198,7 +225,7 @@ void FunctionType::copy_to(FunctionType& r) const
 
 std::unique_ptr<ast::Expression> Literal::make_copy() const
 {
-    auto r = std::make_unique<Literal>(*value);
+    auto r = std::make_unique<Literal>(value);
     Expression::copy_to(*r);
     return r;
 }
@@ -255,6 +282,8 @@ void Block::finish()
         void visit(Return&) override { is_return = true; }
         void visit(Class&) override {}
         void visit(Instance&) override {}
+        void visit(TypeDef&) override {}
+        void visit(TypeAlias&) override {}
 
     public:
         bool is_return = false;

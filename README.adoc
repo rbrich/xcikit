@@ -110,17 +110,15 @@ The basic building blocks for rendering of text and UI elements.
 
 === xci::script
 
-Experimental scripting language with bytecode interpreter and C transpiler.
+Experimental scripting language with bytecode interpreter.
+
+https://fire.xci.cz/[Online REPL]
 
 Docs:
 
-* link:docs/script/syntax.adoc[Fire Script Syntax Reference]
-+
-It's not fully implemented, so it's more precisely a design document at this time. It will become actual reference in version 1.0.
+* link:https://xci.cz/fire-script/syntax[Fire Script Syntax] (link:docs/script/syntax.adoc[source])
 
-* link:docs/script/machine.adoc[Fire Script Virtual Machine]
-
-The C transpiler is not yet available.
+* link:https://xci.cz/fire-script/machine[Fire Script Virtual Machine] (link:docs/script/machine.adoc[source])
 
 === xci::data
 
@@ -166,15 +164,20 @@ Check them on separate pages:
 
 == How to build
 
-Build system (required):
+TL;DR:
 
-- CMake (eg. `apt-get install cmake`)
+* Clone submodules: `git submodule init --update`
+* Run one of the <<system-package-manager,system package manager>> commands below.
+* Proceed to <<using-build-script,Using build script>> below.
 
-Package manager (optional):
+=== Dependencies
 
-- Conan (eg. `pip3 install conan`)
+Tools:
 
-Dependencies:
+- CMake - build system
+- Conan - optional package manager
+
+Libraries:
 
 - PEGTL (xci-core)
 - libzip (xci-core + XCI_WITH_ZIP)
@@ -184,26 +187,59 @@ Dependencies:
 https://github.com/KhronosGroup/glslang[glslangValidator] (xci-graphics)
 - https://github.com/catchorg/Catch2[Catch2] (tests)
 - https://github.com/google/benchmark[Google Benchmark] (benchmarks)
+- https://github.com/graphitemaster/incbin[inbin] (examples)
 
-Some of the dependencies are installed by Conan if not found in the system
-(e.g. PEGTL, range-v3, GLFW). Others must be provided by the system (Vulkan).
+Obtaining dependencies:
 
-Installing the dependencies:
+* Install them into *_system_* or otherwise make them visible to CMake's `find_*` functions.
+  - This works for almost all deps, except *fmt*, *pfr*, *magic_enum*.
+  - Deps that must be installed this way: *vulkan*, *libzip*, *hyperscan*.
+* Install them via *_Conan_*. Pass `-DCONAN_INSTALL=ON` to `cmake` or build with `build.sh`
+  which runs conan automatically.
+  - Always installs *fmt*, *pfr*, *magic_enum*.
+  - May install *range-v3*, *Catch2*, *benchmark*, *pegtl*, *glfw3*
+    if not found in the system.
+* Install them via *_Git submodule_*: `git submodule init`.
+  - Only for *incbin*.
+  - Note that it's still looked up in the system, if the submodule is not cloned.
 
-- Debian: `apt-get install libzip-dev`
-- macOS (Homebrew): `brew install libzip`
-- macOS (MacPorts): `port install vulkan-* MoltenVK glfw-devel freetype hyperscan cmake ninja`
+[#system-package-manager]
+Installing the dependencies with *_system package managers_*:
 
+- Debian:
++
+----
+apt install libzip-dev cmake ninja-build
+pip3 install conan
+----
+- macOS (Homebrew):
++
+----
+# Clang 11 - required for C++20
+brew install llvm
+export CXX="$(brew --prefix llvm)/bin/clang++"
+# Tools
+brew install cmake conan ccache ninja
+# Libs
+brew install pegtl libzip freetype glfw doxygen catch2 google-benchmark hyperscan
+----
+- macOS (MacPorts):
++
+----
+port install vulkan-* MoltenVK glfw-devel freetype hyperscan cmake ninja
+----
+
+[#using-build-script]
 === Using build script
 
-This should be run once to download missing files etc.:
+This should be run once to download additional assets:
 
 [source,bash]
 ----
 ./bootstrap.sh
 ----
 
-The complete build process is handled by build script:
+The complete build process is handled by a build script:
 
 [source,bash]
 ----
@@ -222,19 +258,19 @@ Detailed build steps (these are examples, adjust parameters as needed):
 
 [source,bash]
 ----
-# Configure Conan remotes, download additional assets
+# Download additional assets
 ./bootstrap.sh
 
 # Prepare build directory
 mkdir build && cd build
 
 # Install dependencies using Conan.
-conan install .. --build missing -s compiler=clang
+conan install .. --build missing --profile clang11
 
 # Configure
 cmake .. -G Ninja -DCMAKE_INSTALL_PREFIX=~/sdk/xcikit
 
-# Adjust CMake configuration
+# Run CMake UI to adjust the parameters
 ccmake ..
 
 # Build
@@ -243,7 +279,7 @@ cmake --build .
 # Run unit tests
 cmake --build . --target 'test'
 
-# Install (default prefix is /usr/local)
+# Install artifacts
 cmake --build . --target 'install'
 ----
 
@@ -276,7 +312,7 @@ Run the build with the toolchain:
 === Porting to Windows
 
 The project is not yet fully ported to Windows.
-But the essential parts should already work:
+The essential parts should already work, though:
 
 * dependencies via Conan
 * build scripts (using git-bash)
@@ -285,8 +321,7 @@ But the essential parts should already work:
 
 How to build:
 
-1. Enable https://docs.microsoft.com/en-us/windows/uwp/get-started/enable-your-device-for-development[Developer mode]
-(required for ability to create symlinks)
+1. (Optional) Enable https://docs.microsoft.com/en-us/windows/uwp/get-started/enable-your-device-for-development[Developer mode] to obtain ability to create symlinks
 
 2. Install build tools via their Windows installers: Git, CMake, Conan
 (`git`, `cmake` and `conan` commands should now work in `cmd.exe`)

@@ -30,6 +30,28 @@ using ranges::any_of;
 using ranges::to;
 
 
+class TypeCheckHelper {
+public:
+    TypeCheckHelper(TypeInfo&& spec) : m_specified_type(move(spec)) {}
+    TypeCheckHelper(TypeInfo&& spec, TypeInfo&& cast) : m_specified_type(move(spec)) {
+        if (cast)
+            m_specified_type = move(cast);
+    }
+
+    void check(const TypeInfo& inferred, const SourceInfo& si) const {
+        const auto& specified = type();
+        if (specified && inferred != specified)
+            throw DefinitionTypeMismatch(specified, inferred, si);
+    }
+
+    const TypeInfo& type() const { return m_specified_type; }
+    TypeInfo&& type() { return move(m_specified_type); }
+
+private:
+    TypeInfo m_specified_type;
+};
+
+
 class TypeCheckerVisitor final: public ast::Visitor {
     struct CallArg {
         TypeInfo type_info;
@@ -65,7 +87,7 @@ public:
             // specified type is basically useless here, let's just check
             // it matches evaluated type from class instance
             if (m_type_info && m_type_info != eval_type)
-                throw DefinitionTypeMismatch(m_type_info, eval_type);
+                throw DefinitionTypeMismatch(m_type_info, eval_type, dfn.expression->source_info);
 
             m_type_info = move(eval_type);
 
@@ -119,8 +141,24 @@ public:
         m_instance = nullptr;
     }
 
+    void visit(ast::TypeDef& v) override {
+        v.type->apply(*this);
+        Index index = v.type_name.symbol->index();
+        // create new Named type
+        module().set_type(index, TypeInfo{v.type_name.name, move(m_type_info)});
+    }
+
+    void visit(ast::TypeAlias& v) override {
+        v.type->apply(*this);
+        Index index = v.type_name.symbol->index();
+        // add the actual type to Module, referenced by symbol
+        module().set_type(index, move(m_type_info));
+    }
+
     void visit(ast::Literal& v) override {
-        m_value_type = v.value->type_info();
+        m_value_type = v.value.type_info();
+        TypeCheckHelper type_check(move(m_type_info));
+        type_check.check(m_value_type, v.source_info);
     }
 
     void visit(ast::Bracketed& v) override {
@@ -128,6 +166,7 @@ public:
     }
 
     void visit(ast::Tuple& v) override {
+        TypeCheckHelper type_check(move(m_type_info));
         // build TypeInfo from subtypes
         std::vector<TypeInfo> subtypes;
         subtypes.reserve(v.items.size());
@@ -136,9 +175,11 @@ public:
             subtypes.push_back(m_value_type.effective_type());
         }
         m_value_type = TypeInfo(move(subtypes));
+        type_check.check(m_value_type, v.source_info);
     }
 
     void visit(ast::List& v) override {
+        TypeCheckHelper type_check(move(m_type_info));
         // check all items have same type
         TypeInfo elem_type;
         for (auto& item : v.items) {
@@ -154,6 +195,7 @@ public:
         }
         v.item_size = elem_type.size();
         m_value_type = TypeInfo(Type::List, move(elem_type));
+        type_check.check(m_value_type, v.source_info);
     }
 
     void visit(ast::Reference& v) override {
@@ -412,7 +454,7 @@ public:
     }
 
     void visit(ast::Call& v) override {
-        auto specified_type = m_type_info;
+        TypeCheckHelper type_check(move(m_type_info), move(m_cast_type));
 
         // resolve each argument
         CallArgs args;
@@ -424,7 +466,7 @@ public:
         // append args to m_call_args (note that m_call_args might be used
         // when evaluating each argument, so we cannot push to them above)
         std::move(args.begin(), args.end(), std::back_inserter(m_call_args));
-        m_call_ret = specified_type;
+        m_call_ret = move(type_check.type());
 
         // using resolved args, resolve the callable itself
         // (it may use args types for overload resolution)
@@ -511,6 +553,7 @@ public:
             }
         }
         m_value_type = move(m_type_info);
+        v.call_args = m_call_args.size();
 
         Function& fn = module().get_function(v.index);
         fn.set_signature(m_value_type.signature_ptr());
@@ -522,10 +565,11 @@ public:
                 fn.set_compiled();
                 resolve_types(fn, v.body);
                 m_value_type = TypeInfo{fn.signature_ptr()};
-            } else {
+            } else if (v.definition) {
                 // mark as generic, uncompiled
                 fn.set_ast(v.body);
-            }
+            } else
+                throw UnexpectedGenericFunction(v.source_info);
         } else {
             fn.set_compiled();
             // compile body and resolve return type
@@ -549,7 +593,7 @@ public:
         // check specified type again - in case it wasn't Function
         if (!m_value_type.is_callable() && specified_type) {
             if (m_value_type != specified_type)
-                throw DefinitionTypeMismatch(specified_type, m_value_type);
+                throw DefinitionTypeMismatch(specified_type, m_value_type, v.source_info);
         }
     }
 
@@ -558,10 +602,12 @@ public:
     void visit(ast::Cast& v) override {
         // resolve the target type -> m_type_info
         v.type->apply(*this);
-        v.type_info = m_type_info;  // save for fold_const_expr
+        v.type_info = std::move(m_type_info);  // save for fold_const_expr
         // resolve the inner expression -> m_value_type
-        // (the Expression might use the specified type from `m_type_info`)
+        // (the Expression might use the specified type from `m_cast_type`)
+        m_cast_type = v.type_info;
         v.expression->apply(*this);
+        m_cast_type = {};
         // cast to Void -> don't call the cast function, just drop the expression result from stack
         if (v.type_info.is_void()) {
             v.drop_size = m_value_type.size();
@@ -576,16 +622,15 @@ public:
         // set the effective type of the Cast expression and clean the call types
         m_value_type = std::move(m_call_ret);
         m_call_args.clear();
-        m_call_ret = {};
     }
 
     void visit(ast::TypeName& t) final {
         switch (t.symbol->type()) {
             case Symbol::TypeName:
-                m_type_info = TypeInfo{ Type(t.symbol->index()) };
+                m_type_info = t.symbol.symtab()->module()->get_type(t.symbol->index());
                 break;
             case Symbol::TypeVar:
-                m_type_info = TypeInfo{ Type::Unknown, uint8_t(t.symbol->index()) };
+                m_type_info = TypeInfo{ TypeInfo::Var(t.symbol->index()) };
                 break;
             default:
                 break;
@@ -612,6 +657,15 @@ public:
     void visit(ast::ListType& t) final {
         t.elem_type->apply(*this);
         m_type_info = TypeInfo{Type::List, move(m_type_info)};
+    }
+
+    void visit(ast::TupleType& t) final {
+        std::vector<TypeInfo> subtypes;
+        for (auto& st : t.subtypes) {
+            st->apply(*this);
+            subtypes.push_back(move(m_type_info));
+        }
+        m_type_info = TypeInfo{move(subtypes)};
     }
 
 private:
@@ -665,6 +719,8 @@ private:
             }
             // consume next param
             ++ v.partial_args;
+            if (v.wrapped_execs != 0 && !res->has_closure())
+                v.wrapped_execs = 1;
             res->params.erase(res->params.begin());
         }
         return res;
@@ -775,8 +831,9 @@ private:
 
 private:
     Function& m_function;
-    TypeInfo m_type_info;  // resolved ast::Type
-    TypeInfo m_value_type;
+    TypeInfo m_type_info;   // resolved ast::Type
+    TypeInfo m_value_type;  // inferred type of the value
+    TypeInfo m_cast_type;   // target type of a Cast
 
     // signature for resolving overloaded functions and templates
     CallArgs m_call_args;  // actual argument types

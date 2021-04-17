@@ -14,8 +14,10 @@ using std::unique_ptr;
 using std::move;
 
 
-class FoldDotCallVisitor final: public ast::Visitor {
+class FoldDotCallVisitor final: public ast::VisitorExclTypes {
 public:
+    using VisitorExclTypes::visit;
+
     explicit FoldDotCallVisitor(Function& func)
         : m_function(func) {}
 
@@ -82,10 +84,6 @@ public:
 
     void visit(ast::Class&) override {}
     void visit(ast::Instance&) override {}
-
-    void visit(ast::TypeName&) final {}
-    void visit(ast::FunctionType&) final {}
-    void visit(ast::ListType&) final {}
 
 private:
     Module& module() { return m_function.module(); }

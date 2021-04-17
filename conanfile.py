@@ -40,7 +40,6 @@ class XcikitConan(ConanFile):
         'fmt/7.1.3',
     )
     build_requires = (
-        'incbin/20180413@rbrich/stable',
         'pfr/1.0.4',
         'magic_enum/0.7.2',
     )
@@ -54,11 +53,10 @@ class XcikitConan(ConanFile):
     )
     generators = ("cmake_paths", "cmake_find_package")
     exports = "VERSION"
-    scm = {
-        "type": "git",
-        "url": "auto",
-        "revision": "auto"
-    }
+    exports_sources = ("bootstrap.sh", "CMakeLists.txt", "config.h.in", "xcikitConfig.cmake.in",
+                       "cmake/**", "src/**", "examples/**", "tests/**", "benchmarks/**", "tools/**",
+                       "share/**", "third_party/**")
+    revision_mode = "scm"
 
     _cmake = None
 
@@ -129,7 +127,7 @@ class XcikitConan(ConanFile):
         return self._cmake
 
     def build(self):
-        self.run("./bootstrap.sh --no-conan-remotes")
+        self.run("./bootstrap.sh")
         cmake = self._configure_cmake()
         cmake.build()
 

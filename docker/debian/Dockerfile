@@ -31,7 +31,6 @@ RUN echo "conan"; apt-get update && apt-mark manual $(apt-mark showauto) && \
     python3-pip && pip3 --no-cache-dir install conan && \
     conan profile new default --detect && \
     conan profile update "settings.compiler.libcxx=libstdc++11" default && \
-    conan remote add xcikit https://api.bintray.com/conan/rbrich/xcikit && \
     conan config set general.revisions_enabled=1 && \
     apt-get purge -y python3-pip $(apt-mark showauto) && \
     rm -rf /var/lib/apt/lists/*

@@ -27,7 +27,7 @@ public:
         // check for name collision
         const auto& name = dfn.variable.identifier.name;
         if (symtab().find_by_name(name))
-            throw MultipleDeclarationError(name);
+            throw RedefinedName(name);
 
         // add new function, symbol
         SymbolTable& fn_symtab = symtab().add_child(name);
@@ -71,7 +71,7 @@ public:
     void visit(ast::Class& v) override {
         // check for name collision
         if (symtab().find_by_name(v.class_name.name))
-            throw MultipleDeclarationError(v.class_name.name);
+            throw RedefinedName(v.class_name.name);
 
         // add child symbol table for the class
         SymbolTable& cls_symtab = symtab().add_child(v.class_name.name);
@@ -100,7 +100,7 @@ public:
         // lookup class
         auto sym_class = resolve_symbol_of_type(v.class_name.name, Symbol::Class);
         if (!sym_class)
-            throw UndefinedTypeName(v.class_name.name);
+            throw UndefinedTypeName(v.class_name.name, v.class_name.source_info);
 
         // find next instance of the class (if any)
         auto next = resolve_symbol_of_type(v.class_name.name, Symbol::Instance);
@@ -136,6 +136,36 @@ public:
         v.index = module().add_instance(move(inst));
         v.symtab = &inst_symtab;
         v.class_name.symbol->set_index(v.index);
+    }
+
+    void visit(ast::TypeDef& v) override {
+        // check for name collision
+        if (symtab().find_by_name(v.type_name.name))
+            throw RedefinedName(v.type_name.name);
+
+        // resolve the type
+        v.type->apply(*this);
+
+        // add new type to the module
+        Index index = module().add_type(TypeInfo{});
+
+        // add new type to symbol table
+        v.type_name.symbol = symtab().add({v.type_name.name, Symbol::TypeName, index});
+    }
+
+    void visit(ast::TypeAlias& v) override {
+        // check for name collision
+        if (symtab().find_by_name(v.type_name.name))
+            throw RedefinedName(v.type_name.name);
+
+        // resolve the type
+        v.type->apply(*this);
+
+        // add new type to the module
+        Index index = module().add_type(TypeInfo{});
+
+        // add new type to symbol table
+        v.type_name.symbol = symtab().add({v.type_name.name, Symbol::TypeName, index});
     }
 
     void visit(ast::Literal&) override {}
@@ -227,10 +257,10 @@ public:
     void visit(ast::TypeName& t) final {
         if (t.name.empty())
             //  TypeInfo(Type::Unknown); ?
-            throw UndefinedTypeName(t.name);
+            throw UndefinedTypeName(t.name, t.source_info);
         t.symbol = resolve_symbol(t.name);
         if (!t.symbol)
-            throw UndefinedTypeName(t.name);
+            throw UndefinedTypeName(t.name, t.source_info);
     }
 
     void visit(ast::FunctionType& t) final {
@@ -251,6 +281,11 @@ public:
 
     void visit(ast::ListType& t) final {
         t.elem_type->apply(*this);
+    }
+
+    void visit(ast::TupleType& t) final {
+        for (auto& st : t.subtypes)
+            st->apply(*this);
     }
 
     struct PostponedBlock {

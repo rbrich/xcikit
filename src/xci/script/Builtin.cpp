@@ -239,9 +239,9 @@ const char* builtin::op_to_function_name(ast::Operator::Op op)
 
 BuiltinModule::BuiltinModule() : Module("builtin")
 {
-    symtab().add({"void", Symbol::Value, add_value(std::make_unique<value::Void>())});
-    symtab().add({"false", Symbol::Value, add_value(std::make_unique<value::Bool>(false))});
-    symtab().add({"true", Symbol::Value, add_value(std::make_unique<value::Bool>(true))});
+    symtab().add({"void", Symbol::Value, add_value(TypedValue{value::Void()})});
+    symtab().add({"false", Symbol::Value, add_value(TypedValue{value::Bool(false)})});
+    symtab().add({"true", Symbol::Value, add_value(TypedValue{value::Bool(true)})});
     add_logical_op_function("or", Opcode::LogicalOr);
     add_logical_op_function("and", Opcode::LogicalAnd);
     add_bitwise_op_function("bit_or", Opcode::BitwiseOr_8);
@@ -535,17 +535,17 @@ void BuiltinModule::add_intrinsics()
 
 void BuiltinModule::add_types()
 {
-    symtab().add({"Void", Symbol::TypeName, Index(Type::Void)});
-    symtab().add({"Bool", Symbol::TypeName, Index(Type::Bool)});
-    symtab().add({"Byte", Symbol::TypeName, Index(Type::Byte)});
-    symtab().add({"Char", Symbol::TypeName, Index(Type::Char)});
-    symtab().add({"Int", Symbol::TypeName, Index(Type::Int32)});
-    symtab().add({"Int32", Symbol::TypeName, Index(Type::Int32)});
-    symtab().add({"Int64", Symbol::TypeName, Index(Type::Int64)});
-    symtab().add({"Float", Symbol::TypeName, Index(Type::Float32)});
-    symtab().add({"Float32", Symbol::TypeName, Index(Type::Float32)});
-    symtab().add({"Float64", Symbol::TypeName, Index(Type::Float64)});
-    symtab().add({"String", Symbol::TypeName, Index(Type::String)});
+    symtab().add({"Void", Symbol::TypeName, add_type(Type::Void)});
+    symtab().add({"Bool", Symbol::TypeName, add_type(Type::Bool)});
+    symtab().add({"Byte", Symbol::TypeName, add_type(Type::Byte)});
+    symtab().add({"Char", Symbol::TypeName, add_type(Type::Char)});
+    symtab().add({"Int", Symbol::TypeName, add_type(Type::Int32)});
+    symtab().add({"Int32", Symbol::TypeName, add_type(Type::Int32)});
+    symtab().add({"Int64", Symbol::TypeName, add_type(Type::Int64)});
+    symtab().add({"Float", Symbol::TypeName, add_type(Type::Float32)});
+    symtab().add({"Float32", Symbol::TypeName, add_type(Type::Float32)});
+    symtab().add({"Float64", Symbol::TypeName, add_type(Type::Float64)});
+    symtab().add({"String", Symbol::TypeName, add_type(Type::String)});
 }
 
 

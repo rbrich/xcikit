@@ -22,8 +22,7 @@ using std::endl;
 
 void Stack::push(const Value& o)
 {
-    auto ti = o.type_info();
-    auto size = ti.size();
+    auto size = o.size_on_stack();
     if (size == 0)
         return;  // Void
     if (m_stack_pointer < size) {
@@ -32,34 +31,41 @@ void Stack::push(const Value& o)
     }
     m_stack_pointer -= size;
     o.write(&m_stack[m_stack_pointer]);
-    m_stack_types.emplace_back(move(ti));
+    push_type(o);
 }
 
 
-std::unique_ptr<Value> Stack::pull(const TypeInfo& ti)
+Value Stack::pull(const TypeInfo& ti)
 {
     if (ti.is_void())
-        return std::make_unique<value::Void>();
-    auto s = ti.size();
-    pop_type(ti, s);
+        return Value();
     // create Value with TypeInfo, read contents from stack
-    auto value = Value::create(ti);
-    value->read(&m_stack[m_stack_pointer]);
-    m_stack_pointer += s;
+    auto value = create_value(ti);
+    pop_type(value);
+    m_stack_pointer += value.read(&m_stack[m_stack_pointer]);
     return value;
 }
 
 
-std::unique_ptr<Value> Stack::get(StackRel pos, const TypeInfo& ti) const
+Value Stack::get(StackRel pos, const TypeInfo& ti) const
 {
     assert(pos + ti.size() <= size());
-    auto value = Value::create(ti);
-    value->read(&m_stack[m_stack_pointer + pos]);
+    auto value = create_value(ti);
+    value.read(&m_stack[m_stack_pointer + pos]);
     return value;
 }
 
 
-void* Stack::get_ptr(Stack::StackRel pos) const
+Value Stack::get(StackRel pos, Type type) const
+{
+    assert(pos + type_size_on_stack(type) <= size());
+    auto value = create_value(type);
+    value.read(&m_stack[m_stack_pointer + pos]);
+    return value;
+}
+
+
+void* Stack::get_ptr(StackRel pos) const
 {
     void* value = nullptr;
     assert(pos + sizeof(value) <= size());
@@ -83,15 +89,15 @@ void Stack::copy(StackRel pos, size_t size)
     auto it_type = m_stack_types.end();
     while (top_bytes > 0) {
         it_type --;
-        auto type_size = it_type->size();
+        auto type_size = type_size_on_stack(*it_type);
         assert(type_size <= top_bytes);
         top_bytes -= type_size;
     }
     size_t copy_bytes = size;
-    std::vector<TypeInfo> copies;
+    std::vector<Type> copies;
     while (copy_bytes > 0) {
         it_type --;
-        auto type_size = it_type->size();
+        auto type_size = type_size_on_stack(*it_type);
         assert(copy_bytes >= type_size);
         copy_bytes -= type_size;
         copies.emplace_back(*it_type);
@@ -119,14 +125,14 @@ void Stack::drop(StackRel first, size_t size)
     auto end_type = m_stack_types.end();
     while (top_bytes < first) {
         end_type --;
-        top_bytes += end_type->size();
+        top_bytes += type_size_on_stack(*end_type);
     }
     assert(top_bytes == first);
     size_t erase_bytes = size;
     auto begin_type = end_type;
     while (erase_bytes > 0) {
         begin_type --;
-        auto type_size = begin_type->size();
+        auto type_size = type_size_on_stack(*begin_type);
         assert(erase_bytes >= type_size);
         erase_bytes -= type_size;
     }
@@ -159,24 +165,24 @@ std::ostream& operator<<(std::ostream& os, const Stack& v)
     cout << right << setw(4) << "pos" << setw(4) << "siz"
          << "  value" << endl;
     // stack data
-    for (const auto& ti : reverse(v.m_stack_types)) {
+    for (const auto type : reverse(v.m_stack_types)) {
         check_print_base();
 
-        const auto size = ti.size();
+        const auto size = type_size_on_stack(type);
         cout << setw(4) << right << pos;
         cout << setw(4) << right << size;
 
-        auto value = v.get(pos, ti);
-        const auto* hs = value->heapslot();
+        auto value = v.get(pos, type);
+        const auto* hs = value.heapslot();
         if (hs) {
             cout << "  heap:" << std::hex << (intptr_t) hs->data() << std::dec
                  << " refs:" << hs->refcount();
             if (*hs)
-                cout << "  " << *value << endl;
+                cout << "  " << value << endl;
             else
                 cout << endl;
         } else {
-            cout << "  " << *value << endl;
+            cout << "  " << value << endl;
         }
 
         pos += size;
@@ -209,21 +215,30 @@ size_t Stack::grow()
 }
 
 
-void Stack::pop_type(const TypeInfo& ti, size_t s)
+void Stack::push_type(const Value& v)
 {
-    if (Stack::size() < s)
+    if (v.type() == Type::Tuple) {
+        v.tuple_foreach([this](const Value& item){
+            push_type(item);
+        });
+    } else
+        m_stack_types.emplace_back(v.type());
+}
+
+
+void Stack::pop_type(const Value& v)
+{
+    if (Stack::size() < v.size_on_stack())
         throw StackUnderflow{};
 
     // check type(s) on stack
-    if (ti.type() == Type::Tuple) {
-        for (const auto& subtype : ti.subtypes()) {
-            assert(subtype == m_stack_types.back());
-            (void) subtype;
-            m_stack_types.pop_back();
-        }
+    if (v.type() == Type::Tuple) {
+        v.tuple_foreach([this](const Value& item){
+            pop_type(item);
+        });
     } else {
         // allow casts - only size have to match
-        assert(ti.size() == m_stack_types.back().size());
+        assert(v.size_on_stack() == type_size_on_stack(top_type()));
         m_stack_types.pop_back();
     }
 }

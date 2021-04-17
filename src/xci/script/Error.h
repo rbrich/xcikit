@@ -15,10 +15,13 @@
 #include <fmt/core.h>
 #include <fmt/ostream.h>
 
+#include <string_view>
+
 
 namespace xci::script {
 
 using fmt::format;
+using std::string_view;
 
 
 class ScriptError : public core::Error {
@@ -54,7 +57,7 @@ inline std::ostream& operator<<(std::ostream& os, const ScriptError& e) noexcept
 
 
 struct NotImplemented : public ScriptError {
-    explicit NotImplemented(const std::string& name)
+    explicit NotImplemented(string_view name)
         : ScriptError(format("not implemented: {}", name)) {}
 };
 
@@ -66,8 +69,8 @@ struct BadInstruction : public ScriptError {
 
 
 struct ParseError : public ScriptError {
-    explicit ParseError(const std::string& msg)
-            : ScriptError(format("parse error: {}", msg)) {}
+    explicit ParseError(string_view msg, const SourceInfo& si = {})
+            : ScriptError(format("parse error: {}", msg), si) {}
 };
 
 
@@ -82,31 +85,31 @@ struct StackOverflow : public ScriptError {
 
 
 struct UndefinedName : public ScriptError {
-    explicit UndefinedName(const std::string& name, const SourceInfo& si)
+    explicit UndefinedName(string_view name, const SourceInfo& si)
         : ScriptError(format("undefined name: {}", name), si) {}
 };
 
 
 struct UndefinedTypeName : public ScriptError {
-    explicit UndefinedTypeName(const std::string& name)
-            : ScriptError(format("undefined type name: {}", name)) {}
+    explicit UndefinedTypeName(string_view name, const SourceInfo& si)
+            : ScriptError(format("undefined type name: {}", name), si) {}
 };
 
 
-struct MultipleDeclarationError : public ScriptError {
-    explicit MultipleDeclarationError(const std::string& name)
-            : ScriptError(format("multiple declaration of name: {}", name)) {}
+struct RedefinedName : public ScriptError {
+    explicit RedefinedName(string_view name)
+            : ScriptError(format("redefined name: {}", name)) {}
 };
 
 
 struct UnsupportedOperandsError : public ScriptError {
-    explicit UnsupportedOperandsError(const std::string& op)
+    explicit UnsupportedOperandsError(string_view op)
             : ScriptError(format("unsupported operands to '{}'", op)) {}
 };
 
 
 struct UnknownTypeName : public ScriptError {
-    explicit UnknownTypeName(const std::string& name)
+    explicit UnknownTypeName(string_view name)
         : ScriptError(format("unknown type name: {}", name)) {}
 };
 
@@ -144,29 +147,35 @@ struct MissingExplicitType : public ScriptError {
 };
 
 
+struct UnexpectedGenericFunction : public ScriptError {
+    explicit UnexpectedGenericFunction(const SourceInfo& si)
+            : ScriptError("generic function must be named or immediately called", si) {}
+};
+
+
 struct FunctionNotFound : public ScriptError {
-    explicit FunctionNotFound(const std::string& name, const std::string& args,
-                              const std::string& candidates)
+    explicit FunctionNotFound(string_view name, string_view args,
+                              string_view candidates)
         : ScriptError(format("function not found: {} {}\n   Candidates:\n{}", name, args, candidates)) {}
 };
 
 
 struct FunctionConflict : public ScriptError {
-    explicit FunctionConflict(const std::string& name, const std::string& args,
-                              const std::string& candidates)
+    explicit FunctionConflict(string_view name, string_view args,
+                              string_view candidates)
             : ScriptError(format("function cannot be uniquely resolved: {} {}\n   Candidates:\n{}", name, args, candidates)) {}
 };
 
 
 struct FunctionNotFoundInClass : public ScriptError {
-    explicit FunctionNotFoundInClass(const std::string& fn, const std::string& cls)
+    explicit FunctionNotFoundInClass(string_view fn, string_view cls)
             : ScriptError(format("instance function '{}' not found in class '{}'",
                                  fn, cls)) {}
 };
 
 
-struct TooManyLocalsError : public ScriptError {
-    explicit TooManyLocalsError()
+struct TooManyLocals : public ScriptError {
+    explicit TooManyLocals()
             : ScriptError(format("too many local values in function")) {}
 };
 
@@ -177,9 +186,9 @@ struct ConditionNotBool : public ScriptError {
 
 
 struct DefinitionTypeMismatch : public ScriptError {
-    explicit DefinitionTypeMismatch(const TypeInfo& exp, const TypeInfo& got)
+    explicit DefinitionTypeMismatch(const TypeInfo& exp, const TypeInfo& got, const SourceInfo& si)
             : ScriptError(format("definition type mismatch: specified {}, inferred {}",
-                                 exp, got)) {}
+                                 exp, got), si) {}
 };
 
 
@@ -212,8 +221,8 @@ struct IndexOutOfBounds : public ScriptError {
 
 
 struct IntrinsicsFunctionError : public ScriptError {
-    explicit IntrinsicsFunctionError(const std::string& message, const SourceInfo& si)
-        : ScriptError("intrinsics function: " + message, si) {}
+    explicit IntrinsicsFunctionError(string_view message, const SourceInfo& si)
+        : ScriptError(format("intrinsics function: {}", message), si) {}
 };
 
 

@@ -84,10 +84,11 @@ struct KeywordThen: TAO_PEGTL_KEYWORD("then") {};
 struct KeywordElse: TAO_PEGTL_KEYWORD("else") {};
 struct KeywordClass: TAO_PEGTL_KEYWORD("class") {};
 struct KeywordInstance: TAO_PEGTL_KEYWORD("instance") {};
+struct KeywordType: TAO_PEGTL_KEYWORD("type") {};
 struct KeywordWith: TAO_PEGTL_KEYWORD("with") {};
 struct KeywordMatch: TAO_PEGTL_KEYWORD("match") {};
 struct Keyword: sor<KeywordFun, KeywordIf, KeywordThen, KeywordElse,
-        KeywordClass, KeywordInstance, KeywordWith, KeywordMatch> {};
+        KeywordClass, KeywordInstance, KeywordType, KeywordWith, KeywordMatch> {};
 
 // Literals
 struct BinDigit : one< '0', '1' > {};
@@ -109,16 +110,7 @@ struct Bytes: seq< one<'b'>, String > {};
 struct RawString : raw_string< '$', '-', '$' > {};  // raw_string = $$ raw text! $$
 struct Literal: sor< Char, String, Byte, Bytes, Number, RawString > {};
 
-// Expressions
-// * some rules are parametrized with S (space type), choose either SC or NSC (allow newline)
-// * in general, rules inside brackets (round or square) use NSC, rules outside brackets use SC
-// * this allows leaving out semicolons but still support multiline expressions
-template<class S> struct DotCall: if_must< one<'.'>, SC, seq< ExprCallable, star<RS, S, ExprArgSafe> > > {};
-template<class S> struct ExprInfixRight: seq< sor< DotCall<S>, if_must<InfixOperator, S, ExprOperand> >, S, opt< ExprInfixRight<S> > > {};
-template<class S> struct ExprInfix: seq< ExprOperand, S, opt<ExprInfixRight<S> > > {};
-template<> struct ExprInfix<SC>: seq< ExprOperand, sor< seq<NSC, at< one<'.'> > >, SC>, opt<ExprInfixRight<SC> > > {};  // specialization to allow newline before dotcall even outside brackets
-template<class S> struct Expression: sor< ExprCond, ExprInfix<S> > {};
-struct Variable: seq< Identifier, opt<SC, one<':'>, SC, must<UnsafeType> > > {};
+// Types
 struct Parameter: sor< Type, seq< Identifier, opt<SC, one<':'>, SC, must<Type> > > > {};
 struct DeclParams: seq< plus<Parameter, SC> > {};
 struct DeclResult: if_must< string<'-', '>'>, SC, Type > {};
@@ -126,10 +118,24 @@ struct TypeConstraint: seq<TypeName, RS, SC, TypeName> {};
 struct TypeContext: if_must< one<'('>, SC, TypeConstraint, SC, star_must<one<','>, SC, TypeConstraint, SC>, one<')'> > {};
 struct FunctionType: seq< DeclParams, SC, DeclResult > {};
 struct FunctionDecl: seq< DeclParams, SC, opt<DeclResult>, SC, opt<if_must<KeywordWith, SC, TypeContext>> > {};
-struct ListType: if_must< one<'['>, SC, Type, SC, one<']'> > {};
-struct UnsafeType: sor<FunctionType, ListType, TypeName> {};   // usable in context where Type is already expected
+struct PlainTypeName: seq< TypeName, not_at<SC, one<','>> > {};  // not followed by comma (would be TupleType)
+struct ListType: if_must< one<'['>, SC, UnsafeType, SC, one<']'> > {};
+struct TupleType: seq< Type, plus<SC, one<','>, SC, Type> > {};
 struct BracketedType: if_must< one<'('>, SC, UnsafeType, SC, one<')'> > {};
+struct UnsafeType: sor<FunctionType, PlainTypeName, TupleType, BracketedType, ListType> {};   // usable in context where Type is already expected
 struct Type: sor< BracketedType, ListType, TypeName > {};
+
+// Expressions
+// * some rules are parametrized with S (space type), choose either SC or NSC (allow newline)
+// * in general, rules inside brackets (round or square) use NSC, rules outside brackets use SC
+// * this allows leaving out semicolons but still support multiline expressions
+template<class S> struct DotCall: if_must< one<'.'>, SC, seq< ExprCallable, star<RS, S, ExprArgSafe> > > {};
+template<class S> struct ExprInfixRight: seq< sor< DotCall<S>, seq<InfixOperator, NSC, ExprOperand> >, S, opt< ExprInfixRight<S> > > {};
+template<class S> struct TrailingComma: opt<S, one<','>> {};
+template<class S> struct ExprInfix: seq< ExprOperand, S, opt<ExprInfixRight<S>>, TrailingComma<S> > {};
+template<> struct ExprInfix<SC>: seq< ExprOperand, sor< seq<NSC, at< one<'.'> > >, SC>, opt<ExprInfixRight<SC>>, TrailingComma<SC> > {};  // specialization to allow newline before dotcall even outside brackets
+template<class S> struct Expression: sor< ExprCond, ExprInfix<S> > {};
+struct Variable: seq< Identifier, opt<SC, one<':'>, SC, must<UnsafeType> > > {};
 struct Block: if_must< one<'{'>, NSC, sor< one<'}'>, seq<SepList<Statement>, NSC, one<'}'>> > > {};
 struct Function: sor< Block, if_must< KeywordFun, NSC, FunctionDecl, NSC, Block> > {};
 struct BracketedExpr: if_must< one<'('>, NSC, Expression<NSC>, NSC, one<')'> > {};
@@ -145,7 +151,8 @@ struct ExprCond: if_must< KeywordIf, NSC, ExprInfix<NSC>, NSC, KeywordThen, NSC,
 
 // Statements
 struct Definition: seq< Variable, SC, seq<one<'='>, not_at<one<'='>>, NSC, must<Expression<SC>>> > {};  // must not match `var == ...`
-struct Statement: sor< Definition, Expression<SC> > {};
+struct TypeAlias: if_must< TypeName, NSC, one<'='>, not_at<one<'='>>, NSC, UnsafeType > {};
+struct Statement: sor< TypeAlias, Definition, Expression<SC> > {};
 
 // Module-level definitions
 struct ClassDefinition: seq< Variable, SC, opt_must<one<'='>, SC, Expression<SC>> > {};
@@ -153,7 +160,8 @@ struct DefClass: if_must< KeywordClass, NSC, TypeName, RS, SC, plus<TypeName, SC
         one<'{'>, NSC, sor< one<'}'>, must<SepList<ClassDefinition>, NSC, one<'}'>> > > {};
 struct DefInstance: if_must< KeywordInstance, NSC, TypeName, RS, SC, plus<Type, SC>, opt<TypeContext>, NSC,
         one<'{'>, NSC, sor< one<'}'>, must<SepList<Definition>, NSC, one<'}'>> > > {};
-struct TopLevelStatement: sor<DefClass, DefInstance, Statement> {};
+struct DefType: if_must< KeywordType, NSC, TypeName, NSC, one<'='>, not_at<one<'='>>, NSC, UnsafeType > {};
+struct TopLevelStatement: sor<DefClass, DefInstance, DefType, Statement> {};
 
 // Source module
 struct Module: must<NSC, opt<SepList<TopLevelStatement>, NSC>, eof> {};
@@ -196,6 +204,20 @@ struct Action<Definition> : change_states< ast::Definition > {
     template<typename Input>
     static void success(const Input &in, ast::Definition& def, ast::Instance& inst) {
         inst.defs.push_back(std::move(def));
+    }
+};
+
+
+template<>
+struct Action<TypeAlias> : change_states< ast::TypeAlias > {
+    template<typename Input>
+    static void success(const Input &in, ast::TypeAlias& alias, ast::Module& mod) {
+        mod.body.statements.push_back(std::make_unique<ast::TypeAlias>(std::move(alias)));
+    }
+
+    template<typename Input>
+    static void success(const Input &in, ast::TypeAlias& alias, ast::Block& block) {
+        block.statements.push_back(std::make_unique<ast::TypeAlias>(std::move(alias)));
     }
 };
 
@@ -554,6 +576,7 @@ struct Action<TypeName> {
     template<typename Input>
     static void apply(const Input &in, std::unique_ptr<ast::Type>& type) {
         type = std::make_unique<ast::TypeName>(in.string());
+        type->source_info.load(in.input(), in.position());
     }
 
     template<typename Input>
@@ -576,14 +599,43 @@ struct Action<TypeName> {
     static void apply(const Input &in, ast::Instance& inst) {
         inst.class_name.name = in.string();
     }
+
+    template<typename Input>
+    static void apply(const Input &in, ast::TypeDef& def) {
+        def.type_name.name = in.string();
+    }
+
+    template<typename Input>
+    static void apply(const Input &in, ast::TypeAlias& alias) {
+        alias.type_name.name = in.string();
+    }
 };
 
 
 template<>
 struct Action<ListType> : change_states< ast::ListType > {
     template<typename Input>
+    static void apply(const Input &in, ast::ListType& ltype) {
+        ltype.source_info.load(in.input(), in.position());
+    }
+
+    template<typename Input>
     static void success(const Input &in, ast::ListType& ltype, std::unique_ptr<ast::Type>& type) {
         type = std::make_unique<ast::ListType>(std::move(ltype));
+    }
+};
+
+
+template<>
+struct Action<TupleType> : change_states< ast::TupleType > {
+    template<typename Input>
+    static void apply(const Input &in, ast::TupleType& ltype) {
+        ltype.source_info.load(in.input(), in.position());
+    }
+
+    template<typename Input>
+    static void success(const Input &in, ast::TupleType& ltype, std::unique_ptr<ast::Type>& type) {
+        type = std::make_unique<ast::TupleType>(std::move(ltype));
     }
 };
 
@@ -610,6 +662,11 @@ struct Action<TypeConstraint> : change_states< ast::TypeConstraint > {
 template<>
 struct Action<FunctionType> : change_states< ast::FunctionType > {
     template<typename Input>
+    static void apply(const Input &in, ast::FunctionType& ftype) {
+        ftype.source_info.load(in.input(), in.position());
+    }
+
+    template<typename Input>
     static void success(const Input &in, ast::FunctionType& ftype, std::unique_ptr<ast::Type>& type) {
         type = std::make_unique<ast::FunctionType>(std::move(ftype));
     }
@@ -619,13 +676,18 @@ struct Action<FunctionType> : change_states< ast::FunctionType > {
 template<>
 struct Action<Type> : change_states< std::unique_ptr<ast::Type> >  {
     template<typename Input>
+    static void apply(const Input &in, std::unique_ptr<ast::Type>& type) {
+        type->source_info.load(in.input(), in.position());
+    }
+
+    template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::FunctionType& ftype) {
         ftype.result_type = std::move(type);
     }
 
     template<typename Input>
-    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::ListType& ltype) {
-        ltype.elem_type = std::move(type);
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::TupleType& tuple) {
+        tuple.subtypes.push_back(std::move(type));
     }
 
     template<typename Input>
@@ -652,13 +714,33 @@ struct Action<Type> : change_states< std::unique_ptr<ast::Type> >  {
 template<>
 struct Action<UnsafeType> : change_states< std::unique_ptr<ast::Type> >  {
     template<typename Input>
+    static void apply(const Input &in, std::unique_ptr<ast::Type>& type) {
+        type->source_info.load(in.input(), in.position());
+    }
+
+    template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Type>& inner, std::unique_ptr<ast::Type>& outer) {
         outer = std::move(inner);
     }
 
     template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::ListType& ltype) {
+        ltype.elem_type = std::move(type);
+    }
+
+    template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::Variable& var) {
         var.type = std::move(type);
+    }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::TypeDef& def) {
+        def.type = std::move(type);
+    }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::TypeAlias& alias) {
+        alias.type = std::move(type);
     }
 };
 
@@ -719,10 +801,19 @@ struct Action<DefInstance> : change_states< ast::Instance > {
 
 
 template<>
+struct Action<DefType> : change_states< ast::TypeDef > {
+    template<typename Input>
+    static void success(const Input &in, ast::TypeDef& def, ast::Module& mod) {
+        mod.body.statements.emplace_back(std::make_unique<ast::TypeDef>(std::move(def)));
+    }
+};
+
+
+template<>
 struct Action<Literal> : change_states< LiteralHelper > {
     template<typename Input>
     static void success(const Input &in, LiteralHelper& helper, std::unique_ptr<ast::Expression>& expr) {
-        std::unique_ptr<Value> value;
+        TypedValue value;
         switch (helper.type) {
             default:
             case ValueType::Unknown:
@@ -733,38 +824,38 @@ struct Action<Literal> : change_states< LiteralHelper > {
                 using l = std::numeric_limits<int32_t>;
                 if (v < l::min() || v > l::max())
                     // The value can't fit in Int32, make it Int64 instead
-                    value = std::make_unique<value::Int64>(v);
+                    value = TypedValue{value::Int64(v)};
                 else
-                    value = std::make_unique<value::Int32>((int32_t) v);
+                    value = TypedValue{value::Int32((int32_t) v)};
                 break;
             }
             case ValueType::Int64:
-                value = std::make_unique<value::Int64>( std::get<int64_t>(helper.content) );
+                value = TypedValue{value::Int64( std::get<int64_t>(helper.content) )};
                 break;
             case ValueType::Float32:
-                value = std::make_unique<value::Float32>( std::get<double>(helper.content) );
+                value = TypedValue{value::Float32( std::get<double>(helper.content) )};
                 break;
             case ValueType::Float64:
-                value = std::make_unique<value::Float64>( std::get<double>(helper.content) );
+                value = TypedValue{value::Float64( std::get<double>(helper.content) )};
                 break;
             case ValueType::Char:
-                value = std::make_unique<value::Char>( std::get<std::string>(helper.content) );
+                value = TypedValue{value::Char( std::get<std::string>(helper.content) )};
                 break;
             case ValueType::String:
                 if (std::holds_alternative<std::string>(helper.content))
-                    value = std::make_unique<value::String>( std::get<std::string>(helper.content) );
+                    value = TypedValue{value::String( std::get<std::string>(helper.content) )};
                 else
-                    value = std::make_unique<value::String>( std::get<std::string_view>(helper.content) );
+                    value = TypedValue{value::String( std::get<std::string_view>(helper.content) )};
                 break;
             case ValueType::Byte: {
                 if (std::holds_alternative<std::string>(helper.content))
-                    value = std::make_unique<value::Byte>( std::get<std::string>(helper.content) );
+                    value = TypedValue{value::Byte( std::get<std::string>(helper.content) )};
                 else {
                     const auto v = std::get<int64_t>(helper.content);
                     using l = std::numeric_limits<uint8_t>;
                     if (v < l::min() || v > l::max())
                         throw parse_error("Byte literal out of range", in);
-                    value = std::make_unique<value::Byte>((uint8_t) v);
+                    value = TypedValue{value::Byte((uint8_t) v)};
                     break;
                 }
                 break;
@@ -772,7 +863,7 @@ struct Action<Literal> : change_states< LiteralHelper > {
             case ValueType::List: {  // [Byte]
                 std::string& str = std::get<std::string>(helper.content);
                 std::span data{(const std::byte*) str.data(), str.size()};
-                value = std::make_unique<value::Bytes>(data);
+                value = TypedValue{value::Bytes(data)};
                 break;
             }
         }
@@ -853,10 +944,10 @@ struct Action<Number> : change_states< NumberHelper > {
             using l = std::numeric_limits<int64_t>;
             if (!minus_sign && val > uint64_t(l::max()))
                 throw parse_error("Int64 literal out of range", in);
-            if (minus_sign && val > uint64_t(-l::min()))
+            if (minus_sign && val > uint64_t(l::max()) + 1)
                 throw parse_error("Int64 literal out of range", in);
 
-            n.num = minus_sign ? -int64_t(val) : int64_t(val);
+            n.num = minus_sign ? int64_t(~val+1) : int64_t(val);
         }
     }
 
@@ -1046,12 +1137,15 @@ struct Control : normal< Rule >
 };
 
 template<> const std::string Control<eof>::errmsg = "invalid syntax";
-template<> const std::string Control<Expression<SC>>::errmsg = "expected Expression";
-template<> const std::string Control<Expression<NSC>>::errmsg = "expected Expression";
+template<> const std::string Control<Expression<SC>>::errmsg = "expected expression";
+template<> const std::string Control<Expression<NSC>>::errmsg = "expected expression";
 template<> const std::string Control<DeclParams>::errmsg = "expected function parameter declaration";
 template<> const std::string Control<ExprInfixRight<SC>>::errmsg = "expected infix operator";
 template<> const std::string Control<ExprInfixRight<NSC>>::errmsg = "expected infix operator";
 template<> const std::string Control<Variable>::errmsg = "expected variable name";
+template<> const std::string Control<UnsafeType>::errmsg = "expected type";
+template<> const std::string Control<Type>::errmsg = "expected type";
+template<> const std::string Control<TypeName>::errmsg = "expected type name";
 
 // default message
 template< typename T >
@@ -1077,13 +1171,14 @@ void Parser::parse(std::string_view input, ast::Module& mod)
 
     try {
         if (!tao::pegtl::parse< Module, Action, Control >( in, mod ))
-            throw ParseError{"input not matched"};
+            throw ParseError("input not matched");
         mod.body.finish();
     } catch (tao::pegtl::parse_error& e) {
-        const auto p = e.positions().front();
-        throw ParseError{fmt::format("{}\n{}\n{:>{}}", e.what(), in.line_at(p), '^', p.column)};
+        SourceInfo si;
+        si.load(in, e.positions().front());
+        throw ParseError(e.message(), si);
     } catch( const std::exception& e ) {
-        throw ParseError{e.what()};
+        throw ParseError(e.what());
     }
 }
 

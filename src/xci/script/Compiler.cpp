@@ -26,8 +26,10 @@ namespace xci::script {
 using ranges::cpp20::views::reverse;
 
 
-class CompilerVisitor: public ast::Visitor {
+class CompilerVisitor: public ast::VisitorExclTypes {
 public:
+    using VisitorExclTypes::visit;
+
     explicit CompilerVisitor(Compiler& compiler, Function& function)
         : m_compiler(compiler), m_function(function) {}
 
@@ -99,10 +101,10 @@ public:
     }
 
     void visit(ast::Literal& v) override {
-        if (v.value->is_void())
+        if (v.value.is_void())
             return;  // Void value
         // add to static values
-        auto idx = module().add_value(v.value->make_copy());
+        auto idx = module().add_value(TypedValue(v.value));
         // LOAD_STATIC <static_idx>
         code().add_opcode(Opcode::LoadStatic, idx);
     }
@@ -175,7 +177,7 @@ public:
                 if (symtab.module() != &module()) {
                     // copy static value into this module if it's from builtin or another module
                     const auto & val = symtab.module()->get_value(sym.index());
-                    idx = module().add_value(val.make_copy());
+                    idx = module().add_value(TypedValue(val));
                 }
                 // LOAD_STATIC <static_idx>
                 code().add_opcode(Opcode::LoadStatic, idx);
@@ -271,7 +273,6 @@ public:
                 break;
             case Symbol::TypeName:
             case Symbol::TypeVar:
-                // TODO
                 break;
             case Symbol::Unresolved:
                 UNREACHABLE;
@@ -383,10 +384,16 @@ public:
                     code().add_opcode(Opcode::Execute);
                 }
             }
-        } else {
-            if (!v.definition) {
+        } else if (!v.definition) {
+            // call the function only if it's inside a Call which applies all required parameters (might be zero)
+            if (v.call_args >= func.parameters().size()) {
                 // CALL0 <function_idx>
                 code().add_opcode(Opcode::Call0, v.index);
+            } else {
+                // push closure on stack (it may be EXECUTEd later by outer Call)
+                make_closure(func);
+                // MAKE_CLOSURE <function_idx>
+                code().add_opcode(Opcode::MakeClosure, v.index);
             }
         }
     }
@@ -402,18 +409,12 @@ public:
         }
     }
 
-    void visit(ast::Class& v) override {
-        // TODO
-    }
-
     void visit(ast::Instance& v) override {
         for (auto& dfn : v.defs)
             dfn.apply(*this);
     }
 
-    void visit(ast::TypeName& t) final {}
-    void visit(ast::FunctionType& t) final {}
-    void visit(ast::ListType& t) final {}
+    void visit(ast::Class& v) override {}
 
 private:
     Module& module() { return m_function.module(); }

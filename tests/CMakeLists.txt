@@ -7,7 +7,6 @@ include(Catch)
 
 add_library(catch_main STATIC catch_main.cpp)
 target_link_libraries(catch_main Catch2::Catch2)
-target_compile_definitions(catch_main PUBLIC CATCH_CONFIG_FAST_COMPILE)
 
 macro(add_catch_test name source)
     add_executable(${name} ${source})
@@ -61,7 +60,7 @@ endif()
 if (XCI_SCRIPT)
     add_catch_test(test_script test_script.cpp xci-script)
     if (EMSCRIPTEN)
-        target_link_options(test_script PRIVATE --embed-file=${CMAKE_BINARY_DIR}/share/script@share/script)
+        target_link_options(test_script PRIVATE --embed-file=${CMAKE_BINARY_DIR}/share/xcikit/script@share/script)
     endif()
 endif()
 

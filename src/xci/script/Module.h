@@ -1,7 +1,7 @@
 // Module.h created on 2019-06-12 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019 Radek Brich
+// Copyright 2019–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_MODULE_H
@@ -27,19 +27,19 @@ public:
 
     const std::string& name() const { return m_symtab.name(); }
 
-    Index add_native_function(std::string&& name,
+    SymbolPointer add_native_function(std::string&& name,
             std::vector<TypeInfo>&& params, TypeInfo&& retval,
             NativeDelegate native);
 
     template<class F>
-    Index add_native_function(std::string&& name, F&& fun) {
+    SymbolPointer add_native_function(std::string&& name, F&& fun) {
         auto w = native::AutoWrap{core::ToFunctionPtr(std::forward<F>(fun))};
         return add_native_function(std::move(name),
                 w.param_types(), w.return_type(), w.native_wrapper());
     }
 
     template<class F>
-    Index add_native_function(std::string&& name, F&& fun, void* arg0) {
+    SymbolPointer add_native_function(std::string&& name, F&& fun, void* arg0) {
         auto w = native::AutoWrap(core::ToFunctionPtr(std::forward<F>(fun)), arg0);
         return add_native_function(std::move(name),
                 w.param_types(), w.return_type(), w.native_wrapper());
@@ -61,13 +61,14 @@ public:
     size_t num_functions() const { return m_functions.size(); }
 
     // Static values
-    Index add_value(std::unique_ptr<Value>&& value);
-    const Value& get_value(Index idx) const { return m_values[idx]; }
+    Index add_value(TypedValue&& value);
+    const TypedValue& get_value(Index idx) const { return m_values[idx]; }
     size_t num_values() const { return m_values.size(); }
 
     // Type information
     Index add_type(TypeInfo type_info);
     const TypeInfo& get_type(Index idx) const { return m_types[idx]; }
+    void set_type(Index idx, TypeInfo&& type_info) { m_types[idx] = move(type_info); }
     size_t num_types() const { return m_types.size(); }
 
     // Type classes
@@ -92,7 +93,7 @@ private:
     std::vector<std::unique_ptr<Class>> m_classes;
     std::vector<std::unique_ptr<Instance>> m_instances;
     std::vector<TypeInfo> m_types;
-    Values m_values;
+    TypedValues m_values;
     SymbolTable m_symtab;
 };
 

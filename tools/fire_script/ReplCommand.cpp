@@ -1,7 +1,7 @@
 // ReplCommand.cpp created on 2020-01-11 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020 Radek Brich
+// Copyright 2020–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "ReplCommand.h"
@@ -75,7 +75,7 @@ const Module* ReplCommand::module_by_idx(size_t mod_idx) {
 }
 
 
-const Module* ReplCommand::module_by_name(const std::string& mod_name) {
+const Module* ReplCommand::module_by_name(std::string_view mod_name) {
     size_t n = 0;
     for (const auto& m : m_ctx.input_modules) {
         if (m->name() == mod_name)
@@ -125,7 +125,7 @@ void ReplCommand::cmd_dump_module(size_t mod_idx) {
 }
 
 
-void ReplCommand::cmd_dump_module(std::string mod_name) {
+void ReplCommand::cmd_dump_module(std::string_view mod_name) {
     auto* module = module_by_name(mod_name);
     if (!module)
         return;
@@ -168,7 +168,7 @@ void ReplCommand::cmd_dump_function() {
 }
 
 
-void ReplCommand::cmd_dump_function(std::string fun_name) {
+void ReplCommand::cmd_dump_function(std::string_view fun_name) {
     TermCtl& t = m_ctx.term_out;
     if (m_ctx.input_modules.empty()) {
         t.print("{t:bold}{fg:red}Error: no input modules available{t:normal}\n");
@@ -188,7 +188,7 @@ void ReplCommand::cmd_dump_function(std::string fun_name) {
 }
 
 
-void ReplCommand::cmd_dump_function(std::string fun_name, std::string mod_name) {
+void ReplCommand::cmd_dump_function(std::string_view fun_name, std::string_view mod_name) {
     TermCtl& t = m_ctx.term_out;
 
     // lookup module
@@ -244,8 +244,8 @@ ReplCommand::ReplCommand(Context& ctx) : m_ctx(ctx)
             { ((ReplCommand*)self)->cmd_dump_module(i); },
             this);
     add_cmd("dump_module", "dm",
-            [](void* self, std::string s)
-            { ((ReplCommand*)self)->cmd_dump_module(std::move(s)); },
+            [](void* self, std::string_view s)
+            { ((ReplCommand*)self)->cmd_dump_module(s); },
             this);
     m_module.symtab().detect_overloads("dump_module");
     m_module.symtab().detect_overloads("dm");
@@ -254,12 +254,12 @@ ReplCommand::ReplCommand(Context& ctx) : m_ctx(ctx)
             { ((ReplCommand*)self)->cmd_dump_function(); },
             this);
     add_cmd("dump_function", "df",
-            [](void* self, std::string f)
-            { ((ReplCommand*)self)->cmd_dump_function(std::move(f)); },
+            [](void* self, std::string_view f)
+            { ((ReplCommand*)self)->cmd_dump_function(f); },
             this);
     add_cmd("dump_function", "df",
-            [](void* self, std::string f, std::string m)
-            { ((ReplCommand*)self)->cmd_dump_function(std::move(f), std::move(m)); },
+            [](void* self, std::string_view f, std::string_view m)
+            { ((ReplCommand*)self)->cmd_dump_function(f, m); },
             this);
     add_cmd("dump_function", "df",
             [](void* self, int32_t f)

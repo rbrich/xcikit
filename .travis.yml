@@ -3,6 +3,9 @@ compiler: clang
 os: osx
 osx_image: xcode12.2
 
+git:
+  submodules: false
+
 env:
   global:
     - CC=/usr/local/opt/llvm/bin/clang
@@ -35,7 +38,7 @@ before_script:
       curl -fsSLO https://github.com/gupascal/vulkan-sdk/releases/download/v$VK_SDK_VER/vulkansdk-macos-$VK_SDK_VER.tar.gz
       tar xf vulkansdk-macos-$VK_SDK_VER.tar.gz && rm vulkansdk-macos-$VK_SDK_VER.tar.gz
     fi
-  - ./bootstrap.sh -y
+  - ./bootstrap.sh
   - ./build.sh deps
 
 script:
@@ -54,9 +57,10 @@ cache:
     - $HOME/Library/Caches/Homebrew
     - /usr/local/Homebrew
 
-before_deploy:
-  - conan user -p $CONAN_PASSWORD -r xcikit rbrich
-  - conan upload '*/*@rbrich/stable' --all --no-overwrite --check --confirm -r=xcikit
+#before_deploy:
+#  - conan remote add xcikit https://api.bintray.com/conan/rbrich/xcikit
+#  - conan user -p $CONAN_PASSWORD -r xcikit rbrich
+#  - conan upload 'xcikit/*@rbrich/stable' --all --no-overwrite --check --confirm -r=xcikit
 
 deploy:
   provider: releases

@@ -34,6 +34,8 @@ struct Invocation;
 struct Return;
 struct Class;
 struct Instance;
+struct TypeDef;
+struct TypeAlias;
 
 struct Cast;
 struct Literal;
@@ -49,6 +51,7 @@ struct Function;
 struct TypeName;
 struct FunctionType;
 struct ListType;
+struct TupleType;
 
 
 class ConstVisitor {
@@ -59,6 +62,8 @@ public:
     virtual void visit(const Return&) = 0;
     virtual void visit(const Class&) = 0;
     virtual void visit(const Instance&) = 0;
+    virtual void visit(const TypeDef&) = 0;
+    virtual void visit(const TypeAlias&) = 0;
     // expression
     virtual void visit(const Literal&) = 0;
     virtual void visit(const Bracketed&) = 0;
@@ -74,6 +79,7 @@ public:
     virtual void visit(const TypeName&) = 0;
     virtual void visit(const FunctionType&) = 0;
     virtual void visit(const ListType&) = 0;
+    virtual void visit(const TupleType&) = 0;
 };
 
 class Visitor {
@@ -84,6 +90,8 @@ public:
     virtual void visit(Return&) = 0;
     virtual void visit(Class&) = 0;
     virtual void visit(Instance&) = 0;
+    virtual void visit(TypeDef&) = 0;
+    virtual void visit(TypeAlias&) = 0;
     // expression
     virtual void visit(Literal&) = 0;
     virtual void visit(Bracketed&) = 0;
@@ -99,6 +107,7 @@ public:
     virtual void visit(TypeName&) = 0;
     virtual void visit(FunctionType&) = 0;
     virtual void visit(ListType&) = 0;
+    virtual void visit(TupleType&) = 0;
 };
 
 
@@ -120,18 +129,21 @@ public:
     void visit(TypeName&) final {}
     void visit(FunctionType&) final {}
     void visit(ListType&) final {}
+    void visit(TupleType&) final {}
 };
 
 
 // Inherit this and add `using TypeVisitor::visit;` to skip other visits
 class TypeVisitor: public Visitor {
 public:
-    // statement
+    // skip statement visits
     void visit(Definition&) final {}
     void visit(Invocation&) final {}
     void visit(Return&) final {}
     void visit(Class&) final {}
     void visit(Instance&) final {}
+    void visit(TypeDef&) final {}
+    void visit(TypeAlias&) final {}
     // skip expression visits
     void visit(Literal&) final {}
     void visit(Tuple&) final {}
@@ -143,6 +155,20 @@ public:
     void visit(Condition&) final {}
     void visit(Function&) final {}
     void visit(Cast&) final {}
+};
+
+
+// Inherit this and add `using VisitorExclTypes::visit;` to skip other visits
+class VisitorExclTypes: public Visitor {
+public:
+    // skip statement visits regarding types
+    void visit(TypeDef&) final {}
+    void visit(TypeAlias&) final {}
+    // skip type visits
+    void visit(TypeName&) final {}
+    void visit(FunctionType&) final {}
+    void visit(ListType&) final {}
+    void visit(TupleType&) final {}
 };
 
 
@@ -162,6 +188,8 @@ struct Type {
     virtual void apply(ConstVisitor& visitor) const = 0;
     virtual void apply(Visitor& visitor) = 0;
     virtual std::unique_ptr<ast::Type> make_copy() const = 0;
+
+    SourceInfo source_info;
 };
 
 
@@ -185,6 +213,15 @@ struct ListType: public Type {
     std::unique_ptr<ast::Type> make_copy() const override;
 
     std::unique_ptr<Type> elem_type;
+};
+
+
+struct TupleType: public Type {
+    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
+    void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Type> make_copy() const override;
+
+    std::vector<std::unique_ptr<Type>> subtypes;
 };
 
 
@@ -247,13 +284,13 @@ struct Expression {
 };
 
 struct Literal: public Expression {
-    explicit Literal(const Value& v) : value(v.make_copy()) {}
-    explicit Literal(std::unique_ptr<Value>&& v) : value(std::move(v)) {}
+    explicit Literal(const TypedValue& v) : value(v) {}
+    explicit Literal(TypedValue&& v) : value(std::move(v)) {}
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;
 
-    std::unique_ptr<Value> value;
+    TypedValue value;
 };
 
 /// An expression in round brackets, e.g. (1 + 2)
@@ -393,6 +430,7 @@ struct Function: public Expression {
 
     // resolved:
     Index index = no_index;
+    size_t call_args = 0;  // number of args if the function is inside Call
 };
 
 
@@ -494,6 +532,26 @@ struct Instance: public Statement {
     // resolved:
     Index index = no_index;
     SymbolTable* symtab = nullptr;
+};
+
+
+struct TypeDef: public Statement {
+    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
+    void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Statement> make_copy() const override;
+
+    TypeName type_name;
+    std::unique_ptr<Type> type;
+};
+
+
+struct TypeAlias: public Statement {
+    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
+    void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Statement> make_copy() const override;
+
+    TypeName type_name;
+    std::unique_ptr<Type> type;
 };
 
 

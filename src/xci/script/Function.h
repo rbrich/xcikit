@@ -101,7 +101,7 @@ public:
     // whole closure = nonlocals + partial
     size_t raw_size_of_closure() const { return raw_size_of_nonlocals() + raw_size_of_partial(); }
     size_t closure_size() const { return nonlocals().size() + partial().size(); }
-    std::vector<TypeInfo> closure() const;
+    std::vector<TypeInfo> closure_types() const;
 
     // true if this function should be generic (i.e. signature contains a type variable)
     bool detect_generic() const;

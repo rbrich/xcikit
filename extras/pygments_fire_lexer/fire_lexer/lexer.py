@@ -47,7 +47,7 @@ class FireLexer(CLexer):
             (r'[()\[\],.]', Punctuation),
             (words((
                 'catch', 'class', 'else', 'fun', 'if', 'import',
-                'instance', 'in', 'match', 'module', 'then', 'try', 'with',
+                'instance', 'in', 'match', 'module', 'then', 'try', 'type', 'with',
                 ), suffix=r'\b'),
              Keyword),
             (words(('Void', 'Bool', 'Byte', 'Char', 'Int', 'Int32', 'Int64',

@@ -13,9 +13,10 @@
     "distclean": "rm -rf dist",
     "build-fire": "../../build.sh script --emscripten --minsize -DXCI_BUILD_EXAMPLES=OFF -DXCI_BUILD_TESTS=OFF -DXCI_BUILD_BENCHMARKS=OFF -DXCI_INSTALL_DEVEL=OFF --build-dir $PWD/build --install-dir $PWD/dist && mv dist/bin dist/v$(cat $PWD/../../VERSION)",
     "copy-to-dist": "cp node_modules/xterm/css/xterm.css dist/v$(cat ../../VERSION) && cp index.html dist/v$(cat ../../VERSION)",
+    "gzip-dist": "gzip -k9 dist/v$(cat ../../VERSION)/*",
     "webpack-devel": "webpack ./main.js -o dist/v$(cat ../../VERSION) --output-filename=bundle.js --mode=development",
     "webpack-prod": "webpack ./main.js -o dist/v$(cat ../../VERSION) --output-filename=bundle.js --mode=production",
-    "devel": "npm run distclean && npm run build-fire && npm run copy-to-dist && npm run webpack-devel",
-    "build": "npm run distclean && npm run build-fire && npm run copy-to-dist && npm run webpack-prod"
+    "devel": "npm run distclean && npm run build-fire && npm run copy-to-dist && npm run webpack-devel && npm run gzip-dist",
+    "build": "npm run distclean && npm run build-fire && npm run copy-to-dist && npm run webpack-prod && npm run gzip-dist"
   }
 }

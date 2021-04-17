@@ -10,6 +10,7 @@
 #include <xci/core/string.h>
 #include <numeric>
 #include <sstream>
+#include <limits>
 
 namespace xci::script {
 
@@ -18,53 +19,405 @@ using std::unique_ptr;
 using std::make_unique;
 
 
-std::unique_ptr<Value> Value::create(const TypeInfo& type_info)
+// variant visitor helper
+// see https://en.cppreference.com/w/cpp/utility/variant/visit
+template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+
+
+Value create_value(const TypeInfo& type_info)
 {
-    switch (type_info.type()) {
-        case Type::Unknown: assert(!"Cannot create Value of Unknown type"); break;
-        case Type::Void: return make_unique<value::Void>();
-        case Type::Bool: return make_unique<value::Bool>();
-        case Type::Byte: return make_unique<value::Byte>();
-        case Type::Char: return make_unique<value::Char>();
-        case Type::Int32: return make_unique<value::Int32>();
-        case Type::Int64: return make_unique<value::Int64>();
-        case Type::Float32: return make_unique<value::Float32>();
-        case Type::Float64: return make_unique<value::Float64>();
-        case Type::String: return make_unique<value::String>();
+    const auto type = type_info.type();
+    switch (type) {
+        default:
+            return create_value(type);
         case Type::List:
             if (type_info.elem_type() == TypeInfo{Type::Byte})
-                return make_unique<value::Bytes>();  // List subclass, with special output formatting
+                return value::Bytes();  // List subclass, with special output formatting
             else
-                return make_unique<value::List>(type_info.elem_type());
-        case Type::Tuple: return make_unique<value::Tuple>(type_info);
-        case Type::Function: return make_unique<value::Closure>();
-        case Type::Module: return make_unique<value::Module>();
+                return value::List();
+        case Type::Tuple:
+            return value::Tuple{type_info.subtypes()};
     }
-    return nullptr;
+    return {};
 }
 
 
-Values::Values(const Values& other)
+Value create_value(Type type)
 {
-    for (const auto& val : other)
-        add(val->make_copy());
+    switch (type) {
+        case Type::Unknown: assert(!"Cannot create Value of Unknown type"); break;
+        case Type::Void: return value::Void{};
+        case Type::Bool: return value::Bool{};
+        case Type::Byte: return value::Byte{};
+        case Type::Char: return value::Char{};
+        case Type::Int32: return value::Int32{};
+        case Type::Int64: return value::Int64{};
+        case Type::Float32: return value::Float32{};
+        case Type::Float64: return value::Float64{};
+        case Type::String: return value::String{};
+        case Type::List: return value::List{};
+        case Type::Tuple: return value::Tuple{};
+        case Type::Function: return value::Closure{};
+        case Type::Module: return value::Module{};
+        case Type::Named: assert(!"Cannot create empty Value of Named type"); break;
+    }
+    return {};
 }
 
 
-Values& Values::operator=(const Values& rhs)
+bool Value::operator==(const Value& rhs) const
 {
-    m_items.clear();
-    for (const auto& val : rhs)
-        add(val->make_copy());
+    return std::visit([&rhs](const auto& a) -> bool {
+        using TA = std::decay_t<decltype(a)>;
+        return std::visit([&a](const auto& b) -> bool {
+            using TB = std::decay_t<decltype(b)>;
+            if constexpr (std::is_same_v<TA, TB>)
+                return a == b;
+            else
+                return false;  // different types
+        }, rhs.m_value);
+    }, m_value);
+}
+
+
+size_t Value::write(byte* buffer) const
+{
+    static_assert(sizeof(bool) == 1);
+    return std::visit([buffer](auto&& v) -> size_t {
+        using T = std::decay_t<decltype(v)>;
+        if constexpr (std::is_same_v<T, std::monostate>)
+            return 0;  // Void
+        else if constexpr (sizeof(T) == 1) {
+            *buffer = byte(v);
+            return 1;
+        } else if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, ListV> || std::is_same_v<T, ClosureV>) {
+            const byte* slot_ptr = v.slot.slot();
+            std::memcpy(buffer, &slot_ptr, sizeof(byte*));
+            return sizeof(byte*);
+        } else if constexpr (std::is_same_v<T, TupleV>) {
+            byte* ofs = buffer;
+            for (Value* it = v.values.get(); !it->is_void(); ++it)
+                ofs += it->write(ofs);
+            return ofs - buffer;
+        } else {
+            std::memcpy(buffer, &v, sizeof(v));
+            return sizeof(v);
+        }
+    }, m_value);
+}
+
+
+size_t Value::read(const byte* buffer)
+{
+    return std::visit([buffer](auto& v) -> size_t {
+        using T = std::decay_t<decltype(v)>;
+        if constexpr (std::is_same_v<T, std::monostate>)
+            return 0;  // Void
+        else if constexpr (std::is_same_v<T, bool>) {
+            v = bool(*buffer);
+            return 1;
+        } else if constexpr (std::is_same_v<T, byte>) {
+            v = *buffer;
+            return 1;
+        } else if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, ListV> || std::is_same_v<T, ClosureV>) {
+            byte* slot_ptr;
+            std::memcpy(&slot_ptr, buffer, sizeof(byte*));
+            v.slot = HeapSlot{slot_ptr};
+            return sizeof(byte*);
+        } else if constexpr (std::is_same_v<T, TupleV>) {
+            const byte* ofs = buffer;
+            for (Value* it = v.values.get(); !it->is_void(); ++it)
+                ofs += it->read(ofs);
+            return ofs - buffer;
+        } else {
+            std::memcpy(&v, buffer, sizeof(v));
+            return sizeof(v);
+        }
+    }, m_value);
+}
+
+
+size_t Value::size_on_stack() const
+{
+    static_assert(sizeof(bool) == 1);
+    return std::visit([](auto&& v) -> size_t {
+        using T = std::decay_t<decltype(v)>;
+        if constexpr (std::is_same_v<T, std::monostate>)
+            return 0;  // Void
+        else if constexpr (std::is_same_v<T, TupleV>) {
+            size_t res = 0;
+            for (Value* it = v.values.get(); !it->is_void(); ++it)
+                res += it->size_on_stack();
+            return res;
+        } else
+            return sizeof(T);
+    }, m_value);
+}
+
+
+const HeapSlot* Value::heapslot() const
+{
+    return std::visit([](auto& v) -> const HeapSlot* {
+        using T = std::decay_t<decltype(v)>;
+        if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, ListV> || std::is_same_v<T, ClosureV>)
+            return &v.slot;
+        else
+            return nullptr;
+    }, m_value);
+}
+
+
+
+void Value::incref() const
+{
+    return std::visit([](auto& v) {
+        using T = std::decay_t<decltype(v)>;
+        if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, ListV> || std::is_same_v<T, ClosureV>)
+            v.slot.incref();
+        else if constexpr (std::is_same_v<T, TupleV>) {
+            for (Value* it = v.values.get(); !it->is_void(); ++it)
+                it->incref();
+        }
+    }, m_value);
+}
+
+
+void Value::decref() const
+{
+    return std::visit([](auto& v) {
+        using T = std::decay_t<decltype(v)>;
+        if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, ListV> || std::is_same_v<T, ClosureV>)
+            v.slot.decref();
+        else if constexpr (std::is_same_v<T, TupleV>) {
+            for (Value* it = v.values.get(); !it->is_void(); ++it)
+                it->decref();
+        }
+    }, m_value);
+}
+
+
+void Value::apply(value::Visitor& visitor) const
+{
+    std::visit([&visitor](auto& v) {
+        using T = std::decay_t<decltype(v)>;
+        if constexpr (std::is_same_v<T, std::monostate>)
+            visitor.visit();  // Void
+        else if constexpr (std::is_same_v<T, StringV>)
+            visitor.visit(v.value());
+        else
+            visitor.visit(v);
+    }, m_value);
+}
+
+
+Type Value::type() const
+{
+    return std::visit(overloaded {
+            [](std::monostate) { return Type::Void; },
+            [](bool) { return Type::Bool; },
+            [](byte) { return Type::Byte; },
+            [](char32_t) { return Type::Char; },
+            [](int32_t) { return Type::Int32; },
+            [](int64_t) { return Type::Int64; },
+            [](float) { return Type::Float32; },
+            [](double) { return Type::Float64; },
+            [](const StringV&) { return Type::String; },
+            [](const ListV&) { return Type::List; },
+            [](const TupleV&) { return Type::Tuple; },
+            [](const ClosureV&) { return Type::Function; },
+            [](const script::Module*) { return Type::Module; },
+    }, m_value);
+}
+
+
+bool Value::cast_from(const Value& src)
+{
+    return std::visit([&src](auto& to) -> bool
+    {
+        using TTo = std::decay_t<decltype(to)>;
+        return std::visit([&to](auto&& from) -> bool {
+            using TFrom = std::decay_t<decltype(from)>;
+
+            // same types or cast to Void -> noop
+            if constexpr (std::is_same_v<TFrom, TTo> || std::is_same_v<TTo, std::monostate>)
+                return true;
+
+            // int/float -> int/float
+            if constexpr
+                    ((std::is_integral_v<TFrom> || std::is_floating_point_v<TFrom> || std::is_same_v<TFrom, byte>)
+                    && (std::is_integral_v<TTo> || std::is_floating_point_v<TTo> || std::is_same_v<TTo, byte>))
+            {
+                to = static_cast<TTo>(from);
+                return true;
+            }
+
+            // Complex types or cast from Void
+            return false;
+        }, src.m_value);
+    }, m_value);
+}
+
+
+StringV::StringV(std::string_view v)
+        : slot(v.size() + sizeof(uint32_t))
+{
+    assert(v.size() < std::numeric_limits<uint32_t>::max());
+    uint32_t size = (uint32_t) v.size();
+    std::memcpy(slot.data(), &size, sizeof(uint32_t));
+    std::memcpy(slot.data() + sizeof(uint32_t), v.data(), v.size());
+}
+
+
+std::string_view StringV::value() const
+{
+    size_t size = bit_read<uint32_t>(slot.data());
+    const char* data = reinterpret_cast<const char*>(slot.data() + sizeof(uint32_t));
+    return {data, size};
+}
+
+
+ListV::ListV(size_t length, TypeInfo elem_type)
+        : slot(length * elem_type.size() + sizeof(uint32_t))
+{
+    assert(length < std::numeric_limits<uint32_t>::max());
+    uint32_t len_raw = (uint32_t) length;
+    std::memcpy(slot.data(), &len_raw, sizeof(uint32_t));
+    std::memset(slot.data() + sizeof(uint32_t), 0, length * elem_type.size());
+}
+
+
+size_t ListV::length() const
+{
+    return bit_read<uint32_t>(slot.data());
+}
+
+
+Value ListV::value_at(size_t idx, TypeInfo elem_type) const
+{
+    assert(idx < length());
+    auto elem = create_value(elem_type);
+    const auto elem_size = elem_type.size();
+    elem.read(slot.data() + sizeof(uint32_t) + idx * elem_size);
+    return elem;
+}
+
+
+TupleV::TupleV(const TupleV& other)
+        : values(std::make_unique<Value[]>(other.length() + 1))
+{
+    for (int i = 0;;) {
+        const Value& item = other.value_at(i);
+        values[i++] = item;
+        if (item.is_void())
+            break;
+    }
+}
+
+
+TupleV& TupleV::operator =(const TupleV& other)
+{
+    values = std::make_unique<Value[]>(other.length() + 1);
+    for (int i = 0;;) {
+        const Value& item = other.value_at(i);
+        values[i++] = item;
+        if (item.is_void())
+            break;
+    }
     return *this;
 }
 
 
-size_t Values::raw_size() const
+TupleV::TupleV(const Values& vs)
+        : values(std::make_unique<Value[]>(vs.size() + 1))
+{
+    int i = 0;
+    for (const auto& tv : vs) {
+        values[i++] = tv;
+    }
+    values[i] = Value{};
+}
+
+
+TupleV::TupleV(const TypeInfo::Subtypes& subtypes)
+        : values(std::make_unique<Value[]>(subtypes.size() + 1))
+{
+    int i = 0;
+    for (const auto& ti : subtypes) {
+        values[i++] = create_value(ti);
+    }
+    values[i] = Value{};
+}
+
+
+bool TupleV::empty() const
+{
+    return values[0].is_void();;
+}
+
+
+size_t TupleV::length() const
+{
+    size_t i = 0;
+    while (!values[i].is_void())
+        ++i;
+    return i;
+}
+
+
+void TupleV::foreach(const std::function<void(const Value&)>& cb) const
+{
+    for (Value* it = values.get(); !it->is_void(); ++it)
+        cb(*it);
+}
+
+
+ClosureV::ClosureV() : slot(sizeof(Function*))
+{
+    const Function* fn_ptr = nullptr;
+    std::memcpy(slot.data(), &fn_ptr, sizeof(Function*));
+}
+
+
+ClosureV::ClosureV(const Function& fn)
+        : slot(sizeof(Function*))
+{
+    assert(fn.closure_size() == 0);
+    const Function* fn_ptr = &fn;
+    std::memcpy(slot.data(), &fn_ptr, sizeof(Function*));
+}
+
+
+ClosureV::ClosureV(const Function& fn, Values&& values)
+        : slot(fn.raw_size_of_closure() + sizeof(Function*))
+{
+    assert(fn.closure_size() == values.size());
+    value::Tuple closure(move(values));
+    const Function* fn_ptr = &fn;
+    std::memcpy(slot.data(), &fn_ptr, sizeof(Function*));
+    closure.write(slot.data() + sizeof(Function*));
+}
+
+
+Function* ClosureV::function() const
+{
+    return reinterpret_cast<Function*>(bit_read<intptr_t>(slot.data()));
+}
+
+
+value::Tuple ClosureV::closure() const
+{
+    value::Tuple values{TypeInfo{function()->closure_types()}.subtypes()};
+    values.read(slot.data() + sizeof(Function*));
+    return values;
+}
+
+
+size_t Values::size_on_stack() const
 {
     return std::accumulate(m_items.begin(), m_items.end(), size_t(0),
-        [](size_t init, const unique_ptr<Value>& value)
-        { return init + value->size(); });
+        [](size_t init, const Value& value)
+        { return init + value.size_on_stack(); });
 }
 
 
@@ -81,69 +434,107 @@ static void dump_float(std::ostream& os, /*std::floating_point*/ auto value)
 }
 
 
+class StreamVisitor: public value::Visitor {
+public:
+    explicit StreamVisitor(std::ostream& os, const TypeInfo& type_info = TypeInfo{}) : os(os), type_info(type_info) {}
+    void visit(void) override { os << ""; }
+    void visit(bool v) override { os << std::boolalpha << v; }
+    void visit(std::byte v) override {
+        os << "b'" << core::escape(core::to_utf8(uint8_t(v))) << "'";
+    }
+    void visit(char32_t v) override {
+        os << '\'' << core::escape(core::to_utf8(v)) << "'";
+    }
+    void visit(int32_t v) override { os << v; }
+    void visit(int64_t v) override { os << v << 'L'; }
+    void visit(float v) override {
+        dump_float(os, v);
+        os << 'f';
+    }
+    void visit(double v) override {
+        dump_float(os, v);
+    }
+    void visit(std::string_view&& v) override {
+        os << '"' << core::escape(v) << '"';
+    }
+    void visit(const ListV& v) override {
+        if (!type_info.is_unknown() && type_info.elem_type().type() == Type::Byte) {
+            // special output for [Byte]
+            const char* data = (const char*)v.slot.data() + sizeof(uint32_t);
+            const std::string_view sv{data, v.length()};
+            os << "b\"" << core::escape(sv) << '"';
+            return;
+        }
+        os << "[";
+        if (type_info.is_unknown()) {
+            for (size_t idx = 0; idx < v.length(); idx++) {
+                if (idx != 0)
+                    os << ", ";
+                os << '?';
+            }
+        } else {
+            const auto& ti = type_info.elem_type();
+            for (size_t idx = 0; idx < v.length(); idx++) {
+                if (idx != 0)
+                    os << ", ";
+                os << TypedValue(v.value_at(idx, ti), ti);
+            }
+        }
+        os << "]";
+    }
+    void visit(const TupleV& v) override {
+        os << "(";
+        if (type_info.is_unknown()) {
+            for (Value* it = v.values.get(); !it->is_void(); ++it) {
+                if (it != v.values.get())
+                    os << ", ";
+                os << Value(*it);
+            }
+        } else {
+            auto ti_iter = type_info.subtypes().begin();
+            for (Value* it = v.values.get(); !it->is_void(); ++it) {
+                if (it != v.values.get())
+                    os << ", ";
+                os << TypedValue(Value(*it), *ti_iter++);
+            }
+        }
+        os << ")";
+    }
+    void visit(const ClosureV& v) override {
+        const auto& fn = *v.function();
+        os << fn.name() << ' ' << fn.signature();
+        const auto& nonlocals = v.closure();
+        if (!nonlocals.empty()) {
+            auto closure_types = fn.closure_types();
+            auto ti_iter = closure_types.begin();
+            os << " (";
+            nonlocals.tuple_foreach([&](const Value& item){
+                if (ti_iter != closure_types.begin())
+                    os << ", ";
+                os << TypedValue(item, *ti_iter++);
+            });
+            os << ")";
+        }
+    }
+    void visit(const script::Module* v) override { fmt::print(os, "<module:{:x}>", uintptr_t(v)); }
+private:
+    std::ostream& os;
+    const TypeInfo& type_info;
+};
+
+
+std::ostream& operator<<(std::ostream& os, const TypedValue& o)
+{
+    StreamVisitor visitor(os, o.type_info());
+    o.value().apply(visitor);
+    return os;
+}
+
+
 std::ostream& operator<<(std::ostream& os, const Value& o)
 {
-    struct StreamVisitor: public value::Visitor {
-        std::ostream& os;
-        explicit StreamVisitor(std::ostream& os) : os(os) {}
-        void visit(const value::Void&) override { os << ""; }
-        void visit(const value::Bool& v) override { os << std::boolalpha << v.value(); }
-        void visit(const value::Byte& v) override {
-            os << "b'" << core::escape(core::to_utf8(v.value())) << "'";
-        }
-        void visit(const value::Char& v) override {
-            os << '\'' << core::escape(core::to_utf8(v.value())) << "'";
-        }
-        void visit(const value::Int32& v) override { os << v.value(); }
-        void visit(const value::Int64& v) override { os << v.value() << 'L'; }
-        void visit(const value::Float32& v) override {
-            dump_float(os, v.value());
-            os << 'f';
-        }
-        void visit(const value::Float64& v) override {
-            dump_float(os, v.value());
-        }
-        void visit(const value::Bytes& v) override {
-            const std::string_view sv{(const char*)v.value().data(), v.value().size()};
-            os << "b\"" << core::escape(sv) << '"';
-        }
-        void visit(const value::String& v) override {
-            os << '"' << core::escape(v.value()) << '"';
-        }
-        void visit(const value::List& v) override {
-            os << "[";
-            for (size_t idx = 0; idx < v.length(); idx++) {
-                os << *v.get(idx);
-                if (idx < v.length() - 1)
-                    os << ", ";
-            }
-            os << "]";
-        }
-        void visit(const value::Tuple& v) override {
-            const auto& values = v.values();
-            os << "(";
-            for (const auto& item : values) {
-                os << *item;
-                if (item.get() != values.back().get())
-                    os << ", ";
-            }
-            os << ")";
-        }
-        void visit(const value::Closure& v) override {
-            auto closure = v.closure();
-            const auto& nonlocals = closure.values();
-            os << v.function().name() << " (";
-            for (const auto& item : nonlocals) {
-                os << *item;
-                if (item.get() != nonlocals.back().get())
-                    os << ", ";
-            }
-            os << ")";
-        }
-        void visit(const value::Module& v) override { os << "<module>"; }
-    };
-    StreamVisitor v(os);
-    o.apply(v);
+    StreamVisitor visitor(os);
+    o.apply(visitor);
     return os;
 }
 
@@ -151,273 +542,25 @@ std::ostream& operator<<(std::ostream& os, const Value& o)
 namespace value {
 
 
-template <typename TReal, typename TVal>
-bool numeric_cast(Value& v, TVal& to)
-{
-    struct ValueVisitor: public value::Visitor {
-        TVal& to;
-        bool res = true;
-        explicit ValueVisitor(TVal& to) : to(to) {}
-        void visit(const value::Void&) override { res = false; }
-        void visit(const value::Bool& v) override { to.set_value(static_cast<TReal>(v.value())); }
-        void visit(const value::Byte& v) override { to.set_value(static_cast<TReal>(v.value())); }
-        void visit(const value::Char& v) override { to.set_value(static_cast<TReal>(v.value())); }
-        void visit(const value::Int32& v) override { to.set_value(static_cast<TReal>(v.value())); }
-        void visit(const value::Int64& v) override { to.set_value(static_cast<TReal>(v.value())); }
-        void visit(const value::Float32& v) override { to.set_value(static_cast<TReal>(v.value())); }
-        void visit(const value::Float64& v) override { to.set_value(static_cast<TReal>(v.value())); }
-        void visit(const value::Bytes& v) override { res = false; }
-        void visit(const value::String& v) override { res = false; }
-        void visit(const value::List& v) override { res = false; }
-        void visit(const value::Tuple& v) override { res = false; }
-        void visit(const value::Closure&) override { res = false; }
-        void visit(const value::Module& v) override { res = false; }
-    };
-    ValueVisitor visitor(to);
-    v.apply(visitor);
-    return visitor.res;
-}
-
-
 Byte::Byte(std::string_view utf8)
 {
     auto c = (uint32_t) core::utf8_codepoint(utf8.data());
     if (c > 255)
         throw std::runtime_error("byte value out of range");
-    m_value = (uint8_t) c;
-}
-
-bool Byte::cast_from(Value& v)
-{
-    return numeric_cast<uint8_t>(v, *this);
+    m_value = (byte) c;
 }
 
 
 Char::Char(std::string_view utf8)
-    : m_value(core::utf8_codepoint(utf8.data()))
+    : Value(core::utf8_codepoint(utf8.data()))
 {}
 
 
-bool Int32::cast_from(Value& v)
-{
-    return numeric_cast<int32_t>(v, *this);
-}
-
-
-bool Int64::cast_from(Value& v)
-{
-    return numeric_cast<int64_t>(v, *this);
-}
-
-
-bool Float32::cast_from(Value& v)
-{
-    return numeric_cast<float>(v, *this);
-}
-
-
-bool Float64::cast_from(Value& v)
-{
-    return numeric_cast<double>(v, *this);
-}
-
-
-String::String(std::string_view v)
-    : m_size(v.size()), m_value(v.size())
-{
-    std::memcpy(m_value.data(), v.data(), v.size());
-}
-
-
-String& String::operator=(String&& rhs) noexcept
-{
-    std::swap(m_size, rhs.m_size);
-    std::swap(m_value, rhs.m_value);
-    return *this;
-}
-
-
-std::unique_ptr<Value> String::make_copy() const
-{
-    return std::make_unique<String>(m_size, m_value);
-}
-
-
-void String::write(byte* buffer) const
-{
-    const byte* slot = m_value.slot();
-    std::memcpy(buffer, &slot, sizeof(slot));
-    std::memcpy(buffer + sizeof(slot), &m_size, sizeof(m_size));
-}
-
-
-void String::read(const byte* buffer)
-{
-    byte *slot = nullptr;
-    std::memcpy(&slot, buffer, sizeof(slot));
-    std::memcpy(&m_size, buffer + sizeof(slot), sizeof(m_size));
-    m_value = HeapSlot{slot};
-}
-
-
-List::List(const Values& values)
-    : m_length(values.size())
-{
-    if (values.empty())
-        return;  // default initialized empty list
-    m_elem_type = values[0].type_info();
-    auto elem_size = m_elem_type.size();
-    m_elements = HeapSlot{m_length * elem_size};
-    auto* dataptr = m_elements.data();
-    for (const auto& value : values) {
-        if (value->type_info() != m_elem_type)
-            throw ListElemTypeMismatch(m_elem_type, value->type_info());
-        value->write(dataptr);
-        dataptr += elem_size;
-    }
-}
-
-std::unique_ptr<Value> List::make_copy() const
-{
-    return std::make_unique<List>(m_elem_type, m_length, m_elements);
-}
-
-
-void List::write(byte* buffer) const
-{
-    const byte* slot = m_elements.slot();
-    std::memcpy(buffer, &slot, sizeof(slot));
-    std::memcpy(buffer + sizeof(slot), &m_length, sizeof(m_length));
-}
-
-
-void List::read(const byte* buffer)
-{
-    byte *slot = nullptr;
-    std::memcpy(&slot, buffer, sizeof(slot));
-    std::memcpy(&m_length, buffer + sizeof(slot), sizeof(m_length));
-    m_elements = HeapSlot{slot};
-}
-
-
-std::unique_ptr<Value> List::get(size_t idx) const
-{
-    assert(idx < m_length);
-    auto elem = Value::create(m_elem_type);
-    elem->read(m_elements.data() + idx * m_elem_type.size());
-    return elem;
-}
-
-
 Bytes::Bytes(std::span<const std::byte> v)
-        : List(TypeInfo{Type::Byte}, v.size(), HeapSlot{v.size()})
+        : List(v.size(), TypeInfo{Type::Byte})
 {
-    std::memcpy(heapslot_ref().data(), v.data(), v.size());
-}
-
-
-Tuple::Tuple(const TypeInfo& type_info)
-{
-    for (const TypeInfo& subtype : type_info.subtypes()) {
-        m_values.add(Value::create(subtype));
-    }
-}
-
-
-void Tuple::write(byte* buffer) const
-{
-    for (const auto& v : m_values) {
-        v->write(buffer);
-        buffer += v->size();
-    }
-}
-
-
-void Tuple::read(const byte* buffer)
-{
-    for (const auto& v : m_values) {
-        v->read(buffer);
-        buffer += v->size();
-    }
-}
-
-
-void Tuple::incref() const
-{
-    for (const auto& v : m_values) {
-        v->incref();
-    }
-}
-
-
-void Tuple::decref() const
-{
-    for (const auto& v : m_values) {
-        v->decref();
-    }
-}
-
-
-TypeInfo Tuple::type_info() const
-{
-    // build TypeInfo from subtypes
-    std::vector<TypeInfo> subtypes;
-    subtypes.reserve(m_values.size());
-    for (const auto& v : m_values) {
-        subtypes.push_back(v->type_info());
-    }
-    return TypeInfo(move(subtypes));
-}
-
-
-Closure::Closure(Function& v) : m_function(&v) {}
-
-
-Closure::Closure(Function& v, Values&& values)
-        : m_function(&v), m_closure(v.raw_size_of_closure())
-{
-    assert(m_function->closure_size() == values.size());
-    Tuple closure(move(values));
-    closure.write(m_closure.data());
-}
-
-
-std::unique_ptr<Value> Closure::make_copy() const
-{
-    return std::make_unique<Closure>(*m_function, m_closure);
-}
-
-
-void Closure::write(byte* buffer) const
-{
-    const byte* slot = m_closure.slot();
-    std::memcpy(buffer, &slot, sizeof(slot));
-    std::memcpy(buffer + sizeof(slot), &m_function, sizeof(Function*));
-}
-
-
-void Closure::read(const byte* buffer)
-{
-    byte *slot = nullptr;
-    std::memcpy(&slot, buffer, sizeof(slot));
-    std::memcpy(&m_function, buffer + sizeof(slot), sizeof(Function*));
-    m_closure = HeapSlot{slot};
-}
-
-
-TypeInfo Closure::type_info() const
-{
-    if (m_function == nullptr)
-        return TypeInfo{Type::Function};
-    return TypeInfo{m_function->signature_ptr()};
-}
-
-
-Tuple Closure::closure() const
-{
-    Tuple closure{TypeInfo{m_function->closure()}};
-    closure.read(m_closure.data());
-    return closure;
+    std::memcpy((void*)(heapslot()->data() + sizeof(uint32_t)),
+            v.data(), v.size());
 }
 
 

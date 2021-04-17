@@ -21,7 +21,6 @@ RUN echo "dev tools"; apt-get update && apt-get install --no-install-recommends 
 COPY conan/profile /root/.conan/profiles/default
 COPY conan/settings.yml /root/.conan/settings.yml
 RUN echo "conan"; pip3 --no-cache-dir install conan && \
-    conan remote add xcikit https://api.bintray.com/conan/rbrich/xcikit && \
     conan config set general.revisions_enabled=1
 
 # --------------------------------------------------------------------------------------------------

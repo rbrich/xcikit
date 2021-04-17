@@ -12,6 +12,7 @@ jobs:
 
     env:
       CONAN_REVISIONS_ENABLED: 1
+      BUILD_ARGS: core data script -DXCI_BUILD_TOOLS=OFF -DXCI_BUILD_EXAMPLES=OFF -DXCI_BUILD_TESTS=OFF -DXCI_BUILD_BENCHMARKS=OFF
 
     steps:
     - name: Checkout repository
@@ -51,8 +52,8 @@ jobs:
 
     - name: Build
       run: |
-        ./bootstrap.sh -y
-        ./build.sh  deps config build  core data script
+        ./bootstrap.sh
+        ./build.sh deps config build $BUILD_ARGS
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1

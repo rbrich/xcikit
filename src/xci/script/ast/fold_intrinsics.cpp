@@ -10,8 +10,10 @@
 namespace xci::script {
 
 
-class FoldIntrinsicsVisitor final: public ast::Visitor {
+class FoldIntrinsicsVisitor final: public ast::VisitorExclTypes {
 public:
+    using VisitorExclTypes::visit;
+
     void visit(ast::Definition& v) override { v.expression->apply(*this); reset(); }
     void visit(ast::Invocation& v) override { v.expression->apply(*this); reset(); }
     void visit(ast::Return& v) override { v.expression->apply(*this); reset(); }
@@ -29,16 +31,15 @@ public:
             uint8_t & val;
             const SourceInfo& si;
             explicit ValueVisitor(uint8_t& val, const SourceInfo& si) : val(val), si(si) {}
-            void visit(const value::Byte& v) override { val = v.value(); }
-            void visit(const value::Int32& v) override {
-                auto i = v.value();
-                if (i < 0 || i > 255)
-                    throw IntrinsicsFunctionError("arg value out of Byte range: " + std::to_string(i), si);
-                val = i;
+            void visit(std::byte v) override { val = uint8_t(v); }
+            void visit(int32_t v) override {
+                if (v < 0 || v > 255)
+                    throw IntrinsicsFunctionError("arg value out of Byte range: " + std::to_string(v), si);
+                val = (uint8_t) v;
             }
         };
         ValueVisitor visitor(m_arg_value, v.source_info);
-        v.value->apply(visitor);
+        v.value.apply(visitor);
     }
 
     void visit(ast::Call& v) override {
@@ -90,10 +91,6 @@ public:
         for (auto& d : v.defs)
             visit(d);
     }
-
-    void visit(ast::TypeName&) final {}
-    void visit(ast::FunctionType&) final {}
-    void visit(ast::ListType&) final {}
 
 private:
     void reset() {

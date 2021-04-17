@@ -11,6 +11,7 @@
 #include <string>
 #include <ostream>
 #include <array>
+#include <chrono>
 
 namespace xci::core {
 
@@ -108,6 +109,11 @@ public:
     TermCtl move_to_column(unsigned column) const;  // column is 0-based
     TermCtl save_cursor() const { return _save_cursor(); }
     TermCtl restore_cursor() const { return _restore_cursor(); }
+    TermCtl request_cursor_position() const;
+
+    /// Returns cursor position (row, col), 0-based
+    /// On failure, returns (-1, -1)
+    std::pair<int, int> get_cursor_position();
 
     // clear screen content
     TermCtl clear_screen_down() const;
@@ -206,9 +212,15 @@ public:
     using WriteCallback = std::function<void(std::string_view data)>;
     void set_write_callback(WriteCallback cb) { m_write_cb = std::move(cb); }
 
+    /// This function makes sure the cursor is at line beginning (col 0).
+    /// When the last output didn't end with a newline,
+    /// it prints a "missing newline" marker (⏎) and adds the newline.
+    void sanitize_newline();
+
     /// Compute number of columns required to print the string `s`.
     /// Control sequences and invisible characters are stripped,
     /// double-width UTF-8 characters are counted as two columns.
+    /// Newlines (\n) are counted as 1 column to allow multiline handling in EditLine.
     static unsigned int stripped_width(std::string_view s);
 
     /// Temporarily switch the terminal to raw mode
@@ -217,11 +229,19 @@ public:
     void with_raw_mode(const std::function<void()>& cb, bool isig = false);
 
     /// Read input from stdin
-    /// \returns    The input data, empty string on error or EOF
-    std::string input();
+    /// \param timeout  Return after timeout if no input comes (default = infinite)
+    /// \returns        The input data, empty string on error, timeout or EOF
+    std::string input(std::chrono::microseconds timeout = {});
 
     /// Combination of `with_raw_mode` and `input`
     std::string raw_input(bool isig = false);
+
+    /// Query terminal
+    /// Send request, read response from `in`.
+    /// \param request      a control sequence to send as a request
+    /// \param in           TermCtl which is connected to the response channel
+    /// \returns            raw response from the terminal
+    std::string query(std::string_view request, TermCtl& tin = stdin_instance());
 
     enum class Key : uint8_t {
         Unknown = 0,
@@ -285,6 +305,13 @@ public:
     ///                        or zero in case of special cases (nothing decoded or a non-unicode key)
     DecodedInput decode_input(std::string_view input_buffer);
 
+    struct ControlSequence {
+        std::vector<int> par;  // parameters, default value is -1 (empty parameter)
+        char fun = 0;  // function
+        uint16_t input_len = 0;  // length of input sequence (chars consumed)
+    };
+    ControlSequence decode_seq(std::string_view input_buffer);
+
 private:
     // Copy TermCtl and append seq to new instance
     TermCtl(const TermCtl& term, const std::string& seq)
@@ -304,7 +331,8 @@ private:
         InitOk,     // main instance (it will reset the term when destroyed)
         CopyOk,     // a copy created by chained method
     };
-    State m_state = State::NoTTY;
+    State m_state : 7 = State::NoTTY;
+    bool m_at_newline : 1 = true;
 
 #ifdef _WIN32
     unsigned long m_orig_mode = 0;  // original console mode of the handle

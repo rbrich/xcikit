@@ -1,7 +1,7 @@
 // NativeDelegate.h created on 2020-01-11 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020 Radek Brich
+// Copyright 2020–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_NATIVE_DELEGATE_H
@@ -125,7 +125,7 @@ struct ValueType_s<T, typename std::enable_if_t<std::is_same_v<T, char> || std::
 };
 
 template<class T>
-struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && sizeof(T) == 1 && !std::is_same_v<T, char> && !std::is_same_v<T, bool>>> {
+struct ValueType_s<T, typename std::enable_if_t<std::is_same_v<T, byte> || (std::is_integral_v<T> && sizeof(T) == 1 && !std::is_same_v<T, char> && !std::is_same_v<T, bool>)>> {
     using type = value::Byte;
 };
 
@@ -147,6 +147,11 @@ struct ValueType_s<T, typename std::enable_if_t<std::is_floating_point_v<T> && s
 template<class T>
 struct ValueType_s<T, typename std::enable_if_t<std::is_floating_point_v<T> && sizeof(T) == 8>> {
     using type = value::Float64;
+};
+
+template<>
+struct ValueType_s<std::string_view> {
+    using type = value::String;
 };
 
 template<>

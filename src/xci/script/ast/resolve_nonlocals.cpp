@@ -11,8 +11,10 @@
 namespace xci::script {
 
 
-class NonlocalResolverVisitor final: public ast::Visitor {
+class NonlocalResolverVisitor final: public ast::VisitorExclTypes {
 public:
+    using VisitorExclTypes::visit;
+
     explicit NonlocalResolverVisitor(Function& func)
             : m_function(func) {}
 
@@ -142,10 +144,6 @@ public:
             v.definition->symbol()->set_type(Symbol::Fragment);
         }
     }
-
-    void visit(ast::TypeName& t) final {}
-    void visit(ast::FunctionType& t) final {}
-    void visit(ast::ListType& t) final {}
 
 private:
     Module& module() { return m_function.module(); }

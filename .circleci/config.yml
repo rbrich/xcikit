@@ -13,7 +13,7 @@ jobs:
       - checkout
       - run:
           name: Bootstrap
-          command: ./bootstrap.sh -y
+          command: ./bootstrap.sh
       - run:
           name: Deps
           command: ./build.sh deps
@@ -46,7 +46,7 @@ jobs:
       - checkout
       - run:
           name: Bootstrap
-          command: ./bootstrap.sh -y
+          command: ./bootstrap.sh
       - run:
           name: Deps
           command: ./build.sh deps << parameters.build-args >>

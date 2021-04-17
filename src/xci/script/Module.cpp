@@ -1,7 +1,7 @@
 // Module.cpp created on 2019-06-12 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019 Radek Brich
+// Copyright 2019–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Module.h"
@@ -16,12 +16,12 @@ using std::move;
 Module::~Module()
 {
     for (const auto& val : m_values) {
-        val->decref();
+        val.decref();
     }
 }
 
 
-Index Module::add_native_function(
+SymbolPointer Module::add_native_function(
         std::string&& name, std::vector<TypeInfo>&& params, TypeInfo&& retval,
         NativeDelegate native)
 {
@@ -30,8 +30,7 @@ Index Module::add_native_function(
     fn->signature().return_type = move(retval);
     fn->set_native(native);
     Index index = add_function(move(fn));
-    symtab().add({move(name), Symbol::Function, index});
-    return index;
+    return symtab().add({move(name), Symbol::Function, index});
 }
 
 
@@ -51,7 +50,7 @@ Index Module::add_function(std::unique_ptr<Function>&& fn)
 }
 
 
-Index Module::add_value(std::unique_ptr<Value>&& value)
+Index Module::add_value(TypedValue&& value)
 {
     m_values.add(move(value));
     return m_values.size() - 1;

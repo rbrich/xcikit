@@ -10,7 +10,7 @@ jobs:
         include:
         - os: ubuntu-18.04
         - os: windows-2019
-        #- os: macos-10.15 -- handled by Travis
+        - os: macos-10.15
 
     runs-on: ${{ matrix.os }}
 
@@ -26,39 +26,42 @@ jobs:
         python-version: '3.x'
         architecture: 'x64'
 
-    - name: install GCC
+    - name: "ubuntu: install GCC, dev libs"
       if: ${{ matrix.os == 'ubuntu-18.04' }}
       run: |
         sudo apt-get update
-        sudo apt-get install -y ninja-build g++-10
+        sudo apt-get install -y g++-10 ninja-build libhyperscan-dev
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 50
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 50
         sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++    50
         sudo update-alternatives --install /usr/bin/cc cc /usr/bin/gcc      50
 
-    - name: install dev libs
-      if: ${{ matrix.os == 'ubuntu-18.04' }}
+    - name: "macos: install Clang, dev libs"
+      if: ${{ matrix.os == 'macos-10.15' }}
       run: |
-        sudo apt-get install -y libhyperscan-dev
+        brew install conan ccache ninja glfw doxygen google-benchmark hyperscan vulkan-headers
+        echo "CC='$(brew --prefix llvm)/bin/clang'" >> $GITHUB_ENV
+        echo "CXX='$(brew --prefix llvm)/bin/clang++'" >> $GITHUB_ENV
 
     - name: install tools
       run: |
         pip3 --no-cache-dir install conan
         conan profile new default --detect
 
-    - name: additional Conan setup for Linux
+    - name: "ubuntu: additional Conan setup"
       if: matrix.os == 'ubuntu-18.04'
       run: conan profile update "settings.compiler.libcxx=libstdc++11" default
 
+    - name: "macos: additional Conan setup"
+      if: ${{ matrix.os == 'macos-10.15' }}
+      run: conan profile update "settings.compiler.libcxx=libc++" default
+
     - name: bootstrap
-      run: ./bootstrap.sh -y
+      run: ./bootstrap.sh
       shell: bash
 
     - name: deps
-      run: |
-        ./build.sh deps $BUILD_ARGS
-        conan user -p $CONAN_PASSWORD -r xcikit rbrich
-        conan upload "*/*@rbrich/stable" --all --no-overwrite --check --confirm -r=xcikit
+      run: ./build.sh deps $BUILD_ARGS
       shell: bash
 
     - name: configure
@@ -80,3 +83,11 @@ jobs:
     - name: package
       run: ./build.sh package $BUILD_ARGS
       shell: bash
+
+#    - name: deploy conan package
+#      if: github.ref == 'refs/heads/master'
+#      run: |
+#        conan remote add xcikit https://api.bintray.com/conan/rbrich/xcikit
+#        conan user -p $CONAN_PASSWORD -r xcikit rbrich
+#        conan upload "xcikit/*@rbrich/stable" --all --no-overwrite --check --confirm -r=xcikit
+#      shell: bash

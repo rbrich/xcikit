@@ -1,7 +1,7 @@
 // BytecodeTracer.cpp created on 2020-01-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020 Radek Brich
+// Copyright 2020–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "BytecodeTracer.h"
@@ -82,6 +82,10 @@ void BytecodeTracer::setup(bool print_bytecode, bool trace_bytecode)
             if (m_lines_to_erase > 0)
                 cout << t.move_up(1);
         });
+    }
+
+    if (print_bytecode) {
+        m_term.print("Bytecode trace:\n");
     }
 }
 

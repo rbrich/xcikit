@@ -1,7 +1,7 @@
 // Heap.h created on 2019-08-17 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019 Radek Brich
+// Copyright 2019–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_HEAP_H
@@ -26,8 +26,6 @@ public:
     explicit HeapSlot(std::byte* slot) : m_slot(slot) {}
     // create new slot with refcount = 1
     explicit HeapSlot(size_t size);
-    // free the object only when refcount = 0
-    ~HeapSlot() { gc(); }
     // copy existing slot
     HeapSlot(const HeapSlot& other) = default;
     HeapSlot(HeapSlot&& other) noexcept : m_slot(other.m_slot) { other.m_slot = nullptr; }
@@ -38,9 +36,8 @@ public:
     void read(const std::byte* buffer) { std::memcpy(&m_slot, buffer, sizeof(m_slot)); }
 
     void incref() const;
-    void decref() const;
+    bool decref() const;  // free the object and return true when refcount = 0
     uint32_t refcount() const;
-    void gc();  // delete slot if refs=0
 
     std::byte* data() { return m_slot == nullptr ? nullptr : m_slot + 4; }
     const std::byte* data() const { return m_slot == nullptr ? nullptr : m_slot + 4; }

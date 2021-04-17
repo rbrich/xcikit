@@ -77,19 +77,21 @@ bool Repl::evaluate(std::string_view line)
         BytecodeTracer tracer(machine, t);
         tracer.setup(m_opts.print_bytecode, m_opts.trace_bytecode);
 
-        machine.call(*func, [&](const Value& invoked) {
+        machine.call(*func, [&](const TypedValue& invoked) {
             if (!invoked.is_void()) {
+                t.sanitize_newline();
                 t.print("{t:bold}{fg:yellow}{}{t:normal}\n", invoked);
             }
         });
+        t.sanitize_newline();
 
         // returned value of last statement
-        auto result = machine.stack().pull(func->effective_return_type());
+        auto result = machine.stack().pull_typed(func->effective_return_type());
         if (m_ctx.input_number != -1) {
             // REPL mode
-            if (!result->is_void()) {
+            if (!result.is_void()) {
                 t.print("{t:bold}{fg:magenta}{}:{} = {fg:default}{}{t:normal}\n",
-                        func_name, result->type_info(), *result);
+                        func_name, result.type_info(), result);
             }
             // save result as function `_<N>` in the module
             auto func_idx = module->add_function(move(func));
@@ -98,8 +100,8 @@ bool Repl::evaluate(std::string_view line)
             m_ctx.input_modules.push_back(move(module));
         } else {
             // single input mode
-            if (!result->is_void()) {
-                t.print("{t:bold}{}{t:normal}\n", *result);
+            if (!result.is_void()) {
+                t.print("{t:bold}{}{t:normal}\n", result);
             }
         }
         return true;

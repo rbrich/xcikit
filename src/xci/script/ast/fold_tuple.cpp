@@ -14,8 +14,10 @@ using std::unique_ptr;
 using std::move;
 
 
-class FoldTupleVisitor final: public ast::Visitor {
+class FoldTupleVisitor final: public ast::VisitorExclTypes {
 public:
+    using VisitorExclTypes::visit;
+
     void visit(ast::Definition& dfn) override {
         apply_and_fold(dfn.expression);
     }
@@ -96,10 +98,6 @@ public:
 
     void visit(ast::Class&) override {}
     void visit(ast::Instance&) override {}
-
-    void visit(ast::TypeName&) final {}
-    void visit(ast::FunctionType&) final {}
-    void visit(ast::ListType&) final {}
 
 private:
     void apply_and_fold(unique_ptr<ast::Expression>& expr) {

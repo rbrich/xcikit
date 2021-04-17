@@ -1,0 +1,4 @@
+[submodule "third_party/incbin"]
+	# https://github.com/graphitemaster/incbin
+	path = third_party/incbin
+	url = git@github.com:graphitemaster/incbin.git
