@@ -140,6 +140,12 @@ TypeInfo::TypeInfo(Type type, TypeInfo list_elem)
 }
 
 
+TypeInfo::TypeInfo(std::string name, TypeInfo&& type_info)
+        : m_type(Type::Named),
+          m_info(std::make_shared<NamedType>(NamedType{std::move(name), std::move(type_info)}))
+{}
+
+
 TypeInfo TypeInfo::effective_type() const
 {
     if (is_callable() && signature().params.empty())

@@ -84,7 +84,6 @@ public:
 
     void visit(ast::Class&) override {}
     void visit(ast::Instance&) override {}
-    void visit(ast::TypeDef&) override {}
 
 private:
     Module& module() { return m_function.module(); }

@@ -35,6 +35,7 @@ struct Return;
 struct Class;
 struct Instance;
 struct TypeDef;
+struct TypeAlias;
 
 struct Cast;
 struct Literal;
@@ -62,6 +63,7 @@ public:
     virtual void visit(const Class&) = 0;
     virtual void visit(const Instance&) = 0;
     virtual void visit(const TypeDef&) = 0;
+    virtual void visit(const TypeAlias&) = 0;
     // expression
     virtual void visit(const Literal&) = 0;
     virtual void visit(const Bracketed&) = 0;
@@ -89,6 +91,7 @@ public:
     virtual void visit(Class&) = 0;
     virtual void visit(Instance&) = 0;
     virtual void visit(TypeDef&) = 0;
+    virtual void visit(TypeAlias&) = 0;
     // expression
     virtual void visit(Literal&) = 0;
     virtual void visit(Bracketed&) = 0;
@@ -140,6 +143,7 @@ public:
     void visit(Class&) final {}
     void visit(Instance&) final {}
     void visit(TypeDef&) final {}
+    void visit(TypeAlias&) final {}
     // skip expression visits
     void visit(Literal&) final {}
     void visit(Tuple&) final {}
@@ -157,6 +161,9 @@ public:
 // Inherit this and add `using VisitorExclTypes::visit;` to skip other visits
 class VisitorExclTypes: public Visitor {
 public:
+    // skip statement visits regarding types
+    void visit(TypeDef&) final {}
+    void visit(TypeAlias&) final {}
     // skip type visits
     void visit(TypeName&) final {}
     void visit(FunctionType&) final {}
@@ -527,6 +534,16 @@ struct Instance: public Statement {
 
 
 struct TypeDef: public Statement {
+    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
+    void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Statement> make_copy() const override;
+
+    TypeName type_name;
+    std::unique_ptr<Type> type;
+};
+
+
+struct TypeAlias: public Statement {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Statement> make_copy() const override;

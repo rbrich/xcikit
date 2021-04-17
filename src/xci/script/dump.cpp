@@ -530,6 +530,20 @@ std::ostream& operator<<(std::ostream& os, const TypeDef& v)
     }
 }
 
+std::ostream& operator<<(std::ostream& os, const TypeAlias& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << "TypeAlias" << endl;
+        os << more_indent
+           << put_indent << v.type_name
+           << put_indent << *v.type
+           << less_indent;
+        return os;
+    } else {
+        return os << v.type_name << " = " << *v.type;
+    }
+}
+
 std::ostream& operator<<(std::ostream& os, const Block& v)
 {
     DumpVisitor visitor(os);

@@ -215,7 +215,6 @@ public:
 
     void visit(ast::Class& v) override { m_const_value.reset(); }
     void visit(ast::Instance& v) override { m_const_value.reset(); }
-    void visit(ast::TypeDef& v) override { m_const_value.reset(); }
 
 private:
     Module& module() { return m_function.module(); }

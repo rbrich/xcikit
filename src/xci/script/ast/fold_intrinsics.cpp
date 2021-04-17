@@ -87,7 +87,6 @@ public:
     }
 
     void visit(ast::Class&) override {}
-    void visit(ast::TypeDef&) override {}
     void visit(ast::Instance& v) override {
         for (auto& d : v.defs)
             visit(d);

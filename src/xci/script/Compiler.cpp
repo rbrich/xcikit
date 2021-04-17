@@ -415,7 +415,6 @@ public:
     }
 
     void visit(ast::Class& v) override {}
-    void visit(ast::TypeDef& v) override {}
 
 private:
     Module& module() { return m_function.module(); }

@@ -74,6 +74,8 @@ public:
         : m_type(Type::Tuple), m_info(std::move(tuple_subtypes)) {}
     // List
     explicit TypeInfo(Type t, TypeInfo list_elem);
+    // Named
+    explicit TypeInfo(std::string name, TypeInfo&& type_info);
 
     // shortcuts
     static TypeInfo bytes() { return TypeInfo{Type::List,TypeInfo{Type::Byte}}; }

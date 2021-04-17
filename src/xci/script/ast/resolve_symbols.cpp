@@ -153,6 +153,21 @@ public:
         v.type_name.symbol = symtab().add({v.type_name.name, Symbol::TypeName, index});
     }
 
+    void visit(ast::TypeAlias& v) override {
+        // check for name collision
+        if (symtab().find_by_name(v.type_name.name))
+            throw RedefinedName(v.type_name.name);
+
+        // resolve the type
+        v.type->apply(*this);
+
+        // add new type to the module
+        Index index = module().add_type(TypeInfo{});
+
+        // add new type to symbol table
+        v.type_name.symbol = symtab().add({v.type_name.name, Symbol::TypeName, index});
+    }
+
     void visit(ast::Literal&) override {}
 
     void visit(ast::Bracketed& v) override {

@@ -151,7 +151,8 @@ struct ExprCond: if_must< KeywordIf, NSC, ExprInfix<NSC>, NSC, KeywordThen, NSC,
 
 // Statements
 struct Definition: seq< Variable, SC, seq<one<'='>, not_at<one<'='>>, NSC, must<Expression<SC>>> > {};  // must not match `var == ...`
-struct Statement: sor< Definition, Expression<SC> > {};
+struct TypeAlias: if_must< TypeName, NSC, one<'='>, not_at<one<'='>>, NSC, UnsafeType > {};
+struct Statement: sor< TypeAlias, Definition, Expression<SC> > {};
 
 // Module-level definitions
 struct ClassDefinition: seq< Variable, SC, opt_must<one<'='>, SC, Expression<SC>> > {};
@@ -203,6 +204,20 @@ struct Action<Definition> : change_states< ast::Definition > {
     template<typename Input>
     static void success(const Input &in, ast::Definition& def, ast::Instance& inst) {
         inst.defs.push_back(std::move(def));
+    }
+};
+
+
+template<>
+struct Action<TypeAlias> : change_states< ast::TypeAlias > {
+    template<typename Input>
+    static void success(const Input &in, ast::TypeAlias& alias, ast::Module& mod) {
+        mod.body.statements.push_back(std::make_unique<ast::TypeAlias>(std::move(alias)));
+    }
+
+    template<typename Input>
+    static void success(const Input &in, ast::TypeAlias& alias, ast::Block& block) {
+        block.statements.push_back(std::make_unique<ast::TypeAlias>(std::move(alias)));
     }
 };
 
@@ -588,6 +603,11 @@ struct Action<TypeName> {
     static void apply(const Input &in, ast::TypeDef& def) {
         def.type_name.name = in.string();
     }
+
+    template<typename Input>
+    static void apply(const Input &in, ast::TypeAlias& alias) {
+        alias.type_name.name = in.string();
+    }
 };
 
 
@@ -690,6 +710,11 @@ struct Action<UnsafeType> : change_states< std::unique_ptr<ast::Type> >  {
     template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::TypeDef& def) {
         def.type = std::move(type);
+    }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::TypeAlias& alias) {
+        alias.type = std::move(type);
     }
 };
 

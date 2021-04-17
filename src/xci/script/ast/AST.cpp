@@ -137,6 +137,15 @@ std::unique_ptr<ast::Statement> TypeDef::make_copy() const
 }
 
 
+std::unique_ptr<ast::Statement> TypeAlias::make_copy() const
+{
+    auto r = std::make_unique<TypeAlias>();
+    r->type_name = type_name;
+    r->type = type->make_copy();
+    return r;
+}
+
+
 void Expression::copy_to(Expression& r) const
 {
     r.source_info = source_info;
@@ -274,6 +283,7 @@ void Block::finish()
         void visit(Class&) override {}
         void visit(Instance&) override {}
         void visit(TypeDef&) override {}
+        void visit(TypeAlias&) override {}
 
     public:
         bool is_return = false;

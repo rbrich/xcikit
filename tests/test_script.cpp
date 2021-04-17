@@ -141,6 +141,8 @@ TEST_CASE( "Parsing types", "[script][parser]")
     CHECK(parse("type MyTuple = String, Int") == "type MyTuple = (String, Int)");  // The round brackets are optional, added in AST dump for clarity
     CHECK(parse("type MyListOfTuples = [String, Int]") == "type MyListOfTuples = [(String, Int)]");
     CHECK(parse("type MyListOfTuples2 = [(String, Int), Int]") == "type MyListOfTuples2 = [((String, Int), Int)]");
+    CHECK(parse("MyAlias = Int") == "MyAlias = Int");
+    CHECK(parse("MyAlias2 = [Int]") == "MyAlias2 = [Int]");
 }
 
 
@@ -317,6 +319,13 @@ TEST_CASE( "Types", "[script][interpreter]" )
 
     // TODO: narrowing type of polymorphic function (`f 1.0 2.0` would be error, while `add 1.0 2.0` still works)
     // CHECK(interpret("f : Int Int -> Int = add ; f 1 2") == "3");
+}
+
+
+TEST_CASE( "User-defined types", "[script][interpreter]" )
+{
+    CHECK(interpret("type MyTuple = (String, Int); a:MyTuple = \"hello\", 42; a") == "(\"hello\", 42)");
+    //CHECK_THROWS_AS(interpret("type MyTuple = (String, Int); a:MyTuple = 1, 2; a"), ScriptError);  // TODO: TypeMismatch?
 }
 
 

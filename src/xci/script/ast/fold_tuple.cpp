@@ -98,7 +98,6 @@ public:
 
     void visit(ast::Class&) override {}
     void visit(ast::Instance&) override {}
-    void visit(ast::TypeDef&) override {}
 
 private:
     void apply_and_fold(unique_ptr<ast::Expression>& expr) {
