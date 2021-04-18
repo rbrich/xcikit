@@ -915,6 +915,7 @@ with
 
 === Operator precedence table
 
+.Operator precedence
 |===
 | (-2) |  definition        |  =
 | (-1) |  condition         |  if ...
@@ -942,7 +943,7 @@ The other precedences are hard-coded in parser grammar.
 
 === Terminology
 
-=== Braces, brackets
+==== Braces, brackets
 
 In this document and in the code, all brackets are called either *brackets* (round, square or angle) or *braces* (curly).
 The word parentheses, meaning round brackets, is not used here. I know it's a nice long word, but after needing to write

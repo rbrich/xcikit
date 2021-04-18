@@ -37,15 +37,16 @@ Data stack grows down, to lower addresses.
 
 Arguments are pushed in reversed order, which has two benefits:
 
-* functions can consume arguments from top: pull first arg, pull second arg,
- push result
-* tuple arguments are equivalent to unpacked fields: it doesn't matter
- if each argument is passed separately or all of them in tuple
+* Functions can consume arguments from top: pull first arg, pull second arg,
+  push result.
+* Tuple arguments are equivalent to unpacked fields. It doesn't matter
+  if each argument is passed separately or all of them are passed together
+  as a tuple.
 
 Non-locals are pushed as a tuple, above the arguments. They are effectively
 pushed in reversed order, the same way as the arguments.
 
-Only the `base` address is actually saved in the Call Stack, the others are
+Only the `base` address is saved in the Call Stack, the other addresses are
 computed by the compiler and encoded directly into instructions.
 For example, when compiling the function, compiler knows if it has
 any non-locals, so it can compute `(args)` offset from `base` and use that
@@ -59,10 +60,11 @@ is dynamic, and the stack `(top)` can move freely.
 === Call Stack Frame
 
 Call stack is maintained solely by the VM. When a function reaches end of its
-code, VM is responsible for popping the frame from call stack and restoring
-program counter to caller site.
+code, the VM is responsible for popping the frame from the call stack and restoring
+program counter of the caller site.
 
-Frame contains:
+The call stack frame contains:
+
 - return address: function / instruction
 - base pointer: parameters and non-locals are below, local values above
 
@@ -71,7 +73,7 @@ from current base as their parameter.
 
 === Calling convention
 
-Caller pushes args to stack, in reversed order (1st arg last).
+The caller pushes args to stack, in reversed order (1st arg last).
 Then it either calls a static function (CALL), or executes function object
 (EXECUTE). If the function object contains closure, it is unpacked on stack
 by the VM before calling the function.
@@ -79,7 +81,7 @@ by the VM before calling the function.
 Static function:
 
 ----
-Caller code:              Stack when entering called function:
+Caller code:              Stack when entering the called function:
 
 PUSH <2nd arg>            base    +===============+
 PUSH <1st arg>                    | 1st argument  |
@@ -91,7 +93,7 @@ CALL <static func>                +---------------+
 Function object:
 
 ----
-Caller code:              Stack when entering called function:
+Caller code:              Stack when entering the called function:
 
 PUSH <2nd arg>            base    +===============+
 PUSH <1st arg>                    |  non-locals   |
@@ -106,7 +108,7 @@ The called function is responsible for consuming the arguments and non-locals.
 Those have to be replaced by returned value before exiting.
 
 ----
-Callee code:              Stack when returning to caller:
+Callee code:              Stack when returning to the caller:
 
 PUSH <ret val>            base    +===============+
 DROP <N args + nonloc>            .               .
@@ -115,16 +117,19 @@ DROP <N args + nonloc>            .               .
                                   +---------------+
 ----
 
-Pseudo-functions like `ADD`, `GREATER_THAN` behave the same way: they expect
-the operands in reversed order and replace them with result.
+Machine instructions like `ADD`, `GREATER_THAN` behave in the same way:
+they expect the operands in reversed order and replace them with the result.
 
 == Heap
 
 Some values live on the heap, with only a pointer on the stack. All heap values are
-reference-counted. When all references are removed from stack, they are freed immediately.
-As all values are immutable, we can still think about the values as they were directly
-on the stack. Actually, optimizing compiler can decide if the value goes to stack or not
-and it may also decide to overwrite heap value with only single reference.
+reference-counted. When all references are removed from stack,
+the heap value is freed immediately.
+
+As all values are immutable, we can still think about the values as if they were directly
+on the stack. An optimizing compiler can decide if a value of specific kind goes to heap
+or stack, and it may also decide to modify the heap value in place,
+if it has only a single reference.
 
 All heap values have a header with refcount:
 
@@ -135,3 +140,57 @@ xB data
 
 The size of data is not part of the header, but may be the first item of the data
 (this is the case for strings and arrays).
+
+=== String
+
+String values live on heap. A pointer to the heap is pushed to stack in place
+of the value.
+
+Heap value:
+
+----
+(4B refcount)
+4B size
+xB UTF-8 data (x = size)
+----
+
+The refcount is common for all heap values, allowing universal management
+for heap values of any type.
+
+The string itself has 32bit size and UTF-8 data. The size is in bytes.
+The number of Unicode characters is not directly saved,
+it has to be computed by walking through the data whenever needed.
+If this is an issue, use `[Char]`, which is written as UTF-32 string.
+
+=== List
+
+Heap value:
+
+----
+(4B refcount)
+4B length (number of elements)
+xB element data (x = length * size of element)
+----
+
+The List is similar to the String, but the 32bit length is number of elements,
+instead of bytes. The size of each element is not directly saved, it must be
+passed via TypeInfo. This means that inspecting the heap value is not possible
+without knowing the actual type of the value. Note that without the type,
+it also wouldn't be possible to tell String from List etc.
+
+=== Closure
+
+Heap value:
+
+----
+(4B refcount)
+*B function (pointer)
+xB closure values (tuple)
+----
+
+A closure is composed of a function and tuple of values.
+The function is stored as a pointer to Function object. It's the system pointer,
+so its size depends on system machine, e.g. for 64bit CPU, it's 8 bytes.
+
+The closure values are a tuple of nonlocals and partial call arguments.
+The size of the tuple and its content depends on the function's type information.
