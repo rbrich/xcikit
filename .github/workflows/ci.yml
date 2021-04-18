@@ -7,17 +7,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-18.04, macos-10.15, windows-2019]
+        build_args: [""]
+        name: ["Release build"]
         include:
-        - os: ubuntu-18.04
-        - os: windows-2019
         - os: macos-10.15
+          build_args: "--debug -DBUILD_WITH_ASAN=1 -DBUILD_WITH_UBSAN=1"
+          name: "Debug build + ASAN"
+
+    name: ${{ matrix.os }} ${{ matrix.name }}
 
     runs-on: ${{ matrix.os }}
 
     env:
       CONAN_PASSWORD: ${{ secrets.CONAN_PASSWORD }}
       CONAN_REVISIONS_ENABLED: 1
-      BUILD_ARGS: core data script
+      BUILD_ARGS: core data script ${{ matrix.build_args }}
 
     steps:
     - uses: actions/checkout@v2
