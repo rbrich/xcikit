@@ -8,7 +8,7 @@
 #define XCI_SCRIPT_ERROR_H
 
 #include "Value.h"
-#include "SourceInfo.h"
+#include "Source.h"
 #include "dump.h"
 #include <xci/core/error.h>
 
@@ -27,13 +27,12 @@ using std::string_view;
 class ScriptError : public core::Error {
 public:
     explicit ScriptError(std::string msg) : Error(std::move(msg)) {}
-    explicit ScriptError(std::string msg, const SourceInfo& si) :
+    explicit ScriptError(std::string msg, const SourceLocation& loc) :
         Error(std::move(msg)),
         m_file(format("{}:{}:{}",
-            !si.source ? "<no-source-file>" : si.source, si.line_number, si.column)),
-        m_detail(!si ? "" : format("{}\n{:>{}}",
-            std::string{si.line_begin, si.line_end},
-            '^', si.column))
+            loc.source_name(), loc.line, loc.column)),
+        m_detail(!loc ? "" : format("{}\n{:>{}}",
+            loc.source_line(), '^', loc.column))
     {}
 
     const std::string& file() const noexcept { return m_file; }
@@ -69,8 +68,8 @@ struct BadInstruction : public ScriptError {
 
 
 struct ParseError : public ScriptError {
-    explicit ParseError(string_view msg, const SourceInfo& si = {})
-            : ScriptError(format("parse error: {}", msg), si) {}
+    explicit ParseError(string_view msg, const SourceLocation& loc = {})
+            : ScriptError(format("parse error: {}", msg), loc) {}
 };
 
 
@@ -85,14 +84,14 @@ struct StackOverflow : public ScriptError {
 
 
 struct UndefinedName : public ScriptError {
-    explicit UndefinedName(string_view name, const SourceInfo& si)
-        : ScriptError(format("undefined name: {}", name), si) {}
+    explicit UndefinedName(string_view name, const SourceLocation& loc)
+        : ScriptError(format("undefined name: {}", name), loc) {}
 };
 
 
 struct UndefinedTypeName : public ScriptError {
-    explicit UndefinedTypeName(string_view name, const SourceInfo& si)
-            : ScriptError(format("undefined type name: {}", name), si) {}
+    explicit UndefinedTypeName(string_view name, const SourceLocation& loc)
+            : ScriptError(format("undefined type name: {}", name), loc) {}
 };
 
 
@@ -115,22 +114,22 @@ struct UnknownTypeName : public ScriptError {
 
 
 struct UnexpectedArgumentCount : public ScriptError {
-    explicit UnexpectedArgumentCount(size_t exp, size_t got, const SourceInfo& si)
+    explicit UnexpectedArgumentCount(size_t exp, size_t got, const SourceLocation& loc)
             : ScriptError(format("function expects {} args, called with {} args",
-                    exp, got), si) {}
+                    exp, got), loc) {}
 };
 
 
 struct UnexpectedArgument : public ScriptError {
-    explicit UnexpectedArgument(size_t idx, const SourceInfo& si)
-            : ScriptError(format("unexpected argument #{}", idx), si) {}
+    explicit UnexpectedArgument(size_t idx, const SourceLocation& loc)
+            : ScriptError(format("unexpected argument #{}", idx), loc) {}
 };
 
 
 struct UnexpectedArgumentType : public ScriptError {
-    explicit UnexpectedArgumentType(size_t idx, const TypeInfo& exp, const TypeInfo& got, const SourceInfo& si)
+    explicit UnexpectedArgumentType(size_t idx, const TypeInfo& exp, const TypeInfo& got, const SourceLocation& loc)
             : ScriptError(format("function expects {} for arg #{}, called with {}",
-                                 exp, idx, got), si) {}
+                                 exp, idx, got), loc) {}
 };
 
 
@@ -148,8 +147,8 @@ struct MissingExplicitType : public ScriptError {
 
 
 struct UnexpectedGenericFunction : public ScriptError {
-    explicit UnexpectedGenericFunction(const SourceInfo& si)
-            : ScriptError("generic function must be named or immediately called", si) {}
+    explicit UnexpectedGenericFunction(const SourceLocation& loc)
+            : ScriptError("generic function must be named or immediately called", loc) {}
 };
 
 
@@ -186,9 +185,9 @@ struct ConditionNotBool : public ScriptError {
 
 
 struct DefinitionTypeMismatch : public ScriptError {
-    explicit DefinitionTypeMismatch(const TypeInfo& exp, const TypeInfo& got, const SourceInfo& si)
+    explicit DefinitionTypeMismatch(const TypeInfo& exp, const TypeInfo& got, const SourceLocation& loc)
             : ScriptError(format("definition type mismatch: specified {}, inferred {}",
-                                 exp, got), si) {}
+                                 exp, got), loc) {}
 };
 
 
@@ -221,8 +220,8 @@ struct IndexOutOfBounds : public ScriptError {
 
 
 struct IntrinsicsFunctionError : public ScriptError {
-    explicit IntrinsicsFunctionError(string_view message, const SourceInfo& si)
-        : ScriptError(format("intrinsics function: {}", message), si) {}
+    explicit IntrinsicsFunctionError(string_view message, const SourceLocation& loc)
+        : ScriptError(format("intrinsics function: {}", message), loc) {}
 };
 
 

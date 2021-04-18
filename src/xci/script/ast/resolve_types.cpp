@@ -38,10 +38,10 @@ public:
             m_specified_type = move(cast);
     }
 
-    void check(const TypeInfo& inferred, const SourceInfo& si) const {
+    void check(const TypeInfo& inferred, const SourceLocation& loc) const {
         const auto& specified = type();
         if (specified && inferred != specified)
-            throw DefinitionTypeMismatch(specified, inferred, si);
+            throw DefinitionTypeMismatch(specified, inferred, loc);
     }
 
     const TypeInfo& type() const { return m_specified_type; }
@@ -55,7 +55,7 @@ private:
 class TypeCheckerVisitor final: public ast::Visitor {
     struct CallArg {
         TypeInfo type_info;
-        SourceInfo source_info;
+        SourceLocation source_loc;
     };
     using CallArgs = std::vector<CallArg>;
 
@@ -87,7 +87,7 @@ public:
             // specified type is basically useless here, let's just check
             // it matches evaluated type from class instance
             if (m_type_info && m_type_info != eval_type)
-                throw DefinitionTypeMismatch(m_type_info, eval_type, dfn.expression->source_info);
+                throw DefinitionTypeMismatch(m_type_info, eval_type, dfn.expression->source_loc);
 
             m_type_info = move(eval_type);
 
@@ -158,7 +158,7 @@ public:
     void visit(ast::Literal& v) override {
         m_value_type = v.value.type_info();
         TypeCheckHelper type_check(move(m_type_info));
-        type_check.check(m_value_type, v.source_info);
+        type_check.check(m_value_type, v.source_loc);
     }
 
     void visit(ast::Bracketed& v) override {
@@ -175,7 +175,7 @@ public:
             subtypes.push_back(m_value_type.effective_type());
         }
         m_value_type = TypeInfo(move(subtypes));
-        type_check.check(m_value_type, v.source_info);
+        type_check.check(m_value_type, v.source_loc);
     }
 
     void visit(ast::List& v) override {
@@ -195,7 +195,7 @@ public:
         }
         v.item_size = elem_type.size();
         m_value_type = TypeInfo(Type::List, move(elem_type));
-        type_check.check(m_value_type, v.source_info);
+        type_check.check(m_value_type, v.source_loc);
     }
 
     void visit(ast::Reference& v) override {
@@ -210,21 +210,21 @@ public:
                 auto opcode = (Opcode) sym.index();
                 if (opcode <= Opcode::ZeroArgLast) {
                     if (!m_call_args.empty())
-                        throw UnexpectedArgumentCount(0, m_call_args.size(), v.source_info);
+                        throw UnexpectedArgumentCount(0, m_call_args.size(), v.source_loc);
                 } else if (opcode <= Opcode::OneArgLast) {
                     if (m_call_args.size() != 1)
-                        throw UnexpectedArgumentCount(1, m_call_args.size(), v.source_info);
+                        throw UnexpectedArgumentCount(1, m_call_args.size(), v.source_loc);
                 } else {
                     assert(opcode <= Opcode::TwoArgLast);
                     if (m_call_args.size() != 2)
-                        throw UnexpectedArgumentCount(2, m_call_args.size(), v.source_info);
+                        throw UnexpectedArgumentCount(2, m_call_args.size(), v.source_loc);
                 }
                 // check type of args (they must be Int or Byte)
                 for (const auto&& [i, arg] : m_call_args | enumerate) {
                     Type t = arg.type_info.type();
                     if (t != Type::Byte && t != Type::Int32)
                         throw UnexpectedArgumentType(i+1, TypeInfo{Type::Int32},
-                                                     arg.type_info, arg.source_info);
+                                                     arg.type_info, arg.source_loc);
                 }
                 // cleanup - args are now fully processed
                 m_call_args.clear();
@@ -460,8 +460,8 @@ public:
         CallArgs args;
         for (auto& arg : v.args) {
             arg->apply(*this);
-            assert(arg->source_info);
-            args.push_back({m_value_type.effective_type(), arg->source_info});
+            assert(arg->source_loc);
+            args.push_back({m_value_type.effective_type(), arg->source_loc});
         }
         // append args to m_call_args (note that m_call_args might be used
         // when evaluating each argument, so we cannot push to them above)
@@ -473,7 +473,7 @@ public:
         v.callable->apply(*this);
 
         if (!m_value_type.is_callable() && !m_call_args.empty()) {
-            throw UnexpectedArgument(1, m_call_args[0].source_info);
+            throw UnexpectedArgument(1, m_call_args[0].source_loc);
         }
 
         if (m_value_type.is_callable()) {
@@ -569,7 +569,7 @@ public:
                 // mark as generic, uncompiled
                 fn.set_ast(v.body);
             } else
-                throw UnexpectedGenericFunction(v.source_info);
+                throw UnexpectedGenericFunction(v.source_loc);
         } else {
             fn.set_compiled();
             // compile body and resolve return type
@@ -593,7 +593,7 @@ public:
         // check specified type again - in case it wasn't Function
         if (!m_value_type.is_callable() && specified_type) {
             if (m_value_type != specified_type)
-                throw DefinitionTypeMismatch(specified_type, m_value_type, v.source_info);
+                throw DefinitionTypeMismatch(specified_type, m_value_type, v.source_loc);
         }
     }
 
@@ -616,7 +616,7 @@ public:
             return;
         }
         // lookup the cast function with the resolved arg/return types
-        m_call_args.push_back({m_value_type, v.expression->source_info});
+        m_call_args.push_back({m_value_type, v.expression->source_loc});
         m_call_ret = v.type_info;
         v.cast_function->apply(*this);
         // set the effective type of the Cast expression and clean the call types
@@ -710,12 +710,12 @@ private:
                     ++v.wrapped_execs;
                     v.partial_args = 0;
                 } else {
-                    throw UnexpectedArgument(i, arg.source_info);
+                    throw UnexpectedArgument(i, arg.source_loc);
                 }
             }
             // check type of next param
             if (res->params[0] != arg.type_info) {
-                throw UnexpectedArgumentType(i, res->params[0], arg.type_info, arg.source_info);
+                throw UnexpectedArgumentType(i, res->params[0], arg.type_info, arg.source_loc);
             }
             // consume next param
             ++ v.partial_args;
@@ -800,7 +800,7 @@ private:
                     i_prm = 0;
                 } else {
                     // unexpected argument
-                    throw UnexpectedArgument(i_arg, arg.source_info);
+                    throw UnexpectedArgument(i_arg, arg.source_loc);
                 }
             }
             // resolve T (only from original signature)
@@ -816,12 +816,12 @@ private:
                     res[var-1] = arg_type;
                 else if (res[var-1] != arg_type)
                     throw UnexpectedArgumentType(i_arg, res[var-1], arg_type,
-                            arg.source_info);
+                            arg.source_loc);
             }
             // check type of next param
             if (prm != arg.type_info) {
                 throw UnexpectedArgumentType(i_arg, prm,
-                        arg.type_info, arg.source_info);
+                        arg.type_info, arg.source_loc);
             }
             // consume next param
             ++i_prm;

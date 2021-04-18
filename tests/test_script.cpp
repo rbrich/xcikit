@@ -29,9 +29,11 @@ using namespace xci::core;
 // Check parsing into AST and dumping back to code
 std::string parse(const string& input)
 {
-    Parser parser;
+    SourceManager src_man;
+    auto src_id = src_man.add_source("<input>", input);
+    Parser parser {src_man};
     ast::Module ast;
-    parser.parse(input, ast);
+    parser.parse(src_id, ast);
     fold_tuple(ast.body);
     ostringstream os;
     os << ast;
@@ -50,10 +52,12 @@ std::string interpret(const string& input, bool import_std=false)
             Vfs vfs;
             vfs.mount(XCI_SHARE);
 
-            auto f = vfs.read_file("script/std.fire");
+            const char* std_path = "script/std.fire";
+            auto f = vfs.read_file(std_path);
             REQUIRE(f.is_open());
             auto content = f.content();
-            std_module = interpreter.build_module("std", content->string_view());
+            auto src_id = interpreter.source_manager().add_source(std_path, content->string());
+            std_module = interpreter.build_module("std", src_id);
         }
         interpreter.add_imported_module(*std_module);
     }
@@ -433,7 +437,7 @@ TEST_CASE( "Generic functions", "[script][interpreter]" )
 TEST_CASE( "Lexical scope", "[script][interpreter]" )
 {
     CHECK(interpret("{a=1; b=2}") == "");
-    CHECK_THROWS_AS(Interpreter().eval("{a=1; b=2} a"), UndefinedName);
+    CHECK_THROWS_AS(interpret("{a=1; b=2} a"), UndefinedName);
 
     CHECK(interpret("x=1; y = { x + 2 }; y") == "3");
     CHECK(interpret("a=1; {b=2; {a + b}}") == "3");
@@ -480,7 +484,7 @@ TEST_CASE( "Casting", "[script][interpreter]" )
 TEST_CASE( "Lists", "[script][interpreter]" )
 {
     CHECK(interpret("[1,2,3] ! 2") == "3");
-    CHECK_THROWS_AS(Interpreter().eval("[1,2,3]!3"), IndexOutOfBounds);
+    CHECK_THROWS_AS(interpret("[1,2,3]!3"), IndexOutOfBounds);
     //CHECK(interpret("[[1,2],[3,4],[5,6]] ! 1 ! 0") == "3");
     CHECK(interpret("head = fun l:[Int] -> Int { l!0 }; head [1,2,3]") == "1");
 }

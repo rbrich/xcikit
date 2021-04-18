@@ -7,6 +7,7 @@
 #ifndef XCI_SCRIPT_INTERPRETER_H
 #define XCI_SCRIPT_INTERPRETER_H
 
+#include "Source.h"
 #include "Parser.h"
 #include "Compiler.h"
 #include "Machine.h"
@@ -25,20 +26,23 @@ public:
     // `flags` are Compiler::Flags
     void configure(Compiler::Flags flags) { m_compiler.set_flags(flags); }
 
-    std::unique_ptr<Module> build_module(const std::string& name, std::string_view content);
+    std::unique_ptr<Module> build_module(const std::string& name, SourceId source_id);
     void add_imported_module(Module& module) { m_main.add_imported_module(module); }
 
     using InvokeCallback = Machine::InvokeCallback;
-    TypedValue eval(std::string_view input, const InvokeCallback& cb = [](const TypedValue&){});
+    TypedValue eval(SourceId source_id, const InvokeCallback& cb = [](const TypedValue&){});
+    TypedValue eval(std::string input, const InvokeCallback& cb = [](const TypedValue&){});
 
     // low-level component access
+    SourceManager& source_manager() { return m_source_manager; }
     Parser& parser() { return m_parser; }
     Compiler& compiler() { return m_compiler; }
     Machine& machine() { return m_machine; }
     Module& main_module() { return m_main; }
 
 private:
-    Parser m_parser;
+    SourceManager m_source_manager;
+    Parser m_parser { m_source_manager };
     Compiler m_compiler;
     Machine m_machine;
     Module m_main;

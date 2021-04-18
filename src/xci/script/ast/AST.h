@@ -8,7 +8,7 @@
 #define XCI_SCRIPT_AST_H
 
 #include <xci/script/SymbolTable.h>
-#include <xci/script/SourceInfo.h>
+#include <xci/script/Source.h>
 #include <xci/script/Value.h>
 #include <cstdint>
 #include <vector>
@@ -189,7 +189,7 @@ struct Type {
     virtual void apply(Visitor& visitor) = 0;
     virtual std::unique_ptr<ast::Type> make_copy() const = 0;
 
-    SourceInfo source_info;
+    SourceLocation source_loc;
 };
 
 
@@ -277,7 +277,7 @@ struct Expression {
 
     void copy_to(Expression& r) const;
 
-    SourceInfo source_info;
+    SourceLocation source_loc;
 
     // set when this expression is direct child of a Definition
     Definition* definition = nullptr;

@@ -224,10 +224,10 @@ private:
         if (m_const_value)
             m_collapsed = make_unique<ast::Literal>(*m_const_value);
         if (m_collapsed) {
-            auto source_info = expr->source_info;
+            auto source_loc = expr->source_loc;
             expr = move(m_collapsed);
-            if (!expr->source_info)
-                expr->source_info = source_info;
+            if (!expr->source_loc)
+                expr->source_loc = source_loc;
         }
     }
 

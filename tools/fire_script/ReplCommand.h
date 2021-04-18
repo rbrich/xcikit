@@ -18,7 +18,7 @@ class ReplCommand {
 public:
     ReplCommand(Context& ctx);
 
-    Interpreter& interpreter() { return m_interpreter; }
+    void eval(std::string_view input);
 
     using Callback = std::function<void()>;
     void set_quit_cb(Callback cb) { m_quit_cb = std::move(cb); }

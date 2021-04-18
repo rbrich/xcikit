@@ -8,6 +8,7 @@
 #define XCI_SCRIPT_PARSER_H
 
 #include "ast/AST.h"
+#include "Source.h"
 
 #include <string_view>
 
@@ -16,9 +17,9 @@ namespace xci::script {
 
 class Parser {
 public:
-    // TODO: support incremental parsing
+    explicit Parser(const SourceManager& src_man) : m_source_manager(src_man) {}
 
-    void parse(std::string_view input, ast::Module& mod);
+    void parse(SourceId src_id, ast::Module& mod);
 
 #ifndef NDEBUG
     /// Check that the grammar is built correctly.
@@ -26,6 +27,9 @@ public:
     /// \returns 0 if grammar is OK
     static size_t analyze_grammar();
 #endif
+
+private:
+    const SourceManager& m_source_manager;
 };
 
 

@@ -9,6 +9,7 @@
 
 #include <memory>
 #include <string_view>
+#include <string>
 #include <cstddef>  // byte
 
 namespace xci::core {
@@ -30,6 +31,7 @@ public:
     std::size_t size() const { return m_size; }
 
     std::string_view string_view() const { return {(char*)m_data, m_size}; }
+    std::string string() const { return {(char*)m_data, m_size}; }
 
 private:
     std::byte* m_data;

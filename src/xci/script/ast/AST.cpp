@@ -148,7 +148,7 @@ std::unique_ptr<ast::Statement> TypeAlias::make_copy() const
 
 void Expression::copy_to(Expression& r) const
 {
-    r.source_info = source_info;
+    r.source_loc = source_loc;
     r.definition = definition;
 }
 

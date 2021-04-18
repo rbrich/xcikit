@@ -100,7 +100,7 @@ public:
         // lookup class
         auto sym_class = resolve_symbol_of_type(v.class_name.name, Symbol::Class);
         if (!sym_class)
-            throw UndefinedTypeName(v.class_name.name, v.class_name.source_info);
+            throw UndefinedTypeName(v.class_name.name, v.class_name.source_loc);
 
         // find next instance of the class (if any)
         auto next = resolve_symbol_of_type(v.class_name.name, Symbol::Instance);
@@ -190,7 +190,7 @@ public:
         auto& symptr = v.identifier.symbol;
         symptr = resolve_symbol(v.identifier.name);
         if (!symptr)
-            throw UndefinedName(v.identifier.name, v.source_info);
+            throw UndefinedName(v.identifier.name, v.source_loc);
         if (symptr->type() == Symbol::Method) {
             // if the reference points to a class function, find nearest
             // instance of the class
@@ -250,17 +250,17 @@ public:
         v.expression->apply(*this);
         v.type->apply(*this);
         v.cast_function = make_unique<ast::Reference>(ast::Identifier{"cast"});
-        v.cast_function->source_info = v.source_info;
+        v.cast_function->source_loc = v.source_loc;
         visit(*v.cast_function);
     }
 
     void visit(ast::TypeName& t) final {
         if (t.name.empty())
             //  TypeInfo(Type::Unknown); ?
-            throw UndefinedTypeName(t.name, t.source_info);
+            throw UndefinedTypeName(t.name, t.source_loc);
         t.symbol = resolve_symbol(t.name);
         if (!t.symbol)
-            throw UndefinedTypeName(t.name, t.source_info);
+            throw UndefinedTypeName(t.name, t.source_loc);
     }
 
     void visit(ast::FunctionType& t) final {

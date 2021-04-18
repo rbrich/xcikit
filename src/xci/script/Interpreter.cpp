@@ -16,7 +16,7 @@ Interpreter::Interpreter(Compiler::Flags flags)
 }
 
 
-std::unique_ptr<Module> Interpreter::build_module(const std::string& name, std::string_view content)
+std::unique_ptr<Module> Interpreter::build_module(const std::string& name, SourceId source_id)
 {
     // setup module
     auto module = std::make_unique<Module>(name);
@@ -24,7 +24,7 @@ std::unique_ptr<Module> Interpreter::build_module(const std::string& name, std::
 
     // parse
     ast::Module ast;
-    m_parser.parse(content, ast);
+    m_parser.parse(source_id, ast);
 
     // compile
     Function func {*module, module->symtab()};
@@ -44,14 +44,15 @@ std::unique_ptr<Module> Interpreter::build_module(const std::string& name, std::
 }
 
 
-TypedValue Interpreter::eval(std::string_view input, const InvokeCallback& cb)
+TypedValue Interpreter::eval(SourceId source_id, const InvokeCallback& cb)
 {
     // parse
     ast::Module ast;
-    m_parser.parse(input, ast);
+    m_parser.parse(source_id, ast);
 
     // compile
-    auto& symtab = m_main.symtab().add_child("<input>");
+    auto source_name = m_source_manager.get_source(source_id).name();
+    auto& symtab = m_main.symtab().add_child(source_name);
     Function func {m_main, symtab};
     m_compiler.compile(func, ast);
 
@@ -61,6 +62,13 @@ TypedValue Interpreter::eval(std::string_view input, const InvokeCallback& cb)
     // get result from stack
     auto ti = func.effective_return_type();
     return m_machine.stack().pull_typed(ti);
+}
+
+
+TypedValue Interpreter::eval(std::string input, const Interpreter::InvokeCallback& cb)
+{
+    auto src_id = m_source_manager.add_source("<input>", input);
+    return eval(src_id, cb);
 }
 
 

@@ -62,7 +62,7 @@ public:
             if (m_function.intrinsics() != m_function.code().size())
                 throw IntrinsicsFunctionError(
                         "cannot mix compiled code with intrinsics",
-                        ret.expression->source_info);
+                        ret.expression->source_loc);
             // no DROP for intrinsics function
             return;
         }
