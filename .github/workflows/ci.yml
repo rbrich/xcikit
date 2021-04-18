@@ -13,7 +13,7 @@ jobs:
         include:
         - os: ubuntu-18.04
           build_args: "--debug -DBUILD_WITH_ASAN=1 -DBUILD_WITH_UBSAN=1"
-          name: "Debug build + ASAN"
+          name: "Debug ASAN"
 
     name: ${{ matrix.os }} / ${{ matrix.name }}
 
@@ -82,10 +82,12 @@ jobs:
       shell: bash
 
     - name: install
+      if: ${{ matrix.name == 'Release build' }}
       run: ./build.sh install $BUILD_ARGS
       shell: bash
 
     - name: package
+      if: ${{ matrix.name == 'Release build' }}
       run: ./build.sh package $BUILD_ARGS
       shell: bash
 
