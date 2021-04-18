@@ -66,9 +66,12 @@ size_t TypeInfo::size() const
 void TypeInfo::foreach_heap_slot(std::function<void(size_t offset)> cb) const
 {
     switch (type()) {
-        case Type::String:      cb(0); break;
-        case Type::Function:    cb(0); break;
-        case Type::List:        cb(0); break;
+        case Type::String:
+        case Type::List:
+        case Type::Function:
+        case Type::Stream:
+            cb(0);
+            break;
         case Type::Tuple: {
             size_t pos = 0;
             for (const auto& ti : subtypes()) {

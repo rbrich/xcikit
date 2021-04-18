@@ -11,11 +11,11 @@ jobs:
         build_args: [""]
         name: ["Release build"]
         include:
-        - os: macos-10.15
+        - os: ubuntu-18.04
           build_args: "--debug -DBUILD_WITH_ASAN=1 -DBUILD_WITH_UBSAN=1"
           name: "Debug build + ASAN"
 
-    name: ${{ matrix.os }} ${{ matrix.name }}
+    name: ${{ matrix.os }} / ${{ matrix.name }}
 
     runs-on: ${{ matrix.os }}
 

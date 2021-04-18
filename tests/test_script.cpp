@@ -208,8 +208,8 @@ TEST_CASE( "Value size on stack", "[script][machine]" )
     CHECK(Value(int64_t{0}).size_on_stack() == type_size_on_stack(Type::Int64));
     CHECK(Value(0.0f).size_on_stack() == type_size_on_stack(Type::Float32));
     CHECK(Value(0.0).size_on_stack() == type_size_on_stack(Type::Float64));
-    CHECK(Value("aaa"sv).size_on_stack() == type_size_on_stack(Type::String));
-    CHECK(Value(10, TypeInfo{Type::Int32}).size_on_stack() == type_size_on_stack(Type::List));
+    CHECK(Value(Value::StringTag{}).size_on_stack() == type_size_on_stack(Type::String));
+    CHECK(Value(Value::ListTag{}).size_on_stack() == type_size_on_stack(Type::List));
     CHECK(Value(TypeInfo::Subtypes{}).size_on_stack() == type_size_on_stack(Type::Tuple));
     CHECK(Value(Value::ClosureTag{}).size_on_stack() == type_size_on_stack(Type::Function));
     CHECK(Value(Value::ModuleTag{}).size_on_stack() == type_size_on_stack(Type::Module));
@@ -260,6 +260,7 @@ TEST_CASE( "Stack push/pull", "[script][machine]" )
     CHECK(stack.pull<value::Int32>().value() == 73);
     CHECK(stack.pull<value::Bool>().value() == true);  // NOLINT
 
+    CHECK(str.heapslot()->refcount() == 1);
     str.decref();
 }
 

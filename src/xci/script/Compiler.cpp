@@ -104,6 +104,7 @@ public:
         if (v.value.is_void())
             return;  // Void value
         // add to static values
+        v.value.incref();
         auto idx = module().add_value(TypedValue(v.value));
         // LOAD_STATIC <static_idx>
         code().add_opcode(Opcode::LoadStatic, idx);
@@ -177,6 +178,7 @@ public:
                 if (symtab.module() != &module()) {
                     // copy static value into this module if it's from builtin or another module
                     const auto & val = symtab.module()->get_value(sym.index());
+                    val.incref();
                     idx = module().add_value(TypedValue(val));
                 }
                 // LOAD_STATIC <static_idx>
@@ -403,9 +405,14 @@ public:
         if (v.cast_function)
             v.cast_function->apply(*this);
         else {
+            assert(v.to_type.is_void());
             // cast to Void - remove the expression result from stack
-            // DROP <skip> <size>
-            m_function.code().add_opcode(Opcode::Drop, 0, v.drop_size);
+            v.from_type.foreach_heap_slot([this](size_t offset) {
+                // DEC_REF <offset>
+                m_function.code().add_opcode(Opcode::DecRef, offset);
+            });
+            // DROP 0 <size>
+            m_function.code().add_opcode(Opcode::Drop, 0, v.from_type.size());
         }
     }
 

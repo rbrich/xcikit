@@ -602,22 +602,22 @@ public:
     void visit(ast::Cast& v) override {
         // resolve the target type -> m_type_info
         v.type->apply(*this);
-        v.type_info = std::move(m_type_info);  // save for fold_const_expr
+        v.to_type = std::move(m_type_info);  // save for fold_const_expr
         // resolve the inner expression -> m_value_type
         // (the Expression might use the specified type from `m_cast_type`)
-        m_cast_type = v.type_info;
+        m_cast_type = v.to_type;
         v.expression->apply(*this);
         m_cast_type = {};
         // cast to Void -> don't call the cast function, just drop the expression result from stack
-        if (v.type_info.is_void()) {
-            v.drop_size = m_value_type.size();
+        if (v.to_type.is_void()) {
+            v.from_type = move(m_value_type);
             v.cast_function.reset();
-            m_value_type = v.type_info;
+            m_value_type = v.to_type;
             return;
         }
         // lookup the cast function with the resolved arg/return types
         m_call_args.push_back({m_value_type, v.expression->source_loc});
-        m_call_ret = v.type_info;
+        m_call_ret = v.to_type;
         v.cast_function->apply(*this);
         // set the effective type of the Cast expression and clean the call types
         m_value_type = std::move(m_call_ret);

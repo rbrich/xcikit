@@ -37,7 +37,6 @@ typename std::enable_if<
         std::is_trivially_copyable<From>::value &&
         std::is_trivial<To>::value &&
         !std::is_pointer<From>::value &&
-        !std::is_pointer<To>::value &&
         sizeof(From) == 1,
         To>::type
 bit_read(const From* src) noexcept

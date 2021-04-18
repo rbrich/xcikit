@@ -192,22 +192,22 @@ public:
     void visit(ast::Cast& v) override {
         v.expression->apply(*this);
         // cast to Void?
-        if (v.type_info.is_void()) {
+        if (v.to_type.is_void()) {
             m_const_value = TypedValue(value::Void{});
             return;
         }
         if (!m_const_value)
             return;
         // cast to the same type?
-        if (m_const_value->type_info() == v.type_info) {
+        if (m_const_value->type_info() == v.to_type) {
             // keep m_const_value -> eliminate the cast
             return;
         }
         // FIXME: evaluate the actual (possibly user-defined) cast function
-        auto cast_result = create_value(v.type_info);
+        auto cast_result = create_value(v.to_type);
         if (cast_result.cast_from(m_const_value->value())) {
             // fold the cast into value
-            m_const_value = TypedValue(move(cast_result), v.type_info);
+            m_const_value = TypedValue(move(cast_result), v.to_type);
             return;
         }
         m_const_value.reset();

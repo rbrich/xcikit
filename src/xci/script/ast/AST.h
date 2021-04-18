@@ -286,6 +286,8 @@ struct Expression {
 struct Literal: public Expression {
     explicit Literal(const TypedValue& v) : value(v) {}
     explicit Literal(TypedValue&& v) : value(std::move(v)) {}
+    ~Literal() override { value.decref(); }
+
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;
@@ -457,8 +459,8 @@ struct Cast: public Expression {
     std::unique_ptr<Reference> cast_function;  // none for cast to Void
 
     // resolved:
-    TypeInfo type_info;  // resolved Type
-    size_t drop_size = 0;  // cast to Void: size of expression result type
+    TypeInfo to_type;    // resolved Type (cast to)
+    TypeInfo from_type;  // resolved type of the expression (cast from)
 };
 
 

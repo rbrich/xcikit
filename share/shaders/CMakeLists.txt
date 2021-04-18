@@ -30,7 +30,7 @@ function(add_shaders)
     set(outputs)
     set(assets)
     foreach(src ${ARG_SOURCES})
-        set(output "../xcikit/shaders/${src}.spv")
+        set(output "${CMAKE_CURRENT_BINARY_DIR}/../xcikit/shaders/${src}.spv")
         add_custom_command(
             OUTPUT ${output}
             MAIN_DEPENDENCY "${src}"
@@ -41,7 +41,7 @@ function(add_shaders)
         list(APPEND outputs ${output})
         list(APPEND assets "shaders/${src}.spv")
         if (XCI_INSTALL_SHARE_DIR)
-            install(FILES "${CMAKE_CURRENT_BINARY_DIR}/${output}"
+            install(FILES "${output}"
                 DESTINATION share/xcikit/shaders)
         endif()
     endforeach()

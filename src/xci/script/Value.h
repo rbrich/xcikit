@@ -93,6 +93,7 @@ class PartialVisitor : public Visitor {
 
 
 struct StringV {
+    StringV() = default;
     explicit StringV(std::string_view v);
     bool operator ==(const StringV& rhs) const { return value() == rhs.value(); }
     std::string_view value() const;
@@ -102,11 +103,12 @@ struct StringV {
 
 
 struct ListV {
-    explicit ListV(size_t length, TypeInfo elem_type);
+    ListV() = default;
+    explicit ListV(size_t length, const TypeInfo& elem_type);
     explicit ListV(HeapSlot&& slot) : slot(move(slot)) {}
     bool operator ==(const ListV& rhs) const { return slot.slot() == rhs.slot.slot(); }  // same slot - cannot compare content without elem_type
     size_t length() const;
-    Value value_at(size_t idx, TypeInfo elem_type) const;
+    Value value_at(size_t idx, const TypeInfo& elem_type) const;
 
     HeapSlot slot;
 };
@@ -116,7 +118,7 @@ struct TupleV {
     TupleV(const TupleV& other);
     TupleV& operator =(const TupleV& other);
 
-    explicit TupleV(const Values& vs);
+    explicit TupleV(Values&& vs);
     explicit TupleV(const TypeInfo::Subtypes& subtypes);
     bool operator ==(const TupleV& rhs) const { return values == rhs.values; }
 
@@ -130,7 +132,7 @@ struct TupleV {
 
 
 struct ClosureV {
-    explicit ClosureV();
+    explicit ClosureV() = default;
     explicit ClosureV(const Function& fn);
     explicit ClosureV(const Function& fn, Values&& values);
     bool operator ==(const ClosureV& rhs) const { return slot.slot() == rhs.slot.slot(); }  // same slot - cannot compare content without elem_type
@@ -143,7 +145,7 @@ struct ClosureV {
 
 
 struct StreamV {
-    explicit StreamV() : StreamV(Stream::null()) {}
+    StreamV() = default;
     explicit StreamV(const Stream& v);
 
     bool operator ==(const StreamV& rhs) const { return slot.slot() == rhs.slot.slot(); }  // same slot - cannot compare content without elem_type
@@ -155,6 +157,7 @@ struct StreamV {
 
 class Value {
 public:
+    struct StringTag {};
     struct ListTag {};
     struct ClosureTag {};
     struct StreamTag {};
@@ -168,11 +171,13 @@ public:
     explicit Value(int64_t v) : m_value(v) {}  // Int64
     explicit Value(float v) : m_value(v) {}  // Float32
     explicit Value(double v) : m_value(v) {}  // Float64
+    explicit Value(StringTag) : m_value(StringV{}) {}  // String
     explicit Value(std::string_view v) : m_value(StringV{v}) {}  // String
+    explicit Value(ListTag) : m_value(ListV{}) {}  // List
     explicit Value(size_t length, TypeInfo elem_type) : m_value(ListV{length, elem_type}) {}  // List
     explicit Value(ListTag, HeapSlot&& slot) : m_value(ListV{move(slot)}) {}  // List
     explicit Value(const TypeInfo::Subtypes& subtypes) : m_value(TupleV{subtypes}) {}  // Tuple
-    explicit Value(const Values& values) : m_value(TupleV{values}) {}  // Tuple
+    explicit Value(Values&& values) : m_value(TupleV{move(values)}) {}  // Tuple
     explicit Value(ClosureTag) : m_value(ClosureV{}) {}  // Closure
     explicit Value(const Function& fn) : m_value(ClosureV{fn}) {}  // Closure
     explicit Value(const Function& fn, Values&& values) : m_value(ClosureV{fn, move(values)}) {}  // Closure
@@ -440,7 +445,7 @@ public:
 
 class String: public Value {
 public:
-    String() : Value(std::string_view{}) {}
+    String() : Value(Value::StringTag{}) {}
     explicit String(std::string_view v) : Value(v) {}
     TypeInfo type_info() const { return TypeInfo{Type::String}; }
     std::string_view value() const { return get_string(); }
@@ -450,7 +455,7 @@ public:
 
 class List: public Value {
 public:
-    List() : Value(0, TypeInfo{Type::Void}) {}
+    List() : Value(Value::ListTag{}) {}
     List(size_t length, TypeInfo elem_type) : Value(length, elem_type) {}
     List(HeapSlot&& slot) : Value(Value::ListTag{}, move(slot)) {}
 
@@ -463,7 +468,7 @@ public:
 // [Bytes] has some special handling, e.g. it's dumped as b"abc", not [1,2,3]
 class Bytes: public List {
 public:
-    Bytes() : List(0, TypeInfo{Type::Byte}) {}
+    Bytes() = default;
     explicit Bytes(std::span<const byte> v);
 
     TypeInfo type_info() const { return TypeInfo{Type::List, TypeInfo(Type::Byte)}; }
@@ -474,8 +479,6 @@ public:
 
 class Int32List: public List {
 public:
-    Int32List() : List(0, TypeInfo{Type::Int32}) {}
-
     TypeInfo type_info() const { return TypeInfo{Type::List, TypeInfo(Type::Int32)}; }
 };
 
@@ -484,7 +487,7 @@ public:
 class Tuple: public Value {
 public:
     Tuple() : Value(Values{}) {}
-    explicit Tuple(const Values& values) : Value(values) {}
+    explicit Tuple(Values&& values) : Value(move(values)) {}
     explicit Tuple(const TypeInfo::Subtypes& subtypes) : Value(subtypes) {}
 
     bool empty() const { return get<TupleV>().empty(); }

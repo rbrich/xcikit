@@ -4,6 +4,7 @@
 Checks: >
   bugprone-*,
   -bugprone-branch-clone,
+  -bugprone-sizeof-expression,
   clang-analyzer-*,
   clang-diagnostic-*,
   misc-*,

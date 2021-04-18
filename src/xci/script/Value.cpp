@@ -15,7 +15,6 @@
 namespace xci::script {
 
 using std::move;
-using std::unique_ptr;
 using std::make_unique;
 
 
@@ -23,6 +22,13 @@ using std::make_unique;
 // see https://en.cppreference.com/w/cpp/utility/variant/visit
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+
+
+template<typename T>
+concept HasHeapSlot = requires(const T& v) {
+    v.slot;
+    std::is_same_v<decltype(v.slot), HeapSlot>;
+};
 
 
 Value create_value(const TypeInfo& type_info)
@@ -89,21 +95,21 @@ size_t Value::write(byte* buffer) const
         using T = std::decay_t<decltype(v)>;
         if constexpr (std::is_same_v<T, std::monostate>)
             return 0;  // Void
-        else if constexpr (sizeof(T) == 1) {
+        else if constexpr (std::is_same_v<T, bool> || std::is_same_v<T, byte>) {
             *buffer = byte(v);
             return 1;
-        } else if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, ListV> || std::is_same_v<T, ClosureV>) {
+        } else if constexpr (HasHeapSlot<T>) {
             const byte* slot_ptr = v.slot.slot();
-            std::memcpy(buffer, &slot_ptr, sizeof(byte*));
+            std::memcpy(buffer, &slot_ptr, sizeof(slot_ptr));
             return sizeof(byte*);
         } else if constexpr (std::is_same_v<T, TupleV>) {
             byte* ofs = buffer;
             for (Value* it = v.values.get(); !it->is_void(); ++it)
                 ofs += it->write(ofs);
             return ofs - buffer;
-        } else {
-            std::memcpy(buffer, &v, sizeof(v));
-            return sizeof(v);
+        } else if constexpr(std::is_trivially_copyable_v<T>) {
+            std::memcpy(buffer, &v, sizeof(T));
+            return sizeof(T);
         }
     }, m_value);
 }
@@ -121,7 +127,7 @@ size_t Value::read(const byte* buffer)
         } else if constexpr (std::is_same_v<T, byte>) {
             v = *buffer;
             return 1;
-        } else if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, ListV> || std::is_same_v<T, ClosureV>) {
+        } else if constexpr (HasHeapSlot<T>) {
             byte* slot_ptr;
             std::memcpy(&slot_ptr, buffer, sizeof(byte*));
             v.slot = HeapSlot{slot_ptr};
@@ -131,9 +137,9 @@ size_t Value::read(const byte* buffer)
             for (Value* it = v.values.get(); !it->is_void(); ++it)
                 ofs += it->read(ofs);
             return ofs - buffer;
-        } else {
-            std::memcpy(&v, buffer, sizeof(v));
-            return sizeof(v);
+        } else if constexpr(std::is_trivially_copyable_v<T>) {
+            std::memcpy(&v, buffer, sizeof(T));
+            return sizeof(T);
         }
     }, m_value);
 }
@@ -161,7 +167,7 @@ const HeapSlot* Value::heapslot() const
 {
     return std::visit([](auto& v) -> const HeapSlot* {
         using T = std::decay_t<decltype(v)>;
-        if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, ListV> || std::is_same_v<T, ClosureV>)
+        if constexpr (HasHeapSlot<T>)
             return &v.slot;
         else
             return nullptr;
@@ -174,7 +180,7 @@ void Value::incref() const
 {
     return std::visit([](auto& v) {
         using T = std::decay_t<decltype(v)>;
-        if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, ListV> || std::is_same_v<T, ClosureV>)
+        if constexpr (HasHeapSlot<T>)
             v.slot.incref();
         else if constexpr (std::is_same_v<T, TupleV>) {
             for (Value* it = v.values.get(); !it->is_void(); ++it)
@@ -188,7 +194,7 @@ void Value::decref() const
 {
     return std::visit([](auto& v) {
         using T = std::decay_t<decltype(v)>;
-        if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, ListV> || std::is_same_v<T, ClosureV>)
+        if constexpr (HasHeapSlot<T>)
             v.slot.decref();
         else if constexpr (std::is_same_v<T, TupleV>) {
             for (Value* it = v.values.get(); !it->is_void(); ++it)
@@ -265,9 +271,10 @@ StringV::StringV(std::string_view v)
         : slot(v.size() + sizeof(uint32_t))
 {
     assert(v.size() < std::numeric_limits<uint32_t>::max());
-    uint32_t size = (uint32_t) v.size();
+    auto size = (uint32_t) v.size();
     std::memcpy(slot.data(), &size, sizeof(uint32_t));
-    std::memcpy(slot.data() + sizeof(uint32_t), v.data(), v.size());
+    if (!v.empty())
+        std::memcpy(slot.data() + sizeof(uint32_t), v.data(), v.size());
 }
 
 
@@ -279,13 +286,14 @@ std::string_view StringV::value() const
 }
 
 
-ListV::ListV(size_t length, TypeInfo elem_type)
+ListV::ListV(size_t length, const TypeInfo& elem_type)
         : slot(length * elem_type.size() + sizeof(uint32_t))
 {
     assert(length < std::numeric_limits<uint32_t>::max());
-    uint32_t len_raw = (uint32_t) length;
+    auto len_raw = (uint32_t) length;
     std::memcpy(slot.data(), &len_raw, sizeof(uint32_t));
-    std::memset(slot.data() + sizeof(uint32_t), 0, length * elem_type.size());
+    if (length != 0)
+        std::memset(slot.data() + sizeof(uint32_t), 0, length * elem_type.size());
 }
 
 
@@ -295,7 +303,7 @@ size_t ListV::length() const
 }
 
 
-Value ListV::value_at(size_t idx, TypeInfo elem_type) const
+Value ListV::value_at(size_t idx, const TypeInfo& elem_type) const
 {
     assert(idx < length());
     auto elem = create_value(elem_type);
@@ -330,12 +338,12 @@ TupleV& TupleV::operator =(const TupleV& other)
 }
 
 
-TupleV::TupleV(const Values& vs)
+TupleV::TupleV(Values&& vs)
         : values(std::make_unique<Value[]>(vs.size() + 1))
 {
     int i = 0;
-    for (const auto& tv : vs) {
-        values[i++] = tv;
+    for (auto&& tv : vs) {
+        values[i++] = move(tv);
     }
     values[i] = Value{};
 }
@@ -354,7 +362,7 @@ TupleV::TupleV(const TypeInfo::Subtypes& subtypes)
 
 bool TupleV::empty() const
 {
-    return values[0].is_void();;
+    return values[0].is_void();
 }
 
 
@@ -371,13 +379,6 @@ void TupleV::foreach(const std::function<void(const Value&)>& cb) const
 {
     for (Value* it = values.get(); !it->is_void(); ++it)
         cb(*it);
-}
-
-
-ClosureV::ClosureV() : slot(sizeof(Function*))
-{
-    const Function* fn_ptr = nullptr;
-    std::memcpy(slot.data(), &fn_ptr, sizeof(Function*));
 }
 
 
@@ -403,7 +404,7 @@ ClosureV::ClosureV(const Function& fn, Values&& values)
 
 Function* ClosureV::function() const
 {
-    return reinterpret_cast<Function*>(bit_read<intptr_t>(slot.data()));
+    return bit_read<Function*>(slot.data());
 }
 
 
@@ -424,7 +425,7 @@ StreamV::StreamV(const Stream& v) : slot(sizeof(Stream*))
 
 const Stream& StreamV::value() const
 {
-    return *reinterpret_cast<Stream*>(bit_read<intptr_t>(slot.data()));
+    return *bit_read<Stream*>(slot.data());
 }
 
 
