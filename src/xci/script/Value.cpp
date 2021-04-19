@@ -8,20 +8,16 @@
 #include "Function.h"
 #include "Error.h"
 #include <xci/core/string.h>
+#include <xci/core/template/helpers.h>
 #include <numeric>
 #include <sstream>
 #include <limits>
 
 namespace xci::script {
 
+using xci::core::overloaded;
 using std::move;
 using std::make_unique;
-
-
-// variant visitor helper
-// see https://en.cppreference.com/w/cpp/utility/variant/visit
-template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
-template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 
 template<typename T>
@@ -75,16 +71,14 @@ Value create_value(Type type)
 
 bool Value::operator==(const Value& rhs) const
 {
-    return std::visit([&rhs](const auto& a) -> bool {
+    return std::visit([](const auto& a, const auto& b) -> bool {
         using TA = std::decay_t<decltype(a)>;
-        return std::visit([&a](const auto& b) -> bool {
-            using TB = std::decay_t<decltype(b)>;
-            if constexpr (std::is_same_v<TA, TB>)
-                return a == b;
-            else
-                return false;  // different types
-        }, rhs.m_value);
-    }, m_value);
+        using TB = std::decay_t<decltype(b)>;
+        if constexpr (std::is_same_v<TA, TB>)
+            return a == b;
+        else
+            return false;  // different types
+    }, m_value, rhs.m_value);
 }
 
 
@@ -241,29 +235,26 @@ Type Value::type() const
 
 bool Value::cast_from(const Value& src)
 {
-    return std::visit([&src](auto& to) -> bool
-    {
+    return std::visit([](auto& to, const auto& from) -> bool {
         using TTo = std::decay_t<decltype(to)>;
-        return std::visit([&to](auto&& from) -> bool {
-            using TFrom = std::decay_t<decltype(from)>;
+        using TFrom = std::decay_t<decltype(from)>;
 
-            // same types or cast to Void -> noop
-            if constexpr (std::is_same_v<TFrom, TTo> || std::is_same_v<TTo, std::monostate>)
-                return true;
+        // same types or cast to Void -> noop
+        if constexpr (std::is_same_v<TFrom, TTo> || std::is_same_v<TTo, std::monostate>)
+            return true;
 
-            // int/float -> int/float
-            if constexpr
-                    ((std::is_integral_v<TFrom> || std::is_floating_point_v<TFrom> || std::is_same_v<TFrom, byte>)
-                    && (std::is_integral_v<TTo> || std::is_floating_point_v<TTo> || std::is_same_v<TTo, byte>))
-            {
-                to = static_cast<TTo>(from);
-                return true;
-            }
+        // int/float -> int/float
+        if constexpr
+                ((std::is_integral_v<TFrom> || std::is_floating_point_v<TFrom> || std::is_same_v<TFrom, byte>)
+                && (std::is_integral_v<TTo> || std::is_floating_point_v<TTo> || std::is_same_v<TTo, byte>))
+        {
+            to = static_cast<TTo>(from);
+            return true;
+        }
 
-            // Complex types or cast from Void
-            return false;
-        }, src.m_value);
-    }, m_value);
+        // Complex types or cast from Void
+        return false;
+    }, m_value, src.m_value);
 }
 
 

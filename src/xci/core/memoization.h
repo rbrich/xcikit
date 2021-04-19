@@ -10,7 +10,7 @@
 #define XCI_CORE_MEMOIZATION_H
 
 #include <tuple>
-#include <xci/core/metatype/ToFunctionPtr.h>
+#include <xci/core/template/ToFunctionPtr.h>
 
 namespace xci::core {
 

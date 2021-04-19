@@ -6,7 +6,7 @@ endif::[]
 
 = Fire Script
 
-*_Language specification, v0.6_*
+*_Language description, v0.6_*
 
 toc::[]
 
@@ -25,9 +25,9 @@ this document, and it's also possible that not everything described here will ac
 be implemented. This is a design document, containing miscellaneous ideas.
 The language may change during implementation.
 
-The plan is that the implementation will completely match the specification
-when its version reaches 1.0.
-(Note that the implementation is versioned independently from this document.)
+The plan is that the implementation will completely match this description
+when the document reaches v1.0.
+(Note that the implementation is versioned independently of this document.)
 
 See `xci::script` in https://github.com/rbrich/xcikit[xcikit] codebase.
 
