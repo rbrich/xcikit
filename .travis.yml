@@ -17,7 +17,7 @@ env:
 
 addons:
   homebrew:
-    update: false
+    update: true
     packages:
       - llvm
       - conan
@@ -62,13 +62,13 @@ cache:
 #  - conan user -p $CONAN_PASSWORD -r xcikit rbrich
 #  - conan upload 'xcikit/*@rbrich/stable' --all --no-overwrite --check --confirm -r=xcikit
 
-deploy:
-  provider: releases
-  api_key: $GITHUB_TOKEN
-  file_glob: true
-  file: artifacts/*.zip
-  on:
-    repo: rbrich/xcikit
-    branch: master
-  skip_cleanup: true
-  draft: true
+#deploy:
+#  provider: releases
+#  api_key: $GITHUB_TOKEN
+#  file_glob: true
+#  file: artifacts/*.zip
+#  on:
+#    repo: rbrich/xcikit
+#    branch: master
+#  skip_cleanup: true
+#  draft: true
