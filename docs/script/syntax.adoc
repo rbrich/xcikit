@@ -6,7 +6,7 @@ endif::[]
 
 = Fire Script
 
-*_Language specification, v0.5_*
+*_Language specification, v0.6_*
 
 toc::[]
 
@@ -32,7 +32,7 @@ when its version reaches 1.0.
 See `xci::script` in https://github.com/rbrich/xcikit[xcikit] codebase.
 
 
-== Syntax Elements
+== Basic syntax
 
 === Literals
 
@@ -176,13 +176,79 @@ Infix and prefix operators, operator precedence:
 
 === Variables
 
-Variables are named values. They are always immutable - the name can be
-assigned only once in each scope. But it's possible to override the name
-in inner scope:
+There are no real variables. Let's discuss what looks like variables
+and how it works.
+
+All "variables" (symbolic names) are scoped and unique. It's not possible to assign the same
+name again in the same scope. It's not possible to change to what the name
+points, it's always immutable. Instead, it's possible to introduce a new name
+or override the name in inner scope.
 
 [source,fire]
 ----
-// variable type is inferred
+// type is inferred
+i = 1
+
+// right-hand side can be any expression
+j = 1 + 2
+k = add2 1 2
+
+// error, redefinition of a name
+k = 1; k = k + 1
+
+// ok, inner `m` has value `2`
+m = 1; { m = m + 1 }
+
+// variable type can be explicitly declared
+l:Int32 = k
+s:String = "XCI"
+----
+
+There are three basic ways of naming values:
+
+[source,fire]
+----
+a = 1             // [1.] literal value
+b = add 1 2       // [2.] result of expression
+data c = add 1 2  // [3.] constant value initialized with a result of expression
+----
+
+The first two cases create a function which takes no arguments and returns
+the expected value as the result. The compiler is free to optimize them and
+just point the symbolic names to precomputed values.
+In the third case, this is enforced. The `data` keyword makes sure the value
+is computed in compile-time and no run-time code is generated. It's similar
+to `consteval` in C++20. The compiler emits error if the expression does not
+lead to compile-time value.
+
+A function (object) can't be assigned to `data` value, because that's precisely
+what the keyword does -- it prevents creating a function and forces creating
+a data value in the compiled module.
+
+The picture gets a little more complicated when we start to consider side effects.
+Without side effects, it's not really important when the evaluation happens
+-- everything can be lazy. But when the right side of `=` has side effects,
+the compiler switches to eager evaluation.
+
+[source,fire]
+----
+a = write "hello\n"      // eager: prints "hello" immediately
+a = { write "hello\n" }  // lazy: `a` becomes a function that prints "hello" when called
+----
+
+On module-level, all statements are evaluated eagerly. Code like this works as expected:
+
+[source,fire]
+----
+write "Hello "
+flush
+write "World!\n"
+----
+
+
+[source,fire]
+----
+// type is inferred
 i = 1
 
 // right-hand side can be any expression
@@ -314,6 +380,9 @@ MyRecord = (String name, Int age)
 rec = MyRecord("A name", 42)
 rec.name    // dot operator
 ----
+
+
+== Language constructs
 
 === Type classes
 
@@ -771,11 +840,14 @@ exception.
 A top-level translation unit is named Module.
 Module-level statements are either Declarations or Invocations.
 Declaration can be written in any order, each name can be used only once in a scope.
+Named functions or expressions, type classes, instances -- all are Declarations.
+
+=== Invocations
 
 Invocations are order dependent - when executing the Module, each Invocation is evaluated
 and its result is passed to Executor, which is special function (possibly hardcoded in C++)
 which gets a result from each Invocation, processes it and passes another value to next Invocation.
-This value can be accessed inside the Invocation under special name: `_`.
+The previous value can be accessed inside the Invocation under special name: `_`.
 
 Given this source file:
 
@@ -790,8 +862,8 @@ Imagine that it's executed like this:
 [source,fire]
 ----
 _0 = void
-_1 = executor (fun _{ 1 + 2 } _0)
-_2 = executor (fun _{ 3 * _ } _1)
+_1 = executor (fun _ { 1 + 2 } _0)
+_2 = executor (fun _ { 3 * _ } _1)
 ----
 
 The Executor can do anything with the results, for example:
@@ -802,18 +874,17 @@ The Executor can do anything with the results, for example:
 * concatenate them as a HTTP response (i.e. Web application)
 * implementing anything else that needs a sequence of records
 
-Importing modules:
+=== Importing modules
 
 [source,fire]
 ----
 my_mod = import "my_mod"    // import only Declarations
-my_mod.func                 // run function imported from module `my_mod`
+my_mod::func                // run function imported from module `my_mod`
 my_mod                      // run all associated Invocations
 ----
 
 * In the last line, the whole module is executed.
 * The first Invocation from the module gets current '_' value.
-
 * The statement returns the result of last Invocation in the module.
 
 Module names must be valid function names, i.e. start with lower case letter.
@@ -822,28 +893,35 @@ Module import paths are configurable, by passing `-I` option to compiler,
 by setting them in config file or via C++ interface.
 
 All configured paths are searched in order (which yet needs to be defined),
-checking for existence of source file or bitcode file:
+checking for existence of source file or bytecode file:
 
-* Source file pattern: `&lt;import_path&gt;/&lt;requested_name&gt;.ls`
-* Bitcode file pattern: `&lt;import_path&gt;/&lt;requested_name&gt;.lsB`
+* Source file pattern: `&lt;import_path&gt;/&lt;requested_name&gt;.fire`
+* Bytecode file pattern: `&lt;import_path&gt;/&lt;requested_name&gt;.firm`
 * `&lt;import_path&gt;` is one of paths specified by `-I` etc.
 * `&lt;requested_name&gt;` is the string from `import` statement, without quotes (it may contain slashes, e.g. `&quot;lib/mod&quot;`)
-* the file extension might be configurable too, especially in the embedding scenario
+* The file extension might be configurable too, especially in the embedding scenario.
 
-The bitcode is not autogenerated - if not found, it will be created on-the-fly and stored temporarily
-in local cache.
+If only the source file is found, it will be compiled on-the-fly, in memory.
 
-== Compilation
+Bytecode cache: a directory used to store and retrieve the bytecode of the on-the-fly compiled modules.
+
+=== Compilation
 
 The complete program is composed of main source plus all imported modules,
-each of which is precompiled into bitcode. After this phase, we have a big blob of bitcode.
+each of which is compiled into bytecode. The interpreter gathers all the modules
+(resolving transitive dependencies and possibly compiling some modules on-the-fly)
+and builds a module tree. Then it starts executing the main module:
 
-The whole precompiled blob is then passed either to interpreter, which can execute it as is,
-or to a low-level compiler, for example LLVM. It just needs to be translated to IR and compiled
-to machine code.
+* Embedded interpreter: Calls a provided callback (Executor) for each Invocation
+  and then returns final result to the caller.
 
-The resulting machine binary will have a main entry point, which will run a default Executor
-(that will be compiled in too, for efficiency).
+* CLI interpreter: Prints the value from each Invocation and then prints
+  the final result. The "print" action can be configured
+  (e.g. null-terminate, call a program etc.)
+
+A possible "LTO" optimization: Put all modules together and compile-in the Executor.
+For example, Null Executor would throw away all intermediate results from Invocations,
+so the related code can be thrown away, too.
 
 
 == Syntax decisions
