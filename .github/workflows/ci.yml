@@ -38,6 +38,20 @@ jobs:
         python-version: '3.x'
         architecture: 'x64'
 
+    - name: cache
+      uses: actions/cache@v2
+      with:
+        path: |
+          /usr/local/Homebrew
+          ~/Library/Caches/Homebrew
+          ~/.conan
+          vulkansdk-macos-*
+        key: ${{ runner.os }}-build-${{ env.VK_SDK_VER }}-${{ hashFiles('conanfile.py') }}
+        restore-keys: |
+          ${{ runner.os }}-build-${{ env.VK_SDK_VER }}-
+          ${{ runner.os }}-build-
+          ${{ runner.os }}-
+
     - name: "ubuntu: install GCC, dev libs"
       if: ${{ matrix.os == 'ubuntu-18.04' }}
       run: |
@@ -51,7 +65,7 @@ jobs:
     - name: "macos: install Clang, dev libs, Vulkan SDK"
       if: ${{ matrix.os == 'macos-10.15' }}
       run: |
-        brew install conan ccache ninja glfw doxygen google-benchmark hyperscan vulkan-headers glslang
+        brew install conan ccache ninja glfw doxygen google-benchmark hyperscan
         echo "CC='$(brew --prefix llvm)/bin/clang'" >> $GITHUB_ENV
         echo "CXX='$(brew --prefix llvm)/bin/clang++'" >> $GITHUB_ENV
         echo "MACOSX_DEPLOYMENT_TARGET=10.15" >> $GITHUB_ENV
