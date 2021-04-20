@@ -8,8 +8,8 @@ git:
 
 env:
   global:
-    - CC=/usr/local/opt/llvm/bin/clang
-    - CXX=/usr/local/opt/llvm/bin/clang++
+    - CC=/usr/local/opt/llvm@11/bin/clang
+    - CXX=/usr/local/opt/llvm@11/bin/clang++
     - CONAN_ENV_COMPILER_LIBCXX=libc++
     - CONAN_REVISIONS_ENABLED=1
     - MACOSX_DEPLOYMENT_TARGET=10.15
@@ -19,7 +19,7 @@ addons:
   homebrew:
     update: false
     packages:
-      - llvm
+      - llvm@11
       - conan
       - ccache
       - ninja

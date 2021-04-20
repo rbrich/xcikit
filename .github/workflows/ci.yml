@@ -42,13 +42,11 @@ jobs:
       uses: actions/cache@v2
       with:
         path: |
-          /usr/local/Homebrew
-          ~/Library/Caches/Homebrew
           ~/.conan
           vulkansdk-macos-*
-        key: ${{ runner.os }}-build-${{ env.VK_SDK_VER }}-${{ hashFiles('conanfile.py') }}
+        key: ${{ runner.os }}-build-vk${{ env.VK_SDK_VER }}-${{ hashFiles('conanfile.py') }}
         restore-keys: |
-          ${{ runner.os }}-build-${{ env.VK_SDK_VER }}-
+          ${{ runner.os }}-build-vk${{ env.VK_SDK_VER }}-
           ${{ runner.os }}-build-
           ${{ runner.os }}-
 
@@ -109,11 +107,6 @@ jobs:
       run: ./build.sh test $BUILD_ARGS
       shell: bash
 
-    - name: test failed
-      if: ${{ failure() }}
-      run: cat build/*/Testing/Temporary/LastTest.log
-      shell: bash
-
     - name: install
       if: ${{ matrix.name == 'Release build' }}
       run: ./build.sh install $BUILD_ARGS
@@ -123,6 +116,22 @@ jobs:
       if: ${{ matrix.name == 'Release build' }}
       run: ./build.sh package $BUILD_ARGS
       shell: bash
+
+    - name: artifacts - tarball
+      if: ${{ matrix.name == 'Release build' }}
+      uses: actions/upload-artifact@v2
+      with:
+        name: xcikit-artifacts
+        path: |
+          artifacts/xcikit-*.tar.gz
+
+    - name: artifacts - test report
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v2
+      with:
+        name: test-report
+        path: |
+          build/*/Testing/Temporary/LastTest.log
 
 #    - name: deploy conan package
 #      if: github.ref == 'refs/heads/master'
