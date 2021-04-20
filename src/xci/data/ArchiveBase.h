@@ -43,6 +43,8 @@ concept TypeWithSerialize = requires(T& v, TArchive& ar) { v.serialize(ar); };
 template<typename T, typename TArchive>
 concept TypeWithArchiveSupport = requires(T& v, std::uint8_t k, TArchive& ar) { ar.add(ArchiveField<T>{k, v}); };
 
+template<typename T>
+concept FancyPointerType = requires(const T& v) { *v; typename std::pointer_traits<T>::pointer; };
 
 
 class ArchiveError : public core::Error {

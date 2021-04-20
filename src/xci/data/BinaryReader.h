@@ -34,8 +34,7 @@ public:
     void finish_and_check() { read_footer(); }
 
     // raw and smart pointers
-    template <typename T>
-    requires std::is_pointer_v<T> || std::is_same_v<T, std::unique_ptr> || std::is_same_v<T, std::shared_ptr>
+    template <FancyPointerType T>
     void add(ArchiveField<T>&& a) {
         const auto chunk_type = peek_chunk_head(a.key);
         if (chunk_type == ChunkNotFound)
