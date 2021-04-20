@@ -17,7 +17,7 @@ env:
 
 addons:
   homebrew:
-    update: true
+    update: false
     packages:
       - llvm
       - conan

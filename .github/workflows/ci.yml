@@ -7,13 +7,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-18.04, macos-10.15, windows-2019]
-        build_args: [""]
-        name: ["Release build"]
         include:
         - os: ubuntu-18.04
-          build_args: "--debug -DBUILD_WITH_ASAN=1 -DBUILD_WITH_UBSAN=1"
+          name: "Release build"
+          build_args: "core data script"
+        - os: macos-10.15
+          name: "Release build"
+          build_args: ""
+        - os: windows-2019
+          name: "Release build"
+          build_args: "core data script"
+        - os: ubuntu-18.04
           name: "Debug ASAN"
+          build_args: "core data script --debug -DBUILD_WITH_ASAN=1 -DBUILD_WITH_UBSAN=1"
 
     name: ${{ matrix.os }} / ${{ matrix.name }}
 
@@ -22,7 +28,8 @@ jobs:
     env:
       CONAN_PASSWORD: ${{ secrets.CONAN_PASSWORD }}
       CONAN_REVISIONS_ENABLED: 1
-      BUILD_ARGS: core data script ${{ matrix.build_args }}
+      BUILD_ARGS: ${{ matrix.build_args }}
+      VK_SDK_VER: 1.2.135.0
 
     steps:
     - uses: actions/checkout@v2
@@ -41,12 +48,19 @@ jobs:
         sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++    50
         sudo update-alternatives --install /usr/bin/cc cc /usr/bin/gcc      50
 
-    - name: "macos: install Clang, dev libs"
+    - name: "macos: install Clang, dev libs, Vulkan SDK"
       if: ${{ matrix.os == 'macos-10.15' }}
       run: |
-        brew install conan ccache ninja glfw doxygen google-benchmark hyperscan vulkan-headers
+        brew install conan ccache ninja glfw doxygen google-benchmark hyperscan vulkan-headers glslang
         echo "CC='$(brew --prefix llvm)/bin/clang'" >> $GITHUB_ENV
         echo "CXX='$(brew --prefix llvm)/bin/clang++'" >> $GITHUB_ENV
+        echo "MACOSX_DEPLOYMENT_TARGET=10.15" >> $GITHUB_ENV
+        export VULKAN_SDK="$PWD/vulkansdk-macos-$VK_SDK_VER/macOS"
+        echo "VULKAN_SDK=$VULKAN_SDK" >> $GITHUB_ENV
+        if [ ! -d "$VULKAN_SDK" ]; then
+            curl -fsSLO https://sdk.lunarg.com/sdk/download/$VK_SDK_VER/mac/vulkansdk-macos-$VK_SDK_VER.tar.gz
+            tar xf vulkansdk-macos-$VK_SDK_VER.tar.gz && rm vulkansdk-macos-$VK_SDK_VER.tar.gz
+        fi
 
     - name: install tools
       run: |
@@ -79,6 +93,11 @@ jobs:
 
     - name: test
       run: ./build.sh test $BUILD_ARGS
+      shell: bash
+
+    - name: test failed
+      if: ${{ failure() }}
+      run: cat build/*/Testing/Temporary/LastTest.log
       shell: bash
 
     - name: install
