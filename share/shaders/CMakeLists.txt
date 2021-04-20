@@ -29,8 +29,9 @@ function(add_shaders)
 
     set(outputs)
     set(assets)
+    file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/share/xcikit/shaders")
     foreach(src ${ARG_SOURCES})
-        set(output "${CMAKE_CURRENT_BINARY_DIR}/../xcikit/shaders/${src}.spv")
+        set(output "${CMAKE_BINARY_DIR}/share/xcikit/shaders/${src}.spv")
         add_custom_command(
             OUTPUT ${output}
             MAIN_DEPENDENCY "${src}"
