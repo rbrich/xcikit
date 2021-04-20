@@ -42,15 +42,13 @@ jobs:
       uses: actions/cache@v2
       with:
         path: |
-          ~/.conan
+          ~/.conan/data
           vulkansdk-macos-*
-        key: ${{ runner.os }}-build-vk${{ env.VK_SDK_VER }}-${{ hashFiles('conanfile.py') }}
+        key: ${{ runner.os }}-build-vksdk${{ env.VK_SDK_VER }}-${{ hashFiles('conanfile.py') }}
         restore-keys: |
-          ${{ runner.os }}-build-vk${{ env.VK_SDK_VER }}-
-          ${{ runner.os }}-build-
-          ${{ runner.os }}-
+          ${{ runner.os }}-build-vksdk${{ env.VK_SDK_VER }}-
 
-    - name: "ubuntu: install GCC, dev libs"
+    - name: "ubuntu: install tools and deps"
       if: ${{ matrix.os == 'ubuntu-18.04' }}
       run: |
         sudo apt-get update
@@ -59,33 +57,36 @@ jobs:
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 50
         sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++    50
         sudo update-alternatives --install /usr/bin/cc cc /usr/bin/gcc      50
+        pip3 --no-cache-dir install conan
+        conan profile new default --detect
+        conan profile update "settings.compiler.libcxx=libstdc++11" default
+        conan profile update "settings.compiler.cppstd=20" default
 
-    - name: "macos: install Clang, dev libs, Vulkan SDK"
+    - name: "macos: install tools and deps"
       if: ${{ matrix.os == 'macos-10.15' }}
       run: |
         brew install conan ccache ninja glfw doxygen google-benchmark hyperscan
-        echo "CC='$(brew --prefix llvm)/bin/clang'" >> $GITHUB_ENV
-        echo "CXX='$(brew --prefix llvm)/bin/clang++'" >> $GITHUB_ENV
-        echo "MACOSX_DEPLOYMENT_TARGET=10.15" >> $GITHUB_ENV
+        export CC="$(brew --prefix llvm)/bin/clang"
+        export CXX="$(brew --prefix llvm)/bin/clang++"
+        export MACOSX_DEPLOYMENT_TARGET=10.15
         export VULKAN_SDK="$PWD/vulkansdk-macos-$VK_SDK_VER/macOS"
+        echo "CC='$CC'" >> $GITHUB_ENV
+        echo "CXX='$CXX'" >> $GITHUB_ENV
+        echo "MACOSX_DEPLOYMENT_TARGET=$MACOSX_DEPLOYMENT_TARGET" >> $GITHUB_ENV
         echo "VULKAN_SDK=$VULKAN_SDK" >> $GITHUB_ENV
         if [ ! -d "$VULKAN_SDK" ]; then
             curl -fsSLO https://sdk.lunarg.com/sdk/download/$VK_SDK_VER/mac/vulkansdk-macos-$VK_SDK_VER.tar.gz
             tar xf vulkansdk-macos-$VK_SDK_VER.tar.gz && rm vulkansdk-macos-$VK_SDK_VER.tar.gz
         fi
+        conan profile new default --detect
+        conan profile update "settings.compiler.libcxx=libc++" default
+        conan profile update "settings.compiler.cppstd=20" default
+        conan profile update "settings.os.version=$MACOSX_DEPLOYMENT_TARGET" default
 
-    - name: install tools
+    - name: "windows: install tools and deps"
       run: |
         pip3 --no-cache-dir install conan
         conan profile new default --detect
-
-    - name: "ubuntu: additional Conan setup"
-      if: matrix.os == 'ubuntu-18.04'
-      run: conan profile update "settings.compiler.libcxx=libstdc++11" default
-
-    - name: "macos: additional Conan setup"
-      if: ${{ matrix.os == 'macos-10.15' }}
-      run: conan profile update "settings.compiler.libcxx=libc++" default
 
     - name: bootstrap
       run: ./bootstrap.sh
