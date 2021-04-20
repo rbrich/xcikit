@@ -48,45 +48,41 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-build-vksdk${{ env.VK_SDK_VER }}-
 
-    - name: "ubuntu: install tools and deps"
-      if: ${{ matrix.os == 'ubuntu-18.04' }}
+    - name: "install tools and deps"
       run: |
-        sudo apt-get update
-        sudo apt-get install -y g++-10 ninja-build libhyperscan-dev
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 50
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 50
-        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++    50
-        sudo update-alternatives --install /usr/bin/cc cc /usr/bin/gcc      50
-        pip3 --no-cache-dir install conan
-        conan profile new default --detect
-        conan profile update "settings.compiler.libcxx=libstdc++11" default
-        conan profile update "settings.compiler.cppstd=20" default
-
-    - name: "macos: install tools and deps"
-      if: ${{ matrix.os == 'macos-10.15' }}
-      run: |
-        brew install conan ccache ninja glfw doxygen google-benchmark hyperscan
-        export CC="$(brew --prefix llvm)/bin/clang"
-        export CXX="$(brew --prefix llvm)/bin/clang++"
-        export MACOSX_DEPLOYMENT_TARGET=10.15
-        export VULKAN_SDK="$PWD/vulkansdk-macos-$VK_SDK_VER/macOS"
-        echo "CC='$CC'" >> $GITHUB_ENV
-        echo "CXX='$CXX'" >> $GITHUB_ENV
-        echo "MACOSX_DEPLOYMENT_TARGET=$MACOSX_DEPLOYMENT_TARGET" >> $GITHUB_ENV
-        echo "VULKAN_SDK=$VULKAN_SDK" >> $GITHUB_ENV
-        if [ ! -d "$VULKAN_SDK" ]; then
-            curl -fsSLO https://sdk.lunarg.com/sdk/download/$VK_SDK_VER/mac/vulkansdk-macos-$VK_SDK_VER.tar.gz
-            tar xf vulkansdk-macos-$VK_SDK_VER.tar.gz && rm vulkansdk-macos-$VK_SDK_VER.tar.gz
+        if [ "$RUNNER_OS" == "Linux" ]; then
+            sudo apt-get update
+            sudo apt-get install -y g++-10 ninja-build libhyperscan-dev
+            sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 50
+            sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 50
+            sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++    50
+            sudo update-alternatives --install /usr/bin/cc cc /usr/bin/gcc      50
+            pip3 --no-cache-dir install conan
+            conan profile new default --detect --force
+            conan profile update "settings.compiler.libcxx=libstdc++11" default
+        elif [ "$RUNNER_OS" == "macOS" ]; then
+            brew install conan ccache ninja glfw doxygen google-benchmark hyperscan
+            export CC="$(brew --prefix llvm)/bin/clang"
+            export CXX="$(brew --prefix llvm)/bin/clang++"
+            export MACOSX_DEPLOYMENT_TARGET=10.15
+            export VULKAN_SDK="$PWD/vulkansdk-macos-$VK_SDK_VER/macOS"
+            echo "CC='$CC'" >> $GITHUB_ENV
+            echo "CXX='$CXX'" >> $GITHUB_ENV
+            echo "MACOSX_DEPLOYMENT_TARGET=$MACOSX_DEPLOYMENT_TARGET" >> $GITHUB_ENV
+            echo "VULKAN_SDK=$VULKAN_SDK" >> $GITHUB_ENV
+            if [ ! -d "$VULKAN_SDK" ]; then
+                curl -fsSLO https://sdk.lunarg.com/sdk/download/$VK_SDK_VER/mac/vulkansdk-macos-$VK_SDK_VER.tar.gz
+                tar xf vulkansdk-macos-$VK_SDK_VER.tar.gz && rm vulkansdk-macos-$VK_SDK_VER.tar.gz
+            fi
+            conan profile new default --detect --force
+            conan profile update "settings.compiler.libcxx=libc++" default
+            conan profile update "settings.os.version=$MACOSX_DEPLOYMENT_TARGET" default
+        elif [ "$RUNNER_OS" == "Windows" ]; then
+            pip3 --no-cache-dir install conan
+            conan profile new default --detect --force
         fi
-        conan profile new default --detect
-        conan profile update "settings.compiler.libcxx=libc++" default
         conan profile update "settings.compiler.cppstd=20" default
-        conan profile update "settings.os.version=$MACOSX_DEPLOYMENT_TARGET" default
-
-    - name: "windows: install tools and deps"
-      run: |
-        pip3 --no-cache-dir install conan
-        conan profile new default --detect
+      shell: bash
 
     - name: bootstrap
       run: ./bootstrap.sh
