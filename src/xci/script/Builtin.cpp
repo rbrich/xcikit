@@ -589,6 +589,22 @@ static void read_string(Stack& stack, void*, void*)
 }
 
 
+static void open_file(Stack& stack, void*, void*)
+{
+    auto path = stack.pull<value::String>();
+    std::string path_s {path.value()};
+    path.decref();
+
+    auto flags = stack.pull<value::String>();
+    std::string flags_s {flags.value()};
+    flags.decref();
+
+    FILE* f = fopen(path_s.c_str(), flags_s.c_str());
+
+    stack.push(value::Stream(script::Stream{script::Stream::CFile{f}}));
+}
+
+
 void BuiltinModule::add_io_functions()
 {
     auto ps = add_native_function("write", {TypeInfo{Type::String}}, TypeInfo{Type::Void}, write_string);
@@ -597,6 +613,7 @@ void BuiltinModule::add_io_functions()
     add_native_function("flush", {}, TypeInfo{Type::Void}, flush_out);
     add_native_function("error", {TypeInfo{Type::String}}, TypeInfo{Type::Void}, write_error);
     add_native_function("read", {TypeInfo{Type::Int32}}, TypeInfo{Type::String}, read_string);
+    add_native_function("open", {TypeInfo{Type::String}, TypeInfo{Type::String}}, TypeInfo{Type::Stream}, open_file);
 }
 
 

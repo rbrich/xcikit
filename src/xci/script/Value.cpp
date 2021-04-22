@@ -8,6 +8,7 @@
 #include "Function.h"
 #include "Error.h"
 #include <xci/core/string.h>
+#include <xci/core/log.h>
 #include <xci/core/template/helpers.h>
 #include <numeric>
 #include <sstream>
@@ -15,7 +16,7 @@
 
 namespace xci::script {
 
-using xci::core::overloaded;
+using namespace xci::core;
 using std::move;
 using std::make_unique;
 
@@ -407,16 +408,26 @@ value::Tuple ClosureV::closure() const
 }
 
 
-StreamV::StreamV(const Stream& v) : slot(sizeof(Stream*))
+static void stream_deleter(const byte* data)
 {
-    const Stream* ptr = &v;
-    std::memcpy(slot.data(), &ptr, sizeof(Stream*));
+    Stream v;
+    v.raw_read(data);
+    v.close();
 }
 
 
-const Stream& StreamV::value() const
+StreamV::StreamV(const Stream& v)
+        : slot(Stream::raw_size(), stream_deleter)
 {
-    return *bit_read<Stream*>(slot.data());
+    v.raw_write(slot.data());
+}
+
+
+Stream StreamV::value() const
+{
+    Stream v;
+    v.raw_read(slot.data());
+    return v;
 }
 
 
@@ -524,7 +535,9 @@ public:
         }
     }
     void visit(const script::Module* v) override { fmt::print(os, "<module:{:x}>", uintptr_t(v)); }
-    void visit(const script::Stream& v) override { fmt::print(os, "<stream:{:x}>", uintptr_t(&v)); }
+    void visit(const script::Stream& v) override {
+        os << "<stream:" << v << ">";
+    }
 private:
     std::ostream& os;
     const TypeInfo& type_info;

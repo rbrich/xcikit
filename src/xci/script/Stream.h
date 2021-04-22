@@ -14,6 +14,8 @@
 
 namespace xci::script {
 
+using std::byte;
+
 
 template<typename T>
 concept ByteSpanT = requires(const T& v) {
@@ -24,9 +26,40 @@ concept ByteSpanT = requires(const T& v) {
 
 class Stream {
 public:
+    // null stream (/dev/null)
+    using NullStream = std::monostate;
+
+    // stdio
+    struct CFileRef {
+        // not owned, won't be closed
+        FILE* file;
+        bool operator ==(const CFileRef& rhs) const = default;
+    };
+    struct CFile {
+        // owned, will be closed
+        FILE* file;
+        bool operator ==(const CFile& rhs) const = default;
+    };
+    static_assert(sizeof(CFile) == sizeof(void*));
+
+    // FD / socket
+    struct FdRef {
+        // not owned, won't be closed
+        int fd;
+        bool operator ==(const FdRef& rhs) const = default;
+    };
+    struct Fd {
+        // owned, will be closed
+        int fd;
+        bool operator ==(const Fd& rhs) const = default;
+    };
+    static_assert(sizeof(Fd) == sizeof(int));
+
     Stream() = default;  // null stream
-    Stream(FILE* f) : m_handle(f) {}
-    Stream(int fd) : m_handle(fd) {}
+    Stream(auto&& v) : m_handle(std::forward<decltype(v)>(v)) {}
+
+    bool operator ==(const Stream& rhs) const = default;
+    friend std::ostream& operator<<(std::ostream& os, const Stream& v);
 
     static Stream& null();
 
@@ -46,12 +79,15 @@ public:
 
     std::string read(size_t n);
 
+    // heap serialization
+    constexpr static size_t raw_size() { return 1 + sizeof m_handle; }
+    size_t raw_read(const byte* buffer);
+    size_t raw_write(byte* buffer) const;
+
+    void close();
+
 private:
-    std::variant<
-        std::monostate,  // null stream
-        FILE*,   // stdio
-        int      // FD / socket
-    > m_handle;
+    std::variant<NullStream, CFileRef, CFile, FdRef, Fd> m_handle;
 };
 
 

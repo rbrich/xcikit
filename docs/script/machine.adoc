@@ -131,10 +131,11 @@ on the stack. An optimizing compiler can decide if a value of specific kind goes
 or stack, and it may also decide to modify the heap value in place,
 if it has only a single reference.
 
-All heap values have a header with refcount:
+All heap values have a header with refcount and pointer to deleter:
 
 ----
 4B refcount
+zB deleter (function pointer)
 xB data
 ----
 
@@ -149,7 +150,7 @@ of the value.
 Heap value:
 
 ----
-(4B refcount)
+(4B+zB header)
 4B size
 xB UTF-8 data (x = size)
 ----
@@ -167,7 +168,7 @@ If this is an issue, use `[Char]`, which is written as UTF-32 string.
 Heap value:
 
 ----
-(4B refcount)
+(4B+zB header)
 4B length (number of elements)
 xB element data (x = length * size of element)
 ----
@@ -183,8 +184,8 @@ it also wouldn't be possible to tell String from List etc.
 Heap value:
 
 ----
-(4B refcount)
-*B function (pointer)
+(4B+zB header)
+zB function (pointer)
 xB closure values (tuple)
 ----
 

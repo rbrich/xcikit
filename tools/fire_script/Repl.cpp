@@ -109,6 +109,7 @@ bool Repl::evaluate(std::string_view line)
                 t.print("{t:bold}{}{t:normal}\n", result);
             }
         }
+        result.decref();
         return true;
     } catch (const ScriptError& e) {
         if (!e.file().empty())

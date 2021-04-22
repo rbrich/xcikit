@@ -148,8 +148,8 @@ struct StreamV {
     StreamV() = default;
     explicit StreamV(const Stream& v);
 
-    bool operator ==(const StreamV& rhs) const { return slot.slot() == rhs.slot.slot(); }  // same slot - cannot compare content without elem_type
-    const Stream& value() const;
+    bool operator ==(const StreamV& rhs) const { return value() == rhs.value(); }
+    Stream value() const;
 
     HeapSlot slot;
 };
@@ -182,7 +182,7 @@ public:
     explicit Value(const Function& fn) : m_value(ClosureV{fn}) {}  // Closure
     explicit Value(const Function& fn, Values&& values) : m_value(ClosureV{fn, move(values)}) {}  // Closure
     explicit Value(StreamTag) : m_value(StreamV{}) {}  // Stream
-    explicit Value(script::Stream& v) : m_value(StreamV{v}) {}  // Stream
+    explicit Value(const script::Stream& v) : m_value(StreamV{v}) {}  // Stream
     explicit Value(ModuleTag) : m_value((script::Module*) nullptr) {}  // Module
     explicit Value(script::Module& v) : m_value(&v) {}  // Module
 
@@ -511,7 +511,7 @@ public:
 class Stream: public Value {
 public:
     Stream() : Value(Value::StreamTag{}) {}
-    explicit Stream(script::Stream& v) : Value(v) {}
+    explicit Stream(const script::Stream& v) : Value(v) {}
 };
 
 

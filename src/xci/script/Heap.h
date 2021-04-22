@@ -18,14 +18,23 @@ namespace xci::script {
 // Every instance on the stack should increase refcount by one.
 // Single instance pulled of the stack retains one refcount, which needs to be
 // manually decreased before destroying the object.
+//
+// The slot has a header followed by user data.
+// Header is:
+// * 4B refcount
+// * zB pointer to deleter - a function to be called before destroying the slot
 class HeapSlot {
 public:
+    using RefCount = uint32_t;
+    using Deleter = void(*)(const std::byte* data);
+    static constexpr size_t header_size = sizeof(RefCount) + sizeof(Deleter);
+
     // new uninitialized slot
     HeapSlot() = default;
     // bind to existing slot
     explicit HeapSlot(std::byte* slot) : m_slot(slot) {}
     // create new slot with refcount = 1
-    explicit HeapSlot(size_t size);
+    explicit HeapSlot(size_t user_size, Deleter deleter = nullptr);
     // copy existing slot
     HeapSlot(const HeapSlot& other) = default;
     HeapSlot(HeapSlot&& other) noexcept : m_slot(other.m_slot) { other.m_slot = nullptr; }
@@ -37,10 +46,10 @@ public:
 
     void incref() const;
     bool decref() const;  // free the object and return true when refcount = 0
-    uint32_t refcount() const;
+    RefCount refcount() const;
 
-    std::byte* data() { return m_slot == nullptr ? nullptr : m_slot + 4; }
-    const std::byte* data() const { return m_slot == nullptr ? nullptr : m_slot + 4; }
+    std::byte* data() { return m_slot == nullptr ? nullptr : m_slot + header_size; }
+    const std::byte* data() const { return m_slot == nullptr ? nullptr : m_slot + header_size; }
     const std::byte* slot() const { return m_slot; }
 
     explicit operator bool() const { return m_slot != nullptr; }
