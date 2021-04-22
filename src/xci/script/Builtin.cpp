@@ -607,6 +607,10 @@ static void open_file(Stack& stack, void*, void*)
 
 void BuiltinModule::add_io_functions()
 {
+    symtab().add({"stdin", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::c_stdin())})});
+    symtab().add({"stdout", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::c_stdout())})});
+    symtab().add({"stderr", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::c_stderr())})});
+
     auto ps = add_native_function("write", {TypeInfo{Type::String}}, TypeInfo{Type::Void}, write_string);
     auto pb = add_native_function("write", {TypeInfo::bytes()}, TypeInfo{Type::Void}, write_bytes);
     ps->set_next(pb);

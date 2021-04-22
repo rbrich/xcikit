@@ -108,14 +108,15 @@ public:
     // ------------------------------------------------------------------------
 
     struct Streams {
-        Stream& in;
-        Stream& out;
-        Stream& err;
+        Stream in;
+        Stream out;
+        Stream err;
     };
 
     void push_streams(Streams&& streams) { m_streams.push(std::move(streams)); }
     void pop_streams() { m_streams.pop(); }
     const Streams& streams() const { return m_streams.top(); }
+    Streams& streams() { return m_streams.top(); }
 
     // ------------------------------------------------------------------------
 

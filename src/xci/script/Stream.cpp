@@ -15,53 +15,9 @@ namespace xci::script {
 using namespace xci::core;
 
 
-Stream& Stream::null()
-{
-    static Stream stream;
-    return stream;
-}
-
-
-Stream& Stream::c_stdin()
-{
-    static Stream stream(CFileRef{stdin});
-    return stream;
-}
-
-
-Stream& Stream::c_stdout()
-{
-    static Stream stream(CFileRef{stdout});
-    return stream;
-}
-
-
-Stream& Stream::c_stderr()
-{
-    static Stream stream(CFileRef{stderr});
-    return stream;
-}
-
-
-Stream& Stream::raw_stdin()
-{
-    static Stream stream(FdRef{STDIN_FILENO});
-    return stream;
-}
-
-
-Stream& Stream::raw_stdout()
-{
-    static Stream stream(FdRef{STDOUT_FILENO});
-    return stream;
-}
-
-
-Stream& Stream::raw_stderr()
-{
-    static Stream stream(FdRef{STDERR_FILENO});
-    return stream;
-}
+Stream Stream::raw_stdin() { return Stream(FdRef{STDIN_FILENO}); }
+Stream Stream::raw_stdout() { return Stream(FdRef{STDOUT_FILENO}); }
+Stream Stream::raw_stderr() { return Stream(FdRef{STDERR_FILENO}); }
 
 
 // variant visitor helper

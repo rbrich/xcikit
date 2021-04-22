@@ -61,17 +61,17 @@ public:
     bool operator ==(const Stream& rhs) const = default;
     friend std::ostream& operator<<(std::ostream& os, const Stream& v);
 
-    static Stream& null();
+    static Stream null() { return Stream(NullStream{}); }
 
     // FILE*
-    static Stream& c_stdin();
-    static Stream& c_stdout();
-    static Stream& c_stderr();
+    static Stream c_stdin() { return Stream(CFileRef{stdin}); }
+    static Stream c_stdout() { return Stream(CFileRef{stdout}); }
+    static Stream c_stderr() { return Stream(CFileRef{stderr}); }
 
     // fd
-    static Stream& raw_stdin();
-    static Stream& raw_stdout();
-    static Stream& raw_stderr();
+    static Stream raw_stdin();
+    static Stream raw_stdout();
+    static Stream raw_stderr();
 
     template <ByteSpanT T> size_t write(T data) { return write((void*) data.data(), data.size()); }
     size_t write(void* data, size_t size);
