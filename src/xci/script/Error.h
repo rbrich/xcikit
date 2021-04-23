@@ -127,6 +127,7 @@ struct UnexpectedArgument : public ScriptError {
 
 
 struct UnexpectedArgumentType : public ScriptError {
+    // idx is 1-based
     explicit UnexpectedArgumentType(size_t idx, const TypeInfo& exp, const TypeInfo& got, const SourceLocation& loc)
             : ScriptError(format("function expects {} for arg #{}, called with {}",
                                  exp, idx, got), loc) {}

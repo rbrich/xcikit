@@ -25,11 +25,14 @@ class Function;
 /// The main stack is down-growing, with small initial size,
 /// but resized when full (up to maximum allowed size).
 ///
-/// Includes three auxiliary stacks:
+/// Includes two auxiliary stacks:
 /// - TypeInfo stack for keeping record of types of data on main stack
 ///   (this is optional, might be disabled for non-debug programs)
 /// - Frame stack for keeping record of called functions and return addresses
-/// - Stream stack for keeping record of current set of I/O streams
+///
+/// Also keeps track of current set of I/O streams. Enter/leave functions
+/// modify the current streams, push the original stream on main stack
+/// and restore it from there.
 
 class Stack {
 public:
@@ -113,10 +116,9 @@ public:
         Stream err;
     };
 
-    void push_streams(Streams&& streams) { m_streams.push(std::move(streams)); }
-    void pop_streams() { m_streams.pop(); }
-    const Streams& streams() const { return m_streams.top(); }
-    Streams& streams() { return m_streams.top(); }
+    void set_streams(Streams&& streams) { m_streams = std::move(streams); }
+    const Streams& streams() const { return m_streams; }
+    Streams& streams() { return m_streams; }
 
     // ------------------------------------------------------------------------
 
@@ -139,7 +141,7 @@ private:
     std::unique_ptr<std::byte[]> m_stack = std::make_unique<std::byte[]>(m_stack_capacity);
     std::vector<Type> m_stack_types;
     core::ChunkedStack<Frame> m_frame;
-    core::ChunkedStack<Streams> m_streams;
+    Streams m_streams;
 };
 
 

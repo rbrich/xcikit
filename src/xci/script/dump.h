@@ -40,6 +40,7 @@ std::ostream& operator<<(std::ostream& os, const Reference& v);
 std::ostream& operator<<(std::ostream& os, const Call& v);
 std::ostream& operator<<(std::ostream& os, const OpCall& v);
 std::ostream& operator<<(std::ostream& os, const Condition& v);
+std::ostream& operator<<(std::ostream& os, const WithContext& v);
 std::ostream& operator<<(std::ostream& os, const Operator& v);
 std::ostream& operator<<(std::ostream& os, const Function& v);
 std::ostream& operator<<(std::ostream& os, const Cast& v);

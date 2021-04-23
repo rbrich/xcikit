@@ -155,6 +155,12 @@ public:
         }
     }
 
+    void visit(ast::WithContext& v) override {
+        m_const_value.reset();
+        apply_and_fold(v.context);
+        apply_and_fold(v.expression);
+    }
+
     void visit(ast::Function& v) override {
         Function& func = module().get_function(v.index);
 
@@ -221,8 +227,10 @@ private:
 
     void apply_and_fold(unique_ptr<ast::Expression>& expr) {
         expr->apply(*this);  // may set either m_const_value or m_collapsed
-        if (m_const_value)
-            m_collapsed = make_unique<ast::Literal>(*m_const_value);
+        if (m_const_value) {
+            m_collapsed = make_unique<ast::Literal>(std::move(*m_const_value));
+            m_const_value.reset();
+        }
         if (m_collapsed) {
             auto source_loc = expr->source_loc;
             expr = move(m_collapsed);

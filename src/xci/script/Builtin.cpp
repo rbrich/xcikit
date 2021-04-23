@@ -605,6 +605,24 @@ static void open_file(Stack& stack, void*, void*)
 }
 
 
+static void output_stream_enter(Stack& stack, void*, void*)
+{
+    auto arg = stack.pull<value::Stream>();
+    auto stream = arg.value();
+    std::swap(stack.streams().out, stream);
+    stack.push(value::Stream(stream));
+}
+
+
+static void output_stream_leave(Stack& stack, void*, void*)
+{
+    auto arg = stack.pull<value::Stream>();
+    auto stream = arg.value();
+    std::swap(stack.streams().out, stream);
+    //stream.decref();
+}
+
+
 void BuiltinModule::add_io_functions()
 {
     symtab().add({"stdin", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::c_stdin())})});
@@ -618,6 +636,9 @@ void BuiltinModule::add_io_functions()
     add_native_function("error", {TypeInfo{Type::String}}, TypeInfo{Type::Void}, write_error);
     add_native_function("read", {TypeInfo{Type::Int32}}, TypeInfo{Type::String}, read_string);
     add_native_function("open", {TypeInfo{Type::String}, TypeInfo{Type::String}}, TypeInfo{Type::Stream}, open_file);
+
+    add_native_function("enter", {TypeInfo{Type::Stream}}, TypeInfo{Type::Stream}, output_stream_enter);
+    add_native_function("leave", {TypeInfo{Type::Stream}}, TypeInfo{Type::Void}, output_stream_leave);
 }
 
 

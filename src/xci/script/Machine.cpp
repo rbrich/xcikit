@@ -25,13 +25,13 @@ using fmt::format;
 
 Machine::Machine()
 {
-    m_stack.push_streams({Stream::c_stdin(), Stream::c_stdout(), Stream::c_stderr()});
+    m_stack.set_streams({Stream::c_stdin(), Stream::c_stdout(), Stream::c_stderr()});
 }
 
 
 Machine::Machine(Stack::Streams&& streams)
 {
-    m_stack.push_streams(std::move(streams));
+    m_stack.set_streams(std::move(streams));
 }
 
 

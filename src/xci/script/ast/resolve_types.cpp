@@ -526,6 +526,23 @@ public:
         }
     }
 
+    void visit(ast::WithContext& v) override {
+        // resolve type of context
+        v.context->apply(*this);
+        // lookup the enter function with the resolved context type
+        m_call_args.push_back({m_value_type, v.context->source_loc});
+        m_call_ret = TypeInfo{Type::Unknown};
+        v.enter_function.apply(*this);
+        m_call_args.clear();
+        // lookup the leave function, it's arg type is same as enter functions return type
+        m_call_args.push_back({m_value_type.signature().return_type, v.context->source_loc});
+        m_call_ret = TypeInfo{Type::Void};
+        v.leave_function.apply(*this);
+        m_call_args.clear();
+        // resolve type of expression - it's also the type of the whole "with" expression
+        v.expression->apply(*this);
+    }
+
     void visit(ast::Function& v) override {
         // specified type (left hand side of '=')
         TypeInfo specified_type;

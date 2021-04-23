@@ -69,6 +69,12 @@ public:
         reset();
     }
 
+    void visit(ast::WithContext& v) override {
+        v.context->apply(*this);
+        v.expression->apply(*this);
+        reset();
+    }
+
     void visit(ast::Function& v) override {
         for (const auto& stmt : v.body.statements) {
             stmt->apply(*this);

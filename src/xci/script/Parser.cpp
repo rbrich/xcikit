@@ -44,6 +44,7 @@ using ValueType = xci::script::Type;
 
 struct Keyword;
 struct ExprCond;
+struct ExprWith;
 struct Statement;
 struct ExprArgSafe;
 struct ExprOperand;
@@ -134,7 +135,7 @@ template<class S> struct ExprInfixRight: seq< sor< DotCall<S>, seq<InfixOperator
 template<class S> struct TrailingComma: opt<S, one<','>> {};
 template<class S> struct ExprInfix: seq< ExprOperand, S, opt<ExprInfixRight<S>>, TrailingComma<S> > {};
 template<> struct ExprInfix<SC>: seq< ExprOperand, sor< seq<NSC, at< one<'.'> > >, SC>, opt<ExprInfixRight<SC>>, TrailingComma<SC> > {};  // specialization to allow newline before dotcall even outside brackets
-template<class S> struct Expression: sor< ExprCond, ExprInfix<S> > {};
+template<class S> struct Expression: sor< ExprCond, ExprWith, ExprInfix<S> > {}; // , ExprStruct
 struct Variable: seq< Identifier, opt<SC, one<':'>, SC, must<UnsafeType> > > {};
 struct Block: if_must< one<'{'>, NSC, sor< one<'}'>, seq<SepList<Statement>, NSC, one<'}'>> > > {};
 struct Function: sor< Block, if_must< KeywordFun, NSC, FunctionDecl, NSC, Block> > {};
@@ -148,6 +149,9 @@ struct ExprArgSafe: seq< sor< BracketedExpr, List, Function, Literal, Reference 
 struct Call: seq< ExprCallable, plus<RS, SC, ExprArgSafe> > {};
 struct ExprOperand: sor<Call, ExprArgSafe, ExprPrefix> {};
 struct ExprCond: if_must< KeywordIf, NSC, ExprInfix<NSC>, NSC, KeywordThen, NSC, Expression<SC>, NSC, KeywordElse, NSC, Expression<SC>> {};
+//struct ExprStructItem: seq< Identifier, SC, one<'='>, SC, must<ExprArgSafe> > {};
+//struct ExprStruct: seq< ExprStructItem, star_must< SC, one<','>, SC, ExprStructItem > > {};
+struct ExprWith: if_must< KeywordWith, NSC, ExprArgSafe, NSC, ExprArgSafe > {};  // might be parsed as a function, but that wouldn't allow newlines
 
 // Statements
 struct Definition: seq< Variable, SC, seq<one<'='>, not_at<one<'='>>, NSC, must<Expression<SC>>> > {};  // must not match `var == ...`
@@ -410,6 +414,20 @@ struct Action<ExprCond> : change_states< ast::Condition > {
 
 
 template<>
+struct Action<ExprWith> : change_states< ast::WithContext > {
+    template<typename Input>
+    static void apply(const Input &in, ast::Condition& cnd) {
+        cnd.source_loc.load(in.input(), in.position());
+    }
+
+    template<typename Input>
+    static void success(const Input &in, ast::WithContext& with, std::unique_ptr<ast::Expression>& expr) {
+        expr = std::make_unique<ast::WithContext>(std::move(with));
+    }
+};
+
+
+template<>
 struct Action<BracketedExpr> : change_states< ast::Bracketed > {
     template<typename Input>
     static void apply(const Input &in, ast::Bracketed& bracketed) {
@@ -466,6 +484,16 @@ struct Action<ExprArgSafe> : change_states< std::unique_ptr<ast::Expression> > {
     template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::OpCall& opc) {
         opc.args.push_back(std::move(expr));
+    }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::WithContext& with) {
+        if (!with.context)
+            with.context = std::move(expr);
+        else {
+            assert(!with.expression);
+            with.expression = std::move(expr);
+        }
     }
 };
 

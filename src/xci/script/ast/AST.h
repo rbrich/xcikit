@@ -46,6 +46,7 @@ struct Reference;
 struct Call;
 struct OpCall;
 struct Condition;
+struct WithContext;
 struct Function;
 
 struct TypeName;
@@ -73,6 +74,7 @@ public:
     virtual void visit(const Call&) = 0;
     virtual void visit(const OpCall&) = 0;
     virtual void visit(const Condition&) = 0;
+    virtual void visit(const WithContext&) = 0;
     virtual void visit(const Function&) = 0;
     virtual void visit(const Cast&) = 0;
     // type
@@ -101,6 +103,7 @@ public:
     virtual void visit(Call&) = 0;
     virtual void visit(OpCall&) = 0;
     virtual void visit(Condition&) = 0;
+    virtual void visit(WithContext&) = 0;
     virtual void visit(Function&) = 0;
     virtual void visit(Cast&) = 0;
     // type
@@ -123,6 +126,7 @@ public:
     void visit(Call&) final {}
     void visit(OpCall&) final {}
     void visit(Condition&) final {}
+    void visit(WithContext&) final {}
     void visit(Function&) final {}
     void visit(Cast&) final {}
     // skip type visits
@@ -153,6 +157,7 @@ public:
     void visit(Call&) final {}
     void visit(OpCall&) final {}
     void visit(Condition&) final {}
+    void visit(WithContext&) final {}
     void visit(Function&) final {}
     void visit(Cast&) final {}
 };
@@ -446,6 +451,22 @@ struct Condition: public Expression {
     std::unique_ptr<Expression> cond;
     std::unique_ptr<Expression> then_expr;
     std::unique_ptr<Expression> else_expr;
+};
+
+
+// with <expr:Context> <expr>
+struct WithContext: public Expression {
+    WithContext() = default;
+    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
+    void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Expression> make_copy() const override;
+
+    std::unique_ptr<Expression> context;
+    std::unique_ptr<Expression> expression;
+
+    // resolved:
+    Reference enter_function;
+    Reference leave_function;
 };
 
 

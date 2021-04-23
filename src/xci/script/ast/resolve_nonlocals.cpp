@@ -126,6 +126,11 @@ public:
         v.else_expr->apply(*this);
     }
 
+    void visit(ast::WithContext& v) override {
+        v.context->apply(*this);
+        v.expression->apply(*this);
+    }
+
     void visit(ast::Function& v) override {
         Function& func = module().get_function(v.index);
         process_function(func, v.body);

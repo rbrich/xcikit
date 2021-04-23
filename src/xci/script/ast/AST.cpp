@@ -66,6 +66,16 @@ std::unique_ptr<ast::Expression> Condition::make_copy() const
 }
 
 
+std::unique_ptr<ast::Expression> WithContext::make_copy() const
+{
+    auto r = std::make_unique<WithContext>();
+    Expression::copy_to(*r);
+    r->context = context->make_copy();
+    r->expression = expression->make_copy();
+    return r;
+}
+
+
 std::unique_ptr<ast::Statement> Definition::make_copy() const
 {
     auto r = std::make_unique<Definition>();

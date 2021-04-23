@@ -350,6 +350,17 @@ public:
                 code().this_instruction_address() - jump2_arg_pos);
     }
 
+    void visit(ast::WithContext& v) override {
+        // evaluate context
+        v.context->apply(*this);
+        // call the enter function - pulls arg and pushes the context to stack
+        v.enter_function.apply(*this);
+        // inner expression
+        v.expression->apply(*this);
+        // call the leave function - must pull the context from enter function
+        v.leave_function.apply(*this);
+    }
+
     void visit(ast::Function& v) override {
         // compile body
         Function& func = module().get_function(v.index);
@@ -402,10 +413,7 @@ public:
 
     void visit(ast::Cast& v) override {
         v.expression->apply(*this);
-        if (v.cast_function)
-            v.cast_function->apply(*this);
-        else {
-            assert(v.to_type.is_void());
+        if (v.to_type.is_void()) {
             // cast to Void - remove the expression result from stack
             v.from_type.foreach_heap_slot([this](size_t offset) {
                 // DEC_REF <offset>
@@ -413,7 +421,9 @@ public:
             });
             // DROP 0 <size>
             m_function.code().add_opcode(Opcode::Drop, 0, v.from_type.size());
+            return;
         }
+        v.cast_function->apply(*this);
     }
 
     void visit(ast::Instance& v) override {

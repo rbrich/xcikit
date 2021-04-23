@@ -513,6 +513,8 @@ public:
     Stream() : Value(Value::StreamTag{}) {}
     explicit Stream(const script::Stream& v) : Value(v) {}
     TypeInfo type_info() const { return TypeInfo{Type::Stream}; }
+
+    script::Stream value() const { return get<StreamV>().value(); }
 };
 
 

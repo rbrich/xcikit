@@ -56,7 +56,9 @@ public:
     static_assert(sizeof(Fd) == sizeof(int));
 
     Stream() = default;  // null stream
-    Stream(auto&& v) : m_handle(std::forward<decltype(v)>(v)) {}
+
+    template <class T>
+    explicit Stream(T&& v) : m_handle(std::forward<T>(v)) {}
 
     bool operator ==(const Stream& rhs) const = default;
     friend std::ostream& operator<<(std::ostream& os, const Stream& v);

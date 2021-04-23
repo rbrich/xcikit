@@ -221,6 +221,17 @@ public:
         v.else_expr->apply(*this);
     }
 
+    void visit(ast::WithContext& v) override {
+        v.context->apply(*this);
+        v.expression->apply(*this);
+        v.enter_function = ast::Reference{ast::Identifier{"enter"}};
+        v.enter_function.source_loc = v.source_loc;
+        v.enter_function.apply(*this);
+        v.leave_function = ast::Reference{ast::Identifier{"leave"}};
+        v.leave_function.source_loc = v.source_loc;
+        v.leave_function.apply(*this);
+    }
+
     void visit(ast::Function& v) override {
         if (v.definition != nullptr) {
             // use Definition's symtab and function
@@ -251,7 +262,7 @@ public:
         v.type->apply(*this);
         v.cast_function = make_unique<ast::Reference>(ast::Identifier{"cast"});
         v.cast_function->source_loc = v.source_loc;
-        visit(*v.cast_function);
+        v.cast_function->apply(*this);
     }
 
     void visit(ast::TypeName& t) final {
