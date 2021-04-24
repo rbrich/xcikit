@@ -62,24 +62,28 @@ struct NamedType;
 
 class TypeInfo {
 public:
+    struct ListTag {};
+    struct TupleTag {};
+    static constexpr ListTag list_of;
+    static constexpr TupleTag tuple_of;
+
     // Unknown / generic
     TypeInfo() : m_type(Type::Unknown), m_info(Var(0)) {}
     explicit TypeInfo(uint8_t var) : m_type(Type::Unknown), m_info(var) {}
     // Plain types
-    TypeInfo(Type type);
+    explicit TypeInfo(Type type);
     // Function
     explicit TypeInfo(std::shared_ptr<Signature> signature)
         : m_type(Type::Function), m_info(std::move(signature)) {}
     // Tuple
-    explicit TypeInfo(std::vector<TypeInfo> tuple_subtypes)
-        : m_type(Type::Tuple), m_info(std::move(tuple_subtypes)) {}
+    explicit TypeInfo(TupleTag, std::initializer_list<TypeInfo> subtypes)
+        : m_type(Type::Tuple), m_info(Subtypes(subtypes)) {}
+    explicit TypeInfo(std::vector<TypeInfo> subtypes)
+        : m_type(Type::Tuple), m_info(std::move(subtypes)) {}
     // List
-    explicit TypeInfo(Type t, TypeInfo list_elem);
+    explicit TypeInfo(ListTag, TypeInfo list_elem);
     // Named
     explicit TypeInfo(std::string name, TypeInfo&& type_info);
-
-    // shortcuts
-    static TypeInfo bytes() { return TypeInfo{Type::List,TypeInfo{Type::Byte}}; }
 
     TypeInfo(const TypeInfo&) = default;
     TypeInfo& operator =(const TypeInfo&) = default;
@@ -155,6 +159,27 @@ struct NamedType {
     bool operator==(const NamedType& rhs) const = default;
     bool operator!=(const NamedType& rhs) const = default;
 };
+
+
+// Shortcuts
+inline TypeInfo ti_unknown() { return TypeInfo(Type::Unknown); }
+inline TypeInfo ti_void() { return TypeInfo(Type::Void); }
+inline TypeInfo ti_bool() { return TypeInfo(Type::Bool); }
+inline TypeInfo ti_byte() { return TypeInfo(Type::Byte); }
+inline TypeInfo ti_char() { return TypeInfo(Type::Char); }
+inline TypeInfo ti_int32() { return TypeInfo(Type::Int32); }
+inline TypeInfo ti_int64() { return TypeInfo(Type::Int64); }
+inline TypeInfo ti_float32() { return TypeInfo(Type::Float32); }
+inline TypeInfo ti_float64() { return TypeInfo(Type::Float64); }
+inline TypeInfo ti_string() { return TypeInfo(Type::String); }
+inline TypeInfo ti_stream() { return TypeInfo(Type::Stream); }
+inline TypeInfo ti_function(std::shared_ptr<Signature>&& signature) { return TypeInfo(std::move(signature)); }
+
+inline TypeInfo ti_list(TypeInfo&& elem) { return TypeInfo(TypeInfo::list_of, std::move(elem)); }
+inline TypeInfo ti_bytes() { return TypeInfo{TypeInfo::list_of, ti_byte()}; }
+
+template <typename... Args>
+inline TypeInfo ti_tuple(Args... args) { return TypeInfo(TypeInfo::tuple_of, {args...}); }
 
 
 } // namespace xci::script

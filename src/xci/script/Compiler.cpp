@@ -516,7 +516,7 @@ private:
 bool Compiler::compile(Function& func, ast::Module& ast)
 {
     func.set_compiled();
-    func.signature().set_return_type(TypeInfo{Type::Unknown});
+    func.signature().set_return_type(ti_unknown());
     ast.body.symtab = &func.symtab();
 
     // Preprocess AST

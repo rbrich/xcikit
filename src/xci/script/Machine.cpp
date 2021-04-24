@@ -255,7 +255,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                     lhs.decref();
                     throw IndexOutOfBounds(idx, len);
                 }
-                Value item = lhs.value_at(idx, TypeInfo(Type::Int32));
+                Value item = lhs.value_at(idx, ti_int32());
                 lhs.decref();
                 m_stack.push(item);
                 break;

@@ -194,7 +194,7 @@ public:
             }
         }
         v.item_size = elem_type.size();
-        m_value_type = TypeInfo(Type::List, move(elem_type));
+        m_value_type = ti_list(move(elem_type));
         type_check.check(m_value_type, v.source_loc);
     }
 
@@ -223,7 +223,7 @@ public:
                 for (const auto&& [i, arg] : m_call_args | enumerate) {
                     Type t = arg.type_info.type();
                     if (t != Type::Byte && t != Type::Int32)
-                        throw UnexpectedArgumentType(i+1, TypeInfo{Type::Int32},
+                        throw UnexpectedArgumentType(i+1, ti_int32(),
                                                      arg.type_info, arg.source_loc);
                 }
                 // cleanup - args are now fully processed
@@ -515,7 +515,7 @@ public:
 
     void visit(ast::Condition& v) override {
         v.cond->apply(*this);
-        if (m_value_type != TypeInfo{Type::Bool})
+        if (m_value_type != ti_bool())
             throw ConditionNotBool();
         v.then_expr->apply(*this);
         auto then_type = m_value_type;
@@ -531,7 +531,7 @@ public:
         v.context->apply(*this);
         // lookup the enter function with the resolved context type
         m_call_args.push_back({m_value_type, v.context->source_loc});
-        m_call_ret = TypeInfo{Type::Unknown};
+        m_call_ret = ti_unknown();
         v.enter_function.apply(*this);
         m_call_args.clear();
         // lookup the leave function, it's arg type is same as enter functions return type
@@ -599,7 +599,7 @@ public:
             resolve_types(fn, v.body);
             // if the return type is still Unknown, change it to Void (the body is empty)
             if (fn.signature().return_type.is_unknown())
-                fn.signature().set_return_type(TypeInfo{Type::Void});
+                fn.signature().set_return_type(ti_void());
             m_value_type = TypeInfo{fn.signature_ptr()};
         }
 
@@ -660,20 +660,20 @@ public:
             if (p.type)
                 p.type->apply(*this);
             else
-                m_type_info = TypeInfo{Type::Unknown};
+                m_type_info = ti_unknown();
             signature->add_parameter(move(m_type_info));
         }
         if (t.result_type)
             t.result_type->apply(*this);
         else
-            m_type_info = TypeInfo{Type::Unknown};
+            m_type_info = ti_unknown();
         signature->set_return_type(m_type_info);
         m_type_info = TypeInfo{std::move(signature)};
     }
 
     void visit(ast::ListType& t) final {
         t.elem_type->apply(*this);
-        m_type_info = TypeInfo{Type::List, move(m_type_info)};
+        m_type_info = ti_list(move(m_type_info));
     }
 
     void visit(ast::TupleType& t) final {
@@ -868,7 +868,7 @@ void resolve_types(Function& func, const ast::Block& block)
         stmt->apply(visitor);
     }
     if (func.is_compiled() && func.signature().return_type.is_unknown())
-        func.signature().return_type = TypeInfo{Type::Void};
+        func.signature().return_type = ti_void();
 }
 
 

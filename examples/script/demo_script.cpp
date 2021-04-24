@@ -70,15 +70,15 @@ int main()
             // symbolic name
             "hello",
             // signature: String -> Int32
-            {TypeInfo{Type::String}}, TypeInfo{Type::Int32},
+            {ti_string()}, ti_int32(),
             // native function to be called
             hello_fun);
 
     // still low level interface
     module.add_native_function(
             "toupper_at_wrapped",
-            {TypeInfo{Type::String}, TypeInfo{Type::Int32}},
-            TypeInfo{Type::String},
+            {ti_string(), ti_int32()},
+            ti_string(),
             toupper_at_wrapped);
     // the same function with auto-generated wrapper function
     // (which is essentially the same as our manually written `toupper_at_wrapped`)

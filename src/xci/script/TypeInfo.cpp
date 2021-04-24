@@ -137,11 +137,9 @@ TypeInfo::TypeInfo(Type type) : m_type(type)
 }
 
 
-TypeInfo::TypeInfo(Type type, TypeInfo list_elem)
+TypeInfo::TypeInfo(ListTag, TypeInfo list_elem)
         : m_type(Type::List), m_info(std::vector{std::move(list_elem)})
-{
-    assert(type == Type::List);
-}
+{}
 
 
 TypeInfo::TypeInfo(std::string name, TypeInfo&& type_info)

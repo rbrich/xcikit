@@ -253,6 +253,9 @@ concept ValueT = requires(const T& v) {
 
 class Values {
 public:
+    Values() = default;
+    explicit Values(std::initializer_list<Value> values) : m_items(values) {}
+
     // reserve number of values
     void reserve(size_t n) { m_items.reserve(n); }
     // get number of values
@@ -395,7 +398,7 @@ class Int32: public Value {
 public:
     Int32() : Value(int32_t(0)) {}
     explicit Int32(int32_t v) : Value(v) {}
-    TypeInfo type_info() const { return TypeInfo{Type::Int32}; }
+    TypeInfo type_info() const { return ti_int32(); }
     int32_t value() const { return std::get<int32_t>(m_value); }
     void set_value(int32_t v) { m_value = v; }
 };
@@ -471,7 +474,7 @@ public:
     Bytes() = default;
     explicit Bytes(std::span<const byte> v);
 
-    TypeInfo type_info() const { return TypeInfo{Type::List, TypeInfo(Type::Byte)}; }
+    TypeInfo type_info() const { return ti_bytes(); }
 
     std::span<const byte> value() const { return {heapslot()->data() + sizeof(uint32_t), length()}; }
 };
@@ -479,7 +482,7 @@ public:
 
 class Int32List: public List {
 public:
-    TypeInfo type_info() const { return TypeInfo{Type::List, TypeInfo(Type::Int32)}; }
+    TypeInfo type_info() const { return ti_list(ti_int32()); }
 };
 
 
@@ -487,6 +490,7 @@ public:
 class Tuple: public Value {
 public:
     Tuple() : Value(Values{}) {}
+    explicit Tuple(std::initializer_list<Value> values) : Value(Values{values}) {}
     explicit Tuple(Values&& values) : Value(move(values)) {}
     explicit Tuple(const TypeInfo::Subtypes& subtypes) : Value(subtypes) {}
 

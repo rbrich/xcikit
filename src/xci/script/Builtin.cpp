@@ -275,9 +275,9 @@ BuiltinModule::add_logical_op_function(const std::string& name, Opcode opcode)
 {
     // build function object
     auto fn = std::make_unique<Function>(*this, symtab().add_child(name));
-    fn->signature().return_type = TypeInfo{Type::Bool};
-    fn->add_parameter("lhs", TypeInfo{Type::Bool});
-    fn->add_parameter("rhs", TypeInfo{Type::Bool});
+    fn->signature().return_type = ti_bool();
+    fn->add_parameter("lhs", ti_bool());
+    fn->add_parameter("rhs", ti_bool());
     fn->set_compiled();
     fn->code().add_opcode(opcode);  // call operator
     symtab().add({name, Symbol::Function, add_function(std::move(fn))});
@@ -288,25 +288,25 @@ void
 BuiltinModule::add_bitwise_op_function(const std::string& name, Opcode opcode)
 {
     auto fn8 = std::make_unique<Function>(*this, symtab().add_child(name));
-    fn8->signature().return_type = TypeInfo{Type::Byte};
-    fn8->add_parameter("lhs", TypeInfo{Type::Byte});
-    fn8->add_parameter("rhs", TypeInfo{Type::Byte});
+    fn8->signature().return_type = ti_byte();
+    fn8->add_parameter("lhs", ti_byte());
+    fn8->add_parameter("rhs", ti_byte());
     fn8->set_compiled();
     fn8->code().add_opcode(opcode);
     auto p8 = symtab().add({name, Symbol::Function, add_function(std::move(fn8))});
 
     auto fn32 = std::make_unique<Function>(*this, symtab().add_child(name));
-    fn32->signature().return_type = TypeInfo{Type::Int32};
-    fn32->add_parameter("lhs", TypeInfo{Type::Int32});
-    fn32->add_parameter("rhs", TypeInfo{Type::Int32});
+    fn32->signature().return_type = ti_int32();
+    fn32->add_parameter("lhs", ti_int32());
+    fn32->add_parameter("rhs", ti_int32());
     fn32->set_compiled();
     fn32->code().add_opcode(opcode + 1);
     auto p32 = symtab().add({name, Symbol::Function, add_function(std::move(fn32))});
 
     auto fn64 = std::make_unique<Function>(*this, symtab().add_child(name));
-    fn64->signature().return_type = TypeInfo{Type::Int64};
-    fn64->add_parameter("lhs", TypeInfo{Type::Int64});
-    fn64->add_parameter("rhs", TypeInfo{Type::Int64});
+    fn64->signature().return_type = ti_int64();
+    fn64->add_parameter("lhs", ti_int64());
+    fn64->add_parameter("rhs", ti_int64());
     fn64->set_compiled();
     fn64->code().add_opcode(opcode + 2);
     auto p64 = symtab().add({name, Symbol::Function, add_function(std::move(fn64))});
@@ -320,25 +320,25 @@ void
 BuiltinModule::add_arithmetic_op_function(const std::string& name, Opcode opcode)
 {
     auto fn8 = std::make_unique<Function>(*this, symtab().add_child(name));
-    fn8->signature().return_type = TypeInfo{Type::Byte};
-    fn8->add_parameter("lhs", TypeInfo{Type::Byte});
-    fn8->add_parameter("rhs", TypeInfo{Type::Byte});
+    fn8->signature().return_type = ti_byte();
+    fn8->add_parameter("lhs", ti_byte());
+    fn8->add_parameter("rhs", ti_byte());
     fn8->set_compiled();
     fn8->code().add_opcode(opcode);
     auto p8 = symtab().add({name, Symbol::Function, add_function(std::move(fn8))});
 
     auto fn32 = std::make_unique<Function>(*this, symtab().add_child(name));
-    fn32->signature().return_type = TypeInfo{Type::Int32};
-    fn32->add_parameter("lhs", TypeInfo{Type::Int32});
-    fn32->add_parameter("rhs", TypeInfo{Type::Int32});
+    fn32->signature().return_type = ti_int32();
+    fn32->add_parameter("lhs", ti_int32());
+    fn32->add_parameter("rhs", ti_int32());
     fn32->set_compiled();
     fn32->code().add_opcode(opcode + 1);
     auto p32 = symtab().add({name, Symbol::Function, add_function(std::move(fn32))});
 
     auto fn64 = std::make_unique<Function>(*this, symtab().add_child(name));
-    fn64->signature().return_type = TypeInfo{Type::Int64};
-    fn64->add_parameter("lhs", TypeInfo{Type::Int64});
-    fn64->add_parameter("rhs", TypeInfo{Type::Int64});
+    fn64->signature().return_type = ti_int64();
+    fn64->add_parameter("lhs", ti_int64());
+    fn64->add_parameter("rhs", ti_int64());
     fn64->set_compiled();
     fn64->code().add_opcode(opcode + 2);
     auto p64 = symtab().add({name, Symbol::Function, add_function(std::move(fn64))});
@@ -357,8 +357,8 @@ BuiltinModule::add_unary_op_functions()
         auto opcode = Opcode::LogicalNot;
 
         auto fn = std::make_unique<Function>(*this, symtab().add_child(name));
-        fn->signature().return_type = TypeInfo{Type::Bool};
-        fn->add_parameter("rhs", TypeInfo{Type::Bool});
+        fn->signature().return_type = ti_bool();
+        fn->add_parameter("rhs", ti_bool());
         fn->set_compiled();
         fn->code().add_opcode(opcode);
         symtab().add({name, Symbol::Function, add_function(std::move(fn))});
@@ -370,22 +370,22 @@ BuiltinModule::add_unary_op_functions()
         auto opcode = Opcode::BitwiseNot_8;
 
         auto fn8 = std::make_unique<Function>(*this, symtab().add_child(name));
-        fn8->signature().return_type = TypeInfo{Type::Byte};
-        fn8->add_parameter("rhs", TypeInfo{Type::Byte});
+        fn8->signature().return_type = ti_byte();
+        fn8->add_parameter("rhs", ti_byte());
         fn8->set_compiled();
         fn8->code().add_opcode(opcode);
         auto p8 = symtab().add({name, Symbol::Function, add_function(std::move(fn8))});
 
         auto fn32 = std::make_unique<Function>(*this, symtab().add_child(name));
-        fn32->signature().return_type = TypeInfo{Type::Int32};
-        fn32->add_parameter("rhs", TypeInfo{Type::Int32});
+        fn32->signature().return_type = ti_int32();
+        fn32->add_parameter("rhs", ti_int32());
         fn32->set_compiled();
         fn32->code().add_opcode(opcode + 1);
         auto p32 = symtab().add({name, Symbol::Function, add_function(std::move(fn32))});
 
         auto fn64 = std::make_unique<Function>(*this, symtab().add_child(name));
-        fn64->signature().return_type = TypeInfo{Type::Int64};
-        fn64->add_parameter("rhs", TypeInfo{Type::Int64});
+        fn64->signature().return_type = ti_int64();
+        fn64->add_parameter("rhs", ti_int64());
         fn64->set_compiled();
         fn64->code().add_opcode(opcode + 2);
         auto p64 = symtab().add({name, Symbol::Function, add_function(std::move(fn64))});
@@ -400,22 +400,22 @@ BuiltinModule::add_unary_op_functions()
         auto opcode = Opcode::Neg_8;
 
         auto fn8 = std::make_unique<Function>(*this, symtab().add_child(name));
-        fn8->signature().return_type = TypeInfo{Type::Byte};
-        fn8->add_parameter("rhs", TypeInfo{Type::Byte});
+        fn8->signature().return_type = ti_byte();
+        fn8->add_parameter("rhs", ti_byte());
         fn8->set_compiled();
         fn8->code().add_opcode(opcode);
         auto p8 = symtab().add({name, Symbol::Function, add_function(std::move(fn8))});
 
         auto fn32 = std::make_unique<Function>(*this, symtab().add_child(name));
-        fn32->signature().return_type = TypeInfo{Type::Int32};
-        fn32->add_parameter("rhs", TypeInfo{Type::Int32});
+        fn32->signature().return_type = ti_int32();
+        fn32->add_parameter("rhs", ti_int32());
         fn32->set_compiled();
         fn32->code().add_opcode(opcode + 1);
         auto p32 = symtab().add({name, Symbol::Function, add_function(std::move(fn32))});
 
         auto fn64 = std::make_unique<Function>(*this, symtab().add_child(name));
-        fn64->signature().return_type = TypeInfo{Type::Int64};
-        fn64->add_parameter("rhs", TypeInfo{Type::Int64});
+        fn64->signature().return_type = ti_int64();
+        fn64->add_parameter("rhs", ti_int64());
         fn64->set_compiled();
         fn64->code().add_opcode(opcode + 2);
         auto p64 = symtab().add({name, Symbol::Function, add_function(std::move(fn64))});
@@ -432,9 +432,9 @@ BuiltinModule::add_subscript_function()
     auto name = "subscript";
 
     auto fn = std::make_unique<Function>(*this, symtab().add_child(name));
-    fn->signature().return_type = TypeInfo{Type::Int32};
-    fn->add_parameter("lhs", TypeInfo{Type::List, TypeInfo{Type::Int32}});
-    fn->add_parameter("rhs", TypeInfo{Type::Int32});
+    fn->signature().return_type = ti_int32();
+    fn->add_parameter("lhs", ti_list(ti_int32()));
+    fn->add_parameter("rhs", ti_int32());
     fn->set_compiled();
     fn->code().add_opcode(Opcode::Subscript_32);
     symtab().add({name, Symbol::Function, add_function(std::move(fn))});
@@ -537,17 +537,17 @@ void BuiltinModule::add_intrinsics()
 
 void BuiltinModule::add_types()
 {
-    symtab().add({"Void", Symbol::TypeName, add_type(Type::Void)});
-    symtab().add({"Bool", Symbol::TypeName, add_type(Type::Bool)});
-    symtab().add({"Byte", Symbol::TypeName, add_type(Type::Byte)});
-    symtab().add({"Char", Symbol::TypeName, add_type(Type::Char)});
-    symtab().add({"Int", Symbol::TypeName, add_type(Type::Int32)});
-    symtab().add({"Int32", Symbol::TypeName, add_type(Type::Int32)});
-    symtab().add({"Int64", Symbol::TypeName, add_type(Type::Int64)});
-    symtab().add({"Float", Symbol::TypeName, add_type(Type::Float32)});
-    symtab().add({"Float32", Symbol::TypeName, add_type(Type::Float32)});
-    symtab().add({"Float64", Symbol::TypeName, add_type(Type::Float64)});
-    symtab().add({"String", Symbol::TypeName, add_type(Type::String)});
+    symtab().add({"Void", Symbol::TypeName, add_type(ti_void())});
+    symtab().add({"Bool", Symbol::TypeName, add_type(ti_bool())});
+    symtab().add({"Byte", Symbol::TypeName, add_type(ti_byte())});
+    symtab().add({"Char", Symbol::TypeName, add_type(ti_char())});
+    symtab().add({"Int", Symbol::TypeName, add_type(ti_int32())});
+    symtab().add({"Int32", Symbol::TypeName, add_type(ti_int32())});
+    symtab().add({"Int64", Symbol::TypeName, add_type(ti_int64())});
+    symtab().add({"Float", Symbol::TypeName, add_type(ti_float32())});
+    symtab().add({"Float32", Symbol::TypeName, add_type(ti_float32())});
+    symtab().add({"Float64", Symbol::TypeName, add_type(ti_float64())});
+    symtab().add({"String", Symbol::TypeName, add_type(ti_string())});
 }
 
 
@@ -629,13 +629,13 @@ void BuiltinModule::add_io_functions()
     symtab().add({"stdout", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::c_stdout())})});
     symtab().add({"stderr", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::c_stderr())})});
 
-    auto ps = add_native_function("write", {TypeInfo{Type::String}}, TypeInfo{Type::Void}, write_string);
-    auto pb = add_native_function("write", {TypeInfo::bytes()}, TypeInfo{Type::Void}, write_bytes);
+    auto ps = add_native_function("write", {ti_string()}, ti_void(), write_string);
+    auto pb = add_native_function("write", {ti_bytes()}, ti_void(), write_bytes);
     ps->set_next(pb);
-    add_native_function("flush", {}, TypeInfo{Type::Void}, flush_out);
-    add_native_function("error", {TypeInfo{Type::String}}, TypeInfo{Type::Void}, write_error);
-    add_native_function("read", {TypeInfo{Type::Int32}}, TypeInfo{Type::String}, read_string);
-    add_native_function("open", {TypeInfo{Type::String}, TypeInfo{Type::String}}, TypeInfo{Type::Stream}, open_file);
+    add_native_function("flush", {}, ti_void(), flush_out);
+    add_native_function("error", {ti_string()}, ti_void(), write_error);
+    add_native_function("read", {ti_int32()}, ti_string(), read_string);
+    add_native_function("open", {ti_string(), ti_string()}, ti_stream(), open_file);
 
     add_native_function("enter", {TypeInfo{Type::Stream}}, TypeInfo{Type::Stream}, output_stream_enter);
     add_native_function("leave", {TypeInfo{Type::Stream}}, TypeInfo{Type::Void}, output_stream_leave);
