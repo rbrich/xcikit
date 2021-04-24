@@ -208,6 +208,14 @@ auto TypeInfo::subtypes() const -> const Subtypes&
 }
 
 
+auto TypeInfo::move_subtypes() && -> Subtypes&&
+{
+    assert(m_type == Type::Tuple);
+    assert(std::holds_alternative<Subtypes>(m_info));
+    return std::get<Subtypes>(std::move(m_info));
+}
+
+
 auto TypeInfo::signature_ptr() const -> const SignaturePtr&
 {
     assert(m_type == Type::Function);

@@ -535,12 +535,14 @@ public:
         v.enter_function.apply(*this);
         m_call_args.clear();
         // lookup the leave function, it's arg type is same as enter functions return type
-        m_call_args.push_back({m_value_type.signature().return_type, v.context->source_loc});
-        m_call_ret = TypeInfo{Type::Void};
+        v.leave_type = m_value_type.signature().return_type.effective_type();
+        m_call_args.push_back({v.leave_type, v.context->source_loc});
+        m_call_ret = ti_void();
         v.leave_function.apply(*this);
         m_call_args.clear();
         // resolve type of expression - it's also the type of the whole "with" expression
         v.expression->apply(*this);
+        v.expression_type = m_value_type.effective_type();
     }
 
     void visit(ast::Function& v) override {

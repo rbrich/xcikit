@@ -467,6 +467,8 @@ struct WithContext: public Expression {
     // resolved:
     Reference enter_function;
     Reference leave_function;
+    TypeInfo expression_type;
+    TypeInfo leave_type;   // enter function returns it, leave function consumes it
 };
 
 

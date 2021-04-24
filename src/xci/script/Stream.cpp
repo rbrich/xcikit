@@ -142,7 +142,16 @@ std::ostream& operator<<(std::ostream& os, const Stream& v)
 {
     std::visit(overloaded {
             [](Stream::NullStream) {},
-            [&os](Stream::CFileRef v) { fmt::print(os, "fileref:{:x}", uintptr_t(v.file)); },
+            [&os](Stream::CFileRef v) {
+                if (v.file == stdin)
+                    fmt::print(os, "fileref:stdin");
+                else if (v.file == stdout)
+                    fmt::print(os, "fileref:stdout");
+                else if (v.file == stderr)
+                    fmt::print(os, "fileref:stderr");
+                else
+                    fmt::print(os, "fileref:{:x}", uintptr_t(v.file));
+            },
             [&os](Stream::CFile v) { fmt::print(os, "file:{:x}", uintptr_t(v.file)); },
             [&os](Stream::FdRef v) { fmt::print(os, "fdref:{}", v.fd); },
             [&os](Stream::Fd v) { fmt::print(os, "fd:{}", v.fd); },

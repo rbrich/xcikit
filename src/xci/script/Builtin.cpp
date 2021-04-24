@@ -554,7 +554,7 @@ void BuiltinModule::add_types()
 static void write_bytes(Stack& stack, void*, void*)
 {
     auto arg = stack.pull<value::Bytes>();
-    stack.streams().out.write(arg.value());
+    stack.stream_out().write(arg.value());
     arg.decref();
 }
 
@@ -562,21 +562,21 @@ static void write_bytes(Stack& stack, void*, void*)
 static void write_string(Stack& stack, void*, void*)
 {
     auto arg = stack.pull<value::String>();
-    stack.streams().out.write(arg.value());
+    stack.stream_out().write(arg.value());
     arg.decref();
 }
 
 
 static void flush_out(Stack& stack, void*, void*)
 {
-    stack.streams().out.flush();
+    stack.stream_out().flush();
 }
 
 
 static void write_error(Stack& stack, void*, void*)
 {
     auto arg = stack.pull<value::String>();
-    stack.streams().err.write(arg.value());
+    stack.stream_err().write(arg.value());
     arg.decref();
 }
 
@@ -584,7 +584,7 @@ static void write_error(Stack& stack, void*, void*)
 static void read_string(Stack& stack, void*, void*)
 {
     auto arg = stack.pull<value::Int32>();
-    auto s = stack.streams().in.read(arg.value());
+    auto s = stack.stream_in().read(arg.value());
     stack.push(value::String(s));
 }
 
@@ -605,21 +605,66 @@ static void open_file(Stack& stack, void*, void*)
 }
 
 
-static void output_stream_enter(Stack& stack, void*, void*)
+static void output_stream_enter1(Stack& stack, void*, void*)
 {
-    auto arg = stack.pull<value::Stream>();
-    auto stream = arg.value();
-    std::swap(stack.streams().out, stream);
-    stack.push(value::Stream(stream));
+    auto out = stack.pull<value::Stream>();
+    stack.swap_stream_out(out);
+    stack.push(out);  // return the original stream -> pass it to leave function
 }
 
 
-static void output_stream_leave(Stack& stack, void*, void*)
+static void output_stream_leave1(Stack& stack, void*, void*)
 {
-    auto arg = stack.pull<value::Stream>();
-    auto stream = arg.value();
-    std::swap(stack.streams().out, stream);
-    //stream.decref();
+    auto out = stack.pull<value::Stream>();
+    stack.swap_stream_out(out);
+    out.decref();  // dispose the stream which was used inside the context
+}
+
+
+static void output_stream_enter2(Stack& stack, void*, void*)
+{
+    auto in = stack.pull<value::Stream>();
+    auto out = stack.pull<value::Stream>();
+    stack.swap_stream_in(in);
+    stack.swap_stream_out(out);
+    stack.push(value::Tuple{in, out});
+}
+
+
+static void output_stream_leave2(Stack& stack, void*, void*)
+{
+    auto in = stack.pull<value::Stream>();
+    auto out = stack.pull<value::Stream>();
+    stack.swap_stream_in(in);
+    stack.swap_stream_out(out);
+    in.decref();
+    out.decref();
+}
+
+
+static void output_stream_enter3(Stack& stack, void*, void*)
+{
+    auto in = stack.pull<value::Stream>();
+    auto out = stack.pull<value::Stream>();
+    auto err = stack.pull<value::Stream>();
+    stack.swap_stream_in(in);
+    stack.swap_stream_out(out);
+    stack.swap_stream_err(err);
+    stack.push(value::Tuple{in, out, err});
+}
+
+
+static void output_stream_leave3(Stack& stack, void*, void*)
+{
+    auto in = stack.pull<value::Stream>();
+    auto out = stack.pull<value::Stream>();
+    auto err = stack.pull<value::Stream>();
+    stack.swap_stream_in(in);
+    stack.swap_stream_out(out);
+    stack.swap_stream_err(err);
+    in.decref();
+    out.decref();
+    err.decref();
 }
 
 
@@ -637,8 +682,16 @@ void BuiltinModule::add_io_functions()
     add_native_function("read", {ti_int32()}, ti_string(), read_string);
     add_native_function("open", {ti_string(), ti_string()}, ti_stream(), open_file);
 
-    add_native_function("enter", {TypeInfo{Type::Stream}}, TypeInfo{Type::Stream}, output_stream_enter);
-    add_native_function("leave", {TypeInfo{Type::Stream}}, TypeInfo{Type::Void}, output_stream_leave);
+    auto enter1 = add_native_function("enter", {ti_stream()}, ti_stream(), output_stream_enter1);
+    auto leave1 = add_native_function("leave", {ti_stream()}, ti_void(), output_stream_leave1);
+    auto enter2 = add_native_function("enter", {ti_tuple(ti_stream(), ti_stream())}, ti_tuple(ti_stream(), ti_stream()), output_stream_enter2);
+    auto leave2 = add_native_function("leave", {ti_tuple(ti_stream(), ti_stream())}, ti_void(), output_stream_leave2);
+    auto enter3 = add_native_function("enter", {ti_tuple(ti_stream(), ti_stream(), ti_stream())}, ti_tuple(ti_stream(), ti_stream(), ti_stream()), output_stream_enter3);
+    auto leave3 = add_native_function("leave", {ti_tuple(ti_stream(), ti_stream(), ti_stream())}, ti_void(), output_stream_leave3);
+    enter1->set_next(enter2);
+    enter2->set_next(enter3);
+    leave1->set_next(leave2);
+    leave2->set_next(leave3);
 }
 
 

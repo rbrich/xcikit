@@ -357,6 +357,10 @@ public:
         v.enter_function.apply(*this);
         // inner expression
         v.expression->apply(*this);
+        // swap the expression result with context data below it
+        // SWAP <result_size> <context_size>
+        code().add_opcode(Opcode::Swap,
+                v.expression_type.size(), v.leave_type.size());
         // call the leave function - must pull the context from enter function
         v.leave_function.apply(*this);
     }

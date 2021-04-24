@@ -8,7 +8,6 @@
 #define XCI_SCRIPT_STACK_H
 
 #include "Value.h"
-#include "Stream.h"
 #include <xci/core/container/ChunkedStack.h>
 #include <xci/compat/bit.h>
 #include <cstddef>  // byte
@@ -97,6 +96,7 @@ public:
     Type top_type() const { return m_stack_types.back(); }
 
     // ------------------------------------------------------------------------
+    // Function return addresses
 
     struct Frame {
         const Function* function;
@@ -113,16 +113,30 @@ public:
     size_t n_frames() const { return m_frame.size(); }
 
     // ------------------------------------------------------------------------
+    // I/O Streams
+    // Here we store the initial streams. As the program runs, these values
+    // are swapped to stack and back. Effectively, the values here are
+    // "top of the stack" and the previous values are stored on the value stack.
 
     struct Streams {
-        Stream in;
-        Stream out;
-        Stream err;
+        value::Stream in { Stream::c_stdin() };
+        value::Stream out { Stream::c_stdout() };
+        value::Stream err { Stream::c_stderr() };
+
+        ~Streams() {
+            in.decref();
+            out.decref();
+            err.decref();
+        }
     };
 
-    void set_streams(Streams&& streams) { m_streams = std::move(streams); }
-    const Streams& streams() const { return m_streams; }
-    Streams& streams() { return m_streams; }
+    script::Stream stream_in() const { return m_streams.in.value(); }
+    script::Stream stream_out() const { return m_streams.out.value(); }
+    script::Stream stream_err() const { return m_streams.err.value(); }
+
+    void swap_stream_in(value::Stream& in) { std::swap(m_streams.in, in); }
+    void swap_stream_out(value::Stream& out) { std::swap(m_streams.out, out); }
+    void swap_stream_err(value::Stream& err) { std::swap(m_streams.err, err); }
 
     // ------------------------------------------------------------------------
 

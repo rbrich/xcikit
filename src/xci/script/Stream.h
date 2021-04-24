@@ -93,6 +93,10 @@ private:
 };
 
 
+// Stream is just two pointers big, same as string_view. Safe to pass by value.
+static_assert(sizeof(Stream) == 2 * sizeof(void*));
+
+
 } // namespace xci::script
 
 #endif // include guard

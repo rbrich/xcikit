@@ -64,8 +64,8 @@ class TypeInfo {
 public:
     struct ListTag {};
     struct TupleTag {};
-    static constexpr ListTag list_of;
-    static constexpr TupleTag tuple_of;
+    static constexpr ListTag list_of {};
+    static constexpr TupleTag tuple_of {};
 
     // Unknown / generic
     TypeInfo() : m_type(Type::Unknown), m_info(Var(0)) {}
@@ -118,6 +118,7 @@ public:
     Var generic_var() const;  // type = Unknown
     const TypeInfo& elem_type() const;  // type = List (Subtypes[0])
     const Subtypes& subtypes() const;  // type = Tuple
+    Subtypes&& move_subtypes() &&;
     const SignaturePtr& signature_ptr() const;  // type = Function
     const Signature& signature() const { return *signature_ptr(); }
     Signature& signature() { return *signature_ptr(); }
