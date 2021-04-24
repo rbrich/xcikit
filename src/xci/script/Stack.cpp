@@ -30,7 +30,7 @@ void Stack::push(const Value& o)
             throw StackOverflow();
     }
     m_stack_pointer -= size;
-    o.write(&m_stack[m_stack_pointer]);
+    o.write(data());
     push_type(o);
 }
 
@@ -42,7 +42,7 @@ Value Stack::pull(const TypeInfo& ti)
     // create Value with TypeInfo, read contents from stack
     auto value = create_value(ti);
     pop_type(value);
-    m_stack_pointer += value.read(&m_stack[m_stack_pointer]);
+    m_stack_pointer += value.read(data());
     return value;
 }
 
@@ -51,7 +51,7 @@ Value Stack::get(StackRel pos, const TypeInfo& ti) const
 {
     assert(pos + ti.size() <= size());
     auto value = create_value(ti);
-    value.read(&m_stack[m_stack_pointer + pos]);
+    value.read(data() + pos);
     return value;
 }
 
@@ -60,7 +60,7 @@ Value Stack::get(StackRel pos, Type type) const
 {
     assert(pos + type_size_on_stack(type) <= size());
     auto value = create_value(type);
-    value.read(&m_stack[m_stack_pointer + pos]);
+    value.read(data() + pos);
     return value;
 }
 
@@ -69,7 +69,7 @@ void* Stack::get_ptr(StackRel pos) const
 {
     void* value = nullptr;
     assert(pos + sizeof(value) <= size());
-    std::memcpy(&value, &m_stack[m_stack_pointer + pos], sizeof(value));
+    std::memcpy(&value, data() + pos, sizeof(value));
     return value;
 }
 
@@ -77,7 +77,7 @@ void* Stack::get_ptr(StackRel pos) const
 void Stack::clear_ptr(StackRel pos)
 {
     assert(pos + sizeof(void*) <= size());
-    std::memset(&m_stack[m_stack_pointer + pos], 0, sizeof(void*));
+    std::memset(data() + pos, 0, sizeof(void*));
 }
 
 
@@ -111,9 +111,7 @@ void Stack::copy(StackRel pos, size_t size)
     }
     m_stack_pointer -= size;
     // copy the bytes
-    memcpy(&m_stack[m_stack_pointer],
-           &m_stack[m_stack_pointer + size + pos],
-           size);
+    memcpy(data(), data() + size + pos, size);
 }
 
 
@@ -139,9 +137,41 @@ void Stack::drop(StackRel first, size_t size)
     assert(erase_bytes == 0);
     m_stack_types.erase(begin_type, end_type);
     // remove the requested bytes
-    memmove(m_stack.get() + m_stack_pointer + size,
-            m_stack.get() + m_stack_pointer, first);
+    memmove(data() + size, data(), first);
     m_stack_pointer += size;
+}
+
+
+void Stack::swap(size_t first, size_t second)
+{
+    assert(first + second <= Stack::size());
+    // swap also m_stack_types, check type boundaries
+    // first - types
+    size_t type_bytes = 0;
+    auto first_type_it = m_stack_types.end();
+    while (type_bytes < first) {
+        first_type_it --;
+        type_bytes += type_size_on_stack(*first_type_it);
+    }
+    assert(type_bytes == first);
+    // second - types
+    type_bytes = 0;
+    auto second_type_it = first_type_it;
+    while (type_bytes < second) {
+        second_type_it --;
+        type_bytes += type_size_on_stack(*second_type_it);
+    }
+    assert(type_bytes == second);
+    // swap types
+    std::vector<Type> copies(second_type_it, first_type_it);
+    m_stack_types.erase(second_type_it, first_type_it);
+    m_stack_types.insert(m_stack_types.end(), copies.begin(), copies.end());
+    // swap actual values
+    // (only this is really needed, the above is just optional type info)
+    auto tmp = std::make_unique<std::byte[]>(second);
+    std::memcpy(tmp.get(), data() + first, second);  // copy second to tmp (skipping over first)
+    std::memmove(data() + second, data(), first);  // move first (reserving space for second on top)
+    std::memcpy(data(), tmp.get(), second);  // copy second from tmp
 }
 
 

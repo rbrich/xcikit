@@ -334,6 +334,13 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                 break;
             }
 
+            case Opcode::Swap: {
+                const auto arg1 = *it++;
+                const auto arg2 = *it++;
+                m_stack.swap(arg1, arg2);
+                break;
+            }
+
             case Opcode::Call0:
             case Opcode::Call1:
             case Opcode::Call: {

@@ -58,7 +58,7 @@ public:
         T v;
         pop_type(v);
         // read value from stack
-        m_stack_pointer += v.read(&m_stack[m_stack_pointer]);
+        m_stack_pointer += v.read(data());
         return v;
     }
 
@@ -77,6 +77,10 @@ public:
     //      drop(4, 2) leaves top 4 bytes and removes following 2
     //      drop(4, 0) is no-op
     void drop(StackRel first, size_t size);
+
+    // Swap two values on top of the stack.
+    // Top `first` bytes are swapped with `second` bytes below them.
+    void swap(size_t first, size_t second);
 
     bool empty() const { return m_stack_capacity == m_stack_pointer; }
     StackAbs size() const { return m_stack_capacity - m_stack_pointer; }
