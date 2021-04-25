@@ -7,6 +7,7 @@
 #ifndef XCI_SCRIPT_STREAM_H
 #define XCI_SCRIPT_STREAM_H
 
+#include <xci/core/TermCtl.h>
 #include <string>
 #include <variant>
 #include <span>
@@ -55,6 +56,13 @@ public:
     };
     static_assert(sizeof(Fd) == sizeof(int));
 
+    // TermCtl
+    struct TermCtlRef {
+        // not owned
+        core::TermCtl* term;
+        bool operator ==(const TermCtlRef& rhs) const = default;
+    };
+
     Stream() = default;  // null stream
 
     template <class T>
@@ -75,6 +83,14 @@ public:
     static Stream raw_stdout();
     static Stream raw_stderr();
 
+    // TermCtl
+    static Stream term_out() { return Stream(TermCtlRef{&core::TermCtl::stdout_instance()}); }
+
+    // sane default
+    static Stream default_stdin();
+    static Stream default_stdout();
+    static Stream default_stderr() { return c_stderr(); }
+
     template <ByteSpanT T> size_t write(T data) { return write((void*) data.data(), data.size()); }
     size_t write(void* data, size_t size);
     void flush();
@@ -89,7 +105,7 @@ public:
     void close();
 
 private:
-    std::variant<NullStream, CFileRef, CFile, FdRef, Fd> m_handle;
+    std::variant<NullStream, CFileRef, CFile, FdRef, Fd, TermCtlRef> m_handle;
 };
 
 

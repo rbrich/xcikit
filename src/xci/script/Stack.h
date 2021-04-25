@@ -119,9 +119,9 @@ public:
     // "top of the stack" and the previous values are stored on the value stack.
 
     struct Streams {
-        value::Stream in { Stream::c_stdin() };
-        value::Stream out { Stream::c_stdout() };
-        value::Stream err { Stream::c_stderr() };
+        value::Stream in { Stream::default_stdin() };
+        value::Stream out { Stream::default_stdout() };
+        value::Stream err { Stream::default_stderr() };
 
         ~Streams() {
             in.decref();

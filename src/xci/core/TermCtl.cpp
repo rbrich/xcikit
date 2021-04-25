@@ -679,7 +679,10 @@ std::string TermCtl::raw_input(bool isig)
 
 void TermCtl::write(std::string_view buf)
 {
+#ifdef __EMSCRIPTEN__
     m_at_newline = buf.ends_with('\n');
+#endif
+
     if (m_write_cb)
         m_write_cb(buf);
     else
@@ -687,10 +690,23 @@ void TermCtl::write(std::string_view buf)
 }
 
 
-void TermCtl::sanitize_newline()
+void TermCtl::sanitize_newline(TermCtl& tin)
 {
+#ifdef __EMSCRIPTEN__
+    // non-generic solution for Xterm.js - all output must go through TermCtl
+    (void) tin;
     if (!m_at_newline)
         write((const char*)u8"⏎\n");
+#else
+    // generic solution - this works even when something sidesteps TermCtl
+    // and writes to the terminal
+    auto [row, col] = get_cursor_position(tin);
+    if (col == -1)
+        return;
+    if (col != 0) {
+        write((const char*)u8"⏎\n");
+    }
+#endif
 }
 
 
@@ -872,9 +888,9 @@ std::string TermCtl::query(std::string_view request, TermCtl& tin)
 }
 
 
-std::pair<int, int> TermCtl::get_cursor_position()
+std::pair<int, int> TermCtl::get_cursor_position(TermCtl& tin)
 {
-    auto res = query(request_cursor_position().seq());
+    auto res = query(request_cursor_position().seq(), tin);
     auto seq = decode_seq(res);
     if (seq.input_len != 0 && seq.fun == 'R' && seq.par.size() == 2)
         return {seq.par[0] - 1, seq.par[1] - 1};

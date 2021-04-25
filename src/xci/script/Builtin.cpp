@@ -670,9 +670,9 @@ static void output_stream_leave3(Stack& stack, void*, void*)
 
 void BuiltinModule::add_io_functions()
 {
-    symtab().add({"stdin", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::c_stdin())})});
-    symtab().add({"stdout", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::c_stdout())})});
-    symtab().add({"stderr", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::c_stderr())})});
+    symtab().add({"stdin", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::default_stdin())})});
+    symtab().add({"stdout", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::default_stdout())})});
+    symtab().add({"stderr", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::default_stderr())})});
 
     auto ps = add_native_function("write", {ti_string()}, ti_void(), write_string);
     auto pb = add_native_function("write", {ti_bytes()}, ti_void(), write_bytes);

@@ -19,11 +19,16 @@ Stream Stream::raw_stdin() { return Stream(FdRef{STDIN_FILENO}); }
 Stream Stream::raw_stdout() { return Stream(FdRef{STDOUT_FILENO}); }
 Stream Stream::raw_stderr() { return Stream(FdRef{STDERR_FILENO}); }
 
-
-// variant visitor helper
-// see https://en.cppreference.com/w/cpp/utility/variant/visit
-template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
-template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+#ifdef __EMSCRIPTEN__
+// Xterm.js buffers input, so raw unbuffered read() works same way
+// as buffered stdio in normal program
+Stream Stream::default_stdin() { return raw_stdin(); }
+// The output callback is installed in TermCtl, must write through it
+Stream Stream::default_stdout() { return term_out(); }
+#else
+Stream Stream::default_stdin() { return c_stdin(); }
+Stream Stream::default_stdout() { return c_stdout(); }
+#endif
 
 
 size_t Stream::write(void* data, size_t size)
@@ -44,6 +49,9 @@ size_t Stream::write(void* data, size_t size)
                 return (size_t) 0;
             }
             return (size_t) r;
+        } else if constexpr (std::is_same_v<T, TermCtlRef>) {
+            v.term->write({(const char*) data, size});
+            return size;
         }
     }, m_handle);
 }
@@ -53,8 +61,8 @@ void Stream::flush()
 {
     return std::visit([](auto&& v) {
         using T = std::decay_t<decltype(v)>;
-        if constexpr (std::is_same_v<T, FILE*>) {
-            if (fflush(v) == EOF)
+        if constexpr (std::is_same_v<T, CFile> || std::is_same_v<T, CFileRef>) {
+            if (fflush(v.file) == EOF)
                 log::error("fflush: {m}");
         }
     }, m_handle);
@@ -81,6 +89,8 @@ std::string Stream::read(size_t n)
             }
             res.resize(r);
             return res;
+        } else if constexpr (std::is_same_v<T, TermCtlRef>) {
+            return v.term->input();
         }
     }, m_handle);
 }
@@ -119,6 +129,12 @@ size_t Stream::raw_read(const byte* buffer)
             m_handle = v;
             break;
         }
+        case 5: {
+            TermCtlRef v;
+            std::memcpy(&v, buffer, sizeof(v));
+            m_handle = v;
+            break;
+        }
     }
     return raw_size();
 }
@@ -141,20 +157,30 @@ size_t Stream::raw_write(byte* buffer) const
 std::ostream& operator<<(std::ostream& os, const Stream& v)
 {
     std::visit(overloaded {
-            [](Stream::NullStream) {},
-            [&os](Stream::CFileRef v) {
-                if (v.file == stdin)
-                    fmt::print(os, "fileref:stdin");
-                else if (v.file == stdout)
-                    fmt::print(os, "fileref:stdout");
-                else if (v.file == stderr)
-                    fmt::print(os, "fileref:stderr");
-                else
-                    fmt::print(os, "fileref:{:x}", uintptr_t(v.file));
-            },
-            [&os](Stream::CFile v) { fmt::print(os, "file:{:x}", uintptr_t(v.file)); },
-            [&os](Stream::FdRef v) { fmt::print(os, "fdref:{}", v.fd); },
-            [&os](Stream::Fd v) { fmt::print(os, "fd:{}", v.fd); },
+        [](const Stream::NullStream&) {},
+        [&os](const Stream::CFileRef& v) {
+            if (v.file == stdin)
+                fmt::print(os, "fileref:stdin");
+            else if (v.file == stdout)
+                fmt::print(os, "fileref:stdout");
+            else if (v.file == stderr)
+                fmt::print(os, "fileref:stderr");
+            else
+                fmt::print(os, "fileref:{:x}", uintptr_t(v.file));
+        },
+        [&os](const Stream::CFile& v) { fmt::print(os, "file:{:x}", uintptr_t(v.file)); },
+        [&os](const Stream::FdRef& v) { fmt::print(os, "fdref:{}", v.fd); },
+        [&os](const Stream::Fd& v) { fmt::print(os, "fd:{}", v.fd); },
+        [&os](const Stream::TermCtlRef& v) {
+            if (v.term == &TermCtl::stdin_instance())
+                fmt::print(os, "term:stdin");
+            else if (v.term == &TermCtl::stdout_instance())
+                fmt::print(os, "term:stdout");
+            else if (v.term == &TermCtl::stderr_instance())
+                fmt::print(os, "term:stderr");
+            else
+                fmt::print(os, "term:{}", uintptr_t(v.term));
+        },
     }, v.m_handle);
     return os;
 }
