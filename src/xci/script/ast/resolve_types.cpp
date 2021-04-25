@@ -627,15 +627,16 @@ public:
         m_cast_type = v.to_type;
         v.expression->apply(*this);
         m_cast_type = {};
+        v.from_type = move(m_value_type);
         // cast to Void -> don't call the cast function, just drop the expression result from stack
-        if (v.to_type.is_void()) {
-            v.from_type = move(m_value_type);
+        // cast to the same type -> noop
+        if (v.to_type.is_void() || v.from_type == v.to_type) {
             v.cast_function.reset();
             m_value_type = v.to_type;
             return;
         }
         // lookup the cast function with the resolved arg/return types
-        m_call_args.push_back({m_value_type, v.expression->source_loc});
+        m_call_args.push_back({v.from_type, v.expression->source_loc});
         m_call_ret = v.to_type;
         v.cast_function->apply(*this);
         // set the effective type of the Cast expression and clean the call types

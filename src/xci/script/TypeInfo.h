@@ -42,8 +42,8 @@ enum class Type : uint8_t {
     Stream,     // I/O stream
 
     // Custom types
-    Named,    // type NewType = ... (all other types are anonymous)
-    //Struct,   // a tuple with named members, basically a C-like struct
+    Named,      // type NewType = ... (all other types are anonymous)
+    Struct,     // a tuple with named members, similar to C struct
 };
 
 
@@ -64,24 +64,38 @@ class TypeInfo {
 public:
     struct ListTag {};
     struct TupleTag {};
+    struct StructTag {};
     static constexpr ListTag list_of {};
     static constexpr TupleTag tuple_of {};
+    static constexpr StructTag struct_of {};
+
+    using Var = uint8_t;  // for unknown type, specifies which type variable this represents (counted from 1, none = 0)
+    using Subtypes = std::vector<TypeInfo>;
+    using StructItem = std::pair<std::string, TypeInfo>;
+    using StructItems = std::vector<StructItem>;
+    using SignaturePtr = std::shared_ptr<Signature>;
+    using NamedTypePtr = std::shared_ptr<NamedType>;
 
     // Unknown / generic
     TypeInfo() : m_type(Type::Unknown), m_info(Var(0)) {}
-    explicit TypeInfo(uint8_t var) : m_type(Type::Unknown), m_info(var) {}
+    explicit TypeInfo(Var var) : m_type(Type::Unknown), m_info(var) {}
     // Plain types
     explicit TypeInfo(Type type);
     // Function
-    explicit TypeInfo(std::shared_ptr<Signature> signature)
+    explicit TypeInfo(SignaturePtr signature)
         : m_type(Type::Function), m_info(std::move(signature)) {}
+    // List
+    explicit TypeInfo(ListTag, TypeInfo list_elem);
     // Tuple
     explicit TypeInfo(TupleTag, std::initializer_list<TypeInfo> subtypes)
         : m_type(Type::Tuple), m_info(Subtypes(subtypes)) {}
-    explicit TypeInfo(std::vector<TypeInfo> subtypes)
+    explicit TypeInfo(Subtypes subtypes)
         : m_type(Type::Tuple), m_info(std::move(subtypes)) {}
-    // List
-    explicit TypeInfo(ListTag, TypeInfo list_elem);
+    // Struct
+    explicit TypeInfo(StructTag, std::initializer_list<StructItem> items)
+            : m_type(Type::Struct), m_info(StructItems(items)) {}
+    explicit TypeInfo(StructItems items)
+            : m_type(Type::Struct), m_info(std::move(items)) {}
     // Named
     explicit TypeInfo(std::string name, TypeInfo&& type_info);
 
@@ -110,15 +124,12 @@ public:
     // -------------------------------------------------------------------------
     // Additional info, subtypes
 
-    using Var = uint8_t;  // for unknown type, specifies which type variable this represents (counted from 1, none = 0)
-    using Subtypes = std::vector<TypeInfo>;
-    using SignaturePtr = std::shared_ptr<Signature>;
-    using NamedTypePtr = std::shared_ptr<NamedType>;
-
     Var generic_var() const;  // type = Unknown
     const TypeInfo& elem_type() const;  // type = List (Subtypes[0])
     const Subtypes& subtypes() const;  // type = Tuple
     Subtypes&& move_subtypes() &&;
+    const StructItems& struct_items() const;  // type = Struct
+    StructItems&& move_struct_items() &&;
     const SignaturePtr& signature_ptr() const;  // type = Function
     const Signature& signature() const { return *signature_ptr(); }
     Signature& signature() { return *signature_ptr(); }
@@ -128,7 +139,7 @@ public:
 
 private:
     Type m_type { Type::Unknown };
-    std::variant<std::monostate, Var, Subtypes, SignaturePtr, NamedTypePtr> m_info;
+    std::variant<std::monostate, Var, Subtypes, StructItems, SignaturePtr, NamedTypePtr> m_info;
 };
 
 
@@ -174,13 +185,21 @@ inline TypeInfo ti_float32() { return TypeInfo(Type::Float32); }
 inline TypeInfo ti_float64() { return TypeInfo(Type::Float64); }
 inline TypeInfo ti_string() { return TypeInfo(Type::String); }
 inline TypeInfo ti_stream() { return TypeInfo(Type::Stream); }
-inline TypeInfo ti_function(std::shared_ptr<Signature>&& signature) { return TypeInfo(std::move(signature)); }
 
-inline TypeInfo ti_list(TypeInfo&& elem) { return TypeInfo(TypeInfo::list_of, std::move(elem)); }
+inline TypeInfo ti_function(std::shared_ptr<Signature>&& signature)
+{ return TypeInfo(std::forward<std::shared_ptr<Signature>>(signature)); }
+
+inline TypeInfo ti_list(TypeInfo&& elem) { return TypeInfo(TypeInfo::list_of, std::forward<TypeInfo>(elem)); }
 inline TypeInfo ti_bytes() { return TypeInfo{TypeInfo::list_of, ti_byte()}; }
 
+// Each item must be TypeInfo
+
 template <typename... Args>
-inline TypeInfo ti_tuple(Args... args) { return TypeInfo(TypeInfo::tuple_of, {args...}); }
+inline TypeInfo ti_tuple(Args&&... args) { return TypeInfo(TypeInfo::tuple_of, {std::forward<TypeInfo>(args)...}); }
+
+// Each item must be std::pair<std::string, TypeInfo>
+inline TypeInfo ti_struct(std::initializer_list<TypeInfo::StructItem> items)
+{ return TypeInfo(TypeInfo::struct_of, std::forward<std::initializer_list<TypeInfo::StructItem>>(items)); }
 
 
 } // namespace xci::script

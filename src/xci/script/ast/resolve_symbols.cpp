@@ -186,6 +186,12 @@ public:
         }
     }
 
+    void visit(ast::StructInit& v) override {
+        for (auto& item : v.items) {
+            item.second->apply(*this);
+        }
+    }
+
     void visit(ast::Reference& v) override {
         auto& symptr = v.identifier.symbol;
         symptr = resolve_symbol(v.identifier.name);

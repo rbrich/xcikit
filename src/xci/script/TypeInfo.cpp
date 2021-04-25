@@ -30,6 +30,7 @@ size_t type_size_on_stack(Type type)
         case Type::Unknown:
         case Type::Void:
         case Type::Tuple:
+        case Type::Struct:
         case Type::Named:
             return 0;
         case Type::Bool:
@@ -213,6 +214,22 @@ auto TypeInfo::move_subtypes() && -> Subtypes&&
     assert(m_type == Type::Tuple);
     assert(std::holds_alternative<Subtypes>(m_info));
     return std::get<Subtypes>(std::move(m_info));
+}
+
+
+auto TypeInfo::struct_items() const -> const StructItems&
+{
+    assert(m_type == Type::Struct);
+    assert(std::holds_alternative<StructItems>(m_info));
+    return std::get<StructItems>(m_info);
+}
+
+
+auto TypeInfo::move_struct_items() && -> StructItems&&
+{
+    assert(m_type == Type::Struct);
+    assert(std::holds_alternative<StructItems>(m_info));
+    return std::get<StructItems>(std::move(m_info));
 }
 
 

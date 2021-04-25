@@ -87,6 +87,7 @@ public:
 
     void visit(ast::List& v) override {}
     void visit(ast::Tuple& v) override {}
+    void visit(ast::StructInit& v) override {}
 
     void visit(ast::Cast& v) override {
         v.expression->apply(*this);

@@ -27,6 +27,7 @@ std::ostream& operator<<(std::ostream& os, const Literal& v);
 std::ostream& operator<<(std::ostream& os, const Bracketed& v);
 std::ostream& operator<<(std::ostream& os, const Tuple& v);
 std::ostream& operator<<(std::ostream& os, const List& v);
+std::ostream& operator<<(std::ostream& os, const StructInit& v);
 std::ostream& operator<<(std::ostream& os, const Variable& v);
 std::ostream& operator<<(std::ostream& os, const Parameter& v);
 std::ostream& operator<<(std::ostream& os, const Identifier& v);

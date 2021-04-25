@@ -195,6 +195,10 @@ public:
         m_const_value.reset();
     }
 
+    void visit(ast::StructInit& v) override {
+        m_const_value.reset();
+    }
+
     void visit(ast::Cast& v) override {
         v.expression->apply(*this);
         // cast to Void?

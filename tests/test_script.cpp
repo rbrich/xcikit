@@ -460,6 +460,7 @@ TEST_CASE( "Lexical scope", "[script][interpreter]" )
 TEST_CASE( "Casting", "[script][interpreter]" )
 {
     CHECK(interpret_std("\"drop this\":Void") == "");
+    CHECK(interpret_std("\"noop\":String") == "\"noop\"");
     CHECK(interpret_std("42:Int64") == "42L");
     CHECK(interpret_std("42L:Int32") == "42");
     CHECK(interpret_std("42:Float32") == "42.0f");

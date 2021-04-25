@@ -220,6 +220,13 @@ struct IndexOutOfBounds : public ScriptError {
 };
 
 
+struct StructTypeMismatch : public ScriptError {
+    explicit StructTypeMismatch(const TypeInfo& got, const SourceLocation& loc)
+            : ScriptError(format("cannot cast a struct initializer to {}",
+            got), loc) {}
+};
+
+
 struct IntrinsicsFunctionError : public ScriptError {
     explicit IntrinsicsFunctionError(string_view message, const SourceLocation& loc)
         : ScriptError(format("intrinsics function: {}", message), loc) {}

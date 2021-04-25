@@ -130,6 +130,13 @@ public:
         code().add_opcode(Opcode::MakeList, v.items.size(), v.item_size);
     }
 
+    void visit(ast::StructInit& v) override {
+        // build struct on stack (it's already ordered, with defaults filled in)
+        for (auto& item : reverse(v.items)) {
+            item.second->apply(*this);
+        }
+    }
+
     void visit(ast::Reference& v) override {
         assert(v.identifier.symbol);
         auto& symtab = *v.identifier.symbol.symtab();
@@ -427,7 +434,8 @@ public:
             m_function.code().add_opcode(Opcode::Drop, 0, v.from_type.size());
             return;
         }
-        v.cast_function->apply(*this);
+        if (v.cast_function)
+            v.cast_function->apply(*this);
     }
 
     void visit(ast::Instance& v) override {

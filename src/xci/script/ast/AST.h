@@ -42,6 +42,7 @@ struct Literal;
 struct Bracketed;
 struct Tuple;
 struct List;
+struct StructInit;
 struct Reference;
 struct Call;
 struct OpCall;
@@ -70,6 +71,7 @@ public:
     virtual void visit(const Bracketed&) = 0;
     virtual void visit(const Tuple&) = 0;
     virtual void visit(const List&) = 0;
+    virtual void visit(const StructInit&) = 0;
     virtual void visit(const Reference&) = 0;
     virtual void visit(const Call&) = 0;
     virtual void visit(const OpCall&) = 0;
@@ -99,6 +101,7 @@ public:
     virtual void visit(Bracketed&) = 0;
     virtual void visit(Tuple&) = 0;
     virtual void visit(List&) = 0;
+    virtual void visit(StructInit&) = 0;
     virtual void visit(Reference&) = 0;
     virtual void visit(Call&) = 0;
     virtual void visit(OpCall&) = 0;
@@ -122,6 +125,7 @@ public:
     void visit(Bracketed&) final {}
     void visit(Tuple&) final {}
     void visit(List&) final {}
+    void visit(StructInit&) final {}
     void visit(Reference&) final {}
     void visit(Call&) final {}
     void visit(OpCall&) final {}
@@ -150,9 +154,10 @@ public:
     void visit(TypeAlias&) final {}
     // skip expression visits
     void visit(Literal&) final {}
-    void visit(Tuple&) final {}
     void visit(Bracketed&) final {}
+    void visit(Tuple&) final {}
     void visit(List&) final {}
+    void visit(StructInit&) final {}
     void visit(Reference&) final {}
     void visit(Call&) final {}
     void visit(OpCall&) final {}
@@ -326,6 +331,16 @@ struct List: public Expression {
     size_t item_size = 0;
 };
 
+// structured initializer, i.e. tuple with identifiers
+struct StructInit: public Expression {
+    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
+    void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Expression> make_copy() const override;
+
+    using Item = std::pair<std::string, std::unique_ptr<Expression>>;
+    std::vector<Item> items;
+};
+
 // variable reference
 struct Reference: public Expression {
     Reference() = default;
@@ -479,7 +494,7 @@ struct Cast: public Expression {
 
     std::unique_ptr<Expression> expression;
     std::unique_ptr<Type> type;
-    std::unique_ptr<Reference> cast_function;  // none for cast to Void
+    std::unique_ptr<Reference> cast_function;  // none for cast to Void or to same type
 
     // resolved:
     TypeInfo to_type;    // resolved Type (cast to)

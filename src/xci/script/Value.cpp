@@ -61,6 +61,7 @@ Value create_value(Type type)
         case Type::String: return value::String{};
         case Type::List: return value::List{};
         case Type::Tuple: return value::Tuple{};
+        case Type::Struct: return value::Tuple{};  // struct differs only in type, otherwise it's just a tuple
         case Type::Function: return value::Closure{};
         case Type::Stream: return value::Stream{};
         case Type::Module: return value::Module{};

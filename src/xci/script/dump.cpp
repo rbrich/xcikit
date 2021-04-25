@@ -75,6 +75,7 @@ public:
     void visit(const Bracketed& v) override { m_os << v; }
     void visit(const Tuple& v) override { m_os << v; }
     void visit(const List& v) override { m_os << v; }
+    void visit(const StructInit& v) override { m_os << v; }
     void visit(const Reference& v) override { m_os << v; }
     void visit(const Call& v) override { m_os << v; }
     void visit(const OpCall& v) override { m_os << v; }
@@ -130,6 +131,7 @@ std::ostream& operator<<(std::ostream& os, const Tuple& v)
     }
 }
 
+
 std::ostream& operator<<(std::ostream& os, const List& v)
 {
     if (stream_options(os).enable_tree) {
@@ -148,6 +150,28 @@ std::ostream& operator<<(std::ostream& os, const List& v)
         return os << "]";
     }
 }
+
+
+std::ostream& operator<<(std::ostream& os, const StructInit& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << "StructInit(Expression)" << endl;
+        os << more_indent;
+        for (const auto& item : v.items) {
+            os << put_indent << "Identifier " << item.first;
+            os << put_indent << *item.second;
+        }
+        return os << less_indent;
+    } else {
+        for (const auto& item : v.items) {
+            os << item.first << "=" << *item.second;
+            if (&item != &v.items.back())
+                os << ", ";
+        }
+        return os;
+    }
+}
+
 
 std::ostream& operator<<(std::ostream& os, const Variable& v)
 {
@@ -791,6 +815,15 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
             for (const auto& ti : v.subtypes()) {
                 os << ti;
                 if (&ti != &v.subtypes().back())
+                    os << ", ";
+            }
+            return os << ")";
+        }
+        case Type::Struct: {
+            os << "(";
+            for (const auto& item : v.struct_items()) {
+                os << item.second << ' ' << item.first;
+                if (&item != &v.struct_items().back())
                     os << ", ";
             }
             return os << ")";

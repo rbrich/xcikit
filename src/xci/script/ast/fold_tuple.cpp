@@ -95,6 +95,7 @@ public:
 
     void visit(ast::Literal&) override {}
     void visit(ast::Tuple&) override {}
+    void visit(ast::StructInit&) override {}
     void visit(ast::Reference&) override {}
 
     void visit(ast::Cast& v) override {

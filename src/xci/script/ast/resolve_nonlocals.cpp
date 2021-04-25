@@ -53,6 +53,12 @@ public:
         }
     }
 
+    void visit(ast::StructInit& v) override {
+        for (auto& item : v.items) {
+            item.second->apply(*this);
+        }
+    }
+
     void visit(ast::Reference& v) override {
         assert(v.identifier.symbol);
         const auto& symtab = *v.identifier.symbol.symtab();
