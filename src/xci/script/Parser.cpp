@@ -150,7 +150,7 @@ struct ExprArgSafe: seq< sor< BracketedExpr, List, Function, Literal, Reference 
 struct Call: seq< ExprCallable, plus<RS, SC, ExprArgSafe> > {};
 struct ExprOperand: sor<Call, ExprArgSafe, ExprPrefix> {};
 struct ExprCond: if_must< KeywordIf, NSC, ExprInfix<NSC>, NSC, KeywordThen, NSC, Expression<SC>, NSC, KeywordElse, NSC, Expression<SC>> {};
-struct ExprWith: if_must< KeywordWith, NSC, ExprArgSafe, NSC, ExprArgSafe > {};  // might be parsed as a function, but that wouldn't allow newlines
+struct ExprWith: if_must< KeywordWith, NSC, ExprArgSafe, NSC, Expression<SC> > {};  // might be parsed as a function, but that wouldn't allow newlines
 struct ExprStructItem: seq< Identifier, SC, one<'='>, not_at<one<'='>>, SC, must<ExprArgSafe> > {};
 struct ExprStruct: seq< ExprStructItem, star< SC, one<','>, SC, must<ExprStructItem> > > {};
 
@@ -262,6 +262,12 @@ struct Action<Expression<S>> : change_states< std::unique_ptr<ast::Expression> >
     template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Bracketed& bracketed) {
         bracketed.expression = std::move(expr);
+    }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::WithContext& with) {
+        assert(!with.expression);
+        with.expression = std::move(expr);
     }
 };
 
@@ -503,12 +509,8 @@ struct Action<ExprArgSafe> : change_states< std::unique_ptr<ast::Expression> > {
 
     template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::WithContext& with) {
-        if (!with.context)
-            with.context = std::move(expr);
-        else {
-            assert(!with.expression);
-            with.expression = std::move(expr);
-        }
+        assert(!with.context);
+        with.context = std::move(expr);
     }
 
     template<typename Input>

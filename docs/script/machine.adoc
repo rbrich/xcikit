@@ -155,7 +155,7 @@ Heap value:
 xB UTF-8 data (x = size)
 ----
 
-The refcount is common for all heap values, allowing universal management
+The header is common for all heap values, allowing universal management
 for heap values of any type.
 
 The string itself has 32bit size and UTF-8 data. The size is in bytes.
