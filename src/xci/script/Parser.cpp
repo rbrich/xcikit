@@ -593,7 +593,9 @@ struct Action<Identifier> {
 
     template<typename Input>
     static void apply(const Input &in, ast::StructInit& node) {
-        node.items.emplace_back(in.string(), std::unique_ptr<ast::Expression>{});
+        ast::Key key(in.string());
+        key.source_loc.load(in.input(), in.position());
+        node.items.emplace_back(std::move(key), std::unique_ptr<ast::Expression>{});
     }
 };
 

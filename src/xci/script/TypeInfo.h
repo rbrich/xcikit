@@ -127,9 +127,7 @@ public:
     Var generic_var() const;  // type = Unknown
     const TypeInfo& elem_type() const;  // type = List (Subtypes[0])
     const Subtypes& subtypes() const;  // type = Tuple
-    Subtypes&& move_subtypes() &&;
     const StructItems& struct_items() const;  // type = Struct
-    StructItems&& move_struct_items() &&;
     const SignaturePtr& signature_ptr() const;  // type = Function
     const Signature& signature() const { return *signature_ptr(); }
     Signature& signature() { return *signature_ptr(); }

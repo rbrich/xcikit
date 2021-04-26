@@ -158,7 +158,7 @@ std::ostream& operator<<(std::ostream& os, const StructInit& v)
         os << "StructInit(Expression)" << endl;
         os << more_indent;
         for (const auto& item : v.items) {
-            os << put_indent << "Identifier " << item.first;
+            os << put_indent << item.first;
             os << put_indent << *item.second;
         }
         return os << less_indent;
@@ -219,6 +219,15 @@ std::ostream& operator<<(std::ostream& os, const Identifier& v)
             os << " [" << v.symbol << "]";
         }
         return os << endl;
+    } else {
+        return os << v.name;
+    }
+}
+
+std::ostream& operator<<(std::ostream& os, const Key& v)
+{
+    if (stream_options(os).enable_tree) {
+        return os << "Key " << v.name << endl;
     } else {
         return os << v.name;
     }

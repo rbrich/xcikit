@@ -57,8 +57,14 @@ size_t type_size_on_stack(Type type)
 size_t TypeInfo::size() const
 {
     if (type() == Type::Tuple) {
-        return accumulate(subtypes().begin(), subtypes().end(), size_t(0),
+        const auto& l = subtypes();
+        return accumulate(l.begin(), l.end(), size_t(0),
                 [](size_t init, const TypeInfo& ti) { return init + ti.size(); });
+    }
+    if (type() == Type::Struct) {
+        const auto& l = struct_items();
+        return accumulate(l.begin(), l.end(), size_t(0),
+                [](size_t init, const TypeInfo::StructItem& ti) { return init + ti.second.size(); });
     }
     return type_size_on_stack(type());
 }
@@ -80,6 +86,16 @@ void TypeInfo::foreach_heap_slot(std::function<void(size_t offset)> cb) const
                     cb(pos + offset);
                 });
                 pos += ti.size();
+            }
+            break;
+        }
+        case Type::Struct: {
+            size_t pos = 0;
+            for (const auto& item : struct_items()) {
+                item.second.foreach_heap_slot([&cb, pos](size_t offset) {
+                    cb(pos + offset);
+                });
+                pos += item.second.size();
             }
             break;
         }
@@ -113,6 +129,11 @@ void TypeInfo::replace_var(uint8_t idx, const TypeInfo& ti)
             for (auto& sub : std::get<Subtypes>(m_info))
                 sub.replace_var(idx, ti);
             break;
+        case Type::Struct:
+            assert(std::holds_alternative<StructItems>(m_info));
+            for (auto& item : std::get<StructItems>(m_info))
+                item.second.replace_var(idx, ti);
+            break;
         default:
             break;
     }
@@ -128,6 +149,9 @@ TypeInfo::TypeInfo(Type type) : m_type(type)
         case Type::List:
         case Type::Tuple:
             m_info = Subtypes();
+            break;
+        case Type::Struct:
+            m_info = StructItems();
             break;
         case Type::Function:
             m_info = SignaturePtr();
@@ -209,27 +233,11 @@ auto TypeInfo::subtypes() const -> const Subtypes&
 }
 
 
-auto TypeInfo::move_subtypes() && -> Subtypes&&
-{
-    assert(m_type == Type::Tuple);
-    assert(std::holds_alternative<Subtypes>(m_info));
-    return std::get<Subtypes>(std::move(m_info));
-}
-
-
 auto TypeInfo::struct_items() const -> const StructItems&
 {
     assert(m_type == Type::Struct);
     assert(std::holds_alternative<StructItems>(m_info));
     return std::get<StructItems>(m_info);
-}
-
-
-auto TypeInfo::move_struct_items() && -> StructItems&&
-{
-    assert(m_type == Type::Struct);
-    assert(std::holds_alternative<StructItems>(m_info));
-    return std::get<StructItems>(std::move(m_info));
 }
 
 

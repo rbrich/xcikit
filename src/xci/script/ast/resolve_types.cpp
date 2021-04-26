@@ -198,6 +198,46 @@ public:
         type_check.check(m_value_type, v.source_loc);
     }
 
+    void visit(ast::StructInit& v) override {
+        // The target struct type must be specified or inferred from context
+        TypeCheckHelper type_check(move(m_type_info), move(m_cast_type));
+        auto struct_type = move(type_check.type());
+        if (struct_type.type() != Type::Struct)
+            throw StructTypeMismatch(struct_type, v.source_loc);
+
+        // reorder and check items to match the struct type, fill in the defaults
+        decltype(v.items) reordered;
+        for (const auto& ti : struct_type.struct_items()) {
+            // lookup the name in StructInit
+            auto it = std::find_if(v.items.begin(), v.items.end(),
+                [&ti](const ast::StructInit::Item& item) {
+                    return item.first.name == ti.first;
+                });
+            if (it == v.items.end()) {
+                // not found - use the default
+                reordered.emplace_back(ti.first, std::make_unique<ast::Literal>(TypedValue(ti.second)));
+                continue;
+            }
+            // check item type
+            TypeCheckHelper item_type_check(TypeInfo(ti.second));
+            it->second->apply(*this);
+            item_type_check.check(m_value_type, it->second->source_loc);
+            // move to reordered items
+            reordered.push_back(std::move(*it));
+            v.items.erase(it);
+        }
+
+        // check that no unknown items aren't left
+        if (!v.items.empty()) {
+            const auto& key = v.items.front().first;
+            throw UnknownStructKey(struct_type, key.name, key.source_loc);
+        }
+
+        // pass the results
+        v.items = std::move(reordered);
+        m_value_type = move(struct_type);
+    }
+
     void visit(ast::Reference& v) override {
         assert(v.identifier.symbol);
         const auto& symtab = *v.identifier.symbol.symtab();

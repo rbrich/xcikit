@@ -227,6 +227,13 @@ struct StructTypeMismatch : public ScriptError {
 };
 
 
+struct UnknownStructKey : public ScriptError {
+    explicit UnknownStructKey(const TypeInfo& struct_type, const std::string& key, const SourceLocation& loc)
+            : ScriptError(format("struct key \"{}\" doesn't match struct type {}",
+            key, struct_type), loc) {}
+};
+
+
 struct IntrinsicsFunctionError : public ScriptError {
     explicit IntrinsicsFunctionError(string_view message, const SourceLocation& loc)
         : ScriptError(format("intrinsics function: {}", message), loc) {}

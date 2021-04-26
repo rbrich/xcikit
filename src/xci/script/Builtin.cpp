@@ -671,11 +671,12 @@ static void output_stream_leave3(Stack& stack, void*, void*)
 void BuiltinModule::add_io_functions()
 {
     // types
-    symtab().add({"Streams", Symbol::TypeName, add_type(ti_struct({
+    auto streams = ti_struct({
             {"in", ti_stream()},
             {"out", ti_stream()},
             {"err", ti_stream()}
-    }))});
+    });
+    symtab().add({"Streams", Symbol::TypeName, add_type(streams)});
 
     // values
     symtab().add({"stdin", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::default_stdin())})});
@@ -697,10 +698,14 @@ void BuiltinModule::add_io_functions()
     auto leave2 = add_native_function("leave", {ti_tuple(ti_stream(), ti_stream())}, ti_void(), output_stream_leave2);
     auto enter3 = add_native_function("enter", {ti_tuple(ti_stream(), ti_stream(), ti_stream())}, ti_tuple(ti_stream(), ti_stream(), ti_stream()), output_stream_enter3);
     auto leave3 = add_native_function("leave", {ti_tuple(ti_stream(), ti_stream(), ti_stream())}, ti_void(), output_stream_leave3);
+    auto enter_s = add_native_function("enter", {streams}, TypeInfo(streams), output_stream_enter3);
+    auto leave_s = add_native_function("leave", {streams}, ti_void(), output_stream_leave3);
     enter1->set_next(enter2);
     enter2->set_next(enter3);
+    enter3->set_next(enter_s);
     leave1->set_next(leave2);
     leave2->set_next(leave3);
+    leave3->set_next(leave_s);
 }
 
 

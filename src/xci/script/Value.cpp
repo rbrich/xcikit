@@ -10,13 +10,18 @@
 #include <xci/core/string.h>
 #include <xci/core/log.h>
 #include <xci/core/template/helpers.h>
+#include <range/v3/view/transform.hpp>
+#include <range/v3/to_container.hpp>
 #include <numeric>
 #include <sstream>
 #include <limits>
+#include <cassert>
 
 namespace xci::script {
 
 using namespace xci::core;
+using ranges::cpp20::views::transform;
+using ranges::to;
 using std::move;
 using std::make_unique;
 
@@ -41,6 +46,11 @@ Value create_value(const TypeInfo& type_info)
                 return value::List();
         case Type::Tuple:
             return value::Tuple{type_info.subtypes()};
+        case Type::Struct:
+            auto subtypes = type_info.struct_items()
+                | transform([](const TypeInfo::StructItem& item) { return item.second; })
+                | to<std::vector>();
+            return value::Tuple{subtypes};
     }
     return {};
 }
@@ -440,6 +450,14 @@ size_t Values::size_on_stack() const
 }
 
 
+TypedValue::TypedValue(Value value, TypeInfo type_info)
+        : m_value(move(value)), m_type_info(move(type_info))
+{
+    assert(m_value.type() == m_type_info.type()
+        || (m_value.type() == Type::Tuple && m_type_info.type() == Type::Struct));
+}
+
+
 // make sure float values don't look like integers (append .0 if needed)
 static void dump_float(std::ostream& os, /*std::floating_point*/ auto value)
 {
@@ -503,18 +521,27 @@ public:
     }
     void visit(const TupleV& v) override {
         os << "(";
-        if (type_info.is_unknown()) {
-            for (Value* it = v.values.get(); !it->is_void(); ++it) {
-                if (it != v.values.get())
-                    os << ", ";
-                os << Value(*it);
-            }
-        } else {
+        if (type_info.type() == Type::Tuple) {
             auto ti_iter = type_info.subtypes().begin();
             for (Value* it = v.values.get(); !it->is_void(); ++it) {
                 if (it != v.values.get())
                     os << ", ";
-                os << TypedValue(Value(*it), *ti_iter++);
+                os << TypedValue(*it, *ti_iter++);
+            }
+        } else if (type_info.type() == Type::Struct) {
+            auto ti_iter = type_info.struct_items().begin();
+            for (Value* it = v.values.get(); !it->is_void(); ++it) {
+                if (it != v.values.get())
+                    os << ", ";
+                os << ti_iter->first << '=' << TypedValue(*it, ti_iter->second);
+                ++ti_iter;
+            }
+        } else {
+            // unknown TypeInfo
+            for (Value* it = v.values.get(); !it->is_void(); ++it) {
+                if (it != v.values.get())
+                    os << ", ";
+                os << *it;
             }
         }
         os << ")";

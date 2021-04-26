@@ -18,7 +18,6 @@
 #include <string_view>
 #include <span>
 #include <variant>
-#include <cassert>
 #include <cstring>
 #include <cstdint>
 #include <cstddef>  // byte
@@ -291,9 +290,8 @@ public:
 
     template <ValueWithTypeInfo T> explicit TypedValue(const T& v) : m_value(v), m_type_info(v.type_info()) {}
 
-    TypedValue(TypeInfo&& type_info) : m_value(create_value(type_info)), m_type_info(move(type_info)) {}
-    TypedValue(Value value, TypeInfo type_info)
-            : m_value(move(value)), m_type_info(move(type_info)) { assert(m_value.type() == m_type_info.type()); }
+    TypedValue(TypeInfo type_info) : m_value(create_value(type_info)), m_type_info(move(type_info)) {}
+    TypedValue(Value value, TypeInfo type_info);
 
     bool operator ==(const TypedValue& rhs) const { return m_value == rhs.m_value; }
 
