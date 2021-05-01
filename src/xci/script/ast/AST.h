@@ -306,8 +306,7 @@ struct Expression {
 };
 
 struct Literal: public Expression {
-    explicit Literal(const TypedValue& v) : value(v) {}
-    explicit Literal(TypedValue&& v) : value(std::move(v)) {}
+    explicit Literal(TypedValue v) : value(std::move(v)) {}
     ~Literal() override { value.decref(); }
 
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
@@ -372,7 +371,7 @@ struct Reference: public Expression {
     Index index = no_index;     // index of (instance) function in module
 
     // resolved Instruction:
-    uint8_t instruction_args[2];
+    uint8_t instruction_args[2] {};
 };
 
 struct Call: public Expression {
@@ -536,7 +535,7 @@ struct Definition: public Statement {
 };
 
 struct Invocation: public Statement {
-    Invocation(std::unique_ptr<Expression>&& expr) : expression(std::move(expr)) {}
+    explicit Invocation(std::unique_ptr<Expression>&& expr) : expression(std::move(expr)) {}
 
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }

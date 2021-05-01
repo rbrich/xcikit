@@ -173,7 +173,7 @@ public:
     explicit Value(StringTag) : m_value(StringV{}) {}  // String
     explicit Value(std::string_view v) : m_value(StringV{v}) {}  // String
     explicit Value(ListTag) : m_value(ListV{}) {}  // List
-    explicit Value(size_t length, TypeInfo elem_type) : m_value(ListV{length, elem_type}) {}  // List
+    explicit Value(size_t length, const TypeInfo& elem_type) : m_value(ListV{length, elem_type}) {}  // List
     explicit Value(ListTag, HeapSlot&& slot) : m_value(ListV{move(slot)}) {}  // List
     explicit Value(const TypeInfo::Subtypes& subtypes) : m_value(TupleV{subtypes}) {}  // Tuple
     explicit Value(Values&& values) : m_value(TupleV{move(values)}) {}  // Tuple
@@ -457,12 +457,12 @@ public:
 class List: public Value {
 public:
     List() : Value(Value::ListTag{}) {}
-    List(size_t length, TypeInfo elem_type) : Value(length, elem_type) {}
-    List(HeapSlot&& slot) : Value(Value::ListTag{}, move(slot)) {}
+    List(size_t length, const TypeInfo& elem_type) : Value(length, elem_type) {}
+    explicit List(HeapSlot&& slot) : Value(Value::ListTag{}, move(slot)) {}
 
     size_t length() const { return get<ListV>().length(); }
-    Value value_at(size_t idx, TypeInfo elem_type) const { return get<ListV>().value_at(idx, elem_type); }
-    TypedValue typed_value_at(size_t idx, TypeInfo elem_type) const { return {value_at(idx, elem_type), elem_type}; }
+    Value value_at(size_t idx, const TypeInfo& elem_type) const { return get<ListV>().value_at(idx, elem_type); }
+    TypedValue typed_value_at(size_t idx, const TypeInfo& elem_type) const { return {value_at(idx, elem_type), elem_type}; }
 };
 
 
@@ -488,7 +488,7 @@ public:
 class Tuple: public Value {
 public:
     Tuple() : Value(Values{}) {}
-    explicit Tuple(std::initializer_list<Value> values) : Value(Values{values}) {}
+    Tuple(std::initializer_list<Value> values) : Value(Values{values}) {}
     explicit Tuple(Values&& values) : Value(move(values)) {}
     explicit Tuple(const TypeInfo::Subtypes& subtypes) : Value(subtypes) {}
 

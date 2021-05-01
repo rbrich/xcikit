@@ -32,7 +32,7 @@ using ranges::to;
 
 class TypeCheckHelper {
 public:
-    TypeCheckHelper(TypeInfo&& spec) : m_specified_type(move(spec)) {}
+    explicit TypeCheckHelper(TypeInfo&& spec) : m_specified_type(move(spec)) {}
     TypeCheckHelper(TypeInfo&& spec, TypeInfo&& cast) : m_specified_type(move(spec)) {
         if (cast)
             m_specified_type = move(cast);

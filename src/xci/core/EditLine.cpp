@@ -64,7 +64,7 @@ void EditLine::add_history(std::string_view input)
         // multi-line
         auto begin = input.begin();
         auto end = input.end();
-        auto pos = begin;
+        decltype(begin) pos;
         do {
             pos = std::find(begin, end, '\n');
             if (begin == input.begin())

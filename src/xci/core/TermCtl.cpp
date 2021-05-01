@@ -81,7 +81,7 @@ static constexpr auto set_bright_background = CSI "10{}m";
 static constexpr auto enter_overline_mode = CSI "53m";
 static constexpr auto send_soft_reset = CSI "!p";
 static constexpr auto request_cursor_position = CSI "6n";
-}
+} // namespace seq
 
 
 inline constexpr const char* xci_tparm(const char* seq) { return seq; }
@@ -720,7 +720,8 @@ unsigned int TermCtl::stripped_width(std::string_view s)
     } state = Visible;
     unsigned int length = 0;
     for (auto it = s.cbegin(); it != s.cend(); it = utf8_next(it)) {
-        auto c = utf8_codepoint(&*it);
+        const char32_t c32 = utf8_codepoint(&*it);
+        const int c = (c32 < 256) ? int(c32) : 0;
         switch (state) {
             case Visible:
                 if (c == '\033')
@@ -728,7 +729,7 @@ unsigned int TermCtl::stripped_width(std::string_view s)
                 else if (c == '\n')
                     length += 1;
                 else
-                    length += c32_width(c);
+                    length += c32_width(c32);
                 break;
 
             case Esc:
