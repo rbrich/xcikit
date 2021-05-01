@@ -16,12 +16,15 @@
 #include <xci/script/dump.h>
 #include <xci/core/Vfs.h>
 #include <xci/core/log.h>
+#include <xci/core/string.h>
 #include <xci/config.h>
 
 #include <string>
 #include <sstream>
+#include <filesystem>
 
 using namespace std;
+namespace fs = std::filesystem;
 using namespace xci::script;
 using namespace xci::core;
 
@@ -340,6 +343,9 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
 
 TEST_CASE( "Blocks", "[script][interpreter]" )
 {
+    CHECK(parse("{}") == "{}");
+    CHECK(parse("{{}}") == "{{}}");
+
     // blocks are evaluated and return a value
     CHECK(interpret("{}") == "");  // empty function (has Void type)
     CHECK(interpret("{{}}") == "");  // empty function in empty function
@@ -363,6 +369,8 @@ TEST_CASE( "Blocks", "[script][interpreter]" )
 
 TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
 {
+    CHECK(parse("fun Int -> Int {}") == "fun Int -> Int {}");
+
     // returned lambda
     CHECK(interpret("fun x:Int->Int { x + 1 }") == "<lambda> Int32 -> Int32");
     CHECK_THROWS_AS(interpret("fun x { x + 1 }"), UnexpectedGenericFunction);  // generic lambda must be either assigned or resolved by calling
@@ -497,6 +505,36 @@ TEST_CASE( "Type classes", "[script][interpreter]" )
     CHECK(interpret("class XEq T { xeq : T T -> Bool }; "
                     "instance XEq Int32 { xeq = { __equal_32 } }; "
                     "xeq 1 2") == "false");
+}
+
+
+TEST_CASE( "With expression, I/O streams", "[script][interpreter]" )
+{
+    CHECK(parse("with stdout { 42 }") == "with stdout {42};");
+    // __streams is a builtin function that returns a tuple of current streams: (in, out, err)
+    CHECK(interpret("__streams") == "(in=<stream:stdin>, out=<stream:stdout>, err=<stream:stderr>)");
+    CHECK(interpret("with null { __streams }") == "(in=<stream:stdin>, out=<stream:null>, err=<stream:stderr>)");
+    CHECK_THROWS_AS(interpret("with 42 {}"), FunctionNotFound);  // function not found: enter Int32
+    CHECK(interpret("with (null, null) { __streams }") == "(in=<stream:null>, out=<stream:null>, err=<stream:stderr>)");
+    CHECK(interpret("with (null, null, null) { __streams }; __streams")  // `with` scope
+          == "(in=<stream:null>, out=<stream:null>, err=<stream:null>);"
+             "(in=<stream:stdin>, out=<stream:stdout>, err=<stream:stderr>)");
+    CHECK(interpret("with (in=null) { __streams }") == "(in=<stream:null>, out=<stream:stdout>, err=<stream:stderr>)");
+    CHECK(interpret("with (out=null) { __streams }") == "(in=<stream:stdin>, out=<stream:null>, err=<stream:stderr>)");
+    CHECK(interpret("with (in=null, out=null) { __streams }") == "(in=<stream:null>, out=<stream:null>, err=<stream:stderr>)");
+    CHECK(interpret("with (in=stdin, out=stdout, err=stderr) { __streams }") == "(in=<stream:stdin>, out=<stream:stdout>, err=<stream:stderr>)");
+    CHECK(interpret("with\n(in=stdin, out=stdout, err=stderr)\n{ 42 }") == "42");
+    CHECK(interpret_std("with (in=null):Streams { __streams }") == "(in=<stream:null>, out=<stream:stdout>, err=<stream:stderr>)");  // the missing fields are inherited in `enter` function
+    CHECK(interpret_std("(in=null):Streams") == "(in=<stream:null>, out=<stream:undef>, err=<stream:undef>)");  // the missing fields are default initialized => undef stream
+    CHECK(interpret_std("(in=null)") == "(in=<stream:null>)");  // anonymous struct
+
+    // write an actual file
+    auto filename = fs::temp_directory_path() / "xci_test_script.txt";
+    CHECK(interpret("with (open \""s + escape(filename.string()) + "\" \"w\")\n"
+                    "    write \"this goes to the file\"") == "");
+    CHECK(interpret("with (in=(open \""s + escape(filename.string()) + "\" \"r\"))\n"
+                    "    read 9") == "\"this goes\"");
+    CHECK(fs::remove(filename));
 }
 
 

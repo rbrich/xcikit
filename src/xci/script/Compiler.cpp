@@ -132,7 +132,7 @@ public:
 
     void visit(ast::StructInit& v) override {
         // build struct on stack according to struct_type, fill in defaults
-        for (const auto& ti : v.struct_type.struct_items()) {
+        for (const auto& ti : reverse(v.struct_type.struct_items())) {
             // lookup the name in StructInit
             auto it = std::find_if(v.items.begin(), v.items.end(),
                 [&ti](const ast::StructInit::Item& item) {

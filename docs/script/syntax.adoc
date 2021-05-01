@@ -472,20 +472,60 @@ let [first, *rest] = a_list
 
 === I/O streams
 
-See <<side-effects,Side Effects>> below for information on how this works.
+Builtin functions like `open`, `read`, `write`, `flush`, `error` work
+with a set of streams that is silently passed around. Default set of streams
+is `(stdin, stdout, stderr)`. To change them for a scope of an expression, use
+`with` expression:
 
 [source,fire]
 ----
-with out = (open "file.txt" "w") {
+with (out=(open "/tmp/file.txt" "w"), err=stderr, in=stdin) {
     // output stream is now redirected to a file
     write "this goes to file.txt"
-}
-
-with err = (tee (open "file.txt" "w") cerr) {
-    log "this goes to cerr stream and also to the file"
+    flush
+    // ...
 }
 ----
 
+This changes the set of current streams and saves the original streams on stack.
+When the block finishes, the original streams are restored, and the streams
+from the `with` context are released. This means that the opened file is open
+only inside the scope.
+
+Internally, there are two functions: `enter` and `leave`. Before entering
+the inner block (second argument of `with`), `enter` function is called.
+It gets the first argument of `with` expression as the sole argument.
+The value returned by `enter` is stored on stack. When leaving the inner scope,
+this value is read back from stack and passed to the `leave` function.
+
+For example, in the above fragment, the following functions are called:
+
+[source,fire]
+----
+type Streams = (Stream in, Stream out, Stream err)
+enter : Streams -> Streams
+leave : Streams -> Void
+----
+
+The functions are overloaded. Other overloads accept tuples: `(out)`,
+`(in, out)`, `(in, out, err)`. This allows a condensed syntax:
+
+[source,fire]
+----
+with (open "/tmp/file.txt" "w")
+    write "this goes to file.txt"
+----
+
+Except special parsing, `with` expression behaves like a normal function,
+taking two arguments: `with <context> <expr>`. The parsing is relaxed in two ways:
+
+* Unlike normal function call, newlines are allowed between `with` keyword
+  and first argument, and also between first and second argument.
+
+* The second argument can be any expression, including unbracketed if-then-else,
+  or a function call. This is not possible in arguments of a normal function call.
+
+The return value of the whole expression is what the inner expression returns.
 
 === Exceptions
 

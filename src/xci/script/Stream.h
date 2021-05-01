@@ -27,8 +27,13 @@ concept ByteSpanT = requires(const T& v) {
 
 class Stream {
 public:
+    // undefined - no value
+    using Undef = std::monostate;
+
     // null stream (/dev/null)
-    using NullStream = std::monostate;
+    struct Null {
+        bool operator ==(const Null& rhs) const { return true; }
+    };
 
     // stdio
     struct CFileRef {
@@ -63,15 +68,19 @@ public:
         bool operator ==(const TermCtlRef& rhs) const = default;
     };
 
-    Stream() = default;  // null stream
+    using HandleVariant = std::variant<Undef, Null, CFileRef, CFile, FdRef, Fd, TermCtlRef>;
+
+    Stream() = default;  // undef stream
 
     template <class T>
+    requires requires (HandleVariant x, T y) { x = y; }
     explicit Stream(T&& v) : m_handle(std::forward<T>(v)) {}
 
+    explicit operator bool() const { return !std::holds_alternative<Undef>(m_handle); }
     bool operator ==(const Stream& rhs) const = default;
     friend std::ostream& operator<<(std::ostream& os, const Stream& v);
 
-    static Stream null() { return Stream(NullStream{}); }
+    static Stream null() { return Stream(Null{}); }
 
     // FILE*
     static Stream c_stdin() { return Stream(CFileRef{stdin}); }
@@ -84,7 +93,9 @@ public:
     static Stream raw_stderr();
 
     // TermCtl
+    static Stream term_in() { return Stream(TermCtlRef{&core::TermCtl::stdin_instance()}); }
     static Stream term_out() { return Stream(TermCtlRef{&core::TermCtl::stdout_instance()}); }
+    static Stream term_err() { return Stream(TermCtlRef{&core::TermCtl::stderr_instance()}); }
 
     // sane default
     static Stream default_stdin();
@@ -105,7 +116,7 @@ public:
     void close();
 
 private:
-    std::variant<NullStream, CFileRef, CFile, FdRef, Fd, TermCtlRef> m_handle;
+    HandleVariant m_handle;
 };
 
 

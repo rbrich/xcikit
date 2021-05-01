@@ -172,8 +172,9 @@ public:
 
     void visit(ast::Invocation& inv) override {
         inv.expression->apply(*this);
-        if (!m_value_type.effective_type().is_void())
-            inv.type_index = module().add_type(move(m_value_type));
+        auto res_type = m_value_type.effective_type();
+        if (!res_type.is_void())
+            inv.type_index = module().add_type(move(res_type));
     }
 
     void visit(ast::Return& ret) override {
@@ -263,9 +264,11 @@ public:
         if (v.struct_type) {
             // second pass (from ast::WithContext):
             // * v.struct_type is the inferred type
-            // * m_type_info is final struct type
-            if (m_type_info.is_unknown())
-                throw StructUnknownType(v.source_loc);
+            // * m_type_info is the final struct type
+            if (m_type_info.is_unknown()) {
+                m_value_type = v.struct_type;
+                return;
+            }
             if (m_type_info.type() != Type::Struct)
                 throw StructTypeMismatch(m_type_info, v.source_loc);
             if (!match_struct(v.struct_type, m_type_info))

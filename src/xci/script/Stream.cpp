@@ -6,9 +6,11 @@
 
 #include "Stream.h"
 #include <xci/core/log.h>
-#include <xci/compat/unistd.h>
 #include <xci/core/template/helpers.h>
+#include <xci/compat/unistd.h>
+#include <xci/compat/macros.h>
 #include <fmt/ostream.h>
+#include <cassert>
 
 namespace xci::script {
 
@@ -25,17 +27,35 @@ Stream Stream::raw_stderr() { return Stream(FdRef{STDERR_FILENO}); }
 Stream Stream::default_stdin() { return raw_stdin(); }
 // The output callback is installed in TermCtl, must write through it
 Stream Stream::default_stdout() { return term_out(); }
+static constexpr auto raw_stdin_name = "stdin";
+static constexpr auto term_stdout_name = "stdout";
+static constexpr auto c_stdin_name = "fileref:stdin";
+static constexpr auto c_stdout_name = "fileref:stdout";
+static constexpr auto c_stderr_name = "stderr";
 #else
 Stream Stream::default_stdin() { return c_stdin(); }
 Stream Stream::default_stdout() { return c_stdout(); }
+static constexpr auto c_stdin_name = "stdin";
+static constexpr auto c_stdout_name = "stdout";
+static constexpr auto c_stderr_name = "stderr";
+static constexpr auto raw_stdin_name = "fdref:stdin";
+static constexpr auto term_stdout_name = "term:stdout";
 #endif
+
+static constexpr auto raw_stdout_name = "fdref:stdout";
+static constexpr auto raw_stderr_name = "fdref:stderr";
+static constexpr auto term_stdin_name = "term:stdin";
+static constexpr auto term_stderr_name = "term:stderr";
 
 
 size_t Stream::write(void* data, size_t size)
 {
     return std::visit([data, size](auto&& v) {
         using T = std::decay_t<decltype(v)>;
-        if constexpr (std::is_same_v<T, NullStream>)
+        if constexpr (std::is_same_v<T, Undef>) {
+            assert(!"can't write to undefined stream");
+            return size_t(0);
+        } else if constexpr (std::is_same_v<T, Null>)
             return size;
         else if constexpr (std::is_same_v<T, CFile> || std::is_same_v<T, CFileRef>) {
             return fwrite(data, 1, size, v.file);
@@ -73,7 +93,10 @@ std::string Stream::read(size_t n)
 {
     return std::visit([n](auto&& v) {
         using T = std::decay_t<decltype(v)>;
-        if constexpr (std::is_same_v<T, NullStream>)
+        if constexpr (std::is_same_v<T, Undef>) {
+            assert(!"can't read from undefined stream");
+            return std::string{};
+        } else if constexpr (std::is_same_v<T, Null>)
             return std::string{};
         else if constexpr (std::is_same_v<T, CFile> || std::is_same_v<T, CFileRef>) {
             std::string res(n, 0);
@@ -103,38 +126,44 @@ size_t Stream::raw_read(const byte* buffer)
     buffer += sizeof(idx);
     switch (idx) {
         case 0:
-            m_handle = NullStream{};
+            m_handle = Undef{};
             break;
-        case 1: {
-            CFileRef v;
-            std::memcpy(&v, buffer, sizeof(v));
-            m_handle = v;
+        case 1:
+            m_handle = Null{};
             break;
-        }
         case 2: {
-            CFile v;
+            std::variant_alternative_t<2, HandleVariant> v;
             std::memcpy(&v, buffer, sizeof(v));
             m_handle = v;
             break;
         }
         case 3: {
-            FdRef v;
+            std::variant_alternative_t<3, HandleVariant> v;
             std::memcpy(&v, buffer, sizeof(v));
             m_handle = v;
             break;
         }
         case 4: {
-            Fd v;
+            std::variant_alternative_t<4, HandleVariant> v;
             std::memcpy(&v, buffer, sizeof(v));
             m_handle = v;
             break;
         }
         case 5: {
-            TermCtlRef v;
+            std::variant_alternative_t<5, HandleVariant> v;
             std::memcpy(&v, buffer, sizeof(v));
             m_handle = v;
             break;
         }
+        case 6: {
+            std::variant_alternative_t<6, HandleVariant> v;
+            std::memcpy(&v, buffer, sizeof(v));
+            m_handle = v;
+            break;
+        }
+        default:
+            static_assert(std::variant_size_v<HandleVariant> == 7);
+            UNREACHABLE;
     }
     return raw_size();
 }
@@ -142,12 +171,12 @@ size_t Stream::raw_read(const byte* buffer)
 
 size_t Stream::raw_write(byte* buffer) const
 {
-    uint8_t idx = uint8_t(m_handle.index());
+    auto idx = uint8_t(m_handle.index());
     std::memcpy(buffer, &idx, sizeof(idx));
     buffer += sizeof(idx);
     std::visit([buffer](auto&& v) {
         using T = std::decay_t<decltype(v)>;
-        if constexpr (!std::is_same_v<T, NullStream>)
+        if constexpr (!std::is_same_v<T, Null>)
             std::memcpy(buffer, &v, sizeof(v));
     }, m_handle);
     return raw_size();
@@ -157,27 +186,37 @@ size_t Stream::raw_write(byte* buffer) const
 std::ostream& operator<<(std::ostream& os, const Stream& v)
 {
     std::visit(overloaded {
-        [&os](const Stream::NullStream&) { os << "null"; },
+        [&os](const Stream::Undef&) { os << "undef"; },
+        [&os](const Stream::Null&) { os << "null"; },
         [&os](const Stream::CFileRef& v) {
             if (v.file == stdin)
-                fmt::print(os, "fileref:stdin");
+                fmt::print(os, c_stdin_name);
             else if (v.file == stdout)
-                fmt::print(os, "fileref:stdout");
+                fmt::print(os, c_stdout_name);
             else if (v.file == stderr)
-                fmt::print(os, "fileref:stderr");
+                fmt::print(os, c_stderr_name);
             else
                 fmt::print(os, "fileref:{:x}", uintptr_t(v.file));
         },
         [&os](const Stream::CFile& v) { fmt::print(os, "file:{:x}", uintptr_t(v.file)); },
-        [&os](const Stream::FdRef& v) { fmt::print(os, "fdref:{}", v.fd); },
+        [&os](const Stream::FdRef& v) {
+          if (v.fd == STDIN_FILENO)
+              fmt::print(os, raw_stdin_name);
+          else if (v.fd == STDOUT_FILENO)
+              fmt::print(os, raw_stdout_name);
+          else if (v.fd == STDERR_FILENO)
+              fmt::print(os, raw_stderr_name);
+          else
+               fmt::print(os, "fdref:{}", v.fd);
+        },
         [&os](const Stream::Fd& v) { fmt::print(os, "fd:{}", v.fd); },
         [&os](const Stream::TermCtlRef& v) {
             if (v.term == &TermCtl::stdin_instance())
-                fmt::print(os, "term:stdin");
+                fmt::print(os, term_stdin_name);
             else if (v.term == &TermCtl::stdout_instance())
-                fmt::print(os, "term:stdout");
+                fmt::print(os, term_stdout_name);
             else if (v.term == &TermCtl::stderr_instance())
-                fmt::print(os, "term:stderr");
+                fmt::print(os, term_stderr_name);
             else
                 fmt::print(os, "term:{}", uintptr_t(v.term));
         },

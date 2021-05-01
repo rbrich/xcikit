@@ -605,6 +605,12 @@ static void open_file(Stack& stack, void*, void*)
 }
 
 
+static void internal_streams(Stack& stack, void*, void*)
+{
+    stack.push(value::Tuple{stack.get_stream_in(), stack.get_stream_out(), stack.get_stream_err()});
+}
+
+
 static void output_stream_enter1(Stack& stack, void*, void*)
 {
     auto out = stack.pull<value::Stream>();
@@ -647,9 +653,13 @@ static void output_stream_enter3(Stack& stack, void*, void*)
     auto in = stack.pull<value::Stream>();
     auto out = stack.pull<value::Stream>();
     auto err = stack.pull<value::Stream>();
-    stack.swap_stream_in(in);
-    stack.swap_stream_out(out);
-    stack.swap_stream_err(err);
+    // undef value can be passed via incomplete Streams struct - keep original stream
+    if (in.value())
+        stack.swap_stream_in(in);
+    if (out.value())
+        stack.swap_stream_out(out);
+    if (err.value())
+        stack.swap_stream_err(err);
     stack.push(value::Tuple{in, out, err});
 }
 
@@ -659,9 +669,13 @@ static void output_stream_leave3(Stack& stack, void*, void*)
     auto in = stack.pull<value::Stream>();
     auto out = stack.pull<value::Stream>();
     auto err = stack.pull<value::Stream>();
-    stack.swap_stream_in(in);
-    stack.swap_stream_out(out);
-    stack.swap_stream_err(err);
+    // undef on stack means the stream wasn't swapped - see above (enter3)
+    if (in.value())
+        stack.swap_stream_in(in);
+    if (out.value())
+        stack.swap_stream_out(out);
+    if (err.value())
+        stack.swap_stream_err(err);
     in.decref();
     out.decref();
     err.decref();
@@ -682,6 +696,7 @@ void BuiltinModule::add_io_functions()
     symtab().add({"stdin", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::default_stdin())})});
     symtab().add({"stdout", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::default_stdout())})});
     symtab().add({"stderr", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::default_stderr())})});
+    symtab().add({"null", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::null())})});
 
     // functions
     auto ps = add_native_function("write", {ti_string()}, ti_void(), write_string);
@@ -691,6 +706,7 @@ void BuiltinModule::add_io_functions()
     add_native_function("error", {ti_string()}, ti_void(), write_error);
     add_native_function("read", {ti_int32()}, ti_string(), read_string);
     add_native_function("open", {ti_string(), ti_string()}, ti_stream(), open_file);
+    add_native_function("__streams", {}, TypeInfo(streams), internal_streams);
 
     auto enter1 = add_native_function("enter", {ti_stream()}, ti_stream(), output_stream_enter1);
     auto leave1 = add_native_function("leave", {ti_stream()}, ti_void(), output_stream_leave1);

@@ -1,0 +1,29 @@
+:sectnums:
+:toc: macro
+ifdef::env-github[]
+:!toc-title:
+endif::[]
+
+= Fire Script Standard Library
+
+This is a placeholder for documenting contents of builtin and std modules.
+
+toc::[]
+
+== I/O streams
+
+=== tee
+
+Just an idea.
+
+[source,fire]
+----
+// Creates a new stream that forwards output to both streams from args
+tee : Stream Stream -> Stream
+
+with (tee (open "file.txt" "w") stderr) {
+    write "this goes to both stderr and file.txt"
+}
+----
+
+To implement the `tee` function, we'd need a callback variant of Stream value.

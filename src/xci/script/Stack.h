@@ -138,6 +138,10 @@ public:
     void swap_stream_out(value::Stream& out) { std::swap(m_streams.out, out); }
     void swap_stream_err(value::Stream& err) { std::swap(m_streams.err, err); }
 
+    const value::Stream& get_stream_in() { m_streams.in.incref(); return m_streams.in; }
+    const value::Stream& get_stream_out() { m_streams.out.incref(); return m_streams.out; }
+    const value::Stream& get_stream_err() { m_streams.err.incref(); return m_streams.err; }
+
     // ------------------------------------------------------------------------
 
     friend std::ostream& operator<<(std::ostream& os, const Stack& v);

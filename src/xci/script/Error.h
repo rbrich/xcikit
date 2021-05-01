@@ -220,12 +220,6 @@ struct IndexOutOfBounds : public ScriptError {
 };
 
 
-struct StructUnknownType : public ScriptError {
-    explicit StructUnknownType(const SourceLocation& loc)
-            : ScriptError(format("struct initializer of unknown type"), loc) {}
-};
-
-
 struct StructTypeMismatch : public ScriptError {
     explicit StructTypeMismatch(const TypeInfo& got, const SourceLocation& loc)
             : ScriptError(format("cannot cast a struct initializer to {}",

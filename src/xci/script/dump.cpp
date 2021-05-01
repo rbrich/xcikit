@@ -443,7 +443,9 @@ std::ostream& operator<<(std::ostream& os, const Function& v)
                   << put_indent << v.body
                   << less_indent;
     } else {
-        return os << "fun " << v.type << "{" << v.body << "}";
+        if (!v.type.params.empty() || v.type.result_type)
+            os << "fun " << v.type;
+        return os << "{" << v.body << "}";
     }
 }
 
