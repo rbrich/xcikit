@@ -16,6 +16,7 @@
 #include <range/v3/algorithm.hpp>
 
 #include <sstream>
+#include <unordered_set>
 
 namespace xci::script {
 
@@ -30,6 +31,10 @@ using ranges::any_of;
 using ranges::to;
 
 
+static bool match_type(const TypeInfo& inferred, const TypeInfo& actual);
+static bool match_struct(const TypeInfo& inferred, const TypeInfo& actual);
+
+
 class TypeCheckHelper {
 public:
     explicit TypeCheckHelper(TypeInfo&& spec) : m_specified_type(move(spec)) {}
@@ -40,8 +45,28 @@ public:
 
     void check(const TypeInfo& inferred, const SourceLocation& loc) const {
         const auto& specified = type();
-        if (specified && inferred != specified)
+        if (!specified)
+            return;
+        if (specified.is_struct() && inferred.is_struct()) {
+            if (!match_struct(inferred, specified))
+                throw StructTypeMismatch(specified, loc);
+            return;
+        }
+        if (inferred != specified)
             throw DefinitionTypeMismatch(specified, inferred, loc);
+    }
+
+    void check_struct_item(const std::string& key, const TypeInfo& inferred, const SourceLocation& loc) const {
+        assert(type().is_struct());
+        const auto& spec_items = type().struct_items();
+        auto spec_it = std::find_if(spec_items.begin(), spec_items.end(),
+            [&key](const TypeInfo::StructItem& spec) {
+              return spec.first == key;
+            });
+        if (spec_it == spec_items.end())
+            throw StructUnknownKey(type(), key, loc);
+        if (!match_type(inferred, spec_it->second))
+            throw StructKeyTypeMismatch(type(), spec_it->second, inferred, loc);
     }
 
     const TypeInfo& type() const { return m_specified_type; }
@@ -50,6 +75,42 @@ public:
 private:
     TypeInfo m_specified_type;
 };
+
+
+static bool match_type(const TypeInfo& inferred, const TypeInfo& actual)
+{
+    if (!actual)
+        return true;  // any inferred type matches Unknown type
+    if (actual.is_struct() && inferred.is_struct())
+        return match_struct(inferred, actual);
+    return inferred == actual;
+}
+
+
+/// Match incomplete Struct type from ast::StructInit to resolved Struct type.
+/// All keys and types from inferred are checked against resolved.
+/// Partial match is possible when inferred has less keys than resolved.
+/// \param inferred     Possibly incomplete Struct type as constructed from AST
+/// \param resolved     Actual resolved type for the value
+/// \returns true if fully or partially matched
+static bool match_struct(const TypeInfo& inferred, const TypeInfo& actual)
+{
+    assert(inferred.is_struct());
+    assert(actual.is_struct());
+    const auto& actual_items = actual.struct_items();
+    for (const auto& inf : inferred.struct_items()) {
+        auto act_it = std::find_if(actual_items.begin(), actual_items.end(),
+                [&inf](const TypeInfo::StructItem& act) {
+                  return act.first == inf.first;
+                });
+        if (act_it == actual_items.end())
+            return false;  // not found
+        // check item type
+        if (!match_type(TypeInfo(inf.second), act_it->second))
+            return false;  // item type doesn't match
+    }
+    return true;
+}
 
 
 class TypeCheckerVisitor final: public ast::Visitor {
@@ -199,43 +260,48 @@ public:
     }
 
     void visit(ast::StructInit& v) override {
-        // The target struct type must be specified or inferred from context
+        if (v.struct_type) {
+            // second pass (from ast::WithContext):
+            // * v.struct_type is the inferred type
+            // * m_type_info is final struct type
+            if (m_type_info.is_unknown())
+                throw StructUnknownType(v.source_loc);
+            if (m_type_info.type() != Type::Struct)
+                throw StructTypeMismatch(m_type_info, v.source_loc);
+            if (!match_struct(v.struct_type, m_type_info))
+                throw StructTypeMismatch(m_type_info, v.source_loc);
+            v.struct_type = move(m_type_info);
+            m_value_type = v.struct_type;
+            return;
+        }
+        // first pass - resolve incomplete struct type
+        //              and check it matches specified type (if any)
         TypeCheckHelper type_check(move(m_type_info), move(m_cast_type));
-        auto struct_type = move(type_check.type());
-        if (struct_type.type() != Type::Struct)
-            throw StructTypeMismatch(struct_type, v.source_loc);
-
-        // reorder and check items to match the struct type, fill in the defaults
-        decltype(v.items) reordered;
-        for (const auto& ti : struct_type.struct_items()) {
-            // lookup the name in StructInit
-            auto it = std::find_if(v.items.begin(), v.items.end(),
-                [&ti](const ast::StructInit::Item& item) {
-                    return item.first.name == ti.first;
-                });
-            if (it == v.items.end()) {
-                // not found - use the default
-                reordered.emplace_back(ti.first, std::make_unique<ast::Literal>(TypedValue(ti.second)));
-                continue;
-            }
-            // check item type
-            TypeCheckHelper item_type_check(TypeInfo(ti.second));
-            it->second->apply(*this);
-            item_type_check.check(m_value_type, it->second->source_loc);
-            // move to reordered items
-            reordered.push_back(std::move(*it));
-            v.items.erase(it);
+        const auto& specified = type_check.type();
+        if (specified && specified.type() != Type::Struct)
+            throw StructTypeMismatch(specified, v.source_loc);
+        // build TypeInfo for the struct initializer
+        TypeInfo::StructItems ti_items;
+        ti_items.reserve(v.items.size());
+        std::unordered_set<std::string> keys;
+        for (auto& item : v.items) {
+            // check the key is not duplicate
+            auto [_, ok] = keys.insert(item.first.name);
+            if (!ok)
+                throw StructDuplicateKey(item.first.name, item.second->source_loc);
+            // resolve item type
+            item.second->apply(*this);
+            auto item_type = m_value_type.effective_type();
+            if (specified)
+                type_check.check_struct_item(item.first.name, item_type, item.second->source_loc);
+            ti_items.emplace_back(item.first.name, item_type);
         }
-
-        // check that no unknown items aren't left
-        if (!v.items.empty()) {
-            const auto& key = v.items.front().first;
-            throw UnknownStructKey(struct_type, key.name, key.source_loc);
+        v.struct_type = TypeInfo(move(ti_items));
+        if (specified) {
+            assert(match_struct(v.struct_type, specified));  // already checked above
+            v.struct_type = std::move(type_check.type());
         }
-
-        // pass the results
-        v.items = std::move(reordered);
-        m_value_type = move(struct_type);
+        m_value_type = v.struct_type;
     }
 
     void visit(ast::Reference& v) override {
@@ -567,15 +633,22 @@ public:
     }
 
     void visit(ast::WithContext& v) override {
-        // resolve type of context
+        // resolve type of context (StructInit leads to incomplete struct type)
         v.context->apply(*this);
         // lookup the enter function with the resolved context type
         m_call_args.push_back({m_value_type, v.context->source_loc});
         m_call_ret = ti_unknown();
         v.enter_function.apply(*this);
         m_call_args.clear();
+        assert(m_value_type.is_callable());
+        auto enter_sig = m_value_type.signature();
+        // re-resolve type of context (match actual struct type as found by resolving `with` function)
+        m_type_info = enter_sig.params[0];
+        m_cast_type = {};
+        v.context->apply(*this);
+        assert(m_value_type == m_type_info);
         // lookup the leave function, it's arg type is same as enter functions return type
-        v.leave_type = m_value_type.signature().return_type.effective_type();
+        v.leave_type = enter_sig.return_type.effective_type();
         m_call_args.push_back({v.leave_type, v.context->source_loc});
         m_call_ret = ti_void();
         v.leave_function.apply(*this);
@@ -820,7 +893,7 @@ private:
                 }
             }
             // check type of next param
-            if (sig->params[0] != arg.type_info) {
+            if (!match_type(arg.type_info, sig->params[0])) {
                 return Match::None;
             }
             // consume next param

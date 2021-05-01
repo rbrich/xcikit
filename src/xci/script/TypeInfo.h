@@ -111,6 +111,7 @@ public:
     bool is_callable() const { return m_type == Type::Function; }
     bool is_unknown() const { return m_type == Type::Unknown; }
     bool is_void() const { return m_type == Type::Void; }
+    bool is_struct() const { return m_type == Type::Struct; }
 
     void replace_var(uint8_t idx, const TypeInfo& ti);
 

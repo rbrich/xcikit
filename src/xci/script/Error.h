@@ -220,6 +220,12 @@ struct IndexOutOfBounds : public ScriptError {
 };
 
 
+struct StructUnknownType : public ScriptError {
+    explicit StructUnknownType(const SourceLocation& loc)
+            : ScriptError(format("struct initializer of unknown type"), loc) {}
+};
+
+
 struct StructTypeMismatch : public ScriptError {
     explicit StructTypeMismatch(const TypeInfo& got, const SourceLocation& loc)
             : ScriptError(format("cannot cast a struct initializer to {}",
@@ -227,10 +233,23 @@ struct StructTypeMismatch : public ScriptError {
 };
 
 
-struct UnknownStructKey : public ScriptError {
-    explicit UnknownStructKey(const TypeInfo& struct_type, const std::string& key, const SourceLocation& loc)
+struct StructUnknownKey : public ScriptError {
+    explicit StructUnknownKey(const TypeInfo& struct_type, const std::string& key, const SourceLocation& loc)
             : ScriptError(format("struct key \"{}\" doesn't match struct type {}",
             key, struct_type), loc) {}
+};
+
+
+struct StructDuplicateKey : public ScriptError {
+    explicit StructDuplicateKey(const std::string& key, const SourceLocation& loc)
+            : ScriptError(format("duplicate struct key \"{}\"", key), loc) {}
+};
+
+
+struct StructKeyTypeMismatch : public ScriptError {
+    explicit StructKeyTypeMismatch(const TypeInfo& struct_type, const TypeInfo& spec, const TypeInfo& got, const SourceLocation& loc)
+            : ScriptError(format("struct item type mismatch: specified {} in {}, inferred {}",
+            spec, struct_type, got), loc) {}
 };
 
 

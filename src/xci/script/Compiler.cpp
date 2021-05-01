@@ -131,9 +131,24 @@ public:
     }
 
     void visit(ast::StructInit& v) override {
-        // build struct on stack (it's already ordered, with defaults filled in)
-        for (auto& item : reverse(v.items)) {
-            item.second->apply(*this);
+        // build struct on stack according to struct_type, fill in defaults
+        for (const auto& ti : v.struct_type.struct_items()) {
+            // lookup the name in StructInit
+            auto it = std::find_if(v.items.begin(), v.items.end(),
+                [&ti](const ast::StructInit::Item& item) {
+                  return item.first.name == ti.first;
+                });
+            if (it == v.items.end()) {
+                // not found - use the default
+                if (ti.second.is_void())
+                    return;  // Void value
+                // add to static values
+                auto idx = module().add_value(TypedValue(ti.second));
+                // LOAD_STATIC <static_idx>
+                code().add_opcode(Opcode::LoadStatic, idx);
+                continue;
+            }
+            it->second->apply(*this);
         }
     }
 

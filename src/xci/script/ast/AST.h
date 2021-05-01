@@ -352,7 +352,7 @@ struct StructInit: public Expression {
     std::vector<Item> items;
 
     // resolved:
-    TypeInfo struct_type;
+    TypeInfo struct_type;  // used by Compiler to produce tuple in struct order, with defaults filled in
 };
 
 // variable reference

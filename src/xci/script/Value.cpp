@@ -437,7 +437,8 @@ StreamV::StreamV(const Stream& v)
 Stream StreamV::value() const
 {
     Stream v;
-    v.raw_read(slot.data());
+    if (slot)
+        v.raw_read(slot.data());
     return v;
 }
 

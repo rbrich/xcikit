@@ -98,7 +98,7 @@ std::string Stream::read(size_t n)
 
 size_t Stream::raw_read(const byte* buffer)
 {
-    uint8_t idx = uint8_t(m_handle.index());
+    auto idx = uint8_t(m_handle.index());
     std::memcpy(&idx, buffer, sizeof(idx));
     buffer += sizeof(idx);
     switch (idx) {
@@ -157,7 +157,7 @@ size_t Stream::raw_write(byte* buffer) const
 std::ostream& operator<<(std::ostream& os, const Stream& v)
 {
     std::visit(overloaded {
-        [](const Stream::NullStream&) {},
+        [&os](const Stream::NullStream&) { os << "null"; },
         [&os](const Stream::CFileRef& v) {
             if (v.file == stdin)
                 fmt::print(os, "fileref:stdin");
