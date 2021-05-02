@@ -44,10 +44,12 @@ using ValueType = xci::script::Type;
 
 struct Keyword;
 struct ExprCond;
+struct ExprWith;
 struct Statement;
 struct ExprArgSafe;
 struct ExprOperand;
 struct ExprCallable;
+struct ExprStruct;
 struct Type;
 struct UnsafeType;
 
@@ -134,7 +136,7 @@ template<class S> struct ExprInfixRight: seq< sor< DotCall<S>, seq<InfixOperator
 template<class S> struct TrailingComma: opt<S, one<','>> {};
 template<class S> struct ExprInfix: seq< ExprOperand, S, opt<ExprInfixRight<S>>, TrailingComma<S> > {};
 template<> struct ExprInfix<SC>: seq< ExprOperand, sor< seq<NSC, at< one<'.'> > >, SC>, opt<ExprInfixRight<SC>>, TrailingComma<SC> > {};  // specialization to allow newline before dotcall even outside brackets
-template<class S> struct Expression: sor< ExprCond, ExprInfix<S> > {};
+template<class S> struct Expression: sor< ExprCond, ExprWith, ExprStruct, ExprInfix<S> > {};
 struct Variable: seq< Identifier, opt<SC, one<':'>, SC, must<UnsafeType> > > {};
 struct Block: if_must< one<'{'>, NSC, sor< one<'}'>, seq<SepList<Statement>, NSC, one<'}'>> > > {};
 struct Function: sor< Block, if_must< KeywordFun, NSC, FunctionDecl, NSC, Block> > {};
@@ -148,6 +150,9 @@ struct ExprArgSafe: seq< sor< BracketedExpr, List, Function, Literal, Reference 
 struct Call: seq< ExprCallable, plus<RS, SC, ExprArgSafe> > {};
 struct ExprOperand: sor<Call, ExprArgSafe, ExprPrefix> {};
 struct ExprCond: if_must< KeywordIf, NSC, ExprInfix<NSC>, NSC, KeywordThen, NSC, Expression<SC>, NSC, KeywordElse, NSC, Expression<SC>> {};
+struct ExprWith: if_must< KeywordWith, NSC, ExprArgSafe, NSC, Expression<SC> > {};  // might be parsed as a function, but that wouldn't allow newlines
+struct ExprStructItem: seq< Identifier, SC, one<'='>, not_at<one<'='>>, SC, must<ExprArgSafe> > {};
+struct ExprStruct: seq< ExprStructItem, star< SC, one<','>, SC, must<ExprStructItem> > > {};
 
 // Statements
 struct Definition: seq< Variable, SC, seq<one<'='>, not_at<one<'='>>, NSC, must<Expression<SC>>> > {};  // must not match `var == ...`
@@ -226,7 +231,7 @@ template<class S>
 struct Action<Expression<S>> : change_states< std::unique_ptr<ast::Expression> > {
     template<typename Input>
     static void apply(const Input &in, std::unique_ptr<ast::Expression>& expr) {
-        expr->source_info.load(in.input(), in.position());
+        expr->source_loc.load(in.input(), in.position());
     }
 
     template<typename Input>
@@ -258,6 +263,12 @@ struct Action<Expression<S>> : change_states< std::unique_ptr<ast::Expression> >
     static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Bracketed& bracketed) {
         bracketed.expression = std::move(expr);
     }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::WithContext& with) {
+        assert(!with.expression);
+        with.expression = std::move(expr);
+    }
 };
 
 
@@ -274,7 +285,7 @@ template<>
 struct Action<ExprPrefix> : change_states< ast::OpCall > {
     template<typename Input>
     static void apply(const Input &in, ast::OpCall& opc) {
-        opc.source_info.load(in.input(), in.position());
+        opc.source_loc.load(in.input(), in.position());
     }
 
     template<typename Input>
@@ -309,7 +320,7 @@ template<class S>
 struct Action<ExprInfixRight<S>> : change_states< ast::OpCall > {
     template<typename Input>
     static void apply(const Input &in, ast::OpCall& opc) {
-        opc.source_info.load(in.input(), in.position());
+        opc.source_loc.load(in.input(), in.position());
     }
 
     template<typename Input>
@@ -324,7 +335,7 @@ struct Action<ExprInfixRight<S>> : change_states< ast::OpCall > {
                 std::make_move_iterator(right.args.end())
             );
             left.right_tmp = std::move(right.right_tmp);
-            left.source_info = right.source_info;
+            left.source_loc = right.source_loc;
             while (left.right_tmp) {
                 auto expr_tmp = std::make_unique<ast::OpCall>(std::move(left));
                 left = std::move(*expr_tmp->right_tmp);
@@ -361,7 +372,7 @@ template<class S>
 struct Action<ExprInfix<S>> : change_states< ast::OpCall > {
     template<typename Input>
     static void apply(const Input &in, ast::OpCall& opc) {
-        opc.source_info.load(in.input(), in.position());
+        opc.source_loc.load(in.input(), in.position());
     }
 
     template<typename Input>
@@ -386,7 +397,7 @@ private:
             assert(!opc.right_tmp);
             assert(opc.args.size() == 1);
             auto& expr = opc.args.front();
-            expr->source_info = opc.source_info;
+            expr->source_loc = opc.source_loc;
             return move(expr);
         } else {
             return std::make_unique<ast::OpCall>(std::move(opc));
@@ -399,7 +410,7 @@ template<>
 struct Action<ExprCond> : change_states< ast::Condition > {
     template<typename Input>
     static void apply(const Input &in, ast::Condition& cnd) {
-        cnd.source_info.load(in.input(), in.position());
+        cnd.source_loc.load(in.input(), in.position());
     }
 
     template<typename Input>
@@ -410,10 +421,38 @@ struct Action<ExprCond> : change_states< ast::Condition > {
 
 
 template<>
+struct Action<ExprWith> : change_states< ast::WithContext > {
+    template<typename Input>
+    static void apply(const Input &in, ast::WithContext& with) {
+        with.source_loc.load(in.input(), in.position());
+    }
+
+    template<typename Input>
+    static void success(const Input &in, ast::WithContext& with, std::unique_ptr<ast::Expression>& expr) {
+        expr = std::make_unique<ast::WithContext>(std::move(with));
+    }
+};
+
+
+template<>
+struct Action<ExprStruct> : change_states< ast::StructInit > {
+    template<typename Input>
+    static void apply(const Input &in, ast::StructInit& node) {
+        node.source_loc.load(in.input(), in.position());
+    }
+
+    template<typename Input>
+    static void success(const Input &in, ast::StructInit& node, std::unique_ptr<ast::Expression>& expr) {
+        expr = std::make_unique<ast::StructInit>(std::move(node));
+    }
+};
+
+
+template<>
 struct Action<BracketedExpr> : change_states< ast::Bracketed > {
     template<typename Input>
     static void apply(const Input &in, ast::Bracketed& bracketed) {
-        bracketed.source_info.load(in.input(), in.position());
+        bracketed.source_loc.load(in.input(), in.position());
     }
 
     template<typename Input>
@@ -427,7 +466,7 @@ template<>
 struct Action<List> : change_states< ast::List > {
     template<typename Input>
     static void apply(const Input &in, ast::List& lst) {
-        lst.source_info.load(in.input(), in.position());
+        lst.source_loc.load(in.input(), in.position());
     }
 
     template<typename Input>
@@ -441,7 +480,7 @@ template<>
 struct Action<ExprCallable> : change_states< std::unique_ptr<ast::Expression> > {
     template<typename Input>
     static void apply(const Input &in, std::unique_ptr<ast::Expression>& expr) {
-        expr->source_info.load(in.input(), in.position());
+        expr->source_loc.load(in.input(), in.position());
     }
 
     template<typename Input>
@@ -455,7 +494,7 @@ template<>
 struct Action<ExprArgSafe> : change_states< std::unique_ptr<ast::Expression> > {
     template<typename Input>
     static void apply(const Input &in, std::unique_ptr<ast::Expression>& expr) {
-        expr->source_info.load(in.input(), in.position());
+        expr->source_loc.load(in.input(), in.position());
     }
 
     template<typename Input>
@@ -467,6 +506,17 @@ struct Action<ExprArgSafe> : change_states< std::unique_ptr<ast::Expression> > {
     static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::OpCall& opc) {
         opc.args.push_back(std::move(expr));
     }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::WithContext& with) {
+        assert(!with.context);
+        with.context = std::move(expr);
+    }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::StructInit& node) {
+        node.items.back().second = std::move(expr);
+    }
 };
 
 
@@ -474,7 +524,7 @@ template<>
 struct Action<Reference> : change_states< ast::Reference > {
     template<typename Input>
     static void apply(const Input &in, ast::Reference& ref) {
-        ref.source_info.load(in.input(), in.position());
+        ref.source_loc.load(in.input(), in.position());
     }
 
     template<typename Input>
@@ -488,7 +538,7 @@ template<>
 struct Action<Call> : change_states< ast::Call > {
     template<typename Input>
     static void apply(const Input &in, ast::Call& call) {
-        call.source_info.load(in.input(), in.position());
+        call.source_loc.load(in.input(), in.position());
     }
 
     template<typename Input>
@@ -514,7 +564,7 @@ template<class S>
 struct Action<DotCall<S>> : change_states< ast::Call > {
     template<typename Input>
     static void apply(const Input &in, ast::Call& call) {
-        call.source_info.load(in.input(), in.position());
+        call.source_loc.load(in.input(), in.position());
     }
 
     template<typename Input>
@@ -542,6 +592,13 @@ struct Action<Identifier> {
     static void apply(const Input &in, ast::Reference& ref) {
         ref.identifier.name = in.string();
     }
+
+    template<typename Input>
+    static void apply(const Input &in, ast::StructInit& node) {
+        ast::Key key(in.string());
+        key.source_loc.load(in.input(), in.position());
+        node.items.emplace_back(std::move(key), std::unique_ptr<ast::Expression>{});
+    }
 };
 
 
@@ -549,7 +606,7 @@ template<>
 struct Action<Function> : change_states< std::unique_ptr<ast::Function> > {
     template<typename Input>
     static void apply(const Input &in, std::unique_ptr<ast::Function>& fn) {
-        fn->source_info.load(in.input(), in.position());
+        fn->source_loc.load(in.input(), in.position());
     }
 
     template<typename Input>
@@ -576,7 +633,7 @@ struct Action<TypeName> {
     template<typename Input>
     static void apply(const Input &in, std::unique_ptr<ast::Type>& type) {
         type = std::make_unique<ast::TypeName>(in.string());
-        type->source_info.load(in.input(), in.position());
+        type->source_loc.load(in.input(), in.position());
     }
 
     template<typename Input>
@@ -616,7 +673,7 @@ template<>
 struct Action<ListType> : change_states< ast::ListType > {
     template<typename Input>
     static void apply(const Input &in, ast::ListType& ltype) {
-        ltype.source_info.load(in.input(), in.position());
+        ltype.source_loc.load(in.input(), in.position());
     }
 
     template<typename Input>
@@ -630,7 +687,7 @@ template<>
 struct Action<TupleType> : change_states< ast::TupleType > {
     template<typename Input>
     static void apply(const Input &in, ast::TupleType& ltype) {
-        ltype.source_info.load(in.input(), in.position());
+        ltype.source_loc.load(in.input(), in.position());
     }
 
     template<typename Input>
@@ -663,7 +720,7 @@ template<>
 struct Action<FunctionType> : change_states< ast::FunctionType > {
     template<typename Input>
     static void apply(const Input &in, ast::FunctionType& ftype) {
-        ftype.source_info.load(in.input(), in.position());
+        ftype.source_loc.load(in.input(), in.position());
     }
 
     template<typename Input>
@@ -677,7 +734,7 @@ template<>
 struct Action<Type> : change_states< std::unique_ptr<ast::Type> >  {
     template<typename Input>
     static void apply(const Input &in, std::unique_ptr<ast::Type>& type) {
-        type->source_info.load(in.input(), in.position());
+        type->source_loc.load(in.input(), in.position());
     }
 
     template<typename Input>
@@ -715,7 +772,7 @@ template<>
 struct Action<UnsafeType> : change_states< std::unique_ptr<ast::Type> >  {
     template<typename Input>
     static void apply(const Input &in, std::unique_ptr<ast::Type>& type) {
-        type->source_info.load(in.input(), in.position());
+        type->source_loc.load(in.input(), in.position());
     }
 
     template<typename Input>
@@ -1157,26 +1214,29 @@ const std::string Control< T >::errmsg = "parse error matching " + std::string(t
 } // namespace parser
 
 
-void Parser::parse(std::string_view input, ast::Module& mod)
+void Parser::parse(SourceId src_id, ast::Module& mod)
 {
     using parser::Module;
     using parser::Action;
     using parser::Control;
 
+    const auto& src = m_source_manager.get_source(src_id);
+
     tao::pegtl::memory_input<
         tao::pegtl::tracking_mode::eager,
         tao::pegtl::eol::lf_crlf,
-        const char*>  // pass source filename as non-owning char*
-    in(input.data(), input.size(), "<input>");
+        SourceRef>
+    //SourceRef{m_source_manager, src_id}
+    in(src.data(), src.size(), SourceRef{m_source_manager, src_id});
 
     try {
         if (!tao::pegtl::parse< Module, Action, Control >( in, mod ))
             throw ParseError("input not matched");
         mod.body.finish();
     } catch (tao::pegtl::parse_error& e) {
-        SourceInfo si;
-        si.load(in, e.positions().front());
-        throw ParseError(e.message(), si);
+        SourceLocation loc;
+        loc.load(in, e.positions().front());
+        throw ParseError(e.message(), loc);
     } catch( const std::exception& e ) {
         throw ParseError(e.what());
     }

@@ -23,7 +23,6 @@ tools:
 build/ci:
   - ./*.sh
   - conanfile.py
-  - conan/**/*
   - xcikitConfig.cmake.in
   - Dockerfile
   - docker/**/*

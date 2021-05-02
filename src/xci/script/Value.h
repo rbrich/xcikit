@@ -9,6 +9,7 @@
 
 #include "TypeInfo.h"
 #include "Heap.h"
+#include "Stream.h"
 
 #include <ostream>
 #include <utility>
@@ -17,7 +18,6 @@
 #include <string_view>
 #include <span>
 #include <variant>
-#include <cassert>
 #include <cstring>
 #include <cstdint>
 #include <cstddef>  // byte
@@ -68,6 +68,7 @@ public:
     virtual void visit(const TupleV&) = 0;
     virtual void visit(const ClosureV&) = 0;
     virtual void visit(const script::Module*) = 0;
+    virtual void visit(const script::Stream&) = 0;
 };
 
 class PartialVisitor : public Visitor {
@@ -84,12 +85,14 @@ class PartialVisitor : public Visitor {
     void visit(const TupleV&) override {}
     void visit(const ClosureV&) override {}
     void visit(const script::Module*) override {}
+    void visit(const script::Stream&) override {}
 };
 
 } // namespace value
 
 
 struct StringV {
+    StringV() = default;
     explicit StringV(std::string_view v);
     bool operator ==(const StringV& rhs) const { return value() == rhs.value(); }
     std::string_view value() const;
@@ -99,11 +102,12 @@ struct StringV {
 
 
 struct ListV {
-    explicit ListV(size_t length, TypeInfo elem_type);
+    ListV() = default;
+    explicit ListV(size_t length, const TypeInfo& elem_type);
     explicit ListV(HeapSlot&& slot) : slot(move(slot)) {}
     bool operator ==(const ListV& rhs) const { return slot.slot() == rhs.slot.slot(); }  // same slot - cannot compare content without elem_type
     size_t length() const;
-    Value value_at(size_t idx, TypeInfo elem_type) const;
+    Value value_at(size_t idx, const TypeInfo& elem_type) const;
 
     HeapSlot slot;
 };
@@ -113,7 +117,7 @@ struct TupleV {
     TupleV(const TupleV& other);
     TupleV& operator =(const TupleV& other);
 
-    explicit TupleV(const Values& vs);
+    explicit TupleV(Values&& vs);
     explicit TupleV(const TypeInfo::Subtypes& subtypes);
     bool operator ==(const TupleV& rhs) const { return values == rhs.values; }
 
@@ -127,7 +131,7 @@ struct TupleV {
 
 
 struct ClosureV {
-    explicit ClosureV();
+    explicit ClosureV() = default;
     explicit ClosureV(const Function& fn);
     explicit ClosureV(const Function& fn, Values&& values);
     bool operator ==(const ClosureV& rhs) const { return slot.slot() == rhs.slot.slot(); }  // same slot - cannot compare content without elem_type
@@ -139,10 +143,23 @@ struct ClosureV {
 };
 
 
+struct StreamV {
+    StreamV() = default;
+    explicit StreamV(const Stream& v);
+
+    bool operator ==(const StreamV& rhs) const { return value() == rhs.value(); }
+    Stream value() const;
+
+    HeapSlot slot;
+};
+
+
 class Value {
 public:
+    struct StringTag {};
     struct ListTag {};
     struct ClosureTag {};
+    struct StreamTag {};
     struct ModuleTag {};
 
     Value() = default;  // Void
@@ -153,14 +170,18 @@ public:
     explicit Value(int64_t v) : m_value(v) {}  // Int64
     explicit Value(float v) : m_value(v) {}  // Float32
     explicit Value(double v) : m_value(v) {}  // Float64
+    explicit Value(StringTag) : m_value(StringV{}) {}  // String
     explicit Value(std::string_view v) : m_value(StringV{v}) {}  // String
-    explicit Value(size_t length, TypeInfo elem_type) : m_value(ListV{length, elem_type}) {}  // List
+    explicit Value(ListTag) : m_value(ListV{}) {}  // List
+    explicit Value(size_t length, const TypeInfo& elem_type) : m_value(ListV{length, elem_type}) {}  // List
     explicit Value(ListTag, HeapSlot&& slot) : m_value(ListV{move(slot)}) {}  // List
     explicit Value(const TypeInfo::Subtypes& subtypes) : m_value(TupleV{subtypes}) {}  // Tuple
-    explicit Value(const Values& values) : m_value(TupleV{values}) {}  // Tuple
+    explicit Value(Values&& values) : m_value(TupleV{move(values)}) {}  // Tuple
     explicit Value(ClosureTag) : m_value(ClosureV{}) {}  // Closure
     explicit Value(const Function& fn) : m_value(ClosureV{fn}) {}  // Closure
     explicit Value(const Function& fn, Values&& values) : m_value(ClosureV{fn, move(values)}) {}  // Closure
+    explicit Value(StreamTag) : m_value(StreamV{}) {}  // Stream
+    explicit Value(const script::Stream& v) : m_value(StreamV{v}) {}  // Stream
     explicit Value(ModuleTag) : m_value((script::Module*) nullptr) {}  // Module
     explicit Value(script::Module& v) : m_value(&v) {}  // Module
 
@@ -205,7 +226,7 @@ protected:
     using ValueVariant = std::variant<
             std::monostate,
             bool, byte, char32_t, int32_t, int64_t, float, double,
-            StringV, ListV, TupleV, ClosureV,
+            StringV, ListV, TupleV, ClosureV, StreamV,
             script::Module*
         >;
     ValueVariant m_value;
@@ -231,6 +252,9 @@ concept ValueT = requires(const T& v) {
 
 class Values {
 public:
+    Values() = default;
+    explicit Values(std::initializer_list<Value> values) : m_items(values) {}
+
     // reserve number of values
     void reserve(size_t n) { m_items.reserve(n); }
     // get number of values
@@ -266,9 +290,8 @@ public:
 
     template <ValueWithTypeInfo T> explicit TypedValue(const T& v) : m_value(v), m_type_info(v.type_info()) {}
 
-    TypedValue(TypeInfo&& type_info) : m_value(create_value(type_info)), m_type_info(move(type_info)) {}
-    TypedValue(Value value, TypeInfo type_info)
-            : m_value(move(value)), m_type_info(move(type_info)) { assert(m_value.type() == m_type_info.type()); }
+    TypedValue(TypeInfo type_info) : m_value(create_value(type_info)), m_type_info(move(type_info)) {}
+    TypedValue(Value value, TypeInfo type_info);
 
     bool operator ==(const TypedValue& rhs) const { return m_value == rhs.m_value; }
 
@@ -373,7 +396,7 @@ class Int32: public Value {
 public:
     Int32() : Value(int32_t(0)) {}
     explicit Int32(int32_t v) : Value(v) {}
-    TypeInfo type_info() const { return TypeInfo{Type::Int32}; }
+    TypeInfo type_info() const { return ti_int32(); }
     int32_t value() const { return std::get<int32_t>(m_value); }
     void set_value(int32_t v) { m_value = v; }
 };
@@ -423,7 +446,7 @@ public:
 
 class String: public Value {
 public:
-    String() : Value(std::string_view{}) {}
+    String() : Value(Value::StringTag{}) {}
     explicit String(std::string_view v) : Value(v) {}
     TypeInfo type_info() const { return TypeInfo{Type::String}; }
     std::string_view value() const { return get_string(); }
@@ -433,23 +456,23 @@ public:
 
 class List: public Value {
 public:
-    List() : Value(0, TypeInfo{Type::Void}) {}
-    List(size_t length, TypeInfo elem_type) : Value(length, elem_type) {}
-    List(HeapSlot&& slot) : Value(Value::ListTag{}, move(slot)) {}
+    List() : Value(Value::ListTag{}) {}
+    List(size_t length, const TypeInfo& elem_type) : Value(length, elem_type) {}
+    explicit List(HeapSlot&& slot) : Value(Value::ListTag{}, move(slot)) {}
 
     size_t length() const { return get<ListV>().length(); }
-    Value value_at(size_t idx, TypeInfo elem_type) const { return get<ListV>().value_at(idx, elem_type); }
-    TypedValue typed_value_at(size_t idx, TypeInfo elem_type) const { return {value_at(idx, elem_type), elem_type}; }
+    Value value_at(size_t idx, const TypeInfo& elem_type) const { return get<ListV>().value_at(idx, elem_type); }
+    TypedValue typed_value_at(size_t idx, const TypeInfo& elem_type) const { return {value_at(idx, elem_type), elem_type}; }
 };
 
 
 // [Bytes] has some special handling, e.g. it's dumped as b"abc", not [1,2,3]
 class Bytes: public List {
 public:
-    Bytes() : List(0, TypeInfo{Type::Byte}) {}
+    Bytes() = default;
     explicit Bytes(std::span<const byte> v);
 
-    TypeInfo type_info() const { return TypeInfo{Type::List, TypeInfo(Type::Byte)}; }
+    TypeInfo type_info() const { return ti_bytes(); }
 
     std::span<const byte> value() const { return {heapslot()->data() + sizeof(uint32_t), length()}; }
 };
@@ -457,9 +480,7 @@ public:
 
 class Int32List: public List {
 public:
-    Int32List() : List(0, TypeInfo{Type::Int32}) {}
-
-    TypeInfo type_info() const { return TypeInfo{Type::List, TypeInfo(Type::Int32)}; }
+    TypeInfo type_info() const { return ti_list(ti_int32()); }
 };
 
 
@@ -467,7 +488,8 @@ public:
 class Tuple: public Value {
 public:
     Tuple() : Value(Values{}) {}
-    explicit Tuple(const Values& values) : Value(values) {}
+    Tuple(std::initializer_list<Value> values) : Value(Values{values}) {}
+    explicit Tuple(Values&& values) : Value(move(values)) {}
     explicit Tuple(const TypeInfo::Subtypes& subtypes) : Value(subtypes) {}
 
     bool empty() const { return get<TupleV>().empty(); }
@@ -488,12 +510,21 @@ public:
 };
 
 
+class Stream: public Value {
+public:
+    Stream() : Value(Value::StreamTag{}) {}
+    explicit Stream(const script::Stream& v) : Value(v) {}
+    TypeInfo type_info() const { return TypeInfo{Type::Stream}; }
+
+    script::Stream value() const { return get<StreamV>().value(); }
+};
+
+
 class Module: public Value {
 public:
     Module() : Value(Value::ModuleTag{}) {}
     explicit Module(script::Module& v) : Value(v) {}
 };
-
 
 } // namespace value
 

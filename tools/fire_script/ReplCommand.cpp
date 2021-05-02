@@ -274,4 +274,10 @@ ReplCommand::ReplCommand(Context& ctx) : m_ctx(ctx)
 }
 
 
+void ReplCommand::eval(std::string_view input)
+{
+    m_interpreter.eval(std::string(input));
+}
+
+
 }  // namespace xci::script::tool

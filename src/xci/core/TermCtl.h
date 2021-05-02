@@ -113,7 +113,8 @@ public:
 
     /// Returns cursor position (row, col), 0-based
     /// On failure, returns (-1, -1)
-    std::pair<int, int> get_cursor_position();
+    /// \param tin          TermCtl which is connected to the response channel
+    std::pair<int, int> get_cursor_position(TermCtl& tin = stdin_instance());
 
     // clear screen content
     TermCtl clear_screen_down() const;
@@ -215,7 +216,8 @@ public:
     /// This function makes sure the cursor is at line beginning (col 0).
     /// When the last output didn't end with a newline,
     /// it prints a "missing newline" marker (⏎) and adds the newline.
-    void sanitize_newline();
+    /// \param tin          TermCtl which is connected to the response channel
+    void sanitize_newline(TermCtl& tin = stdin_instance());
 
     /// Compute number of columns required to print the string `s`.
     /// Control sequences and invisible characters are stripped,
@@ -237,9 +239,9 @@ public:
     std::string raw_input(bool isig = false);
 
     /// Query terminal
-    /// Send request, read response from `in`.
+    /// Send request, read response from `tin`.
     /// \param request      a control sequence to send as a request
-    /// \param in           TermCtl which is connected to the response channel
+    /// \param tin          TermCtl which is connected to the response channel
     /// \returns            raw response from the terminal
     std::string query(std::string_view request, TermCtl& tin = stdin_instance());
 
@@ -332,7 +334,10 @@ private:
         CopyOk,     // a copy created by chained method
     };
     State m_state : 7 = State::NoTTY;
+
+#ifdef __EMSCRIPTEN__
     bool m_at_newline : 1 = true;
+#endif
 
 #ifdef _WIN32
     unsigned long m_orig_mode = 0;  // original console mode of the handle

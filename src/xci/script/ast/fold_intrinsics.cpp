@@ -29,16 +29,16 @@ public:
             return;
         struct ValueVisitor: public value::PartialVisitor {
             uint8_t & val;
-            const SourceInfo& si;
-            explicit ValueVisitor(uint8_t& val, const SourceInfo& si) : val(val), si(si) {}
+            const SourceLocation& loc;
+            explicit ValueVisitor(uint8_t& val, const SourceLocation& si) : val(val), loc(si) {}
             void visit(std::byte v) override { val = uint8_t(v); }
             void visit(int32_t v) override {
                 if (v < 0 || v > 255)
-                    throw IntrinsicsFunctionError("arg value out of Byte range: " + std::to_string(v), si);
+                    throw IntrinsicsFunctionError("arg value out of Byte range: " + std::to_string(v), loc);
                 val = (uint8_t) v;
             }
         };
-        ValueVisitor visitor(m_arg_value, v.source_info);
+        ValueVisitor visitor(m_arg_value, v.source_loc);
         v.value.apply(visitor);
     }
 
@@ -69,6 +69,12 @@ public:
         reset();
     }
 
+    void visit(ast::WithContext& v) override {
+        v.context->apply(*this);
+        v.expression->apply(*this);
+        reset();
+    }
+
     void visit(ast::Function& v) override {
         for (const auto& stmt : v.body.statements) {
             stmt->apply(*this);
@@ -81,6 +87,7 @@ public:
 
     void visit(ast::List& v) override {}
     void visit(ast::Tuple& v) override {}
+    void visit(ast::StructInit& v) override {}
 
     void visit(ast::Cast& v) override {
         v.expression->apply(*this);

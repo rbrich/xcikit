@@ -1,11 +1,20 @@
 # Full list: https://clang.llvm.org/extra/clang-tidy/
 # Disabled because...
+# * clang-analyzer-security.insecureAPI.bzero -- bzero is used internally by system macros (e.g. FD_ZERO)
 # * readability-container-size-empty -- in Catch2 tests, comparing with empty string produces better failed test message
+# * readability-qualified-auto -- wants to auto `const auto*` for `std::string_view::iterator` on Clang => that would be unportable
 Checks: >
   bugprone-*,
   -bugprone-branch-clone,
+  -bugprone-sizeof-expression,
   clang-analyzer-*,
+  -clang-analyzer-security.insecureAPI.bzero,
   clang-diagnostic-*,
+  concurrency-*,
+  google-default-arguments,
+  google-global-names-in-headers,
+  google-runtime-operator,
+  llvm-namespace-comment,
   misc-*,
   -misc-unused-parameters,
   -misc-non-private-member-variables-in-classes,
@@ -29,18 +38,5 @@ Checks: >
   -readability-simplify-boolean-expr,
   -readability-container-size-empty,
   -readability-function-cognitive-complexity,
-  google-default-arguments,
-  google-runtime-operator
-
-#-bugprone-bool-pointer-implicit-conversion
-#-bugprone-exception-escape
-#-misc-bool-pointer-implicit-conversion
-#-misc-definitions-in-headers
-#-misc-unused-alias-decls
-#-misc-unused-using-decls
-#-modernize-use-default-member-init
-#-readability-function-size
-#-readability-identifier-naming
-#-readability-isolate-declaration
-#-readability-redundant-member-init
-#-readability-redundant-preprocessor
+  -readability-else-after-return,
+  -readability-qualified-auto

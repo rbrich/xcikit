@@ -22,29 +22,34 @@ using std::endl;
 bool Repl::evaluate(std::string_view line)
 {
     core::TermCtl& t = m_ctx.term_out;
+    auto& source_manager = m_ctx.interpreter.source_manager();
     auto& parser = m_ctx.interpreter.parser();
     auto& compiler = m_ctx.interpreter.compiler();
     auto& machine = m_ctx.interpreter.machine();
 
     m_ctx.interpreter.configure(m_opts.compiler_flags);
 
+    std::string module_name = m_ctx.input_number >= 0 ? format("input_{}", m_ctx.input_number) : "<input>";
+    auto src_id = source_manager.add_source(module_name, std::string(line));
+
     try {
         if (m_opts.with_std_lib && !m_ctx.std_module) {
-            auto f = m_vfs.read_file("script/std.fire");
+            const char* path = "script/std.fire";
+            auto f = m_vfs.read_file(path);
             auto content = f.content();
-            m_ctx.std_module = m_ctx.interpreter.build_module("std", content->string_view());
+            auto file_id = source_manager.add_source(path, std::string(content->string_view()));
+            m_ctx.std_module = m_ctx.interpreter.build_module("std", file_id);
         }
 
         // parse
         ast::Module ast;
-        parser.parse(line, ast);
+        parser.parse(src_id, ast);
 
         if (m_opts.print_raw_ast) {
             t.stream() << "Raw AST:" << endl << dump_tree << ast << endl;
         }
 
         // compile
-        std::string module_name = m_ctx.input_number >= 0 ? format("input_{}", m_ctx.input_number) : "<input>";
         auto module = std::make_unique<Module>(module_name);
         module->add_imported_module(BuiltinModule::static_instance());
         if (m_ctx.std_module)
@@ -77,11 +82,12 @@ bool Repl::evaluate(std::string_view line)
         BytecodeTracer tracer(machine, t);
         tracer.setup(m_opts.print_bytecode, m_opts.trace_bytecode);
 
-        machine.call(*func, [&](const TypedValue& invoked) {
+        machine.call(*func, [&](TypedValue&& invoked) {
             if (!invoked.is_void()) {
                 t.sanitize_newline();
                 t.print("{t:bold}{fg:yellow}{}{t:normal}\n", invoked);
             }
+            invoked.decref();
         });
         t.sanitize_newline();
 
@@ -104,6 +110,7 @@ bool Repl::evaluate(std::string_view line)
                 t.print("{t:bold}{}{t:normal}\n", result);
             }
         }
+        result.decref();
         return true;
     } catch (const ScriptError& e) {
         if (!e.file().empty())

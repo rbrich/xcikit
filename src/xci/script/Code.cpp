@@ -83,6 +83,7 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::Cast:              return os << "CAST";
         case Opcode::Copy:              return os << "COPY";
         case Opcode::Drop:              return os << "DROP";
+        case Opcode::Swap:              return os << "SWAP";
         case Opcode::Call0:             return os << "CALL0";
         case Opcode::Call1:             return os << "CALL1";
         case Opcode::Call:              return os << "CALL";

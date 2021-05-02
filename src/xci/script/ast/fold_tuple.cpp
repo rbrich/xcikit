@@ -67,6 +67,11 @@ public:
         apply_and_fold(v.else_expr);
     }
 
+    void visit(ast::WithContext& v) override {
+        apply_and_fold(v.context);
+        apply_and_fold(v.expression);
+    }
+
     void visit(ast::Function& v) override {
         for (const auto& stmt : v.body.statements) {
             stmt->apply(*this);
@@ -90,6 +95,7 @@ public:
 
     void visit(ast::Literal&) override {}
     void visit(ast::Tuple&) override {}
+    void visit(ast::StructInit&) override {}
     void visit(ast::Reference&) override {}
 
     void visit(ast::Cast& v) override {

@@ -8,16 +8,37 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - os: ubuntu-18.04
-        - os: windows-2019
+        - os: ubuntu-20.04
+          name: "GCC 10 / Release"
+          cc: gcc-10
+          cxx: g++-10
+          build_args: "core data script"
+        - os: ubuntu-20.04
+          name: "Clang 10 / Release"
+          cc: clang-10
+          cxx: clang++-10
+          build_args: "core data script"
+        - os: ubuntu-20.04
+          name: "GCC 10 / Debug ASAN"
+          cc: gcc-10
+          cxx: g++-10
+          build_args: "core data script --debug -DBUILD_WITH_ASAN=1 -DBUILD_WITH_UBSAN=1"
         - os: macos-10.15
+          name: "Clang (latest) / Release"
+          build_args: ""
+        - os: windows-2019
+          name: "MSVC (latest) / Release"
+          build_args: "core data script"
+
+    name: ${{ matrix.os }} / ${{ matrix.name }}
 
     runs-on: ${{ matrix.os }}
 
     env:
       CONAN_PASSWORD: ${{ secrets.CONAN_PASSWORD }}
       CONAN_REVISIONS_ENABLED: 1
-      BUILD_ARGS: core data script
+      BUILD_ARGS: ${{ matrix.build_args }}
+      VK_SDK_VER: 1.2.135.0
 
     steps:
     - uses: actions/checkout@v2
@@ -26,35 +47,57 @@ jobs:
         python-version: '3.x'
         architecture: 'x64'
 
-    - name: "ubuntu: install GCC, dev libs"
-      if: ${{ matrix.os == 'ubuntu-18.04' }}
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y g++-10 ninja-build libhyperscan-dev
-        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 50
-        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 50
-        sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++    50
-        sudo update-alternatives --install /usr/bin/cc cc /usr/bin/gcc      50
+    - name: cache
+      uses: actions/cache@v2
+      with:
+        path: |
+          ~/.conan/data
+          vulkansdk-macos-*
+        key: ${{ runner.os }}-${{ matrix.name }}-vksdk${{ env.VK_SDK_VER }}-${{ hashFiles('conanfile.py') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ matrix.name }}-vksdk${{ env.VK_SDK_VER }}-
+          ${{ runner.os }}-${{ matrix.name }}-
+          ${{ runner.os }}-
 
-    - name: "macos: install Clang, dev libs"
-      if: ${{ matrix.os == 'macos-10.15' }}
+    - name: "install tools and deps"
       run: |
-        brew install conan ccache ninja glfw doxygen google-benchmark hyperscan vulkan-headers
-        echo "CC='$(brew --prefix llvm)/bin/clang'" >> $GITHUB_ENV
-        echo "CXX='$(brew --prefix llvm)/bin/clang++'" >> $GITHUB_ENV
-
-    - name: install tools
-      run: |
+        if [[ "$RUNNER_OS" == "Linux" ]]; then
+            sudo apt-get update
+            sudo apt-get install -y ninja-build libhyperscan-dev
+            export CC=${{ matrix.cc }}
+            export CXX=${{ matrix.cxx }}
+            echo "CC='$CC'" >> $GITHUB_ENV
+            echo "CXX='$CXX'" >> $GITHUB_ENV
+        elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            brew install ccache ninja glfw doxygen google-benchmark hyperscan
+            export CC="$(brew --prefix llvm)/bin/clang"
+            export CXX="$(brew --prefix llvm)/bin/clang++"
+            export MACOSX_DEPLOYMENT_TARGET=10.15
+            export VULKAN_SDK="$PWD/vulkansdk-macos-$VK_SDK_VER/macOS"
+            echo "CC='$CC'" >> $GITHUB_ENV
+            echo "CXX='$CXX'" >> $GITHUB_ENV
+            echo "MACOSX_DEPLOYMENT_TARGET=$MACOSX_DEPLOYMENT_TARGET" >> $GITHUB_ENV
+            echo "VULKAN_SDK=$VULKAN_SDK" >> $GITHUB_ENV
+            if [ ! -d "$VULKAN_SDK" ]; then
+                curl -fsSLO https://sdk.lunarg.com/sdk/download/$VK_SDK_VER/mac/vulkansdk-macos-$VK_SDK_VER.tar.gz
+                tar xf vulkansdk-macos-$VK_SDK_VER.tar.gz && rm vulkansdk-macos-$VK_SDK_VER.tar.gz
+            fi
+        fi
         pip3 --no-cache-dir install conan
-        conan profile new default --detect
-
-    - name: "ubuntu: additional Conan setup"
-      if: matrix.os == 'ubuntu-18.04'
-      run: conan profile update "settings.compiler.libcxx=libstdc++11" default
-
-    - name: "macos: additional Conan setup"
-      if: ${{ matrix.os == 'macos-10.15' }}
-      run: conan profile update "settings.compiler.libcxx=libc++" default
+        conan profile new default --detect --force
+        conan profile update "settings.compiler.cppstd=20" default
+        if [[ "$RUNNER_OS" == "Linux" ]]; then
+            if [[ "$CXX" = clang* ]]; then
+                conan profile update "settings.compiler.libcxx=libc++" default
+                echo "CXXFLAGS=-stdlib=libc++" >> $GITHUB_ENV
+            else
+                conan profile update "settings.compiler.libcxx=libstdc++11" default
+            fi
+        elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            conan profile update "settings.compiler.libcxx=libc++" default
+            conan profile update "settings.os.version=$MACOSX_DEPLOYMENT_TARGET" default
+        fi
+      shell: bash
 
     - name: bootstrap
       run: ./bootstrap.sh
@@ -77,12 +120,30 @@ jobs:
       shell: bash
 
     - name: install
+      if: ${{ matrix.name == 'Release build' }}
       run: ./build.sh install $BUILD_ARGS
       shell: bash
 
     - name: package
+      if: ${{ matrix.name == 'Release build' }}
       run: ./build.sh package $BUILD_ARGS
       shell: bash
+
+    - name: artifacts - tarball
+      if: ${{ matrix.name == 'Release build' }}
+      uses: actions/upload-artifact@v2
+      with:
+        name: xcikit-artifacts
+        path: |
+          artifacts/xcikit-*.tar.gz
+
+    - name: artifacts - test report
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v2
+      with:
+        name: test-report
+        path: |
+          build/*/Testing/Temporary/LastTest.log
 
 #    - name: deploy conan package
 #      if: github.ref == 'refs/heads/master'

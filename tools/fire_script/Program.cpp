@@ -112,7 +112,7 @@ void Program::evaluate_input(std::string_view input)
     if (input[0] == '.') {
         // control commands
         try {
-            repl_command().interpreter().eval(input.substr(1));
+            repl_command().eval(input.substr(1));
         } catch (const ScriptError& e) {
             auto& tout = ctx.term_out;
             tout.print("{fg:red}Error: {t:bold}{}{t:normal}\n", e.what());

@@ -484,7 +484,7 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
 /// \param start        Column after indent where to print. Actual terminal column is indent + start.
 /// \param max_width    Total width, including indent, that the content should fit into. 0 = unlimited
 /// \return             New start position for next call.
-static int wrapping_print_word(const std::string& s, unsigned indent, int start, unsigned max_width)
+static unsigned wrapping_print_word(const std::string& s, unsigned indent, unsigned start, unsigned max_width)
 {
     if (max_width == 0)
         max_width = ~0u;
@@ -507,7 +507,7 @@ static int wrapping_print_word(const std::string& s, unsigned indent, int start,
 /// Print text `s` right of `indent` columns, fitting into total `max_width`.
 /// First line starts at indent + start.
 /// Effectively split `s` into words and calls `wrapping_print_word` on each word.
-static void wrapping_print(const std::string& s, unsigned indent, int start, unsigned max_width)
+static void wrapping_print(const std::string& s, unsigned indent, unsigned start, unsigned max_width)
 {
     istringstream iss(s);
     for (auto it = istream_iterator<string>(iss); it != istream_iterator<string>(); ++it) {
@@ -527,7 +527,7 @@ void ArgParser::print_usage() const
         cout << head;
     }
 
-    int start = 0;
+    unsigned start = 0;
     for (const auto& opt : m_opts) {
         start = wrapping_print_word(opt.usage(), indent, start, m_max_width);
     }

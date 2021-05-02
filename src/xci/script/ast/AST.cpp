@@ -66,6 +66,16 @@ std::unique_ptr<ast::Expression> Condition::make_copy() const
 }
 
 
+std::unique_ptr<ast::Expression> WithContext::make_copy() const
+{
+    auto r = std::make_unique<WithContext>();
+    Expression::copy_to(*r);
+    r->context = context->make_copy();
+    r->expression = expression->make_copy();
+    return r;
+}
+
+
 std::unique_ptr<ast::Statement> Definition::make_copy() const
 {
     auto r = std::make_unique<Definition>();
@@ -148,7 +158,7 @@ std::unique_ptr<ast::Statement> TypeAlias::make_copy() const
 
 void Expression::copy_to(Expression& r) const
 {
-    r.source_info = source_info;
+    r.source_loc = source_loc;
     r.definition = definition;
 }
 
@@ -255,6 +265,19 @@ std::unique_ptr<ast::Expression> List::make_copy() const
     Expression::copy_to(*r);
     r->items = copy_ptr_vector(items);
     r->item_size = item_size;
+    return r;
+}
+
+
+std::unique_ptr<ast::Expression> StructInit::make_copy() const
+{
+    auto r = std::make_unique<StructInit>();
+    Expression::copy_to(*r);
+
+    r->items.reserve(items.size());
+    for (const auto& item : items)
+        r->items.emplace_back(item.first, item.second->make_copy());
+
     return r;
 }
 

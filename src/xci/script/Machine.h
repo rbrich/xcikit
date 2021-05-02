@@ -1,7 +1,7 @@
 // Machine.h created on 2019-05-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019 Radek Brich
+// Copyright 2019–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_MACHINE_H
@@ -22,8 +22,9 @@ public:
     // Run all Invocations in a function or module:
     // - evaluate each invoked value (possibly concurrently)
     // - pass results to cb
-    using InvokeCallback = std::function<void (const TypedValue&)>;
-    void call(const Function& function, const InvokeCallback& cb);
+    using InvokeCallback = std::function<void (TypedValue&&)>;
+    static constexpr auto no_invoke_cb = [](TypedValue&& v){ v.decref(); };
+    void call(const Function& function, const InvokeCallback& cb = no_invoke_cb);
 
     Stack& stack() { return m_stack; }
 

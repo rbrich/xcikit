@@ -12,6 +12,7 @@
 #include <xci/compat/bit.h>
 #include <cstddef>  // byte
 #include <vector>
+#include <iostream>
 
 namespace xci::script {
 
@@ -27,6 +28,10 @@ class Function;
 /// - TypeInfo stack for keeping record of types of data on main stack
 ///   (this is optional, might be disabled for non-debug programs)
 /// - Frame stack for keeping record of called functions and return addresses
+///
+/// Also keeps track of current set of I/O streams. Enter/leave functions
+/// modify the current streams, push the original stream on main stack
+/// and restore it from there.
 
 class Stack {
 public:
@@ -52,7 +57,7 @@ public:
         T v;
         pop_type(v);
         // read value from stack
-        m_stack_pointer += v.read(&m_stack[m_stack_pointer]);
+        m_stack_pointer += v.read(data());
         return v;
     }
 
@@ -72,6 +77,10 @@ public:
     //      drop(4, 0) is no-op
     void drop(StackRel first, size_t size);
 
+    // Swap two values on top of the stack.
+    // Top `first` bytes are swapped with `second` bytes below them.
+    void swap(size_t first, size_t second);
+
     bool empty() const { return m_stack_capacity == m_stack_pointer; }
     StackAbs size() const { return m_stack_capacity - m_stack_pointer; }
     size_t capacity() const { return m_stack_capacity; }
@@ -87,6 +96,7 @@ public:
     Type top_type() const { return m_stack_types.back(); }
 
     // ------------------------------------------------------------------------
+    // Function return addresses
 
     struct Frame {
         const Function* function;
@@ -102,6 +112,37 @@ public:
     const Frame& frame(size_t pos) const { return m_frame[pos]; }
     size_t n_frames() const { return m_frame.size(); }
 
+    // ------------------------------------------------------------------------
+    // I/O Streams
+    // Here we store the initial streams. As the program runs, these values
+    // are swapped to stack and back. Effectively, the values here are
+    // "top of the stack" and the previous values are stored on the value stack.
+
+    struct Streams {
+        value::Stream in { Stream::default_stdin() };
+        value::Stream out { Stream::default_stdout() };
+        value::Stream err { Stream::default_stderr() };
+
+        ~Streams() {
+            in.decref();
+            out.decref();
+            err.decref();
+        }
+    };
+
+    script::Stream stream_in() const { return m_streams.in.value(); }
+    script::Stream stream_out() const { return m_streams.out.value(); }
+    script::Stream stream_err() const { return m_streams.err.value(); }
+
+    void swap_stream_in(value::Stream& in) { std::swap(m_streams.in, in); }
+    void swap_stream_out(value::Stream& out) { std::swap(m_streams.out, out); }
+    void swap_stream_err(value::Stream& err) { std::swap(m_streams.err, err); }
+
+    const value::Stream& get_stream_in() { m_streams.in.incref(); return m_streams.in; }
+    const value::Stream& get_stream_out() { m_streams.out.incref(); return m_streams.out; }
+    const value::Stream& get_stream_err() { m_streams.err.incref(); return m_streams.err; }
+
+    // ------------------------------------------------------------------------
 
     friend std::ostream& operator<<(std::ostream& os, const Stack& v);
 
@@ -122,6 +163,7 @@ private:
     std::unique_ptr<std::byte[]> m_stack = std::make_unique<std::byte[]>(m_stack_capacity);
     std::vector<Type> m_stack_types;
     core::ChunkedStack<Frame> m_frame;
+    Streams m_streams;
 };
 
 

@@ -149,8 +149,8 @@ struct Option {
     /// and how they parse the value. E.g. for bool type,
     /// many usual values are recognized: 1, 0, false, true, y, n, ...
     template <class T>
-    Option(std::string desc, std::string help, T& value)
-            : Option(std::move(desc), std::move(help), [&value](const char* arg)
+    Option(std::string&& desc, std::string&& help, T& value)
+            : Option(std::forward<std::string>(desc), std::forward<std::string>(help), [&value](const char* arg)
                      { return value_from_cstr(arg, value); }, 0) {}
 
     /// Attach env variable to this option

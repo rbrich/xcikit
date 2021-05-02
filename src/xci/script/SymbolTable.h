@@ -31,8 +31,6 @@ public:
 
     explicit operator bool() const { return m_symtab != nullptr && m_index != no_index; }
 
-    SymbolPointer& operator= (const SymbolPointer& rhs) = default;
-
     Symbol& operator* ();
     const Symbol& operator*() const;
 
@@ -42,9 +40,7 @@ public:
     SymbolTable* symtab() const { return m_symtab; }
     Index symidx() const { return m_index; }
 
-    bool operator==(const SymbolPointer& rhs) const {
-        return m_symtab == rhs.m_symtab && m_index == rhs.m_index;
-    }
+    bool operator==(const SymbolPointer& rhs) const = default;
 
 private:
     SymbolTable* m_symtab = nullptr;  // owning table

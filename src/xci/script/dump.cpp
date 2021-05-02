@@ -75,10 +75,12 @@ public:
     void visit(const Bracketed& v) override { m_os << v; }
     void visit(const Tuple& v) override { m_os << v; }
     void visit(const List& v) override { m_os << v; }
+    void visit(const StructInit& v) override { m_os << v; }
     void visit(const Reference& v) override { m_os << v; }
     void visit(const Call& v) override { m_os << v; }
     void visit(const OpCall& v) override { m_os << v; }
     void visit(const Condition& v) override { m_os << v; }
+    void visit(const WithContext& v) override { m_os << v; }
     void visit(const Function& v) override { m_os << v; }
     void visit(const Cast& v) override { m_os << v; }
     void visit(const TypeName& v) override { m_os << v; }
@@ -129,6 +131,7 @@ std::ostream& operator<<(std::ostream& os, const Tuple& v)
     }
 }
 
+
 std::ostream& operator<<(std::ostream& os, const List& v)
 {
     if (stream_options(os).enable_tree) {
@@ -147,6 +150,28 @@ std::ostream& operator<<(std::ostream& os, const List& v)
         return os << "]";
     }
 }
+
+
+std::ostream& operator<<(std::ostream& os, const StructInit& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << "StructInit(Expression)" << endl;
+        os << more_indent;
+        for (const auto& item : v.items) {
+            os << put_indent << item.first;
+            os << put_indent << *item.second;
+        }
+        return os << less_indent;
+    } else {
+        for (const auto& item : v.items) {
+            os << item.first << "=" << *item.second;
+            if (&item != &v.items.back())
+                os << ", ";
+        }
+        return os;
+    }
+}
+
 
 std::ostream& operator<<(std::ostream& os, const Variable& v)
 {
@@ -194,6 +219,15 @@ std::ostream& operator<<(std::ostream& os, const Identifier& v)
             os << " [" << v.symbol << "]";
         }
         return os << endl;
+    } else {
+        return os << v.name;
+    }
+}
+
+std::ostream& operator<<(std::ostream& os, const Key& v)
+{
+    if (stream_options(os).enable_tree) {
+        return os << "Key " << v.name << endl;
     } else {
         return os << v.name;
     }
@@ -372,6 +406,24 @@ std::ostream& operator<<(std::ostream& os, const Condition& v)
     }
 }
 
+std::ostream& operator<<(std::ostream& os, const WithContext& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << "WithContext(Expression)" << endl;
+        os << more_indent
+           << put_indent << *v.context
+           << put_indent << *v.expression;
+        if (v.enter_function.identifier)
+            os << put_indent << v.enter_function;
+        if (v.leave_function.identifier)
+            os << put_indent << v.leave_function;
+        return os << less_indent;
+    } else {
+        os << "with " << *v.context << " " << *v.expression << ";";
+        return os;
+    }
+}
+
 std::ostream& operator<<(std::ostream& os, const Operator& v)
 {
     if (stream_options(os).enable_tree) {
@@ -391,7 +443,9 @@ std::ostream& operator<<(std::ostream& os, const Function& v)
                   << put_indent << v.body
                   << less_indent;
     } else {
-        return os << "fun " << v.type << "{" << v.body << "}";
+        if (!v.type.params.empty() || v.type.result_type)
+            os << "fun " << v.type;
+        return os << "{" << v.body << "}";
     }
 }
 
@@ -776,8 +830,18 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
             }
             return os << ")";
         }
+        case Type::Struct: {
+            os << "(";
+            for (const auto& item : v.struct_items()) {
+                os << item.second << ' ' << item.first;
+                if (&item != &v.struct_items().back())
+                    os << ", ";
+            }
+            return os << ")";
+        }
         case Type::Function:    return os << v.signature();
         case Type::Module:      return os << "Module";
+        case Type::Stream:      return os << "Stream";
         case Type::Named:       return os << v.name();
     }
     UNREACHABLE;
@@ -838,9 +902,12 @@ std::ostream& operator<<(std::ostream& os, const SymbolPointer& v)
     os << v->type();
     if (v->index() != no_index)
         os << " #" << v->index();
-    if (v.symtab() != nullptr)
+    if (v.symtab() != nullptr) {
         os << " @" << v.symtab()->name() << " ("
            << std::hex << intptr_t(v.symtab()) << ')' << std::dec;
+        if (v->type() == Symbol::Function && v.symtab()->module())
+            os << ": " << v.symtab()->module()->get_function(v->index()).signature();
+    }
     if (v->ref())
         os << " -> " << v->ref();
     return os;

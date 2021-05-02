@@ -8,7 +8,7 @@
 #define XCI_SCRIPT_AST_H
 
 #include <xci/script/SymbolTable.h>
-#include <xci/script/SourceInfo.h>
+#include <xci/script/Source.h>
 #include <xci/script/Value.h>
 #include <cstdint>
 #include <vector>
@@ -42,10 +42,12 @@ struct Literal;
 struct Bracketed;
 struct Tuple;
 struct List;
+struct StructInit;
 struct Reference;
 struct Call;
 struct OpCall;
 struct Condition;
+struct WithContext;
 struct Function;
 
 struct TypeName;
@@ -69,10 +71,12 @@ public:
     virtual void visit(const Bracketed&) = 0;
     virtual void visit(const Tuple&) = 0;
     virtual void visit(const List&) = 0;
+    virtual void visit(const StructInit&) = 0;
     virtual void visit(const Reference&) = 0;
     virtual void visit(const Call&) = 0;
     virtual void visit(const OpCall&) = 0;
     virtual void visit(const Condition&) = 0;
+    virtual void visit(const WithContext&) = 0;
     virtual void visit(const Function&) = 0;
     virtual void visit(const Cast&) = 0;
     // type
@@ -97,10 +101,12 @@ public:
     virtual void visit(Bracketed&) = 0;
     virtual void visit(Tuple&) = 0;
     virtual void visit(List&) = 0;
+    virtual void visit(StructInit&) = 0;
     virtual void visit(Reference&) = 0;
     virtual void visit(Call&) = 0;
     virtual void visit(OpCall&) = 0;
     virtual void visit(Condition&) = 0;
+    virtual void visit(WithContext&) = 0;
     virtual void visit(Function&) = 0;
     virtual void visit(Cast&) = 0;
     // type
@@ -119,10 +125,12 @@ public:
     void visit(Bracketed&) final {}
     void visit(Tuple&) final {}
     void visit(List&) final {}
+    void visit(StructInit&) final {}
     void visit(Reference&) final {}
     void visit(Call&) final {}
     void visit(OpCall&) final {}
     void visit(Condition&) final {}
+    void visit(WithContext&) final {}
     void visit(Function&) final {}
     void visit(Cast&) final {}
     // skip type visits
@@ -146,13 +154,15 @@ public:
     void visit(TypeAlias&) final {}
     // skip expression visits
     void visit(Literal&) final {}
-    void visit(Tuple&) final {}
     void visit(Bracketed&) final {}
+    void visit(Tuple&) final {}
     void visit(List&) final {}
+    void visit(StructInit&) final {}
     void visit(Reference&) final {}
     void visit(Call&) final {}
     void visit(OpCall&) final {}
     void visit(Condition&) final {}
+    void visit(WithContext&) final {}
     void visit(Function&) final {}
     void visit(Cast&) final {}
 };
@@ -176,10 +186,22 @@ struct Identifier {
     Identifier() = default;
     explicit Identifier(std::string s) : name(std::move(s)) {}
     explicit operator bool() const { return !name.empty(); }
+
     std::string name;
 
     // resolved symbol:
     SymbolPointer symbol;
+};
+
+
+// an identifier that doesn't need to be resolved
+struct Key {
+    Key() = default;
+    explicit Key(std::string s) : name(std::move(s)) {}
+    explicit operator bool() const { return !name.empty(); }
+
+    std::string name;
+    SourceLocation source_loc;
 };
 
 
@@ -189,7 +211,7 @@ struct Type {
     virtual void apply(Visitor& visitor) = 0;
     virtual std::unique_ptr<ast::Type> make_copy() const = 0;
 
-    SourceInfo source_info;
+    SourceLocation source_loc;
 };
 
 
@@ -277,15 +299,16 @@ struct Expression {
 
     void copy_to(Expression& r) const;
 
-    SourceInfo source_info;
+    SourceLocation source_loc;
 
     // set when this expression is direct child of a Definition
     Definition* definition = nullptr;
 };
 
 struct Literal: public Expression {
-    explicit Literal(const TypedValue& v) : value(v) {}
-    explicit Literal(TypedValue&& v) : value(std::move(v)) {}
+    explicit Literal(TypedValue v) : value(std::move(v)) {}
+    ~Literal() override { value.decref(); }
+
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;
@@ -319,6 +342,19 @@ struct List: public Expression {
     size_t item_size = 0;
 };
 
+// structured initializer, i.e. tuple with identifiers
+struct StructInit: public Expression {
+    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
+    void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Expression> make_copy() const override;
+
+    using Item = std::pair<Key, std::unique_ptr<Expression>>;
+    std::vector<Item> items;
+
+    // resolved:
+    TypeInfo struct_type;  // used by Compiler to produce tuple in struct order, with defaults filled in
+};
+
 // variable reference
 struct Reference: public Expression {
     Reference() = default;
@@ -335,7 +371,7 @@ struct Reference: public Expression {
     Index index = no_index;     // index of (instance) function in module
 
     // resolved Instruction:
-    uint8_t instruction_args[2];
+    uint8_t instruction_args[2] {};
 };
 
 struct Call: public Expression {
@@ -447,6 +483,24 @@ struct Condition: public Expression {
 };
 
 
+// with <expr:Context> <expr>
+struct WithContext: public Expression {
+    WithContext() = default;
+    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
+    void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Expression> make_copy() const override;
+
+    std::unique_ptr<Expression> context;
+    std::unique_ptr<Expression> expression;
+
+    // resolved:
+    Reference enter_function;
+    Reference leave_function;
+    TypeInfo expression_type;
+    TypeInfo leave_type;   // enter function returns it, leave function consumes it
+};
+
+
 struct Cast: public Expression {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
@@ -454,11 +508,11 @@ struct Cast: public Expression {
 
     std::unique_ptr<Expression> expression;
     std::unique_ptr<Type> type;
-    std::unique_ptr<Reference> cast_function;  // none for cast to Void
+    std::unique_ptr<Reference> cast_function;  // none for cast to Void or to same type
 
     // resolved:
-    TypeInfo type_info;  // resolved Type
-    size_t drop_size = 0;  // cast to Void: size of expression result type
+    TypeInfo to_type;    // resolved Type (cast to)
+    TypeInfo from_type;  // resolved type of the expression (cast from)
 };
 
 
@@ -481,7 +535,7 @@ struct Definition: public Statement {
 };
 
 struct Invocation: public Statement {
-    Invocation(std::unique_ptr<Expression>&& expr) : expression(std::move(expr)) {}
+    explicit Invocation(std::unique_ptr<Expression>&& expr) : expression(std::move(expr)) {}
 
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }

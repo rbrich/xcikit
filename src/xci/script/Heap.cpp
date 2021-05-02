@@ -9,11 +9,12 @@
 namespace xci::script {
 
 
-HeapSlot::HeapSlot(size_t size)
-    : m_slot(new std::byte[sizeof(uint32_t) + size])
+HeapSlot::HeapSlot(size_t user_size, Deleter deleter)
+    : m_slot(new std::byte[header_size + user_size])
 {
-    uint32_t refs = 1;
+    RefCount refs = 1;
     memcpy(m_slot, &refs, sizeof(refs));
+    memcpy(m_slot + sizeof(RefCount), &deleter, sizeof(Deleter));
 }
 
 
@@ -21,7 +22,7 @@ void HeapSlot::incref() const
 {
     if (m_slot == nullptr)
         return;
-    const auto refs = bit_read<uint32_t>(m_slot) + 1;
+    const auto refs = bit_read<RefCount>(m_slot) + 1;
     memcpy(m_slot, &refs, sizeof(refs));
 }
 
@@ -30,8 +31,12 @@ bool HeapSlot::decref() const
 {
     if (m_slot == nullptr)
         return false;  // caller's pointer is already null
-    const auto refs = bit_read<uint32_t>(m_slot) - 1;
+    const auto refs = bit_read<RefCount>(m_slot) - 1;
     if (refs == 0) {
+        Deleter deleter;
+        memcpy(&deleter, m_slot + sizeof(RefCount), sizeof(Deleter));
+        if (deleter != nullptr)
+            deleter(data());
         delete[] m_slot;
         return true;  // freed, the caller may want to clear the pointer
     } else {
@@ -41,11 +46,11 @@ bool HeapSlot::decref() const
 }
 
 
-uint32_t HeapSlot::refcount() const
+auto HeapSlot::refcount() const -> RefCount
 {
     if (m_slot == nullptr)
         return 0;
-    return bit_read<uint32_t>(m_slot);
+    return bit_read<RefCount>(m_slot);
 }
 
 

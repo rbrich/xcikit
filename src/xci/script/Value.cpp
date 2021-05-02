@@ -8,21 +8,29 @@
 #include "Function.h"
 #include "Error.h"
 #include <xci/core/string.h>
+#include <xci/core/log.h>
+#include <xci/core/template/helpers.h>
+#include <range/v3/view/transform.hpp>
+#include <range/v3/to_container.hpp>
 #include <numeric>
 #include <sstream>
 #include <limits>
+#include <cassert>
 
 namespace xci::script {
 
+using namespace xci::core;
+using ranges::cpp20::views::transform;
+using ranges::to;
 using std::move;
-using std::unique_ptr;
 using std::make_unique;
 
 
-// variant visitor helper
-// see https://en.cppreference.com/w/cpp/utility/variant/visit
-template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
-template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+template<typename T>
+concept HasHeapSlot = requires(const T& v) {
+    v.slot;
+    std::is_same_v<decltype(v.slot), HeapSlot>;
+};
 
 
 Value create_value(const TypeInfo& type_info)
@@ -38,6 +46,11 @@ Value create_value(const TypeInfo& type_info)
                 return value::List();
         case Type::Tuple:
             return value::Tuple{type_info.subtypes()};
+        case Type::Struct:
+            auto subtypes = type_info.struct_items()
+                | transform([](const TypeInfo::StructItem& item) { return item.second; })
+                | to<std::vector>();
+            return value::Tuple{subtypes};
     }
     return {};
 }
@@ -58,7 +71,9 @@ Value create_value(Type type)
         case Type::String: return value::String{};
         case Type::List: return value::List{};
         case Type::Tuple: return value::Tuple{};
+        case Type::Struct: return value::Tuple{};  // struct differs only in type, otherwise it's just a tuple
         case Type::Function: return value::Closure{};
+        case Type::Stream: return value::Stream{};
         case Type::Module: return value::Module{};
         case Type::Named: assert(!"Cannot create empty Value of Named type"); break;
     }
@@ -68,16 +83,14 @@ Value create_value(Type type)
 
 bool Value::operator==(const Value& rhs) const
 {
-    return std::visit([&rhs](const auto& a) -> bool {
+    return std::visit([](const auto& a, const auto& b) -> bool {
         using TA = std::decay_t<decltype(a)>;
-        return std::visit([&a](const auto& b) -> bool {
-            using TB = std::decay_t<decltype(b)>;
-            if constexpr (std::is_same_v<TA, TB>)
-                return a == b;
-            else
-                return false;  // different types
-        }, rhs.m_value);
-    }, m_value);
+        using TB = std::decay_t<decltype(b)>;
+        if constexpr (std::is_same_v<TA, TB>)
+            return a == b;
+        else
+            return false;  // different types
+    }, m_value, rhs.m_value);
 }
 
 
@@ -88,21 +101,21 @@ size_t Value::write(byte* buffer) const
         using T = std::decay_t<decltype(v)>;
         if constexpr (std::is_same_v<T, std::monostate>)
             return 0;  // Void
-        else if constexpr (sizeof(T) == 1) {
+        else if constexpr (std::is_same_v<T, bool> || std::is_same_v<T, byte>) {
             *buffer = byte(v);
             return 1;
-        } else if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, ListV> || std::is_same_v<T, ClosureV>) {
+        } else if constexpr (HasHeapSlot<T>) {
             const byte* slot_ptr = v.slot.slot();
-            std::memcpy(buffer, &slot_ptr, sizeof(byte*));
+            std::memcpy(buffer, &slot_ptr, sizeof(slot_ptr));
             return sizeof(byte*);
         } else if constexpr (std::is_same_v<T, TupleV>) {
             byte* ofs = buffer;
             for (Value* it = v.values.get(); !it->is_void(); ++it)
                 ofs += it->write(ofs);
             return ofs - buffer;
-        } else {
-            std::memcpy(buffer, &v, sizeof(v));
-            return sizeof(v);
+        } else if constexpr(std::is_trivially_copyable_v<T>) {
+            std::memcpy(buffer, &v, sizeof(T));
+            return sizeof(T);
         }
     }, m_value);
 }
@@ -120,7 +133,7 @@ size_t Value::read(const byte* buffer)
         } else if constexpr (std::is_same_v<T, byte>) {
             v = *buffer;
             return 1;
-        } else if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, ListV> || std::is_same_v<T, ClosureV>) {
+        } else if constexpr (HasHeapSlot<T>) {
             byte* slot_ptr;
             std::memcpy(&slot_ptr, buffer, sizeof(byte*));
             v.slot = HeapSlot{slot_ptr};
@@ -130,9 +143,9 @@ size_t Value::read(const byte* buffer)
             for (Value* it = v.values.get(); !it->is_void(); ++it)
                 ofs += it->read(ofs);
             return ofs - buffer;
-        } else {
-            std::memcpy(&v, buffer, sizeof(v));
-            return sizeof(v);
+        } else if constexpr(std::is_trivially_copyable_v<T>) {
+            std::memcpy(&v, buffer, sizeof(T));
+            return sizeof(T);
         }
     }, m_value);
 }
@@ -160,7 +173,7 @@ const HeapSlot* Value::heapslot() const
 {
     return std::visit([](auto& v) -> const HeapSlot* {
         using T = std::decay_t<decltype(v)>;
-        if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, ListV> || std::is_same_v<T, ClosureV>)
+        if constexpr (HasHeapSlot<T>)
             return &v.slot;
         else
             return nullptr;
@@ -173,7 +186,7 @@ void Value::incref() const
 {
     return std::visit([](auto& v) {
         using T = std::decay_t<decltype(v)>;
-        if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, ListV> || std::is_same_v<T, ClosureV>)
+        if constexpr (HasHeapSlot<T>)
             v.slot.incref();
         else if constexpr (std::is_same_v<T, TupleV>) {
             for (Value* it = v.values.get(); !it->is_void(); ++it)
@@ -187,7 +200,7 @@ void Value::decref() const
 {
     return std::visit([](auto& v) {
         using T = std::decay_t<decltype(v)>;
-        if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, ListV> || std::is_same_v<T, ClosureV>)
+        if constexpr (HasHeapSlot<T>)
             v.slot.decref();
         else if constexpr (std::is_same_v<T, TupleV>) {
             for (Value* it = v.values.get(); !it->is_void(); ++it)
@@ -203,7 +216,7 @@ void Value::apply(value::Visitor& visitor) const
         using T = std::decay_t<decltype(v)>;
         if constexpr (std::is_same_v<T, std::monostate>)
             visitor.visit();  // Void
-        else if constexpr (std::is_same_v<T, StringV>)
+        else if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, StreamV>)
             visitor.visit(v.value());
         else
             visitor.visit(v);
@@ -226,6 +239,7 @@ Type Value::type() const
             [](const ListV&) { return Type::List; },
             [](const TupleV&) { return Type::Tuple; },
             [](const ClosureV&) { return Type::Function; },
+            [](const StreamV&) { return Type::Stream; },
             [](const script::Module*) { return Type::Module; },
     }, m_value);
 }
@@ -233,29 +247,26 @@ Type Value::type() const
 
 bool Value::cast_from(const Value& src)
 {
-    return std::visit([&src](auto& to) -> bool
-    {
+    return std::visit([](auto& to, const auto& from) -> bool {
         using TTo = std::decay_t<decltype(to)>;
-        return std::visit([&to](auto&& from) -> bool {
-            using TFrom = std::decay_t<decltype(from)>;
+        using TFrom = std::decay_t<decltype(from)>;
 
-            // same types or cast to Void -> noop
-            if constexpr (std::is_same_v<TFrom, TTo> || std::is_same_v<TTo, std::monostate>)
-                return true;
+        // same types or cast to Void -> noop
+        if constexpr (std::is_same_v<TFrom, TTo> || std::is_same_v<TTo, std::monostate>)
+            return true;
 
-            // int/float -> int/float
-            if constexpr
-                    ((std::is_integral_v<TFrom> || std::is_floating_point_v<TFrom> || std::is_same_v<TFrom, byte>)
-                    && (std::is_integral_v<TTo> || std::is_floating_point_v<TTo> || std::is_same_v<TTo, byte>))
-            {
-                to = static_cast<TTo>(from);
-                return true;
-            }
+        // int/float -> int/float
+        if constexpr
+                ((std::is_integral_v<TFrom> || std::is_floating_point_v<TFrom> || std::is_same_v<TFrom, byte>)
+                && (std::is_integral_v<TTo> || std::is_floating_point_v<TTo> || std::is_same_v<TTo, byte>))
+        {
+            to = static_cast<TTo>(from);
+            return true;
+        }
 
-            // Complex types or cast from Void
-            return false;
-        }, src.m_value);
-    }, m_value);
+        // Complex types or cast from Void
+        return false;
+    }, m_value, src.m_value);
 }
 
 
@@ -263,9 +274,10 @@ StringV::StringV(std::string_view v)
         : slot(v.size() + sizeof(uint32_t))
 {
     assert(v.size() < std::numeric_limits<uint32_t>::max());
-    uint32_t size = (uint32_t) v.size();
+    auto size = (uint32_t) v.size();
     std::memcpy(slot.data(), &size, sizeof(uint32_t));
-    std::memcpy(slot.data() + sizeof(uint32_t), v.data(), v.size());
+    if (!v.empty())
+        std::memcpy(slot.data() + sizeof(uint32_t), v.data(), v.size());
 }
 
 
@@ -277,13 +289,14 @@ std::string_view StringV::value() const
 }
 
 
-ListV::ListV(size_t length, TypeInfo elem_type)
+ListV::ListV(size_t length, const TypeInfo& elem_type)
         : slot(length * elem_type.size() + sizeof(uint32_t))
 {
     assert(length < std::numeric_limits<uint32_t>::max());
-    uint32_t len_raw = (uint32_t) length;
+    auto len_raw = (uint32_t) length;
     std::memcpy(slot.data(), &len_raw, sizeof(uint32_t));
-    std::memset(slot.data() + sizeof(uint32_t), 0, length * elem_type.size());
+    if (length != 0)
+        std::memset(slot.data() + sizeof(uint32_t), 0, length * elem_type.size());
 }
 
 
@@ -293,7 +306,7 @@ size_t ListV::length() const
 }
 
 
-Value ListV::value_at(size_t idx, TypeInfo elem_type) const
+Value ListV::value_at(size_t idx, const TypeInfo& elem_type) const
 {
     assert(idx < length());
     auto elem = create_value(elem_type);
@@ -328,12 +341,12 @@ TupleV& TupleV::operator =(const TupleV& other)
 }
 
 
-TupleV::TupleV(const Values& vs)
+TupleV::TupleV(Values&& vs)
         : values(std::make_unique<Value[]>(vs.size() + 1))
 {
     int i = 0;
-    for (const auto& tv : vs) {
-        values[i++] = tv;
+    for (auto&& tv : vs) {
+        values[i++] = move(tv);
     }
     values[i] = Value{};
 }
@@ -352,7 +365,7 @@ TupleV::TupleV(const TypeInfo::Subtypes& subtypes)
 
 bool TupleV::empty() const
 {
-    return values[0].is_void();;
+    return values[0].is_void();
 }
 
 
@@ -369,13 +382,6 @@ void TupleV::foreach(const std::function<void(const Value&)>& cb) const
 {
     for (Value* it = values.get(); !it->is_void(); ++it)
         cb(*it);
-}
-
-
-ClosureV::ClosureV() : slot(sizeof(Function*))
-{
-    const Function* fn_ptr = nullptr;
-    std::memcpy(slot.data(), &fn_ptr, sizeof(Function*));
 }
 
 
@@ -401,7 +407,7 @@ ClosureV::ClosureV(const Function& fn, Values&& values)
 
 Function* ClosureV::function() const
 {
-    return reinterpret_cast<Function*>(bit_read<intptr_t>(slot.data()));
+    return bit_read<Function*>(slot.data());
 }
 
 
@@ -413,11 +419,43 @@ value::Tuple ClosureV::closure() const
 }
 
 
+static void stream_deleter(const byte* data)
+{
+    Stream v;
+    v.raw_read(data);
+    v.close();
+}
+
+
+StreamV::StreamV(const Stream& v)
+        : slot(v.raw_size(), stream_deleter)
+{
+    v.raw_write(slot.data());
+}
+
+
+Stream StreamV::value() const
+{
+    Stream v;
+    if (slot)
+        v.raw_read(slot.data());
+    return v;
+}
+
+
 size_t Values::size_on_stack() const
 {
     return std::accumulate(m_items.begin(), m_items.end(), size_t(0),
         [](size_t init, const Value& value)
         { return init + value.size_on_stack(); });
+}
+
+
+TypedValue::TypedValue(Value value, TypeInfo type_info)
+        : m_value(move(value)), m_type_info(move(type_info))
+{
+    assert(m_value.type() == m_type_info.type()
+        || (m_value.type() == Type::Tuple && m_type_info.type() == Type::Struct));
 }
 
 
@@ -484,18 +522,27 @@ public:
     }
     void visit(const TupleV& v) override {
         os << "(";
-        if (type_info.is_unknown()) {
-            for (Value* it = v.values.get(); !it->is_void(); ++it) {
-                if (it != v.values.get())
-                    os << ", ";
-                os << Value(*it);
-            }
-        } else {
+        if (type_info.type() == Type::Tuple) {
             auto ti_iter = type_info.subtypes().begin();
             for (Value* it = v.values.get(); !it->is_void(); ++it) {
                 if (it != v.values.get())
                     os << ", ";
-                os << TypedValue(Value(*it), *ti_iter++);
+                os << TypedValue(*it, *ti_iter++);
+            }
+        } else if (type_info.type() == Type::Struct) {
+            auto ti_iter = type_info.struct_items().begin();
+            for (Value* it = v.values.get(); !it->is_void(); ++it) {
+                if (it != v.values.get())
+                    os << ", ";
+                os << ti_iter->first << '=' << TypedValue(*it, ti_iter->second);
+                ++ti_iter;
+            }
+        } else {
+            // unknown TypeInfo
+            for (Value* it = v.values.get(); !it->is_void(); ++it) {
+                if (it != v.values.get())
+                    os << ", ";
+                os << *it;
             }
         }
         os << ")";
@@ -517,6 +564,9 @@ public:
         }
     }
     void visit(const script::Module* v) override { fmt::print(os, "<module:{:x}>", uintptr_t(v)); }
+    void visit(const script::Stream& v) override {
+        os << "<stream:" << v << ">";
+    }
 private:
     std::ostream& os;
     const TypeInfo& type_info;

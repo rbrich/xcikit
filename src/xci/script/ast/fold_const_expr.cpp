@@ -155,6 +155,12 @@ public:
         }
     }
 
+    void visit(ast::WithContext& v) override {
+        m_const_value.reset();
+        apply_and_fold(v.context);
+        apply_and_fold(v.expression);
+    }
+
     void visit(ast::Function& v) override {
         Function& func = module().get_function(v.index);
 
@@ -189,25 +195,29 @@ public:
         m_const_value.reset();
     }
 
+    void visit(ast::StructInit& v) override {
+        m_const_value.reset();
+    }
+
     void visit(ast::Cast& v) override {
         v.expression->apply(*this);
         // cast to Void?
-        if (v.type_info.is_void()) {
+        if (v.to_type.is_void()) {
             m_const_value = TypedValue(value::Void{});
             return;
         }
         if (!m_const_value)
             return;
         // cast to the same type?
-        if (m_const_value->type_info() == v.type_info) {
+        if (m_const_value->type_info() == v.to_type) {
             // keep m_const_value -> eliminate the cast
             return;
         }
         // FIXME: evaluate the actual (possibly user-defined) cast function
-        auto cast_result = create_value(v.type_info);
+        auto cast_result = create_value(v.to_type);
         if (cast_result.cast_from(m_const_value->value())) {
             // fold the cast into value
-            m_const_value = TypedValue(move(cast_result), v.type_info);
+            m_const_value = TypedValue(move(cast_result), v.to_type);
             return;
         }
         m_const_value.reset();
@@ -221,13 +231,15 @@ private:
 
     void apply_and_fold(unique_ptr<ast::Expression>& expr) {
         expr->apply(*this);  // may set either m_const_value or m_collapsed
-        if (m_const_value)
-            m_collapsed = make_unique<ast::Literal>(*m_const_value);
+        if (m_const_value) {
+            m_collapsed = make_unique<ast::Literal>(std::move(*m_const_value));
+            m_const_value.reset();
+        }
         if (m_collapsed) {
-            auto source_info = expr->source_info;
+            auto source_loc = expr->source_loc;
             expr = move(m_collapsed);
-            if (!expr->source_info)
-                expr->source_info = source_info;
+            if (!expr->source_loc)
+                expr->source_loc = source_loc;
         }
     }
 

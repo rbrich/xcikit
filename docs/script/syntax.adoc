@@ -6,7 +6,7 @@ endif::[]
 
 = Fire Script
 
-*_Language specification, v0.5_*
+*_Language description, v0.6_*
 
 toc::[]
 
@@ -25,14 +25,14 @@ this document, and it's also possible that not everything described here will ac
 be implemented. This is a design document, containing miscellaneous ideas.
 The language may change during implementation.
 
-The plan is that the implementation will completely match the specification
-when its version reaches 1.0.
-(Note that the implementation is versioned independently from this document.)
+The plan is that the implementation will completely match this description
+when the document reaches v1.0.
+(Note that the implementation is versioned independently of this document.)
 
 See `xci::script` in https://github.com/rbrich/xcikit[xcikit] codebase.
 
 
-== Syntax Elements
+== Basic syntax
 
 === Literals
 
@@ -176,13 +176,79 @@ Infix and prefix operators, operator precedence:
 
 === Variables
 
-Variables are named values. They are always immutable - the name can be
-assigned only once in each scope. But it's possible to override the name
-in inner scope:
+There are no real variables. Let's discuss what looks like variables
+and how it works.
+
+All "variables" (symbolic names) are scoped and unique. It's not possible to assign the same
+name again in the same scope. It's not possible to change to what the name
+points, it's always immutable. Instead, it's possible to introduce a new name
+or override the name in inner scope.
 
 [source,fire]
 ----
-// variable type is inferred
+// type is inferred
+i = 1
+
+// right-hand side can be any expression
+j = 1 + 2
+k = add2 1 2
+
+// error, redefinition of a name
+k = 1; k = k + 1
+
+// ok, inner `m` has value `2`
+m = 1; { m = m + 1 }
+
+// variable type can be explicitly declared
+l:Int32 = k
+s:String = "XCI"
+----
+
+There are three basic ways of naming values:
+
+[source,fire]
+----
+a = 1             // [1.] literal value
+b = add 1 2       // [2.] result of expression
+data c = add 1 2  // [3.] constant value initialized with a result of expression
+----
+
+The first two cases create a function which takes no arguments and returns
+the expected value as the result. The compiler is free to optimize them and
+just point the symbolic names to precomputed values.
+In the third case, this is enforced. The `data` keyword makes sure the value
+is computed in compile-time and no run-time code is generated. It's similar
+to `consteval` in C++20. The compiler emits error if the expression does not
+lead to compile-time value.
+
+A function (object) can't be assigned to `data` value, because that's precisely
+what the keyword does -- it prevents creating a function and forces creating
+a data value in the compiled module.
+
+The picture gets a little more complicated when we start to consider side effects.
+Without side effects, it's not really important when the evaluation happens
+-- everything can be lazy. But when the right side of `=` has side effects,
+the compiler switches to eager evaluation.
+
+[source,fire]
+----
+a = write "hello\n"      // eager: prints "hello" immediately
+a = { write "hello\n" }  // lazy: `a` becomes a function that prints "hello" when called
+----
+
+On module-level, all statements are evaluated eagerly. Code like this works as expected:
+
+[source,fire]
+----
+write "Hello "
+flush
+write "World!\n"
+----
+
+
+[source,fire]
+----
+// type is inferred
 i = 1
 
 // right-hand side can be any expression
@@ -315,6 +381,9 @@ rec = MyRecord("A name", 42)
 rec.name    // dot operator
 ----
 
+
+== Language constructs
+
 === Type classes
 
 A type class contains a set of functions for a type.
@@ -399,6 +468,96 @@ Standalone destructuring:
 [source,fire]
 ----
 let [first, *rest] = a_list
+----
+
+=== I/O streams
+
+Builtin functions like `open`, `read`, `write`, `flush`, `error` work
+with a set of streams that is silently passed around. Default set of streams
+is `(stdin, stdout, stderr)`. To change them for a scope of an expression, use
+the `with` expression:
+
+[source,fire]
+----
+with (out=(open "/tmp/file.txt" "w"), err=stderr, in=stdin) {
+    // output stream is now redirected to a file
+    write "this goes to file.txt"
+    flush
+    // ...
+}
+----
+
+This changes the set of current streams and saves the original streams on stack.
+When the block finishes, the original streams are restored, and the streams
+from the `with` context are released. This means that the opened file is open
+only inside the scope.
+
+Internally, there are two functions: `enter` and `leave`. Before entering
+the inner block (second argument of `with`), `enter` function is called.
+It gets the first argument of the `with` expression as the sole argument.
+The value returned by `enter` is stored on stack. When leaving the inner scope,
+this value is read back from stack and passed to the `leave` function.
+
+For example, in the above fragment, the following functions are called:
+
+[source,fire]
+----
+type Streams = (Stream in, Stream out, Stream err)
+enter : Streams -> Streams
+leave : Streams -> Void
+----
+
+The functions are overloaded. Other overloads accept tuples: `(out)`,
+`(in, out)`, `(in, out, err)`. This allows a condensed syntax:
+
+[source,fire]
+----
+with (open "/tmp/file.txt" "w")
+    write "this goes to file.txt"
+----
+
+Except special parsing, `with` expression behaves like a normal function,
+taking two arguments: `with <context> <expr>`. The parsing is relaxed in two ways:
+
+* Unlike normal function call, newlines are allowed between `with` keyword
+  and first argument, and also between first and second argument.
+
+* The second argument can be any expression, including unbracketed if-then-else,
+  or a function call. This is not possible in arguments of a normal function call.
+
+The return value of the whole expression is what the inner expression returns.
+
+=== Exceptions
+
+See <<side-effects,Side Effects>> below for information on how this works.
+
+[source,fire]
+----
+try {
+    throw (Exception "Catch me!")
+} catch ex:Exception {
+    log "Exception caught!"
+}
+----
+
+Braces can be omitted in case of single statement:
+
+[source,fire]
+----
+try this_may_throw
+catch ex:Exception
+    log "Exception caught!"
+----
+The parser looks for a single expression after `try`, which may be a braced block.
+Then it expects `catch` keyword followed by a variable and again a single expression.
+
+Catch all possible exceptions - use generic type T:
+[source,fire]
+----
+try
+    this_may_throw
+catch ex:T
+    log "Exception caught!"
 ----
 
 == Types
@@ -640,16 +799,91 @@ print "hello " /* inline comment */ "world"
    comment */
 ----
 
+[#side-effects]
+== Side Effects
+
+Each function may have side effects. Writing to a disk or throwing an exception
+are examples of such side effects. The effects are gathered from any called functions,
+and the parent function is flagged. The effects are visible in the function prototype,
+and they can be declared also explicitly (this is needed only for native functions).
+The effects may be used for optimizations - a pure function can be automatically
+memoized, for example.
+
+Side effects supported at the moment:
+
+* `in`, `out`, `err` - I/O streams
+* `exc` - Exceptions
+
+Other side effects:
+
+* `random` - random function, the return value is not deterministically linked
+   to parameters
+* `noreturn` - may not return, e.g. exec, exit
+
+At all times, each function has three streams at disposal: `in`, `out`, `err`.
+If it touches one of these streams, it's flagged accordingly (the effects have
+the same names).
+
+The streams are always pointed somewhere. It may be the default character stream
+(stdout etc.), a file, a socket or even a special null stream. When a function
+sets the `out` stream to a null stream, and then calls some other function which
+is flagged with the `out` effect, the calling function is not flagged and can
+still be considered pure and optimized accordingly.
+
+You can think about streams as three hidden parameters and return values. They
+might be returned untouched or processed in the function body and returned
+modified.
+
+Another effect is `exc`, which allows throwing exceptions. This is basically
+a hidden return value. It's implicitly handled (imagine an `if` condition and early
+return with the same hidden value), but it can also be handled explicitly by
+a try-catch construct.
+
+By catching all exceptions, the `exc` effect is no longer propagated.
+Note that it's not possible to track a set of actually thrown exceptions,
+so the only way to prevent automatically adding the `exc` effect to the calling
+function is to catch all possible exceptions thrown by any called function
+with the `exc` effect.
+
+Declaring the side effects explicitly:
+
+[source,fire]
+----
+f = fun msg:String | out exc
+{
+    write msg   // this may throw
+}
+
+// type of f: String -> Void | out exc
+----
+
+Undeclaring the side effects (if compiler adds them but you want to override it):
+[source,fire]
+----
+f = fun msg:String | !out !exc { write msg }
+// type of f: String -> Void
+f  // this call can be removed by the compiler, because it has no effect
+   // according to the type of `f`
+----
+
+The `write` function will still use the out stream and possibly throw an exception.
+But the compiler is now free to ignore the side effects and optimize-out the `f`
+function completely, because it returns Void and does not have any (declared)
+side effects.
+
 == Modules
 
 A top-level translation unit is named Module.
 Module-level statements are either Declarations or Invocations.
 Declaration can be written in any order, each name can be used only once in a scope.
+Named functions or expressions, type classes, instances -- all are Declarations.
+
+=== Invocations
 
 Invocations are order dependent - when executing the Module, each Invocation is evaluated
 and its result is passed to Executor, which is special function (possibly hardcoded in C++)
 which gets a result from each Invocation, processes it and passes another value to next Invocation.
-This value can be accessed inside the Invocation under special name: `_`.
+The previous value can be accessed inside the Invocation under special name: `_`.
 
 Given this source file:
 
@@ -664,8 +898,8 @@ Imagine that it's executed like this:
 [source,fire]
 ----
 _0 = void
-_1 = executor (fun _{ 1 + 2 } _0)
-_2 = executor (fun _{ 3 * _ } _1)
+_1 = executor (fun _ { 1 + 2 } _0)
+_2 = executor (fun _ { 3 * _ } _1)
 ----
 
 The Executor can do anything with the results, for example:
@@ -676,18 +910,17 @@ The Executor can do anything with the results, for example:
 * concatenate them as a HTTP response (i.e. Web application)
 * implementing anything else that needs a sequence of records
 
-Importing modules:
+=== Importing modules
 
 [source,fire]
 ----
 my_mod = import "my_mod"    // import only Declarations
-my_mod.func                 // run function imported from module `my_mod`
+my_mod::func                // run function imported from module `my_mod`
 my_mod                      // run all associated Invocations
 ----
 
 * In the last line, the whole module is executed.
 * The first Invocation from the module gets current '_' value.
-
 * The statement returns the result of last Invocation in the module.
 
 Module names must be valid function names, i.e. start with lower case letter.
@@ -696,28 +929,35 @@ Module import paths are configurable, by passing `-I` option to compiler,
 by setting them in config file or via C++ interface.
 
 All configured paths are searched in order (which yet needs to be defined),
-checking for existence of source file or bitcode file:
+checking for existence of source file or bytecode file:
 
-* Source file pattern: `&lt;import_path&gt;/&lt;requested_name&gt;.ls`
-* Bitcode file pattern: `&lt;import_path&gt;/&lt;requested_name&gt;.lsB`
+* Source file pattern: `&lt;import_path&gt;/&lt;requested_name&gt;.fire`
+* Bytecode file pattern: `&lt;import_path&gt;/&lt;requested_name&gt;.firm`
 * `&lt;import_path&gt;` is one of paths specified by `-I` etc.
 * `&lt;requested_name&gt;` is the string from `import` statement, without quotes (it may contain slashes, e.g. `&quot;lib/mod&quot;`)
-* the file extension might be configurable too, especially in the embedding scenario
+* The file extension might be configurable too, especially in the embedding scenario.
 
-The bitcode is not autogenerated - if not found, it will be created on-the-fly and stored temporarily
-in local cache.
+If only the source file is found, it will be compiled on-the-fly, in memory.
 
-== Compilation
+Bytecode cache: a directory used to store and retrieve the bytecode of the on-the-fly compiled modules.
+
+=== Compilation
 
 The complete program is composed of main source plus all imported modules,
-each of which is precompiled into bitcode. After this phase, we have a big blob of bitcode.
+each of which is compiled into bytecode. The interpreter gathers all the modules
+(resolving transitive dependencies and possibly compiling some modules on-the-fly)
+and builds a module tree. Then it starts executing the main module:
 
-The whole precompiled blob is then passed either to interpreter, which can execute it as is,
-or to a low-level compiler, for example LLVM. It just needs to be translated to IR and compiled
-to machine code.
+* Embedded interpreter: Calls a provided callback (Executor) for each Invocation
+  and then returns final result to the caller.
 
-The resulting machine binary will have a main entry point, which will run a default Executor
-(that will be compiled in too, for efficiency).
+* CLI interpreter: Prints the value from each Invocation and then prints
+  the final result. The "print" action can be configured
+  (e.g. null-terminate, call a program etc.)
+
+A possible "LTO" optimization: Put all modules together and compile-in the Executor.
+For example, Null Executor would throw away all intermediate results from Invocations,
+so the related code can be thrown away, too.
 
 
 == Syntax decisions
@@ -789,6 +1029,7 @@ with
 
 === Operator precedence table
 
+.Operator precedence
 |===
 | (-2) |  definition        |  =
 | (-1) |  condition         |  if ...
@@ -816,7 +1057,7 @@ The other precedences are hard-coded in parser grammar.
 
 === Terminology
 
-=== Braces, brackets
+==== Braces, brackets
 
 In this document and in the code, all brackets are called either *brackets* (round, square or angle) or *braces* (curly).
 The word parentheses, meaning round brackets, is not used here. I know it's a nice long word, but after needing to write

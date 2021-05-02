@@ -7,6 +7,7 @@
 #include "Machine.h"
 #include "Builtin.h"
 #include "Value.h"
+#include "Stream.h"
 #include "Error.h"
 #include "dump.h"
 
@@ -242,7 +243,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                     lhs.decref();
                     throw IndexOutOfBounds(idx, len);
                 }
-                Value item = lhs.value_at(idx, TypeInfo(Type::Int32));
+                Value item = lhs.value_at(idx, ti_int32());
                 lhs.decref();
                 m_stack.push(item);
                 break;
@@ -318,6 +319,13 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
                 const auto addr = *it++;
                 const auto size = *it++;
                 m_stack.drop(addr, size);
+                break;
+            }
+
+            case Opcode::Swap: {
+                const auto arg1 = *it++;
+                const auto arg2 = *it++;
+                m_stack.swap(arg1, arg2);
                 break;
             }
 

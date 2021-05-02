@@ -22,7 +22,9 @@ add_library(xci-script
     Module.cpp
     Value.cpp
     Parser.cpp
+    Source.cpp
     Stack.cpp
+    Stream.cpp
     SymbolTable.cpp
     TypeInfo.cpp
     dump.cpp)

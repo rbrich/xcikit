@@ -62,7 +62,7 @@ public:
             if (m_function.intrinsics() != m_function.code().size())
                 throw IntrinsicsFunctionError(
                         "cannot mix compiled code with intrinsics",
-                        ret.expression->source_info);
+                        ret.expression->source_loc);
             // no DROP for intrinsics function
             return;
         }
@@ -104,6 +104,7 @@ public:
         if (v.value.is_void())
             return;  // Void value
         // add to static values
+        v.value.incref();
         auto idx = module().add_value(TypedValue(v.value));
         // LOAD_STATIC <static_idx>
         code().add_opcode(Opcode::LoadStatic, idx);
@@ -127,6 +128,28 @@ public:
         }
         // MAKE_LIST <length> <elem_size>
         code().add_opcode(Opcode::MakeList, v.items.size(), v.item_size);
+    }
+
+    void visit(ast::StructInit& v) override {
+        // build struct on stack according to struct_type, fill in defaults
+        for (const auto& ti : reverse(v.struct_type.struct_items())) {
+            // lookup the name in StructInit
+            auto it = std::find_if(v.items.begin(), v.items.end(),
+                [&ti](const ast::StructInit::Item& item) {
+                  return item.first.name == ti.first;
+                });
+            if (it == v.items.end()) {
+                // not found - use the default
+                if (ti.second.is_void())
+                    return;  // Void value
+                // add to static values
+                auto idx = module().add_value(TypedValue(ti.second));
+                // LOAD_STATIC <static_idx>
+                code().add_opcode(Opcode::LoadStatic, idx);
+                continue;
+            }
+            it->second->apply(*this);
+        }
     }
 
     void visit(ast::Reference& v) override {
@@ -177,6 +200,7 @@ public:
                 if (symtab.module() != &module()) {
                     // copy static value into this module if it's from builtin or another module
                     const auto & val = symtab.module()->get_value(sym.index());
+                    val.incref();
                     idx = module().add_value(TypedValue(val));
                 }
                 // LOAD_STATIC <static_idx>
@@ -348,6 +372,21 @@ public:
                 code().this_instruction_address() - jump2_arg_pos);
     }
 
+    void visit(ast::WithContext& v) override {
+        // evaluate context
+        v.context->apply(*this);
+        // call the enter function - pulls arg and pushes the context to stack
+        v.enter_function.apply(*this);
+        // inner expression
+        v.expression->apply(*this);
+        // swap the expression result with context data below it
+        // SWAP <result_size> <context_size>
+        code().add_opcode(Opcode::Swap,
+                v.expression_type.size(), v.leave_type.size());
+        // call the leave function - must pull the context from enter function
+        v.leave_function.apply(*this);
+    }
+
     void visit(ast::Function& v) override {
         // compile body
         Function& func = module().get_function(v.index);
@@ -400,13 +439,18 @@ public:
 
     void visit(ast::Cast& v) override {
         v.expression->apply(*this);
+        if (v.to_type.is_void()) {
+            // cast to Void - remove the expression result from stack
+            v.from_type.foreach_heap_slot([this](size_t offset) {
+                // DEC_REF <offset>
+                m_function.code().add_opcode(Opcode::DecRef, offset);
+            });
+            // DROP 0 <size>
+            m_function.code().add_opcode(Opcode::Drop, 0, v.from_type.size());
+            return;
+        }
         if (v.cast_function)
             v.cast_function->apply(*this);
-        else {
-            // cast to Void - remove the expression result from stack
-            // DROP <skip> <size>
-            m_function.code().add_opcode(Opcode::Drop, 0, v.drop_size);
-        }
     }
 
     void visit(ast::Instance& v) override {
@@ -499,7 +543,7 @@ private:
 bool Compiler::compile(Function& func, ast::Module& ast)
 {
     func.set_compiled();
-    func.signature().set_return_type(TypeInfo{Type::Unknown});
+    func.signature().set_return_type(ti_unknown());
     ast.body.symtab = &func.symtab();
 
     // Preprocess AST

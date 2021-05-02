@@ -9,7 +9,7 @@
 
 #include "Value.h"
 #include "Stack.h"
-#include <xci/core/metatype/ToFunctionPtr.h>
+#include <xci/core/template/ToFunctionPtr.h>
 #include <tuple>
 #include <string>
 

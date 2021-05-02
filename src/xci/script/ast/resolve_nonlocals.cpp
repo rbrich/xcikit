@@ -53,6 +53,12 @@ public:
         }
     }
 
+    void visit(ast::StructInit& v) override {
+        for (auto& item : v.items) {
+            item.second->apply(*this);
+        }
+    }
+
     void visit(ast::Reference& v) override {
         assert(v.identifier.symbol);
         const auto& symtab = *v.identifier.symbol.symtab();
@@ -124,6 +130,11 @@ public:
         v.cond->apply(*this);
         v.then_expr->apply(*this);
         v.else_expr->apply(*this);
+    }
+
+    void visit(ast::WithContext& v) override {
+        v.context->apply(*this);
+        v.expression->apply(*this);
     }
 
     void visit(ast::Function& v) override {

@@ -16,12 +16,15 @@
 #include <xci/script/dump.h>
 #include <xci/core/Vfs.h>
 #include <xci/core/log.h>
+#include <xci/core/string.h>
 #include <xci/config.h>
 
 #include <string>
 #include <sstream>
+#include <filesystem>
 
 using namespace std;
+namespace fs = std::filesystem;
 using namespace xci::script;
 using namespace xci::core;
 
@@ -29,9 +32,11 @@ using namespace xci::core;
 // Check parsing into AST and dumping back to code
 std::string parse(const string& input)
 {
-    Parser parser;
+    SourceManager src_man;
+    auto src_id = src_man.add_source("<input>", input);
+    Parser parser {src_man};
     ast::Module ast;
-    parser.parse(input, ast);
+    parser.parse(src_id, ast);
     fold_tuple(ast.body);
     ostringstream os;
     os << ast;
@@ -50,10 +55,12 @@ std::string interpret(const string& input, bool import_std=false)
             Vfs vfs;
             vfs.mount(XCI_SHARE);
 
-            auto f = vfs.read_file("script/std.fire");
+            const char* std_path = "script/std.fire";
+            auto f = vfs.read_file(std_path);
             REQUIRE(f.is_open());
             auto content = f.content();
-            std_module = interpreter.build_module("std", content->string_view());
+            auto src_id = interpreter.source_manager().add_source(std_path, content->string());
+            std_module = interpreter.build_module("std", src_id);
         }
         interpreter.add_imported_module(*std_module);
     }
@@ -61,8 +68,9 @@ std::string interpret(const string& input, bool import_std=false)
     UNSCOPED_INFO(input);
     ostringstream os;
     try {
-        auto result = interpreter.eval(input, [&os](const TypedValue& invoked) {
+        auto result = interpreter.eval(input, [&os](TypedValue&& invoked) {
             os << invoked << ';';
+            invoked.decref();
         });
         os << result;
         result.decref();
@@ -204,8 +212,8 @@ TEST_CASE( "Value size on stack", "[script][machine]" )
     CHECK(Value(int64_t{0}).size_on_stack() == type_size_on_stack(Type::Int64));
     CHECK(Value(0.0f).size_on_stack() == type_size_on_stack(Type::Float32));
     CHECK(Value(0.0).size_on_stack() == type_size_on_stack(Type::Float64));
-    CHECK(Value("aaa"sv).size_on_stack() == type_size_on_stack(Type::String));
-    CHECK(Value(10, TypeInfo{Type::Int32}).size_on_stack() == type_size_on_stack(Type::List));
+    CHECK(Value(Value::StringTag{}).size_on_stack() == type_size_on_stack(Type::String));
+    CHECK(Value(Value::ListTag{}).size_on_stack() == type_size_on_stack(Type::List));
     CHECK(Value(TypeInfo::Subtypes{}).size_on_stack() == type_size_on_stack(Type::Tuple));
     CHECK(Value(Value::ClosureTag{}).size_on_stack() == type_size_on_stack(Type::Function));
     CHECK(Value(Value::ModuleTag{}).size_on_stack() == type_size_on_stack(Type::Module));
@@ -256,6 +264,7 @@ TEST_CASE( "Stack push/pull", "[script][machine]" )
     CHECK(stack.pull<value::Int32>().value() == 73);
     CHECK(stack.pull<value::Bool>().value() == true);  // NOLINT
 
+    CHECK(str.heapslot()->refcount() == 1);
     str.decref();
 }
 
@@ -335,6 +344,9 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
 
 TEST_CASE( "Blocks", "[script][interpreter]" )
 {
+    CHECK(parse("{}") == "{}");
+    CHECK(parse("{{}}") == "{{}}");
+
     // blocks are evaluated and return a value
     CHECK(interpret("{}") == "");  // empty function (has Void type)
     CHECK(interpret("{{}}") == "");  // empty function in empty function
@@ -358,6 +370,8 @@ TEST_CASE( "Blocks", "[script][interpreter]" )
 
 TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
 {
+    CHECK(parse("fun Int -> Int {}") == "fun Int -> Int {}");
+
     // returned lambda
     CHECK(interpret("fun x:Int->Int { x + 1 }") == "<lambda> Int32 -> Int32");
     CHECK_THROWS_AS(interpret("fun x { x + 1 }"), UnexpectedGenericFunction);  // generic lambda must be either assigned or resolved by calling
@@ -433,7 +447,7 @@ TEST_CASE( "Generic functions", "[script][interpreter]" )
 TEST_CASE( "Lexical scope", "[script][interpreter]" )
 {
     CHECK(interpret("{a=1; b=2}") == "");
-    CHECK_THROWS_AS(Interpreter().eval("{a=1; b=2} a"), UndefinedName);
+    CHECK_THROWS_AS(interpret("{a=1; b=2} a"), UndefinedName);
 
     CHECK(interpret("x=1; y = { x + 2 }; y") == "3");
     CHECK(interpret("a=1; {b=2; {a + b}}") == "3");
@@ -455,6 +469,7 @@ TEST_CASE( "Lexical scope", "[script][interpreter]" )
 TEST_CASE( "Casting", "[script][interpreter]" )
 {
     CHECK(interpret_std("\"drop this\":Void") == "");
+    CHECK(interpret_std("\"noop\":String") == "\"noop\"");
     CHECK(interpret_std("42:Int64") == "42L");
     CHECK(interpret_std("42L:Int32") == "42");
     CHECK(interpret_std("42:Float32") == "42.0f");
@@ -480,7 +495,7 @@ TEST_CASE( "Casting", "[script][interpreter]" )
 TEST_CASE( "Lists", "[script][interpreter]" )
 {
     CHECK(interpret("[1,2,3] ! 2") == "3");
-    CHECK_THROWS_AS(Interpreter().eval("[1,2,3]!3"), IndexOutOfBounds);
+    CHECK_THROWS_AS(interpret("[1,2,3]!3"), IndexOutOfBounds);
     //CHECK(interpret("[[1,2],[3,4],[5,6]] ! 1 ! 0") == "3");
     CHECK(interpret("head = fun l:[Int] -> Int { l!0 }; head [1,2,3]") == "1");
 }
@@ -491,6 +506,36 @@ TEST_CASE( "Type classes", "[script][interpreter]" )
     CHECK(interpret("class XEq T { xeq : T T -> Bool }; "
                     "instance XEq Int32 { xeq = { __equal_32 } }; "
                     "xeq 1 2") == "false");
+}
+
+
+TEST_CASE( "With expression, I/O streams", "[script][interpreter]" )
+{
+    CHECK(parse("with stdout { 42 }") == "with stdout {42};");
+    // __streams is a builtin function that returns a tuple of current streams: (in, out, err)
+    CHECK(interpret("__streams") == "(in=<stream:stdin>, out=<stream:stdout>, err=<stream:stderr>)");
+    CHECK(interpret("with null { __streams }") == "(in=<stream:stdin>, out=<stream:null>, err=<stream:stderr>)");
+    CHECK_THROWS_AS(interpret("with 42 {}"), FunctionNotFound);  // function not found: enter Int32
+    CHECK(interpret("with (null, null) { __streams }") == "(in=<stream:null>, out=<stream:null>, err=<stream:stderr>)");
+    CHECK(interpret("with (null, null, null) { __streams }; __streams")  // `with` scope
+          == "(in=<stream:null>, out=<stream:null>, err=<stream:null>);"
+             "(in=<stream:stdin>, out=<stream:stdout>, err=<stream:stderr>)");
+    CHECK(interpret("with (in=null) { __streams }") == "(in=<stream:null>, out=<stream:stdout>, err=<stream:stderr>)");
+    CHECK(interpret("with (out=null) { __streams }") == "(in=<stream:stdin>, out=<stream:null>, err=<stream:stderr>)");
+    CHECK(interpret("with (in=null, out=null) { __streams }") == "(in=<stream:null>, out=<stream:null>, err=<stream:stderr>)");
+    CHECK(interpret("with (in=stdin, out=stdout, err=stderr) { __streams }") == "(in=<stream:stdin>, out=<stream:stdout>, err=<stream:stderr>)");
+    CHECK(interpret("with\n(in=stdin, out=stdout, err=stderr)\n{ 42 }") == "42");
+    CHECK(interpret_std("with (in=null):Streams { __streams }") == "(in=<stream:null>, out=<stream:stdout>, err=<stream:stderr>)");  // the missing fields are inherited in `enter` function
+    CHECK(interpret_std("(in=null):Streams") == "(in=<stream:null>, out=<stream:undef>, err=<stream:undef>)");  // the missing fields are default initialized => undef stream
+    CHECK(interpret_std("(in=null)") == "(in=<stream:null>)");  // anonymous struct
+
+    // write an actual file
+    auto filename = fs::temp_directory_path() / "xci_test_script.txt";
+    CHECK(interpret("with (open \""s + escape(filename.string()) + "\" \"w\")\n"
+                    "    write \"this goes to the file\"") == "");
+    CHECK(interpret("with (in=(open \""s + escape(filename.string()) + "\" \"r\"))\n"
+                    "    read 9") == "\"this goes\"");
+    CHECK(fs::remove(filename));
 }
 
 

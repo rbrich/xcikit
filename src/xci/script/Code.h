@@ -130,6 +130,7 @@ enum class Opcode: uint8_t {
 
     Copy,                   // arg1 => offset from base (0 = base = first arg), copy <arg2> bytes from stack and push them back on top
     Drop,                   // remove a value from stack: drop <arg2> bytes, skipping top <arg1> bytes
+    Swap,                   // swap values on stack: <arg1> bytes from top with following <arg2> bytes
 
     // --------------------------------------------------------------
     // Auxiliary aliases
@@ -139,7 +140,7 @@ enum class Opcode: uint8_t {
     OneArgFirst = LoadStatic,
     OneArgLast = Invoke,
     TwoArgFirst = Call,
-    TwoArgLast = Drop,
+    TwoArgLast = Swap,
 };
 
 // Allow basic arithmetic on OpCode

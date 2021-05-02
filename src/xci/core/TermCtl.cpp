@@ -81,7 +81,7 @@ static constexpr auto set_bright_background = CSI "10{}m";
 static constexpr auto enter_overline_mode = CSI "53m";
 static constexpr auto send_soft_reset = CSI "!p";
 static constexpr auto request_cursor_position = CSI "6n";
-}
+} // namespace seq
 
 
 inline constexpr const char* xci_tparm(const char* seq) { return seq; }
@@ -679,7 +679,10 @@ std::string TermCtl::raw_input(bool isig)
 
 void TermCtl::write(std::string_view buf)
 {
+#ifdef __EMSCRIPTEN__
     m_at_newline = buf.ends_with('\n');
+#endif
+
     if (m_write_cb)
         m_write_cb(buf);
     else
@@ -687,10 +690,23 @@ void TermCtl::write(std::string_view buf)
 }
 
 
-void TermCtl::sanitize_newline()
+void TermCtl::sanitize_newline(TermCtl& tin)
 {
+#ifdef __EMSCRIPTEN__
+    // non-generic solution for Xterm.js - all output must go through TermCtl
+    (void) tin;
     if (!m_at_newline)
         write((const char*)u8"⏎\n");
+#else
+    // generic solution - this works even when something sidesteps TermCtl
+    // and writes directly to the terminal
+    auto [row, col] = get_cursor_position(tin);
+    if (col == -1)
+        return;
+    if (col != 0) {
+        write((const char*)u8"⏎\n");
+    }
+#endif
 }
 
 
@@ -704,7 +720,8 @@ unsigned int TermCtl::stripped_width(std::string_view s)
     } state = Visible;
     unsigned int length = 0;
     for (auto it = s.cbegin(); it != s.cend(); it = utf8_next(it)) {
-        auto c = utf8_codepoint(&*it);
+        const char32_t c32 = utf8_codepoint(&*it);
+        const int c = (c32 < 256) ? int(c32) : 0;
         switch (state) {
             case Visible:
                 if (c == '\033')
@@ -712,7 +729,7 @@ unsigned int TermCtl::stripped_width(std::string_view s)
                 else if (c == '\n')
                     length += 1;
                 else
-                    length += c32_width(c);
+                    length += c32_width(c32);
                 break;
 
             case Esc:
@@ -872,9 +889,9 @@ std::string TermCtl::query(std::string_view request, TermCtl& tin)
 }
 
 
-std::pair<int, int> TermCtl::get_cursor_position()
+std::pair<int, int> TermCtl::get_cursor_position(TermCtl& tin)
 {
-    auto res = query(request_cursor_position().seq());
+    auto res = query(request_cursor_position().seq(), tin);
     auto seq = decode_seq(res);
     if (seq.input_len != 0 && seq.fun == 'R' && seq.par.size() == 2)
         return {seq.par[0] - 1, seq.par[1] - 1};
