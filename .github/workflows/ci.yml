@@ -59,11 +59,8 @@ jobs:
             sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 50
             sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++    50
             sudo update-alternatives --install /usr/bin/cc cc /usr/bin/gcc      50
-            pip3 --no-cache-dir install conan
-            conan profile new default --detect --force
-            conan profile update "settings.compiler.libcxx=libstdc++11" default
         elif [ "$RUNNER_OS" == "macOS" ]; then
-            brew install conan ccache ninja glfw doxygen google-benchmark hyperscan
+            brew install ccache ninja glfw doxygen google-benchmark hyperscan
             export CC="$(brew --prefix llvm)/bin/clang"
             export CXX="$(brew --prefix llvm)/bin/clang++"
             export MACOSX_DEPLOYMENT_TARGET=10.15
@@ -76,14 +73,16 @@ jobs:
                 curl -fsSLO https://sdk.lunarg.com/sdk/download/$VK_SDK_VER/mac/vulkansdk-macos-$VK_SDK_VER.tar.gz
                 tar xf vulkansdk-macos-$VK_SDK_VER.tar.gz && rm vulkansdk-macos-$VK_SDK_VER.tar.gz
             fi
-            conan profile new default --detect --force
+        fi
+        pip3 --no-cache-dir install conan
+        conan profile new default --detect --force
+        conan profile update "settings.compiler.cppstd=20" default
+        if [ "$RUNNER_OS" == "Linux" ]; then
+            conan profile update "settings.compiler.libcxx=libstdc++11" default
+        elif [ "$RUNNER_OS" == "macOS" ]; then
             conan profile update "settings.compiler.libcxx=libc++" default
             conan profile update "settings.os.version=$MACOSX_DEPLOYMENT_TARGET" default
-        elif [ "$RUNNER_OS" == "Windows" ]; then
-            pip3 --no-cache-dir install conan
-            conan profile new default --detect --force
         fi
-        conan profile update "settings.compiler.cppstd=20" default
       shell: bash
 
     - name: bootstrap
