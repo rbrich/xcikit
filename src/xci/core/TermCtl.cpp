@@ -699,7 +699,7 @@ void TermCtl::sanitize_newline(TermCtl& tin)
         write((const char*)u8"⏎\n");
 #else
     // generic solution - this works even when something sidesteps TermCtl
-    // and writes to the terminal
+    // and writes directly to the terminal
     auto [row, col] = get_cursor_position(tin);
     if (col == -1)
         return;

@@ -68,8 +68,9 @@ std::string interpret(const string& input, bool import_std=false)
     UNSCOPED_INFO(input);
     ostringstream os;
     try {
-        auto result = interpreter.eval(input, [&os](const TypedValue& invoked) {
+        auto result = interpreter.eval(input, [&os](TypedValue&& invoked) {
             os << invoked << ';';
+            invoked.decref();
         });
         os << result;
         result.decref();

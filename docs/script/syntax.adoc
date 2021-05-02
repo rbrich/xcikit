@@ -475,7 +475,7 @@ let [first, *rest] = a_list
 Builtin functions like `open`, `read`, `write`, `flush`, `error` work
 with a set of streams that is silently passed around. Default set of streams
 is `(stdin, stdout, stderr)`. To change them for a scope of an expression, use
-`with` expression:
+the `with` expression:
 
 [source,fire]
 ----
@@ -494,7 +494,7 @@ only inside the scope.
 
 Internally, there are two functions: `enter` and `leave`. Before entering
 the inner block (second argument of `with`), `enter` function is called.
-It gets the first argument of `with` expression as the sole argument.
+It gets the first argument of the `with` expression as the sole argument.
 The value returned by `enter` is stored on stack. When leaving the inner scope,
 this value is read back from stack and passed to the `leave` function.
 
@@ -806,8 +806,8 @@ Each function may have side effects. Writing to a disk or throwing an exception
 are examples of such side effects. The effects are gathered from any called functions,
 and the parent function is flagged. The effects are visible in the function prototype,
 and they can be declared also explicitly (this is needed only for native functions).
-The effects may be used for optimizations - a pure function can be automatically memoized,
-for example.
+The effects may be used for optimizations - a pure function can be automatically
+memoized, for example.
 
 Side effects supported at the moment:
 
@@ -827,8 +827,8 @@ the same names).
 The streams are always pointed somewhere. It may be the default character stream
 (stdout etc.), a file, a socket or even a special null stream. When a function
 sets the `out` stream to a null stream, and then calls some other function which
-is flagged with the `out` effect, the calling function is not flagged and can be
-still considered pure and optimized accordingly.
+is flagged with the `out` effect, the calling function is not flagged and can
+still be considered pure and optimized accordingly.
 
 You can think about streams as three hidden parameters and return values. They
 might be returned untouched or processed in the function body and returned
@@ -870,10 +870,6 @@ The `write` function will still use the out stream and possibly throw an excepti
 But the compiler is now free to ignore the side effects and optimize-out the `f`
 function completely, because it returns Void and does not have any (declared)
 side effects.
-
-In an imaginative C transpiler, the effects would be implemented as global
-or thread-local pointers to the current streams and the currently thrown
-exception.
 
 == Modules
 

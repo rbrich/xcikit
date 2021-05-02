@@ -30,8 +30,8 @@ public:
     void add_imported_module(Module& module) { m_main.add_imported_module(module); }
 
     using InvokeCallback = Machine::InvokeCallback;
-    TypedValue eval(SourceId source_id, const InvokeCallback& cb = [](const TypedValue&){});
-    TypedValue eval(std::string input, const InvokeCallback& cb = [](const TypedValue&){});
+    TypedValue eval(SourceId source_id, const InvokeCallback& cb = Machine::no_invoke_cb);
+    TypedValue eval(std::string input, const InvokeCallback& cb = Machine::no_invoke_cb);
 
     // low-level component access
     SourceManager& source_manager() { return m_source_manager; }

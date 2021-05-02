@@ -124,7 +124,7 @@ size_t Stream::raw_size() const
     return sizeof(uint8_t) + std::visit([](auto&& v) -> size_t {
       using T = std::decay_t<decltype(v)>;
       if constexpr (std::is_same_v<T, Undef> || std::is_same_v<T, Null>)
-          return size_t(1);
+          return size_t(0);
       else
           return sizeof(T);
     }, m_handle);

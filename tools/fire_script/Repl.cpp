@@ -82,11 +82,12 @@ bool Repl::evaluate(std::string_view line)
         BytecodeTracer tracer(machine, t);
         tracer.setup(m_opts.print_bytecode, m_opts.trace_bytecode);
 
-        machine.call(*func, [&](const TypedValue& invoked) {
+        machine.call(*func, [&](TypedValue&& invoked) {
             if (!invoked.is_void()) {
                 t.sanitize_newline();
                 t.print("{t:bold}{fg:yellow}{}{t:normal}\n", invoked);
             }
+            invoked.decref();
         });
         t.sanitize_newline();
 
