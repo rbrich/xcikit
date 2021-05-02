@@ -119,67 +119,81 @@ std::string Stream::read(size_t n)
 }
 
 
+size_t Stream::raw_size() const
+{
+    return sizeof(uint8_t) + std::visit([](auto&& v) -> size_t {
+      using T = std::decay_t<decltype(v)>;
+      if constexpr (std::is_same_v<T, Undef> || std::is_same_v<T, Null>)
+          return size_t(1);
+      else
+          return sizeof(T);
+    }, m_handle);
+}
+
+
 size_t Stream::raw_read(const byte* buffer)
 {
     auto idx = uint8_t(m_handle.index());
-    std::memcpy(&idx, buffer, sizeof(idx));
-    buffer += sizeof(idx);
+    constexpr size_t idx_size = sizeof(uint8_t);
+    std::memcpy(&idx, buffer, idx_size);
+    buffer += idx_size;
     switch (idx) {
         case 0:
             m_handle = Undef{};
-            break;
+            return idx_size;
         case 1:
             m_handle = Null{};
-            break;
+            return idx_size;
         case 2: {
             std::variant_alternative_t<2, HandleVariant> v;
             std::memcpy(&v, buffer, sizeof(v));
             m_handle = v;
-            break;
+            return idx_size + sizeof(v);
         }
         case 3: {
             std::variant_alternative_t<3, HandleVariant> v;
             std::memcpy(&v, buffer, sizeof(v));
             m_handle = v;
-            break;
+            return idx_size + sizeof(v);
         }
         case 4: {
             std::variant_alternative_t<4, HandleVariant> v;
             std::memcpy(&v, buffer, sizeof(v));
             m_handle = v;
-            break;
+            return idx_size + sizeof(v);
         }
         case 5: {
             std::variant_alternative_t<5, HandleVariant> v;
             std::memcpy(&v, buffer, sizeof(v));
             m_handle = v;
-            break;
+            return idx_size + sizeof(v);
         }
         case 6: {
             std::variant_alternative_t<6, HandleVariant> v;
             std::memcpy(&v, buffer, sizeof(v));
             m_handle = v;
-            break;
+            return idx_size + sizeof(v);
         }
         default:
             static_assert(std::variant_size_v<HandleVariant> == 7);
             UNREACHABLE;
     }
-    return raw_size();
 }
 
 
 size_t Stream::raw_write(byte* buffer) const
 {
     auto idx = uint8_t(m_handle.index());
-    std::memcpy(buffer, &idx, sizeof(idx));
-    buffer += sizeof(idx);
-    std::visit([buffer](auto&& v) {
+    constexpr size_t idx_size = sizeof(uint8_t);
+    std::memcpy(buffer, &idx, idx_size);
+    buffer += idx_size;
+    return idx_size + std::visit([buffer](auto&& v) -> size_t {
         using T = std::decay_t<decltype(v)>;
-        if constexpr (!std::is_same_v<T, Null>)
-            std::memcpy(buffer, &v, sizeof(v));
+        if constexpr (std::is_same_v<T, Undef> || std::is_same_v<T, Null>)
+            return 0;
+        std::memcpy(buffer, &v, sizeof(v));
+        return sizeof(v);
     }, m_handle);
-    return raw_size();
 }
 
 

@@ -109,7 +109,7 @@ public:
     std::string read(size_t n);
 
     // heap serialization
-    constexpr static size_t raw_size() { return 1 + sizeof m_handle; }
+    size_t raw_size() const;
     size_t raw_read(const byte* buffer);
     size_t raw_write(byte* buffer) const;
 

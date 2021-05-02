@@ -428,7 +428,7 @@ static void stream_deleter(const byte* data)
 
 
 StreamV::StreamV(const Stream& v)
-        : slot(Stream::raw_size(), stream_deleter)
+        : slot(v.raw_size(), stream_deleter)
 {
     v.raw_write(slot.data());
 }
