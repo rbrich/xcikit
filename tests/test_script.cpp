@@ -132,12 +132,30 @@ TEST_CASE( "Values", "[script][parser]" )
     CHECK(parse("\"string literal\"") == "\"string literal\"");
     // Note: don't use raw string literal, it causes MSVC Error C2017 due to stringize operation in Catch2
     CHECK(parse("\"escape sequences: \\\"\\n\\0\\x12 \"") == "\"escape sequences: \\\"\\n\\0\\x12 \"");
-    CHECK(parse("$$ raw \n\r\t\" string $$") == "\" raw \\n\\r\\t\\\" string \"");
     CHECK(parse("1,2,3") == "1, 2, 3");  // naked tuple
     CHECK(parse("(1,2,\"str\")") == "(1, 2, \"str\")");  // bracketed tuple
     CHECK(parse("[1,2,3]") == "[1, 2, 3]");  // list
     CHECK(parse("[(1,2,3,4)]") == "[(1, 2, 3, 4)]");  // list with a tuple item
     CHECK(parse("[(1,2,3,4), 5]") == "[(1, 2, 3, 4), 5]");
+}
+
+
+TEST_CASE( "Raw strings", "[script][parser]" )
+{
+    CHECK(parse("\"\"\"Hello\"\"\"") == "\"Hello\"");
+    CHECK(parse("\"\"\"\nHello\n\"\"\"") == "\"Hello\"");
+    CHECK(parse("\"\"\"\n  Hello\n  \"\"\"") == "\"Hello\"");
+    CHECK(parse("\"\"\"\n  Hello\n\"\"\"") == "\"  Hello\"");
+    CHECK(parse("\"\"\"\n  \\nHello\\0\n  \"\"\"") == "\"\\\\nHello\\\\0\"");
+    CHECK(parse("\"\"\"Hello\n\"\"\"") == "\"Hello\\n\"");
+    CHECK(parse("\"\"\"\n  Hello\"\"\"") == "\"\\n  Hello\"");
+    CHECK(parse("\"\"\"\n\nHello\n\n\"\"\"") == "\"\\nHello\\n\"");
+    CHECK(parse("\"\"\"\n  \\\"\"\"Hello\\\"\"\"\n  \"\"\"") == "\"\\\"\\\"\\\"Hello\\\"\\\"\\\"\"");
+    CHECK(parse("\"\"\"\n  \\\"\"\"\"Hello\\\"\"\"\"\n  \"\"\"") == "\"\\\"\\\"\\\"\\\"Hello\\\"\\\"\\\"\\\"\"");
+    CHECK(parse("\"\"\"\n  \\\"\"\"\n  \\\\\"\"\"\n  \\\\\\\"\"\"\n  \"\"\"")
+             == "\"\\\"\\\"\\\"\\n\\\\\\\"\\\"\\\"\\n\\\\\\\\\\\"\\\"\\\"\"");
+    CHECK_THROWS_AS(parse("\"\"\"\\\"\"\""), ParseError);
+    CHECK(parse("\"\"\"\n\\\n\"\"\"") == "\"\\\\\"");
 }
 
 

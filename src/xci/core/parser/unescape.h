@@ -18,8 +18,8 @@ struct StringChIllEsc : seq< one< '\\' >, sor<StringChIll, eof> > {};
 struct String: star< sor<try_catch<StringCh>, StringChIllEsc, StringChIll> > {};
 
 template< typename Rule > struct Action {};
-template<> struct Action<StringChOther> : StringAppend {};
-template<> struct Action<StringChIll> : StringAppend {};
+template<> struct Action<StringChOther> : StringAppendChar {};
+template<> struct Action<StringChIll> : StringAppendChar {};
 template<> struct Action<StringChEscSingle> : StringAppendEscSingle {};
 template<> struct Action<StringChEscHex> : StringAppendEscHex {};
 template<> struct Action<StringChEscOct> : StringAppendEscOct {};

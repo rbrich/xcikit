@@ -22,11 +22,9 @@ struct StringChOther : sor< one<'\t'>, not_range<0, 31> > {};
 struct StringCh : sor< StringChEsc, StringChOther > {};
 
 
-struct StringAppend {
+struct StringAppendChar {
     template<typename Input, typename String, typename... States>
     static void apply(const Input &in, String& str, States&&...) {
-        if (str.capacity() == str.size())
-            str.reserve(str.capacity() * 3 / 2);
         str.append(in.begin(), in.end());
     }
 };
@@ -35,8 +33,6 @@ struct StringAppend {
 struct StringAppendEscSingle {
     template<typename Input, typename String, typename... States>
     static void apply(const Input &in, String& str, States&&...) {
-        if (str.capacity() == str.size())
-            str.reserve(str.capacity() * 3 / 2);
         assert( in.size() == 1 );
         char ch = *in.begin();
         switch (ch) {
@@ -58,8 +54,6 @@ struct StringAppendEscSingle {
 struct StringAppendEscHex {
     template<typename Input, typename String, typename... States>
     static void apply(const Input &in, String& str, States&&...) {
-        if (str.capacity() == str.size())
-            str.reserve(str.capacity() * 3 / 2);
         assert( in.size() == 3 );
         str += (char) std::stoi(String{in.begin()+1, in.end()}, nullptr, 16);
     }
@@ -69,8 +63,6 @@ struct StringAppendEscHex {
 struct StringAppendEscOct {
     template<typename Input, typename String, typename... States>
     static void apply(const Input &in, String& str, States&&...) {
-        if (str.capacity() == str.size())
-            str.reserve(str.capacity() * 3 / 2);
         assert( in.size() >= 1 && in.size() <= 3 );
         str += (char) std::stoi(in.string(), nullptr, 8);
     }

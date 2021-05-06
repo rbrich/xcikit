@@ -11,6 +11,7 @@ add_library(xci-script
     ast/resolve_nonlocals.cpp
     ast/resolve_symbols.cpp
     ast/resolve_types.cpp
+    parser/raw_string.cpp
     Builtin.cpp
     Class.cpp
     Code.cpp
