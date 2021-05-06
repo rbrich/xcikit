@@ -106,10 +106,12 @@ struct NumSuffix: one<'l', 'L', 'f', 'F', 'b', 'B'> {};
 struct Number: seq< opt<Sign>, sor<ZeroPrefixNum, DecNum>, opt<NumSuffix> > {};
 
 struct Char: if_must< one<'\''>, StringCh, one<'\''> > {};
-struct String: if_must< one<'"'>, until<one<'"'>, StringCh > > {};
+struct StringContent: until< one<'"'>, StringCh > {};
+struct String: if_must< one<'"'>, StringContent > {};
 struct EscapedQuotes: seq<one<'\\'>, three<'"'>, star<one<'"'>>> {};
 struct RawStringCh: any {};
-struct RawString : if_must< three<'"'>, until<three<'"'>, sor<EscapedQuotes, RawStringCh>> > {};
+struct RawStringContent: until<three<'"'>, sor<EscapedQuotes, RawStringCh>> {};
+struct RawString : if_must< three<'"'>, RawStringContent > {};
 struct Byte: seq< one<'b'>, Char > {};
 struct Bytes: seq< one<'b'>, String > {};
 struct RawBytes: seq< one<'b'>, RawString > {};
@@ -1225,6 +1227,8 @@ template<> const std::string Control<Variable>::errmsg = "expected variable name
 template<> const std::string Control<UnsafeType>::errmsg = "expected type";
 template<> const std::string Control<Type>::errmsg = "expected type";
 template<> const std::string Control<TypeName>::errmsg = "expected type name";
+template<> const std::string Control<StringContent>::errmsg = "unclosed string literal";
+template<> const std::string Control<RawStringContent>::errmsg = "unclosed raw string literal";
 
 // default message
 template< typename T >

@@ -314,12 +314,12 @@ void EditLine::process_input()
         for (const auto line : xci::core::split(content, '\n')) {
             if (line.data() != content.data()) {
                 // not the first line
-                write("\r\n" + std::string(m_prompt_len, ' '));
+                write("\n" + tout.move_to_column(m_prompt_len).seq());
                 ++m_cursor_line;
             }
             write(line);
             if (!cursor_found) {
-                auto part_len = tout.stripped_width(line);
+                auto part_len = TermCtl::stripped_width(line);
                 if (cursor > part_len) {
                     cursor -= part_len + 1;  // add 1 for '\n'
                 } else {

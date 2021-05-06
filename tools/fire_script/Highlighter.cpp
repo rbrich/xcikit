@@ -8,7 +8,6 @@
 #include <xci/core/parser/unescape_rules.h>
 
 #include <tao/pegtl.hpp>
-#include <tao/pegtl/contrib/raw_string.hpp>
 
 #ifndef NDEBUG
 #include <tao/pegtl/contrib/analyze.hpp>
@@ -122,11 +121,13 @@ struct Integer: seq< opt<Sign>, sor<ZeroPrefixNum, DecNum>, opt<IntSuffix> > {};
 struct Float: seq< opt<Sign>, plus<digit>, one<'.'>, star<digit>, opt<FloatSuffix> > {};
 
 struct Char: seq< one<'\''>, StringCh, one<'\''> > {};
-struct String: seq< one<'"'>, until<one<'"'>, StringCh > > {};
+struct String: seq< one<'"'>, until<one<'"'>, StringCh >, not_at<one<'"'>> > {};
 struct Byte: seq< one<'b'>, Char > {};
 struct Bytes: seq< one<'b'>, String > {};
-struct RawString : raw_string< '$', '-', '$' > {};  // raw_string = $$ raw text! $$
-struct Literal: seq< sor< Char, String, Byte, Bytes, Float, Integer, RawString >, not_at<identifier_other> > {};
+struct EscapedQuotes: seq<one<'\\'>, three<'"'>, star<one<'"'>>> {};
+struct RawString : seq< three<'"'>, until<three<'"'>, sor<EscapedQuotes, any>> > {};
+struct RawBytes: seq< one<'b'>, RawString > {};
+struct Literal: seq< sor< Char, RawString, String, Byte, RawBytes, Bytes, Float, Integer >, not_at<identifier_other> > {};
 
 // REPL commands
 struct ShortCommand: seq< sor<one<'h', 'q'>, seq<one<'d'>, one<'m', 'f', 'i'>>>, not_at<identifier_other>> {};
@@ -134,7 +135,7 @@ struct LongCommand: sor<TAO_PEGTL_KEYWORD("help"), TAO_PEGTL_KEYWORD("quit"),
         TAO_PEGTL_KEYWORD("dump_module"), TAO_PEGTL_KEYWORD("dump_function"), TAO_PEGTL_KEYWORD("dump_info")> {};
 struct ValidCommand: sor<ShortCommand, LongCommand> {};
 struct InvalidCommand: star< not_at< blank >, any > {};
-struct ReplCommand: if_must<one<'.'>, sor<ValidCommand, InvalidCommand>, SC> {};
+struct ReplCommand: seq<one<'.'>, sor<ValidCommand, InvalidCommand>, SC> {};
 
 // Expressions
 struct BracketedExpr: seq< RoundBracketOpen, NSC, Expression, NSC, RoundBracketClose > {};
@@ -147,7 +148,8 @@ struct OpenBracket: one< '(', '[' > {};
 struct OpenBrace: one< '{' > {};
 struct PartialCharLiteral: seq< one<'\''>, sor<StringCh, one<'\\'>> > {};
 struct PartialStringLiteral: seq< one<'"'>, star<sor<StringCh, one<'\\'>>> > {};
-struct PartialLiteral: seq< opt<one<'b'>>, sor<PartialStringLiteral, PartialCharLiteral> > {};
+struct PartialRawStringLiteral: seq< three<'"'>, star<not_at<three<'"'>>, sor<EscapedQuotes, any>> > {};
+struct PartialLiteral: seq< opt<one<'b'>>, sor<PartialRawStringLiteral, PartialStringLiteral, PartialCharLiteral> > {};
 
 // Invalid expressions
 struct InvalidCloseBracket: one< ')', ']' > {};
@@ -190,6 +192,7 @@ using HighlightSelector = tao::pegtl::parse_tree::selector< Rule,
                 Byte,
                 Char,
                 Bytes,
+                RawBytes,
                 String,
                 RawString,
                 FullyBracketed,
@@ -203,6 +206,7 @@ using HighlightSelector = tao::pegtl::parse_tree::selector< Rule,
                 OpenBrace,
                 PartialCharLiteral,
                 PartialStringLiteral,
+                PartialRawStringLiteral,
                 InvalidCloseBracket,
                 InvalidCloseBrace,
                 InvalidCh,
@@ -254,6 +258,8 @@ static std::pair<const char*, HighlightColor> highlight_color[] {
         {":String", {Color::BrightGreen}},
         {":PartialStringLiteral", {Color::BrightGreen, Mode::Underline}},
         {":RawString", {Color::BrightGreen}},
+        {":RawBytes", {Color::BrightGreen}},
+        {":PartialRawStringLiteral", {Color::BrightGreen, Mode::Underline}},
 
         // invalid expressions
         {":InvalidCh", {Color::BrightRed, Mode::Bold}},
@@ -324,8 +330,9 @@ HighlightColor Highlighter::highlight_node(
     bool child_hl_bracket = (fully_bracketed
             && (cursor == node.begin().byte || cursor == node.end().byte - 1));
 
-    // Set open bracket flag on any unpaired { ( [
-    if (node.type.ends_with(":OpenBracket") || node.type.ends_with(":OpenBrace"))
+    // Set open bracket flag on any unpaired { ( [ """
+    if (node.type.ends_with(":OpenBracket") || node.type.ends_with(":OpenBrace")
+    || node.type.ends_with(":PartialRawStringLiteral"))
         m_open_bracket = true;
 
     // Reset open bracket flag on any unpaired } ) ]
