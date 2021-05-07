@@ -25,6 +25,13 @@ bool remove_prefix(std::string& str, const std::string& prefix);
 
 bool remove_suffix(std::string& str, const std::string& suffix);
 
+/// Replace all occurrences of substring by replacement.
+std::string replace_all(std::string_view str, std::string_view substring, std::string_view replacement);
+
+/// Append `indentation` spaces after each newline.
+inline std::string indent(std::string_view str, unsigned indentation) {
+    return replace_all(str, "\n", "\n" + std::string(indentation, ' '));
+}
 
 std::vector<std::string_view> split(std::string_view str, char delim, int maxsplit = -1);
 std::vector<std::string_view> rsplit(std::string_view str, char delim, int maxsplit = -1);

@@ -42,6 +42,25 @@ bool remove_suffix(string& str, const string& suffix)
 }
 
 
+std::string replace_all(std::string_view str, std::string_view substring, std::string_view replacement)
+{
+    std::string output;
+    size_t pos = 0;
+    auto end = str.cbegin();
+    for(;;) {
+        pos = str.find(substring, pos);
+        if (pos == std::string::npos)
+            break;
+        output.append(end, str.cbegin() + pos);
+        output += replacement;
+        pos += substring.size();
+        end = str.cbegin() + pos;
+    }
+    output.append(end, str.cend());
+    return output;
+}
+
+
 vector<string_view> split(string_view str, char delim, int maxsplit)
 {
     std::vector<string_view> res;
