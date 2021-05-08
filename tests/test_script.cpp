@@ -44,6 +44,24 @@ std::string parse(const string& input)
 }
 
 
+// Format parser input/output by hand, don't use Catch2's automatic expansion.
+// This is easier to read in the log and it also workarounds a bug in MSVC:
+//    CHECK(parse(R"("escape sequences: \"\n\0\x12 ")", R"("escape sequences: \"\n\0\x12 ")"));
+//    > error C2017: illegal escape sequence
+//    > error C2146: syntax error: missing ')' before identifier 'n'
+#define PARSE(input, expected)                          \
+    do {                                                \
+        auto output = parse(input);                     \
+        INFO("Input:    " << indent((input), 12));      \
+        INFO("Output:   " << indent((output), 12));     \
+        INFO("Expected: " << indent((expected), 12));   \
+        if ((output) == (expected))                     \
+            SUCCEED();                                  \
+        else                                            \
+            FAIL();                                     \
+    } while(false)
+
+
 std::string interpret(const string& input, bool import_std=false)
 {
     Interpreter interpreter;
@@ -127,17 +145,35 @@ TEST_CASE( "Values", "[script][parser]" )
     CHECK(parse("1.23") == "1.23");
     CHECK(parse("42b") == "b'*'");  // byte (8-bit integer)
     CHECK(parse("b'B'") == "b'B'");
-    CHECK(parse("b\"bytes literal\"") == "b\"bytes literal\"");
+    PARSE(R"(b"bytes literal")", R"(b"bytes literal")");
     CHECK(parse("'c'") == "'c'");
-    CHECK(parse("\"string literal\"") == "\"string literal\"");
-    // Note: don't use raw string literal, it causes MSVC Error C2017 due to stringize operation in Catch2
-    CHECK(parse("\"escape sequences: \\\"\\n\\0\\x12 \"") == "\"escape sequences: \\\"\\n\\0\\x12 \"");
-    CHECK(parse("$$ raw \n\r\t\" string $$") == "\" raw \\n\\r\\t\\\" string \"");
+    PARSE(R"("string literal")", R"("string literal")");
+    PARSE(R"("escape sequences: \"\n\0\x12 ")", R"("escape sequences: \"\n\0\x12 ")");
     CHECK(parse("1,2,3") == "1, 2, 3");  // naked tuple
-    CHECK(parse("(1,2,\"str\")") == "(1, 2, \"str\")");  // bracketed tuple
+    PARSE(R"((1,2,"str"))", R"((1, 2, "str"))");  // bracketed tuple
     CHECK(parse("[1,2,3]") == "[1, 2, 3]");  // list
     CHECK(parse("[(1,2,3,4)]") == "[(1, 2, 3, 4)]");  // list with a tuple item
     CHECK(parse("[(1,2,3,4), 5]") == "[(1, 2, 3, 4), 5]");
+}
+
+
+TEST_CASE( "Raw strings", "[script][parser]" )
+{
+    PARSE(R"("""Hello""")", R"("Hello")");
+    PARSE("\"\"\"\nHello\n\"\"\"", R"("Hello")");
+    PARSE("\"\"\"\n  Hello\n  \"\"\"", R"("Hello")");
+    PARSE("\"\"\"\n  Hello\n\"\"\"", R"("  Hello")");
+    PARSE("\"\"\"\n    Hello\n  \"\"\"", R"("  Hello")");
+    PARSE("\"\"\"\n  \\nHello\\0\n  \"\"\"", R"("\\nHello\\0")");
+    PARSE("\"\"\"Hello\n\"\"\"", R"("Hello\n")");
+    PARSE("\"\"\"\n  Hello\"\"\"", R"("\n  Hello")");
+    PARSE("\"\"\"\n\nHello\n\n\"\"\"", R"("\nHello\n")");
+    PARSE("\"\"\"\n  \\\"\"\"Hello\\\"\"\"\n  \"\"\"", R"("\"\"\"Hello\"\"\"")");
+    PARSE("\"\"\"\n  \\\"\"\"\"Hello\\\"\"\"\"\n  \"\"\"", R"("\"\"\"\"Hello\"\"\"\"")");
+    PARSE("\"\"\"\n  \\\"\"\"\n  \\\\\"\"\"\n  \\\\\\\"\"\"\n  \"\"\"",
+                R"("\"\"\"\n\\\"\"\"\n\\\\\"\"\"")");
+    CHECK_THROWS_AS(parse("\"\"\"\\\"\"\""), ParseError);
+    PARSE("\"\"\"\n\\\n\"\"\"", R"("\\")");
 }
 
 

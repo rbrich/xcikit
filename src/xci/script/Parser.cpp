@@ -7,10 +7,10 @@
 #include "Parser.h"
 #include "Error.h"
 #include "TypeInfo.h"
+#include "parser/raw_string.h"
 #include <xci/core/parser/unescape_rules.h>
 
 #include <tao/pegtl.hpp>
-#include <tao/pegtl/contrib/raw_string.hpp>
 
 #ifndef NDEBUG
 #include <tao/pegtl/contrib/analyze.hpp>
@@ -106,11 +106,16 @@ struct NumSuffix: one<'l', 'L', 'f', 'F', 'b', 'B'> {};
 struct Number: seq< opt<Sign>, sor<ZeroPrefixNum, DecNum>, opt<NumSuffix> > {};
 
 struct Char: if_must< one<'\''>, StringCh, one<'\''> > {};
-struct String: if_must< one<'"'>, until<one<'"'>, StringCh > > {};
+struct StringContent: until< one<'"'>, StringCh > {};
+struct String: if_must< one<'"'>, StringContent > {};
+struct EscapedQuotes: seq<one<'\\'>, three<'"'>, star<one<'"'>>> {};
+struct RawStringCh: any {};
+struct RawStringContent: until<three<'"'>, sor<EscapedQuotes, RawStringCh>> {};
+struct RawString : if_must< three<'"'>, RawStringContent > {};
 struct Byte: seq< one<'b'>, Char > {};
 struct Bytes: seq< one<'b'>, String > {};
-struct RawString : raw_string< '$', '-', '$' > {};  // raw_string = $$ raw text! $$
-struct Literal: sor< Char, String, Byte, Bytes, Number, RawString > {};
+struct RawBytes: seq< one<'b'>, RawString > {};
+struct Literal: sor< Char, RawString, String, Byte, RawBytes, Bytes, Number > {};
 
 // Types
 struct Parameter: sor< Type, seq< Identifier, opt<SC, one<':'>, SC, must<Type> > > > {};
@@ -1070,18 +1075,37 @@ struct Action<Bytes> {
 };
 
 
-template<> struct Action<StringChOther> : StringAppend {};
+template<> struct Action<StringChOther> : StringAppendChar {};
 template<> struct Action<StringChEscSingle> : StringAppendEscSingle {};
 template<> struct Action<StringChEscHex> : StringAppendEscHex {};
 template<> struct Action<StringChEscOct> : StringAppendEscOct {};
 
+template<> struct Action<RawStringCh> : StringAppendChar {};
 
 template<>
-struct Action<RawString::content> {
-    template<typename Input, typename States>
-    static void apply(const Input &in, const States& /* raw_string states */, LiteralHelper& helper) {
-        helper.content = in.string_view();
+struct Action<EscapedQuotes> {
+    template<typename Input>
+    static void apply(const Input &in, std::string& str) {
+        assert(in.size() >= 4);
+        str.append(in.begin() + 1, in.end());
+    }
+};
+
+template<>
+struct Action<RawString> : change_states< std::string > {
+    template<typename Input>
+    static void success(const Input &in, std::string& str, LiteralHelper& helper) {
+        helper.content = strip_raw_string(move(str));
         helper.type = ValueType::String;
+    }
+};
+
+
+template<>
+struct Action<RawBytes> {
+    template<typename Input>
+    static void apply(const Input &in, LiteralHelper& helper) {
+        helper.type = ValueType::List;  // [Byte]
     }
 };
 
@@ -1203,6 +1227,8 @@ template<> const std::string Control<Variable>::errmsg = "expected variable name
 template<> const std::string Control<UnsafeType>::errmsg = "expected type";
 template<> const std::string Control<Type>::errmsg = "expected type";
 template<> const std::string Control<TypeName>::errmsg = "expected type name";
+template<> const std::string Control<StringContent>::errmsg = "unclosed string literal";
+template<> const std::string Control<RawStringContent>::errmsg = "unclosed raw string literal";
 
 // default message
 template< typename T >

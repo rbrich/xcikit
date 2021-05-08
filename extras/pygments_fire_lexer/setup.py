@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='fire_lexer',
-    version="0.1",
+    version="0.2",
     packages=['fire_lexer'],
     entry_points=
     """

@@ -11,6 +11,7 @@
 #include "Source.h"
 #include "dump.h"
 #include <xci/core/error.h>
+#include <xci/core/TermCtl.h>
 
 #include <fmt/core.h>
 #include <fmt/ostream.h>
@@ -20,6 +21,7 @@
 
 namespace xci::script {
 
+using core::TermCtl;
 using fmt::format;
 using std::string_view;
 
@@ -30,10 +32,14 @@ public:
     explicit ScriptError(std::string msg, const SourceLocation& loc) :
         Error(std::move(msg)),
         m_file(format("{}:{}:{}",
-            loc.source_name(), loc.line, loc.column)),
-        m_detail(!loc ? "" : format("{}\n{:>{}}",
-            loc.source_line(), '^', loc.column))
-    {}
+            loc.source_name(), loc.line, loc.column))
+    {
+        if (!loc)
+            return;
+        auto line = loc.source_line();
+        auto column = TermCtl::stripped_width(std::string_view{line}.substr(0, loc.column));
+        m_detail = format("{}\n{:>{}}", line, '^', column);
+    }
 
     const std::string& file() const noexcept { return m_file; }
     const std::string& detail() const noexcept { return m_detail; }

@@ -46,7 +46,7 @@ class XcikitConan(ConanFile):
     build_requires_or_preinstalled = (
         # <CMake name>, <min ver>,  <Conan reference>       <option>
         ('range-v3',    '0.10.0',   'range-v3/0.11.0',      None),
-        ('Catch2',      '',         'catch2/2.13.4',        'tests'),
+        ('Catch2',      '',         'catch2/2.13.6',        'tests'),
         ('benchmark',   '',         'benchmark/1.5.2',      'benchmarks'),
         ('pegtl',       '3.1.0',    'taocpp-pegtl/3.1.0',   None),
         ('glfw3',       '3.2.1',    'glfw/3.3.2',           'graphics'),
