@@ -78,38 +78,42 @@ The raw string can be multi-line. It has a few special rules:
   i.e. add a newline after the backslash and another one after opening quotes
   (they'll both be removed).
 
+[source,fire]
 ----
-a = """Hello"""   // `Hello`
+a = """Hello"""     // `Hello`
 b = """
-    Hello
-    """           // `Hello`
+    stripped
+    """             // `stripped`
 c = """
-    \nHello\0
-    """           // `\nHello\0`
+    \n\0\ <- not special
+    """             // `\n\0\ <- not special`
 d = """
-    Hello
-"""               // `    Hello`
-e = """Hello
-"""               // `Hello<nl>`
-f = """
-    Hello"""      // `<nl>    Hello`
+    no indent removal
+"""                 // `    no indent removal`
+e = """
+    partial indent removal
+  """               // `  partial indent removal`
+f = """not stripped
+"""                 // `not stripped<nl>`
 g = """
-
-Hello
-
-"""               // `<nl>Hello<nl>`
+    not stripped""" // `<nl>    not stripped`
 h = """
-    \""""Hello\""""
-    """           // `""""Hello""""`
+
+first/last nl stripped
+
+"""                 // `<nl>first/last nl stripped<nl>`
 i = """
+    \""""escaped quotes\""""
+    """             // `""""escaped quotes""""`
+j = """
     \""""
     \\""""
     \\\""""
-    """           // `""""<nl>\""""<nl>\\""""`
-j = """\"""       // ERROR: unclosed
-k = """
+    """             // `""""<nl>\""""<nl>\\""""`
+k = """\""" <- escaped! """
+l = """
 \
-"""               // `\`
+"""                 // `\` (trailing backslash requires multi-line)
 ----
 
 

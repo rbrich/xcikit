@@ -163,6 +163,7 @@ TEST_CASE( "Raw strings", "[script][parser]" )
     PARSE("\"\"\"\nHello\n\"\"\"", R"("Hello")");
     PARSE("\"\"\"\n  Hello\n  \"\"\"", R"("Hello")");
     PARSE("\"\"\"\n  Hello\n\"\"\"", R"("  Hello")");
+    PARSE("\"\"\"\n    Hello\n  \"\"\"", R"("  Hello")");
     PARSE("\"\"\"\n  \\nHello\\0\n  \"\"\"", R"("\\nHello\\0")");
     PARSE("\"\"\"Hello\n\"\"\"", R"("Hello\n")");
     PARSE("\"\"\"\n  Hello\"\"\"", R"("\n  Hello")");
