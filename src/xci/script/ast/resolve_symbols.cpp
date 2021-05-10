@@ -279,11 +279,17 @@ public:
         if (t.name.empty())
             //  TypeInfo(Type::Unknown); ?
             throw UndefinedTypeName(t.name, t.source_loc);
+        if (t.name[0] == '$') {
+            // anonymous generic type
+            t.symbol = allocate_type_var(t.name);
+            return;
+        }
         t.symbol = resolve_symbol(t.name);
         if (!t.symbol) {
             if (t.name.size() == 1 && isupper(t.name[0])) {
-                // single-letter uppercase types like T are generic by default
-                t.symbol = symtab().add({t.name, Symbol::TypeVar, 1});
+                // Single-letter uppercase types like T are generic by default
+                // '$' is internal prefix for untyped function args
+                t.symbol = allocate_type_var(t.name);
             } else
                 throw UndefinedTypeName(t.name, t.source_loc);
         }
@@ -297,13 +303,15 @@ public:
         }
         size_t par_idx = 0;
         for (auto& p : t.params) {
-            if (p.type)
-                p.type->apply(*this);
+            if (!p.type)
+                p.type = std::make_unique<ast::TypeName>("$" + p.identifier.name);
+            p.type->apply(*this);
             if (!p.identifier.name.empty())
                 p.identifier.symbol = symtab().add({p.identifier.name, Symbol::Parameter, par_idx++});
         }
-        if (t.result_type)
-            t.result_type->apply(*this);
+        if (!t.result_type)
+            t.result_type = std::make_unique<ast::TypeName>("$->");
+        t.result_type->apply(*this);
     }
 
     void visit(ast::ListType& t) final {
@@ -324,6 +332,14 @@ public:
 private:
     Module& module() { return m_function.module(); }
     SymbolTable& symtab() { return *m_symtab; }
+
+    SymbolPointer allocate_type_var(const std::string& name = "") {
+        size_t idx = 1;
+        auto last_var = symtab().find_last_of(Symbol::TypeVar);
+        if (last_var)
+            idx = last_var->index() + 1;
+        return symtab().add({name, Symbol::TypeVar, idx});
+    }
 
     SymbolPointer resolve_symbol(const std::string& name) {
         // lookup intrinsics in builtin module first

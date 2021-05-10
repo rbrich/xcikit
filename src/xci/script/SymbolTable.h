@@ -146,6 +146,7 @@ public:
     // find symbol in this table
     SymbolPointer find_by_name(const std::string& name);
     SymbolPointer find_last_of(const std::string& name, Symbol::Type type);
+    SymbolPointer find_last_of(Symbol::Type type);
 
     // return actual number of nonlocals (skipping unreferenced symbols)
     size_t count_nonlocals() const;

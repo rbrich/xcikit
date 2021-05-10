@@ -114,6 +114,16 @@ SymbolPointer SymbolTable::find_last_of(const std::string& name,
 }
 
 
+SymbolPointer SymbolTable::find_last_of(Symbol::Type type)
+{
+    auto it = std::find_if(m_symbols.rbegin(), m_symbols.rend(),
+            [type](const Symbol& sym) { return sym.type() == type; });
+    if (it == m_symbols.rend())
+        return {*this, no_index};
+    return {*this, Index((m_symbols.rend() - it) - 1)};
+}
+
+
 void SymbolTable::detect_overloads(const std::string& name)
 {
     Symbol* prev = nullptr;

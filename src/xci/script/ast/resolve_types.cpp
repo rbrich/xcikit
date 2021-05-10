@@ -463,8 +463,7 @@ public:
                         auto fspec = make_unique<Function>(fn.module(), fn.symtab());
                         fspec->set_signature(fn.signature_ptr());
                         fspec->set_ast(fn.ast());
-                        specialize_to_call_args(*fspec, v.source_loc);
-                        resolve_types(*fspec, fspec->ast());
+                        specialize_to_call_args(*fspec, fspec->ast(), v.source_loc);
                         sig_ptr = fspec->signature_ptr();
                         Symbol sym_copy {*symptr};
                         sym_copy.set_index(module().add_function(move(fspec)));
@@ -709,9 +708,8 @@ public:
             // try to instantiate the specialization
             if (m_call_args.size() == fn.signature().params.size()) {
                 // immediately called generic function -> specialize to normal function
-                specialize_to_call_args(fn, v.source_loc);
                 fn.set_compiled();
-                resolve_types(fn, v.body);
+                specialize_to_call_args(fn, v.body, v.source_loc);
                 m_value_type = TypeInfo{fn.signature_ptr()};
             } else if (v.definition) {
                 // mark as generic, uncompiled
@@ -820,7 +818,9 @@ public:
 private:
     Module& module() { return m_function.module(); }
 
-    void specialize_arg(size_t i, const TypeInfo& sig, const TypeInfo& arg, std::vector<TypeInfo>& resolved, const SourceLocation& loc) const
+    void specialize_arg(const TypeInfo& sig, const TypeInfo& arg,
+                        std::vector<TypeInfo>& resolved,
+                        const std::function<void(const TypeInfo& exp, const TypeInfo& got)>& exc_cb) const
     {
         switch (sig.type()) {
             case Type::Unknown: {
@@ -831,13 +831,13 @@ private:
                 if (!resolved[var-1])
                     resolved[var-1] = arg;
                 else if (resolved[var-1] != arg)
-                    throw UnexpectedArgumentType(i, resolved[var-1], arg, loc);
+                    exc_cb(resolved[var-1], arg);
                 break;
             }
             case Type::List:
                 if (arg.type() != Type::List)
-                    throw UnexpectedArgumentType(i, sig, arg, loc);
-                return specialize_arg(i, sig.elem_type(), arg.elem_type(), resolved, loc);
+                    exc_cb(sig, arg);
+                return specialize_arg(sig.elem_type(), arg.elem_type(), resolved, exc_cb);
             case Type::Function:
             case Type::Tuple:
                 assert(!"not implemented");
@@ -873,9 +873,13 @@ private:
         }
     }
 
-    // return new function according to requested signature
-    // throw when the signature doesn't match
-    void specialize_to_call_args(Function& fn, const SourceLocation& loc) const
+    // Specialize a generic function:
+    // * use m_call_args to resolve actual types of type variable
+    // * resolve function body (deduce actual return type)
+    // * use the deduced return type to resolve type variables in generic return type
+    // Return new function according to requested signature.
+    // Throw when the signature doesn't match the call args or deduced return type.
+    void specialize_to_call_args(Function& fn, const ast::Block& body, const SourceLocation& loc) const
     {
         std::vector<TypeInfo> resolved_types;
         for (size_t i = 0; i < fn.signature().params.size(); i++) {
@@ -883,15 +887,27 @@ private:
             auto& out_type = fn.signature().params[i];
             if (arg.type_info.is_unknown())
                 continue;
-            specialize_arg(i, out_type, arg.type_info, resolved_types, loc);
+            specialize_arg(out_type, arg.type_info, resolved_types,
+                    [i, &loc](const TypeInfo& exp, const TypeInfo& got) {
+                        throw UnexpectedArgumentType(i, exp, got, loc);
+                    });
         }
-
         // resolve generic vars to received types
         for (auto & out_type : fn.signature().params) {
             resolve_generic_type(resolved_types, out_type);
         }
-        auto& ret_type = fn.signature().return_type;
-        resolve_generic_type(resolved_types, ret_type);
+        // resolve function body to get actual return type
+        auto sig_ret = fn.signature().return_type;
+        resolve_types(fn, body);
+        auto deduced_ret = fn.signature().return_type;
+        // resolve generic return type
+        if (!deduced_ret.is_unknown())
+            specialize_arg(sig_ret, deduced_ret, resolved_types,
+                           [](const TypeInfo& exp, const TypeInfo& got) {
+                               throw UnexpectedReturnType(exp, got);
+                           });
+        resolve_generic_type(resolved_types, sig_ret);
+        fn.signature().return_type = sig_ret;
     }
 
     // Consume params from `orig_signature` according to `m_call_args`, creating new signature
