@@ -73,14 +73,13 @@ public:
 
     // Special intrinsics function cannot contain any compiled code and is always inlined.
     // This counter helps to check no other code was generated.
-    void add_intrinsic(uint8_t code) {
-        std::get<CompiledBody>(m_body).intrinsics++;
-        std::get<CompiledBody>(m_body).code.add(code);
-    }
+    void add_intrinsics(unsigned code_size) { std::get<CompiledBody>(m_body).intrinsics += code_size; }
     size_t intrinsics() const { return std::get<CompiledBody>(m_body).intrinsics; }
     bool has_intrinsics() const { return std::get<CompiledBody>(m_body).intrinsics > 0; }
 
     // Generic function: AST of function body
+    struct GenericBody;
+    GenericBody yank_generic_body() { return std::move(std::get<GenericBody>(m_body)); }
     const ast::Block& ast() const { return std::get<GenericBody>(m_body).ast(); }
     void set_ast(const ast::Block& body) { m_body = GenericBody{&body}; }
     bool is_ast_copied() const { return std::get<GenericBody>(m_body).ast_ref == nullptr; }
@@ -114,7 +113,7 @@ public:
 
         // Compiled function body
         Code code;
-        // Counter for instructions from intrinsics
+        // Counter for code bytes from intrinsics
         unsigned intrinsics = 0;
         // If function should be inlined at call site
         bool is_fragment = false;

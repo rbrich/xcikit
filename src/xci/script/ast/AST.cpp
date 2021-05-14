@@ -94,7 +94,7 @@ void Definition::copy_to(Definition& r) const
 std::unique_ptr<ast::Statement> Invocation::make_copy() const
 {
     auto r = std::make_unique<Invocation>(expression->make_copy());
-    r->type_index = type_index;
+    r->type_id = type_id;
     return r;
 }
 
@@ -168,6 +168,8 @@ std::unique_ptr<ast::Expression> Reference::make_copy() const
     auto r = std::make_unique<Reference>();
     Expression::copy_to(*r);
     r->identifier = identifier;
+    if (type_arg)
+        r->type_arg = type_arg->make_copy();
     r->chain = chain;
     r->module = module;
     r->index = index;
@@ -184,6 +186,7 @@ void Call::copy_to(Call& r) const
     r.wrapped_execs = wrapped_execs;
     r.partial_args = partial_args;
     r.partial_index = partial_index;
+    r.intrinsic = intrinsic;
 }
 
 

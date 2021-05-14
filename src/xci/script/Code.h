@@ -90,11 +90,7 @@ enum class Opcode: uint8_t {
     Execute,                // pull closure from stack, unwrap it, call the contained function
 
     // --------------------------------------------------------------
-    // The following have one 1-byte arg
-
-    LoadStatic,             // arg => idx of static in module, push on stack
-    LoadModule,             // arg => idx of imported module, push it as value on stack
-    LoadFunction,           // arg => idx of function in module, push on stack
+    // B1 (one single-byte argument)
 
     /// Cast Int/Float value to another type.
     /// Arg: 4/4 bit split, high half = from type, low half = to type
@@ -105,6 +101,16 @@ enum class Opcode: uint8_t {
     /// Casting rules are based on the C++ implementation (static_cast).
     Cast,
 
+    Jump,                   // arg => relative jump (+N instructions) - unconditional
+    JumpIfNot,              // pull cond from stack, arg => relative jump (+N instructions) if cond is false
+
+    // --------------------------------------------------------------
+    // L1 (one LEB128-encoded argument)
+
+    LoadStatic,             // arg => idx of static in module, push on stack
+    LoadModule,             // arg => idx of imported module, push it as value on stack
+    LoadFunction,           // arg => idx of function in module, push on stack
+
     Call0,                  // arg = idx of function in current module, call it, pull args from stack, push result back
     Call1,                  // arg = idx of function in builtin module, call it, pull args from stack, push result back
 
@@ -114,15 +120,12 @@ enum class Opcode: uint8_t {
     IncRef,                 // arg = offset from top, (uint32*) at the offset is dereferenced and incremented
     DecRef,                 // arg = offset from top, (uint32*) at the offset is dereferenced and decremented
 
-    Jump,                   // arg => relative jump (+N instructions) - unconditional
-    JumpIfNot,              // pull cond from stack, arg => relative jump (+N instructions) if cond is false
-
-    Subscript,              // arg => elem type
+    Subscript,              // arg => elem type (type index, LEB128)
 
     Invoke,                 // arg => type index in current module, pull value from stack, invoke it
 
     // --------------------------------------------------------------
-    // The following have two 1-byte args
+    // L2 (two LEB128-encoded arguments)
 
     Call,                   // arg1 = idx of imported module, arg2 = idx of function in the module, call it, pull args from stack, push result back
 
@@ -135,12 +138,14 @@ enum class Opcode: uint8_t {
     // --------------------------------------------------------------
     // Auxiliary aliases
 
-    ZeroArgFirst = Noop,
-    ZeroArgLast = Execute,
-    OneArgFirst = LoadStatic,
-    OneArgLast = Invoke,
-    TwoArgFirst = Call,
-    TwoArgLast = Swap,
+    NoArgFirst = Noop,
+    NoArgLast = Execute,
+    B1ArgFirst = Cast,
+    B1ArgLast = JumpIfNot,
+    L1ArgFirst = LoadStatic,
+    L1ArgLast = Invoke,
+    L2ArgFirst = Call,
+    L2ArgLast = Swap,
 };
 
 // Allow basic arithmetic on OpCode
@@ -157,34 +162,22 @@ public:
     void add_opcode(Opcode opcode) {
         add(static_cast<uint8_t>(opcode));
     }
-    void add_opcode(Opcode opcode, uint8_t arg) {
+    // opcodes with arguments
+    // Note: These can't be overloads, the semantics are different.
+    void add_B1(Opcode opcode, uint8_t arg) {
         add_opcode(opcode);
         add(arg);
     }
-    void add_opcode(Opcode opcode, size_t arg) {
+    size_t add_L1(Opcode opcode, size_t arg);
+    size_t add_L2(Opcode opcode, size_t arg1, size_t arg2);
+
+    void set_arg_B(OpIdx pos, size_t arg) {
         assert(arg <= 255);
-        add_opcode(opcode);
-        add((uint8_t) arg);
-    }
-    void add_opcode(Opcode opcode, uint8_t arg1, uint8_t arg2) {
-        add_opcode(opcode);
-        add(arg1);
-        add(arg2);
-    }
-    void add_opcode(Opcode opcode, size_t arg1, size_t arg2) {
-        assert(arg1 <= 255);
-        assert(arg2 <= 255);
-        add_opcode(opcode);
-        add((uint8_t) arg1);
-        add((uint8_t) arg2);
-    }
-    void set_arg(OpIdx pos, size_t arg) {
-        assert(arg <= 255);
-        set_arg(pos, (uint8_t) arg);
+        set(pos, (uint8_t) arg);
     }
 
     void add(uint8_t b) { m_ops.push_back(b); }
-    void set_arg(OpIdx pos, uint8_t arg) { m_ops[pos] = arg; }
+    void set(OpIdx pos, uint8_t b) { m_ops[pos] = b; }
     OpIdx this_instruction_address() const { return m_ops.size() - 1; }
 
     using const_iterator = std::vector<uint8_t>::const_iterator;

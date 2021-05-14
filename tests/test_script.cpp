@@ -440,10 +440,23 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
                     "inner = fun x:Int { x + y }; inner y "
                     "}; outer 2") == "4");
     CHECK(interpret("outer = fun y:Int {"
-                    "inner = fun x:Int { x + y }; alias = inner; alias y "
+                    "  inner = fun x:Int { x + y };"
+                    "  alias = inner; alias y "
                     "}; outer 2") == "4");
     CHECK(interpret("outer = fun y {"
-                    "inner = fun x:Int { x + y }; alias = fun x:Int { inner x }; alias y "
+                    "  inner = fun x:Int { x + y };"
+                    "  wrapped = fun x:Int { inner x };"
+                    "  wrapped y "
+                    "}; outer 2") == "4");
+    // generic-in-generic doesn't work yet
+    /*CHECK(interpret("outer = fun y {"
+                    "  inner = fun x { x + y };"
+                    "  wrapped = fun x { inner x };"
+                    "  wrapped y "
+                    "}; outer 2") == "4");*/
+    CHECK(interpret("outer = fun y {"
+                    "  inner = fun x:Int { in2 = fun z:Int{ x + z }; in2 y };"
+                    "  wrapped = fun x:Int { inner x }; wrapped y"
                     "}; outer 2") == "4");
 }
 
@@ -528,12 +541,18 @@ TEST_CASE( "Casting", "[script][interpreter]" )
 }
 
 
-TEST_CASE( "Lists", "[script][interpreter]" )
+TEST_CASE( "Subscript", "[script][interpreter]" )
 {
-    CHECK(interpret("[1,2,3] ! 2") == "3");
-    CHECK_THROWS_AS(interpret("[1,2,3]!3"), IndexOutOfBounds);
-    CHECK(interpret("[[1,2],[3,4],[5,6]] ! 1 ! 0") == "3");
-    CHECK(interpret("head = fun l:[Int] -> Int { l!0 }; head [1,2,3]") == "1");
+    // custom implementation (same as in std.fire)
+    CHECK(interpret("subscript = fun [T] Int -> T { __subscript __type_id<T> }; subscript [1,2,3] 1") == "2");
+    // std implementation
+    CHECK(interpret_std("subscript [1,2,3] 1") == "2");
+    CHECK(interpret_std("[1,2,3] ! 2") == "3");
+    CHECK_THROWS_AS(interpret_std("[1,2,3]!3"), IndexOutOfBounds);
+    CHECK(interpret_std("['a','b','c'] ! 1") == "'b'");
+    CHECK(interpret_std("[[1,2],[3,4],[5,6]] ! 1 ! 0") == "3");
+    CHECK(interpret_std("head = fun l:[Int] -> Int { l!0 }; head [1,2,3]") == "1");
+    CHECK(interpret_std("head = fun l:[T] -> T { l!0 }; head ['a','b','c']") == "'a'");
 }
 
 

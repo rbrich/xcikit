@@ -1,7 +1,7 @@
 // resolve_nonlocals.cpp created on 2020-01-05 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019, 2020 Radek Brich
+// Copyright 2019–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "resolve_nonlocals.h"
@@ -65,7 +65,11 @@ public:
         const auto& sym = *v.identifier.symbol;
         switch (sym.type()) {
             case Symbol::Nonlocal: {
-                auto& nl_sym = *sym.ref();
+                // make sure the symbol is copied if it came from template function
+                // (later needed for erasing nonlocals in function signature)
+                v.identifier.symbol.write(m_function.symtab());
+                // now, check and potentially eliminate the symbol (it will stay in symbol table, though)
+                const auto& nl_sym = *sym.ref();
                 auto* nl_func = sym.ref().symtab()->function();
                 assert(nl_func != nullptr);
                 switch (nl_sym.type()) {
@@ -86,7 +90,6 @@ public:
                 auto* symmod = symtab.module() == nullptr ? &module() : symtab.module();
                 auto& fn = symmod->get_function(sym.index());
                 if (fn.is_generic()) {
-                    assert(!fn.is_ast_copied());   // AST is referenced
                     process_function(fn, fn.ast());
                 }
                 break;
@@ -98,8 +101,11 @@ public:
                 assert(symtab.module() == nullptr || symtab.module() == &module());
                 Function& fn = module().get_function(sym.index());
                 m_function.symtab().set_name(v.identifier.name + "/partial");
-                auto nlsym = m_function.symtab().add({v.identifier.symbol, Symbol::Nonlocal, 0});
-                nlsym->set_index(m_function.nonlocals().size());
+                auto nlsym = m_function.symtab().add({
+                        v.identifier.symbol,
+                        Symbol::Nonlocal,
+                        m_function.nonlocals().size(),
+                        0});
                 m_function.add_nonlocal(TypeInfo{fn.signature_ptr()});
                 v.identifier.symbol = nlsym;
                 break;
@@ -151,8 +157,9 @@ public:
             wfn->set_fragment();
             wfn->set_signature(func.signature_ptr());
             auto wfn_index = module().add_function(move(wfn));
-            v.definition->symbol()->set_index(wfn_index);
-            v.definition->symbol()->set_type(Symbol::Fragment);
+            v.definition->symbol().write(m_function.symtab())
+                    .set_index(wfn_index)
+                    .set_type(Symbol::Fragment);
         }
     }
 

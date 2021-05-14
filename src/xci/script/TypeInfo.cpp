@@ -174,14 +174,14 @@ TypeInfo::TypeInfo(std::string name, TypeInfo&& type_info)
 {}
 
 
-TypeInfo::TypeInfo(TypeInfo&& other)
+TypeInfo::TypeInfo(TypeInfo&& other) noexcept
         : m_type(move(other.m_type)), m_info(move(other.m_info))
 {
     other.m_type = Type::Unknown;
 }
 
 
-TypeInfo& TypeInfo::operator=(TypeInfo&& other)
+TypeInfo& TypeInfo::operator=(TypeInfo&& other) noexcept
 {
     m_type = move(other.m_type);
     m_info = move(other.m_info);
@@ -206,6 +206,8 @@ bool TypeInfo::operator==(const TypeInfo& rhs) const
         return false;
     if (m_type == Type::Function)
         return signature() == rhs.signature();  // compare content, not pointer
+    if (m_type == Type::Named)
+        return named_type() == rhs.named_type();
     return m_info == rhs.m_info;
 }
 

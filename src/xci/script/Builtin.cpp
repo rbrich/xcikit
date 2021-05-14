@@ -257,7 +257,6 @@ BuiltinModule::BuiltinModule() : Module("builtin")
     add_arithmetic_op_function("mod", Opcode::Mod_8);
     add_arithmetic_op_function("exp", Opcode::Exp_8);
     add_unary_op_functions();
-    add_subscript_function();
     add_intrinsics();
     add_types();
     add_io_functions();
@@ -426,22 +425,6 @@ BuiltinModule::add_unary_op_functions()
 }
 
 
-void
-BuiltinModule::add_subscript_function()
-{
-    auto name = "subscript";
-
-    auto fn = std::make_unique<Function>(*this, symtab().add_child(name));
-    fn->signature().return_type = ti_int32();
-    fn->add_parameter("lhs", ti_list(ti_int32()));
-    fn->add_parameter("rhs", ti_int32());
-    fn->set_compiled();
-    Index tidx = add_type(TypeInfo{Type::Int32});
-    fn->code().add_opcode(Opcode::Subscript, tidx);
-    symtab().add({name, Symbol::Function, add_function(std::move(fn))});
-}
-
-
 void BuiltinModule::add_intrinsics()
 {
     // directly write instructions to function code
@@ -537,6 +520,8 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__make_list", Symbol::Instruction, Index(Opcode::MakeList)});
     symtab().add({"__partial", Symbol::Instruction, Index(Opcode::Partial)});
     */
+
+    symtab().add({"__type_id", Symbol::TypeId});
 }
 
 

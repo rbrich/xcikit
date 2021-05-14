@@ -77,8 +77,8 @@ public:
     using NamedTypePtr = std::shared_ptr<NamedType>;
 
     // Unknown / generic
-    TypeInfo() : m_type(Type::Unknown), m_info(Var(0)) {}
-    explicit TypeInfo(Var var) : m_type(Type::Unknown), m_info(var) {}
+    TypeInfo() = default;
+    explicit TypeInfo(Var var) : m_info(var) {}
     // Plain types
     explicit TypeInfo(Type type);
     // Function
@@ -101,8 +101,8 @@ public:
 
     TypeInfo(const TypeInfo&) = default;
     TypeInfo& operator =(const TypeInfo&) = default;
-    TypeInfo(TypeInfo&& other);
-    TypeInfo& operator =(TypeInfo&& other);
+    TypeInfo(TypeInfo&& other) noexcept;
+    TypeInfo& operator =(TypeInfo&& other) noexcept;
 
     size_t size() const;
     void foreach_heap_slot(std::function<void(size_t offset)> cb) const;
@@ -139,7 +139,7 @@ public:
 
 private:
     Type m_type { Type::Unknown };
-    std::variant<std::monostate, Var, Subtypes, StructItems, SignaturePtr, NamedTypePtr> m_info;
+    std::variant<Var, Subtypes, StructItems, SignaturePtr, NamedTypePtr> m_info;
 };
 
 

@@ -221,6 +221,7 @@ struct TypeName: public Type {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Type> make_copy() const override { return std::make_unique<TypeName>(*this); };
+    explicit operator bool() const { return !name.empty(); }
 
     std::string name;
 
@@ -364,14 +365,12 @@ struct Reference: public Expression {
     std::unique_ptr<ast::Expression> make_copy() const override;
 
     Identifier identifier;
+    std::unique_ptr<Type> type_arg;  // explicit type argument: e.g. <Int>
 
     // resolved Method:
     SymbolPointer chain;  // tip of chain of Instances in case of Method
     Module* module = nullptr;   // module with instance function
     Index index = no_index;     // index of (instance) function in module
-
-    // resolved Instruction:
-    uint8_t instruction_args[2] {};
 };
 
 struct Call: public Expression {
@@ -390,6 +389,8 @@ struct Call: public Expression {
     unsigned wrapped_execs = 0;
     unsigned partial_args = 0;
     Index partial_index = no_index;
+
+    bool intrinsic = false;
 };
 
 struct Operator {
@@ -544,7 +545,7 @@ struct Invocation: public Statement {
     std::unique_ptr<Expression> expression;
 
     // resolved:
-    Index type_index = no_index;
+    Index type_id = no_index;
 };
 
 struct Return: public Statement {

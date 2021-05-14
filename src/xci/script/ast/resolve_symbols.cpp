@@ -198,6 +198,8 @@ public:
         symptr = resolve_symbol(v.identifier.name);
         if (!symptr)
             throw UndefinedName(v.identifier.name, v.source_loc);
+        if (v.type_arg)
+            v.type_arg->apply(*this);
         if (symptr->type() == Symbol::Method) {
             // if the reference points to a class function, find nearest
             // instance of the class

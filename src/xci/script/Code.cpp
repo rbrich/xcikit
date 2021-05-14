@@ -5,10 +5,13 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Code.h"
+#include <xci/data/coding/leb128.h>
 #include <xci/compat/macros.h>
 
 
 namespace xci::script {
+
+using xci::data::encode_leb128;
 
 
 std::ostream& operator<<(std::ostream& os, Opcode v)
@@ -97,6 +100,25 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::JumpIfNot:         return os << "JUMP_IF_NOT";
     }
     UNREACHABLE;
+}
+
+
+size_t Code::add_L1(Opcode opcode, size_t arg)
+{
+    const auto orig_ops = m_ops.size();
+    add_opcode(opcode);
+    encode_leb128(m_ops, arg);
+    return m_ops.size() - orig_ops;
+}
+
+
+size_t Code::add_L2(Opcode opcode, size_t arg1, size_t arg2)
+{
+    const auto orig_ops = m_ops.size();
+    add_opcode(opcode);
+    encode_leb128(m_ops, arg1);
+    encode_leb128(m_ops, arg2);
+    return m_ops.size() - orig_ops;
 }
 
 

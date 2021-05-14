@@ -59,8 +59,23 @@ Index Module::add_value(TypedValue&& value)
 
 Index Module::add_type(TypeInfo type_info)
 {
+    if (!type_info.is_unknown()) {
+        auto idx = find_type(type_info);
+        if (idx != no_index)
+            return idx;
+    }
     m_types.push_back(move(type_info));
     return m_types.size() - 1;
+}
+
+
+Index Module::find_type(const TypeInfo& type_info) const
+{
+    assert(!type_info.is_unknown());
+    auto it = std::find(m_types.begin(), m_types.end(), type_info);
+    if (it == m_types.end())
+        return no_index;
+    return it - m_types.begin();
 }
 
 

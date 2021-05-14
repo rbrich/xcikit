@@ -1,7 +1,7 @@
 // SymbolTable.cpp created on 2019-07-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019 Radek Brich
+// Copyright 2019–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "SymbolTable.h"
@@ -17,31 +17,33 @@ SymbolTable::SymbolTable(std::string name, SymbolTable* parent)
 {}
 
 
-Symbol& SymbolPointer::operator*()
-{
-    assert(m_symtab != nullptr);
-    return m_symtab->get(m_index);
-}
-
-
 const Symbol& SymbolPointer::operator*() const
 {
     assert(m_symtab != nullptr);
-    return m_symtab->get(m_index);
-}
-
-
-Symbol* SymbolPointer::operator->()
-{
-    assert(m_symtab != nullptr);
-    return &m_symtab->get(m_index);
+    return m_symtab->get(m_symidx);
 }
 
 
 const Symbol* SymbolPointer::operator->() const
 {
     assert(m_symtab != nullptr);
-    return &m_symtab->get(m_index);
+    return &m_symtab->get(m_symidx);
+}
+
+
+Symbol* SymbolPointer::operator->()
+{
+    assert(m_symtab != nullptr);
+    return &m_symtab->get(m_symidx);
+}
+
+
+Symbol& SymbolPointer::write(SymbolTable& symtab)
+{
+    assert(m_symtab != nullptr);
+    if (m_symtab != &symtab)
+        *this = symtab.add(Symbol(m_symtab->get(m_symidx)));
+    return m_symtab->get(m_symidx);
 }
 
 
@@ -56,6 +58,18 @@ SymbolTable& SymbolTable::add_child(const std::string& name)
 {
     m_children.emplace_back(name, this);
     return m_children.back();
+}
+
+
+unsigned SymbolTable::level() const
+{
+    unsigned res = 0;
+    const auto* p = m_parent;
+    while (p != nullptr) {
+        ++res;
+        p = p->parent();
+    }
+    return res;
 }
 
 

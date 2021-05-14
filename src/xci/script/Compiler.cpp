@@ -12,7 +12,6 @@
 #include "ast/fold_const_expr.h"
 #include "ast/fold_dot_call.h"
 #include "ast/fold_tuple.h"
-#include "ast/fold_intrinsics.h"
 #include "Stack.h"
 #include <xci/compat/macros.h>
 
@@ -51,8 +50,8 @@ public:
 
     void visit(ast::Invocation& inv) override {
         inv.expression->apply(*this);
-        if (inv.type_index != no_index)
-            code().add_opcode(Opcode::Invoke, inv.type_index);
+        if (inv.type_id != no_index)
+            code().add_L1(Opcode::Invoke, inv.type_id);
     }
 
     void visit(ast::Return& ret) override {
@@ -76,38 +75,53 @@ public:
             for (const auto& ti : m_function.nonlocals()) {
                 ti.foreach_heap_slot([this, pos](size_t offset) {
                     // DEC_REF <addr in nonlocals>
-                    m_function.code().add_opcode(Opcode::DecRef, pos + offset);
+                    m_function.code().add_L1(Opcode::DecRef, pos + offset);
                 });
                 pos += ti.size();
             }
             for (const auto& ti : reverse(m_function.partial())) {
                 ti.foreach_heap_slot([this, pos](size_t offset) {
                     // DEC_REF <addr in partial>
-                    m_function.code().add_opcode(Opcode::DecRef, pos + offset);
+                    m_function.code().add_L1(Opcode::DecRef, pos + offset);
                 });
                 pos += ti.size();
             }
             for (const auto& ti : reverse(m_function.parameters())) {
                 ti.foreach_heap_slot([this, pos](size_t offset) {
                     // DEC_REF <addr in params>
-                    m_function.code().add_opcode(Opcode::DecRef, pos + offset);
+                    m_function.code().add_L1(Opcode::DecRef, pos + offset);
                 });
                 pos += ti.size();
             }
             // DROP <ret_value> <params + nonlocals>
-            m_function.code().add_opcode(Opcode::Drop, skip, drop);
+            m_function.code().add_L2(Opcode::Drop, skip, drop);
         }
         // return value left on stack
     }
 
     void visit(ast::Literal& v) override {
+        if (m_intrinsic) {
+            switch (v.value.type()) {
+                case Type::Byte:
+                    m_instruction_args.push_back((uint32_t) v.value.get<byte>());
+                    break;
+                case Type::Int32:
+                    m_instruction_args.push_back(v.value.get<int32_t>());
+                    break;
+                default:
+                    assert(!"wrong intrinsic argument type");
+                    break;
+            }
+            return;
+        }
+
         if (v.value.is_void())
             return;  // Void value
         // add to static values
         v.value.incref();
         auto idx = module().add_value(TypedValue(v.value));
         // LOAD_STATIC <static_idx>
-        code().add_opcode(Opcode::LoadStatic, idx);
+        code().add_L1(Opcode::LoadStatic, idx);
     }
 
     void visit(ast::Bracketed& v) override {
@@ -127,7 +141,7 @@ public:
             item->apply(*this);
         }
         // MAKE_LIST <length> <elem_size>
-        code().add_opcode(Opcode::MakeList, v.items.size(), v.item_size);
+        code().add_L2(Opcode::MakeList, v.items.size(), v.item_size);
     }
 
     void visit(ast::StructInit& v) override {
@@ -145,7 +159,7 @@ public:
                 // add to static values
                 auto idx = module().add_value(TypedValue(ti.second));
                 // LOAD_STATIC <static_idx>
-                code().add_opcode(Opcode::LoadStatic, idx);
+                code().add_L1(Opcode::LoadStatic, idx);
                 continue;
             }
             it->second->apply(*this);
@@ -160,23 +174,46 @@ public:
             case Symbol::Instruction: {
                 // intrinsics - just output the requested instruction
                 auto opcode = Opcode(sym.index());
-                // add the opcode
-                m_function.add_intrinsic(uint8_t(opcode));
-                if (opcode <= Opcode::ZeroArgLast)
-                    break;
-                // add first arg
-                m_function.add_intrinsic(v.instruction_args[0]);
-                if (opcode <= Opcode::OneArgLast)
-                    break;
-                // add second arg
-                m_function.add_intrinsic(uint8_t(v.instruction_args[1]));
-                assert(opcode <= Opcode::TwoArgLast);
+                if (opcode <= Opcode::NoArgLast) {
+                    m_function.code().add_opcode(opcode);
+                    m_function.add_intrinsics(1);
+                } else if (opcode <= Opcode::B1ArgLast) {
+                    assert(m_instruction_args.size() == 1);
+                    if (m_instruction_args[0] < 0 || m_instruction_args[0] >= 256)
+                        throw IntrinsicsFunctionError("arg value out of Byte range: "
+                                  + std::to_string(m_instruction_args[0]), v.source_loc);
+                    m_function.code().add_B1(opcode, (uint8_t) m_instruction_args[0]);
+                    m_function.add_intrinsics(2);
+                } else if (opcode <= Opcode::L1ArgLast) {
+                    assert(m_instruction_args.size() == 1);
+                    auto n = m_function.code().add_L1(opcode, m_instruction_args[0]);
+                    m_function.add_intrinsics(n);
+                } else {
+                    assert(opcode <= Opcode::L2ArgLast);
+                    assert(m_instruction_args.size() == 2);
+                    auto n = m_function.code().add_L2(opcode,
+                            m_instruction_args[0], m_instruction_args[1]);
+                    m_function.add_intrinsics(n);
+                }
+                break;
+            }
+            case Symbol::TypeId: {
+                auto type_id = sym.index();
+                if (m_intrinsic) {
+                    m_instruction_args.push_back(type_id);
+                    return;
+                }
+
+                // create static Int value in this module
+                auto idx = module().add_value(TypedValue(value::Int32((int32_t)type_id)));
+                // LOAD_STATIC <static_idx>
+                code().add_L1(Opcode::LoadStatic, idx);
                 break;
             }
             case Symbol::Module: {
                 assert(sym.depth() == 0);
                 // LOAD_MODULE <module_idx>
-                code().add_opcode(Opcode::LoadModule, sym.index());
+                code().add_L1(Opcode::LoadModule, sym.index());
                 break;
             }
             case Symbol::Nonlocal: {
@@ -187,11 +224,11 @@ public:
                 // Non-locals are captured in closure - read from closure
                 auto ofs_ti = m_function.nonlocal_offset_and_type(sym.index());
                 // COPY <frame_offset>
-                code().add_opcode(Opcode::Copy,
+                code().add_L2(Opcode::Copy,
                         ofs_ti.first, ofs_ti.second.size());
                 ofs_ti.second.foreach_heap_slot([this](size_t offset) {
                     // INC_REF <stack_offset>
-                    code().add_opcode(Opcode::IncRef, offset);
+                    code().add_L1(Opcode::IncRef, offset);
                 });
                 break;
             }
@@ -204,7 +241,7 @@ public:
                     idx = module().add_value(TypedValue(val));
                 }
                 // LOAD_STATIC <static_idx>
-                code().add_opcode(Opcode::LoadStatic, idx);
+                code().add_L1(Opcode::LoadStatic, idx);
                 break;
             }
             case Symbol::Parameter: {
@@ -212,11 +249,11 @@ public:
                 // COPY <frame_offset> <size>
                 auto closure_size = m_function.raw_size_of_closure();
                 const auto& ti = m_function.parameter(sym.index());
-                code().add_opcode(Opcode::Copy,
+                code().add_L2(Opcode::Copy,
                         m_function.parameter_offset(sym.index()) + closure_size,
                         ti.size());
                 ti.foreach_heap_slot([this](size_t offset) {
-                    code().add_opcode(Opcode::IncRef, offset);
+                    code().add_L1(Opcode::IncRef, offset);
                 });
                 break;
             }
@@ -224,7 +261,7 @@ public:
                 // this module
                 if (v.module == &module()) {
                     // CALL0 <function_idx>
-                    code().add_opcode(Opcode::Call0, v.index);
+                    code().add_L1(Opcode::Call0, v.index);
                     break;
                 }
                 // builtin module or imported module
@@ -232,10 +269,10 @@ public:
                 assert(mod_idx != no_index);
                 if (mod_idx == 0) {
                     // CALL1 <function_idx>
-                    code().add_opcode(Opcode::Call1, v.index);
+                    code().add_L1(Opcode::Call1, v.index);
                 } else {
                     // CALL <module_idx> <function_idx>
-                    code().add_opcode(Opcode::Call, mod_idx, v.index);
+                    code().add_L2(Opcode::Call, mod_idx, v.index);
                 }
                 break;
             }
@@ -246,14 +283,12 @@ public:
                     Function& func = module().get_function(sym.index());
                     if (func.is_generic()) {
                         assert(!func.detect_generic());  // fully specialized
-                        assert(!func.is_ast_copied());   // AST is referenced
-                        const auto & ast = func.ast();
-                        //auto ast = std::move(func.ast_copy());
-                        func.set_compiled();
-                        m_compiler.compile_block(func, ast);
+                        const auto body = func.yank_generic_body();
+                        func.set_compiled();  // this would release AST copy
+                        m_compiler.compile_block(func, body.ast());
                     }
                     // CALL0 <function_idx>
-                    code().add_opcode(Opcode::Call0, sym.index());
+                    code().add_L1(Opcode::Call0, sym.index());
                     break;
                 }
                 // builtin module or imported module
@@ -261,30 +296,33 @@ public:
                 assert(mod_idx != no_index);
                 if (mod_idx == 0) {
                     // CALL1 <function_idx>
-                    code().add_opcode(Opcode::Call1, sym.index());
+                    code().add_L1(Opcode::Call1, sym.index());
                 } else {
                     // CALL <module_idx> <function_idx>
-                    code().add_opcode(Opcode::Call, mod_idx, sym.index());
+                    code().add_L2(Opcode::Call, mod_idx, sym.index());
                 }
                 break;
             }
             case Symbol::Fragment: {
                 assert(symtab.module() == nullptr || symtab.module() == &module());
-                Function& func = module().get_function(sym.index());
+                Function& fragment = module().get_function(sym.index());
                 // inline the code
-                int levels = 0;
+                unsigned levels = 0;
                 auto* scope = &m_function.symtab();
-                while (scope != func.symtab().parent()) {
+                while (scope != fragment.symtab().parent()) {
                     scope = scope->parent();
                     ++levels;
                 }
+                // Should be equivalent:
+                //unsigned levels = m_function.symtab().level() + 1 - fragment.symtab().level();
                 if (levels != 0) {
+                    // fragment is not direct child of m_function - climb up `levels` scopes
                     // SET_BASE <levels>
                     assert(levels <= 255);
-                    code().add_opcode(Opcode::SetBase, (uint8_t) levels);
+                    code().add_L1(Opcode::SetBase, (uint8_t) levels);
                 }
                 // copy the code
-                for (auto instr : func.code()) {
+                for (auto instr : fragment.code()) {
                     code().add(instr);
                 }
                 break;
@@ -312,6 +350,8 @@ public:
     void visit(ast::Call& v) override {
         // call the function or push the function as value
 
+        m_intrinsic = v.intrinsic;
+
         for (auto& arg : reverse(v.args)) {
             arg->apply(*this);
         }
@@ -332,7 +372,7 @@ public:
             make_closure(fn);
             if (!v.definition) {
                 // MAKE_CLOSURE <function_idx>
-                code().add_opcode(Opcode::MakeClosure, v.partial_index);
+                code().add_L1(Opcode::MakeClosure, v.partial_index);
                 if (!fn.has_parameters()) {
                     // EXECUTE
                     code().add_opcode(Opcode::Execute);
@@ -347,6 +387,8 @@ public:
             code().add_opcode(Opcode::Execute);
             -- v.wrapped_execs;
         }
+
+        m_intrinsic = false;
     }
 
     void visit(ast::OpCall& v) override {
@@ -357,18 +399,18 @@ public:
         // evaluate condition
         v.cond->apply(*this);
         // add jump instruction
-        code().add_opcode(Opcode::JumpIfNot, uint8_t(0));
+        code().add_B1(Opcode::JumpIfNot, 0);
         auto jump1_arg_pos = code().this_instruction_address();
         // then branch
         v.then_expr->apply(*this);
-        code().add_opcode(Opcode::Jump, uint8_t(0));
+        code().add_B1(Opcode::Jump, 0);
         auto jump2_arg_pos = code().this_instruction_address();
         // else branch
-        code().set_arg(jump1_arg_pos,
+        code().set_arg_B(jump1_arg_pos,
                 code().this_instruction_address() - jump1_arg_pos);
         v.else_expr->apply(*this);
         // end
-        code().set_arg(jump2_arg_pos,
+        code().set_arg_B(jump2_arg_pos,
                 code().this_instruction_address() - jump2_arg_pos);
     }
 
@@ -381,7 +423,7 @@ public:
         v.expression->apply(*this);
         // swap the expression result with context data below it
         // SWAP <result_size> <context_size>
-        code().add_opcode(Opcode::Swap,
+        code().add_L2(Opcode::Swap,
                 v.expression_type.size(), v.leave_type.size());
         // call the leave function - must pull the context from enter function
         v.leave_function.apply(*this);
@@ -406,7 +448,7 @@ public:
                 m_code = &wfn.code();
                 make_closure(func);
                 // MAKE_CLOSURE <function_idx>
-                code().add_opcode(Opcode::MakeClosure, v.index);
+                code().add_L1(Opcode::MakeClosure, v.index);
                 if (!func.has_parameters()) {
                     // parameterless closure is executed immediately
                     // EXECUTE
@@ -416,7 +458,7 @@ public:
             } else {
                 make_closure(func);
                 // MAKE_CLOSURE <function_idx>
-                code().add_opcode(Opcode::MakeClosure, v.index);
+                code().add_L1(Opcode::MakeClosure, v.index);
                 if (!func.has_parameters()) {
                     // parameterless closure is executed immediately
                     // EXECUTE
@@ -427,12 +469,12 @@ public:
             // call the function only if it's inside a Call which applies all required parameters (might be zero)
             if (v.call_args >= func.parameters().size()) {
                 // CALL0 <function_idx>
-                code().add_opcode(Opcode::Call0, v.index);
+                code().add_L1(Opcode::Call0, v.index);
             } else {
                 // push closure on stack (it may be EXECUTEd later by outer Call)
                 make_closure(func);
                 // MAKE_CLOSURE <function_idx>
-                code().add_opcode(Opcode::MakeClosure, v.index);
+                code().add_L1(Opcode::MakeClosure, v.index);
             }
         }
     }
@@ -443,10 +485,10 @@ public:
             // cast to Void - remove the expression result from stack
             v.from_type.foreach_heap_slot([this](size_t offset) {
                 // DEC_REF <offset>
-                m_function.code().add_opcode(Opcode::DecRef, offset);
+                m_function.code().add_L1(Opcode::DecRef, offset);
             });
             // DROP 0 <size>
-            m_function.code().add_opcode(Opcode::Drop, 0, v.from_type.size());
+            m_function.code().add_L2(Opcode::Drop, 0, v.from_type.size());
             return;
         }
         if (v.cast_function)
@@ -480,37 +522,40 @@ private:
                                 // COPY <frame_offset> <size>
                                 auto ofs_ti = m_function.nonlocal_offset_and_type(psym.index());
                                 assert(ofs_ti.first < 256);
-                                code().add_opcode(Opcode::Copy,
+                                code().add_L2(Opcode::Copy,
                                         ofs_ti.first, ofs_ti.second.size());
                                 ofs_ti.second.foreach_heap_slot([this](size_t offset) {
-                                    code().add_opcode(Opcode::IncRef, offset);
+                                    code().add_L1(Opcode::IncRef, offset);
                                 });
                                 break;
                             }
                             case Symbol::Parameter: {
                                 // COPY <frame_offset> <size>
                                 const auto& ti = m_function.parameter(psym.index());
-                                code().add_opcode(Opcode::Copy,
+                                code().add_L2(Opcode::Copy,
                                         m_function.parameter_offset(psym.index()) + closure_size,
                                         ti.size());
                                 ti.foreach_heap_slot([this](size_t offset) {
-                                    code().add_opcode(Opcode::IncRef, offset);
+                                    code().add_L1(Opcode::IncRef, offset);
                                 });
                                 break;
                             }
                             case Symbol::Fragment: {
                                 Function& fragment = module().get_function(psym.index());
                                 // inline the code
-                                int levels = 0;
+                                unsigned levels = 0;
                                 auto* scope = &m_function.symtab();
                                 while (scope != fragment.symtab().parent()) {
                                     scope = scope->parent();
                                     ++levels;
                                 }
+                                // Should be equivalent:
+                                //unsigned levels = m_function.symtab().level() + 1 - fragment.symtab().level();
                                 if (levels != 0) {
+                                    // fragment is not direct child of m_function - climb up `levels` scopes
                                     // SET_BASE <levels>
                                     assert(levels <= 255);
-                                    code().add_opcode(Opcode::SetBase, (uint8_t) levels);
+                                    code().add_L1(Opcode::SetBase, (uint8_t) levels);
                                 }
                                 // copy the code
                                 for (auto instr : fragment.code()) {
@@ -537,6 +582,10 @@ private:
     Compiler& m_compiler;
     Function& m_function;
     Code* m_code = nullptr;
+
+    // intrinsics
+    bool m_intrinsic = false;
+    std::vector<size_t> m_instruction_args;
 };
 
 
@@ -576,11 +625,6 @@ bool Compiler::compile(Function& func, ast::Module& ast)
 
     if ((m_flags & Flags::ResolveTypes) == Flags::ResolveTypes)
         resolve_types(func, ast.body);
-    else
-        can_compile = false;
-
-    if ((m_flags & Flags::FoldIntrinsics) == Flags::FoldIntrinsics)
-        fold_intrinsics(ast.body);
     else
         can_compile = false;
 

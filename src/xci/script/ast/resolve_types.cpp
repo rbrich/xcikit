@@ -135,8 +135,8 @@ class TypeCheckerVisitor final: public ast::Visitor {
     using CallArgs = std::vector<CallArg>;
 
 public:
-    explicit TypeCheckerVisitor(Function& func)
-        : m_function(func) {}
+    explicit TypeCheckerVisitor(Function& func, const std::vector<TypeInfo>& type_args)
+        : m_function(func), m_type_args(type_args) {}
 
     void visit(ast::Definition& dfn) override {
         // Evaluate specified type
@@ -188,7 +188,7 @@ public:
         inv.expression->apply(*this);
         auto res_type = m_value_type.effective_type();
         if (!res_type.is_void())
-            inv.type_index = module().add_type(move(res_type));
+            inv.type_id = get_type_id(move(res_type));
     }
 
     void visit(ast::Return& ret) override {
@@ -326,33 +326,61 @@ public:
         assert(v.identifier.symbol);
         const auto& symtab = *v.identifier.symbol.symtab();
         const auto& sym = *v.identifier.symbol;
+
+        if (v.type_arg) {
+            if (sym.type() != Symbol::TypeId)
+                throw UnexpectedTypeArg(v.type_arg->source_loc);
+            v.type_arg->apply(*this);
+        }
+
         switch (sym.type()) {
             case Symbol::Instruction: {
                 // the instructions are low-level, untyped - set return type to Unknown
                 m_value_type = {};
+                m_intrinsic = true;
                 // check number of args - it depends on Opcode
                 auto opcode = (Opcode) sym.index();
-                if (opcode <= Opcode::ZeroArgLast) {
+                if (opcode <= Opcode::NoArgLast) {
                     if (!m_call_args.empty())
                         throw UnexpectedArgumentCount(0, m_call_args.size(), v.source_loc);
-                } else if (opcode <= Opcode::OneArgLast) {
+                } else if (opcode <= Opcode::L1ArgLast) {
                     if (m_call_args.size() != 1)
                         throw UnexpectedArgumentCount(1, m_call_args.size(), v.source_loc);
                 } else {
-                    assert(opcode <= Opcode::TwoArgLast);
+                    assert(opcode <= Opcode::L2ArgLast);
                     if (m_call_args.size() != 2)
                         throw UnexpectedArgumentCount(2, m_call_args.size(), v.source_loc);
                 }
                 // check type of args (they must be Int or Byte)
                 for (const auto&& [i, arg] : m_call_args | enumerate) {
                     Type t = arg.type_info.type();
-                    if (t != Type::Byte && t != Type::Int32)
+                    if (t != Type::Unknown && t != Type::Byte && t != Type::Int32)
                         throw UnexpectedArgumentType(i+1, ti_int32(),
                                                      arg.type_info, arg.source_loc);
                 }
                 // cleanup - args are now fully processed
                 m_call_args.clear();
                 return;
+            }
+            case Symbol::TypeId: {
+                if (!v.type_arg)
+                    throw MissingTypeArg(v.source_loc);
+                if (m_type_info.is_unknown()) {
+                    // try to resolve via known type args
+                    auto var = m_type_info.generic_var();
+                    if (var > 0 && var <= m_type_args.size())
+                        m_type_info = m_type_args[var-1];
+                    else {
+                        // unresolved -> unknown type id
+                        m_value_type = {};
+                        break;
+                    }
+                }
+                // is the type builtin?
+                Index type_id = get_type_id(move(m_type_info));
+                v.identifier.symbol.write(m_function.symtab()).set_index(type_id);
+                m_value_type = ti_int32();
+                break;
             }
             case Symbol::Class:
             case Symbol::Instance:
@@ -454,22 +482,31 @@ public:
                         symmod = &module();
                     auto& fn = symmod->get_function(symptr->index());
                     auto sig_ptr = fn.signature_ptr();
+                    // FIXME: don't instantiate yet, add generic to candidates
+                    //        candidate priorities - prefer specific over generic
                     if (fn.is_generic()) {
                         if (m_call_args.empty()) {
                             symptr = symptr->next();
                             continue;
                         }
-                        // instantiate the specialization
-                        auto fspec = make_unique<Function>(fn.module(), fn.symtab());
-                        fspec->set_signature(fn.signature_ptr());
+                        // Instantiate the specialization:
+                        // * create a copy of original generic function in this module
+                        // * copy function's AST
+                        // * keep original symbol table (with relative references, like parameter #1 at depth -2)
+                        // Symbols in copied AST still point to original function.
+                        auto fspec = make_unique<Function>(module(), fn.symtab());
+                        fspec->set_signature(std::make_shared<Signature>(*sig_ptr));  // copy, not ref
                         fspec->set_ast(fn.ast());
+                        fspec->ensure_ast_copy();
                         specialize_to_call_args(*fspec, fspec->ast(), v.source_loc);
                         sig_ptr = fspec->signature_ptr();
                         Symbol sym_copy {*symptr};
                         sym_copy.set_index(module().add_function(move(fspec)));
+                        auto symptr_copy = module().symtab().add(move(sym_copy));
+                        symptr_copy->set_next(v.identifier.symbol);  // chain to the original symbol
                         candidates.push_back({
-                            symmod,
-                            module().symtab().add(move(sym_copy)),
+                            &module(),
+                            symptr_copy,
                             TypeInfo{sig_ptr},
                             sig_ptr->params.size() == m_call_args.size() ? Match::Exact : Match::Partial});
                     } else {
@@ -588,10 +625,12 @@ public:
         // when evaluating each argument, so we cannot push to them above)
         std::move(args.begin(), args.end(), std::back_inserter(m_call_args));
         m_call_ret = move(type_check.type());
+        m_intrinsic = false;
 
         // using resolved args, resolve the callable itself
         // (it may use args types for overload resolution)
         v.callable->apply(*this);
+        v.intrinsic = m_intrinsic;
 
         if (!m_value_type.is_callable() && !m_call_args.empty()) {
             throw UnexpectedArgument(1, m_call_args[0].source_loc);
@@ -818,6 +857,16 @@ public:
 private:
     Module& module() { return m_function.module(); }
 
+    Index get_type_id(TypeInfo&& type_info) {
+        // is the type builtin?
+        Index type_id = BuiltinModule::static_instance().find_type(type_info);
+        if (type_id >= 32) {
+            // add to current module
+            type_id = 32 + module().add_type(move(type_info));
+        }
+        return type_id;
+    }
+
     void specialize_arg(const TypeInfo& sig, const TypeInfo& arg,
                         std::vector<TypeInfo>& resolved,
                         const std::function<void(const TypeInfo& exp, const TypeInfo& got)>& exc_cb) const
@@ -854,7 +903,8 @@ private:
             case Type::Unknown: {
                 auto var = sig.generic_var();
                 assert(var > 0);
-                sig = resolved[var - 1];
+                if (var <= resolved.size())
+                    sig = resolved[var - 1];
                 break;
             }
             case Type::List: {
@@ -896,9 +946,10 @@ private:
         for (auto & out_type : fn.signature().params) {
             resolve_generic_type(resolved_types, out_type);
         }
+        resolve_generic_type(resolved_types, fn.signature().return_type);
         // resolve function body to get actual return type
         auto sig_ret = fn.signature().return_type;
-        resolve_types(fn, body);
+        resolve_types(fn, body, resolved_types);
         auto deduced_ret = fn.signature().return_type;
         // resolve generic return type
         if (!deduced_ret.is_unknown())
@@ -1046,6 +1097,8 @@ private:
 
 private:
     Function& m_function;
+    const std::vector<TypeInfo>& m_type_args;  // resolved type parameters
+
     TypeInfo m_type_info;   // resolved ast::Type
     TypeInfo m_value_type;  // inferred type of the value
     TypeInfo m_cast_type;   // target type of a Cast
@@ -1056,12 +1109,14 @@ private:
 
     Class* m_class = nullptr;
     Instance* m_instance = nullptr;
+    bool m_intrinsic = false;
 };
 
 
-void resolve_types(Function& func, const ast::Block& block)
+void resolve_types(Function& func, const ast::Block& block,
+                   const std::vector<TypeInfo>& type_args)
 {
-    TypeCheckerVisitor visitor {func};
+    TypeCheckerVisitor visitor {func, type_args};
     for (const auto& stmt : block.statements) {
         stmt->apply(visitor);
     }

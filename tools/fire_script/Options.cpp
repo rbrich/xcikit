@@ -32,7 +32,6 @@ static PassItem pass_names[] = {
         {"fold_dot_call", Flags::PPDotCall},
         {"resolve_symbols", Flags::PPSymbols},
         {"resolve_types", Flags::PPTypes},
-        {"fold_intrinsics", Flags::PPIntrinsics},
         {"resolve_nonlocals", Flags::PPNonlocals},
 };
 

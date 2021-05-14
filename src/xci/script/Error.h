@@ -152,6 +152,15 @@ struct MissingExplicitType : public ScriptError {
         : ScriptError("type cannot be inferred and wasn't specified", loc) {}
 };
 
+struct MissingTypeArg : public ScriptError {
+    explicit MissingTypeArg(const SourceLocation& loc)
+        : ScriptError("generic function requires type argument", loc) {}
+};
+
+struct UnexpectedTypeArg : public ScriptError {
+    explicit UnexpectedTypeArg(const SourceLocation& loc)
+            : ScriptError("unexpected type argument", loc) {}
+};
 
 struct UnexpectedGenericFunction : public ScriptError {
     explicit UnexpectedGenericFunction(const SourceLocation& loc)

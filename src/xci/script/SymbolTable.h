@@ -27,24 +27,27 @@ static constexpr Index no_index {SIZE_MAX};
 class SymbolPointer {
 public:
     SymbolPointer() = default;
-    SymbolPointer(SymbolTable& symtab, Index idx) : m_symtab(&symtab), m_index(idx) {}
+    SymbolPointer(SymbolTable& symtab, Index idx) : m_symtab(&symtab), m_symidx(idx) {}
 
-    explicit operator bool() const { return m_symtab != nullptr && m_index != no_index; }
+    explicit operator bool() const { return m_symtab != nullptr && m_symidx != no_index; }
 
-    Symbol& operator* ();
     const Symbol& operator*() const;
+    const Symbol* operator->() const;
+    Symbol* operator->();
 
-    Symbol* operator-> ();
-    const Symbol* operator-> () const;
+    // Copy symbol into `symtab` and return a new Symbol* ready for writing.
+    // This SymbolPointer is modified to point to the new symbol.
+    // Same as operator-> if already pointing to `symtab` (i.e. no copying).
+    Symbol& write(SymbolTable& symtab);
 
     SymbolTable* symtab() const { return m_symtab; }
-    Index symidx() const { return m_index; }
+    Index symidx() const { return m_symidx; }
 
     bool operator==(const SymbolPointer& rhs) const = default;
 
 private:
     SymbolTable* m_symtab = nullptr;  // owning table
-    Index m_index = no_index;         // index of item in the table
+    Index m_symidx = no_index;         // index of item in the table
 };
 
 
@@ -67,7 +70,10 @@ public:
         Nonlocal,           // non-local parameter, i.e. a capture from outer scope
         Fragment,           // code fragment (inline function)
         Instruction,        // intrinsics resolve to this, the index is Opcode
-        TypeVar,            // type variable in generic function
+        TypeVar,            // type variable in generic function (index = var ID)
+
+        // special
+        TypeId,             // translate type name to type ID (index = type index in builtin if < 32, else type index in current module + 32)
     };
 
     explicit Symbol(std::string name) : m_name(std::move(name)) {}
@@ -80,6 +86,9 @@ public:
     Symbol(const SymbolPointer& ref, Type type, size_t depth)
         : m_name(ref->name()), m_type(type), m_index(ref.symidx()),
           m_depth(depth), m_ref(ref) {}
+    Symbol(const SymbolPointer& ref, Type type, Index idx, size_t depth)
+            : m_name(ref->name()), m_type(type), m_index(idx),
+              m_depth(depth), m_ref(ref) {}
 
     const std::string& name() const { return m_name; }
     Type type() const { return m_type; }
@@ -90,12 +99,12 @@ public:
     SymbolPointer next() const { return m_next; }
     bool is_callable() const { return m_is_callable; }
 
-    void set_type(Type type) { m_type = type; }
-    void set_index(Index idx) { m_index = idx; }
-    void set_depth(size_t depth) { m_depth = depth; }
-    void set_ref(const SymbolPointer& ref) { m_ref = ref; }
-    void set_next(const SymbolPointer& next) { m_next = next; }
-    void set_callable(bool callable) { m_is_callable = callable; }
+    Symbol& set_type(Type type) { m_type = type; return *this; }
+    Symbol& set_index(Index idx) { m_index = idx; return *this; }
+    Symbol& set_depth(size_t depth) { m_depth = depth; return *this; }
+    Symbol& set_ref(const SymbolPointer& ref) { m_ref = ref; return *this; }
+    Symbol& set_next(const SymbolPointer& next) { m_next = next; return *this; }
+    Symbol& set_callable(bool callable) { m_is_callable = callable; return *this; }
 
 private:
     std::string m_name;
@@ -125,6 +134,7 @@ public:
 
     SymbolTable& add_child(const std::string& name);
     SymbolTable* parent() const { return m_parent; }
+    unsigned level() const;  // number of parents above this symtab
 
     // related function
     void set_function(Function* function) { m_function = function; }

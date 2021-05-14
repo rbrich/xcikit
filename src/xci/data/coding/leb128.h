@@ -1,7 +1,7 @@
 // leb128.h created on 2020-06-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020 Radek Brich
+// Copyright 2020–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_DATA_CODING_LEB128_H
@@ -20,7 +20,11 @@ namespace xci::data {
 /// \param value        Integral value to be written.
 template <typename InT, typename OutIter,
           typename OutT = typename std::iterator_traits<OutIter>::value_type>
-requires std::is_integral_v<InT> && std::is_unsigned_v<InT>
+requires requires {
+    std::is_integral_v<InT> && std::is_unsigned_v<InT>;
+    std::iterator_traits<OutIter>::value_type;
+    !std::iterator_traits<OutIter>::container_type;
+}
 void encode_leb128(OutIter& iter, InT value)
 {
     do {
@@ -30,6 +34,28 @@ void encode_leb128(OutIter& iter, InT value)
             b |= 0x80;
         *iter = OutT(b);
         ++iter;
+    } while (value != 0);
+}
+
+
+/// Encode unsigned integer as LEB128 and write it to a container with push_back() method.
+/// \param iter         Output iterator. Element should be byte/char. Must support ++, * operations.
+/// \param value        Integral value to be written.
+template <typename InT, typename Container,
+          typename OutT = typename Container::value_type>
+requires requires (Container& cont, OutT x) {
+    std::is_integral_v<InT> && std::is_unsigned_v<InT>;
+    typename Container::value_type;
+    cont.push_back(x);
+}
+void encode_leb128(Container& cont, InT value)
+{
+    do {
+        uint8_t b = value & InT{0x7f};
+        value >>= 7;
+        if (value != 0)
+            b |= 0x80;
+        cont.push_back(OutT(b));
     } while (value != 0);
 }
 
@@ -142,6 +168,6 @@ OutT decode_leb128(InIter& iter, unsigned skip_bits)
 }
 
 
-} // namespace xci::core
+} // namespace xci::data
 
 #endif // include guard

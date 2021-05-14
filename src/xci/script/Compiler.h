@@ -26,7 +26,6 @@ public:
         FoldDotCall         = 0x0002,
         ResolveSymbols      = 0x0004,
         ResolveTypes        = 0x0008,
-        FoldIntrinsics      = 0x0010,
         ResolveNonlocals    = 0x0020,
         FoldConstExpr       = 0x0001 << 16,
 
@@ -41,7 +40,6 @@ public:
         PPDotCall       = FoldDotCall,
         PPSymbols       = ResolveSymbols,
         PPTypes         = ResolveTypes | PPSymbols,
-        PPIntrinsics    = FoldIntrinsics | PPTypes,
         PPNonlocals     = ResolveNonlocals,
 
         // Optimization
