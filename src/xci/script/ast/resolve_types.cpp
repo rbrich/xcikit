@@ -31,8 +31,10 @@ using ranges::any_of;
 using ranges::to;
 
 
-static bool match_type(const TypeInfo& inferred, const TypeInfo& actual);
-static bool match_struct(const TypeInfo& inferred, const TypeInfo& actual);
+enum class Match { None, Generic, Partial, Exact };
+
+static Match match_type(const TypeInfo& inferred, const TypeInfo& actual);
+static Match match_struct(const TypeInfo& inferred, const TypeInfo& actual);
 
 
 class TypeCheckHelper {
@@ -48,7 +50,7 @@ public:
         if (!specified)
             return;
         if (specified.is_struct() && inferred.is_struct()) {
-            if (!match_struct(inferred, specified))
+            if (match_struct(inferred, specified) == Match::None)
                 throw StructTypeMismatch(specified, loc);
             return;
         }
@@ -65,7 +67,7 @@ public:
             });
         if (spec_it == spec_items.end())
             throw StructUnknownKey(type(), key, loc);
-        if (!match_type(inferred, spec_it->second))
+        if (match_type(inferred, spec_it->second) == Match::None)
             throw StructKeyTypeMismatch(type(), spec_it->second, inferred, loc);
     }
 
@@ -77,13 +79,14 @@ private:
 };
 
 
-static bool match_type(const TypeInfo& inferred, const TypeInfo& actual)
+/// \returns Match: None/Generic/Partial
+static Match match_type(const TypeInfo& inferred, const TypeInfo& actual)
 {
-    if (!actual)
-        return true;  // any inferred type matches Unknown type
+    if (!actual || !inferred)
+        return Match::Generic;  // any type matches Unknown type
     if (actual.is_struct() && inferred.is_struct())
         return match_struct(inferred, actual);
-    return inferred == actual;
+    return inferred == actual ? Match::Partial : Match::None;
 }
 
 
@@ -92,24 +95,29 @@ static bool match_type(const TypeInfo& inferred, const TypeInfo& actual)
 /// Partial match is possible when inferred has less keys than resolved.
 /// \param inferred     Possibly incomplete Struct type as constructed from AST
 /// \param resolved     Actual resolved type for the value
-/// \returns true if fully or partially matched
-static bool match_struct(const TypeInfo& inferred, const TypeInfo& actual)
+/// \returns  Match: None/Generic/Partial (full match not distinguished)
+static Match match_struct(const TypeInfo& inferred, const TypeInfo& actual)
 {
     assert(inferred.is_struct());
     assert(actual.is_struct());
     const auto& actual_items = actual.struct_items();
+    auto res = Match::Partial;
     for (const auto& inf : inferred.struct_items()) {
         auto act_it = std::find_if(actual_items.begin(), actual_items.end(),
                 [&inf](const TypeInfo::StructItem& act) {
                   return act.first == inf.first;
                 });
         if (act_it == actual_items.end())
-            return false;  // not found
+            return Match::None;  // not found
         // check item type
-        if (!match_type(TypeInfo(inf.second), act_it->second))
-            return false;  // item type doesn't match
+        auto m = match_type(TypeInfo(inf.second), act_it->second);
+        switch (m) {
+            case Match::None: return m;  // item type doesn't match
+            case Match::Generic: res = m; break; // unknown/generic
+            default: break;
+        }
     }
-    return true;
+    return res;
 }
 
 
@@ -286,7 +294,7 @@ public:
             }
             if (m_type_info.type() != Type::Struct)
                 throw StructTypeMismatch(m_type_info, v.source_loc);
-            if (!match_struct(v.struct_type, m_type_info))
+            if (match_struct(v.struct_type, m_type_info) == Match::None)
                 throw StructTypeMismatch(m_type_info, v.source_loc);
             v.struct_type = move(m_type_info);
             m_value_type = v.struct_type;
@@ -316,7 +324,7 @@ public:
         }
         v.struct_type = TypeInfo(move(ti_items));
         if (specified) {
-            assert(match_struct(v.struct_type, specified));  // already checked above
+            assert(match_struct(v.struct_type, specified) != Match::None);  // already checked above
             v.struct_type = std::move(type_check.type());
         }
         m_value_type = v.struct_type;
@@ -482,72 +490,56 @@ public:
                         symmod = &module();
                     auto& fn = symmod->get_function(symptr->index());
                     auto sig_ptr = fn.signature_ptr();
-                    // FIXME: don't instantiate yet, add generic to candidates
-                    //        candidate priorities - prefer specific over generic
+                    auto m = match_params(*sig_ptr);
+                    candidates.push_back({symmod, symptr, TypeInfo{sig_ptr}, m});
+                    symptr = symptr->next();
+                }
+
+                // find best match from candidates
+                bool conflict = false;
+                Match m = Match::None;
+                Item* found = nullptr;
+                for (auto& item : candidates) {
+                    if (item.match == Match::None)
+                        continue;
+                    if (item.match > m) {
+                        // found better match
+                        found = &item;
+                        conflict = false;
+                        continue;
+                    }
+                    if (item.match == m) {
+                        // found same match -> conflict
+                        conflict = true;
+                    }
+                }
+
+                if (found && !conflict) {
+                    auto& fn = found->module->get_function(found->symptr->index());
                     if (fn.is_generic()) {
-                        if (m_call_args.empty()) {
-                            symptr = symptr->next();
-                            continue;
-                        }
                         // Instantiate the specialization:
                         // * create a copy of original generic function in this module
                         // * copy function's AST
                         // * keep original symbol table (with relative references, like parameter #1 at depth -2)
                         // Symbols in copied AST still point to original function.
+                        auto sig_ptr = fn.signature_ptr();
                         auto fspec = make_unique<Function>(module(), fn.symtab());
                         fspec->set_signature(std::make_shared<Signature>(*sig_ptr));  // copy, not ref
                         fspec->set_ast(fn.ast());
                         fspec->ensure_ast_copy();
                         specialize_to_call_args(*fspec, fspec->ast(), v.source_loc);
                         sig_ptr = fspec->signature_ptr();
-                        Symbol sym_copy {*symptr};
+                        Symbol sym_copy {*found->symptr};
                         sym_copy.set_index(module().add_function(move(fspec)));
                         auto symptr_copy = module().symtab().add(move(sym_copy));
                         symptr_copy->set_next(v.identifier.symbol);  // chain to the original symbol
-                        candidates.push_back({
-                            &module(),
-                            symptr_copy,
-                            TypeInfo{sig_ptr},
-                            sig_ptr->params.size() == m_call_args.size() ? Match::Exact : Match::Partial});
-                    } else {
-                        auto m = match_params(*sig_ptr);
-                        candidates.push_back({symmod, symptr, TypeInfo{sig_ptr}, m});
+                        v.identifier.symbol = symptr_copy;
+                        m_value_type = TypeInfo{sig_ptr};
+                        break;
                     }
-                    symptr = symptr->next();
-                }
-
-                // check for single exact match
-                bool conflict = false;
-                Item* found = nullptr;
-                for (auto& item : candidates) {
-                    if (item.match == Match::Exact) {
-                        if (!found)
-                            found = &item;
-                        else
-                            conflict = true;
-                    }
-                }
-                if (found && !conflict) {
                     v.identifier.symbol = found->symptr;
                     m_value_type = found->type;
                     break;
-                }
-
-                // check for single partial match
-                if (!conflict) {
-                    for (auto& item : candidates) {
-                        if (item.match == Match::Partial) {
-                            if (!found)
-                                found = &item;
-                            else
-                                conflict = true;
-                        }
-                    }
-                    if (found && !conflict) {
-                        v.identifier.symbol = found->symptr;
-                        m_value_type = found->type;
-                        break;
-                    }
                 }
 
                 // format the error message (candidates)
@@ -575,7 +567,7 @@ public:
                 break;
             case Symbol::Nonlocal: {
                 assert(sym.ref());
-                auto& nl_sym = *sym.ref();
+                const auto& nl_sym = *sym.ref();
                 auto* nl_func = sym.ref().symtab()->function();
                 assert(nl_func != nullptr);
                 switch (nl_sym.type()) {
@@ -992,27 +984,23 @@ private:
         return res;
     }
 
-    // Check params from `signature` against `m_call_args`
-    //
-    enum class Match {
-        None,
-        Partial,
-        Exact,
-    };
-
     static const char* match_to_cstr(Match m) {
         switch (m) {
             case Match::None: return "[ ]";
+            case Match::Generic: return "[?]";
             case Match::Partial: return "[~]";
             case Match::Exact: return "[x]";
         }
         UNREACHABLE;
     }
 
+    /// \returns Match: None/Generic/Partial/Exact
+    /// Partial match means the signature has less parameters than call args.
     Match match_params(const Signature& signature) const
     {
         auto sig = std::make_unique<Signature>(signature);
         int i = 0;
+        Match res = Match::Partial;
         for (const auto& arg : m_call_args) {
             i += 1;
             // check there are more params to consume
@@ -1026,13 +1014,18 @@ private:
                 }
             }
             // check type of next param
-            if (!match_type(arg.type_info, sig->params[0])) {
-                return Match::None;
+            auto m = match_type(arg.type_info, sig->params[0]);
+            switch (m) {
+                case Match::None: return m;
+                case Match::Generic: res = m; break;
+                default: break;
             }
             // consume next param
             sig->params.erase(sig->params.begin());
         }
-        return sig->params.empty() ? Match::Exact : Match::Partial;
+        if (sig->params.empty() && res == Match::Partial)
+            return Match::Exact;
+        return res;
     }
 
     // Match call args with signature (which contains type vars T, U...)

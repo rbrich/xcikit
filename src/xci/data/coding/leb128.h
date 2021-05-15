@@ -20,10 +20,10 @@ namespace xci::data {
 /// \param value        Integral value to be written.
 template <typename InT, typename OutIter,
           typename OutT = typename std::iterator_traits<OutIter>::value_type>
-requires requires {
+requires requires (OutIter iter, OutT out) {
     std::is_integral_v<InT> && std::is_unsigned_v<InT>;
-    std::iterator_traits<OutIter>::value_type;
-    !std::iterator_traits<OutIter>::container_type;
+    *iter = out;
+    ++iter;
 }
 void encode_leb128(OutIter& iter, InT value)
 {
@@ -43,10 +43,9 @@ void encode_leb128(OutIter& iter, InT value)
 /// \param value        Integral value to be written.
 template <typename InT, typename Container,
           typename OutT = typename Container::value_type>
-requires requires (Container& cont, OutT x) {
+requires requires (Container& cont, OutT out) {
     std::is_integral_v<InT> && std::is_unsigned_v<InT>;
-    typename Container::value_type;
-    cont.push_back(x);
+    cont.push_back(out);
 }
 void encode_leb128(Container& cont, InT value)
 {
