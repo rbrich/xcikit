@@ -102,8 +102,8 @@ struct UndefinedTypeName : public ScriptError {
 
 
 struct RedefinedName : public ScriptError {
-    explicit RedefinedName(string_view name)
-            : ScriptError(format("redefined name: {}", name)) {}
+    explicit RedefinedName(string_view name, const SourceLocation& loc)
+            : ScriptError(format("redefined name: {}", name), loc) {}
 };
 
 

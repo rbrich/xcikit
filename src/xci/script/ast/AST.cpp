@@ -230,6 +230,7 @@ std::unique_ptr<ast::Type> FunctionType::make_copy() const
 
 void FunctionType::copy_to(FunctionType& r) const
 {
+    r.type_params = type_params;
     r.params = copy_vector(params);
     r.result_type = copy(result_type);
     r.context = context;

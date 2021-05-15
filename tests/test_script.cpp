@@ -240,6 +240,15 @@ TEST_CASE( "Operator precedence", "[script][parser]" )
 }
 
 
+TEST_CASE( "Type argument or comparison?", "[script][parser]" )
+{
+    PARSE("1 > 2", "(1 > 2)");
+    PARSE("1 < 2", "(1 < 2)");
+    PARSE("a<b> 3", "((a < b) > 3)");
+    PARSE("a<T> 3", "a<T> 3");
+}
+
+
 TEST_CASE( "Value size on stack", "[script][machine]" )
 {
     CHECK(Value().size_on_stack() == type_size_on_stack(Type::Void));
@@ -488,8 +497,8 @@ TEST_CASE( "Generic functions", "[script][interpreter]" )
     CHECK(interpret("f=fun x {x + 1}; f (f (f 2))") == "5");
     // generic functions can capture from outer scope
     CHECK(interpret("a=3; f=fun x {a + x}; f 4") == "7");
-    // generic type declaration
-    CHECK(interpret_std("f = fun x:T y:T -> Bool with (Eq T) { x == y }; f 1 2") == "false");
+    // generic type declaration, type constraint
+    CHECK(interpret_std("f = fun<T> x:T y:T -> Bool with (Eq T) { x == y }; f 1 2") == "false");
 }
 
 
@@ -544,7 +553,9 @@ TEST_CASE( "Casting", "[script][interpreter]" )
 TEST_CASE( "Subscript", "[script][interpreter]" )
 {
     // custom implementation (same as in std.fire)
-    CHECK(interpret("subscript = fun [T] Int -> T { __subscript __type_id<T> }; subscript [1,2,3] 1") == "2");
+    CHECK(interpret("__type_id<Void>") == "0");
+    CHECK_THROWS_AS(interpret("__type_id<X>"), UndefinedTypeName);
+    CHECK(interpret("subscript = fun<T> [T] Int -> T { __subscript __type_id<T> }; subscript [1,2,3] 1") == "2");
     // std implementation
     CHECK(interpret_std("subscript [1,2,3] 1") == "2");
     CHECK(interpret_std("[1,2,3] ! 2") == "3");
@@ -552,7 +563,7 @@ TEST_CASE( "Subscript", "[script][interpreter]" )
     CHECK(interpret_std("['a','b','c'] ! 1") == "'b'");
     CHECK(interpret_std("[[1,2],[3,4],[5,6]] ! 1 ! 0") == "3");
     CHECK(interpret_std("head = fun l:[Int] -> Int { l!0 }; head [1,2,3]") == "1");
-    CHECK(interpret_std("head = fun l:[T] -> T { l!0 }; head ['a','b','c']") == "'a'");
+    CHECK(interpret_std("head = fun<T> l:[T] -> T { l!0 }; head ['a','b','c']") == "'a'");
 }
 
 

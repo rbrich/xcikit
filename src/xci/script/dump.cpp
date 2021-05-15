@@ -262,6 +262,8 @@ std::ostream& operator<<(std::ostream& os, const FunctionType& v)
     if (stream_options(os).enable_tree) {
         os << "FunctionType(Type)" << endl;
         os << more_indent;
+        for (const auto& tp : v.type_params)
+            os << put_indent << tp;
         for (const auto& prm : v.params)
             os << put_indent << prm;
         if (v.result_type)
@@ -271,6 +273,15 @@ std::ostream& operator<<(std::ostream& os, const FunctionType& v)
         }
         return os << less_indent;
     } else {
+        if (!v.type_params.empty()) {
+            os << '<';
+            for (const auto& tp : v.type_params) {
+                os << tp;
+                if (&tp != &v.type_params.back())
+                    os << ", ";
+            }
+            os << "> ";
+        }
         if (!v.params.empty()) {
             for (const auto& prm : v.params) {
                 os << prm << ' ';
@@ -349,7 +360,10 @@ std::ostream& operator<<(std::ostream& os, const Reference& v)
            os << put_indent << "type_arg: " << *v.type_arg;
         return os << less_indent;
     } else {
-        return os << v.identifier;
+        os << v.identifier;
+        if (v.type_arg)
+            os << '<' << *v.type_arg << '>';
+        return os;
     }
 }
 

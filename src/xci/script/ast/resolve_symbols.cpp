@@ -12,6 +12,7 @@
 #include <range/v3/view/enumerate.hpp>
 #include <range/v3/algorithm/any_of.hpp>
 #include <vector>
+#include <set>
 #include <sstream>
 
 namespace xci::script {
@@ -28,7 +29,7 @@ public:
         // check for name collision
         const auto& name = dfn.variable.identifier.name;
         if (symtab().find_by_name(name))
-            throw RedefinedName(name);
+            throw RedefinedName(name, dfn.variable.identifier.source_loc);
 
         // add new function, symbol
         SymbolTable& fn_symtab = symtab().add_child(name);
@@ -72,7 +73,7 @@ public:
     void visit(ast::Class& v) override {
         // check for name collision
         if (symtab().find_by_name(v.class_name.name))
-            throw RedefinedName(v.class_name.name);
+            throw RedefinedName(v.class_name.name, v.class_name.source_loc);
 
         // add child symbol table for the class
         SymbolTable& cls_symtab = symtab().add_child(v.class_name.name);
@@ -142,7 +143,7 @@ public:
     void visit(ast::TypeDef& v) override {
         // check for name collision
         if (symtab().find_by_name(v.type_name.name))
-            throw RedefinedName(v.type_name.name);
+            throw RedefinedName(v.type_name.name, v.type_name.source_loc);
 
         // resolve the type
         v.type->apply(*this);
@@ -157,7 +158,7 @@ public:
     void visit(ast::TypeAlias& v) override {
         // check for name collision
         if (symtab().find_by_name(v.type_name.name))
-            throw RedefinedName(v.type_name.name);
+            throw RedefinedName(v.type_name.name, v.type_name.source_loc);
 
         // resolve the type
         v.type->apply(*this);
@@ -278,35 +279,37 @@ public:
     }
 
     void visit(ast::TypeName& t) final {
-        if (t.name.empty())
-            //  TypeInfo(Type::Unknown); ?
-            throw UndefinedTypeName(t.name, t.source_loc);
-        if (t.name[0] == '$') {
+        assert(!t.name.empty());  // can't occur in parsed code
+        if (t.name.empty() || t.name[0] == '$') {
             // anonymous generic type
             t.symbol = allocate_type_var(t.name);
             return;
         }
         t.symbol = resolve_symbol(t.name);
-        if (!t.symbol) {
-            if (t.name.size() == 1 && isupper(t.name[0])) {
-                // Single-letter uppercase types like T are generic by default
-                // '$' is internal prefix for untyped function args
-                t.symbol = allocate_type_var(t.name);
-            } else
-                throw UndefinedTypeName(t.name, t.source_loc);
-        }
+        if (!t.symbol)
+            throw UndefinedTypeName(t.name, t.source_loc);
     }
 
     void visit(ast::FunctionType& t) final {
         size_t type_idx = 0;
+        std::set<std::string> type_params;  // check uniqueness
+        for (auto& tp : t.type_params) {
+            if (type_params.contains(tp.name))
+                throw RedefinedName(tp.name, tp.source_loc);
+            type_params.insert(tp.name);
+            symtab().add({tp.name, Symbol::TypeVar, ++type_idx});
+        }
+        /*
         for (auto& tc : t.context) {
             tc.type_class.apply(*this);
             symtab().add({tc.type_name.name, Symbol::TypeVar, ++type_idx});
-        }
+        }*/
         size_t par_idx = 0;
         for (auto& p : t.params) {
-            if (!p.type)
+            if (!p.type) {
+                // '$' is internal prefix for untyped function args
                 p.type = std::make_unique<ast::TypeName>("$" + p.identifier.name);
+            }
             p.type->apply(*this);
             if (!p.identifier.name.empty())
                 p.identifier.symbol = symtab().add({p.identifier.name, Symbol::Parameter, par_idx++});

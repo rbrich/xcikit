@@ -188,6 +188,7 @@ struct Identifier {
     explicit operator bool() const { return !name.empty(); }
 
     std::string name;
+    SourceLocation source_loc;
 
     // resolved symbol:
     SymbolPointer symbol;
@@ -198,6 +199,7 @@ struct Identifier {
 struct Key {
     Key() = default;
     explicit Key(std::string s) : name(std::move(s)) {}
+    explicit Key(Identifier&& ident) : name(std::move(ident.name)), source_loc(std::move(ident.source_loc)) {}
     explicit operator bool() const { return !name.empty(); }
 
     std::string name;
@@ -265,6 +267,7 @@ struct FunctionType: public Type {
     std::unique_ptr<ast::Type> make_copy() const override;
     void copy_to(FunctionType& r) const;
 
+    std::vector<TypeName> type_params;  // declare type parameters of a generic function: <T,U>
     std::vector<Parameter> params;
     std::unique_ptr<Type> result_type;
     std::vector<TypeConstraint> context;
