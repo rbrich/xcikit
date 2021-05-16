@@ -489,7 +489,7 @@ public:
                     if (symmod == nullptr)
                         symmod = &module();
                     auto& fn = symmod->get_function(symptr->index());
-                    auto sig_ptr = fn.signature_ptr();
+                    const auto& sig_ptr = fn.signature_ptr();
                     auto m = match_params(*sig_ptr);
                     candidates.push_back({symmod, symptr, TypeInfo{sig_ptr}, m});
                     symptr = symptr->next();
@@ -515,26 +515,10 @@ public:
                 }
 
                 if (found && !conflict) {
-                    auto& fn = found->module->get_function(found->symptr->index());
-                    if (fn.is_generic()) {
-                        // Instantiate the specialization:
-                        // * create a copy of original generic function in this module
-                        // * copy function's AST
-                        // * keep original symbol table (with relative references, like parameter #1 at depth -2)
-                        // Symbols in copied AST still point to original function.
-                        auto sig_ptr = fn.signature_ptr();
-                        auto fspec = make_unique<Function>(module(), fn.symtab());
-                        fspec->set_signature(std::make_shared<Signature>(*sig_ptr));  // copy, not ref
-                        fspec->set_ast(fn.ast());
-                        fspec->ensure_ast_copy();
-                        specialize_to_call_args(*fspec, fspec->ast(), v.source_loc);
-                        sig_ptr = fspec->signature_ptr();
-                        Symbol sym_copy {*found->symptr};
-                        sym_copy.set_index(module().add_function(move(fspec)));
-                        auto symptr_copy = module().symtab().add(move(sym_copy));
-                        symptr_copy->set_next(v.identifier.symbol);  // chain to the original symbol
-                        v.identifier.symbol = symptr_copy;
-                        m_value_type = TypeInfo{sig_ptr};
+                    auto specialized = specialize_function(found->symptr, v.source_loc);
+                    if (specialized) {
+                        v.identifier.symbol = specialized->symptr;
+                        m_value_type = move(specialized->type_info);
                         break;
                     }
                     v.identifier.symbol = found->symptr;
@@ -568,15 +552,24 @@ public:
             case Symbol::Nonlocal: {
                 assert(sym.ref());
                 const auto& nl_sym = *sym.ref();
-                auto* nl_func = sym.ref().symtab()->function();
-                assert(nl_func != nullptr);
+                // owning function of the nonlocal symbol
+                auto* nl_owner = sym.ref().symtab()->function();
+                assert(nl_owner != nullptr);
                 switch (nl_sym.type()) {
                     case Symbol::Parameter:
-                        m_value_type = nl_func->parameter(nl_sym.index());
+                        m_value_type = nl_owner->parameter(nl_sym.index());
                         break;
-                    case Symbol::Function:
-                        m_value_type = TypeInfo(nl_func->module().get_function(nl_sym.index()).signature_ptr());
+                    case Symbol::Function: {
+                        auto specialized = specialize_function(sym.ref(), v.source_loc);
+                        if (specialized) {
+                            v.identifier.symbol->set_ref(specialized->symptr);
+                            m_value_type = move(specialized->type_info);
+                            break;
+                        }
+                        auto& fn = nl_owner->module().get_function(nl_sym.index());
+                        m_value_type = TypeInfo(fn.signature_ptr());
                         break;
+                    }
                     default:
                         assert(!"non-local must reference a parameter or a function");
                         return;
@@ -919,7 +912,7 @@ private:
     // * use m_call_args to resolve actual types of type variable
     // * resolve function body (deduce actual return type)
     // * use the deduced return type to resolve type variables in generic return type
-    // Return new function according to requested signature.
+    // Modifies `fn` in place - it should be already copied.
     // Throw when the signature doesn't match the call args or deduced return type.
     void specialize_to_call_args(Function& fn, const ast::Block& body, const SourceLocation& loc) const
     {
@@ -951,6 +944,46 @@ private:
                            });
         resolve_generic_type(resolved_types, sig_ret);
         fn.signature().return_type = sig_ret;
+    }
+
+    struct Specialized {
+        SymbolPointer symptr;
+        TypeInfo type_info;
+    };
+
+    /// Given a generic function, create a copy and specialize it to call args.
+    /// * create a copy of original generic function in this module
+    /// * copy function's AST
+    /// * keep original symbol table (with relative references, like parameter #1 at depth -2)
+    /// Symbols in copied AST still point to original generic function.
+    /// \param symptr   Pointer to symbol pointing to original function
+    std::optional<Specialized> specialize_function(SymbolPointer symptr, const SourceLocation& loc)
+    {
+        auto& fn = symptr.get_function();
+        if (!fn.detect_generic())
+            return {};  // not generic, nothing to specialize
+        auto fspec = make_unique<Function>(module(), fn.symtab());
+        fspec->set_signature(std::make_shared<Signature>(fn.signature()));  // copy, not ref
+        fspec->set_ast(fn.ast());
+        fspec->ensure_ast_copy();
+        specialize_to_call_args(*fspec, fspec->ast(), loc);
+        auto fspec_symptr = m_function.symtab().add({
+                symptr->name() + "/spec", Symbol::Function});
+        auto res = std::make_optional<Specialized>({
+                fspec_symptr,
+                TypeInfo{fspec->signature_ptr()}
+        });
+        // Copy original symbol and set it to the specialized function
+        fspec_symptr->set_index( module().add_function(move(fspec)) );
+        fspec_symptr->set_callable(true);
+        assert(!symptr->ref());
+        assert(symptr->depth() == 0);
+        // chain to the original symbol
+        if (symptr.symtab() == &m_function.symtab()) {
+            fspec_symptr->set_next(symptr->next());
+            symptr->set_next(fspec_symptr);
+        }
+        return res;
     }
 
     // Consume params from `orig_signature` according to `m_call_args`, creating new signature

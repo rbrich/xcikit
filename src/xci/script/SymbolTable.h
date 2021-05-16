@@ -35,6 +35,8 @@ public:
     const Symbol* operator->() const;
     Symbol* operator->();
 
+    Function& get_function();
+
     // Copy symbol into `symtab` and return a new Symbol* ready for writing.
     // This SymbolPointer is modified to point to the new symbol.
     // Same as operator-> if already pointing to `symtab` (i.e. no copying).

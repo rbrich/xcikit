@@ -426,6 +426,9 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     CHECK(interpret("fun x {x+1} 2") == "3");  // generic lambda
     CHECK(interpret("b = 3 + fun x {2*x} 2; b") == "7");
 
+    // generic function in local scope
+    CHECK(interpret("outer = fun y { inner = fun x { x+1 }; inner y }; outer 2") == "3");
+
     // argument propagation:
     CHECK(interpret("f = fun a:Int { fun b:Int { a+b } }; f 1 2") == "3");  //  `f` returns a function which consumes the second arg
     CHECK(interpret("f = fun a:Int { fun b:Int { fun c:Int { a+b+c } } }; f 1 2 3") == "6");

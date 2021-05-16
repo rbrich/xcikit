@@ -18,6 +18,7 @@ struct ReplOptions {
     bool print_ast = false;
     bool print_symtab = false;
     bool print_module = false;
+    bool print_module_verbose = false;
     bool print_bytecode = false;
     bool trace_bytecode = false;
     bool with_std_lib = true;

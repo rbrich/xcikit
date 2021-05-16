@@ -5,6 +5,7 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "SymbolTable.h"
+#include "Module.h"
 #include <cassert>
 #include <algorithm>
 
@@ -35,6 +36,15 @@ Symbol* SymbolPointer::operator->()
 {
     assert(m_symtab != nullptr);
     return &m_symtab->get(m_symidx);
+}
+
+
+Function& SymbolPointer::get_function()
+{
+    auto& sym = m_symtab->get(m_symidx);
+    assert(sym.type() == Symbol::Function);
+    assert(m_symtab->module() != nullptr);
+    return m_symtab->module()->get_function(sym.index());
 }
 
 

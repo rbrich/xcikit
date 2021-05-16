@@ -25,6 +25,7 @@ using std::setw;
 
 struct StreamOptions {
     bool enable_tree : 1;
+    bool module_verbose : 1;  // Module: dump function bodies etc.
     unsigned level : 5;
 };
 
@@ -36,6 +37,12 @@ static StreamOptions& stream_options(std::ostream& os) {
 std::ostream& dump_tree(std::ostream& os)
 {
     stream_options(os).enable_tree = true;
+    return os;
+}
+
+std::ostream& dump_module_verbose(std::ostream& os)
+{
+    stream_options(os).module_verbose = true;
     return os;
 }
 
@@ -756,6 +763,7 @@ std::vector<std::string> s_type_var_names;
 
 std::ostream& operator<<(std::ostream& os, const Module& v)
 {
+    bool verbose = stream_options(os).module_verbose;
     os << "* " << v.num_imported_modules() << " imported modules" << endl << more_indent;
     for (size_t i = 0; i < v.num_imported_modules(); ++i)
         os << put_indent << '[' << i << "] " << v.get_imported_module(i).name() << endl;
@@ -768,6 +776,8 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
         if (f.kind() != Function::Kind::Compiled)
             os << '(' << f.kind() << ") ";
         os << f.name() << ": " << f.signature() << endl;
+        if (verbose && f.kind() == Function::Kind::Generic)
+            os << more_indent << put_indent << f.ast() << less_indent;
     }
     os << less_indent;
 

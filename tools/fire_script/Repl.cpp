@@ -71,8 +71,11 @@ bool Repl::evaluate(std::string_view line)
         }
 
         // print compiled module content
-        if (m_opts.print_module) {
-            t.stream() << "Module content:" << endl << *module << endl;
+        if (m_opts.print_module || m_opts.print_module_verbose) {
+            auto s = t.stream();
+            if (m_opts.print_module_verbose)
+                s << dump_module_verbose << dump_tree;
+            s << "Module content:" << endl << *module << endl;
         }
 
         // stop if we were only processing the AST, without actual compilation
