@@ -11,6 +11,7 @@
 #include <xci/data/coding/leb128.h>
 #include <xci/compat/macros.h>
 #include <iomanip>
+#include <bitset>
 
 namespace xci::script {
 
@@ -26,12 +27,22 @@ using std::setw;
 struct StreamOptions {
     bool enable_tree : 1;
     bool module_verbose : 1;  // Module: dump function bodies etc.
-    unsigned level : 5;
+    unsigned level : 6;
+    std::bitset<32> rules;
 };
 
 static StreamOptions& stream_options(std::ostream& os) {
     static int idx = std::ios_base::xalloc();
-    return reinterpret_cast<StreamOptions&>(os.iword(idx));
+    auto* p = reinterpret_cast<StreamOptions*>(os.pword(idx));
+    if (!p) {
+        p = new StreamOptions();
+        os.pword(idx) = p;
+        os.register_callback([](std::ios_base::event ev, std::ios_base& ios, int index){
+            if (ev == std::ios_base::event::erase_event)
+                delete reinterpret_cast<StreamOptions*>(ios.pword(index));
+        }, idx);
+    }
+    return *p;
 }
 
 std::ostream& dump_tree(std::ostream& os)
@@ -48,13 +59,28 @@ std::ostream& dump_module_verbose(std::ostream& os)
 
 std::ostream& put_indent(std::ostream& os)
 {
-    std::string pad(stream_options(os).level * 3u, ' ');
-    return os << pad;
+    auto& so = stream_options(os);
+    for (unsigned i = 0; i != so.level; ++i)
+        if (so.rules[i])
+            os << ".  ";
+        else
+            os << "   ";
+    return os;
+}
+
+std::ostream& rule_indent(std::ostream& os)
+{
+    auto& so = stream_options(os);
+    so.rules[so.level] = true;
+    so.level += 1;
+    return os;
 }
 
 std::ostream& more_indent(std::ostream& os)
 {
-    stream_options(os).level += 1;
+    auto& so = stream_options(os);
+    so.rules[so.level] = false;
+    so.level += 1;
     return os;
 }
 
@@ -465,7 +491,7 @@ std::ostream& operator<<(std::ostream& os, const Function& v)
 {
     if (stream_options(os).enable_tree) {
         os << "Function(Expression)" << endl;
-        return os << more_indent
+        return os << rule_indent
                   << put_indent << v.type
                   << put_indent << v.body
                   << less_indent;
@@ -675,7 +701,8 @@ std::ostream& operator<<(std::ostream& os, const Function& f)
                 os << ' ' << DumpInstruction{f, it} << endl;
             }
             return os;
-        case Function::Kind::Generic:   return os << dump_tree << f.ast() << endl;
+        case Function::Kind::Generic:
+            return os << dump_tree << f.ast() << endl;
         case Function::Kind::Native:    return os << "<native>" << endl;
         case Function::Kind::Undefined: return os << "<undefined>" << endl;
     }
@@ -724,6 +751,7 @@ std::ostream& operator<<(std::ostream& os, DumpInstruction&& v)
                 os << " (" << v.func.module().get_value(arg) << ")";
                 break;
             case Opcode::LoadFunction:
+            case Opcode::MakeClosure:
             case Opcode::Call0: {
                 const auto& fn = v.func.module().get_function(arg);
                 os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
@@ -739,7 +767,7 @@ std::ostream& operator<<(std::ostream& os, DumpInstruction&& v)
         }
     }
     if (opcode >= Opcode::L2ArgFirst && opcode <= Opcode::L2ArgLast) {
-        // 2 args
+        // L2
         auto arg1 = decode_leb128<Index>(v.pos);
         auto arg2 = decode_leb128<Index>(v.pos);
         os << static_cast<int>(arg1) << ' ' << static_cast<int>(arg2);
@@ -778,6 +806,13 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
         os << f.name() << ": " << f.signature() << endl;
         if (verbose && f.kind() == Function::Kind::Generic)
             os << more_indent << put_indent << f.ast() << less_indent;
+        if (verbose && f.kind() == Function::Kind::Compiled) {
+            os << more_indent;
+            for (auto it = f.code().begin(); it != f.code().end();) {
+                os << put_indent << DumpInstruction{f, it} << endl;
+            }
+            os << less_indent;
+        }
     }
     os << less_indent;
 
