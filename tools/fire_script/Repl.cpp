@@ -49,16 +49,21 @@ bool Repl::evaluate(std::string_view line)
             t.stream() << "Raw AST:" << endl << dump_tree << ast << endl;
         }
 
-        // compile
+        // create new module for the input
         auto module = std::make_unique<Module>(module_name);
         module->add_imported_module(BuiltinModule::static_instance());
         if (m_ctx.std_module)
             module->add_imported_module(*m_ctx.std_module);
         for (auto& m : m_ctx.input_modules)
             module->add_imported_module(*m);
-        auto func_name = m_ctx.input_number == -1 ? "_" : "_" + std::to_string(m_ctx.input_number);
-        auto func = std::make_unique<Function>(*module, module->symtab());
-        bool is_compiled = compiler.compile(*func, ast);
+
+        // add main function to the module as `_<N>`
+        auto fn_name = m_ctx.input_number == -1 ? "_" : "_" + std::to_string(m_ctx.input_number);
+        auto fn_idx = module->add_function(std::make_unique<Function>(*module, module->symtab()));
+        auto& fn = module->get_function(fn_idx);
+
+        // compile
+        bool is_compiled = compiler.compile(fn, ast);
 
         // print AST with Compiler modifications
         if (m_opts.print_ast) {
@@ -85,7 +90,7 @@ bool Repl::evaluate(std::string_view line)
         BytecodeTracer tracer(machine, t);
         tracer.setup(m_opts.print_bytecode, m_opts.trace_bytecode);
 
-        machine.call(*func, [&](TypedValue&& invoked) {
+        machine.call(fn, [&](TypedValue&& invoked) {
             if (!invoked.is_void()) {
                 t.sanitize_newline();
                 t.print("{t:bold}{fg:yellow}{}{t:normal}\n", invoked);
@@ -95,17 +100,16 @@ bool Repl::evaluate(std::string_view line)
         t.sanitize_newline();
 
         // returned value of last statement
-        auto result = machine.stack().pull_typed(func->effective_return_type());
+        auto result = machine.stack().pull_typed(fn.effective_return_type());
         if (m_ctx.input_number != -1) {
             // REPL mode
             if (!result.is_void()) {
                 t.print("{t:bold}{fg:magenta}{}:{} = {fg:default}{}{t:normal}\n",
-                        func_name, result.type_info(), result);
+                        fn_name, result.type_info(), result);
             }
-            // save result as function `_<N>` in the module
-            auto func_idx = module->add_function(move(func));
-            module->symtab().add({move(func_name), Symbol::Function, func_idx});
-
+            // add symbol for main function so it will be visible by following input,
+            // which imports this module
+            module->symtab().add({fn_name, Symbol::Function, fn_idx});
             m_ctx.input_modules.push_back(move(module));
         } else {
             // single input mode

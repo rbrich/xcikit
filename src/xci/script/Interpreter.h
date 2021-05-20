@@ -46,6 +46,7 @@ private:
     Compiler m_compiler;
     Machine m_machine;
     Module m_main;
+    int m_input_num = 0;
 };
 
 
