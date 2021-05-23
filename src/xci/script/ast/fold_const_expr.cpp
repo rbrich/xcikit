@@ -76,8 +76,6 @@ public:
                 }
                 break;
             }
-            case Symbol::Fragment:
-                break;
             case Symbol::Unresolved:
                 assert(!"Optimizer: unresolved symbol");
                 break;

@@ -324,30 +324,6 @@ public:
                 }
                 break;
             }
-            case Symbol::Fragment: {
-                assert(symtab.module() == nullptr || symtab.module() == &module());
-                Function& fragment = module().get_function(sym.index());
-                // inline the code
-                unsigned levels = 0;
-                auto* scope = &m_function.symtab();
-                while (scope != fragment.symtab().parent()) {
-                    scope = scope->parent();
-                    ++levels;
-                }
-                // Should be equivalent:
-                //unsigned levels = m_function.symtab().level() + 1 - fragment.symtab().level();
-                if (levels != 0) {
-                    // fragment is not direct child of m_function - climb up `levels` scopes
-                    // SET_BASE <levels>
-                    assert(levels <= 255);
-                    code().add_L1(Opcode::SetBase, (uint8_t) levels);
-                }
-                // copy the code
-                for (auto instr : fragment.code()) {
-                    code().add(instr);
-                }
-                break;
-            }
             case Symbol::Class:
                 assert(!"Class cannot be called.");
                 break;
@@ -570,29 +546,6 @@ private:
                                 } else {
                                     // CALL0 <function_idx>
                                     code().add_L1(Opcode::Call0, psym.index());
-                                }
-                                break;
-                            }
-                            case Symbol::Fragment: {
-                                Function& fragment = module().get_function(psym.index());
-                                // inline the code
-                                unsigned levels = 0;
-                                auto* scope = &parent.symtab();
-                                while (scope != fragment.symtab().parent()) {
-                                    scope = scope->parent();
-                                    ++levels;
-                                }
-                                // Should be equivalent:
-                                //unsigned levels = parent.symtab().level() + 1 - fragment.symtab().level();
-                                if (levels != 0) {
-                                    // fragment is not direct child of parent - climb up `levels` scopes
-                                    // SET_BASE <levels>
-                                    assert(levels <= 255);
-                                    code().add_L1(Opcode::SetBase, (uint8_t) levels);
-                                }
-                                // copy the code
-                                for (auto instr : fragment.code()) {
-                                    code().add(instr);
                                 }
                                 break;
                             }

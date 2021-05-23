@@ -109,22 +109,6 @@ public:
                 }
                 break;
             }
-            case Symbol::Fragment: {
-                // only relevant for partial calls
-                if (m_function.partial().empty())
-                    break;
-                assert(symtab.module() == nullptr || symtab.module() == &module());
-                Function& fn = module().get_function(sym.index());
-                m_function.symtab().set_name(v.identifier.name + "/partial");
-                auto nlsym = m_function.symtab().add({
-                        v.identifier.symbol,
-                        Symbol::Nonlocal,
-                        m_function.nonlocals().size(),
-                        0});
-                m_function.add_nonlocal(TypeInfo{fn.signature_ptr()});
-                v.identifier.symbol = nlsym;
-                break;
-            }
             default:
                 break;
         }

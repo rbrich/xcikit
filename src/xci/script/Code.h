@@ -115,7 +115,7 @@ enum class Opcode: uint8_t {
     Call1,                  // arg = idx of function in builtin module, call it, pull args from stack, push result back
 
     MakeClosure,            // arg = idx of function in current module, pull nonlocals from stack, wrap them into closure, push closure back
-    SetBase,                // arg = number of stack frames to climb up
+    SetBase,                // set base for Copy etc., arg = number of stack frames to climb up
 
     IncRef,                 // arg = offset from top, (uint32*) at the offset is dereferenced and incremented
     DecRef,                 // arg = offset from top, (uint32*) at the offset is dereferenced and decremented

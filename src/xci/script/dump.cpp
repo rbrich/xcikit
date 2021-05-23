@@ -980,7 +980,6 @@ std::ostream& operator<<(std::ostream& os, Symbol::Type v)
         case Symbol::Parameter:     return os << "Parameter";
         case Symbol::Nonlocal:      return os << "Nonlocal";
         case Symbol::Function:      return os << "Function";
-        case Symbol::Fragment:      return os << "Fragment";
         case Symbol::Module:        return os << "Module";
         case Symbol::Instruction:   return os << "Instruction";
         case Symbol::Class:         return os << "Class";
