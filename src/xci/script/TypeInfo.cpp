@@ -175,17 +175,19 @@ TypeInfo::TypeInfo(std::string name, TypeInfo&& type_info)
 
 
 TypeInfo::TypeInfo(TypeInfo&& other) noexcept
-        : m_type(move(other.m_type)), m_info(move(other.m_info))
+        : m_type(other.m_type), m_info(move(other.m_info))
 {
     other.m_type = Type::Unknown;
+    other.m_info = Var{};
 }
 
 
 TypeInfo& TypeInfo::operator=(TypeInfo&& other) noexcept
 {
-    m_type = move(other.m_type);
+    m_type = other.m_type;
     m_info = move(other.m_info);
     other.m_type = Type::Unknown;
+    other.m_info = Var{};
     return *this;
 }
 

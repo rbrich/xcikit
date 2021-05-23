@@ -169,7 +169,7 @@ public:
     void visit(ast::Reference& v) override {
         assert(v.identifier.symbol);
         auto& symtab = *v.identifier.symbol.symtab();
-        auto& sym = *v.identifier.symbol;
+        const auto& sym = *v.identifier.symbol;
         switch (sym.type()) {
             case Symbol::Instruction: {
                 // intrinsics - just output the requested instruction
@@ -217,7 +217,7 @@ public:
                 break;
             }
             case Symbol::Nonlocal: {
-                if (!m_function.partial().empty() && sym.ref()->type() == Symbol::Fragment) {
+                if (!m_function.partial().empty() && sym.ref()->type() == Symbol::Function) {
                     break;
                 }
 
@@ -287,8 +287,17 @@ public:
                         func.set_compiled();  // this would release AST copy
                         m_compiler.compile_block(func, body.ast());
                     }
-                    // CALL0 <function_idx>
-                    code().add_L1(Opcode::Call0, sym.index());
+
+                    if (func.has_nonlocals()) {
+                        make_closure(func);
+                        // MAKE_CLOSURE <function_idx>
+                        code().add_L1(Opcode::MakeClosure, sym.index());
+                        // EXECUTE
+                        code().add_opcode(Opcode::Execute);
+                    } else {
+                        // CALL0 <function_idx>
+                        code().add_L1(Opcode::Call0, sym.index());
+                    }
                     break;
                 }
                 // builtin module or imported module
@@ -442,19 +451,14 @@ public:
             return;  // instance function -> just compile it
         if (func.has_nonlocals()) {
             if (v.definition) {
-                // fill wrapping function for the closure
-                auto& wfn = module().get_function(v.definition->symbol()->index());
-                auto* orig_code = m_code;
-                m_code = &wfn.code();
-                make_closure(func);
-                // MAKE_CLOSURE <function_idx>
-                code().add_L1(Opcode::MakeClosure, v.index);
-                if (!func.has_parameters()) {
+                /*if (!func.has_parameters()) {
                     // parameterless closure is executed immediately
+                    make_closure(func);
+                    // MAKE_CLOSURE <function_idx>
+                    code().add_L1(Opcode::MakeClosure, v.index);
                     // EXECUTE
                     code().add_opcode(Opcode::Execute);
-                }
-                m_code = orig_code;
+                }*/
             } else {
                 make_closure(func);
                 // MAKE_CLOSURE <function_idx>
@@ -507,20 +511,22 @@ private:
     Code& code() { return m_code == nullptr ? m_function.code() : *m_code; };
 
     void make_closure(Function& func) {
-        // m_function is parent
-        assert(&m_function.symtab() == func.symtab().parent());
-        auto closure_size = m_function.raw_size_of_closure();
+        // parent function
+        assert(func.symtab().parent()->function() != nullptr);
+        auto& parent = *func.symtab().parent()->function();
+        auto closure_size = parent.raw_size_of_closure();
         // make closure
         for (const auto& sym : reverse(func.symtab())) {
             if (sym.type() == Symbol::Nonlocal) {
-                // find symbol in parent (which is m_function)
-                for (const auto& psym : m_function.symtab()) {
+                //assert(sym.depth() == 1);
+                // find symbol in parent
+                for (const auto& psym : parent.symtab()) {
                     if (psym.name() == sym.name()) {
                         // found it
                         switch (psym.type()) {
                             case Symbol::Nonlocal: {
                                 // COPY <frame_offset> <size>
-                                auto ofs_ti = m_function.nonlocal_offset_and_type(psym.index());
+                                auto ofs_ti = parent.nonlocal_offset_and_type(psym.index());
                                 assert(ofs_ti.first < 256);
                                 code().add_L2(Opcode::Copy,
                                         ofs_ti.first, ofs_ti.second.size());
@@ -531,28 +537,43 @@ private:
                             }
                             case Symbol::Parameter: {
                                 // COPY <frame_offset> <size>
-                                const auto& ti = m_function.parameter(psym.index());
+                                const auto& ti = parent.parameter(psym.index());
                                 code().add_L2(Opcode::Copy,
-                                        m_function.parameter_offset(psym.index()) + closure_size,
+                                        parent.parameter_offset(psym.index()) + closure_size,
                                         ti.size());
                                 ti.foreach_heap_slot([this](size_t offset) {
                                     code().add_L1(Opcode::IncRef, offset);
                                 });
                                 break;
                             }
+                            case Symbol::Function: {
+                                Function& fn = module().get_function(psym.index());
+                                if (fn.has_nonlocals()) {
+                                    make_closure(fn);
+                                    // MAKE_CLOSURE <function_idx>
+                                    code().add_L1(Opcode::MakeClosure, psym.index());
+                                } else if (fn.has_parameters()) {
+                                    // LOAD_FUNCTION <function_idx>
+                                    code().add_L1(Opcode::LoadFunction, psym.index());
+                                } else {
+                                    // CALL0 <function_idx>
+                                    code().add_L1(Opcode::Call0, psym.index());
+                                }
+                                break;
+                            }
                             case Symbol::Fragment: {
                                 Function& fragment = module().get_function(psym.index());
                                 // inline the code
                                 unsigned levels = 0;
-                                auto* scope = &m_function.symtab();
+                                auto* scope = &parent.symtab();
                                 while (scope != fragment.symtab().parent()) {
                                     scope = scope->parent();
                                     ++levels;
                                 }
                                 // Should be equivalent:
-                                //unsigned levels = m_function.symtab().level() + 1 - fragment.symtab().level();
+                                //unsigned levels = parent.symtab().level() + 1 - fragment.symtab().level();
                                 if (levels != 0) {
-                                    // fragment is not direct child of m_function - climb up `levels` scopes
+                                    // fragment is not direct child of parent - climb up `levels` scopes
                                     // SET_BASE <levels>
                                     assert(levels <= 255);
                                     code().add_L1(Opcode::SetBase, (uint8_t) levels);
@@ -601,44 +622,35 @@ bool Compiler::compile(Function& func, ast::Module& ast)
     // - apply optimizations - const fold etc. (Optimizer)
     // See documentation on each function.
 
-    if ((m_flags & Flags::MandatoryMask) == Flags::Default) {
-        // no post-processing selected by default -> enable all
-        m_flags |= Flags::MandatoryMask;
+    // If these flags are not Default, don't compile, only preprocess
+    auto flags = m_flags;
+    bool default_compile = (flags & Flags::MandatoryMask) == Flags::Default;
+    if (default_compile) {
+        // Enable all mandatory passes for default compilation
+        flags |= Flags::MandatoryMask;
     }
-    // only if all mandatory passes were enabled
-    bool can_compile = true;
 
-    if ((m_flags & Flags::FoldTuple) == Flags::FoldTuple)
+    if ((flags & Flags::FoldTuple) == Flags::FoldTuple)
         fold_tuple(ast.body);
-    else
-        can_compile = false;
 
-    if ((m_flags & Flags::FoldDotCall) == Flags::FoldDotCall)
+    if ((flags & Flags::FoldDotCall) == Flags::FoldDotCall)
         fold_dot_call(func, ast.body);
-    else
-        can_compile = false;
 
-    if ((m_flags & Flags::ResolveSymbols) == Flags::ResolveSymbols)
+    if ((flags & Flags::ResolveSymbols) == Flags::ResolveSymbols)
         resolve_symbols(func, ast.body);
-    else
-        can_compile = false;
 
-    if ((m_flags & Flags::ResolveTypes) == Flags::ResolveTypes)
+    if ((flags & Flags::ResolveTypes) == Flags::ResolveTypes)
         resolve_types(func, ast.body);
-    else
-        can_compile = false;
 
-    if ((m_flags & Flags::FoldConstExpr) == Flags::FoldConstExpr)
+    if ((flags & Flags::FoldConstExpr) == Flags::FoldConstExpr)
         fold_const_expr(func, ast.body);
 
-    if ((m_flags & Flags::ResolveNonlocals) == Flags::ResolveNonlocals)
+    if ((flags & Flags::ResolveNonlocals) == Flags::ResolveNonlocals)
         resolve_nonlocals(func, ast.body);
-    else
-        can_compile = false;
 
-    if (can_compile)
+    if (default_compile)
         compile_block(func, ast.body);
-    return can_compile;
+    return default_compile;
 }
 
 

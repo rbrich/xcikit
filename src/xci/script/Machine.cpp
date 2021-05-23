@@ -34,6 +34,7 @@ void Machine::call(const Function& function, const InvokeCallback& cb)
             fn.call_native(m_stack);
             return;
         }
+        assert(fn.is_compiled());
         m_stack.push_frame(cur_fun, it - cur_fun->code().begin());
         cur_fun = &fn;
         it = cur_fun->code().begin();

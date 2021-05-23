@@ -35,7 +35,8 @@ public:
 
         // Mandatory AST passes
         // - if none of the flags are set, all passes will be enabled
-        // - these flags solve passes have internal dependencies, these flags
+        // - if one or more of these flags is set, the Compiler won't compile, only preprocess
+        // - each flag may bring in other flags as its dependencies
         PPTuple         = FoldTuple,
         PPDotCall       = FoldDotCall,
         PPSymbols       = ResolveSymbols,

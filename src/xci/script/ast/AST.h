@@ -199,7 +199,7 @@ struct Identifier {
 struct Key {
     Key() = default;
     explicit Key(std::string s) : name(std::move(s)) {}
-    explicit Key(Identifier&& ident) : name(std::move(ident.name)), source_loc(std::move(ident.source_loc)) {}
+    explicit Key(Identifier&& ident) : name(std::move(ident.name)), source_loc(ident.source_loc) {}
     explicit operator bool() const { return !name.empty(); }
 
     std::string name;
@@ -366,6 +366,7 @@ struct Reference: public Expression {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;
+    void copy_to(Reference& r) const;
 
     Identifier identifier;
     std::unique_ptr<Type> type_arg;  // explicit type argument: e.g. <Int>

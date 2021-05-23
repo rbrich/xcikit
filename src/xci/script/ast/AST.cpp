@@ -166,14 +166,20 @@ void Expression::copy_to(Expression& r) const
 std::unique_ptr<ast::Expression> Reference::make_copy() const
 {
     auto r = std::make_unique<Reference>();
-    Expression::copy_to(*r);
-    r->identifier = identifier;
-    if (type_arg)
-        r->type_arg = type_arg->make_copy();
-    r->chain = chain;
-    r->module = module;
-    r->index = index;
+    Reference::copy_to(*r);
     return r;
+}
+
+
+void Reference::copy_to(Reference& r) const
+{
+    Expression::copy_to(r);
+    r.identifier = identifier;
+    if (type_arg)
+        r.type_arg = type_arg->make_copy();
+    r.chain = chain;
+    r.module = module;
+    r.index = index;
 }
 
 
@@ -292,6 +298,10 @@ std::unique_ptr<ast::Expression> Cast::make_copy() const
     Expression::copy_to(*r);
     r->expression = expression->make_copy();
     r->type = type->make_copy();
+    if (cast_function) {
+        r->cast_function = std::make_unique<Reference>();
+        cast_function->copy_to(*r->cast_function);
+    }
     return r;
 }
 

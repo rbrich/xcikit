@@ -442,7 +442,7 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     CHECK(interpret("f = fun a:Int b:Int c:Int { "
                     "g=fun c1:Int {a * b - c1}; "
                     "h=fun c1:Int {g c1}; "
-                    "h c }; f 1 2 3") == "-1");
+                    "h c }; f 4 2 3") == "5");
     CHECK(interpret("f = fun a:Int b:Int c:Int { "
                     "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 + b}; "
                     "w=fun b1:Int c1:Int {a + u b1 + v c1}; "
@@ -460,16 +460,19 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
                     "  wrapped = fun x:Int { inner x };"
                     "  wrapped y "
                     "}; outer 2") == "4");
-    // generic-in-generic doesn't work yet
-    /*CHECK(interpret("outer = fun y {"
-                    "  inner = fun x { x + y };"
-                    "  wrapped = fun x { inner x };"
-                    "  wrapped y "
-                    "}; outer 2") == "4");*/
     CHECK(interpret("outer = fun y {"
                     "  inner = fun x:Int { in2 = fun z:Int{ x + z }; in2 y };"
                     "  wrapped = fun x:Int { inner x }; wrapped y"
                     "}; outer 2") == "4");
+
+    // closure: fully generic
+    CHECK(interpret("outer = fun y { inner = fun x { x + y }; inner 3 * inner y }; outer 2") == "20");
+    CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; inner 3 + (inner 4l):T }; outer 2") == "11");
+//    CHECK(interpret("outer = fun y {"
+//                    "  inner = fun x { x + y };"
+//                    "  wrapped = fun x { inner x };"
+//                    "  wrapped y "
+//                    "}; outer 2") == "4");
 }
 
 

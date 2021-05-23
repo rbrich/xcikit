@@ -485,6 +485,8 @@ public:
                 };
                 std::vector<Item> candidates;
                 while (symptr) {
+                    while (symptr->depth() != 0)
+                        symptr = symptr->ref();
                     auto* symmod = symptr.symtab()->module();
                     if (symmod == nullptr)
                         symmod = &module();
@@ -504,6 +506,7 @@ public:
                         continue;
                     if (item.match > m) {
                         // found better match
+                        m = item.match;
                         found = &item;
                         conflict = false;
                         continue;
@@ -593,6 +596,7 @@ public:
         }
 //        if (sym.type() == Symbol::Function)
 //            m_value_type = m_value_type.effective_type();
+        // FIXME: remove, this writes to builtin etc.
         v.identifier.symbol->set_callable(m_value_type.is_callable());
     }
 
@@ -617,7 +621,7 @@ public:
         v.callable->apply(*this);
         v.intrinsic = m_intrinsic;
 
-        if (!m_value_type.is_callable() && !m_call_args.empty()) {
+        if (m_value_type && !m_value_type.is_callable() && !m_call_args.empty()) {
             throw UnexpectedArgument(1, m_call_args[0].source_loc);
         }
 
@@ -801,7 +805,11 @@ public:
                 m_type_info = t.symbol.symtab()->module()->get_type(t.symbol->index());
                 break;
             case Symbol::TypeVar:
-                m_type_info = TypeInfo{ TypeInfo::Var(t.symbol->index()) };
+                if (t.symbol.symtab() == &m_function.symtab()
+                && t.symbol->index() <= m_type_args.size())
+                    m_type_info = m_type_args[t.symbol->index() - 1];
+                else
+                    m_type_info = TypeInfo{ TypeInfo::Var(t.symbol->index()) };
                 break;
             default:
                 break;
@@ -980,6 +988,7 @@ private:
         assert(symptr->depth() == 0);
         // chain to the original symbol
         if (symptr.symtab() == &m_function.symtab()) {
+            fspec_symptr->set_ref(symptr);  // ref is only for dump readability
             fspec_symptr->set_next(symptr->next());
             symptr->set_next(fspec_symptr);
         }

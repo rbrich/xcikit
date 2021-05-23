@@ -65,10 +65,8 @@ public:
         const auto& sym = *v.identifier.symbol;
         switch (sym.type()) {
             case Symbol::Nonlocal: {
-                // make sure the symbol is copied if it came from template function
-                // (later needed for erasing nonlocals in function signature)
-                v.identifier.symbol.write(m_function.symtab());
-                // now, check and potentially eliminate the symbol (it will stay in symbol table, though)
+                // check and potentially replace the NonLocal symbol
+                // (the symbol itself will stay in symbol table, though)
                 const auto& nl_sym = *sym.ref();
                 auto* nl_func = sym.ref().symtab()->function();
                 assert(nl_func != nullptr);
@@ -91,6 +89,17 @@ public:
                 auto& fn = symmod->get_function(sym.index());
                 if (fn.is_generic()) {
                     process_function(fn, fn.ast());
+                }
+                // partial calls
+                if (!m_function.partial().empty() && symmod == &module()) {
+                    m_function.symtab().set_name(v.identifier.name + "/partial");
+                    auto nlsym = m_function.symtab().add({
+                            v.identifier.symbol,
+                            Symbol::Nonlocal,
+                            m_function.nonlocals().size(),
+                            0});
+                    m_function.add_nonlocal(TypeInfo{fn.signature_ptr()});
+                    v.identifier.symbol = nlsym;
                 }
                 break;
             }
@@ -144,23 +153,8 @@ public:
     }
 
     void visit(ast::Function& v) override {
-        Function& func = module().get_function(v.index);
-        process_function(func, v.body);
-
-        if (!func.has_nonlocals())
-            return;
-
-        if (v.definition) {
-            // create wrapping function for the closure
-            SymbolTable& wfn_symtab = m_function.symtab().add_child(func.symtab().name() + "/closure");
-            auto wfn = std::make_unique<Function>(module(), wfn_symtab);
-            wfn->set_fragment();
-            wfn->set_signature(func.signature_ptr());
-            auto wfn_index = module().add_function(move(wfn));
-            v.definition->symbol().write(m_function.symtab())
-                    .set_index(wfn_index)
-                    .set_type(Symbol::Fragment);
-        }
+        Function& fn = module().get_function(v.index);
+        process_function(fn, v.body);
     }
 
 private:
@@ -171,7 +165,8 @@ private:
         expression.apply(visitor);
     }
 
-    void process_function(Function& func, const ast::Block& body) {
+    void process_function(Function& func, const ast::Block& body)
+    {
         resolve_nonlocals(func, body);
 
         auto& nonlocals = func.signature().nonlocals;
@@ -184,9 +179,12 @@ private:
                 sym.set_index(sym.index() - nonlocals_erased);
                 if (sym.ref() && sym.ref()->type() == Symbol::Function) {
                     // unwrap reference to non-value function
-                    nonlocals.erase(nonlocals.begin() + sym.index());
-                    ++ nonlocals_erased;
-                    sym = *sym.ref();
+                    auto& ref_fn = sym.ref().get_function();
+                    if (!ref_fn.has_nonlocals()) {
+                        nonlocals.erase(nonlocals.begin() + (ssize_t) sym.index());
+                        ++ nonlocals_erased;
+                        sym = *sym.ref();
+                    }
                 } else if (sym.depth() > 1) {
                     // not direct parent -> add intermediate Nonlocal
                     auto ti = sym.ref().symtab()->function()->parameter(sym.ref()->index());
