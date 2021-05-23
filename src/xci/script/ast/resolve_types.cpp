@@ -556,25 +556,25 @@ public:
                 break;
             case Symbol::Nonlocal: {
                 assert(sym.ref());
-                const auto& nl_sym = *sym.ref();
+                auto nl_sym = sym.ref();
                 // owning function of the nonlocal symbol
-                auto* nl_owner = sym.ref().symtab()->function();
+                auto* nl_owner = nl_sym.symtab()->function();
                 assert(nl_owner != nullptr);
-                switch (nl_sym.type()) {
+                switch (nl_sym->type()) {
                     case Symbol::Parameter:
-                        m_value_type = nl_owner->parameter(nl_sym.index());
+                        m_value_type = nl_owner->parameter(nl_sym->index());
                         break;
                     case Symbol::Function: {
-                        auto specialized = specialize_function(sym.ref(), v.source_loc);
+                        auto specialized = specialize_function(nl_sym, v.source_loc);
                         if (specialized) {
                             v.module = &module();
                             v.index = specialized->index;
                             m_value_type = move(specialized->type_info);
                             break;
                         }
-                        auto& fn = nl_owner->module().get_function(nl_sym.index());
-                        v.module = sym.ref().symtab()->module();
-                        v.index = sym.ref()->index();
+                        auto& fn = nl_owner->module().get_function(nl_sym->index());
+                        v.module = nl_sym.symtab()->module();
+                        v.index = nl_sym->index();
                         m_value_type = TypeInfo(fn.signature_ptr());
                         break;
                     }

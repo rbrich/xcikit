@@ -67,17 +67,18 @@ public:
             case Symbol::Nonlocal: {
                 // check and potentially replace the NonLocal symbol
                 // (the symbol itself will stay in symbol table, though)
+                assert(sym.ref());
                 const auto nl_sym = sym.ref();
-                auto* nl_owner = nl_sym.symtab()->function();
-                assert(nl_owner != nullptr);
                 switch (nl_sym->type()) {
                     case Symbol::Function: {
-                        auto& ref_fn = nl_owner->module().get_function(nl_sym->index());
+                        assert(v.index != no_index);
+                        auto& ref_fn = v.module->get_function(v.index);
                         if (!ref_fn.has_nonlocals()) {
                             // eliminate nonlocal function without closure
                             v.identifier.symbol = nl_sym;
-                            v.module = nl_sym.symtab()->module();
-                            v.index = nl_sym->index();
+                        }
+                        if (ref_fn.is_generic()) {
+                            process_function(ref_fn, ref_fn.ast());
                         }
                         break;
                     }
@@ -159,7 +160,8 @@ public:
 
     void visit(ast::Function& v) override {
         Function& fn = module().get_function(v.index);
-        process_function(fn, v.body);
+        if (!fn.detect_generic())
+            process_function(fn, v.body);
     }
 
 private:

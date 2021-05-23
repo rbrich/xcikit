@@ -386,7 +386,13 @@ std::ostream& operator<<(std::ostream& os, const TypeConstraint& v)
 std::ostream& operator<<(std::ostream& os, const Reference& v)
 {
     if (stream_options(os).enable_tree) {
-        os << "Reference(Expression)" << endl
+        os << "Reference(Expression)";
+        const auto symptr = v.identifier.symbol;
+        if (symptr && symptr->type() == Symbol::Function && v.index != no_index) {
+            os << " [Function #" << v.index << " @" << v.module->name()
+               << ": " << v.module->get_function(v.index).signature() << "]";
+        }
+        os << endl
            << more_indent
            << put_indent << v.identifier;
         if (v.type_arg)

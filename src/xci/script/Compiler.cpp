@@ -34,7 +34,7 @@ public:
 
     void visit(ast::Definition& dfn) override {
         Function& func = module().get_function(dfn.symbol()->index());
-        if (func.is_generic()) {
+        if (func.detect_generic()) {
             func.ensure_ast_copy();
             return;
         }
@@ -453,7 +453,7 @@ public:
     void visit(ast::Function& v) override {
         // compile body
         Function& func = module().get_function(v.index);
-        if (func.is_generic()) {
+        if (func.detect_generic()) {
             func.ensure_ast_copy();
             return;  // generic function -> compiled on call
         }

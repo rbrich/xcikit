@@ -468,11 +468,11 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     // closure: fully generic
     CHECK(interpret("outer = fun y { inner = fun x { x + y }; inner 3 * inner y }; outer 2") == "20");
     CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; inner 3 + (inner 4l):T }; outer 2") == "11");
-//    CHECK(interpret("outer = fun y {"
-//                    "  inner = fun x { x + y };"
-//                    "  wrapped = fun x { inner x };"
-//                    "  wrapped y "
-//                    "}; outer 2") == "4");
+    CHECK(interpret("outer = fun y {"
+                    "  inner = fun x { x + y };"
+                    "  wrapped = fun x { inner x };"
+                    "  wrapped y "
+                    "}; outer 2") == "4");
 }
 
 
