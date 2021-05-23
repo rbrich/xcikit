@@ -35,7 +35,7 @@ void BytecodeTracer::setup(bool print_bytecode, bool trace_bytecode)
                     m_lines_to_erase = 0;
                 } else {
                     --frame;
-                    const auto& f = *m_machine.stack().frame().function;
+                    const auto& f = m_machine.stack().frame().function;
                     print_code(frame, f);
                 }
             });
