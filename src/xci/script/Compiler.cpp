@@ -217,9 +217,20 @@ public:
                 break;
             }
             case Symbol::Nonlocal: {
-                if (!m_function.partial().empty() && sym.ref()->type() == Symbol::Function) {
-                    break;
+                bool is_nl_function = (sym.ref()->type() == Symbol::Function);
+                if (is_nl_function && v.module == &module()) {
+                    // specialization might not be compiled yet - compile it now
+                    Function& fn = module().get_function(v.index);
+                    if (fn.is_generic()) {
+                        assert(!fn.detect_generic());  // fully specialized
+                        const auto body = fn.yank_generic_body();
+                        fn.set_compiled();  // this would release AST copy
+                        m_compiler.compile_block(fn, body.ast());
+                    }
                 }
+
+                if (is_nl_function && !m_function.partial().empty())
+                    break;
 
                 // Non-locals are captured in closure - read from closure
                 auto ofs_ti = m_function.nonlocal_offset_and_type(sym.index());
@@ -277,38 +288,39 @@ public:
                 break;
             }
             case Symbol::Function: {
+                assert(v.index != no_index);
                 // this module
-                if (symtab.module() == nullptr || symtab.module() == &module()) {
+                if (v.module == &module()) {
                     // specialization might not be compiled yet - compile it now
-                    Function& func = module().get_function(sym.index());
-                    if (func.is_generic()) {
-                        assert(!func.detect_generic());  // fully specialized
-                        const auto body = func.yank_generic_body();
-                        func.set_compiled();  // this would release AST copy
-                        m_compiler.compile_block(func, body.ast());
+                    Function& fn = module().get_function(v.index);
+                    if (fn.is_generic()) {
+                        assert(!fn.detect_generic());  // fully specialized
+                        const auto body = fn.yank_generic_body();
+                        fn.set_compiled();  // this would release AST copy
+                        m_compiler.compile_block(fn, body.ast());
                     }
 
-                    if (func.has_nonlocals()) {
-                        make_closure(func);
+                    if (fn.has_nonlocals()) {
+                        make_closure(fn);
                         // MAKE_CLOSURE <function_idx>
-                        code().add_L1(Opcode::MakeClosure, sym.index());
+                        code().add_L1(Opcode::MakeClosure, v.index);
                         // EXECUTE
                         code().add_opcode(Opcode::Execute);
                     } else {
                         // CALL0 <function_idx>
-                        code().add_L1(Opcode::Call0, sym.index());
+                        code().add_L1(Opcode::Call0, v.index);
                     }
                     break;
                 }
                 // builtin module or imported module
-                auto mod_idx = module().get_imported_module_index(symtab.module());
+                auto mod_idx = module().get_imported_module_index(v.module);
                 assert(mod_idx != no_index);
                 if (mod_idx == 0) {
                     // CALL1 <function_idx>
-                    code().add_L1(Opcode::Call1, sym.index());
+                    code().add_L1(Opcode::Call1, v.index);
                 } else {
                     // CALL <module_idx> <function_idx>
-                    code().add_L2(Opcode::Call, mod_idx, sym.index());
+                    code().add_L2(Opcode::Call, mod_idx, v.index);
                 }
                 break;
             }

@@ -41,7 +41,7 @@ public:
         PPDotCall       = FoldDotCall,
         PPSymbols       = ResolveSymbols,
         PPTypes         = ResolveTypes | PPSymbols,
-        PPNonlocals     = ResolveNonlocals,
+        PPNonlocals     = ResolveNonlocals | PPTypes,
 
         // Optimization
         O0 = 0,

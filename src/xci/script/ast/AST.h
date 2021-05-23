@@ -371,9 +371,9 @@ struct Reference: public Expression {
     Identifier identifier;
     std::unique_ptr<Type> type_arg;  // explicit type argument: e.g. <Int>
 
-    // resolved Method:
+    // resolved function/method:
     SymbolPointer chain;  // tip of chain of Instances in case of Method
-    Module* module = nullptr;   // module with instance function
+    Module* module = nullptr;   // module with (instance) function
     Index index = no_index;     // index of (instance) function in module
 };
 

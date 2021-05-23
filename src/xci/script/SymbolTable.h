@@ -46,6 +46,9 @@ public:
     Index symidx() const { return m_symidx; }
 
     bool operator==(const SymbolPointer& rhs) const = default;
+    bool operator<(const SymbolPointer& rhs) const {
+        return std::tie(m_symtab, m_symidx) < std::tie(rhs.m_symtab, rhs.m_symidx);
+    }
 
 private:
     SymbolTable* m_symtab = nullptr;  // owning table

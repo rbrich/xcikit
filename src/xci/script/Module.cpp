@@ -93,6 +93,19 @@ Index Module::add_instance(std::unique_ptr<Instance>&& inst)
 }
 
 
+void Module::add_spec_function(SymbolPointer gen_fn, Index spec_fn_idx)
+{
+    m_spec_functions.emplace(gen_fn, spec_fn_idx);
+}
+
+
+std::vector<Index> Module::get_spec_functions(SymbolPointer gen_fn)
+{
+    auto [beg, end] = m_spec_functions.equal_range(gen_fn);
+    return {beg->second, end->second};
+}
+
+
 bool Module::operator==(const Module& rhs) const
 {
     return m_modules == rhs.m_modules &&

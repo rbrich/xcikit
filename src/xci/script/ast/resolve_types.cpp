@@ -520,11 +520,13 @@ public:
                 if (found && !conflict) {
                     auto specialized = specialize_function(found->symptr, v.source_loc);
                     if (specialized) {
-                        v.identifier.symbol = specialized->symptr;
+                        v.module = &module();
+                        v.index = specialized->index;
                         m_value_type = move(specialized->type_info);
                         break;
                     }
-                    v.identifier.symbol = found->symptr;
+                    v.module = found->module;
+                    v.index = found->symptr->index();
                     m_value_type = found->type;
                     break;
                 }
@@ -565,11 +567,14 @@ public:
                     case Symbol::Function: {
                         auto specialized = specialize_function(sym.ref(), v.source_loc);
                         if (specialized) {
-                            v.identifier.symbol->set_ref(specialized->symptr);
+                            v.module = &module();
+                            v.index = specialized->index;
                             m_value_type = move(specialized->type_info);
                             break;
                         }
                         auto& fn = nl_owner->module().get_function(nl_sym.index());
+                        v.module = sym.ref().symtab()->module();
+                        v.index = sym.ref()->index();
                         m_value_type = TypeInfo(fn.signature_ptr());
                         break;
                     }
@@ -955,8 +960,8 @@ private:
     }
 
     struct Specialized {
-        SymbolPointer symptr;
         TypeInfo type_info;
+        Index index;
     };
 
     /// Given a generic function, create a copy and specialize it to call args.
@@ -975,23 +980,17 @@ private:
         fspec->set_ast(fn.ast());
         fspec->ensure_ast_copy();
         specialize_to_call_args(*fspec, fspec->ast(), loc);
-        auto fspec_symptr = m_function.symtab().add({
-                symptr->name() + "/spec", Symbol::Function});
-        auto res = std::make_optional<Specialized>({
-                fspec_symptr,
-                TypeInfo{fspec->signature_ptr()}
-        });
+        auto fspec_sig = fspec->signature_ptr();
         // Copy original symbol and set it to the specialized function
-        fspec_symptr->set_index( module().add_function(move(fspec)) );
-        fspec_symptr->set_callable(true);
+        auto fspec_idx = module().add_function(move(fspec));
+        auto res = std::make_optional<Specialized>({
+                TypeInfo{fspec_sig},
+                fspec_idx
+        });
         assert(!symptr->ref());
         assert(symptr->depth() == 0);
-        // chain to the original symbol
-        if (symptr.symtab() == &m_function.symtab()) {
-            fspec_symptr->set_ref(symptr);  // ref is only for dump readability
-            fspec_symptr->set_next(symptr->next());
-            symptr->set_next(fspec_symptr);
-        }
+        // add to specialized functions in this module
+        module().add_spec_function(symptr, fspec_idx);
         return res;
     }
 

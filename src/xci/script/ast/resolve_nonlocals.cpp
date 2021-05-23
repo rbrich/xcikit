@@ -67,15 +67,17 @@ public:
             case Symbol::Nonlocal: {
                 // check and potentially replace the NonLocal symbol
                 // (the symbol itself will stay in symbol table, though)
-                const auto& nl_sym = *sym.ref();
-                auto* nl_func = sym.ref().symtab()->function();
-                assert(nl_func != nullptr);
-                switch (nl_sym.type()) {
+                const auto nl_sym = sym.ref();
+                auto* nl_owner = nl_sym.symtab()->function();
+                assert(nl_owner != nullptr);
+                switch (nl_sym->type()) {
                     case Symbol::Function: {
-                        auto& ref_fn = nl_func->module().get_function(nl_sym.index());
+                        auto& ref_fn = nl_owner->module().get_function(nl_sym->index());
                         if (!ref_fn.has_nonlocals()) {
                             // eliminate nonlocal function without closure
-                            v.identifier.symbol = sym.ref();
+                            v.identifier.symbol = nl_sym;
+                            v.module = nl_sym.symtab()->module();
+                            v.index = nl_sym->index();
                         }
                         break;
                     }
@@ -85,13 +87,16 @@ public:
                 break;
             }
             case Symbol::Function: {
-                auto* symmod = symtab.module() == nullptr ? &module() : symtab.module();
-                auto& fn = symmod->get_function(sym.index());
+                if (v.index == no_index) {
+                    v.module = symtab.module() == nullptr ? &module() : symtab.module();
+                    v.index = sym.index();
+                }
+                auto& fn = v.module->get_function(v.index);
                 if (fn.is_generic()) {
                     process_function(fn, fn.ast());
                 }
                 // partial calls
-                if (!m_function.partial().empty() && symmod == &module()) {
+                if (!m_function.partial().empty() && v.module == &module()) {
                     m_function.symtab().set_name(v.identifier.name + "/partial");
                     auto nlsym = m_function.symtab().add({
                             v.identifier.symbol,
