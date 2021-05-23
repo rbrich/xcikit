@@ -81,11 +81,11 @@ typename std::enable_if_t<std::is_integral_v<T> && sizeof(T) == 1 && !std::is_sa
 make_type_info() { return TypeInfo{Type::Byte}; }
 
 template<class T>
-typename std::enable_if_t<std::is_integral_v<T> && sizeof(T) == 4 && !std::is_same_v<T, char32_t>, TypeInfo>
+typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 4 && !std::is_same_v<T, char32_t>, TypeInfo>
 make_type_info() { return TypeInfo{Type::Int32}; }
 
 template<class T>
-typename std::enable_if_t<std::is_integral_v<T> && sizeof(T) == 8, TypeInfo>
+typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 8, TypeInfo>
 make_type_info() { return TypeInfo{Type::Int64}; }
 
 template<class T>
@@ -99,6 +99,10 @@ make_type_info() { return TypeInfo{Type::Float64}; }
 template<class T>
 typename std::enable_if_t<std::is_constructible_v<value::String, T>, TypeInfo>
 make_type_info() { return TypeInfo{Type::String}; }
+
+template<class T>
+typename std::enable_if_t<std::is_same_v<T, Module&>, TypeInfo>
+make_type_info() { return TypeInfo{Type::Module}; }
 
 
 /// Convert native type to `script::Value` subtype:
@@ -130,12 +134,12 @@ struct ValueType_s<T, typename std::enable_if_t<std::is_same_v<T, byte> || (std:
 };
 
 template<class T>
-struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && sizeof(T) == 4 && !std::is_same_v<T, char32_t>>> {
+struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 4 && !std::is_same_v<T, char32_t>>> {
     using type = value::Int32;
 };
 
 template<class T>
-struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && sizeof(T) == 8>> {
+struct ValueType_s<T, typename std::enable_if_t<std::is_integral_v<T> && std::is_signed_v<T> && sizeof(T) == 8>> {
     using type = value::Int64;
 };
 
@@ -157,6 +161,11 @@ struct ValueType_s<std::string_view> {
 template<>
 struct ValueType_s<std::string> {
     using type = value::String;
+};
+
+template<>
+struct ValueType_s<Module&> {
+    using type = value::Module;
 };
 
 

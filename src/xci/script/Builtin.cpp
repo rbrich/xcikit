@@ -260,6 +260,7 @@ BuiltinModule::BuiltinModule() : Module("builtin")
     add_intrinsics();
     add_types();
     add_io_functions();
+    add_introspections();
 }
 
 BuiltinModule& BuiltinModule::static_instance()
@@ -712,6 +713,25 @@ void BuiltinModule::add_io_functions()
     leave1->set_next(leave2);
     leave2->set_next(leave3);
     leave3->set_next(leave_s);
+}
+
+
+static void introspect_module(Stack& stack, void*, void*)
+{
+    stack.push(value::Module{stack.frame().function.module()});
+}
+
+
+void BuiltinModule::add_introspections()
+{
+    // return the builtin module
+    add_native_function("__builtin",
+            [](void* m) -> Module& { return *static_cast<Module*>(m); },
+            this);
+    // return current module
+    add_native_function("__module", {}, ti_module(), introspect_module);
+    // get number of functions in a module
+    add_native_function("__n_fn", [](Module& m) { return (int) m.num_functions(); });
 }
 
 

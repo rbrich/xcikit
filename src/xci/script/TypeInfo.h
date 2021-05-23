@@ -184,6 +184,7 @@ inline TypeInfo ti_float32() { return TypeInfo(Type::Float32); }
 inline TypeInfo ti_float64() { return TypeInfo(Type::Float64); }
 inline TypeInfo ti_string() { return TypeInfo(Type::String); }
 inline TypeInfo ti_stream() { return TypeInfo(Type::Stream); }
+inline TypeInfo ti_module() { return TypeInfo(Type::Module); }
 
 inline TypeInfo ti_function(std::shared_ptr<Signature>&& signature)
 { return TypeInfo(std::forward<std::shared_ptr<Signature>>(signature)); }

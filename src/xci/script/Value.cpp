@@ -6,6 +6,7 @@
 
 #include "Value.h"
 #include "Function.h"
+#include "Module.h"
 #include "Error.h"
 #include <xci/core/string.h>
 #include <xci/core/log.h>
@@ -563,7 +564,12 @@ public:
             os << ")";
         }
     }
-    void visit(const script::Module* v) override { fmt::print(os, "<module:{:x}>", uintptr_t(v)); }
+    void visit(const script::Module* v) override {
+        if (v == nullptr)
+            fmt::print(os, "<module:null>");
+        else
+            fmt::print(os, "<module:{}>", v->name());
+    }
     void visit(const script::Stream& v) override {
         os << "<stream:" << v << ">";
     }

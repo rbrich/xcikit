@@ -524,6 +524,9 @@ class Module: public Value {
 public:
     Module() : Value(Value::ModuleTag{}) {}
     explicit Module(script::Module& v) : Value(v) {}
+
+    script::Module& value() { return *get<script::Module*>(); }
+    const script::Module& value() const { return *get<script::Module*>(); }
 };
 
 } // namespace value

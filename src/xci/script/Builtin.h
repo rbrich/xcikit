@@ -46,6 +46,7 @@ private:
     void add_intrinsics();
     void add_types();
     void add_io_functions();
+    void add_introspections();
 };
 
 } // namespace xci::script
