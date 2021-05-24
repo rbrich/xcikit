@@ -102,7 +102,12 @@ void Module::add_spec_function(SymbolPointer gen_fn, Index spec_fn_idx)
 std::vector<Index> Module::get_spec_functions(SymbolPointer gen_fn)
 {
     auto [beg, end] = m_spec_functions.equal_range(gen_fn);
-    return {beg->second, end->second};
+    std::vector<Index> res;
+    res.reserve(std::distance(beg, end));
+    std::transform(beg, end, std::back_inserter(res), [](auto item){
+        return item.second;
+    });
+    return res;
 }
 
 

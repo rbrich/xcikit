@@ -476,7 +476,7 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     // multiple specializations
     // * each specialization is generated only once
     CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; inner 3 + inner 4 }; "
-                        "outer 1; outer 2; __module.__n_fn") == "9;11;6");
+                        "outer 1; outer 2; __module.__n_fn") == "9;11;5");
     // * specializations with different types from the same template
     CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; inner 3 + (inner 4l):T }; outer 2") == "11");
 }

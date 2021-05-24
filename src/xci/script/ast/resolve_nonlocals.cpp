@@ -172,7 +172,7 @@ private:
                     // unwrap reference to non-value function
                     auto& ref_fn = sym.ref().get_function();
                     if (!ref_fn.has_nonlocals()) {
-                        nonlocals.erase(nonlocals.begin() + (ssize_t) sym.index());
+                        nonlocals.erase(nonlocals.begin() + (ptrdiff_t) sym.index());
                         ++ nonlocals_erased;
                         sym = *sym.ref();
                     }

@@ -26,7 +26,7 @@ void Machine::run(const InvokeCallback& cb)
 {
     // Avoid double-recursion - move these pointers instead (we already have stack)
     const Function* function = &m_stack.frame().function;
-    auto it = function->code().begin() + (ssize_t) m_stack.frame().instruction;
+    auto it = function->code().begin() + (ptrdiff_t) m_stack.frame().instruction;
     auto base = m_stack.frame().base;
 
     auto call_fun = [this, &function, &it, &base](const Function& fn) {
@@ -81,7 +81,7 @@ void Machine::run(const InvokeCallback& cb)
             // return into previous call location
             m_stack.pop_frame();
             function = &m_stack.frame().function;
-            it = function->code().begin() + (ssize_t) m_stack.frame().instruction;
+            it = function->code().begin() + (ptrdiff_t) m_stack.frame().instruction;
             base = m_stack.frame().base;
             continue;
         }

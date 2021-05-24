@@ -479,6 +479,7 @@ public:
                 auto symptr = v.identifier.symbol;
                 struct Item {
                     Module* module;
+                    Index index;
                     SymbolPointer symptr;
                     TypeInfo type;
                     Match match;
@@ -487,13 +488,25 @@ public:
                 while (symptr) {
                     while (symptr->depth() != 0)
                         symptr = symptr->ref();
+
                     auto* symmod = symptr.symtab()->module();
                     if (symmod == nullptr)
                         symmod = &module();
                     auto& fn = symmod->get_function(symptr->index());
                     const auto& sig_ptr = fn.signature_ptr();
                     auto m = match_params(*sig_ptr);
-                    candidates.push_back({symmod, symptr, TypeInfo{sig_ptr}, m});
+                    candidates.push_back({symmod, symptr->index(), symptr, TypeInfo{sig_ptr}, m});
+
+                    // Check also specializations when the function is generic
+                    if (fn.detect_generic()) {
+                        for (auto spec_idx : module().get_spec_functions(symptr)) {
+                            auto& spec_fn = module().get_function(spec_idx);
+                            const auto& spec_sig = spec_fn.signature_ptr();
+                            auto spec_m = match_params(*spec_sig);
+                            candidates.push_back({&module(), spec_idx, {}, TypeInfo{spec_sig}, spec_m});
+                        }
+                    }
+
                     symptr = symptr->next();
                 }
 
@@ -518,15 +531,17 @@ public:
                 }
 
                 if (found && !conflict) {
-                    auto specialized = specialize_function(found->symptr, v.source_loc);
-                    if (specialized) {
-                        v.module = &module();
-                        v.index = specialized->index;
-                        m_value_type = move(specialized->type_info);
-                        break;
+                    if (found->symptr) {
+                        auto specialized = specialize_function(found->symptr, v.source_loc);
+                        if (specialized) {
+                            v.module = &module();
+                            v.index = specialized->index;
+                            m_value_type = move(specialized->type_info);
+                            break;
+                        }
                     }
                     v.module = found->module;
-                    v.index = found->symptr->index();
+                    v.index = found->index;
                     m_value_type = found->type;
                     break;
                 }
@@ -534,7 +549,7 @@ public:
                 // format the error message (candidates)
                 stringstream o_candidates;
                 for (const auto& c : candidates) {
-                    auto& fn = c.module->get_function(c.symptr->index());
+                    auto& fn = c.module->get_function(c.index);
                     o_candidates << "   " << match_to_cstr(c.match) << "  "
                                  << fn.signature() << endl;
                 }
