@@ -141,6 +141,7 @@ Core utilities. These have little or no dependencies. Mostly just stdlib + OS AP
 * `TermCtl` - Colored output for ANSI terminals.
 * `Vfs` - Unified reading of regular files and archives. Mount the archive to virtual path
  and read contained files in same fashion as regular files.
+* `bit.h` - custom `bit_copy`, `bit_read`, similar to C++20 `bit_cast`
 * `event.h` - System event loop (abstraction of kqueue / epoll).
 * `dispatch.h` - Watch files and notify on changes. Useful for auto-reloading of resource files.
 * `file.h` - Read whole files. Path utilities (dirname, basename, …).
@@ -152,11 +153,10 @@ Core utilities. These have little or no dependencies. Mostly just stdlib + OS AP
 
 === xci::compat
 
-Fills gaps between different systems and compilers.
+Fill gaps between different systems and compilers.
 
-* `bit.h` - custom `bit_read`, similar to C++20 `bit_cast`
 * `dl.h` - `dlopen` etc. for Windows
-* `endian.h` - Linux-like macros provided for MacOS
+* `endian.h` - Linux-like macros provided for macOS and Windows
 * `macros.h` - `FALLTHROUGH`, `UNREACHABLE`, `UNUSED`
 * `unistd.h` - Minimal Unix compatibility header for Windows
 

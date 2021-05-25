@@ -9,7 +9,6 @@
 
 #include "Value.h"
 #include <xci/core/container/ChunkedStack.h>
-#include <xci/compat/bit.h>
 #include <cstddef>  // byte
 #include <vector>
 #include <iostream>

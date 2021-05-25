@@ -284,7 +284,7 @@ StringV::StringV(std::string_view v)
 
 std::string_view StringV::value() const
 {
-    size_t size = bit_read<uint32_t>(slot.data());
+    size_t size = bit_copy<uint32_t>(slot.data());
     const char* data = reinterpret_cast<const char*>(slot.data() + sizeof(uint32_t));
     return {data, size};
 }
@@ -408,7 +408,7 @@ ClosureV::ClosureV(const Function& fn, Values&& values)
 
 Function* ClosureV::function() const
 {
-    return bit_read<Function*>(slot.data());
+    return bit_copy<Function*>(slot.data());
 }
 
 

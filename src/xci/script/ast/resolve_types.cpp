@@ -16,6 +16,7 @@
 #include <range/v3/algorithm.hpp>
 
 #include <sstream>
+#include <optional>
 #include <unordered_set>
 
 namespace xci::script {

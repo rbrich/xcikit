@@ -22,15 +22,15 @@
 namespace xci {
 
 
-/// Similar to C++20 bit_cast, but read bits from void*, char*, byte* etc.
+/// Similar to C++20 bit_cast, but copy bits from void*, char*, byte* etc.
 /// Does not check type sizes. Useful to emulate file reading from memory buffer.
 ///
 /// Example:
 ///
 ///     vector<byte> buf;
 ///     auto ptr = buf.data();
-///     auto a = bit_read<int32_t>(ptr);
-///     auto b = bit_read<uint16_t>(ptr + 4);
+///     auto a = bit_copy<int32_t>(ptr);
+///     auto b = bit_copy<uint16_t>(ptr + 4);
 
 template <class To, class From>
 typename std::enable_if<
@@ -39,10 +39,35 @@ typename std::enable_if<
         !std::is_pointer<From>::value &&
         sizeof(From) == 1,
         To>::type
-bit_read(const From* src) noexcept
+bit_copy(const From* src) noexcept
 {
     To dst;
     std::memcpy(&dst, src, sizeof(To));
+    return dst;
+}
+
+
+/// Read bits from iterator pointing to std::byte or other 1-byte type.
+/// Advance the iterator by number of bytes read.
+///
+/// Example:
+///
+///     vector<byte> buf;
+///     auto ptr = buf.data();
+///     auto a = bit_read<int32_t>(ptr);
+///     auto b = bit_read<uint16_t>(ptr);
+
+template <typename OutT, typename InIter>
+requires requires (InIter iter, size_t s) {
+    std::is_trivial_v<OutT>;
+    sizeof(*iter) == 1;
+    iter += s;
+}
+OutT bit_read(InIter& iter) noexcept
+{
+    OutT dst;
+    std::memcpy(&dst, &*iter, sizeof(OutT));
+    iter += sizeof(OutT);
     return dst;
 }
 

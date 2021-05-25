@@ -7,7 +7,7 @@
 #ifndef XCI_SCRIPT_HEAP_H
 #define XCI_SCRIPT_HEAP_H
 
-#include <xci/compat/bit.h>
+#include <xci/core/bit.h>
 #include <cstddef>  // byte
 #include <cstdint>
 
