@@ -274,7 +274,7 @@ std::unique_ptr<ast::Expression> List::make_copy() const
     auto r = std::make_unique<List>();
     Expression::copy_to(*r);
     r->items = copy_ptr_vector(items);
-    r->item_size = item_size;
+    r->elem_type_idx = elem_type_idx;
     return r;
 }
 

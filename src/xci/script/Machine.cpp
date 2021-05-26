@@ -374,15 +374,12 @@ void Machine::run(const InvokeCallback& cb)
 
             case Opcode::MakeList: {
                 const auto num_elems = leb128_decode<uint32_t>(it);
-                const auto size_of_elem = leb128_decode<uint32_t>(it);
-                const size_t total_size = (size_t) num_elems * size_of_elem;
+                const auto& elem_ti = read_type_arg();
                 // move list contents from stack to heap
-                HeapSlot slot{total_size + sizeof(uint32_t)};
-                std::memcpy(slot.data(), &num_elems, sizeof(uint32_t));
-                std::memcpy(slot.data() + sizeof(uint32_t), m_stack.data(), total_size);
-                m_stack.drop(0, total_size);
+                ListV list(num_elems, elem_ti, m_stack.data());
+                m_stack.drop(0, num_elems * elem_ti.size());
                 // push list handle back to stack
-                m_stack.push(value::List{move(slot)});
+                m_stack.push(Value{move(list)});
                 break;
             }
 

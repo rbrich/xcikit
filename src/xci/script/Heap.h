@@ -26,7 +26,7 @@ namespace xci::script {
 class HeapSlot {
 public:
     using RefCount = uint32_t;
-    using Deleter = void(*)(const std::byte* data);
+    using Deleter = void(*)(std::byte* data);
     static constexpr size_t header_size = sizeof(RefCount) + sizeof(Deleter);
 
     // new uninitialized slot
@@ -48,13 +48,15 @@ public:
     bool decref() const;  // free the object and return true when refcount = 0
     RefCount refcount() const;
 
-    std::byte* data() { return m_slot == nullptr ? nullptr : m_slot + header_size; }
-    const std::byte* data() const { return m_slot == nullptr ? nullptr : m_slot + header_size; }
+    std::byte* data() { return data_(); }
+    const std::byte* data() const { return data_(); }
     const std::byte* slot() const { return m_slot; }
 
     explicit operator bool() const { return m_slot != nullptr; }
 
 private:
+    std::byte* data_() const { return m_slot == nullptr ? nullptr : m_slot + header_size; }
+
     std::byte* m_slot = nullptr;
 };
 

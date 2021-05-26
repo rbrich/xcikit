@@ -120,7 +120,7 @@ enum class Opcode: uint8_t {
     IncRef,                 // arg = offset from top, (uint32*) at the offset is dereferenced and incremented
     DecRef,                 // arg = offset from top, (uint32*) at the offset is dereferenced and decremented
 
-    Subscript,              // arg => elem type (type index, LEB128)
+    Subscript,              // arg => elem type (type index)
 
     Invoke,                 // arg => type index in current module, pull value from stack, invoke it
 
@@ -129,7 +129,7 @@ enum class Opcode: uint8_t {
 
     Call,                   // arg1 = idx of imported module, arg2 = idx of function in the module, call it, pull args from stack, push result back
 
-    MakeList,               // arg1 = number of elements, arg2 = size of each element, pulls number*size bytes from stack, creates list on heap, pushes list handle back to stack
+    MakeList,               // arg1 = number of elements, arg2 = elem type (type index), pulls number elems from stack, creates list on heap, pushes list handle back to stack
 
     Copy,                   // arg1 => offset from base (0 = base = first arg), copy <arg2> bytes from stack and push them back on top
     Drop,                   // remove a value from stack: drop <arg2> bytes, skipping top <arg1> bytes

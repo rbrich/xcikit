@@ -140,8 +140,8 @@ public:
         for (auto& item : reverse(v.items)) {
             item->apply(*this);
         }
-        // MAKE_LIST <length> <elem_size>
-        code().add_L2(Opcode::MakeList, v.items.size(), v.item_size);
+        // MAKE_LIST <length> <elem_type>
+        code().add_L2(Opcode::MakeList, v.items.size(), v.elem_type_idx);
     }
 
     void visit(ast::StructInit& v) override {

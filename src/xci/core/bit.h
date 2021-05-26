@@ -16,6 +16,7 @@
 #define XCI_COMPAT_BIT_H
 
 #include <type_traits>
+#include <iterator>
 #include <cstring>
 #include <cstdint>
 
@@ -47,7 +48,7 @@ bit_copy(const From* src) noexcept
 }
 
 
-/// Read bits from iterator pointing to std::byte or other 1-byte type.
+/// Read bits from input iterator pointing to std::byte or other 1-byte type.
 /// Advance the iterator by number of bytes read.
 ///
 /// Example:
@@ -69,6 +70,29 @@ OutT bit_read(InIter& iter) noexcept
     std::memcpy(&dst, &*iter, sizeof(OutT));
     iter += sizeof(OutT);
     return dst;
+}
+
+
+/// Write bits to output iterator pointing to std::byte or other 1-byte type.
+/// Advance the iterator by number of bytes written.
+///
+/// Example:
+///
+///     char data[6];
+///     int32_t a = 1; bit_write(data, a);
+///     uint16_t b = 2; bit_write(data, b);
+
+template <typename InT, typename OutIter,
+          typename OutT = typename std::iterator_traits<OutIter>::value_type>
+requires requires (OutIter iter, OutT out) {
+    std::is_trivial_v<InT>;
+    sizeof(*iter) == 1;
+    iter += sizeof(InT);
+}
+void bit_write(OutIter& iter, InT value) noexcept
+{
+    std::memcpy(&*iter, &value, sizeof(InT));
+    iter += sizeof(InT);
 }
 
 

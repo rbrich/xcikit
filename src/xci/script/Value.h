@@ -103,7 +103,7 @@ struct StringV {
 
 struct ListV {
     ListV() = default;
-    explicit ListV(size_t length, const TypeInfo& elem_type);
+    explicit ListV(size_t length, const TypeInfo& elem_type, const std::byte* elem_data = nullptr);
     explicit ListV(HeapSlot&& slot) : slot(move(slot)) {}
     bool operator ==(const ListV& rhs) const { return slot.slot() == rhs.slot.slot(); }  // same slot - cannot compare content without elem_type
     size_t length() const;
@@ -175,6 +175,7 @@ public:
     explicit Value(ListTag) : m_value(ListV{}) {}  // List
     explicit Value(size_t length, const TypeInfo& elem_type) : m_value(ListV{length, elem_type}) {}  // List
     explicit Value(ListTag, HeapSlot&& slot) : m_value(ListV{move(slot)}) {}  // List
+    explicit Value(ListV&& list_v) : m_value(move(list_v)) {}  // List
     explicit Value(const TypeInfo::Subtypes& subtypes) : m_value(TupleV{subtypes}) {}  // Tuple
     explicit Value(Values&& values) : m_value(TupleV{move(values)}) {}  // Tuple
     explicit Value(ClosureTag) : m_value(ClosureV{}) {}  // Closure
@@ -474,7 +475,7 @@ public:
 
     TypeInfo type_info() const { return ti_bytes(); }
 
-    std::span<const byte> value() const { return {heapslot()->data() + sizeof(uint32_t), length()}; }
+    std::span<const byte> value() const { return {heapslot()->data() + 6, length()}; }
 };
 
 

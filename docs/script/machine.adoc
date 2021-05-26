@@ -170,14 +170,38 @@ Heap value:
 ----
 (4B+zB header)
 4B length (number of elements)
+2B size of deleter data
+vB deleter data (v = size of deleter data)
 xB element data (x = length * size of element)
 ----
 
-The List is similar to the String, but the 32bit length is number of elements,
-instead of bytes. The size of each element is not directly saved, it must be
+First field is LEB128-encoded number of elements.
+The size of each element is not directly saved, it must be
 passed via TypeInfo. This means that inspecting the heap value is not possible
 without knowing the actual type of the value. Note that without the type,
 it also wouldn't be possible to tell String from List etc.
+
+A list element can be of any type, including another list, string or tuple.
+These types may need a deleter, to decref their heap slots. The _deleter data_
+contains offsets of all heap slots in an element. It is dynamically sized,
+encoded as an array of LEB128 integers. The size of deleter data is written
+in 2B integer field, so the data can be skipped when reading elements.
+If the element doesn't contain any heap slots, the deleter data are empty.
+Otherwise, it contains relative offsets of the slots. First one is offset
+from beginning of an element to first heap slot, next is offset from this
+slot to next one, and final one is offset to the end of the element (no heap slot
+there). The deleter gathers these values, skips each _offset_ bytes,
+calls decref on the heap slot, then skips the final bytes
+and repeats with next element.
+
+.Example of deleter data
+----
+04    first heap slot is 4 bytes from beginning
+10    another heap slot is 16 bytes from previous (20 bytes from beginning)
+08    final 8 bytes to reach end of the element
+----
+
+Note that sum of the offsets is equivalent to size of the element.
 
 === Closure
 

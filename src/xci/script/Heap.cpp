@@ -36,7 +36,7 @@ bool HeapSlot::decref() const
         Deleter deleter;
         memcpy(&deleter, m_slot + sizeof(RefCount), sizeof(Deleter));
         if (deleter != nullptr)
-            deleter(data());
+            deleter(data_());
         delete[] m_slot;
         return true;  // freed, the caller may want to clear the pointer
     } else {

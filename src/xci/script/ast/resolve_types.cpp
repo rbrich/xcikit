@@ -279,7 +279,7 @@ public:
                     throw ListElemTypeMismatch(elem_type, m_value_type);
             }
         }
-        v.item_size = elem_type.size();
+        v.elem_type_idx = get_type_id(elem_type);
         m_value_type = ti_list(move(elem_type));
         type_check.check(m_value_type, v.source_loc);
     }
@@ -876,6 +876,16 @@ private:
         if (type_id >= 32) {
             // add to current module
             type_id = 32 + module().add_type(move(type_info));
+        }
+        return type_id;
+    }
+
+    Index get_type_id(const TypeInfo& type_info) {
+        // is the type builtin?
+        Index type_id = BuiltinModule::static_instance().find_type(type_info);
+        if (type_id >= 32) {
+            // add to current module
+            type_id = 32 + module().add_type(type_info);
         }
         return type_id;
     }
