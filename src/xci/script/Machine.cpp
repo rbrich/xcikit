@@ -17,7 +17,7 @@
 
 namespace xci::script {
 
-using xci::data::decode_leb128;
+using xci::data::leb128_decode;
 using std::move;
 using fmt::format;
 
@@ -50,7 +50,7 @@ void Machine::run(const InvokeCallback& cb)
         // LEB128 encoding of a type:
         // 0-31 primitive types
         // 32-N current module (type index + 32)
-        auto index = decode_leb128<Index>(it);
+        auto index = leb128_decode<Index>(it);
         if (index < 32) {
             // builtin module
             return function->module().get_imported_module(0).get_type(index);
@@ -306,7 +306,7 @@ void Machine::run(const InvokeCallback& cb)
             }
 
             case Opcode::LoadStatic: {
-                auto arg = decode_leb128<size_t>(it);
+                auto arg = leb128_decode<size_t>(it);
                 const auto& o = function->module().get_value(arg);
                 m_stack.push(o);
                 o.incref();
@@ -314,36 +314,36 @@ void Machine::run(const InvokeCallback& cb)
             }
 
             case Opcode::LoadFunction: {
-                auto arg = decode_leb128<size_t>(it);
+                auto arg = leb128_decode<size_t>(it);
                 auto& fn = function->module().get_function(arg);
                 m_stack.push(value::Closure(fn));
                 break;
             }
 
             case Opcode::SetBase: {
-                const auto level = decode_leb128<size_t>(it);
+                const auto level = leb128_decode<size_t>(it);
                 base = m_stack.frame(m_stack.n_frames() - 1 - level).base;
                 break;
             }
 
             case Opcode::Copy: {
-                const auto arg1 = decode_leb128<size_t>(it);
+                const auto arg1 = leb128_decode<size_t>(it);
                 const auto addr = arg1 + m_stack.to_rel(base); // arg1 + base
-                const auto size = decode_leb128<size_t>(it); // arg2
+                const auto size = leb128_decode<size_t>(it); // arg2
                 m_stack.copy(addr, size);
                 break;
             }
 
             case Opcode::Drop: {
-                const auto addr = decode_leb128<size_t>(it);
-                const auto size = decode_leb128<size_t>(it);
+                const auto addr = leb128_decode<size_t>(it);
+                const auto size = leb128_decode<size_t>(it);
                 m_stack.drop(addr, size);
                 break;
             }
 
             case Opcode::Swap: {
-                const auto arg1 = decode_leb128<size_t>(it);
-                const auto arg2 = decode_leb128<size_t>(it);
+                const auto arg1 = leb128_decode<size_t>(it);
+                const auto arg2 = leb128_decode<size_t>(it);
                 m_stack.swap(arg1, arg2);
                 break;
             }
@@ -361,20 +361,20 @@ void Machine::run(const InvokeCallback& cb)
                         idx = 0;
                     } else {
                         // read arg1
-                        idx = decode_leb128<Index>(it);
+                        idx = leb128_decode<Index>(it);
                     }
                     module = &function->module().get_imported_module(idx);
                 }
                 // call function from the module
-                auto arg = decode_leb128<Index>(it);
+                auto arg = leb128_decode<Index>(it);
                 auto& fn = module->get_function(arg);
                 call_fun(fn);
                 break;
             }
 
             case Opcode::MakeList: {
-                const auto num_elems = decode_leb128<uint32_t>(it);
-                const auto size_of_elem = decode_leb128<uint32_t>(it);
+                const auto num_elems = leb128_decode<uint32_t>(it);
+                const auto size_of_elem = leb128_decode<uint32_t>(it);
                 const size_t total_size = (size_t) num_elems * size_of_elem;
                 // move list contents from stack to heap
                 HeapSlot slot{total_size + sizeof(uint32_t)};
@@ -387,7 +387,7 @@ void Machine::run(const InvokeCallback& cb)
             }
 
             case Opcode::MakeClosure: {
-                auto arg = decode_leb128<Index>(it);
+                auto arg = leb128_decode<Index>(it);
                 // get function
                 auto& fn = function->module().get_function(arg);
                 // pull nonlocals + partial args
@@ -405,14 +405,14 @@ void Machine::run(const InvokeCallback& cb)
             }
 
             case Opcode::IncRef: {
-                auto arg = decode_leb128<Stack::StackRel>(it);
+                auto arg = leb128_decode<Stack::StackRel>(it);
                 HeapSlot slot {static_cast<byte*>(m_stack.get_ptr(arg))};
                 slot.incref();
                 break;
             }
 
             case Opcode::DecRef: {
-                auto arg = decode_leb128<Stack::StackRel>(it);
+                auto arg = leb128_decode<Stack::StackRel>(it);
                 HeapSlot slot {static_cast<byte*>(m_stack.get_ptr(arg))};
                 if (slot.decref())
                     m_stack.clear_ptr(arg);  // without this, stack dump would read after use

@@ -11,7 +11,7 @@
 
 namespace xci::script {
 
-using xci::data::encode_leb128;
+using xci::data::leb128_encode;
 
 
 std::ostream& operator<<(std::ostream& os, Opcode v)
@@ -107,7 +107,7 @@ size_t Code::add_L1(Opcode opcode, size_t arg)
 {
     const auto orig_ops = m_ops.size();
     add_opcode(opcode);
-    encode_leb128(m_ops, arg);
+    leb128_encode(m_ops, arg);
     return m_ops.size() - orig_ops;
 }
 
@@ -116,8 +116,8 @@ size_t Code::add_L2(Opcode opcode, size_t arg1, size_t arg2)
 {
     const auto orig_ops = m_ops.size();
     add_opcode(opcode);
-    encode_leb128(m_ops, arg1);
-    encode_leb128(m_ops, arg2);
+    leb128_encode(m_ops, arg1);
+    leb128_encode(m_ops, arg2);
     return m_ops.size() - orig_ops;
 }
 

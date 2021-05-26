@@ -8,6 +8,7 @@
 #include "Function.h"
 #include "Module.h"
 #include "Error.h"
+#include <xci/data/coding/leb128.h>
 #include <xci/core/string.h>
 #include <xci/core/log.h>
 #include <xci/core/template/helpers.h>
@@ -20,6 +21,9 @@
 
 namespace xci::script {
 
+using xci::data::leb128_length;
+using xci::data::leb128_encode;
+using xci::data::leb128_decode;
 using namespace xci::core;
 using ranges::cpp20::views::transform;
 using ranges::to;
@@ -303,7 +307,7 @@ ListV::ListV(size_t length, const TypeInfo& elem_type)
 
 size_t ListV::length() const
 {
-    return bit_read<uint32_t>(slot.data());
+    return bit_copy<uint32_t>(slot.data());
 }
 
 

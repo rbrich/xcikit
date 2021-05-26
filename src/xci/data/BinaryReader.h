@@ -181,7 +181,7 @@ private:
             BinaryReader& m_reader;
         };
         auto iter = ReadWithCrcIter(*this);
-        return decode_leb128<size_t>(iter);
+        return leb128_decode<size_t>(iter);
     }
 
 private:

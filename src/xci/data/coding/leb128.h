@@ -7,12 +7,27 @@
 #ifndef XCI_DATA_CODING_LEB128_H
 #define XCI_DATA_CODING_LEB128_H
 
+#include <iterator>
 #include <cassert>
 
 /// Implements [LEB128](https://en.wikipedia.org/wiki/LEB128) encoding
 /// with additional feature of "skip bits", allowing usage of just a part of first byte.
 
 namespace xci::data {
+
+
+/// Compute length of value when encoded as LEB128
+template <typename InT>
+requires std::is_integral_v<InT> && std::is_unsigned_v<InT>
+unsigned leb128_length(InT value)
+{
+    unsigned res = 0;
+    do {
+        value >>= 7;
+        ++res;
+    } while (value != 0);
+    return res;
+}
 
 
 /// Encode unsigned integer as LEB128 and write it to output iterator.
@@ -25,7 +40,7 @@ requires requires (OutIter iter, OutT out) {
     *iter = out;
     ++iter;
 }
-void encode_leb128(OutIter& iter, InT value)
+void leb128_encode(OutIter& iter, InT value)
 {
     do {
         uint8_t b = value & InT{0x7f};
@@ -47,7 +62,7 @@ requires requires (Container& cont, OutT out) {
     std::is_integral_v<InT> && std::is_unsigned_v<InT>;
     cont.push_back(out);
 }
-void encode_leb128(Container& cont, InT value)
+void leb128_encode(Container& cont, InT value)
 {
     do {
         uint8_t b = value & InT{0x7f};
@@ -66,7 +81,7 @@ void encode_leb128(Container& cont, InT value)
 /// \return             The decoded integer, or OutT::max if the input won't fit
 template <typename OutT, typename InIter>
 requires std::is_integral_v<OutT> && std::is_unsigned_v<OutT>
-OutT decode_leb128(InIter& iter)
+OutT leb128_decode(InIter& iter)
 {
     OutT result = uint8_t(*iter) & 0x7f;
     unsigned shift = 0;
@@ -98,7 +113,7 @@ OutT decode_leb128(InIter& iter)
 template <typename InT, typename OutIter,
           typename OutT = typename std::iterator_traits<OutIter>::value_type>
 requires std::is_integral_v<InT> && std::is_unsigned_v<InT>
-void encode_leb128(OutIter& iter, InT value, unsigned skip_bits)
+void leb128_encode(OutIter& iter, InT value, unsigned skip_bits)
 {
     assert(skip_bits < 7);
     // encode first bits to part of first byte
@@ -130,7 +145,7 @@ void encode_leb128(OutIter& iter, InT value, unsigned skip_bits)
 template <typename OutT, typename InIter,
           typename InT = typename std::iterator_traits<InIter>::value_type>
 requires std::is_integral_v<OutT> && std::is_unsigned_v<OutT>
-OutT decode_leb128(InIter& iter, unsigned skip_bits)
+OutT leb128_decode(InIter& iter, unsigned skip_bits)
 {
     assert(skip_bits < 7);
     OutT result;

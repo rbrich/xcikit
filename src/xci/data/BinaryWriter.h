@@ -117,7 +117,7 @@ private:
     template<typename T>
     void write_leb128(T value) {
         auto out_iter = std::back_inserter(group_buffer());
-        encode_leb128<T, decltype(out_iter), std::byte>(out_iter, value);
+        leb128_encode<T, decltype(out_iter), std::byte>(out_iter, value);
     }
 
 private:

@@ -15,7 +15,7 @@
 
 namespace xci::script {
 
-using xci::data::decode_leb128;
+using xci::data::leb128_decode;
 using std::endl;
 using std::left;
 using std::right;
@@ -750,7 +750,7 @@ std::ostream& operator<<(std::ostream& os, DumpInstruction&& v)
     }
     if (opcode >= Opcode::L1ArgFirst && opcode <= Opcode::L1ArgLast) {
         // L1
-        auto arg = decode_leb128<Index>(v.pos);
+        auto arg = leb128_decode<Index>(v.pos);
         os << arg;
         switch (opcode) {
             case Opcode::LoadStatic:
@@ -774,8 +774,8 @@ std::ostream& operator<<(std::ostream& os, DumpInstruction&& v)
     }
     if (opcode >= Opcode::L2ArgFirst && opcode <= Opcode::L2ArgLast) {
         // L2
-        auto arg1 = decode_leb128<Index>(v.pos);
-        auto arg2 = decode_leb128<Index>(v.pos);
+        auto arg1 = leb128_decode<Index>(v.pos);
+        auto arg2 = leb128_decode<Index>(v.pos);
         os << static_cast<int>(arg1) << ' ' << static_cast<int>(arg2);
         switch (opcode) {  // NOLINT
             case Opcode::Call: {

@@ -179,7 +179,7 @@ public:
                     m_function.add_intrinsics(1);
                 } else if (opcode <= Opcode::B1ArgLast) {
                     assert(m_instruction_args.size() == 1);
-                    if (m_instruction_args[0] < 0 || m_instruction_args[0] >= 256)
+                    if (m_instruction_args[0] >= 256)
                         throw IntrinsicsFunctionError("arg value out of Byte range: "
                                   + std::to_string(m_instruction_args[0]), v.source_loc);
                     m_function.code().add_B1(opcode, (uint8_t) m_instruction_args[0]);
