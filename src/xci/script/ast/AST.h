@@ -343,7 +343,7 @@ struct List: public Expression {
     std::unique_ptr<ast::Expression> make_copy() const override;
 
     std::vector<std::unique_ptr<Expression>> items;
-    size_t elem_type_idx = 0;
+    size_t elem_type_id = 0;
 };
 
 // structured initializer, i.e. tuple with identifiers

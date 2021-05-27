@@ -141,7 +141,7 @@ public:
             item->apply(*this);
         }
         // MAKE_LIST <length> <elem_type>
-        code().add_L2(Opcode::MakeList, v.items.size(), v.elem_type_idx);
+        code().add_L2(Opcode::MakeList, v.items.size(), v.elem_type_id);
     }
 
     void visit(ast::StructInit& v) override {
@@ -198,7 +198,7 @@ public:
                 break;
             }
             case Symbol::TypeId: {
-                auto type_id = sym.index();
+                auto type_id = v.index;
                 if (m_intrinsic) {
                     m_instruction_args.push_back(type_id);
                     return;

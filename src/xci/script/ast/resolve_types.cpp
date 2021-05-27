@@ -279,7 +279,7 @@ public:
                     throw ListElemTypeMismatch(elem_type, m_value_type);
             }
         }
-        v.elem_type_idx = get_type_id(elem_type);
+        v.elem_type_id = get_type_id(elem_type);
         m_value_type = ti_list(move(elem_type));
         type_check.check(m_value_type, v.source_loc);
     }
@@ -385,9 +385,8 @@ public:
                         break;
                     }
                 }
-                // is the type builtin?
-                Index type_id = get_type_id(move(m_type_info));
-                v.identifier.symbol.write(m_function.symtab()).set_index(type_id);
+                // Record the resolved Type ID for Compiler
+                v.index = get_type_id(move(m_type_info));
                 m_value_type = ti_int32();
                 break;
             }

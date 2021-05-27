@@ -37,11 +37,6 @@ public:
 
     Function& get_function();
 
-    // Copy symbol into `symtab` and return a new Symbol* ready for writing.
-    // This SymbolPointer is modified to point to the new symbol.
-    // Same as operator-> if already pointing to `symtab` (i.e. no copying).
-    Symbol& write(SymbolTable& symtab);
-
     SymbolTable* symtab() const { return m_symtab; }
     Index symidx() const { return m_symidx; }
 

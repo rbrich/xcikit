@@ -378,9 +378,8 @@ size_t ListV::length() const
 
 Value ListV::value_at(size_t idx, const TypeInfo& elem_type) const
 {
-    const auto* data = slot.data();
-    auto length = bit_read<uint32_t>(data);
-    assert(idx < length);
+    assert(idx < length());
+    const auto* data = slot.data() + sizeof(uint32_t);
     auto dd_size = bit_read<uint16_t>(data);
     data += dd_size;
 

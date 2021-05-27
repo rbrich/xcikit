@@ -37,7 +37,7 @@ The library uses GLFW and Vulkan for graphics.
 
 XCI is 91 in Roman numerals. I perceive 91 as a beautiful number.
 
-It might also be an abbreviation of **Extended C++ Interface**, but this is an afterthought.
+It might stand for **Extended C++ Interface**, but this is an afterthought.
 
 == Features
 

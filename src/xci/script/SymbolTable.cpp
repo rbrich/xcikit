@@ -48,15 +48,6 @@ Function& SymbolPointer::get_function()
 }
 
 
-Symbol& SymbolPointer::write(SymbolTable& symtab)
-{
-    assert(m_symtab != nullptr);
-    if (m_symtab != &symtab)
-        *this = symtab.add(Symbol(m_symtab->get(m_symidx)));
-    return m_symtab->get(m_symidx);
-}
-
-
 SymbolPointer SymbolTable::add(Symbol&& symbol)
 {
     m_symbols.emplace_back(std::move(symbol));
