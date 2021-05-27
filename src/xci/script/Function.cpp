@@ -103,7 +103,7 @@ std::vector<TypeInfo> Function::closure_types() const
 bool Function::detect_generic() const
 {
     return any_of(signature().params, [](const TypeInfo& type_info) {
-        return type_info.type() == Type::Unknown;
+        return type_info.is_generic();
     });
 }
 

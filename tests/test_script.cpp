@@ -240,6 +240,15 @@ TEST_CASE( "Operator precedence", "[script][parser]" )
 }
 
 
+TEST_CASE( "Type argument or comparison?", "[script][parser]" )
+{
+    PARSE("1 > 2", "(1 > 2)");
+    PARSE("1 < 2", "(1 < 2)");
+    PARSE("a<b> 3", "((a < b) > 3)");
+    PARSE("a<T> 3", "a<T> 3");
+}
+
+
 TEST_CASE( "Value size on stack", "[script][machine]" )
 {
     CHECK(Value().size_on_stack() == type_size_on_stack(Type::Void));
@@ -417,6 +426,9 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     CHECK(interpret("fun x {x+1} 2") == "3");  // generic lambda
     CHECK(interpret("b = 3 + fun x {2*x} 2; b") == "7");
 
+    // generic function in local scope
+    CHECK(interpret("outer = fun y { inner = fun x { x+1 }; inner y }; outer 2") == "3");
+
     // argument propagation:
     CHECK(interpret("f = fun a:Int { fun b:Int { a+b } }; f 1 2") == "3");  //  `f` returns a function which consumes the second arg
     CHECK(interpret("f = fun a:Int { fun b:Int { fun c:Int { a+b+c } } }; f 1 2 3") == "6");
@@ -430,7 +442,7 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     CHECK(interpret("f = fun a:Int b:Int c:Int { "
                     "g=fun c1:Int {a * b - c1}; "
                     "h=fun c1:Int {g c1}; "
-                    "h c }; f 1 2 3") == "-1");
+                    "h c }; f 4 2 3") == "5");
     CHECK(interpret("f = fun a:Int b:Int c:Int { "
                     "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 + b}; "
                     "w=fun b1:Int c1:Int {a + u b1 + v c1}; "
@@ -440,11 +452,33 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
                     "inner = fun x:Int { x + y }; inner y "
                     "}; outer 2") == "4");
     CHECK(interpret("outer = fun y:Int {"
-                    "inner = fun x:Int { x + y }; alias = inner; alias y "
+                    "  inner = fun x:Int { x + y };"
+                    "  alias = inner; alias y "
                     "}; outer 2") == "4");
     CHECK(interpret("outer = fun y {"
-                    "inner = fun x:Int { x + y }; alias = fun x:Int { inner x }; alias y "
+                    "  inner = fun x:Int { x + y };"
+                    "  wrapped = fun x:Int { inner x };"
+                    "  wrapped y "
                     "}; outer 2") == "4");
+    CHECK(interpret("outer = fun y {"
+                    "  inner = fun x:Int { in2 = fun z:Int{ x + z }; in2 y };"
+                    "  wrapped = fun x:Int { inner x }; wrapped y"
+                    "}; outer 2") == "4");
+
+    // closure: fully generic
+    CHECK(interpret("outer = fun y { inner = fun x { x + y }; inner 3 * inner y }; outer 2") == "20");
+    CHECK(interpret("outer = fun y {"
+                    "  inner = fun x { x + y };"
+                    "  wrapped = fun x { inner x };"
+                    "  wrapped y "
+                    "}; outer 2") == "4");
+
+    // multiple specializations
+    // * each specialization is generated only once
+    CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; inner 3 + inner 4 }; "
+                        "outer 1; outer 2; __module.__n_fn") == "9;11;5");
+    // * specializations with different types from the same template
+    CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; inner 3 + (inner 4l):T }; outer 2") == "11");
 }
 
 
@@ -475,8 +509,8 @@ TEST_CASE( "Generic functions", "[script][interpreter]" )
     CHECK(interpret("f=fun x {x + 1}; f (f (f 2))") == "5");
     // generic functions can capture from outer scope
     CHECK(interpret("a=3; f=fun x {a + x}; f 4") == "7");
-    // generic type declaration
-    CHECK(interpret_std("f = fun x:T y:T -> Bool with (Eq T) { x == y }; f 1 2") == "false");
+    // generic type declaration, type constraint
+    CHECK(interpret_std("f = fun<T> x:T y:T -> Bool with (Eq T) { x == y }; f 1 2") == "false");
 }
 
 
@@ -528,12 +562,20 @@ TEST_CASE( "Casting", "[script][interpreter]" )
 }
 
 
-TEST_CASE( "Lists", "[script][interpreter]" )
+TEST_CASE( "Subscript", "[script][interpreter]" )
 {
-    CHECK(interpret("[1,2,3] ! 2") == "3");
-    CHECK_THROWS_AS(interpret("[1,2,3]!3"), IndexOutOfBounds);
-    //CHECK(interpret("[[1,2],[3,4],[5,6]] ! 1 ! 0") == "3");
-    CHECK(interpret("head = fun l:[Int] -> Int { l!0 }; head [1,2,3]") == "1");
+    // custom implementation (same as in std.fire)
+    CHECK(interpret("__type_id<Void>") == "0");
+    CHECK_THROWS_AS(interpret("__type_id<X>"), UndefinedTypeName);
+    CHECK(interpret("subscript = fun<T> [T] Int -> T { __subscript __type_id<T> }; subscript [1,2,3] 1") == "2");
+    // std implementation
+    CHECK(interpret_std("subscript [1,2,3] 1") == "2");
+    CHECK(interpret_std("[1,2,3] ! 2") == "3");
+    CHECK_THROWS_AS(interpret_std("[1,2,3]!3"), IndexOutOfBounds);
+    CHECK(interpret_std("['a','b','c'] ! 1") == "'b'");
+    CHECK(interpret_std("[[1,2],[3,4],[5,6]] ! 1 ! 0") == "3");
+    CHECK(interpret_std("head = fun l:[Int] -> Int { l!0 }; head [1,2,3]") == "1");
+    CHECK(interpret_std("head = fun<T> l:[T] -> T { l!0 }; head ['a','b','c']") == "'a'");
 }
 
 

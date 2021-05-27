@@ -170,14 +170,38 @@ Heap value:
 ----
 (4B+zB header)
 4B length (number of elements)
+2B size of deleter data
+vB deleter data (v = size of deleter data)
 xB element data (x = length * size of element)
 ----
 
-The List is similar to the String, but the 32bit length is number of elements,
-instead of bytes. The size of each element is not directly saved, it must be
+First field is LEB128-encoded number of elements.
+The size of each element is not directly saved, it must be
 passed via TypeInfo. This means that inspecting the heap value is not possible
 without knowing the actual type of the value. Note that without the type,
 it also wouldn't be possible to tell String from List etc.
+
+A list element can be of any type, including another list, string or tuple.
+These types may need a deleter, to decref their heap slots. The _deleter data_
+contains offsets of all heap slots in an element. It is dynamically sized,
+encoded as an array of LEB128 integers. The size of deleter data is written
+in 2B integer field, so the data can be skipped when reading elements.
+If the element doesn't contain any heap slots, the deleter data are empty.
+Otherwise, it contains relative offsets of the slots. First one is offset
+from beginning of an element to first heap slot, next is offset from this
+slot to next one, and final one is offset to the end of the element (no heap slot
+there). The deleter gathers these values, skips each _offset_ bytes,
+calls decref on the heap slot, then skips the final bytes
+and repeats with next element.
+
+.Example of deleter data
+----
+04    first heap slot is 4 bytes from beginning
+10    another heap slot is 16 bytes from previous (20 bytes from beginning)
+08    final 8 bytes to reach end of the element
+----
+
+Note that sum of the offsets is equivalent to size of the element.
 
 === Closure
 
@@ -195,3 +219,67 @@ so its size depends on system machine, e.g. for 64bit CPU, it's 8 bytes.
 
 The closure values are a tuple of nonlocals and partial call arguments.
 The size of the tuple and its content depends on the function's type information.
+
+== Bytecode
+
+The instructions and their arguments are encoded in a bytecode representation.
+There are 256 possible instructions, each of which can have any number of bytes
+as arguments. Some instructions use variable-length arguments, so
+the instruction code is not enough to know how many following bytes
+are the arguments. We have to look inside their bits.
+
+Example instructions:
+
+* `NOOP` - Do nothing. Useful as placeholder or replacement of deleted code
+when generating the machine bytecode.
+* `LOGICAL_OR` - Pull two Bools from stack and push a Bool result
+of `||` operation back.
+* `SUBSCRIPT` - Has a type T as an instruction argument. Pulls a list of T
+and an Int index from stack. Pushes result of subscript operation back.
+
+NOTE: All instructions are documented in `Code.h` and `Machine.cpp`.
+
+=== Encoding of a type
+
+Types are stored in modules. Any type from the current module
+can be referenced by an instruction.
+The information that needs to be encoded in the instruction arguments
+is the index of the type in the module's type table.
+
+Built-in primitive types are expected to be referenced frequently,
+so they have special encoding: the first 32 indices are reserved for them.
+Types from current module are encoded as 32+idx using LEB128 encoding.
+
+=== Varint encoding (LEB128)
+
+Variable length integers are used for encoding various indexes.
+The most-significant bit is reserved as the _continuation_ bit,
+the other bits carry the actual data.
+
+Continuation bit:
+
+- `0` - This is the final byte.
+- `1` - More bytes need to be processed.
+
+The data bits are joined in little-endian order, i.e. the first byte
+always contains the least-significant bits, the bits from the following
+bytes are then appended as more significant bits (without shifting the
+already collected bits).
+
+Example:
+
+- `0b_0000_0000` => 0
+- `0b_0000_1000` => 8
+- `0b_0111_1111` => 127 (maximal single-byte value)
+- `0b_1000_1000, 0b_0101_1001` => `0b101_1001_000_1000` => 11400
+
+==== Varint with shortened first byte
+
+Spare bits from the previous byte (which already contain some other information)
+can be used as the first "byte" of Varint encoding. In this case, the first
+byte is shorter, providing less information bits to the output integer. All
+other rules still apply.
+
+Example: First byte has only 5 bits (contributing 4 bits to the result):
+
+- `0b_1_1000, 0b_0101_1001` => `0b101_1001_1000` => 1432

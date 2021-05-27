@@ -21,11 +21,11 @@ TEST_CASE( "LEB128", "[coding]" )
     SECTION( "encode & decode 7bit value" ) {
         uint32_t v_in = GENERATE(0lu, 1lu, 42lu, 0x0Flu, 0x7Flu);
         auto* iter = buffer;
-        encode_leb128(iter, v_in);
+        leb128_encode(iter, v_in);
         CHECK(iter - buffer == 1);  // encoded in 1B
         CHECK(unsigned(buffer[0]) < 0x80);    // high-order bit not set
         iter = buffer;
-        auto v_out = decode_leb128<uint32_t>(iter);
+        auto v_out = leb128_decode<uint32_t>(iter);
         CHECK(v_in == v_out);
         CHECK(iter - buffer == 1);  // decoded 1B
     }
@@ -37,12 +37,12 @@ TEST_CASE( "LEB128", "[coding]" )
         CAPTURE(v_in, v_bits);
         CHECK(v_bits >= 8);
         auto* iter = buffer;
-        encode_leb128(iter, v_in);
+        leb128_encode(iter, v_in);
         auto b_in = iter - buffer;
         CHECK(b_in == (v_bits + 6) / 7);
         CHECK(unsigned(buffer[0]) >= 0x80);    // high-order bit is set
         iter = buffer;
-        auto v_out = decode_leb128<uint64_t>(iter);
+        auto v_out = leb128_decode<uint64_t>(iter);
         auto b_out = iter - buffer;
         CHECK(v_in == v_out);
         CHECK(b_out == b_in);
@@ -59,12 +59,12 @@ TEST_CASE( "LEB128", "[coding]" )
         CAPTURE(v_in, skip_bits, check);
         buffer[0] = std::byte(check);
         auto* iter = buffer;
-        encode_leb128(iter, v_in, skip_bits);
+        leb128_encode(iter, v_in, skip_bits);
         auto b_in = iter - buffer;
         CHECK(b_in == std::max(1u, (v_bits + skip_bits + 6) / 7));
         CHECK((buffer[0] & std::byte(0xFF << (8-skip_bits))) == check);  // skipped bits untouched
         iter = buffer;
-        auto v_out = decode_leb128<uint64_t>(iter, skip_bits);
+        auto v_out = leb128_decode<uint64_t>(iter, skip_bits);
         auto b_out = iter - buffer;
         CHECK(v_in == v_out);
         CHECK(b_out == b_in);
@@ -75,12 +75,12 @@ TEST_CASE( "LEB128", "[coding]" )
             buffer[i] = std::byte(0xF0 + i);
         buffer[9] = std::byte(0x7F);
         auto* iter = buffer;
-        CHECK(decode_leb128<uint32_t>(iter) == std::numeric_limits<uint32_t>::max());
+        CHECK(leb128_decode<uint32_t>(iter) == std::numeric_limits<uint32_t>::max());
         iter = buffer;
-        CHECK(decode_leb128<uint64_t>(iter) == std::numeric_limits<uint64_t>::max());
+        CHECK(leb128_decode<uint64_t>(iter) == std::numeric_limits<uint64_t>::max());
         iter = buffer;
-        CHECK(decode_leb128<uint32_t>(iter, 0) == std::numeric_limits<uint32_t>::max());
+        CHECK(leb128_decode<uint32_t>(iter, 0) == std::numeric_limits<uint32_t>::max());
         iter = buffer;
-        CHECK(decode_leb128<uint64_t>(iter, 0) == std::numeric_limits<uint64_t>::max());
+        CHECK(leb128_decode<uint64_t>(iter, 0) == std::numeric_limits<uint64_t>::max());
     }
 }

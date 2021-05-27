@@ -25,6 +25,8 @@ int main()
 
     cout << t.move_up().move_right(6).bold().green() << "GREEN" <<t.normal() << endl;
 
+    t.print("{t:bold}{fg:yellow}formatted{t:normal}\n");
+
     TermCtl& tin = TermCtl::stdin_instance();
     bool done = false;
     while (!done) {

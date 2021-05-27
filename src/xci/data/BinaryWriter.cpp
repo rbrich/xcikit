@@ -36,7 +36,7 @@ void BinaryWriter::write_content()
     assert(is_root_group());
     size_t content_size = group_buffer().size() + (m_crc32 ? 6 : 0);
     assert(content_size < 0x400'0000'0000LLU);  // up to 4TB
-    encode_leb128(iter, content_size);
+    leb128_encode(iter, content_size);
 
     const size_t header_size = iter - header;
     assert(header_size <= 10);

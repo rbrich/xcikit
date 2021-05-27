@@ -1,12 +1,13 @@
 // leb128.h created on 2020-06-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020 Radek Brich
+// Copyright 2020–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_DATA_CODING_LEB128_H
 #define XCI_DATA_CODING_LEB128_H
 
+#include <iterator>
 #include <cassert>
 
 /// Implements [LEB128](https://en.wikipedia.org/wiki/LEB128) encoding
@@ -15,13 +16,31 @@
 namespace xci::data {
 
 
+/// Compute length of value when encoded as LEB128
+template <typename InT>
+requires std::is_integral_v<InT> && std::is_unsigned_v<InT>
+unsigned leb128_length(InT value)
+{
+    unsigned res = 0;
+    do {
+        value >>= 7;
+        ++res;
+    } while (value != 0);
+    return res;
+}
+
+
 /// Encode unsigned integer as LEB128 and write it to output iterator.
 /// \param iter         Output iterator. Element should be byte/char. Must support ++, * operations.
 /// \param value        Integral value to be written.
 template <typename InT, typename OutIter,
           typename OutT = typename std::iterator_traits<OutIter>::value_type>
-requires std::is_integral_v<InT> && std::is_unsigned_v<InT>
-void encode_leb128(OutIter& iter, InT value)
+requires requires (OutIter iter, OutT out) {
+    std::is_integral_v<InT> && std::is_unsigned_v<InT>;
+    *iter = out;
+    ++iter;
+}
+void leb128_encode(OutIter& iter, InT value)
 {
     do {
         uint8_t b = value & InT{0x7f};
@@ -34,6 +53,27 @@ void encode_leb128(OutIter& iter, InT value)
 }
 
 
+/// Encode unsigned integer as LEB128 and write it to a container with push_back() method.
+/// \param iter         Output iterator. Element should be byte/char. Must support ++, * operations.
+/// \param value        Integral value to be written.
+template <typename InT, typename Container,
+          typename OutT = typename Container::value_type>
+requires requires (Container& cont, OutT out) {
+    std::is_integral_v<InT> && std::is_unsigned_v<InT>;
+    cont.push_back(out);
+}
+void leb128_encode(Container& cont, InT value)
+{
+    do {
+        uint8_t b = value & InT{0x7f};
+        value >>= 7;
+        if (value != 0)
+            b |= 0x80;
+        cont.push_back(OutT(b));
+    } while (value != 0);
+}
+
+
 /// Decode LEB128 from input iterator (of bytes) to unsigned integer.
 /// The decoder stops as soon as overflow is detected.
 /// Following bytes are not read even if they still have set the continuation bit.
@@ -41,7 +81,7 @@ void encode_leb128(OutIter& iter, InT value)
 /// \return             The decoded integer, or OutT::max if the input won't fit
 template <typename OutT, typename InIter>
 requires std::is_integral_v<OutT> && std::is_unsigned_v<OutT>
-OutT decode_leb128(InIter& iter)
+OutT leb128_decode(InIter& iter)
 {
     OutT result = uint8_t(*iter) & 0x7f;
     unsigned shift = 0;
@@ -73,7 +113,7 @@ OutT decode_leb128(InIter& iter)
 template <typename InT, typename OutIter,
           typename OutT = typename std::iterator_traits<OutIter>::value_type>
 requires std::is_integral_v<InT> && std::is_unsigned_v<InT>
-void encode_leb128(OutIter& iter, InT value, unsigned skip_bits)
+void leb128_encode(OutIter& iter, InT value, unsigned skip_bits)
 {
     assert(skip_bits < 7);
     // encode first bits to part of first byte
@@ -105,7 +145,7 @@ void encode_leb128(OutIter& iter, InT value, unsigned skip_bits)
 template <typename OutT, typename InIter,
           typename InT = typename std::iterator_traits<InIter>::value_type>
 requires std::is_integral_v<OutT> && std::is_unsigned_v<OutT>
-OutT decode_leb128(InIter& iter, unsigned skip_bits)
+OutT leb128_decode(InIter& iter, unsigned skip_bits)
 {
     assert(skip_bits < 7);
     OutT result;
@@ -142,6 +182,6 @@ OutT decode_leb128(InIter& iter, unsigned skip_bits)
 }
 
 
-} // namespace xci::core
+} // namespace xci::data
 
 #endif // include guard

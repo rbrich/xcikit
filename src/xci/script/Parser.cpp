@@ -121,10 +121,11 @@ struct Literal: sor< Char, RawString, String, Byte, RawBytes, Bytes, Number > {}
 struct Parameter: sor< Type, seq< Identifier, opt<SC, one<':'>, SC, must<Type> > > > {};
 struct DeclParams: seq< plus<Parameter, SC> > {};
 struct DeclResult: if_must< string<'-', '>'>, SC, Type > {};
+struct TypeParams: if_must< one<'<'>, TypeName, SC, star_must<one<','>, SC, TypeName, SC>, one<'>'> > {};
 struct TypeConstraint: seq<TypeName, RS, SC, TypeName> {};
 struct TypeContext: if_must< one<'('>, SC, TypeConstraint, SC, star_must<one<','>, SC, TypeConstraint, SC>, one<')'> > {};
-struct FunctionType: seq< DeclParams, SC, DeclResult > {};
-struct FunctionDecl: seq< DeclParams, SC, opt<DeclResult>, SC, opt<if_must<KeywordWith, SC, TypeContext>> > {};
+struct FunctionType: seq< opt<TypeParams>, SC, DeclParams, SC, DeclResult > {};
+struct FunctionDecl: seq< opt<TypeParams>, SC, DeclParams, SC, opt<DeclResult>, SC, opt<if_must<KeywordWith, SC, TypeContext>> > {};
 struct PlainTypeName: seq< TypeName, not_at<SC, one<','>> > {};  // not followed by comma (would be TupleType)
 struct ListType: if_must< one<'['>, SC, UnsafeType, SC, one<']'> > {};
 struct TupleType: seq< Type, plus<SC, one<','>, SC, Type> > {};
@@ -147,7 +148,8 @@ struct Block: if_must< one<'{'>, NSC, sor< one<'}'>, seq<SepList<Statement>, NSC
 struct Function: sor< Block, if_must< KeywordFun, NSC, FunctionDecl, NSC, Block> > {};
 struct BracketedExpr: if_must< one<'('>, NSC, Expression<NSC>, NSC, one<')'> > {};
 struct ExprPrefix: if_must< PrefixOperator, SC, ExprOperand, SC > {};
-struct Reference: seq<Identifier, not_at<one<'"'>>> {};
+struct TypeArgs: seq< one<'<'>, Type, one<'>'> > {};
+struct Reference: seq<Identifier, opt<TypeArgs>, not_at<one<'"'>>> {};
 struct List: if_must< one<'['>, NSC, opt<ExprInfix<NSC>, NSC>, one<']'> > {};
 struct Cast: seq<SC, one<':'>, SC, Type> {};
 struct ExprCallable: sor< BracketedExpr, Function, Reference> {};
@@ -582,27 +584,31 @@ struct Action<DotCall<S>> : change_states< ast::Call > {
 
 
 template<>
-struct Action<Identifier> {
+struct Action<Identifier> : change_states< ast::Identifier > {
     template<typename Input>
-    static void apply(const Input &in, ast::Variable& var) {
-        var.identifier.name = in.string();
+    static void apply(const Input &in, ast::Identifier& ident) {
+        ident.name = in.string();
+        ident.source_loc.load(in.input(), in.position());
     }
 
     template<typename Input>
-    static void apply(const Input &in, ast::Parameter& par) {
-        par.identifier.name = in.string();
+    static void success(const Input &in, ast::Identifier& ident, ast::Variable& var) {
+        var.identifier = move(ident);
     }
 
     template<typename Input>
-    static void apply(const Input &in, ast::Reference& ref) {
-        ref.identifier.name = in.string();
+    static void success(const Input &in, ast::Identifier& ident, ast::Parameter& par) {
+        par.identifier = move(ident);
     }
 
     template<typename Input>
-    static void apply(const Input &in, ast::StructInit& node) {
-        ast::Key key(in.string());
-        key.source_loc.load(in.input(), in.position());
-        node.items.emplace_back(std::move(key), std::unique_ptr<ast::Expression>{});
+    static void success(const Input &in, ast::Identifier& ident, ast::Reference& ref) {
+        ref.identifier = move(ident);
+    }
+
+    template<typename Input>
+    static void success(const Input &in, ast::Identifier& ident, ast::StructInit& node) {
+        node.items.emplace_back(ast::Key(move(ident)), std::unique_ptr<ast::Expression>{});
     }
 };
 
@@ -632,44 +638,53 @@ struct Action<FunctionDecl> : change_states< ast::FunctionType > {
 };
 
 
-
 template<>
-struct Action<TypeName> {
+struct Action<TypeName> : change_states< ast::TypeName > {
     template<typename Input>
-    static void apply(const Input &in, std::unique_ptr<ast::Type>& type) {
-        type = std::make_unique<ast::TypeName>(in.string());
-        type->source_loc.load(in.input(), in.position());
+    static void apply(const Input &in, ast::TypeName& tname) {
+        tname.name = in.string();
+        tname.source_loc.load(in.input(), in.position());
     }
 
     template<typename Input>
-    static void apply(const Input &in, ast::TypeConstraint& tcst) {
-        if (tcst.type_class.name.empty())
-            tcst.type_class.name = in.string();
+    static void success(const Input &in, ast::TypeName& tname, std::unique_ptr<ast::Type>& type) {
+        type = std::make_unique<ast::TypeName>(move(tname));
+    }
+
+    template<typename Input>
+    static void success(const Input &in, ast::TypeName& tname, ast::FunctionType& ftype) {
+        ftype.type_params.push_back(move(tname));
+    }
+
+    template<typename Input>
+    static void success(const Input &in, ast::TypeName& tname, ast::TypeConstraint& tcst) {
+        if (!tcst.type_class)
+            tcst.type_class = move(tname);
         else
-            tcst.type_name.name = in.string();
+            tcst.type_name = move(tname);
     }
 
     template<typename Input>
-    static void apply(const Input &in, ast::Class& cls) {
-        if (cls.class_name.name.empty())
-            cls.class_name.name = in.string();
+    static void success(const Input &in, ast::TypeName& tname, ast::Class& cls) {
+        if (!cls.class_name)
+            cls.class_name = move(tname);
         else
-            cls.type_vars.emplace_back(in.string());
+            cls.type_vars.push_back(move(tname));
     }
 
     template<typename Input>
-    static void apply(const Input &in, ast::Instance& inst) {
-        inst.class_name.name = in.string();
+    static void success(const Input &in, ast::TypeName& tname, ast::Instance& inst) {
+        inst.class_name = move(tname);
     }
 
     template<typename Input>
-    static void apply(const Input &in, ast::TypeDef& def) {
-        def.type_name.name = in.string();
+    static void success(const Input &in, ast::TypeName& tname, ast::TypeDef& def) {
+        def.type_name = move(tname);
     }
 
     template<typename Input>
-    static void apply(const Input &in, ast::TypeAlias& alias) {
-        alias.type_name.name = in.string();
+    static void success(const Input &in, ast::TypeName& tname, ast::TypeAlias& alias) {
+        alias.type_name = move(tname);
     }
 };
 
@@ -769,6 +784,11 @@ struct Action<Type> : change_states< std::unique_ptr<ast::Type> >  {
         cast->expression = std::move(expr);
         cast->type = std::move(type);
         expr = std::move(cast);
+    }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::Reference& ref) {
+        ref.type_arg = std::move(type);
     }
 };
 

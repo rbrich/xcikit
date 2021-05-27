@@ -6,6 +6,7 @@
 
 #include "TypeInfo.h"
 #include "Error.h"
+#include <range/v3/algorithm/any_of.hpp>
 #include <numeric>
 
 namespace xci::script {
@@ -173,18 +174,20 @@ TypeInfo::TypeInfo(std::string name, TypeInfo&& type_info)
 {}
 
 
-TypeInfo::TypeInfo(TypeInfo&& other)
-        : m_type(move(other.m_type)), m_info(move(other.m_info))
+TypeInfo::TypeInfo(TypeInfo&& other) noexcept
+        : m_type(other.m_type), m_info(move(other.m_info))
 {
     other.m_type = Type::Unknown;
+    other.m_info = Var{};
 }
 
 
-TypeInfo& TypeInfo::operator=(TypeInfo&& other)
+TypeInfo& TypeInfo::operator=(TypeInfo&& other) noexcept
 {
-    m_type = move(other.m_type);
+    m_type = other.m_type;
     m_info = move(other.m_info);
     other.m_type = Type::Unknown;
+    other.m_info = Var{};
     return *this;
 }
 
@@ -205,7 +208,25 @@ bool TypeInfo::operator==(const TypeInfo& rhs) const
         return false;
     if (m_type == Type::Function)
         return signature() == rhs.signature();  // compare content, not pointer
+    if (m_type == Type::Named)
+        return named_type() == rhs.named_type();
     return m_info == rhs.m_info;
+}
+
+
+bool TypeInfo::is_generic() const
+{
+    if (m_type == Type::Unknown)
+        return true;
+    if (m_type == Type::Function)
+        return signature_ptr()->is_generic();
+    if (m_type == Type::List)
+        return elem_type().is_generic();
+    if (m_type == Type::Tuple)
+        return ranges::any_of(subtypes(), [](const TypeInfo& type_info) {
+            return type_info.is_generic();
+        });
+    return false;
 }
 
 
@@ -263,16 +284,11 @@ std::string TypeInfo::name() const
 }
 
 
-void Signature::resolve_return_type(const TypeInfo& t)
+bool Signature::is_generic() const
 {
-    if (!return_type) {
-        if (!t)
-            throw MissingExplicitType();
-        return_type = t;
-        return;
-    }
-    if (return_type != t)
-        throw UnexpectedReturnType(return_type, t);
+    return ranges::any_of(params, [](const TypeInfo& type_info) {
+        return type_info.is_generic();
+    });
 }
 
 

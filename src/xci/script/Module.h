@@ -12,6 +12,7 @@
 #include "Class.h"
 #include "Function.h"
 #include <string>
+#include <map>
 #include <cstdint>
 
 namespace xci::script {
@@ -68,6 +69,7 @@ public:
     // Type information
     Index add_type(TypeInfo type_info);
     const TypeInfo& get_type(Index idx) const { return m_types[idx]; }
+    Index find_type(const TypeInfo& type_info) const;
     void set_type(Index idx, TypeInfo&& type_info) { m_types[idx] = move(type_info); }
     size_t num_types() const { return m_types.size(); }
 
@@ -85,6 +87,10 @@ public:
     SymbolTable& symtab() { return m_symtab; }
     const SymbolTable& symtab() const { return m_symtab; }
 
+    // Specialized generic functions
+    void add_spec_function(SymbolPointer gen_fn, Index spec_fn_idx);
+    std::vector<Index> get_spec_functions(SymbolPointer gen_fn);
+
     bool operator==(const Module& rhs) const;
 
 private:
@@ -95,6 +101,11 @@ private:
     std::vector<TypeInfo> m_types;
     TypedValues m_values;
     SymbolTable m_symtab;
+
+    // Specialized generic functions
+    // * SymbolPointer points to original generic function
+    // * Index is function index in this module
+    std::multimap<SymbolPointer, Index> m_spec_functions;
 };
 
 

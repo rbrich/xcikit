@@ -24,7 +24,13 @@ public:
     // - pass results to cb
     using InvokeCallback = std::function<void (TypedValue&&)>;
     static constexpr auto no_invoke_cb = [](TypedValue&& v){ v.decref(); };
-    void call(const Function& function, const InvokeCallback& cb = no_invoke_cb);
+    void call(const Function& function, const InvokeCallback& cb = no_invoke_cb) {
+        m_stack.push_frame(function);
+        run(cb);
+    }
+
+    // The function must be already prepared in top stack frame
+    void run(const InvokeCallback& cb);
 
     Stack& stack() { return m_stack; }
 

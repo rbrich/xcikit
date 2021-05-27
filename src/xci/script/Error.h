@@ -102,8 +102,8 @@ struct UndefinedTypeName : public ScriptError {
 
 
 struct RedefinedName : public ScriptError {
-    explicit RedefinedName(string_view name)
-            : ScriptError(format("redefined name: {}", name)) {}
+    explicit RedefinedName(string_view name, const SourceLocation& loc)
+            : ScriptError(format("redefined name: {}", name), loc) {}
 };
 
 
@@ -148,10 +148,19 @@ struct UnexpectedReturnType : public ScriptError {
 
 
 struct MissingExplicitType : public ScriptError {
-    explicit MissingExplicitType()
-        : ScriptError("type cannot be inferred and wasn't specified") {}
+    explicit MissingExplicitType(const SourceLocation& loc)
+        : ScriptError("type cannot be inferred and wasn't specified", loc) {}
 };
 
+struct MissingTypeArg : public ScriptError {
+    explicit MissingTypeArg(const SourceLocation& loc)
+        : ScriptError("generic function requires type argument", loc) {}
+};
+
+struct UnexpectedTypeArg : public ScriptError {
+    explicit UnexpectedTypeArg(const SourceLocation& loc)
+            : ScriptError("unexpected type argument", loc) {}
+};
 
 struct UnexpectedGenericFunction : public ScriptError {
     explicit UnexpectedGenericFunction(const SourceLocation& loc)

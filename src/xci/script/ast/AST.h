@@ -188,6 +188,7 @@ struct Identifier {
     explicit operator bool() const { return !name.empty(); }
 
     std::string name;
+    SourceLocation source_loc;
 
     // resolved symbol:
     SymbolPointer symbol;
@@ -198,6 +199,7 @@ struct Identifier {
 struct Key {
     Key() = default;
     explicit Key(std::string s) : name(std::move(s)) {}
+    explicit Key(Identifier&& ident) : name(std::move(ident.name)), source_loc(ident.source_loc) {}
     explicit operator bool() const { return !name.empty(); }
 
     std::string name;
@@ -221,6 +223,7 @@ struct TypeName: public Type {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Type> make_copy() const override { return std::make_unique<TypeName>(*this); };
+    explicit operator bool() const { return !name.empty(); }
 
     std::string name;
 
@@ -264,6 +267,7 @@ struct FunctionType: public Type {
     std::unique_ptr<ast::Type> make_copy() const override;
     void copy_to(FunctionType& r) const;
 
+    std::vector<TypeName> type_params;  // declare type parameters of a generic function: <T,U>
     std::vector<Parameter> params;
     std::unique_ptr<Type> result_type;
     std::vector<TypeConstraint> context;
@@ -339,7 +343,7 @@ struct List: public Expression {
     std::unique_ptr<ast::Expression> make_copy() const override;
 
     std::vector<std::unique_ptr<Expression>> items;
-    size_t item_size = 0;
+    size_t elem_type_id = 0;
 };
 
 // structured initializer, i.e. tuple with identifiers
@@ -362,16 +366,15 @@ struct Reference: public Expression {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;
+    void copy_to(Reference& r) const;
 
     Identifier identifier;
+    std::unique_ptr<Type> type_arg;  // explicit type argument: e.g. <Int>
 
-    // resolved Method:
+    // resolved function/method:
     SymbolPointer chain;  // tip of chain of Instances in case of Method
-    Module* module = nullptr;   // module with instance function
+    Module* module = nullptr;   // module with (instance) function
     Index index = no_index;     // index of (instance) function in module
-
-    // resolved Instruction:
-    uint8_t instruction_args[2] {};
 };
 
 struct Call: public Expression {
@@ -390,6 +393,8 @@ struct Call: public Expression {
     unsigned wrapped_execs = 0;
     unsigned partial_args = 0;
     Index partial_index = no_index;
+
+    bool intrinsic = false;
 };
 
 struct Operator {
@@ -544,7 +549,7 @@ struct Invocation: public Statement {
     std::unique_ptr<Expression> expression;
 
     // resolved:
-    Index type_index = no_index;
+    Index type_id = no_index;
 };
 
 struct Return: public Statement {

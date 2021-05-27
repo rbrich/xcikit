@@ -9,7 +9,6 @@
 
 #include "Value.h"
 #include <xci/core/container/ChunkedStack.h>
-#include <xci/compat/bit.h>
 #include <cstddef>  // byte
 #include <vector>
 #include <iostream>
@@ -99,15 +98,17 @@ public:
     // Function return addresses
 
     struct Frame {
-        const Function* function;
-        CodeOffs instruction;
+        const Function& function;
+        CodeOffs instruction;  // return address
         StackAbs base;  // parameters are below base, local variables above
-        explicit Frame(const Function* fun, CodeOffs ins, size_t base)
-            : function(fun), instruction(ins), base(base) {}
+        explicit Frame(const Function& fun, CodeOffs ins, size_t base)
+                : function(fun), instruction(ins), base(base) {}
     };
 
-    void push_frame(const Function* fun, CodeOffs ins) { m_frame.emplace(fun, ins, size()); }
+    // top frame points to currently running function
+    void push_frame(const Function& fun) { m_frame.emplace(fun, 0, size()); }
     void pop_frame() { m_frame.pop(); }
+    Frame& frame() { return m_frame.top(); }
     const Frame& frame() const { return m_frame.top(); }
     const Frame& frame(size_t pos) const { return m_frame[pos]; }
     size_t n_frames() const { return m_frame.size(); }
@@ -156,7 +157,6 @@ private:
     // or when the top isn't compatible with the type
     void pop_type(const Value& v);
 
-private:
     static constexpr size_t m_stack_max = 100*1024*1024;
     size_t m_stack_capacity = 1024;
     size_t m_stack_pointer = m_stack_capacity;

@@ -35,7 +35,7 @@ void BytecodeTracer::setup(bool print_bytecode, bool trace_bytecode)
                     m_lines_to_erase = 0;
                 } else {
                     --frame;
-                    const auto& f = *m_machine.stack().frame().function;
+                    const auto& f = m_machine.stack().frame().function;
                     print_code(frame, f);
                 }
             });
@@ -52,7 +52,7 @@ void BytecodeTracer::setup(bool print_bytecode, bool trace_bytecode)
                 auto frame = m_machine.stack().n_frames() - 1;
                 cout << "[" << frame << "] " << f.name() << " " << f.signature() << endl;
             }
-            for (auto it = f.code().begin(); it != f.code().end(); it++) {
+            for (auto it = f.code().begin(); it != f.code().end();) {
                 if (it == ipos) {
                     cout << t.yellow() << '>' << DumpInstruction{f, it} << t.normal() << endl;
                 } else {
@@ -94,7 +94,7 @@ void BytecodeTracer::print_code(size_t frame, const Function& f)
 {
     m_lines_to_erase = 0;
     cout << "[" << frame << "] " << f.name() << " " << f.signature() << endl;
-    for (auto it = f.code().begin(); it != f.code().end(); ++it) {
+    for (auto it = f.code().begin(); it != f.code().end();) {
         ++ m_lines_to_erase;
         cout << ' ' << DumpInstruction{f, it} << endl;
     }

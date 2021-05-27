@@ -5,10 +5,13 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Code.h"
+#include <xci/data/coding/leb128.h>
 #include <xci/compat/macros.h>
 
 
 namespace xci::script {
+
+using xci::data::leb128_encode;
 
 
 std::ostream& operator<<(std::ostream& os, Opcode v)
@@ -75,7 +78,7 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::Neg_8:
         case Opcode::Neg_32:
         case Opcode::Neg_64:            return os << "NEG";
-        case Opcode::Subscript_32:      return os << "SUBSCRIPT";
+        case Opcode::Subscript:         return os << "SUBSCRIPT";
         case Opcode::Invoke:            return os << "INVOKE";
         case Opcode::LoadStatic:        return os << "LOAD_STATIC";
         case Opcode::LoadModule:        return os << "LOAD_MODULE";
@@ -97,6 +100,25 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::JumpIfNot:         return os << "JUMP_IF_NOT";
     }
     UNREACHABLE;
+}
+
+
+size_t Code::add_L1(Opcode opcode, size_t arg)
+{
+    const auto orig_ops = m_ops.size();
+    add_opcode(opcode);
+    leb128_encode(m_ops, arg);
+    return m_ops.size() - orig_ops;
+}
+
+
+size_t Code::add_L2(Opcode opcode, size_t arg1, size_t arg2)
+{
+    const auto orig_ops = m_ops.size();
+    add_opcode(opcode);
+    leb128_encode(m_ops, arg1);
+    leb128_encode(m_ops, arg2);
+    return m_ops.size() - orig_ops;
 }
 
 

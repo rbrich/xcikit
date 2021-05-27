@@ -353,8 +353,8 @@ concept TermCtlPlaceholder =
         std::is_same_v<T, xci::core::TermCtl::BgPlaceholder> ||
         std::is_same_v<T, xci::core::TermCtl::ModePlaceholder>;
 
-template <TermCtlPlaceholder T, typename Char, typename Enable>
-struct [[maybe_unused]] fmt::formatter<T, Char, Enable> {
+template <TermCtlPlaceholder T>
+struct [[maybe_unused]] fmt::formatter<T> {
     typename T::ValueType value;
     constexpr auto parse(format_parse_context& ctx) {
         auto it = ctx.begin();  // NOLINT

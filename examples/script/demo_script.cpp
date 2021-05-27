@@ -98,6 +98,8 @@ int main()
     // (another possibility is to inject the function directly into `main_module`)
     interpreter.add_imported_module(module);
 
+    interpreter.eval(R"(hello "Demo")");
+
     // evaluate a script
     // (this one would give the same result: `add2 39 3`)
     auto result = interpreter.eval(R"(hello (toupper_at "world" 0))");

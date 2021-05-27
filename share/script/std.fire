@@ -1,7 +1,7 @@
 // std.fire created on 2019-10-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019, 2020 Radek Brich
+// Copyright 2019–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 class Eq T {
@@ -109,8 +109,16 @@ instance Ord Float64 {
 }
 
 /*
-f : fun T T -> T with (Ord T) = |x y| { x < y }
-f = fun x:T y:T -> T lazy with (Ord T) { x < y }
+// TODO: document type args `<T>`, constraints `<Ord T>`, attributes `lazy`
+f : <T> T T -> T with (Ord T) = fun x y { x < y }
+f : <Ord T> T T -> T = fun x y { x < y }
+f = lazy fun<Ord T> x:T y:T -> T { x < y }
+f = fun <T, I> l:[T] i:I -> T { l ! i }
+
+// Unify syntax of functions and classes?
+// The angle brackets would be only decoration, not needed syntactically.
+class Eq <T> { }
+class Ord <T> (Eq T) { }
 */
 
 
@@ -150,4 +158,7 @@ instance Cast Float64 Float32 { cast = { __cast 0xDC } }
 
 succ = fun x { x + 1 }
 pred = fun x { x - 1 }
-max = fun x y { if x > y then x else y }
+max = fun<T> x:T y:T -> T { if x > y then x else y }
+
+
+subscript = fun<T> [T] Int -> T { __subscript __type_id<T> };

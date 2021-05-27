@@ -32,7 +32,6 @@ static PassItem pass_names[] = {
         {"fold_dot_call", Flags::PPDotCall},
         {"resolve_symbols", Flags::PPSymbols},
         {"resolve_types", Flags::PPTypes},
-        {"fold_intrinsics", Flags::PPIntrinsics},
         {"resolve_nonlocals", Flags::PPNonlocals},
 };
 
@@ -85,6 +84,7 @@ void Options::parse(char* argv[])
             Option("-b, --bytecode", "Print bytecode", ro.print_bytecode),
             Option("-s, --symtab", "Print symbol table", ro.print_symtab),
             Option("-m, --module", "Print compiled module content", ro.print_module),
+            Option("-M, --module-verbose", "Print compiled module content, including function bodies", ro.print_module_verbose),
             Option("--trace", "Trace bytecode", ro.trace_bytecode),
             Option("--pp PASS_LIST", "Preprocess AST and stop, don't compile. "
                                      "PASS_LIST is comma separated list of pass names (or unique substrings of them): "

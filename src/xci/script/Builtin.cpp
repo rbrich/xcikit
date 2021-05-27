@@ -191,7 +191,7 @@ const char* builtin::op_to_name(ast::Operator::Op op)
         case Op::Div:           return "/";
         case Op::Mod:           return "%";
         case Op::Exp:           return "**";
-        case Op::Subscript:     return "[]";
+        case Op::Subscript:     return "!";
         case Op::LogicalNot:    return "-";
         case Op::BitwiseNot:    return "~";
         case Op::UnaryPlus:     return "+";
@@ -257,10 +257,10 @@ BuiltinModule::BuiltinModule() : Module("builtin")
     add_arithmetic_op_function("mod", Opcode::Mod_8);
     add_arithmetic_op_function("exp", Opcode::Exp_8);
     add_unary_op_functions();
-    add_subscript_function();
     add_intrinsics();
     add_types();
     add_io_functions();
+    add_introspections();
 }
 
 BuiltinModule& BuiltinModule::static_instance()
@@ -426,23 +426,10 @@ BuiltinModule::add_unary_op_functions()
 }
 
 
-void
-BuiltinModule::add_subscript_function()
-{
-    auto name = "subscript";
-
-    auto fn = std::make_unique<Function>(*this, symtab().add_child(name));
-    fn->signature().return_type = ti_int32();
-    fn->add_parameter("lhs", ti_list(ti_int32()));
-    fn->add_parameter("rhs", ti_int32());
-    fn->set_compiled();
-    fn->code().add_opcode(Opcode::Subscript_32);
-    symtab().add({name, Symbol::Function, add_function(std::move(fn))});
-}
-
-
 void BuiltinModule::add_intrinsics()
 {
+    // directly write instructions to function code
+
     // no args
     symtab().add({"__noop", Symbol::Instruction, Index(Opcode::Noop)});
     symtab().add({"__logical_not", Symbol::Instruction, Index(Opcode::LogicalNot)});
@@ -505,9 +492,11 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__exp_8", Symbol::Instruction, Index(Opcode::Exp_8)});
     symtab().add({"__exp_32", Symbol::Instruction, Index(Opcode::Exp_32)});
     symtab().add({"__exp_64", Symbol::Instruction, Index(Opcode::Exp_64)});
-    symtab().add({"__subscript_32", Symbol::Instruction, Index(Opcode::Subscript_32)});
+
     // one arg
+    symtab().add({"__subscript", Symbol::Instruction, Index(Opcode::Subscript)});
     symtab().add({"__cast", Symbol::Instruction, Index(Opcode::Cast)});
+
     // two args
     symtab().add({"__copy", Symbol::Instruction, Index(Opcode::Copy)});
     symtab().add({"__drop", Symbol::Instruction, Index(Opcode::Drop)});
@@ -532,6 +521,8 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__make_list", Symbol::Instruction, Index(Opcode::MakeList)});
     symtab().add({"__partial", Symbol::Instruction, Index(Opcode::Partial)});
     */
+
+    symtab().add({"__type_id", Symbol::TypeId});
 }
 
 
@@ -722,6 +713,25 @@ void BuiltinModule::add_io_functions()
     leave1->set_next(leave2);
     leave2->set_next(leave3);
     leave3->set_next(leave_s);
+}
+
+
+static void introspect_module(Stack& stack, void*, void*)
+{
+    stack.push(value::Module{stack.frame().function.module()});
+}
+
+
+void BuiltinModule::add_introspections()
+{
+    // return the builtin module
+    add_native_function("__builtin",
+            [](void* m) -> Module& { return *static_cast<Module*>(m); },
+            this);
+    // return current module
+    add_native_function("__module", {}, ti_module(), introspect_module);
+    // get number of functions in a module
+    add_native_function("__n_fn", [](Module& m) { return (int) m.num_functions(); });
 }
 
 

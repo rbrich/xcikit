@@ -6,7 +6,12 @@
 
 #include "Interpreter.h"
 
+#include <utility>
+#include <fmt/format.h>
+
 namespace xci::script {
+
+using fmt::format;
 
 
 Interpreter::Interpreter(Compiler::Flags flags)
@@ -53,21 +58,24 @@ TypedValue Interpreter::eval(SourceId source_id, const InvokeCallback& cb)
     // compile
     auto source_name = m_source_manager.get_source(source_id).name();
     auto& symtab = m_main.symtab().add_child(source_name);
-    Function func {m_main, symtab};
-    m_compiler.compile(func, ast);
+    auto fn_idx = m_main.add_function(std::make_unique<Function>(m_main, symtab));
+    auto& fn = m_main.get_function(fn_idx);
+    m_compiler.compile(fn, ast);
 
     // execute
-    m_machine.call(func, cb);
+    m_machine.call(fn, cb);
 
     // get result from stack
-    auto ti = func.effective_return_type();
+    auto ti = fn.effective_return_type();
     return m_machine.stack().pull_typed(ti);
 }
 
 
 TypedValue Interpreter::eval(std::string input, const Interpreter::InvokeCallback& cb)
 {
-    auto src_id = m_source_manager.add_source("<input>", input);
+    auto src_id = m_source_manager.add_source(
+            format("<input{}>", m_input_num),
+            std::move(input));
     return eval(src_id, cb);
 }
 

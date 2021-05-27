@@ -59,8 +59,23 @@ Index Module::add_value(TypedValue&& value)
 
 Index Module::add_type(TypeInfo type_info)
 {
+    if (!type_info.is_unknown()) {
+        auto idx = find_type(type_info);
+        if (idx != no_index)
+            return idx;
+    }
     m_types.push_back(move(type_info));
     return m_types.size() - 1;
+}
+
+
+Index Module::find_type(const TypeInfo& type_info) const
+{
+    assert(!type_info.is_unknown());
+    auto it = std::find(m_types.begin(), m_types.end(), type_info);
+    if (it == m_types.end())
+        return no_index;
+    return it - m_types.begin();
 }
 
 
@@ -75,6 +90,24 @@ Index Module::add_instance(std::unique_ptr<Instance>&& inst)
 {
     m_instances.push_back(move(inst));
     return m_instances.size() - 1;
+}
+
+
+void Module::add_spec_function(SymbolPointer gen_fn, Index spec_fn_idx)
+{
+    m_spec_functions.emplace(gen_fn, spec_fn_idx);
+}
+
+
+std::vector<Index> Module::get_spec_functions(SymbolPointer gen_fn)
+{
+    auto [beg, end] = m_spec_functions.equal_range(gen_fn);
+    std::vector<Index> res;
+    res.reserve(std::distance(beg, end));
+    std::transform(beg, end, std::back_inserter(res), [](auto item){
+        return item.second;
+    });
+    return res;
 }
 
 

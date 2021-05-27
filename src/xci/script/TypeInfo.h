@@ -77,8 +77,8 @@ public:
     using NamedTypePtr = std::shared_ptr<NamedType>;
 
     // Unknown / generic
-    TypeInfo() : m_type(Type::Unknown), m_info(Var(0)) {}
-    explicit TypeInfo(Var var) : m_type(Type::Unknown), m_info(var) {}
+    TypeInfo() = default;
+    explicit TypeInfo(Var var) : m_info(var) {}
     // Plain types
     explicit TypeInfo(Type type);
     // Function
@@ -101,8 +101,8 @@ public:
 
     TypeInfo(const TypeInfo&) = default;
     TypeInfo& operator =(const TypeInfo&) = default;
-    TypeInfo(TypeInfo&& other);
-    TypeInfo& operator =(TypeInfo&& other);
+    TypeInfo(TypeInfo&& other) noexcept;
+    TypeInfo& operator =(TypeInfo&& other) noexcept;
 
     size_t size() const;
     void foreach_heap_slot(std::function<void(size_t offset)> cb) const;
@@ -113,6 +113,7 @@ public:
     bool is_void() const { return m_type == Type::Void; }
     bool is_struct() const { return m_type == Type::Struct; }
 
+    bool is_generic() const;
     void replace_var(uint8_t idx, const TypeInfo& ti);
 
     TypeInfo effective_type() const;
@@ -138,7 +139,7 @@ public:
 
 private:
     Type m_type { Type::Unknown };
-    std::variant<std::monostate, Var, Subtypes, StructItems, SignaturePtr, NamedTypePtr> m_info;
+    std::variant<Var, Subtypes, StructItems, SignaturePtr, NamedTypePtr> m_info;
 };
 
 
@@ -155,8 +156,7 @@ struct Signature {
 
     bool has_closure() const { return !nonlocals.empty() || !partial.empty(); }
 
-    // Check return type matches and set it to concrete type if it's generic.
-    void resolve_return_type(const TypeInfo& t);
+    bool is_generic() const;
 
     bool operator==(const Signature& rhs) const = default;
     bool operator!=(const Signature& rhs) const = default;
@@ -184,6 +184,7 @@ inline TypeInfo ti_float32() { return TypeInfo(Type::Float32); }
 inline TypeInfo ti_float64() { return TypeInfo(Type::Float64); }
 inline TypeInfo ti_string() { return TypeInfo(Type::String); }
 inline TypeInfo ti_stream() { return TypeInfo(Type::Stream); }
+inline TypeInfo ti_module() { return TypeInfo(Type::Module); }
 
 inline TypeInfo ti_function(std::shared_ptr<Signature>&& signature)
 { return TypeInfo(std::forward<std::shared_ptr<Signature>>(signature)); }

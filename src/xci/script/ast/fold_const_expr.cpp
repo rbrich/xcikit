@@ -65,6 +65,7 @@ public:
             case Symbol::Method:
             case Symbol::TypeName:
             case Symbol::TypeVar:
+            case Symbol::TypeId:
                 break;
             case Symbol::Function: {
                 auto& symmod = symtab.module() == nullptr ? module() : *symtab.module();
@@ -75,8 +76,6 @@ public:
                 }
                 break;
             }
-            case Symbol::Fragment:
-                break;
             case Symbol::Unresolved:
                 assert(!"Optimizer: unresolved symbol");
                 break;

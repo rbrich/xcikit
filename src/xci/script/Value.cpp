@@ -6,12 +6,15 @@
 
 #include "Value.h"
 #include "Function.h"
+#include "Module.h"
 #include "Error.h"
+#include <xci/data/coding/leb128.h>
 #include <xci/core/string.h>
 #include <xci/core/log.h>
 #include <xci/core/template/helpers.h>
 #include <range/v3/view/transform.hpp>
 #include <range/v3/to_container.hpp>
+#include <range/v3/numeric/accumulate.hpp>
 #include <numeric>
 #include <sstream>
 #include <limits>
@@ -19,9 +22,13 @@
 
 namespace xci::script {
 
+using xci::data::leb128_length;
+using xci::data::leb128_encode;
+using xci::data::leb128_decode;
 using namespace xci::core;
 using ranges::cpp20::views::transform;
 using ranges::to;
+using ranges::accumulate;
 using std::move;
 using std::make_unique;
 
@@ -283,35 +290,102 @@ StringV::StringV(std::string_view v)
 
 std::string_view StringV::value() const
 {
-    size_t size = bit_read<uint32_t>(slot.data());
+    size_t size = bit_copy<uint32_t>(slot.data());
     const char* data = reinterpret_cast<const char*>(slot.data() + sizeof(uint32_t));
     return {data, size};
 }
 
 
-ListV::ListV(size_t length, const TypeInfo& elem_type)
-        : slot(length * elem_type.size() + sizeof(uint32_t))
+static void list_deleter(byte* data)
 {
+    auto length = bit_read<uint32_t>(data);
+    auto deleter_data_size = bit_read<uint16_t>(data);
+    if (length == 0 || deleter_data_size == 0)
+        return;  // no slots to decref
+
+    std::vector<size_t> offsets;
+    offsets.reserve(8);
+    auto* deleter_data_end = data + deleter_data_size;
+    while (data < deleter_data_end)
+        offsets.push_back(leb128_decode<size_t>(data));
+
+    assert(!offsets.empty());
+    size_t n_skip = offsets.back();
+    offsets.pop_back();
+
+    for (size_t el = 0; el != length; ++el) {
+        for (size_t offset : offsets) {
+            data += offset;
+            // Read and decref the heap slot
+            auto* slot_ptr = bit_copy<byte*>(data);
+            HeapSlot{slot_ptr}.decref();
+        }
+        data += n_skip;
+    }
+}
+
+
+ListV::ListV(size_t length, const TypeInfo& elem_type, const std::byte* elem_data)
+{
+    // prepare deleter data
+    std::vector<size_t> offsets;
+    offsets.reserve(8);
+    elem_type.foreach_heap_slot([&offsets](size_t offset) {
+        size_t last_offset = offsets.empty() ? 0 : offsets.back();
+        offsets.push_back(offset - last_offset);
+    });
+    unsigned deleter_data_size = 0;
+    if (!offsets.empty()) {
+        // add final skip
+        offsets.push_back(elem_type.size() - offsets.back());
+        // sum of LEB128-encoded lengths of the offsets
+        deleter_data_size = accumulate(offsets | transform([](size_t i){ return leb128_length(i); }), 0);
+    }
+
+    const size_t elem_data_size = length * elem_type.size();
+    slot = HeapSlot(6 + deleter_data_size + elem_data_size, list_deleter);
+    auto* data = slot.data();
+
+    // length (number of elements)
     assert(length < std::numeric_limits<uint32_t>::max());
-    auto len_raw = (uint32_t) length;
-    std::memcpy(slot.data(), &len_raw, sizeof(uint32_t));
-    if (length != 0)
-        std::memset(slot.data() + sizeof(uint32_t), 0, length * elem_type.size());
+    bit_write(data, (uint32_t) length);
+
+    // size of deleter data
+    assert(deleter_data_size < std::numeric_limits<uint16_t>::max());
+    bit_write(data, (uint16_t) deleter_data_size);
+
+    // deleter data (offsets)
+    if (deleter_data_size != 0) {
+        for (auto ofs : offsets)
+            leb128_encode(data, ofs);
+    }
+
+    // element data
+    if (length != 0) {
+        if (elem_data == nullptr)
+            std::memset(data, 0, elem_data_size);
+        else
+            std::memcpy(data, elem_data, elem_data_size);
+    }
 }
 
 
 size_t ListV::length() const
 {
-    return bit_read<uint32_t>(slot.data());
+    return bit_copy<uint32_t>(slot.data());
 }
 
 
 Value ListV::value_at(size_t idx, const TypeInfo& elem_type) const
 {
     assert(idx < length());
+    const auto* data = slot.data() + sizeof(uint32_t);
+    auto dd_size = bit_read<uint16_t>(data);
+    data += dd_size;
+
     auto elem = create_value(elem_type);
     const auto elem_size = elem_type.size();
-    elem.read(slot.data() + sizeof(uint32_t) + idx * elem_size);
+    elem.read(data + idx * elem_size);
     return elem;
 }
 
@@ -407,7 +481,7 @@ ClosureV::ClosureV(const Function& fn, Values&& values)
 
 Function* ClosureV::function() const
 {
-    return bit_read<Function*>(slot.data());
+    return bit_copy<Function*>(slot.data());
 }
 
 
@@ -419,7 +493,7 @@ value::Tuple ClosureV::closure() const
 }
 
 
-static void stream_deleter(const byte* data)
+static void stream_deleter(byte* data)
 {
     Stream v;
     v.raw_read(data);
@@ -498,7 +572,7 @@ public:
     void visit(const ListV& v) override {
         if (!type_info.is_unknown() && type_info.elem_type().type() == Type::Byte) {
             // special output for [Byte]
-            const char* data = (const char*)v.slot.data() + sizeof(uint32_t);
+            const char* data = (const char*)v.slot.data() + 6;
             const std::string_view sv{data, v.length()};
             os << "b\"" << core::escape(sv) << '"';
             return;
@@ -563,7 +637,12 @@ public:
             os << ")";
         }
     }
-    void visit(const script::Module* v) override { fmt::print(os, "<module:{:x}>", uintptr_t(v)); }
+    void visit(const script::Module* v) override {
+        if (v == nullptr)
+            fmt::print(os, "<module:null>");
+        else
+            fmt::print(os, "<module:{}>", v->name());
+    }
     void visit(const script::Stream& v) override {
         os << "<stream:" << v << ">";
     }
@@ -609,8 +688,7 @@ Char::Char(std::string_view utf8)
 Bytes::Bytes(std::span<const std::byte> v)
         : List(v.size(), TypeInfo{Type::Byte})
 {
-    std::memcpy((void*)(heapslot()->data() + sizeof(uint32_t)),
-            v.data(), v.size());
+    std::memcpy((void*)(heapslot()->data() + 6), v.data(), v.size());
 }
 
 

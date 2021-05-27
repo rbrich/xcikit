@@ -10,7 +10,9 @@
 #include <xci/script/Builtin.h>
 #include <xci/script/Error.h>
 #include <range/v3/view/enumerate.hpp>
+#include <range/v3/algorithm/any_of.hpp>
 #include <vector>
+#include <set>
 #include <sstream>
 
 namespace xci::script {
@@ -27,7 +29,7 @@ public:
         // check for name collision
         const auto& name = dfn.variable.identifier.name;
         if (symtab().find_by_name(name))
-            throw RedefinedName(name);
+            throw RedefinedName(name, dfn.variable.identifier.source_loc);
 
         // add new function, symbol
         SymbolTable& fn_symtab = symtab().add_child(name);
@@ -71,7 +73,7 @@ public:
     void visit(ast::Class& v) override {
         // check for name collision
         if (symtab().find_by_name(v.class_name.name))
-            throw RedefinedName(v.class_name.name);
+            throw RedefinedName(v.class_name.name, v.class_name.source_loc);
 
         // add child symbol table for the class
         SymbolTable& cls_symtab = symtab().add_child(v.class_name.name);
@@ -141,7 +143,7 @@ public:
     void visit(ast::TypeDef& v) override {
         // check for name collision
         if (symtab().find_by_name(v.type_name.name))
-            throw RedefinedName(v.type_name.name);
+            throw RedefinedName(v.type_name.name, v.type_name.source_loc);
 
         // resolve the type
         v.type->apply(*this);
@@ -156,7 +158,7 @@ public:
     void visit(ast::TypeAlias& v) override {
         // check for name collision
         if (symtab().find_by_name(v.type_name.name))
-            throw RedefinedName(v.type_name.name);
+            throw RedefinedName(v.type_name.name, v.type_name.source_loc);
 
         // resolve the type
         v.type->apply(*this);
@@ -197,6 +199,8 @@ public:
         symptr = resolve_symbol(v.identifier.name);
         if (!symptr)
             throw UndefinedName(v.identifier.name, v.source_loc);
+        if (v.type_arg)
+            v.type_arg->apply(*this);
         if (symptr->type() == Symbol::Method) {
             // if the reference points to a class function, find nearest
             // instance of the class
@@ -244,7 +248,10 @@ public:
             v.index = v.definition->symbol()->index();
         } else {
             // add new symbol table for the function
-            SymbolTable& fn_symtab = symtab().add_child("<lambda>");
+            std::string name = "<lambda>";
+            if (v.type.params.empty())
+                name = "<block>";
+            SymbolTable& fn_symtab = symtab().add_child(name);
             auto fn = make_unique<Function>(module(), fn_symtab);
             v.index = module().add_function(move(fn));
         }
@@ -272,9 +279,12 @@ public:
     }
 
     void visit(ast::TypeName& t) final {
-        if (t.name.empty())
-            //  TypeInfo(Type::Unknown); ?
-            throw UndefinedTypeName(t.name, t.source_loc);
+        assert(!t.name.empty());  // can't occur in parsed code
+        if (t.name.empty() || t.name[0] == '$') {
+            // anonymous generic type
+            t.symbol = allocate_type_var(t.name);
+            return;
+        }
         t.symbol = resolve_symbol(t.name);
         if (!t.symbol)
             throw UndefinedTypeName(t.name, t.source_loc);
@@ -282,18 +292,31 @@ public:
 
     void visit(ast::FunctionType& t) final {
         size_t type_idx = 0;
+        std::set<std::string> type_params;  // check uniqueness
+        for (auto& tp : t.type_params) {
+            if (type_params.contains(tp.name))
+                throw RedefinedName(tp.name, tp.source_loc);
+            type_params.insert(tp.name);
+            symtab().add({tp.name, Symbol::TypeVar, ++type_idx});
+        }
+        /*
         for (auto& tc : t.context) {
             tc.type_class.apply(*this);
             symtab().add({tc.type_name.name, Symbol::TypeVar, ++type_idx});
-        }
+        }*/
         size_t par_idx = 0;
         for (auto& p : t.params) {
-            if (p.type)
-                p.type->apply(*this);
-            p.identifier.symbol = symtab().add({p.identifier.name, Symbol::Parameter, par_idx++});
+            if (!p.type) {
+                // '$' is internal prefix for untyped function args
+                p.type = std::make_unique<ast::TypeName>("$" + p.identifier.name);
+            }
+            p.type->apply(*this);
+            if (!p.identifier.name.empty())
+                p.identifier.symbol = symtab().add({p.identifier.name, Symbol::Parameter, par_idx++});
         }
-        if (t.result_type)
-            t.result_type->apply(*this);
+        if (!t.result_type)
+            t.result_type = std::make_unique<ast::TypeName>("$->");
+        t.result_type->apply(*this);
     }
 
     void visit(ast::ListType& t) final {
@@ -314,6 +337,14 @@ public:
 private:
     Module& module() { return m_function.module(); }
     SymbolTable& symtab() { return *m_symtab; }
+
+    SymbolPointer allocate_type_var(const std::string& name = "") {
+        size_t idx = 1;
+        auto last_var = symtab().find_last_of(Symbol::TypeVar);
+        if (last_var)
+            idx = last_var->index() + 1;
+        return symtab().add({name, Symbol::TypeVar, idx});
+    }
 
     SymbolPointer resolve_symbol(const std::string& name) {
         // lookup intrinsics in builtin module first
