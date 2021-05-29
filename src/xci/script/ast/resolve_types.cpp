@@ -229,16 +229,18 @@ public:
 
     void visit(ast::TypeDef& v) override {
         v.type->apply(*this);
-        Index index = v.type_name.symbol->index();
+
         // create new Named type
-        module().set_type(index, TypeInfo{v.type_name.name, move(m_type_info)});
+        Index index = module().add_type(TypeInfo{v.type_name.name, move(m_type_info)});
+        v.type_name.symbol->set_index(index);
     }
 
     void visit(ast::TypeAlias& v) override {
         v.type->apply(*this);
-        Index index = v.type_name.symbol->index();
+
         // add the actual type to Module, referenced by symbol
-        module().set_type(index, move(m_type_info));
+        Index index = module().add_type(move(m_type_info));
+        v.type_name.symbol->set_index(index);
     }
 
     void visit(ast::Literal& v) override {

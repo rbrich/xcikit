@@ -148,11 +148,8 @@ public:
         // resolve the type
         v.type->apply(*this);
 
-        // add new type to the module
-        Index index = module().add_type(TypeInfo{});
-
         // add new type to symbol table
-        v.type_name.symbol = symtab().add({v.type_name.name, Symbol::TypeName, index});
+        v.type_name.symbol = symtab().add({v.type_name.name, Symbol::TypeName, no_index});
     }
 
     void visit(ast::TypeAlias& v) override {
@@ -163,11 +160,8 @@ public:
         // resolve the type
         v.type->apply(*this);
 
-        // add new type to the module
-        Index index = module().add_type(TypeInfo{});
-
         // add new type to symbol table
-        v.type_name.symbol = symtab().add({v.type_name.name, Symbol::TypeName, index});
+        v.type_name.symbol = symtab().add({v.type_name.name, Symbol::TypeName, no_index});
     }
 
     void visit(ast::Literal&) override {}
