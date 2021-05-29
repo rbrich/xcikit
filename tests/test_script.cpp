@@ -81,6 +81,7 @@ void import_std_module(Interpreter& interpreter)
     } else {
         auto src_id = interpreter.source_manager().add_source(std_path, content->string());
         assert(src_id == 1);
+        (void) src_id;
     }
     interpreter.add_imported_module(*module);
 }
