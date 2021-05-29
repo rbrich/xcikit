@@ -4,6 +4,82 @@
 // Copyright 2019–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
+
+// Logical operators
+
+class LogicalNot T  { not :   T -> Bool }
+class LogicalOr  T  { or  : T T -> Bool }
+class LogicalAnd T  { and : T T -> Bool }
+
+instance LogicalNot Bool { not = { __logical_not } }
+instance LogicalOr  Bool { or  = { __logical_or  } }
+instance LogicalAnd Bool { and = { __logical_and } }
+
+
+// Bitwise operators
+
+class BitwiseNot T  { bit_not :   T -> T }
+class BitwiseOr  T  { bit_or  : T T -> T }
+class BitwiseAnd T  { bit_and : T T -> T }
+class BitwiseXor T  { bit_xor : T T -> T }
+class ShiftLeft  T  { shift_left  : T T -> T }
+class ShiftRight T  { shift_right : T T -> T }
+
+instance BitwiseNot Byte  { bit_not = { __bitwise_not_8  } }
+instance BitwiseNot Int32 { bit_not = { __bitwise_not_32 } }
+instance BitwiseNot Int64 { bit_not = { __bitwise_not_64 } }
+instance BitwiseOr  Byte  { bit_or  = { __bitwise_or_8   } }
+instance BitwiseOr  Int32 { bit_or  = { __bitwise_or_32  } }
+instance BitwiseOr  Int64 { bit_or  = { __bitwise_or_64  } }
+instance BitwiseAnd Byte  { bit_and = { __bitwise_and_8  } }
+instance BitwiseAnd Int32 { bit_and = { __bitwise_and_32 } }
+instance BitwiseAnd Int64 { bit_and = { __bitwise_and_64 } }
+instance BitwiseXor Byte  { bit_xor = { __bitwise_xor_8  } }
+instance BitwiseXor Int32 { bit_xor = { __bitwise_xor_32 } }
+instance BitwiseXor Int64 { bit_xor = { __bitwise_xor_64 } }
+instance ShiftLeft  Byte  { shift_left  = { __shift_left_8   } }
+instance ShiftLeft  Int32 { shift_left  = { __shift_left_32  } }
+instance ShiftLeft  Int64 { shift_left  = { __shift_left_64  } }
+instance ShiftRight Byte  { shift_right = { __shift_right_8  } }
+instance ShiftRight Int32 { shift_right = { __shift_right_32 } }
+instance ShiftRight Int64 { shift_right = { __shift_right_64 } }
+
+
+// Arithmetic operators
+
+class Minus T  { neg : T -> T }
+class Add T  { add : T T -> T }
+class Sub T  { sub : T T -> T }
+class Mul T  { mul : T T -> T }
+class Div T  { div : T T -> T }
+class Mod T  { mod : T T -> T }
+class Exp T  { exp : T T -> T }
+
+instance Minus Byte  { neg = { __neg_8  } }
+instance Minus Int32 { neg = { __neg_32 } }
+instance Minus Int64 { neg = { __neg_64 } }
+instance Add Byte  { add = { __add_8  } }
+instance Add Int32 { add = { __add_32 } }
+instance Add Int64 { add = { __add_64 } }
+instance Sub Byte  { sub = { __sub_8  } }
+instance Sub Int32 { sub = { __sub_32 } }
+instance Sub Int64 { sub = { __sub_64 } }
+instance Mul Byte  { mul = { __mul_8  } }
+instance Mul Int32 { mul = { __mul_32 } }
+instance Mul Int64 { mul = { __mul_64 } }
+instance Div Byte  { div = { __div_8  } }
+instance Div Int32 { div = { __div_32 } }
+instance Div Int64 { div = { __div_64 } }
+instance Mod Byte  { mod = { __mod_8  } }
+instance Mod Int32 { mod = { __mod_32 } }
+instance Mod Int64 { mod = { __mod_64 } }
+instance Exp Byte  { exp = { __exp_8  } }
+instance Exp Int32 { exp = { __exp_32 } }
+instance Exp Int64 { exp = { __exp_64 } }
+
+
+// Comparison operators
+
 class Eq T {
     eq : T T -> Bool
     ne : T T -> Bool // = fun x y { not (eq x y) };

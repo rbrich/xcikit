@@ -1103,15 +1103,10 @@ private:
         size_t i_arg = 0;
         size_t i_prm = 0;
         std::vector<TypeInfo> res;
-        // resolve variable return type
-        // (doing this first allows to skip checking the content of `res`
-        // and it also resizes `res` to final size, because return type is usually the last type var)
+        // optimization: Resize `res` to according to return type, which is usually the last type var
         if (signature.return_type.is_unknown()) {
             auto var = signature.return_type.generic_var();
-            assert(var != 0);
-            // make space for additional type var in the result
             res.resize(var);
-            res[var-1] = m_call_ret;  // may be Unknown - it doesn't matter
         }
         // resolve args
         for (const auto& arg : m_call_args) {
@@ -1149,6 +1144,13 @@ private:
             }
             // consume next param
             ++i_prm;
+        }
+        // use m_call_ret only as a hint - if return type var is still unknown
+        if (signature.return_type.is_unknown()) {
+            auto var = signature.return_type.generic_var();
+            assert(var != 0);
+            if (res[var - 1].is_unknown())
+                res[var - 1] = m_call_ret;
         }
         return res;
     }
