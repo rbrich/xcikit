@@ -100,14 +100,6 @@ std::vector<TypeInfo> Function::closure_types() const
 }
 
 
-bool Function::detect_generic() const
-{
-    return any_of(signature().params, [](const TypeInfo& type_info) {
-        return type_info.is_generic();
-    });
-}
-
-
 bool Function::operator==(const Function& rhs) const
 {
     return &m_module == &rhs.m_module &&
@@ -118,8 +110,7 @@ bool Function::operator==(const Function& rhs) const
 
 
 bool Function::CompiledBody::operator==(const Function::CompiledBody& rhs) const {
-    return code == rhs.code &&
-           is_fragment == rhs.is_fragment;
+    return code == rhs.code;
 }
 
 

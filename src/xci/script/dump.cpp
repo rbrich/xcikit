@@ -27,6 +27,7 @@ using std::setw;
 struct StreamOptions {
     bool enable_tree : 1;
     bool module_verbose : 1;  // Module: dump function bodies etc.
+    bool bracket_fun_types : 1;
     unsigned level : 6;
     std::bitset<32> rules;
     std::vector<std::string> type_var_names;  // used for Type::Unknown with var!=0 when dumping TypeInfo
@@ -936,7 +937,11 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
             }
             return os << ")";
         }
-        case Type::Function:    return os << v.signature();
+        case Type::Function:
+            if (stream_options(os).bracket_fun_types)
+                return os << '(' << v.signature() << ')';
+            else
+                return os << v.signature();
         case Type::Module:      return os << "Module";
         case Type::Stream:      return os << "Stream";
         case Type::Named:       return os << v.name();
@@ -950,23 +955,30 @@ std::ostream& operator<<(std::ostream& os, const Signature& v)
     if (!v.nonlocals.empty()) {
         os << "{ ";
         for (const auto& ti : v.nonlocals) {
-            os << ti << " ";
+            os << ti;
+            if (&ti != &v.nonlocals.back())
+                os << ", ";
         }
-        os << "} ";
+        os << " } ";
     }
     if (!v.partial.empty()) {
-        os << "( ";
+        os << "| ";
         for (const auto& ti : v.partial) {
-            os << ti << " ";
+            os << ti;
+            if (&ti != &v.partial.back())
+                os << ", ";
         }
-        os << ") ";
+        os << "| ";
     }
+    bool orig_bracket_fun_types = stream_options(os).bracket_fun_types;
+    stream_options(os).bracket_fun_types = true;
     if (!v.params.empty()) {
         for (const auto& ti : v.params) {
-            os << ti << " ";
+            os << ti << ' ';
         }
         os << "-> ";
     }
+    stream_options(os).bracket_fun_types = orig_bracket_fun_types;
     return os << v.return_type;
 }
 

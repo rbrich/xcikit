@@ -156,7 +156,8 @@ struct Signature {
 
     bool has_closure() const { return !nonlocals.empty() || !partial.empty(); }
 
-    bool is_generic() const;
+    bool has_generic_params() const;
+    bool is_generic() const { return has_generic_params() || return_type.is_generic(); }
 
     bool operator==(const Signature& rhs) const = default;
     bool operator!=(const Signature& rhs) const = default;

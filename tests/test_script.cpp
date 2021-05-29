@@ -491,6 +491,9 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
                         "outer 1; outer 2; __module.__n_fn") == "9;11;5");
     // * specializations with different types from the same template
     CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; inner 3 + (inner 4l):T }; outer 2") == "11");
+
+    // "Funarg problem" (upwards)
+    //CHECK(interpret_std("compose = fun f g { fun x { f (g x) } }; same = compose pred succ; same 42") == "42");
 }
 
 
@@ -499,6 +502,7 @@ TEST_CASE( "Partial function call", "[script][interpreter]" )
     // partial call: `add 1` returns a lambda which takes single argument
     CHECK(interpret_std("(add 1) 2") == "3");
     CHECK(interpret_std("{add 1} 2") == "3");
+    CHECK(interpret_std("f=add 1; f 2") == "3");
     CHECK(interpret_std("f={add 1}; f 2") == "3");
     CHECK(interpret_std("f=fun x:Int {add x}; f 2 1") == "3");
     CHECK(interpret_std("f=fun x:Int {add 3}; f 2 1") == "4");

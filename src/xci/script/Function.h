@@ -103,7 +103,7 @@ public:
     std::vector<TypeInfo> closure_types() const;
 
     // true if this function should be generic (i.e. signature contains a type variable)
-    bool detect_generic() const;
+    bool detect_generic() const { return m_signature->has_generic_params(); }
 
     // Kind of function body
 
@@ -115,8 +115,6 @@ public:
         Code code;
         // Counter for code bytes from intrinsics
         unsigned intrinsics = 0;
-        // If function should be inlined at call site
-        bool is_fragment = false;
     };
 
     // function is a template, signature contains type variables
@@ -149,14 +147,12 @@ public:
     };
 
     void set_compiled() { m_body = CompiledBody{}; }
-    void set_fragment() { m_body = CompiledBody{{}, 0, true}; }
 
     void set_native(NativeDelegate native) { m_body = NativeBody{native}; }
     void call_native(Stack& stack) const { std::get<NativeBody>(m_body).native(stack); }
 
     bool is_undefined() const { return std::holds_alternative<std::monostate>(m_body); }
     bool is_compiled() const { return std::holds_alternative<CompiledBody>(m_body); }
-    bool is_fragment() const { return std::holds_alternative<CompiledBody>(m_body) && std::get<CompiledBody>(m_body).is_fragment; }
     bool is_generic() const { return std::holds_alternative<GenericBody>(m_body); }
     bool is_native() const { return std::holds_alternative<NativeBody>(m_body); }
 

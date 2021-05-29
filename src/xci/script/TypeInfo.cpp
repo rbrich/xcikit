@@ -284,7 +284,7 @@ std::string TypeInfo::name() const
 }
 
 
-bool Signature::is_generic() const
+bool Signature::has_generic_params() const
 {
     return ranges::any_of(params, [](const TypeInfo& type_info) {
         return type_info.is_generic();
