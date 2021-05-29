@@ -39,10 +39,6 @@ public:
     static BuiltinModule& static_instance();
 
 private:
-    void add_logical_op_function(const std::string& name, Opcode opcode);
-    void add_bitwise_op_function(const std::string& name, Opcode opcode);
-    void add_arithmetic_op_function(const std::string& name, Opcode opcode);
-    void add_unary_op_functions();
     void add_intrinsics();
     void add_types();
     void add_io_functions();

@@ -62,25 +62,36 @@ std::string parse(const string& input)
     } while(false)
 
 
+void import_std_module(Interpreter& interpreter)
+{
+    static std::unique_ptr<Module> module;
+    static BufferPtr content;
+    const char* std_path = "script/std.fire";
+    if (!module) {
+        Logger::init(Logger::Level::Warning);
+        Vfs vfs;
+        vfs.mount(XCI_SHARE);
+
+        auto f = vfs.read_file(std_path);
+        REQUIRE(f.is_open());
+        content = f.content();
+        auto src_id = interpreter.source_manager().add_source(std_path, content->string());
+        module = interpreter.build_module("std", src_id);
+        assert(src_id == 1);
+    } else {
+        auto src_id = interpreter.source_manager().add_source(std_path, content->string());
+        assert(src_id == 1);
+    }
+    interpreter.add_imported_module(*module);
+}
+
+
 std::string interpret(const string& input, bool import_std=false)
 {
     Interpreter interpreter;
 
     if (import_std) {
-        static std::unique_ptr<Module> std_module;
-        if (!std_module) {
-            Logger::init(Logger::Level::Warning);
-            Vfs vfs;
-            vfs.mount(XCI_SHARE);
-
-            const char* std_path = "script/std.fire";
-            auto f = vfs.read_file(std_path);
-            REQUIRE(f.is_open());
-            auto content = f.content();
-            auto src_id = interpreter.source_manager().add_source(std_path, content->string());
-            std_module = interpreter.build_module("std", src_id);
-        }
-        interpreter.add_imported_module(*std_module);
+        import_std_module(interpreter);
     }
 
     UNSCOPED_INFO(input);
@@ -231,9 +242,9 @@ TEST_CASE( "Operator precedence", "[script][parser]" )
     CHECK(interpret_std("succ 9 + max 5 4 + 1") == "16");
     CHECK(interpret_std("(succ 9) + (max 5 4) + 1") == "16");
     CHECK(interpret_std("succ 9 + 5 .max 4 + 1") == "16");
-    CHECK(interpret("1 .add 2 .mul 3") == "9");
-    CHECK(interpret("(1 .add 2).mul 3") == "9");
-    CHECK(interpret("1 .add (2 .mul 3)") == "7");
+    CHECK(interpret_std("1 .add 2 .mul 3") == "9");
+    CHECK(interpret_std("(1 .add 2).mul 3") == "9");
+    CHECK(interpret_std("1 .add (2 .mul 3)") == "7");
     CHECK(interpret_std("pred (neg (succ (14)))") == "-16");
     CHECK(interpret_std("14 .succ .neg .pred") == "-16");
     CHECK(interpret_std("(((14) .succ) .neg) .pred") == "-16");
@@ -348,17 +359,17 @@ TEST_CASE( "Literals", "[script][interpreter]" )
 
 TEST_CASE( "Expressions", "[script][interpreter]" )
 {
-    CHECK(interpret("add 1 2") == "3");
-    CHECK(interpret("sub (add 1 2) 3") == "0");
-    CHECK(interpret("sub (1 + 2) 3") == "0");
-    CHECK(interpret("(1 + 2) - 3") == "0");
-    CHECK(interpret("1 + 2 - 3") == "0");
+    CHECK(interpret_std("add 1 2") == "3");
+    CHECK(interpret_std("sub (add 1 2) 3") == "0");
+    CHECK(interpret_std("sub (1 + 2) 3") == "0");
+    CHECK(interpret_std("(1 + 2) - 3") == "0");
+    CHECK(interpret_std("1 + 2 - 3") == "0");
 
-    CHECK(interpret("1 + 6/5") == "2");
+    CHECK(interpret_std("1 + 6/5") == "2");
     CHECK(interpret_std("1 + 2 / 3 == 1 + (2 / 3)") == "true");
-    CHECK(interpret("-(1 + 2)") == "-3");
-    CHECK(interpret("1+1, {2+2}") == "(2, 4)");
-    CHECK(interpret("f=fun a:Int {a+1}; [1, f 2]") == "[1, 3]");
+    CHECK(interpret_std("-(1 + 2)") == "-3");
+    CHECK(interpret_std("1+1, {2+2}") == "(2, 4)");
+    CHECK(interpret_std("f=fun a:Int {a+1}; [1, f 2]") == "[1, 3]");
 }
 
 
@@ -369,8 +380,8 @@ TEST_CASE( "Types", "[script][interpreter]" )
     CHECK_THROWS_AS(interpret("a:Int = 1.0 ; a"), DefinitionTypeMismatch);
 
     // function type can be specified in lambda or specified explicitly
-    CHECK(interpret("f = fun a:Int b:Int -> Int {a+b}; f 1 2") == "3");
-    CHECK(interpret("f : Int Int -> Int = fun a b {a+b}; f 1 2") == "3");
+    CHECK(interpret_std("f = fun a:Int b:Int -> Int {a+b}; f 1 2") == "3");
+    CHECK(interpret_std("f : Int Int -> Int = fun a b {a+b}; f 1 2") == "3");
 
     // TODO: narrowing type of polymorphic function (`f 1.0 2.0` would be error, while `add 1.0 2.0` still works)
     // CHECK(interpret("f : Int Int -> Int = add ; f 1 2") == "3");
@@ -396,16 +407,16 @@ TEST_CASE( "Blocks", "[script][interpreter]" )
     CHECK(interpret("{}") == "");  // empty function (has Void type)
     CHECK(interpret("{{}}") == "");  // empty function in empty function
     CHECK(interpret("{};{};{}") == "");  // three empty functions
-    CHECK(interpret("{1+2}") == "3"); // non-empty
-    CHECK(interpret("{{{1+2}}}") == "3"); // three wrapped functions, each returns the result of inner one
-    CHECK(interpret("{1+2;4;{}}") == "3;4;");  // {} as the last statement changes function result to Void, intermediate results are "invoked"
-    CHECK(interpret("x=4; b = 3 + {x+1}; b") == "8");
+    CHECK(interpret_std("{1+2}") == "3"); // non-empty
+    CHECK(interpret_std("{{{1+2}}}") == "3"); // three wrapped functions, each returns the result of inner one
+    CHECK(interpret_std("{1+2;4;{}}") == "3;4;");  // {} as the last statement changes function result to Void, intermediate results are "invoked"
+    CHECK(interpret_std("x=4; b = 3 + {x+1}; b") == "8");
 
     // blocks can be assigned to a name
     CHECK(interpret("a = {}; a") == "");  // empty block can be named too, `a` is a named function of Void type
-    CHECK(interpret("b = {1+2}; b") == "3");
+    CHECK(interpret_std("b = {1+2}; b") == "3");
     CHECK(interpret("b = { a = 1; a }; b") == "1");
-    CHECK(interpret("b:Int = {1+2}; b") == "3");
+    CHECK(interpret_std("b:Int = {1+2}; b") == "3");
 
     // blocks are evaluated after all definitions in the scope,
     // which means they can use names from parent scope that are defined later
@@ -418,60 +429,60 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     CHECK(parse("fun Int -> Int {}") == "fun Int -> Int {}");
 
     // returned lambda
-    CHECK(interpret("fun x:Int->Int { x + 1 }") == "<lambda> Int32 -> Int32");
-    CHECK_THROWS_AS(interpret("fun x { x + 1 }"), UnexpectedGenericFunction);  // generic lambda must be either assigned or resolved by calling
+    CHECK(interpret_std("fun x:Int->Int { x + 1 }") == "<lambda> Int32 -> Int32");
+    CHECK_THROWS_AS(interpret_std("fun x { x + 1 }"), UnexpectedGenericFunction);  // generic lambda must be either assigned or resolved by calling
 
     // immediately called lambda
-    CHECK(interpret("fun x:Int {x+1} 2") == "3");
-    CHECK(interpret("fun x {x+1} 2") == "3");  // generic lambda
-    CHECK(interpret("b = 3 + fun x {2*x} 2; b") == "7");
+    CHECK(interpret_std("fun x:Int {x+1} 2") == "3");
+    CHECK(interpret_std("fun x {x+1} 2") == "3");  // generic lambda
+    CHECK(interpret_std("b = 3 + fun x {2*x} 2; b") == "7");
 
     // generic function in local scope
-    CHECK(interpret("outer = fun y { inner = fun x { x+1 }; inner y }; outer 2") == "3");
+    CHECK(interpret_std("outer = fun y { inner = fun x { x+1 }; inner y }; outer 2") == "3");
 
     // argument propagation:
-    CHECK(interpret("f = fun a:Int { fun b:Int { a+b } }; f 1 2") == "3");  //  `f` returns a function which consumes the second arg
-    CHECK(interpret("f = fun a:Int { fun b:Int { fun c:Int { a+b+c } } }; f 1 2 3") == "6");
-    CHECK(interpret("{ fun x:Int {x*2} } 3") == "6");  // lambda propagates through wrapped blocks and is then called
-    CHECK(interpret("{{{ fun x:Int {x*2} }}} 3") == "6");  // lambda propagates through wrapped blocks and is then called
+    CHECK(interpret_std("f = fun a:Int { fun b:Int { a+b } }; f 1 2") == "3");  //  `f` returns a function which consumes the second arg
+    CHECK(interpret_std("f = fun a:Int { fun b:Int { fun c:Int { a+b+c } } }; f 1 2 3") == "6");
+    CHECK(interpret_std("{ fun x:Int {x*2} } 3") == "6");  // lambda propagates through wrapped blocks and is then called
+    CHECK(interpret_std("{{{ fun x:Int {x*2} }}} 3") == "6");  // lambda propagates through wrapped blocks and is then called
 
     // closure: inner function uses outer function's parameter
-    CHECK(interpret("f = fun a:Int b:Int c:Int { "
-                    "w=fun c1:Int {a / b - c1}; w c }; f 10 2 3") == "2");
+    CHECK(interpret_std("f = fun a:Int b:Int c:Int { "
+                        "w=fun c1:Int {a / b - c1}; w c }; f 10 2 3") == "2");
     // closure: outer closure used by inner function
-    CHECK(interpret("f = fun a:Int b:Int c:Int { "
-                    "g=fun c1:Int {a * b - c1}; "
-                    "h=fun c1:Int {g c1}; "
-                    "h c }; f 4 2 3") == "5");
-    CHECK(interpret("f = fun a:Int b:Int c:Int { "
-                    "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 + b}; "
-                    "w=fun b1:Int c1:Int {a + u b1 + v c1}; "
-                    "w b c }; f 1 2 3") == "9");
+    CHECK(interpret_std("f = fun a:Int b:Int c:Int { "
+                        "g=fun c1:Int {a * b - c1}; "
+                        "h=fun c1:Int {g c1}; "
+                        "h c }; f 4 2 3") == "5");
+    CHECK(interpret_std("f = fun a:Int b:Int c:Int { "
+                        "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 + b}; "
+                        "w=fun b1:Int c1:Int {a + u b1 + v c1}; "
+                        "w b c }; f 1 2 3") == "9");
 
-    CHECK(interpret("outer = fun y:Int {"
-                    "inner = fun x:Int { x + y }; inner y "
-                    "}; outer 2") == "4");
-    CHECK(interpret("outer = fun y:Int {"
-                    "  inner = fun x:Int { x + y };"
-                    "  alias = inner; alias y "
-                    "}; outer 2") == "4");
-    CHECK(interpret("outer = fun y {"
-                    "  inner = fun x:Int { x + y };"
-                    "  wrapped = fun x:Int { inner x };"
-                    "  wrapped y "
-                    "}; outer 2") == "4");
-    CHECK(interpret("outer = fun y {"
-                    "  inner = fun x:Int { in2 = fun z:Int{ x + z }; in2 y };"
-                    "  wrapped = fun x:Int { inner x }; wrapped y"
-                    "}; outer 2") == "4");
+    CHECK(interpret_std("outer = fun y:Int {"
+                        "inner = fun x:Int { x + y }; inner y "
+                        "}; outer 2") == "4");
+    CHECK(interpret_std("outer = fun y:Int {"
+                        "  inner = fun x:Int { x + y };"
+                        "  alias = inner; alias y "
+                        "}; outer 2") == "4");
+    CHECK(interpret_std("outer = fun y {"
+                        "  inner = fun x:Int { x + y };"
+                        "  wrapped = fun x:Int { inner x };"
+                        "  wrapped y "
+                        "}; outer 2") == "4");
+    CHECK(interpret_std("outer = fun y {"
+                        "  inner = fun x:Int { in2 = fun z:Int{ x + z }; in2 y };"
+                        "  wrapped = fun x:Int { inner x }; wrapped y"
+                        "}; outer 2") == "4");
 
     // closure: fully generic
-    CHECK(interpret("outer = fun y { inner = fun x { x + y }; inner 3 * inner y }; outer 2") == "20");
-    CHECK(interpret("outer = fun y {"
-                    "  inner = fun x { x + y };"
-                    "  wrapped = fun x { inner x };"
-                    "  wrapped y "
-                    "}; outer 2") == "4");
+    CHECK(interpret_std("outer = fun y { inner = fun x { x + y }; inner 3 * inner y }; outer 2") == "20");
+    CHECK(interpret_std("outer = fun y {"
+                        "  inner = fun x { x + y };"
+                        "  wrapped = fun x { inner x };"
+                        "  wrapped y "
+                        "}; outer 2") == "4");
 
     // multiple specializations
     // * each specialization is generated only once
@@ -485,30 +496,30 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
 TEST_CASE( "Partial function call", "[script][interpreter]" )
 {
     // partial call: `add 1` returns a lambda which takes single argument
-    CHECK(interpret("(add 1) 2") == "3");
-    CHECK(interpret("{add 1} 2") == "3");
-    CHECK(interpret("f={add 1}; f 2") == "3");
-    CHECK(interpret("f=fun x:Int {add x}; f 2 1") == "3");
-    CHECK(interpret("f=fun x:Int {add 3}; f 2 1") == "4");
-    CHECK(interpret("f=fun x:Int y:Int z:Int { (x - y) * z}; g=fun x1:Int { f 3 x1 }; g 4 5") == "-5");
-    CHECK(interpret("f=fun x:Int y:Int { g=fun x1:Int z1:Int { (y - x1) / z1 }; g x }; f 1 10 3") == "3");
-    CHECK(interpret("f = fun a:Int b:Int { "
-                    "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 - b}; "
-                    "w=fun b1:Int c1:Int {a * u b1 / v c1}; "
-                    "w b }; f 1 2 3") == "3");
+    CHECK(interpret_std("(add 1) 2") == "3");
+    CHECK(interpret_std("{add 1} 2") == "3");
+    CHECK(interpret_std("f={add 1}; f 2") == "3");
+    CHECK(interpret_std("f=fun x:Int {add x}; f 2 1") == "3");
+    CHECK(interpret_std("f=fun x:Int {add 3}; f 2 1") == "4");
+    CHECK(interpret_std("f=fun x:Int y:Int z:Int { (x - y) * z}; g=fun x1:Int { f 3 x1 }; g 4 5") == "-5");
+    CHECK(interpret_std("f=fun x:Int y:Int { g=fun x1:Int z1:Int { (y - x1) / z1 }; g x }; f 1 10 3") == "3");
+    CHECK(interpret_std("f = fun a:Int b:Int { "
+                        "u=fun b2:Int {a + b2}; v=fun c2:Int {c2 - b}; "
+                        "w=fun b1:Int c1:Int {a * u b1 / v c1}; "
+                        "w b }; f 1 2 3") == "3");
     // [closure.fire] return closure with captured closures, propagate arguments into the closure
-    CHECK(interpret("f = fun a:Int { "
-                    "u=fun b2:Int {a / b2}; v=fun c2:Int {c2 - a}; "
-                    "fun b1:Int c1:Int {a + u b1 + v c1} }; f 4 2 3") == "5");
+    CHECK(interpret_std("f = fun a:Int { "
+                        "u=fun b2:Int {a / b2}; v=fun c2:Int {c2 - a}; "
+                        "fun b1:Int c1:Int {a + u b1 + v c1} }; f 4 2 3") == "5");
 }
 
 
 TEST_CASE( "Generic functions", "[script][interpreter]" )
 {
     // `f` is a generic function, instantiated to Int->Int by the call
-    CHECK(interpret("f=fun x {x + 1}; f (f (f 2))") == "5");
+    CHECK(interpret_std("f=fun x {x + 1}; f (f (f 2))") == "5");
     // generic functions can capture from outer scope
-    CHECK(interpret("a=3; f=fun x {a + x}; f 4") == "7");
+    CHECK(interpret_std("a=3; f=fun x {a + x}; f 4") == "7");
     // generic type declaration, type constraint
     CHECK(interpret_std("f = fun<T> x:T y:T -> Bool with (Eq T) { x == y }; f 1 2") == "false");
 }
@@ -519,9 +530,9 @@ TEST_CASE( "Lexical scope", "[script][interpreter]" )
     CHECK(interpret("{a=1; b=2}") == "");
     CHECK_THROWS_AS(interpret("{a=1; b=2} a"), UndefinedName);
 
-    CHECK(interpret("x=1; y = { x + 2 }; y") == "3");
-    CHECK(interpret("a=1; {b=2; {a + b}}") == "3");
-    CHECK(interpret("a=1; f=fun b:Int {a + b}; f 2") == "3");
+    CHECK(interpret_std("x=1; y = { x + 2 }; y") == "3");
+    CHECK(interpret_std("a=1; {b=2; {a + b}}") == "3");
+    CHECK(interpret_std("a=1; f=fun b:Int {a + b}; f 2") == "3");
 
     // recursion
     CHECK(interpret_std("f=fun x:Int->Int { x; if x <= 1 then 0 else f (x-1) }; f 5") == "5;4;3;2;1;0");      // yield intermediate steps
@@ -622,7 +633,7 @@ TEST_CASE( "Compiler intrinsics", "[script][interpreter]" )
     // function signature must be explicitly declared, it's never inferred from intrinsics
     // parameter names are not needed (and not used), intrinsics work directly with stack
     // e.g. __equal_32 pulls two 32bit values and pushes 8bit Bool value back
-    CHECK(interpret("my_eq = fun Int32 Int32 -> Bool { __equal_32 }; my_eq 42 (2*21)") == "true");
+    CHECK(interpret_std("my_eq = fun Int32 Int32 -> Bool { __equal_32 }; my_eq 42 (2*21)") == "true");
     // alternative style - essentially the same
     CHECK(interpret("my_eq : Int32 Int32 -> Bool = { __equal_32 }; my_eq 42 43") == "false");
     // intrinsic with arguments
@@ -672,6 +683,7 @@ TEST_CASE( "Native functions: free function", "[script][native]" )
 {
     Interpreter interpreter;
     Module module;
+    import_std_module(interpreter);
     interpreter.add_imported_module(module);
 
     // free function
@@ -703,8 +715,8 @@ TEST_CASE( "Native functions: lambda", "[script][native]" )
             &state);
 
     auto result = interpreter.eval(R"(
-        ((add1 1 6) +          //  7
-        (add2 3 4))            //  8  (+10 from state)
+        (add1 (add1 1 6)       //  7
+              (add2 3 4))      //  8  (+10 from state)
     )");
     CHECK(result.type() == Type::Int32);
     CHECK(result.get<int32_t>() == 24);
