@@ -47,7 +47,7 @@ struct ExprCond;
 struct ExprWith;
 struct Statement;
 struct ExprArgSafe;
-struct ExprOperand;
+struct ExprPrefix;
 struct ExprCallable;
 struct ExprStruct;
 struct Type;
@@ -137,25 +137,25 @@ struct Type: sor< BracketedType, ListType, TypeName > {};
 // * some rules are parametrized with S (space type), choose either SC or NSC (allow newline)
 // * in general, rules inside brackets (round or square) use NSC, rules outside brackets use SC
 // * this allows leaving out semicolons but still support multiline expressions
+template<class S> struct Call: seq< ExprCallable, plus<RS, S, ExprArgSafe> > {};
 template<class S> struct DotCall: if_must< one<'.'>, SC, seq< ExprCallable, star<RS, S, ExprArgSafe> > > {};
-template<class S> struct ExprInfixRight: seq< sor< DotCall<S>, seq<InfixOperator, NSC, ExprOperand> >, S, opt< ExprInfixRight<S> > > {};
+template<class S> struct ExprOperand: sor<Call<S>, ExprArgSafe, ExprPrefix> {};
+template<class S> struct ExprInfixRight: seq< sor< DotCall<S>, seq<InfixOperator, NSC, ExprOperand<S>> >, S, opt< ExprInfixRight<S> > > {};
 template<class S> struct TrailingComma: opt<S, one<','>> {};
-template<class S> struct ExprInfix: seq< ExprOperand, S, opt<ExprInfixRight<S>>, TrailingComma<S> > {};
-template<> struct ExprInfix<SC>: seq< ExprOperand, sor< seq<NSC, at< one<'.'> > >, SC>, opt<ExprInfixRight<SC>>, TrailingComma<SC> > {};  // specialization to allow newline before dotcall even outside brackets
+template<class S> struct ExprInfix: seq< ExprOperand<S>, S, opt<ExprInfixRight<S>>, TrailingComma<S> > {};
+template<> struct ExprInfix<SC>: seq< ExprOperand<SC>, sor< seq<NSC, at< one<'.'> > >, SC>, opt<ExprInfixRight<SC>>, TrailingComma<SC> > {};  // specialization to allow newline before dotcall even outside brackets
 template<class S> struct Expression: sor< ExprCond, ExprWith, ExprStruct, ExprInfix<S> > {};
 struct Variable: seq< Identifier, opt<SC, one<':'>, SC, must<UnsafeType> > > {};
 struct Block: if_must< one<'{'>, NSC, sor< one<'}'>, seq<SepList<Statement>, NSC, one<'}'>> > > {};
 struct Function: sor< Block, if_must< KeywordFun, NSC, FunctionDecl, NSC, Block> > {};
 struct BracketedExpr: if_must< one<'('>, NSC, Expression<NSC>, NSC, one<')'> > {};
-struct ExprPrefix: if_must< PrefixOperator, SC, ExprOperand, SC > {};
+struct ExprPrefix: if_must< PrefixOperator, SC, ExprOperand<SC>, SC > {};
 struct TypeArgs: seq< one<'<'>, Type, one<'>'> > {};
 struct Reference: seq<Identifier, opt<TypeArgs>, not_at<one<'"'>>> {};
 struct List: if_must< one<'['>, NSC, opt<ExprInfix<NSC>, NSC>, one<']'> > {};
 struct Cast: seq<SC, one<':'>, SC, Type> {};
 struct ExprCallable: sor< BracketedExpr, Function, Reference> {};
 struct ExprArgSafe: seq< sor< BracketedExpr, List, Function, Literal, Reference >, opt<Cast>> {};  // expressions which can be used as args in Call
-struct Call: seq< ExprCallable, plus<RS, SC, ExprArgSafe> > {};
-struct ExprOperand: sor<Call, ExprArgSafe, ExprPrefix> {};
 struct ExprCond: if_must< KeywordIf, NSC, ExprInfix<NSC>, NSC, KeywordThen, NSC, Expression<SC>, NSC, KeywordElse, NSC, Expression<SC>> {};
 struct ExprWith: if_must< KeywordWith, NSC, ExprArgSafe, NSC, Expression<SC> > {};  // might be parsed as a function, but that wouldn't allow newlines
 struct ExprStructItem: seq< Identifier, SC, one<'='>, not_at<one<'='>>, SC, must<ExprArgSafe> > {};
@@ -541,8 +541,8 @@ struct Action<Reference> : change_states< ast::Reference > {
 };
 
 
-template<>
-struct Action<Call> : change_states< ast::Call > {
+template<class S>
+struct Action<Call<S>> : change_states< ast::Call > {
     template<typename Input>
     static void apply(const Input &in, ast::Call& call) {
         call.source_loc.load(in.input(), in.position());
