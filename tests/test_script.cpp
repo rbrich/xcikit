@@ -585,6 +585,7 @@ TEST_CASE( "Subscript", "[script][interpreter]" )
     CHECK(interpret_std("[1,2,3] ! 2") == "3");
     CHECK_THROWS_AS(interpret_std("[1,2,3]!3"), IndexOutOfBounds);
     CHECK(interpret_std("['a','b','c'] ! 1") == "'b'");
+    CHECK(interpret_std("l=[1,2,3,4,5]; l!0 + l!1 + l!2 + l!3 + l!4") == "15");  // inefficient sum
     CHECK(interpret_std("[[1,2],[3,4],[5,6]] ! 1 ! 0") == "3");
     CHECK(interpret_std("head = fun l:[Int] -> Int { l!0 }; head [1,2,3]") == "1");
     CHECK(interpret_std("head = fun<T> l:[T] -> T { l!0 }; head ['a','b','c']") == "'a'");

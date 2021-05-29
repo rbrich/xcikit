@@ -185,6 +185,7 @@ public:
 struct Identifier {
     Identifier() = default;
     explicit Identifier(std::string s) : name(std::move(s)) {}
+    explicit Identifier(std::string s, const SourceLocation& loc) : name(std::move(s)), source_loc(loc) {}
     explicit operator bool() const { return !name.empty(); }
 
     std::string name;

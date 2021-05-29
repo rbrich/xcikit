@@ -221,7 +221,7 @@ public:
 
     void visit(ast::OpCall& v) override {
         assert(!v.right_tmp);
-        v.callable = make_unique<ast::Reference>(ast::Identifier{builtin::op_to_function_name(v.op.op)});
+        v.callable = make_unique<ast::Reference>(ast::Identifier{builtin::op_to_function_name(v.op.op), v.source_loc});
         visit(*static_cast<ast::Call*>(&v));
     }
 

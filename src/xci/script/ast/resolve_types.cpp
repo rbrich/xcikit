@@ -83,11 +83,11 @@ private:
 /// \returns Match: None/Generic/Partial
 static Match match_type(const TypeInfo& inferred, const TypeInfo& actual)
 {
-    if (!actual || !inferred)
-        return Match::Generic;  // any type matches Unknown type
     if (actual.is_struct() && inferred.is_struct())
         return match_struct(inferred, actual);
-    return inferred == actual ? Match::Partial : Match::None;
+    return inferred == actual
+        ? ( (actual.is_generic() || inferred.is_generic()) ? Match::Generic : Match::Partial)
+        : Match::None;
 }
 
 
@@ -472,7 +472,7 @@ public:
                 if (exact_candidates.empty())
                     throw FunctionNotFound(v.identifier.name, o_ftype.str(), o_candidates.str());
                 else
-                    throw FunctionConflict(v.identifier.name, o_ftype.str(), o_candidates.str());
+                    throw FunctionConflict(v.identifier.name, o_ftype.str(), o_candidates.str(), v.identifier.source_loc);
             }
             case Symbol::Function: {
                 // find matching instance
@@ -560,7 +560,7 @@ public:
 
                 if (conflict) {
                     // ERROR found multiple matching functions
-                    throw FunctionConflict(v.identifier.name, o_args.str(), o_candidates.str());
+                    throw FunctionConflict(v.identifier.name, o_args.str(), o_candidates.str(), v.identifier.source_loc);
                 } else {
                     // ERROR couldn't find matching function for `args`
                     throw FunctionNotFound(v.identifier.name, o_args.str(), o_candidates.str());

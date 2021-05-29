@@ -177,8 +177,9 @@ struct FunctionNotFound : public ScriptError {
 
 struct FunctionConflict : public ScriptError {
     explicit FunctionConflict(string_view name, string_view args,
-                              string_view candidates)
-            : ScriptError(format("function cannot be uniquely resolved: {} {}\n   Candidates:\n{}", name, args, candidates)) {}
+                              string_view candidates, const SourceLocation& loc)
+            : ScriptError(format("function cannot be uniquely resolved: {} {}\n"
+                                 "   Candidates:\n{}", name, args, candidates), loc) {}
 };
 
 
