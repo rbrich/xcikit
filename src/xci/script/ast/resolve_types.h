@@ -14,8 +14,7 @@ namespace xci::script {
 
 /// Check and propagate type information
 
-void resolve_types(Function& func, const ast::Block& block,
-                   const std::vector<TypeInfo>& type_args = {});
+void resolve_types(Function& func, const ast::Block& block);
 
 
 } // namespace xci::script

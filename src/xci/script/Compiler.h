@@ -39,7 +39,7 @@ public:
         // - each flag may bring in other flags as its dependencies
         PPTuple         = FoldTuple,
         PPDotCall       = FoldDotCall,
-        PPSymbols       = ResolveSymbols,
+        PPSymbols       = ResolveSymbols | PPDotCall,
         PPTypes         = ResolveTypes | PPSymbols,
         PPNonlocals     = ResolveNonlocals | PPTypes,
 

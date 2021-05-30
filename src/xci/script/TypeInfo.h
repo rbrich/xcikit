@@ -144,6 +144,7 @@ private:
 
 
 struct Signature {
+    std::vector<TypeInfo> type_args;  // resolved type variables or explicit type args (index = var# - 1)
     std::vector<TypeInfo> nonlocals;
     std::vector<TypeInfo> partial;
     std::vector<TypeInfo> params;

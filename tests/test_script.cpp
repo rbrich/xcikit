@@ -646,6 +646,7 @@ TEST_CASE( "Compiler intrinsics", "[script][interpreter]" )
     CHECK(interpret("my_cast : Int32 -> Int64 = { __cast 0x89 }; my_cast 42") == "42L");
     // Static value
     CHECK(interpret("add42 = fun Int->Int { __load_static (__value 42); __add_32 }; add42 8") == "50");
+    CHECK(interpret("add42 = fun Int->Int { __value 42 . __load_static; __add_32 }; add42 8") == "50");
 }
 
 
