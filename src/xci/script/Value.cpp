@@ -277,6 +277,15 @@ bool Value::cast_from(const Value& src)
 }
 
 
+int64_t Value::to_int64() const
+{
+    value::Int64 to_val;
+    bool ok = to_val.cast_from(*this);
+    assert(ok);
+    return to_val.value();
+}
+
+
 StringV::StringV(std::string_view v)
         : slot(v.size() + sizeof(uint32_t))
 {

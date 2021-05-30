@@ -219,6 +219,8 @@ public:
     template <class T> T& get() { return std::get<T>(m_value); }
     template <class T> const T& get() const { return std::get<T>(m_value); }
 
+    int64_t to_int64() const;
+
     std::string_view get_string() const { return get<StringV>().value(); }
     void tuple_foreach(const std::function<void(const Value&)>& cb) const { return get<TupleV>().foreach(cb); }
     const script::Module& get_module() const { return *get<script::Module*>(); }

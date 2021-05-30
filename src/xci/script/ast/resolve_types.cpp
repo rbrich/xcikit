@@ -196,7 +196,8 @@ public:
     void visit(ast::Invocation& inv) override {
         inv.expression->apply(*this);
         auto res_type = m_value_type.effective_type();
-        if (!res_type.is_void())
+        // Unknown in intrinsics function
+        if (!res_type.is_void() && !res_type.is_unknown())
             inv.type_id = get_type_id(move(res_type));
     }
 
@@ -606,6 +607,17 @@ public:
                 m_value_type = m_function.parameter(sym.index());
                 break;
             case Symbol::Value:
+                if (sym.index() == no_index) {
+                    m_intrinsic = true;
+                    // __value - expects a single parameter
+                    if (m_call_args.size() != 1)
+                        throw UnexpectedArgumentCount(1, m_call_args.size(), v.source_loc);
+                    // cleanup - args are now fully processed
+                    m_call_args.clear();
+                    // __value returns index (Int32)
+                    m_value_type = ti_int32();
+                    break;
+                }
                 m_value_type = symtab.module()->get_value(sym.index()).type_info();
                 break;
             case Symbol::TypeName:

@@ -636,14 +636,16 @@ TEST_CASE( "With expression, I/O streams", "[script][interpreter]" )
 
 TEST_CASE( "Compiler intrinsics", "[script][interpreter]" )
 {
-    // function signature must be explicitly declared, it's never inferred from intrinsics
-    // parameter names are not needed (and not used), intrinsics work directly with stack
-    // e.g. __equal_32 pulls two 32bit values and pushes 8bit Bool value back
+    // Function signature must be explicitly declared, it's never inferred from intrinsics.
+    // Parameter names are not needed (and not used), intrinsics work directly with stack.
+    // E.g. __equal_32 pulls two 32bit values and pushes 8bit Bool value back.
     CHECK(interpret_std("my_eq = fun Int32 Int32 -> Bool { __equal_32 }; my_eq 42 (2*21)") == "true");
     // alternative style - essentially the same
     CHECK(interpret("my_eq : Int32 Int32 -> Bool = { __equal_32 }; my_eq 42 43") == "false");
     // intrinsic with arguments
     CHECK(interpret("my_cast : Int32 -> Int64 = { __cast 0x89 }; my_cast 42") == "42L");
+    // Static value
+    CHECK(interpret("add42 = fun Int->Int { __load_static (__value 42); __add_32 }; add42 8") == "50");
 }
 
 

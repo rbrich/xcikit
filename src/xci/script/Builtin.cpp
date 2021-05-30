@@ -324,6 +324,7 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__exp_64", Symbol::Instruction, Index(Opcode::Exp_64)});
 
     // one arg
+    symtab().add({"__load_static", Symbol::Instruction, Index(Opcode::LoadStatic)});
     symtab().add({"__subscript", Symbol::Instruction, Index(Opcode::Subscript)});
     symtab().add({"__cast", Symbol::Instruction, Index(Opcode::Cast)});
 
@@ -333,7 +334,6 @@ void BuiltinModule::add_intrinsics()
     /*
     // not yet found any use for these, uncomment when needed
     symtab().add({"__execute", Symbol::Instruction, Index(Opcode::Execute)});
-    symtab().add({"__load_static", Symbol::Instruction, Index(Opcode::LoadStatic)});
     symtab().add({"__load_module", Symbol::Instruction, Index(Opcode::LoadModule)});
     symtab().add({"__load_function", Symbol::Instruction, Index(Opcode::LoadFunction)});
     symtab().add({"__call0", Symbol::Instruction, Index(Opcode::Call0)});
@@ -352,7 +352,10 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__partial", Symbol::Instruction, Index(Opcode::Partial)});
     */
 
+    // `__type_id<Int>` is index of Int type
     symtab().add({"__type_id", Symbol::TypeId});
+    // `__value 42` is index of static value 42 (e.g. `__load_static (__value 42)`)
+    symtab().add({"__value", Symbol::Value});
 }
 
 
