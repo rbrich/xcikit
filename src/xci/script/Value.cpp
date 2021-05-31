@@ -282,6 +282,7 @@ int64_t Value::to_int64() const
     value::Int64 to_val;
     bool ok = to_val.cast_from(*this);
     assert(ok);
+    (void) ok;
     return to_val.value();
 }
 

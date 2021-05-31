@@ -86,7 +86,8 @@ public:
     void ensure_ast_copy() { std::get<GenericBody>(m_body).ensure_copy(); }
 
     // non-locals
-    void add_nonlocal(TypeInfo&& type_info);
+    Index add_nonlocal(TypeInfo&& type_info);
+    void set_nonlocal(Index idx, TypeInfo&& type_info);
     bool has_nonlocals() const { return !m_signature->nonlocals.empty(); }
     const std::vector<TypeInfo>& nonlocals() const { return m_signature->nonlocals; }
     size_t raw_size_of_nonlocals() const;  // size of all nonlocals in bytes

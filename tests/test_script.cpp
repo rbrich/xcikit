@@ -527,6 +527,14 @@ TEST_CASE( "Generic functions", "[script][interpreter]" )
     CHECK(interpret_std("a=3; f=fun x {a + x}; f 4") == "7");
     // generic type declaration, type constraint
     CHECK(interpret_std("f = fun<T> x:T y:T -> Bool with (Eq T) { x == y }; f 1 2") == "false");
+
+    // === Propagating and deducing function types ===
+    // arg to ret via type parameter
+    CHECK(interpret("fun<T> T->T { __noop } 1") == "1");
+    CHECK(interpret("f = fun<T> T->T { __noop }; f 2") == "2");
+    CHECK(interpret("f = fun<T> T->T { __noop }; f (f 3)") == "3");
+    CHECK(interpret("f = fun<T> T->T { __noop }; 4 .f .f .f") == "4");
+    CHECK(interpret("f = fun<T> T->T { __noop }; same = fun<T> x:T -> T { f (f x) }; same 5") == "5");
 }
 
 

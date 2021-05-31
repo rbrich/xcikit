@@ -464,96 +464,11 @@ public:
                     throw FunctionConflict(v.identifier.name, o_ftype.str(), o_candidates.str(), v.identifier.source_loc);
             }
             case Symbol::Function: {
-                // find matching instance
-                auto symptr = v.identifier.symbol;
-                struct Item {
-                    Module* module;
-                    Index index;
-                    SymbolPointer symptr;
-                    TypeInfo type;
-                    Match match;
-                };
-                std::vector<Item> candidates;
-                while (symptr) {
-                    while (symptr->depth() != 0)
-                        symptr = symptr->ref();
-
-                    auto* symmod = symptr.symtab()->module();
-                    if (symmod == nullptr)
-                        symmod = &module();
-                    auto& fn = symmod->get_function(symptr->index());
-                    const auto& sig_ptr = fn.signature_ptr();
-                    auto m = match_params(*sig_ptr);
-                    candidates.push_back({symmod, symptr->index(), symptr, TypeInfo{sig_ptr}, m});
-
-                    // Check also specializations when the function is generic
-                    if (fn.detect_generic()) {
-                        for (auto spec_idx : module().get_spec_functions(symptr)) {
-                            auto& spec_fn = module().get_function(spec_idx);
-                            const auto& spec_sig = spec_fn.signature_ptr();
-                            auto spec_m = match_params(*spec_sig);
-                            candidates.push_back({&module(), spec_idx, {}, TypeInfo{spec_sig}, spec_m});
-                        }
-                    }
-
-                    symptr = symptr->next();
-                }
-
-                // find best match from candidates
-                bool conflict = false;
-                Match m = Match::None;
-                Item* found = nullptr;
-                for (auto& item : candidates) {
-                    if (item.match == Match::None)
-                        continue;
-                    if (item.match > m) {
-                        // found better match
-                        m = item.match;
-                        found = &item;
-                        conflict = false;
-                        continue;
-                    }
-                    if (item.match == m) {
-                        // found same match -> conflict
-                        conflict = true;
-                    }
-                }
-
-                if (found && !conflict) {
-                    if (found->symptr) {
-                        auto specialized = specialize_function(found->symptr, v.source_loc);
-                        if (specialized) {
-                            v.module = &module();
-                            v.index = specialized->index;
-                            m_value_type = move(specialized->type_info);
-                            break;
-                        }
-                    }
-                    v.module = found->module;
-                    v.index = found->index;
-                    m_value_type = found->type;
-                    break;
-                }
-
-                // format the error message (candidates)
-                stringstream o_candidates;
-                for (const auto& c : candidates) {
-                    auto& fn = c.module->get_function(c.index);
-                    o_candidates << "   " << match_to_cstr(c.match) << "  "
-                                 << fn.signature() << endl;
-                }
-                stringstream o_args;
-                for (const auto& arg : m_call_args) {
-                    o_args << arg.type_info << ' ';
-                }
-
-                if (conflict) {
-                    // ERROR found multiple matching functions
-                    throw FunctionConflict(v.identifier.name, o_args.str(), o_candidates.str(), v.identifier.source_loc);
-                } else {
-                    // ERROR couldn't find matching function for `args`
-                    throw FunctionNotFound(v.identifier.name, o_args.str(), o_candidates.str());
-                }
+                auto res = resolve_overload(v.identifier.symbol, v.identifier);
+                v.module = res.module;
+                v.index = res.index;
+                m_value_type = res.type;
+                break;
             }
             case Symbol::Module:
                 m_value_type = TypeInfo{Type::Module};
@@ -569,24 +484,17 @@ public:
                         m_value_type = nl_owner->parameter(nl_sym->index());
                         break;
                     case Symbol::Function: {
-                        auto specialized = specialize_function(nl_sym, v.source_loc);
-                        if (specialized) {
-                            v.module = &module();
-                            v.index = specialized->index;
-                            m_value_type = move(specialized->type_info);
-                            break;
-                        }
-                        auto& fn = nl_owner->module().get_function(nl_sym->index());
-                        v.module = nl_sym.symtab()->module();
-                        v.index = nl_sym->index();
-                        m_value_type = TypeInfo(fn.signature_ptr());
+                        auto res = resolve_overload(nl_sym, v.identifier);
+                        v.module = res.module;
+                        v.index = res.index;
+                        m_value_type = res.type;
                         break;
                     }
                     default:
                         assert(!"non-local must reference a parameter or a function");
                         return;
                 }
-                m_function.add_nonlocal(TypeInfo{m_value_type});
+                m_function.set_nonlocal(sym.index(), TypeInfo{m_value_type});
                 break;
             }
             case Symbol::Parameter:
@@ -646,7 +554,7 @@ public:
 
         if (m_value_type.is_callable()) {
             // result is new signature with args removed (applied)
-            auto new_signature = resolve_params(m_value_type.signature(), v);
+            auto new_signature = consume_params_from_call_args(m_value_type.signature(), v);
             if (new_signature->params.empty()) {
                 // effective type of zero-arg function is its return type
                 m_value_type = new_signature->return_type;
@@ -991,7 +899,7 @@ private:
                 continue;
             specialize_arg(out_type, arg.type_info, signature.type_args,
                     [i, &loc](const TypeInfo& exp, const TypeInfo& got) {
-                        throw UnexpectedArgumentType(i, exp, got, loc);
+                        throw UnexpectedArgumentType(i+1, exp, got, loc);
                     });
         }
         // resolve generic vars to received types
@@ -1045,8 +953,101 @@ private:
         return res;
     }
 
+    struct Candidate {
+        Module* module;
+        Index index;
+        SymbolPointer symptr;
+        TypeInfo type;
+        Match match;
+    };
+
+    /// Find matching function overload according to m_call_args
+    Candidate resolve_overload(SymbolPointer symptr, const ast::Identifier& identifier)
+    {
+        std::vector<Candidate> candidates;
+        while (symptr) {
+            // resolve nonlocal
+            while (symptr->depth() != 0)
+                symptr = symptr->ref();
+
+            auto* symmod = symptr.symtab()->module();
+            if (symmod == nullptr)
+                symmod = &module();
+            auto& fn = symmod->get_function(symptr->index());
+            const auto& sig_ptr = fn.signature_ptr();
+            auto m = match_params(*sig_ptr);
+            candidates.push_back({symmod, symptr->index(), symptr, TypeInfo{sig_ptr}, m});
+
+            // Check also specializations when the function is generic
+            if (fn.detect_generic()) {
+                for (auto spec_idx : module().get_spec_functions(symptr)) {
+                    auto& spec_fn = module().get_function(spec_idx);
+                    const auto& spec_sig = spec_fn.signature_ptr();
+                    auto spec_m = match_params(*spec_sig);
+                    candidates.push_back({&module(), spec_idx, {}, TypeInfo{spec_sig}, spec_m});
+                }
+            }
+
+            symptr = symptr->next();
+        }
+
+        // find best match from candidates
+        bool conflict = false;
+        Match m = Match::None;
+        Candidate* found = nullptr;
+        for (auto& item : candidates) {
+            if (item.match == Match::None)
+                continue;
+            if (item.match > m) {
+                // found better match
+                m = item.match;
+                found = &item;
+                conflict = false;
+                continue;
+            }
+            if (item.match == m) {
+                // found same match -> conflict
+                conflict = true;
+            }
+        }
+
+        if (found && !conflict) {
+            if (found->symptr) {
+                auto specialized = specialize_function(found->symptr, identifier.source_loc);
+                if (specialized) {
+                    return {
+                        .module = &module(),
+                        .index = specialized->index,
+                        .type = move(specialized->type_info),
+                    };
+                }
+            }
+            return *found;
+        }
+
+        // format the error message (candidates)
+        stringstream o_candidates;
+        for (const auto& c : candidates) {
+            auto& fn = c.module->get_function(c.index);
+            o_candidates << "   " << match_to_cstr(c.match) << "  "
+                         << fn.signature() << endl;
+        }
+        stringstream o_args;
+        for (const auto& arg : m_call_args) {
+            o_args << arg.type_info << ' ';
+        }
+
+        if (conflict) {
+            // ERROR found multiple matching functions
+            throw FunctionConflict(identifier.name, o_args.str(), o_candidates.str(), identifier.source_loc);
+        } else {
+            // ERROR couldn't find matching function for `args`
+            throw FunctionNotFound(identifier.name, o_args.str(), o_candidates.str());
+        }
+    }
+
     // Consume params from `orig_signature` according to `m_call_args`, creating new signature
-    std::shared_ptr<Signature> resolve_params(const Signature& orig_signature, ast::Call& v) const
+    std::shared_ptr<Signature>consume_params_from_call_args(const Signature& orig_signature, ast::Call& v) const
     {
         auto res = std::make_shared<Signature>(orig_signature);
         int i = 0;

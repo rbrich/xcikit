@@ -74,10 +74,10 @@ unsigned SymbolTable::level() const
 }
 
 
-size_t SymbolTable::count_nonlocals() const
+size_t SymbolTable::count(Symbol::Type type) const
 {
     return std::count_if(m_symbols.begin(), m_symbols.end(),
-            [](const Symbol& sym) { return sym.type() == Symbol::Nonlocal; });
+            [type](const Symbol& sym) { return sym.type() == type; });
 }
 
 

@@ -52,9 +52,21 @@ size_t Function::parameter_offset(Index idx) const
 }
 
 
-void Function::add_nonlocal(TypeInfo&& type_info)
+Index Function::add_nonlocal(TypeInfo&& type_info)
 {
     signature().add_nonlocal(std::move(type_info));
+    return signature().nonlocals.size() - 1;
+}
+
+
+void Function::set_nonlocal(Index idx, TypeInfo&& type_info)
+{
+    auto& nonlocals = signature().nonlocals;
+    if (nonlocals.size() < idx + 1)
+        nonlocals.resize(idx + 1);
+    auto& nl = nonlocals[idx];
+    assert(!nl || nl == type_info);
+    nl = std::move(type_info);
 }
 
 

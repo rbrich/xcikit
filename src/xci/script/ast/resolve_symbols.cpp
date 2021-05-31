@@ -358,14 +358,15 @@ private:
                 if (p_symtab->name() == name && p_symtab->parent() != nullptr) {
                     // recursion - unwrap the function
                     auto symptr = p_symtab->parent()->find_by_name(name);
-                    return symtab().add({symptr, Symbol::Function, depth + 1});
+                    return symtab().add({symptr, Symbol::Function, no_index, depth + 1});
                 }
 
                 auto symptr = p_symtab->find_by_name(name);
                 if (symptr) {
                     if (depth > 0 && symptr->type() != Symbol::Method) {
                         // add Nonlocal symbol
-                        return symtab().add({symptr, Symbol::Nonlocal, depth});
+                        Index idx = symtab().count(Symbol::Nonlocal);
+                        return symtab().add({symptr, Symbol::Nonlocal, idx, depth});
                     }
                     return symptr;
                 }

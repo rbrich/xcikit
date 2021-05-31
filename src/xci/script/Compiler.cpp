@@ -38,7 +38,7 @@ public:
             func.ensure_ast_copy();
             return;
         }
-        if (func.is_undefined())
+        if (func.is_undefined() || func.is_generic())
             func.set_compiled();
         assert(func.is_compiled());
         auto* orig_code = m_code;

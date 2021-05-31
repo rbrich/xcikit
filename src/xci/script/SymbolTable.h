@@ -82,9 +82,6 @@ public:
         : m_name(std::move(name)), m_type(type), m_index(idx), m_depth(depth) {}
     Symbol(const SymbolPointer& ref, Type type)
             : m_name(ref->name()), m_type(type), m_ref(ref) {}
-    Symbol(const SymbolPointer& ref, Type type, size_t depth)
-        : m_name(ref->name()), m_type(type), m_index(ref.symidx()),
-          m_depth(depth), m_ref(ref) {}
     Symbol(const SymbolPointer& ref, Type type, Index idx, size_t depth)
             : m_name(ref->name()), m_type(type), m_index(idx),
               m_depth(depth), m_ref(ref) {}
@@ -157,8 +154,7 @@ public:
     SymbolPointer find_last_of(const std::string& name, Symbol::Type type);
     SymbolPointer find_last_of(Symbol::Type type);
 
-    // return actual number of nonlocals (skipping unreferenced symbols)
-    size_t count_nonlocals() const;
+    size_t count(Symbol::Type type) const;
     void update_nonlocal_indices();
 
     /// Check symbol table for overloaded function name

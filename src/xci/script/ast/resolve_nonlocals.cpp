@@ -179,8 +179,8 @@ private:
                 } else if (sym.depth() > 1) {
                     // not direct parent -> add intermediate Nonlocal
                     auto ti = sym.ref().symtab()->function()->parameter(sym.ref()->index());
-                    m_function.add_nonlocal(std::move(ti));
-                    m_function.symtab().add({sym.ref(), Symbol::Nonlocal, sym.depth() - 1});
+                    auto idx = m_function.add_nonlocal(std::move(ti));
+                    m_function.symtab().add({sym.ref(), Symbol::Nonlocal, idx, sym.depth() - 1});
                 }
             }
             if (sym.type() == Symbol::Function && sym.ref() && sym.ref()->type() == Symbol::Function) {
