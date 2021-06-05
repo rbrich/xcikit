@@ -1014,8 +1014,8 @@ std::ostream& operator<<(std::ostream& os, const SymbolPointer& v)
     if (v.symtab() != nullptr) {
         os << " @" << v.symtab()->name() << " ("
            << std::hex << intptr_t(v.symtab()) << ')' << std::dec;
-        if (v->type() == Symbol::Function && v.symtab()->module())
-            os << ": " << v.symtab()->module()->get_function(v->index()).signature();
+        if (v->type() == Symbol::Function && v.symtab()->module() && v->index() != no_index)
+            os << ": " << v.get_function().signature();
     }
     if (v->ref())
         os << " -> " << v->ref();

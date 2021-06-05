@@ -104,7 +104,8 @@ public:
     std::vector<TypeInfo> closure_types() const;
 
     // true if this function should be generic (i.e. signature contains a type variable)
-    bool detect_generic() const { return m_signature->has_generic_params(); }
+    bool detect_generic() const { return m_signature->is_generic(); }
+    bool has_generic_params() const { return m_signature->has_generic_params(); }
 
     // Kind of function body
 

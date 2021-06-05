@@ -260,8 +260,8 @@ public:
 
         m_symtab = v.body.symtab->parent();
 
-        // postpone body compilation
-        m_postponed_blocks.push_back({fn, v.body});
+        // resolve body
+        resolve_symbols(fn, v.body);
     }
 
     void visit(ast::Cast& v) override {
@@ -321,12 +321,6 @@ public:
         for (auto& st : t.subtypes)
             st->apply(*this);
     }
-
-    struct PostponedBlock {
-        Function& func;
-        const ast::Block& block;
-    };
-    const std::vector<PostponedBlock>& postponed_blocks() const { return m_postponed_blocks; }
 
 private:
     Module& module() { return m_function.module(); }
@@ -414,7 +408,6 @@ private:
     }
 
 private:
-    std::vector<PostponedBlock> m_postponed_blocks;
     Function& m_function;
     SymbolTable* m_symtab = &m_function.symtab();
     ast::Class* m_class = nullptr;
@@ -427,11 +420,6 @@ void resolve_symbols(Function& func, const ast::Block& block)
     SymbolResolverVisitor visitor {func};
     for (const auto& stmt : block.statements) {
         stmt->apply(visitor);
-    }
-
-    // process postponed blocks
-    for (const auto& blk : visitor.postponed_blocks()) {
-        resolve_symbols(blk.func, blk.block);
     }
 }
 

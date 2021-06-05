@@ -148,7 +148,7 @@ public:
 
         if (m_instance != nullptr) {
             // evaluate type according to class and type vars
-            auto& psym = dfn.variable.identifier.symbol;
+            const auto& psym = dfn.variable.identifier.symbol;
             TypeInfo eval_type = m_instance->class_().get_function_type(psym->ref()->index());
             for (const auto&& [i, t] : m_instance->types() | enumerate)
                 eval_type.replace_var(i + 1, t);
@@ -164,17 +164,19 @@ public:
         }
 
         // Expression might use the specified type from `m_type_info`
-        if (dfn.expression)
+        if (dfn.expression) {
+            dfn.expression->definition = &dfn;
             dfn.expression->apply(*this);
+        }
 
-        if (m_instance != nullptr)
-            return;
+        if (m_instance == nullptr) {
+            Function& func = module().get_function(dfn.symbol()->index());
+            if (m_value_type.is_callable())
+                func.signature() = m_value_type.signature();
+            else
+                resolve_return_type(func.signature(), m_value_type, dfn.expression->source_loc);
+        }
 
-        Function& func = module().get_function(dfn.symbol()->index());
-        if (m_value_type.is_callable())
-            func.signature() = m_value_type.signature();
-        else
-            resolve_return_type(func.signature(), m_value_type, dfn.expression->source_loc);
         m_value_type = {};
     }
 
@@ -659,7 +661,7 @@ public:
 
         Function& fn = module().get_function(v.index);
         fn.set_signature(m_value_type.signature_ptr());
-        if (fn.detect_generic()) {
+        if (fn.has_generic_params()) {
             // try to instantiate the specialization
             if (m_call_args.size() == fn.signature().params.size()) {
                 // immediately called generic function -> specialize to normal function
@@ -688,7 +690,7 @@ public:
         }
 
         // parameterless function is equivalent to its return type (eager evaluation)
-       /* while (m_value_type.is_callable() && m_value_type.signature().params.empty()) {
+        /* while (m_value_type.is_callable() && m_value_type.signature().params.empty()) {
             m_value_type = m_value_type.signature().return_type;
         }*/
         // check specified type again - in case it wasn't Function
@@ -932,7 +934,7 @@ private:
     std::optional<Specialized> specialize_function(SymbolPointer symptr, const SourceLocation& loc)
     {
         auto& fn = symptr.get_function();
-        if (!fn.detect_generic())
+        if (!fn.has_generic_params())
             return {};  // not generic, nothing to specialize
         auto fspec = make_unique<Function>(module(), fn.symtab());
         fspec->set_signature(std::make_shared<Signature>(fn.signature()));  // copy, not ref
@@ -979,7 +981,7 @@ private:
             candidates.push_back({symmod, symptr->index(), symptr, TypeInfo{sig_ptr}, m});
 
             // Check also specializations when the function is generic
-            if (fn.detect_generic()) {
+            if (fn.has_generic_params()) {
                 for (auto spec_idx : module().get_spec_functions(symptr)) {
                     auto& spec_fn = module().get_function(spec_idx);
                     const auto& spec_sig = spec_fn.signature_ptr();
@@ -1183,7 +1185,6 @@ private:
         return res;
     }
 
-private:
     Function& m_function;
 
     TypeInfo m_type_info;   // resolved ast::Type
@@ -1206,7 +1207,7 @@ void resolve_types(Function& func, const ast::Block& block)
     for (const auto& stmt : block.statements) {
         stmt->apply(visitor);
     }
-    if (func.is_compiled() && func.signature().return_type.is_unknown())
+    if (!func.signature().has_generic_params() && func.signature().return_type.is_unknown())
         func.signature().return_type = ti_void();
 }
 

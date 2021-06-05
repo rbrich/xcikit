@@ -35,7 +35,7 @@ public:
     const Symbol* operator->() const;
     Symbol* operator->();
 
-    Function& get_function();
+    Function& get_function() const;
 
     SymbolTable* symtab() const { return m_symtab; }
     Index symidx() const { return m_symidx; }
