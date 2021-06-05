@@ -81,16 +81,17 @@ struct InfixOperator: sor< one<','>, two<'&'>, two<'|'>, two<'='>, string<'!','=
 
 // Keywords
 struct KeywordFun: TAO_PEGTL_KEYWORD("fun") {};
-struct KeywordIf: TAO_PEGTL_KEYWORD("if") {};
-struct KeywordThen: TAO_PEGTL_KEYWORD("then") {};
-struct KeywordElse: TAO_PEGTL_KEYWORD("else") {};
 struct KeywordClass: TAO_PEGTL_KEYWORD("class") {};
 struct KeywordInstance: TAO_PEGTL_KEYWORD("instance") {};
 struct KeywordType: TAO_PEGTL_KEYWORD("type") {};
+struct KeywordDecl: TAO_PEGTL_KEYWORD("decl") {};
 struct KeywordWith: TAO_PEGTL_KEYWORD("with") {};
+struct KeywordIf: TAO_PEGTL_KEYWORD("if") {};
+struct KeywordThen: TAO_PEGTL_KEYWORD("then") {};
+struct KeywordElse: TAO_PEGTL_KEYWORD("else") {};
 struct KeywordMatch: TAO_PEGTL_KEYWORD("match") {};
-struct Keyword: sor<KeywordFun, KeywordIf, KeywordThen, KeywordElse,
-        KeywordClass, KeywordInstance, KeywordType, KeywordWith, KeywordMatch> {};
+struct Keyword: sor<KeywordFun, KeywordClass, KeywordInstance, KeywordType,
+        KeywordDecl, KeywordWith, KeywordIf, KeywordThen, KeywordElse, KeywordMatch> {};
 
 // Literals
 struct BinDigit : one< '0', '1' > {};
@@ -161,15 +162,16 @@ struct ExprWith: if_must< KeywordWith, NSC, ExprArgSafe, NSC, Expression<SC> > {
 struct ExprStructItem: seq< Identifier, SC, one<'='>, not_at<one<'='>>, SC, must<ExprArgSafe> > {};
 struct ExprStruct: seq< ExprStructItem, star< SC, one<','>, SC, must<ExprStructItem> > > {};
 
-// Statements
+// Block-level statements
+struct Declaration: if_must< KeywordDecl, NSC, Variable > {};
 struct Definition: seq< Variable, SC, seq<one<'='>, not_at<one<'='>>, NSC, must<Expression<SC>>> > {};  // must not match `var == ...`
 struct TypeAlias: if_must< TypeName, NSC, one<'='>, not_at<one<'='>>, NSC, UnsafeType > {};
-struct Statement: sor< TypeAlias, Definition, Expression<SC> > {};
+struct Statement: sor< TypeAlias, Declaration, Definition, Expression<SC> > {};
 
 // Module-level definitions
-struct ClassDefinition: seq< Variable, SC, opt_must<one<'='>, SC, Expression<SC>> > {};
+struct ClassDeclaration: seq< Variable, SC, opt_must<one<'='>, SC, Expression<SC>> > {};  // with optional default definition
 struct DefClass: if_must< KeywordClass, NSC, TypeName, RS, SC, plus<TypeName, SC>, opt<TypeContext>, NSC,
-        one<'{'>, NSC, sor< one<'}'>, must<SepList<ClassDefinition>, NSC, one<'}'>> > > {};
+        one<'{'>, NSC, sor< one<'}'>, must<SepList<ClassDeclaration>, NSC, one<'}'>> > > {};
 struct DefInstance: if_must< KeywordInstance, NSC, TypeName, RS, SC, plus<Type, SC>, opt<TypeContext>, NSC,
         one<'{'>, NSC, sor< one<'}'>, must<SepList<Definition>, NSC, one<'}'>> > > {};
 struct DefType: if_must< KeywordType, NSC, TypeName, NSC, one<'='>, not_at<one<'='>>, NSC, UnsafeType > {};
@@ -199,6 +201,23 @@ struct NumberHelper {
 
 template<typename Rule>
 struct Action : nothing<Rule> {};
+
+
+// AST doesn't have a special node for Declaration, it's just a Definition
+// without an expression. This simplifies processing as the name and type part
+// of both Declaration and Definition is handled in the same way, anyway.
+template<>
+struct Action<Declaration> : change_states< ast::Definition > {
+    template<typename Input>
+    static void success(const Input &in, ast::Definition& def, ast::Module& mod) {
+        mod.body.statements.push_back(std::make_unique<ast::Definition>(std::move(def)));
+    }
+
+    template<typename Input>
+    static void success(const Input &in, ast::Definition& def, ast::Block& block) {
+        block.statements.push_back(std::make_unique<ast::Definition>(std::move(def)));
+    }
+};
 
 
 template<>
@@ -865,7 +884,7 @@ struct Action<DefClass> : change_states< ast::Class > {
 
 
 template<>
-struct Action<ClassDefinition> : change_states< ast::Definition > {
+struct Action<ClassDeclaration> : change_states< ast::Definition > {
     template<typename Input>
     static void success(const Input &in, ast::Definition& def, ast::Class& cls) {
         cls.defs.push_back(std::move(def));

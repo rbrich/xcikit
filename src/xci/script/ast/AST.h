@@ -529,6 +529,9 @@ struct Statement {
     virtual std::unique_ptr<ast::Statement> make_copy() const = 0;
 };
 
+// This node is also used as "Declaration" - in that case, the expression is empty.
+// The same applies to class declarations, but those may have non-empty expression
+// for the default definition part.
 struct Definition: public Statement {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }

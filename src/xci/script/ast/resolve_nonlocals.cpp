@@ -19,7 +19,8 @@ public:
             : m_function(func) {}
 
     void visit(ast::Definition& dfn) override {
-        dfn.expression->apply(*this);
+        if (dfn.expression)
+            dfn.expression->apply(*this);
     }
 
     void visit(ast::Invocation& inv) override {

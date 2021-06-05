@@ -170,8 +170,9 @@ struct UnexpectedGenericFunction : public ScriptError {
 
 struct FunctionNotFound : public ScriptError {
     explicit FunctionNotFound(string_view name, string_view args,
-                              string_view candidates)
-        : ScriptError(format("function not found: {} {}\n   Candidates:\n{}", name, args, candidates)) {}
+                              string_view candidates, const SourceLocation& loc)
+        : ScriptError(format("function not found: {} {}\n"
+                             "   Candidates:\n{}", name, args, candidates), loc) {}
 };
 
 
@@ -198,6 +199,13 @@ struct TooManyLocals : public ScriptError {
 
 struct ConditionNotBool : public ScriptError {
     explicit ConditionNotBool() : ScriptError("condition doesn't evaluate to Bool") {}
+};
+
+
+struct DeclarationTypeMismatch : public ScriptError {
+    explicit DeclarationTypeMismatch(const TypeInfo& decl, const TypeInfo& now, const SourceLocation& loc)
+            : ScriptError(format("declared type mismatch: previous {}, this {}",
+            decl, now), loc) {}
 };
 
 

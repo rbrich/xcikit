@@ -418,10 +418,6 @@ TEST_CASE( "Blocks", "[script][interpreter]" )
     CHECK(interpret_std("b = {1+2}; b") == "3");
     CHECK(interpret("b = { a = 1; a }; b") == "1");
     CHECK(interpret_std("b:Int = {1+2}; b") == "3");
-
-    // blocks are evaluated after all definitions in the scope,
-    // which means they can use names from parent scope that are defined later
-    CHECK(interpret("y={x}; x=7; y") == "7");
 }
 
 
@@ -516,6 +512,23 @@ TEST_CASE( "Partial function call", "[script][interpreter]" )
     CHECK(interpret_std("f = fun a:Int { "
                         "u=fun b2:Int {a / b2}; v=fun c2:Int {c2 - a}; "
                         "fun b1:Int c1:Int {a + u b1 + v c1} }; f 4 2 3") == "5");
+}
+
+
+TEST_CASE( "Forward declarations", "[script][interpreter]")
+{
+    // `x` name not yet seen (the symbol resolution is strictly single-pass)
+    CHECK_THROWS_AS(interpret("y=x; x=7; y"), UndefinedName);
+    CHECK_THROWS_AS(interpret("y={x}; x=7; y"), UndefinedName);  // block doesn't change anything
+    CHECK_THROWS_AS(interpret_std("y=fun a {a+x}; x=7; y 2"), UndefinedName);  // function neither
+    // Inside a block or function, a forward-declared value or function can be used.
+    // A similar principle is used in recursion, where the function itself is considered
+    // declared while processing its own body.
+    CHECK(interpret("decl x:Int; y={x}; x=7; y") == "7");
+    CHECK(interpret("decl f:Int->Int; w=fun x {f x}; f=fun x {x}; w 7") == "7");
+    // Forward-declared template function
+    // TODO: implement (parses fine, but the specialization is done too early, it needs to be postponed)
+    //CHECK(interpret("decl f:<T> T->T; y={f 7}; f=fun x {x}; y") == "7");
 }
 
 

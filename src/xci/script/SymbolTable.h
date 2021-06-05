@@ -94,6 +94,7 @@ public:
     // in case of overloaded function, this points to next overload
     SymbolPointer next() const { return m_next; }
     bool is_callable() const { return m_is_callable; }
+    bool is_defined() const { return m_is_defined; }
 
     Symbol& set_type(Type type) { m_type = type; return *this; }
     Symbol& set_index(Index idx) { m_index = idx; return *this; }
@@ -101,6 +102,7 @@ public:
     Symbol& set_ref(const SymbolPointer& ref) { m_ref = ref; return *this; }
     Symbol& set_next(const SymbolPointer& next) { m_next = next; return *this; }
     Symbol& set_callable(bool callable) { m_is_callable = callable; return *this; }
+    Symbol& set_defined(bool defined) { m_is_defined = defined; return *this; }
 
 private:
     std::string m_name;
@@ -109,7 +111,8 @@ private:
     size_t m_depth = 0;  // 1 = parent, 2 = parent of parent, ...
     SymbolPointer m_ref;
     SymbolPointer m_next;
-    bool m_is_callable = false;
+    bool m_is_callable: 1 = false;
+    bool m_is_defined: 1 = false;  // only declared / already defined
 };
 
 

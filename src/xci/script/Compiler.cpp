@@ -33,6 +33,8 @@ public:
         : m_compiler(compiler), m_function(function) {}
 
     void visit(ast::Definition& dfn) override {
+        if (!dfn.expression)
+            return;  // it's only a declaration
         Function& func = module().get_function(dfn.symbol()->index());
         if (func.detect_generic()) {
             func.ensure_ast_copy();

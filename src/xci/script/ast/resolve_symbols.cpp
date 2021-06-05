@@ -28,19 +28,25 @@ public:
     void visit(ast::Definition& dfn) override {
         // check for name collision
         const auto& name = dfn.variable.identifier.name;
-        if (symtab().find_by_name(name))
-            throw RedefinedName(name, dfn.variable.identifier.source_loc);
+        auto symptr = symtab().find_by_name(name);
+        if (!symptr) {
+            // add new function, symbol
+            SymbolTable& fn_symtab = symtab().add_child(name);
+            auto fn = make_unique<Function>(module(), fn_symtab);
+            auto idx = module().add_function(move(fn));
+            assert(symtab().module() == &module());
+            symptr = symtab().add({name, Symbol::Function, idx});
+        } else {
+            if (symptr->is_defined())
+                throw RedefinedName(name, dfn.variable.identifier.source_loc);
+        }
 
-        // add new function, symbol
-        SymbolTable& fn_symtab = symtab().add_child(name);
-        auto fn = make_unique<Function>(module(), fn_symtab);
-        auto idx = module().add_function(move(fn));
-        assert(symtab().module() == &module());
-        dfn.variable.identifier.symbol = symtab().add({name, Symbol::Function, idx});
+        dfn.variable.identifier.symbol = symptr;
         dfn.variable.identifier.symbol->set_callable(true);
         if (dfn.variable.type)
             dfn.variable.type->apply(*this);
         if (dfn.expression) {
+            symptr->set_defined(true);
             dfn.expression->definition = &dfn;
             dfn.expression->apply(*this);
         }

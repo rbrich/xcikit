@@ -167,6 +167,9 @@ public:
         if (dfn.expression) {
             dfn.expression->definition = &dfn;
             dfn.expression->apply(*this);
+        } else {
+            // declaration: use specified type directly
+            m_value_type = move(m_type_info);
         }
 
         if (m_instance == nullptr) {
@@ -461,7 +464,7 @@ public:
                 if (m_call_ret)
                     o_ftype << " -> " << m_call_ret;
                 if (exact_candidates.empty())
-                    throw FunctionNotFound(v.identifier.name, o_ftype.str(), o_candidates.str());
+                    throw FunctionNotFound(v.identifier.name, o_ftype.str(), o_candidates.str(), v.identifier.source_loc);
                 else
                     throw FunctionConflict(v.identifier.name, o_ftype.str(), o_candidates.str(), v.identifier.source_loc);
             }
@@ -631,10 +634,19 @@ public:
     }
 
     void visit(ast::Function& v) override {
+        Function& fn = module().get_function(v.index);
         // specified type (left hand side of '=')
         TypeInfo specified_type;
         if (v.definition) {
             specified_type = move(m_type_info);
+            // declared type (decl statement)
+            if (fn.signature()) {
+                TypeInfo declared_type(fn.signature_ptr());
+                if (specified_type && declared_type != specified_type) {
+                    throw DeclarationTypeMismatch(declared_type, specified_type, v.source_loc);
+                }
+                specified_type = move(declared_type);
+            }
         }
         // lambda type (right hand side of '=')
         v.type.apply(*this);
@@ -659,7 +671,6 @@ public:
         m_value_type = move(m_type_info);
         v.call_args = m_call_args.size();
 
-        Function& fn = module().get_function(v.index);
         fn.set_signature(m_value_type.signature_ptr());
         if (fn.has_generic_params()) {
             // try to instantiate the specialization
@@ -1044,7 +1055,7 @@ private:
             throw FunctionConflict(identifier.name, o_args.str(), o_candidates.str(), identifier.source_loc);
         } else {
             // ERROR couldn't find matching function for `args`
-            throw FunctionNotFound(identifier.name, o_args.str(), o_candidates.str());
+            throw FunctionNotFound(identifier.name, o_args.str(), o_candidates.str(), identifier.source_loc);
         }
     }
 
