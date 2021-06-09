@@ -798,6 +798,7 @@ std::ostream& operator<<(std::ostream& os, DumpInstruction&& v)
 std::ostream& operator<<(std::ostream& os, const Module& v)
 {
     bool verbose = stream_options(os).module_verbose;
+    bool dump_tree = stream_options(os).enable_tree;
     os << "* " << v.num_imported_modules() << " imported modules" << endl << more_indent;
     for (size_t i = 0; i < v.num_imported_modules(); ++i)
         os << put_indent << '[' << i << "] " << v.get_imported_module(i).name() << endl;
@@ -810,8 +811,11 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
         if (f.kind() != Function::Kind::Compiled)
             os << '(' << f.kind() << ") ";
         os << f.name() << ": " << f.signature() << endl;
-        if (verbose && f.kind() == Function::Kind::Generic)
+        if (verbose && f.kind() == Function::Kind::Generic) {
             os << more_indent << put_indent << f.ast() << less_indent;
+            if (!dump_tree)
+                os << endl;
+        }
         if (verbose && f.kind() == Function::Kind::Compiled) {
             os << more_indent;
             for (auto it = f.code().begin(); it != f.code().end();) {

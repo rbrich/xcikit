@@ -307,15 +307,15 @@ public:
         size_t par_idx = 0;
         for (auto& p : t.params) {
             if (!p.type) {
-                // '$' is internal prefix for untyped function args
-                p.type = std::make_unique<ast::TypeName>("$" + p.identifier.name);
+                // '$T' is internal prefix for untyped function args
+                p.type = std::make_unique<ast::TypeName>("$T" + p.identifier.name);
             }
             p.type->apply(*this);
             if (!p.identifier.name.empty())
                 p.identifier.symbol = symtab().add({p.identifier.name, Symbol::Parameter, par_idx++});
         }
         if (!t.result_type)
-            t.result_type = std::make_unique<ast::TypeName>("$->");
+            t.result_type = std::make_unique<ast::TypeName>("$R");
         t.result_type->apply(*this);
     }
 
