@@ -79,8 +79,9 @@ public:
                             v.identifier.symbol = nl_sym;
                         }
                         if (ref_fn.is_generic()) {
-                            process_function(ref_fn, ref_fn.ast());
+                            resolve_nonlocals(ref_fn, ref_fn.ast());
                         }
+                        process_function(ref_fn);
                         break;
                     }
                     default:
@@ -95,8 +96,9 @@ public:
                 }
                 auto& fn = v.module->get_function(v.index);
                 if (fn.is_generic()) {
-                    process_function(fn, fn.ast());
+                    resolve_nonlocals(fn, fn.ast());
                 }
+                process_function(fn);
                 // partial calls
                 if (!m_function.partial().empty() && v.module == &module()) {
                     m_function.symtab().set_name(v.identifier.name + "/partial");
@@ -145,8 +147,10 @@ public:
 
     void visit(ast::Function& v) override {
         Function& fn = module().get_function(v.index);
-        if (!fn.detect_generic())
-            process_function(fn, v.body);
+        if (!fn.detect_generic()) {
+            resolve_nonlocals(fn, v.body);
+            process_function(fn);
+        }
     }
 
 private:
@@ -157,10 +161,10 @@ private:
         expression.apply(visitor);
     }
 
-    void process_function(Function& func, const ast::Block& body)
+    void process_function(Function& func)
     {
-        resolve_nonlocals(func, body);
-
+        if (func.test_and_set_nonlocals_resolved())
+            return;
         auto& nonlocals = func.signature().nonlocals;
         if (nonlocals.empty())
             return;

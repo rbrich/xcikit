@@ -426,8 +426,9 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     CHECK(parse("fun Int -> Int {}") == "fun Int -> Int {}");
 
     // returned lambda
-    CHECK(interpret_std("fun x:Int->Int { x + 1 }") == "<lambda> Int32 -> Int32");
-    CHECK_THROWS_AS(interpret_std("fun x { x + 1 }"), UnexpectedGenericFunction);  // generic lambda must be either assigned or resolved by calling
+    CHECK(interpret_std("fun x:Int->Int { x + 1 }") == "<lambda> Int32 -> Int32");  // non-generic is fine
+    CHECK(interpret_std("fun x { x + 1 }") == "<lambda> Int32 -> Int32");   // also fine, function type deduced from `1` (Int) and `add: Int Int -> Int`
+    CHECK_THROWS_AS(interpret_std("fun x { x }"), UnexpectedGenericFunction);  // generic lambda must be either assigned or resolved by calling
 
     // immediately called lambda
     CHECK(interpret_std("fun x:Int {x+1} 2") == "3");
@@ -489,7 +490,12 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; inner 3 + (inner 4l):T }; outer 2") == "11");
 
     // "Funarg problem" (upwards)
-    //CHECK(interpret_std("compose = fun f g { fun x { f (g x) } }; same = compose pred succ; same 42") == "42");
+    auto def_succ = "succ = fun Int->Int { __value 1 .__load_static; __add_32 }; "s;
+    auto def_compose = " compose = fun f g { fun x { f (g x) } }; "s;
+    auto def_succ_compose = def_succ + def_compose;
+    CHECK(interpret(def_succ_compose + "plustwo = compose succ succ; plustwo 42") == "44");
+    CHECK(interpret(def_succ_compose + "plustwo = {compose succ succ}; plustwo 42") == "44");
+    //CHECK(interpret_std(def_compose + "same = compose pred succ; same 42") == "42");
 }
 
 

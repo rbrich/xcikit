@@ -320,8 +320,13 @@ public:
                         // EXECUTE
                         code().add_opcode(Opcode::Execute);
                     } else {
-                        // CALL0 <function_idx>
-                        code().add_L1(Opcode::Call0, v.index);
+                        if (!m_callable && fn.has_parameters()) {
+                            // LOAD_FUNCTION <function_idx>
+                            code().add_L1(Opcode::LoadFunction, v.index);
+                        } else {
+                            // CALL0 <function_idx>
+                            code().add_L1(Opcode::Call0, v.index);
+                        }
                     }
                     break;
                 }
@@ -360,11 +365,14 @@ public:
     void visit(ast::Call& v) override {
         // call the function or push the function as value
 
+        bool orig_callable = m_callable;
         m_intrinsic = v.intrinsic;
 
+        m_callable = false;
         for (auto& arg : reverse(v.args)) {
             arg->apply(*this);
         }
+        m_callable = true;
 
         if (v.partial_index != no_index) {
             // partial function call
@@ -399,6 +407,7 @@ public:
         }
 
         m_intrinsic = false;
+        m_callable = orig_callable;
     }
 
     void visit(ast::OpCall& v) override {
@@ -581,6 +590,8 @@ private:
     Compiler& m_compiler;
     Function& m_function;
     Code* m_code = nullptr;
+
+    bool m_callable = true;
 
     // intrinsics
     bool m_intrinsic = false;

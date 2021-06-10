@@ -561,8 +561,14 @@ public:
             // result is new signature with args removed (applied)
             auto new_signature = consume_params_from_call_args(m_value_type.signature(), v);
             if (new_signature->params.empty()) {
-                // effective type of zero-arg function is its return type
-                m_value_type = new_signature->return_type;
+                if (v.definition == nullptr) {
+                    // effective type of zero-arg function is its return type
+                    m_value_type = new_signature->return_type;
+                } else {
+                    // Not really calling, just defining, e.g. `f = compose u v`
+                    // Keep the return type as is, making it `Void -> <lambda type>`
+                    m_value_type = TypeInfo{new_signature};
+                }
                 v.partial_args = 0;
             } else {
                 if (v.partial_args != 0) {
@@ -675,17 +681,20 @@ public:
         if (fn.has_generic_params()) {
             // try to instantiate the specialization
             if (m_call_args.size() == fn.signature().params.size()) {
-                // immediately called generic function -> specialize to normal function
-                fn.set_compiled();
+                // immediately called or returned generic function
+                // -> try to specialize to normal function
                 specialize_to_call_args(fn, v.body, v.source_loc);
                 m_value_type = TypeInfo{fn.signature_ptr()};
-            } else if (v.definition) {
-                // mark as generic, uncompiled
-                fn.set_ast(v.body);
-            } else
-                throw UnexpectedGenericFunction(v.source_loc);
+            } else if (!v.definition) {
+                resolve_types(fn, v.body);
+                if (fn.detect_generic()) {
+                    stringstream sig_str;
+                    sig_str << fn.name() << ':' << fn.signature();
+                    throw UnexpectedGenericFunction(sig_str.str(), v.source_loc);
+                }
+                m_value_type = TypeInfo{fn.signature_ptr()};
+            }
         } else {
-            fn.set_compiled();
             // compile body and resolve return type
             if (v.definition) {
                 // in case the function is recursive, propagate the type upwards
@@ -699,6 +708,11 @@ public:
                 fn.signature().set_return_type(ti_void());
             m_value_type = TypeInfo{fn.signature_ptr()};
         }
+
+        if (fn.has_generic_params())
+            fn.set_ast(v.body);
+        else
+            fn.set_compiled();
 
         // parameterless function is equivalent to its return type (eager evaluation)
         /* while (m_value_type.is_callable() && m_value_type.signature().params.empty()) {
@@ -836,6 +850,7 @@ private:
                 }
                 return specialize_arg(sig.elem_type(), deduced.elem_type(), resolved, exc_cb);
             case Type::Function:
+                break;
             case Type::Tuple:
                 assert(!"not implemented");
                 break;
@@ -861,6 +876,7 @@ private:
                 break;
             }
             case Type::Function:
+                break;
             case Type::Tuple:
                 assert(!"not implemented");
                 break;
@@ -947,6 +963,8 @@ private:
         auto& fn = symptr.get_function();
         if (!fn.has_generic_params())
             return {};  // not generic, nothing to specialize
+        if (fn.signature().params.size() > m_call_args.size())
+            return {};  // not enough call args
         auto fspec = make_unique<Function>(module(), fn.symtab());
         fspec->set_signature(std::make_shared<Signature>(fn.signature()));  // copy, not ref
         fspec->set_ast(fn.ast());
@@ -1078,8 +1096,16 @@ private:
                 }
             }
             // check type of next param
-            if (res->params[0] != arg.type_info) {
+            if (res->params.front() != arg.type_info) {
                 throw UnexpectedArgumentType(i, res->params[0], arg.type_info, arg.source_loc);
+            }
+            // resolve arg if it's a type var and the signature has a known type in its place
+            if (arg.type_info.is_generic() && !res->params.front().is_generic()) {
+                specialize_arg(arg.type_info, res->params.front(),
+                        m_function.signature().type_args,  // current function, not the called one
+                        [i, &arg](const TypeInfo& exp, const TypeInfo& got) {
+                            throw UnexpectedArgumentType(i+1, exp, got, arg.source_loc);
+                        });
             }
             // consume next param
             ++ v.partial_args;

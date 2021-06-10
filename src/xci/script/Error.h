@@ -163,8 +163,9 @@ struct UnexpectedTypeArg : public ScriptError {
 };
 
 struct UnexpectedGenericFunction : public ScriptError {
-    explicit UnexpectedGenericFunction(const SourceLocation& loc)
-            : ScriptError("generic function must be named or immediately called", loc) {}
+    explicit UnexpectedGenericFunction(string_view fn_desc, const SourceLocation& loc)
+            : ScriptError(format("generic function must be named or immediately called: {}",
+                            fn_desc), loc) {}
 };
 
 

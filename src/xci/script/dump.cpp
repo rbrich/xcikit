@@ -980,8 +980,10 @@ std::ostream& operator<<(std::ostream& os, const Signature& v)
         for (const auto& ti : v.params) {
             os << ti << ' ';
         }
-        os << "-> ";
+    } else {
+        os << "Void ";
     }
+    os << "-> ";
     stream_options(os).bracket_fun_types = orig_bracket_fun_types;
     return os << v.return_type;
 }

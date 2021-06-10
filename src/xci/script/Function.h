@@ -168,6 +168,8 @@ public:
 
     bool operator==(const Function& rhs) const;
 
+    bool test_and_set_nonlocals_resolved() { bool v = m_nonlocals_resolved; m_nonlocals_resolved = true; return v; }
+
 private:
     Module& m_module;
     SymbolTable& m_symtab;
@@ -175,6 +177,8 @@ private:
     std::shared_ptr<Signature> m_signature;
     // Function body (depending on kind of function)
     std::variant<std::monostate, CompiledBody, GenericBody, NativeBody> m_body;
+    // compilation status
+    bool m_nonlocals_resolved : 1 = false;
 };
 
 
