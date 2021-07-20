@@ -38,7 +38,6 @@ struct ExpOp {
 UnaryFunction<value::Bool> logical_not_function();
 template <class T> UnaryFunction<T> unary_op_function(Opcode opcode);
 
-const char* op_to_name(ast::Operator::Op op);
 const char* op_to_function_name(ast::Operator::Op op);
 
 } // namespace builtin

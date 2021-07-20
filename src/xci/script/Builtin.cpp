@@ -135,42 +135,6 @@ namespace builtin {
 }  // namespace builtin
 
 
-const char* builtin::op_to_name(ast::Operator::Op op)
-{
-    using Op = ast::Operator;
-    switch (op) {
-        case Op::Undefined:     return nullptr;
-        case Op::Comma:         return ",";
-        case Op::LogicalOr:     return "||";
-        case Op::LogicalAnd:    return "&&";
-        case Op::Equal:         return "==";
-        case Op::NotEqual:      return "!=";
-        case Op::LessEqual:     return "<=";
-        case Op::GreaterEqual:  return ">=";
-        case Op::LessThan:      return "<";
-        case Op::GreaterThan:   return ">";
-        case Op::BitwiseOr:     return "|";
-        case Op::BitwiseAnd:    return "&";
-        case Op::BitwiseXor:    return "^";
-        case Op::ShiftLeft:     return "<<";
-        case Op::ShiftRight:    return ">>";
-        case Op::Add:           return "+";
-        case Op::Sub:           return "-";
-        case Op::Mul:           return "*";
-        case Op::Div:           return "/";
-        case Op::Mod:           return "%";
-        case Op::Exp:           return "**";
-        case Op::Subscript:     return "!";
-        case Op::LogicalNot:    return "-";
-        case Op::BitwiseNot:    return "~";
-        case Op::UnaryPlus:     return "+";
-        case Op::UnaryMinus:    return "-";
-        case Op::DotCall:       return ".";
-    }
-    UNREACHABLE;
-}
-
-
 const char* builtin::op_to_function_name(ast::Operator::Op op)
 {
     using Op = ast::Operator;
