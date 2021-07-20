@@ -18,6 +18,7 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
 {
     switch (v) {
         case Opcode::Noop:              return os << "NOOP";
+        case Opcode::LogicalNot:        return os << "LOGICAL_NOT";
         case Opcode::LogicalOr:         return os << "LOGICAL_OR";
         case Opcode::LogicalAnd:        return os << "LOGICAL_AND";
         case Opcode::Equal_8:
@@ -38,6 +39,9 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::GreaterThan_8:
         case Opcode::GreaterThan_32:
         case Opcode::GreaterThan_64:    return os << "GREATER_THAN";
+        case Opcode::BitwiseNot_8:
+        case Opcode::BitwiseNot_32:
+        case Opcode::BitwiseNot_64:     return os << "BITWISE_NOT";
         case Opcode::BitwiseOr_8:
         case Opcode::BitwiseOr_32:
         case Opcode::BitwiseOr_64:      return os << "BITWISE_OR";
@@ -53,31 +57,13 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::ShiftRight_8:
         case Opcode::ShiftRight_32:
         case Opcode::ShiftRight_64:     return os << "SHIFT_RIGHT";
-        case Opcode::Add_8:
-        case Opcode::Add_32:
-        case Opcode::Add_64:            return os << "ADD";
-        case Opcode::Sub_8:
-        case Opcode::Sub_32:
-        case Opcode::Sub_64:            return os << "SUB";
-        case Opcode::Mul_8:
-        case Opcode::Mul_32:
-        case Opcode::Mul_64:            return os << "MUL";
-        case Opcode::Div_8:
-        case Opcode::Div_32:
-        case Opcode::Div_64:            return os << "DIV";
-        case Opcode::Mod_8:
-        case Opcode::Mod_32:
-        case Opcode::Mod_64:            return os << "MOD";
-        case Opcode::Exp_8:
-        case Opcode::Exp_32:
-        case Opcode::Exp_64:            return os << "EXP";
-        case Opcode::LogicalNot:        return os << "LOGICAL_NOT";
-        case Opcode::BitwiseNot_8:
-        case Opcode::BitwiseNot_32:
-        case Opcode::BitwiseNot_64:     return os << "BITWISE_NOT";
-        case Opcode::Neg_8:
-        case Opcode::Neg_32:
-        case Opcode::Neg_64:            return os << "NEG";
+        case Opcode::Neg:               return os << "NEG";
+        case Opcode::Add:               return os << "ADD";
+        case Opcode::Sub:               return os << "SUB";
+        case Opcode::Mul:               return os << "MUL";
+        case Opcode::Div:               return os << "DIV";
+        case Opcode::Mod:               return os << "MOD";
+        case Opcode::Exp:               return os << "EXP";
         case Opcode::Subscript:         return os << "SUBSCRIPT";
         case Opcode::Invoke:            return os << "INVOKE";
         case Opcode::LoadStatic:        return os << "LOAD_STATIC";

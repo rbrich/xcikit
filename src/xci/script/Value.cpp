@@ -7,6 +7,7 @@
 #include "Value.h"
 #include "Function.h"
 #include "Module.h"
+#include "Builtin.h"
 #include "Error.h"
 #include <xci/data/coding/leb128.h>
 #include <xci/core/string.h>
@@ -274,6 +275,70 @@ bool Value::cast_from(const Value& src)
         // Complex types or cast from Void
         return false;
     }, m_value, src.m_value);
+}
+
+
+bool Value::negate()
+{
+    return std::visit([](auto& v) -> bool {
+        using T = std::decay_t<decltype(v)>;
+
+        if constexpr (std::is_integral_v<T> || std::is_floating_point_v<T>) {
+            v = std::negate<>{}(v);
+            return true;
+        }
+
+        return false;
+    }, m_value);
+}
+
+
+bool Value::modulus(const Value& rhs)
+{
+    return std::visit([](auto& l, const auto& r) -> bool {
+        using TLhs = std::decay_t<decltype(l)>;
+        using TRhs = std::decay_t<decltype(r)>;
+
+        if constexpr (std::is_same_v<TLhs, TRhs> && std::is_integral_v<TLhs>) {
+            l = std::modulus<>{}(l, r);
+            return true;
+        }
+
+        if constexpr (std::is_same_v<TLhs, TRhs> && std::is_same_v<TLhs, byte>) {
+            l = (byte) std::modulus<>{}(uint8_t(l), uint8_t(r));
+            return true;
+        }
+
+        return false;
+    }, m_value, rhs.m_value);
+}
+
+
+Value Value::binary_op(Opcode opcode, const Value& rhs)
+{
+    return std::visit([opcode](const auto& l, const auto& r) -> Value {
+        using TLhs = std::decay_t<decltype(l)>;
+        using TRhs = std::decay_t<decltype(r)>;
+
+        if constexpr (
+                std::is_same_v<TLhs, TRhs> &&
+                (std::is_integral_v<TLhs> || std::is_floating_point_v<TLhs>)
+        ) {
+            auto fn = builtin::binary_op_c_function<TLhs>(opcode);
+            if (!fn)
+                return {};
+            return Value(fn(l, r));
+        }
+
+        if constexpr (std::is_same_v<TLhs, TRhs> && std::is_same_v<TLhs, byte>) {
+            auto fn = builtin::binary_op_c_function<uint8_t>(opcode);
+            if (!fn)
+                return {};
+            return Value((byte) fn(uint8_t(l), uint8_t(r)));
+        }
+
+        return {};
+    }, m_value, rhs.m_value);
 }
 
 

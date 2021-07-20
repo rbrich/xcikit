@@ -155,13 +155,7 @@ void Machine::run(const InvokeCallback& cb)
             case Opcode::BitwiseAnd_8:
             case Opcode::BitwiseXor_8:
             case Opcode::ShiftLeft_8:
-            case Opcode::ShiftRight_8:
-            case Opcode::Add_8:
-            case Opcode::Sub_8:
-            case Opcode::Mul_8:
-            case Opcode::Div_8:
-            case Opcode::Mod_8:
-            case Opcode::Exp_8: {
+            case Opcode::ShiftRight_8: {
                 auto fn = builtin::binary_op_function<value::Byte>(opcode);
                 if (!fn)
                     throw NotImplemented(format("binary operator {}", opcode));
@@ -175,13 +169,7 @@ void Machine::run(const InvokeCallback& cb)
             case Opcode::BitwiseAnd_32:
             case Opcode::BitwiseXor_32:
             case Opcode::ShiftLeft_32:
-            case Opcode::ShiftRight_32:
-            case Opcode::Add_32:
-            case Opcode::Sub_32:
-            case Opcode::Mul_32:
-            case Opcode::Div_32:
-            case Opcode::Mod_32:
-            case Opcode::Exp_32: {
+            case Opcode::ShiftRight_32: {
                 auto fn = builtin::binary_op_function<value::Int32>(opcode);
                 if (!fn)
                     throw NotImplemented(format("binary operator {}", opcode));
@@ -195,19 +183,46 @@ void Machine::run(const InvokeCallback& cb)
             case Opcode::BitwiseAnd_64:
             case Opcode::BitwiseXor_64:
             case Opcode::ShiftLeft_64:
-            case Opcode::ShiftRight_64:
-            case Opcode::Add_64:
-            case Opcode::Sub_64:
-            case Opcode::Mul_64:
-            case Opcode::Div_64:
-            case Opcode::Mod_64:
-            case Opcode::Exp_64: {
+            case Opcode::ShiftRight_64: {
                 auto fn = builtin::binary_op_function<value::Int64>(opcode);
                 if (!fn)
                     throw NotImplemented(format("binary operator {}", opcode));
                 auto lhs = m_stack.pull<value::Int64>();
                 auto rhs = m_stack.pull<value::Int64>();
                 m_stack.push(fn(lhs, rhs));
+                break;
+            }
+
+            case Opcode::Add:
+            case Opcode::Sub:
+            case Opcode::Mul:
+            case Opcode::Div:
+            case Opcode::Exp: {
+                const auto arg = *it++;
+                const auto lhs_type = decode_arg_type(arg >> 4);
+                const auto rhs_type = decode_arg_type(arg & 0xf);
+                if (lhs_type == Type::Unknown || rhs_type == Type::Unknown || lhs_type != rhs_type)
+                    throw NotImplemented(format("opcode: {} lhs: {:x} rhs: {:x}",
+                            opcode, arg >> 4, arg & 0xf));
+                auto lhs = m_stack.pull(TypeInfo{lhs_type});
+                auto rhs = m_stack.pull(TypeInfo{rhs_type});
+                m_stack.push(lhs.binary_op(opcode, rhs));
+                break;
+            }
+
+            case Opcode::Mod: {
+                const auto arg = *it++;
+                const auto lhs_type = decode_arg_type(arg >> 4);
+                const auto rhs_type = decode_arg_type(arg & 0xf);
+                if (lhs_type == Type::Unknown || rhs_type == Type::Unknown || lhs_type != rhs_type)
+                    throw NotImplemented(format("modulus lhs: {:x} rhs: {:x}",
+                            arg >> 4, arg & 0xf));
+                auto lhs = m_stack.pull(TypeInfo{lhs_type});
+                auto rhs = m_stack.pull(TypeInfo{rhs_type});
+                if (!lhs.modulus(rhs))
+                    throw NotImplemented(format("modulus lhs: {:x} rhs: {:x}",
+                            arg >> 4, arg & 0xf));
+                m_stack.push(lhs);
                 break;
             }
 
@@ -219,8 +234,7 @@ void Machine::run(const InvokeCallback& cb)
                 break;
             }
 
-            case Opcode::BitwiseNot_8:
-            case Opcode::Neg_8: {
+            case Opcode::BitwiseNot_8: {
                 auto fn = builtin::unary_op_function<value::Byte>(opcode);
                 if (!fn)
                     throw NotImplemented(format("unary operator {}", opcode));
@@ -229,8 +243,7 @@ void Machine::run(const InvokeCallback& cb)
                 break;
             }
 
-            case Opcode::BitwiseNot_32:
-            case Opcode::Neg_32: {
+            case Opcode::BitwiseNot_32: {
                 auto fn = builtin::unary_op_function<value::Int32>(opcode);
                 if (!fn)
                     throw NotImplemented(format("unary operator {}", opcode));
@@ -239,13 +252,24 @@ void Machine::run(const InvokeCallback& cb)
                 break;
             }
 
-            case Opcode::BitwiseNot_64:
-            case Opcode::Neg_64: {
+            case Opcode::BitwiseNot_64: {
                 auto fn = builtin::unary_op_function<value::Int64>(opcode);
                 if (!fn)
                     throw NotImplemented(format("unary operator {}", opcode));
                 auto rhs = m_stack.pull<value::Int64>();
                 m_stack.push(fn(rhs));
+                break;
+            }
+
+            case Opcode::Neg: {
+                const auto arg = *it++;
+                const auto type = decode_arg_type(arg & 0xf);
+                if (type == Type::Unknown)
+                    throw NotImplemented(format("opcode: {} type: {:x}",
+                            opcode, arg & 0xf));
+                auto v = m_stack.pull(TypeInfo{type});
+                v.negate();
+                m_stack.push(v);
                 break;
             }
 

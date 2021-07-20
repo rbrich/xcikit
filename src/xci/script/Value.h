@@ -10,6 +10,7 @@
 #include "TypeInfo.h"
 #include "Heap.h"
 #include "Stream.h"
+#include "Code.h"
 
 #include <ostream>
 #include <utility>
@@ -214,6 +215,10 @@ public:
     // Load value from `other` and return true if the value is compatible
     // (can be statically casted). Return false otherwise.
     bool cast_from(const Value& src);
+
+    bool negate();  // unary minus op
+    bool modulus(const Value& rhs);
+    Value binary_op(Opcode opcode, const Value& rhs);
 
     // Cast to subtype, e.g.: `v.get<bool>()`
     template <class T> T& get() { return std::get<T>(m_value); }

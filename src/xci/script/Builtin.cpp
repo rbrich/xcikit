@@ -20,6 +20,11 @@ R apply_binary_op(T lhs, T rhs) {
     return static_cast<R>( F{}(lhs.value(), rhs.value()) );
 }
 
+template <class F, class T, class R=T>
+R apply_binary_op_c(T lhs, T rhs) {
+    return static_cast<R>( F{}(lhs, rhs) );
+}
+
 
 template <class F, class T>
 T apply_unary_op(T rhs) {
@@ -111,24 +116,19 @@ namespace builtin {
             case Opcode::ShiftRight_8:
             case Opcode::ShiftRight_32:
             case Opcode::ShiftRight_64: return apply_binary_op<shift_right, T>;
-            case Opcode::Add_8:
-            case Opcode::Add_32:
-            case Opcode::Add_64:        return apply_binary_op<std::plus<>, T>;
-            case Opcode::Sub_8:
-            case Opcode::Sub_32:
-            case Opcode::Sub_64:        return apply_binary_op<std::minus<>, T>;
-            case Opcode::Mul_8:
-            case Opcode::Mul_32:
-            case Opcode::Mul_64:        return apply_binary_op<std::multiplies<>, T>;
-            case Opcode::Div_8:
-            case Opcode::Div_32:
-            case Opcode::Div_64:        return apply_binary_op<std::divides<>, T>;
-            case Opcode::Mod_8:
-            case Opcode::Mod_32:
-            case Opcode::Mod_64:        return apply_binary_op<std::modulus<>, T>;
-            case Opcode::Exp_8:
-            case Opcode::Exp_32:
-            case Opcode::Exp_64:        return apply_binary_op<exp_emul, T>;
+            default:                    return nullptr;
+        }
+    }
+
+    template <class T>
+    BinaryFunction<T> binary_op_c_function(Opcode opcode)
+    {
+        switch (opcode) {
+            case Opcode::Add:           return apply_binary_op_c<std::plus<>, T>;
+            case Opcode::Sub:           return apply_binary_op_c<std::minus<>, T>;
+            case Opcode::Mul:           return apply_binary_op_c<std::multiplies<>, T>;
+            case Opcode::Div:           return apply_binary_op_c<std::divides<>, T>;
+            case Opcode::Exp:           return apply_binary_op_c<exp_emul, T>;
             default:                    return nullptr;
         }
     }
@@ -145,9 +145,6 @@ namespace builtin {
             case Opcode::BitwiseNot_8:
             case Opcode::BitwiseNot_32:
             case Opcode::BitwiseNot_64: return apply_unary_op<std::bit_not<>, T>;
-            case Opcode::Neg_8:
-            case Opcode::Neg_32:
-            case Opcode::Neg_64:        return apply_unary_op<std::negate<>, T>;
             default:                    return nullptr;
         }
     }
@@ -159,6 +156,13 @@ namespace builtin {
     template BinaryFunction<value::Byte> binary_op_function<value::Byte>(Opcode opcode);
     template BinaryFunction<value::Int32> binary_op_function<value::Int32>(Opcode opcode);
     template BinaryFunction<value::Int64> binary_op_function<value::Int64>(Opcode opcode);
+    template BinaryFunction<bool> binary_op_c_function<bool>(Opcode opcode);
+    template BinaryFunction<uint8_t> binary_op_c_function<uint8_t>(Opcode opcode);
+    template BinaryFunction<char32_t> binary_op_c_function<char32_t>(Opcode opcode);
+    template BinaryFunction<int32_t> binary_op_c_function<int32_t>(Opcode opcode);
+    template BinaryFunction<int64_t> binary_op_c_function<int64_t>(Opcode opcode);
+    template BinaryFunction<float> binary_op_c_function<float>(Opcode opcode);
+    template BinaryFunction<double> binary_op_c_function<double>(Opcode opcode);
     template UnaryFunction<value::Byte> unary_op_function<value::Byte>(Opcode opcode);
     template UnaryFunction<value::Int32> unary_op_function<value::Int32>(Opcode opcode);
     template UnaryFunction<value::Int64> unary_op_function<value::Int64>(Opcode opcode);
@@ -301,29 +305,15 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__shift_right_8", Symbol::Instruction, Index(Opcode::ShiftRight_8)});
     symtab().add({"__shift_right_32", Symbol::Instruction, Index(Opcode::ShiftRight_32)});
     symtab().add({"__shift_right_64", Symbol::Instruction, Index(Opcode::ShiftRight_64)});
-    symtab().add({"__neg_8", Symbol::Instruction, Index(Opcode::Neg_8)});
-    symtab().add({"__neg_32", Symbol::Instruction, Index(Opcode::Neg_32)});
-    symtab().add({"__neg_64", Symbol::Instruction, Index(Opcode::Neg_64)});
-    symtab().add({"__add_8", Symbol::Instruction, Index(Opcode::Add_8)});
-    symtab().add({"__add_32", Symbol::Instruction, Index(Opcode::Add_32)});
-    symtab().add({"__add_64", Symbol::Instruction, Index(Opcode::Add_64)});
-    symtab().add({"__sub_8", Symbol::Instruction, Index(Opcode::Sub_8)});
-    symtab().add({"__sub_32", Symbol::Instruction, Index(Opcode::Sub_32)});
-    symtab().add({"__sub_64", Symbol::Instruction, Index(Opcode::Sub_64)});
-    symtab().add({"__mul_8", Symbol::Instruction, Index(Opcode::Mul_8)});
-    symtab().add({"__mul_32", Symbol::Instruction, Index(Opcode::Mul_32)});
-    symtab().add({"__mul_64", Symbol::Instruction, Index(Opcode::Mul_64)});
-    symtab().add({"__div_8", Symbol::Instruction, Index(Opcode::Div_8)});
-    symtab().add({"__div_32", Symbol::Instruction, Index(Opcode::Div_32)});
-    symtab().add({"__div_64", Symbol::Instruction, Index(Opcode::Div_64)});
-    symtab().add({"__mod_8", Symbol::Instruction, Index(Opcode::Mod_8)});
-    symtab().add({"__mod_32", Symbol::Instruction, Index(Opcode::Mod_32)});
-    symtab().add({"__mod_64", Symbol::Instruction, Index(Opcode::Mod_64)});
-    symtab().add({"__exp_8", Symbol::Instruction, Index(Opcode::Exp_8)});
-    symtab().add({"__exp_32", Symbol::Instruction, Index(Opcode::Exp_32)});
-    symtab().add({"__exp_64", Symbol::Instruction, Index(Opcode::Exp_64)});
 
     // one arg
+    symtab().add({"__neg", Symbol::Instruction, Index(Opcode::Neg)});
+    symtab().add({"__add", Symbol::Instruction, Index(Opcode::Add)});
+    symtab().add({"__sub", Symbol::Instruction, Index(Opcode::Sub)});
+    symtab().add({"__mul", Symbol::Instruction, Index(Opcode::Mul)});
+    symtab().add({"__div", Symbol::Instruction, Index(Opcode::Div)});
+    symtab().add({"__mod", Symbol::Instruction, Index(Opcode::Mod)});
+    symtab().add({"__exp", Symbol::Instruction, Index(Opcode::Exp)});
     symtab().add({"__load_static", Symbol::Instruction, Index(Opcode::LoadStatic)});
     symtab().add({"__subscript", Symbol::Instruction, Index(Opcode::Subscript)});
     symtab().add({"__cast", Symbol::Instruction, Index(Opcode::Cast)});

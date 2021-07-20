@@ -64,42 +64,37 @@ enum class Opcode: uint8_t {
     ShiftRight_32,
     ShiftRight_64,
 
-    Neg_8,
-    Neg_32,
-    Neg_64,
-    Add_8,
-    Add_32,
-    Add_64,
-    Sub_8,
-    Sub_32,
-    Sub_64,
-    Mul_8,
-    Mul_32,
-    Mul_64,
-    Div_8,
-    Div_32,
-    Div_64,
-    Mod_8,
-    Mod_32,
-    Mod_64,
-    Exp_8,
-    Exp_32,
-    Exp_64,
-
     // Control flow
     Execute,                // pull closure from stack, unwrap it, call the contained function
 
     // --------------------------------------------------------------
     // B1 (one single-byte argument)
 
-    /// Cast Int/Float value to another type.
-    /// Arg: 4/4 bit split, high half = from type, low half = to type
-    /// Types:
-    /// * unsigned integers: 1 = 8bit, (2 = 16bit), 3 = 32bit, 4 = 64bit, (5 = 128bit)
-    /// * signed integers: 6 = 8bit, (7 = 16bit), 8 = 32bit, 9 = 64bit, (A = 128bit)
-    /// * floats: (B = 16bit), C = 32bit, D = 64bit, (E = 128bit)
-    /// Casting rules are based on the C++ implementation (static_cast).
+    // Cast Int/Float value to another type.
+    // Arg: 4/4 bit split, high half = from type, low half = to type
+    // Type numbers are the same as for arithmetic operations below.
+    // Casting rules are based on the C++ implementation (static_cast).
     Cast,
+
+    // Arithmetic operations, the operand types are defined in Arg.
+    //
+    // Arg: 4/4 bit split, high half = left-hand type, low half = right-hand type
+    // Only pairs of same types are defined, operations on distinct types are reserved
+    // for possible future optimization. (The machine would coerce types by itself,
+    // but the caller would need to know the result of coercion.)
+    //
+    // Types:
+    // * unsigned integers: 1 = 8bit, (2 = 16bit), 3 = 32bit, 4 = 64bit, (5 = 128bit)
+    // * signed integers: 6 = 8bit, (7 = 16bit), 8 = 32bit, 9 = 64bit, (A = 128bit)
+    // * floats: (B = 16bit), C = 32bit, D = 64bit, (E = 128bit)
+
+    Neg,
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+    Exp,
 
     Jump,                   // arg => relative jump (+N instructions) - unconditional
     JumpIfNot,              // pull cond from stack, arg => relative jump (+N instructions) if cond is false

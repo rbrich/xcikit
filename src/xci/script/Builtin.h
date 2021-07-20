@@ -23,6 +23,7 @@ namespace builtin {
     BinaryFunction<value::Bool> logical_op_function(Opcode opcode);
     template <class T> BinaryFunction<T, value::Bool> comparison_op_function(Opcode opcode);
     template <class T> BinaryFunction<T> binary_op_function(Opcode opcode);
+    template <class T> BinaryFunction<T> binary_op_c_function(Opcode opcode);
 
     UnaryFunction<value::Bool> logical_not_function();
     template <class T> UnaryFunction<T> unary_op_function(Opcode opcode);

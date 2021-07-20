@@ -47,7 +47,7 @@ instance ShiftRight Int64 { shift_right = { __shift_right_64 } }
 
 // Arithmetic operators
 
-class Minus T  { neg : T -> T }
+class Neg T  { neg : T -> T }
 class Add T  { add : T T -> T }
 class Sub T  { sub : T T -> T }
 class Mul T  { mul : T T -> T }
@@ -55,27 +55,39 @@ class Div T  { div : T T -> T }
 class Mod T  { mod : T T -> T }
 class Exp T  { exp : T T -> T }
 
-instance Minus Byte  { neg = { __neg_8  } }
-instance Minus Int32 { neg = { __neg_32 } }
-instance Minus Int64 { neg = { __neg_64 } }
-instance Add Byte  { add = { __add_8  } }
-instance Add Int32 { add = { __add_32 } }
-instance Add Int64 { add = { __add_64 } }
-instance Sub Byte  { sub = { __sub_8  } }
-instance Sub Int32 { sub = { __sub_32 } }
-instance Sub Int64 { sub = { __sub_64 } }
-instance Mul Byte  { mul = { __mul_8  } }
-instance Mul Int32 { mul = { __mul_32 } }
-instance Mul Int64 { mul = { __mul_64 } }
-instance Div Byte  { div = { __div_8  } }
-instance Div Int32 { div = { __div_32 } }
-instance Div Int64 { div = { __div_64 } }
-instance Mod Byte  { mod = { __mod_8  } }
-instance Mod Int32 { mod = { __mod_32 } }
-instance Mod Int64 { mod = { __mod_64 } }
-instance Exp Byte  { exp = { __exp_8  } }
-instance Exp Int32 { exp = { __exp_32 } }
-instance Exp Int64 { exp = { __exp_64 } }
+instance Neg Byte  { neg = { __neg 0x11 } }
+instance Neg Int32 { neg = { __neg 0x88 } }
+instance Neg Int64 { neg = { __neg 0x99 } }
+instance Neg Float32 { neg = { __neg 0xCC } }
+instance Neg Float64 { neg = { __neg 0xDD } }
+instance Add Byte  { add = { __add 0x11 } }
+instance Add Int32 { add = { __add 0x88 } }
+instance Add Int64 { add = { __add 0x99 } }
+instance Add Float32 { add = { __add 0xCC } }
+instance Add Float64 { add = { __add 0xDD } }
+instance Sub Byte  { sub = { __sub 0x11 } }
+instance Sub Int32 { sub = { __sub 0x88 } }
+instance Sub Int64 { sub = { __sub 0x99 } }
+instance Sub Float32 { sub = { __sub 0xCC } }
+instance Sub Float64 { sub = { __sub 0xDD } }
+instance Mul Byte  { mul = { __mul 0x11 } }
+instance Mul Int32 { mul = { __mul 0x88 } }
+instance Mul Int64 { mul = { __mul 0x99 } }
+instance Mul Float32 { mul = { __mul 0xCC } }
+instance Mul Float64 { mul = { __mul 0xDD } }
+instance Div Byte  { div = { __div 0x11 } }
+instance Div Int32 { div = { __div 0x88 } }
+instance Div Int64 { div = { __div 0x99 } }
+instance Div Float32 { div = { __div 0xCC } }
+instance Div Float64 { div = { __div 0xDD } }
+instance Mod Byte  { mod = { __mod 0x11 } }
+instance Mod Int32 { mod = { __mod 0x88 } }
+instance Mod Int64 { mod = { __mod 0x99 } }
+instance Exp Byte  { exp = { __exp 0x11 } }
+instance Exp Int32 { exp = { __exp 0x88 } }
+instance Exp Int64 { exp = { __exp 0x99 } }
+instance Exp Float32 { exp = { __exp 0xCC } }
+instance Exp Float64 { exp = { __exp 0xDD } }
 
 
 // Comparison operators
