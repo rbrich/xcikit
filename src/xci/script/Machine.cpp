@@ -206,7 +206,14 @@ void Machine::run(const InvokeCallback& cb)
                             opcode, arg >> 4, arg & 0xf));
                 auto lhs = m_stack.pull(TypeInfo{lhs_type});
                 auto rhs = m_stack.pull(TypeInfo{rhs_type});
-                m_stack.push(lhs.binary_op(opcode, rhs));
+                switch (opcode) {
+                    case Opcode::Add: m_stack.push(lhs.binary_op<std::plus<>>(rhs)); break;
+                    case Opcode::Sub: m_stack.push(lhs.binary_op<std::minus<>>(rhs)); break;
+                    case Opcode::Mul: m_stack.push(lhs.binary_op<std::multiplies<>>(rhs)); break;
+                    case Opcode::Div: m_stack.push(lhs.binary_op<std::divides<>>(rhs)); break;
+                    case Opcode::Exp: m_stack.push(lhs.binary_op<builtin::ExpOp>(rhs)); break;
+                    default: break;
+                }
                 break;
             }
 

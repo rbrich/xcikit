@@ -218,7 +218,23 @@ public:
 
     bool negate();  // unary minus op
     bool modulus(const Value& rhs);
-    Value binary_op(Opcode opcode, const Value& rhs);
+
+    template <class TBinFun>
+    Value binary_op(const Value& rhs) {
+        return std::visit([](const auto& l, const auto& r) -> Value {
+            using TLhs = std::decay_t<decltype(l)>;
+            using TRhs = std::decay_t<decltype(r)>;
+
+            if constexpr (std::is_same_v<TLhs, TRhs> &&
+                    (std::is_integral_v<TLhs> || std::is_floating_point_v<TLhs>))
+                return Value( static_cast<TLhs>( TBinFun{}(l, r) ) );
+
+            if constexpr (std::is_same_v<TLhs, TRhs> && std::is_same_v<TLhs, byte>)
+                return Value((byte) TBinFun{}(uint8_t(l), uint8_t(r)));
+
+            return {};
+        }, m_value, rhs.m_value);
+    }
 
     // Cast to subtype, e.g.: `v.get<bool>()`
     template <class T> T& get() { return std::get<T>(m_value); }

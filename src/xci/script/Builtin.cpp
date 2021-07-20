@@ -20,11 +20,6 @@ R apply_binary_op(T lhs, T rhs) {
     return static_cast<R>( F{}(lhs.value(), rhs.value()) );
 }
 
-template <class F, class T, class R=T>
-R apply_binary_op_c(T lhs, T rhs) {
-    return static_cast<R>( F{}(lhs, rhs) );
-}
-
 
 template <class F, class T>
 T apply_unary_op(T rhs) {
@@ -47,16 +42,6 @@ struct shift_right {
     noexcept(noexcept(std::forward<T>(lhs) + std::forward<U>(rhs)))
     -> decltype(std::forward<T>(lhs) + std::forward<U>(rhs))
     { return std::forward<T>(lhs) << std::forward<U>(rhs); }
-};
-
-
-struct exp_emul {
-    template<class T, class U>
-    constexpr auto operator()( T&& lhs, U&& rhs ) const
-    noexcept(noexcept(std::forward<T>(lhs) + std::forward<U>(rhs)))
-    -> decltype(std::forward<T>(lhs) + std::forward<U>(rhs))
-    { return (decltype(std::forward<T>(lhs) + std::forward<U>(rhs)))
-        std::pow(std::forward<T>(lhs), std::forward<U>(rhs)); }
 };
 
 
@@ -120,19 +105,6 @@ namespace builtin {
         }
     }
 
-    template <class T>
-    BinaryFunction<T> binary_op_c_function(Opcode opcode)
-    {
-        switch (opcode) {
-            case Opcode::Add:           return apply_binary_op_c<std::plus<>, T>;
-            case Opcode::Sub:           return apply_binary_op_c<std::minus<>, T>;
-            case Opcode::Mul:           return apply_binary_op_c<std::multiplies<>, T>;
-            case Opcode::Div:           return apply_binary_op_c<std::divides<>, T>;
-            case Opcode::Exp:           return apply_binary_op_c<exp_emul, T>;
-            default:                    return nullptr;
-        }
-    }
-
     UnaryFunction<value::Bool> logical_not_function()
     {
         return apply_unary_op<std::logical_not<>, value::Bool>;
@@ -156,13 +128,6 @@ namespace builtin {
     template BinaryFunction<value::Byte> binary_op_function<value::Byte>(Opcode opcode);
     template BinaryFunction<value::Int32> binary_op_function<value::Int32>(Opcode opcode);
     template BinaryFunction<value::Int64> binary_op_function<value::Int64>(Opcode opcode);
-    template BinaryFunction<bool> binary_op_c_function<bool>(Opcode opcode);
-    template BinaryFunction<uint8_t> binary_op_c_function<uint8_t>(Opcode opcode);
-    template BinaryFunction<char32_t> binary_op_c_function<char32_t>(Opcode opcode);
-    template BinaryFunction<int32_t> binary_op_c_function<int32_t>(Opcode opcode);
-    template BinaryFunction<int64_t> binary_op_c_function<int64_t>(Opcode opcode);
-    template BinaryFunction<float> binary_op_c_function<float>(Opcode opcode);
-    template BinaryFunction<double> binary_op_c_function<double>(Opcode opcode);
     template UnaryFunction<value::Byte> unary_op_function<value::Byte>(Opcode opcode);
     template UnaryFunction<value::Int32> unary_op_function<value::Int32>(Opcode opcode);
     template UnaryFunction<value::Int64> unary_op_function<value::Int64>(Opcode opcode);
