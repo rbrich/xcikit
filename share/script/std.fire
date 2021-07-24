@@ -106,38 +106,38 @@ class Ord T (Eq T) {
 
 
 instance Eq Bool {
-    eq = { __equal_8 }
-    ne = { __not_equal_8 }
+    eq = { __equal 0x11 }
+    ne = { __not_equal 0x11 }
 }
 
 instance Eq Byte {
-    eq = { __equal_8 }
-    ne = { __not_equal_8 }
+    eq = { __equal 0x11 }
+    ne = { __not_equal 0x11 }
 }
 
 instance Eq Char {
-    eq = { __equal_32 }
-    ne = { __not_equal_32 }
+    eq = { __equal 0x33 }
+    ne = { __not_equal 0x33 }
 }
 
 instance Eq Int32 {
-    eq = { __equal_32 }
-    ne = { __not_equal_32 }
+    eq = { __equal 0x88 }
+    ne = { __not_equal 0x88 }
 }
 
 instance Eq Int64 {
-    eq = { __equal_64 }
-    ne = { __not_equal_64 }
+    eq = { __equal 0x99 }
+    ne = { __not_equal 0x99 }
 }
 
 instance Eq Float32 {
-    eq = { __equal_32 }
-    ne = { __not_equal_32 }
+    eq = { __equal 0xCC }
+    ne = { __not_equal 0xCC }
 }
 
 instance Eq Float64 {
-    eq = { __equal_64 }
-    ne = { __not_equal_64 }
+    eq = { __equal 0xDD }
+    ne = { __not_equal 0xDD }
 }
 
 /*
@@ -155,45 +155,45 @@ instance Eq [T] ( Eq T ) {
 
 
 instance Ord Byte {
-    lt = { __less_than_8 }
-    gt = { __greater_than_8 }
-    le = { __less_equal_8 }
-    ge = { __greater_equal_8 }
+    lt = { __less_than 0x11 }
+    gt = { __greater_than 0x11 }
+    le = { __less_equal 0x11 }
+    ge = { __greater_equal 0x11 }
 }
 
 instance Ord Char {
-    lt = { __less_than_32 }
-    gt = { __greater_than_32 }
-    le = { __less_equal_32 }
-    ge = { __greater_equal_32 }
+    lt = { __less_than 0x33 }
+    gt = { __greater_than 0x33 }
+    le = { __less_equal 0x33 }
+    ge = { __greater_equal 0x33 }
 }
 
 instance Ord Int32 {
-    lt = { __less_than_32 }
-    gt = { __greater_than_32 }
-    le = { __less_equal_32 }
-    ge = { __greater_equal_32 }
+    lt = { __less_than 0x88 }
+    gt = { __greater_than 0x88 }
+    le = { __less_equal 0x88 }
+    ge = { __greater_equal 0x88 }
 }
 
 instance Ord Int64 {
-    lt = { __less_than_64 }
-    gt = { __greater_than_64 }
-    le = { __less_equal_64 }
-    ge = { __greater_equal_64 }
+    lt = { __less_than 0x99 }
+    gt = { __greater_than 0x99 }
+    le = { __less_equal 0x99 }
+    ge = { __greater_equal 0x99 }
 }
 
 instance Ord Float32 {
-    lt = { __less_than_32 }
-    gt = { __greater_than_32 }
-    le = { __less_equal_32 }
-    ge = { __greater_equal_32 }
+    lt = { __less_than 0xCC }
+    gt = { __greater_than 0xCC }
+    le = { __less_equal 0xCC }
+    ge = { __greater_equal 0xCC }
 }
 
 instance Ord Float64 {
-    lt = { __less_than_64 }
-    gt = { __greater_than_64 }
-    le = { __less_equal_64 }
-    ge = { __greater_equal_64 }
+    lt = { __less_than 0xDD }
+    gt = { __greater_than 0xDD }
+    le = { __less_equal 0xDD }
+    ge = { __greater_equal 0xDD }
 }
 
 /*

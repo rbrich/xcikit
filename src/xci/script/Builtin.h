@@ -22,7 +22,6 @@ template <class T, class R=T> using BinaryFunction = std::function<R(T, T)>;
 template <class T> using UnaryFunction = std::function<T(T)>;
 
 BinaryFunction<value::Bool> logical_op_function(Opcode opcode);
-template <class T> BinaryFunction<T, value::Bool> comparison_op_function(Opcode opcode);
 template <class T> BinaryFunction<T> binary_op_function(Opcode opcode);
 
 // exp operator is missing in <functional>

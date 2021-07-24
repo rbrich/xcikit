@@ -106,48 +106,29 @@ void Machine::run(const InvokeCallback& cb)
                 break;
             }
 
-            case Opcode::Equal_8:
-            case Opcode::NotEqual_8:
-            case Opcode::LessEqual_8:
-            case Opcode::GreaterEqual_8:
-            case Opcode::LessThan_8:
-            case Opcode::GreaterThan_8: {
-                auto fn = builtin::comparison_op_function<value::Byte>(opcode);
-                if (!fn)
-                    throw NotImplemented(format("comparison operator {}", opcode));
-                auto lhs = m_stack.pull<value::Byte>();
-                auto rhs = m_stack.pull<value::Byte>();
-                m_stack.push(fn(lhs, rhs));
-                break;
-            }
-
-            case Opcode::Equal_32:
-            case Opcode::NotEqual_32:
-            case Opcode::LessEqual_32:
-            case Opcode::GreaterEqual_32:
-            case Opcode::LessThan_32:
-            case Opcode::GreaterThan_32: {
-                auto fn = builtin::comparison_op_function<value::Int32>(opcode);
-                if (!fn)
-                    throw NotImplemented(format("comparison operator {}", opcode));
-                auto lhs = m_stack.pull<value::Int32>();
-                auto rhs = m_stack.pull<value::Int32>();
-                m_stack.push(fn(lhs, rhs));
-                break;
-            }
-
-            case Opcode::Equal_64:
-            case Opcode::NotEqual_64:
-            case Opcode::LessEqual_64:
-            case Opcode::GreaterEqual_64:
-            case Opcode::LessThan_64:
-            case Opcode::GreaterThan_64: {
-                auto fn = builtin::comparison_op_function<value::Int64>(opcode);
-                if (!fn)
-                    throw NotImplemented(format("comparison operator {}", opcode));
-                auto lhs = m_stack.pull<value::Int64>();
-                auto rhs = m_stack.pull<value::Int64>();
-                m_stack.push(fn(lhs, rhs));
+            case Opcode::Equal:
+            case Opcode::NotEqual:
+            case Opcode::LessEqual:
+            case Opcode::GreaterEqual:
+            case Opcode::LessThan:
+            case Opcode::GreaterThan: {
+                const auto arg = *it++;
+                const auto lhs_type = decode_arg_type(arg >> 4);
+                const auto rhs_type = decode_arg_type(arg & 0xf);
+                if (lhs_type == Type::Unknown || rhs_type == Type::Unknown || lhs_type != rhs_type)
+                    throw NotImplemented(format("opcode: {} lhs type: {:x} rhs type: {:x}",
+                            opcode, arg >> 4, arg & 0xf));
+                auto lhs = m_stack.pull(TypeInfo{lhs_type});
+                auto rhs = m_stack.pull(TypeInfo{rhs_type});
+                switch (opcode) {
+                    case Opcode::Equal: m_stack.push(lhs.binary_op<std::equal_to<>>(rhs)); break;
+                    case Opcode::NotEqual: m_stack.push(lhs.binary_op<std::not_equal_to<>>(rhs)); break;
+                    case Opcode::LessEqual: m_stack.push(lhs.binary_op<std::less_equal<>>(rhs)); break;
+                    case Opcode::GreaterEqual: m_stack.push(lhs.binary_op<std::greater_equal<>>(rhs)); break;
+                    case Opcode::LessThan: m_stack.push(lhs.binary_op<std::less<>>(rhs)); break;
+                    case Opcode::GreaterThan: m_stack.push(lhs.binary_op<std::greater<>>(rhs)); break;
+                    default: break;
+                }
                 break;
             }
 
@@ -202,7 +183,7 @@ void Machine::run(const InvokeCallback& cb)
                 const auto lhs_type = decode_arg_type(arg >> 4);
                 const auto rhs_type = decode_arg_type(arg & 0xf);
                 if (lhs_type == Type::Unknown || rhs_type == Type::Unknown || lhs_type != rhs_type)
-                    throw NotImplemented(format("opcode: {} lhs: {:x} rhs: {:x}",
+                    throw NotImplemented(format("opcode: {} lhs type: {:x} rhs type: {:x}",
                             opcode, arg >> 4, arg & 0xf));
                 auto lhs = m_stack.pull(TypeInfo{lhs_type});
                 auto rhs = m_stack.pull(TypeInfo{rhs_type});

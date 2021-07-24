@@ -26,25 +26,6 @@ enum class Opcode: uint8_t {
     LogicalOr,
     LogicalAnd,
 
-    Equal_8,
-    Equal_32,
-    Equal_64,
-    NotEqual_8,
-    NotEqual_32,
-    NotEqual_64,
-    LessEqual_8,
-    LessEqual_32,
-    LessEqual_64,
-    GreaterEqual_8,
-    GreaterEqual_32,
-    GreaterEqual_64,
-    LessThan_8,
-    LessThan_32,
-    LessThan_64,
-    GreaterThan_8,
-    GreaterThan_32,
-    GreaterThan_64,
-
     BitwiseNot_8,
     BitwiseNot_32,
     BitwiseNot_64,
@@ -72,11 +53,23 @@ enum class Opcode: uint8_t {
 
     // Cast Int/Float value to another type.
     // Arg: 4/4 bit split, high half = from type, low half = to type
-    // Type numbers are the same as for arithmetic operations below.
+    // Type numbers are the same as for arithmetic instructions below.
     // Casting rules are based on the C++ implementation (static_cast).
     Cast,
 
-    // Arithmetic operations, the operand types are defined in Arg.
+    // Comparison instructions, the operand types are defined in Arg.
+    // Arg: 4/4 bit split, high half = left-hand type, low half = right-hand type
+    // Only pairs of same types are defined, operations on distinct types are reserved.
+    // Type numbers are the same as for arithmetic instructions below.
+
+    Equal,
+    NotEqual,
+    LessEqual,
+    GreaterEqual,
+    LessThan,
+    GreaterThan,
+
+    // Arithmetic instructions, the operand types are defined in Arg.
     //
     // Arg: 4/4 bit split, high half = left-hand type, low half = right-hand type
     // Only pairs of same types are defined, operations on distinct types are reserved

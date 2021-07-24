@@ -57,32 +57,6 @@ namespace builtin {
     }
 
     template <class T>
-    BinaryFunction<T, value::Bool> comparison_op_function(Opcode opcode)
-    {
-        switch (opcode) {
-            case Opcode::Equal_8:
-            case Opcode::Equal_32:
-            case Opcode::Equal_64:          return apply_binary_op<std::equal_to<>, T, value::Bool>;
-            case Opcode::NotEqual_8:
-            case Opcode::NotEqual_32:
-            case Opcode::NotEqual_64:       return apply_binary_op<std::not_equal_to<>, T, value::Bool>;
-            case Opcode::LessEqual_8:
-            case Opcode::LessEqual_32:
-            case Opcode::LessEqual_64:      return apply_binary_op<std::less_equal<>, T, value::Bool>;
-            case Opcode::GreaterEqual_8:
-            case Opcode::GreaterEqual_32:
-            case Opcode::GreaterEqual_64:   return apply_binary_op<std::greater_equal<>, T, value::Bool>;
-            case Opcode::LessThan_8:
-            case Opcode::LessThan_32:
-            case Opcode::LessThan_64:       return apply_binary_op<std::less<>, T, value::Bool>;
-            case Opcode::GreaterThan_8:
-            case Opcode::GreaterThan_32:
-            case Opcode::GreaterThan_64:    return apply_binary_op<std::greater<>, T, value::Bool>;
-            default:                    return nullptr;
-        }
-    }
-
-    template <class T>
     BinaryFunction<T> binary_op_function(Opcode opcode)
     {
         switch (opcode) {
@@ -122,9 +96,6 @@ namespace builtin {
     }
 
 
-    template BinaryFunction<value::Byte, value::Bool> comparison_op_function<value::Byte>(Opcode opcode);
-    template BinaryFunction<value::Int32, value::Bool> comparison_op_function<value::Int32>(Opcode opcode);
-    template BinaryFunction<value::Int64, value::Bool> comparison_op_function<value::Int64>(Opcode opcode);
     template BinaryFunction<value::Byte> binary_op_function<value::Byte>(Opcode opcode);
     template BinaryFunction<value::Int32> binary_op_function<value::Int32>(Opcode opcode);
     template BinaryFunction<value::Int64> binary_op_function<value::Int64>(Opcode opcode);
@@ -198,24 +169,6 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__logical_not", Symbol::Instruction, Index(Opcode::LogicalNot)});
     symtab().add({"__logical_or", Symbol::Instruction, Index(Opcode::LogicalOr)});
     symtab().add({"__logical_and", Symbol::Instruction, Index(Opcode::LogicalAnd)});
-    symtab().add({"__equal_8", Symbol::Instruction, Index(Opcode::Equal_8)});
-    symtab().add({"__equal_32", Symbol::Instruction, Index(Opcode::Equal_32)});
-    symtab().add({"__equal_64", Symbol::Instruction, Index(Opcode::Equal_64)});
-    symtab().add({"__not_equal_8", Symbol::Instruction, Index(Opcode::NotEqual_8)});
-    symtab().add({"__not_equal_32", Symbol::Instruction, Index(Opcode::NotEqual_32)});
-    symtab().add({"__not_equal_64", Symbol::Instruction, Index(Opcode::NotEqual_64)});
-    symtab().add({"__less_equal_8", Symbol::Instruction, Index(Opcode::LessEqual_8)});
-    symtab().add({"__less_equal_32", Symbol::Instruction, Index(Opcode::LessEqual_32)});
-    symtab().add({"__less_equal_64", Symbol::Instruction, Index(Opcode::LessEqual_64)});
-    symtab().add({"__greater_equal_8", Symbol::Instruction, Index(Opcode::GreaterEqual_8)});
-    symtab().add({"__greater_equal_32", Symbol::Instruction, Index(Opcode::GreaterEqual_32)});
-    symtab().add({"__greater_equal_64", Symbol::Instruction, Index(Opcode::GreaterEqual_64)});
-    symtab().add({"__less_than_8", Symbol::Instruction, Index(Opcode::LessThan_8)});
-    symtab().add({"__less_than_32", Symbol::Instruction, Index(Opcode::LessThan_32)});
-    symtab().add({"__less_than_64", Symbol::Instruction, Index(Opcode::LessThan_64)});
-    symtab().add({"__greater_than_8", Symbol::Instruction, Index(Opcode::GreaterThan_8)});
-    symtab().add({"__greater_than_32", Symbol::Instruction, Index(Opcode::GreaterThan_32)});
-    symtab().add({"__greater_than_64", Symbol::Instruction, Index(Opcode::GreaterThan_64)});
     symtab().add({"__bitwise_not_8", Symbol::Instruction, Index(Opcode::BitwiseNot_8)});
     symtab().add({"__bitwise_not_32", Symbol::Instruction, Index(Opcode::BitwiseNot_32)});
     symtab().add({"__bitwise_not_64", Symbol::Instruction, Index(Opcode::BitwiseNot_64)});
@@ -236,6 +189,12 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__shift_right_64", Symbol::Instruction, Index(Opcode::ShiftRight_64)});
 
     // one arg
+    symtab().add({"__equal", Symbol::Instruction, Index(Opcode::Equal)});
+    symtab().add({"__not_equal", Symbol::Instruction, Index(Opcode::NotEqual)});
+    symtab().add({"__less_equal", Symbol::Instruction, Index(Opcode::LessEqual)});
+    symtab().add({"__greater_equal", Symbol::Instruction, Index(Opcode::GreaterEqual)});
+    symtab().add({"__less_than", Symbol::Instruction, Index(Opcode::LessThan)});
+    symtab().add({"__greater_than", Symbol::Instruction, Index(Opcode::GreaterThan)});
     symtab().add({"__neg", Symbol::Instruction, Index(Opcode::Neg)});
     symtab().add({"__add", Symbol::Instruction, Index(Opcode::Add)});
     symtab().add({"__sub", Symbol::Instruction, Index(Opcode::Sub)});

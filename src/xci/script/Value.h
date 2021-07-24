@@ -166,7 +166,9 @@ public:
     Value() = default;  // Void
     explicit Value(bool v) : m_value(v) {}  // Bool
     explicit Value(byte v) : m_value(v) {}  // Byte
+    explicit Value(uint8_t v) : m_value(byte(v)) {}  // Byte
     explicit Value(char32_t v) : m_value(v) {}  // Char
+    explicit Value(uint32_t v) : m_value(char32_t(v)) {}  // Char
     explicit Value(int32_t v) : m_value(v) {}  // Int32
     explicit Value(int64_t v) : m_value(v) {}  // Int64
     explicit Value(float v) : m_value(v) {}  // Float32
@@ -227,10 +229,10 @@ public:
 
             if constexpr (std::is_same_v<TLhs, TRhs> &&
                     (std::is_integral_v<TLhs> || std::is_floating_point_v<TLhs>))
-                return Value( static_cast<TLhs>( TBinFun{}(l, r) ) );
+                return Value( TBinFun{}(l, r) );
 
             if constexpr (std::is_same_v<TLhs, TRhs> && std::is_same_v<TLhs, byte>)
-                return Value((byte) TBinFun{}(uint8_t(l), uint8_t(r)));
+                return Value( TBinFun{}(uint8_t(l), uint8_t(r)) );
 
             return {};
         }, m_value, rhs.m_value);

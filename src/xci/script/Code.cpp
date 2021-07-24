@@ -21,24 +21,12 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::LogicalNot:        return os << "LOGICAL_NOT";
         case Opcode::LogicalOr:         return os << "LOGICAL_OR";
         case Opcode::LogicalAnd:        return os << "LOGICAL_AND";
-        case Opcode::Equal_8:
-        case Opcode::Equal_32:
-        case Opcode::Equal_64:          return os << "EQUAL";
-        case Opcode::NotEqual_8:
-        case Opcode::NotEqual_32:
-        case Opcode::NotEqual_64:       return os << "NOT_EQUAL";
-        case Opcode::LessEqual_8:
-        case Opcode::LessEqual_32:
-        case Opcode::LessEqual_64:      return os << "LESS_EQUAL";
-        case Opcode::GreaterEqual_8:
-        case Opcode::GreaterEqual_32:
-        case Opcode::GreaterEqual_64:   return os << "GREATER_EQUAL";
-        case Opcode::LessThan_8:
-        case Opcode::LessThan_32:
-        case Opcode::LessThan_64:       return os << "LESS_THAN";
-        case Opcode::GreaterThan_8:
-        case Opcode::GreaterThan_32:
-        case Opcode::GreaterThan_64:    return os << "GREATER_THAN";
+        case Opcode::Equal:             return os << "EQUAL";
+        case Opcode::NotEqual:          return os << "NOT_EQUAL";
+        case Opcode::LessEqual:         return os << "LESS_EQUAL";
+        case Opcode::GreaterEqual:      return os << "GREATER_EQUAL";
+        case Opcode::LessThan:          return os << "LESS_THAN";
+        case Opcode::GreaterThan:       return os << "GREATER_THAN";
         case Opcode::BitwiseNot_8:
         case Opcode::BitwiseNot_32:
         case Opcode::BitwiseNot_64:     return os << "BITWISE_NOT";
