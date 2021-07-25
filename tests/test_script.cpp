@@ -347,14 +347,20 @@ TEST_CASE( "Literals", "[script][interpreter]" )
 {
     // Integer literal out of 32bit range is promoted to Int64
     CHECK(interpret("2147483647") == "2147483647");
-    CHECK(interpret("2147483648") == "2147483648L");
+    CHECK(interpret("2147483648") == "2147483648L");  // promoted
     CHECK(interpret("-2147483648") == "-2147483648");
-    CHECK(interpret("-2147483649") == "-2147483649L");
+    CHECK(interpret("-2147483649") == "-2147483649L");  // promoted
+    CHECK(interpret("4294967295u") == "4294967295U");
+    CHECK(interpret("4294967296u") == "4294967296UL");  // promoted
+    CHECK(interpret("-1u") == "4294967295U");
+    CHECK(interpret("-1ul") == "18446744073709551615UL");
     // Integer literal out of 64bit range doesn't compile
     CHECK(interpret("9223372036854775807L") == "9223372036854775807L");
     CHECK_THROWS_AS(interpret("9223372036854775808L"), ParseError);
     CHECK(interpret("-9223372036854775808L") == "-9223372036854775808L");
     CHECK_THROWS_AS(interpret("-9223372036854775809L"), ParseError);
+    CHECK(interpret("18446744073709551615ul") == "18446744073709551615UL");
+    CHECK_THROWS_AS(interpret("18446744073709551616UL"), ParseError);
 }
 
 
@@ -490,7 +496,7 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; inner 3 + (inner 4l):T }; outer 2") == "11");
 
     // "Funarg problem" (upwards)
-    auto def_succ = "succ = fun Int->Int { __value 1 .__load_static; __add_32 }; "s;
+    auto def_succ = "succ = fun Int->Int { __value 1 .__load_static; __add 0x88 }; "s;
     auto def_compose = " compose = fun f g { fun x { f (g x) } }; "s;
     auto def_succ_compose = def_succ + def_compose;
     CHECK(interpret(def_succ_compose + "plustwo = compose succ succ; plustwo 42") == "44");
@@ -626,7 +632,7 @@ TEST_CASE( "Subscript", "[script][interpreter]" )
 TEST_CASE( "Type classes", "[script][interpreter]" )
 {
     CHECK(interpret("class XEq T { xeq : T T -> Bool }; "
-                    "instance XEq Int32 { xeq = { __equal_32 } }; "
+                    "instance XEq Int32 { xeq = { __equal 0x88 } }; "
                     "xeq 1 2") == "false");
 }
 
@@ -665,15 +671,15 @@ TEST_CASE( "Compiler intrinsics", "[script][interpreter]" )
 {
     // Function signature must be explicitly declared, it's never inferred from intrinsics.
     // Parameter names are not needed (and not used), intrinsics work directly with stack.
-    // E.g. __equal_32 pulls two 32bit values and pushes 8bit Bool value back.
-    CHECK(interpret_std("my_eq = fun Int32 Int32 -> Bool { __equal_32 }; my_eq 42 (2*21)") == "true");
+    // E.g. `__equal 0x88` pulls two Int32 values and pushes 8bit Bool value back.
+    CHECK(interpret_std("my_eq = fun Int32 Int32 -> Bool { __equal 0x88 }; my_eq 42 (2*21)") == "true");
     // alternative style - essentially the same
-    CHECK(interpret("my_eq : Int32 Int32 -> Bool = { __equal_32 }; my_eq 42 43") == "false");
+    CHECK(interpret("my_eq : Int32 Int32 -> Bool = { __equal 0x88 }; my_eq 42 43") == "false");
     // intrinsic with arguments
     CHECK(interpret("my_cast : Int32 -> Int64 = { __cast 0x89 }; my_cast 42") == "42L");
     // Static value
-    CHECK(interpret("add42 = fun Int->Int { __load_static (__value 42); __add_32 }; add42 8") == "50");
-    CHECK(interpret("add42 = fun Int->Int { __value 42 . __load_static; __add_32 }; add42 8") == "50");
+    CHECK(interpret("add42 = fun Int->Int { __load_static (__value 42); __add 0x88 }; add42 8") == "50");
+    CHECK(interpret("add42 = fun Int->Int { __value 42 . __load_static; __add 0x88 }; add42 8") == "50");
 }
 
 

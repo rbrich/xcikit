@@ -53,14 +53,18 @@ enum class Opcode: uint8_t {
 
     // Cast Int/Float value to another type.
     // Arg: 4/4 bit split, high half = from type, low half = to type
-    // Type numbers are the same as for arithmetic instructions below.
     // Casting rules are based on the C++ implementation (static_cast).
+    //
+    // Type numbers:
+    // * unsigned integers: 1 = 8bit, (2 = 16bit), 3 = 32bit, 4 = 64bit, (5 = 128bit)
+    // * signed integers: (6 = 8bit, 7 = 16bit), 8 = 32bit, 9 = 64bit, (A = 128bit)
+    // * floats: (B = 16bit), C = 32bit, D = 64bit, (E = 128bit)
     Cast,
 
     // Comparison instructions, the operand types are defined in Arg.
     // Arg: 4/4 bit split, high half = left-hand type, low half = right-hand type
     // Only pairs of same types are defined, operations on distinct types are reserved.
-    // Type numbers are the same as for arithmetic instructions below.
+    // Type numbers are the same as for cast instruction above.
 
     Equal,
     NotEqual,
@@ -75,11 +79,7 @@ enum class Opcode: uint8_t {
     // Only pairs of same types are defined, operations on distinct types are reserved
     // for possible future optimization. (The machine would coerce types by itself,
     // but the caller would need to know the result of coercion.)
-    //
-    // Types:
-    // * unsigned integers: 1 = 8bit, (2 = 16bit), 3 = 32bit, 4 = 64bit, (5 = 128bit)
-    // * signed integers: 6 = 8bit, (7 = 16bit), 8 = 32bit, 9 = 64bit, (A = 128bit)
-    // * floats: (B = 16bit), C = 32bit, D = 64bit, (E = 128bit)
+    // Type numbers are the same as for cast instruction above.
 
     Neg,
     Add,

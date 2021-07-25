@@ -25,24 +25,36 @@ class BitwiseXor T  { bit_xor : T T -> T }
 class ShiftLeft  T  { shift_left  : T T -> T }
 class ShiftRight T  { shift_right : T T -> T }
 
-instance BitwiseNot Byte  { bit_not = { __bitwise_not_8  } }
-instance BitwiseNot Int32 { bit_not = { __bitwise_not_32 } }
-instance BitwiseNot Int64 { bit_not = { __bitwise_not_64 } }
-instance BitwiseOr  Byte  { bit_or  = { __bitwise_or_8   } }
-instance BitwiseOr  Int32 { bit_or  = { __bitwise_or_32  } }
-instance BitwiseOr  Int64 { bit_or  = { __bitwise_or_64  } }
-instance BitwiseAnd Byte  { bit_and = { __bitwise_and_8  } }
-instance BitwiseAnd Int32 { bit_and = { __bitwise_and_32 } }
-instance BitwiseAnd Int64 { bit_and = { __bitwise_and_64 } }
-instance BitwiseXor Byte  { bit_xor = { __bitwise_xor_8  } }
-instance BitwiseXor Int32 { bit_xor = { __bitwise_xor_32 } }
-instance BitwiseXor Int64 { bit_xor = { __bitwise_xor_64 } }
-instance ShiftLeft  Byte  { shift_left  = { __shift_left_8   } }
-instance ShiftLeft  Int32 { shift_left  = { __shift_left_32  } }
-instance ShiftLeft  Int64 { shift_left  = { __shift_left_64  } }
-instance ShiftRight Byte  { shift_right = { __shift_right_8  } }
-instance ShiftRight Int32 { shift_right = { __shift_right_32 } }
-instance ShiftRight Int64 { shift_right = { __shift_right_64 } }
+instance BitwiseNot Byte   { bit_not = { __bitwise_not_8  } }
+instance BitwiseNot UInt32 { bit_not = { __bitwise_not_32 } }
+instance BitwiseNot UInt64 { bit_not = { __bitwise_not_64 } }
+instance BitwiseNot Int32  { bit_not = { __bitwise_not_32 } }
+instance BitwiseNot Int64  { bit_not = { __bitwise_not_64 } }
+instance BitwiseOr  Byte   { bit_or  = { __bitwise_or_8   } }
+instance BitwiseOr  UInt32 { bit_or  = { __bitwise_or_32  } }
+instance BitwiseOr  UInt64 { bit_or  = { __bitwise_or_64  } }
+instance BitwiseOr  Int32  { bit_or  = { __bitwise_or_32  } }
+instance BitwiseOr  Int64  { bit_or  = { __bitwise_or_64  } }
+instance BitwiseAnd Byte   { bit_and = { __bitwise_and_8  } }
+instance BitwiseAnd UInt32 { bit_and = { __bitwise_and_32 } }
+instance BitwiseAnd UInt64 { bit_and = { __bitwise_and_64 } }
+instance BitwiseAnd Int32  { bit_and = { __bitwise_and_32 } }
+instance BitwiseAnd Int64  { bit_and = { __bitwise_and_64 } }
+instance BitwiseXor Byte   { bit_xor = { __bitwise_xor_8  } }
+instance BitwiseXor UInt32 { bit_xor = { __bitwise_xor_32 } }
+instance BitwiseXor UInt64 { bit_xor = { __bitwise_xor_64 } }
+instance BitwiseXor Int32  { bit_xor = { __bitwise_xor_32 } }
+instance BitwiseXor Int64  { bit_xor = { __bitwise_xor_64 } }
+instance ShiftLeft  Byte   { shift_left  = { __shift_left_8   } }
+instance ShiftLeft  UInt32 { shift_left  = { __shift_left_32  } }
+instance ShiftLeft  UInt64 { shift_left  = { __shift_left_64  } }
+instance ShiftLeft  Int32  { shift_left  = { __shift_left_32  } }
+instance ShiftLeft  Int64  { shift_left  = { __shift_left_64  } }
+instance ShiftRight Byte   { shift_right = { __shift_right_8  } }
+instance ShiftRight UInt32 { shift_right = { __shift_right_32 } }
+instance ShiftRight UInt64 { shift_right = { __shift_right_64 } }
+instance ShiftRight Int32  { shift_right = { __shift_right_32 } }
+instance ShiftRight Int64  { shift_right = { __shift_right_64 } }
 
 
 // Arithmetic operators
@@ -56,34 +68,48 @@ class Mod T  { mod : T T -> T }
 class Exp T  { exp : T T -> T }
 
 instance Neg Byte  { neg = { __neg 0x11 } }
+instance Neg UInt32 { neg = { __neg 0x33 } }
+instance Neg UInt64 { neg = { __neg 0x44 } }
 instance Neg Int32 { neg = { __neg 0x88 } }
 instance Neg Int64 { neg = { __neg 0x99 } }
 instance Neg Float32 { neg = { __neg 0xCC } }
 instance Neg Float64 { neg = { __neg 0xDD } }
 instance Add Byte  { add = { __add 0x11 } }
+instance Add UInt32 { add = { __add 0x33 } }
+instance Add UInt64 { add = { __add 0x44 } }
 instance Add Int32 { add = { __add 0x88 } }
 instance Add Int64 { add = { __add 0x99 } }
 instance Add Float32 { add = { __add 0xCC } }
 instance Add Float64 { add = { __add 0xDD } }
 instance Sub Byte  { sub = { __sub 0x11 } }
+instance Sub UInt32 { sub = { __sub 0x33 } }
+instance Sub UInt64 { sub = { __sub 0x44 } }
 instance Sub Int32 { sub = { __sub 0x88 } }
 instance Sub Int64 { sub = { __sub 0x99 } }
 instance Sub Float32 { sub = { __sub 0xCC } }
 instance Sub Float64 { sub = { __sub 0xDD } }
 instance Mul Byte  { mul = { __mul 0x11 } }
+instance Mul UInt32 { mul = { __mul 0x33 } }
+instance Mul UInt64 { mul = { __mul 0x44 } }
 instance Mul Int32 { mul = { __mul 0x88 } }
 instance Mul Int64 { mul = { __mul 0x99 } }
 instance Mul Float32 { mul = { __mul 0xCC } }
 instance Mul Float64 { mul = { __mul 0xDD } }
 instance Div Byte  { div = { __div 0x11 } }
+instance Div UInt32 { div = { __div 0x33 } }
+instance Div UInt64 { div = { __div 0x44 } }
 instance Div Int32 { div = { __div 0x88 } }
 instance Div Int64 { div = { __div 0x99 } }
 instance Div Float32 { div = { __div 0xCC } }
 instance Div Float64 { div = { __div 0xDD } }
 instance Mod Byte  { mod = { __mod 0x11 } }
+instance Mod UInt32 { mod = { __mod 0x33 } }
+instance Mod UInt64 { mod = { __mod 0x44 } }
 instance Mod Int32 { mod = { __mod 0x88 } }
 instance Mod Int64 { mod = { __mod 0x99 } }
 instance Exp Byte  { exp = { __exp 0x11 } }
+instance Exp UInt32 { exp = { __exp 0x33 } }
+instance Exp UInt64 { exp = { __exp 0x44 } }
 instance Exp Int32 { exp = { __exp 0x88 } }
 instance Exp Int64 { exp = { __exp 0x99 } }
 instance Exp Float32 { exp = { __exp 0xCC } }
@@ -118,6 +144,16 @@ instance Eq Byte {
 instance Eq Char {
     eq = { __equal 0x33 }
     ne = { __not_equal 0x33 }
+}
+
+instance Eq UInt32 {
+    eq = { __equal 0x33 }
+    ne = { __not_equal 0x33 }
+}
+
+instance Eq UInt64 {
+    eq = { __equal 0x44 }
+    ne = { __not_equal 0x44 }
 }
 
 instance Eq Int32 {
@@ -166,6 +202,20 @@ instance Ord Char {
     gt = { __greater_than 0x33 }
     le = { __less_equal 0x33 }
     ge = { __greater_equal 0x33 }
+}
+
+instance Ord UInt32 {
+    lt = { __less_than 0x33 }
+    gt = { __greater_than 0x33 }
+    le = { __less_equal 0x33 }
+    ge = { __greater_equal 0x33 }
+}
+
+instance Ord UInt64 {
+    lt = { __less_than 0x44 }
+    gt = { __greater_than 0x44 }
+    le = { __less_equal 0x44 }
+    ge = { __greater_equal 0x44 }
 }
 
 instance Ord Int32 {
@@ -217,29 +267,41 @@ class Cast T R {
 // Note: Cast to Void is handled by the compiler, instances with R=Void are ignored.
 
 instance Cast Bool Byte { cast = { __noop } }
+instance Cast Bool UInt32 { cast = { __cast 0x13 } }
+instance Cast Bool UInt64 { cast = { __cast 0x14 } }
 instance Cast Bool Int32 { cast = { __cast 0x18 } }
 instance Cast Bool Int64 { cast = { __cast 0x19 } }
 
 instance Cast Byte Bool { cast = fun x { x != b'\0' } }
+instance Cast Byte UInt32 { cast = { __cast 0x13 } }
+instance Cast Byte UInt64 { cast = { __cast 0x14 } }
 instance Cast Byte Int32 { cast = { __cast 0x18 } }
 instance Cast Byte Int64 { cast = { __cast 0x19 } }
 
 instance Cast Int32 Bool { cast = fun x { x != 0 } }
 instance Cast Int32 Byte { cast = { __cast 0x81 } }
+instance Cast Int32 UInt32 { cast = { __cast 0x83 } }
+instance Cast Int32 UInt64 { cast = { __cast 0x84 } }
 instance Cast Int32 Int64 { cast = { __cast 0x89 } }
 instance Cast Int32 Float32 { cast = { __cast 0x8c } }
 instance Cast Int32 Float64 { cast = { __cast 0x8d } }
 
 instance Cast Int64 Bool { cast = fun x { x != 0L } }
 instance Cast Int64 Byte { cast = { __cast 0x91 } }
+instance Cast Int64 UInt32 { cast = { __cast 0x93 } }
+instance Cast Int64 UInt64 { cast = { __cast 0x94 } }
 instance Cast Int64 Int32 { cast = { __cast 0x98 } }
 instance Cast Int64 Float32 { cast = { __cast 0x9C } }
 instance Cast Int64 Float64 { cast = { __cast 0x9D } }
 
+instance Cast Float32 UInt32 { cast = { __cast 0xC3 } }
+instance Cast Float32 UInt64 { cast = { __cast 0xC4 } }
 instance Cast Float32 Int32 { cast = { __cast 0xC8 } }
 instance Cast Float32 Int64 { cast = { __cast 0xC9 } }
 instance Cast Float32 Float64 { cast = { __cast 0xCD } }
 
+instance Cast Float64 UInt32 { cast = { __cast 0xD3 } }
+instance Cast Float64 UInt64 { cast = { __cast 0xD4 } }
 instance Cast Float64 Int32 { cast = { __cast 0xD8 } }
 instance Cast Float64 Int64 { cast = { __cast 0xD9 } }
 instance Cast Float64 Float32 { cast = { __cast 0xDC } }

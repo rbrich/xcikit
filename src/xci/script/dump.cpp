@@ -916,6 +916,8 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
         case Type::Bool:        return os << "Bool";
         case Type::Byte:        return os << "Byte";
         case Type::Char:        return os << "Char";
+        case Type::UInt32:      return os << "UInt32";
+        case Type::UInt64:      return os << "UInt64";
         case Type::Int32:       return os << "Int32";
         case Type::Int64:       return os << "Int64";
         case Type::Float32:     return os << "Float32";

@@ -367,6 +367,7 @@ public:
 
         bool orig_callable = m_callable;
         m_intrinsic = v.intrinsic;
+        m_instruction_args.clear();
 
         m_callable = false;
         for (auto& arg : reverse(v.args)) {

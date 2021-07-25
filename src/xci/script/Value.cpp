@@ -71,6 +71,8 @@ Value create_value(Type type)
         case Type::Bool: return value::Bool{};
         case Type::Byte: return value::Byte{};
         case Type::Char: return value::Char{};
+        case Type::UInt32: return value::UInt32{};
+        case Type::UInt64: return value::UInt64{};
         case Type::Int32: return value::Int32{};
         case Type::Int64: return value::Int64{};
         case Type::Float32: return value::Float32{};
@@ -238,6 +240,8 @@ Type Value::type() const
             [](bool) { return Type::Bool; },
             [](byte) { return Type::Byte; },
             [](char32_t) { return Type::Char; },
+            [](uint32_t) { return Type::UInt32; },
+            [](uint64_t) { return Type::UInt64; },
             [](int32_t) { return Type::Int32; },
             [](int64_t) { return Type::Int64; },
             [](float) { return Type::Float32; },
@@ -603,6 +607,8 @@ public:
     void visit(char32_t v) override {
         os << '\'' << core::escape(core::to_utf8(v)) << "'";
     }
+    void visit(uint32_t v) override { os << v << 'U'; }
+    void visit(uint64_t v) override { os << v << "UL"; }
     void visit(int32_t v) override { os << v; }
     void visit(int64_t v) override { os << v << 'L'; }
     void visit(float v) override {

@@ -243,6 +243,9 @@ void BuiltinModule::add_types()
     symtab().add({"Bool", Symbol::TypeName, add_type(ti_bool())});
     symtab().add({"Byte", Symbol::TypeName, add_type(ti_byte())});
     symtab().add({"Char", Symbol::TypeName, add_type(ti_char())});
+    symtab().add({"UInt", Symbol::TypeName, add_type(ti_uint32())});
+    symtab().add({"UInt32", Symbol::TypeName, add_type(ti_uint32())});
+    symtab().add({"UInt64", Symbol::TypeName, add_type(ti_uint64())});
     symtab().add({"Int", Symbol::TypeName, add_type(ti_int32())});
     symtab().add({"Int32", Symbol::TypeName, add_type(ti_int32())});
     symtab().add({"Int64", Symbol::TypeName, add_type(ti_int64())});

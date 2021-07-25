@@ -45,7 +45,8 @@ Literal syntax is derived from C++ and Python.
 0b101101   // binary integer
 0o765      // octal integer
 0xBEEFED   // hexadecimal integer
-42L        // 64bit integer
+42L        // integer (64bit)
+42UL       // unsigned integer (64bit)
 12.3       // floating point (64bit)
 12.3f      // floating point (32bit)
 '@'        // unicode character

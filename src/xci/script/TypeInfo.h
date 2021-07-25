@@ -27,6 +27,8 @@ enum class Type : uint8_t {
     Bool,
     Byte,       // uint8
     Char,       // Unicode codepoint (char32)
+    UInt32,
+    UInt64,
     Int32,
     Int64,
     Float32,
@@ -182,6 +184,8 @@ inline TypeInfo ti_void() { return TypeInfo(Type::Void); }
 inline TypeInfo ti_bool() { return TypeInfo(Type::Bool); }
 inline TypeInfo ti_byte() { return TypeInfo(Type::Byte); }
 inline TypeInfo ti_char() { return TypeInfo(Type::Char); }
+inline TypeInfo ti_uint32() { return TypeInfo(Type::UInt32); }
+inline TypeInfo ti_uint64() { return TypeInfo(Type::UInt64); }
 inline TypeInfo ti_int32() { return TypeInfo(Type::Int32); }
 inline TypeInfo ti_int64() { return TypeInfo(Type::Int64); }
 inline TypeInfo ti_float32() { return TypeInfo(Type::Float32); }
