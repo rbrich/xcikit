@@ -27,24 +27,6 @@ T apply_unary_op(T rhs) {
 }
 
 
-struct shift_left {
-    template<class T, class U>
-    constexpr auto operator()( T&& lhs, U&& rhs ) const
-    noexcept(noexcept(std::forward<T>(lhs) + std::forward<U>(rhs)))
-    -> decltype(std::forward<T>(lhs) + std::forward<U>(rhs))
-    { return std::forward<T>(lhs) << std::forward<U>(rhs); }
-};
-
-
-struct shift_right {
-    template<class T, class U>
-    constexpr auto operator()( T&& lhs, U&& rhs ) const
-    noexcept(noexcept(std::forward<T>(lhs) + std::forward<U>(rhs)))
-    -> decltype(std::forward<T>(lhs) + std::forward<U>(rhs))
-    { return std::forward<T>(lhs) << std::forward<U>(rhs); }
-};
-
-
 namespace builtin {
 
     BinaryFunction<value::Bool> logical_op_function(Opcode opcode)
@@ -69,12 +51,6 @@ namespace builtin {
             case Opcode::BitwiseXor_8:
             case Opcode::BitwiseXor_32:
             case Opcode::BitwiseXor_64: return apply_binary_op<std::bit_xor<>, T>;
-            case Opcode::ShiftLeft_8:
-            case Opcode::ShiftLeft_32:
-            case Opcode::ShiftLeft_64:  return apply_binary_op<shift_left, T>;
-            case Opcode::ShiftRight_8:
-            case Opcode::ShiftRight_32:
-            case Opcode::ShiftRight_64: return apply_binary_op<shift_right, T>;
             default:                    return nullptr;
         }
     }
@@ -181,12 +157,6 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__bitwise_xor_8", Symbol::Instruction, Index(Opcode::BitwiseXor_8)});
     symtab().add({"__bitwise_xor_32", Symbol::Instruction, Index(Opcode::BitwiseXor_32)});
     symtab().add({"__bitwise_xor_64", Symbol::Instruction, Index(Opcode::BitwiseXor_64)});
-    symtab().add({"__shift_left_8", Symbol::Instruction, Index(Opcode::ShiftLeft_8)});
-    symtab().add({"__shift_left_32", Symbol::Instruction, Index(Opcode::ShiftLeft_32)});
-    symtab().add({"__shift_left_64", Symbol::Instruction, Index(Opcode::ShiftLeft_64)});
-    symtab().add({"__shift_right_8", Symbol::Instruction, Index(Opcode::ShiftRight_8)});
-    symtab().add({"__shift_right_32", Symbol::Instruction, Index(Opcode::ShiftRight_32)});
-    symtab().add({"__shift_right_64", Symbol::Instruction, Index(Opcode::ShiftRight_64)});
 
     // one arg
     symtab().add({"__equal", Symbol::Instruction, Index(Opcode::Equal)});
@@ -195,6 +165,8 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__greater_equal", Symbol::Instruction, Index(Opcode::GreaterEqual)});
     symtab().add({"__less_than", Symbol::Instruction, Index(Opcode::LessThan)});
     symtab().add({"__greater_than", Symbol::Instruction, Index(Opcode::GreaterThan)});
+    symtab().add({"__shift_left", Symbol::Instruction, Index(Opcode::ShiftLeft)});
+    symtab().add({"__shift_right", Symbol::Instruction, Index(Opcode::ShiftRight)});
     symtab().add({"__neg", Symbol::Instruction, Index(Opcode::Neg)});
     symtab().add({"__add", Symbol::Instruction, Index(Opcode::Add)});
     symtab().add({"__sub", Symbol::Instruction, Index(Opcode::Sub)});

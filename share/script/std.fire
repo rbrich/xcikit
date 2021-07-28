@@ -45,16 +45,16 @@ instance BitwiseXor UInt32 { bit_xor = { __bitwise_xor_32 } }
 instance BitwiseXor UInt64 { bit_xor = { __bitwise_xor_64 } }
 instance BitwiseXor Int32  { bit_xor = { __bitwise_xor_32 } }
 instance BitwiseXor Int64  { bit_xor = { __bitwise_xor_64 } }
-instance ShiftLeft  Byte   { shift_left  = { __shift_left_8   } }
-instance ShiftLeft  UInt32 { shift_left  = { __shift_left_32  } }
-instance ShiftLeft  UInt64 { shift_left  = { __shift_left_64  } }
-instance ShiftLeft  Int32  { shift_left  = { __shift_left_32  } }
-instance ShiftLeft  Int64  { shift_left  = { __shift_left_64  } }
-instance ShiftRight Byte   { shift_right = { __shift_right_8  } }
-instance ShiftRight UInt32 { shift_right = { __shift_right_32 } }
-instance ShiftRight UInt64 { shift_right = { __shift_right_64 } }
-instance ShiftRight Int32  { shift_right = { __shift_right_32 } }
-instance ShiftRight Int64  { shift_right = { __shift_right_64 } }
+instance ShiftLeft  Byte   { shift_left  = { __shift_left 0x11 } }
+instance ShiftLeft  UInt32 { shift_left  = { __shift_left 0x33 } }
+instance ShiftLeft  UInt64 { shift_left  = { __shift_left 0x44 } }
+instance ShiftLeft  Int32  { shift_left  = { __shift_left 0x88 } }
+instance ShiftLeft  Int64  { shift_left  = { __shift_left 0x99 } }
+instance ShiftRight Byte   { shift_right = { __shift_right 0x11 } }
+instance ShiftRight UInt32 { shift_right = { __shift_right 0x33 } }
+instance ShiftRight UInt64 { shift_right = { __shift_right 0x44 } }
+instance ShiftRight Int32  { shift_right = { __shift_right 0x88 } }
+instance ShiftRight Int64  { shift_right = { __shift_right 0x99 } }
 
 
 // Arithmetic operators

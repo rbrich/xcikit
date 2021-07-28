@@ -134,9 +134,7 @@ void Machine::run(const InvokeCallback& cb)
 
             case Opcode::BitwiseOr_8:
             case Opcode::BitwiseAnd_8:
-            case Opcode::BitwiseXor_8:
-            case Opcode::ShiftLeft_8:
-            case Opcode::ShiftRight_8: {
+            case Opcode::BitwiseXor_8: {
                 auto fn = builtin::binary_op_function<value::Byte>(opcode);
                 if (!fn)
                     throw NotImplemented(format("binary operator {}", opcode));
@@ -148,9 +146,7 @@ void Machine::run(const InvokeCallback& cb)
 
             case Opcode::BitwiseOr_32:
             case Opcode::BitwiseAnd_32:
-            case Opcode::BitwiseXor_32:
-            case Opcode::ShiftLeft_32:
-            case Opcode::ShiftRight_32: {
+            case Opcode::BitwiseXor_32: {
                 auto fn = builtin::binary_op_function<value::Int32>(opcode);
                 if (!fn)
                     throw NotImplemented(format("binary operator {}", opcode));
@@ -162,15 +158,31 @@ void Machine::run(const InvokeCallback& cb)
 
             case Opcode::BitwiseOr_64:
             case Opcode::BitwiseAnd_64:
-            case Opcode::BitwiseXor_64:
-            case Opcode::ShiftLeft_64:
-            case Opcode::ShiftRight_64: {
+            case Opcode::BitwiseXor_64: {
                 auto fn = builtin::binary_op_function<value::Int64>(opcode);
                 if (!fn)
                     throw NotImplemented(format("binary operator {}", opcode));
                 auto lhs = m_stack.pull<value::Int64>();
                 auto rhs = m_stack.pull<value::Int64>();
                 m_stack.push(fn(lhs, rhs));
+                break;
+            }
+
+            case Opcode::ShiftLeft:
+            case Opcode::ShiftRight: {
+                const auto arg = *it++;
+                const auto lhs_type = decode_arg_type(arg >> 4);
+                const auto rhs_type = decode_arg_type(arg & 0xf);
+                if (lhs_type == Type::Unknown || rhs_type == Type::Unknown || lhs_type != rhs_type)
+                    throw NotImplemented(format("opcode: {} lhs type: {:x} rhs type: {:x}",
+                            opcode, arg >> 4, arg & 0xf));
+                auto lhs = m_stack.pull(TypeInfo{lhs_type});
+                auto rhs = m_stack.pull(TypeInfo{rhs_type});
+                switch (opcode) {
+                    case Opcode::ShiftLeft: m_stack.push(lhs.binary_op<builtin::shift_left, true>(rhs)); break;
+                    case Opcode::ShiftRight: m_stack.push(lhs.binary_op<builtin::shift_right, true>(rhs)); break;
+                    default: break;
+                }
                 break;
             }
 
@@ -192,7 +204,7 @@ void Machine::run(const InvokeCallback& cb)
                     case Opcode::Sub: m_stack.push(lhs.binary_op<std::minus<>>(rhs)); break;
                     case Opcode::Mul: m_stack.push(lhs.binary_op<std::multiplies<>>(rhs)); break;
                     case Opcode::Div: m_stack.push(lhs.binary_op<std::divides<>>(rhs)); break;
-                    case Opcode::Exp: m_stack.push(lhs.binary_op<builtin::ExpOp>(rhs)); break;
+                    case Opcode::Exp: m_stack.push(lhs.binary_op<builtin::exp>(rhs)); break;
                     default: break;
                 }
                 break;

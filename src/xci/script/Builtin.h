@@ -24,8 +24,26 @@ template <class T> using UnaryFunction = std::function<T(T)>;
 BinaryFunction<value::Bool> logical_op_function(Opcode opcode);
 template <class T> BinaryFunction<T> binary_op_function(Opcode opcode);
 
+// shift_left operator is missing in <functional>
+struct shift_left {
+    template<class T, class U>
+    constexpr auto operator()( T&& lhs, U&& rhs ) const
+    noexcept(noexcept(std::forward<T>(lhs) + std::forward<U>(rhs)))
+    -> decltype(std::forward<T>(lhs) + std::forward<U>(rhs))
+    { return std::forward<T>(lhs) << std::forward<U>(rhs); }
+};
+
+// shift_right operator is missing in <functional>
+struct shift_right {
+    template<class T, class U>
+    constexpr auto operator()( T&& lhs, U&& rhs ) const
+    noexcept(noexcept(std::forward<T>(lhs) + std::forward<U>(rhs)))
+    -> decltype(std::forward<T>(lhs) + std::forward<U>(rhs))
+    { return std::forward<T>(lhs) >> std::forward<U>(rhs); }
+};
+
 // exp operator is missing in <functional>
-struct ExpOp {
+struct exp {
     template<class T, class U>
     constexpr auto operator()( T&& lhs, U&& rhs ) const
     noexcept(noexcept(std::forward<T>(lhs) + std::forward<U>(rhs)))

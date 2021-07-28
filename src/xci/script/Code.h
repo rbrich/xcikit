@@ -38,12 +38,6 @@ enum class Opcode: uint8_t {
     BitwiseXor_8,
     BitwiseXor_32,
     BitwiseXor_64,
-    ShiftLeft_8,
-    ShiftLeft_32,
-    ShiftLeft_64,
-    ShiftRight_8,
-    ShiftRight_32,
-    ShiftRight_64,
 
     // Control flow
     Execute,                // pull closure from stack, unwrap it, call the contained function
@@ -88,6 +82,15 @@ enum class Opcode: uint8_t {
     Div,
     Mod,
     Exp,
+
+    // Bitwise shift, the operand types are defined in Arg.
+    // Arg: 4/4 bit split, high half = left-hand type, low half = right-hand type
+    // Only pairs of same types are defined, operations on distinct types are reserved.
+    // Defined only for integer types. ShiftLeft is same for signed/unsigned types.
+    // ShiftRight does sign extension for signed types.
+    // Type numbers are the same as for cast instruction above.
+    ShiftLeft,
+    ShiftRight,
 
     Jump,                   // arg => relative jump (+N instructions) - unconditional
     JumpIfNot,              // pull cond from stack, arg => relative jump (+N instructions) if cond is false

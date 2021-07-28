@@ -377,6 +377,15 @@ TEST_CASE( "Expressions", "[script][interpreter]" )
     CHECK(interpret_std("-(1 + 2)") == "-3");
     CHECK(interpret_std("1+1, {2+2}") == "(2, 4)");
     CHECK(interpret_std("f=fun a:Int {a+1}; [1, f 2]") == "[1, 3]");
+
+    CHECK(interpret_std("16 >> 2") == "4");
+    CHECK(interpret_std("-16 >> 2") == "-4");
+    CHECK(interpret_std("16 << 3") == "128");
+    CHECK(interpret_std("-16 << 3") == "-128");
+    CHECK(interpret_std("32u >> 3u") == "4U");
+    CHECK(interpret_std("4u << 3u") == "32U");
+    CHECK(interpret_std("-1u >> 20u") == "4095U");  // -1u = 2**32-1
+    CHECK(interpret_std("-1u << 31u") == "2147483648U");
 }
 
 

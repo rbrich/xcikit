@@ -226,14 +226,14 @@ public:
     bool negate();  // unary minus op
     bool modulus(const Value& rhs);
 
-    template <class TBinFun>
+    template <class TBinFun, bool bitwise=false>
     Value binary_op(const Value& rhs) {
         return std::visit([](const auto& l, const auto& r) -> Value {
             using TLhs = std::decay_t<decltype(l)>;
             using TRhs = std::decay_t<decltype(r)>;
 
             if constexpr (std::is_same_v<TLhs, TRhs> &&
-                    (std::is_integral_v<TLhs> || std::is_floating_point_v<TLhs>))
+                    (std::is_integral_v<TLhs> || (!bitwise && std::is_floating_point_v<TLhs>)))
                 return Value( TBinFun{}(l, r) );
 
             if constexpr (std::is_same_v<TLhs, TRhs> && std::is_same_v<TLhs, byte>)
