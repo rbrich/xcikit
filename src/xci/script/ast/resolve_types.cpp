@@ -176,8 +176,11 @@ public:
             Function& func = module().get_function(dfn.symbol()->index());
             if (m_value_type.is_callable())
                 func.signature() = m_value_type.signature();
-            else
-                resolve_return_type(func.signature(), m_value_type, dfn.expression->source_loc);
+            else {
+                const auto& source_loc = dfn.expression ?
+                        dfn.expression->source_loc : dfn.variable.identifier.source_loc;
+                resolve_return_type(func.signature(), m_value_type, source_loc);
+            }
         }
 
         m_value_type = {};

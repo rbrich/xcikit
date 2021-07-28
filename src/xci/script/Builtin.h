@@ -12,6 +12,7 @@
 #include "ast/AST.h"
 #include "Code.h"
 #include <functional>
+#include <cmath>
 
 namespace xci::script {
 

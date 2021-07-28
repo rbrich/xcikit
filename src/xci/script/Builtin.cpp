@@ -6,11 +6,8 @@
 
 #include "Builtin.h"
 #include "Function.h"
-#include "Error.h"
 #include <xci/core/file.h>
 #include <xci/compat/macros.h>
-#include <functional>
-#include <cmath>
 
 namespace xci::script {
 
