@@ -243,7 +243,7 @@ fi
 
 if phase test; then
     header "Test"
-    ( cd "${BUILD_DIR}" && ctest --build-config "${BUILD_TYPE}" "${JOBS_ARGS[@]}" )
+    ( cd "${BUILD_DIR}" && ctest --progress --output-on-failure --build-config "${BUILD_TYPE}" "${JOBS_ARGS[@]}" )
     echo
 fi
 
