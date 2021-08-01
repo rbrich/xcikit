@@ -29,6 +29,11 @@ using namespace xci::script;
 using namespace xci::core;
 
 
+// Disable this to rebuild the std module in each test case.
+// When enabled, it's built once and cached to speed up the tests.
+constexpr bool c_reuse_std_module = true;
+
+
 // Check parsing into AST and dumping back to code
 std::string parse(const string& input)
 {
@@ -62,26 +67,32 @@ std::string parse(const string& input)
     } while(false)
 
 
-void import_std_module(Interpreter& interpreter)
+static constexpr const char* std_path = "script/std.fire";
+
+
+const std::string& std_module_source()
 {
-    static std::unique_ptr<Module> module;
-    static BufferPtr content;
-    const char* std_path = "script/std.fire";
-    if (!module) {
+    static std::string source;
+    if (source.empty()) {
         Logger::init(Logger::Level::Warning);
         Vfs vfs;
         vfs.mount(XCI_SHARE);
-
         auto f = vfs.read_file(std_path);
         REQUIRE(f.is_open());
-        content = f.content();
-        auto src_id = interpreter.source_manager().add_source(std_path, content->string());
+        source = f.content()->string();
+    }
+    return source;
+}
+
+
+void import_std_module(Interpreter& interpreter)
+{
+    static std::unique_ptr<Module> module;
+    auto src_id = interpreter.source_manager().add_source(std_path, std_module_source());
+    assert(src_id == 1);
+    (void) src_id;
+    if (!c_reuse_std_module || !module) {
         module = interpreter.build_module("std", src_id);
-        assert(src_id == 1);
-    } else {
-        auto src_id = interpreter.source_manager().add_source(std_path, content->string());
-        assert(src_id == 1);
-        (void) src_id;
     }
     interpreter.add_imported_module(*module);
 }
