@@ -86,7 +86,8 @@ public:
     void ensure_ast_copy() { std::get<GenericBody>(m_body).ensure_copy(); }
 
     // non-locals
-    void add_nonlocal(TypeInfo&& type_info);
+    Index add_nonlocal(TypeInfo&& type_info);
+    void set_nonlocal(Index idx, TypeInfo&& type_info);
     bool has_nonlocals() const { return !m_signature->nonlocals.empty(); }
     const std::vector<TypeInfo>& nonlocals() const { return m_signature->nonlocals; }
     size_t raw_size_of_nonlocals() const;  // size of all nonlocals in bytes
@@ -103,7 +104,8 @@ public:
     std::vector<TypeInfo> closure_types() const;
 
     // true if this function should be generic (i.e. signature contains a type variable)
-    bool detect_generic() const;
+    bool detect_generic() const { return m_signature->is_generic(); }
+    bool has_generic_params() const { return m_signature->has_generic_params(); }
 
     // Kind of function body
 
@@ -115,8 +117,6 @@ public:
         Code code;
         // Counter for code bytes from intrinsics
         unsigned intrinsics = 0;
-        // If function should be inlined at call site
-        bool is_fragment = false;
     };
 
     // function is a template, signature contains type variables
@@ -149,14 +149,12 @@ public:
     };
 
     void set_compiled() { m_body = CompiledBody{}; }
-    void set_fragment() { m_body = CompiledBody{{}, 0, true}; }
 
     void set_native(NativeDelegate native) { m_body = NativeBody{native}; }
     void call_native(Stack& stack) const { std::get<NativeBody>(m_body).native(stack); }
 
     bool is_undefined() const { return std::holds_alternative<std::monostate>(m_body); }
     bool is_compiled() const { return std::holds_alternative<CompiledBody>(m_body); }
-    bool is_fragment() const { return std::holds_alternative<CompiledBody>(m_body) && std::get<CompiledBody>(m_body).is_fragment; }
     bool is_generic() const { return std::holds_alternative<GenericBody>(m_body); }
     bool is_native() const { return std::holds_alternative<NativeBody>(m_body); }
 
@@ -170,6 +168,8 @@ public:
 
     bool operator==(const Function& rhs) const;
 
+    bool test_and_set_nonlocals_resolved() { bool v = m_nonlocals_resolved; m_nonlocals_resolved = true; return v; }
+
 private:
     Module& m_module;
     SymbolTable& m_symtab;
@@ -177,6 +177,8 @@ private:
     std::shared_ptr<Signature> m_signature;
     // Function body (depending on kind of function)
     std::variant<std::monostate, CompiledBody, GenericBody, NativeBody> m_body;
+    // compilation status
+    bool m_nonlocals_resolved : 1 = false;
 };
 
 

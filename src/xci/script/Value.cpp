@@ -71,6 +71,8 @@ Value create_value(Type type)
         case Type::Bool: return value::Bool{};
         case Type::Byte: return value::Byte{};
         case Type::Char: return value::Char{};
+        case Type::UInt32: return value::UInt32{};
+        case Type::UInt64: return value::UInt64{};
         case Type::Int32: return value::Int32{};
         case Type::Int64: return value::Int64{};
         case Type::Float32: return value::Float32{};
@@ -191,6 +193,9 @@ const HeapSlot* Value::heapslot() const
 
 void Value::incref() const
 {
+#ifdef TRACE_REFCOUNT
+    std::cout << "+ref " << *this << std::endl;
+#endif
     return std::visit([](auto& v) {
         using T = std::decay_t<decltype(v)>;
         if constexpr (HasHeapSlot<T>)
@@ -205,6 +210,9 @@ void Value::incref() const
 
 void Value::decref() const
 {
+#ifdef TRACE_REFCOUNT
+    std::cout << "-ref " << *this << std::endl;
+#endif
     return std::visit([](auto& v) {
         using T = std::decay_t<decltype(v)>;
         if constexpr (HasHeapSlot<T>)
@@ -238,6 +246,8 @@ Type Value::type() const
             [](bool) { return Type::Bool; },
             [](byte) { return Type::Byte; },
             [](char32_t) { return Type::Char; },
+            [](uint32_t) { return Type::UInt32; },
+            [](uint64_t) { return Type::UInt64; },
             [](int32_t) { return Type::Int32; },
             [](int64_t) { return Type::Int64; },
             [](float) { return Type::Float32; },
@@ -274,6 +284,52 @@ bool Value::cast_from(const Value& src)
         // Complex types or cast from Void
         return false;
     }, m_value, src.m_value);
+}
+
+
+bool Value::negate()
+{
+    return std::visit([](auto& v) -> bool {
+        using T = std::decay_t<decltype(v)>;
+
+        if constexpr (std::is_integral_v<T> || std::is_floating_point_v<T>) {
+            v = std::negate<>{}(v);
+            return true;
+        }
+
+        return false;
+    }, m_value);
+}
+
+
+bool Value::modulus(const Value& rhs)
+{
+    return std::visit([](auto& l, const auto& r) -> bool {
+        using TLhs = std::decay_t<decltype(l)>;
+        using TRhs = std::decay_t<decltype(r)>;
+
+        if constexpr (std::is_same_v<TLhs, TRhs> && std::is_integral_v<TLhs>) {
+            l = std::modulus<>{}(l, r);
+            return true;
+        }
+
+        if constexpr (std::is_same_v<TLhs, TRhs> && std::is_same_v<TLhs, byte>) {
+            l = (byte) std::modulus<>{}(uint8_t(l), uint8_t(r));
+            return true;
+        }
+
+        return false;
+    }, m_value, rhs.m_value);
+}
+
+
+int64_t Value::to_int64() const
+{
+    value::Int64 to_val;
+    bool ok = to_val.cast_from(*this);
+    assert(ok);
+    (void) ok;
+    return to_val.value();
 }
 
 
@@ -548,7 +604,7 @@ static void dump_float(std::ostream& os, /*std::floating_point*/ auto value)
 
 class StreamVisitor: public value::Visitor {
 public:
-    explicit StreamVisitor(std::ostream& os, const TypeInfo& type_info = TypeInfo{}) : os(os), type_info(type_info) {}
+    explicit StreamVisitor(std::ostream& os, const TypeInfo& type_info) : os(os), type_info(type_info) {}
     void visit(void) override { os << ""; }
     void visit(bool v) override { os << std::boolalpha << v; }
     void visit(std::byte v) override {
@@ -557,6 +613,8 @@ public:
     void visit(char32_t v) override {
         os << '\'' << core::escape(core::to_utf8(v)) << "'";
     }
+    void visit(uint32_t v) override { os << v << 'U'; }
+    void visit(uint64_t v) override { os << v << "UL"; }
     void visit(int32_t v) override { os << v; }
     void visit(int64_t v) override { os << v << 'L'; }
     void visit(float v) override {
@@ -662,7 +720,8 @@ std::ostream& operator<<(std::ostream& os, const TypedValue& o)
 
 std::ostream& operator<<(std::ostream& os, const Value& o)
 {
-    StreamVisitor visitor(os);
+    TypeInfo type_info;  // Unknown
+    StreamVisitor visitor(os, type_info);
     o.apply(visitor);
     return os;
 }

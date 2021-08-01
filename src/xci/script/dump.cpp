@@ -27,6 +27,7 @@ using std::setw;
 struct StreamOptions {
     bool enable_tree : 1;
     bool module_verbose : 1;  // Module: dump function bodies etc.
+    bool bracket_fun_types : 1;
     unsigned level : 6;
     std::bitset<32> rules;
     std::vector<std::string> type_var_names;  // used for Type::Unknown with var!=0 when dumping TypeInfo
@@ -797,6 +798,7 @@ std::ostream& operator<<(std::ostream& os, DumpInstruction&& v)
 std::ostream& operator<<(std::ostream& os, const Module& v)
 {
     bool verbose = stream_options(os).module_verbose;
+    bool dump_tree = stream_options(os).enable_tree;
     os << "* " << v.num_imported_modules() << " imported modules" << endl << more_indent;
     for (size_t i = 0; i < v.num_imported_modules(); ++i)
         os << put_indent << '[' << i << "] " << v.get_imported_module(i).name() << endl;
@@ -809,8 +811,11 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
         if (f.kind() != Function::Kind::Compiled)
             os << '(' << f.kind() << ") ";
         os << f.name() << ": " << f.signature() << endl;
-        if (verbose && f.kind() == Function::Kind::Generic)
+        if (verbose && f.kind() == Function::Kind::Generic) {
             os << more_indent << put_indent << f.ast() << less_indent;
+            if (!dump_tree)
+                os << endl;
+        }
         if (verbose && f.kind() == Function::Kind::Compiled) {
             os << more_indent;
             for (auto it = f.code().begin(); it != f.code().end();) {
@@ -911,6 +916,8 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
         case Type::Bool:        return os << "Bool";
         case Type::Byte:        return os << "Byte";
         case Type::Char:        return os << "Char";
+        case Type::UInt32:      return os << "UInt32";
+        case Type::UInt64:      return os << "UInt64";
         case Type::Int32:       return os << "Int32";
         case Type::Int64:       return os << "Int64";
         case Type::Float32:     return os << "Float32";
@@ -936,7 +943,11 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
             }
             return os << ")";
         }
-        case Type::Function:    return os << v.signature();
+        case Type::Function:
+            if (stream_options(os).bracket_fun_types)
+                return os << '(' << v.signature() << ')';
+            else
+                return os << v.signature();
         case Type::Module:      return os << "Module";
         case Type::Stream:      return os << "Stream";
         case Type::Named:       return os << v.name();
@@ -950,23 +961,32 @@ std::ostream& operator<<(std::ostream& os, const Signature& v)
     if (!v.nonlocals.empty()) {
         os << "{ ";
         for (const auto& ti : v.nonlocals) {
-            os << ti << " ";
+            os << ti;
+            if (&ti != &v.nonlocals.back())
+                os << ", ";
         }
-        os << "} ";
+        os << " } ";
     }
     if (!v.partial.empty()) {
-        os << "( ";
+        os << "| ";
         for (const auto& ti : v.partial) {
-            os << ti << " ";
+            os << ti;
+            if (&ti != &v.partial.back())
+                os << ", ";
         }
-        os << ") ";
+        os << "| ";
     }
+    bool orig_bracket_fun_types = stream_options(os).bracket_fun_types;
+    stream_options(os).bracket_fun_types = true;
     if (!v.params.empty()) {
         for (const auto& ti : v.params) {
-            os << ti << " ";
+            os << ti << ' ';
         }
-        os << "-> ";
+    } else {
+        os << "Void ";
     }
+    os << "-> ";
+    stream_options(os).bracket_fun_types = orig_bracket_fun_types;
     return os << v.return_type;
 }
 
@@ -1002,8 +1022,8 @@ std::ostream& operator<<(std::ostream& os, const SymbolPointer& v)
     if (v.symtab() != nullptr) {
         os << " @" << v.symtab()->name() << " ("
            << std::hex << intptr_t(v.symtab()) << ')' << std::dec;
-        if (v->type() == Symbol::Function && v.symtab()->module())
-            os << ": " << v.symtab()->module()->get_function(v->index()).signature();
+        if (v->type() == Symbol::Function && v.symtab()->module() && v->index() != no_index)
+            os << ": " << v.get_function().signature();
     }
     if (v->ref())
         os << " -> " << v->ref();

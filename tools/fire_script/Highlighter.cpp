@@ -115,10 +115,15 @@ struct HexNum: seq<one<'x'>, plus<xdigit>> {};
 struct DecNum: seq< plus<digit> > {};
 struct Sign: one<'-','+'> {};
 struct ZeroPrefixNum: seq< one<'0'>, sor<HexNum, OctNum, BinNum, DecNum> > {};
-struct IntSuffix: one<'l', 'L', 'b', 'B'> {};
+struct IntSuffix: sor<
+        seq<one<'u', 'U'>, opt<one<'l', 'L'>>>,
+        seq<one<'l', 'L'>, opt<one<'u', 'U'>>>,
+        one<'b', 'B'> > {};
 struct FloatSuffix: one<'f', 'F'> {};
 struct Integer: seq< opt<Sign>, sor<ZeroPrefixNum, DecNum>, opt<IntSuffix> > {};
-struct Float: seq< opt<Sign>, plus<digit>, one<'.'>, star<digit>, opt<FloatSuffix> > {};
+struct Float: seq< opt<Sign>, plus<digit>, sor<
+        seq< one<'.'>, star<digit>, opt<FloatSuffix> >,
+        FloatSuffix > > {};
 
 struct Char: seq< one<'\''>, StringCh, one<'\''> > {};
 struct String: seq< one<'"'>, until<one<'"'>, StringCh >, not_at<one<'"'>> > {};

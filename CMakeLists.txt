@@ -1,6 +1,7 @@
+# 3.18.4 in Debian 11
+# 3.16.3 in Emscripten Docker image
 # 3.16 introduced CMAKE_MESSAGE_INDENT
-# 3.13 is current version in Emscripten Docker image
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.16)
 file(STRINGS "VERSION" XCI_VERSION)
 project(xcikit
     VERSION "${XCI_VERSION}"
@@ -232,8 +233,7 @@ endif()
 # Documentation #
 # ------------- #
 
-# Only with CMake v3.9+ (older versions don't have doxygen_add_docs())
-if (DOXYGEN_FOUND AND NOT CMAKE_VERSION VERSION_LESS "3.9")
+if (DOXYGEN_FOUND)
     set(DOXYGEN_OUTPUT_DIRECTORY doc)
     set(DOXYGEN_EXTRACT_ALL YES)
     set(DOXYGEN_BUILTIN_STL_SUPPORT YES)
@@ -270,15 +270,7 @@ function(print_flag msg flag)
         endif()
         string(REPLACE "!" " " msg ${msg1})
     endif()
-    if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
-        message(${msg})
-    else()
-        set(INDENT "")
-        foreach(i RANGE 1 ${MESSAGE_INDENT})
-            string(APPEND INDENT "    ")
-        endforeach()
-        message(${INDENT}${msg})
-    endif()
+    message(${msg})
 endfunction()
 
 function(print_trgt msg target)
@@ -289,22 +281,13 @@ function(print_trgt msg target)
     endif()
 endfunction()
 
-if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.16.0")
-    macro(push_indent)
-        list(APPEND CMAKE_MESSAGE_INDENT "    ")
-    endmacro()
-    macro(pop_indent)
-        list(POP_BACK CMAKE_MESSAGE_INDENT)
-    endmacro()
-else()
-    set(MESSAGE_INDENT 0)
-    macro(push_indent)
-        math(EXPR MESSAGE_INDENT "${MESSAGE_INDENT}+1")
-    endmacro()
-    macro(pop_indent)
-        math(EXPR MESSAGE_INDENT "${MESSAGE_INDENT}-1")
-    endmacro()
-endif()
+macro(push_indent)
+    list(APPEND CMAKE_MESSAGE_INDENT "    ")
+endmacro()
+
+macro(pop_indent)
+    list(POP_BACK CMAKE_MESSAGE_INDENT)
+endmacro()
 
 message("Optional components:")
 push_indent()

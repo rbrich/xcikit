@@ -28,19 +28,25 @@ public:
     void visit(ast::Definition& dfn) override {
         // check for name collision
         const auto& name = dfn.variable.identifier.name;
-        if (symtab().find_by_name(name))
-            throw RedefinedName(name, dfn.variable.identifier.source_loc);
+        auto symptr = symtab().find_by_name(name);
+        if (!symptr) {
+            // add new function, symbol
+            SymbolTable& fn_symtab = symtab().add_child(name);
+            auto fn = make_unique<Function>(module(), fn_symtab);
+            auto idx = module().add_function(move(fn));
+            assert(symtab().module() == &module());
+            symptr = symtab().add({name, Symbol::Function, idx});
+        } else {
+            if (symptr->is_defined())
+                throw RedefinedName(name, dfn.variable.identifier.source_loc);
+        }
 
-        // add new function, symbol
-        SymbolTable& fn_symtab = symtab().add_child(name);
-        auto fn = make_unique<Function>(module(), fn_symtab);
-        auto idx = module().add_function(move(fn));
-        assert(symtab().module() == &module());
-        dfn.variable.identifier.symbol = symtab().add({name, Symbol::Function, idx});
+        dfn.variable.identifier.symbol = symptr;
         dfn.variable.identifier.symbol->set_callable(true);
         if (dfn.variable.type)
             dfn.variable.type->apply(*this);
         if (dfn.expression) {
+            symptr->set_defined(true);
             dfn.expression->definition = &dfn;
             dfn.expression->apply(*this);
         }
@@ -148,11 +154,8 @@ public:
         // resolve the type
         v.type->apply(*this);
 
-        // add new type to the module
-        Index index = module().add_type(TypeInfo{});
-
         // add new type to symbol table
-        v.type_name.symbol = symtab().add({v.type_name.name, Symbol::TypeName, index});
+        v.type_name.symbol = symtab().add({v.type_name.name, Symbol::TypeName, no_index});
     }
 
     void visit(ast::TypeAlias& v) override {
@@ -163,11 +166,8 @@ public:
         // resolve the type
         v.type->apply(*this);
 
-        // add new type to the module
-        Index index = module().add_type(TypeInfo{});
-
         // add new type to symbol table
-        v.type_name.symbol = symtab().add({v.type_name.name, Symbol::TypeName, index});
+        v.type_name.symbol = symtab().add({v.type_name.name, Symbol::TypeName, no_index});
     }
 
     void visit(ast::Literal&) override {}
@@ -221,7 +221,7 @@ public:
 
     void visit(ast::OpCall& v) override {
         assert(!v.right_tmp);
-        v.callable = make_unique<ast::Reference>(ast::Identifier{builtin::op_to_function_name(v.op.op)});
+        v.callable = make_unique<ast::Reference>(ast::Identifier{builtin::op_to_function_name(v.op.op), v.source_loc});
         visit(*static_cast<ast::Call*>(&v));
     }
 
@@ -266,8 +266,8 @@ public:
 
         m_symtab = v.body.symtab->parent();
 
-        // postpone body compilation
-        m_postponed_blocks.push_back({fn, v.body});
+        // resolve body
+        resolve_symbols(fn, v.body);
     }
 
     void visit(ast::Cast& v) override {
@@ -307,15 +307,15 @@ public:
         size_t par_idx = 0;
         for (auto& p : t.params) {
             if (!p.type) {
-                // '$' is internal prefix for untyped function args
-                p.type = std::make_unique<ast::TypeName>("$" + p.identifier.name);
+                // '$T' is internal prefix for untyped function args
+                p.type = std::make_unique<ast::TypeName>("$T" + p.identifier.name);
             }
             p.type->apply(*this);
             if (!p.identifier.name.empty())
                 p.identifier.symbol = symtab().add({p.identifier.name, Symbol::Parameter, par_idx++});
         }
         if (!t.result_type)
-            t.result_type = std::make_unique<ast::TypeName>("$->");
+            t.result_type = std::make_unique<ast::TypeName>("$R");
         t.result_type->apply(*this);
     }
 
@@ -327,12 +327,6 @@ public:
         for (auto& st : t.subtypes)
             st->apply(*this);
     }
-
-    struct PostponedBlock {
-        Function& func;
-        const ast::Block& block;
-    };
-    const std::vector<PostponedBlock>& postponed_blocks() const { return m_postponed_blocks; }
 
 private:
     Module& module() { return m_function.module(); }
@@ -364,14 +358,15 @@ private:
                 if (p_symtab->name() == name && p_symtab->parent() != nullptr) {
                     // recursion - unwrap the function
                     auto symptr = p_symtab->parent()->find_by_name(name);
-                    return symtab().add({symptr, Symbol::Function, depth + 1});
+                    return symtab().add({symptr, Symbol::Function, no_index, depth + 1});
                 }
 
                 auto symptr = p_symtab->find_by_name(name);
                 if (symptr) {
                     if (depth > 0 && symptr->type() != Symbol::Method) {
                         // add Nonlocal symbol
-                        return symtab().add({symptr, Symbol::Nonlocal, depth});
+                        Index idx = symtab().count(Symbol::Nonlocal);
+                        return symtab().add({symptr, Symbol::Nonlocal, idx, depth});
                     }
                     return symptr;
                 }
@@ -419,7 +414,6 @@ private:
     }
 
 private:
-    std::vector<PostponedBlock> m_postponed_blocks;
     Function& m_function;
     SymbolTable* m_symtab = &m_function.symtab();
     ast::Class* m_class = nullptr;
@@ -432,11 +426,6 @@ void resolve_symbols(Function& func, const ast::Block& block)
     SymbolResolverVisitor visitor {func};
     for (const auto& stmt : block.statements) {
         stmt->apply(visitor);
-    }
-
-    // process postponed blocks
-    for (const auto& blk : visitor.postponed_blocks()) {
-        resolve_symbols(blk.func, blk.block);
     }
 }
 

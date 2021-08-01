@@ -52,9 +52,21 @@ size_t Function::parameter_offset(Index idx) const
 }
 
 
-void Function::add_nonlocal(TypeInfo&& type_info)
+Index Function::add_nonlocal(TypeInfo&& type_info)
 {
     signature().add_nonlocal(std::move(type_info));
+    return signature().nonlocals.size() - 1;
+}
+
+
+void Function::set_nonlocal(Index idx, TypeInfo&& type_info)
+{
+    auto& nonlocals = signature().nonlocals;
+    if (nonlocals.size() < idx + 1)
+        nonlocals.resize(idx + 1);
+    auto& nl = nonlocals[idx];
+    assert(!nl || nl == type_info);
+    nl = std::move(type_info);
 }
 
 
@@ -100,14 +112,6 @@ std::vector<TypeInfo> Function::closure_types() const
 }
 
 
-bool Function::detect_generic() const
-{
-    return any_of(signature().params, [](const TypeInfo& type_info) {
-        return type_info.is_generic();
-    });
-}
-
-
 bool Function::operator==(const Function& rhs) const
 {
     return &m_module == &rhs.m_module &&
@@ -118,8 +122,7 @@ bool Function::operator==(const Function& rhs) const
 
 
 bool Function::CompiledBody::operator==(const Function::CompiledBody& rhs) const {
-    return code == rhs.code &&
-           is_fragment == rhs.is_fragment;
+    return code == rhs.code;
 }
 
 

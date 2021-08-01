@@ -27,6 +27,8 @@ enum class Type : uint8_t {
     Bool,
     Byte,       // uint8
     Char,       // Unicode codepoint (char32)
+    UInt32,
+    UInt64,
     Int32,
     Int64,
     Float32,
@@ -144,6 +146,7 @@ private:
 
 
 struct Signature {
+    std::vector<TypeInfo> type_args;  // resolved type variables or explicit type args (index = var# - 1)
     std::vector<TypeInfo> nonlocals;
     std::vector<TypeInfo> partial;
     std::vector<TypeInfo> params;
@@ -156,7 +159,10 @@ struct Signature {
 
     bool has_closure() const { return !nonlocals.empty() || !partial.empty(); }
 
-    bool is_generic() const;
+    bool has_generic_params() const;
+    bool is_generic() const { return has_generic_params() || return_type.is_generic(); }
+
+    explicit operator bool() const { return !params.empty() || return_type; }
 
     bool operator==(const Signature& rhs) const = default;
     bool operator!=(const Signature& rhs) const = default;
@@ -178,6 +184,8 @@ inline TypeInfo ti_void() { return TypeInfo(Type::Void); }
 inline TypeInfo ti_bool() { return TypeInfo(Type::Bool); }
 inline TypeInfo ti_byte() { return TypeInfo(Type::Byte); }
 inline TypeInfo ti_char() { return TypeInfo(Type::Char); }
+inline TypeInfo ti_uint32() { return TypeInfo(Type::UInt32); }
+inline TypeInfo ti_uint64() { return TypeInfo(Type::UInt64); }
 inline TypeInfo ti_int32() { return TypeInfo(Type::Int32); }
 inline TypeInfo ti_int64() { return TypeInfo(Type::Int64); }
 inline TypeInfo ti_float32() { return TypeInfo(Type::Float32); }

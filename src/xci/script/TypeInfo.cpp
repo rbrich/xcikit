@@ -16,6 +16,8 @@ Type decode_arg_type(uint8_t arg)
 {
     switch (arg) {
         case 1: return Type::Byte;
+        case 3: return Type::UInt32;
+        case 4: return Type::UInt64;
         case 8: return Type::Int32;
         case 9: return Type::Int64;
         case 0xC: return Type::Float32;
@@ -38,9 +40,11 @@ size_t type_size_on_stack(Type type)
         case Type::Byte:
             return 1;
         case Type::Char:
+        case Type::UInt32:
         case Type::Int32:
         case Type::Float32:
             return 4;
+        case Type::UInt64:
         case Type::Int64:
         case Type::Float64:
             return 8;
@@ -284,7 +288,7 @@ std::string TypeInfo::name() const
 }
 
 
-bool Signature::is_generic() const
+bool Signature::has_generic_params() const
 {
     return ranges::any_of(params, [](const TypeInfo& type_info) {
         return type_info.is_generic();

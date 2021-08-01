@@ -45,7 +45,8 @@ Literal syntax is derived from C++ and Python.
 0b101101   // binary integer
 0o765      // octal integer
 0xBEEFED   // hexadecimal integer
-42L        // 64bit integer
+42L        // integer (64bit)
+42UL       // unsigned integer (64bit)
 12.3       // floating point (64bit)
 12.3f      // floating point (32bit)
 '@'        // unicode character
@@ -432,6 +433,21 @@ rec.name    // dot operator
 ----
 
 
+=== Other syntax
+
+C++ style comments:
+
+[source,fire]
+----
+// comment line
+
+print "hello " /* inline comment */ "world"
+
+/* multiline
+   comment */
+----
+
+
 == Language constructs
 
 === Type classes
@@ -719,6 +735,32 @@ Int -> Int -> Int -> Int            // normalized form
 * But any of the above might describe what is really happening after compilation
  (it depends only on the compiler how many intermediate functions it creates).
 
+
+=== Forward declarations
+
+Type of function or variable can be declared using `decl` statement.
+
+The declared name can be used inside blocks even before giving it a value:
+
+[source,fire]
+----
+decl x:Int  // declare x
+y={x}       // reference x inside a block
+x=7         // define x
+y           // -> 7
+----
+
+Similarly, postpone a function definition:
+
+[source,fire]
+----
+decl f:Int->Int     // declare function f
+w = fun x {2 * f x} // reference f inside another function
+f = fun x {x + 1}   // define function f
+w 7                 // -> 16
+----
+
+
 === Casting
 
 Any expression can be casted to another type.
@@ -833,20 +875,6 @@ Comprehensions:
 ----
 [2*x for x in [1..10] if x > 3]
 [2*x | x <= [1..10], x > 3]
-----
-
-=== Other syntax
-
-C++ style comments:
-
-[source,fire]
-----
-// comment line
-
-print "hello " /* inline comment */ "world"
-
-/* multiline
-   comment */
 ----
 
 [#side-effects]

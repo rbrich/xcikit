@@ -85,6 +85,7 @@ void Options::parse(char* argv[])
             Option("-s, --symtab", "Print symbol table", ro.print_symtab),
             Option("-m, --module", "Print compiled module content", ro.print_module),
             Option("-M, --module-verbose", "Print compiled module content, including function bodies", ro.print_module_verbose),
+            Option("-T, --module-ast", "Print compiled module content like -M, but dump generic functions as AST", ro.print_module_verbose_ast),
             Option("--trace", "Trace bytecode", ro.trace_bytecode),
             Option("--pp PASS_LIST", "Preprocess AST and stop, don't compile. "
                                      "PASS_LIST is comma separated list of pass names (or unique substrings of them): "

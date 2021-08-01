@@ -35,7 +35,7 @@ public:
     const Symbol* operator->() const;
     Symbol* operator->();
 
-    Function& get_function();
+    Function& get_function() const;
 
     SymbolTable* symtab() const { return m_symtab; }
     Index symidx() const { return m_symidx; }
@@ -82,9 +82,6 @@ public:
         : m_name(std::move(name)), m_type(type), m_index(idx), m_depth(depth) {}
     Symbol(const SymbolPointer& ref, Type type)
             : m_name(ref->name()), m_type(type), m_ref(ref) {}
-    Symbol(const SymbolPointer& ref, Type type, size_t depth)
-        : m_name(ref->name()), m_type(type), m_index(ref.symidx()),
-          m_depth(depth), m_ref(ref) {}
     Symbol(const SymbolPointer& ref, Type type, Index idx, size_t depth)
             : m_name(ref->name()), m_type(type), m_index(idx),
               m_depth(depth), m_ref(ref) {}
@@ -97,6 +94,7 @@ public:
     // in case of overloaded function, this points to next overload
     SymbolPointer next() const { return m_next; }
     bool is_callable() const { return m_is_callable; }
+    bool is_defined() const { return m_is_defined; }
 
     Symbol& set_type(Type type) { m_type = type; return *this; }
     Symbol& set_index(Index idx) { m_index = idx; return *this; }
@@ -104,6 +102,7 @@ public:
     Symbol& set_ref(const SymbolPointer& ref) { m_ref = ref; return *this; }
     Symbol& set_next(const SymbolPointer& next) { m_next = next; return *this; }
     Symbol& set_callable(bool callable) { m_is_callable = callable; return *this; }
+    Symbol& set_defined(bool defined) { m_is_defined = defined; return *this; }
 
 private:
     std::string m_name;
@@ -112,7 +111,8 @@ private:
     size_t m_depth = 0;  // 1 = parent, 2 = parent of parent, ...
     SymbolPointer m_ref;
     SymbolPointer m_next;
-    bool m_is_callable = false;
+    bool m_is_callable: 1 = false;
+    bool m_is_defined: 1 = false;  // only declared / already defined
 };
 
 
@@ -157,8 +157,7 @@ public:
     SymbolPointer find_last_of(const std::string& name, Symbol::Type type);
     SymbolPointer find_last_of(Symbol::Type type);
 
-    // return actual number of nonlocals (skipping unreferenced symbols)
-    size_t count_nonlocals() const;
+    size_t count(Symbol::Type type) const;
     void update_nonlocal_indices();
 
     /// Check symbol table for overloaded function name

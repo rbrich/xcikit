@@ -19,7 +19,8 @@ public:
             : m_function(func) {}
 
     void visit(ast::Definition& dfn) override {
-        dfn.expression->apply(*this);
+        if (dfn.expression)
+            dfn.expression->apply(*this);
     }
 
     void visit(ast::Invocation& inv) override {
@@ -78,8 +79,9 @@ public:
                             v.identifier.symbol = nl_sym;
                         }
                         if (ref_fn.is_generic()) {
-                            process_function(ref_fn, ref_fn.ast());
+                            resolve_nonlocals(ref_fn, ref_fn.ast());
                         }
+                        process_function(ref_fn);
                         break;
                     }
                     default:
@@ -94,8 +96,9 @@ public:
                 }
                 auto& fn = v.module->get_function(v.index);
                 if (fn.is_generic()) {
-                    process_function(fn, fn.ast());
+                    resolve_nonlocals(fn, fn.ast());
                 }
+                process_function(fn);
                 // partial calls
                 if (!m_function.partial().empty() && v.module == &module()) {
                     m_function.symtab().set_name(v.identifier.name + "/partial");
@@ -144,8 +147,10 @@ public:
 
     void visit(ast::Function& v) override {
         Function& fn = module().get_function(v.index);
-        if (!fn.detect_generic())
-            process_function(fn, v.body);
+        if (!fn.detect_generic()) {
+            resolve_nonlocals(fn, v.body);
+            process_function(fn);
+        }
     }
 
 private:
@@ -156,10 +161,10 @@ private:
         expression.apply(visitor);
     }
 
-    void process_function(Function& func, const ast::Block& body)
+    void process_function(Function& func)
     {
-        resolve_nonlocals(func, body);
-
+        if (func.test_and_set_nonlocals_resolved())
+            return;
         auto& nonlocals = func.signature().nonlocals;
         if (nonlocals.empty())
             return;
@@ -179,8 +184,8 @@ private:
                 } else if (sym.depth() > 1) {
                     // not direct parent -> add intermediate Nonlocal
                     auto ti = sym.ref().symtab()->function()->parameter(sym.ref()->index());
-                    m_function.add_nonlocal(std::move(ti));
-                    m_function.symtab().add({sym.ref(), Symbol::Nonlocal, sym.depth() - 1});
+                    auto idx = m_function.add_nonlocal(std::move(ti));
+                    m_function.symtab().add({sym.ref(), Symbol::Nonlocal, idx, sym.depth() - 1});
                 }
             }
             if (sym.type() == Symbol::Function && sym.ref() && sym.ref()->type() == Symbol::Function) {

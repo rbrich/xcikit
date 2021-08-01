@@ -133,10 +133,10 @@ struct UnexpectedArgument : public ScriptError {
 
 
 struct UnexpectedArgumentType : public ScriptError {
-    // idx is 1-based
-    explicit UnexpectedArgumentType(size_t idx, const TypeInfo& exp, const TypeInfo& got, const SourceLocation& loc)
+    // num is 1-based
+    explicit UnexpectedArgumentType(size_t num, const TypeInfo& exp, const TypeInfo& got, const SourceLocation& loc)
             : ScriptError(format("function expects {} for arg #{}, called with {}",
-                                 exp, idx, got), loc) {}
+                                 exp, num, got), loc) {}
 };
 
 
@@ -163,22 +163,25 @@ struct UnexpectedTypeArg : public ScriptError {
 };
 
 struct UnexpectedGenericFunction : public ScriptError {
-    explicit UnexpectedGenericFunction(const SourceLocation& loc)
-            : ScriptError("generic function must be named or immediately called", loc) {}
+    explicit UnexpectedGenericFunction(string_view fn_desc, const SourceLocation& loc)
+            : ScriptError(format("generic function must be named or immediately called: {}",
+                            fn_desc), loc) {}
 };
 
 
 struct FunctionNotFound : public ScriptError {
     explicit FunctionNotFound(string_view name, string_view args,
-                              string_view candidates)
-        : ScriptError(format("function not found: {} {}\n   Candidates:\n{}", name, args, candidates)) {}
+                              string_view candidates, const SourceLocation& loc)
+        : ScriptError(format("function not found: {} {}\n"
+                             "   Candidates:\n{}", name, args, candidates), loc) {}
 };
 
 
 struct FunctionConflict : public ScriptError {
     explicit FunctionConflict(string_view name, string_view args,
-                              string_view candidates)
-            : ScriptError(format("function cannot be uniquely resolved: {} {}\n   Candidates:\n{}", name, args, candidates)) {}
+                              string_view candidates, const SourceLocation& loc)
+            : ScriptError(format("function cannot be uniquely resolved: {} {}\n"
+                                 "   Candidates:\n{}", name, args, candidates), loc) {}
 };
 
 
@@ -197,6 +200,13 @@ struct TooManyLocals : public ScriptError {
 
 struct ConditionNotBool : public ScriptError {
     explicit ConditionNotBool() : ScriptError("condition doesn't evaluate to Bool") {}
+};
+
+
+struct DeclarationTypeMismatch : public ScriptError {
+    explicit DeclarationTypeMismatch(const TypeInfo& decl, const TypeInfo& now, const SourceLocation& loc)
+            : ScriptError(format("declared type mismatch: previous {}, this {}",
+            decl, now), loc) {}
 };
 
 

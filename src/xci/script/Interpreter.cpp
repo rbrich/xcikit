@@ -5,6 +5,7 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Interpreter.h"
+#include "Builtin.h"
 
 #include <utility>
 #include <fmt/format.h>

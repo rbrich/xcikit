@@ -10,6 +10,7 @@
 #include "TypeInfo.h"
 #include "Heap.h"
 #include "Stream.h"
+#include "Code.h"
 
 #include <ostream>
 #include <utility>
@@ -59,6 +60,8 @@ public:
     virtual void visit(bool) = 0;
     virtual void visit(byte) = 0;
     virtual void visit(char32_t) = 0;
+    virtual void visit(uint32_t) = 0;
+    virtual void visit(uint64_t) = 0;
     virtual void visit(int32_t) = 0;
     virtual void visit(int64_t) = 0;
     virtual void visit(float) = 0;
@@ -76,6 +79,8 @@ class PartialVisitor : public Visitor {
     void visit(bool) override {}
     void visit(byte) override {}
     void visit(char32_t) override {}
+    void visit(uint32_t) override {}
+    void visit(uint64_t) override {}
     void visit(int32_t) override {}
     void visit(int64_t) override {}
     void visit(float) override {}
@@ -165,7 +170,10 @@ public:
     Value() = default;  // Void
     explicit Value(bool v) : m_value(v) {}  // Bool
     explicit Value(byte v) : m_value(v) {}  // Byte
+    explicit Value(uint8_t v) : m_value(byte(v)) {}  // Byte
     explicit Value(char32_t v) : m_value(v) {}  // Char
+    explicit Value(uint32_t v) : m_value(v) {}  // UInt32
+    explicit Value(uint64_t v) : m_value(v) {}  // UInt64
     explicit Value(int32_t v) : m_value(v) {}  // Int32
     explicit Value(int64_t v) : m_value(v) {}  // Int64
     explicit Value(float v) : m_value(v) {}  // Float32
@@ -215,9 +223,31 @@ public:
     // (can be statically casted). Return false otherwise.
     bool cast_from(const Value& src);
 
+    bool negate();  // unary minus op
+    bool modulus(const Value& rhs);
+
+    template <class TBinFun, bool bitwise=false>
+    Value binary_op(const Value& rhs) {
+        return std::visit([](const auto& l, const auto& r) -> Value {
+            using TLhs = std::decay_t<decltype(l)>;
+            using TRhs = std::decay_t<decltype(r)>;
+
+            if constexpr (std::is_same_v<TLhs, TRhs> &&
+                    (std::is_integral_v<TLhs> || (!bitwise && std::is_floating_point_v<TLhs>)))
+                return Value( TBinFun{}(l, r) );
+
+            if constexpr (std::is_same_v<TLhs, TRhs> && std::is_same_v<TLhs, byte>)
+                return Value( TBinFun{}(uint8_t(l), uint8_t(r)) );
+
+            return {};
+        }, m_value, rhs.m_value);
+    }
+
     // Cast to subtype, e.g.: `v.get<bool>()`
     template <class T> T& get() { return std::get<T>(m_value); }
     template <class T> const T& get() const { return std::get<T>(m_value); }
+
+    int64_t to_int64() const;
 
     std::string_view get_string() const { return get<StringV>().value(); }
     void tuple_foreach(const std::function<void(const Value&)>& cb) const { return get<TupleV>().foreach(cb); }
@@ -226,7 +256,7 @@ public:
 protected:
     using ValueVariant = std::variant<
             std::monostate,
-            bool, byte, char32_t, int32_t, int64_t, float, double,
+            bool, byte, char32_t, uint32_t, uint64_t, int32_t, int64_t, float, double,
             StringV, ListV, TupleV, ClosureV, StreamV,
             script::Module*
         >;
@@ -393,6 +423,26 @@ public:
 };
 
 
+class UInt32: public Value {
+public:
+    UInt32() : Value(uint32_t(0)) {}
+    explicit UInt32(uint32_t v) : Value(v) {}
+    TypeInfo type_info() const { return ti_uint32(); }
+    uint32_t value() const { return std::get<uint32_t>(m_value); }
+    void set_value(uint32_t v) { m_value = v; }
+};
+
+
+class UInt64: public Value {
+public:
+    UInt64() : Value(uint64_t(0)) {}
+    explicit UInt64(uint64_t v) : Value(v) {}
+    TypeInfo type_info() const { return ti_uint64(); }
+    uint64_t value() const { return std::get<uint64_t>(m_value); }
+    void set_value(uint64_t v) { m_value = v; }
+};
+
+
 class Int32: public Value {
 public:
     Int32() : Value(int32_t(0)) {}
@@ -407,7 +457,7 @@ class Int64: public Value {
 public:
     Int64() : Value(int64_t(0)) {}
     explicit Int64(int64_t v) : Value(v) {}
-    TypeInfo type_info() const { return TypeInfo{Type::Int64}; }
+    TypeInfo type_info() const { return ti_int64(); }
     int64_t value() const { return std::get<int64_t>(m_value); }
     void set_value(int64_t v) { m_value = v; }
 };

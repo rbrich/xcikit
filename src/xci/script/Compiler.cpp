@@ -33,12 +33,14 @@ public:
         : m_compiler(compiler), m_function(function) {}
 
     void visit(ast::Definition& dfn) override {
+        if (!dfn.expression)
+            return;  // it's only a declaration
         Function& func = module().get_function(dfn.symbol()->index());
         if (func.detect_generic()) {
             func.ensure_ast_copy();
             return;
         }
-        if (func.is_undefined())
+        if (func.is_undefined() || func.is_generic())
             func.set_compiled();
         assert(func.is_compiled());
         auto* orig_code = m_code;
@@ -101,17 +103,7 @@ public:
 
     void visit(ast::Literal& v) override {
         if (m_intrinsic) {
-            switch (v.value.type()) {
-                case Type::Byte:
-                    m_instruction_args.push_back((uint32_t) v.value.get<byte>());
-                    break;
-                case Type::Int32:
-                    m_instruction_args.push_back(v.value.get<int32_t>());
-                    break;
-                default:
-                    assert(!"wrong intrinsic argument type");
-                    break;
-            }
+            m_instruction_args.push_back(v.value);
             return;
         }
 
@@ -179,33 +171,45 @@ public:
                     m_function.add_intrinsics(1);
                 } else if (opcode <= Opcode::B1ArgLast) {
                     assert(m_instruction_args.size() == 1);
-                    if (m_instruction_args[0] >= 256)
+                    auto arg = m_instruction_args[0].value().to_int64();
+                    if (arg < 0 || arg >= 256)
                         throw IntrinsicsFunctionError("arg value out of Byte range: "
-                                  + std::to_string(m_instruction_args[0]), v.source_loc);
-                    m_function.code().add_B1(opcode, (uint8_t) m_instruction_args[0]);
+                                  + std::to_string(arg), v.source_loc);
+                    m_function.code().add_B1(opcode, (uint8_t) arg);
                     m_function.add_intrinsics(2);
                 } else if (opcode <= Opcode::L1ArgLast) {
                     assert(m_instruction_args.size() == 1);
-                    auto n = m_function.code().add_L1(opcode, m_instruction_args[0]);
+                    auto arg = m_instruction_args[0].value().to_int64();
+                    if (arg < 0)
+                        throw IntrinsicsFunctionError("intrinsic argument is negative: "
+                                                      + std::to_string(arg), v.source_loc);
+                    auto n = m_function.code().add_L1(opcode, size_t(arg));
                     m_function.add_intrinsics(n);
                 } else {
                     assert(opcode <= Opcode::L2ArgLast);
                     assert(m_instruction_args.size() == 2);
-                    auto n = m_function.code().add_L2(opcode,
-                            m_instruction_args[0], m_instruction_args[1]);
+                    auto arg1 = m_instruction_args[0].value().to_int64();
+                    if (arg1 < 0)
+                        throw IntrinsicsFunctionError("intrinsic argument #1 is negative: "
+                                                      + std::to_string(arg1), v.source_loc);
+                    auto arg2 = m_instruction_args[1].value().to_int64();
+                    if (arg2 < 0)
+                        throw IntrinsicsFunctionError("intrinsic argument #2 is negative: "
+                                                      + std::to_string(arg2), v.source_loc);
+                    auto n = m_function.code().add_L2(opcode, size_t(arg1), size_t(arg2));
                     m_function.add_intrinsics(n);
                 }
                 break;
             }
             case Symbol::TypeId: {
-                auto type_id = v.index;
+                value::Int32 type_id_val((int32_t) v.index);
                 if (m_intrinsic) {
-                    m_instruction_args.push_back(type_id);
+                    m_instruction_args.emplace_back(type_id_val);
                     return;
                 }
 
                 // create static Int value in this module
-                auto idx = module().add_value(TypedValue(value::Int32((int32_t)type_id)));
+                auto idx = module().add_value(TypedValue(type_id_val));
                 // LOAD_STATIC <static_idx>
                 code().add_L1(Opcode::LoadStatic, idx);
                 break;
@@ -245,6 +249,15 @@ public:
             }
             case Symbol::Value: {
                 auto idx = sym.index();
+                if (idx == no_index) {
+                    // __value intrinsic
+                    assert(m_intrinsic);
+                    assert(m_instruction_args.size() == 1);
+                    auto value_idx = module().add_value(TypedValue(m_instruction_args[0]));
+                    m_instruction_args.clear();
+                    m_instruction_args.push_back(TypedValue(value::Int64(value_idx)));
+                    break;
+                }
                 if (symtab.module() != &module()) {
                     // copy static value into this module if it's from builtin or another module
                     const auto & val = symtab.module()->get_value(sym.index());
@@ -307,8 +320,13 @@ public:
                         // EXECUTE
                         code().add_opcode(Opcode::Execute);
                     } else {
-                        // CALL0 <function_idx>
-                        code().add_L1(Opcode::Call0, v.index);
+                        if (!m_callable && fn.has_parameters()) {
+                            // LOAD_FUNCTION <function_idx>
+                            code().add_L1(Opcode::LoadFunction, v.index);
+                        } else {
+                            // CALL0 <function_idx>
+                            code().add_L1(Opcode::Call0, v.index);
+                        }
                     }
                     break;
                 }
@@ -347,11 +365,15 @@ public:
     void visit(ast::Call& v) override {
         // call the function or push the function as value
 
+        bool orig_callable = m_callable;
         m_intrinsic = v.intrinsic;
+        m_instruction_args.clear();
 
+        m_callable = false;
         for (auto& arg : reverse(v.args)) {
             arg->apply(*this);
         }
+        m_callable = true;
 
         if (v.partial_index != no_index) {
             // partial function call
@@ -386,6 +408,7 @@ public:
         }
 
         m_intrinsic = false;
+        m_callable = orig_callable;
     }
 
     void visit(ast::OpCall& v) override {
@@ -569,9 +592,11 @@ private:
     Function& m_function;
     Code* m_code = nullptr;
 
+    bool m_callable = true;
+
     // intrinsics
     bool m_intrinsic = false;
-    std::vector<size_t> m_instruction_args;
+    std::vector<TypedValue> m_instruction_args;
 };
 
 

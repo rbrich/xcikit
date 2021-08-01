@@ -64,6 +64,7 @@ public:
     // Static values
     Index add_value(TypedValue&& value);
     const TypedValue& get_value(Index idx) const { return m_values[idx]; }
+    Index find_value(const TypedValue& value) const;
     size_t num_values() const { return m_values.size(); }
 
     // Type information

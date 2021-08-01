@@ -19,7 +19,8 @@ public:
     using VisitorExclTypes::visit;
 
     void visit(ast::Definition& dfn) override {
-        apply_and_fold(dfn.expression);
+        if (dfn.expression)
+            apply_and_fold(dfn.expression);
     }
 
     void visit(ast::Invocation& inv) override {

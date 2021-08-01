@@ -6,6 +6,7 @@
 
 #include "ReplCommand.h"
 #include "Context.h"
+#include <xci/script/Builtin.h>
 #include <xci/script/dump.h>
 #include <xci/core/TermCtl.h>
 #include <iostream>

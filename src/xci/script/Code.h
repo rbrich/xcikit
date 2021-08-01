@@ -26,25 +26,6 @@ enum class Opcode: uint8_t {
     LogicalOr,
     LogicalAnd,
 
-    Equal_8,
-    Equal_32,
-    Equal_64,
-    NotEqual_8,
-    NotEqual_32,
-    NotEqual_64,
-    LessEqual_8,
-    LessEqual_32,
-    LessEqual_64,
-    GreaterEqual_8,
-    GreaterEqual_32,
-    GreaterEqual_64,
-    LessThan_8,
-    LessThan_32,
-    LessThan_64,
-    GreaterThan_8,
-    GreaterThan_32,
-    GreaterThan_64,
-
     BitwiseNot_8,
     BitwiseNot_32,
     BitwiseNot_64,
@@ -57,34 +38,6 @@ enum class Opcode: uint8_t {
     BitwiseXor_8,
     BitwiseXor_32,
     BitwiseXor_64,
-    ShiftLeft_8,
-    ShiftLeft_32,
-    ShiftLeft_64,
-    ShiftRight_8,
-    ShiftRight_32,
-    ShiftRight_64,
-
-    Neg_8,
-    Neg_32,
-    Neg_64,
-    Add_8,
-    Add_32,
-    Add_64,
-    Sub_8,
-    Sub_32,
-    Sub_64,
-    Mul_8,
-    Mul_32,
-    Mul_64,
-    Div_8,
-    Div_32,
-    Div_64,
-    Mod_8,
-    Mod_32,
-    Mod_64,
-    Exp_8,
-    Exp_32,
-    Exp_64,
 
     // Control flow
     Execute,                // pull closure from stack, unwrap it, call the contained function
@@ -92,14 +45,52 @@ enum class Opcode: uint8_t {
     // --------------------------------------------------------------
     // B1 (one single-byte argument)
 
-    /// Cast Int/Float value to another type.
-    /// Arg: 4/4 bit split, high half = from type, low half = to type
-    /// Types:
-    /// * unsigned integers: 1 = 8bit, (2 = 16bit), 3 = 32bit, 4 = 64bit, (5 = 128bit)
-    /// * signed integers: 6 = 8bit, (7 = 16bit), 8 = 32bit, 9 = 64bit, (A = 128bit)
-    /// * floats: (B = 16bit), C = 32bit, D = 64bit, (E = 128bit)
-    /// Casting rules are based on the C++ implementation (static_cast).
+    // Cast Int/Float value to another type.
+    // Arg: 4/4 bit split, high half = from type, low half = to type
+    // Casting rules are based on the C++ implementation (static_cast).
+    //
+    // Type numbers:
+    // * unsigned integers: 1 = 8bit, (2 = 16bit), 3 = 32bit, 4 = 64bit, (5 = 128bit)
+    // * signed integers: (6 = 8bit, 7 = 16bit), 8 = 32bit, 9 = 64bit, (A = 128bit)
+    // * floats: (B = 16bit), C = 32bit, D = 64bit, (E = 128bit)
     Cast,
+
+    // Comparison instructions, the operand types are defined in Arg.
+    // Arg: 4/4 bit split, high half = left-hand type, low half = right-hand type
+    // Only pairs of same types are defined, operations on distinct types are reserved.
+    // Type numbers are the same as for cast instruction above.
+
+    Equal,
+    NotEqual,
+    LessEqual,
+    GreaterEqual,
+    LessThan,
+    GreaterThan,
+
+    // Arithmetic instructions, the operand types are defined in Arg.
+    //
+    // Arg: 4/4 bit split, high half = left-hand type, low half = right-hand type
+    // Only pairs of same types are defined, operations on distinct types are reserved
+    // for possible future optimization. (The machine would coerce types by itself,
+    // but the caller would need to know the result of coercion.)
+    // Type numbers are the same as for cast instruction above.
+
+    Neg,
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+    Exp,
+
+    // Bitwise shift, the operand types are defined in Arg.
+    // Arg: 4/4 bit split, high half = left-hand type, low half = right-hand type
+    // Only pairs of same types are defined, operations on distinct types are reserved.
+    // Defined only for integer types. ShiftLeft is same for signed/unsigned types.
+    // ShiftRight does sign extension for signed types.
+    // Type numbers are the same as for cast instruction above.
+    ShiftLeft,
+    ShiftRight,
 
     Jump,                   // arg => relative jump (+N instructions) - unconditional
     JumpIfNot,              // pull cond from stack, arg => relative jump (+N instructions) if cond is false

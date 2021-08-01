@@ -39,11 +39,12 @@ Symbol* SymbolPointer::operator->()
 }
 
 
-Function& SymbolPointer::get_function()
+Function& SymbolPointer::get_function() const
 {
     auto& sym = m_symtab->get(m_symidx);
     assert(sym.type() == Symbol::Function);
     assert(m_symtab->module() != nullptr);
+    assert(sym.index() != no_index);
     return m_symtab->module()->get_function(sym.index());
 }
 
@@ -74,10 +75,10 @@ unsigned SymbolTable::level() const
 }
 
 
-size_t SymbolTable::count_nonlocals() const
+size_t SymbolTable::count(Symbol::Type type) const
 {
     return std::count_if(m_symbols.begin(), m_symbols.end(),
-            [](const Symbol& sym) { return sym.type() == Symbol::Nonlocal; });
+            [type](const Symbol& sym) { return sym.type() == type; });
 }
 
 

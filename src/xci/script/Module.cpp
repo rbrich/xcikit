@@ -15,6 +15,9 @@ using std::move;
 
 Module::~Module()
 {
+    #ifdef TRACE_REFCOUNT
+    std::cout << "* in ~Module " << name() << std::endl;
+    #endif
     for (const auto& val : m_values) {
         val.decref();
     }
@@ -52,18 +55,34 @@ Index Module::add_function(std::unique_ptr<Function>&& fn)
 
 Index Module::add_value(TypedValue&& value)
 {
+    auto idx = find_value(value);
+    if (idx != no_index) {
+        value.decref();  // we don't save the new value -> release it
+        return idx;
+    }
+
     m_values.add(move(value));
     return m_values.size() - 1;
 }
 
 
+Index Module::find_value(const TypedValue& value) const
+{
+    auto it = std::find(m_values.begin(), m_values.end(), value);
+    if (it == m_values.end())
+        return no_index;
+    return it - m_values.begin();
+}
+
+
 Index Module::add_type(TypeInfo type_info)
 {
-    if (!type_info.is_unknown()) {
-        auto idx = find_type(type_info);
-        if (idx != no_index)
-            return idx;
-    }
+    assert(!type_info.is_generic());
+
+    auto idx = find_type(type_info);
+    if (idx != no_index)
+        return idx;
+
     m_types.push_back(move(type_info));
     return m_types.size() - 1;
 }
@@ -71,7 +90,7 @@ Index Module::add_type(TypeInfo type_info)
 
 Index Module::find_type(const TypeInfo& type_info) const
 {
-    assert(!type_info.is_unknown());
+    assert(!type_info.is_generic());
     auto it = std::find(m_types.begin(), m_types.end(), type_info);
     if (it == m_types.end())
         return no_index;

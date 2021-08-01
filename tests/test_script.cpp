@@ -29,6 +29,11 @@ using namespace xci::script;
 using namespace xci::core;
 
 
+// Disable this to rebuild the std module in each test case.
+// When enabled, it's built once and cached to speed up the tests.
+constexpr bool c_reuse_std_module = true;
+
+
 // Check parsing into AST and dumping back to code
 std::string parse(const string& input)
 {
@@ -62,26 +67,32 @@ std::string parse(const string& input)
     } while(false)
 
 
-void import_std_module(Interpreter& interpreter)
+static constexpr const char* std_path = "script/std.fire";
+
+
+const std::string& std_module_source()
 {
-    static std::unique_ptr<Module> module;
-    static BufferPtr content;
-    const char* std_path = "script/std.fire";
-    if (!module) {
+    static std::string source;
+    if (source.empty()) {
         Logger::init(Logger::Level::Warning);
         Vfs vfs;
         vfs.mount(XCI_SHARE);
-
         auto f = vfs.read_file(std_path);
         REQUIRE(f.is_open());
-        content = f.content();
-        auto src_id = interpreter.source_manager().add_source(std_path, content->string());
+        source = f.content()->string();
+    }
+    return source;
+}
+
+
+void import_std_module(Interpreter& interpreter)
+{
+    static std::unique_ptr<Module> module;
+    auto src_id = interpreter.source_manager().add_source(std_path, std_module_source());
+    assert(src_id == 1);
+    (void) src_id;
+    if (!c_reuse_std_module || !module) {
         module = interpreter.build_module("std", src_id);
-        assert(src_id == 1);
-    } else {
-        auto src_id = interpreter.source_manager().add_source(std_path, content->string());
-        assert(src_id == 1);
-        (void) src_id;
     }
     interpreter.add_imported_module(*module);
 }
@@ -347,14 +358,20 @@ TEST_CASE( "Literals", "[script][interpreter]" )
 {
     // Integer literal out of 32bit range is promoted to Int64
     CHECK(interpret("2147483647") == "2147483647");
-    CHECK(interpret("2147483648") == "2147483648L");
+    CHECK(interpret("2147483648") == "2147483648L");  // promoted
     CHECK(interpret("-2147483648") == "-2147483648");
-    CHECK(interpret("-2147483649") == "-2147483649L");
+    CHECK(interpret("-2147483649") == "-2147483649L");  // promoted
+    CHECK(interpret("4294967295u") == "4294967295U");
+    CHECK(interpret("4294967296u") == "4294967296UL");  // promoted
+    CHECK(interpret("-1u") == "4294967295U");
+    CHECK(interpret("-1ul") == "18446744073709551615UL");
     // Integer literal out of 64bit range doesn't compile
     CHECK(interpret("9223372036854775807L") == "9223372036854775807L");
     CHECK_THROWS_AS(interpret("9223372036854775808L"), ParseError);
     CHECK(interpret("-9223372036854775808L") == "-9223372036854775808L");
     CHECK_THROWS_AS(interpret("-9223372036854775809L"), ParseError);
+    CHECK(interpret("18446744073709551615ul") == "18446744073709551615UL");
+    CHECK_THROWS_AS(interpret("18446744073709551616UL"), ParseError);
 }
 
 
@@ -371,6 +388,15 @@ TEST_CASE( "Expressions", "[script][interpreter]" )
     CHECK(interpret_std("-(1 + 2)") == "-3");
     CHECK(interpret_std("1+1, {2+2}") == "(2, 4)");
     CHECK(interpret_std("f=fun a:Int {a+1}; [1, f 2]") == "[1, 3]");
+
+    CHECK(interpret_std("16 >> 2") == "4");
+    CHECK(interpret_std("-16 >> 2") == "-4");
+    CHECK(interpret_std("16 << 3") == "128");
+    CHECK(interpret_std("-16 << 3") == "-128");
+    CHECK(interpret_std("32u >> 3u") == "4U");
+    CHECK(interpret_std("4u << 3u") == "32U");
+    CHECK(interpret_std("-1u >> 20u") == "4095U");  // -1u = 2**32-1
+    CHECK(interpret_std("-1u << 31u") == "2147483648U");
 }
 
 
@@ -418,10 +444,6 @@ TEST_CASE( "Blocks", "[script][interpreter]" )
     CHECK(interpret_std("b = {1+2}; b") == "3");
     CHECK(interpret("b = { a = 1; a }; b") == "1");
     CHECK(interpret_std("b:Int = {1+2}; b") == "3");
-
-    // blocks are evaluated after all definitions in the scope,
-    // which means they can use names from parent scope that are defined later
-    CHECK(interpret("y={x}; x=7; y") == "7");
 }
 
 
@@ -430,8 +452,9 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     CHECK(parse("fun Int -> Int {}") == "fun Int -> Int {}");
 
     // returned lambda
-    CHECK(interpret_std("fun x:Int->Int { x + 1 }") == "<lambda> Int32 -> Int32");
-    CHECK_THROWS_AS(interpret_std("fun x { x + 1 }"), UnexpectedGenericFunction);  // generic lambda must be either assigned or resolved by calling
+    CHECK(interpret_std("fun x:Int->Int { x + 1 }") == "<lambda> Int32 -> Int32");  // non-generic is fine
+    CHECK(interpret_std("fun x { x + 1 }") == "<lambda> Int32 -> Int32");   // also fine, function type deduced from `1` (Int) and `add: Int Int -> Int`
+    CHECK_THROWS_AS(interpret_std("fun x { x }"), UnexpectedGenericFunction);  // generic lambda must be either assigned or resolved by calling
 
     // immediately called lambda
     CHECK(interpret_std("fun x:Int {x+1} 2") == "3");
@@ -491,6 +514,14 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
                         "outer 1; outer 2; __module.__n_fn") == "9;11;5");
     // * specializations with different types from the same template
     CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; inner 3 + (inner 4l):T }; outer 2") == "11");
+
+    // "Funarg problem" (upwards)
+    auto def_succ = "succ = fun Int->Int { __value 1 .__load_static; __add 0x88 }; "s;
+    auto def_compose = " compose = fun f g { fun x { f (g x) } }; "s;
+    auto def_succ_compose = def_succ + def_compose;
+    CHECK(interpret(def_succ_compose + "plustwo = compose succ succ; plustwo 42") == "44");
+    CHECK(interpret(def_succ_compose + "plustwo = {compose succ succ}; plustwo 42") == "44");
+    //CHECK(interpret_std(def_compose + "same = compose pred succ; same 42") == "42");
 }
 
 
@@ -499,6 +530,7 @@ TEST_CASE( "Partial function call", "[script][interpreter]" )
     // partial call: `add 1` returns a lambda which takes single argument
     CHECK(interpret_std("(add 1) 2") == "3");
     CHECK(interpret_std("{add 1} 2") == "3");
+    CHECK(interpret_std("f=add 1; f 2") == "3");
     CHECK(interpret_std("f={add 1}; f 2") == "3");
     CHECK(interpret_std("f=fun x:Int {add x}; f 2 1") == "3");
     CHECK(interpret_std("f=fun x:Int {add 3}; f 2 1") == "4");
@@ -515,6 +547,23 @@ TEST_CASE( "Partial function call", "[script][interpreter]" )
 }
 
 
+TEST_CASE( "Forward declarations", "[script][interpreter]")
+{
+    // `x` name not yet seen (the symbol resolution is strictly single-pass)
+    CHECK_THROWS_AS(interpret("y=x; x=7; y"), UndefinedName);
+    CHECK_THROWS_AS(interpret("y={x}; x=7; y"), UndefinedName);  // block doesn't change anything
+    CHECK_THROWS_AS(interpret_std("y=fun a {a+x}; x=7; y 2"), UndefinedName);  // function neither
+    // Inside a block or function, a forward-declared value or function can be used.
+    // A similar principle is used in recursion, where the function itself is considered
+    // declared while processing its own body.
+    CHECK(interpret("decl x:Int; y={x}; x=7; y") == "7");
+    CHECK(interpret("decl f:Int->Int; w=fun x {f x}; f=fun x {x}; w 7") == "7");
+    // Forward-declared template function
+    // TODO: implement (parses fine, but the specialization is done too early, it needs to be postponed)
+    //CHECK(interpret("decl f:<T> T->T; y={f 7}; f=fun x {x}; y") == "7");
+}
+
+
 TEST_CASE( "Generic functions", "[script][interpreter]" )
 {
     // `f` is a generic function, instantiated to Int->Int by the call
@@ -523,6 +572,14 @@ TEST_CASE( "Generic functions", "[script][interpreter]" )
     CHECK(interpret_std("a=3; f=fun x {a + x}; f 4") == "7");
     // generic type declaration, type constraint
     CHECK(interpret_std("f = fun<T> x:T y:T -> Bool with (Eq T) { x == y }; f 1 2") == "false");
+
+    // === Propagating and deducing function types ===
+    // arg to ret via type parameter
+    CHECK(interpret("fun<T> T->T { __noop } 1") == "1");
+    CHECK(interpret("f = fun<T> T->T { __noop }; f 2") == "2");
+    CHECK(interpret("f = fun<T> T->T { __noop }; f (f 3)") == "3");
+    CHECK(interpret("f = fun<T> T->T { __noop }; 4 .f .f .f") == "4");
+    CHECK(interpret("f = fun<T> T->T { __noop }; same = fun<T> x:T -> T { f (f x) }; same 5") == "5");
 }
 
 
@@ -585,6 +642,7 @@ TEST_CASE( "Subscript", "[script][interpreter]" )
     CHECK(interpret_std("[1,2,3] ! 2") == "3");
     CHECK_THROWS_AS(interpret_std("[1,2,3]!3"), IndexOutOfBounds);
     CHECK(interpret_std("['a','b','c'] ! 1") == "'b'");
+    CHECK(interpret_std("l=[1,2,3,4,5]; l!0 + l!1 + l!2 + l!3 + l!4") == "15");  // inefficient sum
     CHECK(interpret_std("[[1,2],[3,4],[5,6]] ! 1 ! 0") == "3");
     CHECK(interpret_std("head = fun l:[Int] -> Int { l!0 }; head [1,2,3]") == "1");
     CHECK(interpret_std("head = fun<T> l:[T] -> T { l!0 }; head ['a','b','c']") == "'a'");
@@ -594,7 +652,7 @@ TEST_CASE( "Subscript", "[script][interpreter]" )
 TEST_CASE( "Type classes", "[script][interpreter]" )
 {
     CHECK(interpret("class XEq T { xeq : T T -> Bool }; "
-                    "instance XEq Int32 { xeq = { __equal_32 } }; "
+                    "instance XEq Int32 { xeq = { __equal 0x88 } }; "
                     "xeq 1 2") == "false");
 }
 
@@ -631,14 +689,17 @@ TEST_CASE( "With expression, I/O streams", "[script][interpreter]" )
 
 TEST_CASE( "Compiler intrinsics", "[script][interpreter]" )
 {
-    // function signature must be explicitly declared, it's never inferred from intrinsics
-    // parameter names are not needed (and not used), intrinsics work directly with stack
-    // e.g. __equal_32 pulls two 32bit values and pushes 8bit Bool value back
-    CHECK(interpret_std("my_eq = fun Int32 Int32 -> Bool { __equal_32 }; my_eq 42 (2*21)") == "true");
+    // Function signature must be explicitly declared, it's never inferred from intrinsics.
+    // Parameter names are not needed (and not used), intrinsics work directly with stack.
+    // E.g. `__equal 0x88` pulls two Int32 values and pushes 8bit Bool value back.
+    CHECK(interpret_std("my_eq = fun Int32 Int32 -> Bool { __equal 0x88 }; my_eq 42 (2*21)") == "true");
     // alternative style - essentially the same
-    CHECK(interpret("my_eq : Int32 Int32 -> Bool = { __equal_32 }; my_eq 42 43") == "false");
+    CHECK(interpret("my_eq : Int32 Int32 -> Bool = { __equal 0x88 }; my_eq 42 43") == "false");
     // intrinsic with arguments
     CHECK(interpret("my_cast : Int32 -> Int64 = { __cast 0x89 }; my_cast 42") == "42L");
+    // Static value
+    CHECK(interpret("add42 = fun Int->Int { __load_static (__value 42); __add 0x88 }; add42 8") == "50");
+    CHECK(interpret("add42 = fun Int->Int { __value 42 . __load_static; __add 0x88 }; add42 8") == "50");
 }
 
 

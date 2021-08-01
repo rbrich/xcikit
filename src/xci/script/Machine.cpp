@@ -97,155 +97,167 @@ void Machine::run(const InvokeCallback& cb)
 
             case Opcode::LogicalOr:
             case Opcode::LogicalAnd: {
-                auto fn = builtin::logical_op_function(opcode);
-                if (!fn)
-                    throw NotImplemented(format("logical operator {}", opcode));
                 auto lhs = m_stack.pull<value::Bool>();
                 auto rhs = m_stack.pull<value::Bool>();
-                m_stack.push(fn(lhs, rhs));
+                switch (opcode) {
+                    case Opcode::LogicalOr:   m_stack.push(lhs.binary_op<std::logical_or<>, true>(rhs)); break;
+                    case Opcode::LogicalAnd:  m_stack.push(lhs.binary_op<std::logical_and<>, true>(rhs)); break;
+                    default: break;
+                }
                 break;
             }
 
-            case Opcode::Equal_8:
-            case Opcode::NotEqual_8:
-            case Opcode::LessEqual_8:
-            case Opcode::GreaterEqual_8:
-            case Opcode::LessThan_8:
-            case Opcode::GreaterThan_8: {
-                auto fn = builtin::comparison_op_function<value::Byte>(opcode);
-                if (!fn)
-                    throw NotImplemented(format("comparison operator {}", opcode));
-                auto lhs = m_stack.pull<value::Byte>();
-                auto rhs = m_stack.pull<value::Byte>();
-                m_stack.push(fn(lhs, rhs));
-                break;
-            }
-
-            case Opcode::Equal_32:
-            case Opcode::NotEqual_32:
-            case Opcode::LessEqual_32:
-            case Opcode::GreaterEqual_32:
-            case Opcode::LessThan_32:
-            case Opcode::GreaterThan_32: {
-                auto fn = builtin::comparison_op_function<value::Int32>(opcode);
-                if (!fn)
-                    throw NotImplemented(format("comparison operator {}", opcode));
-                auto lhs = m_stack.pull<value::Int32>();
-                auto rhs = m_stack.pull<value::Int32>();
-                m_stack.push(fn(lhs, rhs));
-                break;
-            }
-
-            case Opcode::Equal_64:
-            case Opcode::NotEqual_64:
-            case Opcode::LessEqual_64:
-            case Opcode::GreaterEqual_64:
-            case Opcode::LessThan_64:
-            case Opcode::GreaterThan_64: {
-                auto fn = builtin::comparison_op_function<value::Int64>(opcode);
-                if (!fn)
-                    throw NotImplemented(format("comparison operator {}", opcode));
-                auto lhs = m_stack.pull<value::Int64>();
-                auto rhs = m_stack.pull<value::Int64>();
-                m_stack.push(fn(lhs, rhs));
+            case Opcode::Equal:
+            case Opcode::NotEqual:
+            case Opcode::LessEqual:
+            case Opcode::GreaterEqual:
+            case Opcode::LessThan:
+            case Opcode::GreaterThan: {
+                const auto arg = *it++;
+                const auto lhs_type = decode_arg_type(arg >> 4);
+                const auto rhs_type = decode_arg_type(arg & 0xf);
+                if (lhs_type == Type::Unknown || rhs_type == Type::Unknown || lhs_type != rhs_type)
+                    throw NotImplemented(format("opcode: {} lhs type: {:x} rhs type: {:x}",
+                            opcode, arg >> 4, arg & 0xf));
+                auto lhs = m_stack.pull(TypeInfo{lhs_type});
+                auto rhs = m_stack.pull(TypeInfo{rhs_type});
+                switch (opcode) {
+                    case Opcode::Equal: m_stack.push(lhs.binary_op<std::equal_to<>>(rhs)); break;
+                    case Opcode::NotEqual: m_stack.push(lhs.binary_op<std::not_equal_to<>>(rhs)); break;
+                    case Opcode::LessEqual: m_stack.push(lhs.binary_op<std::less_equal<>>(rhs)); break;
+                    case Opcode::GreaterEqual: m_stack.push(lhs.binary_op<std::greater_equal<>>(rhs)); break;
+                    case Opcode::LessThan: m_stack.push(lhs.binary_op<std::less<>>(rhs)); break;
+                    case Opcode::GreaterThan: m_stack.push(lhs.binary_op<std::greater<>>(rhs)); break;
+                    default: break;
+                }
                 break;
             }
 
             case Opcode::BitwiseOr_8:
             case Opcode::BitwiseAnd_8:
-            case Opcode::BitwiseXor_8:
-            case Opcode::ShiftLeft_8:
-            case Opcode::ShiftRight_8:
-            case Opcode::Add_8:
-            case Opcode::Sub_8:
-            case Opcode::Mul_8:
-            case Opcode::Div_8:
-            case Opcode::Mod_8:
-            case Opcode::Exp_8: {
-                auto fn = builtin::binary_op_function<value::Byte>(opcode);
-                if (!fn)
-                    throw NotImplemented(format("binary operator {}", opcode));
+            case Opcode::BitwiseXor_8: {
                 auto lhs = m_stack.pull<value::Byte>();
                 auto rhs = m_stack.pull<value::Byte>();
-                m_stack.push(fn(lhs, rhs));
+                switch (opcode) {
+                    case Opcode::BitwiseOr_8:   m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs)); break;
+                    case Opcode::BitwiseAnd_8:  m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs)); break;
+                    case Opcode::BitwiseXor_8:  m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs)); break;
+                    default: break;
+                }
                 break;
             }
 
             case Opcode::BitwiseOr_32:
             case Opcode::BitwiseAnd_32:
-            case Opcode::BitwiseXor_32:
-            case Opcode::ShiftLeft_32:
-            case Opcode::ShiftRight_32:
-            case Opcode::Add_32:
-            case Opcode::Sub_32:
-            case Opcode::Mul_32:
-            case Opcode::Div_32:
-            case Opcode::Mod_32:
-            case Opcode::Exp_32: {
-                auto fn = builtin::binary_op_function<value::Int32>(opcode);
-                if (!fn)
-                    throw NotImplemented(format("binary operator {}", opcode));
+            case Opcode::BitwiseXor_32: {
                 auto lhs = m_stack.pull<value::Int32>();
                 auto rhs = m_stack.pull<value::Int32>();
-                m_stack.push(fn(lhs, rhs));
+                switch (opcode) {
+                    case Opcode::BitwiseOr_32:   m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs)); break;
+                    case Opcode::BitwiseAnd_32:  m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs)); break;
+                    case Opcode::BitwiseXor_32:  m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs)); break;
+                    default: break;
+                }
                 break;
             }
 
             case Opcode::BitwiseOr_64:
             case Opcode::BitwiseAnd_64:
-            case Opcode::BitwiseXor_64:
-            case Opcode::ShiftLeft_64:
-            case Opcode::ShiftRight_64:
-            case Opcode::Add_64:
-            case Opcode::Sub_64:
-            case Opcode::Mul_64:
-            case Opcode::Div_64:
-            case Opcode::Mod_64:
-            case Opcode::Exp_64: {
-                auto fn = builtin::binary_op_function<value::Int64>(opcode);
-                if (!fn)
-                    throw NotImplemented(format("binary operator {}", opcode));
+            case Opcode::BitwiseXor_64: {
                 auto lhs = m_stack.pull<value::Int64>();
                 auto rhs = m_stack.pull<value::Int64>();
-                m_stack.push(fn(lhs, rhs));
+                switch (opcode) {
+                    case Opcode::BitwiseOr_64:   m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs)); break;
+                    case Opcode::BitwiseAnd_64:  m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs)); break;
+                    case Opcode::BitwiseXor_64:  m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs)); break;
+                    default: break;
+                }
                 break;
             }
 
-            case Opcode::LogicalNot: {
-                auto fn = builtin::logical_not_function();
-                assert(fn);
-                auto rhs = m_stack.pull<value::Bool>();
-                m_stack.push(fn(rhs));
+            case Opcode::ShiftLeft:
+            case Opcode::ShiftRight: {
+                const auto arg = *it++;
+                const auto lhs_type = decode_arg_type(arg >> 4);
+                const auto rhs_type = decode_arg_type(arg & 0xf);
+                if (lhs_type == Type::Unknown || rhs_type == Type::Unknown || lhs_type != rhs_type)
+                    throw NotImplemented(format("opcode: {} lhs type: {:x} rhs type: {:x}",
+                            opcode, arg >> 4, arg & 0xf));
+                auto lhs = m_stack.pull(TypeInfo{lhs_type});
+                auto rhs = m_stack.pull(TypeInfo{rhs_type});
+                switch (opcode) {
+                    case Opcode::ShiftLeft: m_stack.push(lhs.binary_op<builtin::shift_left, true>(rhs)); break;
+                    case Opcode::ShiftRight: m_stack.push(lhs.binary_op<builtin::shift_right, true>(rhs)); break;
+                    default: break;
+                }
                 break;
             }
+
+            case Opcode::Add:
+            case Opcode::Sub:
+            case Opcode::Mul:
+            case Opcode::Div:
+            case Opcode::Exp: {
+                const auto arg = *it++;
+                const auto lhs_type = decode_arg_type(arg >> 4);
+                const auto rhs_type = decode_arg_type(arg & 0xf);
+                if (lhs_type == Type::Unknown || rhs_type == Type::Unknown || lhs_type != rhs_type)
+                    throw NotImplemented(format("opcode: {} lhs type: {:x} rhs type: {:x}",
+                            opcode, arg >> 4, arg & 0xf));
+                auto lhs = m_stack.pull(TypeInfo{lhs_type});
+                auto rhs = m_stack.pull(TypeInfo{rhs_type});
+                switch (opcode) {
+                    case Opcode::Add: m_stack.push(lhs.binary_op<std::plus<>>(rhs)); break;
+                    case Opcode::Sub: m_stack.push(lhs.binary_op<std::minus<>>(rhs)); break;
+                    case Opcode::Mul: m_stack.push(lhs.binary_op<std::multiplies<>>(rhs)); break;
+                    case Opcode::Div: m_stack.push(lhs.binary_op<std::divides<>>(rhs)); break;
+                    case Opcode::Exp: m_stack.push(lhs.binary_op<builtin::exp>(rhs)); break;
+                    default: break;
+                }
+                break;
+            }
+
+            case Opcode::Mod: {
+                const auto arg = *it++;
+                const auto lhs_type = decode_arg_type(arg >> 4);
+                const auto rhs_type = decode_arg_type(arg & 0xf);
+                if (lhs_type == Type::Unknown || rhs_type == Type::Unknown || lhs_type != rhs_type)
+                    throw NotImplemented(format("modulus lhs: {:x} rhs: {:x}",
+                            arg >> 4, arg & 0xf));
+                auto lhs = m_stack.pull(TypeInfo{lhs_type});
+                auto rhs = m_stack.pull(TypeInfo{rhs_type});
+                if (!lhs.modulus(rhs))
+                    throw NotImplemented(format("modulus lhs: {:x} rhs: {:x}",
+                            arg >> 4, arg & 0xf));
+                m_stack.push(lhs);
+                break;
+            }
+
+            case Opcode::LogicalNot:
+                m_stack.push(Value(! m_stack.pull<value::Bool>().value()));
+                break;
 
             case Opcode::BitwiseNot_8:
-            case Opcode::Neg_8: {
-                auto fn = builtin::unary_op_function<value::Byte>(opcode);
-                if (!fn)
-                    throw NotImplemented(format("unary operator {}", opcode));
-                auto rhs = m_stack.pull<value::Byte>();
-                m_stack.push(fn(rhs));
+                m_stack.push(Value(~ m_stack.pull<value::Byte>().value()));
                 break;
-            }
 
             case Opcode::BitwiseNot_32:
-            case Opcode::Neg_32: {
-                auto fn = builtin::unary_op_function<value::Int32>(opcode);
-                if (!fn)
-                    throw NotImplemented(format("unary operator {}", opcode));
-                auto rhs = m_stack.pull<value::Int32>();
-                m_stack.push(fn(rhs));
+                m_stack.push(Value(~ m_stack.pull<value::Int32>().value()));
                 break;
-            }
 
             case Opcode::BitwiseNot_64:
-            case Opcode::Neg_64: {
-                auto fn = builtin::unary_op_function<value::Int64>(opcode);
-                if (!fn)
-                    throw NotImplemented(format("unary operator {}", opcode));
-                auto rhs = m_stack.pull<value::Int64>();
-                m_stack.push(fn(rhs));
+                m_stack.push(Value(~ m_stack.pull<value::Int64>().value()));
+                break;
+
+            case Opcode::Neg: {
+                const auto arg = *it++;
+                const auto type = decode_arg_type(arg & 0xf);
+                if (type == Type::Unknown)
+                    throw NotImplemented(format("opcode: {} type: {:x}",
+                            opcode, arg & 0xf));
+                auto v = m_stack.pull(TypeInfo{type});
+                v.negate();
+                m_stack.push(v);
                 break;
             }
 

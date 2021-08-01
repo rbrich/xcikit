@@ -81,16 +81,17 @@ struct InfixOperator: sor< one<','>, two<'&'>, two<'|'>, two<'='>, string<'!','=
 
 // Keywords
 struct KeywordFun: TAO_PEGTL_KEYWORD("fun") {};
-struct KeywordIf: TAO_PEGTL_KEYWORD("if") {};
-struct KeywordThen: TAO_PEGTL_KEYWORD("then") {};
-struct KeywordElse: TAO_PEGTL_KEYWORD("else") {};
 struct KeywordClass: TAO_PEGTL_KEYWORD("class") {};
 struct KeywordInstance: TAO_PEGTL_KEYWORD("instance") {};
 struct KeywordType: TAO_PEGTL_KEYWORD("type") {};
+struct KeywordDecl: TAO_PEGTL_KEYWORD("decl") {};
 struct KeywordWith: TAO_PEGTL_KEYWORD("with") {};
+struct KeywordIf: TAO_PEGTL_KEYWORD("if") {};
+struct KeywordThen: TAO_PEGTL_KEYWORD("then") {};
+struct KeywordElse: TAO_PEGTL_KEYWORD("else") {};
 struct KeywordMatch: TAO_PEGTL_KEYWORD("match") {};
-struct Keyword: sor<KeywordFun, KeywordIf, KeywordThen, KeywordElse,
-        KeywordClass, KeywordInstance, KeywordType, KeywordWith, KeywordMatch> {};
+struct Keyword: sor<KeywordFun, KeywordClass, KeywordInstance, KeywordType,
+        KeywordDecl, KeywordWith, KeywordIf, KeywordThen, KeywordElse, KeywordMatch> {};
 
 // Literals
 struct BinDigit : one< '0', '1' > {};
@@ -102,7 +103,10 @@ struct DecNum: seq< plus<digit>, opt<DecNumFrac> > {};
 struct HexNum: if_must<one<'x'>, plus<xdigit>> {};
 struct Sign: one<'-','+'> {};
 struct ZeroPrefixNum: seq< one<'0'>, sor<HexNum, OctNum, BinNum, DecNum> > {};
-struct NumSuffix: one<'l', 'L', 'f', 'F', 'b', 'B'> {};
+struct NumSuffix: sor<
+        seq<one<'u', 'U'>, opt<one<'l', 'L'>>>,
+        seq<one<'l', 'L'>, opt<one<'u', 'U'>>>,
+        one<'f', 'F', 'b', 'B'> > {};
 struct Number: seq< opt<Sign>, sor<ZeroPrefixNum, DecNum>, opt<NumSuffix> > {};
 
 struct Char: if_must< one<'\''>, StringCh, one<'\''> > {};
@@ -161,15 +165,16 @@ struct ExprWith: if_must< KeywordWith, NSC, ExprArgSafe, NSC, Expression<SC> > {
 struct ExprStructItem: seq< Identifier, SC, one<'='>, not_at<one<'='>>, SC, must<ExprArgSafe> > {};
 struct ExprStruct: seq< ExprStructItem, star< SC, one<','>, SC, must<ExprStructItem> > > {};
 
-// Statements
+// Block-level statements
+struct Declaration: if_must< KeywordDecl, NSC, Variable > {};
 struct Definition: seq< Variable, SC, seq<one<'='>, not_at<one<'='>>, NSC, must<Expression<SC>>> > {};  // must not match `var == ...`
 struct TypeAlias: if_must< TypeName, NSC, one<'='>, not_at<one<'='>>, NSC, UnsafeType > {};
-struct Statement: sor< TypeAlias, Definition, Expression<SC> > {};
+struct Statement: sor< TypeAlias, Declaration, Definition, Expression<SC> > {};
 
 // Module-level definitions
-struct ClassDefinition: seq< Variable, SC, opt_must<one<'='>, SC, Expression<SC>> > {};
+struct ClassDeclaration: seq< Variable, SC, opt_must<one<'='>, SC, Expression<SC>> > {};  // with optional default definition
 struct DefClass: if_must< KeywordClass, NSC, TypeName, RS, SC, plus<TypeName, SC>, opt<TypeContext>, NSC,
-        one<'{'>, NSC, sor< one<'}'>, must<SepList<ClassDefinition>, NSC, one<'}'>> > > {};
+        one<'{'>, NSC, sor< one<'}'>, must<SepList<ClassDeclaration>, NSC, one<'}'>> > > {};
 struct DefInstance: if_must< KeywordInstance, NSC, TypeName, RS, SC, plus<Type, SC>, opt<TypeContext>, NSC,
         one<'{'>, NSC, sor< one<'}'>, must<SepList<Definition>, NSC, one<'}'>> > > {};
 struct DefType: if_must< KeywordType, NSC, TypeName, NSC, one<'='>, not_at<one<'='>>, NSC, UnsafeType > {};
@@ -183,14 +188,14 @@ struct Module: must<NSC, opt<SepList<TopLevelStatement>, NSC>, eof> {};
 // Helper data structs
 
 struct LiteralHelper {
-    std::variant<std::string_view, std::string, double, int64_t> content;
+    std::variant<std::string_view, std::string, double, uint64_t, int64_t> content;
     ValueType type = ValueType::Unknown;
 };
 
 struct NumberHelper {
-    std::variant<double, int64_t> num;
+    std::variant<double, int64_t, uint64_t> num;
     bool is_float = false;
-    char suffix = 0;
+    char suffix[2] = {0, 0};
 };
 
 
@@ -199,6 +204,23 @@ struct NumberHelper {
 
 template<typename Rule>
 struct Action : nothing<Rule> {};
+
+
+// AST doesn't have a special node for Declaration, it's just a Definition
+// without an expression. This simplifies processing as the name and type part
+// of both Declaration and Definition is handled in the same way, anyway.
+template<>
+struct Action<Declaration> : change_states< ast::Definition > {
+    template<typename Input>
+    static void success(const Input &in, ast::Definition& def, ast::Module& mod) {
+        mod.body.statements.push_back(std::make_unique<ast::Definition>(std::move(def)));
+    }
+
+    template<typename Input>
+    static void success(const Input &in, ast::Definition& def, ast::Block& block) {
+        block.statements.push_back(std::make_unique<ast::Definition>(std::move(def)));
+    }
+};
 
 
 template<>
@@ -865,7 +887,7 @@ struct Action<DefClass> : change_states< ast::Class > {
 
 
 template<>
-struct Action<ClassDefinition> : change_states< ast::Definition > {
+struct Action<ClassDeclaration> : change_states< ast::Definition > {
     template<typename Input>
     static void success(const Input &in, ast::Definition& def, ast::Class& cls) {
         cls.defs.push_back(std::move(def));
@@ -901,6 +923,19 @@ struct Action<Literal> : change_states< LiteralHelper > {
             case ValueType::Unknown:
                 assert(!"Literal value not handled");
                 abort();
+            case ValueType::UInt32: {
+                const auto v = std::get<uint64_t>(helper.content);
+                using l = std::numeric_limits<uint32_t>;
+                if (v > l::max())
+                    // The value can't fit in UInt32, make it UInt64 instead
+                    value = TypedValue{value::UInt64(v)};
+                else
+                    value = TypedValue{value::UInt32((uint32_t) v)};
+                break;
+            }
+            case ValueType::UInt64:
+                value = TypedValue{value::UInt64( std::get<uint64_t>(helper.content) )};
+                break;
             case ValueType::Int32: {
                 const auto v = std::get<int64_t>(helper.content);
                 using l = std::numeric_limits<int32_t>;
@@ -967,9 +1002,16 @@ template<>
 struct Action<NumSuffix> {
     template<typename Input>
     static void apply(const Input &in, NumberHelper& n) {
-        n.suffix = tolower(in.peek_char());
-        if (n.suffix == 'f')
+        n.suffix[0] = tolower(in.peek_char());
+        if (in.size() == 2)
+            n.suffix[1] = tolower(in.peek_char(1));
+        if (n.suffix[0] == 'f')
             n.is_float = true;
+        // lu -> ul
+        if (n.suffix[0] == 'l' && n.suffix[1] == 'u') {
+            n.suffix[0] = 'u';
+            n.suffix[1] = 'l';
+        }
     }
 };
 
@@ -980,7 +1022,9 @@ struct Action<Number> : change_states< NumberHelper > {
     static void apply(const Input &in, NumberHelper& n) {
         if (n.is_float) {
             auto s = in.string();
-            if (n.suffix)
+            if (n.suffix[0])
+                s.pop_back();
+            if (n.suffix[1])
                 s.pop_back();
             std::istringstream is(s);
             double val;
@@ -999,7 +1043,9 @@ struct Action<Number> : change_states< NumberHelper > {
                 ++first;
 
             // skip suffix
-            if (n.suffix)
+            if (n.suffix[0])
+                --last;
+            if (n.suffix[1])
                 --last;
 
             bool minus_sign = false;
@@ -1020,26 +1066,35 @@ struct Action<Number> : change_states< NumberHelper > {
             uint64_t val;
             auto [end, ec] = std::from_chars(first, last, val, base);
             if (ec == std::errc::result_out_of_range)
-                throw parse_error("Int64 literal out of range", in);
+                throw parse_error("Integer literal out of range 64bit range", in);
             assert(end == last);
 
-            using l = std::numeric_limits<int64_t>;
-            if (!minus_sign && val > uint64_t(l::max()))
-                throw parse_error("Int64 literal out of range", in);
-            if (minus_sign && val > uint64_t(l::max()) + 1)
-                throw parse_error("Int64 literal out of range", in);
+            if (n.suffix[0] == 'u') {
+                if (n.suffix[1] == 'l')
+                    n.num = minus_sign ? -val : val;
+                else {
+                    // negative value overflows, crop it to 32bit so it doesn't overflow into 64bit
+                    n.num = minus_sign ? uint32_t(-val) : val;
+                }
+            } else {
+                using l = std::numeric_limits<int64_t>;
+                if (!minus_sign && val > uint64_t(l::max()))
+                    throw parse_error("Int64 literal out of range", in);
+                if (minus_sign && val > uint64_t(l::max()) + 1)
+                    throw parse_error("Int64 literal out of range", in);
 
-            n.num = minus_sign ? int64_t(~val+1) : int64_t(val);
+                n.num = minus_sign ? int64_t(~val+1) : int64_t(val);
+            }
         }
     }
 
     template<typename Input>
     static void success(const Input &in, NumberHelper& n, LiteralHelper& lit) {
         if (n.is_float) {
-            lit.type = (n.suffix == 'f') ? ValueType::Float32 : ValueType::Float64;
+            lit.type = (n.suffix[0] == 'f') ? ValueType::Float32 : ValueType::Float64;
             lit.content = std::get<double>(n.num);
         } else {
-            switch (n.suffix) {
+            switch (n.suffix[0]) {
                 default:
                 case 0:
                     lit.type = ValueType::Int32;
@@ -1047,11 +1102,17 @@ struct Action<Number> : change_states< NumberHelper > {
                 case 'l':
                     lit.type = ValueType::Int64;
                     break;
+                case 'u':
+                    lit.type = (n.suffix[1] == 'l') ? ValueType::UInt64 : ValueType::UInt32;
+                    break;
                 case 'b':
                     lit.type = ValueType::Byte;
                     break;
             }
-            lit.content = std::get<int64_t>(n.num);
+            if (n.suffix[0] == 'u')
+                lit.content = std::get<uint64_t>(n.num);
+            else
+                lit.content = std::get<int64_t>(n.num);
         }
     }
 };
