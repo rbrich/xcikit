@@ -97,12 +97,13 @@ void Machine::run(const InvokeCallback& cb)
 
             case Opcode::LogicalOr:
             case Opcode::LogicalAnd: {
-                auto fn = builtin::logical_op_function(opcode);
-                if (!fn)
-                    throw NotImplemented(format("logical operator {}", opcode));
                 auto lhs = m_stack.pull<value::Bool>();
                 auto rhs = m_stack.pull<value::Bool>();
-                m_stack.push(fn(lhs, rhs));
+                switch (opcode) {
+                    case Opcode::LogicalOr:   m_stack.push(lhs.binary_op<std::logical_or<>, true>(rhs)); break;
+                    case Opcode::LogicalAnd:  m_stack.push(lhs.binary_op<std::logical_and<>, true>(rhs)); break;
+                    default: break;
+                }
                 break;
             }
 
@@ -135,36 +136,42 @@ void Machine::run(const InvokeCallback& cb)
             case Opcode::BitwiseOr_8:
             case Opcode::BitwiseAnd_8:
             case Opcode::BitwiseXor_8: {
-                auto fn = builtin::binary_op_function<value::Byte>(opcode);
-                if (!fn)
-                    throw NotImplemented(format("binary operator {}", opcode));
                 auto lhs = m_stack.pull<value::Byte>();
                 auto rhs = m_stack.pull<value::Byte>();
-                m_stack.push(fn(lhs, rhs));
+                switch (opcode) {
+                    case Opcode::BitwiseOr_8:   m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs)); break;
+                    case Opcode::BitwiseAnd_8:  m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs)); break;
+                    case Opcode::BitwiseXor_8:  m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs)); break;
+                    default: break;
+                }
                 break;
             }
 
             case Opcode::BitwiseOr_32:
             case Opcode::BitwiseAnd_32:
             case Opcode::BitwiseXor_32: {
-                auto fn = builtin::binary_op_function<value::Int32>(opcode);
-                if (!fn)
-                    throw NotImplemented(format("binary operator {}", opcode));
                 auto lhs = m_stack.pull<value::Int32>();
                 auto rhs = m_stack.pull<value::Int32>();
-                m_stack.push(fn(lhs, rhs));
+                switch (opcode) {
+                    case Opcode::BitwiseOr_32:   m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs)); break;
+                    case Opcode::BitwiseAnd_32:  m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs)); break;
+                    case Opcode::BitwiseXor_32:  m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs)); break;
+                    default: break;
+                }
                 break;
             }
 
             case Opcode::BitwiseOr_64:
             case Opcode::BitwiseAnd_64:
             case Opcode::BitwiseXor_64: {
-                auto fn = builtin::binary_op_function<value::Int64>(opcode);
-                if (!fn)
-                    throw NotImplemented(format("binary operator {}", opcode));
                 auto lhs = m_stack.pull<value::Int64>();
                 auto rhs = m_stack.pull<value::Int64>();
-                m_stack.push(fn(lhs, rhs));
+                switch (opcode) {
+                    case Opcode::BitwiseOr_64:   m_stack.push(lhs.binary_op<std::bit_or<>, true>(rhs)); break;
+                    case Opcode::BitwiseAnd_64:  m_stack.push(lhs.binary_op<std::bit_and<>, true>(rhs)); break;
+                    case Opcode::BitwiseXor_64:  m_stack.push(lhs.binary_op<std::bit_xor<>, true>(rhs)); break;
+                    default: break;
+                }
                 break;
             }
 
@@ -226,40 +233,21 @@ void Machine::run(const InvokeCallback& cb)
                 break;
             }
 
-            case Opcode::LogicalNot: {
-                auto fn = builtin::logical_not_function();
-                assert(fn);
-                auto rhs = m_stack.pull<value::Bool>();
-                m_stack.push(fn(rhs));
+            case Opcode::LogicalNot:
+                m_stack.push(Value(! m_stack.pull<value::Bool>().value()));
                 break;
-            }
 
-            case Opcode::BitwiseNot_8: {
-                auto fn = builtin::unary_op_function<value::Byte>(opcode);
-                if (!fn)
-                    throw NotImplemented(format("unary operator {}", opcode));
-                auto rhs = m_stack.pull<value::Byte>();
-                m_stack.push(fn(rhs));
+            case Opcode::BitwiseNot_8:
+                m_stack.push(Value(~ m_stack.pull<value::Byte>().value()));
                 break;
-            }
 
-            case Opcode::BitwiseNot_32: {
-                auto fn = builtin::unary_op_function<value::Int32>(opcode);
-                if (!fn)
-                    throw NotImplemented(format("unary operator {}", opcode));
-                auto rhs = m_stack.pull<value::Int32>();
-                m_stack.push(fn(rhs));
+            case Opcode::BitwiseNot_32:
+                m_stack.push(Value(~ m_stack.pull<value::Int32>().value()));
                 break;
-            }
 
-            case Opcode::BitwiseNot_64: {
-                auto fn = builtin::unary_op_function<value::Int64>(opcode);
-                if (!fn)
-                    throw NotImplemented(format("unary operator {}", opcode));
-                auto rhs = m_stack.pull<value::Int64>();
-                m_stack.push(fn(rhs));
+            case Opcode::BitwiseNot_64:
+                m_stack.push(Value(~ m_stack.pull<value::Int64>().value()));
                 break;
-            }
 
             case Opcode::Neg: {
                 const auto arg = *it++;

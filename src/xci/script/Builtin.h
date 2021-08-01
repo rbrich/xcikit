@@ -11,19 +11,12 @@
 #include "Module.h"
 #include "ast/AST.h"
 #include "Code.h"
-#include <functional>
 #include <cmath>
 
 namespace xci::script {
 
 
 namespace builtin {
-
-template <class T, class R=T> using BinaryFunction = std::function<R(T, T)>;
-template <class T> using UnaryFunction = std::function<T(T)>;
-
-BinaryFunction<value::Bool> logical_op_function(Opcode opcode);
-template <class T> BinaryFunction<T> binary_op_function(Opcode opcode);
 
 // shift_left operator is missing in <functional>
 struct shift_left {
@@ -52,9 +45,6 @@ struct exp {
     { return (decltype(std::forward<T>(lhs) + std::forward<U>(rhs)))
                 std::pow(std::forward<T>(lhs), std::forward<U>(rhs)); }
 };
-
-UnaryFunction<value::Bool> logical_not_function();
-template <class T> UnaryFunction<T> unary_op_function(Opcode opcode);
 
 const char* op_to_function_name(ast::Operator::Op op);
 
