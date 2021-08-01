@@ -193,6 +193,9 @@ const HeapSlot* Value::heapslot() const
 
 void Value::incref() const
 {
+#ifdef TRACE_REFCOUNT
+    std::cout << "+ref " << *this << std::endl;
+#endif
     return std::visit([](auto& v) {
         using T = std::decay_t<decltype(v)>;
         if constexpr (HasHeapSlot<T>)
@@ -207,6 +210,9 @@ void Value::incref() const
 
 void Value::decref() const
 {
+#ifdef TRACE_REFCOUNT
+    std::cout << "-ref " << *this << std::endl;
+#endif
     return std::visit([](auto& v) {
         using T = std::decay_t<decltype(v)>;
         if constexpr (HasHeapSlot<T>)
@@ -598,7 +604,7 @@ static void dump_float(std::ostream& os, /*std::floating_point*/ auto value)
 
 class StreamVisitor: public value::Visitor {
 public:
-    explicit StreamVisitor(std::ostream& os, const TypeInfo& type_info = TypeInfo{}) : os(os), type_info(type_info) {}
+    explicit StreamVisitor(std::ostream& os, const TypeInfo& type_info) : os(os), type_info(type_info) {}
     void visit(void) override { os << ""; }
     void visit(bool v) override { os << std::boolalpha << v; }
     void visit(std::byte v) override {
@@ -714,7 +720,8 @@ std::ostream& operator<<(std::ostream& os, const TypedValue& o)
 
 std::ostream& operator<<(std::ostream& os, const Value& o)
 {
-    StreamVisitor visitor(os);
+    TypeInfo type_info;  // Unknown
+    StreamVisitor visitor(os, type_info);
     o.apply(visitor);
     return os;
 }

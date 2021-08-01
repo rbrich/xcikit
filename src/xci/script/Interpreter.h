@@ -11,7 +11,6 @@
 #include "Parser.h"
 #include "Compiler.h"
 #include "Machine.h"
-#include "Builtin.h"
 #include <string_view>
 
 namespace xci::script {

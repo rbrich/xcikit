@@ -15,6 +15,9 @@ using std::move;
 
 Module::~Module()
 {
+    #ifdef TRACE_REFCOUNT
+    std::cout << "* in ~Module " << name() << std::endl;
+    #endif
     for (const auto& val : m_values) {
         val.decref();
     }
@@ -53,8 +56,10 @@ Index Module::add_function(std::unique_ptr<Function>&& fn)
 Index Module::add_value(TypedValue&& value)
 {
     auto idx = find_value(value);
-    if (idx != no_index)
+    if (idx != no_index) {
+        value.decref();  // we don't save the new value -> release it
         return idx;
+    }
 
     m_values.add(move(value));
     return m_values.size() - 1;

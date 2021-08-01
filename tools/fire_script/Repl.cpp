@@ -10,6 +10,7 @@
 
 #include <xci/script/Error.h>
 #include <xci/script/Value.h>
+#include <xci/script/Builtin.h>
 #include <xci/script/dump.h>
 
 #include <iostream>
