@@ -20,7 +20,8 @@ using namespace xci::core;
 int main()
 {
     Vfs vfs;
-    vfs.mount(XCI_SHARE);
+    if (!vfs.mount(XCI_SHARE))
+        return EXIT_FAILURE;
 
     Renderer renderer {vfs};
     Window window {renderer};

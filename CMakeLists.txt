@@ -37,8 +37,8 @@ else()
     set(NOT_EMSCRIPTEN ON)
 endif()
 
-option(XCI_INSTALL_SHARE_DIR "Install runtime data as a directory (share/xcikit)" OFF)
-option(XCI_INSTALL_SHARE_DAR "Install runtime data as DAR archive (share.dar)" ${NOT_EMSCRIPTEN})
+option(XCI_INSTALL_SHARE_DIR "Install runtime data as a directory (share/xcikit)" ON)
+option(XCI_INSTALL_SHARE_DAR "Install runtime data as DAR archive (share.dar)" OFF)
 option(XCI_INSTALL_SHARE_ZIP "Install runtime data as ZIP archive (share.zip)" OFF)
 
 option(XCI_LISTDIR_GETDENTS "Use getdents syscall instead of readdir for tools/find_file." ${NOT_EMSCRIPTEN})

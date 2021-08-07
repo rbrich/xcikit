@@ -213,6 +213,7 @@ public:
 private:
     void setup_view();
     void create_command_buffers();
+    void resize_framebuffer(int w, int h);
     void draw();
 
 public:

@@ -40,6 +40,7 @@ Window::~Window()
 
 void Window::create(const Vec2u& size, const std::string& title)
 {
+    glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
     m_window = glfwCreateWindow(size.x, size.y, title.c_str(),
@@ -116,10 +117,6 @@ std::string Window::get_clipboard_string() const
 void Window::set_draw_callback(Window::DrawCallback draw_cb)
 {
     m_draw_cb = std::move(draw_cb);
-    glfwSetWindowRefreshCallback(m_window, [](GLFWwindow* window) {
-        auto self = (Window*) glfwGetWindowUserPointer(window);
-        self->draw();
-    });
 }
 
 
@@ -206,22 +203,20 @@ void Window::setup_view()
     glfwSetFramebufferSizeCallback(m_window, [](GLFWwindow* win, int w, int h) {
         TRACE("Framebuffer resize: {} {}", w, h);
         auto self = (Window*) glfwGetWindowUserPointer(win);
-        self->m_renderer.reset_framebuffer({uint32_t(w), uint32_t(h)});
-        if (self->m_view.set_framebuffer_size({float(w), float(h)}) && self->m_size_cb)
-            self->m_size_cb(self->m_view);
+        self->resize_framebuffer(w, h);
         self->draw();
     });
 
-    glfwSetWindowSizeCallback(m_window, [](GLFWwindow* win, int w, int h) {
-        TRACE("Window resize: {} {}", w, h);
+    glfwSetWindowMaximizeCallback(m_window, [](GLFWwindow* win, int maximized) {
+        TRACE("Window maximize: {}", maximized);
         auto self = (Window*) glfwGetWindowUserPointer(win);
-        self->m_view.set_screen_size({float(w), float(h)});
+        self->m_view.refresh();
     });
 
     glfwSetWindowRefreshCallback(m_window, [](GLFWwindow* win) {
         TRACE("Window refresh");
         auto self = (Window*) glfwGetWindowUserPointer(win);
-        self->draw();
+        self->m_view.refresh();
     });
 
     glfwSetKeyCallback(m_window, [](GLFWwindow* window, int key, int scancode,
@@ -369,6 +364,23 @@ void Window::finish_draw()
                     vkResetCommandBuffer(com_buf, 0));
         }
     }
+}
+
+
+void Window::resize_framebuffer(int w, int h)
+{
+    VkExtent2D new_size {uint32_t(w), uint32_t(h)};
+    m_renderer.reset_framebuffer(new_size);
+
+    const auto& actual_size = m_renderer.vk_image_extent();  // normally the same
+    m_view.set_framebuffer_size({float(actual_size.width), float(actual_size.height)});
+
+    int width, height;
+    glfwGetWindowSize(m_window, &width, &height);
+    m_view.set_screen_size({float(width), float(height)});
+
+    if (m_size_cb)
+        m_size_cb(m_view);
 }
 
 

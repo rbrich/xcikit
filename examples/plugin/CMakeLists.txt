@@ -1,6 +1,5 @@
-add_executable(demo_plugin demo_plugin.cpp)
-target_link_libraries(demo_plugin xci-core ${CMAKE_DL_LIBS})
-install(TARGETS demo_plugin EXPORT xcikit DESTINATION examples/plugin)
+set(DEMO_DEST examples/plugin)
+add_demo(demo_plugin LINK xci-core ${CMAKE_DL_LIBS})
 
 add_library(pluggable MODULE pluggable.cpp)
 target_link_libraries(pluggable xci-core)

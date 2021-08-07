@@ -60,7 +60,7 @@ public:
 
     void create_surface(GLFWwindow* window);
     void destroy_surface();
-    void reset_framebuffer(VkExtent2D new_size = {0, 0});
+    void reset_framebuffer(VkExtent2D new_size = {UINT32_MAX, UINT32_MAX});
 
     // Vulkan handles
     VkInstance vk_instance() const { return m_instance; }
@@ -85,6 +85,7 @@ private:
     void destroy_framebuffers();
 
     std::optional<uint32_t> query_queue_families(VkPhysicalDevice device);
+    void query_surface_capabilities(VkPhysicalDevice device, VkExtent2D fb_size);
     bool query_swapchain(VkPhysicalDevice device);
 
 private:

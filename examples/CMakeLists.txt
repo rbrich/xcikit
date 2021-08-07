@@ -1,10 +1,39 @@
-if (EMSCRIPTEN)
-    add_link_options(-sEXIT_RUNTIME=1)
-endif()
+# ------------ #
+# Functions    #
+# ------------ #
+
+function(add_demo TARGET)
+    set(options)
+    set(one_value_args)
+    set(multi_value_args SOURCES LINK DEPS CDEFS)
+    cmake_parse_arguments(PARSE_ARGV 1 ARG "${options}"
+        "${one_value_args}" "${multi_value_args}")
+
+    if (ARG_SOURCES)
+        add_executable(${TARGET} ${ARG_SOURCES})
+    else()
+        add_executable(${TARGET} ${TARGET}.cpp)
+    endif()
+    if (ARG_LINK)
+        target_link_libraries(${TARGET} ${ARG_LINK})
+    endif()
+    if (ARG_DEPS)
+        add_dependencies(${TARGET} ${ARG_DEPS})
+    endif()
+    if (ARG_CDEFS)
+        target_compile_definitions(${TARGET} PRIVATE ${ARG_CDEFS})
+    endif()
+    install(TARGETS ${TARGET} EXPORT xcikit DESTINATION ${DEMO_DEST})
+endfunction()
+
 
 # ------------ #
 # Examples     #
 # ------------ #
+
+if (EMSCRIPTEN)
+    add_link_options(-sEXIT_RUNTIME=1)
+endif()
 
 # xci-core
 
@@ -17,17 +46,13 @@ endif()
 # xci-data
 
 if (XCI_DATA)
-    add_executable(demo_serialize data/demo_serialize.cpp)
-    target_link_libraries(demo_serialize xci-data)
-    install(TARGETS demo_serialize EXPORT xcikit DESTINATION examples)
+    add_subdirectory(data)
 endif()
 
 # xci-script
 
 if (XCI_SCRIPT)
-    add_executable(demo_script script/demo_script.cpp)
-    target_link_libraries(demo_script xci-script)
-    install(TARGETS demo_script EXPORT xcikit DESTINATION examples)
+    add_subdirectory(script)
 endif()
 
 # xci-graphics
@@ -39,13 +64,7 @@ endif()
 # xci-text
 
 if (XCI_TEXT)
-    add_executable(demo_font demo_font.cpp)
-    target_link_libraries(demo_font xci-text xci-graphics)
-    install(TARGETS demo_font EXPORT xcikit DESTINATION examples)
-
-    add_executable(demo_layout demo_layout.cpp)
-    target_link_libraries(demo_layout xci-text xci-graphics)
-    install(TARGETS demo_layout EXPORT xcikit DESTINATION examples)
+    add_subdirectory(text)
 endif()
 
 # xci-widgets
