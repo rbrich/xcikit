@@ -21,7 +21,7 @@ if (CONAN_INSTALL)
     include(${CMAKE_BINARY_DIR}/conan.cmake)
 
     macro(opt_to_conan OPT CONAN_VAL)
-        if (OPT)
+        if (${OPT})
             set(${CONAN_VAL} True)
         else()
             set(${CONAN_VAL} False)
