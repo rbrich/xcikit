@@ -34,6 +34,7 @@ install(TARGETS demo_termctl EXPORT xcikit DESTINATION examples)
 
 add_executable(demo_vfs demo_vfs.cpp)
 target_link_libraries(demo_vfs xci-core)
+add_dependencies(demo_vfs share)
 install(TARGETS demo_vfs EXPORT xcikit DESTINATION examples)
 
 if (incbin_FOUND)
