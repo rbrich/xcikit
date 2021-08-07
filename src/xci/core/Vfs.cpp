@@ -463,12 +463,19 @@ bool Vfs::mount(const fs::path& fs_path, std::string target_path)
         // handle relative path - it's relative to program executable,
         // or its parent, or its parent's parent. The nearest matched parent wins.
         auto base_dir = self_executable_path().parent_path();
+        bool found = false;
         for (int parent = 0; parent < 5; ++parent) {
             std::error_code err;
             real_path = fs::canonical(base_dir / fs_path, err);
-            if (!err)
-                break;  // found an existing path
+            if (!err) {
+                // found an existing path
+                found = true;
+                break;
+            }
             base_dir = base_dir.parent_path();
+        }
+        if (!found) {
+            real_path = fs_path;  // keep it as relative path in respect to CWD
         }
     } else {
         real_path = fs_path;
