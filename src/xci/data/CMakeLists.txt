@@ -3,7 +3,15 @@
 # ------------ #
 
 find_package(ZLIB REQUIRED)
-find_package(pfr REQUIRED)
+
+# Prefer Boost, which may be preinstalled in system
+# Fallback to PFR from Conan
+find_package(Boost)
+if (Boost_FOUND)
+    add_library(pfr::pfr ALIAS Boost::headers)
+else()
+    find_package(pfr REQUIRED)
+endif()
 
 
 # ------------ #

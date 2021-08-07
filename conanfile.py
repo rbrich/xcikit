@@ -40,11 +40,11 @@ class XcikitConan(ConanFile):
         'fmt/7.1.3',
     )
     build_requires = (
-        'pfr/1.0.4',
         'magic_enum/0.7.2',
     )
     build_requires_or_preinstalled = (
         # <CMake name>, <min ver>,  <Conan reference>       <option>
+        ('Boost',       '1.75.0',   'pfr/2.0.2',            'data'),
         ('range-v3',    '0.10.0',   'range-v3/0.11.0',      None),
         ('Catch2',      '',         'catch2/2.13.6',        'tests'),
         ('benchmark',   '',         'benchmark/1.5.2',      'benchmarks'),

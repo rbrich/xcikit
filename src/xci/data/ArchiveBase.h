@@ -9,7 +9,7 @@
 
 #include <xci/core/error.h>
 #include <xci/core/macros/foreach.h>
-#include <boost/pfr/precise/core.hpp>
+#include <boost/pfr/core.hpp>
 #include <vector>
 #include <cstdint>
 
