@@ -6,8 +6,9 @@ find_package(ZLIB REQUIRED)
 
 # Prefer Boost, which may be preinstalled in system
 # Fallback to PFR from Conan
-find_package(Boost)
+find_package(Boost 1.75.0)
 if (Boost_FOUND)
+    set_target_properties(Boost::headers PROPERTIES IMPORTED_GLOBAL TRUE)
     add_library(pfr::pfr ALIAS Boost::headers)
 else()
     find_package(pfr REQUIRED)
