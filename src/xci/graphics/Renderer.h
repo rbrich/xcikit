@@ -85,7 +85,7 @@ private:
     void destroy_framebuffers();
 
     std::optional<uint32_t> query_queue_families(VkPhysicalDevice device);
-    void query_surface_capabilities(VkPhysicalDevice device, VkExtent2D fb_size);
+    void query_surface_capabilities(VkPhysicalDevice device, VkExtent2D new_size);
     bool query_swapchain(VkPhysicalDevice device);
 
 private:

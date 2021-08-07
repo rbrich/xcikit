@@ -279,11 +279,14 @@ void Renderer::create_surface(GLFWwindow* window)
     VK_TRY("glfwCreateWindowSurface",
             glfwCreateWindowSurface(m_instance, window, nullptr, &m_surface));
 
+    create_device();
+
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
-    m_extent = { uint32_t(width), uint32_t(height) };
 
-    create_device();
+    query_surface_capabilities(m_physical_device, { uint32_t(width), uint32_t(height) });
+    query_swapchain(m_physical_device);
+
     create_swapchain();
     create_renderpass();
     create_framebuffers();
@@ -634,7 +637,7 @@ Renderer::query_queue_families(VkPhysicalDevice device)
 }
 
 
-void Renderer::query_surface_capabilities(VkPhysicalDevice device, VkExtent2D fb_size)
+void Renderer::query_surface_capabilities(VkPhysicalDevice device, VkExtent2D new_size)
 {
     VkSurfaceCapabilitiesKHR capabilities;
     VK_TRY("vkGetPhysicalDeviceSurfaceCapabilitiesKHR",
@@ -643,8 +646,8 @@ void Renderer::query_surface_capabilities(VkPhysicalDevice device, VkExtent2D fb
 
     if (capabilities.currentExtent.width != UINT32_MAX)
         m_extent = capabilities.currentExtent;
-    else if (fb_size.width != UINT32_MAX)
-        m_extent = fb_size;
+    else if (new_size.width != UINT32_MAX)
+        m_extent = new_size;
 
     m_extent.width = std::clamp(m_extent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
     m_extent.height = std::clamp(m_extent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
