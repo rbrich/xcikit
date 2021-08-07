@@ -49,7 +49,7 @@ class XcikitConan(ConanFile):
         ('Catch2',      '',         'catch2/2.13.6',        'tests'),
         ('benchmark',   '',         'benchmark/1.5.2',      'benchmarks'),
         ('pegtl',       '3.1.0',    'taocpp-pegtl/3.1.0',   None),
-        ('glfw3',       '3.2.1',    'glfw/3.3.2',           'graphics'),
+        ('glfw3',       '3.3.0',    'glfw/3.3.2',           'graphics'),
     )
     generators = ("cmake_paths", "cmake_find_package")
     exports = "VERSION"
