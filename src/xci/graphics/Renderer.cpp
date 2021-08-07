@@ -310,7 +310,7 @@ void Renderer::reset_framebuffer(VkExtent2D new_size)
 {
     vkDeviceWaitIdle(m_device);
 
-    m_extent = new_size;
+    query_surface_capabilities(m_physical_device, new_size);
     if (!query_swapchain(m_physical_device))
         VK_THROW("vulkan: physical device no longer usable");
 
@@ -634,7 +634,7 @@ Renderer::query_queue_families(VkPhysicalDevice device)
 }
 
 
-bool Renderer::query_swapchain(VkPhysicalDevice device)
+void Renderer::query_surface_capabilities(VkPhysicalDevice device, VkExtent2D fb_size)
 {
     VkSurfaceCapabilitiesKHR capabilities;
     VK_TRY("vkGetPhysicalDeviceSurfaceCapabilitiesKHR",
@@ -643,6 +643,8 @@ bool Renderer::query_swapchain(VkPhysicalDevice device)
 
     if (capabilities.currentExtent.width != UINT32_MAX)
         m_extent = capabilities.currentExtent;
+    else if (fb_size.width != UINT32_MAX)
+        m_extent = fb_size;
 
     m_extent.width = std::clamp(m_extent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
     m_extent.height = std::clamp(m_extent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
@@ -651,7 +653,11 @@ bool Renderer::query_swapchain(VkPhysicalDevice device)
     m_image_count = capabilities.minImageCount + 1;
     if (capabilities.maxImageCount > 0 && m_image_count > capabilities.maxImageCount)
         m_image_count = capabilities.maxImageCount;
+}
 
+
+bool Renderer::query_swapchain(VkPhysicalDevice device)
+{
     uint32_t format_count;
     vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_surface, &format_count, nullptr);
     std::vector<VkSurfaceFormatKHR> formats(format_count);
