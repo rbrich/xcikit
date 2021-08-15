@@ -11,9 +11,11 @@
 #include <xci/core/geometry.h>
 #include <xci/core/Vfs.h>
 #include <xci/config.h>
+#include <xci/graphics/vulkan/Pipeline.h>
 
 #include <vulkan/vulkan.h>
 
+#include <unordered_map>
 #include <optional>
 #include <memory>
 #include <array>
@@ -46,6 +48,9 @@ public:
     /// - FifoRelaxed    - mostly vsync, late frame can be displayed immediately
     void set_present_mode(PresentMode mode);
 
+    // -------------------------------------------------------------------------
+    // Shaders
+
     /// Get one of the predefined shaders
     /// \param shader_id Use `Custom` to create new shader
     /// \return shared_ptr to the shader or nullptr on error
@@ -57,6 +62,15 @@ public:
     bool load_shader(ShaderId shader_id, Shader& shader);
 
     void clear_shader_cache();
+
+    // -------------------------------------------------------------------------
+    // Pipelines
+
+    PipelineLayout& get_pipeline_layout(const PipelineLayoutCreateInfo& ci);
+    Pipeline& get_pipeline(const PipelineCreateInfo& ci);
+
+    // -------------------------------------------------------------------------
+    // Surfae
 
     void create_surface(GLFWwindow* window);
     void destroy_surface();
@@ -92,6 +106,9 @@ private:
     core::Vfs& m_vfs;
     static constexpr auto c_num_shaders = (size_t) ShaderId::NumItems_;
     std::array<std::unique_ptr<Shader>, c_num_shaders> m_shader = {};
+
+    std::unordered_map<PipelineLayoutCreateInfo, PipelineLayout> m_pipeline_layout;
+    std::unordered_map<PipelineCreateInfo, Pipeline> m_pipeline;
 
     VkInstance m_instance {};
     VkSurfaceKHR m_surface {};

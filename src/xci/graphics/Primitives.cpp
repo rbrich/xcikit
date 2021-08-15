@@ -22,8 +22,7 @@ namespace xci::graphics {
 
 Primitives::Primitives(Renderer& renderer,
         VertexFormat format, PrimitiveType type)
-        : m_format(format), m_renderer(renderer),
-          m_device_memory(renderer)
+        : m_format(format), m_renderer(renderer), m_device_memory(renderer)
 {
     assert(type == PrimitiveType::TriFans);
 
@@ -39,9 +38,21 @@ Primitives::~Primitives()
 }
 
 
+static uint32_t get_vertex_float_count(VertexFormat format)
+{
+    switch (format) {
+        case VertexFormat::V2t2: return 4;
+        case VertexFormat::V2t22: return 6;
+        case VertexFormat::V2c4t2: return 8;
+        case VertexFormat::V2c4t22: return 10;
+    }
+    UNREACHABLE;
+}
+
+
 void Primitives::reserve(size_t vertices)
 {
-    m_vertex_data.reserve(vertices * get_vertex_float_count());
+    m_vertex_data.reserve(vertices * get_vertex_float_count(m_format));
     // heuristic for quads (won't match for other primitives)
     // each 4 vertices (a quad) require 6 indices (two triangles)
     m_index_data.reserve(vertices / 4 * 6);
@@ -175,7 +186,7 @@ void Primitives::add_uniform_data(uint32_t binding, const void* data, size_t siz
 {
     assert(binding > 0);  // zero is reserved for MVP matrix
     assert(std::find_if(m_uniforms.cbegin(), m_uniforms.cend(),
-            [binding](const Uniform& u) { return u.binding == binding; })
+            [binding](const UniformBinding& u) { return u.binding == binding; })
             == m_uniforms.cend());  // the binding was already added
 
     auto offset = align_uniform(m_uniform_data.size());
@@ -218,8 +229,9 @@ void Primitives::update()
 {
     if (empty())
         return;
-    if (m_pipeline == VK_NULL_HANDLE)
+    if (!m_pipeline) {
         create_pipeline();
+    }
     if (m_texture.ptr)
         m_texture.ptr->update();
 }
@@ -230,7 +242,7 @@ void Primitives::draw(View& view)
     if (empty())
         return;
 
-    if (m_pipeline == VK_NULL_HANDLE) {
+    if (!m_pipeline) {
         assert(!"Primitives: call update before draw!");
         return;
     }
@@ -238,7 +250,7 @@ void Primitives::draw(View& view)
     auto* window = dynamic_cast<Window*>(view.window());
     auto cmd_buf = window->vk_command_buffer();
 
-    vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline);
+    vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->vk());
 
     // set viewport
     VkViewport viewport = {
@@ -277,7 +289,7 @@ void Primitives::draw(View& view)
         m_device_memory.copy_data(m_uniform_offsets[i],
                 m_mvp_size, mvp.data());
         vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                m_pipeline_layout,0, 1,
+                m_pipeline_layout->vk(), 0, 1,
                 &m_descriptor_sets[i], 0, nullptr);
     }
 
@@ -302,123 +314,16 @@ VkDevice Primitives::device() const
 void Primitives::create_pipeline()
 {
     assert(m_shader != nullptr);
-
-    VkPipelineShaderStageCreateInfo vert_shader_stage_ci = {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-            .stage = VK_SHADER_STAGE_VERTEX_BIT,
-            .module = m_shader->vk_vertex_module(),
-            .pName = "main",
-    };
-
-    VkPipelineShaderStageCreateInfo frag_shader_stage_ci = {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-            .stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-            .module = m_shader->vk_fragment_module(),
-            .pName = "main",
-    };
-
-    VkPipelineShaderStageCreateInfo shader_stages[] = {
-            vert_shader_stage_ci,
-            frag_shader_stage_ci
-    };
-
-    auto binding_desc = make_binding_desc();
-    auto attr_descs = make_attr_descs();
-
-    VkPipelineVertexInputStateCreateInfo vertex_input_ci = {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-            .vertexBindingDescriptionCount = 1,
-            .pVertexBindingDescriptions = &binding_desc,
-            .vertexAttributeDescriptionCount = get_attr_desc_count(),
-            .pVertexAttributeDescriptions = attr_descs.data(),
-    };
-
-    VkPipelineInputAssemblyStateCreateInfo input_assembly_ci = {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-            .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-            .primitiveRestartEnable = VK_FALSE,
-    };
-
-    VkPipelineViewportStateCreateInfo viewport_state_ci = {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-            .viewportCount = 1,
-            .pViewports = nullptr,  // dynamic state
-            .scissorCount = 1,
-            .pScissors = nullptr,  // dynamic state
-    };
-
-    VkPipelineRasterizationStateCreateInfo rasterization_ci = {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-            .depthClampEnable = VK_FALSE,
-            .rasterizerDiscardEnable = VK_FALSE,
-            .polygonMode = VK_POLYGON_MODE_FILL,
-            .cullMode = VK_CULL_MODE_BACK_BIT,
-            .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
-            .depthBiasEnable = VK_FALSE,
-            .lineWidth = 1.0f,
-    };
-
-    VkPipelineMultisampleStateCreateInfo multisample_ci = {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-            .rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
-            .sampleShadingEnable = VK_FALSE,
-    };
-
-    auto color_blend_attachment = make_color_blend();
-
-    VkPipelineColorBlendStateCreateInfo color_blend_ci = {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-            .logicOpEnable = VK_FALSE,
-            .logicOp = VK_LOGIC_OP_COPY,
-            .attachmentCount = 1,
-            .pAttachments = &color_blend_attachment,
-    };
-
-    create_descriptor_set_layout();
-
-    VkPipelineLayoutCreateInfo pipeline_layout_ci = {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-            .setLayoutCount = 1,
-            .pSetLayouts = &m_descriptor_set_layout,
-            .pushConstantRangeCount = 0,
-    };
-
-    VK_TRY("vkCreatePipelineLayout",
-            vkCreatePipelineLayout(
-                    device(), &pipeline_layout_ci, nullptr,
-                    &m_pipeline_layout));
-
-    VkDynamicState dynamic_states[] = {
-            VK_DYNAMIC_STATE_VIEWPORT,
-            VK_DYNAMIC_STATE_SCISSOR,
-    };
-
-    VkPipelineDynamicStateCreateInfo dynamic_state_ci = {
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-            .dynamicStateCount = std::size(dynamic_states),
-            .pDynamicStates = dynamic_states,
-    };
-
-    VkGraphicsPipelineCreateInfo pipeline_ci = {
-            .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-            .stageCount = std::size(shader_stages),
-            .pStages = shader_stages,
-            .pVertexInputState = &vertex_input_ci,
-            .pInputAssemblyState = &input_assembly_ci,
-            .pViewportState = &viewport_state_ci,
-            .pRasterizationState = &rasterization_ci,
-            .pMultisampleState = &multisample_ci,
-            .pColorBlendState = &color_blend_ci,
-            .pDynamicState = &dynamic_state_ci,
-            .layout = m_pipeline_layout,
-            .renderPass = m_renderer.vk_render_pass(),
-            .subpass = 0,
-    };
-
-    VK_TRY("vkCreateGraphicsPipelines",
-            vkCreateGraphicsPipelines(device(), VK_NULL_HANDLE, 1,
-                    &pipeline_ci, nullptr, &m_pipeline));
-
+    PipelineLayoutCreateInfo pipeline_layout_ci;
+    for (const auto& uniform : m_uniforms)
+        pipeline_layout_ci.add_uniform_binding(uniform.binding);
+    if (m_texture.ptr != nullptr)
+        pipeline_layout_ci.add_texture_binding(m_texture.binding);
+    m_pipeline_layout = &m_renderer.get_pipeline_layout(pipeline_layout_ci);
+    PipelineCreateInfo pipeline_ci(*m_shader, m_pipeline_layout->vk(), m_renderer.vk_render_pass());
+    pipeline_ci.set_vertex_format(m_format);
+    pipeline_ci.set_color_blend(m_blend);
+    m_pipeline = &m_renderer.get_pipeline(pipeline_ci);
     create_buffers();
     create_descriptor_sets();
 }
@@ -489,52 +394,6 @@ void Primitives::create_buffers()
 }
 
 
-void Primitives::create_descriptor_set_layout()
-{
-    std::vector<VkDescriptorSetLayoutBinding> layout_bindings;
-
-    // mvp
-    layout_bindings.push_back({
-            .binding = 0,
-            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            .descriptorCount = 1,
-            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-    });
-
-    // uniforms
-    for (const auto& uniform : m_uniforms) {
-        layout_bindings.push_back({
-                .binding = uniform.binding,
-                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                .descriptorCount = 1,
-                .stageFlags =
-                VK_SHADER_STAGE_VERTEX_BIT |
-                VK_SHADER_STAGE_FRAGMENT_BIT,
-        });
-    }
-
-    // texture
-    if (m_texture.ptr) {
-        layout_bindings.push_back({
-                .binding = m_texture.binding,
-                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                .descriptorCount = 1,
-                .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-        });
-    }
-
-    VkDescriptorSetLayoutCreateInfo layout_ci = {
-            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-            .bindingCount = (uint32_t) layout_bindings.size(),
-            .pBindings = layout_bindings.data(),
-    };
-    VK_TRY("vkCreateDescriptorSetLayout",
-            vkCreateDescriptorSetLayout(
-                    device(), &layout_ci,
-                    nullptr, &m_descriptor_set_layout));
-}
-
-
 void Primitives::create_descriptor_sets()
 {
     // descriptor pool
@@ -562,7 +421,7 @@ void Primitives::create_descriptor_sets()
     // create descriptor sets
     std::array<VkDescriptorSetLayout, Window::cmd_buf_count> layouts;  // NOLINT
     for (auto& item : layouts)
-        item = m_descriptor_set_layout;
+        item = m_pipeline_layout->vk_descriptor_set_layout();
 
     VkDescriptorSetAllocateInfo alloc_info = {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -641,7 +500,7 @@ void Primitives::create_descriptor_sets()
 
 void Primitives::destroy_pipeline()
 {
-    if (m_pipeline == VK_NULL_HANDLE)
+    if (m_pipeline == nullptr)
         return;
     m_device_memory.free();
     for (auto buffer : m_uniform_buffers)
@@ -649,10 +508,7 @@ void Primitives::destroy_pipeline()
     vkDestroyBuffer(device(), m_index_buffer, nullptr);
     vkDestroyBuffer(device(), m_vertex_buffer, nullptr);
     vkDestroyDescriptorPool(device(), m_descriptor_pool, nullptr);
-    vkDestroyDescriptorSetLayout(device(), m_descriptor_set_layout, nullptr);
-    vkDestroyPipelineLayout(device(), m_pipeline_layout, nullptr);
-    vkDestroyPipeline(device(), m_pipeline, nullptr);
-    m_pipeline = VK_NULL_HANDLE;
+    m_pipeline = nullptr;
 }
 
 
@@ -662,127 +518,6 @@ VkDeviceSize Primitives::align_uniform(VkDeviceSize offset)
     if (unaligned > 0)
         offset += m_min_uniform_offset_alignment - unaligned;
     return offset;
-}
-
-
-auto Primitives::make_binding_desc() -> VkVertexInputBindingDescription
-{
-    return {
-        .stride = (uint32_t) sizeof(float) * get_vertex_float_count()
-    };
-}
-
-
-uint32_t Primitives::get_vertex_float_count()
-{
-    switch (m_format) {
-        case VertexFormat::V2t2: return 4;
-        case VertexFormat::V2t22: return 6;
-        case VertexFormat::V2c4t2: return 8;
-        case VertexFormat::V2c4t22: return 10;
-    }
-    UNREACHABLE;
-}
-
-
-uint32_t Primitives::get_attr_desc_count()
-{
-    switch (m_format) {
-        case VertexFormat::V2t2: return 2;
-        case VertexFormat::V2t22: return 3;
-        case VertexFormat::V2c4t2: return 3;
-        case VertexFormat::V2c4t22: return 4;
-    }
-    UNREACHABLE;
-}
-
-
-auto Primitives::make_attr_descs()
-        -> std::array<VkVertexInputAttributeDescription, max_attr_descs>
-{
-    std::array<VkVertexInputAttributeDescription, max_attr_descs> out;  // NOLINT
-    out[0] = VkVertexInputAttributeDescription {
-            .location = 0,
-            .format = VK_FORMAT_R32G32_SFLOAT,
-            .offset = sizeof(float) * 0,
-    };
-    switch (m_format) {
-        case VertexFormat::V2t22:
-            out[2] = VkVertexInputAttributeDescription {
-                    .location = 2,
-                    .format = VK_FORMAT_R32G32_SFLOAT,
-                    .offset = sizeof(float) * 4,
-            };
-            FALLTHROUGH;
-        case VertexFormat::V2t2:
-            out[1] = VkVertexInputAttributeDescription {
-                    .location = 1,
-                    .format = VK_FORMAT_R32G32_SFLOAT,
-                    .offset = sizeof(float) * 2,
-            };
-            break;
-        case VertexFormat::V2c4t22:
-            out[3] = VkVertexInputAttributeDescription {
-                    .location = 3,
-                    .format = VK_FORMAT_R32G32_SFLOAT,
-                    .offset = sizeof(float) * 8,
-            };
-            FALLTHROUGH;
-        case VertexFormat::V2c4t2:
-            out[1] = VkVertexInputAttributeDescription {
-                    .location = 1,
-                    .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-                    .offset = sizeof(float) * 2,
-            };
-            out[2] = VkVertexInputAttributeDescription {
-                    .location = 2,
-                    .format = VK_FORMAT_R32G32_SFLOAT,
-                    .offset = sizeof(float) * 6,
-            };
-            break;
-    }
-    return out;
-}
-
-
-auto Primitives::make_color_blend() -> VkPipelineColorBlendAttachmentState
-{
-    constexpr VkColorComponentFlags color_mask =
-            VK_COLOR_COMPONENT_R_BIT |
-            VK_COLOR_COMPONENT_G_BIT |
-            VK_COLOR_COMPONENT_B_BIT |
-            VK_COLOR_COMPONENT_A_BIT;
-
-    switch (m_blend) {
-        case BlendFunc::Off:
-            return VkPipelineColorBlendAttachmentState {
-                    .blendEnable = VK_FALSE,
-                    .colorWriteMask = color_mask,
-            };
-        case BlendFunc::AlphaBlend:
-            return VkPipelineColorBlendAttachmentState {
-                    .blendEnable = VK_TRUE,
-                    .srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
-                    .dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-                    .colorBlendOp = VK_BLEND_OP_ADD,
-                    .srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA,
-                    .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-                    .alphaBlendOp = VK_BLEND_OP_ADD,
-                    .colorWriteMask = color_mask,
-            };
-        case BlendFunc::InverseVideo:
-            return VkPipelineColorBlendAttachmentState {
-                    .blendEnable = VK_TRUE,
-                    .srcColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR,
-                    .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
-                    .colorBlendOp = VK_BLEND_OP_ADD,
-                    .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
-                    .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-                    .alphaBlendOp = VK_BLEND_OP_ADD,
-                    .colorWriteMask = color_mask,
-            };
-    }
-    UNREACHABLE;
 }
 
 

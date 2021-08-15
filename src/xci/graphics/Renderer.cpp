@@ -155,8 +155,8 @@ Renderer::Renderer(core::Vfs& vfs)
     VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = {};
     debugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
     debugCreateInfo.messageSeverity =
-            VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-            //VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+            //VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
             VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
             VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
     debugCreateInfo.messageType =
@@ -271,6 +271,20 @@ void Renderer::clear_shader_cache()
 {
     for (auto& shader : m_shader)
         shader.reset();
+}
+
+
+PipelineLayout& Renderer::get_pipeline_layout(const PipelineLayoutCreateInfo& ci)
+{
+    auto [it, added] = m_pipeline_layout.try_emplace(ci, *this, ci);
+    return it->second;
+}
+
+
+Pipeline& Renderer::get_pipeline(const PipelineCreateInfo& ci)
+{
+    auto [it, added] = m_pipeline.try_emplace(ci, *this, ci);
+    return it->second;
 }
 
 

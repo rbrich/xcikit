@@ -21,6 +21,7 @@ add_library(xci-graphics
     Window.cpp
     vulkan/CommandBuffer.cpp
     vulkan/DeviceMemory.cpp
+    vulkan/Pipeline.cpp
 )
 add_library(xcikit::xci-graphics ALIAS xci-graphics)
 
