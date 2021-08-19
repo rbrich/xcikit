@@ -19,7 +19,7 @@ add_library(xci-graphics
     Texture.cpp
     View.cpp
     Window.cpp
-    vulkan/CommandBuffer.cpp
+    vulkan/CommandBuffers.cpp
     vulkan/DeviceMemory.cpp
     vulkan/Pipeline.cpp
 )

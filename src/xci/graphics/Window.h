@@ -1,13 +1,14 @@
 // Window.h created on 2018-03-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_WINDOW_H
 #define XCI_GRAPHICS_WINDOW_H
 
 #include "View.h"
+#include <xci/graphics/vulkan/CommandBuffers.h>
 #include <xci/core/geometry.h>
 
 #include <vulkan/vulkan.h>
@@ -124,7 +125,7 @@ class Renderer;
 
 class Window {
 public:
-    explicit Window(Renderer& renderer);
+    explicit Window(Renderer& renderer) : m_renderer(renderer), m_command_buffers(renderer) {}
     ~Window();
 
     Renderer& renderer();
@@ -208,7 +209,7 @@ public:
 
     // Vulkan - current command buffer
     VkCommandBuffer vk_command_buffer() const { return m_command_buffers[m_current_cmd_buf]; }
-    uint32_t vk_command_buffer_index() const { return m_current_cmd_buf; }
+    uint32_t command_buffer_index() const { return m_current_cmd_buf; }
 
 private:
     void setup_view();
@@ -230,7 +231,7 @@ private:
     bool m_clear_timeout = false;
     bool m_draw_finished = true;
 
-    VkCommandBuffer m_command_buffers[cmd_buf_count] {};
+    CommandBuffers m_command_buffers;
     VkFence m_cmd_buf_fences[cmd_buf_count] {};
     VkSemaphore m_image_semaphore[cmd_buf_count] {};   // image available
     VkSemaphore m_render_semaphore[cmd_buf_count] {};  // render finished

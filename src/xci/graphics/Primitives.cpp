@@ -1,7 +1,7 @@
 // Primitives.cpp created on 2018-08-03 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Primitives.h"
@@ -230,7 +230,7 @@ void Primitives::update()
     if (empty())
         return;
     if (!m_pipeline) {
-        create_pipeline();
+        update_pipeline();
     }
     if (m_texture.ptr)
         m_texture.ptr->update();
@@ -285,7 +285,7 @@ void Primitives::draw(View& view)
     {
         auto mvp = view.projection_matrix();
         assert(mvp.size() * sizeof(mvp[0]) == m_mvp_size);
-        auto i = window->vk_command_buffer_index();
+        auto i = window->command_buffer_index();
         m_device_memory.copy_data(m_uniform_offsets[i],
                 m_mvp_size, mvp.data());
         vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -311,7 +311,7 @@ VkDevice Primitives::device() const
 }
 
 
-void Primitives::create_pipeline()
+void Primitives::update_pipeline()
 {
     assert(m_shader != nullptr);
     PipelineLayoutCreateInfo pipeline_layout_ci;
@@ -324,6 +324,7 @@ void Primitives::create_pipeline()
     pipeline_ci.set_vertex_format(m_format);
     pipeline_ci.set_color_blend(m_blend);
     m_pipeline = &m_renderer.get_pipeline(pipeline_ci);
+
     create_buffers();
     create_descriptor_sets();
 }
