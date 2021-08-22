@@ -10,12 +10,19 @@
 #include <vulkan/vulkan.h>
 #include <xci/core/geometry.h>
 #include <array>
+#include <vector>
+#include <memory>
 
 namespace xci::graphics {
 
 class Renderer;
 
 using xci::core::Rect_u;
+
+
+// Inherit this to add support for resource management
+class Resource {};
+using ResourcePtr = std::shared_ptr<Resource>;
 
 
 class CommandBuffers {
@@ -42,6 +49,10 @@ public:
             VkDeviceSize buffer_offset, uint32_t buffer_row_len,
             VkImage image, const Rect_u& region);
 
+    // Resources used by current command buffer
+    void add_resource(size_t i, const ResourcePtr& resource) { m_resources[i].push_back(resource); }
+    void release_resources(size_t i) { m_resources[i].clear(); }
+
     VkCommandBuffer vk() const { return m_command_buffers[0]; }
     VkCommandBuffer operator[](size_t i) const { return m_command_buffers[i]; }
 
@@ -50,6 +61,7 @@ private:
     VkCommandPool m_command_pool = VK_NULL_HANDLE;
     static constexpr size_t max_count = 2;
     std::array<VkCommandBuffer, max_count> m_command_buffers {};
+    std::array<std::vector<ResourcePtr>, max_count> m_resources;
     unsigned m_count = 0;
 };
 

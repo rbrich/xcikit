@@ -456,6 +456,7 @@ void Window::draw()
         log::error("vkQueuePresentKHR failed: {}", rc);
 
     m_current_cmd_buf = (m_current_cmd_buf + 1) % cmd_buf_count;
+    m_command_buffers.release_resources(m_current_cmd_buf);
     m_draw_finished = false;
 }
 

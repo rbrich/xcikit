@@ -211,6 +211,7 @@ public:
     // Vulkan - current command buffer
     VkCommandBuffer vk_command_buffer() const { return m_command_buffers[m_current_cmd_buf]; }
     uint32_t command_buffer_index() const { return m_current_cmd_buf; }
+    void add_command_buffer_resource(const ResourcePtr& resource) { m_command_buffers.add_resource(m_current_cmd_buf, resource); }
 
 private:
     void setup_view();

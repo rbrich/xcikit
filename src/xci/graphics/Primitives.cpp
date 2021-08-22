@@ -20,9 +20,111 @@
 namespace xci::graphics {
 
 
+PrimitivesBuffers::~PrimitivesBuffers()
+{
+    m_device_memory.free();
+    for (auto buffer : m_uniform_buffers)
+        vkDestroyBuffer(device(), buffer, nullptr);
+    vkDestroyBuffer(device(), m_index_buffer, nullptr);
+    vkDestroyBuffer(device(), m_vertex_buffer, nullptr);
+}
+
+
+void PrimitivesBuffers::create(
+        const std::vector<float>& vertex_data,
+        const std::vector<uint16_t>& index_data,
+        VkDeviceSize uniform_base,
+        const std::vector<std::byte>& uniform_data)
+{
+    // vertex buffer
+    VkBufferCreateInfo vertex_buffer_ci = {
+            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+            .size = sizeof(vertex_data[0]) * vertex_data.size(),
+            .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+    };
+    VK_TRY("vkCreateBuffer(vertex)",
+            vkCreateBuffer(device(), &vertex_buffer_ci,
+                    nullptr, &m_vertex_buffer));
+    VkMemoryRequirements vertex_mem_req;
+    vkGetBufferMemoryRequirements(device(), m_vertex_buffer, &vertex_mem_req);
+    auto vertex_offset = m_device_memory.reserve(vertex_mem_req);
+
+    // index buffer
+    VkBufferCreateInfo index_buffer_ci = {
+            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+            .size = sizeof(index_data[0]) * index_data.size(),
+            .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+    };
+    VK_TRY("vkCreateBuffer(index)",
+            vkCreateBuffer(device(), &index_buffer_ci,
+                    nullptr, &m_index_buffer));
+    VkMemoryRequirements index_mem_req;
+    vkGetBufferMemoryRequirements(device(), m_index_buffer, &index_mem_req);
+    auto index_offset = m_device_memory.reserve(index_mem_req);
+
+    // uniform buffers
+    for (size_t i = 0; i < Window::cmd_buf_count; i++) {
+        VkBufferCreateInfo uniform_buffer_ci = {
+                .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+                .size = uniform_base + uniform_data.size(),
+                .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        };
+        VK_TRY("vkCreateBuffer(uniform)",
+                vkCreateBuffer(device(), &uniform_buffer_ci,
+                        nullptr, &m_uniform_buffers[i]));
+        VkMemoryRequirements mem_req;
+        vkGetBufferMemoryRequirements(device(), m_uniform_buffers[i], &mem_req);
+        m_uniform_offsets[i] = m_device_memory.reserve(mem_req);
+    }
+
+    // allocate memory and copy data
+    m_device_memory.allocate();
+    m_device_memory.bind_buffer(m_vertex_buffer, vertex_offset);
+    m_device_memory.copy_data(vertex_offset, vertex_buffer_ci.size,
+            vertex_data.data());
+    m_device_memory.bind_buffer(m_index_buffer, index_offset);
+    m_device_memory.copy_data(index_offset, index_buffer_ci.size,
+            index_data.data());
+    for (size_t i = 0; i < Window::cmd_buf_count; i++) {
+        m_device_memory.bind_buffer(m_uniform_buffers[i], m_uniform_offsets[i]);
+        if (!uniform_data.empty()) {
+            m_device_memory.copy_data(
+                    m_uniform_offsets[i] + uniform_base,
+                    uniform_data.size(), uniform_data.data());
+        }
+    }
+}
+
+
+void PrimitivesBuffers::bind(VkCommandBuffer cmd_buf)
+{
+    VkDeviceSize offset = 0;
+    vkCmdBindVertexBuffers(cmd_buf, 0, 1, &m_vertex_buffer, &offset);
+    vkCmdBindIndexBuffer(cmd_buf, m_index_buffer, 0, VK_INDEX_TYPE_UINT16);
+}
+
+
+void PrimitivesBuffers::copy_mvp(size_t cmd_buf_idx, const std::array<float, 16>& mvp)
+{
+    m_device_memory.copy_data(m_uniform_offsets[cmd_buf_idx], c_mvp_size, mvp.data());
+}
+
+
+VkDevice PrimitivesBuffers::device() const
+{
+    return m_renderer.vk_device();
+}
+
+
+// -----------------------------------------------------------------------------
+
+
 Primitives::Primitives(Renderer& renderer,
         VertexFormat format, PrimitiveType type)
-        : m_format(format), m_renderer(renderer), m_device_memory(renderer)
+        : m_format(format), m_renderer(renderer)
 {
     assert(type == PrimitiveType::TriFans);
 
@@ -277,17 +379,15 @@ void Primitives::draw(View& view)
     }
     vkCmdSetScissor(cmd_buf, 0, 1, &scissor);
 
-    VkDeviceSize offset = 0;
-    vkCmdBindVertexBuffers(cmd_buf, 0, 1, &m_vertex_buffer, &offset);
-    vkCmdBindIndexBuffer(cmd_buf, m_index_buffer, 0, VK_INDEX_TYPE_UINT16);
+    m_buffers->bind(cmd_buf);
+    window->add_command_buffer_resource(m_buffers);
 
     // projection matrix
     {
         auto mvp = view.projection_matrix();
-        assert(mvp.size() * sizeof(mvp[0]) == m_mvp_size);
+        assert(mvp.size() * sizeof(mvp[0]) == c_mvp_size);
         auto i = window->command_buffer_index();
-        m_device_memory.copy_data(m_uniform_offsets[i],
-                m_mvp_size, mvp.data());
+        m_buffers->copy_mvp(i, mvp);
         vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
                 m_pipeline_layout->vk(), 0, 1,
                 &m_descriptor_sets[i], 0, nullptr);
@@ -325,115 +425,20 @@ void Primitives::update_pipeline()
     pipeline_ci.set_color_blend(m_blend);
     m_pipeline = &m_renderer.get_pipeline(pipeline_ci);
 
-    create_buffers();
+    m_buffers = std::make_shared<PrimitivesBuffers>(m_renderer);
+    m_buffers->create(m_vertex_data, m_index_data, align_uniform(c_mvp_size), m_uniform_data);
     create_descriptor_sets();
-}
-
-
-void Primitives::create_buffers()
-{
-    // vertex buffer
-    VkBufferCreateInfo vertex_buffer_ci = {
-            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            .size = sizeof(m_vertex_data[0]) * m_vertex_data.size(),
-            .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-    };
-    VK_TRY("vkCreateBuffer(vertex)",
-            vkCreateBuffer(device(), &vertex_buffer_ci,
-                    nullptr, &m_vertex_buffer));
-    VkMemoryRequirements vertex_mem_req;
-    vkGetBufferMemoryRequirements(device(), m_vertex_buffer, &vertex_mem_req);
-    auto vertex_offset = m_device_memory.reserve(vertex_mem_req);
-
-    // index buffer
-    VkBufferCreateInfo index_buffer_ci = {
-            .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-            .size = sizeof(m_index_data[0]) * m_index_data.size(),
-            .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-    };
-    VK_TRY("vkCreateBuffer(index)",
-            vkCreateBuffer(device(), &index_buffer_ci,
-                    nullptr, &m_index_buffer));
-    VkMemoryRequirements index_mem_req;
-    vkGetBufferMemoryRequirements(device(), m_index_buffer, &index_mem_req);
-    auto index_offset = m_device_memory.reserve(index_mem_req);
-
-    // uniform buffers
-    for (size_t i = 0; i < Window::cmd_buf_count; i++) {
-        VkBufferCreateInfo uniform_buffer_ci = {
-                .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-                .size = align_uniform(m_mvp_size) + m_uniform_data.size(),
-                .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-        };
-        VK_TRY("vkCreateBuffer(uniform)",
-                vkCreateBuffer(device(), &uniform_buffer_ci,
-                        nullptr, &m_uniform_buffers[i]));
-        VkMemoryRequirements mem_req;
-        vkGetBufferMemoryRequirements(device(), m_uniform_buffers[i], &mem_req);
-        m_uniform_offsets[i] = m_device_memory.reserve(mem_req);
-    }
-
-    // allocate memory and copy data
-    m_device_memory.allocate();
-    m_device_memory.bind_buffer(m_vertex_buffer, vertex_offset);
-    m_device_memory.copy_data(vertex_offset, vertex_buffer_ci.size,
-            m_vertex_data.data());
-    m_device_memory.bind_buffer(m_index_buffer, index_offset);
-    m_device_memory.copy_data(index_offset, index_buffer_ci.size,
-            m_index_data.data());
-    for (size_t i = 0; i < Window::cmd_buf_count; i++) {
-        m_device_memory.bind_buffer(m_uniform_buffers[i], m_uniform_offsets[i]);
-        if (!m_uniform_data.empty()) {
-            m_device_memory.copy_data(
-                    m_uniform_offsets[i] + align_uniform(m_mvp_size),
-                    m_uniform_data.size(), m_uniform_data.data());
-        }
-    }
 }
 
 
 void Primitives::create_descriptor_sets()
 {
-    // descriptor pool
-    VkDescriptorPoolSize pool_sizes[2] = {
-            {
-                    .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                    .descriptorCount = Window::cmd_buf_count
-                                       * uint32_t(1 + m_uniforms.size()),
-            },
-            {
-                    .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                    .descriptorCount = Window::cmd_buf_count,
-            },
-    };
-    VkDescriptorPoolCreateInfo pool_info = {
-            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-            .maxSets = Window::cmd_buf_count,
-            .poolSizeCount = m_texture.ptr ? 2u : 1u,
-            .pPoolSizes = pool_sizes,
-    };
-    VK_TRY("vkCreateDescriptorPool",
-            vkCreateDescriptorPool(device(), &pool_info, nullptr,
-                    &m_descriptor_pool));
-
     // create descriptor sets
     std::array<VkDescriptorSetLayout, Window::cmd_buf_count> layouts;  // NOLINT
     for (auto& item : layouts)
         item = m_pipeline_layout->vk_descriptor_set_layout();
 
-    VkDescriptorSetAllocateInfo alloc_info = {
-            .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-            .descriptorPool = m_descriptor_pool,
-            .descriptorSetCount = Window::cmd_buf_count,
-            .pSetLayouts = layouts.data(),
-    };
-
-    VK_TRY("vkAllocateDescriptorSets",
-            vkAllocateDescriptorSets(device(), &alloc_info,
-                    m_descriptor_sets));
+    m_renderer.descriptor_pool().allocate(Window::cmd_buf_count, layouts.data(), m_descriptor_sets);
 
     for (size_t i = 0; i < Window::cmd_buf_count; i++) {
         std::vector<VkDescriptorBufferInfo> buffer_info;
@@ -443,9 +448,9 @@ void Primitives::create_descriptor_sets()
 
         // mvp
         buffer_info.push_back({
-                .buffer = m_uniform_buffers[i],
+                .buffer = m_buffers->vk_uniform_buffer(i),
                 .offset = 0,
-                .range = m_mvp_size,
+                .range = c_mvp_size,
         });
         write_descriptor_set.push_back(VkWriteDescriptorSet{
                 .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -457,10 +462,10 @@ void Primitives::create_descriptor_sets()
         });
 
         // uniforms
-        auto offset_base = align_uniform(m_mvp_size);
+        auto offset_base = align_uniform(c_mvp_size);
         for (const auto& uni : m_uniforms) {
             buffer_info.push_back({
-                    .buffer = m_uniform_buffers[i],
+                    .buffer = m_buffers->vk_uniform_buffer(i),
                     .offset = offset_base + uni.offset,
                     .range = uni.range,
             });
@@ -503,12 +508,8 @@ void Primitives::destroy_pipeline()
 {
     if (m_pipeline == nullptr)
         return;
-    m_device_memory.free();
-    for (auto buffer : m_uniform_buffers)
-        vkDestroyBuffer(device(), buffer, nullptr);
-    vkDestroyBuffer(device(), m_index_buffer, nullptr);
-    vkDestroyBuffer(device(), m_vertex_buffer, nullptr);
-    vkDestroyDescriptorPool(device(), m_descriptor_pool, nullptr);
+    m_buffers.reset();
+    m_renderer.descriptor_pool().free(Window::cmd_buf_count, m_descriptor_sets);
     m_pipeline = nullptr;
 }
 

@@ -20,6 +20,7 @@ add_library(xci-graphics
     View.cpp
     Window.cpp
     vulkan/CommandBuffers.cpp
+    vulkan/DescriptorPool.cpp
     vulkan/DeviceMemory.cpp
     vulkan/Pipeline.cpp
 )

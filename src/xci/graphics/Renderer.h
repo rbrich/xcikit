@@ -12,6 +12,7 @@
 #include <xci/core/Vfs.h>
 #include <xci/config.h>
 #include <xci/graphics/vulkan/Pipeline.h>
+#include <xci/graphics/vulkan/DescriptorPool.h>
 
 #include <vulkan/vulkan.h>
 
@@ -72,7 +73,12 @@ public:
     Pipeline& get_pipeline(const PipelineCreateInfo& ci);
 
     // -------------------------------------------------------------------------
-    // Surfae
+    // Descriptor sets
+
+    DescriptorPool& descriptor_pool() { return m_descriptor_pool; }
+
+    // -------------------------------------------------------------------------
+    // Surface
 
     void create_surface(GLFWwindow* window);
     void destroy_surface();
@@ -111,6 +117,7 @@ private:
 
     std::unordered_map<PipelineLayoutCreateInfo, PipelineLayout> m_pipeline_layout;
     std::unordered_map<PipelineCreateInfo, Pipeline> m_pipeline;
+    DescriptorPool m_descriptor_pool {*this};
 
     VkInstance m_instance {};
     VkSurfaceKHR m_surface {};

@@ -33,6 +33,54 @@ enum class PrimitiveType {
 };
 
 
+static constexpr VkDeviceSize c_mvp_size = sizeof(float) * 16;
+
+
+class PrimitivesBuffers: public Resource {
+public:
+    explicit PrimitivesBuffers(Renderer& renderer)
+        : m_renderer(renderer), m_device_memory(renderer) {}
+    ~PrimitivesBuffers();
+
+    void create(
+            const std::vector<float>& vertex_data,
+            const std::vector<uint16_t>& index_data,
+            VkDeviceSize uniform_base,
+            const std::vector<std::byte>& uniform_data);
+
+    void bind(VkCommandBuffer cmd_buf);
+
+    void copy_mvp(size_t cmd_buf_idx, const std::array<float, 16>& mvp);
+
+    VkBuffer vk_uniform_buffer(size_t cmd_buf_idx) const { return m_uniform_buffers[cmd_buf_idx]; }
+
+private:
+    VkDevice device() const;
+
+    Renderer& m_renderer;
+    VkBuffer m_vertex_buffer {};
+    VkBuffer m_index_buffer {};
+    VkBuffer m_uniform_buffers[Window::cmd_buf_count] {};
+    VkDeviceSize m_uniform_offsets[Window::cmd_buf_count] {};
+    DeviceMemory m_device_memory;
+};
+
+
+class PrimitivesDescriptorSets: public Resource {
+public:
+    ~PrimitivesDescriptorSets();
+
+    void create();
+
+private:
+    VkDescriptorSet m_descriptor_sets[Window::cmd_buf_count] {};
+};
+
+
+using PrimitivesBuffersPtr = std::shared_ptr<PrimitivesBuffers>;
+using PrimitivesDescriptorSetsPtr = std::shared_ptr<PrimitivesDescriptorSets>;
+
+
 class Primitives: private core::NonCopyable {
 public:
     explicit Primitives(Renderer& renderer, VertexFormat format, PrimitiveType type);
@@ -71,7 +119,6 @@ public:
 private:
     VkDevice device() const;
     void update_pipeline();
-    void create_buffers();
     void create_descriptor_sets();
     void destroy_pipeline();
 
@@ -83,7 +130,6 @@ private:
     int m_open_vertices = -1;
     std::vector<float> m_vertex_data;
     std::vector<uint16_t> m_index_data;
-    static constexpr VkDeviceSize m_mvp_size = sizeof(float) * 16;
     std::vector<std::byte> m_uniform_data;
     struct UniformBinding {
         uint32_t binding;
@@ -102,14 +148,11 @@ private:
     Renderer& m_renderer;
     Shader* m_shader = nullptr;
 
-    VkDescriptorPool m_descriptor_pool {};
     VkDescriptorSet m_descriptor_sets[Window::cmd_buf_count] {};
     PipelineLayout* m_pipeline_layout = nullptr;
-    VkBuffer m_vertex_buffer {};
-    VkBuffer m_index_buffer {};
-    VkBuffer m_uniform_buffers[Window::cmd_buf_count] {};
-    VkDeviceSize m_uniform_offsets[Window::cmd_buf_count] {};
-    DeviceMemory m_device_memory;
+
+    PrimitivesBuffersPtr m_buffers;
+    //PrimitivesDescriptorSetsPtr m_descriptor_sets;
 
     Pipeline* m_pipeline = nullptr;
 };

@@ -304,6 +304,12 @@ void Renderer::create_surface(GLFWwindow* window)
     create_swapchain();
     create_renderpass();
     create_framebuffers();
+
+    // FIXME: Either allow specifying pool sizes per app, or dynamically add more pools
+    m_descriptor_pool.create(100, {
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 500},
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 100}
+    });
 }
 
 
