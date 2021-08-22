@@ -364,10 +364,14 @@ void Renderer::create_device()
     if (device_count == 0)
         VK_THROW("vulkan: couldn't find any physical device");
 
-    // required device extensions
-    const char* const device_extensions[] = {
-            VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    // device extensions
+    const char* const required_device_extensions[] = {
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     };
+    const char* const additional_device_extensions[] = {
+            "VK_KHR_portability_subset",  // required if present on the device
+    };
+    std::vector<const char*> chosen_device_extensions;
 
     // queue family index - queried here, used later
     uint32_t graphics_queue_family = 0;
@@ -399,16 +403,34 @@ void Renderer::create_device()
             vkEnumerateDeviceExtensionProperties(device, nullptr, &ext_count, nullptr);
             std::vector<VkExtensionProperties> ext_props(ext_count);
             vkEnumerateDeviceExtensionProperties(device, nullptr, &ext_count, ext_props.data());
-            std::bitset<std::size(device_extensions)> has_exts;
+            std::bitset<std::size(required_device_extensions)> has_exts;
+            std::bitset<std::size(additional_device_extensions)> add_exts;
             for (const auto& ext : ext_props) {
-                for (size_t i = 0; i < std::size(device_extensions); i++) {
-                    if (std::strcmp(ext.extensionName, device_extensions[i]) == 0) {
+                for (size_t i = 0; i < std::size(required_device_extensions); i++) {
+                    if (std::strcmp(ext.extensionName, required_device_extensions[i]) == 0) {
                         has_exts.set(i);
+                        break;
+                    }
+                }
+
+                for (size_t i = 0; i < std::size(additional_device_extensions); i++) {
+                    if (std::strcmp(ext.extensionName, additional_device_extensions[i]) == 0) {
+                        add_exts.set(i);
                         break;
                     }
                 }
             }
             choose = has_exts.all();
+            if (choose) {
+                chosen_device_extensions.reserve(
+                        std::size(required_device_extensions) + std::size(additional_device_extensions));
+                std::copy(std::begin(required_device_extensions), std::end(required_device_extensions),
+                          std::back_inserter(chosen_device_extensions));
+                for (size_t i = 0; i < std::size(additional_device_extensions); i++) {
+                    if (add_exts[i])
+                        chosen_device_extensions.push_back(additional_device_extensions[i]);
+                }
+            }
         }
 
         // check swapchain
@@ -456,8 +478,8 @@ void Renderer::create_device()
 //                .enabledLayerCount = (uint32_t) enabled_layers.size(),
 //                .ppEnabledLayerNames = enabled_layers.data(),
 //#endif
-                .enabledExtensionCount = std::size(device_extensions),
-                .ppEnabledExtensionNames = device_extensions,
+                .enabledExtensionCount = (uint32_t) chosen_device_extensions.size(),
+                .ppEnabledExtensionNames = chosen_device_extensions.data(),
                 .pEnabledFeatures = &device_features,
         };
 
