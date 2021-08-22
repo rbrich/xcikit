@@ -20,12 +20,15 @@ using namespace std::chrono;
 
 Window::~Window()
 {
-    for (auto* fence : m_cmd_buf_fences)
-        vkDestroyFence(m_renderer.vk_device(), fence, nullptr);
-    for (auto* sem : m_render_semaphore)
-        vkDestroySemaphore(m_renderer.vk_device(), sem, nullptr);
-    for (auto* sem : m_image_semaphore)
-        vkDestroySemaphore(m_renderer.vk_device(), sem, nullptr);
+    const auto vk_device = m_renderer.vk_device();
+    if (vk_device != VK_NULL_HANDLE) {
+        for (auto* fence : m_cmd_buf_fences)
+            vkDestroyFence(vk_device, fence, nullptr);
+        for (auto* sem : m_render_semaphore)
+            vkDestroySemaphore(vk_device, sem, nullptr);
+        for (auto* sem : m_image_semaphore)
+            vkDestroySemaphore(vk_device, sem, nullptr);
+    }
 
     m_renderer.destroy_surface();
 

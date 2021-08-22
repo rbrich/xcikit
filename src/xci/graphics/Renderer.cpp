@@ -364,8 +364,10 @@ void Renderer::create_device()
         VkPhysicalDeviceFeatures device_features;
         vkGetPhysicalDeviceFeatures(device, &device_features);
 
-        // choose only the first adequate device
-        bool choose = m_physical_device == VK_NULL_HANDLE;
+        // Choose the first adequate device,
+        // or the one selected by set_device_id
+        bool choose = (m_physical_device == VK_NULL_HANDLE) && \
+            (m_device_id == 0 || m_device_id == device_props.deviceID);
 
         // check supported queue families
         if (choose) {
@@ -404,10 +406,19 @@ void Renderer::create_device()
             m_physical_device = device;
         }
 
+        if (m_device_id == device_props.deviceID && !choose) {
+            log::error("Chosen device ID not usable: {}", m_device_id);
+            throw VulkanError("Chosen device ID not usable");
+        }
+
         log::info("({}) {}: {} (api {})",
                 choose ? '*' : ' ',
                 device_props.deviceID,
                 device_props.deviceName, device_props.apiVersion);
+    }
+
+    if (!m_physical_device) {
+        throw VulkanError("Did not found an usable device");
     }
 
     // create VkDevice
@@ -469,6 +480,8 @@ void Renderer::create_device()
 
 void Renderer::destroy_device()
 {
+    if (m_device == VK_NULL_HANDLE)
+        return;
     vkDestroyCommandPool(m_device, m_command_pool, nullptr);
     vkDestroyCommandPool(m_device, m_transient_command_pool, nullptr);
     vkDestroyDevice(m_device, nullptr);
@@ -531,10 +544,12 @@ void Renderer::create_swapchain()
 
 void Renderer::destroy_swapchain()
 {
-    for (auto image_view : m_image_views | take(m_image_count)) {
-        vkDestroyImageView(m_device, image_view, nullptr);
+    if (m_device != VK_NULL_HANDLE) {
+        for (auto image_view : m_image_views | take(m_image_count)) {
+            vkDestroyImageView(m_device, image_view, nullptr);
+        }
+        vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
     }
-    vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
 }
 
 
@@ -591,7 +606,8 @@ void Renderer::create_renderpass()
 
 void Renderer::destroy_renderpass()
 {
-    vkDestroyRenderPass(m_device, m_render_pass, nullptr);
+    if (m_device != VK_NULL_HANDLE)
+        vkDestroyRenderPass(m_device, m_render_pass, nullptr);
 }
 
 

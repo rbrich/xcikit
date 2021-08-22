@@ -10,6 +10,7 @@
 #include "View.h"
 #include <xci/graphics/vulkan/CommandBuffers.h>
 #include <xci/core/geometry.h>
+#include <xci/core/mixin.h>
 
 #include <vulkan/vulkan.h>
 
@@ -123,7 +124,7 @@ enum class RefreshMode {
 class Renderer;
 
 
-class Window {
+class Window: private core::NonCopyable {
 public:
     explicit Window(Renderer& renderer) : m_renderer(renderer), m_command_buffers(renderer) {}
     ~Window();

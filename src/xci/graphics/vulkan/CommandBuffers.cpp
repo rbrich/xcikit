@@ -14,8 +14,10 @@ namespace xci::graphics {
 
 CommandBuffers::~CommandBuffers()
 {
-    vkFreeCommandBuffers(m_renderer.vk_device(), m_command_pool,
-            m_count, m_command_buffers.data());
+    if (m_renderer.vk_device() != VK_NULL_HANDLE) {
+        vkFreeCommandBuffers(m_renderer.vk_device(), m_command_pool,
+                m_count, m_command_buffers.data());
+    }
 }
 
 

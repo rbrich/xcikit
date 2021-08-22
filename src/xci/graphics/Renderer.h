@@ -34,7 +34,7 @@ enum class PresentMode {
 };
 
 
-class Renderer {
+class Renderer: private core::NonCopyable {
 public:
     explicit Renderer(core::Vfs& vfs);
     ~Renderer();
@@ -47,6 +47,8 @@ public:
     /// - Fifo*          - full vsync, requests are queued (*default)
     /// - FifoRelaxed    - mostly vsync, late frame can be displayed immediately
     void set_present_mode(PresentMode mode);
+
+    void set_device_id(uint32_t device_id) { m_device_id = device_id; }
 
     // -------------------------------------------------------------------------
     // Shaders
@@ -134,6 +136,8 @@ private:
 #ifdef XCI_DEBUG_VULKAN
     VkDebugUtilsMessengerEXT m_debug_messenger {};
 #endif
+
+    uint32_t m_device_id = 0;
 };
 
 

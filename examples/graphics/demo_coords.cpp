@@ -4,9 +4,10 @@
 // Copyright 2018, 2020 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
+#include "common.h"
+
 #include <xci/text/Font.h>
 #include <xci/text/Text.h>
-#include <xci/graphics/Window.h>
 #include <xci/graphics/Sprites.h>
 #include <xci/graphics/Shape.h>
 #include <xci/graphics/Color.h>
@@ -18,12 +19,11 @@
 #include <cstdlib>
 
 using namespace xci::text;
-using namespace xci::graphics;
 using namespace xci::graphics::unit_literals;
 using namespace xci::core;
 using fmt::format;
 
-int main()
+int main(int argc, const char* argv[])
 {
     Vfs vfs;
     if (!vfs.mount(XCI_SHARE))
@@ -31,7 +31,8 @@ int main()
 
     Renderer renderer {vfs};
     Window window {renderer};
-    window.create({800, 600}, "XCI coords demo");
+
+    setup_window(window, "XCI coords demo", argv);
 
     Font font {renderer};
     if (!font.add_face(vfs, "fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
