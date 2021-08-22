@@ -31,6 +31,7 @@ public:
     ~CommandBuffers();
 
     void create(VkCommandPool command_pool, uint32_t count);
+    void destroy();
 
     void reset();
 

@@ -30,6 +30,7 @@ Window::~Window()
             vkDestroySemaphore(vk_device, sem, nullptr);
     }
 
+    m_command_buffers.destroy();
     m_renderer.destroy_surface();
 
     if (m_window != nullptr)

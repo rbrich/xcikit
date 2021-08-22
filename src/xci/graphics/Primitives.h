@@ -33,6 +33,19 @@ enum class PrimitiveType {
 };
 
 
+struct UniformBinding {
+    uint32_t binding;
+    VkDeviceSize offset;
+    VkDeviceSize range;
+};
+
+
+struct TextureBinding {
+    uint32_t binding = 0;
+    Texture* ptr = nullptr;
+};
+
+
 static constexpr VkDeviceSize c_mvp_size = sizeof(float) * 16;
 
 
@@ -68,11 +81,23 @@ private:
 
 class PrimitivesDescriptorSets: public Resource {
 public:
+    explicit PrimitivesDescriptorSets(Renderer& renderer)
+        : m_renderer(renderer) {}
     ~PrimitivesDescriptorSets();
 
-    void create();
+    void create(const VkDescriptorSetLayout layout);
+
+    void update(
+            const PrimitivesBuffers& buffers,
+            VkDeviceSize uniform_base,
+            const std::vector<UniformBinding>& uniform_bindings,
+            const TextureBinding& texture_binding);
+
+    void bind(VkCommandBuffer cmd_buf, size_t cmd_buf_idx,
+              const VkPipelineLayout pipeline_layout);
 
 private:
+    Renderer& m_renderer;
     VkDescriptorSet m_descriptor_sets[Window::cmd_buf_count] {};
 };
 
@@ -119,7 +144,6 @@ public:
 private:
     VkDevice device() const;
     void update_pipeline();
-    void create_descriptor_sets();
     void destroy_pipeline();
 
     VkDeviceSize align_uniform(VkDeviceSize offset);
@@ -131,28 +155,18 @@ private:
     std::vector<float> m_vertex_data;
     std::vector<uint16_t> m_index_data;
     std::vector<std::byte> m_uniform_data;
-    struct UniformBinding {
-        uint32_t binding;
-        VkDeviceSize offset;
-        VkDeviceSize range;
-    };
     std::vector<UniformBinding> m_uniforms;
     VkDeviceSize m_min_uniform_offset_alignment = 0;
-    struct TextureBinding {
-        uint32_t binding = 0;
-        Texture* ptr = nullptr;
-    };
     TextureBinding m_texture;
     BlendFunc m_blend = BlendFunc::Off;
 
     Renderer& m_renderer;
     Shader* m_shader = nullptr;
 
-    VkDescriptorSet m_descriptor_sets[Window::cmd_buf_count] {};
     PipelineLayout* m_pipeline_layout = nullptr;
 
     PrimitivesBuffersPtr m_buffers;
-    //PrimitivesDescriptorSetsPtr m_descriptor_sets;
+    PrimitivesDescriptorSetsPtr m_descriptor_sets;
 
     Pipeline* m_pipeline = nullptr;
 };

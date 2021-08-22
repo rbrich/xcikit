@@ -19,9 +19,10 @@ class Renderer;
 class DescriptorPool {
 public:
     explicit DescriptorPool(Renderer& renderer) : m_renderer(renderer) {}
-    ~DescriptorPool();
+    ~DescriptorPool() { destroy(); }
 
     void create(uint32_t max_sets, std::initializer_list<VkDescriptorPoolSize> pool_sizes);
+    void destroy();
 
     void allocate(uint32_t count, const VkDescriptorSetLayout* layouts, VkDescriptorSet* descriptor_sets);
     void free(uint32_t count, const VkDescriptorSet* descriptor_sets);

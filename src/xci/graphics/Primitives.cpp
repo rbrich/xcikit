@@ -122,6 +122,105 @@ VkDevice PrimitivesBuffers::device() const
 // -----------------------------------------------------------------------------
 
 
+PrimitivesDescriptorSets::~PrimitivesDescriptorSets()
+{
+    m_renderer.descriptor_pool().free(Window::cmd_buf_count, m_descriptor_sets);
+}
+
+
+void PrimitivesDescriptorSets::create(const VkDescriptorSetLayout layout)
+{
+    // create descriptor sets
+    std::array<VkDescriptorSetLayout, Window::cmd_buf_count> layouts;  // NOLINT
+    for (auto& item : layouts)
+        item = layout;
+
+    m_renderer.descriptor_pool().allocate(Window::cmd_buf_count, layouts.data(), m_descriptor_sets);
+}
+
+
+void PrimitivesDescriptorSets::update(
+        const PrimitivesBuffers& buffers,
+        VkDeviceSize uniform_base,
+        const std::vector<UniformBinding>& uniform_bindings,
+        const TextureBinding& texture_binding)
+{
+    for (size_t i = 0; i < Window::cmd_buf_count; i++) {
+        std::vector<VkDescriptorBufferInfo> buffer_info;
+        std::vector<VkWriteDescriptorSet> write_descriptor_set;
+        buffer_info.reserve(uniform_bindings.size() + 1);
+        write_descriptor_set.reserve(uniform_bindings.size() + 1);
+
+        // mvp
+        buffer_info.push_back({
+                .buffer = buffers.vk_uniform_buffer(i),
+                .offset = 0,
+                .range = c_mvp_size,
+        });
+        write_descriptor_set.push_back(VkWriteDescriptorSet{
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .dstSet = m_descriptor_sets[i],
+                .dstBinding = 0,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .pBufferInfo = &buffer_info.back(),
+        });
+
+        // uniforms
+        for (const auto& uni : uniform_bindings) {
+            buffer_info.push_back({
+                    .buffer = buffers.vk_uniform_buffer(i),
+                    .offset = uniform_base + uni.offset,
+                    .range = uni.range,
+            });
+            write_descriptor_set.push_back(VkWriteDescriptorSet{
+                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                    .dstSet = m_descriptor_sets[i],
+                    .dstBinding = uni.binding,
+                    .descriptorCount = 1,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                    .pBufferInfo = &buffer_info.back(),
+            });
+        }
+
+        // texture
+        VkDescriptorImageInfo image_info;  // keep alive for vkUpdateDescriptorSets()
+        if (texture_binding.ptr) {
+            auto* texture = texture_binding.ptr;
+            image_info = {
+                    .sampler = texture->vk_sampler(),
+                    .imageView = texture->vk_image_view(),
+                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            };
+            write_descriptor_set.push_back(VkWriteDescriptorSet{
+                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                    .dstSet = m_descriptor_sets[i],
+                    .dstBinding = texture_binding.binding,
+                    .descriptorCount = 1,
+                    .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                    .pImageInfo = &image_info,
+            });
+        }
+
+        vkUpdateDescriptorSets(m_renderer.vk_device(), write_descriptor_set.size(),
+                write_descriptor_set.data(), 0, nullptr);
+    }
+}
+
+
+void PrimitivesDescriptorSets::bind(
+        VkCommandBuffer cmd_buf, size_t cmd_buf_idx,
+        const VkPipelineLayout pipeline_layout)
+{
+    vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
+            pipeline_layout, 0, 1,
+            &m_descriptor_sets[cmd_buf_idx], 0, nullptr);
+}
+
+
+// -----------------------------------------------------------------------------
+
+
 Primitives::Primitives(Renderer& renderer,
         VertexFormat format, PrimitiveType type)
         : m_format(format), m_renderer(renderer)
@@ -383,15 +482,14 @@ void Primitives::draw(View& view)
     window->add_command_buffer_resource(m_buffers);
 
     // projection matrix
-    {
-        auto mvp = view.projection_matrix();
-        assert(mvp.size() * sizeof(mvp[0]) == c_mvp_size);
-        auto i = window->command_buffer_index();
-        m_buffers->copy_mvp(i, mvp);
-        vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                m_pipeline_layout->vk(), 0, 1,
-                &m_descriptor_sets[i], 0, nullptr);
-    }
+    auto mvp = view.projection_matrix();
+    assert(mvp.size() * sizeof(mvp[0]) == c_mvp_size);
+    auto i = window->command_buffer_index();
+    m_buffers->copy_mvp(i, mvp);
+
+    // descriptor sets
+    m_descriptor_sets->bind(cmd_buf, i, m_pipeline_layout->vk());
+    window->add_command_buffer_resource(m_descriptor_sets);
 
     vkCmdDrawIndexed(cmd_buf, static_cast<uint32_t>(m_index_data.size()), 1, 0, 0, 0);
 }
@@ -425,82 +523,12 @@ void Primitives::update_pipeline()
     pipeline_ci.set_color_blend(m_blend);
     m_pipeline = &m_renderer.get_pipeline(pipeline_ci);
 
+    auto uniform_base = align_uniform(c_mvp_size);
     m_buffers = std::make_shared<PrimitivesBuffers>(m_renderer);
-    m_buffers->create(m_vertex_data, m_index_data, align_uniform(c_mvp_size), m_uniform_data);
-    create_descriptor_sets();
-}
-
-
-void Primitives::create_descriptor_sets()
-{
-    // create descriptor sets
-    std::array<VkDescriptorSetLayout, Window::cmd_buf_count> layouts;  // NOLINT
-    for (auto& item : layouts)
-        item = m_pipeline_layout->vk_descriptor_set_layout();
-
-    m_renderer.descriptor_pool().allocate(Window::cmd_buf_count, layouts.data(), m_descriptor_sets);
-
-    for (size_t i = 0; i < Window::cmd_buf_count; i++) {
-        std::vector<VkDescriptorBufferInfo> buffer_info;
-        std::vector<VkWriteDescriptorSet> write_descriptor_set;
-        buffer_info.reserve(m_uniforms.size() + 1);
-        write_descriptor_set.reserve(m_uniforms.size() + 1);
-
-        // mvp
-        buffer_info.push_back({
-                .buffer = m_buffers->vk_uniform_buffer(i),
-                .offset = 0,
-                .range = c_mvp_size,
-        });
-        write_descriptor_set.push_back(VkWriteDescriptorSet{
-                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                .dstSet = m_descriptor_sets[i],
-                .dstBinding = 0,
-                .descriptorCount = 1,
-                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                .pBufferInfo = &buffer_info.back(),
-        });
-
-        // uniforms
-        auto offset_base = align_uniform(c_mvp_size);
-        for (const auto& uni : m_uniforms) {
-            buffer_info.push_back({
-                    .buffer = m_buffers->vk_uniform_buffer(i),
-                    .offset = offset_base + uni.offset,
-                    .range = uni.range,
-            });
-            write_descriptor_set.push_back(VkWriteDescriptorSet{
-                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                    .dstSet = m_descriptor_sets[i],
-                    .dstBinding = uni.binding,
-                    .descriptorCount = 1,
-                    .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                    .pBufferInfo = &buffer_info.back(),
-            });
-        }
-
-        // texture
-        VkDescriptorImageInfo image_info;  // keep alive for vkUpdateDescriptorSets()
-        if (m_texture.ptr) {
-            auto* texture = m_texture.ptr;
-            image_info = {
-                    .sampler = texture->vk_sampler(),
-                    .imageView = texture->vk_image_view(),
-                    .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-            };
-            write_descriptor_set.push_back(VkWriteDescriptorSet{
-                    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                    .dstSet = m_descriptor_sets[i],
-                    .dstBinding = m_texture.binding,
-                    .descriptorCount = 1,
-                    .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                    .pImageInfo = &image_info,
-            });
-        }
-
-        vkUpdateDescriptorSets(device(), write_descriptor_set.size(),
-                write_descriptor_set.data(), 0, nullptr);
-    }
+    m_buffers->create(m_vertex_data, m_index_data, uniform_base, m_uniform_data);
+    m_descriptor_sets = std::make_shared<PrimitivesDescriptorSets>(m_renderer );
+    m_descriptor_sets->create(m_pipeline_layout->vk_descriptor_set_layout());
+    m_descriptor_sets->update(*m_buffers, uniform_base, m_uniforms, m_texture);
 }
 
 
@@ -509,7 +537,7 @@ void Primitives::destroy_pipeline()
     if (m_pipeline == nullptr)
         return;
     m_buffers.reset();
-    m_renderer.descriptor_pool().free(Window::cmd_buf_count, m_descriptor_sets);
+    m_descriptor_sets.reset();
     m_pipeline = nullptr;
 }
 

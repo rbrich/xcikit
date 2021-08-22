@@ -288,6 +288,13 @@ Pipeline& Renderer::get_pipeline(const PipelineCreateInfo& ci)
 }
 
 
+void Renderer::clear_pipeline_cache()
+{
+    m_pipeline_layout.clear();
+    m_pipeline.clear();
+}
+
+
 void Renderer::create_surface(GLFWwindow* window)
 {
     VK_TRY("glfwCreateWindowSurface",
@@ -319,6 +326,8 @@ void Renderer::destroy_surface()
         return;
 
     clear_shader_cache();
+    clear_pipeline_cache();
+    m_descriptor_pool.destroy();
     destroy_framebuffers();
     destroy_renderpass();
     destroy_swapchain();

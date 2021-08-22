@@ -11,13 +11,6 @@
 namespace xci::graphics {
 
 
-DescriptorPool::~DescriptorPool()
-{
-    if (m_renderer.vk_device() != VK_NULL_HANDLE)
-        vkDestroyDescriptorPool(m_renderer.vk_device(), m_descriptor_pool, nullptr);
-}
-
-
 void DescriptorPool::create(
         uint32_t max_sets, std::initializer_list<VkDescriptorPoolSize> pool_sizes)
 {
@@ -31,6 +24,15 @@ void DescriptorPool::create(
     VK_TRY("vkCreateDescriptorPool",
             vkCreateDescriptorPool(m_renderer.vk_device(), &pool_info, nullptr,
                     &m_descriptor_pool));
+}
+
+
+void DescriptorPool::destroy()
+{
+    if (m_descriptor_pool != VK_NULL_HANDLE) {
+        vkDestroyDescriptorPool(m_renderer.vk_device(), m_descriptor_pool, nullptr);
+        m_descriptor_pool = VK_NULL_HANDLE;
+    }
 }
 
 

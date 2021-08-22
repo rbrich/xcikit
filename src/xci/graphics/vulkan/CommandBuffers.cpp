@@ -14,7 +14,7 @@ namespace xci::graphics {
 
 CommandBuffers::~CommandBuffers()
 {
-    if (m_renderer.vk_device() != VK_NULL_HANDLE) {
+    if (m_command_pool != VK_NULL_HANDLE) {
         vkFreeCommandBuffers(m_renderer.vk_device(), m_command_pool,
                 m_count, m_command_buffers.data());
     }
@@ -37,6 +37,18 @@ void CommandBuffers::create(VkCommandPool command_pool, uint32_t count)
     VK_TRY("vkAllocateCommandBuffers",
             vkAllocateCommandBuffers(m_renderer.vk_device(), &alloc_info,
                     m_command_buffers.data()));
+}
+
+
+void CommandBuffers::destroy()
+{
+    if (m_command_pool != VK_NULL_HANDLE) {
+        vkFreeCommandBuffers(m_renderer.vk_device(), m_command_pool,
+                m_count, m_command_buffers.data());
+        m_command_pool = VK_NULL_HANDLE;
+        for (unsigned i = 0; i != m_count; ++i)
+            release_resources(i);
+    }
 }
 
 

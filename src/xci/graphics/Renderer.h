@@ -72,6 +72,8 @@ public:
     PipelineLayout& get_pipeline_layout(const PipelineLayoutCreateInfo& ci);
     Pipeline& get_pipeline(const PipelineCreateInfo& ci);
 
+    void clear_pipeline_cache();
+
     // -------------------------------------------------------------------------
     // Descriptor sets
 
