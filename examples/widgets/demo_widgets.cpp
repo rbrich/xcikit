@@ -4,11 +4,11 @@
 // Copyright 2018 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
+#include "graphics/common.h"
+
 #include <xci/widgets/Theme.h>
 #include <xci/widgets/Button.h>
 #include <xci/widgets/Icon.h>
-#include <xci/text/Text.h>
-#include <xci/graphics/Window.h>
 #include <xci/core/Vfs.h>
 #include <xci/core/log.h>
 #include <xci/config.h>
@@ -18,11 +18,9 @@
 
 using namespace xci::widgets;
 using namespace xci::text;
-using namespace xci::graphics;
 using namespace xci::core;
-using namespace xci::core::log;
 
-int main()
+int main(int argc, const char* argv[])
 {
     Vfs vfs;
     if (!vfs.mount(XCI_SHARE))
@@ -30,7 +28,7 @@ int main()
 
     Renderer renderer {vfs};
     Window window {renderer};
-    window.create({800, 600}, "XCI widgets demo");
+    setup_window(window, "XCI widgets demo", argv);
 
     Theme theme(renderer);
     if (!theme.load_default())

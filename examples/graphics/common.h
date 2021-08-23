@@ -8,6 +8,7 @@ using namespace xci::graphics;
 using namespace xci::core::argparser;
 using namespace xci::core::log;
 
+
 inline void setup_window(Window& window, const char* title, const char* argv[])
 {
     uint32_t device_id = 0;

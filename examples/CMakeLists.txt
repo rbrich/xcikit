@@ -14,15 +14,21 @@ function(add_demo TARGET)
     else()
         add_executable(${TARGET} ${TARGET}.cpp)
     endif()
+
+    target_include_directories(${TARGET} PRIVATE ${CMAKE_SOURCE_DIR}/examples)
+
     if (ARG_LINK)
         target_link_libraries(${TARGET} ${ARG_LINK})
     endif()
+
     if (ARG_DEPS)
         add_dependencies(${TARGET} ${ARG_DEPS})
     endif()
+
     if (ARG_CDEFS)
         target_compile_definitions(${TARGET} PRIVATE ${ARG_CDEFS})
     endif()
+
     install(TARGETS ${TARGET} EXPORT xcikit DESTINATION ${DEMO_DEST})
 endfunction()
 

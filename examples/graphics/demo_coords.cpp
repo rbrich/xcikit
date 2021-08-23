@@ -15,7 +15,6 @@
 #include <xci/config.h>
 
 #include <fmt/core.h>
-#include <fmt/ostream.h>
 #include <cstdlib>
 
 using namespace xci::text;

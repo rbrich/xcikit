@@ -4,8 +4,9 @@
 // Copyright 2018 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
+#include "graphics/common.h"
+
 #include <xci/widgets/TextTerminal.h>
-#include <xci/graphics/Window.h>
 #include <xci/core/Vfs.h>
 #include <xci/core/file.h>
 #include <xci/core/log.h>
@@ -14,14 +15,12 @@
 #include <fmt/core.h>
 #include <cstdlib>
 #include <cstdio>
-#include <iostream>
 
 using namespace xci::widgets;
-using namespace xci::graphics;
 using namespace xci::core;
 using fmt::format;
 
-int main()
+int main(int argc, const char* argv[])
 {
     Logger::init();
     Vfs vfs;
@@ -30,7 +29,7 @@ int main()
 
     Renderer renderer {vfs};
     Window window {renderer};
-    window.create({800, 600}, "XCI TextTerminal demo");
+    setup_window(window, "XCI TextTerminal demo", argv);
 
     Theme theme(renderer);
     if (!theme.load_default())
