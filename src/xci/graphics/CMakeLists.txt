@@ -37,8 +37,8 @@ target_link_libraries(xci-graphics
         ${CMAKE_DL_LIBS}
         Vulkan::Vulkan
     PRIVATE
-        range-v3::range-v3
         glfw
+        range-v3::range-v3
 )
 
 if (BUILD_FRAMEWORKS)
