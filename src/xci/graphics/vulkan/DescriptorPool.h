@@ -11,6 +11,7 @@
 #include <xci/core/mixin.h>
 #include <vulkan/vulkan.h>
 #include <array>
+#include <functional>  // struct hash
 
 namespace xci::graphics {
 

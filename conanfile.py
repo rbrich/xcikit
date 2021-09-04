@@ -37,7 +37,7 @@ class XcikitConan(ConanFile):
         "tests": True,
     }
     requires = (
-        'fmt/7.1.3',
+        'fmt/8.0.1',
     )
     build_requires = (
         'magic_enum/0.7.2',

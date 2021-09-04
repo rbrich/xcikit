@@ -17,7 +17,6 @@
 #include <cstdio>
 
 using namespace xci::widgets;
-using namespace xci::core;
 using fmt::format;
 
 int main(int argc, const char* argv[])

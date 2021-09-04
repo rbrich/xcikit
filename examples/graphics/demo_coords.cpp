@@ -14,12 +14,10 @@
 #include <xci/core/Vfs.h>
 #include <xci/config.h>
 
-#include <fmt/core.h>
 #include <cstdlib>
 
 using namespace xci::text;
 using namespace xci::graphics::unit_literals;
-using namespace xci::core;
 using fmt::format;
 
 int main(int argc, const char* argv[])

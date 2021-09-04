@@ -15,8 +15,6 @@
 
 #include <cstdlib>
 
-using namespace xci::core;
-
 
 void generate_checkerboard(Texture& texture)
 {

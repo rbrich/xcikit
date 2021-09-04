@@ -12,13 +12,10 @@
 #include <xci/core/Vfs.h>
 #include <xci/config.h>
 
-#include <fmt/core.h>
-#include <fmt/ostream.h>
 #include <cstdlib>
 
 using namespace xci::widgets;
 using namespace xci::text;
-using namespace xci::core;
 using fmt::format;
 
 int main(int argc, const char* argv[])

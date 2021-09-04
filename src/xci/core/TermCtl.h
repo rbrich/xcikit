@@ -8,10 +8,12 @@
 #define XCI_CORE_TERM_H
 
 #include <fmt/format.h>
+#include <vector>
 #include <string>
 #include <ostream>
 #include <array>
 #include <chrono>
+#include <functional>
 
 namespace xci::core {
 
@@ -152,7 +154,7 @@ public:
     /// {t:MODE} where MODE is bold | underline | normal ...
     template<typename ...Args>
     std::string format(const char *fmt, Args&&... args) {
-        return fmt::format(fmt, std::forward<Args>(args)...,
+        return fmt::format(fmt::runtime(fmt), std::forward<Args>(args)...,
                         fmt::arg("fg", FgPlaceholder{*this}),
                         fmt::arg("bg", BgPlaceholder{*this}),
                         fmt::arg("t",  ModePlaceholder{*this}));

@@ -13,12 +13,10 @@
 #include <xci/core/log.h>
 #include <xci/config.h>
 
-#include <fmt/ostream.h>
 #include <cstdlib>
 
 using namespace xci::widgets;
 using namespace xci::text;
-using namespace xci::core;
 
 int main(int argc, const char* argv[])
 {
@@ -82,11 +80,11 @@ int main(int argc, const char* argv[])
 
     window.set_mouse_button_callback([&](View& view, const MouseBtnEvent& ev) {
         if (ev.action == Action::Press && ev.button == MouseButton::Left) {
-            debug("checkbox mouse {}", ev.pos - view.offset());
-            debug("checkbox bbox {}", checkbox.aabb());
+            log::debug("checkbox mouse {}", ev.pos - view.offset());
+            log::debug("checkbox bbox {}", checkbox.aabb());
             if (checkbox.contains(ev.pos - view.offset())) {
                 checkbox_state = !checkbox_state;
-                debug("checkbox state {}", checkbox_state);
+                log::debug("checkbox state {}", checkbox_state);
                 refresh_checkbox = true;
             }
         }

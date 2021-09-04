@@ -18,7 +18,6 @@
 #include <unistd.h>
 
 using namespace xci::widgets;
-using namespace xci::core;
 
 
 class SharedBuffer {

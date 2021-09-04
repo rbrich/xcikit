@@ -1,7 +1,7 @@
 // test_widgets.cpp created on 2018-08-06 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <catch2/catch.hpp>
@@ -36,10 +36,10 @@ public:
         m_font_style = font_style;
     }
     void set_fg_color(Color fg) override {
-        m_output.append(format("[fg:{}]"));
+        m_output.append(format("[fg:{:02x}{:02x}{:02x}]", fg.r, fg.g, fg.b));
     }
     void set_bg_color(Color bg) override {
-        m_output.append(format("[bg:{}]"));
+        m_output.append(format("[bg:{:02x}{:02x}{:02x}]", bg.r, bg.g, bg.b));
     }
     void draw_blanks(size_t num) override {
         m_output.append(num, ' ');
@@ -118,26 +118,32 @@ TEST_CASE( "Line::add_text", "[TextTerminal]" )
     CHECK(r.output().empty());
 
     bold.set_bold(true);
-    line.add_text(0, "bold", bold, /*insert=*/false);
+    line.add_text(0, "bold", bold, false);
     line.render(r);
     CHECK(r.output() == "[b]bold[r]");
 
     italic.set_italic(true);
-    line.add_text(0, "italic", italic, /*insert=*/true);
+    line.add_text(0, "italic", italic, true);
     line.render(r);
     CHECK(r.output() == "[i]italic[b]bold[r]");
 
-    line.add_text(2, "BOLD", bold, /*insert=*/false);
+    line.add_text(2, "BOLD", bold, false);
     line.render(r);
     CHECK(r.output() == "[i]it[b]BOLDbold[r]");
 
-    line.add_text(20, "skipped after end", attr, /*insert=*/true);
+    line.add_text(20, "skipped after end", attr, true);
     line.render(r);
     CHECK(r.output() == "[i]it[b]BOLDbold[r]          skipped after end");
 
-    line.add_text(18, "#", attr, /*insert=*/false);
+    line.add_text(18, "#", attr, false);
     line.render(r);
     CHECK(r.output() == "[i]it[b]BOLDbold[r]        # skipped after end");
+
+    attr.set_fg(Color::Red());
+    attr.set_bg(Color::Yellow());
+    line.add_text(12, "@", attr, false);
+    line.render(r);
+    CHECK(r.output() == "[i]it[b]BOLDbold[r]  [fg:ff0000][bg:ffff00]@[fg:b2b2b2][bg:000000]     # skipped after end");
 }
 
 

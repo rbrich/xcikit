@@ -7,6 +7,7 @@
 #include "Pipeline.h"
 #include "VulkanError.h"
 #include <xci/graphics/Renderer.h>
+#include <xci/compat/macros.h>
 
 #include <cassert>
 
@@ -267,6 +268,8 @@ void PipelineCreateInfo::set_vertex_format(VertexFormat format)
             m_attr_descs[3] = {3, 0, VK_FORMAT_R32G32_SFLOAT, 8 * sf};
             attr_desc_count = 4;
             break;
+        default:
+            UNREACHABLE;
     }
     assert(attr_desc_count != 0);
     assert(attr_desc_count <= m_attr_descs.size());

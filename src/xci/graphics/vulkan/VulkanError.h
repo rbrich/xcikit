@@ -1,14 +1,14 @@
 // vulkan_error.h created on 2019-12-05 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019 Radek Brich
+// Copyright 2019–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <vulkan/vulkan_core.h>  // VkResult
 #include <exception>
 #include <string>
 #include <string_view>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #ifndef XCI_GRAPHICS_VULKAN_ERROR_H
 #define XCI_GRAPHICS_VULKAN_ERROR_H

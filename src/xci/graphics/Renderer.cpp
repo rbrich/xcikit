@@ -14,7 +14,6 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
-#include <fmt/core.h>
 #include <range/v3/algorithm/any_of.hpp>
 #include <range/v3/view/enumerate.hpp>
 #include <range/v3/view/take.hpp>
@@ -29,7 +28,6 @@ using namespace xci::core;
 using ranges::cpp20::views::take;
 using ranges::views::enumerate;
 using ranges::cpp20::any_of;
-using fmt::format;
 using std::make_unique;
 
 
@@ -83,7 +81,7 @@ vulkan_debug_callback(
     (void) user_data;
     Logger::default_instance().log(
             vulkan_severity_to_log_level(severity),
-            format("VK ({}): {}",
+            fmt::format("VK ({}): {}",
                     vulkan_msg_type_to_cstr(msg_type), data->pMessage));
     return VK_FALSE;
 }

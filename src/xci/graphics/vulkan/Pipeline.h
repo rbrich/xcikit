@@ -15,6 +15,7 @@
 
 #include <array>
 #include <vector>
+#include <functional>  // struct hash
 
 namespace xci::graphics {
 

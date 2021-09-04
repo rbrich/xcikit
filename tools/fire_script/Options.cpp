@@ -10,7 +10,7 @@
 #include <xci/core/TermCtl.h>
 
 #include <range/v3/all.hpp>
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 namespace xci::script::tool {
 
