@@ -75,9 +75,21 @@ public:
     void clear_pipeline_cache();
 
     // -------------------------------------------------------------------------
-    // Descriptor sets
+    // Descriptor pools
 
-    DescriptorPool& descriptor_pool() { return m_descriptor_pool; }
+    /// Get an existing descriptor pool or create a new one. All pools are created with constant
+    /// maxSets size, usually much bigger than requested by reserved_sets parameter.
+    /// Multiple requests will get the same pool. The returned object is a RAII helper which will
+    /// release reserved_sets when disposed of, so the reserved capacity will become available
+    /// to satisfy future requests.
+    /// The pool_sizes given here are per descriptor set. They are hashed and used to lookup
+    /// a specific pool in cache.
+    /// \param reserved_sets    Specify how many sets will you allocate from the pool, at maximum.
+    /// \param pool_sizes       Sizes *per single descriptor set*.
+    /// \return A facade to actual pool, which is owned by Renderer and shared as its capacity allows.
+    SharedDescriptorPool get_descriptor_pool(uint32_t reserved_sets, DescriptorPoolSizes pool_sizes);
+
+    void clear_descriptor_pool_cache() { m_descriptor_pool.clear(); }
 
     // -------------------------------------------------------------------------
     // Surface
@@ -119,7 +131,7 @@ private:
 
     std::unordered_map<PipelineLayoutCreateInfo, PipelineLayout> m_pipeline_layout;
     std::unordered_map<PipelineCreateInfo, Pipeline> m_pipeline;
-    DescriptorPool m_descriptor_pool {*this};
+    std::unordered_map<DescriptorPoolSizes, std::vector<DescriptorPool>> m_descriptor_pool;
 
     VkInstance m_instance {};
     VkSurfaceKHR m_surface {};

@@ -124,7 +124,8 @@ VkDevice PrimitivesBuffers::device() const
 
 PrimitivesDescriptorSets::~PrimitivesDescriptorSets()
 {
-    m_renderer.descriptor_pool().free(Window::cmd_buf_count, m_descriptor_sets);
+    if (m_descriptor_sets[0] != VK_NULL_HANDLE)
+        m_descriptor_pool.free(Window::cmd_buf_count, m_descriptor_sets);
 }
 
 
@@ -135,7 +136,7 @@ void PrimitivesDescriptorSets::create(const VkDescriptorSetLayout layout)
     for (auto& item : layouts)
         item = layout;
 
-    m_renderer.descriptor_pool().allocate(Window::cmd_buf_count, layouts.data(), m_descriptor_sets);
+    m_descriptor_pool.allocate(Window::cmd_buf_count, layouts.data(), m_descriptor_sets);
 }
 
 
@@ -526,7 +527,10 @@ void Primitives::update_pipeline()
     auto uniform_base = align_uniform(c_mvp_size);
     m_buffers = std::make_shared<PrimitivesBuffers>(m_renderer);
     m_buffers->create(m_vertex_data, m_index_data, uniform_base, m_uniform_data);
-    m_descriptor_sets = std::make_shared<PrimitivesDescriptorSets>(m_renderer );
+
+    m_descriptor_pool = m_renderer.get_descriptor_pool(Window::cmd_buf_count, pipeline_layout_ci.descriptor_pool_sizes());
+
+    m_descriptor_sets = std::make_shared<PrimitivesDescriptorSets>(m_renderer, m_descriptor_pool.get());
     m_descriptor_sets->create(m_pipeline_layout->vk_descriptor_set_layout());
     m_descriptor_sets->update(*m_buffers, uniform_base, m_uniforms, m_texture);
 }

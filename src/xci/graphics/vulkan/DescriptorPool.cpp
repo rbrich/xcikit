@@ -5,25 +5,60 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "DescriptorPool.h"
-#include <xci/graphics/Renderer.h>
 #include "VulkanError.h"
+#include <xci/graphics/Renderer.h>
+#include <cassert>
+
+
+static bool operator==(const VkDescriptorPoolSize& lhs, const VkDescriptorPoolSize& rhs) {
+    return lhs.type == rhs.type && lhs.descriptorCount == rhs.descriptorCount;
+}
+
 
 namespace xci::graphics {
 
 
-void DescriptorPool::create(
-        uint32_t max_sets, std::initializer_list<VkDescriptorPoolSize> pool_sizes)
+void DescriptorPoolSizes::add(VkDescriptorType type, uint32_t count)
 {
-    VkDescriptorPoolCreateInfo pool_info = {
+    assert(m_count < m_pool_sizes.size());
+    m_pool_sizes[m_count++] = VkDescriptorPoolSize{.type = type, .descriptorCount = count};
+}
+
+
+size_t DescriptorPoolSizes::hash() const
+{
+    size_t h = 0;
+    for (const auto& item : *this) {
+        h = std::rotl(h, 1) ^ item.type ^ (item.descriptorCount << 4);
+    }
+    return h;
+}
+
+
+bool DescriptorPoolSizes::operator==(const DescriptorPoolSizes& rhs) const
+{
+    return m_count == rhs.m_count && std::equal(begin(), end(), rhs.begin());
+}
+
+
+// -----------------------------------------------------------------------------
+
+void DescriptorPool::create(uint32_t max_sets, DescriptorPoolSizes pool_sizes)
+{
+    for (auto& item : pool_sizes)
+        item.descriptorCount *= max_sets;
+
+    VkDescriptorPoolCreateInfo ci = {
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
             .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
             .maxSets = max_sets,
-            .poolSizeCount = (uint32_t) pool_sizes.size(),
+            .poolSizeCount = pool_sizes.size(),
             .pPoolSizes = pool_sizes.begin(),
     };
     VK_TRY("vkCreateDescriptorPool",
-            vkCreateDescriptorPool(m_renderer.vk_device(), &pool_info, nullptr,
+            vkCreateDescriptorPool(m_renderer.vk_device(), &ci, nullptr,
                     &m_descriptor_pool));
+    m_capacity = max_sets;
 }
 
 
@@ -57,6 +92,37 @@ void DescriptorPool::free(uint32_t count, const VkDescriptorSet* descriptor_sets
     VK_TRY("vkFreeDescriptorSets",
             vkFreeDescriptorSets(m_renderer.vk_device(), m_descriptor_pool,
                     count, descriptor_sets));
+}
+
+
+bool DescriptorPool::book_capacity(uint32_t count)
+{
+    if (m_capacity < count)
+        return false;
+    m_capacity -= count;
+    return true;
+}
+
+
+SharedDescriptorPool::~SharedDescriptorPool()
+{
+    if (m_descriptor_pool && m_booked_sets > 0)
+        m_descriptor_pool->unbook_capacity(m_booked_sets);
+}
+
+
+SharedDescriptorPool::SharedDescriptorPool(SharedDescriptorPool&& rhs)
+    : m_descriptor_pool(rhs.m_descriptor_pool), m_booked_sets(0)
+{
+    std::swap(m_booked_sets, rhs.m_booked_sets);
+}
+
+
+SharedDescriptorPool& SharedDescriptorPool::operator=(SharedDescriptorPool&& rhs)
+{
+    std::swap(m_descriptor_pool, rhs.m_descriptor_pool);
+    std::swap(m_booked_sets, rhs.m_booked_sets);
+    return *this;
 }
 
 

@@ -66,6 +66,24 @@ std::vector<VkDescriptorSetLayoutBinding> PipelineLayoutCreateInfo::vk_layout_bi
 }
 
 
+DescriptorPoolSizes PipelineLayoutCreateInfo::descriptor_pool_sizes() const
+{
+    DescriptorPoolSizes sizes;
+
+    // mvp
+    sizes.add(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1);
+
+    // uniforms
+    sizes.add(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_uniform_binding_count);
+
+    // texture
+    if (m_texture_binding != -1u)
+        sizes.add(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1);
+
+    return sizes;
+}
+
+
 size_t PipelineLayoutCreateInfo::hash() const
 {
     size_t h = 0;

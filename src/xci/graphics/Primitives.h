@@ -14,6 +14,7 @@
 #include "Texture.h"
 #include "vulkan/DeviceMemory.h"
 #include "vulkan/Pipeline.h"
+#include "vulkan/DescriptorPool.h"
 #include <xci/core/geometry.h>
 #include <xci/core/mixin.h>
 
@@ -81,8 +82,8 @@ private:
 
 class PrimitivesDescriptorSets: public Resource {
 public:
-    explicit PrimitivesDescriptorSets(Renderer& renderer)
-        : m_renderer(renderer) {}
+    explicit PrimitivesDescriptorSets(Renderer& renderer, DescriptorPool& descriptor_pool)
+        : m_renderer(renderer), m_descriptor_pool(descriptor_pool) {}
     ~PrimitivesDescriptorSets();
 
     void create(const VkDescriptorSetLayout layout);
@@ -98,6 +99,7 @@ public:
 
 private:
     Renderer& m_renderer;
+    DescriptorPool& m_descriptor_pool;
     VkDescriptorSet m_descriptor_sets[Window::cmd_buf_count] {};
 };
 
@@ -164,7 +166,7 @@ private:
     Shader* m_shader = nullptr;
 
     PipelineLayout* m_pipeline_layout = nullptr;
-
+    SharedDescriptorPool m_descriptor_pool;
     PrimitivesBuffersPtr m_buffers;
     PrimitivesDescriptorSetsPtr m_descriptor_sets;
 

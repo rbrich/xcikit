@@ -7,6 +7,8 @@
 #ifndef XCI_GRAPHICS_VULKAN_PIPELINE_H
 #define XCI_GRAPHICS_VULKAN_PIPELINE_H
 
+#include "DescriptorPool.h"
+
 #include <xci/core/mixin.h>
 
 #include <vulkan/vulkan.h>
@@ -41,6 +43,7 @@ public:
     void add_texture_binding(uint32_t binding);
 
     std::vector<VkDescriptorSetLayoutBinding> vk_layout_bindings() const;
+    DescriptorPoolSizes descriptor_pool_sizes() const;
 
     size_t hash() const;
 

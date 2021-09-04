@@ -295,6 +295,25 @@ void Renderer::clear_pipeline_cache()
 }
 
 
+SharedDescriptorPool
+Renderer::get_descriptor_pool(uint32_t reserved_sets, DescriptorPoolSizes pool_sizes)
+{
+    auto [it, added] = m_descriptor_pool.try_emplace(std::move(pool_sizes));
+    auto& vec_of_pools = it->second;
+    for (auto& pool : vec_of_pools) {
+        if (pool.book_capacity(reserved_sets))
+            return SharedDescriptorPool(pool, reserved_sets);
+    }
+    // None of existing pools had enough capacity
+    auto& pool = vec_of_pools.emplace_back(*this);
+    pool.create(1000, std::move(pool_sizes));
+    if (pool.book_capacity(reserved_sets))
+        return SharedDescriptorPool(pool, reserved_sets);
+    // reserved_sets is > 1000
+    throw VulkanError("Can't reserve " + std::to_string(reserved_sets) + " descriptor sets.");
+}
+
+
 void Renderer::create_surface(GLFWwindow* window)
 {
     VK_TRY("glfwCreateWindowSurface",
@@ -311,12 +330,6 @@ void Renderer::create_surface(GLFWwindow* window)
     create_swapchain();
     create_renderpass();
     create_framebuffers();
-
-    // FIXME: Either allow specifying pool sizes per app, or dynamically add more pools
-    m_descriptor_pool.create(100, {
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 500},
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 100}
-    });
 }
 
 
@@ -327,7 +340,7 @@ void Renderer::destroy_surface()
 
     clear_shader_cache();
     clear_pipeline_cache();
-    m_descriptor_pool.destroy();
+    clear_descriptor_pool_cache();
     destroy_framebuffers();
     destroy_renderpass();
     destroy_swapchain();
