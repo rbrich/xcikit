@@ -15,7 +15,7 @@ compiler:
     Visual Studio:
     msvc:
     clang:
-        version: ["13.0"]
+        version: ["14.0"]
         libcxx: [None, libc++]
         cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
 
