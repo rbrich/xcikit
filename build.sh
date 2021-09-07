@@ -180,6 +180,7 @@ if [[ -t 1 && "${GENERATOR}" = "Ninja" ]]; then
     CMAKE_ARGS+=(-D'FORCE_COLORS=1')
 fi
 
+echo "CONAN_ARGS:   ${CONAN_ARGS[*]}"
 echo "CMAKE_ARGS:   ${CMAKE_ARGS[*]}"
 echo "BUILD_CONFIG: ${BUILD_CONFIG}"
 echo "BUILD_DIR:    ${BUILD_DIR}"

@@ -23,8 +23,10 @@ class XcikitConan(ConanFile):
         "text": [True, False],
         "widgets": [True, False],
         # Also build and install:
-        "benchmarks": [True, False],
+        "tools": [True, False],
+        "examples": [True, False],
         "tests": [True, False],
+        "benchmarks": [True, False],
     }
     default_options = {
         "shared": False,
@@ -33,8 +35,10 @@ class XcikitConan(ConanFile):
         "graphics": True,
         "text": True,
         "widgets": True,
-        "benchmarks": True,
+        "tools": True,
+        "examples": True,
         "tests": True,
+        "benchmarks": True,
     }
     requires = (
         'fmt/8.0.1',
@@ -121,6 +125,8 @@ class XcikitConan(ConanFile):
             self._cmake.definitions["XCI_GRAPHICS"] = self._on_off(self.options.graphics)
             self._cmake.definitions["XCI_TEXT"] = self._on_off(self.options.text)
             self._cmake.definitions["XCI_WIDGETS"] = self._on_off(self.options.widgets)
+            self._cmake.definitions["XCI_BUILD_TOOLS"] = self._on_off(self.options.tools)
+            self._cmake.definitions["XCI_BUILD_EXAMPLES"] = self._on_off(self.options.examples)
             self._cmake.definitions["XCI_BUILD_TESTS"] = self._on_off(self.options.tests)
             self._cmake.definitions["XCI_BUILD_BENCHMARKS"] = self._on_off(self.options.benchmarks)
             self._cmake.configure()

@@ -435,7 +435,7 @@ Now find `xcikit` in usual way:
 
 [source,cmake]
 ----
-find_package(xcikit REQUIRED)
+find_package(xcikit CONFIG REQUIRED)
 ----
 
 Optionally, include XCI goodies:
