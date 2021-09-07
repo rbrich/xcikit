@@ -12,8 +12,6 @@
 #include <tao/pegtl.hpp>
 #include <fmt/ostream.h>
 
-#include <iostream>
-
 namespace xci::text {
 
 using namespace xci::core;

@@ -5,10 +5,11 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "MousePosInfo.h"
+#include "graphics/common.h"
+
 #include <xci/widgets/Button.h>
 #include <xci/widgets/FpsDisplay.h>
 #include <xci/widgets/Form.h>
-#include <xci/graphics/Window.h>
 #include <xci/widgets/Label.h>
 #include <xci/core/Vfs.h>
 #include <xci/config.h>
@@ -21,7 +22,7 @@
 using namespace xci::demo;
 using fmt::format;
 
-int main()
+int main(int argc, const char* argv[])
 {
     Vfs vfs;
     if (!vfs.mount(XCI_SHARE))
@@ -29,7 +30,7 @@ int main()
 
     Renderer renderer {vfs};
     Window window {renderer};
-    window.create({800, 600}, "XCI form demo");
+    setup_window(window, "XCI form demo", argv);
 
     Theme theme(renderer);
     if (!theme.load_default())

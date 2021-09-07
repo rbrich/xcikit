@@ -1,7 +1,7 @@
 // Primitives.h created on 2018-04-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_PRIMITIVES_H
@@ -13,12 +13,15 @@
 #include "Shader.h"
 #include "Texture.h"
 #include "vulkan/DeviceMemory.h"
+#include "vulkan/Pipeline.h"
+#include "vulkan/DescriptorPool.h"
 #include <xci/core/geometry.h>
 #include <xci/core/mixin.h>
 
 #include <vulkan/vulkan.h>
 
 #include <array>
+#include <memory>
 
 namespace xci::graphics {
 
@@ -26,23 +29,83 @@ class Shader;
 class Renderer;
 
 
-enum class VertexFormat {
-    V2t2,       // 2 vertex coords, 2 texture coords (all float)
-    V2t22,      // 2 vertex coords, 2 + 2 texture coords (all float)
-    V2c4t2,     // 2 vertex coords, RGBA color, 2 texture coords (all float)
-    V2c4t22,    // 2 vertex coords, RGBA color, 2 + 2 texture coords (all float)
-};
-
 enum class PrimitiveType {
     TriFans,        // also usable as quads
 };
 
 
-enum class BlendFunc {
-    Off,
-    AlphaBlend,
-    InverseVideo,
+struct UniformBinding {
+    uint32_t binding;
+    VkDeviceSize offset;
+    VkDeviceSize range;
 };
+
+
+struct TextureBinding {
+    uint32_t binding = 0;
+    Texture* ptr = nullptr;
+};
+
+
+static constexpr VkDeviceSize c_mvp_size = sizeof(float) * 16;
+
+
+class PrimitivesBuffers: public Resource {
+public:
+    explicit PrimitivesBuffers(Renderer& renderer)
+        : m_renderer(renderer), m_device_memory(renderer) {}
+    ~PrimitivesBuffers();
+
+    void create(
+            const std::vector<float>& vertex_data,
+            const std::vector<uint16_t>& index_data,
+            VkDeviceSize uniform_base,
+            const std::vector<std::byte>& uniform_data);
+
+    void bind(VkCommandBuffer cmd_buf);
+
+    void copy_mvp(size_t cmd_buf_idx, const std::array<float, 16>& mvp);
+
+    VkBuffer vk_uniform_buffer(size_t cmd_buf_idx) const { return m_uniform_buffers[cmd_buf_idx]; }
+
+private:
+    VkDevice device() const;
+
+    Renderer& m_renderer;
+    VkBuffer m_vertex_buffer {};
+    VkBuffer m_index_buffer {};
+    VkBuffer m_uniform_buffers[Window::cmd_buf_count] {};
+    VkDeviceSize m_uniform_offsets[Window::cmd_buf_count] {};
+    DeviceMemory m_device_memory;
+};
+
+
+class PrimitivesDescriptorSets: public Resource {
+public:
+    explicit PrimitivesDescriptorSets(Renderer& renderer, DescriptorPool& descriptor_pool)
+        : m_renderer(renderer), m_descriptor_pool(descriptor_pool) {}
+    ~PrimitivesDescriptorSets();
+
+    void create(const VkDescriptorSetLayout layout);
+
+    void update(
+            const PrimitivesBuffers& buffers,
+            VkDeviceSize uniform_base,
+            const std::vector<UniformBinding>& uniform_bindings,
+            const TextureBinding& texture_binding);
+
+    void bind(VkCommandBuffer cmd_buf, size_t cmd_buf_idx,
+              const VkPipelineLayout pipeline_layout);
+
+private:
+    Renderer& m_renderer;
+    DescriptorPool& m_descriptor_pool;
+    VkDescriptorSet m_descriptor_sets[Window::cmd_buf_count] {};
+};
+
+
+using PrimitivesBuffersPtr = std::shared_ptr<PrimitivesBuffers>;
+using PrimitivesDescriptorSetsPtr = std::shared_ptr<PrimitivesDescriptorSets>;
 
 
 class Primitives: private core::NonCopyable {
@@ -82,19 +145,10 @@ public:
 
 private:
     VkDevice device() const;
-    void create_pipeline();
-    void create_buffers();
-    void create_descriptor_set_layout();
-    void create_descriptor_sets();
+    void update_pipeline();
     void destroy_pipeline();
 
     VkDeviceSize align_uniform(VkDeviceSize offset);
-    auto make_binding_desc() -> VkVertexInputBindingDescription;
-    uint32_t get_vertex_float_count();
-    uint32_t get_attr_desc_count();
-    static constexpr size_t max_attr_descs = 4;
-    auto make_attr_descs() -> std::array<VkVertexInputAttributeDescription, max_attr_descs>;
-    auto make_color_blend() -> VkPipelineColorBlendAttachmentState;
 
 private:
     VertexFormat m_format;
@@ -102,34 +156,21 @@ private:
     int m_open_vertices = -1;
     std::vector<float> m_vertex_data;
     std::vector<uint16_t> m_index_data;
-    static constexpr VkDeviceSize m_mvp_size = sizeof(float) * 16;
     std::vector<std::byte> m_uniform_data;
-    struct Uniform {
-        uint32_t binding;
-        VkDeviceSize offset;
-        VkDeviceSize range;
-    };
-    std::vector<Uniform> m_uniforms;
+    std::vector<UniformBinding> m_uniforms;
     VkDeviceSize m_min_uniform_offset_alignment = 0;
-    struct TextureBinding {
-        uint32_t binding = 0;
-        Texture* ptr = nullptr;
-    };
     TextureBinding m_texture;
     BlendFunc m_blend = BlendFunc::Off;
 
     Renderer& m_renderer;
     Shader* m_shader = nullptr;
-    VkDescriptorSetLayout m_descriptor_set_layout {};
-    VkDescriptorPool m_descriptor_pool {};
-    VkDescriptorSet m_descriptor_sets[Window::cmd_buf_count] {};
-    VkPipelineLayout m_pipeline_layout {};
-    VkPipeline m_pipeline {};
-    VkBuffer m_vertex_buffer {};
-    VkBuffer m_index_buffer {};
-    VkBuffer m_uniform_buffers[Window::cmd_buf_count] {};
-    VkDeviceSize m_uniform_offsets[Window::cmd_buf_count] {};
-    DeviceMemory m_device_memory;
+
+    PipelineLayout* m_pipeline_layout = nullptr;
+    SharedDescriptorPool m_descriptor_pool;
+    PrimitivesBuffersPtr m_buffers;
+    PrimitivesDescriptorSetsPtr m_descriptor_sets;
+
+    Pipeline* m_pipeline = nullptr;
 };
 
 

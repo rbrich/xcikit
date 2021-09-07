@@ -5,11 +5,12 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "MousePosInfo.h"
+#include "graphics/common.h"
+
 #include <xci/widgets/Button.h>
 #include <xci/widgets/Checkbox.h>
 #include <xci/widgets/FpsDisplay.h>
 #include <xci/widgets/TextInput.h>
-#include <xci/graphics/Window.h>
 #include <xci/core/Vfs.h>
 #include <xci/config.h>
 #include <random>
@@ -19,7 +20,7 @@
 // this brings in all required namespaces
 using namespace xci::demo;
 
-int main()
+int main(int argc, const char* argv[])
 {
     Vfs vfs;
     if (!vfs.mount(XCI_SHARE))
@@ -27,7 +28,7 @@ int main()
 
     Renderer renderer {vfs};
     Window window {renderer};
-    window.create({800, 600}, "XCI UI demo");
+    setup_window(window, "XCI UI demo", argv);
 
     Theme theme(renderer);
     if (!theme.load_default())

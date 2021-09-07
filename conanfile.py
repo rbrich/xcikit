@@ -23,8 +23,10 @@ class XcikitConan(ConanFile):
         "text": [True, False],
         "widgets": [True, False],
         # Also build and install:
-        "benchmarks": [True, False],
+        "tools": [True, False],
+        "examples": [True, False],
         "tests": [True, False],
+        "benchmarks": [True, False],
     }
     default_options = {
         "shared": False,
@@ -33,11 +35,13 @@ class XcikitConan(ConanFile):
         "graphics": True,
         "text": True,
         "widgets": True,
-        "benchmarks": True,
+        "tools": True,
+        "examples": True,
         "tests": True,
+        "benchmarks": True,
     }
     requires = (
-        'fmt/7.1.3',
+        'fmt/8.0.1',
     )
     build_requires = (
         'magic_enum/0.7.2',
@@ -49,7 +53,7 @@ class XcikitConan(ConanFile):
         ('Catch2',      '',         'catch2/2.13.6',        'tests'),
         ('benchmark',   '',         'benchmark/1.5.2',      'benchmarks'),
         ('pegtl',       '3.1.0',    'taocpp-pegtl/3.1.0',   None),
-        ('glfw3',       '3.2.1',    'glfw/3.3.2',           'graphics'),
+        ('glfw3',       '3.3.0',    'glfw/3.3.2',           'graphics'),
     )
     generators = ("cmake_paths", "cmake_find_package")
     exports = "VERSION"
@@ -121,6 +125,8 @@ class XcikitConan(ConanFile):
             self._cmake.definitions["XCI_GRAPHICS"] = self._on_off(self.options.graphics)
             self._cmake.definitions["XCI_TEXT"] = self._on_off(self.options.text)
             self._cmake.definitions["XCI_WIDGETS"] = self._on_off(self.options.widgets)
+            self._cmake.definitions["XCI_BUILD_TOOLS"] = self._on_off(self.options.tools)
+            self._cmake.definitions["XCI_BUILD_EXAMPLES"] = self._on_off(self.options.examples)
             self._cmake.definitions["XCI_BUILD_TESTS"] = self._on_off(self.options.tests)
             self._cmake.definitions["XCI_BUILD_BENCHMARKS"] = self._on_off(self.options.benchmarks)
             self._cmake.configure()

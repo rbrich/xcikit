@@ -1,7 +1,7 @@
 // Window.cpp created on 2019-10-22 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019 Radek Brich
+// Copyright 2019–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Window.h"
@@ -18,19 +18,19 @@ using namespace xci::core;
 using namespace std::chrono;
 
 
-Window::Window(Renderer& renderer)
-  : m_renderer(renderer) {}
-
-
 Window::~Window()
 {
-    for (auto* fence : m_cmd_buf_fences)
-        vkDestroyFence(m_renderer.vk_device(), fence, nullptr);
-    for (auto* sem : m_render_semaphore)
-        vkDestroySemaphore(m_renderer.vk_device(), sem, nullptr);
-    for (auto* sem : m_image_semaphore)
-        vkDestroySemaphore(m_renderer.vk_device(), sem, nullptr);
+    const auto vk_device = m_renderer.vk_device();
+    if (vk_device != VK_NULL_HANDLE) {
+        for (auto* fence : m_cmd_buf_fences)
+            vkDestroyFence(vk_device, fence, nullptr);
+        for (auto* sem : m_render_semaphore)
+            vkDestroySemaphore(vk_device, sem, nullptr);
+        for (auto* sem : m_image_semaphore)
+            vkDestroySemaphore(vk_device, sem, nullptr);
+    }
 
+    m_command_buffers.destroy();
     m_renderer.destroy_surface();
 
     if (m_window != nullptr)
@@ -319,15 +319,7 @@ void Window::setup_view()
 
 void Window::create_command_buffers()
 {
-    VkCommandBufferAllocateInfo alloc_info = {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-            .commandPool = m_renderer.vk_command_pool(),
-            .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-            .commandBufferCount = cmd_buf_count,
-    };
-    VK_TRY("vkAllocateCommandBuffers",
-            vkAllocateCommandBuffers(m_renderer.vk_device(), &alloc_info,
-                    m_command_buffers));
+    m_command_buffers.create(m_renderer.vk_command_pool(), cmd_buf_count);
 
     VkFenceCreateInfo fence_ci {
             .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
@@ -358,12 +350,7 @@ void Window::finish_draw()
 
     vkDeviceWaitIdle(m_renderer.vk_device());
 
-    for (auto & com_buf : m_command_buffers) {
-        if (com_buf != nullptr) {
-            VK_TRY("vkResetCommandBuffer",
-                    vkResetCommandBuffer(com_buf, 0));
-        }
-    }
+    m_command_buffers.reset();
 }
 
 
@@ -412,12 +399,7 @@ void Window::draw()
                 vkResetFences(m_renderer.vk_device(),
                         1, &m_cmd_buf_fences[m_current_cmd_buf]));
 
-        VkCommandBufferBeginInfo begin_info = {
-                .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-                .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-        };
-        VK_TRY("vkBeginCommandBuffer",
-                vkBeginCommandBuffer(cmd_buf, &begin_info));
+        m_command_buffers.begin(m_current_cmd_buf);
 
         VkClearValue clear_value = {.color = {{0.0f, 0.0f, 0.0f, 1.0f}}};
         VkRenderPassBeginInfo render_pass_info = {
@@ -439,7 +421,7 @@ void Window::draw()
 
         vkCmdEndRenderPass(cmd_buf);
 
-        VK_TRY("vkEndCommandBuffer", vkEndCommandBuffer(cmd_buf));
+        m_command_buffers.end(m_current_cmd_buf);
     }
 
     VkSemaphore wait_semaphores[] = {m_image_semaphore[m_current_cmd_buf]};
@@ -475,6 +457,7 @@ void Window::draw()
         log::error("vkQueuePresentKHR failed: {}", rc);
 
     m_current_cmd_buf = (m_current_cmd_buf + 1) % cmd_buf_count;
+    m_command_buffers.release_resources(m_current_cmd_buf);
     m_draw_finished = false;
 }
 

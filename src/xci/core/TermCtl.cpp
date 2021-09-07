@@ -36,8 +36,6 @@
     #include <term.h>
 #endif
 
-#include <fmt/format.h>
-
 #include <array>
 #include <cassert>
 
@@ -86,7 +84,9 @@ static constexpr auto request_cursor_position = CSI "6n";
 
 inline constexpr const char* xci_tparm(const char* seq) { return seq; }
 template<typename ...Args>
-inline std::string xci_tparm(const char* seq, Args... args) { return fmt::format(seq, args...); }
+inline std::string xci_tparm(const char* seq, Args... args) {
+    return fmt::format(fmt::runtime(seq), args...);
+}
 
 // Note that this cannot be implemented with variadic template,
 // because the arguments must not be evaluated unless is_initialized() is true

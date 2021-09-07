@@ -4,25 +4,21 @@
 // Copyright 2018 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
+#include "graphics/common.h"
+
 #include <xci/widgets/Theme.h>
 #include <xci/widgets/Button.h>
 #include <xci/widgets/Icon.h>
-#include <xci/text/Text.h>
-#include <xci/graphics/Window.h>
 #include <xci/core/Vfs.h>
 #include <xci/core/log.h>
 #include <xci/config.h>
 
-#include <fmt/ostream.h>
 #include <cstdlib>
 
 using namespace xci::widgets;
 using namespace xci::text;
-using namespace xci::graphics;
-using namespace xci::core;
-using namespace xci::core::log;
 
-int main()
+int main(int argc, const char* argv[])
 {
     Vfs vfs;
     if (!vfs.mount(XCI_SHARE))
@@ -30,7 +26,7 @@ int main()
 
     Renderer renderer {vfs};
     Window window {renderer};
-    window.create({800, 600}, "XCI widgets demo");
+    setup_window(window, "XCI widgets demo", argv);
 
     Theme theme(renderer);
     if (!theme.load_default())
@@ -84,11 +80,11 @@ int main()
 
     window.set_mouse_button_callback([&](View& view, const MouseBtnEvent& ev) {
         if (ev.action == Action::Press && ev.button == MouseButton::Left) {
-            debug("checkbox mouse {}", ev.pos - view.offset());
-            debug("checkbox bbox {}", checkbox.aabb());
+            log::debug("checkbox mouse {}", ev.pos - view.offset());
+            log::debug("checkbox bbox {}", checkbox.aabb());
             if (checkbox.contains(ev.pos - view.offset())) {
                 checkbox_state = !checkbox_state;
-                debug("checkbox state {}", checkbox_state);
+                log::debug("checkbox state {}", checkbox_state);
                 refresh_checkbox = true;
             }
         }

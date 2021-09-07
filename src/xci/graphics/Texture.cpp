@@ -1,13 +1,13 @@
 // Texture.cpp created on 2019-10-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019 Radek Brich
+// Copyright 2019–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Texture.h"
 #include "Renderer.h"
 #include "vulkan/VulkanError.h"
-#include "vulkan/CommandBuffer.h"
+#include "vulkan/CommandBuffers.h"
 #include <xci/core/log.h>
 #include <cassert>
 #include <cstring>
@@ -156,7 +156,8 @@ void Texture::update()
         return;
 
     TRACE("write pending regions to texture");
-    CommandBuffer cmd_buf(m_renderer);
+    CommandBuffers cmd_buf(m_renderer);
+    cmd_buf.create(m_renderer.vk_transient_command_pool(), 1);
     cmd_buf.begin();
 
     cmd_buf.transition_image_layout(m_image,
@@ -174,7 +175,7 @@ void Texture::update()
                 .layerCount = 1,
         };
         VkClearColorValue clear_color {};
-        vkCmdClearColorImage(cmd_buf.vk_command_buffer(),
+        vkCmdClearColorImage(cmd_buf.vk(),
                 m_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 &clear_color, 1, &range);
     }

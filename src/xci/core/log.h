@@ -1,16 +1,18 @@
 // log.h created on 2018-03-01 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_LOG_H
 #define XCI_CORE_LOG_H
 
 #include <xci/config.h>
+
+#include <fmt/format.h>
+
 #include <string_view>
 #include <filesystem>
-#include <fmt/format.h>
 
 namespace xci::core {
 
@@ -66,41 +68,43 @@ struct LastErrorPlaceholder {
     static std::string message(bool use_last_error, bool error_code);
 };
 
-template<typename ...Args>
-inline std::string format(const char *fmt, Args&&... args)
+template<typename F, typename ...Args>
+inline std::string format(F fmt, Args&&... args)
 {
-    return fmt::format(fmt, std::forward<Args>(args)...,
+    return fmt::format(fmt::runtime(std::forward<F>(fmt)), std::forward<Args>(args)...,
                        fmt::arg("m", LastErrorPlaceholder{}));
 }
 
-template<typename... Args>
-inline void message(Logger::Level lvl, const char *fmt, Args&&... args) {
-    Logger::default_instance().log(lvl, format(fmt, std::forward<Args>(args)...));
+template<typename F, typename... Args>
+inline void message(Logger::Level lvl, F fmt, Args&&... args) {
+    Logger::default_instance().log(lvl, format(std::forward<F>(fmt),
+            std::forward<Args>(args)...));
 }
 
-template<typename... Args>
-inline void trace(const char *fmt, Args&&... args) {
-    message(Logger::Level::Trace, fmt, std::forward<Args>(args)...);
+template<typename F, typename... Args>
+inline void trace(F fmt, Args&&... args) {
+    message(Logger::Level::Trace, std::forward<F>(fmt), std::forward<Args>(args)...);
 }
 
-template<typename... Args>
-inline void debug(const char *fmt, Args&&... args) {
-    message(Logger::Level::Debug, fmt, std::forward<Args>(args)...);
+template<typename F, typename... Args>
+inline void debug(F fmt, Args&&... args) {
+    message(Logger::Level::Debug, std::forward<F>(fmt), std::forward<Args>(args)...);
 }
 
-template<typename... Args>
-inline void info(const char *fmt, Args&&... args) {
-    message(Logger::Level::Info, fmt, std::forward<Args>(args)...);
+template<typename F, typename... Args>
+inline void info(F fmt, Args&&... args) {
+    message(Logger::Level::Info, std::forward<F>(fmt), std::forward<Args>(args)...);
 }
 
-template<typename... Args>
-inline void warning(const char *fmt, Args&&... args) {
-    message(Logger::Level::Warning, fmt, std::forward<Args>(args)...);
+template<typename F, typename... Args>
+inline void warning(F fmt, Args&&... args) {
+    message(Logger::Level::Warning, std::forward<F>(fmt), std::forward<Args>(args)...);
 }
 
-template<typename... Args>
-inline void error(const char *fmt, Args&&... args) {
-    message(Logger::Level::Error, fmt, std::forward<Args>(args)...);
+template<typename F, typename... Args>
+inline void error(F fmt, Args&&... args) {
+    message(Logger::Level::Error, std::forward<F>(fmt),
+            std::forward<Args>(args)...);
 }
 
 }  // namespace log

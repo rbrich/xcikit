@@ -8,11 +8,9 @@
 #include "Builtin.h"
 
 #include <utility>
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 namespace xci::script {
-
-using fmt::format;
 
 
 Interpreter::Interpreter(Compiler::Flags flags)
@@ -75,7 +73,7 @@ TypedValue Interpreter::eval(SourceId source_id, const InvokeCallback& cb)
 TypedValue Interpreter::eval(std::string input, const Interpreter::InvokeCallback& cb)
 {
     auto src_id = m_source_manager.add_source(
-            format("<input{}>", m_input_num),
+            fmt::format("<input{}>", m_input_num),
             std::move(input));
     return eval(src_id, cb);
 }

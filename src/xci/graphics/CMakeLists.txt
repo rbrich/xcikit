@@ -19,8 +19,10 @@ add_library(xci-graphics
     Texture.cpp
     View.cpp
     Window.cpp
-    vulkan/CommandBuffer.cpp
+    vulkan/CommandBuffers.cpp
+    vulkan/DescriptorPool.cpp
     vulkan/DeviceMemory.cpp
+    vulkan/Pipeline.cpp
 )
 add_library(xcikit::xci-graphics ALIAS xci-graphics)
 
@@ -35,8 +37,8 @@ target_link_libraries(xci-graphics
         ${CMAKE_DL_LIBS}
         Vulkan::Vulkan
     PRIVATE
-        range-v3::range-v3
         glfw
+        range-v3::range-v3
 )
 
 if (BUILD_FRAMEWORKS)

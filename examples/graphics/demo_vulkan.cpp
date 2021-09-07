@@ -4,8 +4,8 @@
 // Copyright 2019 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#include <xci/graphics/Renderer.h>
-#include <xci/graphics/Window.h>
+#include "common.h"
+
 #include <xci/graphics/Primitives.h>
 #include <xci/graphics/Shader.h>
 #include <xci/graphics/Texture.h>
@@ -14,9 +14,6 @@
 #include <xci/config.h>
 
 #include <cstdlib>
-
-using namespace xci::graphics;
-using namespace xci::core;
 
 
 void generate_checkerboard(Texture& texture)
@@ -42,7 +39,7 @@ void generate_checkerboard(Texture& texture)
 }
 
 
-int main()
+int main(int argc, const char* argv[])
 {
     Vfs vfs;
     if (!vfs.mount(XCI_SHARE))
@@ -50,7 +47,7 @@ int main()
 
     Renderer renderer(vfs);
     Window window {renderer};
-    window.create({800, 600}, "XCI Vulkan Demo");
+    setup_window(window, "XCI Vulkan Demo", argv);
 
     Shader shader {renderer};
     shader.load_from_file(

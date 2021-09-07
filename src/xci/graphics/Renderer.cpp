@@ -1,7 +1,7 @@
 // Renderer.cpp created on 2018-11-24 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Renderer.h"
@@ -14,7 +14,6 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
-#include <fmt/core.h>
 #include <range/v3/algorithm/any_of.hpp>
 #include <range/v3/view/enumerate.hpp>
 #include <range/v3/view/take.hpp>
@@ -29,7 +28,6 @@ using namespace xci::core;
 using ranges::cpp20::views::take;
 using ranges::views::enumerate;
 using ranges::cpp20::any_of;
-using fmt::format;
 using std::make_unique;
 
 
@@ -83,7 +81,7 @@ vulkan_debug_callback(
     (void) user_data;
     Logger::default_instance().log(
             vulkan_severity_to_log_level(severity),
-            format("VK ({}): {}",
+            fmt::format("VK ({}): {}",
                     vulkan_msg_type_to_cstr(msg_type), data->pMessage));
     return VK_FALSE;
 }
@@ -155,8 +153,8 @@ Renderer::Renderer(core::Vfs& vfs)
     VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = {};
     debugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
     debugCreateInfo.messageSeverity =
-            VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-            //VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+            //VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
             VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
             VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
     debugCreateInfo.messageType =
@@ -274,16 +272,59 @@ void Renderer::clear_shader_cache()
 }
 
 
+PipelineLayout& Renderer::get_pipeline_layout(const PipelineLayoutCreateInfo& ci)
+{
+    auto [it, added] = m_pipeline_layout.try_emplace(ci, *this, ci);
+    return it->second;
+}
+
+
+Pipeline& Renderer::get_pipeline(const PipelineCreateInfo& ci)
+{
+    auto [it, added] = m_pipeline.try_emplace(ci, *this, ci);
+    return it->second;
+}
+
+
+void Renderer::clear_pipeline_cache()
+{
+    m_pipeline_layout.clear();
+    m_pipeline.clear();
+}
+
+
+SharedDescriptorPool
+Renderer::get_descriptor_pool(uint32_t reserved_sets, DescriptorPoolSizes pool_sizes)
+{
+    auto [it, added] = m_descriptor_pool.try_emplace(std::move(pool_sizes));
+    auto& vec_of_pools = it->second;
+    for (auto& pool : vec_of_pools) {
+        if (pool.book_capacity(reserved_sets))
+            return SharedDescriptorPool(pool, reserved_sets);
+    }
+    // None of existing pools had enough capacity
+    auto& pool = vec_of_pools.emplace_back(*this);
+    pool.create(1000, std::move(pool_sizes));
+    if (pool.book_capacity(reserved_sets))
+        return SharedDescriptorPool(pool, reserved_sets);
+    // reserved_sets is > 1000
+    throw VulkanError("Can't reserve " + std::to_string(reserved_sets) + " descriptor sets.");
+}
+
+
 void Renderer::create_surface(GLFWwindow* window)
 {
     VK_TRY("glfwCreateWindowSurface",
             glfwCreateWindowSurface(m_instance, window, nullptr, &m_surface));
 
+    create_device();
+
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
-    m_extent = { uint32_t(width), uint32_t(height) };
 
-    create_device();
+    query_surface_capabilities(m_physical_device, { uint32_t(width), uint32_t(height) });
+    query_swapchain(m_physical_device);
+
     create_swapchain();
     create_renderpass();
     create_framebuffers();
@@ -296,6 +337,8 @@ void Renderer::destroy_surface()
         return;
 
     clear_shader_cache();
+    clear_pipeline_cache();
+    clear_descriptor_pool_cache();
     destroy_framebuffers();
     destroy_renderpass();
     destroy_swapchain();
@@ -332,10 +375,14 @@ void Renderer::create_device()
     if (device_count == 0)
         VK_THROW("vulkan: couldn't find any physical device");
 
-    // required device extensions
-    const char* const device_extensions[] = {
-            VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    // device extensions
+    const char* const required_device_extensions[] = {
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     };
+    const char* const additional_device_extensions[] = {
+            "VK_KHR_portability_subset",  // required if present on the device
+    };
+    std::vector<const char*> chosen_device_extensions;
 
     // queue family index - queried here, used later
     uint32_t graphics_queue_family = 0;
@@ -347,8 +394,10 @@ void Renderer::create_device()
         VkPhysicalDeviceFeatures device_features;
         vkGetPhysicalDeviceFeatures(device, &device_features);
 
-        // choose only the first adequate device
-        bool choose = m_physical_device == VK_NULL_HANDLE;
+        // Choose the first adequate device,
+        // or the one selected by set_device_id
+        bool choose = (m_physical_device == VK_NULL_HANDLE) && \
+            (m_device_id == 0 || m_device_id == device_props.deviceID);
 
         // check supported queue families
         if (choose) {
@@ -365,16 +414,34 @@ void Renderer::create_device()
             vkEnumerateDeviceExtensionProperties(device, nullptr, &ext_count, nullptr);
             std::vector<VkExtensionProperties> ext_props(ext_count);
             vkEnumerateDeviceExtensionProperties(device, nullptr, &ext_count, ext_props.data());
-            std::bitset<std::size(device_extensions)> has_exts;
+            std::bitset<std::size(required_device_extensions)> has_exts;
+            std::bitset<std::size(additional_device_extensions)> add_exts;
             for (const auto& ext : ext_props) {
-                for (size_t i = 0; i < std::size(device_extensions); i++) {
-                    if (std::strcmp(ext.extensionName, device_extensions[i]) == 0) {
+                for (size_t i = 0; i < std::size(required_device_extensions); i++) {
+                    if (std::strcmp(ext.extensionName, required_device_extensions[i]) == 0) {
                         has_exts.set(i);
+                        break;
+                    }
+                }
+
+                for (size_t i = 0; i < std::size(additional_device_extensions); i++) {
+                    if (std::strcmp(ext.extensionName, additional_device_extensions[i]) == 0) {
+                        add_exts.set(i);
                         break;
                     }
                 }
             }
             choose = has_exts.all();
+            if (choose) {
+                chosen_device_extensions.reserve(
+                        std::size(required_device_extensions) + std::size(additional_device_extensions));
+                std::copy(std::begin(required_device_extensions), std::end(required_device_extensions),
+                          std::back_inserter(chosen_device_extensions));
+                for (size_t i = 0; i < std::size(additional_device_extensions); i++) {
+                    if (add_exts[i])
+                        chosen_device_extensions.push_back(additional_device_extensions[i]);
+                }
+            }
         }
 
         // check swapchain
@@ -387,10 +454,19 @@ void Renderer::create_device()
             m_physical_device = device;
         }
 
+        if (m_device_id == device_props.deviceID && !choose) {
+            log::error("Chosen device ID not usable: {}", m_device_id);
+            throw VulkanError("Chosen device ID not usable");
+        }
+
         log::info("({}) {}: {} (api {})",
                 choose ? '*' : ' ',
                 device_props.deviceID,
                 device_props.deviceName, device_props.apiVersion);
+    }
+
+    if (!m_physical_device) {
+        throw VulkanError("Did not found an usable device");
     }
 
     // create VkDevice
@@ -413,8 +489,8 @@ void Renderer::create_device()
 //                .enabledLayerCount = (uint32_t) enabled_layers.size(),
 //                .ppEnabledLayerNames = enabled_layers.data(),
 //#endif
-                .enabledExtensionCount = std::size(device_extensions),
-                .ppEnabledExtensionNames = device_extensions,
+                .enabledExtensionCount = (uint32_t) chosen_device_extensions.size(),
+                .ppEnabledExtensionNames = chosen_device_extensions.data(),
                 .pEnabledFeatures = &device_features,
         };
 
@@ -452,6 +528,8 @@ void Renderer::create_device()
 
 void Renderer::destroy_device()
 {
+    if (m_device == VK_NULL_HANDLE)
+        return;
     vkDestroyCommandPool(m_device, m_command_pool, nullptr);
     vkDestroyCommandPool(m_device, m_transient_command_pool, nullptr);
     vkDestroyDevice(m_device, nullptr);
@@ -514,10 +592,12 @@ void Renderer::create_swapchain()
 
 void Renderer::destroy_swapchain()
 {
-    for (auto image_view : m_image_views | take(m_image_count)) {
-        vkDestroyImageView(m_device, image_view, nullptr);
+    if (m_device != VK_NULL_HANDLE) {
+        for (auto image_view : m_image_views | take(m_image_count)) {
+            vkDestroyImageView(m_device, image_view, nullptr);
+        }
+        vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
     }
-    vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
 }
 
 
@@ -574,7 +654,8 @@ void Renderer::create_renderpass()
 
 void Renderer::destroy_renderpass()
 {
-    vkDestroyRenderPass(m_device, m_render_pass, nullptr);
+    if (m_device != VK_NULL_HANDLE)
+        vkDestroyRenderPass(m_device, m_render_pass, nullptr);
 }
 
 
@@ -634,7 +715,7 @@ Renderer::query_queue_families(VkPhysicalDevice device)
 }
 
 
-void Renderer::query_surface_capabilities(VkPhysicalDevice device, VkExtent2D fb_size)
+void Renderer::query_surface_capabilities(VkPhysicalDevice device, VkExtent2D new_size)
 {
     VkSurfaceCapabilitiesKHR capabilities;
     VK_TRY("vkGetPhysicalDeviceSurfaceCapabilitiesKHR",
@@ -643,8 +724,8 @@ void Renderer::query_surface_capabilities(VkPhysicalDevice device, VkExtent2D fb
 
     if (capabilities.currentExtent.width != UINT32_MAX)
         m_extent = capabilities.currentExtent;
-    else if (fb_size.width != UINT32_MAX)
-        m_extent = fb_size;
+    else if (new_size.width != UINT32_MAX)
+        m_extent = new_size;
 
     m_extent.width = std::clamp(m_extent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
     m_extent.height = std::clamp(m_extent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
