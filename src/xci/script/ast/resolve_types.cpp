@@ -1134,10 +1134,8 @@ private:
     Match match_params(const Signature& signature) const
     {
         auto sig = std::make_unique<Signature>(signature);
-        int i = 0;
         Match res = Match::Partial;
         for (const auto& arg : m_call_args) {
-            i += 1;
             // check there are more params to consume
             while (sig->params.empty()) {
                 if (sig->return_type.type() == Type::Function) {

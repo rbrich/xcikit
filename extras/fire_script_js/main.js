@@ -28,8 +28,9 @@ term.write("Loading...\n");
 fire_script().then(Module => {
     term.write("\r\x1b[A\x1b[2J");  // clear viewport
     const url_args = new URLSearchParams(window.location.search);
-    const debug = Boolean(parseInt(url_args.get('debug')));
-    const prog = new Module.FireScript(debug);
+    const a_debug = Boolean(parseInt(url_args.get('debug')));
+    const a_input = url_args.get('input');
+    const prog = new Module.FireScript(a_debug);
     prog.set_term_out_cb(data => term.write(data));
     prog.set_quit_cb(function() {
         // try to actually quit, it may work in some circumstances
@@ -39,5 +40,8 @@ fire_script().then(Module => {
     });
     prog.repl_init();
     prog.repl_prompt();
+    if (a_input) {
+        prog.repl_step(a_input);
+    }
     term.onData(data => prog.repl_step(data));
 });

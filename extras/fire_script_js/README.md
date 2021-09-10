@@ -75,3 +75,4 @@ gzip -k9 -r *
 ## URL parameters
 
 * `debug=1` Enable debug logging.
+* `input=<line>` Feed this input to Fire script. Can contain a newline (`%0a`) to immediately execute the code.
