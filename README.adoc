@@ -353,7 +353,7 @@ Create a https://docs.conan.io/en/latest/integrations/cross_platform/emscripten.
 os=Emscripten
 arch=wasm
 compiler=clang
-compiler.version=11
+compiler.version=14
 compiler.libcxx=libc++
 build_type=Release
 [options]
@@ -361,6 +361,8 @@ build_type=Release
 [env]
 # Find actual path Emscripten installation (or check CMake command line, when called with emcmake)
 CONAN_CMAKE_TOOLCHAIN_FILE=.../cmake/Modules/Platform/Emscripten.cmake
+CXXFLAGS=-flto=thin
+LDFLAGS=-flto=thin
 ----
 
 See a working example of such profile in the link:docker/emscripten/conan/profile[docker/emscripten] directory.
