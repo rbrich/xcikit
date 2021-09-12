@@ -1,8 +1,4 @@
 from conans import ConanFile, CMake, tools
-import tempfile
-import textwrap
-import io
-import os
 
 
 class XcikitConan(ConanFile):
@@ -27,6 +23,17 @@ class XcikitConan(ConanFile):
         "examples": [True, False],
         "tests": [True, False],
         "benchmarks": [True, False],
+        # System dependencies (instead of Conan):
+        "system_zlib": [True, False],
+        "system_glfw": [True, False],
+        "system_vulkan": [True, False],
+        "system_freetype": [True, False],
+        "system_hyperscan": [True, False],
+        "system_boost": [True, False],
+        "system_range_v3": [True, False],
+        "system_catch2": [True, False],
+        "system_benchmark": [True, False],
+        "system_pegtl": [True, False],
     }
     default_options = {
         "shared": False,
@@ -39,6 +46,16 @@ class XcikitConan(ConanFile):
         "examples": True,
         "tests": True,
         "benchmarks": True,
+        "system_zlib": False,
+        "system_glfw": False,
+        "system_vulkan": False,
+        "system_freetype": False,
+        "system_hyperscan": True,  # it's only for optional ff tool and it would bring tons of deps if installed via Conan
+        "system_boost": False,
+        "system_range_v3": False,
+        "system_catch2": False,
+        "system_benchmark": False,
+        "system_pegtl": False,
     }
     requires = (
         'fmt/8.0.1',
@@ -46,17 +63,8 @@ class XcikitConan(ConanFile):
     build_requires = (
         'magic_enum/0.7.2',
     )
-    build_requires_or_preinstalled = (
-        # <CMake name>, <min ver>,  <Conan reference>       <option>
-        ('Boost',       '1.75.0',   'pfr/2.0.2',            'data'),
-        ('range-v3',    '0.10.0',   'range-v3/0.11.0',      None),
-        ('Catch2',      '',         'catch2/2.13.6',        'tests'),
-        ('benchmark',   '',         'benchmark/1.5.2',      'benchmarks'),
-        ('pegtl',       '3.1.0',    'taocpp-pegtl/3.1.0',   None),
-        ('glfw3',       '3.3.0',    'glfw/3.3.2',           'graphics'),
-    )
-    generators = ("cmake_paths", "cmake_find_package")
-    exports = "VERSION"
+
+    exports = ("VERSION", "requirements.csv")
     exports_sources = ("bootstrap.sh", "CMakeLists.txt", "config.h.in", "xcikitConfig.cmake.in",
                        "cmake/**", "src/**", "examples/**", "tests/**", "benchmarks/**", "tools/**",
                        "share/**", "third_party/**")
@@ -68,52 +76,39 @@ class XcikitConan(ConanFile):
     def _on_off(flag):
         return 'ON' if flag else 'OFF'
 
-    def _check_option(self, opt):
-        """ Check <option> field from `build_requires_or_preinstalled`"""
-        return opt is None or self.options.get_safe(opt)
+    def _check_option(self, prereq, system=None):
+        """ Check <prereq. option> and <system option> fields from `requirements.csv`"""
+        return (
+            (not prereq or self.options.get_safe(prereq)) and  # check prerequisite
+            (not system or not self.options.get_safe(system))  # not using system lib
+        )
 
-    def _check_preinstalled(self):
-        self.output.info(f'Checking for preinstalled dependencies...')
-        items = ';'.join(f"{name}/{ver}" for name, ver, _, opt
-                         in self.build_requires_or_preinstalled
-                         if self._check_option(opt))
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            with tools.chdir(tmp_dir):
-                with open("CMakeLists.txt", 'w') as f:
-                    f.write(textwrap.dedent("""
-                        cmake_minimum_required(VERSION 3.13)
-                        project(SystemPackageFinder CXX)
-                        list(APPEND CMAKE_MODULE_PATH """ + os.path.dirname(__file__) + """/cmake)
-                        foreach (ITEM IN LISTS DEPS)
-                            string(REPLACE "/" ";" ITEM ${ITEM})
-                            list(GET ITEM 0 NAME)
-                            list(GET ITEM 1 VERSION)
-                            find_package(${NAME} ${VERSION})
-                            if (${NAME}_FOUND)
-                                message("FOUND ${NAME} ${${NAME}_VERSION}")
-                            endif()
-                        endforeach()
-                    """))
-                out = io.StringIO()
-                if self.run(f"cmake . -G Ninja -DDEPS='{items}'",
-                            output=out, ignore_errors=True) != 0:
-                    self.output.error(f'Failed:\n{out.getvalue()}')
-                    return
-                for line in out.getvalue().splitlines():
-                    if line.startswith('FOUND '):
-                        _, name, version = line.split(' ')
-                        self.output.success(f"Found: {name} {version}")
-                        yield name
+    def config_options(self):
+        for _, _, _, _, prereq, system in self._requirements_csv():
+            if not self._check_option(prereq):
+                self.options.remove(system)
 
-    def build_requirements(self):
-        preinstalled = list(self._check_preinstalled())
-        for name, _, ref, opt in self.build_requires_or_preinstalled:
-            if self._check_option(opt) and name not in preinstalled:
-                self.build_requires(ref)
+    def _requirements_csv(self):
+        import csv
+        from pathlib import Path
+        script_dir = Path(__file__).parent
+        with open(script_dir.joinpath('requirements.csv'), newline='') as csvfile:
+            reader = csv.reader(csvfile, delimiter=',', quotechar='"')
+            for row in reader:
+                if row[0].strip()[0] in '<#':
+                    continue  # header or comment
+                row = [x.strip() for x in row]
+                yield row
 
     def requirements(self):
-        if self.settings.os == "Windows":
-            self.requires("zlib/1.2.11")
+        for br, _, _, ref, prereq, system in self._requirements_csv():
+            if br == 'run' and self._check_option(prereq, system):
+                self.requires(ref)
+
+    def build_requirements(self):
+        for br, _, _, ref, prereq, system in self._requirements_csv():
+            if br == 'build' and self._check_option(prereq, system):
+                self.build_requires(ref)
 
     def _configure_cmake(self):
         if not self._cmake:

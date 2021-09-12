@@ -11,6 +11,7 @@ EMSCRIPTEN=0
 JOBS_ARGS=()
 CMAKE_ARGS=()
 CONAN_ARGS=()
+DETECT_ARGS=(tools examples tests benchmarks)
 CSI=$'\x1b['
 
 print_usage()
@@ -169,8 +170,11 @@ if [[ -z "$component_default" && -z "$component_all" ]]; then
         else
             CMAKE_ARGS+=(-D "XCI_${name_upper}=ON")
             CONAN_ARGS+=(-o "xcikit:${name}=True")
+            DETECT_ARGS+=("${name}")
         fi
     done
+else
+    DETECT_ARGS+=(data script graphics text widgets)
 fi
 
 CMAKE_ARGS+=(-D"XCI_INSTALL_DEVEL=${INSTALL_DEVEL}")
@@ -203,6 +207,13 @@ if phase deps; then
     fi
     (
         cd "${BUILD_DIR}"
+
+        if [[ ! -f 'system_deps.txt' ]] ; then
+            echo 'Checking for preinstalled dependencies...'
+            "${ROOT_DIR}/detect_system_deps.py" "${DETECT_ARGS[@]}" | tee 'system_deps.txt'
+        fi
+        CONAN_ARGS+=($(tail -n1 'system_deps.txt'))
+
         conan install "${ROOT_DIR}" \
             --build missing \
             -s "build_type=${BUILD_TYPE}" \
