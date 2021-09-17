@@ -14,6 +14,8 @@ CONAN_ARGS=()
 DETECT_ARGS=(tools examples tests benchmarks)
 CSI=$'\x1b['
 
+run() { echo "➤➤➤ $@"; "$@"; }
+
 print_usage()
 {
     echo "Usage: ./build.sh [PHASE, ...] [COMPONENT, ...] [-G CMAKE_GENERATOR] [-j JOBS] [-D CMAKE_DEF, ...]"
@@ -122,7 +124,7 @@ while [[ $# -gt 0 ]] ; do
             INSTALL_DIR="$2"
             shift 2 ;;
         -pr | --profile )
-            CONAN_ARGS+=('--profile' "$2")
+            CONAN_ARGS+=("-pr=$2" "-pr:b=$2")
             shift 2 ;;
         --toolchain )
             CMAKE_ARGS+=(-D"CMAKE_TOOLCHAIN_FILE=$2")
@@ -214,7 +216,7 @@ if phase deps; then
         fi
         CONAN_ARGS+=($(tail -n1 'system_deps.txt'))
 
-        conan install "${ROOT_DIR}" \
+        run conan install "${ROOT_DIR}" \
             --build missing \
             -s "build_type=${BUILD_TYPE}" \
             "${CONAN_ARGS[@]}"
@@ -228,7 +230,8 @@ if phase config; then
         WRAPPER=
         [[ "$EMSCRIPTEN" -eq 1 ]] && WRAPPER=emcmake
         cd "${BUILD_DIR}"
-        XCI_CMAKE_COLORS=1 ${WRAPPER} cmake "${ROOT_DIR}" \
+        CMAKE_ARGS+=($(tail -n2 'system_deps.txt' | head -n1))
+        XCI_CMAKE_COLORS=1 run ${WRAPPER} cmake "${ROOT_DIR}" \
             "${CMAKE_ARGS[@]}" \
             -D"CMAKE_BUILD_TYPE=${BUILD_TYPE}" \
             -D"CMAKE_INSTALL_PREFIX=${INSTALL_DIR}" \

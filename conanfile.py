@@ -12,23 +12,26 @@ class XcikitConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     options = {
         "shared": [True, False],
-        # Optional components:
+        ### Optional components:
         "data": [True, False],
         "script": [True, False],
         "graphics": [True, False],
         "text": [True, False],
         "widgets": [True, False],
-        # Also build and install:
+        ### Also build and install:
         "tools": [True, False],
         "examples": [True, False],
         "tests": [True, False],
         "benchmarks": [True, False],
-        # System dependencies (instead of Conan):
+        ### System dependencies (instead of Conan):
         "system_zlib": [True, False],
         "system_glfw": [True, False],
         "system_vulkan": [True, False],
         "system_freetype": [True, False],
-        "system_hyperscan": [True, False],
+        # Hyperscan is never installed via Conan, because it would bring ton of deps
+        # and it's only needed for optional ff tool.
+        # This option enables using system-installed Hyperscan.
+        "with_hyperscan": [True, False],
         "system_boost": [True, False],
         "system_range_v3": [True, False],
         "system_catch2": [True, False],
@@ -50,7 +53,7 @@ class XcikitConan(ConanFile):
         "system_glfw": False,
         "system_vulkan": False,
         "system_freetype": False,
-        "system_hyperscan": True,  # it's only for optional ff tool and it would bring tons of deps if installed via Conan
+        "with_hyperscan": False,
         "system_boost": False,
         "system_range_v3": False,
         "system_catch2": False,
@@ -76,11 +79,11 @@ class XcikitConan(ConanFile):
     def _on_off(flag):
         return 'ON' if flag else 'OFF'
 
-    def _check_option(self, prereq, system=None):
+    def _check_option(self, prereq, option=None):
         """ Check <prereq. option> and <system option> fields from `requirements.csv`"""
         return (
             (not prereq or self.options.get_safe(prereq)) and  # check prerequisite
-            (not system or not self.options.get_safe(system))  # not using system lib
+            (not option or not self.options.get_safe(option))  # not using system lib
         )
 
     def config_options(self):
@@ -102,12 +105,12 @@ class XcikitConan(ConanFile):
 
     def requirements(self):
         for br, _, _, ref, prereq, system in self._requirements_csv():
-            if br == 'run' and self._check_option(prereq, system):
+            if ref and br == 'run' and self._check_option(prereq, system):
                 self.requires(ref)
 
     def build_requirements(self):
         for br, _, _, ref, prereq, system in self._requirements_csv():
-            if br == 'build' and self._check_option(prereq, system):
+            if ref and br == 'build' and self._check_option(prereq, system):
                 self.build_requires(ref)
 
     def _configure_cmake(self):
@@ -124,6 +127,7 @@ class XcikitConan(ConanFile):
             self._cmake.definitions["XCI_BUILD_EXAMPLES"] = self._on_off(self.options.examples)
             self._cmake.definitions["XCI_BUILD_TESTS"] = self._on_off(self.options.tests)
             self._cmake.definitions["XCI_BUILD_BENCHMARKS"] = self._on_off(self.options.benchmarks)
+            self._cmake.definitions["XCI_WITH_HYPERSCAN"] = self._on_off(self.options.with_hyperscan)
             self._cmake.configure()
         return self._cmake
 

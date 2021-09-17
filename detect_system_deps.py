@@ -84,7 +84,9 @@ def detect_deps(reqs):
 def main():
     options = parse_args()
     reqs = tuple(filtered_requirements(options))
-    print(' '.join(f'-o xcikit:{o}=True' for o in detect_deps(reqs)))
+    deps = tuple(detect_deps(reqs))
+    print(' '.join(f'-DXCI_{o.upper()}=ON' for o in deps if o.startswith('with_')))
+    print(' '.join(f'-o xcikit:{o}=True' for o in deps))
 
 
 if __name__ == '__main__':

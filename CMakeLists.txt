@@ -29,6 +29,7 @@ option(XCI_INSTALL_DEVEL "Install headers, CMake config, static libs." ON)
 # Dependencies
 option(XCI_WITH_TERMINFO "Link with TermInfo and use it for TTY control sequences." OFF)
 option(XCI_WITH_ZIP "Link xci-core with libzip and use it for ZIP format in VFS." OFF)
+option(XCI_WITH_HYPERSCAN "Hyperscan library is required to build ff tool." OFF)
 
 # negate it for use as option() initial value
 if (EMSCRIPTEN)
@@ -59,13 +60,12 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(XciBuildOptions)
+include(ConanInit)
 
 
 # ------------ #
 # Dependencies #
 # ------------ #
-
-include(ConanInit)
 
 add_subdirectory(third_party)
 
@@ -201,7 +201,7 @@ endif()
 # ------------ #
 
 if (XCI_BUILD_TOOLS)
-    if (NOT WIN32)
+    if (XCI_WITH_HYPERSCAN)
         add_subdirectory(tools/find_file)
     endif()
     if (XCI_SCRIPT)
