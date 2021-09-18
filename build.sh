@@ -15,7 +15,7 @@ CONAN_PROFILE=${CONAN_DEFAULT_PROFILE_PATH:-default}
 DETECT_ARGS=(tools examples tests benchmarks)
 CSI=$'\x1b['
 
-run() { echo "➤➤➤ $@"; "$@"; }
+run() { echo "➤➤➤ $*"; "$@"; }
 
 print_usage()
 {
@@ -224,6 +224,7 @@ if phase deps; then
                 echo 'Checking for preinstalled dependencies...'
                 "${PYTHON}" "${ROOT_DIR}/detect_system_deps.py" "${DETECT_ARGS[@]}" | tee 'system_deps.txt'
             fi
+            # shellcheck disable=SC2207
             CONAN_ARGS+=($(tail -n1 'system_deps.txt'))
         fi
 
@@ -241,6 +242,7 @@ if phase config; then
         WRAPPER=
         [[ "$EMSCRIPTEN" -eq 1 ]] && WRAPPER=emcmake
         cd "${BUILD_DIR}"
+        # shellcheck disable=SC2207
         [[ "$EMSCRIPTEN" -eq 0 ]] && CMAKE_ARGS+=($(tail -n2 'system_deps.txt' | head -n1))
         XCI_CMAKE_COLORS=1 run ${WRAPPER} cmake "${ROOT_DIR}" \
             "${CMAKE_ARGS[@]}" \
