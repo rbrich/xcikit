@@ -11,6 +11,7 @@ EMSCRIPTEN=0
 JOBS_ARGS=()
 CMAKE_ARGS=()
 CONAN_ARGS=()
+CONAN_PROFILE=${CONAN_DEFAULT_PROFILE_PATH:-default}
 DETECT_ARGS=(tools examples tests benchmarks)
 CSI=$'\x1b['
 
@@ -124,7 +125,7 @@ while [[ $# -gt 0 ]] ; do
             INSTALL_DIR="$2"
             shift 2 ;;
         -pr | --profile )
-            CONAN_ARGS+=("-pr=$2" "-pr:b=$2")
+            CONAN_PROFILE="$2"
             shift 2 ;;
         --toolchain )
             CMAKE_ARGS+=(-D"CMAKE_TOOLCHAIN_FILE=$2")
@@ -161,6 +162,7 @@ PACKAGE_OUTPUT_DIR="${ROOT_DIR}/artifacts"
 PACKAGE_FILENAME="xcikit-${VERSION}-${PLATFORM}-${ARCH}"
 [[ ${BUILD_TYPE} != "Release" ]] && PACKAGE_FILENAME="${PACKAGE_FILENAME}-${BUILD_TYPE}"
 
+CONAN_ARGS+=("-pr=$CONAN_PROFILE" "-pr:b=$CONAN_PROFILE")
 if [[ -z "$component_default" && -z "$component_all" ]]; then
     # Disable components that were not selected
     for name in data script graphics text widgets ; do
