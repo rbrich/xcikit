@@ -42,7 +42,7 @@ target_link_libraries(xci-graphics
         Vulkan::Vulkan
     PRIVATE
         glfw::glfw
-        range-v3::range-v3
+        range-v3::concepts
 )
 add_dependencies(xci-graphics shaders)
 

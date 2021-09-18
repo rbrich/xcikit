@@ -61,6 +61,11 @@ class XcikitConan(ConanFile):
         "system_catch2": False,
         "system_benchmark": False,
         "system_pegtl": False,
+
+        "freetype:with_png": False,
+        "freetype:with_zlib": False,
+        "freetype:with_bzip2": False,
+        "freetype:with_brotli": False,
     }
     requires = (
         'fmt/8.0.1',

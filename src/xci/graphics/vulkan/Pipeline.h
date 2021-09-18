@@ -53,7 +53,7 @@ public:
 private:
     std::array<uint32_t, 8> m_uniform_bindings;
     uint32_t m_uniform_binding_count = 0;
-    uint32_t m_texture_binding = -1u;
+    uint32_t m_texture_binding = uint32_t(-1);
 };
 
 

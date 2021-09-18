@@ -19,17 +19,20 @@ class Renderer;
 
 
 class DescriptorPoolSizes {
+    using PoolSizes = std::array<VkDescriptorPoolSize, 10>;
+
 public:
     void add(VkDescriptorType type, uint32_t count);
 
-    using const_iterator = const VkDescriptorPoolSize *;
+    using const_iterator = PoolSizes::const_iterator;
     const_iterator begin() const { return m_pool_sizes.begin(); }
     const_iterator end() const { return m_pool_sizes.begin() + m_count; }
 
-    using iterator = VkDescriptorPoolSize *;
+    using iterator = PoolSizes::iterator;
     iterator begin() { return m_pool_sizes.begin(); }
     iterator end() { return m_pool_sizes.begin() + m_count; }
 
+    const VkDescriptorPoolSize* data() const { return m_pool_sizes.data(); }
     uint32_t size() const { return m_count; }
 
     size_t hash() const;
@@ -37,7 +40,7 @@ public:
     bool operator==(const DescriptorPoolSizes& rhs) const;
 
 private:
-    std::array<VkDescriptorPoolSize, 10> m_pool_sizes;
+    PoolSizes m_pool_sizes;
     uint32_t m_count = 0;
 };
 

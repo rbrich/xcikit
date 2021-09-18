@@ -154,7 +154,7 @@ bool Markup::parse(const std::string &s)
 
     try {
         return tao::pegtl::parse< Grammar, Action, Control >( in, *this );
-    } catch (tao::pegtl::parse_error& error) {
+    } catch (tao::pegtl::parse_error&) {
         return false;
     }
 }

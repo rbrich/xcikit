@@ -61,7 +61,7 @@ int main(int argc, const char* argv[])
 
     ViewScale view_scale = ViewScale::ScalingWithAspectCorrection;
     ViewOrigin view_origin = ViewOrigin::Center;
-    ViewportUnits font_size = 0.05;
+    ViewportUnits font_size = 0.05f;
 
     window.set_size_callback([&](View& view) {
         auto vs = view.viewport_size();
@@ -161,14 +161,14 @@ int main(int argc, const char* argv[])
         switch (ev.key) {
             case Key::S:
                 view_scale = ViewScale::ScalingWithAspectCorrection;
-                font_size = 0.05;
+                font_size = 0.05f;
                 window.set_view_mode(view_origin, view_scale);
                 window.size_callback()(view);
                 view.refresh();
                 break;
             case Key::F:
                 view_scale = ViewScale::FixedScreenPixels;
-                font_size = 15.0;
+                font_size = 15.0f;
                 window.set_view_mode(view_origin, view_scale);
                 window.size_callback()(view);
                 view.refresh();

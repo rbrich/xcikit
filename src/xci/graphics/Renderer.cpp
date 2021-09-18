@@ -18,9 +18,10 @@
 #include <range/v3/view/enumerate.hpp>
 #include <range/v3/view/take.hpp>
 #include <memory>
-#include <cstring>
 #include <bitset>
 #include <array>
+#include <cstring>
+#include <cassert>
 
 namespace xci::graphics {
 
@@ -181,7 +182,7 @@ Renderer::Renderer(core::Vfs& vfs)
                  props.extensionName, props.specVersion);
     }
 
-    instance_create_info.enabledExtensionCount = extensions.size();
+    instance_create_info.enabledExtensionCount = (uint32_t) extensions.size();
     instance_create_info.ppEnabledExtensionNames = extensions.data();
 
     VK_TRY("vkCreateInstance",

@@ -318,12 +318,13 @@ Run the build with the toolchain:
 === Porting to Windows
 
 The project is not yet fully ported to Windows.
-The essential parts should already work, though:
+Although the essential parts should already work:
 
 * dependencies via Conan
 * build scripts (using git-bash)
 * CMake configuration and build
 * core and script libraries + demos
+* graphics: demo_coords
 
 How to build:
 

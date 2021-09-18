@@ -45,7 +45,7 @@ value_from_cstr(const char* s, T& value)
     long l = strtol(s, &end, 0);
     if (*end != '\0')
         return false;  // not fully parsed
-    if (errno == ERANGE || l > std::numeric_limits<T>::max() || l < std::numeric_limits<T>::min())
+    if (errno == ERANGE || l > (long) std::numeric_limits<T>::max() || l < (long) std::numeric_limits<T>::min())
         return false;  // out of range
     value = static_cast<T>(l);
     return true;

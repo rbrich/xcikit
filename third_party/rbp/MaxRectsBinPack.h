@@ -1,5 +1,5 @@
 /** @file MaxRectsBinPack.h
-	@author Jukka Jyl‰nki
+    @author Jukka Jyl√§nki
 
 	@brief Implements different bin packer algorithms that use the MAXRECTS data structure.
 
@@ -13,7 +13,7 @@
 
 namespace rbp {
 
-/** MaxRectsBinPack implements the MAXRECTS data structure and different bin packing algorithms that 
+/** MaxRectsBinPack implements the MAXRECTS data structure and different bin packing algorithms that
 	use this structure. */
 class MaxRectsBinPack
 {

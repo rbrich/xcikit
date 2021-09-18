@@ -14,8 +14,11 @@
 
 #include <string>
 #include <memory>
+#include <filesystem>
 
 namespace xci::graphics {
+
+namespace fs = std::filesystem;
 
 class Renderer;
 
@@ -50,8 +53,7 @@ public:
     bool load_from_vfs(const core::Vfs& vfs, const std::string& vertex, const std::string& fragment);
 
     /// Load program from a file (possibly adding a file watch for auto-reload)
-    bool load_from_file(
-            const std::string& vertex, const std::string& fragment);
+    bool load_from_file(const fs::path& vertex, const fs::path& fragment);
 
     /// Load program directly from memory
     /// Note that the memory MUST be aligned to at least 4 bytes.

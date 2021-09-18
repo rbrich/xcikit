@@ -10,6 +10,7 @@
 #include <xci/compat/macros.h>
 
 #include <cassert>
+#include <bit>
 
 namespace xci::graphics {
 
@@ -24,7 +25,7 @@ void PipelineLayoutCreateInfo::add_uniform_binding(uint32_t binding)
 
 void PipelineLayoutCreateInfo::add_texture_binding(uint32_t binding)
 {
-    assert(m_texture_binding == -1u);
+    assert(m_texture_binding == uint32_t(-1));
     m_texture_binding = binding;
 }
 
@@ -54,7 +55,7 @@ std::vector<VkDescriptorSetLayoutBinding> PipelineLayoutCreateInfo::vk_layout_bi
     }
 
     // texture
-    if (m_texture_binding != -1u) {
+    if (m_texture_binding != uint32_t(-1)) {
         layout_bindings.push_back({
                 .binding = m_texture_binding,
                 .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -78,7 +79,7 @@ DescriptorPoolSizes PipelineLayoutCreateInfo::descriptor_pool_sizes() const
     sizes.add(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_uniform_binding_count);
 
     // texture
-    if (m_texture_binding != -1u)
+    if (m_texture_binding != uint32_t(-1))
         sizes.add(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1);
 
     return sizes;
@@ -91,7 +92,7 @@ size_t PipelineLayoutCreateInfo::hash() const
     for (unsigned i = 0; i != m_uniform_binding_count; ++i) {
         h = std::rotl(h, 1) ^ m_uniform_bindings[i];
     }
-    if (m_texture_binding != -1u)
+    if (m_texture_binding != uint32_t(-1))
         h = std::rotl(h, 1) ^ m_texture_binding;
     return h;
 }
