@@ -1,4 +1,5 @@
 :sectnums:
+:idprefix:
 :toc: macro
 ifdef::env-github[]
 :!toc-title:
