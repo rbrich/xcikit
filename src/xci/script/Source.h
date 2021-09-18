@@ -33,9 +33,9 @@ struct SourceLocation {
         // in.source() is SourceRef (see below)
         source_manager = &in.source().source_manager;
         source_id = in.source().source_id;
-        line = pos.line;
-        column = pos.column;
-        offset = pos.byte;
+        line = (unsigned) pos.line;
+        column = (unsigned) pos.column;
+        offset = (unsigned) pos.byte;
     }
 
     std::string_view source_name() const;

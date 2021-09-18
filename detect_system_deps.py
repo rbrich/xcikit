@@ -43,16 +43,19 @@ def filtered_requirements(options):
 def detect_deps(reqs):
     import tempfile
     import textwrap
-    from subprocess import run
+    from subprocess import run, DEVNULL
 
     name_to_sysopt = {name: opt for _, name, _, _, _, opt in reqs}
 
     items = ';'.join(f"{name}/{ver}" for _, name, ver, _, _, _ in reqs)
     with tempfile.TemporaryDirectory() as tmp_dir:
+        # Convert the path to posix (forward slashes) even on Windows.
+        # Paths with backslashes are not supported by CMake.
+        custom_modules = '"' + str(script_dir.joinpath('cmake').as_posix()) + '"'
         cml = textwrap.dedent("""
                     cmake_minimum_required(VERSION 3.13)
                     project(SystemPackageFinder CXX)
-                    list(APPEND CMAKE_MODULE_PATH """ + str(script_dir.joinpath('cmake')) + """)
+                    list(APPEND CMAKE_MODULE_PATH """ + custom_modules + """)
                     foreach (ITEM IN LISTS DEPS)
                         string(REPLACE "/" ";" ITEM ${ITEM})
                         list(GET ITEM 0 NAME)
@@ -66,7 +69,12 @@ def detect_deps(reqs):
         debug(cml)
         with open(tmp_dir + "/CMakeLists.txt", 'w') as f:
             f.write(cml)
-        cmd = f"cmake . -G Ninja -DDEPS='{items}'"
+        # Prefer ninja if available. Needed to allow choose, otherwise `make`
+        # would be required on unixes, as it's the default in cmake.
+        ninja = ""
+        if run("command -v ninja", shell=True, stdout=DEVNULL, stderr=DEVNULL).returncode == 0:
+            ninja = "-G Ninja"
+        cmd = f"cmake . {ninja} -DDEPS='{items}'"
         debug(cmd)
         p = run(cmd, shell=True,
                 capture_output=True, encoding='UTF-8', cwd=tmp_dir)

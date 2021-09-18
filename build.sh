@@ -188,12 +188,19 @@ if [[ -t 1 && "${GENERATOR}" = "Ninja" ]]; then
     CMAKE_ARGS+=(-D'FORCE_COLORS=1')
 fi
 
+if [[ -z "$PYTHON" ]] ; then
+    for name in py python3 ; do
+        if command -v $name >/dev/null ; then PYTHON=$name; break; fi
+    done
+fi
+
 echo "CONAN_ARGS:   ${CONAN_ARGS[*]}"
 echo "CMAKE_ARGS:   ${CMAKE_ARGS[*]}"
 echo "BUILD_CONFIG: ${BUILD_CONFIG}"
 echo "BUILD_DIR:    ${BUILD_DIR}"
 echo "INSTALL_DIR:  ${INSTALL_DIR}"
 phase package && echo "PACKAGE_NAME: ${PACKAGE_NAME}"
+echo "PYTHON:       ${PYTHON}"
 echo
 
 if phase clean; then
@@ -215,7 +222,7 @@ if phase deps; then
         if [[ "$EMSCRIPTEN" -eq 0 ]]; then
             if [[ ! -f 'system_deps.txt' ]] ; then
                 echo 'Checking for preinstalled dependencies...'
-                "${ROOT_DIR}/detect_system_deps.py" "${DETECT_ARGS[@]}" | tee 'system_deps.txt'
+                "${PYTHON}" "${ROOT_DIR}/detect_system_deps.py" "${DETECT_ARGS[@]}" | tee 'system_deps.txt'
             fi
             CONAN_ARGS+=($(tail -n1 'system_deps.txt'))
         fi

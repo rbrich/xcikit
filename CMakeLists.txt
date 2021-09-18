@@ -65,6 +65,7 @@ if (CMAKE_CROSSCOMPILING)
     # Needed for Emscripten to find packages in build dir
     list(APPEND CMAKE_FIND_ROOT_PATH "/")
 endif()
+set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
 
 include(XciBuildOptions)
 include(ConanInit)
