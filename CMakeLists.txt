@@ -58,6 +58,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+set(XCIKIT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(XciBuildOptions)
 include(ConanInit)
@@ -153,8 +154,8 @@ configure_file(config.h.in include/xci/config.h)
 # ------------ #
 
 set(XCI_INCLUDE_DIRS
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
-    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 
 # Setup RPATH
@@ -326,7 +327,7 @@ if (XCI_INSTALL_DEVEL)
         PATTERN "*.h")
 
     # config.h
-    install(DIRECTORY ${CMAKE_BINARY_DIR}/include/xci DESTINATION include)
+    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/xci DESTINATION include)
 
     install(EXPORT xcikit
         NAMESPACE xcikit::
