@@ -61,6 +61,10 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(XCIKIT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 list(APPEND CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
+if (CMAKE_CROSSCOMPILING)
+    # Needed for Emscripten to find packages in build dir
+    list(APPEND CMAKE_FIND_ROOT_PATH "/")
+endif()
 
 include(XciBuildOptions)
 include(ConanInit)

@@ -358,27 +358,23 @@ compiler.libcxx=libc++
 build_type=Release
 [options]
 [build_requires]
-[env]
+[conf]
 # Find actual path Emscripten installation (or check CMake command line, when called with emcmake)
-CONAN_CMAKE_TOOLCHAIN_FILE=.../cmake/Modules/Platform/Emscripten.cmake
+tools.cmake.cmaketoolchain:user_toolchain = .../cmake/Modules/Platform/Emscripten.cmake
+[env]
+# Same as above, for older packages which do not use tools.cmake.CMakeToolchain
+CONAN_CMAKE_TOOLCHAIN_FILE = .../cmake/Modules/Platform/Emscripten.cmake
 CXXFLAGS=-flto=thin
 LDFLAGS=-flto=thin
 ----
 
 See a working example of such profile in the link:docker/emscripten/conan/profile[docker/emscripten] directory.
 
-Set this profile to be used by default:
-
-[source,bash]
-----
-export CONAN_DEFAULT_PROFILE_PATH=emscripten
-----
-
 Run the build (only 'core' and 'script' components work at this time):
 
 [source,bash]
 ----
-./build.sh --debug --emscripten core script
+./build.sh --debug --emscripten --profile emscripten core script
 ----
 
 == How to use in a client program

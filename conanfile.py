@@ -1,5 +1,5 @@
-from conans import ConanFile, CMake, tools
-from conan.tools.cmake import CMakeToolchain, CMakeDeps
+from conans import ConanFile, tools
+from conan.tools.cmake import CMakeToolchain, CMakeDeps, CMake
 import os
 
 
@@ -72,14 +72,11 @@ class XcikitConan(ConanFile):
     exports = ("VERSION", "requirements.csv")
     exports_sources = ("bootstrap.sh", "CMakeLists.txt", "config.h.in", "xcikitConfig.cmake.in",
                        "cmake/**", "src/**", "examples/**", "tests/**", "benchmarks/**", "tools/**",
-                       "share/**", "third_party/**")
+                       "share/**", "third_party/**",
+                       "!build/**", "!cmake-build-*/**")
     revision_mode = "scm"
 
     _cmake = None
-
-    @staticmethod
-    def _on_off(flag):
-        return 'ON' if flag else 'OFF'
 
     def _check_option(self, prereq, option=None):
         """ Check <prereq. option> and <system option> fields from `requirements.csv`"""
@@ -116,29 +113,29 @@ class XcikitConan(ConanFile):
                 self.build_requires(ref)
 
     def generate(self):
-        tc = CMakeToolchain(self)
+        tc = CMakeToolchain(self, generator="Ninja")
+        if self.package_folder:
+            tc.variables["XCI_SHARE_DIR"] = self.package_folder + "/share/xcikit"
+        tc.variables["XCI_DATA"] = self.options.data
+        tc.variables["XCI_SCRIPT"] = self.options.script
+        tc.variables["XCI_GRAPHICS"] = self.options.graphics
+        tc.variables["XCI_TEXT"] = self.options.text
+        tc.variables["XCI_WIDGETS"] = self.options.widgets
+        tc.variables["XCI_BUILD_TOOLS"] = self.options.tools
+        tc.variables["XCI_BUILD_EXAMPLES"] = self.options.examples
+        tc.variables["XCI_BUILD_TESTS"] = self.options.tests
+        tc.variables["XCI_BUILD_BENCHMARKS"] = self.options.benchmarks
+        tc.variables["XCI_WITH_HYPERSCAN"] = self.options.with_hyperscan
         tc.generate()
+
         deps = CMakeDeps(self)
         deps.build_context_activated = ['magic_enum', 'pfr', 'range-v3', 'catch2', 'benchmark', 'taocpp-pegtl']
         deps.generate()
 
     def _configure_cmake(self):
-        if not self._cmake:
-            self._cmake = CMake(self)
-            self._cmake.definitions["CMAKE_INSTALL_PREFIX"] = self.package_folder
-            self._cmake.definitions["XCI_SHARE_DIR"] = self.package_folder + "/share/xcikit"
-            self._cmake.definitions["XCI_DATA"] = self._on_off(self.options.data)
-            self._cmake.definitions["XCI_SCRIPT"] = self._on_off(self.options.script)
-            self._cmake.definitions["XCI_GRAPHICS"] = self._on_off(self.options.graphics)
-            self._cmake.definitions["XCI_TEXT"] = self._on_off(self.options.text)
-            self._cmake.definitions["XCI_WIDGETS"] = self._on_off(self.options.widgets)
-            self._cmake.definitions["XCI_BUILD_TOOLS"] = self._on_off(self.options.tools)
-            self._cmake.definitions["XCI_BUILD_EXAMPLES"] = self._on_off(self.options.examples)
-            self._cmake.definitions["XCI_BUILD_TESTS"] = self._on_off(self.options.tests)
-            self._cmake.definitions["XCI_BUILD_BENCHMARKS"] = self._on_off(self.options.benchmarks)
-            self._cmake.definitions["XCI_WITH_HYPERSCAN"] = self._on_off(self.options.with_hyperscan)
-            self._cmake.configure()
-        return self._cmake
+        cmake = CMake(self)
+        cmake.configure()
+        return cmake
 
     def build(self):
         self.run("./bootstrap.sh")
