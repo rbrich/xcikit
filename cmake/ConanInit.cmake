@@ -34,8 +34,10 @@ if (CONAN_INSTALL)
     opt_to_conan(XCI_WIDGETS OPT_WIDGETS)
 
     conan_cmake_install(
-        PATH_OR_REFERENCE ${CMAKE_SOURCE_DIR}
-        PROFILE ${CONAN_PROFILE}
+        PATH_OR_REFERENCE ${CMAKE_CURRENT_SOURCE_DIR}
+        INSTALL_FOLDER ${CMAKE_BINARY_DIR}
+        PROFILE_HOST ${CONAN_PROFILE}
+        PROFILE_BUILD ${CONAN_PROFILE}
         SETTINGS
             build_type=${CMAKE_BUILD_TYPE}
         OPTIONS
@@ -46,9 +48,3 @@ if (CONAN_INSTALL)
             xcikit:widgets=${OPT_WIDGETS}
         BUILD missing)
 endif()
-
-# Enable lookup for Conan dependencies
-if (EXISTS ${CMAKE_BINARY_DIR}/conan_paths.cmake)
-    include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
-endif()
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_BINARY_DIR})

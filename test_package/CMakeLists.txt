@@ -12,7 +12,7 @@ else()
     set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
 endif()
 
-include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
+list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_BINARY_DIR})
 find_package(xcikit CONFIG REQUIRED)
 
 add_executable(example example.cpp)

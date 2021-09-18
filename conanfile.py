@@ -1,4 +1,6 @@
 from conans import ConanFile, CMake, tools
+from conan.tools.cmake import CMakeToolchain, CMakeDeps
+import os
 
 
 class XcikitConan(ConanFile):
@@ -113,6 +115,13 @@ class XcikitConan(ConanFile):
             if ref and br == 'build' and self._check_option(prereq, system):
                 self.build_requires(ref)
 
+    def generate(self):
+        tc = CMakeToolchain(self)
+        tc.generate()
+        deps = CMakeDeps(self)
+        deps.build_context_activated = ['magic_enum', 'pfr', 'range-v3', 'catch2', 'benchmark', 'taocpp-pegtl']
+        deps.generate()
+
     def _configure_cmake(self):
         if not self._cmake:
             self._cmake = CMake(self)
@@ -144,5 +153,40 @@ class XcikitConan(ConanFile):
         cmake = self._configure_cmake()
         cmake.test()
 
+    def layout(self):
+        # support for editable mode
+        build_dir = os.environ.get('CONAN_EDITABLE_BUILD_DIR', None)
+        if build_dir is not None:
+            self.folders.build = build_dir # e.g. "build/macos-x86_64-Release-Ninja"
+            self.folders.generators = "generators"
+
+        for component in ('core', 'data', 'script', 'graphics', 'text', 'widgets'):
+            if component != 'core' and not self.options.get_safe(component):
+                continue  # component is disabled
+            pc = 'xci-' + component  # pc = prefixed component
+            self.cpp.source.components[pc].libdirs = [self.folders.build + '/src/xci/' + component]
+            self.cpp.source.components[pc].includedirs = ["src", self.folders.build + '/include']
+            self.cpp.source.components[pc].builddirs = ["cmake"]
+            self.cpp.package.components[pc].libdirs = ["lib"]
+            self.cpp.package.components[pc].includedirs = ["include"]
+            self.cpp.package.components[pc].builddirs = ["lib/cmake/xcikit"]
+
     def package_info(self):
-        self.cpp_info.libs = ["xci-core", "xci-graphics-opengl", "xci-text", "xci-widgets"]
+        self.cpp_info.components["xci-core"].libs = ["xci-core"]
+        self.cpp_info.components["xci-core"].requires = ['fmt::fmt']
+        if self.options.data:
+            self.cpp_info.components["xci-data"].libs = ["xci-data"]
+        if self.options.script:
+            self.cpp_info.components["xci-script"].libs = ["xci-script"]
+            self.cpp_info.components["xci-script"].requires = ['xci-core']
+        if self.options.graphics:
+            self.cpp_info.components["xci-graphics"].libs = ["xci-graphics"]
+            self.cpp_info.components["xci-graphics"].requires = [
+                "xci-core", "vulkan-loader::vulkan-loader", "glfw::glfw"]
+        if self.options.text:
+            self.cpp_info.components["xci-text"].libs = ["xci-text"]
+            self.cpp_info.components["xci-text"].requires = [
+                'xci-core', 'xci-graphics', 'freetype::freetype']
+        if self.options.widgets:
+            self.cpp_info.components["xci-widgets"].libs = ["xci-widgets"]
+            self.cpp_info.components["xci-widgets"].requires = ['xci-text']
