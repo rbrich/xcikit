@@ -90,10 +90,15 @@ class XcikitConan(ConanFile):
             (not option or not self.options.get_safe(option))  # not using system lib
         )
 
-    def config_options(self):
-        for _, _, _, _, prereq, system in self._requirements_csv():
+    def configure(self):
+        if not self.options.graphics:
+            del self.options.text
+            del self.options.widgets
+        elif not self.options.text:
+            del self.options.widgets
+        for _, _, _, _, prereq, option in self._requirements_csv():
             if not self._check_option(prereq):
-                self.options.remove(system)
+                self.options.remove(option)
 
     def _requirements_csv(self):
         import csv
@@ -124,13 +129,13 @@ class XcikitConan(ConanFile):
         tc.variables["XCI_DATA"] = self.options.data
         tc.variables["XCI_SCRIPT"] = self.options.script
         tc.variables["XCI_GRAPHICS"] = self.options.graphics
-        tc.variables["XCI_TEXT"] = self.options.text
-        tc.variables["XCI_WIDGETS"] = self.options.widgets
+        tc.variables["XCI_TEXT"] = self.options.get_safe('text', False)
+        tc.variables["XCI_WIDGETS"] = self.options.get_safe('widgets', False)
         tc.variables["XCI_BUILD_TOOLS"] = self.options.tools
         tc.variables["XCI_BUILD_EXAMPLES"] = self.options.examples
         tc.variables["XCI_BUILD_TESTS"] = self.options.tests
         tc.variables["XCI_BUILD_BENCHMARKS"] = self.options.benchmarks
-        tc.variables["XCI_WITH_HYPERSCAN"] = self.options.with_hyperscan
+        tc.variables["XCI_WITH_HYPERSCAN"] = self.options.get_safe('with_hyperscan', False)
         tc.generate()
 
         deps = CMakeDeps(self)
@@ -163,7 +168,7 @@ class XcikitConan(ConanFile):
             self.folders.generators = "generators"
 
         for component in ('core', 'data', 'script', 'graphics', 'text', 'widgets'):
-            if component != 'core' and not self.options.get_safe(component):
+            if component != 'core' and not self.options.get_safe(component, False):
                 continue  # component is disabled
             pc = 'xci-' + component  # pc = prefixed component
             self.cpp.source.components[pc].libdirs = [self.folders.build + '/src/xci/' + component]
@@ -185,10 +190,10 @@ class XcikitConan(ConanFile):
             self.cpp_info.components["xci-graphics"].libs = ["xci-graphics"]
             self.cpp_info.components["xci-graphics"].requires = [
                 "xci-core", "vulkan-loader::vulkan-loader", "glfw::glfw"]
-        if self.options.text:
+        if self.options.get_safe('text', False):
             self.cpp_info.components["xci-text"].libs = ["xci-text"]
             self.cpp_info.components["xci-text"].requires = [
                 'xci-core', 'xci-graphics', 'freetype::freetype']
-        if self.options.widgets:
+        if self.options.get_safe('widgets', False):
             self.cpp_info.components["xci-widgets"].libs = ["xci-widgets"]
             self.cpp_info.components["xci-widgets"].requires = ['xci-text']
