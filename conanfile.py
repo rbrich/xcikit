@@ -26,6 +26,7 @@ class XcikitConan(ConanFile):
         "tests": [True, False],
         "benchmarks": [True, False],
         ### System dependencies (instead of Conan):
+        "system_fmt": [True, False],
         "system_zlib": [True, False],
         "system_glfw": [True, False],
         "system_vulkan": [True, False],
@@ -39,6 +40,7 @@ class XcikitConan(ConanFile):
         "system_catch2": [True, False],
         "system_benchmark": [True, False],
         "system_pegtl": [True, False],
+        "system_magic_enum": [True, False],
     }
     default_options = {
         "shared": False,
@@ -51,6 +53,7 @@ class XcikitConan(ConanFile):
         "examples": True,
         "tests": True,
         "benchmarks": True,
+        "system_fmt": False,
         "system_zlib": False,
         "system_glfw": False,
         "system_vulkan": False,
@@ -61,18 +64,13 @@ class XcikitConan(ConanFile):
         "system_catch2": False,
         "system_benchmark": False,
         "system_pegtl": False,
+        "system_magic_enum": False,
 
         "freetype:with_png": False,
         "freetype:with_zlib": False,
         "freetype:with_bzip2": False,
         "freetype:with_brotli": False,
     }
-    requires = (
-        'fmt/8.0.1',
-    )
-    build_requires = (
-        'magic_enum/0.7.2',
-    )
 
     exports = ("VERSION", "requirements.csv")
     exports_sources = ("bootstrap.sh", "CMakeLists.txt", "config.h.in", "xcikitConfig.cmake.in",

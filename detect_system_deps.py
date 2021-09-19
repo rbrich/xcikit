@@ -60,6 +60,7 @@ def detect_deps(reqs):
                         string(REPLACE "/" ";" ITEM ${ITEM})
                         list(GET ITEM 0 NAME)
                         list(GET ITEM 1 VERSION)
+                        message(STATUS "Find ${NAME} ${VERSION}")
                         find_package(${NAME} ${VERSION})
                         if (${NAME}_FOUND)
                             message(NOTICE "FOUND ${NAME} ${${NAME}_VERSION}")
@@ -69,7 +70,7 @@ def detect_deps(reqs):
         debug(cml)
         with open(tmp_dir + "/CMakeLists.txt", 'w') as f:
             f.write(cml)
-        # Prefer ninja if available. Needed to allow choose, otherwise `make`
+        # Prefer ninja if available. Needed to allow choice, otherwise `make` installation
         # would be required on unixes, as it's the default in cmake.
         ninja = ""
         if run("command -v ninja", shell=True, stdout=DEVNULL, stderr=DEVNULL).returncode == 0:
