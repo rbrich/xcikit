@@ -227,7 +227,7 @@ public:
 
     size_t size() const { return m_lines.size(); }
 
-    Line& operator[] (int line_index) { return m_lines[line_index]; }
+    Line& operator[] (size_t line_index) { return m_lines[line_index]; }
 
 private:
     std::vector<Line> m_lines;

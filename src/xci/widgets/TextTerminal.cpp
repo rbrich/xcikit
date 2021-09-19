@@ -15,7 +15,7 @@ using namespace xci::graphics::unit_literals;
 using namespace xci::core;
 using xci::text::CodePoint;
 
-using namespace std;
+using std::string_view;
 using namespace std::chrono;
 using namespace std::chrono_literals;
 
@@ -172,7 +172,7 @@ std::string terminal::Attributes::encode() const
 
 size_t terminal::Attributes::decode(string_view sv)
 {
-    auto* it = sv.cbegin();
+    auto it = sv.cbegin();
     while (it < sv.cend()) {
         if (*it < ctl::first_introducer || *it > ctl::last_introducer)
             break;
@@ -537,7 +537,7 @@ void TextTerminal::add_text(string_view text, bool insert, bool wrap)
     auto flush_buffer = [this, &buffer, &buffer_length, insert]() {
         if (!buffer.empty()) {
             current_line().add_text(m_cursor.x, buffer, m_attrs, insert);
-            m_cursor.x += buffer_length;
+            m_cursor.x += (uint32_t) buffer_length;
             buffer_length = 0;
             buffer.clear();
         }
@@ -661,8 +661,8 @@ void TextTerminal::set_cursor_pos(core::Vec2u pos)
 {
     // make sure new cursor position is not outside screen area
     m_cursor = {
-        min(pos.x, m_cells.x),
-        min(pos.y, m_cells.y),
+        std::min(pos.x, m_cells.x),
+        std::min(pos.y, m_cells.y),
     };
     // make sure there is a line in buffer at cursor position
     while (m_cursor.y >= int(m_buffer->size()) - m_buffer_offset) {

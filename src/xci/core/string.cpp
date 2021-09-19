@@ -202,49 +202,39 @@ std::string to_utf8(char32_t codepoint)
 }
 
 
-template <class I>
-I utf8_next(I iter)
+const char8_t* utf8_next(const char8_t* utf8)
 {
-    auto first = (unsigned char) *iter;
+    auto first = (unsigned char) *utf8;
     if (first == 0) {
-        return iter;
+        return utf8;
     }
     if ((first & 0b10000000) == 0) {
         // 0xxxxxxx -> 1 byte
-        return iter + 1;
+        return utf8 + 1;
     }
     if ((first & 0b11100000) == 0b11000000) {
         // 110xxxxx -> 2 bytes
-        return iter + 2;
+        return utf8 + 2;
     }
     if ((first & 0b11110000) == 0b11100000) {
         // 1110xxxx -> 3 bytes
-        return iter + 3;
+        return utf8 + 3;
     }
     if ((first & 0b11111000) == 0b11110000) {
         // 11110xxx -> 4 bytes
-        return iter + 4;
+        return utf8 + 4;
     }
     log::error("utf8_next: Invalid UTF8 string, encountered code 0x{:02x}", int(first));
-    return iter + 1;
+    return utf8 + 1;
 }
 
-// instantiate the template (these are the only supported types)
-template std::string::const_iterator utf8_next(std::string::const_iterator);
-template std::string_view::const_iterator utf8_next(std::string_view::const_iterator);
 
-
-template <class I>
-I utf8_prev(I riter)
+const char8_t* utf8_prev(const char8_t* utf8)
 {
-    while ((*riter & 0b11000000) == 0b10000000)
-        ++riter;
-    return riter + 1;
+    while ((static_cast<unsigned char>(*utf8) & 0b11000000) == 0b10000000)
+        --utf8;
+    return utf8 - 1;
 }
-
-// instantiate the template (these are the only supported types)
-template std::string::const_reverse_iterator utf8_prev(std::string::const_reverse_iterator);
-template std::string_view::const_reverse_iterator utf8_prev(std::string_view::const_reverse_iterator);
 
 
 template <class S, class SSize>

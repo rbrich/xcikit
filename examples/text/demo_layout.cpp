@@ -45,9 +45,9 @@ int main()
 
     Text text;
     text.set_markup_string(sample_text);
-    text.set_width(1.33);
+    text.set_width(1.33f);
     text.set_font(font);
-    text.set_font_size(0.07);
+    text.set_font_size(0.07f);
     text.set_color(Color::White());
 
     Text help_text(font, "[c] show character quads\n"

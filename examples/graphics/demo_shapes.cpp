@@ -41,8 +41,8 @@ int main(int argc, const char* argv[])
     Shape shapes[7] {Shape{renderer}, Shape{renderer}, Shape{renderer},
                      Shape{renderer}, Shape{renderer}, Shape{renderer},
                      Shape{renderer} };
-    float antialiasing = 0;
-    float softness = 0;
+    int antialiasing = 0;
+    int softness = 0;
 
     std::function<void(Shape&, const ViewportRect&, ViewportUnits)>
     add_shape_fn = [](Shape& shape, const ViewportRect& rect, ViewportUnits th) {
@@ -72,7 +72,7 @@ int main(int argc, const char* argv[])
                 break;
             case Key::O:
                 add_shape_fn = [](Shape& shape, const ViewportRect& rect, ViewportUnits th) {
-                    shape.add_rounded_rectangle(rect, 0.05, th);
+                    shape.add_rounded_rectangle(rect, 0.05f, th);
                 };
                 break;
             case Key::E:
@@ -124,8 +124,8 @@ int main(int argc, const char* argv[])
         }
 
         // Border scaled with viewport size
-        add_shape_fn(shapes[0], {-1, -0.6f, 2, 1.2f}, 0.05);
-        add_shape_fn(shapes[1], {-0.6f, -0.8f, 1.2f, 1.6f}, 0.02);
+        add_shape_fn(shapes[0], {-1.0f, -0.6f, 2.0f, 1.2f}, 0.05f);
+        add_shape_fn(shapes[1], {-0.6f, -0.8f, 1.2f, 1.6f}, 0.02f);
 
         // Constant border width, in screen pixels
         add_shape_fn(shapes[2], {0.0f, 0.0f, 0.5f, 0.5f}, view.size_to_viewport(1_sc));

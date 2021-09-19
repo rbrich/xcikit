@@ -13,7 +13,7 @@
 #include <xci/core/log.h>
 #include <xci/core/template/helpers.h>
 #include <range/v3/view/transform.hpp>
-#include <range/v3/to_container.hpp>
+#include <range/v3/range/conversion.hpp>
 #include <range/v3/numeric/accumulate.hpp>
 #include <numeric>
 #include <sstream>

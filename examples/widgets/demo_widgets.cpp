@@ -36,8 +36,8 @@ int main(int argc, const char* argv[])
     button_default.set_position({0, -0.2f});
 
     Button button_styled(theme, "Styled button");
-    button_styled.set_font_size(0.07);
-    button_styled.set_padding(0.05);
+    button_styled.set_font_size(0.07f);
+    button_styled.set_padding(0.05f);
     button_styled.set_decoration_color(Color(10, 20, 100), Color(20, 50, 150));
     button_styled.set_text_color(Color(255, 255, 50));
 
@@ -45,7 +45,7 @@ int main(int argc, const char* argv[])
     checkbox.set_position({0, 0.4f});
     checkbox.set_icon(IconId::CheckBoxChecked);
     checkbox.set_text("Checkbox");
-    checkbox.set_font_size(0.08);
+    checkbox.set_font_size(0.08f);
     checkbox.set_color(Color(150, 200, 200));
     bool checkbox_state = true;
     bool checkbox_active = false;

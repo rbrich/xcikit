@@ -47,6 +47,7 @@ extern char **environ;
 
 #else
 
+#include <stdio.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <io.h>
@@ -129,6 +130,12 @@ inline int strcasecmp(const char *s1, const char *s2) {
 inline int strncasecmp(const char *s1, const char *s2, size_t n) {
     return _strnicmp(s1, s2, n);
 }
+
+inline FILE *popen(const char *command, const char *mode) {
+    return _popen(command, mode);
+}
+
+inline int pclose(FILE *stream) { return _pclose(stream); }
 
 #endif  // _WIN32
 

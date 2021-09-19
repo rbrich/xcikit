@@ -13,8 +13,9 @@
 #include <iomanip>
 #include <cwctype>
 
-using namespace std;
 using namespace xci::core;
+using std::cout;
+using std::endl;
 
 int main()
 {

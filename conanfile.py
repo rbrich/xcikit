@@ -66,10 +66,15 @@ class XcikitConan(ConanFile):
         "system_pegtl": False,
         "system_magic_enum": False,
 
+        # Disable unnecessary transient deps by default.
         "freetype:with_png": False,
         "freetype:with_zlib": False,
         "freetype:with_bzip2": False,
         "freetype:with_brotli": False,
+        "vulkan-loader:with_wsi_xcb": False,
+        "vulkan-loader:with_wsi_xlib": False,
+        "vulkan-loader:with_wsi_wayland": False,
+        "vulkan-loader:with_wsi_directfb": False,
     }
 
     exports = ("VERSION", "requirements.csv")
@@ -87,6 +92,13 @@ class XcikitConan(ConanFile):
             (not prereq or self.options.get_safe(prereq)) and  # check prerequisite
             (not option or not self.options.get_safe(option))  # not using system lib
         )
+
+    def config_options(self):
+        if self.settings.os != "Linux":
+            del self.options["vulkan-loader"].with_wsi_xcb
+            del self.options["vulkan-loader"].with_wsi_xlib
+            del self.options["vulkan-loader"].with_wsi_wayland
+            del self.options["vulkan-loader"].with_wsi_directfb
 
     def configure(self):
         if not self.options.graphics:

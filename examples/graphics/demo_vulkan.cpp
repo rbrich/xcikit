@@ -87,7 +87,7 @@ int main(int argc, const char* argv[])
     shape.set_outline_color(Color(180, 180, 0));
     shape.set_softness(1);
     shape.set_antialiasing(1);
-    shape.add_rectangle({-0.75, -0.3f, 2, 1.2f}, 0.05);
+    shape.add_rectangle({-0.75, -0.3f, 2.0f, 1.2f}, 0.05f);
 
     prim.update();
     shape.update();

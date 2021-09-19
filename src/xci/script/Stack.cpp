@@ -177,7 +177,8 @@ void Stack::swap(size_t first, size_t second)
 
 std::ostream& operator<<(std::ostream& os, const Stack& v)
 {
-    using namespace std;
+    using std::right;
+    using std::setw;
 
     Stack::StackRel pos = 0;
     auto frame = v.n_frames() - 1;
