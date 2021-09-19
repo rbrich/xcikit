@@ -26,6 +26,7 @@
 namespace fs = std::filesystem;
 using namespace xci::script;
 using namespace xci::core;
+using namespace std::literals::string_literals;
 
 
 // Disable this to rebuild the std module in each test case.

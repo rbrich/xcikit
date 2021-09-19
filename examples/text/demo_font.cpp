@@ -51,7 +51,7 @@ int main()
     Text text;
     text.set_markup_string(sample_text);
     text.set_font(font);
-    text.set_font_size(0.08);
+    text.set_font_size(0.08f);
     text.set_color(Color::White());
 
     Sprites font_texture(renderer, font.texture(), Color::Blue());

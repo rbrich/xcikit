@@ -172,7 +172,7 @@ std::string terminal::Attributes::encode() const
 
 size_t terminal::Attributes::decode(string_view sv)
 {
-    auto* it = sv.cbegin();
+    auto it = sv.cbegin();
     while (it < sv.cend()) {
         if (*it < ctl::first_introducer || *it > ctl::last_introducer)
             break;
@@ -537,7 +537,7 @@ void TextTerminal::add_text(string_view text, bool insert, bool wrap)
     auto flush_buffer = [this, &buffer, &buffer_length, insert]() {
         if (!buffer.empty()) {
             current_line().add_text(m_cursor.x, buffer, m_attrs, insert);
-            m_cursor.x += buffer_length;
+            m_cursor.x += (uint32_t) buffer_length;
             buffer_length = 0;
             buffer.clear();
         }

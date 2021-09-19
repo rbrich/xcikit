@@ -36,8 +36,8 @@ int main(int argc, const char* argv[])
     // normally, the border scales with viewport size
     Shape rts(renderer, Color(0, 0, 40, 128), Color(180, 180, 0));
     rts.set_antialiasing(2);
-    rts.add_ellipse({-1, -0.6f, 2, 1.2f}, 0.05);
-    rts.add_ellipse({-0.6f, -0.8f, 1.2f, 1.6f}, 0.02);
+    rts.add_ellipse({-1.f, -0.6f, 2.f, 1.2f}, 0.05f);
+    rts.add_ellipse({-0.6f, -0.8f, 1.2f, 1.6f}, 0.02f);
 
     // using View::screen_ratio, we can set constant border width, in screen pixels
     Shape rts_px(renderer, Color(40, 40, 0, 128), Color(255, 255, 0));

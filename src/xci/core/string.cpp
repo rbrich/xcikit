@@ -232,6 +232,7 @@ I utf8_next(I iter)
 // instantiate the template (these are the only supported types)
 template std::string::const_iterator utf8_next(std::string::const_iterator);
 template std::string_view::const_iterator utf8_next(std::string_view::const_iterator);
+template const char* utf8_next(const char*);
 
 
 template <class I>

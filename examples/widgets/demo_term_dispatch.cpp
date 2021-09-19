@@ -12,10 +12,10 @@
 #include <xci/core/log.h>
 #include <xci/core/dispatch.h>
 #include <xci/config.h>
+#include <xci/compat/unistd.h>
 #include <cstdlib>
 #include <cstdio>
 #include <mutex>
-#include <unistd.h>
 
 using namespace xci::widgets;
 
