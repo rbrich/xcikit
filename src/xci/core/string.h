@@ -118,8 +118,19 @@ std::string to_utf8(std::wstring_view wstr);
 // Convert single UTF32 char to UTF8 string. Can't fail.
 std::string to_utf8(char32_t codepoint);
 
-template <class I> I utf8_next(I iter);
-template <class I> I utf8_prev(I riter);
+const char8_t* utf8_next(const char8_t* utf8);
+template <class I> I utf8_next(I iter) {
+    const char8_t* a = reinterpret_cast<const char8_t*>(&*iter);
+    const char8_t* r = utf8_next(a);
+    return iter + (r - a);
+}
+
+const char8_t* utf8_prev(const char8_t* utf8);
+template <class RI> RI utf8_prev(RI riter) {
+    const char8_t* a = reinterpret_cast<const char8_t*>(&*riter);
+    const char8_t* r = utf8_prev(a);
+    return riter + (a - r);
+}
 
 template <class S, class SSize = typename S::size_type>
 SSize utf8_length(const S& str);
