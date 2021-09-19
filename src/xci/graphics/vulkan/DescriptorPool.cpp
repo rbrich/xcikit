@@ -53,7 +53,7 @@ void DescriptorPool::create(uint32_t max_sets, DescriptorPoolSizes pool_sizes)
             .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
             .maxSets = max_sets,
             .poolSizeCount = pool_sizes.size(),
-            .pPoolSizes = pool_sizes.begin(),
+            .pPoolSizes = pool_sizes.data(),
     };
     VK_TRY("vkCreateDescriptorPool",
             vkCreateDescriptorPool(m_renderer.vk_device(), &ci, nullptr,

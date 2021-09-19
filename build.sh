@@ -11,7 +11,11 @@ EMSCRIPTEN=0
 JOBS_ARGS=()
 CMAKE_ARGS=()
 CONAN_ARGS=()
+CONAN_PROFILE=${CONAN_DEFAULT_PROFILE_PATH:-default}
+DETECT_ARGS=(tools examples tests benchmarks)
 CSI=$'\x1b['
+
+run() { echo "➤➤➤ $*"; "$@"; }
 
 print_usage()
 {
@@ -121,7 +125,7 @@ while [[ $# -gt 0 ]] ; do
             INSTALL_DIR="$2"
             shift 2 ;;
         -pr | --profile )
-            CONAN_ARGS+=('--profile' "$2")
+            CONAN_PROFILE="$2"
             shift 2 ;;
         --toolchain )
             CMAKE_ARGS+=(-D"CMAKE_TOOLCHAIN_FILE=$2")
@@ -158,6 +162,7 @@ PACKAGE_OUTPUT_DIR="${ROOT_DIR}/artifacts"
 PACKAGE_FILENAME="xcikit-${VERSION}-${PLATFORM}-${ARCH}"
 [[ ${BUILD_TYPE} != "Release" ]] && PACKAGE_FILENAME="${PACKAGE_FILENAME}-${BUILD_TYPE}"
 
+CONAN_ARGS+=("-pr=$CONAN_PROFILE" "-pr:b=$CONAN_PROFILE")
 if [[ -z "$component_default" && -z "$component_all" ]]; then
     # Disable components that were not selected
     for name in data script graphics text widgets ; do
@@ -169,8 +174,11 @@ if [[ -z "$component_default" && -z "$component_all" ]]; then
         else
             CMAKE_ARGS+=(-D "XCI_${name_upper}=ON")
             CONAN_ARGS+=(-o "xcikit:${name}=True")
+            DETECT_ARGS+=("${name}")
         fi
     done
+else
+    DETECT_ARGS+=(data script graphics text widgets)
 fi
 
 CMAKE_ARGS+=(-D"XCI_INSTALL_DEVEL=${INSTALL_DEVEL}")
@@ -180,12 +188,19 @@ if [[ -t 1 && "${GENERATOR}" = "Ninja" ]]; then
     CMAKE_ARGS+=(-D'FORCE_COLORS=1')
 fi
 
+if [[ -z "$PYTHON" ]] ; then
+    for name in py python3 ; do
+        if command -v $name >/dev/null ; then PYTHON=$name; break; fi
+    done
+fi
+
 echo "CONAN_ARGS:   ${CONAN_ARGS[*]}"
 echo "CMAKE_ARGS:   ${CMAKE_ARGS[*]}"
 echo "BUILD_CONFIG: ${BUILD_CONFIG}"
 echo "BUILD_DIR:    ${BUILD_DIR}"
 echo "INSTALL_DIR:  ${INSTALL_DIR}"
 phase package && echo "PACKAGE_NAME: ${PACKAGE_NAME}"
+echo "PYTHON:       ${PYTHON}"
 echo
 
 if phase clean; then
@@ -203,7 +218,17 @@ if phase deps; then
     fi
     (
         cd "${BUILD_DIR}"
-        conan install "${ROOT_DIR}" \
+
+        if [[ "$EMSCRIPTEN" -eq 0 ]]; then
+            if [[ ! -f 'system_deps.txt' ]] ; then
+                echo 'Checking for preinstalled dependencies...'
+                "${PYTHON}" "${ROOT_DIR}/detect_system_deps.py" "${DETECT_ARGS[@]}" | tee 'system_deps.txt'
+            fi
+            # shellcheck disable=SC2207
+            CONAN_ARGS+=($(tail -n1 'system_deps.txt'))
+        fi
+
+        run conan install "${ROOT_DIR}" \
             --build missing \
             -s "build_type=${BUILD_TYPE}" \
             "${CONAN_ARGS[@]}"
@@ -217,7 +242,9 @@ if phase config; then
         WRAPPER=
         [[ "$EMSCRIPTEN" -eq 1 ]] && WRAPPER=emcmake
         cd "${BUILD_DIR}"
-        XCI_CMAKE_COLORS=1 ${WRAPPER} cmake "${ROOT_DIR}" \
+        # shellcheck disable=SC2207
+        [[ "$EMSCRIPTEN" -eq 0 ]] && CMAKE_ARGS+=($(tail -n2 'system_deps.txt' | head -n1))
+        XCI_CMAKE_COLORS=1 run ${WRAPPER} cmake "${ROOT_DIR}" \
             "${CMAKE_ARGS[@]}" \
             -D"CMAKE_BUILD_TYPE=${BUILD_TYPE}" \
             -D"CMAKE_INSTALL_PREFIX=${INSTALL_DIR}" \
@@ -235,7 +262,7 @@ if phase build; then
     header "Build"
     WRAPPER=
     [[ "$EMSCRIPTEN" -eq 1 ]] && WRAPPER=emmake
-    ${WRAPPER} cmake --build "${BUILD_DIR}" --config "${BUILD_TYPE}" "${JOBS_ARGS[@]}"
+    run ${WRAPPER} cmake --build "${BUILD_DIR}" --config "${BUILD_TYPE}" "${JOBS_ARGS[@]}"
     [[ "${GENERATOR}" = "Ninja" ]] && ninja -C "${BUILD_DIR}" -t cleandead
     echo
 fi

@@ -318,18 +318,19 @@ Run the build with the toolchain:
 === Porting to Windows
 
 The project is not yet fully ported to Windows.
-The essential parts should already work, though:
+Although the essential parts should already work:
 
 * dependencies via Conan
 * build scripts (using git-bash)
 * CMake configuration and build
 * core and script libraries + demos
+* graphics: demo_coords
 
 How to build:
 
 1. (Optional) Enable https://docs.microsoft.com/en-us/windows/uwp/get-started/enable-your-device-for-development[Developer mode] to obtain ability to create symlinks
 
-2. Install build tools via their Windows installers: Git, CMake, Conan
+2. Install build tools: Git, CMake, Conan
 (`git`, `cmake` and `conan` commands should now work in `cmd.exe`)
 
 3. Open _Git Bash_ and run `./bootstrap.sh`
@@ -358,27 +359,23 @@ compiler.libcxx=libc++
 build_type=Release
 [options]
 [build_requires]
-[env]
+[conf]
 # Find actual path Emscripten installation (or check CMake command line, when called with emcmake)
-CONAN_CMAKE_TOOLCHAIN_FILE=.../cmake/Modules/Platform/Emscripten.cmake
+tools.cmake.cmaketoolchain:user_toolchain = .../cmake/Modules/Platform/Emscripten.cmake
+[env]
+# Same as above, for older packages which do not use tools.cmake.CMakeToolchain
+CONAN_CMAKE_TOOLCHAIN_FILE = .../cmake/Modules/Platform/Emscripten.cmake
 CXXFLAGS=-flto=thin
 LDFLAGS=-flto=thin
 ----
 
 See a working example of such profile in the link:docker/emscripten/conan/profile[docker/emscripten] directory.
 
-Set this profile to be used by default:
-
-[source,bash]
-----
-export CONAN_DEFAULT_PROFILE_PATH=emscripten
-----
-
 Run the build (only 'core' and 'script' components work at this time):
 
 [source,bash]
 ----
-./build.sh --debug --emscripten core script
+./build.sh --debug --emscripten --profile emscripten core script
 ----
 
 == How to use in a client program

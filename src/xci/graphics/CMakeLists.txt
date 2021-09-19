@@ -5,6 +5,10 @@
 find_package(glfw3 3.2 REQUIRED)
 find_package(Vulkan REQUIRED)
 
+if (NOT TARGET glfw::glfw)
+    add_library(glfw::glfw ALIAS glfw)
+endif()
+
 # ------------ #
 # Libraries    #
 # ------------ #
@@ -37,9 +41,10 @@ target_link_libraries(xci-graphics
         ${CMAKE_DL_LIBS}
         Vulkan::Vulkan
     PRIVATE
-        glfw
-        range-v3::range-v3
+        glfw::glfw
+        range-v3::concepts
 )
+add_dependencies(xci-graphics shaders)
 
 if (BUILD_FRAMEWORKS)
     set_target_properties(xci-graphics PROPERTIES

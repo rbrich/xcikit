@@ -203,7 +203,7 @@ void PrimitivesDescriptorSets::update(
             });
         }
 
-        vkUpdateDescriptorSets(m_renderer.vk_device(), write_descriptor_set.size(),
+        vkUpdateDescriptorSets(m_renderer.vk_device(), (uint32_t) write_descriptor_set.size(),
                 write_descriptor_set.data(), 0, nullptr);
     }
 }

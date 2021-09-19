@@ -37,7 +37,6 @@ target_link_libraries(xci-data
 
 target_include_directories(xci-data
     PUBLIC
-        ${CMAKE_SOURCE_DIR}/third_party
         ${XCI_INCLUDE_DIRS}
     )
 
@@ -49,5 +48,5 @@ if (MSVC)
 endif()
 
 if (BUILD_SHARED_LIBS OR XCI_INSTALL_DEVEL)
-    #install(TARGETS xci-data EXPORT xcikit DESTINATION lib)
+    install(TARGETS xci-data EXPORT xcikit DESTINATION lib)
 endif()

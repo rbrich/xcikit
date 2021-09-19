@@ -40,7 +40,7 @@ target_link_libraries(xci-text
     PUBLIC
         xci-core
         xci-graphics
-        PRIVATE
+    PRIVATE
         Freetype::Freetype
     )
 

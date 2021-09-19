@@ -1,0 +1,13 @@
+<b/r>, <CMake name>,<min ver>, <Conan reference>,      <prereq. option>,   <output option>
+ run,   fmt,        8.0.0,      fmt/8.0.1,              ,                   system_fmt
+ run,   ZLIB,       ,           zlib/1.2.11,            data,               system_zlib
+ run,   glfw3,      3.3.0,      glfw/3.3.4,             graphics,           system_glfw
+ run,   Vulkan,     ,           vulkan-loader/1.2.190,  graphics,           system_vulkan
+ run,   Freetype,   2.10.0,     freetype/2.10.4,        text,               system_freetype
+ run,   Hyperscan,  ,           ,                       tools,              with_hyperscan
+ build, Boost,      1.75.0,     pfr/2.0.2,              data,               system_boost
+ build, range-v3,   0.11.0,     range-v3/0.11.0,        ,                   system_range_v3
+ build, Catch2,     ,           catch2/2.13.6,          tests,              system_catch2
+ build, benchmark,  1.5.0,      benchmark/1.5.2,        benchmarks,         system_benchmark
+ build, pegtl,      3.1.0,      taocpp-pegtl/3.1.0,     ,                   system_pegtl
+ build, magic_enum, 0.7.3,      magic_enum/0.7.3,       ,                   system_magic_enum

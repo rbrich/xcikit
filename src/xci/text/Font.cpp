@@ -72,7 +72,7 @@ Font::Glyph* Font::get_glyph(CodePoint code_point)
     // translate char to glyph
     // In case of failure, this returns 0, which is okay, because
     // glyph nr. 0 contains graphic for "undefined character code".
-    uint glyph_index = face().get_glyph_index(code_point);
+    auto glyph_index = face().get_glyph_index(code_point);
 
     // check cache
     GlyphKey glyph_key{m_current_face, m_size, glyph_index};

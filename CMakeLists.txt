@@ -29,6 +29,7 @@ option(XCI_INSTALL_DEVEL "Install headers, CMake config, static libs." ON)
 # Dependencies
 option(XCI_WITH_TERMINFO "Link with TermInfo and use it for TTY control sequences." OFF)
 option(XCI_WITH_ZIP "Link xci-core with libzip and use it for ZIP format in VFS." OFF)
+option(XCI_WITH_HYPERSCAN "Hyperscan library is required to build ff tool." OFF)
 
 # negate it for use as option() initial value
 if (EMSCRIPTEN)
@@ -57,15 +58,22 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+set(XCIKIT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+list(APPEND CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
+if (CMAKE_CROSSCOMPILING)
+    # Needed for Emscripten to find packages in build dir
+    list(APPEND CMAKE_FIND_ROOT_PATH "/")
+endif()
+set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
+
 include(XciBuildOptions)
+include(ConanInit)
 
 
 # ------------ #
 # Dependencies #
 # ------------ #
-
-include(ConanInit)
 
 add_subdirectory(third_party)
 
@@ -153,8 +161,8 @@ configure_file(config.h.in include/xci/config.h)
 # ------------ #
 
 set(XCI_INCLUDE_DIRS
-    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src>
-    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
     $<INSTALL_INTERFACE:include>)
 
 # Setup RPATH
@@ -201,7 +209,7 @@ endif()
 # ------------ #
 
 if (XCI_BUILD_TOOLS)
-    if (NOT WIN32)
+    if (XCI_WITH_HYPERSCAN)
         add_subdirectory(tools/find_file)
     endif()
     if (XCI_SCRIPT)
@@ -326,7 +334,7 @@ if (XCI_INSTALL_DEVEL)
         PATTERN "*.h")
 
     # config.h
-    install(DIRECTORY ${CMAKE_BINARY_DIR}/include/xci DESTINATION include)
+    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/xci DESTINATION include)
 
     install(EXPORT xcikit
         NAMESPACE xcikit::

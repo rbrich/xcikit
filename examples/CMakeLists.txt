@@ -2,6 +2,8 @@
 # Functions    #
 # ------------ #
 
+set(EXAMPLES_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+
 function(add_demo TARGET)
     set(options)
     set(one_value_args)
@@ -15,7 +17,7 @@ function(add_demo TARGET)
         add_executable(${TARGET} ${TARGET}.cpp)
     endif()
 
-    target_include_directories(${TARGET} PRIVATE ${CMAKE_SOURCE_DIR}/examples)
+    target_include_directories(${TARGET} PRIVATE ${EXAMPLES_DIR})
 
     if (ARG_LINK)
         target_link_libraries(${TARGET} ${ARG_LINK})

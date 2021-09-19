@@ -18,7 +18,7 @@ namespace xci::graphics {
 using namespace xci::core;
 
 
-static std::vector<std::uint32_t> read_spirv_file(const std::string& pathname)
+static std::vector<std::uint32_t> read_spirv_file(const fs::path& pathname)
 {
     std::ifstream f(pathname, std::ios::ate | std::ios::binary);
     if (!f)
@@ -71,7 +71,7 @@ VkShaderModule Shader::create_module(const uint32_t* code, size_t size)
 }
 
 
-bool Shader::load_from_file(const std::string& vertex, const std::string& fragment)
+bool Shader::load_from_file(const fs::path& vertex, const fs::path& fragment)
 {
     clear();
 

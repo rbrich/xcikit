@@ -63,7 +63,7 @@ Rect MaxRectsBinPack::Insert(int width, int height, FreeRectChoiceHeuristic meth
 		case RectBestLongSideFit: newNode = FindPositionForNewNodeBestLongSideFit(width, height, score2, score1); break;
 		case RectBestAreaFit: newNode = FindPositionForNewNodeBestAreaFit(width, height, score1, score2); break;
 	}
-		
+
 	if (newNode.height == 0)
 		return newNode;
 
@@ -106,7 +106,7 @@ void MaxRectsBinPack::Insert(std::vector<RectSize> &rects, std::vector<Rect> &ds
 				bestScore1 = score1;
 				bestScore2 = score2;
 				bestNode = newNode;
-				bestRectIndex = i;
+				bestRectIndex = (int) i;
 			}
 		}
 
@@ -146,7 +146,7 @@ Rect MaxRectsBinPack::ScoreRect(int width, int height, FreeRectChoiceHeuristic m
 	{
 	case RectBestShortSideFit: newNode = FindPositionForNewNodeBestShortSideFit(width, height, score1, score2); break;
 	case RectBottomLeftRule: newNode = FindPositionForNewNodeBottomLeft(width, height, score1, score2); break;
-	case RectContactPointRule: newNode = FindPositionForNewNodeContactPoint(width, height, score1); 
+	case RectContactPointRule: newNode = FindPositionForNewNodeContactPoint(width, height, score1);
 		score1 = -score1; // Reverse since we are minimizing, but for contact point score bigger is better.
 		break;
 	case RectBestLongSideFit: newNode = FindPositionForNewNodeBestLongSideFit(width, height, score2, score1); break;
@@ -214,7 +214,7 @@ Rect MaxRectsBinPack::FindPositionForNewNodeBottomLeft(int width, int height, in
 	return bestNode;
 }
 
-Rect MaxRectsBinPack::FindPositionForNewNodeBestShortSideFit(int width, int height, 
+Rect MaxRectsBinPack::FindPositionForNewNodeBestShortSideFit(int width, int height,
 	int &bestShortSideFit, int &bestLongSideFit) const
 {
 	Rect bestNode;
@@ -265,7 +265,7 @@ Rect MaxRectsBinPack::FindPositionForNewNodeBestShortSideFit(int width, int heig
 	return bestNode;
 }
 
-Rect MaxRectsBinPack::FindPositionForNewNodeBestLongSideFit(int width, int height, 
+Rect MaxRectsBinPack::FindPositionForNewNodeBestLongSideFit(int width, int height,
 	int &bestShortSideFit, int &bestLongSideFit) const
 {
 	Rect bestNode;
@@ -316,7 +316,7 @@ Rect MaxRectsBinPack::FindPositionForNewNodeBestLongSideFit(int width, int heigh
 	return bestNode;
 }
 
-Rect MaxRectsBinPack::FindPositionForNewNodeBestAreaFit(int width, int height, 
+Rect MaxRectsBinPack::FindPositionForNewNodeBestAreaFit(int width, int height,
 	int &bestAreaFit, int &bestShortSideFit) const
 {
 	Rect bestNode;
@@ -484,9 +484,9 @@ bool MaxRectsBinPack::SplitFreeNode(Rect freeNode, const Rect &usedNode)
 
 void MaxRectsBinPack::PruneFreeList()
 {
-	/* 
+	/*
 	///  Would be nice to do something like this, to avoid a Theta(n^2) loop through each pair.
-	///  But unfortunately it doesn't quite cut it, since we also want to detect containment. 
+	///  But unfortunately it doesn't quite cut it, since we also want to detect containment.
 	///  Perhaps there's another way to do this faster than Theta(n^2).
 
 	if (freeRectangles.size() > 0)

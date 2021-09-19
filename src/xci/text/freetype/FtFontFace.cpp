@@ -100,7 +100,7 @@ float FtFontFace::line_height() const
 float FtFontFace::max_advance()
 {
     // Measure letter 'M' instead of trusting max_advance
-    uint glyph_index = get_glyph_index('M');
+    auto glyph_index = get_glyph_index('M');
     if (!glyph_index) {
         return ft_to_float(m_face->size->metrics.max_advance);
     }
@@ -184,9 +184,12 @@ bool FtFontFace::load_face(const fs::path& file_path, const std::byte* buffer, s
     }
     FT_Error err;
     if (buffer) {
-        err = FT_New_Memory_Face(ft_library(), reinterpret_cast<const FT_Byte*>(buffer), buffer_size, face_index, &m_face);
+        err = FT_New_Memory_Face(ft_library(),
+                reinterpret_cast<const FT_Byte*>(buffer), (FT_Long) buffer_size,
+                face_index, &m_face);
     } else {
-        err = FT_New_Face(ft_library(), file_path.c_str(), face_index, &m_face);
+        err = FT_New_Face(ft_library(),
+                file_path.string().c_str(), face_index, &m_face);
     }
     if (err == FT_Err_Unknown_File_Format) {
         log::error("FT_New_Face: Unknown file format");

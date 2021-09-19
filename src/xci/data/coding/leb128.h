@@ -8,6 +8,7 @@
 #define XCI_DATA_CODING_LEB128_H
 
 #include <iterator>
+#include <limits>
 #include <cassert>
 
 /// Implements [LEB128](https://en.wikipedia.org/wiki/LEB128) encoding

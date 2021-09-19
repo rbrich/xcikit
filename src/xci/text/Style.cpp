@@ -9,6 +9,6 @@
 void xci::text::Style::clear()
 {
     m_font = nullptr;
-    m_size = 0.05;
+    m_size = 0.05f;
     m_color = graphics::Color::White();
 }

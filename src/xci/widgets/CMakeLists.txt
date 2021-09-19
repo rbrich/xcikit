@@ -17,7 +17,9 @@ add_library(xci-widgets
 add_library(xcikit::xci-widgets ALIAS xci-widgets)
 
 target_link_libraries(xci-widgets
-    xci-text)
+    PUBLIC
+        xci-text
+    )
 
 if (APPLE)
     set_target_properties(xci-widgets PROPERTIES
