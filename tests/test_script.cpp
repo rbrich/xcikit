@@ -23,7 +23,6 @@
 #include <sstream>
 #include <filesystem>
 
-using namespace std;
 namespace fs = std::filesystem;
 using namespace xci::script;
 using namespace xci::core;
@@ -35,7 +34,7 @@ constexpr bool c_reuse_std_module = true;
 
 
 // Check parsing into AST and dumping back to code
-std::string parse(const string& input)
+std::string parse(const std::string& input)
 {
     SourceManager src_man;
     auto src_id = src_man.add_source("<input>", input);
@@ -43,7 +42,7 @@ std::string parse(const string& input)
     ast::Module ast;
     parser.parse(src_id, ast);
     fold_tuple(ast.body);
-    ostringstream os;
+    std::ostringstream os;
     os << ast;
     return os.str();
 }
@@ -98,7 +97,7 @@ void import_std_module(Interpreter& interpreter)
 }
 
 
-std::string interpret(const string& input, bool import_std=false)
+std::string interpret(const std::string& input, bool import_std=false)
 {
     Interpreter interpreter;
 
@@ -107,7 +106,7 @@ std::string interpret(const string& input, bool import_std=false)
     }
 
     UNSCOPED_INFO(input);
-    ostringstream os;
+    std::ostringstream os;
     try {
         auto result = interpreter.eval(input, [&os](TypedValue&& invoked) {
             os << invoked << ';';
@@ -123,7 +122,7 @@ std::string interpret(const string& input, bool import_std=false)
 }
 
 
-std::string interpret_std(const string& input)
+std::string interpret_std(const std::string& input)
 {
     return interpret(input, true);
 }

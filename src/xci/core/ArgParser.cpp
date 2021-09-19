@@ -10,6 +10,7 @@
 #include "string.h"
 
 #include <fmt/core.h>
+
 #include <iostream>
 #include <utility>
 #include <cstring>
@@ -19,9 +20,12 @@
 
 namespace xci::core::argparser {
 
-using namespace std;
 namespace fs = std::filesystem;
-using fmt::format;
+using std::move;
+using std::string_view;
+using std::cout;
+using std::cerr;
+using std::endl;
 
 
 Option::Option(std::string&& desc, std::string&& help, Callback cb, int flags)
@@ -115,14 +119,14 @@ bool Option::has_long(const char* arg) const
 
 int Option::missing_args() const
 {
-    return max(m_required - m_received, 0);
+    return std::max(m_required - m_received, 0);
 }
 
 
 std::string Option::usage() const
 {
     auto& t = TermCtl::stdout_instance();
-    string res;
+    std::string res;
     bool required = (is_positional() && !is_remainder()) && required_args() != 0;
     if (!required)
         res += '[';
@@ -151,7 +155,7 @@ std::string Option::usage() const
 std::string Option::formatted_desc(size_t width) const
 {
     auto& t = TermCtl::stdout_instance();
-    string res;
+    std::string res;
     size_t res_len = 0;  // length in visible characters (excluding escape seqs)
     const char* dp = m_desc.c_str();
     for (;;) {
@@ -247,7 +251,7 @@ std::pair<const char*, int> Option::skip_dashes(const char* desc)
 // ----------------------------------------------------------------------------
 
 
-ArgParser::ArgParser(initializer_list<Option> options)
+ArgParser::ArgParser(std::initializer_list<Option> options)
     : m_opts(options)
 {
     validate();
@@ -272,13 +276,13 @@ void ArgParser::validate() const
             if (shortopt != 0) {
                 if (std::find_if(shorts.cbegin(), shorts.cend(),
                         [shortopt](char v){ return shortopt == v; }) != shorts.cend())
-                    throw BadOptionDescription(format("name -{} repeated", shortopt), opt.desc());
+                    throw BadOptionDescription(fmt::format("name -{} repeated", shortopt), opt.desc());
                 shorts.push_back(shortopt);
             } else {
                 assert(!longopt.empty());
                 if (std::find_if(longs.cbegin(), longs.cend(),
                         [longopt](string_view v){ return longopt == v; }) != longs.cend())
-                    throw BadOptionDescription(format("name --{} repeated", longopt), opt.desc());
+                    throw BadOptionDescription(fmt::format("name --{} repeated", longopt), opt.desc());
                 longs.push_back(longopt);
             }
         });
@@ -372,10 +376,10 @@ ArgParser::ParseResult ArgParser::parse_args(const char** argv, bool finish)
     }
     if (finish) {
         if (m_awaiting_arg)
-            throw BadArgument(format("Missing value for option: {}", *(argv-1)));
+            throw BadArgument(fmt::format("Missing value for option: {}", *(argv-1)));
         for (const auto& opt : m_opts) {
             if (opt.is_positional() && opt.missing_args() > 0)
-                throw BadArgument(format("Missing required arguments: {}", opt.desc()));
+                throw BadArgument(fmt::format("Missing required arguments: {}", opt.desc()));
         }
     }
     return Continue;
@@ -391,7 +395,7 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
         // open option -> pass it the arg
         assert(m_curopt->can_receive_arg());  // already checked
         if (!(*m_curopt)(arg))
-            throw BadArgument(format("Wrong value for option: {}: {}", *(argv-1), arg));
+            throw BadArgument(fmt::format("Wrong value for option: {}: {}", *(argv-1), arg));
         m_awaiting_arg = false;
         return Continue;
     }
@@ -402,30 +406,30 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
         ++dashes;
     }
     if (dashes > 2)
-        throw BadArgument(format("Too many dashes: {}", arg));
+        throw BadArgument(fmt::format("Too many dashes: {}", arg));
     if (dashes == 2) {
         // stop parsing (--)
         if (*p == 0) {
             if (invoke_remainder(argv + 1))
                 return Stop;
-            throw BadArgument(format("Unknown option: {}", arg));
+            throw BadArgument(fmt::format("Unknown option: {}", arg));
         }
         // long option
         auto it = find_if(m_opts.begin(), m_opts.end(),
                 [p](const Option& opt) { return opt.has_long(p); });
         if (it == m_opts.end())
-            throw BadArgument(format("Unknown option: {}", arg));
+            throw BadArgument(fmt::format("Unknown option: {}", arg));
         if (!it->has_args()) {
             if (it->is_show_help()) {
                 print_help();
                 return Exit;
             }
             if (! (*it)("1") )
-                throw BadArgument(format("Wrong value to option: {}: 1", arg));
+                throw BadArgument(fmt::format("Wrong value to option: {}: 1", arg));
             return Continue;
         }
         if (!it->can_receive_arg())
-            throw BadArgument(format("Too many occurrences of an option: {}", arg));
+            throw BadArgument(fmt::format("Too many occurrences of an option: {}", arg));
         m_curopt = &*it;
         m_awaiting_arg = true;
         return Continue;
@@ -436,7 +440,7 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
             auto it = find_if(m_opts.begin(), m_opts.end(),
                     [p](const Option& opt) { return opt.has_short(*p); });
             if (it == m_opts.end())
-                throw BadArgument(format("Unknown option: -{} (in {})", p[0], arg));
+                throw BadArgument(fmt::format("Unknown option: -{} (in {})", p[0], arg));
             ++p;
             if (!it->has_args()) {
                 if (it->is_show_help()) {
@@ -444,16 +448,16 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
                     return Exit;
                 }
                 if (! (*it)("1") )
-                    throw BadArgument(format("Wrong value to option: {}: 1", arg));
+                    throw BadArgument(fmt::format("Wrong value to option: {}: 1", arg));
                 continue;
             }
             // has args
             if (!it->can_receive_arg())
-                throw BadArgument(format("Too many occurrences of an option: -{} (in {})", p[-1], arg));
+                throw BadArgument(fmt::format("Too many occurrences of an option: -{} (in {})", p[-1], arg));
             m_curopt = &*it;
             if (*p) {
                 if (! (*it)(p) )
-                    throw BadArgument(format("Wrong value to option: {}: {}", p[-1], p));
+                    throw BadArgument(fmt::format("Wrong value to option: {}: {}", p[-1], p));
                 break;
             }
             m_awaiting_arg = true;
@@ -470,9 +474,9 @@ ArgParser::ParseResult ArgParser::parse_arg(const char* argv[])
             return (opt.is_positional() && opt.can_receive_arg()) || opt.is_remainder();
         });
         if (it == m_opts.end()) {
-            throw BadArgument(format("Unexpected positional argument: {}", arg));
+            throw BadArgument(fmt::format("Unexpected positional argument: {}", arg));
         } if (! (*it)(arg) )
-            throw BadArgument(format("Wrong positional argument: {}", arg));
+            throw BadArgument(fmt::format("Wrong positional argument: {}", arg));
     }
     return Continue;
 }
@@ -509,8 +513,8 @@ static unsigned wrapping_print_word(const std::string& s, unsigned indent, unsig
 /// Effectively split `s` into words and calls `wrapping_print_word` on each word.
 static void wrapping_print(const std::string& s, unsigned indent, unsigned start, unsigned max_width)
 {
-    istringstream iss(s);
-    for (auto it = istream_iterator<string>(iss); it != istream_iterator<string>(); ++it) {
+    std::istringstream iss(s);
+    for (auto it = std::istream_iterator<std::string>(iss); it != std::istream_iterator<std::string>(); ++it) {
         start = wrapping_print_word(*it, indent, start, max_width);
     }
 }
@@ -539,7 +543,7 @@ void ArgParser::print_help() const
 {
     unsigned desc_cols = 0;
     for (const auto& opt : m_opts)
-        desc_cols = max(desc_cols, (unsigned) opt.desc().size());
+        desc_cols = std::max(desc_cols, (unsigned) opt.desc().size());
     print_usage();
     auto& t = TermCtl::stdout_instance();
     cout << endl << t.bold().yellow() << "Options:" << t.normal() << endl;

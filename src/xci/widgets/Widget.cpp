@@ -22,9 +22,8 @@ Widget::Widget(Theme& theme)
 
 void Widget::partial_dump(std::ostream& stream, const std::string& nl_prefix)
 {
-    using namespace std;
     stream << core::type_name(typeid(*this))
-           << "<" << hex << this << "> "
+           << "<" << std::hex << this << "> "
            << "pos=" << m_position << " "
            << "size=" << m_size << " "
            << "baseline=" << m_baseline << " ";

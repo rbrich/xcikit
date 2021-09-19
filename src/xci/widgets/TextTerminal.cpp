@@ -15,7 +15,7 @@ using namespace xci::graphics::unit_literals;
 using namespace xci::core;
 using xci::text::CodePoint;
 
-using namespace std;
+using std::string_view;
 using namespace std::chrono;
 using namespace std::chrono_literals;
 
@@ -661,8 +661,8 @@ void TextTerminal::set_cursor_pos(core::Vec2u pos)
 {
     // make sure new cursor position is not outside screen area
     m_cursor = {
-        min(pos.x, m_cells.x),
-        min(pos.y, m_cells.y),
+        std::min(pos.x, m_cells.x),
+        std::min(pos.y, m_cells.y),
     };
     // make sure there is a line in buffer at cursor position
     while (m_cursor.y >= int(m_buffer->size()) - m_buffer_offset) {

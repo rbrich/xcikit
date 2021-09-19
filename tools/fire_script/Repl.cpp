@@ -13,6 +13,8 @@
 #include <xci/script/Builtin.h>
 #include <xci/script/dump.h>
 
+#include <fmt/core.h>
+
 #include <iostream>
 
 namespace xci::script::tool {
@@ -30,7 +32,7 @@ bool Repl::evaluate(std::string_view line)
 
     m_ctx.interpreter.configure(m_opts.compiler_flags);
 
-    std::string module_name = m_ctx.input_number >= 0 ? format("input_{}", m_ctx.input_number) : "<input>";
+    std::string module_name = m_ctx.input_number >= 0 ? fmt::format("input_{}", m_ctx.input_number) : "<input>";
     auto src_id = source_manager.add_source(module_name, std::string(line));
 
     try {

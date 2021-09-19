@@ -9,7 +9,8 @@
 
 using namespace xci::core;
 using namespace xci::core::argparser;
-using namespace std;
+using std::cout;
+using std::endl;
 
 bool check_color(const char* arg)
 {
@@ -45,7 +46,7 @@ int main(int argc, const char* argv[])
 
     } (argv);
 
-    cout << "OK: verbose=" << boolalpha << verbose << ", optimize=" << optimize << endl;
+    cout << "OK: verbose=" << std::boolalpha << verbose << ", optimize=" << optimize << endl;
     cout << "    color: " << (color ? color : "[not given]") << endl;
     cout << "    pattern: " << (pattern ? pattern : "[not given]") << endl;
     cout << "    files:";
