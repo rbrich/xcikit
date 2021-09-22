@@ -195,10 +195,6 @@ public:
     bool is_page_blanked() const { return m_flags[BlankPage]; }
 
 private:
-    const char* content_begin() const { return m_content.c_str(); }
-    const char* content_end() const { return m_content.c_str() + m_content.size(); }
-
-private:
     std::string m_content;
 
     enum {
