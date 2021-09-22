@@ -13,18 +13,11 @@ endif()
 # File List    #
 # ------------ #
 
-set(ASSETS
-    fonts/Enriqueta/Enriqueta-Bold.ttf
-    fonts/Enriqueta/Enriqueta-Regular.ttf
-    fonts/Hack/Hack-Bold.ttf
-    fonts/Hack/Hack-BoldItalic.ttf
-    fonts/Hack/Hack-Italic.ttf
-    fonts/Hack/Hack-Regular.ttf
-    fonts/MaterialIcons/MaterialIcons-Regular.woff
-    fonts/ShareTechMono/ShareTechMono-Regular.ttf
-    script/std.fire
-    )
+set(ASSETS)
 
+if (XCI_SCRIPT)
+    set(ASSETS ${ASSETS} script/std.fire)
+endif()
 
 # ------------ #
 # Targets      #
@@ -42,10 +35,14 @@ if (XCI_GRAPHICS)
     add_subdirectory(fonts)
 endif()
 
+# dummy targets (it's easier to create a target than adding special conditions below)
 if (NOT TARGET shaders)
-    # dummy target (it's easier to create a target than adding special conditions below)
     add_custom_target(shaders ALL)
     set_property(TARGET shaders PROPERTY ASSETS)
+endif()
+if (NOT TARGET fonts)
+    add_custom_target(fonts ALL)
+    set_property(TARGET fonts PROPERTY ASSETS)
 endif()
 
 # Copy asset files to binary dir
@@ -60,11 +57,13 @@ if (Python3_Interpreter_FOUND)
     set(output_dar "share.dar")
     add_custom_command(
         OUTPUT "${output_dar}"
-        DEPENDS ${ASSETS} shaders
+        DEPENDS ${ASSETS} shaders fonts
         COMMAND Python3::Interpreter
             "${PROJECT_SOURCE_DIR}/tools/pack_assets.py" -q
             "${output_dar}"
-            ${ASSETS} $<TARGET_PROPERTY:shaders,ASSETS>
+            ${ASSETS}
+            $<TARGET_PROPERTY:shaders,ASSETS>
+            $<TARGET_PROPERTY:fonts,ASSETS>
         COMMAND_EXPAND_LISTS
         WORKING_DIRECTORY xcikit
         COMMENT "Archiving assets (DAR archive)"
@@ -82,10 +81,12 @@ if (XCI_WITH_ZIP)
     set(output_zip "share.zip")
     add_custom_command(
         OUTPUT "${output_zip}"
-        DEPENDS ${ASSETS} shaders
+        DEPENDS ${ASSETS} shaders fonts
         COMMAND
             ${CMAKE_COMMAND} -E tar cf "${output_zip}" --format=zip
-            ${ASSETS} $<TARGET_PROPERTY:shaders,ASSETS>
+            ${ASSETS}
+            $<TARGET_PROPERTY:shaders,ASSETS>
+            $<TARGET_PROPERTY:fonts,ASSETS>
         COMMAND_EXPAND_LISTS
         WORKING_DIRECTORY xcikit
         COMMENT "Archiving assets (ZIP archive)"
@@ -100,7 +101,6 @@ endif()
 
 add_custom_target(share ALL DEPENDS ${output_archives})
 
-if (XCI_INSTALL_SHARE_DIR)
-    install(DIRECTORY fonts DESTINATION share/xcikit)
+if (XCI_SCRIPT AND XCI_INSTALL_SHARE_DIR)
     install(DIRECTORY script DESTINATION share/xcikit)
 endif()

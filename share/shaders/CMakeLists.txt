@@ -10,47 +10,6 @@ if (NOT GLSLC_FOUND)
     return()
 endif()
 
-# ------------ #
-# Functions    #
-# ------------ #
-
-function(add_shaders)
-    set(options)
-    set(one_value_args TARGET)
-    set(multi_value_args SOURCES)
-    cmake_parse_arguments(ARG "${options}" "${one_value_args}"
-        "${multi_value_args}" ${ARGN} )
-    if (NOT ARG_TARGET)
-        message(SEND_ERROR "Required parameter missing: TARGET")
-    endif()
-    if (NOT ARG_SOURCES)
-        message(SEND_ERROR "Required parameter missing: SOURCES")
-    endif()
-
-    set(outputs)
-    set(assets)
-    file(MAKE_DIRECTORY "${XCIKIT_BINARY_DIR}/share/xcikit/shaders")
-    foreach(src ${ARG_SOURCES})
-        set(output "${XCIKIT_BINARY_DIR}/share/xcikit/shaders/${src}.spv")
-        add_custom_command(
-            OUTPUT ${output}
-            MAIN_DEPENDENCY "${src}"
-            COMMAND ${GLSLC_COMMAND} "${CMAKE_CURRENT_SOURCE_DIR}/${src}" -o ${output}
-            COMMENT "Compiling shader ${src}"
-            VERBATIM
-        )
-        list(APPEND outputs ${output})
-        list(APPEND assets "shaders/${src}.spv")
-        if (XCI_INSTALL_SHARE_DIR)
-            install(FILES "${output}"
-                DESTINATION share/xcikit/shaders)
-        endif()
-    endforeach()
-
-    add_custom_target(shaders ALL DEPENDS ${outputs})
-    set_property(TARGET shaders PROPERTY ASSETS ${assets})
-endfunction()
-
 
 # ------------ #
 # Targets      #
@@ -73,4 +32,24 @@ set(SHADER_SOURCES
     cursor.frag
     )
 
-add_shaders(TARGET shaders SOURCES ${SHADER_SOURCES})
+set(outputs)
+set(assets)
+file(MAKE_DIRECTORY "${XCIKIT_BINARY_DIR}/share/xcikit/shaders")
+foreach(src ${SHADER_SOURCES})
+    set(output "${XCIKIT_BINARY_DIR}/share/xcikit/shaders/${src}.spv")
+    add_custom_command(
+        OUTPUT ${output}
+        MAIN_DEPENDENCY "${src}"
+        COMMAND ${GLSLC_COMMAND} "${CMAKE_CURRENT_SOURCE_DIR}/${src}" -o ${output}
+        COMMENT "Compiling shader ${src}"
+        VERBATIM
+    )
+    list(APPEND outputs ${output})
+    list(APPEND assets "shaders/${src}.spv")
+    if (XCI_INSTALL_SHARE_DIR)
+        install(FILES "${output}" DESTINATION share/xcikit/shaders)
+    endif()
+endforeach()
+
+add_custom_target(shaders ALL DEPENDS ${outputs})
+set_property(TARGET shaders PROPERTY ASSETS ${assets})
