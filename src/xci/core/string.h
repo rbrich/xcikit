@@ -18,7 +18,8 @@ namespace xci::core {
 
 template <typename T> concept StringIterator =
     std::is_same_v<T, std::string::const_iterator> ||
-    std::is_same_v<T, std::string_view::const_iterator>;
+    std::is_same_v<T, std::string_view::const_iterator> ||
+    std::is_same_v<T, const char*>;
 
 template <typename T> concept StringReverseIterator =
     std::is_same_v<T, std::string::const_reverse_iterator> ||

@@ -51,12 +51,17 @@ setup_ninja()
     local NINJA_VERSION
     # e.g. "1.10.0
     NINJA_VERSION=$(ninja --version)
+    echo -n "Found ninja ${NINJA_VERSION}"
     # strip last part: "1.10"
-    NINJA_VERSION=${NINJA_VERSION%.*}
+    NINJA_VERSION=$(echo "${NINJA_VERSION}" | cut -d. -f'1,2')
     # test major == 1 && minor >= 10 (we require Ninja > 1.10)
-    [[ "${NINJA_VERSION%%.*}" -eq "1" && "${NINJA_VERSION##*.}" -ge "10" ]] || \
+    if [[ "${NINJA_VERSION%%.*}" -eq "1" && "${NINJA_VERSION##*.}" -ge "10" ]]; then
+        echo " OK"
+        return 0
+    else
+        echo " NOT COMPATIBLE"
         return 1
-    return 0
+    fi
 }
 
 header()
@@ -140,8 +145,6 @@ while [[ $# -gt 0 ]] ; do
     esac
 done
 
-header "Settings"
-
 ARCH="$(uname -m)"
 PLATFORM="$(uname)"
 if [[ "${EMSCRIPTEN}" -eq 1 ]] ; then
@@ -194,6 +197,7 @@ if [[ -z "$PYTHON" ]] ; then
     done
 fi
 
+header "Settings"
 echo "CONAN_ARGS:   ${CONAN_ARGS[*]}"
 echo "CMAKE_ARGS:   ${CMAKE_ARGS[*]}"
 echo "BUILD_CONFIG: ${BUILD_CONFIG}"
