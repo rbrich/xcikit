@@ -238,13 +238,6 @@ port install vulkan-* MoltenVK glfw-devel freetype hyperscan cmake ninja
 [#using-build-script]
 === Using build script
 
-This should be run once to download additional assets:
-
-[source,bash]
-----
-./bootstrap.sh
-----
-
 The complete build process is handled by a build script:
 
 [source,bash]
@@ -264,9 +257,6 @@ Detailed build steps (these are examples, adjust parameters as needed):
 
 [source,bash]
 ----
-# Download additional assets
-./bootstrap.sh
-
 # Prepare build directory
 mkdir build && cd build
 
@@ -331,9 +321,7 @@ How to build:
 2. Install build tools: Git, CMake, Conan
 (`git`, `cmake` and `conan` commands should now work in _Git Bash_)
 
-3. Open _Git Bash_ and run `./bootstrap.sh`
-
-4. Still in _Git Bash_, run `./build.sh`
+3. Open _Git Bash_ and run `./build.sh`
 
 Opening the CMakeLists.txt in CLion works.
 I did not try Visual Studio, but it might also work.

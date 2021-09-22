@@ -41,10 +41,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - uses: actions/setup-python@v1
+    - uses: actions/setup-python@v2
       with:
         python-version: '3.x'
         architecture: 'x64'
+    - uses: ilammy/msvc-dev-cmd@v1
 
     - name: cache
       uses: actions/cache@v2
@@ -74,6 +75,9 @@ jobs:
             echo "CC='$CC'" >> $GITHUB_ENV
             echo "CXX='$CXX'" >> $GITHUB_ENV
             echo "MACOSX_DEPLOYMENT_TARGET=$MACOSX_DEPLOYMENT_TARGET" >> $GITHUB_ENV
+        elif [[ "$RUNNER_OS" == "Windows" ]]; then
+            choco install ninja
+            mv /usr/bin/link /usr/bin/link.orig
         fi
         pip3 --no-cache-dir install conan
         conan profile new default --detect --force
@@ -89,10 +93,6 @@ jobs:
             conan profile update "settings.compiler.libcxx=libc++" default
             conan profile update "settings.os.version=$MACOSX_DEPLOYMENT_TARGET" default
         fi
-      shell: bash
-
-    - name: bootstrap
-      run: ./bootstrap.sh
       shell: bash
 
     - name: deps

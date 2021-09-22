@@ -78,7 +78,7 @@ class XcikitConan(ConanFile):
     }
 
     exports = ("VERSION", "requirements.csv")
-    exports_sources = ("bootstrap.sh", "CMakeLists.txt", "config.h.in", "xcikitConfig.cmake.in",
+    exports_sources = ("CMakeLists.txt", "config.h.in", "xcikitConfig.cmake.in",
                        "cmake/**", "src/**", "examples/**", "tests/**", "benchmarks/**", "tools/**",
                        "share/**", "third_party/**",
                        "!build/**", "!cmake-build-*/**")
@@ -158,7 +158,6 @@ class XcikitConan(ConanFile):
         return cmake
 
     def build(self):
-        self.run("./bootstrap.sh")
         cmake = self._configure_cmake()
         cmake.build()
 
@@ -190,7 +189,8 @@ class XcikitConan(ConanFile):
 
     def package_info(self):
         self.cpp_info.components["xci-core"].libs = ["xci-core"]
-        self.cpp_info.components["xci-core"].requires = ['fmt::fmt']
+        if not self.options.system_fmt:
+            self.cpp_info.components["xci-core"].requires = ['fmt::fmt']
         if self.options.data:
             self.cpp_info.components["xci-data"].libs = ["xci-data"]
         if self.options.script:
@@ -198,12 +198,16 @@ class XcikitConan(ConanFile):
             self.cpp_info.components["xci-script"].requires = ['xci-core']
         if self.options.graphics:
             self.cpp_info.components["xci-graphics"].libs = ["xci-graphics"]
-            self.cpp_info.components["xci-graphics"].requires = [
-                "xci-core", "vulkan-loader::vulkan-loader", "glfw::glfw"]
+            self.cpp_info.components["xci-graphics"].requires = ["xci-core"]
+            if not self.options.system_glfw:
+                self.cpp_info.components["xci-graphics"].requires += ["glfw::glfw"]
+            if not self.options.system_vulkan:
+                self.cpp_info.components["xci-graphics"].requires += ["vulkan-loader::vulkan-loader"]
         if self.options.get_safe('text', False):
             self.cpp_info.components["xci-text"].libs = ["xci-text"]
-            self.cpp_info.components["xci-text"].requires = [
-                'xci-core', 'xci-graphics', 'freetype::freetype']
+            self.cpp_info.components["xci-text"].requires = ['xci-core', 'xci-graphics']
+            if not self.options.system_freetype:
+                self.cpp_info.components["xci-text"].requires += ['freetype::freetype']
         if self.options.get_safe('widgets', False):
             self.cpp_info.components["xci-widgets"].libs = ["xci-widgets"]
             self.cpp_info.components["xci-widgets"].requires = ['xci-text']

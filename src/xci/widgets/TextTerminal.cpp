@@ -267,7 +267,7 @@ size_t terminal::Line::content_skip(size_t skip, size_t start, Attributes& attr)
     auto pos = start;
     while (skip > 0 && pos < m_content.size()) {
         if (Attributes::is_introducer(m_content[pos])) {
-            pos += attr.decode({content_begin() + pos, m_content.size() - pos});
+            pos += attr.decode(std::string_view{m_content}.substr(pos));
             continue;
         }
         if (m_content[pos] == ctl::blanks) {
@@ -290,7 +290,7 @@ size_t terminal::Line::content_skip(size_t skip, size_t start, Attributes& attr)
                 break;
             }
         }
-        pos = utf8_next(content_begin() + pos) - content_begin();
+        pos = utf8_next(m_content.cbegin() + pos) - m_content.cbegin();
         --skip;
     }
     if (skip > 0) {
@@ -313,7 +313,7 @@ void terminal::Line::add_text(size_t pos, string_view sv, Attributes attr, bool 
     Attributes attr_end(attr_start);
     auto end = start;
     if (end < m_content.size() && Attributes::is_introducer(m_content[end]))
-        end += attr_end.decode({content_begin() + end, m_content.size() - end});
+        end += attr_end.decode(std::string_view{m_content}.substr(end));
 
     // Replace mode - find end of the place for new text (same length as `sv`)
     if (!insert) {
@@ -323,7 +323,7 @@ void terminal::Line::add_text(size_t pos, string_view sv, Attributes attr, bool 
         // Read also attributes after replace span
         // and unify them with attr_end
         if (end < m_content.size() && Attributes::is_introducer(m_content[end]))
-            end += attr_end.decode({content_begin() + end, m_content.size() - end});
+            end += attr_end.decode(std::string_view{m_content}.substr(end));
     }
 
     attr.preceded_by(attr_start);
@@ -364,7 +364,7 @@ void terminal::Line::delete_text(size_t first, size_t num)
     // Read also attributes after delete span
     // and unify them with attr_end
     if (end < m_content.size() && Attributes::is_introducer(m_content[end]))
-        end += attr_end.decode({content_begin() + end, m_content.size() - end});
+        end += attr_end.decode(std::string_view{m_content}.substr(end));
 
     attr_end.preceded_by(attr_start);
     m_content.erase(start, end - start);
@@ -385,7 +385,7 @@ void terminal::Line::erase_text(size_t first, size_t num, Attributes attr)
     // Read also attributes after delete span
     // and unify them with attr_end
     if (end < m_content.size() && Attributes::is_introducer(m_content[end]))
-        end += attr_end.decode({content_begin() + end, m_content.size() - end});
+        end += attr_end.decode(std::string_view{m_content}.substr(end));
 
     attr.preceded_by(attr_start);
     attr_end.preceded_by(attr);
@@ -428,7 +428,7 @@ int terminal::Line::length() const
 
 void terminal::Line::render(Renderer& renderer)
 {
-    for (const char* it = content_begin(); it != content_end(); ) {
+    for (auto it = m_content.cbegin(); it != m_content.cend(); ) {
         if (*it == terminal::ctl::blanks) {
             auto num = uint8_t(*++it);
             renderer.draw_blanks(num);
@@ -437,13 +437,13 @@ void terminal::Line::render(Renderer& renderer)
         }
         if (terminal::Attributes::is_introducer(*it)) {
             terminal::Attributes attr;
-            it += attr.decode({it, size_t(content_end() - it)});
+            it += attr.decode({&*it, size_t(m_content.cend() - it)});
             attr.render(renderer);
             continue;
         }
 
         // extract single UTF-8 character
-        renderer.draw_char(utf8_codepoint(it));
+        renderer.draw_char(utf8_codepoint(&*it));
         it = utf8_next(it);
     }
 }

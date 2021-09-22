@@ -13,6 +13,20 @@
 
 namespace xci::core {
 
+// -----------------------------------------------------------------------------
+// Concepts
+
+template <typename T> concept StringIterator =
+    std::is_same_v<T, std::string::const_iterator> ||
+    std::is_same_v<T, std::string_view::const_iterator> ||
+    std::is_same_v<T, const char*>;
+
+template <typename T> concept StringReverseIterator =
+    std::is_same_v<T, std::string::const_reverse_iterator> ||
+    std::is_same_v<T, std::string_view::const_reverse_iterator>;
+
+// -----------------------------------------------------------------------------
+
 
 constexpr const char* whitespace_chars = "\t\n\v\f\r ";
 
@@ -119,17 +133,19 @@ std::string to_utf8(std::wstring_view wstr);
 std::string to_utf8(char32_t codepoint);
 
 const char8_t* utf8_next(const char8_t* utf8);
-template <class I> I utf8_next(I iter) {
+
+template <StringIterator I>
+I utf8_next(I iter) {
     const char8_t* a = reinterpret_cast<const char8_t*>(&*iter);
-    const char8_t* r = utf8_next(a);
-    return iter + (r - a);
+    return iter + (utf8_next(a) - a);
 }
 
 const char8_t* utf8_prev(const char8_t* utf8);
-template <class RI> RI utf8_prev(RI riter) {
+
+template <StringReverseIterator RI>
+RI utf8_prev(RI riter) {
     const char8_t* a = reinterpret_cast<const char8_t*>(&*riter);
-    const char8_t* r = utf8_prev(a);
-    return riter + (a - r);
+    return riter + (a - utf8_prev(a));
 }
 
 template <class S, class SSize = typename S::size_type>
