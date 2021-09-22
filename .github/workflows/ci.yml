@@ -91,10 +91,6 @@ jobs:
         fi
       shell: bash
 
-    - name: bootstrap
-      run: ./bootstrap.sh
-      shell: bash
-
     - name: deps
       run: ./build.sh deps $BUILD_ARGS
       shell: bash

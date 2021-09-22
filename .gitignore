@@ -2,5 +2,6 @@
 /*build*/
 /test_package/build/
 /share/fonts/Hack/
+/share/fonts/Hack-*.tar.xz
 
 /.idea/

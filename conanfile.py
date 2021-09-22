@@ -78,7 +78,7 @@ class XcikitConan(ConanFile):
     }
 
     exports = ("VERSION", "requirements.csv")
-    exports_sources = ("bootstrap.sh", "CMakeLists.txt", "config.h.in", "xcikitConfig.cmake.in",
+    exports_sources = ("CMakeLists.txt", "config.h.in", "xcikitConfig.cmake.in",
                        "cmake/**", "src/**", "examples/**", "tests/**", "benchmarks/**", "tools/**",
                        "share/**", "third_party/**",
                        "!build/**", "!cmake-build-*/**")
@@ -158,7 +158,6 @@ class XcikitConan(ConanFile):
         return cmake
 
     def build(self):
-        self.run("./bootstrap.sh")
         cmake = self._configure_cmake()
         cmake.build()
 

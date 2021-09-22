@@ -39,6 +39,7 @@ define_property(TARGET
 
 if (XCI_GRAPHICS)
     add_subdirectory(shaders)
+    add_subdirectory(fonts)
 endif()
 
 if (NOT TARGET shaders)

@@ -12,9 +12,6 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Bootstrap
-          command: ./bootstrap.sh
-      - run:
           name: Deps
           command: ./build.sh deps
       - run:
@@ -44,9 +41,6 @@ jobs:
         default: "--emscripten core script"
     steps:
       - checkout
-      - run:
-          name: Bootstrap
-          command: ./bootstrap.sh
       - run:
           name: Deps
           command: ./build.sh deps << parameters.build-args >>
