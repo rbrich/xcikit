@@ -96,10 +96,15 @@ int main(int argc, const char* argv[])
     window.set_refresh_mode(RefreshMode::OnDemand);
     //window.set_debug_flags(View::DebugFlags(View::Debug::LineBaseLine));
 
-    window.set_key_callback([&root](View& v, const KeyEvent& e) {
-        if (e.action == Action::Press && e.key == Key::D) {
-            root.dump(std::cout);
-            std::cout << std::endl;
+    window.set_key_callback([&root, &window](View& v, const KeyEvent& e) {
+        if (e.action == Action::Press) {
+            if (e.key == Key::Escape) {
+                window.close();
+            }
+            if (e.key == Key::D) {
+                root.dump(std::cout);
+                std::cout << std::endl;
+            }
         }
     });
 

@@ -223,11 +223,6 @@ void Window::setup_view()
                                     int action, int mods) {
         auto self = (Window*) glfwGetWindowUserPointer(window);
 
-        if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-            glfwSetWindowShouldClose(window, GLFW_TRUE);
-            return;
-        }
-
         if (key == GLFW_KEY_F11 && action == GLFW_PRESS) {
             // Toggle fullscreen / windowed mode
             auto& pos = self->m_window_pos;
@@ -281,13 +276,20 @@ void Window::setup_view()
                     case GLFW_KEY_NUM_LOCK: ev_key = Key::NumLock; break;
                     case GLFW_KEY_PRINT_SCREEN: ev_key = Key::PrintScreen; break;
                     case GLFW_KEY_PAUSE: ev_key = Key::Pause; break;
-                    case GLFW_KEY_SPACE: ev_key = Key::Space; break;
                     case GLFW_KEY_KP_ADD: ev_key = Key::KeypadPlus; break;
                     case GLFW_KEY_KP_SUBTRACT: ev_key = Key::KeypadMinus; break;
                     case GLFW_KEY_KP_MULTIPLY: ev_key = Key::KeypadAsterisk; break;
                     case GLFW_KEY_KP_DIVIDE: ev_key = Key::KeypadSlash; break;
                     case GLFW_KEY_KP_DECIMAL: ev_key = Key::KeypadDecimalPoint; break;
                     case GLFW_KEY_KP_ENTER: ev_key = Key::KeypadEnter; break;
+                    case GLFW_KEY_LEFT_SHIFT: ev_key = Key::LeftShift; break;
+                    case GLFW_KEY_RIGHT_SHIFT: ev_key = Key::RightShift; break;
+                    case GLFW_KEY_LEFT_CONTROL: ev_key = Key::LeftControl; break;
+                    case GLFW_KEY_RIGHT_CONTROL: ev_key = Key::RightControl; break;
+                    case GLFW_KEY_LEFT_ALT: ev_key = Key::LeftAlt; break;
+                    case GLFW_KEY_RIGHT_ALT: ev_key = Key::RightAlt; break;
+                    case GLFW_KEY_LEFT_SUPER: ev_key = Key::LeftSuper; break;
+                    case GLFW_KEY_RIGHT_SUPER: ev_key = Key::RightSuper; break;
                     default:
                         log::debug("GlWindow: unknown key: {}", key);
                         ev_key = Key::Unknown; break;

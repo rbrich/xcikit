@@ -159,6 +159,9 @@ int main(int argc, const char* argv[])
         if (ev.action != Action::Press)
             return;
         switch (ev.key) {
+            case Key::Escape:
+                window.close();
+                break;
             case Key::S:
                 view_scale = ViewScale::ScalingWithAspectCorrection;
                 font_size = 0.05f;
