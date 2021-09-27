@@ -36,7 +36,7 @@ const char* terminal::Attributes::skip(const char* introducer)
 
 void terminal::Attributes::set_fg(terminal::Color8bit fg_color)
 {
-    set_bit(Fg);
+    set_bit(FlagFg);
     m_fg = ColorMode::Color8bit;
     m_fg_r = fg_color;
 }
@@ -44,7 +44,7 @@ void terminal::Attributes::set_fg(terminal::Color8bit fg_color)
 
 void terminal::Attributes::set_bg(terminal::Color8bit bg_color)
 {
-    set_bit(Bg);
+    set_bit(FlagBg);
     m_bg = ColorMode::Color8bit;
     m_bg_r = bg_color;
 }
@@ -52,7 +52,7 @@ void terminal::Attributes::set_bg(terminal::Color8bit bg_color)
 
 void terminal::Attributes::set_fg(Color24bit fg_color)
 {
-    set_bit(Fg);
+    set_bit(FlagFg);
     m_fg = ColorMode::Color24bit;
     m_fg_r = fg_color.r;
     m_fg_g = fg_color.g;
@@ -63,7 +63,7 @@ void terminal::Attributes::set_fg(Color24bit fg_color)
 
 void terminal::Attributes::set_bg(Color24bit bg_color)
 {
-    set_bit(Bg);
+    set_bit(FlagBg);
     m_bg = ColorMode::Color24bit;
     m_bg_r = bg_color.r;
     m_bg_g = bg_color.g;
@@ -73,50 +73,80 @@ void terminal::Attributes::set_bg(Color24bit bg_color)
 
 void terminal::Attributes::set_default_fg()
 {
-    set_bit(Fg);
+    set_bit(FlagFg);
     m_fg = ColorMode::ColorDefault;
 }
 
 
 void terminal::Attributes::set_default_bg()
 {
-    set_bit(Bg);
+    set_bit(FlagBg);
     m_bg = ColorMode::ColorDefault;
 }
 
 
+void terminal::Attributes::set_font_style(text::FontStyle style)
+{
+    set_bit(FlagFontStyle);
+    m_font_style = style;
+}
+
+
+void terminal::Attributes::set_mode(terminal::Mode mode)
+{
+    set_bit(FlagMode);
+    m_mode = mode;
+}
+
+
+void terminal::Attributes::set_decoration(terminal::Decoration decoration)
+{
+    set_bit(FlagDecoration);
+    m_decoration = decoration;
+}
+
 
 void terminal::Attributes::preceded_by(const terminal::Attributes& other)
 {
-    // If this and other set same attribute -> leave it out
+    // If this and other set the same attribute -> leave it out
     // If other sets some attribute, but this does not -> reset it
-    if (m_set[Attr] && other.m_set[Attr] && m_attr == other.m_attr) {
-        m_set[Attr] = false;
-    } else if (!m_set[Attr] && other.m_set[Attr] && !other.m_attr.none()) {
-        m_set[Attr] = true;
-        m_attr.reset();
+    // Otherwise, both this and other set the attribute -> set
+    if (m_set[FlagFontStyle] && other.m_set[FlagFontStyle] && m_font_style == other.m_font_style) {
+        m_set[FlagFontStyle] = false;
+    } else if (!m_set[FlagFontStyle] && other.m_set[FlagFontStyle] && other.m_font_style != text::FontStyle::Regular) {
+        set_font_style(text::FontStyle::Regular);
     }
 
-    if (m_set[Fg] && other.m_set[Fg]
+    if (m_set[FlagDecoration] && other.m_set[FlagDecoration] && m_decoration == other.m_decoration) {
+        m_set[FlagDecoration] = false;
+    } else if (!m_set[FlagDecoration] && other.m_set[FlagDecoration] && other.m_decoration != Decoration::None) {
+        set_decoration(Decoration::None);
+    }
+
+    if (m_set[FlagMode] && other.m_set[FlagMode] && m_mode == other.m_mode) {
+        m_set[FlagMode] = false;
+    } else if (!m_set[FlagMode] && other.m_set[FlagMode] && other.m_mode != Mode::Normal) {
+        set_mode(Mode::Normal);
+    }
+
+    if (m_set[FlagFg] && other.m_set[FlagFg]
     && m_fg == other.m_fg
     && (m_fg == ColorMode::ColorDefault || m_fg_r == other.m_fg_r)
     && (m_fg != ColorMode::Color24bit || m_fg_g == other.m_fg_g)
     && (m_fg != ColorMode::Color24bit || m_fg_b == other.m_fg_b)) {
-        m_set[Fg] = false;
-    } else if (!m_set[Fg] && other.m_set[Fg] && other.m_fg != ColorMode::ColorDefault) {
-        m_set[Fg] = true;
-        m_fg = ColorMode::ColorDefault;
+        m_set[FlagFg] = false;  // no change
+    } else if (!m_set[FlagFg] && other.m_set[FlagFg] && other.m_fg != ColorMode::ColorDefault) {
+        set_default_fg();
     }
 
-    if (m_set[Bg] && other.m_set[Bg]
+    if (m_set[FlagBg] && other.m_set[FlagBg]
     && m_bg == other.m_bg
     && (m_bg == ColorMode::ColorDefault || m_bg_r == other.m_bg_r)
     && (m_bg != ColorMode::Color24bit || m_bg_g == other.m_bg_g)
     && (m_bg != ColorMode::Color24bit || m_bg_b == other.m_bg_b)) {
-        m_set[Bg] = false;
-    } else if (!m_set[Bg] && other.m_set[Bg] && other.m_bg != ColorMode::ColorDefault) {
-        m_set[Bg] = true;
-        m_bg = ColorMode::ColorDefault;
+        m_set[FlagBg] = false;  // no change
+    } else if (!m_set[FlagBg] && other.m_set[FlagBg] && other.m_bg != ColorMode::ColorDefault) {
+        set_default_bg();
     }
 }
 
@@ -125,12 +155,22 @@ std::string terminal::Attributes::encode() const
 {
     std::string result;
 
-    if (m_set[Attr]) {
-        result.push_back(ctl::set_attrs);
-        result.push_back(char(m_attr.to_ulong()));
+    if (m_set[FlagFontStyle]) {
+        result.push_back(ctl::font_style);
+        result.push_back(char(m_font_style));
     }
 
-    if (m_set[Fg]) {
+    if (m_set[FlagDecoration]) {
+        result.push_back(ctl::decoration);
+        result.push_back(char(m_decoration));
+    }
+
+    if (m_set[FlagMode]) {
+        result.push_back(ctl::mode);
+        result.push_back(char(m_mode));
+    }
+
+    if (m_set[FlagFg]) {
         switch (m_fg) {
             case ColorMode::ColorDefault:
                 result.push_back(ctl::default_fg);
@@ -148,7 +188,7 @@ std::string terminal::Attributes::encode() const
         }
     }
 
-    if (m_set[Bg]) {
+    if (m_set[FlagBg]) {
         switch (m_bg) {
             case ColorMode::ColorDefault:
                 result.push_back(ctl::default_bg);
@@ -177,9 +217,17 @@ size_t terminal::Attributes::decode(string_view sv)
         if (*it < ctl::first_introducer || *it > ctl::last_introducer)
             break;
         switch (*it) {
-            case ctl::set_attrs:
-                m_set[Attr] = true;
-                m_attr = (*++it);
+            case ctl::font_style:
+                m_set[FlagFontStyle] = true;
+                m_font_style = text::FontStyle(*++it);
+                break;
+            case ctl::decoration:
+                m_set[FlagDecoration] = true;
+                m_decoration = Decoration(*++it);
+                break;
+            case ctl::mode:
+                m_set[FlagMode] = true;
+                m_mode = Mode(*++it);
                 break;
             case ctl::default_fg:
                 set_default_fg();
@@ -194,14 +242,14 @@ size_t terminal::Attributes::decode(string_view sv)
                 set_bg(Color8bit(*++it));
                 break;
             case ctl::fg24bit:
-                set_bit(Fg);
+                set_bit(FlagFg);
                 m_fg = ColorMode::Color24bit;
                 m_fg_r = uint8_t(*++it);
                 m_fg_g = uint8_t(*++it);
                 m_fg_b = uint8_t(*++it);
                 break;
             case ctl::bg24bit:
-                set_bit(Bg);
+                set_bit(FlagBg);
                 m_bg = ColorMode::Color24bit;
                 m_bg_r = uint8_t(*++it);
                 m_bg_g = uint8_t(*++it);
@@ -219,6 +267,8 @@ size_t terminal::Attributes::decode(string_view sv)
 
 Color terminal::Attributes::fg() const
 {
+    if (!has_fg())
+        return Color(7);
     switch (m_fg) {
         default:
         case ColorMode::ColorDefault:   return Color(7);
@@ -230,6 +280,8 @@ Color terminal::Attributes::fg() const
 
 Color terminal::Attributes::bg() const
 {
+    if (!has_bg())
+        return Color(0);
     switch (m_bg) {
         default:
         case ColorMode::ColorDefault:   return Color(0);
@@ -241,13 +293,40 @@ Color terminal::Attributes::bg() const
 
 void terminal::Attributes::render(terminal::Renderer& renderer)
 {
-    if (has_attr()) {
-        renderer.set_font_style(font_style());
+    if (has_font_style())
+        renderer.set_font_style(m_font_style);
+    if (has_decoration())
+        renderer.set_decoration(m_decoration);
+    if (has_mode())
+        renderer.set_mode(m_mode);
+    if (has_fg()) {
+        switch (m_fg) {
+            default:
+            case ColorMode::ColorDefault:
+                renderer.set_default_fg_color();
+                break;
+            case ColorMode::Color8bit:
+                renderer.set_fg_color(m_fg_r);
+                break;
+            case ColorMode::Color24bit:
+                renderer.set_fg_color(Color(m_fg_r, m_fg_g, m_fg_b));
+                break;
+        }
     }
-    if (has_fg())
-        renderer.set_fg_color(fg());
-    if (has_bg())
-        renderer.set_bg_color(bg());
+    if (has_bg()) {
+        switch (m_bg) {
+            default:
+            case ColorMode::ColorDefault:
+                renderer.set_default_bg_color();
+                break;
+            case ColorMode::Color8bit:
+                renderer.set_bg_color(m_bg_r);
+                break;
+            case ColorMode::Color24bit:
+                renderer.set_bg_color(Color(m_bg_r, m_bg_g, m_bg_b));
+                break;
+        }
+    }
 }
 
 
@@ -678,22 +757,19 @@ void TextTerminal::set_cursor_pos(core::Vec2u pos)
 
 void TextTerminal::set_font_style(FontStyle style)
 {
-    m_attrs.set_italic(style == FontStyle::Italic || style == FontStyle::BoldItalic);
-    m_attrs.set_bold(style == FontStyle::Bold || style == FontStyle::BoldItalic);
+    m_attrs.set_font_style(style);
 }
 
 
-void TextTerminal::set_decoration(TextTerminal::Decoration decoration)
+void TextTerminal::set_decoration(Decoration decoration)
 {
-    // TODO
-    //set_attribute(c_decoration_mask, static_cast<uint8_t>(decoration) << c_decoration_shift);
+    m_attrs.set_decoration(decoration);
 }
 
 
-void TextTerminal::set_mode(TextTerminal::Mode mode)
+void TextTerminal::set_mode(Mode mode)
 {
-    // TODO
-    //set_attribute(c_mode_mask, static_cast<uint8_t>(mode) << c_mode_shift);
+    m_attrs.set_mode(mode);
 }
 
 
@@ -775,32 +851,65 @@ void TextTerminal::update(View& view, State state)
         font.set_style(text::FontStyle::Regular);
         m_sprites.set_color(Color(7));
         m_boxes.set_fill_color(Color(0));
-        auto ascender = font.ascender();
 
         class LineRenderer: public terminal::Renderer {
         public:
             // capture by ref
             LineRenderer(ViewportCoords& pen, size_t& column,
                     graphics::ColoredSprites& sprites, graphics::Shape& boxes,
-                    text::Font& font, float& ascender,
+                    text::Font& font,
                     const ViewportSize& cell_size, View& view)
                     : pen(pen), column(column), sprites(sprites), boxes(boxes),
-                      font(font), ascender(ascender),
+                      font(font), ascender(font.ascender()),
                       cell_size(cell_size), view(view)
             {}
 
             void set_font_style(FontStyle font_style) override {
                 font.set_style(font_style);
                 ascender = font.ascender();
-                //auto deco = static_cast<Decoration>((*it & c_decoration_mask) >> c_decoration_shift);
-                //auto mode = static_cast<Mode>((*it & c_mode_mask) >> c_mode_shift);
-                //(void) deco; // TODO
-                //(void) mode; // TODO
             }
-            void set_fg_color(Color fg) override {
+            void set_decoration(Decoration decoration) override {
+                //
+            }
+            void set_mode(Mode mode) override {
+                m_mode = mode;
+                switch (mode) {
+                    default:
+                    case Mode::Normal:
+                        if (m_fg < 8)
+                            sprites.set_color(Color(m_fg));
+                        break;
+                    case Mode::Bright:
+                        if (m_fg < 8)
+                            sprites.set_color(Color(m_fg + 8));
+                        break;
+                }
+            }
+            Color8bit _apply_fg8_mode() {
+                return m_mode == Mode::Bright && m_fg < 8 ? m_fg + 8 : m_fg;
+            }
+            void set_default_fg_color() override {
+                m_fg = 7;
+                sprites.set_color(Color(m_mode == Mode::Bright ? 15 : 7));
+            }
+            void set_default_bg_color() override {
+                m_bg = 0;
+                boxes.set_fill_color(Color(0));
+            }
+            void set_fg_color(Color8bit fg) override {
+                m_fg = fg;
+                sprites.set_color(Color(m_mode == Mode::Bright && fg < 8 ? fg + 8 : fg));
+            }
+            void set_bg_color(Color8bit bg) override {
+                m_bg = bg;
+                boxes.set_fill_color(Color(bg));
+            }
+            void set_fg_color(Color24bit fg) override {
+                m_fg = 255;
                 sprites.set_color(fg);
             }
-            void set_bg_color(Color bg) override {
+            void set_bg_color(Color24bit bg) override {
+                m_bg = 255;
                 boxes.set_fill_color(bg);
             }
             void draw_blanks(size_t num) override {
@@ -835,10 +944,13 @@ void TextTerminal::update(View& view, State state)
             graphics::ColoredSprites& sprites;
             graphics::Shape& boxes;
             text::Font& font;
-            float& ascender;
+            float ascender;
+            Color8bit m_fg = 7;
+            Color8bit m_bg = 0;
+            Mode m_mode = Mode::Normal;
             const ViewportSize& cell_size;
             View& view;
-        } line_renderer(pen, column, m_sprites, m_boxes, font, ascender,
+        } line_renderer(pen, column, m_sprites, m_boxes, font,
                 m_cell_size, view);
 
         line.render(line_renderer);

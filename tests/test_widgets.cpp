@@ -15,7 +15,6 @@ using namespace xci::widgets;
 using namespace xci::text;
 using namespace xci::graphics;
 using namespace xci::core;
-using namespace xci::widgets::terminal::ctl;
 using fmt::format;
 
 
@@ -26,7 +25,6 @@ public:
             return;
         m_output.append([font_style](){
             switch (font_style) {
-                default:
                 case FontStyle::Regular:    return "[r]";
                 case FontStyle::Italic:     return "[i]";
                 case FontStyle::Bold:       return "[b]";
@@ -34,6 +32,38 @@ public:
             }
         }());
         m_font_style = font_style;
+    }
+    void set_decoration(terminal::Decoration decoration) override {
+        using terminal::Decoration;
+        m_output.append([decoration](){
+            switch (decoration) {
+                case Decoration::None:          return "[ ]";
+                case Decoration::Underlined:    return "[_]";
+                case Decoration::Overlined:     return "[‾]";
+                case Decoration::CrossedOut:    return "[-]";
+            }
+        }());
+    }
+    void set_mode(terminal::Mode mode) override {
+        using terminal::Mode;
+        m_output.append([mode](){
+            switch (mode) {
+                case Mode::Normal:        return "[n]";
+                case Mode::Bright:        return "[+]";
+            }
+        }());
+    }
+    void set_default_fg_color() override {
+        m_output.append(format("[fg:-]"));
+    }
+    void set_default_bg_color() override {
+        m_output.append(format("[bg:-]"));
+    }
+    void set_fg_color(terminal::Color8bit fg) override {
+        m_output.append(format("[fg:{:02x}]", fg));
+    }
+    void set_bg_color(terminal::Color8bit bg) override {
+        m_output.append(format("[bg:{:02x}]", bg));
     }
     void set_fg_color(Color fg) override {
         m_output.append(format("[fg:{:02x}{:02x}{:02x}]", fg.r, fg.g, fg.b));
@@ -58,6 +88,7 @@ private:
 
 TEST_CASE( "Attributes", "[TextTerminal]" )
 {
+    using namespace xci::widgets::terminal::ctl;
     terminal::Attributes attr;
     terminal::Attributes attr2;
     std::string enc;
@@ -94,17 +125,21 @@ TEST_CASE( "Attributes", "[TextTerminal]" )
     enc = attr.encode();
     CHECK( escape(enc) == escape(format("{:c}{:c}", default_fg, default_bg)) );
 
-    attr.set_bold(true);
+    attr.set_font_style(FontStyle::Italic);
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{:c}\x02{:c}{:c}", set_attrs, default_fg, default_bg)) );
+    CHECK( escape(enc) == escape(format("{:c}\x01{:c}{:c}", font_style, default_fg, default_bg)) );
 
-    attr.set_italic(false);
+    attr.set_font_style(FontStyle::Bold);
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{:c}\x02{:c}{:c}", set_attrs, default_fg, default_bg)) );
+    CHECK( escape(enc) == escape(format("{:c}\x02{:c}{:c}", font_style, default_fg, default_bg)) );
 
-    attr.set_italic(true);
+    attr.set_font_style(FontStyle::BoldItalic);
     enc = attr.encode();
-    CHECK( escape(enc) == escape(format("{:c}\x03{:c}{:c}", set_attrs, default_fg, default_bg)) );
+    CHECK( escape(enc) == escape(format("{:c}\x03{:c}{:c}", font_style, default_fg, default_bg)) );
+
+    attr.set_mode(terminal::Mode::Bright);
+    enc = attr.encode();
+    CHECK( escape(enc) == escape(format("{:c}\x03{:c}\x01{:c}{:c}", font_style, mode, default_fg, default_bg)) );
 }
 
 
@@ -112,17 +147,17 @@ TEST_CASE( "Line::add_text", "[TextTerminal]" )
 {
     TestRenderer r;
     terminal::Line line;
-    terminal::Attributes bold, italic, attr;
+    terminal::Attributes bold, italic, attr;  // NOLINT
 
     line.render(r);
     CHECK(r.output().empty());
 
-    bold.set_bold(true);
+    bold.set_font_style(FontStyle::Bold);
     line.add_text(0, "bold", bold, false);
     line.render(r);
     CHECK(r.output() == "[b]bold[r]");
 
-    italic.set_italic(true);
+    italic.set_font_style(FontStyle::Italic);
     line.add_text(0, "italic", italic, true);
     line.render(r);
     CHECK(r.output() == "[i]italic[b]bold[r]");
@@ -139,11 +174,11 @@ TEST_CASE( "Line::add_text", "[TextTerminal]" )
     line.render(r);
     CHECK(r.output() == "[i]it[b]BOLDbold[r]        # skipped after end");
 
-    attr.set_fg(Color::Red());
-    attr.set_bg(Color::Yellow());
+    attr.set_fg(1);  // 8bit
+    attr.set_bg(Color::Yellow());  // 24bit
     line.add_text(12, "@", attr, false);
     line.render(r);
-    CHECK(r.output() == "[i]it[b]BOLDbold[r]  [fg:ff0000][bg:ffff00]@[fg:b2b2b2][bg:000000]     # skipped after end");
+    CHECK(r.output() == "[i]it[b]BOLDbold[r]  [fg:01][bg:ffff00]@[fg:-][bg:-]     # skipped after end");
 }
 
 
@@ -151,14 +186,14 @@ TEST_CASE( "Line::erase_text", "[TextTerminal]" )
 {
     TestRenderer r;
     terminal::Line line;
-    terminal::Attributes bold, italic, attr;
+    terminal::Attributes bold, italic, attr;  // NOLINT
 
-    bold.set_bold(true);
+    bold.set_font_style(FontStyle::Bold);
     line.add_text(0, "verybold", bold, /*insert=*/false);
     line.render(r);
     CHECK(r.output() == "[b]verybold[r]");
 
-    italic.set_italic(true);
+    italic.set_font_style(FontStyle::Italic);
     line.erase_text(3, 3, italic);
     line.render(r);
     CHECK(r.output() == "[b]ver[i]   [b]ld[r]");
