@@ -68,6 +68,9 @@ int main(int argc, const char* argv[])
             case Key::Escape:
                 window.close();
                 break;
+            case Key::F11:
+                window.toggle_fullscreen();
+                break;
             case Key::R:
                 add_shape_fn = [](Shape& shape, const ViewportRect& rect, ViewportUnits th) {
                     shape.add_rectangle(rect, th);

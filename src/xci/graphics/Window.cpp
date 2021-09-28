@@ -102,6 +102,24 @@ void Window::close() const
 }
 
 
+void Window::toggle_fullscreen()
+{
+    auto& pos = m_window_pos;
+    auto& size = m_window_size;
+    if (glfwGetWindowMonitor(m_window)) {
+        glfwSetWindowMonitor(m_window, nullptr, pos.x, pos.y, size.x, size.y, 0);
+    } else {
+        GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+        if (monitor) {
+            const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+            glfwGetWindowPos(m_window, &pos.x, &pos.y);
+            glfwGetWindowSize(m_window, &size.x, &size.y);
+            glfwSetWindowMonitor(m_window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+        }
+    }
+}
+
+
 void Window::set_clipboard_string(const std::string& s) const
 {
     glfwSetClipboardString(m_window, s.c_str());
@@ -221,25 +239,7 @@ void Window::setup_view()
 
     glfwSetKeyCallback(m_window, [](GLFWwindow* window, int key, int scancode,
                                     int action, int mods) {
-        auto self = (Window*) glfwGetWindowUserPointer(window);
-
-        if (key == GLFW_KEY_F11 && action == GLFW_PRESS) {
-            // Toggle fullscreen / windowed mode
-            auto& pos = self->m_window_pos;
-            auto& size = self->m_window_size;
-            if (glfwGetWindowMonitor(window)) {
-                glfwSetWindowMonitor(window, nullptr, pos.x, pos.y, size.x, size.y, 0);
-            } else {
-                GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-                if (monitor) {
-                    const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-                    glfwGetWindowPos(window, &pos.x, &pos.y);
-                    glfwGetWindowSize(window, &size.x, &size.y);
-                    glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
-                }
-            }
-            return;
-        }
+        auto* self = (Window*) glfwGetWindowUserPointer(window);
 
         if (self->m_key_cb) {
             Key ev_key;

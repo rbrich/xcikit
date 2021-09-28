@@ -98,6 +98,21 @@ int main(int argc, const char* argv[])
         }
     });
 
+    window.set_key_callback([&](View& view, KeyEvent ev) {
+        if (ev.action != Action::Press)
+            return;
+        switch (ev.key) {
+            case Key::Escape:
+                window.close();
+                break;
+            case Key::F11:
+                window.toggle_fullscreen();
+                break;
+            default:
+                break;
+        }
+    });
+
     window.display();
     return EXIT_SUCCESS;
 }

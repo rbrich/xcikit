@@ -9,6 +9,7 @@ IndentWidth: 4
 AccessModifierOffset: -4
 ConstructorInitializerIndentWidth: 8
 ContinuationIndentWidth: 8
+IndentCaseLabels: true
 ColumnLimit: 0  # cca 100
 
 AlignAfterOpenBracket: Align
@@ -40,11 +41,10 @@ IncludeCategories:
     Priority:        3
   - Regex:           '^<'
     Priority:        4
-IndentCaseLabels: true
 #InsertTrailingCommas: Wrapped
 MaxEmptyLinesToKeep: 2
 PointerAlignment: Left
-SortIncludes: false
+SortIncludes: Never
 SpaceAfterCStyleCast: true
 SpaceAfterTemplateKeyword: false
 SpacesBeforeTrailingComments: 2

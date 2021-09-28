@@ -152,6 +152,10 @@ public:
     // (thread-safe)
     void close() const;
 
+    // Toggle fullscreen / windowed mode
+    // The window starts in windowed mode.
+    void toggle_fullscreen();
+
     void set_clipboard_string(const std::string& s) const;
     std::string get_clipboard_string() const;
 

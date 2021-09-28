@@ -96,15 +96,22 @@ int main(int argc, const char* argv[])
     window.set_refresh_mode(RefreshMode::OnDemand);
     //window.set_debug_flags(View::DebugFlags(View::Debug::LineBaseLine));
 
-    window.set_key_callback([&root, &window](View& v, const KeyEvent& e) {
-        if (e.action == Action::Press) {
-            if (e.key == Key::Escape) {
+    window.set_key_callback([&root, &window](View& v, const KeyEvent& ev) {
+        if (ev.action != Action::Press)
+            return;
+        switch (ev.key) {
+            case Key::Escape:
                 window.close();
-            }
-            if (e.key == Key::D) {
+                break;
+            case Key::F11:
+                window.toggle_fullscreen();
+                break;
+            case Key::D:
                 root.dump(std::cout);
                 std::cout << std::endl;
-            }
+                break;
+            default:
+                break;
         }
     });
 

@@ -78,6 +78,21 @@ int main(int argc, const char* argv[])
     fps_display.set_position({-1.2f, -0.8f});
     root.add(fps_display);
 
+    window.set_key_callback([&](View& view, KeyEvent ev) {
+        if (ev.action != Action::Press)
+            return;
+        switch (ev.key) {
+            case Key::Escape:
+                window.close();
+                break;
+            case Key::F11:
+                window.toggle_fullscreen();
+                break;
+            default:
+                break;
+        }
+    });
+
     Bind bind(window, root);
     window.set_refresh_mode(RefreshMode::OnDemand);
     window.display();
