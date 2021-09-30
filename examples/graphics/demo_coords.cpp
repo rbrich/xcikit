@@ -55,6 +55,7 @@ int main(int argc, const char* argv[])
     Text help_text(font, "Units:     \tOrigin:\n"
                          "[s] scaling\t[c] center\n"
                          "[f] fixed  \t[t] top-left\n");
+    help_text.set_color(Color(200, 100, 50));
 
     Shape unit_square(renderer, Color::Transparent(),
         Color(0.7, 0.7, 0.7));
@@ -89,6 +90,7 @@ int main(int argc, const char* argv[])
         coords_br.resize(view);
         coords_tr.resize(view);
         coords_bl.resize(view);
+        help_text.resize(view);
 
         size_scal.set_fixed_string("Viewport size:     " +
                                    format("{} x {}", vs.x, vs.y) +
@@ -138,7 +140,7 @@ int main(int argc, const char* argv[])
             size_frame.draw(view, {vc.x - 0.4f, vc.y - 0.3f});
             size_font.draw(view, {vc.x - 0.4f, vc.y - 0.2f});
             mouse_pos.draw(view, {vc.x - 0.4f, vc.y + 0.2f});
-            help_text.draw(view, {vc.x - 0.4f, vc.y + 0.3f});
+            help_text.draw(view, {vc.x - 0.4f, vc.y + 0.4f});
         } else {
             auto tl = vc - vs / 2.0_vp;
             auto br = vc + vs / 2.0_vp;
@@ -151,7 +153,7 @@ int main(int argc, const char* argv[])
             size_frame.draw(view, {vc.x - 120, vc.y - 90});
             size_font.draw(view, {vc.x - 120, vc.y - 60});
             mouse_pos.draw(view, {vc.x - 120, vc.y + 60});
-            help_text.draw(view, {vc.x - 120, vc.y + 90});
+            help_text.draw(view, {vc.x - 120, vc.y + 120});
         }
     });
 
@@ -159,6 +161,12 @@ int main(int argc, const char* argv[])
         if (ev.action != Action::Press)
             return;
         switch (ev.key) {
+            case Key::Escape:
+                window.close();
+                break;
+            case Key::F11:
+                window.toggle_fullscreen();
+                break;
             case Key::S:
                 view_scale = ViewScale::ScalingWithAspectCorrection;
                 font_size = 0.05f;

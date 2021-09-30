@@ -54,6 +54,12 @@ enum class Key {
     // Numeric keypad
     Keypad0 = 128, Keypad1, Keypad2, Keypad3, Keypad4, Keypad5, Keypad6, Keypad7, Keypad8, Keypad9,
     KeypadPlus, KeypadMinus, KeypadAsterisk, KeypadSlash, KeypadDecimalPoint, KeypadEnter,
+
+    // Modifier keys
+    LeftShift, RightShift,
+    LeftControl, RightControl,
+    LeftAlt, RightAlt,
+    LeftSuper, RightSuper,  // Command or Windows key
 };
 static_assert((int)Key::Z == 90, "ascii letters");
 
@@ -145,6 +151,10 @@ public:
     // Stop the main loop and close the window.
     // (thread-safe)
     void close() const;
+
+    // Toggle fullscreen / windowed mode
+    // The window starts in windowed mode.
+    void toggle_fullscreen();
 
     void set_clipboard_string(const std::string& s) const;
     std::string get_clipboard_string() const;

@@ -104,6 +104,21 @@ int main(int argc, const char* argv[])
         terminal.set_size(vs);
     });
 
+    window.set_key_callback([&](View& view, KeyEvent ev) {
+        if (ev.action != Action::Press)
+            return;
+        switch (ev.key) {
+            case Key::Escape:
+                window.close();
+                break;
+            case Key::F11:
+                window.toggle_fullscreen();
+                break;
+            default:
+                break;
+        }
+    });
+
     Bind bind(window, terminal);
     window.set_refresh_mode(RefreshMode::OnDemand);
     window.set_view_mode(ViewOrigin::TopLeft, ViewScale::FixedScreenPixels);

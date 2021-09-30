@@ -89,6 +89,12 @@ int main(int argc, const char* argv[])
         if (ev.action != Action::Press)
             return;
         switch (ev.key) {
+            case Key::Escape:
+                window.close();
+                break;
+            case Key::F11:
+                window.toggle_fullscreen();
+                break;
             case Key::P:
                 window.set_refresh_mode(RefreshMode::Periodic);
                 break;

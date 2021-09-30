@@ -40,3 +40,4 @@ Checks: >
   -readability-function-cognitive-complexity,
   -readability-else-after-return,
   -readability-qualified-auto
+  -readability-isolate-declaration

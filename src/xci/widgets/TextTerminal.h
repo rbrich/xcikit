@@ -33,10 +33,10 @@ namespace terminal {
 // ----------------------
 // Codes 16 to 31 are reserved for attribute introducers
 // Number of parameters are deducible from introducer value:
-// 16-19 -> 0
-// 20-23 -> 1
-// 24-27 -> 2
-// 28-31 -> 3
+// 16-19 (0x10-0x13) -> 0
+// 20-23 (0x14-0x17)-> 1
+// 24-27 (0x18-0x1b)-> 1
+// 28-31 (0x1c-0x1f)-> 3
 // The same pattern applies for lower ctl codes too:
 //  0-3  -> 0
 //  4-7  -> 1
@@ -45,26 +45,22 @@ namespace terminal {
 namespace ctl {
     static constexpr uint8_t blanks = 7;        // blanks (1b param - num of cells)
 
-    static constexpr uint8_t first_introducer = 16;
-    static constexpr uint8_t default_fg = 16;
-    static constexpr uint8_t default_bg = 17;
-    static constexpr uint8_t fg8bit = 20;
-    static constexpr uint8_t bg8bit = 21;
-    static constexpr uint8_t set_attrs = 22;
-    static constexpr uint8_t fg24bit = 30;
-    static constexpr uint8_t bg24bit = 31;
-    static constexpr uint8_t last_introducer = 31;
+    static constexpr uint8_t default_fg = 0x10;
+    static constexpr uint8_t default_bg = 0x11;
+    static constexpr uint8_t fg8bit = 0x14;
+    static constexpr uint8_t bg8bit = 0x15;
+    static constexpr uint8_t font_style = 0x18;
+    static constexpr uint8_t decoration = 0x19;
+    static constexpr uint8_t mode = 0x1a;
+    static constexpr uint8_t fg24bit = 0x1e;
+    static constexpr uint8_t bg24bit = 0x1f;
+
+    static constexpr uint8_t first_introducer = 0x10;
+    static constexpr uint8_t last_introducer = 0x1f;
 }
 
-// Encoding of attributes byte
-static constexpr uint8_t c_font_style_mask = 0b00000011;
-static constexpr uint8_t c_decoration_mask = 0b00011100;
-static constexpr uint8_t c_mode_mask       = 0b01100000;
-static constexpr int c_decoration_shift = 2;
-static constexpr int c_mode_shift = 5;
 
-
-enum class Color4bit {
+enum class Color4bit : uint8_t {
     Black, Red, Green, Yellow, Blue, Magenta, Cyan, White,
     BrightBlack, BrightRed, BrightGreen, BrightYellow,
     BrightBlue, BrightMagenta, BrightCyan, BrightWhite
@@ -73,11 +69,36 @@ using Color8bit = uint8_t;
 using Color24bit = graphics::Color;  // alpha channel is ignored
 
 
+enum class Decoration {
+    None,
+    Underlined,
+    Overlined,
+    CrossedOut,
+    //Framed,
+    //Encircled,
+};
+
+
+enum class Mode {
+    Normal,
+    Bright,
+    //Blink,
+    //Conceal,
+    //Reverse,
+};
+
+
 class Renderer {
 public:
     virtual void set_font_style(text::FontStyle font_style) = 0;
-    virtual void set_fg_color(graphics::Color fg) = 0;
-    virtual void set_bg_color(graphics::Color bg) = 0;
+    virtual void set_decoration(Decoration decoration) = 0;
+    virtual void set_mode(Mode mode) = 0;
+    virtual void set_default_fg_color() = 0;
+    virtual void set_default_bg_color() = 0;
+    virtual void set_fg_color(Color8bit fg) = 0;
+    virtual void set_bg_color(Color8bit bg) = 0;
+    virtual void set_fg_color(Color24bit fg) = 0;
+    virtual void set_bg_color(Color24bit bg) = 0;
     virtual void draw_blanks(size_t num) = 0;
     virtual void draw_char(text::CodePoint code_point) = 0;
 };
@@ -118,8 +139,9 @@ public:
     void set_default_fg();
     void set_default_bg();
 
-    void set_italic(bool italic) { set_bit(Attr); m_attr[Italic] = italic; }
-    void set_bold(bool bold) { set_bit(Attr); m_attr[Bold] = bold; }
+    void set_font_style(text::FontStyle style);
+    void set_mode(Mode mode);
+    void set_decoration(Decoration decoration);
 
     // Update this to go after `other` in stream,
     // ie. reset/skip all attributes set in `other`.
@@ -128,11 +150,15 @@ public:
     // ------------------------------------------------------------------------
     // Accessors
 
-    bool has_attr() const { return m_set[Attr]; }
-    text::FontStyle font_style() const { return text::FontStyle(m_attr.to_ulong() & c_font_style_mask); }
+    bool has_font_style() const { return m_set[FlagFontStyle]; }
+    bool has_decoration() const { return m_set[FlagDecoration]; }
+    bool has_mode() const { return m_set[FlagMode]; }
+    text::FontStyle font_style() const { return has_font_style() ? m_font_style : text::FontStyle::Regular; }
+    Mode mode() const { return has_mode() ? m_mode : Mode::Normal; }
+    Decoration decoration() const { return has_decoration() ? m_decoration : Decoration::None; }
 
-    bool has_fg() const { return m_set[Fg]; }
-    bool has_bg() const { return m_set[Bg]; }
+    bool has_fg() const { return m_set[FlagFg]; }
+    bool has_bg() const { return m_set[FlagBg]; }
     graphics::Color fg() const;
     graphics::Color bg() const;
 
@@ -142,16 +168,17 @@ private:
     void set_bit(size_t i) { m_set.set(i, true); }
 
 private:
-    enum class ColorMode { ColorDefault, Color8bit, Color24bit };
+    enum class ColorMode: uint8_t { ColorDefault, Color8bit, Color24bit };
     uint8_t m_fg_r, m_fg_g, m_fg_b;
     uint8_t m_bg_r, m_bg_g, m_bg_b;
     ColorMode m_fg = ColorMode::ColorDefault;
     ColorMode m_bg = ColorMode::ColorDefault;
 
-    enum { Italic, Bold, _attr_count_ };
-    std::bitset<_attr_count_> m_attr;
+    text::FontStyle m_font_style = text::FontStyle::Regular;
+    Mode m_mode = Mode::Normal;
+    Decoration m_decoration = Decoration::None;
 
-    enum { Attr, Fg, Bg, _flag_count_};
+    enum { FlagFontStyle, FlagDecoration, FlagMode, FlagFg, FlagBg, _flag_count_};
     std::bitset<_flag_count_> m_set;
 };
 
@@ -246,7 +273,7 @@ private:
 };
 
 
-} // terminal
+} // namespace terminal
 
 
 class TextTerminal: public Widget {
@@ -281,6 +308,10 @@ public:
     /// Forced line end (disallow reflow for current line).
     void break_line() { current_line().set_hard_break(); }
     void new_line();
+
+    /// Get contents of Nth line of current page
+    terminal::Line& line(size_t n) { return (*m_buffer)[m_buffer_offset + n]; }
+    /// Get contents of current line (where cursor is)
     terminal::Line& current_line() { return (*m_buffer)[m_buffer_offset + m_cursor.y]; }
 
     /// Erase `num` chars from `first`, replacing them with current attr (blanks)
@@ -340,22 +371,10 @@ public:
     using FontStyle = text::FontStyle;
     void set_font_style(FontStyle style);
 
-    enum class Decoration {
-        None,
-        Underlined,
-        Overlined,
-        CrossedOut,
-        Framed,
-        Encircled,
-    };
+    using Decoration = terminal::Decoration;
     void set_decoration(Decoration decoration);
 
-    enum class Mode {
-        Normal,
-        Blink,
-        Conceal,
-        Reverse,
-    };
+    using Mode = terminal::Mode;
     void set_mode(Mode mode);
 
     // ------------------------------------------------------------------------

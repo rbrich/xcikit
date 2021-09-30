@@ -123,6 +123,12 @@ int main(int argc, const char* argv[])
         if (ev.action != Action::Press || ev.mod != ModKey::None())
         {
             switch (ev.key) {
+                case Key::Escape:
+                    window.close();
+                    break;
+                case Key::F:
+                    window.toggle_fullscreen();
+                    break;
                 case Key::Up:
                     terminal.set_cursor_pos(terminal.cursor_pos() - Vec2u{0, 1});
                     break;
