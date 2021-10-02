@@ -1,7 +1,7 @@
 // FontTexture.h created on 2018-03-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_TEXT_FONTTEXTURE_H
@@ -26,7 +26,8 @@ class FontTexture {
 public:
     // The size is fixed. If the size request cannot be satisfied by HW,
     // smaller size will be used (HW maximum texture size).
-    explicit FontTexture(Renderer& renderer, unsigned int size=512);
+    explicit FontTexture(Renderer& renderer,
+            unsigned int size=512, bool color=false);
 
     // non-copyable
     FontTexture(const FontTexture&) = delete;

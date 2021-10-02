@@ -1,7 +1,7 @@
 // Layout.cpp created on 2018-03-10 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Layout.h"
@@ -92,7 +92,7 @@ void Layout::update(const graphics::View& target)
                 Color(100, 0, 150, 128),
                 Color(200, 50, 250));
         m_page.foreach_span([&](const Span& span) {
-            for (auto& part : span.parts()) {
+            for (const auto& part : span.parts()) {
                 m_debug_shapes.back().add_rectangle(part.bbox(), sc_1px);
             }
         });

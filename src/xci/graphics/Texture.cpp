@@ -15,8 +15,8 @@
 namespace xci::graphics {
 
 
-Texture::Texture(Renderer& renderer)
-    : m_renderer(renderer),
+Texture::Texture(Renderer& renderer, ColorFormat format)
+    : m_renderer(renderer), m_format(format),
       m_staging_memory(renderer), m_image_memory(renderer)
 {}
 
@@ -52,7 +52,7 @@ bool Texture::create(const Vec2u& size)
     VkImageCreateInfo image_ci = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
             .imageType = VK_IMAGE_TYPE_2D,
-            .format = VK_FORMAT_R8_UNORM,
+            .format = vk_format(),
             .extent = {
                     .width = size.x,
                     .height = size.y,
@@ -82,7 +82,7 @@ bool Texture::create(const Vec2u& size)
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .image = m_image,
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = VK_FORMAT_R8_UNORM,
+            .format = vk_format(),
             .subresourceRange = {
                     .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                     .baseMipLevel = 0,
@@ -99,8 +99,8 @@ bool Texture::create(const Vec2u& size)
 
     VkSamplerCreateInfo sampler_ci = {
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-            .magFilter = VK_FILTER_NEAREST,
-            .minFilter = VK_FILTER_NEAREST,
+            .magFilter = VK_FILTER_LINEAR,
+            .minFilter = VK_FILTER_LINEAR,
             .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
             .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
             .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
@@ -120,6 +120,14 @@ bool Texture::create(const Vec2u& size)
 }
 
 
+static constexpr size_t format_pixel_size(ColorFormat format) {
+    switch (format) {
+        case ColorFormat::Grey: return 1;
+        case ColorFormat::BGRA: return 4;
+    }
+}
+
+
 void Texture::write(const uint8_t* pixels)
 {
     assert(m_staging_mapped != nullptr);
@@ -132,11 +140,13 @@ void Texture::write(const uint8_t* pixels)
 void Texture::write(const uint8_t* pixels, const Rect_u& region)
 {
     assert(m_staging_mapped != nullptr);
+    const auto pixel_size = format_pixel_size(m_format);
+    const auto stride = region.w * pixel_size;
     for (size_t y = 0; y != region.h; ++y) {
         std::memcpy(
-            (char*) m_staging_mapped + (y + region.y) * m_size.x + region.x,
-            pixels + y * region.w,
-            region.w);
+            (char*) m_staging_mapped + ((region.y + y) * m_size.x + region.x) * pixel_size,
+            pixels, stride);
+        pixels += stride;
     }
     m_pending_regions.push_back(region);
 }
@@ -181,13 +191,16 @@ void Texture::update()
     }
 
     for (auto& region : m_pending_regions) {
-        // offset must be a multiple of 4
-        auto align = (region.y * m_size.x + region.x) % 4;
-        region.x -= align;
-        region.w += align;
+        const auto pixel_size = format_pixel_size(m_format);
+        if (pixel_size % 4 != 0) {
+            // offset must be a multiple of 4
+            auto align = (region.y * m_size.x + region.x) % 4;
+            region.x -= align;
+            region.w += align;
+        }
         cmd_buf.copy_buffer_to_image(m_staging_buffer,
-                region.y * m_size.x + region.x, m_size.x,
-                m_image, region);
+                (region.y * m_size.x + region.x) * pixel_size,
+                m_size.x, m_image, region);
     }
     m_pending_regions.clear();
 
@@ -199,6 +212,21 @@ void Texture::update()
 
     cmd_buf.end();
     cmd_buf.submit();
+}
+
+
+VkDeviceSize Texture::byte_size() const
+{
+    return m_size.x * m_size.y * format_pixel_size(m_format);
+}
+
+
+VkFormat Texture::vk_format() const
+{
+    switch (m_format) {
+        case ColorFormat::Grey: return VK_FORMAT_R8_UNORM;
+        case ColorFormat::BGRA: return VK_FORMAT_B8G8R8A8_UNORM;
+    }
 }
 
 

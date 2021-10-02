@@ -1,7 +1,7 @@
 // FontFace.h created on 2018-03-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_TEXT_FONTFACE_H
@@ -55,19 +55,27 @@ public:
 
     virtual bool set_outline() = 0;
 
+    virtual bool has_color() const = 0;
     virtual FontStyle style() const = 0;
-    virtual float line_height() const = 0;
+
+    // Font metrics
+    virtual float height() const = 0;
     virtual float max_advance() = 0;
     virtual float ascender() const = 0;
     virtual float descender() const = 0;
 
+    // Font size in internal units
+    // Use only as opaque key for caching.
+    virtual long size_key() const = 0;
+
     virtual GlyphIndex get_glyph_index(CodePoint code_point) const = 0;
 
     struct Glyph {
-        core::Vec2u bitmap_size;
-        uint8_t* bitmap_buffer = nullptr;
         core::Vec2i bearing;
         core::Vec2f advance;
+        core::Vec2u bitmap_size;
+        uint8_t* bitmap_buffer = nullptr;
+        bool bgra = false;  // 256 grays or BGRA
     };
     virtual bool render_glyph(GlyphIndex glyph_index, Glyph& glyph) = 0;
 

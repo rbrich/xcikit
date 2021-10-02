@@ -67,7 +67,7 @@ class XcikitConan(ConanFile):
         "system_magic_enum": False,
 
         # Disable unnecessary transient deps by default.
-        "freetype:with_png": False,
+        "freetype:with_png": True,
         "freetype:with_zlib": False,
         "freetype:with_bzip2": False,
         "freetype:with_brotli": False,
