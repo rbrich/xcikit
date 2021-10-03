@@ -5,6 +5,7 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Style.h"
+#include <cmath>
 
 
 namespace xci::text {
@@ -27,7 +28,7 @@ void Style::apply_view(const View& view)
     // must select style (i.e. font face) before changing size of the font face
     m_font->set_style(m_font_style);
     auto font_size = view.size_to_framebuffer(m_size);
-    m_font->set_size(unsigned(std::ceilf(font_size.value)));
+    m_font->set_size(unsigned(std::ceil(font_size.value)));
     m_scale = m_allow_scale ? font_size.value / m_font->height() : 1.0f;
 }
 

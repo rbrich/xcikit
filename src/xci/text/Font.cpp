@@ -73,13 +73,8 @@ void Font::set_size(unsigned size)
 }
 
 
-Font::Glyph* Font::get_glyph(CodePoint code_point)
+Font::Glyph* Font::get_glyph(GlyphIndex glyph_index)
 {
-    // translate char to glyph
-    // In case of failure, this returns 0, which is okay, because
-    // glyph nr. 0 contains graphic for "undefined character code".
-    auto glyph_index = face().get_glyph_index(code_point);
-
     // check cache
     GlyphKey glyph_key{m_current_face, face().size_key(), glyph_index};
     auto iter = m_glyphs.find(glyph_key);
@@ -98,7 +93,7 @@ Font::Glyph* Font::get_glyph(CodePoint code_point)
                               glyph.m_tex_coords)) {
         // no more space in texture -> reset and try again
         clear_cache();
-        return get_glyph(code_point);
+        return get_glyph(glyph_index);
     }
 
     // fill metrics

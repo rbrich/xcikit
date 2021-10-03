@@ -81,7 +81,13 @@ public:
 
         friend class Font;
     };
-    Glyph* get_glyph(CodePoint code_point);
+    Glyph* get_glyph(GlyphIndex glyph_index);
+    Glyph* get_glyph_for_char(CodePoint code_point) { return get_glyph(get_glyph_index(code_point)); }
+
+    // Translate Unicode char to glyph
+    // In case of failure, this returns 0, which doesn't need special handling, because
+    // glyph nr. 0 contains graphic for "undefined character code".
+    GlyphIndex get_glyph_index(CodePoint code_point) const { return face().get_glyph_index(code_point); }
 
     // just a facade
     float height() const { return face().height(); }

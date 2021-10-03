@@ -9,6 +9,7 @@
 #include "vulkan/VulkanError.h"
 #include "vulkan/CommandBuffers.h"
 #include <xci/core/log.h>
+#include <xci/compat/macros.h>
 #include <cassert>
 #include <cstring>
 
@@ -125,6 +126,7 @@ static constexpr size_t format_pixel_size(ColorFormat format) {
         case ColorFormat::Grey: return 1;
         case ColorFormat::BGRA: return 4;
     }
+    UNREACHABLE;
 }
 
 
@@ -227,6 +229,7 @@ VkFormat Texture::vk_format() const
         case ColorFormat::Grey: return VK_FORMAT_R8_UNORM;
         case ColorFormat::BGRA: return VK_FORMAT_B8G8R8A8_UNORM;
     }
+    UNREACHABLE;
 }
 
 

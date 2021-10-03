@@ -42,7 +42,7 @@ Word::Word(Page& page, std::string string)
     ViewportCoords pen;
     m_bbox = {0, ViewportUnits{0} - m_baseline, 0, font_height};
     for (CodePoint code_point : to_utf32(m_string)) {
-        auto* glyph = font->get_glyph(code_point);
+        auto* glyph = font->get_glyph_for_char(code_point);
         if (glyph == nullptr)
             continue;
 
@@ -107,7 +107,7 @@ void Word::update(const graphics::View& target)
 
     ViewportCoords pen = m_pos;
     for (CodePoint code_point : to_utf32(m_string)) {
-        auto* glyph = font->get_glyph(code_point);
+        auto* glyph = font->get_glyph_for_char(code_point);
         if (glyph == nullptr)
             continue;
 
@@ -321,7 +321,7 @@ void Page::add_word(const std::string& string)
 ViewportUnits Page::space_width()
 {
     m_style.apply_view(target());
-    auto* glyph = m_style.font()->get_glyph(' ');
+    auto* glyph = m_style.font()->get_glyph_for_char(' ');
     return target().size_to_viewport(FramebufferPixels{glyph->advance() * m_style.scale()});
 }
 

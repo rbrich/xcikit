@@ -593,6 +593,7 @@ void terminal::Caret::draw(View& view, const ViewportCoords& pos)
 TextTerminal::TextTerminal(Theme& theme)
         : Widget(theme),
           m_sprites(theme.renderer(), theme.font().texture(), Color(7)),
+          m_emoji_sprites(theme.renderer(), theme.emoji_font().texture(), Color(7)),
           m_boxes(theme.renderer(), Color(0)),
           m_caret(theme.renderer()),
           m_frame(theme.renderer(), Color::Transparent(), Color::Transparent())
@@ -651,7 +652,8 @@ void TextTerminal::add_text(string_view text, bool insert, bool wrap)
             current_line().add_text(m_cursor.x, ch_str, m_attrs, /*insert=*/false);
         } else {
             buffer.append(ch_str);
-            ++buffer_length;
+            auto code_point = utf8_codepoint(ch_str.c_str());
+            buffer_length += c32_width(code_point);
         }
 
         it = end_pos;
@@ -825,9 +827,13 @@ void TextTerminal::update(View& view, State state)
     auto& font = theme().font();
     font.set_size(m_font_size.as<unsigned>());
 
+    auto& emoji_font = theme().emoji_font();
+    emoji_font.set_size(m_font_size.as<unsigned>());
+
     size_t expected_num_cells = m_cells.x * m_cells.y / 2;
     m_sprites.clear();
     m_sprites.reserve(expected_num_cells);
+    m_emoji_sprites.clear();
     m_boxes.clear();
     m_boxes.reserve(0, expected_num_cells, 0);
 
@@ -855,13 +861,11 @@ void TextTerminal::update(View& view, State state)
         class LineRenderer: public terminal::Renderer {
         public:
             // capture by ref
-            LineRenderer(ViewportCoords& pen, size_t& column,
-                    graphics::ColoredSprites& sprites, graphics::Shape& boxes,
-                    text::Font& font,
-                    const ViewportSize& cell_size, View& view)
-                    : pen(pen), column(column), sprites(sprites), boxes(boxes),
-                      font(font), ascender(font.ascender()),
-                      cell_size(cell_size), view(view)
+            LineRenderer(TextTerminal& term, ViewportCoords& pen, size_t& column,
+                    text::Font& font, text::Font& emoji_font, View& view)
+                    : term(term), pen(pen), column(column),
+                      font(font), emoji_font(emoji_font), ascender(font.ascender()),
+                      view(view)
             {}
 
             void set_font_style(FontStyle font_style) override {
@@ -877,11 +881,11 @@ void TextTerminal::update(View& view, State state)
                     default:
                     case Mode::Normal:
                         if (m_fg < 8)
-                            sprites.set_color(Color(m_fg));
+                            term.m_sprites.set_color(Color(m_fg));
                         break;
                     case Mode::Bright:
                         if (m_fg < 8)
-                            sprites.set_color(Color(m_fg + 8));
+                            term.m_sprites.set_color(Color(m_fg + 8));
                         break;
                 }
             }
@@ -890,68 +894,98 @@ void TextTerminal::update(View& view, State state)
             }
             void set_default_fg_color() override {
                 m_fg = 7;
-                sprites.set_color(Color(m_mode == Mode::Bright ? 15 : 7));
+                term.m_sprites.set_color(Color(m_mode == Mode::Bright ? 15 : 7));
             }
             void set_default_bg_color() override {
                 m_bg = 0;
-                boxes.set_fill_color(Color(0));
+                term.m_boxes.set_fill_color(Color(0));
             }
             void set_fg_color(Color8bit fg) override {
                 m_fg = fg;
-                sprites.set_color(Color(m_mode == Mode::Bright && fg < 8 ? fg + 8 : fg));
+                term.m_sprites.set_color(Color(m_mode == Mode::Bright && fg < 8 ? fg + 8 : fg));
             }
             void set_bg_color(Color8bit bg) override {
                 m_bg = bg;
-                boxes.set_fill_color(Color(bg));
+                term.m_boxes.set_fill_color(Color(bg));
             }
             void set_fg_color(Color24bit fg) override {
                 m_fg = 255;
-                sprites.set_color(fg);
+                term.m_sprites.set_color(fg);
             }
             void set_bg_color(Color24bit bg) override {
                 m_bg = 255;
-                boxes.set_fill_color(bg);
+                term.m_boxes.set_fill_color(bg);
             }
             void draw_blanks(size_t num) override {
-                boxes.add_rectangle({pen.x, pen.y, cell_size.x * num, cell_size.y});
+                const auto& cell_size = term.m_cell_size;
+                term.m_boxes.add_rectangle({pen.x, pen.y, cell_size.x * num, cell_size.y});
                 pen.x += cell_size.x * num;
                 column += num;
             }
             void draw_char(CodePoint code_point) override {
-                auto glyph = font.get_glyph(code_point);
+                auto glyph_index = font.get_glyph_index(code_point);
+                if (glyph_index == 0 && draw_emoji(code_point))
+                    return;  // not found in normal font, but found in emoji -> we're done
+                auto* glyph = font.get_glyph(glyph_index);
                 if (glyph == nullptr)
-                    glyph = font.get_glyph(' ');
+                    glyph = font.get_glyph_for_char(' ');
 
                 auto bearing = view.size_to_viewport(FramebufferSize{glyph->bearing()});
                 auto ascender_vp = view.size_to_viewport(FramebufferPixels{ascender});
                 auto glyph_size = view.size_to_viewport(FramebufferSize{glyph->size()});
-                sprites.add_sprite({
+                term.m_sprites.add_sprite({
                         pen.x + bearing.x,
                         pen.y + (ascender_vp - bearing.y),
                         glyph_size.x,
                         glyph_size.y
                 }, glyph->tex_coords());
 
-                boxes.add_rectangle({pen, cell_size});
+                const auto& cell_size = term.m_cell_size;
+                term.m_boxes.add_rectangle({pen, cell_size});
 
                 pen.x += cell_size.x;
                 ++column;
             }
 
+            bool draw_emoji(CodePoint code_point) {
+                auto glyph_index = emoji_font.get_glyph_index(code_point);
+                if (glyph_index == 0)
+                    return false;
+                auto* glyph = emoji_font.get_glyph(glyph_index);
+                if (glyph == nullptr)
+                    return false;
+
+                const auto& cell_size = term.m_cell_size;
+                auto bearing = view.size_to_viewport(FramebufferSize{glyph->bearing()});
+                auto ascender_vp = view.size_to_viewport(FramebufferPixels{ascender});
+                auto glyph_size = view.size_to_viewport(FramebufferSize{glyph->size()});
+                const auto scale = cell_size.y / glyph_size.y;
+                term.m_emoji_sprites.add_sprite({
+                        pen.x + bearing.x * scale,
+                        pen.y + (ascender_vp - bearing.y * scale),
+                        glyph_size.x * scale,
+                        glyph_size.y * scale
+                }, glyph->tex_coords());
+
+                term.m_boxes.add_rectangle({pen.x, pen.y, cell_size.x * 2, cell_size.y});
+
+                pen.x += 2* cell_size.x;
+                column += 2;
+                return true;
+            }
+
         private:
+            TextTerminal& term;
             ViewportCoords& pen;
             size_t& column;
-            graphics::ColoredSprites& sprites;
-            graphics::Shape& boxes;
             text::Font& font;
+            text::Font& emoji_font;
             float ascender;
             Color8bit m_fg = 7;
             Color8bit m_bg = 0;
             Mode m_mode = Mode::Normal;
-            const ViewportSize& cell_size;
             View& view;
-        } line_renderer(pen, column, m_sprites, m_boxes, font,
-                m_cell_size, view);
+        } line_renderer(*this, pen, column, font, emoji_font, view);
 
         line.render(line_renderer);
 
@@ -976,6 +1010,7 @@ void TextTerminal::update(View& view, State state)
     }
     m_boxes.update();
     m_sprites.update();
+    m_emoji_sprites.update();
 
     m_caret.update(view, {m_cell_size.x * m_cursor.x, m_cell_size.y * m_cursor.y,
                           m_cell_size.x, m_cell_size.y});
@@ -996,6 +1031,7 @@ void TextTerminal::draw(View& view)
 {
     m_boxes.draw(view, position());
     m_sprites.draw(view, position());
+    m_emoji_sprites.draw(view, position());
     m_caret.draw(view, position());
 
     if (m_bell_time > 0ns) {
