@@ -22,18 +22,18 @@ using namespace xci::core;
 // sample text with forced newlines
 // source: http://www.columbia.edu/~fdc/utf8/index.html
 static const char * sample_text = R"SAMPLE(
-Vitrum edere possum; mihi non nocet.{br}
-Posso mangiare il vetro e non mi fa male.{br}
-Je peux manger du verre, ça ne me fait pas mal.{br}
-Puedo comer vidrio, no me hace daño.{br}
-Posso comer vidro, não me faz mal.{br}
-Mi kian niam glas han i neba hot mi.{br}
-Ich kann Glas essen, ohne mir zu schaden.{br}
-Mogę jeść szkło i mi nie szkodzi.{br}
-Meg tudom enni az üveget, nem lesz tőle bajom.{br}
-Pot să mănânc sticlă și ea nu mă rănește.{br}
-Eg kan eta glas utan å skada meg.{br}
-Ik kan glas eten, het doet mĳ geen kwaad.{br}
+Vitrum edere possum; mihi non nocet.<br>
+Posso mangiare il vetro e non mi fa male.<br>
+Je peux manger du verre, ça ne me fait pas mal.<br>
+Puedo comer vidrio, no me hace daño.<br>
+Posso comer vidro, não me faz mal.<br>
+Mi kian niam glas han i neba hot mi.<br>
+Ich kann Glas essen, ohne mir zu schaden.<br>
+Mogę jeść szkło i mi nie szkodzi.<br>
+Meg tudom enni az üveget, nem lesz tőle bajom.<br>
+Pot să mănânc sticlă și ea nu mă rănește.<br>
+Eg kan eta glas utan å skada meg.<br>
+Ik kan glas eten, het doet mĳ geen kwaad.<br>
 )SAMPLE";
 
 int main(int argc, const char* argv[])
@@ -50,21 +50,43 @@ int main(int argc, const char* argv[])
     Font font {renderer};
     if (!font.add_face(vfs, "fonts/Enriqueta/Enriqueta-Regular.ttf", 0))
         return EXIT_FAILURE;
+    if (!font.add_face(vfs, "fonts/Enriqueta/Enriqueta-Bold.ttf", 0))
+        return EXIT_FAILURE;
 
     Font emoji_font {renderer};
     if (!emoji_font.add_face(vfs, "fonts/Noto/NotoColorEmoji.ttf", 0))
         return EXIT_FAILURE;
 
+    static constexpr float text_font_size = 0.1f;
     Text text;
     text.set_markup_string(sample_text);
     text.set_font(font);
-    text.set_font_size(0.1f);
+    text.set_font_size(text_font_size);
     text.set_color(Color::White());
 
     Text emoji;
     emoji.set_markup_string("🥛🍸🥃🥂🍷🍹🍨🧂");
     emoji.set_font(emoji_font);
     emoji.set_font_size(0.2f);
+
+    static constexpr auto help_color_normal = Color(200, 100, 50);
+    static constexpr auto help_color_highlight = Color(255, 170, 120);
+    Text help_text(font, "<smooth><b>[s]</b> smooth scaling</smooth> <tab>"
+                         "<font><b>[f]</b> font scaling</font><br>"
+                         "(Resize window to observe the scaling effect.)", Text::Format::Markup);
+    help_text.set_color(help_color_normal);
+    help_text.set_font_size(0.1f);
+
+    auto help_highlight = [&help_text, &text](const View& view) {
+        bool smooth = text.layout().default_style().allow_scale();
+        help_text.layout().get_span("smooth")->adjust_style([smooth](Style& s) {
+            s.set_color(smooth ? help_color_highlight : help_color_normal);
+        });
+        help_text.layout().get_span("font")->adjust_style([smooth](Style& s) {
+            s.set_color(!smooth ? help_color_highlight : help_color_normal);
+        });
+        help_text.layout().update(view);
+    };
 
     Sprites font_texture(renderer, font.texture(), Color::Blue());
     Sprites emoji_font_texture(renderer, emoji_font.texture(), Color::Blue());
@@ -77,6 +99,8 @@ int main(int argc, const char* argv[])
     window.set_size_callback([&](View& view) {
         text.resize(view);
         emoji.resize(view);
+        help_text.resize(view);
+        help_highlight(view);
 
         auto tex_size = view.size_to_viewport(FramebufferSize{font.texture().size()});
         ViewportRect rect = {0, 0, tex_size.x, tex_size.y};
@@ -108,9 +132,10 @@ int main(int argc, const char* argv[])
         // font texture width
         auto fw = view.size_to_viewport(FramebufferSize{font.texture().size()}).x;
         auto tx = -vs.x * 0.5f + fw  // the font box right edge
-                + (vs.x - fw - text.layout().bbox().w) / 2;  // half of empty space left around text
+                + (vs.x - fw - emoji.layout().bbox().w) / 2;  // half of empty space left around text
         text.draw(view, {tx, -0.55f});
         emoji.draw(view, {tx, -0.70f});
+        help_text.draw(view, {tx, 0.70f});
     });
 
     window.set_key_callback([&](View& view, KeyEvent ev) {
@@ -122,6 +147,18 @@ int main(int argc, const char* argv[])
                 break;
             case Key::F11:
                 window.toggle_fullscreen();
+                break;
+            case Key::S:
+                text.set_font_size(text_font_size, true);
+                text.update(view);
+                help_highlight(view);
+                view.refresh();
+                break;
+            case Key::F:
+                text.set_font_size(text_font_size, false);
+                text.update(view);
+                help_highlight(view);
+                view.refresh();
                 break;
             default:
                 break;

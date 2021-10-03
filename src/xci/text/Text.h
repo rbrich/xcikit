@@ -39,7 +39,7 @@ public:
 
     void set_width(ViewportUnits width);
     void set_font(Font& font);
-    void set_font_size(ViewportUnits size);
+    void set_font_size(ViewportUnits size, bool allow_scale = true);
     void set_color(const graphics::Color& color);
 
     Layout& layout() { return m_layout; }

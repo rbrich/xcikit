@@ -3,5 +3,6 @@
 /test_package/build/
 /share/fonts/Hack/
 /share/fonts/Hack-*.tar.xz
+/share/fonts/Noto/
 
 /.idea/

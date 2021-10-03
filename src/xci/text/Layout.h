@@ -38,7 +38,7 @@ public:
     // These are not affected by `clear`
     void set_default_page_width(ViewportUnits width);
     void set_default_font(Font* font);
-    void set_default_font_size(ViewportUnits size);
+    void set_default_font_size(ViewportUnits size, bool allow_scale = true);
     void set_default_color(const graphics::Color &color);
 
     const Style& default_style() const { return m_default_style; }
@@ -70,6 +70,8 @@ public:
     // Also affects spacing (which depends on font metrics).
     void set_font(Font* font);
     void set_font_size(ViewportUnits size);
+    void set_bold(bool bold = true);
+    void set_italic(bool italic = true);
     void set_color(const graphics::Color &color);
     void reset_color();
 
@@ -92,16 +94,18 @@ public:
     void finish_line();
 
     // ------------------------------------------------------------------------
-    // Spans allow to name part of the text and change its attributes later
+    // Spans allow naming a part of the text and change its attributes later
 
-    // Begin and end the span.
-    // Returns false on error:
-    // - Trying to begin a span of same name twice.
-    // - Trying to end not-started span.
+    /// Begin the span
+    /// Logs error when trying to begin a span of the same name twice
     void begin_span(const std::string& name);
+
+    /// End the span
+    /// Logs error when trying to end a span which doesn't exist or was already ended
     void end_span(const std::string& name);
 
-    // Returns NULL if the span does not exist.
+    /// Get a span previously created by begin_span, end_span
+    /// \returns NULL if the span does not exist
     Span* get_span(const std::string& name);
 
     // ------------------------------------------------------------------------

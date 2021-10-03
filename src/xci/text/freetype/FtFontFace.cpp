@@ -18,6 +18,10 @@ static inline float ft_to_float(FT_F26Dot6 ft_units) {
     return (float)(ft_units) / 64.f;
 }
 
+static inline FT_F26Dot6 float_to_ft(float units) {
+    return (FT_F26Dot6) roundf(units * 64.f);
+}
+
 
 FtFontFace::~FtFontFace()
 {
@@ -69,9 +73,16 @@ bool FtFontFace::set_size(unsigned pixel_size)
         return true;
     }
 
-    auto err = FT_Set_Pixel_Sizes(m_face, pixel_size, pixel_size);
+    FT_Size_RequestRec size_req = {
+            .type = FT_SIZE_REQUEST_TYPE_CELL,
+            .width = 0,
+            .height = float_to_ft((float) pixel_size),
+            .horiResolution = 0,
+            .vertResolution = 0
+    };
+    auto err = FT_Request_Size(m_face, &size_req);
     if (err) {
-        log::error("FT_Set_Pixel_Sizes: {}", err);
+        log::error("FT_Request_Size: {}", err);
         return false;
     }
 

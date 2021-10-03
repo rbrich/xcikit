@@ -40,9 +40,10 @@ void Layout::set_default_font(Font* font)
 }
 
 
-void Layout::set_default_font_size(ViewportUnits size)
+void Layout::set_default_font_size(ViewportUnits size, bool allow_scale)
 {
     m_default_style.set_size(size);
+    m_default_style.set_allow_scale(allow_scale);
     m_page.clear();
 }
 
@@ -175,6 +176,18 @@ void Layout::set_font(Font* font)
 void Layout::set_font_size(ViewportUnits size)
 {
     m_elements.push_back(std::make_unique<SetFontSize>(size));
+}
+
+
+void Layout::set_bold(bool bold)
+{
+    m_elements.push_back(std::make_unique<SetBold>(bold));
+}
+
+
+void Layout::set_italic(bool italic)
+{
+    m_elements.push_back(std::make_unique<SetItalic>(italic));
 }
 
 

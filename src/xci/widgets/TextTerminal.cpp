@@ -1,7 +1,7 @@
 // TextTerminal.cpp created on 2018-07-19 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "TextTerminal.h"
@@ -806,7 +806,7 @@ void TextTerminal::resize(View& view)
     m_font_size = view.size_to_framebuffer(m_font_size_requested);
     font.set_size(m_font_size.as<unsigned>());
     m_cell_size = view.size_to_viewport(FramebufferSize{
-            font.max_advance(), font.line_height()});
+            font.max_advance(), font.height()});
     if (m_resize_cells) {
         m_cells = {(size().x / m_cell_size.x).as<unsigned>(),
                    (size().y / m_cell_size.y).as<unsigned>()};

@@ -16,15 +16,19 @@ void Style::clear()
 {
     m_font = nullptr;
     m_size = 0.05f;
+    m_scale = 1.0f;
     m_color = graphics::Color::White();
+    m_font_style = FontStyle::Regular;
 }
 
 
 void Style::apply_view(const View& view)
 {
+    // must select style (i.e. font face) before changing size of the font face
+    m_font->set_style(m_font_style);
     auto font_size = view.size_to_framebuffer(m_size);
     m_font->set_size(unsigned(std::ceilf(font_size.value)));
-    m_scale = font_size.value / m_font->height();
+    m_scale = m_allow_scale ? font_size.value / m_font->height() : 1.0f;
 }
 
 

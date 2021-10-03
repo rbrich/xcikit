@@ -23,9 +23,9 @@ using namespace tao::pegtl;
 // ----------------------------------------------------------------------------
 // Grammar
 
-struct ControlSeq: seq< one<'{'>, plus<not_one<'{', '}'>>, one<'}'> > {};
+struct ControlSeq: seq< one<'<'>, plus<not_one<'<', '>'>>, one<'>'> > {};
 
-struct Word: plus<not_at<space>, sor< not_one<'{'>, two<'{'> >> {};
+struct Word: plus<not_at<space>, sor< not_one<'<'>, two<'<'> >> {};
 
 struct Paragraph: two<'\n'> {};
 
@@ -57,26 +57,25 @@ struct Action<ControlSeq>
     {
         dump_token("csq", in);
         auto seq = in.string();
-        if (seq == "{tab}") {
-            ctx.get_layout().add_tab();
-            return;
-        }
-        if (seq == "{br}") {
-            ctx.get_layout().finish_line();
-            return;
-        }
-        if (seq[1] == '+') {
-            auto name = seq.substr(2, seq.size() - 3);
-            ctx.get_layout().begin_span(name);
-            return;
-        }
-        if (seq[1] == '-') {
+        if (seq == "<tab>")
+            return ctx.get_layout().add_tab();
+        if (seq == "<br>")
+            return ctx.get_layout().finish_line();
+        if (seq == "<b>")
+            return ctx.get_layout().set_bold();
+        if (seq == "</b>")
+            return ctx.get_layout().set_bold(false);
+        if (seq == "<i>")
+            return ctx.get_layout().set_italic();
+        if (seq == "</i>")
+            return ctx.get_layout().set_italic(false);
+        if (seq[1] == '/') {
             auto name = seq.substr(2, seq.size() - 3);
             ctx.get_layout().end_span(name);
-            return;
+        } else {
+            auto name = seq.substr(1, seq.size() - 2);
+            ctx.get_layout().begin_span(name);
         }
-        log::warning("Markup: Ignoring unknown control sequence {}", seq);
-        return;
     }
 };
 

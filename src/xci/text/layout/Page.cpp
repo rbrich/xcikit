@@ -322,7 +322,7 @@ ViewportUnits Page::space_width()
 {
     m_style.apply_view(target());
     auto* glyph = m_style.font()->get_glyph(' ');
-    return target().size_to_viewport(FramebufferPixels{glyph->advance()});
+    return target().size_to_viewport(FramebufferPixels{glyph->advance() * m_style.scale()});
 }
 
 

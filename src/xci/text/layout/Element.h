@@ -105,6 +105,42 @@ private:
 };
 
 
+class SetBold: public Element {
+public:
+    explicit SetBold(bool bold) : m_bold(bold) {}
+    void apply(Page& page) override {
+        auto style = static_cast<unsigned>(page.style().font_style());
+        auto bold = static_cast<unsigned>(FontStyle::Bold);
+        if (m_bold)
+            style |= bold;
+        else
+            style &= ~bold;
+        page.set_font_style(static_cast<FontStyle>(style));
+    }
+
+private:
+    bool m_bold;
+};
+
+
+class SetItalic: public Element {
+public:
+    explicit SetItalic(bool italic) : m_italic(italic) {}
+    void apply(Page& page) override {
+        auto style = static_cast<unsigned>(page.style().font_style());
+        auto italic = static_cast<unsigned>(FontStyle::Italic);
+        if (m_italic)
+            style |= italic;
+        else
+            style &= ~italic;
+        page.set_font_style(static_cast<FontStyle>(style));
+    }
+
+private:
+    bool m_italic;
+};
+
+
 class SetColor: public Element {
 public:
     explicit SetColor(graphics::Color color) : m_color(color) {}

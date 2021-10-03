@@ -83,9 +83,9 @@ void Text::set_font(Font& font)
 }
 
 
-void Text::set_font_size(ViewportUnits size)
+void Text::set_font_size(ViewportUnits size, bool allow_scale)
 {
-    m_layout.set_default_font_size(size);
+    m_layout.set_default_font_size(size, allow_scale);
     m_need_typeset = true;
 }
 
