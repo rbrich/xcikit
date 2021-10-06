@@ -221,7 +221,7 @@ if phase deps; then
         CONAN_ARGS+=(-s "os.version=${MACOSX_DEPLOYMENT_TARGET}")
     fi
     (
-        cd "${BUILD_DIR}"
+        run cd "${BUILD_DIR}"
 
         if [[ "$EMSCRIPTEN" -eq 0 ]]; then
             if [[ ! -f 'system_deps.txt' ]] ; then
@@ -245,7 +245,7 @@ if phase config; then
     (
         WRAPPER=
         [[ "$EMSCRIPTEN" -eq 1 ]] && WRAPPER=emcmake
-        cd "${BUILD_DIR}"
+        run cd "${BUILD_DIR}"
         # shellcheck disable=SC2207
         [[ "$EMSCRIPTEN" -eq 0 ]] && CMAKE_ARGS+=($(tail -n2 'system_deps.txt' | head -n1))
         XCI_CMAKE_COLORS=1 run ${WRAPPER} cmake "${ROOT_DIR}" \
@@ -275,22 +275,25 @@ fi
 
 if phase test; then
     header "Test"
-    ( cd "${BUILD_DIR}" && ctest --progress --output-on-failure --build-config "${BUILD_TYPE}" "${JOBS_ARGS[@]}" )
+    (
+        run cd "${BUILD_DIR}" && \
+        run ctest --progress --output-on-failure --build-config "${BUILD_TYPE}" "${JOBS_ARGS[@]}"
+    )
     echo
 fi
 
 if phase install; then
     header "Install"
-    cmake --build "${BUILD_DIR}" --config "${BUILD_TYPE}" "${JOBS_ARGS[@]}" --target install
+    run cmake --build "${BUILD_DIR}" --config "${BUILD_TYPE}" "${JOBS_ARGS[@]}" --target install
     echo
 fi
 
 if phase package; then
     header "Package"
     (
-        cd "${BUILD_DIR}" && \
-        cpack -G "TGZ;ZIP" -D "CPACK_PACKAGE_FILE_NAME=${PACKAGE_FILENAME}" -C "${BUILD_TYPE}" && \
-        mv -v "${BUILD_DIR}/${PACKAGE_FILENAME}"* "${PACKAGE_OUTPUT_DIR}"
+        run cd "${BUILD_DIR}" && \
+        run cpack -G "TGZ;ZIP" -D "CPACK_PACKAGE_FILE_NAME=${PACKAGE_FILENAME}" -C "${BUILD_TYPE}" && \
+        run mv -v "${BUILD_DIR}/${PACKAGE_FILENAME}"* "${PACKAGE_OUTPUT_DIR}"
     )
     echo
 fi
