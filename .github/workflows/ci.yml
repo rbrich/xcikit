@@ -25,9 +25,11 @@ jobs:
           build_args: "--debug -DBUILD_WITH_ASAN=1 -DBUILD_WITH_UBSAN=1"
         - os: macos-10.15
           name: "Clang (latest) / Release"
+          os_target: "10.15"
           build_args: ""
         - os: macos-11
           name: "Clang (latest) / Release"
+          os_target: "11.0"
           build_args: ""
         - os: windows-2019
           name: "MSVC (latest) / Release"
@@ -74,7 +76,7 @@ jobs:
             brew install ccache ninja glfw doxygen google-benchmark hyperscan
             export CC="$(brew --prefix llvm)/bin/clang"
             export CXX="$(brew --prefix llvm)/bin/clang++"
-            export MACOSX_DEPLOYMENT_TARGET=10.15
+            export MACOSX_DEPLOYMENT_TARGET=${{ matrix.os_target }}
             echo "CC='$CC'" >> $GITHUB_ENV
             echo "CXX='$CXX'" >> $GITHUB_ENV
             echo "MACOSX_DEPLOYMENT_TARGET=$MACOSX_DEPLOYMENT_TARGET" >> $GITHUB_ENV
