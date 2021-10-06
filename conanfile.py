@@ -67,7 +67,7 @@ class XcikitConan(ConanFile):
         "system_magic_enum": False,
 
         # Disable unnecessary transient deps by default.
-        "freetype:with_png": False,
+        "freetype:with_png": True,
         "freetype:with_zlib": False,
         "freetype:with_bzip2": False,
         "freetype:with_brotli": False,
@@ -169,8 +169,9 @@ class XcikitConan(ConanFile):
         cmake = self._configure_cmake()
         cmake.test()
 
-    def layout(self):
-        # support for editable mode
+    def _x_layout(self):
+        # DISABLED: This is very experimental for now, breaks the whole package when enabled.
+        # Support for editable mode
         build_dir = os.environ.get('CONAN_EDITABLE_BUILD_DIR', None)
         if build_dir is not None:
             self.folders.build = build_dir # e.g. "build/macos-x86_64-Release-Ninja"
@@ -183,11 +184,15 @@ class XcikitConan(ConanFile):
             self.cpp.source.components[pc].libdirs = [self.folders.build + '/src/xci/' + component]
             self.cpp.source.components[pc].includedirs = ["src", self.folders.build + '/include']
             self.cpp.source.components[pc].builddirs = ["cmake"]
-            self.cpp.package.components[pc].libdirs = ["lib"]
-            self.cpp.package.components[pc].includedirs = ["include"]
-            self.cpp.package.components[pc].builddirs = ["lib/cmake/xcikit"]
 
     def package_info(self):
+        for component in ('core', 'data', 'script', 'graphics', 'text', 'widgets'):
+            if component != 'core' and not self.options.get_safe(component, False):
+                continue  # component is disabled
+            pc = 'xci-' + component  # pc = prefixed component
+            self.cpp_info.components[pc].libdirs = ["lib"]
+            self.cpp_info.components[pc].includedirs = ["include"]
+            self.cpp_info.components[pc].builddirs = ["lib/cmake/xcikit"]
         self.cpp_info.components["xci-core"].libs = ["xci-core"]
         if not self.options.system_fmt:
             self.cpp_info.components["xci-core"].requires = ['fmt::fmt']

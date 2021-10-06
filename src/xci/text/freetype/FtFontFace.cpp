@@ -1,7 +1,7 @@
 // FtFontFace.cpp created on 2018-09-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <xci/core/log.h>
@@ -16,6 +16,10 @@ using namespace xci::core;
 
 static inline float ft_to_float(FT_F26Dot6 ft_units) {
     return (float)(ft_units) / 64.f;
+}
+
+static inline FT_F26Dot6 float_to_ft(float units) {
+    return (FT_F26Dot6) roundf(units * 64.f);
 }
 
 
@@ -49,15 +53,36 @@ bool FtFontFace::load_from_memory(core::BufferPtr buffer, int face_index)
 
 bool FtFontFace::set_size(unsigned pixel_size)
 {
-    /*auto wh = float_to_ft(size);
-    FT_Size_RequestRec size_req = {};
-    size_req.type = FT_SIZE_REQUEST_TYPE_NOMINAL;
-    size_req.width = wh;
-    size_req.height = wh;
-    auto err = FT_Request_Size(face, &size_req);*/
-    auto err = FT_Set_Pixel_Sizes(m_face, pixel_size, pixel_size);
+    if (has_color()) {
+        // Find the nearest size in available sizes:
+        // - height bigger or equal to request
+        FT_Int strike_index = 0;
+        FT_Short strike_h = std::numeric_limits<FT_Short>::max();
+        for (FT_Int i = 0; i != m_face->num_fixed_sizes; ++i) {
+            const auto h = m_face->available_sizes[i].height;
+            if (h >= (FT_Short) pixel_size && h < strike_h) {
+                strike_index = i;
+                strike_h = h;
+            }
+        }
+        auto err = FT_Select_Size(m_face, strike_index);
+        if (err) {
+            log::error("FT_Select_Size: {}", err);
+            return false;
+        }
+        return true;
+    }
+
+    FT_Size_RequestRec size_req = {
+            .type = FT_SIZE_REQUEST_TYPE_CELL,
+            .width = 0,
+            .height = float_to_ft((float) pixel_size),
+            .horiResolution = 0,
+            .vertResolution = 0
+    };
+    auto err = FT_Request_Size(m_face, &size_req);
     if (err) {
-        log::error("FT_Set_Char_Size: {}", err);
+        log::error("FT_Request_Size: {}", err);
         return false;
     }
 
@@ -91,7 +116,7 @@ FontStyle FtFontFace::style() const
 }
 
 
-float FtFontFace::line_height() const
+float FtFontFace::height() const
 {
     return ft_to_float(m_face->size->metrics.height);
 }
@@ -132,7 +157,8 @@ GlyphIndex FtFontFace::get_glyph_index(CodePoint code_point) const
 
 FT_GlyphSlot FtFontFace::load_glyph(GlyphIndex glyph_index)
 {
-    int err = FT_Load_Glyph(m_face, glyph_index, FT_LOAD_DEFAULT | FT_LOAD_TARGET_LIGHT);
+    int err = FT_Load_Glyph(m_face, glyph_index,
+            FT_LOAD_COLOR | (height() < 20.f ? FT_LOAD_TARGET_LIGHT : FT_LOAD_NO_HINTING));
     if (err) {
         log::error("FT_Load_Glyph error: {}", err);
         return nullptr;
@@ -148,17 +174,27 @@ bool FtFontFace::render_glyph(GlyphIndex glyph_index, Glyph& glyph)
     if (glyph_slot == nullptr)
         return false;
 
-    int err = FT_Render_Glyph(m_face->glyph, FT_RENDER_MODE_NORMAL);
-    if (err) {
-        log::error("FT_Render_Glyph error: {}", err);
-    }
+    // Bitmap can be loaded directly by FT_LOAD_COLOR
     auto& bitmap = m_face->glyph->bitmap;
+    if (bitmap.buffer == nullptr) {
+        int err = FT_Render_Glyph(m_face->glyph, FT_RENDER_MODE_NORMAL);
+        if (err) {
+            log::error("FT_Render_Glyph error: {}", err);
+        }
+    }
 
-    // check that the bitmap is as expected
-    // (this depends on FreeType settings which are under our control)
-    assert(bitmap.num_grays == 256);
-    assert((int)bitmap.width == bitmap.pitch);
-    assert(bitmap.pixel_mode == FT_PIXEL_MODE_GRAY);
+    if (bitmap.width != 0) {
+        // check that the bitmap is as expected
+        // (this depends on FreeType settings which are under our control)
+        if (bitmap.pixel_mode == FT_PIXEL_MODE_BGRA) {
+            assert((int)bitmap.width * 4 == bitmap.pitch);
+            glyph.bgra = true;
+        } else {
+            assert(bitmap.pixel_mode == FT_PIXEL_MODE_GRAY);
+            assert(bitmap.num_grays == 256);
+            assert((int)bitmap.width == bitmap.pitch);
+        }
+    }
 
     glyph.bitmap_size = {bitmap.width, bitmap.rows};
     glyph.bitmap_buffer = bitmap.buffer;

@@ -9,8 +9,6 @@
 #include "freetype/FtFontFace.h"
 
 #include <fmt/core.h>
-#include <ft2build.h>
-#include FT_FREETYPE_H
 
 namespace xci::text {
 

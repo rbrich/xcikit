@@ -1227,7 +1227,7 @@ struct Control : normal< Rule >
     template< typename Input, typename... States >
     static void start( const Input& in, States&&... st )
     {
-        auto rule = tao::demangle<Rule>();
+        auto rule = demangle<Rule>();
         if (do_not_trace(rule)) {
             if (g_untraced.empty()) {
                 std::cerr << in.position() << "  start  " << rule << " (untraced)" << "; current ";
@@ -1250,7 +1250,7 @@ struct Control : normal< Rule >
     template< typename Input, typename... States >
     static void success( const Input& in, States&&... st )
     {
-        auto rule = tao::demangle<Rule>();
+        auto rule = demangle<Rule>();
         if (!g_untraced.empty() && g_untraced.top() == rule)
             g_untraced.pop();
         if (!g_untraced.empty()) {
@@ -1267,7 +1267,7 @@ struct Control : normal< Rule >
     template< typename Input, typename... States >
     static void failure( const Input& in, States&&... st )
     {
-        auto rule = tao::demangle<Rule>();
+        auto rule = demangle<Rule>();
         if (!g_untraced.empty() && g_untraced.top() == rule)
             g_untraced.pop();
         if (!g_untraced.empty()) {
@@ -1283,7 +1283,7 @@ struct Control : normal< Rule >
     static auto apply( const Iterator& begin, const Input& in, States&&... st )
     -> decltype( normal<Rule>::template apply< Action >( begin, in, st... ) )
     {
-        std::cerr << in.position() << "  apply  " << tao::demangle<Rule>() << std::endl;
+        std::cerr << in.position() << "  apply  " << demangle<Rule>() << std::endl;
         return normal<Rule>::template apply< Action >( begin, in, st... );
     }
 
@@ -1291,7 +1291,7 @@ struct Control : normal< Rule >
     static auto apply0( const Input& in, States&&... st )
     -> decltype( normal<Rule>::template apply0< Action >( in, st... ) )
     {
-        std::cerr << in.position() << "  apply0 " << tao::demangle<Rule>() << std::endl;
+        std::cerr << in.position() << "  apply0 " << demangle<Rule>() << std::endl;
         return normal<Rule>::template apply0< Action >( in, st... );
     }
 
@@ -1313,7 +1313,7 @@ template<> const std::string Control<RawStringContent>::errmsg = "unclosed raw s
 
 // default message
 template< typename T >
-const std::string Control< T >::errmsg = "parse error matching " + std::string(tao::demangle< T >());
+const std::string Control< T >::errmsg = "parse error matching " + std::string(demangle< T >());
 
 
 // ----------------------------------------------------------------------------

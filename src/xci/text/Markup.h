@@ -11,6 +11,14 @@
 
 namespace xci::text {
 
+/// Minimal XML-like markup language.
+///
+/// Supported tokens:
+/// * `<br>` - line break ('\n')
+/// * `<tab>` - tabulator ('\t')
+/// * `<b>` ... `</b>` - bold
+/// * `<i>` ... `</i>` - italic
+/// * `<name>` ... `</name>` - named span
 
 class Markup {
 public:

@@ -1,7 +1,7 @@
 // FpsDisplay.cpp created on 2018-04-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "FpsDisplay.h"
@@ -22,7 +22,7 @@ FpsDisplay::FpsDisplay(Theme& theme)
         : Widget(theme),
           m_quad(theme.renderer(), VertexFormat::V2t2, PrimitiveType::TriFans),
           m_shader(theme.renderer().get_shader(ShaderId::Fps)),
-          m_texture(theme.renderer())
+          m_texture(theme.renderer(), ColorFormat::Grey)
 {
     m_texture.create({(unsigned)m_fps.resolution(), 1});
 

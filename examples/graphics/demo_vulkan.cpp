@@ -72,7 +72,7 @@ int main(int argc, const char* argv[])
     prim.add_vertex({0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}, 1.0, 0);
     prim.end_primitive();
 
-    Texture texture{renderer};
+    Texture texture{renderer, ColorFormat::Grey};
     texture.create({256, 256});
     generate_checkerboard(texture);
 

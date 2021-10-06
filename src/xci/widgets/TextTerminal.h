@@ -1,7 +1,7 @@
 // TextTerminal.h created on 2018-07-19 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_WIDGETS_TEXTTERMINAL_H
@@ -417,6 +417,7 @@ private:
     std::chrono::nanoseconds m_bell_time {0};
 
     graphics::ColoredSprites m_sprites;
+    graphics::Sprites m_emoji_sprites;
     graphics::Shape m_boxes;
     terminal::Caret m_caret;  // visual indicator of cursor position
     graphics::Shape m_frame;  // for visual bell

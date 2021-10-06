@@ -1,7 +1,7 @@
 // Page.cpp created on 2018-03-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <xci/text/layout/Page.h>
@@ -31,22 +31,23 @@ Word::Word(Page& page, std::string string)
         return;
     }
 
-    auto size_fb = page.target().size_to_framebuffer(m_style.size());
-    font->set_size(size_fb.as<uint32_t>());
-    m_baseline = page.target().size_to_viewport(FramebufferPixels{font->ascender()});
-    auto descender_vp = page.target().size_to_viewport(FramebufferPixels{font->descender()});
+    m_style.apply_view(page.target());
+    auto scale = m_style.scale();
+
+    m_baseline = page.target().size_to_viewport(FramebufferPixels{font->ascender() * scale});
+    auto descender_vp = page.target().size_to_viewport(FramebufferPixels{font->descender() * scale});
     const auto font_height = m_baseline - descender_vp;
 
     // Measure word (metrics are affected by string, font, size)
     ViewportCoords pen;
     m_bbox = {0, ViewportUnits{0} - m_baseline, 0, font_height};
     for (CodePoint code_point : to_utf32(m_string)) {
-        auto* glyph = font->get_glyph(code_point);
+        auto* glyph = font->get_glyph_for_char(code_point);
         if (glyph == nullptr)
             continue;
 
         // Expand text bounds by glyph bounds
-        auto advance_vp = page.target().size_to_viewport(FramebufferPixels{glyph->advance()});
+        auto advance_vp = page.target().size_to_viewport(FramebufferPixels{glyph->advance() * scale});
         ViewportRect rect{pen.x ,
                           pen.y - m_baseline,
                           advance_vp,
@@ -78,8 +79,8 @@ void Word::update(const graphics::View& target)
         return;
     }
 
-    auto size_fb = target.size_to_framebuffer(m_style.size());
-    font->set_size(size_fb.as<uint32_t>());
+    m_style.apply_view(target);
+    auto scale = m_style.scale();
 
     auto& renderer = target.window()->renderer();
 
@@ -106,21 +107,21 @@ void Word::update(const graphics::View& target)
 
     ViewportCoords pen = m_pos;
     for (CodePoint code_point : to_utf32(m_string)) {
-        auto* glyph = font->get_glyph(code_point);
+        auto* glyph = font->get_glyph_for_char(code_point);
         if (glyph == nullptr)
             continue;
 
         auto bearing = target.size_to_viewport(FramebufferSize{glyph->bearing()});
         auto glyph_size = target.size_to_viewport(FramebufferSize{glyph->size()});
-        ViewportRect rect{pen.x + bearing.x,
-                          pen.y - bearing.y,
-                          glyph_size.x,
-                          glyph_size.y};
+        ViewportRect rect{pen.x + bearing.x * scale,
+                          pen.y - bearing.y * scale,
+                          glyph_size.x * scale,
+                          glyph_size.y * scale};
         m_sprites->add_sprite(rect, glyph->tex_coords());
         if (show_bboxes)
             m_debug_shapes.back().add_rectangle(rect, fb_1px);
 
-        pen.x += target.size_to_viewport(FramebufferPixels{glyph->advance()});
+        pen.x += target.size_to_viewport(FramebufferPixels{glyph->advance()}) * scale;
     }
 
     if (show_bboxes)
@@ -268,11 +269,9 @@ void Page::finish_line()
 
 void Page::advance_line(float lines)
 {
-    auto* font = m_style.font();
-    auto font_size = target().size_to_framebuffer(m_style.size());
-    font->set_size(font_size.as<unsigned int>());
-    auto line_height = target().size_to_viewport(FramebufferPixels{font->line_height()});
-    m_pen.y += lines * line_height;
+    m_style.apply_view(target());
+    auto height = target().size_to_viewport(FramebufferPixels{m_style.font()->height() * m_style.scale()});
+    m_pen.y += lines * height;
 }
 
 
@@ -321,11 +320,9 @@ void Page::add_word(const std::string& string)
 
 ViewportUnits Page::space_width()
 {
-    auto* font = m_style.font();
-    auto font_size = target().size_to_framebuffer(m_style.size());
-    font->set_size(font_size.as<unsigned int>());
-    auto* glyph = font->get_glyph(' ');
-    return target().size_to_viewport(FramebufferPixels{glyph->advance()});
+    m_style.apply_view(target());
+    auto* glyph = m_style.font()->get_glyph_for_char(' ');
+    return target().size_to_viewport(FramebufferPixels{glyph->advance() * m_style.scale()});
 }
 
 

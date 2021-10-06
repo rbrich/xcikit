@@ -1,7 +1,7 @@
 // Sprites.cpp created on 2018-03-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Sprites.h"
@@ -14,7 +14,9 @@ namespace xci::graphics {
 Sprites::Sprites(Renderer& renderer, Texture& texture, const Color& color)
         : m_texture(texture), m_color(color),
           m_quads(renderer, VertexFormat::V2t2, PrimitiveType::TriFans),
-          m_shader(renderer.get_shader(ShaderId::Sprite))
+          m_shader(renderer.get_shader(
+                      texture.color_format() == ColorFormat::Grey ?
+                      ShaderId::SpriteR : ShaderId::Sprite))
 {}
 
 
@@ -101,10 +103,10 @@ void ColoredSprites::add_sprite(const ViewportRect& rect, const Rect_u& texrect)
     auto x2 = rect.x + rect.w;
     auto y2 = rect.y + rect.h;
     auto ts = m_texture.size();
-    float tl = (float)texrect.left() / ts.x;
-    float tr = (float)texrect.right() / ts.x;
-    float tb = (float)texrect.bottom() / ts.y;
-    float tt = (float)texrect.top() / ts.y;
+    float tl = (float)texrect.left() / (float)ts.x;
+    float tr = (float)texrect.right() / (float)ts.x;
+    float tb = (float)texrect.bottom() / (float)ts.y;
+    float tt = (float)texrect.top() / (float)ts.y;
 
     m_quads.begin_primitive();
     m_quads.add_vertex({x1, y1}, m_color, tl, tt);

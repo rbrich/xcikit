@@ -1,7 +1,7 @@
 // Font.cpp created on 2018-03-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Font.h"
@@ -23,8 +23,12 @@ Font::~Font() = default;
 
 void Font::add_face(std::unique_ptr<FontFace> face)
 {
-    if (!m_texture)
-        m_texture = std::make_unique<FontTexture>(m_renderer);
+    if (!m_texture) {
+        if (face->has_color())
+            m_texture = std::make_unique<FontTexture>(m_renderer, 1024, true);
+        else
+            m_texture = std::make_unique<FontTexture>(m_renderer);
+    }
     m_faces.emplace_back(std::move(face));
 }
 
@@ -58,6 +62,7 @@ void Font::set_style(FontStyle style)
     }
     // Style not found, selected the first one
     log::warning("Requested font style not found: {}", int(style));
+    m_current_face = 0;
 }
 
 
@@ -67,15 +72,11 @@ void Font::set_size(unsigned size)
     face().set_size(m_size);
 }
 
-Font::Glyph* Font::get_glyph(CodePoint code_point)
-{
-    // translate char to glyph
-    // In case of failure, this returns 0, which is okay, because
-    // glyph nr. 0 contains graphic for "undefined character code".
-    auto glyph_index = face().get_glyph_index(code_point);
 
+Font::Glyph* Font::get_glyph(GlyphIndex glyph_index)
+{
     // check cache
-    GlyphKey glyph_key{m_current_face, m_size, glyph_index};
+    GlyphKey glyph_key{m_current_face, face().size_key(), glyph_index};
     auto iter = m_glyphs.find(glyph_key);
     if (iter != m_glyphs.end())
         return &iter->second;
@@ -83,9 +84,8 @@ Font::Glyph* Font::get_glyph(CodePoint code_point)
     // render
     face().set_size(m_size);
     FontFace::Glyph glyph_render;
-    if (!face().render_glyph(glyph_index, glyph_render)) {
+    if (!face().render_glyph(glyph_index, glyph_render))
         return nullptr;
-    }
 
     // insert into texture
     Glyph glyph;
@@ -93,7 +93,7 @@ Font::Glyph* Font::get_glyph(CodePoint code_point)
                               glyph.m_tex_coords)) {
         // no more space in texture -> reset and try again
         clear_cache();
-        return get_glyph(code_point);
+        return get_glyph(glyph_index);
     }
 
     // fill metrics

@@ -32,4 +32,4 @@ FtFontLibrary::~FtFontLibrary()
 }
 
 
-} // xci::text
+} // namespace xci::text

@@ -1,7 +1,7 @@
 // FtFontFace.h created on 2018-09-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_TEXT_FREETYPE_FONTFACE_H
@@ -33,11 +33,15 @@ public:
 
     bool set_outline() override;  // TODO
 
+    bool has_color() const override { return FT_HAS_COLOR(m_face); }
     FontStyle style() const override;
-    float line_height() const override;
+
+    float height() const override;
     float max_advance() override;
     float ascender() const override;
     float descender() const override;
+
+    long size_key() const override { return m_face->size->metrics.height; }
 
     GlyphIndex get_glyph_index(CodePoint code_point) const override;
 

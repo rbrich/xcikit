@@ -27,6 +27,6 @@ private:
 };
 
 
-} // xci::text
+} // namespace xci::text
 
 #endif // XCI_TEXT_FREETYPE_FONTLIBRARY_H

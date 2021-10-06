@@ -1,7 +1,7 @@
 // Theme.cpp created on 2018-04-10 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Theme.h"
@@ -15,7 +15,7 @@ namespace xci::widgets {
 
 Theme::Theme(graphics::Renderer& renderer)
         : m_renderer(renderer),
-          m_font(renderer), m_icon_font(renderer)
+          m_font(renderer), m_emoji_font(renderer), m_icon_font(renderer)
 {}
 
 
@@ -28,6 +28,9 @@ bool Theme::load_default()
     TRY(load_font_face(vfs, "fonts/Hack/Hack-Bold.ttf", 0));
     TRY(load_font_face(vfs, "fonts/Hack/Hack-Italic.ttf", 0));
     TRY(load_font_face(vfs, "fonts/Hack/Hack-BoldItalic.ttf", 0));
+
+    // Emoji font
+    TRY(load_emoji_font_face(vfs, "fonts/Noto/NotoColorEmoji.ttf", 0));
 
     // Material Icons
     TRY(load_icon_font_face(vfs, "fonts/MaterialIcons/MaterialIcons-Regular.woff", 0));
@@ -49,6 +52,12 @@ bool Theme::load_default()
 bool Theme::load_font_face(const core::Vfs& vfs, const char* file_path, int face_index)
 {
     return m_font.add_face(vfs, file_path, face_index);
+}
+
+
+bool Theme::load_emoji_font_face(const core::Vfs& vfs, const char* file_path, int face_index)
+{
+    return m_emoji_font.add_face(vfs, file_path, face_index);
 }
 
 

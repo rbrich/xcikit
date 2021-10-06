@@ -8,6 +8,7 @@
 
 #include <xci/widgets/TextTerminal.h>
 #include <xci/core/string.h>
+#include <xci/compat/macros.h>
 
 #include <fmt/core.h>
 
@@ -30,6 +31,7 @@ public:
                 case FontStyle::Bold:       return "[b]";
                 case FontStyle::BoldItalic: return "[bi]";
             }
+            UNREACHABLE;
         }());
         m_font_style = font_style;
     }
@@ -42,6 +44,7 @@ public:
                 case Decoration::Overlined:     return "[‾]";
                 case Decoration::CrossedOut:    return "[-]";
             }
+            UNREACHABLE;
         }());
     }
     void set_mode(terminal::Mode mode) override {
@@ -51,6 +54,7 @@ public:
                 case Mode::Normal:        return "[n]";
                 case Mode::Bright:        return "[+]";
             }
+            UNREACHABLE;
         }());
     }
     void set_default_fg_color() override {

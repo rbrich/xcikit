@@ -279,6 +279,15 @@ TEST_CASE( "PathNode", "[FileTree]" )
 #endif // _WIN32
 
 
+TEST_CASE( "c32_width", "[TermCtl]" )
+{
+    CHECK(c32_width(utf8_codepoint(UTF8(" "))) == 1);
+    CHECK(c32_width(utf8_codepoint(UTF8("❓"))) == 2);
+    CHECK(c32_width(utf8_codepoint(UTF8("🐎"))) == 2);
+    CHECK(c32_width(utf8_codepoint(UTF8("🔥"))) == 2);
+}
+
+
 TEST_CASE( "stripped_width", "[TermCtl]" )
 {
     CHECK(TermCtl::stripped_width("test") == 4);

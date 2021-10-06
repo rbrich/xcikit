@@ -1,7 +1,7 @@
 // Font.h created on 2018-03-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_TEXT_FONT_H
@@ -10,6 +10,7 @@
 #include <xci/text/FontFace.h>
 #include <xci/graphics/Renderer.h>
 #include <xci/graphics/Texture.h>
+#include <xci/core/mixin.h>
 #include <xci/core/geometry.h>
 #include <xci/core/Vfs.h>
 
@@ -28,14 +29,10 @@ class FontTexture;
 
 
 // Encapsulates faces, styles and glyph caches for a font
-class Font {
+class Font: private core::NonCopyable {
 public:
     explicit Font(Renderer& renderer);
     ~Font();
-
-    // non-copyable
-    Font(const Font&) = delete;
-    Font& operator =(const Font&) = delete;
 
     // Add a face. Call multiple times to add different strokes
     // (either from separate files or using face_index).
@@ -59,7 +56,7 @@ public:
 
     struct GlyphKey {
         size_t font_face;
-        unsigned font_size;
+        long font_size;
         GlyphIndex glyph_index;
 
         bool operator<(const GlyphKey& rhs) const
@@ -84,10 +81,16 @@ public:
 
         friend class Font;
     };
-    Glyph* get_glyph(CodePoint code_point);
+    Glyph* get_glyph(GlyphIndex glyph_index);
+    Glyph* get_glyph_for_char(CodePoint code_point) { return get_glyph(get_glyph_index(code_point)); }
+
+    // Translate Unicode char to glyph
+    // In case of failure, this returns 0, which doesn't need special handling, because
+    // glyph nr. 0 contains graphic for "undefined character code".
+    GlyphIndex get_glyph_index(CodePoint code_point) const { return face().get_glyph_index(code_point); }
 
     // just a facade
-    float line_height() const { return face().line_height(); }
+    float height() const { return face().height(); }
     float max_advance() { return face().max_advance(); }
     float ascender() const { return face().ascender(); }
     float descender() const { return face().descender(); }

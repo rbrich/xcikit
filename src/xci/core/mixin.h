@@ -4,14 +4,13 @@
 // Copyright 2019 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-/// Mixin classes. Use them as private base.
-/// https://en.wikibooks.org/wiki/More_C%2B%2B_Idioms/Non-copyable_Mixin
-
 #ifndef XCI_CORE_NONCOPYABLE_H
 #define XCI_CORE_NONCOPYABLE_H
 
 namespace xci::core {
 
+/// Mixin classes. Use them as private base.
+/// https://en.wikibooks.org/wiki/More_C%2B%2B_Idioms/Non-copyable_Mixin
 
 class NonCopyable {
 public:

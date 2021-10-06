@@ -235,6 +235,10 @@ bool Renderer::load_shader(ShaderId shader_id, Shader& shader)
             return shader.load_from_vfs(vfs(),
                     "shaders/sprite.vert.spv",
                     "shaders/sprite.frag.spv");
+        case ShaderId::SpriteR:
+            return shader.load_from_vfs(vfs(),
+                    "shaders/sprite.vert.spv",
+                    "shaders/sprite_r.frag.spv");
         case ShaderId::SpriteC:
             return shader.load_from_vfs(vfs(),
                     "shaders/sprite_c.vert.spv",

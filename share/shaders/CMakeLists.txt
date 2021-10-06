@@ -20,6 +20,7 @@ set(SHADER_SOURCES
     rectangle.frag
     sprite.vert
     sprite.frag
+    sprite_r.frag
     sprite_c.vert
     sprite_c.frag
     line.vert

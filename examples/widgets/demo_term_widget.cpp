@@ -1,7 +1,7 @@
 // demo_term_widget.cpp created on 2018-07-19 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "graphics/common.h"
@@ -35,9 +35,11 @@ int main(int argc, const char* argv[])
         return EXIT_FAILURE;
 
     const char* cmd = "uname -a";
+    auto prompt = fs::current_path().string() + "> ";
 
     TextTerminal terminal {theme};
-    terminal.add_text(fs::current_path().string() + "> ");
+    terminal.set_font_size(16.f);
+    terminal.add_text(prompt);
     terminal.set_font_style(TextTerminal::FontStyle::Bold);
     terminal.add_text(std::string(cmd) + "\n");
     terminal.set_font_style(TextTerminal::FontStyle::Regular);
@@ -57,7 +59,7 @@ int main(int argc, const char* argv[])
     // Present some colors
     terminal.set_fg(TextTerminal::Color4bit::White);
     terminal.set_bg(TextTerminal::Color4bit::Black);
-    terminal.add_text(fs::current_path().string() + "> ");
+    terminal.add_text(prompt);
     terminal.set_font_style(TextTerminal::FontStyle::Bold);
     terminal.add_text("rainbow\n");
     terminal.set_font_style(TextTerminal::FontStyle::Regular);
@@ -112,9 +114,9 @@ int main(int argc, const char* argv[])
     }
 
     terminal.reset_attrs();
-    terminal.add_text(fs::current_path().string() + "> ");
+    terminal.add_text(prompt);
     terminal.set_font_style(TextTerminal::FontStyle::Bold);
-    terminal.add_text("Příliš žluťoučký kůň úpěl ďábelské ódy.");
+    terminal.add_text("🐎 Příliš žluťoučký kůň úpěl ďábelské ódy.");
 
     terminal.set_position({50, 50});
     terminal.set_size({700, 500});
