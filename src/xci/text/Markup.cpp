@@ -134,9 +134,9 @@ struct Control : normal< Rule >
     {
         log::error("{}: Parse error matching {} at [{}]",
                   in.position(),
-                  tao::demangle<Rule>(),
+                  demangle<Rule>(),
                   std::string(in.current(), in.size()).substr(0, 10));
-        throw parse_error( "parse error matching " + std::string(tao::demangle<Rule>()), in );
+        throw parse_error( "parse error matching " + std::string(demangle<Rule>()), in );
     }
 };
 
