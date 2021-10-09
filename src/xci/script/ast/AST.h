@@ -223,7 +223,7 @@ struct TypeName: public Type {
     explicit TypeName(std::string s) : name(std::move(s)) {}
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
-    std::unique_ptr<ast::Type> make_copy() const override { return std::make_unique<TypeName>(*this); };
+    std::unique_ptr<ast::Type> make_copy() const override { return std::make_unique<TypeName>(*this); }
     explicit operator bool() const { return !name.empty(); }
 
     std::string name;

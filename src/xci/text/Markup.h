@@ -28,7 +28,7 @@ public:
 
     bool parse(const std::string &s);
 
-    Layout& get_layout() { return m_layout; };
+    Layout& get_layout() { return m_layout; }
 
 private:
     Layout& m_layout;

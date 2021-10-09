@@ -505,7 +505,7 @@ static unsigned wrapping_print_word(const std::string& s, unsigned indent, unsig
     }
     cout << s;
     return start + l;
-};
+}
 
 
 /// Print text `s` right of `indent` columns, fitting into total `max_width`.

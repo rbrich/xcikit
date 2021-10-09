@@ -9,7 +9,6 @@ option(BUILD_WITH_TSAN "Build with ThreadSanitizer." OFF)
 
 # warnings (+ compile time checking tools)
 option(ENABLE_WARNINGS "Enable compiler warnings: -Wall -Wextra ..." ON)
-option(ENABLE_PEDANTIC "Build with -Wpedantic -Werror." OFF)
 option(ENABLE_TIDY "Run clang-tidy on each compiled file, when available." OFF)
 option(ENABLE_IWYU "Run iwyu (Include What You Use) on each compiled file, when available." OFF)
 
@@ -91,6 +90,8 @@ if (ENABLE_WARNINGS)
             _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1)
     else()
         add_compile_options(-Wall -Wextra -Wundef -Werror=switch
+            -Wpointer-arith
+            -Wextra-semi
             -Wno-unused-parameter
             -Wno-missing-field-initializers)
         if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -99,11 +100,6 @@ if (ENABLE_WARNINGS)
             add_compile_options(-Wno-missing-braces)
         endif()
     endif()
-endif()
-
-if (ENABLE_PEDANTIC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wpedantic -Werror")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-gnu-zero-variadic-macro-arguments")
 endif()
 
 # Sanitize unreachable in debug build

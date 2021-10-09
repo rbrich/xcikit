@@ -177,7 +177,7 @@ public:
             sync();
             m_tout.write(std::string_view{s, (size_t)n});
             return n;
-        };
+        }
 
         int_type overflow(int_type ch) override {
             if (traits_type::eq_int_type(ch, traits_type::eof()))

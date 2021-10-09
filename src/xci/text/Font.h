@@ -72,7 +72,7 @@ public:
         const core::Vec2i& bearing() const { return m_bearing; }
         float advance() const { return m_advance; }
 
-        const Rect_u& tex_coords() const { return m_tex_coords; };
+        const Rect_u& tex_coords() const { return m_tex_coords; }
 
     private:
         Rect_u m_tex_coords;

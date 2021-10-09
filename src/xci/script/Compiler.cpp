@@ -519,7 +519,7 @@ public:
 
 private:
     Module& module() { return m_function.module(); }
-    Code& code() { return m_code == nullptr ? m_function.code() : *m_code; };
+    Code& code() { return m_code == nullptr ? m_function.code() : *m_code; }
 
     void make_closure(Function& func) {
         // parent function

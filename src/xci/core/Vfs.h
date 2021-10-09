@@ -105,7 +105,7 @@ namespace vfs {
 /// Lookup regular files in real directory, which is mapped to VFS path
 class RealDirectoryLoader: public VfsLoader {
 public:
-    const char* name() const override { return "directory"; };
+    const char* name() const override { return "directory"; }
     bool can_load_fs_dir(const fs::path& path) override { return true; }
     auto load_fs_dir(const fs::path& path) -> std::shared_ptr<VfsDirectory> override;
 };
@@ -125,7 +125,7 @@ private:
 /// Lookup files in DAR archive, which is mapped to VFS path
 class DarArchiveLoader: public VfsLoader {
 public:
-    const char* name() const override { return "DAR archive"; };
+    const char* name() const override { return "DAR archive"; }
     bool can_load_stream(std::istream& stream) override;
     auto load_stream(std::string&& path, std::unique_ptr<std::istream>&& stream) -> std::shared_ptr<VfsDirectory> override;
 };
@@ -163,7 +163,7 @@ private:
 /// Lookup files in ZIP archive, which is mapped to VFS path
 class ZipArchiveLoader: public VfsLoader {
 public:
-    const char* name() const override { return "ZIP archive"; };
+    const char* name() const override { return "ZIP archive"; }
     bool can_load_stream(std::istream& stream) override;
     auto load_stream(std::string&& path, std::unique_ptr<std::istream>&& stream) -> std::shared_ptr<VfsDirectory> override;
 };
@@ -207,7 +207,7 @@ public:
         NoZip,              // preload RealDirectoryLoader, DarArchiveLoader
         All,                // preload all loaders (incl. ZipArchiveLoader when available)
     };
-    Vfs() : Vfs(Loaders::All) {};
+    Vfs() : Vfs(Loaders::All) {}
     explicit Vfs(Loaders loaders);
 
     /// Register custom loader
