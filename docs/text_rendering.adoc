@@ -1,0 +1,22 @@
+= Text Rendering
+
+== Terminology
+
+code point:: Smallest part of Unicode character,
+multiple code points can be combined in one character.
+
+glyph:: The character image in the font.
+
+
+== Text Shaping
+
+... HarfBuzz ...
+
+== Color Emoji
+
+... Noto Emoji font, color bitmaps ...
+
+== References
+
+* [Text Rendering Hates You](https://gankra.github.io/blah/text-hates-you/) - about rendering in Firefox
+*

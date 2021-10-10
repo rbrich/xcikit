@@ -4,6 +4,8 @@
 // Copyright 2018 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
+#include "graphics/common.h"
+
 #include <xci/text/Font.h>
 #include <xci/text/Text.h>
 #include <xci/graphics/Window.h>
@@ -29,7 +31,7 @@ static const char * sample_text =
         "it and seemed ready to slide off any "
         "moment.";
 
-int main()
+int main(int argc, const char* argv[])
 {
     Vfs vfs;
     if (!vfs.mount(XCI_SHARE))
@@ -37,7 +39,8 @@ int main()
 
     Renderer renderer {vfs};
     Window window {renderer};
-    window.create({800, 600}, "XCI layout demo");
+
+    setup_window(window, "XCI layout demo", argv);
 
     Font font {renderer};
     if (!font.add_face(vfs, "fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))

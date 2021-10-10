@@ -25,6 +25,9 @@ static inline FT_F26Dot6 float_to_ft(float units) {
 
 FtFontFace::~FtFontFace()
 {
+    if (m_hb_font != nullptr)
+        hb_font_destroy(m_hb_font);
+
     if (m_face != nullptr) {
         auto err = FT_Done_Face(m_face);
         if (err) {
@@ -32,9 +35,8 @@ FtFontFace::~FtFontFace()
             return;
         }
     }
-    if (m_stroker != nullptr) {
+    if (m_stroker != nullptr)
         FT_Stroker_Done(m_stroker);
-    }
 }
 
 
@@ -85,6 +87,9 @@ bool FtFontFace::set_size(unsigned pixel_size)
         log::error("FT_Request_Size: {}", err);
         return false;
     }
+
+    hb_ft_font_set_load_flags(m_hb_font, get_load_flags());
+    hb_ft_font_changed(m_hb_font);
 
     return true;
 }
@@ -155,10 +160,41 @@ GlyphIndex FtFontFace::get_glyph_index(CodePoint code_point) const
 }
 
 
+auto FtFontFace::shape_text(std::string_view utf8) const -> std::vector<GlyphPlacement>
+{
+    hb_buffer_t *buf;
+    buf = hb_buffer_create();
+    hb_buffer_add_utf8(buf, utf8.data(), (int) utf8.size(), 0, -1);
+
+    hb_buffer_set_direction(buf, HB_DIRECTION_LTR);
+    hb_buffer_set_script(buf, HB_SCRIPT_LATIN);
+    hb_buffer_set_language(buf, hb_language_from_string("en", -1));
+
+    hb_shape(m_hb_font, buf, nullptr, 0);
+
+    unsigned int glyph_count;
+    hb_glyph_info_t *glyph_info = hb_buffer_get_glyph_infos(buf, &glyph_count);
+    hb_glyph_position_t *glyph_pos = hb_buffer_get_glyph_positions(buf, &glyph_count);
+
+    std::vector<GlyphPlacement> result;
+    result.reserve(glyph_count);
+    for (unsigned int i = 0; i < glyph_count; i++) {
+        result.emplace_back(GlyphPlacement{
+            .glyph_index = glyph_info[i].codepoint,
+            .offset = {glyph_pos[i].x_offset, glyph_pos[i].y_offset},
+            .advance = {ft_to_float(glyph_pos[i].x_advance), ft_to_float(glyph_pos[i].y_advance)},
+        });
+    }
+
+    hb_buffer_destroy(buf);
+
+    return result;
+}
+
+
 FT_GlyphSlot FtFontFace::load_glyph(GlyphIndex glyph_index)
 {
-    int err = FT_Load_Glyph(m_face, glyph_index,
-            FT_LOAD_COLOR | (height() < 20.f ? FT_LOAD_TARGET_LIGHT : FT_LOAD_NO_HINTING));
+    int err = FT_Load_Glyph(m_face, glyph_index, get_load_flags());
     if (err) {
         log::error("FT_Load_Glyph error: {}", err);
         return nullptr;
@@ -247,6 +283,15 @@ bool FtFontFace::load_face(const fs::path& file_path, const std::byte* buffer, s
         m_face = nullptr;
         return false;
     }
+
+    m_hb_font = hb_ft_font_create_referenced(m_face);
+    if (m_hb_font == nullptr) {
+        log::error("hb_ft_font_create_referenced: error");
+        FT_Done_Face(m_face);
+        m_face = nullptr;
+        return false;
+    }
+    hb_ft_font_set_load_flags(m_hb_font, get_load_flags());
 
     return true;
 }

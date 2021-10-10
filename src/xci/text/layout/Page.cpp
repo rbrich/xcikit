@@ -22,8 +22,8 @@ using xci::graphics::View;
 using xci::graphics::Color;
 
 
-Word::Word(Page& page, std::string string)
-    : m_string(std::move(string)), m_style(page.style())
+Word::Word(Page& page, const std::string& utf8)
+    : m_style(page.style())
 {
     auto* font = m_style.font();
     if (!font) {
@@ -41,20 +41,23 @@ Word::Word(Page& page, std::string string)
     // Measure word (metrics are affected by string, font, size)
     ViewportCoords pen;
     m_bbox = {0, ViewportUnits{0} - m_baseline, 0, font_height};
-    for (CodePoint code_point : to_utf32(m_string)) {
-        auto* glyph = font->get_glyph_for_char(code_point);
-        if (glyph == nullptr)
-            continue;
 
-        // Expand text bounds by glyph bounds
-        auto advance_vp = page.target().size_to_viewport(FramebufferPixels{glyph->advance() * scale});
-        ViewportRect rect{pen.x ,
-                          pen.y - m_baseline,
-                          advance_vp,
-                          font_height};
+    m_shaped = font->shape_text(utf8);
 
-        m_bbox.extend(rect);
-        pen.x += rect.w;
+    for (const auto& shaped_glyph : m_shaped) {
+        auto* glyph = font->get_glyph(shaped_glyph.glyph_index);
+        auto advance = page.target().size_to_viewport(FramebufferCoords{shaped_glyph.advance * scale});
+        if (glyph != nullptr) {
+            // Expand text bounds by glyph bounds
+            ViewportRect rect{pen.x,
+                              pen.y - m_baseline,
+                              advance.x,
+                              font_height};
+
+            m_bbox.extend(rect);
+        }
+
+        pen += advance;
     }
 
     // Check line end
@@ -106,22 +109,22 @@ void Word::update(const graphics::View& target)
     m_sprites.emplace(renderer, font->texture(), m_style.color());
 
     ViewportCoords pen = m_pos;
-    for (CodePoint code_point : to_utf32(m_string)) {
-        auto* glyph = font->get_glyph_for_char(code_point);
-        if (glyph == nullptr)
-            continue;
-
-        auto bearing = target.size_to_viewport(FramebufferSize{glyph->bearing()});
-        auto glyph_size = target.size_to_viewport(FramebufferSize{glyph->size()});
-        ViewportRect rect{pen.x + bearing.x * scale,
-                          pen.y - bearing.y * scale,
-                          glyph_size.x * scale,
-                          glyph_size.y * scale};
-        m_sprites->add_sprite(rect, glyph->tex_coords());
-        if (show_bboxes)
-            m_debug_shapes.back().add_rectangle(rect, fb_1px);
-
-        pen.x += target.size_to_viewport(FramebufferPixels{glyph->advance()}) * scale;
+    for (const auto& shaped_glyph : m_shaped) {
+        auto* glyph = font->get_glyph(shaped_glyph.glyph_index);
+        auto advance = target.size_to_viewport(FramebufferCoords{shaped_glyph.advance * scale});
+        auto offset = target.size_to_viewport(FramebufferSize{shaped_glyph.offset});
+        if (glyph != nullptr) {
+            auto bearing = target.size_to_viewport(FramebufferSize{glyph->bearing()});
+            auto glyph_size = target.size_to_viewport(FramebufferSize{glyph->size()});
+            ViewportRect rect{pen.x + (offset.x + bearing.x) * scale,
+                              pen.y + (offset.y - bearing.y) * scale,
+                              glyph_size.x * scale,
+                              glyph_size.y * scale};
+            m_sprites->add_sprite(rect, glyph->tex_coords());
+            if (show_bboxes)
+                m_debug_shapes.back().add_rectangle(rect, fb_1px);
+        }
+        pen += advance;
     }
 
     if (show_bboxes)

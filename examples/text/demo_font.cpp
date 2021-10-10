@@ -65,7 +65,7 @@ int main(int argc, const char* argv[])
     text.set_color(Color::White());
 
     Text emoji;
-    emoji.set_markup_string("🥛🍸🥃🥂🍷🍹🍨🧂");
+    emoji.set_markup_string("🥛🍸🥃🥂🍷🍹⚗️🧂");
     emoji.set_font(emoji_font);
     emoji.set_font_size(0.2f);
 

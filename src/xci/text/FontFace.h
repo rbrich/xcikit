@@ -70,6 +70,13 @@ public:
 
     virtual GlyphIndex get_glyph_index(CodePoint code_point) const = 0;
 
+    struct GlyphPlacement {
+        GlyphIndex glyph_index;
+        core::Vec2i offset;
+        core::Vec2f advance;
+    };
+    virtual std::vector<GlyphPlacement> shape_text(std::string_view utf8) const = 0;
+
     struct Glyph {
         core::Vec2i bearing;
         core::Vec2f advance;

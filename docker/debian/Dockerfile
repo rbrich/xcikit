@@ -36,7 +36,7 @@ RUN echo "conan"; apt-get update && apt-mark manual $(apt-mark showauto) && \
     rm -rf /var/lib/apt/lists/*
 
 RUN echo "xcikit deps"; apt-get update && apt-get install --no-install-recommends -y \
-    librange-v3-dev libglfw3-dev glslang-tools libvulkan-dev libfreetype6-dev \
+    librange-v3-dev libglfw3-dev glslang-tools libvulkan-dev libfreetype6-dev libharfbuzz-dev \
     libhyperscan-dev catch2 libbenchmark-dev && rm -rf /var/lib/apt/lists/*
 
 

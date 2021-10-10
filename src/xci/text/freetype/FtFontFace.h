@@ -14,6 +14,9 @@
 #include FT_FREETYPE_H
 #include FT_STROKER_H
 
+#include <hb.h>
+#include <hb-ft.h>
+
 #include <filesystem>
 
 namespace xci::text {
@@ -45,11 +48,15 @@ public:
 
     GlyphIndex get_glyph_index(CodePoint code_point) const override;
 
+    std::vector<GlyphPlacement> shape_text(std::string_view utf8) const override;
+
     bool render_glyph(GlyphIndex glyph_index, Glyph& glyph) override;
 
 private:
     FT_Library ft_library();
     bool load_face(const fs::path& file_path, const std::byte* buffer, size_t buffer_size, int face_index);
+
+    FT_Int32 get_load_flags() const { return FT_LOAD_COLOR | (height() < 20.f ? FT_LOAD_TARGET_LIGHT : FT_LOAD_NO_HINTING); }
 
     // Returns null on error
     FT_GlyphSlot load_glyph(GlyphIndex glyph_index);
@@ -58,6 +65,7 @@ private:
     core::BufferPtr m_memory_buffer;
     FT_Face m_face = nullptr;
     FT_Stroker m_stroker = nullptr;
+    hb_font_t* m_hb_font = nullptr;
 };
 
 
