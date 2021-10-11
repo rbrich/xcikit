@@ -39,6 +39,7 @@ public:
     void set_default_page_width(ViewportUnits width);
     void set_default_font(Font* font);
     void set_default_font_size(ViewportUnits size, bool allow_scale = true);
+    void set_default_font_style(FontStyle font_style);
     void set_default_color(const graphics::Color &color);
 
     const Style& default_style() const { return m_default_style; }
@@ -70,6 +71,7 @@ public:
     // Also affects spacing (which depends on font metrics).
     void set_font(Font* font);
     void set_font_size(ViewportUnits size);
+    void set_font_style(FontStyle font_style);
     void set_bold(bool bold = true);
     void set_italic(bool italic = true);
     void set_color(const graphics::Color &color);

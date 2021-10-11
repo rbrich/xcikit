@@ -20,3 +20,7 @@ Fonts
 [Noto Emoji](https://github.com/googlefonts/noto-emoji)
 - Color Noto emoji font
 - Apache-2.0 License
+
+[Lora](https://github.com/cyrealtype/Lora-Cyrillic)
+- variable serif font
+- Open Font License (OFL-1.1)

@@ -105,6 +105,18 @@ private:
 };
 
 
+class SetFontStyle: public Element {
+public:
+    explicit SetFontStyle(FontStyle font_style) : m_font_style(font_style) {}
+    void apply(Page& page) override {
+        page.set_font_style(m_font_style);
+    }
+
+private:
+    FontStyle m_font_style;
+};
+
+
 class SetBold: public Element {
 public:
     explicit SetBold(bool bold) : m_bold(bold) {}

@@ -48,6 +48,13 @@ void Layout::set_default_font_size(ViewportUnits size, bool allow_scale)
 }
 
 
+void Layout::set_default_font_style(FontStyle font_style)
+{
+    m_default_style.set_font_style(font_style);
+    m_page.clear();
+}
+
+
 void Layout::set_default_color(const graphics::Color& color)
 {
     m_default_style.set_color(color);
@@ -176,6 +183,12 @@ void Layout::set_font(Font* font)
 void Layout::set_font_size(ViewportUnits size)
 {
     m_elements.push_back(std::make_unique<SetFontSize>(size));
+}
+
+
+void Layout::set_font_style(FontStyle font_style)
+{
+    m_elements.push_back(std::make_unique<SetFontStyle>(font_style));
 }
 
 
