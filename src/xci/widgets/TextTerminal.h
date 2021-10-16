@@ -100,7 +100,7 @@ public:
     virtual void set_fg_color(Color24bit fg) = 0;
     virtual void set_bg_color(Color24bit bg) = 0;
     virtual void draw_blanks(size_t num) = 0;
-    virtual void draw_char(text::CodePoint code_point) = 0;
+    virtual void draw_chars(std::string_view utf8) = 0;
 };
 
 

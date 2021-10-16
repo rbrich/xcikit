@@ -507,24 +507,32 @@ int terminal::Line::length() const
 
 void terminal::Line::render(Renderer& renderer)
 {
+    auto chars_begin = m_content.cend();
+    auto flush_chars = [&](std::string::const_iterator it) {
+        if (chars_begin == m_content.cend())
+            return;
+        renderer.draw_chars(std::string_view{&*chars_begin, size_t(it - chars_begin)});
+    };
     for (auto it = m_content.cbegin(); it != m_content.cend(); ) {
         if (*it == terminal::ctl::blanks) {
+            flush_chars(it);
             auto num = uint8_t(*++it);
             renderer.draw_blanks(num);
-            ++it;
+            chars_begin = ++it;
             continue;
         }
         if (terminal::Attributes::is_introducer(*it)) {
+            flush_chars(it);
             terminal::Attributes attr;
             it += attr.decode({&*it, size_t(m_content.cend() - it)});
             attr.render(renderer);
+            chars_begin = it;
             continue;
         }
 
-        // extract single UTF-8 character
-        renderer.draw_char(utf8_codepoint(&*it));
         it = utf8_next(it);
     }
+    flush_chars(m_content.cend());
 }
 
 
@@ -922,56 +930,81 @@ void TextTerminal::update(View& view, State state)
                 pen.x += cell_size.x * num;
                 column += num;
             }
-            void draw_char(CodePoint code_point) override {
-                auto glyph_index = font.get_glyph_index(code_point);
-                if (glyph_index == 0 && draw_emoji(code_point))
-                    return;  // not found in normal font, but found in emoji -> we're done
-                auto* glyph = font.get_glyph(glyph_index);
-                if (glyph == nullptr)
-                    glyph = font.get_glyph_for_char(' ');
+            void draw_chars(std::string_view utf8) override {
+                auto shaped = font.shape_text(utf8);
+                for (auto it = shaped.cbegin(); it != shaped.cend(); ++it) {
+                    if (it->glyph_index == 0) {
+                        // find length of unknown glyph range
+                        const size_t begin_idx = it->char_index;
+                        size_t count = std::string_view::npos;
+                        auto end = it + 1;
+                        while (end != shaped.cend() && end->glyph_index == 0)
+                            ++end;
+                        if (end != shaped.cend())
+                            count = end->char_index - begin_idx;
+                        // try emoji font, skip drawn characters
+                        auto emoji_end = draw_emoji(utf8.substr(begin_idx, count));
+                        if (emoji_end == std::string_view::npos) {
+                            // the whole range was consumed (it was all emoji)
+                            it = end;
+                        } else {
+                            // partial prefix consumed
+                            while (it->char_index < begin_idx + emoji_end)
+                                ++it;
+                        }
+                    }
+                    auto* glyph = font.get_glyph(it->glyph_index);
+                    if (glyph == nullptr)
+                        glyph = font.get_glyph_for_char(' ');
 
-                auto bearing = view.size_to_viewport(FramebufferSize{glyph->bearing()});
-                auto ascender_vp = view.size_to_viewport(FramebufferPixels{ascender});
-                auto glyph_size = view.size_to_viewport(FramebufferSize{glyph->size()});
-                term.m_sprites.add_sprite({
-                        pen.x + bearing.x,
-                        pen.y + (ascender_vp - bearing.y),
-                        glyph_size.x,
-                        glyph_size.y
-                }, glyph->tex_coords());
+                    auto bearing = view.size_to_viewport(FramebufferSize{glyph->bearing()});
+                    auto ascender_vp = view.size_to_viewport(FramebufferPixels{ascender});
+                    auto glyph_size = view.size_to_viewport(FramebufferSize{glyph->size()});
+                    term.m_sprites.add_sprite({
+                            pen.x + bearing.x,
+                            pen.y + (ascender_vp - bearing.y),
+                            glyph_size.x,
+                            glyph_size.y
+                    }, glyph->tex_coords());
 
-                const auto& cell_size = term.m_cell_size;
-                term.m_boxes.add_rectangle({pen, cell_size});
+                    const auto& cell_size = term.m_cell_size;
+                    term.m_boxes.add_rectangle({pen, cell_size});
 
-                pen.x += cell_size.x;
-                ++column;
+                    pen.x += cell_size.x;
+                    ++column;
+                }
             }
 
-            bool draw_emoji(CodePoint code_point) {
-                auto glyph_index = emoji_font.get_glyph_index(code_point);
-                if (glyph_index == 0)
-                    return false;
-                auto* glyph = emoji_font.get_glyph(glyph_index);
-                if (glyph == nullptr)
-                    return false;
+            /// \returns char_index of first non-consumed char
+            ///          or `npos` if all where consumed
+            size_t draw_emoji(std::string_view utf8) {
+                auto shaped = emoji_font.shape_text(utf8);
+                for (const auto& shaped_glyph : shaped) {
+                    auto glyph_index = shaped_glyph.glyph_index;
+                    if (glyph_index == 0)
+                        return shaped_glyph.char_index;
+                    auto* glyph = emoji_font.get_glyph(glyph_index);
+                    if (glyph == nullptr)
+                        return shaped_glyph.char_index;
 
-                const auto& cell_size = term.m_cell_size;
-                auto bearing = view.size_to_viewport(FramebufferSize{glyph->bearing()});
-                auto ascender_vp = view.size_to_viewport(FramebufferPixels{ascender});
-                auto glyph_size = view.size_to_viewport(FramebufferSize{glyph->size()});
-                const auto scale = cell_size.y / glyph_size.y;
-                term.m_emoji_sprites.add_sprite({
-                        pen.x + bearing.x * scale,
-                        pen.y + (ascender_vp - bearing.y * scale),
-                        glyph_size.x * scale,
-                        glyph_size.y * scale
-                }, glyph->tex_coords());
+                    const auto& cell_size = term.m_cell_size;
+                    auto bearing = view.size_to_viewport(FramebufferSize{glyph->bearing()});
+                    auto ascender_vp = view.size_to_viewport(FramebufferPixels{ascender});
+                    auto glyph_size = view.size_to_viewport(FramebufferSize{glyph->size()});
+                    const auto scale = cell_size.y / glyph_size.y;
+                    term.m_emoji_sprites.add_sprite({
+                            pen.x + bearing.x * scale,
+                            pen.y + (ascender_vp - bearing.y * scale),
+                            glyph_size.x * scale,
+                            glyph_size.y * scale
+                    }, glyph->tex_coords());
 
-                term.m_boxes.add_rectangle({pen.x, pen.y, cell_size.x * 2, cell_size.y});
+                    term.m_boxes.add_rectangle({pen.x, pen.y, cell_size.x * 2, cell_size.y});
 
-                pen.x += 2* cell_size.x;
-                column += 2;
-                return true;
+                    pen.x += 2* cell_size.x;
+                    column += 2;
+                }
+                return std::string_view::npos;
             }
 
         private:

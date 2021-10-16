@@ -56,7 +56,9 @@ private:
     FT_Library ft_library();
     bool load_face(const fs::path& file_path, const std::byte* buffer, size_t buffer_size, int face_index);
 
-    FT_Int32 get_load_flags() const { return FT_LOAD_COLOR | (height() < 20.f ? FT_LOAD_TARGET_LIGHT : FT_LOAD_NO_HINTING); }
+    FT_Int32 get_load_flags() const {
+        return FT_LOAD_COLOR | (height() < 20.f ? FT_LOAD_TARGET_LIGHT : FT_LOAD_NO_HINTING);
+    }
 
     // Returns null on error
     FT_GlyphSlot load_glyph(GlyphIndex glyph_index);

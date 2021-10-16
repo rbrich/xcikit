@@ -181,6 +181,7 @@ auto FtFontFace::shape_text(std::string_view utf8) const -> std::vector<GlyphPla
     for (unsigned int i = 0; i < glyph_count; i++) {
         result.emplace_back(GlyphPlacement{
             .glyph_index = glyph_info[i].codepoint,
+            .char_index = glyph_info[i].cluster,
             .offset = {glyph_pos[i].x_offset, glyph_pos[i].y_offset},
             .advance = {ft_to_float(glyph_pos[i].x_advance), ft_to_float(glyph_pos[i].y_advance)},
         });

@@ -72,6 +72,7 @@ public:
 
     struct GlyphPlacement {
         GlyphIndex glyph_index;
+        uint32_t char_index;
         core::Vec2i offset;
         core::Vec2f advance;
     };
