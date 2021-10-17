@@ -67,13 +67,13 @@ jobs:
         if [[ "$RUNNER_OS" == "Linux" ]]; then
             sudo apt-get update
             sudo apt-get install --no-install-recommends -y ninja-build \
-                libglfw3-dev libfreetype6-dev libhyperscan-dev libbenchmark-dev
+                libglfw3-dev libfreetype6-dev libharfbuzz-dev libhyperscan-dev libbenchmark-dev
             export CC=${{ matrix.cc }}
             export CXX=${{ matrix.cxx }}
             echo "CC='$CC'" >> $GITHUB_ENV
             echo "CXX='$CXX'" >> $GITHUB_ENV
         elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            brew install ccache ninja glfw doxygen google-benchmark hyperscan
+            brew install ccache ninja glfw doxygen google-benchmark hyperscan harfbuzz freetype
             export CC="$(brew --prefix llvm)/bin/clang"
             export CXX="$(brew --prefix llvm)/bin/clang++"
             export MACOSX_DEPLOYMENT_TARGET=${{ matrix.os_target }}
