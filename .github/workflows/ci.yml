@@ -24,11 +24,13 @@ jobs:
           cxx: g++-10
           build_args: "--debug -DBUILD_WITH_ASAN=1 -DBUILD_WITH_UBSAN=1"
         - os: macos-10.15
-          name: "Clang (latest) / Release"
+          name: "Clang 13 / Release"
+          clang: brew
           os_target: "10.15"
           build_args: ""
         - os: macos-11
-          name: "Clang (latest) / Release"
+          name: "AppleClang / Release"
+          clang: apple
           os_target: "11.0"
           build_args: ""
         - os: windows-2019
@@ -57,7 +59,7 @@ jobs:
       with:
         path: |
           ~/.conan/data
-        key: ${{ runner.os }}-${{ matrix.name }}-${{ hashFiles('conanfile.py') }}
+        key: ${{ runner.os }}-${{ matrix.name }}-${{ hashFiles('conanfile.py', 'requirements.csv') }}
         restore-keys: |
           ${{ runner.os }}-${{ matrix.name }}-
           ${{ runner.os }}-
@@ -74,11 +76,13 @@ jobs:
             echo "CXX='$CXX'" >> $GITHUB_ENV
         elif [[ "$RUNNER_OS" == "macOS" ]]; then
             brew install ccache ninja glfw doxygen google-benchmark hyperscan harfbuzz freetype
-            export CC="$(brew --prefix llvm)/bin/clang"
-            export CXX="$(brew --prefix llvm)/bin/clang++"
+            if [[ "${{ matrix.clang }}" == "brew" ]] ; then
+                export CC="$(brew --prefix llvm)/bin/clang"
+                export CXX="$(brew --prefix llvm)/bin/clang++"
+                echo "CC='$CC'" >> $GITHUB_ENV
+                echo "CXX='$CXX'" >> $GITHUB_ENV
+            fi
             export MACOSX_DEPLOYMENT_TARGET=${{ matrix.os_target }}
-            echo "CC='$CC'" >> $GITHUB_ENV
-            echo "CXX='$CXX'" >> $GITHUB_ENV
             echo "MACOSX_DEPLOYMENT_TARGET=$MACOSX_DEPLOYMENT_TARGET" >> $GITHUB_ENV
         elif [[ "$RUNNER_OS" == "Windows" ]]; then
             choco install ninja
