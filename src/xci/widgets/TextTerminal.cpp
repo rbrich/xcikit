@@ -931,6 +931,9 @@ void TextTerminal::update(View& view, State state)
                 column += num;
             }
             void draw_chars(std::string_view utf8) override {
+                const auto& cell_size = term.m_cell_size;
+                const auto start_pen = pen;
+                const auto start_column = column;
                 auto shaped = font.shape_text(utf8);
                 for (auto it = shaped.cbegin(); it != shaped.cend(); ++it) {
                     if (it->glyph_index == 0) {
@@ -952,6 +955,8 @@ void TextTerminal::update(View& view, State state)
                             while (it->char_index < begin_idx + emoji_end)
                                 ++it;
                         }
+                        if (it == shaped.cend())
+                            break;
                     }
                     auto* glyph = font.get_glyph(it->glyph_index);
                     if (glyph == nullptr)
@@ -967,12 +972,11 @@ void TextTerminal::update(View& view, State state)
                             glyph_size.y
                     }, glyph->tex_coords());
 
-                    const auto& cell_size = term.m_cell_size;
-                    term.m_boxes.add_rectangle({pen, cell_size});
-
                     pen.x += cell_size.x;
                     ++column;
                 }
+                const auto n = column - start_column;
+                term.m_boxes.add_rectangle({start_pen.x, start_pen.y, cell_size.x * n, cell_size.y});
             }
 
             /// \returns char_index of first non-consumed char
@@ -999,9 +1003,7 @@ void TextTerminal::update(View& view, State state)
                             glyph_size.y * scale
                     }, glyph->tex_coords());
 
-                    term.m_boxes.add_rectangle({pen.x, pen.y, cell_size.x * 2, cell_size.y});
-
-                    pen.x += 2* cell_size.x;
+                    pen.x += 2 * cell_size.x;
                     column += 2;
                 }
                 return std::string_view::npos;
