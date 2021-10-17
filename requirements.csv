@@ -4,7 +4,7 @@
  run,   glfw3,      3.3.0,      glfw/3.3.4,             graphics,           system_glfw
  run,   Vulkan,     ,           vulkan-loader/1.2.190,  graphics,           system_vulkan
  run,   Freetype,   2.10.0,     freetype/2.10.4,        text,               system_freetype
- run,   harfbuzz,   ,           harfbuzz/2.9.1,         text,               system_harfbuzz
+ run,   harfbuzz,   ,           harfbuzz/3.0.0,         text,               system_harfbuzz
  run,   Hyperscan,  ,           ,                       tools,              with_hyperscan
  run,   Boost,      1.75.0,     pfr/2.0.2,              data,               system_boost
  run,   range-v3,   0.11.0,     range-v3/0.11.0,        ,                   system_range_v3
