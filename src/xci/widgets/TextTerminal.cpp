@@ -746,13 +746,10 @@ TextTerminal::set_buffer(std::unique_ptr<terminal::Buffer> new_buffer)
 }
 
 
-void TextTerminal::set_cursor_pos(core::Vec2u pos)
+void TextTerminal::set_cursor_y(uint32_t y)
 {
     // make sure new cursor position is not outside screen area
-    m_cursor = {
-        std::min(pos.x, m_cells.x),
-        std::min(pos.y, m_cells.y),
-    };
+    m_cursor.y = std::min(y, m_cells.y);
     // make sure there is a line in buffer at cursor position
     while (m_cursor.y >= int(m_buffer->size()) - m_buffer_offset) {
         m_buffer->add_line();

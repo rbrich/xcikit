@@ -340,7 +340,10 @@ public:
     // ------------------------------------------------------------------------
     // Cursor positioning
 
-    void set_cursor_pos(core::Vec2u pos);
+    /// Cursor position is 0-based
+    void set_cursor_pos(core::Vec2u pos) { set_cursor_x(pos.x); set_cursor_y(pos.y); }
+    void set_cursor_x(uint32_t x) { m_cursor.x = std::min(x, m_cells.x); }
+    void set_cursor_y(uint32_t y);
     core::Vec2u cursor_pos() const { return m_cursor; }
 
     // ------------------------------------------------------------------------
