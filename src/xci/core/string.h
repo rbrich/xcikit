@@ -148,8 +148,7 @@ RI utf8_prev(RI riter) {
     return riter + (a - utf8_prev(a));
 }
 
-template <class S, class SSize = typename S::size_type>
-SSize utf8_length(const S& str);
+size_t utf8_length(std::string_view str);
 
 /// Convert character offset to byte offset
 size_t utf8_offset(std::string_view str, size_t n_chars);
@@ -183,6 +182,9 @@ size_t utf8_partial_end(std::string_view str);
 /// An implementation of well-known `wcwidth` function.
 /// Returns width of Unicode char in fixed-width font cells. Useful for terminals.
 int c32_width(char32_t c);
+
+/// Sum of c32_width of all codepoints in `str`
+size_t utf8_width(std::string_view str);
 
 } // namespace xci::core
 

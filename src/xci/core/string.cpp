@@ -237,19 +237,14 @@ const char8_t* utf8_prev(const char8_t* utf8)
 }
 
 
-template <class S, class SSize>
-SSize utf8_length(const S& str)
+size_t utf8_length(std::string_view str)
 {
-    SSize length = 0;
+    size_t length = 0;
     for (auto pos = str.cbegin(); pos != str.cend(); pos = utf8_next(pos)) {
         ++length;
     }
     return length;
 }
-
-// instantiate the template (these are the only supported types)
-template std::string::size_type utf8_length<std::string>(const std::string&);
-template std::string_view::size_type utf8_length<std::string_view>(const std::string_view&);
 
 
 size_t utf8_offset(std::string_view str, size_t n_chars)
@@ -357,10 +352,10 @@ int c32_width(char32_t c)
     using namespace wcw;
     int w = widechar_wcwidth(c);
     switch (w) {
-        case widechar_nonprint:
         case widechar_combining:
             return 0;
 
+        case widechar_nonprint:
         case widechar_ambiguous:
         case widechar_private_use:
         case widechar_unassigned:
@@ -372,6 +367,16 @@ int c32_width(char32_t c)
         default:
             return w;
     }
+}
+
+
+size_t utf8_width(std::string_view str)
+{
+    size_t w = 0;
+    for (auto pos = str.cbegin(); pos != str.cend(); pos = utf8_next(pos)) {
+        w += c32_width(utf8_codepoint(&*pos));
+    }
+    return w;
 }
 
 

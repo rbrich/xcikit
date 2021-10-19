@@ -341,39 +341,40 @@ void terminal::Line::clear(const terminal::Attributes& attr)
 }
 
 
-size_t terminal::Line::content_skip(size_t skip, size_t start, Attributes& attr)
+size_t terminal::Line::content_skip(const size_t skip, const size_t start, Attributes& attr)
 {
     auto pos = start;
-    while (skip > 0 && pos < m_content.size()) {
+    int to_skip = (int) skip;  // remaining chars to skip
+    while (to_skip > 0 && pos < m_content.size()) {
         if (Attributes::is_introducer(m_content[pos])) {
             pos += attr.decode(std::string_view{m_content}.substr(pos));
             continue;
         }
         if (m_content[pos] == ctl::blanks) {
             ++pos;
-            auto num_blanks = (size_t) m_content[pos];
-            if (skip >= num_blanks) {
-                skip -= num_blanks;
+            auto num_blanks = (int)(unsigned char) m_content[pos];
+            if (to_skip >= num_blanks) {
+                to_skip -= num_blanks;
                 ++pos;
                 continue;
-            } else { // skip < num
+            } else { // to_skip < num
                 // Split blanks into two groups
                 // Write back blanks before pos
-                m_content[pos] = uint8_t(skip);
+                m_content[pos] = (char)(unsigned) to_skip;
                 ++pos;
                 // Write rest of blanks after pos
-                num_blanks -= skip;
-                skip = 0;
+                num_blanks -= to_skip;
+                to_skip = 0;
                 uint8_t blank_rest[2] = {ctl::blanks, uint8_t(num_blanks)};
                 m_content.insert(pos, (char*)blank_rest, sizeof(blank_rest));
                 break;
             }
         }
+        to_skip -= c32_width(utf8_codepoint(m_content.c_str() + pos));
         pos = utf8_next(m_content.cbegin() + pos) - m_content.cbegin();
-        --skip;
     }
-    if (skip > 0) {
-        uint8_t blank_skip[2] = {ctl::blanks, uint8_t(skip)};
+    if (to_skip > 0) {
+        uint8_t blank_skip[2] = {ctl::blanks, uint8_t(to_skip)};
         m_content.insert(pos, (char*)blank_skip, sizeof(blank_skip));
         return pos + sizeof(blank_skip);
     } else {
@@ -396,7 +397,7 @@ void terminal::Line::add_text(size_t pos, string_view sv, Attributes attr, bool 
 
     // Replace mode - find end of the place for new text (same length as `sv`)
     if (!insert) {
-        auto len = utf8_length(sv);
+        auto len = utf8_width(sv);
         end = content_skip(len, end, attr_end);
 
         // Read also attributes after replace span
@@ -496,10 +497,10 @@ void terminal::Line::erase_text(size_t first, size_t num, Attributes attr)
 int terminal::Line::length() const
 {
     int length = 0;
-    for (const char* it = m_content.data(); it != m_content.data() + m_content.size(); it = utf8_next(it)) {
+    for (const char* it = m_content.c_str(); it != m_content.c_str() + m_content.size(); it = utf8_next(it)) {
         it = Attributes::skip(it);
         if (*it != '\n')
-            ++length;
+            length += c32_width(utf8_codepoint(it));
     }
     return length;
 }
