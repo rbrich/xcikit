@@ -10,13 +10,12 @@ glyph:: The character image in the font.
 
 == Text Shaping
 
-... HarfBuzz ...
+HarfBuzz ...
 
 == Color Emoji
 
-... Noto Emoji font, color bitmaps ...
+Noto Emoji font, color bitmaps ...
 
 == References
 
-* [Text Rendering Hates You](https://gankra.github.io/blah/text-hates-you/) - about rendering in Firefox
-*
+* https://gankra.github.io/blah/text-hates-you/[Text Rendering Hates You] - about rendering in Firefox
