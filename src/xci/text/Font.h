@@ -72,7 +72,7 @@ public:
         const core::Vec2i& bearing() const { return m_bearing; }
         float advance() const { return m_advance; }
 
-        const Rect_u& tex_coords() const { return m_tex_coords; };
+        const Rect_u& tex_coords() const { return m_tex_coords; }
 
     private:
         Rect_u m_tex_coords;
@@ -81,6 +81,7 @@ public:
 
         friend class Font;
     };
+
     Glyph* get_glyph(GlyphIndex glyph_index);
     Glyph* get_glyph_for_char(CodePoint code_point) { return get_glyph(get_glyph_index(code_point)); }
 
@@ -88,6 +89,9 @@ public:
     // In case of failure, this returns 0, which doesn't need special handling, because
     // glyph nr. 0 contains graphic for "undefined character code".
     GlyphIndex get_glyph_index(CodePoint code_point) const { return face().get_glyph_index(code_point); }
+
+    // Shape a text segment (e.g. a word) to a chain of placed glyphs
+    std::vector<FontFace::GlyphPlacement> shape_text(std::string_view utf8) const { return face().shape_text(utf8); }
 
     // just a facade
     float height() const { return face().height(); }

@@ -3,6 +3,7 @@
 # ------------ #
 
 find_package(Freetype REQUIRED)
+find_package(harfbuzz REQUIRED)
 
 
 # ------------ #
@@ -42,6 +43,7 @@ target_link_libraries(xci-text
         xci-graphics
     PRIVATE
         Freetype::Freetype
+        harfbuzz::harfbuzz
     )
 
 if (APPLE)

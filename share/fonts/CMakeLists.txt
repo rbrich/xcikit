@@ -2,6 +2,23 @@
 # Fetch Fonts  #
 # -------------#
 
+# Lora font - download and extract in SOURCE dir
+message(STATUS "Assets: Lora font")
+set(LORA_VERSION "v2.210")
+set(LORA_ARCHIVE "Lora-Variable.zip")
+file(DOWNLOAD
+    https://github.com/cyrealtype/Lora-Cyrillic/releases/download/${LORA_VERSION}/${LORA_ARCHIVE}
+    ${CMAKE_CURRENT_SOURCE_DIR}/${LORA_ARCHIVE}
+    EXPECTED_HASH SHA1=d088d2f8108225559de5d289f551a28b0a843ae8
+    SHOW_PROGRESS)
+if (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/Lora/Lora-VF.ttf)
+    file(ARCHIVE_EXTRACT INPUT ${CMAKE_CURRENT_SOURCE_DIR}/${LORA_ARCHIVE}
+        PATTERNS variable/*.ttf
+        DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}
+        VERBOSE)
+    file(RENAME ${CMAKE_CURRENT_SOURCE_DIR}/variable ${CMAKE_CURRENT_SOURCE_DIR}/Lora)
+endif()
+
 # Hack font - download and extract in SOURCE dir
 message(STATUS "Assets: Hack font")
 set(HACK_VERSION "v3.003")
@@ -17,7 +34,7 @@ if (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/Hack/Hack-Regular.ttf)
         VERBOSE)
 endif()
 
-# Noto emoji font - download and extract in SOURCE dir
+# Noto emoji font - download in SOURCE dir
 message(STATUS "Assets: Noto emoji font")
 set(NOTO_REVISION "c05b4b47c8250ccd232780cae46d66a8179e77ab")
 file(DOWNLOAD
@@ -33,6 +50,8 @@ set(FONTS
     Hack/Hack-BoldItalic.ttf
     Hack/Hack-Italic.ttf
     Hack/Hack-Regular.ttf
+    Lora/Lora-VF.ttf
+    Lora/Lora-Italic-VF.ttf
     Noto/NotoColorEmoji.ttf
     MaterialIcons/MaterialIcons-Regular.woff
     ShareTechMono/ShareTechMono-Regular.ttf

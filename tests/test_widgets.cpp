@@ -78,8 +78,8 @@ public:
     void draw_blanks(size_t num) override {
         m_output.append(num, ' ');
     }
-    void draw_char(CodePoint code_point) override {
-        m_output.append(to_utf8(code_point));
+    void draw_chars(std::string_view utf8) override {
+        m_output.append(utf8);
     }
 
     std::string output() { return std::move(m_output); }

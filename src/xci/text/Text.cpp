@@ -90,6 +90,13 @@ void Text::set_font_size(ViewportUnits size, bool allow_scale)
 }
 
 
+void Text::set_font_style(FontStyle font_style)
+{
+    m_layout.set_default_font_style(font_style);
+    m_need_typeset = true;
+}
+
+
 void Text::set_color(const graphics::Color& color)
 {
     m_layout.set_default_color(color);

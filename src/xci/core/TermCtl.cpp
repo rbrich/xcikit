@@ -99,7 +99,7 @@ inline std::string xci_tparm(const char* seq, Args... args) {
 #else
     // delegate to our implementation
     #define TERM_APPEND(...) XCI_TERM_APPEND(__VA_ARGS__)
-    static unsigned _plus_one(unsigned arg) { return arg + 1; };
+    static unsigned _plus_one(unsigned arg) { return arg + 1; }
 #endif
 
 
@@ -181,7 +181,7 @@ private:
             {CSI "24~", TermCtl::Key::F12},
         };
         return instance;
-    };
+    }
 
     explicit TermInputSeq(std::initializer_list<std::pair<const char*, TermCtl::Key>> seqs) {
         for (const auto& [seq, key] : seqs) {

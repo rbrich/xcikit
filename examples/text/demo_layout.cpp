@@ -1,8 +1,10 @@
 // demo_layout.cpp created on 2018-03-10 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
+
+#include "graphics/common.h"
 
 #include <xci/text/Font.h>
 #include <xci/text/Text.h>
@@ -16,20 +18,23 @@ using namespace xci::text;
 using namespace xci::graphics;
 using namespace xci::core;
 
-static const char * sample_text =
-        "One morning, when Gregor Samsa "
-        "woke from troubled dreams, he found "
-        "himself transformed in his bed into "
-        "a horrible vermin. <span1>He lay on his "
-        "armour-like back</span1>, and if he lifted "
-        "his head a little he could see his "
-        "brown belly, <span2>slightly domed</span2> and "
-        "divided by arches into stiff sections. "
-        "The bedding was hardly able to cover "
-        "it and seemed ready to slide off any "
-        "moment.";
+// TODO: * vertical space between paragraphs
+//       * justify, center
+//       * demonstrate setting attributes on a span
 
-int main()
+static const char * sample_text =
+        "Each paragraph is broken into lines. "
+        "The lines are further <span1>broken into words</span1>, each of which "
+        "is shaped and rendered as a run of glyphs."
+        "\n\n"
+        "Each line is bound to a base line, each word is attached to a base point. "
+        "To justify the text to a column, the residual space can be uniformly "
+        "<span2>divided between all words</span2> on the line. (This is not yet implemented.)"
+        "\n\n"
+        "Here is a ligature: infinity ∞";
+
+
+int main(int argc, const char* argv[])
 {
     Vfs vfs;
     if (!vfs.mount(XCI_SHARE))
@@ -37,20 +42,24 @@ int main()
 
     Renderer renderer {vfs};
     Window window {renderer};
-    window.create({800, 600}, "XCI layout demo");
+
+    setup_window(window, "XCI layout demo", argv);
 
     Font font {renderer};
-    if (!font.add_face(vfs, "fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
+    if (!font.add_face(vfs, "fonts/Lora/Lora-VF.ttf", 0))
+        return EXIT_FAILURE;
+    if (!font.add_face(vfs, "fonts/Lora/Lora-Italic-VF.ttf", 0))
         return EXIT_FAILURE;
 
     Text text;
     text.set_markup_string(sample_text);
     text.set_width(1.33f);
     text.set_font(font);
-    text.set_font_size(0.07f);
+    text.set_font_size(0.09f);
+    text.set_font_style(FontStyle::Italic);
     text.set_color(Color::White());
 
-    Text help_text(font, "[c] show character quads\n"
+    Text help_text(font, "[g] show glyph quads\n"
                          "[o] show word base points\n"
                          "[w] show word boxes\n"
                          "[u] show line base lines\n"
@@ -58,6 +67,11 @@ int main()
                          "[s] show span boxes\n"
                          "[p] show page boxes\n");
     help_text.set_color(Color(50, 200, 100));
+    help_text.set_font_size(0.07f);
+
+    Text help_text_2(font, "Resize the window to see the reflow.");
+    help_text_2.set_color(Color(200, 100, 50));
+    help_text_2.set_font_size(0.07f);
 
     Sprites font_texture(renderer, font.texture(), Color(0, 50, 255));
 
@@ -66,7 +80,13 @@ int main()
         if (ev.action != Action::Press)
             return;
         switch (ev.key) {
-            case Key::C:
+            case Key::Escape:
+                window.close();
+                break;
+            case Key::F11:
+                window.toggle_fullscreen();
+                break;
+            case Key::G:
                 debug_flags ^= (int)View::Debug::GlyphBBox;
                 break;
             case Key::O:
@@ -95,7 +115,12 @@ int main()
     });
 
     window.set_size_callback([&](View& view) {
+        font.clear_cache();
+
         help_text.resize(view);
+        help_text_2.resize(view);
+
+        text.set_width(view.viewport_size().x / 2.f);
         text.resize(view);
 
         auto tex_size = view.size_to_viewport(FramebufferSize{font.texture().size()});
@@ -111,6 +136,7 @@ int main()
 
     window.set_draw_callback([&](View& view) {
         help_text.draw(view, {-0.17f, -0.9f});
+        help_text_2.draw(view, {-0.17f, 0.9f});
         text.draw(view, {-0.17f, -0.3f});
 
         font_texture.draw(view, {-0.5f * view.viewport_size().x + 0.01f,

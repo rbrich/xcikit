@@ -45,7 +45,7 @@ enum class Alignment {
 
 class Word {
 public:
-    Word(Page& page, std::string string);
+    Word(Page& page, const std::string& utf8);
 
     const ViewportRect& bbox() const { return m_bbox; }
     ViewportUnits baseline() const { return m_baseline; }
@@ -55,7 +55,7 @@ public:
     void draw(graphics::View& target, const ViewportCoords& pos) const;
 
 private:
-    std::string m_string;
+    std::vector<FontFace::GlyphPlacement> m_shaped;
     Style m_style;
     ViewportCoords m_pos;  // relative to page origin (top-left corner)
     ViewportRect m_bbox;

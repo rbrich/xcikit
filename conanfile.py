@@ -31,6 +31,7 @@ class XcikitConan(ConanFile):
         "system_glfw": [True, False],
         "system_vulkan": [True, False],
         "system_freetype": [True, False],
+        "system_harfbuzz": [True, False],
         # Hyperscan is never installed via Conan, because it would bring ton of deps
         # and it's only needed for optional ff tool.
         # This option enables using system-installed Hyperscan.
@@ -58,6 +59,7 @@ class XcikitConan(ConanFile):
         "system_glfw": False,
         "system_vulkan": False,
         "system_freetype": False,
+        "system_harfbuzz": False,
         "with_hyperscan": False,
         "system_boost": False,
         "system_range_v3": False,
@@ -71,6 +73,7 @@ class XcikitConan(ConanFile):
         "freetype:with_zlib": False,
         "freetype:with_bzip2": False,
         "freetype:with_brotli": False,
+        "harfbuzz:with_glib": False,
         "vulkan-loader:with_wsi_xcb": False,
         "vulkan-loader:with_wsi_xlib": False,
         "vulkan-loader:with_wsi_wayland": False,
@@ -213,6 +216,8 @@ class XcikitConan(ConanFile):
             self.cpp_info.components["xci-text"].requires = ['xci-core', 'xci-graphics']
             if not self.options.system_freetype:
                 self.cpp_info.components["xci-text"].requires += ['freetype::freetype']
+            if not self.options.system_harfbuzz:
+                self.cpp_info.components["xci-text"].requires += ['harfbuzz::harfbuzz']
         if self.options.get_safe('widgets', False):
             self.cpp_info.components["xci-widgets"].libs = ["xci-widgets"]
             self.cpp_info.components["xci-widgets"].requires = ['xci-text']
