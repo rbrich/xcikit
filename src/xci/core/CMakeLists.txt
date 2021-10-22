@@ -85,9 +85,8 @@ endif()
 
 # ZIP support in VFS requires libzip
 if (XCI_WITH_ZIP)
-    find_package(PkgConfig REQUIRED)
-    pkg_search_module(LibZip REQUIRED IMPORTED_TARGET libzip)
-    target_link_libraries(xci-core PRIVATE PkgConfig::LibZip)
+    find_package(libzip REQUIRED)
+    target_link_libraries(xci-core PRIVATE libzip::zip)
     target_compile_definitions(xci-core PRIVATE XCI_WITH_ZIP)
 endif ()
 
