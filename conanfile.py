@@ -11,7 +11,7 @@ class XcikitConan(ConanFile):
     url = "https://github.com/rbrich/xcikit"
     description = "Collection of C++ libraries for drawing 2D graphics, rendering text and more."
     topics = ("text-rendering", "ui", "scripting-language", "vulkan", "glsl", "freetype")
-    settings = "os", "compiler", "build_type", "arch"
+    settings = "os", "arch", "compiler", "build_type"
     options = {
         "shared": [True, False],
         ### Optional components:
@@ -152,7 +152,7 @@ class XcikitConan(ConanFile):
         tc.generate()
 
         deps = CMakeDeps(self)
-        deps.build_context_activated = ['magic_enum', 'pfr', 'range-v3', 'catch2', 'benchmark', 'taocpp-pegtl']
+        deps.build_context_activated = ['catch2', 'benchmark']
         deps.generate()
 
     def _configure_cmake(self):
