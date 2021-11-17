@@ -88,6 +88,9 @@ int main(int argc, const char* argv[])
             case Key::F11:
                 window.toggle_fullscreen();
                 break;
+            case Key::R:
+                fps_display.toggle_hidden();
+                break;
             default:
                 break;
         }

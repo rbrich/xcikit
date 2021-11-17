@@ -16,7 +16,9 @@ using namespace xci::graphics;
 
 Widget::Widget(Theme& theme)
     : m_theme(theme),
-      m_tab_focusable(false), m_click_focusable(false)
+      m_tab_focusable(false),
+      m_click_focusable(false),
+      m_hidden(false)
 {}
 
 
@@ -55,8 +57,10 @@ void Composite::resize(View& view)
 void Composite::update(View& view, State state)
 {
     for (auto& child : m_child) {
-        state.focused = (m_focus == child);
-        child->update(view, state);
+        if (!child->is_hidden()) {
+            state.focused = (m_focus == child);
+            child->update(view, state);
+        }
     }
 }
 
@@ -65,7 +69,8 @@ void Composite::draw(View& view)
 {
     view.push_offset(position());
     for (auto& child : m_child) {
-        child->draw(view);
+        if (!child->is_hidden())
+            child->draw(view);
     }
     view.pop_offset();
 }
