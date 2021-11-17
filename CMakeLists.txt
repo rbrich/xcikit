@@ -339,18 +339,18 @@ if (XCI_INSTALL_DEVEL)
     install(EXPORT xcikit
         NAMESPACE xcikit::
         DESTINATION lib/cmake/xcikit
-        FILE "xcikitTargets.cmake")
+        FILE "xcikit-targets.cmake")
 
     set(XCI_INCLUDE_DIRS include)
     include(CMakePackageConfigHelpers)
-    configure_package_config_file(xcikitConfig.cmake.in xcikitConfig.cmake
+    configure_package_config_file(xcikit-config.cmake.in xcikit-config.cmake
         INSTALL_DESTINATION lib/cmake/xcikit
         PATH_VARS XCI_INCLUDE_DIRS)
-    write_basic_package_version_file(xcikitConfigVersion.cmake
+    write_basic_package_version_file(xcikit-config-version.cmake
         COMPATIBILITY SameMajorVersion)
     install(FILES
-        ${CMAKE_CURRENT_BINARY_DIR}/xcikitConfig.cmake
-        ${CMAKE_CURRENT_BINARY_DIR}/xcikitConfigVersion.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/xcikit-config.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/xcikit-config-version.cmake
         DESTINATION lib/cmake/xcikit)
 
     # Make our CMake modules available to clients

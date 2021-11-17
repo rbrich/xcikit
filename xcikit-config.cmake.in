@@ -20,5 +20,5 @@ endif()
 
 # xcikit targets
 
-include("${CMAKE_CURRENT_LIST_DIR}/xcikitTargets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/xcikit-targets.cmake")
 check_required_components(xcikit)

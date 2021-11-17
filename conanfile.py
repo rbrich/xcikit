@@ -1,4 +1,5 @@
 from conans import ConanFile, tools
+import conans.model.build_info
 from conan.tools.cmake import CMakeToolchain, CMakeDeps, CMake
 import os
 
@@ -81,7 +82,7 @@ class XcikitConan(ConanFile):
     }
 
     exports = ("VERSION", "requirements.csv")
-    exports_sources = ("CMakeLists.txt", "config.h.in", "xcikitConfig.cmake.in",
+    exports_sources = ("CMakeLists.txt", "config.h.in", "xcikit-config.cmake.in",
                        "cmake/**", "src/**", "examples/**", "tests/**", "benchmarks/**", "tools/**",
                        "share/**", "third_party/**",
                        "!build/**", "!cmake-build-*/**")
@@ -180,44 +181,43 @@ class XcikitConan(ConanFile):
             self.folders.build = build_dir # e.g. "build/macos-x86_64-Release-Ninja"
             self.folders.generators = "generators"
 
-        for component in ('core', 'data', 'script', 'graphics', 'text', 'widgets'):
-            if component != 'core' and not self.options.get_safe(component, False):
+        for name in ('core', 'data', 'script', 'graphics', 'text', 'widgets'):
+            if name != 'core' and not self.options.get_safe(name, False):
                 continue  # component is disabled
-            pc = 'xci-' + component  # pc = prefixed component
-            self.cpp.source.components[pc].libdirs = [self.folders.build + '/src/xci/' + component]
-            self.cpp.source.components[pc].includedirs = ["src", self.folders.build + '/include']
-            self.cpp.source.components[pc].builddirs = ["cmake"]
+            component = self.cpp.source.components["xci-" + name]
+            component.libdirs = [self.folders.build + '/src/xci/' + name]
+            component.includedirs = ["src", self.folders.build + '/include']
+            component.builddirs = ["cmake"]
+
+    def _add_dep(self, opt: str, component: conans.model.build_info.Component, cmake_dep: str):
+        if self.options.get_safe(opt, False):
+            component.system_libs = [cmake_dep]
+        else:
+            component.requires += [cmake_dep]
 
     def package_info(self):
-        for component in ('core', 'data', 'script', 'graphics', 'text', 'widgets'):
-            if component != 'core' and not self.options.get_safe(component, False):
+        for name in ('core', 'data', 'script', 'graphics', 'text', 'widgets'):
+            if name != 'core' and not self.options.get_safe(name, False):
                 continue  # component is disabled
-            pc = 'xci-' + component  # pc = prefixed component
-            self.cpp_info.components[pc].libdirs = ["lib"]
-            self.cpp_info.components[pc].includedirs = ["include"]
-            self.cpp_info.components[pc].builddirs = ["lib/cmake/xcikit"]
-        self.cpp_info.components["xci-core"].libs = ["xci-core"]
-        if not self.options.system_fmt:
-            self.cpp_info.components["xci-core"].requires = ['fmt::fmt']
-        if self.options.data:
-            self.cpp_info.components["xci-data"].libs = ["xci-data"]
-        if self.options.script:
-            self.cpp_info.components["xci-script"].libs = ["xci-script"]
-            self.cpp_info.components["xci-script"].requires = ['xci-core']
-        if self.options.graphics:
-            self.cpp_info.components["xci-graphics"].libs = ["xci-graphics"]
-            self.cpp_info.components["xci-graphics"].requires = ["xci-core"]
-            if not self.options.system_glfw:
-                self.cpp_info.components["xci-graphics"].requires += ["glfw::glfw"]
-            if not self.options.system_vulkan:
-                self.cpp_info.components["xci-graphics"].requires += ["vulkan-loader::vulkan-loader"]
-        if self.options.get_safe('text', False):
-            self.cpp_info.components["xci-text"].libs = ["xci-text"]
-            self.cpp_info.components["xci-text"].requires = ['xci-core', 'xci-graphics']
-            if not self.options.system_freetype:
-                self.cpp_info.components["xci-text"].requires += ['freetype::freetype']
-            if not self.options.system_harfbuzz:
-                self.cpp_info.components["xci-text"].requires += ['harfbuzz::harfbuzz']
-        if self.options.get_safe('widgets', False):
-            self.cpp_info.components["xci-widgets"].libs = ["xci-widgets"]
-            self.cpp_info.components["xci-widgets"].requires = ['xci-text']
+            component = self.cpp_info.components["xci-" + name]
+            component.libs = ["xci-" + name]
+            component.libdirs = ["lib"]
+            component.includedirs = ["include"]
+            component.builddirs = ["lib/cmake/xcikit"]
+            if name == 'core':
+                self._add_dep('system_fmt', component, "fmt::fmt")
+                self._add_dep('system_magic_enum', component, "magic_enum::magic_enum")
+            if name == 'data':
+                self._add_dep('system_boost', component, "pfr::pfr")
+            if name == 'script':
+                component.requires += ['xci-core']
+            if name == 'graphics':
+                component.requires += ["xci-core"]
+                self._add_dep('system_glfw', component, "glfw::glfw")
+                self._add_dep('system_vulkan', component, "vulkan-loader::vulkan-loader")
+            if name == 'text':
+                component.requires += ['xci-core', 'xci-graphics']
+                self._add_dep('system_freetype', component, "freetype::freetype")
+                self._add_dep('system_harfbuzz', component, "harfbuzz::harfbuzz")
+            if name == 'widgets':
+                component.requires += ['xci-text']
