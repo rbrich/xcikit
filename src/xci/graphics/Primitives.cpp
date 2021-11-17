@@ -406,14 +406,14 @@ void Primitives::add_uniform(uint32_t binding, float f1, float f2)
 }
 
 
-void Primitives::add_uniform(uint32_t binding, const Color& color)
+void Primitives::add_uniform(uint32_t binding, Color color)
 {
     FloatColor buf {color};
     add_uniform_data(binding, &buf, sizeof(buf));
 }
 
 
-void Primitives::add_uniform(uint32_t binding, const Color& color1, const Color& color2)
+void Primitives::add_uniform(uint32_t binding, Color color1, Color color2)
 {
     struct { FloatColor c1, c2; } buf { color1, color2 };
     add_uniform_data(binding, &buf, sizeof(buf));

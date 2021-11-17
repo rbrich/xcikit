@@ -60,9 +60,9 @@ struct Color {
     constexpr float alpha_f() const { return float(a) / 255.f; }
 
     // Comparison operators
-    constexpr bool operator==(const Color& rhs) const
+    constexpr bool operator==(Color rhs) const
         { return std::tie(r, g, b, a) == std::tie(rhs.r, rhs.g, rhs.b, rhs.a); }
-    constexpr bool operator!=(const Color& rhs) const { return !(rhs == *this); }
+    constexpr bool operator!=(Color rhs) const { return !(rhs == *this); }
 
     // Direct access to components
     uint8_t r = 0;    // red
@@ -76,7 +76,7 @@ struct Color {
 /// (this format is used in GLSL shaders as vec4)
 
 struct FloatColor {
-    constexpr FloatColor(const Color& color)  // NOLINT (implicit conversion)
+    constexpr FloatColor(Color color)  // NOLINT (implicit conversion)
             : r(color.red_f())
             , g(color.green_f())
             , b(color.blue_f())

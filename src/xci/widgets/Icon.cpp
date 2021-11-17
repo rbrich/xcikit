@@ -35,13 +35,13 @@ void Icon::set_font_size(float size)
 }
 
 
-void Icon::set_icon_color(const graphics::Color& color)
+void Icon::set_icon_color(graphics::Color color)
 {
     m_icon_color = color;
 }
 
 
-void Icon::set_color(const graphics::Color& color)
+void Icon::set_color(graphics::Color color)
 {
     m_layout.set_default_color(color);
     m_needs_refresh = true;

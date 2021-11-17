@@ -55,7 +55,7 @@ void Layout::set_default_font_style(FontStyle font_style)
 }
 
 
-void Layout::set_default_color(const graphics::Color& color)
+void Layout::set_default_color(graphics::Color color)
 {
     m_default_style.set_color(color);
     m_page.clear();
@@ -204,7 +204,7 @@ void Layout::set_italic(bool italic)
 }
 
 
-void Layout::set_color(const graphics::Color& color)
+void Layout::set_color(graphics::Color color)
 {
     m_elements.push_back(std::make_unique<SetColor>(color));
 }

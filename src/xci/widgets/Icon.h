@@ -20,8 +20,8 @@ public:
     void set_icon(IconId icon_id);
     void set_text(const std::string& text);
     void set_font_size(float size);
-    void set_icon_color(const graphics::Color& color);
-    void set_color(const graphics::Color& color);
+    void set_icon_color(graphics::Color color);
+    void set_color(graphics::Color color);
 
     void resize(View& view) override;
     void update(View& view, State state) override;

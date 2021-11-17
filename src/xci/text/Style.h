@@ -36,8 +36,13 @@ public:
     void set_font_style(FontStyle font_style) { m_font_style = font_style; }
     FontStyle font_style() const { return m_font_style; }
 
-    void set_color(const graphics::Color &color) { m_color = color; }
-    const graphics::Color& color() const { return m_color; }
+    // Text color
+    void set_color(graphics::Color color) { m_color = color; }
+    graphics::Color color() const { return m_color; }
+
+    // Outlined text
+    void set_outline_thickness(float inner, float outer) {}  // not implemented
+    void set_outline_color(graphics::Color color) {}  // not implemented
 
     // Update the font to the selected size
     void apply_view(const graphics::View& view);

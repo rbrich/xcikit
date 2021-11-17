@@ -11,7 +11,7 @@
 namespace xci::graphics {
 
 
-Sprites::Sprites(Renderer& renderer, Texture& texture, const Color& color)
+Sprites::Sprites(Renderer& renderer, Texture& texture, Color color)
         : m_texture(texture), m_color(color),
           m_quads(renderer, VertexFormat::V2t2, PrimitiveType::TriFans),
           m_shader(renderer.get_shader(
@@ -75,7 +75,7 @@ void Sprites::draw(View& view, const ViewportCoords& pos)
 
 
 ColoredSprites::ColoredSprites(Renderer& renderer,
-                               Texture& texture, const Color& color)
+                               Texture& texture, Color color)
     : m_texture(texture), m_color(color),
       m_quads(renderer, VertexFormat::V2c4t2, PrimitiveType::TriFans),
       m_shader(renderer.get_shader(ShaderId::SpriteC))

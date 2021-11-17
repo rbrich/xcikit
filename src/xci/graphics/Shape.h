@@ -26,16 +26,16 @@ using xci::core::Vec2f;
 class Shape: private core::NonCopyable {
 public:
     explicit Shape(Renderer& renderer,
-                   const Color& fill_color = Color::Black(),
-                   const Color& outline_color = Color::White());
+                   Color fill_color = Color::Black(),
+                   Color outline_color = Color::White());
 
-    void set_fill_color(const Color& fill_color) { m_fill_color = fill_color; }
-    void set_outline_color(const Color& outline_color) { m_outline_color = outline_color; }
+    void set_fill_color(Color fill_color) { m_fill_color = fill_color; }
+    void set_outline_color(Color outline_color) { m_outline_color = outline_color; }
     void set_antialiasing(float antialiasing) { m_antialiasing = antialiasing; }
     void set_softness(float softness) { m_softness = softness; }
 
-    const Color& fill_color() const { return m_fill_color; }
-    const Color& outline_color() const { return m_outline_color; }
+    Color fill_color() const { return m_fill_color; }
+    Color outline_color() const { return m_outline_color; }
 
     // Add a slice of infinite line
     // `a`, `b`            - two points to define the line

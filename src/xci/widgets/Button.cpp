@@ -26,15 +26,15 @@ Button::Button(Theme& theme, const std::string &string)
 }
 
 
-void Button::set_decoration_color(const graphics::Color& fill,
-                                  const graphics::Color& outline)
+void Button::set_decoration_color(graphics::Color fill,
+                                  graphics::Color outline)
 {
     m_bg_rect.set_fill_color(fill);
     m_bg_rect.set_outline_color(outline);
 }
 
 
-void Button::set_text_color(const graphics::Color& color)
+void Button::set_text_color(graphics::Color color)
 {
     m_layout.set_default_color(color);
 }

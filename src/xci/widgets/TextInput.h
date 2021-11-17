@@ -27,8 +27,8 @@ public:
     void set_padding(ViewportUnits padding) { m_padding = padding; }
     void set_outline_thickness(ViewportUnits thickness) { m_outline_thickness = thickness; }
 
-    void set_decoration_color(const graphics::Color& fill, const graphics::Color& outline);
-    void set_text_color(const graphics::Color& color) { m_layout.set_default_color(color); }
+    void set_decoration_color(graphics::Color fill, graphics::Color outline);
+    void set_text_color(graphics::Color color) { m_layout.set_default_color(color); }
 
     using ChangeCallback = std::function<void(View&)>;
     void on_change(ChangeCallback cb) { m_change_cb = std::move(cb); }

@@ -132,7 +132,7 @@ public:
     void set_font(Font* font) { m_style.set_font(font); }
     void set_font_size(ViewportUnits size) { m_style.set_size(size); }
     void set_font_style(FontStyle font_style) { m_style.set_font_style(font_style); }
-    void set_color(const graphics::Color &color) { m_style.set_color(color); }
+    void set_color(graphics::Color color) { m_style.set_color(color); }
     void set_style(const Style& style) { m_style = style; }
     const Style& style() const { return m_style; }
 
