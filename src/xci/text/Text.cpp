@@ -104,6 +104,20 @@ void Text::set_color(graphics::Color color)
 }
 
 
+void Text::set_tab_stops(std::vector<ViewportUnits> stops)
+{
+    m_layout.set_default_tab_stops(std::move(stops));
+    m_need_typeset = true;
+}
+
+
+void Text::set_alignment(Alignment alignment)
+{
+    m_layout.set_default_alignment(alignment);
+    m_need_typeset = true;
+}
+
+
 void Text::resize(graphics::View& view)
 {
     view.finish_draw();

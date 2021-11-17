@@ -74,6 +74,13 @@ Word::Word(Page& page, const std::string& utf8)
 }
 
 
+void Word::move_x(ViewportUnits offset)
+{
+    m_pos.x += offset;
+    m_bbox.x += offset;
+}
+
+
 void Word::update(const graphics::View& target)
 {
     auto* font = m_style.font();
@@ -108,7 +115,7 @@ void Word::update(const graphics::View& target)
 
     m_sprites.emplace(renderer, font->texture(), m_style.color());
 
-    ViewportCoords pen = m_pos;
+    ViewportCoords pen;
     for (const auto& shaped_glyph : m_shaped) {
         auto* glyph = font->get_glyph(shaped_glyph.glyph_index);
         auto advance = target.size_to_viewport(FramebufferCoords{shaped_glyph.advance * scale});
@@ -135,9 +142,7 @@ void Word::update(const graphics::View& target)
     if (target.has_debug_flag(View::Debug::WordBasePoint)) {
         const auto sc_1px = target.size_to_viewport(1_sc);
         m_debug_shapes.emplace_back(renderer, Color(150, 0, 255));
-        m_debug_shapes.back().add_rectangle({
-            m_pos.x - sc_1px, m_pos.y - sc_1px,
-            2 * sc_1px, 2 * sc_1px});
+        m_debug_shapes.back().add_rectangle({- sc_1px, - sc_1px, 2 * sc_1px, 2 * sc_1px});
         m_debug_shapes.back().update();
     }
 }
@@ -146,18 +151,21 @@ void Word::update(const graphics::View& target)
 void Word::draw(graphics::View& target, const ViewportCoords& pos) const
 {
     for (auto& shape : m_debug_shapes) {
-        shape.draw(target, pos);
+        shape.draw(target, m_pos + pos);
     }
 
     if (m_sprites)
-        m_sprites->draw(target, pos);
+        m_sprites->draw(target, m_pos + pos);
 
     if (target.has_debug_flag(View::Debug::WordBasePoint)
     && !m_debug_shapes.empty()) {
         // basepoint needs to be drawn on-top (it's the last debug shape)
-        m_debug_shapes.back().draw(target, pos);
+        m_debug_shapes.back().draw(target, m_pos + pos);
     }
 }
+
+
+// -----------------------------------------------------------------------------
 
 
 const ViewportRect& Line::bbox() const
@@ -166,7 +174,7 @@ const ViewportRect& Line::bbox() const
         return m_bbox;
     // Refresh
     bool first = true;
-    for (const auto& word : m_words) {
+    for (const auto* word : m_words) {
         if (first) {
             m_bbox = word->bbox();
             first = false;
@@ -194,6 +202,38 @@ ViewportUnits Line::baseline() const
 }
 
 
+void Line::align(Alignment alignment, ViewportUnits width)
+{
+    // This also computes bbox if not valid
+    auto line_width = bbox().w - 2 * m_padding;
+    if (line_width >= width)
+        return;  // Not enough space for aligning
+    auto current_x = m_bbox.x + m_padding;
+    ViewportUnits target_x;
+    switch (alignment) {
+        case Alignment::Justify:  // not implemented, fallback to Left
+        case Alignment::Left:
+            target_x = 0.f;
+            break;
+        case Alignment::Right:
+            target_x = width - line_width;
+            break;
+        case Alignment::Center:
+            target_x = (width - line_width) / 2.f;
+            break;
+    }
+    // Realign all Words
+    auto offset = target_x - current_x;
+    for (auto* word : m_words) {
+        word->move_x(offset);
+    }
+    m_bbox.x += offset;
+}
+
+
+// -----------------------------------------------------------------------------
+
+
 void Span::add_word(Word& word)
 {
     // Add word to current line
@@ -210,6 +250,9 @@ void Span::adjust_style(const std::function<void(Style& word_style)>& fn_adjust)
         }
     }
 }
+
+
+// -----------------------------------------------------------------------------
 
 
 Page::Page()
@@ -254,9 +297,13 @@ void Page::add_tab_stop(ViewportUnits x)
 
 void Page::finish_line()
 {
-    // Add new line
-    if (!m_lines.back().is_empty())
-         m_lines.emplace_back();
+    // If the current line has any content...
+    if (!m_lines.back().is_empty()) {
+        // Apply alignment
+        m_lines.back().align(m_alignment, m_width);
+        // Add new line
+        m_lines.emplace_back();
+    }
     // Add new part to open spans
     for (auto& span_pair : m_spans) {
         auto& span = span_pair.second;

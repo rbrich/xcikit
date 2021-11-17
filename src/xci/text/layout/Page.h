@@ -1,7 +1,7 @@
 // Page.h created on 2018-03-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_TEXT_LAYOUT_PAGE_H
@@ -33,15 +33,6 @@ using graphics::ViewportRect;
 class Layout;
 class Page;
 
-using ElementIndex = size_t;
-
-enum class Alignment {
-    Left,
-    Right,
-    Center,
-    Justify,
-};
-
 
 class Word {
 public:
@@ -50,6 +41,9 @@ public:
     const ViewportRect& bbox() const { return m_bbox; }
     ViewportUnits baseline() const { return m_baseline; }
     Style& style() { return m_style; }
+
+    // Reposition the word on x-axis
+    void move_x(ViewportUnits offset);
 
     void update(const graphics::View& target);
     void draw(graphics::View& target, const ViewportCoords& pos) const;
@@ -76,6 +70,9 @@ public:
     // Retrieve bounding box of the whole line, relative to page
     const ViewportRect& bbox() const;
     ViewportUnits baseline() const;
+
+    // Align content of the line
+    void align(Alignment alignment, ViewportUnits width);
 
     // Padding to be added to each side of the bounding box
     void set_padding(ViewportUnits padding) { m_padding = padding; m_bbox_valid = false; }

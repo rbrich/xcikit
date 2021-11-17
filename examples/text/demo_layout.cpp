@@ -19,7 +19,7 @@ using namespace xci::graphics;
 using namespace xci::core;
 
 // TODO: * vertical space between paragraphs
-//       * justify, center
+//       * justify
 //       * demonstrate setting attributes on a span
 
 static const char * sample_text =
@@ -51,6 +51,10 @@ int main(int argc, const char* argv[])
     if (!font.add_face(vfs, "fonts/Lora/Lora-Italic-VF.ttf", 0))
         return EXIT_FAILURE;
 
+    Font mono_font{renderer};
+    if (!mono_font.add_face(vfs, "fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
+        return EXIT_FAILURE;
+
     Text text;
     text.set_markup_string(sample_text);
     text.set_width(1.33f);
@@ -59,15 +63,16 @@ int main(int argc, const char* argv[])
     text.set_font_style(FontStyle::Italic);
     text.set_color(Color::White());
 
-    Text help_text(font, "[g] show glyph quads\n"
-                         "[o] show word base points\n"
-                         "[w] show word boxes\n"
+    Text help_text(mono_font, "[g] show glyph quads\t[<] align left\n"
+                         "[o] show word base points\t[>] align right\n"
+                         "[w] show word boxes\t[|] center\n"
                          "[u] show line base lines\n"
                          "[l] show line boxes\n"
                          "[s] show span boxes\n"
                          "[p] show page boxes\n");
+    help_text.set_tab_stops({0.8f});
     help_text.set_color(Color(50, 200, 100));
-    help_text.set_font_size(0.07f);
+    help_text.set_font_size(0.06f);
 
     Text help_text_2(font, "Resize the window to see the reflow.");
     help_text_2.set_color(Color(200, 100, 50));
@@ -106,6 +111,18 @@ int main(int argc, const char* argv[])
                 break;
             case Key::P:
                 debug_flags ^= (int)View::Debug::PageBBox;
+                break;
+            case Key::Comma:
+                text.set_alignment(Alignment::Left);
+                break;
+            case Key::Period:
+                text.set_alignment(Alignment::Right);
+                break;
+            case Key::Backslash:
+                text.set_alignment(Alignment::Center);
+                break;
+            case Key::Equal:
+                text.set_alignment(Alignment::Justify);
                 break;
             default:
                 return;

@@ -17,6 +17,14 @@ using graphics::ViewportUnits;
 using namespace graphics::unit_literals;
 
 
+enum class Alignment {
+    Left,
+    Right,
+    Center,
+    Justify,
+};
+
+
 class Style {
 public:
     void clear();

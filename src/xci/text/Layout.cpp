@@ -61,16 +61,37 @@ void Layout::set_default_color(graphics::Color color)
     m_page.clear();
 }
 
+
+void Layout::set_default_tab_stops(std::vector<ViewportUnits> stops)
+{
+    m_default_tab_stops = std::move(stops);
+    m_page.clear();
+}
+
+
+void Layout::set_default_alignment(Alignment alignment)
+{
+    m_default_alignment = alignment;
+    m_page.clear();
+}
+
+
 void Layout::typeset(const graphics::View& target)
 {
     m_page.clear();
     m_page.set_target(&target);
     m_page.set_width(m_default_width);
     m_page.set_style(m_default_style);
+    m_page.set_alignment(m_default_alignment);
+
+    m_page.reset_tab_stops();
+    for (auto stop : m_default_tab_stops)
+        m_page.add_tab_stop(stop);
 
     for (auto& elem : m_elements) {
         elem->apply(m_page);
     }
+    m_page.finish_line();
 }
 
 void Layout::update(const graphics::View& target)

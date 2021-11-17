@@ -1,7 +1,7 @@
 // Layout.h created on 2018-03-10 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_TEXT_LAYOUT_H
@@ -41,6 +41,8 @@ public:
     void set_default_font_size(ViewportUnits size, bool allow_scale = true);
     void set_default_font_style(FontStyle font_style);
     void set_default_color(graphics::Color color);
+    void set_default_tab_stops(std::vector<ViewportUnits> stops);
+    void set_default_alignment(Alignment alignment);
 
     const Style& default_style() const { return m_default_style; }
 
@@ -136,6 +138,8 @@ private:
 
     Style m_default_style;
     ViewportUnits m_default_width = 0;
+    Alignment m_default_alignment = Alignment::Left;
+    std::vector<ViewportUnits> m_default_tab_stops;
 
     mutable core::ChunkedStack<graphics::Shape> m_debug_shapes;
 };
