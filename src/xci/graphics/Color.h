@@ -53,6 +53,7 @@ struct Color {
     static constexpr Color Yellow() { return {255, 255, 0}; }
 
     // Access components as float values (0.0 .. 1.0)
+    // See FloatColor below for conversion of whole Color to float[4] format
     constexpr float red_f() const { return float(r) / 255.f; }
     constexpr float green_f() const { return float(g) / 255.f; }
     constexpr float blue_f() const { return float(b) / 255.f; }

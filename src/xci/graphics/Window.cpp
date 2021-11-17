@@ -403,7 +403,7 @@ void Window::draw()
 
         m_command_buffers.begin(m_current_cmd_buf);
 
-        VkClearValue clear_value = {.color = {{0.0f, 0.0f, 0.0f, 1.0f}}};
+        const FloatColor clear_value(m_clear_color);
         VkRenderPassBeginInfo render_pass_info = {
                 .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
                 .renderPass = m_renderer.vk_render_pass(),
@@ -413,7 +413,7 @@ void Window::draw()
                         .extent = m_renderer.vk_image_extent(),
                 },
                 .clearValueCount = 1,
-                .pClearValues = &clear_value,
+                .pClearValues = reinterpret_cast<const VkClearValue*>(&clear_value),  // float[4]
         };
         vkCmdBeginRenderPass(cmd_buf, &render_pass_info,
                 VK_SUBPASS_CONTENTS_INLINE);

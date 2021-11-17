@@ -95,6 +95,7 @@ int main(int argc, const char* argv[])
 
     Bind bind(window, root);
     window.set_refresh_mode(RefreshMode::OnDemand);
+    window.set_clear_color(Color(0, 0x19, 0x1C));
     window.display();
     return EXIT_SUCCESS;
 }

@@ -9,6 +9,7 @@
 
 #include "View.h"
 #include <xci/graphics/vulkan/CommandBuffers.h>
+#include <xci/graphics/Color.h>
 #include <xci/core/geometry.h>
 #include <xci/core/mixin.h>
 
@@ -188,6 +189,9 @@ public:
     MouseBtnCallback mouse_button_callback() { return m_mbtn_cb; }
     ScrollCallback scroll_callback() { return m_scroll_cb; }
 
+    /// Color used to clear the framebuffer after swapping. Default: black
+    void set_clear_color(Color color) { m_clear_color = color; }
+
     // Refresh mode:
     // - OnDemand is energy-saving mode, good for normal GUI applications (forms etc.)
     // - OnEvent is similar, but does not require explicit calls to View::refresh()
@@ -237,6 +241,7 @@ private:
     GLFWwindow* m_window = nullptr;
     View m_view {this};
     RefreshMode m_refresh_mode = RefreshMode::OnDemand;
+    Color m_clear_color;
     Vec2i m_window_pos;
     Vec2i m_window_size;
     std::chrono::microseconds m_timeout {0};
