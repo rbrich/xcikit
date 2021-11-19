@@ -206,6 +206,18 @@ public:
 };
 
 
+class AdvanceLine: public Element {
+public:
+    explicit AdvanceLine(float lines) : m_lines(lines) {}
+    void apply(Page& page) override {
+        page.advance_line(m_lines);
+    }
+
+private:
+    float m_lines;
+};
+
+
 class BeginSpan: public Element {
 public:
     explicit BeginSpan(std::string name) : m_name(std::move(name)) {}

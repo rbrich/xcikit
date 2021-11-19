@@ -18,8 +18,7 @@ using namespace xci::text;
 using namespace xci::graphics;
 using namespace xci::core;
 
-// TODO: * vertical space between paragraphs
-//       * justify
+// TODO: * justify
 //       * demonstrate setting attributes on a span
 
 static const char * sample_text =
@@ -74,7 +73,7 @@ int main(int argc, const char* argv[])
     help_text.set_color(Color(50, 200, 100));
     help_text.set_font_size(0.06f);
 
-    Text help_text_2(font, "Resize the window to see the reflow.");
+    Text help_text_2(font, "Resize the window to watch the reflow.");
     help_text_2.set_color(Color(200, 100, 50));
     help_text_2.set_font_size(0.07f);
 
@@ -154,7 +153,7 @@ int main(int argc, const char* argv[])
     window.set_draw_callback([&](View& view) {
         help_text.draw(view, {-0.17f, -0.9f});
         help_text_2.draw(view, {-0.17f, 0.9f});
-        text.draw(view, {-0.17f, -0.3f});
+        text.draw(view, {-0.17f, -0.4f});
 
         font_texture.draw(view, {-0.5f * view.viewport_size().x + 0.01f,
                                  -0.5f * view.viewport_size().y + 0.01f});

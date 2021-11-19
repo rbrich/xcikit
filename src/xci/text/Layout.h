@@ -97,6 +97,9 @@ public:
     // Does nothing if current line is empty.
     void finish_line();
 
+    // Add vertical space. Implies `finish_line`.
+    void advance_line(float lines = 1.0f);
+
     // ------------------------------------------------------------------------
     // Spans allow naming a part of the text and change its attributes later
 
@@ -115,10 +118,11 @@ public:
     // ------------------------------------------------------------------------
     // Typeset and draw
 
-    // Typeset the element stream for the target, ie. compute element
+    // Typeset the element stream for the target, i.e. compute element
     // positions and sizes.
     // Should be called on every change of framebuffer size
     // and after addition of new elements.
+    // Use also to realign/reflow after changing width or alignment.
     void typeset(const graphics::View& target);
 
     // Recreate graphics objects. Must be called at least once before draw.

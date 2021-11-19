@@ -261,6 +261,13 @@ void Layout::finish_line()
 }
 
 
+void Layout::advance_line(float lines)
+{
+    m_elements.push_back(std::make_unique<FinishLine>());
+    m_elements.push_back(std::make_unique<AdvanceLine>(lines));
+}
+
+
 void Layout::begin_span(const std::string& name)
 {
     m_elements.push_back(std::make_unique<BeginSpan>(name));
