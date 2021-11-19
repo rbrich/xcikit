@@ -55,7 +55,12 @@ namespace xci::core {
 #define cursor_left             CSI "D"
 #define enter_bold_mode         CSI "1m"
 #define enter_dim_mode          CSI "2m"
+#define enter_italics_mode      CSI "3m"
 #define enter_underline_mode    CSI "4m"
+#define enter_blink_mode        CSI "5m"
+#define enter_reverse_mode      CSI "7m"
+#define exit_italics_mode       CSI "23m"
+#define exit_underline_mode     CSI "24m"
 #define exit_attribute_mode     CSI "0m"
 #define set_a_foreground        CSI "3{}m"
 #define set_a_background        CSI "4{}m"
@@ -76,7 +81,17 @@ static constexpr auto set_default_foreground = CSI "39m";
 static constexpr auto set_default_background = CSI "49m";
 static constexpr auto set_bright_foreground = CSI "9{}m";
 static constexpr auto set_bright_background = CSI "10{}m";
+static constexpr auto normal_intensity_mode = CSI "22m";
+static constexpr auto enter_conceal_mode = CSI "8m";
+static constexpr auto enter_strike_mode = CSI "9m";
+static constexpr auto exit_blink_mode = CSI "25m";
+static constexpr auto exit_reverse_mode = CSI "27m";
+static constexpr auto exit_conceal_mode = CSI "28m";
+static constexpr auto exit_strike_mode = CSI "29m";
+static constexpr auto enter_frame_mode = CSI "51m";
 static constexpr auto enter_overline_mode = CSI "53m";
+static constexpr auto exit_frame_mode = CSI "54m";
+static constexpr auto exit_overline_mode = CSI "55m";
 static constexpr auto send_soft_reset = CSI "!p";
 static constexpr auto request_cursor_position = CSI "6n";
 } // namespace seq
@@ -95,7 +110,7 @@ inline std::string xci_tparm(const char* seq, Args... args) {
 #ifdef XCI_WITH_TERMINFO
     // delegate to TermInfo
     #define TERM_APPEND(...) TermCtl(*this, is_tty() ? tparm(__VA_ARGS__) : "")
-    static unsigned _plus_one(unsigned arg) { return arg; };  // already corrected with Terminfo -> noop
+    static unsigned _plus_one(unsigned arg) { return arg; }  // already corrected with Terminfo -> noop
 #else
     // delegate to our implementation
     #define TERM_APPEND(...) XCI_TERM_APPEND(__VA_ARGS__)
@@ -480,16 +495,46 @@ TermCtl TermCtl::mode(Mode mode) const
         case Mode::Normal: return normal();
         case Mode::Bold: return bold();
         case Mode::Dim: return dim();
+        case Mode::Italic: return italic();
         case Mode::Underline: return underline();
         case Mode::Overline: return overline();
+        case Mode::CrossOut: return cross_out();
+        case Mode::Frame: return frame();
+        case Mode::Blink: return blink();
+        case Mode::Reverse: return reverse();
+        case Mode::Hidden: return hidden();
+        case Mode::NormalIntensity: return normal_intensity();
+        case Mode::NoItalic: return no_italic();
+        case Mode::NoUnderline: return no_underline();
+        case Mode::NoOverline: return no_overline();
+        case Mode::NoCrossOut: return no_cross_out();
+        case Mode::NoFrame: return no_frame();
+        case Mode::NoBlink: return no_blink();
+        case Mode::NoReverse: return no_reverse();
+        case Mode::NoHidden: return no_hidden();
     }
     UNREACHABLE;
 }
 
 TermCtl TermCtl::bold() const { return TERM_APPEND(enter_bold_mode); }
 TermCtl TermCtl::dim() const { return TERM_APPEND(enter_dim_mode); }
+TermCtl TermCtl::italic() const { return TERM_APPEND(enter_italics_mode); }
 TermCtl TermCtl::underline() const { return TERM_APPEND(enter_underline_mode); }
 TermCtl TermCtl::overline() const { return XCI_TERM_APPEND(seq::enter_overline_mode); }
+TermCtl TermCtl::cross_out() const { return XCI_TERM_APPEND(seq::enter_strike_mode); }
+TermCtl TermCtl::frame() const { return XCI_TERM_APPEND(seq::enter_frame_mode); }
+TermCtl TermCtl::blink() const { return TERM_APPEND(enter_blink_mode); }
+TermCtl TermCtl::reverse() const { return TERM_APPEND(enter_reverse_mode); }
+TermCtl TermCtl::hidden() const { return XCI_TERM_APPEND(seq::enter_conceal_mode); }
+TermCtl TermCtl::normal_intensity() const { return XCI_TERM_APPEND(seq::normal_intensity_mode); }
+TermCtl TermCtl::no_italic() const { return TERM_APPEND(exit_italics_mode); }
+TermCtl TermCtl::no_underline() const { return TERM_APPEND(exit_underline_mode); }
+TermCtl TermCtl::no_overline() const { return XCI_TERM_APPEND(seq::exit_overline_mode); }
+TermCtl TermCtl::no_cross_out() const { return XCI_TERM_APPEND(seq::exit_strike_mode); }
+TermCtl TermCtl::no_frame() const { return XCI_TERM_APPEND(seq::exit_frame_mode); }
+TermCtl TermCtl::no_blink() const { return XCI_TERM_APPEND(seq::exit_blink_mode); }
+TermCtl TermCtl::no_reverse() const { return XCI_TERM_APPEND(seq::exit_reverse_mode); }
+TermCtl TermCtl::no_hidden() const { return XCI_TERM_APPEND(seq::exit_conceal_mode); }
 TermCtl TermCtl::normal() const { return TERM_APPEND(exit_attribute_mode); }
 
 TermCtl TermCtl::move_up() const { return TERM_APPEND(cursor_up); }
@@ -543,11 +588,26 @@ auto TermCtl::ColorPlaceholder::parse(std::string_view name) -> Color
 
 auto TermCtl::ModePlaceholder::parse(std::string_view name) -> Mode
 {
-    if (name == "bold")      return Mode::Bold;
-    if (name == "dim")       return Mode::Dim;
-    if (name == "underline") return Mode::Underline;
-    if (name == "overline")  return Mode::Overline;
-    if (name == "normal")    return Mode::Normal;
+    if (name == "bold")         return Mode::Bold;
+    if (name == "dim")          return Mode::Dim;
+    if (name == "italic")       return Mode::Italic;
+    if (name == "underline")    return Mode::Underline;
+    if (name == "overline")     return Mode::Overline;
+    if (name == "cross_out")    return Mode::CrossOut;
+    if (name == "frame")        return Mode::Frame;
+    if (name == "blink")        return Mode::Blink;
+    if (name == "reverse")      return Mode::Reverse;
+    if (name == "hidden")       return Mode::Hidden;
+    if (name == "normal")       return Mode::Normal;
+    if (name == "normal_intensity") return Mode::NormalIntensity;
+    if (name == "no_italic")    return Mode::NoItalic;
+    if (name == "no_underline") return Mode::NoUnderline;
+    if (name == "no_overline")  return Mode::NoOverline;
+    if (name == "no_cross_out") return Mode::NoCrossOut;
+    if (name == "no_frame")     return Mode::NoFrame;
+    if (name == "no_blink")     return Mode::NoBlink;
+    if (name == "no_reverse")   return Mode::NoReverse;
+    if (name == "no_hidden")    return Mode::NoHidden;
     throw fmt::format_error("invalid mode name: " + std::string(name));
 }
 
