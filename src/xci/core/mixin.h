@@ -19,6 +19,7 @@ public:
 
 protected:
     NonCopyable() = default;
+    ~NonCopyable() = default;
 };
 
 
@@ -29,6 +30,7 @@ public:
 
 protected:
     NonMovable() = default;
+    ~NonMovable() = default;
 };
 
 

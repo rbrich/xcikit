@@ -64,6 +64,7 @@ void Layout::set_default_color(graphics::Color color)
 
 void Layout::set_default_tab_stops(std::vector<ViewportUnits> stops)
 {
+    std::sort(stops.begin(), stops.end());
     m_default_tab_stops = std::move(stops);
     m_page.clear();
 }

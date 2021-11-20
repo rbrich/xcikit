@@ -569,10 +569,8 @@ VfsFile Vfs::read_file(std::string path) const
         }
         // Open the path with loader
         auto f = path_loader.vfs_dir->read_file(path);
-        if (f.is_open()) {
-            log::debug("Vfs: success!");
+        if (f.is_open())
             return f;
-        }
     }
     log::debug("Vfs: failed to open file");
     return {};
