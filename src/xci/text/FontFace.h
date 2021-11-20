@@ -10,12 +10,21 @@
 #include <xci/text/FontLibrary.h>
 #include <xci/core/geometry.h>
 #include <xci/core/Buffer.h>
-#include <string_view>
+#include <xci/core/mixin.h>
 
 #include <memory>  // shared_ptr
 #include <vector>
 #include <string>
+#include <string_view>
 #include <filesystem>
+
+// Forward decls from <ft2build.h>, <hb.h>
+// (to avoid external dependency on Freetype)
+typedef struct FT_FaceRec_*  FT_Face;
+typedef struct FT_StrokerRec_*  FT_Stroker;
+typedef struct FT_GlyphSlotRec_*  FT_GlyphSlot;
+typedef struct hb_font_t hb_font_t;
+
 
 namespace xci::text {
 
@@ -39,36 +48,32 @@ enum class FontStyle {
 // Wrapper around FT_Face. Set size and attributes,
 // retrieve rendered glyphs (bitmaps) and glyph metrics.
 
-class FontFace {
+class FontFace: private core::NonCopyable {
 public:
     explicit FontFace(FontLibraryPtr library) : m_library(std::move(library)) {}
-    virtual ~FontFace() = default;
+    ~FontFace();
 
-    // non-copyable
-    FontFace(const FontFace&) = delete;
-    FontFace& operator =(const FontFace&) = delete;
+    bool load_from_file(const fs::path& file_path, int face_index);
+    bool load_from_memory(core::BufferPtr buffer, int face_index);
 
-    virtual bool load_from_file(const fs::path& file_path, int face_index) = 0;
-    virtual bool load_from_memory(core::BufferPtr buffer, int face_index) = 0;
+    bool set_size(unsigned pixel_size);
 
-    virtual bool set_size(unsigned pixel_size) = 0;
+    bool set_outline();  // TODO
 
-    virtual bool set_outline() = 0;
-
-    virtual bool has_color() const = 0;
-    virtual FontStyle style() const = 0;
+    bool has_color() const;
+    FontStyle style() const;
 
     // Font metrics
-    virtual float height() const = 0;
-    virtual float max_advance() = 0;
-    virtual float ascender() const = 0;
-    virtual float descender() const = 0;
+    float height() const;
+    float max_advance();
+    float ascender() const;
+    float descender() const;
 
     // Font size in internal units
     // Use only as opaque key for caching.
-    virtual long size_key() const = 0;
+    long size_key() const;
 
-    virtual GlyphIndex get_glyph_index(CodePoint code_point) const = 0;
+    GlyphIndex get_glyph_index(CodePoint code_point) const;
 
     struct GlyphPlacement {
         GlyphIndex glyph_index;
@@ -76,7 +81,7 @@ public:
         core::Vec2i offset;
         core::Vec2f advance;
     };
-    virtual std::vector<GlyphPlacement> shape_text(std::string_view utf8) const = 0;
+    std::vector<GlyphPlacement> shape_text(std::string_view utf8) const;
 
     struct Glyph {
         core::Vec2i bearing;
@@ -85,10 +90,22 @@ public:
         uint8_t* bitmap_buffer = nullptr;
         bool bgra = false;  // 256 grays or BGRA
     };
-    virtual bool render_glyph(GlyphIndex glyph_index, Glyph& glyph) = 0;
+    bool render_glyph(GlyphIndex glyph_index, Glyph& glyph);
 
-protected:
+private:
+    bool load_face(const fs::path& file_path, const std::byte* buffer, size_t buffer_size, int face_index);
+
+    int32_t get_load_flags() const;
+
+    // Returns null on error
+    FT_GlyphSlot load_glyph(GlyphIndex glyph_index);
+
+    // private data
     std::shared_ptr<FontLibrary> m_library;
+    core::BufferPtr m_memory_buffer;
+    FT_Face m_face = nullptr;
+    FT_Stroker m_stroker = nullptr;
+    hb_font_t* m_hb_font = nullptr;
 };
 
 

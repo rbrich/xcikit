@@ -1,12 +1,20 @@
-// FtFontFace.cpp created on 2018-09-23 as part of xcikit project
+// FontFace.cpp created on 2018-09-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
 // Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <xci/core/log.h>
-#include "FtFontFace.h"
-#include "FtFontLibrary.h"
+#include "FontFace.h"
+#include "FontLibrary.h"
+
+#include <ft2build.h>
+#include FT_FREETYPE_H
+#include FT_STROKER_H
+
+#include <hb.h>
+#include <hb-ft.h>
+
 #include <cassert>
 
 namespace xci::text {
@@ -23,7 +31,7 @@ static inline FT_F26Dot6 float_to_ft(float units) {
 }
 
 
-FtFontFace::~FtFontFace()
+FontFace::~FontFace()
 {
     if (m_hb_font != nullptr)
         hb_font_destroy(m_hb_font);
@@ -40,20 +48,20 @@ FtFontFace::~FtFontFace()
 }
 
 
-bool FtFontFace::load_from_file(const fs::path& file_path, int face_index)
+bool FontFace::load_from_file(const fs::path& file_path, int face_index)
 {
     return load_face(file_path, nullptr, 0, face_index);
 }
 
 
-bool FtFontFace::load_from_memory(core::BufferPtr buffer, int face_index)
+bool FontFace::load_from_memory(core::BufferPtr buffer, int face_index)
 {
     m_memory_buffer = std::move(buffer);
     return load_face({}, m_memory_buffer->data(), m_memory_buffer->size(), face_index);
 }
 
 
-bool FtFontFace::set_size(unsigned pixel_size)
+bool FontFace::set_size(unsigned pixel_size)
 {
     if (has_color()) {
         // Find the nearest size in available sizes:
@@ -95,11 +103,11 @@ bool FtFontFace::set_size(unsigned pixel_size)
 }
 
 
-bool FtFontFace::set_outline()
+bool FontFace::set_outline()
 {
     if (m_stroker == nullptr) {
         // Create stroker
-        auto err = FT_Stroker_New(static_cast<FtFontLibrary*>(m_library.get())->ft_library(), &m_stroker);
+        auto err = FT_Stroker_New(m_library->ft_library(), &m_stroker);
         if (err) {
             log::error("FT_Stroker_New: {}", err);
             return false;
@@ -112,7 +120,13 @@ bool FtFontFace::set_outline()
 }
 
 
-FontStyle FtFontFace::style() const
+bool FontFace::has_color() const
+{
+    return FT_HAS_COLOR(m_face);
+}
+
+
+FontStyle FontFace::style() const
 {
     assert(m_face != nullptr);
     static_assert(FT_STYLE_FLAG_ITALIC == int(FontStyle::Italic), "freetype italic flag == 1");
@@ -121,13 +135,13 @@ FontStyle FtFontFace::style() const
 }
 
 
-float FtFontFace::height() const
+float FontFace::height() const
 {
     return ft_to_float(m_face->size->metrics.height);
 }
 
 
-float FtFontFace::max_advance()
+float FontFace::max_advance()
 {
     // Measure letter 'M' instead of trusting max_advance
     auto glyph_index = get_glyph_index('M');
@@ -142,25 +156,31 @@ float FtFontFace::max_advance()
 }
 
 
-float FtFontFace::ascender() const
+float FontFace::ascender() const
 {
     return ft_to_float(m_face->size->metrics.ascender);
 }
 
 
-float FtFontFace::descender() const
+float FontFace::descender() const
 {
     return ft_to_float(m_face->size->metrics.descender);
 }
 
 
-GlyphIndex FtFontFace::get_glyph_index(CodePoint code_point) const
+long FontFace::size_key() const
+{
+    return m_face->size->metrics.height;
+}
+
+
+GlyphIndex FontFace::get_glyph_index(CodePoint code_point) const
 {
     return FT_Get_Char_Index(m_face, code_point);
 }
 
 
-auto FtFontFace::shape_text(std::string_view utf8) const -> std::vector<GlyphPlacement>
+auto FontFace::shape_text(std::string_view utf8) const -> std::vector<GlyphPlacement>
 {
     hb_buffer_t *buf;
     buf = hb_buffer_create();
@@ -193,7 +213,7 @@ auto FtFontFace::shape_text(std::string_view utf8) const -> std::vector<GlyphPla
 }
 
 
-FT_GlyphSlot FtFontFace::load_glyph(GlyphIndex glyph_index)
+FT_GlyphSlot FontFace::load_glyph(GlyphIndex glyph_index)
 {
     int err = FT_Load_Glyph(m_face, glyph_index, get_load_flags());
     if (err) {
@@ -204,7 +224,7 @@ FT_GlyphSlot FtFontFace::load_glyph(GlyphIndex glyph_index)
 }
 
 
-bool FtFontFace::render_glyph(GlyphIndex glyph_index, Glyph& glyph)
+bool FontFace::render_glyph(GlyphIndex glyph_index, Glyph& glyph)
 {
     // render
     auto glyph_slot = load_glyph(glyph_index);
@@ -242,14 +262,8 @@ bool FtFontFace::render_glyph(GlyphIndex glyph_index, Glyph& glyph)
 }
 
 
-FT_Library FtFontFace::ft_library()
-{
-    return static_cast<FtFontLibrary*>(m_library.get())->ft_library();
-}
-
-
 // Internal helper to avoid repeating error handling etc.
-bool FtFontFace::load_face(const fs::path& file_path, const std::byte* buffer, size_t buffer_size, int face_index)
+bool FontFace::load_face(const fs::path& file_path, const std::byte* buffer, size_t buffer_size, int face_index)
 {
     if (m_face != nullptr) {
         log::error("FontFace: Reloading not supported! Create new instance instead.");
@@ -257,11 +271,11 @@ bool FtFontFace::load_face(const fs::path& file_path, const std::byte* buffer, s
     }
     FT_Error err;
     if (buffer) {
-        err = FT_New_Memory_Face(ft_library(),
+        err = FT_New_Memory_Face(m_library->ft_library(),
                 reinterpret_cast<const FT_Byte*>(buffer), (FT_Long) buffer_size,
                 face_index, &m_face);
     } else {
-        err = FT_New_Face(ft_library(),
+        err = FT_New_Face(m_library->ft_library(),
                 file_path.string().c_str(), face_index, &m_face);
     }
     if (err == FT_Err_Unknown_File_Format) {
@@ -295,6 +309,12 @@ bool FtFontFace::load_face(const fs::path& file_path, const std::byte* buffer, s
     hb_ft_font_set_load_flags(m_hb_font, get_load_flags());
 
     return true;
+}
+
+
+int32_t FontFace::get_load_flags() const
+{
+    return FT_LOAD_COLOR | (height() < 20.f ? FT_LOAD_TARGET_LIGHT : FT_LOAD_NO_HINTING);
 }
 
 

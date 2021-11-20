@@ -11,6 +11,7 @@ find_package(harfbuzz REQUIRED)
 # ------------ #
 
 add_library(xci-text
+    FontFace.cpp
     FontLibrary.cpp
     FontTexture.cpp
     Font.cpp
@@ -19,8 +20,6 @@ add_library(xci-text
     Markup.cpp
     Style.cpp
     layout/Page.cpp
-    freetype/FtFontLibrary.cpp
-    freetype/FtFontFace.cpp
     $<TARGET_OBJECTS:third_party::rbp>
     )
 add_library(xcikit::xci-text ALIAS xci-text)
