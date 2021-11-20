@@ -227,10 +227,6 @@ Primitives::Primitives(Renderer& renderer,
         : m_format(format), m_renderer(renderer)
 {
     assert(type == PrimitiveType::TriFans);
-
-    VkPhysicalDeviceProperties props;
-    vkGetPhysicalDeviceProperties(m_renderer.vk_physical_device(), &props);
-    m_min_uniform_offset_alignment = props.limits.minUniformBufferOffsetAlignment;
 }
 
 
@@ -548,9 +544,10 @@ void Primitives::destroy_pipeline()
 
 VkDeviceSize Primitives::align_uniform(VkDeviceSize offset)
 {
-    auto unaligned = offset % m_min_uniform_offset_alignment;
+    const auto min_alignment = m_renderer.min_uniform_offset_alignment();
+    auto unaligned = offset % min_alignment;
     if (unaligned > 0)
-        offset += m_min_uniform_offset_alignment - unaligned;
+        offset += min_alignment - unaligned;
     return offset;
 }
 

@@ -24,10 +24,9 @@ Font::~Font() = default;
 void Font::add_face(std::unique_ptr<FontFace> face)
 {
     if (!m_texture) {
-        if (face->has_color())
-            m_texture = std::make_unique<FontTexture>(m_renderer, 1024, true);
-        else
-            m_texture = std::make_unique<FontTexture>(m_renderer);
+        bool color = face->has_color();
+        uint32_t size = std::min(color ? 1024u : 512u, m_renderer.max_image_dimension_2d());
+        m_texture = std::make_unique<FontTexture>(m_renderer, size, color);
     }
     m_faces.emplace_back(std::move(face));
 }

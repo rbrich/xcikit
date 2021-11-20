@@ -28,7 +28,7 @@ using graphics::Texture;
 class FontTexture;
 
 
-// Encapsulates faces, styles and glyph caches for a font
+// Encapsulates the faces, styles and glyph caches for a font
 class Font: private core::NonCopyable {
 public:
     explicit Font(Renderer& renderer);

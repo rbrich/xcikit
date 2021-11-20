@@ -158,7 +158,6 @@ private:
     std::vector<uint16_t> m_index_data;
     std::vector<std::byte> m_uniform_data;
     std::vector<UniformBinding> m_uniforms;
-    VkDeviceSize m_min_uniform_offset_alignment = 0;
     TextureBinding m_texture;
     BlendFunc m_blend = BlendFunc::Off;
 

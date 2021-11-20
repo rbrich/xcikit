@@ -39,6 +39,7 @@ public:
     bool has_color() const override { return FT_HAS_COLOR(m_face); }
     FontStyle style() const override;
 
+    // Font metrics
     float height() const override;
     float max_advance() override;
     float ascender() const override;
