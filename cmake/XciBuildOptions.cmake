@@ -102,8 +102,10 @@ if (ENABLE_WARNINGS)
     endif()
 endif()
 
-# Sanitize unreachable in debug build
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=unreachable")
+if (NOT MSVC)
+    # Sanitize unreachable in debug build
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=unreachable")
+endif()
 
 if (BUILD_WITH_ASAN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
