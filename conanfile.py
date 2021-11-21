@@ -196,7 +196,10 @@ class XcikitConan(ConanFile):
             if name == 'core':
                 self._add_dep('system_fmt', component, "fmt::fmt")
                 self._add_dep('system_magic_enum', component, "magic_enum::magic_enum")
+                self._add_dep('system_range_v3', component, "range-v3::range-v3")
+                self._add_dep('system_pegtl', component, "taocpp-pegtl::taocpp-pegtl")
             if name == 'data':
+                self._add_dep('system_zlib', component, "zlib::zlib")
                 self._add_dep('system_boost', component, "pfr::pfr")
             if name == 'script':
                 component.requires += ['xci-core']
