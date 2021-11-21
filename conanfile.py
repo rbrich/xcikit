@@ -1,7 +1,9 @@
-from conans import ConanFile, tools
+from conans import ConanFile, CMake, tools
 import conans.model.build_info
-from conan.tools.cmake import CMakeToolchain, CMakeDeps, CMake
-import os
+# from conan.tools.cmake import CMakeToolchain, CMakeDeps, CMake
+
+import csv
+from pathlib import Path
 
 
 class XcikitConan(ConanFile):
@@ -81,6 +83,7 @@ class XcikitConan(ConanFile):
         "vulkan-loader:with_wsi_directfb": False,
     }
 
+    generators = ("cmake_find_package_multi",)
     exports = ("VERSION", "requirements.csv")
     exports_sources = ("CMakeLists.txt", "config.h.in", "xcikit-config.cmake.in",
                        "cmake/**", "src/**", "examples/**", "tests/**", "benchmarks/**", "tools/**",
@@ -115,8 +118,6 @@ class XcikitConan(ConanFile):
                 self.options.remove(option)
 
     def _requirements_csv(self):
-        import csv
-        from pathlib import Path
         script_dir = Path(__file__).parent
         with open(script_dir.joinpath('requirements.csv'), newline='') as csvfile:
             reader = csv.reader(csvfile, delimiter=',', quotechar='"')
@@ -136,30 +137,34 @@ class XcikitConan(ConanFile):
             if ref and br == 'build' and self._check_option(prereq, system):
                 self.build_requires(ref)
 
-    def generate(self):
-        tc = CMakeToolchain(self, generator="Ninja")
+    def _set_cmake_defs(self, defs):
         if self.package_folder:
-            tc.variables["XCI_SHARE_DIR"] = self.package_folder + "/share/xcikit"
-        tc.variables["XCI_DATA"] = self.options.data
-        tc.variables["XCI_SCRIPT"] = self.options.script
-        tc.variables["XCI_GRAPHICS"] = self.options.graphics
-        tc.variables["XCI_TEXT"] = self.options.get_safe('text', False)
-        tc.variables["XCI_WIDGETS"] = self.options.get_safe('widgets', False)
-        tc.variables["XCI_BUILD_TOOLS"] = self.options.tools
-        tc.variables["XCI_BUILD_EXAMPLES"] = self.options.examples
-        tc.variables["XCI_BUILD_TESTS"] = self.options.tests
-        tc.variables["XCI_BUILD_BENCHMARKS"] = self.options.benchmarks
-        tc.variables["XCI_WITH_HYPERSCAN"] = self.options.get_safe('with_hyperscan', False)
-        tc.generate()
-
-        deps = CMakeDeps(self)
-        deps.build_context_activated = ['catch2', 'benchmark']
-        deps.generate()
+            defs["XCI_SHARE_DIR"] = self.package_folder + "/share/xcikit"
+        defs["XCI_DATA"] = self.options.data
+        defs["XCI_SCRIPT"] = self.options.script
+        defs["XCI_GRAPHICS"] = self.options.graphics
+        defs["XCI_TEXT"] = self.options.get_safe('text', False)
+        defs["XCI_WIDGETS"] = self.options.get_safe('widgets', False)
+        defs["XCI_BUILD_TOOLS"] = self.options.tools
+        defs["XCI_BUILD_EXAMPLES"] = self.options.examples
+        defs["XCI_BUILD_TESTS"] = self.options.tests
+        defs["XCI_BUILD_BENCHMARKS"] = self.options.benchmarks
+        defs["XCI_WITH_HYPERSCAN"] = self.options.get_safe('with_hyperscan', False)
 
     def _configure_cmake(self):
         cmake = CMake(self)
+        self._set_cmake_defs(cmake.definitions)
         cmake.configure()
         return cmake
+
+    # def generate(self):
+    #     tc = CMakeToolchain(self, generator="Ninja")
+    #     self._set_cmake_defs(tc.variables)
+    #     tc.generate()
+    #
+    #     deps = CMakeDeps(self)
+    #     deps.build_context_activated = ['catch2', 'benchmark']
+    #     deps.generate()
 
     def build(self):
         cmake = self._configure_cmake()
@@ -172,22 +177,6 @@ class XcikitConan(ConanFile):
     def test(self):
         cmake = self._configure_cmake()
         cmake.test()
-
-    def _x_layout(self):
-        # DISABLED: This is very experimental for now, breaks the whole package when enabled.
-        # Support for editable mode
-        build_dir = os.environ.get('CONAN_EDITABLE_BUILD_DIR', None)
-        if build_dir is not None:
-            self.folders.build = build_dir # e.g. "build/macos-x86_64-Release-Ninja"
-            self.folders.generators = "generators"
-
-        for name in ('core', 'data', 'script', 'graphics', 'text', 'widgets'):
-            if name != 'core' and not self.options.get_safe(name, False):
-                continue  # component is disabled
-            component = self.cpp.source.components["xci-" + name]
-            component.libdirs = [self.folders.build + '/src/xci/' + name]
-            component.includedirs = ["src", self.folders.build + '/include']
-            component.builddirs = ["cmake"]
 
     def _add_dep(self, opt: str, component: conans.model.build_info.Component, cmake_dep: str):
         if self.options.get_safe(opt, False):
