@@ -1,6 +1,6 @@
 option(CONAN_INSTALL "Run 'conan install' from CMake (this may be more convenient than separate command)" OFF)
 set(CONAN_PROFILE "default" CACHE STRING "Conan profile ot use in 'conan install'")
-set(CONAN_OPTIONS "default" CACHE STRING "Additional conan options (without -o)")
+set(CONAN_OPTIONS "" CACHE STRING "Additional conan options (without -o)")
 
 # Run conan install directly
 # See https://github.com/conan-io/cmake-conan

@@ -78,7 +78,7 @@ Optional `xci-data` library provides custom text and binary format
 for serialization / deserialization of hierarchical data structures.
 Think of Json and Google Protobuf, but without the complexity and bloat.
 
-All of the above use `xci-core`, which contains miscellaneous utilities,
+All the above libraries use `xci-core`, which contains miscellaneous utilities,
 This can also be used separately.
 
 There is also header-only `compat` library, which is used to hide
@@ -96,9 +96,8 @@ Tested compilers:
 * GCC 10 (Debian 11 Bullseye)
 * Clang 10 (macOS via Homebrew)
 
-Any Unix-like OS with C++20 compliant compiler should work. There is no direct Windows support,
-but it's possible that the project will compile with some layer of Unix compatibility, e.g. WSL.
-Some of the libraries already compile natively, see <<windows,Porting to Windows>>.
+Any Unix-like OS with C++20 compliant compiler should work.
+Windows OS is also supported, to some extent. See <<windows,Building on Windows>>.
 
 == Libraries
 
@@ -148,7 +147,7 @@ Core utilities. These have little or no dependencies. Mostly just stdlib + OS AP
 * `format.h` - Formatted strings. Similar to Python's `format()`.
 * `geometry.h` - 2D vector, rectangle. Linear algebra.
 * `rtti.h` - C++ demangled type names.
-* `string.h` - String manipulation. Unicode utilities.
+* `string.h` - String manipulation, unicode utilities.
 * `sys.h` - A replacement for `std::this_thread::get_id()`, providing the canonical TID.
 
 === xci::compat
@@ -190,17 +189,17 @@ Libraries:
 - FreeType (xci-text)
 - GLFW, Vulkan (xci-graphics)
 - https://github.com/google/shaderc[glslc] or
-https://github.com/KhronosGroup/glslang[glslangValidator] (xci-graphics)
+  https://github.com/KhronosGroup/glslang[glslangValidator] (xci-graphics)
 - https://github.com/catchorg/Catch2[Catch2] (tests)
 - https://github.com/google/benchmark[Google Benchmark] (benchmarks)
-- https://github.com/graphitemaster/incbin[inbin] (examples)
+- https://github.com/graphitemaster/incbin[incbin] (examples)
 
 Obtaining dependencies:
 
 * Install them into *_system_* or otherwise make them visible to CMake's `find_*` functions.
   - This works for almost all deps, except *fmt*, *pfr*, *magic_enum*.
   - Deps that must be installed this way: *vulkan*, *libzip*, *hyperscan*.
-* Install them via *_Conan_*. Pass `-DCONAN_INSTALL=ON` to `cmake` or build with `build.sh`
+* Install them via *_Conan_*. Pass `-D CONAN_INSTALL=ON` to `cmake` or build with `build.sh`
   which runs conan automatically.
   - Always installs *fmt*, *pfr*, *magic_enum*.
   - May install *range-v3*, *Catch2*, *benchmark*, *pegtl*, *glfw3*
@@ -324,7 +323,7 @@ How to build:
 3. Open _Git Bash_ and run `./build.sh`
 
 Opening the CMakeLists.txt in CLion works.
-I did not try Visual Studio, but it might also work.
+I did not try Visual Studio, but it might work as well.
 
 [#emscripten]
 === Porting to Emscripten
@@ -389,7 +388,7 @@ target_link_libraries(example xci-widgets)
 ----
 
 In the case xcikit was installed into non-standard location,
-for example `~/sdk/xcikit`, you need to setup `CMAKE_PREFIX_PATH` appropriately:
+for example `~/sdk/xcikit`, you need to set up `CMAKE_PREFIX_PATH` appropriately:
 
 [source,bash]
 ----
