@@ -24,8 +24,8 @@ public:
     void set_padding(ViewportUnits padding) { m_padding = padding; }
     void set_outline_thickness(ViewportUnits thickness) { m_outline_thickness = thickness; }
 
-    void set_decoration_color(const graphics::Color& fill, const graphics::Color& outline);
-    void set_text_color(const graphics::Color& color);
+    void set_decoration_color(graphics::Color fill, graphics::Color outline);
+    void set_text_color(graphics::Color color);
 
     void resize(View& view) override;
     void update(View& view, State state) override;

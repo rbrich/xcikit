@@ -1,6 +1,9 @@
-from conans import ConanFile, tools
-from conan.tools.cmake import CMakeToolchain, CMakeDeps, CMake
-import os
+from conans import ConanFile, CMake, tools
+import conans.model.build_info
+# from conan.tools.cmake import CMakeToolchain, CMakeDeps, CMake
+
+import csv
+from pathlib import Path
 
 
 class XcikitConan(ConanFile):
@@ -11,7 +14,7 @@ class XcikitConan(ConanFile):
     url = "https://github.com/rbrich/xcikit"
     description = "Collection of C++ libraries for drawing 2D graphics, rendering text and more."
     topics = ("text-rendering", "ui", "scripting-language", "vulkan", "glsl", "freetype")
-    settings = "os", "compiler", "build_type", "arch"
+    settings = "os", "arch", "compiler", "build_type"
     options = {
         "shared": [True, False],
         ### Optional components:
@@ -80,8 +83,9 @@ class XcikitConan(ConanFile):
         "vulkan-loader:with_wsi_directfb": False,
     }
 
+    generators = ("cmake_find_package_multi",)
     exports = ("VERSION", "requirements.csv")
-    exports_sources = ("CMakeLists.txt", "config.h.in", "xcikitConfig.cmake.in",
+    exports_sources = ("CMakeLists.txt", "config.h.in", "xcikit-config.cmake.in",
                        "cmake/**", "src/**", "examples/**", "tests/**", "benchmarks/**", "tools/**",
                        "share/**", "third_party/**",
                        "!build/**", "!cmake-build-*/**")
@@ -114,8 +118,6 @@ class XcikitConan(ConanFile):
                 self.options.remove(option)
 
     def _requirements_csv(self):
-        import csv
-        from pathlib import Path
         script_dir = Path(__file__).parent
         with open(script_dir.joinpath('requirements.csv'), newline='') as csvfile:
             reader = csv.reader(csvfile, delimiter=',', quotechar='"')
@@ -135,30 +137,34 @@ class XcikitConan(ConanFile):
             if ref and br == 'build' and self._check_option(prereq, system):
                 self.build_requires(ref)
 
-    def generate(self):
-        tc = CMakeToolchain(self, generator="Ninja")
+    def _set_cmake_defs(self, defs):
         if self.package_folder:
-            tc.variables["XCI_SHARE_DIR"] = self.package_folder + "/share/xcikit"
-        tc.variables["XCI_DATA"] = self.options.data
-        tc.variables["XCI_SCRIPT"] = self.options.script
-        tc.variables["XCI_GRAPHICS"] = self.options.graphics
-        tc.variables["XCI_TEXT"] = self.options.get_safe('text', False)
-        tc.variables["XCI_WIDGETS"] = self.options.get_safe('widgets', False)
-        tc.variables["XCI_BUILD_TOOLS"] = self.options.tools
-        tc.variables["XCI_BUILD_EXAMPLES"] = self.options.examples
-        tc.variables["XCI_BUILD_TESTS"] = self.options.tests
-        tc.variables["XCI_BUILD_BENCHMARKS"] = self.options.benchmarks
-        tc.variables["XCI_WITH_HYPERSCAN"] = self.options.get_safe('with_hyperscan', False)
-        tc.generate()
-
-        deps = CMakeDeps(self)
-        deps.build_context_activated = ['magic_enum', 'pfr', 'range-v3', 'catch2', 'benchmark', 'taocpp-pegtl']
-        deps.generate()
+            defs["XCI_SHARE_DIR"] = self.package_folder + "/share/xcikit"
+        defs["XCI_DATA"] = self.options.data
+        defs["XCI_SCRIPT"] = self.options.script
+        defs["XCI_GRAPHICS"] = self.options.graphics
+        defs["XCI_TEXT"] = self.options.get_safe('text', False)
+        defs["XCI_WIDGETS"] = self.options.get_safe('widgets', False)
+        defs["XCI_BUILD_TOOLS"] = self.options.tools
+        defs["XCI_BUILD_EXAMPLES"] = self.options.examples
+        defs["XCI_BUILD_TESTS"] = self.options.tests
+        defs["XCI_BUILD_BENCHMARKS"] = self.options.benchmarks
+        defs["XCI_WITH_HYPERSCAN"] = self.options.get_safe('with_hyperscan', False)
 
     def _configure_cmake(self):
         cmake = CMake(self)
+        self._set_cmake_defs(cmake.definitions)
         cmake.configure()
         return cmake
+
+    # def generate(self):
+    #     tc = CMakeToolchain(self, generator="Ninja")
+    #     self._set_cmake_defs(tc.variables)
+    #     tc.generate()
+    #
+    #     deps = CMakeDeps(self)
+    #     deps.build_context_activated = ['catch2', 'benchmark']
+    #     deps.generate()
 
     def build(self):
         cmake = self._configure_cmake()
@@ -172,52 +178,38 @@ class XcikitConan(ConanFile):
         cmake = self._configure_cmake()
         cmake.test()
 
-    def _x_layout(self):
-        # DISABLED: This is very experimental for now, breaks the whole package when enabled.
-        # Support for editable mode
-        build_dir = os.environ.get('CONAN_EDITABLE_BUILD_DIR', None)
-        if build_dir is not None:
-            self.folders.build = build_dir # e.g. "build/macos-x86_64-Release-Ninja"
-            self.folders.generators = "generators"
-
-        for component in ('core', 'data', 'script', 'graphics', 'text', 'widgets'):
-            if component != 'core' and not self.options.get_safe(component, False):
-                continue  # component is disabled
-            pc = 'xci-' + component  # pc = prefixed component
-            self.cpp.source.components[pc].libdirs = [self.folders.build + '/src/xci/' + component]
-            self.cpp.source.components[pc].includedirs = ["src", self.folders.build + '/include']
-            self.cpp.source.components[pc].builddirs = ["cmake"]
+    def _add_dep(self, opt: str, component: conans.model.build_info.Component, cmake_dep: str):
+        if self.options.get_safe(opt, False):
+            component.system_libs = [cmake_dep]
+        else:
+            component.requires += [cmake_dep]
 
     def package_info(self):
-        for component in ('core', 'data', 'script', 'graphics', 'text', 'widgets'):
-            if component != 'core' and not self.options.get_safe(component, False):
+        for name in ('core', 'data', 'script', 'graphics', 'text', 'widgets'):
+            if name != 'core' and not self.options.get_safe(name, False):
                 continue  # component is disabled
-            pc = 'xci-' + component  # pc = prefixed component
-            self.cpp_info.components[pc].libdirs = ["lib"]
-            self.cpp_info.components[pc].includedirs = ["include"]
-            self.cpp_info.components[pc].builddirs = ["lib/cmake/xcikit"]
-        self.cpp_info.components["xci-core"].libs = ["xci-core"]
-        if not self.options.system_fmt:
-            self.cpp_info.components["xci-core"].requires = ['fmt::fmt']
-        if self.options.data:
-            self.cpp_info.components["xci-data"].libs = ["xci-data"]
-        if self.options.script:
-            self.cpp_info.components["xci-script"].libs = ["xci-script"]
-            self.cpp_info.components["xci-script"].requires = ['xci-core']
-        if self.options.graphics:
-            self.cpp_info.components["xci-graphics"].libs = ["xci-graphics"]
-            self.cpp_info.components["xci-graphics"].requires = ["xci-core"]
-            if not self.options.system_glfw:
-                self.cpp_info.components["xci-graphics"].requires += ["glfw::glfw"]
-            if not self.options.system_vulkan:
-                self.cpp_info.components["xci-graphics"].requires += ["vulkan-loader::vulkan-loader"]
-        if self.options.get_safe('text', False):
-            self.cpp_info.components["xci-text"].libs = ["xci-text"]
-            self.cpp_info.components["xci-text"].requires = ['xci-core', 'xci-graphics']
-            if not self.options.system_freetype:
-                self.cpp_info.components["xci-text"].requires += ['freetype::freetype']
-            if not self.options.system_harfbuzz:
-                self.cpp_info.components["xci-text"].requires += ['harfbuzz::harfbuzz']
-        if self.options.get_safe('widgets', False):
-            self.cpp_info.components["xci-widgets"].libs = ["xci-widgets"]
-            self.cpp_info.components["xci-widgets"].requires = ['xci-text']
+            component = self.cpp_info.components["xci-" + name]
+            component.libs = ["xci-" + name]
+            component.libdirs = ["lib"]
+            component.includedirs = ["include"]
+            component.builddirs = ["lib/cmake/xcikit"]
+            if name == 'core':
+                self._add_dep('system_fmt', component, "fmt::fmt")
+                self._add_dep('system_magic_enum', component, "magic_enum::magic_enum")
+                self._add_dep('system_range_v3', component, "range-v3::range-v3")
+                self._add_dep('system_pegtl', component, "taocpp-pegtl::taocpp-pegtl")
+            if name == 'data':
+                self._add_dep('system_zlib', component, "zlib::zlib")
+                self._add_dep('system_boost', component, "pfr::pfr")
+            if name == 'script':
+                component.requires += ['xci-core']
+            if name == 'graphics':
+                component.requires += ["xci-core"]
+                self._add_dep('system_glfw', component, "glfw::glfw")
+                self._add_dep('system_vulkan', component, "vulkan-loader::vulkan-loader")
+            if name == 'text':
+                component.requires += ['xci-core', 'xci-graphics']
+                self._add_dep('system_freetype', component, "freetype::freetype")
+                self._add_dep('system_harfbuzz', component, "harfbuzz::harfbuzz")
+            if name == 'widgets':
+                component.requires += ['xci-text']

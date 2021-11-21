@@ -17,17 +17,17 @@ using namespace xci::core;
 
 // ctor+dtor have to be implemented in cpp file
 // to allow use of forward declaration in unique_ptr<FontTexture>
-Font::Font(Renderer& renderer) : m_renderer(renderer) {}
+Font::Font(Renderer& renderer, uint32_t texture_size)
+    : m_renderer(renderer), m_texture_size(texture_size) {}
 Font::~Font() = default;
 
 
 void Font::add_face(std::unique_ptr<FontFace> face)
 {
     if (!m_texture) {
-        if (face->has_color())
-            m_texture = std::make_unique<FontTexture>(m_renderer, 1024, true);
-        else
-            m_texture = std::make_unique<FontTexture>(m_renderer);
+        bool color = face->has_color();
+        uint32_t size = std::min(m_texture_size, m_renderer.max_image_dimension_2d());
+        m_texture = std::make_unique<FontTexture>(m_renderer, size, color);
     }
     m_faces.emplace_back(std::move(face));
 }
@@ -66,23 +66,34 @@ void Font::set_style(FontStyle style)
 }
 
 
-void Font::set_size(unsigned size)
+bool Font::set_size(unsigned size)
 {
     m_size = size;
-    face().set_size(m_size);
+    return face().set_size(m_size);
+}
+
+
+bool Font::set_stroke(StrokeType type, float radius)
+{
+    m_stroke_type = type;
+    m_stroke_radius = (type == StrokeType::None) ? 0.f : radius;
+    return face().set_stroke(type, radius);
 }
 
 
 Font::Glyph* Font::get_glyph(GlyphIndex glyph_index)
 {
     // check cache
-    GlyphKey glyph_key{m_current_face, face().size_key(), glyph_index};
+    GlyphKey glyph_key {
+        m_current_face,face().size_key(),
+        glyph_index,
+        m_stroke_type, m_stroke_radius
+    };
     auto iter = m_glyphs.find(glyph_key);
     if (iter != m_glyphs.end())
         return &iter->second;
 
     // render
-    face().set_size(m_size);
     FontFace::Glyph glyph_render;
     if (!face().render_glyph(glyph_index, glyph_render))
         return nullptr;

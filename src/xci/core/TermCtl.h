@@ -65,7 +65,12 @@ public:
         BrightBlack = 10, BrightRed, BrightGreen, BrightYellow,
         BrightBlue, BrightMagenta, BrightCyan, BrightWhite,
     };
-    enum class Mode { Normal, Bold, Dim, Underline, Overline };
+    enum class Mode { Normal,  // reset all attributes
+        Bold, Dim, Italic, Underline, Overline, CrossOut, Frame,
+        Blink, Reverse, Hidden,
+        NormalIntensity, NoItalic, NoUnderline, NoOverline, NoCrossOut, NoFrame,
+        NoBlink, NoReverse, NoHidden
+    };
 
     // foreground
     TermCtl fg(Color color) const;
@@ -95,8 +100,23 @@ public:
     TermCtl mode(Mode mode) const;
     TermCtl bold() const;  // bold and/or increased intensity
     TermCtl dim() const;  // decreased intensity
+    TermCtl italic() const;
     TermCtl underline() const;
     TermCtl overline() const;
+    TermCtl cross_out() const;
+    TermCtl frame() const;
+    TermCtl blink() const;
+    TermCtl reverse() const;
+    TermCtl hidden() const;  // conceal
+    TermCtl normal_intensity() const;
+    TermCtl no_italic() const;
+    TermCtl no_underline() const;
+    TermCtl no_overline() const;
+    TermCtl no_cross_out() const;
+    TermCtl no_frame() const;
+    TermCtl no_blink() const;
+    TermCtl no_reverse() const;
+    TermCtl no_hidden() const; // reveal
     TermCtl normal() const;  // reset all attributes
 
     // cursor movement

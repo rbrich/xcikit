@@ -6,14 +6,10 @@
 
 #include "Function.h"
 #include "Module.h"
-#include "Error.h"
-#include <range/v3/algorithm/any_of.hpp>
 #include <utility>
 #include <numeric>
 
 namespace xci::script {
-
-using ranges::cpp20::any_of;
 
 
 Function::Function(Module& module, SymbolTable& symtab)

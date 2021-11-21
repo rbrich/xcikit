@@ -2,6 +2,10 @@
 # Fetch Fonts  #
 # -------------#
 
+message(STATUS "Locking directory: ${CMAKE_CURRENT_SOURCE_DIR}")
+file(LOCK ${CMAKE_CURRENT_SOURCE_DIR} DIRECTORY
+    GUARD FILE)
+
 # Lora font - download and extract in SOURCE dir
 message(STATUS "Assets: Lora font")
 set(LORA_VERSION "v2.210")

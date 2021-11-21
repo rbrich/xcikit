@@ -52,6 +52,13 @@ public:
     void set_device_id(uint32_t device_id) { m_device_id = device_id; }
 
     // -------------------------------------------------------------------------
+    // Device limits
+
+    // Max texture size
+    uint32_t max_image_dimension_2d() const { return m_max_image_dimension_2d; }
+    VkDeviceSize min_uniform_offset_alignment() const { return m_min_uniform_offset_alignment; }
+
+    // -------------------------------------------------------------------------
     // Shaders
 
     /// Get one of the predefined shaders
@@ -124,6 +131,8 @@ private:
     void query_surface_capabilities(VkPhysicalDevice device, VkExtent2D new_size);
     bool query_swapchain(VkPhysicalDevice device);
 
+    void load_device_limits(const VkPhysicalDeviceLimits& limits);
+
 private:
     core::Vfs& m_vfs;
     static constexpr auto c_num_shaders = (size_t) ShaderId::NumItems_;
@@ -158,7 +167,11 @@ private:
     VkDebugUtilsMessengerEXT m_debug_messenger {};
 #endif
 
-    uint32_t m_device_id = 0;
+    uint32_t m_device_id = 0;  // requested deviceID
+
+    // Device limits
+    uint32_t m_max_image_dimension_2d = 0;
+    VkDeviceSize m_min_uniform_offset_alignment = 0;
 };
 
 

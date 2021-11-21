@@ -64,6 +64,11 @@ public:
     // Accept keyboard focus by tab or click
     void set_focusable(bool enabled) { m_tab_focusable = enabled; m_click_focusable = enabled; }
 
+    // Hidden widget doesn't receive update/draw events (when it's a child of Composite)
+    void set_hidden(bool hidden) { m_hidden = hidden; }
+    void toggle_hidden() { m_hidden = !m_hidden; }
+    bool is_hidden() const { return m_hidden; }
+
     // Test if point is contained inside widget area
     virtual bool contains(const ViewportCoords& point) const { return aabb().contains(point); }
 
@@ -97,6 +102,7 @@ private:
     // Flags
     bool m_tab_focusable : 1;
     bool m_click_focusable : 1;
+    bool m_hidden : 1;
 };
 
 

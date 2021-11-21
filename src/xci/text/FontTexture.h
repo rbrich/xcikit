@@ -20,7 +20,7 @@ using graphics::Texture;
 using graphics::Renderer;
 
 
-// Places glyphs into a texture
+// Place glyphs into a texture, retrieve texture coords.
 
 class FontTexture {
 public:

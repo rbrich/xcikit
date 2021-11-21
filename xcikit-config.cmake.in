@@ -14,7 +14,11 @@ if (@XCI_GRAPHICS@)
     find_dependency(Vulkan REQUIRED)
 endif()
 
+if (@XCI_WITH_ZIP@)
+    find_dependency(libzip REQUIRED)
+endif()
+
 # xcikit targets
 
-include("${CMAKE_CURRENT_LIST_DIR}/xcikitTargets.cmake")
+include("${CMAKE_CURRENT_LIST_DIR}/xcikit-targets.cmake")
 check_required_components(xcikit)

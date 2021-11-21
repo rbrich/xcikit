@@ -20,8 +20,7 @@ FontTexture::FontTexture(Renderer& renderer, unsigned int size, bool color)
 {
     if (!m_texture.create({size, size}))
         throw std::runtime_error("Could not create font texture.");
-    //m_texture.setSmooth(true);
-    m_binpack.Init(int(size), int(size), /*allowFlip=*/false);
+    m_binpack.Init(int(size), int(size), false);
 }
 
 
@@ -57,7 +56,7 @@ bool FontTexture::add_glyph(Vec2u size, const uint8_t* pixels, Rect_u& coords)
 void FontTexture::clear()
 {
     auto ts = m_texture.size();
-    m_binpack.Init(ts.x, ts.y, false);
+    m_binpack.Init(int(ts.x), int(ts.y), false);
     m_texture.clear();
 }
 

@@ -1,7 +1,7 @@
 // Text.h created on 2018-03-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_TEXT_TEXT_H
@@ -41,7 +41,11 @@ public:
     void set_font(Font& font);
     void set_font_size(ViewportUnits size, bool allow_scale = true);
     void set_font_style(FontStyle font_style);
-    void set_color(const graphics::Color& color);
+    void set_color(graphics::Color color);
+    void set_outline_radius(ViewportUnits radius);
+    void set_outline_color(graphics::Color color);
+    void set_tab_stops(std::vector<ViewportUnits> stops);
+    void set_alignment(Alignment alignment);
 
     Layout& layout() { return m_layout; }
 

@@ -32,8 +32,8 @@ void TextInput::set_string(const std::string& string)
 }
 
 
-void TextInput::set_decoration_color(const graphics::Color& fill,
-                                     const graphics::Color& outline)
+void TextInput::set_decoration_color(graphics::Color fill,
+                                     graphics::Color outline)
 {
     m_bg_rect.set_fill_color(fill);
     m_bg_rect.set_outline_color(outline);

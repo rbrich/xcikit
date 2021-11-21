@@ -1,7 +1,7 @@
-// demo_layout.cpp created on 2018-03-10 as part of xcikit project
+// demo_outline.cpp created on 2021-11-21 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "graphics/common.h"
@@ -18,19 +18,13 @@ using namespace xci::text;
 using namespace xci::graphics;
 using namespace xci::core;
 
-// TODO: * justify
-//       * demonstrate setting attributes on a span
-
 static const char * sample_text =
-        "Each paragraph is broken into lines. "
-        "The lines are further <span1>broken into words</span1>, each of which "
-        "is shaped and rendered as a run of glyphs."
-        "\n\n"
-        "Each line is bound to a base line, each word is attached to a base point. "
-        "To justify the text to a column, the residual space can be uniformly "
-        "<span2>divided between all words</span2> on the line. (This is not yet implemented.)"
-        "\n\n"
-        "Here is a ligature: infinity ∞";
+"Text without outline. <i>Text without outline</i>\n\n"
+"<white_outline>Transparent text with white outline. <i>Transparent text with white outline.</i></white_outline>\n\n"
+"<black_white>Black text with white outline. <i>Black text with white outline.</i></black_white>\n\n"
+"<blue_white>Blue text with white outline. <i>Blue text with white outline.</i></blue_white>\n\n"
+"<white_red>White text with red outline. <i>White text with red outline.</i></white_red>\n\n"
+"";
 
 
 int main(int argc, const char* argv[])
@@ -44,7 +38,7 @@ int main(int argc, const char* argv[])
 
     setup_window(window, "XCI layout demo", argv);
 
-    Font font {renderer};
+    Font font {renderer, 1024u};
     if (!font.add_face(vfs, "fonts/Lora/Lora-VF.ttf", 0))
         return EXIT_FAILURE;
     if (!font.add_face(vfs, "fonts/Lora/Lora-Italic-VF.ttf", 0))
@@ -54,32 +48,47 @@ int main(int argc, const char* argv[])
     if (!mono_font.add_face(vfs, "fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
         return EXIT_FAILURE;
 
+    ViewportUnits outline_radius = 0.002f;
+
     Text text;
     text.set_markup_string(sample_text);
     text.set_width(1.33f);
     text.set_font(font);
     text.set_font_size(0.09f);
-    text.set_font_style(FontStyle::Italic);
-    text.set_color(Color::White());
+    text.set_outline_radius(outline_radius);
 
-    Text help_text(mono_font, "[g] show glyph quads\t[<] align left\n"
-                         "[o] show word base points\t[>] align right\n"
-                         "[w] show word boxes\t[|] center\n"
-                         "[u] show line base lines\n"
-                         "[l] show line boxes\n"
-                         "[s] show span boxes\n"
-                         "[p] show page boxes\n");
+    auto apply_spans = [&layout = text.layout()](const View& view) {
+        layout.get_span("black_white")->adjust_style([](Style& s) {
+            s.set_color(Color::Black());
+            s.set_outline_color(Color::White());
+        });
+        layout.get_span("blue_white")->adjust_style([](Style& s) {
+            s.set_color(Color::Blue());
+            s.set_outline_color(Color::White());
+        });
+        layout.get_span("white_outline")->adjust_style([](Style& s) {
+            s.set_color(Color::Transparent());
+            s.set_outline_color(Color::White());
+        });
+        layout.get_span("white_red")->adjust_style([](Style& s) {
+            s.set_color(Color::White());
+            s.set_outline_color(Color::Red());
+        });
+        layout.update(view);
+    };
+
+    Text help_text(mono_font, "[+] thicker outline\n"
+                              "[-] thinner outline\n");
     help_text.set_tab_stops({0.8f});
     help_text.set_color(Color(50, 200, 100));
     help_text.set_font_size(0.06f);
 
-    Text help_text_2(font, "Resize the window to watch the reflow.");
-    help_text_2.set_color(Color(200, 100, 50));
-    help_text_2.set_font_size(0.07f);
+    Text info_text(font, fmt::format("Outline radius: {}", outline_radius));
+    info_text.set_color(Color(200, 100, 50));
+    info_text.set_font_size(0.07f);
 
     Sprites font_texture(renderer, font.texture(), Color(0, 50, 255));
 
-    View::DebugFlags debug_flags = 0;
     window.set_key_callback([&](View& view, KeyEvent ev) {
         if (ev.action != Action::Press)
             return;
@@ -90,43 +99,26 @@ int main(int argc, const char* argv[])
             case Key::F11:
                 window.toggle_fullscreen();
                 break;
-            case Key::G:
-                debug_flags ^= (int)View::Debug::GlyphBBox;
+            case Key::Minus:  // -/_ key
+            case Key::KeypadSubtract:
+                outline_radius -= 0.0005f;
+                if (outline_radius < 0.0f)
+                    outline_radius = 0.0f;
                 break;
-            case Key::O:
-                debug_flags ^= (int)View::Debug::WordBasePoint;
-                break;
-            case Key::W:
-                debug_flags ^= (int)View::Debug::WordBBox;
-                break;
-            case Key::U:
-                debug_flags ^= (int)View::Debug::LineBaseLine;
-                break;
-            case Key::L:
-                debug_flags ^= (int)View::Debug::LineBBox;
-                break;
-            case Key::S:
-                debug_flags ^= (int)View::Debug::SpanBBox;
-                break;
-            case Key::P:
-                debug_flags ^= (int)View::Debug::PageBBox;
-                break;
-            case Key::Comma:
-                text.set_alignment(Alignment::Left);
-                break;
-            case Key::Period:
-                text.set_alignment(Alignment::Right);
-                break;
-            case Key::Backslash:
-                text.set_alignment(Alignment::Center);
-                break;
-            case Key::Equal:
-                text.set_alignment(Alignment::Justify);
+            case Key::Equal:  // =/+ key
+            case Key::KeypadAdd:
+                outline_radius += 0.0005f;
                 break;
             default:
                 return;
         }
-        view.set_debug_flags(debug_flags);
+        text.set_outline_radius(outline_radius);
+        text.update(view);
+        apply_spans(view);
+
+        info_text.set_string(fmt::format("Outline radius: {}", outline_radius));
+        info_text.update(view);
+
         view.refresh();
     });
 
@@ -134,10 +126,11 @@ int main(int argc, const char* argv[])
         font.clear_cache();
 
         help_text.resize(view);
-        help_text_2.resize(view);
+        info_text.resize(view);
 
         text.set_width(view.viewport_size().x / 2.f);
         text.resize(view);
+        apply_spans(view);
 
         auto tex_size = view.size_to_viewport(FramebufferSize{font.texture().size()});
         ViewportRect rect = {0, 0, tex_size.x, tex_size.y};
@@ -152,7 +145,7 @@ int main(int argc, const char* argv[])
 
     window.set_draw_callback([&](View& view) {
         help_text.draw(view, {-0.17f, -0.9f});
-        help_text_2.draw(view, {-0.17f, 0.9f});
+        info_text.draw(view, {-0.17f, 0.9f});
         text.draw(view, {-0.17f, -0.4f});
 
         font_texture.draw(view, {-0.5f * view.viewport_size().x + 0.01f,

@@ -1,7 +1,7 @@
 // Vfs.cpp created on 2018-09-01 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2020 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Vfs.h"
@@ -58,7 +58,7 @@ VfsFile RealDirectory::read_file(const std::string& path)
 }
 
 
-// ----------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 
 
 static constexpr std::array<char, 4> c_dar_magic = {{'d', 'a', 'r', '\n'}};
@@ -569,10 +569,8 @@ VfsFile Vfs::read_file(std::string path) const
         }
         // Open the path with loader
         auto f = path_loader.vfs_dir->read_file(path);
-        if (f.is_open()) {
-            log::debug("Vfs: success!");
+        if (f.is_open())
             return f;
-        }
     }
     log::debug("Vfs: failed to open file");
     return {};

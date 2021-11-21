@@ -14,6 +14,7 @@ endif()
 
 list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_BINARY_DIR})
 find_package(xcikit CONFIG REQUIRED)
+find_package(fmt REQUIRED)
 
 add_executable(example example.cpp)
 target_link_libraries(example xcikit::xci-core)

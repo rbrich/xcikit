@@ -1,5 +1,6 @@
 option(CONAN_INSTALL "Run 'conan install' from CMake (this may be more convenient than separate command)" OFF)
 set(CONAN_PROFILE "default" CACHE STRING "Conan profile ot use in 'conan install'")
+set(CONAN_OPTIONS "default" CACHE STRING "Additional conan options (without -o)")
 
 # Run conan install directly
 # See https://github.com/conan-io/cmake-conan
@@ -46,5 +47,6 @@ if (CONAN_INSTALL)
             xcikit:graphics=${OPT_GRAPHICS}
             xcikit:text=${OPT_TEXT}
             xcikit:widgets=${OPT_WIDGETS}
+            ${CONAN_OPTIONS}
         BUILD missing)
 endif()

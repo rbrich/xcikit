@@ -457,6 +457,7 @@ void Renderer::create_device()
         // save chosen device handle
         if (choose) {
             m_physical_device = device;
+            load_device_limits(device_props.limits);
         }
 
         if (m_device_id == device_props.deviceID && !choose) {
@@ -809,6 +810,13 @@ void Renderer::set_present_mode(PresentMode mode)
     destroy_swapchain();
     create_swapchain();
     create_framebuffers();
+}
+
+
+void Renderer::load_device_limits(const VkPhysicalDeviceLimits& limits)
+{
+    m_max_image_dimension_2d = limits.maxImageDimension2D;
+    m_min_uniform_offset_alignment = limits.minUniformBufferOffsetAlignment;
 }
 
 

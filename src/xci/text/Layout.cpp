@@ -55,11 +55,41 @@ void Layout::set_default_font_style(FontStyle font_style)
 }
 
 
-void Layout::set_default_color(const graphics::Color& color)
+void Layout::set_default_color(graphics::Color color)
 {
     m_default_style.set_color(color);
     m_page.clear();
 }
+
+
+void Layout::set_default_outline_radius(ViewportUnits radius)
+{
+    m_default_style.set_outline_radius(radius);
+    m_page.clear();
+}
+
+
+void Layout::set_default_outline_color(graphics::Color color)
+{
+    m_default_style.set_outline_color(color);
+    m_page.clear();
+}
+
+
+void Layout::set_default_tab_stops(std::vector<ViewportUnits> stops)
+{
+    std::sort(stops.begin(), stops.end());
+    m_default_tab_stops = std::move(stops);
+    m_page.clear();
+}
+
+
+void Layout::set_default_alignment(Alignment alignment)
+{
+    m_default_alignment = alignment;
+    m_page.clear();
+}
+
 
 void Layout::typeset(const graphics::View& target)
 {
@@ -67,10 +97,16 @@ void Layout::typeset(const graphics::View& target)
     m_page.set_target(&target);
     m_page.set_width(m_default_width);
     m_page.set_style(m_default_style);
+    m_page.set_alignment(m_default_alignment);
+
+    m_page.reset_tab_stops();
+    for (auto stop : m_default_tab_stops)
+        m_page.add_tab_stop(stop);
 
     for (auto& elem : m_elements) {
         elem->apply(m_page);
     }
+    m_page.finish_line();
 }
 
 void Layout::update(const graphics::View& target)
@@ -204,7 +240,7 @@ void Layout::set_italic(bool italic)
 }
 
 
-void Layout::set_color(const graphics::Color& color)
+void Layout::set_color(graphics::Color color)
 {
     m_elements.push_back(std::make_unique<SetColor>(color));
 }
@@ -237,6 +273,13 @@ void Layout::add_tab()
 void Layout::finish_line()
 {
     m_elements.push_back(std::make_unique<FinishLine>());
+}
+
+
+void Layout::advance_line(float lines)
+{
+    m_elements.push_back(std::make_unique<FinishLine>());
+    m_elements.push_back(std::make_unique<AdvanceLine>(lines));
 }
 
 

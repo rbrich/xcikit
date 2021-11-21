@@ -9,6 +9,7 @@
 
 #include "View.h"
 #include <xci/graphics/vulkan/CommandBuffers.h>
+#include <xci/graphics/Color.h>
 #include <xci/core/geometry.h>
 #include <xci/core/mixin.h>
 
@@ -28,7 +29,8 @@ using xci::core::Vec2u;
 using xci::core::Vec2f;
 using xci::core::Vec2i;
 
-enum class Key {
+// Key names come from GLFW, with only minor changes
+enum class Key: uint8_t {
     Unknown = 0,
     F1 = 1,
     F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12,
@@ -46,20 +48,34 @@ enum class Key {
 
     // The following key codes correspond to ASCII
     Space = 32,
+    Apostrophe  =   39, // '
+    Comma = 44,     // ,
+    Minus = 45,     // -
+    Period = 46,    // .
+    Slash = 47,     // /
     Num0 = 48, Num1, Num2, Num3, Num4, Num5, Num6, Num7, Num8, Num9,
+    Semicolon = 59, // ;
+    Equal = 61,     // =
     A = 65, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z,
-    LeftBracket = 91, Backslash, RightBracket,  // [ \ ]
-    GraveAccent = 96,  // `
+    LeftBracket = 91,   // [
+    Backslash = 92,     // \ //
+    RightBracket = 93,  // ]
+    GraveAccent = 96,   // `
+
+    // International keys (non-US layout)
+    World1 = 101,
+    World2 = 102,
 
     // Numeric keypad
     Keypad0 = 128, Keypad1, Keypad2, Keypad3, Keypad4, Keypad5, Keypad6, Keypad7, Keypad8, Keypad9,
-    KeypadPlus, KeypadMinus, KeypadAsterisk, KeypadSlash, KeypadDecimalPoint, KeypadEnter,
+    KeypadAdd, KeypadSubtract, KeypadMultiply, KeypadDivide, KeypadDecimalPoint, KeypadEnter,
 
     // Modifier keys
     LeftShift, RightShift,
     LeftControl, RightControl,
     LeftAlt, RightAlt,
     LeftSuper, RightSuper,  // Command or Windows key
+    Menu,                   // Windows menu key
 };
 static_assert((int)Key::Z == 90, "ascii letters");
 
@@ -188,6 +204,9 @@ public:
     MouseBtnCallback mouse_button_callback() { return m_mbtn_cb; }
     ScrollCallback scroll_callback() { return m_scroll_cb; }
 
+    /// Color used to clear the framebuffer after swapping. Default: black
+    void set_clear_color(Color color) { m_clear_color = color; }
+
     // Refresh mode:
     // - OnDemand is energy-saving mode, good for normal GUI applications (forms etc.)
     // - OnEvent is similar, but does not require explicit calls to View::refresh()
@@ -237,6 +256,7 @@ private:
     GLFWwindow* m_window = nullptr;
     View m_view {this};
     RefreshMode m_refresh_mode = RefreshMode::OnDemand;
+    Color m_clear_color;
     Vec2i m_window_pos;
     Vec2i m_window_size;
     std::chrono::microseconds m_timeout {0};

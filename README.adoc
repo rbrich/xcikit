@@ -370,7 +370,7 @@ Run the build (only 'core' and 'script' components work at this time):
 === Linking with a client using only CMake
 
 Build and install XCI libraries (see "How to build" above),
-then use installed `xcikitConfig.cmake` in your project's
+then use installed `xcikit-config.cmake` in your project's
 `CMakeLists.txt`:
 
 [source,cmake]

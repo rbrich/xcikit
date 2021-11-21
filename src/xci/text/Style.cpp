@@ -16,10 +16,12 @@ using namespace graphics;
 void Style::clear()
 {
     m_font = nullptr;
-    m_size = 0.05f;
-    m_scale = 1.0f;
+    m_size = 0.05_vp;
+    m_outline_radius = 0.0_vp;
     m_color = graphics::Color::White();
+    m_outline_color = graphics::Color::Transparent();
     m_font_style = FontStyle::Regular;
+    m_scale = 1.0f;
 }
 
 
@@ -27,9 +29,20 @@ void Style::apply_view(const View& view)
 {
     // must select style (i.e. font face) before changing size of the font face
     m_font->set_style(m_font_style);
+    // convert font size
     auto font_size = view.size_to_framebuffer(m_size);
     m_font->set_size(unsigned(std::ceil(font_size.value)));
     m_scale = m_allow_scale ? font_size.value / m_font->height() : 1.0f;
+    // two pass rendering - disable stroker for the first pass
+    m_font->set_stroke(StrokeType::None, 0.0f);
+}
+
+
+void Style::apply_outline(const View& view)
+{
+    m_font->set_stroke(
+            m_color.is_transparent() ? StrokeType::Outline : StrokeType::OutsideBorder,
+            view.size_to_framebuffer(m_outline_radius).value);
 }
 
 

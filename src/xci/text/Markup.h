@@ -15,7 +15,8 @@ namespace xci::text {
 ///
 /// Supported tokens:
 /// * `<br>` - line break ('\n')
-/// * `<tab>` - tabulator ('\t')
+/// * `<p>` or `\n\n` - paragraph break - not a pair element!
+/// * `<tab>` or `\t` - tabulator
 /// * `<b>` ... `</b>` - bold
 /// * `<i>` ... `</i>` - italic
 /// * `<name>` ... `</name>` - named span

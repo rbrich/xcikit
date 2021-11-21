@@ -132,8 +132,8 @@ public:
     void add_uniform_data(uint32_t binding, const void* data, size_t size);
     void add_uniform(uint32_t binding, float f) { add_uniform_data(binding, &f, sizeof(f)); }
     void add_uniform(uint32_t binding, float f1, float f2);
-    void add_uniform(uint32_t binding, const Color& color);
-    void add_uniform(uint32_t binding, const Color& color1, const Color& color2);
+    void add_uniform(uint32_t binding, Color color);
+    void add_uniform(uint32_t binding, Color color1, Color color2);
 
     void set_texture(uint32_t binding, Texture& texture);
 
@@ -158,7 +158,6 @@ private:
     std::vector<uint16_t> m_index_data;
     std::vector<std::byte> m_uniform_data;
     std::vector<UniformBinding> m_uniforms;
-    VkDeviceSize m_min_uniform_offset_alignment = 0;
     TextureBinding m_texture;
     BlendFunc m_blend = BlendFunc::Off;
 

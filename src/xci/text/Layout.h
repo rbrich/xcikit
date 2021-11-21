@@ -1,7 +1,7 @@
 // Layout.h created on 2018-03-10 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_TEXT_LAYOUT_H
@@ -40,7 +40,11 @@ public:
     void set_default_font(Font* font);
     void set_default_font_size(ViewportUnits size, bool allow_scale = true);
     void set_default_font_style(FontStyle font_style);
-    void set_default_color(const graphics::Color &color);
+    void set_default_color(graphics::Color color);
+    void set_default_outline_radius(ViewportUnits radius);
+    void set_default_outline_color(graphics::Color color);
+    void set_default_tab_stops(std::vector<ViewportUnits> stops);
+    void set_default_alignment(Alignment alignment);
 
     const Style& default_style() const { return m_default_style; }
 
@@ -74,7 +78,7 @@ public:
     void set_font_style(FontStyle font_style);
     void set_bold(bool bold = true);
     void set_italic(bool italic = true);
-    void set_color(const graphics::Color &color);
+    void set_color(graphics::Color color);
     void reset_color();
 
     // ------------------------------------------------------------------------
@@ -95,6 +99,9 @@ public:
     // Does nothing if current line is empty.
     void finish_line();
 
+    // Add vertical space. Implies `finish_line`.
+    void advance_line(float lines = 1.0f);
+
     // ------------------------------------------------------------------------
     // Spans allow naming a part of the text and change its attributes later
 
@@ -113,10 +120,11 @@ public:
     // ------------------------------------------------------------------------
     // Typeset and draw
 
-    // Typeset the element stream for the target, ie. compute element
+    // Typeset the element stream for the target, i.e. compute element
     // positions and sizes.
     // Should be called on every change of framebuffer size
     // and after addition of new elements.
+    // Use also to realign/reflow after changing width or alignment.
     void typeset(const graphics::View& target);
 
     // Recreate graphics objects. Must be called at least once before draw.
@@ -136,6 +144,8 @@ private:
 
     Style m_default_style;
     ViewportUnits m_default_width = 0;
+    Alignment m_default_alignment = Alignment::Left;
+    std::vector<ViewportUnits> m_default_tab_stops;
 
     mutable core::ChunkedStack<graphics::Shape> m_debug_shapes;
 };

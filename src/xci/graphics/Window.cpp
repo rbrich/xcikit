@@ -243,20 +243,36 @@ void Window::setup_view()
 
         if (self->m_key_cb) {
             Key ev_key;
-            if ((key == GLFW_KEY_SPACE)
-            ||  (key >= GLFW_KEY_0 && key <= GLFW_KEY_9)
+
+            // Printable keys
+            if ((key >= GLFW_KEY_0 && key <= GLFW_KEY_9)
             ||  (key >= GLFW_KEY_A && key <= GLFW_KEY_Z)
             ||  (key >= GLFW_KEY_LEFT_BRACKET && key <= GLFW_KEY_RIGHT_BRACKET)) {
                 ev_key = Key(key);
 
+            // Function keys
             } else if (key >= GLFW_KEY_F1 && key <= GLFW_KEY_F12) {
                 ev_key = Key(key - GLFW_KEY_F1 + (int)Key::F1);
 
+            // Keypad
             } else if (key >= GLFW_KEY_KP_0 && key <= GLFW_KEY_KP_9) {
                 ev_key = Key(key - GLFW_KEY_KP_0 + (int)Key::Keypad0);
 
             } else {
                 switch (key) {
+                    // Printable keys (continued)
+                    case GLFW_KEY_SPACE: ev_key = Key::Space; break;
+                    case GLFW_KEY_APOSTROPHE: ev_key = Key::Apostrophe; break;
+                    case GLFW_KEY_COMMA: ev_key = Key::Comma; break;
+                    case GLFW_KEY_MINUS: ev_key = Key::Minus; break;
+                    case GLFW_KEY_PERIOD: ev_key = Key::Period; break;
+                    case GLFW_KEY_SLASH: ev_key = Key::Slash; break;
+                    case GLFW_KEY_SEMICOLON: ev_key = Key::Semicolon; break;
+                    case GLFW_KEY_EQUAL: ev_key = Key::Equal; break;
+                    case GLFW_KEY_GRAVE_ACCENT: ev_key = Key::GraveAccent; break;
+                    case GLFW_KEY_WORLD_1: ev_key = Key::World1; break;
+                    case GLFW_KEY_WORLD_2: ev_key = Key::World2; break;
+                    // Function keys (continued)
                     case GLFW_KEY_ESCAPE: ev_key = Key::Escape; break;
                     case GLFW_KEY_ENTER: ev_key = Key::Enter; break;
                     case GLFW_KEY_BACKSPACE: ev_key = Key::Backspace; break;
@@ -276,12 +292,14 @@ void Window::setup_view()
                     case GLFW_KEY_NUM_LOCK: ev_key = Key::NumLock; break;
                     case GLFW_KEY_PRINT_SCREEN: ev_key = Key::PrintScreen; break;
                     case GLFW_KEY_PAUSE: ev_key = Key::Pause; break;
-                    case GLFW_KEY_KP_ADD: ev_key = Key::KeypadPlus; break;
-                    case GLFW_KEY_KP_SUBTRACT: ev_key = Key::KeypadMinus; break;
-                    case GLFW_KEY_KP_MULTIPLY: ev_key = Key::KeypadAsterisk; break;
-                    case GLFW_KEY_KP_DIVIDE: ev_key = Key::KeypadSlash; break;
+                    // Keypad (continued)
+                    case GLFW_KEY_KP_ADD: ev_key = Key::KeypadAdd; break;
+                    case GLFW_KEY_KP_SUBTRACT: ev_key = Key::KeypadSubtract; break;
+                    case GLFW_KEY_KP_MULTIPLY: ev_key = Key::KeypadMultiply; break;
+                    case GLFW_KEY_KP_DIVIDE: ev_key = Key::KeypadDivide; break;
                     case GLFW_KEY_KP_DECIMAL: ev_key = Key::KeypadDecimalPoint; break;
                     case GLFW_KEY_KP_ENTER: ev_key = Key::KeypadEnter; break;
+                    // Modifier keys
                     case GLFW_KEY_LEFT_SHIFT: ev_key = Key::LeftShift; break;
                     case GLFW_KEY_RIGHT_SHIFT: ev_key = Key::RightShift; break;
                     case GLFW_KEY_LEFT_CONTROL: ev_key = Key::LeftControl; break;
@@ -290,6 +308,9 @@ void Window::setup_view()
                     case GLFW_KEY_RIGHT_ALT: ev_key = Key::RightAlt; break;
                     case GLFW_KEY_LEFT_SUPER: ev_key = Key::LeftSuper; break;
                     case GLFW_KEY_RIGHT_SUPER: ev_key = Key::RightSuper; break;
+                    case GLFW_KEY_MENU: ev_key = Key::Menu; break;
+                    // Unknown keys
+                    case GLFW_KEY_UNKNOWN: ev_key = Key::Unknown; break;
                     default:
                         log::debug("GlWindow: unknown key: {}", key);
                         ev_key = Key::Unknown; break;
@@ -403,7 +424,7 @@ void Window::draw()
 
         m_command_buffers.begin(m_current_cmd_buf);
 
-        VkClearValue clear_value = {.color = {{0.0f, 0.0f, 0.0f, 1.0f}}};
+        const FloatColor clear_value(m_clear_color);
         VkRenderPassBeginInfo render_pass_info = {
                 .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
                 .renderPass = m_renderer.vk_render_pass(),
@@ -413,7 +434,7 @@ void Window::draw()
                         .extent = m_renderer.vk_image_extent(),
                 },
                 .clearValueCount = 1,
-                .pClearValues = &clear_value,
+                .pClearValues = reinterpret_cast<const VkClearValue*>(&clear_value),  // float[4]
         };
         vkCmdBeginRenderPass(cmd_buf, &render_pass_info,
                 VK_SUBPASS_CONTENTS_INLINE);

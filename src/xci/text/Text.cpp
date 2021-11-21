@@ -97,9 +97,37 @@ void Text::set_font_style(FontStyle font_style)
 }
 
 
-void Text::set_color(const graphics::Color& color)
+void Text::set_color(graphics::Color color)
 {
     m_layout.set_default_color(color);
+    m_need_typeset = true;
+}
+
+
+void Text::set_outline_radius(ViewportUnits radius)
+{
+    m_layout.set_default_outline_radius(radius);
+    m_need_typeset = true;
+}
+
+
+void Text::set_outline_color(graphics::Color color)
+{
+    m_layout.set_default_outline_color(color);
+    m_need_typeset = true;
+}
+
+
+void Text::set_tab_stops(std::vector<ViewportUnits> stops)
+{
+    m_layout.set_default_tab_stops(std::move(stops));
+    m_need_typeset = true;
+}
+
+
+void Text::set_alignment(Alignment alignment)
+{
+    m_layout.set_default_alignment(alignment);
     m_need_typeset = true;
 }
 

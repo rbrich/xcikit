@@ -27,7 +27,7 @@ using xci::core::Vec2f;
 class Sprites {
 public:
     explicit Sprites(Renderer& renderer, Texture& texture,
-                     const Color& color = Color::White());
+                     Color color = Color::White());
 
     // Reserve memory for `num` sprites.
     void reserve(size_t num);
@@ -63,14 +63,14 @@ private:
 class ColoredSprites {
 public:
     explicit ColoredSprites(Renderer& renderer, Texture& texture,
-                            const Color& color = Color::White());
+                            Color color = Color::White());
 
     // Reserve memory for `num` sprites.
     void reserve(size_t num);
     void clear() { m_quads.clear(); }
 
-    void set_color(const Color& color) { m_color = color; }
-    const Color& color() const { return m_color; }
+    void set_color(Color color) { m_color = color; }
+    Color color() const { return m_color; }
 
     // Add new sprite containing whole texture
     // `rect` defines position and size of the sprite

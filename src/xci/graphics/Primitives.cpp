@@ -227,10 +227,6 @@ Primitives::Primitives(Renderer& renderer,
         : m_format(format), m_renderer(renderer)
 {
     assert(type == PrimitiveType::TriFans);
-
-    VkPhysicalDeviceProperties props;
-    vkGetPhysicalDeviceProperties(m_renderer.vk_physical_device(), &props);
-    m_min_uniform_offset_alignment = props.limits.minUniformBufferOffsetAlignment;
 }
 
 
@@ -406,14 +402,14 @@ void Primitives::add_uniform(uint32_t binding, float f1, float f2)
 }
 
 
-void Primitives::add_uniform(uint32_t binding, const Color& color)
+void Primitives::add_uniform(uint32_t binding, Color color)
 {
     FloatColor buf {color};
     add_uniform_data(binding, &buf, sizeof(buf));
 }
 
 
-void Primitives::add_uniform(uint32_t binding, const Color& color1, const Color& color2)
+void Primitives::add_uniform(uint32_t binding, Color color1, Color color2)
 {
     struct { FloatColor c1, c2; } buf { color1, color2 };
     add_uniform_data(binding, &buf, sizeof(buf));
@@ -548,9 +544,10 @@ void Primitives::destroy_pipeline()
 
 VkDeviceSize Primitives::align_uniform(VkDeviceSize offset)
 {
-    auto unaligned = offset % m_min_uniform_offset_alignment;
+    const auto min_alignment = m_renderer.min_uniform_offset_alignment();
+    auto unaligned = offset % min_alignment;
     if (unaligned > 0)
-        offset += m_min_uniform_offset_alignment - unaligned;
+        offset += min_alignment - unaligned;
     return offset;
 }
 

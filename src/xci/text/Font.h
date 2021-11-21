@@ -28,10 +28,10 @@ using graphics::Texture;
 class FontTexture;
 
 
-// Encapsulates faces, styles and glyph caches for a font
+// Encapsulates the faces, styles and glyph caches for a font
 class Font: private core::NonCopyable {
 public:
-    explicit Font(Renderer& renderer);
+    explicit Font(Renderer& renderer, uint32_t texture_size = 512u);
     ~Font();
 
     // Add a face. Call multiple times to add different strokes
@@ -50,19 +50,24 @@ public:
     // Select a loaded face by style
     void set_style(FontStyle style);
 
-    // Select a size for current face. This may create a new texture (glyph table).
-    void set_size(unsigned size);
+    // Select a size for current face
+    bool set_size(unsigned size);
     unsigned size() const { return m_size; }
+
+    // Select stroke type
+    bool set_stroke(StrokeType type, float radius);
 
     struct GlyphKey {
         size_t font_face;
         long font_size;
         GlyphIndex glyph_index;
+        StrokeType stroke_type;
+        float stroke_radius;
 
-        bool operator<(const GlyphKey& rhs) const
-        {
-            return std::tie(font_face, font_size, glyph_index) <
-                   std::tie(rhs.font_face, rhs.font_size, rhs.glyph_index);
+        bool operator<(const GlyphKey& rhs) const {
+            return std::tie(font_face, font_size, glyph_index, stroke_type, stroke_radius)
+                 < std::tie(rhs.font_face, rhs.font_size, rhs.glyph_index,
+                            rhs.stroke_type, rhs.stroke_radius);
         }
     };
 
@@ -109,11 +114,15 @@ private:
 
 private:
     Renderer& m_renderer;
-    unsigned m_size = 10;
     size_t m_current_face = 0;
     std::vector<std::unique_ptr<FontFace>> m_faces;  // faces for different strokes (eg. normal, bold, italic)
     std::unique_ptr<FontTexture> m_texture;  // glyph tables for different styles (size, outline)
     std::map<GlyphKey, Glyph> m_glyphs;
+
+    uint32_t m_texture_size;
+    unsigned m_size = 10;
+    float m_stroke_radius = 0.f;
+    StrokeType m_stroke_type = StrokeType::None;
 };
 
 
