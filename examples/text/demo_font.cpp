@@ -53,7 +53,7 @@ int main(int argc, const char* argv[])
     if (!font.add_face(vfs, "fonts/Enriqueta/Enriqueta-Bold.ttf", 0))
         return EXIT_FAILURE;
 
-    Font emoji_font {renderer};
+    Font emoji_font {renderer, 1024u};
     if (!emoji_font.add_face(vfs, "fonts/Noto/NotoColorEmoji.ttf", 0))
         return EXIT_FAILURE;
 
@@ -134,7 +134,7 @@ int main(int argc, const char* argv[])
         auto tx = -vs.x * 0.5f + fw  // the font box right edge
                 + (vs.x - fw - emoji.layout().bbox().w) / 2;  // half of empty space left around text
         text.draw(view, {tx, -0.55f});
-        emoji.draw(view, {tx, -0.70f});
+        emoji.draw(view, {tx, -0.90f});
         help_text.draw(view, {tx, 0.70f});
     });
 

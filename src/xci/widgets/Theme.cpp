@@ -15,7 +15,7 @@ namespace xci::widgets {
 
 Theme::Theme(graphics::Renderer& renderer)
         : m_renderer(renderer),
-          m_font(renderer), m_emoji_font(renderer), m_icon_font(renderer)
+          m_font(renderer), m_emoji_font(renderer, 1024u), m_icon_font(renderer)
 {}
 
 

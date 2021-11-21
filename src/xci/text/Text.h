@@ -42,6 +42,8 @@ public:
     void set_font_size(ViewportUnits size, bool allow_scale = true);
     void set_font_style(FontStyle font_style);
     void set_color(graphics::Color color);
+    void set_outline_radius(ViewportUnits radius);
+    void set_outline_color(graphics::Color color);
     void set_tab_stops(std::vector<ViewportUnits> stops);
     void set_alignment(Alignment alignment);
 

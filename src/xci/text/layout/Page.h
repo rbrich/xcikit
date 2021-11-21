@@ -38,7 +38,7 @@ class Word {
 public:
     Word(Page& page, const std::string& utf8);
 
-    const ViewportRect& bbox() const { return m_bbox; }
+    ViewportRect bbox() const { return m_bbox.moved(m_pos); }
     ViewportUnits baseline() const { return m_baseline; }
     Style& style() { return m_style; }
 
@@ -56,6 +56,7 @@ private:
     ViewportUnits m_baseline = 0;  // relative to bbox top
 
     mutable std::optional<graphics::Sprites> m_sprites;
+    mutable std::optional<graphics::Sprites> m_outline_sprites;
     mutable core::ChunkedStack<graphics::Shape> m_debug_shapes;
 };
 

@@ -67,8 +67,6 @@ Word::Word(Page& page, const std::string& utf8)
 
     // Set position according to pen
     m_pos = page.pen();
-    m_bbox.x += m_pos.x;
-    m_bbox.y += m_pos.y;
 
     page.advance_pen(pen);
 }
@@ -77,7 +75,6 @@ Word::Word(Page& page, const std::string& utf8)
 void Word::move_x(ViewportUnits offset)
 {
     m_pos.x += offset;
-    m_bbox.x += offset;
 }
 
 
@@ -97,6 +94,7 @@ void Word::update(const graphics::View& target)
     const auto fb_1px = target.size_to_viewport(1_fb);
     m_debug_shapes.clear();
     m_sprites.reset();
+    m_outline_sprites.reset();
 
     if (target.has_debug_flag(View::Debug::WordBBox)) {
         m_debug_shapes.emplace_back(renderer,
@@ -113,31 +111,42 @@ void Word::update(const graphics::View& target)
                 Color(250, 50, 50));
     }
 
-    m_sprites.emplace(renderer, font->texture(), m_style.color());
+    auto render_sprites = [&](std::optional<graphics::Sprites>& sprites, graphics::Color color) {
+        sprites.emplace(renderer, font->texture(), color);
 
-    ViewportCoords pen;
-    for (const auto& shaped_glyph : m_shaped) {
-        auto* glyph = font->get_glyph(shaped_glyph.glyph_index);
-        auto advance = target.size_to_viewport(FramebufferCoords{shaped_glyph.advance * scale});
-        auto offset = target.size_to_viewport(FramebufferSize{shaped_glyph.offset});
-        if (glyph != nullptr) {
-            auto bearing = target.size_to_viewport(FramebufferSize{glyph->bearing()});
-            auto glyph_size = target.size_to_viewport(FramebufferSize{glyph->size()});
-            ViewportRect rect{pen.x + (offset.x + bearing.x) * scale,
-                              pen.y + (offset.y - bearing.y) * scale,
-                              glyph_size.x * scale,
-                              glyph_size.y * scale};
-            m_sprites->add_sprite(rect, glyph->tex_coords());
-            if (show_bboxes)
-                m_debug_shapes.back().add_rectangle(rect, fb_1px);
+        ViewportCoords pen;
+        for (const auto& shaped_glyph : m_shaped) {
+            auto* glyph = font->get_glyph(shaped_glyph.glyph_index);
+            auto advance = target.size_to_viewport(FramebufferCoords{shaped_glyph.advance * scale});
+            auto offset = target.size_to_viewport(FramebufferSize{shaped_glyph.offset});
+            if (glyph != nullptr) {
+                auto bearing = target.size_to_viewport(FramebufferSize{glyph->bearing()});
+                auto glyph_size = target.size_to_viewport(FramebufferSize{glyph->size()});
+                ViewportRect rect{pen.x + (offset.x + bearing.x) * scale,
+                                  pen.y + (offset.y - bearing.y) * scale,
+                                  glyph_size.x * scale,
+                                  glyph_size.y * scale};
+                sprites->add_sprite(rect, glyph->tex_coords());
+                if (show_bboxes)
+                    m_debug_shapes.back().add_rectangle(rect, fb_1px);
+            }
+            pen += advance;
         }
-        pen += advance;
+
+        sprites->update();
+    };
+
+    if (!m_style.color().is_transparent()) {
+        render_sprites(m_sprites, m_style.color());
+    }
+
+    if (!m_style.outline_color().is_transparent()) {
+        m_style.apply_outline(target);
+        render_sprites(m_outline_sprites, m_style.outline_color());
     }
 
     if (show_bboxes)
         m_debug_shapes.back().update();
-
-    m_sprites->update();
 
     if (target.has_debug_flag(View::Debug::WordBasePoint)) {
         const auto sc_1px = target.size_to_viewport(1_sc);
@@ -153,6 +162,9 @@ void Word::draw(graphics::View& target, const ViewportCoords& pos) const
     for (auto& shape : m_debug_shapes) {
         shape.draw(target, m_pos + pos);
     }
+
+    if (m_outline_sprites)
+        m_outline_sprites->draw(target, m_pos + pos);
 
     if (m_sprites)
         m_sprites->draw(target, m_pos + pos);

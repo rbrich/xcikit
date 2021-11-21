@@ -22,6 +22,14 @@ namespace xci::text {
 using namespace xci::core;
 
 
+#define FT_CHECK_OR(err, msg, or_stmt)  do {       \
+    if (err != 0) {                             \
+        log::error("{}: {}", (msg), err);       \
+        or_stmt;                              \
+    }                                           \
+} while(false)
+#define FT_CHECK_RETURN_FALSE(err, msg)  FT_CHECK_OR(err, msg, return false)
+
 static inline float ft_to_float(FT_F26Dot6 ft_units) {
     return (float)(ft_units) / 64.f;
 }
@@ -38,13 +46,9 @@ FontFace::~FontFace()
 
     if (m_face != nullptr) {
         auto err = FT_Done_Face(m_face);
-        if (err) {
-            log::error("FT_Done_FreeType: {}", err);
-            return;
-        }
+        FT_CHECK_OR(err, "FT_Done_Face", return);
     }
-    if (m_stroker != nullptr)
-        FT_Stroker_Done(m_stroker);
+    FT_Stroker_Done(m_stroker);
 }
 
 
@@ -76,10 +80,7 @@ bool FontFace::set_size(unsigned pixel_size)
             }
         }
         auto err = FT_Select_Size(m_face, strike_index);
-        if (err) {
-            log::error("FT_Select_Size: {}", err);
-            return false;
-        }
+        FT_CHECK_RETURN_FALSE(err, "FT_Select_Size");
         return true;
     }
 
@@ -91,10 +92,7 @@ bool FontFace::set_size(unsigned pixel_size)
             .vertResolution = 0
     };
     auto err = FT_Request_Size(m_face, &size_req);
-    if (err) {
-        log::error("FT_Request_Size: {}", err);
-        return false;
-    }
+    FT_CHECK_RETURN_FALSE(err, "FT_Request_Size");
 
     hb_ft_font_set_load_flags(m_hb_font, get_load_flags());
     hb_ft_font_changed(m_hb_font);
@@ -103,19 +101,26 @@ bool FontFace::set_size(unsigned pixel_size)
 }
 
 
-bool FontFace::set_outline()
+bool FontFace::set_stroke(StrokeType type, float radius)
 {
+    if (has_color())
+        return false;
+
+    if (type == StrokeType::None) {
+        m_stroke_type = type;
+        return true;
+    }
+
     if (m_stroker == nullptr) {
         // Create stroker
         auto err = FT_Stroker_New(m_library->ft_library(), &m_stroker);
-        if (err) {
-            log::error("FT_Stroker_New: {}", err);
-            return false;
-        }
+        FT_CHECK_RETURN_FALSE(err, "FT_Stroker_New");
     }
 
-    // TODO
+    FT_Stroker_Set(m_stroker, float_to_ft(radius),
+            FT_STROKER_LINECAP_ROUND, FT_STROKER_LINEJOIN_ROUND, 0);
 
+    m_stroke_type = type;
     return true;
 }
 
@@ -216,15 +221,18 @@ auto FontFace::shape_text(std::string_view utf8) const -> std::vector<GlyphPlace
 FT_GlyphSlot FontFace::load_glyph(GlyphIndex glyph_index)
 {
     int err = FT_Load_Glyph(m_face, glyph_index, get_load_flags());
-    if (err) {
-        log::error("FT_Load_Glyph error: {}", err);
-        return nullptr;
-    }
+    FT_CHECK_OR(err, "FT_Load_Glyph", return nullptr);
     return m_face->glyph;
 }
 
 
-bool FontFace::render_glyph(GlyphIndex glyph_index, Glyph& glyph)
+FontFace::Glyph::~Glyph()
+{
+    FT_Done_Glyph(ft_glyph);
+}
+
+
+bool FontFace::render_glyph(GlyphIndex glyph_index, Glyph& out_glyph)
 {
     // render
     auto glyph_slot = load_glyph(glyph_index);
@@ -232,32 +240,53 @@ bool FontFace::render_glyph(GlyphIndex glyph_index, Glyph& glyph)
         return false;
 
     // Bitmap can be loaded directly by FT_LOAD_COLOR
-    auto& bitmap = m_face->glyph->bitmap;
-    if (bitmap.buffer == nullptr) {
-        int err = FT_Render_Glyph(m_face->glyph, FT_RENDER_MODE_NORMAL);
-        if (err) {
-            log::error("FT_Render_Glyph error: {}", err);
+    FT_Bitmap* bitmap = &glyph_slot->bitmap;
+    if (bitmap->buffer == nullptr) {
+        if (m_stroke_type != StrokeType::None) {
+            assert(m_stroker != nullptr);
+            FT_Glyph ft_glyph;
+            FT_Error err;
+            err = FT_Get_Glyph(glyph_slot, &ft_glyph);
+            FT_CHECK_RETURN_FALSE(err, "FT_Get_Glyph");
+            if (m_stroke_type == StrokeType::Outline) {
+                FT_Glyph_Stroke(&ft_glyph, m_stroker, true);
+                FT_CHECK_RETURN_FALSE(err, "FT_Glyph_Stroke");
+            } else {
+                assert(m_stroke_type == StrokeType::InsideBorder || m_stroke_type == StrokeType::OutsideBorder);
+                FT_Glyph_StrokeBorder(&ft_glyph, m_stroker, m_stroke_type == StrokeType::InsideBorder, true);
+                FT_CHECK_RETURN_FALSE(err, "FT_Glyph_StrokeBorder");
+            }
+            FT_Glyph_To_Bitmap(&ft_glyph, FT_RENDER_MODE_NORMAL, nullptr, true);
+            FT_CHECK_RETURN_FALSE(err, "FT_Glyph_To_Bitmap");
+            FT_BitmapGlyph bitmap_glyph = reinterpret_cast<FT_BitmapGlyph>(ft_glyph);
+            bitmap = &bitmap_glyph->bitmap;
+            out_glyph.bearing = {bitmap_glyph->left, bitmap_glyph->top};
+            out_glyph.ft_glyph = ft_glyph;
+        } else {
+            auto err = FT_Render_Glyph(glyph_slot, FT_RENDER_MODE_NORMAL);
+            FT_CHECK_RETURN_FALSE(err, "FT_Render_Glyph");
+            out_glyph.bearing = {glyph_slot->bitmap_left, glyph_slot->bitmap_top};
         }
     }
 
-    if (bitmap.width != 0) {
+    if (bitmap->width != 0) {
         // check that the bitmap is as expected
         // (this depends on FreeType settings which are under our control)
-        if (bitmap.pixel_mode == FT_PIXEL_MODE_BGRA) {
-            assert((int)bitmap.width * 4 == bitmap.pitch);
-            glyph.bgra = true;
+        if (bitmap->pixel_mode == FT_PIXEL_MODE_BGRA) {
+            assert(has_color());
+            assert((int)bitmap->width * 4 == bitmap->pitch);
         } else {
-            assert(bitmap.pixel_mode == FT_PIXEL_MODE_GRAY);
-            assert(bitmap.num_grays == 256);
-            assert((int)bitmap.width == bitmap.pitch);
+            assert(!has_color());
+            assert(bitmap->pixel_mode == FT_PIXEL_MODE_GRAY);
+            assert(bitmap->num_grays == 256);
+            assert((int)bitmap->width == bitmap->pitch);
         }
     }
 
-    glyph.bitmap_size = {bitmap.width, bitmap.rows};
-    glyph.bitmap_buffer = bitmap.buffer;
-    glyph.bearing = {glyph_slot->bitmap_left, glyph_slot->bitmap_top};
-    glyph.advance = {ft_to_float(glyph_slot->advance.x),
-                     ft_to_float(glyph_slot->advance.y)};
+    out_glyph.bitmap_size = {bitmap->width, bitmap->rows};
+    out_glyph.bitmap_buffer = bitmap->buffer;
+    out_glyph.advance = {ft_to_float(glyph_slot->advance.x),
+                         ft_to_float(glyph_slot->advance.y)};
     return true;
 }
 

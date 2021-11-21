@@ -62,6 +62,20 @@ void Layout::set_default_color(graphics::Color color)
 }
 
 
+void Layout::set_default_outline_radius(ViewportUnits radius)
+{
+    m_default_style.set_outline_radius(radius);
+    m_page.clear();
+}
+
+
+void Layout::set_default_outline_color(graphics::Color color)
+{
+    m_default_style.set_outline_color(color);
+    m_page.clear();
+}
+
+
 void Layout::set_default_tab_stops(std::vector<ViewportUnits> stops)
 {
     std::sort(stops.begin(), stops.end());

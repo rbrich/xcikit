@@ -23,6 +23,7 @@
 typedef struct FT_FaceRec_*  FT_Face;
 typedef struct FT_StrokerRec_*  FT_Stroker;
 typedef struct FT_GlyphSlotRec_*  FT_GlyphSlot;
+typedef struct FT_GlyphRec_*  FT_Glyph;
 typedef struct hb_font_t hb_font_t;
 
 
@@ -45,6 +46,14 @@ enum class FontStyle {
 };
 
 
+enum class StrokeType {
+    None,           // normal filled rendering
+    Outline,        // outlined glyphs
+    InsideBorder,   // inside border glyphs (for multi-pass rendering)
+    OutsideBorder,  // outside border glyphs (for multi-pass rendering)
+};
+
+
 // Wrapper around FT_Face. Set size and attributes,
 // retrieve rendered glyphs (bitmaps) and glyph metrics.
 
@@ -58,7 +67,7 @@ public:
 
     bool set_size(unsigned pixel_size);
 
-    bool set_outline();  // TODO
+    bool set_stroke(StrokeType type, float radius);
 
     bool has_color() const;
     FontStyle style() const;
@@ -88,9 +97,11 @@ public:
         core::Vec2f advance;
         core::Vec2u bitmap_size;
         uint8_t* bitmap_buffer = nullptr;
-        bool bgra = false;  // 256 grays or BGRA
+        // Owned Freetype handle
+        FT_Glyph ft_glyph = nullptr;
+        ~Glyph();
     };
-    bool render_glyph(GlyphIndex glyph_index, Glyph& glyph);
+    bool render_glyph(GlyphIndex glyph_index, Glyph& out_glyph);
 
 private:
     bool load_face(const fs::path& file_path, const std::byte* buffer, size_t buffer_size, int face_index);
@@ -106,6 +117,7 @@ private:
     FT_Face m_face = nullptr;
     FT_Stroker m_stroker = nullptr;
     hb_font_t* m_hb_font = nullptr;
+    StrokeType m_stroke_type = StrokeType::None;
 };
 
 

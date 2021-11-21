@@ -59,6 +59,10 @@ struct Color {
     constexpr float blue_f() const { return float(b) / 255.f; }
     constexpr float alpha_f() const { return float(a) / 255.f; }
 
+    // Test transparency
+    constexpr bool is_transparent() const { return a == 0; }
+    constexpr bool is_opaque() const { return a == 255; }
+
     // Comparison operators
     constexpr bool operator==(Color rhs) const
         { return std::tie(r, g, b, a) == std::tie(rhs.r, rhs.g, rhs.b, rhs.a); }
