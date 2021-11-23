@@ -37,7 +37,7 @@ std::string log::LastErrorPlaceholder::message(bool use_last_error, bool error_c
     }
     if (use_last_error)
         return last_error_str();
-    return errno_str();
+    return error_str();
 }
 
 

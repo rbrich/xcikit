@@ -142,18 +142,21 @@ std::string gid_to_group_name(gid_t gid)
 #endif  // _WIN32
 
 
-std::string errno_str()
+std::string error_str(int errno_)
 {
     char buf[200] = {};
 #if defined(HAVE_GNU_STRERROR_R)
-    return strerror_r(errno, buf, sizeof buf);
+    // Assign to typed var to defend against wrong detection
+    char* res = strerror_r(errno_, buf, sizeof buf);
+    return res;
 #elif defined(HAVE_XSI_STRERROR_R)
-    if (strerror_r(errno, buf, sizeof buf) == 0) {
+    int rc = strerror_r(errno_, buf, sizeof buf);
+    if (rc == 0) {
         return buf;
     }
-    return "Unknown error (" + std::to_string(errno) + ')';
+    return "Unknown error (" + std::to_string(errno_) + ')';
 #else
-    (void) strerror_s(buf, sizeof buf, errno);
+    (void) strerror_s(buf, sizeof buf, errno_);
     return buf;
 #endif
 }
@@ -169,21 +172,20 @@ int last_error()
 }
 
 
-std::string last_error_str()
+std::string last_error_str(int err_)
 {
 #ifdef _WIN32
     char buffer[1000];
-    auto msg_id = GetLastError();
     auto size = FormatMessageA(
             FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-            nullptr, msg_id, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+            nullptr, err_, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
             buffer, sizeof(buffer), nullptr);
     if (!size) {
-        return "unknown error (" + std::to_string(msg_id) + ')';
+        return "Unknown error (" + std::to_string(err_) + ')';
     }
     return buffer;
 #else
-    return errno_str();
+    return error_str(err_);
 #endif
 }
 
