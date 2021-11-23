@@ -124,10 +124,9 @@ class XcikitConan(ConanFile):
 
     def requirements(self):
         for info in self._requirements():
-            # Skip requirement if:
-            # - `system_<lib>` is True
-            # - `system_<lib>` option doesn't exist (prereq not satisfied)
-            if not self.options.get_safe(info['option'], default=True):
+            # Install requirement via Conan if `system_<lib>` option exists and is set to False
+            opt = self.options.get_safe('system_' + info['name'])
+            if opt is not None and not opt:
                 self.requires(info['conan'])
 
     def _set_cmake_defs(self, defs):
