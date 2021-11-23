@@ -60,7 +60,7 @@ jobs:
       with:
         path: |
           ~/.conan/data
-        key: ${{ runner.os }}-${{ matrix.name }}-${{ hashFiles('conanfile.py', 'requirements.csv') }}
+        key: ${{ runner.os }}-${{ matrix.name }}-${{ hashFiles('conanfile.py', 'conandata.yml') }}
         restore-keys: |
           ${{ runner.os }}-${{ matrix.name }}-
           ${{ runner.os }}-

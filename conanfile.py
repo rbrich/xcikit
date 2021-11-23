@@ -2,9 +2,6 @@ from conans import ConanFile, CMake, tools
 import conans.model.build_info
 # from conan.tools.cmake import CMakeToolchain, CMakeDeps, CMake
 
-import csv
-from pathlib import Path
-
 
 class XcikitConan(ConanFile):
     name = "xcikit"
@@ -84,7 +81,7 @@ class XcikitConan(ConanFile):
     }
 
     generators = ("cmake_find_package_multi",)
-    exports = ("VERSION", "requirements.csv")
+    exports = ("VERSION",)
     exports_sources = ("CMakeLists.txt", "config.h.in", "xcikit-config.cmake.in",
                        "cmake/**", "src/**", "examples/**", "tests/**", "benchmarks/**", "tools/**",
                        "share/**", "third_party/**",
@@ -93,12 +90,13 @@ class XcikitConan(ConanFile):
 
     _cmake = None
 
-    def _check_option(self, prereq, option=None):
-        """ Check <prereq. option> and <system option> fields from `requirements.csv`"""
-        return (
-            (not prereq or self.options.get_safe(prereq)) and  # check prerequisite
-            (not option or not self.options.get_safe(option))  # not using system lib
-        )
+    def _check_prereq(self, prereq):
+        if not prereq:
+            return True
+        for p in prereq:
+            if self.options.get_safe(p):
+                return True
+        return False
 
     def config_options(self):
         if self.settings.os != "Linux":
@@ -107,35 +105,30 @@ class XcikitConan(ConanFile):
             del self.options["vulkan-loader"].with_wsi_wayland
             del self.options["vulkan-loader"].with_wsi_directfb
 
+    def _requirements(self):
+        for name, info in self.conan_data["requirements"].items():
+            info['name'] = name
+            info['option'] = f"system_{name}" if 'conan' in info else f"with_{name}"
+            info.setdefault('prereq', [])
+            yield info
+
     def configure(self):
         if not self.options.graphics:
             del self.options.text
             del self.options.widgets
         elif not self.options.text:
             del self.options.widgets
-        for _, _, _, _, prereq, option in self._requirements_csv():
-            if not self._check_option(prereq):
-                self.options.remove(option)
-
-    def _requirements_csv(self):
-        script_dir = Path(__file__).parent
-        with open(script_dir.joinpath('requirements.csv'), newline='') as csvfile:
-            reader = csv.reader(csvfile, delimiter=',', quotechar='"')
-            for row in reader:
-                if row[0].strip()[0] in '<#':
-                    continue  # header or comment
-                row = [x.strip() for x in row]
-                yield row
+        for info in self._requirements():
+            if not self._check_prereq(info['prereq']):
+                self.options.remove(info['option'])
 
     def requirements(self):
-        for br, _, _, ref, prereq, system in self._requirements_csv():
-            if ref and br == 'run' and self._check_option(prereq, system):
-                self.requires(ref)
-
-    def build_requirements(self):
-        for br, _, _, ref, prereq, system in self._requirements_csv():
-            if ref and br == 'build' and self._check_option(prereq, system):
-                self.build_requires(ref)
+        for info in self._requirements():
+            # Skip requirement if:
+            # - `system_<lib>` is True
+            # - `system_<lib>` option doesn't exist (prereq not satisfied)
+            if not self.options.get_safe(info['option'], default=True):
+                self.requires(info['conan'])
 
     def _set_cmake_defs(self, defs):
         if self.package_folder:

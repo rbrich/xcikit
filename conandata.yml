@@ -1,0 +1,67 @@
+# Run detect_system_deps.py to detect dependencies preinstalled in system.
+# conanfile.py accepts options in format `system_<req_name>` or `with_<req_name>`.
+#
+# The `system_<req_name>` option allows choosing between preinstalled dependency
+# and a dependency that needs to be installed from ConanCenter.
+#
+# The `with_<req_name>` option enables/disables the system dependency.
+# This doesn't allow installing the dependency from ConanCenter.
+# Currently, only "hyperscan" is such an option.
+
+requirements:
+  fmt:
+    cmake: "fmt/8.0.0"
+    conan: "fmt/8.0.1"
+  range_v3:
+    cmake: "range-v3/0.11.0"
+    conan: "range-v3/0.11.0"
+  pegtl:
+    cmake: "pegtl/3.2.0"
+    conan: "taocpp-pegtl/3.2.1"
+  magic_enum:
+    cmake: "magic_enum/0.7.3"
+    conan: "magic_enum/0.7.3"
+  zlib:
+    cmake: "ZLIB/"
+    conan: "zlib/1.2.11"
+    prereq:
+      - data
+  glfw:
+    cmake: "glfw3/3.3.0"
+    conan: "glfw/3.3.5"
+    prereq:
+      - graphics
+  vulkan:
+    cmake: "Vulkan/"
+    conan: "vulkan-loader/1.2.190"
+    prereq:
+      - graphics
+  freetype:
+    cmake: "Freetype/2.10.0"
+    conan: "freetype/2.10.4"
+    prereq:
+      - text
+  harfbuzz:
+    cmake: "harfbuzz/"
+    conan: "harfbuzz/3.1.1"
+    prereq:
+      - text
+  hyperscan:
+    cmake: "Hyperscan/"
+    prereq:
+      - tools
+  boost:
+    cmake: "Boost/1.75.0"
+    conan: "pfr/2.0.2"
+    prereq:
+      - data
+  catch2:
+    cmake: "Catch2/"
+    conan: "catch2/2.13.7"
+    prereq:
+      - tests
+  benchmark:
+    cmake: "benchmark/1.5.0"
+    conan: "benchmark/1.6.0"
+    prereq:
+      - benchmarks
