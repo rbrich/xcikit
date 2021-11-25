@@ -401,7 +401,7 @@ static void print_path_with_attrs(const std::string& name, const FileTree::PathN
     if (S_ISLNK(st.st_mode)) {
         std::string target;
         if (!path.readlink(target)) {
-            fmt::print(stderr,"ff: readlink({}): {}\n", path.file_path(), errno_str());
+            fmt::print(stderr,"ff: readlink({}): {}\n", path.file_path(), error_str());
             return;
         }
         fmt::print(std::cout, " -> {}", target);
@@ -538,7 +538,7 @@ public:
         int fd = path.open();
         if (fd == -1) {
             if (errno != ELOOP)  // O_NOFOLLOW -> it's a symlink
-                fmt::print(stderr,"ff: open({}): {}\n", path.file_path(), errno_str());
+                fmt::print(stderr,"ff: open({}): {}\n", path.file_path(), error_str());
             return {false};
         }
 
@@ -566,7 +566,7 @@ public:
             // Blocking read - not optimal
             auto size = ::read(fd, buffers[current_buffer], bufsize);
             if (size == -1) {
-                fmt::print(stderr,"ff: read({}): {}\n", path.file_path(), errno_str());
+                fmt::print(stderr,"ff: read({}): {}\n", path.file_path(), error_str());
                 ::close(fd);
                 hs_close_stream(hs_stream, scratch, nullptr, nullptr);
                 return {false};
@@ -838,7 +838,7 @@ int main(int argc, const char* argv[])
                     if (single_device) {
                         struct stat st;
                         if (!path.stat(st)) {
-                            fmt::print(stderr,"ff: stat({}): {}\n", path.file_path(), errno_str());
+                            fmt::print(stderr,"ff: stat({}): {}\n", path.file_path(), error_str());
                             return descend;
                         }
                         if (path.is_input()) {
@@ -899,7 +899,7 @@ int main(int argc, const char* argv[])
                 if (long_form || type_mask || size_from || size_to) {
                     // need stat
                     if (!path.stat(st)) {
-                        fmt::print(stderr,"ff: stat({}): {}\n", path.file_path(), errno_str());
+                        fmt::print(stderr,"ff: stat({}): {}\n", path.file_path(), error_str());
                         return descend;
                     }
                     counters.total_size.fetch_add(st.st_size, std::memory_order_relaxed);
@@ -997,13 +997,13 @@ int main(int argc, const char* argv[])
                 return descend;
             }
             case FileTree::OpenError:
-                fmt::print(stderr,"ff: open({}): {}\n", path.file_path(), errno_str());
+                fmt::print(stderr,"ff: open({}): {}\n", path.file_path(), error_str());
                 return true;
             case FileTree::OpenDirError:
-                fmt::print(stderr,"ff: opendir({}): {}\n", path.file_path(), errno_str());
+                fmt::print(stderr,"ff: opendir({}): {}\n", path.file_path(), error_str());
                 return true;
             case FileTree::ReadDirError:
-                fmt::print(stderr,"ff: readdir({}): {}\n", path.file_path(), errno_str());
+                fmt::print(stderr,"ff: readdir({}): {}\n", path.file_path(), error_str());
                 return true;
         }
         UNREACHABLE;

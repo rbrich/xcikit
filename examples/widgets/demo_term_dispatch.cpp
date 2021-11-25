@@ -125,6 +125,5 @@ int main(int argc, const char* argv[])
     window.display();
 
     dispatch.terminate();
-    pclose(f);
     return EXIT_SUCCESS;
 }

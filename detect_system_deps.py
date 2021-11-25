@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 import sys
+import yaml
+import tempfile
+import textwrap
 from pathlib import Path
+from subprocess import run, DEVNULL
 
 script_dir = Path(__file__).parent
 
@@ -24,30 +28,22 @@ def parse_args():
 
 
 def requirements():
-    import csv
-    with open(script_dir.joinpath('requirements.csv'), newline='') as csvfile:
-        reader = csv.reader(csvfile, delimiter=',', quotechar='"')
-        for row in reader:
-            if row[0].strip()[0] in '<#':
-                continue  # header or comment
-            row = [x.strip() for x in row]
-            yield row
+    with open(script_dir.joinpath('conandata.yml'), newline='') as conandata:
+        return yaml.safe_load(conandata)['requirements']
 
 
 def filtered_requirements(options):
-    for row in requirements():
-        if not row[4] or row[4] in options:
-            yield row
+    for name, info in requirements().items():
+        if 'prereq' not in info or set(info['prereq']).intersection(set(options)):
+            yield name, info
 
 
 def detect_deps(reqs):
-    import tempfile
-    import textwrap
-    from subprocess import run, DEVNULL
+    cmake_name_to_sysopt = {info['cmake'].split('/')[0]
+                            : f"system_{name}" if 'conan' in info else f"with_{name}"
+                            for name, info in reqs}
 
-    name_to_sysopt = {name: opt for _, name, _, _, _, opt in reqs}
-
-    items = ';'.join(f"{name}/{ver}" for _, name, ver, _, _, _ in reqs)
+    items = ';'.join(info['cmake'] for _, info in reqs)
     with tempfile.TemporaryDirectory() as tmp_dir:
         # Convert the path to posix (forward slashes) even on Windows.
         # Paths with backslashes are not supported by CMake.
@@ -87,7 +83,7 @@ def detect_deps(reqs):
             if line.startswith('FOUND '):
                 _, name, version = line.split(' ')
                 print(f"Found: {name} {version}")
-                yield name_to_sysopt[name]
+                yield cmake_name_to_sysopt[name]
 
 
 def main():

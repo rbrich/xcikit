@@ -86,15 +86,15 @@ std::string uid_to_user_name(uid_t uid);
 std::string gid_to_group_name(gid_t gid);
 #endif
 
-/// Calls a variant of strerror(errno) and returns result as a string.
-std::string errno_str();
+/// Returns error message for `errno_`.
+/// Calls a thread-safe variant of strerror.
+std::string error_str(int errno_ = errno);
 
-/// Returns value of GetLastError on Windows, errno elsewhere;
+/// Returns value of GetLastError on Windows, errno elsewhere.
 int last_error();
 
-/// Same as `errno_str`, but on Windows, this version uses GetLastError
-/// to obtain the error code.
-std::string last_error_str();
+/// Returns message for GetLastError on Windows, same as error_str elsewhere.
+std::string last_error_str(int err_ = last_error());
 
 }  // namespace xci::core
 
