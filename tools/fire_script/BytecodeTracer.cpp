@@ -13,11 +13,8 @@
 
 namespace xci::script::tool {
 
-using std::string;
-using std::cin;
 using std::cout;
 using std::endl;
-using std::flush;
 
 
 void BytecodeTracer::setup(bool print_bytecode, bool trace_bytecode)
@@ -65,9 +62,9 @@ void BytecodeTracer::setup(bool print_bytecode, bool trace_bytecode)
             }
             // pause
             for (;;) {
-                cout << "dbg> " << flush;
-                string cmd;
-                getline(cin, cmd);
+                cout << "dbg> " << std::flush;
+                std::string cmd;
+                getline(std::cin, cmd);
                 if (cmd == "n" || cmd.empty()) {
                     break;
                 } else if (cmd == "s") {
