@@ -5,7 +5,7 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Markup.h"
-#include <xci/config.h>
+#include <xci/config.h>  // XCI_DEBUG_MARKUP_DUMP_TOKENS
 #include <xci/core/log.h>
 #include <xci/core/string.h>
 

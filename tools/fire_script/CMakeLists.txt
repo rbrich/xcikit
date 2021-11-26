@@ -16,6 +16,11 @@ target_link_libraries(fire
     range-v3::concepts
 )
 
+target_precompile_headers(fire PRIVATE
+    <fmt/format.h>
+    <fmt/ostream.h>
+    )
+
 if (EMSCRIPTEN)
     target_link_options(fire PRIVATE
         --bind --closure=1 -sMODULARIZE=1 -sEXPORT_NAME=fire_script

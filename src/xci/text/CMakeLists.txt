@@ -24,6 +24,11 @@ add_library(xci-text
     )
 add_library(xcikit::xci-text ALIAS xci-text)
 
+target_precompile_headers(xci-text PRIVATE
+    <fmt/format.h>
+    <fmt/ostream.h>
+    )
+
 target_include_directories(xci-text
     PUBLIC
         ${XCI_INCLUDE_DIRS}

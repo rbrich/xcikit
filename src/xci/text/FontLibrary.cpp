@@ -8,8 +8,6 @@
 #include "FontFace.h"
 #include <xci/core/log.h>
 
-#include <fmt/core.h>
-
 #include <ft2build.h>
 #include FT_FREETYPE_H
 

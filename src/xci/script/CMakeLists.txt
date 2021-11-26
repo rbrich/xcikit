@@ -30,6 +30,11 @@ add_library(xci-script
     dump.cpp)
 add_library(xcikit::xci-script ALIAS xci-script)
 
+target_precompile_headers(xci-script PRIVATE
+    <fmt/format.h>
+    <fmt/ostream.h>
+    )
+
 target_link_libraries(xci-script
     PUBLIC
         xci-core
