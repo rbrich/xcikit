@@ -6,7 +6,6 @@
 
 #include "log.h"
 #include <xci/core/sys.h>
-#include <xci/core/file.h>
 
 
 namespace xci::core {

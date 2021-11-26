@@ -20,6 +20,8 @@ add_library(xci-core
     )
 add_library(xcikit::xci-core ALIAS xci-core)
 
+target_precompile_headers(xci-core PRIVATE <fmt/format.h>)
+
 if (NOT WIN32)
     target_sources(xci-core PRIVATE
         FileTree.cpp
