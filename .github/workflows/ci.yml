@@ -22,7 +22,7 @@ jobs:
           name: "GCC 10 / Debug ASAN"
           cc: gcc-10
           cxx: g++-10
-          build_args: "--debug -DBUILD_WITH_ASAN=1 -DBUILD_WITH_UBSAN=1"
+          build_args: "--debug --asan --ubsan"
         - os: ubuntu-20.04
           name: "GCC 10 / MinSizeRel Unity"
           cc: gcc-10

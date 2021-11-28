@@ -31,6 +31,7 @@ print_usage()
     echo "      --devel                 Install/package headers, CMake config, static libs."
     echo "      --emscripten            Target Emscripten (i.e. wrap with 'emcmake')"
     echo "      --unity                 CMAKE_UNITY_BUILD - batch all source files in each target together"
+    echo "      --asan, --ubsan, --tsan Build with sanitizers (Address, UB, Thread)"
     echo "      --tidy                  Run clang-tidy on each compiled file"
     echo "      --update                Passed to conan - update dependencies"
     echo "      --profile, -pr PROFILE  Passed to conan - use the profile"
@@ -116,6 +117,15 @@ while [[ $# -gt 0 ]] ; do
             # sure a unity build works. It might not be best for speed or memory
             # consumption, but seems not worse then smaller batches in my tests.
             CMAKE_ARGS+=(-D'CMAKE_UNITY_BUILD=1' -D'CMAKE_UNITY_BUILD_BATCH_SIZE=0')
+            shift 1 ;;
+        --asan )
+            CMAKE_ARGS+=(-D'BUILD_WITH_ASAN=1')
+            shift 1 ;;
+        --ubsan )
+            CMAKE_ARGS+=(-D'BUILD_WITH_UBSAN=1')
+            shift 1 ;;
+        --tsan )
+            CMAKE_ARGS+=(-D'BUILD_WITH_TSAN=1')
             shift 1 ;;
         --tidy )
             CMAKE_ARGS+=(-D'ENABLE_TIDY=1')
