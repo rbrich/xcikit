@@ -12,9 +12,12 @@ else()
     set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
 endif()
 
+if (EXISTS ${CMAKE_BINARY_DIR}/conan_paths.cmake)
+    include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
+endif()
+
 list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_BINARY_DIR})
 find_package(xcikit CONFIG REQUIRED)
-find_package(fmt REQUIRED)
 
 add_executable(example example.cpp)
 target_link_libraries(example xcikit::xci-core)

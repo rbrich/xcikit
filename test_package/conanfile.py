@@ -5,7 +5,7 @@ from conans import ConanFile, CMake, tools
 
 class XcikitTestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
-    generators = ("CMakeToolchain", "CMakeDeps")
+    generators = ("cmake_paths",)
 
     def build(self):
         cmake = CMake(self)

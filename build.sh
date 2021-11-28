@@ -166,6 +166,9 @@ PACKAGE_FILENAME="xcikit-${VERSION}-${PLATFORM}-${ARCH}"
 [[ ${BUILD_TYPE} != "Release" ]] && PACKAGE_FILENAME="${PACKAGE_FILENAME}-${BUILD_TYPE}"
 
 CONAN_ARGS+=("-pr=$CONAN_PROFILE" "-pr:b=$CONAN_PROFILE")
+for name in "${DETECT_ARGS[@]}" ; do
+    CONAN_ARGS+=(-o "xcikit:${name}=True")
+done
 if [[ -z "$component_default" && -z "$component_all" ]]; then
     # Disable components that were not selected
     for name in data script graphics text widgets ; do

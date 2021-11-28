@@ -9,14 +9,14 @@ project(xcikit
 
 # Optional libraries (only xci-core is required)
 include(CMakeDependentOption)
-option(XCI_DATA "Enable component: xci-data" ON)
-cmake_dependent_option(XCI_SCRIPT "Enable component: xci-script" ON
-    "XCI_DATA" OFF)
-option(XCI_GRAPHICS "Enable component: xci-graphics (requires Vulkan and GLFW)" ON)
+option(XCI_WIDGETS "Enable component: xci-widgets" ON)
+option(XCI_SCRIPT "Enable component: xci-script" ON)
 cmake_dependent_option(XCI_TEXT "Enable component: xci-text" ON
-    "XCI_GRAPHICS" OFF)
-cmake_dependent_option(XCI_WIDGETS "Enable component: xci-widgets" ON
-    "XCI_GRAPHICS;XCI_TEXT" OFF)
+    "NOT XCI_WIDGETS" ON)
+cmake_dependent_option(XCI_GRAPHICS "Enable component: xci-graphics (requires Vulkan and GLFW)" ON
+    "NOT XCI_TEXT" ON)
+cmake_dependent_option(XCI_DATA "Enable component: xci-data" ON
+    "NOT XCI_SCRIPT" ON)
 
 # Libraries are always built. The rest is optional:
 option(BUILD_TOOLS "Disable to skip building tools." ON)
@@ -102,7 +102,7 @@ endif()
 # Google Benchmark
 if (BUILD_BENCHMARKS)
     find_package(benchmark)
-endif ()
+endif()
 
 # Doxygen
 find_package(Doxygen)

@@ -28,6 +28,10 @@ if (CONAN_INSTALL)
             set(${CONAN_VAL} False)
         endif()
     endmacro()
+    opt_to_conan(BUILD_TOOLS OPT_TOOLS)
+    opt_to_conan(BUILD_EXAMPLES OPT_EXAMPLES)
+    opt_to_conan(BUILD_TESTING OPT_TESTS)
+    opt_to_conan(BUILD_BENCHMARKS OPT_BENCHMARKS)
     opt_to_conan(XCI_DATA OPT_DATA)
     opt_to_conan(XCI_SCRIPT OPT_SCRIPT)
     opt_to_conan(XCI_GRAPHICS OPT_GRAPHICS)
@@ -42,6 +46,10 @@ if (CONAN_INSTALL)
         SETTINGS
             build_type=${CMAKE_BUILD_TYPE}
         OPTIONS
+            xcikit:tools=${OPT_TOOLS}
+            xcikit:examples=${OPT_EXAMPLES}
+            xcikit:tests=${OPT_TESTS}
+            xcikit:benchmarks=${OPT_BENCHMARKS}
             xcikit:data=${OPT_DATA}
             xcikit:script=${OPT_SCRIPT}
             xcikit:graphics=${OPT_GRAPHICS}
