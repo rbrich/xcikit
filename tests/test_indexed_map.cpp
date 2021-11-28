@@ -44,8 +44,15 @@ TEST_CASE( "Sparse indexed map", "[IndexedMap]" )
     CHECK(idx1.index == idx1b.index);
     CHECK(idx1.tenant != idx1b.tenant);
     CHECK(!map.remove(idx1)); // invalid weak index
+    CHECK(map.size() == 4);
 
-    map.clear();
+    // Moving invalidates (clears) original map
+    IndexedMap<std::string> map2 = std::move(map);
     CHECK(map.empty());
     CHECK(map.capacity() == 0);
+    CHECK(map2.size() == 4);
+
+    map2.clear();
+    CHECK(map2.empty());
+    CHECK(map2.capacity() == 0);
 }

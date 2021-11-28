@@ -7,6 +7,7 @@
 #ifndef XCI_CORE_INDEXED_MAP_H
 #define XCI_CORE_INDEXED_MAP_H
 
+#include <xci/core/mixin.h>
 #include <vector>
 #include <cassert>
 #include <cstring>
@@ -34,7 +35,7 @@ namespace xci::core {
 /// \tparam T   the element type
 
 template < class T >
-class IndexedMap {
+class IndexedMap: private NonCopyable {
 public:
 
     using value_type = T;
@@ -75,6 +76,12 @@ private:
     static constexpr size_t chunk_size = 64;
 
 public:
+
+    IndexedMap() = default;
+    IndexedMap(IndexedMap&& other) noexcept;
+    ~IndexedMap() { destroy_chunks(); }
+
+    IndexedMap& operator=(IndexedMap&& other) noexcept;
 
     bool operator==(const IndexedMap& other) const;
     bool operator!=(const IndexedMap& other) const { return !(*this == other); }
@@ -188,6 +195,7 @@ public:
 private:
     Slot* allocate_slots();
     void free_slots(Slot* slot);
+    void destroy_chunks();  // deallocate all chunks
 
     Slot& acquire_slot(Index& index);
 
@@ -199,6 +207,30 @@ private:
 
 // ----------------------------------------------------------------------------
 // Implementation details
+
+
+template<class T>
+IndexedMap<T>::IndexedMap(IndexedMap&& other) noexcept
+    : m_chunk(std::move(other.m_chunk)),
+      m_size(other.m_size),
+      m_free_chunk(other.m_free_chunk)
+{
+    if (&other == this)
+        return;
+    assert(other.m_chunk.empty());
+    other.m_size = 0;
+    other.m_free_chunk = no_index;
+}
+
+
+template<class T>
+IndexedMap<T>& IndexedMap<T>::operator=(IndexedMap&& other) noexcept
+{
+    std::swap(m_chunk, other.m_chunk);
+    std::swap(m_size, other.m_size);
+    std::swap(m_free_chunk, other.m_free_chunk);
+    return *this;
+}
 
 
 template<class T>
@@ -219,13 +251,7 @@ auto IndexedMap<T>::capacity() const noexcept -> size_type
 template<class T>
 void IndexedMap<T>::clear() noexcept
 {
-    for (Chunk chunk : m_chunk) {
-        for (Slot* slot = chunk.slot; slot != chunk.slot + chunk_size; ++slot) {
-            if (slot->tenant != empty_slot)
-                std::destroy_at(&slot->elem);
-        }
-        free_slots(chunk.slot);
-    }
+    destroy_chunks();
     m_chunk.clear();
     m_size = 0;
     m_free_chunk = no_index;
@@ -356,6 +382,19 @@ template<class T>
 void IndexedMap<T>::free_slots(Slot* slot)
 {
     ::operator delete(slot, chunk_size * sizeof(Slot), std::align_val_t(alignof(Slot)));
+}
+
+
+template<class T>
+void IndexedMap<T>::destroy_chunks()
+{
+    for (Chunk chunk : m_chunk) {
+        for (Slot* slot = chunk.slot; slot != chunk.slot + chunk_size; ++slot) {
+            if (slot->tenant != empty_slot)
+                std::destroy_at(&slot->elem);
+        }
+        free_slots(chunk.slot);
+    }
 }
 
 
