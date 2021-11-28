@@ -9,6 +9,7 @@
 
 #include <vector>
 #include <cassert>
+#include <cstring>
 
 namespace xci::core {
 
