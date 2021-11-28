@@ -129,6 +129,9 @@ class XcikitConan(ConanFile):
         for info in self._requirements():
             if not self._check_prereq(info['prereq']):
                 self.options.remove(info['option'])
+        if self.settings.os == "Emscripten":
+            # These are imported from Emscripten Ports
+            del self.options.system_zlib
 
     def requirements(self):
         for info in self._requirements():
@@ -179,7 +182,10 @@ class XcikitConan(ConanFile):
         cmake.test()
 
     def _add_dep(self, opt: str, component: conans.model.build_info.Component, cmake_dep: str):
-        if self.options.get_safe(opt, False):
+        opt_val = self.options.get_safe(opt)
+        if opt_val is None:  # system option deleted
+            return
+        if opt_val:
             component.system_libs = [cmake_dep]
         else:
             component.requires += [cmake_dep]

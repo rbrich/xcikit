@@ -2,7 +2,9 @@
 # Dependencies #
 # ------------ #
 
-find_package(ZLIB REQUIRED)
+if (NOT EMSCRIPTEN)
+    find_package(ZLIB REQUIRED)
+endif()
 
 # Prefer Boost, which may be preinstalled in system
 # Fallback to PFR from Conan
@@ -28,12 +30,17 @@ add_library(xci-data
 add_library(xcikit::xci-data ALIAS xci-data)
 
 target_link_libraries(xci-data
-    PRIVATE
-        ZLIB::ZLIB
     PUBLIC
         pfr::pfr
         magic_enum::magic_enum
     )
+
+if (EMSCRIPTEN)
+    target_compile_options(xci-data PUBLIC -sUSE_ZLIB=1)
+    target_link_options(xci-data PUBLIC -sUSE_ZLIB=1)
+else()
+    target_link_libraries(xci-data PRIVATE ZLIB::ZLIB)
+endif()
 
 target_include_directories(xci-data
     PUBLIC

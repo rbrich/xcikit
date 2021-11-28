@@ -38,7 +38,7 @@ jobs:
     parameters:
       build-args:
         type: string
-        default: "--emscripten core script"
+        default: "--emscripten core data script"
     steps:
       - checkout
       - run:

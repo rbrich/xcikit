@@ -7,6 +7,8 @@ project(xcikit
     VERSION "${XCI_VERSION}"
     LANGUAGES CXX)
 
+include(CTest)
+
 # Optional libraries (only xci-core is required)
 include(CMakeDependentOption)
 option(XCI_WIDGETS "Enable component: xci-widgets" ON)
@@ -70,7 +72,6 @@ set(CMAKE_FIND_PACKAGE_PREFER_CONFIG ON)
 
 include(XciBuildOptions)
 include(ConanInit)
-include(CTest)
 
 
 # ------------ #
