@@ -137,10 +137,10 @@ class XcikitConan(ConanFile):
         defs["XCI_GRAPHICS"] = self.options.graphics
         defs["XCI_TEXT"] = self.options.get_safe('text', False)
         defs["XCI_WIDGETS"] = self.options.get_safe('widgets', False)
-        defs["XCI_BUILD_TOOLS"] = self.options.tools
-        defs["XCI_BUILD_EXAMPLES"] = self.options.examples
-        defs["XCI_BUILD_TESTS"] = self.options.tests
-        defs["XCI_BUILD_BENCHMARKS"] = self.options.benchmarks
+        defs["BUILD_TOOLS"] = self.options.tools
+        defs["BUILD_EXAMPLES"] = self.options.examples
+        defs["BUILD_TESTING"] = self.options.tests
+        defs["BUILD_BENCHMARKS"] = self.options.benchmarks
         defs["XCI_WITH_HYPERSCAN"] = self.options.get_safe('with_hyperscan', False)
 
     def _configure_cmake(self):

@@ -61,7 +61,7 @@ TEST_CASE( "LEB128", "[coding]" )
         auto* iter = buffer;
         leb128_encode(iter, v_in, skip_bits);
         auto b_in = iter - buffer;
-        CHECK(b_in == std::max(1u, (v_bits + skip_bits + 6) / 7));
+        CHECK(unsigned(b_in) == std::max(1u, (v_bits + skip_bits + 6u) / 7u));
         CHECK((buffer[0] & std::byte(0xFF << (8-skip_bits))) == check);  // skipped bits untouched
         iter = buffer;
         auto v_out = leb128_decode<uint64_t>(iter, skip_bits);

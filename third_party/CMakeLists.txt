@@ -5,7 +5,7 @@ if (XCI_TEXT)
     add_subdirectory(rbp)
 endif()
 
-if (XCI_BUILD_EXAMPLES AND NOT WIN32 AND NOT EMSCRIPTEN)
+if (BUILD_EXAMPLES AND NOT WIN32 AND NOT EMSCRIPTEN)
     find_path(incbin_INCLUDE_DIR
         NAMES incbin.h
         PATHS ${CMAKE_CURRENT_SOURCE_DIR}/incbin)

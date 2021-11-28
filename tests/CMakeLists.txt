@@ -2,7 +2,6 @@
 # Catch2 helpers #
 # -------------- #
 
-include(CTest)
 include(Catch)
 
 add_library(catch_main STATIC catch_main.cpp)

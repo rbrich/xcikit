@@ -217,7 +217,7 @@ mkdir -p "${BUILD_DIR}"
 
 if phase deps; then
     header "Install Dependencies"
-    if [[ -n "${MACOSX_DEPLOYMENT_TARGET}" ]]; then
+    if [[ "${PLATFORM}" == macos* && -n "${MACOSX_DEPLOYMENT_TARGET}" ]]; then
         CONAN_ARGS+=(-s "os.version=${MACOSX_DEPLOYMENT_TARGET}")
     fi
     (
