@@ -1,6 +1,6 @@
 # CI builder with Emscripten (DockerHub public image)
 #   docker build --build-arg UID=$(id -u) -t rbrich/xcikit-emscripten . -f docker/emscripten/Dockerfile
-#   docker run --rm -v $PWD:/xcikit -w /xcikit -it rbrich/xcikit-emscripten bash
+#   docker run --rm -v $PWD:/xcikit -w /xcikit -it rbrich/xcikit-emscripten
 # CMake arguments (for Clion IDE):
 #   -DCMAKE_TOOLCHAIN_FILE=/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake
 #   -DFORCE_COLORS=1 -DCONAN_INSTALL=1 -DXCI_WIDGETS=0 -DXCI_TEXT=0 -DXCI_GRAPHICS=0
@@ -26,3 +26,9 @@ ENV XCIKIT=$CONAN_USER_HOME/xcikit
 COPY --chown=builder build.sh detect_system_deps.py conanfile.py conandata.yml VERSION $XCIKIT/
 RUN $XCIKIT/build.sh deps --emscripten script
 RUN $XCIKIT/build.sh deps --emscripten script --debug
+
+# Preinstall Emscripten ports (it has no explicit install command, workaround...)
+RUN echo "int main(){}" > ~/dummy.c
+RUN cd ; emcc -s USE_ZLIB=1 dummy.c -o dummy.out && rm dummy.*
+
+CMD ./build.sh --emscripten script
