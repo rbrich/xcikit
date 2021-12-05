@@ -42,7 +42,7 @@ General chunk format: `<TYPE:4><KEY/SUBTYPE:4>[<LEN:var>][<VALUE>]`
     - 7 = Int64, VALUE is 8 bytes, signed, two's complement format
     - 8 = Float32, VALUE is 4 bytes, IEEE 754 format
     - 9 = Float64, VALUE is 8 bytes, IEEE 754 format
-    - 10 = Varint, has LEN, signed 1-N bytes (this is different from encoding of LEN)
+    - 10 = VarInt, has LEN, signed 1-N bytes (this is different from encoding of LEN)
     - 11 = Array, has LEN, VALUE contains SUBTYPE, see below
     - 12 = String, has LEN, contains UTF-8 string (not zero-terminated)
     - 13 = Binary Data, has LEN, contains arbitrary data
