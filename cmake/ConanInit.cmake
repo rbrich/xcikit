@@ -58,3 +58,13 @@ if (CONAN_INSTALL)
             ${CONAN_OPTIONS}
         BUILD missing)
 endif()
+
+# Enable lookup for Conan dependencies
+
+# cmake_paths
+if (EXISTS ${CMAKE_BINARY_DIR}/conan_paths.cmake)
+    include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
+endif()
+
+# cmake_find_package_multi
+list(APPEND CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})

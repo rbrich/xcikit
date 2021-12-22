@@ -83,7 +83,7 @@ class XcikitConan(ConanFile):
         "vulkan-loader:with_wsi_directfb": False,
     }
 
-    generators = ("cmake_find_package_multi",)
+    generators = ("cmake_find_package_multi", "cmake_paths")
     exports = ("VERSION",)
     exports_sources = ("CMakeLists.txt", "config.h.in", "xcikit-config.cmake.in",
                        "cmake/**", "src/**", "examples/**", "tests/**", "benchmarks/**", "tools/**",
