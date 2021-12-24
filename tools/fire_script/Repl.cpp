@@ -22,27 +22,18 @@ namespace xci::script::tool {
 using std::endl;
 
 
-bool Repl::evaluate(std::string module_name, std::string module_source, EvalMode mode)
+bool Repl::evaluate(const std::string& module_name, std::string module_source, EvalMode mode)
 {
     core::TermCtl& t = m_ctx.term_out;
     auto& source_manager = m_ctx.interpreter.source_manager();
     auto& parser = m_ctx.interpreter.parser();
     auto& compiler = m_ctx.interpreter.compiler();
-    auto& machine = m_ctx.interpreter.machine();
 
     m_ctx.interpreter.configure(m_opts.compiler_flags);
 
     auto src_id = source_manager.add_source(module_name, std::move(module_source));
 
     try {
-        if (m_opts.with_std_lib && !m_ctx.std_module) {
-            const char* path = "script/std.fire";
-            auto f = m_vfs.read_file(path);
-            auto content = f.content();
-            auto file_id = source_manager.add_source(path, content->string());
-            m_ctx.std_module = m_ctx.interpreter.build_module("std", file_id);
-        }
-
         // parse
         ast::Module ast;
         parser.parse(src_id, ast);
@@ -52,55 +43,92 @@ bool Repl::evaluate(std::string module_name, std::string module_source, EvalMode
         }
 
         // create new module for the input
-        auto module = std::make_unique<Module>(module_name);
-        module->add_imported_module(BuiltinModule::static_instance());
-        if (m_ctx.std_module)
-            module->add_imported_module(*m_ctx.std_module);
-        for (auto& m : m_ctx.input_modules)
-            module->add_imported_module(*m);
+        auto module = prepare_module(module_name);
 
         // add main function to the module
         auto fn_idx = module->add_function(Function{*module, module->symtab()}).index;
+        assert(fn_idx == 0);
         auto& fn = module->get_function(fn_idx);
 
         // compile
         bool is_compiled = compiler.compile(fn, ast);
+        if (!is_compiled) {
+            // We're only processing the AST, without actual compilation
+            mode = EvalMode::Preprocess;
+        }
 
         // print AST with Compiler modifications
         if (m_opts.print_ast) {
             t.stream() << "Processed AST:" << endl << dump_tree << ast << endl;
         }
 
-        // print symbol table
-        if (m_opts.print_symtab) {
-            t.stream() << "Symbol table:" << endl << module->symtab() << endl;
-        }
+        bool res = evaluate_module(*module, mode);
 
-        // print compiled module content
-        if (m_opts.print_module || m_opts.print_module_verbose || m_opts.print_module_verbose_ast) {
-            auto s = t.stream();
-            if (m_opts.print_module_verbose)
-                s << dump_module_verbose;
-            if (m_opts.print_module_verbose_ast)
-                s << dump_module_verbose << dump_tree;
-            s << "Module content:" << endl << *module << endl;
-        }
-
-        // Only requested to compile
-        if (mode == EvalMode::Compile) {
-            assert(is_compiled);
+        if (mode == EvalMode::Compile || mode == EvalMode::Repl)
             m_ctx.input_modules.push_back(move(module));
-            return true;
+
+        return res;
+    } catch (const ScriptError& e) {
+        print_error(e);
+        return false;
+    }
+}
+
+
+std::unique_ptr<Module> Repl::prepare_module(const std::string& module_name)
+{
+    auto module = std::make_unique<Module>(module_name);
+    module->add_imported_module(BuiltinModule::static_instance());
+
+    if (m_opts.with_std_lib) {
+        if (!m_ctx.std_module) {
+            const char* path = "script/std.fire";
+            auto f = m_vfs.read_file(path);
+            auto content = f.content();
+            auto& source_manager = m_ctx.interpreter.source_manager();
+            auto file_id = source_manager.add_source(path, content->string());
+            m_ctx.std_module = m_ctx.interpreter.build_module("std", file_id);
         }
+        module->add_imported_module(*m_ctx.std_module);
+    }
 
-        // Stop if we were only processing the AST, without actual compilation
-        if (!is_compiled)
-            return true;
+    for (auto& m : m_ctx.input_modules)
+        module->add_imported_module(*m);
 
-        BytecodeTracer tracer(machine, t);
-        tracer.setup(m_opts.print_bytecode, m_opts.trace_bytecode);
+    return module;
+}
 
-        machine.call(fn, [&](TypedValue&& invoked) {
+
+bool Repl::evaluate_module(Module& module, EvalMode mode)
+{
+    core::TermCtl& t = m_ctx.term_out;
+    auto& machine = m_ctx.interpreter.machine();
+
+    // print symbol table
+    if (m_opts.print_symtab) {
+        t.stream() << "Symbol table:" << endl << module.symtab() << endl;
+    }
+
+    // print compiled module content
+    if (m_opts.print_module || m_opts.print_module_verbose || m_opts.print_module_verbose_ast) {
+        auto s = t.stream();
+        if (m_opts.print_module_verbose)
+            s << dump_module_verbose;
+        if (m_opts.print_module_verbose_ast)
+            s << dump_module_verbose << dump_tree;
+        s << "Module content:" << endl << module << endl;
+    }
+
+    if (mode == EvalMode::Preprocess || mode == EvalMode::Compile)
+        return true;
+
+    BytecodeTracer tracer(machine, t);
+    tracer.setup(m_opts.print_bytecode, m_opts.trace_bytecode);
+
+    try {
+        constexpr unsigned int main_fn_idx = 0;
+        auto& main_fn = module.get_function(main_fn_idx);
+        machine.call(main_fn, [&](TypedValue&& invoked) {
             if (!invoked.is_void()) {
                 t.sanitize_newline();
                 t.print("{t:bold}{fg:yellow}{}{t:normal}\n", invoked);
@@ -110,17 +138,17 @@ bool Repl::evaluate(std::string module_name, std::string module_source, EvalMode
         t.sanitize_newline();
 
         // returned value of last statement
-        auto result = machine.stack().pull_typed(fn.effective_return_type());
+        auto result = machine.stack().pull_typed(main_fn.effective_return_type());
         if (mode == EvalMode::Repl) {
             // REPL mode
+            const auto& module_name = module.name();
             if (!result.is_void()) {
                 t.print("{t:bold}{fg:magenta}{}:{} = {fg:default}{}{t:normal}\n",
                         module_name, result.type_info(), result);
             }
-            // add symbol for main function so it will be visible by following input,
+            // add symbol for main function, so it will be visible by following input,
             // which imports this module
-            module->symtab().add({module_name, Symbol::Function, fn_idx});
-            m_ctx.input_modules.push_back(move(module));
+            module.symtab().add({module_name, Symbol::Function, main_fn_idx});
         } else {
             // single input mode
             assert(mode == EvalMode::SingleInput);
@@ -131,14 +159,22 @@ bool Repl::evaluate(std::string module_name, std::string module_source, EvalMode
         result.decref();
         return true;
     } catch (const ScriptError& e) {
-        if (!e.file().empty())
-            t.stream() << e.file() << ": ";
-        t.stream() << t.red().bold() << "Error: " << e.what() << t.normal();
-        if (!e.detail().empty())
-            t.stream() << endl << t.magenta() << e.detail() << t.normal();
-        t.stream() << endl;
+        print_error(e);
         return false;
     }
+}
+
+
+void Repl::print_error(const ScriptError& e)
+{
+    core::TermCtl& t = m_ctx.term_out;
+
+    if (!e.file().empty())
+        t.stream() << e.file() << ": ";
+    t.stream() << t.red().bold() << "Error: " << e.what() << t.normal();
+    if (!e.detail().empty())
+        t.stream() << endl << t.magenta() << e.detail() << t.normal();
+    t.stream() << endl;
 }
 
 

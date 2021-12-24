@@ -4,18 +4,17 @@
 // Copyright 2020 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
+/// Data Inspector (dati) command line tool
+/// Parses binary data files and shows their content in generic fashion,
+/// with numeric tags and non-blob types converted to human-readable presentation.
+
 #include <xci/core/ArgParser.h>
 #include <xci/data/BinaryBase.h>
 #include <xci/data/BinaryReader.h>
 #include <xci/core/TermCtl.h>
 #include <xci/core/string.h>
-#include <xci/compat/macros.h>
 
 #include <fstream>
-
-/// Data Inspector (dati) command line tool
-/// Parses binary data files and shows their content in generic fashion,
-/// with numeric tags and non-blob types converted to human-readable presentation.
 
 using namespace xci::core;
 using namespace xci::core::argparser;

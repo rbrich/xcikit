@@ -34,19 +34,34 @@ void Program::process_args(char* argv[])
     opts.parse(argv);
 
     if (opts.prog_opts.expr) {
-        if (!repl.evaluate("<input>", opts.prog_opts.expr, EvalMode::SingleInput))
+        if (!repl.evaluate("<input>", opts.prog_opts.expr,
+                EvalMode::SingleInput))
             exit(1);
         exit(0);
     }
 
     if (!opts.prog_opts.input_files.empty()) {
         for (const char* input_file : opts.prog_opts.input_files) {
+            fs::path input_path {input_file};
+            auto module_name = input_path.filename().replace_extension().string();
+            if (input_path.extension() == ".firm") {
+                // Load binary module
+                auto module = std::make_unique<Module>(module_name);
+                if (!module->load_from_file(input_file)) {
+                    std::cerr << "error loading module file: " << input_file << std::endl;
+                    exit(1);
+                }
+
+                repl.evaluate_module(*module,
+                        opts.prog_opts.compile ? EvalMode::Compile : EvalMode::SingleInput);
+                continue;
+            }
+
             auto content = read_text_file(input_file);
             if (!content) {
                 std::cerr << "cannot read file: " << input_file << std::endl;
                 exit(1);
             }
-            auto module_name = fs::path(input_file).filename().replace_extension().string();
             if (!repl.evaluate(module_name, *content,
                     opts.prog_opts.compile ? EvalMode::Compile : EvalMode::SingleInput))
                 exit(1);
