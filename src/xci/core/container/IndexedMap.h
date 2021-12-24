@@ -9,6 +9,7 @@
 
 #include <xci/core/mixin.h>
 #include <vector>
+#include <bit>
 #include <cassert>
 #include <cstring>
 

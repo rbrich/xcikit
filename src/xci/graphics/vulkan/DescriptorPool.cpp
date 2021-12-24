@@ -7,6 +7,7 @@
 #include "DescriptorPool.h"
 #include "VulkanError.h"
 #include <xci/graphics/Renderer.h>
+#include <bit>
 #include <cassert>
 
 

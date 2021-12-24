@@ -8,6 +8,7 @@ BUILD_TYPE="Release"
 INSTALL_DEVEL=0
 GENERATOR=
 EMSCRIPTEN=0
+PRECACHE_DEPS=0
 JOBS_ARGS=()
 CMAKE_ARGS=()
 CONAN_ARGS=()
@@ -35,6 +36,7 @@ print_usage()
     echo "      --tidy                  Run clang-tidy on each compiled file"
     echo "      --update                Passed to conan - update dependencies"
     echo "      --profile, -pr PROFILE  Passed to conan - use the profile"
+    echo "      --precache-deps         Call precache_upstream_deps.py, useful for CI"
     echo "      --build-dir             Build directory (default: ./build/<build-config>)"
     echo "      --install-dir           Installation directory (default: ./artifacts/<build-config>)"
     echo "      --toolchain FILE        CMAKE_TOOLCHAIN_FILE - select build toolchain"
@@ -132,6 +134,9 @@ while [[ $# -gt 0 ]] ; do
             shift 1 ;;
         --update )
             CONAN_ARGS+=('--update')
+            shift 1 ;;
+        --precache-deps )
+            PRECACHE_DEPS=1
             shift 1 ;;
         --build-dir )
             BUILD_DIR="$2"
@@ -232,6 +237,9 @@ if phase deps; then
     header "Install Dependencies"
     if [[ "${PLATFORM}" == macos* && -n "${MACOSX_DEPLOYMENT_TARGET}" ]]; then
         CONAN_ARGS+=(-s "os.version=${MACOSX_DEPLOYMENT_TARGET}")
+    fi
+    if [[ "${PRECACHE_DEPS}" -eq 1 ]]; then
+        "${ROOT_DIR}/precache_upstream_deps.py"
     fi
     (
         run cd "${BUILD_DIR}"
