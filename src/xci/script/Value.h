@@ -253,6 +253,24 @@ public:
     void tuple_foreach(const std::function<void(const Value&)>& cb) const { return get<TupleV>().foreach(cb); }
     const script::Module& get_module() const { return *get<script::Module*>(); }
 
+    // -------------------------------------------------------------------------
+    // Serialization
+
+    template <class Archive>
+    void serialize(Archive& ar) {
+        std::visit([&ar](auto& v) {
+            using T = std::decay_t<decltype(v)>;
+            if constexpr (std::is_same_v<T, std::monostate>) {
+                // Void
+            } else if constexpr (std::is_trivial_v<T>) {
+                ar(v);
+            } else {
+                // String etc.
+                // TODO
+            }
+        }, m_value);
+    }
+
 protected:
     using ValueVariant = std::variant<
             std::monostate,
@@ -590,38 +608,24 @@ public:
 template<class Archive>
 void save(Archive& archive, const TypedValue& value)
 {
-    using namespace value;
-    class ArchiveVisitor : public Visitor {
-    public:
-        ArchiveVisitor(Archive& ar) : ar(ar) {}
-        void visit(void) override { ar(TypeInfo(Type::Void)); }
-        void visit(bool v) override { ar(TypeInfo(Type::Bool), v); }
-        void visit(byte v) override { ar(TypeInfo(Type::Byte), v); }
-        void visit(char32_t v) override { ar(TypeInfo(Type::Char), v); }
-        void visit(uint32_t v) override { ar(TypeInfo(Type::UInt32), v); }
-        void visit(uint64_t v) override { ar(TypeInfo(Type::UInt64), v); }
-        void visit(int32_t v) override { ar(TypeInfo(Type::Int32), v); }
-        void visit(int64_t v) override { ar(TypeInfo(Type::Int64), v); }
-        void visit(float v) override { ar(TypeInfo(Type::Float32), v); }
-        void visit(double v) override { ar(TypeInfo(Type::Float64), v); }
-        void visit(std::string_view&& v) override { ar(TypeInfo(Type::String), v); }
-        void visit(const ListV&) override {  }
-        void visit(const TupleV&) override {  }
-        void visit(const ClosureV&) override {  }
-        void visit(const script::Module*) override {  }
-        void visit(const script::Stream&) override {  }
-    private:
-        Archive& ar;
-    };
-    ArchiveVisitor visitor(archive);
-
-    value.apply(visitor);
+    archive(value.type_info());
+    if (!value.is_void())
+        archive(value.value());
 }
 
 template<class Archive>
 void load(Archive& archive, TypedValue& value)
 {
-    // TODO
+    TypeInfo type_info;
+    archive(type_info);
+
+    if (type_info.is_void()) {
+        value = TypedValue(std::move(type_info));
+    } else {
+        Value pure_value { create_value(type_info) };
+        archive(pure_value);
+        value = TypedValue(std::move(pure_value), std::move(type_info));
+    }
 }
 
 

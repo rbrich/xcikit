@@ -143,12 +143,19 @@ public:
     // Serialization
 
     template <class Archive>
-    void serialize(Archive& ar) {
+    void save(Archive& ar) const {
         ar(m_type);
         if (is_unknown())
             ar(generic_var());
         if (is_callable())
             ar(signature());
+        // TODO: subtypes
+    }
+
+    template <class Archive>
+    void load(Archive& ar)
+    {
+        ar(m_type);
         // TODO: subtypes
     }
 
