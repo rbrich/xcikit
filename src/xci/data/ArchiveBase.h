@@ -20,6 +20,8 @@
 #error "xci::data require C++20 concepts"
 #endif
 
+#include <concepts>
+
 namespace xci::data {
 
 
@@ -76,6 +78,12 @@ concept TypeWithReaderSupport = requires(T& v, std::uint8_t k, TArchive& ar) { t
 template<typename T, typename TArchive>
 concept TypeWithWriterSupport = requires(const T& v, std::uint8_t k, TArchive& ar) { typename TArchive::Writer; ar.add(ArchiveField<TArchive, T>{k, v}); };
 
+template<typename T>
+concept ContainerType = requires (T& v) {
+    typename T::const_iterator;
+    typename T::value_type;
+};
+
 #ifdef XCI_ARCHIVE_MAGIC
 template<typename T, typename TArchive>
 concept TypeWithMagicSupport =
@@ -87,6 +95,7 @@ concept TypeWithMagicSupport =
         !TypeWithLoadFunction<T, TArchive> &&
         !TypeWithReaderSupport<T, TArchive> &&
         !TypeWithWriterSupport<T, TArchive> &&
+        !ContainerType<T> &&
         std::is_class_v<T> &&
         !std::is_polymorphic_v<T> &&
         std::is_copy_constructible_v<T>;
@@ -95,6 +104,22 @@ concept TypeWithMagicSupport =
 template<typename T>
 concept FancyPointerType = requires(const T& v) { *v; typename std::pointer_traits<T>::pointer; };
 
+template<typename T>
+concept ContainerTypeWithEmplaceBack = ContainerType<T> && requires (T& v) {
+    typename T::const_iterator;
+    typename T::value_type;
+    typename T::reference;
+    v.emplace_back();
+    { v.back() } -> std::same_as<typename T::reference>;
+};
+
+template<typename T>
+concept ContainerTypeWithEmplace = ContainerType<T> && !ContainerTypeWithEmplaceBack<T> &&
+requires (T& v) {
+    typename T::const_iterator;
+    typename T::value_type;
+    v.emplace();
+};
 
 class ArchiveError : public core::Error {
 public:

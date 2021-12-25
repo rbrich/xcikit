@@ -113,6 +113,8 @@ public:
     T* get(WeakIndex weak);
     const T* get(WeakIndex weak) const;
 
+    /// Get reference to object at index.
+    /// Unsafe. Using wrong index may return garbage or crash.
     reference operator[](Index index);
     const_reference operator[](Index index) const;
 

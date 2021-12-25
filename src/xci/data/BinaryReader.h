@@ -119,8 +119,7 @@ public:
     }
 
     // iterables
-    template <typename T>
-    requires requires (T& v) { v.emplace_back(); }
+    template <ContainerTypeWithEmplaceBack T>
     void add(ArchiveField<BinaryReader, T>&& a) {
         for (;;) {
             const auto chunk_type = peek_chunk_head(a.key);
@@ -128,6 +127,18 @@ public:
                 return;
             a.value.emplace_back();
             apply(ArchiveField<BinaryReader, typename T::value_type>{a.key, a.value.back(), a.name});
+        }
+    }
+
+    template <ContainerTypeWithEmplace T>
+    void add(ArchiveField<BinaryReader, T>&& a) {
+        for (;;) {
+            const auto chunk_type = peek_chunk_head(a.key);
+            if (chunk_type == ChunkNotFound)
+                return;
+            typename T::value_type v;
+            apply(ArchiveField<BinaryReader, typename T::value_type>{a.key, v, a.name});
+            a.value.emplace(std::move(v));
         }
     }
 

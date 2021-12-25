@@ -10,11 +10,13 @@
 #include <xci/data/Dumper.h>
 #include <xci/data/BinaryWriter.h>
 #include <xci/data/BinaryReader.h>
+#include <xci/core/container/ChunkedStack.h>
 
 #include <sstream>
 #include <string>
 
 using namespace xci::data;
+using namespace xci::core;
 
 
 enum class Option : uint8_t {
@@ -157,5 +159,41 @@ TEST_CASE( "Magic save/load", "[data]")
                          "    (1): \"test\"\n"  //   name
                          "    (2): Two\n"       //   option
                          "    (3): true\n");    //   flag
+    }
+}
+
+
+TEST_CASE( "Save/load ChunkedStack", "[data]")
+{
+    ChunkedStack<std::string> c(4);
+    std::string data;
+
+    c.push("first");
+    c.push("second");
+    c.push("third");
+    c.push("fourth");
+
+    // save
+    {
+        std::ostringstream s(data);
+        {
+            xci::data::BinaryWriter bw(s);
+            bw(c);
+        }
+        data = s.str();
+    }
+
+    // load
+    {
+        ChunkedStack<std::string> c2;
+
+        std::istringstream s(data);
+        {
+            xci::data::BinaryReader br(s);
+            br(c2);
+            br.finish_and_check();
+        }
+
+        CHECK(c2 == c);
     }
 }

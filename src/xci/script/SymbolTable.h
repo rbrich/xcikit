@@ -75,6 +75,7 @@ public:
         TypeId,             // translate type name to type ID (index = type index in builtin if < 32, else type index in current module + 32)
     };
 
+    Symbol() = default;  // only for deserialization
     explicit Symbol(std::string name) : m_name(std::move(name)) {}
     Symbol(std::string name, Type type) : m_name(std::move(name)), m_type(type) {}
     Symbol(std::string name, Type type, Index idx) : m_name(std::move(name)), m_type(type), m_index(idx) {}
@@ -103,6 +104,19 @@ public:
     Symbol& set_next(const SymbolPointer& next) { m_next = next; return *this; }
     Symbol& set_callable(bool callable) { m_is_callable = callable; return *this; }
     Symbol& set_defined(bool defined) { m_is_defined = defined; return *this; }
+
+    template<class Archive>
+    void save(Archive& ar) const {
+        ar(m_name, m_type, m_index, m_depth, m_is_callable, m_is_defined);
+    }
+
+    template<class Archive>
+    void load(Archive& ar) {
+        bool is_callable, is_defined;
+        ar(m_name, m_type, m_index, m_depth, is_callable, is_defined);
+        m_is_callable = is_callable;
+        m_is_defined = is_defined;
+    }
 
 private:
     std::string m_name;
@@ -198,6 +212,11 @@ public:
     };
 
     Children children() const { return Children{*this}; }
+
+    template<class Archive>
+    void serialize(Archive& ar) {
+        ar(m_name, m_symbols, m_children);
+    }
 
 private:
     std::string m_name;   // only for debugging

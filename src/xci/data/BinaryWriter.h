@@ -105,8 +105,7 @@ public:
     }
 
     // iterables
-    template <typename T>
-    requires requires { typename T::const_iterator; typename T::value_type; }
+    template <ContainerType T>
     void add(ArchiveField<BinaryWriter, T>&& a) {
         for (auto& item : a.value) {
             apply(ArchiveField<BinaryWriter, typename T::value_type>{a.key, item, a.name});
