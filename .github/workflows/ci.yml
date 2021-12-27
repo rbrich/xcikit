@@ -17,11 +17,13 @@ jobs:
           name: "Clang 11 / Release"
           cc: clang-11
           cxx: clang++-11
+          apt: libc++-11-dev libc++abi-11-dev
           build_args: ""
         - os: ubuntu-20.04
           name: "Clang 12 / Release"
           cc: clang-12
           cxx: clang++-12
+          apt: libc++-12-dev libc++abi-12-dev
           build_args: ""
         - os: ubuntu-20.04
           name: "GCC 10 / Debug ASAN"
@@ -83,7 +85,8 @@ jobs:
         if [[ "$RUNNER_OS" == "Linux" ]]; then
             sudo apt-get update
             sudo apt-get install --no-install-recommends -y ninja-build \
-                libglfw3-dev libfreetype6-dev libharfbuzz-dev libhyperscan-dev libbenchmark-dev
+                libglfw3-dev libfreetype6-dev libharfbuzz-dev libhyperscan-dev libbenchmark-dev \
+                ${{ matrix.apt }}
             export CC=${{ matrix.cc }}
             export CXX=${{ matrix.cxx }}
             echo "CC='$CC'" >> $GITHUB_ENV
