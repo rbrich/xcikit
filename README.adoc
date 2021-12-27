@@ -91,10 +91,12 @@ Technologies:
 * CMake as build system
 * Conan as dependency manager
 
-Tested compilers:
+Supported compilers:
 
-* GCC 10 (Debian 11 Bullseye)
-* Clang 10 (macOS via Homebrew)
+* GCC >= 10
+* Clang >= 11
+* Xcode >= 13
+* Visual Studio >= 16
 
 Any Unix-like OS with C++20 compliant compiler should work.
 Windows OS is also supported, to some extent. See <<windows,Building on Windows>>.
