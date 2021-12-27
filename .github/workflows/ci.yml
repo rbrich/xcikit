@@ -14,9 +14,14 @@ jobs:
           cxx: g++-10
           build_args: ""
         - os: ubuntu-20.04
-          name: "Clang 10 / Release"
-          cc: clang-10
-          cxx: clang++-10
+          name: "Clang 11 / Release"
+          cc: clang-11
+          cxx: clang++-11
+          build_args: ""
+        - os: ubuntu-20.04
+          name: "Clang 12 / Release"
+          cc: clang-12
+          cxx: clang++-12
           build_args: ""
         - os: ubuntu-20.04
           name: "GCC 10 / Debug ASAN"
@@ -39,7 +44,10 @@ jobs:
           os_target: "11.0"
           build_args: ""
         - os: windows-2019
-          name: "MSVC (latest) / Release"
+          name: "VS 16 / Release"
+          build_args: ""
+        - os: windows-2022
+          name: "VS 17 / Release"
           build_args: ""
 
     name: ${{ matrix.os }} / ${{ matrix.name }}
