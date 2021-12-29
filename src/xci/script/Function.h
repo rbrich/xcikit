@@ -40,19 +40,21 @@ class Stack;
 
 class Function {
 public:
+    explicit Function(Module& module);  // only for deserialization!
     explicit Function(Module& module, SymbolTable& symtab);
     Function(Function&& rhs) noexcept;
     Function& operator =(Function&&) = delete;
 
     bool operator==(const Function& rhs) const;
 
-    const std::string& name() const { return m_symtab.name(); }
+    const std::string& name() const { return m_symtab->name(); }
+    std::string qualified_name() const { return m_symtab->qualified_name(); }
 
     // module containing this function
     Module& module() const { return m_module; }
 
     // symbol table with names used in function scope
-    SymbolTable& symtab() const { return m_symtab; }
+    SymbolTable& symtab() const { return *m_symtab; }
 
     // parameters
     void add_parameter(std::string name, TypeInfo&& type_info);
@@ -174,17 +176,22 @@ public:
 
     template<class Archive>
     void save(Archive& ar) const {
-        ar(name(), m_signature);
+        ar(qualified_name(), m_signature);
     }
 
     template<class Archive>
     void load(Archive& ar) {
-        // TODO
+        std::string qualified_name;
+        ar(qualified_name);
+        set_symtab_by_qualified_name(qualified_name);
+        m_symtab->set_function(this);
     }
 
 private:
+    void set_symtab_by_qualified_name(std::string_view name);
+
     Module& m_module;
-    SymbolTable& m_symtab;
+    SymbolTable* m_symtab = nullptr;
     // Function signature
     std::shared_ptr<Signature> m_signature;
     // Function body (depending on kind of function)

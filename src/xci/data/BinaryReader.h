@@ -130,13 +130,13 @@ public:
         }
     }
 
-    template <ContainerTypeWithEmplace T>
-    void add(ArchiveField<BinaryReader, T>&& a) {
+    template <ContainerTypeWithEmplace T, typename... EmplaceArgs>
+    void add(ArchiveField<BinaryReader, T>&& a, EmplaceArgs&&... args) {
         for (;;) {
             const auto chunk_type = peek_chunk_head(a.key);
             if (chunk_type == ChunkNotFound)
                 return;
-            typename T::value_type v;
+            typename T::value_type v {std::forward<EmplaceArgs...>(args...)};
             apply(ArchiveField<BinaryReader, typename T::value_type>{a.key, v, a.name});
             a.value.emplace(std::move(v));
         }

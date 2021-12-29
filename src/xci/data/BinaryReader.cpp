@@ -193,6 +193,8 @@ uint8_t BinaryReader::peek_chunk_head(uint8_t key)
         auto b = (uint8_t) peek_byte();
         const uint8_t chunk_key = b & KeyMask;
         const uint8_t chunk_type = b & TypeMask;
+        if (chunk_type == Control)
+            return ChunkNotFound;
         if (chunk_key < key) {
             (void) read_byte_with_crc();
             skip_unknown_chunk(chunk_type, chunk_key);

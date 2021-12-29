@@ -175,6 +175,7 @@ TEST_CASE( "split", "[string]" )
     CHECK(split("one\ntwo\nthree", '\n') == l{"one", "two", "three"});
     CHECK(split("\none\ntwo\n\nthree\n", '\n') == l{"", "one", "two", "", "three", ""});
     CHECK(split("one, two, three", ',', 1) == l{"one", " two, three"});
+    CHECK(split("one::two::three", "::") == l{"one", "two", "three"});
 }
 
 
@@ -184,6 +185,7 @@ TEST_CASE( "rsplit", "[string]" )
     CHECK(rsplit("one\ntwo\nthree", '\n') == l{"one", "two", "three"});
     CHECK(rsplit("\none\ntwo\n\nthree\n", '\n') == l{"", "one", "two", "", "three", ""});
     CHECK(rsplit("one, two, three", ',', 1) == l{"one, two", " three"});
+    CHECK(rsplit("one::two::three", "::") == l{"one", "two", "three"});
 }
 
 

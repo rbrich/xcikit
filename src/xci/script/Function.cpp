@@ -12,11 +12,17 @@
 namespace xci::script {
 
 
+Function::Function(Module& module)
+        : m_module(module),
+          m_signature(std::make_shared<Signature>())
+{}
+
+
 Function::Function(Module& module, SymbolTable& symtab)
-        : m_module(module), m_symtab(symtab),
+        : m_module(module), m_symtab(&symtab),
           m_signature(std::make_shared<Signature>())
 {
-    m_symtab.set_function(this);
+    m_symtab->set_function(this);
 }
 
 
@@ -26,13 +32,13 @@ Function::Function(Function&& rhs) noexcept
           m_body(std::move(rhs.m_body)),
           m_nonlocals_resolved(rhs.m_nonlocals_resolved)
 {
-    m_symtab.set_function(this);
+    m_symtab->set_function(this);
 }
 
 
 void Function::add_parameter(std::string name, TypeInfo&& type_info)
 {
-    m_symtab.add({std::move(name), Symbol::Parameter, parameters().size()});
+    m_symtab->add({std::move(name), Symbol::Parameter, parameters().size()});
     signature().add_parameter(std::move(type_info));
 }
 
@@ -124,6 +130,12 @@ bool Function::operator==(const Function& rhs) const
            &m_symtab == &rhs.m_symtab &&
            *m_signature == *rhs.m_signature &&
            m_body == rhs.m_body;
+}
+
+
+void Function::set_symtab_by_qualified_name(std::string_view name)
+{
+    m_symtab = &m_module.symtab_by_qualified_name(name);
 }
 
 

@@ -11,6 +11,7 @@
 #include <xci/core/mixin.h>
 #include <vector>
 #include <string>
+#include <string_view>
 
 namespace xci::script {
 
@@ -144,6 +145,7 @@ public:
 
     void set_name(const std::string& name) { m_name = name; }
     const std::string& name() const { return m_name; }
+    std::string qualified_name() const;
 
     SymbolTable& add_child(const std::string& name);
     SymbolTable* parent() const { return m_parent; }
@@ -167,7 +169,7 @@ public:
     const Symbol& get(Index idx) const;
 
     // find symbol in this table
-    SymbolPointer find_by_name(const std::string& name);
+    SymbolPointer find_by_name(std::string_view name);
     SymbolPointer find_last_of(const std::string& name, Symbol::Type type);
     SymbolPointer find_last_of(Symbol::Type type);
 
@@ -212,14 +214,23 @@ public:
     };
 
     Children children() const { return Children{*this}; }
+    SymbolTable* find_child_by_name(std::string_view name);
 
     template<class Archive>
-    void serialize(Archive& ar) {
+    void save(Archive& ar) const {
         ar(m_name, m_symbols, m_children);
     }
 
+    template<class Archive>
+    void load(Archive& ar) {
+        ar(m_name, m_symbols, m_children);
+        for (SymbolTable& child : m_children) {
+            child.m_parent = this;
+        }
+    }
+
 private:
-    std::string m_name;   // only for debugging
+    std::string m_name;
     SymbolTable* m_parent = nullptr;
     Function* m_function = nullptr;
     Class* m_class = nullptr;

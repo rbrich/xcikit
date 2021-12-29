@@ -100,6 +100,9 @@ public:
     SymbolTable& symtab() { return m_symtab; }
     const SymbolTable& symtab() const { return m_symtab; }
 
+    // Find symbol table by qualified function name
+    SymbolTable& symtab_by_qualified_name(std::string_view name);
+
     // Specialized generic functions
     void add_spec_function(SymbolPointer gen_fn, Index spec_fn_idx);
     std::vector<Index> get_spec_functions(SymbolPointer gen_fn);

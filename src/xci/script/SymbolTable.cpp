@@ -12,12 +12,6 @@
 namespace xci::script {
 
 
-SymbolTable::SymbolTable(std::string name, SymbolTable* parent)
-        : m_name(std::move(name)), m_parent(parent),
-          m_module(parent ? parent->module() : nullptr)
-{}
-
-
 const Symbol& SymbolPointer::operator*() const
 {
     assert(m_symtab != nullptr);
@@ -46,6 +40,27 @@ Function& SymbolPointer::get_function() const
     assert(m_symtab->module() != nullptr);
     assert(sym.index() != no_index);
     return m_symtab->module()->get_function(sym.index());
+}
+
+
+//------------------------------------------------------------------------------
+
+
+SymbolTable::SymbolTable(std::string name, SymbolTable* parent)
+        : m_name(std::move(name)), m_parent(parent),
+          m_module(parent ? parent->module() : nullptr)
+{}
+
+
+std::string SymbolTable::qualified_name() const
+{
+    std::string result = m_name;
+    const auto* parent = m_parent;
+    while (parent != nullptr) {
+        result = parent->name() + "::" + result;
+        parent = parent->parent();
+    }
+    return result;
 }
 
 
@@ -107,7 +122,7 @@ const Symbol& SymbolTable::get(Index idx) const
 }
 
 
-SymbolPointer SymbolTable::find_by_name(const std::string& name)
+SymbolPointer SymbolTable::find_by_name(std::string_view name)
 {
     auto it = std::find_if(m_symbols.begin(), m_symbols.end(),
             [&name](const Symbol& sym){ return sym.name() == name; });
@@ -151,6 +166,16 @@ void SymbolTable::detect_overloads(const std::string& name)
             prev = &m_symbols[i];
         }
     }
+}
+
+
+SymbolTable* SymbolTable::find_child_by_name(std::string_view name)
+{
+    auto it = std::find_if(m_children.begin(), m_children.end(),
+            [&name](const SymbolTable& s){ return s.name() == name; });
+    if (it == m_children.end())
+        return nullptr;
+    return &*it;
 }
 
 

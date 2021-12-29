@@ -10,6 +10,7 @@
 
 #include <xci/data/BinaryWriter.h>
 #include <xci/data/BinaryReader.h>
+#include <xci/core/string.h>
 
 #include <fstream>
 
@@ -114,6 +115,33 @@ auto Module::add_instance(Instance&& inst) -> InstanceId
 }
 
 
+SymbolTable& Module::symtab_by_qualified_name(std::string_view name)
+{
+    auto parts = core::split(name, "::");
+    auto part_it = parts.begin();
+
+    SymbolTable* symtab = nullptr;
+    if (*part_it == m_symtab.name()) {
+        // a symbol from this module
+        symtab = &m_symtab;
+    } else {
+        // a symbol from an imported module
+        for (Module* module : m_modules)
+            if (module->name() == *part_it)
+                symtab = &module->symtab();
+        if (symtab == nullptr)
+            throw UnresolvedSymbol(name);
+    }
+
+    while (++part_it != parts.end()) {
+        symtab = symtab->find_child_by_name(*part_it);
+        if (symtab == nullptr)
+            throw UnresolvedSymbol(name);
+    }
+    return *symtab;
+}
+
+
 void Module::add_spec_function(SymbolPointer gen_fn, Index spec_fn_idx)
 {
     m_spec_functions.emplace(gen_fn, spec_fn_idx);
@@ -154,6 +182,7 @@ bool Module::load_from_file(const std::string& filename)
     std::ifstream f(filename, std::ios::binary);
     xci::data::BinaryReader reader(f);
     reader(m_modules, m_values, m_symtab);
+    reader.repeated(m_functions, *this);
     return !f.fail();
 }
 

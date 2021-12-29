@@ -7,3 +7,5 @@ bar = fun x y { x + y };
 foo 1;
 foo 2;
 bar 1 2;
+
+//five = succ 4;

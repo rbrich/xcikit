@@ -277,6 +277,12 @@ struct IntrinsicsFunctionError : public ScriptError {
 };
 
 
+struct UnresolvedSymbol : public ScriptError {
+    explicit UnresolvedSymbol(string_view name)
+            : ScriptError(fmt::format("unresolved symbol: {}", name)) {}
+};
+
+
 } // namespace xci::script
 
 #endif // include guard

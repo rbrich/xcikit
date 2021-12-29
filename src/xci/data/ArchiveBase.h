@@ -170,7 +170,15 @@ public:
         apply(ArchiveField<TImpl, T>{key, value});
     }
 
-    // when: the type has serialize() method
+    // convenience: ar.repeated(value, emplace_args...) -> reader.add(ArchiveField{key_auto, value}, emplace_args...)
+    template <ContainerTypeWithEmplace T, typename... EmplaceArgs>
+    void repeated(T& value, EmplaceArgs&&... args) {
+        static_cast<TImpl*>(this)->add(
+                ArchiveField<TImpl, T>{draw_next_key(key_auto), value},
+                std::forward<EmplaceArgs...>(args...));
+    }
+
+    // when: the type has `serialize` method
     template <TypeWithSerializeMethod<TImpl> T>
     void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = draw_next_key(kv.key);

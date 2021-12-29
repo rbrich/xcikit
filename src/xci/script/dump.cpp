@@ -810,7 +810,7 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
         os << put_indent << '[' << i << "] ";
         if (f.kind() != Function::Kind::Compiled)
             os << '(' << f.kind() << ") ";
-        os << f.name() << ": " << f.signature() << endl;
+        os << f.qualified_name() << ": " << f.signature() << endl;
         if (verbose && f.kind() == Function::Kind::Generic) {
             os << more_indent << put_indent << f.ast() << less_indent;
             if (!dump_tree)
