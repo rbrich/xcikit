@@ -104,12 +104,35 @@ public:
         write((const std::byte*) a.value.data(), a.value.size());
     }
 
+    // binary data
+    template <BlobType T>
+    void add(ArchiveField<BinaryWriter, T>&& a) {
+        write(uint8_t(Type::Binary | a.key));
+        write_leb128(a.value.size());
+        write((const std::byte*) a.value.data(), a.value.size());
+    }
+
     // iterables
     template <ContainerType T>
     void add(ArchiveField<BinaryWriter, T>&& a) {
         for (auto& item : a.value) {
             apply(ArchiveField<BinaryWriter, typename T::value_type>{a.key, item, a.name});
         }
+    }
+
+    // variant
+    template <VariantType T>
+    void add(ArchiveField<BinaryWriter, T>&& a) {
+        // index of active alternative
+        apply(ArchiveField<BinaryWriter, size_t>{draw_next_key(a.key), a.value.index(), a.name});
+        // value of the alternative
+        a.key = draw_next_key(key_auto);
+        std::visit([this, &a](const auto& value) {
+            using Tv = std::decay_t<decltype(value)>;
+            if constexpr (!std::is_same_v<Tv, std::monostate>) {
+                this->apply(ArchiveField<BinaryWriter, Tv>{a.key, value});
+            }
+        }, a.value);
     }
 
 private:

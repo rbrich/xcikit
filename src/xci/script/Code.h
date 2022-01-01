@@ -179,6 +179,11 @@ public:
 
     bool operator==(const Code& rhs) const { return m_ops == rhs.m_ops; }
 
+    template<class Archive>
+    void serialize(Archive& ar) {
+        ar(m_ops);
+    }
+
 private:
     std::vector<uint8_t> m_ops;
 };

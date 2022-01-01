@@ -99,7 +99,7 @@ struct BinaryBase {
         Int64       =  7 << 4,
         Float32     =  8 << 4,
         Float64     =  9 << 4,
-        Varint      = 10 << 4,
+        VarInt      = 10 << 4,
         Array       = 11 << 4,
         String      = 12 << 4,
         Binary      = 13 << 4,
@@ -158,7 +158,7 @@ struct BinaryBase {
     }
 
     static constexpr bool type_has_len(uint8_t type) {
-        return type == Varint || type == Array || type == String || type == Master;
+        return type == VarInt || type == Array || type == String || type == Binary || type == Master;
     }
 
     enum ControlSubtype: uint8_t {

@@ -34,7 +34,7 @@ static std::string type_to_str(uint8_t type)
         case BinaryBase::Int64:     return "Int64";
         case BinaryBase::Float32:   return "Float32";
         case BinaryBase::Float64:   return "Float64";
-        case BinaryBase::Varint:    return "Varint";
+        case BinaryBase::VarInt:    return "Varint";
         case BinaryBase::Array:     return "Array";
         case BinaryBase::String:    return "String";
         case BinaryBase::Binary:    return "Binary";
@@ -64,7 +64,7 @@ static void print_data(TermCtl& term, uint8_t type, const std::byte* data, size_
         case BinaryBase::Int64:     term.print("{fg:magenta}{}{t:normal}", uint32_t(*data)); return;
         case BinaryBase::Float32:   term.print("{fg:magenta}{}{t:normal}", float(*data)); return;
         case BinaryBase::Float64:   term.print("{fg:magenta}{}{t:normal}", double(*data)); return;
-        case BinaryBase::Varint:    term.print("{fg:yellow}varint{t:normal}"); return;
+        case BinaryBase::VarInt:    term.print("{fg:yellow}varint{t:normal}"); return;
         case BinaryBase::Array:     term.print("{fg:yellow}array{t:normal}"); return;
         case BinaryBase::String:
             term.print("{fg:green}\"{}\"{t:normal}",

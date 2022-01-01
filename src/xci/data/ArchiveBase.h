@@ -14,6 +14,7 @@
 #include <boost/pfr/core.hpp>
 #endif
 #include <vector>
+#include <variant>
 #include <cstdint>
 
 #ifndef __cpp_concepts
@@ -79,7 +80,15 @@ template<typename T, typename TArchive>
 concept TypeWithWriterSupport = requires(const T& v, std::uint8_t k, TArchive& ar) { typename TArchive::Writer; ar.add(ArchiveField<TArchive, T>{k, v}); };
 
 template<typename T>
-concept ContainerType = requires (T& v) {
+concept BlobType = requires (T& v) {
+    typename T::const_iterator;
+    typename T::value_type;
+} && (std::is_integral_v<typename T::value_type> || std::is_same_v<typename T::value_type, std::byte>)
+  && sizeof(typename T::value_type) == 1;
+
+
+template<typename T>
+concept ContainerType = !BlobType<T> && requires (T& v) {
     typename T::const_iterator;
     typename T::value_type;
 };
@@ -89,6 +98,24 @@ concept TupleType = !std::is_reference_v<T> && requires(T t) {
     typename std::tuple_size<T>::type;
     std::get<0>(t);
 };
+
+template <typename T>
+concept VariantType = !std::is_reference_v<T> && requires(T t) {
+    { t.index() } -> std::same_as<std::size_t>;
+    std::variant_size<T>::value;
+};
+
+template <typename Variant, std::size_t I = 0>
+Variant variant_from_index(std::size_t index) {
+    assert(index < std::variant_size_v<Variant>);
+    if constexpr(I >= std::variant_size_v<Variant>)
+        return Variant{};
+    else
+        return index == 0
+               ? Variant{std::in_place_index<I>}
+               : variant_from_index<Variant, I + 1>(index - 1);
+}
+
 
 #ifndef XCI_ARCHIVE_NO_MAGIC
 template<typename T, typename TArchive>
@@ -101,11 +128,15 @@ concept TypeWithMagicSupport =
         !TypeWithLoadFunction<T, TArchive> &&
         !TypeWithReaderSupport<T, TArchive> &&
         !TypeWithWriterSupport<T, TArchive> &&
+        !BlobType<T> &&
         !ContainerType<T> &&
         !TupleType<T> &&
+        !VariantType<T> &&
         std::is_class_v<T> &&
+        !std::is_reference_v<T> &&
         !std::is_polymorphic_v<T> &&
-        std::is_copy_constructible_v<T>;
+        std::is_copy_constructible_v<T> &&
+        (std::is_aggregate_v<T> || std::is_scalar_v<T>);
 #endif
 
 template<typename T>
@@ -251,6 +282,7 @@ public:
         static_cast<TImpl*>(this)->add(std::forward<ArchiveField<TImpl, T>>(kv));
     }
 
+    // when: the type is tuple-like (e.g. std::pair)
     template <TupleType T>
     void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = draw_next_key(kv.key);

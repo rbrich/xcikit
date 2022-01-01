@@ -118,6 +118,17 @@ public:
             throw ArchiveBadChunkType();
     }
 
+    // binary data
+    template <BlobType T>
+    void add(ArchiveField<BinaryReader, T>&& a) {
+        const auto chunk_type = read_chunk_head(a.key);
+        if (chunk_type == Type::Binary) {
+            a.value.resize(read_leb128<size_t>());
+            read_with_crc((std::byte*) a.value.data(), a.value.size());
+        } else if (chunk_type != ChunkNotFound)
+            throw ArchiveBadChunkType();
+    }
+
     // iterables
     template <ContainerTypeWithEmplaceBack T>
     void add(ArchiveField<BinaryReader, T>&& a) {
@@ -140,6 +151,23 @@ public:
             apply(ArchiveField<BinaryReader, typename T::value_type>{a.key, v, a.name});
             a.value.emplace(std::move(v));
         }
+    }
+
+    // variant
+    template <VariantType T>
+    void add(ArchiveField<BinaryReader, T>&& a) {
+        // index of active alternative
+        size_t index = std::variant_npos;
+        apply(ArchiveField<BinaryReader, size_t>{draw_next_key(a.key), index, a.name});
+        a.value = variant_from_index<T>(index);
+        // value of the alternative
+        a.key = draw_next_key(key_auto);
+        std::visit([this, &a](auto& value) {
+            using Tv = std::decay_t<decltype(value)>;
+            if constexpr (!std::is_same_v<Tv, std::monostate>) {
+                this->apply(ArchiveField<BinaryReader, Tv>{a.key, value});
+            }
+        }, a.value);
     }
 
 private:

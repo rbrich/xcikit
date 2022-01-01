@@ -119,6 +119,11 @@ public:
     struct CompiledBody {
         bool operator==(const CompiledBody& rhs) const;
 
+        template<class Archive>
+        void serialize(Archive& ar) {
+            ar(code);
+        }
+
         // Compiled function body
         Code code;
         // Counter for code bytes from intrinsics
@@ -145,11 +150,21 @@ public:
                 ast_ref = nullptr;
             }
         }
+
+        template<class Archive>
+        void serialize(Archive& ar) {
+
+        }
     };
 
     // function wraps native function (C++ binding)
     struct NativeBody {
         bool operator==(const NativeBody& rhs) const;
+
+        template<class Archive>
+        void serialize(Archive& ar) {
+            throw std::runtime_error("Native function cannot be serialized");
+        }
 
         NativeDelegate native;
     };
@@ -176,13 +191,13 @@ public:
 
     template<class Archive>
     void save(Archive& ar) const {
-        ar(qualified_name(), m_signature);
+        ar(qualified_name(), m_signature, m_body);
     }
 
     template<class Archive>
     void load(Archive& ar) {
         std::string qualified_name;
-        ar(qualified_name, m_signature);
+        ar(qualified_name, m_signature, m_body);
         set_symtab_by_qualified_name(qualified_name);
         m_symtab->set_function(this);
     }
