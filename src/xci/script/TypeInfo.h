@@ -145,18 +145,72 @@ public:
     template <class Archive>
     void save(Archive& ar) const {
         ar(m_type);
-        if (is_unknown())
-            ar(generic_var());
-        if (is_callable())
-            ar(signature());
-        // TODO: subtypes
+        switch (m_type) {
+            case Type::Unknown:
+                ar(generic_var());
+                break;
+            case Type::Function:
+                ar(signature());
+                break;
+            case Type::List:
+                ar(elem_type());
+                break;
+            case Type::Tuple:
+                ar(subtypes());
+                break;
+            case Type::Struct:
+                ar(struct_items());
+                break;
+            case Type::Named:
+                ar(named_type());
+                break;
+            default:
+                break;
+        }
     }
 
     template <class Archive>
     void load(Archive& ar)
     {
         ar(m_type);
-        // TODO: subtypes
+        switch (m_type) {
+            case Type::Unknown: {
+                Var var;
+                ar(var);
+                m_info = var;
+                break;
+            }
+            case Type::Function: {
+                auto signature = std::make_shared<Signature>();
+                ar(*signature);
+                m_info = std::move(signature);
+                break;
+            }
+            case Type::List: {
+                m_info.emplace<Subtypes>();
+                auto& subtypes = std::get<Subtypes>(m_info);
+                subtypes.emplace_back();
+                ar(subtypes.back());
+                break;
+            }
+            case Type::Tuple: {
+                m_info.emplace<Subtypes>();
+                ar(std::get<Subtypes>(m_info));
+                break;
+            }
+            case Type::Struct: {
+                m_info.emplace<StructItems>();
+                ar(std::get<StructItems>(m_info));
+                break;
+            }
+            case Type::Named: {
+                auto named_type = std::make_shared<NamedTypePtr>();
+                ar(named_type);
+                break;
+            }
+            default:
+                break;
+        }
     }
 
 private:
@@ -189,7 +243,7 @@ struct Signature {
 
     template <class Archive>
     void serialize(Archive& ar) {
-        ar(nonlocals, partial, params, return_type);
+        ar(type_args, nonlocals, partial, params, return_type);
     }
 };
 

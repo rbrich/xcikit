@@ -182,7 +182,7 @@ public:
     template<class Archive>
     void load(Archive& ar) {
         std::string qualified_name;
-        ar(qualified_name);
+        ar(qualified_name, m_signature);
         set_symtab_by_qualified_name(qualified_name);
         m_symtab->set_function(this);
     }

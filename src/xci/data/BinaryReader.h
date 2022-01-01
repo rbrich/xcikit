@@ -76,7 +76,7 @@ public:
             return;
         }
         using ElemT = typename std::pointer_traits<T>::element_type;
-        a.value = new ElemT{};
+        a.value = T{new ElemT{}};
         apply(ArchiveField<BinaryReader, ElemT>{a.key, *a.value, a.name});
     }
 

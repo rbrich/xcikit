@@ -10,7 +10,7 @@
 #include <xci/core/error.h>
 #include <xci/core/macros/foreach.h>
 
-#ifdef XCI_ARCHIVE_MAGIC
+#ifndef XCI_ARCHIVE_NO_MAGIC
 #include <boost/pfr/core.hpp>
 #endif
 #include <vector>
@@ -84,7 +84,13 @@ concept ContainerType = requires (T& v) {
     typename T::value_type;
 };
 
-#ifdef XCI_ARCHIVE_MAGIC
+template <typename T>
+concept TupleType = !std::is_reference_v<T> && requires(T t) {
+    typename std::tuple_size<T>::type;
+    std::get<0>(t);
+};
+
+#ifndef XCI_ARCHIVE_NO_MAGIC
 template<typename T, typename TArchive>
 concept TypeWithMagicSupport =
         !TypeWithSerializeMethod<T, TArchive> &&
@@ -96,6 +102,7 @@ concept TypeWithMagicSupport =
         !TypeWithReaderSupport<T, TArchive> &&
         !TypeWithWriterSupport<T, TArchive> &&
         !ContainerType<T> &&
+        !TupleType<T> &&
         std::is_class_v<T> &&
         !std::is_polymorphic_v<T> &&
         std::is_copy_constructible_v<T>;
@@ -244,7 +251,17 @@ public:
         static_cast<TImpl*>(this)->add(std::forward<ArchiveField<TImpl, T>>(kv));
     }
 
-#ifdef XCI_ARCHIVE_MAGIC
+    template <TupleType T>
+    void apply(ArchiveField<TImpl, T>&& kv) {
+        kv.key = draw_next_key(kv.key);
+        static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
+        std::apply([this]<typename... Args>(Args&&... args) {
+            ((void) this->apply(std::forward<Args>(args)), ...);
+        }, kv.value);
+        static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
+    }
+
+#ifndef XCI_ARCHIVE_NO_MAGIC
     // when: other non-polymorphic structs - use pfr
     template <TypeWithMagicSupport<TImpl> T>
     void apply(ArchiveField<TImpl, T>&& kv) {
