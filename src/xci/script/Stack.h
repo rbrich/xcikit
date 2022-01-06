@@ -18,6 +18,14 @@ namespace xci::script {
 class Function;
 
 
+struct StackTraceFrame {
+    std::string function_name;
+};
+
+using StackTrace = std::vector<StackTraceFrame>;
+
+
+
 /// Call stack
 ///
 /// The main stack is down-growing, with small initial size,
@@ -112,6 +120,11 @@ public:
     const Frame& frame() const { return m_frame.top(); }
     const Frame& frame(size_t pos) const { return m_frame[pos]; }
     size_t n_frames() const { return m_frame.size(); }
+
+    // ------------------------------------------------------------------------
+    // Unwinding
+
+    StackTrace make_trace();
 
     // ------------------------------------------------------------------------
     // I/O Streams

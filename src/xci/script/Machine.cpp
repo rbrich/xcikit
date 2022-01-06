@@ -22,6 +22,19 @@ using std::move;
 using fmt::format;
 
 
+void Machine::call(const Function& function, const Machine::InvokeCallback& cb)
+{
+    m_stack.push_frame(function);
+    try {
+        run(cb);
+    } catch (ScriptError& e) {
+        // unwind the whole stack, fill StackTrace in the ScriptError
+        e.set_stack_trace(m_stack.make_trace());
+        throw;
+    }
+}
+
+
 void Machine::run(const InvokeCallback& cb)
 {
     // Avoid double-recursion - move these pointers instead (we already have stack)

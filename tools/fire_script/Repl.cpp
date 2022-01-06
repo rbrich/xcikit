@@ -14,11 +14,13 @@
 #include <xci/script/dump.h>
 
 #include <fmt/core.h>
+#include <range/v3/view/reverse.hpp>
 
 #include <iostream>
 
 namespace xci::script::tool {
 
+using ranges::cpp20::views::reverse;
 using std::endl;
 
 
@@ -169,6 +171,15 @@ void Repl::print_error(const ScriptError& e)
 {
     core::TermCtl& t = m_ctx.term_out;
 
+    if (!e.trace().empty()) {
+        int i = 0;
+        for (const auto& frame : e.trace() | reverse) {
+            t.stream()
+                << "  #" << i++
+                << " " << frame.function_name
+                << '\n';
+        }
+    }
     if (!e.file().empty())
         t.stream() << e.file() << ": ";
     t.stream() << t.red().bold() << "Error: " << e.what() << t.normal();
