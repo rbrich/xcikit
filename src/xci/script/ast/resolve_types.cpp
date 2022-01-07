@@ -484,13 +484,14 @@ public:
             case Symbol::Nonlocal: {
                 assert(sym.ref());
                 auto nl_sym = sym.ref();
-                // owning function of the nonlocal symbol
-                auto* nl_owner = nl_sym.symtab()->function();
-                assert(nl_owner != nullptr);
                 switch (nl_sym->type()) {
-                    case Symbol::Parameter:
+                    case Symbol::Parameter: {
+                        // owning function of the nonlocal symbol
+                        auto* nl_owner = nl_sym.symtab()->function();
+                        assert(nl_owner != nullptr);
                         m_value_type = nl_owner->parameter(nl_sym->index());
                         break;
+                    }
                     case Symbol::Function: {
                         auto res = resolve_overload(nl_sym, v.identifier);
                         v.module = res.module;
@@ -811,7 +812,8 @@ private:
 
     Index get_type_id(TypeInfo&& type_info) {
         // is the type builtin?
-        Index type_id = BuiltinModule::static_instance().find_type(type_info);
+        const Module& builtin_module = module().module_manager().builtin_module();
+        Index type_id = builtin_module.find_type(type_info);
         if (type_id >= 32) {
             // add to current module
             type_id = 32 + module().add_type(move(type_info));
@@ -821,7 +823,8 @@ private:
 
     Index get_type_id(const TypeInfo& type_info) {
         // is the type builtin?
-        Index type_id = BuiltinModule::static_instance().find_type(type_info);
+        const Module& builtin_module = module().module_manager().builtin_module();
+        Index type_id = builtin_module.find_type(type_info);
         if (type_id >= 32) {
             // add to current module
             type_id = 32 + module().add_type(type_info);

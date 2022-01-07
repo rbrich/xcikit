@@ -204,8 +204,9 @@ public:
                 break;
             }
             case Type::Named: {
-                auto named_type = std::make_shared<NamedTypePtr>();
+                auto named_type = std::make_shared<NamedType>();
                 ar(named_type);
+                m_info.emplace<NamedTypePtr>(std::move(named_type));
                 break;
             }
             default:

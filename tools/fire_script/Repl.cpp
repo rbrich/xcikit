@@ -5,7 +5,6 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Repl.h"
-#include "Context.h"
 #include "BytecodeTracer.h"
 
 #include <xci/script/Error.h>
@@ -77,25 +76,17 @@ bool Repl::evaluate(const std::string& module_name, std::string module_source, E
 }
 
 
-std::unique_ptr<Module> Repl::prepare_module(const std::string& module_name)
+std::shared_ptr<Module> Repl::prepare_module(const std::string& module_name)
 {
-    auto module = std::make_unique<Module>(module_name);
-    module->add_imported_module(BuiltinModule::static_instance());
+    auto module = std::make_shared<Module>(m_ctx.interpreter.module_manager(), module_name);
+    module->import_module("builtin");
 
     if (m_opts.with_std_lib) {
-        if (!m_ctx.std_module) {
-            const char* path = "script/std.fire";
-            auto f = m_vfs.read_file(path);
-            auto content = f.content();
-            auto& source_manager = m_ctx.interpreter.source_manager();
-            auto file_id = source_manager.add_source(path, content->string());
-            m_ctx.std_module = m_ctx.interpreter.build_module("std", file_id);
-        }
-        module->add_imported_module(*m_ctx.std_module);
+        module->import_module("std");
     }
 
     for (auto& m : m_ctx.input_modules)
-        module->add_imported_module(*m);
+        module->add_imported_module(m);
 
     return module;
 }

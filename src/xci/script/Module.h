@@ -11,6 +11,7 @@
 #include "SymbolTable.h"
 #include "Class.h"
 #include "Function.h"
+#include "ModuleManager.h"
 #include <xci/core/container/IndexedMap.h>
 #include <string>
 #include <map>
@@ -29,13 +30,15 @@ public:
     using ClassId = IndexedMap<Class>::WeakIndex;
     using InstanceId = IndexedMap<Instance>::WeakIndex;
 
-    explicit Module(std::string name) : m_symtab(move(name)) { m_symtab.set_module(this); }
-    Module() : Module("<module>") { m_symtab.set_module(this); }
+    explicit Module(ModuleManager& module_manager, std::string name = "<module>")
+        : m_module_manager(module_manager), m_symtab(move(name))
+        { m_symtab.set_module(this); }
     ~Module();
     Module(Module&&) = delete;
     Module& operator =(Module&&) = delete;
 
     const std::string& name() const { return m_symtab.name(); }
+    const ModuleManager& module_manager() const { return m_module_manager; }
 
     SymbolPointer add_native_function(std::string&& name,
             std::vector<TypeInfo>&& params, TypeInfo&& retval,
@@ -60,8 +63,9 @@ public:
     // - index 0 should be builtin
     // - index 1 should be std
     // - imported modules are added in import order
-    void add_imported_module(Module& module) { m_modules.push_back(&module); }
-    Module& get_imported_module(size_t idx) const { return *m_modules[idx]; }
+    Index import_module(const std::string& name) { m_modules.push_back(m_module_manager.import_module(name)); return m_modules.size() - 1; }
+    Index add_imported_module(std::shared_ptr<Module> module) { m_modules.push_back(std::move(module)); return m_modules.size() - 1; }
+    Module& get_imported_module(Index idx) const { return *m_modules[idx]; }
     Index get_imported_module_index(Module* module) const;
     size_t num_imported_modules() const { return m_modules.size(); }
 
@@ -116,17 +120,13 @@ public:
         ar(name());
     }
 
-    template<class Archive>
-    void load(Archive& ar) {
-        std::string module_name;
-        ar(module_name);
-        // TODO: import the module
-    }
+    // load() is implemented inside load_from_file in a wrapper class
 
     bool operator==(const Module& rhs) const;
 
 private:
-    std::vector<Module*> m_modules;
+    ModuleManager& m_module_manager;
+    std::vector<std::shared_ptr<Module>> m_modules;
     IndexedMap<Function> m_functions;
     IndexedMap<Class> m_classes;
     IndexedMap<Instance> m_instances;

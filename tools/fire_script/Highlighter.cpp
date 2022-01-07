@@ -35,6 +35,7 @@ using namespace xci::core::parser::unescape;
 // Imagine the cursor in the middle of that string...
 
 struct Expression;
+struct PartialExpr;
 struct Block;
 
 // Spaces and comments
@@ -140,7 +141,7 @@ struct LongCommand: sor<TAO_PEGTL_KEYWORD("help"), TAO_PEGTL_KEYWORD("quit"),
         TAO_PEGTL_KEYWORD("dump_module"), TAO_PEGTL_KEYWORD("dump_function"), TAO_PEGTL_KEYWORD("dump_info")> {};
 struct ValidCommand: sor<ShortCommand, LongCommand> {};
 struct InvalidCommand: star< not_at< blank >, any > {};
-struct ReplCommand: seq<one<'.'>, sor<ValidCommand, InvalidCommand>, SC> {};
+struct ReplCommand: seq<one<'.'>, sor<ValidCommand, InvalidCommand>, SC, star<PartialExpr, SC>> {};
 
 // Expressions
 struct BracketedExpr: seq< RoundBracketOpen, NSC, Expression, NSC, RoundBracketClose > {};

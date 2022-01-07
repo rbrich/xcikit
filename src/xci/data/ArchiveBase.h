@@ -140,7 +140,11 @@ concept TypeWithMagicSupport =
 #endif
 
 template<typename T>
-concept FancyPointerType = requires(const T& v) { *v; typename std::pointer_traits<T>::pointer; };
+concept FancyPointerType = requires(T v) {
+    *v;
+    typename std::pointer_traits<T>::pointer;
+    typename std::pointer_traits<T>::element_type;
+};
 
 template<typename T>
 concept ContainerTypeWithEmplaceBack = ContainerType<T> && requires (T& v) {
@@ -208,12 +212,13 @@ public:
         apply(ArchiveField<TImpl, T>{key, value});
     }
 
-    // convenience: ar.repeated(value, emplace_args...) -> reader.add(ArchiveField{key_auto, value}, emplace_args...)
-    template <ContainerTypeWithEmplace T, typename... EmplaceArgs>
-    void repeated(T& value, EmplaceArgs&&... args) {
+    // convenience: ar.repeated(value, f_make_value) -> reader.add(ArchiveField{key_auto, value}, f_make_value)
+    template <ContainerType T, typename F>
+    requires ArchiveIsReader<T, TImpl>
+    void repeated(T& value, F&& f_make_value) {
         static_cast<TImpl*>(this)->add(
                 ArchiveField<TImpl, T>{draw_next_key(key_auto), value},
-                std::forward<EmplaceArgs...>(args...));
+                std::forward<F>(f_make_value));
     }
 
     // when: the type has `serialize` method

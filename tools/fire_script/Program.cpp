@@ -25,7 +25,7 @@ static constexpr const char* prompt = "{fg:green}_{} ?{t:normal} ";
 Program::Program(bool log_debug)
 {
     Logger::init(log_debug ? Logger::Level::Trace : Logger::Level::Warning);
-    vfs.mount(XCI_SHARE);
+    ctx.vfs.mount(XCI_SHARE);
 }
 
 
@@ -46,7 +46,7 @@ void Program::process_args(char* argv[])
             auto module_name = input_path.filename().replace_extension().string();
             if (input_path.extension() == ".firm") {
                 // Load binary module
-                auto module = std::make_unique<Module>(module_name);
+                auto module = std::make_shared<Module>(ctx.interpreter.module_manager(), module_name);
                 if (!module->load_from_file(input_file)) {
                     std::cerr << "error loading module file: " << input_file << std::endl;
                     exit(1);

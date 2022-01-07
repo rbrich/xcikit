@@ -53,19 +53,18 @@ static void print_module_header(const Module& module)
 
 const Module* ReplCommand::module_by_idx(size_t mod_idx) {
     TermCtl& t = m_ctx.term_out;
+    auto& module_manager = m_ctx.interpreter.module_manager();
 
     if (mod_idx == size_t(-1)) {
-        if (!m_ctx.std_module) {
-            t.print("{t:bold}{fg:red}Error: std module not loaded{t:normal}\n");
-            return nullptr;
-        }
-        return m_ctx.std_module.get();
+        auto std_module = module_manager.import_module("std");
+        return std_module.get();
     }
-    if (mod_idx == size_t(-2))
-        return &BuiltinModule::static_instance();
-
+    if (mod_idx == size_t(-2)) {
+        auto builtin_module = module_manager.import_module("builtin");
+        return builtin_module.get();
+    }
     if (mod_idx == size_t(-3))
-        return &m_module;
+        return m_module.get();
 
     if (mod_idx >= m_ctx.input_modules.size()) {
         t.print("{t:bold}{fg:red}Error: module index out of range: {}{t:normal}\n",
@@ -84,22 +83,15 @@ const Module* ReplCommand::module_by_name(std::string_view mod_name) {
         ++n;
     }
 
-    auto& ctx = m_ctx;
     TermCtl& t = m_ctx.term_out;
 
-    if (mod_name == "std") {
-        if (!ctx.std_module) {
-            t.print("{t:bold}{fg:red}Error: std module not loaded{t:normal}\n");
-            return nullptr;
-        }
-        return ctx.std_module.get();
-    }
+    if (mod_name == ".")
+        return m_module.get();
 
-    if (mod_name == "builtin")
-        return &BuiltinModule::static_instance();
-
-    if (mod_name == "." || mod_name == "cmd")
-        return &m_module;
+    auto& module_manager = m_ctx.interpreter.module_manager();
+    auto module = module_manager.import_module(mod_name);
+    if (module)
+        return module.get();
 
     t.print("{t:bold}{fg:red}Error: module not found: {}{t:normal}\n",
             mod_name);
@@ -230,9 +222,11 @@ void ReplCommand::cmd_dump_function(size_t fun_idx, size_t mod_idx)
 }
 
 
-ReplCommand::ReplCommand(Context& ctx) : m_ctx(ctx)
+ReplCommand::ReplCommand(Context& ctx)
+        : m_ctx(ctx),
+          m_module(std::make_shared<Module>(m_ctx.interpreter.module_manager()))
 {
-    m_interpreter.add_imported_module(m_module);
+    m_ctx.interpreter.add_module("cmd", m_module);
     add_cmd("quit", "q", [](void* self) { ((ReplCommand*)self)->cmd_quit(); }, this);
     add_cmd("help", "h", cmd_help);
     add_cmd("dump_info", "di", cmd_dump_info);
@@ -248,8 +242,8 @@ ReplCommand::ReplCommand(Context& ctx) : m_ctx(ctx)
             [](void* self, std::string_view s)
             { ((ReplCommand*)self)->cmd_dump_module(s); },
             this);
-    m_module.symtab().detect_overloads("dump_module");
-    m_module.symtab().detect_overloads("dm");
+    m_module->symtab().detect_overloads("dump_module");
+    m_module->symtab().detect_overloads("dm");
     add_cmd("dump_function", "df",
             [](void* self)
             { ((ReplCommand*)self)->cmd_dump_function(); },
@@ -270,14 +264,17 @@ ReplCommand::ReplCommand(Context& ctx) : m_ctx(ctx)
             [](void* self, int32_t f, int32_t m)
             { ((ReplCommand*)self)->cmd_dump_function(f, m); },
             this);
-    m_module.symtab().detect_overloads("dump_function");
-    m_module.symtab().detect_overloads("df");
+    m_module->symtab().detect_overloads("dump_function");
+    m_module->symtab().detect_overloads("df");
 }
 
 
 void ReplCommand::eval(std::string_view input)
 {
-    m_interpreter.eval(std::string(input));
+    Module module(m_ctx.interpreter.module_manager());
+    module.add_imported_module(m_module);
+
+    m_ctx.interpreter.eval(module, std::string(input));
 }
 
 

@@ -6,6 +6,7 @@
 
 #include <xci/script/Interpreter.h>
 #include <xci/script/NativeDelegate.h>
+#include <xci/core/Vfs.h>
 #include <fmt/core.h>
 #include <string_view>
 #include <cassert>
@@ -58,11 +59,13 @@ void toupper_at_wrapped(Stack& stack, void*, void*)
 
 int main()
 {
+    xci::core::Vfs vfs;
+
     // this is a convenient class which manages everything needed to interpret a script
-    Interpreter interpreter;
+    Interpreter interpreter {vfs};
 
     // create module with our native function
-    Module module;
+    Module module {interpreter.module_manager()};
 
     // low level interface - the native function has to operate directly on Stack
     // and its signature is specified explicitly
@@ -94,15 +97,11 @@ int main()
         { return (*static_cast<decltype(lambda_with_capture)*>(l)) (a, b); },
         &lambda_with_capture);
 
-    // add our module as if it was imported by the script
-    // (another possibility is to inject the function directly into `main_module`)
-    interpreter.add_imported_module(module);
-
-    interpreter.eval(R"(hello "Demo")");
+    interpreter.eval(module, R"(hello "Demo")");
 
     // evaluate a script
     // (this one would give the same result: `add2 39 3`)
-    auto result = interpreter.eval(R"(hello (toupper_at "world" 0))");
+    auto result = interpreter.eval(module, R"(hello (toupper_at "world" 0))");
 
     // result contains value of the last expression in the script
     assert(result.type() == Type::Int32);

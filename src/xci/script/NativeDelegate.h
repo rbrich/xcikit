@@ -165,7 +165,7 @@ struct ValueType_s<std::string> {
 };
 
 template<>
-struct ValueType_s<Module&> {
+struct ValueType_s<xci::script::Module&> {
     using type = value::Module;
 };
 

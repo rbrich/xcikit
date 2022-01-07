@@ -20,9 +20,9 @@ namespace xci::script::tool {
 // globals, basically
 struct Context {
     int input_number = -1;  // -1 = batch mode, 0..N = REPL mode
-    Interpreter interpreter;
-    std::unique_ptr<xci::script::Module> std_module;
-    std::vector<std::unique_ptr<xci::script::Module>> input_modules;
+    core::Vfs vfs;
+    Interpreter interpreter {vfs};
+    std::vector<std::shared_ptr<xci::script::Module>> input_modules;
     xci::core::TermCtl& term_out = xci::core::TermCtl::stdout_instance();
 };
 

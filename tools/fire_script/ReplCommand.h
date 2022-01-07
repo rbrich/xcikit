@@ -26,13 +26,13 @@ public:
 private:
     template<class F>
     void add_cmd(std::string&& name, std::string&& alias, F&& fun) {
-        auto p = m_module.add_native_function(move(name), std::forward<F>(fun));
-        m_module.symtab().add(Symbol{move(alias), Symbol::Function, p->index()});
+        auto p = m_module->add_native_function(move(name), std::forward<F>(fun));
+        m_module->symtab().add(Symbol{move(alias), Symbol::Function, p->index()});
     }
     template<class F>
     void add_cmd(std::string&& name, std::string&& alias, F&& fun, void* arg) {
-        auto p = m_module.add_native_function(move(name), std::forward<F>(fun), arg);
-        m_module.symtab().add(Symbol{move(alias), Symbol::Function, p->index()});
+        auto p = m_module->add_native_function(move(name), std::forward<F>(fun), arg);
+        m_module->symtab().add(Symbol{move(alias), Symbol::Function, p->index()});
     }
 
     void cmd_quit();
@@ -53,8 +53,7 @@ private:
     void cmd_dump_function(size_t fun_idx, size_t mod_idx);
 
     Context& m_ctx;
-    Interpreter m_interpreter;  // second interpreter, just for the commands
-    Module m_module {"cmd"};
+    std::shared_ptr<Module> m_module;  // "cmd" module
     Callback m_quit_cb;
 };
 

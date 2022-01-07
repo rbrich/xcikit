@@ -38,8 +38,8 @@ public:
     VfsFile& operator=(VfsFile&&) noexcept = default;
 
     /// \returns true if file was successfully read
-    bool is_open() { return m_content != nullptr; }
-    bool is_real_file() { return !m_path.empty(); }
+    bool is_open() const { return m_content != nullptr; }
+    bool is_real_file() const { return !m_path.empty(); }
 
     /// path to file (only regular files, empty for archives)
     const fs::path& path() const { return m_path; }
@@ -47,6 +47,9 @@ public:
     /// memory buffer containing the file data
     /// or nullptr if there was error reading the file
     BufferPtr content() { return m_content; }
+
+    // convenience operators
+    operator bool() const { return is_open(); }
 
 private:
     fs::path m_path;   ///< path of the file or archive containing the file

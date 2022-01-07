@@ -13,18 +13,17 @@
 namespace xci::script {
 
 
-Interpreter::Interpreter(Compiler::Flags flags)
-    : m_compiler(flags)
-{
-    add_imported_module(BuiltinModule::static_instance());
-}
+Interpreter::Interpreter(const core::Vfs& vfs, Compiler::Flags flags)
+    : m_module_manager(vfs, *this),
+      m_compiler(flags)
+{}
 
 
-std::unique_ptr<Module> Interpreter::build_module(const std::string& name, SourceId source_id)
+std::shared_ptr<Module> Interpreter::build_module(const std::string& name, SourceId source_id)
 {
     // setup module
-    auto module = std::make_unique<Module>(name);
-    module->add_imported_module(BuiltinModule::static_instance());
+    auto module = std::make_shared<Module>(m_module_manager, name);
+    module->import_module("builtin");
 
     // parse
     ast::Module ast;
@@ -48,7 +47,7 @@ std::unique_ptr<Module> Interpreter::build_module(const std::string& name, Sourc
 }
 
 
-TypedValue Interpreter::eval(SourceId source_id, const InvokeCallback& cb)
+TypedValue Interpreter::eval(Module& module, SourceId source_id, const InvokeCallback& cb)
 {
     // parse
     ast::Module ast;
@@ -56,9 +55,9 @@ TypedValue Interpreter::eval(SourceId source_id, const InvokeCallback& cb)
 
     // compile
     auto source_name = m_source_manager.get_source(source_id).name();
-    auto& symtab = m_main.symtab().add_child(source_name);
-    auto fn_idx = m_main.add_function(Function{m_main, symtab}).index;
-    auto& fn = m_main.get_function(fn_idx);
+    auto& symtab = module.symtab().add_child(source_name);
+    auto fn_idx = module.add_function(Function{module, symtab}).index;
+    auto& fn = module.get_function(fn_idx);
     m_compiler.compile(fn, ast);
 
     // execute
@@ -70,12 +69,21 @@ TypedValue Interpreter::eval(SourceId source_id, const InvokeCallback& cb)
 }
 
 
-TypedValue Interpreter::eval(std::string input, const Interpreter::InvokeCallback& cb)
+TypedValue Interpreter::eval(Module& module, std::string input, const Interpreter::InvokeCallback& cb)
 {
     auto src_id = m_source_manager.add_source(
-            fmt::format("<input{}>", m_input_num),
+            fmt::format("<input{}>", m_input_num++),
             std::move(input));
-    return eval(src_id, cb);
+
+    return eval(module, src_id, cb);
+}
+
+
+TypedValue Interpreter::eval(std::string input, const Interpreter::InvokeCallback& cb)
+{
+    Module main(m_module_manager);
+    main.import_module("builtin");
+    return eval(main, std::move(input), cb);
 }
 
 

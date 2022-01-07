@@ -27,12 +27,12 @@ enum class EvalMode {
 
 class Repl {
 public:
-    Repl(Context& ctx, const ReplOptions& opts, const core::Vfs & vfs)
-        : m_ctx(ctx), m_opts(opts), m_vfs(vfs) {}
+    Repl(Context& ctx, const ReplOptions& opts)
+        : m_ctx(ctx), m_opts(opts) {}
 
     bool evaluate(const std::string& module_name, std::string module_source, EvalMode mode);
 
-    std::unique_ptr<Module> prepare_module(const std::string& module_name);
+    std::shared_ptr<Module> prepare_module(const std::string& module_name);
     bool evaluate_module(Module& module, EvalMode mode);
 
 private:
@@ -40,7 +40,6 @@ private:
 
     Context& m_ctx;
     const ReplOptions& m_opts;
-    const core::Vfs& m_vfs;
 };
 
 }  // namespace xci::script::tool

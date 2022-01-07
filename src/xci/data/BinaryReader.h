@@ -76,7 +76,7 @@ public:
             return;
         }
         using ElemT = typename std::pointer_traits<T>::element_type;
-        a.value = T{new ElemT{}};
+        a.value = T(new ElemT{});
         apply(ArchiveField<BinaryReader, ElemT>{a.key, *a.value, a.name});
     }
 
@@ -141,15 +141,14 @@ public:
         }
     }
 
-    template <ContainerTypeWithEmplace T, typename... EmplaceArgs>
-    void add(ArchiveField<BinaryReader, T>&& a, EmplaceArgs&&... args) {
+    template <ContainerType T, typename F>
+    void add(ArchiveField<BinaryReader, T>&& a, F&& f_make_value) {
         for (;;) {
             const auto chunk_type = peek_chunk_head(a.key);
             if (chunk_type == ChunkNotFound)
                 return;
-            typename T::value_type v {std::forward<EmplaceArgs...>(args...)};
-            apply(ArchiveField<BinaryReader, typename T::value_type>{a.key, v, a.name});
-            a.value.emplace(std::move(v));
+            auto&& v = f_make_value(a.value);
+            apply(ArchiveField<BinaryReader, decltype(v)>{a.key, v, a.name});
         }
     }
 

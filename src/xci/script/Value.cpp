@@ -231,7 +231,7 @@ void Value::apply(value::Visitor& visitor) const
         using T = std::decay_t<decltype(v)>;
         if constexpr (std::is_same_v<T, std::monostate>)
             visitor.visit();  // Void
-        else if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, StreamV>)
+        else if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, StreamV> || std::is_same_v<T, ModuleV>)
             visitor.visit(v.value());
         else
             visitor.visit(v);
@@ -257,7 +257,7 @@ Type Value::type() const
             [](const TupleV&) { return Type::Tuple; },
             [](const ClosureV&) { return Type::Function; },
             [](const StreamV&) { return Type::Stream; },
-            [](const script::Module*) { return Type::Module; },
+            [](const ModuleV&) { return Type::Module; },
     }, m_value);
 }
 

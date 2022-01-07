@@ -20,6 +20,7 @@ add_library(xci-script
     Interpreter.cpp
     Machine.cpp
     Module.cpp
+    ModuleManager.cpp
     Value.cpp
     Parser.cpp
     Source.cpp

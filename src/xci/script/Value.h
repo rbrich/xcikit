@@ -159,6 +159,17 @@ struct StreamV {
 };
 
 
+struct ModuleV {
+    ModuleV() = default;
+    explicit ModuleV(script::Module& v) : module_ptr(&v) {}
+
+    bool operator ==(const ModuleV& rhs) const { return value() == rhs.value(); }
+    const script::Module* value() const { return module_ptr; }
+
+    script::Module* module_ptr = nullptr;
+};
+
+
 class Value {
 public:
     struct StringTag {};
@@ -191,8 +202,8 @@ public:
     explicit Value(const Function& fn, Values&& values) : m_value(ClosureV{fn, move(values)}) {}  // Closure
     explicit Value(StreamTag) : m_value(StreamV{}) {}  // Stream
     explicit Value(const script::Stream& v) : m_value(StreamV{v}) {}  // Stream
-    explicit Value(ModuleTag) : m_value((script::Module*) nullptr) {}  // Module
-    explicit Value(script::Module& v) : m_value(&v) {}  // Module
+    explicit Value(ModuleTag) : m_value(ModuleV{}) {}  // Module
+    explicit Value(script::Module& v) : m_value(ModuleV{v}) {}  // Module
 
     bool operator ==(const Value& rhs) const;
 
@@ -251,7 +262,7 @@ public:
 
     std::string_view get_string() const { return get<StringV>().value(); }
     void tuple_foreach(const std::function<void(const Value&)>& cb) const { return get<TupleV>().foreach(cb); }
-    const script::Module& get_module() const { return *get<script::Module*>(); }
+    const script::Module& get_module() const { return *get<ModuleV>().module_ptr; }
 
     // -------------------------------------------------------------------------
     // Serialization
@@ -275,8 +286,7 @@ protected:
     using ValueVariant = std::variant<
             std::monostate,
             bool, byte, char32_t, uint32_t, uint64_t, int32_t, int64_t, float, double,
-            StringV, ListV, TupleV, ClosureV, StreamV,
-            script::Module*
+            StringV, ListV, TupleV, ClosureV, StreamV, ModuleV
         >;
     ValueVariant m_value;
 };
@@ -598,8 +608,8 @@ public:
     Module() : Value(Value::ModuleTag{}) {}
     explicit Module(script::Module& v) : Value(v) {}
 
-    script::Module& value() { return *get<script::Module*>(); }
-    const script::Module& value() const { return *get<script::Module*>(); }
+    script::Module& value() { return *get<ModuleV>().module_ptr; }
+    const script::Module& value() const { return get_module(); }
 };
 
 } // namespace value
