@@ -70,7 +70,7 @@ jobs:
     - uses: ilammy/msvc-dev-cmd@v1
 
     - name: cache
-      if: ${{ matrix.os != 'windows-2019' }}
+      if: ${{ !startsWith(matrix.os, 'windows-') }}
       uses: actions/cache@v2
       with:
         path: |
