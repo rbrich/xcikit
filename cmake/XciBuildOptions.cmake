@@ -80,9 +80,12 @@ if (ENABLE_WARNINGS)
         string(REGEX REPLACE "/W[0-4]" "" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
         # Suppressed warnings:
         # - C4100: unreferenced formal parameter (noisy)
+        # - C4146: unary minus operator applied to unsigned type, result still unsigned (intentional)
         # - C4200: nonstandard extension used: zero-sized array in struct/union (intentional)
         # - C4244: conversion from 'int' to 'uint8_t' ... (FP)
-        add_compile_options(/W4 /wd4100 /wd4200 /wd4244)
+        # - C4702: unreachable code (tons of FPs in std::visit)
+        # - C5105: macro expansion producing 'defined' has undefined behavior (only in Windows headers)
+        add_compile_options(/W4 /wd4100 /wd4146 /wd4200 /wd4244 /wd4702 /wd5105)
         # https://docs.microsoft.com/en-us/cpp/c-runtime-library/compatibility?view=vs-2019
         add_compile_definitions(
             _CRT_NONSTDC_NO_WARNINGS
@@ -130,6 +133,8 @@ if (MSVC)
     add_compile_definitions(NOMINMAX)
     # Read all source files as utf-8
     add_compile_options(/utf-8)
+    # xci/script/Machine.cpp : fatal error C1128: number of sections exceeded object file format limit: compile with /bigobj
+    add_compile_options(/bigobj)
 endif()
 
 if (EMSCRIPTEN)

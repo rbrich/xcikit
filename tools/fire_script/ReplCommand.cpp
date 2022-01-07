@@ -51,19 +51,19 @@ static void print_module_header(const Module& module)
 }
 
 
-const Module* ReplCommand::module_by_idx(size_t mod_idx) {
+const Module* ReplCommand::module_by_idx(Index mod_idx) {
     TermCtl& t = m_ctx.term_out;
     auto& module_manager = m_ctx.interpreter.module_manager();
 
-    if (mod_idx == size_t(-1)) {
+    if (mod_idx == Index(-1)) {
         auto std_module = module_manager.import_module("std");
         return std_module.get();
     }
-    if (mod_idx == size_t(-2)) {
+    if (mod_idx == Index(-2)) {
         auto builtin_module = module_manager.import_module("builtin");
         return builtin_module.get();
     }
-    if (mod_idx == size_t(-3))
+    if (mod_idx == Index(-3))
         return m_module.get();
 
     if (mod_idx >= m_ctx.input_modules.size()) {
@@ -99,7 +99,7 @@ const Module* ReplCommand::module_by_name(std::string_view mod_name) {
 }
 
 
-void ReplCommand::dump_module(size_t mod_idx) {
+void ReplCommand::dump_module(Index mod_idx) {
     auto* module = module_by_idx(mod_idx);
     if (!module)
         return;
@@ -109,11 +109,11 @@ void ReplCommand::dump_module(size_t mod_idx) {
 
 
 void ReplCommand::cmd_dump_module() {
-    dump_module(m_ctx.input_modules.size() - 1);
+    dump_module(Index(m_ctx.input_modules.size() - 1));
 }
 
 
-void ReplCommand::cmd_dump_module(size_t mod_idx) {
+void ReplCommand::cmd_dump_module(Index mod_idx) {
     dump_module(mod_idx);
 }
 
@@ -127,7 +127,7 @@ void ReplCommand::cmd_dump_module(std::string_view mod_name) {
 }
 
 
-void ReplCommand::dump_function(const Module& module, size_t fun_idx) {
+void ReplCommand::dump_function(const Module& module, Index fun_idx) {
     TermCtl& t = m_ctx.term_out;
 
     if (fun_idx >= module.num_functions()) {
@@ -201,7 +201,7 @@ void ReplCommand::cmd_dump_function(std::string_view fun_name, std::string_view 
 }
 
 
-void ReplCommand::cmd_dump_function(size_t fun_idx)
+void ReplCommand::cmd_dump_function(Index fun_idx)
 {
     TermCtl& t = m_ctx.term_out;
     if (m_ctx.input_modules.empty()) {
@@ -213,7 +213,7 @@ void ReplCommand::cmd_dump_function(size_t fun_idx)
 }
 
 
-void ReplCommand::cmd_dump_function(size_t fun_idx, size_t mod_idx)
+void ReplCommand::cmd_dump_function(Index fun_idx, Index mod_idx)
 {
     auto* module = module_by_idx(mod_idx);
     if (!module)

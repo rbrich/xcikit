@@ -405,7 +405,7 @@ template<class T>
 auto IndexedMap<T>::acquire_slot(Index& index) -> Slot&
 {
     if (m_free_chunk == no_index) {
-        m_free_chunk = m_chunk.size();
+        m_free_chunk = Index(m_chunk.size());
         m_chunk.push_back({allocate_slots(), ~uint64_t{0}, no_index});
     }
 

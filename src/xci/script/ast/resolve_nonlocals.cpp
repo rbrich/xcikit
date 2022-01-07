@@ -145,7 +145,7 @@ public:
                     auto nlsym = m_function.symtab().add({
                             v.identifier.symbol,
                             Symbol::Nonlocal,
-                            m_function.nonlocals().size(),
+                            Index(m_function.nonlocals().size()),
                             0});
                     m_function.add_nonlocal(TypeInfo{fn.signature_ptr()});
                     v.identifier.symbol = nlsym;

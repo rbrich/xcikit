@@ -26,9 +26,12 @@ using xci::core::IndexedMap;
 
 class Module {
 public:
-    using FunctionId = IndexedMap<Function>::WeakIndex;
-    using ClassId = IndexedMap<Class>::WeakIndex;
-    using InstanceId = IndexedMap<Instance>::WeakIndex;
+    using WeakFunctionId = IndexedMap<Function>::WeakIndex;
+    using FunctionIdx = IndexedMap<Function>::Index;
+    using WeakClassId = IndexedMap<Class>::WeakIndex;
+    using ClassIdx = IndexedMap<Class>::Index;
+    using WeakInstanceId = IndexedMap<Instance>::WeakIndex;
+    using InstanceIdx = IndexedMap<Instance>::Index;
 
     explicit Module(ModuleManager& module_manager, std::string name = "<module>")
         : m_module_manager(module_manager), m_symtab(move(name))
@@ -63,42 +66,42 @@ public:
     // - index 0 should be builtin
     // - index 1 should be std
     // - imported modules are added in import order
-    Index import_module(const std::string& name) { m_modules.push_back(m_module_manager.import_module(name)); return m_modules.size() - 1; }
-    Index add_imported_module(std::shared_ptr<Module> module) { m_modules.push_back(std::move(module)); return m_modules.size() - 1; }
+    Index import_module(const std::string& name);
+    Index add_imported_module(std::shared_ptr<Module> module);
     Module& get_imported_module(Index idx) const { return *m_modules[idx]; }
     Index get_imported_module_index(Module* module) const;
-    size_t num_imported_modules() const { return m_modules.size(); }
+    Size num_imported_modules() const { return Size(m_modules.size()); }
 
     // Functions
-    FunctionId add_function(Function&& fn);
-    const Function& get_function(Index id) const { return m_functions[id]; }
-    Function& get_function(Index id) { return m_functions[id]; }
-    size_t num_functions() const { return m_functions.size(); }
+    WeakFunctionId add_function(Function&& fn);
+    const Function& get_function(FunctionIdx id) const { return m_functions[id]; }
+    Function& get_function(FunctionIdx id) { return m_functions[id]; }
+    Size num_functions() const { return Size(m_functions.size()); }
 
     // Static values
     Index add_value(TypedValue&& value);
     const TypedValue& get_value(Index idx) const { return m_values[idx]; }
     Index find_value(const TypedValue& value) const;
-    size_t num_values() const { return m_values.size(); }
+    Size num_values() const { return Size(m_values.size()); }
 
     // Type information
     Index add_type(TypeInfo type_info);
     const TypeInfo& get_type(Index idx) const { return m_types[idx]; }
     Index find_type(const TypeInfo& type_info) const;
     void set_type(Index idx, TypeInfo&& type_info) { m_types[idx] = move(type_info); }
-    size_t num_types() const { return m_types.size(); }
+    Size num_types() const { return Size(m_types.size()); }
 
     // Type classes
-    ClassId add_class(Class&& cls);
-    const Class& get_class(size_t idx) const { return m_classes[idx]; }
-    Class& get_class(size_t idx) { return m_classes[idx]; }
-    size_t num_classes() const { return m_classes.size(); }
+    WeakClassId add_class(Class&& cls);
+    const Class& get_class(ClassIdx idx) const { return m_classes[idx]; }
+    Class& get_class(ClassIdx idx) { return m_classes[idx]; }
+    Size num_classes() const { return Size(m_classes.size()); }
 
     // Instances
-    InstanceId add_instance(Instance&& inst);
-    const Instance& get_instance(size_t idx) const { return m_instances[idx]; }
-    Instance& get_instance(size_t idx) { return m_instances[idx]; }
-    size_t num_instances() const { return m_instances.size(); }
+    WeakInstanceId add_instance(Instance&& inst);
+    const Instance& get_instance(InstanceIdx idx) const { return m_instances[idx]; }
+    Instance& get_instance(InstanceIdx idx) { return m_instances[idx]; }
+    Size num_instances() const { return Size(m_instances.size()); }
 
     // Top-level symbol table
     SymbolTable& symtab() { return m_symtab; }

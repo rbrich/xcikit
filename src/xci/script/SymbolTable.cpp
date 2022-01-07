@@ -67,7 +67,7 @@ std::string SymbolTable::qualified_name() const
 SymbolPointer SymbolTable::add(Symbol&& symbol)
 {
     m_symbols.emplace_back(std::move(symbol));
-    return {*this, m_symbols.size() - 1};
+    return {*this, Index(m_symbols.size() - 1)};
 }
 
 
@@ -90,7 +90,7 @@ unsigned SymbolTable::level() const
 }
 
 
-size_t SymbolTable::count(Symbol::Type type) const
+Size SymbolTable::count(Symbol::Type type) const
 {
     return std::count_if(m_symbols.begin(), m_symbols.end(),
             [type](const Symbol& sym) { return sym.type() == type; });
@@ -99,7 +99,7 @@ size_t SymbolTable::count(Symbol::Type type) const
 
 void SymbolTable::update_nonlocal_indices()
 {
-    size_t idx = 0;
+    Index idx = 0;
     for (auto& sym : m_symbols) {
         if (sym.type() == Symbol::Nonlocal) {
             sym.set_index(idx++);
@@ -161,7 +161,7 @@ void SymbolTable::detect_overloads(const std::string& name)
     for (size_t i = 0; i != m_symbols.size(); ++i) {
         if (m_symbols[i].name() == name) {
             if (prev) {
-                prev->set_next({*this, i});
+                prev->set_next({*this, Index(i)});
             }
             prev = &m_symbols[i];
         }

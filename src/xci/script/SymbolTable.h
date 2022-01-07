@@ -22,8 +22,11 @@ class Class;
 class Module;
 
 
-using Index = size_t;
-static constexpr Index no_index {SIZE_MAX};
+using Index = uint32_t;
+static constexpr Index no_index {~0u};
+
+using Size = uint32_t;
+
 
 class SymbolPointer {
 public:
@@ -173,7 +176,7 @@ public:
     SymbolPointer find_last_of(const std::string& name, Symbol::Type type);
     SymbolPointer find_last_of(Symbol::Type type);
 
-    size_t count(Symbol::Type type) const;
+    Size count(Symbol::Type type) const;
     void update_nonlocal_indices();
 
     /// Check symbol table for overloaded function name

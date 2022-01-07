@@ -38,8 +38,22 @@ SymbolPointer Module::add_native_function(
     fn.signature().params = move(params);
     fn.signature().return_type = move(retval);
     fn.set_native(native);
-    FunctionId fn_id = add_function(move(fn));
+    WeakFunctionId fn_id = add_function(move(fn));
     return symtab().add({move(name), Symbol::Function, fn_id.index});
+}
+
+
+Index Module::import_module(const std::string& name)
+{
+    m_modules.push_back(m_module_manager.import_module(name));
+    return Index(m_modules.size() - 1);
+}
+
+
+Index Module::add_imported_module(std::shared_ptr<Module> module)
+{
+    m_modules.push_back(std::move(module));
+    return Index(m_modules.size() - 1);
 }
 
 
@@ -53,7 +67,7 @@ Index Module::get_imported_module_index(Module* module) const
 }
 
 
-auto Module::add_function(Function&& fn) -> FunctionId
+auto Module::add_function(Function&& fn) -> WeakFunctionId
 {
     return m_functions.add(move(fn));
 }
@@ -68,7 +82,7 @@ Index Module::add_value(TypedValue&& value)
     }
 
     m_values.add(move(value));
-    return m_values.size() - 1;
+    return Index(m_values.size() - 1);
 }
 
 
@@ -90,7 +104,7 @@ Index Module::add_type(TypeInfo type_info)
         return idx;
 
     m_types.push_back(move(type_info));
-    return m_types.size() - 1;
+    return Index(m_types.size() - 1);
 }
 
 
@@ -104,13 +118,13 @@ Index Module::find_type(const TypeInfo& type_info) const
 }
 
 
-auto Module::add_class(Class&& cls) -> ClassId
+auto Module::add_class(Class&& cls) -> WeakClassId
 {
     return m_classes.add(move(cls));
 }
 
 
-auto Module::add_instance(Instance&& inst) -> InstanceId
+auto Module::add_instance(Instance&& inst) -> WeakInstanceId
 {
     return m_instances.add(move(inst));
 }

@@ -292,7 +292,9 @@ bool Value::negate()
     return std::visit([](auto& v) -> bool {
         using T = std::decay_t<decltype(v)>;
 
-        if constexpr (std::is_integral_v<T> || std::is_floating_point_v<T>) {
+        if constexpr ((std::is_integral_v<T> || std::is_floating_point_v<T>)
+                && !std::is_same_v<T, bool>)
+        {
             v = std::negate<>{}(v);
             return true;
         }
@@ -308,7 +310,9 @@ bool Value::modulus(const Value& rhs)
         using TLhs = std::decay_t<decltype(l)>;
         using TRhs = std::decay_t<decltype(r)>;
 
-        if constexpr (std::is_same_v<TLhs, TRhs> && std::is_integral_v<TLhs>) {
+        if constexpr (std::is_same_v<TLhs, TRhs> && std::is_integral_v<TLhs>
+                && !std::is_same_v<TLhs, bool>)
+        {
             l = std::modulus<>{}(l, r);
             return true;
         }

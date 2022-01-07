@@ -29,7 +29,7 @@ Class::Class(Class&& rhs)
 Index Class::add_function_type(TypeInfo&& type_info)
 {
     m_functions.push_back(move(type_info));
-    return m_functions.size() - 1;
+    return Index(m_functions.size() - 1);
 }
 
 

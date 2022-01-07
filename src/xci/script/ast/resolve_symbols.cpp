@@ -84,7 +84,7 @@ public:
         // add child symbol table for the class
         SymbolTable& cls_symtab = symtab().add_child(v.class_name.name);
         for (auto&& [i, type_var] : v.type_vars | enumerate)
-            cls_symtab.add({type_var.name, Symbol::TypeVar, i + 1});
+            cls_symtab.add({type_var.name, Symbol::TypeVar, Index(i + 1)});
 
         // add new class to the module
         Class cls {cls_symtab};
@@ -291,7 +291,7 @@ public:
     }
 
     void visit(ast::FunctionType& t) final {
-        size_t type_idx = 0;
+        Index type_idx = 0;
         std::set<std::string> type_params;  // check uniqueness
         for (auto& tp : t.type_params) {
             if (type_params.contains(tp.name))
@@ -304,7 +304,7 @@ public:
             tc.type_class.apply(*this);
             symtab().add({tc.type_name.name, Symbol::TypeVar, ++type_idx});
         }*/
-        size_t par_idx = 0;
+        Index par_idx = 0;
         for (auto& p : t.params) {
             if (!p.type) {
                 // '$T' is internal prefix for untyped function args
@@ -333,7 +333,7 @@ private:
     SymbolTable& symtab() { return *m_symtab; }
 
     SymbolPointer allocate_type_var(const std::string& name = "") {
-        size_t idx = 1;
+        Index idx = 1;
         auto last_var = symtab().find_last_of(Symbol::TypeVar);
         if (last_var)
             idx = last_var->index() + 1;
@@ -380,7 +380,7 @@ private:
                 return symptr;
         }
         // imported modules
-        for (size_t i = module().num_imported_modules() - 1; i != size_t(-1); --i) {
+        for (Index i = Index(module().num_imported_modules() - 1); i != Index(-1); --i) {
             auto symptr = module().get_imported_module(i).symtab().find_by_name(name);
             if (symptr)
                 return symptr;
@@ -403,7 +403,7 @@ private:
                 return symptr;
         }
         // imported modules
-        for (size_t i = module().num_imported_modules() - 1; i != size_t(-1); --i) {
+        for (Index i = Index(module().num_imported_modules() - 1); i != Index(-1); --i) {
             auto symptr = module().get_imported_module(
                     i).symtab().find_last_of(name, type);
             if (symptr)

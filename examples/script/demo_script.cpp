@@ -7,11 +7,16 @@
 #include <xci/script/Interpreter.h>
 #include <xci/script/NativeDelegate.h>
 #include <xci/core/Vfs.h>
+#include <xci/core/log.h>
+#include <xci/config.h>
+
 #include <fmt/core.h>
+
 #include <string_view>
 #include <cassert>
 
 using namespace xci::script;
+using namespace xci::core;
 
 
 void hello_fun(Stack& stack, void*, void*)
@@ -59,6 +64,9 @@ void toupper_at_wrapped(Stack& stack, void*, void*)
 
 int main()
 {
+    // silence logging
+    Logger::init(Logger::Level::Warning);
+
     xci::core::Vfs vfs;
 
     // this is a convenient class which manages everything needed to interpret a script
@@ -97,15 +105,27 @@ int main()
         { return (*static_cast<decltype(lambda_with_capture)*>(l)) (a, b); },
         &lambda_with_capture);
 
+    // compile the snippet and add it as a new function to module, then run it
     interpreter.eval(module, R"(hello "Demo")");
 
-    // evaluate a script
-    // (this one would give the same result: `add2 39 3`)
+    // capture the result
     auto result = interpreter.eval(module, R"(hello (toupper_at "world" 0))");
 
     // result contains value of the last expression in the script
     assert(result.type() == Type::Int32);
     assert(result.get<int32_t>() == 42);
+
+    // use standard functions in a script - they must be imported manually
+    module.import_module("builtin");  // builtin `__add` intrinsic
+
+    // std module is loaded from std.fire file, looked up in VFS as "script/std.fire"
+    if (!vfs.mount(XCI_SHARE))
+        return EXIT_FAILURE;
+    module.import_module("std");    // `add` function, which is alias of `+` operator
+
+    auto result2 = interpreter.eval(module, R"(10 + 2)");
+    assert(result2.type() == Type::Int32);
+    assert(result2.get<int32_t>() == 12);
 
     return 0;
 }
