@@ -11,6 +11,44 @@
 namespace xci::script {
 
 
+// This function contains most of the logic - see description in resolve_nonlocals.h
+void resolve_nonlocals_in_symtab(Function& func)
+{
+    if (func.test_and_set_nonlocals_resolved())
+        return;
+    auto& nonlocals = func.signature().nonlocals;
+    if (nonlocals.empty())
+        return;
+
+    auto nonlocals_erased = 0;
+    for (auto& sym : func.symtab()) {
+        if (sym.type() == Symbol::Nonlocal) {
+            sym.set_index(sym.index() - nonlocals_erased);
+            if (sym.ref() && sym.ref()->type() == Symbol::Function) {
+                // unwrap reference to non-value function
+                auto& ref_fn = sym.ref().get_function();
+                if (!ref_fn.has_nonlocals()) {
+                    nonlocals.erase(nonlocals.begin() + (ptrdiff_t) sym.index());
+                    ++ nonlocals_erased;
+                    sym = *sym.ref();
+                }
+            } else if (sym.depth() > 1) {
+                // not direct parent -> add intermediate Nonlocal
+                auto ti = sym.ref().symtab()->function()->parameter(sym.ref()->index());
+                auto* parent_fn = func.symtab().parent()->function();
+                auto idx = parent_fn->add_nonlocal(std::move(ti));
+                parent_fn->symtab().add({sym.ref(), Symbol::Nonlocal, idx, sym.depth() - 1});
+            }
+        }
+        if (sym.type() == Symbol::Function && sym.ref() && sym.ref()->type() == Symbol::Function) {
+            // unwrap function (self-)reference
+            sym.set_index(sym.ref()->index());
+        }
+    }
+    func.symtab().update_nonlocal_indices();
+}
+
+
 class NonlocalResolverVisitor final: public ast::VisitorExclTypes {
 public:
     using VisitorExclTypes::visit;
@@ -80,8 +118,9 @@ public:
                         }
                         if (ref_fn.is_generic()) {
                             resolve_nonlocals(ref_fn, ref_fn.ast());
+                        } else {
+                            resolve_nonlocals_in_symtab(ref_fn);
                         }
-                        process_function(ref_fn);
                         break;
                     }
                     default:
@@ -97,8 +136,9 @@ public:
                 auto& fn = v.module->get_function(v.index);
                 if (fn.is_generic()) {
                     resolve_nonlocals(fn, fn.ast());
+                } else {
+                    resolve_nonlocals_in_symtab(fn);
                 }
-                process_function(fn);
                 // partial calls
                 if (!m_function.partial().empty() && v.module == &module()) {
                     m_function.symtab().set_name(v.identifier.name + "/partial");
@@ -149,7 +189,6 @@ public:
         Function& fn = module().get_function(v.index);
         if (!fn.detect_generic()) {
             resolve_nonlocals(fn, v.body);
-            process_function(fn);
         }
     }
 
@@ -159,40 +198,6 @@ private:
     void process_subroutine(Function& func, ast::Expression& expression) {
         NonlocalResolverVisitor visitor(func);
         expression.apply(visitor);
-    }
-
-    void process_function(Function& func)
-    {
-        if (func.test_and_set_nonlocals_resolved())
-            return;
-        auto& nonlocals = func.signature().nonlocals;
-        if (nonlocals.empty())
-            return;
-
-        auto nonlocals_erased = 0;
-        for (auto& sym : func.symtab()) {
-            if (sym.type() == Symbol::Nonlocal) {
-                sym.set_index(sym.index() - nonlocals_erased);
-                if (sym.ref() && sym.ref()->type() == Symbol::Function) {
-                    // unwrap reference to non-value function
-                    auto& ref_fn = sym.ref().get_function();
-                    if (!ref_fn.has_nonlocals()) {
-                        nonlocals.erase(nonlocals.begin() + (ptrdiff_t) sym.index());
-                        ++ nonlocals_erased;
-                        sym = *sym.ref();
-                    }
-                } else if (sym.depth() > 1) {
-                    // not direct parent -> add intermediate Nonlocal
-                    auto ti = sym.ref().symtab()->function()->parameter(sym.ref()->index());
-                    auto idx = m_function.add_nonlocal(std::move(ti));
-                    m_function.symtab().add({sym.ref(), Symbol::Nonlocal, idx, sym.depth() - 1});
-                }
-            }
-            if (sym.type() == Symbol::Function && sym.ref() && sym.ref()->type() == Symbol::Function) {
-                // unwrap function (self-)reference
-                sym.set_index(sym.ref()->index());
-            }
-        }
     }
 
 private:
@@ -206,7 +211,7 @@ void resolve_nonlocals(Function& func, const ast::Block& block)
     for (const auto& stmt : block.statements) {
         stmt->apply(visitor);
     }
-    func.symtab().update_nonlocal_indices();
+    resolve_nonlocals_in_symtab(func);
 }
 
 
