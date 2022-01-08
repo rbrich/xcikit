@@ -170,7 +170,7 @@ void ReplCommand::cmd_dump_function(std::string_view fun_name) {
     size_t mod_idx = m_ctx.input_modules.size() - 1;
     const auto& module = *m_ctx.input_modules[mod_idx];
 
-    for (size_t i = 0; i != module.num_functions(); ++i) {
+    for (Index i = 0; i != module.num_functions(); ++i) {
         if (module.get_function(i).name() == fun_name) {
             dump_function(module, i);
             return;
@@ -190,7 +190,7 @@ void ReplCommand::cmd_dump_function(std::string_view fun_name, std::string_view 
         return;
 
     // lookup function
-    for (size_t i = 0; i != module->num_functions(); ++i) {
+    for (Index i = 0; i != module->num_functions(); ++i) {
         if (module->get_function(i).name() == fun_name) {
             dump_function(*module, i);
             return;
