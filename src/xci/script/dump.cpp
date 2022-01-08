@@ -800,17 +800,17 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
     bool verbose = stream_options(os).module_verbose;
     bool dump_tree = stream_options(os).enable_tree;
     os << "* " << v.num_imported_modules() << " imported modules" << endl << more_indent;
-    for (size_t i = 0; i < v.num_imported_modules(); ++i)
+    for (Index i = 0; i < v.num_imported_modules(); ++i)
         os << put_indent << '[' << i << "] " << v.get_imported_module(i).name() << endl;
     os << less_indent;
 
     os << "* " << v.num_functions() << " functions" << endl << more_indent;
-    for (size_t i = 0; i < v.num_functions(); ++i) {
+    for (Index i = 0; i < v.num_functions(); ++i) {
         const auto& f = v.get_function(i);
         os << put_indent << '[' << i << "] ";
         if (f.kind() != Function::Kind::Compiled)
             os << '(' << f.kind() << ") ";
-        os << f.name() << ": " << f.signature() << endl;
+        os << f.qualified_name() << ": " << f.signature() << endl;
         if (verbose && f.kind() == Function::Kind::Generic) {
             os << more_indent << put_indent << f.ast() << less_indent;
             if (!dump_tree)
@@ -827,14 +827,14 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
     os << less_indent;
 
     os << "* " << v.num_values() << " static values" << endl << more_indent;
-    for (size_t i = 0; i < v.num_values(); ++i) {
+    for (Index i = 0; i < v.num_values(); ++i) {
         const auto& val = v.get_value(i);
         os << put_indent << '[' << i << "] " << val << endl;
     }
     os << less_indent;
 
     os << "* " << v.num_types() << " types" << endl << more_indent;
-    for (size_t i = 0; i < v.num_types(); ++i) {
+    for (Index i = 0; i < v.num_types(); ++i) {
         const auto& typ = v.get_type(i);
         os << put_indent << '[' << i << "] " << typ << endl;
     }
@@ -842,7 +842,7 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
 
     os << "* " << v.num_classes() << " type classes" << endl << more_indent;
     auto& type_var_names = stream_options(os).type_var_names;
-    for (size_t i = 0; i < v.num_classes(); ++i) {
+    for (Index i = 0; i < v.num_classes(); ++i) {
         const auto& cls = v.get_class(i);
         os << put_indent << '[' << i << "] " << cls.name();
         bool first_method = true;
@@ -879,7 +879,7 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
     os << less_indent;
 
     os << "* " << v.num_instances() << " instances" << endl << more_indent;
-    for (size_t i = 0; i < v.num_instances(); ++i) {
+    for (Index i = 0; i < v.num_instances(); ++i) {
         const auto& inst = v.get_instance(i);
         os << put_indent << '[' << i << "] " << inst.class_().name();
         for (const auto& t : inst.types())
@@ -1037,6 +1037,8 @@ std::ostream& operator<<(std::ostream& os, const Symbol& v)
        << left << setw(18) << v.type();
     if (v.index() != no_index)
         os << " #" << v.index();
+    if (v.next())
+        os << " (next: #" << v.next()->index() << ")";
     if (v.ref())
         os << " -> " << v.ref()->type() << " #" << v.ref()->index();
     if (v.depth() != 0)

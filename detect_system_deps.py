@@ -27,14 +27,27 @@ def parse_args():
     return args.option
 
 
+def add_required_components(options):
+    result = set(options)
+    for name in options:
+        if name == 'widgets':
+            result.add('text')
+            result.add('graphics')
+        if name == 'text':
+            result.add('graphics')
+        if name == 'script':
+            result.add('data')
+    return result
+
+
 def requirements():
     with open(script_dir.joinpath('conandata.yml'), newline='') as conandata:
         return yaml.safe_load(conandata)['requirements']
 
 
-def filtered_requirements(options):
+def filtered_requirements(options: set):
     for name, info in requirements().items():
-        if 'prereq' not in info or set(info['prereq']).intersection(set(options)):
+        if 'prereq' not in info or set(info['prereq']).intersection(options):
             yield name, info
 
 
@@ -88,6 +101,7 @@ def detect_deps(reqs):
 
 def main():
     options = parse_args()
+    options = add_required_components(options)
     reqs = tuple(filtered_requirements(options))
     deps = tuple(detect_deps(reqs))
     print(' '.join(f'-DXCI_{o.upper()}=ON' for o in deps if o.startswith('with_')))

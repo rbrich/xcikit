@@ -45,15 +45,18 @@ class XcikitConan(ConanFile):
     }
     default_options = {
         "shared": False,
+        ### Optional components:
         "data": True,
         "script": True,
         "graphics": True,
         "text": True,
         "widgets": True,
-        "tools": True,
-        "examples": True,
-        "tests": True,
-        "benchmarks": True,
+        ### Also build and install:
+        "tools": False,
+        "examples": False,
+        "tests": False,
+        "benchmarks": False,
+        ### System dependencies (instead of Conan):
         "system_fmt": False,
         "system_zlib": False,
         "system_glfw": False,
@@ -80,7 +83,7 @@ class XcikitConan(ConanFile):
         "vulkan-loader:with_wsi_directfb": False,
     }
 
-    generators = ("cmake_find_package_multi",)
+    generators = ("cmake_find_package_multi", "cmake_paths")
     exports = ("VERSION",)
     exports_sources = ("CMakeLists.txt", "config.h.in", "xcikit-config.cmake.in",
                        "cmake/**", "src/**", "examples/**", "tests/**", "benchmarks/**", "tools/**",
@@ -94,7 +97,8 @@ class XcikitConan(ConanFile):
         if not prereq:
             return True
         for p in prereq:
-            if self.options.get_safe(p):
+            # Missing option -> forced enabled (see self.configure)
+            if self.options.get_safe(p, True):
                 return True
         return False
 
@@ -113,14 +117,21 @@ class XcikitConan(ConanFile):
             yield info
 
     def configure(self):
-        if not self.options.graphics:
+        # Dependent options - remove their requirements
+        if self.options.widgets:
             del self.options.text
-            del self.options.widgets
-        elif not self.options.text:
-            del self.options.widgets
+            del self.options.graphics
+        elif self.options.text:
+            del self.options.graphics
+        elif self.options.script:
+            del self.options.data
+        # Remove system_ options for disabled components
         for info in self._requirements():
             if not self._check_prereq(info['prereq']):
                 self.options.remove(info['option'])
+        if self.settings.os == "Emscripten":
+            # These are imported from Emscripten Ports
+            del self.options.system_zlib
 
     def requirements(self):
         for info in self._requirements():
@@ -132,15 +143,15 @@ class XcikitConan(ConanFile):
     def _set_cmake_defs(self, defs):
         if self.package_folder:
             defs["XCI_SHARE_DIR"] = self.package_folder + "/share/xcikit"
-        defs["XCI_DATA"] = self.options.data
+        defs["XCI_DATA"] = self.options.get_safe('data', True)
         defs["XCI_SCRIPT"] = self.options.script
-        defs["XCI_GRAPHICS"] = self.options.graphics
-        defs["XCI_TEXT"] = self.options.get_safe('text', False)
-        defs["XCI_WIDGETS"] = self.options.get_safe('widgets', False)
-        defs["XCI_BUILD_TOOLS"] = self.options.tools
-        defs["XCI_BUILD_EXAMPLES"] = self.options.examples
-        defs["XCI_BUILD_TESTS"] = self.options.tests
-        defs["XCI_BUILD_BENCHMARKS"] = self.options.benchmarks
+        defs["XCI_GRAPHICS"] = self.options.get_safe('graphics', True)
+        defs["XCI_TEXT"] = self.options.get_safe('text', True)
+        defs["XCI_WIDGETS"] = self.options.widgets
+        defs["BUILD_TOOLS"] = self.options.tools
+        defs["BUILD_EXAMPLES"] = self.options.examples
+        defs["BUILD_TESTING"] = self.options.tests
+        defs["BUILD_BENCHMARKS"] = self.options.benchmarks
         defs["XCI_WITH_HYPERSCAN"] = self.options.get_safe('with_hyperscan', False)
 
     def _configure_cmake(self):
@@ -171,14 +182,17 @@ class XcikitConan(ConanFile):
         cmake.test()
 
     def _add_dep(self, opt: str, component: conans.model.build_info.Component, cmake_dep: str):
-        if self.options.get_safe(opt, False):
+        opt_val = self.options.get_safe(opt)
+        if opt_val is None:  # system option deleted
+            return
+        if opt_val:
             component.system_libs = [cmake_dep]
         else:
             component.requires += [cmake_dep]
 
     def package_info(self):
         for name in ('core', 'data', 'script', 'graphics', 'text', 'widgets'):
-            if name != 'core' and not self.options.get_safe(name, False):
+            if not self.options.get_safe(name, True):
                 continue  # component is disabled
             component = self.cpp_info.components["xci-" + name]
             component.libs = ["xci-" + name]
@@ -189,7 +203,7 @@ class XcikitConan(ConanFile):
                 self._add_dep('system_fmt', component, "fmt::fmt")
                 self._add_dep('system_magic_enum', component, "magic_enum::magic_enum")
                 self._add_dep('system_range_v3', component, "range-v3::range-v3")
-                self._add_dep('system_pegtl', component, "taocpp-pegtl::taocpp-pegtl")
+                self._add_dep('system_pegtl', component, "taocpp::pegtl")
             if name == 'data':
                 self._add_dep('system_zlib', component, "zlib::zlib")
                 self._add_dep('system_boost', component, "pfr::pfr")

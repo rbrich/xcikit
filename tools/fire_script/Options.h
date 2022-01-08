@@ -28,7 +28,10 @@ struct ReplOptions {
 
 struct ProgramOptions {
     std::vector<const char*> input_files;
+    std::string output_file;
     const char* expr = nullptr;
+    bool compile = false;
+    bool verbose = false;
 };
 
 struct Options {

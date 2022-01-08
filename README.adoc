@@ -91,10 +91,12 @@ Technologies:
 * CMake as build system
 * Conan as dependency manager
 
-Tested compilers:
+Supported compilers:
 
-* GCC 10 (Debian 11 Bullseye)
-* Clang 10 (macOS via Homebrew)
+* GCC >= 10
+* Clang >= 11
+* Xcode >= 13
+* Visual Studio >= 16
 
 Any Unix-like OS with C++20 compliant compiler should work.
 Windows OS is also supported, to some extent. See <<windows,Building on Windows>>.
@@ -310,20 +312,54 @@ Almost everything is portable and should work:
 
 * build scripts (using git-bash)
 * dependencies via Conan
-* build with CMake + nmake or ninja + cl.exe
+* build with CMake + ninja + cl.exe
 * all libraries, examples, tests
 
-How to build:
+What doesn't work:
+
+* find_file (ff) tool - it's built on low-level unix APIs, probably unportable
+
+==== How to build from command line
 
 1. (Optional) Enable https://docs.microsoft.com/en-us/windows/uwp/get-started/enable-your-device-for-development[Developer mode] to obtain ability to create symlinks
 
-2. Install build tools: Git, CMake, Conan
-(`git`, `cmake` and `conan` commands should now work in _Git Bash_)
+2. Install https://git-scm.com/download/win[Git Bash] and run it
 
-3. Open _Git Bash_ and run `./build.sh`
+3. We need these commands to work:
 
-Opening the CMakeLists.txt in CLion works.
-I did not try Visual Studio, but it might work as well.
+    * `git` (to clone the project)
+    * `cmake`, `ninja` (build tools)
+    * `conan` (C++ package manager)
+    * `cl` (VS compiler)
+
+4. Beginning from the last one:
+
+    * Find `vcvars64.bat` in Visual Studio installation. I have *Visual Studio Build Tools 2019* and it's here:
+      `"C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat"`
+      (The directory slightly differs for Community and Professional edition.)
+    * Paste the path including the quotes into Git Bash and execute it.
+    * Now we should have `cl`, `cmake` and `ninja` working.
+    * (For convenience, add https://stackoverflow.com/a/69027383/6013024[Git Bash + VS] configuration to https://docs.microsoft.com/en-us/windows/terminal/[Windows Terminal].)
+
+5. Install conan: `pip install conan` (Python should also work via VS developer tools)
+
+6. Run `./build.sh`
+
+Note that the build script detects "MINGW64_NT" as target platform, but this is not true. It builds native Windows binaries.
+The string is just the output of `uname` in Git Bash. I don't know any better way how to detect host platform on Windows (please tell me if you know).
+
+==== How to build from IDE with CMake support
+
+Works with Clion, and may work with Visual Studio (I did not try).
+
+Open the project, let the IDE load the top-level `CMakeLists.txt`.
+Add the following cmake parameter, so it also installs Conan dependencies:
+
+```
+-DCONAN_INSTALL=ON
+```
+
+You still need `conan` command working. Install it either via `pip` or use the standalone installer from https://conan.io/.
 
 [#emscripten]
 === Porting to Emscripten

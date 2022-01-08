@@ -11,6 +11,7 @@
 #include <xci/core/mixin.h>
 #include <vector>
 #include <string>
+#include <string_view>
 
 namespace xci::script {
 
@@ -21,8 +22,11 @@ class Class;
 class Module;
 
 
-using Index = size_t;
-static constexpr Index no_index {SIZE_MAX};
+using Index = uint32_t;
+static constexpr Index no_index {~0u};
+
+using Size = uint32_t;
+
 
 class SymbolPointer {
 public:
@@ -75,6 +79,7 @@ public:
         TypeId,             // translate type name to type ID (index = type index in builtin if < 32, else type index in current module + 32)
     };
 
+    Symbol() = default;  // only for deserialization
     explicit Symbol(std::string name) : m_name(std::move(name)) {}
     Symbol(std::string name, Type type) : m_name(std::move(name)), m_type(type) {}
     Symbol(std::string name, Type type, Index idx) : m_name(std::move(name)), m_type(type), m_index(idx) {}
@@ -104,6 +109,20 @@ public:
     Symbol& set_callable(bool callable) { m_is_callable = callable; return *this; }
     Symbol& set_defined(bool defined) { m_is_defined = defined; return *this; }
 
+    template<class Archive>
+    void save(Archive& ar) const {
+        uint8_t flags = m_is_callable | (m_is_defined << 1);
+        ar(m_name, m_type, m_index, m_depth, flags);
+    }
+
+    template<class Archive>
+    void load(Archive& ar) {
+        uint8_t flags = 0;
+        ar(m_name, m_type, m_index, m_depth, flags);
+        m_is_callable = bool(flags & 0x01);
+        m_is_defined = bool(flags & 0x02);
+    }
+
 private:
     std::string m_name;
     Type m_type = Unresolved;
@@ -130,6 +149,7 @@ public:
 
     void set_name(const std::string& name) { m_name = name; }
     const std::string& name() const { return m_name; }
+    std::string qualified_name() const;
 
     SymbolTable& add_child(const std::string& name);
     SymbolTable* parent() const { return m_parent; }
@@ -153,11 +173,11 @@ public:
     const Symbol& get(Index idx) const;
 
     // find symbol in this table
-    SymbolPointer find_by_name(const std::string& name);
+    SymbolPointer find_by_name(std::string_view name);
     SymbolPointer find_last_of(const std::string& name, Symbol::Type type);
     SymbolPointer find_last_of(Symbol::Type type);
 
-    size_t count(Symbol::Type type) const;
+    Size count(Symbol::Type type) const;
     void update_nonlocal_indices();
 
     /// Check symbol table for overloaded function name
@@ -198,9 +218,23 @@ public:
     };
 
     Children children() const { return Children{*this}; }
+    SymbolTable* find_child_by_name(std::string_view name);
+
+    template<class Archive>
+    void save(Archive& ar) const {
+        ar(m_name, m_symbols, m_children);
+    }
+
+    template<class Archive>
+    void load(Archive& ar) {
+        ar(m_name, m_symbols, m_children);
+        for (SymbolTable& child : m_children) {
+            child.m_parent = this;
+        }
+    }
 
 private:
-    std::string m_name;   // only for debugging
+    std::string m_name;
     SymbolTable* m_parent = nullptr;
     Function* m_function = nullptr;
     Class* m_class = nullptr;

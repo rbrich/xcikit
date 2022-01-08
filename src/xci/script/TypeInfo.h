@@ -139,6 +139,81 @@ public:
     const NamedType& named_type() const { return *named_type_ptr(); }
     std::string name() const;
 
+    // -------------------------------------------------------------------------
+    // Serialization
+
+    template <class Archive>
+    void save(Archive& ar) const {
+        ar(m_type);
+        switch (m_type) {
+            case Type::Unknown:
+                ar(generic_var());
+                break;
+            case Type::Function:
+                ar(signature());
+                break;
+            case Type::List:
+                ar(elem_type());
+                break;
+            case Type::Tuple:
+                ar(subtypes());
+                break;
+            case Type::Struct:
+                ar(struct_items());
+                break;
+            case Type::Named:
+                ar(named_type());
+                break;
+            default:
+                break;
+        }
+    }
+
+    template <class Archive>
+    void load(Archive& ar)
+    {
+        ar(m_type);
+        switch (m_type) {
+            case Type::Unknown: {
+                Var var;
+                ar(var);
+                m_info = var;
+                break;
+            }
+            case Type::Function: {
+                auto signature = std::make_shared<Signature>();
+                ar(*signature);
+                m_info = std::move(signature);
+                break;
+            }
+            case Type::List: {
+                m_info.emplace<Subtypes>();
+                auto& subtypes = std::get<Subtypes>(m_info);
+                subtypes.emplace_back();
+                ar(subtypes.back());
+                break;
+            }
+            case Type::Tuple: {
+                m_info.emplace<Subtypes>();
+                ar(std::get<Subtypes>(m_info));
+                break;
+            }
+            case Type::Struct: {
+                m_info.emplace<StructItems>();
+                ar(std::get<StructItems>(m_info));
+                break;
+            }
+            case Type::Named: {
+                auto named_type = std::make_shared<NamedType>();
+                ar(named_type);
+                m_info.emplace<NamedTypePtr>(std::move(named_type));
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
 private:
     Type m_type { Type::Unknown };
     std::variant<Var, Subtypes, StructItems, SignaturePtr, NamedTypePtr> m_info;
@@ -166,6 +241,11 @@ struct Signature {
 
     bool operator==(const Signature& rhs) const = default;
     bool operator!=(const Signature& rhs) const = default;
+
+    template <class Archive>
+    void serialize(Archive& ar) {
+        ar(type_args, nonlocals, partial, params, return_type);
+    }
 };
 
 

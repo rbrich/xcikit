@@ -20,6 +20,7 @@ add_library(xci-script
     Interpreter.cpp
     Machine.cpp
     Module.cpp
+    ModuleManager.cpp
     Value.cpp
     Parser.cpp
     Source.cpp
@@ -38,6 +39,7 @@ target_precompile_headers(xci-script PRIVATE
 target_link_libraries(xci-script
     PUBLIC
         xci-core
+        xci-data
     PRIVATE
         range-v3::concepts
     )

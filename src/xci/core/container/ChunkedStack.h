@@ -126,7 +126,7 @@ public:
         explicit iterator(Bucket* head)
             : m_head(head), m_bucket{head->count == 0 ? nullptr : head} {}
 
-        Bucket* const m_head = nullptr;
+        Bucket* m_head = nullptr;
         Bucket* m_bucket = nullptr;
         uint32_t m_item = 0;
     };
@@ -154,7 +154,7 @@ public:
         explicit const_iterator(Bucket* head)
             : m_head(head), m_bucket{head->count == 0 ? nullptr : head} {}
 
-        const Bucket* const m_head = nullptr;
+        const Bucket* m_head = nullptr;
         const Bucket* m_bucket = nullptr;
         uint32_t m_item = 0;
     };

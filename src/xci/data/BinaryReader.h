@@ -10,7 +10,6 @@
 #include "BinaryBase.h"
 #include <xci/data/coding/leb128.h>
 #include <xci/compat/endian.h>
-#include <xci/compat/macros.h>
 
 #include <istream>
 #include <iterator>
@@ -21,21 +20,53 @@
 namespace xci::data {
 
 
-class BinaryReader : public ArchiveBase<BinaryReader>, BinaryBase {
+class BinaryReader : public ArchiveBase<BinaryReader>, protected BinaryBase {
     friend ArchiveBase<BinaryReader>;
-    struct Buffer {
-        size_t size = 0;
+    struct BufferType {
+        size_t size = 0;        // size of group content, in bytes
+        bool metadata = false;  // the next chunk in group is data or metadata?
     };
-    using BufferType = Buffer;
 
 public:
+    using Reader = std::true_type;
+    template<typename T> using FieldType = T&;
+
     explicit BinaryReader(std::istream& is) : m_stream(is) { read_header(); }
 
-    void finish_and_check() { read_footer(); }
+    uint8_t flags() const { return m_flags; }
+    bool has_crc() const { return (m_flags & ChecksumMask) == ChecksumCrc32; }
+    uint32_t crc() const { return m_crc.as_uint32(); }
+
+    // size of root group
+    size_t root_group_size() const { return m_group_stack.front().buffer.size; }
+
+    using UnknownChunkCb = std::function<void(uint8_t type, uint8_t key, const std::byte* data, size_t size)>;
+    void set_unknown_chunk_callback(UnknownChunkCb cb) { m_unknown_chunk_cb = std::move(cb); }
+
+    struct GenericNext {
+        enum What {
+            DataItem,
+            MetadataItem,
+            EnterGroup,  // Master chunk
+            LeaveGroup,
+            EnterMetadata,
+            LeaveMetadata,
+            EndOfFile,
+        };
+        What what;
+        // chunk:
+        uint8_t type = 0;
+        uint8_t key = 0;
+        std::unique_ptr<std::byte[]> data;
+        size_t size = 0;
+    };
+    GenericNext generic_next();
+
+    void finish_and_check() { skip_until_metadata(); read_footer(); }
 
     // raw and smart pointers
     template <FancyPointerType T>
-    void add(ArchiveField<T>&& a) {
+    void add(ArchiveField<BinaryReader, T>&& a) {
         const auto chunk_type = peek_chunk_head(a.key);
         if (chunk_type == ChunkNotFound)
             return;
@@ -45,12 +76,12 @@ public:
             return;
         }
         using ElemT = typename std::pointer_traits<T>::element_type;
-        a.value = new ElemT{};
-        apply(ArchiveField<ElemT>{a.key, *a.value, a.name});
+        a.value = T(new ElemT{});
+        apply(ArchiveField<BinaryReader, ElemT>{a.key, *a.value, a.name});
     }
 
     // bool
-    void add(ArchiveField<bool>&& a) {
+    void add(ArchiveField<BinaryReader, bool>&& a) {
         const auto chunk_type = read_chunk_head(a.key);
         if (chunk_type == ChunkNotFound)
             return;
@@ -68,7 +99,7 @@ public:
     // integers, floats, enums
     template <typename T>
     requires requires() { to_chunk_type<T>(); }
-    void add(ArchiveField<T>&& a) {
+    void add(ArchiveField<BinaryReader, T>&& a) {
         const auto chunk_type = read_chunk_head(a.key);
         if (chunk_type == to_chunk_type<T>())
             read_with_crc(a.value);
@@ -77,7 +108,7 @@ public:
     }
 
     // string
-    void add(ArchiveField<std::string>&& a) {
+    void add(ArchiveField<BinaryReader, std::string>&& a) {
         const auto chunk_type = read_chunk_head(a.key);
         if (chunk_type == Type::String) {
             auto length = read_leb128<size_t>();
@@ -87,80 +118,70 @@ public:
             throw ArchiveBadChunkType();
     }
 
+    // binary data
+    template <BlobType T>
+    void add(ArchiveField<BinaryReader, T>&& a) {
+        const auto chunk_type = read_chunk_head(a.key);
+        if (chunk_type == Type::Binary) {
+            a.value.resize(read_leb128<size_t>());
+            read_with_crc((std::byte*) a.value.data(), a.value.size());
+        } else if (chunk_type != ChunkNotFound)
+            throw ArchiveBadChunkType();
+    }
+
     // iterables
-    template <typename T>
-    requires requires (T& v) { v.emplace_back(); }
-    void add(ArchiveField<T>&& a) {
+    template <ContainerTypeWithEmplaceBack T>
+    void add(ArchiveField<BinaryReader, T>&& a) {
         for (;;) {
             const auto chunk_type = peek_chunk_head(a.key);
             if (chunk_type == ChunkNotFound)
                 return;
             a.value.emplace_back();
-            apply(ArchiveField<typename T::value_type>{reuse_same_key(a.key), a.value.back(), a.name});
+            apply(ArchiveField<BinaryReader, typename T::value_type>{a.key, a.value.back(), a.name});
         }
+    }
+
+    template <ContainerType T, typename F>
+    void add(ArchiveField<BinaryReader, T>&& a, F&& f_make_value) {
+        for (;;) {
+            const auto chunk_type = peek_chunk_head(a.key);
+            if (chunk_type == ChunkNotFound)
+                return;
+            auto&& v = f_make_value(a.value);
+            apply(ArchiveField<BinaryReader, decltype(v)>{a.key, v, a.name});
+        }
+    }
+
+    // variant
+    template <VariantType T>
+    void add(ArchiveField<BinaryReader, T>&& a) {
+        // index of active alternative
+        size_t index = std::variant_npos;
+        apply(ArchiveField<BinaryReader, size_t>{draw_next_key(a.key), index, a.name});
+        a.value = variant_from_index<T>(index);
+        // value of the alternative
+        a.key = draw_next_key(key_auto);
+        std::visit([this, &a](auto& value) {
+            using Tv = std::decay_t<decltype(value)>;
+            if constexpr (!std::is_same_v<Tv, std::monostate>) {
+                this->apply(ArchiveField<BinaryReader, Tv>{a.key, value});
+            }
+        }, a.value);
     }
 
 private:
-    void enter_group(uint8_t key, const char* name);
-    void leave_group(uint8_t key, const char* name);
-
     void read_header();
     void read_footer();
 
+    void enter_group(uint8_t key, const char* name);
+    void leave_group(uint8_t key, const char* name);
+
+    void skip_until_metadata();
     void skip_unknown_chunk(uint8_t type, uint8_t key);
+    std::pair<std::unique_ptr<std::byte[]>, size_t> read_chunk_content(uint8_t type, uint8_t key);
 
-    constexpr bool type_has_len(uint8_t type) {
-        return type == Varint || type == Array || type == String || type == Master;
-    }
-
-    constexpr size_t size_by_type(uint8_t type) {
-        switch (type) {
-            case Null:
-            case BoolFalse:
-            case BoolTrue:
-            case Control:
-                return 0;
-            case Byte:
-                return 1;
-            case UInt32:
-            case Int32:
-            case Float32:
-                return 4;
-            case UInt64:
-            case Int64:
-            case Float64:
-                return 8;
-            default:
-                UNREACHABLE;
-        }
-    }
-
-    uint8_t peek_chunk_head(uint8_t key) {
-        // Read ahead until key matches
-        while (group_buffer().size != 0) {
-            auto b = (uint8_t) peek_byte();
-            const uint8_t chunk_key = b & KeyMask;
-            const uint8_t chunk_type = b & TypeMask;
-            if (chunk_key < key) {
-                (void) read_byte_with_crc();
-                skip_unknown_chunk(chunk_type, chunk_key);
-                continue;
-            }
-            if (chunk_key > key)
-                return ChunkNotFound;
-            // success, pointer is still at KEY/TYPE
-            return chunk_type;
-        }
-        return ChunkNotFound;
-    }
-
-    uint8_t read_chunk_head(uint8_t key) {
-        auto chunk_type = peek_chunk_head(key);
-        if (chunk_type == ChunkNotFound)
-            return ChunkNotFound;
-        read_byte_with_crc();
-        return chunk_type;
-    }
+    uint8_t peek_chunk_head(uint8_t key);
+    uint8_t read_chunk_head(uint8_t key);
 
     template <typename T>
     void read_with_crc(T& value) {
@@ -184,13 +205,11 @@ private:
         return leb128_decode<size_t>(iter);
     }
 
-private:
     std::istream& m_stream;
 
-    bool m_has_crc = false;
+    uint8_t m_flags = 0;
     Crc32 m_crc;
 
-    using UnknownChunkCb = std::function<void(uint8_t type, uint8_t key, const std::byte* data, size_t size)>;
     UnknownChunkCb m_unknown_chunk_cb;
 };
 

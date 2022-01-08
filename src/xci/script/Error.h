@@ -40,12 +40,16 @@ public:
         m_detail = fmt::format("{}\n{:>{}}", line, '^', column);
     }
 
+    void set_stack_trace(StackTrace&& trace) { m_trace = std::move(trace); }
+
     const std::string& file() const noexcept { return m_file; }
     const std::string& detail() const noexcept { return m_detail; }
+    const StackTrace& trace() const noexcept { return m_trace; }
 
 private:
     std::string m_file;
     std::string m_detail;
+    StackTrace m_trace;
 };
 
 
@@ -275,6 +279,19 @@ struct IntrinsicsFunctionError : public ScriptError {
     explicit IntrinsicsFunctionError(string_view message, const SourceLocation& loc)
         : ScriptError(fmt::format("intrinsics function: {}", message), loc) {}
 };
+
+
+struct UnresolvedSymbol : public ScriptError {
+    explicit UnresolvedSymbol(string_view name)
+            : ScriptError(fmt::format("unresolved symbol: {}", name)) {}
+};
+
+
+struct ImportError : public ScriptError {
+    explicit ImportError(string_view name)
+            : ScriptError(fmt::format("module not found: {}", name)) {}
+};
+
 
 
 } // namespace xci::script

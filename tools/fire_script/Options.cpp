@@ -77,6 +77,9 @@ void Options::parse(char* argv[])
     auto& po = prog_opts;
     ArgParser {
             Option("-h, --help", "Show help", show_help),
+            Option("-v, --verbose", "Print compilation progress and timing stats", po.verbose),
+            Option("-c, --compile", "Compile a module (don't run anything)", po.compile),
+            Option("-o, --output FILE", "Output file for compiled module (default is <source basename>.firm)", po.output_file),
             Option("-e, --eval EXPR", "Execute EXPR as main input", po.expr),
             Option("-O, --optimize", "Allow optimizations", [&ro]{ ro.compiler_flags |= Flags::O1; }),
             Option("-r, --raw-ast", "Print raw AST", ro.print_raw_ast),

@@ -159,6 +159,17 @@ struct StreamV {
 };
 
 
+struct ModuleV {
+    ModuleV() = default;
+    explicit ModuleV(script::Module& v) : module_ptr(&v) {}
+
+    bool operator ==(const ModuleV& rhs) const { return value() == rhs.value(); }
+    const script::Module* value() const { return module_ptr; }
+
+    script::Module* module_ptr = nullptr;
+};
+
+
 class Value {
 public:
     struct StringTag {};
@@ -191,8 +202,8 @@ public:
     explicit Value(const Function& fn, Values&& values) : m_value(ClosureV{fn, move(values)}) {}  // Closure
     explicit Value(StreamTag) : m_value(StreamV{}) {}  // Stream
     explicit Value(const script::Stream& v) : m_value(StreamV{v}) {}  // Stream
-    explicit Value(ModuleTag) : m_value((script::Module*) nullptr) {}  // Module
-    explicit Value(script::Module& v) : m_value(&v) {}  // Module
+    explicit Value(ModuleTag) : m_value(ModuleV{}) {}  // Module
+    explicit Value(script::Module& v) : m_value(ModuleV{v}) {}  // Module
 
     bool operator ==(const Value& rhs) const;
 
@@ -233,6 +244,7 @@ public:
             using TRhs = std::decay_t<decltype(r)>;
 
             if constexpr (std::is_same_v<TLhs, TRhs> &&
+                    !std::is_same_v<TLhs, bool> &&
                     (std::is_integral_v<TLhs> || (!bitwise && std::is_floating_point_v<TLhs>)))
                 return Value( TBinFun{}(l, r) );
 
@@ -251,14 +263,31 @@ public:
 
     std::string_view get_string() const { return get<StringV>().value(); }
     void tuple_foreach(const std::function<void(const Value&)>& cb) const { return get<TupleV>().foreach(cb); }
-    const script::Module& get_module() const { return *get<script::Module*>(); }
+    const script::Module& get_module() const { return *get<ModuleV>().module_ptr; }
+
+    // -------------------------------------------------------------------------
+    // Serialization
+
+    template <class Archive>
+    void serialize(Archive& ar) {
+        std::visit([&ar](auto& v) {
+            using T = std::decay_t<decltype(v)>;
+            if constexpr (std::is_same_v<T, std::monostate>) {
+                // Void
+            } else if constexpr (std::is_trivial_v<T>) {
+                ar(v);
+            } else {
+                // String etc.
+                // TODO
+            }
+        }, m_value);
+    }
 
 protected:
     using ValueVariant = std::variant<
             std::monostate,
             bool, byte, char32_t, uint32_t, uint64_t, int32_t, int64_t, float, double,
-            StringV, ListV, TupleV, ClosureV, StreamV,
-            script::Module*
+            StringV, ListV, TupleV, ClosureV, StreamV, ModuleV
         >;
     ValueVariant m_value;
 };
@@ -283,6 +312,10 @@ concept ValueT = requires(const T& v) {
 
 class Values {
 public:
+    using value_type = Value;
+    using reference = Value&;
+    using const_reference = const Value&;
+
     Values() = default;
     explicit Values(std::initializer_list<Value> values) : m_items(values) {}
 
@@ -297,7 +330,7 @@ public:
 
     void add(Value&& value) { m_items.emplace_back(std::forward<Value>(value)); }
 
-    const Value& operator[](size_t i) const { return m_items[i]; }
+    const_reference operator[](size_t i) const { return m_items[i]; }
 
     bool operator==(const Values& rhs) const { return m_items == rhs.m_items; }
     bool operator!=(const Values& rhs) const { return m_items != rhs.m_items; }
@@ -308,7 +341,7 @@ public:
     iterator end() { return m_items.end(); }
     const_iterator begin() const { return m_items.begin(); }
     const_iterator end() const { return m_items.end(); }
-    const Value& back() const { return m_items.back(); }
+    const_reference back() const { return m_items.back(); }
 
 private:
     std::vector<Value> m_items;
@@ -321,7 +354,7 @@ public:
 
     template <ValueWithTypeInfo T> explicit TypedValue(const T& v) : m_value(v), m_type_info(v.type_info()) {}
 
-    TypedValue(TypeInfo type_info) : m_value(create_value(type_info)), m_type_info(move(type_info)) {}
+    explicit TypedValue(TypeInfo type_info) : m_value(create_value(type_info)), m_type_info(move(type_info)) {}
     TypedValue(Value value, TypeInfo type_info);
 
     bool operator ==(const TypedValue& rhs) const { return m_value == rhs.m_value; }
@@ -348,6 +381,10 @@ private:
 
 class TypedValues {
 public:
+    using value_type = TypedValue;
+    using reference = TypedValue&;
+    using const_reference = const TypedValue&;
+
     // reserve number of values
     void reserve(size_t n) { m_items.reserve(n); }
     // get number of values
@@ -355,8 +392,10 @@ public:
     bool empty() const { return m_items.empty(); }
 
     void add(TypedValue&& value) { m_items.emplace_back(std::forward<TypedValue>(value)); }
+    reference emplace_back() { return m_items.emplace_back(); }
 
-    const TypedValue& operator[](size_t i) const { return m_items[i]; }
+    reference operator[](size_t i) { return m_items[i]; }
+    const_reference operator[](size_t i) const { return m_items[i]; }
 
     bool operator==(const TypedValues& rhs) const { return m_items == rhs.m_items; }
     bool operator!=(const TypedValues& rhs) const { return m_items != rhs.m_items; }
@@ -367,7 +406,8 @@ public:
     iterator end() { return m_items.end(); }
     const_iterator begin() const { return m_items.begin(); }
     const_iterator end() const { return m_items.end(); }
-    const TypedValue& back() const { return m_items.back(); }
+    const_reference back() const { return m_items.back(); }
+    reference back() { return m_items.back(); }
 
 private:
     std::vector<TypedValue> m_items;
@@ -487,13 +527,6 @@ public:
 // Complex types //
 // ------------- //
 
-//        bool* m_bools;
-//        uint8_t* m_bytes;
-//        int32_t* m_int32s;
-//        int64_t* m_int64s;
-//        float* m_float32s;
-//        double* m_float64s;
-
 
 class String: public Value {
 public:
@@ -576,11 +609,35 @@ public:
     Module() : Value(Value::ModuleTag{}) {}
     explicit Module(script::Module& v) : Value(v) {}
 
-    script::Module& value() { return *get<script::Module*>(); }
-    const script::Module& value() const { return *get<script::Module*>(); }
+    script::Module& value() { return *get<ModuleV>().module_ptr; }
+    const script::Module& value() const { return get_module(); }
 };
 
 } // namespace value
+
+
+template<class Archive>
+void save(Archive& archive, const TypedValue& value)
+{
+    archive(value.type_info());
+    if (!value.is_void())
+        archive(value.value());
+}
+
+template<class Archive>
+void load(Archive& archive, TypedValue& value)
+{
+    TypeInfo type_info;
+    archive(type_info);
+
+    if (type_info.is_void()) {
+        value = TypedValue(std::move(type_info));
+    } else {
+        Value pure_value { create_value(type_info) };
+        archive(pure_value);
+        value = TypedValue(std::move(pure_value), std::move(type_info));
+    }
+}
 
 
 std::ostream& operator<<(std::ostream& os, const TypedValue& o);

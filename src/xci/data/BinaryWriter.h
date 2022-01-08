@@ -30,6 +30,20 @@ namespace xci::data {
 ///         }
 ///     };
 ///
+/// Alternatively, it can implement save/load pair, so it can behave specifically
+/// depending on the data direction:
+///
+///     struct MyStruct {
+///         template <class Archive> void save(Archive& ar) const { ar(a, b, c); }
+///         template <class Archive> void load(Archive& ar) { ar(a, b, c); }
+///     };
+///
+/// Out-of-class functions are also supported:
+///
+///     template <class Archive> void serialize(Archive& ar, MyStruct& v) { ar(v.a, v.b, v.c); }
+///     template <class Archive> void save(Archive& ar, const MyStruct& v) { ar(v.a, v.b, v.c); }
+///     template <class Archive> void load(Archive& ar, MyStruct& v) { ar(v.a, v.b, v.c); }
+///
 /// The numeric keys are auto-assigned: a=0, b=1, c=2.
 /// Maximum number of members serializable in this fashion is 16.
 ///
@@ -47,27 +61,30 @@ namespace xci::data {
 ///     XCI_ARCHIVE(ar, a, b, c)
 ///
 
-class BinaryWriter : public ArchiveBase<BinaryWriter>, BinaryBase {
+class BinaryWriter : public ArchiveBase<BinaryWriter>, protected BinaryBase {
     friend ArchiveBase<BinaryWriter>;
     using BufferType = std::vector<std::byte>;
 
 public:
+    using Writer = std::true_type;
+    template<typename T> using FieldType = const T&;
+
     explicit BinaryWriter(std::ostream& os, bool crc32 = false) : m_stream(os), m_crc32(crc32) {}
     ~BinaryWriter() { write_content(); }
 
     // raw and smart pointers
     template <FancyPointerType T>
-    void add(ArchiveField<T>&& a) {
+    void add(ArchiveField<BinaryWriter, T>&& a) {
         if (!a.value) {
             write(uint8_t(Type::Null | a.key));
             return;
         }
         using ElemT = typename std::pointer_traits<T>::element_type;
-        apply(ArchiveField<ElemT>{a.key, *a.value, a.name});
+        apply(ArchiveField<BinaryWriter, ElemT>{a.key, *a.value, a.name});
     }
 
     // bool
-    void add(ArchiveField<bool>&& a) {
+    void add(ArchiveField<BinaryWriter, bool>&& a) {
         uint8_t type = (a.value ? Type::BoolTrue : Type::BoolFalse);
         write(uint8_t(type | a.key));
     }
@@ -75,25 +92,47 @@ public:
     // integers, floats, enums
     template <typename T>
     requires requires() { to_chunk_type<T>(); }
-    void add(ArchiveField<T>&& a) {
+    void add(ArchiveField<BinaryWriter, T>&& a) {
         write(uint8_t(to_chunk_type<T>() | a.key));
         write(a.value);
     }
 
     // string
-    void add(ArchiveField<std::string>&& a) {
+    void add(ArchiveField<BinaryWriter, std::string>&& a) {
         write(uint8_t(Type::String | a.key));
         write_leb128(a.value.size());
         write((const std::byte*) a.value.data(), a.value.size());
     }
 
+    // binary data
+    template <BlobType T>
+    void add(ArchiveField<BinaryWriter, T>&& a) {
+        write(uint8_t(Type::Binary | a.key));
+        write_leb128(a.value.size());
+        write((const std::byte*) a.value.data(), a.value.size());
+    }
+
     // iterables
-    template <typename T>
-    requires requires { typename T::iterator; }
-    void add(ArchiveField<T>&& a) {
+    template <ContainerType T>
+    void add(ArchiveField<BinaryWriter, T>&& a) {
         for (auto& item : a.value) {
-            apply(ArchiveField<typename T::value_type>{reuse_same_key(a.key), item, a.name});
+            apply(ArchiveField<BinaryWriter, typename T::value_type>{a.key, item, a.name});
         }
+    }
+
+    // variant
+    template <VariantType T>
+    void add(ArchiveField<BinaryWriter, T>&& a) {
+        // index of active alternative
+        apply(ArchiveField<BinaryWriter, size_t>{draw_next_key(a.key), a.value.index(), a.name});
+        // value of the alternative
+        a.key = draw_next_key(key_auto);
+        std::visit([this, &a](const auto& value) {
+            using Tv = std::decay_t<decltype(value)>;
+            if constexpr (!std::is_same_v<Tv, std::monostate>) {
+                this->apply(ArchiveField<BinaryWriter, Tv>{a.key, value});
+            }
+        }, a.value);
     }
 
 private:

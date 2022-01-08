@@ -40,15 +40,21 @@ class Stack;
 
 class Function {
 public:
+    explicit Function(Module& module);  // only for deserialization!
     explicit Function(Module& module, SymbolTable& symtab);
+    Function(Function&& rhs) noexcept;
+    Function& operator =(Function&&) = delete;
 
-    const std::string& name() const { return m_symtab.name(); }
+    bool operator==(const Function& rhs) const;
+
+    const std::string& name() const { return m_symtab->name(); }
+    std::string qualified_name() const { return m_symtab->qualified_name(); }
 
     // module containing this function
     Module& module() const { return m_module; }
 
     // symbol table with names used in function scope
-    SymbolTable& symtab() const { return m_symtab; }
+    SymbolTable& symtab() const { return *m_symtab; }
 
     // parameters
     void add_parameter(std::string name, TypeInfo&& type_info);
@@ -113,6 +119,11 @@ public:
     struct CompiledBody {
         bool operator==(const CompiledBody& rhs) const;
 
+        template<class Archive>
+        void serialize(Archive& ar) {
+            ar(code);
+        }
+
         // Compiled function body
         Code code;
         // Counter for code bytes from intrinsics
@@ -139,11 +150,26 @@ public:
                 ast_ref = nullptr;
             }
         }
+
+        template<class Archive>
+        void save(Archive& ar) const {
+            ar(ast());
+        }
+
+        template<class Archive>
+        void load(Archive& ar) {
+            ar(ast_copy);
+        }
     };
 
     // function wraps native function (C++ binding)
     struct NativeBody {
         bool operator==(const NativeBody& rhs) const;
+
+        template<class Archive>
+        void serialize(Archive& ar) {
+            throw std::runtime_error("Native function cannot be serialized");
+        }
 
         NativeDelegate native;
     };
@@ -166,13 +192,26 @@ public:
     };
     Kind kind() const { return Kind(m_body.index()); }
 
-    bool operator==(const Function& rhs) const;
-
     bool test_and_set_nonlocals_resolved() { bool v = m_nonlocals_resolved; m_nonlocals_resolved = true; return v; }
 
+    template<class Archive>
+    void save(Archive& ar) const {
+        ar(qualified_name(), m_signature, m_body);
+    }
+
+    template<class Archive>
+    void load(Archive& ar) {
+        std::string qualified_name;
+        ar(qualified_name, m_signature, m_body);
+        set_symtab_by_qualified_name(qualified_name);
+        m_symtab->set_function(this);
+    }
+
 private:
+    void set_symtab_by_qualified_name(std::string_view name);
+
     Module& m_module;
-    SymbolTable& m_symtab;
+    SymbolTable* m_symtab = nullptr;
     // Function signature
     std::shared_ptr<Signature> m_signature;
     // Function body (depending on kind of function)

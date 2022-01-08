@@ -7,21 +7,24 @@ project(xcikit
     VERSION "${XCI_VERSION}"
     LANGUAGES CXX)
 
+include(CTest)
+
 # Optional libraries (only xci-core is required)
 include(CMakeDependentOption)
-option(XCI_DATA "Enable component: xci-data" ON)
+option(XCI_WIDGETS "Enable component: xci-widgets" ON)
 option(XCI_SCRIPT "Enable component: xci-script" ON)
-option(XCI_GRAPHICS "Enable component: xci-graphics (requires Vulkan and GLFW)" ON)
 cmake_dependent_option(XCI_TEXT "Enable component: xci-text" ON
-    "XCI_GRAPHICS" OFF)
-cmake_dependent_option(XCI_WIDGETS "Enable component: xci-widgets" ON
-    "XCI_GRAPHICS;XCI_TEXT" OFF)
+    "NOT XCI_WIDGETS" ON)
+cmake_dependent_option(XCI_GRAPHICS "Enable component: xci-graphics (requires Vulkan and GLFW)" ON
+    "NOT XCI_TEXT" ON)
+cmake_dependent_option(XCI_DATA "Enable component: xci-data" ON
+    "NOT XCI_SCRIPT" ON)
 
 # Libraries are always built. The rest is optional:
-option(XCI_BUILD_TOOLS "Disable to skip building tools." ON)
-option(XCI_BUILD_EXAMPLES "Disable to skip building examples." ON)
-option(XCI_BUILD_TESTS "Disable to skip building tests." ON)
-option(XCI_BUILD_BENCHMARKS "Disable to skip building benchmarks." ON)
+option(BUILD_TOOLS "Disable to skip building tools." ON)
+option(BUILD_EXAMPLES "Disable to skip building examples." ON)
+option(BUILD_BENCHMARKS "Disable to skip building benchmarks." ON)
+# BUILD_TESTING "Build tests" ON (option added by CTest)
 
 # Optional installation artifacts:
 option(XCI_INSTALL_DEVEL "Install headers, CMake config, static libs." ON)
@@ -60,7 +63,6 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(XCIKIT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
-list(APPEND CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
 if (CMAKE_CROSSCOMPILING)
     # Needed for Emscripten to find packages in build dir
     list(APPEND CMAKE_FIND_ROOT_PATH "/")
@@ -93,14 +95,14 @@ find_package(fmt REQUIRED)
 find_package(magic_enum REQUIRED)
 
 # Catch
-if (XCI_BUILD_TESTS)
-    find_package(Catch2)
+if (BUILD_TESTING)
+    find_package(Catch2 REQUIRED)
 endif()
 
 # Google Benchmark
-if (XCI_BUILD_BENCHMARKS)
+if (BUILD_BENCHMARKS)
     find_package(benchmark)
-endif ()
+endif()
 
 # Doxygen
 find_package(Doxygen)
@@ -199,7 +201,7 @@ endif()
 # Examples     #
 # ------------ #
 
-if (XCI_BUILD_EXAMPLES)
+if (BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
 
@@ -208,9 +210,12 @@ endif()
 # Tools     #
 # ------------ #
 
-if (XCI_BUILD_TOOLS)
+if (BUILD_TOOLS)
     if (XCI_WITH_HYPERSCAN)
         add_subdirectory(tools/find_file)
+    endif()
+    if (XCI_DATA)
+        add_subdirectory(tools/data_inspect)
     endif()
     if (XCI_SCRIPT)
         add_subdirectory(tools/fire_script)
@@ -222,7 +227,7 @@ endif()
 # Tests        #
 # ------------ #
 
-if (Catch2_FOUND)
+if (BUILD_TESTING)
     enable_testing()
     add_subdirectory(tests)
 endif()
@@ -310,16 +315,17 @@ if (TRUE)
     print_flag("? xci-widgets!                 " ${XCI_WIDGETS})
     pop_indent()
 endif()
-print_flag("? tools!                       " ${XCI_BUILD_TOOLS})
-if (${XCI_BUILD_TOOLS})
+print_flag("? tools!                       " ${BUILD_TOOLS})
+if (${BUILD_TOOLS})
     push_indent()
+    print_trgt("? dati! (req. xci-data)        " dati)
     print_trgt("? ff!   (req. Hyperscan)       " ff)
     print_trgt("? fire! (req. xci-script)      " fire)
     pop_indent()
 endif()
-print_flag("? examples!                    " ${XCI_BUILD_EXAMPLES})
-print_flag("? tests!                       " ${XCI_BUILD_TESTS})
-print_flag("? benchmarks!                  " ${XCI_BUILD_BENCHMARKS})
+print_flag("? examples!                    " ${BUILD_EXAMPLES})
+print_flag("? tests!                       " ${BUILD_TESTING})
+print_flag("? benchmarks!                  " ${BUILD_BENCHMARKS})
 pop_indent()
 
 

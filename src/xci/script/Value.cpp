@@ -122,6 +122,9 @@ size_t Value::write(byte* buffer) const
             for (Value* it = v.values.get(); !it->is_void(); ++it)
                 ofs += it->write(ofs);
             return ofs - buffer;
+        } else if constexpr (std::is_same_v<T, ModuleV>) {
+            std::memcpy(buffer, &v.module_ptr, sizeof(v.module_ptr));
+            return sizeof(v.module_ptr);
         } else if constexpr(std::is_trivially_copyable_v<T>) {
             std::memcpy(buffer, &v, sizeof(T));
             return sizeof(T);
@@ -152,6 +155,9 @@ size_t Value::read(const byte* buffer)
             for (Value* it = v.values.get(); !it->is_void(); ++it)
                 ofs += it->read(ofs);
             return ofs - buffer;
+        } else if constexpr (std::is_same_v<T, ModuleV>) {
+            std::memcpy(&v.module_ptr, buffer, sizeof(v.module_ptr));
+            return sizeof(v.module_ptr);
         } else if constexpr(std::is_trivially_copyable_v<T>) {
             std::memcpy(&v, buffer, sizeof(T));
             return sizeof(T);
@@ -227,11 +233,11 @@ void Value::decref() const
 
 void Value::apply(value::Visitor& visitor) const
 {
-    std::visit([&visitor](auto& v) {
+    std::visit([&visitor](const auto& v) {
         using T = std::decay_t<decltype(v)>;
         if constexpr (std::is_same_v<T, std::monostate>)
             visitor.visit();  // Void
-        else if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, StreamV>)
+        else if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, StreamV> || std::is_same_v<T, ModuleV>)
             visitor.visit(v.value());
         else
             visitor.visit(v);
@@ -257,7 +263,7 @@ Type Value::type() const
             [](const TupleV&) { return Type::Tuple; },
             [](const ClosureV&) { return Type::Function; },
             [](const StreamV&) { return Type::Stream; },
-            [](const script::Module*) { return Type::Module; },
+            [](const ModuleV&) { return Type::Module; },
     }, m_value);
 }
 
@@ -292,7 +298,9 @@ bool Value::negate()
     return std::visit([](auto& v) -> bool {
         using T = std::decay_t<decltype(v)>;
 
-        if constexpr (std::is_integral_v<T> || std::is_floating_point_v<T>) {
+        if constexpr ((std::is_integral_v<T> || std::is_floating_point_v<T>)
+                && !std::is_same_v<T, bool>)
+        {
             v = std::negate<>{}(v);
             return true;
         }
@@ -308,7 +316,9 @@ bool Value::modulus(const Value& rhs)
         using TLhs = std::decay_t<decltype(l)>;
         using TRhs = std::decay_t<decltype(r)>;
 
-        if constexpr (std::is_same_v<TLhs, TRhs> && std::is_integral_v<TLhs>) {
+        if constexpr (std::is_same_v<TLhs, TRhs> && std::is_integral_v<TLhs>
+                && !std::is_same_v<TLhs, bool>)
+        {
             l = std::modulus<>{}(l, r);
             return true;
         }

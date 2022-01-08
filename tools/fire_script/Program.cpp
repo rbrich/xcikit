@@ -25,7 +25,7 @@ static constexpr const char* prompt = "{fg:green}_{} ?{t:normal} ";
 Program::Program(bool log_debug)
 {
     Logger::init(log_debug ? Logger::Level::Trace : Logger::Level::Warning);
-    vfs.mount(XCI_SHARE);
+    ctx.vfs.mount(XCI_SHARE);
 }
 
 
@@ -34,20 +34,58 @@ void Program::process_args(char* argv[])
     opts.parse(argv);
 
     if (opts.prog_opts.expr) {
-        repl.evaluate(opts.prog_opts.expr);
+        if (!repl.evaluate("<input>", opts.prog_opts.expr,
+                EvalMode::SingleInput))
+            exit(1);
         exit(0);
     }
 
     if (!opts.prog_opts.input_files.empty()) {
-        for (const char* input : opts.prog_opts.input_files) {
-            auto content = read_text_file(input);
+        for (const char* input_file : opts.prog_opts.input_files) {
+            fs::path input_path {input_file};
+            auto module_name = input_path.filename().replace_extension().string();
+            if (input_path.extension() == ".firm") {
+                // Load binary module
+                auto module = std::make_shared<Module>(ctx.interpreter.module_manager(), module_name);
+                if (!module->load_from_file(input_file)) {
+                    std::cerr << "error loading module file: " << input_file << std::endl;
+                    exit(1);
+                }
+
+                repl.evaluate_module(*module,
+                        opts.prog_opts.compile ? EvalMode::Compile : EvalMode::SingleInput);
+                continue;
+            }
+
+            auto content = read_text_file(input_file);
             if (!content) {
-                std::cerr << "cannot read file: " << input << std::endl;
+                std::cerr << "cannot read file: " << input_file << std::endl;
                 exit(1);
             }
-            repl.evaluate(*content);
+            if (!repl.evaluate(module_name, *content,
+                    opts.prog_opts.compile ? EvalMode::Compile : EvalMode::SingleInput))
+                exit(1);
+            if (opts.prog_opts.compile) {
+                std::string out_path = opts.prog_opts.output_file;
+                if (out_path.empty()) {
+                    out_path = input_file;
+                    if (out_path.ends_with(".fire"))
+                        out_path.back() = 'm';
+                    else
+                        out_path += ".firm";
+                }
+                if (opts.prog_opts.verbose)
+                    std::clog << "Writing module: " << out_path << std::endl;
+                if (!ctx.input_modules.back()->save_to_file(out_path))
+                    exit(1);
+            }
         }
         exit(0);
+    }
+
+    if (opts.prog_opts.compile) {
+        std::cerr << "--compile: no input files" << std::endl;
+        exit(1);
     }
 }
 
@@ -123,7 +161,7 @@ void Program::evaluate_input(std::string_view input)
         return;
     }
 
-    if (repl.evaluate(input))
+    if (repl.evaluate(fmt::format("_{}", ctx.input_number), std::string(input), EvalMode::Repl))
         ++ ctx.input_number;
 }
 

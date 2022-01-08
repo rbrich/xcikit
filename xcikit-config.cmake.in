@@ -8,14 +8,15 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
 
 include(CMakeFindDependencyMacro)
 find_dependency(Threads)
-find_dependency(fmt REQUIRED)
+find_dependency(fmt)
+find_dependency(pegtl 3.2.0)
 
 if (@XCI_GRAPHICS@)
-    find_dependency(Vulkan REQUIRED)
+    find_dependency(Vulkan)
 endif()
 
 if (@XCI_WITH_ZIP@)
-    find_dependency(libzip REQUIRED)
+    find_dependency(libzip)
 endif()
 
 # xcikit targets

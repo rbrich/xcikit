@@ -275,4 +275,20 @@ void Stack::pop_type(const Value& v)
 }
 
 
+StackTrace Stack::make_trace()
+{
+    // unwind all variables on stack
+    drop(0, size());
+    // make trace from stack frames and clear them too
+    StackTrace trace;
+    while (!m_frame.empty()) {
+        trace.push_back({
+            frame().function.name()
+        });
+        pop_frame();
+    }
+    return trace;
+}
+
+
 } // namespace xci::script

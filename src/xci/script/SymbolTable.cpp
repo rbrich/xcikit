@@ -12,12 +12,6 @@
 namespace xci::script {
 
 
-SymbolTable::SymbolTable(std::string name, SymbolTable* parent)
-        : m_name(std::move(name)), m_parent(parent),
-          m_module(parent ? parent->module() : nullptr)
-{}
-
-
 const Symbol& SymbolPointer::operator*() const
 {
     assert(m_symtab != nullptr);
@@ -49,10 +43,31 @@ Function& SymbolPointer::get_function() const
 }
 
 
+//------------------------------------------------------------------------------
+
+
+SymbolTable::SymbolTable(std::string name, SymbolTable* parent)
+        : m_name(std::move(name)), m_parent(parent),
+          m_module(parent ? parent->module() : nullptr)
+{}
+
+
+std::string SymbolTable::qualified_name() const
+{
+    std::string result = m_name;
+    const auto* parent = m_parent;
+    while (parent != nullptr) {
+        result = parent->name() + "::" + result;
+        parent = parent->parent();
+    }
+    return result;
+}
+
+
 SymbolPointer SymbolTable::add(Symbol&& symbol)
 {
     m_symbols.emplace_back(std::move(symbol));
-    return {*this, m_symbols.size() - 1};
+    return {*this, Index(m_symbols.size() - 1)};
 }
 
 
@@ -75,7 +90,7 @@ unsigned SymbolTable::level() const
 }
 
 
-size_t SymbolTable::count(Symbol::Type type) const
+Size SymbolTable::count(Symbol::Type type) const
 {
     return std::count_if(m_symbols.begin(), m_symbols.end(),
             [type](const Symbol& sym) { return sym.type() == type; });
@@ -84,7 +99,7 @@ size_t SymbolTable::count(Symbol::Type type) const
 
 void SymbolTable::update_nonlocal_indices()
 {
-    size_t idx = 0;
+    Index idx = 0;
     for (auto& sym : m_symbols) {
         if (sym.type() == Symbol::Nonlocal) {
             sym.set_index(idx++);
@@ -107,7 +122,7 @@ const Symbol& SymbolTable::get(Index idx) const
 }
 
 
-SymbolPointer SymbolTable::find_by_name(const std::string& name)
+SymbolPointer SymbolTable::find_by_name(std::string_view name)
 {
     auto it = std::find_if(m_symbols.begin(), m_symbols.end(),
             [&name](const Symbol& sym){ return sym.name() == name; });
@@ -146,11 +161,21 @@ void SymbolTable::detect_overloads(const std::string& name)
     for (size_t i = 0; i != m_symbols.size(); ++i) {
         if (m_symbols[i].name() == name) {
             if (prev) {
-                prev->set_next({*this, i});
+                prev->set_next({*this, Index(i)});
             }
             prev = &m_symbols[i];
         }
     }
+}
+
+
+SymbolTable* SymbolTable::find_child_by_name(std::string_view name)
+{
+    auto it = std::find_if(m_children.begin(), m_children.end(),
+            [&name](const SymbolTable& s){ return s.name() == name; });
+    if (it == m_children.end())
+        return nullptr;
+    return &*it;
 }
 
 

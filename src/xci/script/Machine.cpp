@@ -22,6 +22,19 @@ using std::move;
 using fmt::format;
 
 
+void Machine::call(const Function& function, const Machine::InvokeCallback& cb)
+{
+    m_stack.push_frame(function);
+    try {
+        run(cb);
+    } catch (ScriptError& e) {
+        // unwind the whole stack, fill StackTrace in the ScriptError
+        e.set_stack_trace(m_stack.make_trace());
+        throw;
+    }
+}
+
+
 void Machine::run(const InvokeCallback& cb)
 {
     // Avoid double-recursion - move these pointers instead (we already have stack)
@@ -309,7 +322,7 @@ void Machine::run(const InvokeCallback& cb)
             case Opcode::Execute: {
                 auto o = m_stack.pull<value::Closure>();
                 auto closure = o.closure();
-                for (unsigned i = closure.length(); i != 0;) {
+                for (size_t i = closure.length(); i != 0;) {
                     m_stack.push(closure.value_at(--i));
                 }
                 call_fun(*o.function());
@@ -318,7 +331,7 @@ void Machine::run(const InvokeCallback& cb)
             }
 
             case Opcode::LoadStatic: {
-                auto arg = leb128_decode<size_t>(it);
+                auto arg = leb128_decode<Index>(it);
                 const auto& o = function->module().get_value(arg);
                 m_stack.push(o);
                 o.incref();
@@ -326,7 +339,7 @@ void Machine::run(const InvokeCallback& cb)
             }
 
             case Opcode::LoadFunction: {
-                auto arg = leb128_decode<size_t>(it);
+                auto arg = leb128_decode<Index>(it);
                 auto& fn = function->module().get_function(arg);
                 m_stack.push(value::Closure(fn));
                 break;
@@ -368,7 +381,7 @@ void Machine::run(const InvokeCallback& cb)
                 if (opcode == Opcode::Call0) {
                     module = &function->module();
                 } else {
-                    size_t idx;
+                    Index idx;
                     if (opcode == Opcode::Call1) {
                         idx = 0;
                     } else {

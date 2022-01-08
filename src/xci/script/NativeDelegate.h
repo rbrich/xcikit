@@ -30,10 +30,11 @@ class NativeDelegate final {
 public:
     using WrapperFunction = void (*)(Stack& stack, void* data_1, void* data_2);
 
+    NativeDelegate() = default;
     NativeDelegate(WrapperFunction func)
-        : m_func(func), m_data_1(nullptr), m_data_2(nullptr) {}
+            : m_func(func) {}
     NativeDelegate(WrapperFunction func, void* data_1)
-            : m_func(func), m_data_1(data_1), m_data_2(nullptr) {}
+            : m_func(func), m_data_1(data_1) {}
     NativeDelegate(WrapperFunction func, void* data_1, void* data_2)
             : m_func(func), m_data_1(data_1), m_data_2(data_2) {}
 
@@ -49,9 +50,9 @@ public:
     }
 
 private:
-    WrapperFunction m_func;  // function that operates on stack, may call wrapped function
-    void* m_data_1;    // may be used to store wrapped function pointer
-    void* m_data_2;    // may be used for `this` pointer when the wrapped function is a method
+    WrapperFunction m_func = nullptr;  // function that operates on stack, may call wrapped function
+    void* m_data_1 = nullptr;  // may be used to store wrapped function pointer
+    void* m_data_2 = nullptr;  // may be used for `this` pointer when the wrapped function is a method
 };
 
 
@@ -164,7 +165,7 @@ struct ValueType_s<std::string> {
 };
 
 template<>
-struct ValueType_s<Module&> {
+struct ValueType_s<xci::script::Module&> {
     using type = value::Module;
 };
 

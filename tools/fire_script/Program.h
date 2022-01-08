@@ -47,10 +47,9 @@ struct Program {
     // Line editing widget
     core::EditLine& edit_line();
 
-    core::Vfs vfs;
     Context ctx;
     Options opts;
-    Repl repl {ctx, opts.repl_opts, vfs};
+    Repl repl {ctx, opts.repl_opts};
 };
 
 

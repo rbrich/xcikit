@@ -5,7 +5,6 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Builtin.h"
-#include "Function.h"
 #include <xci/core/file.h>
 #include <xci/compat/macros.h>
 
@@ -48,7 +47,7 @@ const char* builtin::op_to_function_name(ast::Operator::Op op)
 }
 
 
-BuiltinModule::BuiltinModule() : Module("builtin")
+BuiltinModule::BuiltinModule(ModuleManager& module_manager) : Module(module_manager, "builtin")
 {
     symtab().add({"void", Symbol::Value, add_value(TypedValue{value::Void()})});
     symtab().add({"false", Symbol::Value, add_value(TypedValue{value::Bool(false)})});
@@ -57,13 +56,6 @@ BuiltinModule::BuiltinModule() : Module("builtin")
     add_types();
     add_io_functions();
     add_introspections();
-}
-
-
-BuiltinModule& BuiltinModule::static_instance()
-{
-    static BuiltinModule instance;
-    return instance;
 }
 
 

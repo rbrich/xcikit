@@ -7,6 +7,13 @@
 #include "Module.h"
 #include "Function.h"
 #include "Error.h"
+#include "ast/AST_serialization.h"
+
+#include <xci/data/BinaryWriter.h>
+#include <xci/data/BinaryReader.h>
+#include <xci/core/string.h>
+
+#include <fstream>
 
 namespace xci::script {
 
@@ -28,28 +35,42 @@ SymbolPointer Module::add_native_function(
         std::string&& name, std::vector<TypeInfo>&& params, TypeInfo&& retval,
         NativeDelegate native)
 {
-    auto fn = std::make_unique<Function>(*this, symtab().add_child(name));
-    fn->signature().params = move(params);
-    fn->signature().return_type = move(retval);
-    fn->set_native(native);
-    Index index = add_function(move(fn));
-    return symtab().add({move(name), Symbol::Function, index});
+    Function fn {*this, symtab().add_child(name)};
+    fn.signature().params = move(params);
+    fn.signature().return_type = move(retval);
+    fn.set_native(native);
+    WeakFunctionId fn_id = add_function(move(fn));
+    return symtab().add({move(name), Symbol::Function, fn_id.index});
+}
+
+
+Index Module::import_module(const std::string& name)
+{
+    m_modules.push_back(m_module_manager.import_module(name));
+    return Index(m_modules.size() - 1);
+}
+
+
+Index Module::add_imported_module(std::shared_ptr<Module> module)
+{
+    m_modules.push_back(std::move(module));
+    return Index(m_modules.size() - 1);
 }
 
 
 Index Module::get_imported_module_index(Module* module) const
 {
-    auto it = find(m_modules.begin(), m_modules.end(), module);
+    auto it = find_if(m_modules.begin(), m_modules.end(),
+            [module](const std::shared_ptr<Module>& a){ return module == a.get(); });
     if (it == m_modules.end())
         return no_index;
     return it - m_modules.begin();
 }
 
 
-Index Module::add_function(std::unique_ptr<Function>&& fn)
+auto Module::add_function(Function&& fn) -> WeakFunctionId
 {
-    m_functions.push_back(move(fn));
-    return m_functions.size() - 1;
+    return m_functions.add(move(fn));
 }
 
 
@@ -62,7 +83,7 @@ Index Module::add_value(TypedValue&& value)
     }
 
     m_values.add(move(value));
-    return m_values.size() - 1;
+    return Index(m_values.size() - 1);
 }
 
 
@@ -84,7 +105,7 @@ Index Module::add_type(TypeInfo type_info)
         return idx;
 
     m_types.push_back(move(type_info));
-    return m_types.size() - 1;
+    return Index(m_types.size() - 1);
 }
 
 
@@ -98,17 +119,42 @@ Index Module::find_type(const TypeInfo& type_info) const
 }
 
 
-Index Module::add_class(std::unique_ptr<Class>&& cls)
+auto Module::add_class(Class&& cls) -> WeakClassId
 {
-    m_classes.push_back(move(cls));
-    return m_classes.size() - 1;
+    return m_classes.add(move(cls));
 }
 
 
-Index Module::add_instance(std::unique_ptr<Instance>&& inst)
+auto Module::add_instance(Instance&& inst) -> WeakInstanceId
 {
-    m_instances.push_back(move(inst));
-    return m_instances.size() - 1;
+    return m_instances.add(move(inst));
+}
+
+
+SymbolTable& Module::symtab_by_qualified_name(std::string_view name)
+{
+    auto parts = core::split(name, "::");
+    auto part_it = parts.begin();
+
+    SymbolTable* symtab = nullptr;
+    if (*part_it == m_symtab.name()) {
+        // a symbol from this module
+        symtab = &m_symtab;
+    } else {
+        // a symbol from an imported module
+        for (const auto& module : m_modules)
+            if (module->name() == *part_it)
+                symtab = &module->symtab();
+        if (symtab == nullptr)
+            throw UnresolvedSymbol(name);
+    }
+
+    while (++part_it != parts.end()) {
+        symtab = symtab->find_child_by_name(*part_it);
+        if (symtab == nullptr)
+            throw UnresolvedSymbol(name);
+    }
+    return *symtab;
 }
 
 
@@ -135,6 +181,55 @@ bool Module::operator==(const Module& rhs) const
     return m_modules == rhs.m_modules &&
            m_functions == rhs.m_functions &&
            m_values == rhs.m_values;
+}
+
+
+// -----------------------------------------------------------------------------
+// Module serialization
+
+// Following static asserts help with development - error message readability
+static_assert(xci::data::TypeWithSerializeFunction<ast::Block, xci::data::BinaryReader>);
+
+
+bool Module::save_to_file(const std::string& filename)
+{
+    std::ofstream f(filename, std::ios::binary);
+    xci::data::BinaryWriter writer(f, true);
+    writer(m_modules, m_values, m_symtab, m_functions);
+    return !f.fail();
+}
+
+
+class ModuleLoader {
+    ModuleManager& m_module_manager;
+    std::vector<std::shared_ptr<Module>>& m_modules;
+
+public:
+    ModuleLoader(ModuleManager& module_manager, std::vector<std::shared_ptr<Module>>& modules)
+        : m_module_manager(module_manager), m_modules(modules) {}
+
+    template<class Archive>
+    void load(Archive& ar) {
+        std::string module_name;
+        ar(module_name);
+        m_modules.push_back(m_module_manager.import_module(module_name));
+    }
+};
+
+
+bool Module::load_from_file(const std::string& filename)
+{
+    std::ifstream f(filename, std::ios::binary);
+    xci::data::BinaryReader reader(f);
+    reader.repeated(m_modules, [this](std::vector<std::shared_ptr<Module>>& modules) {
+        return ModuleLoader(m_module_manager, modules);
+    });
+    reader(m_values, m_symtab);
+    reader.repeated(m_functions, [this](IndexedMap<Function>& functions) -> Function& {
+        auto idx = m_functions.emplace(*this);
+        return *m_functions.get(idx);
+    });
+    return !f.fail();
 }
 
 

@@ -8,6 +8,7 @@ BUILD_TYPE="Release"
 INSTALL_DEVEL=0
 GENERATOR=
 EMSCRIPTEN=0
+PRECACHE_DEPS=0
 JOBS_ARGS=()
 CMAKE_ARGS=()
 CONAN_ARGS=()
@@ -31,9 +32,11 @@ print_usage()
     echo "      --devel                 Install/package headers, CMake config, static libs."
     echo "      --emscripten            Target Emscripten (i.e. wrap with 'emcmake')"
     echo "      --unity                 CMAKE_UNITY_BUILD - batch all source files in each target together"
+    echo "      --asan, --ubsan, --tsan Build with sanitizers (Address, UB, Thread)"
     echo "      --tidy                  Run clang-tidy on each compiled file"
     echo "      --update                Passed to conan - update dependencies"
     echo "      --profile, -pr PROFILE  Passed to conan - use the profile"
+    echo "      --precache-deps         Call precache_upstream_deps.py, useful for CI"
     echo "      --build-dir             Build directory (default: ./build/<build-config>)"
     echo "      --install-dir           Installation directory (default: ./artifacts/<build-config>)"
     echo "      --toolchain FILE        CMAKE_TOOLCHAIN_FILE - select build toolchain"
@@ -117,11 +120,23 @@ while [[ $# -gt 0 ]] ; do
             # consumption, but seems not worse then smaller batches in my tests.
             CMAKE_ARGS+=(-D'CMAKE_UNITY_BUILD=1' -D'CMAKE_UNITY_BUILD_BATCH_SIZE=0')
             shift 1 ;;
+        --asan )
+            CMAKE_ARGS+=(-D'BUILD_WITH_ASAN=1')
+            shift 1 ;;
+        --ubsan )
+            CMAKE_ARGS+=(-D'BUILD_WITH_UBSAN=1')
+            shift 1 ;;
+        --tsan )
+            CMAKE_ARGS+=(-D'BUILD_WITH_TSAN=1')
+            shift 1 ;;
         --tidy )
             CMAKE_ARGS+=(-D'ENABLE_TIDY=1')
             shift 1 ;;
         --update )
             CONAN_ARGS+=('--update')
+            shift 1 ;;
+        --precache-deps )
+            PRECACHE_DEPS=1
             shift 1 ;;
         --build-dir )
             BUILD_DIR="$2"
@@ -166,6 +181,9 @@ PACKAGE_FILENAME="xcikit-${VERSION}-${PLATFORM}-${ARCH}"
 [[ ${BUILD_TYPE} != "Release" ]] && PACKAGE_FILENAME="${PACKAGE_FILENAME}-${BUILD_TYPE}"
 
 CONAN_ARGS+=("-pr=$CONAN_PROFILE" "-pr:b=$CONAN_PROFILE")
+for name in "${DETECT_ARGS[@]}" ; do
+    CONAN_ARGS+=(-o "xcikit:${name}=True")
+done
 if [[ -z "$component_default" && -z "$component_all" ]]; then
     # Disable components that were not selected
     for name in data script graphics text widgets ; do
@@ -217,8 +235,11 @@ mkdir -p "${BUILD_DIR}"
 
 if phase deps; then
     header "Install Dependencies"
-    if [[ -n "${MACOSX_DEPLOYMENT_TARGET}" ]]; then
+    if [[ "${PLATFORM}" == macos* && -n "${MACOSX_DEPLOYMENT_TARGET}" ]]; then
         CONAN_ARGS+=(-s "os.version=${MACOSX_DEPLOYMENT_TARGET}")
+    fi
+    if [[ "${PRECACHE_DEPS}" -eq 1 ]]; then
+        "${ROOT_DIR}/precache_upstream_deps.py"
     fi
     (
         run cd "${BUILD_DIR}"

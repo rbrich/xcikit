@@ -484,13 +484,14 @@ public:
             case Symbol::Nonlocal: {
                 assert(sym.ref());
                 auto nl_sym = sym.ref();
-                // owning function of the nonlocal symbol
-                auto* nl_owner = nl_sym.symtab()->function();
-                assert(nl_owner != nullptr);
                 switch (nl_sym->type()) {
-                    case Symbol::Parameter:
+                    case Symbol::Parameter: {
+                        // owning function of the nonlocal symbol
+                        auto* nl_owner = nl_sym.symtab()->function();
+                        assert(nl_owner != nullptr);
                         m_value_type = nl_owner->parameter(nl_sym->index());
                         break;
+                    }
                     case Symbol::Function: {
                         auto res = resolve_overload(nl_sym, v.identifier);
                         v.module = res.module;
@@ -580,8 +581,8 @@ public:
                         v.partial_index = v.definition->symbol()->index();
                     } else {
                         SymbolTable& fn_symtab = m_function.symtab().add_child("?/partial");
-                        auto fn = make_unique<Function>(module(), fn_symtab);
-                        v.partial_index = module().add_function(move(fn));
+                        Function fn {module(), fn_symtab};
+                        v.partial_index = module().add_function(move(fn)).index;
                     }
                     auto& fn = module().get_function(v.partial_index);
                     fn.signature() = *new_signature;
@@ -811,7 +812,8 @@ private:
 
     Index get_type_id(TypeInfo&& type_info) {
         // is the type builtin?
-        Index type_id = BuiltinModule::static_instance().find_type(type_info);
+        const Module& builtin_module = module().module_manager().builtin_module();
+        Index type_id = builtin_module.find_type(type_info);
         if (type_id >= 32) {
             // add to current module
             type_id = 32 + module().add_type(move(type_info));
@@ -821,7 +823,8 @@ private:
 
     Index get_type_id(const TypeInfo& type_info) {
         // is the type builtin?
-        Index type_id = BuiltinModule::static_instance().find_type(type_info);
+        const Module& builtin_module = module().module_manager().builtin_module();
+        Index type_id = builtin_module.find_type(type_info);
         if (type_id >= 32) {
             // add to current module
             type_id = 32 + module().add_type(type_info);
@@ -968,14 +971,14 @@ private:
             return {};  // not generic, nothing to specialize
         if (fn.signature().params.size() > m_call_args.size())
             return {};  // not enough call args
-        auto fspec = make_unique<Function>(module(), fn.symtab());
-        fspec->set_signature(std::make_shared<Signature>(fn.signature()));  // copy, not ref
-        fspec->set_ast(fn.ast());
-        fspec->ensure_ast_copy();
-        specialize_to_call_args(*fspec, fspec->ast(), loc);
-        auto fspec_sig = fspec->signature_ptr();
+        Function fspec(module(), fn.symtab());
+        fspec.set_signature(std::make_shared<Signature>(fn.signature()));  // copy, not ref
+        fspec.set_ast(fn.ast());
+        fspec.ensure_ast_copy();
+        specialize_to_call_args(fspec, fspec.ast(), loc);
+        auto fspec_sig = fspec.signature_ptr();
         // Copy original symbol and set it to the specialized function
-        auto fspec_idx = module().add_function(move(fspec));
+        auto fspec_idx = module().add_function(move(fspec)).index;
         auto res = std::make_optional<Specialized>({
                 TypeInfo{fspec_sig},
                 fspec_idx

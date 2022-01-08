@@ -29,11 +29,6 @@ using namespace xci::core;
 using namespace std::literals::string_literals;
 
 
-// Disable this to rebuild the std module in each test case.
-// When enabled, it's built once and cached to speed up the tests.
-constexpr bool c_reuse_std_module = true;
-
-
 // Check parsing into AST and dumping back to code
 std::string parse(const std::string& input)
 {
@@ -67,56 +62,48 @@ std::string parse(const std::string& input)
     } while(false)
 
 
-static constexpr const char* std_path = "script/std.fire";
+struct Context {
+    Vfs vfs;
+    Interpreter interpreter {vfs};
 
-
-const std::string& std_module_source()
-{
-    static std::string source;
-    if (source.empty()) {
+    Context() {
         Logger::init(Logger::Level::Warning);
-        Vfs vfs;
         vfs.mount(XCI_SHARE);
-        auto f = vfs.read_file(std_path);
-        REQUIRE(f.is_open());
-        source = f.content()->string();
     }
-    return source;
-}
+};
 
 
-void import_std_module(Interpreter& interpreter)
+static Context& context()
 {
-    static std::unique_ptr<Module> module;
-    auto src_id = interpreter.source_manager().add_source(std_path, std_module_source());
-    assert(src_id == 1);
-    (void) src_id;
-    if (!c_reuse_std_module || !module) {
-        module = interpreter.build_module("std", src_id);
-    }
-    interpreter.add_imported_module(*module);
+    static Context context;
+    return context;
 }
 
 
 std::string interpret(const std::string& input, bool import_std=false)
 {
-    Interpreter interpreter;
-
+    Context& ctx = context();
+    Module module {ctx.interpreter.module_manager()};
+    module.import_module("builtin");
     if (import_std) {
-        import_std_module(interpreter);
+        module.import_module("std");
     }
 
     UNSCOPED_INFO(input);
     std::ostringstream os;
     try {
-        auto result = interpreter.eval(input, [&os](TypedValue&& invoked) {
+        auto result = ctx.interpreter.eval(module, input, [&os](TypedValue&& invoked) {
             os << invoked << ';';
             invoked.decref();
         });
         os << result;
         result.decref();
+        REQUIRE(ctx.interpreter.machine().stack().empty());
+        REQUIRE(ctx.interpreter.machine().stack().n_frames() == 0);
     } catch (const ScriptError& e) {
         UNSCOPED_INFO("Exception: " << e.what() << "\n" << e.detail());
+        REQUIRE(ctx.interpreter.machine().stack().empty());
+        REQUIRE(ctx.interpreter.machine().stack().n_frames() == 0);
         throw;
     }
     return os.str();
@@ -743,16 +730,18 @@ int test_fun1(int a, int b, int c) { return (a - b) / c; }
 
 TEST_CASE( "Native functions: free function", "[script][native]" )
 {
-    Interpreter interpreter;
-    Module module;
-    import_std_module(interpreter);
-    interpreter.add_imported_module(module);
+    Context& ctx = context();
+    Module main_module {ctx.interpreter.module_manager()};
+    auto native_module = std::make_shared<Module>(ctx.interpreter.module_manager());
+    main_module.import_module("builtin");
+    main_module.import_module("std");
+    main_module.add_imported_module(native_module);
 
     // free function
-    module.add_native_function("test_fun1a", &test_fun1);
-    module.add_native_function("test_fun1b", test_fun1);  // function pointer is deduced
+    native_module->add_native_function("test_fun1a", &test_fun1);
+    native_module->add_native_function("test_fun1b", test_fun1);  // function pointer is deduced
 
-    auto result = interpreter.eval(R"(
+    auto result = ctx.interpreter.eval(main_module, R"(
         ((test_fun1a 10 4 2)     //  3
         + (test_fun1b 0 6 3))    // -2
     )");
@@ -763,9 +752,8 @@ TEST_CASE( "Native functions: free function", "[script][native]" )
 
 TEST_CASE( "Native functions: lambda", "[script][native]" )
 {
-    Interpreter interpreter;
-    Module module;
-    interpreter.add_imported_module(module);
+    Context& ctx = context();
+    Module module {ctx.interpreter.module_manager()};
 
     // lambdas
     module.add_native_function("add1", [](int a, int b) { return a + b; });
@@ -776,7 +764,7 @@ TEST_CASE( "Native functions: lambda", "[script][native]" )
             [](void* s, int a, int b) { return a + b + *(int*)(s); },
             &state);
 
-    auto result = interpreter.eval(R"(
+    auto result = ctx.interpreter.eval(module, R"(
         (add1 (add1 1 6)       //  7
               (add2 3 4))      //  8  (+10 from state)
     )");

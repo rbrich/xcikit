@@ -53,7 +53,7 @@ endforeach()
 set(output_archives)
 
 # Create data archive: share.dar
-if (Python3_Interpreter_FOUND)
+if (ASSETS AND Python3_Interpreter_FOUND)
     set(output_dar "share.dar")
     add_custom_command(
         OUTPUT "${output_dar}"
@@ -77,7 +77,7 @@ if (Python3_Interpreter_FOUND)
 endif()
 
 # Create data archive: share.zip
-if (XCI_WITH_ZIP)
+if (ASSETS AND XCI_WITH_ZIP)
     set(output_zip "share.zip")
     add_custom_command(
         OUTPUT "${output_zip}"

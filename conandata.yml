@@ -7,6 +7,18 @@
 # The `with_<req_name>` option enables/disables the system dependency.
 # This doesn't allow installing the dependency from ConanCenter.
 # Currently, only "hyperscan" is such an option.
+#
+# Requirement options:
+# * `cmake` - what to look for in CMake, e.g. "fmt/8.0.0" -> `find_package(fmt 8.0.0)`
+# * `conan` - what to add to Conan's requires
+# * `upstream` - when installing directly from upstream (instead of via ConanCenter),
+#                specifies the repo and commit to download: "<site> <repo> <commit>"
+# * `prereq` - what option from `conanfile.py` requires this dependency
+#
+# Run `precache_upstream_deps.py` to download and export `upstream` deps as specified.
+# This is alternative to ConanCenter, but may be needed when a fix didn't yet make it
+# into ConanCenter. The `upstream` must contain a `conanfile.py` which exports
+# a matching package (name/version) when exported via `conan export .`.
 
 requirements:
   fmt:
@@ -15,6 +27,8 @@ requirements:
   range_v3:
     cmake: "range-v3/0.11.0"
     conan: "range-v3/0.11.0"
+    # This version contains a fix that is needed for Clang 13 build:
+    upstream: "github.com ericniebler/range-v3 83783f578e0e6666d68a3bf17b0038a80e62530e"
   pegtl:
     cmake: "pegtl/3.2.0"
     conan: "taocpp-pegtl/3.2.1"

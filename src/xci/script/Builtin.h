@@ -53,9 +53,7 @@ const char* op_to_function_name(ast::Operator::Op op);
 
 class BuiltinModule : public Module {
 public:
-    BuiltinModule();
-
-    static BuiltinModule& static_instance();
+    explicit BuiltinModule(ModuleManager& module_manager);
 
 private:
     void add_intrinsics();
