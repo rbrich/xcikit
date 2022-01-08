@@ -152,8 +152,13 @@ public:
         }
 
         template<class Archive>
-        void serialize(Archive& ar) {
+        void save(Archive& ar) const {
+            ar(ast());
+        }
 
+        template<class Archive>
+        void load(Archive& ar) {
+            ar(ast_copy);
         }
     };
 

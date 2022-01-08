@@ -122,6 +122,9 @@ size_t Value::write(byte* buffer) const
             for (Value* it = v.values.get(); !it->is_void(); ++it)
                 ofs += it->write(ofs);
             return ofs - buffer;
+        } else if constexpr (std::is_same_v<T, ModuleV>) {
+            std::memcpy(buffer, &v.module_ptr, sizeof(v.module_ptr));
+            return sizeof(v.module_ptr);
         } else if constexpr(std::is_trivially_copyable_v<T>) {
             std::memcpy(buffer, &v, sizeof(T));
             return sizeof(T);
@@ -152,6 +155,9 @@ size_t Value::read(const byte* buffer)
             for (Value* it = v.values.get(); !it->is_void(); ++it)
                 ofs += it->read(ofs);
             return ofs - buffer;
+        } else if constexpr (std::is_same_v<T, ModuleV>) {
+            std::memcpy(&v.module_ptr, buffer, sizeof(v.module_ptr));
+            return sizeof(v.module_ptr);
         } else if constexpr(std::is_trivially_copyable_v<T>) {
             std::memcpy(&v, buffer, sizeof(T));
             return sizeof(T);

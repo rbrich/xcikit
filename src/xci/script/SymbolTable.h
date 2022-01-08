@@ -111,15 +111,16 @@ public:
 
     template<class Archive>
     void save(Archive& ar) const {
-        ar(m_name, m_type, m_index, m_depth, m_is_callable, m_is_defined);
+        uint8_t flags = m_is_callable | (m_is_defined << 1);
+        ar(m_name, m_type, m_index, m_depth, flags);
     }
 
     template<class Archive>
     void load(Archive& ar) {
-        bool is_callable, is_defined;
-        ar(m_name, m_type, m_index, m_depth, is_callable, is_defined);
-        m_is_callable = is_callable;
-        m_is_defined = is_defined;
+        uint8_t flags = 0;
+        ar(m_name, m_type, m_index, m_depth, flags);
+        m_is_callable = bool(flags & 0x01);
+        m_is_defined = bool(flags & 0x02);
     }
 
 private:

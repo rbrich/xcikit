@@ -7,6 +7,7 @@
 #include "Module.h"
 #include "Function.h"
 #include "Error.h"
+#include "ast/AST_serialization.h"
 
 #include <xci/data/BinaryWriter.h>
 #include <xci/data/BinaryReader.h>
@@ -181,6 +182,13 @@ bool Module::operator==(const Module& rhs) const
            m_functions == rhs.m_functions &&
            m_values == rhs.m_values;
 }
+
+
+// -----------------------------------------------------------------------------
+// Module serialization
+
+// Following static asserts help with development - error message readability
+static_assert(xci::data::TypeWithSerializeFunction<ast::Block, xci::data::BinaryReader>);
 
 
 bool Module::save_to_file(const std::string& filename)
