@@ -75,7 +75,7 @@ public:
         }
     }
 
-    void visit(ast::Bracketed& v) override {
+    void visit(ast::Parenthesized& v) override {
         v.expression->apply(*this);
     }
 

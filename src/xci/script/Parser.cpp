@@ -1,7 +1,7 @@
 // Parser.cpp created on 2019-05-15 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Parser.h"
@@ -133,13 +133,13 @@ struct FunctionDecl: seq< opt<TypeParams>, SC, DeclParams, SC, opt<DeclResult>, 
 struct PlainTypeName: seq< TypeName, not_at<SC, one<','>> > {};  // not followed by comma (would be TupleType)
 struct ListType: if_must< one<'['>, SC, UnsafeType, SC, one<']'> > {};
 struct TupleType: seq< Type, plus<SC, one<','>, SC, Type> > {};
-struct BracketedType: if_must< one<'('>, SC, UnsafeType, SC, one<')'> > {};
-struct UnsafeType: sor<FunctionType, PlainTypeName, TupleType, BracketedType, ListType> {};   // usable in context where Type is already expected
-struct Type: sor< BracketedType, ListType, TypeName > {};
+struct ParenthesizedType: if_must< one<'('>, SC, UnsafeType, SC, one<')'> > {};
+struct UnsafeType: sor<FunctionType, PlainTypeName, TupleType, ParenthesizedType, ListType> {};   // usable in context where Type is already expected
+struct Type: sor< ParenthesizedType, ListType, TypeName > {};
 
 // Expressions
 // * some rules are parametrized with S (space type), choose either SC or NSC (allow newline)
-// * in general, rules inside brackets (round or square) use NSC, rules outside brackets use SC
+// * in general, rules inside parentheses or brackets use NSC, rules outside use SC
 // * this allows leaving out semicolons but still support multiline expressions
 template<class S> struct Call: seq< ExprCallable, plus<RS, S, ExprArgSafe> > {};
 template<class S> struct DotCall: if_must< one<'.'>, SC, seq< ExprCallable, star<RS, S, ExprArgSafe> > > {};
@@ -147,19 +147,19 @@ template<class S> struct ExprOperand: sor<Call<S>, ExprArgSafe, ExprPrefix> {};
 template<class S> struct ExprInfixRight: seq< sor< DotCall<S>, seq<InfixOperator, NSC, ExprOperand<S>> >, S, opt< ExprInfixRight<S> > > {};
 template<class S> struct TrailingComma: opt<S, one<','>> {};
 template<class S> struct ExprInfix: seq< ExprOperand<S>, S, opt<ExprInfixRight<S>>, TrailingComma<S> > {};
-template<> struct ExprInfix<SC>: seq< ExprOperand<SC>, sor< seq<NSC, at< one<'.'> > >, SC>, opt<ExprInfixRight<SC>>, TrailingComma<SC> > {};  // specialization to allow newline before dotcall even outside brackets
+template<> struct ExprInfix<SC>: seq< ExprOperand<SC>, sor< seq<NSC, at< one<'.'> > >, SC>, opt<ExprInfixRight<SC>>, TrailingComma<SC> > {};  // specialization to allow newline before dotcall even outside parens
 template<class S> struct Expression: sor< ExprCond, ExprWith, ExprStruct, ExprInfix<S> > {};
 struct Variable: seq< Identifier, opt<SC, one<':'>, SC, must<UnsafeType> > > {};
 struct Block: if_must< one<'{'>, NSC, sor< one<'}'>, seq<SepList<Statement>, NSC, one<'}'>> > > {};
 struct Function: sor< Block, if_must< KeywordFun, NSC, FunctionDecl, NSC, Block> > {};
-struct BracketedExpr: if_must< one<'('>, NSC, Expression<NSC>, NSC, one<')'> > {};
+struct ParenthesizedExpr: if_must< one<'('>, NSC, Expression<NSC>, NSC, one<')'> > {};
 struct ExprPrefix: if_must< PrefixOperator, SC, ExprOperand<SC>, SC > {};
 struct TypeArgs: seq< one<'<'>, Type, one<'>'> > {};
 struct Reference: seq<Identifier, opt<TypeArgs>, not_at<one<'"'>>> {};
 struct List: if_must< one<'['>, NSC, opt<ExprInfix<NSC>, NSC>, one<']'> > {};
 struct Cast: seq<SC, one<':'>, SC, Type> {};
-struct ExprCallable: sor< BracketedExpr, Function, Reference> {};
-struct ExprArgSafe: seq< sor< BracketedExpr, List, Function, Literal, Reference >, opt<Cast>> {};  // expressions which can be used as args in Call
+struct ExprCallable: sor< ParenthesizedExpr, Function, Reference> {};
+struct ExprArgSafe: seq< sor< ParenthesizedExpr, List, Function, Literal, Reference >, opt<Cast>> {};  // expressions which can be used as args in Call
 struct ExprCond: if_must< KeywordIf, NSC, ExprInfix<NSC>, NSC, KeywordThen, NSC, Expression<SC>, NSC, KeywordElse, NSC, Expression<SC>> {};
 struct ExprWith: if_must< KeywordWith, NSC, ExprArgSafe, NSC, Expression<SC> > {};  // might be parsed as a function, but that wouldn't allow newlines
 struct ExprStructItem: seq< Identifier, SC, one<'='>, not_at<one<'='>>, SC, must<ExprArgSafe> > {};
@@ -289,8 +289,8 @@ struct Action<Expression<S>> : change_states< std::unique_ptr<ast::Expression> >
     }
 
     template<typename Input>
-    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Bracketed& bracketed) {
-        bracketed.expression = std::move(expr);
+    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Parenthesized& parenthesized) {
+        parenthesized.expression = std::move(expr);
     }
 
     template<typename Input>
@@ -478,15 +478,15 @@ struct Action<ExprStruct> : change_states< ast::StructInit > {
 
 
 template<>
-struct Action<BracketedExpr> : change_states< ast::Bracketed > {
+struct Action<ParenthesizedExpr> : change_states< ast::Parenthesized > {
     template<typename Input>
-    static void apply(const Input &in, ast::Bracketed& bracketed) {
-        bracketed.source_loc.load(in.input(), in.position());
+    static void apply(const Input &in, ast::Parenthesized& parenthesized) {
+        parenthesized.source_loc.load(in.input(), in.position());
     }
 
     template<typename Input>
-    static void success(const Input &in, ast::Bracketed& bracketed, std::unique_ptr<ast::Expression>& expr) {
-        expr = std::make_unique<ast::Bracketed>(std::move(bracketed));
+    static void success(const Input &in, ast::Parenthesized& parenthesized, std::unique_ptr<ast::Expression>& expr) {
+        expr = std::make_unique<ast::Parenthesized>(std::move(parenthesized));
     }
 };
 

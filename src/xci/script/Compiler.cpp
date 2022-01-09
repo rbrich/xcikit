@@ -116,7 +116,7 @@ public:
         code().add_L1(Opcode::LoadStatic, idx);
     }
 
-    void visit(ast::Bracketed& v) override {
+    void visit(ast::Parenthesized& v) override {
         v.expression->apply(*this);
     }
 

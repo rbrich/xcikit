@@ -243,7 +243,7 @@ public:
         type_check.check(m_value_type, v.source_loc);
     }
 
-    void visit(ast::Bracketed& v) override {
+    void visit(ast::Parenthesized& v) override {
         v.expression->apply(*this);
     }
 

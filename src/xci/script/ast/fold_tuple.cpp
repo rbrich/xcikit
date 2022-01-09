@@ -79,7 +79,7 @@ public:
         }
     }
 
-    void visit(ast::Bracketed& v) override {
+    void visit(ast::Parenthesized& v) override {
         apply_and_fold(v.expression);
     }
 

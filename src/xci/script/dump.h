@@ -26,7 +26,7 @@ std::ostream& less_indent(std::ostream& os);
 // AST
 namespace ast {
 std::ostream& operator<<(std::ostream& os, const Literal& v);
-std::ostream& operator<<(std::ostream& os, const Bracketed& v);
+std::ostream& operator<<(std::ostream& os, const Parenthesized& v);
 std::ostream& operator<<(std::ostream& os, const Tuple& v);
 std::ostream& operator<<(std::ostream& os, const List& v);
 std::ostream& operator<<(std::ostream& os, const StructInit& v);

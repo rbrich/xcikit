@@ -251,9 +251,9 @@ std::unique_ptr<ast::Expression> Literal::make_copy() const
 }
 
 
-std::unique_ptr<ast::Expression> Bracketed::make_copy() const
+std::unique_ptr<ast::Expression> Parenthesized::make_copy() const
 {
-    auto r = std::make_unique<Bracketed>();
+    auto r = std::make_unique<Parenthesized>();
     Expression::copy_to(*r);
     r->expression = expression->make_copy();
     return r;

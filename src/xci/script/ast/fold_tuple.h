@@ -14,7 +14,7 @@ namespace xci::script {
 
 /// Tuple is parsed as comma operator, leading to following AST,
 /// given input tuple (1, 2, "three"):
-///     Bracketed(Expression)
+///     Parenthesized(Expression)
 ///        OpCall(Expression)
 ///           Operator , [L2]
 ///           OpCall(Expression)
