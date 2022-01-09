@@ -45,7 +45,7 @@ public:
 
         // Optimization
         O0 = 0,
-        O1 = MandatoryMask | FoldConstExpr,
+        O1 = FoldConstExpr,
 
         Default = 0,
     };

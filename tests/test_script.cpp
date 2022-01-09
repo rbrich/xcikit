@@ -29,6 +29,24 @@ using namespace xci::core;
 using namespace std::literals::string_literals;
 
 
+struct Context {
+    Vfs vfs;
+    Interpreter interpreter {vfs};
+
+    Context() {
+        Logger::init(Logger::Level::Warning);
+        vfs.mount(XCI_SHARE);
+    }
+};
+
+
+static Context& context()
+{
+    static Context context;
+    return context;
+}
+
+
 // Check parsing into AST and dumping back to code
 std::string parse(const std::string& input)
 {
@@ -62,21 +80,29 @@ std::string parse(const std::string& input)
     } while(false)
 
 
-struct Context {
-    Vfs vfs;
-    Interpreter interpreter {vfs};
-
-    Context() {
-        Logger::init(Logger::Level::Warning);
-        vfs.mount(XCI_SHARE);
-    }
-};
-
-
-static Context& context()
+// Check parsing into AST, optimizing the AST, and dumping back to code
+std::string optimize(const std::string& input)
 {
-    static Context context;
-    return context;
+    SourceManager src_man;
+    auto src_id = src_man.add_source("<input>", input);
+
+    ast::Module ast;
+    Parser parser {src_man};
+    parser.parse(src_id, ast);
+
+    Context& ctx = context();
+    Module module {ctx.interpreter.module_manager()};
+    module.import_module("builtin");
+    module.import_module("std");
+
+    auto& symtab = module.symtab().add_child("main");
+    Function fn {module, symtab};
+    Compiler compiler(Compiler::Flags::O1);
+    compiler.compile(fn, ast);
+
+    std::ostringstream os;
+    os << ast;
+    return os.str();
 }
 
 
@@ -787,4 +813,38 @@ TEST_CASE( "Native functions: lambda", "[script][native]" )
     )");
     CHECK(result.type() == Type::Int32);
     CHECK(result.get<int32_t>() == 24);
+}
+
+
+TEST_CASE( "Fold const expressions", "[script][optimizer]" )
+{
+    // fold constant if-expression
+    CHECK(optimize("if false then 10 else 0;") == "0");
+    CHECK(optimize("if true then 10 else 0;") == "10");
+    CHECK(optimize("if false then 10 if true then 42 else 0;") == "42");
+    CHECK(optimize("if false then 10 if false then 42 else 0;") == "0");
+
+    // partially fold if-expression (only some branches)
+    CHECK(optimize("num = 16; if true then 10 if num>5 then 5 else 0;") == "/*def*/ num = (16);\n10");
+    CHECK(optimize("num = 16; if false then 10 if num>5 then 5 else 0;") == "/*def*/ num = (16);\nif (num > 5) then 5\nelse 0;");
+    CHECK(optimize("num = 16; if num>10 then 10 if true then 5 else 0;") == "/*def*/ num = (16);\nif (num > 10) then 10\nelse 5;");
+    CHECK(optimize("num = 16; if num>10 then 10 if false then 5 else 0;") == "/*def*/ num = (16);\nif (num > 10) then 10\nelse 0;");
+    CHECK(optimize("num = 16; if num>10 then 10 if true then 5 if num==3 then 3 else 0;") == "/*def*/ num = (16);\nif (num > 10) then 10\nelse 5;");
+    CHECK(optimize("num = 16; if num>10 then 10 if false then 5 if num==3 then 3 else 0;") == "/*def*/ num = (16);\nif (num > 10) then 10\nif (num == 3) then 3\nelse 0;");
+
+    // collapse block with single statement
+    CHECK(optimize("{ 1 }") == "1");
+    CHECK(optimize("{{{ 1 }}}") == "1");
+    CHECK(optimize("a = {{1}}") == "/*def*/ a = (1);");
+
+    // cast to Void eliminates the expression
+    CHECK(optimize("42:Void") == "");
+    CHECK(optimize("{42}:Void") == "");
+    CHECK(optimize("(fun x { x + 1 }):Void") == "");
+
+    // cast to the same type is eliminated
+    CHECK(optimize("42:Int") == "42");
+
+    // cast of constant value is collapsed to the value
+    CHECK(optimize("42l:Int") == "42");
 }
