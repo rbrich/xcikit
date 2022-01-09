@@ -456,13 +456,18 @@ std::ostream& operator<<(std::ostream& os, const Condition& v)
 {
     if (stream_options(os).enable_tree) {
         os << "Condition(Expression)" << endl;
-        os << more_indent
-           << put_indent << *v.cond
-           << put_indent << *v.then_expr
-           << put_indent << *v.else_expr;
+        os << more_indent;
+        for (auto& item : v.if_then_expr) {
+           os << put_indent << *item.first
+              << put_indent << *item.second;
+        }
+        os << put_indent << *v.else_expr;
         return os << less_indent;
     } else {
-        os << "if " << *v.cond << " then " << *v.then_expr << " else " << *v.else_expr << ";";
+        for (auto& item : v.if_then_expr) {
+            os << "if " << *item.first << " then " << *item.second << '\n';
+        }
+        os << "else " << *v.else_expr << ";";
         return os;
     }
 }

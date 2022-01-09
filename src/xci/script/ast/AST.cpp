@@ -55,12 +55,17 @@ std::unique_ptr<ast::Expression> Function::make_copy() const
 }
 
 
+Condition::IfThen copy(const Condition::IfThen& s)
+{
+    return {s.first->make_copy(), s.second->make_copy()};
+}
+
+
 std::unique_ptr<ast::Expression> Condition::make_copy() const
 {
     auto r = std::make_unique<Condition>();
     Expression::copy_to(*r);
-    r->cond = cond->make_copy();
-    r->then_expr = then_expr->make_copy();
+    r->if_then_expr = copy_vector(if_then_expr);
     r->else_expr = else_expr->make_copy();
     return r;
 }

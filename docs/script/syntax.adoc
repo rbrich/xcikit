@@ -426,6 +426,66 @@ print "hello " /* inline comment */ "world"
 ----
 
 
+== Control flow
+
+=== If-expression
+
+[source,fire]
+----
+if x == "add" then add2 else sub2
+----
+
+The if-branch can occur multiple times to handle different conditions.
+This is equivalent to nested if-expressions but simplifies the syntax.
+
+The `if` keyword in non-ambiguous in this case, so there is no need
+for special `elif` keyword and using the same keyword helps with vertical
+alignment.
+
+[source,fire]
+----
+z = if x > 0 then x
+    if y > 0 then y
+    if z > 0 then z
+    else 0
+----
+
+Else branch is always mandatory - the parser needs it to find end of the expression.
+
+* Spec: `[if &lt;cond&gt; then &lt;expr&gt;]... else &lt;expr&gt;`
+* The parentheses around condition are optional.
+* The if-expression evaluates to a value -> all branches must have the same type.
+
+Nested if expressions are possible, still without any braces:
+
+[source,fire]
+----
+if a > 1 then
+    if a > 10 then 10
+    else 1
+else 0
+----
+
+The parsing is well-defined, because both expressions are ended by else-branch.
+
+A possible multiline style for complex conditions and expressions:
+
+[source,fire]
+----
+if (
+   x == "add" ||
+   x == "add2"
+)
+then {
+    fun a b { a + b }
+}
+else {
+    fun a b { a - b }
+}
+----
+
+See also <<Pattern matching>>.
+
 == Language constructs
 
 === Type classes
@@ -478,29 +538,6 @@ The function names that are declared by a class and implemented by the instances
 are in global name space. That means that no other function with the same name
 and no other class declaring the same function name can be visible in the same
 module.
-
-
-=== If-condition
-
-[source,fire]
-----
-if x == "add" then add2 else sub2
-
-// possible multiline style
-if (
-   x == "add"
-)
-then {
-    add2
-}
-else {
-    sub2
-}
-----
-
-* Spec: `if &lt;cond&gt; then &lt;true-branch&gt; else &lt;false-branch&gt;`
-* The parentheses around condition are optional.
-* The if-expression evaluates to a value -> both branches must have the same type.
 
 
 === Pattern matching

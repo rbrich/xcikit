@@ -592,6 +592,23 @@ TEST_CASE( "Lexical scope", "[script][interpreter]" )
 }
 
 
+TEST_CASE( "If-expression", "[script][interpreter]" )
+{
+    CHECK(parse("if 1>2 then 1 else 2") == "if (1 > 2) then 1\nelse 2;");
+    CHECK(parse("if 1>2 then 1 "
+                "if 2>2 then 2 "
+                "else 3") == "if (1 > 2) then 1\n"
+                             "if (2 > 2) then 2\n"
+                             "else 3;");
+
+    CHECK(interpret_std("x = 3; if x < 0 then -1 else 1") == "1");
+    CHECK(interpret_std("x = 3; if x < 0 then -1 if x > 1 then 1 else 0") == "1");
+
+    // The result can be assigned
+    CHECK(interpret_std("x = 3; y = if x < 0 then -1 else 1; x + y") == "4");
+}
+
+
 TEST_CASE( "Casting", "[script][interpreter]" )
 {
     CHECK(interpret_std("\"drop this\":Void") == "");

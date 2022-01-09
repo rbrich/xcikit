@@ -133,24 +133,37 @@ public:
 
     void visit(ast::Condition& v) override {
         m_const_value.reset();
-        apply_and_fold(v.cond);
-
-        if (!m_const_value) {
-            // try to collapse each branch
-            apply_and_fold(v.then_expr);
-            apply_and_fold(v.else_expr);
+        for (auto& item : v.if_then_expr) {
+            // condition
+            apply_and_fold(item.first);
+            // collapse when the condition is const expression
+            if (m_const_value) {
+                assert(m_const_value->is_bool());
+                if (m_const_value->get<bool>()) {
+                    apply_and_fold(item.second);
+                    m_collapsed = move(item.second);
+                    return;
+                } else {
+                    // remove this branch - mark it, sweep below
+                    item.first.reset();
+                    item.second.reset();
+                }
+            } else {
+                apply_and_fold(item.second);
+            }
             m_const_value.reset();
-            return;
         }
+        // sweep deleted branches
+        std::erase_if(v.if_then_expr, [](const auto& it){ return !it.first; });
 
-        // collapse const if-expr
-        assert(m_const_value->is_bool());
-        if (m_const_value->get<bool>()) {
-            apply_and_fold(v.then_expr);
-            m_collapsed = move(v.then_expr);
-        } else {
+        if (v.if_then_expr.empty()) {
+            // all branches removed, collapse the whole if to only else-expression
             apply_and_fold(v.else_expr);
             m_collapsed = move(v.else_expr);
+        } else {
+            // try to collapse else branch
+            apply_and_fold(v.else_expr);
+            m_const_value.reset();
         }
     }
 

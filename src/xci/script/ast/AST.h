@@ -483,8 +483,11 @@ struct Condition: public Expression {
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;
 
-    std::unique_ptr<Expression> cond;
-    std::unique_ptr<Expression> then_expr;
+    // first = if-condition
+    // second = then-expression
+    using IfThen = std::pair<std::unique_ptr<Expression>, std::unique_ptr<Expression>>;
+
+    std::vector<IfThen> if_then_expr;
     std::unique_ptr<Expression> else_expr;
 };
 

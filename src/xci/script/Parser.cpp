@@ -160,7 +160,10 @@ struct List: if_must< one<'['>, NSC, opt<ExprInfix<NSC>, NSC>, one<']'> > {};
 struct Cast: seq<SC, one<':'>, SC, Type> {};
 struct ExprCallable: sor< ParenthesizedExpr, Function, Reference> {};
 struct ExprArgSafe: seq< sor< ParenthesizedExpr, List, Function, Literal, Reference >, opt<Cast>> {};  // expressions which can be used as args in Call
-struct ExprCond: if_must< KeywordIf, NSC, ExprInfix<NSC>, NSC, KeywordThen, NSC, Expression<SC>, NSC, KeywordElse, NSC, Expression<SC>> {};
+struct ExprCondThen: if_must<KeywordThen, NSC, Expression<SC>> {};
+struct ExprCondIf: if_must<KeywordIf, NSC, ExprInfix<NSC>, NSC, ExprCondThen> {};
+struct ExprCondElse: if_must<KeywordElse, NSC, Expression<SC>> {};
+struct ExprCond: seq< plus< ExprCondIf, NSC >, ExprCondElse> {};
 struct ExprWith: if_must< KeywordWith, NSC, ExprArgSafe, NSC, Expression<SC> > {};  // might be parsed as a function, but that wouldn't allow newlines
 struct ExprStructItem: seq< Identifier, SC, one<'='>, not_at<one<'='>>, SC, must<ExprArgSafe> > {};
 struct ExprStruct: seq< ExprStructItem, star< SC, one<','>, SC, must<ExprStructItem> > > {};
@@ -279,13 +282,13 @@ struct Action<Expression<S>> : change_states< std::unique_ptr<ast::Expression> >
     }
 
     template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Condition::IfThen& if_then) {
+        if_then.second = std::move(expr);
+    }
+
+    template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Expression>& expr, ast::Condition& cnd) {
-        if (!cnd.then_expr) {
-            cnd.then_expr = std::move(expr);
-        } else {
-            assert(!cnd.else_expr);
-            cnd.else_expr = std::move(expr);
-        }
+        cnd.else_expr = std::move(expr);
     }
 
     template<typename Input>
@@ -410,8 +413,8 @@ struct Action<ExprInfix<S>> : change_states< ast::OpCall > {
     }
 
     template<typename Input>
-    static void success(const Input &in, ast::OpCall& opc, ast::Condition& cnd) {
-        cnd.cond = prepare_expression(opc);
+    static void success(const Input &in, ast::OpCall& opc, ast::Condition::IfThen& if_then) {
+        if_then.first = prepare_expression(opc);
     }
 
     template<typename Input>
@@ -431,6 +434,20 @@ private:
         } else {
             return std::make_unique<ast::OpCall>(std::move(opc));
         }
+    }
+};
+
+
+template<>
+struct Action<ExprCondIf> : change_states< ast::Condition::IfThen > {
+    template<typename Input>
+    static void apply(const Input &in, ast::Condition::IfThen& if_then) {
+        if_then.first->source_loc.load(in.input(), in.position());
+    }
+
+    template<typename Input>
+    static void success(const Input &in, ast::Condition::IfThen& if_then, ast::Condition& cond) {
+        cond.if_then_expr.emplace_back(std::move(if_then));
     }
 };
 

@@ -283,3 +283,62 @@ other rules still apply.
 Example: First byte has only 5 bits (contributing 4 bits to the result):
 
 - `0b_1_1000, 0b_0101_1001` => `0b101_1001_1000` => 1432
+
+
+=== Conditional jumps
+
+Let's see simple if-expression and the resulting unoptimized bytecode.
+
+[source,fire]
+----
+if num > 10 then 10 else 0;
+----
+Translates to:
+----
+    LOAD_STATIC         (10)
+    CALL0               (num Void -> Int32)
+    CALL                (gt Int32 Int32 -> Bool)
+    JUMP_IF_NOT         .else
+    LOAD_STATIC         (10)
+    JUMP                .end
+.else
+    LOAD_STATIC         (0)
+.end
+----
+
+The same happens with a multi-branch if-expression.
+
+[source,fire]
+----
+if num > 10 then 10
+if num > 5 then 5
+else 0;
+----
+Translates to:
+----
+    LOAD_STATIC         (10)
+    CALL0               (num Void -> Int32)
+    CALL                (gt Int32 Int32 -> Bool)
+    JUMP_IF_NOT         .cond1
+    LOAD_STATIC         (10)
+    JUMP                .end
+.cond1
+    LOAD_STATIC         (5)
+    CALL0               (num Void -> Int32)
+    CALL                (gt Int32 Int32 -> Bool)
+    JUMP_IF_NOT         .else
+    LOAD_STATIC         (5)
+    JUMP                .end
+.else
+    LOAD_STATIC         (0)
+.end
+----
+
+The logic is always the same:
+
+* condition code
+* JUMP_IF_NOT to next condition (or else branch if it was the last one)
+* then-expression code
+* JUMP to the end (an instruction right after the whole if-expression)
+* (repeat for another if-then branch)
+* else-expression code

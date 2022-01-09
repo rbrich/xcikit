@@ -229,7 +229,7 @@ struct DefinitionParamTypeMismatch : public ScriptError {
 
 struct BranchTypeMismatch : public ScriptError {
     explicit BranchTypeMismatch(const TypeInfo& exp, const TypeInfo& got)
-            : ScriptError(fmt::format("branch type mismatch: then branch {} else branch {}",
+            : ScriptError(fmt::format("branch type mismatch: expected {}, got {}",
                                  exp, got)) {}
 };
 

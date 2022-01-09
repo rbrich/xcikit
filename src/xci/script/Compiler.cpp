@@ -416,22 +416,32 @@ public:
     }
 
     void visit(ast::Condition& v) override {
-        // evaluate condition
-        v.cond->apply(*this);
-        // add jump instruction
-        code().add_B1(Opcode::JumpIfNot, 0);
-        auto jump1_arg_pos = code().this_instruction_address();
-        // then branch
-        v.then_expr->apply(*this);
-        code().add_B1(Opcode::Jump, 0);
-        auto jump2_arg_pos = code().this_instruction_address();
+        // See "Conditional jumps" in `docs/script/machine.adoc`
+        std::vector<Code::OpIdx> end_arg_pos;
+        for (auto& item : v.if_then_expr) {
+            // condition
+            item.first->apply(*this);
+            // JUMP_IF_NOT (to next condition)
+            code().add_B1(Opcode::JumpIfNot, 0);
+            auto jump_arg_pos = code().this_instruction_address();
+            // then branch
+            item.second->apply(*this);
+            // JUMP (to end)
+            code().add_B1(Opcode::Jump, 0);
+            end_arg_pos.push_back( code().this_instruction_address() );
+            // .condX label
+            // fill the above jump instruction target (jump here)
+            const auto label_cond = code().this_instruction_address();
+            code().set_arg_B(jump_arg_pos, label_cond - jump_arg_pos);
+        }
         // else branch
-        code().set_arg_B(jump1_arg_pos,
-                code().this_instruction_address() - jump1_arg_pos);
         v.else_expr->apply(*this);
-        // end
-        code().set_arg_B(jump2_arg_pos,
-                code().this_instruction_address() - jump2_arg_pos);
+        // .end label
+        // fill the target in all previous jump instructions
+        const auto label_end = code().this_instruction_address();
+        for (auto arg_pos : end_arg_pos) {
+            code().set_arg_B(arg_pos, label_end - arg_pos);
+        }
     }
 
     void visit(ast::WithContext& v) override {
