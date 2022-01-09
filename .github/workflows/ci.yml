@@ -102,7 +102,7 @@ jobs:
             export MACOSX_DEPLOYMENT_TARGET=${{ matrix.os_target }}
             echo "MACOSX_DEPLOYMENT_TARGET=$MACOSX_DEPLOYMENT_TARGET" >> $GITHUB_ENV
         elif [[ "$RUNNER_OS" == "Windows" ]]; then
-            choco install ninja
+            # remove MinGW's link as it collides with MSVC
             mv /usr/bin/link /usr/bin/link.orig
         fi
         pip3 --no-cache-dir install conan
