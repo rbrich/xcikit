@@ -63,8 +63,10 @@ public:
     }
 
     void visit(ast::Condition& v) override {
-        apply_and_fold(v.cond);
-        apply_and_fold(v.then_expr);
+        for (auto& item : v.if_then_expr) {
+            apply_and_fold(item.first);
+            apply_and_fold(item.second);
+        }
         apply_and_fold(v.else_expr);
     }
 
@@ -79,7 +81,7 @@ public:
         }
     }
 
-    void visit(ast::Bracketed& v) override {
+    void visit(ast::Parenthesized& v) override {
         apply_and_fold(v.expression);
     }
 

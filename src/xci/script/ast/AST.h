@@ -1,7 +1,7 @@
 // AST.h created on 2019-05-15 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_AST_H
@@ -39,7 +39,7 @@ struct TypeAlias;
 
 struct Cast;
 struct Literal;
-struct Bracketed;
+struct Parenthesized;
 struct Tuple;
 struct List;
 struct StructInit;
@@ -68,7 +68,7 @@ public:
     virtual void visit(const TypeAlias&) = 0;
     // expression
     virtual void visit(const Literal&) = 0;
-    virtual void visit(const Bracketed&) = 0;
+    virtual void visit(const Parenthesized&) = 0;
     virtual void visit(const Tuple&) = 0;
     virtual void visit(const List&) = 0;
     virtual void visit(const StructInit&) = 0;
@@ -98,7 +98,7 @@ public:
     virtual void visit(TypeAlias&) = 0;
     // expression
     virtual void visit(Literal&) = 0;
-    virtual void visit(Bracketed&) = 0;
+    virtual void visit(Parenthesized&) = 0;
     virtual void visit(Tuple&) = 0;
     virtual void visit(List&) = 0;
     virtual void visit(StructInit&) = 0;
@@ -122,7 +122,7 @@ class StatementVisitor: public Visitor {
 public:
     // skip expression visits
     void visit(Literal&) final {}
-    void visit(Bracketed&) final {}
+    void visit(Parenthesized&) final {}
     void visit(Tuple&) final {}
     void visit(List&) final {}
     void visit(StructInit&) final {}
@@ -154,7 +154,7 @@ public:
     void visit(TypeAlias&) final {}
     // skip expression visits
     void visit(Literal&) final {}
-    void visit(Bracketed&) final {}
+    void visit(Parenthesized&) final {}
     void visit(Tuple&) final {}
     void visit(List&) final {}
     void visit(StructInit&) final {}
@@ -321,8 +321,8 @@ struct Literal: public Expression {
     TypedValue value;
 };
 
-/// An expression in round brackets, e.g. (1 + 2)
-struct Bracketed: public Expression {
+/// An expression in parentheses, e.g. (1 + 2)
+struct Parenthesized: public Expression {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;
@@ -483,8 +483,11 @@ struct Condition: public Expression {
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;
 
-    std::unique_ptr<Expression> cond;
-    std::unique_ptr<Expression> then_expr;
+    // first = if-condition
+    // second = then-expression
+    using IfThen = std::pair<std::unique_ptr<Expression>, std::unique_ptr<Expression>>;
+
+    std::vector<IfThen> if_then_expr;
     std::unique_ptr<Expression> else_expr;
 };
 

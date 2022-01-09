@@ -1,7 +1,7 @@
 // dump.cpp created on 2019-10-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "dump.h"
@@ -27,7 +27,7 @@ using std::setw;
 struct StreamOptions {
     bool enable_tree : 1;
     bool module_verbose : 1;  // Module: dump function bodies etc.
-    bool bracket_fun_types : 1;
+    bool parenthesize_fun_types : 1;
     unsigned level : 6;
     std::bitset<32> rules;
     std::vector<std::string> type_var_names;  // used for Type::Unknown with var!=0 when dumping TypeInfo
@@ -109,7 +109,7 @@ public:
     void visit(const TypeDef& v) override { m_os << v; }
     void visit(const TypeAlias& v) override { m_os << v; }
     void visit(const Literal& v) override { m_os << v; }
-    void visit(const Bracketed& v) override { m_os << v; }
+    void visit(const Parenthesized& v) override { m_os << v; }
     void visit(const Tuple& v) override { m_os << v; }
     void visit(const List& v) override { m_os << v; }
     void visit(const StructInit& v) override { m_os << v; }
@@ -139,10 +139,10 @@ std::ostream& operator<<(std::ostream& os, const Literal& v)
 }
 
 
-std::ostream& operator<<(std::ostream& os, const Bracketed& v)
+std::ostream& operator<<(std::ostream& os, const Parenthesized& v)
 {
     if (stream_options(os).enable_tree) {
-        os << "Bracketed(Expression)" << endl;
+        os << "Parenthesized(Expression)" << endl;
         return os << more_indent << put_indent << *v.expression << less_indent;
     } else {
         return os << "(" << *v.expression << ")";
@@ -456,13 +456,18 @@ std::ostream& operator<<(std::ostream& os, const Condition& v)
 {
     if (stream_options(os).enable_tree) {
         os << "Condition(Expression)" << endl;
-        os << more_indent
-           << put_indent << *v.cond
-           << put_indent << *v.then_expr
-           << put_indent << *v.else_expr;
+        os << more_indent;
+        for (auto& item : v.if_then_expr) {
+           os << put_indent << *item.first
+              << put_indent << *item.second;
+        }
+        os << put_indent << *v.else_expr;
         return os << less_indent;
     } else {
-        os << "if " << *v.cond << " then " << *v.then_expr << " else " << *v.else_expr << ";";
+        for (auto& item : v.if_then_expr) {
+            os << "if " << *item.first << " then " << *item.second << '\n';
+        }
+        os << "else " << *v.else_expr << ";";
         return os;
     }
 }
@@ -944,7 +949,7 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
             return os << ")";
         }
         case Type::Function:
-            if (stream_options(os).bracket_fun_types)
+            if (stream_options(os).parenthesize_fun_types)
                 return os << '(' << v.signature() << ')';
             else
                 return os << v.signature();
@@ -976,8 +981,8 @@ std::ostream& operator<<(std::ostream& os, const Signature& v)
         }
         os << "| ";
     }
-    bool orig_bracket_fun_types = stream_options(os).bracket_fun_types;
-    stream_options(os).bracket_fun_types = true;
+    bool orig_parenthesize_fun_types = stream_options(os).parenthesize_fun_types;
+    stream_options(os).parenthesize_fun_types = true;
     if (!v.params.empty()) {
         for (const auto& ti : v.params) {
             os << ti << ' ';
@@ -986,7 +991,7 @@ std::ostream& operator<<(std::ostream& os, const Signature& v)
         os << "Void ";
     }
     os << "-> ";
-    stream_options(os).bracket_fun_types = orig_bracket_fun_types;
+    stream_options(os).parenthesize_fun_types = orig_parenthesize_fun_types;
     return os << v.return_type;
 }
 

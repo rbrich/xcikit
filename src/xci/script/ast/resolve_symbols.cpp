@@ -172,7 +172,7 @@ public:
 
     void visit(ast::Literal&) override {}
 
-    void visit(ast::Bracketed& v) override {
+    void visit(ast::Parenthesized& v) override {
         v.expression->apply(*this);
     }
 
@@ -226,8 +226,10 @@ public:
     }
 
     void visit(ast::Condition& v) override {
-        v.cond->apply(*this);
-        v.then_expr->apply(*this);
+        for (auto& item : v.if_then_expr) {
+            item.first->apply(*this);
+            item.second->apply(*this);
+        }
         v.else_expr->apply(*this);
     }
 

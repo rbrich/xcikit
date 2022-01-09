@@ -243,7 +243,7 @@ public:
         type_check.check(m_value_type, v.source_loc);
     }
 
-    void visit(ast::Bracketed& v) override {
+    void visit(ast::Parenthesized& v) override {
         v.expression->apply(*this);
     }
 
@@ -605,16 +605,24 @@ public:
     }
 
     void visit(ast::Condition& v) override {
-        v.cond->apply(*this);
-        if (m_value_type != ti_bool())
-            throw ConditionNotBool();
-        v.then_expr->apply(*this);
-        auto then_type = m_value_type;
-        v.else_expr->apply(*this);
-        auto else_type = m_value_type;
-        if (then_type != else_type) {
-            throw BranchTypeMismatch(then_type, else_type);
+        TypeInfo expr_type;
+        for (auto& item : v.if_then_expr) {
+            item.first->apply(*this);
+            if (m_value_type != ti_bool())
+                throw ConditionNotBool();
+            item.second->apply(*this);
+            // check that all then-expressions have the same type
+            if (&item == &v.if_then_expr.front()) {
+                expr_type = m_value_type;
+            } else {
+                if (expr_type != m_value_type)
+                    throw BranchTypeMismatch(expr_type, m_value_type);
+            }
         }
+
+        v.else_expr->apply(*this);
+        if (expr_type != m_value_type)
+            throw BranchTypeMismatch(expr_type, m_value_type);
     }
 
     void visit(ast::WithContext& v) override {

@@ -147,9 +147,9 @@ sub (1 + 2) 3   // => 0
 1 .add 2        // infix style
 ----
 
-* Function call syntax is minimalistic - there are no commas or brackets.
-* Round brackets can be used around each single argument.
-* Infix operators and other function calls require round brackets around them.
+* Function call syntax is minimalistic - there are no commas or parentheses.
+* Parentheses can be used around each single argument.
+* Infix operators and other function calls require parentheses around them.
 
 === Infix function call
 
@@ -166,7 +166,7 @@ The evaluation rule is simple:
 The left-hand side expression is passed as the first argument and
 zero or more right-hand side expressions are passed as the following arguments.
 
-Spaces around the dot are optional, but numbers might need bracketing
+Spaces around the dot are optional, but numbers might need parenthesizing
 if the dot is not preceded by a space:
 
 [source,fire]
@@ -209,7 +209,7 @@ a_list .sort .uniq          // implicit left-to-right evaluation
 list_1 .cat list_2 list_3 .sort .uniq
 cat list_1 list_2 list_3 .sort .uniq
 
-// might be more readable with explicit round brackets
+// might be more readable with explicit parentheses
 (cat list_1 list_2 list_3) .sort .uniq
 ----
 
@@ -374,28 +374,6 @@ choose "add" 1 2
 choose "sub" 1 2
 ----
 
-If-condition:
-
-[source,fire]
-----
-if x == "add" then add2 else sub2
-
-// possible multiline style
-if (
-   x == "add"
-)
-then {
-    add2
-}
-else {
-    sub2
-}
-----
-
-* Spec: `if &lt;cond&gt; then &lt;true-branch&gt; else &lt;false-branch&gt;`
-* The round brackets around condition are optional.
-* The if-expression evaluates to a value -> both branches must have the same type.
-
 Block is a function with zero arguments:
 
 [source,fire]
@@ -447,6 +425,66 @@ print "hello " /* inline comment */ "world"
    comment */
 ----
 
+
+== Control flow
+
+=== If-expression
+
+[source,fire]
+----
+if x == "add" then add2 else sub2
+----
+
+The if-branch can occur multiple times to handle different conditions.
+This is equivalent to nested if-expressions but simplifies the syntax.
+
+The `if` keyword is non-ambiguous in this case, so there is no need
+for special `elif` keyword and using the same keyword helps with vertical
+alignment.
+
+[source,fire]
+----
+a = if x > 0 then x
+    if y > 0 then y
+    if z > 0 then z
+    else 0
+----
+
+Else branch is always mandatory - the parser needs it to find end of the expression.
+
+* Spec: `[if &lt;cond&gt; then &lt;expr&gt;]... else &lt;expr&gt;`
+* The parentheses around the condition are optional.
+* The if-expression evaluates to a value -> all branches must have the same type.
+
+Nested if-expressions are possible, still without any braces:
+
+[source,fire]
+----
+if a > 1 then
+    if a > 10 then 10
+    else 1
+else 0
+----
+
+The parsing is well-defined, because both expressions are ended by else-branch.
+
+A possible multiline style for complex conditions and expressions:
+
+[source,fire]
+----
+if (
+   x == "add" ||
+   x == "add2"
+)
+then {
+    fun a b { a + b }
+}
+else {
+    fun a b { a - b }
+}
+----
+
+See also <<Pattern matching>>.
 
 == Language constructs
 
@@ -500,6 +538,7 @@ The function names that are declared by a class and implemented by the instances
 are in global name space. That means that no other function with the same name
 and no other class declaring the same function name can be visible in the same
 module.
+
 
 === Pattern matching
 
@@ -588,7 +627,7 @@ taking two arguments: `with <context> <expr>`. The parsing is relaxed in two way
 * Unlike normal function call, newlines are allowed between `with` keyword
   and first argument, and also between first and second argument.
 
-* The second argument can be any expression, including unbracketed if-then-else,
+* The second argument can be any expression, including unparenthesized if-then-else,
   or a function call. This is not possible in arguments of a normal function call.
 
 The return value of the whole expression is what the inner expression returns.
@@ -1056,8 +1095,8 @@ but semicolon-free code is a little easier to write, and it looks cleaner--semic
 before line-breaks are mostly just noise.
 
 - The main drawback is when a statement spans multiple lines, it needs either a special guide
-(e.g. escaping newlines), or the grammar needs special rules (bracketed expression, continuation
-of expression when a line begins or ends with an operator).
+(e.g. escaping newlines), or the grammar needs special rules (parenthesized expression,
+continuation of expression when a line begins or ends with an operator).
 
 - Example of a function call spanning multiple lines:
 +
@@ -1071,7 +1110,7 @@ some_fun 1 2 3
 some_fun 1 2 3 \
     b 4
 
-// with optional semicolon, using round brackets
+// with optional semicolon, using parentheses
 (some_fun 1 2 3
     b 4)
 ----
@@ -1135,18 +1174,17 @@ The other precedences are hard-coded in parser grammar.
 
 === Terminology
 
-==== Braces, brackets
+==== Parentheses, braces, brackets
 
-In this document and in the code, all brackets are called either *brackets* (round, square or angle) or *braces* (curly).
-The word parentheses, meaning round brackets, is not used here. I know it's a nice long word, but after needing to write
-_parenthesizing_ a few times, I gave up.
+In this document and in the code, the various https://en.wikipedia.org/wiki/Bracket[brackets] are called similarly as in C++: *parentheses*
+or *parens* (round), *braces* (curly), *brackets* (square), and *angle brackets* (not chevrons, because they are actually different glyphs).
 
 .Brackets
 |===
-| Type  | Name             | Usage
+| Type  | Name              | Usage
 
-| {}    | (curly) braces   | blocks of code
-| ()    | round brackets   | bracketing of expressions, tuples
-| []    | square brackets  | lists
-| <>    | angle brackets   | _currently none_
+| {}    | braces            | blocks of code
+| ()    | parentheses       | parenthesizing of expressions, tuples
+| []    | (square) brackets | lists
+| <>    | angle brackets    | type parameters
 |===

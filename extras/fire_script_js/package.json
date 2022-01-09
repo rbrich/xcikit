@@ -2,7 +2,7 @@
   "dependencies": {
     "xterm": "^4.10.0",
     "xterm-addon-fit": "^0.5.0",
-    "xterm-addon-web-links": "^0.4.0"
+    "xterm-addon-web-links": "^0.5.0"
   },
   "devDependencies": {
     "webpack": "^5.27.0",
@@ -11,7 +11,7 @@
   "scripts": {
     "clean": "rm -rf build",
     "distclean": "rm -rf dist",
-    "build-fire": "../../build.sh script --emscripten --minsize -DXCI_BUILD_EXAMPLES=OFF -DXCI_BUILD_TESTS=OFF -DXCI_BUILD_BENCHMARKS=OFF -DXCI_INSTALL_DEVEL=OFF --build-dir $PWD/build --install-dir $PWD/dist && mv dist/bin dist/v$(cat $PWD/../../VERSION)",
+    "build-fire": "../../build.sh script --emscripten --minsize -DBUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF -DBUILD_BENCHMARKS=OFF -DXCI_INSTALL_DEVEL=OFF --build-dir $PWD/build --install-dir $PWD/dist && mv dist/bin dist/v$(cat $PWD/../../VERSION)",
     "copy-to-dist": "cp node_modules/xterm/css/xterm.css dist/v$(cat ../../VERSION) && cp index.html dist/v$(cat ../../VERSION)",
     "gzip-dist": "gzip -k9 dist/v$(cat ../../VERSION)/*",
     "webpack-devel": "webpack ./main.js -o dist/v$(cat ../../VERSION) --output-filename=bundle.js --mode=development",

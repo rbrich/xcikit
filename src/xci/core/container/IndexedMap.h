@@ -307,7 +307,7 @@ void IndexedMap<T>::remove(Index index)
 template<class T>
 bool IndexedMap<T>::remove(WeakIndex weak_index)
 {
-    const size_t chunk_idx = weak_index.index / chunk_size;
+    const Index chunk_idx = weak_index.index / chunk_size;
     const size_t slot_idx = weak_index.index % chunk_size;
 
     if (chunk_idx >= m_chunk.size())

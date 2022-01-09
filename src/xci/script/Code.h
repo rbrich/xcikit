@@ -1,7 +1,7 @@
 // Code.h created on 2019-05-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_CODE_H
@@ -93,7 +93,7 @@ enum class Opcode: uint8_t {
     ShiftRight,
 
     Jump,                   // arg => relative jump (+N instructions) - unconditional
-    JumpIfNot,              // pull cond from stack, arg => relative jump (+N instructions) if cond is false
+    JumpIfNot,              // pull a bool from stack, arg => relative jump (+N instructions) if cond is false
 
     // --------------------------------------------------------------
     // L1 (one LEB128-encoded argument)
