@@ -99,6 +99,7 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__exp", Symbol::Instruction, Index(Opcode::Exp)});
     symtab().add({"__load_static", Symbol::Instruction, Index(Opcode::LoadStatic)});
     symtab().add({"__subscript", Symbol::Instruction, Index(Opcode::Subscript)});
+    symtab().add({"__length", Symbol::Instruction, Index(Opcode::Length)});
     symtab().add({"__cast", Symbol::Instruction, Index(Opcode::Cast)});
 
     // two args

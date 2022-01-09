@@ -49,6 +49,7 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::Mod:               return os << "MOD";
         case Opcode::Exp:               return os << "EXP";
         case Opcode::Subscript:         return os << "SUBSCRIPT";
+        case Opcode::Length:            return os << "LENGTH";
         case Opcode::Invoke:            return os << "INVOKE";
         case Opcode::LoadStatic:        return os << "LOAD_STATIC";
         case Opcode::LoadModule:        return os << "LOAD_MODULE";

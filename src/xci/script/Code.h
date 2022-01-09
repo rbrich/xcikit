@@ -111,7 +111,8 @@ enum class Opcode: uint8_t {
     IncRef,                 // arg = offset from top, (uint32*) at the offset is dereferenced and incremented
     DecRef,                 // arg = offset from top, (uint32*) at the offset is dereferenced and decremented
 
-    Subscript,              // arg => elem type (type index)
+    Subscript,              // arg => elem type (type index), get list element
+    Length,                 // arg => elem type (type index), get list length
 
     Invoke,                 // arg => type index in current module, pull value from stack, invoke it
 

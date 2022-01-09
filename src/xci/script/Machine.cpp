@@ -293,6 +293,15 @@ void Machine::run(const InvokeCallback& cb)
                 break;
             }
 
+            case Opcode::Length: {
+                const auto& elem_ti = read_type_arg();
+                auto arg = m_stack.pull_typed(ti_list(TypeInfo(elem_ti)));
+                auto len = arg.get<ListV>().length();
+                arg.decref();
+                m_stack.push(value::UInt32(len));
+                break;
+            }
+
             case Opcode::Cast: {
                 // TODO: possible optimization when truncating integers
                 //       or extending unsigned integers: do not pull the value,

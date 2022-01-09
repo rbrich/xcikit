@@ -247,7 +247,7 @@ bool IndexedMap<T>::operator==(const IndexedMap& other) const
 template<class T>
 auto IndexedMap<T>::capacity() const noexcept -> size_type
 {
-    return m_chunk.size() * chunk_size;
+    return size_type(m_chunk.size() * chunk_size);
 }
 
 

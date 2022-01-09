@@ -310,8 +310,8 @@ succ = fun<T> x:T -> T { x + 1 }
 pred = fun<T> x:T -> T { x - 1 }
 max = fun<T> x:T y:T -> T { if x > y then x else y }
 
-
 subscript = fun<T> [T] Int -> T { __subscript __type_id<T> }
+len = fun<T> [T] -> UInt { __length __type_id<T> }
 
 //filter = fun<Ord T> fn [T] -> [T] { }
 //map = fun<T> fn l:[T] -> [T] { (fn l[0]) + l[1:] }

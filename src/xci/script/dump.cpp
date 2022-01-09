@@ -775,6 +775,18 @@ std::ostream& operator<<(std::ostream& os, DumpInstruction&& v)
                 os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
                 break;
             }
+            case Opcode::Subscript:
+            case Opcode::Length: {
+                const TypeInfo* ti;
+                if (arg < 32) {
+                    // builtin module
+                    ti = &v.func.module().get_imported_module(0).get_type(arg);
+                } else {
+                    ti = &v.func.module().get_type(arg - 32);
+                }
+                os << " (" << *ti << ")";
+                break;
+            }
             default:
                 break;
         }
