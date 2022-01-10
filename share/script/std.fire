@@ -1,7 +1,7 @@
 // std.fire created on 2019-10-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 
@@ -312,6 +312,10 @@ max = fun<T> x:T y:T -> T { if x > y then x else y }
 
 subscript = fun<T> [T] Int -> T { __subscript __type_id<T> }
 len = fun<T> [T] -> UInt { __length __type_id<T> }
+slice = fun<T> [T] start:Int stop:Int step:Int -> [T] { __slice __type_id<T> }
+
+head = fun<T> a:[T] -> T { a!0 }
+tail = fun<T> a:[T] -> [T] { a .slice 1 0 1 }
 
 //filter = fun<Ord T> fn [T] -> [T] { }
 //map = fun<T> fn l:[T] -> [T] { (fn l[0]) + l[1:] }

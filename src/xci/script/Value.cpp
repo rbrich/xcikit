@@ -13,6 +13,7 @@
 #include <xci/core/log.h>
 #include <xci/core/template/helpers.h>
 #include <range/v3/view/transform.hpp>
+#include <range/v3/view/take.hpp>
 #include <range/v3/range/conversion.hpp>
 #include <range/v3/numeric/accumulate.hpp>
 #include <numeric>
@@ -26,7 +27,7 @@ using xci::data::leb128_length;
 using xci::data::leb128_encode;
 using xci::data::leb128_decode;
 using namespace xci::core;
-using ranges::cpp20::views::transform;
+using namespace ranges::cpp20;
 using ranges::to;
 using ranges::accumulate;
 using std::move;
@@ -55,7 +56,7 @@ Value create_value(const TypeInfo& type_info)
             return value::Tuple{type_info.subtypes()};
         case Type::Struct:
             auto subtypes = type_info.struct_items()
-                | transform([](const TypeInfo::StructItem& item) { return item.second; })
+                | views::transform([](const TypeInfo::StructItem& item) { return item.second; })
                 | to<std::vector>();
             return value::Tuple{subtypes};
     }
@@ -362,6 +363,33 @@ std::string_view StringV::value() const
 }
 
 
+template <typename InIter = byte*>
+auto list_deleter_read_offsets(InIter& data, size_t size) -> std::vector<size_t>
+{
+    std::vector<size_t> offsets;
+    InIter end = data + size;
+    while (data < end)
+        offsets.push_back(leb128_decode<size_t>(data));
+    return offsets;
+}
+
+template <typename InIter = byte*, typename F>
+void list_deleter_foreach_heap_slot(InIter& data, uint32_t length,
+                                    const std::vector<size_t>& offsets, F&& cb)
+{
+    size_t n_skip = offsets.back();
+
+    for (size_t el = 0; el != length; ++el) {
+        for (size_t offset : offsets | views::take(offsets.size() - 1)) {
+            data += offset;
+            // Read and decref the heap slot
+            auto* slot_ptr = bit_copy<byte*>(data);
+            cb(HeapSlot{slot_ptr});
+        }
+        data += n_skip;
+    }
+}
+
 static void list_deleter(byte* data)
 {
     auto length = bit_read<uint32_t>(data);
@@ -369,25 +397,10 @@ static void list_deleter(byte* data)
     if (length == 0 || deleter_data_size == 0)
         return;  // no slots to decref
 
-    std::vector<size_t> offsets;
-    offsets.reserve(8);
-    auto* deleter_data_end = data + deleter_data_size;
-    while (data < deleter_data_end)
-        offsets.push_back(leb128_decode<size_t>(data));
-
-    assert(!offsets.empty());
-    size_t n_skip = offsets.back();
-    offsets.pop_back();
-
-    for (size_t el = 0; el != length; ++el) {
-        for (size_t offset : offsets) {
-            data += offset;
-            // Read and decref the heap slot
-            auto* slot_ptr = bit_copy<byte*>(data);
-            HeapSlot{slot_ptr}.decref();
-        }
-        data += n_skip;
-    }
+    std::vector<size_t> offsets = list_deleter_read_offsets(data, deleter_data_size);
+    assert(!offsets.empty());  // last offset skips the whole element - must be present
+    list_deleter_foreach_heap_slot(data, length, offsets,
+            [](HeapSlot&& slot){ slot.decref(); });
 }
 
 
@@ -405,7 +418,7 @@ ListV::ListV(size_t length, const TypeInfo& elem_type, const std::byte* elem_dat
         // add final skip
         offsets.push_back(elem_type.size() - offsets.back());
         // sum of LEB128-encoded lengths of the offsets
-        deleter_data_size = accumulate(offsets | transform([](size_t i){ return leb128_length(i); }), 0);
+        deleter_data_size = accumulate(offsets | views::transform([](size_t i){ return leb128_length(i); }), 0);
     }
 
     const size_t elem_data_size = length * elem_type.size();
@@ -453,6 +466,106 @@ Value ListV::value_at(size_t idx, const TypeInfo& elem_type) const
     const auto elem_size = elem_type.size();
     elem.read(data + idx * elem_size);
     return elem;
+}
+
+
+void ListV::slice(int begin, int end, int step, const TypeInfo& elem_type)
+{
+    const auto* data = slot.data();
+    auto length = bit_read<uint32_t>(data);
+
+    // deleter data
+    auto offsets_size = bit_read<uint16_t>(data);
+    std::vector<size_t> offsets = list_deleter_read_offsets(data, offsets_size);
+
+    // adjust indexes
+    if (end < 0)
+        end += int(length);  // -1 => length - 1
+    if (begin < 0)
+        begin += int(length);  // -1 => length - 1
+
+    // compute number of elements in the sliced list
+    unsigned n_sliced = 0;
+    if (step > 0) {
+        if (begin < 0)
+            begin %= int(step);  // get closer to zero if still negative
+        if (begin < 0)
+            begin += int(step);  // step over zero if still negative
+        if (end > int(length))
+            end = length;
+        auto i = begin;
+        while (i < end) {
+            ++ n_sliced;
+            i += step;
+        }
+    } else if (step < 0) {
+        if (begin >= int(length)) {
+            // get closer to length
+            begin = (begin - int(length)) % int(step);
+            if (begin >= 0)
+                begin += int(step);
+            begin += int(length);
+        }
+        if (end < -1)
+            end = -1;
+        auto i = begin;
+        while (i > end) {
+            ++ n_sliced;
+            i += step;
+        }
+    } else {
+        assert(step == 0);
+        if (begin >= 0 && begin < end)
+            n_sliced = 1;
+    }
+
+    const auto elem_size = elem_type.size();
+
+/*
+    if (slot.refcount() == 1) {
+        // TODO: in-place
+    }
+*/
+
+    HeapSlot new_slot(6 + offsets_size + n_sliced * elem_size, list_deleter);
+    auto* new_data = new_slot.data();
+    bit_write(new_data, (uint32_t) n_sliced);
+    bit_write(new_data, (uint16_t) offsets_size);
+    std::memcpy(new_data, slot.data() + sizeof(uint32_t) + sizeof(uint16_t), offsets_size);
+    new_data += offsets_size;
+
+    if (step > 0) {
+        auto orig_i = begin;
+        auto* new_ptr = new_data;
+        while (orig_i < end) {
+            std::memcpy(new_ptr, data + orig_i * elem_size, elem_size);
+            new_ptr += elem_size;
+            orig_i += step;
+        }
+    } else if (step < 0) {
+        auto orig_i = begin;
+        auto* new_ptr = new_data;
+        while (orig_i > end) {
+            std::memcpy(new_ptr, data + orig_i * elem_size, elem_size);
+            new_ptr += elem_size;
+            orig_i += step;
+        }
+    } else {
+        assert(step == 0);
+        if (begin >= 0 && begin < end) {
+            std::memcpy(new_data, data + begin * elem_size, elem_size);
+        }
+    }
+
+    // incref all new elements
+    if (!offsets.empty()) {
+        list_deleter_foreach_heap_slot(new_data, n_sliced, offsets,
+                [](HeapSlot&& heap_slot){ heap_slot.decref(); });
+    }
+
+    // decref original slot (all elements) and replace it
+    slot.decref();
+    slot = new_slot;
 }
 
 

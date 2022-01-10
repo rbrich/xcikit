@@ -302,6 +302,17 @@ void Machine::run(const InvokeCallback& cb)
                 break;
             }
 
+            case Opcode::Slice: {
+                const auto& elem_ti = read_type_arg();
+                auto list = m_stack.pull_typed(ti_list(TypeInfo(elem_ti)));
+                auto idx1 = m_stack.pull<value::Int32>().value();
+                auto idx2 = m_stack.pull<value::Int32>().value();
+                auto step = m_stack.pull<value::Int32>().value();
+                list.get<ListV>().slice(idx1, idx2, step, elem_ti);
+                m_stack.push(list);
+                break;
+            }
+
             case Opcode::Cast: {
                 // TODO: possible optimization when truncating integers
                 //       or extending unsigned integers: do not pull the value,

@@ -760,9 +760,11 @@ std::ostream& operator<<(std::ostream& os, DumpInstruction&& v)
         auto arg = leb128_decode<Index>(v.pos);
         os << arg;
         switch (opcode) {
-            case Opcode::LoadStatic:
-                os << " (" << v.func.module().get_value(arg) << ")";
+            case Opcode::LoadStatic: {
+                const auto& value = v.func.module().get_value(arg);
+                os << " (" << value << ':' << value.type_info() << ")";
                 break;
+            }
             case Opcode::LoadFunction:
             case Opcode::MakeClosure:
             case Opcode::Call0: {
@@ -776,7 +778,8 @@ std::ostream& operator<<(std::ostream& os, DumpInstruction&& v)
                 break;
             }
             case Opcode::Subscript:
-            case Opcode::Length: {
+            case Opcode::Length:
+            case Opcode::Slice: {
                 const TypeInfo* ti;
                 if (arg < 32) {
                     // builtin module
@@ -800,6 +803,17 @@ std::ostream& operator<<(std::ostream& os, DumpInstruction&& v)
             case Opcode::Call: {
                 const auto& fn = v.func.module().get_imported_module(arg1).get_function(arg2);
                 os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
+                break;
+            }
+            case Opcode::MakeList: {
+                const TypeInfo* ti;
+                if (arg2 < 32) {
+                    // builtin module
+                    ti = &v.func.module().get_imported_module(0).get_type(arg2);
+                } else {
+                    ti = &v.func.module().get_type(arg2 - 32);
+                }
+                os << " (" << *ti << ")";
                 break;
             }
             default:

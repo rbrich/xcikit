@@ -114,6 +114,11 @@ struct ListV {
     size_t length() const;
     Value value_at(size_t idx, const TypeInfo& elem_type) const;
 
+    /// Slice the list. Indexes work similarly to Python.
+    /// Automatically copies the list on heap when it has more than 1 reference.
+    /// Works in-place otherwise.
+    void slice(int begin, int end, int step, const TypeInfo& elem_type);
+
     HeapSlot slot;
 };
 
@@ -371,6 +376,7 @@ public:
     bool is_void() const { return type() == Type::Void; }
     bool is_bool() const { return type() == Type::Bool; }
 
+    template <class T> T& get() { return m_value.get<T>(); }
     template <class T> const T& get() const { return m_value.get<T>(); }
 
 private:
