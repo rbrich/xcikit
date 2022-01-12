@@ -235,6 +235,7 @@ struct Signature {
     bool has_closure() const { return !nonlocals.empty() || !partial.empty(); }
 
     bool has_generic_params() const;
+    bool has_nonvoid_params() const;
     bool is_generic() const { return has_generic_params() || return_type.is_generic(); }
 
     explicit operator bool() const { return !params.empty() || return_type; }

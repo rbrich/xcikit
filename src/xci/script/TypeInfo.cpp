@@ -198,7 +198,7 @@ TypeInfo& TypeInfo::operator=(TypeInfo&& other) noexcept
 
 TypeInfo TypeInfo::effective_type() const
 {
-    if (is_callable() && signature().params.empty())
+    if (is_callable() && !signature().has_nonvoid_params())
         return signature().return_type.effective_type();
     return *this;
 }
@@ -292,6 +292,14 @@ bool Signature::has_generic_params() const
 {
     return ranges::any_of(params, [](const TypeInfo& type_info) {
         return type_info.is_generic();
+    });
+}
+
+
+bool Signature::has_nonvoid_params() const
+{
+    return ranges::any_of(params, [](const TypeInfo& type_info) {
+        return !type_info.is_void();
     });
 }
 

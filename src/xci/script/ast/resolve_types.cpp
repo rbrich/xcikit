@@ -751,7 +751,7 @@ public:
         v.from_type = move(m_value_type);
         // cast to Void -> don't call the cast function, just drop the expression result from stack
         // cast to the same type -> noop
-        if (v.to_type.is_void() || v.from_type == v.to_type) {
+        if (v.to_type.is_void() || v.from_type.effective_type() == v.to_type) {
             v.cast_function.reset();
             m_value_type = v.to_type;
             return;
@@ -1228,8 +1228,12 @@ private:
         if (signature.return_type.is_unknown()) {
             auto var = signature.return_type.generic_var();
             assert(var != 0);
-            if (res[var - 1].is_unknown())
-                res[var - 1] = m_call_ret;
+            if (res[var - 1].is_unknown()) {
+                if (!m_call_ret.is_unknown())
+                    res[var - 1] = m_call_ret;
+                if (m_cast_type)
+                    res[var - 1] = m_cast_type.effective_type();
+            }
         }
         return res;
     }
