@@ -38,7 +38,7 @@ static PassItem pass_names[] = {
 
 static std::string output_pass_list()
 {
-    return fmt::format("{}", fmt::join(pass_names | keys, ", "));
+    return fmt::format("{}", fmt::join(pass_names | keys, ","));
 }
 
 

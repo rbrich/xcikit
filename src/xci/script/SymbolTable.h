@@ -65,9 +65,9 @@ public:
         Function,           // static function
         Value,              // static value
         TypeName,           // type information (index = type index in module)
-        Class,              // type class
-        Instance,           // instance of type class
-        Method,             // method declaration: index = class index, ref = symbol in class scope
+        Class,              // type class (index = class index in module)
+        Instance,           // instance of type class (index = instance index in module)
+        Method,             // method declaration (index = class index, ref = symbol in class scope)
 
         // function scope
         Parameter,          // function parameter

@@ -830,48 +830,51 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
 {
     bool verbose = stream_options(os).module_verbose;
     bool dump_tree = stream_options(os).enable_tree;
-    os << "* " << v.num_imported_modules() << " imported modules" << endl << more_indent;
+    os << "* " << v.num_imported_modules() << " imported modules\n" << more_indent;
     for (Index i = 0; i < v.num_imported_modules(); ++i)
-        os << put_indent << '[' << i << "] " << v.get_imported_module(i).name() << endl;
+        os << put_indent << '[' << i << "] " << v.get_imported_module(i).name() << '\n';
     os << less_indent;
 
-    os << "* " << v.num_functions() << " functions" << endl << more_indent;
+    os << "* " << v.num_functions() << " functions\n" << more_indent;
     for (Index i = 0; i < v.num_functions(); ++i) {
         const auto& f = v.get_function(i);
         os << put_indent << '[' << i << "] ";
         if (f.kind() != Function::Kind::Compiled)
             os << '(' << f.kind() << ") ";
-        os << f.qualified_name() << ": " << f.signature() << endl;
+        os << f.qualified_name();
+        if (f.signature())
+            os << ": " << f.signature();
+        os << '\n';
         if (verbose && f.kind() == Function::Kind::Generic) {
             os << more_indent << put_indent << f.ast() << less_indent;
             if (!dump_tree)
-                os << endl;
+                os << '\n';
         }
         if (verbose && f.kind() == Function::Kind::Compiled) {
             os << more_indent;
             for (auto it = f.code().begin(); it != f.code().end();) {
-                os << put_indent << DumpInstruction{f, it} << endl;
+                os << put_indent << DumpInstruction{f, it} << '\n';
             }
             os << less_indent;
         }
     }
     os << less_indent;
 
-    os << "* " << v.num_values() << " static values" << endl << more_indent;
+    os << "* " << v.num_values() << " static values\n" << more_indent;
     for (Index i = 0; i < v.num_values(); ++i) {
         const auto& val = v.get_value(i);
-        os << put_indent << '[' << i << "] " << val << endl;
+        os << put_indent << '[' << i << "] " << val << '\n';
     }
     os << less_indent;
 
-    os << "* " << v.num_types() << " types" << endl << more_indent;
+    os << "* " << v.num_types() << " types\n" << more_indent;
     for (Index i = 0; i < v.num_types(); ++i) {
         const auto& typ = v.get_type(i);
-        os << put_indent << '[' << i << "] " << typ << endl;
+        os << put_indent << '[' << i << "] " << typ << '\n';
     }
     os << less_indent;
 
-    os << "* " << v.num_classes() << " type classes" << endl << more_indent;
+    os << "* " << v.num_classes() << " type classes\n" << more_indent;
     auto& type_var_names = stream_options(os).type_var_names;
     for (Index i = 0; i < v.num_classes(); ++i) {
         const auto& cls = v.get_class(i);
@@ -892,14 +895,15 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
                     os << ' ' << sym.name();
                     break;
                 }
-                case Symbol::Function:
+                case Symbol::Function: {
                     if (first_method) {
-                        os << endl << more_indent;
+                        os << '\n' << more_indent;
                         first_method = false;
                     }
                     os << put_indent << sym.name() << ": "
-                       << cls.get_function_type(sym.index()) << endl;
+                       << v.get_function(sym.index()).signature() << '\n';
                     break;
+                }
                 default:
                     assert(!"unexpected symbol type");
                     break;
@@ -909,17 +913,17 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
     }
     os << less_indent;
 
-    os << "* " << v.num_instances() << " instances" << endl << more_indent;
+    os << "* " << v.num_instances() << " instances\n" << more_indent;
     for (Index i = 0; i < v.num_instances(); ++i) {
         const auto& inst = v.get_instance(i);
         os << put_indent << '[' << i << "] " << inst.class_().name();
         for (const auto& t : inst.types())
             os << ' ' << t;
-        os << endl << more_indent;
+        os << '\n' << more_indent;
         for (size_t j = 0; j < inst.num_functions(); ++j) {
-            const auto fi = inst.get_function(j);
+            const auto fi = inst.get_function(j).index;
             const auto& f = v.get_function(fi);
-            os << put_indent << f.name() << ": " << f.signature() << endl;
+            os << put_indent << f.name() << ": " << f.signature() << '\n';
         }
         os << less_indent;
     }
@@ -1070,8 +1074,13 @@ std::ostream& operator<<(std::ostream& os, const Symbol& v)
         os << " #" << v.index();
     if (v.next())
         os << " (next: #" << v.next()->index() << ")";
-    if (v.ref())
-        os << " -> " << v.ref()->type() << " #" << v.ref()->index();
+    if (v.ref()) {
+        os << " -> " << v.ref()->type()
+           << " #" << v.ref()->index();
+        if (v.depth() == 0 && v.ref().symtab()->level() != 0)
+            os << " @ " << v.ref().symtab()->name();
+        os << " (" << v.ref()->name() << ')';
+    }
     if (v.depth() != 0)
         os << ", depth -" << v.depth();
     return os;

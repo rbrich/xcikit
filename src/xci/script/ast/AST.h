@@ -591,6 +591,7 @@ struct Instance: public Statement {
     std::unique_ptr<ast::Statement> make_copy() const override;
 
     TypeName class_name;
+    std::vector<TypeName> type_params;  // type parameters of a generic instance: <T,U>
     std::vector<std::unique_ptr<Type>> type_inst;
     std::vector<TypeConstraint> context;
     std::vector<ast::Definition> defs;  // functions in class

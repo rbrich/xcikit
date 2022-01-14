@@ -117,6 +117,13 @@ public:
         v.class_name.symbol = symtab().add({sym_class, Symbol::Instance});
         v.class_name.symbol->set_next(next);
 
+        // add child symbol table for the instance
+        SymbolTable& inst_symtab = symtab().add_child(v.class_name.name);
+        m_symtab = &inst_symtab;
+
+        // generic instance - add symbols for type params
+        load_type_params(v.type_params);
+
         // resolve type_inst
         std::stringstream inst_names;
         for (auto& t : v.type_inst) {
@@ -125,11 +132,8 @@ public:
                 inst_names << ' ';
             inst_names << *t;
         }
-
-        // add child symbol table for the instance
-        SymbolTable& inst_symtab = symtab().add_child(fmt::format("{} ({})",
+        inst_symtab.set_name(fmt::format("{} ({})",
                 v.class_name.name, inst_names.str()));
-        m_symtab = &inst_symtab;
 
         // add new instance to the module
         auto& cls = module().get_class(sym_class->index());
@@ -293,14 +297,7 @@ public:
     }
 
     void visit(ast::FunctionType& t) final {
-        Index type_idx = 0;
-        std::set<std::string> type_params;  // check uniqueness
-        for (auto& tp : t.type_params) {
-            if (type_params.contains(tp.name))
-                throw RedefinedName(tp.name, tp.source_loc);
-            type_params.insert(tp.name);
-            symtab().add({tp.name, Symbol::TypeVar, ++type_idx});
-        }
+        load_type_params(t.type_params);
         /*
         for (auto& tc : t.context) {
             tc.type_class.apply(*this);
@@ -316,9 +313,10 @@ public:
             if (!p.identifier.name.empty())
                 p.identifier.symbol = symtab().add({p.identifier.name, Symbol::Parameter, par_idx++});
         }
-        if (!t.result_type)
+        if (!t.result_type && !m_instance)
             t.result_type = std::make_unique<ast::TypeName>("$R");
-        t.result_type->apply(*this);
+        if (t.result_type)
+            t.result_type->apply(*this);
     }
 
     void visit(ast::ListType& t) final {
@@ -413,6 +411,17 @@ private:
         }
         // nowhere
         return {};
+    }
+
+    void load_type_params(const std::vector<ast::TypeName>& type_params) {
+        Index type_idx = 0;
+        std::set<std::string> unique;  // check uniqueness
+        for (auto& tp : type_params) {
+            if (unique.contains(tp.name))
+                throw RedefinedName(tp.name, tp.source_loc);
+            unique.insert(tp.name);
+            symtab().add({tp.name, Symbol::TypeVar, ++type_idx});
+        }
     }
 
 private:

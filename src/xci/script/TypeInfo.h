@@ -123,7 +123,7 @@ public:
     bool operator==(const TypeInfo& rhs) const;
     bool operator!=(const TypeInfo& rhs) const { return !(*this == rhs); }
 
-    explicit operator bool() const { return m_type != Type::Unknown; }
+    explicit operator bool() const { return m_type != Type::Unknown || generic_var() != 0; }
 
     // -------------------------------------------------------------------------
     // Additional info, subtypes

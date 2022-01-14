@@ -657,7 +657,7 @@ TEST_CASE( "Casting", "[script][interpreter]" )
     //CHECK(interpret_std("['a', 'b', 'c']:String") == "abc");
     CHECK(interpret_std("(cast 42):Int64") == "42L");
     CHECK(interpret_std("a:Int64 = cast 42; a") == "42L");
-    CHECK_THROWS_AS(interpret_std("cast 42"), FunctionNotFound);  // must specify the result type
+    CHECK_THROWS_AS(interpret_std("cast 42"), FunctionConflict);  // must specify the result type
     CHECK(interpret_std("{23L}:Int") == "23");
     CHECK(interpret_std("min:Int") == "-2147483648");
     CHECK(interpret_std("max:UInt") == "4294967295U");

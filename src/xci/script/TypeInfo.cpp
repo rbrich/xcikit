@@ -119,13 +119,15 @@ void TypeInfo::replace_var(uint8_t idx, const TypeInfo& ti)
                 *this = ti;
             break;
         case Type::Function: {
-            // work on copy of signature
-            auto sig_copy = std::make_shared<Signature>(signature());
-            for (auto& prm : sig_copy->params) {
+            SignaturePtr sig_ptr;
+            if (signature_ptr().use_count() > 1) {
+                // multiple users - make copy of the signature
+                m_info = std::make_shared<Signature>(signature());
+            }
+            for (auto& prm : signature().params) {
                 prm.replace_var(idx, ti);
             }
-            sig_copy->return_type.replace_var(idx, ti);
-            m_info = move(sig_copy);
+            signature().return_type.replace_var(idx, ti);
             break;
         }
         case Type::Tuple:

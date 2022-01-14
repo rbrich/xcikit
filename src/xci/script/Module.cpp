@@ -176,6 +176,24 @@ std::vector<Index> Module::get_spec_functions(SymbolPointer gen_fn)
 }
 
 
+void Module::add_spec_instance(SymbolPointer gen_inst, Index spec_inst_idx)
+{
+    m_spec_instances.emplace(gen_inst, spec_inst_idx);
+}
+
+
+std::vector<Index> Module::get_spec_instances(SymbolPointer gen_inst)
+{
+    auto [beg, end] = m_spec_instances.equal_range(gen_inst);
+    std::vector<Index> res;
+    res.reserve(std::distance(beg, end));
+    std::transform(beg, end, std::back_inserter(res), [](auto item){
+        return item.second;
+    });
+    return res;
+}
+
+
 bool Module::operator==(const Module& rhs) const
 {
     return m_modules == rhs.m_modules &&

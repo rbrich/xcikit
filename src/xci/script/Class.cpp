@@ -7,9 +7,12 @@
 #include "Class.h"
 #include "Function.h"
 
+#include <range/v3/algorithm.hpp>
+
 namespace xci::script {
 
 using std::move;
+using ranges::any_of;
 
 
 Class::Class(SymbolTable& symtab)
@@ -26,10 +29,10 @@ Class::Class(Class&& rhs)
 }
 
 
-Index Class::add_function_type(TypeInfo&& type_info)
+Index Class::get_function_index(Index fn_idx) const
 {
-    m_functions.push_back(move(type_info));
-    return Index(m_functions.size() - 1);
+    auto it = std::find(m_functions.begin(), m_functions.end(), fn_idx);
+    return Index(it - m_functions.begin());
 }
 
 
@@ -40,10 +43,16 @@ Instance::Instance(Class& cls, SymbolTable& symtab)
 }
 
 
-void Instance::set_function(Index cls_fn_idx, Index mod_fn_idx)
+bool Instance::is_generic() const
 {
-    m_functions.resize(m_class.num_functions(), no_index);
-    m_functions[cls_fn_idx] = mod_fn_idx;
+    return ranges::any_of(m_types, [](const TypeInfo& t) { return t.is_generic(); });
+}
+
+
+void Instance::set_function(Index cls_fn_idx, Index mod_fn_idx, SymbolPointer symptr)
+{
+    m_functions.resize(m_class.num_functions());
+    m_functions[cls_fn_idx] = FunctionInfo{mod_fn_idx, symptr};
 }
 
 

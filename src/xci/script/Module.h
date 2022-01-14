@@ -114,6 +114,10 @@ public:
     void add_spec_function(SymbolPointer gen_fn, Index spec_fn_idx);
     std::vector<Index> get_spec_functions(SymbolPointer gen_fn);
 
+    // Specialized generic instances
+    void add_spec_instance(SymbolPointer gen_inst, Index spec_inst_idx);
+    std::vector<Index> get_spec_instances(SymbolPointer gen_inst);
+
     // Serialization
     bool save_to_file(const std::string& filename);
     bool load_from_file(const std::string& filename);
@@ -141,6 +145,11 @@ private:
     // * SymbolPointer points to original generic function
     // * Index is function index in this module
     std::multimap<SymbolPointer, Index> m_spec_functions;
+
+    // Specialized generic instances
+    // * SymbolPointer points to original generic instance
+    // * Index is instance index in this module
+    std::multimap<SymbolPointer, Index> m_spec_instances;
 };
 
 

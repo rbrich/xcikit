@@ -178,7 +178,7 @@ struct Statement: sor< TypeAlias, Declaration, Definition, Expression<SC> > {};
 struct ClassDeclaration: seq< Variable, SC, opt_must<one<'='>, SC, Expression<SC>> > {};  // with optional default definition
 struct DefClass: if_must< KeywordClass, NSC, TypeName, RS, SC, plus<TypeName, SC>, opt<TypeContext>, NSC,
         one<'{'>, NSC, sor< one<'}'>, must<SepList<ClassDeclaration>, NSC, one<'}'>> > > {};
-struct DefInstance: if_must< KeywordInstance, NSC, TypeName, RS, SC, plus<Type, SC>, opt<TypeContext>, NSC,
+struct DefInstance: if_must< KeywordInstance, SC, opt<TypeParams>, NSC, TypeName, RS, SC, plus<Type, SC>, opt<TypeContext>, NSC,
         one<'{'>, NSC, sor< one<'}'>, must<SepList<Definition>, NSC, one<'}'>> > > {};
 struct DefType: if_must< KeywordType, NSC, TypeName, NSC, one<'='>, not_at<one<'='>>, NSC, UnsafeType > {};
 struct TopLevelStatement: sor<DefClass, DefInstance, DefType, Statement> {};
@@ -678,6 +678,20 @@ struct Action<FunctionDecl> : change_states< ast::FunctionType > {
 
 
 template<>
+struct Action<TypeParams> : change_states< std::vector<ast::TypeName> > {
+    template<typename Input>
+    static void success(const Input &in, std::vector<ast::TypeName>& type_params, ast::FunctionType& ftype) {
+        ftype.type_params = std::move(type_params);
+    }
+
+    template<typename Input>
+    static void success(const Input &in, std::vector<ast::TypeName>& type_params, ast::Instance& inst) {
+        inst.type_params = std::move(type_params);
+    }
+};
+
+
+template<>
 struct Action<TypeName> : change_states< ast::TypeName > {
     template<typename Input>
     static void apply(const Input &in, ast::TypeName& tname) {
@@ -691,8 +705,8 @@ struct Action<TypeName> : change_states< ast::TypeName > {
     }
 
     template<typename Input>
-    static void success(const Input &in, ast::TypeName& tname, ast::FunctionType& ftype) {
-        ftype.type_params.push_back(move(tname));
+    static void success(const Input &in, ast::TypeName& tname, std::vector<ast::TypeName>& type_params) {
+        type_params.push_back(move(tname));
     }
 
     template<typename Input>

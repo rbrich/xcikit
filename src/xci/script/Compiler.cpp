@@ -282,8 +282,18 @@ public:
                 break;
             }
             case Symbol::Method: {
+                assert(v.index != no_index);
                 // this module
                 if (v.module == &module()) {
+                    // specialization might not be compiled yet - compile it now
+                    Function& fn = module().get_function(v.index);
+                    if (fn.is_generic()) {
+                        assert(!fn.detect_generic());  // fully specialized
+                        const auto body = fn.yank_generic_body();
+                        fn.set_compiled();  // this would release AST copy
+                        m_compiler.compile_block(fn, body.ast());
+                    }
+
                     // CALL0 <function_idx>
                     code().add_L1(Opcode::Call0, v.index);
                     break;
