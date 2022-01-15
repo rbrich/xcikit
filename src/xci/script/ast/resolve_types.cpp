@@ -663,6 +663,7 @@ public:
             }
         }
         m_call_args.clear();
+        m_call_ret = {};
     }
 
     void visit(ast::OpCall& v) override {
@@ -1348,6 +1349,8 @@ private:
                     res[var - 1] = m_call_ret;
                 if (!m_cast_type.is_unknown())
                     res[var - 1] = m_cast_type.effective_type();
+                if (m_type_info)
+                    res[var - 1] = m_type_info;
             }
         }
         return res;

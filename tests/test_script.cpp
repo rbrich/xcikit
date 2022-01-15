@@ -705,6 +705,7 @@ TEST_CASE( "Casting", "[script][interpreter]" )
     CHECK(interpret_std("{23L}:Int") == "23");
     CHECK(interpret_std("min:Int") == "-2147483648");
     CHECK(interpret_std("max:UInt") == "4294967295U");
+    CHECK(interpret_std("a:Int = min; a") == "-2147483648");
 }
 
 
@@ -716,6 +717,7 @@ TEST_CASE( "Subscript", "[script][interpreter]" )
     CHECK(interpret("subscript = fun<T> [T] Int -> T { __subscript __type_id<T> }; subscript [1,2,3] 1") == "2");
     // std implementation
     CHECK(interpret_std("subscript [1,2,3] 1") == "2");
+    CHECK(interpret_std("[1,2,3] .subscript 0") == "1");
     CHECK(interpret_std("[1,2,3] ! 2") == "3");
     CHECK_THROWS_AS(interpret_std("[1,2,3]!3"), IndexOutOfBounds);
     CHECK(interpret_std("['a','b','c'] ! 1") == "'b'");
@@ -723,6 +725,39 @@ TEST_CASE( "Subscript", "[script][interpreter]" )
     CHECK(interpret_std("[[1,2],[3,4],[5,6]] ! 1 ! 0") == "3");
     CHECK(interpret_std("head = fun l:[Int] -> Int { l!0 }; head [1,2,3]") == "1");
     CHECK(interpret_std("head = fun<T> l:[T] -> T { l!0 }; head ['a','b','c']") == "'a'");
+}
+
+
+TEST_CASE( "Slice", "[script][interpreter]" )
+{
+    CHECK(interpret("slice = fun<T> [T] start:Int stop:Int step:Int -> [T] { __slice __type_id<T> }; [1,2,3,4,5] .slice 1 4 1") == "[2, 3, 4]");
+    // step=0 -- pick one element for a new list
+    CHECK(interpret_std("[1,2,3,4,5] .slice 3 max:Int 0") == "[4]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 3 max:Int max:Int") == "[4]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 0 max:Int 1") == "[1, 2, 3, 4, 5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 1 max:Int 1") == "[2, 3, 4, 5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 3 max:Int 1") == "[4, 5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 5 max:Int 1") == "[]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice -1 max:Int 1") == "[5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice -2 max:Int 1") == "[4, 5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice -5 max:Int 1") == "[1, 2, 3, 4, 5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice min:Int max:Int 1") == "[1, 2, 3, 4, 5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice min:Int max:Int 2") == "[1, 3, 5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice min:Int max:Int 3") == "[1, 4]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 2 4 1") == "[3, 4]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 1 4 2") == "[2, 4]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice max:Int min:Int -1") == "[5, 4, 3, 2, 1]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice max:Int min:Int -2") == "[5, 3, 1]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice max:Int min:Int -3") == "[5, 2]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 4 3 -1") == "[5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 4 1 -1") == "[5, 4, 3]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice -1 -4 -1") == "[5, 4, 3]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 5 1 1") == "[]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 1 5 -1") == "[]");
+//    CHECK(interpret_std("[]:[Int] .slice 0 5 1") == "[]");
+//    CHECK(interpret_std("[]:[Int]") == "[]");
+//    CHECK(interpret_std("[]") == "[]");
+    CHECK(interpret_std("tail [1,2,3]") == "[2, 3]");
 }
 
 

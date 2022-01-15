@@ -357,7 +357,7 @@ len = fun<T> [T] -> UInt { __length __type_id<T> }
 slice = fun<T> [T] start:Int stop:Int step:Int -> [T] { __slice __type_id<T> }
 
 head = fun<T> a:[T] -> T { a!0 }
-tail = fun<T> a:[T] -> [T] { a .slice 1 0 1 }
+tail = fun<T> a:[T] -> [T] { a .slice 1 max:Int 1 }
 
 //filter = fun<Ord T> fn [T] -> [T] { }
 //map = fun<T> fn l:[T] -> [T] { (fn l[0]) + l[1:] }

@@ -481,25 +481,32 @@ void ListV::slice(int begin, int end, int step, const TypeInfo& elem_type)
     // adjust indexes
     if (end < 0)
         end += int(length);  // -1 => length - 1
-    if (begin < 0)
+    if (begin < 0 && begin != std::numeric_limits<int>::min())
         begin += int(length);  // -1 => length - 1
 
     // compute number of elements in the sliced list
     unsigned n_sliced = 0;
     if (step > 0) {
-        if (begin < 0)
-            begin %= int(step);  // get closer to zero if still negative
-        if (begin < 0)
-            begin += int(step);  // step over zero if still negative
+        if (begin == std::numeric_limits<int>::min()) {
+            begin = 0;
+        } else if (begin < 0) {
+            // get closer to zero if still negative
+            begin %= int(step);
+            // step over zero if still negative
+            if (begin < 0)
+                begin += int(step);
+        }
         if (end > int(length))
             end = length;
         auto i = begin;
-        while (i < end) {
+        while (i >= 0 && i < end) {
             ++ n_sliced;
             i += step;
         }
     } else if (step < 0) {
-        if (begin >= int(length)) {
+        if (begin == std::numeric_limits<int>::max()) {
+            begin = int(length) - 1;
+        } else if (begin >= int(length)) {
             // get closer to length
             begin = (begin - int(length)) % int(step);
             if (begin >= 0)
@@ -509,7 +516,7 @@ void ListV::slice(int begin, int end, int step, const TypeInfo& elem_type)
         if (end < -1)
             end = -1;
         auto i = begin;
-        while (i > end) {
+        while (i > end && i < int(length)) {
             ++ n_sliced;
             i += step;
         }
@@ -537,7 +544,7 @@ void ListV::slice(int begin, int end, int step, const TypeInfo& elem_type)
     if (step > 0) {
         auto orig_i = begin;
         auto* new_ptr = new_data;
-        while (orig_i < end) {
+        while (orig_i >= 0 && orig_i < end) {
             std::memcpy(new_ptr, data + orig_i * elem_size, elem_size);
             new_ptr += elem_size;
             orig_i += step;
@@ -545,7 +552,7 @@ void ListV::slice(int begin, int end, int step, const TypeInfo& elem_type)
     } else if (step < 0) {
         auto orig_i = begin;
         auto* new_ptr = new_data;
-        while (orig_i > end) {
+        while (orig_i > end && orig_i < int(length)) {
             std::memcpy(new_ptr, data + orig_i * elem_size, elem_size);
             new_ptr += elem_size;
             orig_i += step;
