@@ -60,7 +60,7 @@ public:
         T* operator->() const { return ptr; }
         T& operator*() const { return *ptr; }
 
-        operator bool() const { return ptr != nullptr; }
+        explicit operator bool() const { return ptr != nullptr; }
 
     private:
         T* ptr = nullptr;

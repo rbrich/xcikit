@@ -81,7 +81,7 @@ public:
     SharedDescriptorPool& operator=(SharedDescriptorPool&& rhs);
 
     DescriptorPool& get() const { return *m_descriptor_pool; }
-    operator bool() const { return  m_descriptor_pool != nullptr; }
+    explicit operator bool() const { return  m_descriptor_pool != nullptr; }
 
 private:
     DescriptorPool* m_descriptor_pool = nullptr;

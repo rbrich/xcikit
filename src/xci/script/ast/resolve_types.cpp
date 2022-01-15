@@ -32,10 +32,47 @@ using ranges::any_of;
 using ranges::to;
 
 
-enum class Match { None, Generic, Partial, Exact };
+class MatchScore {
+public:
+    MatchScore() = default;
+    MatchScore(int8_t exact, int8_t coerce, int8_t generic)
+        : m_exact(exact), m_coerce(coerce), m_generic(generic) {}
+    explicit MatchScore(int8_t exact) : m_exact(exact) {}  // -1 => mismatch
 
-static Match match_type(const TypeInfo& inferred, const TypeInfo& actual);
-static Match match_struct(const TypeInfo& inferred, const TypeInfo& actual);
+    void set_mismatch() { m_exact = -1; }
+    void add_exact() { ++m_exact; }
+    void add_coerce() { ++m_coerce; }
+    void add_generic() { ++m_generic; }
+
+    bool is_exact() const { return m_exact >= 0 && (m_coerce | m_generic) == 0; }
+
+    explicit operator bool() const { return m_exact != -1; }
+    auto operator<=>(const MatchScore&) const = default;
+
+    void operator +=(MatchScore rhs) {
+        m_exact += rhs.m_exact;
+        m_coerce += rhs.m_coerce;
+        m_generic += rhs.m_generic;
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, MatchScore v) {
+        if (!v)
+            return os << "[ ]";
+        os << '[' << int(v.m_exact);
+        if (v.m_coerce != 0) os << '~' << int(v.m_coerce);
+        if (v.m_generic != 0) os << '?' << int(v.m_generic);
+        return os << ']';
+    }
+
+private:
+    int8_t m_exact = 0;  // num parameters matched exactly (Int == Int)
+    int8_t m_coerce = 0;  // num parameters that can coerce (Int32 => Int64)
+    int8_t m_generic = 0;  // num parameters matched generically (T == T or T == Int or Num T == Int)
+};
+
+static MatchScore match_params(const std::vector<TypeInfo>& candidate, const std::vector<TypeInfo>& actual);
+static MatchScore match_type(const TypeInfo& candidate, const TypeInfo& actual);
+static MatchScore match_struct(const TypeInfo& candidate, const TypeInfo& actual);
 
 
 class TypeCheckHelper {
@@ -51,7 +88,7 @@ public:
         if (!specified)
             return;
         if (specified.is_struct() && inferred.is_struct()) {
-            if (match_struct(inferred, specified) == Match::None)
+            if (!match_struct(inferred, specified))
                 throw StructTypeMismatch(specified, loc);
             return;
         }
@@ -68,7 +105,7 @@ public:
             });
         if (spec_it == spec_items.end())
             throw StructUnknownKey(type(), key, loc);
-        if (match_type(inferred, spec_it->second) == Match::None)
+        if (!match_type(inferred, spec_it->second))
             throw StructKeyTypeMismatch(type(), spec_it->second, inferred, loc);
     }
 
@@ -80,43 +117,60 @@ private:
 };
 
 
-/// \returns Match: None/Generic/Partial
-static Match match_type(const TypeInfo& inferred, const TypeInfo& actual)
+static MatchScore match_params(const std::vector<TypeInfo>& candidate, const std::vector<TypeInfo>& actual)
 {
-    if (actual.is_struct() && inferred.is_struct())
-        return match_struct(inferred, actual);
-    return inferred == actual
-        ? ( (actual.is_generic() || inferred.is_generic()) ? Match::Generic : Match::Partial)
-        : Match::None;
+    if (candidate.size() != actual.size())
+        return MatchScore(-1);
+    MatchScore score;
+    for (size_t i = 0; i != actual.size(); ++i) {
+        auto m = match_type(candidate[i], actual[i]);
+        if (!m)
+            return MatchScore(-1);
+        score += m;
+    }
+    return score;
+}
+
+
+/// \returns Match: None/Generic/Partial
+static MatchScore match_type(const TypeInfo& candidate, const TypeInfo& actual)
+{
+    if (actual.is_struct() && candidate.is_struct())
+        return match_struct(candidate, actual);
+    if (candidate == actual) {
+        if (actual.is_generic() || candidate.is_generic())
+            return MatchScore(0, 0, 1);
+        else
+            return MatchScore(1);
+    }
+    return MatchScore(-1);
 }
 
 
 /// Match incomplete Struct type from ast::StructInit to resolved Struct type.
 /// All keys and types from inferred are checked against resolved.
 /// Partial match is possible when inferred has less keys than resolved.
-/// \param inferred     Possibly incomplete Struct type as constructed from AST
+/// \param candidate    Possibly incomplete Struct type as constructed from AST
 /// \param resolved     Actual resolved type for the value
 /// \returns  Match: None/Generic/Partial (full match not distinguished)
-static Match match_struct(const TypeInfo& inferred, const TypeInfo& actual)
+static MatchScore match_struct(const TypeInfo& candidate, const TypeInfo& actual)
 {
-    assert(inferred.is_struct());
+    assert(candidate.is_struct());
     assert(actual.is_struct());
     const auto& actual_items = actual.struct_items();
-    auto res = Match::Partial;
-    for (const auto& inf : inferred.struct_items()) {
+    MatchScore res;
+    for (const auto& inf : candidate.struct_items()) {
         auto act_it = std::find_if(actual_items.begin(), actual_items.end(),
                 [&inf](const TypeInfo::StructItem& act) {
                   return act.first == inf.first;
                 });
         if (act_it == actual_items.end())
-            return Match::None;  // not found
+            return MatchScore(-1);  // not found
         // check item type
         auto m = match_type(TypeInfo(inf.second), act_it->second);
-        switch (m) {
-            case Match::None: return m;  // item type doesn't match
-            case Match::Generic: res = m; break; // unknown/generic
-            default: break;
-        }
+        if (!m)
+            return MatchScore(-1);  // item type doesn't match
+        res += m;
     }
     return res;
 }
@@ -134,7 +188,7 @@ class TypeCheckerVisitor final: public ast::Visitor {
         Index index;
         SymbolPointer symptr;
         TypeInfo type;
-        Match match;
+        MatchScore match;
     };
 
 public:
@@ -301,7 +355,7 @@ public:
             }
             if (m_type_info.type() != Type::Struct)
                 throw StructTypeMismatch(m_type_info, v.source_loc);
-            if (match_struct(v.struct_type, m_type_info) == Match::None)
+            if (!match_struct(v.struct_type, m_type_info))
                 throw StructTypeMismatch(m_type_info, v.source_loc);
             v.struct_type = move(m_type_info);
             m_value_type = v.struct_type;
@@ -331,7 +385,7 @@ public:
         }
         v.struct_type = TypeInfo(move(ti_items));
         if (!specified.is_unknown()) {
-            assert(match_struct(v.struct_type, specified) != Match::None);  // already checked above
+            assert(match_struct(v.struct_type, specified));  // already checked above
             v.struct_type = std::move(type_check.type());
         }
         m_value_type = v.struct_type;
@@ -418,32 +472,26 @@ public:
                         inst_mod = &module();
                     auto& inst = inst_mod->get_instance(inst_psym->index());
                     auto inst_fn = inst.get_function(cls_fn_idx);
-                    if (inst.types() == inst_types) {
-                        // find instance function
-                        Match m = (ranges::any_of(inst_types, [](const TypeInfo& t) { return t.is_unknown(); }))
-                                  ? Match::Partial : Match::Exact;
-                        candidates.push_back({inst_mod, inst_fn.index, inst_psym, TypeInfo{}, m});
-                    } else {
-                        candidates.push_back({inst_mod, inst_fn.index, inst_psym, TypeInfo{}, Match::None});
-                    }
+                    auto m = match_params(inst.types(), inst_types);
+                    candidates.push_back({inst_mod, inst_fn.index, inst_psym, TypeInfo{}, m});
                     inst_psym = inst_psym->next();
                 }
 
                 // find best match from candidates
                 bool conflict = false;
-                Match m = Match::None;
+                MatchScore score(-1);
                 Candidate* found = nullptr;
                 for (auto& item : candidates) {
-                    if (item.match == Match::None)
+                    if (!item.match)
                         continue;
-                    if (item.match > m) {
+                    if (item.match > score) {
                         // found better match
-                        m = item.match;
+                        score = item.match;
                         found = &item;
                         conflict = false;
                         continue;
                     }
-                    if (item.match == m) {
+                    if (item.match == score) {
                         // found same match -> conflict
                         conflict = true;
                     }
@@ -469,7 +517,7 @@ public:
                 stringstream o_candidates;
                 for (const auto& c : candidates) {
                     auto& fn = c.module->get_function(c.index);
-                    o_candidates << "   " << match_to_cstr(c.match) << "  "
+                    o_candidates << "   " << c.match << "  "
                                  << fn.signature() << endl;
                 }
                 stringstream o_ftype;
@@ -663,6 +711,7 @@ public:
         m_call_ret = ti_void();
         v.leave_function.apply(*this);
         m_call_args.clear();
+        m_call_ret = {};
         // resolve type of expression - it's also the type of the whole "with" expression
         v.expression->apply(*this);
         v.expression_type = m_value_type.effective_type();
@@ -1009,8 +1058,7 @@ private:
         for (auto spec_idx : module().get_spec_functions(symptr)) {
             auto& spec_fn = module().get_function(spec_idx);
             const auto& spec_sig = spec_fn.signature_ptr();
-            auto m = match_signature(*spec_sig);
-            if (m == Match::Exact)
+            if (match_signature(*spec_sig).is_exact())
                 return std::make_optional<Specialized>({
                         TypeInfo{spec_sig},
                         spec_idx
@@ -1109,19 +1157,19 @@ private:
 
         // find best match from candidates
         bool conflict = false;
-        Match m = Match::None;
+        MatchScore score(-1);
         Candidate* found = nullptr;
         for (auto& item : candidates) {
-            if (item.match == Match::None)
+            if (!item.match)
                 continue;
-            if (item.match > m) {
+            if (item.match > score) {
                 // found better match
-                m = item.match;
+                score = item.match;
                 found = &item;
                 conflict = false;
                 continue;
             }
-            if (item.match == m) {
+            if (item.match == score) {
                 // found same match -> conflict
                 conflict = true;
             }
@@ -1145,7 +1193,7 @@ private:
         stringstream o_candidates;
         for (const auto& c : candidates) {
             auto& fn = c.module->get_function(c.index);
-            o_candidates << "   " << match_to_cstr(c.match) << "  "
+            o_candidates << "   " << c.match << "  "
                          << fn.signature() << endl;
         }
         stringstream o_args;
@@ -1201,22 +1249,12 @@ private:
         return res;
     }
 
-    static const char* match_to_cstr(Match m) {
-        switch (m) {
-            case Match::None: return "[ ]";
-            case Match::Generic: return "[?]";
-            case Match::Partial: return "[~]";
-            case Match::Exact: return "[x]";
-        }
-        UNREACHABLE;
-    }
-
     /// \returns Match: None/Generic/Partial/Exact
     /// Partial match means the signature has less parameters than call args.
-    Match match_signature(const Signature& signature) const
+    MatchScore match_signature(const Signature& signature) const
     {
         Signature sig = signature;  // a copy to work on (modified below)
-        Match res = Match::Partial;
+        MatchScore res;
         for (const auto& arg : m_call_args) {
             // check there are more params to consume
             while (sig.params.empty()) {
@@ -1225,22 +1263,31 @@ private:
                     sig = sig.return_type.signature();
                 } else {
                     // unexpected argument
-                    return Match::None;
+                    return MatchScore(-1);
                 }
             }
             // check type of next param
             auto m = match_type(arg.type_info, sig.params[0]);
-            switch (m) {
-                case Match::None: return m;
-                case Match::Generic: res = m; break;
-                default: break;
-            }
+            if (!m)
+                return MatchScore(-1);
+            res += m;
             // consume next param
             sig.params.erase(sig.params.begin());
         }
-        // exact match - all params and return_type match
-        if (sig.params.empty() && res == Match::Partial)
-            return Match::Exact;
+        // check return type
+        if (m_call_ret) {
+            auto m = match_type(m_call_ret, sig.return_type);
+            if (!m)
+                return MatchScore(-1);
+            res += m;
+        }
+        if (m_cast_type) {
+            // increase score if casting target type matches return type,
+            // but don't fail if it doesn't match
+            auto m = match_type(m_cast_type, sig.return_type);
+            if (m)
+                res += m;
+        }
         return res;
     }
 

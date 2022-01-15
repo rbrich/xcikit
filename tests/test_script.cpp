@@ -635,8 +635,8 @@ TEST_CASE( "Overloaded functions", "[script][interpreter]" )
     CHECK(interpret("decl f:Int->Int; f:Int->Int = fun a {a}; f:String->String = fun a {a}; f 1; f \"abc\"") == "1;\"abc\"");
 
     // Variables are also functions and so can be overloaded
-    CHECK(interpret("a:Int=2; a:String=\"two\";a:Int;a:String") == "2;\"two\"");
-    CHECK_THROWS_AS(interpret("a:Int=2; a:String=\"two\";a:Int64"), FunctionConflict);
+    CHECK(interpret_std("a:Int=2; a:String=\"two\";a:Int;a:String") == "2;\"two\"");
+    CHECK_THROWS_AS(interpret_std("a:Int=2; a:String=\"two\";a:Int64"), FunctionConflict);
 }
 
 
