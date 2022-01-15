@@ -6,7 +6,7 @@ endif::[]
 
 = Fire Script
 
-*_Language description, v0.6_*
+*_Language description, v0.7_*
 
 toc::[]
 
