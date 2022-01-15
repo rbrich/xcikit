@@ -124,11 +124,11 @@ const Symbol& SymbolTable::get(Index idx) const
 
 SymbolPointer SymbolTable::find_by_name(std::string_view name)
 {
-    auto it = std::find_if(m_symbols.begin(), m_symbols.end(),
+    auto it = std::find_if(m_symbols.rbegin(), m_symbols.rend(),
             [&name](const Symbol& sym){ return sym.name() == name; });
-    if (it == m_symbols.end())
+    if (it == m_symbols.rend())
         return {*this, no_index};
-    return {*this, Index(it - m_symbols.begin())};
+    return {*this, Index((m_symbols.rend() - it) - 1)};
 }
 
 
@@ -157,13 +157,13 @@ SymbolPointer SymbolTable::find_last_of(Symbol::Type type)
 
 void SymbolTable::detect_overloads(const std::string& name)
 {
-    Symbol* prev = nullptr;
+    Index prev_i = no_index;
     for (size_t i = 0; i != m_symbols.size(); ++i) {
         if (m_symbols[i].name() == name) {
-            if (prev) {
-                prev->set_next({*this, Index(i)});
+            if (prev_i != no_index) {
+                m_symbols[i].set_next({*this, prev_i});
             }
-            prev = &m_symbols[i];
+            prev_i = Index(i);
         }
     }
 }

@@ -487,6 +487,9 @@ public:
             }
             case Symbol::Function: {
                 auto res = resolve_overload(v.identifier.symbol, v.identifier);
+                // The referenced function must have been defined
+                if (!res.type.effective_type())
+                    throw MissingExplicitType(v.identifier.name, v.identifier.source_loc);
                 v.module = res.module;
                 v.index = res.index;
                 m_value_type = res.type;
@@ -667,7 +670,7 @@ public:
 
     void visit(ast::Function& v) override {
         Function& fn = module().get_function(v.index);
-        // specified type (left hand side of '=')
+        // specified type (left-hand side of '=')
         TypeInfo specified_type;
         if (v.definition) {
             specified_type = move(m_type_info);
@@ -683,7 +686,9 @@ public:
         // lambda type (right hand side of '=')
         v.type.apply(*this);
         assert(m_type_info);
-        // fill in / check type from specified type
+        if (!m_instance && specified_type && specified_type != m_type_info.effective_type())
+            throw DeclarationTypeMismatch(specified_type, m_type_info, v.source_loc);
+        // fill in types from specified function type
         if (specified_type.is_callable()) {
             if (m_type_info.signature().return_type.is_unknown() && specified_type.signature().return_type)
                 m_type_info.signature().set_return_type(specified_type.signature().return_type);
@@ -937,6 +942,8 @@ private:
                         throw UnexpectedReturnType(exp, got);
                     });
             resolve_type_vars(sig);  // fill in concrete types using new type var info
+            if (deduced.is_callable() && &sig == &deduced.signature())
+                throw MissingExplicitType(loc);  // the return type is recursive!
             sig.return_type = deduced;  // Unknown/var=0 not handled by resolve_type_vars
             return;
         }
@@ -1002,7 +1009,7 @@ private:
         for (auto spec_idx : module().get_spec_functions(symptr)) {
             auto& spec_fn = module().get_function(spec_idx);
             const auto& spec_sig = spec_fn.signature_ptr();
-            auto m = match_params(*spec_sig);
+            auto m = match_signature(*spec_sig);
             if (m == Match::Exact)
                 return std::make_optional<Specialized>({
                         TypeInfo{spec_sig},
@@ -1094,7 +1101,7 @@ private:
                 symmod = &module();
             auto& fn = symmod->get_function(symptr->index());
             const auto& sig_ptr = fn.signature_ptr();
-            auto m = match_params(*sig_ptr);
+            auto m = match_signature(*sig_ptr);
             candidates.push_back({symmod, symptr->index(), symptr, TypeInfo{sig_ptr}, m});
 
             symptr = symptr->next();
@@ -1206,32 +1213,33 @@ private:
 
     /// \returns Match: None/Generic/Partial/Exact
     /// Partial match means the signature has less parameters than call args.
-    Match match_params(const Signature& signature) const
+    Match match_signature(const Signature& signature) const
     {
-        auto sig = std::make_unique<Signature>(signature);
+        Signature sig = signature;  // a copy to work on (modified below)
         Match res = Match::Partial;
         for (const auto& arg : m_call_args) {
             // check there are more params to consume
-            while (sig->params.empty()) {
-                if (sig->return_type.type() == Type::Function) {
+            while (sig.params.empty()) {
+                if (sig.return_type.type() == Type::Function) {
                     // collapse returned function, start consuming its params
-                    sig = std::make_unique<Signature>(sig->return_type.signature());
+                    sig = sig.return_type.signature();
                 } else {
                     // unexpected argument
                     return Match::None;
                 }
             }
             // check type of next param
-            auto m = match_type(arg.type_info, sig->params[0]);
+            auto m = match_type(arg.type_info, sig.params[0]);
             switch (m) {
                 case Match::None: return m;
                 case Match::Generic: res = m; break;
                 default: break;
             }
             // consume next param
-            sig->params.erase(sig->params.begin());
+            sig.params.erase(sig.params.begin());
         }
-        if (sig->params.empty() && res == Match::Partial)
+        // exact match - all params and return_type match
+        if (sig.params.empty() && res == Match::Partial)
             return Match::Exact;
         return res;
     }
@@ -1302,7 +1310,7 @@ private:
 
     TypeInfo m_type_info;   // resolved ast::Type
     TypeInfo m_value_type;  // inferred type of the value
-    TypeInfo m_cast_type;   // target type of a Cast
+    TypeInfo m_cast_type;   // target type of Cast
 
     // signature for resolving overloaded functions and templates
     CallArgs m_call_args;  // actual argument types

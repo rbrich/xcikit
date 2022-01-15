@@ -29,15 +29,31 @@ public:
         // check for name collision
         const auto& name = dfn.variable.identifier.name;
         auto symptr = symtab().find_by_name(name);
-        if (!symptr) {
-            // add new function, symbol
+
+        // allow overloading in some cases
+        // * must not have forward declaration
+        // * must be a plain function (not method)
+        // * must have explicitly specified type
+        if (!symptr
+        || (!m_class && !m_instance && dfn.variable.type && symptr->is_defined() && symptr->type() == Symbol::Function))
+        {
+            // not found or undefined -> add new function, symbol
             SymbolTable& fn_symtab = symtab().add_child(name);
             Function fn {module(), fn_symtab};
             auto fn_id = module().add_function(move(fn));
             assert(symtab().module() == &module());
-            symptr = symtab().add({name, Symbol::Function, fn_id.index});
+            auto new_symptr = symtab().add({name, Symbol::Function, fn_id.index});
+
+            // Overloaded: function's next = the preexisting function
+            if (symptr)
+                new_symptr->set_next(symptr);
+
+            symptr = new_symptr;
         } else {
-            if (symptr->is_defined())
+            // Allow redefinition only if we're defining plain function, not a method
+            if (symptr->is_defined()
+            || (!symptr->is_defined() && !dfn.expression)  // multiple forward declarations
+            || (!m_class && !m_instance && symptr->type() == Symbol::Method))
                 throw RedefinedName(name, dfn.variable.identifier.source_loc);
         }
 
@@ -355,12 +371,6 @@ private:
             // lookup in this and parent scopes
             size_t depth = 0;
             for (auto* p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
-                if (p_symtab->name() == name && p_symtab->parent() != nullptr) {
-                    // recursion - unwrap the function
-                    auto symptr = p_symtab->parent()->find_by_name(name);
-                    return symtab().add({symptr, Symbol::Function, no_index, depth + 1});
-                }
-
                 auto symptr = p_symtab->find_by_name(name);
                 if (symptr) {
                     if (depth > 0 && symptr->type() != Symbol::Method) {
@@ -370,6 +380,13 @@ private:
                     }
                     return symptr;
                 }
+
+                if (p_symtab->name() == name && p_symtab->parent() != nullptr) {
+                    // recursion - unwrap the function
+                    auto symptr = p_symtab->parent()->find_by_name(name);
+                    return symtab().add({symptr, Symbol::Function, no_index, depth + 1});
+                }
+
                 depth ++;
             }
         }

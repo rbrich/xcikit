@@ -322,22 +322,21 @@ instance Cast Float64 Int32 { cast = { __cast 0xD8 } }
 instance Cast Float64 Int64 { cast = { __cast 0xD9 } }
 instance Cast Float64 Float32 { cast = { __cast 0xDC } }
 
-/*
-class Limits T {
+
+class Bounded T {
     min : Void -> T
     max : Void -> T
 }
 
-instance Limits UInt32 {
+instance Bounded UInt32 {
     min = { 0u }
     max = { 0xFFFFFFFFu }
 }
 
-instance Limits Int32 {
+instance Bounded Int32 {
     min = { -2147483648 }
     max = { +2147483647 }
 }
-*/
 
 
 class Subscript T U R {
@@ -351,7 +350,8 @@ instance<T> Subscript [T] Int T {
 
 succ = fun<T> x:T -> T { x + 1 }
 pred = fun<T> x:T -> T { x - 1 }
-max = fun<T> x:T y:T -> T { if x > y then x else y }
+larger = fun<T> x:T y:T -> T { if x > y then x else y }
+smaller = fun<T> x:T y:T -> T { if x < y then x else y }
 
 len = fun<T> [T] -> UInt { __length __type_id<T> }
 slice = fun<T> [T] start:Int stop:Int step:Int -> [T] { __slice __type_id<T> }
