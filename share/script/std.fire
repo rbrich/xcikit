@@ -1,7 +1,7 @@
 // std.fire created on 2019-10-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 
@@ -278,6 +278,22 @@ instance Cast Byte UInt64 { cast = { __cast 0x14 } }
 instance Cast Byte Int32 { cast = { __cast 0x18 } }
 instance Cast Byte Int64 { cast = { __cast 0x19 } }
 
+instance Cast UInt32 Bool { cast = fun x { x != 0U } }
+instance Cast UInt32 Byte { cast = { __cast 0x31 } }
+instance Cast UInt32 UInt64 { cast = { __cast 0x34 } }
+instance Cast UInt32 Int32 { cast = { __cast 0x38 } }
+instance Cast UInt32 Int64 { cast = { __cast 0x39 } }
+instance Cast UInt32 Float32 { cast = { __cast 0x3c } }
+instance Cast UInt32 Float64 { cast = { __cast 0x3d } }
+
+instance Cast UInt64 Bool { cast = fun x { x != 0UL } }
+instance Cast UInt64 Byte { cast = { __cast 0x41 } }
+instance Cast UInt64 UInt32 { cast = { __cast 0x43 } }
+instance Cast UInt64 Int32 { cast = { __cast 0x48 } }
+instance Cast UInt64 Int64 { cast = { __cast 0x49 } }
+instance Cast UInt64 Float32 { cast = { __cast 0x4C } }
+instance Cast UInt64 Float64 { cast = { __cast 0x4D } }
+
 instance Cast Int32 Bool { cast = fun x { x != 0 } }
 instance Cast Int32 Byte { cast = { __cast 0x81 } }
 instance Cast Int32 UInt32 { cast = { __cast 0x83 } }
@@ -306,12 +322,42 @@ instance Cast Float64 Int32 { cast = { __cast 0xD8 } }
 instance Cast Float64 Int64 { cast = { __cast 0xD9 } }
 instance Cast Float64 Float32 { cast = { __cast 0xDC } }
 
+
+class Bounded T {
+    min : Void -> T
+    max : Void -> T
+}
+
+instance Bounded UInt32 {
+    min = { 0u }
+    max = { 0xFFFFFFFFu }
+}
+
+instance Bounded Int32 {
+    min = { -2147483648 }
+    max = { +2147483647 }
+}
+
+
+class Subscript T U R {
+    subscript : T U -> R
+}
+
+instance<T> Subscript [T] Int T {
+    subscript = { __subscript __type_id<T> }
+}
+
+
 succ = fun<T> x:T -> T { x + 1 }
 pred = fun<T> x:T -> T { x - 1 }
-max = fun<T> x:T y:T -> T { if x > y then x else y }
+larger = fun<T> x:T y:T -> T { if x > y then x else y }
+smaller = fun<T> x:T y:T -> T { if x < y then x else y }
 
+len = fun<T> [T] -> UInt { __length __type_id<T> }
+slice = fun<T> [T] start:Int stop:Int step:Int -> [T] { __slice __type_id<T> }
 
-subscript = fun<T> [T] Int -> T { __subscript __type_id<T> }
+head = fun<T> a:[T] -> T { a!0 }
+tail = fun<T> a:[T] -> [T] { a .slice 1 max:Int 1 }
 
 //filter = fun<Ord T> fn [T] -> [T] { }
 //map = fun<T> fn l:[T] -> [T] { (fn l[0]) + l[1:] }

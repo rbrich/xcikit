@@ -1,7 +1,7 @@
 // resolve_types.cpp created on 2019-06-13 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "resolve_types.h"
@@ -32,10 +32,47 @@ using ranges::any_of;
 using ranges::to;
 
 
-enum class Match { None, Generic, Partial, Exact };
+class MatchScore {
+public:
+    MatchScore() = default;
+    MatchScore(int8_t exact, int8_t coerce, int8_t generic)
+        : m_exact(exact), m_coerce(coerce), m_generic(generic) {}
+    explicit MatchScore(int8_t exact) : m_exact(exact) {}  // -1 => mismatch
 
-static Match match_type(const TypeInfo& inferred, const TypeInfo& actual);
-static Match match_struct(const TypeInfo& inferred, const TypeInfo& actual);
+    void set_mismatch() { m_exact = -1; }
+    void add_exact() { ++m_exact; }
+    void add_coerce() { ++m_coerce; }
+    void add_generic() { ++m_generic; }
+
+    bool is_exact() const { return m_exact >= 0 && (m_coerce | m_generic) == 0; }
+
+    explicit operator bool() const { return m_exact != -1; }
+    auto operator<=>(const MatchScore&) const = default;
+
+    void operator +=(MatchScore rhs) {
+        m_exact += rhs.m_exact;
+        m_coerce += rhs.m_coerce;
+        m_generic += rhs.m_generic;
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, MatchScore v) {
+        if (!v)
+            return os << "[ ]";
+        os << '[' << int(v.m_exact);
+        if (v.m_coerce != 0) os << '~' << int(v.m_coerce);
+        if (v.m_generic != 0) os << '?' << int(v.m_generic);
+        return os << ']';
+    }
+
+private:
+    int8_t m_exact = 0;  // num parameters matched exactly (Int == Int)
+    int8_t m_coerce = 0;  // num parameters that can coerce (Int32 => Int64)
+    int8_t m_generic = 0;  // num parameters matched generically (T == T or T == Int or Num T == Int)
+};
+
+static MatchScore match_params(const std::vector<TypeInfo>& candidate, const std::vector<TypeInfo>& actual);
+static MatchScore match_type(const TypeInfo& candidate, const TypeInfo& actual);
+static MatchScore match_struct(const TypeInfo& candidate, const TypeInfo& actual);
 
 
 class TypeCheckHelper {
@@ -51,7 +88,7 @@ public:
         if (!specified)
             return;
         if (specified.is_struct() && inferred.is_struct()) {
-            if (match_struct(inferred, specified) == Match::None)
+            if (!match_struct(inferred, specified))
                 throw StructTypeMismatch(specified, loc);
             return;
         }
@@ -68,7 +105,7 @@ public:
             });
         if (spec_it == spec_items.end())
             throw StructUnknownKey(type(), key, loc);
-        if (match_type(inferred, spec_it->second) == Match::None)
+        if (!match_type(inferred, spec_it->second))
             throw StructKeyTypeMismatch(type(), spec_it->second, inferred, loc);
     }
 
@@ -80,45 +117,96 @@ private:
 };
 
 
-/// \returns Match: None/Generic/Partial
-static Match match_type(const TypeInfo& inferred, const TypeInfo& actual)
+static MatchScore match_params(const std::vector<TypeInfo>& candidate, const std::vector<TypeInfo>& actual)
 {
-    if (actual.is_struct() && inferred.is_struct())
-        return match_struct(inferred, actual);
-    return inferred == actual
-        ? ( (actual.is_generic() || inferred.is_generic()) ? Match::Generic : Match::Partial)
-        : Match::None;
+    if (candidate.size() != actual.size())
+        return MatchScore(-1);
+    MatchScore score;
+    for (size_t i = 0; i != actual.size(); ++i) {
+        auto m = match_type(candidate[i], actual[i]);
+        if (!m)
+            return MatchScore(-1);
+        score += m;
+    }
+    return score;
+}
+
+
+/// \returns Match: None/Generic/Partial
+static MatchScore match_type(const TypeInfo& candidate, const TypeInfo& actual)
+{
+    if (actual.is_struct() && candidate.is_struct())
+        return match_struct(candidate, actual);
+    if (candidate == actual) {
+        if (actual.is_generic() || candidate.is_generic())
+            return MatchScore(0, 0, 1);
+        else
+            return MatchScore(1);
+    }
+    return MatchScore(-1);
 }
 
 
 /// Match incomplete Struct type from ast::StructInit to resolved Struct type.
 /// All keys and types from inferred are checked against resolved.
 /// Partial match is possible when inferred has less keys than resolved.
-/// \param inferred     Possibly incomplete Struct type as constructed from AST
+/// \param candidate    Possibly incomplete Struct type as constructed from AST
 /// \param resolved     Actual resolved type for the value
 /// \returns  Match: None/Generic/Partial (full match not distinguished)
-static Match match_struct(const TypeInfo& inferred, const TypeInfo& actual)
+static MatchScore match_struct(const TypeInfo& candidate, const TypeInfo& actual)
 {
-    assert(inferred.is_struct());
+    assert(candidate.is_struct());
     assert(actual.is_struct());
     const auto& actual_items = actual.struct_items();
-    auto res = Match::Partial;
-    for (const auto& inf : inferred.struct_items()) {
+    MatchScore res;
+    for (const auto& inf : candidate.struct_items()) {
         auto act_it = std::find_if(actual_items.begin(), actual_items.end(),
                 [&inf](const TypeInfo::StructItem& act) {
                   return act.first == inf.first;
                 });
         if (act_it == actual_items.end())
-            return Match::None;  // not found
+            return MatchScore(-1);  // not found
         // check item type
         auto m = match_type(TypeInfo(inf.second), act_it->second);
-        switch (m) {
-            case Match::None: return m;  // item type doesn't match
-            case Match::Generic: res = m; break; // unknown/generic
-            default: break;
-        }
+        if (!m)
+            return MatchScore(-1);  // item type doesn't match
+        res += m;
     }
     return res;
+}
+
+
+struct Candidate {
+    Module* module;
+    Index index;
+    SymbolPointer symptr;
+    TypeInfo type;
+    MatchScore match;
+};
+
+
+/// Find best match from candidates
+static std::pair<const Candidate*, bool> find_best_candidate(const std::vector<Candidate>& candidates)
+{
+    bool conflict = false;
+    MatchScore score(-1);
+    const Candidate* found = nullptr;
+    for (const auto& item : candidates) {
+        if (!item.match)
+            continue;
+        if (item.match > score) {
+            // found better match
+            score = item.match;
+            found = &item;
+            conflict = false;
+            continue;
+        }
+        if (item.match == score) {
+            // found same match -> conflict
+            conflict = true;
+        }
+    }
+    return {found, conflict};
 }
 
 
@@ -141,15 +229,16 @@ public:
         }
 
         if (m_class != nullptr) {
-            auto idx = m_class->add_function_type(move(m_type_info));
-            dfn.variable.identifier.symbol->set_index(idx);
-            return;
+            const auto& psym = dfn.variable.identifier.symbol;
+            m_class->add_function(psym->index());
         }
 
         if (m_instance != nullptr) {
             // evaluate type according to class and type vars
             const auto& psym = dfn.variable.identifier.symbol;
-            TypeInfo eval_type = m_instance->class_().get_function_type(psym->ref()->index());
+            Index cls_fn_idx = psym->ref()->index();
+            const auto& cls_fn = module().get_function(cls_fn_idx);
+            TypeInfo eval_type {cls_fn.signature_ptr()};
             for (const auto&& [i, t] : m_instance->types() | enumerate)
                 eval_type.replace_var(i + 1, t);
 
@@ -160,7 +249,8 @@ public:
 
             m_type_info = move(eval_type);
 
-            m_instance->set_function(psym->ref()->index(), psym->index());
+            auto idx_in_cls = m_instance->class_().get_function_index(cls_fn_idx);
+            m_instance->set_function(idx_in_cls, psym->index(), psym);
         }
 
         // Expression might use the specified type from `m_type_info`
@@ -281,7 +371,7 @@ public:
     }
 
     void visit(ast::StructInit& v) override {
-        if (v.struct_type) {
+        if (!v.struct_type.is_unknown()) {
             // second pass (from ast::WithContext):
             // * v.struct_type is the inferred type
             // * m_type_info is the final struct type
@@ -291,7 +381,7 @@ public:
             }
             if (m_type_info.type() != Type::Struct)
                 throw StructTypeMismatch(m_type_info, v.source_loc);
-            if (match_struct(v.struct_type, m_type_info) == Match::None)
+            if (!match_struct(v.struct_type, m_type_info))
                 throw StructTypeMismatch(m_type_info, v.source_loc);
             v.struct_type = move(m_type_info);
             m_value_type = v.struct_type;
@@ -301,7 +391,7 @@ public:
         //              and check it matches specified type (if any)
         TypeCheckHelper type_check(move(m_type_info), move(m_cast_type));
         const auto& specified = type_check.type();
-        if (specified && specified.type() != Type::Struct)
+        if (!specified.is_unknown() && specified.type() != Type::Struct)
             throw StructTypeMismatch(specified, v.source_loc);
         // build TypeInfo for the struct initializer
         TypeInfo::StructItems ti_items;
@@ -315,13 +405,13 @@ public:
             // resolve item type
             item.second->apply(*this);
             auto item_type = m_value_type.effective_type();
-            if (specified)
+            if (!specified.is_unknown())
                 type_check.check_struct_item(item.first.name, item_type, item.second->source_loc);
             ti_items.emplace_back(item.first.name, item_type);
         }
         v.struct_type = TypeInfo(move(ti_items));
-        if (specified) {
-            assert(match_struct(v.struct_type, specified) != Match::None);  // already checked above
+        if (!specified.is_unknown()) {
+            assert(match_struct(v.struct_type, specified));  // already checked above
             v.struct_type = std::move(type_check.type());
         }
         m_value_type = v.struct_type;
@@ -395,14 +485,10 @@ public:
                 // find prototype of the function, resolve actual type of T
                 const auto& symmod = symtab.module() == nullptr ? module() : *symtab.module();
                 auto& cls = symmod.get_class(sym.index());
-                const auto& cls_fn = cls.get_function_type(sym.ref()->index());
+                Index cls_fn_idx = cls.get_function_index(sym.ref()->index());
+                const auto& cls_fn = symmod.get_function(sym.ref()->index());
                 auto inst_types = resolve_instance_types(cls_fn.signature());
                 // find instance using resolved T
-                struct Candidate {
-                    Module* module;
-                    Index index;
-                    Match match;
-                };
                 std::vector<Candidate> candidates;
                 auto inst_psym = v.chain;
                 while (inst_psym) {
@@ -411,51 +497,35 @@ public:
                     if (inst_mod == nullptr)
                         inst_mod = &module();
                     auto& inst = inst_mod->get_instance(inst_psym->index());
-                    auto fn_idx = inst.get_function(sym.ref()->index());
-                    if (inst.types() == inst_types) {
-                        // find instance function
-                        Match m = (ranges::any_of(inst_types, [](const TypeInfo& t) { return t.is_unknown(); }))
-                                  ? Match::Partial : Match::Exact;
-                        candidates.push_back({inst_mod, fn_idx, m});
-                    } else {
-                        candidates.push_back({inst_mod, fn_idx, Match::None});
-                    }
+                    auto inst_fn = inst.get_function(cls_fn_idx);
+                    auto m = match_params(inst.types(), inst_types);
+                    candidates.push_back({inst_mod, inst_fn.index, inst_psym, TypeInfo{}, m});
                     inst_psym = inst_psym->next();
                 }
 
-                // check for single exact match
-                const auto exact_candidates = candidates
-                        | filter([](const Candidate& c){ return c.match == Match::Exact; })
-                        | to<std::vector>();
-                if (exact_candidates.size() == 1) {
-                    const auto& c = exact_candidates.front();
-                    auto& fn = c.module->get_function(c.index);
-                    v.module = c.module;
-                    v.index = c.index;
+                auto [found, conflict] = find_best_candidate(candidates);
+
+                if (found && !conflict) {
+                    auto spec_idx = specialize_instance(found->symptr, cls_fn_idx, v.identifier.source_loc);
+                    if (spec_idx != no_index) {
+                        auto& inst = module().get_instance(spec_idx);
+                        auto inst_fn_idx = inst.get_function(cls_fn_idx).index;
+                        v.module = &module();
+                        v.index = inst_fn_idx;
+                    } else {
+                        v.module = found->module;
+                        v.index = found->index;
+                    }
+                    auto& fn = v.module->get_function(v.index);
                     m_value_type = TypeInfo{fn.signature_ptr()};
                     break;
-                }
-
-                // check for single partial match
-                if (exact_candidates.empty()) {
-                    const auto partial_candidates = candidates
-                          | filter([](const Candidate& c){ return c.match == Match::Partial; })
-                          | to<std::vector>();
-                    if (partial_candidates.size() == 1) {
-                        const auto& c = partial_candidates.front();
-                        auto& fn = c.module->get_function(c.index);
-                        v.module = c.module;
-                        v.index = c.index;
-                        m_value_type = TypeInfo{fn.signature_ptr()};
-                        break;
-                    }
                 }
 
                 // ERROR couldn't find single matching instance for `args`
                 stringstream o_candidates;
                 for (const auto& c : candidates) {
                     auto& fn = c.module->get_function(c.index);
-                    o_candidates << "   " << match_to_cstr(c.match) << "  "
+                    o_candidates << "   " << c.match << "  "
                                  << fn.signature() << endl;
                 }
                 stringstream o_ftype;
@@ -466,13 +536,16 @@ public:
                 }
                 if (m_call_ret)
                     o_ftype << " -> " << m_call_ret;
-                if (exact_candidates.empty())
-                    throw FunctionNotFound(v.identifier.name, o_ftype.str(), o_candidates.str(), v.identifier.source_loc);
-                else
+                if (conflict)
                     throw FunctionConflict(v.identifier.name, o_ftype.str(), o_candidates.str(), v.identifier.source_loc);
+                else
+                    throw FunctionNotFound(v.identifier.name, o_ftype.str(), o_candidates.str(), v.identifier.source_loc);
             }
             case Symbol::Function: {
                 auto res = resolve_overload(v.identifier.symbol, v.identifier);
+                // The referenced function must have been defined
+                if (!res.type.effective_type())
+                    throw MissingExplicitType(v.identifier.name, v.identifier.source_loc);
                 v.module = res.module;
                 v.index = res.index;
                 m_value_type = res.type;
@@ -557,7 +630,7 @@ public:
         v.callable->apply(*this);
         v.intrinsic = m_intrinsic;
 
-        if (m_value_type && !m_value_type.is_callable() && !m_call_args.empty()) {
+        if (!m_value_type.is_unknown() && !m_value_type.is_callable() && !m_call_args.empty()) {
             throw UnexpectedArgument(1, m_call_args[0].source_loc);
         }
 
@@ -598,6 +671,7 @@ public:
             }
         }
         m_call_args.clear();
+        m_call_ret = {};
     }
 
     void visit(ast::OpCall& v) override {
@@ -646,6 +720,7 @@ public:
         m_call_ret = ti_void();
         v.leave_function.apply(*this);
         m_call_args.clear();
+        m_call_ret = {};
         // resolve type of expression - it's also the type of the whole "with" expression
         v.expression->apply(*this);
         v.expression_type = m_value_type.effective_type();
@@ -653,7 +728,7 @@ public:
 
     void visit(ast::Function& v) override {
         Function& fn = module().get_function(v.index);
-        // specified type (left hand side of '=')
+        // specified type (left-hand side of '=')
         TypeInfo specified_type;
         if (v.definition) {
             specified_type = move(m_type_info);
@@ -669,16 +744,18 @@ public:
         // lambda type (right hand side of '=')
         v.type.apply(*this);
         assert(m_type_info);
-        // fill in / check type from specified type
+        if (!m_instance && specified_type && specified_type != m_type_info.effective_type())
+            throw DeclarationTypeMismatch(specified_type, m_type_info, v.source_loc);
+        // fill in types from specified function type
         if (specified_type.is_callable()) {
-            if (!m_type_info.signature().return_type && specified_type.signature().return_type)
+            if (m_type_info.signature().return_type.is_unknown() && specified_type.signature().return_type)
                 m_type_info.signature().set_return_type(specified_type.signature().return_type);
             size_t idx = 0;
             auto& params = m_type_info.signature().params;
             for (const auto& sp : specified_type.signature().params) {
                 if (idx >= params.size())
                     params.emplace_back(sp);
-                else if (!params[idx])
+                else if (params[idx].is_unknown())
                     params[idx] = sp;
                 // specified param must match now
                 if (params[idx] != sp)
@@ -731,7 +808,7 @@ public:
             m_value_type = m_value_type.signature().return_type;
         }*/
         // check specified type again - in case it wasn't Function
-        if (!m_value_type.is_callable() && specified_type) {
+        if (!m_value_type.is_callable() && !specified_type.is_unknown()) {
             if (m_value_type != specified_type)
                 throw DefinitionTypeMismatch(specified_type, m_value_type, v.source_loc);
         }
@@ -751,7 +828,7 @@ public:
         v.from_type = move(m_value_type);
         // cast to Void -> don't call the cast function, just drop the expression result from stack
         // cast to the same type -> noop
-        if (v.to_type.is_void() || v.from_type == v.to_type) {
+        if (v.to_type.is_void() || v.from_type.effective_type() == v.to_type) {
             v.cast_function.reset();
             m_value_type = v.to_type;
             return;
@@ -766,22 +843,7 @@ public:
     }
 
     void visit(ast::TypeName& t) final {
-        switch (t.symbol->type()) {
-            case Symbol::TypeName:
-                m_type_info = t.symbol.symtab()->module()->get_type(t.symbol->index());
-                break;
-            case Symbol::TypeVar: {
-                const auto& type_args = m_function.signature().type_args;
-                if (t.symbol.symtab() == &m_function.symtab()
-                && t.symbol->index() <= type_args.size())
-                    m_type_info = type_args[t.symbol->index() - 1];
-                else
-                    m_type_info = TypeInfo{ TypeInfo::Var(t.symbol->index()) };
-                break;
-            }
-            default:
-                break;
-        }
+        m_type_info = resolve_type_name(t.symbol);
     }
 
     void visit(ast::FunctionType& t) final {
@@ -840,6 +902,24 @@ private:
         return type_id;
     }
 
+    TypeInfo resolve_type_name(SymbolPointer symptr) {
+        switch (symptr->type()) {
+            case Symbol::TypeName:
+                return symptr.symtab()->module()->get_type(symptr->index());
+            case Symbol::TypeVar: {
+                const auto& type_args = m_function.signature().type_args;
+                if (symptr.symtab() == &m_function.symtab()
+                    && symptr->index() <= type_args.size())
+                    return type_args[symptr->index() - 1];
+                return TypeInfo{ TypeInfo::Var(symptr->index()) };
+            }
+            case Symbol::Nonlocal:
+                return resolve_type_name(symptr->ref());
+            default:
+                return {};
+        }
+    }
+
     void specialize_arg(const TypeInfo& sig, const TypeInfo& deduced,
                         std::vector<TypeInfo>& resolved,
                         const std::function<void(const TypeInfo& exp, const TypeInfo& got)>& exc_cb) const
@@ -848,9 +928,10 @@ private:
             case Type::Unknown: {
                 auto var = sig.generic_var();
                 if (var > 0) {
+                    // make space for additional type var
                     if (resolved.size() < var)
                         resolved.resize(var);
-                    if (!resolved[var-1])
+                    if (resolved[var-1].is_unknown())
                         resolved[var-1] = deduced;
                     else if (resolved[var-1] != deduced)
                         exc_cb(resolved[var-1], deduced);
@@ -911,9 +992,11 @@ private:
     // Check return type matches and set it to concrete type if it's generic.
     void resolve_return_type(Signature& sig, const TypeInfo& deduced, const SourceLocation& loc) const
     {
-        if (!sig.return_type) {
-            if (!deduced && !sig.is_generic())
+        if (sig.return_type.is_unknown()) {
+            if (deduced.is_unknown() && !sig.is_generic())
                 throw MissingExplicitType(loc);
+            if (deduced.is_callable() && &sig == &deduced.signature())
+                throw MissingExplicitType(loc);  // the return type is recursive!
             specialize_arg(sig.return_type, deduced, sig.type_args,
                     [](const TypeInfo& exp, const TypeInfo& got) {
                         throw UnexpectedReturnType(exp, got);
@@ -979,6 +1062,18 @@ private:
             return {};  // not generic, nothing to specialize
         if (fn.signature().params.size() > m_call_args.size())
             return {};  // not enough call args
+
+        // Check already created specializations if one of them matches
+        for (auto spec_idx : module().get_spec_functions(symptr)) {
+            auto& spec_fn = module().get_function(spec_idx);
+            const auto& spec_sig = spec_fn.signature_ptr();
+            if (match_signature(*spec_sig).is_exact())
+                return std::make_optional<Specialized>({
+                        TypeInfo{spec_sig},
+                        spec_idx
+                });
+        }
+
         Function fspec(module(), fn.symtab());
         fspec.set_signature(std::make_shared<Signature>(fn.signature()));  // copy, not ref
         fspec.set_ast(fn.ast());
@@ -991,20 +1086,63 @@ private:
                 TypeInfo{fspec_sig},
                 fspec_idx
         });
-        assert(!symptr->ref());
         assert(symptr->depth() == 0);
         // add to specialized functions in this module
         module().add_spec_function(symptr, fspec_idx);
         return res;
     }
 
-    struct Candidate {
-        Module* module;
-        Index index;
-        SymbolPointer symptr;
-        TypeInfo type;
-        Match match;
-    };
+    /// Specialize a generic instance and all functions it contains
+    /// * create a specialized copy of the instance in module()
+    /// * create specialized copies of all instance functions in module()
+    /// * refer to original symbols (no new symbols are created)
+    /// \param symptr       SymbolPointer to the generic instance
+    /// \param cls_fn_idx   Index in class of the called method, to help resolving instance types
+    /// \param loc          SourceLocation of an expression that is being compiled
+    /// \returns Index of the specialized instance in module()
+    ///          or no_index if the original instance is not generic
+    Index specialize_instance(SymbolPointer symptr,
+                              Index cls_fn_idx,
+                              const SourceLocation& loc)
+    {
+        auto* inst_mod = symptr.symtab()->module();
+        auto& inst = inst_mod->get_instance(symptr->index());
+        if (!inst.is_generic())
+            return no_index;
+
+        // Resolve instance types using the m_call_args
+        // and the called method (instance function with known Index)
+        const auto& called_inst_fn = inst.get_function(cls_fn_idx).symptr.get_function();
+        auto resolved_types = resolve_instance_types(called_inst_fn.signature());
+        auto inst_types = inst.types();
+        for (auto& it : inst_types)
+            resolve_generic_type(resolved_types, it);
+
+        // Check already created specializations if one of them matches
+        for (auto spec_idx : module().get_spec_instances(symptr)) {
+            auto& spec_inst = module().get_instance(spec_idx);
+            if (spec_inst.types() == inst_types)
+                return spec_idx;
+        }
+
+        Instance spec(inst.class_(), inst.symtab());
+        spec.set_types(inst_types);
+
+        for (size_t i = 0; i != inst.num_functions(); ++i) {
+            auto fn_info = inst.get_function(i);
+            auto specialized = specialize_function(fn_info.symptr, loc);
+            if (specialized) {
+                spec.set_function(i, specialized->index, fn_info.symptr);
+            } else {
+                spec.set_function(i, fn_info.index, fn_info.symptr);
+            }
+        }
+
+        // add to specialized instance in this module
+        auto spec_idx = module().add_instance(move(spec)).index;
+        module().add_spec_instance(symptr, spec_idx);
+        return spec_idx;
+    }
 
     /// Find matching function overload according to m_call_args
     Candidate resolve_overload(SymbolPointer symptr, const ast::Identifier& identifier)
@@ -1020,41 +1158,13 @@ private:
                 symmod = &module();
             auto& fn = symmod->get_function(symptr->index());
             const auto& sig_ptr = fn.signature_ptr();
-            auto m = match_params(*sig_ptr);
+            auto m = match_signature(*sig_ptr);
             candidates.push_back({symmod, symptr->index(), symptr, TypeInfo{sig_ptr}, m});
-
-            // Check also specializations when the function is generic
-            if (fn.has_generic_params()) {
-                for (auto spec_idx : module().get_spec_functions(symptr)) {
-                    auto& spec_fn = module().get_function(spec_idx);
-                    const auto& spec_sig = spec_fn.signature_ptr();
-                    auto spec_m = match_params(*spec_sig);
-                    candidates.push_back({&module(), spec_idx, {}, TypeInfo{spec_sig}, spec_m});
-                }
-            }
 
             symptr = symptr->next();
         }
 
-        // find best match from candidates
-        bool conflict = false;
-        Match m = Match::None;
-        Candidate* found = nullptr;
-        for (auto& item : candidates) {
-            if (item.match == Match::None)
-                continue;
-            if (item.match > m) {
-                // found better match
-                m = item.match;
-                found = &item;
-                conflict = false;
-                continue;
-            }
-            if (item.match == m) {
-                // found same match -> conflict
-                conflict = true;
-            }
-        }
+        auto [found, conflict] = find_best_candidate(candidates);
 
         if (found && !conflict) {
             if (found->symptr) {
@@ -1074,20 +1184,23 @@ private:
         stringstream o_candidates;
         for (const auto& c : candidates) {
             auto& fn = c.module->get_function(c.index);
-            o_candidates << "   " << match_to_cstr(c.match) << "  "
+            o_candidates << "   " << c.match << "  "
                          << fn.signature() << endl;
         }
-        stringstream o_args;
+        stringstream o_ftype;
         for (const auto& arg : m_call_args) {
-            o_args << arg.type_info << ' ';
+            if (&arg != &m_call_args.front())
+                o_ftype << ' ';
+            o_ftype << arg.type_info;
         }
-
+        if (m_call_ret)
+            o_ftype << " -> " << m_call_ret;
         if (conflict) {
             // ERROR found multiple matching functions
-            throw FunctionConflict(identifier.name, o_args.str(), o_candidates.str(), identifier.source_loc);
+            throw FunctionConflict(identifier.name, o_ftype.str(), o_candidates.str(), identifier.source_loc);
         } else {
             // ERROR couldn't find matching function for `args`
-            throw FunctionNotFound(identifier.name, o_args.str(), o_candidates.str(), identifier.source_loc);
+            throw FunctionNotFound(identifier.name, o_ftype.str(), o_candidates.str(), identifier.source_loc);
         }
     }
 
@@ -1130,45 +1243,45 @@ private:
         return res;
     }
 
-    static const char* match_to_cstr(Match m) {
-        switch (m) {
-            case Match::None: return "[ ]";
-            case Match::Generic: return "[?]";
-            case Match::Partial: return "[~]";
-            case Match::Exact: return "[x]";
-        }
-        UNREACHABLE;
-    }
-
     /// \returns Match: None/Generic/Partial/Exact
     /// Partial match means the signature has less parameters than call args.
-    Match match_params(const Signature& signature) const
+    MatchScore match_signature(const Signature& signature) const
     {
-        auto sig = std::make_unique<Signature>(signature);
-        Match res = Match::Partial;
+        Signature sig = signature;  // a copy to work on (modified below)
+        MatchScore res;
         for (const auto& arg : m_call_args) {
             // check there are more params to consume
-            while (sig->params.empty()) {
-                if (sig->return_type.type() == Type::Function) {
+            while (sig.params.empty()) {
+                if (sig.return_type.type() == Type::Function) {
                     // collapse returned function, start consuming its params
-                    sig = std::make_unique<Signature>(sig->return_type.signature());
+                    sig = sig.return_type.signature();
                 } else {
                     // unexpected argument
-                    return Match::None;
+                    return MatchScore(-1);
                 }
             }
             // check type of next param
-            auto m = match_type(arg.type_info, sig->params[0]);
-            switch (m) {
-                case Match::None: return m;
-                case Match::Generic: res = m; break;
-                default: break;
-            }
+            auto m = match_type(arg.type_info, sig.params[0]);
+            if (!m)
+                return MatchScore(-1);
+            res += m;
             // consume next param
-            sig->params.erase(sig->params.begin());
+            sig.params.erase(sig.params.begin());
         }
-        if (sig->params.empty() && res == Match::Partial)
-            return Match::Exact;
+        // check return type
+        if (m_call_ret) {
+            auto m = match_type(m_call_ret, sig.return_type);
+            if (!m)
+                return MatchScore(-1);
+            res += m;
+        }
+        if (m_cast_type) {
+            // increase score if casting target type matches return type,
+            // but don't fail if it doesn't match
+            auto m = match_type(m_cast_type, sig.return_type);
+            if (m)
+                res += m;
+        }
         return res;
     }
 
@@ -1203,24 +1316,20 @@ private:
             }
             // resolve T (only from original signature)
             const auto& prm = sig->params[i_prm];
-            if (prm.is_unknown() && sig == &signature) {
-                auto var = prm.generic_var();
-                assert(var != 0);
-                // make space for additional type var in the result
-                if (var > res.size())
-                    res.resize(var);
-                auto arg_type = arg.type_info.effective_type();
-                if (res[var-1].is_unknown())
-                    res[var-1] = arg_type;
-                else if (res[var-1] != arg_type)
-                    throw UnexpectedArgumentType(i_arg, res[var-1], arg_type,
-                            arg.source_loc);
-            }
+
             // check type of next param
             if (prm != arg.type_info) {
                 throw UnexpectedArgumentType(i_arg, prm,
                         arg.type_info, arg.source_loc);
             }
+
+            auto arg_type = arg.type_info.effective_type();
+            specialize_arg(prm, arg_type, res,
+                    [i_arg, &arg](const TypeInfo& exp, const TypeInfo& got) {
+                        throw UnexpectedArgumentType(i_arg, exp, got,
+                            arg.source_loc);
+                    });
+
             // consume next param
             ++i_prm;
         }
@@ -1228,8 +1337,14 @@ private:
         if (signature.return_type.is_unknown()) {
             auto var = signature.return_type.generic_var();
             assert(var != 0);
-            if (res[var - 1].is_unknown())
-                res[var - 1] = m_call_ret;
+            if (res[var - 1].is_unknown()) {
+                if (!m_call_ret.is_unknown())
+                    res[var - 1] = m_call_ret;
+                if (!m_cast_type.is_unknown())
+                    res[var - 1] = m_cast_type.effective_type();
+                if (m_type_info)
+                    res[var - 1] = m_type_info;
+            }
         }
         return res;
     }
@@ -1238,7 +1353,7 @@ private:
 
     TypeInfo m_type_info;   // resolved ast::Type
     TypeInfo m_value_type;  // inferred type of the value
-    TypeInfo m_cast_type;   // target type of a Cast
+    TypeInfo m_cast_type;   // target type of Cast
 
     // signature for resolving overloaded functions and templates
     CallArgs m_call_args;  // actual argument types

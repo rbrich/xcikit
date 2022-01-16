@@ -1,7 +1,7 @@
 // Machine.cpp created on 2019-05-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Machine.h"
@@ -290,6 +290,26 @@ void Machine::run(const InvokeCallback& cb)
                 item.incref();
                 lhs.decref();
                 m_stack.push(item);
+                break;
+            }
+
+            case Opcode::Length: {
+                const auto& elem_ti = read_type_arg();
+                auto arg = m_stack.pull_typed(ti_list(TypeInfo(elem_ti)));
+                auto len = arg.get<ListV>().length();
+                arg.decref();
+                m_stack.push(value::UInt32(len));
+                break;
+            }
+
+            case Opcode::Slice: {
+                const auto& elem_ti = read_type_arg();
+                auto list = m_stack.pull_typed(ti_list(TypeInfo(elem_ti)));
+                auto idx1 = m_stack.pull<value::Int32>().value();
+                auto idx2 = m_stack.pull<value::Int32>().value();
+                auto step = m_stack.pull<value::Int32>().value();
+                list.get<ListV>().slice(idx1, idx2, step, elem_ti);
+                m_stack.push(list);
                 break;
             }
 

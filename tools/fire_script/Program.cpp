@@ -65,7 +65,7 @@ void Program::process_args(char* argv[])
             if (!repl.evaluate(module_name, *content,
                     opts.prog_opts.compile ? EvalMode::Compile : EvalMode::SingleInput))
                 exit(1);
-            if (opts.prog_opts.compile) {
+            if (opts.prog_opts.compile && !ctx.input_modules.empty()) {
                 std::string out_path = opts.prog_opts.output_file;
                 if (out_path.empty()) {
                     out_path = input_file;

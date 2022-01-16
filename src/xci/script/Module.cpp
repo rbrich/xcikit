@@ -1,7 +1,7 @@
 // Module.cpp created on 2019-06-12 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Module.h"
@@ -167,6 +167,24 @@ void Module::add_spec_function(SymbolPointer gen_fn, Index spec_fn_idx)
 std::vector<Index> Module::get_spec_functions(SymbolPointer gen_fn)
 {
     auto [beg, end] = m_spec_functions.equal_range(gen_fn);
+    std::vector<Index> res;
+    res.reserve(std::distance(beg, end));
+    std::transform(beg, end, std::back_inserter(res), [](auto item){
+        return item.second;
+    });
+    return res;
+}
+
+
+void Module::add_spec_instance(SymbolPointer gen_inst, Index spec_inst_idx)
+{
+    m_spec_instances.emplace(gen_inst, spec_inst_idx);
+}
+
+
+std::vector<Index> Module::get_spec_instances(SymbolPointer gen_inst)
+{
+    auto [beg, end] = m_spec_instances.equal_range(gen_inst);
     std::vector<Index> res;
     res.reserve(std::distance(beg, end));
     std::transform(beg, end, std::back_inserter(res), [](auto item){

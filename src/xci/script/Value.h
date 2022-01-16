@@ -1,7 +1,7 @@
 // Value.h created on 2019-05-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_VALUE_H
@@ -113,6 +113,11 @@ struct ListV {
     bool operator ==(const ListV& rhs) const { return slot.slot() == rhs.slot.slot(); }  // same slot - cannot compare content without elem_type
     size_t length() const;
     Value value_at(size_t idx, const TypeInfo& elem_type) const;
+
+    /// Slice the list. Indexes work similarly to Python.
+    /// Automatically copies the list on heap when it has more than 1 reference.
+    /// Works in-place otherwise.
+    void slice(int begin, int end, int step, const TypeInfo& elem_type);
 
     HeapSlot slot;
 };
@@ -371,6 +376,7 @@ public:
     bool is_void() const { return type() == Type::Void; }
     bool is_bool() const { return type() == Type::Bool; }
 
+    template <class T> T& get() { return m_value.get<T>(); }
     template <class T> const T& get() const { return m_value.get<T>(); }
 
 private:

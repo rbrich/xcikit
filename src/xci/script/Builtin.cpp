@@ -1,7 +1,7 @@
 // Builtin.cpp created on 2019-05-20 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Builtin.h"
@@ -99,6 +99,8 @@ void BuiltinModule::add_intrinsics()
     symtab().add({"__exp", Symbol::Instruction, Index(Opcode::Exp)});
     symtab().add({"__load_static", Symbol::Instruction, Index(Opcode::LoadStatic)});
     symtab().add({"__subscript", Symbol::Instruction, Index(Opcode::Subscript)});
+    symtab().add({"__length", Symbol::Instruction, Index(Opcode::Length)});
+    symtab().add({"__slice", Symbol::Instruction, Index(Opcode::Slice)});
     symtab().add({"__cast", Symbol::Instruction, Index(Opcode::Cast)});
 
     // two args
@@ -301,7 +303,7 @@ void BuiltinModule::add_io_functions()
     // functions
     auto ps = add_native_function("write", {ti_string()}, ti_void(), write_string);
     auto pb = add_native_function("write", {ti_bytes()}, ti_void(), write_bytes);
-    ps->set_next(pb);
+    pb->set_next(ps);
     add_native_function("flush", {}, ti_void(), flush_out);
     add_native_function("error", {ti_string()}, ti_void(), write_error);
     add_native_function("read", {ti_int32()}, ti_string(), read_string);
@@ -316,12 +318,12 @@ void BuiltinModule::add_io_functions()
     auto leave3 = add_native_function("leave", {ti_tuple(ti_stream(), ti_stream(), ti_stream())}, ti_void(), output_stream_leave3);
     auto enter_s = add_native_function("enter", {streams}, TypeInfo(streams), output_stream_enter3);
     auto leave_s = add_native_function("leave", {streams}, ti_void(), output_stream_leave3);
-    enter1->set_next(enter2);
-    enter2->set_next(enter3);
-    enter3->set_next(enter_s);
-    leave1->set_next(leave2);
-    leave2->set_next(leave3);
-    leave3->set_next(leave_s);
+    enter_s->set_next(enter3);
+    enter3->set_next(enter2);
+    enter2->set_next(enter1);
+    leave_s->set_next(leave3);
+    leave3->set_next(leave2);
+    leave2->set_next(leave1);
 }
 
 

@@ -6,7 +6,7 @@ endif::[]
 
 = Fire Script
 
-*_Language description, v0.6_*
+*_Language description, v0.7_*
 
 toc::[]
 
@@ -245,9 +245,13 @@ j = 1 + 2
 k = add2 1 2
 
 // error, redefinition of a name
-k = 1; k = k + 1
+k = 1; k = 2
 
-// ok, inner `m` has value `2`
+// ok, inner `l` has its own scope
+l = 1; { l = 2 }
+
+// error: type of 'm' cannot be inferred
+// (the third 'm' refers to the second one, not the first, outer one)
 m = 1; { m = m + 1 }
 
 // variable type can be explicitly declared
@@ -408,6 +412,47 @@ Record field lookup:
 MyRecord = (String name, Int age)
 rec = MyRecord("A name", 42)
 rec.name    // dot operator
+----
+
+
+=== Overloading functions
+
+Plain functions may be overloaded, but the mechanic is somewhat limited.
+See <<Type classes>> for more flexible construct for function overloading.
+
+The limitations are:
+
+* All overloads must be defined in the same scope (module, function).
+* A forward declaration is possible only for the immediately following overload.
+
+The overloads have to differ in a type:
+
+[source,fire]
+----
+f : Int -> Int = fun a { a }
+f : Float -> Float = fun a { a }
+f : String -> String = fun a { a }
+----
+
+The type has to be declared on the left-hand side,
+it cannot be inferred from the function type on right-hand side:
+
+[source,fire]
+----
+f = fun a:Int -> Int { a }
+f = fun a:Float -> Float { a }  // error: redefined name f
+----
+
+Plain variables are also functions and may be overloaded:
+
+[source,fire]
+----
+a : Int = 2
+a : String = "two"
+a           // error - cannot be uniquely resolved
+a:Int       // -> 2
+a:String    // -> "two"
+a:Int64     // error - cannot be uniquely resolved
 ----
 
 

@@ -1,7 +1,7 @@
 // SymbolTable.h created on 2019-07-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_SYMBOL_TABLE_H
@@ -65,9 +65,9 @@ public:
         Function,           // static function
         Value,              // static value
         TypeName,           // type information (index = type index in module)
-        Class,              // type class
-        Instance,           // instance of type class
-        Method,             // method declaration: index = class index, ref = symbol in class scope
+        Class,              // type class (index = class index in module)
+        Instance,           // instance of type class (index = instance index in module)
+        Method,             // method declaration (index = class index, ref = symbol in class scope)
 
         // function scope
         Parameter,          // function parameter

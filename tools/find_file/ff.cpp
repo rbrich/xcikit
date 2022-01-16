@@ -462,7 +462,7 @@ class HyperscanDatabase: private NonCopyable {
 public:
     ~HyperscanDatabase() { hs_free_database(m_db); }
 
-    operator bool() const { return m_db != nullptr; }
+    explicit operator bool() const { return m_db != nullptr; }
     operator const hs_database_t *() const { return m_db; }
 
     void add(const char* pattern, unsigned int flags, unsigned int id=0) {

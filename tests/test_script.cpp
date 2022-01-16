@@ -264,9 +264,9 @@ TEST_CASE( "Operator precedence", "[script][parser]" )
     CHECK(parse("a fun b {} c") == "a fun b {} c");
     CHECK(parse("a (fun b {}) c") == "a (fun b {}) c");
     // function calls
-    CHECK(interpret_std("succ 9 + max 5 4 + 1") == "16");
-    CHECK(interpret_std("(succ 9) + (max 5 4) + 1") == "16");
-    CHECK(interpret_std("succ 9 + 5 .max 4 + 1") == "16");
+    CHECK(interpret_std("succ 9 + larger 5 4 + 1") == "16");
+    CHECK(interpret_std("(succ 9) + (larger 5 4) + 1") == "16");
+    CHECK(interpret_std("succ 9 + 5 .larger 4 + 1") == "16");
     CHECK(interpret_std("1 .add 2 .mul 3") == "9");
     CHECK(interpret_std("(1 .add 2).mul 3") == "9");
     CHECK(interpret_std("1 .add (2 .mul 3)") == "7");
@@ -385,6 +385,21 @@ TEST_CASE( "Literals", "[script][interpreter]" )
     CHECK_THROWS_AS(interpret("-9223372036854775809L"), ParseError);
     CHECK(interpret("18446744073709551615ul") == "18446744073709551615UL");
     CHECK_THROWS_AS(interpret("18446744073709551616UL"), ParseError);
+}
+
+
+TEST_CASE( "Variables", "[script][interpreter]" )
+{
+    CHECK_THROWS_AS(interpret_std("a=1; a=\"asb\""), RedefinedName);
+    CHECK_THROWS_AS(interpret_std("k = 1; k = k + 1"), RedefinedName);
+    CHECK(interpret_std("m = 1; { m = 2; m }") == "2");
+    CHECK_THROWS_AS(interpret("m = m"), MissingExplicitType);
+    CHECK_THROWS_AS(interpret("m = {m}"), MissingExplicitType);
+    CHECK_THROWS_AS(interpret("m = { m = m }"), MissingExplicitType);
+    CHECK_THROWS_AS(interpret("m = { m = m }"), MissingExplicitType);
+    CHECK_THROWS_AS(interpret_std("m = { m = m + 1 }"), MissingExplicitType);
+    CHECK(interpret_std("m = { m = 1; m }; m") == "1");
+    // "m = { m + 1 }" compiles fine, but infinitely recurses
 }
 
 
@@ -565,7 +580,7 @@ TEST_CASE( "Forward declarations", "[script][interpreter]")
     // `x` name not yet seen (the symbol resolution is strictly single-pass)
     CHECK_THROWS_AS(interpret("y=x; x=7; y"), UndefinedName);
     CHECK_THROWS_AS(interpret("y={x}; x=7; y"), UndefinedName);  // block doesn't change anything
-    CHECK_THROWS_AS(interpret_std("y=fun a {a+x}; x=7; y 2"), UndefinedName);  // function neither
+    CHECK_THROWS_AS(interpret_std("y=fun a {a+x}; x=7; y 2"), UndefinedName);  // neither does a function
     // Inside a block or function, a forward-declared value or function can be used.
     // A similar principle is used in recursion, where the function itself is considered
     // declared while processing its own body.
@@ -574,6 +589,16 @@ TEST_CASE( "Forward declarations", "[script][interpreter]")
     // Forward-declared template function
     // TODO: implement (parses fine, but the specialization is done too early, it needs to be postponed)
     //CHECK(interpret("decl f:<T> T->T; y={f 7}; f=fun x {x}; y") == "7");
+
+    // Types must match
+    CHECK_THROWS_AS(interpret("x: Int->Int = fun<T> a:T->Int64 {a}"), DeclarationTypeMismatch);
+    CHECK_THROWS_AS(interpret("decl x: Int->Int; x = fun<T> a:T->Int64 {a}"), DeclarationTypeMismatch);
+    CHECK_THROWS_AS(interpret("decl x: Int->Int; x: Float->Float = fun a {a}"), DeclarationTypeMismatch);
+    CHECK(interpret("decl x: Int->Int; x = fun a {a}; x 7") == "7");
+    CHECK(interpret("decl x: <T> T->T; x = fun a {a}; x 7") == "7");
+
+    // Multiple forward declarations for same name
+    CHECK_THROWS_AS(interpret("decl over:Int->Int; decl over:String->String"), RedefinedName);
 }
 
 
@@ -593,6 +618,25 @@ TEST_CASE( "Generic functions", "[script][interpreter]" )
     CHECK(interpret("f = fun<T> T->T { __noop }; f (f 3)") == "3");
     CHECK(interpret("f = fun<T> T->T { __noop }; 4 .f .f .f") == "4");
     CHECK(interpret("f = fun<T> T->T { __noop }; same = fun<T> x:T -> T { f (f x) }; same 5") == "5");
+}
+
+
+TEST_CASE( "Overloaded functions", "[script][interpreter]" )
+{
+    CHECK(interpret("f: <T> T -> T = fun a { a }\n"
+                    "f: String -> String = fun a { a }\n"
+                    "f: Int -> Int = fun a { a }\n"
+                    "f 3.f; f 1; f \"abc\";") == "3.0f;1;\"abc\"");
+    CHECK_THROWS_AS(interpret("f = fun a:Int -> Int { a }\n"
+                              "f = fun a:Float -> Float { a }"), RedefinedName);
+
+    // Overloaded function with forward declaration - only the first overload may be declared
+    CHECK_THROWS_AS(interpret("decl f:Int->Int; f:String->String = fun a {a}; f:Int->Int = fun a {a}"), DeclarationTypeMismatch);
+    CHECK(interpret("decl f:Int->Int; f:Int->Int = fun a {a}; f:String->String = fun a {a}; f 1; f \"abc\"") == "1;\"abc\"");
+
+    // Variables are also functions and so can be overloaded
+    CHECK(interpret_std("a:Int=2; a:String=\"two\";a:Int;a:String") == "2;\"two\"");
+    CHECK_THROWS_AS(interpret_std("a:Int=2; a:String=\"two\";a:Int64"), FunctionConflict);
 }
 
 
@@ -657,7 +701,11 @@ TEST_CASE( "Casting", "[script][interpreter]" )
     //CHECK(interpret_std("['a', 'b', 'c']:String") == "abc");
     CHECK(interpret_std("(cast 42):Int64") == "42L");
     CHECK(interpret_std("a:Int64 = cast 42; a") == "42L");
-    CHECK_THROWS_AS(interpret_std("cast 42"), FunctionNotFound);  // must specify the result type
+    CHECK_THROWS_AS(interpret_std("cast 42"), FunctionConflict);  // must specify the result type
+    CHECK(interpret_std("{23L}:Int") == "23");
+    CHECK(interpret_std("min:Int") == "-2147483648");
+    CHECK(interpret_std("max:UInt") == "4294967295U");
+    CHECK(interpret_std("a:Int = min; a") == "-2147483648");
 }
 
 
@@ -669,6 +717,7 @@ TEST_CASE( "Subscript", "[script][interpreter]" )
     CHECK(interpret("subscript = fun<T> [T] Int -> T { __subscript __type_id<T> }; subscript [1,2,3] 1") == "2");
     // std implementation
     CHECK(interpret_std("subscript [1,2,3] 1") == "2");
+    CHECK(interpret_std("[1,2,3] .subscript 0") == "1");
     CHECK(interpret_std("[1,2,3] ! 2") == "3");
     CHECK_THROWS_AS(interpret_std("[1,2,3]!3"), IndexOutOfBounds);
     CHECK(interpret_std("['a','b','c'] ! 1") == "'b'");
@@ -676,6 +725,40 @@ TEST_CASE( "Subscript", "[script][interpreter]" )
     CHECK(interpret_std("[[1,2],[3,4],[5,6]] ! 1 ! 0") == "3");
     CHECK(interpret_std("head = fun l:[Int] -> Int { l!0 }; head [1,2,3]") == "1");
     CHECK(interpret_std("head = fun<T> l:[T] -> T { l!0 }; head ['a','b','c']") == "'a'");
+}
+
+
+TEST_CASE( "Slice", "[script][interpreter]" )
+{
+    CHECK(interpret("slice = fun<T> [T] start:Int stop:Int step:Int -> [T] { __slice __type_id<T> }; [1,2,3,4,5] .slice 1 4 1") == "[2, 3, 4]");
+    // step=0 -- pick one element for a new list
+    CHECK(interpret_std("[1,2,3,4,5] .slice 3 max:Int 0") == "[4]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 3 max:Int max:Int") == "[4]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 3 min:Int min:Int") == "[4]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 0 max:Int 1") == "[1, 2, 3, 4, 5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 1 max:Int 1") == "[2, 3, 4, 5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 3 max:Int 1") == "[4, 5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 5 max:Int 1") == "[]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice -1 max:Int 1") == "[5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice -2 max:Int 1") == "[4, 5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice -5 max:Int 1") == "[1, 2, 3, 4, 5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice min:Int max:Int 1") == "[1, 2, 3, 4, 5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice min:Int max:Int 2") == "[1, 3, 5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice min:Int max:Int 3") == "[1, 4]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 2 4 1") == "[3, 4]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 1 4 2") == "[2, 4]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice max:Int min:Int -1") == "[5, 4, 3, 2, 1]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice max:Int min:Int -2") == "[5, 3, 1]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice max:Int min:Int -3") == "[5, 2]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 4 3 -1") == "[5]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 4 1 -1") == "[5, 4, 3]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice -1 -4 -1") == "[5, 4, 3]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 5 1 1") == "[]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 1 5 -1") == "[]");
+//    CHECK(interpret_std("[]:[Int] .slice 0 5 1") == "[]");
+//    CHECK(interpret_std("[]:[Int]") == "[]");
+//    CHECK(interpret_std("[]") == "[]");
+    CHECK(interpret_std("tail [1,2,3]") == "[2, 3]");
 }
 
 

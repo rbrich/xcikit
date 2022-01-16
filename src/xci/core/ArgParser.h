@@ -191,7 +191,7 @@ private:
         int dashes;
         int len;
         int end() const { return pos + dashes + len; }
-        operator bool() const { return dashes != 0 || len != 0; }
+        explicit operator bool() const { return dashes != 0 || len != 0; }
     };
     static NamePos parse_desc(const char* desc) ;
 

@@ -1,7 +1,7 @@
 // resolve_symbols.cpp created on 2019-06-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "resolve_symbols.h"
@@ -29,15 +29,31 @@ public:
         // check for name collision
         const auto& name = dfn.variable.identifier.name;
         auto symptr = symtab().find_by_name(name);
-        if (!symptr) {
-            // add new function, symbol
+
+        // allow overloading in some cases
+        // * must not have forward declaration
+        // * must be a plain function (not method)
+        // * must have explicitly specified type
+        if (!symptr
+        || (!m_class && !m_instance && dfn.variable.type && symptr->is_defined() && symptr->type() == Symbol::Function))
+        {
+            // not found or undefined -> add new function, symbol
             SymbolTable& fn_symtab = symtab().add_child(name);
             Function fn {module(), fn_symtab};
             auto fn_id = module().add_function(move(fn));
             assert(symtab().module() == &module());
-            symptr = symtab().add({name, Symbol::Function, fn_id.index});
+            auto new_symptr = symtab().add({name, Symbol::Function, fn_id.index});
+
+            // Overloaded: function's next = the preexisting function
+            if (symptr)
+                new_symptr->set_next(symptr);
+
+            symptr = new_symptr;
         } else {
-            if (symptr->is_defined())
+            // Allow redefinition only if we're defining plain function, not a method
+            if (symptr->is_defined()
+            || (!symptr->is_defined() && !dfn.expression)  // multiple forward declarations
+            || (!m_class && !m_instance && symptr->type() == Symbol::Method))
                 throw RedefinedName(name, dfn.variable.identifier.source_loc);
         }
 
@@ -117,6 +133,13 @@ public:
         v.class_name.symbol = symtab().add({sym_class, Symbol::Instance});
         v.class_name.symbol->set_next(next);
 
+        // add child symbol table for the instance
+        SymbolTable& inst_symtab = symtab().add_child(v.class_name.name);
+        m_symtab = &inst_symtab;
+
+        // generic instance - add symbols for type params
+        load_type_params(v.type_params);
+
         // resolve type_inst
         std::stringstream inst_names;
         for (auto& t : v.type_inst) {
@@ -125,11 +148,8 @@ public:
                 inst_names << ' ';
             inst_names << *t;
         }
-
-        // add child symbol table for the instance
-        SymbolTable& inst_symtab = symtab().add_child(fmt::format("{} ({})",
+        inst_symtab.set_name(fmt::format("{} ({})",
                 v.class_name.name, inst_names.str()));
-        m_symtab = &inst_symtab;
 
         // add new instance to the module
         auto& cls = module().get_class(sym_class->index());
@@ -293,14 +313,7 @@ public:
     }
 
     void visit(ast::FunctionType& t) final {
-        Index type_idx = 0;
-        std::set<std::string> type_params;  // check uniqueness
-        for (auto& tp : t.type_params) {
-            if (type_params.contains(tp.name))
-                throw RedefinedName(tp.name, tp.source_loc);
-            type_params.insert(tp.name);
-            symtab().add({tp.name, Symbol::TypeVar, ++type_idx});
-        }
+        load_type_params(t.type_params);
         /*
         for (auto& tc : t.context) {
             tc.type_class.apply(*this);
@@ -316,9 +329,10 @@ public:
             if (!p.identifier.name.empty())
                 p.identifier.symbol = symtab().add({p.identifier.name, Symbol::Parameter, par_idx++});
         }
-        if (!t.result_type)
+        if (!t.result_type && !m_instance)
             t.result_type = std::make_unique<ast::TypeName>("$R");
-        t.result_type->apply(*this);
+        if (t.result_type)
+            t.result_type->apply(*this);
     }
 
     void visit(ast::ListType& t) final {
@@ -357,12 +371,6 @@ private:
             // lookup in this and parent scopes
             size_t depth = 0;
             for (auto* p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
-                if (p_symtab->name() == name && p_symtab->parent() != nullptr) {
-                    // recursion - unwrap the function
-                    auto symptr = p_symtab->parent()->find_by_name(name);
-                    return symtab().add({symptr, Symbol::Function, no_index, depth + 1});
-                }
-
                 auto symptr = p_symtab->find_by_name(name);
                 if (symptr) {
                     if (depth > 0 && symptr->type() != Symbol::Method) {
@@ -372,6 +380,13 @@ private:
                     }
                     return symptr;
                 }
+
+                if (p_symtab->name() == name && p_symtab->parent() != nullptr) {
+                    // recursion - unwrap the function
+                    auto symptr = p_symtab->parent()->find_by_name(name);
+                    return symtab().add({symptr, Symbol::Function, no_index, depth + 1});
+                }
+
                 depth ++;
             }
         }
@@ -413,6 +428,17 @@ private:
         }
         // nowhere
         return {};
+    }
+
+    void load_type_params(const std::vector<ast::TypeName>& type_params) {
+        Index type_idx = 0;
+        std::set<std::string> unique;  // check uniqueness
+        for (auto& tp : type_params) {
+            if (unique.contains(tp.name))
+                throw RedefinedName(tp.name, tp.source_loc);
+            unique.insert(tp.name);
+            symtab().add({tp.name, Symbol::TypeVar, ++type_idx});
+        }
     }
 
 private:

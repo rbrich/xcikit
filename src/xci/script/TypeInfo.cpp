@@ -1,7 +1,7 @@
 // TypeInfo.cpp created on 2019-06-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "TypeInfo.h"
@@ -119,13 +119,15 @@ void TypeInfo::replace_var(uint8_t idx, const TypeInfo& ti)
                 *this = ti;
             break;
         case Type::Function: {
-            // work on copy of signature
-            auto sig_copy = std::make_shared<Signature>(signature());
-            for (auto& prm : sig_copy->params) {
+            SignaturePtr sig_ptr;
+            if (signature_ptr().use_count() > 1) {
+                // multiple users - make copy of the signature
+                m_info = std::make_shared<Signature>(signature());
+            }
+            for (auto& prm : signature().params) {
                 prm.replace_var(idx, ti);
             }
-            sig_copy->return_type.replace_var(idx, ti);
-            m_info = move(sig_copy);
+            signature().return_type.replace_var(idx, ti);
             break;
         }
         case Type::Tuple:
@@ -198,7 +200,7 @@ TypeInfo& TypeInfo::operator=(TypeInfo&& other) noexcept
 
 TypeInfo TypeInfo::effective_type() const
 {
-    if (is_callable() && signature().params.empty())
+    if (is_callable() && !signature().has_nonvoid_params())
         return signature().return_type.effective_type();
     return *this;
 }
@@ -292,6 +294,14 @@ bool Signature::has_generic_params() const
 {
     return ranges::any_of(params, [](const TypeInfo& type_info) {
         return type_info.is_generic();
+    });
+}
+
+
+bool Signature::has_nonvoid_params() const
+{
+    return ranges::any_of(params, [](const TypeInfo& type_info) {
+        return !type_info.is_void();
     });
 }
 

@@ -153,6 +153,8 @@ struct UnexpectedReturnType : public ScriptError {
 struct MissingExplicitType : public ScriptError {
     explicit MissingExplicitType(const SourceLocation& loc)
         : ScriptError("type cannot be inferred and wasn't specified", loc) {}
+    explicit MissingExplicitType(string_view name, const SourceLocation& loc)
+            : ScriptError(fmt::format("type cannot be inferred and wasn't specified: {}", name), loc) {}
 };
 
 struct MissingTypeArg : public ScriptError {

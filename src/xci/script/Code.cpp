@@ -1,7 +1,7 @@
 // Code.cpp created on 2019-05-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Code.h"
@@ -49,6 +49,8 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::Mod:               return os << "MOD";
         case Opcode::Exp:               return os << "EXP";
         case Opcode::Subscript:         return os << "SUBSCRIPT";
+        case Opcode::Length:            return os << "LENGTH";
+        case Opcode::Slice:             return os << "SLICE";
         case Opcode::Invoke:            return os << "INVOKE";
         case Opcode::LoadStatic:        return os << "LOAD_STATIC";
         case Opcode::LoadModule:        return os << "LOAD_MODULE";

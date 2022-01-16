@@ -1,7 +1,7 @@
 // TypeInfo.h created on 2019-06-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_TYPEINFO_H
@@ -123,7 +123,7 @@ public:
     bool operator==(const TypeInfo& rhs) const;
     bool operator!=(const TypeInfo& rhs) const { return !(*this == rhs); }
 
-    explicit operator bool() const { return m_type != Type::Unknown; }
+    explicit operator bool() const { return m_type != Type::Unknown || generic_var() != 0; }
 
     // -------------------------------------------------------------------------
     // Additional info, subtypes
@@ -235,6 +235,7 @@ struct Signature {
     bool has_closure() const { return !nonlocals.empty() || !partial.empty(); }
 
     bool has_generic_params() const;
+    bool has_nonvoid_params() const;
     bool is_generic() const { return has_generic_params() || return_type.is_generic(); }
 
     explicit operator bool() const { return !params.empty() || return_type; }

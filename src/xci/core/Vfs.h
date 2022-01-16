@@ -49,7 +49,7 @@ public:
     BufferPtr content() { return m_content; }
 
     // convenience operators
-    operator bool() const { return is_open(); }
+    explicit operator bool() const { return is_open(); }
 
 private:
     fs::path m_path;   ///< path of the file or archive containing the file
