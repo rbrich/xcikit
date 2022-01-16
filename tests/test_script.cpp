@@ -734,6 +734,7 @@ TEST_CASE( "Slice", "[script][interpreter]" )
     // step=0 -- pick one element for a new list
     CHECK(interpret_std("[1,2,3,4,5] .slice 3 max:Int 0") == "[4]");
     CHECK(interpret_std("[1,2,3,4,5] .slice 3 max:Int max:Int") == "[4]");
+    CHECK(interpret_std("[1,2,3,4,5] .slice 3 min:Int min:Int") == "[4]");
     CHECK(interpret_std("[1,2,3,4,5] .slice 0 max:Int 1") == "[1, 2, 3, 4, 5]");
     CHECK(interpret_std("[1,2,3,4,5] .slice 1 max:Int 1") == "[2, 3, 4, 5]");
     CHECK(interpret_std("[1,2,3,4,5] .slice 3 max:Int 1") == "[4, 5]");
