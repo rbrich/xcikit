@@ -987,13 +987,13 @@ private:
         if (sig.return_type.is_unknown()) {
             if (deduced.is_unknown() && !sig.is_generic())
                 throw MissingExplicitType(loc);
+            if (deduced.is_callable() && &sig == &deduced.signature())
+                throw MissingExplicitType(loc);  // the return type is recursive!
             specialize_arg(sig.return_type, deduced, sig.type_args,
                     [](const TypeInfo& exp, const TypeInfo& got) {
                         throw UnexpectedReturnType(exp, got);
                     });
             resolve_type_vars(sig);  // fill in concrete types using new type var info
-            if (deduced.is_callable() && &sig == &deduced.signature())
-                throw MissingExplicitType(loc);  // the return type is recursive!
             sig.return_type = deduced;  // Unknown/var=0 not handled by resolve_type_vars
             return;
         }
