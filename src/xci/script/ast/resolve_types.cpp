@@ -1,7 +1,7 @@
 // resolve_types.cpp created on 2019-06-13 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "resolve_types.h"
@@ -176,20 +176,46 @@ static MatchScore match_struct(const TypeInfo& candidate, const TypeInfo& actual
 }
 
 
+struct Candidate {
+    Module* module;
+    Index index;
+    SymbolPointer symptr;
+    TypeInfo type;
+    MatchScore match;
+};
+
+
+/// Find best match from candidates
+static std::pair<const Candidate*, bool> find_best_candidate(const std::vector<Candidate>& candidates)
+{
+    bool conflict = false;
+    MatchScore score(-1);
+    const Candidate* found = nullptr;
+    for (const auto& item : candidates) {
+        if (!item.match)
+            continue;
+        if (item.match > score) {
+            // found better match
+            score = item.match;
+            found = &item;
+            conflict = false;
+            continue;
+        }
+        if (item.match == score) {
+            // found same match -> conflict
+            conflict = true;
+        }
+    }
+    return {found, conflict};
+}
+
+
 class TypeCheckerVisitor final: public ast::Visitor {
     struct CallArg {
         TypeInfo type_info;
         SourceLocation source_loc;
     };
     using CallArgs = std::vector<CallArg>;
-
-    struct Candidate {
-        Module* module;
-        Index index;
-        SymbolPointer symptr;
-        TypeInfo type;
-        MatchScore match;
-    };
 
 public:
     explicit TypeCheckerVisitor(Function& func) : m_function(func) {}
@@ -477,25 +503,7 @@ public:
                     inst_psym = inst_psym->next();
                 }
 
-                // find best match from candidates
-                bool conflict = false;
-                MatchScore score(-1);
-                Candidate* found = nullptr;
-                for (auto& item : candidates) {
-                    if (!item.match)
-                        continue;
-                    if (item.match > score) {
-                        // found better match
-                        score = item.match;
-                        found = &item;
-                        conflict = false;
-                        continue;
-                    }
-                    if (item.match == score) {
-                        // found same match -> conflict
-                        conflict = true;
-                    }
-                }
+                auto [found, conflict] = find_best_candidate(candidates);
 
                 if (found && !conflict) {
                     auto spec_idx = specialize_instance(found->symptr, cls_fn_idx, v.identifier.source_loc);
@@ -1156,25 +1164,7 @@ private:
             symptr = symptr->next();
         }
 
-        // find best match from candidates
-        bool conflict = false;
-        MatchScore score(-1);
-        Candidate* found = nullptr;
-        for (auto& item : candidates) {
-            if (!item.match)
-                continue;
-            if (item.match > score) {
-                // found better match
-                score = item.match;
-                found = &item;
-                conflict = false;
-                continue;
-            }
-            if (item.match == score) {
-                // found same match -> conflict
-                conflict = true;
-            }
-        }
+        auto [found, conflict] = find_best_candidate(candidates);
 
         if (found && !conflict) {
             if (found->symptr) {
@@ -1197,17 +1187,20 @@ private:
             o_candidates << "   " << c.match << "  "
                          << fn.signature() << endl;
         }
-        stringstream o_args;
+        stringstream o_ftype;
         for (const auto& arg : m_call_args) {
-            o_args << arg.type_info << ' ';
+            if (&arg != &m_call_args.front())
+                o_ftype << ' ';
+            o_ftype << arg.type_info;
         }
-
+        if (m_call_ret)
+            o_ftype << " -> " << m_call_ret;
         if (conflict) {
             // ERROR found multiple matching functions
-            throw FunctionConflict(identifier.name, o_args.str(), o_candidates.str(), identifier.source_loc);
+            throw FunctionConflict(identifier.name, o_ftype.str(), o_candidates.str(), identifier.source_loc);
         } else {
             // ERROR couldn't find matching function for `args`
-            throw FunctionNotFound(identifier.name, o_args.str(), o_candidates.str(), identifier.source_loc);
+            throw FunctionNotFound(identifier.name, o_ftype.str(), o_candidates.str(), identifier.source_loc);
         }
     }
 

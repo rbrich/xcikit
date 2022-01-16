@@ -417,10 +417,11 @@ rec.name    // dot operator
 
 === Overloading functions
 
-Plain functions may be overloaded, but mechanic is somewhat limited.
-See <<Type classes>> for more flexible construct for overloading.
+Plain functions may be overloaded, but the mechanic is somewhat limited.
+See <<Type classes>> for more flexible construct for function overloading.
 
 The limitations are:
+
 * All overloads must be defined in the same scope (module, function).
 * A forward declaration is possible only for the immediately following overload.
 
@@ -434,7 +435,7 @@ f : String -> String = fun a { a }
 ----
 
 The type has to be declared on the left-hand side,
-it cannot be inferred from the function type on right-hand side.
+it cannot be inferred from the function type on right-hand side:
 
 [source,fire]
 ----
@@ -442,7 +443,7 @@ f = fun a:Int -> Int { a }
 f = fun a:Float -> Float { a }  // error: redefined name f
 ----
 
-Plain variables are also functions and may be also overloaded:
+Plain variables are also functions and may be overloaded:
 
 [source,fire]
 ----
