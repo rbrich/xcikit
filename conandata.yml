@@ -23,7 +23,7 @@
 requirements:
   fmt:
     cmake: "fmt/8.0.0"
-    conan: "fmt/8.0.1"
+    conan: "fmt/8.1.1"
   range_v3:
     cmake: "range-v3/0.11.0"
     conan: "range-v3/0.11.0"
@@ -31,7 +31,7 @@ requirements:
     upstream: "github.com ericniebler/range-v3 83783f578e0e6666d68a3bf17b0038a80e62530e"
   pegtl:
     cmake: "pegtl/3.2.0"
-    conan: "taocpp-pegtl/3.2.1"
+    conan: "taocpp-pegtl/3.2.1"  # 3.2.2 not yet in ConanCenter
   magic_enum:
     cmake: "magic_enum/0.7.3"
     conan: "magic_enum/0.7.3"
@@ -42,22 +42,22 @@ requirements:
       - data
   glfw:
     cmake: "glfw3/3.3.0"
-    conan: "glfw/3.3.5"
+    conan: "glfw/3.3.6"
     prereq:
       - graphics
   vulkan:
     cmake: "Vulkan/"
-    conan: "vulkan-loader/1.2.190"
+    conan: "vulkan-loader/1.2.198.0"
     prereq:
       - graphics
   freetype:
     cmake: "Freetype/2.10.0"
-    conan: "freetype/2.10.4"
+    conan: "freetype/2.11.1"
     prereq:
       - text
   harfbuzz:
     cmake: "harfbuzz/"
-    conan: "harfbuzz/3.1.1"
+    conan: "harfbuzz/3.2.0"
     prereq:
       - text
   hyperscan:
@@ -66,16 +66,16 @@ requirements:
       - tools
   boost:
     cmake: "Boost/1.75.0"
-    conan: "pfr/2.0.2"
+    conan: "pfr/2.0.2"  # 2.0.3 not yet in ConanCenter
     prereq:
       - data
   catch2:
     cmake: "Catch2/"
-    conan: "catch2/2.13.7"
+    conan: "catch2/2.13.8"
     prereq:
       - tests
   benchmark:
     cmake: "benchmark/1.5.0"
-    conan: "benchmark/1.6.0"
+    conan: "benchmark/1.6.0"  # 1.6.1 not yet in ConanCenter
     prereq:
       - benchmarks
