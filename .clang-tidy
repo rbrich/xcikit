@@ -39,6 +39,6 @@ Checks: >
   -readability-container-size-empty,
   -readability-function-cognitive-complexity,
   -readability-else-after-return,
-  -readability-qualified-auto
-  -readability-isolate-declaration
+  -readability-qualified-auto,
+  -readability-isolate-declaration,
   -readability-identifier-length

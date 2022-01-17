@@ -84,29 +84,28 @@ public:
     }
 
     void check(const TypeInfo& inferred, const SourceLocation& loc) const {
-        const auto& specified = type();
-        if (!specified)
+        if (!m_specified_type)
             return;
-        if (specified.is_struct() && inferred.is_struct()) {
-            if (!match_struct(inferred, specified))
-                throw StructTypeMismatch(specified, loc);
+        if (m_specified_type.is_struct() && inferred.is_struct()) {
+            if (!match_struct(inferred, m_specified_type))
+                throw StructTypeMismatch(m_specified_type, loc);
             return;
         }
-        if (inferred != specified)
-            throw DefinitionTypeMismatch(specified, inferred, loc);
+        if (inferred != m_specified_type)
+            throw DefinitionTypeMismatch(m_specified_type, inferred, loc);
     }
 
     void check_struct_item(const std::string& key, const TypeInfo& inferred, const SourceLocation& loc) const {
-        assert(type().is_struct());
-        const auto& spec_items = type().struct_items();
+        assert(m_specified_type.is_struct());
+        const auto& spec_items = m_specified_type.struct_items();
         auto spec_it = std::find_if(spec_items.begin(), spec_items.end(),
             [&key](const TypeInfo::StructItem& spec) {
               return spec.first == key;
             });
         if (spec_it == spec_items.end())
-            throw StructUnknownKey(type(), key, loc);
+            throw StructUnknownKey(m_specified_type, key, loc);
         if (!match_type(inferred, spec_it->second))
-            throw StructKeyTypeMismatch(type(), spec_it->second, inferred, loc);
+            throw StructKeyTypeMismatch(m_specified_type, spec_it->second, inferred, loc);
     }
 
     const TypeInfo& type() const { return m_specified_type; }
@@ -351,10 +350,12 @@ public:
     }
 
     void visit(ast::List& v) override {
-        TypeCheckHelper type_check(move(m_type_info));
+        TypeCheckHelper type_check(move(m_type_info), move(m_cast_type));
         // check all items have same type
         TypeInfo elem_type;
-        for (auto& item : v.items) {
+        if (!type_check.type() && v.items.empty())
+            elem_type = ti_void();
+        else for (auto& item : v.items) {
             item->apply(*this);
             if (item.get() == v.items.front().get()) {
                 // first item
@@ -362,12 +363,17 @@ public:
             } else {
                 // other items
                 if (elem_type != m_value_type)
-                    throw ListElemTypeMismatch(elem_type, m_value_type);
+                    throw ListElemTypeMismatch(elem_type, m_value_type, item->source_loc);
             }
         }
-        v.elem_type_id = get_type_id(elem_type);
         m_value_type = ti_list(move(elem_type));
         type_check.check(m_value_type, v.source_loc);
+        if (m_value_type.is_generic() && type_check.type())
+            m_value_type = std::move(type_check.type());
+        // FIXME: allow generic type: fun <T> Void->[T] { []:[T] }
+        if (m_value_type.elem_type().is_generic())
+            throw MissingExplicitType(v.source_loc);
+        v.elem_type_id = get_type_id(m_value_type.elem_type());
     }
 
     void visit(ast::StructInit& v) override {

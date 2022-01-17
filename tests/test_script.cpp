@@ -385,6 +385,12 @@ TEST_CASE( "Literals", "[script][interpreter]" )
     CHECK_THROWS_AS(interpret("-9223372036854775809L"), ParseError);
     CHECK(interpret("18446744073709551615ul") == "18446744073709551615UL");
     CHECK_THROWS_AS(interpret("18446744073709551616UL"), ParseError);
+    // Lists
+    CHECK(interpret("[]") == "[]");  // no type -> [Void]
+    CHECK(interpret_std("[]:[Void]") == "[]");  // same
+    CHECK(interpret_std("[]:[Int]") == "[]");
+    CHECK(interpret_std("[].len") == "0U");
+    CHECK(interpret("[1,2,3]") == "[1, 2, 3]");
 }
 
 
@@ -755,9 +761,8 @@ TEST_CASE( "Slice", "[script][interpreter]" )
     CHECK(interpret_std("[1,2,3,4,5] .slice -1 -4 -1") == "[5, 4, 3]");
     CHECK(interpret_std("[1,2,3,4,5] .slice 5 1 1") == "[]");
     CHECK(interpret_std("[1,2,3,4,5] .slice 1 5 -1") == "[]");
-//    CHECK(interpret_std("[]:[Int] .slice 0 5 1") == "[]");
-//    CHECK(interpret_std("[]:[Int]") == "[]");
-//    CHECK(interpret_std("[]") == "[]");
+    CHECK(interpret_std("[] .slice 0 5 1") == "[]");
+    CHECK(interpret_std("[]:[Int] .slice 0 5 1") == "[]");
     CHECK(interpret_std("tail [1,2,3]") == "[2, 3]");
 }
 
