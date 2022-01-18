@@ -455,16 +455,21 @@ size_t ListV::length() const
 }
 
 
-Value ListV::value_at(size_t idx, const TypeInfo& elem_type) const
+const std::byte* ListV::raw_data() const
 {
-    assert(idx < length());
     const auto* data = slot.data() + sizeof(uint32_t);
     auto dd_size = bit_read<uint16_t>(data);
     data += dd_size;
+    return data;
+}
 
+
+Value ListV::value_at(size_t idx, const TypeInfo& elem_type) const
+{
+    assert(idx < length());
     auto elem = create_value(elem_type);
     const auto elem_size = elem_type.size();
-    elem.read(data + idx * elem_size);
+    elem.read(raw_data() + idx * elem_size);
     return elem;
 }
 

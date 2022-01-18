@@ -77,42 +77,46 @@ static MatchScore match_struct(const TypeInfo& candidate, const TypeInfo& actual
 
 class TypeCheckHelper {
 public:
-    explicit TypeCheckHelper(TypeInfo&& spec) : m_specified_type(move(spec)) {}
-    TypeCheckHelper(TypeInfo&& spec, TypeInfo&& cast) : m_specified_type(move(spec)) {
-        if (cast)
-            m_specified_type = move(cast);
-    }
+    explicit TypeCheckHelper(TypeInfo&& spec) : m_spec(move(spec)) {}
+    TypeCheckHelper(TypeInfo&& spec, TypeInfo&& cast) : m_spec(move(spec)), m_cast(move(cast)) {}
 
     void check(const TypeInfo& inferred, const SourceLocation& loc) const {
-        if (!m_specified_type)
+        if (!m_spec)
             return;
-        if (m_specified_type.is_struct() && inferred.is_struct()) {
-            if (!match_struct(inferred, m_specified_type))
-                throw StructTypeMismatch(m_specified_type, loc);
+        if (m_spec.is_struct() && inferred.is_struct()) {
+            if (!match_struct(inferred, m_spec))
+                throw StructTypeMismatch(m_spec, loc);
             return;
         }
-        if (inferred != m_specified_type)
-            throw DefinitionTypeMismatch(m_specified_type, inferred, loc);
+        if (inferred != m_spec)
+            throw DefinitionTypeMismatch(m_spec, inferred, loc);
     }
 
     void check_struct_item(const std::string& key, const TypeInfo& inferred, const SourceLocation& loc) const {
-        assert(m_specified_type.is_struct());
-        const auto& spec_items = m_specified_type.struct_items();
+        assert(eval_type().is_struct());
+        const auto& spec_items = eval_type().struct_items();
         auto spec_it = std::find_if(spec_items.begin(), spec_items.end(),
             [&key](const TypeInfo::StructItem& spec) {
               return spec.first == key;
             });
         if (spec_it == spec_items.end())
-            throw StructUnknownKey(m_specified_type, key, loc);
+            throw StructUnknownKey(eval_type(), key, loc);
         if (!match_type(inferred, spec_it->second))
-            throw StructKeyTypeMismatch(m_specified_type, spec_it->second, inferred, loc);
+            throw StructKeyTypeMismatch(eval_type(), spec_it->second, inferred, loc);
     }
 
-    const TypeInfo& type() const { return m_specified_type; }
-    TypeInfo&& type() { return move(m_specified_type); }
+    const TypeInfo& spec() const { return m_spec; }
+    TypeInfo&& spec() { return move(m_spec); }
+
+    const TypeInfo& cast() const { return m_cast; }
+    TypeInfo&& cast() { return move(m_cast); }
+
+    const TypeInfo& eval_type() const { return m_cast ? m_cast : m_spec; }
+    TypeInfo&& eval_type() { return m_cast ? move(m_cast) : move(m_spec); }
 
 private:
-    TypeInfo m_specified_type;
+    TypeInfo m_spec;  // specified type
+    TypeInfo m_cast;  // casted-to type
 };
 
 
@@ -228,13 +232,13 @@ public:
         }
 
         if (m_class != nullptr) {
-            const auto& psym = dfn.variable.identifier.symbol;
+            const auto& psym = dfn.symbol();
             m_class->add_function(psym->index());
         }
 
         if (m_instance != nullptr) {
             // evaluate type according to class and type vars
-            const auto& psym = dfn.variable.identifier.symbol;
+            const auto& psym = dfn.symbol();
             Index cls_fn_idx = psym->ref()->index();
             const auto& cls_fn = module().get_function(cls_fn_idx);
             TypeInfo eval_type {cls_fn.signature_ptr()};
@@ -261,15 +265,13 @@ public:
             m_value_type = move(m_type_info);
         }
 
-        if (m_instance == nullptr) {
-            Function& func = module().get_function(dfn.symbol()->index());
-            if (m_value_type.is_callable())
-                func.signature() = m_value_type.signature();
-            else {
-                const auto& source_loc = dfn.expression ?
-                        dfn.expression->source_loc : dfn.variable.identifier.source_loc;
-                resolve_return_type(func.signature(), m_value_type, source_loc);
-            }
+        Function& func = module().get_function(dfn.symbol()->index());
+        if (m_value_type.is_callable())
+            func.signature() = m_value_type.signature();
+        else {
+            const auto& source_loc = dfn.expression ?
+                    dfn.expression->source_loc : dfn.variable.identifier.source_loc;
+            resolve_return_type(func.signature(), m_value_type, source_loc);
         }
 
         m_value_type = {};
@@ -353,7 +355,7 @@ public:
         TypeCheckHelper type_check(move(m_type_info), move(m_cast_type));
         // check all items have same type
         TypeInfo elem_type;
-        if (!type_check.type() && v.items.empty())
+        if (!type_check.eval_type() && v.items.empty())
             elem_type = ti_void();
         else for (auto& item : v.items) {
             item->apply(*this);
@@ -368,8 +370,8 @@ public:
         }
         m_value_type = ti_list(move(elem_type));
         type_check.check(m_value_type, v.source_loc);
-        if (m_value_type.is_generic() && type_check.type())
-            m_value_type = std::move(type_check.type());
+        if (m_value_type.is_generic() && type_check.eval_type())
+            m_value_type = std::move(type_check.eval_type());
         // FIXME: allow generic type: fun <T> Void->[T] { []:[T] }
         if (m_value_type.elem_type().is_generic())
             throw MissingExplicitType(v.source_loc);
@@ -396,7 +398,7 @@ public:
         // first pass - resolve incomplete struct type
         //              and check it matches specified type (if any)
         TypeCheckHelper type_check(move(m_type_info), move(m_cast_type));
-        const auto& specified = type_check.type();
+        const auto& specified = type_check.eval_type();
         if (!specified.is_unknown() && specified.type() != Type::Struct)
             throw StructTypeMismatch(specified, v.source_loc);
         // build TypeInfo for the struct initializer
@@ -418,7 +420,7 @@ public:
         v.struct_type = TypeInfo(move(ti_items));
         if (!specified.is_unknown()) {
             assert(match_struct(v.struct_type, specified));  // already checked above
-            v.struct_type = std::move(type_check.type());
+            v.struct_type = std::move(type_check.eval_type());
         }
         m_value_type = v.struct_type;
     }
@@ -548,6 +550,16 @@ public:
                     throw FunctionNotFound(v.identifier.name, o_ftype.str(), o_candidates.str(), v.identifier.source_loc);
             }
             case Symbol::Function: {
+                // specified type in definition
+                if (v.definition && m_type_info) {
+                    assert(m_type_info.is_callable());
+                    assert(m_call_args.empty());
+                    for (const auto& t : m_type_info.signature().params)
+                        m_call_args.push_back({t, v.source_loc});
+                    m_call_ret = m_type_info.signature().return_type;
+                    m_type_info = {};
+                }
+
                 auto res = resolve_overload(v.identifier.symbol, v.identifier);
                 // The referenced function must have been defined
                 if (!res.type.effective_type())
@@ -555,6 +567,11 @@ public:
                 v.module = res.module;
                 v.index = res.index;
                 m_value_type = res.type;
+
+                if (v.definition) {
+                    m_call_args.clear();
+                    m_call_ret = {};
+                }
                 break;
             }
             case Symbol::Module:
@@ -628,7 +645,7 @@ public:
         // append args to m_call_args (note that m_call_args might be used
         // when evaluating each argument, so we cannot push to them above)
         std::move(args.begin(), args.end(), std::back_inserter(m_call_args));
-        m_call_ret = move(type_check.type());
+        m_call_ret = move(type_check.eval_type());
         m_intrinsic = false;
 
         // using resolved args, resolve the callable itself
@@ -793,7 +810,7 @@ public:
             // compile body and resolve return type
             if (v.definition) {
                 // in case the function is recursive, propagate the type upwards
-                auto symptr = v.definition->variable.identifier.symbol;
+                auto symptr = v.definition->symbol();
                 auto& fn_dfn = module().get_function(symptr->index());
                 fn_dfn.set_signature(m_value_type.signature_ptr());
             }

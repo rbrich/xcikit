@@ -127,6 +127,7 @@ std::u32string to_utf32(std::string_view utf8);
 
 // Convert UTF16/32 string to UTF8
 std::string to_utf8(std::u16string_view wstr);
+std::string to_utf8(std::u32string_view wstr);
 
 #ifdef _WIN32
 std::string to_utf8(std::wstring_view wstr);
@@ -139,7 +140,7 @@ const char8_t* utf8_next(const char8_t* utf8);
 
 template <StringIterator I>
 I utf8_next(I iter) {
-    const char8_t* a = reinterpret_cast<const char8_t*>(&*iter);
+    const auto* a = reinterpret_cast<const char8_t*>(&*iter);
     return iter + (utf8_next(a) - a);
 }
 
@@ -147,7 +148,7 @@ const char8_t* utf8_prev(const char8_t* utf8);
 
 template <StringReverseIterator RI>
 RI utf8_prev(RI riter) {
-    const char8_t* a = reinterpret_cast<const char8_t*>(&*riter);
+    const auto* a = reinterpret_cast<const char8_t*>(&*riter);
     return riter + (a - utf8_prev(a));
 }
 

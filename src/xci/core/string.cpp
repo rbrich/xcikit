@@ -198,6 +198,7 @@ std::string _to_utf8(std::basic_string_view<Elem> wstr)
 }
 
 std::string to_utf8(std::u16string_view wstr) { return _to_utf8(wstr); }
+std::string to_utf8(std::u32string_view wstr) { return _to_utf8(wstr); }
 
 #ifdef _WIN32
 std::string to_utf8(std::wstring_view wstr) { return _to_utf8(wstr); }
