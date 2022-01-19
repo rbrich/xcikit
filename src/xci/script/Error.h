@@ -237,9 +237,9 @@ struct BranchTypeMismatch : public ScriptError {
 
 
 struct ListElemTypeMismatch : public ScriptError {
-    explicit ListElemTypeMismatch(const TypeInfo& exp, const TypeInfo& got)
+    explicit ListElemTypeMismatch(const TypeInfo& exp, const TypeInfo& got, const SourceLocation& loc)
             : ScriptError(fmt::format("list element type mismatch: got {} in list of {}",
-                                 got, exp)) {}
+                                 got, exp), loc) {}
 };
 
 

@@ -58,6 +58,7 @@ public:
 private:
     void add_intrinsics();
     void add_types();
+    void add_transform_functions();
     void add_io_functions();
     void add_introspections();
 };

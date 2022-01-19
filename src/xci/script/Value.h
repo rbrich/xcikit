@@ -112,6 +112,7 @@ struct ListV {
     explicit ListV(HeapSlot&& slot) : slot(move(slot)) {}
     bool operator ==(const ListV& rhs) const { return slot.slot() == rhs.slot.slot(); }  // same slot - cannot compare content without elem_type
     size_t length() const;
+    const std::byte* raw_data() const;
     Value value_at(size_t idx, const TypeInfo& elem_type) const;
 
     /// Slice the list. Indexes work similarly to Python.

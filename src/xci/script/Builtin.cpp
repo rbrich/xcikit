@@ -6,6 +6,7 @@
 
 #include "Builtin.h"
 #include <xci/core/file.h>
+#include <xci/core/string.h>
 #include <xci/compat/macros.h>
 
 namespace xci::script {
@@ -54,6 +55,7 @@ BuiltinModule::BuiltinModule(ModuleManager& module_manager) : Module(module_mana
     symtab().add({"true", Symbol::Value, add_value(TypedValue{value::Bool(true)})});
     add_intrinsics();
     add_types();
+    add_transform_functions();
     add_io_functions();
     add_introspections();
 }
@@ -150,6 +152,34 @@ void BuiltinModule::add_types()
     symtab().add({"Float32", Symbol::TypeName, add_type(ti_float32())});
     symtab().add({"Float64", Symbol::TypeName, add_type(ti_float64())});
     symtab().add({"String", Symbol::TypeName, add_type(ti_string())});
+}
+
+
+static void cast_chars_to_string(Stack& stack, void*, void*)
+{
+    auto in = stack.pull(ti_list(ti_char()));
+    const auto * data = in.get<ListV>().raw_data();
+    const auto len = in.get<ListV>().length();
+    auto utf8 = core::to_utf8(std::u32string_view(reinterpret_cast<const char32_t*>(data), len));
+    in.decref();
+    stack.push(value::String{utf8});
+}
+
+
+static void cast_string_to_chars(Stack& stack, void*, void*)
+{
+    auto in = stack.pull<value::String>();
+    auto utf32 = core::to_utf32(in.value());
+    in.decref();
+    Value out(ListV(utf32.length(), ti_char(), reinterpret_cast<const std::byte*>(utf32.data())));
+    stack.push(out);
+}
+
+
+void BuiltinModule::add_transform_functions()
+{
+    add_native_function("cast_to_string", {ti_list(ti_char())}, ti_string(), cast_chars_to_string);
+    add_native_function("cast_to_chars", {ti_string()}, ti_list(ti_char()), cast_string_to_chars);
 }
 
 

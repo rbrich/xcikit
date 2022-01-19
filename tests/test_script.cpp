@@ -385,6 +385,12 @@ TEST_CASE( "Literals", "[script][interpreter]" )
     CHECK_THROWS_AS(interpret("-9223372036854775809L"), ParseError);
     CHECK(interpret("18446744073709551615ul") == "18446744073709551615UL");
     CHECK_THROWS_AS(interpret("18446744073709551616UL"), ParseError);
+    // Lists
+    CHECK(interpret("[]") == "[]");  // no type -> [Void]
+    CHECK(interpret_std("[]:[Void]") == "[]");  // same
+    CHECK(interpret_std("[]:[Int]") == "[]");
+    CHECK(interpret_std("[].len") == "0U");
+    CHECK(interpret("[1,2,3]") == "[1, 2, 3]");
 }
 
 
@@ -400,6 +406,7 @@ TEST_CASE( "Variables", "[script][interpreter]" )
     CHECK_THROWS_AS(interpret_std("m = { m = m + 1 }"), MissingExplicitType);
     CHECK(interpret_std("m = { m = 1; m }; m") == "1");
     // "m = { m + 1 }" compiles fine, but infinitely recurses
+    CHECK_THROWS_AS(interpret_std("a:[Char] = [1,2,3]"), DefinitionTypeMismatch);
 }
 
 
@@ -698,7 +705,6 @@ TEST_CASE( "Casting", "[script][interpreter]" )
     CHECK(interpret_std("-42:Bool") == "true");  // '-' is part of Int literal, not an operator
     CHECK_THROWS_AS(interpret_std("- 42:Bool"), FunctionNotFound);  // now it's operator and that's an error: "neg Bool" not defined
     CHECK(interpret_std("(- 42):Bool") == "true");
-    //CHECK(interpret_std("['a', 'b', 'c']:String") == "abc");
     CHECK(interpret_std("(cast 42):Int64") == "42L");
     CHECK(interpret_std("a:Int64 = cast 42; a") == "42L");
     CHECK_THROWS_AS(interpret_std("cast 42"), FunctionConflict);  // must specify the result type
@@ -706,6 +712,11 @@ TEST_CASE( "Casting", "[script][interpreter]" )
     CHECK(interpret_std("min:Int") == "-2147483648");
     CHECK(interpret_std("max:UInt") == "4294967295U");
     CHECK(interpret_std("a:Int = min; a") == "-2147483648");
+    // [Char] <-> String
+    CHECK(interpret_std("cast_to_string ['a','b','c']") == "\"abc\"");
+    CHECK(interpret_std("['a','b','c']:String") == "\"abc\"");
+    CHECK(interpret_std("cast_to_chars \"abc\"") == "['a', 'b', 'c']");
+    CHECK(interpret_std("\"abc\":[Char]") == "['a', 'b', 'c']");
 }
 
 
@@ -755,9 +766,8 @@ TEST_CASE( "Slice", "[script][interpreter]" )
     CHECK(interpret_std("[1,2,3,4,5] .slice -1 -4 -1") == "[5, 4, 3]");
     CHECK(interpret_std("[1,2,3,4,5] .slice 5 1 1") == "[]");
     CHECK(interpret_std("[1,2,3,4,5] .slice 1 5 -1") == "[]");
-//    CHECK(interpret_std("[]:[Int] .slice 0 5 1") == "[]");
-//    CHECK(interpret_std("[]:[Int]") == "[]");
-//    CHECK(interpret_std("[]") == "[]");
+    CHECK(interpret_std("[] .slice 0 5 1") == "[]");
+    CHECK(interpret_std("[]:[Int] .slice 0 5 1") == "[]");
     CHECK(interpret_std("tail [1,2,3]") == "[2, 3]");
 }
 
