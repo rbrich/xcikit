@@ -385,6 +385,11 @@ TEST_CASE( "Literals", "[script][interpreter]" )
     CHECK_THROWS_AS(interpret("-9223372036854775809L"), ParseError);
     CHECK(interpret("18446744073709551615ul") == "18446744073709551615UL");
     CHECK_THROWS_AS(interpret("18446744073709551616UL"), ParseError);
+    // Chars and strings (UTF-8)
+    CHECK(interpret("'@'") == "'@'");
+    CHECK(interpret("'웃'") == "'웃'"); // multi-byte UTF-8
+    CHECK(interpret("\"hello\"") == "\"hello\"");
+    CHECK(interpret("\"řečiště\"") == "\"řečiště\"");
     // Lists
     CHECK(interpret("[]") == "[]");  // no type -> [Void]
     CHECK(interpret_std("[]:[Void]") == "[]");  // same

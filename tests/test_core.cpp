@@ -121,6 +121,9 @@ TEST_CASE( "escape", "[string]" )
     CHECK(escape("\x07\x08\x09\x0a\x0b\x0c") == "\\a\\b\\t\\n\\v\\f");
     CHECK(escape("\x0d\x0e\x0f\x10\x1a\x1b") == "\\r\\x0e\\x0f\\x10\\x1a\\x1b");
     CHECK(escape("\x80\xff") == "\\x80\\xff");
+    // UTF-8
+    CHECK(escape("černěný") == "\\xc4\\x8dern\\xc4\\x9bn\\xc3\\xbd");
+    CHECK(escape_utf8("černěný") == "černěný");
 }
 
 

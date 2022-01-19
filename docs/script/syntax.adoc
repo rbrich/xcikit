@@ -10,7 +10,7 @@ endif::[]
 
 toc::[]
 
-Fire Script is a functional language, strongly and statically typed,
+Fire Script is a functional, strongly and statically typed language,
 with Haskell-like generics (type classes and type variables).
 
 The language is designed to allow small and easily embeddable implementation,
@@ -21,8 +21,8 @@ This document presents the syntax and semantics by example.
 An interpreter is being developed in {cpp} together with this description.
 The interpreter consists of a {cpp} static library (`libxci-script`)
 and a REPL interpreter (`fire`). The implementation is a little behind
-this document, and it's also possible that not everything described here will actually
-be implemented. This is a design document, containing miscellaneous ideas.
+this document, and it's also possible that not everything described here will
+be actually implemented. This is a design document, containing miscellaneous ideas.
 The language may change during implementation.
 
 The plan is that the implementation will completely match this description
