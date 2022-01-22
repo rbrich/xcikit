@@ -155,17 +155,6 @@ void BuiltinModule::add_types()
 }
 
 
-static void cast_chars_to_string(Stack& stack, void*, void*)
-{
-    auto in = stack.pull(ti_list(ti_char()));
-    const auto * data = in.get<ListV>().raw_data();
-    const auto len = in.get<ListV>().length();
-    auto utf8 = core::to_utf8(std::u32string_view(reinterpret_cast<const char32_t*>(data), len));
-    in.decref();
-    stack.push(value::String{utf8});
-}
-
-
 static void cast_string_to_chars(Stack& stack, void*, void*)
 {
     auto in = stack.pull<value::String>();
@@ -176,10 +165,45 @@ static void cast_string_to_chars(Stack& stack, void*, void*)
 }
 
 
+static void cast_string_to_bytes(Stack& stack, void*, void*)
+{
+    auto in = stack.pull<value::String>();
+    auto utf8 = in.value();
+    in.decref();
+    Value out(ListV(utf8.length(), ti_byte(), reinterpret_cast<const std::byte*>(utf8.data())));
+    stack.push(out);
+}
+
+
+static void cast_chars_to_string(Stack& stack, void*, void*)
+{
+    auto in = stack.pull(ti_chars());
+    const auto * data = in.get<ListV>().raw_data();
+    const auto size = in.get<ListV>().length();
+    auto utf8 = core::to_utf8(std::u32string_view(reinterpret_cast<const char32_t*>(data), size));
+    in.decref();
+    stack.push(value::String{utf8});
+}
+
+
+static void cast_bytes_to_string(Stack& stack, void*, void*)
+{
+    auto in = stack.pull(ti_bytes());
+    const auto * data = in.get<ListV>().raw_data();
+    const auto size = in.get<ListV>().length();
+    value::String out{std::string_view(reinterpret_cast<const char*>(data), size)};
+    in.decref();
+    stack.push(out);
+}
+
+
 void BuiltinModule::add_transform_functions()
 {
-    add_native_function("cast_to_string", {ti_list(ti_char())}, ti_string(), cast_chars_to_string);
-    add_native_function("cast_to_chars", {ti_string()}, ti_list(ti_char()), cast_string_to_chars);
+    add_native_function("cast_to_chars", {ti_string()}, ti_chars(), cast_string_to_chars);
+    add_native_function("cast_to_bytes", {ti_string()}, ti_bytes(), cast_string_to_bytes);
+    auto f1 = add_native_function("cast_to_string", {ti_chars()}, ti_string(), cast_chars_to_string);
+    auto f2 = add_native_function("cast_to_string", {ti_bytes()}, ti_string(), cast_bytes_to_string);
+    f2->set_next(f1);
 }
 
 

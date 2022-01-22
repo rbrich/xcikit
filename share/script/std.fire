@@ -322,8 +322,10 @@ instance Cast Float64 Int32 { cast = { __cast 0xD8 } }
 instance Cast Float64 Int64 { cast = { __cast 0xD9 } }
 instance Cast Float64 Float32 { cast = { __cast 0xDC } }
 
-instance Cast [Char] String { cast = cast_to_string }
 instance Cast String [Char] { cast = cast_to_chars }
+instance Cast String [Byte] { cast = cast_to_bytes }
+instance Cast [Char] String { cast = cast_to_string }
+instance Cast [Byte] String { cast = cast_to_string }
 
 class Bounded T {
     min : Void -> T
