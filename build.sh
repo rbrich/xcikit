@@ -192,7 +192,7 @@ if [[ -z "$component_default" ]]; then
     # Disable components that were not selected
     for name in "${COMPONENTS[@]}" ; do
         component_var="component_$name"
-        name_upper="$(echo $name | tr '[:lower:]' '[:upper:]')"
+        name_upper="$(echo "$name" | tr '[:lower:]' '[:upper:]')"
         if [[ -z "${!component_var}" ]] ; then
             CMAKE_ARGS+=(-D "XCI_${name_upper}=OFF")
             CONAN_ARGS+=(-o "xcikit:${name}=False")
@@ -211,7 +211,7 @@ if [[ -z "$part_default" ]]; then
     # Disable parts that were not selected
     for name in "${PARTS[@]}" ; do
         part_var="part_$name"
-        name_upper="$(echo $name | tr '[:lower:]' '[:upper:]')"
+        name_upper="$(echo "$name" | tr '[:lower:]' '[:upper:]')"
         if [[ -z "${!part_var}" ]] ; then
             CMAKE_ARGS+=(-D "BUILD_${name_upper}=OFF")
             CONAN_ARGS+=(-o "xcikit:${name}=False")

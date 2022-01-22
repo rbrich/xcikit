@@ -49,7 +49,8 @@ fi
 
 echo "=== ShellCheck ==="
 if command -v shellcheck >/dev/null; then
-    find . -type f -name '*.sh' -print0 | xargs -0 shellcheck
+    find . \( -path ./build -o -path ./artifacts \) -prune -o \
+        -type f -name '*.sh' -print0 | xargs -0 shellcheck
 else
     echo "[skipped] shellcheck not found"
 fi
