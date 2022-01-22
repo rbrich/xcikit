@@ -37,7 +37,7 @@ void Machine::call(const Function& function, const Machine::InvokeCallback& cb)
 
 void Machine::run(const InvokeCallback& cb)
 {
-    // Avoid double-recursion - move these pointers instead (we already have stack)
+    // Avoid double-recursion - move these pointers instead (we already have a stack)
     const Function* function = &m_stack.frame().function;
     auto it = function->code().begin() + (ptrdiff_t) m_stack.frame().instruction;
     auto base = m_stack.frame().base;

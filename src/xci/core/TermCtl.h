@@ -172,18 +172,18 @@ public:
     /// {fg:COLOR} where COLOR is default | red | *red ... ("*" = bright)
     /// {bg:COLOR} where COLOR is the same as for fg
     /// {t:MODE} where MODE is bold | underline | normal ...
-    template<typename ...Args>
-    std::string format(const char *fmt, Args&&... args) {
-        return fmt::format(fmt::runtime(fmt), std::forward<Args>(args)...,
+    template<typename... T>
+    std::string format(fmt::string_view fmt, T&&... args) {
+        return fmt::vformat(fmt, fmt::make_format_args(args...,
                         fmt::arg("fg", FgPlaceholder{*this}),
                         fmt::arg("bg", BgPlaceholder{*this}),
-                        fmt::arg("t",  ModePlaceholder{*this}));
+                        fmt::arg("t",  ModePlaceholder{*this})));
     }
 
     /// Print string with special color/mode placeholders, see `format` above.
-    template<typename ...Args>
-    void print(const char *fmt, Args&&... args) {
-        write(format(fmt, std::forward<Args>(args)...));
+    template<typename... T>
+    void print(fmt::string_view fmt, T&&... args) {
+        write(format(fmt, std::forward<T>(args)...));
     }
 
     void write(std::string_view buf);

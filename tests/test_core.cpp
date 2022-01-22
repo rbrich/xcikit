@@ -25,21 +25,13 @@ using xci::core::log::format;
 
 TEST_CASE( "Format placeholders", "[log]" )
 {
-    CHECK(format("") == "");  // NOLINT
-    CHECK(format("hello there") == "hello there");
-
-    CHECK(format("number {} str {}", 123, "hello") == "number 123 str hello");
-
     CHECK(format("hex {:x} dec {}", 255, 255) == "hex ff dec 255");
     CHECK(format("hex {:02X} dec {:03}", 15, 15) == "hex 0F dec 015");
 
     errno = EACCES;
     CHECK(format("error: {m}") == "error: Permission denied");
-}
 
-
-TEST_CASE( "Format char type", "[log]" )
-{
+    // Format char type
     // only 'char' is special, other char-like types are just numbers
     CHECK(format("{}", char('c')) == "c");
     CHECK(format("{:c}", int('c')) == "c");

@@ -9,16 +9,16 @@
 
 
 #if __cplusplus >= 201703L || __has_cpp_attribute(fallthrough)
-    #define FALLTHROUGH [[fallthrough]]
+#   define FALLTHROUGH [[fallthrough]]
 #else
-    #define FALLTHROUGH
+#   define FALLTHROUGH
 #endif
 
 
 #ifdef _MSC_VER
-    #define UNREACHABLE     __assume(0)
+#   define UNREACHABLE     __assume(0)
 #else
-    #define UNREACHABLE     __builtin_unreachable()
+#   define UNREACHABLE     __builtin_unreachable()
 #endif
 
 
