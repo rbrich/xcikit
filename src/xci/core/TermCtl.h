@@ -341,6 +341,9 @@ private:
     TermCtl(const TermCtl& term, const std::string& seq)
         : m_seq(term.m_seq + seq)
         , m_state(term.m_state == State::NoTTY ? State::NoTTY : State::CopyOk) {}
+    TermCtl(const TermCtl& term, const char* seq)
+            : m_seq(term.m_seq + (seq == nullptr ? "" : seq))
+            , m_state(term.m_state == State::NoTTY ? State::NoTTY : State::CopyOk) {}
 
     // Aliases needed to avoid macro collision
     TermCtl _save_cursor() const;
