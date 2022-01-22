@@ -47,6 +47,10 @@ target_include_directories(xci-data
         ${XCI_INCLUDE_DIRS}
     )
 
+if (BUILD_SHARED_LIBS)
+    set_target_properties(xci-data PROPERTIES CXX_VISIBILITY_PRESET default)
+endif()
+
 if (MSVC)
     # Fix passing __VA_ARGS__ between macros.
     # Old behaviour was to pass all args in single arg, ignoring commas.

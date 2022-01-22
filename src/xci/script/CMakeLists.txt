@@ -53,6 +53,10 @@ target_include_directories(xci-script
 
 add_dependencies(xci-script share)
 
+if (BUILD_SHARED_LIBS)
+    set_target_properties(xci-script PROPERTIES CXX_VISIBILITY_PRESET default)
+endif()
+
 if (BUILD_SHARED_LIBS OR XCI_INSTALL_DEVEL)
     install(TARGETS xci-script EXPORT xcikit DESTINATION lib)
 endif()

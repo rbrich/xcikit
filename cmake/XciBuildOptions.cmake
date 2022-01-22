@@ -28,6 +28,9 @@ option(FORCE_COLORS "Force colored compiler output." OFF)
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo" "")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
+set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)  # override to "default" for shared libs
+
 if (BUILD_FRAMEWORKS)
     set(BUILD_SHARED_LIBS ON)
 endif()
@@ -123,9 +126,11 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT EMSCRIPTEN)
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-dead_strip")
 endif ()
 
-# To get useful debuginfo, we need frame pointer
 if (NOT MSVC)
+    # To get useful debuginfo, we need frame pointer
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer")
+    # MinSizeRel - change to -Oz
+    string(REGEX REPLACE "-Os" "-Oz" CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL}")
 endif()
 
 if (MSVC)

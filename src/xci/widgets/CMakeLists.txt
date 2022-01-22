@@ -21,6 +21,10 @@ target_link_libraries(xci-widgets
         xci-text
     )
 
+if (BUILD_SHARED_LIBS)
+    set_target_properties(xci-widgets PROPERTIES CXX_VISIBILITY_PRESET default)
+endif()
+
 if (APPLE)
     set_target_properties(xci-widgets PROPERTIES
         LINK_FLAGS "-undefined dynamic_lookup")

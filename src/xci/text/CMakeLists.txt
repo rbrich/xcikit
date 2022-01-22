@@ -50,6 +50,10 @@ target_link_libraries(xci-text
         harfbuzz::harfbuzz
     )
 
+if (BUILD_SHARED_LIBS)
+    set_target_properties(xci-text PROPERTIES CXX_VISIBILITY_PRESET default)
+endif()
+
 if (APPLE)
     set_target_properties(xci-text PROPERTIES
         LINK_FLAGS "-undefined dynamic_lookup")

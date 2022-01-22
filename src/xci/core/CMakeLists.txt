@@ -92,6 +92,10 @@ if (XCI_WITH_ZIP)
     target_compile_definitions(xci-core PRIVATE XCI_WITH_ZIP)
 endif ()
 
+if (BUILD_SHARED_LIBS)
+    set_target_properties(xci-core PROPERTIES CXX_VISIBILITY_PRESET default)
+endif()
+
 if (BUILD_FRAMEWORKS)
     set_target_properties(xci-core PROPERTIES
         FRAMEWORK TRUE
