@@ -40,15 +40,23 @@ public:
         m_detail = fmt::format("{}\n{:>{}}", line, '^', column);
     }
 
-    void set_stack_trace(StackTrace&& trace) { m_trace = std::move(trace); }
-
     const std::string& file() const noexcept { return m_file; }
     const std::string& detail() const noexcept { return m_detail; }
-    const StackTrace& trace() const noexcept { return m_trace; }
 
 private:
     std::string m_file;
     std::string m_detail;
+};
+
+
+class RuntimeError : public ScriptError {
+public:
+    explicit RuntimeError(std::string msg) : ScriptError(std::move(msg)) {}
+
+    void set_stack_trace(StackTrace&& trace) { m_trace = std::move(trace); }
+    const StackTrace& trace() const noexcept { return m_trace; }
+
+private:
     StackTrace m_trace;
 };
 
@@ -64,9 +72,9 @@ inline std::ostream& operator<<(std::ostream& os, const ScriptError& e) noexcept
 }
 
 
-struct NotImplemented : public ScriptError {
+struct NotImplemented : public RuntimeError {
     explicit NotImplemented(string_view name)
-        : ScriptError(fmt::format("not implemented: {}", name)) {}
+        : RuntimeError(fmt::format("not implemented: {}", name)) {}
 };
 
 
@@ -243,9 +251,9 @@ struct ListElemTypeMismatch : public ScriptError {
 };
 
 
-struct IndexOutOfBounds : public ScriptError {
+struct IndexOutOfBounds : public RuntimeError {
     explicit IndexOutOfBounds(int idx, size_t len)
-            : ScriptError(fmt::format("list index out of bounds: {} not in [0..{}]",
+            : RuntimeError(fmt::format("list index out of bounds: {} not in [0..{}]",
                                  idx, len-1)) {}
 };
 

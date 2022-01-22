@@ -151,6 +151,9 @@ bool Repl::evaluate_module(Module& module, EvalMode mode)
         }
         result.decref();
         return true;
+    } catch (const RuntimeError& e) {
+        print_runtime_error(e);
+        return false;
     } catch (const ScriptError& e) {
         print_error(e);
         return false;
@@ -162,21 +165,30 @@ void Repl::print_error(const ScriptError& e)
 {
     core::TermCtl& t = m_ctx.term_out;
 
-    if (!e.trace().empty()) {
-        int i = 0;
-        for (const auto& frame : e.trace() | reverse) {
-            t.stream()
-                << "  #" << i++
-                << " " << frame.function_name
-                << '\n';
-        }
-    }
     if (!e.file().empty())
         t.stream() << e.file() << ": ";
     t.stream() << t.red().bold() << "Error: " << e.what() << t.normal();
     if (!e.detail().empty())
         t.stream() << endl << t.magenta() << e.detail() << t.normal();
     t.stream() << endl;
+}
+
+
+void Repl::print_runtime_error(const RuntimeError& e)
+{
+    core::TermCtl& t = m_ctx.term_out;
+
+    if (!e.trace().empty()) {
+        int i = 0;
+        for (const auto& frame : e.trace() | reverse) {
+            t.stream()
+                    << "  #" << i++
+                    << " " << frame.function_name
+                    << '\n';
+        }
+    }
+
+    print_error(e);
 }
 
 
