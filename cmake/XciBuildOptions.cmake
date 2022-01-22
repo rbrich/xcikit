@@ -19,6 +19,7 @@ else()
     set(MINSIZE OFF)
 endif()
 option(ENABLE_LTO "Enable link-time, whole-program optimizations." ${MINSIZE})
+option(ENABLE_OZ "Only MinSizeRel: replace default -Os flag by -Oz." OFF)
 option(ENABLE_CCACHE "Use ccache as compiler launcher, when available." ON)
 
 # cosmetics
@@ -126,10 +127,13 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT EMSCRIPTEN)
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-dead_strip")
 endif ()
 
+# To get useful debuginfo, we need frame pointer
 if (NOT MSVC)
-    # To get useful debuginfo, we need frame pointer
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer")
-    # MinSizeRel - change to -Oz
+endif()
+
+# MinSizeRel - enable more optimization (-Oz)
+if (ENABLE_OZ)
     string(REGEX REPLACE "-Os" "-Oz" CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL}")
 endif()
 
