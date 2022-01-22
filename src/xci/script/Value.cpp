@@ -27,7 +27,7 @@ using xci::data::leb128_length;
 using xci::data::leb128_encode;
 using xci::data::leb128_decode;
 using namespace xci::core;
-using namespace ranges::cpp20;
+namespace views = ranges::cpp20::views;
 using ranges::to;
 using ranges::accumulate;
 using std::move;

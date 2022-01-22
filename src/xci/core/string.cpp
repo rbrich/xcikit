@@ -134,7 +134,7 @@ std::string escape(string_view str, bool extended, bool utf8)
                         auto len = utf8_char_length(*cp);
                         if (len > 1 && cp + len <= str.end()) {
                             // multi-byte UTF-8 char -> passthrough
-                            out.append(cp, size_t(len));
+                            out.append(cp, cp + size_t(len));
                             cp += len - 1;
                             break;
                         }

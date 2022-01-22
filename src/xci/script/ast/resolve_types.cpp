@@ -1151,7 +1151,7 @@ private:
         Instance spec(inst.class_(), inst.symtab());
         spec.set_types(inst_types);
 
-        for (size_t i = 0; i != inst.num_functions(); ++i) {
+        for (Index i = 0; i != inst.num_functions(); ++i) {
             auto fn_info = inst.get_function(i);
             auto specialized = specialize_function(fn_info.symptr, loc);
             if (specialized) {

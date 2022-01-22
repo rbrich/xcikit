@@ -298,7 +298,7 @@ void Machine::run(const InvokeCallback& cb)
                 auto arg = m_stack.pull_typed(ti_list(TypeInfo(elem_ti)));
                 auto len = arg.get<ListV>().length();
                 arg.decref();
-                m_stack.push(value::UInt32(len));
+                m_stack.push(value::UInt32(uint32_t(len)));
                 break;
             }
 

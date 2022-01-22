@@ -920,7 +920,7 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
         for (const auto& t : inst.types())
             os << ' ' << t;
         os << '\n' << more_indent;
-        for (size_t j = 0; j < inst.num_functions(); ++j) {
+        for (Index j = 0; j < inst.num_functions(); ++j) {
             const auto fi = inst.get_function(j).index;
             const auto& f = v.get_function(fi);
             os << put_indent << f.name() << ": " << f.signature() << '\n';
