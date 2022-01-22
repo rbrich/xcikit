@@ -23,8 +23,17 @@ cmake_dependent_option(XCI_DATA "Enable component: xci-data" ON
 # Libraries are always built. The rest is optional:
 option(BUILD_TOOLS "Disable to skip building tools." ON)
 option(BUILD_EXAMPLES "Disable to skip building examples." ON)
+option(BUILD_TESTS "Disable to skip building tests (BUILD_TESTING also works)." ON)
 option(BUILD_BENCHMARKS "Disable to skip building benchmarks." ON)
-# BUILD_TESTING "Build tests" ON (option added by CTest)
+
+if (BUILD_TESTING AND NOT BUILD_TESTS)
+    set(BUILD_TESTING OFF)
+endif()
+
+# Individual tools
+option(BUILD_DATI_TOOL "Disable to skip building 'dati' tool." ON)
+option(BUILD_FF_TOOL "Disable to skip building 'ff' tool." ON)
+option(BUILD_FIRE_TOOL "Disable to skip building 'fire' tool." ON)
 
 # Optional installation artifacts:
 option(XCI_INSTALL_DEVEL "Install headers, CMake config, static libs." ON)
@@ -211,13 +220,13 @@ endif()
 # ------------ #
 
 if (BUILD_TOOLS)
-    if (XCI_WITH_HYPERSCAN)
+    if (BUILD_FF_TOOL AND XCI_WITH_HYPERSCAN)
         add_subdirectory(tools/find_file)
     endif()
-    if (XCI_DATA)
+    if (BUILD_DATI_TOOL AND XCI_DATA)
         add_subdirectory(tools/data_inspect)
     endif()
-    if (XCI_SCRIPT)
+    if (BUILD_FIRE_TOOL AND XCI_SCRIPT)
         add_subdirectory(tools/fire_script)
     endif()
 endif()

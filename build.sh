@@ -13,17 +13,18 @@ JOBS_ARGS=()
 CMAKE_ARGS=()
 CONAN_ARGS=()
 CONAN_PROFILE=${CONAN_DEFAULT_PROFILE_PATH:-default}
-DETECT_ARGS=(tools examples tests benchmarks)
+DETECT_ARGS=()
 CSI=$'\x1b['
 
 run() { echo "➤➤➤ $*"; "$@"; }
 
 print_usage()
 {
-    echo "Usage: ./build.sh [PHASE, ...] [COMPONENT, ...] [-G CMAKE_GENERATOR] [-j JOBS] [-D CMAKE_DEF, ...]"
+    echo "Usage: ./build.sh [PHASE, ...] [COMPONENT, ...] [PART, ...] [-G CMAKE_GENERATOR] [-j JOBS] [-D CMAKE_DEF, ...]"
     echo "                  [--debug|--minsize] [--emscripten] [--unity] [--tidy] [--update]"
     echo "Where: PHASE = clean | deps | config | build | test | install | package | graphviz (default: deps..install)"
-    echo "       COMPONENT = core | data | script | graphics | text | widgets | all (default: all)"
+    echo "       COMPONENT = core | data | script | graphics | text | widgets (default: all)"
+    echo "       PART = libs | tools | examples | tests | benchmarks (default: all)"
     echo "Other options:"
     echo "      -G CMAKE_GENERATOR      Unix Makefiles | Ninja | ... (default: Ninja if available, Unix Makefiles otherwise)"
     echo "      -j JOBS                 Parallel jobs for build and test phases"
@@ -79,16 +80,20 @@ header()
 # parse args...
 phase_default=yes
 component_default=yes
-component_all=
+part_default=yes
 while [[ $# -gt 0 ]] ; do
     case "$1" in
         clean | deps | config | build | test | install | package | graphviz )
             phase_default=
             declare "phase_$1=yes"
             shift 1 ;;
-        core | data | script | graphics | text | widgets | all )
+        core | data | script | graphics | text | widgets )
             component_default=
             declare "component_$1=yes"
+            shift 1 ;;
+        libs | tools | examples | tests | benchmarks )
+            part_default=
+            declare "part_$1=yes"
             shift 1 ;;
         -G )
             GENERATOR="$2"
@@ -181,12 +186,11 @@ PACKAGE_FILENAME="xcikit-${VERSION}-${PLATFORM}-${ARCH}"
 [[ ${BUILD_TYPE} != "Release" ]] && PACKAGE_FILENAME="${PACKAGE_FILENAME}-${BUILD_TYPE}"
 
 CONAN_ARGS+=("-pr=$CONAN_PROFILE" "-pr:b=$CONAN_PROFILE")
-for name in "${DETECT_ARGS[@]}" ; do
-    CONAN_ARGS+=(-o "xcikit:${name}=True")
-done
-if [[ -z "$component_default" && -z "$component_all" ]]; then
+
+COMPONENTS=(data script graphics text widgets)
+if [[ -z "$component_default" ]]; then
     # Disable components that were not selected
-    for name in data script graphics text widgets ; do
+    for name in "${COMPONENTS[@]}" ; do
         component_var="component_$name"
         name_upper="$(echo $name | tr '[:lower:]' '[:upper:]')"
         if [[ -z "${!component_var}" ]] ; then
@@ -199,7 +203,29 @@ if [[ -z "$component_default" && -z "$component_all" ]]; then
         fi
     done
 else
-    DETECT_ARGS+=(data script graphics text widgets)
+    DETECT_ARGS+=("${COMPONENTS[@]}")
+fi
+
+PARTS=(tools examples tests benchmarks)
+if [[ -z "$part_default" ]]; then
+    # Disable parts that were not selected
+    for name in "${PARTS[@]}" ; do
+        part_var="part_$name"
+        name_upper="$(echo $name | tr '[:lower:]' '[:upper:]')"
+        if [[ -z "${!part_var}" ]] ; then
+            CMAKE_ARGS+=(-D "BUILD_${name_upper}=OFF")
+            CONAN_ARGS+=(-o "xcikit:${name}=False")
+        else
+            CMAKE_ARGS+=(-D "BUILD_${name_upper}=ON")
+            CONAN_ARGS+=(-o "xcikit:${name}=True")
+            DETECT_ARGS+=("${name}")
+        fi
+    done
+else
+    DETECT_ARGS+=("${PARTS[@]}")
+    for name in "${PARTS[@]}" ; do
+        CONAN_ARGS+=(-o "xcikit:${name}=True")
+    done
 fi
 
 CMAKE_ARGS+=(-D"XCI_INSTALL_DEVEL=${INSTALL_DEVEL}")
