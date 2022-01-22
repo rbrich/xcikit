@@ -41,7 +41,7 @@ target_link_libraries(xci-script
         xci-core
         xci-data
     PRIVATE
-        range-v3::concepts
+        range-v3::range-v3
     )
 
 target_include_directories(xci-script

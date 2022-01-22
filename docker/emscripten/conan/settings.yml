@@ -7,6 +7,7 @@ os:
     Android:
     iOS:
     Emscripten:
+    baremetal:
 
 arch: [asm.js, wasm]
 
