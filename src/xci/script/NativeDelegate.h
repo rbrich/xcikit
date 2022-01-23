@@ -178,8 +178,7 @@ using ValueType = typename ValueType_s<T>::type;
 template<class Tuple, std::size_t... Is>
 void decref_each(Tuple&& t, std::index_sequence<Is...>)
 {
-    auto l = { 0, (std::get<Is>(t).decref(), 0)... };
-    (void) l;
+    [[maybe_unused]] auto l = { 0, (std::get<Is>(t).decref(), 0)... };
 }
 
 

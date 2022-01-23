@@ -19,6 +19,7 @@ else()
     set(MINSIZE OFF)
 endif()
 option(ENABLE_LTO "Enable link-time, whole-program optimizations." ${MINSIZE})
+option(ENABLE_OZ "Only MinSizeRel: replace default -Os flag by -Oz." OFF)
 option(ENABLE_CCACHE "Use ccache as compiler launcher, when available." ON)
 
 # cosmetics
@@ -27,6 +28,9 @@ option(FORCE_COLORS "Force colored compiler output." OFF)
 # Build type options
 set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo" "")
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+
+set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)  # override to "default" for shared libs
 
 if (BUILD_FRAMEWORKS)
     set(BUILD_SHARED_LIBS ON)
@@ -126,6 +130,11 @@ endif ()
 # To get useful debuginfo, we need frame pointer
 if (NOT MSVC)
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer")
+endif()
+
+# MinSizeRel - enable more optimization (-Oz)
+if (ENABLE_OZ)
+    string(REGEX REPLACE "-Os" "-Oz" CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL}")
 endif()
 
 if (MSVC)

@@ -18,7 +18,7 @@ struct StringChEscSingle : one< 'a', 'b', 'f', 'n', 'r', 't', 'v', 'e', '\\', '"
 struct StringChEscHex : if_must< one< 'x' >, xdigit, xdigit > {};
 struct StringChEscOct : if_must< digit, opt<digit>, opt<digit> > {};
 struct StringChEsc : if_must< one< '\\' >, sor< StringChEscHex, StringChEscOct, StringChEscSingle > > {};
-struct StringChOther : sor< one<'\t'>, not_range<0, 31> > {};
+struct StringChOther : sor< one<'\t'>, utf8::not_range<0, 31> > {};
 struct StringCh : sor< StringChEsc, StringChOther > {};
 
 

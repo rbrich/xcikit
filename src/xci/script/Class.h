@@ -60,8 +60,8 @@ public:
     };
 
     void set_function(Index cls_fn_idx, Index mod_fn_idx, SymbolPointer symptr);
-    const FunctionInfo& get_function(size_t idx) const { return m_functions[idx]; }
-    size_t num_functions() const { return m_functions.size(); }
+    const FunctionInfo& get_function(Index cls_fn_idx) const { return m_functions[cls_fn_idx]; }
+    Size num_functions() const { return Size(m_functions.size()); }
 
 private:
     Class& m_class;

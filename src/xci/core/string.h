@@ -110,7 +110,9 @@ void strip(S& str) { lstrip(str); rstrip(str); }
 /// \param str          The string to be escaped. May contains '\0'.
 /// \param extended     Enable non-standard extension:
 ///                     * replace ESC with '\e' instead of '\x1b'
-std::string escape(std::string_view str, bool extended = false);
+/// \param utf8         Passthrough UTF-8 multi-byte chars as printable (do not escape them)
+std::string escape(std::string_view str, bool extended = false, bool utf8 = false);
+inline std::string escape_utf8(std::string_view str, bool extended = false) { return escape(str, extended, true); }
 
 // Unescape (expand) C escape sequences (i.e. "\\n" -> "\n")
 // This expects the input is well-formatted:
@@ -136,7 +138,8 @@ std::string to_utf8(std::wstring_view wstr);
 // Convert single UTF32 char to UTF8 string. Can't fail.
 std::string to_utf8(char32_t codepoint);
 
-const char8_t* utf8_next(const char8_t* utf8);
+int utf8_char_length(char8_t first);
+inline const char8_t* utf8_next(const char8_t* utf8) { return utf8 + utf8_char_length(*utf8); }
 
 template <StringIterator I>
 I utf8_next(I iter) {

@@ -44,7 +44,7 @@ public:
     void set_level(Level level) { m_level = level; }
 
     // Customizable log handler
-    // The function parameters are preformatted messages and log level.
+    // The function parameters are preformatted message and the log level.
     // The handler has to add a timestamp by itself.
     static void default_handler(Level lvl, std::string_view msg);
     using Handler = decltype(&default_handler);
@@ -68,43 +68,45 @@ struct LastErrorPlaceholder {
     static std::string message(bool use_last_error, bool error_code);
 };
 
-template<typename F, typename ...Args>
-inline std::string format(F fmt, Args&&... args)
-{
-    return fmt::format(fmt::runtime(std::forward<F>(fmt)), std::forward<Args>(args)...,
-                       fmt::arg("m", LastErrorPlaceholder{}));
+template <typename... T>
+inline std::string format(fmt::string_view fmt, T&&... args) {
+    return fmt::vformat(fmt, fmt::make_format_args(args..., fmt::arg("m", LastErrorPlaceholder{})));
 }
 
-template<typename F, typename... Args>
-inline void message(Logger::Level lvl, F fmt, Args&&... args) {
-    Logger::default_instance().log(lvl, format(std::forward<F>(fmt),
-            std::forward<Args>(args)...));
+template <typename... T>
+inline void message(Logger::Level lvl, fmt::string_view fmt, T&&... args) {
+    const auto& vargs = fmt::make_format_args(args..., fmt::arg("m", LastErrorPlaceholder{}));
+    Logger::default_instance().log(lvl, fmt::vformat(fmt, vargs));
 }
 
-template<typename F, typename... Args>
-inline void trace(F fmt, Args&&... args) {
-    message(Logger::Level::Trace, std::forward<F>(fmt), std::forward<Args>(args)...);
+template <typename... T>
+inline void trace(fmt::string_view fmt, T&&... args) {
+    const auto& vargs = fmt::make_format_args(args..., fmt::arg("m", LastErrorPlaceholder{}));
+    Logger::default_instance().log(Logger::Level::Trace, fmt::vformat(fmt, vargs));
 }
 
-template<typename F, typename... Args>
-inline void debug(F fmt, Args&&... args) {
-    message(Logger::Level::Debug, std::forward<F>(fmt), std::forward<Args>(args)...);
+template <typename... T>
+inline void debug(fmt::string_view fmt, T&&... args) {
+    const auto& vargs = fmt::make_format_args(args..., fmt::arg("m", LastErrorPlaceholder{}));
+    Logger::default_instance().log(Logger::Level::Debug, fmt::vformat(fmt, vargs));
 }
 
-template<typename F, typename... Args>
-inline void info(F fmt, Args&&... args) {
-    message(Logger::Level::Info, std::forward<F>(fmt), std::forward<Args>(args)...);
+template <typename... T>
+inline void info(fmt::string_view fmt, T&&... args) {
+    const auto& vargs = fmt::make_format_args(args..., fmt::arg("m", LastErrorPlaceholder{}));
+    Logger::default_instance().log(Logger::Level::Info, fmt::vformat(fmt, vargs));
 }
 
-template<typename F, typename... Args>
-inline void warning(F fmt, Args&&... args) {
-    message(Logger::Level::Warning, std::forward<F>(fmt), std::forward<Args>(args)...);
+template <typename... T>
+inline void warning(fmt::string_view fmt, T&&... args) {
+    const auto& vargs = fmt::make_format_args(args..., fmt::arg("m", LastErrorPlaceholder{}));
+    Logger::default_instance().log(Logger::Level::Warning, fmt::vformat(fmt, vargs));
 }
 
-template<typename F, typename... Args>
-inline void error(F fmt, Args&&... args) {
-    message(Logger::Level::Error, std::forward<F>(fmt),
-            std::forward<Args>(args)...);
+template <typename... T>
+inline void error(fmt::string_view fmt, T&&... args) {
+    const auto& vargs = fmt::make_format_args(args..., fmt::arg("m", LastErrorPlaceholder{}));
+    Logger::default_instance().log(Logger::Level::Error, fmt::vformat(fmt, vargs));
 }
 
 }  // namespace log

@@ -385,6 +385,11 @@ TEST_CASE( "Literals", "[script][interpreter]" )
     CHECK_THROWS_AS(interpret("-9223372036854775809L"), ParseError);
     CHECK(interpret("18446744073709551615ul") == "18446744073709551615UL");
     CHECK_THROWS_AS(interpret("18446744073709551616UL"), ParseError);
+    // Chars and strings (UTF-8)
+    CHECK(interpret("'@'") == "'@'");
+    CHECK(interpret("'웃'") == "'웃'"); // multi-byte UTF-8
+    CHECK(interpret("\"hello\"") == "\"hello\"");
+    CHECK(interpret("\"řečiště\"") == "\"řečiště\"");
     // Lists
     CHECK(interpret("[]") == "[]");  // no type -> [Void]
     CHECK(interpret_std("[]:[Void]") == "[]");  // same
@@ -713,10 +718,22 @@ TEST_CASE( "Casting", "[script][interpreter]" )
     CHECK(interpret_std("max:UInt") == "4294967295U");
     CHECK(interpret_std("a:Int = min; a") == "-2147483648");
     // [Char] <-> String
-    CHECK(interpret_std("cast_to_string ['a','b','c']") == "\"abc\"");
-    CHECK(interpret_std("['a','b','c']:String") == "\"abc\"");
-    CHECK(interpret_std("cast_to_chars \"abc\"") == "['a', 'b', 'c']");
-    CHECK(interpret_std("\"abc\":[Char]") == "['a', 'b', 'c']");
+    CHECK(interpret_std("cast_to_string ['a','b','č']") == "\"abč\"");
+    CHECK(interpret_std("['a','b','č']:String") == "\"abč\"");
+    CHECK(interpret_std("cast_to_chars \"abč\"") == "['a', 'b', 'č']");
+    CHECK(interpret_std("\"abč\":[Char]") == "['a', 'b', 'č']");
+    // [Byte] <-> String
+    CHECK(interpret_std("cast_to_string b\"fire\"") == "\"fire\"");
+    CHECK(interpret_std("b\"fire\":String") == "\"fire\"");
+    CHECK(interpret_std("cast_to_bytes \"fire\"") == "b\"fire\"");
+    CHECK(interpret_std("\"fire\":[Byte]") == "b\"fire\"");
+    // [Byte] <-> String (UTF-8)
+    CHECK(interpret_std("cast_to_string b\"\\xc5\\x99e\\xc5\\xbe\"") == "\"řež\"");
+    CHECK(interpret_std("b\"\\xc5\\x99e\\xc5\\xbe\":String") == "\"řež\"");
+    CHECK(interpret_std("cast_to_bytes \"řež\"") == "b\"\\xc5\\x99e\\xc5\\xbe\"");
+    CHECK(interpret_std("\"řež\":[Byte]") == "b\"\\xc5\\x99e\\xc5\\xbe\"");
+    // "multi-cast" (parentheses are required)
+    CHECK(interpret_std("((\"fire\":[Byte]):String):[Char]") == "['f', 'i', 'r', 'e']");
 }
 
 

@@ -42,9 +42,13 @@ target_link_libraries(xci-graphics
         Vulkan::Vulkan
     PRIVATE
         glfw::glfw
-        range-v3::concepts
+        range-v3::range-v3
 )
 add_dependencies(xci-graphics shaders)
+
+if (BUILD_SHARED_LIBS)
+    set_target_properties(xci-graphics PROPERTIES CXX_VISIBILITY_PRESET default)
+endif()
 
 if (BUILD_FRAMEWORKS)
     set_target_properties(xci-graphics PROPERTIES

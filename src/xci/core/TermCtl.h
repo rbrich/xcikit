@@ -172,18 +172,18 @@ public:
     /// {fg:COLOR} where COLOR is default | red | *red ... ("*" = bright)
     /// {bg:COLOR} where COLOR is the same as for fg
     /// {t:MODE} where MODE is bold | underline | normal ...
-    template<typename ...Args>
-    std::string format(const char *fmt, Args&&... args) {
-        return fmt::format(fmt::runtime(fmt), std::forward<Args>(args)...,
+    template<typename... T>
+    std::string format(fmt::string_view fmt, T&&... args) {
+        return fmt::vformat(fmt, fmt::make_format_args(args...,
                         fmt::arg("fg", FgPlaceholder{*this}),
                         fmt::arg("bg", BgPlaceholder{*this}),
-                        fmt::arg("t",  ModePlaceholder{*this}));
+                        fmt::arg("t",  ModePlaceholder{*this})));
     }
 
     /// Print string with special color/mode placeholders, see `format` above.
-    template<typename ...Args>
-    void print(const char *fmt, Args&&... args) {
-        write(format(fmt, std::forward<Args>(args)...));
+    template<typename... T>
+    void print(fmt::string_view fmt, T&&... args) {
+        write(format(fmt, std::forward<T>(args)...));
     }
 
     void write(std::string_view buf);
@@ -341,6 +341,9 @@ private:
     TermCtl(const TermCtl& term, const std::string& seq)
         : m_seq(term.m_seq + seq)
         , m_state(term.m_state == State::NoTTY ? State::NoTTY : State::CopyOk) {}
+    TermCtl(const TermCtl& term, const char* seq)
+            : m_seq(term.m_seq + (seq == nullptr ? "" : seq))
+            , m_state(term.m_state == State::NoTTY ? State::NoTTY : State::CopyOk) {}
 
     // Aliases needed to avoid macro collision
     TermCtl _save_cursor() const;

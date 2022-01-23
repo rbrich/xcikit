@@ -279,6 +279,7 @@ inline TypeInfo ti_function(std::shared_ptr<Signature>&& signature)
 { return TypeInfo(std::forward<std::shared_ptr<Signature>>(signature)); }
 
 inline TypeInfo ti_list(TypeInfo&& elem) { return TypeInfo(TypeInfo::list_of, std::forward<TypeInfo>(elem)); }
+inline TypeInfo ti_chars() { return TypeInfo{TypeInfo::list_of, ti_char()}; }
 inline TypeInfo ti_bytes() { return TypeInfo{TypeInfo::list_of, ti_byte()}; }
 
 // Each item must be TypeInfo

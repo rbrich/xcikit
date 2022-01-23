@@ -103,12 +103,12 @@ std::vector<std::string_view> rsplit(std::string_view str, char delim, int maxsp
 std::vector<std::string_view> rsplit(std::string_view str, std::string_view delim, int maxsplit)  { return _rsplit(str, delim, delim.size(), maxsplit); }
 
 
-std::string escape(string_view str, bool extended)
+std::string escape(string_view str, bool extended, bool utf8)
 {
     std::string out;
     out.reserve(str.size());
-    for (auto ch : str) {
-        switch (ch) {
+    for (auto cp = str.begin(); cp != str.end(); ++cp) {
+        switch (*cp) {
             case '\a': out += "\\a"; break;
             case '\b': out += "\\b"; break;
             case '\f': out += "\\f"; break;
@@ -120,17 +120,27 @@ std::string escape(string_view str, bool extended)
             case '"': out += "\\\""; break;
             case '\'': out += "\\'"; break;
             default: {
-                if (extended && ch == '\x1b') {
+                if (extended && *cp == '\x1b') {
                     out += "\\e";
                     break;
                 }
-                auto chnum = (int)(unsigned char)(ch);
-                if (std::isprint(chnum))
-                    out += ch;
-                else if (ch >= 0 && ch < 8)
-                    out += format("\\{}", chnum);
-                else
-                    out += format("\\x{:02x}", chnum);
+                auto c_int = (int)(unsigned char)(*cp);
+                if (std::isprint(c_int))
+                    out += *cp;
+                else if (*cp >= 0 && *cp < 8)
+                    out += format("\\{}", c_int);
+                else {
+                    if (utf8) {
+                        auto len = utf8_char_length(*cp);
+                        if (len > 1 && cp + len <= str.end()) {
+                            // multi-byte UTF-8 char -> passthrough
+                            out.append(cp, cp + size_t(len));
+                            cp += len - 1;
+                            break;
+                        }
+                    }
+                    out += format("\\x{:02x}", c_int);
+                }
                 break;
             }
         }
@@ -211,30 +221,29 @@ std::string to_utf8(char32_t codepoint)
 }
 
 
-const char8_t* utf8_next(const char8_t* utf8)
+int utf8_char_length(char8_t first)
 {
-    auto first = (unsigned char) *utf8;
     if (first == 0) {
-        return utf8;
+        return 0;
     }
     if ((first & 0b10000000) == 0) {
         // 0xxxxxxx -> 1 byte
-        return utf8 + 1;
+        return 1;
     }
     if ((first & 0b11100000) == 0b11000000) {
         // 110xxxxx -> 2 bytes
-        return utf8 + 2;
+        return 2;
     }
     if ((first & 0b11110000) == 0b11100000) {
         // 1110xxxx -> 3 bytes
-        return utf8 + 3;
+        return 3;
     }
     if ((first & 0b11111000) == 0b11110000) {
         // 11110xxx -> 4 bytes
-        return utf8 + 4;
+        return 4;
     }
-    log::error("utf8_next: Invalid UTF8 string, encountered code 0x{:02x}", int(first));
-    return utf8 + 1;
+    log::error("utf8_char_length: Invalid UTF8 string, encountered code 0x{:02x}", int(first));
+    return 1;
 }
 
 

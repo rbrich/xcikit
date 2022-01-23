@@ -371,8 +371,7 @@ private:
             // lookup in this and parent scopes
             size_t depth = 0;
             for (auto* p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
-                auto symptr = p_symtab->find_by_name(name);
-                if (symptr) {
+                if (auto symptr = p_symtab->find_by_name(name); symptr) {
                     if (depth > 0 && symptr->type() != Symbol::Method) {
                         // add Nonlocal symbol
                         Index idx = symtab().count(Symbol::Nonlocal);

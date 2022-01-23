@@ -27,7 +27,7 @@ using xci::data::leb128_length;
 using xci::data::leb128_encode;
 using xci::data::leb128_decode;
 using namespace xci::core;
-using namespace ranges::cpp20;
+namespace views = ranges::cpp20::views;
 using ranges::to;
 using ranges::accumulate;
 using std::move;
@@ -754,7 +754,7 @@ public:
         os << "b'" << core::escape(core::to_utf8(uint8_t(v))) << "'";
     }
     void visit(char32_t v) override {
-        os << '\'' << core::escape(core::to_utf8(v)) << "'";
+        os << '\'' << core::escape_utf8(core::to_utf8(v)) << "'";
     }
     void visit(uint32_t v) override { os << v << 'U'; }
     void visit(uint64_t v) override { os << v << "UL"; }
@@ -768,7 +768,7 @@ public:
         dump_float(os, v);
     }
     void visit(std::string_view&& v) override {
-        os << '"' << core::escape(v) << '"';
+        os << '"' << core::escape_utf8(v) << '"';
     }
     void visit(const ListV& v) override {
         if (!type_info.is_unknown() && type_info.elem_type().type() == Type::Byte) {

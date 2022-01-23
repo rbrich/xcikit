@@ -378,7 +378,8 @@ arch=wasm
 compiler=clang
 compiler.version=14
 compiler.libcxx=libc++
-build_type=Release
+compiler.cppstd=20
+build_type=MinSizeRel
 [options]
 [build_requires]
 [conf]
