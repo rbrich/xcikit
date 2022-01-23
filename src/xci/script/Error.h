@@ -303,7 +303,6 @@ struct ImportError : public ScriptError {
 };
 
 
-
 } // namespace xci::script
 
 #endif // include guard

@@ -10,7 +10,6 @@
 #include "Function.h"
 #include "Stack.h"
 #include <functional>
-#include <stack>
 
 namespace xci::script {
 

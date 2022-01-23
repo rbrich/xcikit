@@ -67,20 +67,8 @@ Rect MaxRectsBinPack::Insert(int width, int height, FreeRectChoiceHeuristic meth
 	if (newNode.height == 0)
 		return newNode;
 
-	size_t numRectanglesToProcess = freeRectangles.size();
-	for(size_t i = 0; i < numRectanglesToProcess; ++i)
-	{
-		if (SplitFreeNode(freeRectangles[i], newNode))
-		{
-			freeRectangles.erase(freeRectangles.begin() + i);
-			--i;
-			--numRectanglesToProcess;
-		}
-	}
+	PlaceRect(newNode);
 
-	PruneFreeList();
-
-	usedRectangles.push_back(newNode);
 	return newNode;
 }
 
@@ -115,21 +103,22 @@ void MaxRectsBinPack::Insert(std::vector<RectSize> &rects, std::vector<Rect> &ds
 
 		PlaceRect(bestNode);
 		dst.push_back(bestNode);
-		rects.erase(rects.begin() + bestRectIndex);
+		rects[bestRectIndex] = rects.back();
+		rects.pop_back();
 	}
 }
 
 void MaxRectsBinPack::PlaceRect(const Rect &node)
 {
-	size_t numRectanglesToProcess = freeRectangles.size();
-	for(size_t i = 0; i < numRectanglesToProcess; ++i)
+	for(size_t i = 0; i < freeRectangles.size();)
 	{
 		if (SplitFreeNode(freeRectangles[i], node))
 		{
-			freeRectangles.erase(freeRectangles.begin() + i);
-			--i;
-			--numRectanglesToProcess;
+			freeRectangles[i] = freeRectangles.back();
+			freeRectangles.pop_back();
 		}
+		else
+			++i;
 	}
 
 	PruneFreeList();
@@ -164,19 +153,18 @@ Rect MaxRectsBinPack::ScoreRect(int width, int height, FreeRectChoiceHeuristic m
 }
 
 /// Computes the ratio of used surface area.
-float MaxRectsBinPack::Occupancy() const
+double MaxRectsBinPack::Occupancy() const
 {
-	unsigned long usedSurfaceArea = 0;
-	for(size_t i = 0; i < usedRectangles.size(); ++i)
-		usedSurfaceArea += usedRectangles[i].width * usedRectangles[i].height;
+	uint64_t usedSurfaceArea = 0;
+	for(const auto& usedRectangle : usedRectangles)
+		usedSurfaceArea += uint64_t(usedRectangle.width * usedRectangle.height);
 
-	return (float)usedSurfaceArea / (binWidth * binHeight);
+	return (double)usedSurfaceArea / (binWidth * binHeight);
 }
 
 Rect MaxRectsBinPack::FindPositionForNewNodeBottomLeft(int width, int height, int &bestY, int &bestX) const
 {
-	Rect bestNode;
-	memset(&bestNode, 0, sizeof(Rect));
+	Rect bestNode = {};
 
 	bestY = std::numeric_limits<int>::max();
 	bestX = std::numeric_limits<int>::max();
@@ -217,8 +205,7 @@ Rect MaxRectsBinPack::FindPositionForNewNodeBottomLeft(int width, int height, in
 Rect MaxRectsBinPack::FindPositionForNewNodeBestShortSideFit(int width, int height,
 	int &bestShortSideFit, int &bestLongSideFit) const
 {
-	Rect bestNode;
-	memset(&bestNode, 0, sizeof(Rect));
+	Rect bestNode = {};
 
 	bestShortSideFit = std::numeric_limits<int>::max();
 	bestLongSideFit = std::numeric_limits<int>::max();
@@ -268,8 +255,7 @@ Rect MaxRectsBinPack::FindPositionForNewNodeBestShortSideFit(int width, int heig
 Rect MaxRectsBinPack::FindPositionForNewNodeBestLongSideFit(int width, int height,
 	int &bestShortSideFit, int &bestLongSideFit) const
 {
-	Rect bestNode;
-	memset(&bestNode, 0, sizeof(Rect));
+	Rect bestNode = {};
 
 	bestShortSideFit = std::numeric_limits<int>::max();
 	bestLongSideFit = std::numeric_limits<int>::max();
@@ -319,8 +305,7 @@ Rect MaxRectsBinPack::FindPositionForNewNodeBestLongSideFit(int width, int heigh
 Rect MaxRectsBinPack::FindPositionForNewNodeBestAreaFit(int width, int height,
 	int &bestAreaFit, int &bestShortSideFit) const
 {
-	Rect bestNode;
-	memset(&bestNode, 0, sizeof(Rect));
+	Rect bestNode = {};
 
 	bestAreaFit = std::numeric_limits<int>::max();
 	bestShortSideFit = std::numeric_limits<int>::max();
@@ -396,8 +381,7 @@ int MaxRectsBinPack::ContactPointScoreNode(int x, int y, int width, int height) 
 
 Rect MaxRectsBinPack::FindPositionForNewNodeContactPoint(int width, int height, int &bestContactScore) const
 {
-	Rect bestNode;
-	memset(&bestNode, 0, sizeof(Rect));
+	Rect bestNode = {};
 
 	bestContactScore = -1;
 
@@ -416,7 +400,7 @@ Rect MaxRectsBinPack::FindPositionForNewNodeContactPoint(int width, int height, 
 				bestContactScore = score;
 			}
 		}
-		if (freeRectangles[i].width >= height && freeRectangles[i].height >= width)
+		if (binAllowFlip && freeRectangles[i].width >= height && freeRectangles[i].height >= width)
 		{
 			int score = ContactPointScoreNode(freeRectangles[i].x, freeRectangles[i].y, height, width);
 			if (score > bestContactScore)
@@ -432,12 +416,17 @@ Rect MaxRectsBinPack::FindPositionForNewNodeContactPoint(int width, int height, 
 	return bestNode;
 }
 
-bool MaxRectsBinPack::SplitFreeNode(Rect freeNode, const Rect &usedNode)
+bool MaxRectsBinPack::SplitFreeNode(const Rect &freeNode, const Rect &usedNode)
 {
 	// Test with SAT if the rectangles even intersect.
 	if (usedNode.x >= freeNode.x + freeNode.width || usedNode.x + usedNode.width <= freeNode.x ||
 		usedNode.y >= freeNode.y + freeNode.height || usedNode.y + usedNode.height <= freeNode.y)
 		return false;
+
+	// We add up to four new free rectangles to the free rectangles list below. None of these
+	// four newly added free rectangles can overlap any other three, so keep a mark of them
+	// to avoid testing them against each other.
+	newFreeRectanglesLastSize = newFreeRectangles.size();
 
 	if (usedNode.x < freeNode.x + freeNode.width && usedNode.x + usedNode.width > freeNode.x)
 	{
@@ -446,7 +435,7 @@ bool MaxRectsBinPack::SplitFreeNode(Rect freeNode, const Rect &usedNode)
 		{
 			Rect newNode = freeNode;
 			newNode.height = usedNode.y - newNode.y;
-			freeRectangles.push_back(newNode);
+			InsertNewFreeRectangle(newNode);
 		}
 
 		// New node at the bottom side of the used node.
@@ -455,7 +444,7 @@ bool MaxRectsBinPack::SplitFreeNode(Rect freeNode, const Rect &usedNode)
 			Rect newNode = freeNode;
 			newNode.y = usedNode.y + usedNode.height;
 			newNode.height = freeNode.y + freeNode.height - (usedNode.y + usedNode.height);
-			freeRectangles.push_back(newNode);
+			InsertNewFreeRectangle(newNode);
 		}
 	}
 
@@ -466,7 +455,7 @@ bool MaxRectsBinPack::SplitFreeNode(Rect freeNode, const Rect &usedNode)
 		{
 			Rect newNode = freeNode;
 			newNode.width = usedNode.x - newNode.x;
-			freeRectangles.push_back(newNode);
+			InsertNewFreeRectangle(newNode);
 		}
 
 		// New node at the right side of the used node.
@@ -475,50 +464,74 @@ bool MaxRectsBinPack::SplitFreeNode(Rect freeNode, const Rect &usedNode)
 			Rect newNode = freeNode;
 			newNode.x = usedNode.x + usedNode.width;
 			newNode.width = freeNode.x + freeNode.width - (usedNode.x + usedNode.width);
-			freeRectangles.push_back(newNode);
+			InsertNewFreeRectangle(newNode);
 		}
 	}
 
 	return true;
 }
 
+void MaxRectsBinPack::InsertNewFreeRectangle(const Rect &newFreeRect)
+{
+	assert(newFreeRect.width > 0);
+	assert(newFreeRect.height > 0);
+
+	for(size_t i = 0; i < newFreeRectanglesLastSize;)
+	{
+		// This new free rectangle is already accounted for?
+		if (IsContainedIn(newFreeRect, newFreeRectangles[i]))
+			return;
+
+		// Does this new free rectangle obsolete a previous new free rectangle?
+		if (IsContainedIn(newFreeRectangles[i], newFreeRect))
+		{
+			// Remove i'th new free rectangle, but do so by retaining the order
+			// of the older vs newest free rectangles that we may still be placing
+			// in calling function SplitFreeNode().
+			newFreeRectangles[i] = newFreeRectangles[--newFreeRectanglesLastSize];
+			newFreeRectangles[newFreeRectanglesLastSize] = newFreeRectangles.back();
+			newFreeRectangles.pop_back();
+		}
+		else
+			++i;
+	}
+	newFreeRectangles.push_back(newFreeRect);
+}
+
 void MaxRectsBinPack::PruneFreeList()
 {
-	/*
-	///  Would be nice to do something like this, to avoid a Theta(n^2) loop through each pair.
-	///  But unfortunately it doesn't quite cut it, since we also want to detect containment.
-	///  Perhaps there's another way to do this faster than Theta(n^2).
-
-	if (freeRectangles.size() > 0)
-		clb::sort::QuickSort(&freeRectangles[0], freeRectangles.size(), NodeSortCmp);
-
-	for(size_t i = 0; i < freeRectangles.size()-1; ++i)
-		if (freeRectangles[i].x == freeRectangles[i+1].x &&
-		    freeRectangles[i].y == freeRectangles[i+1].y &&
-		    freeRectangles[i].width == freeRectangles[i+1].width &&
-		    freeRectangles[i].height == freeRectangles[i+1].height)
+	// Test all newly introduced free rectangles against old free rectangles.
+	for(size_t i = 0; i < freeRectangles.size(); ++i)
+		for(size_t j = 0; j < newFreeRectangles.size();)
 		{
-			freeRectangles.erase(freeRectangles.begin() + i);
-			--i;
-		}
-	*/
+			if (IsContainedIn(newFreeRectangles[j], freeRectangles[i]))
+			{
+				newFreeRectangles[j] = newFreeRectangles.back();
+				newFreeRectangles.pop_back();
+			}
+			else
+			{
+				// The old free rectangles can never be contained in any of the
+				// new free rectangles (the new free rectangles keep shrinking
+				// in size)
+				assert(!IsContainedIn(freeRectangles[i], newFreeRectangles[j]));
 
-	/// Go through each pair and remove any rectangle that is redundant.
+				++j;
+			}
+		}
+
+	// Merge new and old free rectangles to the group of old free rectangles.
+	freeRectangles.insert(freeRectangles.end(), newFreeRectangles.begin(), newFreeRectangles.end());
+	newFreeRectangles.clear();
+
+#ifdef _DEBUG
 	for(size_t i = 0; i < freeRectangles.size(); ++i)
 		for(size_t j = i+1; j < freeRectangles.size(); ++j)
 		{
-			if (IsContainedIn(freeRectangles[i], freeRectangles[j]))
-			{
-				freeRectangles.erase(freeRectangles.begin()+i);
-				--i;
-				break;
-			}
-			if (IsContainedIn(freeRectangles[j], freeRectangles[i]))
-			{
-				freeRectangles.erase(freeRectangles.begin()+j);
-				--j;
-			}
+			assert(!IsContainedIn(freeRectangles[i], freeRectangles[j]));
+			assert(!IsContainedIn(freeRectangles[j], freeRectangles[i]));
 		}
+#endif
 }
 
 }
