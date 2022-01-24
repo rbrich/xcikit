@@ -151,8 +151,7 @@ public:
                 v.class_name.name, inst_names.str()));
 
         // add new instance to the module
-        auto& cls = module().get_class(sym_class->index());
-        Instance inst {cls, inst_symtab};
+        Instance inst {sym_class.get_class(), inst_symtab};
         m_instance = &inst;
 
         for (auto& dfn : v.defs)
@@ -221,12 +220,9 @@ public:
         if (v.type_arg)
             v.type_arg->apply(*this);
         if (symptr->type() == Symbol::Method) {
-            // if the reference points to a class function, find nearest
+            // if the reference points to a class function, find the nearest
             // instance of the class
-            auto* symmod = symptr.symtab()->module();
-            if (symmod == nullptr)
-                symmod = &module();
-            const auto& class_name = symmod->get_class(symptr->index()).name();
+            const auto& class_name = symptr.get_class().name();
             v.chain = resolve_symbol_of_type(class_name, Symbol::Instance);
         }
     }

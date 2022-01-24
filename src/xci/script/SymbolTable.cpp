@@ -43,6 +43,16 @@ Function& SymbolPointer::get_function() const
 }
 
 
+Class& SymbolPointer::get_class() const
+{
+    auto& sym = m_symtab->get(m_symidx);
+    assert(sym.type() == Symbol::Class || sym.type() == Symbol::Method);
+    assert(m_symtab->module() != nullptr);
+    assert(sym.index() != no_index);
+    return m_symtab->module()->get_class(sym.index());
+}
+
+
 //------------------------------------------------------------------------------
 
 
