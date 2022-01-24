@@ -176,6 +176,11 @@ instance Eq Float64 {
     ne = { __not_equal 0xDD }
 }
 
+instance Eq String {
+    eq = fun a b { string_equal a b }
+    ne = fun a b { ! string_equal a b }
+}
+
 /*
 instance Eq [T] ( Eq T ) {
     eq = fun x y {

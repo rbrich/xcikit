@@ -69,8 +69,7 @@ public:
 
         if (m_class) {
             // export symbol to outer scope
-            auto outer_sym = symtab().parent()->add({name,
-                                                     Symbol::Method, m_class->index});
+            auto outer_sym = symtab().parent()->add({name, Symbol::Method, m_class->index});
             outer_sym->set_ref(dfn.variable.identifier.symbol);
             return;
         }
@@ -396,7 +395,7 @@ private:
                 return symptr;
         }
         // imported modules
-        for (Index i = Index(module().num_imported_modules() - 1); i != Index(-1); --i) {
+        for (auto i = Index(module().num_imported_modules() - 1); i != Index(-1); --i) {
             auto symptr = module().get_imported_module(i).symtab().find_by_name(name);
             if (symptr)
                 return symptr;

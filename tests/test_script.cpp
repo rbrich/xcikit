@@ -737,6 +737,19 @@ TEST_CASE( "Casting", "[script][interpreter]" )
 }
 
 
+TEST_CASE( "String operations", "[script][interpreter]" )
+{
+    CHECK(interpret_std("string_equal \"fire\" \"fire\"") == "true");
+    CHECK(interpret_std("string_equal \"fire\" \"water\"") == "false");
+    CHECK(interpret_std("\"fire\" == \"fire\"") == "true");
+    CHECK(interpret_std("\"fire\" != \"water\"") == "true");
+    CHECK(interpret_std("string_compare \"fire\" \"fire\"") == "0");
+    CHECK(interpret_std("string_compare \"fire\" \"earth\"") == "1");
+    CHECK(interpret_std("string_compare \"fire\" \"air\"") == "5");
+    CHECK(interpret_std("string_compare \"fire\" \"water\"") == "-17");
+}
+
+
 TEST_CASE( "Subscript", "[script][interpreter]" )
 {
     // custom implementation (same as in std.fire)
