@@ -1,0 +1,19 @@
+// sample module
+
+l = [1,2,3];
+
+foo = fun x: Int -> Int { x + 1 };
+bar = fun x y { x + y };
+
+class Ord T (Eq T) {
+    lt : T T -> Bool
+}
+
+instance Ord Int32 {
+    lt = { __less_than 0x88 }
+}
+
+"123"
+123
+12.3f
+0xFFFFFFFFu
