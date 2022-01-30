@@ -4,6 +4,9 @@ ifdef::env-github[]
 :!toc-title:
 endif::[]
 
+:source-highlighter: highlightjs
+:highlightjsdir: https://doc.xci.cz/lib/highlightjs
+
 = Fire Script
 
 *_Language description, v0.7_*

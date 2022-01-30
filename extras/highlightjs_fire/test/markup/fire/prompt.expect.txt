@@ -1,0 +1,9 @@
+<span class="hljs-meta">_0 ?</span> string_compare <span class="hljs-string">&quot;a&quot;</span> <span class="hljs-string">&quot;a&quot;</span>
+<span class="hljs-variable">_0</span>:<span class="hljs-type">Int32</span> = <span class="hljs-number">0</span>
+<span class="hljs-meta">_1 ?</span> string_compare <span class="hljs-string">&quot;fire&quot;</span> <span class="hljs-string">&quot;water&quot;</span>
+<span class="hljs-variable">_1</span>:<span class="hljs-type">Int32</span> = <span class="hljs-number">-17</span>
+<span class="hljs-meta">_2 ?</span> string_compare <span class="hljs-string">&quot;fire&quot;</span> <span class="hljs-string">&quot;earth&quot;</span>
+<span class="hljs-variable">_2</span>:<span class="hljs-type">Int32</span> = <span class="hljs-number">1</span>
+<span class="hljs-meta">_3 ?</span> string_compare <span class="hljs-string">&quot;fire&quot;</span> <span class="hljs-string">&quot;air&quot;</span>
+<span class="hljs-variable">_3</span>:<span class="hljs-type">Int32</span> = <span class="hljs-number">5</span>
+<span class="hljs-meta">_4 ?</span>
