@@ -276,6 +276,16 @@ TEST_CASE( "Operator precedence", "[script][parser]" )
 }
 
 
+TEST_CASE( "Dot call", "[script][parser]")
+{
+    CHECK(parse("12 . sign") == "(12 . sign)");
+    CHECK(parse("12 .sign") == "(12 . sign)");
+    CHECK_THROWS_AS(parse("12. sign"), ParseError);  // parses as 12. + ref name sign, which is not allowed
+    CHECK_THROWS_AS(parse("12.sign"), ParseError);  // parses as 12. + type specifier "sign", which is not known
+    CHECK(parse("(12).sign") == "((12) . sign)");  // use parentheses to disambiguate
+}
+
+
 TEST_CASE( "Type argument or comparison?", "[script][parser]" )
 {
     PARSE("1 > 2", "(1 > 2)");
@@ -437,6 +447,9 @@ TEST_CASE( "Expressions", "[script][interpreter]" )
     CHECK(interpret_std("4u << 3u") == "32U");
     CHECK(interpret_std("-1u >> 20u") == "4095U");  // -1u = 2**32-1
     CHECK(interpret_std("-1u << 31u") == "2147483648U");
+
+    CHECK(interpret_std("sign -32") == "-1");
+    CHECK(interpret_std("32 .sign") == "1");
 }
 
 
@@ -744,9 +757,9 @@ TEST_CASE( "String operations", "[script][interpreter]" )
     CHECK(interpret_std("\"fire\" == \"fire\"") == "true");
     CHECK(interpret_std("\"fire\" != \"water\"") == "true");
     CHECK(interpret_std("string_compare \"fire\" \"fire\"") == "0");
-    CHECK(interpret_std("string_compare \"fire\" \"earth\"") == "1");
-    CHECK(interpret_std("string_compare \"fire\" \"air\"") == "5");
-    CHECK(interpret_std("string_compare \"fire\" \"water\"") == "-17");
+    CHECK(interpret_std("string_compare \"fire\" \"earth\" .sign") == "1");
+    CHECK(interpret_std("string_compare \"fire\" \"air\" .sign") == "1");
+    CHECK(interpret_std("string_compare \"fire\" \"water\" .sign") == "-1");
     CHECK(interpret_std("\"fire\" > \"fire\"") == "false");
     CHECK(interpret_std("\"fire\" < \"fire\"") == "false");
     CHECK(interpret_std("\"fire\" >= \"fire\"") == "true");
