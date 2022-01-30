@@ -6,25 +6,70 @@ Website: https://xci.cz/
 
 module.exports = function (hljs) {
   const KEYWORDS = {
-    keyword: 'catch class else fun if import instance in match module then try type with',
+    keyword: 'catch else fun if import instance in match module then try type with',
     literal: 'void false true',
     type: 'Void Bool Byte Char Int Int32 Int64 Float Float32 Float64 String',
     built_in: 'stdin stdout stderr null'
   }
-  const DEFINITIONS = {
-    begin: [
-      /[a-z][a-zA-Z_]*/,
-      /\s+/,
-      /[=:]/,
-    ],
-    className: {
-      1: "title.function"
-    }
-  }
-  const TYPES = {
+  const TYPE_RE = /\b[A-Z][A-Za-z0-9_]*\b/
+  const VAR_RE = /\b[a-z][A-Za-z0-9_]*\b/
+  const TYPE = {
     className: 'type',
-    begin: '\\b[A-Z][A-Za-z_]*\\b',
+    begin: TYPE_RE,
     relevance: 0
+  }
+  const DEFINITION = {
+    variants: [
+      {
+        begin: [
+          VAR_RE,
+          /\s*:\s*(?=([A-Za-z_()|,\s]|->)+\s*=)/,  // lookahead, e.g. " : Int ="
+        ],
+        contains: [
+          TYPE,
+        ],
+        end: /=/,
+      },
+      {
+        begin: [
+          VAR_RE,
+          /\s*=/,
+        ],
+      }
+    ],
+    beginScope: {
+      1: "title.function"
+    },
+  }
+  const CLASS_DEF = {
+    begin: [
+      VAR_RE,
+      /\s*:/
+    ],
+    beginScope: {
+      1: "title.function"
+    },
+    contains: [
+      TYPE,
+    ],
+    end: /($|;)/,
+  }
+  const CLASS = {
+    begin: [
+      /\bclass\b/,
+      /\s+/,
+      TYPE_RE,
+      /\s+(?=([A-Za-z_()|,\s]|->)+\{)/,  // lookahead, e.g. " T (Eq T) {"
+    ],
+    beginScope: {
+      1: "keyword",
+      3: "title.class",
+    },
+    end: /\}/,
+    contains: [
+      CLASS_DEF,
+      TYPE,
+    ],
   }
   const BUILTINS = {
     className: 'built_in',
@@ -78,13 +123,13 @@ module.exports = function (hljs) {
 
   return {
     name: 'Fire',
-    aliases: ['fire'],
     keywords: KEYWORDS,
     contains: [
       hljs.C_LINE_COMMENT_MODE,
       hljs.C_BLOCK_COMMENT_MODE,
-      DEFINITIONS,
-      TYPES,
+      DEFINITION,
+      CLASS,
+      TYPE,
       BUILTINS,
       NUMBERS,
       STRING,
@@ -92,6 +137,7 @@ module.exports = function (hljs) {
       PROMPT,
       PROMPT_VARIABLES
     ],
+    unicodeRegex: true,
     disableAutodetect: true
   }
 }

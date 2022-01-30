@@ -17,3 +17,5 @@ instance Ord Int32 {
 123
 12.3f
 0xFFFFFFFFu
+
+a : Int = 2
