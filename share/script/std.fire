@@ -251,6 +251,14 @@ instance Ord Float64 {
     ge = { __greater_equal 0xDD }
 }
 
+instance Ord String {
+    lt = fun a b { string_compare a b < 0 }
+    gt = fun a b { string_compare a b > 0 }
+    le = fun a b { string_compare a b <= 0 }
+    ge = fun a b { string_compare a b >= 0 }
+}
+
+
 /*
 // TODO: document type args `<T>`, constraints `<Ord T>`, attributes `lazy`
 f : <T> T T -> T with (Ord T) = fun x y { x < y }

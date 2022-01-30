@@ -57,8 +57,16 @@ public:
                 throw RedefinedName(name, dfn.variable.identifier.source_loc);
         }
 
+        if (m_instance) {
+            // resolve symbol with the class
+            auto ref = m_instance->class_().symtab().find_by_name(name);
+            if (!ref)
+                throw FunctionNotFoundInClass(name, m_instance->class_().name());
+            symptr->set_ref(ref);
+        }
+
         dfn.variable.identifier.symbol = symptr;
-        dfn.variable.identifier.symbol->set_callable(true);
+        symptr->set_callable(true);
         if (dfn.variable.type)
             dfn.variable.type->apply(*this);
         if (dfn.expression) {
@@ -70,16 +78,8 @@ public:
         if (m_class) {
             // export symbol to outer scope
             auto outer_sym = symtab().parent()->add({name, Symbol::Method, m_class->index});
-            outer_sym->set_ref(dfn.variable.identifier.symbol);
+            outer_sym->set_ref(symptr);
             return;
-        }
-
-        if (m_instance) {
-            // resolve symbol with the class
-            auto ref = m_instance->class_().symtab().find_by_name(dfn.variable.identifier.name);
-            if (!ref)
-                throw FunctionNotFoundInClass(dfn.variable.identifier.name, m_instance->class_().name());
-            dfn.variable.identifier.symbol->set_ref(ref);
         }
     }
 
@@ -376,8 +376,12 @@ private:
                 }
 
                 if (p_symtab->name() == name && p_symtab->parent() != nullptr) {
-                    // recursion - unwrap the function
                     auto symptr = p_symtab->parent()->find_by_name(name);
+                    // self-reference in instance function -> find the Method symbol and ref that instead
+                    if (symptr && symptr.symtab()->class_() != nullptr) {
+                        return symptr.symtab()->class_()->symtab().parent()->find_last_of(name, Symbol::Method);
+                    }
+                    // recursion - unwrap the function
                     return symtab().add({symptr, Symbol::Function, no_index, depth + 1});
                 }
 

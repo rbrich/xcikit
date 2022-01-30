@@ -747,6 +747,13 @@ TEST_CASE( "String operations", "[script][interpreter]" )
     CHECK(interpret_std("string_compare \"fire\" \"earth\"") == "1");
     CHECK(interpret_std("string_compare \"fire\" \"air\"") == "5");
     CHECK(interpret_std("string_compare \"fire\" \"water\"") == "-17");
+    CHECK(interpret_std("\"fire\" > \"fire\"") == "false");
+    CHECK(interpret_std("\"fire\" < \"fire\"") == "false");
+    CHECK(interpret_std("\"fire\" >= \"fire\"") == "true");
+    CHECK(interpret_std("\"fire\" <= \"fire\"") == "true");
+    CHECK(interpret_std("\"fire\" > \"earth\"") == "true");
+    CHECK(interpret_std("\"fire\" < \"air\"") == "false");
+    CHECK(interpret_std("\"fire\" < \"water\"") == "true");
 }
 
 
@@ -807,6 +814,14 @@ TEST_CASE( "Type classes", "[script][interpreter]" )
     CHECK(interpret("class XEq T { xeq : T T -> Bool }; "
                     "instance XEq Int32 { xeq = { __equal 0x88 } }; "
                     "xeq 1 2") == "false");
+    // Instance function may reference the method that is being instantiated
+    CHECK(interpret("class Ord T (Eq T) { lt : T T -> Bool }; "
+                    "instance Ord Int32 { lt = { __less_than 0x88 } }; "
+                    "instance Ord String { lt = fun a b { string_compare a b < 0 } }; "
+                    "\"a\" < \"b\"") == "true");
+    // Instantiate type class from another module
+    CHECK(interpret_std("instance Ord Bool { lt = { __less_than 0x11 }; gt = false; le = false; ge = false }; "
+                        "false < true; 2 < 1") == "true;false");
 }
 
 
