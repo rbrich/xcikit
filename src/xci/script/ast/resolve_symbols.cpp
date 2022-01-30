@@ -57,8 +57,16 @@ public:
                 throw RedefinedName(name, dfn.variable.identifier.source_loc);
         }
 
+        if (m_instance) {
+            // resolve symbol with the class
+            auto ref = m_instance->class_().symtab().find_by_name(name);
+            if (!ref)
+                throw FunctionNotFoundInClass(name, m_instance->class_().name());
+            symptr->set_ref(ref);
+        }
+
         dfn.variable.identifier.symbol = symptr;
-        dfn.variable.identifier.symbol->set_callable(true);
+        symptr->set_callable(true);
         if (dfn.variable.type)
             dfn.variable.type->apply(*this);
         if (dfn.expression) {
@@ -69,18 +77,9 @@ public:
 
         if (m_class) {
             // export symbol to outer scope
-            auto outer_sym = symtab().parent()->add({name,
-                                                     Symbol::Method, m_class->index});
-            outer_sym->set_ref(dfn.variable.identifier.symbol);
+            auto outer_sym = symtab().parent()->add({name, Symbol::Method, m_class->index});
+            outer_sym->set_ref(symptr);
             return;
-        }
-
-        if (m_instance) {
-            // resolve symbol with the class
-            auto ref = m_instance->class_().symtab().find_by_name(dfn.variable.identifier.name);
-            if (!ref)
-                throw FunctionNotFoundInClass(dfn.variable.identifier.name, m_instance->class_().name());
-            dfn.variable.identifier.symbol->set_ref(ref);
         }
     }
 
@@ -152,8 +151,7 @@ public:
                 v.class_name.name, inst_names.str()));
 
         // add new instance to the module
-        auto& cls = module().get_class(sym_class->index());
-        Instance inst {cls, inst_symtab};
+        Instance inst {sym_class.get_class(), inst_symtab};
         m_instance = &inst;
 
         for (auto& dfn : v.defs)
@@ -222,12 +220,9 @@ public:
         if (v.type_arg)
             v.type_arg->apply(*this);
         if (symptr->type() == Symbol::Method) {
-            // if the reference points to a class function, find nearest
+            // if the reference points to a class function, find the nearest
             // instance of the class
-            auto* symmod = symptr.symtab()->module();
-            if (symmod == nullptr)
-                symmod = &module();
-            const auto& class_name = symmod->get_class(symptr->index()).name();
+            const auto& class_name = symptr.get_class().name();
             v.chain = resolve_symbol_of_type(class_name, Symbol::Instance);
         }
     }
@@ -381,8 +376,12 @@ private:
                 }
 
                 if (p_symtab->name() == name && p_symtab->parent() != nullptr) {
-                    // recursion - unwrap the function
                     auto symptr = p_symtab->parent()->find_by_name(name);
+                    // self-reference in instance function -> find the Method symbol and ref that instead
+                    if (symptr && symptr.symtab()->class_() != nullptr) {
+                        return symptr.symtab()->class_()->symtab().parent()->find_last_of(name, Symbol::Method);
+                    }
+                    // recursion - unwrap the function
                     return symtab().add({symptr, Symbol::Function, no_index, depth + 1});
                 }
 
@@ -396,7 +395,7 @@ private:
                 return symptr;
         }
         // imported modules
-        for (Index i = Index(module().num_imported_modules() - 1); i != Index(-1); --i) {
+        for (auto i = Index(module().num_imported_modules() - 1); i != Index(-1); --i) {
             auto symptr = module().get_imported_module(i).symtab().find_by_name(name);
             if (symptr)
                 return symptr;

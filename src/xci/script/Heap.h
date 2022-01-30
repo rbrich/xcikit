@@ -52,6 +52,7 @@ public:
     const std::byte* data() const { return data_(); }
     const std::byte* slot() const { return m_slot; }
 
+    bool operator==(const HeapSlot&) const = default;
     explicit operator bool() const { return m_slot != nullptr; }
 
 private:

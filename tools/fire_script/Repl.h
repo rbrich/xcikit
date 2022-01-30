@@ -37,6 +37,7 @@ public:
 
 private:
     void print_error(const ScriptError& e);
+    void print_runtime_error(const RuntimeError& e);
 
     Context& m_ctx;
     const ReplOptions& m_opts;

@@ -276,6 +276,16 @@ TEST_CASE( "Operator precedence", "[script][parser]" )
 }
 
 
+TEST_CASE( "Dot call", "[script][parser]")
+{
+    CHECK(parse("12 . sign") == "(12 . sign)");
+    CHECK(parse("12 .sign") == "(12 . sign)");
+    CHECK_THROWS_AS(parse("12. sign"), ParseError);  // parses as 12. + ref name sign, which is not allowed
+    CHECK_THROWS_AS(parse("12.sign"), ParseError);  // parses as 12. + type specifier "sign", which is not known
+    CHECK(parse("(12).sign") == "((12) . sign)");  // use parentheses to disambiguate
+}
+
+
 TEST_CASE( "Type argument or comparison?", "[script][parser]" )
 {
     PARSE("1 > 2", "(1 > 2)");
@@ -437,6 +447,9 @@ TEST_CASE( "Expressions", "[script][interpreter]" )
     CHECK(interpret_std("4u << 3u") == "32U");
     CHECK(interpret_std("-1u >> 20u") == "4095U");  // -1u = 2**32-1
     CHECK(interpret_std("-1u << 31u") == "2147483648U");
+
+    CHECK(interpret_std("sign -32") == "-1");
+    CHECK(interpret_std("32 .sign") == "1");
 }
 
 
@@ -737,6 +750,26 @@ TEST_CASE( "Casting", "[script][interpreter]" )
 }
 
 
+TEST_CASE( "String operations", "[script][interpreter]" )
+{
+    CHECK(interpret_std("string_equal \"fire\" \"fire\"") == "true");
+    CHECK(interpret_std("string_equal \"fire\" \"water\"") == "false");
+    CHECK(interpret_std("\"fire\" == \"fire\"") == "true");
+    CHECK(interpret_std("\"fire\" != \"water\"") == "true");
+    CHECK(interpret_std("string_compare \"fire\" \"fire\"") == "0");
+    CHECK(interpret_std("string_compare \"fire\" \"earth\" .sign") == "1");
+    CHECK(interpret_std("string_compare \"fire\" \"air\" .sign") == "1");
+    CHECK(interpret_std("string_compare \"fire\" \"water\" .sign") == "-1");
+    CHECK(interpret_std("\"fire\" > \"fire\"") == "false");
+    CHECK(interpret_std("\"fire\" < \"fire\"") == "false");
+    CHECK(interpret_std("\"fire\" >= \"fire\"") == "true");
+    CHECK(interpret_std("\"fire\" <= \"fire\"") == "true");
+    CHECK(interpret_std("\"fire\" > \"earth\"") == "true");
+    CHECK(interpret_std("\"fire\" < \"air\"") == "false");
+    CHECK(interpret_std("\"fire\" < \"water\"") == "true");
+}
+
+
 TEST_CASE( "Subscript", "[script][interpreter]" )
 {
     // custom implementation (same as in std.fire)
@@ -794,6 +827,14 @@ TEST_CASE( "Type classes", "[script][interpreter]" )
     CHECK(interpret("class XEq T { xeq : T T -> Bool }; "
                     "instance XEq Int32 { xeq = { __equal 0x88 } }; "
                     "xeq 1 2") == "false");
+    // Instance function may reference the method that is being instantiated
+    CHECK(interpret("class Ord T (Eq T) { lt : T T -> Bool }; "
+                    "instance Ord Int32 { lt = { __less_than 0x88 } }; "
+                    "instance Ord String { lt = fun a b { string_compare a b < 0 } }; "
+                    "\"a\" < \"b\"") == "true");
+    // Instantiate type class from another module
+    CHECK(interpret_std("instance Ord Bool { lt = { __less_than 0x11 }; gt = false; le = false; ge = false }; "
+                        "false < true; 2 < 1") == "true;false");
 }
 
 

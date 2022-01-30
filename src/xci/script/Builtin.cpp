@@ -55,7 +55,7 @@ BuiltinModule::BuiltinModule(ModuleManager& module_manager) : Module(module_mana
     symtab().add({"true", Symbol::Value, add_value(TypedValue{value::Bool(true)})});
     add_intrinsics();
     add_types();
-    add_transform_functions();
+    add_string_functions();
     add_io_functions();
     add_introspections();
 }
@@ -197,13 +197,46 @@ static void cast_bytes_to_string(Stack& stack, void*, void*)
 }
 
 
-void BuiltinModule::add_transform_functions()
+static void string_equal(Stack& stack, void*, void*)
+{
+    auto s1 = stack.pull<value::String>();
+    auto s2 = stack.pull<value::String>();
+    bool res;
+    if (s1.get<StringV>().slot == s2.get<StringV>().slot)
+        res = true;  // same instance on heap
+    else
+        res = s1.value() == s2.value();
+    s1.decref();
+    s2.decref();
+    stack.push(value::Bool(res));
+}
+
+
+static void string_compare(Stack& stack, void*, void*)
+{
+    auto s1 = stack.pull<value::String>();
+    auto s2 = stack.pull<value::String>();
+    int32_t res;
+    if (s1.get<StringV>().slot == s2.get<StringV>().slot)
+        res = 0;  // same instance on heap
+    else
+        res = s1.value().compare(s2.value());
+    s1.decref();
+    s2.decref();
+    stack.push(value::Int32(res));
+}
+
+
+void BuiltinModule::add_string_functions()
 {
     add_native_function("cast_to_chars", {ti_string()}, ti_chars(), cast_string_to_chars);
     add_native_function("cast_to_bytes", {ti_string()}, ti_bytes(), cast_string_to_bytes);
     auto f1 = add_native_function("cast_to_string", {ti_chars()}, ti_string(), cast_chars_to_string);
     auto f2 = add_native_function("cast_to_string", {ti_bytes()}, ti_string(), cast_bytes_to_string);
     f2->set_next(f1);
+
+    add_native_function("string_equal", {ti_string(), ti_string()}, ti_bool(), string_equal);
+    add_native_function("string_compare", {ti_string(), ti_string()}, ti_int32(), string_compare);
 }
 
 

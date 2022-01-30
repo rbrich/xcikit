@@ -239,8 +239,7 @@ public:
         if (m_instance != nullptr) {
             // evaluate type according to class and type vars
             const auto& psym = dfn.symbol();
-            Index cls_fn_idx = psym->ref()->index();
-            const auto& cls_fn = module().get_function(cls_fn_idx);
+            const auto& cls_fn = psym->ref().get_function();
             TypeInfo eval_type {cls_fn.signature_ptr()};
             for (const auto&& [i, t] : m_instance->types() | enumerate)
                 eval_type.replace_var(i + 1, t);
@@ -252,7 +251,7 @@ public:
 
             m_type_info = move(eval_type);
 
-            auto idx_in_cls = m_instance->class_().get_function_index(cls_fn_idx);
+            auto idx_in_cls = m_instance->class_().get_function_index(psym->ref()->index());
             m_instance->set_function(idx_in_cls, psym->index(), psym);
         }
 

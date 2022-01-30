@@ -27,7 +27,7 @@ void Machine::call(const Function& function, const Machine::InvokeCallback& cb)
     m_stack.push_frame(function);
     try {
         run(cb);
-    } catch (ScriptError& e) {
+    } catch (RuntimeError& e) {
         // unwind the whole stack, fill StackTrace in the ScriptError
         e.set_stack_trace(m_stack.make_trace());
         throw;

@@ -40,6 +40,7 @@ public:
     Symbol* operator->();
 
     Function& get_function() const;
+    Class& get_class() const;
 
     SymbolTable* symtab() const { return m_symtab; }
     Index symidx() const { return m_symidx; }
