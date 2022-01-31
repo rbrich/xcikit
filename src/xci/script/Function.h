@@ -196,13 +196,17 @@ public:
 
     template<class Archive>
     void save(Archive& ar) const {
-        ar(qualified_name(), m_signature, m_body);
+        ar("name", qualified_name());
+        ar("signature", m_signature);
+        ar("body", m_body);
     }
 
     template<class Archive>
     void load(Archive& ar) {
         std::string qualified_name;
-        ar(qualified_name, m_signature, m_body);
+        ar(qualified_name);
+        ar(m_signature);
+        ar(m_body);
         set_symtab_by_qualified_name(qualified_name);
         m_symtab->set_function(this);
     }

@@ -113,13 +113,13 @@ public:
     template<class Archive>
     void save(Archive& ar) const {
         uint8_t flags = uint8_t(m_is_callable) | uint8_t(unsigned(m_is_defined) << 1);
-        ar(m_name, m_type, m_index, m_depth, flags);
+        ar(m_name)(m_type)(m_index)(m_depth)(flags);
     }
 
     template<class Archive>
     void load(Archive& ar) {
         uint8_t flags = 0;
-        ar(m_name, m_type, m_index, m_depth, flags);
+        ar(m_name)(m_type)(m_index)(m_depth)(flags);
         m_is_callable = bool(flags & 0x01);
         m_is_defined = bool(flags & 0x02);
     }
@@ -223,12 +223,12 @@ public:
 
     template<class Archive>
     void save(Archive& ar) const {
-        ar(m_name, m_symbols, m_children);
+        ar(m_name)(m_symbols)(m_children);
     }
 
     template<class Archive>
     void load(Archive& ar) {
-        ar(m_name, m_symbols, m_children);
+        ar(m_name)(m_symbols)(m_children);
         for (SymbolTable& child : m_children) {
             child.m_parent = this;
         }

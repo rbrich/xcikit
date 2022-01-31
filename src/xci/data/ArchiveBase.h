@@ -36,11 +36,10 @@ struct ArchiveField {
 };
 
 // Automatic named fields
-#define XCI_ARCHIVE_FIELD(i, mbr) xci::data::ArchiveField<Archive, decltype(mbr)>{i, mbr, #mbr}
+#define XCI_ARCHIVE_FIELD_AUTOKEY(ar, mbr) ar(255, #mbr, mbr)
+#define XCI_ARCHIVE_FIELD(ar, i, mbr) ar(i, #mbr, mbr)
 #define XCI_ARCHIVE(ar, ...)                                                                        \
-    ar(                                                                                             \
-        XCI_FOREACH(XCI_ARCHIVE_FIELD, 255, XCI_COMMA, __VA_ARGS__)                                 \
-    )
+        XCI_FOREACH(XCI_ARCHIVE_FIELD_AUTOKEY, ar, XCI_SEMICOLON, __VA_ARGS__);
 
 
 // in-class method: void serialize(Archive&)
@@ -186,30 +185,32 @@ class ArchiveBase {
 public:
     ArchiveBase() { m_group_stack.emplace_back(); }
 
-    // convenience: ar(value, ...) -> ar.apply(value), ...
-    template<typename ...Args>
-    void operator() (Args&&... args) {
-        ((void) apply(std::forward<Args>(args)), ...);
+    // convenience: ar(value) -> ar.apply(ArchiveField{key_auto, value})
+    template<typename T>
+    ArchiveBase& operator() (T&& value) {
+        apply(ArchiveField<TImpl, std::remove_cvref_t<T>>{key_auto, value});
+        return *this;
     }
 
-    // convenience: ar.apply(value) -> ar.apply(ArchiveField{key_auto, value})
-    template <ArchiveIsReader<TImpl> T>
-    void apply(T& value) {
-        apply(ArchiveField<TImpl, T>{key_auto, value});
-    }
-    template <ArchiveIsWriter<TImpl> T>
-    void apply(const T& value) {
-        apply(ArchiveField<TImpl, T>{key_auto, value});
+    // convenience: ar(key, value) -> ar.apply(ArchiveField{key, value})
+    template<typename T>
+    ArchiveBase& operator() (uint8_t key, T&& value) {
+        apply(ArchiveField<TImpl, std::remove_cvref_t<T>>{key, value});
+        return *this;
     }
 
-    // convenience: ar.kv(key, value) -> ar.apply(ArchiveField{key, value})
-    template <ArchiveIsReader<TImpl> T>
-    void kv(uint8_t key, T& value) {
-        apply(ArchiveField<TImpl, T>{key, value});
+    // convenience: ar(name, value) -> ar.apply(ArchiveField{key_auto, value, name})
+    template<typename T>
+    ArchiveBase& operator() (const char* name, T&& value) {
+        apply(ArchiveField<TImpl, std::remove_cvref_t<T>>{key_auto, value, name});
+        return *this;
     }
-    template <ArchiveIsWriter<TImpl> T>
-    void kv(uint8_t key, const T& value) {
-        apply(ArchiveField<TImpl, T>{key, value});
+
+    // convenience: ar(key, name, value) -> ar.apply(ArchiveField{key, value, name})
+    template<typename T>
+    ArchiveBase& operator() (uint8_t key, const char* name, T&& value) {
+        apply(ArchiveField<TImpl, std::remove_cvref_t<T>>{key, value, name});
+        return *this;
     }
 
     // convenience: ar.repeated(value, f_make_value) -> reader.add(ArchiveField{key_auto, value}, f_make_value)
@@ -293,7 +294,7 @@ public:
         kv.key = draw_next_key(kv.key);
         static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
         std::apply([this]<typename... Args>(Args&&... args) {
-            ((void) this->apply(std::forward<Args>(args)), ...);
+            ((void) (*this)(std::forward<Args>(args)), ...);
         }, kv.value);
         static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
     }
@@ -305,7 +306,7 @@ public:
         kv.key = draw_next_key(kv.key);
         static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
         boost::pfr::for_each_field(kv.value, [&](auto& field) {
-            apply(field);
+            (*this)(field);  // operator()
         });
         static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
     }

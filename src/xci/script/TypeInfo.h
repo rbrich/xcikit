@@ -245,7 +245,7 @@ struct Signature {
 
     template <class Archive>
     void serialize(Archive& ar) {
-        ar(type_args, nonlocals, partial, params, return_type);
+        ar(type_args)(nonlocals)(partial)(params)(return_type);
     }
 };
 
