@@ -24,8 +24,9 @@ endif()
 add_library(xci-data
     BinaryWriter.cpp
     BinaryReader.cpp
-    Dumper.cpp
     Crc32.cpp
+    Dumper.cpp
+    Schema.cpp
     )
 add_library(xcikit::xci-data ALIAS xci-data)
 

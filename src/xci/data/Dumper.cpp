@@ -9,19 +9,6 @@
 namespace xci::data {
 
 
-void Dumper::enter_group(uint8_t key, const char* name)
-{
-    write_key_name(key, name, '\n');
-    m_group_stack.emplace_back();
-}
-
-
-void Dumper::leave_group(uint8_t key, const char* name)
-{
-    m_group_stack.pop_back();
-}
-
-
 void Dumper::write_key_name(uint8_t key, const char* name, char sep)
 {
     m_stream << indent() << '(' << int(key) << ")";

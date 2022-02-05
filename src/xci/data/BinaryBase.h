@@ -39,6 +39,13 @@ public:
     ArchiveBadChunkType() : ArchiveError("Bad chunk type") {}
 };
 
+// Reading "const char*" would require malloc, which is probably not what you want.
+// Thus, C strings can be only dumped, not read.
+// Workaround: Read into std::string temporary and copy into const char* as needed.
+class ArchiveCannotReadCString : public ArchiveError {
+public:
+    ArchiveCannotReadCString() : ArchiveError("Cannot read C string from archive") {}
+};
 
 class ArchiveBadChecksum : public ArchiveError {
 public:

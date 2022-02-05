@@ -117,6 +117,9 @@ public:
         } else if (chunk_type != ChunkNotFound)
             throw ArchiveBadChunkType();
     }
+    void add(ArchiveField<BinaryReader, const char*>&& a) {
+        throw ArchiveCannotReadCString();
+    }
 
     // binary data
     template <BlobType T>
@@ -173,8 +176,17 @@ private:
     void read_header();
     void read_footer();
 
-    void enter_group(uint8_t key, const char* name);
-    void leave_group(uint8_t key, const char* name);
+    template <typename T>
+    void enter_group(const ArchiveField<BinaryReader, T>& kv) {
+        _enter_group(kv.key);
+    }
+    template <typename T>
+    void leave_group(const ArchiveField<BinaryReader, T>& kv) {
+        _leave_group();
+    }
+
+    void _enter_group(uint8_t key);
+    void _leave_group();
 
     void skip_until_metadata();
     void skip_unknown_chunk(uint8_t type, uint8_t key);

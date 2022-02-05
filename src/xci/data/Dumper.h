@@ -4,8 +4,8 @@
 // Copyright 2019, 2020 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#ifndef XCI_DATA_SERIALIZATION_H
-#define XCI_DATA_SERIALIZATION_H
+#ifndef XCI_DATA_DUMPER_H
+#define XCI_DATA_DUMPER_H
 
 #include "ArchiveBase.h"
 
@@ -69,7 +69,15 @@ public:
     }
 
     template <typename T>
-    requires std::is_integral_v<T> || std::is_floating_point_v<T>
+    requires std::is_same_v<T, uint8_t>
+    void add(ArchiveField<Dumper, T>&& a) {
+        write_key_name(a.key, a.name);
+        m_stream << unsigned(a.value) << std::endl;
+    }
+
+    // integers, floats
+    template <typename T>
+    requires (std::is_integral_v<T> && !std::is_same_v<T, uint8_t>) || std::is_floating_point_v<T>
     void add(ArchiveField<Dumper, T>&& a) {
         write_key_name(a.key, a.name);
         m_stream << a.value << std::endl;
@@ -82,9 +90,14 @@ public:
         m_stream << magic_enum::enum_name(a.value) << std::endl;
     }
 
+    // string
     void add(ArchiveField<Dumper, std::string>&& a) {
         write_key_name(a.key, a.name);
         m_stream << '"' << a.value << '"' << std::endl;
+    }
+    void add(ArchiveField<Dumper, const char*>&& a) {
+        write_key_name(a.key, a.name);
+        m_stream << '"' << (a.value? a.value : "<null>") << '"' << std::endl;
     }
 
     template <typename T>
@@ -96,8 +109,15 @@ public:
     }
 
 private:
-    void enter_group(uint8_t key, const char* name);
-    void leave_group(uint8_t key, const char* name);
+    template <typename T>
+    void enter_group(const ArchiveField<Dumper, T>& kv) {
+        write_key_name(kv.key, kv.name, '\n');
+        m_group_stack.emplace_back();
+    }
+    template <typename T>
+    void leave_group(const ArchiveField<Dumper, T>& kv) {
+        m_group_stack.pop_back();
+    }
 
     std::string indent(int offset = 0) const {
         return std::string((m_group_stack.size() - 1 + offset) * 4, ' ');

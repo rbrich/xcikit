@@ -103,6 +103,12 @@ public:
         write_leb128(a.value.size());
         write((const std::byte*) a.value.data(), a.value.size());
     }
+    void add(ArchiveField<BinaryWriter, const char*>&& a) {
+        write(uint8_t(Type::String | a.key));
+        auto size = strlen(a.value);
+        write_leb128(size);
+        write((const std::byte*) a.value, size);
+    }
 
     // binary data
     template <BlobType T>
@@ -136,9 +142,16 @@ public:
     }
 
 private:
-    void enter_group(uint8_t key, const char* name);
-    void leave_group(uint8_t key, const char* name);
+    template <typename T>
+    void enter_group(const ArchiveField<BinaryWriter, T>&) {
+        m_group_stack.emplace_back();
+    }
+    template <typename T>
+    void leave_group(const ArchiveField<BinaryWriter, T>& kv) {
+        write_group(kv.key, kv.name);
+    }
 
+    void write_group(uint8_t key, const char* name);
     void write_content();
 
     template <typename T>

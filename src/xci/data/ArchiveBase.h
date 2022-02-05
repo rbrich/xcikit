@@ -143,7 +143,7 @@ concept FancyPointerType = requires(T v) {
     *v;
     typename std::pointer_traits<T>::pointer;
     typename std::pointer_traits<T>::element_type;
-};
+} && !std::is_same_v<T, const char*>;
 
 template<typename T>
 concept ContainerTypeWithEmplaceBack = ContainerType<T> && requires (T& v) {
@@ -188,28 +188,28 @@ public:
     // convenience: ar(value) -> ar.apply(ArchiveField{key_auto, value})
     template<typename T>
     ArchiveBase& operator() (T&& value) {
-        apply(ArchiveField<TImpl, std::remove_cvref_t<T>>{key_auto, value});
+        apply(ArchiveField<TImpl, std::remove_cvref_t<T>>{key_auto, std::forward<T>(value)});
         return *this;
     }
 
     // convenience: ar(key, value) -> ar.apply(ArchiveField{key, value})
     template<typename T>
     ArchiveBase& operator() (uint8_t key, T&& value) {
-        apply(ArchiveField<TImpl, std::remove_cvref_t<T>>{key, value});
+        apply(ArchiveField<TImpl, std::remove_cvref_t<T>>{key, std::forward<T>(value)});
         return *this;
     }
 
     // convenience: ar(name, value) -> ar.apply(ArchiveField{key_auto, value, name})
     template<typename T>
     ArchiveBase& operator() (const char* name, T&& value) {
-        apply(ArchiveField<TImpl, std::remove_cvref_t<T>>{key_auto, value, name});
+        apply(ArchiveField<TImpl, std::remove_cvref_t<T>>{key_auto, std::forward<T>(value), name});
         return *this;
     }
 
     // convenience: ar(key, name, value) -> ar.apply(ArchiveField{key, value, name})
     template<typename T>
     ArchiveBase& operator() (uint8_t key, const char* name, T&& value) {
-        apply(ArchiveField<TImpl, std::remove_cvref_t<T>>{key, value, name});
+        apply(ArchiveField<TImpl, std::remove_cvref_t<T>>{key, std::forward<T>(value), name});
         return *this;
     }
 
@@ -226,54 +226,54 @@ public:
     template <TypeWithSerializeMethod<TImpl> T>
     void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = draw_next_key(kv.key);
-        static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
+        static_cast<TImpl*>(this)->enter_group(kv);
         const_cast<T&>(kv.value).serialize(*static_cast<TImpl*>(this));
-        static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
+        static_cast<TImpl*>(this)->leave_group(kv);
     }
 
     // when: the type has out-of-class serialize() function
     template <TypeWithSerializeFunction<TImpl> T>
     void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = draw_next_key(kv.key);
-        static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
+        static_cast<TImpl*>(this)->enter_group(kv);
         serialize(*static_cast<TImpl*>(this), const_cast<T&>(kv.value));
-        static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
+        static_cast<TImpl*>(this)->leave_group(kv);
     }
 
     // when: the type has save() method and this is Writer
     template <TypeWithSaveMethod<TImpl> T>
     void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = draw_next_key(kv.key);
-        static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
+        static_cast<TImpl*>(this)->enter_group(kv);
         kv.value.save(*static_cast<TImpl*>(this));
-        static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
+        static_cast<TImpl*>(this)->leave_group(kv);
     }
 
     // when: the type has out-of-class save() function and this is Writer
     template <TypeWithSaveFunction<TImpl> T>
     void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = draw_next_key(kv.key);
-        static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
+        static_cast<TImpl*>(this)->enter_group(kv);
         save(*static_cast<TImpl*>(this), kv.value);
-        static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
+        static_cast<TImpl*>(this)->leave_group(kv);
     }
 
     // when: the type has load() method and this is Reader
     template <TypeWithLoadMethod<TImpl> T>
     void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = draw_next_key(kv.key);
-        static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
+        static_cast<TImpl*>(this)->enter_group(kv);
         kv.value.load(*static_cast<TImpl*>(this));
-        static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
+        static_cast<TImpl*>(this)->leave_group(kv);
     }
 
     // when: the type has out-of-class load() function and this is Reader
     template <TypeWithLoadFunction<TImpl> T>
     void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = draw_next_key(kv.key);
-        static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
+        static_cast<TImpl*>(this)->enter_group(kv);
         load(*static_cast<TImpl*>(this), kv.value);
-        static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
+        static_cast<TImpl*>(this)->leave_group(kv);
     }
 
     // when: Archive implementation has add() method for the type
@@ -292,11 +292,11 @@ public:
     template <TupleType T>
     void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = draw_next_key(kv.key);
-        static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
+        static_cast<TImpl*>(this)->enter_group(kv);
         std::apply([this]<typename... Args>(Args&&... args) {
             ((void) (*this)(std::forward<Args>(args)), ...);
         }, kv.value);
-        static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
+        static_cast<TImpl*>(this)->leave_group(kv);
     }
 
 #ifndef XCI_ARCHIVE_NO_MAGIC
@@ -304,11 +304,11 @@ public:
     template <TypeWithMagicSupport<TImpl> T>
     void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = draw_next_key(kv.key);
-        static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
-        boost::pfr::for_each_field(kv.value, [&](auto& field) {
+        static_cast<TImpl*>(this)->enter_group(kv);
+        boost::pfr::for_each_field(kv.value, [this](auto& field) {
             (*this)(field);  // operator()
         });
-        static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
+        static_cast<TImpl*>(this)->leave_group(kv);
     }
 #endif
 

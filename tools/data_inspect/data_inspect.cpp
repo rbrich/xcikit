@@ -21,7 +21,7 @@ using namespace xci::core::argparser;
 using namespace xci::data;
 
 
-static std::string type_to_str(uint8_t type)
+static const char* type_to_cstr(uint8_t type)
 {
     switch (type) {
         case BinaryBase::Null:      return "Null";
@@ -47,7 +47,7 @@ static std::string type_to_str(uint8_t type)
 
 static void print_data(TermCtl& term, uint8_t type, const std::byte* data, size_t size)
 {
-    auto expected_size = BinaryBase::size_by_type(type);
+    const auto expected_size = BinaryBase::size_by_type(type);
     if (expected_size != size_t(-1) && size != expected_size) {
         term.print("{fg:red}bad size {}{t:normal}", size);
         return;
@@ -68,7 +68,7 @@ static void print_data(TermCtl& term, uint8_t type, const std::byte* data, size_
         case BinaryBase::Array:     term.print("{fg:yellow}array{t:normal}"); return;
         case BinaryBase::String:
             term.print("{fg:green}\"{}\"{t:normal}",
-                    escape(std::string((const char*) data, size)));
+                    escape(std::string_view((const char*) data, size)));
             return;
         case BinaryBase::Binary:    term.print("{fg:yellow}(size {}){t:normal}", size); return;
         case BinaryBase::Master:
@@ -117,7 +117,7 @@ int main(int argc, const char* argv[])
                     case What::MetadataItem:
                         term.print("{}{t:bold}{fg:cyan}{}{t:normal}: {} = ",
                                 std::string(indent * 4, ' '),
-                                int(it.key), type_to_str(it.type));
+                                int(it.key), type_to_cstr(it.type));
                         print_data(term, it.type, it.data.get(), it.size);
                         if (it.what == What::MetadataItem) {
                             if (it.key == 1 && it.type == BinaryBase::UInt32) {
