@@ -341,7 +341,7 @@ void terminal::Line::clear(const terminal::Attributes& attr)
 }
 
 
-size_t terminal::Line::content_skip(const size_t skip, const size_t start, Attributes& attr)
+size_t terminal::Line::content_skip(size_t skip, size_t start, Attributes& attr)
 {
     auto pos = start;
     int to_skip = (int) skip;  // remaining chars to skip
@@ -371,7 +371,7 @@ size_t terminal::Line::content_skip(const size_t skip, const size_t start, Attri
             }
         }
         to_skip -= c32_width(utf8_codepoint(m_content.c_str() + pos));
-        pos = utf8_next(m_content.cbegin() + pos) - m_content.cbegin();
+        pos = utf8_next(m_content.cbegin() + ssize_t(pos)) - m_content.cbegin();
     }
     if (to_skip > 0) {
         uint8_t blank_skip[2] = {ctl::blanks, uint8_t(to_skip)};
@@ -508,7 +508,7 @@ int terminal::Line::length() const
 
 void terminal::Line::render(Renderer& renderer)
 {
-    auto chars_begin = m_content.cend();
+    auto chars_begin = m_content.cbegin();
     auto flush_chars = [&](std::string::const_iterator it) {
         if (chars_begin == m_content.cend())
             return;

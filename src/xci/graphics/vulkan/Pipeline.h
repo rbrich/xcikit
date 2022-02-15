@@ -135,7 +135,7 @@ namespace std {
             return x.hash();
         }
     };
-}
+} // namespace std
 
 
 #endif // include guard

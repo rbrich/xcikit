@@ -258,7 +258,7 @@ bool FontFace::render_glyph(GlyphIndex glyph_index, Glyph& out_glyph)
             }
             FT_Glyph_To_Bitmap(&ft_glyph, FT_RENDER_MODE_NORMAL, nullptr, true);
             FT_CHECK_RETURN_FALSE(err, "FT_Glyph_To_Bitmap");
-            FT_BitmapGlyph bitmap_glyph = reinterpret_cast<FT_BitmapGlyph>(ft_glyph);
+            auto* bitmap_glyph = reinterpret_cast<FT_BitmapGlyph>(ft_glyph);
             bitmap = &bitmap_glyph->bitmap;
             out_glyph.bearing = {bitmap_glyph->left, bitmap_glyph->top};
             out_glyph.ft_glyph = ft_glyph;
@@ -267,6 +267,8 @@ bool FontFace::render_glyph(GlyphIndex glyph_index, Glyph& out_glyph)
             FT_CHECK_RETURN_FALSE(err, "FT_Render_Glyph");
             out_glyph.bearing = {glyph_slot->bitmap_left, glyph_slot->bitmap_top};
         }
+    } else {
+        out_glyph.bearing = {glyph_slot->bitmap_left, glyph_slot->bitmap_top};
     }
 
     if (bitmap->width != 0) {

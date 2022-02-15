@@ -53,16 +53,23 @@ bool Font::add_face(const core::Vfs& vfs, std::string path, int face_index)
 
 void Font::set_style(FontStyle style)
 {
+    auto orig_face = m_current_face;
     m_current_face = 0;
     for (auto& face : m_faces) {
-        if (face->style() == style) {
-            return;
-        }
+        if (face->style() == style)
+            break;
         ++m_current_face;
     }
-    // Style not found, selected the first one
-    log::warning("Requested font style not found: {}", int(style));
-    m_current_face = 0;
+    if (m_current_face == m_faces.size()) {
+        // Style not found, selected the first one
+        log::warning("Requested font style not found: {}", int(style));
+        m_current_face = 0;
+    }
+    if (m_current_face != orig_face) {
+        // Apply attributes to new face
+        face().set_size(m_size);
+        face().set_stroke(m_stroke_type, m_stroke_radius);
+    }
 }
 
 
@@ -77,7 +84,7 @@ bool Font::set_stroke(StrokeType type, float radius)
 {
     m_stroke_type = type;
     m_stroke_radius = (type == StrokeType::None) ? 0.f : radius;
-    return face().set_stroke(type, radius);
+    return face().set_stroke(m_stroke_type, m_stroke_radius);
 }
 
 
@@ -85,7 +92,7 @@ Font::Glyph* Font::get_glyph(GlyphIndex glyph_index)
 {
     // check cache
     GlyphKey glyph_key {
-        m_current_face,face().size_key(),
+        m_current_face, face().size_key(),
         glyph_index,
         m_stroke_type, m_stroke_radius
     };
