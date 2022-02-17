@@ -13,7 +13,7 @@
 
 #include <iostream>
 #include <vector>
-#include <map>
+#include <unordered_map>
 #include <memory>
 #include <typeindex>
 
@@ -89,7 +89,14 @@ public:
     template <typename T>
     requires requires { typename T::iterator; }
     void add(ArchiveField<Schema, T>&& a) {
-        apply(ArchiveField<Schema, typename T::value_type>{a.key, *std::begin(a.value), a.name});
+        // break infinite recursion - don't dive in if the value_type is a struct that was already seen
+        if (auto it = m_type_to_struct_idx.find(std::type_index(typeid(typename T::value_type)));
+            it != m_type_to_struct_idx.end())
+        {
+            add_member(a.key, a.name, std::string{m_structs[it->second].name});
+            return;
+        }
+        apply(ArchiveField<Schema, typename T::value_type>{a.key, {}, a.name});
     }
 
     template <class Archive>
@@ -100,13 +107,13 @@ public:
 private:
     template <typename T>
     void enter_group(const ArchiveField<Schema, T>& a) {
-        auto [it, add] = m_type_to_struct_idx.try_emplace(std::type_index(typeid(a.value)), 0);
+        auto [it, add] = m_type_to_struct_idx.try_emplace(std::type_index(typeid(T)), 0);
         if (add) {
             it->second = m_structs.size();
-            m_structs.emplace_back(std::string(a.name) + "_" + std::to_string(it->second));
+            m_structs.emplace_back("struct_" + std::to_string(it->second));
         }
 
-        add_member(a.key, a.name, std::string(a.name) + "_" + std::to_string(it->second));
+        add_member(a.key, a.name, std::string{m_structs[it->second].name});
 
         m_group_stack.emplace_back();
         m_group_stack.back().buffer.struct_idx = it->second;
@@ -135,7 +142,8 @@ private:
         std::string name;
         std::vector<Member> members;
 
-        Struct(std::string&& a_name) : name(std::move(a_name)) {}
+        Struct() = default;
+        explicit Struct(std::string&& a_name) : name(std::move(a_name)) {}
 
         template <class Archive>
         void serialize(Archive& ar) {
@@ -143,8 +151,8 @@ private:
             ar("member", members);
         }
     };
-    std::vector<Struct> m_structs = {Struct{"root_0"}};
-    std::map<std::type_index, size_t> m_type_to_struct_idx;
+    std::vector<Struct> m_structs = {Struct{"struct_0"}};
+    std::unordered_map<std::type_index, size_t> m_type_to_struct_idx;
 };
 
 

@@ -122,7 +122,7 @@ struct BinaryBase {
     template<class T> requires std::is_enum_v<T>
     static constexpr Type to_chunk_type() { return to_chunk_type<std::underlying_type_t<T>>(); }
 
-    template<class T> requires (sizeof(T) == 1) && std::is_integral_v<T>
+    template<class T> requires (sizeof(T) == 1) && std::is_integral_v<T> && (!std::is_same_v<T, bool>)
     static constexpr Type to_chunk_type() { return Type::Byte; }
 
     template<class T> requires (sizeof(T) == 4) && std::is_integral_v<T> && std::is_unsigned_v<T>
