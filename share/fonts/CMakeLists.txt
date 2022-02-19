@@ -6,6 +6,20 @@ message(STATUS "Locking directory: ${CMAKE_CURRENT_SOURCE_DIR}")
 file(LOCK ${CMAKE_CURRENT_SOURCE_DIR} DIRECTORY
     GUARD FILE)
 
+# Roboto Mono font - download and extract in SOURCE dir
+message(STATUS "Assets: Roboto Mono font")
+set(ROBOTO_MONO_REVISION "8f651634e746da6df6c2c0be73255721d24f2372")
+file(DOWNLOAD
+    https://github.com/googlefonts/RobotoMono/raw/${ROBOTO_MONO_REVISION}/fonts/variable/RobotoMono%5Bwght%5D.ttf
+    ${CMAKE_CURRENT_SOURCE_DIR}/RobotoMono/RobotoMono_wght.ttf
+    EXPECTED_HASH SHA1=1f6afd30d77cb011d0747c81e0e62ff0b29b3fa7
+    SHOW_PROGRESS)
+file(DOWNLOAD
+    https://github.com/googlefonts/RobotoMono/raw/${ROBOTO_MONO_REVISION}/fonts/variable/RobotoMono-Italic%5Bwght%5D.ttf
+    ${CMAKE_CURRENT_SOURCE_DIR}/RobotoMono/RobotoMono-Italic_wght.ttf
+    EXPECTED_HASH SHA1=ab937906afc3b6deff56e02a72ea7f8e3f61006e
+    SHOW_PROGRESS)
+
 # Lora font - download and extract in SOURCE dir
 message(STATUS "Assets: Lora font")
 set(LORA_VERSION "v2.210")
@@ -58,6 +72,8 @@ set(FONTS
     Lora/Lora-Italic-VF.ttf
     Noto/NotoColorEmoji.ttf
     MaterialIcons/MaterialIcons-Regular.woff
+    RobotoMono/RobotoMono_wght.ttf
+    RobotoMono/RobotoMono-Italic_wght.ttf
     ShareTechMono/ShareTechMono-Regular.ttf
     )
 

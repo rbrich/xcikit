@@ -24,3 +24,7 @@ Fonts
 [Lora](https://github.com/cyrealtype/Lora-Cyrillic)
 - variable serif font
 - Open Font License (OFL-1.1)
+
+[Roboto Mono](https://fonts.google.com/specimen/Roboto+Mono)
+- variable mono font
+- Apache-2.0 License
