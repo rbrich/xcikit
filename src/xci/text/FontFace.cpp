@@ -4,17 +4,21 @@
 // Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#include <xci/core/log.h>
 #include "FontFace.h"
 #include "FontLibrary.h"
+#include <xci/core/log.h>
+#include <xci/compat/endian.h>
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_STROKER_H
+#include FT_MULTIPLE_MASTERS_H
+#include FT_SFNT_NAMES_H
 
 #include <hb.h>
 #include <hb-ft.h>
 
+#include <bit>
 #include <cassert>
 
 namespace xci::text {
@@ -140,6 +144,73 @@ FontStyle FontFace::style() const
 }
 
 
+bool FontFace::FontFace::is_variable() const
+{
+    return (m_face->face_flags & FT_FACE_FLAG_MULTIPLE_MASTERS) != 0;
+}
+
+
+auto FontFace::get_variable_axes() const -> std::vector<VarAxis>
+{
+    FT_MM_Var* mm_var;
+    auto err = FT_Get_MM_Var(m_face, &mm_var);
+    FT_CHECK_OR(err, "FT_Get_MM_Var", return {});
+    std::vector<VarAxis> axes;
+    for (FT_UInt i = 0; i != mm_var->num_axis; ++i) {
+        const auto& mm_axis = mm_var->axis[i];
+        auto& ax = axes.emplace_back(VarAxis{
+                .name = mm_axis.name,
+                .minimum = ft_to_float(mm_axis.minimum),
+                .maximum = ft_to_float(mm_axis.maximum),
+                .default_ = ft_to_float(mm_axis.def),
+        });
+        uint32_t tag = htobe32(mm_axis.tag);
+        std::memcpy(&ax.tag, &tag, sizeof ax.tag);
+    }
+    FT_Done_MM_Var(m_library->ft_library(), mm_var);
+    return axes;
+}
+
+
+auto FontFace::get_variable_named_styles() const -> std::vector<VarNamedStyle>
+{
+    FT_MM_Var* mm_var;
+    auto err = FT_Get_MM_Var(m_face, &mm_var);
+    FT_CHECK_OR(err, "FT_Get_MM_Var", return {});
+    std::vector<VarNamedStyle> styles;
+    for (FT_UInt i = 0; i != mm_var->num_namedstyles; ++i) {
+        const auto& mm_style = mm_var->namedstyle[i];
+        auto& style = styles.emplace_back(VarNamedStyle{
+                .name = get_name_by_strid(mm_style.strid)
+        });
+        style.coords.reserve(mm_var->num_axis);
+        std::transform(mm_style.coords, mm_style.coords + mm_var->num_axis,
+                       std::back_inserter(style.coords), ft_to_float);
+    }
+    FT_Done_MM_Var(m_library->ft_library(), mm_var);
+    return styles;
+}
+
+
+bool FontFace::set_variable_axes_coords(const std::vector<float>& coords)
+{
+    std::vector<FT_Fixed> ft_coords;
+    ft_coords.reserve(coords.size());
+    std::transform(coords.begin(), coords.end(), std::back_inserter(ft_coords), float_to_ft);
+    auto err = FT_Set_Var_Design_Coordinates(m_face, ft_coords.size(), ft_coords.data());
+    FT_CHECK_RETURN_FALSE(err, "FT_Set_Var_Design_Coordinates");
+    return true;
+}
+
+
+bool FontFace::set_variable_named_style(unsigned int instance_index)
+{
+    auto err = FT_Set_Named_Instance(m_face, instance_index);
+    FT_CHECK_RETURN_FALSE(err, "FT_Set_Named_Instance");
+    return true;
+}
+
+
 float FontFace::height() const
 {
     return ft_to_float(m_face->size->metrics.height);
@@ -226,6 +297,22 @@ FT_GlyphSlot FontFace::load_glyph(GlyphIndex glyph_index)
 }
 
 
+std::string FontFace::get_name_by_strid(unsigned int strid) const
+{
+    auto n = FT_Get_Sfnt_Name_Count(m_face);
+    for (FT_UInt i = 0; i != n; ++i) {
+        FT_SfntName name_info;
+        auto err = FT_Get_Sfnt_Name(m_face, i, &name_info);
+        FT_CHECK_OR(err, "FT_Get_Sfnt_Name", return {});
+        // FIXME: check platform_id/encoding_id/language_id
+        if (name_info.name_id == strid) {
+            return {(const char*)name_info.string, name_info.string_len};
+        }
+    }
+    return {};
+}
+
+
 FontFace::Glyph::~Glyph()
 {
     FT_Done_Glyph(ft_glyph);
@@ -249,14 +336,14 @@ bool FontFace::render_glyph(GlyphIndex glyph_index, Glyph& out_glyph)
             err = FT_Get_Glyph(glyph_slot, &ft_glyph);
             FT_CHECK_RETURN_FALSE(err, "FT_Get_Glyph");
             if (m_stroke_type == StrokeType::Outline) {
-                FT_Glyph_Stroke(&ft_glyph, m_stroker, true);
+                err = FT_Glyph_Stroke(&ft_glyph, m_stroker, true);
                 FT_CHECK_RETURN_FALSE(err, "FT_Glyph_Stroke");
             } else {
                 assert(m_stroke_type == StrokeType::InsideBorder || m_stroke_type == StrokeType::OutsideBorder);
-                FT_Glyph_StrokeBorder(&ft_glyph, m_stroker, m_stroke_type == StrokeType::InsideBorder, true);
+                err = FT_Glyph_StrokeBorder(&ft_glyph, m_stroker, m_stroke_type == StrokeType::InsideBorder, true);
                 FT_CHECK_RETURN_FALSE(err, "FT_Glyph_StrokeBorder");
             }
-            FT_Glyph_To_Bitmap(&ft_glyph, FT_RENDER_MODE_NORMAL, nullptr, true);
+            err = FT_Glyph_To_Bitmap(&ft_glyph, FT_RENDER_MODE_NORMAL, nullptr, true);
             FT_CHECK_RETURN_FALSE(err, "FT_Glyph_To_Bitmap");
             auto* bitmap_glyph = reinterpret_cast<FT_BitmapGlyph>(ft_glyph);
             bitmap = &bitmap_glyph->bitmap;

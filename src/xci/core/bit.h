@@ -96,6 +96,6 @@ void bit_write(OutIter& iter, InT value) noexcept
 }
 
 
-} // namespace
+} // namespace xci
 
 #endif // include guard

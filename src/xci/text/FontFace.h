@@ -72,6 +72,30 @@ public:
     bool has_color() const;
     FontStyle style() const;
 
+    // Variable fonts
+    bool is_variable() const;
+
+    struct VarAxis {
+        std::string name;   // e.g. "Weight"
+        char tag[4];        // e.g. "wght"
+        float minimum;
+        float maximum;
+        float default_;
+    };
+    std::vector<VarAxis> get_variable_axes() const;
+
+    struct VarNamedStyle {
+        std::vector<float> coords;
+        std::string name;
+    };
+    std::vector<VarNamedStyle> get_variable_named_styles() const;
+
+    bool set_variable_axes_coords(const std::vector<float>& coords);
+
+    /// Select one of named styles (index starting with 1).
+    /// Set 0 to reset to default style.
+    bool set_variable_named_style(unsigned int instance_index);
+
     // Font metrics
     float height() const;
     float max_advance();
@@ -110,6 +134,8 @@ private:
 
     // Returns null on error
     FT_GlyphSlot load_glyph(GlyphIndex glyph_index);
+
+    std::string get_name_by_strid(unsigned int strid) const;
 
     // private data
     std::shared_ptr<FontLibrary> m_library;
