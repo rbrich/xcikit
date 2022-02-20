@@ -54,12 +54,15 @@ int main(int argc, const char* argv[])
     if (!mono_font.add_face(vfs, "fonts/ShareTechMono/ShareTechMono-Regular.ttf", 0))
         return EXIT_FAILURE;
 
+    uint16_t font_weight = 400;
+
     Text text;
     text.set_markup_string(sample_text);
     text.set_width(1.33f);
     text.set_font(font);
     text.set_font_size(0.09f);
     text.set_font_style(FontStyle::Italic);
+    text.set_font_weight(font_weight);
     text.set_color(Color::White());
 
     Text help_text(mono_font, "[g] show glyph quads\t[<] align left\n"
@@ -73,9 +76,13 @@ int main(int argc, const char* argv[])
     help_text.set_color(Color(50, 200, 100));
     help_text.set_font_size(0.06f);
 
-    Text help_text_2(font, "Resize the window to watch the reflow.");
-    help_text_2.set_color(Color(200, 100, 50));
-    help_text_2.set_font_size(0.07f);
+    Text help_text_2(mono_font, fmt::format("[+]/[-] Font weight: {}", font_weight));
+    help_text_2.set_color(Color(50, 200, 100));
+    help_text_2.set_font_size(0.06f);
+
+    Text help_text_3(font, "Resize the window to watch the reflow.");
+    help_text_3.set_color(Color(200, 100, 50));
+    help_text_3.set_font_size(0.07f);
 
     Sprites font_texture(renderer, font.texture(), Color(0, 50, 255));
 
@@ -83,6 +90,7 @@ int main(int argc, const char* argv[])
     window.set_key_callback([&](View& view, KeyEvent ev) {
         if (ev.action != Action::Press)
             return;
+        auto orig_font_weight = font_weight;
         switch (ev.key) {
             case Key::Escape:
                 window.close();
@@ -120,12 +128,29 @@ int main(int argc, const char* argv[])
             case Key::Backslash:
                 text.set_alignment(Alignment::Center);
                 break;
-            case Key::Equal:
-                text.set_alignment(Alignment::Justify);
+            case Key::Minus:  // -/_ key
+            case Key::KeypadSubtract:
+                font_weight -= 50;
+                if (font_weight < 400)
+                    font_weight = 400;
+                break;
+            case Key::Equal:  // =/+ key
+            case Key::KeypadAdd:
+                font_weight += 50;
+                if (font_weight > 700)
+                    font_weight = 700;
                 break;
             default:
                 return;
         }
+
+        if (font_weight != orig_font_weight) {
+            text.set_font_weight(font_weight);
+            text.update(view);
+            help_text_2.set_string(fmt::format("[+]/[-] Font weight: {}", font_weight));
+            help_text_2.update(view);
+        }
+
         view.set_debug_flags(debug_flags);
         view.refresh();
     });
@@ -135,6 +160,7 @@ int main(int argc, const char* argv[])
 
         help_text.resize(view);
         help_text_2.resize(view);
+        help_text_3.resize(view);
 
         text.set_width(view.viewport_size().x / 2.f);
         text.resize(view);
@@ -152,7 +178,8 @@ int main(int argc, const char* argv[])
 
     window.set_draw_callback([&](View& view) {
         help_text.draw(view, {-0.17f, -0.9f});
-        help_text_2.draw(view, {-0.17f, 0.9f});
+        help_text_2.draw(view, {-0.17f, 0.75f});
+        help_text_3.draw(view, {-0.17f, 0.9f});
         text.draw(view, {-0.17f, -0.4f});
 
         font_texture.draw(view, {-0.5f * view.viewport_size().x + 0.01f,

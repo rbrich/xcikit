@@ -14,6 +14,7 @@
 #include FT_STROKER_H
 #include FT_MULTIPLE_MASTERS_H
 #include FT_SFNT_NAMES_H
+#include FT_TRUETYPE_TABLES_H
 
 #include <hb.h>
 #include <hb-ft.h>
@@ -41,6 +42,101 @@ static inline float ft_to_float(FT_F26Dot6 ft_units) {
 static inline FT_F26Dot6 float_to_ft(float units) {
     return (FT_F26Dot6) roundf(units * 64.f);
 }
+
+
+static inline float ft_fixed_to_float(FT_Fixed units) {
+    return (float)(units) / 65536.f;
+}
+
+static inline FT_Fixed float_to_ft_fixed(float units) {
+    return (FT_Fixed) roundf(units * 65536.f);
+}
+
+
+// -----------------------------------------------------------------------------
+
+
+static std::string get_name_by_strid(FT_Face ft_face, unsigned int strid)
+{
+    auto n = FT_Get_Sfnt_Name_Count(ft_face);
+    for (FT_UInt i = 0; i != n; ++i) {
+        FT_SfntName name_info;
+        auto err = FT_Get_Sfnt_Name(ft_face, i, &name_info);
+        FT_CHECK_OR(err, "FT_Get_Sfnt_Name", return {});
+        // FIXME: check platform_id/encoding_id/language_id
+        if (name_info.name_id == strid) {
+            return {(const char*)name_info.string, name_info.string_len};
+        }
+    }
+    return {};
+}
+
+
+FontVar::FontVar(const FontFace& font_face)
+{
+    FT_MM_Var* mm_var;
+    auto err = FT_Get_MM_Var(font_face.ft_face(), &mm_var);
+    FT_CHECK_OR(err, "FT_Get_MM_Var", return;);
+
+    // get current values of coords
+    std::vector<FT_Fixed> ft_coords;
+    ft_coords.resize(mm_var->num_axis);
+    err = FT_Get_Var_Design_Coordinates(font_face.ft_face(), ft_coords.size(), ft_coords.data());
+    FT_CHECK_OR(err, "FT_Get_Var_Design_Coordinates", return;);
+
+    // fill axis info
+    for (FT_UInt i = 0; i != mm_var->num_axis; ++i) {
+        const auto& mm_axis = mm_var->axis[i];
+        m_axes.emplace_back(Axis{
+                .name = mm_axis.name,
+                .tag = uint32_t(mm_axis.tag),
+                .minimum = ft_fixed_to_float(mm_axis.minimum),
+                .maximum = ft_fixed_to_float(mm_axis.maximum),
+                .default_ = ft_fixed_to_float(mm_axis.def),
+                .current = ft_fixed_to_float(ft_coords[i]),
+        });
+    }
+
+    // fill named styles
+    for (FT_UInt i = 0; i != mm_var->num_namedstyles; ++i) {
+        const auto& mm_style = mm_var->namedstyle[i];
+        auto& style = m_named_styles.emplace_back(NamedStyle{
+                .name = get_name_by_strid(font_face.ft_face(), mm_style.strid)
+        });
+        style.coords.reserve(mm_var->num_axis);
+        std::transform(mm_style.coords, mm_style.coords + mm_var->num_axis,
+                       std::back_inserter(style.coords), ft_fixed_to_float);
+    }
+
+    FT_Done_MM_Var(font_face.ft_library(), mm_var);
+}
+
+
+int8_t FontVar::weight_coord_index() const
+{
+    for (unsigned i = 0; i != m_axes.size(); ++i)
+        if (m_axes[i].tag == make_tag("wght"))
+            return int8_t(i);
+    return -1;
+}
+
+
+std::string FontVar::decode_tag(uint32_t tag)
+{
+    uint32_t be_tag = htobe32(tag);
+    std::string res(4, '\0');
+    std::memcpy(res.data(), &be_tag, sizeof(be_tag));
+    return res;
+}
+
+
+constexpr uint32_t FontVar::make_tag(const char name[4])
+{
+    return FT_MAKE_TAG(name[0], name[1], name[2], name[3]);
+}
+
+
+// -----------------------------------------------------------------------------
 
 
 FontFace::~FontFace()
@@ -144,51 +240,67 @@ FontStyle FontFace::style() const
 }
 
 
+bool FontFace::set_weight(uint16_t weight)
+{
+    if (!is_variable())
+        return false;
+    if (m_var_weight == c_var_uninitialized) {
+        auto var = get_variable();
+        m_var_weight = var.weight_coord_index();
+    }
+    if (m_var_weight < 0)
+        return false;  // doesn't have weight axis
+    auto coords = get_variable_axes_coords();
+    coords[m_var_weight] = weight;
+    return set_variable_axes_coords(coords);
+}
+
+
+uint16_t FontFace::weight() const
+{
+    assert(m_face != nullptr);
+    // try variable axes
+    if (is_variable()) {
+        if (m_var_weight == c_var_uninitialized) {
+            auto var = get_variable();
+            m_var_weight = var.weight_coord_index();
+        }
+        if (m_var_weight >= 0) {
+            auto coords = get_variable_axes_coords();
+            return uint16_t(coords[m_var_weight]);
+        }
+    }
+    // try OS/2 table
+    auto* os2 = (TT_OS2*) FT_Get_Sfnt_Table(m_face, FT_SFNT_OS2);
+    if (os2 == nullptr)
+        return 0;
+    return os2->usWeightClass;
+}
+
+
 bool FontFace::FontFace::is_variable() const
 {
-    return (m_face->face_flags & FT_FACE_FLAG_MULTIPLE_MASTERS) != 0;
+    return FT_HAS_MULTIPLE_MASTERS(m_face);
 }
 
 
-auto FontFace::get_variable_axes() const -> std::vector<VarAxis>
+std::vector<float> FontFace::get_variable_axes_coords() const
 {
+    // get number of coords
     FT_MM_Var* mm_var;
     auto err = FT_Get_MM_Var(m_face, &mm_var);
     FT_CHECK_OR(err, "FT_Get_MM_Var", return {});
-    std::vector<VarAxis> axes;
-    for (FT_UInt i = 0; i != mm_var->num_axis; ++i) {
-        const auto& mm_axis = mm_var->axis[i];
-        auto& ax = axes.emplace_back(VarAxis{
-                .name = mm_axis.name,
-                .minimum = ft_to_float(mm_axis.minimum),
-                .maximum = ft_to_float(mm_axis.maximum),
-                .default_ = ft_to_float(mm_axis.def),
-        });
-        uint32_t tag = htobe32(mm_axis.tag);
-        std::memcpy(&ax.tag, &tag, sizeof ax.tag);
-    }
+    unsigned int num_coords = mm_var->num_axis;
     FT_Done_MM_Var(m_library->ft_library(), mm_var);
-    return axes;
-}
-
-
-auto FontFace::get_variable_named_styles() const -> std::vector<VarNamedStyle>
-{
-    FT_MM_Var* mm_var;
-    auto err = FT_Get_MM_Var(m_face, &mm_var);
-    FT_CHECK_OR(err, "FT_Get_MM_Var", return {});
-    std::vector<VarNamedStyle> styles;
-    for (FT_UInt i = 0; i != mm_var->num_namedstyles; ++i) {
-        const auto& mm_style = mm_var->namedstyle[i];
-        auto& style = styles.emplace_back(VarNamedStyle{
-                .name = get_name_by_strid(mm_style.strid)
-        });
-        style.coords.reserve(mm_var->num_axis);
-        std::transform(mm_style.coords, mm_style.coords + mm_var->num_axis,
-                       std::back_inserter(style.coords), ft_to_float);
-    }
-    FT_Done_MM_Var(m_library->ft_library(), mm_var);
-    return styles;
+    // get current values of coords
+    std::vector<FT_Fixed> ft_coords;
+    ft_coords.resize(num_coords);
+    err = FT_Get_Var_Design_Coordinates(m_face, num_coords, ft_coords.data());
+    FT_CHECK_OR(err, "FT_Get_Var_Design_Coordinates", return {});
+    // transform to float coords
+    std::vector<float> coords;
+    std::transform(ft_coords.begin(), ft_coords.end(), std::back_inserter(coords), ft_fixed_to_float);
+    return coords;
 }
 
 
@@ -196,7 +308,7 @@ bool FontFace::set_variable_axes_coords(const std::vector<float>& coords)
 {
     std::vector<FT_Fixed> ft_coords;
     ft_coords.reserve(coords.size());
-    std::transform(coords.begin(), coords.end(), std::back_inserter(ft_coords), float_to_ft);
+    std::transform(coords.begin(), coords.end(), std::back_inserter(ft_coords), float_to_ft_fixed);
     auto err = FT_Set_Var_Design_Coordinates(m_face, ft_coords.size(), ft_coords.data());
     FT_CHECK_RETURN_FALSE(err, "FT_Set_Var_Design_Coordinates");
     return true;
@@ -294,22 +406,6 @@ FT_GlyphSlot FontFace::load_glyph(GlyphIndex glyph_index)
     int err = FT_Load_Glyph(m_face, glyph_index, get_load_flags());
     FT_CHECK_OR(err, "FT_Load_Glyph", return nullptr);
     return m_face->glyph;
-}
-
-
-std::string FontFace::get_name_by_strid(unsigned int strid) const
-{
-    auto n = FT_Get_Sfnt_Name_Count(m_face);
-    for (FT_UInt i = 0; i != n; ++i) {
-        FT_SfntName name_info;
-        auto err = FT_Get_Sfnt_Name(m_face, i, &name_info);
-        FT_CHECK_OR(err, "FT_Get_Sfnt_Name", return {});
-        // FIXME: check platform_id/encoding_id/language_id
-        if (name_info.name_id == strid) {
-            return {(const char*)name_info.string, name_info.string_len};
-        }
-    }
-    return {};
 }
 
 

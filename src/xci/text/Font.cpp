@@ -51,25 +51,63 @@ bool Font::add_face(const core::Vfs& vfs, std::string path, int face_index)
 }
 
 
-void Font::set_style(FontStyle style)
+bool Font::set_style(FontStyle style)
 {
-    auto orig_face = m_current_face;
-    m_current_face = 0;
+    auto select_face_idx = [this](size_t idx) {
+        if (idx != m_current_face) {
+            m_current_face = idx;
+            // Apply attributes to new face
+            face().set_size(m_size);
+            face().set_stroke(m_stroke_type, m_stroke_radius);
+        }
+    };
+
+    // find face index by style flags
+    size_t face_idx = 0;
     for (auto& face : m_faces) {
-        if (face->style() == style)
-            break;
-        ++m_current_face;
+        if (face->style() == style) {
+            select_face_idx(face_idx);
+            return true;
+        }
+        ++face_idx;
     }
-    if (m_current_face == m_faces.size()) {
-        // Style not found, selected the first one
-        log::warning("Requested font style not found: {}", int(style));
-        m_current_face = 0;
+
+    // Style not found, selected the first one
+    log::warning("Requested font style not found: {}", int(style));
+    select_face_idx(0);
+    return false;
+}
+
+
+bool Font::set_weight(uint16_t weight)
+{
+    auto select_face_idx = [this](size_t idx) {
+        if (idx != m_current_face) {
+            m_current_face = idx;
+            // Apply attributes to new face
+            face().set_size(m_size);
+            face().set_stroke(m_stroke_type, m_stroke_radius);
+        }
+    };
+
+    // find face index by weight and current style (e.g. italic)
+    size_t face_idx = 0;
+    auto cur_style = face().style();
+    for (auto& face : m_faces) {
+        if (face->style() == cur_style && face->weight() == weight) {
+            select_face_idx(face_idx);
+            return true;
+        }
+        ++face_idx;
     }
-    if (m_current_face != orig_face) {
-        // Apply attributes to new face
-        face().set_size(m_size);
-        face().set_stroke(m_stroke_type, m_stroke_radius);
-    }
+
+    // variable fonts - set 'wght' axis
+    if (face().set_weight(weight))
+        return true;
+
+    // Weight not found, selected the first one
+    log::warning("Requested font weight not found: {}", weight);
+    return false;
 }
 
 
@@ -92,7 +130,7 @@ Font::Glyph* Font::get_glyph(GlyphIndex glyph_index)
 {
     // check cache
     GlyphKey glyph_key {
-        m_current_face, face().size_key(),
+        m_current_face, face().size_key(), face().weight(),
         glyph_index,
         m_stroke_type, m_stroke_radius
     };

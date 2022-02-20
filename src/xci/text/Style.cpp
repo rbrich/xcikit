@@ -21,6 +21,7 @@ void Style::clear()
     m_color = graphics::Color::White();
     m_outline_color = graphics::Color::Transparent();
     m_font_style = FontStyle::Regular;
+    m_font_weight = 0;
     m_scale = 1.0f;
 }
 
@@ -29,6 +30,8 @@ void Style::apply_view(const View& view)
 {
     // must select style (i.e. font face) before changing size of the font face
     m_font->set_style(m_font_style);
+    if (m_font_weight != 0)
+        m_font->set_weight(m_font_weight);
     // convert font size
     auto font_size = view.size_to_framebuffer(m_size);
     m_font->set_size(unsigned(std::ceil(font_size.value)));

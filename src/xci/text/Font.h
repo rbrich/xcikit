@@ -48,7 +48,15 @@ public:
     const FontFace& face() const { check_face(); return *m_faces[m_current_face].get(); }
 
     // Select a loaded face by style
-    void set_style(FontStyle style);
+    bool set_style(FontStyle style);
+
+    /// Select font face by weight, or set 'wght' axis of a variable font.
+    /// Common values:
+    /// 100 = Thin,    200 = ExtraLight, 300 = Light
+    /// 400 = Regular, 500 = Medium,     600 = SemiBold
+    /// 700 = Bold,    800 = ExtraBold,  900 = Black
+    /// \returns false - request could not be satisfied
+    bool set_weight(uint16_t weight);
 
     // Select a size for current face
     bool set_size(unsigned size);
@@ -60,13 +68,14 @@ public:
     struct GlyphKey {
         size_t font_face;
         long font_size;
+        uint32_t font_weight;
         GlyphIndex glyph_index;
         StrokeType stroke_type;
         float stroke_radius;
 
         bool operator<(const GlyphKey& rhs) const {
-            return std::tie(font_face, font_size, glyph_index, stroke_type, stroke_radius)
-                 < std::tie(rhs.font_face, rhs.font_size, rhs.glyph_index,
+            return std::tie(font_face, font_size, font_weight, glyph_index, stroke_type, stroke_radius)
+                 < std::tie(rhs.font_face, rhs.font_size, rhs.font_weight, rhs.glyph_index,
                             rhs.stroke_type, rhs.stroke_radius);
         }
     };

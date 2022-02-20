@@ -41,6 +41,7 @@ public:
     void set_font(Font& font);
     void set_font_size(ViewportUnits size, bool allow_scale = true);
     void set_font_style(FontStyle font_style);
+    void set_font_weight(uint16_t weight);
     void set_color(graphics::Color color);
     void set_outline_radius(ViewportUnits radius);
     void set_outline_color(graphics::Color color);

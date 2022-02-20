@@ -44,6 +44,10 @@ public:
     void set_font_style(FontStyle font_style) { m_font_style = font_style; }
     FontStyle font_style() const { return m_font_style; }
 
+    // Font weight
+    void set_font_weight(uint16_t weight) { m_font_weight = weight; }
+    uint16_t font_weight() const { return m_font_weight; }
+
     // Fill color
     void set_color(graphics::Color color) { m_color = color; }
     graphics::Color color() const { return m_color; }
@@ -77,6 +81,7 @@ private:
     graphics::Color m_color = graphics::Color::White();
     graphics::Color m_outline_color = graphics::Color::Transparent();
     FontStyle m_font_style = FontStyle::Regular;
+    uint16_t m_font_weight = 0;
     float m_scale = 1.0f;
     bool m_allow_scale = true;
 };

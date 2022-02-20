@@ -97,6 +97,13 @@ void Text::set_font_style(FontStyle font_style)
 }
 
 
+void Text::set_font_weight(uint16_t weight)
+{
+    m_layout.set_default_font_weight(weight);
+    m_need_typeset = true;
+}
+
+
 void Text::set_color(graphics::Color color)
 {
     m_layout.set_default_color(color);
