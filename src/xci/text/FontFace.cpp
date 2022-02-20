@@ -266,7 +266,7 @@ bool FontFace::set_style(FontStyle style)
     unsigned int idx = 0;
     for (const auto& named : var.named_styles()) {
         ++idx; // one-based
-        if (named.name == "Bold") {
+        if (named.name.starts_with("Bold")) {
             set_variable_named_style(idx);
             return true;
         }

@@ -65,7 +65,10 @@ bool Font::set_style(FontStyle style)
     // find face index by style flags
     size_t face_idx = 0;
     for (auto& face : m_faces) {
-        if (face->style() == style || face->set_style(style)) {
+        // It's important to first try setting variable style,
+        // because the reported style is incomplete.
+        // E.g. "Thin" face is reported as "Regular"
+        if (face->set_style(style) || face->style() == style) {
             select_face_idx(face_idx);
             return true;
         }

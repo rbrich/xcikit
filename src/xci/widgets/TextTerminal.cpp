@@ -85,7 +85,7 @@ void terminal::Attributes::set_default_bg()
 }
 
 
-void terminal::Attributes::set_font_style(text::FontStyle style)
+void terminal::Attributes::set_font_style(terminal::FontStyle style)
 {
     set_bit(FlagFontStyle);
     m_font_style = style;
@@ -113,8 +113,8 @@ void terminal::Attributes::preceded_by(const terminal::Attributes& other)
     // Otherwise, both this and other set the attribute -> set
     if (m_set[FlagFontStyle] && other.m_set[FlagFontStyle] && m_font_style == other.m_font_style) {
         m_set[FlagFontStyle] = false;
-    } else if (!m_set[FlagFontStyle] && other.m_set[FlagFontStyle] && other.m_font_style != text::FontStyle::Regular) {
-        set_font_style(text::FontStyle::Regular);
+    } else if (!m_set[FlagFontStyle] && other.m_set[FlagFontStyle] && other.m_font_style != FontStyle::Regular) {
+        set_font_style(FontStyle::Regular);
     }
 
     if (m_set[FlagDecoration] && other.m_set[FlagDecoration] && m_decoration == other.m_decoration) {
@@ -219,7 +219,7 @@ size_t terminal::Attributes::decode(string_view sv)
         switch (*it) {
             case ctl::font_style:
                 m_set[FlagFontStyle] = true;
-                m_font_style = text::FontStyle(*++it);
+                m_font_style = FontStyle(*++it);
                 break;
             case ctl::decoration:
                 m_set[FlagDecoration] = true;
@@ -875,7 +875,11 @@ void TextTerminal::update(View& view, State state)
             {}
 
             void set_font_style(FontStyle font_style) override {
-                font.set_style(font_style);
+                // Bold/Italic
+                font.set_style(text::FontStyle(int(font_style) & 0b11));
+                // Thin
+                if (font_style >= FontStyle::Light)
+                    font.set_weight(300);
                 ascender = font.ascender();
             }
             void set_decoration(Decoration decoration) override {

@@ -17,6 +17,7 @@
 #include <cstdio>
 
 using namespace xci::widgets;
+using namespace xci::graphics::unit_literals;
 using fmt::format;
 
 int main(int argc, const char* argv[])
@@ -38,7 +39,8 @@ int main(int argc, const char* argv[])
     auto prompt = fs::current_path().string() + "> ";
 
     TextTerminal terminal {theme};
-    terminal.set_font_size(16.f);
+    terminal.set_size_in_cells({100, 50});
+    terminal.set_font_size(18.f);
     terminal.add_text(prompt);
     terminal.set_font_style(TextTerminal::FontStyle::Bold);
     terminal.add_text(std::string(cmd) + "\n");
@@ -116,10 +118,37 @@ int main(int argc, const char* argv[])
     terminal.reset_attrs();
     terminal.add_text(prompt);
     terminal.set_font_style(TextTerminal::FontStyle::Bold);
-    terminal.add_text("🐎 Příliš žluťoučký kůň úpěl ďábelské ódy.");
+    terminal.add_text("test_unicode\n");
+    terminal.set_font_style(TextTerminal::FontStyle::Regular);
+    terminal.set_fg(TextTerminal::Color8bit{214});
+    terminal.add_text("🐎 Příliš žluťoučký kůň úpěl ďábelské ódy. 🐎\n");
 
-    terminal.set_position({50, 50});
-    terminal.set_size({700, 500});
+    terminal.reset_attrs();
+    terminal.add_text(prompt);
+    terminal.set_font_style(TextTerminal::FontStyle::Bold);
+    terminal.add_text("test_attrs\n");
+
+    terminal.set_font_style(TextTerminal::FontStyle::Light);
+    terminal.add_text("Light\n");
+    terminal.set_font_style(TextTerminal::FontStyle::LightItalic);
+    terminal.add_text("LightItalic\n");
+    terminal.set_font_style(TextTerminal::FontStyle::Regular);
+    terminal.add_text("Regular\n");
+    terminal.set_font_style(TextTerminal::FontStyle::Italic);
+    terminal.add_text("Italic\n");
+    terminal.set_font_style(TextTerminal::FontStyle::Bold);
+    terminal.add_text("Bold\n");
+    terminal.set_font_style(TextTerminal::FontStyle::BoldItalic);
+    terminal.add_text("BoldItalic\n");
+
+    terminal.set_position({5, 0});
+
+    // Make the terminal fullscreen
+    window.set_size_callback([&](View& v) {
+        auto vs = v.viewport_size();
+        vs.x -= 10_vp;
+        terminal.set_size(vs);
+    });
 
     window.set_key_callback([&](View& view, const KeyEvent& ev) {
         if (ev.action != Action::Press || ev.mod != ModKey::None())

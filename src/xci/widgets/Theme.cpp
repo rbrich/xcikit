@@ -24,10 +24,8 @@ bool Theme::load_default()
     core::Vfs& vfs = m_renderer.vfs();
 
     // Base font
-    TRY(load_font_face(vfs, "fonts/Hack/Hack-Regular.ttf", 0));
-    TRY(load_font_face(vfs, "fonts/Hack/Hack-Bold.ttf", 0));
-    TRY(load_font_face(vfs, "fonts/Hack/Hack-Italic.ttf", 0));
-    TRY(load_font_face(vfs, "fonts/Hack/Hack-BoldItalic.ttf", 0));
+    TRY(load_font_face(vfs, "fonts/RobotoMono/RobotoMono_wght.ttf", 0));
+    TRY(load_font_face(vfs, "fonts/RobotoMono/RobotoMono-Italic_wght.ttf", 0));
 
     // Emoji font
     TRY(load_emoji_font_face(vfs, "fonts/Noto/NotoColorEmoji.ttf", 0));

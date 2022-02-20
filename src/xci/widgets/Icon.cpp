@@ -63,9 +63,9 @@ void Icon::resize(View& view)
         m_layout.set_font(&theme().font());
         m_layout.add_space();
         m_layout.add_word(m_text);
-        m_layout.typeset(view);
         m_needs_refresh = false;
     }
+    m_layout.typeset(view);
     m_layout.update(view);
     auto rect = m_layout.bbox();
     set_size(rect.size());
