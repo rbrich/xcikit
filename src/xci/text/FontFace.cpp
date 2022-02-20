@@ -27,13 +27,29 @@ namespace xci::text {
 using namespace xci::core;
 
 
-#define FT_CHECK_OR(err, msg, or_stmt)  do {       \
-    if (err != 0) {                             \
-        log::error("{}: {}", (msg), err);       \
-        or_stmt;                              \
-    }                                           \
+const char* ft_error_cstr(FT_Error error_code)
+{
+#if defined(FT_CONFIG_OPTION_ERROR_STRINGS) || defined(FT_DEBUG_LEVEL_ERROR)
+    return FT_Error_String(error_code);
+#else
+    #undef FTERRORS_H_
+    #define FT_ERROR_START_LIST     switch (error_code) {
+    #define FT_ERRORDEF( e, v, s )      case v: return s;
+    #define FT_ERROR_END_LIST       }
+    #include FT_ERRORS_H
+    return "Unknown error";
+#endif
+}
+
+
+#define FT_CHECK_OR(err, msg, or_stmt)  do {                        \
+    if ((err) != 0) {                                               \
+        log::error("{}: {} {}", (msg), (err), ft_error_cstr(err));  \
+        or_stmt;                                                    \
+    }                                                               \
 } while(false)
 #define FT_CHECK_RETURN_FALSE(err, msg)  FT_CHECK_OR(err, msg, return false)
+
 
 static inline float ft_to_float(FT_F26Dot6 ft_units) {
     return (float)(ft_units) / 64.f;
@@ -231,12 +247,41 @@ bool FontFace::has_color() const
 }
 
 
+bool FontFace::set_style(FontStyle style)
+{
+    if (!is_variable())
+        return false;
+    bool want_bold = (int(style) & int(FontStyle::Bold)) != 0;
+    bool want_italic = (int(style) & int(FontStyle::Italic)) != 0;
+    bool is_italic = bool(m_face->style_flags & FT_STYLE_FLAG_ITALIC);
+    if (want_italic != is_italic)
+        return false;  // italic request not satisfied by the face
+    if (!want_bold) {
+        // set default style
+        set_variable_named_style(0);
+        return true;
+    }
+    assert(want_bold);
+    auto var = get_variable();
+    unsigned int idx = 0;
+    for (const auto& named : var.named_styles()) {
+        ++idx; // one-based
+        if (named.name == "Bold") {
+            set_variable_named_style(idx);
+            return true;
+        }
+    }
+    return false;
+}
+
+
 FontStyle FontFace::style() const
 {
     assert(m_face != nullptr);
     static_assert(FT_STYLE_FLAG_ITALIC == int(FontStyle::Italic), "freetype italic flag == 1");
     static_assert(FT_STYLE_FLAG_BOLD == int(FontStyle::Bold), "freetype bold flag == 2");
-    return static_cast<FontStyle>(m_face->style_flags & 0b11);
+    bool weight_is_bold = m_var_weight >= 0 && (get_variable_axes_coords()[m_var_weight] > 600.f);
+    return static_cast<FontStyle>((m_face->style_flags & 0b11) | weight_is_bold);
 }
 
 
@@ -318,6 +363,8 @@ bool FontFace::set_variable_axes_coords(const std::vector<float>& coords)
 bool FontFace::set_variable_named_style(unsigned int instance_index)
 {
     auto err = FT_Set_Named_Instance(m_face, instance_index);
+    if (instance_index == 0 && err == -1)
+        return true;  // index=0 resets variation, but FreeType returns -1 -> ignore it
     FT_CHECK_RETURN_FALSE(err, "FT_Set_Named_Instance");
     return true;
 }

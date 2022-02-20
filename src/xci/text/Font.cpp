@@ -65,7 +65,7 @@ bool Font::set_style(FontStyle style)
     // find face index by style flags
     size_t face_idx = 0;
     for (auto& face : m_faces) {
-        if (face->style() == style) {
+        if (face->style() == style || face->set_style(style)) {
             select_face_idx(face_idx);
             return true;
         }

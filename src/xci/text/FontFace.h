@@ -56,6 +56,11 @@ enum class StrokeType {
 
 
 /// Extracts and contains information about font variations ("variable fonts")
+///
+/// Reference:
+/// - https://freetype.org/freetype2/docs/reference/ft2-multiple_masters.html
+/// - https://docs.microsoft.com/en-us/typography/opentype/spec/fvar
+/// - https://web.dev/variable-fonts/
 class FontVar: private core::NonCopyable {
 public:
     struct Axis {
@@ -108,9 +113,16 @@ public:
 
     bool has_color() const;
 
+    /// Style can be set on variable fonts
+    /// \returns true if the style was set (when supported by the face)
+    bool set_style(FontStyle style);
+    /// Query style of the face, or style of the current variation
     FontStyle style() const;
 
+    /// Weight can be set on variable fonts
+    /// \returns true if the weight was set (when supported by the face)
     bool set_weight(uint16_t weight);
+    /// Query weight of the face, or weight of the current variation
     uint16_t weight() const;
 
     // -------------------------------------------------------------------------
