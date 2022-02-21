@@ -402,7 +402,7 @@ void Renderer::create_device()
         // Choose the first adequate device,
         // or the one selected by set_device_id
         bool choose = (m_physical_device == VK_NULL_HANDLE) && \
-            (m_device_id == 0 || m_device_id == device_props.deviceID);
+            (m_device_id == ~0u || m_device_id == device_props.deviceID);
 
         // check supported queue families
         if (choose) {
