@@ -86,7 +86,7 @@ public:
         : m_renderer(renderer), m_descriptor_pool(descriptor_pool) {}
     ~PrimitivesDescriptorSets();
 
-    void create(const VkDescriptorSetLayout layout);
+    void create(VkDescriptorSetLayout layout);
 
     void update(
             const PrimitivesBuffers& buffers,
@@ -95,7 +95,7 @@ public:
             const TextureBinding& texture_binding);
 
     void bind(VkCommandBuffer cmd_buf, size_t cmd_buf_idx,
-              const VkPipelineLayout pipeline_layout);
+              VkPipelineLayout pipeline_layout);
 
 private:
     Renderer& m_renderer;
@@ -144,7 +144,6 @@ public:
     void draw(View& view, const ViewportCoords& pos);
 
 private:
-    VkDevice device() const;
     void update_pipeline();
     void destroy_pipeline();
 

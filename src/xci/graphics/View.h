@@ -75,12 +75,12 @@ using ViewportSize = core::Vec2<ViewportUnits>;
 using ViewportRect = core::Rect<ViewportUnits>;
 
 namespace unit_literals {
-constexpr ScreenPixels operator ""_sc (long double value) { return ScreenPixels(value); }
-constexpr ScreenPixels operator ""_sc (unsigned long long value) { return ScreenPixels(value); }
-constexpr FramebufferPixels operator ""_fb (long double value) { return FramebufferPixels(value); }
-constexpr FramebufferPixels operator ""_fb (unsigned long long value) { return FramebufferPixels(value); }
-constexpr ViewportUnits operator ""_vp (long double value) { return ViewportUnits(value); }
-constexpr ViewportUnits operator ""_vp (unsigned long long value) { return ViewportUnits(value); }
+constexpr ScreenPixels operator ""_sc (long double value) { return {float(value)}; }
+constexpr ScreenPixels operator ""_sc (unsigned long long value) { return {float(value)}; }
+constexpr FramebufferPixels operator ""_fb (long double value) { return {float(value)}; }
+constexpr FramebufferPixels operator ""_fb (unsigned long long value) { return {float(value)}; }
+constexpr ViewportUnits operator ""_vp (long double value) { return {float(value)}; }
+constexpr ViewportUnits operator ""_vp (unsigned long long value) { return {float(value)}; }
 } // namespace unit_literals
 
 

@@ -98,8 +98,8 @@ public:
 
     // mode
     TermCtl mode(Mode mode) const;
-    TermCtl bold() const;  // bold and/or increased intensity
-    TermCtl dim() const;  // decreased intensity
+    TermCtl bold() const;  // bold or increased intensity
+    TermCtl dim() const;  // faint or decreased intensity
     TermCtl italic() const;
     TermCtl underline() const;
     TermCtl overline() const;

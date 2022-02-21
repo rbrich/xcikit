@@ -21,15 +21,18 @@ using fmt::format;
 
 class TestRenderer: public terminal::Renderer {
 public:
-    void set_font_style(FontStyle font_style) override {
+    void set_font_style(terminal::FontStyle font_style) override {
         if (font_style == m_font_style)
             return;
+        using terminal::FontStyle;
         m_output.append([font_style](){
             switch (font_style) {
-                case FontStyle::Regular:    return "[r]";
-                case FontStyle::Italic:     return "[i]";
-                case FontStyle::Bold:       return "[b]";
-                case FontStyle::BoldItalic: return "[bi]";
+                case FontStyle::Regular:     return "[r]";
+                case FontStyle::Italic:      return "[i]";
+                case FontStyle::Bold:        return "[b]";
+                case FontStyle::BoldItalic:  return "[bi]";
+                case FontStyle::Light:       return "[l]";
+                case FontStyle::LightItalic: return "[li]";
             }
             UNREACHABLE;
         }());
@@ -86,7 +89,7 @@ public:
 
 private:
     std::string m_output;
-    FontStyle m_font_style = FontStyle::Regular;
+    terminal::FontStyle m_font_style = terminal::FontStyle::Regular;
 };
 
 
@@ -129,15 +132,15 @@ TEST_CASE( "Attributes", "[TextTerminal]" )
     enc = attr.encode();
     CHECK( escape(enc) == escape(format("{:c}{:c}", default_fg, default_bg)) );
 
-    attr.set_font_style(FontStyle::Italic);
+    attr.set_font_style(terminal::FontStyle::Italic);
     enc = attr.encode();
     CHECK( escape(enc) == escape(format("{:c}\x01{:c}{:c}", font_style, default_fg, default_bg)) );
 
-    attr.set_font_style(FontStyle::Bold);
+    attr.set_font_style(terminal::FontStyle::Bold);
     enc = attr.encode();
     CHECK( escape(enc) == escape(format("{:c}\x02{:c}{:c}", font_style, default_fg, default_bg)) );
 
-    attr.set_font_style(FontStyle::BoldItalic);
+    attr.set_font_style(terminal::FontStyle::BoldItalic);
     enc = attr.encode();
     CHECK( escape(enc) == escape(format("{:c}\x03{:c}{:c}", font_style, default_fg, default_bg)) );
 
@@ -156,12 +159,12 @@ TEST_CASE( "Line::add_text", "[TextTerminal]" )
     line.render(r);
     CHECK(r.output().empty());
 
-    bold.set_font_style(FontStyle::Bold);
+    bold.set_font_style(terminal::FontStyle::Bold);
     line.add_text(0, "bold", bold, false);
     line.render(r);
     CHECK(r.output() == "[b]bold[r]");
 
-    italic.set_font_style(FontStyle::Italic);
+    italic.set_font_style(terminal::FontStyle::Italic);
     line.add_text(0, "italic", italic, true);
     line.render(r);
     CHECK(r.output() == "[i]italic[b]bold[r]");
@@ -192,12 +195,12 @@ TEST_CASE( "Line::erase_text", "[TextTerminal]" )
     terminal::Line line;
     terminal::Attributes bold, italic, attr;  // NOLINT
 
-    bold.set_font_style(FontStyle::Bold);
+    bold.set_font_style(terminal::FontStyle::Bold);
     line.add_text(0, "verybold", bold, /*insert=*/false);
     line.render(r);
     CHECK(r.output() == "[b]verybold[r]");
 
-    italic.set_font_style(FontStyle::Italic);
+    italic.set_font_style(terminal::FontStyle::Italic);
     line.erase_text(3, 3, italic);
     line.render(r);
     CHECK(r.output() == "[b]ver[i]   [b]ld[r]");

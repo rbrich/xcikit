@@ -69,6 +69,16 @@ using Color8bit = uint8_t;
 using Color24bit = graphics::Color;  // alpha channel is ignored
 
 
+enum class FontStyle {
+    Regular,        // 000
+    Italic,         // 001
+    Bold,           // 010
+    BoldItalic,     // 011
+    Light,          // 100
+    LightItalic,    // 101
+};
+
+
 enum class Decoration {
     None,
     Underlined,
@@ -90,7 +100,7 @@ enum class Mode {
 
 class Renderer {
 public:
-    virtual void set_font_style(text::FontStyle font_style) = 0;
+    virtual void set_font_style(FontStyle font_style) = 0;
     virtual void set_decoration(Decoration decoration) = 0;
     virtual void set_mode(Mode mode) = 0;
     virtual void set_default_fg_color() = 0;
@@ -139,7 +149,7 @@ public:
     void set_default_fg();
     void set_default_bg();
 
-    void set_font_style(text::FontStyle style);
+    void set_font_style(terminal::FontStyle style);
     void set_mode(Mode mode);
     void set_decoration(Decoration decoration);
 
@@ -153,7 +163,7 @@ public:
     bool has_font_style() const { return m_set[FlagFontStyle]; }
     bool has_decoration() const { return m_set[FlagDecoration]; }
     bool has_mode() const { return m_set[FlagMode]; }
-    text::FontStyle font_style() const { return has_font_style() ? m_font_style : text::FontStyle::Regular; }
+    FontStyle font_style() const { return has_font_style() ? m_font_style : FontStyle::Regular; }
     Mode mode() const { return has_mode() ? m_mode : Mode::Normal; }
     Decoration decoration() const { return has_decoration() ? m_decoration : Decoration::None; }
 
@@ -174,7 +184,7 @@ private:
     ColorMode m_fg = ColorMode::ColorDefault;
     ColorMode m_bg = ColorMode::ColorDefault;
 
-    text::FontStyle m_font_style = text::FontStyle::Regular;
+    FontStyle m_font_style = FontStyle::Regular;
     Mode m_mode = Mode::Normal;
     Decoration m_decoration = Decoration::None;
 
@@ -371,7 +381,7 @@ public:
     // ------------------------------------------------------------------------
     // Text attributes
 
-    using FontStyle = text::FontStyle;
+    using FontStyle = terminal::FontStyle;
     void set_font_style(FontStyle style);
 
     using Decoration = terminal::Decoration;

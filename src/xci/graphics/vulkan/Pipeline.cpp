@@ -76,7 +76,8 @@ DescriptorPoolSizes PipelineLayoutCreateInfo::descriptor_pool_sizes() const
     sizes.add(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1);
 
     // uniforms
-    sizes.add(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_uniform_binding_count);
+    if (m_uniform_binding_count != 0)
+        sizes.add(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_uniform_binding_count);
 
     // texture
     if (m_texture_binding != uint32_t(-1))

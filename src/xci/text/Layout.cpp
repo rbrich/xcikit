@@ -55,6 +55,13 @@ void Layout::set_default_font_style(FontStyle font_style)
 }
 
 
+void Layout::set_default_font_weight(uint16_t weight)
+{
+    m_default_style.set_font_weight(weight);
+    m_page.clear();
+}
+
+
 void Layout::set_default_color(graphics::Color color)
 {
     m_default_style.set_color(color);

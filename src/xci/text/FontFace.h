@@ -29,11 +29,12 @@ typedef struct hb_font_t hb_font_t;
 
 namespace xci::text {
 
+namespace fs = std::filesystem;
 
 using CodePoint = char32_t;
 using GlyphIndex = uint32_t;
 
-namespace fs = std::filesystem;
+class FontFace;
 
 
 // This enum can also be considered a bitset,
@@ -54,9 +55,50 @@ enum class StrokeType {
 };
 
 
-// Wrapper around FT_Face. Set size and attributes,
-// retrieve rendered glyphs (bitmaps) and glyph metrics.
+/// Extracts and contains information about font variations ("variable fonts")
+///
+/// Reference:
+/// - https://freetype.org/freetype2/docs/reference/ft2-multiple_masters.html
+/// - https://docs.microsoft.com/en-us/typography/opentype/spec/fvar
+/// - https://web.dev/variable-fonts/
+class FontVar: private core::NonCopyable {
+public:
+    struct Axis {
+        std::string name;   // e.g. "Weight"
+        uint32_t tag;       // e.g. "wght"
+        float minimum;
+        float maximum;
+        float default_;
+        float current;
+    };
 
+    struct NamedStyle {
+        std::vector<float> coords;
+        std::string name;
+    };
+
+    explicit FontVar(const FontFace& font_face);
+
+    const std::vector<Axis>& axes() const { return m_axes; }
+    const std::vector<NamedStyle>& named_styles() const { return m_named_styles; }
+
+    // -1 = not available
+    int8_t weight_coord_index() const;
+
+    /// Decode 32-bit tag to 4-byte string
+    static std::string decode_tag(uint32_t tag);
+
+    /// Make 32-bit tag (as used in Axis) from 4-byte string
+    static constexpr uint32_t make_tag(const char name[4]);
+
+private:
+    std::vector<Axis> m_axes;
+    std::vector<NamedStyle> m_named_styles;
+};
+
+
+/// Wrapper around FT_Face. Set size and attributes,
+/// retrieve rendered glyphs (bitmaps) and glyph metrics.
 class FontFace: private core::NonCopyable {
 public:
     explicit FontFace(FontLibraryPtr library) : m_library(std::move(library)) {}
@@ -70,9 +112,40 @@ public:
     bool set_stroke(StrokeType type, float radius);
 
     bool has_color() const;
+
+    /// Style can be set on variable fonts
+    /// \returns true if the style was set (when supported by the face)
+    bool set_style(FontStyle style);
+    /// Query style of the face, or style of the current variation
     FontStyle style() const;
 
+    /// Weight can be set on variable fonts
+    /// \returns true if the weight was set (when supported by the face)
+    bool set_weight(uint16_t weight);
+    /// Query weight of the face, or weight of the current variation
+    uint16_t weight() const;
+
+    // -------------------------------------------------------------------------
+    // Variable fonts
+
+    bool is_variable() const;
+
+    /// Get information about variable axes and named styles
+    FontVar get_variable() const { return FontVar(*this); }
+
+    /// Get current values of variable axes coords
+    std::vector<float> get_variable_axes_coords() const;
+
+    /// Set variable axes coords to new values
+    bool set_variable_axes_coords(const std::vector<float>& coords);
+
+    /// Select one of named styles (index starting with 1).
+    /// Set 0 to reset to default style.
+    bool set_variable_named_style(unsigned int instance_index);
+
+    // -------------------------------------------------------------------------
     // Font metrics
+
     float height() const;
     float max_advance();
     float ascender() const;
@@ -103,6 +176,9 @@ public:
     };
     bool render_glyph(GlyphIndex glyph_index, Glyph& out_glyph);
 
+    FT_Face ft_face() const { return m_face; }
+    FT_Library ft_library() const { return m_library->ft_library(); }
+
 private:
     bool load_face(const fs::path& file_path, const std::byte* buffer, size_t buffer_size, int face_index);
 
@@ -118,6 +194,10 @@ private:
     FT_Stroker m_stroker = nullptr;
     hb_font_t* m_hb_font = nullptr;
     StrokeType m_stroke_type = StrokeType::None;
+
+    static constexpr int8_t c_var_uninitialized = -2;
+    static constexpr int8_t c_var_not_available = -1;
+    mutable int8_t m_var_weight = c_var_uninitialized;  // index of variable coord for weight
 };
 
 

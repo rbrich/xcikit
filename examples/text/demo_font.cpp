@@ -134,7 +134,7 @@ int main(int argc, const char* argv[])
         auto tx = -vs.x * 0.5f + fw  // the font box right edge
                 + (vs.x - fw - emoji.layout().bbox().w) / 2;  // half of empty space left around text
         text.draw(view, {tx, -0.55f});
-        emoji.draw(view, {tx, -0.90f});
+        emoji.draw(view, {tx, -0.70f});
         help_text.draw(view, {tx, 0.70f});
     });
 

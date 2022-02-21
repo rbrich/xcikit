@@ -40,6 +40,7 @@ public:
     void set_default_font(Font* font);
     void set_default_font_size(ViewportUnits size, bool allow_scale = true);
     void set_default_font_style(FontStyle font_style);
+    void set_default_font_weight(uint16_t weight);
     void set_default_color(graphics::Color color);
     void set_default_outline_radius(ViewportUnits radius);
     void set_default_outline_color(graphics::Color color);

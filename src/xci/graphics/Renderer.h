@@ -167,7 +167,7 @@ private:
     VkDebugUtilsMessengerEXT m_debug_messenger {};
 #endif
 
-    uint32_t m_device_id = 0;  // requested deviceID
+    uint32_t m_device_id = ~0u;  // requested deviceID
 
     // Device limits
     uint32_t m_max_image_dimension_2d = 0;

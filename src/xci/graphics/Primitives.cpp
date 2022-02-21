@@ -129,7 +129,7 @@ PrimitivesDescriptorSets::~PrimitivesDescriptorSets()
 }
 
 
-void PrimitivesDescriptorSets::create(const VkDescriptorSetLayout layout)
+void PrimitivesDescriptorSets::create(VkDescriptorSetLayout layout)
 {
     // create descriptor sets
     std::array<VkDescriptorSetLayout, Window::cmd_buf_count> layouts;  // NOLINT
@@ -211,7 +211,7 @@ void PrimitivesDescriptorSets::update(
 
 void PrimitivesDescriptorSets::bind(
         VkCommandBuffer cmd_buf, size_t cmd_buf_idx,
-        const VkPipelineLayout pipeline_layout)
+        VkPipelineLayout pipeline_layout)
 {
     vkCmdBindDescriptorSets(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS,
             pipeline_layout, 0, 1,
@@ -480,7 +480,7 @@ void Primitives::draw(View& view)
 
     // projection matrix
     auto mvp = view.projection_matrix();
-    assert(mvp.size() * sizeof(mvp[0]) == c_mvp_size);
+    static_assert(mvp.size() * sizeof(mvp[0]) == c_mvp_size);
     auto i = window->command_buffer_index();
     m_buffers->copy_mvp(i, mvp);
 
@@ -497,12 +497,6 @@ void Primitives::draw(View& view, const ViewportCoords& pos)
     view.push_offset(pos);
     draw(view);
     view.pop_offset();
-}
-
-
-VkDevice Primitives::device() const
-{
-    return m_renderer.vk_device();
 }
 
 

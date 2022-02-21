@@ -4,17 +4,22 @@
 // Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#include <xci/core/log.h>
 #include "FontFace.h"
 #include "FontLibrary.h"
+#include <xci/core/log.h>
+#include <xci/compat/endian.h>
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_STROKER_H
+#include FT_MULTIPLE_MASTERS_H
+#include FT_SFNT_NAMES_H
+#include FT_TRUETYPE_TABLES_H
 
 #include <hb.h>
 #include <hb-ft.h>
 
+#include <bit>
 #include <cassert>
 
 namespace xci::text {
@@ -22,13 +27,29 @@ namespace xci::text {
 using namespace xci::core;
 
 
-#define FT_CHECK_OR(err, msg, or_stmt)  do {       \
-    if (err != 0) {                             \
-        log::error("{}: {}", (msg), err);       \
-        or_stmt;                              \
-    }                                           \
+const char* ft_error_cstr(FT_Error error_code)
+{
+#if defined(FT_CONFIG_OPTION_ERROR_STRINGS) || defined(FT_DEBUG_LEVEL_ERROR)
+    return FT_Error_String(error_code);
+#else
+    #undef FTERRORS_H_
+    #define FT_ERROR_START_LIST     switch (error_code) {
+    #define FT_ERRORDEF( e, v, s )      case v: return s;
+    #define FT_ERROR_END_LIST       }
+    #include FT_ERRORS_H
+    return "Unknown error";
+#endif
+}
+
+
+#define FT_CHECK_OR(err, msg, or_stmt)  do {                        \
+    if ((err) != 0) {                                               \
+        log::error("{}: {} {}", (msg), (err), ft_error_cstr(err));  \
+        or_stmt;                                                    \
+    }                                                               \
 } while(false)
 #define FT_CHECK_RETURN_FALSE(err, msg)  FT_CHECK_OR(err, msg, return false)
+
 
 static inline float ft_to_float(FT_F26Dot6 ft_units) {
     return (float)(ft_units) / 64.f;
@@ -37,6 +58,101 @@ static inline float ft_to_float(FT_F26Dot6 ft_units) {
 static inline FT_F26Dot6 float_to_ft(float units) {
     return (FT_F26Dot6) roundf(units * 64.f);
 }
+
+
+static inline float ft_fixed_to_float(FT_Fixed units) {
+    return (float)(units) / 65536.f;
+}
+
+static inline FT_Fixed float_to_ft_fixed(float units) {
+    return (FT_Fixed) roundf(units * 65536.f);
+}
+
+
+// -----------------------------------------------------------------------------
+
+
+static std::string get_name_by_strid(FT_Face ft_face, unsigned int strid)
+{
+    auto n = FT_Get_Sfnt_Name_Count(ft_face);
+    for (FT_UInt i = 0; i != n; ++i) {
+        FT_SfntName name_info;
+        auto err = FT_Get_Sfnt_Name(ft_face, i, &name_info);
+        FT_CHECK_OR(err, "FT_Get_Sfnt_Name", return {});
+        // FIXME: check platform_id/encoding_id/language_id
+        if (name_info.name_id == strid) {
+            return {(const char*)name_info.string, name_info.string_len};
+        }
+    }
+    return {};
+}
+
+
+FontVar::FontVar(const FontFace& font_face)
+{
+    FT_MM_Var* mm_var;
+    auto err = FT_Get_MM_Var(font_face.ft_face(), &mm_var);
+    FT_CHECK_OR(err, "FT_Get_MM_Var", return;);
+
+    // get current values of coords
+    std::vector<FT_Fixed> ft_coords;
+    ft_coords.resize(mm_var->num_axis);
+    err = FT_Get_Var_Design_Coordinates(font_face.ft_face(), ft_coords.size(), ft_coords.data());
+    FT_CHECK_OR(err, "FT_Get_Var_Design_Coordinates", return;);
+
+    // fill axis info
+    for (FT_UInt i = 0; i != mm_var->num_axis; ++i) {
+        const auto& mm_axis = mm_var->axis[i];
+        m_axes.emplace_back(Axis{
+                .name = mm_axis.name,
+                .tag = uint32_t(mm_axis.tag),
+                .minimum = ft_fixed_to_float(mm_axis.minimum),
+                .maximum = ft_fixed_to_float(mm_axis.maximum),
+                .default_ = ft_fixed_to_float(mm_axis.def),
+                .current = ft_fixed_to_float(ft_coords[i]),
+        });
+    }
+
+    // fill named styles
+    for (FT_UInt i = 0; i != mm_var->num_namedstyles; ++i) {
+        const auto& mm_style = mm_var->namedstyle[i];
+        auto& style = m_named_styles.emplace_back(NamedStyle{
+                .name = get_name_by_strid(font_face.ft_face(), mm_style.strid)
+        });
+        style.coords.reserve(mm_var->num_axis);
+        std::transform(mm_style.coords, mm_style.coords + mm_var->num_axis,
+                       std::back_inserter(style.coords), ft_fixed_to_float);
+    }
+
+    FT_Done_MM_Var(font_face.ft_library(), mm_var);
+}
+
+
+int8_t FontVar::weight_coord_index() const
+{
+    for (unsigned i = 0; i != m_axes.size(); ++i)
+        if (m_axes[i].tag == make_tag("wght"))
+            return int8_t(i);
+    return -1;
+}
+
+
+std::string FontVar::decode_tag(uint32_t tag)
+{
+    uint32_t be_tag = htobe32(tag);
+    std::string res(4, '\0');
+    std::memcpy(res.data(), &be_tag, sizeof(be_tag));
+    return res;
+}
+
+
+constexpr uint32_t FontVar::make_tag(const char name[4])
+{
+    return FT_MAKE_TAG(name[0], name[1], name[2], name[3]);
+}
+
+
+// -----------------------------------------------------------------------------
 
 
 FontFace::~FontFace()
@@ -131,12 +247,126 @@ bool FontFace::has_color() const
 }
 
 
+bool FontFace::set_style(FontStyle style)
+{
+    if (!is_variable())
+        return false;
+    bool want_bold = (int(style) & int(FontStyle::Bold)) != 0;
+    bool want_italic = (int(style) & int(FontStyle::Italic)) != 0;
+    bool is_italic = bool(m_face->style_flags & FT_STYLE_FLAG_ITALIC);
+    if (want_italic != is_italic)
+        return false;  // italic request not satisfied by the face
+    if (!want_bold) {
+        // set default style
+        set_variable_named_style(0);
+        return true;
+    }
+    assert(want_bold);
+    auto var = get_variable();
+    unsigned int idx = 0;
+    for (const auto& named : var.named_styles()) {
+        ++idx; // one-based
+        if (named.name.starts_with("Bold")) {
+            set_variable_named_style(idx);
+            return true;
+        }
+    }
+    return false;
+}
+
+
 FontStyle FontFace::style() const
 {
     assert(m_face != nullptr);
     static_assert(FT_STYLE_FLAG_ITALIC == int(FontStyle::Italic), "freetype italic flag == 1");
     static_assert(FT_STYLE_FLAG_BOLD == int(FontStyle::Bold), "freetype bold flag == 2");
-    return static_cast<FontStyle>(m_face->style_flags & 0b11);
+    bool weight_is_bold = m_var_weight >= 0 && (get_variable_axes_coords()[m_var_weight] > 600.f);
+    return static_cast<FontStyle>((m_face->style_flags & 0b11) | weight_is_bold);
+}
+
+
+bool FontFace::set_weight(uint16_t weight)
+{
+    if (!is_variable())
+        return false;
+    if (m_var_weight == c_var_uninitialized) {
+        auto var = get_variable();
+        m_var_weight = var.weight_coord_index();
+    }
+    if (m_var_weight < 0)
+        return false;  // doesn't have weight axis
+    auto coords = get_variable_axes_coords();
+    coords[m_var_weight] = weight;
+    return set_variable_axes_coords(coords);
+}
+
+
+uint16_t FontFace::weight() const
+{
+    assert(m_face != nullptr);
+    // try variable axes
+    if (is_variable()) {
+        if (m_var_weight == c_var_uninitialized) {
+            auto var = get_variable();
+            m_var_weight = var.weight_coord_index();
+        }
+        if (m_var_weight >= 0) {
+            auto coords = get_variable_axes_coords();
+            return uint16_t(coords[m_var_weight]);
+        }
+    }
+    // try OS/2 table
+    auto* os2 = (TT_OS2*) FT_Get_Sfnt_Table(m_face, FT_SFNT_OS2);
+    if (os2 == nullptr)
+        return 0;
+    return os2->usWeightClass;
+}
+
+
+bool FontFace::FontFace::is_variable() const
+{
+    return FT_HAS_MULTIPLE_MASTERS(m_face);
+}
+
+
+std::vector<float> FontFace::get_variable_axes_coords() const
+{
+    // get number of coords
+    FT_MM_Var* mm_var;
+    auto err = FT_Get_MM_Var(m_face, &mm_var);
+    FT_CHECK_OR(err, "FT_Get_MM_Var", return {});
+    unsigned int num_coords = mm_var->num_axis;
+    FT_Done_MM_Var(m_library->ft_library(), mm_var);
+    // get current values of coords
+    std::vector<FT_Fixed> ft_coords;
+    ft_coords.resize(num_coords);
+    err = FT_Get_Var_Design_Coordinates(m_face, num_coords, ft_coords.data());
+    FT_CHECK_OR(err, "FT_Get_Var_Design_Coordinates", return {});
+    // transform to float coords
+    std::vector<float> coords;
+    std::transform(ft_coords.begin(), ft_coords.end(), std::back_inserter(coords), ft_fixed_to_float);
+    return coords;
+}
+
+
+bool FontFace::set_variable_axes_coords(const std::vector<float>& coords)
+{
+    std::vector<FT_Fixed> ft_coords;
+    ft_coords.reserve(coords.size());
+    std::transform(coords.begin(), coords.end(), std::back_inserter(ft_coords), float_to_ft_fixed);
+    auto err = FT_Set_Var_Design_Coordinates(m_face, ft_coords.size(), ft_coords.data());
+    FT_CHECK_RETURN_FALSE(err, "FT_Set_Var_Design_Coordinates");
+    return true;
+}
+
+
+bool FontFace::set_variable_named_style(unsigned int instance_index)
+{
+    auto err = FT_Set_Named_Instance(m_face, instance_index);
+    if (instance_index == 0 && err == -1)
+        return true;  // index=0 resets variation, but FreeType returns -1 -> ignore it
+    FT_CHECK_RETURN_FALSE(err, "FT_Set_Named_Instance");
+    return true;
 }
 
 
@@ -249,16 +479,16 @@ bool FontFace::render_glyph(GlyphIndex glyph_index, Glyph& out_glyph)
             err = FT_Get_Glyph(glyph_slot, &ft_glyph);
             FT_CHECK_RETURN_FALSE(err, "FT_Get_Glyph");
             if (m_stroke_type == StrokeType::Outline) {
-                FT_Glyph_Stroke(&ft_glyph, m_stroker, true);
+                err = FT_Glyph_Stroke(&ft_glyph, m_stroker, true);
                 FT_CHECK_RETURN_FALSE(err, "FT_Glyph_Stroke");
             } else {
                 assert(m_stroke_type == StrokeType::InsideBorder || m_stroke_type == StrokeType::OutsideBorder);
-                FT_Glyph_StrokeBorder(&ft_glyph, m_stroker, m_stroke_type == StrokeType::InsideBorder, true);
+                err = FT_Glyph_StrokeBorder(&ft_glyph, m_stroker, m_stroke_type == StrokeType::InsideBorder, true);
                 FT_CHECK_RETURN_FALSE(err, "FT_Glyph_StrokeBorder");
             }
-            FT_Glyph_To_Bitmap(&ft_glyph, FT_RENDER_MODE_NORMAL, nullptr, true);
+            err = FT_Glyph_To_Bitmap(&ft_glyph, FT_RENDER_MODE_NORMAL, nullptr, true);
             FT_CHECK_RETURN_FALSE(err, "FT_Glyph_To_Bitmap");
-            FT_BitmapGlyph bitmap_glyph = reinterpret_cast<FT_BitmapGlyph>(ft_glyph);
+            auto* bitmap_glyph = reinterpret_cast<FT_BitmapGlyph>(ft_glyph);
             bitmap = &bitmap_glyph->bitmap;
             out_glyph.bearing = {bitmap_glyph->left, bitmap_glyph->top};
             out_glyph.ft_glyph = ft_glyph;
@@ -267,6 +497,8 @@ bool FontFace::render_glyph(GlyphIndex glyph_index, Glyph& out_glyph)
             FT_CHECK_RETURN_FALSE(err, "FT_Render_Glyph");
             out_glyph.bearing = {glyph_slot->bitmap_left, glyph_slot->bitmap_top};
         }
+    } else {
+        out_glyph.bearing = {glyph_slot->bitmap_left, glyph_slot->bitmap_top};
     }
 
     if (bitmap->width != 0) {
