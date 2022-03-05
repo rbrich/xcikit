@@ -144,25 +144,25 @@ public:
 
     template <class Archive>
     void save(Archive& ar) const {
-        ar(m_type);
+        ar("type", m_type);
         switch (m_type) {
             case Type::Unknown:
-                ar(generic_var());
+                ar("var", generic_var());
                 break;
             case Type::Function:
-                ar(signature());
+                ar("signature", signature());
                 break;
             case Type::List:
-                ar(elem_type());
+                ar("elem_type", elem_type());
                 break;
             case Type::Tuple:
-                ar(subtypes());
+                ar("subtypes", subtypes());
                 break;
             case Type::Struct:
-                ar(struct_items());
+                ar("struct_items", struct_items());
                 break;
             case Type::Named:
-                ar(named_type());
+                ar("named_type", named_type());
                 break;
             default:
                 break;
@@ -245,7 +245,8 @@ struct Signature {
 
     template <class Archive>
     void serialize(Archive& ar) {
-        ar(type_args)(nonlocals)(partial)(params)(return_type);
+        ar ("type_args", type_args) ("nonlocals", nonlocals) ("partial", partial)
+           ("params", params) ("return_type", return_type);
     }
 };
 

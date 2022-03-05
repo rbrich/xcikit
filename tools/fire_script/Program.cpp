@@ -33,6 +33,12 @@ void Program::process_args(char* argv[])
 {
     opts.parse(argv);
 
+    if (!opts.prog_opts.schema_file.empty()) {
+        Module dummy_module(ctx.interpreter.module_manager());
+        if (!dummy_module.write_schema_to_file(opts.prog_opts.schema_file))
+            exit(1);
+    }
+
     if (opts.prog_opts.expr) {
         if (!repl.evaluate("<input>", opts.prog_opts.expr,
                 EvalMode::SingleInput))

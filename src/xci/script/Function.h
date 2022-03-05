@@ -40,6 +40,7 @@ class Stack;
 
 class Function {
 public:
+    Function();  // only for deserialization!
     explicit Function(Module& module);  // only for deserialization!
     explicit Function(Module& module, SymbolTable& symtab);
     Function(Function&& rhs) noexcept;
@@ -48,10 +49,10 @@ public:
     bool operator==(const Function& rhs) const;
 
     const std::string& name() const { return m_symtab->name(); }
-    std::string qualified_name() const { return m_symtab->qualified_name(); }
+    std::string qualified_name() const { return m_symtab == nullptr ? "" : m_symtab->qualified_name(); }
 
     // module containing this function
-    Module& module() const { return m_module; }
+    Module& module() const { return *m_module; }
 
     // symbol table with names used in function scope
     SymbolTable& symtab() const { return *m_symtab; }
@@ -121,7 +122,7 @@ public:
 
         template<class Archive>
         void serialize(Archive& ar) {
-            ar(code);
+            ar("code", code);
         }
 
         // Compiled function body
@@ -153,7 +154,7 @@ public:
 
         template<class Archive>
         void save(Archive& ar) const {
-            ar(ast());
+            ar("ast", ast());
         }
 
         template<class Archive>
@@ -214,7 +215,7 @@ public:
 private:
     void set_symtab_by_qualified_name(std::string_view name);
 
-    Module& m_module;
+    Module* m_module = nullptr;
     SymbolTable* m_symtab = nullptr;
     // Function signature
     std::shared_ptr<Signature> m_signature;

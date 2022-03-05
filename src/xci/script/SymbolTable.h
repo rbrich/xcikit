@@ -113,7 +113,7 @@ public:
     template<class Archive>
     void save(Archive& ar) const {
         uint8_t flags = uint8_t(m_is_callable) | uint8_t(unsigned(m_is_defined) << 1);
-        ar(m_name)(m_type)(m_index)(m_depth)(flags);
+        ar ("name", m_name) ("type", m_type) ("index", m_index) ("depth", m_depth) ("flags", flags);
     }
 
     template<class Archive>
@@ -223,7 +223,7 @@ public:
 
     template<class Archive>
     void save(Archive& ar) const {
-        ar(m_name)(m_symbols)(m_children);
+        ar ("name", m_name) ("symbols", m_symbols) ("children", m_children);
     }
 
     template<class Archive>

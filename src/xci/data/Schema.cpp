@@ -13,7 +13,7 @@ void Schema::add_member(uint8_t key, const char* name, std::string&& type)
 {
     const size_t idx = m_group_stack.back().buffer.struct_idx;
     auto& members = m_structs[idx].members;
-    Member m{key, name, std::move(type)};
+    Member m{key, (name == nullptr ? "" : name), std::move(type)};
     auto it = std::find(members.begin(), members.end(), m);
     if (it == members.end()) {
         members.emplace_back(std::move(m));

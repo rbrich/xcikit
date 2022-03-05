@@ -104,6 +104,10 @@ public:
         write((const std::byte*) a.value.data(), a.value.size());
     }
     void add(ArchiveField<BinaryWriter, const char*>&& a) {
+        if (!a.value) {
+            write(uint8_t(Type::Null | a.key));
+            return;
+        }
         write(uint8_t(Type::String | a.key));
         auto size = strlen(a.value);
         write_leb128(size);

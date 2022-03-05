@@ -11,6 +11,7 @@
 
 #include <xci/data/BinaryWriter.h>
 #include <xci/data/BinaryReader.h>
+#include <xci/data/Schema.h>
 #include <xci/core/string.h>
 
 #include <fstream>
@@ -46,7 +47,10 @@ SymbolPointer Module::add_native_function(
 
 Index Module::import_module(const std::string& name)
 {
-    m_modules.push_back(m_module_manager.import_module(name));
+    if (m_module_manager == nullptr)
+        return no_index;
+
+    m_modules.push_back(m_module_manager->import_module(name));
     return Index(m_modules.size() - 1);
 }
 
@@ -218,6 +222,21 @@ bool Module::save_to_file(const std::string& filename)
 }
 
 
+bool Module::write_schema_to_file(const std::string& filename)
+{
+    xci::data::Schema schema;
+    schema  ("modules", m_modules)
+            ("values", m_values)
+            ("symtab", m_symtab)
+            ("functions", m_functions);
+
+    std::ofstream f(filename, std::ios::binary);
+    xci::data::BinaryWriter writer(f, true);
+    writer(schema);
+    return !f.fail();
+}
+
+
 class ModuleLoader {
     ModuleManager& m_module_manager;
     std::vector<std::shared_ptr<Module>>& m_modules;
@@ -237,10 +256,13 @@ public:
 
 bool Module::load_from_file(const std::string& filename)
 {
+    if (m_module_manager == nullptr)
+        return false;
+
     std::ifstream f(filename, std::ios::binary);
     xci::data::BinaryReader reader(f);
     reader.repeated(m_modules, [this](std::vector<std::shared_ptr<Module>>& modules) {
-        return ModuleLoader(m_module_manager, modules);
+        return ModuleLoader(*m_module_manager, modules);
     });
     reader(m_values)(m_symtab);
     reader.repeated(m_functions, [this](IndexedMap<Function>& functions) -> Function& {

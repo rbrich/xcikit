@@ -42,12 +42,8 @@ public:
     // raw and smart pointers
     template <FancyPointerType T>
     void add(ArchiveField<Schema, T>&& a) {
-        if (!a.value) {
-            write_key_name(a.key, a.name);
-            return;
-        }
         using ElemT = typename std::pointer_traits<T>::element_type;
-        apply(ArchiveField<Schema, ElemT>{a.key, *a.value, a.name});
+        apply(ArchiveField<Schema, ElemT>{a.key, {}, a.name});
     }
 
     void add(ArchiveField<Schema, bool>&& a) {
@@ -86,8 +82,8 @@ public:
         add_member(a.key, a.name, "string");
     }
 
-    template <typename T>
-    requires requires { typename T::iterator; }
+    // iterables
+    template <ContainerType T>
     void add(ArchiveField<Schema, T>&& a) {
         // break infinite recursion - don't dive in if the value_type is a struct that was already seen
         if (auto it = m_type_to_struct_idx.find(std::type_index(typeid(typename T::value_type)));
@@ -127,7 +123,7 @@ private:
 
     struct Member {
         uint8_t key;
-        const char* name;
+        std::string name;
         std::string type;
 
         bool operator==(const Member&) const = default;
