@@ -8,6 +8,8 @@
 #define XCI_DATA_SCHEMA_H
 
 #include "ArchiveBase.h"
+#include <xci/core/rtti.h>
+#include <xci/core/string.h>
 
 #include <magic_enum.hpp>
 
@@ -82,6 +84,12 @@ public:
         add_member(a.key, a.name, "string");
     }
 
+    // binary data
+    template <BlobType T>
+    void add(ArchiveField<Schema, T>&& a) {
+        add_member(a.key, a.name, "bytes");
+    }
+
     // iterables
     template <ContainerType T>
     void add(ArchiveField<Schema, T>&& a) {
@@ -95,27 +103,81 @@ public:
         apply(ArchiveField<Schema, typename T::value_type>{a.key, {}, a.name});
     }
 
+    // variant
+    template <typename V, std::size_t I = 0>
+    void add_variant_members() {
+        if constexpr (I < std::variant_size_v<V>) {
+            using VAlt = std::variant_alternative_t<I, V>;
+            apply(ArchiveField<Schema, VAlt>{I, {}, name_of_type(typeid(VAlt), "").c_str()});
+            add_variant_members<V, I + 1>();
+        }
+    }
+
+    template <VariantType T>
+    void add(ArchiveField<Schema, T>&& a) {
+        // index of active alternative
+        add_member(draw_next_key(a.key), a.name, "uint" + std::to_string(sizeof(size_t) * 8));
+        // value of the alternative
+        _enter_group(typeid(T), "variant ", draw_next_key(key_auto), a.name);
+        add_variant_members<T>();
+        _leave_group();
+    }
+
     template <class Archive>
     void serialize(Archive& ar) {
         ar("struct", m_structs);
     }
 
 private:
+    static std::string name_of_type(const std::type_info& ti, std::string fallback) {
+        std::string name = core::type_name(ti);
+        // templated types ->
+        if (name.find('<') != std::string::npos)
+            return fallback;
+        // strip namespaces
+        name = core::rsplit(name, "::", 1).back();
+        return name;
+    }
+
     template <typename T>
     void enter_group(const ArchiveField<Schema, T>& a) {
-        auto [it, add] = m_type_to_struct_idx.try_emplace(std::type_index(typeid(T)), 0);
+        _enter_group(typeid(T), "struct ", a.key, a.name);
+    }
+    template <typename T>
+    void leave_group(const ArchiveField<Schema, T>& kv) {
+        _leave_group();
+    }
+
+    void _enter_group(const std::type_info& ti, const std::string& prefix,
+                      uint8_t key, const char* name)
+    {
+        auto [it, add] = m_type_to_struct_idx.try_emplace(std::type_index(ti), 0);
         if (add) {
             it->second = m_structs.size();
-            m_structs.emplace_back("struct_" + std::to_string(it->second));
+
+            auto type_name = name_of_type(ti, name);
+            type_name.insert(0, prefix);
+
+            // Make sure the type name is unique
+            auto found = std::find_if(m_structs.begin(), m_structs.end(),
+                                      [&type_name](const Struct& s) {
+                                          return s.name == type_name;
+                                      });
+            if (found != m_structs.end()) {
+                type_name += '_';
+                type_name += std::to_string(it->second);
+            }
+
+            m_structs.emplace_back(std::move(type_name));
         }
 
-        add_member(a.key, a.name, std::string{m_structs[it->second].name});
+        add_member(key, name, std::string{m_structs[it->second].name});
 
         m_group_stack.emplace_back();
         m_group_stack.back().buffer.struct_idx = it->second;
     }
-    template <typename T>
-    void leave_group(const ArchiveField<Schema, T>& kv) {
+
+    void _leave_group() {
         m_group_stack.pop_back();
     }
 
@@ -147,7 +209,8 @@ private:
             ar("member", members);
         }
     };
-    std::vector<Struct> m_structs = {Struct{"struct_0"}};
+
+    std::vector<Struct> m_structs = {Struct{"struct Main"}};
     std::unordered_map<std::type_index, size_t> m_type_to_struct_idx;
 };
 

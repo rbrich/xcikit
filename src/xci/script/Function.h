@@ -168,8 +168,13 @@ public:
         bool operator==(const NativeBody& rhs) const;
 
         template<class Archive>
-        void serialize(Archive& ar) {
-            throw std::runtime_error("Native function cannot be serialized");
+        void save(Archive& ar) const {
+            ar("native", uintptr_t(&native));
+        }
+
+        template<class Archive>
+        void load(Archive& ar) {
+            throw std::runtime_error("Native function cannot be deserialized");
         }
 
         NativeDelegate native;
