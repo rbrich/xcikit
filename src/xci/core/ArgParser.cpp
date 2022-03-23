@@ -104,11 +104,12 @@ bool Option::has_long(const char* arg) const
     if (!is_long())
         return false;
     const char* dp = m_desc.c_str();
+    const int arg_len = (int) strlen(arg);
     for (;;) {
         auto p = parse_desc(dp);
         if (!p.len)
             break;
-        if (p.dashes == 2 && !strncmp(dp + p.pos + p.dashes, arg, p.len))
+        if (p.dashes == 2 && p.len == arg_len && !strncmp(dp + p.pos + p.dashes, arg, p.len))
             return true;
         dp += p.end();
     }
