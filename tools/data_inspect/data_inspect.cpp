@@ -11,10 +11,12 @@
 #include <xci/core/ArgParser.h>
 #include <xci/data/BinaryBase.h>
 #include <xci/data/BinaryReader.h>
+#include <xci/data/Schema.h>
 #include <xci/core/TermCtl.h>
 #include <xci/core/string.h>
 
 #include <fstream>
+#include <vector>
 
 using namespace xci::core;
 using namespace xci::core::argparser;
@@ -81,12 +83,14 @@ static void print_data(TermCtl& term, uint8_t type, const std::byte* data, size_
 
 int main(int argc, const char* argv[])
 {
+    std::string schema_file;
     std::vector<const char*> files;
 
     TermCtl& term = TermCtl::stdout_instance();
 
     ArgParser {
             Option("-h, --help", "Show help", show_help),
+            Option("-s, --schema SCHEMA", "Schema file, used to describe the fields (names, types)", schema_file),
             Option("-- FILE ...", "Files to parse", files),
     } (argv);
 
@@ -94,11 +98,23 @@ int main(int argc, const char* argv[])
         term.print("{t:bold}{fg:yellow}No input files.{t:normal}\n");
     }
 
+    Schema schema;
+    if (!schema_file.empty()) {
+        std::ifstream f(schema_file, std::ios::binary);
+        try {
+            BinaryReader reader(f);
+            reader(schema);
+            reader.finish_and_check();
+        } catch (const ArchiveError& e) {
+            term.print("{t:bold}{fg:red}Error reading schema: {}{t:normal}\n", e.what());
+        }
+    }
+
     for (const auto& filename : files) {
         term.print("{fg:yellow}{t:bold}{}{t:normal}\n", filename);
         std::ifstream f(filename, std::ios::binary);
         try {
-            xci::data::BinaryReader reader(f);
+            BinaryReader reader(f);
 
             // This is implicit, any other MAGIC/VERSION would throw
             term.print("CBDF (Chunked Binary Data Format), version 1\n");
@@ -106,18 +122,31 @@ int main(int argc, const char* argv[])
                     reader.has_crc() ? ", ChecksumCrc32" : "");
             term.print("Size: {}\n", reader.root_group_size());
 
-            int indent = 0;
             bool eof = false;
+            std::vector<const Schema::Struct*> struct_stack {&schema.struct_main()};
             while (!eof) {
                 auto it = reader.generic_next();
+                const Schema::Member* schema_member = struct_stack.back() ?
+                        struct_stack.back()->member_by_key(it.key) : nullptr;
+                const auto indent = (struct_stack.size() - 1) * 4;
+
                 using What = BinaryReader::GenericNext::What;
                 switch (it.what) {
                     case What::EnterGroup:
                     case What::DataItem:
                     case What::MetadataItem:
-                        term.print("{}{t:bold}{fg:cyan}{}{t:normal}: {} = ",
-                                std::string(indent * 4, ' '),
-                                int(it.key), type_to_cstr(it.type));
+                        {
+                            if (schema_member) {
+                                term.print("{}{t:bold}{fg:cyan}{} ({}: {}){t:normal}: {} = ",
+                                           std::string(indent, ' '),
+                                           int(it.key), schema_member->name, schema_member->type,
+                                           type_to_cstr(it.type));
+                            } else {
+                                term.print("{}{t:bold}{fg:cyan}{}{t:normal}: {} = ",
+                                           std::string(indent, ' '),
+                                           int(it.key), type_to_cstr(it.type));
+                            }
+                        }
                         print_data(term, it.type, it.data.get(), it.size);
                         if (it.what == What::MetadataItem) {
                             if (it.key == 1 && it.type == BinaryBase::UInt32) {
@@ -131,18 +160,20 @@ int main(int argc, const char* argv[])
                             }
                         }
                         term.print("\n");
-                        if (it.what == What::EnterGroup)
-                            ++ indent;
+                        if (it.what == What::EnterGroup) {
+                            struct_stack.push_back(schema_member ?
+                                schema.struct_by_name(schema_member->type) : nullptr);
+                        }
                         break;
                     case What::LeaveGroup:
-                        -- indent;
-                        term.print("{t:bold}{}}}{t:normal}\n", std::string(indent * 4, ' '));
+                        struct_stack.pop_back();
+                        term.print("{t:bold}{}}}{t:normal}\n", std::string(indent - 4, ' '));
                         break;
                     case What::EnterMetadata:
-                        term.print("{t:bold}{}Metadata:{t:normal}\n", std::string(indent * 4, ' '));
+                        term.print("{t:bold}{}Metadata:{t:normal}\n", std::string(indent, ' '));
                         break;
                     case What::LeaveMetadata:
-                        term.print("{t:bold}{}Data:{t:normal}\n", std::string(indent * 4, ' '));
+                        term.print("{t:bold}{}Data:{t:normal}\n", std::string(indent, ' '));
                         break;
                     case What::EndOfFile:
                         eof = true;
