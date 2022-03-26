@@ -11,8 +11,7 @@ namespace xci::data {
 
 void Schema::add_member(uint8_t key, const char* name, std::string&& type)
 {
-    if (m_structs.empty())
-        m_structs.emplace_back(Struct{"struct Main"});
+    init_structs();
     const size_t idx = m_group_stack.back().buffer.struct_idx;
     auto& members = m_structs[idx].members;
     Member m{key, (name == nullptr ? "" : name), std::move(type)};
@@ -28,6 +27,7 @@ void Schema::_enter_group(const std::type_info& ti, const std::string& prefix,
 {
     auto [it, add] = m_type_to_struct_idx.try_emplace(std::type_index(ti), 0);
     if (add) {
+        init_structs();
         it->second = m_structs.size();
 
         auto type_name = name_of_type(ti, name);
@@ -46,6 +46,13 @@ void Schema::_enter_group(const std::type_info& ti, const std::string& prefix,
 
     m_group_stack.emplace_back();
     m_group_stack.back().buffer.struct_idx = it->second;
+}
+
+
+void Schema::init_structs()
+{
+    if (m_structs.empty())
+        m_structs.emplace_back(Struct{"struct Main"});
 }
 
 

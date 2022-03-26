@@ -32,6 +32,7 @@ add_library(xcikit::xci-data ALIAS xci-data)
 
 target_link_libraries(xci-data
     PUBLIC
+        xci-core
         pfr::pfr
         magic_enum::magic_enum
     )

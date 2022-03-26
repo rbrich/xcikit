@@ -204,6 +204,8 @@ private:
 
     void add_member(uint8_t key, const char* name, std::string&& type);
 
+    void init_structs();
+
     std::vector<Struct> m_structs;
     std::unordered_map<std::type_index, size_t> m_type_to_struct_idx;
 };

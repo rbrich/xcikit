@@ -108,6 +108,9 @@ int main(int argc, const char* argv[])
         } catch (const ArchiveError& e) {
             term.print("{t:bold}{fg:red}Error reading schema: {}{t:normal}\n", e.what());
         }
+    } else if (files.size() == 1 && std::string(files.back()).ends_with(".schema")) {
+        // get Schema of .schema file
+        schema("schema", schema);
     }
 
     for (const auto& filename : files) {
