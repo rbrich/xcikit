@@ -110,9 +110,10 @@ public:
 
 private:
     template <typename T>
-    void enter_group(const ArchiveField<Dumper, T>& kv) {
+    bool enter_group(const ArchiveField<Dumper, T>& kv) {
         write_key_name(kv.key, kv.name, '\n');
         m_group_stack.emplace_back();
+        return true;
     }
     template <typename T>
     void leave_group(const ArchiveField<Dumper, T>& kv) {

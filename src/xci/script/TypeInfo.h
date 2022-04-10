@@ -143,6 +143,20 @@ public:
     // Serialization
 
     template <class Archive>
+    void save_schema(Archive& ar) const {
+        ar("type", m_type);
+        if (ar.enter_union("info", "type", typeid(decltype(m_info)))) {
+            ar(uint8_t(Type::Unknown), "var", Var{});
+            ar(uint8_t(Type::List), "elem_type", TypeInfo{});
+            ar(uint8_t(Type::Tuple), "subtypes", Subtypes{});
+            ar(uint8_t(Type::Function), "signature", SignaturePtr{});
+            ar(uint8_t(Type::Named), "named_type", NamedTypePtr{});
+            ar(uint8_t(Type::Struct), "struct_items", StructItems{});
+            ar.leave_union();
+        }
+    }
+
+    template <class Archive>
     void save(Archive& ar) const {
         ar("type", m_type);
         switch (m_type) {

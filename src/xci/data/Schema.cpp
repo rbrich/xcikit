@@ -22,15 +22,16 @@ void Schema::add_member(uint8_t key, const char* name, std::string&& type)
 }
 
 
-void Schema::_enter_group(const std::type_info& ti, const std::string& prefix,
-                          uint8_t key, const char* name)
+bool Schema::_enter_group(const std::type_info& ti, const std::string& prefix,
+                          uint8_t key, const char* name, std::string fallback_type_name)
 {
     auto [it, add] = m_type_to_struct_idx.try_emplace(std::type_index(ti), 0);
     if (add) {
         init_structs();
         it->second = m_structs.size();
 
-        auto type_name = name_of_type(ti, name);
+        auto type_name = name_of_type(ti,
+                fallback_type_name.empty() ? name : std::move(fallback_type_name));
         type_name.insert(0, prefix);
 
         // Make sure the type name is unique
@@ -44,8 +45,13 @@ void Schema::_enter_group(const std::type_info& ti, const std::string& prefix,
 
     add_member(key, name, std::string{m_structs[it->second].name});
 
+    // break infinite recursion - don't dive in if the struct was already seen
+    if (!add)
+        return false;
+
     m_group_stack.emplace_back();
     m_group_stack.back().buffer.struct_idx = it->second;
+    return true;
 }
 
 

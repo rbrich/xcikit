@@ -70,6 +70,9 @@ void BinaryWriter::write_content()
 
 void BinaryWriter::write_group(uint8_t key, const char* name)
 {
+    if (key > 15)
+        throw ArchiveOutOfKeys(key);
+
     auto inner_buffer = std::move(group_buffer());
     m_group_stack.pop_back();
     // TYPE:4, KEY:4

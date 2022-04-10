@@ -39,6 +39,7 @@ class Schema : public ArchiveBase<Schema> {
 
 public:
     using Writer = std::true_type;
+    using SchemaWriter = std::true_type;
     template<typename T> using FieldType = const T&;
 
     // raw and smart pointers
@@ -93,13 +94,6 @@ public:
     // iterables
     template <ContainerType T>
     void add(ArchiveField<Schema, T>&& a) {
-        // break infinite recursion - don't dive in if the value_type is a struct that was already seen
-        if (auto it = m_type_to_struct_idx.find(std::type_index(typeid(typename T::value_type)));
-            it != m_type_to_struct_idx.end())
-        {
-            add_member(a.key, a.name, std::string{m_structs[it->second].name});
-            return;
-        }
         apply(ArchiveField<Schema, typename T::value_type>{a.key, {}, a.name});
     }
 
@@ -116,10 +110,19 @@ public:
     template <VariantType T>
     void add(ArchiveField<Schema, T>&& a) {
         // index of active alternative
-        add_member(draw_next_key(a.key), a.name, "uint" + std::to_string(sizeof(size_t) * 8));
+        add_member(draw_next_key(a.key), a.name, "variant_id");
         // value of the alternative
         _enter_group(typeid(T), "variant ", draw_next_key(key_auto), a.name);
         add_variant_members<T>();
+        _leave_group();
+    }
+
+    bool enter_union(const char* name, const char* index_name, const std::type_info& ti) {
+        auto name_with_index = fmt::format("{}[{}]", name, index_name);
+        return _enter_group(ti, "variant ", draw_next_key(), name_with_index.c_str(), name);
+    }
+
+    void leave_union() {
         _leave_group();
     }
 
@@ -187,16 +190,17 @@ private:
     }
 
     template <typename T>
-    void enter_group(const ArchiveField<Schema, T>& a) {
-        _enter_group(typeid(T), "struct ", a.key, a.name);
+    bool enter_group(const ArchiveField<Schema, T>& a) {
+        return _enter_group(typeid(T), "struct ", a.key, a.name);
     }
     template <typename T>
     void leave_group(const ArchiveField<Schema, T>& kv) {
         _leave_group();
     }
 
-    void _enter_group(const std::type_info& ti, const std::string& prefix,
-                      uint8_t key, const char* name);
+    bool _enter_group(const std::type_info& ti, const std::string& prefix,
+                      uint8_t key, const char* name,
+                      std::string fallback_type_name = {});
 
     void _leave_group() {
         m_group_stack.pop_back();

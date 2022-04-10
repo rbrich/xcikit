@@ -147,8 +147,9 @@ public:
 
 private:
     template <typename T>
-    void enter_group(const ArchiveField<BinaryWriter, T>&) {
+    bool enter_group(const ArchiveField<BinaryWriter, T>&) {
         m_group_stack.emplace_back();
+        return true;
     }
     template <typename T>
     void leave_group(const ArchiveField<BinaryWriter, T>& kv) {

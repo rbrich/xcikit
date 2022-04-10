@@ -177,8 +177,9 @@ private:
     void read_footer();
 
     template <typename T>
-    void enter_group(const ArchiveField<BinaryReader, T>& kv) {
+    bool enter_group(const ArchiveField<BinaryReader, T>& kv) {
         _enter_group(kv.key);
+        return true;
     }
     template <typename T>
     void leave_group(const ArchiveField<BinaryReader, T>& kv) {
