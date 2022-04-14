@@ -1,7 +1,7 @@
 // data_inspect.cpp created on 2020-08-15 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020 Radek Brich
+// Copyright 2020–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 /// Data Inspector (dati) command line tool
@@ -14,9 +14,11 @@
 #include <xci/data/Schema.h>
 #include <xci/core/TermCtl.h>
 #include <xci/core/string.h>
+#include <xci/core/bit.h>
 
 #include <fstream>
 #include <vector>
+#include <optional>
 
 using namespace xci::core;
 using namespace xci::core::argparser;
@@ -60,12 +62,12 @@ static void print_data(TermCtl& term, uint8_t type, const std::byte* data, size_
         case BinaryBase::BoolFalse: term.print("{fg:yellow}false{t:normal}"); return;
         case BinaryBase::BoolTrue:  term.print("{fg:yellow}true{t:normal}"); return;
         case BinaryBase::Byte:      term.print("{fg:magenta}{}{t:normal}", int(*data)); return;
-        case BinaryBase::UInt32:    term.print("{fg:magenta}{}{t:normal}", uint32_t(*data)); return;
-        case BinaryBase::UInt64:    term.print("{fg:magenta}{}{t:normal}", uint64_t(*data)); return;
-        case BinaryBase::Int32:     term.print("{fg:magenta}{}{t:normal}", int32_t(*data)); return;
-        case BinaryBase::Int64:     term.print("{fg:magenta}{}{t:normal}", uint32_t(*data)); return;
-        case BinaryBase::Float32:   term.print("{fg:magenta}{}{t:normal}", float(*data)); return;
-        case BinaryBase::Float64:   term.print("{fg:magenta}{}{t:normal}", double(*data)); return;
+        case BinaryBase::UInt32:    term.print("{fg:magenta}{}{t:normal}", bit_copy<uint32_t>(data)); return;
+        case BinaryBase::UInt64:    term.print("{fg:magenta}{}{t:normal}", bit_copy<uint64_t>(data)); return;
+        case BinaryBase::Int32:     term.print("{fg:magenta}{}{t:normal}", bit_copy<int32_t>(data)); return;
+        case BinaryBase::Int64:     term.print("{fg:magenta}{}{t:normal}", bit_copy<int64_t>(data)); return;
+        case BinaryBase::Float32:   term.print("{fg:magenta}{}{t:normal}", bit_copy<float>(data)); return;
+        case BinaryBase::Float64:   term.print("{fg:magenta}{}{t:normal}", bit_copy<double>(data)); return;
         case BinaryBase::VarInt:    term.print("{fg:yellow}varint{t:normal}"); return;
         case BinaryBase::Array:     term.print("{fg:yellow}array{t:normal}"); return;
         case BinaryBase::String:
@@ -78,6 +80,19 @@ static void print_data(TermCtl& term, uint8_t type, const std::byte* data, size_
         case BinaryBase::Control:   term.print("{fg:yellow}control{t:normal}"); return;
     }
     term.print("{fg:red}unknown{t:normal}");
+}
+
+
+static std::optional<int> int_value(uint8_t type, const std::byte* data, size_t size)
+{
+    switch (type) {
+        case BinaryBase::Byte:      return int(*data);
+        case BinaryBase::UInt32:    return (int) bit_copy<uint32_t>(data);
+        case BinaryBase::UInt64:    return (int) bit_copy<uint64_t>(data);
+        case BinaryBase::Int32:     return (int) bit_copy<int32_t>(data);
+        case BinaryBase::Int64:     return (int) bit_copy<int64_t>(data);
+        default:                    return {};
+    }
 }
 
 
@@ -127,6 +142,7 @@ int main(int argc, const char* argv[])
 
             bool eof = false;
             std::vector<const Schema::Struct*> struct_stack {&schema.struct_main()};
+            std::map<std::string, int> last_int_values;  // for variant index
             while (!eof) {
                 auto it = reader.generic_next();
                 const Schema::Member* schema_member = struct_stack.back() ?
@@ -140,6 +156,32 @@ int main(int argc, const char* argv[])
                     case What::MetadataItem:
                         {
                             if (schema_member) {
+                                if (schema_member->type.starts_with("variant ")) {
+                                    // name of variant field refers to variant ID field in one of these ways:
+                                    // * the name of variant ID field is same as the variant field itself
+                                    // * the name of variant ID field is referred in brackets: `name[id_name]`
+                                    std::string index_name;
+                                    auto beg = schema_member->name.find('[');
+                                    if (beg != std::string::npos) {
+                                        ++beg;
+                                        auto end = schema_member->name.find(']', beg);
+                                        index_name = schema_member->name.substr(beg, end - beg);
+                                    } else {
+                                        index_name = schema_member->name;
+                                    }
+                                    // retrieve value of the variant ID
+                                    auto index_value = last_int_values.find(index_name);
+                                    if (index_value != last_int_values.end()) {
+                                        auto* variant_schema = schema.struct_by_name(schema_member->type);
+                                        if (variant_schema != nullptr)
+                                            schema_member = variant_schema->member_by_key(uint8_t(index_value->second));
+                                    }
+                                }
+                                if (it.what == What::DataItem) {
+                                    auto opt_int = int_value(it.type, it.data.get(), it.size);
+                                    if (opt_int)
+                                        last_int_values[schema_member->name] = *opt_int;
+                                }
                                 term.print("{}{t:bold}{fg:cyan}{} ({}: {}){t:normal}: {} = ",
                                            std::string(indent, ' '),
                                            int(it.key), schema_member->name, schema_member->type,
@@ -166,10 +208,12 @@ int main(int argc, const char* argv[])
                         if (it.what == What::EnterGroup) {
                             struct_stack.push_back(schema_member ?
                                 schema.struct_by_name(schema_member->type) : nullptr);
+                            last_int_values.clear();
                         }
                         break;
                     case What::LeaveGroup:
                         struct_stack.pop_back();
+                        last_int_values.clear();
                         term.print("{t:bold}{}}}{t:normal}\n", std::string(indent - 4, ' '));
                         break;
                     case What::EnterMetadata:

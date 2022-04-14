@@ -8,6 +8,8 @@
 
 namespace xci::script {
 
+using xci::core::bit_copy;
+
 
 HeapSlot::HeapSlot(size_t user_size, Deleter deleter)
     : m_slot(new std::byte[header_size + user_size])
