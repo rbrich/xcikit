@@ -14,62 +14,68 @@ class XcikitConan(ConanFile):
     settings = "os", "arch", "compiler", "build_type"
     options = {
         "shared": [True, False],
-        ### Optional components:
+
+        # Optional components:
         "data": [True, False],
         "script": [True, False],
         "graphics": [True, False],
         "text": [True, False],
         "widgets": [True, False],
-        ### Also build and install:
+
+        # Also build and install:
         "tools": [True, False],
         "examples": [True, False],
         "tests": [True, False],
         "benchmarks": [True, False],
-        ### System dependencies (instead of Conan):
+
+        # System dependencies (instead of Conan):
         "system_fmt": [True, False],
         "system_zlib": [True, False],
         "system_glfw": [True, False],
         "system_vulkan": [True, False],
         "system_freetype": [True, False],
         "system_harfbuzz": [True, False],
-        # Hyperscan is never installed via Conan, because it would bring ton of deps
-        # and it's only needed for optional ff tool.
-        # This option enables using system-installed Hyperscan.
-        "with_hyperscan": [True, False],
         "system_boost": [True, False],
         "system_range_v3": [True, False],
         "system_catch2": [True, False],
         "system_benchmark": [True, False],
         "system_pegtl": [True, False],
         "system_magic_enum": [True, False],
+        # Hyperscan is never installed via Conan, because it would bring ton of deps,
+        # and it's only needed for optional ff tool.
+        # This option enables using system-installed Hyperscan.
+        "with_hyperscan": [True, False],
     }
     default_options = {
         "shared": False,
-        ### Optional components:
+
+        # Optional components:
         "data": True,
         "script": True,
         "graphics": True,
         "text": True,
         "widgets": True,
-        ### Also build and install:
+
+        # Also build and install:
         "tools": False,
         "examples": False,
         "tests": False,
         "benchmarks": False,
-        ### System dependencies (instead of Conan):
+
+        # System dependencies (instead of Conan):
         "system_fmt": False,
         "system_zlib": False,
         "system_glfw": False,
         "system_vulkan": False,
         "system_freetype": False,
         "system_harfbuzz": False,
-        "with_hyperscan": False,
         "system_boost": False,
         "system_range_v3": False,
         "system_catch2": False,
         "system_benchmark": False,
         "system_pegtl": False,
         "system_magic_enum": False,
+        "with_hyperscan": False,
 
         # Disable unnecessary transient deps by default.
         "freetype:with_png": True,

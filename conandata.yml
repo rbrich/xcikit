@@ -76,6 +76,6 @@ requirements:
       - tests
   benchmark:
     cmake: "benchmark/1.5.0"
-    conan: "benchmark/1.6.0"  # 1.6.1 not yet in ConanCenter
+    conan: "benchmark/1.6.1"
     prereq:
       - benchmarks

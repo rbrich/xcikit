@@ -102,7 +102,9 @@ public:
     void add_variant_members() {
         if constexpr (I < std::variant_size_v<V>) {
             using VAlt = std::variant_alternative_t<I, V>;
-            apply(ArchiveField<Schema, VAlt>{I, {}, name_of_type(typeid(VAlt), "").c_str()});
+            if constexpr (!std::is_same_v<VAlt, std::monostate>) {
+                apply(ArchiveField<Schema, VAlt>{I, {}, name_of_type(typeid(VAlt), "").c_str()});
+            }
             add_variant_members<V, I + 1>();
         }
     }

@@ -135,6 +135,8 @@ template<typename T, typename TArchive>
 concept TypeWithMagicSupport =
         !TypeWithSerializeMethod<T, TArchive> &&
         !TypeWithSerializeFunction<T, TArchive> &&
+        !TypeWithSchemaMethod<T, TArchive> &&
+        !TypeWithSchemaFunction<T, TArchive> &&
         !TypeWithSaveMethod<T, TArchive> &&
         !TypeWithSaveFunction<T, TArchive> &&
         !TypeWithLoadMethod<T, TArchive> &&
