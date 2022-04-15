@@ -29,7 +29,7 @@ if (EMSCRIPTEN)
         FILES
             ${CMAKE_CURRENT_BINARY_DIR}/fire.wasm
             ${CMAKE_CURRENT_BINARY_DIR}/fire.data
-        DESTINATION bin)
+        DESTINATION ${CMAKE_INSTALL_BINDIR})
 endif()
 
-install(TARGETS fire EXPORT xcikit DESTINATION bin)
+install(TARGETS fire EXPORT xcikit DESTINATION ${CMAKE_INSTALL_BINDIR})

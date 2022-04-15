@@ -64,5 +64,5 @@ if (BUILD_FRAMEWORKS)
 endif()
 
 if (BUILD_SHARED_LIBS OR XCI_INSTALL_DEVEL)
-    install(TARGETS xci-graphics EXPORT xcikit DESTINATION lib)
+    install(TARGETS xci-graphics EXPORT xcikit DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()

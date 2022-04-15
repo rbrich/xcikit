@@ -8,6 +8,7 @@ project(xcikit
     LANGUAGES CXX)
 
 include(CTest)
+include(GNUInstallDirs)
 
 # Optional libraries (only xci-core is required)
 include(CMakeDependentOption)
@@ -344,16 +345,16 @@ pop_indent()
 
 if (XCI_INSTALL_DEVEL)
     # Headers
-    install(DIRECTORY src/xci DESTINATION include
+    install(DIRECTORY src/xci DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
         FILES_MATCHING
         PATTERN "*.h")
 
     # config.h
-    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/xci DESTINATION include)
+    install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include/xci DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
     install(EXPORT xcikit
         NAMESPACE xcikit::
-        DESTINATION lib/cmake/xcikit
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xcikit
         FILE "xcikit-targets.cmake")
 
     set(XCI_INCLUDE_DIRS include)
@@ -366,10 +367,10 @@ if (XCI_INSTALL_DEVEL)
     install(FILES
         ${CMAKE_CURRENT_BINARY_DIR}/xcikit-config.cmake
         ${CMAKE_CURRENT_BINARY_DIR}/xcikit-config-version.cmake
-        DESTINATION lib/cmake/xcikit)
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xcikit)
 
     # Make our CMake modules available to clients
-    install(FILES cmake/XciBuildOptions.cmake DESTINATION lib/cmake/xcikit)
+    install(FILES cmake/XciBuildOptions.cmake DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xcikit)
 endif()
 
 
