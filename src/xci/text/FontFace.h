@@ -20,11 +20,11 @@
 
 // Forward decls from <ft2build.h>, <hb.h>
 // (to avoid external dependency on Freetype)
-typedef struct FT_FaceRec_*  FT_Face;
-typedef struct FT_StrokerRec_*  FT_Stroker;
-typedef struct FT_GlyphSlotRec_*  FT_GlyphSlot;
-typedef struct FT_GlyphRec_*  FT_Glyph;
-typedef struct hb_font_t hb_font_t;
+typedef struct FT_FaceRec_*  FT_Face;  // NOLINT
+typedef struct FT_StrokerRec_*  FT_Stroker;  // NOLINT
+typedef struct FT_GlyphSlotRec_*  FT_GlyphSlot;  // NOLINT
+typedef struct FT_GlyphRec_*  FT_Glyph;  // NOLINT
+typedef struct hb_font_t hb_font_t;  // NOLINT
 
 
 namespace xci::text {

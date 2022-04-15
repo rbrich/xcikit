@@ -377,6 +377,8 @@ ZipArchive::~ZipArchive()
         TRACE("ZipArchive: Closing archive: {}", m_path);
         zip_close((zip_t*) m_zip);
     }
+#else
+    (void) 0;
 #endif
 }
 

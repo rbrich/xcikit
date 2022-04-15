@@ -38,9 +38,9 @@ std::shared_ptr<Module> ModuleManager::import_module(const std::string& name)
 }
 
 
-bool ModuleManager::add_module(const std::string& name, std::shared_ptr<Module> module)
+bool ModuleManager::add_module(const std::string& name, const std::shared_ptr<Module>& module)
 {
-    auto it = m_modules.try_emplace(name, std::move(module));
+    auto it = m_modules.try_emplace(name, module);
     return it.second;
 }
 

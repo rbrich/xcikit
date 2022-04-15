@@ -190,7 +190,7 @@ std::u32string to_utf32(string_view utf8)
         return convert_utf32.from_bytes(utf8.data(), utf8.data() + utf8.size());
     } catch (const std::range_error& e) {
         log::error("to_utf32: Invalid UTF8 string: {} ({})", utf8, e.what());
-        return std::u32string();
+        return {};
     }
 }
 

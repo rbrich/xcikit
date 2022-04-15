@@ -301,7 +301,7 @@ void Renderer::clear_pipeline_cache()
 SharedDescriptorPool
 Renderer::get_descriptor_pool(uint32_t reserved_sets, DescriptorPoolSizes pool_sizes)
 {
-    auto [it, added] = m_descriptor_pool.try_emplace(std::move(pool_sizes));
+    auto [it, added] = m_descriptor_pool.try_emplace(pool_sizes);
     auto& vec_of_pools = it->second;
     for (auto& pool : vec_of_pools) {
         if (pool.book_capacity(reserved_sets))
@@ -309,7 +309,7 @@ Renderer::get_descriptor_pool(uint32_t reserved_sets, DescriptorPoolSizes pool_s
     }
     // None of existing pools had enough capacity
     auto& pool = vec_of_pools.emplace_back(*this);
-    pool.create(1000, std::move(pool_sizes));
+    pool.create(1000, pool_sizes);
     if (pool.book_capacity(reserved_sets))
         return SharedDescriptorPool(pool, reserved_sets);
     // reserved_sets is > 1000

@@ -336,7 +336,7 @@ size_t PipelineCreateInfo::hash() const
     h = std::rotl(h, 1) ^ size_t(m_pipeline_ci.layout);
     h = std::rotl(h, 1) ^ size_t(m_pipeline_ci.renderPass);
     h = std::rotl(h, 1) ^ (size_t(m_format) << 16 | size_t(m_blend_func));
-    return 0;
+    return h;
 }
 
 

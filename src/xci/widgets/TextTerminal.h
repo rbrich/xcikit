@@ -57,7 +57,7 @@ namespace ctl {
 
     static constexpr uint8_t first_introducer = 0x10;
     static constexpr uint8_t last_introducer = 0x1f;
-}
+} // namespace ctl
 
 
 enum class Color4bit : uint8_t {

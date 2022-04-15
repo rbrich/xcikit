@@ -112,14 +112,14 @@ SharedDescriptorPool::~SharedDescriptorPool()
 }
 
 
-SharedDescriptorPool::SharedDescriptorPool(SharedDescriptorPool&& rhs)
+SharedDescriptorPool::SharedDescriptorPool(SharedDescriptorPool&& rhs) noexcept
     : m_descriptor_pool(rhs.m_descriptor_pool), m_booked_sets(0)
 {
     std::swap(m_booked_sets, rhs.m_booked_sets);
 }
 
 
-SharedDescriptorPool& SharedDescriptorPool::operator=(SharedDescriptorPool&& rhs)
+SharedDescriptorPool& SharedDescriptorPool::operator=(SharedDescriptorPool&& rhs) noexcept
 {
     std::swap(m_descriptor_pool, rhs.m_descriptor_pool);
     std::swap(m_booked_sets, rhs.m_booked_sets);

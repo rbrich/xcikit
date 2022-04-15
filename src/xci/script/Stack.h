@@ -55,8 +55,8 @@ public:
     void push(const Value& v);
     void push(const TypedValue& v) { push(v.value()); }
 
-    Value pull(const TypeInfo& type_info);
-    TypedValue pull_typed(const TypeInfo& type_info) { return {pull(type_info), type_info}; }
+    Value pull(const TypeInfo& ti);
+    TypedValue pull_typed(const TypeInfo& ti) { return {pull(ti), ti}; }
 
     template <ValueT T>
     T pull() {

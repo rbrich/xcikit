@@ -97,7 +97,7 @@ FontVar::FontVar(const FontFace& font_face)
     // get current values of coords
     std::vector<FT_Fixed> ft_coords;
     ft_coords.resize(mm_var->num_axis);
-    err = FT_Get_Var_Design_Coordinates(font_face.ft_face(), ft_coords.size(), ft_coords.data());
+    err = FT_Get_Var_Design_Coordinates(font_face.ft_face(), FT_UInt(ft_coords.size()), ft_coords.data());
     FT_CHECK_OR(err, "FT_Get_Var_Design_Coordinates", return;);
 
     // fill axis info
@@ -281,7 +281,7 @@ FontStyle FontFace::style() const
     static_assert(FT_STYLE_FLAG_ITALIC == int(FontStyle::Italic), "freetype italic flag == 1");
     static_assert(FT_STYLE_FLAG_BOLD == int(FontStyle::Bold), "freetype bold flag == 2");
     bool weight_is_bold = m_var_weight >= 0 && (get_variable_axes_coords()[m_var_weight] > 600.f);
-    return static_cast<FontStyle>((m_face->style_flags & 0b11) | weight_is_bold);
+    return static_cast<FontStyle>((m_face->style_flags & 0b11) | int(weight_is_bold));
 }
 
 
@@ -354,7 +354,7 @@ bool FontFace::set_variable_axes_coords(const std::vector<float>& coords)
     std::vector<FT_Fixed> ft_coords;
     ft_coords.reserve(coords.size());
     std::transform(coords.begin(), coords.end(), std::back_inserter(ft_coords), float_to_ft_fixed);
-    auto err = FT_Set_Var_Design_Coordinates(m_face, ft_coords.size(), ft_coords.data());
+    auto err = FT_Set_Var_Design_Coordinates(m_face, FT_UInt(ft_coords.size()), ft_coords.data());
     FT_CHECK_RETURN_FALSE(err, "FT_Set_Var_Design_Coordinates");
     return true;
 }

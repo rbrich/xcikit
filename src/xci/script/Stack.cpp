@@ -20,9 +20,9 @@ using std::cout;
 using std::endl;
 
 
-void Stack::push(const Value& o)
+void Stack::push(const Value& v)
 {
-    auto size = o.size_on_stack();
+    auto size = v.size_on_stack();
     if (size == 0)
         return;  // Void
     if (m_stack_pointer < size) {
@@ -30,8 +30,8 @@ void Stack::push(const Value& o)
             throw StackOverflow();
     }
     m_stack_pointer -= size;
-    o.write(data());
-    push_type(o);
+    v.write(data());
+    push_type(v);
 }
 
 

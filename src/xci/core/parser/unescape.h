@@ -11,8 +11,8 @@
 
 namespace xci::core::parser::unescape {
 
-// This is tolerant version of the unescape parser,
-// consuming any output and interpreting unknown escapes in best effort manner.
+// This is a tolerant version of unescape parser,
+// consuming any output and interpreting unknown escapes in the best effort manner.
 struct StringChIll : any {};
 struct StringChIllEsc : seq< one< '\\' >, sor<StringChIll, eof> > {};
 struct String: star< sor<try_catch<StringCh>, StringChIllEsc, StringChIll> > {};
@@ -24,6 +24,6 @@ template<> struct Action<StringChEscSingle> : StringAppendEscSingle {};
 template<> struct Action<StringChEscHex> : StringAppendEscHex {};
 template<> struct Action<StringChEscOct> : StringAppendEscOct {};
 
-} // namespace xci::core::parser
+} // namespace xci::core::parser::unescape
 
 #endif // include guard

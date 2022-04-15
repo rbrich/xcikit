@@ -3,6 +3,8 @@
 # * clang-analyzer-security.insecureAPI.bzero -- bzero is used internally by system macros (e.g. FD_ZERO)
 # * readability-container-size-empty -- in Catch2 tests, comparing with empty string produces better failed test message
 # * readability-qualified-auto -- wants to auto `const auto*` for `std::string_view::iterator` on Clang => that would be unportable
+# * modernize-redundant-void-arg -- used intentionally in xci::script to emphasize visitors of 'void' type
+# * performance-no-int-to-ptr -- nothing found in our code, but warns about SIG_ERR macro content
 Checks: >
   bugprone-*,
   -bugprone-branch-clone,
@@ -26,7 +28,9 @@ Checks: >
   -modernize-deprecated-headers,
   -modernize-use-nodiscard,
   -modernize-use-trailing-return-type,
+  -modernize-redundant-void-arg,
   performance-*,
+  -performance-no-int-to-ptr,
   portability-*,
   readability-*,
   -readability-implicit-bool-conversion,

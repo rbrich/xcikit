@@ -12,8 +12,6 @@
 #include <xci/compat/macros.h>
 
 #include <range/v3/view/enumerate.hpp>
-#include <range/v3/view/filter.hpp>
-#include <range/v3/algorithm.hpp>
 
 #include <sstream>
 #include <optional>
@@ -22,14 +20,10 @@
 namespace xci::script {
 
 using std::move;
-using std::make_unique;
 using std::stringstream;
 using std::endl;
 
 using ranges::views::enumerate;
-using ranges::views::filter;
-using ranges::any_of;
-using ranges::to;
 
 
 class MatchScore {

@@ -27,7 +27,7 @@ public:
     std::shared_ptr<Module> import_module(const char* name)
         { return import_module(std::string(name)); }
 
-    bool add_module(const std::string& name, std::shared_ptr<Module> module);
+    bool add_module(const std::string& name, const std::shared_ptr<Module>& module);
 
     Module& builtin_module() { return *m_modules["builtin"]; }
     const Module& builtin_module() const { return const_cast<ModuleManager*>(this)->builtin_module(); }
