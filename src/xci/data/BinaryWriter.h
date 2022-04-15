@@ -26,7 +26,7 @@ namespace xci::data {
 ///     struct MyStruct {
 ///         template <class Archive>
 ///         void serialize(Archive& ar) {
-///             ar(a, b, c);
+///             ar(a)(b)(c);
 ///         }
 ///     };
 ///
@@ -34,29 +34,29 @@ namespace xci::data {
 /// depending on the data direction:
 ///
 ///     struct MyStruct {
-///         template <class Archive> void save(Archive& ar) const { ar(a, b, c); }
-///         template <class Archive> void load(Archive& ar) { ar(a, b, c); }
+///         template <class Archive> void save(Archive& ar) const { ar(a)(b)(c); }
+///         template <class Archive> void load(Archive& ar) { ar(a)(b)(c); }
 ///     };
 ///
 /// Out-of-class functions are also supported:
 ///
-///     template <class Archive> void serialize(Archive& ar, MyStruct& v) { ar(v.a, v.b, v.c); }
-///     template <class Archive> void save(Archive& ar, const MyStruct& v) { ar(v.a, v.b, v.c); }
-///     template <class Archive> void load(Archive& ar, MyStruct& v) { ar(v.a, v.b, v.c); }
+///     template <class Archive> void serialize(Archive& ar, MyStruct& v) { ar(v.a)(v.b)(v.c); }
+///     template <class Archive> void save(Archive& ar, const MyStruct& v) { ar(v.a)(v.b)(v.c); }
+///     template <class Archive> void load(Archive& ar, MyStruct& v) { ar(v.a)(v.b)(v.c); }
 ///
 /// The numeric keys are auto-assigned: a=0, b=1, c=2.
 /// Maximum number of members serializable in this fashion is 16.
 ///
 /// The keys can be assigned explicitly:
 ///
-///     ar(XCI_ARCHIVE_FIELD(0, a), XCI_ARCHIVE_FIELD(1, b), XCI_ARCHIVE_FIELD(2, c))
+///     ar (0, a) (1, b) (2, c);
+///     ar (0, "a", a) (1, "a", b) (2, "a", c);
+///     XCI_ARCHIVE_FIELD(ar, 0, a); XCI_ARCHIVE_FIELD(ar, 1, b); XCI_ARCHIVE_FIELD(ar, 2, c);
 ///
-/// XCI_ARCHIVE_FIELD also assigns name to the item, which is same as the member name.
-/// It can be customized by calling the constructor directly:
+/// The second line also assigns a name to each field. The third line is equivalent
+/// to the second, but XCI_ARCHIVE_FIELD assigns the name automatically as stringified variable name.
 ///
-///     xci::data::ArchiveField{(0, a, "my_name")
-///
-/// As a shortcut, multiple named fields can be added at once:
+/// As a shortcut, multiple auto-named and auto-keyed fields can be added at once:
 ///
 ///     XCI_ARCHIVE(ar, a, b, c)
 ///
@@ -103,6 +103,16 @@ public:
         write_leb128(a.value.size());
         write((const std::byte*) a.value.data(), a.value.size());
     }
+    void add(ArchiveField<BinaryWriter, const char*>&& a) {
+        if (!a.value) {
+            write(uint8_t(Type::Null | a.key));
+            return;
+        }
+        write(uint8_t(Type::String | a.key));
+        auto size = strlen(a.value);
+        write_leb128(size);
+        write((const std::byte*) a.value, size);
+    }
 
     // binary data
     template <BlobType T>
@@ -136,9 +146,17 @@ public:
     }
 
 private:
-    void enter_group(uint8_t key, const char* name);
-    void leave_group(uint8_t key, const char* name);
+    template <typename T>
+    bool enter_group(const ArchiveField<BinaryWriter, T>&) {
+        m_group_stack.emplace_back();
+        return true;
+    }
+    template <typename T>
+    void leave_group(const ArchiveField<BinaryWriter, T>& kv) {
+        write_group(kv.key, kv.name);
+    }
 
+    void write_group(uint8_t key, const char* name);
     void write_content();
 
     template <typename T>

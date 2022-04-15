@@ -108,6 +108,7 @@ TEST_CASE( "Option description parsing", "[ArgParser][Option]" )
     SECTION("1 long") {
         Option o("--help", "1 long", flag);
         CHECK(o.has_long("help"));
+        CHECK(!o.has_long("help-me"));
         CHECK(!o.has_args());
         CHECK(!o.is_positional());
     }
@@ -261,7 +262,7 @@ TEST_CASE( "Parse args", "[ArgParser][parse_arg]" )
             Option("-w, --warn", "Warn me", warn),
             Option("-O, --optimize LEVEL", "Optimization level", optimize),
     };
-    
+
     SECTION("bad input") {
         CHECK_THROWS_AS(ap.parse_arg(ARGV("-x")), BadArgument);
         CHECK_THROWS_AS(ap.parse_arg(ARGV("---v")), BadArgument);

@@ -20,7 +20,7 @@
 #include <cstring>
 #include <cstdint>
 
-namespace xci {
+namespace xci::core {
 
 
 /// Similar to C++20 bit_cast, but copy bits from void*, char*, byte* etc.
@@ -96,6 +96,6 @@ void bit_write(OutIter& iter, InT value) noexcept
 }
 
 
-} // namespace xci
+} // namespace xci::core
 
 #endif // include guard

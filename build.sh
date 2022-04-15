@@ -265,7 +265,7 @@ if phase deps; then
         CONAN_ARGS+=(-s "os.version=${MACOSX_DEPLOYMENT_TARGET}")
     fi
     if [[ "${PRECACHE_DEPS}" -eq 1 ]]; then
-        "${ROOT_DIR}/precache_upstream_deps.py"
+        "${PYTHON}" "${ROOT_DIR}/precache_upstream_deps.py"
     fi
     (
         run cd "${BUILD_DIR}"

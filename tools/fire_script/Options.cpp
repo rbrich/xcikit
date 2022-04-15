@@ -95,6 +95,7 @@ void Options::parse(char* argv[])
                                      + output_pass_list()
                                      , [&ro](const char* arg){ return parse_pass_list(ro, arg); }),
             Option("-S, --no-std", "Do not import standard library", [&ro]{ ro.with_std_lib = false; }),
+            Option("--output-schema FILE", "Write schema of compiled module to FILE (for use in dati tool)", po.schema_file),
             Option("[INPUT ...]", "Input files", [&po](const char* arg)
             { po.input_files.emplace_back(arg); return true; }),
     } (argv);

@@ -68,14 +68,11 @@ void BinaryWriter::write_content()
 }
 
 
-void BinaryWriter::enter_group(uint8_t key, const char* name)
+void BinaryWriter::write_group(uint8_t key, const char* name)
 {
-    m_group_stack.emplace_back();
-}
+    if (key > 15)
+        throw ArchiveOutOfKeys(key);
 
-
-void BinaryWriter::leave_group(uint8_t key, const char* name)
-{
     auto inner_buffer = std::move(group_buffer());
     m_group_stack.pop_back();
     // TYPE:4, KEY:4

@@ -34,14 +34,15 @@ public:
     using InstanceIdx = IndexedMap<Instance>::Index;
 
     explicit Module(ModuleManager& module_manager, std::string name = "<module>")
-        : m_module_manager(module_manager), m_symtab(move(name))
+        : m_module_manager(&module_manager), m_symtab(move(name))
         { m_symtab.set_module(this); }
+    Module() : m_symtab("<module>") { m_symtab.set_module(this); }  // only for serialization
     ~Module();
     Module(Module&&) = delete;
     Module& operator =(Module&&) = delete;
 
     const std::string& name() const { return m_symtab.name(); }
-    const ModuleManager& module_manager() const { return m_module_manager; }
+    const ModuleManager& module_manager() const { return *m_module_manager; }
 
     SymbolPointer add_native_function(std::string&& name,
             std::vector<TypeInfo>&& params, TypeInfo&& retval,
@@ -121,10 +122,11 @@ public:
     // Serialization
     bool save_to_file(const std::string& filename);
     bool load_from_file(const std::string& filename);
+    bool write_schema_to_file(const std::string& filename);
 
     template<class Archive>
     void save(Archive& ar) const {
-        ar(name());
+        ar("name", name());
     }
 
     // load() is implemented inside load_from_file in a wrapper class
@@ -132,7 +134,7 @@ public:
     bool operator==(const Module& rhs) const;
 
 private:
-    ModuleManager& m_module_manager;
+    ModuleManager* m_module_manager = nullptr;
     std::vector<std::shared_ptr<Module>> m_modules;
     IndexedMap<Function> m_functions;
     IndexedMap<Class> m_classes;

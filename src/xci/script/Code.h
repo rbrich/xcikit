@@ -183,7 +183,7 @@ public:
 
     template<class Archive>
     void serialize(Archive& ar) {
-        ar(m_ops);
+        ar("ops", m_ops);
     }
 
 private:

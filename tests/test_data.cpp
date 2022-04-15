@@ -7,6 +7,7 @@
 #include <catch2/catch.hpp>
 
 #include <xci/data/Dumper.h>
+#include <xci/data/Schema.h>
 #include <xci/data/BinaryWriter.h>
 #include <xci/data/BinaryReader.h>
 #include <xci/core/container/ChunkedStack.h>
@@ -55,7 +56,7 @@ TEST_CASE( "Node tree: dump/save/load", "[data]" )
         Node{"child2", Option::Two, {}, 2.2},
     }, 0.0};
     const char* node_text =
-            "(0):\n"
+            "(0) root:\n"
             "    (0) name: \"root\"\n"
             "    (1) option: Zero\n"
             "    (2) child:\n"
@@ -67,19 +68,45 @@ TEST_CASE( "Node tree: dump/save/load", "[data]" )
             "        (1) option: Two\n"
             "        (3) f: 2.2\n"
             "    (3) f: 0\n";
+    const char* schema_text =
+            "(0) schema:\n"
+            "    (0) struct:\n"
+            "        (0) name: \"struct Main\"\n"
+            "        (1) member:\n"
+            "            (0) key: 0\n"
+            "            (1) name: \"root\"\n"
+            "            (2) type: \"struct Node\"\n"
+            "    (0) struct:\n"
+            "        (0) name: \"struct Node\"\n"
+            "        (1) member:\n"
+            "            (0) key: 0\n"
+            "            (1) name: \"name\"\n"
+            "            (2) type: \"string\"\n"
+            "        (1) member:\n"
+            "            (0) key: 1\n"
+            "            (1) name: \"option\"\n"
+            "            (2) type: \"enum\"\n"
+            "        (1) member:\n"
+            "            (0) key: 2\n"
+            "            (1) name: \"child\"\n"
+            "            (2) type: \"struct Node\"\n"
+            "        (1) member:\n"
+            "            (0) key: 3\n"
+            "            (1) name: \"f\"\n"
+            "            (2) type: \"float64\"\n";
 
     SECTION( "Dumper" ) {
         std::stringstream s("");
-        Dumper wtext(s);
-        wtext(root);
+        Dumper dumper(s);
+        XCI_ARCHIVE(dumper, root);
         CHECK(s.str() == node_text);
     }
 
     SECTION( "BinaryWriter / BinaryReader" ) {
         std::stringstream s("");
         {
-            BinaryWriter wbin(s);
-            wbin(root);
+            BinaryWriter binary_writer(s);
+            XCI_ARCHIVE(binary_writer, root);
         }
 
         Node reconstructed_node;
@@ -97,10 +124,67 @@ TEST_CASE( "Node tree: dump/save/load", "[data]" )
         root.check_equal(reconstructed_node);
 
         std::stringstream st("");
-        Dumper wtext(st);
-        wtext(reconstructed_node);
+        Dumper dumper(st);
+        dumper("root", reconstructed_node);
         CHECK(st.str() == node_text);
     }
+
+    SECTION( "Schema" ) {
+        Schema schema;
+        schema("root", root);
+        std::stringstream s("");
+        Dumper dumper(s);
+        XCI_ARCHIVE(dumper, schema);
+        CHECK(s.str() == schema_text);
+    }
+}
+
+
+TEST_CASE( "Schema schema", "[data]" ) {
+    const char* schema_text =
+            "(0) schema:\n"
+            "    (0) struct:\n"
+            "        (0) name: \"struct Main\"\n"
+            "        (1) member:\n"
+            "            (0) key: 0\n"
+            "            (1) name: \"schema\"\n"
+            "            (2) type: \"struct Schema\"\n"
+            "    (0) struct:\n"
+            "        (0) name: \"struct Schema\"\n"
+            "        (1) member:\n"
+            "            (0) key: 0\n"
+            "            (1) name: \"struct\"\n"
+            "            (2) type: \"struct Struct\"\n"
+            "    (0) struct:\n"
+            "        (0) name: \"struct Struct\"\n"
+            "        (1) member:\n"
+            "            (0) key: 0\n"
+            "            (1) name: \"name\"\n"
+            "            (2) type: \"string\"\n"
+            "        (1) member:\n"
+            "            (0) key: 1\n"
+            "            (1) name: \"member\"\n"
+            "            (2) type: \"struct Member\"\n"
+            "    (0) struct:\n"
+            "        (0) name: \"struct Member\"\n"
+            "        (1) member:\n"
+            "            (0) key: 0\n"
+            "            (1) name: \"key\"\n"
+            "            (2) type: \"uint8\"\n"
+            "        (1) member:\n"
+            "            (0) key: 1\n"
+            "            (1) name: \"name\"\n"
+            "            (2) type: \"string\"\n"
+            "        (1) member:\n"
+            "            (0) key: 2\n"
+            "            (1) name: \"type\"\n"
+            "            (2) type: \"string\"\n";
+    Schema schema;
+    schema("schema", schema);
+    std::stringstream s("");
+    Dumper dumper(s);
+    XCI_ARCHIVE(dumper, schema);
+    CHECK(s.str() == schema_text);
 }
 
 

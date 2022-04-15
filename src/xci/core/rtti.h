@@ -18,7 +18,9 @@ std::string demangle_type_name(const char* name);
 
 // Returns human-readable type name for given typeid()
 // Typical usage: `type_name(typeid(*this))`
-inline std::string type_name(const std::type_info& ti) { return demangle_type_name(ti.name()); }
+inline std::string type_name(const std::type_info& ti) {
+    return demangle_type_name(ti.name());
+}
 
 
 }  // namespace xci::core

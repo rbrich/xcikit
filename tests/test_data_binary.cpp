@@ -21,7 +21,7 @@ struct Record {
 
     template <class Archive>
     void serialize(Archive& ar) {
-        ar(id, flag);
+        ar(id)(flag);
     }
 };
 
@@ -32,7 +32,7 @@ struct MasterRecord {
 
     template <class Archive>
     void serialize(Archive& ar) {
-        ar(rec1, rec2);
+        ar(rec1)(rec2);
     }
 };
 
@@ -80,7 +80,7 @@ TEST_CASE( "BinaryWriter", "[data]" )
 
         {
             BinaryWriter writer(buf);
-            writer(x, f, b, n, z);
+            writer(x)(f)(b)(n)(z);
         }
         CHECK(buf.str() == expected);
     }
@@ -204,7 +204,7 @@ TEST_CASE( "BinaryReader", "[data]" )
         std::byte z {0};
         try {
             BinaryReader reader(buf);
-            reader(x, f, b, n, z);
+            reader(x)(f)(b)(n)(z);
             reader.finish_and_check();
         } catch (const ArchiveError& e) {
             INFO(e.what());

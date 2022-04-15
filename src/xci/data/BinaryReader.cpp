@@ -113,7 +113,7 @@ auto BinaryReader::generic_next() -> GenericNext
 }
 
 
-void BinaryReader::enter_group(uint8_t key, const char* name)
+void BinaryReader::_enter_group(uint8_t key)
 {
     auto chunk_type = read_chunk_head(key);
     size_t chunk_length = 0;  // ChunkNotFound -> size 0
@@ -130,7 +130,7 @@ void BinaryReader::enter_group(uint8_t key, const char* name)
 }
 
 
-void BinaryReader::leave_group(uint8_t key, const char* name)
+void BinaryReader::_leave_group()
 {
     // drain the rest of chunks in the group
     auto chunk_type = read_chunk_head(ChunkNotFound);

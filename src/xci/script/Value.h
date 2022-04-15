@@ -626,9 +626,9 @@ public:
 template<class Archive>
 void save(Archive& archive, const TypedValue& value)
 {
-    archive(value.type_info());
+    archive("type_info", value.type_info());
     if (!value.is_void())
-        archive(value.value());
+        archive("value", value.value());
 }
 
 template<class Archive>

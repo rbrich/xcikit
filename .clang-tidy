@@ -8,6 +8,7 @@ Checks: >
   -bugprone-branch-clone,
   -bugprone-sizeof-expression,
   -bugprone-easily-swappable-parameters,
+  -bugprone-exception-escape,
   clang-analyzer-*,
   -clang-analyzer-security.insecureAPI.bzero,
   clang-diagnostic-*,

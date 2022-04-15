@@ -28,8 +28,13 @@ std::string demangle_type_name(const char* name)
     std::free(realname);
     return result;
 #else
-    // not mangled
-    return name;
+    // Windows: not mangled
+    std::string res(name);
+    for (const char* prefix : {"struct ", "class "}) {
+        if (res.starts_with(prefix))
+            res.erase(0, strlen(prefix));
+    }
+    return res;
 #endif
 }
 

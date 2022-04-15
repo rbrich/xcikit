@@ -8,7 +8,9 @@
 #define XCI_CORE_MACROS_FOREACH_H
 
 
+#define XCI_NOSEP()
 #define XCI_COMMA() ,
+#define XCI_SEMICOLON() ;
 #define XCI_GET_NTH_(a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11,a12,a13,a14,a15,a16,fn,...) fn
 #define XCI_FOR_1(f,arg,sep,x)     f(arg,x)
 #define XCI_FOR_2(f,arg,sep,x,...) f(arg,x)sep()XCI_FOR_1(f,arg,sep,__VA_ARGS__)

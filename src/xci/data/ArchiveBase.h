@@ -10,9 +10,11 @@
 #include <xci/core/error.h>
 #include <xci/core/macros/foreach.h>
 
+#include <fmt/core.h>
 #ifndef XCI_ARCHIVE_NO_MAGIC
 #include <boost/pfr/core.hpp>
 #endif
+
 #include <vector>
 #include <variant>
 #include <cstdint>
@@ -36,11 +38,10 @@ struct ArchiveField {
 };
 
 // Automatic named fields
-#define XCI_ARCHIVE_FIELD(i, mbr) xci::data::ArchiveField<Archive, decltype(mbr)>{i, mbr, #mbr}
+#define XCI_ARCHIVE_FIELD_AUTOKEY(ar, mbr) ar(255, #mbr, mbr)
+#define XCI_ARCHIVE_FIELD(ar, i, mbr) ar(i, #mbr, mbr)
 #define XCI_ARCHIVE(ar, ...)                                                                        \
-    ar(                                                                                             \
-        XCI_FOREACH(XCI_ARCHIVE_FIELD, 255, XCI_COMMA, __VA_ARGS__)                                 \
-    )
+        XCI_FOREACH(XCI_ARCHIVE_FIELD_AUTOKEY, ar, XCI_SEMICOLON, __VA_ARGS__);
 
 
 // in-class method: void serialize(Archive&)
@@ -51,13 +52,23 @@ concept TypeWithSerializeMethod = requires(T& v, TArchive& ar) { v.serialize(ar)
 template<typename T, typename TArchive>
 concept TypeWithSerializeFunction = requires(T& v, TArchive& ar) { serialize(ar, v); };
 
+// in-class method: void save_schema(Archive&) const
+template<typename T, typename TArchive>
+concept TypeWithSchemaMethod = requires(const T& v, TArchive& ar) { typename TArchive::SchemaWriter; v.save_schema(ar); };
+
+// out-of-class function: void save_schema(Archive&, const T&)
+template<typename T, typename TArchive>
+concept TypeWithSchemaFunction = requires(const T& v, TArchive& ar) { typename TArchive::SchemaWriter; save_schema(ar, v); };
+
 // in-class method: void save(Archive&) const
 template<typename T, typename TArchive>
-concept TypeWithSaveMethod = requires(const T& v, TArchive& ar) { typename TArchive::Writer; v.save(ar); };
+concept TypeWithSaveMethod = !TypeWithSchemaMethod<T, TArchive> &&
+    requires(const T& v, TArchive& ar) { typename TArchive::Writer; v.save(ar); };
 
 // out-of-class function: void save(Archive&, const T&)
 template<typename T, typename TArchive>
-concept TypeWithSaveFunction = requires(const T& v, TArchive& ar) { typename TArchive::Writer; save(ar, v); };
+concept TypeWithSaveFunction = !TypeWithSchemaFunction<T, TArchive> &&
+    requires(const T& v, TArchive& ar) { typename TArchive::Writer; save(ar, v); };
 
 // in-class method: void load(Archive&)
 template<typename T, typename TArchive>
@@ -91,6 +102,8 @@ template<typename T>
 concept ContainerType = !BlobType<T> && requires (T& v) {
     typename T::const_iterator;
     typename T::value_type;
+    { std::begin(v) } -> std::same_as<typename T::iterator>;
+    { std::end(v) } -> std::same_as<typename T::iterator>;
 };
 
 template <typename T>
@@ -122,6 +135,8 @@ template<typename T, typename TArchive>
 concept TypeWithMagicSupport =
         !TypeWithSerializeMethod<T, TArchive> &&
         !TypeWithSerializeFunction<T, TArchive> &&
+        !TypeWithSchemaMethod<T, TArchive> &&
+        !TypeWithSchemaFunction<T, TArchive> &&
         !TypeWithSaveMethod<T, TArchive> &&
         !TypeWithSaveFunction<T, TArchive> &&
         !TypeWithLoadMethod<T, TArchive> &&
@@ -144,12 +159,10 @@ concept FancyPointerType = requires(T v) {
     *v;
     typename std::pointer_traits<T>::pointer;
     typename std::pointer_traits<T>::element_type;
-};
+} && !std::is_same_v<T, const char*>;
 
 template<typename T>
 concept ContainerTypeWithEmplaceBack = ContainerType<T> && requires (T& v) {
-    typename T::const_iterator;
-    typename T::value_type;
     typename T::reference;
     v.emplace_back();
     { v.back() } -> std::same_as<typename T::reference>;
@@ -158,8 +171,6 @@ concept ContainerTypeWithEmplaceBack = ContainerType<T> && requires (T& v) {
 template<typename T>
 concept ContainerTypeWithEmplace = ContainerType<T> && !ContainerTypeWithEmplaceBack<T> &&
 requires (T& v) {
-    typename T::const_iterator;
-    typename T::value_type;
     v.emplace();
 };
 
@@ -171,7 +182,8 @@ public:
 
 class ArchiveOutOfKeys : public ArchiveError {
 public:
-    ArchiveOutOfKeys() : ArchiveError("Tried to allocate more than 16 keys per object.") {}
+    explicit ArchiveOutOfKeys(int key)
+        : ArchiveError(fmt::format("Key {} is out of range for the object.", key)) {}
 };
 
 
@@ -186,30 +198,32 @@ class ArchiveBase {
 public:
     ArchiveBase() { m_group_stack.emplace_back(); }
 
-    // convenience: ar(value, ...) -> ar.apply(value), ...
-    template<typename ...Args>
-    void operator() (Args&&... args) {
-        ((void) apply(std::forward<Args>(args)), ...);
+    // convenience: ar(value) -> ar.apply(ArchiveField{key_auto, value})
+    template<typename T>
+    ArchiveBase& operator() (T&& value) {
+        apply(ArchiveField<TImpl, std::remove_cvref_t<T>>{key_auto, std::forward<T>(value)});
+        return *this;
     }
 
-    // convenience: ar.apply(value) -> ar.apply(ArchiveField{key_auto, value})
-    template <ArchiveIsReader<TImpl> T>
-    void apply(T& value) {
-        apply(ArchiveField<TImpl, T>{key_auto, value});
-    }
-    template <ArchiveIsWriter<TImpl> T>
-    void apply(const T& value) {
-        apply(ArchiveField<TImpl, T>{key_auto, value});
+    // convenience: ar(key, value) -> ar.apply(ArchiveField{key, value})
+    template<typename T>
+    ArchiveBase& operator() (uint8_t key, T&& value) {
+        apply(ArchiveField<TImpl, std::remove_cvref_t<T>>{key, std::forward<T>(value)});
+        return *this;
     }
 
-    // convenience: ar.kv(key, value) -> ar.apply(ArchiveField{key, value})
-    template <ArchiveIsReader<TImpl> T>
-    void kv(uint8_t key, T& value) {
-        apply(ArchiveField<TImpl, T>{key, value});
+    // convenience: ar(name, value) -> ar.apply(ArchiveField{key_auto, value, name})
+    template<typename T>
+    ArchiveBase& operator() (const char* name, T&& value) {
+        apply(ArchiveField<TImpl, std::remove_cvref_t<T>>{key_auto, std::forward<T>(value), name});
+        return *this;
     }
-    template <ArchiveIsWriter<TImpl> T>
-    void kv(uint8_t key, const T& value) {
-        apply(ArchiveField<TImpl, T>{key, value});
+
+    // convenience: ar(key, name, value) -> ar.apply(ArchiveField{key, value, name})
+    template<typename T>
+    ArchiveBase& operator() (uint8_t key, const char* name, T&& value) {
+        apply(ArchiveField<TImpl, std::remove_cvref_t<T>>{key, std::forward<T>(value), name});
+        return *this;
     }
 
     // convenience: ar.repeated(value, f_make_value) -> reader.add(ArchiveField{key_auto, value}, f_make_value)
@@ -225,54 +239,80 @@ public:
     template <TypeWithSerializeMethod<TImpl> T>
     void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = draw_next_key(kv.key);
-        static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
-        const_cast<T&>(kv.value).serialize(*static_cast<TImpl*>(this));
-        static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
+        if (static_cast<TImpl*>(this)->enter_group(kv)) {
+            const_cast<T&>(kv.value).serialize(*static_cast<TImpl*>(this));
+            static_cast<TImpl*>(this)->leave_group(kv);
+        }
     }
 
     // when: the type has out-of-class serialize() function
     template <TypeWithSerializeFunction<TImpl> T>
     void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = draw_next_key(kv.key);
-        static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
-        serialize(*static_cast<TImpl*>(this), const_cast<T&>(kv.value));
-        static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
+        if (static_cast<TImpl*>(this)->enter_group(kv)) {
+            serialize(*static_cast<TImpl*>(this), const_cast<T&>(kv.value));
+            static_cast<TImpl*>(this)->leave_group(kv);
+        }
+    }
+
+    // when: the type has save_schema() method and archive is Schema
+    template <TypeWithSchemaMethod<TImpl> T>
+    void apply(ArchiveField<TImpl, T>&& kv) {
+        kv.key = draw_next_key(kv.key);
+        if (static_cast<TImpl*>(this)->enter_group(kv)) {
+            kv.value.save_schema(*static_cast<TImpl*>(this));
+            static_cast<TImpl*>(this)->leave_group(kv);
+        }
+    }
+
+    // when: the type has out-of-class save_schema() function and archive is Schema
+    template <TypeWithSchemaFunction<TImpl> T>
+    void apply(ArchiveField<TImpl, T>&& kv) {
+        kv.key = draw_next_key(kv.key);
+        if (static_cast<TImpl*>(this)->enter_group(kv)) {
+            save_schema(*static_cast<TImpl*>(this), kv.value);
+            static_cast<TImpl*>(this)->leave_group(kv);
+        }
     }
 
     // when: the type has save() method and this is Writer
     template <TypeWithSaveMethod<TImpl> T>
     void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = draw_next_key(kv.key);
-        static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
-        kv.value.save(*static_cast<TImpl*>(this));
-        static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
+        if (static_cast<TImpl*>(this)->enter_group(kv)) {
+            kv.value.save(*static_cast<TImpl*>(this));
+            static_cast<TImpl*>(this)->leave_group(kv);
+        }
     }
 
     // when: the type has out-of-class save() function and this is Writer
     template <TypeWithSaveFunction<TImpl> T>
     void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = draw_next_key(kv.key);
-        static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
-        save(*static_cast<TImpl*>(this), kv.value);
-        static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
+        if (static_cast<TImpl*>(this)->enter_group(kv)) {
+            save(*static_cast<TImpl*>(this), kv.value);
+            static_cast<TImpl*>(this)->leave_group(kv);
+        }
     }
 
     // when: the type has load() method and this is Reader
     template <TypeWithLoadMethod<TImpl> T>
     void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = draw_next_key(kv.key);
-        static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
-        kv.value.load(*static_cast<TImpl*>(this));
-        static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
+        if (static_cast<TImpl*>(this)->enter_group(kv)) {
+            kv.value.load(*static_cast<TImpl*>(this));
+            static_cast<TImpl*>(this)->leave_group(kv);
+        }
     }
 
     // when: the type has out-of-class load() function and this is Reader
     template <TypeWithLoadFunction<TImpl> T>
     void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = draw_next_key(kv.key);
-        static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
-        load(*static_cast<TImpl*>(this), kv.value);
-        static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
+        if (static_cast<TImpl*>(this)->enter_group(kv)) {
+            load(*static_cast<TImpl*>(this), kv.value);
+            static_cast<TImpl*>(this)->leave_group(kv);
+        }
     }
 
     // when: Archive implementation has add() method for the type
@@ -291,11 +331,12 @@ public:
     template <TupleType T>
     void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = draw_next_key(kv.key);
-        static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
-        std::apply([this]<typename... Args>(Args&&... args) {
-            ((void) this->apply(std::forward<Args>(args)), ...);
-        }, kv.value);
-        static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
+        if (static_cast<TImpl*>(this)->enter_group(kv)) {
+            std::apply([this]<typename... Args>(Args&&... args) {
+                ((void) (*this)(std::forward<Args>(args)), ...);
+            }, kv.value);
+            static_cast<TImpl*>(this)->leave_group(kv);
+        }
     }
 
 #ifndef XCI_ARCHIVE_NO_MAGIC
@@ -303,17 +344,17 @@ public:
     template <TypeWithMagicSupport<TImpl> T>
     void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = draw_next_key(kv.key);
-        static_cast<TImpl*>(this)->enter_group(kv.key, kv.name);
-        boost::pfr::for_each_field(kv.value, [&](auto& field) {
-            apply(field);
-        });
-        static_cast<TImpl*>(this)->leave_group(kv.key, kv.name);
+        if (static_cast<TImpl*>(this)->enter_group(kv)) {
+            boost::pfr::for_each_field(kv.value, [this](auto& field) {
+                (*this)(field);  // operator()
+            });
+            static_cast<TImpl*>(this)->leave_group(kv);
+        }
     }
 #endif
 
 protected:
 
-    static constexpr uint8_t key_max = 15;
     static constexpr uint8_t key_auto = 255;
     uint8_t draw_next_key(uint8_t req = key_auto) {
         auto& group = m_group_stack.back();
@@ -329,8 +370,8 @@ protected:
             group.next_key = req;
         }
 
-        if (group.next_key > key_max)
-            throw ArchiveOutOfKeys();
+        if (group.next_key == key_auto)
+            throw ArchiveOutOfKeys(group.next_key);
 
         return group.next_key ++;
     }
