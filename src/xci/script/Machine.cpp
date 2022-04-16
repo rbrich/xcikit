@@ -18,7 +18,6 @@
 namespace xci::script {
 
 using xci::data::leb128_decode;
-using std::move;
 using fmt::format;
 
 
@@ -424,7 +423,7 @@ void Machine::run(const InvokeCallback& cb)
                 ListV list(num_elems, elem_ti, m_stack.data());
                 m_stack.drop(0, num_elems * elem_ti.size());
                 // push list handle back to stack
-                m_stack.push(Value{move(list)});
+                m_stack.push(Value{std::move(list)});
                 break;
             }
 
@@ -442,7 +441,7 @@ void Machine::run(const InvokeCallback& cb)
                     closure.add(m_stack.pull(ti));
                 }
                 // push closure
-                m_stack.push(value::Closure{fn, move(closure)});
+                m_stack.push(value::Closure{fn, std::move(closure)});
                 break;
             }
 

@@ -384,7 +384,7 @@ auto IndexedMap<T>::allocate_slots() -> Slot*
 template<class T>
 void IndexedMap<T>::free_slots(Slot* slot)
 {
-    ::operator delete(slot, chunk_size * sizeof(Slot), std::align_val_t(alignof(Slot)));
+    ::operator delete(slot, std::align_val_t(alignof(Slot)));
 }
 
 

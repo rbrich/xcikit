@@ -219,7 +219,7 @@ void Texture::update()
 
 VkDeviceSize Texture::byte_size() const
 {
-    return m_size.x * m_size.y * format_pixel_size(m_format);
+    return size_t(m_size.x * m_size.y) * format_pixel_size(m_format);
 }
 
 

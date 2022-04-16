@@ -211,9 +211,7 @@ auto EditLine::input(std::string_view prompt) -> std::pair<bool, std::string_vie
 
 void EditLine::start_input(std::string_view prompt)
 {
-    auto& tout = TermCtl::stdout_instance();
-
-    m_prompt_len = tout.stripped_width(prompt);
+    m_prompt_len = TermCtl::stripped_width(prompt);
     write("\r");
     write(prompt);
     flush();
@@ -293,7 +291,7 @@ void EditLine::process_input()
         m_cursor_line = 0;
     }
     write(tout.move_to_column(m_prompt_len).clear_screen_down().seq());
-    auto cursor = tout.stripped_width(m_edit_buffer.content_upto_cursor());
+    auto cursor = TermCtl::stripped_width(m_edit_buffer.content_upto_cursor());
 
     // Optionally highlight the content
     std::string_view content;  // pointer to content, either original or highlighted

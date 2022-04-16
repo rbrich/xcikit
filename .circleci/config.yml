@@ -4,41 +4,32 @@
 
 version: 2.1
 
-jobs:
-  build-debian-11:
+executors:
+  debian:
     docker:
       - image: rbrich/xcikit-debian:latest
-
-    steps:
-      - checkout
-      - run:
-          name: Deps
-          command: ./build.sh deps
-      - run:
-          name: Configure
-          command: ./build.sh config
-      - run:
-          name: Build
-          command: ./build.sh build -j 2
-      - run:
-          name: Run tests
-          command: ./build.sh test
-      - run:
-          name: Install
-          command: ./build.sh install
-      - run:
-          name: Package
-          command: ./build.sh package
-      - store_artifacts:
-          path: artifacts
-
-  build-emscripten:
+    resource_class: large
+  ubuntu:
+    docker:
+      - image: rbrich/xcikit-ubuntu:latest
+    resource_class: large
+  emscripten:
     docker:
       - image: rbrich/xcikit-emscripten:latest
+    resource_class: large
+
+jobs:
+  build:
     parameters:
+      image:
+        type: executor
+      jobs:
+        type: integer
+        default: 4
       build-args:
         type: string
-        default: "--emscripten core data script"
+        default: ""
+    executor: << parameters.image >>
     steps:
       - checkout
       - run:
@@ -49,7 +40,7 @@ jobs:
           command: ./build.sh config << parameters.build-args >>
       - run:
           name: Build
-          command: ./build.sh build << parameters.build-args >>
+          command: ./build.sh build -j << parameters.jobs >> << parameters.build-args >>
       - run:
           name: Run tests
           command: ./build.sh test << parameters.build-args >>
@@ -58,13 +49,24 @@ jobs:
           command: ./build.sh install << parameters.build-args >>
       - run:
           name: Package
-          command: ./build.sh package << parameters.build-args >>
+          command: |
+            ./build.sh package << parameters.build-args >>
+            rm -rf artifacts/Linux-*
+            rm -rf artifacts/emscripten-*
       - store_artifacts:
           path: artifacts
 
 workflows:
   version: 2
-  build:
+  workflow:
     jobs:
-      - build-debian-11
-      - build-emscripten
+      - build:
+          name: Debian 11 - GCC 10
+          image: debian
+      - build:
+          name: Ubuntu 22.04 - Clang 14
+          image: ubuntu
+      - build:
+          name: Emscripten
+          image: emscripten
+          build-args: "--emscripten core data script"

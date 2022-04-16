@@ -353,7 +353,7 @@ Operator::Operator(std::string_view s, bool prefix)
 {
     assert(!s.empty());
     char c1 = s[0];
-    char c2 = s.size() >= 2 ? s[1] : 0;
+    char c2 = s.size() >= 2 ? s[1] : '\0';
     switch (c1) {
         case ',':    op = Comma; break;
         case '|':    op = (c2 == '|')? LogicalOr : BitwiseOr; break;

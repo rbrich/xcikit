@@ -57,7 +57,7 @@ namespace ctl {
 
     static constexpr uint8_t first_introducer = 0x10;
     static constexpr uint8_t last_introducer = 0x1f;
-}
+} // namespace ctl
 
 
 enum class Color4bit : uint8_t {
@@ -137,6 +137,7 @@ public:
 
     /// Decode attribute sequence from string_view into object state
     /// This is usable for incremental (running) decoder.
+    /// \returns Number of bytes consumed
     size_t decode(std::string_view sv);
 
     // ------------------------------------------------------------------------
@@ -226,7 +227,7 @@ public:
     /// \returns        new pos (ie. start + skip)
     size_t content_skip(size_t skip, size_t start, Attributes& attr);
 
-    int length() const;
+    size_t length() const;
 
     bool is_blanked() const { return m_flags[BlankLine]; }
     bool is_page_blanked() const { return m_flags[BlankPage]; }

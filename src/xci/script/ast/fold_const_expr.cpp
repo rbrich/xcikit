@@ -17,7 +17,6 @@ namespace xci::script {
 using ranges::cpp20::views::reverse;
 using std::unique_ptr;
 using std::make_unique;
-using std::move;
 using std::optional;
 
 
@@ -89,7 +88,7 @@ public:
         for (auto& arg : v.args) {
             apply_and_fold(arg);
             if (all_const && m_const_value) {
-                args.add(move(*m_const_value));
+                args.add(std::move(*m_const_value));
                 m_const_value.reset();
             } else {
                 all_const = false;
@@ -144,7 +143,7 @@ public:
                 if (m_const_value->get<bool>()) {
                     apply_and_fold(item.second);
                     if (all_const) {
-                        m_collapsed = move(item.second);
+                        m_collapsed = std::move(item.second);
                         return;
                     } else {
                         // remove this branch - mark it, sweep below
@@ -178,7 +177,7 @@ public:
         if (v.if_then_expr.empty()) {
             // all branches removed, collapse the whole if to only the else-expression
             apply_and_fold(v.else_expr);
-            m_collapsed = move(v.else_expr);
+            m_collapsed = std::move(v.else_expr);
         } else {
             // try to collapse the else branch
             if (replacement_else_expr) {
@@ -203,7 +202,7 @@ public:
             auto* ret = dynamic_cast<ast::Return*>(v.body.statements[0].get());
             assert(ret != nullptr);
             apply_and_fold(ret->expression);
-            m_collapsed = move(ret->expression);
+            m_collapsed = std::move(ret->expression);
             return;
         }
 
@@ -252,7 +251,7 @@ public:
         auto cast_result = create_value(v.to_type);
         if (cast_result.cast_from(m_const_value->value())) {
             // fold the cast into value
-            m_const_value = TypedValue(move(cast_result), v.to_type);
+            m_const_value = TypedValue(std::move(cast_result), v.to_type);
             m_collapsed = make_unique<ast::Literal>(*m_const_value);
             return;
         }
@@ -269,7 +268,7 @@ private:
         expr->apply(*this);  // may set either m_const_value or m_collapsed
         if (m_collapsed) {
             auto source_loc = expr->source_loc;
-            expr = move(m_collapsed);
+            expr = std::move(m_collapsed);
             if (!expr->source_loc)
                 expr->source_loc = source_loc;
         }

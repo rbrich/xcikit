@@ -53,9 +53,9 @@ extern char **environ;
 #include <io.h>
 #include <direct.h>
 #include <windows.h>
+#include <type_traits>
 
-
-using ssize_t = long long;
+using ssize_t = std::make_signed<size_t>::type;
 
 #define STDIN_FILENO 0
 #define STDOUT_FILENO 1

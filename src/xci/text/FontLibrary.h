@@ -16,7 +16,7 @@
 
 // Forward decls from <ft2build.h>
 // (to avoid external dependency on Freetype)
-typedef struct FT_LibraryRec_  *FT_Library;
+typedef struct FT_LibraryRec_  *FT_Library;  // NOLINT(modernize-use-using)
 
 
 namespace xci::text {

@@ -53,7 +53,7 @@ int main(int argc, const char* argv[])
         return EXIT_FAILURE;
     std::string buf(256, 0);
     size_t nread;
-    while ((nread = fread(&buf[0], 1, buf.size(), f)) > 0) {
+    while ((nread = fread(buf.data(), 1, buf.size(), f)) > 0) {
         terminal.add_text(buf.substr(0, nread));
     }
     pclose(f);

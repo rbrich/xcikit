@@ -35,7 +35,7 @@ struct State {
 
 class Widget {
 public:
-    explicit Widget(Theme& theme);
+    explicit Widget(Theme& theme) : m_theme(theme) {}
     virtual ~Widget() = default;
 
     Theme& theme() const { return m_theme; }
@@ -100,9 +100,9 @@ private:
     ViewportUnits m_baseline = 0;
 
     // Flags
-    bool m_tab_focusable : 1;
-    bool m_click_focusable : 1;
-    bool m_hidden : 1;
+    bool m_tab_focusable : 1 = false;
+    bool m_click_focusable : 1 = false;
+    bool m_hidden : 1 = false;
 };
 
 

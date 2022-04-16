@@ -13,8 +13,6 @@
 
 namespace xci::script {
 
-using std::move;
-
 using SourceId = uint32_t;
 class SourceManager;
 
@@ -48,7 +46,7 @@ struct SourceLocation {
 class Source {
 public:
     Source(std::string&& name, std::string&& content)
-        : m_name(move(name)), m_content(move(content)) {}
+        : m_name(std::move(name)), m_content(std::move(content)) {}
 
     const std::string& name() const { return m_name; }
     const char* data() const { return m_content.data(); }

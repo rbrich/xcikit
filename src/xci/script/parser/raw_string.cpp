@@ -8,8 +8,6 @@
 
 namespace xci::script {
 
-using std::move;
-
 
 /// Skip spaces and tabs, success on a newline, fail on any other char
 /// \returns 0 = fail, >0 success (a number of leading blanks including the newline)
@@ -37,7 +35,7 @@ std::string strip_raw_string(std::string&& content)
     const size_t leading_ws = count_leading_ws(content.begin(), content.end());
     const size_t trailing_ws = count_leading_ws(content.rbegin(), content.rend());
     if (leading_ws == 0 || trailing_ws == 0)
-        return move(content);
+        return std::move(content);
 
     // remove leading and trailing whitespace
     content.erase(0, leading_ws);
@@ -46,7 +44,7 @@ std::string strip_raw_string(std::string&& content)
     // check uniform indentation
     const size_t indentation = trailing_ws - 1;
     if (indentation == 0)
-        return move(content);
+        return std::move(content);
 
     auto it = content.cbegin();
     const auto end = content.cbegin() + ptrdiff_t(content.size());
@@ -57,7 +55,7 @@ std::string strip_raw_string(std::string&& content)
             ++it;
         }
         if (need_indent != 0)
-            return move(content);  // line not indented enough, abort
+            return std::move(content);  // line not indented enough, abort
         while (it != end && *it++ != '\n')
             ;
     }

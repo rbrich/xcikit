@@ -85,7 +85,7 @@ public:
         m_output.append(utf8);
     }
 
-    std::string output() { return std::move(m_output); }
+    std::string output() { std::string res; std::swap(m_output, res); return res; }
 
 private:
     std::string m_output;

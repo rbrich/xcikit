@@ -46,7 +46,7 @@ static std::string toupper_at(std::string_view word, int32_t index)
     std::string res(word);
     auto i = unsigned(index);
     if (i < word.size())
-        res[i] = toupper(res[i]);
+        res[i] = (char)(unsigned char)toupper(res[i]);
     return res;
 }
 

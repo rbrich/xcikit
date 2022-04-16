@@ -55,8 +55,8 @@ public:
     void push(const Value& v);
     void push(const TypedValue& v) { push(v.value()); }
 
-    Value pull(const TypeInfo& type_info);
-    TypedValue pull_typed(const TypeInfo& type_info) { return {pull(type_info), type_info}; }
+    Value pull(const TypeInfo& ti);
+    TypedValue pull_typed(const TypeInfo& ti) { return {pull(ti), ti}; }
 
     template <ValueT T>
     T pull() {
@@ -170,7 +170,7 @@ private:
     // or when the top isn't compatible with the type
     void pop_type(const Value& v);
 
-    static constexpr size_t m_stack_max = 100*1024*1024;
+    static constexpr size_t m_stack_max = size_t(100*1024*1024);
     size_t m_stack_capacity = 1024;
     size_t m_stack_pointer = m_stack_capacity;
     std::unique_ptr<std::byte[]> m_stack = std::make_unique<std::byte[]>(m_stack_capacity);

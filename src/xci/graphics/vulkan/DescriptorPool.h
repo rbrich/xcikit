@@ -72,13 +72,13 @@ private:
 
 class SharedDescriptorPool: private core::NonCopyable {
 public:
-    SharedDescriptorPool() {}
+    SharedDescriptorPool() = default;
     explicit SharedDescriptorPool(DescriptorPool& pool, uint32_t booked_sets)
         : m_descriptor_pool(&pool), m_booked_sets(booked_sets) {}
     ~SharedDescriptorPool();
 
-    SharedDescriptorPool(SharedDescriptorPool&& rhs);
-    SharedDescriptorPool& operator=(SharedDescriptorPool&& rhs);
+    SharedDescriptorPool(SharedDescriptorPool&& rhs) noexcept;
+    SharedDescriptorPool& operator=(SharedDescriptorPool&& rhs) noexcept;
 
     DescriptorPool& get() const { return *m_descriptor_pool; }
     explicit operator bool() const { return  m_descriptor_pool != nullptr; }
@@ -98,7 +98,7 @@ namespace std {
             return x.hash();
         }
     };
-}
+} // namespace std
 
 
 #endif // include guard

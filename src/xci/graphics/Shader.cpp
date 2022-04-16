@@ -29,7 +29,7 @@ static std::vector<std::uint32_t> read_spirv_file(const fs::path& pathname)
 
     assert(file_size % sizeof(std::uint32_t) == 0);
     std::vector<std::uint32_t> content(file_size / sizeof(std::uint32_t));
-    f.read(reinterpret_cast<char*>(content.data()), file_size);
+    f.read(reinterpret_cast<char*>(content.data()), std::streamsize(file_size));
     if (!f)
         content.clear();
 

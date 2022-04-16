@@ -33,7 +33,7 @@ std::optional<std::string> read_text_file(std::istream& stream)
     auto file_size = size_t(stream.tellg());
     stream.seekg(0, std::ios::beg);
     std::string content(file_size, char(0));
-    stream.read(&content[0], content.size());
+    stream.read(content.data(), std::streamsize(content.size()));
     if (!stream)
         content.clear();
 
@@ -58,7 +58,7 @@ BufferPtr read_binary_file(std::istream& stream)
     stream.seekg(0, std::ios::beg);
 
     auto* content = new std::byte[file_size];
-    stream.read(reinterpret_cast<char*>(content), file_size);
+    stream.read(reinterpret_cast<char*>(content), std::streamsize(file_size));
     if (!stream) {
         delete[] content;
         return {};

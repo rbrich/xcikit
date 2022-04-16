@@ -43,11 +43,11 @@ void Window::create(const Vec2u& size, const std::string& title)
     glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
-    m_window = glfwCreateWindow(size.x, size.y, title.c_str(),
+    m_window = glfwCreateWindow(int(size.x), int(size.y), title.c_str(),
                                 nullptr, nullptr);
     if (!m_window) {
         log::error("Couldn't create GLFW window...");
-        exit(1);
+        throw std::runtime_error("Window::create failed");
     }
     glfwSetWindowUserPointer(m_window, this);
 

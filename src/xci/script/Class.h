@@ -18,7 +18,7 @@ class Function;
 class Class {
 public:
     explicit Class(SymbolTable& symtab);
-    Class(Class&& rhs);
+    Class(Class&& rhs) noexcept;
     Class& operator =(Class&&) = delete;
 
     const std::string& name() const { return m_symtab.name(); }

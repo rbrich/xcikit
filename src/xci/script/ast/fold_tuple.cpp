@@ -11,7 +11,6 @@
 namespace xci::script {
 
 using std::unique_ptr;
-using std::move;
 
 
 class FoldTupleVisitor final: public ast::VisitorExclTypes {
@@ -112,7 +111,7 @@ private:
     void apply_and_fold(unique_ptr<ast::Expression>& expr) {
         expr->apply(*this);
         if (m_collapsed) {
-            expr = move(m_collapsed);
+            expr = std::move(m_collapsed);
         }
     }
 

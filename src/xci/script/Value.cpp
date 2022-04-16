@@ -30,8 +30,6 @@ using namespace xci::core;
 namespace views = ranges::cpp20::views;
 using ranges::to;
 using ranges::accumulate;
-using std::move;
-using std::make_unique;
 
 
 template<typename T>
@@ -477,7 +475,7 @@ Value ListV::value_at(size_t idx, const TypeInfo& elem_type) const
 void ListV::slice(int begin, int end, int step, const TypeInfo& elem_type)
 {
     const auto* data = slot.data();
-    auto length = bit_read<uint32_t>(data);
+    auto length = (int32_t) bit_read<uint32_t>(data);
 
     // deleter data
     auto offsets_size = bit_read<uint16_t>(data);
@@ -485,9 +483,9 @@ void ListV::slice(int begin, int end, int step, const TypeInfo& elem_type)
 
     // adjust indexes
     if (end < 0)
-        end += int(length);  // -1 => length - 1
+        end += length;  // -1 => length - 1
     if (begin < 0 && begin != std::numeric_limits<int>::min())
-        begin += int(length);  // -1 => length - 1
+        begin += length;  // -1 => length - 1
 
     // compute number of elements in the sliced list
     unsigned n_sliced = 0;
@@ -496,12 +494,12 @@ void ListV::slice(int begin, int end, int step, const TypeInfo& elem_type)
             begin = 0;
         } else if (begin < 0) {
             // get closer to zero if still negative
-            begin %= int(step);
+            begin %= step;
             // step over zero if still negative
             if (begin < 0)
-                begin += int(step);
+                begin += step;
         }
-        if (end > int(length))
+        if (end > length)
             end = length;
         auto i = begin;
         while (i < end) {
@@ -512,13 +510,13 @@ void ListV::slice(int begin, int end, int step, const TypeInfo& elem_type)
         }
     } else if (step < 0) {
         if (begin == std::numeric_limits<int>::max()) {
-            begin = int(length) - 1;
-        } else if (begin >= int(length)) {
+            begin = length - 1;
+        } else if (begin >= length) {
             // get closer to length
-            begin = (begin - int(length)) % int(step);
+            begin = (begin - length) % step;
             if (begin >= 0)
-                begin += int(step);
-            begin += int(length);
+                begin += step;
+            begin += length;
         }
         if (end < -1)
             end = -1;
@@ -619,7 +617,7 @@ TupleV::TupleV(Values&& vs)
 {
     int i = 0;
     for (auto&& tv : vs) {
-        values[i++] = move(tv);
+        values[i++] = std::move(tv);
     }
     values[i] = Value{};
 }
@@ -671,7 +669,7 @@ ClosureV::ClosureV(const Function& fn, Values&& values)
         : slot(fn.raw_size_of_closure() + sizeof(Function*))
 {
     assert(fn.closure_size() == values.size());
-    value::Tuple closure(move(values));
+    value::Tuple closure(std::move(values));
     const Function* fn_ptr = &fn;
     std::memcpy(slot.data(), &fn_ptr, sizeof(Function*));
     closure.write(slot.data() + sizeof(Function*));
@@ -725,7 +723,7 @@ size_t Values::size_on_stack() const
 
 
 TypedValue::TypedValue(Value value, TypeInfo type_info)
-        : m_value(move(value)), m_type_info(move(type_info))
+        : m_value(std::move(value)), m_type_info(std::move(type_info))
 {
     assert(m_value.type() == m_type_info.type()
         || (m_value.type() == Type::Tuple && m_type_info.type() == Type::Struct));

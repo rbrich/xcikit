@@ -74,7 +74,7 @@ public:
 
     template <class T>
     requires requires (HandleVariant x, T y) { x = y; }
-    explicit Stream(T&& v) : m_handle(std::forward<T>(v)) {}
+    explicit Stream(T&& v) : m_handle(std::forward<T>(v)) {} // NOLINT(bugprone-forwarding-reference-overload)
 
     explicit operator bool() const { return !std::holds_alternative<Undef>(m_handle); }
     bool operator ==(const Stream& rhs) const = default;

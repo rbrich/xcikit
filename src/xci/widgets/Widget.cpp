@@ -7,20 +7,13 @@
 #include "Widget.h"
 #include <xci/core/rtti.h>
 #include <xci/graphics/Window.h>
+#include <range/v3/algorithm/any_of.hpp>
 #include <cassert>
 
 namespace xci::widgets {
 
 using namespace xci::graphics;
-
-
-Widget::Widget(Theme& theme)
-    : m_theme(theme),
-      m_tab_focusable(false),
-      m_click_focusable(false),
-      m_hidden(false)
-{}
-
+using ranges::cpp20::any_of;
 
 void Widget::partial_dump(std::ostream& stream, const std::string& nl_prefix)
 {
@@ -40,10 +33,7 @@ void Composite::add(Widget& child)
 
 bool Composite::contains(const ViewportCoords& point) const
 {
-    for (auto& child : m_child)
-        if (child->contains(point))
-            return true;
-    return false;
+    return any_of(m_child, [&point](const Widget* child){ return child->contains(point); });
 }
 
 

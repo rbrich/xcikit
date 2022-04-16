@@ -7,6 +7,7 @@
 #include "TextTerminal.h"
 #include <xci/core/string.h>
 #include <xci/core/log.h>
+#include <xci/compat/unistd.h>
 
 namespace xci::widgets {
 
@@ -177,13 +178,13 @@ std::string terminal::Attributes::encode() const
                 break;
             case ColorMode::Color8bit:
                 result.push_back(ctl::fg8bit);
-                result.push_back(m_fg_r);
+                result.push_back(char(m_fg_r));
                 break;
             case ColorMode::Color24bit:
                 result.push_back(ctl::fg24bit);
-                result.push_back(m_fg_r);
-                result.push_back(m_fg_g);
-                result.push_back(m_fg_b);
+                result.push_back(char(m_fg_r));
+                result.push_back(char(m_fg_g));
+                result.push_back(char(m_fg_b));
                 break;
         }
     }
@@ -195,13 +196,13 @@ std::string terminal::Attributes::encode() const
                 break;
             case ColorMode::Color8bit:
                 result.push_back(ctl::bg8bit);
-                result.push_back(m_bg_r);
+                result.push_back(char(m_bg_r));
                 break;
             case ColorMode::Color24bit:
                 result.push_back(ctl::bg24bit);
-                result.push_back(m_bg_r);
-                result.push_back(m_bg_g);
-                result.push_back(m_bg_b);
+                result.push_back(char(m_bg_r));
+                result.push_back(char(m_bg_g));
+                result.push_back(char(m_bg_b));
                 break;
         }
     }
@@ -273,7 +274,7 @@ Color terminal::Attributes::fg() const
         default:
         case ColorMode::ColorDefault:   return Color(7);
         case ColorMode::Color8bit:      return Color(m_fg_r);
-        case ColorMode::Color24bit:     return Color(m_fg_r, m_fg_g, m_fg_b);
+        case ColorMode::Color24bit:     return {m_fg_r, m_fg_g, m_fg_b};
     }
 }
 
@@ -286,7 +287,7 @@ Color terminal::Attributes::bg() const
         default:
         case ColorMode::ColorDefault:   return Color(0);
         case ColorMode::Color8bit:      return Color(m_bg_r);
-        case ColorMode::Color24bit:     return Color(m_bg_r, m_bg_g, m_bg_b);
+        case ColorMode::Color24bit:     return {m_bg_r, m_bg_g, m_bg_b};
     }
 }
 
@@ -344,37 +345,40 @@ void terminal::Line::clear(const terminal::Attributes& attr)
 size_t terminal::Line::content_skip(size_t skip, size_t start, Attributes& attr)
 {
     auto pos = start;
-    int to_skip = (int) skip;  // remaining chars to skip
-    while (to_skip > 0 && pos < m_content.size()) {
+    while (skip > 0 && pos < m_content.size()) {
         if (Attributes::is_introducer(m_content[pos])) {
             pos += attr.decode(std::string_view{m_content}.substr(pos));
             continue;
         }
         if (m_content[pos] == ctl::blanks) {
             ++pos;
-            auto num_blanks = (int)(unsigned char) m_content[pos];
-            if (to_skip >= num_blanks) {
-                to_skip -= num_blanks;
+            auto num_blanks = (size_t)(unsigned char) m_content[pos];
+            if (skip >= num_blanks) {
+                skip -= num_blanks;
                 ++pos;
                 continue;
-            } else { // to_skip < num
+            } else { // skip < num
                 // Split blanks into two groups
                 // Write back blanks before pos
-                m_content[pos] = (char)(unsigned) to_skip;
+                m_content[pos] = (char)(unsigned char) skip;
                 ++pos;
                 // Write rest of blanks after pos
-                num_blanks -= to_skip;
-                to_skip = 0;
+                num_blanks -= skip;
+                skip = 0;
                 uint8_t blank_rest[2] = {ctl::blanks, uint8_t(num_blanks)};
                 m_content.insert(pos, (char*)blank_rest, sizeof(blank_rest));
                 break;
             }
         }
-        to_skip -= c32_width(utf8_codepoint(m_content.c_str() + pos));
+        const auto w = c32_width(utf8_codepoint(m_content.c_str() + pos));
+        if (w <= skip)
+            skip -= w;
+        else
+            skip = 0;
         pos = utf8_next(m_content.cbegin() + std::string::difference_type(pos)) - m_content.cbegin();
     }
-    if (to_skip > 0) {
-        uint8_t blank_skip[2] = {ctl::blanks, uint8_t(to_skip)};
+    if (skip > 0) {
+        uint8_t blank_skip[2] = {ctl::blanks, uint8_t(skip)};
         m_content.insert(pos, (char*)blank_skip, sizeof(blank_skip));
         return pos + sizeof(blank_skip);
     } else {
@@ -478,7 +482,7 @@ void terminal::Line::erase_text(size_t first, size_t num, Attributes attr)
         while (num > 0) {
             auto num_blanks = std::min(num, size_t(UINT8_MAX));
             repl.push_back(ctl::blanks);
-            repl.push_back(uint8_t(num_blanks));
+            repl.push_back((char)(uint8_t)(num_blanks));
             num -= num_blanks;
         }
         // Write back original attributes
@@ -494,9 +498,9 @@ void terminal::Line::erase_text(size_t first, size_t num, Attributes attr)
 }
 
 
-int terminal::Line::length() const
+size_t terminal::Line::length() const
 {
-    int length = 0;
+    size_t length = 0;
     for (const char* it = m_content.c_str(); it != m_content.c_str() + m_content.size(); it = utf8_next(it)) {
         it = Attributes::skip(it);
         if (*it != '\n')
@@ -525,7 +529,7 @@ void terminal::Line::render(Renderer& renderer)
         if (terminal::Attributes::is_introducer(*it)) {
             flush_chars(it);
             terminal::Attributes attr;
-            it += attr.decode({&*it, size_t(m_content.cend() - it)});
+            it += ssize_t(attr.decode({&*it, size_t(m_content.cend() - it)}));
             attr.render(renderer);
             chars_begin = it;
             continue;
@@ -548,7 +552,8 @@ void terminal::Buffer::add_line()
 
 void terminal::Buffer::remove_lines(size_t start, size_t count)
 {
-    m_lines.erase(m_lines.begin() + start, m_lines.begin() + start + count);
+    const auto beg = m_lines.begin() + ssize_t(start);
+    m_lines.erase(beg, beg + ssize_t(count));
 }
 
 

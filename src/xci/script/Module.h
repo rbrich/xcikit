@@ -34,7 +34,7 @@ public:
     using InstanceIdx = IndexedMap<Instance>::Index;
 
     explicit Module(ModuleManager& module_manager, std::string name = "<module>")
-        : m_module_manager(&module_manager), m_symtab(move(name))
+        : m_module_manager(&module_manager), m_symtab(std::move(name))
         { m_symtab.set_module(this); }
     Module() : m_symtab("<module>") { m_symtab.set_module(this); }  // only for serialization
     ~Module();
@@ -89,7 +89,7 @@ public:
     Index add_type(TypeInfo type_info);
     const TypeInfo& get_type(Index idx) const { return m_types[idx]; }
     Index find_type(const TypeInfo& type_info) const;
-    void set_type(Index idx, TypeInfo&& type_info) { m_types[idx] = move(type_info); }
+    void set_type(Index idx, TypeInfo&& type_info) { m_types[idx] = std::move(type_info); }
     Size num_types() const { return Size(m_types.size()); }
 
     // Type classes

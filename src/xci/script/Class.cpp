@@ -11,9 +11,6 @@
 
 namespace xci::script {
 
-using std::move;
-using ranges::any_of;
-
 
 Class::Class(SymbolTable& symtab)
         : m_symtab(symtab)
@@ -22,7 +19,7 @@ Class::Class(SymbolTable& symtab)
 }
 
 
-Class::Class(Class&& rhs)
+Class::Class(Class&& rhs) noexcept
         : m_symtab(rhs.m_symtab), m_functions(std::move(rhs.m_functions))
 {
     m_symtab.set_class(this);
