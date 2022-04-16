@@ -38,7 +38,7 @@ void BinaryWriter::write_content()
     assert(uint64_t(content_size) < 0x400'0000'0000LLU);  // up to 4TB
     leb128_encode(iter, content_size);
 
-    const ssize_t header_size = iter - header;
+    const ptrdiff_t header_size = iter - header;
     assert(header_size <= 10);
 
     // Write header

@@ -30,7 +30,6 @@ using namespace xci::core;
 namespace views = ranges::cpp20::views;
 using ranges::to;
 using ranges::accumulate;
-using std::make_unique;
 
 
 template<typename T>
@@ -476,7 +475,7 @@ Value ListV::value_at(size_t idx, const TypeInfo& elem_type) const
 void ListV::slice(int begin, int end, int step, const TypeInfo& elem_type)
 {
     const auto* data = slot.data();
-    auto length = bit_read<uint32_t>(data);
+    auto length = (int32_t) bit_read<uint32_t>(data);
 
     // deleter data
     auto offsets_size = bit_read<uint16_t>(data);
@@ -484,9 +483,9 @@ void ListV::slice(int begin, int end, int step, const TypeInfo& elem_type)
 
     // adjust indexes
     if (end < 0)
-        end += int(length);  // -1 => length - 1
+        end += length;  // -1 => length - 1
     if (begin < 0 && begin != std::numeric_limits<int>::min())
-        begin += int(length);  // -1 => length - 1
+        begin += length;  // -1 => length - 1
 
     // compute number of elements in the sliced list
     unsigned n_sliced = 0;
@@ -495,12 +494,12 @@ void ListV::slice(int begin, int end, int step, const TypeInfo& elem_type)
             begin = 0;
         } else if (begin < 0) {
             // get closer to zero if still negative
-            begin %= int(step);
+            begin %= step;
             // step over zero if still negative
             if (begin < 0)
-                begin += int(step);
+                begin += step;
         }
-        if (end > int(length))
+        if (end > length)
             end = length;
         auto i = begin;
         while (i < end) {
@@ -511,13 +510,13 @@ void ListV::slice(int begin, int end, int step, const TypeInfo& elem_type)
         }
     } else if (step < 0) {
         if (begin == std::numeric_limits<int>::max()) {
-            begin = int(length) - 1;
-        } else if (begin >= int(length)) {
+            begin = length - 1;
+        } else if (begin >= length) {
             // get closer to length
-            begin = (begin - int(length)) % int(step);
+            begin = (begin - length) % step;
             if (begin >= 0)
-                begin += int(step);
-            begin += int(length);
+                begin += step;
+            begin += length;
         }
         if (end < -1)
             end = -1;
