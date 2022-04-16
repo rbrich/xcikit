@@ -142,7 +142,7 @@ void FSWatch::_notify(uint32_t epoll_events)
             //log::debug("FSWatch: event {:x} for {}",
             //          event->mask, name);
             handle_event(event->wd, event->mask, name);
-            ofs += sizeof(inotify_event) + event->len;
+            ofs += int(sizeof(inotify_event) + event->len);
         }
     }
 }

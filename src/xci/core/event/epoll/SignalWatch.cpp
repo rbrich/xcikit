@@ -54,7 +54,7 @@ void SignalWatch::_notify(uint32_t epoll_events)
 
         assert(readlen == sizeof(si));
         if (m_cb) {
-            m_cb(si.ssi_signo);
+            m_cb(int(si.ssi_signo));
         }
     }
 }

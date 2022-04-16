@@ -38,26 +38,26 @@ void BinaryWriter::write_content()
     assert(uint64_t(content_size) < 0x400'0000'0000LLU);  // up to 4TB
     leb128_encode(iter, content_size);
 
-    const size_t header_size = iter - header;
+    const ssize_t header_size = iter - header;
     assert(header_size <= 10);
 
     // Write header
     m_stream.write((const char*)header, header_size);
 
     // Write content
-    m_stream.write((const char*)group_buffer().data(), group_buffer().size());
+    m_stream.write((const char*)group_buffer().data(), std::streamsize(group_buffer().size()));
 
     if (!m_crc32)
         return;  // no checksum -> we're done
 
     // CRC-32: header + content
     Crc32 crc;
-    crc.feed((const std::byte*)header, header_size);
+    crc.feed((const std::byte*)header, size_t(header_size));
     crc(group_buffer());
 
     // Write metadata intro (included in checksum)
     const uint8_t meta_intro = (Type::Control | 0);
-    m_stream.put(meta_intro);
+    m_stream.put(char(meta_intro));
     crc(meta_intro);
 
     // Write checksum

@@ -255,7 +255,7 @@ public:
                     assert(m_instruction_args.size() == 1);
                     auto value_idx = module().add_value(TypedValue(m_instruction_args[0]));
                     m_instruction_args.clear();
-                    m_instruction_args.push_back(TypedValue(value::Int64(value_idx)));
+                    m_instruction_args.emplace_back(value::Int64(value_idx));
                     break;
                 }
                 if (symtab.module() != &module()) {

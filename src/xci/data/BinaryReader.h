@@ -113,7 +113,7 @@ public:
         if (chunk_type == Type::String) {
             auto length = read_leb128<size_t>();
             a.value.resize(length);
-            read_with_crc((std::byte*)&a.value[0], length);
+            read_with_crc((std::byte*)(a.value.data()), length);
         } else if (chunk_type != ChunkNotFound)
             throw ArchiveBadChunkType();
     }

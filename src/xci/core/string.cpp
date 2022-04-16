@@ -365,7 +365,7 @@ size_t utf8_partial_end(string_view str)
 }
 
 
-int c32_width(char32_t c)
+unsigned c32_width(char32_t c)
 {
     using namespace wcw;
     int w = widechar_wcwidth(c);
@@ -383,7 +383,7 @@ int c32_width(char32_t c)
             return 2;
 
         default:
-            return w;
+            return w < 0 ? 1 : unsigned(w);
     }
 }
 

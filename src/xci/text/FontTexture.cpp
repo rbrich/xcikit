@@ -35,7 +35,7 @@ bool FontTexture::add_glyph(Vec2u size, const uint8_t* pixels, Rect_u& coords)
     // try to place the rect
     constexpr int p = 1;  // padding
     constexpr int pp = 2 * p;
-    rbp::Rect rect = m_binpack.Insert(size.x + pp, size.y + pp,
+    rbp::Rect rect = m_binpack.Insert(int(size.x) + pp, int(size.y) + pp,
                                       rbp::MaxRectsBinPack::RectBestShortSideFit);
     if (rect.height == 0 || rect.width == 0)
         return false;

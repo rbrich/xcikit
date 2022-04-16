@@ -124,7 +124,7 @@ VfsFile DarArchive::read_file(const std::string& path)
             [this_ptr = shared_from_this()](Buffer* b){ delete[] b->data(); delete b; });
 
     m_stream->seekg(entry_it->offset);
-    m_stream->read((char*) buffer_ptr->data(), buffer_ptr->size());
+    m_stream->read((char*) buffer_ptr->data(), std::streamsize(buffer_ptr->size()));
     if (!m_stream) {
         log::error("VfsDarArchiveLoader: Not found in archive: {}", path);
         return {};
@@ -197,7 +197,7 @@ bool DarArchive::read_index(size_t size)
         auto name_size = be16toh(entry_header.name_size);
         // INDEX_ENTRY: NAME
         entry.name.resize(name_size);
-        m_stream->read(&entry.name[0], name_size);
+        m_stream->read(entry.name.data(), name_size);
         if (!m_stream) {
             log::error("VfsDarArchiveLoader: Corrupted archive: {} ({}).",
                       m_path, "NAME");
@@ -276,7 +276,7 @@ ZipArchive::ZipArchive(std::string&& path, std::unique_ptr<std::istream>&& strea
                             self->m_last_zip_err = ZIP_ER_INTERNAL;
                             return -1;
                         }
-                        sp->read((char*)data, len);
+                        sp->read((char*)data, std::streamsize(len));
                         if (sp->eof())
                             return 0;
                         if (sp->fail()) {

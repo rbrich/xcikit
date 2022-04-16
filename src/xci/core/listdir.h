@@ -106,7 +106,7 @@ inline bool list_dir_sys(int dir_fd, DirEntryArena& arena, std::vector<sys_diren
 #ifdef __APPLE__
         int n = __getdirentries64(dir_fd, buf, DirEntryArena::block_size, &basep);
 #else
-        int n = syscall(SYS_getdents64, dir_fd, buf, DirEntryArena::block_size);
+        auto n = syscall(SYS_getdents64, dir_fd, buf, DirEntryArena::block_size);
 #endif
         if (n == 0)
             break;

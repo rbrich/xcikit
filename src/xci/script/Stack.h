@@ -170,7 +170,7 @@ private:
     // or when the top isn't compatible with the type
     void pop_type(const Value& v);
 
-    static constexpr size_t m_stack_max = 100*1024*1024;
+    static constexpr size_t m_stack_max = size_t(100*1024*1024);
     size_t m_stack_capacity = 1024;
     size_t m_stack_pointer = m_stack_capacity;
     std::unique_ptr<std::byte[]> m_stack = std::make_unique<std::byte[]>(m_stack_capacity);

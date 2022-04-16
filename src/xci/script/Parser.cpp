@@ -1009,7 +1009,7 @@ struct Action<Literal> : change_states< LiteralHelper > {
                 break;
             }
             case ValueType::List: {  // [Byte]
-                std::string& str = std::get<std::string>(helper.content);
+                auto& str = std::get<std::string>(helper.content);
                 std::span data{(const std::byte*) str.data(), str.size()};
                 value = TypedValue{value::Bytes(data)};
                 break;

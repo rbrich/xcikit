@@ -188,7 +188,7 @@ size_t utf8_partial_end(std::string_view str);
 
 /// An implementation of well-known `wcwidth` function.
 /// Returns width of Unicode char in fixed-width font cells. Useful for terminals.
-int c32_width(char32_t c);
+unsigned c32_width(char32_t c);
 
 /// Sum of c32_width of all codepoints in `str`
 size_t utf8_width(std::string_view str);

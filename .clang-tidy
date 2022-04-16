@@ -1,6 +1,7 @@
 # Full list: https://clang.llvm.org/extra/clang-tidy/
 # Disabled because...
 # * clang-analyzer-security.insecureAPI.bzero -- bzero is used internally by system macros (e.g. FD_ZERO)
+# * concurrency-mt-unsafe -- reports exit() etc., not going to fix that
 # * readability-container-size-empty -- in Catch2 tests, comparing with empty string produces better failed test message
 # * readability-qualified-auto -- wants to auto `const auto*` for `std::string_view::iterator` on Clang => that would be unportable
 # * modernize-redundant-void-arg -- used intentionally in xci::script to emphasize visitors of 'void' type
@@ -15,6 +16,7 @@ Checks: >
   -clang-analyzer-security.insecureAPI.bzero,
   clang-diagnostic-*,
   concurrency-*,
+  -concurrency-mt-unsafe,
   google-default-arguments,
   google-global-names-in-headers,
   google-runtime-operator,
@@ -29,6 +31,7 @@ Checks: >
   -modernize-use-nodiscard,
   -modernize-use-trailing-return-type,
   -modernize-redundant-void-arg,
+  -modernize-return-braced-init-list,
   performance-*,
   -performance-no-int-to-ptr,
   portability-*,
@@ -50,4 +53,6 @@ Checks: >
   -readability-identifier-length
 CheckOptions:
   - key: bugprone-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion
+    value: 'false'
+  - key: bugprone-narrowing-conversions.WarnOnFloatingPointNarrowingConversion
     value: 'false'

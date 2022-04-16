@@ -19,6 +19,8 @@ add_library(xcikit::xci-widgets ALIAS xci-widgets)
 target_link_libraries(xci-widgets
     PUBLIC
         xci-text
+    PRIVATE
+        range-v3::range-v3
     )
 
 if (BUILD_SHARED_LIBS)

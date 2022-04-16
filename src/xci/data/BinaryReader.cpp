@@ -224,7 +224,7 @@ void BinaryReader::read_with_crc(std::byte* buffer, size_t length)
     if (length > group_buffer().size)
         throw ArchiveUnexpectedEnd();
     group_buffer().size -= length;
-    m_stream.read((char*)buffer, length);
+    m_stream.read((char*)buffer, std::streamsize(length));
     if (!m_stream)
         throw ArchiveReadError();
     if (has_crc())
@@ -236,7 +236,7 @@ std::byte BinaryReader::read_byte_with_crc()
 {
     if (group_buffer().size-- == 0 || m_stream.eof())
         throw ArchiveUnexpectedEnd();
-    char c = m_stream.get();
+    char c = char(m_stream.get());
     if (!m_stream)
         throw ArchiveReadError();
     if (has_crc())
