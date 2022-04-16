@@ -8,18 +8,24 @@ executors:
   debian:
     docker:
       - image: rbrich/xcikit-debian:latest
+    resource_class: large
   ubuntu:
     docker:
       - image: rbrich/xcikit-ubuntu:latest
+    resource_class: large
   emscripten:
     docker:
       - image: rbrich/xcikit-emscripten:latest
+    resource_class: large
 
 jobs:
   build:
     parameters:
       image:
         type: executor
+      jobs:
+        type: integer
+        default: 4
       build-args:
         type: string
         default: ""
@@ -34,7 +40,7 @@ jobs:
           command: ./build.sh config << parameters.build-args >>
       - run:
           name: Build
-          command: ./build.sh build << parameters.build-args >>
+          command: ./build.sh build -j << parameters.jobs >> << parameters.build-args >>
       - run:
           name: Run tests
           command: ./build.sh test << parameters.build-args >>
