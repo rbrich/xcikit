@@ -49,7 +49,10 @@ jobs:
           command: ./build.sh install << parameters.build-args >>
       - run:
           name: Package
-          command: ./build.sh package << parameters.build-args >>
+          command: |
+            ./build.sh package << parameters.build-args >>
+            rm -rf artifacts/Linux-*
+            rm -rf artifacts/emscripten-*
       - store_artifacts:
           path: artifacts
 
