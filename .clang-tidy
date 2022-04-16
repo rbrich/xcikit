@@ -48,3 +48,6 @@ Checks: >
   -readability-qualified-auto,
   -readability-isolate-declaration,
   -readability-identifier-length
+CheckOptions:
+  - key: bugprone-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion
+    value: 'false'
