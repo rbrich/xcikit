@@ -18,8 +18,6 @@
 
 namespace xci::script {
 
-using std::move;
-
 
 Module::~Module()
 {
@@ -37,11 +35,11 @@ SymbolPointer Module::add_native_function(
         NativeDelegate native)
 {
     Function fn {*this, symtab().add_child(name)};
-    fn.signature().params = move(params);
-    fn.signature().return_type = move(retval);
+    fn.signature().params = std::move(params);
+    fn.signature().return_type = std::move(retval);
     fn.set_native(native);
-    WeakFunctionId fn_id = add_function(move(fn));
-    return symtab().add({move(name), Symbol::Function, fn_id.index});
+    WeakFunctionId fn_id = add_function(std::move(fn));
+    return symtab().add({std::move(name), Symbol::Function, fn_id.index});
 }
 
 
@@ -74,7 +72,7 @@ Index Module::get_imported_module_index(Module* module) const
 
 auto Module::add_function(Function&& fn) -> WeakFunctionId
 {
-    return m_functions.add(move(fn));
+    return m_functions.add(std::move(fn));
 }
 
 
@@ -86,7 +84,7 @@ Index Module::add_value(TypedValue&& value)
         return idx;
     }
 
-    m_values.add(move(value));
+    m_values.add(std::move(value));
     return Index(m_values.size() - 1);
 }
 
@@ -108,7 +106,7 @@ Index Module::add_type(TypeInfo type_info)
     if (idx != no_index)
         return idx;
 
-    m_types.push_back(move(type_info));
+    m_types.push_back(std::move(type_info));
     return Index(m_types.size() - 1);
 }
 
@@ -125,13 +123,13 @@ Index Module::find_type(const TypeInfo& type_info) const
 
 auto Module::add_class(Class&& cls) -> WeakClassId
 {
-    return m_classes.add(move(cls));
+    return m_classes.add(std::move(cls));
 }
 
 
 auto Module::add_instance(Instance&& inst) -> WeakInstanceId
 {
-    return m_instances.add(move(inst));
+    return m_instances.add(std::move(inst));
 }
 
 

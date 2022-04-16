@@ -20,7 +20,6 @@
 namespace xci::core::argparser {
 
 namespace fs = std::filesystem;
-using std::move;
 using std::string_view;
 using std::cout;
 using std::cerr;
@@ -28,7 +27,7 @@ using std::endl;
 
 
 Option::Option(std::string&& desc, std::string&& help, Callback cb, int flags)
-    : m_desc(move(desc)), m_help(std::move(help)), m_cb(move(cb)), m_flags(flags)
+    : m_desc(std::move(desc)), m_help(std::move(help)), m_cb(std::move(cb)), m_flags(flags)
 {
     // check and remove brackets from both ends
     strip(m_desc, ' ');
@@ -260,7 +259,7 @@ ArgParser::ArgParser(std::initializer_list<Option> options)
 
 ArgParser& ArgParser::add_option(Option&& opt)
 {
-    m_opts.push_back(move(opt));
+    m_opts.push_back(std::move(opt));
     return *this;
 }
 

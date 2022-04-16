@@ -15,7 +15,6 @@
 namespace xci::script {
 
 using ranges::cpp20::views::reverse;
-using std::move;
 using std::cout;
 using std::endl;
 
@@ -239,7 +238,7 @@ size_t Stack::grow()
     auto newstack = std::make_unique<byte[]>(newcap);
     memcpy(newstack.get() + newcap - m_stack_capacity,
            m_stack.get(), m_stack_capacity);
-    m_stack = move(newstack);
+    m_stack = std::move(newstack);
     m_stack_pointer += newcap - m_stack_capacity;
     m_stack_capacity = newcap;
     return m_stack_pointer;

@@ -40,7 +40,7 @@ public:
             // not found or undefined -> add new function, symbol
             SymbolTable& fn_symtab = symtab().add_child(name);
             Function fn {module(), fn_symtab};
-            auto fn_id = module().add_function(move(fn));
+            auto fn_id = module().add_function(std::move(fn));
             assert(symtab().module() == &module());
             auto new_symptr = symtab().add({name, Symbol::Function, fn_id.index});
 
@@ -103,7 +103,7 @@ public:
 
         // add new class to the module
         Class cls {cls_symtab};
-        v.index = module().add_class(move(cls)).index;
+        v.index = module().add_class(std::move(cls)).index;
         v.symtab = &cls_symtab;
 
         m_class = &v;
@@ -159,7 +159,7 @@ public:
 
         m_instance = nullptr;
         m_symtab = inst_symtab.parent();
-        v.index = module().add_instance(move(inst)).index;
+        v.index = module().add_instance(std::move(inst)).index;
         v.symtab = &inst_symtab;
         v.class_name.symbol->set_index(v.index);
     }
@@ -270,7 +270,7 @@ public:
                 name = "<block>";
             SymbolTable& fn_symtab = symtab().add_child(name);
             Function fn {module(), fn_symtab};
-            v.index = module().add_function(move(fn)).index;
+            v.index = module().add_function(std::move(fn)).index;
         }
         Function& fn = module().get_function(v.index);
 

@@ -66,7 +66,7 @@ bool Repl::evaluate(const std::string& module_name, std::string module_source, E
         bool res = evaluate_module(*module, mode);
 
         if (mode == EvalMode::Compile || mode == EvalMode::Repl)
-            m_ctx.input_modules.push_back(move(module));
+            m_ctx.input_modules.push_back(std::move(module));
 
         return res;
     } catch (const ScriptError& e) {

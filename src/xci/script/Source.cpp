@@ -19,7 +19,7 @@ const Source& SourceManager::get_source(SourceId id) const
 
 SourceId SourceManager::add_source(std::string name, std::string content)
 {
-    m_sources.emplace_back(move(name), move(content));
+    m_sources.emplace_back(std::move(name), std::move(content));
     return (SourceId) m_sources.size();
 }
 

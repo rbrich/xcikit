@@ -430,7 +430,7 @@ private:
             assert(opc.args.size() == 1);
             auto& expr = opc.args.front();
             expr->source_loc = opc.source_loc;
-            return move(expr);
+            return std::move(expr);
         } else {
             return std::make_unique<ast::OpCall>(std::move(opc));
         }
@@ -632,22 +632,22 @@ struct Action<Identifier> : change_states< ast::Identifier > {
 
     template<typename Input>
     static void success(const Input &in, ast::Identifier& ident, ast::Variable& var) {
-        var.identifier = move(ident);
+        var.identifier = std::move(ident);
     }
 
     template<typename Input>
     static void success(const Input &in, ast::Identifier& ident, ast::Parameter& par) {
-        par.identifier = move(ident);
+        par.identifier = std::move(ident);
     }
 
     template<typename Input>
     static void success(const Input &in, ast::Identifier& ident, ast::Reference& ref) {
-        ref.identifier = move(ident);
+        ref.identifier = std::move(ident);
     }
 
     template<typename Input>
     static void success(const Input &in, ast::Identifier& ident, ast::StructInit& node) {
-        node.items.emplace_back(ast::Key(move(ident)), std::unique_ptr<ast::Expression>{});
+        node.items.emplace_back(ast::Key(std::move(ident)), std::unique_ptr<ast::Expression>{});
     }
 };
 
@@ -701,43 +701,43 @@ struct Action<TypeName> : change_states< ast::TypeName > {
 
     template<typename Input>
     static void success(const Input &in, ast::TypeName& tname, std::unique_ptr<ast::Type>& type) {
-        type = std::make_unique<ast::TypeName>(move(tname));
+        type = std::make_unique<ast::TypeName>(std::move(tname));
     }
 
     template<typename Input>
     static void success(const Input &in, ast::TypeName& tname, std::vector<ast::TypeName>& type_params) {
-        type_params.push_back(move(tname));
+        type_params.push_back(std::move(tname));
     }
 
     template<typename Input>
     static void success(const Input &in, ast::TypeName& tname, ast::TypeConstraint& tcst) {
         if (!tcst.type_class)
-            tcst.type_class = move(tname);
+            tcst.type_class = std::move(tname);
         else
-            tcst.type_name = move(tname);
+            tcst.type_name = std::move(tname);
     }
 
     template<typename Input>
     static void success(const Input &in, ast::TypeName& tname, ast::Class& cls) {
         if (!cls.class_name)
-            cls.class_name = move(tname);
+            cls.class_name = std::move(tname);
         else
-            cls.type_vars.push_back(move(tname));
+            cls.type_vars.push_back(std::move(tname));
     }
 
     template<typename Input>
     static void success(const Input &in, ast::TypeName& tname, ast::Instance& inst) {
-        inst.class_name = move(tname);
+        inst.class_name = std::move(tname);
     }
 
     template<typename Input>
     static void success(const Input &in, ast::TypeName& tname, ast::TypeDef& def) {
-        def.type_name = move(tname);
+        def.type_name = std::move(tname);
     }
 
     template<typename Input>
     static void success(const Input &in, ast::TypeName& tname, ast::TypeAlias& alias) {
-        alias.type_name = move(tname);
+        alias.type_name = std::move(tname);
     }
 };
 
@@ -1207,7 +1207,7 @@ template<>
 struct Action<RawString> : change_states< std::string > {
     template<typename Input>
     static void success(const Input &in, std::string& str, LiteralHelper& helper) {
-        helper.content = strip_raw_string(move(str));
+        helper.content = strip_raw_string(std::move(str));
         helper.type = ValueType::String;
     }
 };

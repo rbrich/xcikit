@@ -25,9 +25,6 @@
 
 namespace xci::script {
 
-using std::byte;
-using std::move;
-
 class Value;
 struct ListV;
 struct TupleV;
@@ -58,7 +55,7 @@ class Visitor {
 public:
     virtual void visit(void) = 0;
     virtual void visit(bool) = 0;
-    virtual void visit(byte) = 0;
+    virtual void visit(std::byte) = 0;
     virtual void visit(char32_t) = 0;
     virtual void visit(uint32_t) = 0;
     virtual void visit(uint64_t) = 0;
@@ -77,7 +74,7 @@ public:
 class PartialVisitor : public Visitor {
     void visit(void) override {}
     void visit(bool) override {}
-    void visit(byte) override {}
+    void visit(std::byte) override {}
     void visit(char32_t) override {}
     void visit(uint32_t) override {}
     void visit(uint64_t) override {}
@@ -109,7 +106,7 @@ struct StringV {
 struct ListV {
     ListV() = default;
     explicit ListV(size_t length, const TypeInfo& elem_type, const std::byte* elem_data = nullptr);
-    explicit ListV(HeapSlot&& slot) : slot(move(slot)) {}
+    explicit ListV(HeapSlot&& slot) : slot(std::move(slot)) {}
     bool operator ==(const ListV& rhs) const { return slot.slot() == rhs.slot.slot(); }  // same slot - cannot compare content without elem_type
     size_t length() const;
     const std::byte* raw_data() const;
@@ -186,8 +183,8 @@ public:
 
     Value() = default;  // Void
     explicit Value(bool v) : m_value(v) {}  // Bool
-    explicit Value(byte v) : m_value(v) {}  // Byte
-    explicit Value(uint8_t v) : m_value(byte(v)) {}  // Byte
+    explicit Value(std::byte v) : m_value(v) {}  // Byte
+    explicit Value(uint8_t v) : m_value(std::byte(v)) {}  // Byte
     explicit Value(char32_t v) : m_value(v) {}  // Char
     explicit Value(uint32_t v) : m_value(v) {}  // UInt32
     explicit Value(uint64_t v) : m_value(v) {}  // UInt64
@@ -199,13 +196,13 @@ public:
     explicit Value(std::string_view v) : m_value(StringV{v}) {}  // String
     explicit Value(ListTag) : m_value(ListV{}) {}  // List
     explicit Value(size_t length, const TypeInfo& elem_type) : m_value(ListV{length, elem_type}) {}  // List
-    explicit Value(ListTag, HeapSlot&& slot) : m_value(ListV{move(slot)}) {}  // List
-    explicit Value(ListV&& list_v) : m_value(move(list_v)) {}  // List
+    explicit Value(ListTag, HeapSlot&& slot) : m_value(ListV{std::move(slot)}) {}  // List
+    explicit Value(ListV&& list_v) : m_value(std::move(list_v)) {}  // List
     explicit Value(const TypeInfo::Subtypes& subtypes) : m_value(TupleV{subtypes}) {}  // Tuple
-    explicit Value(Values&& values) : m_value(TupleV{move(values)}) {}  // Tuple
+    explicit Value(Values&& values) : m_value(TupleV{std::move(values)}) {}  // Tuple
     explicit Value(ClosureTag) : m_value(ClosureV{}) {}  // Closure
     explicit Value(const Function& fn) : m_value(ClosureV{fn}) {}  // Closure
-    explicit Value(const Function& fn, Values&& values) : m_value(ClosureV{fn, move(values)}) {}  // Closure
+    explicit Value(const Function& fn, Values&& values) : m_value(ClosureV{fn, std::move(values)}) {}  // Closure
     explicit Value(StreamTag) : m_value(StreamV{}) {}  // Stream
     explicit Value(const script::Stream& v) : m_value(StreamV{v}) {}  // Stream
     explicit Value(ModuleTag) : m_value(ModuleV{}) {}  // Module
@@ -218,8 +215,8 @@ public:
     // To read value and also keep it in original location,
     // you MUST also call incref.
     // Returns number of bytes written/read
-    size_t write(byte* buffer) const;
-    size_t read(const byte* buffer);
+    size_t write(std::byte* buffer) const;
+    size_t read(const std::byte* buffer);
     size_t size_on_stack() const;
 
     // Set when the value lives on heap
@@ -254,7 +251,7 @@ public:
                     (std::is_integral_v<TLhs> || (!bitwise && std::is_floating_point_v<TLhs>)))
                 return Value( TBinFun{}(l, r) );
 
-            if constexpr (std::is_same_v<TLhs, TRhs> && std::is_same_v<TLhs, byte>)
+            if constexpr (std::is_same_v<TLhs, TRhs> && std::is_same_v<TLhs, std::byte>)
                 return Value( TBinFun{}(uint8_t(l), uint8_t(r)) );
 
             return {};
@@ -292,7 +289,7 @@ public:
 protected:
     using ValueVariant = std::variant<
             std::monostate,
-            bool, byte, char32_t, uint32_t, uint64_t, int32_t, int64_t, float, double,
+            bool, std::byte, char32_t, uint32_t, uint64_t, int32_t, int64_t, float, double,
             StringV, ListV, TupleV, ClosureV, StreamV, ModuleV
         >;
     ValueVariant m_value;
@@ -360,7 +357,7 @@ public:
 
     template <ValueWithTypeInfo T> explicit TypedValue(const T& v) : m_value(v), m_type_info(v.type_info()) {}
 
-    explicit TypedValue(TypeInfo type_info) : m_value(create_value(type_info)), m_type_info(move(type_info)) {}
+    explicit TypedValue(TypeInfo type_info) : m_value(create_value(type_info)), m_type_info(std::move(type_info)) {}
     TypedValue(Value value, TypeInfo type_info);
 
     bool operator ==(const TypedValue& rhs) const { return m_value == rhs.m_value; }
@@ -448,14 +445,14 @@ public:
 
 class Byte: public Value {
 public:
-    Byte() : Value(byte(0)) {}
-    explicit Byte(byte v) : Value(v) {}
-    explicit Byte(uint8_t v) : Value(byte(v)) {}
+    Byte() : Value(std::byte(0)) {}
+    explicit Byte(std::byte v) : Value(v) {}
+    explicit Byte(uint8_t v) : Value(std::byte(v)) {}
     explicit Byte(std::string_view utf8);
     TypeInfo type_info() const { return TypeInfo{Type::Byte}; }
-    uint8_t value() const { return (uint8_t) std::get<byte>(m_value); }
-    void set_value(byte v) { m_value = v; }
-    void set_value(uint8_t v) { m_value = byte(v); }
+    uint8_t value() const { return (uint8_t) std::get<std::byte>(m_value); }
+    void set_value(std::byte v) { m_value = v; }
+    void set_value(uint8_t v) { m_value = std::byte(v); }
 };
 
 
@@ -549,7 +546,7 @@ class List: public Value {
 public:
     List() : Value(Value::ListTag{}) {}
     List(size_t length, const TypeInfo& elem_type) : Value(length, elem_type) {}
-    explicit List(HeapSlot&& slot) : Value(Value::ListTag{}, move(slot)) {}
+    explicit List(HeapSlot&& slot) : Value(Value::ListTag{}, std::move(slot)) {}
 
     size_t length() const { return get<ListV>().length(); }
     Value value_at(size_t idx, const TypeInfo& elem_type) const { return get<ListV>().value_at(idx, elem_type); }
@@ -561,11 +558,11 @@ public:
 class Bytes: public List {
 public:
     Bytes() = default;
-    explicit Bytes(std::span<const byte> v);
+    explicit Bytes(std::span<const std::byte> v);
 
     TypeInfo type_info() const { return ti_bytes(); }
 
-    std::span<const byte> value() const { return {heapslot()->data() + 6, length()}; }
+    std::span<const std::byte> value() const { return {heapslot()->data() + 6, length()}; }
 };
 
 
@@ -580,7 +577,7 @@ class Tuple: public Value {
 public:
     Tuple() : Value(Values{}) {}
     Tuple(std::initializer_list<Value> values) : Value(Values{values}) {}
-    explicit Tuple(Values&& values) : Value(move(values)) {}
+    explicit Tuple(Values&& values) : Value(std::move(values)) {}
     explicit Tuple(const TypeInfo::Subtypes& subtypes) : Value(subtypes) {}
 
     bool empty() const { return get<TupleV>().empty(); }
@@ -593,7 +590,7 @@ class Closure: public Value {
 public:
     Closure() : Value(Value::ClosureTag{}) {}
     explicit Closure(const Function& fn) : Value(fn) {}
-    explicit Closure(const Function& fn, Values&& values) : Value(fn, move(values)) {}
+    explicit Closure(const Function& fn, Values&& values) : Value(fn, std::move(values)) {}
     TypeInfo type_info() const { return TypeInfo{Type::Function}; }
 
     Function* function() const { return get<ClosureV>().function(); }

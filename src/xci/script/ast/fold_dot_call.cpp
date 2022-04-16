@@ -11,7 +11,6 @@
 namespace xci::script {
 
 using std::unique_ptr;
-using std::move;
 
 
 class FoldDotCallVisitor final: public ast::VisitorExclTypes {
@@ -51,10 +50,10 @@ public:
             // collapse inner Call into outer OpCall (with op=DotCall)
             assert(!v.right_tmp);
             assert(v.args.size() == 2);
-            m_collapsed = move(v.args[1]);
+            m_collapsed = std::move(v.args[1]);
             auto* call = dynamic_cast<ast::Call*>(m_collapsed.get());
             assert(call != nullptr);
-            call->args.insert(call->args.begin(), move(v.args[0]));
+            call->args.insert(call->args.begin(), std::move(v.args[0]));
         }
     }
 
@@ -101,7 +100,7 @@ private:
     void apply_and_fold(unique_ptr<ast::Expression>& expr) {
         expr->apply(*this);
         if (m_collapsed) {
-            expr = move(m_collapsed);
+            expr = std::move(m_collapsed);
         }
     }
 

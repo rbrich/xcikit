@@ -30,7 +30,6 @@ using namespace xci::core;
 namespace views = ranges::cpp20::views;
 using ranges::to;
 using ranges::accumulate;
-using std::move;
 using std::make_unique;
 
 
@@ -619,7 +618,7 @@ TupleV::TupleV(Values&& vs)
 {
     int i = 0;
     for (auto&& tv : vs) {
-        values[i++] = move(tv);
+        values[i++] = std::move(tv);
     }
     values[i] = Value{};
 }
@@ -671,7 +670,7 @@ ClosureV::ClosureV(const Function& fn, Values&& values)
         : slot(fn.raw_size_of_closure() + sizeof(Function*))
 {
     assert(fn.closure_size() == values.size());
-    value::Tuple closure(move(values));
+    value::Tuple closure(std::move(values));
     const Function* fn_ptr = &fn;
     std::memcpy(slot.data(), &fn_ptr, sizeof(Function*));
     closure.write(slot.data() + sizeof(Function*));
@@ -725,7 +724,7 @@ size_t Values::size_on_stack() const
 
 
 TypedValue::TypedValue(Value value, TypeInfo type_info)
-        : m_value(move(value)), m_type_info(move(type_info))
+        : m_value(std::move(value)), m_type_info(std::move(type_info))
 {
     assert(m_value.type() == m_type_info.type()
         || (m_value.type() == Type::Tuple && m_type_info.type() == Type::Struct));

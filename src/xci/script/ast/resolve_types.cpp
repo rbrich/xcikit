@@ -19,7 +19,6 @@
 
 namespace xci::script {
 
-using std::move;
 using std::stringstream;
 using std::endl;
 
@@ -71,8 +70,8 @@ static MatchScore match_struct(const TypeInfo& candidate, const TypeInfo& actual
 
 class TypeCheckHelper {
 public:
-    explicit TypeCheckHelper(TypeInfo&& spec) : m_spec(move(spec)) {}
-    TypeCheckHelper(TypeInfo&& spec, TypeInfo&& cast) : m_spec(move(spec)), m_cast(move(cast)) {}
+    explicit TypeCheckHelper(TypeInfo&& spec) : m_spec(std::move(spec)) {}
+    TypeCheckHelper(TypeInfo&& spec, TypeInfo&& cast) : m_spec(std::move(spec)), m_cast(std::move(cast)) {}
 
     void check(const TypeInfo& inferred, const SourceLocation& loc) const {
         if (!m_spec)
@@ -100,13 +99,13 @@ public:
     }
 
     const TypeInfo& spec() const { return m_spec; }
-    TypeInfo&& spec() { return move(m_spec); }
+    TypeInfo&& spec() { return std::move(m_spec); }
 
     const TypeInfo& cast() const { return m_cast; }
-    TypeInfo&& cast() { return move(m_cast); }
+    TypeInfo&& cast() { return std::move(m_cast); }
 
     const TypeInfo& eval_type() const { return m_cast ? m_cast : m_spec; }
-    TypeInfo&& eval_type() { return m_cast ? move(m_cast) : move(m_spec); }
+    TypeInfo&& eval_type() { return m_cast ? std::move(m_cast) : std::move(m_spec); }
 
 private:
     TypeInfo m_spec;  // specified type
@@ -243,7 +242,7 @@ public:
             if (m_type_info && m_type_info != eval_type)
                 throw DefinitionTypeMismatch(m_type_info, eval_type, dfn.expression->source_loc);
 
-            m_type_info = move(eval_type);
+            m_type_info = std::move(eval_type);
 
             auto idx_in_cls = m_instance->class_().get_function_index(psym->ref()->index());
             m_instance->set_function(idx_in_cls, psym->index(), psym);
@@ -255,7 +254,7 @@ public:
             dfn.expression->apply(*this);
         } else {
             // declaration: use specified type directly
-            m_value_type = move(m_type_info);
+            m_value_type = std::move(m_type_info);
         }
 
         Function& func = module().get_function(dfn.symbol()->index());
@@ -275,7 +274,7 @@ public:
         auto res_type = m_value_type.effective_type();
         // Unknown in intrinsics function
         if (!res_type.is_void() && !res_type.is_unknown())
-            inv.type_id = get_type_id(move(res_type));
+            inv.type_id = get_type_id(std::move(res_type));
     }
 
     void visit(ast::Return& ret) override {
@@ -296,7 +295,7 @@ public:
         // resolve instance types
         for (auto& t : v.type_inst) {
             t->apply(*this);
-            m_instance->add_type(move(m_type_info));
+            m_instance->add_type(std::move(m_type_info));
         }
         // resolve each Definition from the class,
         // fill-in FunctionType, match with possible named arguments and body
@@ -309,7 +308,7 @@ public:
         v.type->apply(*this);
 
         // create new Named type
-        Index index = module().add_type(TypeInfo{v.type_name.name, move(m_type_info)});
+        Index index = module().add_type(TypeInfo{v.type_name.name, std::move(m_type_info)});
         v.type_name.symbol->set_index(index);
     }
 
@@ -317,13 +316,13 @@ public:
         v.type->apply(*this);
 
         // add the actual type to Module, referenced by symbol
-        Index index = module().add_type(move(m_type_info));
+        Index index = module().add_type(std::move(m_type_info));
         v.type_name.symbol->set_index(index);
     }
 
     void visit(ast::Literal& v) override {
         m_value_type = v.value.type_info();
-        TypeCheckHelper type_check(move(m_type_info));
+        TypeCheckHelper type_check(std::move(m_type_info));
         type_check.check(m_value_type, v.source_loc);
     }
 
@@ -332,7 +331,7 @@ public:
     }
 
     void visit(ast::Tuple& v) override {
-        TypeCheckHelper type_check(move(m_type_info));
+        TypeCheckHelper type_check(std::move(m_type_info));
         // build TypeInfo from subtypes
         std::vector<TypeInfo> subtypes;
         subtypes.reserve(v.items.size());
@@ -340,12 +339,12 @@ public:
             item->apply(*this);
             subtypes.push_back(m_value_type.effective_type());
         }
-        m_value_type = TypeInfo(move(subtypes));
+        m_value_type = TypeInfo(std::move(subtypes));
         type_check.check(m_value_type, v.source_loc);
     }
 
     void visit(ast::List& v) override {
-        TypeCheckHelper type_check(move(m_type_info), move(m_cast_type));
+        TypeCheckHelper type_check(std::move(m_type_info), std::move(m_cast_type));
         // check all items have same type
         TypeInfo elem_type;
         if (!type_check.eval_type() && v.items.empty())
@@ -354,14 +353,14 @@ public:
             item->apply(*this);
             if (item.get() == v.items.front().get()) {
                 // first item
-                elem_type = move(m_value_type);
+                elem_type = std::move(m_value_type);
             } else {
                 // other items
                 if (elem_type != m_value_type)
                     throw ListElemTypeMismatch(elem_type, m_value_type, item->source_loc);
             }
         }
-        m_value_type = ti_list(move(elem_type));
+        m_value_type = ti_list(std::move(elem_type));
         type_check.check(m_value_type, v.source_loc);
         if (m_value_type.is_generic() && type_check.eval_type())
             m_value_type = std::move(type_check.eval_type());
@@ -384,13 +383,13 @@ public:
                 throw StructTypeMismatch(m_type_info, v.source_loc);
             if (!match_struct(v.struct_type, m_type_info))
                 throw StructTypeMismatch(m_type_info, v.source_loc);
-            v.struct_type = move(m_type_info);
+            v.struct_type = std::move(m_type_info);
             m_value_type = v.struct_type;
             return;
         }
         // first pass - resolve incomplete struct type
         //              and check it matches specified type (if any)
-        TypeCheckHelper type_check(move(m_type_info), move(m_cast_type));
+        TypeCheckHelper type_check(std::move(m_type_info), std::move(m_cast_type));
         const auto& specified = type_check.eval_type();
         if (!specified.is_unknown() && specified.type() != Type::Struct)
             throw StructTypeMismatch(specified, v.source_loc);
@@ -410,7 +409,7 @@ public:
                 type_check.check_struct_item(item.first.name, item_type, item.second->source_loc);
             ti_items.emplace_back(item.first.name, item_type);
         }
-        v.struct_type = TypeInfo(move(ti_items));
+        v.struct_type = TypeInfo(std::move(ti_items));
         if (!specified.is_unknown()) {
             assert(match_struct(v.struct_type, specified));  // already checked above
             v.struct_type = std::move(type_check.eval_type());
@@ -474,7 +473,7 @@ public:
                     }
                 }
                 // Record the resolved Type ID for Compiler
-                v.index = get_type_id(move(m_type_info));
+                v.index = get_type_id(std::move(m_type_info));
                 m_value_type = ti_int32();
                 break;
             }
@@ -626,7 +625,7 @@ public:
     }
 
     void visit(ast::Call& v) override {
-        TypeCheckHelper type_check(move(m_type_info), move(m_cast_type));
+        TypeCheckHelper type_check(std::move(m_type_info), std::move(m_cast_type));
 
         // resolve each argument
         CallArgs args;
@@ -638,7 +637,7 @@ public:
         // append args to m_call_args (note that m_call_args might be used
         // when evaluating each argument, so we cannot push to them above)
         std::move(args.begin(), args.end(), std::back_inserter(m_call_args));
-        m_call_ret = move(type_check.eval_type());
+        m_call_ret = std::move(type_check.eval_type());
         m_intrinsic = false;
 
         // using resolved args, resolve the callable itself
@@ -671,7 +670,7 @@ public:
                     } else {
                         SymbolTable& fn_symtab = m_function.symtab().add_child("?/partial");
                         Function fn {module(), fn_symtab};
-                        v.partial_index = module().add_function(move(fn)).index;
+                        v.partial_index = module().add_function(std::move(fn)).index;
                     }
                     auto& fn = module().get_function(v.partial_index);
                     fn.signature() = *new_signature;
@@ -747,14 +746,14 @@ public:
         // specified type (left-hand side of '=')
         TypeInfo specified_type;
         if (v.definition) {
-            specified_type = move(m_type_info);
+            specified_type = std::move(m_type_info);
             // declared type (decl statement)
             if (fn.signature()) {
                 TypeInfo declared_type(fn.signature_ptr());
                 if (specified_type && declared_type != specified_type) {
                     throw DeclarationTypeMismatch(declared_type, specified_type, v.source_loc);
                 }
-                specified_type = move(declared_type);
+                specified_type = std::move(declared_type);
             }
         }
         // lambda type (right hand side of '=')
@@ -779,7 +778,7 @@ public:
                 ++idx;
             }
         }
-        m_value_type = move(m_type_info);
+        m_value_type = std::move(m_type_info);
         v.call_args = m_call_args.size();
 
         fn.set_signature(m_value_type.signature_ptr());
@@ -841,7 +840,7 @@ public:
         m_cast_type = v.to_type;
         v.expression->apply(*this);
         m_cast_type = {};
-        v.from_type = move(m_value_type);
+        v.from_type = std::move(m_value_type);
         // cast to Void -> don't call the cast function, just drop the expression result from stack
         // cast to the same type -> noop
         if (v.to_type.is_void() || v.from_type.effective_type() == v.to_type) {
@@ -869,7 +868,7 @@ public:
                 p.type->apply(*this);
             else
                 m_type_info = ti_unknown();
-            signature->add_parameter(move(m_type_info));
+            signature->add_parameter(std::move(m_type_info));
         }
         if (t.result_type)
             t.result_type->apply(*this);
@@ -881,16 +880,16 @@ public:
 
     void visit(ast::ListType& t) final {
         t.elem_type->apply(*this);
-        m_type_info = ti_list(move(m_type_info));
+        m_type_info = ti_list(std::move(m_type_info));
     }
 
     void visit(ast::TupleType& t) final {
         std::vector<TypeInfo> subtypes;
         for (auto& st : t.subtypes) {
             st->apply(*this);
-            subtypes.push_back(move(m_type_info));
+            subtypes.push_back(std::move(m_type_info));
         }
-        m_type_info = TypeInfo{move(subtypes)};
+        m_type_info = TypeInfo{std::move(subtypes)};
     }
 
 private:
@@ -902,7 +901,7 @@ private:
         Index type_id = builtin_module.find_type(type_info);
         if (type_id >= 32) {
             // add to current module
-            type_id = 32 + module().add_type(move(type_info));
+            type_id = 32 + module().add_type(std::move(type_info));
         }
         return type_id;
     }
@@ -983,7 +982,7 @@ private:
             case Type::List: {
                 TypeInfo elem_type = sig.elem_type();
                 resolve_generic_type(resolved, elem_type);
-                sig = ti_list(move(elem_type));
+                sig = ti_list(std::move(elem_type));
                 break;
             }
             case Type::Function:
@@ -1097,7 +1096,7 @@ private:
         specialize_to_call_args(fspec, fspec.ast(), loc);
         auto fspec_sig = fspec.signature_ptr();
         // Copy original symbol and set it to the specialized function
-        auto fspec_idx = module().add_function(move(fspec)).index;
+        auto fspec_idx = module().add_function(std::move(fspec)).index;
         auto res = std::make_optional<Specialized>({
                 TypeInfo{fspec_sig},
                 fspec_idx
@@ -1155,7 +1154,7 @@ private:
         }
 
         // add to specialized instance in this module
-        auto spec_idx = module().add_instance(move(spec)).index;
+        auto spec_idx = module().add_instance(std::move(spec)).index;
         module().add_spec_instance(symptr, spec_idx);
         return spec_idx;
     }
@@ -1189,7 +1188,7 @@ private:
                     return {
                         .module = &module(),
                         .index = specialized->index,
-                        .type = move(specialized->type_info),
+                        .type = std::move(specialized->type_info),
                     };
                 }
             }
