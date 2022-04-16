@@ -43,9 +43,9 @@ public:
     auto operator<=>(const MatchScore&) const = default;
 
     void operator +=(MatchScore rhs) {
-        m_exact += rhs.m_exact;
-        m_coerce += rhs.m_coerce;
-        m_generic += rhs.m_generic;
+        m_exact += rhs.m_exact;  // NOLINT
+        m_coerce += rhs.m_coerce;  // NOLINT
+        m_generic += rhs.m_generic;  // NOLINT
     }
 
     friend std::ostream& operator<<(std::ostream& os, MatchScore v) {

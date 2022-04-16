@@ -48,8 +48,8 @@ TEST_CASE( "Sparse indexed map", "[IndexedMap]" )
 
     // Moving invalidates (clears) original map
     IndexedMap<std::string> map2 = std::move(map);
-    CHECK(map.empty());
-    CHECK(map.capacity() == 0);
+    CHECK(map.empty());  // NOLINT
+    CHECK(map.capacity() == 0);  // NOLINT
     CHECK(map2.size() == 4);
 
     map2.clear();
