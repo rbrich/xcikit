@@ -106,6 +106,11 @@ public:
     // with reference to the word's current style to be adjusted.
     void adjust_style(const std::function<void(Style& word_style)>& fn_adjust);
 
+    // Convenience shortcuts for `adjust_style`:
+    void adjust_color(graphics::Color c) { adjust_style([c](Style& w){ w.set_color(c); }); }
+
+    bool contains(const ViewportCoords& point) const;
+
 private:
     std::vector<Line> m_parts;
     bool m_open = true;

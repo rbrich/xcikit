@@ -11,6 +11,7 @@
 
 #include <cassert>
 #include <utility>
+#include <algorithm>
 
 namespace xci::text { class Style; }
 
@@ -261,6 +262,13 @@ void Span::adjust_style(const std::function<void(Style& word_style)>& fn_adjust)
             fn_adjust(word->style());
         }
     }
+}
+
+
+bool Span::contains(const ViewportCoords& point) const
+{
+    return std::any_of(m_parts.begin(), m_parts.end(),
+               [&point](const Line& line) { return line.bbox().contains(point); });
 }
 
 
