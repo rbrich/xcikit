@@ -1,5 +1,6 @@
 @PACKAGE_INIT@
 
+set_and_check(XCI_PACKAGE_DIR "@PACKAGE_XCI_PACKAGE_DIR@")
 set_and_check(XCI_INCLUDE_DIRS "@PACKAGE_XCI_INCLUDE_DIRS@")
 
 # Dependencies
@@ -10,9 +11,16 @@ include(CMakeFindDependencyMacro)
 find_dependency(Threads)
 find_dependency(fmt)
 find_dependency(pegtl 3.2.0)
+find_dependency(range-v3)
 
 if (@XCI_GRAPHICS@)
+    find_dependency(glfw3 3.2)
     find_dependency(Vulkan)
+endif()
+
+if (@XCI_TEXT@)
+    find_dependency(Freetype)
+    find_dependency(harfbuzz)
 endif()
 
 if (@XCI_WITH_ZIP@)

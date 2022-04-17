@@ -358,10 +358,11 @@ if (XCI_INSTALL_DEVEL)
         FILE "xcikit-targets.cmake")
 
     set(XCI_INCLUDE_DIRS include)
+    set(XCI_PACKAGE_DIR "")
     include(CMakePackageConfigHelpers)
     configure_package_config_file(xcikit-config.cmake.in xcikit-config.cmake
         INSTALL_DESTINATION lib/cmake/xcikit
-        PATH_VARS XCI_INCLUDE_DIRS)
+        PATH_VARS XCI_PACKAGE_DIR XCI_INCLUDE_DIRS)
     write_basic_package_version_file(xcikit-config-version.cmake
         COMPATIBILITY SameMajorVersion)
     install(FILES
