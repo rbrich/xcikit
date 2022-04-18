@@ -59,7 +59,7 @@ void TextInput::resize(View& view)
     layout::Span* cursor_span = m_layout.get_span("cursor");
     m_cursor_shape.clear();
     auto cursor_box = cursor_span->part(0).bbox();
-    cursor_box.w = view.size_to_viewport(1_sc);
+    cursor_box.w = view.size_to_viewport(1_px);
     if (cursor_box.x < m_content_pos)
         m_content_pos = cursor_box.x;
     if (cursor_box.x > m_content_pos + m_width)

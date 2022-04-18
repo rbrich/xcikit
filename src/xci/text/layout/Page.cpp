@@ -150,7 +150,7 @@ void Word::update(const graphics::View& target)
         m_debug_shapes.back().update();
 
     if (target.has_debug_flag(View::Debug::WordBasePoint)) {
-        const auto sc_1px = target.size_to_viewport(1_sc);
+        const auto sc_1px = target.size_to_viewport(1_px);
         m_debug_shapes.emplace_back(renderer, Color(150, 0, 255));
         m_debug_shapes.back().add_rectangle({- sc_1px, - sc_1px, 2 * sc_1px, 2 * sc_1px});
         m_debug_shapes.back().update();

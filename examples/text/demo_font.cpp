@@ -116,8 +116,8 @@ int main(int argc, const char* argv[])
 
         auto enl_rect = rect.enlarged(0.01f);
         rects.clear();
-        rects.add_rectangle(enl_rect, view.size_to_viewport(1_sc));
-        rects.add_rectangle(enl_rect.moved({0, emoji_offset}), view.size_to_viewport(1_sc));
+        rects.add_rectangle(enl_rect, view.size_to_viewport(1_px));
+        rects.add_rectangle(enl_rect.moved({0, emoji_offset}), view.size_to_viewport(1_px));
         rects.update();
     });
 

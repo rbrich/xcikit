@@ -55,11 +55,11 @@ int main(int argc, const char* argv[])
     window.set_size_callback([&](View& view) {
         rts.update();
         rts_px.clear();
-        rts_px.add_ellipse({0.0f, 0.0f, 0.5f, 0.5f}, view.size_to_viewport(1_sc));
-        rts_px.add_ellipse({0.1f, 0.1f, 0.5f, 0.5f}, view.size_to_viewport(2_sc));
-        rts_px.add_ellipse({0.2f, 0.2f, 0.5f, 0.5f}, view.size_to_viewport(3_sc));
-        rts_px.add_ellipse({0.3f, 0.3f, 0.5f, 0.5f}, view.size_to_viewport(4_sc));
-        rts_px.add_ellipse({0.4f, 0.4f, 0.5f, 0.5f}, view.size_to_viewport(5_sc));
+        rts_px.add_ellipse({0.0f, 0.0f, 0.5f, 0.5f}, view.size_to_viewport(1_px));
+        rts_px.add_ellipse({0.1f, 0.1f, 0.5f, 0.5f}, view.size_to_viewport(2_px));
+        rts_px.add_ellipse({0.2f, 0.2f, 0.5f, 0.5f}, view.size_to_viewport(3_px));
+        rts_px.add_ellipse({0.3f, 0.3f, 0.5f, 0.5f}, view.size_to_viewport(4_px));
+        rts_px.add_ellipse({0.4f, 0.4f, 0.5f, 0.5f}, view.size_to_viewport(5_px));
         rts_px.update();
         fps_display.resize(view);
         help_text.resize(view);

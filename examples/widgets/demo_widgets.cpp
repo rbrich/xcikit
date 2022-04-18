@@ -55,7 +55,7 @@ int main(int argc, const char* argv[])
         //view.set_debug_flag(View::Debug::WordBasePoint);
         //view.set_debug_flag(View::Debug::PageBBox);
         button_default.resize(view);
-        button_styled.set_outline_thickness(view.size_to_viewport(1_sc));
+        button_styled.set_outline_thickness(view.size_to_viewport(1_px));
         button_styled.resize(view);
         checkbox.resize(view);
     });

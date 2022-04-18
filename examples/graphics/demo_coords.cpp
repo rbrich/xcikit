@@ -114,9 +114,9 @@ int main(int argc, const char* argv[])
 
         unit_square.clear();
         if (view_origin == ViewOrigin::Center)
-            unit_square.add_rectangle({-1, -1, 2, 2}, view.size_to_viewport(1_sc));
+            unit_square.add_rectangle({-1, -1, 2, 2}, view.size_to_viewport(1_px));
         else
-            unit_square.add_rectangle({0, 0, 2, 2}, view.size_to_viewport(1_sc));
+            unit_square.add_rectangle({0, 0, 2, 2}, view.size_to_viewport(1_px));
         unit_square.update();
     });
 

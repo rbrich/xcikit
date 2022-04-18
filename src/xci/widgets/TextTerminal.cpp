@@ -568,7 +568,7 @@ void terminal::Caret::update(View& view, const ViewportRect& rect)
     auto y1 = rect.y;
     auto x2 = rect.x + rect.w;
     auto y2 = rect.y + rect.h;
-    auto outline_thickness = view.size_to_viewport(1.0_sc);
+    auto outline_thickness = view.size_to_viewport(1_px);
     float tx = 2.0f * outline_thickness.value / rect.w.value;
     float ty = 2.0f * outline_thickness.value / rect.h.value;
     float ix = 1.0f + tx / (1.0f - tx);

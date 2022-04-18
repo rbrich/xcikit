@@ -125,7 +125,7 @@ void Layout::update(const graphics::View& target)
     // setup debug rectangles
 
     auto& renderer = target.window()->renderer();
-    const auto sc_1px = target.size_to_viewport(1_sc);
+    const auto sc_1px = target.size_to_viewport(1_px);
     m_debug_shapes.clear();
 
     // Debug: page bbox

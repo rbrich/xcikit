@@ -134,11 +134,11 @@ int main(int argc, const char* argv[])
         add_shape_fn(shapes[1], {-0.6f, -0.8f, 1.2f, 1.6f}, 0.02f);
 
         // Constant border width, in screen pixels
-        add_shape_fn(shapes[2], {0.0f, 0.0f, 0.5f, 0.5f}, view.size_to_viewport(1_sc));
-        add_shape_fn(shapes[3], {0.1f, 0.1f, 0.5f, 0.5f}, view.size_to_viewport(2_sc));
-        add_shape_fn(shapes[4], {0.2f, 0.2f, 0.5f, 0.5f}, view.size_to_viewport(3_sc));
-        add_shape_fn(shapes[5], {0.3f, 0.3f, 0.5f, 0.5f}, view.size_to_viewport(4_sc));
-        add_shape_fn(shapes[6], {0.4f, 0.4f, 0.5f, 0.5f}, view.size_to_viewport(5_sc));
+        add_shape_fn(shapes[2], {0.0f, 0.0f, 0.5f, 0.5f}, view.size_to_viewport(1_px));
+        add_shape_fn(shapes[3], {0.1f, 0.1f, 0.5f, 0.5f}, view.size_to_viewport(2_px));
+        add_shape_fn(shapes[4], {0.2f, 0.2f, 0.5f, 0.5f}, view.size_to_viewport(3_px));
+        add_shape_fn(shapes[5], {0.3f, 0.3f, 0.5f, 0.5f}, view.size_to_viewport(4_px));
+        add_shape_fn(shapes[6], {0.4f, 0.4f, 0.5f, 0.5f}, view.size_to_viewport(5_px));
 
         for (Shape& shape : shapes)
             shape.update();

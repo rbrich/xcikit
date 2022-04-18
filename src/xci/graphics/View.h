@@ -75,13 +75,57 @@ using ViewportSize = core::Vec2<ViewportUnits>;
 using ViewportRect = core::Rect<ViewportUnits>;
 
 namespace unit_literals {
-constexpr ScreenPixels operator ""_sc (long double value) { return {float(value)}; }
-constexpr ScreenPixels operator ""_sc (unsigned long long value) { return {float(value)}; }
+constexpr ScreenPixels operator ""_px (long double value) { return {float(value)}; }
+constexpr ScreenPixels operator ""_px (unsigned long long value) { return {float(value)}; }
 constexpr FramebufferPixels operator ""_fb (long double value) { return {float(value)}; }
 constexpr FramebufferPixels operator ""_fb (unsigned long long value) { return {float(value)}; }
 constexpr ViewportUnits operator ""_vp (long double value) { return {float(value)}; }
 constexpr ViewportUnits operator ""_vp (unsigned long long value) { return {float(value)}; }
 } // namespace unit_literals
+
+
+/// A variant which can contain FramebufferPixels, ScreenPixels, ViewportUnits
+/// Optimized for size - it's 4 bytes, same as the original types.
+/// The pixels units do not lose any precision. ViewportUnits is stored in fixed point format.
+/// FramebufferPixels - encoded in range -536870912 .. 536870911 (three upper bits are 000 or 111)
+///                   - the value is fixed point decimal in 19 dot 10 bits format (+ 1 bit sign)
+/// ScreenPixels     - encoded in range -1073741824 .. 1073741823 (three upper bits are 001 or 110)
+///                  - xor 0x20000000 to decode original value
+///                  - the value is fixed point decimal in 19 dot 10 bits format (+ 1 bit sign)
+/// ViewportUnits    - encoded in range -2147483648 .. 2147483647 (two upper bits are 01 or 10)
+///                  - xor 0x40000000 to decode original value (30 bits + sign)
+///                  - the value is fixed point decimal in 4 dot 26 bits format (+ 1 bit sign)
+class VariUnits {
+public:
+    VariUnits() = default;
+    VariUnits(FramebufferPixels fb) : m_storage(to_storage(fb)) {}
+    VariUnits(ScreenPixels px) : m_storage(to_storage(px)) {}
+    VariUnits(ViewportUnits vp) : m_storage(to_storage(vp)) {}
+
+    // Get contained type
+    enum Type { Framebuffer, Screen, Viewport };
+    Type type() const;
+
+    // Get contained value
+    // Unchecked (assert in debug). Returns garbage when asked for different type than contained.
+    FramebufferPixels framebuffer() const;
+    ScreenPixels screen() const;
+    ViewportUnits viewport() const;
+
+    // For tests
+    int32_t raw_storage() const { return m_storage; }
+
+private:
+    static int32_t to_storage(FramebufferPixels fb);
+    static int32_t to_storage(ScreenPixels px);
+    static int32_t to_storage(ViewportUnits vp);
+
+    int32_t m_storage = 0;
+};
+
+using VariCoords = core::Vec2<VariUnits>;
+using VariSize = core::Vec2<VariUnits>;
+using VariRect = core::Rect<VariUnits>;
 
 
 enum class ViewOrigin {
