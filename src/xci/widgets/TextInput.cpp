@@ -107,11 +107,10 @@ void TextInput::draw(View& view)
     auto pos = position() + FramebufferCoords{padding - rect.x - m_content_pos,
                                               padding - rect.y};
     m_bg_rect.draw(view, position());
-    view.push_crop(aabb().enlarged(-view.to_fb(m_outline_thickness)));
+    auto pop_crop = view.push_crop(aabb().enlarged(-view.to_fb(m_outline_thickness)));
     m_layout.draw(view, pos);
     if (m_draw_cursor)
         m_cursor_shape.draw(view, pos);
-    view.pop_crop();
 }
 
 

@@ -343,15 +343,22 @@ public:
     // ------------------------------------------------------------------------
     // Local offset of coordinates
 
-    void push_offset(VariCoords offset);
-    void pop_offset() { m_offset.pop_back(); }
+    template <class T>
+    class PopHelper {
+        friend View;
+        std::vector<T>& container;
+        PopHelper(std::vector<T>& c) : container(c) {}
+    public:
+        ~PopHelper() { container.pop_back(); }
+    };
+
+    PopHelper<FramebufferCoords> push_offset(VariCoords offset);
     FramebufferCoords offset() const;
 
     // ------------------------------------------------------------------------
     // Crop region (scissors test)
 
-    void push_crop(const FramebufferRect& region);
-    void pop_crop() { m_crop.pop_back(); }
+    PopHelper<FramebufferRect> push_crop(const FramebufferRect& region);
     bool has_crop() const { return !m_crop.empty(); }
     const FramebufferRect& get_crop() const { return m_crop.back(); }
 

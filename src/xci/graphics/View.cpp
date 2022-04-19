@@ -176,9 +176,10 @@ ViewportCoords View::viewport_center() const
 }
 
 
-void View::push_offset(VariCoords offset)
+auto View::push_offset(VariCoords offset) -> PopHelper<FramebufferCoords>
 {
     m_offset.push_back(this->offset() + to_fb(offset));
+    return {m_offset};
 }
 
 
@@ -190,13 +191,14 @@ FramebufferCoords View::offset() const
 }
 
 
-void View::push_crop(const FramebufferRect& region)
+auto View::push_crop(const FramebufferRect& region) -> PopHelper<FramebufferRect>
 {
     if (m_crop.empty())
         m_crop.push_back(region.moved(offset()));
     else {
         m_crop.push_back(region.moved(offset()).intersection(m_crop.back()));
     }
+    return {m_crop};
 }
 
 

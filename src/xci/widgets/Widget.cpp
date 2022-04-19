@@ -82,12 +82,11 @@ void Composite::update(View& view, State state)
 
 void Composite::draw(View& view)
 {
-    view.push_offset(position());
+    auto pop_offset = view.push_offset(position());
     for (auto& child : m_child) {
         if (!child->is_hidden())
             child->draw(view);
     }
-    view.pop_offset();
 }
 
 
@@ -113,25 +112,22 @@ void Composite::char_event(View& view, const CharEvent& ev)
 
 void Composite::mouse_pos_event(View& view, const MousePosEvent& ev)
 {
-    view.push_offset(position());
+    auto pop_offset = view.push_offset(position());
     for (auto& child : m_child)
         child->mouse_pos_event(view, ev);
-    view.pop_offset();
 }
 
 
 bool Composite::mouse_button_event(View& view, const MouseBtnEvent& ev)
 {
-    view.push_offset(position());
-    bool handled = false;
+    auto pop_offset = view.push_offset(position());
     for (auto& child : m_child) {
         // Propagate the event
-        handled = child->mouse_button_event(view, ev);
+        bool handled = child->mouse_button_event(view, ev);
         if (handled)
-            break;
+            return true;
     }
-    view.pop_offset();
-    return handled;
+    return false;
 }
 
 

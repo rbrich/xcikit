@@ -212,6 +212,7 @@ public:
     // - OnEvent is similar, but does not require explicit calls to View::refresh()
     // - Periodic is good for games (continuous animations)
     void set_refresh_mode(RefreshMode mode)  { m_refresh_mode = mode; }
+    RefreshMode refresh_mode() const { return m_refresh_mode; }
 
     /// Set refresh timeout. This is useful for OnDemand/OnEvent modes,
     /// where no update events are generated unless an event occurs.

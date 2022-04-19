@@ -492,9 +492,8 @@ void Primitives::draw(View& view)
 
 void Primitives::draw(View& view, VariCoords pos)
 {
-    view.push_offset(view.to_fb(pos));
+    auto pop_offset = view.push_offset(view.to_fb(pos));
     draw(view);
-    view.pop_offset();
 }
 
 

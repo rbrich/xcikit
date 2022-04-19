@@ -39,11 +39,10 @@ void Label::resize(View& view)
 
 void Label::draw(View& view)
 {
-    view.push_offset(position());
+    auto pop_offset = view.push_offset(position());
     auto rect = m_text.layout().bbox();
     FramebufferCoords pos = {m_padding - rect.x, m_padding - rect.y};
     m_text.draw(view, pos);
-    view.pop_offset();
 }
 
 
