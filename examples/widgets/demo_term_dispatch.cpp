@@ -120,8 +120,8 @@ int main(int argc, const char* argv[])
     });
 
     Bind bind(window, terminal);
-    window.set_refresh_mode(RefreshMode::OnDemand);
-    window.set_view_mode(ViewOrigin::TopLeft, ViewScale::FixedScreenPixels);
+    window.set_refresh_mode(RefreshMode::Periodic);  // FIXME: bell() doesn't work with OnDemand
+    window.set_view_mode(ViewOrigin::TopLeft);
     window.display();
 
     dispatch.terminate();

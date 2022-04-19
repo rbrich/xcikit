@@ -1,7 +1,7 @@
 // Form.h created on 2018-06-22 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_WIDGETS_FORM_H
@@ -14,6 +14,8 @@
 #include <xci/core/container/ChunkedStack.h>
 
 namespace xci::widgets {
+
+using namespace graphics::unit_literals;
 
 
 class Form: public Composite {
@@ -37,7 +39,7 @@ public:
     void resize(View& view) override;
 
 private:
-    ViewportCoords m_margin = {0.02f, 0.02f};
+    VariCoords m_margin = {0.02_vp, 0.02_vp};
 
     struct ChildHint {
         size_t child_index;

@@ -1,7 +1,7 @@
 // Window.h created on 2018-03-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_WINDOW_H
@@ -121,13 +121,13 @@ struct CharEvent {
 enum class MouseButton { Left = 0, Right = 1, Middle = 2 };
 
 struct MousePosEvent {
-    ViewportCoords pos;
+    FramebufferCoords pos;
 };
 
 struct MouseBtnEvent {
     MouseButton button;
     Action action;
-    ViewportCoords pos;
+    FramebufferCoords pos;
 };
 
 
@@ -225,8 +225,8 @@ public:
     /// Select kind of viewport units to be used throughout the program
     /// for all placing and sizes of elements in view.
     /// \param origin       The position of (0,0) coordinates. Default is Center.
-    /// \param scale        The scale of the units. Default is ScalingWithAspectCorrection.
-    void set_view_mode(ViewOrigin origin, ViewScale scale);
+    /// \param scale        The scale of the viewport units. Default is 2.0.
+    void set_view_mode(ViewOrigin origin, float scale = 2.0f);
 
     void set_debug_flags(View::DebugFlags flags);
 

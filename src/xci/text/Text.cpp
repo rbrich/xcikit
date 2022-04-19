@@ -1,7 +1,7 @@
 // Text.cpp created on 2018-03-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Text.h"
@@ -69,7 +69,7 @@ void Text::set_string(const std::string& string, Format format)
 }
 
 
-void Text::set_width(ViewportUnits width)
+void Text::set_width(VariUnits width)
 {
     m_layout.set_default_page_width(width);
     m_need_typeset = true;
@@ -83,7 +83,7 @@ void Text::set_font(Font& font)
 }
 
 
-void Text::set_font_size(ViewportUnits size, bool allow_scale)
+void Text::set_font_size(VariUnits size, bool allow_scale)
 {
     m_layout.set_default_font_size(size, allow_scale);
     m_need_typeset = true;
@@ -111,7 +111,7 @@ void Text::set_color(graphics::Color color)
 }
 
 
-void Text::set_outline_radius(ViewportUnits radius)
+void Text::set_outline_radius(VariUnits radius)
 {
     m_layout.set_default_outline_radius(radius);
     m_need_typeset = true;
@@ -125,7 +125,7 @@ void Text::set_outline_color(graphics::Color color)
 }
 
 
-void Text::set_tab_stops(std::vector<ViewportUnits> stops)
+void Text::set_tab_stops(std::vector<VariUnits> stops)
 {
     m_layout.set_default_tab_stops(std::move(stops));
     m_need_typeset = true;
@@ -159,7 +159,7 @@ void Text::update(graphics::View& view)
 }
 
 
-void Text::draw(graphics::View& view, const ViewportCoords& pos)
+void Text::draw(graphics::View& view, VariCoords pos)
 {
     m_layout.draw(view, pos);
 }

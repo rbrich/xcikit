@@ -40,7 +40,7 @@ int main(int argc, const char* argv[])
 
     // Form #1
     Form form1 {theme};
-    form1.set_position({-1.0f, -0.5f});
+    form1.set_position({-1.0_vp, -0.5_vp});
     root.add(form1);
 
     std::string input_text = "2018-06-23";
@@ -58,7 +58,7 @@ int main(int argc, const char* argv[])
 
     // Form #1 output
     Label output_text(theme);
-    output_text.set_position({0.2f, -0.5f});
+    output_text.set_position({0.2_vp, -0.5_vp});
     output_text.text().set_color(Color(180, 100, 140));
     button.on_click([&output_text, &input_text, &checkbox1, &checkbox2]
                      (View& view) {
@@ -74,7 +74,7 @@ int main(int argc, const char* argv[])
 
     // Form #2
     Form form2(theme);
-    form2.set_position({-1.0f, 0.2f});
+    form2.set_position({-1.0_vp, 0.2_vp});
     root.add(form2);
 
     std::string name = "Player1";
@@ -85,12 +85,12 @@ int main(int argc, const char* argv[])
 
     // Mouse pos
     MousePosInfo mouse_pos_info(theme);
-    mouse_pos_info.set_position({-1.2f, 0.9f});
+    mouse_pos_info.set_position({-1.2_vp, 0.9_vp});
     root.add(mouse_pos_info);
 
     // FPS
     FpsDisplay fps_display(theme);
-    fps_display.set_position({-1.2f, -0.8f});
+    fps_display.set_position({-1.2_vp, -0.8_vp});
     root.add(fps_display);
 
     window.set_refresh_mode(RefreshMode::OnDemand);

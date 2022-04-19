@@ -1,7 +1,7 @@
 // View.cpp created on 2018-03-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "View.h"
@@ -67,10 +67,21 @@ int32_t VariUnits::to_storage(ViewportUnits vp)
 }
 
 
+std::ostream& operator<<(std::ostream& s, VariUnits rhs)
+{
+    switch (rhs.type()) {
+        case VariUnits::Framebuffer: return s << rhs.framebuffer() << "fb";
+        case VariUnits::Screen: return s << rhs.screen() << "px";
+        case VariUnits::Viewport: return s << rhs.viewport() << "vp";
+    }
+    UNREACHABLE;
+}
+
+
 std::array<float, 16> View::projection_matrix() const
 {
-    float xs = 2.0f / viewport_size().x.value;
-    float ys = 2.0f / viewport_size().y.value;
+    float xs = 2.0f / framebuffer_size().x.value;
+    float ys = 2.0f / framebuffer_size().y.value;
     float xt = offset().x.value * xs;
     float yt = offset().y.value * ys;
     if (m_origin == ViewOrigin::TopLeft) {
@@ -86,7 +97,7 @@ std::array<float, 16> View::projection_matrix() const
 }
 
 
-bool View::set_screen_size(ScreenCoords size)
+bool View::set_screen_size(ScreenSize size)
 {
     bool changed = (m_screen_size != size);
     m_screen_size = size;
@@ -107,7 +118,17 @@ bool View::set_screen_size(ScreenCoords size)
 }
 
 
-bool View::set_framebuffer_size(FramebufferCoords size)
+ScreenCoords View::screen_center() const
+{
+    if (m_origin == ViewOrigin::TopLeft) {
+        return 0.5f * m_screen_size;
+    } else {
+        return {0, 0};
+    }
+}
+
+
+bool View::set_framebuffer_size(FramebufferSize size)
 {
     bool changed = (m_framebuffer_size != size);
     m_framebuffer_size = size;
@@ -115,7 +136,27 @@ bool View::set_framebuffer_size(FramebufferCoords size)
 }
 
 
-void View::set_viewport_mode(ViewOrigin origin, ViewScale scale)
+FramebufferCoords View::framebuffer_center() const
+{
+    if (m_origin == ViewOrigin::TopLeft) {
+        return 0.5f * m_framebuffer_size;
+    } else {
+        return {0, 0};
+    }
+}
+
+
+FramebufferCoords View::framebuffer_origin() const
+{
+    if (m_origin == ViewOrigin::Center) {
+        return 0.5f * m_framebuffer_size;
+    } else {
+        return {0, 0};
+    }
+}
+
+
+void View::set_viewport_mode(ViewOrigin origin, float scale)
 {
     assert(m_crop.empty());
     assert(m_offset.empty());
@@ -128,30 +169,28 @@ void View::set_viewport_mode(ViewOrigin origin, ViewScale scale)
 ViewportCoords View::viewport_center() const
 {
     if (m_origin == ViewOrigin::TopLeft) {
-        return m_viewport_size / ViewportUnits{2.0};
+        return 0.5f * m_viewport_size;
     } else {
         return {0, 0};
     }
 }
 
 
-void View::push_offset(const ViewportCoords& offset)
+void View::push_offset(VariCoords offset)
 {
-    m_offset.push_back(this->offset() + offset);
+    m_offset.push_back(this->offset() + to_fb(offset));
 }
 
 
-const ViewportCoords& View::offset() const
+FramebufferCoords View::offset() const
 {
-    if (m_offset.empty()) {
-        static ViewportCoords default_offset{0, 0};
-        return default_offset;
-    }
+    if (m_offset.empty())
+        return {0, 0};
     return m_offset.back();
 }
 
 
-void View::push_crop(const ViewportRect& region)
+void View::push_crop(const FramebufferRect& region)
 {
     if (m_crop.empty())
         m_crop.push_back(region.moved(offset()));
@@ -188,23 +227,15 @@ bool View::has_debug_flag(View::Debug flag) const {
 
 void View::rescale_viewport()
 {
-    switch (m_scale) {
-        case ViewScale::ScalingWithAspectCorrection:
-            // Decide between vert+/hor+ depending on screen orientation.
-            if (m_screen_size.x < m_screen_size.y) {
-                // preserve screen width
-                float aspect = float(m_screen_size.y.value) / float(m_screen_size.x.value);
-                m_viewport_size = {2.0f, 2.0f * aspect};
-            } else {
-                // preserve screen height
-                float aspect = float(m_screen_size.x.value) / float(m_screen_size.y.value);
-                m_viewport_size = {2.0f * aspect, 2.0f};
-            }
-            break;
-
-        case ViewScale::FixedScreenPixels:
-            m_viewport_size = {m_screen_size.x.value, m_screen_size.y.value};
-            break;
+    // Decide between vert+/hor+ depending on screen orientation.
+    if (m_screen_size.x < m_screen_size.y) {
+        // preserve screen width
+        float aspect = float(m_screen_size.y.value) / float(m_screen_size.x.value);
+        m_viewport_size = {m_scale, m_scale * aspect};
+    } else {
+        // preserve screen height
+        float aspect = float(m_screen_size.x.value) / float(m_screen_size.y.value);
+        m_viewport_size = {m_scale * aspect, m_scale};
     }
 }
 

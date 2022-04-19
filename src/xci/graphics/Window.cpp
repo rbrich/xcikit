@@ -1,7 +1,7 @@
 // Window.cpp created on 2019-10-22 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Window.h"
@@ -144,7 +144,7 @@ void Window::set_mouse_position_callback(Window::MousePosCallback mpos_cb)
     glfwSetCursorPosCallback(m_window, [](GLFWwindow* window, double xpos, double ypos) {
         auto self = (Window*) glfwGetWindowUserPointer(window);
         if (self->m_mpos_cb) {
-            auto pos = self->m_view.coords_to_viewport(ScreenCoords{float(xpos), float(ypos)});
+            auto pos = self->m_view.px_to_fb(ScreenCoords{float(xpos), float(ypos)}) - self->m_view.framebuffer_origin();
             self->m_mpos_cb(self->m_view, MousePosEvent{pos});
         }
     });
@@ -159,7 +159,7 @@ void Window::set_mouse_button_callback(Window::MouseBtnCallback mbtn_cb)
         if (self->m_mbtn_cb) {
             double xpos, ypos;
             glfwGetCursorPos(window, &xpos, &ypos);
-            auto pos = self->m_view.coords_to_viewport(ScreenCoords{float(xpos), float(ypos)});
+            auto pos = self->m_view.px_to_fb(ScreenCoords{float(xpos), float(ypos)}) - self->m_view.framebuffer_origin();
             self->m_mbtn_cb(self->m_view, MouseBtnEvent{(MouseButton) button, (Action) action, pos});
         }
     });
@@ -189,7 +189,7 @@ void Window::set_refresh_timeout(std::chrono::microseconds timeout,
 }
 
 
-void Window::set_view_mode(ViewOrigin origin, ViewScale scale)
+void Window::set_view_mode(ViewOrigin origin, float scale)
 {
     m_view.set_viewport_mode(origin, scale);
 }

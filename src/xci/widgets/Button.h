@@ -1,7 +1,7 @@
 // Button.h created on 2018-03-21 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_WIDGETS_BUTTON_H
@@ -15,14 +15,16 @@
 
 namespace xci::widgets {
 
+using namespace xci::graphics::unit_literals;
+
 
 class Button: public Widget, public Clickable {
 public:
     explicit Button(Theme& theme, const std::string &string);
 
-    void set_font_size(ViewportUnits size) { m_layout.set_default_font_size(size); }
-    void set_padding(ViewportUnits padding) { m_padding = padding; }
-    void set_outline_thickness(ViewportUnits thickness) { m_outline_thickness = thickness; }
+    void set_font_size(VariUnits size) { m_layout.set_default_font_size(size); }
+    void set_padding(VariUnits padding) { m_padding = padding; }
+    void set_outline_thickness(VariUnits thickness) { m_outline_thickness = thickness; }
 
     void set_decoration_color(graphics::Color fill, graphics::Color outline);
     void set_text_color(graphics::Color color);
@@ -37,8 +39,8 @@ public:
 private:
     graphics::Shape m_bg_rect;
     text::Layout m_layout;
-    ViewportUnits m_padding = 0.02f;
-    ViewportUnits m_outline_thickness = 0.005f;
+    VariUnits m_padding = 0.02_vp;
+    VariUnits m_outline_thickness = 0.005_vp;
 };
 
 

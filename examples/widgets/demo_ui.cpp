@@ -45,14 +45,14 @@ int main(int argc, const char* argv[])
     std::deque<TextInput> text_inputs;
     for (auto i : {0,1,2,3,4}) {
         text_inputs.emplace_back(theme, "input");
-        text_inputs.back().set_position({-1.0f, -0.5f + i * 0.12f});
+        text_inputs.back().set_position({-1.0_vp, -0.5_vp + i * 0.12f});
         root.add(text_inputs.back());
     }
 
     std::deque<Button> buttons;
     for (auto i : {0,1,2,3,4}) {
         buttons.emplace_back(theme, std::to_string(i+1) + ". click me!");
-        buttons.back().set_position({-0.2f, -0.5f + i * 0.12f});
+        buttons.back().set_position({-0.2_vp, -0.5_vp + i * 0.12f});
         auto* btn_self = &buttons.back();
         buttons.back().on_click([btn_self, &random_color](View& view) {
             view.finish_draw();
@@ -66,16 +66,16 @@ int main(int argc, const char* argv[])
     for (auto i : {0,1,2,3,4}) {
         checkboxes.emplace_back(theme);
         checkboxes.back().set_text("Checkbox " + std::to_string(i+1));
-        checkboxes.back().set_position({0.5f, -0.5f + i * 0.06f});
+        checkboxes.back().set_position({0.5_vp, -0.5_vp + i * 0.06f});
         root.add(checkboxes.back());
     }
 
     MousePosInfo mouse_pos_info {theme};
-    mouse_pos_info.set_position({-1.2f, 0.9f});
+    mouse_pos_info.set_position({-1.2_vp, 0.9_vp});
     root.add(mouse_pos_info);
 
     FpsDisplay fps_display {theme};
-    fps_display.set_position({-1.2f, -0.8f});
+    fps_display.set_position({-1.2_vp, -0.8_vp});
     root.add(fps_display);
 
     window.set_key_callback([&](View& view, KeyEvent ev) {
@@ -86,6 +86,7 @@ int main(int argc, const char* argv[])
                 window.close();
                 break;
             case Key::F11:
+            case Key::F:
                 window.toggle_fullscreen();
                 break;
             case Key::R:

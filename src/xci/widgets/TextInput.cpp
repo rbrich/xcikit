@@ -1,7 +1,7 @@
 // TextInput.cpp created on 2018-06-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "TextInput.h"
@@ -59,25 +59,27 @@ void TextInput::resize(View& view)
     layout::Span* cursor_span = m_layout.get_span("cursor");
     m_cursor_shape.clear();
     auto cursor_box = cursor_span->part(0).bbox();
-    cursor_box.w = view.size_to_viewport(1_px);
+    cursor_box.w = view.px_to_fb(1_px);
     if (cursor_box.x < m_content_pos)
         m_content_pos = cursor_box.x;
-    if (cursor_box.x > m_content_pos + m_width)
-        m_content_pos = cursor_box.x - m_width;
+    const auto width = view.to_fb(m_width);
+    if (cursor_box.x > m_content_pos + width)
+        m_content_pos = cursor_box.x - width;
     m_cursor_shape.add_rectangle(cursor_box);
     m_cursor_shape.update();
 
     auto rect = m_layout.bbox();
-    rect.w = m_width;
-    rect.enlarge(m_padding);
+    rect.w = width;
+    rect.enlarge(view.to_fb(m_padding));
     set_size(rect.size());
     set_baseline(-rect.y);
+    Widget::resize(view);
 
     // Background rect
     rect.x = 0;
     rect.y = 0;
     m_bg_rect.clear();
-    m_bg_rect.add_rectangle(rect, m_outline_thickness);
+    m_bg_rect.add_rectangle(rect, view.to_fb(m_outline_thickness));
     m_bg_rect.update();
 }
 
@@ -101,10 +103,11 @@ void TextInput::update(View& view, State state)
 void TextInput::draw(View& view)
 {
     auto rect = m_layout.bbox();
-    auto pos = position() + ViewportCoords{m_padding - rect.x - m_content_pos,
-                                           m_padding - rect.y};
+    const auto padding = view.to_fb(m_padding);
+    auto pos = position() + FramebufferCoords{padding - rect.x - m_content_pos,
+                                              padding - rect.y};
     m_bg_rect.draw(view, position());
-    view.push_crop(aabb().enlarged(-m_outline_thickness));
+    view.push_crop(aabb().enlarged(-view.to_fb(m_outline_thickness)));
     m_layout.draw(view, pos);
     if (m_draw_cursor)
         m_cursor_shape.draw(view, pos);

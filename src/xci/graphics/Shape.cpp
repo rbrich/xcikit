@@ -1,7 +1,7 @@
 // Shape.cpp created on 2018-04-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Shape.h"
@@ -22,9 +22,9 @@ Shape::Shape(Renderer& renderer, Color fill_color, Color outline_color)
 {}
 
 
-void Shape::add_line_slice(const ViewportRect& slice,
-                           const ViewportCoords& a, const ViewportCoords& b,
-                           ViewportUnits thickness)
+void Shape::add_line_slice(const FramebufferRect& slice,
+                           FramebufferCoords a, FramebufferCoords b,
+                           FramebufferPixels thickness)
 {
     auto dir = (b-a).norm();
     auto rotate = [dir](float x, float y) -> Vec2f {
@@ -54,7 +54,7 @@ void Shape::add_line_slice(const ViewportRect& slice,
 }
 
 
-void Shape::add_rectangle(const ViewportRect& rect, ViewportUnits outline_thickness)
+void Shape::add_rectangle(const FramebufferRect& rect, FramebufferPixels outline_thickness)
 {
     auto x1 = rect.x;
     auto y1 = rect.y;
@@ -74,8 +74,8 @@ void Shape::add_rectangle(const ViewportRect& rect, ViewportUnits outline_thickn
 }
 
 
-void Shape::add_rectangle_slice(const ViewportRect& slice, const ViewportRect& rect,
-                                ViewportUnits outline_thickness)
+void Shape::add_rectangle_slice(const FramebufferRect& slice, const FramebufferRect& rect,
+                                FramebufferPixels outline_thickness)
 {
     auto x1 = slice.x;
     auto y1 = slice.y;
@@ -102,7 +102,7 @@ void Shape::add_rectangle_slice(const ViewportRect& slice, const ViewportRect& r
 }
 
 
-void Shape::add_ellipse(const ViewportRect& rect, ViewportUnits outline_thickness)
+void Shape::add_ellipse(const FramebufferRect& rect, FramebufferPixels outline_thickness)
 {
     auto x1 = rect.x;
     auto y1 = rect.y;
@@ -121,8 +121,8 @@ void Shape::add_ellipse(const ViewportRect& rect, ViewportUnits outline_thicknes
 }
 
 
-void Shape::add_ellipse_slice(const ViewportRect& slice, const ViewportRect& ellipse,
-                              ViewportUnits outline_thickness)
+void Shape::add_ellipse_slice(const FramebufferRect& slice, const FramebufferRect& ellipse,
+                              FramebufferPixels outline_thickness)
 {
     auto x1 = slice.x;
     auto y1 = slice.y;
@@ -148,8 +148,8 @@ void Shape::add_ellipse_slice(const ViewportRect& slice, const ViewportRect& ell
 
 
 void
-Shape::add_rounded_rectangle(const ViewportRect& rect, ViewportUnits radius,
-                             ViewportUnits outline_thickness)
+Shape::add_rounded_rectangle(const FramebufferRect& rect, FramebufferPixels radius,
+                             FramebufferPixels outline_thickness)
 {
     // the shape is composed from 7-slice pattern:
     // corner ellipse slices and center rectangle slices
@@ -218,7 +218,7 @@ void Shape::update()
 }
 
 
-void Shape::draw(View& view, const ViewportCoords& pos)
+void Shape::draw(View& view, VariCoords pos)
 {
     // lines
     if (!m_lines.empty())

@@ -1,7 +1,7 @@
 // FpsDisplay.cpp created on 2018-04-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "FpsDisplay.h"
@@ -27,15 +27,17 @@ FpsDisplay::FpsDisplay(Theme& theme)
     m_texture.create({(unsigned)m_fps.resolution(), 1});
 
     // default size in "scalable" units
-    set_size({0.50f, 0.10f});
-    create_sprite();
+    set_size({0.50_vp, 0.10_vp});
 }
 
 
 void FpsDisplay::resize(View& view)
 {
+    Widget::resize(view);
+    view.finish_draw();
+
     m_quad.clear();
-    create_sprite();
+    create_sprite(view);
 
     m_text.set_font(theme().font());
     m_text.set_font_size(size().y / 2);
@@ -82,14 +84,14 @@ void FpsDisplay::draw(View& view)
 
     auto font_size = size().y / 2;
     auto offset = size().y / 5;
-    m_text.draw(view, position() + ViewportCoords{offset, offset + font_size});
+    m_text.draw(view, position() + FramebufferCoords{offset, offset + font_size});
 }
 
 
-void FpsDisplay::create_sprite()
+void FpsDisplay::create_sprite(View& view)
 {
-    auto x1 = 0_vp;
-    auto y1 = 0_vp;
+    auto x1 = 0_fb;
+    auto y1 = 0_fb;
     auto x2 = size().x;
     auto y2 = size().y;
     m_quad.reserve(4);

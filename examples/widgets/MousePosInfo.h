@@ -30,6 +30,7 @@ public:
     }
 
     void resize(View& view) override {
+        Widget::resize(view);
         m_text.resize(view);
     }
 

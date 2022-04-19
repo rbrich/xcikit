@@ -1,7 +1,7 @@
 // Style.h created on 2018-03-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_TEXT_STYLE_H
@@ -13,7 +13,7 @@
 
 namespace xci::text {
 
-using graphics::ViewportUnits;
+using graphics::VariUnits;
 using namespace graphics::unit_literals;
 
 
@@ -33,8 +33,8 @@ public:
     Font* font() const { return m_font; }
 
     // Request font size
-    void set_size(ViewportUnits size) { m_size = size; }
-    ViewportUnits size() const { return m_size; }
+    void set_size(VariUnits size) { m_size = size; }
+    VariUnits size() const { return m_size; }
 
     // Set false to force using exact font size, without GPU scaling
     void set_allow_scale(bool allow_scale) { m_allow_scale = allow_scale; }
@@ -56,8 +56,8 @@ public:
     // * outline color other than Transparent enables the outline
     // * set Transparent text color to get outlined text without inner filling
     // * set both colors to get a text with colored outside border
-    void set_outline_radius(ViewportUnits radius) { m_outline_radius = radius; }
-    ViewportUnits outline_radius() const { return m_outline_radius; }
+    void set_outline_radius(VariUnits radius) { m_outline_radius = radius; }
+    VariUnits outline_radius() const { return m_outline_radius; }
     void set_outline_color(graphics::Color color) { m_outline_color = color; }
     graphics::Color outline_color() const { return m_outline_color; }
 
@@ -76,8 +76,8 @@ public:
 
 private:
     Font* m_font = nullptr;
-    ViewportUnits m_size = 0.05_vp;  // requested font height
-    ViewportUnits m_outline_radius = 0.0_vp;  // requested outline radius
+    VariUnits m_size = 0.05_vp;  // requested font height
+    VariUnits m_outline_radius = 0.0_vp;  // requested outline radius
     graphics::Color m_color = graphics::Color::White();
     graphics::Color m_outline_color = graphics::Color::Transparent();
     FontStyle m_font_style = FontStyle::Regular;

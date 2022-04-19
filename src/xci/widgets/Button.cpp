@@ -1,7 +1,7 @@
 // Button.cpp created on 2018-03-21 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Button.h"
@@ -42,17 +42,19 @@ void Button::set_text_color(graphics::Color color)
 
 void Button::resize(View& view)
 {
+    view.finish_draw();
     m_layout.typeset(view);
     m_layout.update(view);
     auto rect = m_layout.bbox();
-    rect.enlarge(m_padding);
+    rect.enlarge(view.to_fb(m_padding));
     set_size(rect.size());
     set_baseline(-rect.y);
+    Widget::resize(view);
 
     rect.x = 0;
     rect.y = 0;
     m_bg_rect.clear();
-    m_bg_rect.add_rectangle(rect, m_outline_thickness);
+    m_bg_rect.add_rectangle(rect, view.to_fb(m_outline_thickness));
     m_bg_rect.update();
 }
 
@@ -72,9 +74,10 @@ void Button::update(View& view, State state)
 
 void Button::draw(View& view)
 {
-    auto rect = m_layout.bbox();
+    const auto layout_pos = m_layout.bbox().top_left();
+    const auto padding = view.to_fb(m_padding);
     m_bg_rect.draw(view, position());
-    m_layout.draw(view, position() + ViewportCoords{m_padding - rect.x, m_padding - rect.y});
+    m_layout.draw(view, position() + FramebufferCoords{padding - layout_pos.x, padding - layout_pos.y});
 }
 
 

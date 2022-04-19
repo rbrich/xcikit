@@ -20,6 +20,7 @@ using namespace xci::core;
 
 // TODO: * justify
 //       * demonstrate setting attributes on a span
+// FIXME: comma may land on next line when reflowed
 
 static const char * sample_text =
         "Each paragraph is broken into lines. "
@@ -58,9 +59,9 @@ int main(int argc, const char* argv[])
 
     Text text;
     text.set_markup_string(sample_text);
-    text.set_width(1.33f);
+    text.set_width(1.33_vp);
     text.set_font(font);
-    text.set_font_size(0.09f);
+    text.set_font_size(0.09_vp);
     text.set_font_style(FontStyle::Italic);
     text.set_font_weight(font_weight);
     text.set_color(Color::White());
@@ -72,17 +73,17 @@ int main(int argc, const char* argv[])
                          "[l] show line boxes\n"
                          "[s] show span boxes\n"
                          "[p] show page boxes\n");
-    help_text.set_tab_stops({0.8f});
+    help_text.set_tab_stops({0.8_vp});
     help_text.set_color(Color(50, 200, 100));
-    help_text.set_font_size(0.06f);
+    help_text.set_font_size(0.06_vp);
 
     Text help_text_2(mono_font, fmt::format("[+]/[-] Font weight: {}", font_weight));
     help_text_2.set_color(Color(50, 200, 100));
-    help_text_2.set_font_size(0.06f);
+    help_text_2.set_font_size(0.06_vp);
 
     Text help_text_3(font, "Resize the window to watch the reflow.");
     help_text_3.set_color(Color(200, 100, 50));
-    help_text_3.set_font_size(0.07f);
+    help_text_3.set_font_size(0.07_vp);
 
     Sprites font_texture(renderer, font.texture(), Color(0, 50, 255));
 
@@ -165,10 +166,9 @@ int main(int argc, const char* argv[])
         text.set_width(view.viewport_size().x / 2.f);
         text.resize(view);
 
-        auto tex_size = view.size_to_viewport(FramebufferSize{font.texture().size()});
-        ViewportRect rect = {0, 0, tex_size.x, tex_size.y};
+        auto tex_size = FramebufferSize{font.texture().size()};
         font_texture.clear();
-        font_texture.add_sprite(rect);
+        font_texture.add_sprite({0, 0, tex_size.x, tex_size.y});
         font_texture.update();
     });
 
@@ -177,10 +177,10 @@ int main(int argc, const char* argv[])
     });
 
     window.set_draw_callback([&](View& view) {
-        help_text.draw(view, {-0.17f, -0.9f});
-        help_text_2.draw(view, {-0.17f, 0.75f});
-        help_text_3.draw(view, {-0.17f, 0.9f});
-        text.draw(view, {-0.17f, -0.4f});
+        help_text.draw(view, {-0.17_vp, -0.9_vp});
+        help_text_2.draw(view, {-0.17_vp, 0.75_vp});
+        help_text_3.draw(view, {-0.17_vp, 0.9_vp});
+        text.draw(view, {-0.17_vp, -0.4_vp});
 
         font_texture.draw(view, {-0.5f * view.viewport_size().x + 0.01f,
                                  -0.5f * view.viewport_size().y + 0.01f});

@@ -1,7 +1,7 @@
 // geometry.h created on 2018-03-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_GEOMETRY_H
@@ -25,7 +25,7 @@ typename T::numeric_type cast_to_numeric(T var)
 
 template <typename T>
 struct Vec2 {
-    Vec2() : x(0), y(0) {}
+    Vec2() = default;
     Vec2(T x, T y) : x(x), y(y) {}
 
     // Convert another type of vector (possibly foreign type)
@@ -61,9 +61,21 @@ struct Vec2 {
         return std::abs(dx) + std::abs(dy);
     }
 
+    Vec2<T>& operator +=(const Vec2<T>& rhs) {
+        x += rhs.x;
+        y += rhs.y;
+        return *this;
+    }
+
+    Vec2<T>& operator -=(const Vec2<T>& rhs) {
+        x -= rhs.x;
+        y -= rhs.y;
+        return *this;
+    }
+
 public:
-    T x;
-    T y;
+    T x {};
+    T y {};
 };
 
 // unary minus (opposite vector)
@@ -110,20 +122,6 @@ Vec2<T> operator /(const Vec2<T>& lhs, const Vec2<T>& rhs) {
 template <typename T>
 Vec2<T> operator /(const Vec2<T>& lhs, T rhs) {
     return Vec2<T>(lhs.x / rhs, lhs.y / rhs);
-}
-
-template <typename T>
-Vec2<T>& operator +=(Vec2<T>& lhs, const Vec2<T>& rhs) {
-    lhs.x += rhs.x;
-    lhs.y += rhs.y;
-    return lhs;
-}
-
-template <typename T>
-Vec2<T>& operator -=(Vec2<T>& lhs, const Vec2<T>& rhs) {
-    lhs.x -= rhs.x;
-    lhs.y -= rhs.y;
-    return lhs;
 }
 
 template <typename T>

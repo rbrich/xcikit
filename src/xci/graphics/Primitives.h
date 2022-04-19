@@ -1,7 +1,7 @@
 // Primitives.h created on 2018-04-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_PRIMITIVES_H
@@ -119,10 +119,10 @@ public:
 
     void begin_primitive();
     void end_primitive();
-    void add_vertex(ViewportCoords xy, float u, float v);
-    void add_vertex(ViewportCoords xy, float u1, float v1, float u2, float v2);
-    void add_vertex(ViewportCoords xy, Color color, float u, float v);
-    void add_vertex(ViewportCoords xy, Color color, float u1, float v1, float u2, float v2);
+    void add_vertex(FramebufferCoords xy, float u, float v);
+    void add_vertex(FramebufferCoords xy, float u1, float v1, float u2, float v2);
+    void add_vertex(FramebufferCoords xy, Color color, float u, float v);
+    void add_vertex(FramebufferCoords xy, Color color, float u1, float v1, float u2, float v2);
     void clear();
     bool empty() const { return m_vertex_data.empty(); }
 
@@ -141,7 +141,7 @@ public:
 
     void update();
     void draw(View& view);
-    void draw(View& view, const ViewportCoords& pos);
+    void draw(View& view, VariCoords pos);
 
 private:
     void update_pipeline();

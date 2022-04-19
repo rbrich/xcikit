@@ -1,24 +1,26 @@
 // View.h created on 2018-03-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_VIEW_H
 #define XCI_GRAPHICS_VIEW_H
 
 #include <xci/core/geometry.h>
+#include <xci/compat/macros.h>
 
 #include <memory>
 #include <vector>
 #include <array>
+#include <cassert>
 
 namespace xci::graphics {
 
 
 enum class Unit {
-    ScreenPixel,        // virtual screen pixels
     FramebufferPixel,   // actual GPU pixels
+    ScreenPixel,        // virtual screen pixels
     ViewportUnit,       // relative units derived from viewport size and aspect ratio (see below)
 };
 
@@ -59,26 +61,26 @@ struct Units {
 };
 
 
-using ScreenPixels = Units<float, Unit::ScreenPixel>;
-using ScreenCoords = core::Vec2<ScreenPixels>;
-using ScreenSize = core::Vec2<ScreenPixels>;
-using ScreenRect = core::Rect<ScreenPixels>;
-
 using FramebufferPixels = Units<float, Unit::FramebufferPixel>;
 using FramebufferCoords = core::Vec2<FramebufferPixels>;
-using FramebufferSize = core::Vec2<FramebufferPixels>;
+using FramebufferSize = FramebufferCoords;
 using FramebufferRect = core::Rect<FramebufferPixels>;
+
+using ScreenPixels = Units<float, Unit::ScreenPixel>;
+using ScreenCoords = core::Vec2<ScreenPixels>;
+using ScreenSize = ScreenCoords;
+using ScreenRect = core::Rect<ScreenPixels>;
 
 using ViewportUnits = Units<float, Unit::ViewportUnit>;
 using ViewportCoords = core::Vec2<ViewportUnits>;
-using ViewportSize = core::Vec2<ViewportUnits>;
+using ViewportSize = ViewportCoords;
 using ViewportRect = core::Rect<ViewportUnits>;
 
 namespace unit_literals {
-constexpr ScreenPixels operator ""_px (long double value) { return {float(value)}; }
-constexpr ScreenPixels operator ""_px (unsigned long long value) { return {float(value)}; }
 constexpr FramebufferPixels operator ""_fb (long double value) { return {float(value)}; }
 constexpr FramebufferPixels operator ""_fb (unsigned long long value) { return {float(value)}; }
+constexpr ScreenPixels operator ""_px (long double value) { return {float(value)}; }
+constexpr ScreenPixels operator ""_px (unsigned long long value) { return {float(value)}; }
 constexpr ViewportUnits operator ""_vp (long double value) { return {float(value)}; }
 constexpr ViewportUnits operator ""_vp (unsigned long long value) { return {float(value)}; }
 } // namespace unit_literals
@@ -115,6 +117,8 @@ public:
     // For tests
     int32_t raw_storage() const { return m_storage; }
 
+    friend std::ostream& operator <<(std::ostream& s, VariUnits rhs);
+
 private:
     static int32_t to_storage(FramebufferPixels fb);
     static int32_t to_storage(ScreenPixels px);
@@ -123,19 +127,22 @@ private:
     int32_t m_storage = 0;
 };
 
-using VariCoords = core::Vec2<VariUnits>;
-using VariSize = core::Vec2<VariUnits>;
+struct VariCoords: public core::Vec2<VariUnits> {
+    VariCoords() = default;
+    VariCoords(core::Vec2<VariUnits> v) : core::Vec2<VariUnits>(v) {}
+    VariCoords(FramebufferCoords v) : core::Vec2<VariUnits>(v.x, v.y) {}
+    VariCoords(ScreenCoords v) : core::Vec2<VariUnits>(v.x, v.y) {}
+    VariCoords(ViewportCoords v) : core::Vec2<VariUnits>(v.x, v.y) {}
+    VariCoords(VariUnits x, VariUnits y) : core::Vec2<VariUnits>(x, y) {}
+};
+
+using VariSize = VariCoords;
 using VariRect = core::Rect<VariUnits>;
 
 
 enum class ViewOrigin {
     Center,
     TopLeft,
-};
-
-enum class ViewScale {
-    ScalingWithAspectCorrection,    // 2.0 x 2.0 + horiz/vert extension
-    FixedScreenPixels,              // same as screen_size()
 };
 
 
@@ -159,13 +166,23 @@ public:
     // from framebuffer size - in that case, call also `set_framebuffer_size`.
     bool set_screen_size(ScreenSize size);
     ScreenSize screen_size() const { return m_screen_size; }
+    ScreenCoords screen_center() const;
 
     // Size of the view in framebuffer pixels.
     // This is used for pixel-perfect font rendering.
-    // By default (or when set to {0, 0}, the framebuffer size will be set
+    // By default, (or when set to {0, 0}), the framebuffer size will be set
     // to same value as view size in screen pixels.
     bool set_framebuffer_size(FramebufferSize size);
     FramebufferSize framebuffer_size() const { return m_framebuffer_size; }
+
+    /// Viewport center in framebuffer coordinates.
+    /// Start at these coordinates to center thinks in the viewport.
+    FramebufferCoords framebuffer_center() const;
+
+    /// Viewport origin in real (underlying) framebuffer coordinates.
+    /// Add this to FramebufferCoords to translate them to underlying VkViewport coords.
+    /// In reverse, subtract from reported (e.g. mouse) underlying coords to translate them to view.
+    FramebufferCoords framebuffer_origin() const;
 
     // Size of the view in "viewport" units. These units are used
     // for placing objects in the view. Default view size is at least 2 units
@@ -173,83 +190,170 @@ public:
     // X goes right, Y goes down. Total size in one of the dimensions
     // will always equal 2.0.
     // Eg: {2.666, 2.0} for 800x600 (4/3 aspect ratio)
-    void set_viewport_mode(ViewOrigin origin, ViewScale scale);
+    void set_viewport_mode(ViewOrigin origin, float scale = 2.0f);
     ViewportSize viewport_size() const { return m_viewport_size; }
     ViewportCoords viewport_center() const;
 
-    // Conversion units to framebuffer:
+    // Convert units to framebuffer / screen:
 
-    FramebufferPixels size_to_framebuffer(ScreenPixels value) const {
+    FramebufferPixels px_to_fb(ScreenPixels value) const {
         return value.value * framebuffer_size().y.value / screen_size().y.value;
     }
 
-    FramebufferPixels size_to_framebuffer(ViewportUnits value) const {
+    FramebufferPixels vp_to_fb(ViewportUnits value) const {
         return value.value * framebuffer_size().y.value / viewport_size().y.value;
     }
 
-    FramebufferSize size_to_framebuffer(ViewportSize size) const {
-        core::Vec2f s = {size.x.value * framebuffer_size().x.value,
-                         size.y.value * framebuffer_size().y.value};
-        return {s.x / viewport_size().x.value,
-                s.y / viewport_size().y.value};
+    FramebufferPixels to_fb(VariUnits value) const {
+        switch (value.type()) {
+            case VariUnits::Framebuffer: return value.framebuffer();
+            case VariUnits::Screen: return px_to_fb(value.screen());
+            case VariUnits::Viewport: return vp_to_fb(value.viewport());
+        }
+        UNREACHABLE;
     }
 
-    /// Convert coords in viewport units into framebuffer coords.
-    /// Framebuffer has zero coords in bottom-left corner.
-    FramebufferCoords coords_to_framebuffer(const ViewportCoords& coords) const {
-        auto c = size_to_framebuffer(coords + 0.5f * viewport_size());
-        return {c.x, c.y};
+    ScreenPixels fb_to_px(FramebufferPixels value) const {
+        return value.value * screen_size().y.value / framebuffer_size().y.value;
+    }
+
+    ScreenPixels vp_to_px(ViewportUnits value) const {
+        return value.value * screen_size().y.value / viewport_size().y.value;
+    }
+
+    ScreenPixels to_px(VariUnits value) const {
+        switch (value.type()) {
+            case VariUnits::Framebuffer: return fb_to_px(value.framebuffer());
+            case VariUnits::Screen: return value.screen();
+            case VariUnits::Viewport: return vp_to_px(value.viewport());
+        }
+        UNREACHABLE;
+    }
+
+    // Convert coords / size to framebuffer / screen:
+
+    FramebufferSize px_to_fb(ScreenSize size) const {
+        return {size.x.value * framebuffer_size().x.value / screen_size().x.value,
+                size.y.value * framebuffer_size().y.value / screen_size().y.value};
+    }
+
+    FramebufferSize vp_to_fb(ViewportSize size) const {
+        return {size.x.value * framebuffer_size().x.value / viewport_size().x.value,
+                size.y.value * framebuffer_size().y.value / viewport_size().y.value};
+    }
+
+    FramebufferSize to_fb(VariSize size) const {
+        assert(size.x.type() == size.y.type());
+        switch (size.x.type()) {
+            case VariUnits::Framebuffer: return {size.x.framebuffer(), size.y.framebuffer()};
+            case VariUnits::Screen: return px_to_fb(ScreenSize{size.x.screen(), size.y.screen()});
+            case VariUnits::Viewport: return vp_to_fb(ViewportSize{size.x.viewport(), size.y.viewport()});
+        }
+        UNREACHABLE;
+    }
+
+    ScreenSize fb_to_px(FramebufferSize size) const {
+        return {size.x.value * screen_size().x.value / framebuffer_size().x.value,
+                size.y.value * screen_size().y.value / framebuffer_size().y.value};
+    }
+
+    ScreenSize vp_to_px(ViewportSize size) const {
+        return {size.x.value * screen_size().x.value / viewport_size().x.value,
+                size.y.value * screen_size().y.value / viewport_size().y.value};
+    }
+
+    ScreenSize to_px(VariSize size) const {
+        assert(size.x.type() == size.y.type());
+        switch (size.x.type()) {
+            case VariUnits::Framebuffer: return fb_to_px(FramebufferSize{size.x.framebuffer(), size.y.framebuffer()});
+            case VariUnits::Screen: return {size.x.screen(), size.y.screen()};
+            case VariUnits::Viewport: return vp_to_px(ViewportSize{size.x.viewport(), size.y.viewport()});
+        }
+        UNREACHABLE;
+    }
+
+    // Convert rect to framebuffer / screen:
+
+    FramebufferRect px_to_fb(const ScreenRect& rect) const {
+        auto xy = px_to_fb(rect.top_left());
+        auto size = px_to_fb(rect.size());
+        return {xy.x, xy.y, size.x, size.y};
     }
 
     /// Convert rectangle in viewport space into framebuffer space.
-    FramebufferRect rect_to_framebuffer(const ViewportRect& rect) const {
-        auto xy = coords_to_framebuffer(rect.top_left());
-        auto size = size_to_framebuffer(rect.size());
+    FramebufferRect vp_to_fb(const ViewportRect& rect) const {
+        auto xy = vp_to_fb(rect.top_left());
+        auto size = vp_to_fb(rect.size());
+        return {xy.x, xy.y, size.x, size.y};
+    }
+
+    FramebufferRect to_fb(const VariRect& rect) const {
+        auto xy = to_fb(rect.top_left());
+        auto size = to_fb(rect.size());
+        return {xy.x, xy.y, size.x, size.y};
+    }
+
+    ScreenRect fb_to_px(const FramebufferRect& rect) const {
+        auto xy = fb_to_px(rect.top_left());
+        auto size = fb_to_px(rect.size());
         return {xy.x, xy.y, size.x, size.y};
     }
 
     // Convert units to viewport:
 
-    ViewportUnits size_to_viewport(ScreenPixels value) const {
+    ViewportUnits px_to_vp(ScreenPixels value) const {
         return value.value * viewport_size().y.value / screen_size().y.value;
     }
 
-    ViewportSize size_to_viewport(ScreenSize size) const {
-        core::Vec2f s = {size.x.value * viewport_size().x.value,
-                         size.y.value * viewport_size().y.value};
-        return {s.x / screen_size().x.value,
-                s.y / screen_size().y.value};
-    }
-
-    ViewportUnits size_to_viewport(FramebufferPixels value) const {
+    ViewportUnits fb_to_vp(FramebufferPixels value) const {
         return value.value * viewport_size().y.value / framebuffer_size().y.value;
     }
 
-    ViewportSize size_to_viewport(FramebufferSize size) const {
-        core::Vec2f s = {size.x.value * viewport_size().x.value,
-                         size.y.value * viewport_size().y.value};
-        return {s.x / framebuffer_size().x.value,
-                s.y / framebuffer_size().y.value};
+    ViewportUnits to_vp(VariUnits value) const {
+        switch (value.type()) {
+            case VariUnits::Framebuffer: return fb_to_vp(value.framebuffer());
+            case VariUnits::Screen: return px_to_vp(value.screen());
+            case VariUnits::Viewport: return value.viewport();
+        }
+        UNREACHABLE;
     }
 
-    ViewportCoords coords_to_viewport(const ScreenCoords& coords) const {
-        return size_to_viewport(coords) - 0.5f * viewport_size();
+    ViewportSize px_to_vp(ScreenSize size) const {
+        return {size.x.value * viewport_size().x.value / screen_size().x.value,
+                size.y.value * viewport_size().y.value / screen_size().y.value};
+    }
+
+    ViewportSize fb_to_vp(FramebufferSize size) const {
+        return {size.x.value * viewport_size().x.value / framebuffer_size().x.value,
+                size.y.value * viewport_size().y.value / framebuffer_size().y.value};
+    }
+
+    ViewportRect px_to_vp(const ScreenRect& rect) const {
+        auto xy = px_to_vp(rect.top_left());
+        auto size = px_to_vp(rect.size());
+        return {xy.x, xy.y, size.x, size.y};
+    }
+
+    ViewportRect fb_to_vp(const FramebufferRect& rect) const {
+        auto xy = fb_to_vp(rect.top_left());
+        auto size = fb_to_vp(rect.size());
+        return {xy.x, xy.y, size.x, size.y};
     }
 
     // ------------------------------------------------------------------------
     // Local offset of coordinates
 
-    void push_offset(const ViewportCoords& offset);
+    void push_offset(VariCoords offset);
     void pop_offset() { m_offset.pop_back(); }
-    const ViewportCoords& offset() const;
+    FramebufferCoords offset() const;
 
     // ------------------------------------------------------------------------
     // Crop region (scissors test)
 
-    void push_crop(const ViewportRect& region);
+    void push_crop(const FramebufferRect& region);
     void pop_crop() { m_crop.pop_back(); }
     bool has_crop() const { return !m_crop.empty(); }
-    const ViewportRect& get_crop() const { return m_crop.back(); }
+    const FramebufferRect& get_crop() const { return m_crop.back(); }
 
     // ------------------------------------------------------------------------
     // Refresh
@@ -296,11 +400,11 @@ private:
     ScreenSize m_screen_size;           // eg. {800, 600}
     FramebufferSize m_framebuffer_size; // eg. {1600, 1200}
     ViewOrigin m_origin = ViewOrigin::Center;
-    ViewScale m_scale = ViewScale::ScalingWithAspectCorrection;
+    float m_scale = 2.0f;
     DebugFlags m_debug = 0;
     bool m_needs_refresh = true;  // start with dirty state to force first refresh
-    std::vector<ViewportRect> m_crop;  // Crop region stack (current crop region on back)
-    std::vector<ViewportCoords> m_offset;  // Offset stack (current offset on back)
+    std::vector<FramebufferRect> m_crop;  // Crop region stack (current crop region on back)
+    std::vector<FramebufferCoords> m_offset;  // Offset stack (current offset on back)
 };
 
 

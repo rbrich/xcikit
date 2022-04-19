@@ -15,6 +15,8 @@
 
 #include <cstdlib>
 
+using namespace xci::graphics::unit_literals;
+
 
 void generate_checkerboard(Texture& texture)
 {
@@ -58,19 +60,7 @@ int main(int argc, const char* argv[])
     Primitives prim {renderer,
                      VertexFormat::V2c4t2, PrimitiveType::TriFans};
 
-    prim.begin_primitive();
-    prim.add_vertex({-1.0f, -1.0f}, {1.0f, 0.0f, 0.0f}, 0, 0);
-    prim.add_vertex({-1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, 0, 0);
-    prim.add_vertex({0.0f, 0.0f}, {1.0f, 0.0f, 1.0f}, 0, 0);
-    prim.add_vertex({0.0f, -1.0f}, {1.0f, 1.0f, 0.0f}, 0, 0);
-    prim.end_primitive();
 
-    prim.begin_primitive();
-    prim.add_vertex({-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, 0, 0);
-    prim.add_vertex({-0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}, 0, 1.0);
-    prim.add_vertex({0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, 1.0, 1.0);
-    prim.add_vertex({0.5f, -0.5f}, {1.0f, 1.0f, 0.0f}, 1.0, 0);
-    prim.end_primitive();
 
     Texture texture{renderer, ColorFormat::Grey};
     texture.create({256, 256});
@@ -87,14 +77,34 @@ int main(int argc, const char* argv[])
     shape.set_outline_color(Color(180, 180, 0));
     shape.set_softness(1);
     shape.set_antialiasing(1);
-    shape.add_rectangle({-0.75, -0.3f, 2.0f, 1.2f}, 0.05f);
 
-    prim.update();
-    shape.update();
+    window.set_size_callback([&](View& view) {
+        prim.clear();
+
+        prim.begin_primitive();
+        prim.add_vertex(view.vp_to_fb({-1.0f, -1.0f}), {1.0f, 0.0f, 0.0f}, 0, 0);
+        prim.add_vertex(view.vp_to_fb({-1.0f, 0.0f}), {0.0f, 0.0f, 1.0f}, 0, 0);
+        prim.add_vertex(view.vp_to_fb({0.0f, 0.0f}), {1.0f, 0.0f, 1.0f}, 0, 0);
+        prim.add_vertex(view.vp_to_fb({0.0f, -1.0f}), {1.0f, 1.0f, 0.0f}, 0, 0);
+        prim.end_primitive();
+
+        prim.begin_primitive();
+        prim.add_vertex(view.vp_to_fb({-0.5f, -0.5f}), {1.0f, 0.0f, 0.0f}, 0, 0);
+        prim.add_vertex(view.vp_to_fb({-0.5f, 0.5f}), {0.0f, 1.0f, 0.0f}, 0, 1.0);
+        prim.add_vertex(view.vp_to_fb({0.5f, 0.5f}), {0.0f, 0.0f, 1.0f}, 1.0, 1.0);
+        prim.add_vertex(view.vp_to_fb({0.5f, -0.5f}), {1.0f, 1.0f, 0.0f}, 1.0, 0);
+        prim.end_primitive();
+
+        prim.update();
+
+        shape.clear();
+        shape.add_rectangle(view.vp_to_fb({-0.75, -0.3f, 2.0f, 1.2f}), view.vp_to_fb(0.05f));
+        shape.update();
+    });
 
     window.set_draw_callback([&](View& view) {
         prim.draw(view);
-        shape.draw(view, {0, 0});
+        shape.draw(view, {0_fb, 0_fb});
     });
 
     window.set_refresh_mode(RefreshMode::OnDemand);

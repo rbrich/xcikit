@@ -1,12 +1,14 @@
 // Label.cpp created on 2018-06-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Label.h"
 
 namespace xci::widgets {
+
+using graphics::FramebufferCoords;
 
 
 Label::Label(Theme& theme)
@@ -31,6 +33,7 @@ void Label::resize(View& view)
     rect.enlarge(m_padding);
     set_size(rect.size());
     set_baseline(-rect.y);
+    Widget::resize(view);
 }
 
 
@@ -38,8 +41,7 @@ void Label::draw(View& view)
 {
     view.push_offset(position());
     auto rect = m_text.layout().bbox();
-    auto pos = ViewportCoords{m_padding - rect.x,
-                              m_padding - rect.y};
+    FramebufferCoords pos = {m_padding - rect.x, m_padding - rect.y};
     m_text.draw(view, pos);
     view.pop_offset();
 }

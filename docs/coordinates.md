@@ -13,9 +13,9 @@ Vulkan Coordinates
 ### Viewport coordinates
 
 Vulkan uses following viewport coordinates:
-- X axis goes from left to right
-- Y axis goes from top to bottom
-- Z axis goes from near to far
+- X-axis goes from left to right
+- Y-axis goes from top to bottom
+- Z-axis goes from near to far
 
 Note that Y axis is inverted in OpenGL, but that was fixed in Vulkan.
 It now goes the same direction as is usual in window coordinates.
@@ -97,16 +97,40 @@ a square, regardless of actual viewport size.
 XCI Coordinates
 ---------------
 
-For the purpose of rendering UI and text, we'll stay with the Vulkan
-coordinates, with one modification:
+There are three kinds of coordinates understood by xcikit:
 
-- One of the X/Y axis is expanded, so the visible coordinates go beyond -1/1.
-  This is the aspect ratio correction.
+- *Framebuffer pixels* - these are based on size of frame buffer
+  (the actual pixels being drawn on the screen)
+- *Screen pixels* - these are based on size of window as reported by OS
+  (the pixels with "normal" size)
+- *Viewport units* - partially normalized units that scale with the viewport size
+  (the size stays cca the same regardless of actual window size in pixels)
 
-We no longer need to flip Y coordinate as we did in OpenGL.
+The framebuffer pixels are used for low-level drawing. The projection matrix maps
+them directly to actual pixels. These are also reported back in e.g. mouse callback.
+
+Screen pixels should be preferred as an input, when the size of text/UI is not meant
+to scale with window size.
+The screen pixels might be the same as framebuffer pixels, or they might
+be bigger (this technique is used for high-DPI screens).
+
+Viewport units should be used for scaling text/UI with window size, if you want the same
+amount of content in small or big window (or device screen).
+
+See `demo_coords` in examples for live demonstration of all kinds of the
+coordinates.
+
+### Viewport units
+
+These units are based on uniform projection matrix - the default Vulkan coordinates.
+The only modification is aspect ratio correction:
+
+- One of the X/Y axes is expanded, so the visible coordinates go beyond -1/1.
+
+Note: We no longer need to flip Y coordinate as we did in OpenGL.
 Vulkan Y coordinate is well suited for drawing text or widgets, because
 we usually write from top to bottom.
- 
+
 The diagram shows that the square of (-1,-1) .. (1,1) is always completely
 covered by the view. Depending on actual ratio of width and height,
 it is expanded either horizontally or vertically.
@@ -124,21 +148,7 @@ it is expanded either horizontally or vertically.
 
 Same as with Vulkan coordinates, origin (0,0) is in the center of the screen.
 
-These coordinates are used for positioning text and widgets in the viewport.
-There is always the same amount of elements, disregarding the actual size
+These coordinates may be used for positioning text and widgets in the viewport.
+There is always the same amount of elements, regardless the actual size
 of window in pixels. In bigger window or on finer screen, the elements just
 get bigger and more detailed.
-
-These are called *scalable units* throughout xcikit.
-
-There are also two other kinds of units:
-- *Framebuffer pixels* - these are based on size of frame buffer
-  (the actual pixels being drawn on the screen)
-- *Screen pixels* - these are based on size of window as reported by OS
-  (the pixels with "normal" size)
-
-The screen pixels might be the same as framebuffer pixels, or they might
-be bigger (this technique is used for high-DPI screens).
-
-See `demo_coords` in examples for live demonstration of all kinds of the
-coordinates.

@@ -1,7 +1,7 @@
 // FpsDisplay.h created on 2018-04-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCIKIT_FPSDISPLAY_H
@@ -25,7 +25,7 @@ public:
     void draw(View& view) override;
 
 private:
-    void create_sprite();
+    void create_sprite(View& view);
     void update_texture();
 
 private:
