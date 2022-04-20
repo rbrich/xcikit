@@ -85,7 +85,7 @@ public:
     void update();
 
     // Draw all shapes to `view` at `pos`.
-    // Final shape position is `pos` + shapes's relative position
+    // Final shape position is `pos` + shapes' relative position
     void draw(View& view, VariCoords pos);
 
 private:
@@ -103,6 +103,19 @@ private:
     Shader& m_ellipse_shader;
 };
 
+
+/// Convenience - build shapes in resize() method with any units
+class ShapeBuilder {
+public:
+    ShapeBuilder(View& view, Shape& shape) : m_view(view), m_shape(shape) { m_shape.clear(); }
+    ~ShapeBuilder() { m_shape.update(); }
+
+    ShapeBuilder& add_ellipse(const VariRect& rect, VariUnits outline_thickness = {});
+
+private:
+    View& m_view;
+    Shape& m_shape;
+};
 
 } // namespace xci::graphics
 

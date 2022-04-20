@@ -1,7 +1,7 @@
 // demo_term_dispatch.cpp created on 2019-04-06 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "graphics/common.h"
@@ -121,7 +121,7 @@ int main(int argc, const char* argv[])
 
     Bind bind(window, terminal);
     window.set_refresh_mode(RefreshMode::Periodic);  // FIXME: bell() doesn't work with OnDemand
-    window.set_view_mode(ViewOrigin::TopLeft);
+    window.set_view_origin(ViewOrigin::TopLeft);
     window.display();
 
     dispatch.terminate();

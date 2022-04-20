@@ -30,7 +30,7 @@ void Label::resize(View& view)
     view.finish_draw();
     m_text.resize(view);
     auto rect = m_text.layout().bbox();
-    rect.enlarge(m_padding);
+    rect.enlarge(view.to_fb(m_padding));
     set_size(rect.size());
     set_baseline(-rect.y);
     Widget::resize(view);
@@ -41,7 +41,8 @@ void Label::draw(View& view)
 {
     auto pop_offset = view.push_offset(position());
     auto rect = m_text.layout().bbox();
-    FramebufferCoords pos = {m_padding - rect.x, m_padding - rect.y};
+    const auto padding = view.to_fb(m_padding);
+    FramebufferCoords pos = {padding - rect.x, padding - rect.y};
     m_text.draw(view, pos);
 }
 

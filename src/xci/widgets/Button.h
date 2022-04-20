@@ -39,8 +39,8 @@ public:
 private:
     graphics::Shape m_bg_rect;
     text::Layout m_layout;
-    VariUnits m_padding = 0.02_vp;
-    VariUnits m_outline_thickness = 0.005_vp;
+    VariUnits m_padding = 1_vp;
+    VariUnits m_outline_thickness = 0.25_vp;
 };
 
 

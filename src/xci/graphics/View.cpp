@@ -39,7 +39,7 @@ ScreenPixels VariUnits::screen() const
 ViewportUnits VariUnits::viewport() const
 {
     assert(type() == Viewport);
-    return { float(m_storage ^ 0x40000000) / float(1<<26) };
+    return { float(m_storage ^ 0x40000000) / float(1<<16) };
 }
 
 
@@ -61,7 +61,7 @@ int32_t VariUnits::to_storage(ScreenPixels px)
 
 int32_t VariUnits::to_storage(ViewportUnits vp)
 {
-    const auto r = int32_t(vp.value * float(1<<26));
+    const auto r = int32_t(vp.value * float(1<<16));
     assert((r < 0 ? ~r : r) >> 30 == 0);
     return r ^ 0x40000000;
 }
@@ -94,6 +94,14 @@ std::array<float, 16> View::projection_matrix() const
             0.0f, 0.0f, 1.0f, 0.0f,
             xt,   yt,  0.0f, 1.0f,
     }};
+}
+
+
+void View::set_origin(ViewOrigin origin)
+{
+    assert(m_crop.empty());
+    assert(m_offset.empty());
+    m_origin = origin;
 }
 
 
@@ -153,16 +161,6 @@ FramebufferCoords View::framebuffer_origin() const
     } else {
         return {0, 0};
     }
-}
-
-
-void View::set_viewport_mode(ViewOrigin origin, float scale)
-{
-    assert(m_crop.empty());
-    assert(m_offset.empty());
-    m_origin = origin;
-    m_scale = scale;
-    rescale_viewport();
 }
 
 
@@ -233,11 +231,11 @@ void View::rescale_viewport()
     if (m_screen_size.x < m_screen_size.y) {
         // preserve screen width
         float aspect = float(m_screen_size.y.value) / float(m_screen_size.x.value);
-        m_viewport_size = {m_scale, m_scale * aspect};
+        m_viewport_size = {m_vp_scale, m_vp_scale * aspect};
     } else {
         // preserve screen height
         float aspect = float(m_screen_size.x.value) / float(m_screen_size.y.value);
-        m_viewport_size = {m_scale * aspect, m_scale};
+        m_viewport_size = {m_vp_scale * aspect, m_vp_scale};
     }
 }
 

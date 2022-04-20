@@ -361,8 +361,9 @@ void Page::add_tab()
     // apply generic tabs
     if (x <= m_pen.x) {
         FramebufferPixels tab_size = 8 * space_width();
-        while (x <= m_pen.x)
-            x += tab_size;
+        if (tab_size > 0.f)
+            while (x <= m_pen.x)
+                x += tab_size;
     }
     // move to new position
     m_pen.x = x;

@@ -39,7 +39,7 @@ public:
     void resize(View& view) override;
 
 private:
-    VariCoords m_margin = {0.02_vp, 0.02_vp};
+    VariCoords m_margin = {1_vp, 1_vp};
 
     struct ChildHint {
         size_t child_index;

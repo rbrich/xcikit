@@ -1,7 +1,7 @@
 // demo_rectangles.cpp created on 2018-03-19 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "common.h"
@@ -70,15 +70,15 @@ int main(int argc, const char* argv[])
         }
 
         // Border scaled with viewport size
-        add_shape_fn(shapes[0], view.vp_to_fb({-1.0f, -0.6f, 2.0f, 1.2f}), view.vp_to_fb(0.05f));
-        add_shape_fn(shapes[1], view.vp_to_fb({-0.6f, -0.8f, 1.2f, 1.6f}), view.vp_to_fb(0.02f));
+        add_shape_fn(shapes[0], view.vp_to_fb({-50_vp, -30_vp, 100_vp, 60_vp}), view.vp_to_fb(2.5_vp));
+        add_shape_fn(shapes[1], view.vp_to_fb({-30_vp, -40_vp, 60_vp, 80_vp}), view.vp_to_fb(1_vp));
 
         // Constant border width, in screen pixels
-        add_shape_fn(shapes[2], view.vp_to_fb({0.0f, 0.0f, 0.5f, 0.5f}), view.px_to_fb(1_px));
-        add_shape_fn(shapes[3], view.vp_to_fb({0.1f, 0.1f, 0.5f, 0.5f}), view.px_to_fb(2_px));
-        add_shape_fn(shapes[4], view.vp_to_fb({0.2f, 0.2f, 0.5f, 0.5f}), view.px_to_fb(3_px));
-        add_shape_fn(shapes[5], view.vp_to_fb({0.3f, 0.3f, 0.5f, 0.5f}), view.px_to_fb(4_px));
-        add_shape_fn(shapes[6], view.vp_to_fb({0.4f, 0.4f, 0.5f, 0.5f}), view.px_to_fb(5_px));
+        add_shape_fn(shapes[2], view.vp_to_fb({ 0_vp,  0_vp, 25_vp, 25_vp}), view.px_to_fb(1_px));
+        add_shape_fn(shapes[3], view.vp_to_fb({ 5_vp,  5_vp, 25_vp, 25_vp}), view.px_to_fb(2_px));
+        add_shape_fn(shapes[4], view.vp_to_fb({10_vp, 10_vp, 25_vp, 25_vp}), view.px_to_fb(3_px));
+        add_shape_fn(shapes[5], view.vp_to_fb({15_vp, 15_vp, 25_vp, 25_vp}), view.px_to_fb(4_px));
+        add_shape_fn(shapes[6], view.vp_to_fb({20_vp, 20_vp, 25_vp, 25_vp}), view.px_to_fb(5_px));
 
         for (Shape& shape : shapes)
             shape.update();
@@ -102,7 +102,7 @@ int main(int argc, const char* argv[])
                 break;
             case Key::O:
                 add_shape_fn = [&](Shape& shape, const FramebufferRect& rect, FramebufferPixels th) {
-                    shape.add_rounded_rectangle(rect, view.vp_to_fb(0.05_vp), th);
+                    shape.add_rounded_rectangle(rect, view.vp_to_fb(2.5_vp), th);
                 };
                 break;
             case Key::E:
@@ -148,14 +148,14 @@ int main(int argc, const char* argv[])
 
     window.set_draw_callback([&](View& view) {
         auto vs = view.viewport_size();
-        shapes_help.draw(view, {-vs.x / 2 + 0.1_vp, -vs.y / 2 + 0.1_vp});
-        option_help.draw(view, {vs.x / 2 - 0.5_vp, -vs.y / 2 + 0.1_vp});
+        shapes_help.draw(view, {-vs.x / 2 + 5_vp, -vs.y / 2 + 5_vp});
+        option_help.draw(view, {vs.x / 2 - 25_vp, -vs.y / 2 + 5_vp});
 
         shapes[0].draw(view, {0_vp, 0_vp});
         shapes[1].draw(view, {0_vp, 0_vp});
 
         for (size_t i = 2; i <= 6; i++)
-            shapes[i].draw(view, {-0.45_vp, -0.45_vp});
+            shapes[i].draw(view, {-22.5_vp, -22.5_vp});
     });
 
     window.set_refresh_mode(RefreshMode::OnDemand);

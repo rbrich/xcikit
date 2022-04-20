@@ -1,7 +1,7 @@
 // demo_term_widget.cpp created on 2018-07-19 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "graphics/common.h"
@@ -182,7 +182,7 @@ int main(int argc, const char* argv[])
 
     Bind bind(window, terminal);
     window.set_refresh_mode(RefreshMode::OnDemand);
-    window.set_view_mode(ViewOrigin::TopLeft);
+    window.set_view_origin(ViewOrigin::TopLeft);
     window.display();
     return EXIT_SUCCESS;
 }

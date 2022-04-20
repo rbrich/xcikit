@@ -27,7 +27,7 @@ FpsDisplay::FpsDisplay(Theme& theme)
     m_texture.create({(unsigned)m_fps.resolution(), 1});
 
     // default size in "scalable" units
-    set_size({0.50_vp, 0.10_vp});
+    set_size({25_vp, 5_vp});
 }
 
 

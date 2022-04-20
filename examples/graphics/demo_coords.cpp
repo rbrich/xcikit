@@ -1,7 +1,7 @@
 // demo_coords.cpp created on 2018-03-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "common.h"
@@ -50,7 +50,6 @@ int main(int argc, const char* argv[])
     size_font.set_color(Color(70, 150, 255));
     Text mouse_pos(font, "Mouse position:    ");
     mouse_pos.set_color(Color(255, 150, 50));
-    mouse_pos.set_tab_stops({0.4_vp});
     std::string mouse_pos_str;
 
     Text help_text(font, "Units:     \tOrigin:\n"
@@ -63,7 +62,7 @@ int main(int argc, const char* argv[])
 
     bool scaling = true;
     ViewOrigin view_origin = ViewOrigin::Center;
-    VariUnits font_size = 0.05_vp;
+    VariUnits font_size = 2.5_vp;
 
     window.set_size_callback([&](View& view) {
         auto vs = view.viewport_size();
@@ -87,12 +86,16 @@ int main(int argc, const char* argv[])
             coords_br.set_fixed_string(format("({}, {})", c.x + 0.5f * vs.x, c.y + 0.5f * vs.y));
             coords_tr.set_fixed_string(format("({}, {})", c.x + 0.5f * vs.x, c.y - 0.5f * vs.y));
             coords_bl.set_fixed_string(format("({}, {})", c.x - 0.5f * vs.x, c.y + 0.5f * vs.y));
+            mouse_pos.set_tab_stops({20_vp});
+            help_text.set_tab_stops({20_vp});
         } else {
             auto c = view.screen_center();
             coords_tl.set_fixed_string(format("({}, {})", c.x - 0.5f * ps.x, c.y - 0.5f * ps.y));
             coords_br.set_fixed_string(format("({}, {})", c.x + 0.5f * ps.x, c.y + 0.5f * ps.y));
             coords_tr.set_fixed_string(format("({}, {})", c.x + 0.5f * ps.x, c.y - 0.5f * ps.y));
             coords_bl.set_fixed_string(format("({}, {})", c.x - 0.5f * ps.x, c.y + 0.5f * ps.y));
+            mouse_pos.set_tab_stops({120_px});
+            help_text.set_tab_stops({120_px});
         }
         coords_center.resize(view);
         coords_tl.resize(view);
@@ -123,9 +126,9 @@ int main(int argc, const char* argv[])
 
         unit_square.clear();
         if (view_origin == ViewOrigin::Center)
-            unit_square.add_rectangle(view.vp_to_fb({-1, -1, 2, 2}), view.px_to_fb(1_px));
+            unit_square.add_rectangle(view.vp_to_fb({-50, -50, 100, 100}), view.px_to_fb(1_px));
         else
-            unit_square.add_rectangle(view.vp_to_fb({0, 0, 2, 2}), view.px_to_fb(1_px));
+            unit_square.add_rectangle(view.vp_to_fb({0, 0, 100, 100}), view.px_to_fb(1_px));
         unit_square.update();
     });
 
@@ -143,27 +146,27 @@ int main(int argc, const char* argv[])
             coords_br.draw(view, {vc.x + 0.30f * vs.x, vc.y + 0.45f * vs.y});
             coords_tr.draw(view, {vc.x + 0.30f * vs.x, vc.y - 0.45f * vs.y});
             coords_bl.draw(view, {vc.x - 0.45f * vs.x, vc.y + 0.45f * vs.y});
-            size_scal.draw(view, {vc.x - 0.4f, vc.y - 0.5f});
-            size_screen.draw(view, {vc.x - 0.4f, vc.y - 0.4f});
-            size_frame.draw(view, {vc.x - 0.4f, vc.y - 0.3f});
-            size_font.draw(view, {vc.x - 0.4f, vc.y - 0.2f});
-            mouse_pos.draw(view, {vc.x - 0.4f, vc.y + 0.2f});
-            help_text.draw(view, {vc.x - 0.4f, vc.y + 0.5f});
+            size_scal.draw(view, {vc.x - 20_vp, vc.y - 25_vp});
+            size_screen.draw(view, {vc.x - 20_vp, vc.y - 20_vp});
+            size_frame.draw(view, {vc.x - 20_vp, vc.y - 15_vp});
+            size_font.draw(view, {vc.x - 20_vp, vc.y - 10_vp});
+            mouse_pos.draw(view, {vc.x - 20_vp, vc.y + 10_vp});
+            help_text.draw(view, {vc.x - 20_vp, vc.y + 25_vp});
         } else {
             auto size = view.screen_size();
             auto sc = view.screen_center();
             auto tl = sc - 0.5 * size;
             auto br = sc + 0.5 * size;
-            coords_tl.draw(view, {tl.x + 30, tl.y + 30});
-            coords_br.draw(view, {br.x - 150, br.y - 30});
-            coords_tr.draw(view, {br.x - 150, tl.y + 30});
-            coords_bl.draw(view, {tl.x + 30, br.y - 30});
-            size_scal.draw(view, {sc.x - 120, sc.y - 150});
-            size_screen.draw(view, {sc.x - 120, sc.y - 120});
-            size_frame.draw(view, {sc.x - 120, sc.y - 90});
-            size_font.draw(view, {sc.x - 120, sc.y - 60});
-            mouse_pos.draw(view, {sc.x - 120, sc.y + 60});
-            help_text.draw(view, {sc.x - 120, sc.y + 120});
+            coords_tl.draw(view, {tl.x + 30_px, tl.y + 30_px});
+            coords_br.draw(view, {br.x - 150_px, br.y - 30_px});
+            coords_tr.draw(view, {br.x - 150_px, tl.y + 30_px});
+            coords_bl.draw(view, {tl.x + 30_px, br.y - 30_px});
+            size_scal.draw(view, {sc.x - 120_px, sc.y - 150_px});
+            size_screen.draw(view, {sc.x - 120_px, sc.y - 120_px});
+            size_frame.draw(view, {sc.x - 120_px, sc.y - 90_px});
+            size_font.draw(view, {sc.x - 120_px, sc.y - 60_px});
+            mouse_pos.draw(view, {sc.x - 120_px, sc.y + 60_px});
+            help_text.draw(view, {sc.x - 120_px, sc.y + 120_px});
         }
     });
 
@@ -179,7 +182,7 @@ int main(int argc, const char* argv[])
                 break;
             case Key::S:
                 scaling = true;
-                font_size = 0.05_vp;
+                font_size = 2.5_vp;
                 window.size_callback()(view);
                 view.refresh();
                 break;
@@ -191,13 +194,13 @@ int main(int argc, const char* argv[])
                 break;
             case Key::C:
                 view_origin = ViewOrigin::Center;
-                window.set_view_mode(view_origin);
+                window.set_view_origin(view_origin);
                 window.size_callback()(view);
                 view.refresh();
                 break;
             case Key::T:
                 view_origin = ViewOrigin::TopLeft;
-                window.set_view_mode(view_origin);
+                window.set_view_origin(view_origin);
                 window.size_callback()(view);
                 view.refresh();
                 break;

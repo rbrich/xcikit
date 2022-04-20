@@ -96,7 +96,7 @@ constexpr ViewportUnits operator ""_vp (unsigned long long value) { return {floa
 ///                  - the value is fixed point decimal in 19 dot 10 bits format (+ 1 bit sign)
 /// ViewportUnits    - encoded in range -2147483648 .. 2147483647 (two upper bits are 01 or 10)
 ///                  - xor 0x40000000 to decode original value (30 bits + sign)
-///                  - the value is fixed point decimal in 4 dot 26 bits format (+ 1 bit sign)
+///                  - the value is fixed point decimal in 14 dot 16 bits format (+ 1 bit sign)
 class VariUnits {
 public:
     VariUnits() = default;
@@ -162,6 +162,11 @@ public:
     // ------------------------------------------------------------------------
     // Sizes, coordinates
 
+    /// Set origin of the coordinates (0,0).
+    /// This affects all units (framebuffer, screen, viewport).
+    /// Default: Center
+    void set_origin(ViewOrigin origin);
+
     // Size of the view in screen pixels. This size might be different
     // from framebuffer size - in that case, call also `set_framebuffer_size`.
     bool set_screen_size(ScreenSize size);
@@ -184,13 +189,6 @@ public:
     /// In reverse, subtract from reported (e.g. mouse) underlying coords to translate them to view.
     FramebufferCoords framebuffer_origin() const;
 
-    // Size of the view in "viewport" units. These units are used
-    // for placing objects in the view. Default view size is at least 2 units
-    // in either direction, with center at {0, 0} and aspect correction.
-    // X goes right, Y goes down. Total size in one of the dimensions
-    // will always equal 2.0.
-    // Eg: {2.666, 2.0} for 800x600 (4/3 aspect ratio)
-    void set_viewport_mode(ViewOrigin origin, float scale = 2.0f);
     ViewportSize viewport_size() const { return m_viewport_size; }
     ViewportCoords viewport_center() const;
 
@@ -407,7 +405,7 @@ private:
     ScreenSize m_screen_size;           // eg. {800, 600}
     FramebufferSize m_framebuffer_size; // eg. {1600, 1200}
     ViewOrigin m_origin = ViewOrigin::Center;
-    float m_scale = 2.0f;
+    static constexpr float m_vp_scale = 100.0f;
     DebugFlags m_debug = 0;
     bool m_needs_refresh = true;  // start with dirty state to force first refresh
     std::vector<FramebufferRect> m_crop;  // Crop region stack (current crop region on back)

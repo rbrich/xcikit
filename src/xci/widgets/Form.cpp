@@ -78,7 +78,7 @@ void Form::resize(View& view)
                 case Hint::None:
                     break;
                 case Hint::NextColumn:
-                    pos.x = view.vp_to_fb(0.5f);
+                    pos.x = view.vp_to_fb(25_vp);
                     break;
                 case Hint::NextRow:
                     pos.x = 0;

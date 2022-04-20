@@ -1,7 +1,7 @@
 // demo_vulkan.cpp created on 2019-10-22 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "common.h"
@@ -32,7 +32,7 @@ void generate_checkerboard(Texture& texture)
         }
     texture.write(pixels.data());
 
-    // replace sub-region of the texture
+    // replace subregion of the texture
     for (uint32_t i = 0; i != 50*50; ++i) {
         pixels[i] = 128;
     }
@@ -60,8 +60,6 @@ int main(int argc, const char* argv[])
     Primitives prim {renderer,
                      VertexFormat::V2c4t2, PrimitiveType::TriFans};
 
-
-
     Texture texture{renderer, ColorFormat::Grey};
     texture.create({256, 256});
     generate_checkerboard(texture);
@@ -82,23 +80,23 @@ int main(int argc, const char* argv[])
         prim.clear();
 
         prim.begin_primitive();
-        prim.add_vertex(view.vp_to_fb({-1.0f, -1.0f}), {1.0f, 0.0f, 0.0f}, 0, 0);
-        prim.add_vertex(view.vp_to_fb({-1.0f, 0.0f}), {0.0f, 0.0f, 1.0f}, 0, 0);
-        prim.add_vertex(view.vp_to_fb({0.0f, 0.0f}), {1.0f, 0.0f, 1.0f}, 0, 0);
-        prim.add_vertex(view.vp_to_fb({0.0f, -1.0f}), {1.0f, 1.0f, 0.0f}, 0, 0);
+        prim.add_vertex(view.vp_to_fb({-50_vp, -50_vp}), {1.0f, 0.0f, 0.0f}, 0, 0);
+        prim.add_vertex(view.vp_to_fb({-50_vp, 0_vp}), {0.0f, 0.0f, 1.0f}, 0, 0);
+        prim.add_vertex(view.vp_to_fb({0_vp, 0_vp}),  {1.0f, 0.0f, 1.0f}, 0, 0);
+        prim.add_vertex(view.vp_to_fb({0_vp, -50_vp}), {1.0f, 1.0f, 0.0f}, 0, 0);
         prim.end_primitive();
 
         prim.begin_primitive();
-        prim.add_vertex(view.vp_to_fb({-0.5f, -0.5f}), {1.0f, 0.0f, 0.0f}, 0, 0);
-        prim.add_vertex(view.vp_to_fb({-0.5f, 0.5f}), {0.0f, 1.0f, 0.0f}, 0, 1.0);
-        prim.add_vertex(view.vp_to_fb({0.5f, 0.5f}), {0.0f, 0.0f, 1.0f}, 1.0, 1.0);
-        prim.add_vertex(view.vp_to_fb({0.5f, -0.5f}), {1.0f, 1.0f, 0.0f}, 1.0, 0);
+        prim.add_vertex(view.vp_to_fb({-25_vp, -25_vp}), {1.0f, 0.0f, 0.0f}, 0, 0);
+        prim.add_vertex(view.vp_to_fb({-25_vp, 25_vp}), {0.0f, 1.0f, 0.0f}, 0, 1.0);
+        prim.add_vertex(view.vp_to_fb({25_vp, 25_vp}), {0.0f, 0.0f, 1.0f}, 1.0, 1.0);
+        prim.add_vertex(view.vp_to_fb({25_vp, -25_vp}), {1.0f, 1.0f, 0.0f}, 1.0, 0);
         prim.end_primitive();
 
         prim.update();
 
         shape.clear();
-        shape.add_rectangle(view.vp_to_fb({-0.75, -0.3f, 2.0f, 1.2f}), view.vp_to_fb(0.05f));
+        shape.add_rectangle(view.vp_to_fb({-37.5_vp, -15_vp, 100_vp, 60_vp}), view.vp_to_fb(2.5_vp));
         shape.update();
     });
 

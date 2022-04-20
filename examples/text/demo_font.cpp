@@ -1,7 +1,7 @@
 // demo_font.cpp created on 2018-03-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "graphics/common.h"
@@ -57,7 +57,7 @@ int main(int argc, const char* argv[])
     if (!emoji_font.add_face(vfs, "fonts/Noto/NotoColorEmoji.ttf", 0))
         return EXIT_FAILURE;
 
-    static constexpr ViewportUnits text_font_size = 0.1_vp;
+    static constexpr ViewportUnits text_font_size = 5_vp;
     Text text;
     text.set_markup_string(sample_text);
     text.set_font(font);
@@ -67,7 +67,7 @@ int main(int argc, const char* argv[])
     Text emoji;
     emoji.set_markup_string("🥛🍸🥃🥂🍷🍹⚗️🧂");
     emoji.set_font(emoji_font);
-    emoji.set_font_size(0.2_vp);
+    emoji.set_font_size(10_vp);
 
     static constexpr auto help_color_normal = Color(200, 100, 50);
     static constexpr auto help_color_highlight = Color(255, 170, 120);
@@ -75,7 +75,7 @@ int main(int argc, const char* argv[])
                          "<font><b>[f]</b> font scaling</font><br>"
                          "(Resize window to observe the scaling effect.)", Text::Format::Markup);
     help_text.set_color(help_color_normal);
-    help_text.set_font_size(0.1_vp);
+    help_text.set_font_size(5_vp);
 
     auto help_highlight = [&help_text, &text](const View& view) {
         bool smooth = text.layout().default_style().allow_scale();
@@ -123,7 +123,7 @@ int main(int argc, const char* argv[])
 
     window.set_draw_callback([&](View& view) {
         auto vs = view.viewport_size();
-        ViewportCoords font_pos {-0.5 * vs.x + 0.01_vp, -0.5f * vs.y + 0.01_vp};
+        ViewportCoords font_pos {-0.5f * vs.x + 0.5_vp, -0.5f * vs.y + 0.5_vp};
         rects.draw(view, font_pos);
         font_texture.draw(view, font_pos);
         font_pos.y += view.fb_to_vp(emoji_offset);
@@ -134,9 +134,9 @@ int main(int argc, const char* argv[])
         auto ew = view.fb_to_vp(emoji.layout().bbox().w);
         auto tx = -vs.x * 0.5f + fw  // the font box right edge
                 + (vs.x - fw - ew) / 2;  // half of empty space left around text
-        text.draw(view, {tx, -0.55_vp});
-        emoji.draw(view, {tx, -0.70_vp});
-        help_text.draw(view, {tx, 0.70_vp});
+        text.draw(view, {tx, -27.5_vp});
+        emoji.draw(view, {tx, -35_vp});
+        help_text.draw(view, {tx, 35_vp});
     });
 
     window.set_key_callback([&](View& view, KeyEvent ev) {

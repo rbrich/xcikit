@@ -234,4 +234,14 @@ void Shape::draw(View& view, VariCoords pos)
 }
 
 
+// -----------------------------------------------------------------------------
+
+
+ShapeBuilder& ShapeBuilder::add_ellipse(const VariRect& rect, VariUnits outline_thickness)
+{
+    m_shape.add_ellipse(m_view.to_fb(rect), m_view.to_fb(outline_thickness));
+    return *this;
+}
+
+
 } // namespace xci::graphics

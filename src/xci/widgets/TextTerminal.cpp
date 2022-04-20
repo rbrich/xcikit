@@ -827,7 +827,7 @@ void TextTerminal::resize(View& view)
 
     m_frame.clear();
     m_frame.add_rectangle(FramebufferRect{{0, 0}, size()},
-                          view.vp_to_fb(0.01_vp));
+                          view.vp_to_fb(0.5_vp));
     m_frame.update();
 }
 
@@ -970,11 +970,10 @@ void TextTerminal::update(View& view, State state)
                         glyph = font.get_glyph_for_char(' ');
 
                     auto bearing = FramebufferSize{glyph->bearing()};
-                    auto ascender_vp = FramebufferPixels{ascender};
                     auto glyph_size = FramebufferSize{glyph->size()};
                     term.m_sprites.add_sprite({
                             pen.x + bearing.x,
-                            pen.y + (ascender_vp - bearing.y),
+                            pen.y + (ascender - bearing.y),
                             glyph_size.x,
                             glyph_size.y
                     }, glyph->tex_coords());
@@ -1000,12 +999,11 @@ void TextTerminal::update(View& view, State state)
 
                     const auto& cell_size = term.m_cell_size;
                     auto bearing = FramebufferSize{glyph->bearing()};
-                    auto ascender_vp = FramebufferPixels{ascender};
                     auto glyph_size = FramebufferSize{glyph->size()};
                     const auto scale = cell_size.y / glyph_size.y;
                     term.m_emoji_sprites.add_sprite({
                             pen.x + bearing.x * scale,
-                            pen.y + (ascender_vp - bearing.y * scale),
+                            pen.y + (ascender - bearing.y * scale),
                             glyph_size.x * scale,
                             glyph_size.y * scale
                     }, glyph->tex_coords());
@@ -1022,7 +1020,7 @@ void TextTerminal::update(View& view, State state)
             size_t& column;
             text::Font& font;
             text::Font& emoji_font;
-            float ascender;
+            FramebufferPixels ascender;
             Color8bit m_fg = 7;
             Color8bit m_bg = 0;
             Mode m_mode = Mode::Normal;

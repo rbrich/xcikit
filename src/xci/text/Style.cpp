@@ -16,8 +16,8 @@ using namespace graphics;
 void Style::clear()
 {
     m_font = nullptr;
-    m_size = 0.05_vp;
-    m_outline_radius = 0.0_vp;
+    m_size = 2.5_vp;
+    m_outline_radius = 0_fb;
     m_color = graphics::Color::White();
     m_outline_color = graphics::Color::Transparent();
     m_font_style = FontStyle::Regular;

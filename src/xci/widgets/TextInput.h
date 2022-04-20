@@ -15,6 +15,7 @@
 namespace xci::widgets {
 
 using xci::graphics::VariUnits;
+using xci::graphics::FramebufferPixels;
 using namespace xci::graphics::unit_literals;
 
 
@@ -49,10 +50,10 @@ private:
     text::Layout m_layout;
     graphics::Shape m_bg_rect;
     graphics::Shape m_cursor_shape;
-    VariUnits m_width = 0.4_vp;
-    VariUnits m_padding = 0.02_vp;
-    VariUnits m_outline_thickness = 0.005_vp;
-    graphics::FramebufferPixels m_content_pos = 0;
+    VariUnits m_width = 20_vp;
+    VariUnits m_padding = 1_vp;
+    VariUnits m_outline_thickness = 0.25_vp;
+    FramebufferPixels m_content_pos = 0;
     ChangeCallback m_change_cb;
     bool m_draw_cursor = false;
 };

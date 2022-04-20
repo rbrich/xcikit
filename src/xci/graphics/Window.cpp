@@ -189,9 +189,9 @@ void Window::set_refresh_timeout(std::chrono::microseconds timeout,
 }
 
 
-void Window::set_view_mode(ViewOrigin origin, float scale)
+void Window::set_view_origin(ViewOrigin origin)
 {
-    m_view.set_viewport_mode(origin, scale);
+    m_view.set_origin(origin);
 }
 
 

@@ -76,8 +76,8 @@ public:
 
 private:
     Font* m_font = nullptr;
-    VariUnits m_size = 0.05_vp;  // requested font height
-    VariUnits m_outline_radius = 0.0_vp;  // requested outline radius
+    VariUnits m_size = 2.5_vp;  // requested font height
+    VariUnits m_outline_radius = 0_fb;  // requested outline radius
     graphics::Color m_color = graphics::Color::White();
     graphics::Color m_outline_color = graphics::Color::Transparent();
     FontStyle m_font_style = FontStyle::Regular;
