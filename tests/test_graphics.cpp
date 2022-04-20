@@ -61,9 +61,9 @@ TEST_CASE( "Variant units", "[VariUnits]" )
 
     // Limits (overflow is asserted, UB in release)
     CHECK( VariUnits(524287.95_fb).raw_storage() == 0x1fffffc0 );
-    CHECK( VariUnits(-524287.95_fb).raw_storage() == -0x1fffffc0 );
+    CHECK( VariUnits(-524287.99_fb).raw_storage() == -0x20000000 );
     CHECK( VariUnits(524287.95_px).raw_storage() == 0x3fffffc0 );
-    CHECK( VariUnits(-524287.95_px).raw_storage() == -0x3fffffc0 );
-    CHECK( VariUnits(15.9999995_vp).raw_storage() == 0x7fffffc0 );
-    CHECK( VariUnits(-15.9999999_vp).raw_storage() == int32_t(-0x80000000) );
+    CHECK( VariUnits(-524287.99_px).raw_storage() == -0x40000000 );
+    CHECK( VariUnits(16383.9995_vp).raw_storage() == 0x7fffffc0 );
+    CHECK( VariUnits(-16383.9999_vp).raw_storage() == int32_t(-0x80000000) );
 }

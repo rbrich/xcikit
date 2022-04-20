@@ -68,7 +68,7 @@ compared to standard mathematical notation:
 To adjust the 2D view without touching Z coordinate, we can adjust
 some of the fields:
 
-- Change `ax`, `by` to scale the view, eg. set both to 0.5 to resize
+- Change `ax`, `by` to scale the view, e.g. set both to 0.5 to resize
   the view to (-2.0, 2.0) in both axes. Or, if we'd consider the model
   being rendered, this will scale it to half size.
 
@@ -123,28 +123,29 @@ coordinates.
 ### Viewport units
 
 These units are based on uniform projection matrix - the default Vulkan coordinates.
-The only modification is aspect ratio correction:
+The two modifications are scale and aspect ratio correction:
 
-- One of the X/Y axes is expanded, so the visible coordinates go beyond -1/1.
+- The basic unit is 1% of viewport size.
+- One of the X/Y axes is expanded, so the visible coordinates go beyond -50..50.
 
 Note: We no longer need to flip Y coordinate as we did in OpenGL.
 Vulkan Y coordinate is well suited for drawing text or widgets, because
 we usually write from top to bottom.
 
-The diagram shows that the square of (-1,-1) .. (1,1) is always completely
+The diagram shows that the square of (-50,-50) .. (50,50) is always completely
 covered by the view. Depending on actual ratio of width and height,
 it is expanded either horizontally or vertically.
 
-    horizontal+           vertical+
-    +---+-------+---+     +---------+
-    |   |       |   |     |    +    |
-    | + |  2x2  | + |     +---------+
-    |   |       |   |     |         |
-    +---+-------+---+     |   2x2   |
-                          |         |
-                          +---------+
-                          |    +    |
-                          +---------+
+    horizontal+             vertical+
+    +---+---------+---+     +---------+
+    |   |         |   |     |    +    |
+    | + | 100x100 | + |     +---------+
+    |   |         |   |     |         |
+    +---+---------+---+     | 100x100 |
+                            |         |
+                            +---------+
+                            |    +    |
+                            +---------+
 
 Same as with Vulkan coordinates, origin (0,0) is in the center of the screen.
 
