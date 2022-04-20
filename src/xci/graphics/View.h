@@ -189,7 +189,19 @@ public:
     /// In reverse, subtract from reported (e.g. mouse) underlying coords to translate them to view.
     FramebufferCoords framebuffer_origin() const;
 
+    /// The viewport units are based on smaller viewport dimension.
+    /// One unit is by default 1% of the viewport. The default scale is 100.
+    /// Using this method, the scale can be changed to dynamically enlarge/shrink
+    /// the whole UI, when it's based on the viewport units.
+    void set_viewport_scale(float scale);
+    float viewport_scale() const { return m_vp_scale; }
+
+    /// Viewport size in viewport units.
+    /// E.g: {133.33, 100.0} for 800x600 (4/3 aspect ratio)
     ViewportSize viewport_size() const { return m_viewport_size; }
+
+    /// Coordinates of viewport center in viewport units.
+    /// By default {0, 0}. With TopLeft origin, it will be e.g. {66.66, 50}
     ViewportCoords viewport_center() const;
 
     // Convert units to framebuffer / screen:
@@ -405,7 +417,7 @@ private:
     ScreenSize m_screen_size;           // eg. {800, 600}
     FramebufferSize m_framebuffer_size; // eg. {1600, 1200}
     ViewOrigin m_origin = ViewOrigin::Center;
-    static constexpr float m_vp_scale = 100.0f;
+    float m_vp_scale = 100.0f;
     DebugFlags m_debug = 0;
     bool m_needs_refresh = true;  // start with dirty state to force first refresh
     std::vector<FramebufferRect> m_crop;  // Crop region stack (current crop region on back)

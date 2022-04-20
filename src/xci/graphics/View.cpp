@@ -164,6 +164,13 @@ FramebufferCoords View::framebuffer_origin() const
 }
 
 
+void View::set_viewport_scale(float scale)
+{
+    m_vp_scale = scale;
+    rescale_viewport();
+}
+
+
 ViewportCoords View::viewport_center() const
 {
     if (m_origin == ViewOrigin::TopLeft) {
