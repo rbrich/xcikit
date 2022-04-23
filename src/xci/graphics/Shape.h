@@ -110,7 +110,12 @@ public:
     ShapeBuilder(View& view, Shape& shape) : m_view(view), m_shape(shape) { m_shape.clear(); }
     ~ShapeBuilder() { m_shape.update(); }
 
+    ShapeBuilder& add_line_slice(const VariRect& slice, VariCoords a, VariCoords b, VariUnits thickness);
+    ShapeBuilder& add_rectangle(const VariRect& rect, VariUnits outline_thickness = {});
+    ShapeBuilder& add_rectangle_slice(const VariRect& slice, const VariRect& rect, VariUnits outline_thickness = {});
     ShapeBuilder& add_ellipse(const VariRect& rect, VariUnits outline_thickness = {});
+    ShapeBuilder& add_ellipse_slice(const VariRect& slice, const VariRect& ellipse, VariUnits outline_thickness = {});
+    ShapeBuilder& add_rounded_rectangle(const VariRect& rect, VariUnits radius, VariUnits outline_thickness = {});
 
 private:
     View& m_view;

@@ -56,11 +56,11 @@ int main(int argc, const char* argv[])
 
         // Constant border width, in screen pixels
         ShapeBuilder(view, rts_px)
-            .add_ellipse({ 0_vp,  0_vp, 25_vp, 25_vp}, view.px_to_fb(1_px))
-            .add_ellipse({ 5_vp,  5_vp, 25_vp, 25_vp}, view.px_to_fb(2_px))
-            .add_ellipse({10_vp, 10_vp, 25_vp, 25_vp}, view.px_to_fb(3_px))
-            .add_ellipse({15_vp, 15_vp, 25_vp, 25_vp}, view.px_to_fb(4_px))
-            .add_ellipse({20_vp, 20_vp, 25_vp, 25_vp}, view.px_to_fb(5_px));
+            .add_ellipse({ 0_vp,  0_vp, 25_vp, 25_vp}, 1_px)
+            .add_ellipse({ 5_vp,  5_vp, 25_vp, 25_vp}, 2_px)
+            .add_ellipse({10_vp, 10_vp, 25_vp, 25_vp}, 3_px)
+            .add_ellipse({15_vp, 15_vp, 25_vp, 25_vp}, 4_px)
+            .add_ellipse({20_vp, 20_vp, 25_vp, 25_vp}, 5_px);
 
         fps_display.resize(view);
         help_text.resize(view);

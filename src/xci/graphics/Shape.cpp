@@ -237,9 +237,44 @@ void Shape::draw(View& view, VariCoords pos)
 // -----------------------------------------------------------------------------
 
 
+ShapeBuilder& ShapeBuilder::add_line_slice(const VariRect& slice, VariCoords a, VariCoords b, VariUnits thickness)
+{
+    m_shape.add_line_slice(m_view.to_fb(slice), m_view.to_fb(a), m_view.to_fb(b), m_view.to_fb(thickness));
+    return *this;
+}
+
+
+ShapeBuilder& ShapeBuilder::add_rectangle(const VariRect& rect, VariUnits outline_thickness)
+{
+    m_shape.add_rectangle(m_view.to_fb(rect), m_view.to_fb(outline_thickness));
+    return *this;
+}
+
+
+ShapeBuilder& ShapeBuilder::add_rectangle_slice(const VariRect& slice, const VariRect& rect, VariUnits outline_thickness)
+{
+    m_shape.add_rectangle_slice(m_view.to_fb(slice), m_view.to_fb(rect), m_view.to_fb(outline_thickness));
+    return *this;
+}
+
+
 ShapeBuilder& ShapeBuilder::add_ellipse(const VariRect& rect, VariUnits outline_thickness)
 {
     m_shape.add_ellipse(m_view.to_fb(rect), m_view.to_fb(outline_thickness));
+    return *this;
+}
+
+
+ShapeBuilder& ShapeBuilder::add_ellipse_slice(const VariRect& slice, const VariRect& ellipse, VariUnits outline_thickness)
+{
+    m_shape.add_ellipse_slice(m_view.to_fb(slice), m_view.to_fb(ellipse), m_view.to_fb(outline_thickness));
+    return *this;
+}
+
+
+ShapeBuilder& ShapeBuilder::add_rounded_rectangle(const VariRect& rect, VariUnits radius, VariUnits outline_thickness)
+{
+    m_shape.add_rounded_rectangle(m_view.to_fb(rect), m_view.to_fb(radius), m_view.to_fb(outline_thickness));
     return *this;
 }
 
