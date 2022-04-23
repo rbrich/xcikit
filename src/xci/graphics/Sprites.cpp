@@ -1,7 +1,7 @@
 // Sprites.cpp created on 2018-03-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Sprites.h"
@@ -26,7 +26,7 @@ void Sprites::reserve(size_t num)
 }
 
 
-void Sprites::add_sprite(const ViewportRect& rect)
+void Sprites::add_sprite(const FramebufferRect& rect)
 {
     auto ts = m_texture.size();
     add_sprite(rect, {0, 0, ts.x, ts.y});
@@ -34,7 +34,7 @@ void Sprites::add_sprite(const ViewportRect& rect)
 
 
 // Position a sprite with cutoff from the texture
-void Sprites::add_sprite(const ViewportRect& rect, const Rect_u& texrect)
+void Sprites::add_sprite(const FramebufferRect& rect, const Rect_u& texrect)
 {
     auto x1 = rect.x;
     auto y1 = rect.y;
@@ -65,7 +65,7 @@ void Sprites::update()
 }
 
 
-void Sprites::draw(View& view, const ViewportCoords& pos)
+void Sprites::draw(View& view, VariCoords pos)
 {
     m_quads.draw(view, pos);
 }
@@ -88,7 +88,7 @@ void ColoredSprites::reserve(size_t num)
 }
 
 
-void ColoredSprites::add_sprite(const ViewportRect& rect)
+void ColoredSprites::add_sprite(const FramebufferRect& rect)
 {
     auto ts = m_texture.size();
     add_sprite(rect, {0, 0, ts.x, ts.y});
@@ -96,7 +96,7 @@ void ColoredSprites::add_sprite(const ViewportRect& rect)
 
 
 // Position a sprite with cutoff from the texture
-void ColoredSprites::add_sprite(const ViewportRect& rect, const Rect_u& texrect)
+void ColoredSprites::add_sprite(const FramebufferRect& rect, const Rect_u& texrect)
 {
     auto x1 = rect.x;
     auto y1 = rect.y;
@@ -126,7 +126,7 @@ void ColoredSprites::update()
 }
 
 
-void ColoredSprites::draw(View& view, const ViewportCoords& pos)
+void ColoredSprites::draw(View& view, VariCoords pos)
 {
     m_quads.draw(view, pos);
 }

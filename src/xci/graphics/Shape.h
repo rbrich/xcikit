@@ -1,7 +1,7 @@
 // Shape.h created on 2018-04-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_SHAPES_H
@@ -45,35 +45,35 @@ public:
     //   ---- a --- b ----
     //                    > thickness
     //   -----------------
-    void add_line_slice(const ViewportRect& slice,
-                        const ViewportCoords& a, const ViewportCoords& b,
-                        ViewportUnits thickness);
+    void add_line_slice(const FramebufferRect& slice,
+                        FramebufferCoords a, FramebufferCoords b,
+                        FramebufferPixels thickness);
 
     // Add new rectangle.
     // `rect`              - rectangle position and size
     // `outline_thickness` - the outline actually goes from edge to inside
-    //                       this parameter defines how far (in viewport units)
-    void add_rectangle(const ViewportRect& rect,
-                       ViewportUnits outline_thickness = 0);
-    void add_rectangle_slice(const ViewportRect& slice, const ViewportRect& rect,
-                             ViewportUnits outline_thickness = 0);
+    //                       this parameter defines how far (in framebuffer pixels)
+    void add_rectangle(const FramebufferRect& rect,
+                       FramebufferPixels outline_thickness = 0);
+    void add_rectangle_slice(const FramebufferRect& slice, const FramebufferRect& rect,
+                             FramebufferPixels outline_thickness = 0);
 
     // Add new ellipse.
     // `rect`              - ellipse position and size
     // `outline_thickness` - the outline actually goes from edge to inside
-    //                       this parameter defines how far (in display units)
-    void add_ellipse(const ViewportRect& rect,
-                     ViewportUnits outline_thickness = 0);
-    void add_ellipse_slice(const ViewportRect& slice, const ViewportRect& ellipse,
-                           ViewportUnits outline_thickness = 0);
+    //                       this parameter defines how far (in framebuffer pixels)
+    void add_ellipse(const FramebufferRect& rect,
+                     FramebufferPixels outline_thickness = 0);
+    void add_ellipse_slice(const FramebufferRect& slice, const FramebufferRect& ellipse,
+                           FramebufferPixels outline_thickness = 0);
 
     // Add new rounded rectangle.
     // `rect`              - position and size
     // `radius`            - corner radius
     // `outline_thickness` - the outline actually goes from edge to inside
     //                       this parameter defines how far (in display units)
-    void add_rounded_rectangle(const ViewportRect& rect, ViewportUnits radius,
-                               ViewportUnits outline_thickness = 0);
+    void add_rounded_rectangle(const FramebufferRect& rect, FramebufferPixels radius,
+                               FramebufferPixels outline_thickness = 0);
 
     // Reserve memory for a number of `lines`, `rectangles`, `ellipses`.
     void reserve(size_t lines, size_t rectangles, size_t ellipses);
@@ -85,8 +85,8 @@ public:
     void update();
 
     // Draw all shapes to `view` at `pos`.
-    // Final shape position is `pos` + shapes's relative position
-    void draw(View& view, const ViewportCoords& pos);
+    // Final shape position is `pos` + shapes' relative position
+    void draw(View& view, VariCoords pos);
 
 private:
     Color m_fill_color;
@@ -103,6 +103,24 @@ private:
     Shader& m_ellipse_shader;
 };
 
+
+/// Convenience - build shapes in resize() method with any units
+class ShapeBuilder {
+public:
+    ShapeBuilder(View& view, Shape& shape) : m_view(view), m_shape(shape) { m_shape.clear(); }
+    ~ShapeBuilder() { m_shape.update(); }
+
+    ShapeBuilder& add_line_slice(const VariRect& slice, VariCoords a, VariCoords b, VariUnits thickness);
+    ShapeBuilder& add_rectangle(const VariRect& rect, VariUnits outline_thickness = {});
+    ShapeBuilder& add_rectangle_slice(const VariRect& slice, const VariRect& rect, VariUnits outline_thickness = {});
+    ShapeBuilder& add_ellipse(const VariRect& rect, VariUnits outline_thickness = {});
+    ShapeBuilder& add_ellipse_slice(const VariRect& slice, const VariRect& ellipse, VariUnits outline_thickness = {});
+    ShapeBuilder& add_rounded_rectangle(const VariRect& rect, VariUnits radius, VariUnits outline_thickness = {});
+
+private:
+    View& m_view;
+    Shape& m_shape;
+};
 
 } // namespace xci::graphics
 

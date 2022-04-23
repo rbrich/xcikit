@@ -1,7 +1,7 @@
 // Icon.cpp created on 2018-04-10 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Icon.h"
@@ -28,7 +28,7 @@ void Icon::set_text(const std::string& text)
 }
 
 
-void Icon::set_font_size(float size)
+void Icon::set_font_size(graphics::VariUnits size)
 {
     m_layout.set_default_font_size(size);
     m_needs_refresh = true;
@@ -56,7 +56,7 @@ void Icon::resize(View& view)
         m_layout.clear();
         m_layout.set_font(&theme().icon_font());
         m_layout.begin_span("icon");
-        m_layout.set_offset({0_vp, 0.125f * m_layout.default_style().size()});
+        m_layout.set_offset({0_fb, 0.125f * view.to_fb(m_layout.default_style().size())});
         m_layout.add_word(to_utf8(theme().icon_codepoint(m_icon_id)));
         m_layout.end_span("icon");
         m_layout.reset_offset();
@@ -70,6 +70,7 @@ void Icon::resize(View& view)
     auto rect = m_layout.bbox();
     set_size(rect.size());
     set_baseline(-rect.y);
+    Widget::resize(view);
 }
 
 

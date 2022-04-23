@@ -1,7 +1,7 @@
 // demo_term_widget.cpp created on 2018-07-19 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "graphics/common.h"
@@ -40,7 +40,7 @@ int main(int argc, const char* argv[])
 
     TextTerminal terminal {theme};
     terminal.set_size_in_cells({100, 50});
-    terminal.set_font_size(18.f);
+    terminal.set_font_size(18_px);
     terminal.add_text(prompt);
     terminal.set_font_style(TextTerminal::FontStyle::Bold);
     terminal.add_text(std::string(cmd) + "\n");
@@ -141,13 +141,14 @@ int main(int argc, const char* argv[])
     terminal.set_font_style(TextTerminal::FontStyle::BoldItalic);
     terminal.add_text("BoldItalic\n");
 
-    terminal.set_position({5, 0});
+    terminal.set_position({5_px, 0_px});
 
     // Make the terminal fullscreen
-    window.set_size_callback([&](View& v) {
-        auto vs = v.viewport_size();
-        vs.x -= 10_vp;
+    window.set_size_callback([&](View& view) {
+        auto vs = view.screen_size();
+        vs.x -= 10_px;
         terminal.set_size(vs);
+        view.refresh();
     });
 
     window.set_key_callback([&](View& view, const KeyEvent& ev) {
@@ -181,7 +182,7 @@ int main(int argc, const char* argv[])
 
     Bind bind(window, terminal);
     window.set_refresh_mode(RefreshMode::OnDemand);
-    window.set_view_mode(ViewOrigin::TopLeft, ViewScale::FixedScreenPixels);
+    window.set_view_origin(ViewOrigin::TopLeft);
     window.display();
     return EXIT_SUCCESS;
 }

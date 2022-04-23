@@ -1,7 +1,7 @@
 // demo_rectangles.cpp created on 2018-03-19 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "common.h"
@@ -44,8 +44,8 @@ int main(int argc, const char* argv[])
     int antialiasing = 0;
     int softness = 0;
 
-    std::function<void(Shape&, const ViewportRect&, ViewportUnits)>
-    add_shape_fn = [](Shape& shape, const ViewportRect& rect, ViewportUnits th) {
+    std::function add_shape_fn = [](Shape& shape, const FramebufferRect& rect, FramebufferPixels th)
+    {
         shape.add_rectangle(rect, th);
     };
 
@@ -61,6 +61,29 @@ int main(int argc, const char* argv[])
         shape.set_softness(softness);
     };
 
+    auto recreate_shapes = [&](View& view) {
+        view.finish_draw();
+
+        for (Shape& shape : shapes) {
+            shape.clear();
+            set_shape_attr(shape);
+        }
+
+        // Border scaled with viewport size
+        add_shape_fn(shapes[0], view.vp_to_fb({-50_vp, -30_vp, 100_vp, 60_vp}), view.vp_to_fb(2.5_vp));
+        add_shape_fn(shapes[1], view.vp_to_fb({-30_vp, -40_vp, 60_vp, 80_vp}), view.vp_to_fb(1_vp));
+
+        // Constant border width, in screen pixels
+        add_shape_fn(shapes[2], view.vp_to_fb({ 0_vp,  0_vp, 25_vp, 25_vp}), view.px_to_fb(1_px));
+        add_shape_fn(shapes[3], view.vp_to_fb({ 5_vp,  5_vp, 25_vp, 25_vp}), view.px_to_fb(2_px));
+        add_shape_fn(shapes[4], view.vp_to_fb({10_vp, 10_vp, 25_vp, 25_vp}), view.px_to_fb(3_px));
+        add_shape_fn(shapes[5], view.vp_to_fb({15_vp, 15_vp, 25_vp, 25_vp}), view.px_to_fb(4_px));
+        add_shape_fn(shapes[6], view.vp_to_fb({20_vp, 20_vp, 25_vp, 25_vp}), view.px_to_fb(5_px));
+
+        for (Shape& shape : shapes)
+            shape.update();
+    };
+
     window.set_key_callback([&](View& view, KeyEvent ev){
         if (ev.action != Action::Press)
             return;
@@ -68,26 +91,27 @@ int main(int argc, const char* argv[])
             case Key::Escape:
                 window.close();
                 break;
+            case Key::F:
             case Key::F11:
                 window.toggle_fullscreen();
                 break;
             case Key::R:
-                add_shape_fn = [](Shape& shape, const ViewportRect& rect, ViewportUnits th) {
+                add_shape_fn = [](Shape& shape, const FramebufferRect& rect, FramebufferPixels th) {
                     shape.add_rectangle(rect, th);
                 };
                 break;
             case Key::O:
-                add_shape_fn = [](Shape& shape, const ViewportRect& rect, ViewportUnits th) {
-                    shape.add_rounded_rectangle(rect, 0.05f, th);
+                add_shape_fn = [&](Shape& shape, const FramebufferRect& rect, FramebufferPixels th) {
+                    shape.add_rounded_rectangle(rect, view.vp_to_fb(2.5_vp), th);
                 };
                 break;
             case Key::E:
-                add_shape_fn = [](Shape& shape, const ViewportRect& rect, ViewportUnits th) {
+                add_shape_fn = [](Shape& shape, const FramebufferRect& rect, FramebufferPixels th) {
                     shape.add_ellipse(rect, th);
                 };
                 break;
             case Key::L:
-                add_shape_fn = [](Shape& shape, const ViewportRect& rect, ViewportUnits th) {
+                add_shape_fn = [](Shape& shape, const FramebufferRect& rect, FramebufferPixels th) {
                     auto l = rect.left();
                     auto t = rect.top();
                     auto r = rect.right();
@@ -110,50 +134,28 @@ int main(int argc, const char* argv[])
                 softness = (softness == 0) ? 1 : 0;
                 break;
             default:
-                break;
+                return;
         }
+        recreate_shapes(view);
         view.refresh();
     });
 
     window.set_size_callback([&](View& view) {
         shapes_help.resize(view);
         option_help.resize(view);
-    });
-
-    window.set_update_callback([&](View& view, std::chrono::nanoseconds) {
-        shapes_help.update(view);
-        option_help.update(view);
-
-        for (Shape& shape : shapes) {
-            shape.clear();
-            set_shape_attr(shape);
-        }
-
-        // Border scaled with viewport size
-        add_shape_fn(shapes[0], {-1.0f, -0.6f, 2.0f, 1.2f}, 0.05f);
-        add_shape_fn(shapes[1], {-0.6f, -0.8f, 1.2f, 1.6f}, 0.02f);
-
-        // Constant border width, in screen pixels
-        add_shape_fn(shapes[2], {0.0f, 0.0f, 0.5f, 0.5f}, view.size_to_viewport(1_sc));
-        add_shape_fn(shapes[3], {0.1f, 0.1f, 0.5f, 0.5f}, view.size_to_viewport(2_sc));
-        add_shape_fn(shapes[4], {0.2f, 0.2f, 0.5f, 0.5f}, view.size_to_viewport(3_sc));
-        add_shape_fn(shapes[5], {0.3f, 0.3f, 0.5f, 0.5f}, view.size_to_viewport(4_sc));
-        add_shape_fn(shapes[6], {0.4f, 0.4f, 0.5f, 0.5f}, view.size_to_viewport(5_sc));
-
-        for (Shape& shape : shapes)
-            shape.update();
+        recreate_shapes(view);
     });
 
     window.set_draw_callback([&](View& view) {
         auto vs = view.viewport_size();
-        shapes_help.draw(view, {-vs.x / 2 + 0.1f, -vs.y / 2 + 0.1f});
-        option_help.draw(view, {vs.x / 2 - 0.5f, -vs.y / 2 + 0.1f});
+        shapes_help.draw(view, {-vs.x / 2 + 5_vp, -vs.y / 2 + 5_vp});
+        option_help.draw(view, {vs.x / 2 - 25_vp, -vs.y / 2 + 5_vp});
 
-        shapes[0].draw(view, {0, 0});
-        shapes[1].draw(view, {0, 0});
+        shapes[0].draw(view, {0_vp, 0_vp});
+        shapes[1].draw(view, {0_vp, 0_vp});
 
         for (size_t i = 2; i <= 6; i++)
-            shapes[i].draw(view, {-0.45f, -0.45f});
+            shapes[i].draw(view, {-22.5_vp, -22.5_vp});
     });
 
     window.set_refresh_mode(RefreshMode::OnDemand);

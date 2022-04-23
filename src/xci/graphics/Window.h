@@ -1,7 +1,7 @@
 // Window.h created on 2018-03-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_WINDOW_H
@@ -121,13 +121,13 @@ struct CharEvent {
 enum class MouseButton { Left = 0, Right = 1, Middle = 2 };
 
 struct MousePosEvent {
-    ViewportCoords pos;
+    FramebufferCoords pos;
 };
 
 struct MouseBtnEvent {
     MouseButton button;
     Action action;
-    ViewportCoords pos;
+    FramebufferCoords pos;
 };
 
 
@@ -212,6 +212,7 @@ public:
     // - OnEvent is similar, but does not require explicit calls to View::refresh()
     // - Periodic is good for games (continuous animations)
     void set_refresh_mode(RefreshMode mode)  { m_refresh_mode = mode; }
+    RefreshMode refresh_mode() const { return m_refresh_mode; }
 
     /// Set refresh timeout. This is useful for OnDemand/OnEvent modes,
     /// where no update events are generated unless an event occurs.
@@ -222,11 +223,10 @@ public:
     ///                     True = periodic (no clear).
     void set_refresh_timeout(std::chrono::microseconds timeout, bool periodic);
 
-    /// Select kind of viewport units to be used throughout the program
-    /// for all placing and sizes of elements in view.
+    /// Set origin of the coordinates to be used throughout the program
+    /// for all placing elements in the view.
     /// \param origin       The position of (0,0) coordinates. Default is Center.
-    /// \param scale        The scale of the units. Default is ScalingWithAspectCorrection.
-    void set_view_mode(ViewOrigin origin, ViewScale scale);
+    void set_view_origin(ViewOrigin origin);
 
     void set_debug_flags(View::DebugFlags flags);
 

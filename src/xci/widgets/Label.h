@@ -1,7 +1,7 @@
 // Label.h created on 2018-06-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCIKIT_LABEL_H
@@ -11,6 +11,8 @@
 #include <xci/text/Text.h>
 
 namespace xci::widgets {
+
+using namespace xci::graphics::unit_literals;
 
 
 class Label: public Widget {
@@ -25,7 +27,7 @@ public:
 
 private:
     text::Text m_text;
-    float m_padding = 0.02f;
+    VariUnits m_padding = 1_vp;
 };
 
 

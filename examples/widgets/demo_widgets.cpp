@@ -1,7 +1,7 @@
 // demo_widget.cpp created on 2018-03-20 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "graphics/common.h"
@@ -33,19 +33,19 @@ int main(int argc, const char* argv[])
         return EXIT_FAILURE;
 
     Button button_default(theme, "Default button");
-    button_default.set_position({0, -0.2f});
+    button_default.set_position({0_vp, -10_vp});
 
     Button button_styled(theme, "Styled button");
-    button_styled.set_font_size(0.07f);
-    button_styled.set_padding(0.05f);
+    button_styled.set_font_size(3.5_vp);
+    button_styled.set_padding(2.5_vp);
     button_styled.set_decoration_color(Color(10, 20, 100), Color(20, 50, 150));
     button_styled.set_text_color(Color(255, 255, 50));
 
     Icon checkbox(theme);
-    checkbox.set_position({0, 0.4f});
+    checkbox.set_position({0_vp, 20_vp});
     checkbox.set_icon(IconId::CheckBoxChecked);
     checkbox.set_text("Checkbox");
-    checkbox.set_font_size(0.08f);
+    checkbox.set_font_size(4_vp);
     checkbox.set_color(Color(150, 200, 200));
     bool checkbox_state = true;
     bool checkbox_active = false;
@@ -55,7 +55,7 @@ int main(int argc, const char* argv[])
         //view.set_debug_flag(View::Debug::WordBasePoint);
         //view.set_debug_flag(View::Debug::PageBBox);
         button_default.resize(view);
-        button_styled.set_outline_thickness(view.size_to_viewport(1_sc));
+        button_styled.set_outline_thickness(1_px);
         button_styled.resize(view);
         checkbox.resize(view);
     });

@@ -1,7 +1,7 @@
 // demo_font.cpp created on 2018-03-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "graphics/common.h"
@@ -57,7 +57,7 @@ int main(int argc, const char* argv[])
     if (!emoji_font.add_face(vfs, "fonts/Noto/NotoColorEmoji.ttf", 0))
         return EXIT_FAILURE;
 
-    static constexpr float text_font_size = 0.1f;
+    static constexpr ViewportUnits text_font_size = 5_vp;
     Text text;
     text.set_markup_string(sample_text);
     text.set_font(font);
@@ -67,7 +67,7 @@ int main(int argc, const char* argv[])
     Text emoji;
     emoji.set_markup_string("🥛🍸🥃🥂🍷🍹⚗️🧂");
     emoji.set_font(emoji_font);
-    emoji.set_font_size(0.2f);
+    emoji.set_font_size(10_vp);
 
     static constexpr auto help_color_normal = Color(200, 100, 50);
     static constexpr auto help_color_highlight = Color(255, 170, 120);
@@ -75,7 +75,7 @@ int main(int argc, const char* argv[])
                          "<font><b>[f]</b> font scaling</font><br>"
                          "(Resize window to observe the scaling effect.)", Text::Format::Markup);
     help_text.set_color(help_color_normal);
-    help_text.set_font_size(0.1f);
+    help_text.set_font_size(5_vp);
 
     auto help_highlight = [&help_text, &text](const View& view) {
         bool smooth = text.layout().default_style().allow_scale();
@@ -94,7 +94,7 @@ int main(int argc, const char* argv[])
     Shape rects(renderer, Color::Transparent(),
             Color(0.7, 0.7, 0.7));
 
-    ViewportUnits emoji_offset = 0.f;
+    FramebufferPixels emoji_offset = 0.f;
 
     window.set_size_callback([&](View& view) {
         text.resize(view);
@@ -102,8 +102,8 @@ int main(int argc, const char* argv[])
         help_text.resize(view);
         help_highlight(view);
 
-        auto tex_size = view.size_to_viewport(FramebufferSize{font.texture().size()});
-        ViewportRect rect = {0, 0, tex_size.x, tex_size.y};
+        auto tex_size = FramebufferSize{font.texture().size()};
+        FramebufferRect rect = {0, 0, tex_size.x, tex_size.y};
         emoji_offset = rect.size().y + 0.04f;
 
         font_texture.clear();
@@ -116,26 +116,27 @@ int main(int argc, const char* argv[])
 
         auto enl_rect = rect.enlarged(0.01f);
         rects.clear();
-        rects.add_rectangle(enl_rect, view.size_to_viewport(1_sc));
-        rects.add_rectangle(enl_rect.moved({0, emoji_offset}), view.size_to_viewport(1_sc));
+        rects.add_rectangle(enl_rect, view.px_to_fb(1_px));
+        rects.add_rectangle(enl_rect.moved({0, emoji_offset}), view.px_to_fb(1_px));
         rects.update();
     });
 
     window.set_draw_callback([&](View& view) {
         auto vs = view.viewport_size();
-        ViewportCoords font_pos {-0.5f * vs.x + 0.01f, -0.5f * vs.y + 0.01f};
+        ViewportCoords font_pos {-0.5f * vs.x + 0.5_vp, -0.5f * vs.y + 0.5_vp};
         rects.draw(view, font_pos);
         font_texture.draw(view, font_pos);
-        font_pos.y += emoji_offset;
+        font_pos.y += view.fb_to_vp(emoji_offset);
         emoji_font_texture.draw(view, font_pos);
 
         // font texture width
-        auto fw = view.size_to_viewport(FramebufferSize{font.texture().size()}).x;
+        auto fw = view.fb_to_vp(font.texture().size().x);
+        auto ew = view.fb_to_vp(emoji.layout().bbox().w);
         auto tx = -vs.x * 0.5f + fw  // the font box right edge
-                + (vs.x - fw - emoji.layout().bbox().w) / 2;  // half of empty space left around text
-        text.draw(view, {tx, -0.55f});
-        emoji.draw(view, {tx, -0.70f});
-        help_text.draw(view, {tx, 0.70f});
+                + (vs.x - fw - ew) / 2;  // half of empty space left around text
+        text.draw(view, {tx, -27.5_vp});
+        emoji.draw(view, {tx, -35_vp});
+        help_text.draw(view, {tx, 35_vp});
     });
 
     window.set_key_callback([&](View& view, KeyEvent ev) {

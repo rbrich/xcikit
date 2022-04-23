@@ -1,7 +1,7 @@
 // TextTerminal.cpp created on 2018-07-19 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "TextTerminal.h"
@@ -560,7 +560,7 @@ void terminal::Buffer::remove_lines(size_t start, size_t count)
 // ------------------------------------------------------------------------
 
 
-void terminal::Caret::update(View& view, const ViewportRect& rect)
+void terminal::Caret::update(View& view, const FramebufferRect& rect)
 {
     view.finish_draw();
 
@@ -568,7 +568,7 @@ void terminal::Caret::update(View& view, const ViewportRect& rect)
     auto y1 = rect.y;
     auto x2 = rect.x + rect.w;
     auto y2 = rect.y + rect.h;
-    auto outline_thickness = view.size_to_viewport(1.0_sc);
+    auto outline_thickness = view.px_to_vp(1_px);
     float tx = 2.0f * outline_thickness.value / rect.w.value;
     float ty = 2.0f * outline_thickness.value / rect.h.value;
     float ix = 1.0f + tx / (1.0f - tx);
@@ -595,7 +595,7 @@ void terminal::Caret::update(View& view, const ViewportRect& rect)
 }
 
 
-void terminal::Caret::draw(View& view, const ViewportCoords& pos)
+void terminal::Caret::draw(View& view, VariCoords pos)
 {
     m_quad.draw(view, pos);
 }
@@ -616,7 +616,7 @@ TextTerminal::TextTerminal(Theme& theme)
 }
 
 
-void TextTerminal::set_font_size(ViewportUnits size)
+void TextTerminal::set_font_size(VariUnits size)
 {
     m_font_size_requested = size;
     m_font_size = 0;
@@ -815,18 +815,19 @@ void TextTerminal::cancel_scrollback()
 
 void TextTerminal::resize(View& view)
 {
+    Widget::resize(view);
     auto& font = theme().font();
-    m_font_size = view.size_to_framebuffer(m_font_size_requested);
+    m_font_size = view.to_fb(m_font_size_requested);
     font.set_size(m_font_size.as<unsigned>());
-    m_cell_size = view.size_to_viewport(FramebufferSize{
-            font.max_advance(), font.height()});
+    m_cell_size = {font.max_advance(), font.height()};
     if (m_resize_cells) {
         m_cells = {(size().x / m_cell_size.x).as<unsigned>(),
                    (size().y / m_cell_size.y).as<unsigned>()};
     }
 
     m_frame.clear();
-    m_frame.add_rectangle({{0, 0}, size()}, 0.01f);
+    m_frame.add_rectangle(FramebufferRect{{0, 0}, size()},
+                          view.vp_to_fb(0.5_vp));
     m_frame.update();
 }
 
@@ -848,7 +849,7 @@ void TextTerminal::update(View& view, State state)
     m_boxes.clear();
     m_boxes.reserve(0, expected_num_cells, 0);
 
-    ViewportCoords pen;
+    FramebufferCoords pen;
     size_t buffer_first, buffer_last;
     if (m_scroll_offset == c_scroll_end) {
         buffer_first = m_buffer_offset;
@@ -872,11 +873,10 @@ void TextTerminal::update(View& view, State state)
         class LineRenderer: public terminal::Renderer {
         public:
             // capture by ref
-            LineRenderer(TextTerminal& term, ViewportCoords& pen, size_t& column,
-                    text::Font& font, text::Font& emoji_font, View& view)
+            LineRenderer(TextTerminal& term, FramebufferCoords& pen, size_t& column,
+                    text::Font& font, text::Font& emoji_font)
                     : term(term), pen(pen), column(column),
-                      font(font), emoji_font(emoji_font), ascender(font.ascender()),
-                      view(view)
+                      font(font), emoji_font(emoji_font), ascender(font.ascender())
             {}
 
             void set_font_style(FontStyle font_style) override {
@@ -969,12 +969,11 @@ void TextTerminal::update(View& view, State state)
                     if (glyph == nullptr)
                         glyph = font.get_glyph_for_char(' ');
 
-                    auto bearing = view.size_to_viewport(FramebufferSize{glyph->bearing()});
-                    auto ascender_vp = view.size_to_viewport(FramebufferPixels{ascender});
-                    auto glyph_size = view.size_to_viewport(FramebufferSize{glyph->size()});
+                    auto bearing = FramebufferSize{glyph->bearing()};
+                    auto glyph_size = FramebufferSize{glyph->size()};
                     term.m_sprites.add_sprite({
                             pen.x + bearing.x,
-                            pen.y + (ascender_vp - bearing.y),
+                            pen.y + (ascender - bearing.y),
                             glyph_size.x,
                             glyph_size.y
                     }, glyph->tex_coords());
@@ -999,13 +998,12 @@ void TextTerminal::update(View& view, State state)
                         return shaped_glyph.char_index;
 
                     const auto& cell_size = term.m_cell_size;
-                    auto bearing = view.size_to_viewport(FramebufferSize{glyph->bearing()});
-                    auto ascender_vp = view.size_to_viewport(FramebufferPixels{ascender});
-                    auto glyph_size = view.size_to_viewport(FramebufferSize{glyph->size()});
+                    auto bearing = FramebufferSize{glyph->bearing()};
+                    auto glyph_size = FramebufferSize{glyph->size()};
                     const auto scale = cell_size.y / glyph_size.y;
                     term.m_emoji_sprites.add_sprite({
                             pen.x + bearing.x * scale,
-                            pen.y + (ascender_vp - bearing.y * scale),
+                            pen.y + (ascender - bearing.y * scale),
                             glyph_size.x * scale,
                             glyph_size.y * scale
                     }, glyph->tex_coords());
@@ -1018,22 +1016,21 @@ void TextTerminal::update(View& view, State state)
 
         private:
             TextTerminal& term;
-            ViewportCoords& pen;
+            FramebufferCoords& pen;
             size_t& column;
             text::Font& font;
             text::Font& emoji_font;
-            float ascender;
+            FramebufferPixels ascender;
             Color8bit m_fg = 7;
             Color8bit m_bg = 0;
             Mode m_mode = Mode::Normal;
-            View& view;
-        } line_renderer(*this, pen, column, font, emoji_font, view);
+        } line_renderer(*this, pen, column, font, emoji_font);
 
         line.render(line_renderer);
 
         // draw rest of blanked line
         if (line.is_blanked()) {
-            ViewportRect rect {
+            FramebufferRect rect {
                     pen.x, pen.y,
                     m_cell_size.x * (m_cells.x - column), m_cell_size.y };
             m_boxes.add_rectangle(rect);
@@ -1041,7 +1038,7 @@ void TextTerminal::update(View& view, State state)
 
         // draw rest of blanked page
         if (line.is_page_blanked()) {
-            ViewportRect rect {
+            FramebufferRect rect {
                     0, pen.y + m_cell_size.y,
                     m_cell_size.x * m_cells.x, m_cell_size.y * (m_cells.y - row - 1) };
             m_boxes.add_rectangle(rect);

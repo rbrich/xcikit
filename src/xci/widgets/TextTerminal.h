@@ -1,7 +1,7 @@
 // TextTerminal.h created on 2018-07-19 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_WIDGETS_TEXTTERMINAL_H
@@ -23,6 +23,10 @@
 namespace xci::widgets {
 
 using graphics::FramebufferPixels;
+using graphics::FramebufferSize;
+using graphics::FramebufferRect;
+using graphics::VariRect;
+using namespace graphics::unit_literals;
 
 
 // Gory bits...
@@ -275,8 +279,8 @@ public:
              graphics::PrimitiveType::TriFans),
       m_shader(renderer.get_shader(graphics::ShaderId::Cursor)) {}
 
-    void update(View& view, const ViewportRect& rect);
-    void draw(View& view, const ViewportCoords& pos);
+    void update(View& view, const FramebufferRect& rect);
+    void draw(View& view, VariCoords pos);
 
 private:
     graphics::Primitives m_quad;
@@ -297,7 +301,7 @@ public:
 
     /// Set font size and font scaling mode:
     /// \param size     size in viewport units
-    void set_font_size(ViewportUnits size);
+    void set_font_size(VariUnits size);
 
     /// Set requested terminal size in cells (i.e. do not scale the number of cells
     /// according to widget size - keep it fixed)
@@ -419,8 +423,8 @@ private:
     static constexpr double c_scroll_end = std::numeric_limits<double>::infinity();
 
     FramebufferPixels m_font_size = 0;
-    ViewportUnits m_font_size_requested {14.0};
-    ViewportSize m_cell_size;
+    VariUnits m_font_size_requested { 14_px };
+    FramebufferSize m_cell_size;
     core::Vec2u m_cells = {80, 25};  // rows, columns
     bool m_resize_cells = true;
     std::unique_ptr<terminal::Buffer> m_buffer = std::make_unique<terminal::Buffer>();

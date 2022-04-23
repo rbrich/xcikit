@@ -1,7 +1,7 @@
 // Text.h created on 2018-03-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_TEXT_TEXT_H
@@ -18,8 +18,8 @@ namespace xci::text { class Font; }
 
 namespace xci::text {
 
-using graphics::ViewportUnits;
-using graphics::ViewportCoords;
+using graphics::VariUnits;
+using graphics::VariCoords;
 
 // Text rendering - convenient combination of Layout and Markup
 class Text {
@@ -37,22 +37,22 @@ public:
     void set_fixed_string(const std::string& string) { set_string(string, Format::None); }
     void set_markup_string(const std::string& string) { set_string(string, Format::Markup); }
 
-    void set_width(ViewportUnits width);
+    void set_width(VariUnits width);
     void set_font(Font& font);
-    void set_font_size(ViewportUnits size, bool allow_scale = true);
+    void set_font_size(VariUnits size, bool allow_scale = true);
     void set_font_style(FontStyle font_style);
     void set_font_weight(uint16_t weight);
     void set_color(graphics::Color color);
-    void set_outline_radius(ViewportUnits radius);
+    void set_outline_radius(VariUnits radius);
     void set_outline_color(graphics::Color color);
-    void set_tab_stops(std::vector<ViewportUnits> stops);
+    void set_tab_stops(std::vector<VariUnits> stops);
     void set_alignment(Alignment alignment);
 
     Layout& layout() { return m_layout; }
 
     void resize(graphics::View& view);
     void update(graphics::View& view);
-    void draw(graphics::View& view, const ViewportCoords& pos);
+    void draw(graphics::View& view, VariCoords pos);
 
 private:
     Layout m_layout;

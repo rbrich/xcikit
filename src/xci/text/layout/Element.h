@@ -1,7 +1,7 @@
 // Element.h created on 2018-03-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_TEXT_LAYOUT_PAGE_ELEMENT_H
@@ -12,6 +12,9 @@
 #include <string>
 
 namespace xci::text::layout {
+
+using graphics::VariUnits;
+using graphics::VariSize;
 
 
 class Element {
@@ -27,13 +30,13 @@ public:
 
 class SetPageWidth: public Element {
 public:
-    explicit SetPageWidth(ViewportUnits width) : m_width(width) {}
+    explicit SetPageWidth(VariUnits width) : m_width(width) {}
     void apply(Page& page) override {
-        page.set_width(m_width);
+        page.set_width(page.target().to_fb(m_width));
     }
 
 private:
-    float m_width;
+    VariUnits m_width;
 };
 
 
@@ -51,13 +54,13 @@ private:
 
 class AddTabStop: public Element {
 public:
-    explicit AddTabStop(ViewportUnits tab_stop) : m_tab_stop(tab_stop) {}
+    explicit AddTabStop(VariUnits tab_stop) : m_tab_stop(tab_stop) {}
     void apply(Page& page) override {
-        page.add_tab_stop(m_tab_stop);
+        page.add_tab_stop(page.target().to_fb(m_tab_stop));
     }
 
 private:
-    float m_tab_stop;
+    VariUnits m_tab_stop;
 };
 
 
@@ -71,13 +74,13 @@ public:
 
 class SetOffset: public Element {
 public:
-    explicit SetOffset(const ViewportSize& offset) : m_offset(offset) {}
+    explicit SetOffset(VariSize offset) : m_offset(offset) {}
     void apply(Page& page) override {
-        page.set_pen_offset(m_offset);
+        page.set_pen_offset(page.target().to_fb(m_offset));
     }
 
 private:
-    const ViewportSize m_offset;
+    VariSize m_offset;
 };
 
 
@@ -95,13 +98,13 @@ private:
 
 class SetFontSize: public Element {
 public:
-    explicit SetFontSize(ViewportUnits size) : m_size(size) {}
+    explicit SetFontSize(VariUnits size) : m_size(size) {}
     void apply(Page& page) override {
         page.set_font_size(m_size);
     }
 
 private:
-    float m_size;
+    VariUnits m_size;
 };
 
 

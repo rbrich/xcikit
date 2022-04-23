@@ -1,7 +1,7 @@
 // Widget.cpp created on 2018-04-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Widget.h"
@@ -14,6 +14,30 @@ namespace xci::widgets {
 
 using namespace xci::graphics;
 using ranges::cpp20::any_of;
+
+
+void Widget::set_position(const VariCoords& pos)
+{
+    m_position_request = pos;
+    if (pos.x.type() == VariUnits::Framebuffer && pos.y.type() == VariUnits::Framebuffer)
+        m_position = {pos.x.framebuffer(), pos.y.framebuffer()};
+}
+
+
+void Widget::set_size(const VariSize& size)
+{
+    m_size_request = size;
+    if (size.x.type() == VariUnits::Framebuffer && size.y.type() == VariUnits::Framebuffer)
+        m_size = {size.x.framebuffer(), size.y.framebuffer()};
+}
+
+
+void Widget::resize(View& view)
+{
+    m_position = view.to_fb(m_position_request);
+    m_size = view.to_fb(m_size_request);
+}
+
 
 void Widget::partial_dump(std::ostream& stream, const std::string& nl_prefix)
 {
@@ -31,7 +55,7 @@ void Composite::add(Widget& child)
 }
 
 
-bool Composite::contains(const ViewportCoords& point) const
+bool Composite::contains(FramebufferCoords point) const
 {
     return any_of(m_child, [&point](const Widget* child){ return child->contains(point); });
 }
@@ -39,6 +63,7 @@ bool Composite::contains(const ViewportCoords& point) const
 
 void Composite::resize(View& view)
 {
+    Widget::resize(view);
     for (auto& child : m_child)
         child->resize(view);
 }
@@ -57,12 +82,11 @@ void Composite::update(View& view, State state)
 
 void Composite::draw(View& view)
 {
-    view.push_offset(position());
+    auto pop_offset = view.push_offset(position());
     for (auto& child : m_child) {
         if (!child->is_hidden())
             child->draw(view);
     }
-    view.pop_offset();
 }
 
 
@@ -88,25 +112,22 @@ void Composite::char_event(View& view, const CharEvent& ev)
 
 void Composite::mouse_pos_event(View& view, const MousePosEvent& ev)
 {
-    view.push_offset(position());
+    auto pop_offset = view.push_offset(position());
     for (auto& child : m_child)
         child->mouse_pos_event(view, ev);
-    view.pop_offset();
 }
 
 
 bool Composite::mouse_button_event(View& view, const MouseBtnEvent& ev)
 {
-    view.push_offset(position());
-    bool handled = false;
+    auto pop_offset = view.push_offset(position());
     for (auto& child : m_child) {
         // Propagate the event
-        handled = child->mouse_button_event(view, ev);
+        bool handled = child->mouse_button_event(view, ev);
         if (handled)
-            break;
+            return true;
     }
-    view.pop_offset();
-    return handled;
+    return false;
 }
 
 
@@ -118,7 +139,7 @@ void Composite::scroll_event(View& view, const ScrollEvent& ev)
 }
 
 
-bool Composite::click_focus(View& view, ViewportCoords pos)
+bool Composite::click_focus(View& view, FramebufferCoords pos)
 {
     bool handled = false;
     auto* original_focus = m_focus;

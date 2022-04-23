@@ -1,7 +1,7 @@
 // Sprites.h created on 2018-03-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_SPRITES_H
@@ -37,18 +37,18 @@ public:
 
     // Add new sprite containing whole texture
     // `rect` defines position and size of the sprite
-    void add_sprite(const ViewportRect& rect);
+    void add_sprite(const FramebufferRect& rect);
 
     // Add new sprite containing a cutoff from the texture
     // `rect` defines position and size of the sprite
-    void add_sprite(const ViewportRect& rect, const Rect_u& texrect);
+    void add_sprite(const FramebufferRect& rect, const Rect_u& texrect);
 
     // Update sprites attributes according to settings (color etc.)
     void update();
 
     // Draw all sprites to `view` at `pos`.
     // Final sprite position is `pos` + sprite's relative position
-    void draw(View& view, const ViewportCoords& pos);
+    void draw(View& view, VariCoords pos);
 
 private:
     Texture& m_texture;
@@ -74,18 +74,18 @@ public:
 
     // Add new sprite containing whole texture
     // `rect` defines position and size of the sprite
-    void add_sprite(const ViewportRect& rect);
+    void add_sprite(const FramebufferRect& rect);
 
     // Add new sprite containing a cutoff from the texture
     // `rect` defines position and size of the sprite
-    void add_sprite(const ViewportRect& rect, const Rect_u& texrect);
+    void add_sprite(const FramebufferRect& rect, const Rect_u& texrect);
 
     // Update sprites attributes according to settings (color etc.)
     void update();
 
     // Draw all sprites to `view` at `pos`.
     // Final sprite position is `pos` + sprite's relative position
-    void draw(View& view, const ViewportCoords& pos);
+    void draw(View& view, VariCoords pos);
 
 private:
     Texture& m_texture;

@@ -1,7 +1,7 @@
 // Primitives.cpp created on 2018-08-03 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Primitives.h"
@@ -283,7 +283,7 @@ void Primitives::end_primitive()
 }
 
 
-void Primitives::add_vertex(ViewportCoords xy, float u, float v)
+void Primitives::add_vertex(FramebufferCoords xy, float u, float v)
 {
     assert(m_format == VertexFormat::V2t2);
     assert(m_open_vertices != -1);
@@ -295,7 +295,7 @@ void Primitives::add_vertex(ViewportCoords xy, float u, float v)
 }
 
 
-void Primitives::add_vertex(ViewportCoords xy, float u1, float v1, float u2, float v2)
+void Primitives::add_vertex(FramebufferCoords xy, float u1, float v1, float u2, float v2)
 {
     assert(m_format == VertexFormat::V2t22);
     assert(m_open_vertices != -1);
@@ -309,7 +309,7 @@ void Primitives::add_vertex(ViewportCoords xy, float u1, float v1, float u2, flo
 }
 
 
-void Primitives::add_vertex(ViewportCoords xy, Color color, float u, float v)
+void Primitives::add_vertex(FramebufferCoords xy, Color color, float u, float v)
 {
     assert(m_format == VertexFormat::V2c4t2);
     assert(m_open_vertices != -1);
@@ -326,7 +326,7 @@ void Primitives::add_vertex(ViewportCoords xy, Color color, float u, float v)
 
 
 void
-Primitives::add_vertex(ViewportCoords xy, Color color, float u1, float v1, float u2, float v2)
+Primitives::add_vertex(FramebufferCoords xy, Color color, float u1, float v1, float u2, float v2)
 {
     assert(m_format == VertexFormat::V2c4t22);
     assert(m_open_vertices != -1);
@@ -352,8 +352,6 @@ void Primitives::clear()
     clear_uniforms();
     m_closed_vertices = 0;
     m_open_vertices = -1;
-    m_texture.ptr = nullptr;
-    m_blend = BlendFunc::Off;
 }
 
 
@@ -467,7 +465,7 @@ void Primitives::draw(View& view)
             .extent = { INT32_MAX, INT32_MAX },
     };
     if (view.has_crop()) {
-        auto cr = view.rect_to_framebuffer(view.get_crop());
+        auto cr = view.get_crop().moved(view.framebuffer_origin());
         scissor.offset.x = cr.x.as<int32_t>();
         scissor.offset.y = cr.y.as<int32_t>();
         scissor.extent.width = cr.w.as<int32_t>();
@@ -492,11 +490,10 @@ void Primitives::draw(View& view)
 }
 
 
-void Primitives::draw(View& view, const ViewportCoords& pos)
+void Primitives::draw(View& view, VariCoords pos)
 {
-    view.push_offset(pos);
+    auto pop_offset = view.push_offset(view.to_fb(pos));
     draw(view);
-    view.pop_offset();
 }
 
 
