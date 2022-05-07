@@ -8,6 +8,7 @@
 #define XCI_SCRIPT_STACK_H
 
 #include "Value.h"
+#include "Error.h"
 #include <xci/core/container/ChunkedStack.h>
 #include <cstddef>  // byte
 #include <vector>
@@ -16,14 +17,6 @@
 namespace xci::script {
 
 class Function;
-
-
-struct StackTraceFrame {
-    std::string function_name;
-};
-
-using StackTrace = std::vector<StackTraceFrame>;
-
 
 
 /// Call stack

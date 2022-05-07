@@ -9,6 +9,7 @@
 #include <xci/script/Builtin.h>
 #include <xci/script/Function.h>
 #include <xci/script/Error.h>
+#include <xci/script/dump.h>
 #include <xci/compat/macros.h>
 
 #include <range/v3/view/enumerate.hpp>

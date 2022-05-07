@@ -224,7 +224,7 @@ public:
     void set_refresh_timeout(std::chrono::microseconds timeout, bool periodic);
 
     /// Set origin of the coordinates to be used throughout the program
-    /// for all placing elements in the view.
+    /// for placing elements in the view.
     /// \param origin       The position of (0,0) coordinates. Default is Center.
     void set_view_origin(ViewOrigin origin);
 

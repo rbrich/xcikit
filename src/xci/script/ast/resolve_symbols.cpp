@@ -9,6 +9,7 @@
 #include <xci/script/Module.h>
 #include <xci/script/Builtin.h>
 #include <xci/script/Error.h>
+#include <xci/script/dump.h>
 #include <range/v3/view/enumerate.hpp>
 #include <range/v3/algorithm/any_of.hpp>
 #include <vector>

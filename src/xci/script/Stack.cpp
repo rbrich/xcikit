@@ -6,6 +6,7 @@
 
 #include "Stack.h"
 #include "Error.h"
+#include "Function.h"
 
 #include <range/v3/view/reverse.hpp>
 

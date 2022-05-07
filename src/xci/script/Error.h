@@ -9,7 +9,6 @@
 
 #include "Value.h"
 #include "Source.h"
-#include "dump.h"
 #include <xci/core/error.h>
 #include <xci/core/TermCtl.h>
 
@@ -47,6 +46,13 @@ private:
     std::string m_file;
     std::string m_detail;
 };
+
+
+struct StackTraceFrame {
+    std::string function_name;
+};
+
+using StackTrace = std::vector<StackTraceFrame>;
 
 
 class RuntimeError : public ScriptError {
@@ -145,16 +151,13 @@ struct UnexpectedArgument : public ScriptError {
 
 struct UnexpectedArgumentType : public ScriptError {
     // num is 1-based
-    explicit UnexpectedArgumentType(size_t num, const TypeInfo& exp, const TypeInfo& got, const SourceLocation& loc)
-            : ScriptError(fmt::format("function expects {} for arg #{}, called with {}",
-                                 exp, num, got), loc) {}
+    explicit UnexpectedArgumentType(size_t num, const TypeInfo& exp, const TypeInfo& got,
+                                    const SourceLocation& loc);
 };
 
 
 struct UnexpectedReturnType : public ScriptError {
-    explicit UnexpectedReturnType(const TypeInfo& exp, const TypeInfo& got)
-            : ScriptError(fmt::format("function returns {}, body evaluates to {}",
-                                 exp, got)) {}
+    explicit UnexpectedReturnType(const TypeInfo& exp, const TypeInfo& got);
 };
 
 
@@ -217,37 +220,27 @@ struct ConditionNotBool : public ScriptError {
 
 
 struct DeclarationTypeMismatch : public ScriptError {
-    explicit DeclarationTypeMismatch(const TypeInfo& decl, const TypeInfo& now, const SourceLocation& loc)
-            : ScriptError(fmt::format("declared type mismatch: previous {}, this {}",
-            decl, now), loc) {}
+    explicit DeclarationTypeMismatch(const TypeInfo& decl, const TypeInfo& now, const SourceLocation& loc);
 };
 
 
 struct DefinitionTypeMismatch : public ScriptError {
-    explicit DefinitionTypeMismatch(const TypeInfo& exp, const TypeInfo& got, const SourceLocation& loc)
-            : ScriptError(fmt::format("definition type mismatch: specified {}, inferred {}",
-                                 exp, got), loc) {}
+    explicit DefinitionTypeMismatch(const TypeInfo& exp, const TypeInfo& got, const SourceLocation& loc);
 };
 
 
 struct DefinitionParamTypeMismatch : public ScriptError {
-    explicit DefinitionParamTypeMismatch(size_t idx, const TypeInfo& exp, const TypeInfo& got)
-            : ScriptError(fmt::format("definition type mismatch: specified {} for param #{}, inferred {}",
-                                 exp, idx, got)) {}
+    explicit DefinitionParamTypeMismatch(size_t idx, const TypeInfo& exp, const TypeInfo& got);
 };
 
 
 struct BranchTypeMismatch : public ScriptError {
-    explicit BranchTypeMismatch(const TypeInfo& exp, const TypeInfo& got)
-            : ScriptError(fmt::format("branch type mismatch: expected {}, got {}",
-                                 exp, got)) {}
+    explicit BranchTypeMismatch(const TypeInfo& exp, const TypeInfo& got);
 };
 
 
 struct ListElemTypeMismatch : public ScriptError {
-    explicit ListElemTypeMismatch(const TypeInfo& exp, const TypeInfo& got, const SourceLocation& loc)
-            : ScriptError(fmt::format("list element type mismatch: got {} in list of {}",
-                                 got, exp), loc) {}
+    explicit ListElemTypeMismatch(const TypeInfo& exp, const TypeInfo& got, const SourceLocation& loc);
 };
 
 
@@ -259,16 +252,12 @@ struct IndexOutOfBounds : public RuntimeError {
 
 
 struct StructTypeMismatch : public ScriptError {
-    explicit StructTypeMismatch(const TypeInfo& got, const SourceLocation& loc)
-            : ScriptError(fmt::format("cannot cast a struct initializer to {}",
-            got), loc) {}
+    explicit StructTypeMismatch(const TypeInfo& got, const SourceLocation& loc);
 };
 
 
 struct StructUnknownKey : public ScriptError {
-    explicit StructUnknownKey(const TypeInfo& struct_type, const std::string& key, const SourceLocation& loc)
-            : ScriptError(fmt::format("struct key \"{}\" doesn't match struct type {}",
-            key, struct_type), loc) {}
+    explicit StructUnknownKey(const TypeInfo& struct_type, const std::string& key, const SourceLocation& loc);
 };
 
 
@@ -279,9 +268,7 @@ struct StructDuplicateKey : public ScriptError {
 
 
 struct StructKeyTypeMismatch : public ScriptError {
-    explicit StructKeyTypeMismatch(const TypeInfo& struct_type, const TypeInfo& spec, const TypeInfo& got, const SourceLocation& loc)
-            : ScriptError(fmt::format("struct item type mismatch: specified {} in {}, inferred {}",
-            spec, struct_type, got), loc) {}
+    explicit StructKeyTypeMismatch(const TypeInfo& struct_type, const TypeInfo& spec, const TypeInfo& got, const SourceLocation& loc);
 };
 
 
