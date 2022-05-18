@@ -1,5 +1,27 @@
 {
     "extends": [
-        "config:base"
+        "config:base",
+        ":disableDependencyDashboard"
+    ],
+    "regexManagers": [
+        {
+            "fileMatch": ["^conandata.yml$"],
+            "matchStrings": ["conan: \"(?<depName>.*?)/(?<currentValue>.*?)\""],
+            "packageNameTemplate": "{{depName}}/{{currentValue}}@_/_",
+            "depTypeTemplate": "requires",
+            "datasourceTemplate": "conan",
+            "versioningTemplate": "conan"
+        }
+    ],
+    "enabledManagers": [
+        "regex",
+        "github-actions"
+    ],
+    "packageRules": [
+        {
+            "matchManagers": ["github-actions"],
+            "groupName": "github-actions",
+            "commitMessageExtra": null
+        }
     ]
 }
