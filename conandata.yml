@@ -57,7 +57,7 @@ requirements:
       - text
   harfbuzz:
     cmake: "harfbuzz/"
-    conan: "harfbuzz/4.2.0"
+    conan: "harfbuzz/4.2.1"
     prereq:
       - text
   hyperscan:
@@ -66,12 +66,12 @@ requirements:
       - tools
   boost:
     cmake: "Boost/1.75.0"
-    conan: "pfr/2.0.2"  # 2.0.3 not yet in ConanCenter
+    conan: "pfr/2.0.3"  # 2.0.3 not yet in ConanCenter
     prereq:
       - data
   catch2:
     cmake: "Catch2/"
-    conan: "catch2/2.13.8"
+    conan: "catch2/2.13.9"
     prereq:
       - tests
   benchmark:
