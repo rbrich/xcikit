@@ -62,8 +62,8 @@ jobs:
       BUILD_ARGS: ${{ matrix.build_args }}
 
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-python@v2
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v3
       with:
         python-version: '3.x'
         architecture: 'x64'
@@ -71,7 +71,7 @@ jobs:
 
     - name: cache
       if: ${{ !startsWith(matrix.os, 'windows-') }}
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: |
           ~/.conan/data
@@ -157,7 +157,7 @@ jobs:
 
     - name: artifacts - tarball
       if: ${{ matrix.name == 'Release build' }}
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: xcikit-artifacts
         path: |
@@ -165,7 +165,7 @@ jobs:
 
     - name: artifacts - test report
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: test-report
         path: |
