@@ -34,7 +34,7 @@ requirements:
     conan: "taocpp-pegtl/3.2.5"
   magic_enum:
     cmake: "magic_enum/0.7.3"
-    conan: "magic_enum/0.7.3"
+    conan: "magic_enum/0.8.0"
   zlib:
     cmake: "ZLIB/"
     conan: "zlib/1.2.12"
