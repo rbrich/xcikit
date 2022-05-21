@@ -1,5 +1,6 @@
 {
     "extends": [
+        ":autodetectPinVersions",
         "group:monorepos",
         "group:recommended"
     ],
@@ -15,7 +16,8 @@
     ],
     "enabledManagers": [
         "regex",
-        "github-actions"
+        "github-actions",
+        "npm"
     ],
     "packageRules": [
         {
