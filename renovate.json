@@ -32,5 +32,7 @@
             "groupSlug": "conan-deps-patch"
         }
     ],
-    "prConcurrentLimit": 2
+    "prConcurrentLimit": 2,
+    "semanticCommits": "disabled",
+    "labels": ["deps"]
 }
