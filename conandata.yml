@@ -32,6 +32,8 @@ requirements:
   pegtl:
     cmake: "pegtl/3.2.0"
     conan: "taocpp-pegtl/3.2.5"
+    # This version contains a fix that is needed for VS 17 build:
+    upstream: "github.com taocpp/PEGTL 7c906970b0ba1747897498e5ddf2e3286813dd4f"
   magic_enum:
     cmake: "magic_enum/0.7.3"
     conan: "magic_enum/0.8.0"
