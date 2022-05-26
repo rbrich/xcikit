@@ -51,7 +51,7 @@ def filtered_requirements(options: set):
             yield name, info
 
 
-def detect_deps(reqs):
+def detect_deps(reqs, precached_deps):
     cmake_name_to_sysopt = {info['cmake'].split('/')[0]
                             : f"system_{name}" if 'conan' in info else f"with_{name}"
                             for name, info in reqs}
@@ -84,13 +84,14 @@ def detect_deps(reqs):
         ninja = ""
         if run("command -v ninja", shell=True, stdout=DEVNULL, stderr=DEVNULL).returncode == 0:
             ninja = "-G Ninja"
-        cmd = f"cmake . {ninja} -DDEPS='{items}'"
+        cmd = f"cmake . {ninja} -DDEPS='{items}' -DCMAKE_PREFIX_PATH='{';'.join(precached_deps)}'"
         debug(cmd)
         p = run(cmd, shell=True,
                 capture_output=True, encoding='UTF-8', cwd=tmp_dir)
         debug(p.stdout)
+        debug(p.stderr)
         if p.returncode != 0:
-            print(f'Failed:\n{p.stderr}', file=sys.stderr)
+            print(f'Failed: {p.returncode}', file=sys.stderr)
             return
         for line in p.stderr.splitlines():
             if line.startswith('FOUND '):
@@ -103,8 +104,15 @@ def main():
     options = parse_args()
     options = add_required_components(options)
     reqs = tuple(filtered_requirements(options))
-    deps = tuple(detect_deps(reqs))
-    print(' '.join(f'-DXCI_{o.upper()}=ON' for o in deps if o.startswith('with_')))
+    precached_deps_dir = script_dir.joinpath('.deps')
+    if precached_deps_dir.is_dir():
+        precached_deps = [str(d) for d in precached_deps_dir.iterdir()]
+    else:
+        precached_deps = []
+    deps = tuple(detect_deps(reqs, precached_deps))
+    cmake_args = [f'-DXCI_{o.upper()}=ON' for o in deps if o.startswith('with_')] + \
+                 [f"-DCMAKE_PREFIX_PATH={';'.join(precached_deps)}"]
+    print(' '.join(cmake_args))
     print(' '.join(f'-o xcikit:{o}=True' for o in deps))
 
 

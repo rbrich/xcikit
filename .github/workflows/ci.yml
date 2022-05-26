@@ -50,7 +50,7 @@ jobs:
           build_args: ""
         - os: windows-2022
           name: "VS 17 / Release"
-          build_args: ""
+          build_args: "--precache-deps"
 
     name: ${{ matrix.os }} / ${{ matrix.name }}
 

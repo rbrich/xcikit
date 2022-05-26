@@ -93,7 +93,7 @@ add_subdirectory(third_party)
 find_package(Threads REQUIRED)
 
 # PEGTL
-find_package(pegtl 3.2.0 REQUIRED)
+find_package(pegtl REQUIRED)
 
 # range-v3
 find_package(range-v3 REQUIRED)
