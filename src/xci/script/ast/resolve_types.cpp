@@ -892,6 +892,15 @@ public:
         m_type_info = TypeInfo{std::move(subtypes)};
     }
 
+    void visit(ast::StructType& t) final {
+        TypeInfo::StructItems items;
+        for (auto& st : t.subtypes) {
+            st.type->apply(*this);
+            items.emplace_back(st.identifier.name, std::move(m_type_info));
+        }
+        m_type_info = TypeInfo{std::move(items)};
+    }
+
 private:
     Module& module() { return m_function.module(); }
 

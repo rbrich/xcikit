@@ -339,6 +339,11 @@ public:
             st->apply(*this);
     }
 
+    void visit(ast::StructType& t) final {
+        for (auto& st : t.subtypes)
+            st.type->apply(*this);
+    }
+
 private:
     Module& module() { return m_function.module(); }
     SymbolTable& symtab() { return *m_symtab; }

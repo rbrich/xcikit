@@ -133,8 +133,10 @@ struct FunctionDecl: seq< opt<TypeParams>, SC, DeclParams, SC, opt<DeclResult>, 
 struct PlainTypeName: seq< TypeName, not_at<SC, one<','>> > {};  // not followed by comma (would be TupleType)
 struct ListType: if_must< one<'['>, SC, UnsafeType, SC, one<']'> > {};
 struct TupleType: seq< Type, plus<SC, one<','>, SC, Type> > {};
+struct StructItem: seq< Identifier, SC, one<':'>, SC, must<Type> > {};
+struct StructType: seq< StructItem, plus<SC, one<','>, SC, StructItem> > {};
 struct ParenthesizedType: if_must< one<'('>, SC, UnsafeType, SC, one<')'> > {};
-struct UnsafeType: sor<FunctionType, PlainTypeName, TupleType, ParenthesizedType, ListType> {};   // usable in context where Type is already expected
+struct UnsafeType: sor<FunctionType, PlainTypeName, TupleType, StructType, ParenthesizedType, ListType> {};   // usable in context where Type is already expected
 struct Type: sor< ParenthesizedType, ListType, TypeName > {};
 
 // Expressions
@@ -631,6 +633,11 @@ struct Action<Identifier> : change_states< ast::Identifier > {
     }
 
     template<typename Input>
+    static void success(const Input &in, ast::Identifier& ident, ast::StructItem& item) {
+        item.identifier = std::move(ident);
+    }
+
+    template<typename Input>
     static void success(const Input &in, ast::Identifier& ident, ast::Variable& var) {
         var.identifier = std::move(ident);
     }
@@ -771,6 +778,20 @@ struct Action<TupleType> : change_states< ast::TupleType > {
 
 
 template<>
+struct Action<StructType> : change_states< ast::StructType > {
+    template<typename Input>
+    static void apply(const Input &in, ast::StructType& ltype) {
+        ltype.source_loc.load(in.input(), in.position());
+    }
+
+    template<typename Input>
+    static void success(const Input &in, ast::StructType& ltype, std::unique_ptr<ast::Type>& type) {
+        type = std::make_unique<ast::StructType>(std::move(ltype));
+    }
+};
+
+
+template<>
 struct Action<TypeConstraint> : change_states< ast::TypeConstraint > {
     template<typename Input>
     static void success(const Input &in, ast::TypeConstraint& tcst, ast::FunctionType& ftype) {
@@ -818,6 +839,11 @@ struct Action<Type> : change_states< std::unique_ptr<ast::Type> >  {
     template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::TupleType& tuple) {
         tuple.subtypes.push_back(std::move(type));
+    }
+
+    template<typename Input>
+    static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::StructItem& item) {
+        item.type = std::move(type);
     }
 
     template<typename Input>
@@ -879,6 +905,14 @@ struct Action<UnsafeType> : change_states< std::unique_ptr<ast::Type> >  {
     }
 };
 
+
+template<>
+struct Action<StructItem> : change_states< ast::StructItem > {
+    template<typename Input>
+    static void success(const Input &in, ast::StructItem& item, ast::StructType& stype) {
+        stype.subtypes.push_back(std::move(item));
+    }
+};
 
 template<>
 struct Action<Variable> : change_states< ast::Variable > {

@@ -655,7 +655,7 @@ For example, in the above fragment, the following functions are called:
 
 [source,fire]
 ----
-type Streams = (Stream in, Stream out, Stream err)
+type Streams = (in: Stream, out: Stream, err: Stream)
 enter : Streams -> Streams
 leave : Streams -> Void
 ----
@@ -771,7 +771,7 @@ All type names must begin with uppercase letter (this is enforced by the compile
 ----
 type MyType = Int    // make new type by giving other type a new name
 type MyTuple = (String, Int)
-type MyStruct = (String name, Int age)    // tuple with named fields
+type MyStruct = (name:String, age:Int)    // struct (a tuple with named fields)
 type MyBool = false | true   // enum
 type MyUnion = Int | String | Void   // tagged union
 type MyVariant = int Int | string String | none   // tagged union with explicit names
