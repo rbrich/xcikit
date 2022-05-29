@@ -412,7 +412,7 @@ Record field lookup:
 
 [source,fire]
 ----
-MyRecord = (String name, Int age)
+type MyRecord = (name: String, age: Int)
 rec = MyRecord("A name", 42)
 rec.name    // dot operator
 ----

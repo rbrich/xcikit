@@ -475,8 +475,8 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     // TODO: cast from underlying type
     //CHECK(interpret_std("type MyTuple = (String, Int); a = (\"hello\", 42):MyTuple; a") == "(\"hello\", 42)");
     CHECK_THROWS_AS(interpret_std("type MyTuple = (String, Int); (1, 2):MyTuple"), FunctionNotFound);  // bad cast
-    // TODO: struct
-    //CHECK(interpret("type MyStruct = (String name, Int age); a:MyStruct = (name=\"joe\", age=42)") == "");
+    // struct
+    CHECK(interpret("type Record = (name: String, age: Int); a:Record = (name=\"Marvin\", age=42); a") == "(name=\"Marvin\", age=42)");
 }
 
 

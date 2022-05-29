@@ -61,17 +61,22 @@ size_t type_size_on_stack(Type type)
 
 size_t TypeInfo::size() const
 {
-    if (type() == Type::Tuple) {
-        const auto& l = subtypes();
-        return accumulate(l.begin(), l.end(), size_t(0),
-                [](size_t init, const TypeInfo& ti) { return init + ti.size(); });
+    switch (m_type) {
+        case Type::Named:
+            return named_type().type_info.size();
+        case Type::Tuple: {
+            const auto& l = subtypes();
+            return accumulate(l.begin(), l.end(), size_t(0),
+                              [](size_t init, const TypeInfo& ti) { return init + ti.size(); });
+        }
+        case Type::Struct: {
+            const auto& l = struct_items();
+            return accumulate(l.begin(), l.end(), size_t(0),
+                              [](size_t init, const TypeInfo::StructItem& ti) { return init + ti.second.size(); });
+        }
+        default:
+            return type_size_on_stack(type());
     }
-    if (type() == Type::Struct) {
-        const auto& l = struct_items();
-        return accumulate(l.begin(), l.end(), size_t(0),
-                [](size_t init, const TypeInfo::StructItem& ti) { return init + ti.second.size(); });
-    }
-    return type_size_on_stack(type());
 }
 
 
@@ -220,6 +225,12 @@ bool TypeInfo::operator==(const TypeInfo& rhs) const
 }
 
 
+Type TypeInfo::underlying_type() const
+{
+    return m_type == Type::Named ? named_type().type_info.underlying_type() : m_type;
+}
+
+
 bool TypeInfo::is_generic() const
 {
     if (m_type == Type::Unknown)
@@ -246,6 +257,8 @@ auto TypeInfo::generic_var() const -> Var
 
 auto TypeInfo::elem_type() const -> const TypeInfo&
 {
+    if (m_type == Type::Named)
+        return named_type().type_info.elem_type();
     assert(m_type == Type::List);
     assert(std::holds_alternative<Subtypes>(m_info));
     return std::get<Subtypes>(m_info)[0];
@@ -254,6 +267,8 @@ auto TypeInfo::elem_type() const -> const TypeInfo&
 
 auto TypeInfo::subtypes() const -> const Subtypes&
 {
+    if (m_type == Type::Named)
+        return named_type().type_info.subtypes();
     assert(m_type == Type::Tuple);
     assert(std::holds_alternative<Subtypes>(m_info));
     return std::get<Subtypes>(m_info);
@@ -262,6 +277,8 @@ auto TypeInfo::subtypes() const -> const Subtypes&
 
 auto TypeInfo::struct_items() const -> const StructItems&
 {
+    if (m_type == Type::Named)
+        return named_type().type_info.struct_items();
     assert(m_type == Type::Struct);
     assert(std::holds_alternative<StructItems>(m_info));
     return std::get<StructItems>(m_info);
@@ -270,6 +287,8 @@ auto TypeInfo::struct_items() const -> const StructItems&
 
 auto TypeInfo::signature_ptr() const -> const SignaturePtr&
 {
+    if (m_type == Type::Named)
+        return named_type().type_info.signature_ptr();
     assert(m_type == Type::Function);
     assert(std::holds_alternative<SignaturePtr>(m_info));
     return std::get<SignaturePtr>(m_info);

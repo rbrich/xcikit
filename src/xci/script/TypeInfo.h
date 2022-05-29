@@ -110,10 +110,11 @@ public:
     void foreach_heap_slot(std::function<void(size_t offset)> cb) const;
 
     Type type() const { return m_type; }
-    bool is_callable() const { return m_type == Type::Function; }
-    bool is_unknown() const { return m_type == Type::Unknown; }
-    bool is_void() const { return m_type == Type::Void; }
-    bool is_struct() const { return m_type == Type::Struct; }
+    Type underlying_type() const;
+    bool is_callable() const { return underlying_type() == Type::Function; }
+    bool is_unknown() const { return underlying_type() == Type::Unknown; }
+    bool is_void() const { return underlying_type() == Type::Void; }
+    bool is_struct() const { return underlying_type() == Type::Struct; }
 
     bool is_generic() const;
     void replace_var(uint8_t idx, const TypeInfo& ti);
