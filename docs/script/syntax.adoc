@@ -9,7 +9,7 @@ endif::[]
 
 = Fire Script
 
-*_Language description, v0.7_*
+*_Language description, v0.8_*
 
 toc::[]
 
@@ -783,6 +783,7 @@ type MyFunction = [Int] Int -> Int
 The `type` definition creates a new type known to a compiler.
 The original type can be cast to the new type (and vice versa),
 but it does not coerce.
+On the other hand, literals always coerce when the underlying type is the same.
 
 For example:
 
@@ -790,8 +791,34 @@ For example:
 ----
 type Number = Int
 f = fun a:Number b:Number -> Number { a+b }  // `add` must be implemented for Number
-f 11 22   // Error: `f` expects Number, not Int
-f 11:Number 22:Number  // OK, returns 33:Number
+f 11 22   // OK, literals coerce
+a = 11; b = 22:Number
+f a a   // Error: `f` expects Number, not Int
+f b b   // OK
+f a:Number b   // OK, returns 33:Number
+----
+
+Tuples and structs have the same rules.
+In addition, a struct can be initialized with a tuple of same types.
+
+[source,fire]
+----
+type MyStruct = (name:String, age:Int)
+// All of these initializations are valid:
+a: MyStruct = ("Luke", 10)
+a: MyStruct = (name="Luke", age=10)
+a = ("Luke", 10):MyStruct
+a = (name="Luke", age=10):MyStruct
+// Variables and function return values need explicit cast
+a = ("Luke", 10)
+b: MyStruct = a   // Error: cannot assign (String, Int) to MyStruct
+b: MyStruct = a: MyStruct  // OK
+b = a: MyStruct  // same, type of `b` is inferred
+
+get_age = fun st:MyStruct -> Int { st.age }
+get_age a   // Error, variable does not coerce
+get_age { ("Luke", 10) }  // Error, the block's return value doesn't coerce
+get_age a:MyStruct  // OK
 ----
 
 It's also possible to make an alias of a type:
@@ -802,8 +829,8 @@ MyInt = Int
 MyFun = String -> String
 ----
 
-The *alias* can be used in place of the actual type. It's basically replaced
-by the actual type anywhere it's used.
+The *alias* can be used in place of the actual type. It's replaced
+by the actual type wherever it's used.
 
 Function types:
 
