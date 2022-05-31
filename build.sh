@@ -9,6 +9,7 @@ INSTALL_DEVEL=0
 GENERATOR=
 EMSCRIPTEN=0
 PRECACHE_DEPS=0
+PRECACHE_ARGS=()
 JOBS_ARGS=()
 CMAKE_ARGS=()
 CONAN_ARGS=()
@@ -154,6 +155,7 @@ while [[ $# -gt 0 ]] ; do
             shift 2 ;;
         --toolchain )
             CMAKE_ARGS+=(-D"CMAKE_TOOLCHAIN_FILE=$2")
+            PRECACHE_ARGS+=("--toolchain" "$2")
             shift 2 ;;
         -h | --help )
             print_usage
@@ -265,7 +267,7 @@ if phase deps; then
         CONAN_ARGS+=(-s "os.version=${MACOSX_DEPLOYMENT_TARGET}")
     fi
     if [[ "${PRECACHE_DEPS}" -eq 1 ]]; then
-        "${PYTHON}" "${ROOT_DIR}/precache_upstream_deps.py"
+        "${PYTHON}" "${ROOT_DIR}/precache_upstream_deps.py" "${PRECACHE_ARGS[@]}"
     fi
     (
         run cd "${BUILD_DIR}"
