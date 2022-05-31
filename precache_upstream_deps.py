@@ -3,6 +3,7 @@
 import yaml
 from pathlib import Path
 from shlex import quote
+import sys
 import subprocess
 from conans.tools import Git
 
@@ -15,6 +16,11 @@ def parse_args():
     ap.add_argument("--toolchain", type=str,
                     help="CMake toolchain to use when building packages.")
     return ap.parse_args()
+
+
+def sgr(code: str):
+    """ANSI colors"""
+    return f"\x1b[{code}m" if sys.stdout.isatty() else ""
 
 
 def run(popen_args, *args, **kwargs):
@@ -44,7 +50,7 @@ def main():
     for name, upstream, cmake_defs in upstream_requirements():
         repo, project, git_ref = upstream.split(' ')
         url = f"https://{repo}/{project}.git"
-        print(f"* {name} ({url})")
+        print(f"* {sgr('1;36')}{name}{sgr('0')} ({url})")
 
         package_dir = deps_dir / name
         install_dir = deps_all_dir / name / git_ref
@@ -71,7 +77,7 @@ def main():
             git = Git(folder=source_dir)
             git.clone(url, git_ref, shallow=True)
 
-        build_dir.mkdir(parents=True)
+        build_dir.mkdir(parents=True, exist_ok=True)
         cmake_args = ["-D" + d for d in cmake_defs.split()]
         if args.toolchain is not None:
             cmake_args += ["--toolchain", args.toolchain]
