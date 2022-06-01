@@ -604,6 +604,26 @@ match an_int {
 }
 ----
 
+Use semicolon to separate multiple cases on single line:
+
+[source,fire]
+----
+match an_int { 1 => "one"; 2 => "two"; _ => "other" }
+----
+
+Enums / tagged unions:
+
+[source,fire]
+----
+type MyVariant = int Int | string String | none
+a : MyVariant = int 42
+match a {
+    int x     => x.to_string
+    string x  => x
+    none      => "<none>"
+}
+----
+
 Or in combination with destructuring:
 
 [source,fire]
