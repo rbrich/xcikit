@@ -33,7 +33,8 @@ print_usage()
     echo "      --devel                 Install/package headers, CMake config, static libs."
     echo "      --emscripten            Target Emscripten (i.e. wrap with 'emcmake')"
     echo "      --unity                 CMAKE_UNITY_BUILD - batch all source files in each target together"
-    echo "      --asan, --ubsan, --tsan Build with sanitizers (Address, UB, Thread)"
+    echo "      --asan, --lsan, --ubsan, --tsan"
+    echo "                              Build with sanitizers (Address, Leak, UB, Thread)"
     echo "      --tidy                  Run clang-tidy on each compiled file"
     echo "      --update                Passed to conan - update dependencies"
     echo "      --profile, -pr PROFILE  Passed to conan - use the profile"
@@ -127,6 +128,9 @@ while [[ $# -gt 0 ]] ; do
             shift 1 ;;
         --asan )
             CMAKE_ARGS+=(-D'BUILD_WITH_ASAN=1')
+            shift 1 ;;
+        --lsan )
+            CMAKE_ARGS+=(-D'BUILD_WITH_LSAN=1')
             shift 1 ;;
         --ubsan )
             CMAKE_ARGS+=(-D'BUILD_WITH_UBSAN=1')
