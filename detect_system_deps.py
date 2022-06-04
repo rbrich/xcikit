@@ -106,7 +106,7 @@ def main():
     reqs = tuple(filtered_requirements(options))
     precached_deps_dir = script_dir.joinpath('.deps')
     if precached_deps_dir.is_dir():
-        precached_deps = [str(d) for d in precached_deps_dir.iterdir()]
+        precached_deps = [str(d) for d in precached_deps_dir.glob("[!.]*") if d.is_dir()]
     else:
         precached_deps = []
     deps = tuple(detect_deps(reqs, precached_deps))
