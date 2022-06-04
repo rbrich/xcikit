@@ -66,6 +66,7 @@ private:
 static MatchScore match_params(const std::vector<TypeInfo>& candidate, const std::vector<TypeInfo>& actual);
 static MatchScore match_type(const TypeInfo& candidate, const TypeInfo& actual);
 static MatchScore match_struct(const TypeInfo& candidate, const TypeInfo& actual);
+static MatchScore match_tuple_to_struct(const TypeInfo& candidate, const TypeInfo& actual);
 
 
 class TypeCheckHelper {
@@ -73,16 +74,24 @@ public:
     explicit TypeCheckHelper(TypeInfo&& spec) : m_spec(std::move(spec)) {}
     TypeCheckHelper(TypeInfo&& spec, TypeInfo&& cast) : m_spec(std::move(spec)), m_cast(std::move(cast)) {}
 
-    void check(const TypeInfo& inferred, const SourceLocation& loc) const {
+    TypeInfo resolve(const TypeInfo& inferred, const SourceLocation& loc) const {
         if (!m_spec)
-            return;
-        if (m_spec.is_struct() && inferred.is_struct()) {
-            if (!match_struct(inferred, m_spec))
-                throw StructTypeMismatch(m_spec, loc);
-            return;
+            return inferred;
+        if (m_spec.is_struct()) {
+            if (inferred.is_struct()) {
+                if (!match_struct(inferred, m_spec))
+                    throw DefinitionTypeMismatch(m_spec, inferred, loc);
+                return m_spec;
+            }
+            if (inferred.is_tuple()) {
+                if (!match_tuple_to_struct(inferred, m_spec))
+                    throw DefinitionTypeMismatch(m_spec, inferred, loc);
+                return m_spec;
+            }
         }
-        if (inferred != m_spec)
+        if (inferred != m_spec.underlying())
             throw DefinitionTypeMismatch(m_spec, inferred, loc);
+        return m_spec;
     }
 
     void check_struct_item(const std::string& key, const TypeInfo& inferred, const SourceLocation& loc) const {
@@ -147,8 +156,8 @@ static MatchScore match_type(const TypeInfo& candidate, const TypeInfo& actual)
 /// All keys and types from inferred are checked against resolved.
 /// Partial match is possible when inferred has less keys than resolved.
 /// \param candidate    Possibly incomplete Struct type as constructed from AST
-/// \param resolved     Actual resolved type for the value
-/// \returns  Match: None/Generic/Partial (full match not distinguished)
+/// \param actual       Actual resolved type for the value
+/// \returns Total match score of all fields, or -1 when not matching
 static MatchScore match_struct(const TypeInfo& candidate, const TypeInfo& actual)
 {
     assert(candidate.is_struct());
@@ -163,10 +172,35 @@ static MatchScore match_struct(const TypeInfo& candidate, const TypeInfo& actual
         if (act_it == actual_items.end())
             return MatchScore(-1);  // not found
         // check item type
-        auto m = match_type(TypeInfo(inf.second), act_it->second);
+        auto m = match_type(inf.second, act_it->second);
         if (!m)
             return MatchScore(-1);  // item type doesn't match
         res += m;
+    }
+    return res;
+}
+
+
+/// Match tuple to resolved Struct type, i.e. initialize struct with tuple literal
+/// \param candidate    Tuple with same or lesser number of fields
+/// \param actual       Actual resolved struct type for the value
+/// \returns Total match score of all fields, or -1 when not matching
+static MatchScore match_tuple_to_struct(const TypeInfo& candidate, const TypeInfo& actual)
+{
+    assert(candidate.is_tuple());
+    assert(actual.is_struct());
+    const auto& actual_items = actual.struct_items();
+    const auto& candidate_types = candidate.subtypes();
+    if (candidate_types.size() > actual_items.size())
+        return MatchScore(-1);  // number of fields doesn't match
+    MatchScore res;
+    auto actual_iter = actual_items.begin();
+    for (const auto& inf_type : candidate.subtypes()) {
+        auto m = match_type(inf_type, actual_iter->second);
+        if (!m)
+            return MatchScore(-1);  // item type doesn't match
+        res += m;
+        ++actual_iter;
     }
     return res;
 }
@@ -321,9 +355,8 @@ public:
     }
 
     void visit(ast::Literal& v) override {
-        m_value_type = v.value.type_info();
         TypeCheckHelper type_check(std::move(m_type_info));
-        type_check.check(m_value_type, v.source_loc);
+        m_value_type = type_check.resolve(v.value.type_info(), v.source_loc);
     }
 
     void visit(ast::Tuple& v) override {
@@ -335,8 +368,7 @@ public:
             item->apply(*this);
             subtypes.push_back(m_value_type.effective_type());
         }
-        m_value_type = TypeInfo(std::move(subtypes));
-        type_check.check(m_value_type, v.source_loc);
+        m_value_type = type_check.resolve(TypeInfo(std::move(subtypes)), v.source_loc);
     }
 
     void visit(ast::List& v) override {
@@ -356,8 +388,7 @@ public:
                     throw ListElemTypeMismatch(elem_type, m_value_type, item->source_loc);
             }
         }
-        m_value_type = ti_list(std::move(elem_type));
-        type_check.check(m_value_type, v.source_loc);
+        m_value_type = type_check.resolve(ti_list(std::move(elem_type)), v.source_loc);
         if (m_value_type.is_generic() && type_check.eval_type())
             m_value_type = std::move(type_check.eval_type());
         // FIXME: allow generic type: fun <T> Void->[T] { []:[T] }

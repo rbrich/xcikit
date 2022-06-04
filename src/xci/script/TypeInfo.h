@@ -114,12 +114,14 @@ public:
     bool is_callable() const { return underlying_type() == Type::Function; }
     bool is_unknown() const { return underlying_type() == Type::Unknown; }
     bool is_void() const { return underlying_type() == Type::Void; }
+    bool is_tuple() const { return underlying_type() == Type::Tuple; }
     bool is_struct() const { return underlying_type() == Type::Struct; }
 
     bool is_generic() const;
     void replace_var(uint8_t idx, const TypeInfo& ti);
 
-    TypeInfo effective_type() const;
+    // If the type is function without args, get its return type.
+    const TypeInfo& effective_type() const;
 
     bool operator==(const TypeInfo& rhs) const;
     bool operator!=(const TypeInfo& rhs) const { return !(*this == rhs); }
@@ -138,6 +140,7 @@ public:
     Signature& signature() { return *signature_ptr(); }
     const NamedTypePtr& named_type_ptr() const;   // type = Named
     const NamedType& named_type() const { return *named_type_ptr(); }
+    const TypeInfo& underlying() const;  // transparently get type_info of NamedType
     std::string name() const;
 
     // -------------------------------------------------------------------------

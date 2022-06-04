@@ -203,7 +203,7 @@ TypeInfo& TypeInfo::operator=(TypeInfo&& other) noexcept
 }
 
 
-TypeInfo TypeInfo::effective_type() const
+const TypeInfo& TypeInfo::effective_type() const
 {
     if (is_callable() && !signature().has_nonvoid_params())
         return signature().return_type.effective_type();
@@ -300,6 +300,12 @@ const TypeInfo::NamedTypePtr& TypeInfo::named_type_ptr() const
     assert(m_type == Type::Named);
     assert(std::holds_alternative<NamedTypePtr>(m_info));
     return std::get<NamedTypePtr>(m_info);
+}
+
+
+const TypeInfo& TypeInfo::underlying() const
+{
+    return m_type == Type::Named ? named_type().type_info.underlying() : *this;
 }
 
 
