@@ -190,10 +190,6 @@ public:
 
     void visit(ast::Literal&) override {}
 
-    void visit(ast::Parenthesized& v) override {
-        v.expression->apply(*this);
-    }
-
     void visit(ast::Tuple& v) override {
         for (auto& item : v.items) {
             item->apply(*this);

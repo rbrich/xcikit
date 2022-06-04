@@ -326,10 +326,6 @@ public:
         type_check.check(m_value_type, v.source_loc);
     }
 
-    void visit(ast::Parenthesized& v) override {
-        v.expression->apply(*this);
-    }
-
     void visit(ast::Tuple& v) override {
         TypeCheckHelper type_check(std::move(m_type_info));
         // build TypeInfo from subtypes

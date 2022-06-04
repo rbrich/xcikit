@@ -470,10 +470,18 @@ TEST_CASE( "Types", "[script][interpreter]" )
 
 TEST_CASE( "User-defined types", "[script][interpreter]" )
 {
-    CHECK(interpret("TupleAlias = (String, Int); a:TupleAlias = \"hello\", 42; a") == "(\"hello\", 42)");
-    CHECK_THROWS_AS(interpret("type MyTuple = (String, Int); a:MyTuple = \"hello\", 42; a"), DefinitionTypeMismatch);
-    // TODO: cast from underlying type
-    //CHECK(interpret_std("type MyTuple = (String, Int); a = (\"hello\", 42):MyTuple; a") == "(\"hello\", 42)");
+//    CHECK(interpret("TupleAlias = (String, Int); a:TupleAlias = \"hello\", 42; a") == "(\"hello\", 42)");
+//    CHECK(interpret("type MyTuple = (String, Int); a:MyTuple = \"hello\", 42; a") == "(\"hello\", 42)");
+    std::string my_struct = "type MyStruct = (name:String, age:Int);";
+//    CHECK(interpret(my_struct + " a:MyStruct = (name=\"hello\", age=42); a") == "(name=\"hello\", age=42)");
+    CHECK(interpret(my_struct + " a:MyStruct = \"hello\", 42; a") == "(name=\"hello\", age=42)");
+    CHECK(interpret(my_struct + " a = (\"hello\", 42):MyStruct; a") == "(name=\"hello\", age=42)");
+    CHECK(interpret(my_struct + " a = (name=\"hello\", age=42):MyStruct; a") == "(name=\"hello\", age=42)");
+    CHECK_THROWS_AS(interpret(my_struct + "a = (\"Luke\", 10); b: MyStruct = a"), DefinitionTypeMismatch);
+    CHECK(interpret(my_struct + "a = (\"Luke\", 10); b: MyStruct = a: MyStruct; b") == "(name=\"hello\", age=42)");
+    CHECK(interpret(my_struct + "a = (\"Luke\", 10); b = a: MyStruct; b") == "(name=\"hello\", age=42)");
+    // cast from underlying type
+    CHECK(interpret_std("type MyTuple = (String, Int); a = (\"hello\", 42):MyTuple; a") == "(\"hello\", 42)");
     CHECK_THROWS_AS(interpret_std("type MyTuple = (String, Int); (1, 2):MyTuple"), FunctionNotFound);  // bad cast
     // struct
     CHECK(interpret("type Record = (name: String, age: Int); a:Record = (name=\"Marvin\", age=42); a") == "(name=\"Marvin\", age=42)");

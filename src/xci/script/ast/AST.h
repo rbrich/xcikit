@@ -100,7 +100,7 @@ public:
     virtual void visit(TypeAlias&) = 0;
     // expression
     virtual void visit(Literal&) = 0;
-    virtual void visit(Parenthesized&) = 0;
+    virtual void visit(Parenthesized& v);
     virtual void visit(Tuple&) = 0;
     virtual void visit(List&) = 0;
     virtual void visit(StructInit&) = 0;

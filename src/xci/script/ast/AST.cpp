@@ -22,6 +22,12 @@ namespace xci::script::ast {
 using ranges::cpp20::views::reverse;
 
 
+void Visitor::visit(Parenthesized& v)
+{
+    v.expression->apply(*this);
+}
+
+
 template <class T>
 auto copy_vector(const std::vector<T>& s)
 {
