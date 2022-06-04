@@ -56,7 +56,7 @@ requirements:
       - graphics
   freetype:
     cmake: "Freetype/2.10.0"
-    conan: "freetype/2.11.1"
+    conan: "freetype/2.12.1"
     prereq:
       - text
   harfbuzz:
