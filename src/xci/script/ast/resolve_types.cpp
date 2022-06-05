@@ -75,20 +75,23 @@ public:
     TypeCheckHelper(TypeInfo&& spec, TypeInfo&& cast) : m_spec(std::move(spec)), m_cast(std::move(cast)) {}
 
     TypeInfo resolve(const TypeInfo& inferred, const SourceLocation& loc) const {
-        if (!m_spec)
-            return inferred;
-        if (m_spec.is_struct()) {
+        // struct - resolve to either specified or cast type
+        const TypeInfo& ti = eval_type();
+        if (ti.is_struct()) {
             if (inferred.is_struct()) {
-                if (!match_struct(inferred, m_spec))
-                    throw DefinitionTypeMismatch(m_spec, inferred, loc);
-                return m_spec;
+                if (!match_struct(inferred, ti))
+                    throw DefinitionTypeMismatch(ti, inferred, loc);
+                return ti;
             }
             if (inferred.is_tuple()) {
-                if (!match_tuple_to_struct(inferred, m_spec))
-                    throw DefinitionTypeMismatch(m_spec, inferred, loc);
-                return m_spec;
+                if (!match_tuple_to_struct(inferred, ti))
+                    throw DefinitionTypeMismatch(ti, inferred, loc);
+                return ti;
             }
         }
+        // otherwise, resolve to specified type, ignore cast type (a cast function will be called)
+        if (!m_spec)
+            return inferred;
         if (inferred != m_spec.underlying())
             throw DefinitionTypeMismatch(m_spec, inferred, loc);
         return m_spec;
@@ -360,7 +363,7 @@ public:
     }
 
     void visit(ast::Tuple& v) override {
-        TypeCheckHelper type_check(std::move(m_type_info));
+        TypeCheckHelper type_check(std::move(m_type_info), std::move(m_cast_type));
         // build TypeInfo from subtypes
         std::vector<TypeInfo> subtypes;
         subtypes.reserve(v.items.size());
@@ -857,7 +860,7 @@ public:
     }
 
     // The cast expression is translated to a call to `cast` method from the Cast class.
-    // The inner expression type and the cast type are used to lookup the instance of Cast.
+    // The inner expression type and the cast type are used to look up the instance of Cast.
     void visit(ast::Cast& v) override {
         // resolve the target type -> m_type_info
         v.type->apply(*this);

@@ -479,8 +479,8 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     CHECK(interpret(my_struct + " a:MyStruct = (name=\"hello\", age=42); a") == "(name=\"hello\", age=42)");
     CHECK(interpret(my_struct + " a:MyStruct = \"hello\", 42; a") == "(name=\"hello\", age=42)");
     // cast from underlying type
-//    CHECK(interpret_std(my_struct + " a = (\"hello\", 42):MyStruct; a") == "(name=\"hello\", age=42)");
-//    CHECK(interpret_std(my_struct + " a = (name=\"hello\", age=42):MyStruct; a") == "(name=\"hello\", age=42)");
+    CHECK(interpret_std(my_struct + " a = (\"hello\", 42):MyStruct; a") == "(name=\"hello\", age=42)");
+    CHECK(interpret_std(my_struct + " a = (name=\"hello\", age=42):MyStruct; a") == "(name=\"hello\", age=42)");
 //    CHECK_THROWS_AS(interpret(my_struct + "a = (\"Luke\", 10); b: MyStruct = a"), DefinitionTypeMismatch);
 //    CHECK(interpret(my_struct + "a = (\"Luke\", 10); b: MyStruct = a: MyStruct; b") == "(name=\"hello\", age=42)");
 //    CHECK(interpret(my_struct + "a = (\"Luke\", 10); b = a: MyStruct; b") == "(name=\"hello\", age=42)");
