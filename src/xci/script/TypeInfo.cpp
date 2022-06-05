@@ -214,7 +214,7 @@ const TypeInfo& TypeInfo::effective_type() const
 bool TypeInfo::operator==(const TypeInfo& rhs) const
 {
     if (m_type == Type::Unknown || rhs.type() == Type::Unknown)
-        return true;  // unknown type matches all other types
+        return true;  // unknown type matches any other type
     if (m_type != rhs.type())
         return false;
     if (m_type == Type::Function)

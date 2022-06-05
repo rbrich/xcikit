@@ -111,8 +111,9 @@ public:
 
     Type type() const { return m_type; }
     Type underlying_type() const;
+    bool is_unknown() const { return m_type == Type::Unknown; }
+    bool is_named() const { return m_type == Type::Named; }
     bool is_callable() const { return underlying_type() == Type::Function; }
-    bool is_unknown() const { return underlying_type() == Type::Unknown; }
     bool is_void() const { return underlying_type() == Type::Void; }
     bool is_tuple() const { return underlying_type() == Type::Tuple; }
     bool is_struct() const { return underlying_type() == Type::Struct; }
