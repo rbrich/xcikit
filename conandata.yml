@@ -50,13 +50,13 @@ requirements:
     prereq:
       - graphics
   vulkan:
-    cmake: "Vulkan/"
+    cmake: "Vulkan/1.2.0"
     conan: "vulkan-loader/1.3.204.1"
     prereq:
       - graphics
   freetype:
     cmake: "Freetype/2.10.0"
-    conan: "freetype/2.11.1"
+    conan: "freetype/2.12.1"
     prereq:
       - text
   harfbuzz:
@@ -70,7 +70,7 @@ requirements:
       - tools
   boost:
     cmake: "Boost/1.75.0"
-    conan: "pfr/2.0.3"  # 2.0.3 not yet in ConanCenter
+    conan: "pfr/2.0.3"
     prereq:
       - data
   catch2:

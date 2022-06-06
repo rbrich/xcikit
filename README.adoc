@@ -222,18 +222,19 @@ pip3 install conan
 - macOS (Homebrew):
 +
 ----
-# Clang 11 - required for C++20
-brew install llvm
-export CXX="$(brew --prefix llvm)/bin/clang++"
 # Tools
-brew install cmake conan ccache ninja
+brew install cmake ninja ccache conan
 # Libs
 brew install pegtl libzip freetype glfw doxygen catch2 google-benchmark hyperscan
 ----
 - macOS (MacPorts):
 +
 ----
-port install vulkan-* MoltenVK glfw-devel freetype hyperscan cmake ninja
+# Tools
+port install cmake ninja ccache
+pip3 install conan
+# Libs
+port install vulkan-* MoltenVK glfw-devel harfbuzz-devel hyperscan libfmt catch2
 ----
 
 [#using-build-script]

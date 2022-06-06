@@ -1,12 +1,31 @@
 #!/usr/bin/env python3
 
 import yaml
-import tempfile
 from pathlib import Path
-from subprocess import run
+from shlex import quote
+import sys
+import subprocess
 from conans.tools import Git
 
 script_dir = Path(__file__).parent
+
+
+def parse_args():
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--toolchain", type=str,
+                    help="CMake toolchain to use when building packages.")
+    return ap.parse_args()
+
+
+def sgr(code: str):
+    """ANSI colors"""
+    return f"\x1b[{code}m" if sys.stdout.isatty() else ""
+
+
+def run(popen_args, *args, **kwargs):
+    print(f"> {' '.join(quote(str(x)) for x in popen_args)}")
+    subprocess.run(popen_args, *args, **kwargs)
 
 
 def requirements():
@@ -21,29 +40,56 @@ def upstream_requirements():
 
 
 def main():
+    args = parse_args()
+
+    deps_dir = script_dir / '.deps'
+    deps_all_dir = deps_dir / '.all'
+    deps_source_dir = deps_dir / '.source'
+    deps_build_dir = deps_dir / '.build'
+
     for name, upstream, cmake_defs in upstream_requirements():
         repo, project, git_ref = upstream.split(' ')
         url = f"https://{repo}/{project}.git"
-        print(f"* {name} ({url})")
-        package_dir = script_dir.joinpath(".deps").joinpath(name)
-        if package_dir.exists():
-            print(f"Already installed at {package_dir}")
-        else:
-            with tempfile.TemporaryDirectory() as temp_dir:
-                source_dir = Path(temp_dir).joinpath("source")
-                source_dir.mkdir()
-                build_dir = Path(temp_dir).joinpath("build")
-                build_dir.mkdir()
-                print(f"Cloning into {source_dir}")
-                git = Git(folder=source_dir)
-                git.clone(url, git_ref, shallow=True)
+        print(f"* {sgr('1;36')}{name}{sgr('0')} ({url})")
 
-                run(["cmake", "-S", source_dir, "-B", build_dir,
-                     "-DCMAKE_BUILD_TYPE=Release",
-                     f"-DCMAKE_INSTALL_PREFIX={package_dir}"
-                     ] + ['-D' + d for d in cmake_defs.split()])
-                run(["cmake", "--build", build_dir])
-                run(["cmake", "--install", build_dir])
+        package_dir = deps_dir / name
+        install_dir = deps_all_dir / name / git_ref
+        install_dir_rel = install_dir.relative_to(deps_dir)
+        source_dir = deps_source_dir / name / git_ref
+        build_dir = deps_build_dir / name / git_ref
+
+        if install_dir.exists():
+            if package_dir.exists():
+                if not package_dir.is_symlink():
+                    raise Exception(f"Package dir exists but is not a symlink: {package_dir}")
+                if package_dir.resolve() == install_dir:
+                    print(f"Already installed at {package_dir} -> {install_dir_rel}")
+                    continue
+                # Package dir points to different version -> relink
+                package_dir.unlink()
+            print(f"Linking {package_dir} -> {install_dir_rel}")
+            package_dir.symlink_to(install_dir_rel, target_is_directory=True)
+            continue
+
+        if not source_dir.exists():
+            print(f"Cloning into {source_dir}")
+            source_dir.mkdir(parents=True)
+            git = Git(folder=source_dir)
+            git.clone(url, git_ref, shallow=True)
+
+        build_dir.mkdir(parents=True, exist_ok=True)
+        cmake_args = ["-D" + d for d in cmake_defs.split()]
+        if args.toolchain is not None:
+            cmake_args += ["--toolchain", args.toolchain]
+        run(["cmake", "-S", source_dir, "-B", build_dir,
+             "-DCMAKE_BUILD_TYPE=Release",
+             "--install-prefix", install_dir,
+             *cmake_args])
+        run(["cmake", "--build", build_dir])
+        run(["cmake", "--install", build_dir])
+
+        package_dir.unlink(missing_ok=True)
+        package_dir.symlink_to(install_dir_rel, target_is_directory=True)
 
 
 if __name__ == '__main__':
