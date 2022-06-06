@@ -155,11 +155,11 @@ static MatchScore match_params(const std::vector<TypeInfo>& candidate, const std
 /// \returns MatchScore: mismatch/generic/exact or combination in case of complex types
 static MatchScore match_type(const TypeInfo& candidate, const TypeInfo& actual)
 {
-    if (actual.is_struct() && candidate.is_struct())
+    if (candidate.is_struct() && actual.is_struct())
         return match_struct(candidate, actual);
-    if (actual.is_tuple() && candidate.is_tuple())
+    if (candidate.is_tuple() && actual.is_tuple())
         return match_tuple(candidate, actual);
-    if (actual.is_named() || candidate.is_named())
+    if (candidate.is_named() || actual.is_named())
         return MatchScore::coerce() + match_type(candidate.underlying(), actual.underlying());
     if (candidate == actual) {
         if (actual.is_generic() || candidate.is_generic())
@@ -931,9 +931,9 @@ public:
         v.expression->apply(*this);
         m_cast_type = {};
         v.from_type = std::move(m_value_type);
-        // cast to Void -> don't call the cast function, just drop the expression result from stack
-        // cast to the same type -> noop
-        if (v.to_type.is_void() || v.from_type.effective_type() == v.to_type) {
+        // Cast to Void -> don't call the cast function, just drop the expression result from stack
+        // Cast to the same type or same underlying type (from/to a named type) -> noop
+        if (v.to_type.is_void() || is_same_underlying(v.from_type.effective_type(), v.to_type)) {
             v.cast_function.reset();
             m_value_type = v.to_type;
             return;

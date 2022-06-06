@@ -475,22 +475,22 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
 {
     // tuple
     std::string my_tuple = "type MyTuple = (String, Int); ";
-    CHECK(interpret("TupleAlias = (String, Int); a:TupleAlias = \"hello\", 42; a") == "(\"hello\", 42)");
-    CHECK(interpret(my_tuple + "a:MyTuple = \"hello\", 42; a") == "(\"hello\", 42)");
+    CHECK(interpret(R"(TupleAlias = (String, Int); a:TupleAlias = "hello", 42; a)") == R"(("hello", 42))");
+    CHECK(interpret(my_tuple + R"(a:MyTuple = "hello", 42; a)") == R"(("hello", 42))");
     CHECK(interpret(my_tuple + R"(type Tuple2 = (String, MyTuple); a:Tuple2 = ("hello", ("a", 1)); a)") == R"(("hello", ("a", 1)))");
     // struct
     std::string my_struct = "type MyStruct = (name:String, age:Int); ";
-    CHECK(interpret(my_struct + " a:MyStruct = (name=\"hello\", age=42); a") == "(name=\"hello\", age=42)");
-    CHECK(interpret(my_struct + " a:MyStruct = \"hello\", 42; a") == "(name=\"hello\", age=42)");
+    CHECK(interpret(my_struct + R"( a:MyStruct = (name="hello", age=42); a)") == R"((name="hello", age=42))");
+    CHECK(interpret(my_struct + R"( a:MyStruct = "hello", 42; a)") == R"((name="hello", age=42))");
     // cast from underlying type
-    CHECK(interpret_std(my_struct + " a = (\"hello\", 42):MyStruct; a") == "(name=\"hello\", age=42)");
-    CHECK(interpret_std(my_struct + " a = (name=\"hello\", age=42):MyStruct; a") == "(name=\"hello\", age=42)");
-    CHECK_THROWS_AS(interpret(my_struct + "a = (\"Luke\", 10); b: MyStruct = a"), FunctionNotFound);
-    CHECK_THROWS_AS(interpret(my_struct + "type OtherStruct = (name:String, age:Int); a:MyStruct = (\"Luke\", 10); b: OtherStruct = a"), FunctionNotFound);
-//    CHECK(interpret_std(my_struct + "a = (\"Luke\", 10); b: MyStruct = a: MyStruct; b") == "(name=\"hello\", age=42)");
-//    CHECK(interpret(my_struct + "a = (\"Luke\", 10); b = a: MyStruct; b") == "(name=\"hello\", age=42)");
-//    CHECK(interpret_std(my_tuple + "a = (\"hello\", 42):MyTuple; a") == "(\"hello\", 42)");
-//    CHECK_THROWS_AS(interpret_std(my_tuple + "(1, 2):MyTuple"), FunctionNotFound);  // bad cast
+    CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a)") == R"((name="hello", age=42))");
+    CHECK(interpret_std(my_struct + R"( a = (name="hello", age=42):MyStruct; a)") == R"((name="hello", age=42))");
+    CHECK_THROWS_AS(interpret(my_struct + R"(a = ("Luke", 10); b: MyStruct = a)"), FunctionNotFound);
+    CHECK_THROWS_AS(interpret(my_struct + R"(type OtherStruct = (name:String, age:Int); a:MyStruct = ("Luke", 10); b: OtherStruct = a)"), FunctionNotFound);
+    CHECK(interpret_std(my_struct + R"(a = ("Luke", 10); b: MyStruct = a: MyStruct; b)") == R"((name="Luke", age=10))");
+    CHECK(interpret_std(my_struct + R"(a = ("Luke", 10); b = a: MyStruct; b)") == R"((name="Luke", age=10))");
+    CHECK(interpret_std(my_tuple + R"(a = ("hello", 42):MyTuple; a)") == R"(("hello", 42))");
+    CHECK_THROWS_AS(interpret_std(my_tuple + "(1, 2):MyTuple"), FunctionNotFound);  // bad cast
 }
 
 

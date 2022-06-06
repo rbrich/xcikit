@@ -124,6 +124,10 @@ public:
     // If the type is function without args, get its return type.
     const TypeInfo& effective_type() const;
 
+    /// Deep comparison of underlying types. The types must be fully known, non-generic.
+    /// \returns true if the types are equivalent (same size, layout, underlying types)
+    friend bool is_same_underlying(const TypeInfo& lhs, const TypeInfo& rhs);
+
     bool operator==(const TypeInfo& rhs) const;
     bool operator!=(const TypeInfo& rhs) const { return !(*this == rhs); }
 
@@ -136,6 +140,7 @@ public:
     const TypeInfo& elem_type() const;  // type = List (Subtypes[0])
     const Subtypes& subtypes() const;  // type = Tuple
     const StructItems& struct_items() const;  // type = Struct
+    Subtypes struct_or_tuple_subtypes() const;  // type = Tuple | Struct
     const SignaturePtr& signature_ptr() const;  // type = Function
     const Signature& signature() const { return *signature_ptr(); }
     Signature& signature() { return *signature_ptr(); }
@@ -279,7 +284,9 @@ struct NamedType {
 };
 
 
+// -----------------------------------------------------------------------------
 // Shortcuts
+
 inline TypeInfo ti_unknown() { return TypeInfo(Type::Unknown); }
 inline TypeInfo ti_void() { return TypeInfo(Type::Void); }
 inline TypeInfo ti_bool() { return TypeInfo(Type::Bool); }
@@ -303,7 +310,6 @@ inline TypeInfo ti_chars() { return TypeInfo{TypeInfo::list_of, ti_char()}; }
 inline TypeInfo ti_bytes() { return TypeInfo{TypeInfo::list_of, ti_byte()}; }
 
 // Each item must be TypeInfo
-
 template <typename... Args>
 inline TypeInfo ti_tuple(Args&&... args) { return TypeInfo(TypeInfo::tuple_of, {std::forward<TypeInfo>(args)...}); }
 

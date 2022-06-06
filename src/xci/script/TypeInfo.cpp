@@ -211,6 +211,53 @@ const TypeInfo& TypeInfo::effective_type() const
 }
 
 
+bool is_same_underlying(const TypeInfo& lhs, const TypeInfo& rhs)
+{
+    const TypeInfo& l = lhs.underlying();
+    const TypeInfo& r = rhs.underlying();
+    switch (l.type()) {
+        case Type::Unknown:
+        case Type::Named:
+            return false;
+        case Type::Void:
+        case Type::Bool:
+        case Type::Byte:
+        case Type::Char:
+        case Type::UInt32:
+        case Type::UInt64:
+        case Type::Int32:
+        case Type::Int64:
+        case Type::Float32:
+        case Type::Float64:
+        case Type::String:
+        case Type::Module:
+        case Type::Stream:
+            return l.type() == r.type();
+        case Type::List:
+            return r.type() == Type::List &&
+                   is_same_underlying(l.elem_type(), r.elem_type());
+        case Type::Tuple:
+        case Type::Struct:
+            if (r.type() == Type::Tuple || r.type() == Type::Struct) {
+                auto l_types = l.struct_or_tuple_subtypes();
+                auto r_types = r.struct_or_tuple_subtypes();
+                if (l_types.size() != r_types.size())
+                    return false;
+                auto r_type_it = r_types.begin();
+                for (const auto& l_type : l_types) {
+                    if (!is_same_underlying(l_type, *r_type_it++))
+                        return false;
+                }
+                return true;
+            }
+            return false;
+        case Type::Function:
+            // FIXME: deep compare underlying types in function prototype?
+            return false;
+    }
+}
+
+
 bool TypeInfo::operator==(const TypeInfo& rhs) const
 {
     if (m_type == Type::Unknown || rhs.type() == Type::Unknown)
@@ -282,6 +329,20 @@ auto TypeInfo::struct_items() const -> const StructItems&
     assert(m_type == Type::Struct);
     assert(std::holds_alternative<StructItems>(m_info));
     return std::get<StructItems>(m_info);
+}
+
+
+auto TypeInfo::struct_or_tuple_subtypes() const -> Subtypes
+{
+    if (m_type == Type::Tuple)
+        return subtypes();
+    const auto& items = struct_items();
+    Subtypes res;
+    res.reserve(items.size());
+    std::transform(items.begin(), items.end(), std::back_inserter(res), [](const auto& item) {
+        return item.second;
+    });
+    return res;
 }
 
 
