@@ -465,7 +465,7 @@ public:
                 m_value_type = v.struct_type;
                 return;
             }
-            if (m_type_info.underlying_type() != Type::Struct)
+            if (!m_type_info.is_struct())
                 throw StructTypeMismatch(m_type_info, v.source_loc);
             if (!match_struct(v.struct_type, m_type_info))
                 throw StructTypeMismatch(m_type_info, v.source_loc);
@@ -477,7 +477,7 @@ public:
         //              and check it matches specified type (if any)
         TypeCheckHelper type_check(std::move(m_type_info), std::move(m_cast_type));
         const auto& specified = type_check.eval_type();
-        if (!specified.is_unknown() && specified.underlying_type() != Type::Struct)
+        if (!specified.is_unknown() && !specified.is_struct())
             throw StructTypeMismatch(specified, v.source_loc);
         // build TypeInfo for the struct initializer
         TypeInfo::StructItems ti_items;
