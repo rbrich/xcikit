@@ -190,10 +190,6 @@ public:
 
     void visit(ast::Literal&) override {}
 
-    void visit(ast::Parenthesized& v) override {
-        v.expression->apply(*this);
-    }
-
     void visit(ast::Tuple& v) override {
         for (auto& item : v.items) {
             item->apply(*this);
@@ -337,6 +333,11 @@ public:
     void visit(ast::TupleType& t) final {
         for (auto& st : t.subtypes)
             st->apply(*this);
+    }
+
+    void visit(ast::StructType& t) final {
+        for (auto& st : t.subtypes)
+            st.type->apply(*this);
     }
 
 private:

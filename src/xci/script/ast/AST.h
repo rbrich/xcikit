@@ -54,6 +54,7 @@ struct TypeName;
 struct FunctionType;
 struct ListType;
 struct TupleType;
+struct StructType;
 
 
 class ConstVisitor {
@@ -84,6 +85,7 @@ public:
     virtual void visit(const FunctionType&) = 0;
     virtual void visit(const ListType&) = 0;
     virtual void visit(const TupleType&) = 0;
+    virtual void visit(const StructType&) = 0;
 };
 
 class Visitor {
@@ -98,7 +100,7 @@ public:
     virtual void visit(TypeAlias&) = 0;
     // expression
     virtual void visit(Literal&) = 0;
-    virtual void visit(Parenthesized&) = 0;
+    virtual void visit(Parenthesized& v);
     virtual void visit(Tuple&) = 0;
     virtual void visit(List&) = 0;
     virtual void visit(StructInit&) = 0;
@@ -114,6 +116,7 @@ public:
     virtual void visit(FunctionType&) = 0;
     virtual void visit(ListType&) = 0;
     virtual void visit(TupleType&) = 0;
+    virtual void visit(StructType&) = 0;
 };
 
 
@@ -138,6 +141,7 @@ public:
     void visit(FunctionType&) final {}
     void visit(ListType&) final {}
     void visit(TupleType&) final {}
+    void visit(StructType&) final {}
 };
 
 
@@ -179,6 +183,7 @@ public:
     void visit(FunctionType&) final {}
     void visit(ListType&) final {}
     void visit(TupleType&) final {}
+    void visit(StructType&) final {}
 };
 
 
@@ -251,9 +256,24 @@ struct TupleType: public Type {
 };
 
 
+struct StructItem {
+    Identifier identifier;  // required
+    std::unique_ptr<Type> type;  // required
+};
+
+
+struct StructType: public Type {
+    void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
+    void apply(Visitor& visitor) override { visitor.visit(*this); }
+    std::unique_ptr<ast::Type> make_copy() const override;
+
+    std::vector<StructItem> subtypes;
+};
+
+
 struct Parameter {
     Identifier identifier;  // optional
-    std::unique_ptr<Type> type;
+    std::unique_ptr<Type> type;  // optional
 };
 
 
@@ -277,7 +297,7 @@ struct FunctionType: public Type {
 
 struct Variable {
     Identifier identifier;  // required
-    std::unique_ptr<Type> type;
+    std::unique_ptr<Type> type;  // optional
 };
 
 
@@ -629,6 +649,7 @@ struct Module {
 
 template <class T> std::unique_ptr<T> pcopy(const T& v) { auto r = std::make_unique<T>(); v.copy_to(*r); return r; }
 std::unique_ptr<Type> copy(const std::unique_ptr<Type>& v);
+inline StructItem copy(const StructItem& v) { return {v.identifier, copy(v.type)}; }
 inline Variable copy(const Variable& v) { return {v.identifier, copy(v.type)}; }
 inline Parameter copy(const Parameter& v) { return {v.identifier, copy(v.type)}; }
 Block copy(const Block& v);

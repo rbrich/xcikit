@@ -411,6 +411,7 @@ TEST_CASE( "Literals", "[script][interpreter]" )
 
 TEST_CASE( "Variables", "[script][interpreter]" )
 {
+    CHECK(interpret_std("a = 42; b = a; b") == "42");
     CHECK_THROWS_AS(interpret_std("a=1; a=\"asb\""), RedefinedName);
     CHECK_THROWS_AS(interpret_std("k = 1; k = k + 1"), RedefinedName);
     CHECK(interpret_std("m = 1; { m = 2; m }") == "2");
@@ -458,6 +459,8 @@ TEST_CASE( "Types", "[script][interpreter]" )
     // each definition can have explicit type
     CHECK(interpret("a:Int = 1 ; a") == "1");
     CHECK_THROWS_AS(interpret("a:Int = 1.0 ; a"), DefinitionTypeMismatch);
+    CHECK(interpret_std("a:Int = 42; b:Int = a; b") == "42");
+    CHECK_THROWS_AS(interpret("a = 42; b:String = a"), FunctionNotFound);
 
     // function type can be specified in lambda or specified explicitly
     CHECK(interpret_std("f = fun a:Int b:Int -> Int {a+b}; f 1 2") == "3");
@@ -470,11 +473,33 @@ TEST_CASE( "Types", "[script][interpreter]" )
 
 TEST_CASE( "User-defined types", "[script][interpreter]" )
 {
-    CHECK(interpret("TupleAlias = (String, Int); a:TupleAlias = \"hello\", 42; a") == "(\"hello\", 42)");
-    CHECK_THROWS_AS(interpret("type MyTuple = (String, Int); a:MyTuple = \"hello\", 42; a"), DefinitionTypeMismatch);
-    // TODO: cast from underlying type
-    //CHECK(interpret_std("type MyTuple = (String, Int); a = (\"hello\", 42):MyTuple; a") == "(\"hello\", 42)");
-    CHECK_THROWS_AS(interpret_std("type MyTuple = (String, Int); (1, 2):MyTuple"), FunctionNotFound);  // bad cast
+    // 'type' keyword makes strong types
+    CHECK(interpret_std("type X=Int; x:X = 42; x:Int") == "42");
+    CHECK_THROWS_AS(interpret_std("type X=Int; x:X = 42; x:Int64"), FunctionNotFound);  // cast X -> Int64
+    CHECK(interpret_std("type X=Int; x:X = 42; (x:Int):Int64") == "42L");  // OK with intermediate cast to Int
+    // alias (not a strong type)
+    CHECK(interpret_std("X=Int; x:X = 42; x:Int64") == "42L");
+    // tuple
+    std::string my_tuple = "type MyTuple = (String, Int); ";
+    CHECK(interpret(R"(TupleAlias = (String, Int); a:TupleAlias = "hello", 42; a)") == R"(("hello", 42))");
+    CHECK(interpret(my_tuple + R"(a:MyTuple = "hello", 42; a)") == R"(("hello", 42))");
+    CHECK(interpret(my_tuple + R"(type Tuple2 = (String, MyTuple); a:Tuple2 = ("hello", ("a", 1)); a)") == R"(("hello", ("a", 1)))");
+    // struct
+    CHECK(interpret(R"(a:(name: String, age: Int) = ("hello", 42); a)") == R"((name="hello", age=42))");  // anonymous
+    CHECK(interpret(R"(Rec = (name: String, age: Int); a:Rec = (name="hello", age=42); a)") == R"((name="hello", age=42))");  // alias
+    std::string my_struct = "type MyStruct = (name:String, age:Int); ";  // named struct
+    CHECK(interpret(my_struct + R"( a:MyStruct = (name="hello", age=42); a)") == R"((name="hello", age=42))");
+    CHECK(interpret(my_struct + R"( a:MyStruct = "hello", 42; a)") == R"((name="hello", age=42))");
+    // cast from underlying type
+    CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a)") == R"((name="hello", age=42))");
+    CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a:(String, Int))") == R"(("hello", 42))");
+    CHECK(interpret_std(my_struct + R"( a = (name="hello", age=42):MyStruct; a)") == R"((name="hello", age=42))");
+    CHECK_THROWS_AS(interpret(my_struct + R"(a = ("Luke", 10); b: MyStruct = a)"), FunctionNotFound);
+    CHECK_THROWS_AS(interpret(my_struct + R"(type OtherStruct = (name:String, age:Int); a:MyStruct = ("Luke", 10); b: OtherStruct = a)"), FunctionNotFound);
+    CHECK(interpret_std(my_struct + R"(a = ("Luke", 10); b: MyStruct = a: MyStruct; b)") == R"((name="Luke", age=10))");
+    CHECK(interpret_std(my_struct + R"(a = ("Luke", 10); b = a: MyStruct; b)") == R"((name="Luke", age=10))");
+    CHECK(interpret_std(my_tuple + R"(a = ("hello", 42):MyTuple; a)") == R"(("hello", 42))");
+    CHECK_THROWS_AS(interpret_std(my_tuple + "(1, 2):MyTuple"), FunctionNotFound);  // bad cast
 }
 
 

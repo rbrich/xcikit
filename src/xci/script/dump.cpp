@@ -124,6 +124,7 @@ public:
     void visit(const FunctionType& v) override { m_os << v; }
     void visit(const ListType& v) override { m_os << v; }
     void visit(const TupleType& v) override { m_os << v; }
+    void visit(const StructType& v) override { m_os << v; }
 
 private:
     std::ostream& m_os;
@@ -206,6 +207,20 @@ std::ostream& operator<<(std::ostream& os, const StructInit& v)
                 os << ", ";
         }
         return os;
+    }
+}
+
+
+std::ostream& operator<<(std::ostream& os, const StructItem& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << "StructItem" << endl;
+        os << more_indent
+           << put_indent << v.identifier
+           << put_indent << *v.type;
+        return os << less_indent;
+    } else {
+        return os << v.identifier << ':' << *v.type;
     }
 }
 
@@ -370,6 +385,26 @@ std::ostream& operator<<(std::ostream& os, const TupleType& v)
         return os << ')';
     }
 }
+
+
+std::ostream& operator<<(std::ostream& os, const StructType& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << "StructType(Type)" << endl << more_indent;
+        for (const auto& t : v.subtypes)
+            os << put_indent << t;
+        return os << less_indent;
+    } else {
+        os << '(';
+        for (const auto& t : v.subtypes) {
+            os << t;
+            if (&t != &v.subtypes.back())
+                os << ", ";
+        }
+        return os << ')';
+    }
+}
+
 
 std::ostream& operator<<(std::ostream& os, const TypeConstraint& v)
 {
@@ -972,7 +1007,7 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
         case Type::Struct: {
             os << "(";
             for (const auto& item : v.struct_items()) {
-                os << item.second << ' ' << item.first;
+                os << item.first << ": " << item.second;
                 if (&item != &v.struct_items().back())
                     os << ", ";
             }

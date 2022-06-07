@@ -22,6 +22,12 @@ namespace xci::script::ast {
 using ranges::cpp20::views::reverse;
 
 
+void Visitor::visit(Parenthesized& v)
+{
+    v.expression->apply(*this);
+}
+
+
 template <class T>
 auto copy_vector(const std::vector<T>& s)
 {
@@ -130,7 +136,7 @@ std::unique_ptr<ast::Statement> Instance::make_copy() const
 {
     auto r = std::make_unique<Instance>();
     r->class_name = class_name;
-    for (const auto& t : r->type_inst)
+    for (const auto& t : type_inst)
         r->type_inst.push_back(t->make_copy());
     r->context = context;
     for (const auto& d : defs) {
@@ -227,8 +233,16 @@ std::unique_ptr<ast::Type> ListType::make_copy() const
 std::unique_ptr<ast::Type> TupleType::make_copy() const
 {
     auto r = std::make_unique<TupleType>();
-    for (const auto& t : r->subtypes)
+    for (const auto& t : subtypes)
         r->subtypes.push_back(t->make_copy());
+    return r;
+}
+
+
+std::unique_ptr<ast::Type> StructType::make_copy() const
+{
+    auto r = std::make_unique<StructType>();
+    r->subtypes = copy_vector(subtypes);
     return r;
 }
 

@@ -116,10 +116,6 @@ public:
         code().add_L1(Opcode::LoadStatic, idx);
     }
 
-    void visit(ast::Parenthesized& v) override {
-        v.expression->apply(*this);
-    }
-
     void visit(ast::Tuple& v) override {
         // build tuple on stack
         for (auto& item : reverse(v.items)) {

@@ -36,6 +36,9 @@ static void cmd_help() {
 static void cmd_dump_info() {
     TermCtl& t = xci::core::TermCtl::stdout_instance();
     t.write("Bloat:\n");
+    t.print("  sizeof(HeapSlot) = {}\n", sizeof(HeapSlot));
+    t.print("  sizeof(Value) = {}\n", sizeof(Value));
+    t.print("  sizeof(TypeInfo) = {}\n", sizeof(TypeInfo));
     t.print("  sizeof(Function) = {}\n", sizeof(Function));
     t.print("  sizeof(Function::CompiledBody) = {}\n", sizeof(Function::CompiledBody));
     t.print("  sizeof(Function::GenericBody) = {}\n", sizeof(Function::GenericBody));

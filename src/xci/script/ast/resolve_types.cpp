@@ -32,17 +32,28 @@ public:
         : m_exact(exact), m_coerce(coerce), m_generic(generic) {}
     explicit MatchScore(int8_t exact) : m_exact(exact) {}  // -1 => mismatch
 
-    void set_mismatch() { m_exact = -1; }
+    static MatchScore exact() { return MatchScore(1); }
+    static MatchScore coerce() { return MatchScore(0, 1, 0); }
+    static MatchScore generic() { return MatchScore(0, 0, 1); }
+    static MatchScore mismatch() { return MatchScore(-1); }
+
     void add_exact() { ++m_exact; }
     void add_coerce() { ++m_coerce; }
     void add_generic() { ++m_generic; }
 
-    bool is_exact() const { return m_exact >= 0 && (m_coerce | m_generic) == 0; }
+    bool is_exact() const { return m_exact >= 0 && (m_coerce + m_generic) == 0; }
+    bool is_coerce() const { return m_coerce > 0; }
 
     explicit operator bool() const { return m_exact != -1; }
     auto operator<=>(const MatchScore&) const = default;
 
-    void operator +=(MatchScore rhs) {
+    MatchScore operator+(MatchScore rhs) {
+        return {int8_t(m_exact + rhs.m_exact),
+                int8_t(m_coerce + rhs.m_coerce),
+                int8_t(m_generic + rhs.m_generic)};
+    }
+
+    void operator+=(MatchScore rhs) {
         m_exact += rhs.m_exact;  // NOLINT
         m_coerce += rhs.m_coerce;  // NOLINT
         m_generic += rhs.m_generic;  // NOLINT
@@ -65,7 +76,9 @@ private:
 
 static MatchScore match_params(const std::vector<TypeInfo>& candidate, const std::vector<TypeInfo>& actual);
 static MatchScore match_type(const TypeInfo& candidate, const TypeInfo& actual);
+static MatchScore match_tuple(const TypeInfo& candidate, const TypeInfo& actual);
 static MatchScore match_struct(const TypeInfo& candidate, const TypeInfo& actual);
+static MatchScore match_tuple_to_struct(const TypeInfo& candidate, const TypeInfo& actual);
 
 
 class TypeCheckHelper {
@@ -73,16 +86,27 @@ public:
     explicit TypeCheckHelper(TypeInfo&& spec) : m_spec(std::move(spec)) {}
     TypeCheckHelper(TypeInfo&& spec, TypeInfo&& cast) : m_spec(std::move(spec)), m_cast(std::move(cast)) {}
 
-    void check(const TypeInfo& inferred, const SourceLocation& loc) const {
-        if (!m_spec)
-            return;
-        if (m_spec.is_struct() && inferred.is_struct()) {
-            if (!match_struct(inferred, m_spec))
-                throw StructTypeMismatch(m_spec, loc);
-            return;
+    TypeInfo resolve(const TypeInfo& inferred, const SourceLocation& loc) const {
+        // struct - resolve to either specified or cast type
+        const TypeInfo& ti = eval_type();
+        if (ti.is_struct()) {
+            if (inferred.is_struct()) {
+                if (!match_struct(inferred, ti))
+                    throw DefinitionTypeMismatch(ti, inferred, loc);
+                return ti;
+            }
+            if (inferred.is_tuple()) {
+                if (!match_tuple_to_struct(inferred, ti))
+                    throw DefinitionTypeMismatch(ti, inferred, loc);
+                return ti;
+            }
         }
-        if (inferred != m_spec)
+        // otherwise, resolve to specified type, ignore cast type (a cast function will be called)
+        if (!m_spec)
+            return inferred;
+        if (!match_type(inferred, m_spec))
             throw DefinitionTypeMismatch(m_spec, inferred, loc);
+        return m_spec;
     }
 
     void check_struct_item(const std::string& key, const TypeInfo& inferred, const SourceLocation& loc) const {
@@ -120,7 +144,7 @@ static MatchScore match_params(const std::vector<TypeInfo>& candidate, const std
     MatchScore score;
     for (size_t i = 0; i != actual.size(); ++i) {
         auto m = match_type(candidate[i], actual[i]);
-        if (!m)
+        if (!m || m.is_coerce())
             return MatchScore(-1);
         score += m;
     }
@@ -128,18 +152,51 @@ static MatchScore match_params(const std::vector<TypeInfo>& candidate, const std
 }
 
 
-/// \returns Match: None/Generic/Partial
+/// \returns MatchScore: mismatch/generic/exact or combination in case of complex types
 static MatchScore match_type(const TypeInfo& candidate, const TypeInfo& actual)
 {
-    if (actual.is_struct() && candidate.is_struct())
+    if (candidate.is_struct() && actual.is_struct())
         return match_struct(candidate, actual);
+    if (candidate.is_tuple() && actual.is_tuple())
+        return match_tuple(candidate, actual);
+    if (candidate.is_named() || actual.is_named())
+        return MatchScore::coerce() + match_type(candidate.underlying(), actual.underlying());
     if (candidate == actual) {
         if (actual.is_generic() || candidate.is_generic())
-            return MatchScore(0, 0, 1);
+            return MatchScore::generic();
         else
-            return MatchScore(1);
+            return MatchScore::exact();
     }
-    return MatchScore(-1);
+    return MatchScore::mismatch();
+}
+
+
+/// Match tuple to tuple
+/// \param candidate    Candidate tuple type
+/// \param actual       Actual resolved tuple type for the value
+/// \returns Total match score of all fields, or mismatch
+static MatchScore match_tuple(const TypeInfo& candidate, const TypeInfo& actual)
+{
+    assert(candidate.is_tuple());
+    assert(actual.is_tuple());
+    const auto& actual_types = actual.subtypes();
+    const auto& candidate_types = candidate.subtypes();
+    if (candidate_types.size() != actual_types.size())
+        return MatchScore::mismatch();  // number of fields doesn't match
+    if (candidate == actual)
+        return MatchScore::exact();
+    MatchScore res;
+    if (candidate.is_named() || actual.is_named())
+        res.add_coerce();
+    auto actual_iter = actual_types.begin();
+    for (const auto& inf_type : candidate_types) {
+        auto m = match_type(inf_type, *actual_iter);
+        if (!m)
+            return MatchScore::mismatch();  // item type doesn't match
+        res += m;
+        ++actual_iter;
+    }
+    return res;
 }
 
 
@@ -147,26 +204,62 @@ static MatchScore match_type(const TypeInfo& candidate, const TypeInfo& actual)
 /// All keys and types from inferred are checked against resolved.
 /// Partial match is possible when inferred has less keys than resolved.
 /// \param candidate    Possibly incomplete Struct type as constructed from AST
-/// \param resolved     Actual resolved type for the value
-/// \returns  Match: None/Generic/Partial (full match not distinguished)
+/// \param actual       Actual resolved type for the value
+/// \returns Total match score of all fields, or mismatch
 static MatchScore match_struct(const TypeInfo& candidate, const TypeInfo& actual)
 {
     assert(candidate.is_struct());
     assert(actual.is_struct());
     const auto& actual_items = actual.struct_items();
+    if (candidate == actual)
+        return MatchScore::exact();
     MatchScore res;
+    if (candidate.is_named() || actual.is_named()) {
+        // The named type doesn't match.
+        // The underlying type may match - each field adds another match to total score.
+        res.add_coerce();
+    }
     for (const auto& inf : candidate.struct_items()) {
         auto act_it = std::find_if(actual_items.begin(), actual_items.end(),
                 [&inf](const TypeInfo::StructItem& act) {
                   return act.first == inf.first;
                 });
         if (act_it == actual_items.end())
-            return MatchScore(-1);  // not found
+            return MatchScore::mismatch();  // not found
         // check item type
-        auto m = match_type(TypeInfo(inf.second), act_it->second);
+        auto m = match_type(inf.second, act_it->second);
         if (!m)
-            return MatchScore(-1);  // item type doesn't match
+            return MatchScore::mismatch();  // item type doesn't match
         res += m;
+    }
+    return res;
+}
+
+
+/// Match tuple to resolved Struct type, i.e. initialize struct with tuple literal
+/// \param candidate    Tuple with same or lesser number of fields
+/// \param actual       Actual resolved struct type for the value
+/// \returns Total match score of all fields, or mismatch
+static MatchScore match_tuple_to_struct(const TypeInfo& candidate, const TypeInfo& actual)
+{
+    assert(candidate.is_tuple());
+    assert(actual.is_struct());
+    const auto& actual_items = actual.struct_items();
+    const auto& candidate_types = candidate.subtypes();
+    if (candidate_types.size() > actual_items.size())
+        return MatchScore::mismatch();  // number of fields doesn't match
+    if (candidate == actual)
+        return MatchScore::exact();
+    MatchScore res;
+    if (candidate.is_named() || actual.is_named())
+        res.add_coerce();
+    auto actual_iter = actual_items.begin();
+    for (const auto& inf_type : candidate_types) {
+        auto m = match_type(inf_type, actual_iter->second);
+        if (!m)
+            return MatchScore::mismatch();  // item type doesn't match
+        res += m;
+        ++actual_iter;
     }
     return res;
 }
@@ -321,17 +414,12 @@ public:
     }
 
     void visit(ast::Literal& v) override {
-        m_value_type = v.value.type_info();
         TypeCheckHelper type_check(std::move(m_type_info));
-        type_check.check(m_value_type, v.source_loc);
-    }
-
-    void visit(ast::Parenthesized& v) override {
-        v.expression->apply(*this);
+        m_value_type = type_check.resolve(v.value.type_info(), v.source_loc);
     }
 
     void visit(ast::Tuple& v) override {
-        TypeCheckHelper type_check(std::move(m_type_info));
+        TypeCheckHelper type_check(std::move(m_type_info), std::move(m_cast_type));
         // build TypeInfo from subtypes
         std::vector<TypeInfo> subtypes;
         subtypes.reserve(v.items.size());
@@ -339,8 +427,7 @@ public:
             item->apply(*this);
             subtypes.push_back(m_value_type.effective_type());
         }
-        m_value_type = TypeInfo(std::move(subtypes));
-        type_check.check(m_value_type, v.source_loc);
+        m_value_type = type_check.resolve(TypeInfo(std::move(subtypes)), v.source_loc);
     }
 
     void visit(ast::List& v) override {
@@ -360,8 +447,7 @@ public:
                     throw ListElemTypeMismatch(elem_type, m_value_type, item->source_loc);
             }
         }
-        m_value_type = ti_list(std::move(elem_type));
-        type_check.check(m_value_type, v.source_loc);
+        m_value_type = type_check.resolve(ti_list(std::move(elem_type)), v.source_loc);
         if (m_value_type.is_generic() && type_check.eval_type())
             m_value_type = std::move(type_check.eval_type());
         // FIXME: allow generic type: fun <T> Void->[T] { []:[T] }
@@ -379,7 +465,7 @@ public:
                 m_value_type = v.struct_type;
                 return;
             }
-            if (m_type_info.type() != Type::Struct)
+            if (!m_type_info.is_struct())
                 throw StructTypeMismatch(m_type_info, v.source_loc);
             if (!match_struct(v.struct_type, m_type_info))
                 throw StructTypeMismatch(m_type_info, v.source_loc);
@@ -391,7 +477,7 @@ public:
         //              and check it matches specified type (if any)
         TypeCheckHelper type_check(std::move(m_type_info), std::move(m_cast_type));
         const auto& specified = type_check.eval_type();
-        if (!specified.is_unknown() && specified.type() != Type::Struct)
+        if (!specified.is_unknown() && !specified.is_struct())
             throw StructTypeMismatch(specified, v.source_loc);
         // build TypeInfo for the struct initializer
         TypeInfo::StructItems ti_items;
@@ -544,12 +630,16 @@ public:
             case Symbol::Function: {
                 // specified type in definition
                 if (v.definition && m_type_info) {
-                    assert(m_type_info.is_callable());
                     assert(m_call_args.empty());
-                    for (const auto& t : m_type_info.signature().params)
-                        m_call_args.push_back({t, v.source_loc});
-                    m_call_ret = m_type_info.signature().return_type;
-                    m_type_info = {};
+                    if (m_type_info.is_callable()) {
+                        for (const auto& t : m_type_info.signature().params)
+                            m_call_args.push_back({t, v.source_loc});
+                        m_call_ret = m_type_info.signature().return_type;
+                        m_type_info = {};
+                    } else {
+                        // A naked type, consider it a function return type
+                        m_call_ret = std::move(m_type_info);
+                    }
                 }
 
                 auto res = resolve_overload(v.identifier.symbol, v.identifier);
@@ -830,7 +920,7 @@ public:
     }
 
     // The cast expression is translated to a call to `cast` method from the Cast class.
-    // The inner expression type and the cast type are used to lookup the instance of Cast.
+    // The inner expression type and the cast type are used to look up the instance of Cast.
     void visit(ast::Cast& v) override {
         // resolve the target type -> m_type_info
         v.type->apply(*this);
@@ -841,9 +931,9 @@ public:
         v.expression->apply(*this);
         m_cast_type = {};
         v.from_type = std::move(m_value_type);
-        // cast to Void -> don't call the cast function, just drop the expression result from stack
-        // cast to the same type -> noop
-        if (v.to_type.is_void() || v.from_type.effective_type() == v.to_type) {
+        // Cast to Void -> don't call the cast function, just drop the expression result from stack
+        // Cast to the same type or same underlying type (from/to a named type) -> noop
+        if (v.to_type.is_void() || is_same_underlying(v.from_type.effective_type(), v.to_type)) {
             v.cast_function.reset();
             m_value_type = v.to_type;
             return;
@@ -890,6 +980,15 @@ public:
             subtypes.push_back(std::move(m_type_info));
         }
         m_type_info = TypeInfo{std::move(subtypes)};
+    }
+
+    void visit(ast::StructType& t) final {
+        TypeInfo::StructItems items;
+        for (auto& st : t.subtypes) {
+            st.type->apply(*this);
+            items.emplace_back(st.identifier.name, std::move(m_type_info));
+        }
+        m_type_info = TypeInfo{std::move(items)};
     }
 
 private:
@@ -1208,8 +1307,12 @@ private:
                 o_ftype << ' ';
             o_ftype << arg.type_info;
         }
+        if (!m_call_args.empty())
+            o_ftype << " -> ";
         if (m_call_ret)
-            o_ftype << " -> " << m_call_ret;
+            o_ftype << m_call_ret;
+        else
+            o_ftype << "Void";
         if (conflict) {
             // ERROR found multiple matching functions
             throw FunctionConflict(identifier.name, o_ftype.str(), o_candidates.str(), identifier.source_loc);
@@ -1258,8 +1361,8 @@ private:
         return res;
     }
 
-    /// \returns Match: None/Generic/Partial/Exact
-    /// Partial match means the signature has less parameters than call args.
+    /// \returns total MatchScore of all parameters and return value, or mismatch
+    /// Partial match is possible when the signature has less parameters than call args.
     MatchScore match_signature(const Signature& signature) const
     {
         Signature sig = signature;  // a copy to work on (modified below)
@@ -1272,13 +1375,13 @@ private:
                     sig = sig.return_type.signature();
                 } else {
                     // unexpected argument
-                    return MatchScore(-1);
+                    return MatchScore::mismatch();
                 }
             }
             // check type of next param
             auto m = match_type(arg.type_info, sig.params[0]);
-            if (!m)
-                return MatchScore(-1);
+            if (!m || m.is_coerce())
+                return MatchScore::mismatch();
             res += m;
             // consume next param
             sig.params.erase(sig.params.begin());
@@ -1286,8 +1389,8 @@ private:
         // check return type
         if (m_call_ret) {
             auto m = match_type(m_call_ret, sig.return_type);
-            if (!m)
-                return MatchScore(-1);
+            if (!m || m.is_coerce())
+                return MatchScore::mismatch();
             res += m;
         }
         if (m_cast_type) {

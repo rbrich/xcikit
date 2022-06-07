@@ -110,15 +110,23 @@ public:
     void foreach_heap_slot(std::function<void(size_t offset)> cb) const;
 
     Type type() const { return m_type; }
-    bool is_callable() const { return m_type == Type::Function; }
+    Type underlying_type() const;
     bool is_unknown() const { return m_type == Type::Unknown; }
-    bool is_void() const { return m_type == Type::Void; }
-    bool is_struct() const { return m_type == Type::Struct; }
+    bool is_named() const { return m_type == Type::Named; }
+    bool is_callable() const { return underlying_type() == Type::Function; }
+    bool is_void() const { return underlying_type() == Type::Void; }
+    bool is_tuple() const { return underlying_type() == Type::Tuple; }
+    bool is_struct() const { return underlying_type() == Type::Struct; }
 
     bool is_generic() const;
     void replace_var(uint8_t idx, const TypeInfo& ti);
 
-    TypeInfo effective_type() const;
+    // If the type is function without args, get its return type.
+    const TypeInfo& effective_type() const;
+
+    /// Deep comparison of underlying types. The types must be fully known, non-generic.
+    /// \returns true if the types are equivalent (same size, layout, underlying types)
+    friend bool is_same_underlying(const TypeInfo& lhs, const TypeInfo& rhs);
 
     bool operator==(const TypeInfo& rhs) const;
     bool operator!=(const TypeInfo& rhs) const { return !(*this == rhs); }
@@ -132,11 +140,13 @@ public:
     const TypeInfo& elem_type() const;  // type = List (Subtypes[0])
     const Subtypes& subtypes() const;  // type = Tuple
     const StructItems& struct_items() const;  // type = Struct
+    Subtypes struct_or_tuple_subtypes() const;  // type = Tuple | Struct
     const SignaturePtr& signature_ptr() const;  // type = Function
     const Signature& signature() const { return *signature_ptr(); }
     Signature& signature() { return *signature_ptr(); }
     const NamedTypePtr& named_type_ptr() const;   // type = Named
     const NamedType& named_type() const { return *named_type_ptr(); }
+    const TypeInfo& underlying() const;  // transparently get type_info of NamedType
     std::string name() const;
 
     // -------------------------------------------------------------------------
@@ -274,7 +284,9 @@ struct NamedType {
 };
 
 
+// -----------------------------------------------------------------------------
 // Shortcuts
+
 inline TypeInfo ti_unknown() { return TypeInfo(Type::Unknown); }
 inline TypeInfo ti_void() { return TypeInfo(Type::Void); }
 inline TypeInfo ti_bool() { return TypeInfo(Type::Bool); }
@@ -298,7 +310,6 @@ inline TypeInfo ti_chars() { return TypeInfo{TypeInfo::list_of, ti_char()}; }
 inline TypeInfo ti_bytes() { return TypeInfo{TypeInfo::list_of, ti_byte()}; }
 
 // Each item must be TypeInfo
-
 template <typename... Args>
 inline TypeInfo ti_tuple(Args&&... args) { return TypeInfo(TypeInfo::tuple_of, {std::forward<TypeInfo>(args)...}); }
 

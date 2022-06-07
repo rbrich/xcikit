@@ -43,8 +43,6 @@ Value create_value(const TypeInfo& type_info)
 {
     const auto type = type_info.type();
     switch (type) {
-        default:
-            return create_value(type);
         case Type::List:
             if (type_info.elem_type() == TypeInfo{Type::Byte})
                 return value::Bytes();  // List subclass, with special output formatting
@@ -52,11 +50,16 @@ Value create_value(const TypeInfo& type_info)
                 return value::List();
         case Type::Tuple:
             return value::Tuple{type_info.subtypes()};
-        case Type::Struct:
+        case Type::Struct: {
             auto subtypes = type_info.struct_items()
                 | views::transform([](const TypeInfo::StructItem& item) { return item.second; })
                 | to<std::vector>();
             return value::Tuple{subtypes};
+        }
+        case Type::Named:
+            return create_value(type_info.named_type().type_info);
+        default:
+            return create_value(type);
     }
     return {};
 }
@@ -725,8 +728,8 @@ size_t Values::size_on_stack() const
 TypedValue::TypedValue(Value value, TypeInfo type_info)
         : m_value(std::move(value)), m_type_info(std::move(type_info))
 {
-    assert(m_value.type() == m_type_info.type()
-        || (m_value.type() == Type::Tuple && m_type_info.type() == Type::Struct));
+    assert(m_value.type() == m_type_info.underlying_type()
+        || (m_value.type() == Type::Tuple && m_type_info.is_struct()));
 }
 
 
@@ -795,14 +798,14 @@ public:
     }
     void visit(const TupleV& v) override {
         os << "(";
-        if (type_info.type() == Type::Tuple) {
+        if (type_info.is_tuple()) {
             auto ti_iter = type_info.subtypes().begin();
             for (Value* it = v.values.get(); !it->is_void(); ++it) {
                 if (it != v.values.get())
                     os << ", ";
                 os << TypedValue(*it, *ti_iter++);
             }
-        } else if (type_info.type() == Type::Struct) {
+        } else if (type_info.is_struct()) {
             auto ti_iter = type_info.struct_items().begin();
             for (Value* it = v.values.get(); !it->is_void(); ++it) {
                 if (it != v.values.get())

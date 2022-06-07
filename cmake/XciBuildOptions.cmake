@@ -4,6 +4,7 @@ option(BUILD_FRAMEWORKS "Build shared libs as OSX frameworks. Implies BUILD_SHAR
 
 # sanitizers (runtime checking tools)
 option(BUILD_WITH_ASAN "Build with AddressSanitizer." OFF)
+option(BUILD_WITH_LSAN "Build with standalone LeakSanitizer." OFF)
 option(BUILD_WITH_UBSAN "Build with UndefinedBehaviorSanitizer." OFF)
 option(BUILD_WITH_TSAN "Build with ThreadSanitizer." OFF)
 
@@ -113,15 +114,23 @@ if (ENABLE_WARNINGS)
 endif()
 
 if (BUILD_WITH_ASAN)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
+    add_compile_options(-fsanitize=address)
+    add_link_options(-fsanitize=address)
+endif ()
+
+if (BUILD_WITH_LSAN)
+    add_compile_options(-fsanitize=leak)
+    add_link_options(-fsanitize=leak)
 endif ()
 
 if (BUILD_WITH_UBSAN)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined")
+    add_compile_options(-fsanitize=undefined)
+    add_link_options(-fsanitize=undefined)
 endif ()
 
 if (BUILD_WITH_TSAN)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=thread")
+    add_compile_options(-fsanitize=thread)
+    add_link_options(-fsanitize=thread)
 endif ()
 
 # Strip dead-code

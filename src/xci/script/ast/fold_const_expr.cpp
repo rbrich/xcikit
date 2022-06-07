@@ -214,10 +214,6 @@ public:
         m_const_value = v.value;
     }
 
-    void visit(ast::Parenthesized& v) override {
-        v.expression->apply(*this);
-    }
-
     void visit(ast::Tuple& v) override {
         // TODO: const tuple -> static value
         m_const_value.reset();
