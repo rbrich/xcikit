@@ -1007,7 +1007,7 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
         case Type::Struct: {
             os << "(";
             for (const auto& item : v.struct_items()) {
-                os << item.second << ' ' << item.first;
+                os << item.first << ": " << item.second;
                 if (&item != &v.struct_items().back())
                     os << ", ";
             }

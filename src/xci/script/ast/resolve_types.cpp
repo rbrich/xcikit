@@ -1302,15 +1302,17 @@ private:
                          << fn.signature() << endl;
         }
         stringstream o_ftype;
-        if (m_call_args.empty())
-            o_ftype << "Void";
-        else for (const auto& arg : m_call_args) {
+        for (const auto& arg : m_call_args) {
             if (&arg != &m_call_args.front())
                 o_ftype << ' ';
             o_ftype << arg.type_info;
         }
+        if (!m_call_args.empty())
+            o_ftype << " -> ";
         if (m_call_ret)
-            o_ftype << " -> " << m_call_ret;
+            o_ftype << m_call_ret;
+        else
+            o_ftype << "Void";
         if (conflict) {
             // ERROR found multiple matching functions
             throw FunctionConflict(identifier.name, o_ftype.str(), o_candidates.str(), identifier.source_loc);

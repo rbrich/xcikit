@@ -839,6 +839,12 @@ get_age = fun st:MyStruct -> Int { st.age }
 get_age a   // Error, variable does not coerce
 get_age { ("Luke", 10) }  // Error, the block's return value doesn't coerce
 get_age a:MyStruct  // OK
+
+// Anonymous struct
+a: (name: String, age: Int) = ("Luke", 10)
+// Alias - the type of `a` is still an anonymous struct
+Record = (name: String, age: Int)
+a: Record = ("Luke", 10)
 ----
 
 It's also possible to make an alias of a type:
