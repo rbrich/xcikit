@@ -64,7 +64,7 @@ SignalWatch::~SignalWatch()
 void SignalWatch::_notify(const struct kevent& event)
 {
     if (m_cb)
-        m_cb(event.ident);
+        m_cb(int(event.ident));
 }
 
 
