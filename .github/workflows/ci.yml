@@ -52,12 +52,6 @@ jobs:
           cc: gcc-10
           cxx: g++-10
           build_args: "--minsize --unity"
-        - os: ubuntu-22.04
-          name: "Clang 14 / Tidy"
-          cc: clang-14
-          cxx: clang++-14
-          apt: libc++-14-dev libc++abi-14-dev
-          build_args: "--precache-deps --tidy"
         - os: macos-10.15
           name: "Clang 13 / Release"
           clang: brew
