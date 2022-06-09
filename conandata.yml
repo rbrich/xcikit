@@ -75,7 +75,7 @@ requirements:
       - data
   catch2:
     cmake: "Catch2/"
-    conan: "catch2/2.13.9"
+    conan: "catch2/3.0.1"
     prereq:
       - tests
   benchmark:
