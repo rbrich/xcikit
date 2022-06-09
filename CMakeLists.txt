@@ -61,8 +61,6 @@ option(XCI_DEBUG_VULKAN "Log info about Vulkan calls and errors." OFF)
 option(XCI_DEBUG_TRACE "Enable trace log messages." OFF)
 option(XCI_DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
 
-option(XCI_PCH_CATCH2 "Precompile <catch2/catch.hpp> header." OFF)
-
 # The C++20 standard will stay as minimal requirement until C++23 is well established among compilers.
 # That means at least until year 2024. By that time, xcikit should have an actual release branch.
 # Another major version will be created before bumping the requirement.
@@ -106,7 +104,7 @@ find_package(magic_enum REQUIRED)
 
 # Catch
 if (BUILD_TESTING)
-    find_package(Catch2 REQUIRED)
+    find_package(Catch2 3 REQUIRED)
 endif()
 
 # Google Benchmark

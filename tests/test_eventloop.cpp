@@ -4,7 +4,7 @@
 // Copyright 2019, 2020 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 #include <xci/core/event.h>
 #include <xci/core/dispatch.h>

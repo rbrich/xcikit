@@ -4,7 +4,8 @@
 // Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <xci/script/Parser.h>
 #include <xci/script/Interpreter.h>
