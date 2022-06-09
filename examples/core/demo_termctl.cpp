@@ -63,7 +63,7 @@ int main()
                  << " '" << to_utf8(decoded.unicode) << "'\n";
         // handle Ctrl-C
         if (decoded.mod.is_ctrl() && decoded.key == TermCtl::Key::UnicodeChar) {
-            switch (towupper(decoded.unicode)) {
+            switch (towupper(wint_t(decoded.unicode))) {
                 case 'C':
                 case 'D':
                 case 'Z':

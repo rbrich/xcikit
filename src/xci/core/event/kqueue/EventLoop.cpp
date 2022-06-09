@@ -60,7 +60,7 @@ bool EventLoop::_kevent(struct kevent* evlist, size_t nevents)
 {
     if (m_kqueue_fd == -1)
         return true;
-    return ::kevent(m_kqueue_fd, evlist, nevents, nullptr, 0, nullptr) != -1;
+    return ::kevent(m_kqueue_fd, evlist, int(nevents), nullptr, 0, nullptr) != -1;
 }
 
 

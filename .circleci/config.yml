@@ -64,8 +64,9 @@ workflows:
           name: Debian 11 - GCC 10
           image: debian
       - build:
-          name: Ubuntu 22.04 - Clang 14
+          name: Ubuntu 22.04 - Clang-Tidy 14
           image: ubuntu
+          build-args: "--tidy -DFAIL_ON_WARNINGS=1"
       - build:
           name: Emscripten
           image: emscripten

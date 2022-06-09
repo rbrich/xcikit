@@ -79,11 +79,9 @@ const Module* ReplCommand::module_by_idx(Index mod_idx) {
 
 
 const Module* ReplCommand::module_by_name(std::string_view mod_name) {
-    size_t n = 0;
     for (const auto& m : m_ctx.input_modules) {
         if (m->name() == mod_name)
             return m.get();
-        ++n;
     }
 
     TermCtl& t = m_ctx.term_out;

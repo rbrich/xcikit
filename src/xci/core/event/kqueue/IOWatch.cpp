@@ -42,12 +42,13 @@ IOWatch::~IOWatch()
 
 void IOWatch::_notify(const struct kevent& event)
 {
+    // NOTE: event.ident is actually an FD (int) we passed above
     if (event.filter == EVFILT_READ && (event.flags & EV_EOF) != EV_EOF)
-        m_cb(event.ident, Event::Read);
+        m_cb(int(event.ident), Event::Read);
     if (event.filter == EVFILT_WRITE && (event.flags & EV_EOF) != EV_EOF)
-        m_cb(event.ident, Event::Write);
+        m_cb(int(event.ident), Event::Write);
     if (event.flags & EV_EOF)
-        m_cb(event.ident, Event::Error);
+        m_cb(int(event.ident), Event::Error);
 }
 
 
