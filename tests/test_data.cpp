@@ -208,7 +208,7 @@ TEST_CASE( "Magic save/load", "[data]")
         std::ostringstream s(data);
         {
             xci::data::BinaryWriter bw(s);
-            bw(record);
+            bw(record);  // NOLINT(clang-analyzer-core.uninitialized.UndefReturn) - https://github.com/boostorg/pfr/issues/91
         }
         data = s.str();
     }
