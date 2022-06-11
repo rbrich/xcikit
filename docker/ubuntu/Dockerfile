@@ -5,7 +5,7 @@
 #   docker run --rm -v $PWD:/src -w /src -it rbrich/xcikit-ubuntu
 # CMake arguments (for Clion IDE):
 #   -DFORCE_COLORS=1 -DCONAN_INSTALL=1
-#   -DCONAN_OPTIONS="xcikit:system_glfw=True;xcikit:system_vulkan=True;xcikit:system_freetype=True;xcikit:system_harfbuzz=True;xcikit:system_catch2=True;xcikit:system_benchmark=True;xcikit:system_zlib=True;xcikit:system_range_v3=True;xcikit:with_hyperscan=True"
+#   -DCONAN_OPTIONS="xcikit:system_glfw=True;xcikit:system_vulkan=True;xcikit:system_freetype=True;xcikit:system_harfbuzz=True;xcikit:system_benchmark=True;xcikit:system_zlib=True;xcikit:system_range_v3=True;xcikit:with_hyperscan=True"
 
 FROM ubuntu:jammy AS builder
 
@@ -21,7 +21,7 @@ ENV CMAKE_GENERATOR=Ninja CONAN_CMAKE_GENERATOR=Ninja
 
 RUN echo "xcikit deps"; apt-get update && apt-get install --no-install-recommends -y \
     librange-v3-dev libglfw3-dev glslang-tools libvulkan-dev libfreetype6-dev libharfbuzz-dev \
-    libhyperscan-dev catch2 libbenchmark-dev && rm -rf /var/lib/apt/lists/*
+    libhyperscan-dev libbenchmark-dev && rm -rf /var/lib/apt/lists/*
 
 RUN echo "conan"; pip3 --no-cache-dir install conan
 
