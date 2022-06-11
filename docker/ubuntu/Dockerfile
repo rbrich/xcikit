@@ -32,6 +32,7 @@ USER builder
 ENV CONAN_USER_HOME=/home/builder
 RUN conan profile new default --detect && \
     conan profile update "settings.compiler.libcxx=libstdc++11" default && \
+    conan profile update "settings.compiler.cppstd=20" default && \
     conan config set general.revisions_enabled=1
 
 # Preinstall Conan deps
