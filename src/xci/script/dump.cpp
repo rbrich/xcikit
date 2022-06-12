@@ -276,15 +276,6 @@ std::ostream& operator<<(std::ostream& os, const Identifier& v)
     }
 }
 
-std::ostream& operator<<(std::ostream& os, const Key& v)
-{
-    if (stream_options(os).enable_tree) {
-        return os << "Key " << v.name << endl;
-    } else {
-        return os << v.name;
-    }
-}
-
 std::ostream& operator<<(std::ostream& os, const Type& v)
 {
     DumpVisitor visitor(os);
@@ -904,8 +895,11 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
 
     os << "* " << v.num_types() << " types\n" << more_indent;
     for (Index i = 0; i < v.num_types(); ++i) {
-        const auto& typ = v.get_type(i);
-        os << put_indent << '[' << i << "] " << typ << '\n';
+        const auto& ti = v.get_type(i);
+        os << put_indent << '[' << i << "] " << ti;
+        if (ti.is_named())
+            os << " = " << ti.underlying();
+        os << '\n';
     }
     os << less_indent;
 
@@ -1078,6 +1072,7 @@ std::ostream& operator<<(std::ostream& os, Symbol::Type v)
         case Symbol::Instance:      return os << "Instance";
         case Symbol::TypeName:      return os << "TypeName";
         case Symbol::TypeVar:       return os << "TypeVar";
+        case Symbol::StructItem:    return os << "StructItem";
         case Symbol::TypeId:        return os << "TypeId";
     }
     return os;

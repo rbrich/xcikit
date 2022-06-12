@@ -102,6 +102,7 @@ Index Module::add_type(TypeInfo type_info)
 {
     assert(!type_info.is_generic());
 
+    // lookup previous type
     auto idx = find_type(type_info);
     if (idx != no_index)
         return idx;

@@ -64,6 +64,7 @@ public:
             case Symbol::Method:
             case Symbol::TypeName:
             case Symbol::TypeVar:
+            case Symbol::StructItem:
             case Symbol::TypeId:
                 break;
             case Symbol::Function: {

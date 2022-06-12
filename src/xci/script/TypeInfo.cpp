@@ -334,6 +334,18 @@ auto TypeInfo::struct_items() const -> const StructItems&
 }
 
 
+const TypeInfo* TypeInfo::struct_item_by_name(const std::string& name) const
+{
+    const auto& items = struct_items();
+    auto it = std::find_if(items.begin(), items.end(), [&name](const StructItem& item) {
+         return item.first == name;
+    });
+    if (it == items.end())
+        return nullptr;
+    return &it->second;
+}
+
+
 auto TypeInfo::struct_or_tuple_subtypes() const -> Subtypes
 {
     if (m_type == Type::Tuple)

@@ -15,7 +15,6 @@
 
 #include <sstream>
 #include <optional>
-#include <unordered_set>
 
 namespace xci::script {
 
@@ -482,12 +481,7 @@ public:
         // build TypeInfo for the struct initializer
         TypeInfo::StructItems ti_items;
         ti_items.reserve(v.items.size());
-        std::unordered_set<std::string> keys;
         for (auto& item : v.items) {
-            // check the key is not duplicate
-            auto [_, ok] = keys.insert(item.first.name);
-            if (!ok)
-                throw StructDuplicateKey(item.first.name, item.second->source_loc);
             // resolve item type
             item.second->apply(*this);
             auto item_type = m_value_type.effective_type();
@@ -501,6 +495,12 @@ public:
             v.struct_type = std::move(type_check.eval_type());
         }
         m_value_type = v.struct_type;
+
+        // Add the inferred struct type to module, point StructItem symbols to it
+        Index index = module().add_type(v.struct_type);
+        for (auto& item : v.items) {
+            item.first.symbol->set_index(index);
+        }
     }
 
     void visit(ast::Reference& v) override {
@@ -705,6 +705,21 @@ public:
             case Symbol::TypeVar:
                 // TODO
                 return;
+            case Symbol::StructItem: {
+                if (m_call_args.size() != 1)
+                    throw UnexpectedArgumentCount(1, m_call_args.size(), v.source_loc);
+
+                const TypeInfo& struct_type = symtab.module()->get_type(sym.index());
+                if (m_call_args[0].type_info != struct_type)
+                    throw UnexpectedArgumentType(1, struct_type, m_call_args[0].type_info, v.source_loc);
+
+                const auto* item_type = struct_type.struct_item_by_name(sym.name());
+                assert(item_type != nullptr);
+
+                m_call_args.clear();
+                m_value_type = *item_type;
+                break;
+            }
             case Symbol::Unresolved:
                 UNREACHABLE;
         }
@@ -989,6 +1004,11 @@ public:
             items.emplace_back(st.identifier.name, std::move(m_type_info));
         }
         m_type_info = TypeInfo{std::move(items)};
+
+        Index index = module().add_type(m_type_info);
+        for (auto& st : t.subtypes) {
+            st.identifier.symbol->set_index(index);
+        }
     }
 
 private:

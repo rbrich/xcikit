@@ -499,6 +499,12 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     CHECK(interpret_std(my_struct + R"(a = ("Luke", 10); b = a: MyStruct; b)") == R"((name="Luke", age=10))");
     CHECK(interpret_std(my_tuple + R"(a = ("hello", 42):MyTuple; a)") == R"(("hello", 42))");
     CHECK_THROWS_AS(interpret_std(my_tuple + "(1, 2):MyTuple"), FunctionNotFound);  // bad cast
+    // struct member access
+    CHECK(interpret(my_struct + R"( a:MyStruct = (name="hello", age=42); a.name; a.age)") == R"("hello";42)");
+    CHECK(interpret(R"(a = (name="hello", age=42, valid=true); a.name; a.age; a.valid)") == R"("hello";42;true)");
+    // invalid struct - repeated field names
+    CHECK_THROWS_AS(interpret("type MyStruct = (same:String, same:Int)"), StructDuplicateKey);  // struct type
+    CHECK_THROWS_AS(interpret(R"(a = (same="hello", same=42))"), StructDuplicateKey);  // struct init (anonymous struct type)
 }
 
 

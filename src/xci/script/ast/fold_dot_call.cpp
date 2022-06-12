@@ -81,9 +81,22 @@ public:
     }
 
     void visit(ast::Literal&) override {}
-    void visit(ast::Tuple&) override {}
-    void visit(ast::List&) override {}
-    void visit(ast::StructInit&) override {}
+
+    void visit(ast::Tuple& v) override {
+        for (const auto& expr : v.items)
+            expr->apply(*this);
+    }
+
+    void visit(ast::List& v) override {
+        for (const auto& expr : v.items)
+            expr->apply(*this);
+    }
+
+    void visit(ast::StructInit& v) override {
+        for (const auto& item : v.items)
+            item.second->apply(*this);
+    }
+
     void visit(ast::Reference&) override {}
 
     void visit(ast::Cast& v) override {

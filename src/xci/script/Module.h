@@ -89,7 +89,6 @@ public:
     Index add_type(TypeInfo type_info);
     const TypeInfo& get_type(Index idx) const { return m_types[idx]; }
     Index find_type(const TypeInfo& type_info) const;
-    void set_type(Index idx, TypeInfo&& type_info) { m_types[idx] = std::move(type_info); }
     Size num_types() const { return Size(m_types.size()); }
 
     // Type classes

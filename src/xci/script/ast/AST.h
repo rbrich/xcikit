@@ -201,18 +201,6 @@ struct Identifier {
 };
 
 
-// an identifier that doesn't need to be resolved
-struct Key {
-    Key() = default;
-    explicit Key(std::string s) : name(std::move(s)) {}
-    explicit Key(Identifier&& ident) : name(std::move(ident.name)), source_loc(ident.source_loc) {}
-    explicit operator bool() const { return !name.empty(); }
-
-    std::string name;
-    SourceLocation source_loc;
-};
-
-
 struct Type {
     virtual ~Type() = default;
     virtual void apply(ConstVisitor& visitor) const = 0;
@@ -373,7 +361,7 @@ struct StructInit: public Expression {
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;
 
-    using Item = std::pair<Key, std::unique_ptr<Expression>>;
+    using Item = std::pair<Identifier, std::unique_ptr<Expression>>;
     std::vector<Item> items;
 
     // resolved:

@@ -76,6 +76,9 @@ public:
         Instruction,        // intrinsics resolve to this, the index is Opcode
         TypeVar,            // type variable in generic function (index = var ID)
 
+        // struct type
+        StructItem,         // name = item name, index = struct type index in module
+
         // special
         TypeId,             // translate type name to type ID (index = type index in builtin if < 32, else type index in current module + 32)
     };
