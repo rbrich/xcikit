@@ -1,6 +1,6 @@
 // test_core.cpp created on 2018-03-30, part of XCI toolkit
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 #include <xci/core/log.h>
 #include <xci/core/file.h>

@@ -4,23 +4,9 @@
 
 include(Catch)
 
-add_library(catch_main STATIC catch_main.cpp)
-target_link_libraries(catch_main PUBLIC Catch2::Catch2)
-
 macro(add_catch_test name source)
     add_executable(${name} ${source})
-    target_link_libraries(${name} catch_main ${ARGN})
-    # Catch2 in PCH
-    if (XCI_PCH_CATCH2)
-        if (DEFINED target_with_pch)
-            # already have PCH in another target, reuse it
-            target_precompile_headers(${name} REUSE_FROM ${target_with_pch})
-        else()
-            # no PCH yet, create it and save this target name
-            target_precompile_headers(${name} PRIVATE <catch2/catch.hpp>)
-            set(target_with_pch ${name})
-        endif()
-    endif()
+    target_link_libraries(${name} PRIVATE Catch2::Catch2WithMain ${ARGN})
     if (EMSCRIPTEN)
         # Discovering tests doesn't work with Emscripten
         add_test(NAME ${name} COMMAND node ${name}.js)

@@ -276,14 +276,12 @@ if phase deps; then
     (
         run cd "${BUILD_DIR}"
 
-        if [[ "$EMSCRIPTEN" -eq 0 ]]; then
-            if [[ ! -f 'system_deps.txt' ]] ; then
-                echo 'Checking for preinstalled dependencies...'
-                "${PYTHON}" "${ROOT_DIR}/detect_system_deps.py" "${DETECT_ARGS[@]}" | tee 'system_deps.txt'
-            fi
-            # shellcheck disable=SC2207
-            CONAN_ARGS+=($(tail -n1 'system_deps.txt'))
+        if [[ ! -f 'system_deps.txt' ]] ; then
+            echo 'Checking for preinstalled dependencies...'
+            "${PYTHON}" "${ROOT_DIR}/detect_system_deps.py" "${DETECT_ARGS[@]}" | tee 'system_deps.txt'
         fi
+        # shellcheck disable=SC2207
+        CONAN_ARGS+=($(tail -n1 'system_deps.txt'))
 
         run conan install "${ROOT_DIR}" \
             --build missing \
@@ -300,7 +298,7 @@ if phase config; then
         [[ "$EMSCRIPTEN" -eq 1 ]] && WRAPPER=emcmake
         run cd "${BUILD_DIR}"
         # shellcheck disable=SC2207
-        [[ "$EMSCRIPTEN" -eq 0 ]] && CMAKE_ARGS+=($(tail -n2 'system_deps.txt' | head -n1))
+        CMAKE_ARGS+=($(tail -n2 'system_deps.txt' | head -n1))
         XCI_CMAKE_COLORS=1 run ${WRAPPER} cmake "${ROOT_DIR}" \
             "${CMAKE_ARGS[@]}" \
             -D"CMAKE_BUILD_TYPE=${BUILD_TYPE}" \

@@ -12,7 +12,7 @@ script_dir = Path(__file__).parent
 
 def parse_args():
     import argparse
-    ap = argparse.ArgumentParser()
+    ap = argparse.ArgumentParser(description="Precache deps into $HOME/.xcikit/deps")
     ap.add_argument("--toolchain", type=str,
                     help="CMake toolchain to use when building packages.")
     return ap.parse_args()
@@ -42,7 +42,7 @@ def upstream_requirements():
 def main():
     args = parse_args()
 
-    deps_dir = script_dir / '.deps'
+    deps_dir = Path.home() / '.xcikit/deps'
     deps_all_dir = deps_dir / '.all'
     deps_source_dir = deps_dir / '.source'
     deps_build_dir = deps_dir / '.build'
@@ -83,7 +83,7 @@ def main():
             cmake_args += ["--toolchain", args.toolchain]
         run(["cmake", "-S", source_dir, "-B", build_dir,
              "-DCMAKE_BUILD_TYPE=Release",
-             "--install-prefix", install_dir,
+             f"-DCMAKE_INSTALL_PREFIX={install_dir}",
              *cmake_args])
         run(["cmake", "--build", build_dir])
         run(["cmake", "--install", build_dir])

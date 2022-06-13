@@ -5,4 +5,4 @@ set(GRAPHVIZ_GENERATE_PER_TARGET OFF)
 set(GRAPHVIZ_GENERATE_DEPENDERS OFF)
 
 # Ignore tests and demos
-set(GRAPHVIZ_IGNORE_TARGETS demo_.* test_.* bm_.* catch_main benchmark::benchmark Catch2::Catch2)
+set(GRAPHVIZ_IGNORE_TARGETS demo_.* test_.* bm_.* benchmark::benchmark Catch2::Catch2WithMain)

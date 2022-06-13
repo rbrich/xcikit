@@ -4,7 +4,7 @@
 // Copyright 2020 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 #include <xci/data/BinaryWriter.h>
 #include <xci/data/BinaryReader.h>
@@ -200,7 +200,7 @@ TEST_CASE( "BinaryReader", "[data]" )
         uint32_t x = 0;
         double f = 0.0;
         bool b = false;
-        int *n = nullptr;
+        std::unique_ptr<int> n;
         std::byte z {0};
         try {
             BinaryReader reader(buf);

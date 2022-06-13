@@ -4,7 +4,7 @@
 // Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 #include <xci/widgets/TextTerminal.h>
 #include <xci/core/string.h>

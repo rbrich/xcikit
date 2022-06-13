@@ -6,6 +6,7 @@
 
 #include "TypeInfo.h"
 #include "Error.h"
+#include <xci/compat/macros.h>
 #include <range/v3/algorithm/any_of.hpp>
 #include <numeric>
 
@@ -255,6 +256,7 @@ bool is_same_underlying(const TypeInfo& lhs, const TypeInfo& rhs)
             // FIXME: deep compare underlying types in function prototype?
             return false;
     }
+    UNREACHABLE;
 }
 
 
