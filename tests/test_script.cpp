@@ -5,7 +5,6 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <xci/script/Parser.h>
 #include <xci/script/Interpreter.h>
@@ -169,8 +168,7 @@ TEST_CASE( "Optional semicolon", "[script][parser]" )
     CHECK(parse("1 + \n 2") == parse("1+2"));  // linebreak is allowed after infix operator
     CHECK(parse("add 1 \\\n 2") == parse("add 1 2"));  // newline can be escaped
     CHECK(parse("(add 1 \\\n 2)") == parse("(add 1 2)"));
-    REQUIRE_THROWS_WITH(parse("a=1;;"),  // empty statement is not allowed, semicolon is only used as a separator
-            Catch::Matchers::StartsWith("parse error: invalid syntax"));
+    CHECK_THROWS_AS(parse("a=1;;"), ParseError);  // empty statement is not allowed, semicolon is only used as a separator
 }
 
 
