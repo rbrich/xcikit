@@ -104,9 +104,9 @@ def main():
     options = parse_args()
     options = add_required_components(options)
     reqs = tuple(filtered_requirements(options))
-    precached_deps_dir = script_dir.joinpath('.deps')
+    precached_deps_dir = Path.home().joinpath('.xcikit/deps')
     if precached_deps_dir.is_dir():
-        precached_deps = [str(d) for d in precached_deps_dir.glob("[!.]*") if d.is_dir()]
+        precached_deps = [str(d) for d in precached_deps_dir.glob("[!.]*") if d.is_symlink()]
     else:
         precached_deps = []
     deps = tuple(detect_deps(reqs, precached_deps))

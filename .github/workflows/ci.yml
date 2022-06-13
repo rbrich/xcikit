@@ -97,6 +97,7 @@ jobs:
       with:
         path: |
           ~/.conan/data
+          ~/.xcikit/deps/.all
         key: ${{ runner.os }}-${{ matrix.name }}-${{ hashFiles('conanfile.py', 'conandata.yml') }}
         restore-keys: |
           ${{ runner.os }}-${{ matrix.name }}-
