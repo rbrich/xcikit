@@ -200,7 +200,7 @@ TEST_CASE( "BinaryReader", "[data]" )
         uint32_t x = 0;
         double f = 0.0;
         bool b = false;
-        int *n = nullptr;
+        std::unique_ptr<int> n;
         std::byte z {0};
         try {
             BinaryReader reader(buf);
