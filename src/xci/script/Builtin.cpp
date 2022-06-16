@@ -430,6 +430,7 @@ void BuiltinModule::add_introspections()
     add_native_function("__module", {}, ti_module(), introspect_module);
     // get number of functions in a module
     add_native_function("__n_fn", [](Module& m) { return (int) m.num_functions(); });
+    add_native_function("__n_types", [](Module& m) { return (int) m.num_types(); });
 }
 
 

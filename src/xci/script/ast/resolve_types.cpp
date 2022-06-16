@@ -397,10 +397,17 @@ public:
     }
 
     void visit(ast::TypeDef& v) override {
+        // `add_type` deduplicates by comparing the TypeInfos. Unknown equals to any type.
+        // The second add_type below overwrites the placeholder.
+        auto placeholder_index = module().add_type(TypeInfo{v.type_name.name, ti_unknown()});
+
+        m_type_def_index = placeholder_index;
         v.type->apply(*this);
+        m_type_def_index = no_index;
 
         // create new Named type
-        Index index = module().add_type(TypeInfo{v.type_name.name, std::move(m_type_info)});
+        auto index = module().add_type(TypeInfo{v.type_name.name, std::move(m_type_info)});
+        assert(index == placeholder_index);
         v.type_name.symbol->set_index(index);
     }
 
@@ -967,6 +974,7 @@ public:
     }
 
     void visit(ast::FunctionType& t) final {
+        m_type_def_index = no_index;
         auto signature = std::make_shared<Signature>();
         for (const auto& p : t.params) {
             if (p.type)
@@ -984,11 +992,13 @@ public:
     }
 
     void visit(ast::ListType& t) final {
+        m_type_def_index = no_index;
         t.elem_type->apply(*this);
         m_type_info = ti_list(std::move(m_type_info));
     }
 
     void visit(ast::TupleType& t) final {
+        m_type_def_index = no_index;
         std::vector<TypeInfo> subtypes;
         for (auto& st : t.subtypes) {
             st->apply(*this);
@@ -998,6 +1008,8 @@ public:
     }
 
     void visit(ast::StructType& t) final {
+        auto type_def_index = m_type_def_index;
+        m_type_def_index = no_index;
         TypeInfo::StructItems items;
         for (auto& st : t.subtypes) {
             st.type->apply(*this);
@@ -1005,7 +1017,8 @@ public:
         }
         m_type_info = TypeInfo{std::move(items)};
 
-        Index index = module().add_type(m_type_info);
+        Index index = (type_def_index == no_index) ?
+                      module().add_type(m_type_info) : type_def_index;
         for (auto& st : t.subtypes) {
             st.identifier.symbol->set_index(index);
         }
@@ -1496,6 +1509,8 @@ private:
     // signature for resolving overloaded functions and templates
     CallArgs m_call_args;  // actual argument types
     TypeInfo m_call_ret;   // expected return type
+
+    Index m_type_def_index = no_index;  // placeholder for module type being defined in TypeDef
 
     Class* m_class = nullptr;
     Instance* m_instance = nullptr;
