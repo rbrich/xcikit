@@ -84,7 +84,7 @@ void Options::parse(char* argv[])
             Option("-O, --optimize", "Allow optimizations", [&ro]{ ro.compiler_flags |= Flags::O1; }),
             Option("-r, --raw-ast", "Print raw AST", ro.print_raw_ast),
             Option("-t, --ast", "Print processed AST", ro.print_ast),
-            Option("-b, --bytecode", "Print bytecode", ro.print_bytecode),
+            Option("-b, --bytecode", "Print bytecode being run", ro.print_bytecode),
             Option("-s, --symtab", "Print symbol table", ro.print_symtab),
             Option("-m, --module", "Print compiled module content", ro.print_module),
             Option("-M, --module-verbose", "Print compiled module content, including function bodies", ro.print_module_verbose),

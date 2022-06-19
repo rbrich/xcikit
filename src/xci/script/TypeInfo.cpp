@@ -83,7 +83,7 @@ size_t TypeInfo::size() const
 
 void TypeInfo::foreach_heap_slot(std::function<void(size_t offset)> cb) const
 {
-    switch (type()) {
+    switch (underlying_type()) {
         case Type::String:
         case Type::List:
         case Type::Function:

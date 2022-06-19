@@ -101,7 +101,7 @@ void Stack::copy(StackRel pos, size_t size)
         copy_bytes -= type_size;
         copies.emplace_back(*it_type);
     }
-    m_stack_types.insert(m_stack_types.end(), copies.begin(), copies.end());
+    m_stack_types.insert(m_stack_types.end(), copies.rbegin(), copies.rend());
     // move stack pointer
     assert(size > 0);
     if (m_stack_pointer < size) {
