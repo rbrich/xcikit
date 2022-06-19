@@ -8,7 +8,6 @@
 #include "Builtin.h"
 #include "Value.h"
 #include "Error.h"
-#include "dump.h"
 #include <xci/data/coding/leb128.h>
 
 #include <fmt/core.h>

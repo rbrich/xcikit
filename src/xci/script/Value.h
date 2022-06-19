@@ -234,7 +234,7 @@ public:
     bool is_callable() const { return type() == Type::Function; }
 
     // Load value from `other` and return true if the value is compatible
-    // (can be statically casted). Return false otherwise.
+    // (can be statically cast). Return false otherwise.
     bool cast_from(const Value& src);
 
     bool negate();  // unary minus op

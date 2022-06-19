@@ -5,7 +5,6 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Builtin.h"
-#include <xci/core/file.h>
 #include <xci/core/string.h>
 #include <xci/compat/macros.h>
 
