@@ -513,8 +513,8 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     // struct as member of a struct
     CHECK(interpret_std("type Rec2=(x:String, y:Int, z:(a:Int32, b:Int32)); "
                         "r:Rec2 = (x=\"x\",y=2,z=(a=3,b=4)); __module.__n_types; r.y; r.z.a") == "2;2;3");
-//    CHECK(interpret_std("type Rec1=(a:Int32, b:Int32); type Rec2=(x:String, y:Int, z:Rec1); "
-//                        "r:Rec2 = (x=\"x\",y=2,z=(a=3,b=4)); __module.__n_types; r.y; r.z.a") == "2;2;3");
+    CHECK(interpret_std("type Rec1=(a:Int32, b:Int32); type Rec2=(x:String, y:Int, z:Rec1); "
+                        "r:Rec2 = (x=\"x\",y=2,z=(a=3,b=4)); __module.__n_types; r.y; r.z.a") == "2;2;3");
 }
 
 

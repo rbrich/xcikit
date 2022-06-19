@@ -491,7 +491,13 @@ public:
         ti_items.reserve(v.items.size());
         for (auto& item : v.items) {
             // resolve item type
+            if (specified) {
+                const TypeInfo* specified_item = specified.struct_item_by_name(item.first.name);
+                if (specified_item)
+                    m_type_info = *specified_item;
+            }
             item.second->apply(*this);
+            m_type_info = {};
             auto item_type = m_value_type.effective_type();
             if (!specified.is_unknown())
                 type_check.check_struct_item(item.first.name, item_type, item.second->source_loc);
