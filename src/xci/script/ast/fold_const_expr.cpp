@@ -102,7 +102,7 @@ public:
             // + sanity checks
             assert(m_const_value->type() == Type::Function);
             auto& fnval = m_const_value->value().get<ClosureV>();
-            assert(!fnval.slot);  // no values in closure
+            assert(fnval.closure().empty());  // no values in closure
             auto& fn = *fnval.function();
             assert(!fn.has_nonlocals());
             assert(fn.parameters().size() == args.size());
@@ -116,6 +116,7 @@ public:
                 auto reti = fn.effective_return_type();
                 assert(m_machine.stack().size() == reti.size());
                 m_const_value = m_machine.stack().pull_typed(reti);
+                m_collapsed = make_unique<ast::Literal>(*m_const_value);
             } else {
                 // backoff - can't process invocations in compile-time
                 m_const_value.reset();

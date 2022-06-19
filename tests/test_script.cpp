@@ -1026,6 +1026,9 @@ TEST_CASE( "Fold const expressions", "[script][optimizer]" )
     CHECK(optimize("{{{ 1 }}}") == "1");
     CHECK(optimize("a = {{1}}") == "/*def*/ a = (1);");
 
+    // collapse function call with constant arguments
+    CHECK(optimize("f=fun a:Int {a}; f 42") == "/*def*/ f = (fun a:Int -> $R {a});\n42");
+
     // cast to Void eliminates the expression
     CHECK(optimize("42:Void") == "");
     CHECK(optimize("{42}:Void") == "");
