@@ -277,7 +277,7 @@ struct Candidate {
 static std::pair<const Candidate*, bool> find_best_candidate(const std::vector<Candidate>& candidates)
 {
     bool conflict = false;
-    MatchScore score(-1);
+    MatchScore score = MatchScore::mismatch();
     const Candidate* found = nullptr;
     for (const auto& item : candidates) {
         if (!item.match)
@@ -301,6 +301,7 @@ static std::pair<const Candidate*, bool> find_best_candidate(const std::vector<C
 class TypeCheckerVisitor final: public ast::Visitor {
     struct CallArg {
         TypeInfo type_info;
+        bool literal_value;
         SourceLocation source_loc;
     };
     using CallArgs = std::vector<CallArg>;
@@ -521,6 +522,9 @@ public:
             v.type_arg->apply(*this);
         }
 
+        // referencing variable / function - not a literal value, in case this is Call arg
+        m_literal_value = false;
+
         switch (sym.type()) {
             case Symbol::Instruction: {
                 // the instructions are low-level, untyped - set return type to Unknown
@@ -640,7 +644,7 @@ public:
                     assert(m_call_args.empty());
                     if (m_type_info.is_callable()) {
                         for (const auto& t : m_type_info.signature().params)
-                            m_call_args.push_back({t, v.source_loc});
+                            m_call_args.push_back({t, false, v.source_loc});
                         m_call_ret = m_type_info.signature().return_type;
                         m_type_info = {};
                     } else {
@@ -742,15 +746,17 @@ public:
         // resolve each argument
         CallArgs args;
         for (auto& arg : v.args) {
+            m_literal_value = true;
             arg->apply(*this);
             assert(arg->source_loc);
-            args.push_back({m_value_type.effective_type(), arg->source_loc});
+            args.push_back({m_value_type.effective_type(), m_literal_value, arg->source_loc});
         }
         // append args to m_call_args (note that m_call_args might be used
         // when evaluating each argument, so we cannot push to them above)
         std::move(args.begin(), args.end(), std::back_inserter(m_call_args));
         m_call_ret = std::move(type_check.eval_type());
         m_intrinsic = false;
+        m_literal_value = false;
 
         // using resolved args, resolve the callable itself
         // (it may use args types for overload resolution)
@@ -824,13 +830,16 @@ public:
         v.else_expr->apply(*this);
         if (expr_type != m_value_type)
             throw BranchTypeMismatch(expr_type, m_value_type);
+
+        m_literal_value = false;
     }
 
     void visit(ast::WithContext& v) override {
         // resolve type of context (StructInit leads to incomplete struct type)
+        m_literal_value = true;
         v.context->apply(*this);
         // lookup the enter function with the resolved context type
-        m_call_args.push_back({m_value_type, v.context->source_loc});
+        m_call_args.push_back({m_value_type, m_literal_value, v.context->source_loc});
         m_call_ret = ti_unknown();
         v.enter_function.apply(*this);
         m_call_args.clear();
@@ -839,11 +848,12 @@ public:
         // re-resolve type of context (match actual struct type as found by resolving `with` function)
         m_type_info = enter_sig.params[0];
         m_cast_type = {};
+        m_literal_value = true;
         v.context->apply(*this);
         assert(m_value_type == m_type_info);
         // lookup the leave function, it's arg type is same as enter functions return type
         v.leave_type = enter_sig.return_type.effective_type();
-        m_call_args.push_back({v.leave_type, v.context->source_loc});
+        m_call_args.push_back({v.leave_type, m_literal_value, v.context->source_loc});
         m_call_ret = ti_void();
         v.leave_function.apply(*this);
         m_call_args.clear();
@@ -851,6 +861,7 @@ public:
         // resolve type of expression - it's also the type of the whole "with" expression
         v.expression->apply(*this);
         v.expression_type = m_value_type.effective_type();
+        m_literal_value = false;
     }
 
     void visit(ast::Function& v) override {
@@ -891,6 +902,7 @@ public:
             }
         }
         m_value_type = std::move(m_type_info);
+        m_literal_value = false;
         v.call_args = m_call_args.size();
 
         fn.set_signature(m_value_type.signature_ptr());
@@ -950,6 +962,7 @@ public:
         // resolve the inner expression -> m_value_type
         // (the Expression might use the specified type from `m_cast_type`)
         m_cast_type = v.to_type;
+        m_literal_value = true;
         v.expression->apply(*this);
         m_cast_type = {};
         v.from_type = std::move(m_value_type);
@@ -961,11 +974,12 @@ public:
             return;
         }
         // lookup the cast function with the resolved arg/return types
-        m_call_args.push_back({v.from_type, v.expression->source_loc});
+        m_call_args.push_back({v.from_type, m_literal_value, v.expression->source_loc});
         m_call_ret = v.to_type;
         v.cast_function->apply(*this);
         // set the effective type of the Cast expression and clean the call types
         m_value_type = std::move(m_call_ret);
+        m_literal_value = false;
         m_call_args.clear();
     }
 
@@ -1305,8 +1319,8 @@ private:
                 symmod = &module();
             auto& fn = symmod->get_function(symptr->index());
             const auto& sig_ptr = fn.signature_ptr();
-            auto m = match_signature(*sig_ptr);
-            candidates.push_back({symmod, symptr->index(), symptr, TypeInfo{sig_ptr}, m});
+            auto match = match_signature(*sig_ptr);
+            candidates.push_back({symmod, symptr->index(), symptr, TypeInfo{sig_ptr}, match});
 
             symptr = symptr->next();
         }
@@ -1374,7 +1388,7 @@ private:
                 }
             }
             // check type of next param
-            if (res->params.front() != arg.type_info) {
+            if (res->params.front().underlying() != arg.type_info.underlying()) {
                 throw UnexpectedArgumentType(i, res->params[0], arg.type_info, arg.source_loc);
             }
             // resolve arg if it's a type var and the signature has a known type in its place
@@ -1413,7 +1427,7 @@ private:
             }
             // check type of next param
             auto m = match_type(arg.type_info, sig.params[0]);
-            if (!m || m.is_coerce())
+            if (!m || (!arg.literal_value && m.is_coerce()))
                 return MatchScore::mismatch();
             res += m;
             // consume next param
@@ -1505,6 +1519,7 @@ private:
     TypeInfo m_type_info;   // resolved ast::Type
     TypeInfo m_value_type;  // inferred type of the value
     TypeInfo m_cast_type;   // target type of Cast
+    bool m_literal_value = true;  // the m_value_type is a literal (for Call args, set false if not)
 
     // signature for resolving overloaded functions and templates
     CallArgs m_call_args;  // actual argument types
