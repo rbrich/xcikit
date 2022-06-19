@@ -115,6 +115,7 @@ public:
             if (!invoked) {
                 auto reti = fn.effective_return_type();
                 assert(m_machine.stack().size() == reti.size());
+                m_const_value->decref();  // fnval
                 m_const_value = m_machine.stack().pull_typed(reti);
                 m_collapsed = make_unique<ast::Literal>(*m_const_value);
             } else {
