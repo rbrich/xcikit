@@ -357,6 +357,36 @@ public:
             case Symbol::TypeName:
             case Symbol::TypeVar:
                 break;
+            case Symbol::StructItem: {
+                // arg = struct (pushed on stack)
+                const TypeInfo& struct_type = symtab.module()->get_type(sym.index());
+
+                // return the item -> drop all other items from stack, leaving only the selected one
+                size_t drop_before = 0;  // first DROP 0 <size>
+                size_t skip = 0;
+                size_t drop = 0;  // second DROP <skip> <size>
+                for (const auto& item : struct_type.struct_items()) {
+                    if (item.first == sym.name()) {
+                        std::swap(drop_before, drop);
+                        skip = item.second.size();
+                        continue;
+                    }
+                    item.second.foreach_heap_slot([this, skip](size_t offset) {
+                        // DEC_REF <offset>
+                        m_function.code().add_L1(Opcode::DecRef, offset + skip);
+                    });
+                    drop += item.second.size();
+                }
+                if (drop_before != 0) {
+                    // DROP <skip> <size>
+                    m_function.code().add_L2(Opcode::Drop, 0, drop_before);
+                }
+                if (drop != 0) {
+                    // DROP <skip> <size>
+                    m_function.code().add_L2(Opcode::Drop, skip, drop);
+                }
+                break;
+            }
             case Symbol::Unresolved:
                 UNREACHABLE;
         }

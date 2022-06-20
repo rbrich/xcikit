@@ -83,7 +83,7 @@ size_t TypeInfo::size() const
 
 void TypeInfo::foreach_heap_slot(std::function<void(size_t offset)> cb) const
 {
-    switch (type()) {
+    switch (underlying_type()) {
         case Type::String:
         case Type::List:
         case Type::Function:
@@ -331,6 +331,18 @@ auto TypeInfo::struct_items() const -> const StructItems&
     assert(m_type == Type::Struct);
     assert(std::holds_alternative<StructItems>(m_info));
     return std::get<StructItems>(m_info);
+}
+
+
+const TypeInfo* TypeInfo::struct_item_by_name(const std::string& name) const
+{
+    const auto& items = struct_items();
+    auto it = std::find_if(items.begin(), items.end(), [&name](const StructItem& item) {
+         return item.first == name;
+    });
+    if (it == items.end())
+        return nullptr;
+    return &it->second;
 }
 
 

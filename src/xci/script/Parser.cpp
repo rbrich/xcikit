@@ -654,7 +654,7 @@ struct Action<Identifier> : change_states< ast::Identifier > {
 
     template<typename Input>
     static void success(const Input &in, ast::Identifier& ident, ast::StructInit& node) {
-        node.items.emplace_back(ast::Key(std::move(ident)), std::unique_ptr<ast::Expression>{});
+        node.items.emplace_back(std::move(ident), std::unique_ptr<ast::Expression>{});
     }
 };
 

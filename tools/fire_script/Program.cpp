@@ -41,7 +41,7 @@ void Program::process_args(char* argv[])
 
     if (opts.prog_opts.expr) {
         if (!repl.evaluate("<input>", opts.prog_opts.expr,
-                EvalMode::SingleInput))
+                    opts.prog_opts.compile ? EvalMode::Compile : EvalMode::SingleInput))
             exit(1);
         exit(0);
     }

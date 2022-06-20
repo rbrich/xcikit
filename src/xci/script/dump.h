@@ -34,7 +34,6 @@ std::ostream& operator<<(std::ostream& os, const Variable& v);
 std::ostream& operator<<(std::ostream& os, const StructItem& v);
 std::ostream& operator<<(std::ostream& os, const Parameter& v);
 std::ostream& operator<<(std::ostream& os, const Identifier& v);
-std::ostream& operator<<(std::ostream& os, const Key& v);
 std::ostream& operator<<(std::ostream& os, const Type& v);
 std::ostream& operator<<(std::ostream& os, const TypeName& v);
 std::ostream& operator<<(std::ostream& os, const FunctionType& v);

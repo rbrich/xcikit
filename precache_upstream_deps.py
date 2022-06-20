@@ -81,7 +81,8 @@ def main():
         cmake_args = ["-D" + d for d in cmake_defs.split()]
         if args.toolchain is not None:
             cmake_args += ["--toolchain", args.toolchain]
-        run(["cmake", "-S", source_dir, "-B", build_dir,
+        run(["cmake", "-G", "Ninja",
+             "-S", source_dir, "-B", build_dir,
              "-DCMAKE_BUILD_TYPE=Release",
              f"-DCMAKE_INSTALL_PREFIX={install_dir}",
              *cmake_args])

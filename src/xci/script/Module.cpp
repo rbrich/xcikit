@@ -102,9 +102,14 @@ Index Module::add_type(TypeInfo type_info)
 {
     assert(!type_info.is_generic());
 
+    // lookup previous type
     auto idx = find_type(type_info);
-    if (idx != no_index)
+    if (idx != no_index) {
+        // Replace the placeholder used for named type (contains Unknown ti).
+        if (type_info.is_named())
+            m_types[idx] = std::move(type_info);
         return idx;
+    }
 
     m_types.push_back(std::move(type_info));
     return Index(m_types.size() - 1);

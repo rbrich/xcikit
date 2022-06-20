@@ -38,11 +38,7 @@ public:
         || (!m_class && !m_instance && dfn.variable.type && symptr->is_defined() && symptr->type() == Symbol::Function))
         {
             // not found or undefined -> add new function, symbol
-            SymbolTable& fn_symtab = symtab().add_child(name);
-            Function fn {module(), fn_symtab};
-            auto fn_id = module().add_function(std::move(fn));
-            assert(symtab().module() == &module());
-            auto new_symptr = symtab().add({name, Symbol::Function, fn_id.index});
+            auto new_symptr = create_function(name);
 
             // Overloaded: function's next = the preexisting function
             if (symptr)
@@ -203,8 +199,15 @@ public:
     }
 
     void visit(ast::StructInit& v) override {
+        std::set<std::string> keys;
         for (auto& item : v.items) {
+            // check the key is not duplicate
+            auto [_, ok] = keys.insert(item.first.name);
+            if (!ok)
+                throw StructDuplicateKey(item.first.name, item.first.source_loc);
+
             item.second->apply(*this);
+            item.first.symbol = symtab().add({item.first.name, Symbol::StructItem, no_index});
         }
     }
 
@@ -336,13 +339,31 @@ public:
     }
 
     void visit(ast::StructType& t) final {
-        for (auto& st : t.subtypes)
+        std::set<std::string> keys;
+        for (auto& st : t.subtypes) {
+            const auto& name = st.identifier.name;
+
+            // check the key is not duplicate
+            auto [_, ok] = keys.insert(name);
+            if (!ok)
+                throw StructDuplicateKey(name, st.identifier.source_loc);
+
             st.type->apply(*this);
+            st.identifier.symbol = symtab().add({name, Symbol::StructItem, no_index});
+        }
     }
 
 private:
     Module& module() { return m_function.module(); }
     SymbolTable& symtab() { return *m_symtab; }
+
+    SymbolPointer create_function(const std::string& name) {
+        SymbolTable& fn_symtab = symtab().add_child(name);
+        Function fn {module(), fn_symtab};
+        auto fn_id = module().add_function(std::move(fn));
+        assert(symtab().module() == &module());
+        return symtab().add({name, Symbol::Function, fn_id.index});
+    }
 
     SymbolPointer allocate_type_var(const std::string& name = "") {
         Index idx = 1;
@@ -368,7 +389,9 @@ private:
             size_t depth = 0;
             for (auto* p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
                 if (auto symptr = p_symtab->find_by_name(name); symptr) {
-                    if (depth > 0 && symptr->type() != Symbol::Method) {
+                    if (depth > 0 && symptr->type() != Symbol::Method
+                                  && symptr->type() != Symbol::StructItem
+                                  && symptr->type() != Symbol::TypeName) {
                         // add Nonlocal symbol
                         Index idx = symtab().count(Symbol::Nonlocal);
                         return symtab().add({symptr, Symbol::Nonlocal, idx, depth});

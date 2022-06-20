@@ -1,7 +1,7 @@
 // Stack.h created on 2019-05-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_STACK_H
@@ -76,7 +76,7 @@ public:
     // Copy `size` bytes from `addr` to top of the stack
     void copy(StackRel pos, size_t size);
 
-    // Remove bytes in range `first`..`first + size` from top of the stack.
+    // Remove bytes in range `first` .. `first + size` from top of the stack.
     // Exactly `size` bytes is removed.
     // E.g.:
     //      drop(0, 4) removes top 4 bytes
@@ -92,7 +92,7 @@ public:
     StackAbs size() const { return m_stack_capacity - m_stack_pointer; }
     size_t capacity() const { return m_stack_capacity; }
 
-    // Get moving pointer to top of the stack (lowest valid address)
+    // Get moving pointer to top of the stack (the lowest valid address)
     // The address changes with each operation.
     std::byte* data() const { return &m_stack[m_stack_pointer]; }
 

@@ -499,6 +499,22 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     CHECK(interpret_std(my_struct + R"(a = ("Luke", 10); b = a: MyStruct; b)") == R"((name="Luke", age=10))");
     CHECK(interpret_std(my_tuple + R"(a = ("hello", 42):MyTuple; a)") == R"(("hello", 42))");
     CHECK_THROWS_AS(interpret_std(my_tuple + "(1, 2):MyTuple"), FunctionNotFound);  // bad cast
+    // struct member access
+    CHECK(interpret(my_struct + R"( a:MyStruct = (name="hello", age=42); a.name; a.age)") == R"("hello";42)");
+    CHECK(interpret(R"(a = (name="hello", age=42, valid=true); a.name; a.age; a.valid)") == R"("hello";42;true)");
+    CHECK(interpret(my_struct + R"(f = fun a:MyStruct { a.name }; f (name="hello", age=42))") == R"("hello")");
+    CHECK(interpret(R"(type Rec=(x:String, y:Int); f=fun a:Rec { a.x }; r:Rec=(x="x",y=3); f r)") == R"("x")");
+    // invalid struct - repeated field names
+    CHECK_THROWS_AS(interpret("type MyStruct = (same:String, same:Int)"), StructDuplicateKey);  // struct type
+    CHECK_THROWS_AS(interpret(R"(a = (same="hello", same=42))"), StructDuplicateKey);  // struct init (anonymous struct type)
+    // 'type' creates only the named type for struct, not also anonymous struct type (the right side)
+    CHECK(interpret(R"(type Rec=(x:String, y:Int); __module.__n_types)") == "1");
+
+    // struct as member of a struct
+    CHECK(interpret_std("type Rec2=(x:String, y:Int, z:(a:Int32, b:Int32)); "
+                        "r:Rec2 = (x=\"x\",y=2,z=(a=3,b=4)); __module.__n_types; r.y; r.z.a") == "2;2;3");
+    CHECK(interpret_std("type Rec1=(a:Int32, b:Int32); type Rec2=(x:String, y:Int, z:Rec1); "
+                        "r:Rec2 = (x=\"x\",y=2,z=(a=3,b=4)); __module.__n_types; r.y; r.z.a") == "2;2;3");
 }
 
 
@@ -1011,6 +1027,9 @@ TEST_CASE( "Fold const expressions", "[script][optimizer]" )
     CHECK(optimize("{ 1 }") == "1");
     CHECK(optimize("{{{ 1 }}}") == "1");
     CHECK(optimize("a = {{1}}") == "/*def*/ a = (1);");
+
+    // collapse function call with constant arguments
+    CHECK(optimize("f=fun a:Int {a}; f 42") == "/*def*/ f = (fun a:Int -> $R {a});\n42");
 
     // cast to Void eliminates the expression
     CHECK(optimize("42:Void") == "");

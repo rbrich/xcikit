@@ -10,7 +10,6 @@
 #include "Error.h"
 #include <xci/data/coding/leb128.h>
 #include <xci/core/string.h>
-#include <xci/core/log.h>
 #include <xci/core/template/helpers.h>
 #include <range/v3/view/transform.hpp>
 #include <range/v3/view/take.hpp>
