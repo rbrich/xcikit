@@ -25,11 +25,10 @@ requirements:
     cmake: "fmt/8.0.0"
     conan: "fmt/8.1.1"
   range_v3:
-    cmake: "range-v3/0.11.0"
+    cmake: "range-v3/0.12.0"
     conan: "range-v3/0.12.0"
-    # This version contains a fix that is needed for Clang 13 build:
-    upstream: "github.com ericniebler/range-v3 83783f578e0e6666d68a3bf17b0038a80e62530e"
-    cmake_defs: RANGE_V3_TESTS=OFF RANGE_V3_EXAMPLES=OFF RANGE_V3_PERF=OFF RANGE_V3_DOCS=OFF RANGE_V3_HEADER_CHECKS=OFF
+    #upstream: "github.com ericniebler/range-v3 0.12.0"
+    #cmake_defs: RANGE_V3_TESTS=OFF RANGE_V3_EXAMPLES=OFF RANGE_V3_PERF=OFF RANGE_V3_DOCS=OFF RANGE_V3_HEADER_CHECKS=OFF
   pegtl:
     cmake: "pegtl/"
     conan: "taocpp-pegtl/3.2.5"
