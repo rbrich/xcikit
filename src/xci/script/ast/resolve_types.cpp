@@ -699,6 +699,7 @@ public:
                         return;
                 }
                 m_function.set_nonlocal(sym.index(), TypeInfo{m_value_type});
+                v.identifier.symbol->set_callable(m_value_type.is_callable());
                 break;
             }
             case Symbol::Parameter:
@@ -740,10 +741,6 @@ public:
             case Symbol::Unresolved:
                 UNREACHABLE;
         }
-//        if (sym.type() == Symbol::Function)
-//            m_value_type = m_value_type.effective_type();
-        // FIXME: remove, this writes to builtin etc.
-        v.identifier.symbol->set_callable(m_value_type.is_callable());
     }
 
     void visit(ast::Call& v) override {

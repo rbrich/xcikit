@@ -51,7 +51,7 @@ public:
     }
 
 private:
-    SymbolTable* m_symtab = nullptr;  // owning table
+    SymbolTable* m_symtab = nullptr;   // owning table
     Index m_symidx = no_index;         // index of item in the table
 };
 
