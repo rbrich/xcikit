@@ -95,6 +95,8 @@ public:
             : m_name(ref->name()), m_type(type), m_index(idx),
               m_depth(depth), m_ref(ref) {}
 
+    bool operator==(const Symbol&) const = default;
+
     const std::string& name() const { return m_name; }
     Type type() const { return m_type; }
     Index index() const { return m_index; }
@@ -177,6 +179,7 @@ public:
     const Symbol& get(Index idx) const;
 
     // find symbol in this table
+    SymbolPointer find(const Symbol& symbol);
     SymbolPointer find_by_name(std::string_view name);
     SymbolPointer find_last_of(const std::string& name, Symbol::Type type);
     SymbolPointer find_last_of(Symbol::Type type);

@@ -76,6 +76,15 @@ std::string SymbolTable::qualified_name() const
 
 SymbolPointer SymbolTable::add(Symbol&& symbol)
 {
+    // deduplicate StructItem symbols
+    if (symbol.type() == Symbol::StructItem) {
+        auto sym_ptr = find(symbol);
+        if (sym_ptr) {
+            assert(sym_ptr.symtab() == this);
+            return sym_ptr;
+        }
+    }
+
     m_symbols.emplace_back(std::move(symbol));
     return {*this, Index(m_symbols.size() - 1)};
 }
@@ -129,6 +138,16 @@ const Symbol& SymbolTable::get(Index idx) const
 {
     assert(idx < m_symbols.size());
     return m_symbols[idx];
+}
+
+
+SymbolPointer SymbolTable::find(const Symbol& symbol)
+{
+    auto it = std::find_if(m_symbols.begin(), m_symbols.end(),
+                           [&symbol](const Symbol& other){ return symbol == other; });
+    if (it == m_symbols.end())
+        return {*this, no_index};
+    return {*this, Index(it - m_symbols.begin())};
 }
 
 
