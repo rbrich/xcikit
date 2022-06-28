@@ -55,6 +55,25 @@ jobs:
             rm -rf artifacts/emscripten-*
       - store_artifacts:
           path: artifacts
+  conan_package:
+    parameters:
+      image:
+        type: executor
+      jobs:
+        type: integer
+        default: 4
+      build-args:
+        type: string
+        default: ""
+    executor: << parameters.image >>
+    steps:
+      - checkout
+      - run:
+          name: Detect system deps
+          command: ./detect_system_deps.py widgets script | tail -n1 | tee system_deps.txt
+      - run:
+          name: Conan package
+          command: conan create . $(cat system_deps.txt) << parameters.build-args >>
 
 workflows:
   version: 2
@@ -71,3 +90,6 @@ workflows:
           name: Emscripten
           image: emscripten
           build-args: "--emscripten core data script"
+      - conan_package:
+          name: Ubuntu 22.04 - Clang 14 - Conan package
+          image: ubuntu

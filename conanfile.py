@@ -95,7 +95,6 @@ class XcikitConan(ConanFile):
                        "cmake/**", "src/**", "examples/**", "tests/**", "benchmarks/**", "tools/**",
                        "share/**", "third_party/**",
                        "!build/**", "!cmake-build-*/**")
-    revision_mode = "scm"
 
     _cmake = None
 
