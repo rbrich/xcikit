@@ -41,6 +41,7 @@ class XcikitConan(ConanFile):
         "system_benchmark": [True, False],
         "system_pegtl": [True, False],
         "system_magic_enum": [True, False],
+        "system_incbin": [True, False],
         # Hyperscan is never installed via Conan, because it would bring ton of deps,
         # and it's only needed for optional ff tool.
         # This option enables using system-installed Hyperscan.
@@ -75,6 +76,7 @@ class XcikitConan(ConanFile):
         "system_benchmark": False,
         "system_pegtl": False,
         "system_magic_enum": False,
+        "system_incbin": False,
         "with_hyperscan": False,
 
         # Disable unnecessary transient deps by default.
@@ -137,6 +139,9 @@ class XcikitConan(ConanFile):
         if self.settings.os == "Emscripten":
             # These are imported from Emscripten Ports
             del self.options.system_zlib
+        if self.settings.os in ("Windows", "Emscripten"):
+            # Incbin is not supported
+            del self.options.system_incbin
 
     def requirements(self):
         for info in self._requirements():

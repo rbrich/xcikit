@@ -4,8 +4,9 @@
 cmake_minimum_required(VERSION 3.16)
 file(STRINGS "VERSION" XCI_VERSION)
 project(xcikit
+    LANGUAGES CXX
     VERSION "${XCI_VERSION}"
-    LANGUAGES CXX)
+    HOMEPAGE_URL "https://github.com/rbrich/xcikit")
 
 include(CTest)
 include(GNUInstallDirs)
@@ -107,6 +108,10 @@ endif()
 # Google Benchmark
 if (BUILD_BENCHMARKS)
     find_package(benchmark)
+endif()
+
+if (BUILD_EXAMPLES AND NOT WIN32 AND NOT EMSCRIPTEN)
+    find_package(incbin REQUIRED)
 endif()
 
 # Doxygen
@@ -377,7 +382,6 @@ endif()
 include(CPack)
 
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Collection of C++ libraries for drawing 2D graphics, rendering text and more.")
-set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/rbrich/xcikit")
 set(CPACK_PACKAGE_VENDOR "xci.cz")
 set(CPACK_PACKAGE_CONTACT "radek.brich@devl.cz")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")

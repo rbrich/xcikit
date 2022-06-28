@@ -11,6 +11,7 @@
 
 #define INCBIN_PREFIX g_
 #define INCBIN_STYLE INCBIN_STYLE_SNAKE
+#define INCBIN_SILENCE_BITCODE_WARNING
 #include <incbin.h>
 
 // SHARE_ARCHIVE is passed as -D arg from CMake,
