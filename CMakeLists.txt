@@ -110,6 +110,10 @@ if (BUILD_BENCHMARKS)
     find_package(benchmark)
 endif()
 
+if (BUILD_EXAMPLES)
+    find_package(incbin)
+endif()
+
 # Doxygen
 find_package(Doxygen)
 

@@ -173,7 +173,6 @@ Check them on separate pages:
 
 TL;DR:
 
-* Clone submodules: `git submodule init --update`
 * Run one of the <<system-package-manager,system package manager>> commands below.
 * Proceed to <<using-build-script,Using build script>> below.
 
@@ -206,9 +205,6 @@ Obtaining dependencies:
   - Always installs *fmt*, *pfr*, *magic_enum*.
   - May install *range-v3*, *Catch2*, *benchmark*, *pegtl*, *glfw3*
     if not found in the system.
-* Install them via *_Git submodule_*: `git submodule init`.
-  - Only for *incbin*.
-  - Note that it's still looked up in the system, if the submodule is not cloned.
 
 [#system-package-manager]
 Installing the dependencies with *_system package managers_*:
