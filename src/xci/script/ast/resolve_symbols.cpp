@@ -443,8 +443,7 @@ private:
         }
         // imported modules
         for (auto i = Index(module().num_imported_modules() - 1); i != Index(-1); --i) {
-            auto symptr = module().get_imported_module(
-                    i).symtab().find_last_of(name, type);
+            auto symptr = module().get_imported_module(i).symtab().find_last_of(name, type);
             if (symptr)
                 return symptr;
         }

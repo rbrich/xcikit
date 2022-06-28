@@ -391,9 +391,7 @@ public:
                 UNREACHABLE;
         }
         // if it's function object, execute it
-        if (sym.type() != Symbol::Function
-        &&  sym.type() != Symbol::Method
-        &&  sym.is_callable()) {
+        if (sym.type() == Symbol::Nonlocal && sym.is_callable()) {
             code().add_opcode(Opcode::Execute);
         }
     }

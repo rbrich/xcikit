@@ -106,8 +106,11 @@ Index Module::add_type(TypeInfo type_info)
     auto idx = find_type(type_info);
     if (idx != no_index) {
         // Replace the placeholder used for named type (contains Unknown ti).
-        if (type_info.is_named())
+        if (type_info.is_named()) {
+            assert(m_types[idx].named_type().type_info.is_unknown()
+                || m_types[idx] == type_info);
             m_types[idx] = std::move(type_info);
+        }
         return idx;
     }
 
