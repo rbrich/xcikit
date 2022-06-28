@@ -139,6 +139,9 @@ class XcikitConan(ConanFile):
         if self.settings.os == "Emscripten":
             # These are imported from Emscripten Ports
             del self.options.system_zlib
+        if self.settings.os in ("Windows", "Emscripten"):
+            # Incbin is not supported
+            del self.options.system_incbin
 
     def requirements(self):
         for info in self._requirements():
