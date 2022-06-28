@@ -95,7 +95,6 @@ class XcikitConan(ConanFile):
                        "cmake/**", "src/**", "examples/**", "tests/**", "benchmarks/**", "tools/**",
                        "share/**", "third_party/**",
                        "!build/**", "!cmake-build-*/**")
-    revision_mode = "scm"
 
     _cmake = None
 
@@ -187,14 +186,15 @@ class XcikitConan(ConanFile):
         cmake = self._configure_cmake()
         cmake.test()
 
-    def _add_dep(self, opt: str, component: conans.model.build_info.Component, cmake_dep: str):
+    def _add_dep(self, opt: str, component: conans.model.build_info.Component,
+                 cmake_dep: str, conan_dep=None):
         opt_val = self.options.get_safe(opt)
         if opt_val is None:  # system option deleted
             return
         if opt_val:
             component.system_libs = [cmake_dep]
         else:
-            component.requires += [cmake_dep]
+            component.requires += [conan_dep if conan_dep is not None else cmake_dep]
 
     def package_info(self):
         for name in ('core', 'data', 'script', 'graphics', 'text', 'widgets'):
@@ -209,7 +209,7 @@ class XcikitConan(ConanFile):
                 self._add_dep('system_fmt', component, "fmt::fmt")
                 self._add_dep('system_magic_enum', component, "magic_enum::magic_enum")
                 self._add_dep('system_range_v3', component, "range-v3::range-v3")
-                self._add_dep('system_pegtl', component, "taocpp::pegtl")
+                self._add_dep('system_pegtl', component, "taocpp::pegtl", "taocpp-pegtl::taocpp-pegtl")
             if name == 'data':
                 self._add_dep('system_zlib', component, "zlib::zlib")
                 self._add_dep('system_boost', component, "pfr::pfr")

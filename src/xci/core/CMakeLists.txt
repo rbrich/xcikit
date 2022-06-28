@@ -20,6 +20,9 @@ add_library(xci-core
     )
 add_library(xcikit::xci-core ALIAS xci-core)
 
+# PUBLIC to set CXX standard also on dependees (i.e. all other xci libs + any program using them)
+target_compile_features(xci-core PUBLIC cxx_std_${XCI_CXX_STANDARD})
+
 target_precompile_headers(xci-core PRIVATE <fmt/format.h>)
 
 if (NOT WIN32)

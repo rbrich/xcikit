@@ -62,7 +62,7 @@ def detect_deps(reqs, precached_deps):
         # Paths with backslashes are not supported by CMake.
         custom_modules = '"' + str(script_dir.joinpath('cmake').as_posix()) + '"'
         cml = textwrap.dedent("""
-                    cmake_minimum_required(VERSION 3.13)
+                    cmake_minimum_required(VERSION 3.16)
                     project(SystemPackageFinder CXX)
                     list(APPEND CMAKE_MODULE_PATH """ + custom_modules + """)
                     foreach (ITEM IN LISTS DEPS)
