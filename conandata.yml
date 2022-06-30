@@ -31,7 +31,7 @@ requirements:
     #cmake_defs: RANGE_V3_TESTS=OFF RANGE_V3_EXAMPLES=OFF RANGE_V3_PERF=OFF RANGE_V3_DOCS=OFF RANGE_V3_HEADER_CHECKS=OFF
   pegtl:
     cmake: "pegtl/"
-    conan: "taocpp-pegtl/3.2.5"
+    conan: "taocpp-pegtl/3.2.6"
     # This version contains a fix that is needed for VS 17 build:
     upstream: "github.com taocpp/PEGTL 7c906970b0ba1747897498e5ddf2e3286813dd4f"
     cmake_defs: PEGTL_BUILD_TESTS=OFF PEGTL_BUILD_EXAMPLES=OFF
