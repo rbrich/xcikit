@@ -23,10 +23,9 @@ RUN conan config set general.revisions_enabled=1
 
 # Preinstall Conan deps
 ENV XCIKIT=/home/builder/xcikit
-COPY --chown=builder build.sh detect_system_deps.py precache_upstream_deps.py \
-    conanfile.py conandata.yml VERSION $XCIKIT/
-RUN $XCIKIT/build.sh deps --precache-deps --emscripten script
-RUN $XCIKIT/build.sh deps --precache-deps --emscripten script --debug
+COPY --chown=builder build.sh detect_system_deps.py conanfile.py conandata.yml VERSION $XCIKIT/
+RUN $XCIKIT/build.sh deps --emscripten script
+RUN $XCIKIT/build.sh deps --emscripten script --debug
 
 # Preinstall Emscripten ports (it has no explicit install command, workaround...)
 RUN echo "int main(){}" > ~/dummy.c

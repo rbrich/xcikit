@@ -52,10 +52,10 @@ jobs:
           cc: gcc-10
           cxx: g++-10
           build_args: "--minsize --unity"
-        - os: macos-10.15
+        - os: macos-11
           name: "Clang 13 / Release"
           clang: brew
-          os_target: "10.15"
+          os_target: "11.0"
           build_args: "--precache-deps"
         - os: macos-11
           name: "AppleClang / Release"
@@ -117,8 +117,8 @@ jobs:
         elif [[ "$RUNNER_OS" == "macOS" ]]; then
             brew install ccache ninja glfw doxygen google-benchmark hyperscan harfbuzz freetype
             if [[ "${{ matrix.clang }}" == "brew" ]] ; then
-                export CC="$(brew --prefix llvm)/bin/clang"
-                export CXX="$(brew --prefix llvm)/bin/clang++"
+                export CC="$(brew --prefix llvm@13)/bin/clang"
+                export CXX="$(brew --prefix llvm@13)/bin/clang++"
                 echo "CC='$CC'" >> $GITHUB_ENV
                 echo "CXX='$CXX'" >> $GITHUB_ENV
             fi
