@@ -17,8 +17,7 @@
 #
 # Run `precache_upstream_deps.py` to download and export `upstream` deps as specified.
 # This is alternative to ConanCenter, but may be needed when a fix didn't yet make it
-# into ConanCenter. The `upstream` must contain a `conanfile.py` which exports
-# a matching package (name/version) when exported via `conan export .`.
+# into ConanCenter. The `upstream` must contain a `CMakeLists.txt` with installation commands.
 
 requirements:
   fmt:
@@ -32,9 +31,8 @@ requirements:
   pegtl:
     cmake: "pegtl/"
     conan: "taocpp-pegtl/3.2.6"
-    # This version contains a fix that is needed for VS 17 build:
-    upstream: "github.com taocpp/PEGTL 7c906970b0ba1747897498e5ddf2e3286813dd4f"
-    cmake_defs: PEGTL_BUILD_TESTS=OFF PEGTL_BUILD_EXAMPLES=OFF
+    #upstream: "github.com taocpp/PEGTL 7c906970b0ba1747897498e5ddf2e3286813dd4f"
+    #cmake_defs: PEGTL_BUILD_TESTS=OFF PEGTL_BUILD_EXAMPLES=OFF
   magic_enum:
     cmake: "magic_enum/0.7.3"
     conan: "magic_enum/0.8.0"
