@@ -26,13 +26,13 @@ requirements:
   range_v3:
     cmake: "range-v3/0.12.0"
     conan: "range-v3/0.12.0"
-    #upstream: "github.com ericniebler/range-v3 0.12.0"
-    #cmake_defs: RANGE_V3_TESTS=OFF RANGE_V3_EXAMPLES=OFF RANGE_V3_PERF=OFF RANGE_V3_DOCS=OFF RANGE_V3_HEADER_CHECKS=OFF
+    upstream: "github.com ericniebler/range-v3 0.12.0"
+    cmake_defs: RANGE_V3_TESTS=OFF RANGE_V3_EXAMPLES=OFF RANGE_V3_PERF=OFF RANGE_V3_DOCS=OFF RANGE_V3_HEADER_CHECKS=OFF
   pegtl:
     cmake: "pegtl/"
     conan: "taocpp-pegtl/3.2.6"
-    #upstream: "github.com taocpp/PEGTL 7c906970b0ba1747897498e5ddf2e3286813dd4f"
-    #cmake_defs: PEGTL_BUILD_TESTS=OFF PEGTL_BUILD_EXAMPLES=OFF
+    upstream: "github.com taocpp/PEGTL 3.2.6"
+    cmake_defs: PEGTL_BUILD_TESTS=OFF PEGTL_BUILD_EXAMPLES=OFF
   magic_enum:
     cmake: "magic_enum/0.7.3"
     conan: "magic_enum/0.8.0"
@@ -73,8 +73,8 @@ requirements:
   catch2:
     cmake: "Catch2/3"
     conan: "catch2/3.0.1"
-    #upstream: "github.com catchorg/Catch2 v3.0.1"
-    #cmake_defs: CATCH_INSTALL_DOCS=OFF CMAKE_CXX_STANDARD=20
+    upstream: "github.com catchorg/Catch2 v3.0.1"
+    cmake_defs: CATCH_INSTALL_DOCS=OFF CMAKE_CXX_STANDARD=20
     prereq:
       - tests
   benchmark:
