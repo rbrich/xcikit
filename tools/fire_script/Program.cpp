@@ -152,6 +152,10 @@ void Program::evaluate_input(std::string_view input)
         return;
 
     edit_line().add_history(input);
+#ifdef __EMSCRIPTEN__
+    if (m_sync_history_cb)
+        m_sync_history_cb();
+#endif
 
     if (input[0] == '.') {
         // control commands

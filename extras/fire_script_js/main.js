@@ -25,7 +25,7 @@ term.loadAddon(new WebLinksAddon());
 
 term.write("Loading...\n");
 
-fire_script().then(Module => {
+createModule({}).then(Module => {
     term.write("\r\x1b[A\x1b[2J");  // clear viewport
     const url_args = new URLSearchParams(window.location.search);
     const a_debug = Boolean(parseInt(url_args.get('debug')));
@@ -38,6 +38,7 @@ fire_script().then(Module => {
         // inform it didn't work otherwise
         term.write("Cannot quit the web app.\nHint: Try to close the window instead.\n");
     });
+    prog.set_sync_history_cb(Module.syncFS);
     prog.repl_init();
     prog.repl_prompt();
     if (a_input) {
