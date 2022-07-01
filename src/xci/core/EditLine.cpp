@@ -37,6 +37,7 @@ void EditLine::open_history_file(const fs::path& path)
         }
         m_history_file.close();
     }
+    xci::core::log::debug("Loaded {} history lines from {}", m_history.size(), path);
     // reopen for appending
     m_history_file.open(path, std::ios::out | std::ios::app);
 }

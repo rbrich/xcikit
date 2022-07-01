@@ -9,7 +9,7 @@ add_executable(fire
     main.cpp
 )
 
-target_link_libraries(fire
+target_link_libraries(fire PRIVATE
     xci-core
     xci-script
     taocpp::pegtl
@@ -23,7 +23,8 @@ target_precompile_headers(fire PRIVATE
 
 if (EMSCRIPTEN)
     target_link_options(fire PRIVATE
-        --bind --closure=1 -sMODULARIZE=1 -sEXPORT_NAME=fire_script
+        --bind --closure=1 -sMODULARIZE=1 -sEXPORT_NAME=createModule
+        -lidbfs.js --pre-js=${CMAKE_SOURCE_DIR}/extras/fire_script_js/pre.js
         --preload-file=${XCIKIT_BINARY_DIR}/share/xcikit/script@share/script)
     install(
         FILES

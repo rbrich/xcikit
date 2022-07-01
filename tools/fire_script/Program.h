@@ -50,6 +50,13 @@ struct Program {
     Context ctx;
     Options opts;
     Repl repl {ctx, opts.repl_opts};
+
+#ifdef __EMSCRIPTEN__
+    // Emscripten needs explicit 'syncfs' after writing to a file
+    using Callback = std::function<void()>;
+    void set_sync_history_cb(Callback cb) { m_sync_history_cb = std::move(cb); }
+    Callback m_sync_history_cb;
+#endif
 };
 
 
