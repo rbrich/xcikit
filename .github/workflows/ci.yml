@@ -70,9 +70,9 @@ jobs:
         - os: windows-2019
           name: "VS 16 / Release"
           build_args: ""
-        - os: windows-2022
-          name: "VS 17 / Release"
-          build_args: ""
+#        - os: windows-2022
+#          name: "VS 17 / Release"
+#          build_args: ""
 
     name: ${{ matrix.os }} / ${{ matrix.name }}
 
@@ -141,14 +141,6 @@ jobs:
         elif [[ "$RUNNER_OS" == "macOS" ]]; then
             conan profile update "settings.compiler.libcxx=libc++" default
             conan profile update "settings.os.version=$MACOSX_DEPLOYMENT_TARGET" default
-        elif [[ "$RUNNER_OS" == "Windows" ]]; then
-            if [[ "${{ matrix.os }}" == "windows-2022" ]] ; then
-                # Auto-detected profile fo VS 17 is experimental and broken,
-                # see https://github.com/conan-io/conan/issues/10185
-                conan profile update "settings.compiler=Visual Studio" default
-                conan profile update "settings.compiler.runtime=MD" default
-                conan profile update "settings.compiler.version=17" default
-            fi
         fi
       shell: bash
 

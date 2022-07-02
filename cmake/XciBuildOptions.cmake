@@ -157,6 +157,8 @@ if (ENABLE_OZ)
 endif()
 
 if (MSVC)
+    # Enable standards-conforming compiler behavior
+    add_compile_options(/permissive-)
     # Disable min/max macros (very bad in C++)
     add_compile_definitions(NOMINMAX)
     # Read all source files as utf-8
