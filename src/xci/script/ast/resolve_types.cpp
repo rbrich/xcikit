@@ -1437,6 +1437,10 @@ private:
             // consume next param
             sig.params.erase(sig.params.begin());
         }
+        if (sig.params.empty()) {
+            // increase score for full match - whole signature matches the call args
+            res.add_exact();
+        }
         // check return type
         if (m_call_ret) {
             auto m = match_type(m_call_ret, sig.return_type);
