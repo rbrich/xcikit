@@ -85,21 +85,20 @@ const Module* ReplCommand::module_by_idx(Index mod_idx) {
 
 
 const Module* ReplCommand::module_by_name(std::string_view mod_name) {
-    for (const auto& m : m_ctx.input_modules) {
-        if (m->name() == mod_name)
-            return m.get();
-    }
-
-    TermCtl& t = m_ctx.term_out;
-
     if (mod_name == ".")
         return m_module.get();
 
-    auto& module_manager = m_ctx.interpreter.module_manager();
-    auto module = module_manager.import_module(mod_name);
-    if (module)
-        return module.get();
+    for (const auto& m : m_ctx.input_modules | reverse) {
+        if (m->name() == mod_name)
+            return m.get();
+        for (Index i = 0; i != m->num_imported_modules(); ++i) {
+            const auto& imp_mod = m->get_imported_module(i);
+            if (imp_mod.name() == mod_name)
+                return &imp_mod;
+        }
+    }
 
+    TermCtl& t = m_ctx.term_out;
     t.print("{t:bold}{fg:red}Error: module not found: {}{t:normal}\n",
             mod_name);
     return nullptr;
