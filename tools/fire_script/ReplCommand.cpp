@@ -7,8 +7,10 @@
 #include "ReplCommand.h"
 #include "Context.h"
 #include <range/v3/view/reverse.hpp>
+#include <range/v3/view/drop.hpp>
 #include <xci/script/Builtin.h>
 #include <xci/script/dump.h>
+#include <xci/core/string.h>
 #include <xci/core/TermCtl.h>
 #include <iostream>
 #include <utility>
@@ -16,6 +18,7 @@
 namespace xci::script::tool {
 
 using ranges::cpp20::views::reverse;
+using ranges::cpp20::views::drop;
 using namespace xci::core;
 
 
@@ -336,7 +339,26 @@ void ReplCommand::eval(std::string_view input)
     Module module(m_ctx.interpreter.module_manager());
     module.add_imported_module(m_module);
 
-    m_ctx.interpreter.eval(module, std::string(input));
+    std::string input_str;
+    input_str.reserve(input.size());
+
+    auto input_parts = split(input, ' ');
+    input_str += input_parts[0];
+
+    // Auto-quote arguments that begin with letters
+    for (const auto& part : input_parts | drop(1) ) {
+        input_str += ' ';
+        const auto first = part.front();
+        if (isalpha(first) || first == '_') {
+            input_str += '"';
+            input_str += part;
+            input_str += '"';
+        } else {
+            input_str += part;
+        }
+    }
+
+    m_ctx.interpreter.eval(module, std::move(input_str));
 }
 
 

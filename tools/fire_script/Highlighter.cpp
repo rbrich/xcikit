@@ -136,7 +136,7 @@ struct RawBytes: seq< one<'b'>, RawString > {};
 struct Literal: seq< sor< Char, RawString, String, Byte, RawBytes, Bytes, Float, Integer >, not_at<identifier_other> > {};
 
 // REPL commands
-struct ShortCommand: seq< sor<one<'h', 'q', 'd'>, seq<one<'d'>, one<'m', 'f', 'i'>>>, not_at<identifier_other>> {};
+struct ShortCommand: seq< sor<one<'h', 'q'>, seq<one<'d'>, opt<one<'m', 'f', 'i'>>>>, not_at<identifier_other>> {};
 struct LongCommand: sor<TAO_PEGTL_KEYWORD("help"), TAO_PEGTL_KEYWORD("quit"),
         TAO_PEGTL_KEYWORD("dump_module"), TAO_PEGTL_KEYWORD("dump_function"), TAO_PEGTL_KEYWORD("dump_info"),
         TAO_PEGTL_KEYWORD("describe")> {};
