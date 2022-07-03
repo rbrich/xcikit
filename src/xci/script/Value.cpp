@@ -8,6 +8,7 @@
 #include "Function.h"
 #include "Module.h"
 #include "Error.h"
+#include "dump.h"
 #include <xci/data/coding/leb128.h>
 #include <xci/core/string.h>
 #include <xci/core/template/helpers.h>

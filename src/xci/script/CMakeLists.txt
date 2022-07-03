@@ -15,6 +15,7 @@ add_library(xci-script
     Class.cpp
     Code.cpp
     Compiler.cpp
+    Error.cpp
     Function.cpp
     Heap.cpp
     Interpreter.cpp

@@ -45,7 +45,7 @@ ViewportUnits VariUnits::viewport() const
 
 int32_t VariUnits::to_storage(FramebufferPixels fb)
 {
-    const auto r = int32_t(fb.value * double(1<<10));
+    const auto r = int32_t(fb.value * float(1<<10));
     assert((r < 0 ? ~r : r) >> 29 == 0);
     return r;
 }

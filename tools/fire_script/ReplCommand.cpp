@@ -1,19 +1,24 @@
 // ReplCommand.cpp created on 2020-01-11 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020–2021 Radek Brich
+// Copyright 2020–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "ReplCommand.h"
 #include "Context.h"
+#include <range/v3/view/reverse.hpp>
+#include <range/v3/view/drop.hpp>
 #include <xci/script/Builtin.h>
 #include <xci/script/dump.h>
+#include <xci/core/string.h>
 #include <xci/core/TermCtl.h>
 #include <iostream>
 #include <utility>
 
 namespace xci::script::tool {
 
+using ranges::cpp20::views::reverse;
+using ranges::cpp20::views::drop;
 using namespace xci::core;
 
 
@@ -27,9 +32,10 @@ static void cmd_help() {
     TermCtl& t = xci::core::TermCtl::stdout_instance();
     t.write(".q, .quit                                  quit\n");
     t.write(".h, .help                                  show all accepted commands\n");
-    t.write(".dm, .dump_module [#|name]                 print contents of last compiled module (or module by index or by name)\n");
-    t.write(".df, .dump_function [#|name] [#|module]    print contents of last compiled function (or function by index/name from specified module)\n");
     t.write(".di, .dump_info                            print info about interpreter attributes on this machine\n");
+    t.write(".dm, .dump_module [#|NAME]                 print contents of last compiled module (or module by index or by name)\n");
+    t.write(".df, .dump_function [#|NAME] [#|MODULE]    print contents of last compiled function (or function by index/name from specified module)\n");
+    t.write(".d, .describe NAME                         print information about named symbol (function, type, module)\n");
 }
 
 
@@ -79,21 +85,20 @@ const Module* ReplCommand::module_by_idx(Index mod_idx) {
 
 
 const Module* ReplCommand::module_by_name(std::string_view mod_name) {
-    for (const auto& m : m_ctx.input_modules) {
-        if (m->name() == mod_name)
-            return m.get();
-    }
-
-    TermCtl& t = m_ctx.term_out;
-
     if (mod_name == ".")
         return m_module.get();
 
-    auto& module_manager = m_ctx.interpreter.module_manager();
-    auto module = module_manager.import_module(mod_name);
-    if (module)
-        return module.get();
+    for (const auto& m : m_ctx.input_modules | reverse) {
+        if (m->name() == mod_name)
+            return m.get();
+        for (Index i = 0; i != m->num_imported_modules(); ++i) {
+            const auto& imp_mod = m->get_imported_module(i);
+            if (imp_mod.name() == mod_name)
+                return &imp_mod;
+        }
+    }
 
+    TermCtl& t = m_ctx.term_out;
     t.print("{t:bold}{fg:red}Error: module not found: {}{t:normal}\n",
             mod_name);
     return nullptr;
@@ -223,6 +228,60 @@ void ReplCommand::cmd_dump_function(Index fun_idx, Index mod_idx)
 }
 
 
+void ReplCommand::cmd_describe(std::string_view name) {
+    TermCtl& t = m_ctx.term_out;
+
+    for (const auto& module : m_ctx.input_modules | reverse) {
+        if (module->name() == name) {
+            t.print("Module {}\n", name);
+            return;
+        }
+        auto sym_ptr = module->symtab().find_by_name(name);
+        if (!sym_ptr) {
+            // FIXME: this is workaround, remove when all imported modules have a relevant symbol
+            for (Index i = 0; i != module->num_imported_modules(); ++i) {
+                const auto& imp_mod = module->get_imported_module(i);
+                if (imp_mod.name() == name) {
+                    t.print("Module {} (imported from {})\n",
+                            name, module->name());
+                    return;
+                }
+            }
+            continue;
+        }
+        switch (sym_ptr->type()) {
+            case Symbol::Module:
+                t.print("Module {} (imported from {})\n",
+                        name, module->name());
+                return;
+            case Symbol::Function: {
+                const auto& function = module->get_function(sym_ptr->index());
+                t.print("Function {}: ", name);
+                t.stream() << function.signature() << std::endl;
+                return;
+            }
+            case Symbol::TypeName: {
+                const auto& ti = module->get_type(sym_ptr->index());
+                if (ti.is_named() && ti.name() == name) {
+                    t.print("Named type {} = ", name);
+                    t.stream() << ti.underlying() << std::endl;
+                } else {
+                    t.print("Type alias {} = ", name);
+                    t.stream() << ti << std::endl;
+                }
+                return;
+            }
+            default:
+                t.print("Symbol {} = ", name);
+                t.stream() << *sym_ptr << std::endl;
+                return;
+        }
+    }
+    t.print("{t:bold}{fg:red}Error: symbol not found: {}{t:normal}\n",
+            name);
+}
+
+
 ReplCommand::ReplCommand(Context& ctx)
         : m_ctx(ctx),
           m_module(std::make_shared<Module>(m_ctx.interpreter.module_manager()))
@@ -267,6 +326,10 @@ ReplCommand::ReplCommand(Context& ctx)
             this);
     m_module->symtab().detect_overloads("dump_function");
     m_module->symtab().detect_overloads("df");
+    add_cmd("describe", "d",
+            [](void* self, std::string_view name)
+            { ((ReplCommand*)self)->cmd_describe(name); },
+            this);
 }
 
 
@@ -275,7 +338,26 @@ void ReplCommand::eval(std::string_view input)
     Module module(m_ctx.interpreter.module_manager());
     module.add_imported_module(m_module);
 
-    m_ctx.interpreter.eval(module, std::string(input));
+    std::string input_str;
+    input_str.reserve(input.size());
+
+    auto input_parts = split(input, ' ');
+    input_str += input_parts[0];
+
+    // Auto-quote arguments that begin with letters
+    for (const auto& part : input_parts | drop(1) ) {
+        input_str += ' ';
+        const auto first = part.front();
+        if (isalpha(first) || first == '_') {
+            input_str += '"';
+            input_str += part;
+            input_str += '"';
+        } else {
+            input_str += part;
+        }
+    }
+
+    m_ctx.interpreter.eval(module, std::move(input_str));
 }
 
 

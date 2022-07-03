@@ -9,6 +9,7 @@
 #include <xci/script/Builtin.h>
 #include <xci/script/Function.h>
 #include <xci/script/Error.h>
+#include <xci/script/dump.h>
 #include <xci/compat/macros.h>
 
 #include <range/v3/view/enumerate.hpp>
@@ -1435,6 +1436,10 @@ private:
             res += m;
             // consume next param
             sig.params.erase(sig.params.begin());
+        }
+        if (sig.params.empty()) {
+            // increase score for full match - whole signature matches the call args
+            res.add_exact();
         }
         // check return type
         if (m_call_ret) {
