@@ -716,9 +716,11 @@ public:
                     m_call_args.clear();
                     // __value returns index (Int32)
                     m_value_type = ti_int32();
-                    break;
+                } else {
+                    TypeCheckHelper type_check(std::move(m_type_info));
+                    auto inferred = symtab.module()->get_value(sym.index()).type_info();
+                    m_value_type = type_check.resolve(inferred, v.source_loc);
                 }
-                m_value_type = symtab.module()->get_value(sym.index()).type_info();
                 break;
             case Symbol::TypeName:
             case Symbol::TypeVar:

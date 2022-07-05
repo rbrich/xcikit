@@ -457,7 +457,8 @@ TEST_CASE( "Types", "[script][interpreter]" )
 {
     // each definition can have explicit type
     CHECK(interpret("a:Int = 1 ; a") == "1");
-    CHECK_THROWS_AS(interpret("a:Int = 1.0 ; a"), DefinitionTypeMismatch);
+    CHECK_THROWS_AS(interpret("a:Int = 1.0"), DefinitionTypeMismatch);
+    CHECK_THROWS_AS(interpret("a:Int = true"), DefinitionTypeMismatch);
     CHECK(interpret_std("a:Int = 42; b:Int = a; b") == "42");
     CHECK_THROWS_AS(interpret("a = 42; b:String = a"), FunctionNotFound);
 
@@ -873,7 +874,7 @@ TEST_CASE( "Type classes", "[script][interpreter]" )
                     "instance Ord String { lt = fun a b { string_compare a b < 0 } }; "
                     "\"a\" < \"b\"") == "true");
     // Instantiate type class from another module
-    CHECK(interpret_std("instance Ord Bool { lt = { __less_than 0x11 }; gt = false; le = false; ge = false }; "
+    CHECK(interpret_std("instance Ord Bool { lt = { __less_than 0x11 }; gt = {false}; le = {false}; ge = {false} }; "
                         "false < true; 2 < 1") == "true;false");
 }
 
