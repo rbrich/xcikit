@@ -223,7 +223,7 @@ bool Module::save_to_file(const std::string& filename)
 {
     std::ofstream f(filename, std::ios::binary);
     xci::data::BinaryWriter writer(f, true);
-    writer(m_modules)(m_values)(m_symtab)(m_functions);
+    writer(m_modules)(m_values)(m_symtab)(m_functions);  // NOLINT(clang-analyzer-core.uninitialized.UndefReturn) - https://github.com/boostorg/pfr/issues/91
     return !f.fail();
 }
 
