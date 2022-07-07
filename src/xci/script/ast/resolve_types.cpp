@@ -13,6 +13,7 @@
 #include <xci/compat/macros.h>
 
 #include <range/v3/view/enumerate.hpp>
+#include <range/v3/view/zip.hpp>
 
 #include <sstream>
 #include <optional>
@@ -23,6 +24,7 @@ using std::stringstream;
 using std::endl;
 
 using ranges::views::enumerate;
+using ranges::views::zip;
 
 
 class MatchScore {
@@ -1110,11 +1112,18 @@ private:
                     exc_cb(sig, deduced);
                     break;
                 }
-                return specialize_arg(sig.elem_type(), deduced.elem_type(), resolved, exc_cb);
-            case Type::Function:
+                specialize_arg(sig.elem_type(), deduced.elem_type(), resolved, exc_cb);
                 break;
             case Type::Tuple:
-                assert(!"not implemented");
+                if (deduced.type() != Type::Tuple || sig.subtypes().size() != deduced.subtypes().size()) {
+                    exc_cb(sig, deduced);
+                    break;
+                }
+                for (auto&& [sig_sub, deduced_sub] : zip(sig.subtypes(), deduced.subtypes())) {
+                    specialize_arg(sig_sub, deduced_sub, resolved, exc_cb);
+                }
+                break;
+            case Type::Function:
                 break;
             default:
                 // Int32 etc. (never generic)
@@ -1131,16 +1140,14 @@ private:
                     sig = resolved[var - 1];
                 break;
             }
-            case Type::List: {
-                TypeInfo elem_type = sig.elem_type();
-                resolve_generic_type(resolved, elem_type);
-                sig = ti_list(std::move(elem_type));
-                break;
-            }
-            case Type::Function:
+            case Type::List:
+                resolve_generic_type(resolved, sig.elem_type());
                 break;
             case Type::Tuple:
-                assert(!"not implemented");
+                for (auto& sub : sig.subtypes())
+                    resolve_generic_type(resolved, sub);
+                break;
+            case Type::Function:
                 break;
             default:
                 // Int32 etc. (never generic)
@@ -1365,7 +1372,7 @@ private:
         if (m_call_ret)
             o_ftype << m_call_ret;
         else
-            o_ftype << "Void";
+            o_ftype << "()";
         if (conflict) {
             // ERROR found multiple matching functions
             throw FunctionConflict(identifier.name, o_ftype.str(), o_candidates.str(), identifier.source_loc);

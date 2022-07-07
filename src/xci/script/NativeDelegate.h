@@ -67,7 +67,7 @@ namespace native {
 
 template<class T>
 typename std::enable_if_t<std::is_void_v<T>, TypeInfo>
-make_type_info() { return TypeInfo{Type::Void}; }
+make_type_info() { return TypeInfo{Type::Tuple}; }
 
 template<class T>
 typename std::enable_if_t<std::is_same_v<T, bool>, TypeInfo>
@@ -116,7 +116,7 @@ struct ValueType_s;
 
 template<>
 struct ValueType_s<void> {
-    using type = value::Void;
+    using type = value::Tuple;
 };
 
 template<>

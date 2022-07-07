@@ -24,7 +24,7 @@ void Stack::push(const Value& v)
 {
     auto size = v.size_on_stack();
     if (size == 0)
-        return;  // Void
+        return;
     if (m_stack_pointer < size) {
         if (grow() < size)
             throw StackOverflow();
@@ -37,8 +37,6 @@ void Stack::push(const Value& v)
 
 Value Stack::pull(const TypeInfo& ti)
 {
-    if (ti.is_void())
-        return Value();
     // create Value with TypeInfo, read contents from stack
     auto value = create_value(ti);
     pop_type(value);

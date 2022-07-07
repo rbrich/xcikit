@@ -36,7 +36,6 @@ class Module;
 
 namespace value {
 
-class Void;
 class Bool;
 class Byte;
 class Char;
@@ -53,7 +52,6 @@ class Module;
 
 class Visitor {
 public:
-    virtual void visit(void) = 0;
     virtual void visit(bool) = 0;
     virtual void visit(std::byte) = 0;
     virtual void visit(char32_t) = 0;
@@ -72,7 +70,6 @@ public:
 };
 
 class PartialVisitor : public Visitor {
-    void visit(void) override {}
     void visit(bool) override {}
     void visit(std::byte) override {}
     void visit(char32_t) override {}
@@ -134,7 +131,7 @@ struct TupleV {
     const Value& value_at(size_t idx) const { return values[idx]; }
     void foreach(const std::function<void(const Value&)>& cb) const;
 
-    std::unique_ptr<Value[]> values;  // Void-terminated
+    std::unique_ptr<Value[]> values;  // Unknown-terminated
 };
 
 
@@ -181,7 +178,7 @@ public:
     struct StreamTag {};
     struct ModuleTag {};
 
-    Value() = default;  // Void
+    Value() = default;  // Unknown (invalid value)
     explicit Value(bool v) : m_value(v) {}  // Bool
     explicit Value(std::byte v) : m_value(v) {}  // Byte
     explicit Value(uint8_t v) : m_value(std::byte(v)) {}  // Byte
@@ -229,7 +226,8 @@ public:
     void apply(value::Visitor& visitor) const;
 
     Type type() const;
-    bool is_void() const { return type() == Type::Void; }
+    bool is_unknown() const { return type() == Type::Unknown; }
+    bool is_void() const { return type() == Type::Tuple && get<TupleV>().empty(); }
     bool is_bool() const { return type() == Type::Bool; }
     bool is_callable() const { return type() == Type::Function; }
 
@@ -278,7 +276,7 @@ public:
         std::visit([&ar](auto& v) {
             using T = std::decay_t<decltype(v)>;
             if constexpr (std::is_same_v<T, std::monostate>) {
-                // Void
+                // Unknown
             } else if constexpr (std::is_trivial_v<T>) {
                 ar(v);
             } else {
@@ -290,7 +288,7 @@ public:
 
 protected:
     using ValueVariant = std::variant<
-            std::monostate,
+            std::monostate,  // Unknown (invalid value)
             bool, std::byte, char32_t, uint32_t, uint64_t, int32_t, int64_t, float, double,
             StringV, ListV, TupleV, ClosureV, StreamV, ModuleV
         >;
@@ -373,8 +371,9 @@ public:
 
     void apply(value::Visitor& visitor) const { m_value.apply(visitor); }
 
-    bool is_void() const { return type() == Type::Void; }
-    bool is_bool() const { return type() == Type::Bool; }
+    bool is_unknown() const { return m_type_info.is_unknown(); }
+    bool is_void() const { return m_type_info.is_void(); }
+    bool is_bool() const { return m_type_info.is_bool(); }
 
     template <class T> T& get() { return m_value.get<T>(); }
     template <class T> const T& get() const { return m_value.get<T>(); }
@@ -425,14 +424,6 @@ namespace value {
 // ----------- //
 // Plain types //
 // ----------- //
-
-
-// Empty value, doesn't carry any information
-class Void: public Value {
-public:
-    void value() const {}
-    TypeInfo type_info() const { return TypeInfo{Type::Void}; }
-};
 
 
 class Bool: public Value {
@@ -626,8 +617,7 @@ template<class Archive>
 void save(Archive& archive, const TypedValue& value)
 {
     archive("type_info", value.type_info());
-    if (!value.is_void())
-        archive("value", value.value());
+    archive("value", value.value());
 }
 
 template<class Archive>
@@ -636,13 +626,9 @@ void load(Archive& archive, TypedValue& value)
     TypeInfo type_info;
     archive(type_info);
 
-    if (type_info.is_void()) {
-        value = TypedValue(std::move(type_info));
-    } else {
-        Value pure_value { create_value(type_info) };
-        archive(pure_value);
-        value = TypedValue(std::move(pure_value), std::move(type_info));
-    }
+    Value pure_value { create_value(type_info) };
+    archive(pure_value);
+    value = TypedValue(std::move(pure_value), std::move(type_info));
 }
 
 
