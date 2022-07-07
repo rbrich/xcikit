@@ -296,7 +296,7 @@ TEST_CASE( "Type argument or comparison?", "[script][parser]" )
 
 TEST_CASE( "Value size on stack", "[script][machine]" )
 {
-    CHECK(Value().size_on_stack() == type_size_on_stack(Type::Void));
+    CHECK(Value().size_on_stack() == type_size_on_stack(Type::Unknown));
     CHECK(Value(false).size_on_stack() == type_size_on_stack(Type::Bool));
     CHECK(Value(0).size_on_stack() == type_size_on_stack(Type::Int32));
     CHECK(Value(int64_t{0}).size_on_stack() == type_size_on_stack(Type::Int64));
@@ -457,7 +457,8 @@ TEST_CASE( "Types", "[script][interpreter]" )
 {
     // each definition can have explicit type
     CHECK(interpret("a:Int = 1 ; a") == "1");
-    CHECK_THROWS_AS(interpret("a:Int = 1.0 ; a"), DefinitionTypeMismatch);
+    CHECK_THROWS_AS(interpret("a:Int = 1.0"), DefinitionTypeMismatch);
+    CHECK_THROWS_AS(interpret("a:Int = true"), DefinitionTypeMismatch);
     CHECK(interpret_std("a:Int = 42; b:Int = a; b") == "42");
     CHECK_THROWS_AS(interpret("a = 42; b:String = a"), FunctionNotFound);
 
@@ -524,16 +525,16 @@ TEST_CASE( "Blocks", "[script][interpreter]" )
     CHECK(parse("{{}}") == "{{}}");
 
     // blocks are evaluated and return a value
-    CHECK(interpret("{}") == "");  // empty function (has Void type)
-    CHECK(interpret("{{}}") == "");  // empty function in empty function
-    CHECK(interpret("{};{};{}") == "");  // three empty functions
+    CHECK(interpret("{}") == "()");  // empty function (has Void type)
+    CHECK(interpret("{{}}") == "()");  // empty function in empty function
+    CHECK(interpret("{};{};{}") == "()");  // three empty functions
     CHECK(interpret_std("{1+2}") == "3"); // non-empty
     CHECK(interpret_std("{{{1+2}}}") == "3"); // three wrapped functions, each returns the result of inner one
-    CHECK(interpret_std("{1+2;4;{}}") == "3;4;");  // {} as the last statement changes function result to Void, intermediate results are "invoked"
+    CHECK(interpret_std("{1+2;4;{}}") == "3;4;()");  // {} as the last statement changes function result to Void, intermediate results are "invoked"
     CHECK(interpret_std("x=4; b = 3 + {x+1}; b") == "8");
 
     // blocks can be assigned to a name
-    CHECK(interpret("a = {}; a") == "");  // empty block can be named too, `a` is a named function of Void type
+    CHECK(interpret("a = {}; a") == "()");  // empty block can be named too, `a` is a named function of Void type
     CHECK(interpret_std("b = {1+2}; b") == "3");
     CHECK(interpret("b = { a = 1; a }; b") == "1");
     CHECK(interpret_std("b:Int = {1+2}; b") == "3");
@@ -683,6 +684,15 @@ TEST_CASE( "Generic functions", "[script][interpreter]" )
     CHECK(interpret("f = fun<T> T->T { __noop }; f (f 3)") == "3");
     CHECK(interpret("f = fun<T> T->T { __noop }; 4 .f .f .f") == "4");
     CHECK(interpret("f = fun<T> T->T { __noop }; same = fun<T> x:T -> T { f (f x) }; same 5") == "5");
+    // deducing tuple type
+    CHECK(interpret("fun () -> () { __noop } ()") == "()");
+    CHECK(interpret("fun<T> (T,T) -> (T,T) { __noop } (1,2)") == "(1, 2)");
+    CHECK(interpret("f = fun<T> (T,T) -> (T,T) { __noop }; f (1,2)") == "(1, 2)");
+    //CHECK(interpret("f = fun<Add T> (T,T) -> T { add }; f (1,2)") == "3");
+    // deducing list type
+    CHECK(interpret("fun<T> [T] -> [T] { __noop } [1,2]") == "[1, 2]");
+    CHECK(interpret("len = fun<T> [T] -> UInt { __length __type_id<T> }; len [1,2,3]") == "3U");
+    CHECK(interpret_std("f = fun<T> a:[T] -> T { a!1 }; f [1,2,3]") == "2");
 }
 
 
@@ -707,7 +717,7 @@ TEST_CASE( "Overloaded functions", "[script][interpreter]" )
 
 TEST_CASE( "Lexical scope", "[script][interpreter]" )
 {
-    CHECK(interpret("{a=1; b=2}") == "");
+    CHECK(interpret("{a=1; b=2}") == "()");
     CHECK_THROWS_AS(interpret("{a=1; b=2} a"), UndefinedName);
 
     CHECK(interpret_std("x=1; y = { x + 2 }; y") == "3");
@@ -746,7 +756,8 @@ TEST_CASE( "If-expression", "[script][interpreter]" )
 
 TEST_CASE( "Casting", "[script][interpreter]" )
 {
-    CHECK(interpret_std("\"drop this\":Void") == "");
+    CHECK(interpret_std("\"drop this\":Void") == "()");
+    CHECK(interpret_std("\"drop this\":()") == "()");
     CHECK(interpret_std("\"noop\":String") == "\"noop\"");
     CHECK(interpret_std("42:Int64") == "42L");
     CHECK(interpret_std("42L:Int32") == "42");
@@ -873,7 +884,7 @@ TEST_CASE( "Type classes", "[script][interpreter]" )
                     "instance Ord String { lt = fun a b { string_compare a b < 0 } }; "
                     "\"a\" < \"b\"") == "true");
     // Instantiate type class from another module
-    CHECK(interpret_std("instance Ord Bool { lt = { __less_than 0x11 }; gt = false; le = false; ge = false }; "
+    CHECK(interpret_std("instance Ord Bool { lt = { __less_than 0x11 }; gt = {false}; le = {false}; ge = {false} }; "
                         "false < true; 2 < 1") == "true;false");
 }
 
@@ -901,7 +912,7 @@ TEST_CASE( "With expression, I/O streams", "[script][interpreter]" )
     // write an actual file
     auto filename = fs::temp_directory_path() / "xci_test_script.txt";
     CHECK(interpret("with (open \""s + escape(filename.string()) + "\" \"w\")\n"
-                    "    write \"this goes to the file\"") == "");
+                    "    write \"this goes to the file\"") == "()");
     CHECK(interpret("with (in=(open \""s + escape(filename.string()) + "\" \"r\"))\n"
                     "    read 9") == "\"this goes\"");
     CHECK(fs::remove(filename));
@@ -926,7 +937,7 @@ TEST_CASE( "Compiler intrinsics", "[script][interpreter]" )
 
 TEST_CASE( "Native to TypeInfo mapping", "[script][native]" )
 {
-    CHECK(native::make_type_info<void>().type() == Type::Void);
+    CHECK(native::make_type_info<void>().is_void());
     CHECK(native::make_type_info<bool>().type() == Type::Bool);
     CHECK(native::make_type_info<uint8_t>().type() == Type::Byte);
     CHECK(native::make_type_info<char>().type() == Type::Char);
@@ -946,7 +957,7 @@ TEST_CASE( "Native to TypeInfo mapping", "[script][native]" )
 
 TEST_CASE( "Native to Value mapping", "[script][native]" )
 {
-    CHECK(native::ValueType<void>().type() == Type::Void);
+    CHECK(native::ValueType<void>().is_void());
     CHECK(native::ValueType<bool>{true}.value() == true);
     CHECK(native::ValueType<byte>(255).value() == 255);
     CHECK(native::ValueType<char>('y').value() == 'y');
@@ -1032,9 +1043,9 @@ TEST_CASE( "Fold const expressions", "[script][optimizer]" )
     CHECK(optimize("f=fun a:Int {a}; f 42") == "/*def*/ f = (fun a:Int -> $R {a});\n42");
 
     // cast to Void eliminates the expression
-    CHECK(optimize("42:Void") == "");
-    CHECK(optimize("{42}:Void") == "");
-    CHECK(optimize("(fun x { x + 1 }):Void") == "");
+    CHECK(optimize("42:Void") == "()");
+    CHECK(optimize("{42}:Void") == "()");
+    CHECK(optimize("(fun x { x + 1 }):Void") == "()");
 
     // cast to the same type is eliminated
     CHECK(optimize("42:Int") == "42");

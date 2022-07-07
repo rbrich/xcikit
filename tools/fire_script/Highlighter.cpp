@@ -145,7 +145,7 @@ struct InvalidCommand: star< not_at< blank >, any > {};
 struct ReplCommand: seq<one<'.'>, sor<ValidCommand, InvalidCommand>, SC, star<PartialExpr, SC>> {};
 
 // Expressions
-struct BracketedExpr: seq< RoundBracketOpen, NSC, Expression, NSC, RoundBracketClose > {};
+struct BracketedExpr: seq< RoundBracketOpen, NSC, opt<Expression, NSC>, RoundBracketClose > {};
 struct List: seq< SquareBracketOpen, NSC, opt<Expression, NSC>, SquareBracketClose > {};
 struct FullyBracketed: sor< BracketedExpr, Block, List > {};
 struct PrimaryExpr: sor< Operator, Literal, Keyword, SpecialVariable, Identifier, TypeName > {};

@@ -976,7 +976,6 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
                 return os << type_var_names[var - 1];
             return os << char('S' + var);
         }
-        case Type::Void:        return os << "Void";
         case Type::Bool:        return os << "Bool";
         case Type::Byte:        return os << "Byte";
         case Type::Char:        return os << "Char";
@@ -1047,7 +1046,7 @@ std::ostream& operator<<(std::ostream& os, const Signature& v)
             os << ti << ' ';
         }
     } else {
-        os << "Void ";
+        os << "() ";
     }
     os << "-> ";
     stream_options(os).parenthesize_fun_types = orig_parenthesize_fun_types;

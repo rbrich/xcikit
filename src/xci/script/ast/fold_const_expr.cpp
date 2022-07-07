@@ -235,7 +235,7 @@ public:
         apply_and_fold(v.expression);
         // cast to Void?
         if (v.to_type.is_void()) {
-            m_const_value = TypedValue(value::Void{});
+            m_const_value = TypedValue(ti_void());
             m_collapsed = make_unique<ast::Literal>(*m_const_value);
             return;
         }

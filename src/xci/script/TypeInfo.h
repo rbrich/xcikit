@@ -21,7 +21,6 @@ namespace xci::script {
 
 enum class Type : uint8_t {
     Unknown,    // type not known at this time (might be inferred or generic)
-    Void,       // void type - has no value
 
     // Primitive types
     Bool,
@@ -114,7 +113,8 @@ public:
     bool is_unknown() const { return m_type == Type::Unknown; }
     bool is_named() const { return m_type == Type::Named; }
     bool is_callable() const { return underlying_type() == Type::Function; }
-    bool is_void() const { return underlying_type() == Type::Void; }
+    bool is_void() const { return is_tuple() && subtypes().empty(); }
+    bool is_bool() const { return underlying_type() == Type::Bool; }
     bool is_tuple() const { return underlying_type() == Type::Tuple; }
     bool is_struct() const { return underlying_type() == Type::Struct; }
 
@@ -138,7 +138,9 @@ public:
 
     Var generic_var() const;  // type = Unknown
     const TypeInfo& elem_type() const;  // type = List (Subtypes[0])
+    TypeInfo& elem_type();              // type = List (Subtypes[0])
     const Subtypes& subtypes() const;  // type = Tuple
+    Subtypes& subtypes();              // type = Tuple
     const StructItems& struct_items() const;  // type = Struct
     const TypeInfo* struct_item_by_name(const std::string& name) const;  // type = Struct
     Subtypes struct_or_tuple_subtypes() const;  // type = Tuple | Struct
@@ -289,7 +291,7 @@ struct NamedType {
 // Shortcuts
 
 inline TypeInfo ti_unknown() { return TypeInfo(Type::Unknown); }
-inline TypeInfo ti_void() { return TypeInfo(Type::Void); }
+inline TypeInfo ti_void() { return TypeInfo(TypeInfo::tuple_of, {}); }
 inline TypeInfo ti_bool() { return TypeInfo(Type::Bool); }
 inline TypeInfo ti_byte() { return TypeInfo(Type::Byte); }
 inline TypeInfo ti_char() { return TypeInfo(Type::Char); }

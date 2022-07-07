@@ -32,7 +32,6 @@ size_t type_size_on_stack(Type type)
 {
     switch (type) {
         case Type::Unknown:
-        case Type::Void:
         case Type::Tuple:
         case Type::Struct:
         case Type::Named:
@@ -220,7 +219,6 @@ bool is_same_underlying(const TypeInfo& lhs, const TypeInfo& rhs)
         case Type::Unknown:
         case Type::Named:
             return false;
-        case Type::Void:
         case Type::Bool:
         case Type::Byte:
         case Type::Char:
@@ -310,6 +308,18 @@ auto TypeInfo::elem_type() const -> const TypeInfo&
         return named_type().type_info.elem_type();
     assert(m_type == Type::List);
     assert(std::holds_alternative<Subtypes>(m_info));
+    assert(std::get<Subtypes>(m_info).size() == 1);
+    return std::get<Subtypes>(m_info)[0];
+}
+
+
+auto TypeInfo::elem_type() -> TypeInfo&
+{
+    if (m_type == Type::Named)
+        return named_type_ptr()->type_info.elem_type();
+    assert(m_type == Type::List);
+    assert(std::holds_alternative<Subtypes>(m_info));
+    assert(std::get<Subtypes>(m_info).size() == 1);
     return std::get<Subtypes>(m_info)[0];
 }
 
@@ -318,6 +328,16 @@ auto TypeInfo::subtypes() const -> const Subtypes&
 {
     if (m_type == Type::Named)
         return named_type().type_info.subtypes();
+    assert(m_type == Type::Tuple);
+    assert(std::holds_alternative<Subtypes>(m_info));
+    return std::get<Subtypes>(m_info);
+}
+
+
+auto TypeInfo::subtypes() -> Subtypes&
+{
+    if (m_type == Type::Named)
+        return named_type_ptr()->type_info.subtypes();
     assert(m_type == Type::Tuple);
     assert(std::holds_alternative<Subtypes>(m_info));
     return std::get<Subtypes>(m_info);

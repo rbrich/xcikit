@@ -134,8 +134,8 @@ struct PlainTypeName: seq< TypeName, not_at<SC, one<','>> > {};  // not followed
 struct ListType: if_must< one<'['>, SC, UnsafeType, SC, one<']'> > {};
 struct TupleType: seq< Type, plus<SC, one<','>, SC, Type> > {};
 struct StructItem: seq< Identifier, SC, one<':'>, SC, must<Type> > {};
-struct StructType: seq< StructItem, plus<SC, one<','>, SC, StructItem> > {};
-struct ParenthesizedType: if_must< one<'('>, SC, UnsafeType, SC, one<')'> > {};
+struct StructType: seq< StructItem, star<SC, one<','>, SC, StructItem> > {};
+struct ParenthesizedType: if_must< one<'('>, SC, opt<UnsafeType, SC>, one<')'> > {};
 struct UnsafeType: sor<FunctionType, PlainTypeName, TupleType, StructType, ParenthesizedType, ListType> {};   // usable in context where Type is already expected
 struct Type: sor< ParenthesizedType, ListType, TypeName > {};
 
@@ -154,7 +154,7 @@ template<class S> struct Expression: sor< ExprCond, ExprWith, ExprStruct, ExprIn
 struct Variable: seq< Identifier, opt<SC, one<':'>, SC, must<UnsafeType> > > {};
 struct Block: if_must< one<'{'>, NSC, sor< one<'}'>, seq<SepList<Statement>, NSC, one<'}'>> > > {};
 struct Function: sor< Block, if_must< KeywordFun, NSC, FunctionDecl, NSC, Block> > {};
-struct ParenthesizedExpr: if_must< one<'('>, NSC, Expression<NSC>, NSC, one<')'> > {};
+struct ParenthesizedExpr: if_must< one<'('>, NSC, opt<Expression<NSC>, NSC>, one<')'> > {};
 struct ExprPrefix: if_must< PrefixOperator, SC, ExprOperand<SC>, SC > {};
 struct TypeArgs: seq< one<'<'>, Type, one<'>'> > {};
 struct Reference: seq<Identifier, opt<TypeArgs>, not_at<one<'"'>>> {};
@@ -505,6 +505,8 @@ struct Action<ParenthesizedExpr> : change_states< ast::Parenthesized > {
 
     template<typename Input>
     static void success(const Input &in, ast::Parenthesized& parenthesized, std::unique_ptr<ast::Expression>& expr) {
+        if (!parenthesized.expression)
+            parenthesized.expression = std::make_unique<ast::Tuple>();  // "()" => empty tuple (void)
         expr = std::make_unique<ast::Parenthesized>(std::move(parenthesized));
     }
 };
@@ -828,6 +830,8 @@ template<>
 struct Action<Type> : change_states< std::unique_ptr<ast::Type> >  {
     template<typename Input>
     static void apply(const Input &in, std::unique_ptr<ast::Type>& type) {
+        if (!type)
+            type = std::make_unique<ast::TupleType>();  // "()" => empty tuple type (Void)
         type->source_loc.load(in.input(), in.position());
     }
 
@@ -876,6 +880,8 @@ template<>
 struct Action<UnsafeType> : change_states< std::unique_ptr<ast::Type> >  {
     template<typename Input>
     static void apply(const Input &in, std::unique_ptr<ast::Type>& type) {
+        if (!type)
+            type = std::make_unique<ast::TupleType>();  // "()" => empty tuple type (Void)
         type->source_loc.load(in.input(), in.position());
     }
 

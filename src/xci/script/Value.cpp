@@ -69,7 +69,6 @@ Value create_value(Type type)
 {
     switch (type) {
         case Type::Unknown: assert(!"Cannot create Value of Unknown type"); break;
-        case Type::Void: return value::Void{};
         case Type::Bool: return value::Bool{};
         case Type::Byte: return value::Byte{};
         case Type::Char: return value::Char{};
@@ -111,7 +110,7 @@ size_t Value::write(byte* buffer) const
     return std::visit([buffer](auto&& v) -> size_t {
         using T = std::decay_t<decltype(v)>;
         if constexpr (std::is_same_v<T, std::monostate>)
-            return 0;  // Void
+            return 0;  // Unknown
         else if constexpr (std::is_same_v<T, bool> || std::is_same_v<T, byte>) {
             *buffer = byte(v);
             return 1;
@@ -121,7 +120,7 @@ size_t Value::write(byte* buffer) const
             return sizeof(byte*);
         } else if constexpr (std::is_same_v<T, TupleV>) {
             byte* ofs = buffer;
-            for (Value* it = v.values.get(); !it->is_void(); ++it)
+            for (Value* it = v.values.get(); !it->is_unknown(); ++it)
                 ofs += it->write(ofs);
             return ofs - buffer;
         } else if constexpr (std::is_same_v<T, ModuleV>) {
@@ -140,7 +139,7 @@ size_t Value::read(const byte* buffer)
     return std::visit([buffer](auto& v) -> size_t {
         using T = std::decay_t<decltype(v)>;
         if constexpr (std::is_same_v<T, std::monostate>)
-            return 0;  // Void
+            return 0;  // Unknown
         else if constexpr (std::is_same_v<T, bool>) {
             v = bool(*buffer);
             return 1;
@@ -154,7 +153,7 @@ size_t Value::read(const byte* buffer)
             return sizeof(byte*);
         } else if constexpr (std::is_same_v<T, TupleV>) {
             const byte* ofs = buffer;
-            for (Value* it = v.values.get(); !it->is_void(); ++it)
+            for (Value* it = v.values.get(); !it->is_unknown(); ++it)
                 ofs += it->read(ofs);
             return ofs - buffer;
         } else if constexpr (std::is_same_v<T, ModuleV>) {
@@ -174,10 +173,10 @@ size_t Value::size_on_stack() const
     return std::visit([](auto&& v) -> size_t {
         using T = std::decay_t<decltype(v)>;
         if constexpr (std::is_same_v<T, std::monostate>)
-            return 0;  // Void
+            return 0;  // Unknown
         else if constexpr (std::is_same_v<T, TupleV>) {
             size_t res = 0;
-            for (Value* it = v.values.get(); !it->is_void(); ++it)
+            for (Value* it = v.values.get(); !it->is_unknown(); ++it)
                 res += it->size_on_stack();
             return res;
         } else
@@ -209,7 +208,7 @@ void Value::incref() const
         if constexpr (HasHeapSlot<T>)
             v.slot.incref();
         else if constexpr (std::is_same_v<T, TupleV>) {
-            for (Value* it = v.values.get(); !it->is_void(); ++it)
+            for (Value* it = v.values.get(); !it->is_unknown(); ++it)
                 it->incref();
         }
     }, m_value);
@@ -226,7 +225,7 @@ void Value::decref() const
         if constexpr (HasHeapSlot<T>)
             v.slot.decref();
         else if constexpr (std::is_same_v<T, TupleV>) {
-            for (Value* it = v.values.get(); !it->is_void(); ++it)
+            for (Value* it = v.values.get(); !it->is_unknown(); ++it)
                 it->decref();
         }
     }, m_value);
@@ -237,9 +236,9 @@ void Value::apply(value::Visitor& visitor) const
 {
     std::visit([&visitor](const auto& v) {
         using T = std::decay_t<decltype(v)>;
-        if constexpr (std::is_same_v<T, std::monostate>)
-            visitor.visit();  // Void
-        else if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, StreamV> || std::is_same_v<T, ModuleV>)
+        if constexpr (std::is_same_v<T, std::monostate>) {
+            assert(!"Cannot apply Value of unknown type");  // Unknown
+        } else if constexpr (std::is_same_v<T, StringV> || std::is_same_v<T, StreamV> || std::is_same_v<T, ModuleV>)
             visitor.visit(v.value());
         else
             visitor.visit(v);
@@ -250,7 +249,7 @@ void Value::apply(value::Visitor& visitor) const
 Type Value::type() const
 {
     return std::visit(overloaded {
-            [](std::monostate) { return Type::Void; },
+            [](std::monostate) { return Type::Unknown; },
             [](bool) { return Type::Bool; },
             [](byte) { return Type::Byte; },
             [](char32_t) { return Type::Char; },
@@ -276,8 +275,8 @@ bool Value::cast_from(const Value& src)
         using TTo = std::decay_t<decltype(to)>;
         using TFrom = std::decay_t<decltype(from)>;
 
-        // same types or cast to Void -> noop
-        if constexpr (std::is_same_v<TFrom, TTo> || std::is_same_v<TTo, std::monostate>)
+        // same types -> noop
+        if constexpr (std::is_same_v<TFrom, TTo>)
             return true;
 
         // int/float -> int/float
@@ -289,7 +288,7 @@ bool Value::cast_from(const Value& src)
             return true;
         }
 
-        // Complex types or cast from Void
+        // Complex types
         return false;
     }, m_value, src.m_value);
 }
@@ -596,7 +595,7 @@ TupleV::TupleV(const TupleV& other)
     for (int i = 0;;) {
         const Value& item = other.value_at(i);
         values[i++] = item;
-        if (item.is_void())
+        if (item.is_unknown())
             break;
     }
 }
@@ -608,7 +607,7 @@ TupleV& TupleV::operator =(const TupleV& other)
     for (int i = 0;;) {
         const Value& item = other.value_at(i);
         values[i++] = item;
-        if (item.is_void())
+        if (item.is_unknown())
             break;
     }
     return *this;
@@ -622,7 +621,7 @@ TupleV::TupleV(Values&& vs)
     for (auto&& tv : vs) {
         values[i++] = std::move(tv);
     }
-    values[i] = Value{};
+    values[i] = Value();
 }
 
 
@@ -633,20 +632,20 @@ TupleV::TupleV(const TypeInfo::Subtypes& subtypes)
     for (const auto& ti : subtypes) {
         values[i++] = create_value(ti);
     }
-    values[i] = Value{};
+    values[i] = Value();
 }
 
 
 bool TupleV::empty() const
 {
-    return values[0].is_void();
+    return values[0].is_unknown();
 }
 
 
 size_t TupleV::length() const
 {
     size_t i = 0;
-    while (!values[i].is_void())
+    while (!values[i].is_unknown())
         ++i;
     return i;
 }
@@ -654,7 +653,7 @@ size_t TupleV::length() const
 
 void TupleV::foreach(const std::function<void(const Value&)>& cb) const
 {
-    for (Value* it = values.get(); !it->is_void(); ++it)
+    for (Value* it = values.get(); !it->is_unknown(); ++it)
         cb(*it);
 }
 
@@ -749,7 +748,6 @@ static void dump_float(std::ostream& os, /*std::floating_point*/ auto value)
 class StreamVisitor: public value::Visitor {
 public:
     explicit StreamVisitor(std::ostream& os, const TypeInfo& type_info) : os(os), type_info(type_info) {}
-    void visit(void) override { os << ""; }
     void visit(bool v) override { os << std::boolalpha << v; }
     void visit(std::byte v) override {
         os << "b'" << core::escape(core::to_utf8(uint8_t(v))) << "'";
@@ -800,14 +798,14 @@ public:
         os << "(";
         if (type_info.is_tuple()) {
             auto ti_iter = type_info.subtypes().begin();
-            for (Value* it = v.values.get(); !it->is_void(); ++it) {
+            for (Value* it = v.values.get(); !it->is_unknown(); ++it) {
                 if (it != v.values.get())
                     os << ", ";
                 os << TypedValue(*it, *ti_iter++);
             }
         } else if (type_info.is_struct()) {
             auto ti_iter = type_info.struct_items().begin();
-            for (Value* it = v.values.get(); !it->is_void(); ++it) {
+            for (Value* it = v.values.get(); !it->is_unknown(); ++it) {
                 if (it != v.values.get())
                     os << ", ";
                 os << ti_iter->first << '=' << TypedValue(*it, ti_iter->second);
@@ -815,7 +813,7 @@ public:
             }
         } else {
             // unknown TypeInfo
-            for (Value* it = v.values.get(); !it->is_void(); ++it) {
+            for (Value* it = v.values.get(); !it->is_unknown(); ++it) {
                 if (it != v.values.get())
                     os << ", ";
                 os << *it;

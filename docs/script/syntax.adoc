@@ -9,7 +9,7 @@ endif::[]
 
 = Fire Script
 
-*_Language description, v0.8_*
+*_Language description, v0.9_*
 
 toc::[]
 
@@ -59,10 +59,12 @@ b'@'       // byte / ASCII character
 b"lava"    // bytes (ASCII string)
 """abc"""  // raw string (here doc)
 b"""abc""" // raw bytes
+("abc",42) // tuple
 [1, 2, 3]  // list
 []:[Byte]  // empty list (type can be specified or inferred from context)
-{}         // empty block, effectively Void
-void       // empty statement, returns Void -> noop
+{}         // empty block, has type () -> () (no parameters, no return value)
+()         // empty tuple (value of zero size)
+void       // alias of ()
 ----
 
 The raw string can be multi-line. It has a few special rules:
@@ -126,7 +128,7 @@ l = """
 [source,fire]
 ----
 // define some names in a scope:
-{ a = 1; b = 2 }    // the whole expression evaluates to `void`
+{ a = 1; b = 2 }    // the whole expression evaluates to ()
 a                   // ERROR - `a` is not defined in outer scope
 
 // block returns `a`, `c` evaluates to `1`
@@ -385,8 +387,8 @@ Block is a function with zero arguments:
 
 [source,fire]
 ----
-block1 = { c = add2 a b; }    // returns c (the semicolon is not important)
-block2 = { c = add2 a b; void }  // returns `void`
+block1 = { c = add2 a b; c }    // returns closure c
+block2 = { c = add2 a b }       // returns ()
 block1  // evaluate the block (actually, it might have been evaluated above - that's up to compiler)
 block3 = { a + b }      // block with free variables: a, b
 block3      // the value is still { a + b } - variables are not bound, cannot be evaluated
@@ -735,6 +737,8 @@ catch ex:T
 
 == Types
 
+=== Built-in types
+
 Primitive types:
 
 [source,fire]
@@ -757,23 +761,24 @@ b"abc"              // [Byte]
 [10b, 11b, 13b]     // [Byte]         -- equivalent to the "bytes" literal
 "Hello."            // String         -- UTF-8 string
 ['a', 'b', 'c']     // [Char]         -- compatible with String, but not the same
-("Hello", 33)       // (String, Int)  -- a tuple
 [1, 2, 3]           // [Int]          -- a list
+("Hello", 33)       // (String, Int)  -- a tuple
+()                  // () aka Void    -- empty tuple
 ----
 
 The type of value is inferred from the literal. Assigning literal of a type with
-smaller range is fine. Assigning a value of bigger range is find if it fits,
-compile-time error otherwise.
+smaller range is fine. Assigning a value of bigger range is only fine if it fits,
+otherwise it's a compile-time error.
 
 [source,fire]
 ----
-ok = true       // inferred type Bool
-c = 'a'         // inferred type Char
-byte = 27b      // inferred type Byte
-b1:Byte = 12    // ok
-b2:Byte = 300   // error
-b3 = c          // error, not a literal, must be casted explicitly
-b4 = c:Byte     // cast ok, value clipped
+ok = true           // inferred type Bool
+c = 'a'             // inferred type Char
+byte = 27b          // inferred type Byte
+b1:Byte = 12        // ok
+b2:Byte = 300       // error
+b3:Byte = c         // error, not a literal, must be casted explicitly
+b4:Byte = c:Byte    // cast ok, value clipped
 ----
 
 Strings and lists have the same interface and can be handled universally
@@ -782,6 +787,22 @@ than String: it stores 32bit characters, allowing constant-time indexing,
 but taking more space. String is UTF-8 encoded, random access
 is slower (linear-time), but it takes less space.
 
+==== Void type
+
+[source,fire]
+----
+_0 ? v:() = ()
+_1 ? .d v
+Function v: () -> ()
+----
+
+A special case of the tuple type is an empty tuple `()`, also known as `Void`.
+A value of this type, which is also written as `()` (alias `void`), doesn't carry any data.
+A function taking `()` as input won't pull anything from data stack.
+A function returning `()` doesn't push any data on the stack.
+The size of the value is effectively zero, so the value doesn't exist at all.
+It's only known to the compiler for the purpose of type checking.
+
 === User-defined types
 
 User-defined types are made by giving a name to a type, or to a composition of types.
@@ -789,13 +810,14 @@ All type names must begin with uppercase letter (this is enforced by the compile
 
 [source,fire]
 ----
+type MyVoid = ()     // empty tuple => Void
 type MyType = Int    // make new type by giving other type a new name
 type MyTuple = (String, Int)
 type MyStruct = (name:String, age:Int)    // struct (a tuple with named fields)
 type MyBool = false | true   // enum
 type MyUnion = Int | String | Void   // tagged union
 type MyVariant = int Int | string String | none   // tagged union with explicit names
-type MyOptional T = some T | void   // generic type (a kind?)
+type MyOptional T = some T | none   // generic type (a kind?)
 type MyOptionalInt = MyOptional Int   // instance of the generic type
 type MyFunction = [Int] Int -> Int
 ----
