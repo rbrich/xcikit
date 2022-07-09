@@ -490,6 +490,13 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     std::string my_struct = "type MyStruct = (name:String, age:Int); ";  // named struct
     CHECK(interpret(my_struct + R"( a:MyStruct = (name="hello", age=42); a)") == R"((name="hello", age=42))");
     CHECK(interpret(my_struct + R"( a:MyStruct = "hello", 42; a)") == R"((name="hello", age=42))");
+    // struct defaults (left out fields get default "zero" value)
+    CHECK_THROWS_AS(interpret("x:(Int,Int) = ()"), DefinitionTypeMismatch);  // tuple doesn't have defaults
+    CHECK(interpret_std("x:FormatSpec = (fill='_',width=2); x") == R"((fill='_', align='\0', sign='\0', width=2, precision=0, spec=""))");
+    CHECK(interpret_std("x:FormatSpec = (width=2); x") == R"((fill='\0', align='\0', sign='\0', width=2, precision=0, spec=""))");
+    CHECK(interpret_std("x:FormatSpec = (); x") == R"((fill='\0', align='\0', sign='\0', width=0, precision=0, spec=""))");  // empty tuple stands for empty StructInit
+    CHECK_THROWS_AS(interpret_std("x:FormatSpec = ('_', '>')"), DefinitionTypeMismatch);  // when initializing with a tuple, all fields have to be specified (no defaults are filled in)
+    CHECK(interpret_std("x:(field:Int) = 2; x") == "(field=2)");  // a single-item struct can be initialized with the field value (as there is no single-field tuple)
     // cast from underlying type
     CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a)") == R"((name="hello", age=42))");
     CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a:(String, Int))") == R"(("hello", 42))");
@@ -645,8 +652,8 @@ TEST_CASE( "Forward declarations", "[script][interpreter]")
 {
     // `x` name not yet seen (the symbol resolution is strictly single-pass)
     CHECK_THROWS_AS(interpret("y=x; x=7; y"), UndefinedName);
-    CHECK_THROWS_AS(interpret("y={x}; x=7; y"), UndefinedName);  // block doesn't change anything
-    CHECK_THROWS_AS(interpret_std("y=fun a {a+x}; x=7; y 2"), UndefinedName);  // neither does a function
+    CHECK_THROWS_AS(interpret("y={x}; x=7; y"), UndefinedName);  // A block doesn't change anything.
+    CHECK_THROWS_AS(interpret_std("y=fun a {a+x}; x=7; y 2"), UndefinedName);  // Neither does a function.
     // Inside a block or function, a forward-declared value or function can be used.
     // A similar principle is used in recursion, where the function itself is considered
     // declared while processing its own body.
@@ -944,7 +951,7 @@ TEST_CASE( "Native to TypeInfo mapping", "[script][native]" )
     CHECK(native::make_type_info<char16_t>().type() == Type::Char);
     CHECK(native::make_type_info<char32_t>().type() == Type::Char);
     CHECK(native::make_type_info<int>().type() == Type::Int32);  // depends on sizeof(int)
-    CHECK(native::make_type_info<long long>().type() == Type::Int64);  // depends on sizeof(long long)
+    CHECK(native::make_type_info<long long>().type() == Type::Int64);  // depends on `sizeof(long long)`
     CHECK(native::make_type_info<int32_t>().type() == Type::Int32);
     CHECK(native::make_type_info<int64_t>().type() == Type::Int64);
     CHECK(native::make_type_info<float>().type() == Type::Float32);

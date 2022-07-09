@@ -102,6 +102,12 @@ public:
                     throw DefinitionTypeMismatch(ti, inferred, loc);
                 return ti;
             }
+            if (ti.struct_items().size() == 1) {
+                // allow initializing a single-field struct with the value of first field (as there is no single-item tuple)
+                if (!match_type(inferred, ti.struct_items().front().second))
+                    throw DefinitionTypeMismatch(ti, inferred, loc);
+                return ti;
+            }
         }
         // otherwise, resolve to specified type, ignore cast type (a cast function will be called)
         if (!m_spec)
@@ -239,7 +245,7 @@ static MatchScore match_struct(const TypeInfo& candidate, const TypeInfo& actual
 
 
 /// Match tuple to resolved Struct type, i.e. initialize struct with tuple literal
-/// \param candidate    Tuple with same or lesser number of fields
+/// \param candidate    Tuple with same number of fields
 /// \param actual       Actual resolved struct type for the value
 /// \returns Total match score of all fields, or mismatch
 static MatchScore match_tuple_to_struct(const TypeInfo& candidate, const TypeInfo& actual)
@@ -248,7 +254,7 @@ static MatchScore match_tuple_to_struct(const TypeInfo& candidate, const TypeInf
     assert(actual.is_struct());
     const auto& actual_items = actual.struct_items();
     const auto& candidate_types = candidate.subtypes();
-    if (candidate_types.size() > actual_items.size())
+    if (candidate_types.size() != actual_items.size() && !candidate_types.empty())  // allow initializing a struct with ()
         return MatchScore::mismatch();  // number of fields doesn't match
     if (candidate == actual)
         return MatchScore::exact();
@@ -438,6 +444,7 @@ public:
             subtypes.push_back(m_value_type.effective_type());
         }
         m_value_type = type_check.resolve(TypeInfo(std::move(subtypes)), v.source_loc);
+        v.literal_type = m_value_type;
     }
 
     void visit(ast::List& v) override {

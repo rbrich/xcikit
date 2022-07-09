@@ -344,6 +344,9 @@ struct Tuple: public Expression {
     std::unique_ptr<ast::Expression> make_copy() const override;
 
     std::vector<std::unique_ptr<Expression>> items;
+
+    // resolved:
+    TypeInfo literal_type;  // the tuple may resolve to Struct type depending on specified/inferred type
 };
 
 struct List: public Expression {

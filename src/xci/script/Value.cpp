@@ -357,6 +357,8 @@ StringV::StringV(std::string_view v)
 
 std::string_view StringV::value() const
 {
+    if (!slot)
+        return {nullptr, 0};
     size_t size = bit_copy<uint32_t>(slot.data());
     const char* data = reinterpret_cast<const char*>(slot.data() + sizeof(uint32_t));
     return {data, size};

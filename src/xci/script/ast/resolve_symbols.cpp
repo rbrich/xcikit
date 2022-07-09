@@ -36,7 +36,8 @@ public:
         // * must be a plain function (not method)
         // * must have explicitly specified type
         if (!symptr
-        || (!m_class && !m_instance && dfn.variable.type && symptr->is_defined() && symptr->type() == Symbol::Function))
+        || (!m_class && !m_instance && dfn.variable.type && symptr->is_defined() && symptr->type() == Symbol::Function)
+        || (symptr->type() == Symbol::StructItem))
         {
             // not found or undefined -> add new function, symbol
             auto new_symptr = create_function(name);
