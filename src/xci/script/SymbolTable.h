@@ -159,7 +159,8 @@ public:
 
     SymbolTable& add_child(const std::string& name);
     SymbolTable* parent() const { return m_parent; }
-    unsigned level() const;  // number of parents above this symtab
+    unsigned level() const { return depth(nullptr) - 1; }  // number of parents above this symtab
+    unsigned depth(const SymbolTable* p_symtab) const;  // number of parents up to `p_symtab`
 
     // related function
     void set_function(Function* function) { m_function = function; }

@@ -1037,7 +1037,7 @@ std::ostream& operator<<(std::ostream& os, const Signature& v)
             if (&ti != &v.partial.back())
                 os << ", ";
         }
-        os << "| ";
+        os << " | ";
     }
     bool orig_parenthesize_fun_types = stream_options(os).parenthesize_fun_types;
     stream_options(os).parenthesize_fun_types = true;

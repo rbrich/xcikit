@@ -124,12 +124,12 @@ std::string interpret(const std::string& input, bool import_std=false)
         });
         os << result;
         result.decref();
-        REQUIRE(ctx.interpreter.machine().stack().empty());
-        REQUIRE(ctx.interpreter.machine().stack().n_frames() == 0);
+        assert(ctx.interpreter.machine().stack().empty());
+        assert(ctx.interpreter.machine().stack().n_frames() == 0);
     } catch (const ScriptError& e) {
         UNSCOPED_INFO("Exception: " << e.what() << "\n" << e.detail());
-        REQUIRE(ctx.interpreter.machine().stack().empty());
-        REQUIRE(ctx.interpreter.machine().stack().n_frames() == 0);
+        assert(ctx.interpreter.machine().stack().empty());
+        assert(ctx.interpreter.machine().stack().n_frames() == 0);
         throw;
     }
     return os.str();

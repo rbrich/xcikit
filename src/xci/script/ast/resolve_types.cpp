@@ -686,34 +686,8 @@ public:
             case Symbol::Module:
                 m_value_type = TypeInfo{Type::Module};
                 break;
-            case Symbol::Nonlocal: {
-                assert(sym.ref());
-                auto nl_sym = sym.ref();
-                switch (nl_sym->type()) {
-                    case Symbol::Parameter: {
-                        // owning function of the nonlocal symbol
-                        auto* nl_owner = nl_sym.symtab()->function();
-                        assert(nl_owner != nullptr);
-                        m_value_type = nl_owner->parameter(nl_sym->index());
-                        break;
-                    }
-                    case Symbol::Function: {
-                        auto res = resolve_overload(nl_sym, v.identifier);
-                        v.module = res.module;
-                        v.index = res.index;
-                        m_value_type = res.type;
-                        break;
-                    }
-                    default:
-                        assert(!"non-local must reference a parameter or a function");
-                        return;
-                }
-                m_function.set_nonlocal(sym.index(), TypeInfo{m_value_type});
-                v.identifier.symbol->set_callable(m_value_type.is_callable());
-                break;
-            }
             case Symbol::Parameter:
-                m_value_type = m_function.parameter(sym.index());
+                m_value_type = symtab.function()->parameter(sym.index());
                 break;
             case Symbol::Value:
                 if (sym.index() == no_index) {
@@ -750,6 +724,7 @@ public:
                 m_value_type = *item_type;
                 break;
             }
+            case Symbol::Nonlocal:
             case Symbol::Unresolved:
                 UNREACHABLE;
         }
@@ -776,6 +751,7 @@ public:
         // using resolved args, resolve the callable itself
         // (it may use args types for overload resolution)
         v.callable->apply(*this);
+        v.callable_type = m_value_type;
         v.intrinsic = m_intrinsic;
 
         if (!m_value_type.is_unknown() && !m_value_type.is_callable() && !m_call_args.empty()) {
@@ -1089,8 +1065,6 @@ private:
                     return type_args[symptr->index() - 1];
                 return TypeInfo{ TypeInfo::Var(symptr->index()) };
             }
-            case Symbol::Nonlocal:
-                return resolve_type_name(symptr->ref());
             default:
                 return {};
         }
@@ -1421,8 +1395,6 @@ private:
             }
             // consume next param
             ++ v.partial_args;
-            if (v.wrapped_execs != 0 && !res->has_closure())
-                v.wrapped_execs = 1;
             res->params.erase(res->params.begin());
         }
         return res;

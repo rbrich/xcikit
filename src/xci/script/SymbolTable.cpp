@@ -97,11 +97,11 @@ SymbolTable& SymbolTable::add_child(const std::string& name)
 }
 
 
-unsigned SymbolTable::level() const
+unsigned SymbolTable::depth(const SymbolTable* p_symtab) const
 {
     unsigned res = 0;
-    const auto* p = m_parent;
-    while (p != nullptr) {
+    const auto* p = this;
+    while (p != p_symtab) {
         ++res;
         p = p->parent();
     }

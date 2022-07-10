@@ -385,21 +385,13 @@ private:
             if (symptr)
                 return symptr;
         }
-        // (non)local values and parameters
+        // local functions and parameters
         {
             // lookup in this and parent scopes
             size_t depth = 0;
             for (auto* p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
-                if (auto symptr = p_symtab->find_by_name(name); symptr) {
-                    if (depth > 0 && symptr->type() != Symbol::Method
-                                  && symptr->type() != Symbol::StructItem
-                                  && symptr->type() != Symbol::TypeName) {
-                        // add Nonlocal symbol
-                        Index idx = symtab().count(Symbol::Nonlocal);
-                        return symtab().add({symptr, Symbol::Nonlocal, idx, depth});
-                    }
+                if (auto symptr = p_symtab->find_by_name(name); symptr)
                     return symptr;
-                }
 
                 if (p_symtab->name() == name && p_symtab->parent() != nullptr) {
                     auto symptr = p_symtab->parent()->find_by_name(name);

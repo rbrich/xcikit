@@ -1,7 +1,7 @@
 // resolve_nonlocals.cpp created on 2020-01-05 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "resolve_nonlocals.h"
@@ -100,55 +100,75 @@ public:
 
     void visit(ast::Reference& v) override {
         assert(v.identifier.symbol);
+        auto& my_symtab = m_function.symtab();
         const auto& symtab = *v.identifier.symbol.symtab();
-        const auto& sym = *v.identifier.symbol;
-        switch (sym.type()) {
-            case Symbol::Nonlocal: {
-                // check and potentially replace the NonLocal symbol
-                // (the symbol itself will stay in symbol table, though)
-                assert(sym.ref());
-                const auto nl_sym = sym.ref();
-                switch (nl_sym->type()) {
-                    case Symbol::Function: {
-                        assert(v.index != no_index);
-                        auto& ref_fn = v.module->get_function(v.index);
-                        if (!ref_fn.has_nonlocals()) {
-                            // eliminate nonlocal function without closure
-                            v.identifier.symbol = nl_sym;
-                        }
-                        if (ref_fn.is_generic()) {
-                            resolve_nonlocals(ref_fn, ref_fn.ast());
-                        } else {
-                            resolve_nonlocals_in_symtab(ref_fn);
-                        }
-                        break;
+        const auto& symptr = v.identifier.symbol;
+        switch (symptr->type()) {
+            case Symbol::Parameter: {
+                // add Nonlocal symbol
+                auto depth = my_symtab.depth(&symtab);
+                if (depth > 0) {
+                    auto found = my_symtab.find_last_of(v.identifier.name, Symbol::Nonlocal);
+                    const TypeInfo& ti = symtab.function()->parameter(symptr->index());
+                    if (found) {
+                        assert(found->ref() == symptr);
+                        v.identifier.symbol = found;
+                        m_function.set_nonlocal(found->index(), TypeInfo{ti});
+                    } else {
+                        Index idx = my_symtab.count(Symbol::Nonlocal);
+                        v.identifier.symbol = my_symtab.add({symptr, Symbol::Nonlocal, idx, depth});
+                        v.identifier.symbol->set_callable(ti.is_callable());
+                        m_function.set_nonlocal(idx, TypeInfo{ti});
                     }
-                    default:
-                        break;
                 }
                 break;
             }
             case Symbol::Function: {
                 if (v.index == no_index) {
                     v.module = symtab.module() == nullptr ? &module() : symtab.module();
-                    v.index = sym.index();
+                    v.index = symptr->index();
                 }
-                auto& fn = v.module->get_function(v.index);
-                if (fn.is_generic()) {
-                    resolve_nonlocals(fn, fn.ast());
+                auto& ref_fn = v.module->get_function(v.index);
+                if (ref_fn.is_generic()) {
+                    resolve_nonlocals(ref_fn, ref_fn.ast());
                 } else {
-                    resolve_nonlocals_in_symtab(fn);
+                    resolve_nonlocals_in_symtab(ref_fn);
+                }
+                if (v.module != &module()) {
+                    // Referenced function is from another module -> we're done
+                    break;
                 }
                 // partial calls
-                if (!m_function.partial().empty() && v.module == &module()) {
+                if (!m_function.partial().empty()) {
                     m_function.symtab().set_name(v.identifier.name + "/partial");
-                    auto nlsym = m_function.symtab().add({
-                            v.identifier.symbol,
-                            Symbol::Nonlocal,
-                            Index(m_function.nonlocals().size()),
-                            0});
-                    m_function.add_nonlocal(TypeInfo{fn.signature_ptr()});
-                    v.identifier.symbol = nlsym;
+                    if (ref_fn.has_nonlocals()) {
+                        auto nlsym = m_function.symtab().add({
+                                v.identifier.symbol,
+                                Symbol::Nonlocal,
+                                Index(m_function.nonlocals().size()),
+                                0});
+                        m_function.add_nonlocal(TypeInfo{ref_fn.signature_ptr()});
+                        v.identifier.symbol = nlsym;
+                        //v.identifier.symbol->set_callable(true);
+                    }
+                    break;
+                }
+                // add Nonlocal symbol
+                if (ref_fn.has_nonlocals()) {
+                    auto depth = my_symtab.depth(&symtab);
+                    if (depth > 0) {
+                        auto found = my_symtab.find_last_of(v.identifier.name, Symbol::Nonlocal);
+                        if (found) {
+                            assert(found->ref() == symptr);
+                            v.identifier.symbol = found;
+                            m_function.set_nonlocal(found->index(), TypeInfo{ref_fn.signature_ptr()});
+                        } else {
+                            Index idx = my_symtab.count(Symbol::Nonlocal);
+                            v.identifier.symbol = my_symtab.add({symptr, Symbol::Nonlocal, idx, depth});
+                            v.identifier.symbol->set_callable(true);
+                            m_function.set_nonlocal(idx, TypeInfo{ref_fn.signature_ptr()});
+                        }
+                    }
                 }
                 break;
             }

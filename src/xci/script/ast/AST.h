@@ -402,6 +402,7 @@ struct Call: public Expression {
     std::vector<std::unique_ptr<Expression>> args;
 
     // resolved:
+    TypeInfo callable_type;
     unsigned wrapped_execs = 0;
     unsigned partial_args = 0;
     Index partial_index = no_index;

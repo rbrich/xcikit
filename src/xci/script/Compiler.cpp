@@ -403,7 +403,7 @@ public:
             case Symbol::Unresolved:
                 UNREACHABLE;
         }
-        // if it's function object, execute it
+        // if it's a function object, execute it
         if (sym.type() == Symbol::Nonlocal && sym.is_callable()) {
             code().add_opcode(Opcode::Execute);
         }
@@ -449,10 +449,16 @@ public:
         }
 
         // add executes for each call that results in function which consumes more args
-        while (v.wrapped_execs > 0) {
-            code().add_opcode(Opcode::Execute);
-            -- v.wrapped_execs;
+        if (v.wrapped_execs > 1) {
+            // Emit only a single EXECUTE if there is no closure in the wrapped function calls
+            const Signature* sig = &v.callable_type.signature();
+            for (auto i = v.wrapped_execs; i != 0; --i)
+                sig = &sig->return_type.signature();
+            if (!sig->has_closure())
+                v.wrapped_execs = 1;
         }
+        for (auto i = v.wrapped_execs; i != 0; --i)
+            code().add_opcode(Opcode::Execute);
 
         m_intrinsic = false;
         m_callable = orig_callable;
