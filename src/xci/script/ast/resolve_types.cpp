@@ -778,7 +778,7 @@ public:
                         v.partial_index = v.definition->symbol()->index();
                     } else {
                         SymbolTable& fn_symtab = m_function.symtab().add_child("?/partial");
-                        Function fn {module(), fn_symtab};
+                        Function fn {module(), fn_symtab, &m_function};
                         v.partial_index = module().add_function(std::move(fn)).index;
                     }
                     auto& fn = module().get_function(v.partial_index);
@@ -1210,6 +1210,7 @@ private:
     /// * keep original symbol table (with relative references, like parameter #1 at depth -2)
     /// Symbols in copied AST still point to original generic function.
     /// \param symptr   Pointer to symbol pointing to original function
+    /// \returns TypeInfo and Index of the specialized function in this module
     std::optional<Specialized> specialize_function(SymbolPointer symptr, const SourceLocation& loc)
     {
         auto& fn = symptr.get_function();
@@ -1229,7 +1230,7 @@ private:
                 });
         }
 
-        Function fspec(module(), fn.symtab());
+        Function fspec(module(), fn.symtab(), &m_function);
         fspec.set_signature(std::make_shared<Signature>(fn.signature()));  // copy, not ref
         fspec.set_ast(fn.ast());
         fspec.ensure_ast_copy();

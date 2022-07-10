@@ -42,7 +42,7 @@ class Function {
 public:
     Function();  // only for deserialization!
     explicit Function(Module& module);  // only for deserialization!
-    explicit Function(Module& module, SymbolTable& symtab);
+    explicit Function(Module& module, SymbolTable& symtab, Function* parent);
     Function(Function&& rhs) noexcept;
     Function& operator =(Function&&) = delete;
 
@@ -56,6 +56,8 @@ public:
 
     // symbol table with names used in function scope
     SymbolTable& symtab() const { return *m_symtab; }
+
+    Function* parent() const { return m_parent; }
 
     // parameters
     void add_parameter(std::string name, TypeInfo&& type_info);
@@ -222,6 +224,7 @@ private:
 
     Module* m_module = nullptr;
     SymbolTable* m_symtab = nullptr;
+    Function* m_parent = nullptr;  // matches `m_symtab.parent()`, but can be specialized function, while symtab is kept generic
     // Function signature
     std::shared_ptr<Signature> m_signature;
     // Function body (depending on kind of function)

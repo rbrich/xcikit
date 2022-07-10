@@ -23,8 +23,8 @@ Function::Function(Module& module)
 {}
 
 
-Function::Function(Module& module, SymbolTable& symtab)
-        : m_module(&module), m_symtab(&symtab),
+Function::Function(Module& module, SymbolTable& symtab, Function* parent)
+        : m_module(&module), m_symtab(&symtab), m_parent(parent),
           m_signature(std::make_shared<Signature>())
 {
     m_symtab->set_function(this);

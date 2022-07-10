@@ -34,7 +34,7 @@ SymbolPointer Module::add_native_function(
         std::string&& name, std::vector<TypeInfo>&& params, TypeInfo&& retval,
         NativeDelegate native)
 {
-    Function fn {*this, symtab().add_child(name)};
+    Function fn {*this, symtab().add_child(name), nullptr};
     fn.signature().params = std::move(params);
     fn.signature().return_type = std::move(retval);
     fn.set_native(native);

@@ -270,7 +270,7 @@ public:
             if (v.type.params.empty())
                 name = "<block>";
             SymbolTable& fn_symtab = symtab().add_child(name);
-            Function fn {module(), fn_symtab};
+            Function fn {module(), fn_symtab, &m_function};
             v.index = module().add_function(std::move(fn)).index;
         }
         Function& fn = module().get_function(v.index);
@@ -361,7 +361,7 @@ private:
 
     SymbolPointer create_function(const std::string& name) {
         SymbolTable& fn_symtab = symtab().add_child(name);
-        Function fn {module(), fn_symtab};
+        Function fn {module(), fn_symtab, &m_function};
         auto fn_id = module().add_function(std::move(fn));
         assert(symtab().module() == &module());
         return symtab().add({name, Symbol::Function, fn_id.index});

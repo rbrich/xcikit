@@ -47,7 +47,7 @@ bool Repl::evaluate(const std::string& module_name, std::string module_source, E
         auto module = prepare_module(module_name);
 
         // add main function to the module
-        auto fn_idx = module->add_function(Function{*module, module->symtab()}).index;
+        auto fn_idx = module->add_function(Function{*module, module->symtab(), nullptr}).index;
         assert(fn_idx == 0);
         auto& fn = module->get_function(fn_idx);
 

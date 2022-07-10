@@ -30,7 +30,7 @@ std::shared_ptr<Module> Interpreter::build_module(const std::string& name, Sourc
     m_parser.parse(source_id, ast);
 
     // compile
-    Function func {*module, module->symtab()};
+    Function func {*module, module->symtab(), nullptr};
     if (!m_compiler.compile(func, ast))
         return module;  // requested to only preprocess AST
 
@@ -56,7 +56,7 @@ TypedValue Interpreter::eval(Module& module, SourceId source_id, const InvokeCal
     // compile
     auto source_name = m_source_manager.get_source(source_id).name();
     auto& symtab = module.symtab().add_child(source_name);
-    auto fn_idx = module.add_function(Function{module, symtab}).index;
+    auto fn_idx = module.add_function(Function{module, symtab, nullptr}).index;
     auto& fn = module.get_function(fn_idx);
     m_compiler.compile(fn, ast);
 

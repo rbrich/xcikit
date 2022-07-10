@@ -96,7 +96,7 @@ std::string optimize(const std::string& input)
     module.import_module("std");
 
     auto& symtab = module.symtab().add_child("main");
-    Function fn {module, symtab};
+    Function fn {module, symtab, nullptr};
     Compiler compiler(Compiler::Flags::O1);
     compiler.compile(fn, ast);
 
