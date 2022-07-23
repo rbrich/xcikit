@@ -90,10 +90,10 @@ void Options::parse(char* argv[])
             Option("-M, --module-verbose", "Print compiled module content, including function bodies", ro.print_module_verbose),
             Option("-T, --module-ast", "Print compiled module content like -M, but dump generic functions as AST", ro.print_module_verbose_ast),
             Option("--trace", "Trace bytecode", ro.trace_bytecode),
-            Option("--pp PASS_LIST", "Preprocess AST and stop, don't compile. "
-                                     "PASS_LIST is comma separated list of pass names (or unique substrings of them): "
-                                     + output_pass_list()
-                                     , [&ro](const char* arg){ return parse_pass_list(ro, arg); }),
+            Option("-p PASS_LIST", "Preprocess AST and stop, don't compile. "
+                                   "PASS_LIST is comma separated list of pass names (or unique substrings of them): "
+                                   + output_pass_list()
+                                   , [&ro](const char* arg){ return parse_pass_list(ro, arg); }),
             Option("-S, --no-std", "Do not import standard library", [&ro]{ ro.with_std_lib = false; }),
             Option("--output-schema FILE", "Write schema of compiled module to FILE (for use in dati tool)", po.schema_file),
             Option("[INPUT ...]", "Input files", [&po](const char* arg)
