@@ -7,8 +7,9 @@
 #include "Compiler.h"
 #include "Error.h"
 #include "ast/resolve_symbols.h"
-#include "ast/resolve_nonlocals.h"
+#include "ast/resolve_decl.h"
 #include "ast/resolve_types.h"
+#include "ast/resolve_nonlocals.h"
 #include "ast/fold_const_expr.h"
 #include "ast/fold_dot_call.h"
 #include "ast/fold_tuple.h"
@@ -690,7 +691,10 @@ bool Compiler::compile(Function& func, ast::Module& ast)
         fold_dot_call(func, ast.body);
 
     if ((flags & Flags::ResolveSymbols) == Flags::ResolveSymbols)
-        resolve_symbols(func, ast.body);
+        resolve_symbols(scope, ast.body);
+
+    if ((flags & Flags::ResolveDecl) == Flags::ResolveDecl)
+        resolve_decl(scope, ast.body);
 
     if ((flags & Flags::ResolveTypes) == Flags::ResolveTypes)
         resolve_types(func, ast.body);

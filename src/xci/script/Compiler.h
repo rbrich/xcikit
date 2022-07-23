@@ -25,7 +25,8 @@ public:
         FoldTuple           = 0x0001,
         FoldDotCall         = 0x0002,
         ResolveSymbols      = 0x0004,
-        ResolveTypes        = 0x0008,
+        ResolveDecl         = 0x0008,
+        ResolveTypes        = 0x0010,
         ResolveNonlocals    = 0x0020,
         FoldConstExpr       = 0x0001 << 16,
 
@@ -39,8 +40,9 @@ public:
         // - each flag may bring in other flags as its dependencies
         PPTuple         = FoldTuple,
         PPDotCall       = FoldDotCall,
-        PPSymbols       = ResolveSymbols | PPDotCall,
-        PPTypes         = ResolveTypes | PPSymbols,
+        PPSymbols       = ResolveSymbols | PPDotCall | PPTuple,
+        PPDecl          = ResolveDecl | PPSymbols,
+        PPTypes         = ResolveTypes | PPDecl,
         PPNonlocals     = ResolveNonlocals | PPTypes,
 
         // Optimization
