@@ -33,13 +33,61 @@ Symbol* SymbolPointer::operator->()
 }
 
 
-Function& SymbolPointer::get_function() const
+FunctionScope& SymbolPointer::get_scope(const FunctionScope& hier) const
 {
     auto& sym = m_symtab->get(m_symidx);
+    if (sym.type() == Symbol::NestedFunction) {
+        return hier.find_parent_scope(m_symtab)->get_subscope(sym.index());
+        //return m_symtab->scope()->get_subscope(sym.index());
+    }
     assert(sym.type() == Symbol::Function);
     assert(m_symtab->module() != nullptr);
     assert(sym.index() != no_index);
-    return m_symtab->module()->get_function(sym.index());
+    return m_symtab->module()->get_scope(sym.index());
+}
+
+
+FunctionScope& SymbolPointer::get_generic_scope() const
+{
+    auto& sym = m_symtab->get(m_symidx);
+    if (sym.type() == Symbol::NestedFunction) {
+        return m_symtab->scope()->get_subscope(sym.index());
+    }
+    assert(sym.type() == Symbol::Function);
+    assert(m_symtab->module() != nullptr);
+    assert(sym.index() != no_index);
+    return m_symtab->module()->get_scope(sym.index());
+}
+
+
+Index SymbolPointer::get_scope_index(const FunctionScope& hier) const
+{
+    auto& sym = m_symtab->get(m_symidx);
+    if (sym.type() == Symbol::NestedFunction) {
+        return hier.find_parent_scope(m_symtab)->get_subscope_index(sym.index());
+    }
+    assert(sym.type() == Symbol::Function);
+    assert(sym.index() != no_index);
+    return sym.index();
+}
+
+
+Index SymbolPointer::get_generic_scope_index() const
+{
+    auto& sym = m_symtab->get(m_symidx);
+    if (sym.type() == Symbol::NestedFunction) {
+        assert(m_symtab->scope() != nullptr);
+        return m_symtab->scope()->get_subscope_index(sym.index());
+    }
+    assert(sym.type() == Symbol::Function);
+    assert(sym.index() != no_index);
+    return sym.index();
+}
+
+
+Function& SymbolPointer::get_function(const FunctionScope& hier) const
+{
+    return get_scope(hier).function();
 }
 
 
@@ -116,17 +164,6 @@ Size SymbolTable::count(Symbol::Type type) const
 }
 
 
-void SymbolTable::update_nonlocal_indices()
-{
-    Index idx = 0;
-    for (auto& sym : m_symbols) {
-        if (sym.type() == Symbol::Nonlocal) {
-            sym.set_index(idx++);
-        }
-    }
-}
-
-
 Symbol& SymbolTable::get(Index idx)
 {
     assert(idx < m_symbols.size());
@@ -155,6 +192,17 @@ SymbolPointer SymbolTable::find_by_name(std::string_view name)
 {
     auto it = std::find_if(m_symbols.rbegin(), m_symbols.rend(),
             [&name](const Symbol& sym){ return sym.name() == name; });
+    if (it == m_symbols.rend())
+        return {*this, no_index};
+    return {*this, Index((m_symbols.rend() - it) - 1)};
+}
+
+
+SymbolPointer SymbolTable::find_by_index(Symbol::Type type, Index index)
+{
+    auto it = std::find_if(m_symbols.rbegin(), m_symbols.rend(),
+                           [type,index](const Symbol& sym)
+                           { return sym.type() == type && sym.index() == index; });
     if (it == m_symbols.rend())
         return {*this, no_index};
     return {*this, Index((m_symbols.rend() - it) - 1)};

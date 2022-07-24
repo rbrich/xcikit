@@ -18,6 +18,7 @@ namespace xci::script {
 class Symbol;
 class SymbolTable;
 class Function;
+class FunctionScope;
 class Class;
 class Module;
 
@@ -39,7 +40,13 @@ public:
     const Symbol* operator->() const;
     Symbol* operator->();
 
-    Function& get_function() const;
+    FunctionScope& get_scope(const FunctionScope& hier) const;
+    FunctionScope& get_generic_scope() const;
+    Index get_scope_index(const FunctionScope& hier) const;
+    Index get_generic_scope_index() const;
+    Function& get_function(const FunctionScope& hier) const;
+
+
     Class& get_class() const;
 
     SymbolTable* symtab() const { return m_symtab; }
@@ -63,7 +70,8 @@ public:
 
         // module-level
         Module,             // imported module
-        Function,           // static function
+        Function,           // module-level function (index = scope index in module)
+        NestedFunction,     // scope-level function (index = subscope index in scope)
         Value,              // static value
         TypeName,           // type information (index = type index in module)
         Class,              // type class (index = class index in module)
@@ -166,6 +174,10 @@ public:
     void set_function(Function* function) { m_function = function; }
     Function* function() const { return m_function; }
 
+    // scope for NestedFunction symbols
+    void set_scope(const FunctionScope* scope) { m_scope = scope; }
+    const FunctionScope* scope() const { return m_scope; }
+
     // related class
     void set_class(Class* cls) { m_class = cls; }
     Class* class_() const { return m_class; }
@@ -182,11 +194,11 @@ public:
     // find symbol in this table
     SymbolPointer find(const Symbol& symbol);
     SymbolPointer find_by_name(std::string_view name);
+    SymbolPointer find_by_index(Symbol::Type type, Index index);
     SymbolPointer find_last_of(const std::string& name, Symbol::Type type);
     SymbolPointer find_last_of(Symbol::Type type);
 
     Size count(Symbol::Type type) const;
-    void update_nonlocal_indices();
 
     /// Check symbol table for overloaded function name
     /// and connect the symbols using `next` pointer
@@ -244,6 +256,7 @@ public:
 private:
     std::string m_name;
     SymbolTable* m_parent = nullptr;
+    const FunctionScope* m_scope = nullptr;
     Function* m_function = nullptr;
     Class* m_class = nullptr;
     Module* m_module = nullptr;

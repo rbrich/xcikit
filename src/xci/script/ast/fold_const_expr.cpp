@@ -67,10 +67,11 @@ public:
             case Symbol::StructItem:
             case Symbol::TypeId:
                 break;
-            case Symbol::Function: {
-                auto& symmod = symtab.module() == nullptr ? module() : *symtab.module();
-                Function& fn = symmod.get_function(sym.index());
-                if (fn.is_compiled()) {
+            case Symbol::Function:
+            case Symbol::NestedFunction: {
+                assert(v.index != no_index);
+                Function& fn = v.module->get_scope(v.index).function();
+                if (fn.has_code()) {
                     m_const_value = TypedValue(value::Closure(fn), TypeInfo{fn.signature_ptr()});
                     return;
                 }
@@ -198,7 +199,7 @@ public:
     }
 
     void visit(ast::Function& v) override {
-        Function& func = module().get_function(v.index);
+        Function& func = module().get_scope(v.scope_index).function();
 
         // collapse block with single statement
         if (!func.has_parameters() && v.body.statements.size() == 1) {

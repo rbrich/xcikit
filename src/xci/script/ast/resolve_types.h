@@ -1,7 +1,7 @@
 // resolve_types.h created on 2019-06-13 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_AST_RESOLVE_TYPES_H
@@ -14,7 +14,7 @@ namespace xci::script {
 
 /// Check and propagate type information
 
-void resolve_types(Function& func, const ast::Block& block);
+void resolve_types(FunctionScope& scope, const ast::Block& block);
 
 
 } // namespace xci::script

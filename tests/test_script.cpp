@@ -96,9 +96,10 @@ std::string optimize(const std::string& input)
     module.import_module("std");
 
     auto& symtab = module.symtab().add_child("main");
-    Function fn {module, symtab, nullptr};
+    auto fn_idx = module.add_function(Function{module, symtab}).index;
+    FunctionScope scope {module, fn_idx, nullptr};
     Compiler compiler(Compiler::Flags::O1);
-    compiler.compile(fn, ast);
+    compiler.compile(scope, ast);
 
     std::ostringstream os;
     os << ast;
@@ -238,7 +239,7 @@ TEST_CASE( "Trailing comma", "[script][parser]" )
     CHECK(parse("([1,],[2,],[1,2,],)") == "([1], [2], [1, 2])");
     // multiline
     CHECK(parse("1,\n2,\n3,\n") == "1, 2, 3");  // expression continues on next line after operator
-    CHECK(parse("1,;\n2,\n3,\n") == "1\n2, 3");  // semicolon splits the multiline expression
+    CHECK(parse("1,;\n2,\n3,\n") == "1; 2, 3");  // semicolon splits the multiline expression
     CHECK(parse("(\n1,\n2,\n3,\n)") == "(1, 2, 3)");
     CHECK(parse("[\n1,\n2,\n3,\n]") == "[1, 2, 3]");
     CHECK(parse("[\n1\n,\n2\n,\n3\n,\n]") == "[1, 2, 3]");
@@ -417,7 +418,6 @@ TEST_CASE( "Variables", "[script][interpreter]" )
     CHECK_THROWS_AS(interpret("m = m"), MissingExplicitType);
     CHECK_THROWS_AS(interpret("m = {m}"), MissingExplicitType);
     CHECK_THROWS_AS(interpret("m = { m = m }"), MissingExplicitType);
-    CHECK_THROWS_AS(interpret("m = { m = m }"), MissingExplicitType);
     CHECK_THROWS_AS(interpret_std("m = { m = m + 1 }"), MissingExplicitType);
     CHECK(interpret_std("m = { m = 1; m }; m") == "1");
     // "m = { m + 1 }" compiles fine, but infinitely recurses
@@ -512,6 +512,8 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     CHECK(interpret(R"(a = (name="hello", age=42, valid=true); a.name; a.age; a.valid)") == R"("hello";42;true)");
     CHECK(interpret(my_struct + R"(f = fun a:MyStruct { a.name }; f (name="hello", age=42))") == R"("hello")");
     CHECK(interpret(R"(type Rec=(x:String, y:Int); f=fun a:Rec { a.x }; r:Rec=(x="x",y=3); f r)") == R"("x")");
+//    CHECK(interpret_std("x:(field:Int) = (field=2); field = fun a:Int->Int { a*a }; x.field; field 12") == "2;144");  // member access doesn't collide with functions/variables of the same name
+//    CHECK(interpret("x:(field:Int) = (field=2); field = 3; x.field; field") == "2;3");
     // invalid struct - repeated field names
     CHECK_THROWS_AS(interpret("type MyStruct = (same:String, same:Int)"), StructDuplicateKey);  // struct type
     CHECK_THROWS_AS(interpret(R"(a = (same="hello", same=42))"), StructDuplicateKey);  // struct init (anonymous struct type)
@@ -553,8 +555,8 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     CHECK(parse("fun Int -> Int {}") == "fun Int -> Int {}");
 
     // returned lambda
-    CHECK(interpret_std("fun x:Int->Int { x + 1 }") == "<lambda> Int32 -> Int32");  // non-generic is fine
-    CHECK(interpret_std("fun x { x + 1 }") == "<lambda> Int32 -> Int32");   // also fine, function type deduced from `1` (Int) and `add: Int Int -> Int`
+    CHECK(interpret_std("fun x:Int->Int { x + 1 }") == "<lambda_0> Int32 -> Int32");  // non-generic is fine
+    CHECK(interpret_std("fun x { x + 1 }") == "<lambda_0> Int32 -> Int32");   // also fine, function type deduced from `1` (Int) and `add: Int Int -> Int`
     CHECK_THROWS_AS(interpret_std("fun x { x }"), UnexpectedGenericFunction);  // generic lambda must be either assigned or resolved by calling
 
     // immediately called lambda
@@ -564,6 +566,7 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
 
     // generic function in local scope
     CHECK(interpret_std("outer = fun y { inner = fun x { x+1 }; inner y }; outer 2") == "3");
+    CHECK(interpret("outer = fun y { inner = fun x { x;y }; inner 3 }; outer 2") == "3;2");
 
     // argument propagation:
     CHECK(interpret_std("f = fun a:Int { fun b:Int { a+b } }; f 1 2") == "3");  //  `f` returns a function which consumes the second arg
@@ -597,6 +600,11 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
                         "  wrapped y "
                         "}; outer 2") == "4");
     CHECK(interpret_std("outer = fun y {"
+                        "  inner = fun x:Int { x ; y };"
+                        "  wrapped = fun x:Int { inner x };"
+                        "  wrapped y:Int "
+                        "}; outer 2; outer 2L") == "2;2;2;2L");
+    CHECK(interpret_std("outer = fun y {"
                         "  inner = fun x:Int { in2 = fun z:Int{ x + z }; in2 y };"
                         "  wrapped = fun x:Int { inner x }; wrapped y"
                         "}; outer 2") == "4");
@@ -612,9 +620,12 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     // multiple specializations
     // * each specialization is generated only once
     CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; inner 3 + inner 4 }; "
-                        "outer 1; outer 2; __module.__n_fn") == "9;11;5");
+                        "outer 1; outer 2; __module.__n_fn") == "9;11;6");
     // * specializations with different types from the same template
     CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; inner 3 + (inner 4l):T }; outer 2") == "11");
+    CHECK(interpret("l0=fun a { l1b=fun b { a;b };"
+                    " l1=fun b { l2=fun c { l3=fun d { a;b;c; l1b 42L; l1b d }; l3 b}; l2 a };"
+                    " wrapped = fun x { l1b 'x'; l1 x }; wrapped a }; l0 2") == "2;'x';2;2;2;2;42L;2;2");
 
     // "Funarg problem" (upwards)
     auto def_succ = "succ = fun Int->Int { __value 1 .__load_static; __add 0x88 }; "s;
@@ -622,6 +633,7 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     auto def_succ_compose = def_succ + def_compose;
     CHECK(interpret(def_succ_compose + "plustwo = compose succ succ; plustwo 42") == "44");
     CHECK(interpret(def_succ_compose + "plustwo = {compose succ succ}; plustwo 42") == "44");
+    CHECK(interpret(def_succ_compose + "plustwo = compose succ succ; plusfour = compose plustwo plustwo;  plustwo 42; plusfour 42") == "44;46");
     //CHECK(interpret_std(def_compose + "same = compose pred succ; same 42") == "42");
 }
 
@@ -1034,20 +1046,20 @@ TEST_CASE( "Fold const expressions", "[script][optimizer]" )
     CHECK(optimize("if false then 10 if false then 42 else 0;") == "0");
 
     // partially fold if-expression (only some branches)
-    CHECK(optimize("num = 16; if true then 10 if num>5 then 5 else 0;") == "/*def*/ num = (16);\n10");
-    CHECK(optimize("num = 16; if false then 10 if num>5 then 5 else 0;") == "/*def*/ num = (16);\nif (num > 5) then 5\nelse 0;");
-    CHECK(optimize("num = 16; if num>10 then 10 if true then 5 else 0;") == "/*def*/ num = (16);\nif (num > 10) then 10\nelse 5;");
-    CHECK(optimize("num = 16; if num>10 then 10 if false then 5 else 0;") == "/*def*/ num = (16);\nif (num > 10) then 10\nelse 0;");
-    CHECK(optimize("num = 16; if num>10 then 10 if true then 5 if num==3 then 3 else 0;") == "/*def*/ num = (16);\nif (num > 10) then 10\nelse 5;");
-    CHECK(optimize("num = 16; if num>10 then 10 if false then 5 if num==3 then 3 else 0;") == "/*def*/ num = (16);\nif (num > 10) then 10\nif (num == 3) then 3\nelse 0;");
+    CHECK(optimize("num = 16; if true then 10 if num>5 then 5 else 0;") == "num = 16; 10");
+    CHECK(optimize("num = 16; if false then 10 if num>5 then 5 else 0;") == "num = 16; if (num > 5) then 5\nelse 0;");
+    CHECK(optimize("num = 16; if num>10 then 10 if true then 5 else 0;") == "num = 16; if (num > 10) then 10\nelse 5;");
+    CHECK(optimize("num = 16; if num>10 then 10 if false then 5 else 0;") == "num = 16; if (num > 10) then 10\nelse 0;");
+    CHECK(optimize("num = 16; if num>10 then 10 if true then 5 if num==3 then 3 else 0;") == "num = 16; if (num > 10) then 10\nelse 5;");
+    CHECK(optimize("num = 16; if num>10 then 10 if false then 5 if num==3 then 3 else 0;") == "num = 16; if (num > 10) then 10\nif (num == 3) then 3\nelse 0;");
 
     // collapse block with single statement
     CHECK(optimize("{ 1 }") == "1");
     CHECK(optimize("{{{ 1 }}}") == "1");
-    CHECK(optimize("a = {{1}}") == "/*def*/ a = (1);");
+    CHECK(optimize("a = {{1}}") == "a = 1");
 
     // collapse function call with constant arguments
-    CHECK(optimize("f=fun a:Int {a}; f 42") == "/*def*/ f = (fun a:Int -> $R {a});\n42");
+    CHECK(optimize("f=fun a:Int {a}; f 42") == "f = fun a:Int -> $R {a}; 42");
 
     // cast to Void eliminates the expression
     CHECK(optimize("42:Void") == "()");

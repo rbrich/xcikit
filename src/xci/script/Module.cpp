@@ -34,12 +34,13 @@ SymbolPointer Module::add_native_function(
         std::string&& name, std::vector<TypeInfo>&& params, TypeInfo&& retval,
         NativeDelegate native)
 {
-    Function fn {*this, symtab().add_child(name), nullptr};
+    Function fn {*this, symtab().add_child(name)};
     fn.signature().params = std::move(params);
     fn.signature().return_type = std::move(retval);
     fn.set_native(native);
     WeakFunctionId fn_id = add_function(std::move(fn));
-    return symtab().add({std::move(name), Symbol::Function, fn_id.index});
+    ScopeIdx scope_idx = add_scope(FunctionScope{*this, fn_id.index, nullptr});
+    return symtab().add({std::move(name), Symbol::Function, scope_idx});
 }
 
 
@@ -73,6 +74,18 @@ Index Module::get_imported_module_index(Module* module) const
 auto Module::add_function(Function&& fn) -> WeakFunctionId
 {
     return m_functions.add(std::move(fn));
+}
+
+
+auto Module::add_scope(FunctionScope&& scope) -> ScopeIdx
+{
+    auto scope_idx = m_scopes.add(std::move(scope)).index;
+    auto& rscope = get_scope(scope_idx);
+    auto& symtab = get_function(rscope.function_index()).symtab();
+    if (symtab.scope() == nullptr) {
+        symtab.set_scope(&rscope);
+    }
+    return scope_idx;
 }
 
 
@@ -168,9 +181,9 @@ SymbolTable& Module::symtab_by_qualified_name(std::string_view name)
 }
 
 
-void Module::add_spec_function(SymbolPointer gen_fn, Index spec_fn_idx)
+void Module::add_spec_function(SymbolPointer gen_fn, Index spec_scope_idx)
 {
-    m_spec_functions.emplace(gen_fn, spec_fn_idx);
+    m_spec_functions.emplace(gen_fn, spec_scope_idx);
 }
 
 

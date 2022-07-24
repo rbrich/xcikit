@@ -47,12 +47,13 @@ bool Repl::evaluate(const std::string& module_name, std::string module_source, E
         auto module = prepare_module(module_name);
 
         // add main function to the module
-        auto fn_idx = module->add_function(Function{*module, module->symtab(), nullptr}).index;
-        assert(fn_idx == 0);
-        auto& fn = module->get_function(fn_idx);
+        auto fn_idx = module->add_function(Function{*module, module->symtab()}).index;
+        auto scope_idx = module->add_scope(FunctionScope{*module, fn_idx, nullptr});
+        assert(fn_idx == 0 && scope_idx == 0);
+        auto& scope = module->get_scope(scope_idx);
 
         // compile
-        bool is_compiled = compiler.compile(fn, ast);
+        bool is_compiled = compiler.compile(scope, ast);
         if (!is_compiled) {
             // We're only processing the AST, without actual compilation
             mode = EvalMode::Preprocess;
@@ -99,7 +100,16 @@ bool Repl::evaluate_module(Module& module, EvalMode mode)
 
     // print symbol table
     if (m_opts.print_symtab) {
-        t.stream() << "Symbol table:" << endl << module.symtab() << endl;
+        t.stream() << "Symbol table:\n" << module.symtab() << '\n';
+    }
+
+    // print scopes
+    if (m_opts.print_symtab) {
+        t.stream() << "Scope trees:\n";
+        for (unsigned i = 0; i != module.num_scopes(); ++i) {
+            t.stream() << '[' << i << "]\t" << module.get_scope(i) << '\n';
+        }
+        t.stream() << '\n';
     }
 
     // print compiled module content

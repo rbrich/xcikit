@@ -28,6 +28,7 @@ class Module {
 public:
     using WeakFunctionId = IndexedMap<Function>::WeakIndex;
     using FunctionIdx = IndexedMap<Function>::Index;
+    using ScopeIdx = IndexedMap<FunctionScope>::Index;
     using WeakClassId = IndexedMap<Class>::WeakIndex;
     using ClassIdx = IndexedMap<Class>::Index;
     using WeakInstanceId = IndexedMap<Instance>::WeakIndex;
@@ -79,6 +80,12 @@ public:
     Function& get_function(FunctionIdx id) { return m_functions[id]; }
     Size num_functions() const { return Size(m_functions.size()); }
 
+    // Scopes
+    ScopeIdx add_scope(FunctionScope&& fn);
+    const FunctionScope& get_scope(ScopeIdx id) const { return m_scopes[id]; }
+    FunctionScope& get_scope(ScopeIdx id) { return m_scopes[id]; }
+    Size num_scopes() const { return Size(m_scopes.size()); }
+
     // Static values
     Index add_value(TypedValue&& value);
     const TypedValue& get_value(Index idx) const { return m_values[idx]; }
@@ -111,7 +118,7 @@ public:
     SymbolTable& symtab_by_qualified_name(std::string_view name);
 
     // Specialized generic functions
-    void add_spec_function(SymbolPointer gen_fn, Index spec_fn_idx);
+    void add_spec_function(SymbolPointer gen_fn, Index spec_scope_idx);
     std::vector<Index> get_spec_functions(SymbolPointer gen_fn);
 
     // Specialized generic instances
@@ -136,6 +143,7 @@ private:
     ModuleManager* m_module_manager = nullptr;
     std::vector<std::shared_ptr<Module>> m_modules;
     IndexedMap<Function> m_functions;
+    IndexedMap<FunctionScope> m_scopes;
     IndexedMap<Class> m_classes;
     IndexedMap<Instance> m_instances;
     std::vector<TypeInfo> m_types;
@@ -144,7 +152,7 @@ private:
 
     // Specialized generic functions
     // * SymbolPointer points to original generic function
-    // * Index is function index in this module
+    // * Index is scope index in this module
     std::multimap<SymbolPointer, Index> m_spec_functions;
 
     // Specialized generic instances

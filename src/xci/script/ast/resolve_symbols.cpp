@@ -22,9 +22,9 @@ using std::make_unique;
 using ranges::views::enumerate;
 
 
-class SymbolResolverVisitor final: public ast::Visitor {
+class ResolveSymbolsVisitor final: public ast::Visitor {
 public:
-    explicit SymbolResolverVisitor(Function& func) : m_function(func) {}
+    explicit ResolveSymbolsVisitor(FunctionScope& scope) : m_scope(scope) {}
 
     void visit(ast::Definition& dfn) override {
         // check for name collision
@@ -36,7 +36,8 @@ public:
         // * must be a plain function (not method)
         // * must have explicitly specified type
         if (!symptr
-        || (!m_class && !m_instance && dfn.variable.type && symptr->is_defined() && symptr->type() == Symbol::Function)
+        || (!m_class && !m_instance && dfn.variable.type && symptr->is_defined()
+                && (symptr->type() == Symbol::Function || symptr->type() == Symbol::NestedFunction))
         || (symptr->type() == Symbol::StructItem))
         {
             // not found or undefined -> add new function, symbol
@@ -100,8 +101,7 @@ public:
             cls_symtab.add({type_var.name, Symbol::TypeVar, Index(i + 1)});
 
         // add new class to the module
-        Class cls {cls_symtab};
-        v.index = module().add_class(std::move(cls)).index;
+        v.index = module().add_class(Class{cls_symtab}).index;
         v.symtab = &cls_symtab;
 
         m_class = &v;
@@ -263,17 +263,21 @@ public:
     void visit(ast::Function& v) override {
         if (v.definition != nullptr) {
             // use Definition's symtab and function
-            v.index = v.definition->symbol()->index();
+            v.symbol = v.definition->symbol();
+            v.scope_index = v.symbol.get_scope_index(m_scope);
         } else {
             // add new symbol table for the function
-            std::string name = "<lambda>";
+            auto num = symtab().count(Symbol::NestedFunction);
+            std::string name;
             if (v.type.params.empty())
-                name = "<block>";
-            SymbolTable& fn_symtab = symtab().add_child(name);
-            Function fn {module(), fn_symtab, &m_function};
-            v.index = module().add_function(std::move(fn)).index;
+                name = fmt::format("<block_{}>", num);
+            else
+                name = fmt::format("<lambda_{}>", num);
+            std::tie(v.symbol, v.scope_index) = create_nested_function(name);
         }
-        Function& fn = module().get_function(v.index);
+        auto& scope = module().get_scope(v.scope_index);
+        Function& fn = scope.function();
+        fn.set_ast(v.body);
 
         v.body.symtab = &fn.symtab();
         m_symtab = v.body.symtab;
@@ -285,7 +289,7 @@ public:
         m_symtab = v.body.symtab->parent();
 
         // resolve body
-        resolve_symbols(fn, v.body);
+        resolve_symbols(scope, v.body);
     }
 
     void visit(ast::Cast& v) override {
@@ -356,15 +360,34 @@ public:
     }
 
 private:
-    Module& module() { return m_function.module(); }
+    Module& module() { return m_scope.module(); }
+    Function& function() { return m_scope.function(); }
     SymbolTable& symtab() { return *m_symtab; }
 
     SymbolPointer create_function(const std::string& name) {
         SymbolTable& fn_symtab = symtab().add_child(name);
-        Function fn {module(), fn_symtab, &m_function};
-        auto fn_id = module().add_function(std::move(fn));
+        auto fn_idx = module().add_function(Function{module(), fn_symtab}).index;
+        auto scope_idx = module().add_scope(FunctionScope{module(), fn_idx, &m_scope});
+        auto subscope_i = m_scope.add_subscope(scope_idx);
         assert(symtab().module() == &module());
-        return symtab().add({name, Symbol::Function, fn_id.index});
+        if (m_scope.function_index() != 0) {
+            // Create NestedFunction symbol for the case of specialized function,
+            // so the correct parent can be found when making closure for non-locals in Compiler.
+            assert(symtab().scope() == &m_scope);
+            // symtab()->set_scope(m_scope);
+            return symtab().add({name, Symbol::NestedFunction, subscope_i});
+        }
+        return symtab().add({name, Symbol::Function, scope_idx});
+    }
+
+    std::pair<SymbolPointer, Index> create_nested_function(const std::string& name) {
+        SymbolTable& fn_symtab = symtab().add_child(name);
+        auto fn_idx = module().add_function(Function{module(), fn_symtab}).index;
+        auto scope_idx = module().add_scope(FunctionScope{module(), fn_idx, &m_scope});
+        auto subscope_i = m_scope.add_subscope(scope_idx);
+        assert(symtab().module() == &module());
+        auto symptr = symtab().add({name, Symbol::NestedFunction, subscope_i});
+        return {symptr, scope_idx};
     }
 
     SymbolPointer allocate_type_var(const std::string& name = "") {
@@ -400,6 +423,7 @@ private:
                         return symptr.symtab()->class_()->symtab().parent()->find_last_of(name, Symbol::Method);
                     }
                     // recursion - unwrap the function
+                    assert(symptr->type() == Symbol::Function);
                     return symtab().add({symptr, Symbol::Function, no_index, depth + 1});
                 }
 
@@ -457,16 +481,16 @@ private:
     }
 
 private:
-    Function& m_function;
-    SymbolTable* m_symtab = &m_function.symtab();
+    FunctionScope& m_scope;
+    SymbolTable* m_symtab = &function().symtab();
     ast::Class* m_class = nullptr;
     Instance* m_instance = nullptr;
 };
 
 
-void resolve_symbols(Function& func, const ast::Block& block)
+void resolve_symbols(FunctionScope& scope, const ast::Block& block)
 {
-    SymbolResolverVisitor visitor {func};
+    ResolveSymbolsVisitor visitor {scope};
     for (const auto& stmt : block.statements) {
         stmt->apply(visitor);
     }

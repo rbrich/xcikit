@@ -42,7 +42,7 @@ class Function {
 public:
     Function();  // only for deserialization!
     explicit Function(Module& module);  // only for deserialization!
-    explicit Function(Module& module, SymbolTable& symtab, Function* parent);
+    explicit Function(Module& module, SymbolTable& symtab);
     Function(Function&& rhs) noexcept;
     Function& operator =(Function&&) = delete;
 
@@ -56,8 +56,6 @@ public:
 
     // symbol table with names used in function scope
     SymbolTable& symtab() const { return *m_symtab; }
-
-    Function* parent() const { return m_parent; }
 
     // parameters
     void add_parameter(std::string name, TypeInfo&& type_info);
@@ -95,12 +93,9 @@ public:
     void ensure_ast_copy() { std::get<GenericBody>(m_body).ensure_copy(); }
 
     // non-locals
-    Index add_nonlocal(TypeInfo&& type_info);
-    void set_nonlocal(Index idx, TypeInfo&& type_info);
     bool has_nonlocals() const { return !m_signature->nonlocals.empty(); }
     const std::vector<TypeInfo>& nonlocals() const { return m_signature->nonlocals; }
     size_t raw_size_of_nonlocals() const;  // size of all nonlocals in bytes
-    std::pair<size_t, TypeInfo> nonlocal_offset_and_type(Index idx) const;
 
     // partial call (bound args)
     void add_partial(TypeInfo&& type_info);
@@ -113,8 +108,9 @@ public:
     std::vector<TypeInfo> closure_types() const;
 
     // true if this function should be generic (i.e. signature contains a type variable)
-    bool detect_generic() const { return m_signature->is_generic(); }
+    bool has_any_generic() const { return m_signature->has_any_generic(); }
     bool has_generic_params() const { return m_signature->has_generic_params(); }
+    bool has_generic_return_type() const { return m_signature->has_generic_return_type(); }
 
     // Kind of function body
 
@@ -182,15 +178,27 @@ public:
         NativeDelegate native;
     };
 
-    void set_compiled() { m_body = CompiledBody{}; }
+    void set_undefined() { m_body = std::monostate{}; }
+    void set_code() { m_body = CompiledBody{}; m_compile = false; }
 
     void set_native(NativeDelegate native) { m_body = NativeBody{native}; }
     void call_native(Stack& stack) const { std::get<NativeBody>(m_body).native(stack); }
 
     bool is_undefined() const { return std::holds_alternative<std::monostate>(m_body); }
-    bool is_compiled() const { return std::holds_alternative<CompiledBody>(m_body); }
+    bool has_code() const { return std::holds_alternative<CompiledBody>(m_body); }
     bool is_generic() const { return std::holds_alternative<GenericBody>(m_body); }
     bool is_native() const { return std::holds_alternative<NativeBody>(m_body); }
+
+    void copy_body(const Function& src);
+
+    void set_specialized() { m_specialized = true; }
+    bool is_specialized() const { return m_specialized; }
+
+    void set_compile(bool compile = true) { m_compile = compile; }
+    bool has_compile() const { return m_compile; }
+
+    void set_nonlocals_resolved(bool nonlocals_resolved = true) { m_nonlocals_resolved = nonlocals_resolved; }
+    bool has_nonlocals_resolved() const { return m_nonlocals_resolved; }
 
     enum class Kind {
         Undefined,  // not yet compiled
@@ -199,8 +207,6 @@ public:
         Native,     // wrapped native function (C++ binding)
     };
     Kind kind() const { return Kind(m_body.index()); }
-
-    bool test_and_set_nonlocals_resolved() { bool v = m_nonlocals_resolved; m_nonlocals_resolved = true; return v; }
 
     template<class Archive>
     void save(Archive& ar) const {
@@ -224,13 +230,62 @@ private:
 
     Module* m_module = nullptr;
     SymbolTable* m_symtab = nullptr;
-    Function* m_parent = nullptr;  // matches `m_symtab.parent()`, but can be specialized function, while symtab is kept generic
-    // Function signature
+    // function signature
     std::shared_ptr<Signature> m_signature;
-    // Function body (depending on kind of function)
+    // function body (depending on kind of function)
     std::variant<std::monostate, CompiledBody, GenericBody, NativeBody> m_body;
-    // compilation status
+    // flags
+    bool m_specialized : 1 = false;
+    bool m_compile : 1 = false;
     bool m_nonlocals_resolved : 1 = false;
+};
+
+
+class FunctionScope {
+public:
+    FunctionScope() = default;
+    explicit FunctionScope(Module& module, Index function_idx, FunctionScope* parent_scope);
+
+    Module& module() const { return *m_module; }
+    Function& function() const;
+    void set_function_index(Index fn_idx) { m_function = fn_idx; }
+    Index function_index() const { return m_function; }
+    FunctionScope* parent() const { return m_parent_scope; }
+
+    // Nested functions
+    Index add_subscope(Index scope_idx);
+    void copy_subscopes(const FunctionScope& from);
+    Index get_subscope_index(Index idx) const { return m_subscopes[idx]; }
+    void set_subscope_index(Index idx, Index scope_idx) { m_subscopes[idx] = scope_idx; }
+    Index get_index_of_subscope(Index mod_scope_idx) const;
+    FunctionScope& get_subscope(Index idx) const;
+    Size num_subscopes() const { return Size(m_subscopes.size()); }
+    bool has_subscopes() const { return !m_subscopes.empty(); }
+    const std::vector<Index>& subscopes() const { return m_subscopes; }
+
+    // SymbolTable mapping (a SymbolTable may map to multiple scope hierarchies)
+    // Find a scope (this or parent of this) matching the `symtab`
+    const FunctionScope* find_parent_scope(const SymbolTable* symtab) const;
+
+    // Non-local values needed by nested functions, closures
+    // The nonlocal may reference a parent Nonlocal symbol - in that case, the value must be captured
+    // by parent scope, so this scope can use it.
+    struct Nonlocal {
+        Index index;  // index() from symbol of type Symbol::Nonlocal in this function's SymbolTable
+        Index fn_scope_idx;  // scope index of resolved overloaded Function (target of the nonlocal)
+    };
+    void add_nonlocal(Index index);
+    void add_nonlocal(Index index, TypeInfo ti, Index fn_scope_idx = no_index);
+    bool has_nonlocals() const { return !m_nonlocals.empty(); }
+    const std::vector<Nonlocal>& nonlocals() const { return m_nonlocals; }
+    size_t nonlocal_raw_offset(Index index, const TypeInfo& ti) const;
+
+private:
+    Module* m_module = nullptr;
+    Index m_function = no_index;  // function index in module
+    FunctionScope* m_parent_scope = nullptr;  // matches `m_symtab.parent()`, but can be a specialized function, while symtab is only lexical
+    std::vector<Index> m_subscopes;  // nested scopes (Index into module scopes)
+    std::vector<Nonlocal> m_nonlocals;
 };
 
 

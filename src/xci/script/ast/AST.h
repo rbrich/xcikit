@@ -490,7 +490,8 @@ struct Function: public Expression {
     Block body;
 
     // resolved:
-    Index index = no_index;
+    SymbolPointer symbol;  // only for lambda
+    Index scope_index = no_index;
     size_t call_args = 0;  // number of args if the function is inside Call
 };
 

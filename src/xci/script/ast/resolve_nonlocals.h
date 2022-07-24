@@ -20,7 +20,7 @@ namespace xci::script {
 /// - add the same non-local symbol also to the parent scope
 /// - reference the non-local in parent scope instead of the target symbol directly
 
-void resolve_nonlocals(Function& func, const ast::Block& block);
+void resolve_nonlocals(FunctionScope& main, const ast::Block& block);
 
 
 } // namespace xci::script

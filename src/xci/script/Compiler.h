@@ -66,10 +66,15 @@ public:
     /// Compile AST into Function object, which contains objects in scope + code
     /// (module is a special kind of function, with predefined parameters)
     /// \returns true if actually compiled (depends on Flags)
-    bool compile(Function& func, ast::Module& ast);
+    bool compile(FunctionScope& scope, ast::Module& ast);
 
-    // Compile block, return type of its return value
-    void compile_block(Function& func, const ast::Block& block);
+    /// Compile single function that has fully prepared AST
+    /// (all other phases were run on it)
+    void compile_function(FunctionScope& scope, const ast::Block& body);
+
+    /// Compile all functions in a module except `main`
+    /// that are marked with compile flag but not yet compiled
+    void compile_all_functions(FunctionScope& main);
 
 private:
     Flags m_flags = Flags::Default;

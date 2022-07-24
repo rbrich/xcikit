@@ -48,7 +48,7 @@ void Machine::run(const InvokeCallback& cb)
         }
         // return address
         m_stack.frame().instruction = it - function->code().begin();
-        assert(fn.is_compiled());
+        assert(fn.has_code());
         function = &fn;
         m_stack.push_frame(fn);
         it = function->code().begin();

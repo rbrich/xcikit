@@ -80,6 +80,9 @@ std::ostream& operator<<(std::ostream& os, const Symbol& v);
 std::ostream& operator<<(std::ostream& os, const SymbolPointer& v);
 std::ostream& operator<<(std::ostream& os, const SymbolTable& v);
 
+// Scopes
+std::ostream& operator<<(std::ostream& os, const FunctionScope& v);
+
 } // namespace xci::script
 
 #endif // include guard
