@@ -133,6 +133,8 @@ jobs:
             # remove MinGW's link as it collides with MSVC
             mv /usr/bin/link /usr/bin/link.orig
         fi
+        # Allow caching precompiled headers
+        ccache --set-config=sloppiness=pch_defines,time_macros,include_file_ctime,include_file_mtime
         pip3 --no-cache-dir install conan
         conan profile new default --detect --force
         conan profile update "settings.compiler.cppstd=20" default
