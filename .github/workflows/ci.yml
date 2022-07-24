@@ -53,17 +53,17 @@ jobs:
           cxx: g++-10
           build_args: "--minsize --unity"
         - os: macos-11
-          name: "Clang 13 / Release"
+          name: "Clang 14 / Release"
           clang: brew
           os_target: "11.0"
           build_args: ""
         - os: macos-11
-          name: "AppleClang / Release"
+          name: "AppleClang 13.2 / Release"
           clang: apple
           os_target: "11.0"
           build_args: ""
         - os: macos-12
-          name: "AppleClang / Release"
+          name: "AppleClang 13.4 / Release"
           clang: apple
           os_target: "12.0"
           build_args: ""
@@ -91,19 +91,13 @@ jobs:
         architecture: 'x64'
     - uses: ilammy/msvc-dev-cmd@v1
 
-    - name: cache
-      if: ${{ !startsWith(matrix.os, 'windows-') }}
-      uses: actions/cache@v3
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2
       with:
-        path: |
-          ~/.conan/data
-          ~/.xcikit/deps/.all
-        key: ${{ runner.os }}-${{ matrix.name }}-${{ hashFiles('conanfile.py', 'conandata.yml') }}
-        restore-keys: |
-          ${{ runner.os }}-${{ matrix.name }}-
-          ${{ runner.os }}-
+        key: ${{ matrix.os }}-${{ matrix.name }}
 
     - name: "install tools and deps"
+      id: tools
       run: |
         if [[ "$RUNNER_OS" == "Linux" ]]; then
             sudo apt-get update
@@ -115,10 +109,10 @@ jobs:
             echo "CC='$CC'" >> $GITHUB_ENV
             echo "CXX='$CXX'" >> $GITHUB_ENV
         elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            brew install ccache ninja glfw doxygen google-benchmark hyperscan harfbuzz freetype
+            brew install ninja glfw doxygen google-benchmark hyperscan harfbuzz freetype
             if [[ "${{ matrix.clang }}" == "brew" ]] ; then
-                export CC="$(brew --prefix llvm@13)/bin/clang"
-                export CXX="$(brew --prefix llvm@13)/bin/clang++"
+                export CC="$(brew --prefix llvm)/bin/clang"
+                export CXX="$(brew --prefix llvm)/bin/clang++"
                 echo "CC='$CC'" >> $GITHUB_ENV
                 echo "CXX='$CXX'" >> $GITHUB_ENV
             fi
@@ -128,6 +122,9 @@ jobs:
             # remove MinGW's link as it collides with MSVC
             mv /usr/bin/link /usr/bin/link.orig
         fi
+        # Allow caching precompiled headers
+        ccache --set-config=sloppiness=pch_defines,time_macros,include_file_ctime,include_file_mtime
+        # Install conan
         pip3 --no-cache-dir install conan
         conan profile new default --detect --force
         conan profile update "settings.compiler.cppstd=20" default
@@ -142,6 +139,22 @@ jobs:
             conan profile update "settings.compiler.libcxx=libc++" default
             conan profile update "settings.os.version=$MACOSX_DEPLOYMENT_TARGET" default
         fi
+        echo "::set-output name=conan_home::$(conan config home)"
+      shell: bash
+
+    - name: conan cache
+      uses: actions/cache@v3
+      with:
+        path: ${{ steps.tools.outputs.conan_home }}/data
+        key: ${{ matrix.os }}-${{ matrix.name }}-${{ hashFiles('conanfile.py', 'conandata.yml') }}-${{github.sha}}
+        restore-keys: |
+          ${{ matrix.os }}-${{ matrix.name }}-${{ hashFiles('conanfile.py', 'conandata.yml') }}-
+          ${{ matrix.os }}-${{ matrix.name }}-
+          ${{ matrix.os }}-
+
+    - name: conan inconsistent cache workaround
+      if: startsWith(runner.os, 'Windows')
+      run: conan remove -f harfbuzz/4.4.1
       shell: bash
 
     - name: deps
