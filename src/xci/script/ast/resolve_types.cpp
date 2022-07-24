@@ -5,6 +5,7 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "resolve_types.h"
+#include <xci/script/TypeChecker.h>
 #include <xci/script/Value.h>
 #include <xci/script/Builtin.h>
 #include <xci/script/Function.h>
@@ -13,7 +14,6 @@
 #include <xci/compat/macros.h>
 
 #include <range/v3/view/enumerate.hpp>
-#include <range/v3/view/zip.hpp>
 
 #include <sstream>
 #include <optional>
@@ -25,252 +25,6 @@ using std::endl;
 
 using ranges::views::enumerate;
 using ranges::views::zip;
-
-
-class MatchScore {
-public:
-    MatchScore() = default;
-    MatchScore(int8_t exact, int8_t coerce, int8_t generic)
-        : m_exact(exact), m_coerce(coerce), m_generic(generic) {}
-    explicit MatchScore(int8_t exact) : m_exact(exact) {}  // -1 => mismatch
-
-    static MatchScore exact() { return MatchScore(1); }
-    static MatchScore coerce() { return MatchScore(0, 1, 0); }
-    static MatchScore generic() { return MatchScore(0, 0, 1); }
-    static MatchScore mismatch() { return MatchScore(-1); }
-
-    void add_exact() { ++m_exact; }
-    void add_coerce() { ++m_coerce; }
-    void add_generic() { ++m_generic; }
-
-    bool is_exact() const { return m_exact >= 0 && (m_coerce + m_generic) == 0; }
-    bool is_coerce() const { return m_coerce > 0; }
-
-    explicit operator bool() const { return m_exact != -1; }
-    auto operator<=>(const MatchScore&) const = default;
-
-    MatchScore operator+(MatchScore rhs) {
-        return {int8_t(m_exact + rhs.m_exact),
-                int8_t(m_coerce + rhs.m_coerce),
-                int8_t(m_generic + rhs.m_generic)};
-    }
-
-    void operator+=(MatchScore rhs) {
-        m_exact += rhs.m_exact;  // NOLINT
-        m_coerce += rhs.m_coerce;  // NOLINT
-        m_generic += rhs.m_generic;  // NOLINT
-    }
-
-    friend std::ostream& operator<<(std::ostream& os, MatchScore v) {
-        if (!v)
-            return os << "[ ]";
-        os << '[' << int(v.m_exact);
-        if (v.m_coerce != 0) os << '~' << int(v.m_coerce);
-        if (v.m_generic != 0) os << '?' << int(v.m_generic);
-        return os << ']';
-    }
-
-private:
-    int8_t m_exact = 0;  // num parameters matched exactly (Int == Int)
-    int8_t m_coerce = 0;  // num parameters that can coerce (Int32 => Int64)
-    int8_t m_generic = 0;  // num parameters matched generically (T == T or T == Int or Num T == Int)
-};
-
-static MatchScore match_params(const std::vector<TypeInfo>& candidate, const std::vector<TypeInfo>& actual);
-static MatchScore match_type(const TypeInfo& candidate, const TypeInfo& actual);
-static MatchScore match_tuple(const TypeInfo& candidate, const TypeInfo& actual);
-static MatchScore match_struct(const TypeInfo& candidate, const TypeInfo& actual);
-static MatchScore match_tuple_to_struct(const TypeInfo& candidate, const TypeInfo& actual);
-
-
-class TypeCheckHelper {
-public:
-    explicit TypeCheckHelper(TypeInfo&& spec) : m_spec(std::move(spec)) {}
-    TypeCheckHelper(TypeInfo&& spec, TypeInfo&& cast) : m_spec(std::move(spec)), m_cast(std::move(cast)) {}
-
-    TypeInfo resolve(const TypeInfo& inferred, const SourceLocation& loc) const {
-        // struct - resolve to either specified or cast type
-        const TypeInfo& ti = eval_type();
-        if (ti.is_struct()) {
-            if (inferred.is_struct()) {
-                if (!match_struct(inferred, ti))
-                    throw DefinitionTypeMismatch(ti, inferred, loc);
-                return ti;
-            }
-            if (inferred.is_tuple()) {
-                if (!match_tuple_to_struct(inferred, ti))
-                    throw DefinitionTypeMismatch(ti, inferred, loc);
-                return ti;
-            }
-            if (ti.struct_items().size() == 1) {
-                // allow initializing a single-field struct with the value of first field (as there is no single-item tuple)
-                if (!match_type(inferred, ti.struct_items().front().second))
-                    throw DefinitionTypeMismatch(ti, inferred, loc);
-                return ti;
-            }
-        }
-        // otherwise, resolve to specified type, ignore cast type (a cast function will be called)
-        if (!m_spec)
-            return inferred;
-        if (!match_type(inferred, m_spec))
-            throw DefinitionTypeMismatch(m_spec, inferred, loc);
-        return m_spec;
-    }
-
-    void check_struct_item(const std::string& key, const TypeInfo& inferred, const SourceLocation& loc) const {
-        assert(eval_type().is_struct());
-        const auto& spec_items = eval_type().struct_items();
-        auto spec_it = std::find_if(spec_items.begin(), spec_items.end(),
-            [&key](const TypeInfo::StructItem& spec) {
-              return spec.first == key;
-            });
-        if (spec_it == spec_items.end())
-            throw StructUnknownKey(eval_type(), key, loc);
-        if (!match_type(inferred, spec_it->second))
-            throw StructKeyTypeMismatch(eval_type(), spec_it->second, inferred, loc);
-    }
-
-    const TypeInfo& spec() const { return m_spec; }
-    TypeInfo&& spec() { return std::move(m_spec); }
-
-    const TypeInfo& cast() const { return m_cast; }
-    TypeInfo&& cast() { return std::move(m_cast); }
-
-    const TypeInfo& eval_type() const { return m_cast ? m_cast : m_spec; }
-    TypeInfo&& eval_type() { return m_cast ? std::move(m_cast) : std::move(m_spec); }
-
-private:
-    TypeInfo m_spec;  // specified type
-    TypeInfo m_cast;  // casted-to type
-};
-
-
-static MatchScore match_params(const std::vector<TypeInfo>& candidate, const std::vector<TypeInfo>& actual)
-{
-    if (candidate.size() != actual.size())
-        return MatchScore(-1);
-    MatchScore score;
-    for (size_t i = 0; i != actual.size(); ++i) {
-        auto m = match_type(candidate[i], actual[i]);
-        if (!m || m.is_coerce())
-            return MatchScore(-1);
-        score += m;
-    }
-    return score;
-}
-
-
-/// \returns MatchScore: mismatch/generic/exact or combination in case of complex types
-static MatchScore match_type(const TypeInfo& candidate, const TypeInfo& actual)
-{
-    if (candidate.is_struct() && actual.is_struct())
-        return match_struct(candidate, actual);
-    if (candidate.is_tuple() && actual.is_tuple())
-        return match_tuple(candidate, actual);
-    if (candidate.is_named() || actual.is_named())
-        return MatchScore::coerce() + match_type(candidate.underlying(), actual.underlying());
-    if (candidate == actual) {
-        if (actual.is_generic() || candidate.is_generic())
-            return MatchScore::generic();
-        else
-            return MatchScore::exact();
-    }
-    return MatchScore::mismatch();
-}
-
-
-/// Match tuple to tuple
-/// \param candidate    Candidate tuple type
-/// \param actual       Actual resolved tuple type for the value
-/// \returns Total match score of all fields, or mismatch
-static MatchScore match_tuple(const TypeInfo& candidate, const TypeInfo& actual)
-{
-    assert(candidate.is_tuple());
-    assert(actual.is_tuple());
-    const auto& actual_types = actual.subtypes();
-    const auto& candidate_types = candidate.subtypes();
-    if (candidate_types.size() != actual_types.size())
-        return MatchScore::mismatch();  // number of fields doesn't match
-    if (candidate == actual)
-        return MatchScore::exact();
-    MatchScore res;
-    if (candidate.is_named() || actual.is_named())
-        res.add_coerce();
-    auto actual_iter = actual_types.begin();
-    for (const auto& inf_type : candidate_types) {
-        auto m = match_type(inf_type, *actual_iter);
-        if (!m)
-            return MatchScore::mismatch();  // item type doesn't match
-        res += m;
-        ++actual_iter;
-    }
-    return res;
-}
-
-
-/// Match incomplete Struct type from ast::StructInit to resolved Struct type.
-/// All keys and types from inferred are checked against resolved.
-/// Partial match is possible when inferred has less keys than resolved.
-/// \param candidate    Possibly incomplete Struct type as constructed from AST
-/// \param actual       Actual resolved type for the value
-/// \returns Total match score of all fields, or mismatch
-static MatchScore match_struct(const TypeInfo& candidate, const TypeInfo& actual)
-{
-    assert(candidate.is_struct());
-    assert(actual.is_struct());
-    const auto& actual_items = actual.struct_items();
-    if (candidate == actual)
-        return MatchScore::exact();
-    MatchScore res;
-    if (candidate.is_named() || actual.is_named()) {
-        // The named type doesn't match.
-        // The underlying type may match - each field adds another match to total score.
-        res.add_coerce();
-    }
-    for (const auto& inf : candidate.struct_items()) {
-        auto act_it = std::find_if(actual_items.begin(), actual_items.end(),
-                [&inf](const TypeInfo::StructItem& act) {
-                  return act.first == inf.first;
-                });
-        if (act_it == actual_items.end())
-            return MatchScore::mismatch();  // not found
-        // check item type
-        auto m = match_type(inf.second, act_it->second);
-        if (!m)
-            return MatchScore::mismatch();  // item type doesn't match
-        res += m;
-    }
-    return res;
-}
-
-
-/// Match tuple to resolved Struct type, i.e. initialize struct with tuple literal
-/// \param candidate    Tuple with same number of fields
-/// \param actual       Actual resolved struct type for the value
-/// \returns Total match score of all fields, or mismatch
-static MatchScore match_tuple_to_struct(const TypeInfo& candidate, const TypeInfo& actual)
-{
-    assert(candidate.is_tuple());
-    assert(actual.is_struct());
-    const auto& actual_items = actual.struct_items();
-    const auto& candidate_types = candidate.subtypes();
-    if (candidate_types.size() != actual_items.size() && !candidate_types.empty())  // allow initializing a struct with ()
-        return MatchScore::mismatch();  // number of fields doesn't match
-    if (candidate == actual)
-        return MatchScore::exact();
-    MatchScore res;
-    if (candidate.is_named() || actual.is_named())
-        res.add_coerce();
-    auto actual_iter = actual_items.begin();
-    for (const auto& inf_type : candidate_types) {
-        auto m = match_type(inf_type, actual_iter->second);
-        if (!m)
-            return MatchScore::mismatch();  // item type doesn't match
-        res += m;
-        ++actual_iter;
-    }
-    return res;
-}
 
 
 struct Candidate {
@@ -435,7 +189,7 @@ public:
     }
 
     void visit(ast::Tuple& v) override {
-        TypeCheckHelper type_check(std::move(m_type_info), std::move(m_cast_type));
+        TypeChecker type_check(std::move(v.literal_type), std::move(m_cast_type));
         // build TypeInfo from subtypes
         std::vector<TypeInfo> subtypes;
         subtypes.reserve(v.items.size());
@@ -448,7 +202,7 @@ public:
     }
 
     void visit(ast::List& v) override {
-        TypeCheckHelper type_check(std::move(m_type_info), std::move(m_cast_type));
+        TypeChecker type_check(std::move(m_type_info), std::move(m_cast_type));
         // check all items have same type
         TypeInfo elem_type;
         if (!type_check.eval_type() && v.items.empty())
@@ -492,7 +246,7 @@ public:
         }
         // first pass - resolve incomplete struct type
         //              and check it matches specified type (if any)
-        TypeCheckHelper type_check(std::move(m_type_info), std::move(m_cast_type));
+        TypeChecker type_check(std::move(v.struct_type), std::move(m_cast_type));
         const auto& specified = type_check.eval_type();
         if (!specified.is_unknown() && !specified.is_struct())
             throw StructTypeMismatch(specified, v.source_loc);

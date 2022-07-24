@@ -29,6 +29,7 @@ add_library(xci-script
     Stream.cpp
     SymbolTable.cpp
     TypeInfo.cpp
+    TypeChecker.cpp
     dump.cpp)
 add_library(xcikit::xci-script ALIAS xci-script)
 
