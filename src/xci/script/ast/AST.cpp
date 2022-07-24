@@ -56,7 +56,8 @@ std::unique_ptr<ast::Expression> Function::make_copy() const
     Expression::copy_to(*r);
     type.copy_to(r->type);
     r->body = copy(body);
-    r->index = index;
+    r->symbol = symbol;
+    r->scope_index = scope_index;
     return r;
 }
 
@@ -191,6 +192,7 @@ void Reference::copy_to(Reference& r) const
     r.chain = chain;
     r.module = module;
     r.index = index;
+    r.type_info = type_info;
 }
 
 
@@ -266,6 +268,7 @@ std::unique_ptr<ast::Expression> Literal::make_copy() const
 {
     auto r = std::make_unique<Literal>(value);
     Expression::copy_to(*r);
+    r->type_info = type_info;
     return r;
 }
 
@@ -293,6 +296,7 @@ std::unique_ptr<ast::Expression> List::make_copy() const
     auto r = std::make_unique<List>();
     Expression::copy_to(*r);
     r->items = copy_ptr_vector(items);
+    r->type_info = type_info;
     r->elem_type_id = elem_type_id;
     return r;
 }

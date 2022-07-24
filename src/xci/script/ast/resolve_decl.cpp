@@ -12,18 +12,12 @@
 #include <xci/compat/macros.h>
 
 #include <range/v3/view/enumerate.hpp>
-#include <range/v3/view/zip.hpp>
 
-#include <sstream>
 #include <optional>
 
 namespace xci::script {
 
-using std::stringstream;
-using std::endl;
-
 using ranges::views::enumerate;
-using ranges::views::zip;
 
 
 class ResolveDeclVisitor final: public ast::Visitor {
@@ -92,7 +86,7 @@ public:
             dfn.expression->apply(*this);
         }
 
-        m_value_type = {};
+        m_type_info = {};
     }
 
     void visit(ast::Invocation& inv) override {
@@ -157,68 +151,28 @@ public:
         }
         TypeChecker type_check(std::move(declared));
         v.type_info = type_check.resolve(v.value.type_info(), v.source_loc);
-        m_value_type = v.type_info;
     }
 
     void visit(ast::Tuple& v) override {
         v.literal_type = std::move(m_type_info);
         for (auto& item : v.items) {
+            m_type_info = {};
             item->apply(*this);
         }
     }
 
     void visit(ast::List& v) override {
-        TypeChecker type_check(std::move(m_type_info));
-        // check all items have same type
-        TypeInfo elem_type;
-        if (!type_check.eval_type() && v.items.empty())
-            elem_type = ti_void();
-        else for (auto& item : v.items) {
+        v.type_info = std::move(m_type_info);
+        for (auto& item : v.items) {
+            m_type_info = {};
             item->apply(*this);
-            if (item.get() == v.items.front().get()) {
-                // first item
-                elem_type = std::move(m_value_type);
-            } else {
-                // other items
-                if (elem_type != m_value_type)
-                    throw ListElemTypeMismatch(elem_type, m_value_type, item->source_loc);
-            }
         }
-        m_value_type = type_check.resolve(ti_list(std::move(elem_type)), v.source_loc);
-        if (m_value_type.is_generic() && type_check.eval_type())
-            m_value_type = std::move(type_check.eval_type());
-        // FIXME: allow generic type: fun <T> Void->[T] { []:[T] }
-        if (m_value_type.elem_type().is_generic())
-            throw MissingExplicitType(v.source_loc);
-        v.elem_type_id = get_type_id(m_value_type.elem_type());
     }
 
     void visit(ast::StructInit& v) override {
-        if (!v.struct_type.is_unknown()) {
-            // second pass (from ast::WithContext):
-            // * v.struct_type is the inferred type
-            // * m_type_info is the final struct type
-            if (m_type_info.is_unknown()) {
-                m_value_type = v.struct_type;
-                return;
-            }
-            if (!m_type_info.is_struct())
-                throw StructTypeMismatch(m_type_info, v.source_loc);
-            if (!match_struct(v.struct_type, m_type_info))
-                throw StructTypeMismatch(m_type_info, v.source_loc);
-            v.struct_type = std::move(m_type_info);
-            m_value_type = v.struct_type;
-            return;
-        }
-        // first pass - resolve incomplete struct type
-        //              and check it matches specified type (if any)
-        TypeChecker type_check(std::move(m_type_info));
-        const auto& specified = type_check.eval_type();
+        auto specified = std::move(m_type_info);
         if (!specified.is_unknown() && !specified.is_struct())
             throw StructTypeMismatch(specified, v.source_loc);
-        // build TypeInfo for the struct initializer
-        TypeInfo::StructItems ti_items;
-        ti_items.reserve(v.items.size());
         for (auto& item : v.items) {
             // resolve item type
             if (specified) {
@@ -228,17 +182,8 @@ public:
             }
             item.second->apply(*this);
             m_type_info = {};
-            auto item_type = m_value_type.effective_type();
-            if (!specified.is_unknown())
-                type_check.check_struct_item(item.first.name, item_type, item.second->source_loc);
-            ti_items.emplace_back(item.first.name, item_type);
         }
-        v.struct_type = TypeInfo(std::move(ti_items));
-        if (!specified.is_unknown()) {
-            assert(match_struct(v.struct_type, specified));  // already checked above
-            v.struct_type = std::move(type_check.eval_type());
-        }
-        m_value_type = v.struct_type;
+        v.struct_type = std::move(specified);
     }
 
     void visit(ast::Reference& v) override {
@@ -255,7 +200,6 @@ public:
         switch (sym.type()) {
             case Symbol::Instruction: {
                 // the instructions are low-level, untyped - set return type to Unknown
-                m_value_type = {};
                 m_intrinsic = true;
                 return;
             }
@@ -263,7 +207,6 @@ public:
                 if (!v.type_arg)
                     throw MissingTypeArg(v.source_loc);
                 v.type_info = std::move(m_type_info);
-                m_value_type = ti_int32();
                 break;
             }
             case Symbol::Class:
@@ -274,24 +217,20 @@ public:
                 const auto& symmod = symtab.module() == nullptr ? module() : *symtab.module();
                 const auto& cls_fn = symmod.get_scope(sym.ref()->index()).function();
                 v.type_info = TypeInfo{cls_fn.signature_ptr()};
-                m_value_type = v.type_info;
                 break;
             }
             case Symbol::Function:
             case Symbol::NestedFunction: {
                 // specified type in definition
                 v.type_info = std::move(m_type_info);
-                m_value_type = v.type_info;
                 break;
             }
             case Symbol::Module:
                 v.type_info = TypeInfo{Type::Module};
-                m_value_type = v.type_info;
                 break;
             case Symbol::Parameter: {
                 const auto* ref_scope = m_scope.find_parent_scope(&symtab);
                 v.type_info = ref_scope->function().parameter(sym.index());
-                m_value_type = v.type_info;
                 break;
             }
             case Symbol::Value:
@@ -303,14 +242,12 @@ public:
                     auto inferred = symtab.module()->get_value(sym.index()).type_info();
                     v.type_info = type_check.resolve(inferred, v.source_loc);
                 }
-                m_value_type = v.type_info;
                 break;
             case Symbol::TypeName:
             case Symbol::TypeVar:
                 return;
             case Symbol::StructItem:
                 v.type_info = std::move(m_type_info);
-                m_value_type = v.type_info;
                 break;
             case Symbol::Nonlocal:
             case Symbol::Unresolved:
@@ -319,18 +256,17 @@ public:
     }
 
     void visit(ast::Call& v) override {
-        TypeChecker type_check(std::move(m_type_info));
-
         // resolve each argument
         for (auto& arg : v.args) {
+            m_type_info = {};
             arg->apply(*this);
         }
 
         // using resolved args, resolve the callable itself
         // (it may use args types for overload resolution)
+        m_type_info = {};
         m_intrinsic = false;
         v.callable->apply(*this);
-        v.callable_type = m_value_type;
         v.intrinsic = m_intrinsic;
     }
 
@@ -355,7 +291,6 @@ public:
         v.leave_function.apply(*this);
         // resolve type of expression - it's also the type of the whole "with" expression
         v.expression->apply(*this);
-        v.expression_type = m_value_type.effective_type();
     }
 
     void visit(ast::Function& v) override {
@@ -389,18 +324,11 @@ public:
                 ++idx;
             }
         }
-        m_value_type = std::move(m_type_info);
 
-        fn.set_signature(m_value_type.signature_ptr());
+        fn.set_signature(m_type_info.signature_ptr());
         fn.set_ast(v.body);
 
         resolve_decl(scope, v.body);
-
-        // check specified type again - in case it wasn't Function
-        if (!m_value_type.is_callable() && !specified_type.is_unknown()) {
-            if (m_value_type != specified_type)
-                throw DefinitionTypeMismatch(specified_type, m_value_type, v.source_loc);
-        }
     }
 
     // The cast expression is translated to a call to `cast` method from the Cast class.
@@ -411,8 +339,6 @@ public:
         v.to_type = std::move(m_type_info);
 
         v.expression->apply(*this);
-
-        m_value_type = v.to_type;
     }
 
     void visit(ast::TypeName& t) final {
@@ -474,28 +400,6 @@ private:
     Module& module() { return m_scope.module(); }
     Function& function() const { return m_scope.function(); }
 
-    Index get_type_id(TypeInfo&& type_info) {
-        // is the type builtin?
-        const Module& builtin_module = module().module_manager().builtin_module();
-        Index type_id = builtin_module.find_type(type_info);
-        if (type_id >= 32) {
-            // add to current module
-            type_id = 32 + module().add_type(std::move(type_info));
-        }
-        return type_id;
-    }
-
-    Index get_type_id(const TypeInfo& type_info) {
-        // is the type builtin?
-        const Module& builtin_module = module().module_manager().builtin_module();
-        Index type_id = builtin_module.find_type(type_info);
-        if (type_id >= 32) {
-            // add to current module
-            type_id = 32 + module().add_type(type_info);
-        }
-        return type_id;
-    }
-
     TypeInfo resolve_type_name(SymbolPointer symptr) {
         switch (symptr->type()) {
             case Symbol::TypeName:
@@ -515,7 +419,6 @@ private:
     FunctionScope& m_scope;
 
     TypeInfo m_type_info;   // resolved ast::Type
-    TypeInfo m_value_type;  // inferred type of the value
 
     Index m_type_def_index = no_index;  // placeholder for module type being defined in TypeDef
 

@@ -327,6 +327,9 @@ struct Literal: public Expression {
     std::unique_ptr<ast::Expression> make_copy() const override;
 
     TypedValue value;
+
+    // resolved:
+    TypeInfo type_info;
 };
 
 /// An expression in parentheses, e.g. (1 + 2)
@@ -355,6 +358,9 @@ struct List: public Expression {
     std::unique_ptr<ast::Expression> make_copy() const override;
 
     std::vector<std::unique_ptr<Expression>> items;
+
+    // resolved:
+    TypeInfo type_info;
     size_t elem_type_id = 0;
 };
 
@@ -385,8 +391,9 @@ struct Reference: public Expression {
 
     // resolved function/method:
     SymbolPointer chain;  // tip of chain of Instances in case of Method
-    Module* module = nullptr;   // module with (instance) function
-    Index index = no_index;     // index of (instance) function in module
+    Module* module = nullptr;   // module with function
+    Index index = no_index;     // index of function scope in module
+    TypeInfo type_info;
 };
 
 struct Call: public Expression {

@@ -12,7 +12,7 @@
 namespace xci::script {
 
 
-/// Resolve declared and literal types
+/// Resolve declared types
 
 void resolve_decl(FunctionScope& scope, const ast::Block& block);
 
