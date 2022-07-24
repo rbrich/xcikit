@@ -98,10 +98,15 @@ jobs:
         path: |
           ~/.conan/data
           ~/.xcikit/deps/.all
-        key: ${{ runner.os }}-${{ matrix.name }}-${{ hashFiles('conanfile.py', 'conandata.yml') }}
+        key: ${{ matrix.os }}-${{ matrix.name }}-${{ hashFiles('conanfile.py', 'conandata.yml') }}
         restore-keys: |
-          ${{ runner.os }}-${{ matrix.name }}-
-          ${{ runner.os }}-
+          ${{ matrix.os }}-${{ matrix.name }}-
+          ${{ matrix.os }}-
+
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+        key: ${{ matrix.os }}-${{ matrix.name }}
 
     - name: "install tools and deps"
       run: |
