@@ -91,24 +91,13 @@ jobs:
         architecture: 'x64'
     - uses: ilammy/msvc-dev-cmd@v1
 
-    - name: cache
-      if: ${{ !startsWith(matrix.os, 'windows-') }}
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.conan/data
-          ~/.xcikit/deps/.all
-        key: ${{ matrix.os }}-${{ matrix.name }}-${{ hashFiles('conanfile.py', 'conandata.yml') }}
-        restore-keys: |
-          ${{ matrix.os }}-${{ matrix.name }}-
-          ${{ matrix.os }}-
-
     - name: ccache
       uses: hendrikmuhs/ccache-action@v1.2
       with:
         key: ${{ matrix.os }}-${{ matrix.name }}
 
     - name: "install tools and deps"
+      id: tools
       run: |
         if [[ "$RUNNER_OS" == "Linux" ]]; then
             sudo apt-get update
@@ -135,6 +124,7 @@ jobs:
         fi
         # Allow caching precompiled headers
         ccache --set-config=sloppiness=pch_defines,time_macros,include_file_ctime,include_file_mtime
+        # Install conan
         pip3 --no-cache-dir install conan
         conan profile new default --detect --force
         conan profile update "settings.compiler.cppstd=20" default
@@ -149,7 +139,17 @@ jobs:
             conan profile update "settings.compiler.libcxx=libc++" default
             conan profile update "settings.os.version=$MACOSX_DEPLOYMENT_TARGET" default
         fi
+        echo "::set-output name=conan_home::$(conan config home)"
       shell: bash
+
+    - name: conan cache
+      uses: actions/cache@v3
+      with:
+        path: ${{ steps.tools.outputs.conan_home }}/data
+        key: ${{ matrix.os }}-${{ matrix.name }}-${{ hashFiles('conanfile.py', 'conandata.yml') }}
+        restore-keys: |
+          ${{ matrix.os }}-${{ matrix.name }}-
+          ${{ matrix.os }}-
 
     - name: deps
       run: ./build.sh deps $BUILD_ARGS
