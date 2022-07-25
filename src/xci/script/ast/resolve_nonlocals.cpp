@@ -52,18 +52,6 @@ void resolve_nonlocals_in_symtab(FunctionScope& scope)
                     break;
                 }
                 case Symbol::Function: {
-                    auto& ref_mod = *sym.ref().symtab()->module();
-                    auto& ref_scope = ref_mod.get_scope(sym.ref()->index());
-//                    auto& ref_fn = ref_scope.function();
-//                    if (ref_fn.is_generic() && !ref_fn.has_nonlocals_resolved()) {
-//                        ref_fn.set_nonlocals_resolved();
-//                        resolve_nonlocals_for_scope(ref_scope, ref_fn.ast());
-//                    }
-                    resolve_nonlocals_in_symtab(ref_scope);
-                    scope.add_nonlocal(sym.index(), TypeInfo{ref_scope.function().signature_ptr()});
-                    break;
-                }
-                case Symbol::NestedFunction: {
                     auto* parent_scope = scope.parent();
                     auto& ref_scope = parent_scope->get_subscope(sym.ref()->index());
 //                    auto& ref_fn = ref_scope.function();
@@ -149,8 +137,7 @@ public:
                     v.identifier.symbol = nl_symptr;
                 break;
             }
-            case Symbol::Function:
-            case Symbol::NestedFunction: {
+            case Symbol::Function: {
                 assert(v.index != no_index);
 //                if (v.index == no_index) {
 //                    assert(symtab.module() != nullptr);
@@ -299,7 +286,7 @@ void resolve_nonlocals(FunctionScope& main, const ast::Block& block)
     Module& module = main.module();
     for (unsigned i = 0; i != module.num_scopes(); ++i) {
         FunctionScope& scope = module.get_scope(i);
-        if (&scope == &main)
+        if (&scope == &main || !scope.has_function())
             continue;
         Function& fn = scope.function();
         if (fn.has_nonlocals_resolved() || !fn.is_generic() || !fn.has_compile())

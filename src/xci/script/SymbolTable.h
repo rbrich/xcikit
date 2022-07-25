@@ -70,8 +70,7 @@ public:
 
         // module-level
         Module,             // imported module
-        Function,           // module-level function (index = scope index in module)
-        NestedFunction,     // scope-level function (index = subscope index in scope)
+        Function,           // scope-level function (index = subscope index in scope)
         Value,              // static value
         TypeName,           // type information (index = type index in module)
         Class,              // type class (index = class index in module)
@@ -174,8 +173,9 @@ public:
     void set_function(Function* function) { m_function = function; }
     Function* function() const { return m_function; }
 
-    // scope for NestedFunction symbols
-    void set_scope(const FunctionScope* scope) { m_scope = scope; }
+    // scope for Function symbols
+    void set_scope(FunctionScope* scope) { m_scope = scope; }
+    FunctionScope* scope() { return m_scope; }
     const FunctionScope* scope() const { return m_scope; }
 
     // related class
@@ -256,7 +256,7 @@ public:
 private:
     std::string m_name;
     SymbolTable* m_parent = nullptr;
-    const FunctionScope* m_scope = nullptr;
+    FunctionScope* m_scope = nullptr;
     Function* m_function = nullptr;
     Class* m_class = nullptr;
     Module* m_module = nullptr;

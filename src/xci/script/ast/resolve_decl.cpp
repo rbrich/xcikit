@@ -60,7 +60,7 @@ public:
             m_type_info = std::move(eval_type);
 
             auto idx_in_cls = m_instance->class_().get_index_of_function(psym->ref()->index());
-            m_instance->set_function(idx_in_cls, psym->index(), psym);
+            m_instance->set_function(idx_in_cls, psym.get_scope_index(m_scope), psym);
         }
 
         Function& fn = dfn.symbol().get_function(m_scope);
@@ -214,13 +214,11 @@ public:
                 return;
             case Symbol::Method: {
                 // find prototype of the function, resolve actual type of T
-                const auto& symmod = symtab.module() == nullptr ? module() : *symtab.module();
-                const auto& cls_fn = symmod.get_scope(sym.ref()->index()).function();
+                const auto& cls_fn = sym.ref().get_function(m_scope);
                 v.type_info = TypeInfo{cls_fn.signature_ptr()};
                 break;
             }
-            case Symbol::Function:
-            case Symbol::NestedFunction: {
+            case Symbol::Function: {
                 // specified type in definition
                 v.type_info = std::move(m_type_info);
                 break;
@@ -294,9 +292,6 @@ public:
     }
 
     void visit(ast::Function& v) override {
-        if (v.symbol->type() == Symbol::NestedFunction) {
-            v.scope_index = m_scope.get_subscope_index(v.symbol->index());
-        }
         auto& scope = module().get_scope(v.scope_index);
         Function& fn = scope.function();
 

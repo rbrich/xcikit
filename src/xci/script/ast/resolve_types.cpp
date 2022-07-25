@@ -268,7 +268,7 @@ public:
                 const auto& symmod = symtab.module() == nullptr ? module() : *symtab.module();
                 auto& cls = symmod.get_class(sym.index());
                 Index cls_fn_idx = cls.get_index_of_function(sym.ref()->index());
-                const auto& cls_fn = symmod.get_scope(sym.ref()->index()).function();
+                const auto& cls_fn = sym.ref().get_generic_scope().function();
                 auto inst_types = resolve_instance_types(cls_fn.signature());
                 // find instance using resolved T
                 std::vector<Candidate> candidates;
@@ -323,8 +323,7 @@ public:
                 else
                     throw FunctionNotFound(v.identifier.name, o_ftype.str(), o_candidates.str(), v.identifier.source_loc);
             }
-            case Symbol::Function:
-            case Symbol::NestedFunction: {
+            case Symbol::Function: {
                 // specified type in definition
                 if (v.definition && v.type_info) {
                     assert(m_call_args.empty());
@@ -534,14 +533,16 @@ public:
     }
 
     void visit(ast::Function& v) override {
-        if (v.symbol->type() == Symbol::NestedFunction) {
-            v.scope_index = m_scope.get_subscope_index(v.symbol->index());
+        if (v.symbol->type() == Symbol::Function) {
+            v.scope_index = v.symbol.get_scope_index(m_scope);
         }
         auto& scope = module().get_scope(v.scope_index);
 
         // This is a nested function in a function we're currently specializing.
         // Make sure we work on specialized nested function, not original (generic) one.
-        if (scope.parent()->function().is_specialized()) {
+        bool parent_is_specialized = scope.parent()->has_function() &&
+                                     scope.parent()->function().is_specialized();
+        if (parent_is_specialized) {
             assert(!scope.function().is_specialized());
             auto clone_fn_idx = clone_function(scope);
             auto& clone_fn = module().get_function(clone_fn_idx);
@@ -554,7 +555,7 @@ public:
         m_literal_value = false;
         v.call_args = m_call_args.size();
 
-        if (scope.parent()->function().is_specialized()) {
+        if (parent_is_specialized) {
             if (!v.definition) {
                 fn.set_specialized();
                 specialize_to_call_args(scope, fn.ast(), v.source_loc);

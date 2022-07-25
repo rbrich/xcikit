@@ -197,12 +197,12 @@ FunctionScope& FunctionScope::get_subscope(Index idx) const
 const FunctionScope* FunctionScope::find_parent_scope(const SymbolTable* symtab) const
 {
     const FunctionScope* scope = this;
-    while (&scope->function().symtab() != symtab) {
+    while (scope->has_function() && &scope->function().symtab() != symtab) {
         scope = scope->parent();
         if (scope == nullptr)
-            break;
+            return nullptr;
     }
-    return scope;
+    return scope->has_function() ? scope : nullptr;
 }
 
 

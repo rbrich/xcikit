@@ -37,11 +37,11 @@ public:
         // * must have explicitly specified type
         if (!symptr
         || (!m_class && !m_instance && dfn.variable.type && symptr->is_defined()
-                && (symptr->type() == Symbol::Function || symptr->type() == Symbol::NestedFunction))
+                && symptr->type() == Symbol::Function)
         || (symptr->type() == Symbol::StructItem))
         {
             // not found or undefined -> add new function, symbol
-            auto new_symptr = create_function(name);
+            auto new_symptr = create_function(name).first;
 
             // Overloaded: function's next = the preexisting function
             if (symptr)
@@ -95,8 +95,11 @@ public:
         if (symtab().find_by_name(v.class_name.name))
             throw RedefinedName(v.class_name.name, v.class_name.source_loc);
 
-        // add child symbol table for the class
+        // add child symbol table and scope for the class
         SymbolTable& cls_symtab = symtab().add_child(v.class_name.name);
+        auto scope_idx = module().add_scope(FunctionScope{module(), no_index, &m_scope});
+        m_scope.add_subscope(scope_idx);
+        cls_symtab.set_scope(&module().get_scope(scope_idx));
         for (auto&& [i, type_var] : v.type_vars | enumerate)
             cls_symtab.add({type_var.name, Symbol::TypeVar, Index(i + 1)});
 
@@ -130,8 +133,11 @@ public:
         v.class_name.symbol = symtab().add({sym_class, Symbol::Instance});
         v.class_name.symbol->set_next(next);
 
-        // add child symbol table for the instance
+        // add child symbol table and scope for the instance
         SymbolTable& inst_symtab = symtab().add_child(v.class_name.name);
+        auto scope_idx = module().add_scope(FunctionScope{module(), no_index, &m_scope});
+        m_scope.add_subscope(scope_idx);
+        inst_symtab.set_scope(&module().get_scope(scope_idx));
         m_symtab = &inst_symtab;
 
         // generic instance - add symbols for type params
@@ -265,15 +271,16 @@ public:
             // use Definition's symtab and function
             v.symbol = v.definition->symbol();
             v.scope_index = v.symbol.get_scope_index(m_scope);
+            //v.scope_index = symtab().scope()->get_subscope_index(v.symbol->index());
         } else {
             // add new symbol table for the function
-            auto num = symtab().count(Symbol::NestedFunction);
+            auto num = symtab().count(Symbol::Function);
             std::string name;
             if (v.type.params.empty())
                 name = fmt::format("<block_{}>", num);
             else
                 name = fmt::format("<lambda_{}>", num);
-            std::tie(v.symbol, v.scope_index) = create_nested_function(name);
+            std::tie(v.symbol, v.scope_index) = create_function(name);
         }
         auto& scope = module().get_scope(v.scope_index);
         Function& fn = scope.function();
@@ -364,29 +371,13 @@ private:
     Function& function() { return m_scope.function(); }
     SymbolTable& symtab() { return *m_symtab; }
 
-    SymbolPointer create_function(const std::string& name) {
+    std::pair<SymbolPointer, Index> create_function(const std::string& name) {
         SymbolTable& fn_symtab = symtab().add_child(name);
         auto fn_idx = module().add_function(Function{module(), fn_symtab}).index;
-        auto scope_idx = module().add_scope(FunctionScope{module(), fn_idx, &m_scope});
-        auto subscope_i = m_scope.add_subscope(scope_idx);
+        auto scope_idx = module().add_scope(FunctionScope{module(), fn_idx, symtab().scope()});
+        auto subscope_i = symtab().scope()->add_subscope(scope_idx);
         assert(symtab().module() == &module());
-        if (m_scope.function_index() != 0) {
-            // Create NestedFunction symbol for the case of specialized function,
-            // so the correct parent can be found when making closure for non-locals in Compiler.
-            assert(symtab().scope() == &m_scope);
-            // symtab()->set_scope(m_scope);
-            return symtab().add({name, Symbol::NestedFunction, subscope_i});
-        }
-        return symtab().add({name, Symbol::Function, scope_idx});
-    }
-
-    std::pair<SymbolPointer, Index> create_nested_function(const std::string& name) {
-        SymbolTable& fn_symtab = symtab().add_child(name);
-        auto fn_idx = module().add_function(Function{module(), fn_symtab}).index;
-        auto scope_idx = module().add_scope(FunctionScope{module(), fn_idx, &m_scope});
-        auto subscope_i = m_scope.add_subscope(scope_idx);
-        assert(symtab().module() == &module());
-        auto symptr = symtab().add({name, Symbol::NestedFunction, subscope_i});
+        auto symptr = symtab().add({name, Symbol::Function, subscope_i});
         return {symptr, scope_idx};
     }
 

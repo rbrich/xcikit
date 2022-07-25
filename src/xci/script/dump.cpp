@@ -948,8 +948,9 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
                         os << '\n' << more_indent;
                         first_method = false;
                     }
+                    SymbolPointer symptr = cls.symtab().find(sym);
                     os << put_indent << sym.name() << ": "
-                       << v.get_scope(sym.index()).function().signature() << '\n';
+                       << symptr.get_generic_scope().function().signature() << '\n';
                     break;
                 }
                 default:
@@ -1083,7 +1084,6 @@ std::ostream& operator<<(std::ostream& os, Symbol::Type v)
         case Symbol::Parameter:         return os << "Parameter";
         case Symbol::Nonlocal:          return os << "Nonlocal";
         case Symbol::Function:          return os << "Function";
-        case Symbol::NestedFunction:    return os << "NestedFunction";
         case Symbol::Module:            return os << "Module";
         case Symbol::Instruction:       return os << "Instruction";
         case Symbol::Class:             return os << "Class";
@@ -1107,7 +1107,7 @@ std::ostream& operator<<(std::ostream& os, const SymbolPointer& v)
         os << " @" << v.symtab()->name() << " ("
            << std::hex << intptr_t(v.symtab()) << ')' << std::dec;
         if (v->type() == Symbol::Function && v.symtab()->module() && v->index() != no_index)
-            os << ": " << v.get_function(*v.symtab()->scope()).signature();
+            os << ": " << v.get_generic_scope().function().signature();
     }
     if (v->ref())
         os << " -> " << v->ref();

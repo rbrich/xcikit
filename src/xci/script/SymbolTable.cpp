@@ -36,52 +36,61 @@ Symbol* SymbolPointer::operator->()
 FunctionScope& SymbolPointer::get_scope(const FunctionScope& hier) const
 {
     auto& sym = m_symtab->get(m_symidx);
-    if (sym.type() == Symbol::NestedFunction) {
-        return hier.find_parent_scope(m_symtab)->get_subscope(sym.index());
-        //return m_symtab->scope()->get_subscope(sym.index());
-    }
     assert(sym.type() == Symbol::Function);
-    assert(m_symtab->module() != nullptr);
-    assert(sym.index() != no_index);
-    return m_symtab->module()->get_scope(sym.index());
+    auto* parent_scope = hier.find_parent_scope(m_symtab);
+    if (!parent_scope) {
+        // use symtab's (generic) scope
+        return m_symtab->scope()->get_subscope(sym.index());
+    }
+    return hier.find_parent_scope(m_symtab)->get_subscope(sym.index());
+
+//    assert(sym.type() == Symbol::Function);
+//    assert(m_symtab->module() != nullptr);
+//    assert(sym.index() != no_index);
+//    return m_symtab->module()->get_scope(sym.index());
 }
 
 
 FunctionScope& SymbolPointer::get_generic_scope() const
 {
     auto& sym = m_symtab->get(m_symidx);
-    if (sym.type() == Symbol::NestedFunction) {
-        return m_symtab->scope()->get_subscope(sym.index());
-    }
     assert(sym.type() == Symbol::Function);
-    assert(m_symtab->module() != nullptr);
-    assert(sym.index() != no_index);
-    return m_symtab->module()->get_scope(sym.index());
+    return m_symtab->scope()->get_subscope(sym.index());
+
+//    assert(sym.type() == Symbol::Function);
+//    assert(m_symtab->module() != nullptr);
+//    assert(sym.index() != no_index);
+//    return m_symtab->module()->get_scope(sym.index());
 }
 
 
 Index SymbolPointer::get_scope_index(const FunctionScope& hier) const
 {
     auto& sym = m_symtab->get(m_symidx);
-    if (sym.type() == Symbol::NestedFunction) {
-        return hier.find_parent_scope(m_symtab)->get_subscope_index(sym.index());
-    }
     assert(sym.type() == Symbol::Function);
-    assert(sym.index() != no_index);
-    return sym.index();
+    auto* parent_scope = hier.find_parent_scope(m_symtab);
+    if (!parent_scope) {
+        // use symtab's (generic) scope
+        return m_symtab->scope()->get_subscope_index(sym.index());
+    }
+    return hier.find_parent_scope(m_symtab)->get_subscope_index(sym.index());
+
+//    assert(sym.type() == Symbol::Function);
+//    assert(sym.index() != no_index);
+//    return sym.index();
 }
 
 
 Index SymbolPointer::get_generic_scope_index() const
 {
     auto& sym = m_symtab->get(m_symidx);
-    if (sym.type() == Symbol::NestedFunction) {
-        assert(m_symtab->scope() != nullptr);
-        return m_symtab->scope()->get_subscope_index(sym.index());
-    }
     assert(sym.type() == Symbol::Function);
-    assert(sym.index() != no_index);
-    return sym.index();
+    assert(m_symtab->scope() != nullptr);
+    return m_symtab->scope()->get_subscope_index(sym.index());
+
+//    assert(sym.type() == Symbol::Function);
+//    assert(sym.index() != no_index);
+//    return sym.index();
 }
 
 

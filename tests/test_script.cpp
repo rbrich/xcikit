@@ -95,11 +95,8 @@ std::string optimize(const std::string& input)
     module.import_module("builtin");
     module.import_module("std");
 
-    auto& symtab = module.symtab().add_child("main");
-    auto fn_idx = module.add_function(Function{module, symtab}).index;
-    FunctionScope scope {module, fn_idx, nullptr};
     Compiler compiler(Compiler::Flags::O1);
-    compiler.compile(scope, ast);
+    compiler.compile(module.get_main_scope(), ast);
 
     std::ostringstream os;
     os << ast;

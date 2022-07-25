@@ -67,8 +67,7 @@ public:
             case Symbol::StructItem:
             case Symbol::TypeId:
                 break;
-            case Symbol::Function:
-            case Symbol::NestedFunction: {
+            case Symbol::Function: {
                 assert(v.index != no_index);
                 Function& fn = v.module->get_scope(v.index).function();
                 if (fn.has_code()) {

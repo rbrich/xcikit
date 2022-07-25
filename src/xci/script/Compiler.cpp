@@ -235,8 +235,7 @@ public:
                 break;
             }
             case Symbol::Nonlocal: {
-                bool is_nl_function = (sym.ref()->type() == Symbol::Function ||
-                                       sym.ref()->type() == Symbol::NestedFunction);
+                bool is_nl_function = (sym.ref()->type() == Symbol::Function);
 
                 if (is_nl_function && !function().partial().empty())
                     break;
@@ -316,8 +315,7 @@ public:
                 }
                 break;
             }
-            case Symbol::Function:
-            case Symbol::NestedFunction: {
+            case Symbol::Function: {
                 assert(v.index != no_index);
                 FunctionScope& scope = v.module->get_scope(v.index);
                 // this module
@@ -641,12 +639,10 @@ private:
                     });
                     break;
                 }
-                case Symbol::Function:
-                case Symbol::NestedFunction: {
+                case Symbol::Function: {
                     assert(nl.fn_scope_idx != no_index);
                     const auto& subscope = module().get_scope(nl.fn_scope_idx);
-                    // const auto& subscope = module().get_scope(psym.index());  // orig Function
-                    // const auto& subscope = parent_scope.get_subscope(psym.index());  // orig NestedFunction
+                    // const auto& subscope = parent_scope.get_subscope(psym.index());
                     Index fn_idx = subscope.function_index();
                     Function& fn = module().get_function(fn_idx);
                     if (subscope.has_nonlocals()) {
@@ -754,7 +750,7 @@ void Compiler::compile_all_functions(FunctionScope& main)
     Module& module = main.module();
     for (unsigned i = module.num_scopes(); i != 0; --i) {
         FunctionScope& scope = module.get_scope(i - 1);
-        if (&scope == &main)
+        if (&scope == &main || !scope.has_function())
             continue;
         Function& fn = scope.function();
         if (!fn.is_generic())

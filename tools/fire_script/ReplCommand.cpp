@@ -255,7 +255,7 @@ void ReplCommand::cmd_describe(std::string_view name) {
                         name, module->name());
                 return;
             case Symbol::Function: {
-                const auto& function = module->get_function(sym_ptr->index());
+                const auto& function = sym_ptr.get_generic_scope().function();
                 t.print("Function {}: ", name);
                 t.stream() << function.signature() << std::endl;
                 return;

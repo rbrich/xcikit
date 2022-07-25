@@ -247,10 +247,12 @@ public:
     explicit FunctionScope(Module& module, Index function_idx, FunctionScope* parent_scope);
 
     Module& module() const { return *m_module; }
+    FunctionScope* parent() const { return m_parent_scope; }
+
+    bool has_function() const { return m_function != no_index; }
     Function& function() const;
     void set_function_index(Index fn_idx) { m_function = fn_idx; }
     Index function_index() const { return m_function; }
-    FunctionScope* parent() const { return m_parent_scope; }
 
     // Nested functions
     Index add_subscope(Index scope_idx);

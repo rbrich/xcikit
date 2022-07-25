@@ -30,10 +30,7 @@ std::shared_ptr<Module> Interpreter::build_module(const std::string& name, Sourc
     m_parser.parse(source_id, ast);
 
     // compile
-    auto fn_idx = module->add_function(Function{*module, module->symtab()}).index;
-    auto scope_idx = module->add_scope(FunctionScope(*module, fn_idx, nullptr));
-    auto& scope = module->get_scope(scope_idx);
-    if (!m_compiler.compile(scope, ast))
+    if (!m_compiler.compile(module->get_main_scope(), ast))
         return module;  // requested to only preprocess AST
 
     // sanity check (no AST references)
@@ -56,11 +53,7 @@ TypedValue Interpreter::eval(Module& module, SourceId source_id, const InvokeCal
     m_parser.parse(source_id, ast);
 
     // compile
-    auto source_name = m_source_manager.get_source(source_id).name();
-    auto& symtab = module.symtab().add_child(source_name);
-    auto fn_idx = module.add_function(Function{module, symtab}).index;
-    auto scope_idx = module.add_scope(FunctionScope(module, fn_idx, nullptr));
-    auto& scope = module.get_scope(scope_idx);
+    auto& scope = module.get_main_scope();
     m_compiler.compile(scope, ast);
 
     // execute

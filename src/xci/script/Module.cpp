@@ -38,9 +38,10 @@ SymbolPointer Module::add_native_function(
     fn.signature().params = std::move(params);
     fn.signature().return_type = std::move(retval);
     fn.set_native(native);
-    WeakFunctionId fn_id = add_function(std::move(fn));
-    ScopeIdx scope_idx = add_scope(FunctionScope{*this, fn_id.index, nullptr});
-    return symtab().add({std::move(name), Symbol::Function, scope_idx});
+    auto fn_idx = add_function(std::move(fn)).index;
+    auto scope_idx = add_scope(FunctionScope{*this, fn_idx, symtab().scope()});
+    auto subscope_i = symtab().scope()->add_subscope(scope_idx);
+    return symtab().add({std::move(name), Symbol::Function, subscope_i});
 }
 
 
@@ -79,11 +80,14 @@ auto Module::add_function(Function&& fn) -> WeakFunctionId
 
 auto Module::add_scope(FunctionScope&& scope) -> ScopeIdx
 {
+    assert(scope.parent() != nullptr);  // only main scope has no parent
     auto scope_idx = m_scopes.add(std::move(scope)).index;
     auto& rscope = get_scope(scope_idx);
-    auto& symtab = get_function(rscope.function_index()).symtab();
-    if (symtab.scope() == nullptr) {
-        symtab.set_scope(&rscope);
+    if (rscope.function_index() != no_index) {
+        auto& symtab = get_function(rscope.function_index()).symtab();
+        if (symtab.scope() == nullptr) {
+            symtab.set_scope(&rscope);
+        }
     }
     return scope_idx;
 }
@@ -289,6 +293,19 @@ bool Module::load_from_file(const std::string& filename)
         return *m_functions.get(idx);
     });
     return !f.fail();
+}
+
+
+void Module::init()
+{
+    m_symtab.set_module(this);
+    // create main function
+    auto fn_idx = add_function(Function{*this, m_symtab}).index;
+    assert(fn_idx == 0);
+    // create root scope
+    auto scope_idx = m_scopes.add(FunctionScope{*this, fn_idx, nullptr}).index;
+    assert(scope_idx == 0);
+    m_symtab.set_scope(&m_scopes[scope_idx]);
 }
 
 
