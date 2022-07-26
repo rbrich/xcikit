@@ -1121,8 +1121,6 @@ std::ostream& operator<<(std::ostream& os, const Symbol& v)
        << left << setw(18) << v.type();
     if (v.index() != no_index)
         os << " #" << v.index();
-    if (v.next())
-        os << " (next: #" << v.next()->index() << ")";
     if (v.ref()) {
         os << " -> " << v.ref()->type()
            << " #" << v.ref()->index();

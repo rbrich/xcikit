@@ -272,8 +272,7 @@ public:
                 auto inst_types = resolve_instance_types(cls_fn.signature());
                 // find instance using resolved T
                 std::vector<Candidate> candidates;
-                auto inst_psym = v.chain;
-                while (inst_psym) {
+                for (auto inst_psym : v.sym_list) {
                     assert(inst_psym->type() == Symbol::Instance);
                     auto* inst_mod = inst_psym.symtab()->module();
                     if (inst_mod == nullptr)
@@ -282,7 +281,6 @@ public:
                     auto inst_fn = inst.get_function(cls_fn_idx);
                     auto m = match_params(inst.types(), inst_types);
                     candidates.push_back({inst_mod, inst_fn.scope_index, inst_psym, TypeInfo{}, m});
-                    inst_psym = inst_psym->next();
                 }
 
                 auto [found, conflict] = find_best_candidate(candidates);
@@ -338,7 +336,7 @@ public:
                 }
 
                 // Resolve overload / specialize
-                auto res = resolve_overload(v.identifier.symbol, v.identifier);
+                auto res = resolve_overload(v.sym_list, v.identifier);
                 // The referenced function must have been defined
                 if (!res.type.effective_type())
                     throw MissingExplicitType(v.identifier.name, v.identifier.source_loc);
@@ -934,10 +932,10 @@ private:
     }
 
     /// Find matching function overload according to m_call_args
-    Candidate resolve_overload(SymbolPointer symptr, const ast::Identifier& identifier)
+    Candidate resolve_overload(const SymbolPointerList& sym_list, const ast::Identifier& identifier)
     {
         std::vector<Candidate> candidates;
-        while (symptr) {
+        for (auto symptr : sym_list) {
             // resolve nonlocal
             while (symptr->depth() != 0)
                 symptr = symptr->ref();
@@ -949,8 +947,6 @@ private:
             const auto& sig_ptr = fn.signature_ptr();
             auto match = match_signature(*sig_ptr);
             candidates.push_back({symmod, scope_idx, symptr, TypeInfo{sig_ptr}, match});
-
-            symptr = symptr->next();
         }
 
         auto [found, conflict] = find_best_candidate(candidates);

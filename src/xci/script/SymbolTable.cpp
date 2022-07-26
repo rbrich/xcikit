@@ -241,17 +241,16 @@ SymbolPointer SymbolTable::find_last_of(Symbol::Type type)
 }
 
 
-void SymbolTable::detect_overloads(const std::string& name)
+SymbolPointerList SymbolTable::filter(const std::string& name, Symbol::Type type)
 {
-    Index prev_i = no_index;
-    for (size_t i = 0; i != m_symbols.size(); ++i) {
-        if (m_symbols[i].name() == name) {
-            if (prev_i != no_index) {
-                m_symbols[i].set_next({*this, prev_i});
-            }
-            prev_i = Index(i);
-        }
+    SymbolPointerList res;
+    Index i = 0;
+    for (const auto& sym : m_symbols) {
+        if (sym.type() == type && sym.name() == name)
+            res.emplace_back(*this, i);
+        ++i;
     }
+    return res;
 }
 
 

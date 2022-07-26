@@ -189,7 +189,7 @@ void Reference::copy_to(Reference& r) const
     r.identifier = identifier;
     if (type_arg)
         r.type_arg = type_arg->make_copy();
-    r.chain = chain;
+    r.sym_list = sym_list;
     r.module = module;
     r.index = index;
     r.type_info = type_info;

@@ -302,8 +302,6 @@ ReplCommand::ReplCommand(Context& ctx)
             [](void* self, std::string_view s)
             { ((ReplCommand*)self)->cmd_dump_module(s); },
             this);
-    m_module->symtab().detect_overloads("dump_module");
-    m_module->symtab().detect_overloads("dm");
     add_cmd("dump_function", "df",
             [](void* self)
             { ((ReplCommand*)self)->cmd_dump_function(); },
@@ -324,8 +322,6 @@ ReplCommand::ReplCommand(Context& ctx)
             [](void* self, int32_t f, int32_t m)
             { ((ReplCommand*)self)->cmd_dump_function(f, m); },
             this);
-    m_module->symtab().detect_overloads("dump_function");
-    m_module->symtab().detect_overloads("df");
     add_cmd("describe", "d",
             [](void* self, std::string_view name)
             { ((ReplCommand*)self)->cmd_describe(name); },

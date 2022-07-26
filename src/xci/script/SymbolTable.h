@@ -63,6 +63,9 @@ private:
 };
 
 
+using SymbolPointerList = std::vector<SymbolPointer>;
+
+
 class Symbol {
 public:
     enum Type {
@@ -109,8 +112,6 @@ public:
     Index index() const { return m_index; }
     size_t depth() const { return m_depth; }
     SymbolPointer ref() const { return m_ref; }
-    // in case of overloaded function, this points to next overload
-    SymbolPointer next() const { return m_next; }
     bool is_callable() const { return m_is_callable; }
     bool is_defined() const { return m_is_defined; }
 
@@ -118,7 +119,6 @@ public:
     Symbol& set_index(Index idx) { m_index = idx; return *this; }
     Symbol& set_depth(size_t depth) { m_depth = depth; return *this; }
     Symbol& set_ref(const SymbolPointer& ref) { m_ref = ref; return *this; }
-    Symbol& set_next(const SymbolPointer& next) { m_next = next; return *this; }
     Symbol& set_callable(bool callable) { m_is_callable = callable; return *this; }
     Symbol& set_defined(bool defined) { m_is_defined = defined; return *this; }
 
@@ -142,7 +142,6 @@ private:
     Index m_index = no_index;
     size_t m_depth = 0;  // 1 = parent, 2 = parent of parent, ...
     SymbolPointer m_ref;
-    SymbolPointer m_next;
     bool m_is_callable: 1 = false;
     bool m_is_defined: 1 = false;  // only declared / already defined
 };
@@ -198,12 +197,9 @@ public:
     SymbolPointer find_last_of(const std::string& name, Symbol::Type type);
     SymbolPointer find_last_of(Symbol::Type type);
 
-    Size count(Symbol::Type type) const;
+    SymbolPointerList filter(const std::string& name, Symbol::Type type);
 
-    /// Check symbol table for overloaded function name
-    /// and connect the symbols using `next` pointer
-    /// (making the overloads visible to SymbolResolver)
-    void detect_overloads(const std::string& name);
+    Size count(Symbol::Type type) const;
 
     // FIXME: use Pointer<T> / ConstPointer<T> directly as iterator
     using const_iterator = typename std::vector<Symbol>::const_iterator;

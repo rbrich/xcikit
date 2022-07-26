@@ -390,7 +390,7 @@ struct Reference: public Expression {
     std::unique_ptr<Type> type_arg;  // explicit type argument: e.g. <Int>
 
     // resolved function/method:
-    SymbolPointer chain;  // tip of chain of Instances in case of Method
+    SymbolPointerList sym_list;  // list of overloaded Functions, or Instances in case of Method
     Module* module = nullptr;   // module with function
     Index index = no_index;     // index of function scope in module
     TypeInfo type_info;

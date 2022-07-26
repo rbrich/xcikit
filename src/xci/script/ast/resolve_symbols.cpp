@@ -40,14 +40,8 @@ public:
                 && symptr->type() == Symbol::Function)
         || (symptr->type() == Symbol::StructItem))
         {
-            // not found or undefined -> add new function, symbol
-            auto new_symptr = create_function(name).first;
-
-            // Overloaded: function's next = the preexisting function
-            if (symptr)
-                new_symptr->set_next(symptr);
-
-            symptr = new_symptr;
+            // Either not found, or overloaded -> add new function, symbol
+            symptr = create_function(name).first;
         } else {
             // Allow redefinition only if we're defining plain function, not a method
             if (symptr->is_defined()
@@ -126,12 +120,8 @@ public:
         if (!sym_class)
             throw UndefinedTypeName(v.class_name.name, v.class_name.source_loc);
 
-        // find next instance of the class (if any)
-        auto next = resolve_symbol_of_type(v.class_name.name, Symbol::Instance);
-
         // create symbol for the instance
         v.class_name.symbol = symtab().add({sym_class, Symbol::Instance});
-        v.class_name.symbol->set_next(next);
 
         // add child symbol table and scope for the instance
         SymbolTable& inst_symtab = symtab().add_child(v.class_name.name);
@@ -230,7 +220,11 @@ public:
             // if the reference points to a class function, find the nearest
             // instance of the class
             const auto& class_name = symptr.get_class().name();
-            v.chain = resolve_symbol_of_type(class_name, Symbol::Instance);
+            v.sym_list = find_all_instance_symbols(class_name);
+        }
+        if (symptr->type() == Symbol::Function) {
+            // find all overloads
+            v.sym_list = find_function_overloads(v.identifier.name);
         }
     }
 
@@ -438,15 +432,9 @@ private:
     }
 
     SymbolPointer resolve_symbol_of_type(const std::string& name, Symbol::Type type) {
-        // lookup in this and parent scopes
+        // lookup in this and parent scopes (including this module scope)
         for (auto* p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
             auto symptr = p_symtab->find_last_of(name, type);
-            if (symptr)
-                return symptr;
-        }
-        // this module
-        {
-            auto symptr = module().symtab().find_last_of(name, type);
             if (symptr)
                 return symptr;
         }
@@ -458,6 +446,38 @@ private:
         }
         // nowhere
         return {};
+    }
+
+    SymbolPointerList find_function_overloads(const std::string& name) {
+        // lookup in this and parent scopes (including this module scope)
+        for (auto* p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
+            auto sym_list = p_symtab->filter(name, Symbol::Function);
+            if (!sym_list.empty())
+                return sym_list;
+        }
+        // imported modules
+        for (auto i = Index(module().num_imported_modules() - 1); i != Index(-1); --i) {
+            auto sym_list = module().get_imported_module(i).symtab().filter(name, Symbol::Function);
+            if (!sym_list.empty())
+                return sym_list;
+        }
+        // nowhere
+        return {};
+    }
+
+    SymbolPointerList find_all_instance_symbols(const std::string& name) {
+        // lookup in this and parent scopes (including this module scope)
+        SymbolPointerList res;
+        for (auto* p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
+            auto sym_list = p_symtab->filter(name, Symbol::Instance);
+            res.insert(res.end(), sym_list.begin(), sym_list.end());
+        }
+        // imported modules
+        for (auto i = Index(module().num_imported_modules() - 1); i != Index(-1); --i) {
+            auto sym_list = module().get_imported_module(i).symtab().filter(name, Symbol::Instance);
+            res.insert(res.end(), sym_list.begin(), sym_list.end());
+        }
+        return res;
     }
 
     void load_type_params(const std::vector<ast::TypeName>& type_params) {
