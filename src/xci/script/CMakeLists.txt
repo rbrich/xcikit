@@ -54,8 +54,6 @@ target_include_directories(xci-script
         $<TARGET_PROPERTY:taocpp::pegtl,INTERFACE_INCLUDE_DIRECTORIES>
     )
 
-add_dependencies(xci-script share)
-
 if (BUILD_SHARED_LIBS)
     set_target_properties(xci-script PROPERTIES CXX_VISIBILITY_PRESET default)
 endif()

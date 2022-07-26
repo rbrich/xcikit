@@ -14,6 +14,6 @@ add_demo(demo_vfs LINK xci-core DEPS share)
 
 if (NOT WIN32 AND NOT EMSCRIPTEN AND XCI_SCRIPT)
     set(SHARE_ARCHIVE "${XCIKIT_BINARY_DIR}/${XCI_SHARE_DAR}")
-    add_demo(demo_vfs_incbin LINK xci-core incbin::incbin DEPS share
+    add_demo(demo_vfs_incbin LINK xci-core incbin::incbin
         CDEFS SHARE_ARCHIVE="${SHARE_ARCHIVE}")
 endif()
