@@ -509,8 +509,10 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     CHECK(interpret(R"(a = (name="hello", age=42, valid=true); a.name; a.age; a.valid)") == R"("hello";42;true)");
     CHECK(interpret(my_struct + R"(f = fun a:MyStruct { a.name }; f (name="hello", age=42))") == R"("hello")");
     CHECK(interpret(R"(type Rec=(x:String, y:Int); f=fun a:Rec { a.x }; r:Rec=(x="x",y=3); f r)") == R"("x")");
-//    CHECK(interpret_std("x:(field:Int) = (field=2); field = fun a:Int->Int { a*a }; x.field; field 12") == "2;144");  // member access doesn't collide with functions/variables of the same name
-//    CHECK(interpret("x:(field:Int) = (field=2); field = 3; x.field; field") == "2;3");
+    CHECK(interpret_std("x:(field:Int) = (field=2); field = fun a:Int->Int { a*a }; x.field; field 12") == "2;144");  // member access doesn't collide with functions/variables of the same name
+    CHECK(interpret("x:(field:Int) = (field=2); field = 3; x.field; field") == "2;3");
+    CHECK(interpret("x:(field:Int) = (field=2); { field = 3; x.field; field }") == "2;3");
+    CHECK(interpret("field = 3; { x:(field:Int) = (field=2); x.field; field }") == "2;3");
     // invalid struct - repeated field names
     CHECK_THROWS_AS(interpret("type MyStruct = (same:String, same:Int)"), StructDuplicateKey);  // struct type
     CHECK_THROWS_AS(interpret(R"(a = (same="hello", same=42))"), StructDuplicateKey);  // struct init (anonymous struct type)
@@ -631,6 +633,7 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     CHECK(interpret(def_succ_compose + "plustwo = compose succ succ; plustwo 42") == "44");
     CHECK(interpret(def_succ_compose + "plustwo = {compose succ succ}; plustwo 42") == "44");
     CHECK(interpret(def_succ_compose + "plustwo = compose succ succ; plusfour = compose plustwo plustwo;  plustwo 42; plusfour 42") == "44;46");
+    // TODO: compose generic functions
     //CHECK(interpret_std(def_compose + "same = compose pred succ; same 42") == "42");
 }
 

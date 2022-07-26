@@ -6,6 +6,7 @@
 
 #include "SymbolTable.h"
 #include "Module.h"
+#include "TypeInfo.h"
 #include <cassert>
 #include <algorithm>
 
@@ -97,6 +98,15 @@ Index SymbolPointer::get_generic_scope_index() const
 Function& SymbolPointer::get_function(const FunctionScope& hier) const
 {
     return get_scope(hier).function();
+}
+
+
+const TypeInfo& SymbolPointer::get_type() const
+{
+    auto& sym = m_symtab->get(m_symidx);
+    assert(sym.type() == Symbol::TypeName || sym.type() == Symbol::StructItem);
+    assert(m_symtab->module() != nullptr);
+    return m_symtab->module()->get_type(sym.index());
 }
 
 

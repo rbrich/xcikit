@@ -21,6 +21,7 @@ class Function;
 class FunctionScope;
 class Class;
 class Module;
+class TypeInfo;
 
 
 using Index = uint32_t;
@@ -46,6 +47,7 @@ public:
     Index get_generic_scope_index() const;
     Function& get_function(const FunctionScope& hier) const;
 
+    const TypeInfo& get_type() const;
 
     Class& get_class() const;
 

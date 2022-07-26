@@ -321,9 +321,10 @@ public:
                 else
                     throw FunctionNotFound(v.identifier.name, o_ftype.str(), o_candidates.str(), v.identifier.source_loc);
             }
-            case Symbol::Function: {
+            case Symbol::Function:
+            case Symbol::StructItem: {
                 // specified type in definition
-                if (v.definition && v.type_info) {
+                if (sym.type() == Symbol::Function && v.definition && v.type_info) {
                     assert(m_call_args.empty());
                     if (v.type_info.is_callable()) {
                         for (const auto& t : v.type_info.signature().params)
@@ -340,14 +341,22 @@ public:
                 // The referenced function must have been defined
                 if (!res.type.effective_type())
                     throw MissingExplicitType(v.identifier.name, v.identifier.source_loc);
-                v.module = res.module;
-                v.index = res.scope_index;
-                m_value_type = res.type;
 
-                if (v.definition) {
+                if (res.symptr->type() == Symbol::Function) {
+                    v.module = res.module;
+                    v.index = res.scope_index;
+                    m_value_type = res.type;
+                    if (v.definition) {
+                        m_call_args.clear();
+                        m_call_ret = {};
+                    }
+                } else {
+                    assert(res.symptr->type() == Symbol::StructItem);
+                    m_value_type = res.type.signature().return_type;
                     m_call_args.clear();
                     m_call_ret = {};
                 }
+                v.identifier.symbol = res.symptr;
                 break;
             }
             case Symbol::Module:
@@ -376,21 +385,6 @@ public:
             case Symbol::TypeVar:
                 // TODO
                 return;
-            case Symbol::StructItem: {
-                if (m_call_args.size() != 1)
-                    throw UnexpectedArgumentCount(1, m_call_args.size(), v.source_loc);
-
-                const TypeInfo& struct_type = symtab.module()->get_type(sym.index());
-                if (m_call_args[0].type_info != struct_type)
-                    throw UnexpectedArgumentType(1, struct_type, m_call_args[0].type_info, v.source_loc);
-
-                const auto* item_type = struct_type.struct_item_by_name(sym.name());
-                assert(item_type != nullptr);
-
-                m_call_args.clear();
-                m_value_type = *item_type;
-                break;
-            }
             case Symbol::Nonlocal:
             case Symbol::Unresolved:
                 UNREACHABLE;
@@ -942,22 +936,36 @@ private:
 
             auto* symmod = symptr.symtab()->module();
             assert(symmod != nullptr);
-            auto scope_idx = symptr.get_generic_scope_index();
-            auto& fn = symmod->get_scope(scope_idx).function();
-            const auto& sig_ptr = fn.signature_ptr();
+            Index scope_idx;
+            std::shared_ptr<Signature> sig_ptr;
+            if (symptr->type() == Symbol::Function) {
+                scope_idx = symptr.get_generic_scope_index();
+                auto& fn = symmod->get_scope(scope_idx).function();
+                sig_ptr = fn.signature_ptr();
+            } else {
+                assert(symptr->type() == Symbol::StructItem);
+                scope_idx = no_index;
+                sig_ptr = std::make_shared<Signature>();
+                const auto& struct_type = symptr.get_type();
+                sig_ptr->add_parameter(TypeInfo{struct_type});
+                const auto* item_type = struct_type.struct_item_by_name(symptr->name());
+                assert(item_type != nullptr);
+                sig_ptr->set_return_type(*item_type);
+            }
             auto match = match_signature(*sig_ptr);
-            candidates.push_back({symmod, scope_idx, symptr, TypeInfo{sig_ptr}, match});
+            candidates.push_back({symmod, scope_idx, symptr, TypeInfo{std::move(sig_ptr)}, match});
         }
 
         auto [found, conflict] = find_best_candidate(candidates);
 
         if (found && !conflict) {
-            if (found->symptr) {
+            if (found->symptr->type() == Symbol::Function) {
                 auto specialized = specialize_function(found->symptr, identifier.source_loc);
                 if (specialized) {
                     return {
                         .module = &module(),
                         .scope_index = specialized->scope_index,
+                        .symptr = found->symptr,
                         .type = std::move(specialized->type_info),
                     };
                 }
@@ -968,9 +976,8 @@ private:
         // format the error message (candidates)
         stringstream o_candidates;
         for (const auto& c : candidates) {
-            auto& fn = c.module->get_scope(c.scope_index).function();
             o_candidates << "   " << c.match << "  "
-                         << fn.signature() << endl;
+                         << c.type.signature() << endl;
         }
         stringstream o_ftype;
         for (const auto& arg : m_call_args) {
