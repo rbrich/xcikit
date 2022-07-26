@@ -365,6 +365,41 @@ instance<T> Subscript [T] Int T {
 }
 
 
+// -----------------------------------------------------------------------------
+// Format and Parse
+
+type FormatSpec = (
+    fill: Char
+    align: Char  // < > ^
+    sign: Char   // + -
+    width: Int
+    precision: Int
+    spec: String
+)
+
+type ParseSpec = (
+    spec: String
+)
+
+class Format T {
+    format : T FormatSpec -> String
+}
+
+instance Format Bool { format = fun x _f { if x then "true" else "false" } }
+
+class Parse T {
+    parse : String ParseSpec -> T
+}
+
+instance Parse Bool { parse = fun x _f { x == "true" } }
+
+// TODO: allow () without explicit cast
+to_string = fun<T> x:T -> String { format x ():FormatSpec }
+from_string = fun<T> x:String -> T { parse x ():ParseSpec }
+
+// -----------------------------------------------------------------------------
+
+
 succ = fun<T> x:T -> T { x + 1 }
 pred = fun<T> x:T -> T { x - 1 }
 larger = fun<T> x:T y:T -> T { if x > y then x else y }
