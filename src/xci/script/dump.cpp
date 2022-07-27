@@ -155,7 +155,10 @@ std::ostream& operator<<(std::ostream& os, const Parenthesized& v)
 std::ostream& operator<<(std::ostream& os, const Tuple& v)
 {
     if (stream_options(os).enable_tree) {
-        os << "Tuple(Expression)" << endl;
+        os << "Tuple(Expression)";
+        if (v.type_info)
+            os << " [type_info=" << v.type_info << ']';
+        os << endl;
         os << more_indent;
         for (const auto& item : v.items)
             os << put_indent << *item;

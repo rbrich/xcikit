@@ -25,29 +25,26 @@ MatchScore match_params(const std::vector<TypeInfo>& candidate, const std::vecto
 }
 
 
-/// \returns MatchScore: mismatch/generic/exact or combination in case of complex types
 MatchScore match_type(const TypeInfo& candidate, const TypeInfo& actual)
 {
     if (candidate.is_struct() && actual.is_struct())
         return match_struct(candidate, actual);
     if (candidate.is_tuple() && actual.is_tuple())
         return match_tuple(candidate, actual);
-    if (candidate.is_named() || actual.is_named())
-        return MatchScore::coerce() + match_type(candidate.underlying(), actual.underlying());
+    if (candidate.is_tuple() && actual.is_struct())
+        return MatchScore::coerce() + match_tuple_to_struct(candidate, actual);
     if (candidate == actual) {
         if (actual.is_generic() || candidate.is_generic())
             return MatchScore::generic();
         else
             return MatchScore::exact();
     }
+    if (candidate.is_named() || actual.is_named())
+        return MatchScore::coerce() + match_type(candidate.underlying(), actual.underlying());
     return MatchScore::mismatch();
 }
 
 
-/// Match tuple to tuple
-/// \param candidate    Candidate tuple type
-/// \param actual       Actual resolved tuple type for the value
-/// \returns Total match score of all fields, or mismatch
 MatchScore match_tuple(const TypeInfo& candidate, const TypeInfo& actual)
 {
     assert(candidate.is_tuple());
@@ -73,12 +70,6 @@ MatchScore match_tuple(const TypeInfo& candidate, const TypeInfo& actual)
 }
 
 
-/// Match incomplete Struct type from ast::StructInit to resolved Struct type.
-/// All keys and types from inferred are checked against resolved.
-/// Partial match is possible when inferred has less keys than resolved.
-/// \param candidate    Possibly incomplete Struct type as constructed from AST
-/// \param actual       Actual resolved type for the value
-/// \returns Total match score of all fields, or mismatch
 MatchScore match_struct(const TypeInfo& candidate, const TypeInfo& actual)
 {
     assert(candidate.is_struct());
@@ -109,10 +100,6 @@ MatchScore match_struct(const TypeInfo& candidate, const TypeInfo& actual)
 }
 
 
-/// Match tuple to resolved Struct type, i.e. initialize struct with tuple literal
-/// \param candidate    Tuple with same number of fields
-/// \param actual       Actual resolved struct type for the value
-/// \returns Total match score of all fields, or mismatch
 MatchScore match_tuple_to_struct(const TypeInfo& candidate, const TypeInfo& actual)
 {
     assert(candidate.is_tuple());

@@ -393,9 +393,8 @@ class Parse T {
 
 instance Parse Bool { parse = fun x _f { x == "true" } }
 
-// TODO: allow () without explicit cast
-to_string = fun<T> x:T -> String { format x ():FormatSpec }
-from_string = fun<T> x:String -> T { parse x ():ParseSpec }
+to_string = fun<T> x:T -> String { format x () }
+from_string = fun<T> x:String -> T { parse x () }
 
 // -----------------------------------------------------------------------------
 

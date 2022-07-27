@@ -123,10 +123,10 @@ public:
 
     void visit(ast::Tuple& v) override {
         // build tuple on stack
-        if (v.literal_type.is_struct() && v.items.empty()) {
+        if (v.type_info.is_struct() && v.items.empty()) {
             // A struct can be initialized with empty tuple "()".
             // Fill in the defaults.
-            for (const auto& ti : reverse(v.literal_type.struct_items())) {
+            for (const auto& ti : reverse(v.type_info.struct_items())) {
                 if (ti.second.is_void())
                     return;  // Void value
                 // add to static values

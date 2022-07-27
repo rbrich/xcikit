@@ -349,7 +349,7 @@ struct Tuple: public Expression {
     std::vector<std::unique_ptr<Expression>> items;
 
     // resolved:
-    TypeInfo literal_type;  // the tuple may resolve to Struct type depending on specified/inferred type
+    TypeInfo type_info;  // the tuple may resolve to Struct type depending on specified/inferred type
 };
 
 struct List: public Expression {

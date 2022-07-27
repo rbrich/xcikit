@@ -21,13 +21,6 @@ using ranges::views::enumerate;
 
 
 class ResolveDeclVisitor final: public ast::Visitor {
-    struct CallArg {
-        TypeInfo type_info;
-        bool literal_value;
-        SourceLocation source_loc;
-    };
-    using CallArgs = std::vector<CallArg>;
-
 public:
     explicit ResolveDeclVisitor(Scope& scope) : m_scope(scope) {}
 
@@ -154,7 +147,7 @@ public:
     }
 
     void visit(ast::Tuple& v) override {
-        v.literal_type = std::move(m_type_info);
+        v.type_info = std::move(m_type_info);
         for (auto& item : v.items) {
             m_type_info = {};
             item->apply(*this);

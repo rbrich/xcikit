@@ -121,7 +121,7 @@ public:
     }
 
     void visit(ast::Tuple& v) override {
-        TypeChecker type_check(std::move(v.literal_type), std::move(m_cast_type));
+        TypeChecker type_check(std::move(v.type_info), std::move(m_cast_type));
         // build TypeInfo from subtypes
         std::vector<TypeInfo> subtypes;
         subtypes.reserve(v.items.size());
@@ -130,7 +130,7 @@ public:
             subtypes.push_back(m_value_type.effective_type());
         }
         m_value_type = type_check.resolve(TypeInfo(std::move(subtypes)), v.source_loc);
-        v.literal_type = m_value_type;
+        v.type_info = m_value_type;
     }
 
     void visit(ast::List& v) override {
@@ -1001,7 +1001,7 @@ private:
     }
 
     // Consume params from `orig_signature` according to `m_call_args`, creating new signature
-    std::shared_ptr<Signature> consume_params_from_call_args(const Signature& orig_signature, ast::Call& v) const
+    std::shared_ptr<Signature> consume_params_from_call_args(const Signature& orig_signature, ast::Call& v)
     {
         auto res = std::make_shared<Signature>(orig_signature);
         int i = 0;
@@ -1019,15 +1019,21 @@ private:
                 }
             }
             // check type of next param
-            if (res->params.front().underlying() != arg.type_info.underlying()) {
+            const auto m = match_type(arg.type_info, res->params.front());
+            if (!(m.is_exact() || m.is_generic() || (m.is_coerce() && arg.literal_value))) {
                 throw UnexpectedArgumentType(i, res->params[0], arg.type_info, arg.source_loc);
+            }
+            if (m.is_coerce()) {
+                // Update type_info of the coerced literal argument
+                m_cast_type = res->params.front();
+                v.args[i - 1]->apply(*this);
             }
             // resolve arg if it's a type var and the signature has a known type in its place
             if (arg.type_info.is_generic() && !res->params.front().is_generic()) {
                 specialize_arg(arg.type_info, res->params.front(),
                         function().signature().type_args,  // current function, not the called one
                         [i, &arg](const TypeInfo& exp, const TypeInfo& got) {
-                            throw UnexpectedArgumentType(i+1, exp, got, arg.source_loc);
+                            throw UnexpectedArgumentType(i, exp, got, arg.source_loc);
                         });
             }
             // consume next param
@@ -1116,7 +1122,8 @@ private:
             const auto& prm = sig->params[i_prm];
 
             // check type of next param
-            if (prm != arg.type_info) {
+            const auto m = match_type(arg.type_info, prm);
+            if (!(m.is_exact() || m.is_generic() || (m.is_coerce() && arg.literal_value))) {
                 throw UnexpectedArgumentType(i_arg, prm,
                         arg.type_info, arg.source_loc);
             }

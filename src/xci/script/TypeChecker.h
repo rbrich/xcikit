@@ -32,6 +32,7 @@ public:
 
     bool is_exact() const { return m_exact >= 0 && (m_coerce + m_generic) == 0; }
     bool is_coerce() const { return m_coerce > 0; }
+    bool is_generic() const { return m_generic > 0; }
 
     explicit operator bool() const { return m_exact != -1; }
     auto operator<=>(const MatchScore&) const = default;
@@ -63,10 +64,35 @@ private:
     int8_t m_generic = 0;  // num parameters matched generically (T == T or T == Int or Num T == Int)
 };
 
+/// Match function parameters
+/// \param candidate    Candidate parameters (inferred types of the arguments)
+/// \param actual       Actual parameters (expected by signature)
 MatchScore match_params(const std::vector<TypeInfo>& candidate, const std::vector<TypeInfo>& actual);
+
+/// Match a single type
+/// \param candidate    Candidate type (inferred type)
+/// \param actual       Actual type (expected / specified type)
+/// \returns MatchScore: mismatch/generic/exact or combination in case of complex types
 MatchScore match_type(const TypeInfo& candidate, const TypeInfo& actual);
+
+/// Match tuple to tuple
+/// \param candidate    Candidate tuple type
+/// \param actual       Actual resolved tuple type for the value
+/// \returns Total match score of all fields, or mismatch
 MatchScore match_tuple(const TypeInfo& candidate, const TypeInfo& actual);
+
+/// Match incomplete Struct type from ast::StructInit to resolved Struct type.
+/// All keys and types from inferred are checked against resolved.
+/// Partial match is possible when inferred has less keys than resolved.
+/// \param candidate    Possibly incomplete Struct type as constructed from AST
+/// \param actual       Actual resolved type for the value
+/// \returns Total match score of all fields, or mismatch
 MatchScore match_struct(const TypeInfo& candidate, const TypeInfo& actual);
+
+/// Match tuple to resolved Struct type, i.e. initialize struct with tuple literal
+/// \param candidate    Tuple with same number of fields
+/// \param actual       Actual resolved struct type for the value
+/// \returns Total match score of all fields, or mismatch
 MatchScore match_tuple_to_struct(const TypeInfo& candidate, const TypeInfo& actual);
 
 
