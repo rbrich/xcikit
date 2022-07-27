@@ -14,7 +14,7 @@ namespace xci::script {
 
 /// Check and propagate type information
 
-void resolve_types(FunctionScope& scope, const ast::Block& block);
+void resolve_types(Scope& scope, const ast::Block& block);
 
 
 } // namespace xci::script

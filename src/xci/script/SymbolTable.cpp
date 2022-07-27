@@ -34,7 +34,7 @@ Symbol* SymbolPointer::operator->()
 }
 
 
-FunctionScope& SymbolPointer::get_scope(const FunctionScope& hier) const
+Scope& SymbolPointer::get_scope(const Scope& hier) const
 {
     auto& sym = m_symtab->get(m_symidx);
     assert(sym.type() == Symbol::Function);
@@ -52,7 +52,7 @@ FunctionScope& SymbolPointer::get_scope(const FunctionScope& hier) const
 }
 
 
-FunctionScope& SymbolPointer::get_generic_scope() const
+Scope& SymbolPointer::get_generic_scope() const
 {
     auto& sym = m_symtab->get(m_symidx);
     assert(sym.type() == Symbol::Function);
@@ -65,7 +65,7 @@ FunctionScope& SymbolPointer::get_generic_scope() const
 }
 
 
-Index SymbolPointer::get_scope_index(const FunctionScope& hier) const
+Index SymbolPointer::get_scope_index(const Scope& hier) const
 {
     auto& sym = m_symtab->get(m_symidx);
     assert(sym.type() == Symbol::Function);
@@ -95,7 +95,7 @@ Index SymbolPointer::get_generic_scope_index() const
 }
 
 
-Function& SymbolPointer::get_function(const FunctionScope& hier) const
+Function& SymbolPointer::get_function(const Scope& hier) const
 {
     return get_scope(hier).function();
 }

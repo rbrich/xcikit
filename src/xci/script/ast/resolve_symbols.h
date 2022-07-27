@@ -20,7 +20,7 @@ namespace xci::script {
 ///   (this allows references to all parent definitions, not just those
 ///   preceding the block syntactically)
 
-void resolve_symbols(FunctionScope& scope, const ast::Block& block);
+void resolve_symbols(Scope& scope, const ast::Block& block);
 
 
 } // namespace xci::script

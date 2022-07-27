@@ -1153,7 +1153,7 @@ std::ostream& operator<<(std::ostream& os, const SymbolTable& v)
 }
 
 
-std::ostream& operator<<(std::ostream& os, const FunctionScope& v)
+std::ostream& operator<<(std::ostream& os, const Scope& v)
 {
     os << "Function #" << v.function_index() << " (" << v.function().name() << ")";
     if (v.has_subscopes()) {

@@ -18,7 +18,7 @@ namespace xci::script {
 class Symbol;
 class SymbolTable;
 class Function;
-class FunctionScope;
+class Scope;
 class Class;
 class Module;
 class TypeInfo;
@@ -41,11 +41,11 @@ public:
     const Symbol* operator->() const;
     Symbol* operator->();
 
-    FunctionScope& get_scope(const FunctionScope& hier) const;
-    FunctionScope& get_generic_scope() const;
-    Index get_scope_index(const FunctionScope& hier) const;
+    Scope& get_scope(const Scope& hier) const;
+    Scope& get_generic_scope() const;
+    Index get_scope_index(const Scope& hier) const;
     Index get_generic_scope_index() const;
-    Function& get_function(const FunctionScope& hier) const;
+    Function& get_function(const Scope& hier) const;
 
     const TypeInfo& get_type() const;
 
@@ -175,9 +175,9 @@ public:
     Function* function() const { return m_function; }
 
     // scope for Function symbols
-    void set_scope(FunctionScope* scope) { m_scope = scope; }
-    FunctionScope* scope() { return m_scope; }
-    const FunctionScope* scope() const { return m_scope; }
+    void set_scope(Scope* scope) { m_scope = scope; }
+    Scope* scope() { return m_scope; }
+    const Scope* scope() const { return m_scope; }
 
     // related class
     void set_class(Class* cls) { m_class = cls; }
@@ -254,7 +254,7 @@ public:
 private:
     std::string m_name;
     SymbolTable* m_parent = nullptr;
-    FunctionScope* m_scope = nullptr;
+    Scope* m_scope = nullptr;
     Function* m_function = nullptr;
     Class* m_class = nullptr;
     Module* m_module = nullptr;

@@ -81,7 +81,7 @@ std::ostream& operator<<(std::ostream& os, const SymbolPointer& v);
 std::ostream& operator<<(std::ostream& os, const SymbolTable& v);
 
 // Scopes
-std::ostream& operator<<(std::ostream& os, const FunctionScope& v);
+std::ostream& operator<<(std::ostream& os, const Scope& v);
 
 } // namespace xci::script
 

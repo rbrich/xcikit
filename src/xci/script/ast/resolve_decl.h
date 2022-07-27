@@ -14,7 +14,7 @@ namespace xci::script {
 
 /// Resolve declared types
 
-void resolve_decl(FunctionScope& scope, const ast::Block& block);
+void resolve_decl(Scope& scope, const ast::Block& block);
 
 
 } // namespace xci::script

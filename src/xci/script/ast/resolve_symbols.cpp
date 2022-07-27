@@ -24,7 +24,7 @@ using ranges::views::enumerate;
 
 class ResolveSymbolsVisitor final: public ast::Visitor {
 public:
-    explicit ResolveSymbolsVisitor(FunctionScope& scope) : m_scope(scope) {}
+    explicit ResolveSymbolsVisitor(Scope& scope) : m_scope(scope) {}
 
     void visit(ast::Definition& dfn) override {
         // check for name collision
@@ -91,7 +91,7 @@ public:
 
         // add child symbol table and scope for the class
         SymbolTable& cls_symtab = symtab().add_child(v.class_name.name);
-        auto scope_idx = module().add_scope(FunctionScope{module(), no_index, &m_scope});
+        auto scope_idx = module().add_scope(Scope{module(), no_index, &m_scope});
         m_scope.add_subscope(scope_idx);
         cls_symtab.set_scope(&module().get_scope(scope_idx));
         for (auto&& [i, type_var] : v.type_vars | enumerate)
@@ -125,7 +125,7 @@ public:
 
         // add child symbol table and scope for the instance
         SymbolTable& inst_symtab = symtab().add_child(v.class_name.name);
-        auto scope_idx = module().add_scope(FunctionScope{module(), no_index, &m_scope});
+        auto scope_idx = module().add_scope(Scope{module(), no_index, &m_scope});
         m_scope.add_subscope(scope_idx);
         inst_symtab.set_scope(&module().get_scope(scope_idx));
         m_symtab = &inst_symtab;
@@ -371,7 +371,7 @@ private:
     std::pair<SymbolPointer, Index> create_function(const std::string& name) {
         SymbolTable& fn_symtab = symtab().add_child(name);
         auto fn_idx = module().add_function(Function{module(), fn_symtab}).index;
-        auto scope_idx = module().add_scope(FunctionScope{module(), fn_idx, symtab().scope()});
+        auto scope_idx = module().add_scope(Scope{module(), fn_idx, symtab().scope()});
         auto subscope_i = symtab().scope()->add_subscope(scope_idx);
         assert(symtab().module() == &module());
         auto symptr = symtab().add({name, Symbol::Function, subscope_i});
@@ -495,14 +495,14 @@ private:
     }
 
 private:
-    FunctionScope& m_scope;
+    Scope& m_scope;
     SymbolTable* m_symtab = &function().symtab();
     ast::Class* m_class = nullptr;
     Instance* m_instance = nullptr;
 };
 
 
-void resolve_symbols(FunctionScope& scope, const ast::Block& block)
+void resolve_symbols(Scope& scope, const ast::Block& block)
 {
     ResolveSymbolsVisitor visitor {scope};
     for (const auto& stmt : block.statements) {

@@ -39,7 +39,7 @@ SymbolPointer Module::add_native_function(
     fn.signature().return_type = std::move(retval);
     fn.set_native(native);
     auto fn_idx = add_function(std::move(fn)).index;
-    auto scope_idx = add_scope(FunctionScope{*this, fn_idx, symtab().scope()});
+    auto scope_idx = add_scope(Scope{*this, fn_idx, symtab().scope()});
     auto subscope_i = symtab().scope()->add_subscope(scope_idx);
     return symtab().add({std::move(name), Symbol::Function, subscope_i});
 }
@@ -78,7 +78,7 @@ auto Module::add_function(Function&& fn) -> WeakFunctionId
 }
 
 
-auto Module::add_scope(FunctionScope&& scope) -> ScopeIdx
+auto Module::add_scope(Scope&& scope) -> ScopeIdx
 {
     assert(scope.parent() != nullptr);  // only main scope has no parent
     auto scope_idx = m_scopes.add(std::move(scope)).index;
@@ -303,7 +303,7 @@ void Module::init()
     auto fn_idx = add_function(Function{*this, m_symtab}).index;
     assert(fn_idx == 0);
     // create root scope
-    auto scope_idx = m_scopes.add(FunctionScope{*this, fn_idx, nullptr}).index;
+    auto scope_idx = m_scopes.add(Scope{*this, fn_idx, nullptr}).index;
     assert(scope_idx == 0);
     m_symtab.set_scope(&m_scopes[scope_idx]);
 }

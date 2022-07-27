@@ -72,7 +72,7 @@ class ResolveTypesVisitor final: public ast::VisitorExclTypes {
 public:
     using VisitorExclTypes::visit;
 
-    explicit ResolveTypesVisitor(FunctionScope& scope) : m_scope(scope) {}
+    explicit ResolveTypesVisitor(Scope& scope) : m_scope(scope) {}
 
     void visit(ast::Definition& dfn) override {
         // Expression might use the specified type from `dfn.symbol().get_function(m_scope).signature()`
@@ -448,7 +448,7 @@ public:
                         SymbolTable& fn_symtab = function().symtab().add_child("?/partial");
                         Function fn {module(), fn_symtab};
                         auto fn_idx = module().add_function(std::move(fn)).index;
-                        v.partial_index = module().add_scope(FunctionScope{module(), fn_idx, &m_scope});
+                        v.partial_index = module().add_scope(Scope{module(), fn_idx, &m_scope});
                         m_scope.add_subscope(v.partial_index);
                     }
                     auto& fn = module().get_scope(v.partial_index).function();
@@ -748,7 +748,7 @@ private:
     // * use the deduced return type to resolve type variables in generic return type
     // Modifies `fn` in place - it should be already copied.
     // Throw when the signature doesn't match the call args or deduced return type.
-    void specialize_to_call_args(FunctionScope& scope, const ast::Block& body, const SourceLocation& loc) const
+    void specialize_to_call_args(Scope& scope, const ast::Block& body, const SourceLocation& loc) const
     {
         auto& signature = scope.function().signature();
         for (size_t i = 0; i < std::min(signature.params.size(), m_call_args.size()); i++) {
@@ -782,7 +782,7 @@ private:
         Index scope_index;
     };
 
-    Index clone_function(const FunctionScope& scope)
+    Index clone_function(const Scope& scope)
     {
         const auto& fn = scope.function();
         auto clone_fn_idx = module().add_function(Function(module(), fn.symtab())).index;
@@ -796,9 +796,9 @@ private:
         return clone_fn_idx;
     }
 
-    Index clone_scope(FunctionScope& scope, Index fn_idx)
+    Index clone_scope(Scope& scope, Index fn_idx)
     {
-        auto fscope_idx = module().add_scope(FunctionScope{module(), fn_idx, scope.parent()});
+        auto fscope_idx = module().add_scope(Scope{module(), fn_idx, scope.parent()});
         auto& fscope = module().get_scope(fscope_idx);
         fscope.copy_subscopes(scope);
         return fscope_idx;
@@ -1147,7 +1147,7 @@ private:
         return res;
     }
 
-    FunctionScope& m_scope;
+    Scope& m_scope;
 
     TypeInfo m_type_info;   // resolved ast::Type
     TypeInfo m_value_type;  // inferred type of the value
@@ -1160,7 +1160,7 @@ private:
 };
 
 
-void resolve_types(FunctionScope& scope, const ast::Block& block)
+void resolve_types(Scope& scope, const ast::Block& block)
 {
     ResolveTypesVisitor visitor {scope};
     for (const auto& stmt : block.statements) {

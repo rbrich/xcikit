@@ -29,7 +29,7 @@ class ResolveDeclVisitor final: public ast::Visitor {
     using CallArgs = std::vector<CallArg>;
 
 public:
-    explicit ResolveDeclVisitor(FunctionScope& scope) : m_scope(scope) {}
+    explicit ResolveDeclVisitor(Scope& scope) : m_scope(scope) {}
 
     void visit(ast::Definition& dfn) override {
         // Evaluate specified type
@@ -411,7 +411,7 @@ private:
         }
     }
 
-    FunctionScope& m_scope;
+    Scope& m_scope;
 
     TypeInfo m_type_info;   // resolved ast::Type
 
@@ -423,7 +423,7 @@ private:
 };
 
 
-void resolve_decl(FunctionScope& scope, const ast::Block& block)
+void resolve_decl(Scope& scope, const ast::Block& block)
 {
     ResolveDeclVisitor visitor {scope};
     for (const auto& stmt : block.statements) {

@@ -241,13 +241,14 @@ private:
 };
 
 
-class FunctionScope {
+class Scope
+{
 public:
-    FunctionScope() = default;
-    explicit FunctionScope(Module& module, Index function_idx, FunctionScope* parent_scope);
+    Scope() = default;
+    explicit Scope(Module& module, Index function_idx, Scope* parent_scope);
 
     Module& module() const { return *m_module; }
-    FunctionScope* parent() const { return m_parent_scope; }
+    Scope* parent() const { return m_parent_scope; }
 
     bool has_function() const { return m_function != no_index; }
     Function& function() const;
@@ -256,18 +257,18 @@ public:
 
     // Nested functions
     Index add_subscope(Index scope_idx);
-    void copy_subscopes(const FunctionScope& from);
+    void copy_subscopes(const Scope& from);
     Index get_subscope_index(Index idx) const { return m_subscopes[idx]; }
     void set_subscope_index(Index idx, Index scope_idx) { m_subscopes[idx] = scope_idx; }
     Index get_index_of_subscope(Index mod_scope_idx) const;
-    FunctionScope& get_subscope(Index idx) const;
+    Scope& get_subscope(Index idx) const;
     Size num_subscopes() const { return Size(m_subscopes.size()); }
     bool has_subscopes() const { return !m_subscopes.empty(); }
     const std::vector<Index>& subscopes() const { return m_subscopes; }
 
     // SymbolTable mapping (a SymbolTable may map to multiple scope hierarchies)
     // Find a scope (this or parent of this) matching the `symtab`
-    const FunctionScope* find_parent_scope(const SymbolTable* symtab) const;
+    const Scope* find_parent_scope(const SymbolTable* symtab) const;
 
     // Non-local values needed by nested functions, closures
     // The nonlocal may reference a parent Nonlocal symbol - in that case, the value must be captured
@@ -285,7 +286,7 @@ public:
 private:
     Module* m_module = nullptr;
     Index m_function = no_index;  // function index in module
-    FunctionScope* m_parent_scope = nullptr;  // matches `m_symtab.parent()`, but can be a specialized function, while symtab is only lexical
+    Scope* m_parent_scope = nullptr;  // matches `m_symtab.parent()`, but can be a specialized function, while symtab is only lexical
     std::vector<Index> m_subscopes;  // nested scopes (Index into module scopes)
     std::vector<Nonlocal> m_nonlocals;
 };

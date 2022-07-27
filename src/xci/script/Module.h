@@ -28,7 +28,7 @@ class Module {
 public:
     using WeakFunctionId = IndexedMap<Function>::WeakIndex;
     using FunctionIdx = IndexedMap<Function>::Index;
-    using ScopeIdx = IndexedMap<FunctionScope>::Index;
+    using ScopeIdx = IndexedMap<Scope>::Index;
     using WeakClassId = IndexedMap<Class>::WeakIndex;
     using ClassIdx = IndexedMap<Class>::Index;
     using WeakInstanceId = IndexedMap<Instance>::WeakIndex;
@@ -82,10 +82,10 @@ public:
     Size num_functions() const { return Size(m_functions.size()); }
 
     // Scopes
-    ScopeIdx add_scope(FunctionScope&& fn);
-    const FunctionScope& get_scope(ScopeIdx id) const { return m_scopes[id]; }
-    FunctionScope& get_scope(ScopeIdx id) { return m_scopes[id]; }
-    FunctionScope& get_main_scope() { return m_scopes[0]; }
+    ScopeIdx add_scope(Scope&& scope);
+    const Scope& get_scope(ScopeIdx id) const { return m_scopes[id]; }
+    Scope& get_scope(ScopeIdx id) { return m_scopes[id]; }
+    Scope& get_main_scope() { return m_scopes[0]; }
     Size num_scopes() const { return Size(m_scopes.size()); }
 
     // Static values
@@ -147,7 +147,7 @@ private:
     ModuleManager* m_module_manager = nullptr;
     std::vector<std::shared_ptr<Module>> m_modules;
     IndexedMap<Function> m_functions;
-    IndexedMap<FunctionScope> m_scopes;
+    IndexedMap<Scope> m_scopes;
     IndexedMap<Class> m_classes;
     IndexedMap<Instance> m_instances;
     std::vector<TypeInfo> m_types;

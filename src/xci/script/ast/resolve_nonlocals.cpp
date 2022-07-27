@@ -11,10 +11,10 @@
 namespace xci::script {
 
 
-static void resolve_nonlocals_for_scope(FunctionScope& scope, const ast::Block& block);
+static void resolve_nonlocals_for_scope(Scope& scope, const ast::Block& block);
 
 
-void resolve_nonlocals_in_symtab(FunctionScope& scope)
+void resolve_nonlocals_in_symtab(Scope& scope)
 {
     auto& fn = scope.function();
     if (fn.signature().has_generic_nonlocals()) {
@@ -79,7 +79,7 @@ class ResolveNonlocalsVisitor final: public ast::VisitorExclTypes {
 public:
     using VisitorExclTypes::visit;
 
-    explicit ResolveNonlocalsVisitor(FunctionScope& scope)
+    explicit ResolveNonlocalsVisitor(Scope& scope)
             : m_scope(scope) {}
 
     void visit(ast::Definition& dfn) override {
@@ -229,12 +229,12 @@ private:
     Module& module() { return m_scope.module(); }
     Function& function() const { return m_scope.function(); }
 
-    void process_subroutine(FunctionScope& scope, ast::Expression& expression) {
+    void process_subroutine(Scope& scope, ast::Expression& expression) {
         ResolveNonlocalsVisitor visitor(scope);
         expression.apply(visitor);
     }
 
-    SymbolPointer add_nonlocal_symbol(FunctionScope& scope, SymbolPointer symptr,
+    SymbolPointer add_nonlocal_symbol(Scope& scope, SymbolPointer symptr,
                                       const std::string& name, const TypeInfo& ti,
                                       Index fn_scope_idx = no_index)
     {
@@ -264,11 +264,11 @@ private:
     }
 
 private:
-    FunctionScope& m_scope;
+    Scope& m_scope;
 };
 
 
-static void resolve_nonlocals_for_scope(FunctionScope& scope, const ast::Block& block)
+static void resolve_nonlocals_for_scope(Scope& scope, const ast::Block& block)
 {
     ResolveNonlocalsVisitor visitor {scope};
     for (const auto& stmt : block.statements) {
@@ -278,14 +278,14 @@ static void resolve_nonlocals_for_scope(FunctionScope& scope, const ast::Block& 
 }
 
 
-void resolve_nonlocals(FunctionScope& main, const ast::Block& block)
+void resolve_nonlocals(Scope& main, const ast::Block& block)
 {
     resolve_nonlocals_for_scope(main, block);
 
     // Resolve other scopes (not referenced directly via main scope or AST)
     Module& module = main.module();
     for (unsigned i = 0; i != module.num_scopes(); ++i) {
-        FunctionScope& scope = module.get_scope(i);
+        Scope& scope = module.get_scope(i);
         if (&scope == &main || !scope.has_function())
             continue;
         Function& fn = scope.function();

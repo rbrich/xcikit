@@ -30,7 +30,7 @@ class CompilerVisitor: public ast::VisitorExclTypes {
 public:
     using VisitorExclTypes::visit;
 
-    explicit CompilerVisitor(Compiler& compiler, FunctionScope& scope)
+    explicit CompilerVisitor(Compiler& compiler, Scope& scope)
         : m_compiler(compiler), m_scope(scope) {}
 
     void visit(ast::Definition& dfn) override {
@@ -287,7 +287,7 @@ public:
             }
             case Symbol::Method: {
                 assert(v.index != no_index);
-                FunctionScope& scope = v.module->get_scope(v.index);
+                Scope& scope = v.module->get_scope(v.index);
                 // this module
                 if (v.module == &module()) {
                     // specialization might not be compiled yet - compile it now
@@ -317,7 +317,7 @@ public:
             }
             case Symbol::Function: {
                 assert(v.index != no_index);
-                FunctionScope& scope = v.module->get_scope(v.index);
+                Scope& scope = v.module->get_scope(v.index);
                 // this module
                 if (v.module == &module()) {
                     // specialization might not be compiled yet - compile it now
@@ -515,7 +515,7 @@ public:
 
     void visit(ast::Function& v) override {
         // compile body
-        FunctionScope& scope = module().get_scope(v.scope_index);
+        Scope& scope = module().get_scope(v.scope_index);
         Function& func = scope.function();
         if (func.has_any_generic()) {
             if (func.is_generic()) {
@@ -597,7 +597,7 @@ private:
     Function& function() { return m_scope.function(); }
     Code& code() { return m_code == nullptr ? function().code() : *m_code; }
 
-    void make_closure(const FunctionScope& scope) {
+    void make_closure(const Scope& scope) {
         if (!scope.has_nonlocals())
             return;
         const auto& func = scope.function();
@@ -664,14 +664,14 @@ private:
         }
     }
 
-    void compile_subroutine(FunctionScope& scope, ast::Expression& expression) {
+    void compile_subroutine(Scope& scope, ast::Expression& expression) {
         CompilerVisitor visitor(m_compiler, scope);
         expression.apply(visitor);
     }
 
 private:
     Compiler& m_compiler;
-    FunctionScope& m_scope;
+    Scope& m_scope;
     Code* m_code = nullptr;
 
     bool m_callable = true;
@@ -682,7 +682,7 @@ private:
 };
 
 
-bool Compiler::compile(FunctionScope& scope, ast::Module& ast)
+bool Compiler::compile(Scope& scope, ast::Module& ast)
 {
     auto& func = scope.function();
     func.set_code();
@@ -735,7 +735,7 @@ bool Compiler::compile(FunctionScope& scope, ast::Module& ast)
 }
 
 
-void Compiler::compile_function(FunctionScope& scope, const ast::Block& body)
+void Compiler::compile_function(Scope& scope, const ast::Block& body)
 {
     // Compile AST into bytecode
     CompilerVisitor visitor(*this, scope);
@@ -745,11 +745,11 @@ void Compiler::compile_function(FunctionScope& scope, const ast::Block& body)
 }
 
 
-void Compiler::compile_all_functions(FunctionScope& main)
+void Compiler::compile_all_functions(Scope& main)
 {
     Module& module = main.module();
     for (unsigned i = module.num_scopes(); i != 0; --i) {
-        FunctionScope& scope = module.get_scope(i - 1);
+        Scope& scope = module.get_scope(i - 1);
         if (&scope == &main || !scope.has_function())
             continue;
         Function& fn = scope.function();

@@ -144,19 +144,19 @@ bool Function::NativeBody::operator==(const Function::NativeBody& rhs) const
 }
 
 
-FunctionScope::FunctionScope(Module& module, Index function_idx, FunctionScope* parent_scope)
+Scope::Scope(Module& module, Index function_idx, Scope* parent_scope)
     : m_module(&module), m_function(function_idx), m_parent_scope(parent_scope)
 {
 }
 
 
-Function& FunctionScope::function() const
+Function& Scope::function() const
 {
     return m_module->get_function(m_function);
 }
 
 
-Index FunctionScope::add_subscope(Index scope_idx)
+Index Scope::add_subscope(Index scope_idx)
 {
     auto it = std::find(m_subscopes.begin(), m_subscopes.end(), scope_idx);
     if (it != m_subscopes.end()) {
@@ -169,11 +169,11 @@ Index FunctionScope::add_subscope(Index scope_idx)
 }
 
 
-void FunctionScope::copy_subscopes(const FunctionScope& from)
+void Scope::copy_subscopes(const Scope& from)
 {
     for (Index scope_idx : from.m_subscopes) {
         auto& orig = module().get_scope(scope_idx);
-        FunctionScope sub(module(), orig.function_index(), this);
+        Scope sub(module(), orig.function_index(), this);
         auto sub_idx = module().add_scope(std::move(sub));
         module().get_scope(sub_idx).copy_subscopes(orig);
         add_subscope(sub_idx);
@@ -181,22 +181,22 @@ void FunctionScope::copy_subscopes(const FunctionScope& from)
 }
 
 
-Index FunctionScope::get_index_of_subscope(Index mod_scope_idx) const
+Index Scope::get_index_of_subscope(Index mod_scope_idx) const
 {
     auto it = std::find(m_subscopes.begin(), m_subscopes.end(), mod_scope_idx);
     return Index(it - m_subscopes.begin());
 }
 
 
-FunctionScope& FunctionScope::get_subscope(Index idx) const
+Scope& Scope::get_subscope(Index idx) const
 {
     return module().get_scope(m_subscopes[idx]);
 }
 
 
-const FunctionScope* FunctionScope::find_parent_scope(const SymbolTable* symtab) const
+const Scope* Scope::find_parent_scope(const SymbolTable* symtab) const
 {
-    const FunctionScope* scope = this;
+    const Scope* scope = this;
     while (scope->has_function() && &scope->function().symtab() != symtab) {
         scope = scope->parent();
         if (scope == nullptr)
@@ -206,13 +206,13 @@ const FunctionScope* FunctionScope::find_parent_scope(const SymbolTable* symtab)
 }
 
 
-void FunctionScope::add_nonlocal(Index index)
+void Scope::add_nonlocal(Index index)
 {
     m_nonlocals.emplace_back(Nonlocal{index});
 }
 
 
-void FunctionScope::add_nonlocal(Index index, TypeInfo ti, Index fn_scope_idx)
+void Scope::add_nonlocal(Index index, TypeInfo ti, Index fn_scope_idx)
 {
     auto& sig = function().signature();
     assert(m_nonlocals.size() <= sig.nonlocals.size());
@@ -237,7 +237,7 @@ void FunctionScope::add_nonlocal(Index index, TypeInfo ti, Index fn_scope_idx)
 }
 
 
-size_t FunctionScope::nonlocal_raw_offset(Index index, const TypeInfo& ti) const
+size_t Scope::nonlocal_raw_offset(Index index, const TypeInfo& ti) const
 {
     size_t ofs = 0;
     auto& sig = function().signature();
