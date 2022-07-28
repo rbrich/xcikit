@@ -23,6 +23,9 @@ jobs:
     parameters:
       image:
         type: executor
+      label:
+        type: string
+        default: ""
       jobs:
         type: integer
         default: 4
@@ -32,6 +35,11 @@ jobs:
     executor: << parameters.image >>
     steps:
       - checkout
+      - restore_cache:
+          keys:
+            - ccache1-<< parameters.label >>-{{ .Branch }}-{{ .Revision }}
+            - ccache1-<< parameters.label >>-{{ .Branch }}-
+            - ccache1-<< parameters.label >>-
       - run:
           name: Deps
           command: ./build.sh deps << parameters.build-args >>
@@ -55,6 +63,10 @@ jobs:
             rm -rf artifacts/emscripten-*
       - store_artifacts:
           path: artifacts
+      - save_cache:
+          key: ccache1-<< parameters.label >>-{{ .Branch }}-{{ .Revision }}
+          paths:
+            - ~/.cache/ccache
   conan_package:
     parameters:
       image:
@@ -82,9 +94,11 @@ workflows:
       - build:
           name: Debian 11 - GCC 10
           image: debian
+          label: debian-gcc10
       - build:
           name: Ubuntu 22.04 - Clang-Tidy 14
           image: ubuntu
+          label: ubuntu-tidy14
           build-args: "--tidy -DFAIL_ON_WARNINGS=1"
       - build:
           name: Emscripten
