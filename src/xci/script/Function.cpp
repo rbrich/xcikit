@@ -229,7 +229,7 @@ void Scope::add_nonlocal(Index index, TypeInfo ti, Index fn_scope_idx)
     }
     auto new_i = m_nonlocals.size() - 1;
     if (new_i < sig.nonlocals.size()) {
-        //assert(sig.nonlocals[new_i] == ti);  // orig can be of type Unknown, but not different type
+        assert(sig.nonlocals[new_i] == ti);  // orig can be of type Unknown, but not different type
         sig.nonlocals[new_i] = ti;
         return;
     }

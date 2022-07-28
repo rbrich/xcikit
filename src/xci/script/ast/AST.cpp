@@ -58,6 +58,7 @@ std::unique_ptr<ast::Expression> Function::make_copy() const
     r->body = copy(body);
     r->symbol = symbol;
     r->scope_index = scope_index;
+    r->call_args = call_args;
     return r;
 }
 
@@ -202,6 +203,7 @@ void Call::copy_to(Call& r) const
     if (callable)
         r.callable = callable->make_copy();
     r.args = copy_ptr_vector(args);
+    r.callable_type = callable_type;
     r.wrapped_execs = wrapped_execs;
     r.partial_args = partial_args;
     r.partial_index = partial_index;
@@ -287,6 +289,7 @@ std::unique_ptr<ast::Expression> Tuple::make_copy() const
     auto r = std::make_unique<Tuple>();
     Expression::copy_to(*r);
     r->items = copy_ptr_vector(items);
+    r->type_info = type_info;
     return r;
 }
 

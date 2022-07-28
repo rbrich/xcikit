@@ -459,7 +459,7 @@ public:
                         fn.add_partial(TypeInfo{arg.type_info});
                     }
                     assert(!fn.has_any_generic());
-                    //fn.set_compile();
+                    fn.set_compile();
                 }
                 m_value_type = TypeInfo{new_signature};
             }
