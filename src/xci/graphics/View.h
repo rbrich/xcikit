@@ -10,6 +10,8 @@
 #include <xci/core/geometry.h>
 #include <xci/compat/macros.h>
 
+#include <fmt/ostream.h>
+
 #include <memory>
 #include <vector>
 #include <array>
@@ -53,7 +55,7 @@ struct Units {
     template <typename U>
     U as() const { return static_cast<U>(value); }
 
-    // Value of Units can be explicitly casted to T
+    // Value of Units can be explicitly cast to T
     using numeric_type = T;
     constexpr explicit operator T() const { return value; }
 
@@ -426,5 +428,11 @@ private:
 
 
 } // namespace xci::graphics
+
+template <> struct fmt::formatter<xci::graphics::FramebufferPixels> : ostream_formatter {};
+template <> struct fmt::formatter<xci::graphics::ScreenPixels> : ostream_formatter {};
+template <> struct fmt::formatter<xci::graphics::ViewportUnits> : ostream_formatter {};
+template <typename T> struct fmt::formatter<xci::core::Vec2<T>> : ostream_formatter {};
+template <typename T> struct fmt::formatter<xci::core::Rect<T>> : ostream_formatter {};
 
 #endif // XCI_GRAPHICS_VIEW_H

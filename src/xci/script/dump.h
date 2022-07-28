@@ -85,4 +85,7 @@ std::ostream& operator<<(std::ostream& os, const Scope& v);
 
 } // namespace xci::script
 
+template <> struct fmt::formatter<xci::script::TypeInfo> : ostream_formatter {};
+
+
 #endif // include guard

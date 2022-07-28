@@ -14,13 +14,12 @@
 using namespace xci::core;
 using namespace xci::core::log;
 
-using std::ostream;
-
-
 class ArbitraryObject {};
-ostream& operator<<(ostream& stream, const ArbitraryObject&) {
+std::ostream& operator<<(std::ostream& stream, const ArbitraryObject&) {
     return stream << "I am arbitrary!";
 }
+
+template <> struct fmt::formatter<ArbitraryObject> : ostream_formatter {};
 
 
 void thread_run(const std::string& thread_name)

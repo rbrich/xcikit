@@ -638,4 +638,7 @@ std::ostream& operator<<(std::ostream& os, const Value& o);
 
 } // namespace xci::script
 
+template <> struct fmt::formatter<xci::script::TypedValue> : ostream_formatter {};
+template <> struct fmt::formatter<xci::script::Value> : ostream_formatter {};
+
 #endif // include guard

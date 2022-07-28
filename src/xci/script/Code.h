@@ -7,6 +7,8 @@
 #ifndef XCI_SCRIPT_CODE_H
 #define XCI_SCRIPT_CODE_H
 
+#include <fmt/ostream.h>
+
 #include <vector>
 #include <ostream>
 #include <cstdint>
@@ -193,5 +195,7 @@ private:
 
 
 } // namespace xci::script
+
+template <> struct fmt::formatter<xci::script::Opcode> : ostream_formatter {};
 
 #endif // include guard
