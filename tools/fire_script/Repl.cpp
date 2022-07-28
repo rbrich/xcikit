@@ -46,13 +46,8 @@ bool Repl::evaluate(const std::string& module_name, std::string module_source, E
         // create new module for the input
         auto module = prepare_module(module_name);
 
-        // add main function to the module
-        auto fn_idx = module->add_function(Function{*module, module->symtab()}).index;
-        assert(fn_idx == 0);
-        auto& fn = module->get_function(fn_idx);
-
         // compile
-        bool is_compiled = compiler.compile(fn, ast);
+        bool is_compiled = compiler.compile(module->get_main_scope(), ast);
         if (!is_compiled) {
             // We're only processing the AST, without actual compilation
             mode = EvalMode::Preprocess;
@@ -99,7 +94,16 @@ bool Repl::evaluate_module(Module& module, EvalMode mode)
 
     // print symbol table
     if (m_opts.print_symtab) {
-        t.stream() << "Symbol table:" << endl << module.symtab() << endl;
+        t.stream() << "Symbol table:\n" << module.symtab() << '\n';
+    }
+
+    // print scopes
+    if (m_opts.print_symtab) {
+        t.stream() << "Scope trees:\n";
+        for (unsigned i = 0; i != module.num_scopes(); ++i) {
+            t.stream() << '[' << i << "]\t" << module.get_scope(i) << '\n';
+        }
+        t.stream() << '\n';
     }
 
     // print compiled module content
@@ -119,8 +123,7 @@ bool Repl::evaluate_module(Module& module, EvalMode mode)
     tracer.setup(m_opts.print_bytecode, m_opts.trace_bytecode);
 
     try {
-        constexpr unsigned int main_fn_idx = 0;
-        auto& main_fn = module.get_function(main_fn_idx);
+        auto& main_fn = module.get_main_function();
         machine.call(main_fn, [&](TypedValue&& invoked) {
             if (!invoked.is_void()) {
                 t.sanitize_newline();
@@ -141,7 +144,7 @@ bool Repl::evaluate_module(Module& module, EvalMode mode)
             }
             // add symbol for main function, so it will be visible by following input,
             // which imports this module
-            module.symtab().add({module_name, Symbol::Function, main_fn_idx});
+            module.symtab().add({module_name, Symbol::Function, 0});
         } else {
             // single input mode
             assert(mode == EvalMode::SingleInput);

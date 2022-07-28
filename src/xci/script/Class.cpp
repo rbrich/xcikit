@@ -20,16 +20,16 @@ Class::Class(SymbolTable& symtab)
 
 
 Class::Class(Class&& rhs) noexcept
-        : m_symtab(rhs.m_symtab), m_functions(std::move(rhs.m_functions))
+        : m_symtab(rhs.m_symtab), m_scopes(std::move(rhs.m_scopes))
 {
     m_symtab.set_class(this);
 }
 
 
-Index Class::get_function_index(Index fn_idx) const
+Index Class::get_index_of_function(Index mod_scope_idx) const
 {
-    auto it = std::find(m_functions.begin(), m_functions.end(), fn_idx);
-    return Index(it - m_functions.begin());
+    auto it = std::find(m_scopes.begin(), m_scopes.end(), mod_scope_idx);
+    return Index(it - m_scopes.begin());
 }
 
 
@@ -46,10 +46,10 @@ bool Instance::is_generic() const
 }
 
 
-void Instance::set_function(Index cls_fn_idx, Index mod_fn_idx, SymbolPointer symptr)
+void Instance::set_function(Index cls_fn_idx, Index mod_scope_idx, SymbolPointer symptr)
 {
-    m_functions.resize(m_class.num_functions());
-    m_functions[cls_fn_idx] = FunctionInfo{mod_fn_idx, symptr};
+    m_functions.resize(m_class.num_function_scopes());
+    m_functions[cls_fn_idx] = FunctionInfo{mod_scope_idx, symptr};
 }
 
 

@@ -22,9 +22,9 @@ using std::make_unique;
 using ranges::views::enumerate;
 
 
-class SymbolResolverVisitor final: public ast::Visitor {
+class ResolveSymbolsVisitor final: public ast::Visitor {
 public:
-    explicit SymbolResolverVisitor(Function& func) : m_function(func) {}
+    explicit ResolveSymbolsVisitor(Scope& scope) : m_scope(scope) {}
 
     void visit(ast::Definition& dfn) override {
         // check for name collision
@@ -36,16 +36,12 @@ public:
         // * must be a plain function (not method)
         // * must have explicitly specified type
         if (!symptr
-        || (!m_class && !m_instance && dfn.variable.type && symptr->is_defined() && symptr->type() == Symbol::Function))
+        || (!m_class && !m_instance && dfn.variable.type && symptr->is_defined()
+                && symptr->type() == Symbol::Function)
+        || (symptr->type() == Symbol::StructItem))
         {
-            // not found or undefined -> add new function, symbol
-            auto new_symptr = create_function(name);
-
-            // Overloaded: function's next = the preexisting function
-            if (symptr)
-                new_symptr->set_next(symptr);
-
-            symptr = new_symptr;
+            // Either not found, or overloaded -> add new function, symbol
+            symptr = create_function(name).first;
         } else {
             // Allow redefinition only if we're defining plain function, not a method
             if (symptr->is_defined()
@@ -93,14 +89,16 @@ public:
         if (symtab().find_by_name(v.class_name.name))
             throw RedefinedName(v.class_name.name, v.class_name.source_loc);
 
-        // add child symbol table for the class
+        // add child symbol table and scope for the class
         SymbolTable& cls_symtab = symtab().add_child(v.class_name.name);
+        auto scope_idx = module().add_scope(Scope{module(), no_index, &m_scope});
+        m_scope.add_subscope(scope_idx);
+        cls_symtab.set_scope(&module().get_scope(scope_idx));
         for (auto&& [i, type_var] : v.type_vars | enumerate)
             cls_symtab.add({type_var.name, Symbol::TypeVar, Index(i + 1)});
 
         // add new class to the module
-        Class cls {cls_symtab};
-        v.index = module().add_class(std::move(cls)).index;
+        v.index = module().add_class(Class{cls_symtab}).index;
         v.symtab = &cls_symtab;
 
         m_class = &v;
@@ -122,15 +120,14 @@ public:
         if (!sym_class)
             throw UndefinedTypeName(v.class_name.name, v.class_name.source_loc);
 
-        // find next instance of the class (if any)
-        auto next = resolve_symbol_of_type(v.class_name.name, Symbol::Instance);
-
         // create symbol for the instance
         v.class_name.symbol = symtab().add({sym_class, Symbol::Instance});
-        v.class_name.symbol->set_next(next);
 
-        // add child symbol table for the instance
+        // add child symbol table and scope for the instance
         SymbolTable& inst_symtab = symtab().add_child(v.class_name.name);
+        auto scope_idx = module().add_scope(Scope{module(), no_index, &m_scope});
+        m_scope.add_subscope(scope_idx);
+        inst_symtab.set_scope(&module().get_scope(scope_idx));
         m_symtab = &inst_symtab;
 
         // generic instance - add symbols for type params
@@ -223,7 +220,14 @@ public:
             // if the reference points to a class function, find the nearest
             // instance of the class
             const auto& class_name = symptr.get_class().name();
-            v.chain = resolve_symbol_of_type(class_name, Symbol::Instance);
+            v.sym_list = find_all_symbols_of_type(class_name, Symbol::Instance);
+        }
+        if (symptr->type() == Symbol::Function || symptr->type() == Symbol::StructItem) {
+            // find all visible function overloads (in the nearest scope)
+            v.sym_list = find_function_overloads(v.identifier.name);
+            // find all StructItem symbols, in all scopes
+            auto struct_syms = find_all_symbols_of_type(v.identifier.name, Symbol::StructItem);
+            v.sym_list.insert(v.sym_list.end(), struct_syms.begin(), struct_syms.end());
         }
     }
 
@@ -262,17 +266,22 @@ public:
     void visit(ast::Function& v) override {
         if (v.definition != nullptr) {
             // use Definition's symtab and function
-            v.index = v.definition->symbol()->index();
+            v.symbol = v.definition->symbol();
+            v.scope_index = v.symbol.get_scope_index(m_scope);
+            //v.scope_index = symtab().scope()->get_subscope_index(v.symbol->index());
         } else {
             // add new symbol table for the function
-            std::string name = "<lambda>";
+            auto num = symtab().count(Symbol::Function);
+            std::string name;
             if (v.type.params.empty())
-                name = "<block>";
-            SymbolTable& fn_symtab = symtab().add_child(name);
-            Function fn {module(), fn_symtab};
-            v.index = module().add_function(std::move(fn)).index;
+                name = fmt::format("<block_{}>", num);
+            else
+                name = fmt::format("<lambda_{}>", num);
+            std::tie(v.symbol, v.scope_index) = create_function(name);
         }
-        Function& fn = module().get_function(v.index);
+        auto& scope = module().get_scope(v.scope_index);
+        Function& fn = scope.function();
+        fn.set_ast(v.body);
 
         v.body.symtab = &fn.symtab();
         m_symtab = v.body.symtab;
@@ -284,7 +293,7 @@ public:
         m_symtab = v.body.symtab->parent();
 
         // resolve body
-        resolve_symbols(fn, v.body);
+        resolve_symbols(scope, v.body);
     }
 
     void visit(ast::Cast& v) override {
@@ -355,15 +364,18 @@ public:
     }
 
 private:
-    Module& module() { return m_function.module(); }
+    Module& module() { return m_scope.module(); }
+    Function& function() { return m_scope.function(); }
     SymbolTable& symtab() { return *m_symtab; }
 
-    SymbolPointer create_function(const std::string& name) {
+    std::pair<SymbolPointer, Index> create_function(const std::string& name) {
         SymbolTable& fn_symtab = symtab().add_child(name);
-        Function fn {module(), fn_symtab};
-        auto fn_id = module().add_function(std::move(fn));
+        auto fn_idx = module().add_function(Function{module(), fn_symtab}).index;
+        auto scope_idx = module().add_scope(Scope{module(), fn_idx, symtab().scope()});
+        auto subscope_i = symtab().scope()->add_subscope(scope_idx);
         assert(symtab().module() == &module());
-        return symtab().add({name, Symbol::Function, fn_id.index});
+        auto symptr = symtab().add({name, Symbol::Function, subscope_i});
+        return {symptr, scope_idx};
     }
 
     SymbolPointer allocate_type_var(const std::string& name = "") {
@@ -384,21 +396,13 @@ private:
             if (symptr)
                 return symptr;
         }
-        // (non)local values and parameters
+        // local functions and parameters
         {
             // lookup in this and parent scopes
             size_t depth = 0;
             for (auto* p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
-                if (auto symptr = p_symtab->find_by_name(name); symptr) {
-                    if (depth > 0 && symptr->type() != Symbol::Method
-                                  && symptr->type() != Symbol::StructItem
-                                  && symptr->type() != Symbol::TypeName) {
-                        // add Nonlocal symbol
-                        Index idx = symtab().count(Symbol::Nonlocal);
-                        return symtab().add({symptr, Symbol::Nonlocal, idx, depth});
-                    }
+                if (auto symptr = p_symtab->find_by_name(name); symptr)
                     return symptr;
-                }
 
                 if (p_symtab->name() == name && p_symtab->parent() != nullptr) {
                     auto symptr = p_symtab->parent()->find_by_name(name);
@@ -407,6 +411,7 @@ private:
                         return symptr.symtab()->class_()->symtab().parent()->find_last_of(name, Symbol::Method);
                     }
                     // recursion - unwrap the function
+                    assert(symptr->type() == Symbol::Function);
                     return symtab().add({symptr, Symbol::Function, no_index, depth + 1});
                 }
 
@@ -430,15 +435,9 @@ private:
     }
 
     SymbolPointer resolve_symbol_of_type(const std::string& name, Symbol::Type type) {
-        // lookup in this and parent scopes
+        // lookup in this and parent scopes (including this module scope)
         for (auto* p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
             auto symptr = p_symtab->find_last_of(name, type);
-            if (symptr)
-                return symptr;
-        }
-        // this module
-        {
-            auto symptr = module().symtab().find_last_of(name, type);
             if (symptr)
                 return symptr;
         }
@@ -447,6 +446,38 @@ private:
             auto symptr = module().get_imported_module(i).symtab().find_last_of(name, type);
             if (symptr)
                 return symptr;
+        }
+        // nowhere
+        return {};
+    }
+
+    SymbolPointerList find_all_symbols_of_type(const std::string& name, Symbol::Type type) {
+        // lookup in this and parent scopes (including this module scope)
+        SymbolPointerList res;
+        for (auto* p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
+            auto sym_list = p_symtab->filter(name, type);
+            res.insert(res.end(), sym_list.begin(), sym_list.end());
+        }
+        // imported modules
+        for (auto i = Index(module().num_imported_modules() - 1); i != Index(-1); --i) {
+            auto sym_list = module().get_imported_module(i).symtab().filter(name, type);
+            res.insert(res.end(), sym_list.begin(), sym_list.end());
+        }
+        return res;
+    }
+
+    SymbolPointerList find_function_overloads(const std::string& name) {
+        // lookup in this and parent scopes (including this module scope)
+        for (auto* p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
+            auto sym_list = p_symtab->filter(name, Symbol::Function);
+            if (!sym_list.empty())
+                return sym_list;
+        }
+        // imported modules
+        for (auto i = Index(module().num_imported_modules() - 1); i != Index(-1); --i) {
+            auto sym_list = module().get_imported_module(i).symtab().filter(name, Symbol::Function);
+            if (!sym_list.empty())
+                return sym_list;
         }
         // nowhere
         return {};
@@ -464,16 +495,16 @@ private:
     }
 
 private:
-    Function& m_function;
-    SymbolTable* m_symtab = &m_function.symtab();
+    Scope& m_scope;
+    SymbolTable* m_symtab = &function().symtab();
     ast::Class* m_class = nullptr;
     Instance* m_instance = nullptr;
 };
 
 
-void resolve_symbols(Function& func, const ast::Block& block)
+void resolve_symbols(Scope& scope, const ast::Block& block)
 {
-    SymbolResolverVisitor visitor {func};
+    ResolveSymbolsVisitor visitor {scope};
     for (const auto& stmt : block.statements) {
         stmt->apply(visitor);
     }

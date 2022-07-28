@@ -28,6 +28,7 @@ struct StreamOptions {
     bool enable_tree : 1;
     bool module_verbose : 1;  // Module: dump function bodies etc.
     bool parenthesize_fun_types : 1;
+    bool multiline : 1;
     unsigned level : 6;
     std::bitset<32> rules;
     std::vector<std::string> type_var_names;  // used for Type::Unknown with var!=0 when dumping TypeInfo
@@ -154,7 +155,10 @@ std::ostream& operator<<(std::ostream& os, const Parenthesized& v)
 std::ostream& operator<<(std::ostream& os, const Tuple& v)
 {
     if (stream_options(os).enable_tree) {
-        os << "Tuple(Expression)" << endl;
+        os << "Tuple(Expression)";
+        if (v.type_info)
+            os << " [type_info=" << v.type_info << ']';
+        os << endl;
         os << more_indent;
         for (const auto& item : v.items)
             os << put_indent << *item;
@@ -418,7 +422,7 @@ std::ostream& operator<<(std::ostream& os, const Reference& v)
         const auto symptr = v.identifier.symbol;
         if (symptr && symptr->type() == Symbol::Function && v.index != no_index) {
             os << " [Function #" << v.index << " @" << v.module->name()
-               << ": " << v.module->get_function(v.index).signature() << "]";
+               << ": " << v.module->get_scope(v.index).function().signature() << "]";
         }
         os << endl
            << more_indent
@@ -537,7 +541,12 @@ std::ostream& operator<<(std::ostream& os, const Function& v)
     } else {
         if (!v.type.params.empty() || v.type.result_type)
             os << "fun " << v.type;
-        return os << "{" << v.body << "}";
+        if (stream_options(os).multiline)
+            return os << "{" << endl
+                      << more_indent << put_indent << v.body << endl
+                      << less_indent << put_indent << "}";
+        else
+            return os << "{" << v.body << "}";
     }
 }
 
@@ -572,10 +581,10 @@ std::ostream& operator<<(std::ostream& os, const Definition& v)
             os << put_indent << *v.expression;
         return os << less_indent;
     } else {
-        os << "/*def*/ " << v.variable;
+        os << v.variable;
         if (v.expression)
-            os << " = (" << *v.expression << ")";
-        return os << ';';
+            os << " = " << *v.expression;
+        return os;
     }
 }
 
@@ -707,10 +716,15 @@ std::ostream& operator<<(std::ostream& os, const Block& v)
         }
         return os << less_indent;
     } else {
+        const bool multiline = stream_options(os).multiline;
         for (const auto& stmt : v.statements) {
             stmt->apply(visitor);
-            if (&stmt != &v.statements.back())
-                os << endl;
+            if (&stmt != &v.statements.back()) {
+                if (multiline)
+                    os << endl << put_indent;
+                else
+                    os << "; ";
+            }
         }
         return os;
     }
@@ -865,8 +879,16 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
     for (Index i = 0; i < v.num_functions(); ++i) {
         const auto& f = v.get_function(i);
         os << put_indent << '[' << i << "] ";
-        if (f.kind() != Function::Kind::Compiled)
-            os << '(' << f.kind() << ") ";
+        if (f.kind() != Function::Kind::Compiled) {
+            os << '(' << f.kind();
+            if (f.has_compile())
+                os << ", compile";
+            if (f.is_specialized())
+                os << ", specialized";
+            if (f.has_nonlocals_resolved())
+                os << ", nlres";
+            os << ") ";
+        }
         os << f.qualified_name();
         if (f.signature())
             os << ": " << f.signature();
@@ -929,8 +951,9 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
                         os << '\n' << more_indent;
                         first_method = false;
                     }
+                    SymbolPointer symptr = cls.symtab().find(sym);
                     os << put_indent << sym.name() << ": "
-                       << v.get_function(sym.index()).signature() << '\n';
+                       << symptr.get_generic_scope().function().signature() << '\n';
                     break;
                 }
                 default:
@@ -950,8 +973,8 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
             os << ' ' << t;
         os << '\n' << more_indent;
         for (Index j = 0; j < inst.num_functions(); ++j) {
-            const auto fi = inst.get_function(j).index;
-            const auto& f = v.get_function(fi);
+            const auto scope_idx = inst.get_function(j).scope_index;
+            const auto& f = v.get_scope(scope_idx).function();
             os << put_indent << f.name() << ": " << f.signature() << '\n';
         }
         os << less_indent;
@@ -1037,7 +1060,7 @@ std::ostream& operator<<(std::ostream& os, const Signature& v)
             if (&ti != &v.partial.back())
                 os << ", ";
         }
-        os << "| ";
+        os << " | ";
     }
     bool orig_parenthesize_fun_types = stream_options(os).parenthesize_fun_types;
     stream_options(os).parenthesize_fun_types = true;
@@ -1059,20 +1082,20 @@ std::ostream& operator<<(std::ostream& os, const Signature& v)
 std::ostream& operator<<(std::ostream& os, Symbol::Type v)
 {
     switch (v) {
-        case Symbol::Unresolved:    return os << "Unresolved";
-        case Symbol::Value:         return os << "Value";
-        case Symbol::Parameter:     return os << "Parameter";
-        case Symbol::Nonlocal:      return os << "Nonlocal";
-        case Symbol::Function:      return os << "Function";
-        case Symbol::Module:        return os << "Module";
-        case Symbol::Instruction:   return os << "Instruction";
-        case Symbol::Class:         return os << "Class";
-        case Symbol::Method:        return os << "Method";
-        case Symbol::Instance:      return os << "Instance";
-        case Symbol::TypeName:      return os << "TypeName";
-        case Symbol::TypeVar:       return os << "TypeVar";
-        case Symbol::StructItem:    return os << "StructItem";
-        case Symbol::TypeId:        return os << "TypeId";
+        case Symbol::Unresolved:        return os << "Unresolved";
+        case Symbol::Value:             return os << "Value";
+        case Symbol::Parameter:         return os << "Parameter";
+        case Symbol::Nonlocal:          return os << "Nonlocal";
+        case Symbol::Function:          return os << "Function";
+        case Symbol::Module:            return os << "Module";
+        case Symbol::Instruction:       return os << "Instruction";
+        case Symbol::Class:             return os << "Class";
+        case Symbol::Method:            return os << "Method";
+        case Symbol::Instance:          return os << "Instance";
+        case Symbol::TypeName:          return os << "TypeName";
+        case Symbol::TypeVar:           return os << "TypeVar";
+        case Symbol::StructItem:        return os << "StructItem";
+        case Symbol::TypeId:            return os << "TypeId";
     }
     return os;
 }
@@ -1087,7 +1110,7 @@ std::ostream& operator<<(std::ostream& os, const SymbolPointer& v)
         os << " @" << v.symtab()->name() << " ("
            << std::hex << intptr_t(v.symtab()) << ')' << std::dec;
         if (v->type() == Symbol::Function && v.symtab()->module() && v->index() != no_index)
-            os << ": " << v.get_function().signature();
+            os << ": " << v.get_generic_scope().function().signature();
     }
     if (v->ref())
         os << " -> " << v->ref();
@@ -1101,8 +1124,6 @@ std::ostream& operator<<(std::ostream& os, const Symbol& v)
        << left << setw(18) << v.type();
     if (v.index() != no_index)
         os << " #" << v.index();
-    if (v.next())
-        os << " (next: #" << v.next()->index() << ")";
     if (v.ref()) {
         os << " -> " << v.ref()->type()
            << " #" << v.ref()->index();
@@ -1118,7 +1139,10 @@ std::ostream& operator<<(std::ostream& os, const Symbol& v)
 
 std::ostream& operator<<(std::ostream& os, const SymbolTable& v)
 {
-    os << put_indent << "--- " << v.name() << " ---" << endl;
+    os << put_indent << "--- ";
+    if (v.scope() != nullptr)
+        os << '#' << v.scope()->function_index() << ' ';
+    os << v.name() << " ---" << endl;
     for (const auto& sym : v) {
         os << put_indent << sym << endl;
     }
@@ -1128,6 +1152,33 @@ std::ostream& operator<<(std::ostream& os, const SymbolTable& v)
         os << child << endl;
     }
     os << less_indent;
+    return os;
+}
+
+
+std::ostream& operator<<(std::ostream& os, const Scope& v)
+{
+    os << "Function #" << v.function_index() << " (" << v.function().name() << ")";
+    if (v.has_subscopes()) {
+        os << "\tSubscopes: ";
+        for (unsigned i = 0; i != v.num_subscopes(); ++i) {
+            if (i != 0)
+                os << ", ";
+            os << v.get_subscope_index(i);
+            assert(v.get_subscope(i).parent() == &v);
+        }
+    }
+    if (v.has_nonlocals()) {
+        os << "\tNonlocals: ";
+        bool first = true;
+        for (auto nl : v.nonlocals()) {
+            if (!first)
+                os << ", ";
+            else
+                first = false;
+            os << nl.index;
+        }
+    }
     return os;
 }
 

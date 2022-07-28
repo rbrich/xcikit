@@ -327,6 +327,9 @@ struct Literal: public Expression {
     std::unique_ptr<ast::Expression> make_copy() const override;
 
     TypedValue value;
+
+    // resolved:
+    TypeInfo type_info;
 };
 
 /// An expression in parentheses, e.g. (1 + 2)
@@ -344,6 +347,9 @@ struct Tuple: public Expression {
     std::unique_ptr<ast::Expression> make_copy() const override;
 
     std::vector<std::unique_ptr<Expression>> items;
+
+    // resolved:
+    TypeInfo type_info;  // the tuple may resolve to Struct type depending on specified/inferred type
 };
 
 struct List: public Expression {
@@ -352,6 +358,9 @@ struct List: public Expression {
     std::unique_ptr<ast::Expression> make_copy() const override;
 
     std::vector<std::unique_ptr<Expression>> items;
+
+    // resolved:
+    TypeInfo type_info;
     size_t elem_type_id = 0;
 };
 
@@ -381,9 +390,10 @@ struct Reference: public Expression {
     std::unique_ptr<Type> type_arg;  // explicit type argument: e.g. <Int>
 
     // resolved function/method:
-    SymbolPointer chain;  // tip of chain of Instances in case of Method
-    Module* module = nullptr;   // module with (instance) function
-    Index index = no_index;     // index of (instance) function in module
+    SymbolPointerList sym_list;  // list of overloaded Functions, or Instances in case of Method
+    Module* module = nullptr;   // module with function
+    Index index = no_index;     // index of function scope in module
+    TypeInfo type_info;
 };
 
 struct Call: public Expression {
@@ -399,6 +409,7 @@ struct Call: public Expression {
     std::vector<std::unique_ptr<Expression>> args;
 
     // resolved:
+    TypeInfo callable_type;
     unsigned wrapped_execs = 0;
     unsigned partial_args = 0;
     Index partial_index = no_index;
@@ -479,7 +490,8 @@ struct Function: public Expression {
     Block body;
 
     // resolved:
-    Index index = no_index;
+    SymbolPointer symbol;  // only for lambda
+    Index scope_index = no_index;
     size_t call_args = 0;  // number of args if the function is inside Call
 };
 

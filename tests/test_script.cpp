@@ -95,10 +95,8 @@ std::string optimize(const std::string& input)
     module.import_module("builtin");
     module.import_module("std");
 
-    auto& symtab = module.symtab().add_child("main");
-    Function fn {module, symtab};
     Compiler compiler(Compiler::Flags::O1);
-    compiler.compile(fn, ast);
+    compiler.compile(module.get_main_scope(), ast);
 
     std::ostringstream os;
     os << ast;
@@ -124,12 +122,12 @@ std::string interpret(const std::string& input, bool import_std=false)
         });
         os << result;
         result.decref();
-        REQUIRE(ctx.interpreter.machine().stack().empty());
-        REQUIRE(ctx.interpreter.machine().stack().n_frames() == 0);
+        assert(ctx.interpreter.machine().stack().empty());
+        assert(ctx.interpreter.machine().stack().n_frames() == 0);
     } catch (const ScriptError& e) {
         UNSCOPED_INFO("Exception: " << e.what() << "\n" << e.detail());
-        REQUIRE(ctx.interpreter.machine().stack().empty());
-        REQUIRE(ctx.interpreter.machine().stack().n_frames() == 0);
+        assert(ctx.interpreter.machine().stack().empty());
+        assert(ctx.interpreter.machine().stack().n_frames() == 0);
         throw;
     }
     return os.str();
@@ -238,7 +236,7 @@ TEST_CASE( "Trailing comma", "[script][parser]" )
     CHECK(parse("([1,],[2,],[1,2,],)") == "([1], [2], [1, 2])");
     // multiline
     CHECK(parse("1,\n2,\n3,\n") == "1, 2, 3");  // expression continues on next line after operator
-    CHECK(parse("1,;\n2,\n3,\n") == "1\n2, 3");  // semicolon splits the multiline expression
+    CHECK(parse("1,;\n2,\n3,\n") == "1; 2, 3");  // semicolon splits the multiline expression
     CHECK(parse("(\n1,\n2,\n3,\n)") == "(1, 2, 3)");
     CHECK(parse("[\n1,\n2,\n3,\n]") == "[1, 2, 3]");
     CHECK(parse("[\n1\n,\n2\n,\n3\n,\n]") == "[1, 2, 3]");
@@ -417,7 +415,6 @@ TEST_CASE( "Variables", "[script][interpreter]" )
     CHECK_THROWS_AS(interpret("m = m"), MissingExplicitType);
     CHECK_THROWS_AS(interpret("m = {m}"), MissingExplicitType);
     CHECK_THROWS_AS(interpret("m = { m = m }"), MissingExplicitType);
-    CHECK_THROWS_AS(interpret("m = { m = m }"), MissingExplicitType);
     CHECK_THROWS_AS(interpret_std("m = { m = m + 1 }"), MissingExplicitType);
     CHECK(interpret_std("m = { m = 1; m }; m") == "1");
     // "m = { m + 1 }" compiles fine, but infinitely recurses
@@ -471,6 +468,31 @@ TEST_CASE( "Types", "[script][interpreter]" )
 }
 
 
+TEST_CASE( "Coercion", "[script][interpreter]" )
+{
+    // coerce empty tuple (literal) to a struct
+    CHECK(interpret("a:(x:String,y:Int) = (); a") == "(x=\"\", y=0)");
+    CHECK(interpret("f = fun a:(x:String,y:Int) {a.y}; f ()") == "0");
+    CHECK(interpret_std("format true ()") == "\"true\"");  // second arg is FormatSpec
+    // only literals may coerce, not functions/variables
+    CHECK_THROWS_AS(interpret("t=(); a:(x:String,y:Int) = t"), FunctionNotFound);
+    CHECK_THROWS_AS(interpret("f = fun a:(x:String,y:Int) {a.y}; t = (); f t"), FunctionNotFound);
+    // named type - literal of underlying type coerces
+    std::string num_def = "type Num = Int; f = fun a:Num b:Num -> Num { (a:Int + b:Int):Num };";
+    CHECK(interpret_std(num_def + "f 11 22") == "33");
+    CHECK_THROWS_AS(interpret_std(num_def + "a = 11; f a a"), FunctionNotFound);
+    CHECK(interpret_std(num_def + "b = 22:Num; f b b") == "44");
+    CHECK(interpret_std(num_def + "a = 11; b = 22:Num; f a:Num b") == "33");
+    // same with a struct
+    std::string struct_def = "type MyStruct = (name:String, age:Int); "
+                             "get_age = fun st:MyStruct -> Int { st.age }; "
+                             "a = (\"Luke\", 10); ";
+    CHECK_THROWS_AS(interpret_std(struct_def + "get_age a"), FunctionNotFound);
+    CHECK_THROWS_AS(interpret_std(struct_def + "get_age { (\"Luke\", 10) }"), FunctionNotFound);
+    CHECK(interpret_std(struct_def + "get_age a:MyStruct") == "10");
+}
+
+
 TEST_CASE( "User-defined types", "[script][interpreter]" )
 {
     // 'type' keyword makes strong types
@@ -490,6 +512,13 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     std::string my_struct = "type MyStruct = (name:String, age:Int); ";  // named struct
     CHECK(interpret(my_struct + R"( a:MyStruct = (name="hello", age=42); a)") == R"((name="hello", age=42))");
     CHECK(interpret(my_struct + R"( a:MyStruct = "hello", 42; a)") == R"((name="hello", age=42))");
+    // struct defaults (left out fields get default "zero" value)
+    CHECK_THROWS_AS(interpret("x:(Int,Int) = ()"), DefinitionTypeMismatch);  // tuple doesn't have defaults
+    CHECK(interpret_std("x:FormatSpec = (fill='_',width=2); x") == R"((fill='_', align='\0', sign='\0', width=2, precision=0, spec=""))");
+    CHECK(interpret_std("x:FormatSpec = (width=2); x") == R"((fill='\0', align='\0', sign='\0', width=2, precision=0, spec=""))");
+    CHECK(interpret_std("x:FormatSpec = (); x") == R"((fill='\0', align='\0', sign='\0', width=0, precision=0, spec=""))");  // empty tuple stands for empty StructInit
+    CHECK_THROWS_AS(interpret_std("x:FormatSpec = ('_', '>')"), DefinitionTypeMismatch);  // when initializing with a tuple, all fields have to be specified (no defaults are filled in)
+    CHECK(interpret_std("x:(field:Int) = 2; x") == "(field=2)");  // a single-item struct can be initialized with the field value (as there is no single-field tuple)
     // cast from underlying type
     CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a)") == R"((name="hello", age=42))");
     CHECK(interpret_std(my_struct + R"( a = ("hello", 42):MyStruct; a:(String, Int))") == R"(("hello", 42))");
@@ -505,6 +534,10 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     CHECK(interpret(R"(a = (name="hello", age=42, valid=true); a.name; a.age; a.valid)") == R"("hello";42;true)");
     CHECK(interpret(my_struct + R"(f = fun a:MyStruct { a.name }; f (name="hello", age=42))") == R"("hello")");
     CHECK(interpret(R"(type Rec=(x:String, y:Int); f=fun a:Rec { a.x }; r:Rec=(x="x",y=3); f r)") == R"("x")");
+    CHECK(interpret_std("x:(field:Int) = (field=2); field = fun a:Int->Int { a*a }; x.field; field 12") == "2;144");  // member access doesn't collide with functions/variables of the same name
+    CHECK(interpret("x:(field:Int) = (field=2); field = 3; x.field; field") == "2;3");
+    CHECK(interpret("x:(field:Int) = (field=2); { field = 3; x.field; field }") == "2;3");
+    CHECK(interpret("field = 3; { x:(field:Int) = (field=2); x.field; field }") == "2;3");
     // invalid struct - repeated field names
     CHECK_THROWS_AS(interpret("type MyStruct = (same:String, same:Int)"), StructDuplicateKey);  // struct type
     CHECK_THROWS_AS(interpret(R"(a = (same="hello", same=42))"), StructDuplicateKey);  // struct init (anonymous struct type)
@@ -546,8 +579,8 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     CHECK(parse("fun Int -> Int {}") == "fun Int -> Int {}");
 
     // returned lambda
-    CHECK(interpret_std("fun x:Int->Int { x + 1 }") == "<lambda> Int32 -> Int32");  // non-generic is fine
-    CHECK(interpret_std("fun x { x + 1 }") == "<lambda> Int32 -> Int32");   // also fine, function type deduced from `1` (Int) and `add: Int Int -> Int`
+    CHECK(interpret_std("fun x:Int->Int { x + 1 }") == "<lambda_0> Int32 -> Int32");  // non-generic is fine
+    CHECK(interpret_std("fun x { x + 1 }") == "<lambda_0> Int32 -> Int32");   // also fine, function type deduced from `1` (Int) and `add: Int Int -> Int`
     CHECK_THROWS_AS(interpret_std("fun x { x }"), UnexpectedGenericFunction);  // generic lambda must be either assigned or resolved by calling
 
     // immediately called lambda
@@ -557,6 +590,7 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
 
     // generic function in local scope
     CHECK(interpret_std("outer = fun y { inner = fun x { x+1 }; inner y }; outer 2") == "3");
+    CHECK(interpret("outer = fun y { inner = fun x { x;y }; inner 3 }; outer 2") == "3;2");
 
     // argument propagation:
     CHECK(interpret_std("f = fun a:Int { fun b:Int { a+b } }; f 1 2") == "3");  //  `f` returns a function which consumes the second arg
@@ -590,6 +624,11 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
                         "  wrapped y "
                         "}; outer 2") == "4");
     CHECK(interpret_std("outer = fun y {"
+                        "  inner = fun x:Int { x ; y };"
+                        "  wrapped = fun x:Int { inner x };"
+                        "  wrapped y:Int "
+                        "}; outer 2; outer 2L") == "2;2;2;2L");
+    CHECK(interpret_std("outer = fun y {"
                         "  inner = fun x:Int { in2 = fun z:Int{ x + z }; in2 y };"
                         "  wrapped = fun x:Int { inner x }; wrapped y"
                         "}; outer 2") == "4");
@@ -605,9 +644,12 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     // multiple specializations
     // * each specialization is generated only once
     CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; inner 3 + inner 4 }; "
-                        "outer 1; outer 2; __module.__n_fn") == "9;11;5");
+                        "outer 1; outer 2; __module.__n_fn") == "9;11;6");
     // * specializations with different types from the same template
     CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; inner 3 + (inner 4l):T }; outer 2") == "11");
+    CHECK(interpret("l0=fun a { l1b=fun b { a;b };"
+                    " l1=fun b { l2=fun c { l3=fun d { a;b;c; l1b 42L; l1b d }; l3 b}; l2 a };"
+                    " wrapped = fun x { l1b 'x'; l1 x }; wrapped a }; l0 2") == "2;'x';2;2;2;2;42L;2;2");
 
     // "Funarg problem" (upwards)
     auto def_succ = "succ = fun Int->Int { __value 1 .__load_static; __add 0x88 }; "s;
@@ -615,6 +657,8 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     auto def_succ_compose = def_succ + def_compose;
     CHECK(interpret(def_succ_compose + "plustwo = compose succ succ; plustwo 42") == "44");
     CHECK(interpret(def_succ_compose + "plustwo = {compose succ succ}; plustwo 42") == "44");
+    CHECK(interpret(def_succ_compose + "plustwo = compose succ succ; plusfour = compose plustwo plustwo;  plustwo 42; plusfour 42") == "44;46");
+    // TODO: compose generic functions
     //CHECK(interpret_std(def_compose + "same = compose pred succ; same 42") == "42");
 }
 
@@ -645,8 +689,8 @@ TEST_CASE( "Forward declarations", "[script][interpreter]")
 {
     // `x` name not yet seen (the symbol resolution is strictly single-pass)
     CHECK_THROWS_AS(interpret("y=x; x=7; y"), UndefinedName);
-    CHECK_THROWS_AS(interpret("y={x}; x=7; y"), UndefinedName);  // block doesn't change anything
-    CHECK_THROWS_AS(interpret_std("y=fun a {a+x}; x=7; y 2"), UndefinedName);  // neither does a function
+    CHECK_THROWS_AS(interpret("y={x}; x=7; y"), UndefinedName);  // A block doesn't change anything.
+    CHECK_THROWS_AS(interpret_std("y=fun a {a+x}; x=7; y 2"), UndefinedName);  // Neither does a function.
     // Inside a block or function, a forward-declared value or function can be used.
     // A similar principle is used in recursion, where the function itself is considered
     // declared while processing its own body.
@@ -944,7 +988,7 @@ TEST_CASE( "Native to TypeInfo mapping", "[script][native]" )
     CHECK(native::make_type_info<char16_t>().type() == Type::Char);
     CHECK(native::make_type_info<char32_t>().type() == Type::Char);
     CHECK(native::make_type_info<int>().type() == Type::Int32);  // depends on sizeof(int)
-    CHECK(native::make_type_info<long long>().type() == Type::Int64);  // depends on sizeof(long long)
+    CHECK(native::make_type_info<long long>().type() == Type::Int64);  // depends on `sizeof(long long)`
     CHECK(native::make_type_info<int32_t>().type() == Type::Int32);
     CHECK(native::make_type_info<int64_t>().type() == Type::Int64);
     CHECK(native::make_type_info<float>().type() == Type::Float32);
@@ -1027,20 +1071,20 @@ TEST_CASE( "Fold const expressions", "[script][optimizer]" )
     CHECK(optimize("if false then 10 if false then 42 else 0;") == "0");
 
     // partially fold if-expression (only some branches)
-    CHECK(optimize("num = 16; if true then 10 if num>5 then 5 else 0;") == "/*def*/ num = (16);\n10");
-    CHECK(optimize("num = 16; if false then 10 if num>5 then 5 else 0;") == "/*def*/ num = (16);\nif (num > 5) then 5\nelse 0;");
-    CHECK(optimize("num = 16; if num>10 then 10 if true then 5 else 0;") == "/*def*/ num = (16);\nif (num > 10) then 10\nelse 5;");
-    CHECK(optimize("num = 16; if num>10 then 10 if false then 5 else 0;") == "/*def*/ num = (16);\nif (num > 10) then 10\nelse 0;");
-    CHECK(optimize("num = 16; if num>10 then 10 if true then 5 if num==3 then 3 else 0;") == "/*def*/ num = (16);\nif (num > 10) then 10\nelse 5;");
-    CHECK(optimize("num = 16; if num>10 then 10 if false then 5 if num==3 then 3 else 0;") == "/*def*/ num = (16);\nif (num > 10) then 10\nif (num == 3) then 3\nelse 0;");
+    CHECK(optimize("num = 16; if true then 10 if num>5 then 5 else 0;") == "num = 16; 10");
+    CHECK(optimize("num = 16; if false then 10 if num>5 then 5 else 0;") == "num = 16; if (num > 5) then 5\nelse 0;");
+    CHECK(optimize("num = 16; if num>10 then 10 if true then 5 else 0;") == "num = 16; if (num > 10) then 10\nelse 5;");
+    CHECK(optimize("num = 16; if num>10 then 10 if false then 5 else 0;") == "num = 16; if (num > 10) then 10\nelse 0;");
+    CHECK(optimize("num = 16; if num>10 then 10 if true then 5 if num==3 then 3 else 0;") == "num = 16; if (num > 10) then 10\nelse 5;");
+    CHECK(optimize("num = 16; if num>10 then 10 if false then 5 if num==3 then 3 else 0;") == "num = 16; if (num > 10) then 10\nif (num == 3) then 3\nelse 0;");
 
     // collapse block with single statement
     CHECK(optimize("{ 1 }") == "1");
     CHECK(optimize("{{{ 1 }}}") == "1");
-    CHECK(optimize("a = {{1}}") == "/*def*/ a = (1);");
+    CHECK(optimize("a = {{1}}") == "a = 1");
 
     // collapse function call with constant arguments
-    CHECK(optimize("f=fun a:Int {a}; f 42") == "/*def*/ f = (fun a:Int -> $R {a});\n42");
+    CHECK(optimize("f=fun a:Int {a}; f 42") == "f = fun a:Int -> $R {a}; 42");
 
     // cast to Void eliminates the expression
     CHECK(optimize("42:Void") == "()");

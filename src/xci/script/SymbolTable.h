@@ -18,8 +18,10 @@ namespace xci::script {
 class Symbol;
 class SymbolTable;
 class Function;
+class Scope;
 class Class;
 class Module;
+class TypeInfo;
 
 
 using Index = uint32_t;
@@ -39,7 +41,14 @@ public:
     const Symbol* operator->() const;
     Symbol* operator->();
 
-    Function& get_function() const;
+    Scope& get_scope(const Scope& hier) const;
+    Scope& get_generic_scope() const;
+    Index get_scope_index(const Scope& hier) const;
+    Index get_generic_scope_index() const;
+    Function& get_function(const Scope& hier) const;
+
+    const TypeInfo& get_type() const;
+
     Class& get_class() const;
 
     SymbolTable* symtab() const { return m_symtab; }
@@ -56,6 +65,9 @@ private:
 };
 
 
+using SymbolPointerList = std::vector<SymbolPointer>;
+
+
 class Symbol {
 public:
     enum Type {
@@ -63,7 +75,7 @@ public:
 
         // module-level
         Module,             // imported module
-        Function,           // static function
+        Function,           // scope-level function (index = subscope index in scope)
         Value,              // static value
         TypeName,           // type information (index = type index in module)
         Class,              // type class (index = class index in module)
@@ -102,8 +114,6 @@ public:
     Index index() const { return m_index; }
     size_t depth() const { return m_depth; }
     SymbolPointer ref() const { return m_ref; }
-    // in case of overloaded function, this points to next overload
-    SymbolPointer next() const { return m_next; }
     bool is_callable() const { return m_is_callable; }
     bool is_defined() const { return m_is_defined; }
 
@@ -111,7 +121,6 @@ public:
     Symbol& set_index(Index idx) { m_index = idx; return *this; }
     Symbol& set_depth(size_t depth) { m_depth = depth; return *this; }
     Symbol& set_ref(const SymbolPointer& ref) { m_ref = ref; return *this; }
-    Symbol& set_next(const SymbolPointer& next) { m_next = next; return *this; }
     Symbol& set_callable(bool callable) { m_is_callable = callable; return *this; }
     Symbol& set_defined(bool defined) { m_is_defined = defined; return *this; }
 
@@ -135,7 +144,6 @@ private:
     Index m_index = no_index;
     size_t m_depth = 0;  // 1 = parent, 2 = parent of parent, ...
     SymbolPointer m_ref;
-    SymbolPointer m_next;
     bool m_is_callable: 1 = false;
     bool m_is_defined: 1 = false;  // only declared / already defined
 };
@@ -159,11 +167,17 @@ public:
 
     SymbolTable& add_child(const std::string& name);
     SymbolTable* parent() const { return m_parent; }
-    unsigned level() const;  // number of parents above this symtab
+    unsigned level() const { return depth(nullptr) - 1; }  // number of parents above this symtab
+    unsigned depth(const SymbolTable* p_symtab) const;  // number of parents up to `p_symtab`
 
     // related function
     void set_function(Function* function) { m_function = function; }
     Function* function() const { return m_function; }
+
+    // scope for Function symbols
+    void set_scope(Scope* scope) { m_scope = scope; }
+    Scope* scope() { return m_scope; }
+    const Scope* scope() const { return m_scope; }
 
     // related class
     void set_class(Class* cls) { m_class = cls; }
@@ -181,16 +195,13 @@ public:
     // find symbol in this table
     SymbolPointer find(const Symbol& symbol);
     SymbolPointer find_by_name(std::string_view name);
+    SymbolPointer find_by_index(Symbol::Type type, Index index);
     SymbolPointer find_last_of(const std::string& name, Symbol::Type type);
     SymbolPointer find_last_of(Symbol::Type type);
 
-    Size count(Symbol::Type type) const;
-    void update_nonlocal_indices();
+    SymbolPointerList filter(const std::string& name, Symbol::Type type);
 
-    /// Check symbol table for overloaded function name
-    /// and connect the symbols using `next` pointer
-    /// (making the overloads visible to SymbolResolver)
-    void detect_overloads(const std::string& name);
+    Size count(Symbol::Type type) const;
 
     // FIXME: use Pointer<T> / ConstPointer<T> directly as iterator
     using const_iterator = typename std::vector<Symbol>::const_iterator;
@@ -243,6 +254,7 @@ public:
 private:
     std::string m_name;
     SymbolTable* m_parent = nullptr;
+    Scope* m_scope = nullptr;
     Function* m_function = nullptr;
     Class* m_class = nullptr;
     Module* m_module = nullptr;

@@ -25,7 +25,8 @@ public:
         FoldTuple           = 0x0001,
         FoldDotCall         = 0x0002,
         ResolveSymbols      = 0x0004,
-        ResolveTypes        = 0x0008,
+        ResolveDecl         = 0x0008,
+        ResolveTypes        = 0x0010,
         ResolveNonlocals    = 0x0020,
         FoldConstExpr       = 0x0001 << 16,
 
@@ -39,8 +40,9 @@ public:
         // - each flag may bring in other flags as its dependencies
         PPTuple         = FoldTuple,
         PPDotCall       = FoldDotCall,
-        PPSymbols       = ResolveSymbols | PPDotCall,
-        PPTypes         = ResolveTypes | PPSymbols,
+        PPSymbols       = ResolveSymbols | PPDotCall | PPTuple,
+        PPDecl          = ResolveDecl | PPSymbols,
+        PPTypes         = ResolveTypes | PPDecl,
         PPNonlocals     = ResolveNonlocals | PPTypes,
 
         // Optimization
@@ -64,10 +66,15 @@ public:
     /// Compile AST into Function object, which contains objects in scope + code
     /// (module is a special kind of function, with predefined parameters)
     /// \returns true if actually compiled (depends on Flags)
-    bool compile(Function& func, ast::Module& ast);
+    bool compile(Scope& scope, ast::Module& ast);
 
-    // Compile block, return type of its return value
-    void compile_block(Function& func, const ast::Block& block);
+    /// Compile single function that has fully prepared AST
+    /// (all other phases were run on it)
+    void compile_function(Scope& scope, const ast::Block& body);
+
+    /// Compile all functions in a module except `main`
+    /// that are marked with compile flag but not yet compiled
+    void compile_all_functions(Scope& main);
 
 private:
     Flags m_flags = Flags::Default;

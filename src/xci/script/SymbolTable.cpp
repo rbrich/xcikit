@@ -6,6 +6,7 @@
 
 #include "SymbolTable.h"
 #include "Module.h"
+#include "TypeInfo.h"
 #include <cassert>
 #include <algorithm>
 
@@ -33,13 +34,79 @@ Symbol* SymbolPointer::operator->()
 }
 
 
-Function& SymbolPointer::get_function() const
+Scope& SymbolPointer::get_scope(const Scope& hier) const
 {
     auto& sym = m_symtab->get(m_symidx);
     assert(sym.type() == Symbol::Function);
+    auto* parent_scope = hier.find_parent_scope(m_symtab);
+    if (!parent_scope) {
+        // use symtab's (generic) scope
+        return m_symtab->scope()->get_subscope(sym.index());
+    }
+    return hier.find_parent_scope(m_symtab)->get_subscope(sym.index());
+
+//    assert(sym.type() == Symbol::Function);
+//    assert(m_symtab->module() != nullptr);
+//    assert(sym.index() != no_index);
+//    return m_symtab->module()->get_scope(sym.index());
+}
+
+
+Scope& SymbolPointer::get_generic_scope() const
+{
+    auto& sym = m_symtab->get(m_symidx);
+    assert(sym.type() == Symbol::Function);
+    return m_symtab->scope()->get_subscope(sym.index());
+
+//    assert(sym.type() == Symbol::Function);
+//    assert(m_symtab->module() != nullptr);
+//    assert(sym.index() != no_index);
+//    return m_symtab->module()->get_scope(sym.index());
+}
+
+
+Index SymbolPointer::get_scope_index(const Scope& hier) const
+{
+    auto& sym = m_symtab->get(m_symidx);
+    assert(sym.type() == Symbol::Function);
+    auto* parent_scope = hier.find_parent_scope(m_symtab);
+    if (!parent_scope) {
+        // use symtab's (generic) scope
+        return m_symtab->scope()->get_subscope_index(sym.index());
+    }
+    return hier.find_parent_scope(m_symtab)->get_subscope_index(sym.index());
+
+//    assert(sym.type() == Symbol::Function);
+//    assert(sym.index() != no_index);
+//    return sym.index();
+}
+
+
+Index SymbolPointer::get_generic_scope_index() const
+{
+    auto& sym = m_symtab->get(m_symidx);
+    assert(sym.type() == Symbol::Function);
+    assert(m_symtab->scope() != nullptr);
+    return m_symtab->scope()->get_subscope_index(sym.index());
+
+//    assert(sym.type() == Symbol::Function);
+//    assert(sym.index() != no_index);
+//    return sym.index();
+}
+
+
+Function& SymbolPointer::get_function(const Scope& hier) const
+{
+    return get_scope(hier).function();
+}
+
+
+const TypeInfo& SymbolPointer::get_type() const
+{
+    auto& sym = m_symtab->get(m_symidx);
+    assert(sym.type() == Symbol::TypeName || sym.type() == Symbol::StructItem);
     assert(m_symtab->module() != nullptr);
-    assert(sym.index() != no_index);
-    return m_symtab->module()->get_function(sym.index());
+    return m_symtab->module()->get_type(sym.index());
 }
 
 
@@ -97,11 +164,11 @@ SymbolTable& SymbolTable::add_child(const std::string& name)
 }
 
 
-unsigned SymbolTable::level() const
+unsigned SymbolTable::depth(const SymbolTable* p_symtab) const
 {
     unsigned res = 0;
-    const auto* p = m_parent;
-    while (p != nullptr) {
+    const auto* p = this;
+    while (p != p_symtab) {
         ++res;
         p = p->parent();
     }
@@ -113,17 +180,6 @@ Size SymbolTable::count(Symbol::Type type) const
 {
     return std::count_if(m_symbols.begin(), m_symbols.end(),
             [type](const Symbol& sym) { return sym.type() == type; });
-}
-
-
-void SymbolTable::update_nonlocal_indices()
-{
-    Index idx = 0;
-    for (auto& sym : m_symbols) {
-        if (sym.type() == Symbol::Nonlocal) {
-            sym.set_index(idx++);
-        }
-    }
 }
 
 
@@ -161,6 +217,17 @@ SymbolPointer SymbolTable::find_by_name(std::string_view name)
 }
 
 
+SymbolPointer SymbolTable::find_by_index(Symbol::Type type, Index index)
+{
+    auto it = std::find_if(m_symbols.rbegin(), m_symbols.rend(),
+                           [type,index](const Symbol& sym)
+                           { return sym.type() == type && sym.index() == index; });
+    if (it == m_symbols.rend())
+        return {*this, no_index};
+    return {*this, Index((m_symbols.rend() - it) - 1)};
+}
+
+
 SymbolPointer SymbolTable::find_last_of(const std::string& name,
                                         Symbol::Type type)
 {
@@ -184,17 +251,16 @@ SymbolPointer SymbolTable::find_last_of(Symbol::Type type)
 }
 
 
-void SymbolTable::detect_overloads(const std::string& name)
+SymbolPointerList SymbolTable::filter(const std::string& name, Symbol::Type type)
 {
-    Index prev_i = no_index;
-    for (size_t i = 0; i != m_symbols.size(); ++i) {
-        if (m_symbols[i].name() == name) {
-            if (prev_i != no_index) {
-                m_symbols[i].set_next({*this, prev_i});
-            }
-            prev_i = Index(i);
-        }
+    SymbolPointerList res;
+    Index i = 0;
+    for (const auto& sym : m_symbols) {
+        if (sym.type() == type && sym.name() == name)
+            res.emplace_back(*this, i);
+        ++i;
     }
+    return res;
 }
 
 

@@ -134,8 +134,8 @@ struct PlainTypeName: seq< TypeName, not_at<SC, one<','>> > {};  // not followed
 struct ListType: if_must< one<'['>, SC, UnsafeType, SC, one<']'> > {};
 struct TupleType: seq< Type, plus<SC, one<','>, SC, Type> > {};
 struct StructItem: seq< Identifier, SC, one<':'>, SC, must<Type> > {};
-struct StructType: seq< StructItem, star<SC, one<','>, SC, StructItem> > {};
-struct ParenthesizedType: if_must< one<'('>, SC, opt<UnsafeType, SC>, one<')'> > {};
+struct StructType: seq< StructItem, star<SC, opt<one<','>>, NSC, StructItem>, opt<SC, one<','>> > {};
+struct ParenthesizedType: if_must< one<'('>, NSC, opt<UnsafeType, NSC>, one<')'> > {};
 struct UnsafeType: sor<FunctionType, PlainTypeName, TupleType, StructType, ParenthesizedType, ListType> {};   // usable in context where Type is already expected
 struct Type: sor< ParenthesizedType, ListType, TypeName > {};
 

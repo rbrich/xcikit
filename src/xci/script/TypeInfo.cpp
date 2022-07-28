@@ -265,7 +265,7 @@ bool TypeInfo::operator==(const TypeInfo& rhs) const
     if (m_type != rhs.type())
         return false;
     if (m_type == Type::Function)
-        return signature() == rhs.signature();  // compare content, not pointer
+        return signature().compare_without_type_args(rhs.signature());  // compare content, not pointer
     if (m_type == Type::Named)
         return named_type() == rhs.named_type();
     return m_info == rhs.m_info;
@@ -283,7 +283,7 @@ bool TypeInfo::is_generic() const
     if (m_type == Type::Unknown)
         return true;
     if (m_type == Type::Function)
-        return signature_ptr()->is_generic();
+        return signature_ptr()->has_any_generic();
     if (m_type == Type::List)
         return elem_type().is_generic();
     if (m_type == Type::Tuple)
@@ -418,11 +418,31 @@ bool Signature::has_generic_params() const
 }
 
 
+bool Signature::has_generic_return_type() const
+{
+    return return_type.is_generic();
+}
+
+
+bool Signature::has_generic_nonlocals() const
+{
+    return ranges::any_of(nonlocals, [](const TypeInfo& type_info) {
+        return type_info.is_generic();
+    });
+}
+
+
 bool Signature::has_nonvoid_params() const
 {
     return ranges::any_of(params, [](const TypeInfo& type_info) {
         return !type_info.is_void();
     });
+}
+
+
+bool Signature::compare_without_type_args(const Signature& rhs) const
+{
+    return nonlocals == rhs.nonlocals && partial == rhs.partial && params == rhs.params && return_type == rhs.return_type;
 }
 
 

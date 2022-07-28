@@ -230,9 +230,8 @@ void BuiltinModule::add_string_functions()
 {
     add_native_function("cast_to_chars", {ti_string()}, ti_chars(), cast_string_to_chars);
     add_native_function("cast_to_bytes", {ti_string()}, ti_bytes(), cast_string_to_bytes);
-    auto f1 = add_native_function("cast_to_string", {ti_chars()}, ti_string(), cast_chars_to_string);
-    auto f2 = add_native_function("cast_to_string", {ti_bytes()}, ti_string(), cast_bytes_to_string);
-    f2->set_next(f1);
+    add_native_function("cast_to_string", {ti_chars()}, ti_string(), cast_chars_to_string);
+    add_native_function("cast_to_string", {ti_bytes()}, ti_string(), cast_bytes_to_string);
 
     add_native_function("string_equal", {ti_string(), ti_string()}, ti_bool(), string_equal);
     add_native_function("string_compare", {ti_string(), ti_string()}, ti_int32(), string_compare);
@@ -387,29 +386,22 @@ void BuiltinModule::add_io_functions()
     symtab().add({"null", Symbol::Value, add_value(TypedValue{value::Stream(script::Stream::null())})});
 
     // functions
-    auto ps = add_native_function("write", {ti_string()}, ti_void(), write_string);
-    auto pb = add_native_function("write", {ti_bytes()}, ti_void(), write_bytes);
-    pb->set_next(ps);
+    add_native_function("write", {ti_string()}, ti_void(), write_string);
+    add_native_function("write", {ti_bytes()}, ti_void(), write_bytes);
     add_native_function("flush", {}, ti_void(), flush_out);
     add_native_function("error", {ti_string()}, ti_void(), write_error);
     add_native_function("read", {ti_int32()}, ti_string(), read_string);
     add_native_function("open", {ti_string(), ti_string()}, ti_stream(), open_file);
     add_native_function("__streams", {}, TypeInfo(streams), internal_streams);
 
-    auto enter1 = add_native_function("enter", {ti_stream()}, ti_stream(), output_stream_enter1);
-    auto leave1 = add_native_function("leave", {ti_stream()}, ti_void(), output_stream_leave1);
-    auto enter2 = add_native_function("enter", {ti_tuple(ti_stream(), ti_stream())}, ti_tuple(ti_stream(), ti_stream()), output_stream_enter2);
-    auto leave2 = add_native_function("leave", {ti_tuple(ti_stream(), ti_stream())}, ti_void(), output_stream_leave2);
-    auto enter3 = add_native_function("enter", {ti_tuple(ti_stream(), ti_stream(), ti_stream())}, ti_tuple(ti_stream(), ti_stream(), ti_stream()), output_stream_enter3);
-    auto leave3 = add_native_function("leave", {ti_tuple(ti_stream(), ti_stream(), ti_stream())}, ti_void(), output_stream_leave3);
-    auto enter_s = add_native_function("enter", {streams}, TypeInfo(streams), output_stream_enter3);
-    auto leave_s = add_native_function("leave", {streams}, ti_void(), output_stream_leave3);
-    enter_s->set_next(enter3);
-    enter3->set_next(enter2);
-    enter2->set_next(enter1);
-    leave_s->set_next(leave3);
-    leave3->set_next(leave2);
-    leave2->set_next(leave1);
+    add_native_function("enter", {ti_stream()}, ti_stream(), output_stream_enter1);
+    add_native_function("leave", {ti_stream()}, ti_void(), output_stream_leave1);
+    add_native_function("enter", {ti_tuple(ti_stream(), ti_stream())}, ti_tuple(ti_stream(), ti_stream()), output_stream_enter2);
+    add_native_function("leave", {ti_tuple(ti_stream(), ti_stream())}, ti_void(), output_stream_leave2);
+    add_native_function("enter", {ti_tuple(ti_stream(), ti_stream(), ti_stream())}, ti_tuple(ti_stream(), ti_stream(), ti_stream()), output_stream_enter3);
+    add_native_function("leave", {ti_tuple(ti_stream(), ti_stream(), ti_stream())}, ti_void(), output_stream_leave3);
+    add_native_function("enter", {streams}, TypeInfo(streams), output_stream_enter3);
+    add_native_function("leave", {streams}, ti_void(), output_stream_leave3);
 }
 
 

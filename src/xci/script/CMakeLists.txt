@@ -7,6 +7,7 @@ add_library(xci-script
     ast/fold_const_expr.cpp
     ast/fold_dot_call.cpp
     ast/fold_tuple.cpp
+    ast/resolve_decl.cpp
     ast/resolve_nonlocals.cpp
     ast/resolve_symbols.cpp
     ast/resolve_types.cpp
@@ -29,6 +30,7 @@ add_library(xci-script
     Stream.cpp
     SymbolTable.cpp
     TypeInfo.cpp
+    TypeChecker.cpp
     dump.cpp)
 add_library(xcikit::xci-script ALIAS xci-script)
 
@@ -51,8 +53,6 @@ target_include_directories(xci-script
     PRIVATE
         $<TARGET_PROPERTY:taocpp::pegtl,INTERFACE_INCLUDE_DIRECTORIES>
     )
-
-add_dependencies(xci-script share)
 
 if (BUILD_SHARED_LIBS)
     set_target_properties(xci-script PROPERTIES CXX_VISIBILITY_PRESET default)

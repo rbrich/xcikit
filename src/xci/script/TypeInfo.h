@@ -262,13 +262,17 @@ struct Signature {
     bool has_closure() const { return !nonlocals.empty() || !partial.empty(); }
 
     bool has_generic_params() const;
+    bool has_generic_return_type() const;
+    bool has_generic_nonlocals() const;
     bool has_nonvoid_params() const;
-    bool is_generic() const { return has_generic_params() || return_type.is_generic(); }
+    bool has_any_generic() const { return has_generic_params() || has_generic_return_type() || has_generic_nonlocals(); }
 
     explicit operator bool() const { return !params.empty() || return_type; }
 
     bool operator==(const Signature& rhs) const = default;
     bool operator!=(const Signature& rhs) const = default;
+
+    bool compare_without_type_args(const Signature& rhs) const;
 
     template <class Archive>
     void serialize(Archive& ar) {
