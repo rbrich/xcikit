@@ -381,7 +381,7 @@ build_type=MinSizeRel
 [build_requires]
 [conf]
 # Find actual path Emscripten installation (or check CMake command line, when called with emcmake)
-tools.cmake.cmaketoolchain:user_toolchain = .../cmake/Modules/Platform/Emscripten.cmake
+tools.cmake.cmaketoolchain:user_toolchain = [".../cmake/Modules/Platform/Emscripten.cmake"]
 [env]
 # Same as above, for older packages which do not use tools.cmake.CMakeToolchain
 CONAN_CMAKE_TOOLCHAIN_FILE = .../cmake/Modules/Platform/Emscripten.cmake

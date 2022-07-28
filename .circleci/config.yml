@@ -99,7 +99,7 @@ workflows:
           name: Ubuntu 22.04 - Clang-Tidy 14
           image: ubuntu
           label: ubuntu-tidy14
-          build-args: "--tidy -DFAIL_ON_WARNINGS=1"
+          build-args: "--tidy -DFAIL_ON_WARNINGS=1 -DCMAKE_DISABLE_PRECOMPILE_HEADERS=1"
       - build:
           name: Emscripten
           image: emscripten
