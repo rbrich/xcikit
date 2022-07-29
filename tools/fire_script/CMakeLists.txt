@@ -16,11 +16,6 @@ target_link_libraries(fire PRIVATE
     range-v3::range-v3
 )
 
-target_precompile_headers(fire PRIVATE
-    <fmt/format.h>
-    <fmt/ostream.h>
-    )
-
 if (EMSCRIPTEN)
     target_link_options(fire PRIVATE
         --bind --closure=1 -sMODULARIZE=1 -sEXPORT_NAME=createModule

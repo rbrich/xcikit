@@ -11,7 +11,7 @@ RUN echo "gcc"; apt-get update && apt-get install --no-install-recommends -y \
     g++ && rm -rf /var/lib/apt/lists/*
 
 RUN echo "dev tools"; apt-get update && apt-get install --no-install-recommends -y \
-    gdb ca-certificates curl cmake make ninja-build \
+    gdb ca-certificates curl cmake make ninja-build ccache \
     python3-minimal python3-pip libpython3-stdlib && \
     rm -rf /var/lib/apt/lists/*
 ENV CMAKE_GENERATOR=Ninja CONAN_CMAKE_GENERATOR=Ninja
@@ -37,5 +37,8 @@ ENV XCIKIT=/home/builder/xcikit
 COPY --chown=builder build.sh detect_system_deps.py conanfile.py conandata.yml VERSION $XCIKIT/
 RUN $XCIKIT/build.sh deps
 RUN $XCIKIT/build.sh deps --debug
+
+# Configure ccache
+RUN ccache -o max_size=200M
 
 CMD ./build.sh

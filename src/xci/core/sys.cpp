@@ -16,7 +16,6 @@
     #include <sys/syscall.h>
 #elif defined(__APPLE__)
     #include <pthread.h>
-    #include <sys/types.h>
     #include <sys/sysctl.h>
     #include <mach-o/dyld.h>
 #elif defined(__EMSCRIPTEN_PTHREADS__)
@@ -29,7 +28,7 @@
     #include <sysinfoapi.h>
     #include <cassert>
 #else
-    #include <sys/types.h>
+    #include <csignal>  // pthread_sigmask
     #include <pwd.h>
     #include <grp.h>
 #endif
