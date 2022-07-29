@@ -126,7 +126,7 @@ struct [[maybe_unused]] fmt::formatter<xci::core::log::LastErrorPlaceholder> {
     bool error_code = false;    // s -> false, d -> true
 
     // Parses format specifications of the form ['l']['s' | 'd'].
-    constexpr auto parse(format_parse_context& ctx) {
+    constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
         auto it = ctx.begin();  // NOLINT
         while (it != ctx.end() && *it != '}') {
             switch (*it) {
@@ -148,7 +148,7 @@ struct [[maybe_unused]] fmt::formatter<xci::core::log::LastErrorPlaceholder> {
     }
 
     template <typename FormatContext>
-    auto format(const xci::core::log::LastErrorPlaceholder& p, FormatContext& ctx) {
+    auto format(const xci::core::log::LastErrorPlaceholder& p, FormatContext& ctx) -> decltype(ctx.out()) {
         auto msg = xci::core::log::LastErrorPlaceholder::message(last_error, error_code);
         return std::copy(msg.begin(), msg.end(), ctx.out());
     }
@@ -156,7 +156,7 @@ struct [[maybe_unused]] fmt::formatter<xci::core::log::LastErrorPlaceholder> {
 
 
 template <>
-struct [[maybe_unused]] fmt::formatter<std::filesystem::path> {
+struct fmt::formatter<std::filesystem::path> {
     constexpr auto parse(format_parse_context& ctx) {
         auto it = ctx.begin();  // NOLINT
         if (it != ctx.end() && *it != '}')

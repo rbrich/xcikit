@@ -42,7 +42,7 @@ template<typename T>
 void dump_token(const char *name, T& token)
 {
 #ifdef XCI_DEBUG_MARKUP_DUMP_TOKENS
-    log::debug("{}: \"{}\"", name, core::escape(token.string()).c_str());
+    log::debug("{}: \"{}\"", name, core::escape(token.string()));
 #endif
 }
 
@@ -135,7 +135,7 @@ struct Control : normal< Rule >
     static void raise( const Input& in, States&&... /*unused*/ )
     {
         log::error("{}: Parse error matching {} at [{}]",
-                  in.position(),
+                  fmt::streamed(in.position()),
                   demangle<Rule>(),
                   std::string(in.current(), in.size()).substr(0, 10));
         throw parse_error( "parse error matching " + std::string(demangle<Rule>()), in );
