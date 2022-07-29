@@ -5,6 +5,7 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "raw_string.h"
+#include <cstddef>  // std::ptrdiff_t
 
 namespace xci::script {
 
@@ -47,7 +48,7 @@ std::string strip_raw_string(std::string&& content)
         return std::move(content);
 
     auto it = content.cbegin();
-    const auto end = content.cbegin() + ptrdiff_t(content.size());
+    const auto end = content.cbegin() + std::ptrdiff_t(content.size());
     while (it != end) {
         size_t need_indent = indentation;
         while (need_indent > 0 && isblank(*it)) {
@@ -67,7 +68,7 @@ std::string strip_raw_string(std::string&& content)
         auto newline = it;
         while (newline != end && *newline++ != '\n')
             ;
-        out.append(it + ptrdiff_t(indentation), newline);
+        out.append(it + std::ptrdiff_t(indentation), newline);
         it = newline;
     }
     return out;
