@@ -630,7 +630,8 @@ int main(int argc, const char* argv[])
     bool show_version = false;
     bool show_stats = false;
     bool grep_mode = false;
-    bool silent_grep = false;
+    bool quiet_grep = false;
+    bool quiet = false;
     int jobs = 2 * cpu_count();
     size_t size_from = 0;
     size_t size_to = 0;
@@ -657,18 +658,19 @@ int main(int argc, const char* argv[])
             Option("-d, --max-depth N", "Descend at most N directory levels below input directories", max_depth),
             Option("-l, --long", "Print file attributes", long_form),
             Option("-L, --list-long", "Don't descend and print attributes, similar to `ls -l` (alias for -lDd1)", [&]{ long_form = true; show_dirs = true; max_depth = 1; }),
+            Option("-s, --stats", "Print statistics (number of searched objects)", show_stats),
             Option("-t, --types TYPES", "Filter file types: f=regular, d=dir, l=link, s=sock, p=fifo, c=char, b=block, x=exec, e.g. -tdl for dir+link (implies -D)",
                     [&type_mask, &show_dirs](const char* arg){ show_dirs = true; return parse_types(arg, type_mask); }),
             Option("--size BETWEEN", "Filter files by size: [MIN]..[MAX], each site is optional, e.g. 1M..2M, 42K (eq. 42K..), ..1G",
                     [&size_from, &size_to](const char* arg){ return parse_size_filter(arg, size_from, size_to); }),
             Option("-g, --grep PATTERN", "Filter files by content, i.e. \"grep\"", grep_pattern),
             Option("-G, --grep-mode", "Switch to grep mode (positional arg PATTERN is searched in content instead of file names)", grep_mode),
-            Option("-Q, --silent-grep", "Grep: filter files, don't show matched lines. Stops of first match, making it faster.", silent_grep),
+            Option("-Q, --quiet-grep", "Grep: filter files, don't show matched lines. Stops on first match, making filtering faster.", quiet_grep),
+            Option("-q, --quiet", "Do not print file names. Exit status: 0 = match, 1 = no match", quiet),
             Option("-c, --color", "Force color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Always); }),
             Option("-C, --no-color", "Disable color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Never); }),
             Option("-M, --no-highlight", "Don't highlight matches (default: enabled for color output)", [&highlight_match]{ highlight_match = false; }),
             Option("-j, --jobs JOBS", fmt::format("Number of worker threads (default: 2*ncpu = {})", jobs), jobs).env("JOBS"),
-            Option("-s, --stats", "Print statistics (number of searched objects)", show_stats),
             Option("-V, --version", "Show version", show_version),
             Option("-h, --help", "Show help", show_help),
             Option("[PATTERN]", "File name pattern (Perl-style regex)", pattern),
@@ -684,6 +686,11 @@ int main(int argc, const char* argv[])
     if (grep_mode) {
         grep_pattern = pattern;
         pattern = nullptr;
+    }
+
+    if (quiet) {
+        quiet_grep = true;  // --quiet-grep implied by --quiet
+        highlight_match = false;
     }
 
     // empty pattern -> show all files
@@ -812,7 +819,7 @@ int main(int argc, const char* argv[])
 
     FileTree ft(jobs-1,
                 [show_hidden, show_dirs, single_device, long_form, highlight_match,
-                 type_mask, size_from, size_to, max_depth, search_in_special_dirs, silent_grep,
+                 type_mask, size_from, size_to, max_depth, search_in_special_dirs, quiet, quiet_grep,
                  &re_db, &grep_db, &re_scratch, &theme, &dev_ids, &counters]
                 (int tn, const FileTree::PathNode& path, FileTree::Type t)
     {
@@ -928,21 +935,15 @@ int main(int argc, const char* argv[])
                 if (size_to && size_t(st.st_size) > size_to)
                     return descend;
 
-                if (t == FileTree::Directory) {
-                    counters.matched_dirs.fetch_add(1, std::memory_order_relaxed);
-                } else {
-                    counters.matched_files.fetch_add(1, std::memory_order_relaxed);
-                }
-
                 std::string content;
                 if (t == FileTree::File && grep_db) {
                     bool matched = false;
                     GrepContext ctx {.theme = theme};
                     auto [read_ok, hs_res] = grep_db.scan_file(path, re_scratch[tn],
-                            [silent_grep, &matched, &content, &ctx]
+                            [quiet_grep, &content, &ctx]
                             (const ScanFileBuffers& bufs, PatternId id, uint32_t from, uint32_t to)
                             {
-                                if (silent_grep) {
+                                if (quiet_grep) {
                                     // stop if a match was found
                                     return id == IdMatch ? 1 : 0;
                                 }
@@ -980,13 +981,23 @@ int main(int argc, const char* argv[])
                             });
                     if (!read_ok)
                         return false;
-                    if ((silent_grep && hs_res == HS_SUCCESS) || (!silent_grep && !matched))
+                    if ((quiet_grep && hs_res == HS_SUCCESS) || (!quiet_grep && !ctx.matched))
                         return false;  // not matched
-                    if ((silent_grep && hs_res != HS_SCAN_TERMINATED) || (!silent_grep && hs_res != HS_SUCCESS)) {
+                    if ((quiet_grep && hs_res != HS_SCAN_TERMINATED) || (!quiet_grep && hs_res != HS_SUCCESS)) {
                         fmt::print(stderr,"ff: {}: scan failed ({})\n", path.name(), hs_res);
                         return false;
                     }
                 }
+
+                if (t == FileTree::Directory) {
+                    counters.matched_dirs.fetch_add(1, std::memory_order_relaxed);
+                } else {
+                    counters.matched_files.fetch_add(1, std::memory_order_relaxed);
+                }
+
+                if (quiet)
+                    return false;
+
                 flockfile(stdout);
                 if (long_form)
                     print_path_with_attrs(out, path, st);
@@ -1026,5 +1037,6 @@ int main(int argc, const char* argv[])
         print_stats(counters);
     }
 
-    return 0;
+    // --quiet: 0 = match, 1 = no match
+    return quiet ? int(counters.matched_files == 0) : 0;
 }
