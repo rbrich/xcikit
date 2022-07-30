@@ -1,8 +1,6 @@
 {
     "extends": [
-        ":autodetectPinVersions",
-        "group:monorepos",
-        "group:recommended"
+        ":autodetectPinVersions"
     ],
     "regexManagers": [
         {
@@ -22,8 +20,11 @@
     "packageRules": [
         {
             "matchManagers": ["github-actions"],
-            "groupName": "github-actions",
-            "commitMessageExtra": null
+            "groupName": "github-actions"
+        },
+        {
+            "matchManagers": ["npm"],
+            "groupName": "npm"
         },
         {
             "matchManagers": ["regex"],
