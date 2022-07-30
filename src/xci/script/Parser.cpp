@@ -166,7 +166,7 @@ struct ExprCondThen: if_must<KeywordThen, NSC, Expression<SC>> {};
 struct ExprCondIf: if_must<KeywordIf, NSC, ExprInfix<NSC>, NSC, ExprCondThen> {};
 struct ExprCondElse: if_must<KeywordElse, NSC, Expression<SC>> {};
 struct ExprCond: seq< plus< ExprCondIf, NSC >, ExprCondElse> {};
-struct ExprWith: if_must< KeywordWith, NSC, ExprArgSafe, NSC, Expression<SC> > {};  // might be parsed as a function, but that wouldn't allow newlines
+struct ExprWith: if_must< KeywordWith, NSC, ExprArgSafe, NSC, Expression<SC> > {};  // could be parsed as a function, but that wouldn't allow newlines
 struct ExprStructItem: seq< Identifier, SC, one<'='>, not_at<one<'='>>, SC, must<ExprArgSafe> > {};
 struct ExprStruct: seq< ExprStructItem, star< SC, one<','>, SC, must<ExprStructItem> > > {};
 

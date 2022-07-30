@@ -1,7 +1,7 @@
 // TermCtl.h created on 2018-07-09 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2020, 2021 Radek Brich
+// Copyright 2018–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_TERM_H
@@ -59,13 +59,13 @@ public:
     // Following methods are appending the capability codes
     // to a copy of TermCtl instance, which can then be send to stream
 
-    enum class Color {
+    enum class Color: uint8_t {
         Default = 9,
         Black = 0, Red, Green, Yellow, Blue, Magenta, Cyan, White,
         BrightBlack = 10, BrightRed, BrightGreen, BrightYellow,
         BrightBlue, BrightMagenta, BrightCyan, BrightWhite,
     };
-    enum class Mode { Normal,  // reset all attributes
+    enum class Mode: uint8_t { Normal,  // reset all attributes
         Bold, Dim, Italic, Underline, Overline, CrossOut, Frame,
         Blink, Reverse, Hidden,
         NormalIntensity, NoItalic, NoUnderline, NoOverline, NoCrossOut, NoFrame,

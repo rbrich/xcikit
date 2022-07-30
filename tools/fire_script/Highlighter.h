@@ -14,6 +14,8 @@
 
 namespace xci::script::tool {
 
+namespace parser { struct Node; }
+
 
 class Highlighter {
 public:
@@ -35,7 +37,7 @@ public:
 
 private:
     void switch_color(const HighlightColor& from, const HighlightColor& to);
-    HighlightColor highlight_node(const tao::pegtl::parse_tree::node& node,
+    HighlightColor highlight_node(const parser::Node& node,
                                   const HighlightColor& prev_color,
                                   unsigned cursor, bool hl_bracket = false);
 
