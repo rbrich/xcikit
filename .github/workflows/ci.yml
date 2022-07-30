@@ -72,7 +72,7 @@ jobs:
           build_args: "-DCMAKE_DISABLE_PRECOMPILE_HEADERS=1"
 #        - os: windows-2022
 #          name: "VS 17 / Release"
-#          build_args: ""
+#          build_args: "-DCMAKE_DISABLE_PRECOMPILE_HEADERS=1"
 
     name: ${{ matrix.os }} / ${{ matrix.name }}
 
