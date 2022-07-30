@@ -37,6 +37,14 @@ using namespace xci::core::argparser;
 static constexpr auto c_version = "0.6";
 
 
+enum PatternId: unsigned {
+    IdMatch = 0,            // default ID, user pattern matched
+    IdNewline = 10,         // newline pattern, for counting lines
+    IdFinishBuffer = 11,    // finish buffer (going to swap buffers)
+    IdEndOfStream = 12,     // end of stream
+};
+
+
 struct Theme {
     std::string normal;
     std::string dir;
@@ -526,12 +534,12 @@ public:
         hs_error_t hs_result = HS_INVALID;
     };
 
-    // id == 10 is special pattern for matching newlines
+    // id == IdNewline is special pattern for matching newlines
     // The reader maintains two buffers, so the previous one can be saved
     // and used together with current one to complete lines that span through buffer boundary.
     // \return 1 to stop matching, 0 to continue
     using ScanFileCallback = std::function<int(const ScanFileBuffers& bufs,
-                                               unsigned int id, uint64_t from, uint64_t to)>;
+                                               PatternId id, uint64_t from, uint64_t to)>;
 
     ScanResult scan_file(const FileTree::PathNode& path, hs_scratch_t* scratch,
                          const ScanFileCallback& cb) {
@@ -551,7 +559,7 @@ public:
         auto handler = [] (unsigned int id, unsigned long long from,
                            unsigned long long to, unsigned int flags, void *ctx_p) {
             auto& ctx = *static_cast<struct Context*>(ctx_p);
-            return ctx.cb(ctx.bufs, id, from, to);
+            return ctx.cb(ctx.bufs, PatternId(id), from, to);
         };
 
         constexpr size_t bufsize = 4096;
@@ -586,12 +594,12 @@ public:
                     0, scratch, handler, &ctx);
 
             // notify: swapping buffers
-            (void) ctx.cb(ctx.bufs, 11, 0, 0);
+            (void) ctx.cb(ctx.bufs, IdFinishBuffer, 0, 0);
         }
         if (r == HS_SUCCESS) {
             r = hs_close_stream(hs_stream, scratch, handler, &ctx);
             // notify: end of stream
-            (void) ctx.cb(ctx.bufs, 12, 0, 0);
+            (void) ctx.cb(ctx.bufs, IdEndOfStream, 0, 0);
         } else {
             // no longer interested in matches or errors, just close it
             hs_close_stream(hs_stream, scratch, nullptr, nullptr);
@@ -746,7 +754,7 @@ int main(int argc, const char* argv[])
             flags |= HS_FLAG_SINGLEMATCH;
         hs_compile_error_t *re_compile_err;
         // count newlines
-        grep_db.add_literal("\n", flags, 10);
+        grep_db.add_literal("\n", flags, IdNewline);
         if (fixed) {
             grep_db.add_literal(grep_pattern, flags);
         } else {
@@ -932,40 +940,35 @@ int main(int argc, const char* argv[])
                     GrepContext ctx {.theme = theme};
                     auto [read_ok, hs_res] = grep_db.scan_file(path, re_scratch[tn],
                             [silent_grep, &matched, &content, &ctx]
-                            (const ScanFileBuffers& bufs, unsigned id, uint32_t from, uint32_t to)
+                            (const ScanFileBuffers& bufs, PatternId id, uint32_t from, uint32_t to)
                             {
-                                // id  0    -> match
-                                // id 10    -> newline pattern, for counting lines
-                                // id 11    -> finish buffer
-                                // id 12    -> end of stream
-
                                 if (silent_grep) {
                                     // stop if a match was found
-                                    return id == 0 ? 1 : 0;
+                                    return id == IdMatch ? 1 : 0;
                                 }
 
                                 switch (id) {
                                     // match found
-                                    case 0:
+                                    case IdMatch:
                                         ctx.highlight_line(content, bufs, from, to);
                                         matched = true;
                                         return 0;
 
                                     // newline found
-                                    case 10:
+                                    case IdNewline:
                                         // special newline pattern, for counting lines
                                         ctx.finish_buffer0(content, bufs);
                                         ctx.finish_line(content, bufs, to);
                                         return 0;
 
                                     // buffers will be swapped
-                                    case 11:
+                                    case IdFinishBuffer:
                                         // there are two buffers, new data are read to the other buffer
                                         ctx.finish_buffer0(content, bufs);
                                         return 0;
 
                                     // end of stream
-                                    case 12:
+                                    case IdEndOfStream:
                                         ctx.finish_buffer0(content, bufs);
                                         ctx.finish_buffer1(content, bufs);
                                         return 0;
