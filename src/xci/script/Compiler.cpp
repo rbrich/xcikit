@@ -607,7 +607,7 @@ private:
         auto& parent_fn = parent_scope.function();
         auto closure_size = parent_fn.raw_size_of_closure();
         // make closure
-        unsigned nl_i = scope.nonlocals().size();
+        auto nl_i = scope.nonlocals().size();
         for (const auto& nl : reverse(scope.nonlocals())) {
             --nl_i;
             const auto& sym = *func.symtab().find_by_index(Symbol::Nonlocal, nl.index);

@@ -12,7 +12,7 @@
 #include <xci/core/container/ChunkedStack.h>
 #include <cstddef>  // byte
 #include <vector>
-#include <iostream>
+#include <ostream>
 
 namespace xci::script {
 

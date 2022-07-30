@@ -166,7 +166,7 @@ struct ExprCondThen: if_must<KeywordThen, NSC, Expression<SC>> {};
 struct ExprCondIf: if_must<KeywordIf, NSC, ExprInfix<NSC>, NSC, ExprCondThen> {};
 struct ExprCondElse: if_must<KeywordElse, NSC, Expression<SC>> {};
 struct ExprCond: seq< plus< ExprCondIf, NSC >, ExprCondElse> {};
-struct ExprWith: if_must< KeywordWith, NSC, ExprArgSafe, NSC, Expression<SC> > {};  // might be parsed as a function, but that wouldn't allow newlines
+struct ExprWith: if_must< KeywordWith, NSC, ExprArgSafe, NSC, Expression<SC> > {};  // could be parsed as a function, but that wouldn't allow newlines
 struct ExprStructItem: seq< Identifier, SC, one<'='>, not_at<one<'='>>, SC, must<ExprArgSafe> > {};
 struct ExprStruct: seq< ExprStructItem, star< SC, one<','>, SC, must<ExprStructItem> > > {};
 
@@ -1274,14 +1274,19 @@ inline bool do_not_trace(std::string_view rule) {
 }
 #endif
 
+using ErrMsg = const std::pair<const char*, std::string_view>;
+
 template< typename Rule >
 struct Control : normal< Rule >
 {
-    static const std::string errmsg;
+    static ErrMsg errmsg;
 
     template< typename Input, typename... States >
     static void raise( const Input& in, States&&... /*unused*/ ) {
-        throw parse_error( errmsg, in );
+        if (!errmsg.second.empty())
+            throw parse_error( errmsg.first + std::string(errmsg.second), in );
+        else
+            throw parse_error( errmsg.first, in );
     }
 
 #ifdef XCI_SCRIPT_PARSER_TRACE
@@ -1369,23 +1374,37 @@ struct Control : normal< Rule >
 #endif
 };
 
-template<> const std::string Control<eof>::errmsg = "invalid syntax";
-template<> const std::string Control<Expression<SC>>::errmsg = "expected expression";
-template<> const std::string Control<Expression<NSC>>::errmsg = "expected expression";
-template<> const std::string Control<DeclParams>::errmsg = "expected function parameter declaration";
-template<> const std::string Control<ExprInfixRight<SC>>::errmsg = "expected infix operator";
-template<> const std::string Control<ExprInfixRight<NSC>>::errmsg = "expected infix operator";
-template<> const std::string Control<Variable>::errmsg = "expected variable name";
-template<> const std::string Control<UnsafeType>::errmsg = "expected type";
-template<> const std::string Control<Type>::errmsg = "expected type";
-template<> const std::string Control<TypeName>::errmsg = "expected type name";
-template<> const std::string Control<StringContent>::errmsg = "unclosed string literal";
-template<> const std::string Control<RawStringContent>::errmsg = "unclosed raw string literal";
+template<> ErrMsg Control<eof>::errmsg = {"invalid syntax", {}};
+template<> ErrMsg Control<until< string<'*', '/'>, any >>::errmsg = {"unterminated comment", {}};
+template<> ErrMsg Control<one<']'>>::errmsg = {"expected ']'", {}};
+template<> ErrMsg Control<one<')'>>::errmsg = {"expected ')'", {}};
+template<> ErrMsg Control<one<'>'>>::errmsg = {"expected '>'", {}};
+template<> ErrMsg Control<one<'{'>>::errmsg = {"expected '{'", {}};
+template<> ErrMsg Control<one<'}'>>::errmsg = {"expected '}'", {}};
+template<> ErrMsg Control<one<'='>>::errmsg = {"expected '='", {}};
+template<> ErrMsg Control<one<'\''>>::errmsg = {"expected '\''", {}};
+template<> ErrMsg Control<RS>::errmsg = {"expected a whitespace character", {}};
+template<> ErrMsg Control<SC>::errmsg = {"expected a whitespace character", {}};
+template<> ErrMsg Control<NSC>::errmsg = {"expected a whitespace character", {}};
+template<> ErrMsg Control<until<eolf>>::errmsg = {"unterminated comment", {}};
+template<> ErrMsg Control<Expression<SC>>::errmsg = {"expected expression", {}};
+template<> ErrMsg Control<Expression<NSC>>::errmsg = {"expected expression", {}};
+template<> ErrMsg Control<DeclParams>::errmsg = {"expected function parameter declaration", {}};
+template<> ErrMsg Control<ExprInfixRight<SC>>::errmsg = {"expected infix operator", {}};
+template<> ErrMsg Control<ExprInfixRight<NSC>>::errmsg = {"expected infix operator", {}};
+template<> ErrMsg Control<Variable>::errmsg = {"expected variable name", {}};
+template<> ErrMsg Control<UnsafeType>::errmsg = {"expected type", {}};
+template<> ErrMsg Control<Type>::errmsg = {"expected type", {}};
+template<> ErrMsg Control<TypeName>::errmsg = {"expected type name", {}};
+template<> ErrMsg Control<StringContent>::errmsg = {"unclosed string literal", {}};
+template<> ErrMsg Control<RawStringContent>::errmsg = {"unclosed raw string literal", {}};
 
 // default message
-template< typename T >
-const std::string Control< T >::errmsg = "parse error matching " + std::string(demangle< T >());
-
+#ifndef NDEBUG
+template< typename T > ErrMsg Control< T >::errmsg = {"parse error matching ", demangle<T>()};
+#else
+template< typename T > ErrMsg Control< T >::errmsg = {"parse error", {}};
+#endif
 
 // ----------------------------------------------------------------------------
 
@@ -1404,7 +1423,6 @@ void Parser::parse(SourceId src_id, ast::Module& mod)
         tao::pegtl::tracking_mode::eager,
         tao::pegtl::eol::lf_crlf,
         SourceRef>
-    //SourceRef{m_source_manager, src_id}
     in(src.data(), src.size(), SourceRef{m_source_manager, src_id});
 
     try {

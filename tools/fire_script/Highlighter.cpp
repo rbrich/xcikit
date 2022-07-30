@@ -6,6 +6,7 @@
 
 #include "Highlighter.h"
 #include <xci/core/parser/unescape_rules.h>
+#include <xci/core/mixin.h>
 
 #include <tao/pegtl.hpp>
 
@@ -182,6 +183,70 @@ struct Main: must< NSC, sor<ReplCommand, SepList<Statement>, success>, NSC, eof 
 
 // ----------------------------------------------------------------------------
 
+
+using HighlightColor = Highlighter::HighlightColor;
+using Color = Highlighter::Color;
+using Mode = Highlighter::Mode;
+
+template< typename Rule >
+struct HighlightRule {
+    static const HighlightColor color;
+};
+
+// NOTE: Don't forget to add each type to HighlightSelector below
+#define HIGHLIGHT_RULE template<> const HighlightColor HighlightRule
+
+// brackets - bg color applied only for brackets under cursor
+HIGHLIGHT_RULE<RoundBracketOpen>::color = {Color::BrightWhite, Mode::Normal, Color::BrightBlack};
+HIGHLIGHT_RULE<RoundBracketClose>::color = {Color::BrightWhite, Mode::Normal, Color::BrightBlack};
+HIGHLIGHT_RULE<SquareBracketOpen>::color = {Color::BrightWhite, Mode::Normal, Color::BrightBlack};
+HIGHLIGHT_RULE<SquareBracketClose>::color = {Color::BrightWhite, Mode::Normal, Color::BrightBlack};
+HIGHLIGHT_RULE<BraceOpen>::color = {Color::BrightWhite, Mode::Normal, Color::BrightBlack};
+HIGHLIGHT_RULE<BraceClose>::color = {Color::BrightWhite, Mode::Normal, Color::BrightBlack};
+HIGHLIGHT_RULE<InvalidCloseBracket>::color = {Color::BrightRed};
+HIGHLIGHT_RULE<InvalidCloseBrace>::color = {Color::BrightRed, Mode::Bold};
+
+// types and variables
+HIGHLIGHT_RULE<SpecialVariable>::color = {Color::Magenta, Mode::Bold};
+HIGHLIGHT_RULE<TypeName>::color = {Color::Yellow};
+
+// keywords, well-known types and names
+HIGHLIGHT_RULE<ControlKeyword>::color = {Color::Magenta};
+HIGHLIGHT_RULE<FunnyKeyword>::color = {Color::BrightMagenta};
+HIGHLIGHT_RULE<TypeKeyword>::color = {Color::BrightYellow};
+HIGHLIGHT_RULE<ValueKeyword>::color = {Color::BrightBlue};
+
+// commands
+HIGHLIGHT_RULE<ValidCommand>::color = {Color::BrightYellow, Mode::Bold};
+HIGHLIGHT_RULE<InvalidCommand>::color = {Color::BrightRed};
+
+// numbers
+HIGHLIGHT_RULE<Integer>::color = {Color::BrightCyan};
+HIGHLIGHT_RULE<Float>::color = {Color::Cyan};
+
+// strings
+HIGHLIGHT_RULE<Byte>::color = {Color::Green};
+HIGHLIGHT_RULE<Char>::color = {Color::Green};
+HIGHLIGHT_RULE<PartialCharLiteral>::color = {Color::Green, Mode::Underline};
+HIGHLIGHT_RULE<Bytes>::color = {Color::BrightGreen};
+HIGHLIGHT_RULE<String>::color = {Color::BrightGreen};
+HIGHLIGHT_RULE<PartialStringLiteral>::color = {Color::BrightGreen, Mode::Underline};
+HIGHLIGHT_RULE<RawString>::color = {Color::BrightGreen};
+HIGHLIGHT_RULE<RawBytes>::color = {Color::BrightGreen};
+HIGHLIGHT_RULE<PartialRawStringLiteral>::color = {Color::BrightGreen, Mode::Underline};
+
+// invalid expressions
+HIGHLIGHT_RULE<InvalidCh>::color = {Color::BrightRed, Mode::Bold};
+
+// comments
+HIGHLIGHT_RULE<LineComment>::color = {Color::BrightBlack};
+HIGHLIGHT_RULE<BlockComment>::color = {Color::BrightBlack};
+HIGHLIGHT_RULE<OpenBlockComment>::color = {Color::BrightBlack};
+
+// default
+template< typename T > const HighlightColor HighlightRule<T>::color = {};
+
+
 template< typename Rule >
 using HighlightSelector = tao::pegtl::parse_tree::selector< Rule,
         tao::pegtl::parse_tree::store_content::on<
@@ -221,84 +286,101 @@ using HighlightSelector = tao::pegtl::parse_tree::selector< Rule,
                 BlockComment,
                 OpenBlockComment > >;
 
+
+struct Node: private xci::core::NonCopyable, private xci::core::NonMovable
+{
+    using children_type = std::vector<std::unique_ptr<Node>>;
+    children_type children;
+
+    tao::pegtl::internal::iterator begin;
+    tao::pegtl::internal::iterator end;
+
+    HighlightColor color;
+
+    bool is_bracket : 1;
+    bool is_fully_bracketed : 1;
+    bool is_open_bracket_or_string: 1;
+    bool is_invalid_close_bracket: 1;
+
+    template< typename Rule >
+    void apply_rule() {
+        color = HighlightRule<Rule>::color;
+        is_bracket =
+                std::is_same_v<Rule, RoundBracketOpen> ||
+                std::is_same_v<Rule, RoundBracketClose> ||
+                std::is_same_v<Rule, SquareBracketOpen> ||
+                std::is_same_v<Rule, SquareBracketClose> ||
+                std::is_same_v<Rule, BraceOpen> ||
+                std::is_same_v<Rule, BraceClose>;
+        is_fully_bracketed = std::is_same_v<Rule, FullyBracketed>;
+        is_open_bracket_or_string =
+                std::is_same_v<Rule, OpenBracket> ||
+                std::is_same_v<Rule, OpenBrace> ||
+                std::is_same_v<Rule, PartialRawStringLiteral>;
+        is_invalid_close_bracket =
+                std::is_same_v<Rule, InvalidCloseBracket> ||
+                std::is_same_v<Rule, InvalidCloseBrace>;
+    }
+
+    // normal color
+    HighlightColor get_color() const {
+        return HighlightColor{
+            .fg = color.fg,
+            .mode = color.mode,
+            .bg = Color::Default
+        };
+    }
+
+    // highlight brackets
+    HighlightColor get_bracket_color() const {
+        return HighlightColor{
+            .fg = Color::White,
+            .mode = Mode::Normal,
+            .bg = color.bg
+        };
+    }
+
+    template< typename Rule, typename ParseInput, typename... States >
+    void start( const ParseInput& in, States&&... st ) {
+        apply_rule<Rule>();
+        begin = tao::pegtl::internal::iterator(in.iterator());
+    }
+
+    template< typename Rule, typename ParseInput, typename... States >
+    void success( const ParseInput& in, States&&... st ) {
+        end = tao::pegtl::internal::iterator(in.iterator());
+    }
+
+    template< typename Rule, typename ParseInput, typename... States >
+    void failure( const ParseInput& in, States&&... st ) noexcept {}
+
+    template< typename... States >
+    void emplace_back( std::unique_ptr<Node> child, States&&... st ) {
+        assert(child);
+        children.emplace_back(std::move(child));
+    }
+};
+
+
+template< typename Rule >
+struct Control : normal< Rule >
+{
+    template< typename Input, typename... States >
+    static void raise( const Input& in, States&&... ) {
+#ifndef NDEBUG
+        throw parse_error("parse error matching " + std::string( demangle< Rule >() ), in);
+#else
+        throw parse_error("parse error", in);
+#endif
+    }
+};
+
 } // namespace parser
+
 
 using HighlightColor = Highlighter::HighlightColor;
 using Color = Highlighter::Color;
 using Mode = Highlighter::Mode;
-
-// NOTE: Don't forget to add each type to HighlightSelector above
-static std::pair<const char*, HighlightColor> highlight_color[] {
-        // brackets - bg color applied only for brackets under cursor
-        {":RoundBracketOpen", {Color::BrightWhite, Mode::Normal, Color::BrightBlack}},
-        {":RoundBracketClose", {Color::BrightWhite, Mode::Normal, Color::BrightBlack}},
-        {":SquareBracketOpen", {Color::BrightWhite, Mode::Normal, Color::BrightBlack}},
-        {":SquareBracketClose", {Color::BrightWhite, Mode::Normal, Color::BrightBlack}},
-        {":BraceOpen", {Color::BrightWhite, Mode::Normal, Color::BrightBlack}},
-        {":BraceClose", {Color::BrightWhite, Mode::Normal, Color::BrightBlack}},
-        {":InvalidCloseBracket", {Color::BrightRed}},
-        {":InvalidCloseBrace", {Color::BrightRed, Mode::Bold}},
-
-        // types and variables
-        {":SpecialVariable", {Color::Magenta, Mode::Bold}},
-        {":TypeName", {Color::Yellow}},
-
-        // keywords, well-known types and names
-        {":ControlKeyword", {Color::Magenta}},
-        {":FunnyKeyword", {Color::BrightMagenta}},
-        {":TypeKeyword", {Color::BrightYellow}},
-        {":ValueKeyword", {Color::BrightBlue}},
-
-        // commands
-        {":ValidCommand", {Color::BrightYellow, Mode::Bold}},
-        {":InvalidCommand", {Color::BrightRed}},
-
-        // numbers
-        {":Integer", {Color::BrightCyan}},
-        {":Float", {Color::Cyan}},
-
-        // strings
-        {":Byte", {Color::Green}},
-        {":Char", {Color::Green}},
-        {":PartialCharLiteral", {Color::Green, Mode::Underline}},
-        {":Bytes", {Color::BrightGreen}},
-        {":String", {Color::BrightGreen}},
-        {":PartialStringLiteral", {Color::BrightGreen, Mode::Underline}},
-        {":RawString", {Color::BrightGreen}},
-        {":RawBytes", {Color::BrightGreen}},
-        {":PartialRawStringLiteral", {Color::BrightGreen, Mode::Underline}},
-
-        // invalid expressions
-        {":InvalidCh", {Color::BrightRed, Mode::Bold}},
-
-        // comments
-        {":LineComment", {Color::BrightBlack}},
-        {":BlockComment", {Color::BrightBlack}},
-        {":OpenBlockComment", {Color::BrightBlack}},
-};
-
-
-static HighlightColor select_highlight_color(std::string_view node_type, bool hl_bracket)
-{
-    for (auto const& [type, c] : highlight_color) {
-        if (node_type.ends_with(type)) {
-            // highlight brackets
-            if (hl_bracket)
-                return HighlightColor{
-                    .fg = Color::White,
-                    .mode = Mode::Normal,
-                    .bg = c.bg
-                };
-            // normal
-            return HighlightColor{
-                .fg = c.fg,
-                .mode = c.mode,
-                .bg = Color::Default
-            };
-        }
-    }
-    return {};
-}
 
 
 void Highlighter::switch_color(const HighlightColor& from, const HighlightColor& to)
@@ -317,40 +399,39 @@ void Highlighter::switch_color(const HighlightColor& from, const HighlightColor&
 
 
 HighlightColor Highlighter::highlight_node(
-        const tao::pegtl::parse_tree::node& node,
+        const parser::Node& node,
         const HighlightColor& prev_color,
         unsigned cursor, bool hl_bracket)
 {
     // Highlight only open/close brackets, not the content
-    hl_bracket = hl_bracket && (node.type.ends_with("Open") || node.type.ends_with("Close"));
+    hl_bracket = hl_bracket && node.is_bracket;
 
     // Workaround: parse_tree node doesn't expose its begin/end char* directly.
     // I've tried to use `node.string_view()`, but it makes the iterating more complicated
     // and less readable, so let's do this instead, for now.
-    const auto *pos = node.m_begin.data;
-    auto color = select_highlight_color(node.type, hl_bracket);
+    const auto *pos = node.begin.data;
+    auto color = hl_bracket ? node.get_bracket_color() : node.get_color();
     switch_color(prev_color, color);
 
-    const bool fully_bracketed = node.type.ends_with(":FullyBracketed");
+    const bool fully_bracketed = node.is_fully_bracketed;
     // When this node is FullyBracketed, then allow highlighting brackets
     // in direct child nodes, if the cursor is positioned on them.
     bool child_hl_bracket = (fully_bracketed
-            && (cursor == node.begin().byte || cursor == node.end().byte - 1));
+            && (cursor == node.begin.byte || cursor == node.end.byte - 1));
 
     // Set open bracket flag on any unpaired { ( [ """
-    if (node.type.ends_with(":OpenBracket") || node.type.ends_with(":OpenBrace")
-    || node.type.ends_with(":PartialRawStringLiteral"))
+    if (node.is_open_bracket_or_string)
         m_open_bracket = true;
 
     // Reset open bracket flag on any unpaired } ) ]
-    if (node.type.ends_with(":InvalidCloseBracket") || node.type.ends_with(":InvalidCloseBrace"))
+    if (node.is_invalid_close_bracket)
         m_open_bracket = false;
 
     for (const auto& child : node.children) {
-        m_output.append(pos, child->m_begin.data - pos);
+        m_output.append(pos, child->begin.data - pos);
         auto child_color = highlight_node(*child, color, cursor, child_hl_bracket);
         switch_color(child_color, color);
-        pos = child->m_end.data;
+        pos = child->end.data;
     }
 
     // Reset open bracket flag if we just closed an expression or a block
@@ -358,7 +439,7 @@ HighlightColor Highlighter::highlight_node(
     if (fully_bracketed)
         m_open_bracket = false;
 
-    m_output.append(pos, node.m_end.data - pos);
+    m_output.append(pos, node.end.data - pos);
     return color;
 }
 
@@ -375,7 +456,7 @@ auto Highlighter::highlight(std::string_view input, unsigned cursor) -> HlResult
 
     m_output.clear();
     try {
-        auto root = tao::pegtl::parse_tree::parse< Main, HighlightSelector >( in );
+        auto root = tao::pegtl::parse_tree::parse< Main, Node, HighlightSelector, tao::pegtl::nothing, Control >( in );
         if (root->children.size() != 1)
             return {std::string{input} + m_term.format("\n{fg:*red}{t:bold}highlighter parse error:{t:normal} {fg:*red}no match{t:normal}"), false};
         auto last_color = highlight_node(*root->children[0], HighlightColor{}, cursor);
