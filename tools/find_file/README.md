@@ -56,3 +56,19 @@ Not planned:
    - This would add a ton of complexity with questionable profit. If you want to hide
      build products from search tools like `ff`, then consider building into a hidden directory
      like `.build`.
+
+
+Build
+-----
+
+Configure cmake to build just `ff` tool + necessary libs (run from repo root, not tools subdirectory):
+
+```bash
+mkdir build; cd build
+cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release --install-prefix $PWD/artifacts \
+  -DXCI_WITH_HYPERSCAN=ON -DXCI_WITH_PEGTL=OFF \
+  -DXCI_GRAPHICS=OFF -DXCI_DATA=OFF -DXCI_SCRIPT=OFF -DXCI_TEXT=OFF -DXCI_WIDGETS=OFF \
+  -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF -DXCI_INSTALL_DEVEL=OFF
+```
+
+Note that `ccmake` tool may be more convenient to flip the switches, especially if the above command line becomes outdated.

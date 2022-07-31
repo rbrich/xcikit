@@ -44,6 +44,7 @@ option(XCI_INSTALL_DEVEL "Install headers, CMake config, static libs." ON)
 option(XCI_WITH_TERMINFO "Link with TermInfo and use it for TTY control sequences, instead of builtin sequences." OFF)
 option(XCI_WITH_ZIP "Link xci-core with libzip and use it for ZIP format in VFS." OFF)
 option(XCI_WITH_HYPERSCAN "Hyperscan library is required to build ff tool." OFF)
+option(XCI_WITH_PEGTL "PEGTL library is required to build xci-script." ON)
 
 # negate it for use as option() initial value
 if (EMSCRIPTEN)
@@ -89,16 +90,22 @@ add_subdirectory(third_party)
 find_package(Threads REQUIRED)
 
 # PEGTL
-find_package(pegtl REQUIRED)
+if (XCI_WITH_PEGTL)
+    find_package(pegtl REQUIRED)
+endif()
 
 # range-v3
-find_package(range-v3 REQUIRED)
+if (XCI_SCRIPT OR XCI_GRAPHICS)
+    find_package(range-v3 REQUIRED)
+endif()
 
 # fmtlib
 find_package(fmt REQUIRED)
 
 # magic enum
-find_package(magic_enum REQUIRED)
+if (XCI_DATA)
+    find_package(magic_enum REQUIRED)
+endif()
 
 # Catch
 if (BUILD_TESTING)

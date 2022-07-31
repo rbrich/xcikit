@@ -32,7 +32,7 @@
     #include <sys/select.h>
 #endif
 
-#ifdef XCI_WITH_TERMINFO
+#if XCI_WITH_TERMINFO == 1
     #include <term.h>
 #endif
 
@@ -48,7 +48,7 @@ namespace xci::core {
 
 // When building without TInfo, emit ANSI escape sequences directly
 // Note that these need to be macros, to match compiler behaviour with <term.h>
-#ifndef XCI_WITH_TERMINFO
+#if XCI_WITH_TERMINFO == 0
 #define cursor_up               CSI "A"
 #define cursor_down             CSI "B"
 #define cursor_right            CSI "C"
@@ -107,7 +107,7 @@ inline std::string xci_tparm(const char* seq, Args... args) {
 // because the arguments must not be evaluated unless is_initialized() is true
 #define XCI_TERM_APPEND(...) TermCtl(*this, is_tty() ? xci_tparm(__VA_ARGS__) : "")
 
-#ifdef XCI_WITH_TERMINFO
+#if XCI_WITH_TERMINFO == 1
     // delegate to TermInfo
     #define TERM_APPEND(...) TermCtl(*this, is_tty() ? tparm(__VA_ARGS__) : "")
     static unsigned _plus_one(unsigned arg) { return arg; }  // already corrected with Terminfo -> noop
@@ -125,7 +125,7 @@ public:
         return instance()._lookup(input_buffer);
     }
 
-#ifdef XCI_WITH_TERMINFO
+#if XCI_WITH_TERMINFO == 1
     static void populate_terminfo() {
         std::initializer_list<std::pair<const char*, TermCtl::Key>> seqs = {
                 {key_enter, TermCtl::Key::Enter},
@@ -441,7 +441,7 @@ void TermCtl::set_is_tty(IsTty is_tty)
             return;
     }
 
-    #ifdef XCI_WITH_TERMINFO
+    #if XCI_WITH_TERMINFO == 1
     // Setup terminfo
     int err = 0;
     if (setupterm(nullptr, m_fd, &err) != 0)

@@ -5,7 +5,11 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "string.h"
+
+#if XCI_WITH_PEGTL == 1
 #include "parser/unescape.h"
+#endif
+
 #include <xci/core/log.h>
 
 #include <fmt/core.h>
@@ -149,6 +153,7 @@ std::string escape(string_view str, bool extended, bool utf8)
 }
 
 
+#if XCI_WITH_PEGTL == 1
 std::string unescape(string_view str)
 {
     using namespace parser::unescape;
@@ -171,6 +176,7 @@ std::string unescape(string_view str)
     result.shrink_to_fit();
     return result;
 }
+#endif
 
 
 std::string to_lower(std::string_view str)
