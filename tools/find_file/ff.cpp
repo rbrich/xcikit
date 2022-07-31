@@ -1,7 +1,7 @@
 // ff.cpp created on 2020-03-17 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020, 2021 Radek Brich
+// Copyright 2020–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 /// Find File (ff) command line tool
@@ -34,14 +34,15 @@ using namespace xci::core;
 using namespace xci::core::argparser;
 
 
-static constexpr auto c_version = "0.6";
+static constexpr auto c_version = "0.7";
 
 
 enum PatternId: unsigned {
     IdMatch = 0,            // default ID, user pattern matched
     IdNewline = 10,         // newline pattern, for counting lines
-    IdFinishBuffer = 11,    // finish buffer (going to swap buffers)
-    IdEndOfStream = 12,     // end of stream
+    IdBinary,               // pattern for detecting binary files
+    IdFinishBuffer,         // finish buffer (going to swap buffers)
+    IdEndOfStream,          // end of stream
 };
 
 
@@ -53,6 +54,9 @@ struct Theme {
     std::string highlight;
     std::string grep_highlight;
     std::string grep_lineno;
+    std::string grep_binary_low;  // non-text characters in binary grep (low control chars)
+    std::string grep_binary_ext;  // non-text characters in binary grep (extended ascii chars)
+    std::string grep_binary_int;  // non-text characters in binary grep (high international chars)
 };
 
 
@@ -282,27 +286,130 @@ struct GrepContext {
     enum State {
         CountLines,
         PrintMatch,
+        PrintBinary,
     };
     State state = CountLines;
 
-    void print_line_number(std::string& out)
+    bool binary: 1 = false;
+    bool matched: 1 = false;
+
+    void print_line_number(std::string& out, std::string&& lineno_str)
     {
         out += theme.grep_lineno;
-        out += std::to_string(lineno);
+        out += lineno_str;
         out += ':';
         out += theme.normal;
     }
 
-    void highlight_line(std::string& out, const ScanFileBuffers& bufs,
-                        const size_t from, const size_t to)
+    void highlight_binary(std::string& out, std::string_view data, size_t from, size_t to)
     {
+        size_t i = 0;
+        bool hl = false;
+        int in_bin = 0;  // 0 = normal, 1 = low bin, 2 = high bin
+        auto bin_state = [&hl, &in_bin, &out, this](int st){
+            if (in_bin != st) {
+                if (st == -1)
+                    st = 0;
+                switch (st) {
+                    case 0: out += theme.normal; break;
+                    case 1: out += theme.grep_binary_low; break;
+                    case 2: out += theme.grep_binary_ext; break;
+                    case 3: out += theme.grep_binary_int; break;
+                }
+                in_bin = st;
+                if (hl)
+                    out += theme.grep_highlight;
+            }
+        };
+        for (const char c : data) {
+            auto uc = (unsigned char)c;
+            if (i == from) {
+                hl = true;
+                bin_state(-1);
+            }
+            if (i == to)
+                break;
+            // Display non-printing characters as visible surrogates, using color coding.
+            // Control characters are printed as `X` for Control-X, in magenta color. DEL (7F) prints as magenta `?`.
+            // High characters (extended or international) are printed as the character for the low 7 bits,
+            // on blue background (the characters that map to low ASCII control chars are still magenta).
+            // Inspired by `cat -v`.
+            if (uc < 0x20 || uc == 0x7F) {
+                bin_state(1);
+                out += (uc == 0x7F) ? '?' : char(c + 0x40);
+            } else if ((uc >= 0x80 && uc < 0xA0) || uc == 0xFF) {
+                bin_state(2);
+                out += (uc == 0xFF) ? '?' : char(c - 0x40);
+            } else if (uc >= 0xA0) {
+                bin_state(3);
+                out += char(c - 0x80);
+            } else {
+                bin_state(0);
+                out += c;
+            }
+            ++i;
+        }
+        hl = false;
+        bin_state(-1);
+    }
+
+    void highlight_binary_line(std::string& out, const ScanFileBuffers& bufs,
+                               size_t from, size_t to, size_t line)
+    {
+        const auto& buf0 = bufs.buffer[0];
+        const auto& buf1 = bufs.buffer[1];
+        if (line < buf1.offset) {
+            assert(line >= buf0.offset);
+            const auto ln0 = line - buf0.offset;
+            highlight_binary(out, {buf0.data + ln0, buf0.size - ln0},
+                             from < buf0.offset + ln0 ? 0 : from - buf0.offset - ln0,
+                             to < buf0.offset + ln0 ? 0 : to - buf0.offset - ln0);
+        }
+        const auto ln1 = line < buf1.offset ? 0 : line - buf1.offset;
+        highlight_binary(out, {buf1.data + ln1, buf1.size - ln1},
+                         from < buf1.offset + ln1 ? 0 : from - buf1.offset - ln1,
+                         to < buf1.offset + ln1 ? 0 : to - buf1.offset - ln1);
+    }
+
+    void highlight_line(std::string& out, const ScanFileBuffers& bufs,
+                        size_t from, size_t to)
+    {
+        const auto& buf0 = bufs.buffer[0];
+        const auto& buf1 = bufs.buffer[1];
+
+        if (binary) {
+            // The binary output is split to lines of 64 bytes.
+            // A match may span multiple lines.
+            const auto from_line = from & ~63;
+            const auto to_line = to & ~63;
+            assert(from_line >= buf0.offset);
+            if (state == PrintBinary && from_line != (last_end & ~63)) {
+                finish_buffer0(out, bufs);
+                finish_buffer1(out, bufs);
+            }
+            for (auto line = from_line; line <= to_line; line += 64) {
+                if (line != from_line || state == CountLines)
+                    print_line_number(out, fmt::format("{:08x}", line));
+                auto start = line;
+                if (state == PrintBinary && last_end > line)
+                    start = last_end;
+                highlight_binary_line(out, bufs, from, std::min(to, line + 64), start);
+                if (to >= line + 63) {
+                    out += '\n';
+                    state = CountLines;
+                } else {
+                    state = PrintBinary;
+                }
+            }
+            last_end = to;
+            return;
+        }
+
         if (state == CountLines)
-            print_line_number(out);
+            print_line_number(out, std::to_string(lineno));
         state = PrintMatch;
 
         // print everything from last end (newline or last match) upto current match start
-        const auto& buf0 = bufs.buffer[0];
-        const auto& buf1 = bufs.buffer[1];
         if (last_end < buf0.offset) {
             // we've missed the start of line - it's not in the previous buffer
             out += theme.grep_lineno;
@@ -341,6 +448,8 @@ struct GrepContext {
 
     void finish_line(std::string& out, const ScanFileBuffers& bufs, uint32_t end)
     {
+        if (state == PrintBinary)
+            return;
         if (state == PrintMatch) {
             const auto& buf1 = bufs.buffer[1];
             out.append(buf1.data + last_end - buf1.offset, end - last_end);
@@ -362,6 +471,21 @@ struct GrepContext {
                 last_end = buf1.offset;
             }
         }
+        if (state == PrintBinary) {
+            const auto& buf0 = bufs.buffer[0];
+            const auto& buf1 = bufs.buffer[1];
+            if (last_end < buf1.offset) {
+                const auto line_end = (last_end & ~63) + 64;
+                assert(line_end <= buf1.offset);
+                const auto end0 = last_end - buf0.offset;
+                highlight_binary(out, {buf0.data + end0, buf0.size - end0},
+                                 buf0.size /* from = out of buffer -> no highlight */,
+                                 line_end - buf0.offset - end0);
+                out += '\n';
+                state = CountLines;
+                last_end = line_end;
+            }
+        }
     }
 
     void finish_buffer1(std::string& out, const ScanFileBuffers& bufs)
@@ -374,8 +498,52 @@ struct GrepContext {
                 last_end = buf1.offset + buf1.size;
             }
         }
+        if (state == PrintBinary) {
+            const auto& buf1 = bufs.buffer[1];
+            const auto line_end = (last_end & ~63) + 64;
+            const auto end1 = last_end - buf1.offset;
+            highlight_binary(out, {buf1.data + end1, buf1.size - end1},
+                             buf1.size /* from = out of buffer -> no highlight */,
+                             line_end - buf1.offset - end1);
+            out += '\n';
+            state = CountLines;
+        }
     }
 };
+
+
+static void print_bin_table(const Theme& theme)
+{
+    GrepContext ctx{ .theme = theme };
+    std::string out;
+    // header
+    {
+        out += theme.grep_lineno;
+        std::string line;
+        line.reserve(40);
+        for (int i = 0; i != 8; ++i)
+            line += fmt::format(" {:02x}  ", i * 4);
+        out += "   ";
+        out += line;
+        out += '\n';
+        out += theme.normal;
+    }
+    // rows
+    for (int row = 0; row != 8; ++row) {
+        const auto ofs = row * 32;
+        ctx.print_line_number(out, fmt::format("{:02x}", ofs));
+        std::string line;
+        line.reserve(40);
+        for (int c = ofs; c != ofs + 32; ++c) {
+            if (c % 4 == 0)
+                line += ' ';
+            line += char(c);
+        }
+        ctx.highlight_binary(out, line, ~0, ~0);
+        out += '\n';
+    }
+    std::cout << out;
+}
 
 
 static void print_path_with_attrs(const std::string& name, const FileTree::PathNode& path,
@@ -629,8 +797,10 @@ int main(int argc, const char* argv[])
     int max_depth = -1;
     bool show_version = false;
     bool show_stats = false;
+    bool show_bin_table = false;
     bool grep_mode = false;
     bool quiet_grep = false;
+    bool binary_grep = false;
     bool quiet = false;
     int jobs = 2 * cpu_count();
     size_t size_from = 0;
@@ -665,7 +835,9 @@ int main(int argc, const char* argv[])
                     [&size_from, &size_to](const char* arg){ return parse_size_filter(arg, size_from, size_to); }),
             Option("-g, --grep PATTERN", "Filter files by content, i.e. \"grep\"", grep_pattern),
             Option("-G, --grep-mode", "Switch to grep mode (positional arg PATTERN is searched in content instead of file names)", grep_mode),
-            Option("-Q, --quiet-grep", "Grep: filter files, don't show matched lines. Stops on first match, making filtering faster.", quiet_grep),
+            Option("-b, --binary", "Grep: Show matches in binary files.", binary_grep),
+            Option("-B, --binary-table", "Print table of color-coded binary characters, as used in -b (binary grep)", show_bin_table),
+            Option("-Q, --quiet-grep", "Grep: Filter files, don't show matched lines. Stops on first match, making filtering faster.", quiet_grep),
             Option("-q, --quiet", "Do not print file names. Exit status: 0 = match, 1 = no match", quiet),
             Option("-c, --color", "Force color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Always); }),
             Option("-C, --no-color", "Disable color output (default: auto)", [&term]{ term.set_is_tty(TermCtl::IsTty::Never); }),
@@ -673,7 +845,7 @@ int main(int argc, const char* argv[])
             Option("-j, --jobs JOBS", fmt::format("Number of worker threads (default: 2*ncpu = {})", jobs), jobs).env("JOBS"),
             Option("-V, --version", "Show version", show_version),
             Option("-h, --help", "Show help", show_help),
-            Option("[PATTERN]", "File name pattern (Perl-style regex)", pattern),
+            Option("[PATTERN]", "Pattern (Perl-style regex) to search in file names, or in file content (with -G)", pattern),
             Option("-- PATH ...", "Paths to search", paths),
     } (argv);
 
@@ -760,8 +932,23 @@ int main(int argc, const char* argv[])
         else
             flags |= HS_FLAG_SINGLEMATCH;
         hs_compile_error_t *re_compile_err;
-        // count newlines
+
+        // Count newlines
         grep_db.add_literal("\n", flags, IdNewline);
+
+        // Detect binary files
+        //
+        // A file is classified as binary if it contains:
+        // 0x00 .. 0x08 (includes BEL, BS)
+        // 0x0E .. 0x1F (includes ESC)
+        // 0x7F (DEL)
+        //
+        // NOTE: BEL, BS, ESC might occur in special text files, that are meant to be used in a terminal.
+        //       We could allow them, but then we would need to replace them on output, so they don't
+        //       mess up with the terminal. The replacement would work similarly as in the binary output
+        //       (surrogate character in magenta color).
+        grep_db.add(R"([\x00-\x08\x0E-\x1F\x7F])", flags, IdBinary);
+
         if (fixed) {
             grep_db.add_literal(grep_pattern, flags);
         } else {
@@ -809,9 +996,12 @@ int main(int argc, const char* argv[])
         .dir = term.bold().cyan().seq(),
         .file_dir = term.cyan().seq(),
         .file_name = term.normal().seq(),
-        .highlight = term.bold().yellow().seq(),
-        .grep_highlight = term.bold().red().seq(),
+        .highlight = term.bold().bright_yellow().seq(),
+        .grep_highlight = term.bold().bright_yellow().underline().seq(),
         .grep_lineno = term.green().seq(),
+        .grep_binary_low = term.bright_magenta().seq(),
+        .grep_binary_ext = term.bright_magenta().on_blue().seq(),
+        .grep_binary_int = term.on_blue().seq(),
     };
 
     FlatSet<dev_t> dev_ids;
@@ -819,7 +1009,8 @@ int main(int argc, const char* argv[])
 
     FileTree ft(jobs-1,
                 [show_hidden, show_dirs, single_device, long_form, highlight_match,
-                 type_mask, size_from, size_to, max_depth, search_in_special_dirs, quiet, quiet_grep,
+                 type_mask, size_from, size_to, max_depth, search_in_special_dirs,
+                 quiet, quiet_grep, binary_grep,
                  &re_db, &grep_db, &re_scratch, &theme, &dev_ids, &counters]
                 (int tn, const FileTree::PathNode& path, FileTree::Type t)
     {
@@ -937,29 +1128,49 @@ int main(int argc, const char* argv[])
 
                 std::string content;
                 if (t == FileTree::File && grep_db) {
-                    bool matched = false;
-                    GrepContext ctx {.theme = theme};
+                    GrepContext ctx { .theme = theme };
                     auto [read_ok, hs_res] = grep_db.scan_file(path, re_scratch[tn],
-                            [quiet_grep, &content, &ctx]
+                            [quiet_grep, binary_grep, &content, &ctx]
                             (const ScanFileBuffers& bufs, PatternId id, uint32_t from, uint32_t to)
                             {
+                                if (ctx.binary && !binary_grep) {
+                                    // stop if a match was found in binary file
+                                    if (id == IdMatch) {
+                                        content = fmt::format("Binary file matched at {:08x}\n", from);
+                                        ctx.matched = true;
+                                        return 1;  // -> HS_SCAN_TERMINATED
+                                    }
+                                    return 0;
+                                }
+
                                 if (quiet_grep) {
                                     // stop if a match was found
-                                    return id == IdMatch ? 1 : 0;
+                                    if (id == IdMatch) {
+                                        ctx.matched = true;
+                                        return 1;  // -> HS_SCAN_TERMINATED
+                                    }
+                                    return 0;
                                 }
 
                                 switch (id) {
                                     // match found
                                     case IdMatch:
                                         ctx.highlight_line(content, bufs, from, to);
-                                        matched = true;
+                                        ctx.matched = true;
                                         return 0;
 
                                     // newline found
                                     case IdNewline:
+                                        if (ctx.binary)
+                                            return 0;
                                         // special newline pattern, for counting lines
                                         ctx.finish_buffer0(content, bufs);
                                         ctx.finish_line(content, bufs, to);
+                                        return 0;
+
+                                    case IdBinary:
+                                        // found a byte which is classified as binary
+                                        ctx.binary = true;
                                         return 0;
 
                                     // buffers will be swapped
@@ -979,11 +1190,9 @@ int main(int argc, const char* argv[])
                                         return 0;
                                 }
                             });
-                    if (!read_ok)
+                    if (!read_ok || !ctx.matched)
                         return false;
-                    if ((quiet_grep && hs_res == HS_SUCCESS) || (!quiet_grep && !ctx.matched))
-                        return false;  // not matched
-                    if ((quiet_grep && hs_res != HS_SCAN_TERMINATED) || (!quiet_grep && hs_res != HS_SUCCESS)) {
+                    if (hs_res != HS_SUCCESS && hs_res != HS_SCAN_TERMINATED) {
                         fmt::print(stderr,"ff: {}: scan failed ({})\n", path.name(), hs_res);
                         return false;
                     }
@@ -1032,6 +1241,10 @@ int main(int argc, const char* argv[])
     }
 
     ft.main_worker();
+
+    if (show_bin_table) {
+        print_bin_table(theme);
+    }
 
     if (show_stats) {
         print_stats(counters);

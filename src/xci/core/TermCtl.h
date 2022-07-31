@@ -82,6 +82,14 @@ public:
     TermCtl magenta() const { return fg(Color::Magenta); }
     TermCtl cyan() const { return fg(Color::Cyan); }
     TermCtl white() const { return fg(Color::White); }
+    TermCtl bright_black() const { return fg(Color::BrightBlack); }
+    TermCtl bright_red() const { return fg(Color::BrightRed); }
+    TermCtl bright_green() const { return fg(Color::BrightGreen); }
+    TermCtl bright_yellow() const { return fg(Color::BrightYellow); }
+    TermCtl bright_blue() const { return fg(Color::BrightBlue); }
+    TermCtl bright_magenta() const { return fg(Color::BrightMagenta); }
+    TermCtl bright_cyan() const { return fg(Color::BrightCyan); }
+    TermCtl bright_white() const { return fg(Color::BrightWhite); }
     TermCtl default_fg() const { return fg(Color::Default); }
 
     // background
