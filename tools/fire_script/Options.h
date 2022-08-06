@@ -14,6 +14,7 @@
 namespace xci::script::tool {
 
 struct ReplOptions {
+    bool print_rusage = false;
     bool print_raw_ast = false;
     bool print_ast = false;
     bool print_symtab = false;

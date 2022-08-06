@@ -7,6 +7,8 @@ add_library(xci-core
     file.cpp
     dispatch.cpp
     EditBuffer.cpp
+    EditLine.cpp
+    ResourceUsage.cpp
     FpsCounter.cpp
     log.cpp
     SharedLibrary.cpp
@@ -15,7 +17,6 @@ add_library(xci-core
     rtti.cpp
     TermCtl.cpp
     Vfs.cpp
-    EditLine.cpp
     $<TARGET_OBJECTS:third_party::widechar_width>
     )
 add_library(xcikit::xci-core ALIAS xci-core)
