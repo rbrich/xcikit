@@ -11,6 +11,7 @@
 #include <xci/script/Value.h>
 #include <xci/script/Builtin.h>
 #include <xci/script/dump.h>
+#include <xci/core/ResourceUsage.h>
 
 #include <fmt/core.h>
 #include <range/v3/view/reverse.hpp>
@@ -19,6 +20,7 @@
 
 namespace xci::script::tool {
 
+using xci::core::ResourceUsage;
 using ranges::cpp20::views::reverse;
 using std::endl;
 
@@ -35,9 +37,13 @@ bool Repl::evaluate(const std::string& module_name, std::string module_source, E
     auto src_id = source_manager.add_source(module_name, std::move(module_source));
 
     try {
+        ResourceUsage rusage;
+
         // parse
+        rusage.start_if(m_opts.print_rusage, "parsed");
         ast::Module ast;
         parser.parse(src_id, ast);
+        rusage.stop();
 
         if (m_opts.print_raw_ast) {
             t.stream() << "Raw AST:" << endl << dump_tree << ast << endl;
@@ -47,7 +53,9 @@ bool Repl::evaluate(const std::string& module_name, std::string module_source, E
         auto module = prepare_module(module_name);
 
         // compile
+        rusage.start_if(m_opts.print_rusage, "compiled");
         bool is_compiled = compiler.compile(module->get_main_scope(), ast);
+        rusage.stop();
         if (!is_compiled) {
             // We're only processing the AST, without actual compilation
             mode = EvalMode::Preprocess;
@@ -74,10 +82,16 @@ bool Repl::evaluate(const std::string& module_name, std::string module_source, E
 std::shared_ptr<Module> Repl::prepare_module(const std::string& module_name)
 {
     auto module = std::make_shared<Module>(m_ctx.interpreter.module_manager(), module_name);
+    ResourceUsage rusage;
+
+    rusage.start_if(m_opts.print_rusage, "builtin imported");
     module->import_module("builtin");
+    rusage.stop();
 
     if (m_opts.with_std_lib) {
+        rusage.start_if(m_opts.print_rusage, "std imported");
         module->import_module("std");
+        rusage.stop();
     }
 
     for (auto& m : m_ctx.input_modules)
@@ -122,8 +136,10 @@ bool Repl::evaluate_module(Module& module, EvalMode mode)
     BytecodeTracer tracer(machine, t);
     tracer.setup(m_opts.print_bytecode, m_opts.trace_bytecode);
 
+    ResourceUsage rusage;
     try {
         auto& main_fn = module.get_main_function();
+        rusage.start_if(m_opts.print_rusage, "executed");
         machine.call(main_fn, [&](TypedValue&& invoked) {
             if (!invoked.is_void()) {
                 t.sanitize_newline();
@@ -131,6 +147,7 @@ bool Repl::evaluate_module(Module& module, EvalMode mode)
             }
             invoked.decref();
         });
+        rusage.stop();
         t.sanitize_newline();
 
         // returned value of last statement
