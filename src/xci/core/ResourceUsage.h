@@ -7,16 +7,13 @@
 #ifndef XCI_CORE_RESOURCEUSAGE_H
 #define XCI_CORE_RESOURCEUSAGE_H
 
-#include <chrono>
 #include <cstdint>
 
 namespace xci::core {
 
 /// Measure resource usage, including time.
-/// Uses getrusage(2) or similar.
-class ResourceUsage
-{
-    using WallClock = std::chrono::steady_clock;
+/// Uses getrusage(2) wherever available.
+class ResourceUsage {
 public:
     ResourceUsage() = default;
     explicit ResourceUsage(const char* name, bool start_now=true)
@@ -33,16 +30,18 @@ public:
 
 private:
     struct Measurements {
-        WallClock::time_point wall;
-        uint64_t user;
-        uint64_t system;
+        uint64_t real_time;  // microseconds
+        uint64_t user_time;  // microseconds
+        uint64_t system_time;  // microseconds
         long page_faults;
+#ifndef _WIN32
         long page_reclaims;
         long blk_in;
         long blk_out;
+#endif
 
-        void reset() { wall = WallClock::time_point{}; }
-        operator bool() const { return wall != WallClock::time_point{}; }
+        void reset() { real_time = 0; }
+        operator bool() const { return real_time != 0; }
     };
 
     Measurements measure() const;
