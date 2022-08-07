@@ -33,6 +33,7 @@ private:
         uint64_t real_time;  // microseconds
         uint64_t user_time;  // microseconds
         uint64_t system_time;  // microseconds
+        long max_rss;  // in kilobytes
         long page_faults;
 #ifndef _WIN32
         long page_reclaims;

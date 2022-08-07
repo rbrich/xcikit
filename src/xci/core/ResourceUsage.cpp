@@ -48,18 +48,21 @@ void ResourceUsage::stop()
     m.real_time -= m_start.real_time;
     m.user_time -= m_start.user_time;
     m.system_time -= m_start.system_time;
+    m.max_rss -= m_start.max_rss;
     m.page_faults -= m_start.page_faults;
 #ifndef _WIN32
     m.page_reclaims -= m_start.page_reclaims;
     m.blk_in -= m_start.blk_in;
     m.blk_out -= m_start.blk_out;
     fmt::print("⧗ {:20} {:>8} µs real {:>8} µs usr {:>8} µs sys"
-               " {:>5} pg flt {:>5} pg rclm {:>5} blk in {:>5} blk out\n",
+               " {:>7} kB rss {:>5} pg flt {:>5} pg rclm {:>5} blk in {:>5} blk out\n",
                m_name, m.real_time, m.user_time, m.system_time,
-               m.page_faults, m.page_reclaims, m.blk_in, m.blk_out);
+               m.max_rss, m.page_faults, m.page_reclaims, m.blk_in, m.blk_out);
 #else
-    fmt::print("⧗ {:20} {:>8} µs real {:>8} µs usr {:>8} µs sys {:>5} pg flt\n",
-               m_name, m.real_time, m.user_time, m.system_time, m.page_faults);
+    fmt::print("⧗ {:20} {:>8} µs real {:>8} µs usr {:>8} µs sys"
+               " {:>7} kB rss {:>5} pg flt\n",
+               m_name, m.real_time, m.user_time, m.system_time,
+               m.max_rss, m.page_faults);
 #endif
     m_start.reset();
 }
@@ -75,6 +78,11 @@ ResourceUsage::Measurements ResourceUsage::measure() const
     if (getrusage(RUSAGE_SELF, &r_usage) == 0) {
         res.user_time = timeval_to_micros(r_usage.ru_utime);
         res.system_time = timeval_to_micros(r_usage.ru_stime);
+#ifdef __linux__
+        res.max_rss = r_usage.ru_maxrss;  // already in kB on Linux
+#else
+        res.max_rss = r_usage.ru_maxrss / 1024;
+#endif
         res.page_faults = r_usage.ru_majflt;
         res.page_reclaims = r_usage.ru_minflt;
         res.blk_in = r_usage.ru_inblock;
@@ -92,6 +100,7 @@ ResourceUsage::Measurements ResourceUsage::measure() const
     PROCESS_MEMORY_COUNTERS pmc;
     if (GetProcessMemoryInfo(GetCurrentProcess(), &pmc, sizeof(pmc)))
     {
+        res.max_rss = pmc.PeakWorkingSetSize / 1024;
         res.page_faults = pmc.PageFaultCount;
     }
 #endif
