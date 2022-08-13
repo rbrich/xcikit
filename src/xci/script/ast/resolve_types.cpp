@@ -422,8 +422,8 @@ public:
         v.callable->apply(*this);
         v.callable_type = m_value_type;
 
-        if (!m_value_type.is_unknown() && !m_value_type.is_callable() && !m_call_args.empty()) {
-            throw UnexpectedArgument(1, m_call_args[0].source_loc);
+        if (!m_value_type.is_callable() && !m_call_args.empty()) {
+            throw UnexpectedArgument(1, m_value_type, m_call_args[0].source_loc);
         }
 
         if (m_value_type.is_callable()) {
@@ -435,7 +435,7 @@ public:
                     m_value_type = new_signature->return_type;
                 } else {
                     // Not really calling, just defining, e.g. `f = compose u v`
-                    // Keep the return type as is, making it `Void -> <lambda type>`
+                    // Keep the return type as is, making it `() -> <lambda type>`
                     m_value_type = TypeInfo{new_signature};
                 }
                 v.partial_args = 0;
@@ -695,7 +695,7 @@ private:
         switch (sig.type()) {
             case Type::Unknown: {
                 auto var = sig.generic_var();
-                if (var > 0 && var <= resolved.size())
+                if (var > 0 && var <= resolved.size() && resolved[var - 1])
                     sig = resolved[var - 1];
                 break;
             }
@@ -1015,7 +1015,7 @@ private:
                     ++v.wrapped_execs;
                     v.partial_args = 0;
                 } else {
-                    throw UnexpectedArgument(i, arg.source_loc);
+                    throw UnexpectedArgument(i, TypeInfo{std::make_shared<Signature>(orig_signature)}, arg.source_loc);
                 }
             }
             // check type of next param
@@ -1115,7 +1115,7 @@ private:
                     i_prm = 0;
                 } else {
                     // unexpected argument
-                    throw UnexpectedArgument(i_arg, arg.source_loc);
+                    throw UnexpectedArgument(i_arg, TypeInfo{std::make_shared<Signature>(signature)}, arg.source_loc);
                 }
             }
             // resolve T (only from original signature)

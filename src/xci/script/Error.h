@@ -144,8 +144,7 @@ struct UnexpectedArgumentCount : public ScriptError {
 
 
 struct UnexpectedArgument : public ScriptError {
-    explicit UnexpectedArgument(size_t idx, const SourceLocation& loc)
-            : ScriptError(fmt::format("unexpected argument #{}", idx), loc) {}
+    explicit UnexpectedArgument(size_t num, const TypeInfo& ftype, const SourceLocation& loc);
 };
 
 
