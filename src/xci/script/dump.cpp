@@ -134,7 +134,10 @@ private:
 std::ostream& operator<<(std::ostream& os, const Literal& v)
 {
     if (stream_options(os).enable_tree) {
-        return os << "Literal(Expression) " << v.value << endl;
+        os << "Literal(Expression) " << v.value;
+        if (v.ti)
+            os << " [type_info=" << v.ti << ']';
+        return os << endl;
     } else {
         return os << v.value;
     }
@@ -156,10 +159,9 @@ std::ostream& operator<<(std::ostream& os, const Tuple& v)
 {
     if (stream_options(os).enable_tree) {
         os << "Tuple(Expression)";
-        if (v.type_info)
-            os << " [type_info=" << v.type_info << ']';
-        os << endl;
-        os << more_indent;
+        if (v.ti)
+            os << " [type_info=" << v.ti << ']';
+        os << endl << more_indent;
         for (const auto& item : v.items)
             os << put_indent << *item;
         return os << less_indent;
@@ -177,8 +179,10 @@ std::ostream& operator<<(std::ostream& os, const Tuple& v)
 std::ostream& operator<<(std::ostream& os, const List& v)
 {
     if (stream_options(os).enable_tree) {
-        os << "List(Expression)" << endl;
-        os << more_indent;
+        os << "List(Expression)";
+        if (v.ti)
+            os << " [type_info=" << v.ti << ']';
+        os << endl << more_indent;
         for (const auto& item : v.items)
             os << put_indent << *item;
         return os << less_indent;
@@ -197,8 +201,10 @@ std::ostream& operator<<(std::ostream& os, const List& v)
 std::ostream& operator<<(std::ostream& os, const StructInit& v)
 {
     if (stream_options(os).enable_tree) {
-        os << "StructInit(Expression)" << endl;
-        os << more_indent;
+        os << "StructInit(Expression)";
+        if (v.ti)
+            os << " [type_info=" << v.ti << ']';
+        os << endl << more_indent;
         for (const auto& item : v.items) {
             os << put_indent << item.first;
             os << put_indent << *item.second;
@@ -419,6 +425,8 @@ std::ostream& operator<<(std::ostream& os, const Reference& v)
 {
     if (stream_options(os).enable_tree) {
         os << "Reference(Expression)";
+        if (v.ti)
+            os << " [type_info=" << v.ti << ']';
         const auto symptr = v.identifier.symbol;
         if (symptr && symptr->type() == Symbol::Function && v.index != no_index) {
             os << " [Function #" << v.index << " @" << v.module->name()
@@ -441,8 +449,10 @@ std::ostream& operator<<(std::ostream& os, const Reference& v)
 std::ostream& operator<<(std::ostream& os, const Call& v)
 {
     if (stream_options(os).enable_tree) {
-        os << "Call(Expression)" << endl;
-        os << more_indent << put_indent << *v.callable;
+        os << "Call(Expression)";
+        if (v.ti)
+            os << " [type_info=" << v.ti << ']';
+        os << endl << more_indent << put_indent << *v.callable;
         for (const auto& arg : v.args) {
             os << put_indent << *arg;
         }
@@ -533,7 +543,10 @@ std::ostream& operator<<(std::ostream& os, const Operator& v)
 std::ostream& operator<<(std::ostream& os, const Function& v)
 {
     if (stream_options(os).enable_tree) {
-        os << "Function(Expression)" << endl;
+        os << "Function(Expression)";
+        if (v.ti)
+            os << " [type_info=" << v.ti << ']';
+        os << endl;
         return os << rule_indent
                   << put_indent << v.type
                   << put_indent << v.body
@@ -553,8 +566,11 @@ std::ostream& operator<<(std::ostream& os, const Function& v)
 std::ostream& operator<<(std::ostream& os, const Cast& v)
 {
     if (stream_options(os).enable_tree) {
-        os << "Cast(Expression)" << endl;
-        os << more_indent
+        os << "Cast(Expression)";
+        if (v.to_type)
+            os << " [type_info=" << v.to_type << ']';
+        os << endl
+           << more_indent
            << put_indent << *v.expression
            << put_indent << *v.type;
         if (v.cast_function)

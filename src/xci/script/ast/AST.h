@@ -309,8 +309,8 @@ struct Expression {
     virtual void apply(ConstVisitor& visitor) const = 0;
     virtual void apply(Visitor& visitor) = 0;
     virtual std::unique_ptr<ast::Expression> make_copy() const = 0;
-
     void copy_to(Expression& r) const;
+    virtual const TypeInfo& type_info() const = 0;  // resolved type
 
     SourceLocation source_loc;
 
@@ -325,11 +325,12 @@ struct Literal: public Expression {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;
+    const TypeInfo& type_info() const override { return ti; }
 
     TypedValue value;
 
     // resolved:
-    TypeInfo type_info;
+    TypeInfo ti;
 };
 
 /// An expression in parentheses, e.g. (1 + 2)
@@ -337,6 +338,7 @@ struct Parenthesized: public Expression {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;
+    const TypeInfo& type_info() const override { return expression->type_info(); }
 
     std::unique_ptr<Expression> expression;
 };
@@ -345,22 +347,24 @@ struct Tuple: public Expression {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;
+    const TypeInfo& type_info() const override { return ti; }
 
     std::vector<std::unique_ptr<Expression>> items;
 
     // resolved:
-    TypeInfo type_info;  // the tuple may resolve to Struct type depending on specified/inferred type
+    TypeInfo ti;  // the tuple may resolve to Struct type depending on specified/inferred type
 };
 
 struct List: public Expression {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;
+    const TypeInfo& type_info() const override { return ti; }
 
     std::vector<std::unique_ptr<Expression>> items;
 
     // resolved:
-    TypeInfo type_info;
+    TypeInfo ti;
     size_t elem_type_id = 0;
 };
 
@@ -369,12 +373,13 @@ struct StructInit: public Expression {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;
+    const TypeInfo& type_info() const override { return ti; }
 
     using Item = std::pair<Identifier, std::unique_ptr<Expression>>;
     std::vector<Item> items;
 
     // resolved:
-    TypeInfo struct_type;  // used by Compiler to produce tuple in struct order, with defaults filled in
+    TypeInfo ti;  // used by Compiler to produce tuple in struct order, with defaults filled in
 };
 
 // variable reference
@@ -385,6 +390,7 @@ struct Reference: public Expression {
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;
     void copy_to(Reference& r) const;
+    const TypeInfo& type_info() const override { return ti; }
 
     Identifier identifier;
     std::unique_ptr<Type> type_arg;  // explicit type argument: e.g. <Int>
@@ -393,7 +399,7 @@ struct Reference: public Expression {
     SymbolPointerList sym_list;  // list of overloaded Functions, or Instances in case of Method
     Module* module = nullptr;   // module with function
     Index index = no_index;     // index of function scope in module
-    TypeInfo type_info;
+    TypeInfo ti;
 };
 
 struct Call: public Expression {
@@ -404,12 +410,13 @@ struct Call: public Expression {
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;
     void copy_to(Call& r) const;
+    const TypeInfo& type_info() const override { return ti; }
 
     std::unique_ptr<Expression> callable;
     std::vector<std::unique_ptr<Expression>> args;
 
     // resolved:
-    TypeInfo callable_type;
+    TypeInfo ti;
     unsigned wrapped_execs = 0;
     unsigned partial_args = 0;
     Index partial_index = no_index;
@@ -485,11 +492,13 @@ struct Function: public Expression {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;
+    const TypeInfo& type_info() const override { return ti; }
 
     FunctionType type;
     Block body;
 
     // resolved:
+    TypeInfo ti;
     SymbolPointer symbol;  // only for lambda
     Index scope_index = no_index;
     size_t call_args = 0;  // number of args if the function is inside Call
@@ -502,6 +511,7 @@ struct Condition: public Expression {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;
+    const TypeInfo& type_info() const override { return else_expr->type_info(); }
 
     // first = if-condition
     // second = then-expression
@@ -518,6 +528,7 @@ struct WithContext: public Expression {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;
+    const TypeInfo& type_info() const override { return expression->type_info(); }
 
     std::unique_ptr<Expression> context;
     std::unique_ptr<Expression> expression;
@@ -525,7 +536,6 @@ struct WithContext: public Expression {
     // resolved:
     Reference enter_function;
     Reference leave_function;
-    TypeInfo expression_type;
     TypeInfo leave_type;   // enter function returns it, leave function consumes it
 };
 
@@ -534,6 +544,7 @@ struct Cast: public Expression {
     void apply(ConstVisitor& visitor) const override { visitor.visit(*this); }
     void apply(Visitor& visitor) override { visitor.visit(*this); }
     std::unique_ptr<ast::Expression> make_copy() const override;
+    const TypeInfo& type_info() const override { return to_type; }
 
     std::unique_ptr<Expression> expression;
     std::unique_ptr<Type> type;
@@ -541,7 +552,6 @@ struct Cast: public Expression {
 
     // resolved:
     TypeInfo to_type;    // resolved Type (cast to)
-    TypeInfo from_type;  // resolved type of the expression (cast from)
 };
 
 

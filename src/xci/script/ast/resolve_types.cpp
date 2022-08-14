@@ -117,11 +117,11 @@ public:
     }
 
     void visit(ast::Literal& v) override {
-        m_value_type = v.type_info;
+        m_value_type = v.ti;
     }
 
     void visit(ast::Tuple& v) override {
-        TypeChecker type_check(std::move(v.type_info), std::move(m_cast_type));
+        TypeChecker type_check(std::move(v.ti), std::move(m_cast_type));
         // build TypeInfo from subtypes
         std::vector<TypeInfo> subtypes;
         subtypes.reserve(v.items.size());
@@ -130,11 +130,11 @@ public:
             subtypes.push_back(m_value_type.effective_type());
         }
         m_value_type = type_check.resolve(TypeInfo(std::move(subtypes)), v.source_loc);
-        v.type_info = m_value_type;
+        v.ti = m_value_type;
     }
 
     void visit(ast::List& v) override {
-        TypeChecker type_check(std::move(v.type_info), std::move(m_cast_type));
+        TypeChecker type_check(std::move(v.ti), std::move(m_cast_type));
         // check all items have same type
         TypeInfo elem_type;
         if (!type_check.eval_type() && v.items.empty())
@@ -156,14 +156,14 @@ public:
         // FIXME: allow generic type: fun <T> Void->[T] { []:[T] }
         if (m_value_type.elem_type().is_generic())
             throw MissingExplicitType(v.source_loc);
-        v.type_info = m_value_type;
+        v.ti = m_value_type;
         v.elem_type_id = get_type_id(m_value_type.elem_type());
     }
 
     void visit(ast::StructInit& v) override {
         // first pass - resolve incomplete struct type
         //              and check it matches specified type (if any)
-        TypeChecker type_check(std::move(v.struct_type), std::move(m_cast_type));
+        TypeChecker type_check(std::move(v.ti), std::move(m_cast_type));
         const auto& specified = type_check.eval_type();
         if (!specified.is_unknown() && !specified.is_struct())
             throw StructTypeMismatch(specified, v.source_loc);
@@ -184,15 +184,15 @@ public:
                 type_check.check_struct_item(item.first.name, item_type, item.second->source_loc);
             ti_items.emplace_back(item.first.name, item_type);
         }
-        v.struct_type = TypeInfo(std::move(ti_items));
+        v.ti = TypeInfo(std::move(ti_items));
         if (!specified.is_unknown()) {
-            assert(match_struct(v.struct_type, specified));  // already checked above
-            v.struct_type = std::move(type_check.eval_type());
+            assert(match_struct(v.ti, specified));  // already checked above
+            v.ti = std::move(type_check.eval_type());
         }
-        m_value_type = v.struct_type;
+        m_value_type = v.ti;
 
         // Add the inferred struct type to module, point StructItem symbols to it
-        Index index = module().add_type(v.struct_type);
+        Index index = module().add_type(v.ti);
         for (auto& item : v.items) {
             item.first.symbol->set_index(index);
         }
@@ -235,12 +235,12 @@ public:
                 return;
             }
             case Symbol::TypeId: {
-                if (v.type_info.is_unknown()) {
+                if (v.ti.is_unknown()) {
                     // try to resolve via known type args
-                    auto var = v.type_info.generic_var();
+                    auto var = v.ti.generic_var();
                     const auto& type_args = function().signature().type_args;
                     if (var > 0 && var <= type_args.size()) {
-                        v.type_info = type_args[var - 1];
+                        v.ti = type_args[var - 1];
                     } else {
                         // unresolved -> unknown type id
                         m_value_type = {};
@@ -248,7 +248,7 @@ public:
                     }
                 }
                 // Record the resolved Type ID for Compiler
-                v.index = get_type_id(v.type_info);
+                v.index = get_type_id(v.ti);
                 m_value_type = ti_int32();
                 break;
             }
@@ -324,15 +324,15 @@ public:
             case Symbol::Function:
             case Symbol::StructItem: {
                 // specified type in definition
-                if (sym.type() == Symbol::Function && v.definition && v.type_info) {
+                if (sym.type() == Symbol::Function && v.definition && v.ti) {
                     assert(m_call_args.empty());
-                    if (v.type_info.is_callable()) {
-                        for (const auto& t : v.type_info.signature().params)
+                    if (v.ti.is_callable()) {
+                        for (const auto& t : v.ti.signature().params)
                             m_call_args.push_back({t, false, v.source_loc});
-                        m_call_ret = v.type_info.signature().return_type;
+                        m_call_ret = v.ti.signature().return_type;
                     } else {
                         // A naked type, consider it a function return type
-                        m_call_ret = v.type_info;
+                        m_call_ret = v.ti;
                     }
                 }
 
@@ -378,7 +378,7 @@ public:
                     // __value returns index (Int32)
                     m_value_type = ti_int32();
                 } else {
-                    m_value_type = v.type_info;
+                    m_value_type = v.ti;
                 }
                 break;
             case Symbol::TypeName:
@@ -389,7 +389,7 @@ public:
             case Symbol::Unresolved:
                 UNREACHABLE;
         }
-        v.type_info = m_value_type;
+        v.ti = m_value_type;
     }
 
     void visit(ast::Call& v) override {
@@ -420,7 +420,6 @@ public:
         // using resolved args, resolve the callable itself
         // (it may use args types for overload resolution)
         v.callable->apply(*this);
-        v.callable_type = m_value_type;
 
         if (!m_value_type.is_callable() && !m_call_args.empty()) {
             throw UnexpectedArgument(1, m_value_type, m_call_args[0].source_loc);
@@ -466,6 +465,7 @@ public:
         }
         m_call_args.clear();
         m_call_ret = {};
+        v.ti = m_value_type;
     }
 
     void visit(ast::OpCall& v) override {
@@ -520,7 +520,6 @@ public:
         m_call_ret = {};
         // resolve type of expression - it's also the type of the whole "with" expression
         v.expression->apply(*this);
-        v.expression_type = m_value_type.effective_type();
         m_literal_value = false;
     }
 
@@ -592,6 +591,8 @@ public:
         /* while (m_value_type.is_callable() && m_value_type.signature().params.empty()) {
             m_value_type = m_value_type.signature().return_type;
         }*/
+
+        v.ti = m_value_type;
     }
 
     // The cast expression is translated to a call to `cast` method from the Cast class.
@@ -604,16 +605,15 @@ public:
         m_literal_value = true;
         v.expression->apply(*this);
         m_cast_type = {};
-        v.from_type = std::move(m_value_type);
         // Cast to Void -> don't call the cast function, just drop the expression result from stack
         // Cast to the same type or same underlying type (from/to a named type) -> noop
-        if (v.to_type.is_void() || is_same_underlying(v.from_type.effective_type(), v.to_type)) {
+        if (v.to_type.is_void() || is_same_underlying(m_value_type.effective_type(), v.to_type)) {
             v.cast_function.reset();
             m_value_type = v.to_type;
             return;
         }
         // lookup the cast function with the resolved arg/return types
-        m_call_args.push_back({v.from_type, m_literal_value, v.expression->source_loc});
+        m_call_args.push_back({m_value_type, m_literal_value, v.expression->source_loc});
         m_call_ret = v.to_type;
         v.cast_function->apply(*this);
         // set the effective type of the Cast expression and clean the call types
