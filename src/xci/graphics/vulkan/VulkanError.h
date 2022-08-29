@@ -65,7 +65,7 @@ class VulkanError : public std::exception {
 public:
     explicit VulkanError(std::string_view msg, enum VkResult vk_res = VK_SUCCESS)
         : m_msg(vk_res == VK_SUCCESS ? msg :
-                fmt::format("{} ({} {})", msg, vk_res, vk_result_to_cstr(vk_res)))
+                fmt::format("{} ({} {})", msg, int(vk_res), vk_result_to_cstr(vk_res)))
         , m_vk_res(vk_res) {}
 
     const char* what() const noexcept override { return m_msg.c_str(); }
