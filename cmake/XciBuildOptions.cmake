@@ -160,17 +160,13 @@ endif()
 
 if (MSVC)
     # Enable standards-conforming compiler behavior
-    add_compile_options(/permissive-)
+    add_compile_options(/permissive- /Zc:preprocessor /Zc:inline /Zc:__cplusplus)
     # Disable min/max macros (very bad in C++)
     add_compile_definitions(NOMINMAX)
     # Read all source files as utf-8
     add_compile_options(/utf-8)
     # xci/script/Machine.cpp : fatal error C1128: number of sections exceeded object file format limit: compile with /bigobj
     add_compile_options(/bigobj)
-    # Fix passing __VA_ARGS__ between macros.
-    # Old behaviour was to pass all args in single arg, ignoring commas.
-    # https://stackoverflow.com/questions/5134523/msvc-doesnt-expand-va-args-correctly
-    add_compile_options(/Zc:preprocessor)
 endif()
 
 if (EMSCRIPTEN)
