@@ -53,13 +53,6 @@ if (BUILD_SHARED_LIBS)
     set_target_properties(xci-data PROPERTIES CXX_VISIBILITY_PRESET default)
 endif()
 
-if (MSVC)
-    # Fix passing __VA_ARGS__ between macros.
-    # Old behaviour was to pass all args in single arg, ignoring commas.
-    # https://stackoverflow.com/questions/5134523/msvc-doesnt-expand-va-args-correctly
-    target_compile_options(xci-data PUBLIC /Zc:preprocessor)
-endif()
-
 if (BUILD_SHARED_LIBS OR XCI_INSTALL_DEVEL)
     install(TARGETS xci-data EXPORT xcikit DESTINATION ${CMAKE_INSTALL_LIBDIR})
 endif()

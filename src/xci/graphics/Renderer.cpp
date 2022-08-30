@@ -771,7 +771,7 @@ bool Renderer::query_swapchain(VkPhysicalDevice device)
             found_mode = mode;
     }
     if (m_present_mode != found_mode) {
-        log::warning("vulkan: requested present mode not supported: {}", m_present_mode);
+        log::warning("vulkan: requested present mode not supported: {}", int(m_present_mode));
         m_present_mode = found_mode;
     }
 
