@@ -267,7 +267,7 @@ auto IndexedMap<T>::emplace(Args&&... args) -> WeakIndex
 {
     Index index;
     Slot& slot = acquire_slot(index);
-    ::new (&slot.elem) T(std::forward<Args>(args)...);
+    std::construct_at(&slot.elem, std::forward<Args>(args)...);
     return {index, slot.tenant};
 }
 
@@ -277,7 +277,7 @@ auto IndexedMap<T>::add(T&& value) -> WeakIndex
 {
     Index index;
     Slot& slot = acquire_slot(index);
-    ::new (&slot.elem) T(std::forward<T>(value));
+    std::construct_at(&slot.elem, std::forward<T>(value));
     return {index, slot.tenant};
 }
 
