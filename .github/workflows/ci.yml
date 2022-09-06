@@ -19,12 +19,6 @@ jobs:
           cxx: g++-11
           build_args: ""
         - os: ubuntu-20.04
-          name: "Clang 11 / Release"
-          cc: clang-11
-          cxx: clang++-11
-          apt: libc++-11-dev libc++abi-11-dev
-          build_args: ""
-        - os: ubuntu-20.04
           name: "Clang 12 / Release"
           cc: clang-12
           cxx: clang++-12

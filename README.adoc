@@ -94,7 +94,7 @@ Technologies:
 Supported compilers:
 
 * GCC >= 10
-* Clang >= 11
+* Clang >= 12
 * Xcode >= 13
 * Visual Studio >= 16
 
@@ -259,7 +259,7 @@ Detailed build steps (these are examples, adjust parameters as needed):
 mkdir build && cd build
 
 # Install dependencies using Conan.
-conan install .. --build missing --profile clang11
+conan install .. --build missing
 
 # Configure
 cmake .. -G Ninja -DCMAKE_INSTALL_PREFIX=~/sdk/xcikit
@@ -279,18 +279,18 @@ cmake --build . --target 'install'
 
 === Building on macOS older than Catalina (10.15)
 
-Using https://www.macports.org/[MacPorts], install Clang 11 and libc++:
+Using https://www.macports.org/[MacPorts], install Clang 14 and libc++:
 
 [source,bash]
 ----
-port install clang-11 macports-libcxx
+port install clang-14 macports-libcxx
 ----
 
-Then create a `clang11-toolchain.cmake` file with content like this:
+Then create a `clang14-toolchain.cmake` file with content like this:
 
 [source,cmake]
 ----
-set(CMAKE_CXX_COMPILER /opt/local/bin/clang++-mp-11)
+set(CMAKE_CXX_COMPILER /opt/local/bin/clang++-mp-14)
 add_compile_options(-nostdinc++ -I/opt/local/include/libcxx/v1 -D_LIBCPP_DISABLE_AVAILABILITY)
 add_link_options(-L/opt/local/lib/libcxx)
 ----
@@ -299,7 +299,7 @@ Run the build with the toolchain:
 
 [source,bash]
 ----
-./build.sh --toolchain clang11-toolchain.cmake
+./build.sh --toolchain clang14-toolchain.cmake
 ----
 
 [#windows]

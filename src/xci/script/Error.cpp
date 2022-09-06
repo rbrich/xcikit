@@ -10,6 +10,11 @@
 namespace xci::script {
 
 
+UnexpectedArgument::UnexpectedArgument(size_t num, const TypeInfo& ftype, const SourceLocation& loc)
+        : ScriptError(fmt::format("unexpected argument #{} for called type {}", num, ftype), loc)
+{}
+
+
 UnexpectedArgumentType::UnexpectedArgumentType(size_t num, const TypeInfo& exp, const TypeInfo& got,
                                                const SourceLocation& loc)
         : ScriptError(fmt::format("function expects {} for arg #{}, called with {}",

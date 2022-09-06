@@ -368,7 +368,7 @@ template<class... Args>
 void ChunkedStack<T>::emplace(Args&& ... args)
 {
     T& item = push_uninitialized();
-    ::new (&item) T(std::forward<Args>(args)...);
+    std::construct_at(&item, std::forward<Args>(args)...);
 }
 
 
@@ -376,7 +376,7 @@ template<class T>
 void ChunkedStack<T>::push(const T& value)
 {
     T& item = push_uninitialized();
-    ::new (&item) T(value);
+    std::construct_at(&item, value);
 }
 
 
@@ -384,7 +384,7 @@ template<class T>
 void ChunkedStack<T>::push(T&& value)
 {
     T& item = push_uninitialized();
-    ::new (&item) T(std::move(value));
+    std::construct_at(&item, std::move(value));
 }
 
 

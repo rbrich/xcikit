@@ -48,7 +48,7 @@ private:
     Measurements measure() const;
 
     const char* m_name = nullptr;
-    Measurements m_start;
+    Measurements m_start {};
 };
 
 } // namespace xci::core

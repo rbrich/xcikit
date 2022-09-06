@@ -123,10 +123,10 @@ public:
 
     void visit(ast::Tuple& v) override {
         // build tuple on stack
-        if (v.type_info.is_struct() && v.items.empty()) {
+        if (v.ti.is_struct() && v.items.empty()) {
             // A struct can be initialized with empty tuple "()".
             // Fill in the defaults.
-            for (const auto& ti : reverse(v.type_info.struct_items())) {
+            for (const auto& ti : reverse(v.ti.struct_items())) {
                 if (ti.second.is_void())
                     return;  // Void value
                 // add to static values
@@ -152,7 +152,7 @@ public:
 
     void visit(ast::StructInit& v) override {
         // build struct on stack according to struct_type, fill in defaults
-        for (const auto& ti : reverse(v.struct_type.struct_items())) {
+        for (const auto& ti : reverse(v.ti.struct_items())) {
             // lookup the name in StructInit
             auto it = std::find_if(v.items.begin(), v.items.end(),
                 [&ti](const ast::StructInit::Item& item) {
@@ -241,11 +241,11 @@ public:
                     break;
 
                 // Non-locals are captured in closure - read from closure
-                auto ofs = m_scope.nonlocal_raw_offset(sym.index(), v.type_info);
+                auto ofs = m_scope.nonlocal_raw_offset(sym.index(), v.ti);
                 // COPY <frame_offset>
                 code().add_L2(Opcode::Copy,
-                              ofs, v.type_info.size());
-                v.type_info.foreach_heap_slot([this](size_t offset) {
+                              ofs, v.ti.size());
+                v.ti.foreach_heap_slot([this](size_t offset) {
                     // INC_REF <stack_offset>
                     code().add_L1(Opcode::IncRef, offset);
                 });
@@ -452,7 +452,7 @@ public:
         // add executes for each call that results in function which consumes more args
         if (v.wrapped_execs > 1) {
             // Emit only a single EXECUTE if there is no closure in the wrapped function calls
-            const Signature* sig = &v.callable_type.signature();
+            const Signature* sig = &v.callable->type_info().signature();
             for (auto i = v.wrapped_execs; i != 0; --i)
                 sig = &sig->return_type.signature();
             if (!sig->has_closure())
@@ -508,7 +508,7 @@ public:
         // swap the expression result with context data below it
         // SWAP <result_size> <context_size>
         code().add_L2(Opcode::Swap,
-                v.expression_type.size(), v.leave_type.size());
+                v.type_info().effective_type().size(), v.leave_type.size());
         // call the leave function - must pull the context from enter function
         v.leave_function.apply(*this);
     }
@@ -573,12 +573,12 @@ public:
         v.expression->apply(*this);
         if (v.to_type.is_void()) {
             // cast to Void - remove the expression result from stack
-            v.from_type.foreach_heap_slot([this](size_t offset) {
+            v.expression->type_info().foreach_heap_slot([this](size_t offset) {
                 // DEC_REF <offset>
                 function().code().add_L1(Opcode::DecRef, offset);
             });
             // DROP 0 <size>
-            function().code().add_L2(Opcode::Drop, 0, v.from_type.size());
+            function().code().add_L2(Opcode::Drop, 0, v.expression->type_info().size());
             return;
         }
         if (v.cast_function)

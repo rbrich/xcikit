@@ -96,7 +96,7 @@ struct Keyword: sor<KeywordFun, KeywordClass, KeywordInstance, KeywordType,
 // Literals
 struct BinDigit : one< '0', '1' > {};
 struct OctDigit : range< '0', '7' > {};
-struct BinNum: if_must<one<'b'>, plus<BinDigit>> {};
+struct BinNum: seq<one<'b'>, plus<BinDigit>> {};
 struct OctNum: if_must<one<'o'>, plus<OctDigit>> {};
 struct DecNumFrac: seq< one<'.'>, star<digit> > {};
 struct DecNum: seq< plus<digit>, opt<DecNumFrac> > {};

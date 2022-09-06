@@ -143,11 +143,11 @@ public:
             declared = m_type_info.signature().return_type;
         }
         TypeChecker type_check(std::move(declared));
-        v.type_info = type_check.resolve(v.value.type_info(), v.source_loc);
+        v.ti = type_check.resolve(v.value.type_info(), v.source_loc);
     }
 
     void visit(ast::Tuple& v) override {
-        v.type_info = std::move(m_type_info);
+        v.ti = std::move(m_type_info);
         for (auto& item : v.items) {
             m_type_info = {};
             item->apply(*this);
@@ -155,7 +155,7 @@ public:
     }
 
     void visit(ast::List& v) override {
-        v.type_info = std::move(m_type_info);
+        v.ti = std::move(m_type_info);
         for (auto& item : v.items) {
             m_type_info = {};
             item->apply(*this);
@@ -176,7 +176,7 @@ public:
             item.second->apply(*this);
             m_type_info = {};
         }
-        v.struct_type = std::move(specified);
+        v.ti = std::move(specified);
     }
 
     void visit(ast::Reference& v) override {
@@ -199,7 +199,7 @@ public:
             case Symbol::TypeId: {
                 if (!v.type_arg)
                     throw MissingTypeArg(v.source_loc);
-                v.type_info = std::move(m_type_info);
+                v.ti = std::move(m_type_info);
                 break;
             }
             case Symbol::Class:
@@ -208,37 +208,37 @@ public:
             case Symbol::Method: {
                 // find prototype of the function, resolve actual type of T
                 const auto& cls_fn = sym.ref().get_function(m_scope);
-                v.type_info = TypeInfo{cls_fn.signature_ptr()};
+                v.ti = TypeInfo{cls_fn.signature_ptr()};
                 break;
             }
             case Symbol::Function: {
                 // specified type in definition
-                v.type_info = std::move(m_type_info);
+                v.ti = std::move(m_type_info);
                 break;
             }
             case Symbol::Module:
-                v.type_info = TypeInfo{Type::Module};
+                v.ti = TypeInfo{Type::Module};
                 break;
             case Symbol::Parameter: {
                 const auto* ref_scope = m_scope.find_parent_scope(&symtab);
-                v.type_info = ref_scope->function().parameter(sym.index());
+                v.ti = ref_scope->function().parameter(sym.index());
                 break;
             }
             case Symbol::Value:
                 if (sym.index() == no_index) {
                     m_intrinsic = true;
-                    v.type_info = ti_int32();
+                    v.ti = ti_int32();
                 } else {
                     TypeChecker type_check(std::move(m_type_info));
                     auto inferred = symtab.module()->get_value(sym.index()).type_info();
-                    v.type_info = type_check.resolve(inferred, v.source_loc);
+                    v.ti = type_check.resolve(inferred, v.source_loc);
                 }
                 break;
             case Symbol::TypeName:
             case Symbol::TypeVar:
                 return;
             case Symbol::StructItem:
-                v.type_info = std::move(m_type_info);
+                v.ti = std::move(m_type_info);
                 break;
             case Symbol::Nonlocal:
             case Symbol::Unresolved:
@@ -317,6 +317,8 @@ public:
         fn.set_ast(v.body);
 
         resolve_decl(scope, v.body);
+
+        v.ti = m_type_info;
     }
 
     // The cast expression is translated to a call to `cast` method from the Cast class.
