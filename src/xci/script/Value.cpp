@@ -752,7 +752,7 @@ public:
     explicit StreamVisitor(std::ostream& os, const TypeInfo& type_info) : os(os), type_info(type_info) {}
     void visit(bool v) override { os << std::boolalpha << v; }
     void visit(std::byte v) override {
-        os << "b'" << core::escape(core::to_utf8(uint8_t(v))) << "'";
+        os << "b'" << core::escape(std::string_view{(char*)&v, 1}) << "'";
     }
     void visit(char32_t v) override {
         os << '\'' << core::escape_utf8(core::to_utf8(v)) << "'";
@@ -874,12 +874,11 @@ std::ostream& operator<<(std::ostream& os, const Value& o)
 namespace value {
 
 
-Byte::Byte(std::string_view utf8)
+Byte::Byte(std::string_view str)
 {
-    auto c = (uint32_t) core::utf8_codepoint(utf8.data());
-    if (c > 255)
-        throw std::runtime_error("byte value out of range");
-    m_value = (byte) c;
+    if (str.size() != 1)
+        throw ValueOutOfRange("byte value out of range");
+    m_value = (byte) str.front();
 }
 
 

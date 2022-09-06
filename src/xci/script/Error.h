@@ -84,6 +84,18 @@ struct NotImplemented : public RuntimeError {
 };
 
 
+struct ValueOutOfRange : public RuntimeError {
+    explicit ValueOutOfRange(std::string msg) : RuntimeError(std::move(msg)) {}
+};
+
+
+struct IndexOutOfBounds : public RuntimeError {
+    explicit IndexOutOfBounds(int idx, size_t len)
+            : RuntimeError(fmt::format("list index out of bounds: {} not in [0..{}]",
+                                       idx, len-1)) {}
+};
+
+
 struct BadInstruction : public ScriptError {
     explicit BadInstruction(uint8_t code)
             : ScriptError(fmt::format("bad instruction: {}", code)) {}
@@ -240,13 +252,6 @@ struct BranchTypeMismatch : public ScriptError {
 
 struct ListElemTypeMismatch : public ScriptError {
     explicit ListElemTypeMismatch(const TypeInfo& exp, const TypeInfo& got, const SourceLocation& loc);
-};
-
-
-struct IndexOutOfBounds : public RuntimeError {
-    explicit IndexOutOfBounds(int idx, size_t len)
-            : RuntimeError(fmt::format("list index out of bounds: {} not in [0..{}]",
-                                 idx, len-1)) {}
 };
 
 

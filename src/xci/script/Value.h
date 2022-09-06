@@ -441,7 +441,7 @@ public:
     Byte() : Value(std::byte(0)) {}
     explicit Byte(std::byte v) : Value(v) {}
     explicit Byte(uint8_t v) : Value(std::byte(v)) {}
-    explicit Byte(std::string_view utf8);
+    explicit Byte(std::string_view str);
     TypeInfo type_info() const { return TypeInfo{Type::Byte}; }
     uint8_t value() const { return (uint8_t) std::get<std::byte>(m_value); }
     void set_value(std::byte v) { m_value = v; }
