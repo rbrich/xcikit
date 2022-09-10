@@ -122,6 +122,9 @@ inline std::string escape_utf8(std::string_view str, bool extended = false) { re
 // - a trailing backslash is just ignored
 // - unknown escape sequence (e.g. "\\J") is expanded to literal character ("J")
 std::string unescape(std::string_view str);
+
+// Same as unescape, with additional support for braced unicode escapes: "\u{ABCD}"
+std::string unescape_uni(std::string_view str);
 #endif
 
 // Convert string to lower case

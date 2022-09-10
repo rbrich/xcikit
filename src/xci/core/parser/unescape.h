@@ -16,13 +16,15 @@ namespace xci::core::parser::unescape {
 struct StringChIll : any {};
 struct StringChIllEsc : seq< one< '\\' >, sor<StringChIll, eof> > {};
 struct String: star< sor<try_catch<StringCh>, StringChIllEsc, StringChIll> > {};
+struct StringUni: star< sor<try_catch<StringChUni>, StringChIllEsc, StringChIll> > {};
 
 template< typename Rule > struct Action {};
 template<> struct Action<StringChOther> : StringAppendChar {};
 template<> struct Action<StringChIll> : StringAppendChar {};
 template<> struct Action<StringChEscSingle> : StringAppendEscSingle {};
-template<> struct Action<StringChEscHex> : StringAppendEscHex {};
 template<> struct Action<StringChEscOct> : StringAppendEscOct {};
+template<> struct Action<StringChEscHex> : StringAppendEscHex {};
+template<> struct Action<StringChEscUni> : StringAppendEscUni {};
 
 } // namespace xci::core::parser::unescape
 

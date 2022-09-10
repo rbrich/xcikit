@@ -126,6 +126,7 @@ TEST_CASE( "unescape", "[string]" )
     CHECK(unescape("\\a\\b\\t\\n\\v\\f") == "\a\b\t\n\v\f");
     CHECK(unescape("\\r\\x0e\\x0f\\x10\\x1a\\x1b") == "\r\x0e\x0f\x10\x1a\x1b");
     CHECK(unescape("\\x80\\xff") == "\x80\xff");
+    CHECK(unescape_uni("\\u{ABCD} \\u{FF}") == "\xEA\xAF\x8D \xC3\xBF");  // Unicode char -> UTF-8
     // ill-formatted:
     CHECK(unescape("trailing backslash \\") == "trailing backslash ");
     CHECK(unescape("bad esc \\J\\X\\\\") == "bad esc JX\\");
