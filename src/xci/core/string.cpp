@@ -131,8 +131,6 @@ std::string escape(string_view str, bool extended, bool utf8)
                 auto c_int = (int)(unsigned char)(*cp);
                 if (std::isprint(c_int))
                     out += *cp;
-                else if (*cp >= 0 && *cp < 8)
-                    out += format("\\{}", c_int);
                 else {
                     if (utf8) {
                         auto len = utf8_char_length(*cp);

@@ -108,8 +108,8 @@ TEST_CASE( "utf8_codepoint", "[string]" )
 
 TEST_CASE( "escape", "[string]" )
 {
-    CHECK(escape("abc\0"s) == "abc\\0");
-    CHECK(escape("\1\2\3\4\5\6") == "\\1\\2\\3\\4\\5\\6");
+    CHECK(escape("abc\0"s) == "abc\\x00");
+    CHECK(escape("\1\2\3\4\5\6") == "\\x01\\x02\\x03\\x04\\x05\\x06");
     CHECK(escape("\x07\x08\x09\x0a\x0b\x0c") == "\\a\\b\\t\\n\\v\\f");
     CHECK(escape("\x0d\x0e\x0f\x10\x1a\x1b") == "\\r\\x0e\\x0f\\x10\\x1a\\x1b");
     CHECK(escape("\x80\xff") == "\\x80\\xff");
@@ -123,8 +123,8 @@ TEST_CASE( "unescape", "[string]" )
 {
     CHECK(unescape("abc\\n") == "abc\n"s);
     CHECK(unescape("\\0\\1\\2\\3\\4\\5\\6") == "\0\1\2\3\4\5\6"s);
-    CHECK(unescape("\\a\\b\\t\\n\\v\\f") == "\x07\x08\x09\x0a\x0b\x0c");
-    CHECK(unescape("\\r\\x0e\\x0f\\x10\\x1a\\x1b") == "\x0d\x0e\x0f\x10\x1a\x1b");
+    CHECK(unescape("\\a\\b\\t\\n\\v\\f") == "\a\b\t\n\v\f");
+    CHECK(unescape("\\r\\x0e\\x0f\\x10\\x1a\\x1b") == "\r\x0e\x0f\x10\x1a\x1b");
     CHECK(unescape("\\x80\\xff") == "\x80\xff");
     // ill-formatted:
     CHECK(unescape("trailing backslash \\") == "trailing backslash ");
