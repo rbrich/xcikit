@@ -131,8 +131,6 @@ std::string escape(string_view str, bool extended, bool utf8)
                 auto c_int = (int)(unsigned char)(*cp);
                 if (std::isprint(c_int))
                     out += *cp;
-                else if (*cp >= 0 && *cp < 8)
-                    out += format("\\{}", c_int);
                 else {
                     if (utf8) {
                         auto len = utf8_char_length(*cp);
@@ -154,10 +152,9 @@ std::string escape(string_view str, bool extended, bool utf8)
 
 
 #if XCI_WITH_PEGTL == 1
-std::string unescape(string_view str)
+template<typename Rule>
+std::string gen_unescape(string_view str)
 {
-    using namespace parser::unescape;
-
     tao::pegtl::memory_input<
         tao::pegtl::tracking_mode::eager,
         tao::pegtl::eol::lf_crlf,
@@ -167,7 +164,7 @@ std::string unescape(string_view str)
     result.reserve(str.size());
 
     try {
-        auto matched = tao::pegtl::parse< String, Action >( input, result );
+        auto matched = tao::pegtl::parse< Rule, parser::unescape::Action >( input, result );
         assert(matched);
         (void) matched;
     } catch (tao::pegtl::parse_error&) {
@@ -176,6 +173,9 @@ std::string unescape(string_view str)
     result.shrink_to_fit();
     return result;
 }
+
+std::string unescape(string_view str) { return gen_unescape<parser::unescape::String>(str); }
+std::string unescape_uni(string_view str) { return gen_unescape<parser::unescape::StringUni>(str); }
 #endif
 
 

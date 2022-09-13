@@ -178,16 +178,16 @@ TEST_CASE( "Values", "[script][parser]" )
     CHECK(parse("1.23") == "1.23");
     // Byte (8-bit integer)
     CHECK(parse("42b") == "b'*'");
-    CHECK(parse("0b") == "b'\\0'");
+    CHECK(parse("0b") == "b'\\x00'");
     CHECK(parse("255b") == "b'\\xff'");
     CHECK(parse("b'B'") == "b'B'");
-    CHECK(parse("b'\\0'") == "b'\\0'");
+    CHECK(parse("b'\\0'") == "b'\\x00'");
     CHECK(parse("b'\\xff'") == "b'\\xff'");
     // Bytes (aka [Byte])
     PARSE(R"(b"bytes literal")", R"(b"bytes literal")");
     CHECK(parse("'c'") == "'c'");
     PARSE(R"("string literal")", R"("string literal")");
-    PARSE(R"("escape sequences: \"\n\0\x12 ")", R"("escape sequences: \"\n\0\x12 ")");
+    PARSE(R"("escape sequences: \"\n\0\x12 ")", R"("escape sequences: \"\n\x00\x12 ")");
     CHECK(parse("1,2,3") == "1, 2, 3");  // naked tuple
     PARSE(R"((1,2,"str"))", R"((1, 2, "str"))");  // bracketed tuple
     CHECK(parse("[1,2,3]") == "[1, 2, 3]");  // list
@@ -520,9 +520,9 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     CHECK(interpret(my_struct + R"( a:MyStruct = "hello", 42; a)") == R"((name="hello", age=42))");
     // struct defaults (left out fields get default "zero" value)
     CHECK_THROWS_AS(interpret("x:(Int,Int) = ()"), DefinitionTypeMismatch);  // tuple doesn't have defaults
-    CHECK(interpret_std("x:FormatSpec = (fill='_',width=2); x") == R"((fill='_', align='\0', sign='\0', width=2, precision=0, spec=""))");
-    CHECK(interpret_std("x:FormatSpec = (width=2); x") == R"((fill='\0', align='\0', sign='\0', width=2, precision=0, spec=""))");
-    CHECK(interpret_std("x:FormatSpec = (); x") == R"((fill='\0', align='\0', sign='\0', width=0, precision=0, spec=""))");  // empty tuple stands for empty StructInit
+    CHECK(interpret_std("x:FormatSpec = (fill='_',width=2); x") == R"((fill='_', align='\x00', sign='\x00', width=2, precision=0, spec=""))");
+    CHECK(interpret_std("x:FormatSpec = (width=2); x") == R"((fill='\x00', align='\x00', sign='\x00', width=2, precision=0, spec=""))");
+    CHECK(interpret_std("x:FormatSpec = (); x") == R"((fill='\x00', align='\x00', sign='\x00', width=0, precision=0, spec=""))");  // empty tuple stands for empty StructInit
     CHECK_THROWS_AS(interpret_std("x:FormatSpec = ('_', '>')"), DefinitionTypeMismatch);  // when initializing with a tuple, all fields have to be specified (no defaults are filled in)
     CHECK(interpret_std("x:(field:Int) = 2; x") == "(field=2)");  // a single-item struct can be initialized with the field value (as there is no single-field tuple)
     // cast from underlying type

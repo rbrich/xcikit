@@ -109,15 +109,16 @@ struct NumSuffix: sor<
         one<'f', 'F', 'b', 'B'> > {};
 struct Number: seq< opt<Sign>, sor<ZeroPrefixNum, DecNum>, opt<NumSuffix> > {};
 
-struct Char: if_must< one<'\''>, StringCh, one<'\''> > {};
-struct StringContent: until< one<'"'>, StringCh > {};
+struct Char: if_must< one<'\''>, StringChUni, one<'\''> > {};
+struct StringContent: until< one<'"'>, StringChUni > {};
 struct String: if_must< one<'"'>, StringContent > {};
 struct EscapedQuotes: seq<one<'\\'>, three<'"'>, star<one<'"'>>> {};
 struct RawStringCh: any {};
 struct RawStringContent: until<three<'"'>, sor<EscapedQuotes, RawStringCh>> {};
 struct RawString : if_must< three<'"'>, RawStringContent > {};
-struct Byte: seq< one<'b'>, Char > {};
-struct Bytes: seq< one<'b'>, String > {};
+struct Byte: if_must< seq< one<'b'>, one<'\''> >, StringCh, one<'\''> > {};
+struct BytesContent: until< one<'"'>, StringCh > {};
+struct Bytes: if_must< seq< one<'b'>, one<'"'> >, BytesContent > {};
 struct RawBytes: seq< one<'b'>, RawString > {};
 struct Literal: sor< Char, RawString, String, Byte, RawBytes, Bytes, Number > {};
 
@@ -1210,18 +1211,20 @@ struct Action<String> : change_states< std::string > {
 
 
 template<>
-struct Action<Byte> {
+struct Action<Byte> : change_states< std::string > {
     template<typename Input>
-    static void apply(const Input &in, LiteralHelper& helper) {
+    static void success(const Input &in, std::string& str, LiteralHelper& helper) {
+        helper.content = std::move(str);
         helper.type = ValueType::Byte;
     }
 };
 
 
 template<>
-struct Action<Bytes> {
+struct Action<Bytes> : change_states< std::string > {
     template<typename Input>
-    static void apply(const Input &in, LiteralHelper& helper) {
+    static void success(const Input &in, std::string& str, LiteralHelper& helper) {
+        helper.content = std::move(str);
         helper.type = ValueType::List;  // [Byte]
     }
 };

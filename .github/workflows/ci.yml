@@ -146,7 +146,7 @@ jobs:
 
     - name: conan inconsistent cache workaround
       if: startsWith(runner.os, 'Windows')
-      run: conan remove -f harfbuzz/4.4.1
+      run: conan remove -f harfbuzz
       shell: bash
 
     - name: deps

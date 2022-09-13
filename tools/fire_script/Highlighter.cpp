@@ -127,10 +127,10 @@ struct Float: seq< opt<Sign>, plus<digit>, sor<
         seq< one<'.'>, star<digit>, opt<FloatSuffix> >,
         FloatSuffix > > {};
 
-struct Char: seq< one<'\''>, StringCh, one<'\''> > {};
-struct String: seq< one<'"'>, until<one<'"'>, StringCh >, not_at<one<'"'>> > {};
-struct Byte: seq< one<'b'>, Char > {};
-struct Bytes: seq< one<'b'>, String > {};
+struct Char: seq< one<'\''>, try_catch<StringChUni>, one<'\''> > {};
+struct String: seq< one<'"'>, until<one<'"'>, try_catch<StringChUni> >, not_at<one<'"'>> > {};
+struct Byte: seq< one<'b'>, one<'\''>, try_catch<StringCh>, one<'\''> > {};
+struct Bytes: seq< one<'b'>, one<'"'>, until<one<'"'>, try_catch<StringCh> >, not_at<one<'"'>> > {};
 struct EscapedQuotes: seq<one<'\\'>, three<'"'>, star<one<'"'>>> {};
 struct RawString : seq< three<'"'>, until<three<'"'>, sor<EscapedQuotes, any>> > {};
 struct RawBytes: seq< one<'b'>, RawString > {};
@@ -154,8 +154,8 @@ struct PrimaryExpr: sor< Operator, Literal, Keyword, SpecialVariable, Identifier
 // Incomplete expressions
 struct OpenBracket: one< '(', '[' > {};
 struct OpenBrace: one< '{' > {};
-struct PartialCharLiteral: seq< one<'\''>, sor<StringCh, one<'\\'>> > {};
-struct PartialStringLiteral: seq< one<'"'>, star<sor<StringCh, one<'\\'>>> > {};
+struct PartialCharLiteral: seq< one<'\''>, sor<try_catch<StringChUni>, one<'\\'>> > {};
+struct PartialStringLiteral: seq< one<'"'>, star<sor<try_catch<StringChUni>, one<'\\'>>> > {};
 struct PartialRawStringLiteral: seq< three<'"'>, star<not_at<three<'"'>>, sor<EscapedQuotes, any>> > {};
 struct PartialLiteral: seq< opt<one<'b'>>, sor<PartialRawStringLiteral, PartialStringLiteral, PartialCharLiteral> > {};
 
