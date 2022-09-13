@@ -2,7 +2,7 @@
 # Dependencies #
 # ------------ #
 
-find_package(glfw3 3.2 REQUIRED)
+find_package(glfw3 REQUIRED)
 find_package(Vulkan REQUIRED)
 
 if (NOT TARGET glfw::glfw)

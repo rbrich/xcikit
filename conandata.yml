@@ -43,7 +43,7 @@ requirements:
       - data
   glfw:
     cmake: "glfw3/3.3.0"
-    conan: "glfw/3.3.7"
+    conan: "glfw/3.3.8"
     prereq:
       - graphics
   vulkan:
@@ -58,7 +58,7 @@ requirements:
       - text
   harfbuzz:
     cmake: "harfbuzz/"
-    conan: "harfbuzz/4.4.1"
+    conan: "harfbuzz/5.1.0"
     prereq:
       - text
   hyperscan:

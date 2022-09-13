@@ -119,13 +119,6 @@ if (BUILD_FRAMEWORKS)
         )
 endif()
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    target_compile_definitions(xci-core PRIVATE
-        _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
-        _SILENCE_CXX17_STRSTREAM_DEPRECATION_WARNING
-        _CRT_SECURE_NO_WARNINGS)
-endif()
-
 if (BUILD_SHARED_LIBS OR XCI_INSTALL_DEVEL)
     install(TARGETS xci-core
         EXPORT xcikit

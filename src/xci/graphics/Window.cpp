@@ -408,7 +408,7 @@ void Window::draw()
     }
     if (rc != VK_SUCCESS && rc != VK_SUBOPTIMAL_KHR) {
         // VK_SUBOPTIMAL_KHR handled later with vkQueuePresentKHR
-        log::error("vkAcquireNextImageKHR failed: {}", rc);
+        log::error("vkAcquireNextImageKHR failed: {}", int(rc));
         return;
     }
 
@@ -477,7 +477,7 @@ void Window::draw()
     if (rc == VK_ERROR_OUT_OF_DATE_KHR || rc == VK_SUBOPTIMAL_KHR)
         m_renderer.reset_framebuffer();
     else if (rc != VK_SUCCESS)
-        log::error("vkQueuePresentKHR failed: {}", rc);
+        log::error("vkQueuePresentKHR failed: {}", int(rc));
 
     m_current_cmd_buf = (m_current_cmd_buf + 1) % cmd_buf_count;
     m_command_buffers.release_resources(m_current_cmd_buf);

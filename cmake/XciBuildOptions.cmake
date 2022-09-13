@@ -102,7 +102,9 @@ if (ENABLE_WARNINGS)
         add_compile_definitions(
             _CRT_NONSTDC_NO_WARNINGS
             _CRT_SECURE_NO_WARNINGS
-            _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1)
+            _CRT_SECURE_CPP_OVERLOAD_STANDARD_NAMES=1
+            _SILENCE_CXX17_STRSTREAM_DEPRECATION_WARNING
+            _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING)
     else()
         add_compile_options(-Wall -Wextra -Wundef -Werror=switch
             -Wpointer-arith
@@ -158,7 +160,7 @@ endif()
 
 if (MSVC)
     # Enable standards-conforming compiler behavior
-    add_compile_options(/permissive-)
+    add_compile_options(/permissive- /Zc:preprocessor /Zc:inline /Zc:__cplusplus)
     # Disable min/max macros (very bad in C++)
     add_compile_definitions(NOMINMAX)
     # Read all source files as utf-8
