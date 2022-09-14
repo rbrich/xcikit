@@ -659,19 +659,19 @@ auto TermCtl::ModePlaceholder::parse(std::string_view name) -> Mode
 
 std::string TermCtl::FgPlaceholder::seq(Color color) const
 {
-    return term_ctl.fg(color).seq();
+    return term_ctl->fg(color).seq();
 }
 
 
 std::string TermCtl::BgPlaceholder::seq(Color color) const
 {
-    return term_ctl.bg(color).seq();
+    return term_ctl->bg(color).seq();
 }
 
 
 std::string TermCtl::ModePlaceholder::seq(Mode mode) const
 {
-    return term_ctl.mode(mode).seq();
+    return term_ctl->mode(mode).seq();
 }
 
 

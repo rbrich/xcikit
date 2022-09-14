@@ -1,7 +1,7 @@
 // log_termctl.cpp created on 2021-03-27 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021 Radek Brich
+// Copyright 2021–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "log.h"
@@ -18,7 +18,7 @@ namespace xci::core {
 // 0..4 => log level (Trace..Error)
 // 5..9 => multi-line continuation for each log level
 static constexpr size_t c_cont = 5;
-static const char* c_log_format[] = {
+static constexpr const char* c_log_format[] = {
         "{:%F %T} {fg:cyan}{:6x}{t:normal}  {t:bold}TRACE{t:normal}  {fg:blue}{}{t:normal}\n",
         "{:%F %T} {fg:cyan}{:6x}{t:normal}  {t:bold}DEBUG{t:normal}  {fg:white}{}{t:normal}\n",
         "{:%F %T} {fg:cyan}{:6x}{t:normal}  {t:bold}INFO {t:normal}  {t:bold}{fg:white}{}{t:normal}\n",
@@ -30,7 +30,7 @@ static const char* c_log_format[] = {
         "                            {t:bold}...{t:normal}    {t:bold}{fg:yellow}{2}{t:normal}\n",
         "                            {t:bold}...{t:normal}    {t:bold}{fg:red}{2}{t:normal}\n",
 };
-static const char* c_log_intro = "{t:underline}   Date      Time    TID    Level  Message   {t:normal}\n";
+static constexpr const char* c_log_intro = "{t:underline}   Date      Time    TID    Level  Message   {t:normal}\n";
 
 
 Logger::Logger(Level level) : m_level(level)
@@ -51,7 +51,7 @@ void Logger::default_handler(Logger::Level lvl, std::string_view msg)
     const auto lines = split(msg, '\n');
     size_t cont = 0;
     for (const auto line : lines) {
-        t.print(c_log_format[lvl_num + cont], tm, tid, line);
+        t.print(fmt::runtime(c_log_format[lvl_num + cont]), tm, tid, line);
         cont = c_cont;
     }
 }
