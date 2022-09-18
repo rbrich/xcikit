@@ -5,6 +5,7 @@ import { WebLinksAddon } from 'xterm-addon-web-links';
 const termContainer = document.getElementById('terminal');
 
 const term = new Terminal({
+    allowProposedApi: true,
     convertEol: true,
     rightClickSelectsWord: false,
     theme: {

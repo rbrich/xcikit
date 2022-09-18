@@ -26,7 +26,7 @@
 #include "event/iocp/SignalWatch.h"
 #include "event/iocp/TimerWatch.h"
 
-#elif defined(__linux__) || defined(__EMSCRIPTEN__)
+#elif defined(__linux__)
 
 #include "event/epoll/EventLoop.h"
 #include "event/epoll/EventWatch.h"
