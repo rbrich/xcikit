@@ -35,7 +35,7 @@ requirements:
     cmake_defs: PEGTL_BUILD_TESTS=OFF PEGTL_BUILD_EXAMPLES=OFF
   magic_enum:
     cmake: "magic_enum/0.7.3"
-    conan: "magic_enum/0.8.0"
+    conan: "magic_enum/0.8.1"
   zlib:
     cmake: "ZLIB/"
     conan: "zlib/1.2.12"
