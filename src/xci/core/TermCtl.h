@@ -19,6 +19,8 @@
 
 namespace xci::core {
 
+using namespace fmt::literals;
+
 // Sends control codes and escape sequences to controlling terminal
 // or does nothing if the output stream is not connected to TTY.
 
@@ -201,16 +203,16 @@ public:
     /// {fg:COLOR} where COLOR is default | red | *red ... ("*" = bright)
     /// {bg:COLOR} where COLOR is the same as for fg
     /// {t:MODE} where MODE is bold | underline | normal ...
-    #define XCI_TERMCTL_FMT_ARGS decltype(fmt::arg("fg", FgPlaceholder{})), \
-                                 decltype(fmt::arg("bg", BgPlaceholder{})), \
-                                 decltype(fmt::arg("t",  ModePlaceholder{}))
+    #define XCI_TERMCTL_FMT_ARGS decltype("fg"_a = FgPlaceholder{}), \
+                                 decltype("bg"_a = BgPlaceholder{}), \
+                                 decltype("t"_a = ModePlaceholder{})
     template<typename... T>
     std::string format(fmt::format_string<T..., XCI_TERMCTL_FMT_ARGS> fmt,
                        T&&... args) {
         return fmt::vformat(fmt, fmt::make_format_args(args...,
-                        fmt::arg("fg", FgPlaceholder{this}),
-                        fmt::arg("bg", BgPlaceholder{this}),
-                        fmt::arg("t",  ModePlaceholder{this})));
+                        "fg"_a = FgPlaceholder{this},
+                        "bg"_a = BgPlaceholder{this},
+                        "t"_a = ModePlaceholder{this}));
     }
 
     /// Print string with special color/mode placeholders, see `format` above.

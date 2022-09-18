@@ -8,6 +8,7 @@
 #define XCI_CORE_LOG_H
 
 #include <xci/config.h>
+#include <xci/compat/macros.h>
 
 #include <fmt/format.h>
 
@@ -15,6 +16,8 @@
 #include <filesystem>
 
 namespace xci::core {
+
+using namespace fmt::literals;
 
 
 class Logger
@@ -68,45 +71,45 @@ struct LastErrorPlaceholder {
     static std::string message(bool use_last_error, bool error_code);
 };
 
-#define XCI_LAST_ERROR_ARG fmt::arg("m", LastErrorPlaceholder{})
+#define XCI_LAST_ERROR_ARG  "m"_a = LastErrorPlaceholder{}
 
 template <typename... T>
-inline std::string format(fmt::format_string<T..., decltype(XCI_LAST_ERROR_ARG)> fmt, T&&... args) {
+XCI_INLINE std::string format(fmt::format_string<T..., decltype(XCI_LAST_ERROR_ARG)> fmt, T&&... args) {
     return fmt::vformat(fmt, fmt::make_format_args(args..., XCI_LAST_ERROR_ARG));
 }
 
 template <typename... T>
-inline void message(Logger::Level lvl, fmt::format_string<T..., decltype(XCI_LAST_ERROR_ARG)> fmt, T&&... args) {
+XCI_INLINE void message(Logger::Level lvl, fmt::format_string<T..., decltype(XCI_LAST_ERROR_ARG)> fmt, T&&... args) {
     const auto& vargs = fmt::make_format_args(args..., XCI_LAST_ERROR_ARG);
     Logger::default_instance().log(lvl, fmt::vformat(fmt, vargs));
 }
 
 template <typename... T>
-inline void trace(fmt::format_string<T..., decltype(XCI_LAST_ERROR_ARG)> fmt, T&&... args) {
+XCI_INLINE void trace(fmt::format_string<T..., decltype(XCI_LAST_ERROR_ARG)> fmt, T&&... args) {
     const auto& vargs = fmt::make_format_args(args..., XCI_LAST_ERROR_ARG);
     Logger::default_instance().log(Logger::Level::Trace, fmt::vformat(fmt, vargs));
 }
 
 template <typename... T>
-inline void debug(fmt::format_string<T..., decltype(XCI_LAST_ERROR_ARG)> fmt, T&&... args) {
+XCI_INLINE void debug(fmt::format_string<T..., decltype(XCI_LAST_ERROR_ARG)> fmt, T&&... args) {
     const auto& vargs = fmt::make_format_args(args..., XCI_LAST_ERROR_ARG);
     Logger::default_instance().log(Logger::Level::Debug, fmt::vformat(fmt, vargs));
 }
 
 template <typename... T>
-inline void info(fmt::format_string<T..., decltype(XCI_LAST_ERROR_ARG)> fmt, T&&... args) {
+XCI_INLINE void info(fmt::format_string<T..., decltype(XCI_LAST_ERROR_ARG)> fmt, T&&... args) {
     const auto& vargs = fmt::make_format_args(args..., XCI_LAST_ERROR_ARG);
     Logger::default_instance().log(Logger::Level::Info, fmt::vformat(fmt, vargs));
 }
 
 template <typename... T>
-inline void warning(fmt::format_string<T..., decltype(XCI_LAST_ERROR_ARG)> fmt, T&&... args) {
+XCI_INLINE void warning(fmt::format_string<T..., decltype(XCI_LAST_ERROR_ARG)> fmt, T&&... args) {
     const auto& vargs = fmt::make_format_args(args..., XCI_LAST_ERROR_ARG);
     Logger::default_instance().log(Logger::Level::Warning, fmt::vformat(fmt, vargs));
 }
 
 template <typename... T>
-inline void error(fmt::format_string<T..., decltype(XCI_LAST_ERROR_ARG)> fmt, T&&... args) {
+XCI_INLINE void error(fmt::format_string<T..., decltype(XCI_LAST_ERROR_ARG)> fmt, T&&... args) {
     const auto& vargs = fmt::make_format_args(std::forward<T>(args)..., XCI_LAST_ERROR_ARG);
     Logger::default_instance().log(Logger::Level::Error, fmt::vformat(fmt, vargs));
 }
