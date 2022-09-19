@@ -58,7 +58,7 @@ requirements:
       - text
   harfbuzz:
     cmake: "harfbuzz/"
-    conan: "harfbuzz/5.1.0"
+    conan: "harfbuzz/5.2.0"
     prereq:
       - text
   hyperscan:
