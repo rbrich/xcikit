@@ -878,7 +878,7 @@ auto TermCtl::decode_input(std::string_view input_buffer) -> DecodedInput
         mod.set_alt();
         offset = 1;
     }
-    if (input_buffer[offset] >= 0 && input_buffer[offset] < 32) {
+    if (uint8_t(input_buffer[offset]) < 32) {
         // Ctrl + <char>
         mod.set_ctrl();
         return {uint16_t(offset + 1), Key::UnicodeChar, mod,
