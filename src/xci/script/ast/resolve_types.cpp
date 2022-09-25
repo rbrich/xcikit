@@ -85,7 +85,8 @@ public:
             else {
                 const auto& source_loc = dfn.expression ?
                                 dfn.expression->source_loc : dfn.variable.identifier.source_loc;
-                resolve_return_type(fn.signature(), m_value_type, source_loc);
+                resolve_return_type(fn.signature(), m_value_type,
+                                    dfn.symbol().get_scope(m_scope).type_args(), source_loc);
             }
         }
 
@@ -102,7 +103,7 @@ public:
 
     void visit(ast::Return& ret) override {
         ret.expression->apply(*this);
-        resolve_return_type(function().signature(), m_value_type,
+        resolve_return_type(function().signature(), m_value_type, m_scope.type_args(),
                 ret.expression->source_loc);
     }
 
@@ -238,7 +239,7 @@ public:
                 if (v.ti.is_unknown()) {
                     // try to resolve via known type args
                     auto var = v.ti.generic_var();
-                    const auto& type_args = function().signature().type_args;
+                    const auto& type_args = m_scope.type_args();
                     if (var > 0 && var <= type_args.size()) {
                         v.ti = type_args[var - 1];
                     } else {
@@ -600,7 +601,7 @@ public:
     void visit(ast::Cast& v) override {
         // resolve the inner expression -> m_value_type
         // (the Expression might use the specified type from `m_cast_type`)
-        resolve_generic_type(function().signature().type_args, v.to_type);
+        resolve_generic_type(m_scope.type_args(), v.to_type);
         m_cast_type = v.to_type;
         m_literal_value = true;
         v.expression->apply(*this);
@@ -649,7 +650,7 @@ private:
     }
 
     void specialize_arg(const TypeInfo& sig, const TypeInfo& deduced,
-                        std::vector<TypeInfo>& resolved,
+                        std::vector<TypeInfo>& type_args,
                         const std::function<void(const TypeInfo& exp, const TypeInfo& got)>& exc_cb) const
     {
         switch (sig.type()) {
@@ -657,12 +658,12 @@ private:
                 auto var = sig.generic_var();
                 if (var > 0) {
                     // make space for additional type var
-                    if (resolved.size() < var)
-                        resolved.resize(var);
-                    if (resolved[var-1].is_unknown())
-                        resolved[var-1] = deduced;
-                    else if (resolved[var-1] != deduced)
-                        exc_cb(resolved[var-1], deduced);
+                    if (type_args.size() < var)
+                        type_args.resize(var);
+                    if (type_args[var-1].is_unknown())
+                        type_args[var-1] = deduced;
+                    else if (type_args[var-1] != deduced)
+                        exc_cb(type_args[var-1], deduced);
                 }
                 break;
             }
@@ -671,7 +672,7 @@ private:
                     exc_cb(sig, deduced);
                     break;
                 }
-                specialize_arg(sig.elem_type(), deduced.elem_type(), resolved, exc_cb);
+                specialize_arg(sig.elem_type(), deduced.elem_type(), type_args, exc_cb);
                 break;
             case Type::Tuple:
                 if (deduced.type() != Type::Tuple || sig.subtypes().size() != deduced.subtypes().size()) {
@@ -679,7 +680,7 @@ private:
                     break;
                 }
                 for (auto&& [sig_sub, deduced_sub] : zip(sig.subtypes(), deduced.subtypes())) {
-                    specialize_arg(sig_sub, deduced_sub, resolved, exc_cb);
+                    specialize_arg(sig_sub, deduced_sub, type_args, exc_cb);
                 }
                 break;
             case Type::Function:
@@ -714,27 +715,28 @@ private:
         }
     }
 
-    void resolve_type_vars(Signature& signature) const
+    void resolve_type_vars(Signature& signature, const std::vector<TypeInfo>& type_args) const
     {
         for (auto& arg_type : signature.params) {
-            resolve_generic_type(signature.type_args, arg_type);
+            resolve_generic_type(type_args, arg_type);
         }
-        resolve_generic_type(signature.type_args, signature.return_type);
+        resolve_generic_type(type_args, signature.return_type);
     }
 
     // Check return type matches and set it to concrete type if it's generic.
-    void resolve_return_type(Signature& sig, const TypeInfo& deduced, const SourceLocation& loc) const
+    void resolve_return_type(Signature& sig, const TypeInfo& deduced,
+                             std::vector<TypeInfo>& type_args, const SourceLocation& loc) const
     {
         if (sig.return_type.is_unknown()) {
             if (deduced.is_unknown() && !sig.has_any_generic())
                 throw MissingExplicitType(loc);
             if (deduced.is_callable() && &sig == &deduced.signature())
                 throw MissingExplicitType(loc);  // the return type is recursive!
-            specialize_arg(sig.return_type, deduced, sig.type_args,
+            specialize_arg(sig.return_type, deduced, type_args,
                     [](const TypeInfo& exp, const TypeInfo& got) {
                         throw UnexpectedReturnType(exp, got);
                     });
-            resolve_type_vars(sig);  // fill in concrete types using new type var info
+            resolve_type_vars(sig, type_args);  // fill in concrete types using new type var info
             sig.return_type = deduced;  // Unknown/var=0 not handled by resolve_type_vars
             return;
         }
@@ -756,24 +758,24 @@ private:
             const auto& out_type = signature.params[i];
             if (arg.type_info.is_unknown())
                 continue;
-            specialize_arg(out_type, arg.type_info, signature.type_args,
+            specialize_arg(out_type, arg.type_info, scope.type_args(),
                     [i, &loc](const TypeInfo& exp, const TypeInfo& got) {
                         throw UnexpectedArgumentType(i+1, exp, got, loc);
                     });
         }
         // resolve generic vars to received types
-        resolve_type_vars(signature);
+        resolve_type_vars(signature, scope.type_args());
         // resolve function body to get actual return type
         auto sig_ret = signature.return_type;
         resolve_types(scope, body);
         auto deduced_ret = signature.return_type;
         // resolve generic return type
         if (!deduced_ret.is_unknown())
-            specialize_arg(sig_ret, deduced_ret, signature.type_args,
+            specialize_arg(sig_ret, deduced_ret, scope.type_args(),
                            [](const TypeInfo& exp, const TypeInfo& got) {
                                throw UnexpectedReturnType(exp, got);
                            });
-        resolve_generic_type(signature.type_args, sig_ret);
+        resolve_generic_type(scope.type_args(), sig_ret);
         signature.return_type = sig_ret;
     }
 
@@ -1031,7 +1033,7 @@ private:
             // resolve arg if it's a type var and the signature has a known type in its place
             if (arg.type_info.is_generic() && !res->params.front().is_generic()) {
                 specialize_arg(arg.type_info, res->params.front(),
-                        function().signature().type_args,  // current function, not the called one
+                        m_scope.type_args(),  // current function, not the called one
                         [i, &arg](const TypeInfo& exp, const TypeInfo& got) {
                             throw UnexpectedArgumentType(i, exp, got, arg.source_loc);
                         });
@@ -1176,8 +1178,7 @@ void resolve_types(Scope& scope, const ast::Block& block)
     // if the return type is still Unknown, change it to Void (the body is empty)
     auto& fn = scope.function();
     if (!fn.signature().has_generic_params()
-        && fn.signature().return_type.is_unknown()
-        && fn.signature().type_args.empty())
+        && fn.signature().return_type.is_unknown())
     {
         fn.signature().return_type = ti_void();
     }

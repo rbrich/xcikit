@@ -395,7 +395,7 @@ private:
             case Symbol::TypeName:
                 return symptr.symtab()->module()->get_type(symptr->index());
             case Symbol::TypeVar: {
-                const auto& type_args = function().signature().type_args;
+                const auto& type_args = m_scope.type_args();
                 if (symptr.symtab() == &function().symtab()
                     && symptr->index() <= type_args.size())
                     return type_args[symptr->index() - 1];

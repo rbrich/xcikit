@@ -265,7 +265,7 @@ bool TypeInfo::operator==(const TypeInfo& rhs) const
     if (m_type != rhs.type())
         return false;
     if (m_type == Type::Function)
-        return signature().compare_without_type_args(rhs.signature());  // compare content, not pointer
+        return signature() == rhs.signature();  // compare content, not pointer
     if (m_type == Type::Named)
         return named_type() == rhs.named_type();
     return m_info == rhs.m_info;
@@ -437,12 +437,6 @@ bool Signature::has_nonvoid_params() const
     return ranges::any_of(params, [](const TypeInfo& type_info) {
         return !type_info.is_void();
     });
-}
-
-
-bool Signature::compare_without_type_args(const Signature& rhs) const
-{
-    return nonlocals == rhs.nonlocals && partial == rhs.partial && params == rhs.params && return_type == rhs.return_type;
 }
 
 

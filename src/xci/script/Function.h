@@ -283,12 +283,16 @@ public:
     const std::vector<Nonlocal>& nonlocals() const { return m_nonlocals; }
     size_t nonlocal_raw_offset(Index index, const TypeInfo& ti) const;
 
+    const std::vector<TypeInfo>& type_args() const { return m_type_args; }
+    std::vector<TypeInfo>& type_args() { return m_type_args; }
+
 private:
     Module* m_module = nullptr;
     Index m_function = no_index;  // function index in module
     Scope* m_parent_scope = nullptr;  // matches `m_symtab.parent()`, but can be a specialized function, while symtab is only lexical
     std::vector<Index> m_subscopes;  // nested scopes (Index into module scopes)
     std::vector<Nonlocal> m_nonlocals;
+    std::vector<TypeInfo> m_type_args;  // resolved type variables or explicit type args (index = var# - 1)
 };
 
 

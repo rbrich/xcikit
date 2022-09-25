@@ -248,7 +248,6 @@ private:
 
 
 struct Signature {
-    std::vector<TypeInfo> type_args;  // resolved type variables or explicit type args (index = var# - 1)
     std::vector<TypeInfo> nonlocals;
     std::vector<TypeInfo> partial;
     std::vector<TypeInfo> params;
@@ -272,11 +271,9 @@ struct Signature {
     bool operator==(const Signature& rhs) const = default;
     bool operator!=(const Signature& rhs) const = default;
 
-    bool compare_without_type_args(const Signature& rhs) const;
-
     template <class Archive>
     void serialize(Archive& ar) {
-        ar ("type_args", type_args) ("nonlocals", nonlocals) ("partial", partial)
+        ar ("nonlocals", nonlocals) ("partial", partial)
            ("params", params) ("return_type", return_type);
     }
 };
