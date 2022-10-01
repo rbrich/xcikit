@@ -240,8 +240,9 @@ public:
                     // try to resolve via known type args
                     auto var = v.ti.generic_var();
                     const auto& type_args = m_scope.type_args();
-                    if (var > 0 && var <= type_args.size()) {
-                        v.ti = type_args[var - 1];
+                    auto resolved = type_args.get(var);
+                    if (resolved) {
+                        v.ti = resolved;
                     } else {
                         // unresolved -> unknown type id
                         m_value_type = {};
@@ -271,6 +272,11 @@ public:
                 Index cls_fn_idx = cls.get_index_of_function(sym.ref()->index());
                 const auto& cls_fn = sym.ref().get_generic_scope().function();
                 auto inst_types = resolve_instance_types(cls_fn.signature());
+                std::vector<TypeInfo> resolved_types;
+                for (Index i = 1; i <= cls.symtab().count(Symbol::TypeVar); ++i) {
+                    auto symptr = cls.symtab().find_by_index(Symbol::TypeVar, i);
+                    resolved_types.push_back(inst_types.get(symptr));
+                }
                 // find instance using resolved T
                 std::vector<Candidate> candidates;
                 for (auto inst_psym : v.sym_list) {
@@ -280,7 +286,7 @@ public:
                         inst_mod = &module();
                     auto& inst = inst_mod->get_instance(inst_psym->index());
                     auto inst_fn = inst.get_function(cls_fn_idx);
-                    auto m = match_params(inst.types(), inst_types);
+                    auto m = match_params(inst.types(), resolved_types);
                     candidates.push_back({inst_mod, inst_fn.scope_index, inst_psym, TypeInfo{}, m});
                 }
 
@@ -650,20 +656,16 @@ private:
     }
 
     void specialize_arg(const TypeInfo& sig, const TypeInfo& deduced,
-                        std::vector<TypeInfo>& type_args,
+                        TypeArgs& type_args,
                         const std::function<void(const TypeInfo& exp, const TypeInfo& got)>& exc_cb) const
     {
         switch (sig.type()) {
             case Type::Unknown: {
                 auto var = sig.generic_var();
-                if (var > 0) {
-                    // make space for additional type var
-                    if (type_args.size() < var)
-                        type_args.resize(var);
-                    if (type_args[var-1].is_unknown())
-                        type_args[var-1] = deduced;
-                    else if (type_args[var-1] != deduced)
-                        exc_cb(type_args[var-1], deduced);
+                if (var) {
+                    auto [it, inserted] = type_args.set(var, deduced);
+                    if (!inserted && it->second != deduced)
+                        exc_cb(it->second, deduced);
                 }
                 break;
             }
@@ -691,21 +693,24 @@ private:
         }
     }
 
-    void resolve_generic_type(const std::vector<TypeInfo>& resolved, TypeInfo& sig) const
+    void resolve_generic_type(const TypeArgs& type_args, TypeInfo& sig) const
     {
         switch (sig.type()) {
             case Type::Unknown: {
                 auto var = sig.generic_var();
-                if (var > 0 && var <= resolved.size() && resolved[var - 1])
-                    sig = resolved[var - 1];
+                if (var) {
+                    auto ti = type_args.get(var);
+                    if (ti)
+                        sig = ti;
+                }
                 break;
             }
             case Type::List:
-                resolve_generic_type(resolved, sig.elem_type());
+                resolve_generic_type(type_args, sig.elem_type());
                 break;
             case Type::Tuple:
                 for (auto& sub : sig.subtypes())
-                    resolve_generic_type(resolved, sub);
+                    resolve_generic_type(type_args, sub);
                 break;
             case Type::Function:
                 break;
@@ -715,7 +720,7 @@ private:
         }
     }
 
-    void resolve_type_vars(Signature& signature, const std::vector<TypeInfo>& type_args) const
+    void resolve_type_vars(Signature& signature, const TypeArgs& type_args) const
     {
         for (auto& arg_type : signature.params) {
             resolve_generic_type(type_args, arg_type);
@@ -725,7 +730,7 @@ private:
 
     // Check return type matches and set it to concrete type if it's generic.
     void resolve_return_type(Signature& sig, const TypeInfo& deduced,
-                             std::vector<TypeInfo>& type_args, const SourceLocation& loc) const
+                             TypeArgs& type_args, const SourceLocation& loc) const
     {
         if (sig.return_type.is_unknown()) {
             if (deduced.is_unknown() && !sig.has_any_generic())
@@ -1095,17 +1100,12 @@ private:
     // Throw if unmatched, return resolved types for T, U... if matched
     // The result types are in the same order as the matched type vars in signature,
     // e.g. for `class MyClass T U V { my V U -> T }` it will return actual types [T, U, V].
-    std::vector<TypeInfo> resolve_instance_types(const Signature& signature) const
+    TypeArgs resolve_instance_types(const Signature& signature) const
     {
         const auto* sig = &signature;
         size_t i_arg = 0;
         size_t i_prm = 0;
-        std::vector<TypeInfo> res;
-        // optimization: Resize `res` to according to return type, which is usually the last type var
-        if (signature.return_type.is_unknown()) {
-            auto var = signature.return_type.generic_var();
-            res.resize(var);
-        }
+        TypeArgs res;
         // resolve args
         for (const auto& arg : m_call_args) {
             i_arg += 1;
@@ -1143,15 +1143,13 @@ private:
         // use m_call_ret only as a hint - if return type var is still unknown
         if (signature.return_type.is_unknown()) {
             auto var = signature.return_type.generic_var();
-            assert(var != 0);
-            if (res[var - 1].is_unknown()) {
-                if (!m_call_ret.is_unknown())
-                    res[var - 1] = m_call_ret;
-                if (!m_cast_type.is_unknown())
-                    res[var - 1] = m_cast_type.effective_type();
-                if (m_type_info)
-                    res[var - 1] = m_type_info;
-            }
+            assert(var);
+            if (!m_call_ret.is_unknown())
+                res.set(var, m_call_ret);
+            if (!m_cast_type.is_unknown())
+                res.set(var, m_cast_type.effective_type());
+            if (m_type_info)
+                res.set(var, m_type_info);
         }
         return res;
     }

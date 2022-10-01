@@ -7,6 +7,8 @@
 #ifndef XCI_SCRIPT_TYPEINFO_H
 #define XCI_SCRIPT_TYPEINFO_H
 
+#include "SymbolTable.h"
+
 #include <cstdint>
 #include <ostream>
 #include <vector>
@@ -70,7 +72,7 @@ public:
     static constexpr TupleTag tuple_of {};
     static constexpr StructTag struct_of {};
 
-    using Var = uint8_t;  // for unknown type, specifies which type variable this represents (counted from 1, none = 0)
+    using Var = SymbolPointer;  // for unknown type, specifies which type variable this represents
     using Subtypes = std::vector<TypeInfo>;
     using StructItem = std::pair<std::string, TypeInfo>;
     using StructItems = std::vector<StructItem>;
@@ -119,7 +121,7 @@ public:
     bool is_struct() const { return underlying_type() == Type::Struct; }
 
     bool is_generic() const;
-    void replace_var(uint8_t idx, const TypeInfo& ti);
+    void replace_var(SymbolPointer var, const TypeInfo& ti);
 
     // If the type is function without args, get its return type.
     const TypeInfo& effective_type() const;
@@ -131,7 +133,7 @@ public:
     bool operator==(const TypeInfo& rhs) const;
     bool operator!=(const TypeInfo& rhs) const { return !(*this == rhs); }
 
-    explicit operator bool() const { return m_type != Type::Unknown || generic_var() != 0; }
+    explicit operator bool() const { return m_type != Type::Unknown || generic_var(); }
 
     // -------------------------------------------------------------------------
     // Additional info, subtypes
@@ -159,7 +161,7 @@ public:
     void save_schema(Archive& ar) const {
         ar("type", m_type);
         if (ar.enter_union("info", "type", typeid(decltype(m_info)))) {
-            ar(uint8_t(Type::Unknown), "var", Var{});
+            ar(uint8_t(Type::Unknown), "var", Symbol{});
             ar(uint8_t(Type::List), "elem_type", TypeInfo{});
             ar(uint8_t(Type::Tuple), "subtypes", Subtypes{});
             ar(uint8_t(Type::Function), "signature", SignaturePtr{});
@@ -174,7 +176,7 @@ public:
         ar("type", m_type);
         switch (m_type) {
             case Type::Unknown:
-                ar("var", generic_var());
+                ar("var", *generic_var());
                 break;
             case Type::Function:
                 ar("signature", signature());
@@ -203,7 +205,8 @@ public:
         switch (m_type) {
             case Type::Unknown: {
                 Var var;
-                ar(var);
+                //FIXME
+                //ar(var);
                 m_info = var;
                 break;
             }

@@ -42,8 +42,10 @@ public:
             const auto& psym = dfn.symbol();
             const auto& cls_fn = psym->ref().get_function(m_scope);
             TypeInfo eval_type {cls_fn.signature_ptr()};
-            for (const auto&& [i, t] : m_instance->types() | enumerate)
-                eval_type.replace_var(i + 1, t);
+            for (const auto&& [i, t] : m_instance->types() | enumerate) {
+                auto var = m_instance->class_().symtab().find_by_index(Symbol::TypeVar, i + 1);
+                eval_type.replace_var(var, t);
+            }
 
             // specified type is basically useless here, let's just check
             // it matches evaluated type from class instance
@@ -394,13 +396,8 @@ private:
         switch (symptr->type()) {
             case Symbol::TypeName:
                 return symptr.symtab()->module()->get_type(symptr->index());
-            case Symbol::TypeVar: {
-                const auto& type_args = m_scope.type_args();
-                if (symptr.symtab() == &function().symtab()
-                    && symptr->index() <= type_args.size())
-                    return type_args[symptr->index() - 1];
-                return TypeInfo{ TypeInfo::Var(symptr->index()) };
-            }
+            case Symbol::TypeVar:
+                return TypeInfo{ TypeInfo::Var(symptr) };
             default:
                 return {};
         }

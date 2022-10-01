@@ -241,8 +241,45 @@ private:
 };
 
 
-class Scope
-{
+class TypeArgs {
+public:
+    using map_type = std::map<SymbolPointer, TypeInfo>;
+    using iterator = typename map_type::iterator;
+    using const_iterator = typename map_type::const_iterator;
+
+    // Returns Unknown when not contained in the map
+    TypeInfo get(SymbolPointer sym) const {
+        if (!sym)
+            return TypeInfo{};
+        auto it = m_type_args.find(sym);
+        if (it == m_type_args.end())
+            return TypeInfo{};
+        return it->second;
+    }
+
+    std::pair<iterator, bool> set(SymbolPointer sym, TypeInfo&& ti) {
+        if (ti.is_unknown())
+            return { m_type_args.end(), true };  // "inserted" Unknown to nowhere
+        return m_type_args.try_emplace(sym, std::move(ti));
+    }
+
+    std::pair<iterator, bool> set(SymbolPointer sym, const TypeInfo& ti) {
+        if (ti.is_unknown())
+            return { m_type_args.end(), true };  // "inserted" Unknown to nowhere
+        return m_type_args.try_emplace(sym, ti);
+    }
+
+    // Must not query Unknown or a symbol that is not in the map
+    TypeInfo& operator[] (SymbolPointer sym) {
+        return m_type_args[sym];
+    }
+
+private:
+    std::map<SymbolPointer, TypeInfo> m_type_args;
+};
+
+
+class Scope {
 public:
     Scope() = default;
     explicit Scope(Module& module, Index function_idx, Scope* parent_scope);
@@ -283,8 +320,8 @@ public:
     const std::vector<Nonlocal>& nonlocals() const { return m_nonlocals; }
     size_t nonlocal_raw_offset(Index index, const TypeInfo& ti) const;
 
-    const std::vector<TypeInfo>& type_args() const { return m_type_args; }
-    std::vector<TypeInfo>& type_args() { return m_type_args; }
+    const TypeArgs& type_args() const { return m_type_args; }
+    TypeArgs& type_args() { return m_type_args; }
 
 private:
     Module* m_module = nullptr;
@@ -292,7 +329,7 @@ private:
     Scope* m_parent_scope = nullptr;  // matches `m_symtab.parent()`, but can be a specialized function, while symtab is only lexical
     std::vector<Index> m_subscopes;  // nested scopes (Index into module scopes)
     std::vector<Nonlocal> m_nonlocals;
-    std::vector<TypeInfo> m_type_args;  // resolved type variables or explicit type args (index = var# - 1)
+    TypeArgs m_type_args;  // resolved type variables or explicit type args
 };
 
 
