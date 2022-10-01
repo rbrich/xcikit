@@ -22,7 +22,7 @@
 requirements:
   fmt:
     cmake: "fmt/9.0.0"
-    conan: "fmt/9.0.0"
+    conan: "fmt/9.1.0"
   range_v3:
     cmake: "range-v3/0.12.0"
     conan: "range-v3/0.12.0"
@@ -35,7 +35,7 @@ requirements:
     cmake_defs: PEGTL_BUILD_TESTS=OFF PEGTL_BUILD_EXAMPLES=OFF
   magic_enum:
     cmake: "magic_enum/0.7.3"
-    conan: "magic_enum/0.8.0"
+    conan: "magic_enum/0.8.1"
   zlib:
     cmake: "ZLIB/"
     conan: "zlib/1.2.12"
@@ -58,7 +58,7 @@ requirements:
       - text
   harfbuzz:
     cmake: "harfbuzz/"
-    conan: "harfbuzz/5.1.0"
+    conan: "harfbuzz/5.2.0"
     prereq:
       - text
   hyperscan:

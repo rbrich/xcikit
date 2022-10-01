@@ -5,7 +5,6 @@
 add_library(xci-core
     ArgParser.cpp
     file.cpp
-    dispatch.cpp
     EditBuffer.cpp
     EditLine.cpp
     ResourceUsage.cpp
@@ -42,7 +41,7 @@ if (APPLE)
         event/kqueue/SignalWatch.cpp
         event/kqueue/TimerWatch.cpp
         )
-elseif(WIN32)
+elseif (WIN32)
     target_sources(xci-core PRIVATE
         event/iocp/EventLoop.cpp
         event/iocp/IOWatch.cpp
@@ -51,7 +50,7 @@ elseif(WIN32)
         event/iocp/SignalWatch.cpp
         event/iocp/TimerWatch.cpp
         )
-else()
+elseif (NOT EMSCRIPTEN)
     target_sources(xci-core PRIVATE
         event/epoll/EventLoop.cpp
         event/epoll/EventWatch.cpp
@@ -60,6 +59,9 @@ else()
         event/epoll/SignalWatch.cpp
         event/epoll/TimerWatch.cpp
         )
+endif()
+if (NOT EMSCRIPTEN)
+    target_sources(xci-core PRIVATE dispatch.cpp)
 endif()
 
 # Choose Logger::default_handler implementation
