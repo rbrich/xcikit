@@ -10,7 +10,8 @@
 //   - https://www.ecma-international.org/wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
 //   - https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
 //   - https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
-//   - terminfo(5), https://linux.die.net/man/5/terminfo
+//   - https://xtermjs.org/docs/api/vtfeatures/
+//   - terminfo(5), https://manpages.debian.org/testing/ncurses-bin/terminfo.5.en.html
 // * raw mode:
 //   - https://en.wikipedia.org/wiki/POSIX_terminal_interface
 //   - termios(4)
@@ -73,6 +74,8 @@ namespace xci::core {
 #define column_address          CSI "{}G"   // horizontal position, absolute
 #define save_cursor             ESC "7"
 #define restore_cursor          ESC "8"
+#define clear_all_tabs          CSI "3g"
+#define set_tab                 ESC "H"
 #endif // XCI_WITH_TERMINFO
 
 // not found in Terminfo DB:
@@ -94,6 +97,7 @@ static constexpr auto exit_frame_mode = CSI "54m";
 static constexpr auto exit_overline_mode = CSI "55m";
 static constexpr auto send_soft_reset = CSI "!p";
 static constexpr auto request_cursor_position = CSI "6n";
+static constexpr auto clear_tab = CSI "g";
 } // namespace seq
 
 
@@ -549,6 +553,10 @@ TermCtl TermCtl::move_to_column(unsigned column) const { return TERM_APPEND(colu
 TermCtl TermCtl::_save_cursor() const { return TERM_APPEND(save_cursor); }
 TermCtl TermCtl::_restore_cursor() const { return TERM_APPEND(restore_cursor); }
 TermCtl TermCtl::request_cursor_position() const { return XCI_TERM_APPEND(seq::request_cursor_position); }
+
+TermCtl TermCtl::tab_clear() const { return XCI_TERM_APPEND(seq::clear_tab); }
+TermCtl TermCtl::tab_clear_all() const { return TERM_APPEND(clear_all_tabs); }
+TermCtl TermCtl::tab_set() const { return TERM_APPEND(set_tab); }
 
 TermCtl TermCtl::clear_screen_down() const { return TERM_APPEND(clr_eos); }
 TermCtl TermCtl::clear_line_to_end() const { return TERM_APPEND(clr_eol); }

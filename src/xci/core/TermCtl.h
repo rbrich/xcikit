@@ -141,6 +141,11 @@ public:
     TermCtl restore_cursor() const { return _restore_cursor(); }
     TermCtl request_cursor_position() const;
 
+    // tabulation (tab stops)
+    TermCtl tab_clear() const;      // TBC 0 (CSI 0 g)
+    TermCtl tab_clear_all() const;  // TBC 3 (CSI 3 g)
+    TermCtl tab_set() const;        // HTS   (ESC H or \x88)
+
     /// Returns cursor position (row, col), 0-based
     /// On failure, returns (-1, -1)
     /// \param tin          TermCtl which is connected to the response channel
