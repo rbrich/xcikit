@@ -166,7 +166,8 @@ public:
 
     // Output cached seq
     const std::string& seq() const { return m_seq; }
-    friend std::ostream& operator<<(std::ostream& os, const TermCtl& term);
+    void write() { write(seq()); }
+    friend std::ostream& operator<<(std::ostream& os, const TermCtl& t) { return os << t.seq(); }
 
     // Formatting helpers
     struct Placeholder {
@@ -358,20 +359,20 @@ public:
 
 private:
     // Copy TermCtl and append seq to new instance
-    TermCtl(const TermCtl& term, const std::string& seq)
-        : m_seq(term.m_seq + seq)
-        , m_state(term.m_state == State::NoTTY ? State::NoTTY : State::CopyOk) {}
+    TermCtl(const TermCtl& term, const std::string& seq) : TermCtl(term, seq.c_str()) {}
     TermCtl(const TermCtl& term, const char* seq)
             : m_seq(term.m_seq + (seq == nullptr ? "" : seq))
-            , m_state(term.m_state == State::NoTTY ? State::NoTTY : State::CopyOk) {}
+            , m_write_cb(term.m_write_cb ? term.m_write_cb : WriteCallback{})
+            , m_fd(term.m_fd)
+            , m_state(term.m_state == State::NoTTY ? State::NoTTY : State::CopyOk)
+            , m_at_newline(term.m_at_newline) {}
 
     // Aliases needed to avoid macro collision
     TermCtl _save_cursor() const;
     TermCtl _restore_cursor() const;
 
-    WriteCallback m_write_cb;
-
     std::string m_seq;  // cached capability sequences
+    WriteCallback m_write_cb;
     int m_fd;   // FD (on Windows mapped to handle)
     enum class State {
         NoTTY,      // initialization failed
@@ -379,10 +380,7 @@ private:
         CopyOk,     // a copy created by chained method
     };
     State m_state : 7 = State::NoTTY;
-
-#ifdef __EMSCRIPTEN__
     bool m_at_newline : 1 = true;
-#endif
 
 #ifdef _WIN32
     unsigned long m_orig_mode = 0;  // original console mode of the handle

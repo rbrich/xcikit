@@ -585,13 +585,6 @@ TermCtl TermCtl::clear_line_to_end() const { return TERM_APPEND(clr_eol); }
 TermCtl TermCtl::soft_reset() const { return XCI_TERM_APPEND(seq::send_soft_reset); }
 
 
-std::ostream& operator<<(std::ostream& os, const TermCtl& term)
-{
-    os << term.seq();
-    return os;
-}
-
-
 auto TermCtl::ColorPlaceholder::parse(std::string_view name) -> Color
 {
     if (name == "default")   return Color::Default;
@@ -768,10 +761,7 @@ std::string TermCtl::raw_input(bool isig)
 
 void TermCtl::write(std::string_view buf)
 {
-#ifdef __EMSCRIPTEN__
     m_at_newline = buf.ends_with('\n');
-#endif
-
     if (m_write_cb)
         m_write_cb(buf);
     else
@@ -790,9 +780,7 @@ void TermCtl::sanitize_newline(TermCtl& tin)
     // generic solution - this works even when something sidesteps TermCtl
     // and writes directly to the terminal
     auto [row, col] = get_cursor_position(tin);
-    if (col == -1)
-        return;
-    if (col != 0) {
+    if (col > 0 || (col == -1 && !m_at_newline)) {
         write((const char*)u8"⏎\n");
     }
 #endif

@@ -39,11 +39,9 @@ int main()
             "{t:hidden}hidden{t:no_hidden} "
             "\n");
 
-    cout << t.tab_clear_all()
-            .move_right(20).tab_set()
-            .move_right(30).tab_set()
-            .move_to_column(0) << std::flush;
+    t.tab_set_all({30, 20}).write();
     t.print("tab stops:\t1\t2\n");
+    t.tab_set_every(8).write();
 
     TermCtl& tin = TermCtl::stdin_instance();
     bool done = false;

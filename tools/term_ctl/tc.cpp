@@ -39,9 +39,9 @@ int main(int argc, const char* argv[])
 
     if (!tabs.empty()) {
         if (tabs.size() == 1)
-            term.write(term.tab_set_every(tabs.front()).seq());
+            term.tab_set_every(tabs.front()).write();
         else
-            term.write(term.tab_set_all(tabs).seq());
+            term.tab_set_all(tabs).write();
 
         return 0;
     }
