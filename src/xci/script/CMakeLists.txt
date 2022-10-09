@@ -39,6 +39,7 @@ target_precompile_headers(xci-script REUSE_FROM xci-core)
 target_link_libraries(xci-script
     PUBLIC
         xci-core
+        xci-core-vfs
         xci-data
     PRIVATE
         range-v3::range-v3
