@@ -42,7 +42,7 @@ void BytecodeTracer::setup(bool print_bytecode, bool trace_bytecode)
     if (trace_bytecode) {
         m_machine.set_bytecode_trace_cb([this]
                 (const Function& f, Code::const_iterator ipos) {
-            const auto& t = m_term;
+            auto& t = m_term;
             if (m_lines_to_erase > 0) {
                 cout << t.move_up(m_lines_to_erase);
             } else {

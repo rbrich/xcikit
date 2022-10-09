@@ -48,7 +48,7 @@ public:
     // - Auto: true if connected to TTY
     // - Always: true
     // - Never: false
-    [[nodiscard]] bool is_tty() const { return m_state != State::NoTTY; }
+    [[nodiscard]] bool is_tty() const { return m_tty_ok; }
 
     // Detect terminal size, return {0,0} if not detected
     struct Size {
@@ -74,82 +74,82 @@ public:
     };
 
     // foreground
-    TermCtl fg(Color color) const;
-    TermCtl black() const { return fg(Color::Black); }
-    TermCtl red() const { return fg(Color::Red); }
-    TermCtl green() const { return fg(Color::Green); }
-    TermCtl yellow() const { return fg(Color::Yellow); }
-    TermCtl blue() const { return fg(Color::Blue); }
-    TermCtl magenta() const { return fg(Color::Magenta); }
-    TermCtl cyan() const { return fg(Color::Cyan); }
-    TermCtl white() const { return fg(Color::White); }
-    TermCtl bright_black() const { return fg(Color::BrightBlack); }
-    TermCtl bright_red() const { return fg(Color::BrightRed); }
-    TermCtl bright_green() const { return fg(Color::BrightGreen); }
-    TermCtl bright_yellow() const { return fg(Color::BrightYellow); }
-    TermCtl bright_blue() const { return fg(Color::BrightBlue); }
-    TermCtl bright_magenta() const { return fg(Color::BrightMagenta); }
-    TermCtl bright_cyan() const { return fg(Color::BrightCyan); }
-    TermCtl bright_white() const { return fg(Color::BrightWhite); }
-    TermCtl default_fg() const { return fg(Color::Default); }
+    TermCtl& fg(Color color);
+    TermCtl& black() { return fg(Color::Black); }
+    TermCtl& red() { return fg(Color::Red); }
+    TermCtl& green() { return fg(Color::Green); }
+    TermCtl& yellow() { return fg(Color::Yellow); }
+    TermCtl& blue() { return fg(Color::Blue); }
+    TermCtl& magenta() { return fg(Color::Magenta); }
+    TermCtl& cyan() { return fg(Color::Cyan); }
+    TermCtl& white() { return fg(Color::White); }
+    TermCtl& bright_black() { return fg(Color::BrightBlack); }
+    TermCtl& bright_red() { return fg(Color::BrightRed); }
+    TermCtl& bright_green() { return fg(Color::BrightGreen); }
+    TermCtl& bright_yellow() { return fg(Color::BrightYellow); }
+    TermCtl& bright_blue() { return fg(Color::BrightBlue); }
+    TermCtl& bright_magenta() { return fg(Color::BrightMagenta); }
+    TermCtl& bright_cyan() { return fg(Color::BrightCyan); }
+    TermCtl& bright_white() { return fg(Color::BrightWhite); }
+    TermCtl& default_fg() { return fg(Color::Default); }
 
     // background
-    TermCtl bg(Color color) const;
-    TermCtl on_black() const { return bg(Color::Black); }
-    TermCtl on_red() const { return bg(Color::Red); }
-    TermCtl on_green() const { return bg(Color::Green); }
-    TermCtl on_yellow() const { return bg(Color::Yellow); }
-    TermCtl on_blue() const { return bg(Color::Blue); }
-    TermCtl on_magenta() const { return bg(Color::Magenta); }
-    TermCtl on_cyan() const { return bg(Color::Cyan); }
-    TermCtl on_white() const { return bg(Color::White); }
-    TermCtl default_bg() const { return bg(Color::Default); }
+    TermCtl& bg(Color color);
+    TermCtl& on_black() { return bg(Color::Black); }
+    TermCtl& on_red() { return bg(Color::Red); }
+    TermCtl& on_green() { return bg(Color::Green); }
+    TermCtl& on_yellow() { return bg(Color::Yellow); }
+    TermCtl& on_blue() { return bg(Color::Blue); }
+    TermCtl& on_magenta() { return bg(Color::Magenta); }
+    TermCtl& on_cyan() { return bg(Color::Cyan); }
+    TermCtl& on_white() { return bg(Color::White); }
+    TermCtl& default_bg() { return bg(Color::Default); }
 
     // mode
-    TermCtl mode(Mode mode) const;
-    TermCtl bold() const;  // bold or increased intensity
-    TermCtl dim() const;  // faint or decreased intensity
-    TermCtl italic() const;
-    TermCtl underline() const;
-    TermCtl overline() const;
-    TermCtl cross_out() const;
-    TermCtl frame() const;
-    TermCtl blink() const;
-    TermCtl reverse() const;
-    TermCtl hidden() const;  // conceal
-    TermCtl normal_intensity() const;
-    TermCtl no_italic() const;
-    TermCtl no_underline() const;
-    TermCtl no_overline() const;
-    TermCtl no_cross_out() const;
-    TermCtl no_frame() const;
-    TermCtl no_blink() const;
-    TermCtl no_reverse() const;
-    TermCtl no_hidden() const; // reveal
-    TermCtl normal() const;  // reset all attributes
+    TermCtl& mode(Mode mode);
+    TermCtl& bold();  // bold or increased intensity
+    TermCtl& dim();  // faint or decreased intensity
+    TermCtl& italic();
+    TermCtl& underline();
+    TermCtl& overline();
+    TermCtl& cross_out();
+    TermCtl& frame();
+    TermCtl& blink();
+    TermCtl& reverse();
+    TermCtl& hidden();  // conceal
+    TermCtl& normal_intensity();
+    TermCtl& no_italic();
+    TermCtl& no_underline();
+    TermCtl& no_overline();
+    TermCtl& no_cross_out();
+    TermCtl& no_frame();
+    TermCtl& no_blink();
+    TermCtl& no_reverse();
+    TermCtl& no_hidden(); // reveal
+    TermCtl& normal();  // reset all attributes
 
     // cursor movement
-    TermCtl move_up() const;
-    TermCtl move_up(unsigned n_lines) const;
-    TermCtl move_down() const;
-    TermCtl move_down(unsigned n_lines) const;
-    TermCtl move_left() const;
-    TermCtl move_left(unsigned n_cols) const;
-    TermCtl move_right() const;
-    TermCtl move_right(unsigned n_cols) const;
-    TermCtl move_to_column(unsigned column) const;  // column is 0-based
-    TermCtl move_to_beginning() const;  // CR ('\r')
-    TermCtl save_cursor() const { return _save_cursor(); }
-    TermCtl restore_cursor() const { return _restore_cursor(); }
-    TermCtl request_cursor_position() const;
+    TermCtl& move_up();
+    TermCtl& move_up(unsigned n_lines);
+    TermCtl& move_down();
+    TermCtl& move_down(unsigned n_lines);
+    TermCtl& move_left();
+    TermCtl& move_left(unsigned n_cols);
+    TermCtl& move_right();
+    TermCtl& move_right(unsigned n_cols);
+    TermCtl& move_to_column(unsigned column);  // column is 0-based
+    TermCtl& move_to_beginning();  // CR ('\r')
+    TermCtl& save_cursor() { return _save_cursor(); }
+    TermCtl& restore_cursor() { return _restore_cursor(); }
+    TermCtl& request_cursor_position();
 
     // tabulation (tab stops)
-    TermCtl tab_clear() const;      // TBC 0 (CSI 0 g)
-    TermCtl tab_clear_all() const;  // TBC 3 (CSI 3 g)
-    TermCtl tab_set() const;        // HTS   (ESC H or \x88)
-    TermCtl tab_set_every(unsigned n_cols) const;    // composite operation
-    TermCtl tab_set_all(std::span<const unsigned> n_cols) const;    // composite operation
-    TermCtl tab_set_all(std::initializer_list<unsigned> n_cols) const {
+    TermCtl& tab_clear();      // TBC 0 (CSI 0 g)
+    TermCtl& tab_clear_all();  // TBC 3 (CSI 3 g)
+    TermCtl& tab_set();        // HTS   (ESC H or \x88)
+    TermCtl& tab_set_every(unsigned n_cols);    // composite operation
+    TermCtl& tab_set_all(std::span<const unsigned> n_cols);    // composite operation
+    TermCtl& tab_set_all(std::initializer_list<unsigned> n_cols) {
         return tab_set_all(std::span{n_cols.begin(), n_cols.end()});
     }
 
@@ -159,19 +159,21 @@ public:
     std::pair<int, int> get_cursor_position(TermCtl& tin = stdin_instance());
 
     // clear screen content
-    TermCtl clear_screen_down() const;
-    TermCtl clear_line_to_end() const;
+    TermCtl& clear_screen_down();
+    TermCtl& clear_line_to_end();
 
-    TermCtl soft_reset() const;
+    TermCtl& soft_reset();
 
-    // Output cached seq
-    const std::string& seq() const { return m_seq; }
+    // Cached seq
+    TermCtl& append_seq(const char* seq) { if (is_tty()) m_seq += seq; return *this; }
+    TermCtl& append_seq(const std::string& seq) { if (is_tty()) m_seq += seq;  return *this; }
+    std::string seq() { return std::move(m_seq); }
     void write() { write(seq()); }
-    friend std::ostream& operator<<(std::ostream& os, const TermCtl& t) { return os << t.seq(); }
+    friend std::ostream& operator<<(std::ostream& os, TermCtl& t) { return os << t.seq(); }
 
     // Formatting helpers
     struct Placeholder {
-        const TermCtl& term_ctl;
+        TermCtl& term_ctl;
     };
     struct ColorPlaceholder: Placeholder {
         using ValueType = Color;
@@ -358,28 +360,14 @@ public:
     ControlSequence decode_seq(std::string_view input_buffer);
 
 private:
-    // Copy TermCtl and append seq to new instance
-    TermCtl(const TermCtl& term, const std::string& seq) : TermCtl(term, seq.c_str()) {}
-    TermCtl(const TermCtl& term, const char* seq)
-            : m_seq(term.m_seq + (seq == nullptr ? "" : seq))
-            , m_write_cb(term.m_write_cb ? term.m_write_cb : WriteCallback{})
-            , m_fd(term.m_fd)
-            , m_state(term.m_state == State::NoTTY ? State::NoTTY : State::CopyOk)
-            , m_at_newline(term.m_at_newline) {}
-
     // Aliases needed to avoid macro collision
-    TermCtl _save_cursor() const;
-    TermCtl _restore_cursor() const;
+    TermCtl& _save_cursor();
+    TermCtl& _restore_cursor();
 
     std::string m_seq;  // cached capability sequences
-    WriteCallback m_write_cb;
+    WriteCallback m_write_cb {};
     int m_fd;   // FD (on Windows mapped to handle)
-    enum class State {
-        NoTTY,      // initialization failed
-        InitOk,     // main instance (it will reset the term when destroyed)
-        CopyOk,     // a copy created by chained method
-    };
-    State m_state : 7 = State::NoTTY;
+    bool m_tty_ok : 1 = false;  // tty initialized, will reset the term when destroyed
     bool m_at_newline : 1 = true;
 
 #ifdef _WIN32
@@ -427,8 +415,9 @@ struct [[maybe_unused]] fmt::formatter<xci::core::TermCtl> {
     }
 
     template <typename FormatContext>
-    auto format(const xci::core::TermCtl& term, FormatContext& ctx) {
-        return std::copy(term.seq().cbegin(), term.seq().cend(), ctx.out());
+    auto format(xci::core::TermCtl& term, FormatContext& ctx) {
+        auto seq = term.seq();
+        return std::copy(seq.cbegin(), seq.cend(), ctx.out());
     }
 };
 
