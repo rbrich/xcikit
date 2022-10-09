@@ -33,9 +33,10 @@ if (BUILD_TESTING AND NOT BUILD_TESTS)
 endif()
 
 # Individual tools
-option(BUILD_DATI_TOOL "Disable to skip building 'dati' tool." ON)
-option(BUILD_FF_TOOL "Disable to skip building 'ff' tool." ON)
-option(BUILD_FIRE_TOOL "Disable to skip building 'fire' tool." ON)
+option(BUILD_DATI_TOOL "Disable to skip building 'dati' (Data Inspect) tool." ON)
+option(BUILD_FF_TOOL "Disable to skip building 'ff' (Find File) tool." ON)
+option(BUILD_FIRE_TOOL "Disable to skip building 'fire' (Fire Script) tool." ON)
+option(BUILD_TC_TOOL "Disable to skip building 'tc' (Term Ctl) tool." ON)
 
 # Optional installation artifacts:
 option(XCI_INSTALL_DEVEL "Install headers, CMake config, static libs." ON)
@@ -228,6 +229,9 @@ endif()
 # ------------ #
 
 if (BUILD_TOOLS)
+    if (BUILD_TC_TOOL)
+        add_subdirectory(tools/term_ctl)
+    endif()
     if (BUILD_FF_TOOL AND XCI_WITH_HYPERSCAN)
         add_subdirectory(tools/find_file)
     endif()

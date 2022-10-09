@@ -12,6 +12,7 @@
 #include <string>
 #include <ostream>
 #include <array>
+#include <span>
 #include <chrono>
 #include <functional>
 
@@ -137,6 +138,7 @@ public:
     TermCtl move_right() const;
     TermCtl move_right(unsigned n_cols) const;
     TermCtl move_to_column(unsigned column) const;  // column is 0-based
+    TermCtl move_to_beginning() const;  // CR ('\r')
     TermCtl save_cursor() const { return _save_cursor(); }
     TermCtl restore_cursor() const { return _restore_cursor(); }
     TermCtl request_cursor_position() const;
@@ -145,6 +147,11 @@ public:
     TermCtl tab_clear() const;      // TBC 0 (CSI 0 g)
     TermCtl tab_clear_all() const;  // TBC 3 (CSI 3 g)
     TermCtl tab_set() const;        // HTS   (ESC H or \x88)
+    TermCtl tab_set_every(unsigned n_cols) const;    // composite operation
+    TermCtl tab_set_all(std::span<const unsigned> n_cols) const;    // composite operation
+    TermCtl tab_set_all(std::initializer_list<unsigned> n_cols) const {
+        return tab_set_all(std::span{n_cols.begin(), n_cols.end()});
+    }
 
     /// Returns cursor position (row, col), 0-based
     /// On failure, returns (-1, -1)

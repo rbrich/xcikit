@@ -72,6 +72,7 @@ namespace xci::core {
 #define clr_eos                 CSI "J"     // clear screen from cursor down
 #define clr_eol                 CSI "K"     // clear line from cursor to end
 #define column_address          CSI "{}G"   // horizontal position, absolute
+#define carriage_return         "\r"
 #define save_cursor             ESC "7"
 #define restore_cursor          ESC "8"
 #define clear_all_tabs          CSI "3g"
@@ -550,6 +551,7 @@ TermCtl TermCtl::move_left(unsigned n_cols) const { return TERM_APPEND(parm_left
 TermCtl TermCtl::move_right() const { return TERM_APPEND(cursor_right); }
 TermCtl TermCtl::move_right(unsigned n_cols) const { return TERM_APPEND(parm_right_cursor, n_cols); }
 TermCtl TermCtl::move_to_column(unsigned column) const { return TERM_APPEND(column_address, _plus_one(column)); }
+TermCtl TermCtl::move_to_beginning() const { return TERM_APPEND(carriage_return); }
 TermCtl TermCtl::_save_cursor() const { return TERM_APPEND(save_cursor); }
 TermCtl TermCtl::_restore_cursor() const { return TERM_APPEND(restore_cursor); }
 TermCtl TermCtl::request_cursor_position() const { return XCI_TERM_APPEND(seq::request_cursor_position); }
@@ -557,6 +559,25 @@ TermCtl TermCtl::request_cursor_position() const { return XCI_TERM_APPEND(seq::r
 TermCtl TermCtl::tab_clear() const { return XCI_TERM_APPEND(seq::clear_tab); }
 TermCtl TermCtl::tab_clear_all() const { return TERM_APPEND(clear_all_tabs); }
 TermCtl TermCtl::tab_set() const { return TERM_APPEND(set_tab); }
+TermCtl TermCtl::tab_set_every(unsigned n_cols) const {
+    if (n_cols == 0)
+        return tab_clear_all();
+    auto cols = size().cols;
+    if (cols == 0)
+        cols = 80;
+    TermCtl t = move_to_beginning().tab_clear_all();
+    while (cols > n_cols) {
+        t = t.move_right(n_cols).tab_set();
+        cols -= n_cols;
+    }
+    return t.move_to_beginning();
+}
+TermCtl TermCtl::tab_set_all(std::span<const unsigned> n_cols) const {
+    TermCtl t = move_to_beginning().tab_clear_all();
+    for (auto n : n_cols)
+        t = t.move_right(n).tab_set();
+    return t.move_to_beginning();
+}
 
 TermCtl TermCtl::clear_screen_down() const { return TERM_APPEND(clr_eos); }
 TermCtl TermCtl::clear_line_to_end() const { return TERM_APPEND(clr_eol); }
