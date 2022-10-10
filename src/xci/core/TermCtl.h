@@ -154,6 +154,9 @@ public:
     TermCtl& tab_set_all(std::initializer_list<unsigned> n_cols) {
         return _tab_set_all(std::span{n_cols.begin(), n_cols.end()});
     }
+    TermCtl& tab_set_all(std::vector<unsigned> n_cols) {
+        return _tab_set_all(std::span{n_cols.data(), n_cols.size()});
+    }
 
     /// Returns cursor position (row, col), 0-based
     /// On failure, returns (-1, -1)
