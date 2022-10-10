@@ -186,11 +186,11 @@ void Repl::print_error(const ScriptError& e)
     core::TermCtl& t = m_ctx.term_out;
 
     if (!e.file().empty())
-        t.stream() << e.file() << ": ";
-    t.stream() << t.red().bold() << "Error: " << e.what() << t.normal();
+        t.print("{}: ", e.file());
+    t.print("{fg:red}{t:bold}Error: {}{t:normal}", e.what());
     if (!e.detail().empty())
-        t.stream() << endl << t.magenta() << e.detail() << t.normal();
-    t.stream() << endl;
+        t.print("\n{fg:magenta}{}{t:normal}", e.detail());
+    t.write_nl();
 }
 
 
@@ -201,10 +201,7 @@ void Repl::print_runtime_error(const RuntimeError& e)
     if (!e.trace().empty()) {
         int i = 0;
         for (const auto& frame : e.trace() | reverse) {
-            t.stream()
-                    << "  #" << i++
-                    << " " << frame.function_name
-                    << '\n';
+            t.print("  #{} {}\n", i++, frame.function_name);
         }
     }
 

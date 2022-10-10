@@ -5,7 +5,7 @@ Command Line Tools
 ------------------
 
 * [Find File (ff)](find_file/README.md) - `find` alternative
-
+* [Term Ctl (tc)](term_ctl/README.md) - (`setterm`), `tabs` alternative
 
 Fire Script (fire)
 ------------------

@@ -10,7 +10,8 @@
 //   - https://www.ecma-international.org/wp-content/uploads/ECMA-48_5th_edition_june_1991.pdf
 //   - https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
 //   - https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
-//   - terminfo(5), https://linux.die.net/man/5/terminfo
+//   - https://xtermjs.org/docs/api/vtfeatures/
+//   - terminfo(5), https://manpages.debian.org/testing/ncurses-bin/terminfo.5.en.html
 // * raw mode:
 //   - https://en.wikipedia.org/wiki/POSIX_terminal_interface
 //   - termios(4)
@@ -71,8 +72,11 @@ namespace xci::core {
 #define clr_eos                 CSI "J"     // clear screen from cursor down
 #define clr_eol                 CSI "K"     // clear line from cursor to end
 #define column_address          CSI "{}G"   // horizontal position, absolute
+#define carriage_return         "\r"
 #define save_cursor             ESC "7"
 #define restore_cursor          ESC "8"
+#define clear_all_tabs          CSI "3g"
+#define set_tab                 ESC "H"
 #endif // XCI_WITH_TERMINFO
 
 // not found in Terminfo DB:
@@ -94,6 +98,7 @@ static constexpr auto exit_frame_mode = CSI "54m";
 static constexpr auto exit_overline_mode = CSI "55m";
 static constexpr auto send_soft_reset = CSI "!p";
 static constexpr auto request_cursor_position = CSI "6n";
+static constexpr auto clear_tab = CSI "g";
 } // namespace seq
 
 
@@ -105,11 +110,11 @@ inline std::string xci_tparm(const char* seq, Args... args) {
 
 // Note that this cannot be implemented with variadic template,
 // because the arguments must not be evaluated unless is_initialized() is true
-#define XCI_TERM_APPEND(...) TermCtl(*this, is_tty() ? xci_tparm(__VA_ARGS__) : "")
+#define XCI_TERM_APPEND(...) append_seq(xci_tparm(__VA_ARGS__))
 
 #if XCI_WITH_TERMINFO == 1
     // delegate to TermInfo
-    #define TERM_APPEND(...) TermCtl(*this, is_tty() ? tparm(__VA_ARGS__) : "")
+    #define TERM_APPEND(...) append_seq(tparm(__VA_ARGS__))
     static unsigned _plus_one(unsigned arg) { return arg; }  // already corrected with Terminfo -> noop
 #else
     // delegate to our implementation
@@ -369,7 +374,7 @@ TermCtl::TermCtl(int fd, IsTty is_tty) : m_fd(fd)
 
 TermCtl::~TermCtl() {
 #ifdef _WIN32
-    if (m_state == State::InitOk) {
+    if (m_tty_ok) {
         assert(m_orig_mode != bad_mode);
         switch (m_fd) {
             case STDIN_FILENO:
@@ -413,31 +418,31 @@ void TermCtl::set_is_tty(IsTty is_tty)
             return;
     }
 
-    if (is_tty != IsTty::Never && m_state == State::NoTTY) {
+    if (is_tty != IsTty::Never && !m_tty_ok) {
         m_orig_mode = set_console_mode(std_handle, req_mode);
         if (m_orig_mode == bad_mode)
             return;
-        m_state = State::InitOk;
+        m_tty_ok = true;
     }
-    if (is_tty == IsTty::Never && m_state == State::InitOk) {
+    if (is_tty == IsTty::Never && m_tty_ok) {
         assert(m_orig_mode != bad_mode);
         reset_console_mode(std_handle, m_orig_mode);
         m_orig_mode = 0;
-        m_state = State::NoTTY;
+        m_tty_ok = false;
     }
 #else
     switch (is_tty) {
         case IsTty::Auto:
             // Do not even try if not TTY (e.g. when piping to other command)
             if (isatty(m_fd) != 1) {
-                m_state = State::NoTTY;
+                m_tty_ok = false;
                 return;
             }
             break;  // go to setup below
         case IsTty::Always:
             break;  // go to setup below
         case IsTty::Never:
-            m_state = State::NoTTY;
+            m_tty_ok = false;
             return;
     }
 
@@ -450,7 +455,7 @@ void TermCtl::set_is_tty(IsTty is_tty)
         TermInputSeq::populate_terminfo();
     #endif
 
-    m_state = State::InitOk;
+    m_tty_ok = true;
 #endif
 }
 
@@ -469,7 +474,7 @@ auto TermCtl::size() const -> Size
 }
 
 
-TermCtl TermCtl::fg(Color color) const
+TermCtl& TermCtl::fg(Color color)
 {
     if (color == Color::Default)
         return XCI_TERM_APPEND(seq::set_default_foreground);
@@ -479,7 +484,7 @@ TermCtl TermCtl::fg(Color color) const
     return XCI_TERM_APPEND(seq::set_bright_foreground, static_cast<int>(color) - static_cast<int>(Color::BrightBlack));
 }
 
-TermCtl TermCtl::bg(Color color) const
+TermCtl& TermCtl::bg(Color color)
 {
     if (color == Color::Default)
         return XCI_TERM_APPEND(seq::set_default_background);
@@ -489,7 +494,7 @@ TermCtl TermCtl::bg(Color color) const
     return XCI_TERM_APPEND(seq::set_bright_background, static_cast<int>(color) - static_cast<int>(Color::BrightBlack));
 }
 
-TermCtl TermCtl::mode(Mode mode) const
+TermCtl& TermCtl::mode(Mode mode)
 {
     switch (mode) {
         case Mode::Normal: return normal();
@@ -516,51 +521,70 @@ TermCtl TermCtl::mode(Mode mode) const
     UNREACHABLE;
 }
 
-TermCtl TermCtl::bold() const { return TERM_APPEND(enter_bold_mode); }
-TermCtl TermCtl::dim() const { return TERM_APPEND(enter_dim_mode); }
-TermCtl TermCtl::italic() const { return TERM_APPEND(enter_italics_mode); }
-TermCtl TermCtl::underline() const { return TERM_APPEND(enter_underline_mode); }
-TermCtl TermCtl::overline() const { return XCI_TERM_APPEND(seq::enter_overline_mode); }
-TermCtl TermCtl::cross_out() const { return XCI_TERM_APPEND(seq::enter_strike_mode); }
-TermCtl TermCtl::frame() const { return XCI_TERM_APPEND(seq::enter_frame_mode); }
-TermCtl TermCtl::blink() const { return TERM_APPEND(enter_blink_mode); }
-TermCtl TermCtl::reverse() const { return TERM_APPEND(enter_reverse_mode); }
-TermCtl TermCtl::hidden() const { return XCI_TERM_APPEND(seq::enter_conceal_mode); }
-TermCtl TermCtl::normal_intensity() const { return XCI_TERM_APPEND(seq::normal_intensity_mode); }
-TermCtl TermCtl::no_italic() const { return TERM_APPEND(exit_italics_mode); }
-TermCtl TermCtl::no_underline() const { return TERM_APPEND(exit_underline_mode); }
-TermCtl TermCtl::no_overline() const { return XCI_TERM_APPEND(seq::exit_overline_mode); }
-TermCtl TermCtl::no_cross_out() const { return XCI_TERM_APPEND(seq::exit_strike_mode); }
-TermCtl TermCtl::no_frame() const { return XCI_TERM_APPEND(seq::exit_frame_mode); }
-TermCtl TermCtl::no_blink() const { return XCI_TERM_APPEND(seq::exit_blink_mode); }
-TermCtl TermCtl::no_reverse() const { return XCI_TERM_APPEND(seq::exit_reverse_mode); }
-TermCtl TermCtl::no_hidden() const { return XCI_TERM_APPEND(seq::exit_conceal_mode); }
-TermCtl TermCtl::normal() const { return TERM_APPEND(exit_attribute_mode); }
+TermCtl& TermCtl::bold() { return TERM_APPEND(enter_bold_mode); }
+TermCtl& TermCtl::dim() { return TERM_APPEND(enter_dim_mode); }
+TermCtl& TermCtl::italic() { return TERM_APPEND(enter_italics_mode); }
+TermCtl& TermCtl::underline() { return TERM_APPEND(enter_underline_mode); }
+TermCtl& TermCtl::overline() { return XCI_TERM_APPEND(seq::enter_overline_mode); }
+TermCtl& TermCtl::cross_out() { return XCI_TERM_APPEND(seq::enter_strike_mode); }
+TermCtl& TermCtl::frame() { return XCI_TERM_APPEND(seq::enter_frame_mode); }
+TermCtl& TermCtl::blink() { return TERM_APPEND(enter_blink_mode); }
+TermCtl& TermCtl::reverse() { return TERM_APPEND(enter_reverse_mode); }
+TermCtl& TermCtl::hidden() { return XCI_TERM_APPEND(seq::enter_conceal_mode); }
+TermCtl& TermCtl::normal_intensity() { return XCI_TERM_APPEND(seq::normal_intensity_mode); }
+TermCtl& TermCtl::no_italic() { return TERM_APPEND(exit_italics_mode); }
+TermCtl& TermCtl::no_underline() { return TERM_APPEND(exit_underline_mode); }
+TermCtl& TermCtl::no_overline() { return XCI_TERM_APPEND(seq::exit_overline_mode); }
+TermCtl& TermCtl::no_cross_out() { return XCI_TERM_APPEND(seq::exit_strike_mode); }
+TermCtl& TermCtl::no_frame() { return XCI_TERM_APPEND(seq::exit_frame_mode); }
+TermCtl& TermCtl::no_blink() { return XCI_TERM_APPEND(seq::exit_blink_mode); }
+TermCtl& TermCtl::no_reverse() { return XCI_TERM_APPEND(seq::exit_reverse_mode); }
+TermCtl& TermCtl::no_hidden() { return XCI_TERM_APPEND(seq::exit_conceal_mode); }
+TermCtl& TermCtl::normal() { return TERM_APPEND(exit_attribute_mode); }
 
-TermCtl TermCtl::move_up() const { return TERM_APPEND(cursor_up); }
-TermCtl TermCtl::move_up(unsigned n_lines) const { return TERM_APPEND(parm_up_cursor, n_lines); }
-TermCtl TermCtl::move_down() const { return TERM_APPEND(cursor_down); }
-TermCtl TermCtl::move_down(unsigned n_lines) const { return TERM_APPEND(parm_down_cursor, n_lines); }
-TermCtl TermCtl::move_left() const { return TERM_APPEND(cursor_left); }
-TermCtl TermCtl::move_left(unsigned n_cols) const { return TERM_APPEND(parm_left_cursor, n_cols); }
-TermCtl TermCtl::move_right() const { return TERM_APPEND(cursor_right); }
-TermCtl TermCtl::move_right(unsigned n_cols) const { return TERM_APPEND(parm_right_cursor, n_cols); }
-TermCtl TermCtl::move_to_column(unsigned column) const { return TERM_APPEND(column_address, _plus_one(column)); }
-TermCtl TermCtl::_save_cursor() const { return TERM_APPEND(save_cursor); }
-TermCtl TermCtl::_restore_cursor() const { return TERM_APPEND(restore_cursor); }
-TermCtl TermCtl::request_cursor_position() const { return XCI_TERM_APPEND(seq::request_cursor_position); }
+TermCtl& TermCtl::move_up() { return TERM_APPEND(cursor_up); }
+TermCtl& TermCtl::move_up(unsigned n_lines) { return TERM_APPEND(parm_up_cursor, n_lines); }
+TermCtl& TermCtl::move_down() { return TERM_APPEND(cursor_down); }
+TermCtl& TermCtl::move_down(unsigned n_lines) { return TERM_APPEND(parm_down_cursor, n_lines); }
+TermCtl& TermCtl::move_left() { return TERM_APPEND(cursor_left); }
+TermCtl& TermCtl::move_left(unsigned n_cols) { return TERM_APPEND(parm_left_cursor, n_cols); }
+TermCtl& TermCtl::move_right() { return TERM_APPEND(cursor_right); }
+TermCtl& TermCtl::move_right(unsigned n_cols) { return TERM_APPEND(parm_right_cursor, n_cols); }
+TermCtl& TermCtl::move_to_column(unsigned column) { return TERM_APPEND(column_address, _plus_one(column)); }
+TermCtl& TermCtl::move_to_beginning() { return TERM_APPEND(carriage_return); }
+TermCtl& TermCtl::_save_cursor() { return TERM_APPEND(save_cursor); }
+TermCtl& TermCtl::_restore_cursor() { return TERM_APPEND(restore_cursor); }
+TermCtl& TermCtl::request_cursor_position() { return XCI_TERM_APPEND(seq::request_cursor_position); }
 
-TermCtl TermCtl::clear_screen_down() const { return TERM_APPEND(clr_eos); }
-TermCtl TermCtl::clear_line_to_end() const { return TERM_APPEND(clr_eol); }
-
-TermCtl TermCtl::soft_reset() const { return XCI_TERM_APPEND(seq::send_soft_reset); }
-
-
-std::ostream& operator<<(std::ostream& os, const TermCtl& term)
-{
-    os << term.seq();
-    return os;
+TermCtl& TermCtl::tab_clear() { return XCI_TERM_APPEND(seq::clear_tab); }
+TermCtl& TermCtl::tab_clear_all() { return TERM_APPEND(clear_all_tabs); }
+TermCtl& TermCtl::tab_set() { return TERM_APPEND(set_tab); }
+TermCtl& TermCtl::tab_set_every(unsigned n_cols) {
+    if (n_cols == 0)
+        return tab_clear_all();
+    auto cols = size().cols;
+    if (cols == 0)
+        cols = 80;
+    move_to_beginning();
+    tab_clear_all();
+    while (cols > n_cols) {
+        move_right(n_cols).tab_set();
+        cols -= n_cols;
+    }
+    return move_to_beginning();
 }
+TermCtl& TermCtl::_tab_set_all(std::span<const unsigned> n_cols) {
+    move_to_beginning();
+    tab_clear_all();
+    for (auto n : n_cols)
+        move_right(n).tab_set();
+    return move_to_beginning();
+}
+
+TermCtl& TermCtl::clear_screen_down() { return TERM_APPEND(clr_eos); }
+TermCtl& TermCtl::clear_line_to_end() { return TERM_APPEND(clr_eol); }
+
+TermCtl& TermCtl::soft_reset() { return XCI_TERM_APPEND(seq::send_soft_reset); }
 
 
 auto TermCtl::ColorPlaceholder::parse(std::string_view name) -> Color
@@ -739,14 +763,21 @@ std::string TermCtl::raw_input(bool isig)
 
 void TermCtl::write(std::string_view buf)
 {
-#ifdef __EMSCRIPTEN__
     m_at_newline = buf.ends_with('\n');
-#endif
-
     if (m_write_cb)
         m_write_cb(buf);
     else
         core::write(m_fd, buf);
+}
+
+
+void TermCtl::write_nl()
+{
+    m_at_newline = true;
+    if (m_write_cb)
+        m_write_cb("\n");
+    else
+        core::write(m_fd, "\n");
 }
 
 
@@ -761,9 +792,7 @@ void TermCtl::sanitize_newline(TermCtl& tin)
     // generic solution - this works even when something sidesteps TermCtl
     // and writes directly to the terminal
     auto [row, col] = get_cursor_position(tin);
-    if (col == -1)
-        return;
-    if (col != 0) {
+    if (col > 0 || (col == -1 && !m_at_newline)) {
         write((const char*)u8"⏎\n");
     }
 #endif
@@ -878,7 +907,7 @@ auto TermCtl::decode_input(std::string_view input_buffer) -> DecodedInput
         mod.set_alt();
         offset = 1;
     }
-    if (input_buffer[offset] >= 0 && input_buffer[offset] < 32) {
+    if (uint8_t(input_buffer[offset]) < 32) {
         // Ctrl + <char>
         mod.set_ctrl();
         return {uint16_t(offset + 1), Key::UnicodeChar, mod,

@@ -39,6 +39,10 @@ int main()
             "{t:hidden}hidden{t:no_hidden} "
             "\n");
 
+    t.tab_set_all({30, 20}).write();
+    t.print("tab stops:\t1\t2\n");
+    t.tab_set_every(8).write();
+
     TermCtl& tin = TermCtl::stdin_instance();
     bool done = false;
     while (!done) {

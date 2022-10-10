@@ -199,12 +199,9 @@ Obtaining dependencies:
 
 * Install them into *_system_* or otherwise make them visible to CMake's `find_*` functions.
   - This works for almost all deps, except *fmt*, *pfr*, *magic_enum*.
-  - Deps that must be installed this way: *vulkan*, *libzip*, *hyperscan*.
+  - Deps that must be installed this way: *libzip*, *hyperscan*.
 * Install them via *_Conan_*. Pass `-D CONAN_INSTALL=ON` to `cmake` or build with `build.sh`
   which runs conan automatically.
-  - Always installs *fmt*, *pfr*, *magic_enum*.
-  - May install *range-v3*, *Catch2*, *benchmark*, *pegtl*, *glfw3*
-    if not found in the system.
 
 [#system-package-manager]
 Installing the dependencies with *_system package managers_*:

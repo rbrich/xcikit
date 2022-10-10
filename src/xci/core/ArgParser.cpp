@@ -22,7 +22,6 @@ namespace xci::core::argparser {
 namespace fs = std::filesystem;
 using std::string_view;
 using std::cout;
-using std::cerr;
 using std::endl;
 
 
@@ -312,7 +311,7 @@ ArgParser& ArgParser::operator()(const char* argv[], bool detect_width, unsigned
     if (!parse_program_name(argv[0])) {
         // this should not occur
         auto& t = TermCtl::stderr_instance();
-        cerr << t.bold().red() << "Missing program name (argv[0])" << t.normal() << endl;
+        t.print("{t:bold}{fg:red}Missing program name (argv[0]){t:normal}\n");
         exit(1);
     }
     try {
@@ -326,7 +325,7 @@ ArgParser& ArgParser::operator()(const char* argv[], bool detect_width, unsigned
         }
     } catch (const BadArgument& e) {
         auto& t = TermCtl::stderr_instance();
-        cerr << t.bold().yellow() << "Error: " << t.red() << e.what() << t.normal() << '\n' << endl;
+        t.print("{t:bold}{fg:yellow}Error: {fg:red}{}{t:normal}\n\n", e.what());
         print_usage();
         print_help_notice();
         exit(1);
@@ -545,7 +544,7 @@ void ArgParser::print_help() const
         desc_cols = std::max(desc_cols, (unsigned) opt.desc().size());
     print_usage();
     auto& t = TermCtl::stdout_instance();
-    cout << endl << t.bold().yellow() << "Options:" << t.normal() << endl;
+    t.print("\n{t:bold}{fg:yellow}Options:{t:normal}\n");
     for (const auto& opt : m_opts) {
         cout << "  " << opt.formatted_desc(desc_cols) << "  ";
         wrapping_print(opt.help(), desc_cols + 4, 0, m_max_width);

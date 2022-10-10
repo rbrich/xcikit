@@ -1,6 +1,6 @@
-# ------------ #
-# Libraries    #
-# ------------ #
+# ----------------- #
+# Library: xci-core #
+# ----------------- #
 
 add_library(xci-core
     ArgParser.cpp
@@ -15,7 +15,6 @@ add_library(xci-core
     sys.cpp
     rtti.cpp
     TermCtl.cpp
-    Vfs.cpp
     $<TARGET_OBJECTS:third_party::widechar_width>
     )
 add_library(xcikit::xci-core ALIAS xci-core)
@@ -97,13 +96,6 @@ if (XCI_WITH_TERMINFO)
     target_link_libraries(xci-core PRIVATE terminfo::terminfo)
 endif()
 
-# ZIP support in VFS requires libzip
-if (XCI_WITH_ZIP)
-    find_package(libzip REQUIRED)
-    target_link_libraries(xci-core PRIVATE libzip::zip)
-    target_compile_definitions(xci-core PRIVATE XCI_WITH_ZIP)
-endif ()
-
 if (BUILD_SHARED_LIBS)
     set_target_properties(xci-core PROPERTIES CXX_VISIBILITY_PRESET default)
 endif()
@@ -121,8 +113,33 @@ if (BUILD_FRAMEWORKS)
         )
 endif()
 
+
+# --------------------- #
+# Library: xci-core-vfs #
+# --------------------- #
+
+add_library(xci-core-vfs Vfs.cpp)
+add_library(xcikit::xci-core-vfs ALIAS xci-core-vfs)
+target_precompile_headers(xci-core-vfs REUSE_FROM xci-core)
+target_link_libraries(xci-core-vfs PUBLIC xci-core)
+if (BUILD_SHARED_LIBS)
+    set_target_properties(xci-core-vfs PROPERTIES CXX_VISIBILITY_PRESET default)
+endif()
+
+# ZIP support requires libzip
+if (XCI_WITH_ZIP)
+    find_package(libzip REQUIRED)
+    target_link_libraries(xci-core-vfs PRIVATE libzip::zip)
+    target_compile_definitions(xci-core-vfs PRIVATE XCI_WITH_ZIP)
+endif ()
+
+
+# ------- #
+# Install #
+# ------- #
+
 if (BUILD_SHARED_LIBS OR XCI_INSTALL_DEVEL)
-    install(TARGETS xci-core
+    install(TARGETS xci-core xci-core-vfs
         EXPORT xcikit
         DESTINATION ${CMAKE_INSTALL_LIBDIR}
         INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

@@ -1,5 +1,5 @@
 # Try to find Hyperscan.
-# Use Hyperscan_ROOT_DIR to specify custom installation dir.
+# Use Hyperscan_ROOT to specify custom installation dir.
 #
 # Once done this will define:
 #   Hyperscan_FOUND
@@ -7,16 +7,10 @@
 #   Hyperscan_LIBRARIES
 #   Hyperscan::Hyperscan target
 
-set(Hyperscan_ROOT_DIR CACHE PATH "custom installation root for Hyperscan")
-
-find_path(Hyperscan_INCLUDE_DIR
-    NAMES hs/hs.h
-    PATHS ${Hyperscan_ROOT_DIR})
+find_path(Hyperscan_INCLUDE_DIR NAMES hs/hs.h)
 mark_as_advanced(Hyperscan_INCLUDE_DIR)
 
-find_library(Hyperscan_LIBRARY
-    NAMES hs
-    PATHS ${Hyperscan_ROOT_DIR})
+find_library(Hyperscan_LIBRARY NAMES hs)
 mark_as_advanced(Hyperscan_LIBRARY)
 
 include(FindPackageHandleStandardArgs)

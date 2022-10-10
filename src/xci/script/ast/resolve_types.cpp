@@ -232,7 +232,7 @@ public:
                 }
                 // cleanup - args are now fully processed
                 m_call_args.clear();
-                return;
+                break;
             }
             case Symbol::TypeId: {
                 if (v.ti.is_unknown()) {
