@@ -48,17 +48,17 @@ jobs:
           build_args: "--minsize --unity"
         - os: macos-11
           name: "Clang 14 / Release"
-          clang: brew
+          clang: llvm@14
           os_target: "11.0"
           build_args: ""
         - os: macos-11
-          name: "AppleClang 13.2 / Release"
-          clang: apple
+          name: "Xcode 13.2 / Release"
+          clang: Xcode_13.2.1
           os_target: "11.0"
           build_args: ""
         - os: macos-12
-          name: "AppleClang 13.4 / Release"
-          clang: apple
+          name: "Xcode 14 / Release"
+          clang: Xcode_14.0
           os_target: "12.0"
           build_args: ""
         - os: windows-2019
@@ -104,11 +104,13 @@ jobs:
             echo "CXX='$CXX'" >> $GITHUB_ENV
         elif [[ "$RUNNER_OS" == "macOS" ]]; then
             brew install ninja glfw doxygen google-benchmark hyperscan harfbuzz freetype
-            if [[ "${{ matrix.clang }}" == "brew" ]] ; then
-                export CC="$(brew --prefix llvm)/bin/clang"
-                export CXX="$(brew --prefix llvm)/bin/clang++"
+            if [[ "${{ matrix.clang }}" == llvm* ]] ; then
+                export CC="$(brew --prefix ${{ matrix.clang }})/bin/clang"
+                export CXX="$(brew --prefix ${{ matrix.clang }})/bin/clang++"
                 echo "CC='$CC'" >> $GITHUB_ENV
                 echo "CXX='$CXX'" >> $GITHUB_ENV
+            else
+                sudo xcode-select -s "/Applications/${{ matrix.clang }}.app"
             fi
             export MACOSX_DEPLOYMENT_TARGET=${{ matrix.os_target }}
             echo "MACOSX_DEPLOYMENT_TARGET=$MACOSX_DEPLOYMENT_TARGET" >> $GITHUB_ENV
