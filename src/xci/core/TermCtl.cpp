@@ -771,6 +771,16 @@ void TermCtl::write(std::string_view buf)
 }
 
 
+void TermCtl::write_nl()
+{
+    m_at_newline = true;
+    if (m_write_cb)
+        m_write_cb("\n");
+    else
+        core::write(m_fd, "\n");
+}
+
+
 void TermCtl::sanitize_newline(TermCtl& tin)
 {
 #ifdef __EMSCRIPTEN__

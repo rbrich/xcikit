@@ -210,6 +210,7 @@ public:
     }
 
     void write(std::string_view buf);
+    void write_nl();
 
     class StreamBuf : public std::streambuf {
     public:

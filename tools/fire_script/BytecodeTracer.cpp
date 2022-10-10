@@ -28,7 +28,7 @@ void BytecodeTracer::setup(bool print_bytecode, bool trace_bytecode)
             m_machine.set_call_exit_cb([this](const Function&) {
                 auto frame = m_machine.stack().n_frames() - 1;
                 if (frame == 0) {
-                    cout << m_term.clear_screen_down();
+                    m_term.clear_screen_down().write();
                     m_lines_to_erase = 0;
                 } else {
                     --frame;
@@ -44,7 +44,7 @@ void BytecodeTracer::setup(bool print_bytecode, bool trace_bytecode)
                 (const Function& f, Code::const_iterator ipos) {
             auto& t = m_term;
             if (m_lines_to_erase > 0) {
-                cout << t.move_up(m_lines_to_erase);
+                t.move_up(m_lines_to_erase).write();
             } else {
                 auto frame = m_machine.stack().n_frames() - 1;
                 cout << "[" << frame << "] " << f.name() << " " << f.signature() << endl;
@@ -57,7 +57,7 @@ void BytecodeTracer::setup(bool print_bytecode, bool trace_bytecode)
                 }
             }
             if (ipos == f.code().end()) {
-                cout << t.yellow() << "> --- RETURN ---" << t.normal() << endl;
+                t.print("{fg:yellow}> --- RETURN ---{t:normal}\n");
                 ++ m_lines_to_erase;
             }
             // pause
@@ -77,7 +77,7 @@ void BytecodeTracer::setup(bool print_bytecode, bool trace_bytecode)
                 }
             }
             if (m_lines_to_erase > 0)
-                cout << t.move_up(1);
+                t.move_up(1).write();
         });
     }
 
