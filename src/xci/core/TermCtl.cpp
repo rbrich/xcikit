@@ -573,7 +573,7 @@ TermCtl& TermCtl::tab_set_every(unsigned n_cols) {
     }
     return move_to_beginning();
 }
-TermCtl& TermCtl::tab_set_all(std::span<const unsigned> n_cols) {
+TermCtl& TermCtl::_tab_set_all(std::span<const unsigned> n_cols) {
     move_to_beginning();
     tab_clear_all();
     for (auto n : n_cols)

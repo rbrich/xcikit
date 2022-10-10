@@ -148,9 +148,11 @@ public:
     TermCtl& tab_clear_all();  // TBC 3 (CSI 3 g)
     TermCtl& tab_set();        // HTS   (ESC H or \x88)
     TermCtl& tab_set_every(unsigned n_cols);    // composite operation
-    TermCtl& tab_set_all(std::span<const unsigned> n_cols);    // composite operation
+    TermCtl& tab_set_all(std::span<unsigned> n_cols) {
+        return _tab_set_all(std::span<const unsigned>{n_cols.data(), n_cols.size()});
+    }
     TermCtl& tab_set_all(std::initializer_list<unsigned> n_cols) {
-        return tab_set_all(std::span{n_cols.begin(), n_cols.end()});
+        return _tab_set_all(std::span{n_cols.begin(), n_cols.end()});
     }
 
     /// Returns cursor position (row, col), 0-based
@@ -364,6 +366,7 @@ private:
     // Aliases needed to avoid macro collision
     TermCtl& _save_cursor();
     TermCtl& _restore_cursor();
+    TermCtl& _tab_set_all(std::span<const unsigned> n_cols);
 
     std::string m_seq;  // cached capability sequences
     WriteCallback m_write_cb {};

@@ -22,7 +22,6 @@ namespace xci::core::argparser {
 namespace fs = std::filesystem;
 using std::string_view;
 using std::cout;
-using std::cerr;
 using std::endl;
 
 

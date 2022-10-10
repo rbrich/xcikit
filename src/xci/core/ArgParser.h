@@ -85,7 +85,7 @@ value_from_cstr(const char* s, T& value) {
 // vector of unparsed args
 template <class T>
 bool value_from_cstr(const char* s, std::vector<T>& value) {
-    T v;
+    std::remove_const_t<T> v;
     if (!value_from_cstr(s, v))
         return false;
     value.push_back(std::move(v));
