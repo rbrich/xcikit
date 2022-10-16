@@ -38,7 +38,7 @@ requirements:
     conan: "magic_enum/0.8.1"
   zlib:
     cmake: "ZLIB/"
-    conan: "zlib/1.2.12"
+    conan: "zlib/1.2.13"
     prereq:
       - data
   glfw:
