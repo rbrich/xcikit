@@ -300,10 +300,10 @@ void Module::init()
 {
     m_symtab.set_module(this);
     // create main function
-    auto fn_idx = add_function(Function{*this, m_symtab}).index;
+    auto fn_idx = m_functions.emplace(*this, m_symtab).index;
     assert(fn_idx == 0);
     // create root scope
-    auto scope_idx = m_scopes.add(Scope{*this, fn_idx, nullptr}).index;
+    auto scope_idx = m_scopes.emplace(*this, fn_idx, nullptr).index;
     assert(scope_idx == 0);
     m_symtab.set_scope(&m_scopes[scope_idx]);
 }

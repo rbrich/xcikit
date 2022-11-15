@@ -10,6 +10,7 @@
 #include <xci/core/mixin.h>
 #include <vector>
 #include <memory>
+#include <new>
 #include <bit>
 #include <cassert>
 #include <cstring>
@@ -64,7 +65,6 @@ public:
 
 private:
 
-    static constexpr Tenant empty_slot {~0u};
     struct Slot {
         T elem;
         Tenant tenant;  // generation number, 0 when allocated, increased on removal
@@ -72,7 +72,7 @@ private:
 
     struct Chunk {
         Slot* slot;
-        uint64_t free_map;  // bitmap, 1=free, 0=occupied, mask: 1 << idx
+        uint64_t free_map;  // bitmap, 0=free, 1=occupied, mask: 1 << idx
         Index next_free;    // index of next chunk with free slots
     };
     static constexpr size_t chunk_size = 64;
@@ -291,13 +291,13 @@ void IndexedMap<T>::remove(Index index)
     Chunk& chunk = m_chunk[chunk_idx];
 
     const size_t slot_idx = index % chunk_size;
-    assert((chunk.free_map & (uint64_t{1} << slot_idx)) == 0);  // slot is occupied
+    assert((chunk.free_map & (uint64_t{1} << slot_idx)) == 1);  // slot is occupied
     if (chunk.free_map == 0) {
         // chunk was fully occupied, now freeing a slot
         chunk.next_free = m_free_chunk;
         m_free_chunk = chunk_idx;
     }
-    chunk.free_map |= uint64_t{1} << slot_idx;
+    chunk.free_map &= ~(uint64_t{1} << slot_idx);
 
     Slot& slot = chunk.slot[slot_idx];
     std::destroy_at(&slot.elem);
@@ -315,17 +315,17 @@ bool IndexedMap<T>::remove(WeakIndex weak_index)
         return false;  // index out of range
 
     Chunk& chunk = m_chunk[chunk_idx];
-    if ((chunk.free_map & (uint64_t{1} << slot_idx)) != 0)
+    if ((chunk.free_map & (uint64_t{1} << slot_idx)) == 0)
         return false;  // slot is not occupied
     if (chunk.slot[slot_idx].tenant != weak_index.tenant)
         return false;  // slot has different tenant
 
-    if (chunk.free_map == 0) {
+    if (chunk.free_map == ~uint64_t{0}) {
         // chunk was fully occupied, now freeing a slot
         chunk.next_free = m_free_chunk;
         m_free_chunk = chunk_idx;
     }
-    chunk.free_map |= uint64_t{1} << slot_idx;
+    chunk.free_map &= ~(uint64_t{1} << slot_idx);
 
     Slot& slot = chunk.slot[slot_idx];
     std::destroy_at(&slot.elem);
@@ -349,7 +349,7 @@ const T* IndexedMap<T>::get(IndexedMap::WeakIndex weak) const
         return nullptr;  // out of range
     const auto& chunk = m_chunk[chunk_index];
     const size_t slot_index = weak.index % chunk_size;
-    if (chunk.free_map & (uint64_t{1} << slot_index))
+    if ((chunk.free_map & (uint64_t{1} << slot_index)) == 0)
         return nullptr;  // slot is free
     const auto& slot = chunk.slot[slot_index];
     if (slot.tenant != weak.tenant)
@@ -393,9 +393,13 @@ template<class T>
 void IndexedMap<T>::destroy_chunks()
 {
     for (Chunk chunk : m_chunk) {
+        auto free_map = chunk.free_map;
         for (Slot* slot = chunk.slot; slot != chunk.slot + chunk_size; ++slot) {
-            if (slot->tenant != empty_slot)
+            if (free_map & uint64_t{1})
                 std::destroy_at(&slot->elem);
+            free_map >>= 1;
+            if (free_map == 0)
+                break;
         }
         free_slots(chunk.slot);
     }
@@ -407,14 +411,14 @@ auto IndexedMap<T>::acquire_slot(Index& index) -> Slot&
 {
     if (m_free_chunk == no_index) {
         m_free_chunk = Index(m_chunk.size());
-        m_chunk.push_back({allocate_slots(), ~uint64_t{0}, no_index});
+        m_chunk.push_back({allocate_slots(), {}, no_index});
     }
 
     Chunk& chunk = m_chunk[m_free_chunk];
-    auto free_slot = std::countr_zero(chunk.free_map);
-    chunk.free_map &= ~(uint64_t{1} << free_slot);
+    auto free_slot = std::countr_one(chunk.free_map);
+    chunk.free_map |= uint64_t{1} << free_slot;
     index = m_free_chunk * chunk_size + free_slot;
-    if (chunk.free_map == 0)
+    if (chunk.free_map == ~uint64_t{0})
         m_free_chunk = chunk.next_free;
     ++m_size;
     return chunk.slot[free_slot];
@@ -426,7 +430,7 @@ void IndexedMap<T>::iterator::jump_to_next()
 {
     while (m_chunk_idx < m_chunk.size()) {
         const Chunk& chunk = m_chunk[m_chunk_idx];
-        while ((chunk.free_map & (uint64_t{1} << m_slot_idx)) != 0) {
+        while ((chunk.free_map & (uint64_t{1} << m_slot_idx)) == 0) {
             // slot is free, jump to next one
             ++m_slot_idx;
             if (m_slot_idx == chunk_size) {
@@ -455,7 +459,7 @@ void IndexedMap<T>::const_iterator::jump_to_next()
 {
     while (m_chunk_idx < m_chunk.size()) {
         const Chunk& chunk = m_chunk[m_chunk_idx];
-        while ((chunk.free_map & (uint64_t{1} << m_slot_idx)) != 0) {
+        while ((chunk.free_map & (uint64_t{1} << m_slot_idx)) == 0) {
             // slot is free, jump to next one
             ++m_slot_idx;
             if (m_slot_idx == chunk_size) {
