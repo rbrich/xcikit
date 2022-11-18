@@ -85,6 +85,8 @@ class XcikitConan(ConanFile):
         "freetype:with_bzip2": False,
         "freetype:with_brotli": False,
         "harfbuzz:with_glib": False,
+        "harfbuzz:with_gdi": False,
+        "harfbuzz:with_uniscribe": False,
         "vulkan-loader:with_wsi_xcb": False,
         "vulkan-loader:with_wsi_xlib": False,
         "vulkan-loader:with_wsi_wayland": False,
