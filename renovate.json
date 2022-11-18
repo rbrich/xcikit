@@ -20,11 +20,13 @@
     "packageRules": [
         {
             "matchManagers": ["github-actions"],
-            "groupName": "github-actions"
+            "groupName": "github-actions",
+            "separateMajorMinor": false
         },
         {
             "matchManagers": ["npm"],
-            "groupName": "npm"
+            "groupName": "npm",
+            "separateMajorMinor": false
         },
         {
             "matchManagers": ["regex"],
