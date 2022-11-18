@@ -17,13 +17,13 @@ Make sure Emscripten build works, see [README](../../README.adoc#emscripten).
 Install Xterm.js and Webpack:
 ```bash
 npm install
-````
+```
 
 Then run the build:
 ```bash
 export CONAN_DEFAULT_PROFILE_PATH=emscripten
 npm run build
-````
+```
 
 This will build the Fire script tool with Emscripten and then run Webpack on `main.js`.
 
@@ -32,7 +32,7 @@ The web app is now ready in `dist` directory.
 Test it locally:
 ```bash
 emrun --browser firefox dist/v*/index.html
-````
+```
 
 ## Serving with NGINX
 
@@ -71,7 +71,7 @@ This expects that you have a symlink named `latest` which points to latest `vX.Y
 GZIP files should be generated statically:
 ```bash
 gzip -k9 -r *
-````
+```
 
 ## URL parameters
 
