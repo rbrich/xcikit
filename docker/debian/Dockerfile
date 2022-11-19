@@ -1,3 +1,5 @@
+# Debian 11
+#
 # CI builder (DockerHub public image), local build check:
 #   docker build --pull --build-arg UID=$(id -u) -t rbrich/xcikit-debian . -f docker/debian/Dockerfile
 #   docker run --rm -v $PWD:/src -w /src -it rbrich/xcikit-debian
