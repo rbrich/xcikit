@@ -31,7 +31,6 @@ struct StreamOptions {
     bool multiline : 1;
     unsigned level : 6;
     std::bitset<32> rules;
-    std::vector<std::string> type_var_names;  // used for Type::Unknown with var!=0 when dumping TypeInfo
 };
 
 static StreamOptions& stream_options(std::ostream& os) {
@@ -942,26 +941,17 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
     os << less_indent;
 
     os << "* " << v.num_classes() << " type classes\n" << more_indent;
-    auto& type_var_names = stream_options(os).type_var_names;
     for (Index i = 0; i < v.num_classes(); ++i) {
         const auto& cls = v.get_class(i);
         os << put_indent << '[' << i << "] " << cls.name();
         bool first_method = true;
-        type_var_names.clear();
         for (const auto& sym : cls.symtab()) {
             switch (sym.type()) {
                 case Symbol::Parameter:
                     break;
-                case Symbol::TypeVar: {
-                    auto var = sym.index();
-                    if (var > 0 && var != no_index) {
-                        if (type_var_names.size() < var)
-                            type_var_names.resize(var);
-                        type_var_names[var - 1] = sym.name();
-                    }
+                case Symbol::TypeVar:
                     os << ' ' << sym.name();
                     break;
-                }
                 case Symbol::Function: {
                     if (first_method) {
                         os << '\n' << more_indent;
@@ -1005,15 +995,12 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
 
 std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
 {
-    auto& type_var_names = stream_options(os).type_var_names;
     switch (v.type()) {
         case Type::Unknown: {
             auto var = v.generic_var();
-            if (var == 0)
+            if (!var)
                 return os << '?';
-            if (type_var_names.size() >= var)
-                return os << type_var_names[var - 1];
-            return os << char('S' + var);
+            return os << var->name();
         }
         case Type::Bool:        return os << "Bool";
         case Type::Byte:        return os << "Byte";
