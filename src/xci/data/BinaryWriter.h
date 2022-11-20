@@ -61,9 +61,11 @@ namespace xci::data {
 ///     XCI_ARCHIVE(ar, a, b, c)
 ///
 
-class BinaryWriter : public ArchiveBase<BinaryWriter>, protected BinaryBase {
+class BinaryWriter
+        : public ArchiveBase<BinaryWriter>
+        , protected ArchiveGroupStack< /*BufferType=*/ std::vector<std::byte> >
+        , protected BinaryBase {
     friend ArchiveBase<BinaryWriter>;
-    using BufferType = std::vector<std::byte>;
 
 public:
     using Writer = std::true_type;
@@ -91,9 +93,9 @@ public:
 
     // integers, floats, enums
     template <typename T>
-    requires requires() { to_chunk_type<T>(); }
+    requires requires() { BinaryBase::to_chunk_type<T>(); }
     void add(ArchiveField<BinaryWriter, T>&& a) {
-        write(uint8_t(to_chunk_type<T>() | a.key));
+        write(uint8_t(BinaryBase::to_chunk_type<T>() | a.key));
         write(a.value);
     }
 

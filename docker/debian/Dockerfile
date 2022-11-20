@@ -1,13 +1,18 @@
-# Debian 11
+# Debian 11 with GCC 10
+# Debian 12 with GCC 12
 #
 # CI builder (DockerHub public image), local build check:
-#   docker build --pull --build-arg UID=$(id -u) -t rbrich/xcikit-debian . -f docker/debian/Dockerfile
-#   docker run --rm -v $PWD:/src -w /src -it rbrich/xcikit-debian
+#   docker build --pull --build-arg UID=$(id -u) --build-arg BASE=bullseye -t rbrich/xcikit-debian:11 . -f docker/debian/Dockerfile
+#   docker run --rm -v $PWD:/src -w /src -it rbrich/xcikit-debian:11
+# Or:
+#   docker build --pull --build-arg UID=$(id -u) --build-arg BASE=bookworm -t rbrich/xcikit-debian:12 . -f docker/debian/Dockerfile
+#   docker run --rm -v $PWD:/src -w /src -it rbrich/xcikit-debian:12
 # CMake arguments (for Clion IDE):
 #   -DFORCE_COLORS=1 -DCONAN_INSTALL=1
 #   -DCONAN_OPTIONS="xcikit:system_glfw=True;xcikit:system_vulkan=True;xcikit:system_freetype=True;xcikit:system_harfbuzz=True;xcikit:system_benchmark=True;xcikit:system_zlib=True;xcikit:system_range_v3=True;xcikit:with_hyperscan=True"
 
-FROM debian:bullseye-slim AS builder
+ARG BASE=bullseye
+FROM debian:${BASE}-slim AS builder
 
 RUN echo "gcc"; apt-get update && apt-get install --no-install-recommends -y \
     g++ && rm -rf /var/lib/apt/lists/*

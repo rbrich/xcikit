@@ -17,9 +17,18 @@
 #include <vector>
 #include <unordered_map>
 #include <memory>
+#include <algorithm>
 #include <typeindex>
 
 namespace xci::data {
+
+namespace detail {
+
+struct SchemaBufferType {
+    size_t struct_idx;
+};
+
+} // namespace detail
 
 
 /// Collects key-tag-type information for writing a schema file.
@@ -33,9 +42,8 @@ namespace xci::data {
 ///     // fstream f; ...
 ///     BinaryWriter writer(f);
 ///     writer(schema);
-class Schema : public ArchiveBase<Schema> {
+class Schema : public ArchiveBase<Schema>, protected ArchiveGroupStack<detail::SchemaBufferType> {
     friend ArchiveBase<Schema>;
-    struct BufferType { size_t struct_idx; };
 
 public:
     using Writer = std::true_type;
