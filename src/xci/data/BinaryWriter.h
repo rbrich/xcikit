@@ -93,9 +93,9 @@ public:
 
     // integers, floats, enums
     template <typename T>
-    requires requires() { to_chunk_type<T>(); }
+    requires requires() { BinaryBase::to_chunk_type<T>(); }
     void add(ArchiveField<BinaryWriter, T>&& a) {
-        write(uint8_t(to_chunk_type<T>() | a.key));
+        write(uint8_t(BinaryBase::to_chunk_type<T>() | a.key));
         write(a.value);
     }
 

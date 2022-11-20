@@ -156,10 +156,10 @@ public:
 
     // integers, floats, enums
     template <typename T>
-    requires requires() { to_chunk_type<T>(); }
+    requires requires() { BinaryBase::to_chunk_type<T>(); }
     void add(ArchiveField<TImpl, T>&& a) {
         const auto chunk_type = read_chunk_head(a.key);
-        if (chunk_type == to_chunk_type<T>())
+        if (chunk_type == BinaryBase::to_chunk_type<T>())
             read_with_crc(a.value);
         else if (chunk_type != ChunkNotFound)
             throw ArchiveBadChunkType();
