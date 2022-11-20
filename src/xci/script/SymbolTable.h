@@ -59,7 +59,21 @@ public:
         return std::tie(m_symtab, m_symidx) < std::tie(rhs.m_symtab, rhs.m_symidx);
     }
 
+    template<class Archive>
+    void save(Archive& ar) const {
+        ar("symtab", symtab_qualified_name()) ("symidx", m_symidx);
+    }
+
+    template<class Archive>
+    void load(Archive& ar) {
+        std::string qualified_name;
+        ar(qualified_name)(m_symidx);
+        m_symtab = &ar.module().symtab_by_qualified_name(qualified_name);
+    }
+
 private:
+    std::string symtab_qualified_name() const;
+
     SymbolTable* m_symtab = nullptr;   // owning table
     Index m_symidx = no_index;         // index of item in the table
 };

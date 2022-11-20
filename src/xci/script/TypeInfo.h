@@ -161,7 +161,7 @@ public:
     void save_schema(Archive& ar) const {
         ar("type", m_type);
         if (ar.enter_union("info", "type", typeid(decltype(m_info)))) {
-            ar(uint8_t(Type::Unknown), "var", Symbol{});
+            ar(uint8_t(Type::Unknown), "var", SymbolPointer{});
             ar(uint8_t(Type::List), "elem_type", TypeInfo{});
             ar(uint8_t(Type::Tuple), "subtypes", Subtypes{});
             ar(uint8_t(Type::Function), "signature", SignaturePtr{});
@@ -176,7 +176,7 @@ public:
         ar("type", m_type);
         switch (m_type) {
             case Type::Unknown:
-                ar("var", *generic_var());
+                ar("var", generic_var());
                 break;
             case Type::Function:
                 ar("signature", signature());
@@ -204,10 +204,8 @@ public:
         ar(m_type);
         switch (m_type) {
             case Type::Unknown: {
-                Var var;
-                //FIXME
-                //ar(var);
-                m_info = var;
+                m_info.emplace<Var>();
+                ar(std::get<Var>(m_info));
                 break;
             }
             case Type::Function: {
