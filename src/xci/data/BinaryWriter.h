@@ -61,9 +61,11 @@ namespace xci::data {
 ///     XCI_ARCHIVE(ar, a, b, c)
 ///
 
-class BinaryWriter : public ArchiveBase<BinaryWriter>, protected BinaryBase {
+class BinaryWriter
+        : public ArchiveBase<BinaryWriter>
+        , protected ArchiveGroupStack< /*BufferType=*/ std::vector<std::byte> >
+        , protected BinaryBase {
     friend ArchiveBase<BinaryWriter>;
-    using BufferType = std::vector<std::byte>;
 
 public:
     using Writer = std::true_type;

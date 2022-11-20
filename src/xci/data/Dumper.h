@@ -17,6 +17,12 @@
 
 namespace xci::data {
 
+namespace detail {
+
+struct DumperBufferType {};
+
+} // namespace detail
+
 
 /// Writes serializable objects to a stream.
 ///
@@ -42,9 +48,8 @@ namespace xci::data {
 /// - bool (false/true)
 /// - string ("utf8 text")
 ///
-class Dumper : public ArchiveBase<Dumper> {
+class Dumper : public ArchiveBase<Dumper>, protected ArchiveGroupStack<detail::DumperBufferType> {
     friend ArchiveBase<Dumper>;
-    struct BufferType {};
 
 public:
     using Writer = std::true_type;
