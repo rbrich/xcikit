@@ -286,6 +286,11 @@ struct NamedType {
 
     bool operator==(const NamedType& rhs) const = default;
     bool operator!=(const NamedType& rhs) const = default;
+
+    template <class Archive>
+    void serialize(Archive& ar) {
+        ar ("name", name) ("type_info", type_info);
+    }
 };
 
 

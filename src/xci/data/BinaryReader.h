@@ -106,15 +106,18 @@ private:
 }  // namespace detail
 
 
-template <class TImpl>
-class BinaryReaderBase : public ArchiveBase<TImpl>, public detail::BinaryReaderImpl {
-    friend ArchiveBase<TImpl>;
+template <class TCtx>
+class BinaryReaderBase : public ArchiveBase<BinaryReaderBase<TCtx>>, public detail::BinaryReaderImpl {
+    friend ArchiveBase<BinaryReaderBase<TCtx>>;
 
 public:
+    using TImpl = BinaryReaderBase<TCtx>;
     using Reader = std::true_type;
     template<typename T> using FieldType = T&;
 
-    explicit BinaryReaderBase(std::istream& is) : detail::BinaryReaderImpl(is) {}
+    explicit BinaryReaderBase(std::istream& is, TCtx ctx = {}) : detail::BinaryReaderImpl(is), m_ctx(std::move(ctx)) {}
+
+    TCtx& ctx() { return m_ctx; }
 
     // size of root group
     size_t root_group_size() const { return m_group_stack.front().buffer.size; }
@@ -237,15 +240,13 @@ private:
     void leave_group(const ArchiveField<TImpl, T>& kv) {
         _leave_group();
     }
+
+    TCtx m_ctx;
 };
 
 
-// Mimic this class to extend the reader, e.g. add your own data for use by load() function
-// (You have to inherit from BinaryReaderBase with CRTP, not from BinaryReader itself.)
-class BinaryReader : public BinaryReaderBase<BinaryReader> {
-public:
-    explicit BinaryReader(std::istream& is) : BinaryReaderBase(is) {}
-};
+// The template parameter is type of custom context (.ctx member).
+using BinaryReader = BinaryReaderBase<std::monostate>;
 
 
 } // namespace xci::data

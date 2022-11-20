@@ -277,17 +277,6 @@ public:
 };
 
 
-class ModuleReader : public xci::data::BinaryReaderBase<ModuleReader> {
-    Module& m_module;
-
-public:
-    explicit ModuleReader(std::istream& is, Module& module)
-            : xci::data::BinaryReaderBase<ModuleReader>(is), m_module(module) {}
-
-    Module& module() const { return m_module; }
-};
-
-
 bool Module::load_from_file(const std::string& filename)
 {
     if (m_module_manager == nullptr)
@@ -299,7 +288,12 @@ bool Module::load_from_file(const std::string& filename)
     m_symtab.set_scope(nullptr);
 
     std::ifstream f(filename, std::ios::binary);
-    ModuleReader reader(f, *this);
+
+    struct ReaderContext {
+        Module& module;
+    };
+    using ModuleReader = xci::data::BinaryReaderBase<ReaderContext>;
+    ModuleReader reader(f, ReaderContext{*this});
     reader.repeated(m_modules, [this](std::vector<std::shared_ptr<Module>>& modules) {
         return ModuleLoader(*m_module_manager, modules);
     });

@@ -17,6 +17,7 @@
 
 #include <vector>
 #include <variant>
+#include <tuple>
 #include <cstdint>
 
 #ifndef __cpp_concepts
@@ -30,7 +31,7 @@ namespace xci::data {
 
 template <typename Archive, typename T>
 struct ArchiveField {
-    struct archive_field_tag {};
+    using IsArchiveField =  std::true_type;
 
     uint8_t key = 255;
     typename Archive::template FieldType<T> value;
@@ -79,10 +80,10 @@ template<typename T, typename TArchive>
 concept TypeWithLoadFunction = requires(T& v, TArchive& ar) { typename TArchive::Reader; load(ar, v); };
 
 template<typename T, typename TArchive>
-concept ArchiveIsReader = requires(T& v, std::uint8_t k, TArchive& ar) { typename TArchive::Reader; ArchiveField<TArchive, T>{k, v}; };
+concept ArchiveIsReader = !requires { typename T::IsArchiveField; } && requires(T& v, std::uint8_t k, TArchive& ar) { typename TArchive::Reader; ArchiveField<TArchive, T>{k, v}; };
 
 template<typename T, typename TArchive>
-concept ArchiveIsWriter = !requires { typename T::archive_field_tag; } && requires(const T& v, std::uint8_t k, TArchive& ar) { typename TArchive::Writer; ArchiveField<TArchive, T>{k, v}; };
+concept ArchiveIsWriter = !requires { typename T::IsArchiveField; } && requires(const T& v, std::uint8_t k, TArchive& ar) { typename TArchive::Writer; ArchiveField<TArchive, T>{k, v}; };
 
 template<typename T, typename TArchive>
 concept TypeWithReaderSupport = requires(T& v, std::uint8_t k, TArchive& ar) { typename TArchive::Reader; ar.add(ArchiveField<TArchive, T>{k, v}); };
@@ -296,7 +297,7 @@ public:
         }
     }
 
-    // when: the type has load() method and this is Reader
+    // when: the type has `load()` method and this is Reader
     template <TypeWithLoadMethod<TImpl> T>
     void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = static_cast<TImpl*>(this)->draw_next_key(kv.key);
@@ -306,7 +307,7 @@ public:
         }
     }
 
-    // when: the type has out-of-class load() function and this is Reader
+    // when: the type has out-of-class `load()` function and this is Reader
     template <TypeWithLoadFunction<TImpl> T>
     void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = static_cast<TImpl*>(this)->draw_next_key(kv.key);
@@ -316,7 +317,7 @@ public:
         }
     }
 
-    // when: Archive implementation has add() method for the type
+    // when: Archive implementation has `add()` method for the type
     template <TypeWithReaderSupport<TImpl> T>
     void apply(ArchiveField<TImpl, T>&& kv) {
         kv.key = static_cast<TImpl*>(this)->draw_next_key(kv.key);

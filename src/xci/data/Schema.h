@@ -17,6 +17,7 @@
 #include <vector>
 #include <unordered_map>
 #include <memory>
+#include <algorithm>
 #include <typeindex>
 
 namespace xci::data {

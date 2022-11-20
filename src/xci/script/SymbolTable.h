@@ -68,7 +68,7 @@ public:
     void load(Archive& ar) {
         std::string qualified_name;
         ar(qualified_name)(m_symidx);
-        m_symtab = &ar.module().symtab_by_qualified_name(qualified_name);
+        m_symtab = &ar.ctx().module.symtab_by_qualified_name(qualified_name);
     }
 
 private:
