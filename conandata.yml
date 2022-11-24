@@ -38,7 +38,7 @@ requirements:
     conan: "magic_enum/0.8.1"
   zlib:
     cmake: "ZLIB/"
-    conan: "zlib/1.2.12"
+    conan: "zlib/1.2.13"
     prereq:
       - data
   glfw:
@@ -48,7 +48,7 @@ requirements:
       - graphics
   vulkan:
     cmake: "Vulkan/1.2.0"
-    conan: "vulkan-loader/1.3.221"
+    conan: "vulkan-loader/1.3.231"
     prereq:
       - graphics
   freetype:
@@ -58,7 +58,7 @@ requirements:
       - text
   harfbuzz:
     cmake: "harfbuzz/"
-    conan: "harfbuzz/5.3.0"
+    conan: "harfbuzz/5.3.1"
     prereq:
       - text
   hyperscan:
@@ -72,8 +72,8 @@ requirements:
       - data
   catch2:
     cmake: "Catch2/3"
-    conan: "catch2/3.1.0"
-    upstream: "github.com catchorg/Catch2 v3.1.0"
+    conan: "catch2/3.2.0"
+    upstream: "github.com catchorg/Catch2 v3.2.0"
     cmake_defs: CATCH_INSTALL_DOCS=OFF CMAKE_CXX_STANDARD=20
     prereq:
       - tests

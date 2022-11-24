@@ -120,6 +120,12 @@ Class& SymbolPointer::get_class() const
 }
 
 
+std::string SymbolPointer::symtab_qualified_name() const
+{
+    return m_symtab ? m_symtab->qualified_name() : "";
+}
+
+
 //------------------------------------------------------------------------------
 
 

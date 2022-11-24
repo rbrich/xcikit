@@ -5,9 +5,13 @@
 version: 2.1
 
 executors:
-  debian:
+  debian11:
     docker:
-      - image: rbrich/xcikit-debian:latest
+      - image: rbrich/xcikit-debian:11
+    resource_class: large
+  debian12:
+    docker:
+      - image: rbrich/xcikit-debian:12
     resource_class: large
   ubuntu:
     docker:
@@ -93,8 +97,12 @@ workflows:
     jobs:
       - build:
           name: Debian 11 - GCC 10
-          image: debian
-          label: debian-gcc10
+          image: debian11
+          label: debian11-gcc10
+      - build:
+          name: Debian 12 - GCC 12
+          image: debian12
+          label: debian12-gcc12
       - build:
           name: Ubuntu 22.04 - Clang-Tidy 14
           image: ubuntu

@@ -281,9 +281,19 @@ bool Module::load_from_file(const std::string& filename)
 {
     if (m_module_manager == nullptr)
         return false;
+    // undo init()
+    // FIXME: don't call init() from constructor, call it directly in REPL etc.
+    m_functions.clear();
+    m_scopes.clear();
+    m_symtab.set_scope(nullptr);
 
     std::ifstream f(filename, std::ios::binary);
-    xci::data::BinaryReader reader(f);
+
+    struct ReaderContext {
+        Module& module;
+    };
+    using ModuleReader = xci::data::BinaryReaderBase<ReaderContext>;
+    ModuleReader reader(f, ReaderContext{*this});
     reader.repeated(m_modules, [this](std::vector<std::shared_ptr<Module>>& modules) {
         return ModuleLoader(*m_module_manager, modules);
     });
@@ -300,10 +310,10 @@ void Module::init()
 {
     m_symtab.set_module(this);
     // create main function
-    auto fn_idx = add_function(Function{*this, m_symtab}).index;
+    auto fn_idx = m_functions.emplace(*this, m_symtab).index;
     assert(fn_idx == 0);
     // create root scope
-    auto scope_idx = m_scopes.add(Scope{*this, fn_idx, nullptr}).index;
+    auto scope_idx = m_scopes.emplace(*this, fn_idx, nullptr).index;
     assert(scope_idx == 0);
     m_symtab.set_scope(&m_scopes[scope_idx]);
 }

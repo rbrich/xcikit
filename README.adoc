@@ -127,6 +127,21 @@ Docs:
 
 * link:https://xci.cz/fire-script/machine[Fire Script Virtual Machine] (link:docs/script/machine.adoc[source])
 
+link:examples/script[Example scripts]
+
+[source,bash]
+----
+# Compile and run a script
+fire examples/script/some.fire
+
+# Compile script to bytecode
+fire -c examples/script/some.fire --output-schema /tmp/firm.schema
+# Inspect binary format with the compiled bytecode
+dati examples/script/some.firm -s /tmp/firm.schema
+# Execute compiled bytecode
+fire examples/script/some.firm
+----
+
 === xci::data
 
 Serialization and deserialization of structured data.

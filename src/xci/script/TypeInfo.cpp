@@ -114,13 +114,13 @@ void TypeInfo::foreach_heap_slot(std::function<void(size_t offset)> cb) const
 }
 
 
-void TypeInfo::replace_var(uint8_t idx, const TypeInfo& ti)
+void TypeInfo::replace_var(SymbolPointer var, const TypeInfo& ti)
 {
-    if (idx == 0)
+    if (!var)
         return;
     switch (m_type) {
         case Type::Unknown:
-            if (generic_var() == idx)
+            if (generic_var() == var)
                 *this = ti;
             break;
         case Type::Function: {
@@ -130,21 +130,21 @@ void TypeInfo::replace_var(uint8_t idx, const TypeInfo& ti)
                 m_info = std::make_shared<Signature>(signature());
             }
             for (auto& prm : signature().params) {
-                prm.replace_var(idx, ti);
+                prm.replace_var(var, ti);
             }
-            signature().return_type.replace_var(idx, ti);
+            signature().return_type.replace_var(var, ti);
             break;
         }
         case Type::Tuple:
         case Type::List:
             assert(std::holds_alternative<Subtypes>(m_info));
             for (auto& sub : std::get<Subtypes>(m_info))
-                sub.replace_var(idx, ti);
+                sub.replace_var(var, ti);
             break;
         case Type::Struct:
             assert(std::holds_alternative<StructItems>(m_info));
             for (auto& item : std::get<StructItems>(m_info))
-                item.second.replace_var(idx, ti);
+                item.second.replace_var(var, ti);
             break;
         default:
             break;
@@ -156,7 +156,7 @@ TypeInfo::TypeInfo(Type type) : m_type(type)
 {
     switch (type) {
         case Type::Unknown:
-            m_info = Var(0);
+            m_info = Var{};
             break;
         case Type::List:
         case Type::Tuple:
@@ -265,7 +265,7 @@ bool TypeInfo::operator==(const TypeInfo& rhs) const
     if (m_type != rhs.type())
         return false;
     if (m_type == Type::Function)
-        return signature().compare_without_type_args(rhs.signature());  // compare content, not pointer
+        return signature() == rhs.signature();  // compare content, not pointer
     if (m_type == Type::Named)
         return named_type() == rhs.named_type();
     return m_info == rhs.m_info;
@@ -437,12 +437,6 @@ bool Signature::has_nonvoid_params() const
     return ranges::any_of(params, [](const TypeInfo& type_info) {
         return !type_info.is_void();
     });
-}
-
-
-bool Signature::compare_without_type_args(const Signature& rhs) const
-{
-    return nonlocals == rhs.nonlocals && partial == rhs.partial && params == rhs.params && return_type == rhs.return_type;
 }
 
 

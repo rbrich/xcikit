@@ -7,10 +7,10 @@
 #include "BinaryReader.h"
 #include <zlib.h>
 
-namespace xci::data {
+namespace xci::data::detail {
 
 
-void BinaryReader::read_header() {
+void BinaryReaderImpl::read_header() {
     // This size is decreased with every read.
     // Initial value is used only for reading the header,
     // then overwritten by actual value from the header.
@@ -42,7 +42,7 @@ void BinaryReader::read_header() {
 }
 
 
-void BinaryReader::read_footer()
+void BinaryReaderImpl::read_footer()
 {
     // read metadata chunks
     while (group_buffer().size != 0) {
@@ -66,7 +66,7 @@ void BinaryReader::read_footer()
 }
 
 
-auto BinaryReader::generic_next() -> GenericNext
+auto BinaryReaderImpl::generic_next() -> GenericNext
 {
     if (group_buffer().size == 0) {
         // leave group
@@ -113,7 +113,7 @@ auto BinaryReader::generic_next() -> GenericNext
 }
 
 
-void BinaryReader::_enter_group(uint8_t key)
+void BinaryReaderImpl::_enter_group(uint8_t key)
 {
     auto chunk_type = read_chunk_head(key);
     size_t chunk_length = 0;  // ChunkNotFound -> size 0
@@ -130,7 +130,7 @@ void BinaryReader::_enter_group(uint8_t key)
 }
 
 
-void BinaryReader::_leave_group()
+void BinaryReaderImpl::_leave_group()
 {
     // drain the rest of chunks in the group
     auto chunk_type = read_chunk_head(ChunkNotFound);
@@ -140,7 +140,7 @@ void BinaryReader::_leave_group()
 }
 
 
-void BinaryReader::skip_until_metadata()
+void BinaryReaderImpl::skip_until_metadata()
 {
     // read chunks until Control/Metadata
     for (;;) {
@@ -162,7 +162,7 @@ void BinaryReader::skip_until_metadata()
 }
 
 
-void BinaryReader::skip_unknown_chunk(uint8_t type, uint8_t key)
+void BinaryReaderImpl::skip_unknown_chunk(uint8_t type, uint8_t key)
 {
     auto&& [buf, length] = read_chunk_content(type, key);
     if (m_unknown_chunk_cb) {
@@ -172,7 +172,7 @@ void BinaryReader::skip_unknown_chunk(uint8_t type, uint8_t key)
 
 
 std::pair<std::unique_ptr<std::byte[]>, size_t>
-BinaryReader::read_chunk_content(uint8_t type, uint8_t key)
+BinaryReaderImpl::read_chunk_content(uint8_t type, uint8_t key)
 {
     size_t length;
     if (type_has_len(type)) {
@@ -186,7 +186,7 @@ BinaryReader::read_chunk_content(uint8_t type, uint8_t key)
 }
 
 
-uint8_t BinaryReader::peek_chunk_head(uint8_t key)
+uint8_t BinaryReaderImpl::peek_chunk_head(uint8_t key)
 {
     // Read ahead until key matches
     while (group_buffer().size != 0) {
@@ -209,7 +209,7 @@ uint8_t BinaryReader::peek_chunk_head(uint8_t key)
 }
 
 
-uint8_t BinaryReader::read_chunk_head(uint8_t key)
+uint8_t BinaryReaderImpl::read_chunk_head(uint8_t key)
 {
     auto chunk_type = peek_chunk_head(key);
     if (chunk_type == ChunkNotFound)
@@ -219,7 +219,7 @@ uint8_t BinaryReader::read_chunk_head(uint8_t key)
 }
 
 
-void BinaryReader::read_with_crc(std::byte* buffer, size_t length)
+void BinaryReaderImpl::read_with_crc(std::byte* buffer, size_t length)
 {
     if (length > group_buffer().size)
         throw ArchiveUnexpectedEnd();
@@ -232,7 +232,7 @@ void BinaryReader::read_with_crc(std::byte* buffer, size_t length)
 }
 
 
-std::byte BinaryReader::read_byte_with_crc()
+std::byte BinaryReaderImpl::read_byte_with_crc()
 {
     if (group_buffer().size-- == 0 || m_stream.eof())
         throw ArchiveUnexpectedEnd();
@@ -245,7 +245,7 @@ std::byte BinaryReader::read_byte_with_crc()
 }
 
 
-std::byte BinaryReader::peek_byte()
+std::byte BinaryReaderImpl::peek_byte()
 {
     if (m_stream.eof())
         throw ArchiveUnexpectedEnd();
@@ -253,4 +253,4 @@ std::byte BinaryReader::peek_byte()
 }
 
 
-} // namespace xci::data
+} // namespace xci::data::detail

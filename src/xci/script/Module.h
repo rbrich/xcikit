@@ -37,7 +37,7 @@ public:
     explicit Module(ModuleManager& module_manager, std::string name = "<module>")
         : m_module_manager(&module_manager), m_symtab(std::move(name))
         { init(); }
-    Module() : m_symtab("<module>") { init(); }  // only for serialization
+    Module() : m_symtab("<module>") { m_symtab.set_module(this); }  // only for serialization
     ~Module();
     Module(Module&&) = delete;
     Module& operator =(Module&&) = delete;
