@@ -1013,12 +1013,12 @@ private:
         auto res = std::make_shared<Signature>(orig_signature);
         int i = 0;
         for (const auto& arg : m_call_args) {
-            i += 1;
+            ++i;
             // check there are more params to consume
             while (res->params.empty()) {
                 if (res->return_type.type() == Type::Function) {
                     // collapse returned function, start consuming its params
-                    res = std::make_unique<Signature>(res->return_type.signature());
+                    res = std::make_shared<Signature>(res->return_type.signature());
                     ++v.wrapped_execs;
                     v.partial_args = 0;
                 } else {
