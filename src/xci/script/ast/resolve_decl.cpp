@@ -244,7 +244,7 @@ public:
                 break;
             case Symbol::Nonlocal:
             case Symbol::Unresolved:
-                UNREACHABLE;
+                XCI_UNREACHABLE;
         }
     }
 

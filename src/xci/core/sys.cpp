@@ -66,7 +66,7 @@ void block_signals(std::initializer_list<int> signums)
         sigaddset(&sigset, signum);
     pthread_sigmask(SIG_BLOCK, &sigset, nullptr);
 #else
-    UNUSED signums;
+    XCI_UNUSED signums;
     assert(!"block_signals: Not implemented");
 #endif
 }
@@ -83,7 +83,7 @@ int pending_signals(std::initializer_list<int> signums)
             return signum;
     return 0;
 #else
-    UNUSED signums;
+    XCI_UNUSED signums;
     assert(!"pending_signals: Not implemented");
     return 0;
 #endif

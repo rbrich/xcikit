@@ -254,7 +254,7 @@ bool is_same_underlying(const TypeInfo& lhs, const TypeInfo& rhs)
             // FIXME: deep compare underlying types in function prototype?
             return false;
     }
-    UNREACHABLE;
+    XCI_UNREACHABLE;
 }
 
 

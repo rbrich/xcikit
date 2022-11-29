@@ -176,7 +176,7 @@ size_t Stream::raw_read(const byte* buffer)
         }
         default:
             static_assert(std::variant_size_v<HandleVariant> == 7);
-            UNREACHABLE;
+            XCI_UNREACHABLE;
     }
 }
 

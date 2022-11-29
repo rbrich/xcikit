@@ -518,7 +518,7 @@ TermCtl& TermCtl::mode(Mode mode)
         case Mode::NoReverse: return no_reverse();
         case Mode::NoHidden: return no_hidden();
     }
-    UNREACHABLE;
+    XCI_UNREACHABLE;
 }
 
 TermCtl& TermCtl::bold() { return TERM_APPEND(enter_bold_mode); }
