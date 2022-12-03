@@ -1,0 +1,9 @@
+_0 ? string_compare "a" "a"
+_0:Int32 = 0
+_1 ? string_compare "fire" "water"
+_1:Int32 = -17
+_2 ? string_compare "fire" "earth"
+_2:Int32 = 1
+_3 ? string_compare "fire" "air"
+_3:Int32 = 5
+_4 ?

@@ -1,0 +1,12 @@
+// sample module
+
+l = [1,2,3];
+foo = fun x: Int -> Int { x + 1 };
+bar = fun x y { x + y };
+
+foo 1;
+foo 2;
+bar 1 2;
+
+five = succ 4;
+five

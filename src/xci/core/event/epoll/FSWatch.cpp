@@ -1,17 +1,8 @@
-// epoll/FSWatch.cpp created on 2018-04-14, part of XCI toolkit
+// epoll/FSWatch.cpp created on 2018-04-14 as part of xcikit project
+// https://github.com/rbrich/xcikit
+//
 // Copyright 2018, 2019 Radek Brich
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "FSWatch.h"
 #include <xci/core/event.h>
@@ -34,7 +25,7 @@ FSWatch::FSWatch(EventLoop& loop, Callback cb)
 {
     m_inotify_fd = inotify_init();
     if (m_inotify_fd < 0 ) {
-        log_error("FSWatch: inotify_init: {m}");
+        log::error("FSWatch: inotify_init: {m}");
         return;
     }
     loop._register(m_inotify_fd, *this, POLLIN);
@@ -48,13 +39,13 @@ FSWatch::~FSWatch()
 }
 
 
-bool FSWatch::add(const std::string& pathname, FSWatch::PathCallback cb)
+bool FSWatch::add(const fs::path& pathname, FSWatch::PathCallback cb)
 {
     if (m_inotify_fd < 0)
         return false;
 
     // Is the directory already watched?
-    auto dir = path_dirname(pathname);
+    auto dir = pathname.parent_path();
     auto it = std::find_if(m_dir.begin(), m_dir.end(),
                            [&dir](const Dir& d) { return d.name == dir; });
     int dir_wd;
@@ -65,28 +56,28 @@ bool FSWatch::add(const std::string& pathname, FSWatch::PathCallback cb)
                                    IN_ATTRIB | IN_MOVED_FROM | IN_MOVED_TO |
                                    IN_DELETE_SELF | IN_MOVE_SELF | IN_ONLYDIR);
         if (wd < 0) {
-            log_error("FSWatch: inotify_add_watch({}): {m}", dir);
+            log::error("FSWatch: inotify_add_watch({}): {m}", dir);
             return false;
         }
         m_dir.push_back({wd, dir});
-        log_debug("FSWatch: Watching dir {} ({})", dir, wd);
+        log::debug("FSWatch: Watching dir {} ({})", dir, wd);
         dir_wd = wd;
     } else {
         dir_wd = it->wd;
     }
 
     // Directory is now watched, add the new watch to it
-    auto filename = path_basename(pathname);
+    auto filename = pathname.filename();
     m_file.push_back({dir_wd, filename, std::move(cb)});
-    log_debug("FSWatch: Watching file {}/{}", dir, filename);
+    log::debug("FSWatch: Watching file {}/{}", dir, filename);
     return true;
 }
 
 
-bool FSWatch::remove(const std::string& pathname)
+bool FSWatch::remove(const fs::path& pathname)
 {
     // Find dir record
-    auto dir = path_dirname(pathname);
+    auto dir = pathname.parent_path();
     int dir_wd;
     {
         auto it = std::find_if(m_dir.begin(), m_dir.end(),
@@ -99,7 +90,7 @@ bool FSWatch::remove(const std::string& pathname)
     }
 
     // Find file record
-    auto filename = path_basename(pathname);
+    auto filename = pathname.filename();
     auto it = std::find_if(m_file.begin(), m_file.end(),
                            [&filename, dir_wd](const File& f) {
                                return f.dir_wd == dir_wd && f.name == filename;
@@ -110,7 +101,7 @@ bool FSWatch::remove(const std::string& pathname)
     }
 
     // Remove file record
-    log_debug("FSWatch: Removing watch {}/{}", dir, filename);
+    log::debug("FSWatch: Removing watch {}/{}", dir, filename);
     m_file.erase(it);
 
     // If there are more watches on the same dir, we're finished
@@ -128,7 +119,7 @@ bool FSWatch::remove(const std::string& pathname)
         m_dir.erase(it_dir);
     }
     inotify_rm_watch(m_inotify_fd, dir_wd);
-    log_debug("FSWatch: Stopped watching dir {} ({})", dir, dir_wd);
+    log::debug("FSWatch: Stopped watching dir {} ({})", dir, dir_wd);
     return true;
 }
 
@@ -140,7 +131,7 @@ void FSWatch::_notify(uint32_t epoll_events)
         char buffer[buflen];
         ssize_t readlen = read(m_inotify_fd, buffer, buflen);
         if (readlen < 0) {
-            log_error("FSWatch: read: {m}");
+            log::error("FSWatch: read: {m}");
             return;
         }
 
@@ -148,10 +139,10 @@ void FSWatch::_notify(uint32_t epoll_events)
         while (ofs < readlen) {
             auto* event = (inotify_event*) &buffer[ofs];
             std::string name(event->name);
-            //log_debug("FSWatch: event {:x} for {}",
+            //log::debug("FSWatch: event {:x} for {}",
             //          event->mask, name);
             handle_event(event->wd, event->mask, name);
-            ofs += sizeof(inotify_event) + event->len;
+            ofs += int(sizeof(inotify_event) + event->len);
         }
     }
 }
@@ -191,7 +182,7 @@ void FSWatch::handle_event(int wd, uint32_t mask, const std::string& name)
                 if (w.cb) {
                     w.cb(Event::Stopped);
                 }
-                remove_list.push_back(path_join(it_dir->name, w.name));
+                remove_list.push_back(it_dir->name / w.name);
             }
         }
         for (auto& path : remove_list) {

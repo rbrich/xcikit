@@ -1,0 +1,14 @@
+// fire -trbS cast.fire
+
+class Cast T R {
+    cast : T -> R
+}
+
+// Note: Cast to Void is handled by the compiler, instances with R=Void are ignored.
+
+instance Cast Int64 Int32 { cast = { __cast 0x98 } }
+instance Cast Int32 Int32 { cast = { __noop } }
+
+"drop this":Void
+42:Int
+42L:Int32

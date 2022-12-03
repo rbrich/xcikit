@@ -1,25 +1,28 @@
-// error.h - created by Radek Brich on 2018-09-23
+// error.h created on 2018-09-23 as part of xcikit project
+// https://github.com/rbrich/xcikit
+//
+// Copyright 2018 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_ERROR_H
 #define XCI_CORE_ERROR_H
 
 #include <exception>
-#include "format.h"
-#include "log.h"
+#include <string>
 
 namespace xci::core {
 
 
 class Error: public std::exception {
 public:
-    explicit Error(std::string detail) : m_detail(std::move(detail)) {}
+    explicit Error(std::string msg) : m_msg(std::move(msg)) {}
 
     const char* what() const noexcept override {
-        return m_detail.c_str();
+        return m_msg.c_str();
     }
 
 private:
-    std::string m_detail;
+    std::string m_msg;
 };
 
 

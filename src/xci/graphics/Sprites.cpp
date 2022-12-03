@@ -1,32 +1,22 @@
-// Sprites.cpp created on 2018-03-14, part of XCI toolkit
-// Copyright 2018, 2019 Radek Brich
+// Sprites.cpp created on 2018-03-14 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Sprites.h"
 
 #include <xci/config.h>
-#include <xci/core/log.h>
 
 namespace xci::graphics {
 
-using namespace xci::core::log;
 
-
-Sprites::Sprites(Renderer& renderer, Texture& texture, const Color& color)
+Sprites::Sprites(Renderer& renderer, Texture& texture, Color color)
         : m_texture(texture), m_color(color),
           m_quads(renderer, VertexFormat::V2t2, PrimitiveType::TriFans),
-          m_shader(renderer.get_shader(ShaderId::Sprite))
+          m_shader(renderer.get_shader(
+                      texture.color_format() == ColorFormat::Grey ?
+                      ShaderId::SpriteR : ShaderId::Sprite))
 {}
 
 
@@ -36,7 +26,7 @@ void Sprites::reserve(size_t num)
 }
 
 
-void Sprites::add_sprite(const ViewportRect& rect)
+void Sprites::add_sprite(const FramebufferRect& rect)
 {
     auto ts = m_texture.size();
     add_sprite(rect, {0, 0, ts.x, ts.y});
@@ -44,7 +34,7 @@ void Sprites::add_sprite(const ViewportRect& rect)
 
 
 // Position a sprite with cutoff from the texture
-void Sprites::add_sprite(const ViewportRect& rect, const Rect_u& texrect)
+void Sprites::add_sprite(const FramebufferRect& rect, const Rect_u& texrect)
 {
     auto x1 = rect.x;
     auto y1 = rect.y;
@@ -75,7 +65,7 @@ void Sprites::update()
 }
 
 
-void Sprites::draw(View& view, const ViewportCoords& pos)
+void Sprites::draw(View& view, VariCoords pos)
 {
     m_quads.draw(view, pos);
 }
@@ -85,7 +75,7 @@ void Sprites::draw(View& view, const ViewportCoords& pos)
 
 
 ColoredSprites::ColoredSprites(Renderer& renderer,
-                               Texture& texture, const Color& color)
+                               Texture& texture, Color color)
     : m_texture(texture), m_color(color),
       m_quads(renderer, VertexFormat::V2c4t2, PrimitiveType::TriFans),
       m_shader(renderer.get_shader(ShaderId::SpriteC))
@@ -98,7 +88,7 @@ void ColoredSprites::reserve(size_t num)
 }
 
 
-void ColoredSprites::add_sprite(const ViewportRect& rect)
+void ColoredSprites::add_sprite(const FramebufferRect& rect)
 {
     auto ts = m_texture.size();
     add_sprite(rect, {0, 0, ts.x, ts.y});
@@ -106,17 +96,17 @@ void ColoredSprites::add_sprite(const ViewportRect& rect)
 
 
 // Position a sprite with cutoff from the texture
-void ColoredSprites::add_sprite(const ViewportRect& rect, const Rect_u& texrect)
+void ColoredSprites::add_sprite(const FramebufferRect& rect, const Rect_u& texrect)
 {
     auto x1 = rect.x;
     auto y1 = rect.y;
     auto x2 = rect.x + rect.w;
     auto y2 = rect.y + rect.h;
     auto ts = m_texture.size();
-    float tl = (float)texrect.left() / ts.x;
-    float tr = (float)texrect.right() / ts.x;
-    float tb = (float)texrect.bottom() / ts.y;
-    float tt = (float)texrect.top() / ts.y;
+    float tl = (float)texrect.left() / (float)ts.x;
+    float tr = (float)texrect.right() / (float)ts.x;
+    float tb = (float)texrect.bottom() / (float)ts.y;
+    float tt = (float)texrect.top() / (float)ts.y;
 
     m_quads.begin_primitive();
     m_quads.add_vertex({x1, y1}, m_color, tl, tt);
@@ -136,7 +126,7 @@ void ColoredSprites::update()
 }
 
 
-void ColoredSprites::draw(View& view, const ViewportCoords& pos)
+void ColoredSprites::draw(View& view, VariCoords pos)
 {
     m_quads.draw(view, pos);
 }

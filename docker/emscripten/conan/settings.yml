@@ -1,0 +1,22 @@
+os:
+    Windows:
+    Linux:
+    Macos:
+    FreeBSD:
+    SunOS:
+    Android:
+    iOS:
+    Emscripten:
+    baremetal:
+
+arch: [asm.js, wasm]
+
+compiler:
+    gcc:
+    Visual Studio:
+    msvc:
+    clang:
+        version: ["16"]
+        cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17, 20, gnu20]
+
+build_type: [None, Debug, Release, RelWithDebInfo, MinSizeRel]

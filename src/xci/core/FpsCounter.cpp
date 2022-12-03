@@ -1,17 +1,8 @@
-// FpsCounter.cpp created on 2018-04-13, part of XCI toolkit
+// FpsCounter.cpp created on 2018-04-13 as part of xcikit project
+// https://github.com/rbrich/xcikit
+//
 // Copyright 2018 Radek Brich
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "FpsCounter.h"
 
@@ -39,9 +30,9 @@ void FpsCounter::foreach_sample(const std::function<void(float)>& cb) const
     float last_sample = 0.f;
     for (auto i = (m_idx+1 == m_samples.size()) ? 0 : m_idx+1;;
               i = (i+1 == m_samples.size()) ? 0 : i+1) {
-        auto& s = m_samples[i];
+        const auto& s = m_samples[i];
         if (s.num_frames > 0)
-            last_sample = s.total_time / s.num_frames;
+            last_sample = s.total_time / float(s.num_frames);
         cb(last_sample);
         if (i == m_idx)
             break;

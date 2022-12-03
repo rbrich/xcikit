@@ -1,0 +1,480 @@
+:sectnums:
+:toc: macro
+ifdef::env-github[]
+:!toc-title:
+endif::[]
+
+= xcikit
+
+Collection of C++ libraries for drawing 2D graphics, rendering text and more.
+
+toc::[]
+
+== About
+
+Xcikit contains basic elements needed for creating 2D graphical applications.
+The focus is on text rendering and closely related UI rendering. Additional
+features are a custom scripting language and data serialization.
+
+With xcikit you can:
+
+* render a few paragraphs of text,
+* style some parts of the text differently (colored highlights),
+* respond to mouse hover, click on the highlighted parts (spans),
+* create a basic UI with buttons, checkboxes, combo-boxes,
+* support scripting, provide sandboxed API for user scripts.
+
+This should be enough for a program to render:
+
+* 2D sprites,
+* menu,
+* settings screen,
+* dialogs.
+
+The library uses GLFW and Vulkan for graphics.
+
+=== Name
+
+XCI is 91 in Roman numerals. I perceive 91 as a beautiful number.
+
+It might stand for **Extended C++ Interface**, but this is an afterthought.
+
+== Features
+
+Note that xcikit is still under development and mostly experimental.
+There is no stable API. There are no releases. The features below are partially planned,
+but already implemented to some degree.
+
+The planned features:
+
+* GPU oriented 2D graphics
+* advanced text rendering
+* UI widgets (not meant to replace Qt, but should be good enough for indie games)
+* data file management (VFS)
+* custom scripting language (it wasn't planned originally, but it's fun to design and implement)
+* support library (logging, eventloop etc.)
+
+The features are divided into a set of libraries:
+
+* `xci-widgets`
+* `xci-text`
+* `xci-graphics`
+* `xci-script`
+* `xci-data`
+* `xci-core`
+
+The separation of the code into libraries helps to create layers
+and avoid bi-directional dependencies. Basically, each library can depend only
+on the libraries listed below it. (TODO: draw a dependency graph)
+
+The top-level `xci-widgets` provides UI components with event processing.
+It uses text layout engine `xci-text`, which can also be used separately.
+
+All rendering goes through GLFW and Vulkan based `xci-graphics` library.
+Graphics lib can be used separately when neither UI nor text rendering
+is needed.
+
+Optional `xci-data` library provides custom text and binary format
+for serialization / deserialization of hierarchical data structures.
+Think of Json and Google Protobuf, but without the complexity and bloat.
+
+All the above libraries use `xci-core`, which contains miscellaneous utilities,
+This can also be used separately.
+
+There is also header-only `compat` library, which is used to hide
+differences between compilers and OS's. It does not implement any
+abstraction layer, but just provides what is available elsewhere.
+
+Technologies:
+
+* C++20 as main programming language
+* CMake as build system
+* Conan as dependency manager
+
+Supported compilers:
+
+* GCC >= 10
+* Clang >= 12
+* Xcode >= 13
+* Visual Studio >= 16
+
+Any Unix-like OS with C++20 compliant compiler should work.
+Windows OS is also supported, to some extent. See <<windows,Building on Windows>>.
+
+== Libraries
+
+=== xci::widgets
+
+Basic UI elements.
+
+=== xci::text
+
+Text rendering and text layout.
+
+=== xci::graphics
+
+The basic building blocks for rendering of text and UI elements.
+
+=== xci::script
+
+Experimental scripting language with bytecode interpreter.
+
+https://fire.xci.cz/[Online REPL]
+
+Docs:
+
+* link:https://xci.cz/fire-script/syntax[Fire Script Syntax] (link:docs/script/syntax.adoc[source])
+
+* link:https://xci.cz/fire-script/machine[Fire Script Virtual Machine] (link:docs/script/machine.adoc[source])
+
+link:examples/script[Example scripts]
+
+[source,bash]
+----
+# Compile and run a script
+fire examples/script/some.fire
+
+# Compile script to bytecode
+fire -c examples/script/some.fire --output-schema /tmp/firm.schema
+# Inspect binary format with the compiled bytecode
+dati examples/script/some.firm -s /tmp/firm.schema
+# Execute compiled bytecode
+fire examples/script/some.firm
+----
+
+=== xci::data
+
+Serialization and deserialization of structured data.
+
+=== xci::core
+
+Core utilities. These have little or no dependencies. Mostly just stdlib + OS API.
+
+* `Buffer` (`types.h`) - Owned blob of data, with deleter.
+* `FpsCounter` - Tracks delays between frames and computes frame rate.
+* `Logger` (`log.h`) - Logging functions.
+* `SharedLibrary` - Thin wrapper around dlopen. For plugins.
+* `TermCtl` - Colored output for ANSI terminals.
+* `Vfs` - Unified reading of regular files and archives. Mount the archive to virtual path
+ and read contained files in same fashion as regular files.
+* `bit.h` - custom `bit_copy`, `bit_read`, similar to C++20 `bit_cast`
+* `event.h` - System event loop (abstraction of kqueue / epoll).
+* `dispatch.h` - Watch files and notify on changes. Useful for auto-reloading of resource files.
+* `file.h` - Read whole files. Path utilities (dirname, basename, …).
+* `format.h` - Formatted strings. Similar to Python's `format()`.
+* `geometry.h` - 2D vector, rectangle. Linear algebra.
+* `rtti.h` - C++ demangled type names.
+* `string.h` - String manipulation, unicode utilities.
+* `sys.h` - A replacement for `std::this_thread::get_id()`, providing the canonical TID.
+
+=== xci::compat
+
+Fill gaps between different systems and compilers.
+
+* `dl.h` - `dlopen` etc. for Windows
+* `endian.h` - Linux-like macros provided for macOS and Windows
+* `macros.h` - `FALLTHROUGH`, `UNREACHABLE`, `UNUSED`
+* `unistd.h` - Minimal Unix compatibility header for Windows
+
+== Tools
+
+Included are some tools build on top of the libraries.
+Check them on separate pages:
+
+* link:tools/README.md[XCI Tools]
+** link:tools/find_file/README.md[Find File (ff)] - `find` alternative
+
+== How to build
+
+TL;DR:
+
+* Run one of the <<system-package-manager,system package manager>> commands below.
+* Proceed to <<using-build-script,Using build script>> below.
+
+=== Dependencies
+
+Tools:
+
+- CMake - build system
+- Conan - optional package manager
+
+Libraries:
+
+- PEGTL (xci-core)
+- libzip (xci-core + XCI_WITH_ZIP)
+- FreeType (xci-text)
+- GLFW, Vulkan (xci-graphics)
+- https://github.com/google/shaderc[glslc] or
+  https://github.com/KhronosGroup/glslang[glslangValidator] (xci-graphics)
+- https://github.com/catchorg/Catch2[Catch2] (tests)
+- https://github.com/google/benchmark[Google Benchmark] (benchmarks)
+- https://github.com/graphitemaster/incbin[incbin] (examples)
+
+Obtaining dependencies:
+
+* Install them into *_system_* or otherwise make them visible to CMake's `find_*` functions.
+  - This works for almost all deps, except *fmt*, *pfr*, *magic_enum*.
+  - Deps that must be installed this way: *libzip*, *hyperscan*.
+* Install them via *_Conan_*. Pass `-D CONAN_INSTALL=ON` to `cmake` or build with `build.sh`
+  which runs conan automatically.
+
+[#system-package-manager]
+Installing the dependencies with *_system package managers_*:
+
+- Debian:
++
+----
+apt install libzip-dev cmake ninja-build
+pip3 install conan
+----
+- macOS (Homebrew):
++
+----
+# Tools
+brew install cmake ninja ccache conan
+# Libs
+brew install pegtl libzip freetype glfw doxygen catch2 google-benchmark hyperscan
+----
+- macOS (MacPorts):
++
+----
+# Tools
+port install cmake ninja ccache
+pip3 install conan
+# Libs
+port install vulkan-* MoltenVK glfw-devel harfbuzz-devel hyperscan libfmt catch2
+----
+
+[#using-build-script]
+=== Using build script
+
+The complete build process is handled by a build script:
+
+[source,bash]
+----
+./build.sh
+----
+
+When finished, you'll find the temporary build files in `build/`
+and installation artifacts in `artifacts/`.
+
+Both scripts are incremental, so it's safe to run them repeatably.
+They do only the required work and re-use what was done previously.
+
+=== Manual build with CMake
+
+Detailed build steps (these are examples, adjust parameters as needed):
+
+[source,bash]
+----
+# Prepare build directory
+mkdir build && cd build
+
+# Install dependencies using Conan.
+conan install .. --build missing
+
+# Configure
+cmake .. -G Ninja -DCMAKE_INSTALL_PREFIX=~/sdk/xcikit
+
+# Run CMake UI to adjust the parameters
+ccmake ..
+
+# Build
+cmake --build .
+
+# Run unit tests
+cmake --build . --target 'test'
+
+# Install artifacts
+cmake --build . --target 'install'
+----
+
+=== Building on macOS older than Catalina (10.15)
+
+Using https://www.macports.org/[MacPorts], install Clang 14 and libc++:
+
+[source,bash]
+----
+port install clang-14 macports-libcxx
+----
+
+Then create a `clang14-toolchain.cmake` file with content like this:
+
+[source,cmake]
+----
+set(CMAKE_CXX_COMPILER /opt/local/bin/clang++-mp-14)
+add_compile_options(-nostdinc++ -I/opt/local/include/libcxx/v1 -D_LIBCPP_DISABLE_AVAILABILITY)
+add_link_options(-L/opt/local/lib/libcxx)
+----
+
+Run the build with the toolchain:
+
+[source,bash]
+----
+./build.sh --toolchain clang14-toolchain.cmake
+----
+
+[#windows]
+=== Building on Windows
+
+Almost everything is portable and should work:
+
+* build scripts (using git-bash)
+* dependencies via Conan
+* build with CMake + ninja + cl.exe
+* all libraries, examples, tests
+
+What doesn't work:
+
+* find_file (ff) tool - it's built on low-level unix APIs, probably unportable
+
+==== How to build from command line
+
+1. (Optional) Enable https://docs.microsoft.com/en-us/windows/uwp/get-started/enable-your-device-for-development[Developer mode] to obtain ability to create symlinks
+
+2. Install https://git-scm.com/download/win[Git Bash] and run it
+
+3. We need these commands to work:
+
+    * `git` (to clone the project)
+    * `cmake`, `ninja` (build tools)
+    * `conan` (C++ package manager)
+    * `cl` (VS compiler)
+
+4. Beginning from the last one:
+
+    * Find `vcvars64.bat` in Visual Studio installation. I have *Visual Studio Build Tools 2019* and it's here:
+      `"C:\Program Files (x86)\Microsoft Visual Studio\2019\BuildTools\VC\Auxiliary\Build\vcvars64.bat"`
+      (The directory slightly differs for Community and Professional edition.)
+    * Paste the path including the quotes into Git Bash and execute it.
+    * Now we should have `cl`, `cmake` and `ninja` working.
+    * (For convenience, add https://stackoverflow.com/a/69027383/6013024[Git Bash + VS] configuration to https://docs.microsoft.com/en-us/windows/terminal/[Windows Terminal].)
+
+5. Install conan: `pip install conan` (Python should also work via VS developer tools)
+
+6. Run `./build.sh`
+
+Note that the build script detects "MINGW64_NT" as target platform, but this is not true. It builds native Windows binaries.
+The string is just the output of `uname` in Git Bash. I don't know any better way how to detect host platform on Windows (please tell me if you know).
+
+==== How to build from IDE with CMake support
+
+Works with Clion, and may work with Visual Studio (I did not try).
+
+Open the project, let the IDE load the top-level `CMakeLists.txt`.
+Add the following cmake parameter, so it also installs Conan dependencies:
+
+```
+-DCONAN_INSTALL=ON
+```
+
+You still need `conan` command working. Install it either via `pip` or use the standalone installer from https://conan.io/.
+
+[#emscripten]
+=== Porting to Emscripten
+
+The non-graphical components should build with Emscripten.
+
+Install and link https://emscripten.org/[Emscripten] so that this command works: `emcc -v`
+
+Create a https://docs.conan.io/en/latest/integrations/cross_platform/emscripten.html[Conan profile for Emscripten], for example:
+
+[source,ini]
+----
+[settings]
+os=Emscripten
+arch=wasm
+compiler=clang
+compiler.version=14
+compiler.libcxx=libc++
+compiler.cppstd=20
+build_type=MinSizeRel
+[options]
+[build_requires]
+[conf]
+# Find actual path Emscripten installation (or check CMake command line, when called with emcmake)
+tools.cmake.cmaketoolchain:user_toolchain = [".../cmake/Modules/Platform/Emscripten.cmake"]
+[env]
+# Same as above, for older packages which do not use tools.cmake.CMakeToolchain
+CONAN_CMAKE_TOOLCHAIN_FILE = .../cmake/Modules/Platform/Emscripten.cmake
+CXXFLAGS=-flto=thin
+LDFLAGS=-flto=thin
+----
+
+See a working example of such profile in the link:docker/emscripten/conan/profile[docker/emscripten] directory.
+
+Run the build (only 'core' and 'script' components work at this time):
+
+[source,bash]
+----
+./build.sh --debug --emscripten --profile emscripten core script
+----
+
+== How to use in a client program
+
+=== Linking with a client using only CMake
+
+Build and install XCI libraries (see "How to build" above),
+then use installed `xcikit-config.cmake` in your project's
+`CMakeLists.txt`:
+
+[source,cmake]
+----
+cmake_minimum_required(VERSION 3.16)
+project(example CXX)
+
+find_package(xcikit REQUIRED)
+
+add_executable(example src/main.cpp)
+target_link_libraries(example xci-widgets)
+----
+
+In the case xcikit was installed into non-standard location,
+for example `~/sdk/xcikit`, you need to set up `CMAKE_PREFIX_PATH` appropriately:
+
+[source,bash]
+----
+cmake -DCMAKE_PREFIX_PATH="~/sdk/xcikit" ..
+----
+
+=== Linking with a client using CMake and Conan
+
+Add xcikit as dependency to `conanfile.txt`:
+
+----
+[requires]
+xcikit/0.1@rbrich/stable
+
+[generators]
+cmake_paths
+----
+
+Then include generated `conan_paths.cmake` from project's `CMakeLists.txt`:
+
+[source,cmake]
+----
+if (EXISTS ${CMAKE_BINARY_DIR}/conan_paths.cmake)
+    include(${CMAKE_BINARY_DIR}/conan_paths.cmake)
+endif()
+----
+
+Now find `xcikit` in usual way:
+
+[source,cmake]
+----
+find_package(xcikit CONFIG REQUIRED)
+----
+
+Optionally, include XCI goodies:
+
+[source,cmake]
+----
+include(XciBuildOptions)
+----
+
+Link with the libraries:
+
+[source,cmake]
+----
+target_link_libraries(example xcikit::xci-text xcikit::xci-graphics)
+----

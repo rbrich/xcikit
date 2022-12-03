@@ -9,6 +9,7 @@ layout(location = 1) in vec2 in_tex_coord;
 layout(location = 0) out vec4 out_color;
 
 void main() {
+    // R channel as alpha, color from vertex
     float alpha = texture(u_tex_sampler, in_tex_coord).r;
     out_color = vec4(in_color.rgb, in_color.a * alpha);
 }

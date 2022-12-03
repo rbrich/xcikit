@@ -1,7 +1,7 @@
 // Renderer.cpp created on 2018-11-24 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Renderer.h"
@@ -9,7 +9,6 @@
 
 #include <xci/config.h>
 #include <xci/core/log.h>
-#include <xci/core/string.h>
 #include <xci/compat/macros.h>
 
 #define GLFW_INCLUDE_NONE
@@ -19,40 +18,22 @@
 #include <range/v3/view/enumerate.hpp>
 #include <range/v3/view/take.hpp>
 #include <memory>
-#include <cstring>
 #include <bitset>
 #include <array>
-
-#ifdef XCI_EMBED_SHADERS
-#define INCBIN_PREFIX g_
-#define INCBIN_STYLE INCBIN_STYLE_SNAKE
-#include <incbin.h>
-INCBIN(sprite_vert, XCI_SHARE_DIR "/shaders/sprite.vert.spv");
-INCBIN(sprite_frag, XCI_SHARE_DIR "/shaders/sprite.frag.spv");
-INCBIN(sprite_c_vert, XCI_SHARE_DIR "/shaders/sprite_c.vert.spv");
-INCBIN(sprite_c_frag, XCI_SHARE_DIR "/shaders/sprite_c.frag.spv");
-INCBIN(line_vert, XCI_SHARE_DIR "/shaders/line.vert.spv");
-INCBIN(line_frag, XCI_SHARE_DIR "/shaders/line.frag.spv");
-INCBIN(rectangle_vert, XCI_SHARE_DIR "/shaders/rectangle.vert.spv");
-INCBIN(rectangle_frag, XCI_SHARE_DIR "/shaders/rectangle.frag.spv");
-INCBIN(ellipse_vert, XCI_SHARE_DIR "/shaders/ellipse.vert.spv");
-INCBIN(ellipse_frag, XCI_SHARE_DIR "/shaders/ellipse.frag.spv");
-INCBIN(fps_vert, XCI_SHARE_DIR "/shaders/fps.vert.spv");
-INCBIN(fps_frag, XCI_SHARE_DIR "/shaders/fps.frag.spv");
-INCBIN(cursor_vert, XCI_SHARE_DIR "/shaders/cursor.vert.spv");
-INCBIN(cursor_frag, XCI_SHARE_DIR "/shaders/cursor.frag.spv");
-#endif
+#include <cstring>
+#include <cassert>
 
 namespace xci::graphics {
 
 using namespace xci::core;
-using namespace xci::core::log;
-using std::make_unique;
+using ranges::cpp20::views::take;
+using ranges::views::enumerate;
+using ranges::cpp20::any_of;
 
 
 static void glfw_error_callback(int error, const char* description)
 {
-    log_error("GLFW error {}: {}", error, description);
+    log::error("GLFW error {}: {}", error, description);
 }
 
 
@@ -97,9 +78,10 @@ vulkan_debug_callback(
         const VkDebugUtilsMessengerCallbackDataEXT* data,
         void* user_data)
 {
+    (void) user_data;
     Logger::default_instance().log(
             vulkan_severity_to_log_level(severity),
-            format("VK ({}): {}",
+            fmt::format("VK ({}): {}",
                     vulkan_msg_type_to_cstr(msg_type), data->pMessage));
     return VK_FALSE;
 }
@@ -141,21 +123,22 @@ Renderer::Renderer(core::Vfs& vfs)
     vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
     std::vector<VkLayerProperties> layer_props(layer_count);
     vkEnumerateInstanceLayerProperties(&layer_count, layer_props.data());
-    log_info("Vulkan: {} validation layers available:", layer_count);
+    log::info("Vulkan: {} validation layers available:", layer_count);
     std::vector<const char*> enabled_layers;
     enabled_layers.reserve(layer_count);
     for (const auto& props : layer_props) {
         bool enable = false;
+        std::string layer_name(props.layerName);
         if ((
-                starts_with(props.layerName, "VK_LAYER_LUNARG_") ||
-                starts_with(props.layerName, "VK_LAYER_GOOGLE_") ||
-                starts_with(props.layerName, "VK_LAYER_KHRONOS_")
-            ) && !ranges::any_of(enabled_layers,[&](const char* name) {
-                return strcmp(name, props.layerName) == 0;
-            }) && strcmp(props.layerName, "VK_LAYER_LUNARG_api_dump") != 0
+                layer_name.starts_with("VK_LAYER_LUNARG_") ||
+                layer_name.starts_with("VK_LAYER_GOOGLE_") ||
+                layer_name.starts_with("VK_LAYER_KHRONOS_")
+            ) && !any_of(enabled_layers, [&](const char* name) {
+                return layer_name == name;
+            }) && layer_name != "VK_LAYER_LUNARG_api_dump"
         )
             enable = true;
-        log_info("[{}] {} - {} (spec {}, impl {})",
+        log::info("[{}] {} - {} (spec {}, impl {})",
                 enable ? 'x' : ' ',
                 props.layerName, props.description,
                 props.specVersion, props.implementationVersion);
@@ -170,8 +153,8 @@ Renderer::Renderer(core::Vfs& vfs)
     VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = {};
     debugCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
     debugCreateInfo.messageSeverity =
-            VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-            //VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+            //VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+            VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
             VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
             VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
     debugCreateInfo.messageType =
@@ -188,17 +171,17 @@ Renderer::Renderer(core::Vfs& vfs)
     vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, nullptr);
     std::vector<VkExtensionProperties> ext_props(ext_count);
     vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, ext_props.data());
-    log_info("Vulkan: {} extensions available:", ext_count);
+    log::info("Vulkan: {} extensions available:", ext_count);
     for (const auto& props : ext_props) {
-        bool enable = ranges::any_of(extensions,[&](const char* name) {
+        bool enable = any_of(extensions, [&](const char* name) {
             return strcmp(name, props.extensionName) == 0;
         });
-        log_info("[{}] {} (spec {})",
+        log::info("[{}] {} (spec {})",
                  enable ? 'x' : ' ',
                  props.extensionName, props.specVersion);
     }
 
-    instance_create_info.enabledExtensionCount = extensions.size();
+    instance_create_info.enabledExtensionCount = (uint32_t) extensions.size();
     instance_create_info.ppEnabledExtensionNames = extensions.data();
 
     VK_TRY("vkCreateInstance",
@@ -246,45 +229,15 @@ Shader& Renderer::get_shader(ShaderId shader_id)
 
 bool Renderer::load_shader(ShaderId shader_id, Shader& shader)
 {
-#ifdef XCI_EMBED_SHADERS
-    switch (shader_id) {
-        case ShaderId::Sprite:
-            return shader.load_from_memory(
-                    (const char*) g_sprite_vert_data, g_sprite_vert_size,
-                    (const char*) g_sprite_frag_data, g_sprite_frag_size);
-        case ShaderId::SpriteC:
-            return shader.load_from_memory(
-                    (const char*) g_sprite_c_vert_data, g_sprite_c_vert_size,
-                    (const char*) g_sprite_c_frag_data, g_sprite_c_frag_size);
-        case ShaderId::Line:
-            return shader.load_from_memory(
-                    (const char*) g_line_vert_data, g_line_vert_size,
-                    (const char*) g_line_frag_data, g_line_frag_size);
-        case ShaderId::Rectangle:
-             return shader.load_from_memory(
-                    (const char*) g_rectangle_vert_data, g_rectangle_vert_size,
-                    (const char*) g_rectangle_frag_data, g_rectangle_frag_size);
-        case ShaderId::Ellipse:
-             return shader.load_from_memory(
-                    (const char*) g_ellipse_vert_data, g_ellipse_vert_size,
-                    (const char*) g_ellipse_frag_data, g_ellipse_frag_size);
-        case ShaderId::Fps:
-             return shader.load_from_memory(
-                    (const char*) g_fps_vert_data, g_fps_vert_size,
-                    (const char*) g_fps_frag_data, g_fps_frag_size);
-        case ShaderId::Cursor:
-             return shader.load_from_memory(
-                    (const char*)g_cursor_vert_data, g_cursor_vert_size,
-                    (const char*)g_cursor_frag_data, g_cursor_frag_size);
-        case ShaderId::_NumItems_:
-            return false;
-    }
-#else
     switch (shader_id) {
         case ShaderId::Sprite:
             return shader.load_from_vfs(vfs(),
                     "shaders/sprite.vert.spv",
                     "shaders/sprite.frag.spv");
+        case ShaderId::SpriteR:
+            return shader.load_from_vfs(vfs(),
+                    "shaders/sprite.vert.spv",
+                    "shaders/sprite_r.frag.spv");
         case ShaderId::SpriteC:
             return shader.load_from_vfs(vfs(),
                     "shaders/sprite_c.vert.spv",
@@ -309,10 +262,9 @@ bool Renderer::load_shader(ShaderId shader_id, Shader& shader)
             return shader.load_from_vfs(vfs(),
                     "shaders/cursor.vert.spv",
                     "shaders/cursor.frag.spv");
-        case ShaderId::_NumItems_:
+        case ShaderId::NumItems_:
             return false;
     }
-#endif
     UNREACHABLE;
 }
 
@@ -324,16 +276,59 @@ void Renderer::clear_shader_cache()
 }
 
 
+PipelineLayout& Renderer::get_pipeline_layout(const PipelineLayoutCreateInfo& ci)
+{
+    auto [it, added] = m_pipeline_layout.try_emplace(ci, *this, ci);
+    return it->second;
+}
+
+
+Pipeline& Renderer::get_pipeline(const PipelineCreateInfo& ci)
+{
+    auto [it, added] = m_pipeline.try_emplace(ci, *this, ci);
+    return it->second;
+}
+
+
+void Renderer::clear_pipeline_cache()
+{
+    m_pipeline_layout.clear();
+    m_pipeline.clear();
+}
+
+
+SharedDescriptorPool
+Renderer::get_descriptor_pool(uint32_t reserved_sets, DescriptorPoolSizes pool_sizes)
+{
+    auto [it, added] = m_descriptor_pool.try_emplace(pool_sizes);
+    auto& vec_of_pools = it->second;
+    for (auto& pool : vec_of_pools) {
+        if (pool.book_capacity(reserved_sets))
+            return SharedDescriptorPool(pool, reserved_sets);
+    }
+    // None of existing pools had enough capacity
+    auto& pool = vec_of_pools.emplace_back(*this);
+    pool.create(1000, pool_sizes);
+    if (pool.book_capacity(reserved_sets))
+        return SharedDescriptorPool(pool, reserved_sets);
+    // reserved_sets is > 1000
+    throw VulkanError("Can't reserve " + std::to_string(reserved_sets) + " descriptor sets.");
+}
+
+
 void Renderer::create_surface(GLFWwindow* window)
 {
     VK_TRY("glfwCreateWindowSurface",
             glfwCreateWindowSurface(m_instance, window, nullptr, &m_surface));
 
+    create_device();
+
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
-    m_extent = { uint32_t(width), uint32_t(height) };
 
-    create_device();
+    query_surface_capabilities(m_physical_device, { uint32_t(width), uint32_t(height) });
+    query_swapchain(m_physical_device);
+
     create_swapchain();
     create_renderpass();
     create_framebuffers();
@@ -346,6 +341,8 @@ void Renderer::destroy_surface()
         return;
 
     clear_shader_cache();
+    clear_pipeline_cache();
+    clear_descriptor_pool_cache();
     destroy_framebuffers();
     destroy_renderpass();
     destroy_swapchain();
@@ -360,7 +357,7 @@ void Renderer::reset_framebuffer(VkExtent2D new_size)
 {
     vkDeviceWaitIdle(m_device);
 
-    m_extent = new_size;
+    query_surface_capabilities(m_physical_device, new_size);
     if (!query_swapchain(m_physical_device))
         VK_THROW("vulkan: physical device no longer usable");
 
@@ -382,23 +379,29 @@ void Renderer::create_device()
     if (device_count == 0)
         VK_THROW("vulkan: couldn't find any physical device");
 
-    // required device extensions
-    const char* const device_extensions[] = {
-            VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    // device extensions
+    const char* const required_device_extensions[] = {
+            VK_KHR_SWAPCHAIN_EXTENSION_NAME,
     };
+    const char* const additional_device_extensions[] = {
+            "VK_KHR_portability_subset",  // required if present on the device
+    };
+    std::vector<const char*> chosen_device_extensions;
 
     // queue family index - queried here, used later
     uint32_t graphics_queue_family = 0;
 
-    log_info("Vulkan: {} devices available:", device_count);
-    for (const auto& device : devices | ranges::views::take(device_count)) {
+    log::info("Vulkan: {} devices available:", device_count);
+    for (const auto& device : devices | take(device_count)) {
         VkPhysicalDeviceProperties device_props;
         vkGetPhysicalDeviceProperties(device, &device_props);
         VkPhysicalDeviceFeatures device_features;
         vkGetPhysicalDeviceFeatures(device, &device_features);
 
-        // choose only the first adequate device
-        bool choose = m_physical_device == VK_NULL_HANDLE;
+        // Choose the first adequate device,
+        // or the one selected by set_device_id
+        bool choose = (m_physical_device == VK_NULL_HANDLE) && \
+            (m_device_id == ~0u || m_device_id == device_props.deviceID);
 
         // check supported queue families
         if (choose) {
@@ -415,16 +418,34 @@ void Renderer::create_device()
             vkEnumerateDeviceExtensionProperties(device, nullptr, &ext_count, nullptr);
             std::vector<VkExtensionProperties> ext_props(ext_count);
             vkEnumerateDeviceExtensionProperties(device, nullptr, &ext_count, ext_props.data());
-            std::bitset<std::size(device_extensions)> has_exts;
+            std::bitset<std::size(required_device_extensions)> has_exts;
+            std::bitset<std::size(additional_device_extensions)> add_exts;
             for (const auto& ext : ext_props) {
-                for (size_t i = 0; i < std::size(device_extensions); i++) {
-                    if (std::strcmp(ext.extensionName, device_extensions[i]) == 0) {
+                for (size_t i = 0; i < std::size(required_device_extensions); i++) {
+                    if (std::strcmp(ext.extensionName, required_device_extensions[i]) == 0) {
                         has_exts.set(i);
+                        break;
+                    }
+                }
+
+                for (size_t i = 0; i < std::size(additional_device_extensions); i++) {
+                    if (std::strcmp(ext.extensionName, additional_device_extensions[i]) == 0) {
+                        add_exts.set(i);
                         break;
                     }
                 }
             }
             choose = has_exts.all();
+            if (choose) {
+                chosen_device_extensions.reserve(
+                        std::size(required_device_extensions) + std::size(additional_device_extensions));
+                std::copy(std::begin(required_device_extensions), std::end(required_device_extensions),
+                          std::back_inserter(chosen_device_extensions));
+                for (size_t i = 0; i < std::size(additional_device_extensions); i++) {
+                    if (add_exts[i])
+                        chosen_device_extensions.push_back(additional_device_extensions[i]);
+                }
+            }
         }
 
         // check swapchain
@@ -435,12 +456,22 @@ void Renderer::create_device()
         // save chosen device handle
         if (choose) {
             m_physical_device = device;
+            load_device_limits(device_props.limits);
         }
 
-        log_info("({}) {}: {} (api {})",
+        if (m_device_id == device_props.deviceID && !choose) {
+            log::error("Chosen device ID not usable: {}", m_device_id);
+            throw VulkanError("Chosen device ID not usable");
+        }
+
+        log::info("({}) {}: {} (api {})",
                 choose ? '*' : ' ',
                 device_props.deviceID,
                 device_props.deviceName, device_props.apiVersion);
+    }
+
+    if (!m_physical_device) {
+        throw VulkanError("Did not found an usable device");
     }
 
     // create VkDevice
@@ -463,8 +494,8 @@ void Renderer::create_device()
 //                .enabledLayerCount = (uint32_t) enabled_layers.size(),
 //                .ppEnabledLayerNames = enabled_layers.data(),
 //#endif
-                .enabledExtensionCount = std::size(device_extensions),
-                .ppEnabledExtensionNames = device_extensions,
+                .enabledExtensionCount = (uint32_t) chosen_device_extensions.size(),
+                .ppEnabledExtensionNames = chosen_device_extensions.data(),
                 .pEnabledFeatures = &device_features,
         };
 
@@ -502,6 +533,8 @@ void Renderer::create_device()
 
 void Renderer::destroy_device()
 {
+    if (m_device == VK_NULL_HANDLE)
+        return;
     vkDestroyCommandPool(m_device, m_command_pool, nullptr);
     vkDestroyCommandPool(m_device, m_transient_command_pool, nullptr);
     vkDestroyDevice(m_device, nullptr);
@@ -564,10 +597,12 @@ void Renderer::create_swapchain()
 
 void Renderer::destroy_swapchain()
 {
-    for (auto image_view : m_image_views | ranges::views::take(m_image_count)) {
-        vkDestroyImageView(m_device, image_view, nullptr);
+    if (m_device != VK_NULL_HANDLE) {
+        for (auto image_view : m_image_views | take(m_image_count)) {
+            vkDestroyImageView(m_device, image_view, nullptr);
+        }
+        vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
     }
-    vkDestroySwapchainKHR(m_device, m_swapchain, nullptr);
 }
 
 
@@ -624,7 +659,8 @@ void Renderer::create_renderpass()
 
 void Renderer::destroy_renderpass()
 {
-    vkDestroyRenderPass(m_device, m_render_pass, nullptr);
+    if (m_device != VK_NULL_HANDLE)
+        vkDestroyRenderPass(m_device, m_render_pass, nullptr);
 }
 
 
@@ -652,7 +688,7 @@ void Renderer::create_framebuffers()
 
 void Renderer::destroy_framebuffers()
 {
-    for (auto framebuffer : m_framebuffers | ranges::views::take(m_image_count)) {
+    for (auto framebuffer : m_framebuffers | take(m_image_count)) {
         vkDestroyFramebuffer(m_device, framebuffer, nullptr);
     }
 }
@@ -667,7 +703,7 @@ Renderer::query_queue_families(VkPhysicalDevice device)
     std::vector<VkQueueFamilyProperties> families(family_count);
     vkGetPhysicalDeviceQueueFamilyProperties(device, &family_count, families.data());
 
-    for (auto&& [i, family] : families | ranges::views::enumerate) {
+    for (auto&& [i, family] : families | enumerate) {
         // require that the queue supports both graphics and presentation
 
         if (!(family.queueFlags & VK_QUEUE_GRAPHICS_BIT))
@@ -684,7 +720,7 @@ Renderer::query_queue_families(VkPhysicalDevice device)
 }
 
 
-bool Renderer::query_swapchain(VkPhysicalDevice device)
+void Renderer::query_surface_capabilities(VkPhysicalDevice device, VkExtent2D new_size)
 {
     VkSurfaceCapabilitiesKHR capabilities;
     VK_TRY("vkGetPhysicalDeviceSurfaceCapabilitiesKHR",
@@ -693,6 +729,8 @@ bool Renderer::query_swapchain(VkPhysicalDevice device)
 
     if (capabilities.currentExtent.width != UINT32_MAX)
         m_extent = capabilities.currentExtent;
+    else if (new_size.width != UINT32_MAX)
+        m_extent = new_size;
 
     m_extent.width = std::clamp(m_extent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
     m_extent.height = std::clamp(m_extent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
@@ -701,7 +739,11 @@ bool Renderer::query_swapchain(VkPhysicalDevice device)
     m_image_count = capabilities.minImageCount + 1;
     if (capabilities.maxImageCount > 0 && m_image_count > capabilities.maxImageCount)
         m_image_count = capabilities.maxImageCount;
+}
 
+
+bool Renderer::query_swapchain(VkPhysicalDevice device)
+{
     uint32_t format_count;
     vkGetPhysicalDeviceSurfaceFormatsKHR(device, m_surface, &format_count, nullptr);
     std::vector<VkSurfaceFormatKHR> formats(format_count);
@@ -729,7 +771,7 @@ bool Renderer::query_swapchain(VkPhysicalDevice device)
             found_mode = mode;
     }
     if (m_present_mode != found_mode) {
-        log_warning("vulkan: requested present mode not supported: {}", m_present_mode);
+        log::warning("vulkan: requested present mode not supported: {}", int(m_present_mode));
         m_present_mode = found_mode;
     }
 
@@ -767,6 +809,13 @@ void Renderer::set_present_mode(PresentMode mode)
     destroy_swapchain();
     create_swapchain();
     create_framebuffers();
+}
+
+
+void Renderer::load_device_limits(const VkPhysicalDeviceLimits& limits)
+{
+    m_max_image_dimension_2d = limits.maxImageDimension2D;
+    m_min_uniform_offset_alignment = limits.minUniformBufferOffsetAlignment;
 }
 
 

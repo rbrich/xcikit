@@ -1,17 +1,8 @@
-// Label.h created on 2018-06-23, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Label.h created on 2018-06-23 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCIKIT_LABEL_H
 #define XCIKIT_LABEL_H
@@ -20,6 +11,8 @@
 #include <xci/text/Text.h>
 
 namespace xci::widgets {
+
+using namespace xci::graphics::unit_literals;
 
 
 class Label: public Widget {
@@ -34,7 +27,7 @@ public:
 
 private:
     text::Text m_text;
-    float m_padding = 0.02f;
+    VariUnits m_padding = 1_vp;
 };
 
 

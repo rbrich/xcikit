@@ -1,7 +1,7 @@
 // Texture.h created on 2018-03-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 
@@ -26,10 +26,16 @@ using xci::core::Rect_u;
 using std::uint8_t;
 
 
+enum class ColorFormat {
+    Grey,  // 256 shades of grey
+    BGRA,  // 32bit color
+};
+
+
 /// Gray-scale texture - 1 byte per pixel
 class Texture {
 public:
-    explicit Texture(Renderer& renderer);
+    explicit Texture(Renderer& renderer, ColorFormat format);
     ~Texture() { destroy(); }
 
     // Create or resize the texture
@@ -44,18 +50,21 @@ public:
     void update();
 
     Vec2u size() const { return m_size; }
-    VkDeviceSize byte_size() const { return m_size.x * m_size.y; }
+    VkDeviceSize byte_size() const;
+    ColorFormat color_format() const { return m_format; }
 
     // Vulkan handles
     VkSampler vk_sampler() const { return m_sampler; }
     VkImageView vk_image_view() const { return m_image_view; }
 
 private:
+    VkFormat vk_format() const;
     VkDevice device() const;
     void destroy();
 
 private:
     Renderer& m_renderer;
+    ColorFormat m_format;
     Vec2u m_size;
     VkBuffer m_staging_buffer {};
     VkImage m_image {};

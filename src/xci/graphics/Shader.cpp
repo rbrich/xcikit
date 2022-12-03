@@ -16,10 +16,9 @@
 namespace xci::graphics {
 
 using namespace xci::core;
-using namespace xci::core::log;
 
 
-static std::vector<std::uint32_t> read_spirv_file(const std::string& pathname)
+static std::vector<std::uint32_t> read_spirv_file(const fs::path& pathname)
 {
     std::ifstream f(pathname, std::ios::ate | std::ios::binary);
     if (!f)
@@ -30,7 +29,7 @@ static std::vector<std::uint32_t> read_spirv_file(const std::string& pathname)
 
     assert(file_size % sizeof(std::uint32_t) == 0);
     std::vector<std::uint32_t> content(file_size / sizeof(std::uint32_t));
-    f.read(reinterpret_cast<char*>(content.data()), file_size);
+    f.read(reinterpret_cast<char*>(content.data()), std::streamsize(file_size));
     if (!f)
         content.clear();
 
@@ -72,7 +71,7 @@ VkShaderModule Shader::create_module(const uint32_t* code, size_t size)
 }
 
 
-bool Shader::load_from_file(const std::string& vertex, const std::string& fragment)
+bool Shader::load_from_file(const fs::path& vertex, const fs::path& fragment)
 {
     clear();
 
@@ -89,8 +88,8 @@ bool Shader::load_from_file(const std::string& vertex, const std::string& fragme
             fragment_code.data(),
             fragment_code.size() * sizeof(uint32_t));
 
-    log_info("Loaded vertex shader: {}", vertex);
-    log_info("Loaded fragment shader: {}", fragment);
+    log::info("Loaded vertex shader: {}", vertex);
+    log::info("Loaded fragment shader: {}", fragment);
     return true;
 }
 

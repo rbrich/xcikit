@@ -14,9 +14,18 @@ add_library(xci-widgets
     Label.cpp
     TextTerminal.cpp
     )
+add_library(xcikit::xci-widgets ALIAS xci-widgets)
 
 target_link_libraries(xci-widgets
-    xci-text)
+    PUBLIC
+        xci-text
+    PRIVATE
+        range-v3::range-v3
+    )
+
+if (BUILD_SHARED_LIBS)
+    set_target_properties(xci-widgets PROPERTIES CXX_VISIBILITY_PRESET default)
+endif()
 
 if (APPLE)
     set_target_properties(xci-widgets PROPERTIES
@@ -36,4 +45,6 @@ if (BUILD_FRAMEWORKS)
         )
 endif()
 
-install(TARGETS xci-widgets EXPORT xcikit DESTINATION lib)
+if (BUILD_SHARED_LIBS OR XCI_INSTALL_DEVEL)
+    install(TARGETS xci-widgets EXPORT xcikit DESTINATION ${CMAKE_INSTALL_LIBDIR})
+endif()

@@ -1,17 +1,8 @@
-// Font.cpp created on 2018-03-02, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Font.cpp created on 2018-03-02 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018–2021 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Font.h"
 
@@ -21,19 +12,23 @@
 
 namespace xci::text {
 
-using namespace core::log;
+using namespace xci::core;
 
 
 // ctor+dtor have to be implemented in cpp file
 // to allow use of forward declaration in unique_ptr<FontTexture>
-Font::Font(Renderer& renderer) : m_renderer(renderer) {}
+Font::Font(Renderer& renderer, uint32_t texture_size)
+    : m_renderer(renderer), m_texture_size(texture_size) {}
 Font::~Font() = default;
 
 
 void Font::add_face(std::unique_ptr<FontFace> face)
 {
-    if (!m_texture)
-        m_texture = std::make_unique<FontTexture>(m_renderer);
+    if (!m_texture) {
+        bool color = face->has_color();
+        uint32_t size = std::min(m_texture_size, m_renderer.max_image_dimension_2d());
+        m_texture = std::make_unique<FontTexture>(m_renderer, size, color);
+    }
     m_faces.emplace_back(std::move(face));
 }
 
@@ -56,45 +51,100 @@ bool Font::add_face(const core::Vfs& vfs, std::string path, int face_index)
 }
 
 
-void Font::set_style(FontStyle style)
+bool Font::set_style(FontStyle style)
 {
-    m_current_face = 0;
-    for (auto& face : m_faces) {
-        if (face->style() == style) {
-            return;
+    auto select_face_idx = [this](size_t idx) {
+        if (idx != m_current_face) {
+            m_current_face = idx;
+            // Apply attributes to new face
+            face().set_size(m_size);
+            face().set_stroke(m_stroke_type, m_stroke_radius);
         }
-        ++m_current_face;
+    };
+
+    // find face index by style flags
+    size_t face_idx = 0;
+    for (auto& face : m_faces) {
+        // It's important to first try setting variable style,
+        // because the reported style is incomplete.
+        // E.g. "Thin" face is reported as "Regular"
+        if (face->set_style(style) || face->style() == style) {
+            select_face_idx(face_idx);
+            return true;
+        }
+        ++face_idx;
     }
+
     // Style not found, selected the first one
-    log_warning("Requested font style not found: {}", int(style));
+    log::warning("Requested font style not found: {}", int(style));
+    select_face_idx(0);
+    return false;
 }
 
 
-void Font::set_size(unsigned size)
+bool Font::set_weight(uint16_t weight)
+{
+    auto select_face_idx = [this](size_t idx) {
+        if (idx != m_current_face) {
+            m_current_face = idx;
+            // Apply attributes to new face
+            face().set_size(m_size);
+            face().set_stroke(m_stroke_type, m_stroke_radius);
+        }
+    };
+
+    // find face index by weight and current style (e.g. italic)
+    size_t face_idx = 0;
+    auto cur_style = face().style();
+    for (auto& face : m_faces) {
+        if (face->style() == cur_style && face->weight() == weight) {
+            select_face_idx(face_idx);
+            return true;
+        }
+        ++face_idx;
+    }
+
+    // variable fonts - set 'wght' axis
+    if (face().set_weight(weight))
+        return true;
+
+    // Weight not found, selected the first one
+    log::warning("Requested font weight not found: {}", weight);
+    return false;
+}
+
+
+bool Font::set_size(unsigned size)
 {
     m_size = size;
-    face().set_size(m_size);
+    return face().set_size(m_size);
 }
 
-Font::Glyph* Font::get_glyph(CodePoint code_point)
-{
-    // translate char to glyph
-    // In case of failure, this returns 0, which is okay, because
-    // glyph nr. 0 contains graphic for "undefined character code".
-    uint glyph_index = face().get_glyph_index(code_point);
 
+bool Font::set_stroke(StrokeType type, float radius)
+{
+    m_stroke_type = type;
+    m_stroke_radius = (type == StrokeType::None) ? 0.f : radius;
+    return face().set_stroke(m_stroke_type, m_stroke_radius);
+}
+
+
+Font::Glyph* Font::get_glyph(GlyphIndex glyph_index)
+{
     // check cache
-    GlyphKey glyph_key{m_current_face, m_size, glyph_index};
+    GlyphKey glyph_key {
+        m_current_face, face().size_key(), face().weight(),
+        glyph_index,
+        m_stroke_type, m_stroke_radius
+    };
     auto iter = m_glyphs.find(glyph_key);
     if (iter != m_glyphs.end())
         return &iter->second;
 
     // render
-    face().set_size(m_size);
     FontFace::Glyph glyph_render;
-    if (!face().render_glyph(glyph_index, glyph_render)) {
+    if (!face().render_glyph(glyph_index, glyph_render))
         return nullptr;
-    }
 
     // insert into texture
     Glyph glyph;
@@ -102,7 +152,7 @@ Font::Glyph* Font::get_glyph(CodePoint code_point)
                               glyph.m_tex_coords)) {
         // no more space in texture -> reset and try again
         clear_cache();
-        return get_glyph(code_point);
+        return get_glyph(glyph_index);
     }
 
     // fill metrics

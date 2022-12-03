@@ -1,17 +1,8 @@
-// Theme.cpp created on 2018-04-10, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Theme.cpp created on 2018-04-10 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018–2021 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Theme.h"
 #include <xci/graphics/Renderer.h>
@@ -24,7 +15,7 @@ namespace xci::widgets {
 
 Theme::Theme(graphics::Renderer& renderer)
         : m_renderer(renderer),
-          m_font(renderer), m_icon_font(renderer)
+          m_font(renderer), m_emoji_font(renderer, 1024u), m_icon_font(renderer)
 {}
 
 
@@ -33,10 +24,11 @@ bool Theme::load_default()
     core::Vfs& vfs = m_renderer.vfs();
 
     // Base font
-    TRY(load_font_face(vfs, "fonts/Hack/Hack-Regular.ttf", 0));
-    TRY(load_font_face(vfs, "fonts/Hack/Hack-Bold.ttf", 0));
-    TRY(load_font_face(vfs, "fonts/Hack/Hack-Italic.ttf", 0));
-    TRY(load_font_face(vfs, "fonts/Hack/Hack-BoldItalic.ttf", 0));
+    TRY(load_font_face(vfs, "fonts/RobotoMono/RobotoMono_wght.ttf", 0));
+    TRY(load_font_face(vfs, "fonts/RobotoMono/RobotoMono-Italic_wght.ttf", 0));
+
+    // Emoji font
+    TRY(load_emoji_font_face(vfs, "fonts/Noto/NotoColorEmoji.ttf", 0));
 
     // Material Icons
     TRY(load_icon_font_face(vfs, "fonts/MaterialIcons/MaterialIcons-Regular.woff", 0));
@@ -58,6 +50,12 @@ bool Theme::load_default()
 bool Theme::load_font_face(const core::Vfs& vfs, const char* file_path, int face_index)
 {
     return m_font.add_face(vfs, file_path, face_index);
+}
+
+
+bool Theme::load_emoji_font_face(const core::Vfs& vfs, const char* file_path, int face_index)
+{
+    return m_emoji_font.add_face(vfs, file_path, face_index);
 }
 
 

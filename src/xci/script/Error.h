@@ -1,69 +1,73 @@
-// Error.h created on 2019-05-18, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// Error.h created on 2019-05-18 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#ifndef XCIKIT_ERROR_H
-#define XCIKIT_ERROR_H
+#ifndef XCI_SCRIPT_ERROR_H
+#define XCI_SCRIPT_ERROR_H
 
 #include "Value.h"
-#include <xci/core/format.h>
+#include "Source.h"
+#include <xci/core/error.h>
+#include <xci/core/TermCtl.h>
+
+#include <fmt/core.h>
+#include <fmt/ostream.h>
+
+#include <string_view>
+
 
 namespace xci::script {
 
-
-struct SourceInfo {
-    size_t line_number = 0;
-    size_t byte_in_line = 0;
-    const char* line_begin = nullptr;
-    const char* line_end = nullptr;
-    const char* source = nullptr;
-
-    template <typename Input, typename Position>
-    void load(const Input &in, const Position& pos) {
-        line_begin = in.begin_of_line(pos);
-        line_end = in.end_of_line(pos);
-        line_number = pos.line;
-        byte_in_line = pos.byte_in_line;
-        source = in.source();
-    }
-};
+using core::TermCtl;
+using std::string_view;
 
 
-class Error : public std::exception {
+class ScriptError : public core::Error {
 public:
-    explicit Error(std::string msg) : m_msg(std::move(msg)) {}
-    explicit Error(std::string msg, const SourceInfo& si) :
-        m_msg(std::move(msg)),
-        m_file(core::format("{}:{}:{}",
-            si.source, si.line_number, si.byte_in_line)),
-        m_detail(core::format("{}\n{}^",
-            std::string{si.line_begin, si.line_end},
-            std::string(si.byte_in_line, ' ')))
-    {}
+    explicit ScriptError(std::string msg) : Error(std::move(msg)) {}
+    explicit ScriptError(std::string msg, const SourceLocation& loc) :
+        Error(std::move(msg)),
+        m_file(fmt::format("{}:{}:{}",
+            loc.source_name(), loc.line, loc.column))
+    {
+        if (!loc)
+            return;
+        auto line = loc.source_line();
+        auto column = TermCtl::stripped_width(std::string_view{line}.substr(0, loc.column));
+        m_detail = fmt::format("{}\n{:>{}}", line, '^', column);
+    }
 
-    const char* what() const noexcept override { return m_msg.c_str(); }
-    const std::string& detail() const noexcept { return m_detail; }
     const std::string& file() const noexcept { return m_file; }
+    const std::string& detail() const noexcept { return m_detail; }
 
 private:
-    std::string m_msg;
     std::string m_file;
     std::string m_detail;
 };
 
 
-inline std::ostream& operator<<(std::ostream& os, const Error& e) noexcept
+struct StackTraceFrame {
+    std::string function_name;
+};
+
+using StackTrace = std::vector<StackTraceFrame>;
+
+
+class RuntimeError : public ScriptError {
+public:
+    explicit RuntimeError(std::string msg) : ScriptError(std::move(msg)) {}
+
+    void set_stack_trace(StackTrace&& trace) { m_trace = std::move(trace); }
+    const StackTrace& trace() const noexcept { return m_trace; }
+
+private:
+    StackTrace m_trace;
+};
+
+
+inline std::ostream& operator<<(std::ostream& os, const ScriptError& e) noexcept
 {
     if (!e.file().empty())
         os << e.file() << ": ";
@@ -74,160 +78,219 @@ inline std::ostream& operator<<(std::ostream& os, const Error& e) noexcept
 }
 
 
-struct NotImplemented : public Error {
-    explicit NotImplemented(const std::string& name)
-        : Error(core::format("not implemented: {}", name)) {}
+struct NotImplemented : public RuntimeError {
+    explicit NotImplemented(string_view name)
+        : RuntimeError(fmt::format("not implemented: {}", name)) {}
 };
 
 
-struct BadInstruction : public Error {
+struct ValueOutOfRange : public RuntimeError {
+    explicit ValueOutOfRange(std::string msg) : RuntimeError(std::move(msg)) {}
+};
+
+
+struct IndexOutOfBounds : public RuntimeError {
+    explicit IndexOutOfBounds(int idx, size_t len)
+            : RuntimeError(fmt::format("list index out of bounds: {} not in [0..{}]",
+                                       idx, len-1)) {}
+};
+
+
+struct BadInstruction : public ScriptError {
     explicit BadInstruction(uint8_t code)
-            : Error(core::format("bad instruction: {}", code)) {}
+            : ScriptError(fmt::format("bad instruction: {}", code)) {}
 };
 
 
-struct ParseError : public Error {
-    explicit ParseError(const std::string& msg)
-            : Error(core::format("parse error: {}", msg)) {}
+struct ParseError : public ScriptError {
+    explicit ParseError(string_view msg, const SourceLocation& loc = {})
+            : ScriptError(fmt::format("parse error: {}", msg), loc) {}
 };
 
 
-struct StackUnderflow : public Error {
-    explicit StackUnderflow() : Error(core::format("stack underflow")) {}
+struct StackUnderflow : public ScriptError {
+    explicit StackUnderflow() : ScriptError(fmt::format("stack underflow")) {}
 };
 
 
-struct StackOverflow : public Error {
-    explicit StackOverflow() : Error(core::format("stack overflow")) {}
+struct StackOverflow : public ScriptError {
+    explicit StackOverflow() : ScriptError(fmt::format("stack overflow")) {}
 };
 
 
-struct UndefinedName : public Error {
-    explicit UndefinedName(const std::string& name, const SourceInfo& si)
-        : Error(core::format("undefined name: {}", name), si) {}
+struct UndefinedName : public ScriptError {
+    explicit UndefinedName(string_view name, const SourceLocation& loc)
+        : ScriptError(fmt::format("undefined name: {}", name), loc) {}
 };
 
 
-struct UndefinedTypeName : public Error {
-    explicit UndefinedTypeName(const std::string& name)
-            : Error(core::format("undefined type name: {}", name)) {}
+struct UndefinedTypeName : public ScriptError {
+    explicit UndefinedTypeName(string_view name, const SourceLocation& loc)
+            : ScriptError(fmt::format("undefined type name: {}", name), loc) {}
 };
 
 
-struct MultipleDeclarationError : public Error {
-    explicit MultipleDeclarationError(const std::string& name)
-            : Error(core::format("multiple declaration of name: {}", name)) {}
+struct RedefinedName : public ScriptError {
+    explicit RedefinedName(string_view name, const SourceLocation& loc)
+            : ScriptError(fmt::format("redefined name: {}", name), loc) {}
 };
 
 
-struct UnexpectedArgument : public Error {
-    explicit UnexpectedArgument(int idx, const SourceInfo& si)
-            : Error(core::format("unexpected argument #{}", idx), si) {}
+struct UnsupportedOperandsError : public ScriptError {
+    explicit UnsupportedOperandsError(string_view op)
+            : ScriptError(fmt::format("unsupported operands to '{}'", op)) {}
 };
 
 
-struct UnsupportedOperandsError : public Error {
-    explicit UnsupportedOperandsError(const std::string& op)
-            : Error(core::format("unsupported operands to '{}'", op)) {}
+struct UnknownTypeName : public ScriptError {
+    explicit UnknownTypeName(string_view name)
+        : ScriptError(fmt::format("unknown type name: {}", name)) {}
 };
 
 
-struct UnexpectedArgumentCount : public Error {
-    explicit UnexpectedArgumentCount(int exp, int got)
-            : Error(core::format("function expects {} args, called with {} args",
-                    exp, got)) {}
+struct UnexpectedArgumentCount : public ScriptError {
+    explicit UnexpectedArgumentCount(size_t exp, size_t got, const SourceLocation& loc)
+            : ScriptError(fmt::format("function expects {} args, called with {} args",
+                    exp, got), loc) {}
 };
 
 
-struct UnknownTypeName : public Error {
-    explicit UnknownTypeName(const std::string& name)
-        : Error(core::format("unknown type name: {}", name)) {}
+struct UnexpectedArgument : public ScriptError {
+    explicit UnexpectedArgument(size_t num, const TypeInfo& ftype, const SourceLocation& loc);
 };
 
 
-struct UnexpectedArgumentType : public Error {
-    explicit UnexpectedArgumentType(int idx, const TypeInfo& exp, const TypeInfo& got, const SourceInfo& si)
-            : Error(core::format("function expects {} for arg #{}, called with {}",
-                                 exp, idx, got), si) {}
+struct UnexpectedArgumentType : public ScriptError {
+    // num is 1-based
+    explicit UnexpectedArgumentType(size_t num, const TypeInfo& exp, const TypeInfo& got,
+                                    const SourceLocation& loc);
 };
 
 
-struct UnexpectedReturnType : public Error {
-    explicit UnexpectedReturnType(const TypeInfo& exp, const TypeInfo& got)
-            : Error(core::format("function returns {}, body evaluates to {}",
-                                 exp, got)) {}
+struct UnexpectedReturnType : public ScriptError {
+    explicit UnexpectedReturnType(const TypeInfo& exp, const TypeInfo& got);
 };
 
 
-struct MissingExplicitType : public Error {
-    explicit MissingExplicitType()
-        : Error("type cannot be inferred and wasn't specified") {}
+struct MissingExplicitType : public ScriptError {
+    explicit MissingExplicitType(const SourceLocation& loc)
+        : ScriptError("type cannot be inferred and wasn't specified", loc) {}
+    explicit MissingExplicitType(string_view name, const SourceLocation& loc)
+            : ScriptError(fmt::format("type cannot be inferred and wasn't specified: {}", name), loc) {}
+};
+
+struct MissingTypeArg : public ScriptError {
+    explicit MissingTypeArg(const SourceLocation& loc)
+        : ScriptError("generic function requires type argument", loc) {}
+};
+
+struct UnexpectedTypeArg : public ScriptError {
+    explicit UnexpectedTypeArg(const SourceLocation& loc)
+            : ScriptError("unexpected type argument", loc) {}
+};
+
+struct UnexpectedGenericFunction : public ScriptError {
+    explicit UnexpectedGenericFunction(string_view fn_desc, const SourceLocation& loc)
+            : ScriptError(fmt::format("generic function must be named or immediately called: {}",
+                            fn_desc), loc) {}
 };
 
 
-struct FunctionNotFound : public Error {
-    explicit FunctionNotFound(const std::string& name, const std::string& args,
-                              const std::string& candidates)
-        : Error(core::format("function not found: {} {}\n   Candidates:\n{}", name, args, candidates)) {}
+struct FunctionNotFound : public ScriptError {
+    explicit FunctionNotFound(string_view name, string_view args,
+                              string_view candidates, const SourceLocation& loc)
+        : ScriptError(fmt::format("function not found: {}: {}\n"
+                             "   Candidates:\n{}", name, args, candidates), loc) {}
 };
 
 
-struct FunctionNotFoundInClass : public Error {
-    explicit FunctionNotFoundInClass(const std::string& fn, const std::string& cls)
-            : Error(core::format("instance function '{}' not found in class '{}'",
+struct FunctionConflict : public ScriptError {
+    explicit FunctionConflict(string_view name, string_view args,
+                              string_view candidates, const SourceLocation& loc)
+            : ScriptError(fmt::format("function cannot be uniquely resolved: {}: {}\n"
+                                 "   Candidates:\n{}", name, args, candidates), loc) {}
+};
+
+
+struct FunctionNotFoundInClass : public ScriptError {
+    explicit FunctionNotFoundInClass(string_view fn, string_view cls)
+            : ScriptError(fmt::format("instance function '{}' not found in class '{}'",
                                  fn, cls)) {}
 };
 
 
-struct TooManyLocalsError : public Error {
-    explicit TooManyLocalsError()
-            : Error(core::format("too many local values in function")) {}
+struct TooManyLocals : public ScriptError {
+    explicit TooManyLocals()
+            : ScriptError(fmt::format("too many local values in function")) {}
 };
 
 
-struct ConditionNotBool : public Error {
-    explicit ConditionNotBool() : Error("condition doesn't evaluate to Bool") {}
+struct ConditionNotBool : public ScriptError {
+    explicit ConditionNotBool() : ScriptError("condition doesn't evaluate to Bool") {}
 };
 
 
-struct DefinitionTypeMismatch : public Error {
-    explicit DefinitionTypeMismatch(const TypeInfo& exp, const TypeInfo& got)
-            : Error(core::format("definition type mismatch: specified {}, inferred {}",
-                                 exp, got)) {}
+struct DeclarationTypeMismatch : public ScriptError {
+    explicit DeclarationTypeMismatch(const TypeInfo& decl, const TypeInfo& now, const SourceLocation& loc);
 };
 
 
-struct DefinitionParamTypeMismatch : public Error {
-    explicit DefinitionParamTypeMismatch(int idx, const TypeInfo& exp, const TypeInfo& got)
-            : Error(core::format("definition type mismatch: specified {} for param #{}, inferred {}",
-                                 exp, idx, got)) {}
+struct DefinitionTypeMismatch : public ScriptError {
+    explicit DefinitionTypeMismatch(const TypeInfo& exp, const TypeInfo& got, const SourceLocation& loc);
 };
 
 
-struct BranchTypeMismatch : public Error {
-    explicit BranchTypeMismatch(const TypeInfo& exp, const TypeInfo& got)
-            : Error(core::format("branch type mismatch: then branch {} else branch {}",
-                                 exp, got)) {}
+struct DefinitionParamTypeMismatch : public ScriptError {
+    explicit DefinitionParamTypeMismatch(size_t idx, const TypeInfo& exp, const TypeInfo& got);
 };
 
 
-struct ListElemTypeMismatch : public Error {
-    explicit ListElemTypeMismatch(const TypeInfo& exp, const TypeInfo& got)
-            : Error(core::format("list element type mismatch: got {} in list of {}",
-                                 got, exp)) {}
+struct BranchTypeMismatch : public ScriptError {
+    explicit BranchTypeMismatch(const TypeInfo& exp, const TypeInfo& got);
 };
 
 
-struct IndexOutOfBounds : public Error {
-    explicit IndexOutOfBounds(int idx, size_t len)
-            : Error(core::format("list index out of bounds: {} not in [0..{}]",
-                                 idx, len-1)) {}
+struct ListElemTypeMismatch : public ScriptError {
+    explicit ListElemTypeMismatch(const TypeInfo& exp, const TypeInfo& got, const SourceLocation& loc);
 };
 
 
-struct IntrinsicsFunctionError : public Error {
-    explicit IntrinsicsFunctionError(const std::string& message)
-        : Error("intrinsics function: " + message) {}
+struct StructTypeMismatch : public ScriptError {
+    explicit StructTypeMismatch(const TypeInfo& got, const SourceLocation& loc);
+};
+
+
+struct StructUnknownKey : public ScriptError {
+    explicit StructUnknownKey(const TypeInfo& struct_type, const std::string& key, const SourceLocation& loc);
+};
+
+
+struct StructDuplicateKey : public ScriptError {
+    explicit StructDuplicateKey(const std::string& key, const SourceLocation& loc)
+            : ScriptError(fmt::format("duplicate struct key \"{}\"", key), loc) {}
+};
+
+
+struct StructKeyTypeMismatch : public ScriptError {
+    explicit StructKeyTypeMismatch(const TypeInfo& struct_type, const TypeInfo& spec, const TypeInfo& got, const SourceLocation& loc);
+};
+
+
+struct IntrinsicsFunctionError : public ScriptError {
+    explicit IntrinsicsFunctionError(string_view message, const SourceLocation& loc)
+        : ScriptError(fmt::format("intrinsics function: {}", message), loc) {}
+};
+
+
+struct UnresolvedSymbol : public ScriptError {
+    explicit UnresolvedSymbol(string_view name)
+            : ScriptError(fmt::format("unresolved symbol: {}", name)) {}
+};
+
+
+struct ImportError : public ScriptError {
+    explicit ImportError(string_view name)
+            : ScriptError(fmt::format("module not found: {}", name)) {}
 };
 
 

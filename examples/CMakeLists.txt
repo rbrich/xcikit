@@ -1,33 +1,82 @@
-set(INST_EXAMPLES share/xcikit/examples)
+# ------------ #
+# Functions    #
+# ------------ #
 
-add_subdirectory(plugin)
-add_subdirectory(script)
+set(EXAMPLES_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
-if (XCI_WITH_VULKAN)
-    add_subdirectory(graphics)
-    add_subdirectory(text)
-    add_subdirectory(widgets)
+function(add_demo TARGET)
+    set(options)
+    set(one_value_args)
+    set(multi_value_args SOURCES LINK DEPS CDEFS)
+    cmake_parse_arguments(PARSE_ARGV 1 ARG "${options}"
+        "${one_value_args}" "${multi_value_args}")
+
+    if (ARG_SOURCES)
+        add_executable(${TARGET} ${ARG_SOURCES})
+    else()
+        add_executable(${TARGET} ${TARGET}.cpp)
+    endif()
+
+    target_include_directories(${TARGET} PRIVATE ${EXAMPLES_DIR})
+
+    if (ARG_LINK)
+        target_link_libraries(${TARGET} ${ARG_LINK})
+    endif()
+
+    if (ARG_DEPS)
+        add_dependencies(${TARGET} ${ARG_DEPS})
+    endif()
+
+    if (ARG_CDEFS)
+        target_compile_definitions(${TARGET} PRIVATE ${ARG_CDEFS})
+    endif()
+
+    install(TARGETS ${TARGET} EXPORT xcikit DESTINATION ${DEMO_DEST})
+endfunction()
+
+
+# ------------ #
+# Examples     #
+# ------------ #
+
+if (EMSCRIPTEN)
+    add_link_options(-sEXIT_RUNTIME=1)
 endif()
 
-# core
+# xci-core
 
-add_executable(demo_log demo_log.cpp)
-target_link_libraries(demo_log xci-core)
-install(TARGETS demo_log EXPORT xcikit DESTINATION ${INST_EXAMPLES})
+add_subdirectory(core)
 
-add_executable(demo_filewatch demo_filewatch.cpp)
-target_link_libraries(demo_filewatch xci-core)
-install(TARGETS demo_filewatch EXPORT xcikit DESTINATION ${INST_EXAMPLES})
+if (NOT EMSCRIPTEN)
+    add_subdirectory(plugin)
+endif()
 
-add_executable(demo_termctl demo_termctl.cpp)
-target_link_libraries(demo_termctl xci-core)
-install(TARGETS demo_termctl EXPORT xcikit DESTINATION ${INST_EXAMPLES})
+# xci-data
 
-add_executable(demo_vfs demo_vfs.cpp)
-target_link_libraries(demo_vfs xci-core)
-install(TARGETS demo_vfs EXPORT xcikit DESTINATION ${INST_EXAMPLES})
+if (XCI_DATA)
+    add_subdirectory(data)
+endif()
 
-# data
+# xci-script
 
-add_executable(demo_reflect reflect/demo_reflect.cpp)
-target_link_libraries(demo_reflect xci-data)
+if (XCI_SCRIPT)
+    add_subdirectory(script)
+endif()
+
+# xci-graphics
+
+if (XCI_GRAPHICS)
+    add_subdirectory(graphics)
+endif()
+
+# xci-text
+
+if (XCI_TEXT)
+    add_subdirectory(text)
+endif()
+
+# xci-widgets
+
+if (XCI_WIDGETS)
+    add_subdirectory(widgets)
+endif()

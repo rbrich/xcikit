@@ -1,444 +1,131 @@
-// demo_script.cpp created on 2019-05-15, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// demo_script.cpp created on 2020-01-11 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2020–2021 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <xci/script/Interpreter.h>
-#include <xci/script/Error.h>
-#include <xci/script/Value.h>
-#include <xci/script/dump.h>
-#include <xci/core/TermCtl.h>
-#include <xci/core/file.h>
+#include <xci/script/NativeDelegate.h>
 #include <xci/core/Vfs.h>
 #include <xci/core/log.h>
-#include <xci/core/format.h>
-#include <xci/core/string.h>
 #include <xci/config.h>
 
-#include <docopt.h>
-#include <replxx.hxx>
-#include <tao/pegtl.hpp>
+#include <fmt/core.h>
 
-#include <iostream>
-#include <vector>
-#include <stack>
-#include <algorithm>
+#include <string_view>
+#include <cassert>
 
-using namespace xci::core;
 using namespace xci::script;
-using Replxx = replxx::Replxx;
-using std::string;
-using std::cin;
-using std::cout;
-using std::endl;
-using std::flush;
-using std::stack;
-using std::vector;
-using std::map;
+using namespace xci::core;
 
 
-struct Options {
-    bool print_raw_ast = false;
-    bool print_ast = false;
-    bool print_symtab = false;
-    bool print_module = false;
-    bool print_bytecode = false;
-    bool trace_bytecode = false;
-    bool with_std_lib = true;
-    uint32_t compiler_flags = 0;
-};
-
-
-static bool g_done {false};
-
-std::vector<std::unique_ptr<Module>>& modules()
+void hello_fun(Stack& stack, void*, void*)
 {
-    static std::vector<std::unique_ptr<Module>> modules;
-    return modules;
-}
+    // pull arguments according to function signature
+    auto arg = stack.pull<value::String>();
 
-struct Environment {
-    Vfs vfs;
+    // push return value (this can be done as early as we know the value)
+    // (failing to pull/push expected values will cause hard-to-track errors
+    // e.g. StackUnderflow at some later point in another function)
+    stack.push(value::Int32{42});
 
-    Environment() {
-        Logger::init(Logger::Level::Warning);
-        vfs.mount(XCI_SHARE_DIR);
-    }
-};
+    // here comes our native code
+    fmt::print("Hello, {}!\n", arg.value());
 
-bool evaluate(Environment& env, const string& line, const Options& opts, int input_number=-1)
-{
-    static TermCtl& t = TermCtl::stdout_instance();
-    static Interpreter interpreter;
-
-    auto& parser = interpreter.parser();
-    auto& compiler = interpreter.compiler();
-    auto& machine = interpreter.machine();
-
-    try {
-        if (modules().empty()) {
-            interpreter.configure(opts.compiler_flags);
-            modules().push_back(std::make_unique<BuiltinModule>());
-
-            if (opts.with_std_lib) {
-                auto f = env.vfs.read_file("script/sys.ys");
-                auto content = f.content();
-                auto sys_module = interpreter.build_module("sys", content->string_view());
-                modules().push_back(move(sys_module));
-            }
-        }
-
-        // parse
-        ast::Module ast;
-        parser.parse(line, ast);
-
-        if (opts.print_raw_ast) {
-            cout << "Raw AST:" << endl << dump_tree << ast << endl;
-        }
-
-        // compile
-        std::string module_name = input_number >= 0 ? format("input_{}", input_number) : "<input>";
-        auto module = std::make_unique<Module>(module_name);
-        for (auto& m : modules())
-            module->add_imported_module(*m);
-        Function func {*module, module->symtab()};
-        compiler.compile(func, ast);
-
-        // print AST with Compiler modifications
-        if (opts.print_ast) {
-            cout << "Processed AST:" << endl << dump_tree << ast << endl;
-        }
-
-        // print symbol table
-        if (opts.print_symtab) {
-            cout << "Symbol table:" << endl << module->symtab() << endl;
-        }
-
-        // print compiled module content
-        if (opts.print_module) {
-            cout << "Module content:" << endl << *module << endl;
-        }
-
-        // stop if we were only processing the AST, without actual compilation
-        if ((opts.compiler_flags & Compiler::PPMask) != 0)
-            return false;
-
-        stack<vector<size_t>> codelines_stack;
-        if (opts.print_bytecode || opts.trace_bytecode) {
-            machine.set_call_enter_cb([&codelines_stack](const Function& f) {
-                cout << "[" << codelines_stack.size() << "] " << f.signature() << endl;
-                codelines_stack.emplace();
-                for (auto it = f.code().begin(); it != f.code().end(); it++) {
-                    codelines_stack.top().push_back(it - f.code().begin());
-                    cout << ' ' << f.dump_instruction_at(it) << endl;
-                }
-            });
-            machine.set_call_exit_cb([&codelines_stack, &opts](const Function& function) {
-                if (opts.trace_bytecode) {
-                    cout
-                        << t.move_up(codelines_stack.top().size() + 1)
-                        << t.clear_screen_down();
-                }
-                codelines_stack.pop();
-            });
-        }
-        bool erase = true;
-        if (opts.trace_bytecode) {
-            machine.set_bytecode_trace_cb([&erase, &codelines_stack, &machine]
-            (const Function& f, Code::const_iterator ipos) {
-                if (erase)
-                    cout << t.move_up(codelines_stack.top().size());
-                for (auto it = f.code().begin(); it != f.code().end(); it++) {
-                    if (it == ipos) {
-                        cout << t.yellow() << '>' << f.dump_instruction_at(it) << t.normal() << endl;
-                    } else {
-                        cout << ' ' << f.dump_instruction_at(it) << endl;
-                    }
-                }
-                if (ipos == f.code().end()) {
-                    cout << "---" << endl;
-                    codelines_stack.top().push_back(9999);
-                } else {
-                    // pause
-                    erase = true;
-                    for (;;) {
-                        cout << "dbg> " << flush;
-                        string cmd;
-                        getline(cin, cmd);
-                        if (cmd == "n" || cmd.empty()) {
-                            break;
-                        } else if (cmd == "ss") {
-                            cout << "Stack content:" << endl;
-                            cout << machine.stack() << endl;
-                            erase = false;
-                        } else {
-                            cout << "Help:\nn    next step\nss   show stack" << endl;
-                            erase = false;
-                        }
-                    }
-                    if (erase)
-                        cout << t.move_up(1);
-                }
-            });
-        }
-        machine.call(func, [](const Value& invoked) {
-            if (!invoked.is_void()) {
-                cout << t.bold().yellow() << invoked << t.normal() << endl;
-            }
-        });
-
-        // returned value of last statement
-        auto result = machine.stack().pull(func.signature().return_type);
-        if (!result->is_void()) {
-            cout << t.bold() << *result << t.normal() << endl;
-        }
-
-        // save result as static value `_<N>` in the module
-        auto result_idx = module->add_value(std::move(result));
-        module->symtab().add({"_" + std::to_string(input_number), result_idx});
-
-        modules().push_back(move(module));
-        return true;
-    } catch (const Error& e) {
-        if (!e.file().empty())
-            cout << e.file() << ": ";
-        cout << t.red().bold() << "Error: " << e.what() << t.normal() ;
-        if (!e.detail().empty())
-            cout << std::endl << t.yellow() << e.detail() << t.normal();
-        cout << endl;
-        return false;
-    }
+    // some values live on heap - they need to be explicitly released
+    // - normally, only the instances on the stack are counted
+    // - by pulling the value from the stack, we removed one instance
+    // - unless we're going to push it back as a result,
+    //   its refcount needs to be decreased
+    arg.decref();
 }
 
 
-namespace cmd_parser {
-using namespace tao::pegtl;
-
-// ----------------------------------------------------------------------------
-// Grammar
-
-struct Unsigned: seq< plus<digit> > {};
-
-struct Quit: sor<TAO_PEGTL_KEYWORD("q"), TAO_PEGTL_KEYWORD("quit")> {};
-struct Help: sor<TAO_PEGTL_KEYWORD("h"), TAO_PEGTL_KEYWORD("help")> {};
-struct DumpModule: seq<
-            sor<TAO_PEGTL_KEYWORD("dm"), TAO_PEGTL_KEYWORD("dump_module")>,
-            star<space>,
-            opt<sor< Unsigned, identifier> >
-        > {};
-
-struct CmdGrammar: seq<
-            one<'.'>,
-            sor<Quit, Help, DumpModule>,
-            eof
-        > {};
-
-// ----------------------------------------------------------------------------
-// Actions
-
-struct Args {
-    size_t num = 0;
-    unsigned u1;
-    std::string s1;
-};
-
-template<typename Rule>
-struct Action : nothing<Rule> {};
-
-template<>
-struct Action<Quit> {
-    static void apply0() {
-        g_done = true;
-    }
-};
-
-template<>
-struct Action<Help> {
-    static void apply0() {
-        cout << ".q, .quit                      quit" << endl;
-        cout << ".h, .help                      show all accepted commands" << endl;
-        cout << ".dm, .dump_module [#|name]     print contents of last compiled module (or module by index or by name)" << endl;
-    }
-};
-
-template<>
-struct Action<DumpModule> : change_states< Args > {
-    template<typename Input>
-    static void success(const Input &in, Args& args) {
-        TermCtl& t = TermCtl::stdout_instance();
-        if (modules().empty()) {
-            cout << t.red().bold() << "Error: no modules available" << t.normal() << endl;
-            return;
-        }
-
-        unsigned mod = 0;
-        if (args.num == 1) {
-            if (!args.s1.empty()) {
-                size_t n = 0;
-                for (const auto& m : modules()) {
-                    if (m->name() == args.s1) {
-                        cout << "Module [" << n << "] " << args.s1 << ":" << endl << *m << endl;
-                        return;
-                    }
-                    ++n;
-                }
-            } else {
-                mod = args.u1;
-                if (mod >= modules().size()) {
-                    cout << t.red().bold() << "Error: module index out of range: "
-                         << mod << t.normal() << endl;
-                    return;
-                }
-            }
-        } else {
-            mod = modules().size() - 1;
-        }
-        const auto& m = *modules()[mod];
-        cout << "Module [" << mod << "] " << m.name() << ":" << endl << m << endl;
-    }
-};
-
-template<>
-struct Action<Unsigned> {
-    template<typename Input>
-    static void apply(const Input &in, Args& args) {
-        ++args.num;
-        args.u1 = atoi(in.string().c_str());
-    }
-};
-
-template<>
-struct Action<identifier> {
-    template<typename Input>
-    static void apply(const Input &in, Args& args) {
-        ++args.num;
-        args.s1 = in.string();
-    }
-};
-
-// ----------------------------------------------------------------------------
-
-}  // namespace cmd_parser
-
-
-int main(int argc, char* argv[])
+static std::string toupper_at(std::string_view word, int32_t index)
 {
-    Environment env;
+    std::string res(word);
+    auto i = unsigned(index);
+    if (i < word.size())
+        res[i] = (char)(unsigned char)toupper(res[i]);
+    return res;
+}
 
-    map<string, docopt::value> args = docopt::docopt(
-            "Usage:\n"
-            "    demo_script [options] [INPUT ...]\n"
-            "\n"
-            "Options:\n"
-            "   -e EXPR --eval EXPR    Load EXPR as it was a module, run it and exit\n"
-            "   -O --optimize          Allow optimizations\n"
-            "   -r --raw-ast           Print raw AST\n"
-            "   -t --ast               Print processed AST\n"
-            "   -b --bytecode          Print bytecode\n"
-            "   -s --symtab            Print symbol table\n"
-            "   -m --module            Print compiled module content\n"
-            "   --trace                Trace bytecode\n"
-            "   --pp-symbols           Stop after symbols pass\n"
-            "   --pp-nonlocals         Stop after nonlocals pass\n"
-            "   --pp-typecheck         Stop after typecheck pass\n"
-            "   --no-std               Do not load standard library\n"
-            "   -h --help              Show help\n",
-            { argv + 1, argv + argc },
-            /*help =*/ true,
-            "");
 
-    Options opts;
-    opts.print_raw_ast = args["--raw-ast"].asBool();
-    opts.print_ast = args["--ast"].asBool();
-    opts.print_symtab = args["--symtab"].asBool();
-    opts.print_module = args["--module"].asBool();
-    opts.print_bytecode = args["--bytecode"].asBool();
-    opts.trace_bytecode = args["--trace"].asBool();
-    opts.with_std_lib = !args["--no-std"].asBool();
+void toupper_at_wrapped(Stack& stack, void*, void*)
+{
+    auto arg1 = stack.pull<value::String>();
+    auto arg2 = stack.pull<value::Int32>();
+    arg1.decref();
+    arg2.decref();
+    auto result = toupper_at(arg1.value(), arg2.value());
+    stack.push(value::String{result});
+}
 
-    if (args["--optimize"].asBool())
-        opts.compiler_flags |= Compiler::O1;
-    if (args["--pp-symbols"].asBool())
-        opts.compiler_flags |= Compiler::PPSymbols;
-    if (args["--pp-nonlocals"].asBool())
-        opts.compiler_flags |= Compiler::PPNonlocals;
-    if (args["--pp-typecheck"].asBool())
-        opts.compiler_flags |= Compiler::PPTypes;
 
-    if (args["--eval"]) {
-        evaluate(env, args["--eval"].asString(), opts);
-        return 0;
-    }
+int main()
+{
+    // silence logging
+    Logger::init(Logger::Level::Warning);
 
-    if (!args["INPUT"].asStringList().empty()) {
-        for (const auto& input : args["INPUT"].asStringList()) {
-            auto content = read_text_file(input);
-            if (!content) {
-                std::cerr << "cannot read file: " << input << std::endl;
-                exit(1);
-            }
-            evaluate(env, *content, opts);
-        }
-        return 0;
-    }
+    xci::core::Vfs vfs;
 
-    TermCtl& t = TermCtl::stdout_instance();
-    Replxx rx;
-    int input_number = 0;
-    std::string history_file = "./.xci_script_history";
-    rx.history_load(history_file);
-    rx.set_max_history_size(1000);
+    // this is a convenient class which manages everything needed to interpret a script
+    Interpreter interpreter {vfs};
 
-    while (!g_done) {
-        const char* input;
-        do {
-            input = rx.input(t.format("{green}_{}> {normal}", input_number));
-        } while (input == nullptr && errno == EAGAIN);
+    // create module with our native function
+    Module module {interpreter.module_manager()};
 
-        if (input == nullptr) {
-            cout << ".quit" << endl;
-            break;
-        }
+    // low level interface - the native function has to operate directly on Stack
+    // and its signature is specified explicitly
+    module.add_native_function(
+            // symbolic name
+            "hello",
+            // signature: String -> Int32
+            {ti_string()}, ti_int32(),
+            // native function to be called
+            hello_fun);
 
-        std::string line{input};
-        strip(line);
-        if (line.empty())
-            continue;
+    // still low level interface
+    module.add_native_function(
+            "toupper_at_wrapped",
+            {ti_string(), ti_int32()},
+            ti_string(),
+            toupper_at_wrapped);
+    // the same function with auto-generated wrapper function
+    // (which is essentially the same as our manually written `toupper_at_wrapped`)
+    module.add_native_function("toupper_at", toupper_at);
 
-        rx.history_add(input);
+    // capture-less lambda works, too
+    module.add_native_function("add2", [](int a, int b) { return a + b; });
 
-        if (line[0] == '.') {
-            // control commands
-            using cmd_parser::CmdGrammar;
-            using cmd_parser::Action;
+    // lambda with capture and other function objects can't be passed directly,
+    // but they can be wrapped in captureless lambda
+    auto lambda_with_capture = [v=1](int a, int b) { return a + b + v; };
+    module.add_native_function("add_v", [](void* l, int a, int b)
+        { return (*static_cast<decltype(lambda_with_capture)*>(l)) (a, b); },
+        &lambda_with_capture);
 
-            tao::pegtl::memory_input<> in(line, "command");
-            try {
-                if (!tao::pegtl::parse< CmdGrammar, Action >( in )) {
-                    // not matched at all
-                    cout << t.red().bold() << "Error: unknown command: " << line << " (try .help)" << t.normal() << endl;
-                }
-            } catch (tao::pegtl::parse_error&) {
-                // partially matched, encountered error - possibly wrong argument
-                cout << t.red().bold() << "Error: unknown command: " << line << " (try .help)" << t.normal() << endl;
-            }
-            continue;
-        }
+    // compile the snippet and add it as a new function to module, then run it
+    interpreter.eval(module, R"(hello "Demo")");
 
-        if (evaluate(env, line, opts, input_number))
-            ++input_number;
-    }
+    // capture the result
+    auto result = interpreter.eval(module, R"(hello (toupper_at "world" 0))");
 
-    rx.history_save(history_file);
+    // result contains value of the last expression in the script
+    assert(result.type() == Type::Int32);
+    assert(result.get<int32_t>() == 42);
+
+    // use standard functions in a script - they must be imported manually
+    module.import_module("builtin");  // builtin `__add` intrinsic
+
+    // std module is loaded from std.fire file, looked up in VFS as "script/std.fire"
+    if (!vfs.mount(XCI_SHARE))
+        return EXIT_FAILURE;
+    module.import_module("std");    // `add` function, which is alias of `+` operator
+
+    auto result2 = interpreter.eval(module, R"(10 + 2)");
+    assert(result2.type() == Type::Int32);
+    assert(result2.get<int32_t>() == 12);
+
     return 0;
 }

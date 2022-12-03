@@ -1,66 +1,111 @@
-// TypeInfo.cpp created on 2019-06-09, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// TypeInfo.cpp created on 2019-06-09 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "TypeInfo.h"
 #include "Error.h"
 #include <xci/compat/macros.h>
+#include <range/v3/algorithm/any_of.hpp>
 #include <numeric>
-
-using namespace std;
 
 namespace xci::script {
 
 
-size_t TypeInfo::size() const
+Type decode_arg_type(uint8_t arg)
 {
-    switch (type()) {
-        case Type::Unknown:     return 0;
-        case Type::Void:        return 1;
-        case Type::Bool:        return 1;
-        case Type::Byte:        return 1;
-        case Type::Char:        return 4;
-        case Type::Int32:       return 4;
-        case Type::Int64:       return 8;
-        case Type::Float32:     return 4;
-        case Type::Float64:     return 8;
-        case Type::String:      return sizeof(byte*) + sizeof(size_t);
-        case Type::List:        return sizeof(byte*) + sizeof(size_t);
+    switch (arg) {
+        case 1: return Type::Byte;
+        case 3: return Type::UInt32;
+        case 4: return Type::UInt64;
+        case 8: return Type::Int32;
+        case 9: return Type::Int64;
+        case 0xC: return Type::Float32;
+        case 0xD: return Type::Float64;
+        default: return Type::Unknown;
+    }
+}
+
+
+size_t type_size_on_stack(Type type)
+{
+    switch (type) {
+        case Type::Unknown:
         case Type::Tuple:
-            return accumulate(m_subtypes.begin(), m_subtypes.end(), 0,
-                              [](size_t init, const TypeInfo& ti)
-                              { return init + ti.size(); });
-        case Type::Function:    return sizeof(byte*) + sizeof(void*);
-        case Type::Module:      return 0;  // TODO
+        case Type::Struct:
+        case Type::Named:
+            return 0;
+        case Type::Bool:
+        case Type::Byte:
+            return 1;
+        case Type::Char:
+        case Type::UInt32:
+        case Type::Int32:
+        case Type::Float32:
+            return 4;
+        case Type::UInt64:
+        case Type::Int64:
+        case Type::Float64:
+            return 8;
+        case Type::String:
+        case Type::List:
+        case Type::Function:
+        case Type::Stream:
+        case Type::Module:
+            return sizeof(void*);
     }
     return 0;
 }
 
 
+size_t TypeInfo::size() const
+{
+    switch (m_type) {
+        case Type::Named:
+            return named_type().type_info.size();
+        case Type::Tuple: {
+            const auto& l = subtypes();
+            return accumulate(l.begin(), l.end(), size_t(0),
+                              [](size_t init, const TypeInfo& ti) { return init + ti.size(); });
+        }
+        case Type::Struct: {
+            const auto& l = struct_items();
+            return accumulate(l.begin(), l.end(), size_t(0),
+                              [](size_t init, const TypeInfo::StructItem& ti) { return init + ti.second.size(); });
+        }
+        default:
+            return type_size_on_stack(type());
+    }
+}
+
+
 void TypeInfo::foreach_heap_slot(std::function<void(size_t offset)> cb) const
 {
-    switch (type()) {
-        case Type::String:      cb(0); break;
-        case Type::Function:    cb(0); break;
-        case Type::List:        cb(0); break;
+    switch (underlying_type()) {
+        case Type::String:
+        case Type::List:
+        case Type::Function:
+        case Type::Stream:
+            cb(0);
+            break;
         case Type::Tuple: {
             size_t pos = 0;
-            for (const auto& ti : m_subtypes) {
+            for (const auto& ti : subtypes()) {
                 ti.foreach_heap_slot([&cb, pos](size_t offset) {
                     cb(pos + offset);
                 });
                 pos += ti.size();
+            }
+            break;
+        }
+        case Type::Struct: {
+            size_t pos = 0;
+            for (const auto& item : struct_items()) {
+                item.second.foreach_heap_slot([&cb, pos](size_t offset) {
+                    cb(pos + offset);
+                });
+                pos += item.second.size();
             }
             break;
         }
@@ -69,29 +114,37 @@ void TypeInfo::foreach_heap_slot(std::function<void(size_t offset)> cb) const
 }
 
 
-void TypeInfo::replace_var(uint8_t idx, const TypeInfo& ti)
+void TypeInfo::replace_var(SymbolPointer var, const TypeInfo& ti)
 {
-    if (idx == 0)
+    if (!var)
         return;
     switch (m_type) {
         case Type::Unknown:
-            if (m_var == idx)
+            if (generic_var() == var)
                 *this = ti;
             break;
         case Type::Function: {
-            // work on copy of signature
-            auto sig_copy = make_shared<Signature>(*m_signature);
-            for (auto& prm : sig_copy->params) {
-                prm.replace_var(idx, ti);
+            SignaturePtr sig_ptr;
+            if (signature_ptr().use_count() > 1) {
+                // multiple users - make copy of the signature
+                m_info = std::make_shared<Signature>(signature());
             }
-            sig_copy->return_type.replace_var(idx, ti);
-            m_signature = move(sig_copy);
+            for (auto& prm : signature().params) {
+                prm.replace_var(var, ti);
+            }
+            signature().return_type.replace_var(var, ti);
             break;
         }
         case Type::Tuple:
         case Type::List:
-            for (auto& sub : m_subtypes)
-                sub.replace_var(idx, ti);
+            assert(std::holds_alternative<Subtypes>(m_info));
+            for (auto& sub : std::get<Subtypes>(m_info))
+                sub.replace_var(var, ti);
+            break;
+        case Type::Struct:
+            assert(std::holds_alternative<StructItems>(m_info));
+            for (auto& item : std::get<StructItems>(m_info))
+                item.second.replace_var(var, ti);
             break;
         default:
             break;
@@ -99,80 +152,291 @@ void TypeInfo::replace_var(uint8_t idx, const TypeInfo& ti)
 }
 
 
-const TypeInfo& TypeInfo::elem_type() const
+TypeInfo::TypeInfo(Type type) : m_type(type)
 {
-    assert(m_type == Type::List);
-    return m_subtypes[0];
+    switch (type) {
+        case Type::Unknown:
+            m_info = Var{};
+            break;
+        case Type::List:
+        case Type::Tuple:
+            m_info = Subtypes();
+            break;
+        case Type::Struct:
+            m_info = StructItems();
+            break;
+        case Type::Function:
+            m_info = SignaturePtr();
+            break;
+        default:
+            break;
+    }
+}
+
+
+TypeInfo::TypeInfo(ListTag, TypeInfo list_elem)
+        : m_type(Type::List), m_info(std::vector{std::move(list_elem)})
+{}
+
+
+TypeInfo::TypeInfo(std::string name, TypeInfo&& type_info)
+        : m_type(Type::Named),
+          m_info(std::make_shared<NamedType>(NamedType{std::move(name), std::move(type_info)}))
+{}
+
+
+TypeInfo::TypeInfo(TypeInfo&& other) noexcept
+        : m_type(other.m_type), m_info(std::move(other.m_info))
+{
+    other.m_type = Type::Unknown;
+    other.m_info = Var{};
+}
+
+
+TypeInfo& TypeInfo::operator=(TypeInfo&& other) noexcept
+{
+    m_type = other.m_type;
+    m_info = std::move(other.m_info);
+    other.m_type = Type::Unknown;
+    other.m_info = Var{};
+    return *this;
+}
+
+
+const TypeInfo& TypeInfo::effective_type() const
+{
+    if (is_callable() && !signature().has_nonvoid_params())
+        return signature().return_type.effective_type();
+    return *this;
+}
+
+
+bool is_same_underlying(const TypeInfo& lhs, const TypeInfo& rhs)
+{
+    const TypeInfo& l = lhs.underlying();
+    const TypeInfo& r = rhs.underlying();
+    switch (l.type()) {
+        case Type::Unknown:
+        case Type::Named:
+            return false;
+        case Type::Bool:
+        case Type::Byte:
+        case Type::Char:
+        case Type::UInt32:
+        case Type::UInt64:
+        case Type::Int32:
+        case Type::Int64:
+        case Type::Float32:
+        case Type::Float64:
+        case Type::String:
+        case Type::Module:
+        case Type::Stream:
+            return l.type() == r.type();
+        case Type::List:
+            return r.type() == Type::List &&
+                   is_same_underlying(l.elem_type(), r.elem_type());
+        case Type::Tuple:
+        case Type::Struct:
+            if (r.type() == Type::Tuple || r.type() == Type::Struct) {
+                auto l_types = l.struct_or_tuple_subtypes();
+                auto r_types = r.struct_or_tuple_subtypes();
+                if (l_types.size() != r_types.size())
+                    return false;
+                auto r_type_it = r_types.begin();
+                for (const auto& l_type : l_types) {
+                    if (!is_same_underlying(l_type, *r_type_it++))
+                        return false;
+                }
+                return true;
+            }
+            return false;
+        case Type::Function:
+            // FIXME: deep compare underlying types in function prototype?
+            return false;
+    }
+    UNREACHABLE;
 }
 
 
 bool TypeInfo::operator==(const TypeInfo& rhs) const
 {
     if (m_type == Type::Unknown || rhs.type() == Type::Unknown)
-        return true;  // unknown type matches all other types
+        return true;  // unknown type matches any other type
     if (m_type != rhs.type())
         return false;
     if (m_type == Type::Function)
-        return *m_signature == *rhs.m_signature;
-    if (m_type == Type::Tuple || m_type == Type::List)
-        return m_subtypes == rhs.m_subtypes;
-    return true;
+        return signature() == rhs.signature();  // compare content, not pointer
+    if (m_type == Type::Named)
+        return named_type() == rhs.named_type();
+    return m_info == rhs.m_info;
 }
 
 
-std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
+Type TypeInfo::underlying_type() const
 {
-    switch (v.type()) {
-        case Type::Unknown:     return os << "?";
-        case Type::Void:        return os << "Void";
-        case Type::Bool:        return os << "Bool";
-        case Type::Byte:        return os << "Byte";
-        case Type::Char:        return os << "Char";
-        case Type::Int32:       return os << "Int32";
-        case Type::Int64:       return os << "Int64";
-        case Type::Float32:     return os << "Float32";
-        case Type::Float64:     return os << "Float64";
-        case Type::String:      return os << "String";
-        case Type::List:
-            return os << "[" << v.subtypes()[0] << "]";
-        case Type::Tuple: {
-            os << "(";
-            for (const auto& ti : v.subtypes()) {
-                os << ti;
-                if (&ti != &v.subtypes().back())
-                    os << ", ";
-            }
-            return os << ")";
-        }
-        case Type::Function:    return os << v.signature();
-        case Type::Module:      return os << "Module";
-    }
-    UNREACHABLE;
+    return m_type == Type::Named ? named_type().type_info.underlying_type() : m_type;
 }
 
 
-void Signature::resolve_return_type(const TypeInfo& t)
+bool TypeInfo::is_generic() const
 {
-    if (!return_type) {
-        if (!t)
-            throw MissingExplicitType();
-        return_type = t;
-    }
-    if (return_type != t)
-        throw UnexpectedReturnType(return_type, t);
+    if (m_type == Type::Unknown)
+        return true;
+    if (m_type == Type::Function)
+        return signature_ptr()->has_any_generic();
+    if (m_type == Type::List)
+        return elem_type().is_generic();
+    if (m_type == Type::Tuple)
+        return ranges::any_of(subtypes(), [](const TypeInfo& type_info) {
+            return type_info.is_generic();
+        });
+    return false;
 }
 
 
-std::ostream& operator<<(std::ostream& os, const Signature& v)
+auto TypeInfo::generic_var() const -> Var
 {
-    if (!v.params.empty()) {
-        os << "| ";
-        for (auto& param : v.params) {
-            os << param << " ";
-        }
-        os << "| -> ";
-    }
-    return os << v.return_type;
+    assert(m_type == Type::Unknown);
+    assert(std::holds_alternative<Var>(m_info));
+    return std::get<Var>(m_info);
+}
+
+
+auto TypeInfo::elem_type() const -> const TypeInfo&
+{
+    if (m_type == Type::Named)
+        return named_type().type_info.elem_type();
+    assert(m_type == Type::List);
+    assert(std::holds_alternative<Subtypes>(m_info));
+    assert(std::get<Subtypes>(m_info).size() == 1);
+    return std::get<Subtypes>(m_info)[0];
+}
+
+
+auto TypeInfo::elem_type() -> TypeInfo&
+{
+    if (m_type == Type::Named)
+        return named_type_ptr()->type_info.elem_type();
+    assert(m_type == Type::List);
+    assert(std::holds_alternative<Subtypes>(m_info));
+    assert(std::get<Subtypes>(m_info).size() == 1);
+    return std::get<Subtypes>(m_info)[0];
+}
+
+
+auto TypeInfo::subtypes() const -> const Subtypes&
+{
+    if (m_type == Type::Named)
+        return named_type().type_info.subtypes();
+    assert(m_type == Type::Tuple);
+    assert(std::holds_alternative<Subtypes>(m_info));
+    return std::get<Subtypes>(m_info);
+}
+
+
+auto TypeInfo::subtypes() -> Subtypes&
+{
+    if (m_type == Type::Named)
+        return named_type_ptr()->type_info.subtypes();
+    assert(m_type == Type::Tuple);
+    assert(std::holds_alternative<Subtypes>(m_info));
+    return std::get<Subtypes>(m_info);
+}
+
+
+auto TypeInfo::struct_items() const -> const StructItems&
+{
+    if (m_type == Type::Named)
+        return named_type().type_info.struct_items();
+    assert(m_type == Type::Struct);
+    assert(std::holds_alternative<StructItems>(m_info));
+    return std::get<StructItems>(m_info);
+}
+
+
+const TypeInfo* TypeInfo::struct_item_by_name(const std::string& name) const
+{
+    const auto& items = struct_items();
+    auto it = std::find_if(items.begin(), items.end(), [&name](const StructItem& item) {
+         return item.first == name;
+    });
+    if (it == items.end())
+        return nullptr;
+    return &it->second;
+}
+
+
+auto TypeInfo::struct_or_tuple_subtypes() const -> Subtypes
+{
+    if (m_type == Type::Tuple)
+        return subtypes();
+    const auto& items = struct_items();
+    Subtypes res;
+    res.reserve(items.size());
+    std::transform(items.begin(), items.end(), std::back_inserter(res), [](const auto& item) {
+        return item.second;
+    });
+    return res;
+}
+
+
+auto TypeInfo::signature_ptr() const -> const SignaturePtr&
+{
+    if (m_type == Type::Named)
+        return named_type().type_info.signature_ptr();
+    assert(m_type == Type::Function);
+    assert(std::holds_alternative<SignaturePtr>(m_info));
+    return std::get<SignaturePtr>(m_info);
+}
+
+
+const TypeInfo::NamedTypePtr& TypeInfo::named_type_ptr() const
+{
+    assert(m_type == Type::Named);
+    assert(std::holds_alternative<NamedTypePtr>(m_info));
+    return std::get<NamedTypePtr>(m_info);
+}
+
+
+const TypeInfo& TypeInfo::underlying() const
+{
+    return m_type == Type::Named ? named_type().type_info.underlying() : *this;
+}
+
+
+std::string TypeInfo::name() const
+{
+    return named_type().name;
+}
+
+
+bool Signature::has_generic_params() const
+{
+    return ranges::any_of(params, [](const TypeInfo& type_info) {
+        return type_info.is_generic();
+    });
+}
+
+
+bool Signature::has_generic_return_type() const
+{
+    return return_type.is_generic();
+}
+
+
+bool Signature::has_generic_nonlocals() const
+{
+    return ranges::any_of(nonlocals, [](const TypeInfo& type_info) {
+        return type_info.is_generic();
+    });
+}
+
+
+bool Signature::has_nonvoid_params() const
+{
+    return ranges::any_of(params, [](const TypeInfo& type_info) {
+        return !type_info.is_void();
+    });
 }
 
 

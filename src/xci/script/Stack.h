@@ -1,28 +1,22 @@
-// Stack.h created on 2019-05-18, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// Stack.h created on 2019-05-18 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_STACK_H
 #define XCI_SCRIPT_STACK_H
 
 #include "Value.h"
-#include "Function.h"
-#include <xci/compat/utility.h>
-#include <xci/compat/bit.h>
-#include <stack>
+#include "Error.h"
+#include <xci/core/container/ChunkedStack.h>
+#include <cstddef>  // byte
+#include <vector>
+#include <ostream>
 
 namespace xci::script {
+
+class Function;
 
 
 /// Call stack
@@ -34,6 +28,10 @@ namespace xci::script {
 /// - TypeInfo stack for keeping record of types of data on main stack
 ///   (this is optional, might be disabled for non-debug programs)
 /// - Frame stack for keeping record of called functions and return addresses
+///
+/// Also keeps track of current set of I/O streams. Enter/leave functions
+/// modify the current streams, push the original stream on main stack
+/// and restore it from there.
 
 class Stack {
 public:
@@ -42,39 +40,36 @@ public:
 
     using StackAbs = size_t;  // address into stack, zero is the bottom (this is basically negative address, bad for reasoning, but it's stable when stack grows)
     using StackRel = size_t;  // address into stack, zero is stack pointer (top of the stack, address grows to the bottom)
+    using CodeOffs = size_t;  // instruction pointer (bytecode offset from beginning of the function)
 
     StackRel to_rel(StackAbs abs) const { return size() - abs; }
     StackAbs to_abs(StackRel rel) const { return size() - rel; }
 
-    void push(const Value& o);
+    void push(const Value& v);
+    void push(const TypedValue& v) { push(v.value()); }
 
-    std::unique_ptr<Value> pull(const TypeInfo& type_info);
+    Value pull(const TypeInfo& ti);
+    TypedValue pull_typed(const TypeInfo& ti) { return {pull(ti), ti}; }
 
-    template <typename T,
-              typename = std::enable_if_t<std::is_base_of<Value, T>::value>>
+    template <ValueT T>
     T pull() {
         // create empty value
         T v;
-        auto s = v.size();
-        if (size() < s)
-            throw StackUnderflow{};
+        pop_type(v);
         // read value from stack
-        v.read(&m_stack[m_stack_pointer]);
-        v.decref();
-        m_stack_pointer += s;
-        // check type on stack (allow casts - only size have to match)
-        assert(v.type_info().size() == m_stack_types.back().size());
-        m_stack_types.pop_back();
+        m_stack_pointer += v.read(data());
         return v;
     }
 
-    std::unique_ptr<Value> get(StackRel pos, const TypeInfo& ti) const;
+    Value get(StackRel pos, const TypeInfo& ti) const;
+    Value get(StackRel pos, Type type) const;  // cannot be used for Tuple
     void* get_ptr(StackRel pos) const;
+    void clear_ptr(StackRel pos);
 
     // Copy `size` bytes from `addr` to top of the stack
     void copy(StackRel pos, size_t size);
 
-    // Remove bytes in range `first`..`first + size` from top of the stack.
+    // Remove bytes in range `first` .. `first + size` from top of the stack.
     // Exactly `size` bytes is removed.
     // E.g.:
     //      drop(0, 4) removes top 4 bytes
@@ -82,32 +77,79 @@ public:
     //      drop(4, 0) is no-op
     void drop(StackRel first, size_t size);
 
+    // Swap two values on top of the stack.
+    // Top `first` bytes are swapped with `second` bytes below them.
+    void swap(size_t first, size_t second);
+
     bool empty() const { return m_stack_capacity == m_stack_pointer; }
     StackAbs size() const { return m_stack_capacity - m_stack_pointer; }
     size_t capacity() const { return m_stack_capacity; }
 
-    // Get moving pointer to top of the stack (lowest valid address)
+    // Get moving pointer to top of the stack (the lowest valid address)
     // The address changes with each operation.
-    byte* data() const { return &m_stack[m_stack_pointer]; }
+    std::byte* data() const { return &m_stack[m_stack_pointer]; }
 
     // ------------------------------------------------------------------------
     // Type tracking
 
     size_t n_values() const { return m_stack_types.size(); }
+    Type top_type() const { return m_stack_types.back(); }
 
     // ------------------------------------------------------------------------
+    // Function return addresses
 
     struct Frame {
-        const Function* function;
-        Index instruction;
+        const Function& function;
+        CodeOffs instruction;  // return address
         StackAbs base;  // parameters are below base, local variables above
-        explicit Frame(const Function* fun, Index ins, size_t base)
-            : function(fun), instruction(ins), base(base) {}
+        explicit Frame(const Function& fun, CodeOffs ins, size_t base)
+                : function(fun), instruction(ins), base(base) {}
     };
 
-    void push_frame(const Function* fun, Index ins) { m_frame.emplace(fun, ins, size()); }
+    // top frame points to currently running function
+    void push_frame(const Function& fun) { m_frame.emplace(fun, 0, size()); }
     void pop_frame() { m_frame.pop(); }
+    Frame& frame() { return m_frame.top(); }
     const Frame& frame() const { return m_frame.top(); }
+    const Frame& frame(size_t pos) const { return m_frame[pos]; }
+    size_t n_frames() const { return m_frame.size(); }
+
+    // ------------------------------------------------------------------------
+    // Unwinding
+
+    StackTrace make_trace();
+
+    // ------------------------------------------------------------------------
+    // I/O Streams
+    // Here we store the initial streams. As the program runs, these values
+    // are swapped to stack and back. Effectively, the values here are
+    // "top of the stack" and the previous values are stored on the value stack.
+
+    struct Streams {
+        value::Stream in { Stream::default_stdin() };
+        value::Stream out { Stream::default_stdout() };
+        value::Stream err { Stream::default_stderr() };
+
+        ~Streams() {
+            in.decref();
+            out.decref();
+            err.decref();
+        }
+    };
+
+    script::Stream stream_in() const { return m_streams.in.value(); }
+    script::Stream stream_out() const { return m_streams.out.value(); }
+    script::Stream stream_err() const { return m_streams.err.value(); }
+
+    void swap_stream_in(value::Stream& in) { std::swap(m_streams.in, in); }
+    void swap_stream_out(value::Stream& out) { std::swap(m_streams.out, out); }
+    void swap_stream_err(value::Stream& err) { std::swap(m_streams.err, err); }
+
+    const value::Stream& get_stream_in() { m_streams.in.incref(); return m_streams.in; }
+    const value::Stream& get_stream_out() { m_streams.out.incref(); return m_streams.out; }
+    const value::Stream& get_stream_err() { m_streams.err.incref(); return m_streams.err; }
+
+    // ------------------------------------------------------------------------
 
     friend std::ostream& operator<<(std::ostream& os, const Stack& v);
 
@@ -115,12 +157,19 @@ public:
     size_t grow();
 
 private:
-    static constexpr size_t m_stack_max = 100*1024*1024;
+    void push_type(const Value& v);
+
+    // throw if the stack would underflow
+    // or when the top isn't compatible with the type
+    void pop_type(const Value& v);
+
+    static constexpr size_t m_stack_max = size_t(100*1024*1024);
     size_t m_stack_capacity = 1024;
     size_t m_stack_pointer = m_stack_capacity;
-    std::unique_ptr<byte[]> m_stack = std::make_unique<byte[]>(m_stack_capacity);
-    std::vector<TypeInfo> m_stack_types;
-    std::stack<Frame> m_frame;
+    std::unique_ptr<std::byte[]> m_stack = std::make_unique<std::byte[]>(m_stack_capacity);
+    std::vector<Type> m_stack_types;
+    core::ChunkedStack<Frame> m_frame;
+    Streams m_streams;
 };
 
 

@@ -1,4 +1,4 @@
-// unescape.h created on 2019-11-29 belongs to XCI Toolkit
+// unescape.h created on 2019-11-29 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
 // Copyright 2019 Radek Brich
@@ -11,19 +11,21 @@
 
 namespace xci::core::parser::unescape {
 
-// This is tolerant version of the unescape parser,
-// consuming any output and interpreting unknown escapes in best effort manner.
+// This is a tolerant version of unescape parser,
+// consuming any output and interpreting unknown escapes in the best effort manner.
 struct StringChIll : any {};
 struct StringChIllEsc : seq< one< '\\' >, sor<StringChIll, eof> > {};
 struct String: star< sor<try_catch<StringCh>, StringChIllEsc, StringChIll> > {};
+struct StringUni: star< sor<try_catch<StringChUni>, StringChIllEsc, StringChIll> > {};
 
 template< typename Rule > struct Action {};
-template<> struct Action<StringChOther> : StringAppend {};
-template<> struct Action<StringChIll> : StringAppend {};
+template<> struct Action<StringChOther> : StringAppendChar {};
+template<> struct Action<StringChIll> : StringAppendChar {};
 template<> struct Action<StringChEscSingle> : StringAppendEscSingle {};
-template<> struct Action<StringChEscHex> : StringAppendEscHex {};
 template<> struct Action<StringChEscOct> : StringAppendEscOct {};
+template<> struct Action<StringChEscHex> : StringAppendEscHex {};
+template<> struct Action<StringChEscUni> : StringAppendEscUni {};
 
-} // namespace xci::core::parser
+} // namespace xci::core::parser::unescape
 
 #endif // include guard

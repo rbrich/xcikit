@@ -1,17 +1,8 @@
-// TextInput.cpp created on 2018-06-02, part of XCI toolkit
-// Copyright 2018, 2019 Radek Brich
+// TextInput.cpp created on 2018-06-02 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "TextInput.h"
 #include <xci/core/string.h>
@@ -26,10 +17,9 @@ using namespace xci::core;
 
 TextInput::TextInput(Theme& theme, const std::string& string)
     : Widget(theme),
-      m_text(string),
+      m_buffer(string),
       m_bg_rect(theme.renderer(), Color(10, 20, 40), theme.color(ColorId::Default)),
-      m_cursor_shape(theme.renderer(), Color::Yellow(), Color::Transparent()),
-      m_cursor(string.size())
+      m_cursor_shape(theme.renderer(), Color::Yellow(), Color::Transparent())
 {
     set_focusable(true);
     m_layout.set_default_font(&theme.font());
@@ -38,12 +28,12 @@ TextInput::TextInput(Theme& theme, const std::string& string)
 
 void TextInput::set_string(const std::string& string)
 {
-    m_text = string;
+    m_buffer.set_content(string);
 }
 
 
-void TextInput::set_decoration_color(const graphics::Color& fill,
-                                     const graphics::Color& outline)
+void TextInput::set_decoration_color(graphics::Color fill,
+                                     graphics::Color outline)
 {
     m_bg_rect.set_fill_color(fill);
     m_bg_rect.set_outline_color(outline);
@@ -55,13 +45,13 @@ void TextInput::resize(View& view)
     view.finish_draw();
     m_layout.clear();
     // Text before cursor
-    m_layout.add_word(m_text.substr(0, m_cursor));
+    m_layout.add_word(m_buffer.content_upto_cursor());
     // Cursor placing
     m_layout.begin_span("cursor");
     m_layout.add_word("");
     m_layout.end_span("cursor");
     // Text after cursor
-    m_layout.add_word(m_text.substr(m_cursor));
+    m_layout.add_word(m_buffer.content_from_cursor());
     m_layout.typeset(view);
     m_layout.update(view);
 
@@ -69,25 +59,27 @@ void TextInput::resize(View& view)
     layout::Span* cursor_span = m_layout.get_span("cursor");
     m_cursor_shape.clear();
     auto cursor_box = cursor_span->part(0).bbox();
-    cursor_box.w = view.size_to_viewport(1_sc);
+    cursor_box.w = view.px_to_fb(1_px);
     if (cursor_box.x < m_content_pos)
         m_content_pos = cursor_box.x;
-    if (cursor_box.x > m_content_pos + m_width)
-        m_content_pos = cursor_box.x - m_width;
+    const auto width = view.to_fb(m_width);
+    if (cursor_box.x > m_content_pos + width)
+        m_content_pos = cursor_box.x - width;
     m_cursor_shape.add_rectangle(cursor_box);
     m_cursor_shape.update();
 
     auto rect = m_layout.bbox();
-    rect.w = m_width;
-    rect.enlarge(m_padding);
+    rect.w = width;
+    rect.enlarge(view.to_fb(m_padding));
     set_size(rect.size());
     set_baseline(-rect.y);
+    Widget::resize(view);
 
     // Background rect
     rect.x = 0;
     rect.y = 0;
     m_bg_rect.clear();
-    m_bg_rect.add_rectangle(rect, m_outline_thickness);
+    m_bg_rect.add_rectangle(rect, view.to_fb(m_outline_thickness));
     m_bg_rect.update();
 }
 
@@ -111,14 +103,14 @@ void TextInput::update(View& view, State state)
 void TextInput::draw(View& view)
 {
     auto rect = m_layout.bbox();
-    auto pos = position() + ViewportCoords{m_padding - rect.x - m_content_pos,
-                                           m_padding - rect.y};
+    const auto padding = view.to_fb(m_padding);
+    auto pos = position() + FramebufferCoords{padding - rect.x - m_content_pos,
+                                              padding - rect.y};
     m_bg_rect.draw(view, position());
-    view.push_crop(aabb().enlarged(-m_outline_thickness));
+    auto pop_crop = view.push_crop(aabb().enlarged(-view.to_fb(m_outline_thickness)));
     m_layout.draw(view, pos);
     if (m_draw_cursor)
         m_cursor_shape.draw(view, pos);
-    view.pop_crop();
 }
 
 
@@ -130,51 +122,34 @@ bool TextInput::key_event(View& view, const KeyEvent& ev)
 
     switch (ev.key) {
         case Key::Backspace:
-            if (m_cursor > 0) {
-                auto pos = m_text.rbegin() + m_text.size() - m_cursor;
-                auto prev = m_text.rbegin() + m_text.size() - utf8_prev(pos);
-                m_text.erase(prev, m_cursor - prev);
-                m_cursor = prev;
-                break;
-            }
-            return true;
+            if (!m_buffer.delete_left())
+                return true;
+            break;
 
         case Key::Delete:
-            if (m_cursor < m_text.size()) {
-                auto next = utf8_next(m_text.data() + m_cursor) - m_text.data();
-                m_text.erase(m_cursor, next - m_cursor);
-                break;
-            }
-            return true;
+            if (!m_buffer.delete_right())
+                return true;
+            break;
 
         case Key::Left:
-            if (m_cursor > 0) {
-                auto pos = m_text.rbegin() + m_text.size() - m_cursor;
-                m_cursor = m_text.rbegin() + m_text.size() - utf8_prev(pos);
-                break;
-            }
-            return true;
+            if (!m_buffer.move_left())
+                return true;
+            break;
 
         case Key::Right:
-            if (m_cursor < m_text.size()) {
-                m_cursor = utf8_next(m_text.data() + m_cursor) - m_text.data();
-                break;
-            }
-            return true;
+            if (!m_buffer.move_right())
+                return true;
+            break;
 
         case Key::Home:
-            if (m_cursor > 0) {
-                m_cursor = 0;
-                break;
-            }
-            return true;
+            if (!m_buffer.move_to_line_beginning())
+                return true;
+            break;
 
         case Key::End:
-            if (m_cursor < m_text.size()) {
-                m_cursor = m_text.size();
-                break;
-            }
-            return true;
+            if (!m_buffer.move_to_line_end())
+                return true;
+            break;
 
         default:
             return false;
@@ -191,8 +166,7 @@ bool TextInput::key_event(View& view, const KeyEvent& ev)
 void TextInput::char_event(View& view, const CharEvent& ev)
 {
     auto ch = to_utf8(ev.code_point);
-    m_text.insert(m_cursor, ch);
-    m_cursor += ch.size();
+    m_buffer.insert(ch);
     resize(view);
     view.refresh();
     if (m_change_cb)

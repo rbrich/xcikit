@@ -2,7 +2,8 @@
 # Dependencies #
 # ------------ #
 
-include(FindFreetype)
+find_package(Freetype REQUIRED)
+find_package(harfbuzz REQUIRED)
 
 
 # ------------ #
@@ -10,6 +11,7 @@ include(FindFreetype)
 # ------------ #
 
 add_library(xci-text
+    FontFace.cpp
     FontLibrary.cpp
     FontTexture.cpp
     Font.cpp
@@ -19,17 +21,17 @@ add_library(xci-text
     Style.cpp
     Text.cpp
     layout/Page.cpp
-    freetype/FtFontLibrary.cpp
-    freetype/FtFontFace.cpp
-    $<TARGET_OBJECTS:rbp>
+    $<TARGET_OBJECTS:third_party::rbp>
     )
+add_library(xcikit::xci-text ALIAS xci-text)
+
+target_precompile_headers(xci-text REUSE_FROM xci-core)
 
 target_include_directories(xci-text
     PUBLIC
         ${XCI_INCLUDE_DIRS}
-        ${FREETYPE_INCLUDE_DIRS}
     PRIVATE
-        $<TARGET_PROPERTY:rbp,INTERFACE_INCLUDE_DIRECTORIES>
+        $<TARGET_PROPERTY:third_party::rbp,INTERFACE_INCLUDE_DIRECTORIES>
         # NOTE: We cannot link `taocpp::pegtl` directly, because it would become
         #       dependency in exported target and the whole xcikit would have to
         #       externally depend on PEGTL while it is used only in implementation.
@@ -40,10 +42,16 @@ target_include_directories(xci-text
 target_link_libraries(xci-text
     PUBLIC
         xci-core
+        xci-core-vfs
         xci-graphics
-        PRIVATE
-        ${FREETYPE_LIBRARIES}
+    PRIVATE
+        Freetype::Freetype
+        harfbuzz::harfbuzz
     )
+
+if (BUILD_SHARED_LIBS)
+    set_target_properties(xci-text PROPERTIES CXX_VISIBILITY_PRESET default)
+endif()
 
 if (APPLE)
     set_target_properties(xci-text PROPERTIES
@@ -63,4 +71,6 @@ if (BUILD_FRAMEWORKS)
         )
 endif()
 
-install(TARGETS xci-text EXPORT xcikit DESTINATION lib)
+if (BUILD_SHARED_LIBS OR XCI_INSTALL_DEVEL)
+    install(TARGETS xci-text EXPORT xcikit DESTINATION ${CMAKE_INSTALL_LIBDIR})
+endif()

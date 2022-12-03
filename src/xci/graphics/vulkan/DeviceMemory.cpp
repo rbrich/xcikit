@@ -6,11 +6,14 @@
 
 #include "DeviceMemory.h"
 #include <xci/graphics/Renderer.h>
+#include <xci/core/memory.h>
 #include "VulkanError.h"
 #include <cstring>
 #include <cassert>
 
 namespace xci::graphics {
+
+using core::align_to;
 
 
 VkDeviceSize DeviceMemory::reserve(const VkMemoryRequirements& requirements)
@@ -24,7 +27,7 @@ VkDeviceSize DeviceMemory::reserve(const VkMemoryRequirements& requirements)
     }
 
     m_type_bits &= requirements.memoryTypeBits;
-    pad_to_alignment(requirements.alignment);
+    m_alloc_size = align_to(m_alloc_size, requirements.alignment);
     VkDeviceSize offset = m_alloc_size;
     m_alloc_size += requirements.size;
     return offset;
@@ -107,13 +110,6 @@ uint32_t DeviceMemory::find_memory_type(VkMemoryPropertyFlags properties)
     }
 
     VK_THROW("vkGetPhysicalDeviceMemoryProperties didn't return suitable memory type");
-}
-
-
-void DeviceMemory::pad_to_alignment(VkDeviceSize alignment)
-{
-    auto padding = alignment - (m_alloc_size % alignment);
-    m_alloc_size += (padding == alignment) ? 0 : padding;
 }
 
 

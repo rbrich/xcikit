@@ -1,17 +1,8 @@
-// Page.cpp created on 2018-03-18, part of XCI toolkit
-// Copyright 2018, 2019 Radek Brich
+// Page.cpp created on 2018-03-18 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <xci/text/layout/Page.h>
 #include <xci/graphics/View.h>
@@ -20,22 +11,20 @@
 
 #include <cassert>
 #include <utility>
+#include <algorithm>
 
 namespace xci::text { class Style; }
 
 namespace xci::text::layout {
 
-using namespace xci::core::log;
+using namespace xci::core;
 using namespace xci::graphics::unit_literals;
 using xci::graphics::View;
 using xci::graphics::Color;
-using xci::core::Rect_f;
-using xci::core::Vec2f;
-using xci::core::to_utf32;
 
 
-Word::Word(Page& page, std::string string)
-    : m_string(std::move(string)), m_style(page.style())
+Word::Word(Page& page, const std::string& utf8)
+    : m_style(page.style())
 {
     auto* font = m_style.font();
     if (!font) {
@@ -43,29 +32,33 @@ Word::Word(Page& page, std::string string)
         return;
     }
 
-    auto size_fb = page.target().size_to_framebuffer(m_style.size());
-    font->set_size(size_fb.as<uint32_t>());
-    m_baseline = page.target().size_to_viewport(FramebufferPixels{font->ascender()});
-    auto descender_vp = page.target().size_to_viewport(FramebufferPixels{font->descender()});
+    m_style.apply_view(page.target());
+    auto scale = m_style.scale();
+
+    m_baseline = FramebufferPixels{font->ascender() * scale};
+    auto descender_vp = FramebufferPixels{font->descender() * scale};
     const auto font_height = m_baseline - descender_vp;
 
     // Measure word (metrics are affected by string, font, size)
-    ViewportCoords pen;
-    m_bbox = {0, ViewportUnits{0} - m_baseline, 0, font_height};
-    for (CodePoint code_point : to_utf32(m_string)) {
-        auto glyph = font->get_glyph(code_point);
-        if (glyph == nullptr)
-            continue;
+    FramebufferCoords pen;
+    m_bbox = {0, 0 - m_baseline, 0, font_height};
 
-        // Expand text bounds by glyph bounds
-        auto advance_vp = page.target().size_to_viewport(FramebufferPixels{glyph->advance()});
-        ViewportRect rect{pen.x ,
-                          pen.y - m_baseline,
-                          advance_vp,
-                          font_height};
+    m_shaped = font->shape_text(utf8);
 
-        m_bbox.extend(rect);
-        pen.x += rect.w;
+    for (const auto& shaped_glyph : m_shaped) {
+        auto* glyph = font->get_glyph(shaped_glyph.glyph_index);
+        auto advance = FramebufferCoords{shaped_glyph.advance * scale};
+        if (glyph != nullptr) {
+            // Expand text bounds by glyph bounds
+            FramebufferRect rect{pen.x,
+                                 pen.y - m_baseline,
+                                 advance.x,
+                                 font_height};
+
+            m_bbox.extend(rect);
+        }
+
+        pen += advance;
     }
 
     // Check line end
@@ -75,10 +68,14 @@ Word::Word(Page& page, std::string string)
 
     // Set position according to pen
     m_pos = page.pen();
-    m_bbox.x += m_pos.x;
-    m_bbox.y += m_pos.y;
 
     page.advance_pen(pen);
+}
+
+
+void Word::move_x(FramebufferPixels offset)
+{
+    m_pos.x += offset;
 }
 
 
@@ -90,20 +87,20 @@ void Word::update(const graphics::View& target)
         return;
     }
 
-    auto size_fb = target.size_to_framebuffer(m_style.size());
-    font->set_size(size_fb.as<uint32_t>());
+    m_style.apply_view(target);
+    auto scale = m_style.scale();
 
     auto& renderer = target.window()->renderer();
 
-    const auto fb_1px = target.size_to_viewport(1_fb);
     m_debug_shapes.clear();
     m_sprites.reset();
+    m_outline_sprites.reset();
 
     if (target.has_debug_flag(View::Debug::WordBBox)) {
         m_debug_shapes.emplace_back(renderer,
                 Color(0, 150, 0),
                 Color(50, 250, 50));
-        m_debug_shapes.back().add_rectangle(m_bbox, fb_1px);
+        m_debug_shapes.back().add_rectangle(m_bbox, 1_fb);
         m_debug_shapes.back().update();
     }
 
@@ -114,67 +111,82 @@ void Word::update(const graphics::View& target)
                 Color(250, 50, 50));
     }
 
-    m_sprites.emplace(renderer, font->texture(), m_style.color());
+    auto render_sprites = [&](std::optional<graphics::Sprites>& sprites, graphics::Color color) {
+        sprites.emplace(renderer, font->texture(), color);
 
-    ViewportCoords pen = m_pos;
-    for (CodePoint code_point : to_utf32(m_string)) {
-        auto glyph = font->get_glyph(code_point);
-        if (glyph == nullptr)
-            continue;
+        FramebufferCoords pen;
+        for (const auto& shaped_glyph : m_shaped) {
+            auto* glyph = font->get_glyph(shaped_glyph.glyph_index);
+            auto advance = FramebufferCoords{shaped_glyph.advance * scale};
+            auto offset = FramebufferSize{shaped_glyph.offset};
+            if (glyph != nullptr) {
+                auto bearing = FramebufferSize{glyph->bearing()};
+                auto glyph_size = FramebufferSize{glyph->size()};
+                FramebufferRect rect{pen.x + (offset.x + bearing.x) * scale,
+                                     pen.y + (offset.y - bearing.y) * scale,
+                                     glyph_size.x * scale,
+                                     glyph_size.y * scale};
+                sprites->add_sprite(rect, glyph->tex_coords());
+                if (show_bboxes)
+                    m_debug_shapes.back().add_rectangle(rect, 1_fb);
+            }
+            pen += advance;
+        }
 
-        auto bearing = target.size_to_viewport(FramebufferSize{glyph->bearing()});
-        auto glyph_size = target.size_to_viewport(FramebufferSize{glyph->size()});
-        ViewportRect rect{pen.x + bearing.x,
-                          pen.y - bearing.y,
-                          glyph_size.x,
-                          glyph_size.y};
-        m_sprites->add_sprite(rect, glyph->tex_coords());
-        if (show_bboxes)
-            m_debug_shapes.back().add_rectangle(rect, fb_1px);
+        sprites->update();
+    };
 
-        pen.x += target.size_to_viewport(FramebufferPixels{glyph->advance()});
+    if (!m_style.color().is_transparent()) {
+        render_sprites(m_sprites, m_style.color());
+    }
+
+    if (!m_style.outline_color().is_transparent()) {
+        m_style.apply_outline(target);
+        render_sprites(m_outline_sprites, m_style.outline_color());
     }
 
     if (show_bboxes)
         m_debug_shapes.back().update();
 
-    m_sprites->update();
-
     if (target.has_debug_flag(View::Debug::WordBasePoint)) {
-        const auto sc_1px = target.size_to_viewport(1_sc);
+        const auto fb_1px = target.px_to_fb(1_px);
         m_debug_shapes.emplace_back(renderer, Color(150, 0, 255));
-        m_debug_shapes.back().add_rectangle({
-            m_pos.x - sc_1px, m_pos.y - sc_1px,
-            2 * sc_1px, 2 * sc_1px});
+        m_debug_shapes.back().add_rectangle({- fb_1px, - fb_1px, 2 * fb_1px, 2 * fb_1px});
         m_debug_shapes.back().update();
     }
 }
 
 
-void Word::draw(graphics::View& target, const ViewportCoords& pos) const
+void Word::draw(graphics::View& target, FramebufferCoords pos) const
 {
     for (auto& shape : m_debug_shapes) {
-        shape.draw(target, pos);
+        shape.draw(target, m_pos + pos);
     }
 
+    if (m_outline_sprites)
+        m_outline_sprites->draw(target, m_pos + pos);
+
     if (m_sprites)
-        m_sprites->draw(target, pos);
+        m_sprites->draw(target, m_pos + pos);
 
     if (target.has_debug_flag(View::Debug::WordBasePoint)
     && !m_debug_shapes.empty()) {
         // basepoint needs to be drawn on-top (it's the last debug shape)
-        m_debug_shapes.back().draw(target, pos);
+        m_debug_shapes.back().draw(target, m_pos + pos);
     }
 }
 
 
-const ViewportRect& Line::bbox() const
+// -----------------------------------------------------------------------------
+
+
+const FramebufferRect& Line::bbox() const
 {
     if (m_bbox_valid)
         return m_bbox;
     // Refresh
     bool first = true;
-    for (auto& word : m_words) {
+    for (const auto* word : m_words) {
         if (first) {
             m_bbox = word->bbox();
             first = false;
@@ -183,7 +195,7 @@ const ViewportRect& Line::bbox() const
         }
     }
     // Add padding
-    if (m_padding != 0_vp) {
+    if (m_padding != 0_fb) {
         m_bbox.x -= m_padding;
         m_bbox.y -= m_padding;
         m_bbox.w += 2 * m_padding;
@@ -194,12 +206,44 @@ const ViewportRect& Line::bbox() const
 }
 
 
-ViewportUnits Line::baseline() const
+FramebufferPixels Line::baseline() const
 {
     if (m_words.empty())
-        return 0_vp;
+        return 0_fb;
     return m_words[0]->baseline();
 }
+
+
+void Line::align(Alignment alignment, FramebufferPixels width)
+{
+    // This also computes bbox if not valid
+    auto line_width = bbox().w - 2 * m_padding;
+    if (line_width >= width)
+        return;  // Not enough space for aligning
+    auto current_x = m_bbox.x + m_padding;
+    FramebufferPixels target_x;
+    switch (alignment) {
+        case Alignment::Justify:  // not implemented, fallback to Left
+        case Alignment::Left:
+            target_x = 0.f;
+            break;
+        case Alignment::Right:
+            target_x = width - line_width;
+            break;
+        case Alignment::Center:
+            target_x = (width - line_width) / 2.f;
+            break;
+    }
+    // Realign all Words
+    auto offset = target_x - current_x;
+    for (auto* word : m_words) {
+        word->move_x(offset);
+    }
+    m_bbox.x += offset;
+}
+
+
+// -----------------------------------------------------------------------------
 
 
 void Span::add_word(Word& word)
@@ -218,6 +262,16 @@ void Span::adjust_style(const std::function<void(Style& word_style)>& fn_adjust)
         }
     }
 }
+
+
+bool Span::contains(FramebufferCoords point) const
+{
+    return std::any_of(m_parts.begin(), m_parts.end(),
+               [&point](const Line& line) { return line.bbox().contains(point); });
+}
+
+
+// -----------------------------------------------------------------------------
 
 
 Page::Page()
@@ -253,7 +307,7 @@ void Page::clear()
 }
 
 
-void Page::add_tab_stop(ViewportUnits x)
+void Page::add_tab_stop(FramebufferPixels x)
 {
     m_tab_stops.push_back(x);
     std::sort(m_tab_stops.begin(), m_tab_stops.end());
@@ -262,9 +316,13 @@ void Page::add_tab_stop(ViewportUnits x)
 
 void Page::finish_line()
 {
-    // Add new line
-    if (!m_lines.back().is_empty())
-         m_lines.emplace_back();
+    // If the current line has any content...
+    if (!m_lines.back().is_empty()) {
+        // Apply alignment
+        m_lines.back().align(m_alignment, m_width);
+        // Add new line
+        m_lines.emplace_back();
+    }
     // Add new part to open spans
     for (auto& span_pair : m_spans) {
         auto& span = span_pair.second;
@@ -280,11 +338,9 @@ void Page::finish_line()
 
 void Page::advance_line(float lines)
 {
-    auto* font = m_style.font();
-    auto font_size = target().size_to_framebuffer(m_style.size());
-    font->set_size(font_size.as<unsigned int>());
-    auto line_height = target().size_to_viewport(FramebufferPixels{font->line_height()});
-    m_pen.y += lines * line_height;
+    m_style.apply_view(target());
+    auto height = FramebufferPixels{m_style.font()->height() * m_style.scale()};
+    m_pen.y += lines * height;
 }
 
 
@@ -298,15 +354,16 @@ void Page::add_tab()
 {
     // apply tab stops
     auto tab_stop = m_tab_stops.begin();
-    ViewportUnits x = 0_vp;
+    FramebufferPixels x = 0;
     while (x <= m_pen.x && tab_stop != m_tab_stops.end()) {
         x = *tab_stop++;
     }
     // apply generic tabs
     if (x <= m_pen.x) {
-        ViewportUnits tab_size = 8 * space_width();
-        while (x <= m_pen.x)
-            x += tab_size;
+        FramebufferPixels tab_size = 8 * space_width();
+        if (tab_size > 0.f)
+            while (x <= m_pen.x)
+                x += tab_size;
     }
     // move to new position
     m_pen.x = x;
@@ -331,13 +388,11 @@ void Page::add_word(const std::string& string)
 }
 
 
-ViewportUnits Page::space_width()
+FramebufferPixels Page::space_width()
 {
-    auto* font = m_style.font();
-    auto font_size = target().size_to_framebuffer(m_style.size());
-    font->set_size(font_size.as<unsigned int>());
-    auto glyph = font->get_glyph(' ');
-    return target().size_to_viewport(FramebufferPixels{glyph->advance()});
+    m_style.apply_view(target());
+    auto* glyph = m_style.font()->get_glyph_for_char(' ');
+    return FramebufferPixels{glyph->advance() * m_style.scale()};
 }
 
 
@@ -345,7 +400,7 @@ bool Page::begin_span(const std::string& name)
 {
     auto result = m_spans.emplace(name, Span());
     if (!result.second) {
-        log_error("Page: Span '{}' already exists!", name);
+        log::error("Page: Span '{}' already exists!", name);
         return false;
     }
     return true;
@@ -356,11 +411,11 @@ bool Page::end_span(const std::string& name)
 {
     auto iter = m_spans.find(name);
     if (iter == m_spans.end()) {
-        log_error("Page: Span '{}' does not exists!", name);
+        log::error("Page: Span '{}' does not exists!", name);
         return false;
     }
     if (!iter->second.is_open()) {
-        log_error("Page: Span '{}' is not open!", name);
+        log::error("Page: Span '{}' is not open!", name);
         return false;
     }
     iter->second.close();
@@ -398,7 +453,7 @@ void Page::foreach_word(const std::function<void(const Word& word)>& cb) const
 void Page::foreach_line(const std::function<void(const Line& line)>& cb) const
 {
     if (!cb) return;
-    for (auto& line : m_lines) {
+    for (const auto& line : m_lines) {
         cb(line);
     }
 }
@@ -407,7 +462,7 @@ void Page::foreach_line(const std::function<void(const Line& line)>& cb) const
 void Page::foreach_span(const std::function<void(const Span& span)>& cb) const
 {
     if (!cb) return;
-    for (auto& pair : m_spans) {
+    for (const auto& pair : m_spans) {
         cb(pair.second);
     }
 }

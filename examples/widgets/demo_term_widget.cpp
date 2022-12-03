@@ -1,51 +1,47 @@
-// demo_term_widget.cpp created on 2018-07-19, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// demo_term_widget.cpp created on 2018-07-19 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
+
+#include "graphics/common.h"
 
 #include <xci/widgets/TextTerminal.h>
-#include <xci/graphics/Window.h>
 #include <xci/core/Vfs.h>
 #include <xci/core/file.h>
-#include <xci/core/format.h>
 #include <xci/core/log.h>
 #include <xci/config.h>
+
+#include <fmt/core.h>
 #include <cstdlib>
 #include <cstdio>
-#include <iostream>
 
 using namespace xci::widgets;
-using namespace xci::graphics;
-using namespace xci::core;
+using namespace xci::graphics::unit_literals;
+using fmt::format;
 
-int main()
+int main(int argc, const char* argv[])
 {
     Logger::init();
     Vfs vfs;
-    vfs.mount(XCI_SHARE_DIR);
+    if (!vfs.mount(XCI_SHARE))
+        return EXIT_FAILURE;
 
     Renderer renderer {vfs};
     Window window {renderer};
-    window.create({800, 600}, "XCI TextTerminal demo");
+    setup_window(window, "XCI TextTerminal demo", argv);
 
     Theme theme(renderer);
     if (!theme.load_default())
         return EXIT_FAILURE;
 
     const char* cmd = "uname -a";
+    auto prompt = fs::current_path().string() + "> ";
 
     TextTerminal terminal {theme};
-    terminal.add_text(get_cwd() + "> ");
+    terminal.set_size_in_cells({100, 50});
+    terminal.set_font_size(18_px);
+    terminal.add_text(prompt);
     terminal.set_font_style(TextTerminal::FontStyle::Bold);
     terminal.add_text(std::string(cmd) + "\n");
     terminal.set_font_style(TextTerminal::FontStyle::Regular);
@@ -57,7 +53,7 @@ int main()
         return EXIT_FAILURE;
     std::string buf(256, 0);
     size_t nread;
-    while ((nread = fread(&buf[0], 1, buf.size(), f)) > 0) {
+    while ((nread = fread(buf.data(), 1, buf.size(), f)) > 0) {
         terminal.add_text(buf.substr(0, nread));
     }
     pclose(f);
@@ -65,7 +61,7 @@ int main()
     // Present some colors
     terminal.set_fg(TextTerminal::Color4bit::White);
     terminal.set_bg(TextTerminal::Color4bit::Black);
-    terminal.add_text(get_cwd() + "> ");
+    terminal.add_text(prompt);
     terminal.set_font_style(TextTerminal::FontStyle::Bold);
     terminal.add_text("rainbow\n");
     terminal.set_font_style(TextTerminal::FontStyle::Regular);
@@ -120,17 +116,51 @@ int main()
     }
 
     terminal.reset_attrs();
-    terminal.add_text(get_cwd() + "> ");
+    terminal.add_text(prompt);
     terminal.set_font_style(TextTerminal::FontStyle::Bold);
-    terminal.add_text("Příliš žluťoučký kůň úpěl ďábelské ódy.");
+    terminal.add_text("test_unicode\n");
+    terminal.set_font_style(TextTerminal::FontStyle::Regular);
+    terminal.set_fg(TextTerminal::Color8bit{214});
+    terminal.add_text("🐎 Příliš žluťoučký kůň úpěl ďábelské ódy. 🐎\n");
 
-    terminal.set_position({50, 50});
-    terminal.set_size({700, 500});
+    terminal.reset_attrs();
+    terminal.add_text(prompt);
+    terminal.set_font_style(TextTerminal::FontStyle::Bold);
+    terminal.add_text("test_attrs\n");
+
+    terminal.set_font_style(TextTerminal::FontStyle::Light);
+    terminal.add_text("Light\n");
+    terminal.set_font_style(TextTerminal::FontStyle::LightItalic);
+    terminal.add_text("LightItalic\n");
+    terminal.set_font_style(TextTerminal::FontStyle::Regular);
+    terminal.add_text("Regular\n");
+    terminal.set_font_style(TextTerminal::FontStyle::Italic);
+    terminal.add_text("Italic\n");
+    terminal.set_font_style(TextTerminal::FontStyle::Bold);
+    terminal.add_text("Bold\n");
+    terminal.set_font_style(TextTerminal::FontStyle::BoldItalic);
+    terminal.add_text("BoldItalic\n");
+
+    terminal.set_position({5_px, 0_px});
+
+    // Make the terminal fullscreen
+    window.set_size_callback([&](View& view) {
+        auto vs = view.screen_size();
+        vs.x -= 10_px;
+        terminal.set_size(vs);
+        view.refresh();
+    });
 
     window.set_key_callback([&](View& view, const KeyEvent& ev) {
         if (ev.action != Action::Press || ev.mod != ModKey::None())
         {
             switch (ev.key) {
+                case Key::Escape:
+                    window.close();
+                    break;
+                case Key::F:
+                    window.toggle_fullscreen();
+                    break;
                 case Key::Up:
                     terminal.set_cursor_pos(terminal.cursor_pos() - Vec2u{0, 1});
                     break;
@@ -152,7 +182,7 @@ int main()
 
     Bind bind(window, terminal);
     window.set_refresh_mode(RefreshMode::OnDemand);
-    window.set_view_mode(ViewOrigin::TopLeft, ViewScale::FixedScreenPixels);
+    window.set_view_origin(ViewOrigin::TopLeft);
     window.display();
     return EXIT_SUCCESS;
 }

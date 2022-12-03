@@ -1,62 +1,51 @@
-// demo_widget.cpp created on 2018-03-20, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// demo_widget.cpp created on 2018-03-20 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
+
+#include "graphics/common.h"
 
 #include <xci/widgets/Theme.h>
 #include <xci/widgets/Button.h>
 #include <xci/widgets/Icon.h>
-#include <xci/text/Text.h>
-#include <xci/graphics/Window.h>
 #include <xci/core/Vfs.h>
-#include <xci/core/format.h>
 #include <xci/core/log.h>
 #include <xci/config.h>
+
 #include <cstdlib>
 
 using namespace xci::widgets;
 using namespace xci::text;
-using namespace xci::graphics;
-using namespace xci::core;
-using namespace xci::core::log;
 
-int main()
+int main(int argc, const char* argv[])
 {
     Vfs vfs;
-    vfs.mount(XCI_SHARE_DIR);
+    if (!vfs.mount(XCI_SHARE))
+        return EXIT_FAILURE;
 
     Renderer renderer {vfs};
     Window window {renderer};
-    window.create({800, 600}, "XCI widgets demo");
+    setup_window(window, "XCI widgets demo", argv);
 
     Theme theme(renderer);
     if (!theme.load_default())
         return EXIT_FAILURE;
 
     Button button_default(theme, "Default button");
-    button_default.set_position({0, -0.2f});
+    button_default.set_position({0_vp, -10_vp});
 
     Button button_styled(theme, "Styled button");
-    button_styled.set_font_size(0.07);
-    button_styled.set_padding(0.05);
+    button_styled.set_font_size(3.5_vp);
+    button_styled.set_padding(2.5_vp);
     button_styled.set_decoration_color(Color(10, 20, 100), Color(20, 50, 150));
     button_styled.set_text_color(Color(255, 255, 50));
 
     Icon checkbox(theme);
-    checkbox.set_position({0, 0.4f});
+    checkbox.set_position({0_vp, 20_vp});
     checkbox.set_icon(IconId::CheckBoxChecked);
     checkbox.set_text("Checkbox");
-    checkbox.set_font_size(0.08);
+    checkbox.set_font_size(4_vp);
     checkbox.set_color(Color(150, 200, 200));
     bool checkbox_state = true;
     bool checkbox_active = false;
@@ -66,7 +55,7 @@ int main()
         //view.set_debug_flag(View::Debug::WordBasePoint);
         //view.set_debug_flag(View::Debug::PageBBox);
         button_default.resize(view);
-        button_styled.set_outline_thickness(view.size_to_viewport(1_sc));
+        button_styled.set_outline_thickness(1_px);
         button_styled.resize(view);
         checkbox.resize(view);
     });
@@ -91,11 +80,11 @@ int main()
 
     window.set_mouse_button_callback([&](View& view, const MouseBtnEvent& ev) {
         if (ev.action == Action::Press && ev.button == MouseButton::Left) {
-            log_debug("checkbox mouse {}", ev.pos - view.offset());
-            log_debug("checkbox bbox {}", checkbox.aabb());
+            log::debug("checkbox mouse {}", ev.pos - view.offset());
+            log::debug("checkbox bbox {}", checkbox.aabb());
             if (checkbox.contains(ev.pos - view.offset())) {
                 checkbox_state = !checkbox_state;
-                log_debug("checkbox state {}", checkbox_state);
+                log::debug("checkbox state {}", checkbox_state);
                 refresh_checkbox = true;
             }
         }
@@ -106,6 +95,21 @@ int main()
         if (mouse_in != checkbox_active) {
             checkbox_active = mouse_in;
             refresh_checkbox = true;
+        }
+    });
+
+    window.set_key_callback([&](View& view, KeyEvent ev) {
+        if (ev.action != Action::Press)
+            return;
+        switch (ev.key) {
+            case Key::Escape:
+                window.close();
+                break;
+            case Key::F11:
+                window.toggle_fullscreen();
+                break;
+            default:
+                break;
         }
     });
 

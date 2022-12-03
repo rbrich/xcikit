@@ -1,22 +1,11 @@
-// Text.cpp created on 2018-03-02, part of XCI toolkit
-// Copyright 2018, 2019 Radek Brich
+// Text.cpp created on 2018-03-02 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Text.h"
 #include "Markup.h"
-
-#include <xci/graphics/Sprites.h>
 
 namespace xci::text {
 
@@ -80,7 +69,7 @@ void Text::set_string(const std::string& string, Format format)
 }
 
 
-void Text::set_width(ViewportUnits width)
+void Text::set_width(VariUnits width)
 {
     m_layout.set_default_page_width(width);
     m_need_typeset = true;
@@ -94,16 +83,58 @@ void Text::set_font(Font& font)
 }
 
 
-void Text::set_font_size(ViewportUnits size)
+void Text::set_font_size(VariUnits size, bool allow_scale)
 {
-    m_layout.set_default_font_size(size);
+    m_layout.set_default_font_size(size, allow_scale);
     m_need_typeset = true;
 }
 
 
-void Text::set_color(const graphics::Color& color)
+void Text::set_font_style(FontStyle font_style)
+{
+    m_layout.set_default_font_style(font_style);
+    m_need_typeset = true;
+}
+
+
+void Text::set_font_weight(uint16_t weight)
+{
+    m_layout.set_default_font_weight(weight);
+    m_need_typeset = true;
+}
+
+
+void Text::set_color(graphics::Color color)
 {
     m_layout.set_default_color(color);
+    m_need_typeset = true;
+}
+
+
+void Text::set_outline_radius(VariUnits radius)
+{
+    m_layout.set_default_outline_radius(radius);
+    m_need_typeset = true;
+}
+
+
+void Text::set_outline_color(graphics::Color color)
+{
+    m_layout.set_default_outline_color(color);
+    m_need_typeset = true;
+}
+
+
+void Text::set_tab_stops(std::vector<VariUnits> stops)
+{
+    m_layout.set_default_tab_stops(std::move(stops));
+    m_need_typeset = true;
+}
+
+
+void Text::set_alignment(Alignment alignment)
+{
+    m_layout.set_default_alignment(alignment);
     m_need_typeset = true;
 }
 
@@ -128,7 +159,7 @@ void Text::update(graphics::View& view)
 }
 
 
-void Text::draw(graphics::View& view, const ViewportCoords& pos)
+void Text::draw(graphics::View& view, VariCoords pos)
 {
     m_layout.draw(view, pos);
 }

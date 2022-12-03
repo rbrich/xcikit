@@ -1,4 +1,4 @@
-// unescape_rules.h created on 2019-11-29 belongs to XCI Toolkit
+// unescape_rules.h created on 2019-11-29 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
 // Copyright 2019 Radek Brich
@@ -7,6 +7,7 @@
 #ifndef XCI_CORE_PARSER_UNESCAPE_RULES_H
 #define XCI_CORE_PARSER_UNESCAPE_RULES_H
 
+#include <xci/core/string.h>
 #include <tao/pegtl.hpp>
 
 namespace xci::core::parser::unescape {
@@ -14,19 +15,20 @@ namespace xci::core::parser::unescape {
 using namespace tao::pegtl;
 
 
-struct StringChEscSingle : one< 'a', 'b', 'f', 'n', 'r', 't', 'v', 'e', '\\', '"', '\'', '0', '\n' > {};
-struct StringChEscHex : if_must< one< 'x' >, xdigit, xdigit > {};
-struct StringChEscOct : if_must< digit, opt<digit>, opt<digit> > {};
-struct StringChEsc : if_must< one< '\\' >, sor< StringChEscHex, StringChEscOct, StringChEscSingle > > {};
-struct StringChOther : sor< one<'\t'>, not_range<0, 31> > {};
+struct StringChEscSingle : one< 'a', 'b', 'f', 'n', 'r', 't', 'v', 'e', '\\', '"', '\'', '\n' > {};  // \a, ...
+struct StringChEscOct : if_must< digit, opt<digit>, opt<digit> > {};         //  \0, \377
+struct StringChEscHex : if_must< one<'x'>, xdigit, xdigit > {};              //  \xFF
+struct StringChEscUni : if_must< one<'u'>, one<'{'>, rep_min_max<1,6,xdigit>, one<'}'> > {};  //  \u{10234F}
+struct StringChEsc : if_must< one<'\\'>, sor< StringChEscHex, StringChEscOct, StringChEscSingle > > {};
+struct StringChUniEsc : if_must< one<'\\'>, sor< StringChEscHex, StringChEscUni, StringChEscOct, StringChEscSingle > > {};
+struct StringChOther : sor< one<'\t'>, utf8::not_range<0, 31> > {};
 struct StringCh : sor< StringChEsc, StringChOther > {};
+struct StringChUni : sor< StringChUniEsc, StringChOther > {};
 
 
-struct StringAppend {
+struct StringAppendChar {
     template<typename Input, typename String, typename... States>
     static void apply(const Input &in, String& str, States&&...) {
-        if (str.capacity() == str.size())
-            str.reserve(str.capacity() * 3 / 2);
         str.append(in.begin(), in.end());
     }
 };
@@ -35,8 +37,6 @@ struct StringAppend {
 struct StringAppendEscSingle {
     template<typename Input, typename String, typename... States>
     static void apply(const Input &in, String& str, States&&...) {
-        if (str.capacity() == str.size())
-            str.reserve(str.capacity() * 3 / 2);
         assert( in.size() == 1 );
         char ch = *in.begin();
         switch (ch) {
@@ -55,24 +55,29 @@ struct StringAppendEscSingle {
 };
 
 
+struct StringAppendEscOct {
+    template<typename Input, typename String, typename... States>
+    static void apply(const Input &in, String& str, States&&...) {
+        assert( in.size() >= 1 && in.size() <= 3 );
+        str += (char) std::stoi(in.string(), nullptr, 8);
+    }
+};
+
+
 struct StringAppendEscHex {
     template<typename Input, typename String, typename... States>
     static void apply(const Input &in, String& str, States&&...) {
-        if (str.capacity() == str.size())
-            str.reserve(str.capacity() * 3 / 2);
         assert( in.size() == 3 );
         str += (char) std::stoi(String{in.begin()+1, in.end()}, nullptr, 16);
     }
 };
 
 
-struct StringAppendEscOct {
+struct StringAppendEscUni {
     template<typename Input, typename String, typename... States>
     static void apply(const Input &in, String& str, States&&...) {
-        if (str.capacity() == str.size())
-            str.reserve(str.capacity() * 3 / 2);
-        assert( in.size() >= 1 && in.size() <= 3 );
-        str += (char) std::stoi(in.string(), nullptr, 8);
+        assert( in.size() > 3 && in.size() <= 9 );
+        str += to_utf8( (char32_t) std::stoi(String{in.begin()+2, in.end()-1}, nullptr, 16) );
     }
 };
 

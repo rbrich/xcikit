@@ -1,38 +1,48 @@
-// FontLibrary.cpp created on 2018-03-01, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// FontLibrary.cpp created on 2018-03-01 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018–2021 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "FontLibrary.h"
-#include "freetype/FtFontLibrary.h"
-#include "freetype/FtFontFace.h"
-#include <xci/core/format.h>
+#include "FontFace.h"
+#include <xci/core/log.h>
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-namespace xci {
-namespace text {
+namespace xci::text {
+
+using namespace xci::core;
 
 
 FontError::FontError(int error_code, const char* detail) :
-    Error(core::format("FT_Error: {} detail: {}", error_code, detail)),
+    Error(fmt::format("FT_Error: {} detail: {}", error_code, detail)),
     m_error_code(error_code) {}
+
+
+FontLibrary::FontLibrary()
+{
+    auto err = FT_Init_FreeType(&m_ft_library);
+    if (err) {
+        throw FontError(err, "FT_Init_FreeType");
+    }
+}
+
+
+FontLibrary::~FontLibrary()
+{
+    auto err = FT_Done_FreeType(m_ft_library);
+    if (err) {
+        log::error("FT_Done_FreeType: {}", err);
+        return;
+    }
+}
 
 
 FontLibraryPtr FontLibrary::create_instance()
 {
-    return std::make_shared<FtFontLibrary>();
+    return std::make_shared<FontLibrary>();
 }
 
 
@@ -45,8 +55,8 @@ std::shared_ptr<FontLibrary> FontLibrary::default_instance()
 
 FontFacePtr FontLibrary::create_font_face()
 {
-    return std::make_unique<FtFontFace>(shared_from_this());
+    return std::make_unique<FontFace>(shared_from_this());
 }
 
 
-}} // namespace xci::text
+} // namespace xci::text

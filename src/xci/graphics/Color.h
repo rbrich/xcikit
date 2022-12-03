@@ -1,17 +1,8 @@
-// Color.h created on 2018-03-04, part of XCI toolkit
+// Color.h created on 2018-03-04 as part of xcikit project
+// https://github.com/rbrich/xcikit
+//
 // Copyright 2018 Radek Brich
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_COLOR_H
 #define XCI_GRAPHICS_COLOR_H
@@ -22,7 +13,7 @@
 namespace xci::graphics {
 
 
-/// RGBA color
+/// RGBA color in 4x 8bit integer format
 
 struct Color {
     constexpr Color() = default;
@@ -62,21 +53,41 @@ struct Color {
     static constexpr Color Yellow() { return {255, 255, 0}; }
 
     // Access components as float values (0.0 .. 1.0)
-    float red_f() const { return r / 255.f; }
-    float green_f() const { return g / 255.f; }
-    float blue_f() const { return b / 255.f; }
-    float alpha_f() const { return a / 255.f; }
+    // See FloatColor below for conversion of whole Color to float[4] format
+    constexpr float red_f() const { return float(r) / 255.f; }
+    constexpr float green_f() const { return float(g) / 255.f; }
+    constexpr float blue_f() const { return float(b) / 255.f; }
+    constexpr float alpha_f() const { return float(a) / 255.f; }
+
+    // Test transparency
+    constexpr bool is_transparent() const { return a == 0; }
+    constexpr bool is_opaque() const { return a == 255; }
 
     // Comparison operators
-    bool operator==(const Color& rhs) const
+    constexpr bool operator==(Color rhs) const
         { return std::tie(r, g, b, a) == std::tie(rhs.r, rhs.g, rhs.b, rhs.a); }
-    bool operator!=(const Color& rhs) const { return !(rhs == *this); }
+    constexpr bool operator!=(Color rhs) const { return !(rhs == *this); }
 
     // Direct access to components
     uint8_t r = 0;    // red
     uint8_t g = 0;    // green
     uint8_t b = 0;    // blue
     uint8_t a = 255;  // alpha
+};
+
+
+/// RGBA color in 4x 32bit float format
+/// (this format is used in GLSL shaders as vec4)
+
+struct FloatColor {
+    constexpr FloatColor(Color color)  // NOLINT (implicit conversion)
+            : r(color.red_f())
+            , g(color.green_f())
+            , b(color.blue_f())
+            , a(color.alpha_f()) {}
+
+    // Direct access to components
+    float r, g, b, a;
 };
 
 

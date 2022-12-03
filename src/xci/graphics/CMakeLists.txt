@@ -2,9 +2,12 @@
 # Dependencies #
 # ------------ #
 
-find_package(glfw3 3.2 REQUIRED)
+find_package(glfw3 REQUIRED)
 find_package(Vulkan REQUIRED)
-find_path(INCBIN_INCLUDE_DIR incbin.h)
+
+if (NOT TARGET glfw::glfw)
+    add_library(glfw::glfw ALIAS glfw)
+endif()
 
 # ------------ #
 # Libraries    #
@@ -20,24 +23,33 @@ add_library(xci-graphics
     Texture.cpp
     View.cpp
     Window.cpp
-    vulkan/CommandBuffer.cpp
+    vulkan/CommandBuffers.cpp
+    vulkan/DescriptorPool.cpp
     vulkan/DeviceMemory.cpp
-    )
+    vulkan/Pipeline.cpp
+)
+add_library(xcikit::xci-graphics ALIAS xci-graphics)
 
 target_include_directories(xci-graphics
     PUBLIC
         ${XCI_INCLUDE_DIRS}
-    PRIVATE
-        ${INCBIN_INCLUDE_DIR})
+)
 
 target_link_libraries(xci-graphics
     PUBLIC
         xci-core
+        xci-core-vfs
         ${CMAKE_DL_LIBS}
         Vulkan::Vulkan
     PRIVATE
-        range-v3
-        glfw)
+        glfw::glfw
+        range-v3::range-v3
+)
+add_dependencies(xci-graphics shaders)
+
+if (BUILD_SHARED_LIBS)
+    set_target_properties(xci-graphics PROPERTIES CXX_VISIBILITY_PRESET default)
+endif()
 
 if (BUILD_FRAMEWORKS)
     set_target_properties(xci-graphics PROPERTIES
@@ -49,7 +61,9 @@ if (BUILD_FRAMEWORKS)
         # "compatibility version" in semantic format in Mach-O binary file
         SOVERSION 1.0.0
         PUBLIC_HEADER xci-graphics.h
-        )
+    )
 endif()
 
-install(TARGETS xci-graphics EXPORT xcikit DESTINATION lib)
+if (BUILD_SHARED_LIBS OR XCI_INSTALL_DEVEL)
+    install(TARGETS xci-graphics EXPORT xcikit DESTINATION ${CMAKE_INSTALL_LIBDIR})
+endif()

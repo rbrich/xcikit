@@ -1,17 +1,8 @@
-// Text.h created on 2018-03-02, part of XCI toolkit
-// Copyright 2018, 2019 Radek Brich
+// Text.h created on 2018-03-02 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_TEXT_TEXT_H
 #define XCI_TEXT_TEXT_H
@@ -27,8 +18,8 @@ namespace xci::text { class Font; }
 
 namespace xci::text {
 
-using graphics::ViewportUnits;
-using graphics::ViewportCoords;
+using graphics::VariUnits;
+using graphics::VariCoords;
 
 // Text rendering - convenient combination of Layout and Markup
 class Text {
@@ -46,16 +37,22 @@ public:
     void set_fixed_string(const std::string& string) { set_string(string, Format::None); }
     void set_markup_string(const std::string& string) { set_string(string, Format::Markup); }
 
-    void set_width(ViewportUnits width);
+    void set_width(VariUnits width);
     void set_font(Font& font);
-    void set_font_size(ViewportUnits size);
-    void set_color(const graphics::Color& color);
+    void set_font_size(VariUnits size, bool allow_scale = true);
+    void set_font_style(FontStyle font_style);
+    void set_font_weight(uint16_t weight);
+    void set_color(graphics::Color color);
+    void set_outline_radius(VariUnits radius);
+    void set_outline_color(graphics::Color color);
+    void set_tab_stops(std::vector<VariUnits> stops);
+    void set_alignment(Alignment alignment);
 
     Layout& layout() { return m_layout; }
 
     void resize(graphics::View& view);
     void update(graphics::View& view);
-    void draw(graphics::View& view, const ViewportCoords& pos);
+    void draw(graphics::View& view, VariCoords pos);
 
 private:
     Layout m_layout;

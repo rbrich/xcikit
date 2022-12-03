@@ -1,31 +1,29 @@
-// test_eventloop.cpp created on 2019-03-25, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// test_eventloop.cpp created on 2019-03-25 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019, 2020 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#define CATCH_CONFIG_MAIN
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 #include <xci/core/event.h>
-#include <xci/core/chrono.h>
+#include <xci/core/dispatch.h>
+#include <xci/core/log.h>
+#include <xci/compat/unistd.h>
 
 #include <thread>
-#include <unistd.h>
+#include <fstream>
+#include <string>
+#include <filesystem>
+#include <chrono>
 
 using namespace xci::core;
 using std::this_thread::sleep_for;
+using namespace std::chrono_literals;
+namespace fs = std::filesystem;
 
 
+#ifndef _WIN32
 TEST_CASE( "IO events", "[core][event][IOWatch]" )
 {
     EventLoop loop;
@@ -42,7 +40,7 @@ TEST_CASE( "IO events", "[core][event][IOWatch]" )
     });
 
     char data[] = {1, 0};
-    ::write(pipe_rw[1], data, 1);
+    (void) ::write(pipe_rw[1], data, 1u);
 
     loop.run();
 
@@ -50,6 +48,7 @@ TEST_CASE( "IO events", "[core][event][IOWatch]" )
     ::close(pipe_rw[0]);
     ::close(pipe_rw[1]);
 }
+#endif
 
 
 TEST_CASE( "Timer events", "[.][core][event][TimerWatch]" )
@@ -80,7 +79,10 @@ TEST_CASE( "FS events", "[.][core][event][FSWatch]" )
     EventLoop loop;
 
     FSWatch::Event expected_events[] = {
+            FSWatch::Event::Create,  // first open
+#ifndef _WIN32
             FSWatch::Event::Modify,  // one
+#endif
             FSWatch::Event::Modify,  // two
             FSWatch::Event::Modify,  // three
             FSWatch::Event::Delete,  // unlink
@@ -88,8 +90,7 @@ TEST_CASE( "FS events", "[.][core][event][FSWatch]" )
     size_t ev_ptr = 0;
     size_t ev_size = sizeof(expected_events) / sizeof(expected_events[0]);
 
-    std::string tmpname = "/tmp/xci_test_filewatch.XXXXXX";
-    close(mkstemp(&tmpname[0]));
+    auto tmpname = fs::temp_directory_path() / "xci_test_fswatch";
 
     FSWatch fs_watch(loop);
     fs_watch.add(tmpname,
@@ -107,6 +108,8 @@ TEST_CASE( "FS events", "[.][core][event][FSWatch]" )
     EventWatch quit_cond(loop, [&loop](){ loop.terminate(); });
 
     std::thread t([&quit_cond, &tmpname](){
+        sleep_for(50ms);
+
         // open
         std::ofstream f(tmpname);
         sleep_for(50ms);
@@ -128,7 +131,7 @@ TEST_CASE( "FS events", "[.][core][event][FSWatch]" )
         sleep_for(50ms);
 
         // delete
-        ::unlink(tmpname.c_str());
+        fs::remove(tmpname);
         sleep_for(50ms);
 
         quit_cond.fire();
@@ -136,6 +139,60 @@ TEST_CASE( "FS events", "[.][core][event][FSWatch]" )
 
     loop.run();
     t.join();
+
+    CHECK(ev_ptr == ev_size);  // got all expected events
+}
+
+
+TEST_CASE( "File watch", "[.][FSDispatch]" )
+{
+    Logger::init(Logger::Level::Error);
+    FSDispatch fw;
+
+    auto tmpname = fs::temp_directory_path() / "xci_test_fsdispatch";
+    std::ofstream f(tmpname);
+
+    FSDispatch::Event expected_events[] = {
+#ifndef _WIN32
+            FSDispatch::Event::Modify,  // one
+#endif
+            FSDispatch::Event::Modify,  // two
+            FSDispatch::Event::Modify,  // three
+            FSDispatch::Event::Delete,  // unlink
+    };
+    size_t ev_ptr = 0;
+    size_t ev_size = std::size(expected_events);
+    fw.add_watch(tmpname,
+            [&expected_events, &ev_ptr, ev_size] (FSDispatch::Event ev)
+            {
+              CHECK(ev_ptr < ev_size);
+              CHECK(expected_events[ev_ptr] == ev);
+              ev_ptr++;
+            });
+
+    // modify
+    f << "one" << std::endl;
+    f.flush();
+    sleep_for(100ms);
+
+    // modify, close
+    f << "two" << std::endl;
+    f.close();
+    sleep_for(100ms);
+
+    // reopen, modify, close
+    f.open(tmpname, std::ios::app);
+    f << "three" << std::endl;
+    f.close();
+    sleep_for(100ms);
+
+    // delete
+    fs::remove(tmpname);
+    sleep_for(100ms);
+
+    // although the inotify watch is removed automatically after delete,
+    // this should still be called to cleanup the callback info
+    fw.remove_watch(tmpname);
 
     CHECK(ev_ptr == ev_size);  // got all expected events
 }

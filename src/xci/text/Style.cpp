@@ -1,23 +1,52 @@
-// Style.cpp created on 2018-03-18, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Style.cpp created on 2018-03-18 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Style.h"
+#include <cmath>
 
-void xci::text::Style::clear()
+
+namespace xci::text {
+
+using namespace graphics;
+
+
+void Style::clear()
 {
     m_font = nullptr;
-    m_size = 0.05;
+    m_size = 2.5_vp;
+    m_outline_radius = 0_fb;
     m_color = graphics::Color::White();
+    m_outline_color = graphics::Color::Transparent();
+    m_font_style = FontStyle::Regular;
+    m_font_weight = 0;
+    m_scale = 1.0f;
 }
+
+
+void Style::apply_view(const View& view)
+{
+    // must select style (i.e. font face) before changing size of the font face
+    m_font->set_style(m_font_style);
+    if (m_font_weight != 0)
+        m_font->set_weight(m_font_weight);
+    // convert font size
+    auto font_size = view.to_fb(m_size);
+    m_font->set_size(unsigned(std::ceil(font_size.value)));
+    m_scale = m_allow_scale ? font_size.value / m_font->height() : 1.0f;
+    // two pass rendering - disable stroker for the first pass
+    m_font->set_stroke(StrokeType::None, 0.0f);
+}
+
+
+void Style::apply_outline(const View& view)
+{
+    m_font->set_stroke(
+            m_color.is_transparent() ? StrokeType::Outline : StrokeType::OutsideBorder,
+            view.to_fb(m_outline_radius).value);
+}
+
+
+} // namespace xci::text

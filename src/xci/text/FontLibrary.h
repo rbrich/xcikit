@@ -1,17 +1,8 @@
-// FontLibrary.h created on 2018-03-01, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// FontLibrary.h created on 2018-03-01 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018–2021 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_TEXT_FONTLIBRARY_H
 #define XCI_TEXT_FONTLIBRARY_H
@@ -19,7 +10,14 @@
 #include <memory>
 #include <vector>
 #include <string>
+
 #include <xci/core/error.h>
+#include <xci/core/mixin.h>
+
+// Forward decls from <ft2build.h>
+// (to avoid external dependency on Freetype)
+typedef struct FT_LibraryRec_  *FT_Library;  // NOLINT(modernize-use-using)
+
 
 namespace xci::text {
 
@@ -49,19 +47,20 @@ using FontFacePtr = std::unique_ptr<FontFace>;
 /// new instances explicitly. In that case, it's up to you how you manage
 /// their lifetime. But keep in mind that the FontLibrary instance must outlive
 /// any FontFaces created with it.
-class FontLibrary : public std::enable_shared_from_this<FontLibrary> {
+class FontLibrary : public std::enable_shared_from_this<FontLibrary>, private core::NonCopyable {
 public:
-    FontLibrary() = default;
-    virtual ~FontLibrary() = default;
-
-    // non-copyable
-    FontLibrary(const FontLibrary&) = delete;
-    FontLibrary& operator =(const FontLibrary&) = delete;
+    FontLibrary();
+    ~FontLibrary();
 
     static FontLibraryPtr create_instance();
     static FontLibraryPtr default_instance();
 
     FontFacePtr create_font_face();
+
+    FT_Library ft_library() const { return m_ft_library; }
+
+private:
+    FT_Library m_ft_library = nullptr;
 };
 
 

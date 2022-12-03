@@ -1,17 +1,8 @@
-// Button.cpp created on 2018-03-21, part of XCI toolkit
-// Copyright 2018, 2019 Radek Brich
+// Button.cpp created on 2018-03-21 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Button.h"
 #include <xci/text/Markup.h>
@@ -35,15 +26,15 @@ Button::Button(Theme& theme, const std::string &string)
 }
 
 
-void Button::set_decoration_color(const graphics::Color& fill,
-                                  const graphics::Color& outline)
+void Button::set_decoration_color(graphics::Color fill,
+                                  graphics::Color outline)
 {
     m_bg_rect.set_fill_color(fill);
     m_bg_rect.set_outline_color(outline);
 }
 
 
-void Button::set_text_color(const graphics::Color& color)
+void Button::set_text_color(graphics::Color color)
 {
     m_layout.set_default_color(color);
 }
@@ -51,17 +42,19 @@ void Button::set_text_color(const graphics::Color& color)
 
 void Button::resize(View& view)
 {
+    view.finish_draw();
     m_layout.typeset(view);
     m_layout.update(view);
     auto rect = m_layout.bbox();
-    rect.enlarge(m_padding);
+    rect.enlarge(view.to_fb(m_padding));
     set_size(rect.size());
     set_baseline(-rect.y);
+    Widget::resize(view);
 
     rect.x = 0;
     rect.y = 0;
     m_bg_rect.clear();
-    m_bg_rect.add_rectangle(rect, m_outline_thickness);
+    m_bg_rect.add_rectangle(rect, view.to_fb(m_outline_thickness));
     m_bg_rect.update();
 }
 
@@ -81,9 +74,10 @@ void Button::update(View& view, State state)
 
 void Button::draw(View& view)
 {
-    auto rect = m_layout.bbox();
+    const auto layout_pos = m_layout.bbox().top_left();
+    const auto padding = view.to_fb(m_padding);
     m_bg_rect.draw(view, position());
-    m_layout.draw(view, position() + ViewportCoords{m_padding - rect.x, m_padding - rect.y});
+    m_layout.draw(view, position() + FramebufferCoords{padding - layout_pos.x, padding - layout_pos.y});
 }
 
 

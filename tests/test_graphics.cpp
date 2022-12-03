@@ -1,24 +1,16 @@
-// test_graphics.cpp created on 2018-08-04, part of XCI toolkit
+// test_graphics.cpp created on 2018-08-04 as part of xcikit project
+// https://github.com/rbrich/xcikit
+//
 // Copyright 2018 Radek Brich
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#define CATCH_CONFIG_MAIN
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 #include <xci/graphics/Color.h>
+#include <xci/graphics/View.h>
 
 using namespace xci::graphics;
+using namespace xci::graphics::unit_literals;
 
 
 TEST_CASE( "Float colors", "[Color]" )
@@ -40,4 +32,38 @@ TEST_CASE( "Indexed colors", "[Color]" )
     CHECK( Color(232) == Color(8, 8, 8) );
     CHECK( Color(254) == Color(228, 228, 228) );
     CHECK( Color(255) == Color(238, 238, 238) );
+}
+
+
+TEST_CASE( "Variant units", "[VariUnits]" )
+{
+    // Type is encoded in upper bits
+    CHECK( VariUnits(0_fb).type() == VariUnits::Framebuffer );
+    CHECK( VariUnits(0_px).type() == VariUnits::Screen );
+    CHECK( VariUnits(0_vp).type() == VariUnits::Viewport );
+    CHECK( VariUnits(1_fb).type() == VariUnits::Framebuffer );
+    CHECK( VariUnits(2_px).type() == VariUnits::Screen );
+    CHECK( VariUnits(3_vp).type() == VariUnits::Viewport );
+    CHECK( VariUnits(-1_fb).type() == VariUnits::Framebuffer );
+    CHECK( VariUnits(-2_px).type() == VariUnits::Screen );
+    CHECK( VariUnits(-3_vp).type() == VariUnits::Viewport );
+
+    // Value is preserved
+    CHECK( VariUnits(0_fb).framebuffer() == 0_fb );
+    CHECK( VariUnits(0_px).screen() == 0_px );
+    CHECK( VariUnits(0_vp).viewport() == 0_vp );
+    CHECK( VariUnits(4_fb).framebuffer() == 4_fb );
+    CHECK( VariUnits(5_px).screen() == 5_px );
+    CHECK( VariUnits(6_vp).viewport() == 6_vp );
+    CHECK( VariUnits(-4_fb).framebuffer() == -4_fb );
+    CHECK( VariUnits(-5_px).screen() == -5_px );
+    CHECK( VariUnits(-6_vp).viewport() == -6_vp );
+
+    // Limits (overflow is asserted, UB in release)
+    CHECK( VariUnits(524287.95_fb).raw_storage() == 0x1fffffc0 );
+    CHECK( VariUnits(-524287.99_fb).raw_storage() == -0x20000000 );
+    CHECK( VariUnits(524287.95_px).raw_storage() == 0x3fffffc0 );
+    CHECK( VariUnits(-524287.99_px).raw_storage() == -0x40000000 );
+    CHECK( VariUnits(16383.9995_vp).raw_storage() == 0x7fffffc0 );
+    CHECK( VariUnits(-16383.9999_vp).raw_storage() == int32_t(-0x80000000) );
 }

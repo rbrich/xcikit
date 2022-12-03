@@ -1,192 +1,87 @@
-// BinaryWriter.cpp created on 2019-03-13, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// BinaryWriter.cpp created on 2019-03-13 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019, 2020 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "BinaryWriter.h"
-#include <zlib.h>
-#include <vector>
+#include <cstddef>  // std::ptrdiff_t
 
 namespace xci::data {
 
 
-void BinaryWriter::write_header()
+void BinaryWriter::write_content()
 {
-    // initialize CRC
-    m_crc = (uint32_t) crc32(0L, Z_NULL, 0);
-    m_pos = 0;
-
-    // MAGIC:16
-    uint8_t magic[2] = {Magic_Byte0, Magic_Byte1};
-    write_with_crc(magic);
-
-    // VERSION:8
-    uint8_t version = Version;
-    write_with_crc(version);
-
-    // FLAGS:8
     uint8_t flags = 0;
+
 #if BYTE_ORDER == LITTLE_ENDIAN
-    flags |= Flags_LittleEndian;
+    flags |= LittleEndian;
 #endif
 #if BYTE_ORDER == BIG_ENDIAN
-    flags |= Flags_BigEndian
+    flags |= BigEndian;
 #endif
-    write_with_crc(flags);
+
+    if (m_crc32)
+        flags |= ChecksumCrc32;
+
+    // Prepare header:
+    // 4 bytes fixed header: MAGIC:16, VERSION:8, FLAGS:8
+    // 6 bytes for SIZE in LEB128 => up to 4TB of file content
+    uint8_t header[10] {
+        Magic0, Magic1,
+        Version,
+        flags
+    };
+
+    uint8_t* iter = header + 4;
+    assert(is_root_group());
+    size_t content_size = group_buffer().size() + (m_crc32 ? 6 : 0);
+    assert(uint64_t(content_size) < 0x400'0000'0000LLU);  // up to 4TB
+    leb128_encode(iter, content_size);
+
+    const std::ptrdiff_t header_size = iter - header;
+    assert(header_size <= 10);
+
+    // Write header
+    m_stream.write((const char*)header, header_size);
+
+    // Write content
+    m_stream.write((const char*)group_buffer().data(), std::streamsize(group_buffer().size()));
+
+    if (!m_crc32)
+        return;  // no checksum -> we're done
+
+    // CRC-32: header + content
+    Crc32 crc;
+    crc.feed((const std::byte*)header, size_t(header_size));
+    crc(group_buffer());
+
+    // Write metadata intro (included in checksum)
+    const uint8_t meta_intro = (Type::Control | 0);
+    m_stream.put(char(meta_intro));
+    crc(meta_intro);
+
+    // Write checksum
+    const uint8_t crc_intro = (Type::UInt32 | 1);
+    m_stream.put(crc_intro);
+    crc(crc_intro);
+    m_stream.write((const char*)crc.data(), crc.size());
 }
 
 
-void BinaryWriter::write_footer()
+void BinaryWriter::write_group(uint8_t key, const char* name)
 {
-    // TAG + CRC:32
-    write_type_len(Type_Checksum, sizeof(m_crc));
-    m_stream.write((char*)&m_crc, sizeof(m_crc));
-}
+    if (key > 15)
+        throw ArchiveOutOfKeys(key);
 
-
-void BinaryWriter::write(const char* name, const std::string& value)
-{
-    // TYPE:3 LENFLAG:1 LEN:4 [LEN:8-64]
-    write_type_len(Type_String, value.size());
-
-    // KEY
-    write_key(name);
-
-    // VALUE
-    write_with_crc((const uint8_t*)value.data(), value.size());
-}
-
-
-void BinaryWriter::write(const char* name, unsigned int value)
-{
-    write_type_len(Type_Integer, sizeof(value));
-    write_key(name);
-    write_with_crc(htole32(value));
-}
-
-
-void BinaryWriter::write(const char* name, double value)
-{
-    write_type_len(Type_Float, sizeof(value));
-    write_key(name);
-    write_with_crc(value);
-}
-
-
-void BinaryWriter::write_with_crc(const uint8_t* buffer, size_t length)
-{
-    m_stream.write((char*)buffer, length);
-    m_crc = (uint32_t) crc32(m_crc, buffer, (uInt)length);
-    m_pos += length;
-}
-
-
-void BinaryWriter::write_type_len(uint8_t type, uint64_t len)
-{
-    // TYPE:3 FLAG:1 LEN:4
-    {
-        uint8_t type_len = (type & Type_Mask) | uint8_t(len & Length41_Mask);
-        len >>= 4;
-        if (len > 0) {
-            type_len |= Length41_Flag;
-        }
-        write_with_crc(type_len);
-    }
-    if (len == 0)
-        return;
-
-    // There might be 60 more bits of len. Those are encoded in 8,16,32 or 64 bits:
-    //
-    // FLAG:2 LEN:6 [LEN:8] [LEN:16] [LEN:32]
-    //        \ F=0  \ F=1   \ F=2    \ F=3
-    //
-    // The first two bits tell how many more bits are used.
-
-    // FLAG:2 LEN:6
-    {
-        auto len0 = uint8_t(len & Length62_Mask);
-        len >>= 6;
-        if (len == 0) {
-            len0 |= Length62_Flag0;
-        } else if (len < (1 << 8)) {
-            len0 |= Length62_Flag1;
-        } else if (len < (1 << 24)) {
-            len0 |= Length62_Flag2;
-        } else {
-            len0 |= Length62_Flag3;
-        }
-        write_with_crc(len0);
-    }
-    if (len == 0)
-        return;
-
-    // LEN:8
-    {
-        auto len1 = uint8_t(len & 0xff);
-        write_with_crc(len1);
-        len >>= 8;
-    }
-    if (len == 0)
-        return;
-
-    // LEN:16
-    {
-        uint16_t len2 = htole16((uint16_t)(len & 0xffff));
-        write_with_crc(len2);
-        len >>= 16;
-    }
-    if (len == 0)
-        return;
-
+    auto inner_buffer = std::move(group_buffer());
+    m_group_stack.pop_back();
+    // TYPE:4, KEY:4
+    write(uint8_t(Type::Master | key));
     // LEN:32
-    {
-        uint32_t len3 = htole32((uint32_t)len);
-        write_with_crc(len3);
-    }
-}
-
-
-void BinaryWriter::write_key(const char* key)
-{
-    // Try emplace
-    auto item = m_key_to_pos.emplace(key, m_pos);
-    // Is it new?
-    if (item.second || m_pos - item.first->second > 0x7fff) {
-        // Write raw key
-        auto len = uint8_t(std::max(127uL, strlen(key)));
-        write_with_crc(len);
-        write_with_crc((const uint8_t*)key, len);
-    } else {
-        // Write offset to first appearance
-        auto offset = uint16_t(m_pos - item.first->second);
-        auto b1 = uint8_t(0x80 | (offset & 0x7f));
-        write_with_crc(b1);
-        auto b2 = uint8_t(offset >> 7);
-        write_with_crc(b2);
-    }
-}
-
-
-void BinaryWriter::write_master(int flag)
-{
-    if (flag == Master_Leave)
-        m_depth--;
-
-    auto type_len = uint8_t(Type_Master | (flag & Length41_Mask));
-    write_with_crc(type_len);
-
-    if (flag == Master_Enter)
-        m_depth++;
+    write_leb128(inner_buffer.size());
+    // VALUE
+    write(inner_buffer.data(), inner_buffer.size());
 }
 
 

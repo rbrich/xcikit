@@ -9,6 +9,8 @@
 
 #include <xci/widgets/Widget.h>
 #include <xci/text/Text.h>
+#include <fmt/core.h>
+#include <fmt/ostream.h>
 
 namespace xci::demo {
 
@@ -28,6 +30,7 @@ public:
     }
 
     void resize(View& view) override {
+        Widget::resize(view);
         m_text.resize(view);
     }
 
@@ -45,7 +48,7 @@ public:
     }
 
     void mouse_pos_event(View& view, const MousePosEvent& ev) override {
-        m_pos_str = format("({}, {})", ev.pos.x, ev.pos.y);
+        m_pos_str = fmt::format("({}, {})", ev.pos.x, ev.pos.y);
     }
 
 private:

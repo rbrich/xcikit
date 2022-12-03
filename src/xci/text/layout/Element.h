@@ -1,17 +1,8 @@
-// Element.h created on 2018-03-18, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Element.h created on 2018-03-18 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_TEXT_LAYOUT_PAGE_ELEMENT_H
 #define XCI_TEXT_LAYOUT_PAGE_ELEMENT_H
@@ -21,6 +12,9 @@
 #include <string>
 
 namespace xci::text::layout {
+
+using graphics::VariUnits;
+using graphics::VariSize;
 
 
 class Element {
@@ -36,13 +30,13 @@ public:
 
 class SetPageWidth: public Element {
 public:
-    explicit SetPageWidth(ViewportUnits width) : m_width(width) {}
+    explicit SetPageWidth(VariUnits width) : m_width(width) {}
     void apply(Page& page) override {
-        page.set_width(m_width);
+        page.set_width(page.target().to_fb(m_width));
     }
 
 private:
-    float m_width;
+    VariUnits m_width;
 };
 
 
@@ -60,13 +54,13 @@ private:
 
 class AddTabStop: public Element {
 public:
-    explicit AddTabStop(ViewportUnits tab_stop) : m_tab_stop(tab_stop) {}
+    explicit AddTabStop(VariUnits tab_stop) : m_tab_stop(tab_stop) {}
     void apply(Page& page) override {
-        page.add_tab_stop(m_tab_stop);
+        page.add_tab_stop(page.target().to_fb(m_tab_stop));
     }
 
 private:
-    float m_tab_stop;
+    VariUnits m_tab_stop;
 };
 
 
@@ -80,13 +74,13 @@ public:
 
 class SetOffset: public Element {
 public:
-    explicit SetOffset(const ViewportSize& offset) : m_offset(offset) {}
+    explicit SetOffset(VariSize offset) : m_offset(offset) {}
     void apply(Page& page) override {
-        page.set_pen_offset(m_offset);
+        page.set_pen_offset(page.target().to_fb(m_offset));
     }
 
 private:
-    const ViewportSize m_offset;
+    VariSize m_offset;
 };
 
 
@@ -104,13 +98,61 @@ private:
 
 class SetFontSize: public Element {
 public:
-    explicit SetFontSize(ViewportUnits size) : m_size(size) {}
+    explicit SetFontSize(VariUnits size) : m_size(size) {}
     void apply(Page& page) override {
         page.set_font_size(m_size);
     }
 
 private:
-    float m_size;
+    VariUnits m_size;
+};
+
+
+class SetFontStyle: public Element {
+public:
+    explicit SetFontStyle(FontStyle font_style) : m_font_style(font_style) {}
+    void apply(Page& page) override {
+        page.set_font_style(m_font_style);
+    }
+
+private:
+    FontStyle m_font_style;
+};
+
+
+class SetBold: public Element {
+public:
+    explicit SetBold(bool bold) : m_bold(bold) {}
+    void apply(Page& page) override {
+        auto style = static_cast<unsigned>(page.style().font_style());
+        auto bold = static_cast<unsigned>(FontStyle::Bold);
+        if (m_bold)
+            style |= bold;
+        else
+            style &= ~bold;
+        page.set_font_style(static_cast<FontStyle>(style));
+    }
+
+private:
+    bool m_bold;
+};
+
+
+class SetItalic: public Element {
+public:
+    explicit SetItalic(bool italic) : m_italic(italic) {}
+    void apply(Page& page) override {
+        auto style = static_cast<unsigned>(page.style().font_style());
+        auto italic = static_cast<unsigned>(FontStyle::Italic);
+        if (m_italic)
+            style |= italic;
+        else
+            style &= ~italic;
+        page.set_font_style(static_cast<FontStyle>(style));
+    }
+
+private:
+    bool m_italic;
 };
 
 
@@ -164,6 +206,18 @@ public:
     void apply(Page& page) override {
         page.finish_line();
     }
+};
+
+
+class AdvanceLine: public Element {
+public:
+    explicit AdvanceLine(float lines) : m_lines(lines) {}
+    void apply(Page& page) override {
+        page.advance_line(m_lines);
+    }
+
+private:
+    float m_lines;
 };
 
 

@@ -1,66 +1,86 @@
-// Interpreter.cpp created on 2019-06-21, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// Interpreter.cpp created on 2019-06-21 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Interpreter.h"
+#include "Builtin.h"
+
+#include <utility>
+#include <fmt/core.h>
 
 namespace xci::script {
 
-using std::move;
+
+Interpreter::Interpreter(const core::Vfs& vfs, Compiler::Flags flags)
+    : m_module_manager(vfs, *this),
+      m_compiler(flags)
+{}
 
 
-Interpreter::Interpreter(uint32_t flags)
-    : m_compiler(flags)
-{
-    add_imported_module(m_builtin);
-}
-
-
-std::unique_ptr<Module> Interpreter::build_module(const std::string& name, std::string_view content)
+std::shared_ptr<Module> Interpreter::build_module(const std::string& name, SourceId source_id)
 {
     // setup module
-    auto module = std::make_unique<Module>(name);
-    module->add_imported_module(m_builtin);
+    auto module = std::make_shared<Module>(m_module_manager, name);
+    module->import_module("builtin");
 
     // parse
     ast::Module ast;
-    m_parser.parse(content, ast);
+    m_parser.parse(source_id, ast);
 
     // compile
-    Function func {*module, module->symtab()};
-    m_compiler.compile(func, ast);
+    if (!m_compiler.compile(module->get_main_scope(), ast))
+        return module;  // requested to only preprocess AST
+
+    // sanity check (no AST references)
+    for (Index idx = 0; idx != module->num_functions(); ++idx) {
+        auto& fn = module->get_function(idx);
+        if (fn.is_generic()) {
+            assert(fn.is_ast_copied());
+            fn.ensure_ast_copy();
+        }
+    }
 
     return module;
 }
 
 
-std::unique_ptr<Value> Interpreter::eval(std::string_view input, const InvokeCallback& cb)
+TypedValue Interpreter::eval(Module& module, SourceId source_id, const InvokeCallback& cb)
 {
     // parse
     ast::Module ast;
-    m_parser.parse(input, ast);
+    m_parser.parse(source_id, ast);
 
     // compile
-    auto& symtab = m_main.symtab().add_child("<input>");
-    Function func {m_main, symtab};
-    m_compiler.compile(func, ast);
+    auto& scope = module.get_main_scope();
+    m_compiler.compile(scope, ast);
 
     // execute
-    m_machine.call(func, cb);
+    auto& fn = scope.function();
+    m_machine.call(fn, cb);
 
     // get result from stack
-    return m_machine.stack().pull(func.signature().return_type);
+    auto ti = fn.effective_return_type();
+    return m_machine.stack().pull_typed(ti);
+}
+
+
+TypedValue Interpreter::eval(Module& module, std::string input, const Interpreter::InvokeCallback& cb)
+{
+    auto src_id = m_source_manager.add_source(
+            fmt::format("<input{}>", m_input_num++),
+            std::move(input));
+
+    return eval(module, src_id, cb);
+}
+
+
+TypedValue Interpreter::eval(std::string input, const Interpreter::InvokeCallback& cb)
+{
+    Module main(m_module_manager);
+    main.import_module("builtin");
+    return eval(main, std::move(input), cb);
 }
 
 

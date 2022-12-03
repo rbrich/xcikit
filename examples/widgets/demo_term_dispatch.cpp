@@ -1,36 +1,23 @@
-// demo_term_dispatch.cpp created on 2019-04-06, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// demo_term_dispatch.cpp created on 2019-04-06 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
+#include "graphics/common.h"
 
 #include <xci/widgets/TextTerminal.h>
-#include <xci/graphics/Window.h>
 #include <xci/core/Vfs.h>
 #include <xci/core/file.h>
-#include <xci/core/format.h>
 #include <xci/core/log.h>
 #include <xci/core/dispatch.h>
 #include <xci/config.h>
+#include <xci/compat/unistd.h>
 #include <cstdlib>
 #include <cstdio>
-#include <iostream>
 #include <mutex>
-#include <unistd.h>
 
 using namespace xci::widgets;
-using namespace xci::graphics;
-using namespace xci::core;
 
 
 class SharedBuffer {
@@ -50,15 +37,16 @@ private:
     size_t m_pending = 0;
 };
 
-int main()
+int main(int argc, const char* argv[])
 {
     Logger::init();
     Vfs vfs;
-    vfs.mount(XCI_SHARE_DIR);
+    if (!vfs.mount(XCI_SHARE))
+        return EXIT_FAILURE;
 
     Renderer renderer {vfs};
     Window window {renderer};
-    window.create({800, 600}, "XCI TextTerminal + Dispatch demo");
+    setup_window(window, "XCI TextTerminal + Dispatch demo", argv);
 
     Theme theme(renderer);
     if (!theme.load_default())
@@ -67,7 +55,7 @@ int main()
     const char* cmd = "while true ; do date ; sleep 1; done";
 
     TextTerminal terminal {theme};
-    terminal.add_text(get_cwd() + "> ");
+    terminal.add_text(fs::current_path().string() + "> ");
     terminal.set_font_style(TextTerminal::FontStyle::Bold);
     terminal.add_text(std::string(cmd) + "\n");
     terminal.set_font_style(TextTerminal::FontStyle::Regular);
@@ -116,9 +104,24 @@ int main()
         terminal.set_size(vs);
     });
 
+    window.set_key_callback([&](View& view, KeyEvent ev) {
+        if (ev.action != Action::Press)
+            return;
+        switch (ev.key) {
+            case Key::Escape:
+                window.close();
+                break;
+            case Key::F11:
+                window.toggle_fullscreen();
+                break;
+            default:
+                break;
+        }
+    });
+
     Bind bind(window, terminal);
-    window.set_refresh_mode(RefreshMode::OnDemand);
-    window.set_view_mode(ViewOrigin::TopLeft, ViewScale::FixedScreenPixels);
+    window.set_refresh_mode(RefreshMode::Periodic);  // FIXME: bell() doesn't work with OnDemand
+    window.set_view_origin(ViewOrigin::TopLeft);
     window.display();
 
     dispatch.terminate();

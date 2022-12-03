@@ -1,58 +1,66 @@
-// Builtin.h created on 2019-05-20, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// Builtin.h created on 2019-05-20 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019–2021 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_BUILTIN_H
 #define XCI_SCRIPT_BUILTIN_H
 
 #include "Value.h"
 #include "Module.h"
-#include "AST.h"
+#include "ast/AST.h"
 #include "Code.h"
-#include <functional>
+#include <cmath>
 
 namespace xci::script {
 
 
 namespace builtin {
-    template <class T, class R=T> using BinaryFunction = std::function<R(T, T)>;
-    template <class T> using UnaryFunction = std::function<T(T)>;
 
-    BinaryFunction<value::Bool> logical_op_function(Opcode opcode);
-    template <class T> BinaryFunction<T, value::Bool> comparison_op_function(Opcode opcode);
-    template <class T> BinaryFunction<T> binary_op_function(Opcode opcode);
+// shift_left operator is missing in <functional>
+struct shift_left {
+    template<class T, class U>
+    constexpr auto operator()( T&& lhs, U&& rhs ) const
+    noexcept(noexcept(std::forward<T>(lhs) + std::forward<U>(rhs)))
+    -> decltype(std::forward<T>(lhs) + std::forward<U>(rhs))
+    { return std::forward<T>(lhs) << std::forward<U>(rhs); }
+};
 
-    UnaryFunction<value::Bool> logical_not_function();
-    template <class T> UnaryFunction<T> unary_op_function(Opcode opcode);
+// shift_right operator is missing in <functional>
+struct shift_right {
+    template<class T, class U>
+    constexpr auto operator()( T&& lhs, U&& rhs ) const
+    noexcept(noexcept(std::forward<T>(lhs) + std::forward<U>(rhs)))
+    -> decltype(std::forward<T>(lhs) + std::forward<U>(rhs))
+    { return std::forward<T>(lhs) >> std::forward<U>(rhs); }
+};
 
-    const char* op_to_name(ast::Operator::Op op);
-    const char* op_to_function_name(ast::Operator::Op op);
-}
+// exp operator is missing in <functional>
+struct exp {
+    template<class T, class U>
+    constexpr auto operator()( T&& lhs, U&& rhs ) const
+    noexcept(noexcept(std::forward<T>(lhs) + std::forward<U>(rhs)))
+    -> decltype(std::forward<T>(lhs) + std::forward<U>(rhs))
+    { return (decltype(std::forward<T>(lhs) + std::forward<U>(rhs)))
+                std::pow(std::forward<T>(lhs), std::forward<U>(rhs)); }
+};
+
+const char* op_to_function_name(ast::Operator::Op op);
+
+} // namespace builtin
 
 
 class BuiltinModule : public Module {
 public:
-    BuiltinModule();
+    explicit BuiltinModule(ModuleManager& module_manager);
 
 private:
-    void add_logical_op_function(const std::string& name, Opcode opcode);
-    void add_bitwise_op_function(const std::string& name, Opcode opcode);
-    void add_arithmetic_op_function(const std::string& name, Opcode opcode);
-    void add_unary_op_functions();
-    void add_subscript_function();
     void add_intrinsics();
     void add_types();
+    void add_string_functions();
+    void add_io_functions();
+    void add_introspections();
 };
 
 } // namespace xci::script

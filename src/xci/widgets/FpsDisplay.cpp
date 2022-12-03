@@ -1,21 +1,12 @@
-// FpsDisplay.cpp created on 2018-04-14, part of XCI toolkit
-// Copyright 2018, 2019 Radek Brich
+// FpsDisplay.cpp created on 2018-04-14 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "FpsDisplay.h"
-#include <xci/core/format.h>
 #include <xci/graphics/Renderer.h>
+#include <fmt/core.h>
 #include <chrono>
 
 namespace xci::widgets {
@@ -23,8 +14,7 @@ namespace xci::widgets {
 using namespace xci::graphics;
 using namespace xci::graphics::unit_literals;
 using namespace xci::core;
-using namespace xci::core::log;
-using xci::core::format;
+using fmt::format;
 using namespace std::chrono_literals;
 
 
@@ -32,20 +22,22 @@ FpsDisplay::FpsDisplay(Theme& theme)
         : Widget(theme),
           m_quad(theme.renderer(), VertexFormat::V2t2, PrimitiveType::TriFans),
           m_shader(theme.renderer().get_shader(ShaderId::Fps)),
-          m_texture(theme.renderer())
+          m_texture(theme.renderer(), ColorFormat::Grey)
 {
     m_texture.create({(unsigned)m_fps.resolution(), 1});
 
     // default size in "scalable" units
-    set_size({0.50f, 0.10f});
-    create_sprite();
+    set_size({25_vp, 5_vp});
 }
 
 
 void FpsDisplay::resize(View& view)
 {
+    Widget::resize(view);
+    view.finish_draw();
+
     m_quad.clear();
-    create_sprite();
+    create_sprite(view);
 
     m_text.set_font(theme().font());
     m_text.set_font_size(size().y / 2);
@@ -92,14 +84,14 @@ void FpsDisplay::draw(View& view)
 
     auto font_size = size().y / 2;
     auto offset = size().y / 5;
-    m_text.draw(view, position() + ViewportCoords{offset, offset + font_size});
+    m_text.draw(view, position() + FramebufferCoords{offset, offset + font_size});
 }
 
 
-void FpsDisplay::create_sprite()
+void FpsDisplay::create_sprite(View& view)
 {
-    auto x1 = 0_vp;
-    auto y1 = 0_vp;
+    auto x1 = 0_fb;
+    auto y1 = 0_fb;
     auto x2 = size().x;
     auto y2 = size().y;
     m_quad.reserve(4);

@@ -1,22 +1,13 @@
-// Compiler.h created on 2019-05-30, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// Compiler.h created on 2019-05-30 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_SCRIPT_COMPILER_H
 #define XCI_SCRIPT_COMPILER_H
 
-#include "AST.h"
+#include "ast/AST.h"
 #include "Function.h"
 #include "Module.h"
 #include <vector>
@@ -26,34 +17,67 @@ namespace xci::script {
 
 class Compiler {
 public:
-    enum Flags {
-        // enable optimizations
-        OConstFold = 0x1,
-        O0 = 0,
-        O1 = OConstFold,
+    enum class Flags {
+        // All compiler passes
+        // UNSAFE: Don't use these flags directly - the wrong set of flags
+        //         can crash the compiler (asserts in Debug mode).
+        //         Use PP* flags below.
+        FoldTuple           = 0x0001,
+        FoldDotCall         = 0x0002,
+        ResolveSymbols      = 0x0004,
+        ResolveDecl         = 0x0008,
+        ResolveTypes        = 0x0010,
+        ResolveNonlocals    = 0x0020,
+        FoldConstExpr       = 0x0001 << 16,
 
-        // parse & process only, do no compile into bytecode
-        PPMask      = 3 << 24,
-        PPSymbols   = 1 << 24,    // stop after SymbolResolver pass
-        PPNonlocals = 2 << 24,    // stop after NonlocalSymbolResolver pass
-        PPTypes     = 3 << 24,    // stop after TypeResolver pass
+        // Bit masks
+        MandatoryMask       = 0xffff,
+        OptimizationMask    = 0xffff << 16,
+
+        // Mandatory AST passes
+        // - if none of the flags are set, all passes will be enabled
+        // - if one or more of these flags is set, the Compiler won't compile, only preprocess
+        // - each flag may bring in other flags as its dependencies
+        PPTuple         = FoldTuple,
+        PPDotCall       = FoldDotCall,
+        PPSymbols       = ResolveSymbols | PPDotCall | PPTuple,
+        PPDecl          = ResolveDecl | PPSymbols,
+        PPTypes         = ResolveTypes | PPDecl,
+        PPNonlocals     = ResolveNonlocals | PPTypes,
+
+        // Optimization
+        O0 = 0,
+        O1 = FoldConstExpr,
+
+        Default = 0,
     };
 
+    // Allow basic arithmetic on OpCode
+    friend inline Flags operator|(Flags a, Flags b) { return Flags(int32_t(a) | int32_t(b)); }
+    friend inline Flags operator&(Flags a, Flags b) { return Flags(int32_t(a) & int32_t(b)); }
+    friend inline Flags operator|=(Flags& a, Flags b) { return a = a | b; }
+
     Compiler() = default;
-    explicit Compiler(uint32_t flags) : Compiler() { configure(flags); }
+    explicit Compiler(Flags flags) : m_flags(flags) {}
 
-    void configure(uint32_t flags);
-    bool is_configured() const { return !m_ast_passes.empty(); }
+    void set_flags(Flags flags) { m_flags = flags; }
+    Flags flags() const { return m_flags; }
 
-    // Compile AST into Function object, which contains objects in scope + code
-    // (module is special kind of function, with predefined parameters)
-    void compile(Function& func, ast::Module& ast);
+    /// Compile AST into Function object, which contains objects in scope + code
+    /// (module is a special kind of function, with predefined parameters)
+    /// \returns true if actually compiled (depends on Flags)
+    bool compile(Scope& scope, ast::Module& ast);
 
-    // Compile block, return type of its return value
-    void compile_block(Function& func, const ast::Block& block);
+    /// Compile single function that has fully prepared AST
+    /// (all other phases were run on it)
+    void compile_function(Scope& scope, const ast::Block& body);
+
+    /// Compile all functions in a module except `main`
+    /// that are marked with compile flag but not yet compiled
+    void compile_all_functions(Scope& main);
 
 private:
-    std::vector<std::unique_ptr<ast::BlockProcessor>> m_ast_passes;  // preprocessing & optimization passes
+    Flags m_flags = Flags::Default;
 };
 
 

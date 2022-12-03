@@ -1,0 +1,419 @@
+// std.fire created on 2019-10-14 as part of xcikit project
+// https://github.com/rbrich/xcikit
+//
+// Copyright 2019–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
+
+
+// Logical operators
+
+class LogicalNot T  { not :   T -> Bool }
+class LogicalOr  T  { or  : T T -> Bool }
+class LogicalAnd T  { and : T T -> Bool }
+
+instance LogicalNot Bool { not = { __logical_not } }
+instance LogicalOr  Bool { or  = { __logical_or  } }
+instance LogicalAnd Bool { and = { __logical_and } }
+
+
+// Bitwise operators
+
+class BitwiseNot T  { bit_not :   T -> T }
+class BitwiseOr  T  { bit_or  : T T -> T }
+class BitwiseAnd T  { bit_and : T T -> T }
+class BitwiseXor T  { bit_xor : T T -> T }
+class ShiftLeft  T  { shift_left  : T T -> T }
+class ShiftRight T  { shift_right : T T -> T }
+
+instance BitwiseNot Byte   { bit_not = { __bitwise_not_8  } }
+instance BitwiseNot UInt32 { bit_not = { __bitwise_not_32 } }
+instance BitwiseNot UInt64 { bit_not = { __bitwise_not_64 } }
+instance BitwiseNot Int32  { bit_not = { __bitwise_not_32 } }
+instance BitwiseNot Int64  { bit_not = { __bitwise_not_64 } }
+instance BitwiseOr  Byte   { bit_or  = { __bitwise_or_8   } }
+instance BitwiseOr  UInt32 { bit_or  = { __bitwise_or_32  } }
+instance BitwiseOr  UInt64 { bit_or  = { __bitwise_or_64  } }
+instance BitwiseOr  Int32  { bit_or  = { __bitwise_or_32  } }
+instance BitwiseOr  Int64  { bit_or  = { __bitwise_or_64  } }
+instance BitwiseAnd Byte   { bit_and = { __bitwise_and_8  } }
+instance BitwiseAnd UInt32 { bit_and = { __bitwise_and_32 } }
+instance BitwiseAnd UInt64 { bit_and = { __bitwise_and_64 } }
+instance BitwiseAnd Int32  { bit_and = { __bitwise_and_32 } }
+instance BitwiseAnd Int64  { bit_and = { __bitwise_and_64 } }
+instance BitwiseXor Byte   { bit_xor = { __bitwise_xor_8  } }
+instance BitwiseXor UInt32 { bit_xor = { __bitwise_xor_32 } }
+instance BitwiseXor UInt64 { bit_xor = { __bitwise_xor_64 } }
+instance BitwiseXor Int32  { bit_xor = { __bitwise_xor_32 } }
+instance BitwiseXor Int64  { bit_xor = { __bitwise_xor_64 } }
+instance ShiftLeft  Byte   { shift_left  = { __shift_left 0x11 } }
+instance ShiftLeft  UInt32 { shift_left  = { __shift_left 0x33 } }
+instance ShiftLeft  UInt64 { shift_left  = { __shift_left 0x44 } }
+instance ShiftLeft  Int32  { shift_left  = { __shift_left 0x88 } }
+instance ShiftLeft  Int64  { shift_left  = { __shift_left 0x99 } }
+instance ShiftRight Byte   { shift_right = { __shift_right 0x11 } }
+instance ShiftRight UInt32 { shift_right = { __shift_right 0x33 } }
+instance ShiftRight UInt64 { shift_right = { __shift_right 0x44 } }
+instance ShiftRight Int32  { shift_right = { __shift_right 0x88 } }
+instance ShiftRight Int64  { shift_right = { __shift_right 0x99 } }
+
+
+// Arithmetic operators
+
+class Neg T  { neg : T -> T }
+class Add T  { add : T T -> T }
+class Sub T  { sub : T T -> T }
+class Mul T  { mul : T T -> T }
+class Div T  { div : T T -> T }
+class Mod T  { mod : T T -> T }
+class Exp T  { exp : T T -> T }
+
+instance Neg Byte  { neg = { __neg 0x11 } }
+instance Neg UInt32 { neg = { __neg 0x33 } }
+instance Neg UInt64 { neg = { __neg 0x44 } }
+instance Neg Int32 { neg = { __neg 0x88 } }
+instance Neg Int64 { neg = { __neg 0x99 } }
+instance Neg Float32 { neg = { __neg 0xCC } }
+instance Neg Float64 { neg = { __neg 0xDD } }
+instance Add Byte  { add = { __add 0x11 } }
+instance Add UInt32 { add = { __add 0x33 } }
+instance Add UInt64 { add = { __add 0x44 } }
+instance Add Int32 { add = { __add 0x88 } }
+instance Add Int64 { add = { __add 0x99 } }
+instance Add Float32 { add = { __add 0xCC } }
+instance Add Float64 { add = { __add 0xDD } }
+instance Sub Byte  { sub = { __sub 0x11 } }
+instance Sub UInt32 { sub = { __sub 0x33 } }
+instance Sub UInt64 { sub = { __sub 0x44 } }
+instance Sub Int32 { sub = { __sub 0x88 } }
+instance Sub Int64 { sub = { __sub 0x99 } }
+instance Sub Float32 { sub = { __sub 0xCC } }
+instance Sub Float64 { sub = { __sub 0xDD } }
+instance Mul Byte  { mul = { __mul 0x11 } }
+instance Mul UInt32 { mul = { __mul 0x33 } }
+instance Mul UInt64 { mul = { __mul 0x44 } }
+instance Mul Int32 { mul = { __mul 0x88 } }
+instance Mul Int64 { mul = { __mul 0x99 } }
+instance Mul Float32 { mul = { __mul 0xCC } }
+instance Mul Float64 { mul = { __mul 0xDD } }
+instance Div Byte  { div = { __div 0x11 } }
+instance Div UInt32 { div = { __div 0x33 } }
+instance Div UInt64 { div = { __div 0x44 } }
+instance Div Int32 { div = { __div 0x88 } }
+instance Div Int64 { div = { __div 0x99 } }
+instance Div Float32 { div = { __div 0xCC } }
+instance Div Float64 { div = { __div 0xDD } }
+instance Mod Byte  { mod = { __mod 0x11 } }
+instance Mod UInt32 { mod = { __mod 0x33 } }
+instance Mod UInt64 { mod = { __mod 0x44 } }
+instance Mod Int32 { mod = { __mod 0x88 } }
+instance Mod Int64 { mod = { __mod 0x99 } }
+instance Exp Byte  { exp = { __exp 0x11 } }
+instance Exp UInt32 { exp = { __exp 0x33 } }
+instance Exp UInt64 { exp = { __exp 0x44 } }
+instance Exp Int32 { exp = { __exp 0x88 } }
+instance Exp Int64 { exp = { __exp 0x99 } }
+instance Exp Float32 { exp = { __exp 0xCC } }
+instance Exp Float64 { exp = { __exp 0xDD } }
+
+
+// Comparison operators
+
+class Eq T {
+    eq : T T -> Bool
+    ne : T T -> Bool // = fun x y { not (eq x y) };
+}
+
+class Ord T (Eq T) {
+    lt : T T -> Bool
+    gt : T T -> Bool
+    le : T T -> Bool
+    ge : T T -> Bool
+}
+
+
+instance Eq Bool {
+    eq = { __equal 0x11 }
+    ne = { __not_equal 0x11 }
+}
+
+instance Eq Byte {
+    eq = { __equal 0x11 }
+    ne = { __not_equal 0x11 }
+}
+
+instance Eq Char {
+    eq = { __equal 0x33 }
+    ne = { __not_equal 0x33 }
+}
+
+instance Eq UInt32 {
+    eq = { __equal 0x33 }
+    ne = { __not_equal 0x33 }
+}
+
+instance Eq UInt64 {
+    eq = { __equal 0x44 }
+    ne = { __not_equal 0x44 }
+}
+
+instance Eq Int32 {
+    eq = { __equal 0x88 }
+    ne = { __not_equal 0x88 }
+}
+
+instance Eq Int64 {
+    eq = { __equal 0x99 }
+    ne = { __not_equal 0x99 }
+}
+
+instance Eq Float32 {
+    eq = { __equal 0xCC }
+    ne = { __not_equal 0xCC }
+}
+
+instance Eq Float64 {
+    eq = { __equal 0xDD }
+    ne = { __not_equal 0xDD }
+}
+
+instance Eq String {
+    eq = fun a b { string_equal a b }
+    ne = fun a b { ! string_equal a b }
+}
+
+/*
+instance Eq [T] ( Eq T ) {
+    eq = fun x y {
+        match x, y {
+            [], [] -> true
+            [], [...] -> false
+            [...], [] -> false
+            [x1, xrest...], [y1, yrest...] -> (eq x1 y1) && (eq xrest yrest)
+        }
+    }
+}
+*/
+
+
+instance Ord Byte {
+    lt = { __less_than 0x11 }
+    gt = { __greater_than 0x11 }
+    le = { __less_equal 0x11 }
+    ge = { __greater_equal 0x11 }
+}
+
+instance Ord Char {
+    lt = { __less_than 0x33 }
+    gt = { __greater_than 0x33 }
+    le = { __less_equal 0x33 }
+    ge = { __greater_equal 0x33 }
+}
+
+instance Ord UInt32 {
+    lt = { __less_than 0x33 }
+    gt = { __greater_than 0x33 }
+    le = { __less_equal 0x33 }
+    ge = { __greater_equal 0x33 }
+}
+
+instance Ord UInt64 {
+    lt = { __less_than 0x44 }
+    gt = { __greater_than 0x44 }
+    le = { __less_equal 0x44 }
+    ge = { __greater_equal 0x44 }
+}
+
+instance Ord Int32 {
+    lt = { __less_than 0x88 }
+    gt = { __greater_than 0x88 }
+    le = { __less_equal 0x88 }
+    ge = { __greater_equal 0x88 }
+}
+
+instance Ord Int64 {
+    lt = { __less_than 0x99 }
+    gt = { __greater_than 0x99 }
+    le = { __less_equal 0x99 }
+    ge = { __greater_equal 0x99 }
+}
+
+instance Ord Float32 {
+    lt = { __less_than 0xCC }
+    gt = { __greater_than 0xCC }
+    le = { __less_equal 0xCC }
+    ge = { __greater_equal 0xCC }
+}
+
+instance Ord Float64 {
+    lt = { __less_than 0xDD }
+    gt = { __greater_than 0xDD }
+    le = { __less_equal 0xDD }
+    ge = { __greater_equal 0xDD }
+}
+
+instance Ord String {
+    lt = fun a b { string_compare a b < 0 }
+    gt = fun a b { string_compare a b > 0 }
+    le = fun a b { string_compare a b <= 0 }
+    ge = fun a b { string_compare a b >= 0 }
+}
+
+
+/*
+// TODO: document type args `<T>`, constraints `<Ord T>`, attributes `lazy`
+f : <T> T T -> T with (Ord T) = fun x y { x < y }
+f : <Ord T> T T -> T = fun x y { x < y }
+f = lazy fun<Ord T> x:T y:T -> T { x < y }
+f = fun <T, I> l:[T] i:I -> T { l ! i }
+
+// Unify syntax of functions and classes?
+// The angle brackets would be only decoration, not needed syntactically.
+class Eq <T> { }
+class Ord <T> (Eq T) { }
+*/
+
+
+class Cast T R {
+    cast : T -> R
+}
+
+// Note: Cast to Void is handled by the compiler, instances with R=Void are ignored.
+
+instance Cast Bool Byte { cast = { __noop } }
+instance Cast Bool UInt32 { cast = { __cast 0x13 } }
+instance Cast Bool UInt64 { cast = { __cast 0x14 } }
+instance Cast Bool Int32 { cast = { __cast 0x18 } }
+instance Cast Bool Int64 { cast = { __cast 0x19 } }
+
+instance Cast Byte Bool { cast = fun x { x != b'\0' } }
+instance Cast Byte UInt32 { cast = { __cast 0x13 } }
+instance Cast Byte UInt64 { cast = { __cast 0x14 } }
+instance Cast Byte Int32 { cast = { __cast 0x18 } }
+instance Cast Byte Int64 { cast = { __cast 0x19 } }
+
+instance Cast UInt32 Bool { cast = fun x { x != 0U } }
+instance Cast UInt32 Byte { cast = { __cast 0x31 } }
+instance Cast UInt32 UInt64 { cast = { __cast 0x34 } }
+instance Cast UInt32 Int32 { cast = { __cast 0x38 } }
+instance Cast UInt32 Int64 { cast = { __cast 0x39 } }
+instance Cast UInt32 Float32 { cast = { __cast 0x3c } }
+instance Cast UInt32 Float64 { cast = { __cast 0x3d } }
+
+instance Cast UInt64 Bool { cast = fun x { x != 0UL } }
+instance Cast UInt64 Byte { cast = { __cast 0x41 } }
+instance Cast UInt64 UInt32 { cast = { __cast 0x43 } }
+instance Cast UInt64 Int32 { cast = { __cast 0x48 } }
+instance Cast UInt64 Int64 { cast = { __cast 0x49 } }
+instance Cast UInt64 Float32 { cast = { __cast 0x4C } }
+instance Cast UInt64 Float64 { cast = { __cast 0x4D } }
+
+instance Cast Int32 Bool { cast = fun x { x != 0 } }
+instance Cast Int32 Byte { cast = { __cast 0x81 } }
+instance Cast Int32 UInt32 { cast = { __cast 0x83 } }
+instance Cast Int32 UInt64 { cast = { __cast 0x84 } }
+instance Cast Int32 Int64 { cast = { __cast 0x89 } }
+instance Cast Int32 Float32 { cast = { __cast 0x8c } }
+instance Cast Int32 Float64 { cast = { __cast 0x8d } }
+
+instance Cast Int64 Bool { cast = fun x { x != 0L } }
+instance Cast Int64 Byte { cast = { __cast 0x91 } }
+instance Cast Int64 UInt32 { cast = { __cast 0x93 } }
+instance Cast Int64 UInt64 { cast = { __cast 0x94 } }
+instance Cast Int64 Int32 { cast = { __cast 0x98 } }
+instance Cast Int64 Float32 { cast = { __cast 0x9C } }
+instance Cast Int64 Float64 { cast = { __cast 0x9D } }
+
+instance Cast Float32 UInt32 { cast = { __cast 0xC3 } }
+instance Cast Float32 UInt64 { cast = { __cast 0xC4 } }
+instance Cast Float32 Int32 { cast = { __cast 0xC8 } }
+instance Cast Float32 Int64 { cast = { __cast 0xC9 } }
+instance Cast Float32 Float64 { cast = { __cast 0xCD } }
+
+instance Cast Float64 UInt32 { cast = { __cast 0xD3 } }
+instance Cast Float64 UInt64 { cast = { __cast 0xD4 } }
+instance Cast Float64 Int32 { cast = { __cast 0xD8 } }
+instance Cast Float64 Int64 { cast = { __cast 0xD9 } }
+instance Cast Float64 Float32 { cast = { __cast 0xDC } }
+
+instance Cast String [Char] { cast = cast_to_chars }
+instance Cast String [Byte] { cast = cast_to_bytes }
+instance Cast [Char] String { cast = cast_to_string }
+instance Cast [Byte] String { cast = cast_to_string }
+
+class Bounded T {
+    min : Void -> T
+    max : Void -> T
+}
+
+instance Bounded UInt32 {
+    min = { 0u }
+    max = { 0xFFFFFFFFu }
+}
+
+instance Bounded Int32 {
+    min = { -2147483648 }
+    max = { +2147483647 }
+}
+
+
+class Subscript T U R {
+    subscript : T U -> R
+}
+
+instance<T> Subscript [T] Int T {
+    subscript = { __subscript __type_id<T> }
+}
+
+
+// -----------------------------------------------------------------------------
+// Format and Parse
+
+type FormatSpec = (
+    fill: Char
+    align: Char  // < > ^
+    sign: Char   // + -
+    width: Int
+    precision: Int
+    spec: String
+)
+
+type ParseSpec = (
+    spec: String
+)
+
+class Format T {
+    format : T FormatSpec -> String
+}
+
+instance Format Bool { format = fun x _f { if x then "true" else "false" } }
+
+class Parse T {
+    parse : String ParseSpec -> T
+}
+
+instance Parse Bool { parse = fun x _f { x == "true" } }
+
+to_string = fun<T> x:T -> String { format x () }
+from_string = fun<T> x:String -> T { parse x () }
+
+// -----------------------------------------------------------------------------
+
+
+succ = fun<T> x:T -> T { x + 1 }
+pred = fun<T> x:T -> T { x - 1 }
+larger = fun<T> x:T y:T -> T { if x > y then x else y }
+smaller = fun<T> x:T y:T -> T { if x < y then x else y }
+sign = fun x:Int -> Int { if x < 0 then -1  if x > 0 then +1  else 0 }
+
+len = fun<T> [T] -> UInt { __length __type_id<T> }
+slice = fun<T> [T] start:Int stop:Int step:Int -> [T] { __slice __type_id<T> }
+
+head = fun<T> a:[T] -> T { a!0 }
+tail = fun<T> a:[T] -> [T] { a .slice 1 max:Int 1 }
+
+//filter = fun<Ord T> fn [T] -> [T] { }
+//map = fun<T> fn l:[T] -> [T] { (fn l[0]) + l[1:] }
+//reduce = fun<Ord T> fn [T] -> T { }
+//sum = reduce add
+
+//sort = fun<Ord T> [T] -> [T] { __sort __type_id<T> }

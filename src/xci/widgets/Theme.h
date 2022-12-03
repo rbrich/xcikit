@@ -1,17 +1,8 @@
-// Theme.h created on 2018-04-10, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// Theme.h created on 2018-04-10 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018–2021 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_WIDGETS_THEME_H
 #define XCI_WIDGETS_THEME_H
@@ -32,10 +23,10 @@ enum class IconId {
     RadioButtonUnchecked,
     RadioButtonChecked,
 
-    _NumItems_,
+    NumItems_,
 };
 
-constexpr size_t IconMapSize = static_cast<size_t>(IconId::_NumItems_);
+constexpr size_t IconMapSize = static_cast<size_t>(IconId::NumItems_);
 using IconMap = std::array<text::CodePoint, IconMapSize>;
 
 
@@ -44,10 +35,10 @@ enum class ColorId {
     Hover,
     Focus,
 
-    _NumItems_,
+    NumItems_,
 };
 
-constexpr size_t ColorMapSize = static_cast<size_t>(ColorId::_NumItems_);
+constexpr size_t ColorMapSize = static_cast<size_t>(ColorId::NumItems_);
 using ColorMap = std::array<graphics::Color, ColorMapSize>;
 
 
@@ -64,6 +55,10 @@ public:
     bool load_font_face(const core::Vfs& vfs, const char* file_path, int face_index);
     text::Font& font() { return m_font; }
 
+    // emoji font (fallback)
+    bool load_emoji_font_face(const core::Vfs& vfs, const char* file_path, int face_index);
+    text::Font& emoji_font() { return m_emoji_font; }
+
     // icons
     bool load_icon_font_face(const core::Vfs& vfs, const char* file_path, int face_index);
     text::Font& icon_font() { return m_icon_font; }
@@ -76,10 +71,9 @@ public:
 
 private:
     graphics::Renderer& m_renderer;
-    // base font
-    text::Font m_font;
-    // icons
-    text::Font m_icon_font;
+    text::Font m_font;  // base font
+    text::Font m_emoji_font;  // emojis
+    text::Font m_icon_font;  // icons
     IconMap m_icon_map {};
     // colors
     ColorMap m_color_map;

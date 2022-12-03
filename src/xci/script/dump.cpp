@@ -1,42 +1,50 @@
-// dump.cpp created on 2019-10-08, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// dump.cpp created on 2019-10-08 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "dump.h"
 #include "Function.h"
 #include "Module.h"
 #include <xci/core/string.h>
+#include <xci/data/coding/leb128.h>
+#include <xci/compat/macros.h>
+#include <iomanip>
+#include <bitset>
 
 namespace xci::script {
 
+using xci::data::leb128_decode;
 using std::endl;
 using std::left;
+using std::right;
 using std::setw;
-using std::string;
-using std::ostringstream;
 
 
 // stream manipulators
 
 struct StreamOptions {
     bool enable_tree : 1;
-    unsigned level : 5;
+    bool module_verbose : 1;  // Module: dump function bodies etc.
+    bool parenthesize_fun_types : 1;
+    bool multiline : 1;
+    unsigned level : 6;
+    std::bitset<32> rules;
 };
 
 static StreamOptions& stream_options(std::ostream& os) {
     static int idx = std::ios_base::xalloc();
-    return reinterpret_cast<StreamOptions&>(os.iword(idx));
+    auto* p = reinterpret_cast<StreamOptions*>(os.pword(idx));
+    if (!p) {
+        p = new StreamOptions();
+        os.pword(idx) = p;
+        os.register_callback([](std::ios_base::event ev, std::ios_base& ios, int index){
+            if (ev == std::ios_base::event::erase_event)
+                delete reinterpret_cast<StreamOptions*>(ios.pword(index));
+        }, idx);
+    }
+    return *p;
 }
 
 std::ostream& dump_tree(std::ostream& os)
@@ -45,15 +53,36 @@ std::ostream& dump_tree(std::ostream& os)
     return os;
 }
 
+std::ostream& dump_module_verbose(std::ostream& os)
+{
+    stream_options(os).module_verbose = true;
+    return os;
+}
+
 std::ostream& put_indent(std::ostream& os)
 {
-    std::string pad(stream_options(os).level * 3u, ' ');
-    return os << pad;
+    auto& so = stream_options(os);
+    for (unsigned i = 0; i != so.level; ++i)
+        if (so.rules[i])
+            os << ".  ";
+        else
+            os << "   ";
+    return os;
+}
+
+std::ostream& rule_indent(std::ostream& os)
+{
+    auto& so = stream_options(os);
+    so.rules[so.level] = true;
+    so.level += 1;
+    return os;
 }
 
 std::ostream& more_indent(std::ostream& os)
 {
-    stream_options(os).level += 1;
+    auto& so = stream_options(os);
+    so.rules[so.level] = false;
+    so.level += 1;
     return os;
 }
 
@@ -77,83 +106,84 @@ public:
     void visit(const Return& v) override { m_os << v; }
     void visit(const Class& v) override { m_os << v; }
     void visit(const Instance& v) override { m_os << v; }
-    void visit(const Integer& v) override { m_os << v; }
-    void visit(const Float& v) override { m_os << v; }
-    void visit(const String& v) override { m_os << v; }
+    void visit(const TypeDef& v) override { m_os << v; }
+    void visit(const TypeAlias& v) override { m_os << v; }
+    void visit(const Literal& v) override { m_os << v; }
+    void visit(const Parenthesized& v) override { m_os << v; }
     void visit(const Tuple& v) override { m_os << v; }
     void visit(const List& v) override { m_os << v; }
+    void visit(const StructInit& v) override { m_os << v; }
     void visit(const Reference& v) override { m_os << v; }
     void visit(const Call& v) override { m_os << v; }
     void visit(const OpCall& v) override { m_os << v; }
     void visit(const Condition& v) override { m_os << v; }
+    void visit(const WithContext& v) override { m_os << v; }
     void visit(const Function& v) override { m_os << v; }
+    void visit(const Cast& v) override { m_os << v; }
     void visit(const TypeName& v) override { m_os << v; }
     void visit(const FunctionType& v) override { m_os << v; }
     void visit(const ListType& v) override { m_os << v; }
+    void visit(const TupleType& v) override { m_os << v; }
+    void visit(const StructType& v) override { m_os << v; }
 
 private:
     std::ostream& m_os;
 };
 
-std::ostream& operator<<(std::ostream& os, const Integer& v)
+std::ostream& operator<<(std::ostream& os, const Literal& v)
 {
     if (stream_options(os).enable_tree) {
-        return os << put_indent << "Integer(Expression) " << v.value << endl;
+        os << "Literal(Expression) " << v.value;
+        if (v.ti)
+            os << " [type_info=" << v.ti << ']';
+        return os << endl;
     } else {
         return os << v.value;
     }
 }
 
-std::ostream& operator<<(std::ostream& os, const Float& v)
+
+std::ostream& operator<<(std::ostream& os, const Parenthesized& v)
 {
     if (stream_options(os).enable_tree) {
-        return os << put_indent << "Float(Expression) " << v.value << endl;
+        os << "Parenthesized(Expression)" << endl;
+        return os << more_indent << put_indent << *v.expression << less_indent;
     } else {
-        ostringstream sbuf;
-        sbuf << v.value;
-        auto str = sbuf.str();
-        if (str.find('.') == string::npos)
-            return os << str << ".0";
-        else
-            return os << str;
+        return os << "(" << *v.expression << ")";
     }
 }
 
-std::ostream& operator<<(std::ostream& os, const String& v)
-{
-    if (stream_options(os).enable_tree) {
-        return os << put_indent << "String(Expression) " << core::escape(v.value) << endl;
-    } else {
-        return os << '"' << core::escape(v.value) << '"';
-    }
-}
 
 std::ostream& operator<<(std::ostream& os, const Tuple& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "Tuple(Expression)" << endl;
-        os << more_indent;
+        os << "Tuple(Expression)";
+        if (v.ti)
+            os << " [type_info=" << v.ti << ']';
+        os << endl << more_indent;
         for (const auto& item : v.items)
-            os << *item;
+            os << put_indent << *item;
         return os << less_indent;
     } else {
-        os << "(";
         for (const auto& item : v.items) {
             os << *item;
             if (&item != &v.items.back())
                 os << ", ";
         }
-        return os << ")";
+        return os;
     }
 }
+
 
 std::ostream& operator<<(std::ostream& os, const List& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "List(Expression)" << endl;
-        os << more_indent;
+        os << "List(Expression)";
+        if (v.ti)
+            os << " [type_info=" << v.ti << ']';
+        os << endl << more_indent;
         for (const auto& item : v.items)
-            os << *item;
+            os << put_indent << *item;
         return os << less_indent;
     } else {
         os << "[";
@@ -166,13 +196,51 @@ std::ostream& operator<<(std::ostream& os, const List& v)
     }
 }
 
+
+std::ostream& operator<<(std::ostream& os, const StructInit& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << "StructInit(Expression)";
+        if (v.ti)
+            os << " [type_info=" << v.ti << ']';
+        os << endl << more_indent;
+        for (const auto& item : v.items) {
+            os << put_indent << item.first;
+            os << put_indent << *item.second;
+        }
+        return os << less_indent;
+    } else {
+        for (const auto& item : v.items) {
+            os << item.first << "=" << *item.second;
+            if (&item != &v.items.back())
+                os << ", ";
+        }
+        return os;
+    }
+}
+
+
+std::ostream& operator<<(std::ostream& os, const StructItem& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << "StructItem" << endl;
+        os << more_indent
+           << put_indent << v.identifier
+           << put_indent << *v.type;
+        return os << less_indent;
+    } else {
+        return os << v.identifier << ':' << *v.type;
+    }
+}
+
+
 std::ostream& operator<<(std::ostream& os, const Variable& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "Variable" << endl;
-        os << more_indent << v.identifier;
+        os << "Variable" << endl;
+        os << more_indent << put_indent << v.identifier;
         if (v.type)
-            os << *v.type;
+            os << put_indent << *v.type;
         return os << less_indent;
     } else {
         os << v.identifier;
@@ -185,12 +253,12 @@ std::ostream& operator<<(std::ostream& os, const Variable& v)
 std::ostream& operator<<(std::ostream& os, const Parameter& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "Parameter" << endl;
+        os << "Parameter" << endl;
         os << more_indent;
         if (v.identifier)
-            os << v.identifier;
+            os << put_indent << v.identifier;
         if (v.type)
-            os << *v.type << endl;
+            os << put_indent << *v.type;
         return os << less_indent;
     } else {
         if (v.identifier) {
@@ -207,7 +275,7 @@ std::ostream& operator<<(std::ostream& os, const Parameter& v)
 std::ostream& operator<<(std::ostream& os, const Identifier& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "Identifier " << v.name;
+        os << "Identifier " << v.name;
         if (v.symbol) {
             os << " [" << v.symbol << "]";
         }
@@ -228,12 +296,12 @@ std::ostream& operator<<(std::ostream& os, const TypeName& v)
 {
     if (stream_options(os).enable_tree) {
         if (!v.name.empty()) {
-            os << put_indent << "TypeName(Type) " << v.name;
+            os << "TypeName(Type) " << v.name;
             if (v.symbol) {
                 os << " [" << v.symbol << "]";
             }
         }
-        return os;
+        return os << endl;
     } else {
         return os << v.name;
     }
@@ -242,25 +310,44 @@ std::ostream& operator<<(std::ostream& os, const TypeName& v)
 std::ostream& operator<<(std::ostream& os, const FunctionType& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "FunctionType(Type)" << endl;
+        os << "FunctionType(Type)" << endl;
         os << more_indent;
+        for (const auto& tp : v.type_params)
+            os << put_indent << tp;
         for (const auto& prm : v.params)
-            os << prm;
+            os << put_indent << prm;
         if (v.result_type)
-            os << *v.result_type << endl;
+            os << put_indent << "result: " << *v.result_type;
+        for (const auto& ctx : v.context) {
+            os << put_indent << ctx;
+        }
         return os << less_indent;
     } else {
-        if (!v.params.empty()) {
-            os << "|";
-            for (const auto& prm : v.params) {
-                if (&prm != &v.params.front())
-                    os << ' ';
-                os << prm;
+        if (!v.type_params.empty()) {
+            os << '<';
+            for (const auto& tp : v.type_params) {
+                os << tp;
+                if (&tp != &v.type_params.back())
+                    os << ", ";
             }
-            os << "| ";
+            os << "> ";
+        }
+        if (!v.params.empty()) {
+            for (const auto& prm : v.params) {
+                os << prm << ' ';
+            }
         }
         if (v.result_type) {
             os << "-> " << *v.result_type << " ";
+        }
+        if (!v.context.empty()) {
+            os << "with (";
+            for (const auto& ctx : v.context) {
+                os << ctx;
+                if (&ctx != &v.context.back())
+                    os << ", ";
+            }
+            os << ") ";
         }
         return os;
     }
@@ -269,9 +356,9 @@ std::ostream& operator<<(std::ostream& os, const FunctionType& v)
 std::ostream& operator<<(std::ostream& os, const ListType& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "ListType(Type) " << endl;
+        os << "ListType(Type)" << endl;
         if (v.elem_type)
-            os << more_indent << *v.elem_type << less_indent;
+            os << more_indent << put_indent << *v.elem_type << less_indent;
         return os;
     } else {
         os << "[";
@@ -281,10 +368,52 @@ std::ostream& operator<<(std::ostream& os, const ListType& v)
     }
 }
 
+std::ostream& operator<<(std::ostream& os, const TupleType& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << "TupleType(Type)" << endl << more_indent;
+        for (const auto& t : v.subtypes)
+            os << put_indent << *t;
+        return os << less_indent;
+    } else {
+        os << '(';
+        for (const auto& t : v.subtypes) {
+            os << *t;
+            if (t.get() != v.subtypes.back().get())
+                os << ", ";
+        }
+        return os << ')';
+    }
+}
+
+
+std::ostream& operator<<(std::ostream& os, const StructType& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << "StructType(Type)" << endl << more_indent;
+        for (const auto& t : v.subtypes)
+            os << put_indent << t;
+        return os << less_indent;
+    } else {
+        os << '(';
+        for (const auto& t : v.subtypes) {
+            os << t;
+            if (&t != &v.subtypes.back())
+                os << ", ";
+        }
+        return os << ')';
+    }
+}
+
+
 std::ostream& operator<<(std::ostream& os, const TypeConstraint& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "TypeConstraint " << v.type_class << ' ' << v.type_name << endl;
+        os << "TypeConstraint" << endl
+           << more_indent
+           << put_indent << v.type_class
+           << put_indent << v.type_name
+           << less_indent;
         return os;
     } else {
         return os << v.type_class << ' ' << v.type_name;
@@ -294,20 +423,37 @@ std::ostream& operator<<(std::ostream& os, const TypeConstraint& v)
 std::ostream& operator<<(std::ostream& os, const Reference& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "Reference(Expression)" << endl;
-        return os << more_indent << v.identifier << less_indent;
+        os << "Reference(Expression)";
+        if (v.ti)
+            os << " [type_info=" << v.ti << ']';
+        const auto symptr = v.identifier.symbol;
+        if (symptr && symptr->type() == Symbol::Function && v.index != no_index) {
+            os << " [Function #" << v.index << " @" << v.module->name()
+               << ": " << v.module->get_scope(v.index).function().signature() << "]";
+        }
+        os << endl
+           << more_indent
+           << put_indent << v.identifier;
+        if (v.type_arg)
+           os << put_indent << "type_arg: " << *v.type_arg;
+        return os << less_indent;
     } else {
-        return os << v.identifier;
+        os << v.identifier;
+        if (v.type_arg)
+            os << '<' << *v.type_arg << '>';
+        return os;
     }
 }
 
 std::ostream& operator<<(std::ostream& os, const Call& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "Call(Expression)" << endl;
-        os << more_indent << *v.callable;
+        os << "Call(Expression)";
+        if (v.ti)
+            os << " [type_info=" << v.ti << ']';
+        os << endl << more_indent << put_indent << *v.callable;
         for (const auto& arg : v.args) {
-            os << *arg;
+            os << put_indent << *arg;
         }
         return os << less_indent;
     } else {
@@ -322,19 +468,23 @@ std::ostream& operator<<(std::ostream& os, const Call& v)
 std::ostream& operator<<(std::ostream& os, const OpCall& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "OpCall(Expression)" << endl;
-        os << more_indent << v.op;
+        os << "OpCall(Expression)" << endl;
+        os << more_indent << put_indent << v.op;
         if (v.callable)
-            os << *v.callable;
+            os << put_indent << *v.callable;
         for (const auto& arg : v.args) {
-            os << *arg;
+            os << put_indent << *arg;
         }
         return os << less_indent;
     } else {
         os << "(";
         for (const auto& arg : v.args) {
-            if (&arg != &v.args.front())
-                os << ' ' << v.op << ' ';
+            if (&arg != &v.args.front()) {
+                if (v.op.is_comma())
+                    os << ", ";  // no leading space
+                else
+                    os << ' ' << v.op << ' ';
+            }
             os << *arg;
         }
         return os << ")";
@@ -344,11 +494,37 @@ std::ostream& operator<<(std::ostream& os, const OpCall& v)
 std::ostream& operator<<(std::ostream& os, const Condition& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "Condition(Expression)" << endl;
-        os << more_indent << *v.cond << *v.then_expr << *v.else_expr;
+        os << "Condition(Expression)" << endl;
+        os << more_indent;
+        for (auto& item : v.if_then_expr) {
+           os << put_indent << *item.first
+              << put_indent << *item.second;
+        }
+        os << put_indent << *v.else_expr;
         return os << less_indent;
     } else {
-        os << "if " << *v.cond << " then " << *v.then_expr << " else " << *v.else_expr << ";";
+        for (auto& item : v.if_then_expr) {
+            os << "if " << *item.first << " then " << *item.second << '\n';
+        }
+        os << "else " << *v.else_expr << ";";
+        return os;
+    }
+}
+
+std::ostream& operator<<(std::ostream& os, const WithContext& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << "WithContext(Expression)" << endl;
+        os << more_indent
+           << put_indent << *v.context
+           << put_indent << *v.expression;
+        if (v.enter_function.identifier)
+            os << put_indent << v.enter_function;
+        if (v.leave_function.identifier)
+            os << put_indent << v.leave_function;
+        return os << less_indent;
+    } else {
+        os << "with " << *v.context << " " << *v.expression << ";";
         return os;
     }
 }
@@ -356,7 +532,7 @@ std::ostream& operator<<(std::ostream& os, const Condition& v)
 std::ostream& operator<<(std::ostream& os, const Operator& v)
 {
     if (stream_options(os).enable_tree) {
-        return os << put_indent << "Operator " << v.to_cstr()
+        return os << "Operator " << v.to_cstr()
                   << " [L" << v.precedence() << "]" << endl;
     } else {
         return os << v.to_cstr();
@@ -366,10 +542,41 @@ std::ostream& operator<<(std::ostream& os, const Operator& v)
 std::ostream& operator<<(std::ostream& os, const Function& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "Function(Expression)" << endl;
-        return os << more_indent << v.type << v.body << less_indent;
+        os << "Function(Expression)";
+        if (v.ti)
+            os << " [type_info=" << v.ti << ']';
+        os << endl;
+        return os << rule_indent
+                  << put_indent << v.type
+                  << put_indent << v.body
+                  << less_indent;
     } else {
-        return os << "(" << v.type << "{" << v.body << "})";
+        if (!v.type.params.empty() || v.type.result_type)
+            os << "fun " << v.type;
+        if (stream_options(os).multiline)
+            return os << "{" << endl
+                      << more_indent << put_indent << v.body << endl
+                      << less_indent << put_indent << "}";
+        else
+            return os << "{" << v.body << "}";
+    }
+}
+
+std::ostream& operator<<(std::ostream& os, const Cast& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << "Cast(Expression)";
+        if (v.to_type)
+            os << " [type_info=" << v.to_type << ']';
+        os << endl
+           << more_indent
+           << put_indent << *v.expression
+           << put_indent << *v.type;
+        if (v.cast_function)
+            os << put_indent << *v.cast_function;
+        return os << less_indent;
+    } else {
+        return os << *v.expression << ":" << *v.type;
     }
 }
 
@@ -383,24 +590,24 @@ std::ostream& operator<<(std::ostream& os, const Expression& v)
 std::ostream& operator<<(std::ostream& os, const Definition& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "Definition(Statement)" << endl;
-        os << more_indent << v.variable;
+        os << "Definition(Statement)" << endl;
+        os << more_indent << put_indent << v.variable;
         if (v.expression)
-            os << *v.expression;
+            os << put_indent << *v.expression;
         return os << less_indent;
     } else {
-        os << "/*def*/ " << v.variable;
+        os << v.variable;
         if (v.expression)
-            os << " = (" << *v.expression << ")";
-        return os << ';';
+            os << " = " << *v.expression;
+        return os;
     }
 }
 
 std::ostream& operator<<(std::ostream& os, const Invocation& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "Invocation(Statement)" << endl;
-        return os << more_indent << *v.expression << less_indent;
+        os << "Invocation(Statement)" << endl;
+        return os << more_indent << put_indent << *v.expression << less_indent;
     } else {
         return os << *v.expression;
     }
@@ -409,8 +616,8 @@ std::ostream& operator<<(std::ostream& os, const Invocation& v)
 std::ostream& operator<<(std::ostream& os, const Return& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "Return(Statement)" << endl;
-        return os << more_indent << *v.expression << less_indent;
+        os << "Return(Statement)" << endl;
+        return os << more_indent << put_indent << *v.expression << less_indent;
     } else {
         return os << *v.expression;
     }
@@ -419,16 +626,20 @@ std::ostream& operator<<(std::ostream& os, const Return& v)
 std::ostream& operator<<(std::ostream& os, const Class& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "Class" << endl;
-        os << more_indent << v.class_name << endl;
-        os << v.type_var << endl;
+        os << "Class" << endl;
+        os << more_indent
+           << put_indent << "name: " << v.class_name;
+        for (const auto& type_var : v.type_vars)
+            os << put_indent << "var: " << type_var;
         for (const auto& cst : v.context)
-            os << cst;
+            os << put_indent << cst;
         for (const auto& def : v.defs)
-            os << def;
+            os << put_indent << def;
         return os << less_indent;
     } else {
-        os << "class " << v.class_name << ' ' << v.type_var;
+        os << "class " << v.class_name;
+        for (const auto& type_var : v.type_vars)
+           os << ' ' << type_var;
         if (!v.context.empty()) {
             os << " (";
             for (const auto& cst : v.context) {
@@ -448,16 +659,19 @@ std::ostream& operator<<(std::ostream& os, const Class& v)
 std::ostream& operator<<(std::ostream& os, const Instance& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "Instance" << endl;
-        os << more_indent << v.class_name << endl;
-        os << *v.type_inst << endl;
+        os << "Instance" << endl;
+        os << more_indent << put_indent << v.class_name;
+        for (const auto& t : v.type_inst)
+            os << put_indent << *t;
         for (const auto& cst : v.context)
-            os << cst;
+            os << put_indent << cst;
         for (const auto& def : v.defs)
-            os << def;
+            os << put_indent << def;
         return os << less_indent;
     } else {
-        os << "instance " << v.class_name << ' ' << *v.type_inst;
+        os << "instance " << v.class_name;
+        for (const auto& t : v.type_inst)
+            os << ' ' << *t;
         if (!v.context.empty()) {
             os << " (";
             for (const auto& cst : v.context) {
@@ -474,23 +688,58 @@ std::ostream& operator<<(std::ostream& os, const Instance& v)
     }
 }
 
+std::ostream& operator<<(std::ostream& os, const TypeDef& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << "TypeDef" << endl;
+        os << more_indent
+           << put_indent << v.type_name
+           << put_indent << *v.type
+           << less_indent;
+        return os;
+    } else {
+        return os << "type " << v.type_name << " = " << *v.type;
+    }
+}
+
+std::ostream& operator<<(std::ostream& os, const TypeAlias& v)
+{
+    if (stream_options(os).enable_tree) {
+        os << "TypeAlias" << endl;
+        os << more_indent
+           << put_indent << v.type_name
+           << put_indent << *v.type
+           << less_indent;
+        return os;
+    } else {
+        return os << v.type_name << " = " << *v.type;
+    }
+}
+
 std::ostream& operator<<(std::ostream& os, const Block& v)
 {
     DumpVisitor visitor(os);
     if (stream_options(os).enable_tree) {
-        os << put_indent << "Block";
+        os << "Block";
         if (v.symtab != nullptr)
             os << " [" << std::hex << v.symtab << std::dec << "]";
         os << endl;
         os << more_indent;
-        for (const auto& stmt : v.statements)
+        for (const auto& stmt : v.statements) {
+            os << put_indent;
             stmt->apply(visitor);
+        }
         return os << less_indent;
     } else {
+        const bool multiline = stream_options(os).multiline;
         for (const auto& stmt : v.statements) {
             stmt->apply(visitor);
-            if (&stmt != &v.statements.back())
-                os << endl;
+            if (&stmt != &v.statements.back()) {
+                if (multiline)
+                    os << endl << put_indent;
+                else
+                    os << "; ";
+            }
         }
         return os;
     }
@@ -499,8 +748,8 @@ std::ostream& operator<<(std::ostream& os, const Block& v)
 std::ostream& operator<<(std::ostream& os, const Module& v)
 {
     if (stream_options(os).enable_tree) {
-        os << put_indent << "Module" << endl;
-        return os << more_indent << v.body << less_indent;
+        os << "Module" << endl;
+        return os << more_indent << put_indent << v.body << less_indent;
     } else {
         return os << v.body;
     }
@@ -509,63 +758,230 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
 }  // namespace ast
 
 
+// Function
+
+std::ostream& operator<<(std::ostream& os, const Function& f)
+{
+    os << f.signature() << endl;
+    switch (f.kind()) {
+        case Function::Kind::Compiled:
+            for (auto it = f.code().begin(); it != f.code().end();) {
+                os << ' ' << DumpInstruction{f, it} << endl;
+            }
+            return os;
+        case Function::Kind::Generic:
+            return os << dump_tree << f.ast() << endl;
+        case Function::Kind::Native:    return os << "<native>" << endl;
+        case Function::Kind::Undefined: return os << "<undefined>" << endl;
+    }
+    UNREACHABLE;
+}
+
+
+std::ostream& operator<<(std::ostream& os, Function::Kind v)
+{
+    switch (v) {
+        case Function::Kind::Undefined:  return os << "undefined";
+        case Function::Kind::Compiled:    return os << "compiled";
+        case Function::Kind::Generic: return os << "generic";
+        case Function::Kind::Native:  return os << "native";
+    }
+    UNREACHABLE;
+}
+
+
+std::ostream& operator<<(std::ostream& os, DumpInstruction&& v)
+{
+    auto inum = v.pos - v.func.code().begin();
+    auto opcode = static_cast<Opcode>(*v.pos++);
+    os << right << setw(3) << inum << "  " << left << setw(20) << opcode;
+    if (opcode >= Opcode::B1ArgFirst && opcode <= Opcode::B1ArgLast) {
+        // B1
+        auto arg = *(v.pos++);
+        os << std::hex << "0x" << static_cast<int>(arg) << std::dec;
+        switch (opcode) {  // NOLINT
+            case Opcode::Cast: {
+                const auto from_type = decode_arg_type(arg >> 4);
+                const auto to_type = decode_arg_type(arg & 0xf);
+                os << " (" << TypeInfo{from_type} << " -> " << TypeInfo{to_type} << ")";
+                break;
+            }
+            default:
+                break;
+        }
+    }
+    if (opcode >= Opcode::L1ArgFirst && opcode <= Opcode::L1ArgLast) {
+        // L1
+        auto arg = leb128_decode<Index>(v.pos);
+        os << arg;
+        switch (opcode) {
+            case Opcode::LoadStatic: {
+                const auto& value = v.func.module().get_value(arg);
+                os << " (" << value << ':' << value.type_info() << ")";
+                break;
+            }
+            case Opcode::LoadFunction:
+            case Opcode::MakeClosure:
+            case Opcode::Call0: {
+                const auto& fn = v.func.module().get_function(arg);
+                os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
+                break;
+            }
+            case Opcode::Call1: {
+                const auto& fn = v.func.module().get_imported_module(0).get_function(arg);
+                os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
+                break;
+            }
+            case Opcode::Subscript:
+            case Opcode::Length:
+            case Opcode::Slice: {
+                const TypeInfo* ti;
+                if (arg < 32) {
+                    // builtin module
+                    ti = &v.func.module().get_imported_module(0).get_type(arg);
+                } else {
+                    ti = &v.func.module().get_type(arg - 32);
+                }
+                os << " (" << *ti << ")";
+                break;
+            }
+            default:
+                break;
+        }
+    }
+    if (opcode >= Opcode::L2ArgFirst && opcode <= Opcode::L2ArgLast) {
+        // L2
+        auto arg1 = leb128_decode<Index>(v.pos);
+        auto arg2 = leb128_decode<Index>(v.pos);
+        os << static_cast<int>(arg1) << ' ' << static_cast<int>(arg2);
+        switch (opcode) {  // NOLINT
+            case Opcode::Call: {
+                const auto& fn = v.func.module().get_imported_module(arg1).get_function(arg2);
+                os << " (" << fn.symtab().name() << ' ' << fn.signature() << ")";
+                break;
+            }
+            case Opcode::MakeList: {
+                const TypeInfo* ti;
+                if (arg2 < 32) {
+                    // builtin module
+                    ti = &v.func.module().get_imported_module(0).get_type(arg2);
+                } else {
+                    ti = &v.func.module().get_type(arg2 - 32);
+                }
+                os << " (" << *ti << ")";
+                break;
+            }
+            default:
+                break;
+        }
+    }
+    return os;
+}
+
+
 // Module
 
 std::ostream& operator<<(std::ostream& os, const Module& v)
 {
-    os << "* " << v.num_imported_modules() << " imported modules" << endl << more_indent;
-    for (size_t i = 0; i < v.num_imported_modules(); ++i)
-        os << put_indent << '[' << i << "] " << v.get_imported_module(i).name() << endl;
+    bool verbose = stream_options(os).module_verbose;
+    bool dump_tree = stream_options(os).enable_tree;
+    os << "* " << v.num_imported_modules() << " imported modules\n" << more_indent;
+    for (Index i = 0; i < v.num_imported_modules(); ++i)
+        os << put_indent << '[' << i << "] " << v.get_imported_module(i).name() << '\n';
     os << less_indent;
 
-    os << "* " << v.num_functions() << " functions" << endl << more_indent;
-    for (size_t i = 0; i < v.num_functions(); ++i) {
+    os << "* " << v.num_functions() << " functions\n" << more_indent;
+    for (Index i = 0; i < v.num_functions(); ++i) {
         const auto& f = v.get_function(i);
-        os << put_indent << '[' << i << "] " << f.name() << ": " << f.signature() << endl;
+        os << put_indent << '[' << i << "] ";
+        if (f.kind() != Function::Kind::Compiled) {
+            os << '(' << f.kind();
+            if (f.has_compile())
+                os << ", compile";
+            if (f.is_specialized())
+                os << ", specialized";
+            if (f.has_nonlocals_resolved())
+                os << ", nlres";
+            os << ") ";
+        }
+        os << f.qualified_name();
+        if (f.signature())
+            os << ": " << f.signature();
+        os << '\n';
+        if (verbose && f.kind() == Function::Kind::Generic) {
+            os << more_indent << put_indent << f.ast() << less_indent;
+            if (!dump_tree)
+                os << '\n';
+        }
+        if (verbose && f.kind() == Function::Kind::Compiled) {
+            os << more_indent;
+            for (auto it = f.code().begin(); it != f.code().end();) {
+                os << put_indent << DumpInstruction{f, it} << '\n';
+            }
+            os << less_indent;
+        }
     }
     os << less_indent;
 
-    os << "* " << v.num_values() << " static values" << endl << more_indent;
-    for (size_t i = 0; i < v.num_values(); ++i) {
+    os << "* " << v.num_values() << " static values\n" << more_indent;
+    for (Index i = 0; i < v.num_values(); ++i) {
         const auto& val = v.get_value(i);
-        os << put_indent << '[' << i << "] " << val << endl;
+        os << put_indent << '[' << i << "] " << val << '\n';
     }
     os << less_indent;
 
-    os << "* " << v.num_types() << " types" << endl << more_indent;
-    for (size_t i = 0; i < v.num_types(); ++i) {
-        const auto& typ = v.get_type(i);
-        os << put_indent << '[' << i << "] " << typ << endl;
+    os << "* " << v.num_types() << " types\n" << more_indent;
+    for (Index i = 0; i < v.num_types(); ++i) {
+        const auto& ti = v.get_type(i);
+        os << put_indent << '[' << i << "] " << ti;
+        if (ti.is_named())
+            os << " = " << ti.underlying();
+        os << '\n';
     }
     os << less_indent;
 
-    os << "* " << v.num_classes() << " type classes" << endl << more_indent;
-    for (size_t i = 0; i < v.num_classes(); ++i) {
+    os << "* " << v.num_classes() << " type classes\n" << more_indent;
+    for (Index i = 0; i < v.num_classes(); ++i) {
         const auto& cls = v.get_class(i);
         os << put_indent << '[' << i << "] " << cls.name();
+        bool first_method = true;
         for (const auto& sym : cls.symtab()) {
-            if (sym.type() == Symbol::TypeVar) {
-                os << ' ' << sym.name() << endl << more_indent;
-                continue;
+            switch (sym.type()) {
+                case Symbol::Parameter:
+                    break;
+                case Symbol::TypeVar:
+                    os << ' ' << sym.name();
+                    break;
+                case Symbol::Function: {
+                    if (first_method) {
+                        os << '\n' << more_indent;
+                        first_method = false;
+                    }
+                    SymbolPointer symptr = cls.symtab().find(sym);
+                    os << put_indent << sym.name() << ": "
+                       << symptr.get_generic_scope().function().signature() << '\n';
+                    break;
+                }
+                default:
+                    assert(!"unexpected symbol type");
+                    break;
             }
-            assert(sym.type() == Symbol::Value);
-            os << put_indent << sym.name() << ": "
-               << cls.get_function_type(sym.index()) << endl;
         }
         os << less_indent;
     }
     os << less_indent;
 
-    os << "* " << v.num_instances() << " instances" << endl << more_indent;
-    for (size_t i = 0; i < v.num_instances(); ++i) {
+    os << "* " << v.num_instances() << " instances\n" << more_indent;
+    for (Index i = 0; i < v.num_instances(); ++i) {
         const auto& inst = v.get_instance(i);
-        os << put_indent << '[' << i << "] " << inst.class_().name()
-           << ' ' << inst.type() << endl;
-        os << more_indent;
-        for (size_t j = 0; j < inst.num_functions(); ++j) {
-            const auto fi = inst.get_function(j);
-            const auto& f = v.get_function(fi);
-            os << put_indent << f.name() << ": " << f.signature() << endl;
+        os << put_indent << '[' << i << "] " << inst.class_().name();
+        for (const auto& t : inst.types())
+            os << ' ' << t;
+        os << '\n' << more_indent;
+        for (Index j = 0; j < inst.num_functions(); ++j) {
+            const auto scope_idx = inst.get_function(j).scope_index;
+            const auto& f = v.get_scope(scope_idx).function();
+            os << put_indent << f.name() << ": " << f.signature() << '\n';
         }
         os << less_indent;
     }
@@ -575,23 +991,114 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
 }
 
 
+// Type
+
+std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
+{
+    switch (v.type()) {
+        case Type::Unknown: {
+            auto var = v.generic_var();
+            if (!var)
+                return os << '?';
+            return os << var->name();
+        }
+        case Type::Bool:        return os << "Bool";
+        case Type::Byte:        return os << "Byte";
+        case Type::Char:        return os << "Char";
+        case Type::UInt32:      return os << "UInt32";
+        case Type::UInt64:      return os << "UInt64";
+        case Type::Int32:       return os << "Int32";
+        case Type::Int64:       return os << "Int64";
+        case Type::Float32:     return os << "Float32";
+        case Type::Float64:     return os << "Float64";
+        case Type::String:      return os << "String";
+        case Type::List:
+            return os << "[" << v.elem_type() << "]";
+        case Type::Tuple: {
+            os << "(";
+            for (const auto& ti : v.subtypes()) {
+                os << ti;
+                if (&ti != &v.subtypes().back())
+                    os << ", ";
+            }
+            return os << ")";
+        }
+        case Type::Struct: {
+            os << "(";
+            for (const auto& item : v.struct_items()) {
+                os << item.first << ": " << item.second;
+                if (&item != &v.struct_items().back())
+                    os << ", ";
+            }
+            return os << ")";
+        }
+        case Type::Function:
+            if (stream_options(os).parenthesize_fun_types)
+                return os << '(' << v.signature() << ')';
+            else
+                return os << v.signature();
+        case Type::Module:      return os << "Module";
+        case Type::Stream:      return os << "Stream";
+        case Type::Named:       return os << v.name();
+    }
+    UNREACHABLE;
+}
+
+
+std::ostream& operator<<(std::ostream& os, const Signature& v)
+{
+    if (!v.nonlocals.empty()) {
+        os << "{ ";
+        for (const auto& ti : v.nonlocals) {
+            os << ti;
+            if (&ti != &v.nonlocals.back())
+                os << ", ";
+        }
+        os << " } ";
+    }
+    if (!v.partial.empty()) {
+        os << "| ";
+        for (const auto& ti : v.partial) {
+            os << ti;
+            if (&ti != &v.partial.back())
+                os << ", ";
+        }
+        os << " | ";
+    }
+    bool orig_parenthesize_fun_types = stream_options(os).parenthesize_fun_types;
+    stream_options(os).parenthesize_fun_types = true;
+    if (!v.params.empty()) {
+        for (const auto& ti : v.params) {
+            os << ti << ' ';
+        }
+    } else {
+        os << "() ";
+    }
+    os << "-> ";
+    stream_options(os).parenthesize_fun_types = orig_parenthesize_fun_types;
+    return os << v.return_type;
+}
+
+
 // SymbolTable
 
 std::ostream& operator<<(std::ostream& os, Symbol::Type v)
 {
     switch (v) {
-        case Symbol::Unresolved:    return os << "Unresolved";
-        case Symbol::Value:         return os << "Value";
-        case Symbol::Parameter:     return os << "Parameter";
-        case Symbol::Nonlocal:      return os << "Nonlocal";
-        case Symbol::Function:      return os << "Function";
-        case Symbol::Module:        return os << "Module";
-        case Symbol::Instruction:   return os << "Instruction";
-        case Symbol::Class:         return os << "Class";
-        case Symbol::Method:        return os << "Method";
-        case Symbol::Instance:      return os << "Instance";
-        case Symbol::TypeName:      return os << "TypeName";
-        case Symbol::TypeVar:       return os << "TypeVar";
+        case Symbol::Unresolved:        return os << "Unresolved";
+        case Symbol::Value:             return os << "Value";
+        case Symbol::Parameter:         return os << "Parameter";
+        case Symbol::Nonlocal:          return os << "Nonlocal";
+        case Symbol::Function:          return os << "Function";
+        case Symbol::Module:            return os << "Module";
+        case Symbol::Instruction:       return os << "Instruction";
+        case Symbol::Class:             return os << "Class";
+        case Symbol::Method:            return os << "Method";
+        case Symbol::Instance:          return os << "Instance";
+        case Symbol::TypeName:          return os << "TypeName";
+        case Symbol::TypeVar:           return os << "TypeVar";
+        case Symbol::StructItem:        return os << "StructItem";
+        case Symbol::TypeId:            return os << "TypeId";
     }
     return os;
 }
@@ -602,8 +1109,12 @@ std::ostream& operator<<(std::ostream& os, const SymbolPointer& v)
     os << v->type();
     if (v->index() != no_index)
         os << " #" << v->index();
-    if (v.symtab() != nullptr)
-        os << " @" << std::hex << v.symtab() << std::dec;
+    if (v.symtab() != nullptr) {
+        os << " @" << v.symtab()->name() << " ("
+           << std::hex << intptr_t(v.symtab()) << ')' << std::dec;
+        if (v->type() == Symbol::Function && v.symtab()->module() && v->index() != no_index)
+            os << ": " << v.get_generic_scope().function().signature();
+    }
     if (v->ref())
         os << " -> " << v->ref();
     return os;
@@ -616,8 +1127,13 @@ std::ostream& operator<<(std::ostream& os, const Symbol& v)
        << left << setw(18) << v.type();
     if (v.index() != no_index)
         os << " #" << v.index();
-    if (v.ref())
-        os << " -> " << v.ref()->type() << " #" << v.ref()->index();
+    if (v.ref()) {
+        os << " -> " << v.ref()->type()
+           << " #" << v.ref()->index();
+        if (v.depth() == 0 && v.ref().symtab()->level() != 0)
+            os << " @ " << v.ref().symtab()->name();
+        os << " (" << v.ref()->name() << ')';
+    }
     if (v.depth() != 0)
         os << ", depth -" << v.depth();
     return os;
@@ -626,7 +1142,10 @@ std::ostream& operator<<(std::ostream& os, const Symbol& v)
 
 std::ostream& operator<<(std::ostream& os, const SymbolTable& v)
 {
-    os << put_indent << "--- " << v.name() << " ---" << endl;
+    os << put_indent << "--- ";
+    if (v.scope() != nullptr)
+        os << '#' << v.scope()->function_index() << ' ';
+    os << v.name() << " ---" << endl;
     for (const auto& sym : v) {
         os << put_indent << sym << endl;
     }
@@ -636,6 +1155,33 @@ std::ostream& operator<<(std::ostream& os, const SymbolTable& v)
         os << child << endl;
     }
     os << less_indent;
+    return os;
+}
+
+
+std::ostream& operator<<(std::ostream& os, const Scope& v)
+{
+    os << "Function #" << v.function_index() << " (" << v.function().name() << ")";
+    if (v.has_subscopes()) {
+        os << "\tSubscopes: ";
+        for (unsigned i = 0; i != v.num_subscopes(); ++i) {
+            if (i != 0)
+                os << ", ";
+            os << v.get_subscope_index(i);
+            assert(v.get_subscope(i).parent() == &v);
+        }
+    }
+    if (v.has_nonlocals()) {
+        os << "\tNonlocals: ";
+        bool first = true;
+        for (auto nl : v.nonlocals()) {
+            if (!first)
+                os << ", ";
+            else
+                first = false;
+            os << nl.index;
+        }
+    }
     return os;
 }
 

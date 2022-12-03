@@ -1,61 +1,165 @@
-// SymbolTable.cpp created on 2019-07-14, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// SymbolTable.cpp created on 2019-07-14 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "SymbolTable.h"
+#include "Module.h"
+#include "TypeInfo.h"
 #include <cassert>
 #include <algorithm>
-#include <ostream>
-#include <iomanip>
 
 namespace xci::script {
-
-using namespace std;
-
-
-Symbol& SymbolPointer::operator*()
-{
-    assert(m_symtab != nullptr);
-    return m_symtab->get(m_index);
-}
 
 
 const Symbol& SymbolPointer::operator*() const
 {
     assert(m_symtab != nullptr);
-    return m_symtab->get(m_index);
-}
-
-
-Symbol* SymbolPointer::operator->()
-{
-    assert(m_symtab != nullptr);
-    return &m_symtab->get(m_index);
+    return m_symtab->get(m_symidx);
 }
 
 
 const Symbol* SymbolPointer::operator->() const
 {
     assert(m_symtab != nullptr);
-    return &m_symtab->get(m_index);
+    return &m_symtab->get(m_symidx);
+}
+
+
+Symbol* SymbolPointer::operator->()
+{
+    assert(m_symtab != nullptr);
+    return &m_symtab->get(m_symidx);
+}
+
+
+Scope& SymbolPointer::get_scope(const Scope& hier) const
+{
+    auto& sym = m_symtab->get(m_symidx);
+    assert(sym.type() == Symbol::Function);
+    auto* parent_scope = hier.find_parent_scope(m_symtab);
+    if (!parent_scope) {
+        // use symtab's (generic) scope
+        return m_symtab->scope()->get_subscope(sym.index());
+    }
+    return hier.find_parent_scope(m_symtab)->get_subscope(sym.index());
+
+//    assert(sym.type() == Symbol::Function);
+//    assert(m_symtab->module() != nullptr);
+//    assert(sym.index() != no_index);
+//    return m_symtab->module()->get_scope(sym.index());
+}
+
+
+Scope& SymbolPointer::get_generic_scope() const
+{
+    auto& sym = m_symtab->get(m_symidx);
+    assert(sym.type() == Symbol::Function);
+    return m_symtab->scope()->get_subscope(sym.index());
+
+//    assert(sym.type() == Symbol::Function);
+//    assert(m_symtab->module() != nullptr);
+//    assert(sym.index() != no_index);
+//    return m_symtab->module()->get_scope(sym.index());
+}
+
+
+Index SymbolPointer::get_scope_index(const Scope& hier) const
+{
+    auto& sym = m_symtab->get(m_symidx);
+    assert(sym.type() == Symbol::Function);
+    auto* parent_scope = hier.find_parent_scope(m_symtab);
+    if (!parent_scope) {
+        // use symtab's (generic) scope
+        return m_symtab->scope()->get_subscope_index(sym.index());
+    }
+    return hier.find_parent_scope(m_symtab)->get_subscope_index(sym.index());
+
+//    assert(sym.type() == Symbol::Function);
+//    assert(sym.index() != no_index);
+//    return sym.index();
+}
+
+
+Index SymbolPointer::get_generic_scope_index() const
+{
+    auto& sym = m_symtab->get(m_symidx);
+    assert(sym.type() == Symbol::Function);
+    assert(m_symtab->scope() != nullptr);
+    return m_symtab->scope()->get_subscope_index(sym.index());
+
+//    assert(sym.type() == Symbol::Function);
+//    assert(sym.index() != no_index);
+//    return sym.index();
+}
+
+
+Function& SymbolPointer::get_function(const Scope& hier) const
+{
+    return get_scope(hier).function();
+}
+
+
+const TypeInfo& SymbolPointer::get_type() const
+{
+    auto& sym = m_symtab->get(m_symidx);
+    assert(sym.type() == Symbol::TypeName || sym.type() == Symbol::StructItem);
+    assert(m_symtab->module() != nullptr);
+    return m_symtab->module()->get_type(sym.index());
+}
+
+
+Class& SymbolPointer::get_class() const
+{
+    auto& sym = m_symtab->get(m_symidx);
+    assert(sym.type() == Symbol::Class || sym.type() == Symbol::Method);
+    assert(m_symtab->module() != nullptr);
+    assert(sym.index() != no_index);
+    return m_symtab->module()->get_class(sym.index());
+}
+
+
+std::string SymbolPointer::symtab_qualified_name() const
+{
+    return m_symtab ? m_symtab->qualified_name() : "";
+}
+
+
+//------------------------------------------------------------------------------
+
+
+SymbolTable::SymbolTable(std::string name, SymbolTable* parent)
+        : m_name(std::move(name)), m_parent(parent),
+          m_module(parent ? parent->module() : nullptr)
+{}
+
+
+std::string SymbolTable::qualified_name() const
+{
+    std::string result = m_name;
+    const auto* parent = m_parent;
+    while (parent != nullptr) {
+        result = parent->name() + "::" + result;
+        parent = parent->parent();
+    }
+    return result;
 }
 
 
 SymbolPointer SymbolTable::add(Symbol&& symbol)
 {
+    // deduplicate StructItem symbols
+    if (symbol.type() == Symbol::StructItem) {
+        auto sym_ptr = find(symbol);
+        if (sym_ptr) {
+            assert(sym_ptr.symtab() == this);
+            return sym_ptr;
+        }
+    }
+
     m_symbols.emplace_back(std::move(symbol));
-    return {*this, m_symbols.size() - 1};
+    return {*this, Index(m_symbols.size() - 1)};
 }
 
 
@@ -66,21 +170,22 @@ SymbolTable& SymbolTable::add_child(const std::string& name)
 }
 
 
-size_t SymbolTable::count_nonlocals() const
+unsigned SymbolTable::depth(const SymbolTable* p_symtab) const
 {
-    return std::count_if(m_symbols.begin(), m_symbols.end(),
-            [](const Symbol& sym) { return sym.type() == Symbol::Nonlocal; });
+    unsigned res = 0;
+    const auto* p = this;
+    while (p != p_symtab) {
+        ++res;
+        p = p->parent();
+    }
+    return res;
 }
 
 
-void SymbolTable::update_nonlocal_indices()
+Size SymbolTable::count(Symbol::Type type) const
 {
-    size_t idx = 0;
-    for (auto& sym : m_symbols) {
-        if (sym.type() == Symbol::Nonlocal) {
-            sym.set_index(idx++);
-        }
-    }
+    return std::count_if(m_symbols.begin(), m_symbols.end(),
+            [type](const Symbol& sym) { return sym.type() == type; });
 }
 
 
@@ -98,13 +203,34 @@ const Symbol& SymbolTable::get(Index idx) const
 }
 
 
-SymbolPointer SymbolTable::find_by_name(const std::string& name)
+SymbolPointer SymbolTable::find(const Symbol& symbol)
 {
     auto it = std::find_if(m_symbols.begin(), m_symbols.end(),
-            [&name](const Symbol& sym){ return sym.name() == name; });
+                           [&symbol](const Symbol& other){ return symbol == other; });
     if (it == m_symbols.end())
         return {*this, no_index};
     return {*this, Index(it - m_symbols.begin())};
+}
+
+
+SymbolPointer SymbolTable::find_by_name(std::string_view name)
+{
+    auto it = std::find_if(m_symbols.rbegin(), m_symbols.rend(),
+            [&name](const Symbol& sym){ return sym.name() == name; });
+    if (it == m_symbols.rend())
+        return {*this, no_index};
+    return {*this, Index((m_symbols.rend() - it) - 1)};
+}
+
+
+SymbolPointer SymbolTable::find_by_index(Symbol::Type type, Index index)
+{
+    auto it = std::find_if(m_symbols.rbegin(), m_symbols.rend(),
+                           [type,index](const Symbol& sym)
+                           { return sym.type() == type && sym.index() == index; });
+    if (it == m_symbols.rend())
+        return {*this, no_index};
+    return {*this, Index((m_symbols.rend() - it) - 1)};
 }
 
 
@@ -118,6 +244,39 @@ SymbolPointer SymbolTable::find_last_of(const std::string& name,
     if (it == m_symbols.rend())
         return {*this, no_index};
     return {*this, Index((m_symbols.rend() - it) - 1)};
+}
+
+
+SymbolPointer SymbolTable::find_last_of(Symbol::Type type)
+{
+    auto it = std::find_if(m_symbols.rbegin(), m_symbols.rend(),
+            [type](const Symbol& sym) { return sym.type() == type; });
+    if (it == m_symbols.rend())
+        return {*this, no_index};
+    return {*this, Index((m_symbols.rend() - it) - 1)};
+}
+
+
+SymbolPointerList SymbolTable::filter(const std::string& name, Symbol::Type type)
+{
+    SymbolPointerList res;
+    Index i = 0;
+    for (const auto& sym : m_symbols) {
+        if (sym.type() == type && sym.name() == name)
+            res.emplace_back(*this, i);
+        ++i;
+    }
+    return res;
+}
+
+
+SymbolTable* SymbolTable::find_child_by_name(std::string_view name)
+{
+    auto it = std::find_if(m_children.begin(), m_children.end(),
+            [&name](const SymbolTable& s){ return s.name() == name; });
+    if (it == m_children.end())
+        return nullptr;
+    return &*it;
 }
 
 

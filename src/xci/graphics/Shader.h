@@ -1,7 +1,7 @@
 // Shader.h created on 2018-04-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_SHADER_H
@@ -14,8 +14,11 @@
 
 #include <string>
 #include <memory>
+#include <filesystem>
 
 namespace xci::graphics {
+
+namespace fs = std::filesystem;
 
 class Renderer;
 
@@ -23,14 +26,15 @@ class Renderer;
 // predefined shaders
 enum class ShaderId {
     Sprite = 0,
-    SpriteC,
+    SpriteR,  // R channel as alpha, color from uniform
+    SpriteC,  // R channel as alpha, color from vertex
     Line,
     Rectangle,
     Ellipse,
     Fps,
     Cursor,
 
-    _NumItems_
+    NumItems_
 };
 
 
@@ -50,8 +54,7 @@ public:
     bool load_from_vfs(const core::Vfs& vfs, const std::string& vertex, const std::string& fragment);
 
     /// Load program from a file (possibly adding a file watch for auto-reload)
-    bool load_from_file(
-            const std::string& vertex, const std::string& fragment);
+    bool load_from_file(const fs::path& vertex, const fs::path& fragment);
 
     /// Load program directly from memory
     /// Note that the memory MUST be aligned to at least 4 bytes.

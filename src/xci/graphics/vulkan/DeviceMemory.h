@@ -43,7 +43,6 @@ public:
 
 private:
     uint32_t find_memory_type(VkMemoryPropertyFlags properties);
-    void pad_to_alignment(VkDeviceSize alignment);
 
 private:
     Renderer& m_renderer;

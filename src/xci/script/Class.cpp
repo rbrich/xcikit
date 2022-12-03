@@ -1,51 +1,55 @@
-// Class.cpp created on 2019-09-11, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// Class.cpp created on 2019-09-11 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Class.h"
 #include "Function.h"
 
-namespace xci::script {
+#include <range/v3/algorithm.hpp>
 
-using namespace std;
+namespace xci::script {
 
 
 Class::Class(SymbolTable& symtab)
         : m_symtab(symtab)
 {
-    symtab.set_class(this);
+    m_symtab.set_class(this);
 }
 
 
-Index Class::add_function_type(TypeInfo&& type_info)
+Class::Class(Class&& rhs) noexcept
+        : m_symtab(rhs.m_symtab), m_scopes(std::move(rhs.m_scopes))
 {
-    m_functions.push_back(move(type_info));
-    return m_functions.size() - 1;
+    m_symtab.set_class(this);
+}
+
+
+Index Class::get_index_of_function(Index mod_scope_idx) const
+{
+    auto it = std::find(m_scopes.begin(), m_scopes.end(), mod_scope_idx);
+    return Index(it - m_scopes.begin());
 }
 
 
 Instance::Instance(Class& cls, SymbolTable& symtab)
         : m_class(cls), m_symtab(symtab)
 {
-    symtab.set_class(&cls);
+    m_symtab.set_class(&cls);
 }
 
 
-void Instance::set_function(Index cls_fn_idx, Index mod_fn_idx)
+bool Instance::is_generic() const
 {
-    m_functions.resize(m_class.num_functions(), no_index);
-    m_functions[cls_fn_idx] = mod_fn_idx;
+    return ranges::any_of(m_types, [](const TypeInfo& t) { return t.is_generic(); });
+}
+
+
+void Instance::set_function(Index cls_fn_idx, Index mod_scope_idx, SymbolPointer symptr)
+{
+    m_functions.resize(m_class.num_function_scopes());
+    m_functions[cls_fn_idx] = FunctionInfo{mod_scope_idx, symptr};
 }
 
 

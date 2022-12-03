@@ -1,0 +1,41 @@
+{
+    "extends": [
+        ":autodetectPinVersions"
+    ],
+    "regexManagers": [
+        {
+            "fileMatch": ["^conandata.yml$"],
+            "matchStrings": ["conan: \"(?<depName>.*?)/(?<currentValue>.*?)\""],
+            "packageNameTemplate": "{{depName}}/{{currentValue}}@_/_",
+            "depTypeTemplate": "requires",
+            "datasourceTemplate": "conan",
+            "versioningTemplate": "conan"
+        }
+    ],
+    "enabledManagers": [
+        "regex",
+        "github-actions",
+        "npm"
+    ],
+    "packageRules": [
+        {
+            "matchManagers": ["github-actions"],
+            "groupName": "github-actions",
+            "separateMajorMinor": false
+        },
+        {
+            "matchManagers": ["npm"],
+            "groupName": "npm",
+            "separateMajorMinor": false
+        },
+        {
+            "matchManagers": ["regex"],
+            "matchUpdateTypes": ["patch"],
+            "groupName": "conan dependencies",
+            "groupSlug": "conan-deps-patch"
+        }
+    ],
+    "prConcurrentLimit": 2,
+    "semanticCommits": "disabled",
+    "labels": ["deps"]
+}

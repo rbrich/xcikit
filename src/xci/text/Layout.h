@@ -1,17 +1,8 @@
-// Layout.h created on 2018-03-10, part of XCI toolkit
-// Copyright 2018, 2019 Radek Brich
+// Layout.h created on 2018-03-10 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_TEXT_LAYOUT_H
 #define XCI_TEXT_LAYOUT_H
@@ -24,14 +15,20 @@
 #include <xci/graphics/Color.h>
 #include <xci/graphics/Shape.h>
 #include <xci/core/geometry.h>
+#include <xci/core/container/ChunkedStack.h>
 
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 namespace xci::text {
 namespace layout {
 
+using graphics::VariUnits;
+using graphics::VariCoords;
+using graphics::Color;
+using graphics::View;
 
 // Layout allows to record a stream of elements (text and control)
 // and then apply this stream of elements to generate precise positions
@@ -43,10 +40,16 @@ public:
     void clear();
 
     // These are not affected by `clear`
-    void set_default_page_width(ViewportUnits width);
+    void set_default_page_width(VariUnits width);
     void set_default_font(Font* font);
-    void set_default_font_size(ViewportUnits size);
-    void set_default_color(const graphics::Color &color);
+    void set_default_font_size(VariUnits size, bool allow_scale = true);
+    void set_default_font_style(FontStyle font_style);
+    void set_default_font_weight(uint16_t weight);
+    void set_default_color(Color color);
+    void set_default_outline_radius(VariUnits radius);
+    void set_default_outline_color(Color color);
+    void set_default_tab_stops(std::vector<VariUnits> stops);
+    void set_default_alignment(Alignment alignment);
 
     const Style& default_style() const { return m_default_style; }
 
@@ -58,26 +61,29 @@ public:
 
     // Set page width. This drives the line breaking.
     // Default: 0 (same as INF - no line breaking)
-    void set_page_width(ViewportUnits width);
+    void set_page_width(VariUnits width);
 
     // Set text alignment
     void set_alignment(Alignment alignment);
 
     // Horizontal tab stops. Following Tab elements will add horizontal space
     // up to next tab stop.
-    void add_tab_stop(ViewportUnits x);
+    void add_tab_stop(VariUnits x);
     void reset_tab_stops();
 
     // Horizontal/vertical offset (in multiplies of font size)
     // This can be used to create subscript/superscript.
-    void set_offset(const ViewportSize& offset);
-    void reset_offset() { set_offset({0.f, 0.f}); }
+    void set_offset(VariSize offset);
+    void reset_offset() { set_offset({0_fb, 0_fb}); }
 
     // Set font and text style.
     // Also affects spacing (which depends on font metrics).
     void set_font(Font* font);
-    void set_font_size(ViewportUnits size);
-    void set_color(const graphics::Color &color);
+    void set_font_size(VariUnits size);
+    void set_font_style(FontStyle font_style);
+    void set_bold(bool bold = true);
+    void set_italic(bool italic = true);
+    void set_color(Color color);
     void reset_color();
 
     // ------------------------------------------------------------------------
@@ -86,7 +92,7 @@ public:
     // Word should be actual word. Punctuation can be attached to it
     // or pushed separately as another "word". No whitespace should be contained
     // in the word, unless it is meant to behave as hard, unbreakable space.
-    void add_word(const std::string& string);
+    void add_word(std::string_view word);
 
     // Add a space after last word. Does nothing if current line is empty.
     void add_space();
@@ -98,47 +104,55 @@ public:
     // Does nothing if current line is empty.
     void finish_line();
 
-    // ------------------------------------------------------------------------
-    // Spans allow to name part of the text and change its attributes later
+    // Add vertical space. Implies `finish_line`.
+    void advance_line(float lines = 1.0f);
 
-    // Begin and end the span.
-    // Returns false on error:
-    // - Trying to begin a span of same name twice.
-    // - Trying to end not-started span.
+    // ------------------------------------------------------------------------
+    // Spans allow naming a part of the text and change its attributes later
+
+    /// Begin the span
+    /// Logs error when trying to begin a span of the same name twice
     void begin_span(const std::string& name);
+
+    /// End the span
+    /// Logs error when trying to end a span which doesn't exist or was already ended
     void end_span(const std::string& name);
 
-    // Returns NULL if the span does not exist.
+    /// Get a span previously created by begin_span, end_span
+    /// \returns NULL if the span does not exist
     Span* get_span(const std::string& name);
 
     // ------------------------------------------------------------------------
     // Typeset and draw
 
-    // Typeset the element stream for the target, ie. compute element
+    // Typeset the element stream for the target, i.e. compute element
     // positions and sizes.
     // Should be called on every change of framebuffer size
     // and after addition of new elements.
-    void typeset(const graphics::View& target);
+    // Use also to realign/reflow after changing width or alignment.
+    void typeset(const View& target);
 
     // Recreate graphics objects. Must be called at least once before draw.
-    void update(const graphics::View& target);
+    void update(const View& target);
 
     // Draw whole layout to target
-    void draw(graphics::View& target, const ViewportCoords& pos) const;
+    void draw(View& view, VariCoords pos) const;
 
     // ------------------------------------------------------------------------
     // Metrics
 
-    ViewportRect bbox() const;
+    FramebufferRect bbox() const;
 
 private:
     Page m_page;
     std::vector<std::unique_ptr<Element>> m_elements;
 
     Style m_default_style;
-    ViewportUnits m_default_width = 0;
+    VariUnits m_default_width = 0_px;
+    Alignment m_default_alignment = Alignment::Left;
+    std::vector<VariUnits> m_default_tab_stops;
 
-    mutable std::list<graphics::Shape> m_debug_shapes;
+    mutable core::ChunkedStack<graphics::Shape> m_debug_shapes;
 };
 
 

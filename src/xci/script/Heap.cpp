@@ -1,28 +1,22 @@
-// Heap.cpp created on 2019-08-17, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// Heap.cpp created on 2019-08-17 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019–2021 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Heap.h"
 
 namespace xci::script {
 
+using xci::core::bit_copy;
 
-HeapSlot::HeapSlot(size_t size)
-    : m_slot(new byte[sizeof(uint32_t) + size])
+
+HeapSlot::HeapSlot(size_t user_size, Deleter deleter)
+    : m_slot(new std::byte[header_size + user_size])
 {
-    uint32_t refs = 1;
+    RefCount refs = 1;
     memcpy(m_slot, &refs, sizeof(refs));
+    memcpy(m_slot + sizeof(RefCount), &deleter, sizeof(Deleter));
 }
 
 
@@ -30,51 +24,35 @@ void HeapSlot::incref() const
 {
     if (m_slot == nullptr)
         return;
-    auto refs = bit_read<uint32_t>(m_slot);
-    refs++;
+    const auto refs = bit_copy<RefCount>(m_slot) + 1;
     memcpy(m_slot, &refs, sizeof(refs));
 }
 
 
-void HeapSlot::decref() const
+bool HeapSlot::decref() const
 {
     if (m_slot == nullptr)
-        return;
-    auto refs = bit_read<uint32_t>(m_slot);;
-    refs--;
-    memcpy(m_slot, &refs, sizeof(refs));
-}
-
-
-void HeapSlot::decref_gc()
-{
-    if (m_slot == nullptr)
-        return;
-    auto refs = bit_read<uint32_t>(m_slot);
-    refs--;
+        return false;  // caller's pointer is already null
+    const auto refs = bit_copy<RefCount>(m_slot) - 1;
     if (refs == 0) {
+        Deleter deleter;
+        memcpy(&deleter, m_slot + sizeof(RefCount), sizeof(Deleter));
+        if (deleter != nullptr)
+            deleter(data_());
         delete[] m_slot;
-        m_slot = nullptr;
-        return;
+        return true;  // freed, the caller may want to clear the pointer
+    } else {
+        memcpy(m_slot, &refs, sizeof(refs));
+        return false;
     }
-    memcpy(m_slot, &refs, sizeof(refs));
 }
 
 
-void HeapSlot::reset(byte* slot)
+auto HeapSlot::refcount() const -> RefCount
 {
-    decref_gc();
-    m_slot = slot;
-    incref();
-}
-
-
-void HeapSlot::reset(size_t size)
-{
-    decref_gc();
-    uint32_t refs = 1;
-    m_slot = new byte[sizeof(refs) + size];
-    memcpy(m_slot, &refs, sizeof(refs));
+    if (m_slot == nullptr)
+        return 0;
+    return bit_copy<RefCount>(m_slot);
 }
 
 

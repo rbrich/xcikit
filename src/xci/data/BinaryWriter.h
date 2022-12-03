@@ -1,109 +1,187 @@
-// BinaryWriter.h created on 2019-03-13, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// BinaryWriter.h created on 2019-03-13 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019, 2020 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_DATA_BINARY_WRITER_H
 #define XCI_DATA_BINARY_WRITER_H
 
 #include "BinaryBase.h"
-#include <xci/data/reflection.h>
 #include <xci/compat/endian.h>
-#include <xci/compat/bit.h>
+#include <xci/data/coding/leb128.h>
+#include <memory>
 #include <ostream>
-#include <map>
 
 namespace xci::data {
 
 
-/// Writes reflected objects to a binary stream.
-/// The format is custom:
-/// - byte-order is configurable and saved in header
-/// - keys are compressed to 8..16 bits
-/// - maximum number of distinct keys is 32768
-/// - header is: <MAGIC:16><VERSION:8><FLAGS:8>
-/// - the general format is: <TYPE:3><FLAG:1><LEN:4>[<+LEN>]<KEY><VALUE>
-/// - key is encoded:
-///   - first appearance - length + string: <FLAG:1><LEN:7><CHARS> (flag=0)
-///   - keys are truncated to 127 chars (max LEN:7)
-///   - next appearance, offset from first app. less than 32768: <FLAG:1><OFS:15> (flag=1)
-///   - remember pos before reading offset, subtract offset, seek, read <LEN:7><CHARS> (flag is zero an can be ignored)
-/// - footer is: <TYPE_FLAG_LEN:8><CRC:32> (type=7,flag=0,len=4)
-/// - master chunks contain sub-chunks, terminated with master chunk with LEN=1
-/// See source code for actual values.
+/// Writes serializable objects to a binary stream.
+///
+/// The binary format is custom, see [docs](docs/data/binary_format.md].
+///
+/// Each serializable object must implement `serialize` method, similarly
+/// to [cereal](https://uscilab.github.io/cereal/):
+///
+///     struct MyStruct {
+///         template <class Archive>
+///         void serialize(Archive& ar) {
+///             ar(a)(b)(c);
+///         }
+///     };
+///
+/// Alternatively, it can implement save/load pair, so it can behave specifically
+/// depending on the data direction:
+///
+///     struct MyStruct {
+///         template <class Archive> void save(Archive& ar) const { ar(a)(b)(c); }
+///         template <class Archive> void load(Archive& ar) { ar(a)(b)(c); }
+///     };
+///
+/// Out-of-class functions are also supported:
+///
+///     template <class Archive> void serialize(Archive& ar, MyStruct& v) { ar(v.a)(v.b)(v.c); }
+///     template <class Archive> void save(Archive& ar, const MyStruct& v) { ar(v.a)(v.b)(v.c); }
+///     template <class Archive> void load(Archive& ar, MyStruct& v) { ar(v.a)(v.b)(v.c); }
+///
+/// The numeric keys are auto-assigned: a=0, b=1, c=2.
+/// Maximum number of members serializable in this fashion is 16.
+///
+/// The keys can be assigned explicitly:
+///
+///     ar (0, a) (1, b) (2, c);
+///     ar (0, "a", a) (1, "a", b) (2, "a", c);
+///     XCI_ARCHIVE_FIELD(ar, 0, a); XCI_ARCHIVE_FIELD(ar, 1, b); XCI_ARCHIVE_FIELD(ar, 2, c);
+///
+/// The second line also assigns a name to each field. The third line is equivalent
+/// to the second, but XCI_ARCHIVE_FIELD assigns the name automatically as stringified variable name.
+///
+/// As a shortcut, multiple auto-named and auto-keyed fields can be added at once:
+///
+///     XCI_ARCHIVE(ar, a, b, c)
+///
 
-class BinaryWriter : private BinaryBase {
+class BinaryWriter
+        : public ArchiveBase<BinaryWriter>
+        , protected ArchiveGroupStack< /*BufferType=*/ std::vector<std::byte> >
+        , protected BinaryBase {
+    friend ArchiveBase<BinaryWriter>;
+
 public:
-    explicit BinaryWriter(std::ostream& os) : m_stream(os) {}
+    using Writer = std::true_type;
+    template<typename T> using FieldType = const T&;
 
-    template <class T>
-    void dump(const T& o) {
-        write_header();
-        write(o);
-        write_footer();
+    explicit BinaryWriter(std::ostream& os, bool crc32 = false) : m_stream(os), m_crc32(crc32) {}
+    ~BinaryWriter() { write_content(); }
+
+    // raw and smart pointers
+    template <FancyPointerType T>
+    void add(ArchiveField<BinaryWriter, T>&& a) {
+        if (!a.value) {
+            write(uint8_t(Type::Null | a.key));
+            return;
+        }
+        using ElemT = typename std::pointer_traits<T>::element_type;
+        apply(ArchiveField<BinaryWriter, ElemT>{a.key, *a.value, a.name});
     }
 
-    void write_header();
-    void write_footer();
-
-    template <class T>
-    void write(const T& o) {
-        meta::doForAllMembers<T>([this, &o](const auto& member) {
-            this->write(member.getName(), member.get(o));
-        });
+    // bool
+    void add(ArchiveField<BinaryWriter, bool>&& a) {
+        uint8_t type = (a.value ? Type::BoolTrue : Type::BoolFalse);
+        write(uint8_t(type | a.key));
     }
 
-    template <class T, typename std::enable_if_t<meta::isRegistered<T>(), int> = 0>
-    void write(const char* name, const T& o) {
-        write_master(Master_Enter);
-        write_key(name);
-        write(o);
-        write_master(Master_Leave);
+    // integers, floats, enums
+    template <typename T>
+    requires requires() { BinaryBase::to_chunk_type<T>(); }
+    void add(ArchiveField<BinaryWriter, T>&& a) {
+        write(uint8_t(BinaryBase::to_chunk_type<T>() | a.key));
+        write(a.value);
     }
 
-    template <class T, typename std::enable_if_t<meta::isRegistered<typename T::value_type>(), int> = 0>
-    void write(const char* name, const T& o) {
-        for (auto& item : o) {
-            write(name, item);
+    // string
+    void add(ArchiveField<BinaryWriter, std::string>&& a) {
+        write(uint8_t(Type::String | a.key));
+        write_leb128(a.value.size());
+        write((const std::byte*) a.value.data(), a.value.size());
+    }
+    void add(ArchiveField<BinaryWriter, const char*>&& a) {
+        if (!a.value) {
+            write(uint8_t(Type::Null | a.key));
+            return;
+        }
+        write(uint8_t(Type::String | a.key));
+        auto size = strlen(a.value);
+        write_leb128(size);
+        write((const std::byte*) a.value, size);
+    }
+
+    // binary data
+    template <BlobType T>
+    void add(ArchiveField<BinaryWriter, T>&& a) {
+        write(uint8_t(Type::Binary | a.key));
+        write_leb128(a.value.size());
+        write((const std::byte*) a.value.data(), a.value.size());
+    }
+
+    // iterables
+    template <ContainerType T>
+    void add(ArchiveField<BinaryWriter, T>&& a) {
+        for (auto& item : a.value) {
+            apply(ArchiveField<BinaryWriter, typename T::value_type>{a.key, item, a.name});
         }
     }
 
-    template <class T, typename std::enable_if_t<std::is_enum<T>::value, int> = 0>
-    void write(const char* name, T value) {
-        write(name, (unsigned int) value);
+    // variant
+    template <VariantType T>
+    void add(ArchiveField<BinaryWriter, T>&& a) {
+        // index of active alternative
+        apply(ArchiveField<BinaryWriter, size_t>{draw_next_key(a.key), a.value.index(), a.name});
+        // value of the alternative
+        a.key = draw_next_key(key_auto);
+        std::visit([this, &a](const auto& value) {
+            using Tv = std::decay_t<decltype(value)>;
+            if constexpr (!std::is_same_v<Tv, std::monostate>) {
+                this->apply(ArchiveField<BinaryWriter, Tv>{a.key, value});
+            }
+        }, a.value);
     }
-
-    void write(const char* name, const std::string& value);
-    void write(const char* name, unsigned int value);
-    void write(const char* name, double value);
 
 private:
     template <typename T>
-    void write_with_crc(const T& value) {
-        write_with_crc((uint8_t*)&value, sizeof(value));
+    bool enter_group(const ArchiveField<BinaryWriter, T>&) {
+        m_group_stack.emplace_back();
+        return true;
     }
-    void write_with_crc(const uint8_t* buffer, size_t length);
+    template <typename T>
+    void leave_group(const ArchiveField<BinaryWriter, T>& kv) {
+        write_group(kv.key, kv.name);
+    }
 
-    void write_type_len(uint8_t type, uint64_t len);
-    void write_key(const char* key);
-    void write_master(int flag);
+    void write_group(uint8_t key, const char* name);
+    void write_content();
 
+    template <typename T>
+    void write(const T& value) {
+        add_to_buffer((const std::byte*) &value, sizeof(value));
+    }
+    void write(const std::byte* buffer, size_t length) {
+        add_to_buffer(buffer, length);
+    }
+
+    void add_to_buffer(const std::byte* data, size_t size) {
+        group_buffer().insert(group_buffer().end(), data, data + size);
+    }
+
+    template<typename T>
+    void write_leb128(T value) {
+        auto out_iter = std::back_inserter(group_buffer());
+        leb128_encode<T, decltype(out_iter), std::byte>(out_iter, value);
+    }
 
 private:
     std::ostream& m_stream;
-    std::map<std::string, size_t> m_key_to_pos;
-    size_t m_pos = 0;
-    int m_depth = 0;
+    bool m_crc32;  // enable CRC32
 };
 
 

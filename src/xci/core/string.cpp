@@ -1,13 +1,19 @@
-// string.cpp created on 2018-03-23 belongs to XCI Toolkit
+// string.cpp created on 2018-03-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
 // Copyright 2018, 2019 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "string.h"
+
+#if XCI_WITH_PEGTL == 1
 #include "parser/unescape.h"
-#include <xci/core/format.h>
+#endif
+
 #include <xci/core/log.h>
+
+#include <fmt/core.h>
+#include <widechar_width/widechar_width.h>
 
 #include <cctype>
 #include <locale>
@@ -16,43 +22,97 @@
 
 namespace xci::core {
 
-using namespace std;
+using std::string;
+using std::vector;
+using std::string_view;
+using fmt::format;
 
 
-bool starts_with(const std::string& str, const std::string& sub)
+bool remove_prefix(string& str, const string& prefix)
 {
-    // Note: don't use find(), that would be ineffective to decide negative result
-    return str.size() >= sub.size() && str.substr(0, sub.size()) == sub;
+    if (!str.starts_with(prefix))
+        return false;
+    str.erase(0, prefix.size());
+    return true;
 }
 
 
-std::vector<string_view> split(string_view str, char delim)
+bool remove_suffix(string& str, const string& suffix)
+{
+    if (!str.ends_with(suffix))
+        return false;
+    str.erase(str.size() - suffix.size());
+    return true;
+}
+
+
+std::string replace_all(std::string_view str, std::string_view substring, std::string_view replacement)
+{
+    std::string output;
+    size_t pos = 0;
+    auto end = str.cbegin();
+    for(;;) {
+        pos = str.find(substring, pos);
+        if (pos == std::string::npos)
+            break;
+        output.append(end, str.cbegin() + pos);
+        output += replacement;
+        pos += substring.size();
+        end = str.cbegin() + pos;
+    }
+    output.append(end, str.cend());
+    return output;
+}
+
+
+template <class TDelim>
+vector<string_view> _split(string_view str, TDelim delim, size_t delim_len, int maxsplit)
 {
     std::vector<string_view> res;
     size_t pos = 0;
-    size_t end = 0;
-    for (;;) {
-        end = str.find(delim, pos);
-        if (end != string_view::npos) {
-            if (end != pos)
-                res.push_back(str.substr(pos, end - pos));
-            pos = end + 1;
-        } else {
-            if (pos < str.size() - 1)
-                res.push_back(str.substr(pos, end - pos));
+    while (maxsplit != 0) {
+        size_t end = str.find(delim, pos);
+        if (end == string_view::npos)
             break;
-        }
+        res.push_back(str.substr(pos, end - pos));
+        pos = end + delim_len;
+        --maxsplit;
     }
+    res.push_back(str.substr(pos, str.size() - pos));
     return res;
 }
 
+std::vector<std::string_view> split(std::string_view str, char delim, int maxsplit) { return _split(str, delim, 1, maxsplit); }
+std::vector<std::string_view> split(std::string_view str, std::string_view delim, int maxsplit)  { return _split(str, delim, delim.size(), maxsplit); }
 
-std::string escape(string_view str)
+
+template <class TDelim>
+vector<string_view> _rsplit(string_view str, TDelim delim, size_t delim_len, int maxsplit)
+{
+    std::vector<string_view> res;
+    size_t pos = str.size();
+    while (maxsplit != 0 && pos != 0) {
+        size_t beg = str.rfind(delim, pos - 1);
+        if (beg == string_view::npos)
+            break;
+        res.insert(res.begin(), str.substr(beg + delim_len, pos - beg - delim_len));
+        pos = beg;
+        --maxsplit;
+    }
+    res.insert(res.begin(), str.substr(0, pos));
+    return res;
+}
+
+std::vector<std::string_view> rsplit(std::string_view str, char delim, int maxsplit)  { return _rsplit(str, delim, 1, maxsplit); }
+std::vector<std::string_view> rsplit(std::string_view str, std::string_view delim, int maxsplit)  { return _rsplit(str, delim, delim.size(), maxsplit); }
+
+
+std::string escape(string_view str, bool extended, bool utf8)
 {
     std::string out;
     out.reserve(str.size());
-    for (auto ch : str) {
-        switch (ch) {
+    for (auto cp = str.begin(); cp != str.end(); ++cp) {
+        switch (*cp) {
             case '\a': out += "\\a"; break;
             case '\b': out += "\\b"; break;
             case '\f': out += "\\f"; break;
@@ -64,12 +124,25 @@ std::string escape(string_view str)
             case '"': out += "\\\""; break;
             case '\'': out += "\\'"; break;
             default: {
-                if (std::isprint(ch))
-                    out += ch;
-                else if (ch >= 0 && ch < 8)
-                    out += format("\\{}", (int)(unsigned char)(ch));
-                else
-                    out += format("\\x{:02x}", (int)(unsigned char)(ch));
+                if (extended && *cp == '\x1b') {
+                    out += "\\e";
+                    break;
+                }
+                auto c_int = (int)(unsigned char)(*cp);
+                if (std::isprint(c_int))
+                    out += *cp;
+                else {
+                    if (utf8) {
+                        auto len = utf8_char_length(*cp);
+                        if (len > 1 && cp + len <= str.end()) {
+                            // multi-byte UTF-8 char -> passthrough
+                            out.append(cp, cp + size_t(len));
+                            cp += len - 1;
+                            break;
+                        }
+                    }
+                    out += format("\\x{:02x}", c_int);
+                }
                 break;
             }
         }
@@ -78,10 +151,10 @@ std::string escape(string_view str)
 }
 
 
-std::string unescape(string_view str)
+#if XCI_WITH_PEGTL == 1
+template<typename Rule>
+std::string gen_unescape(string_view str)
 {
-    using namespace parser::unescape;
-
     tao::pegtl::memory_input<
         tao::pegtl::tracking_mode::eager,
         tao::pegtl::eol::lf_crlf,
@@ -91,7 +164,7 @@ std::string unescape(string_view str)
     result.reserve(str.size());
 
     try {
-        auto matched = tao::pegtl::parse< String, Action >( input, result );
+        auto matched = tao::pegtl::parse< Rule, parser::unescape::Action >( input, result );
         assert(matched);
         (void) matched;
     } catch (tao::pegtl::parse_error&) {
@@ -101,13 +174,17 @@ std::string unescape(string_view str)
     return result;
 }
 
+std::string unescape(string_view str) { return gen_unescape<parser::unescape::String>(str); }
+std::string unescape_uni(string_view str) { return gen_unescape<parser::unescape::StringUni>(str); }
+#endif
+
 
 std::string to_lower(std::string_view str)
 {
     std::string result(str.size(), '\0');
     std::transform(
         str.begin(), str.end(),
-        result.begin(), [](char c){ return std::tolower(c); });
+        result.begin(), [](char c){ return (char) std::tolower(c); });
     return result;
 }
 
@@ -116,13 +193,32 @@ std::u32string to_utf32(string_view utf8)
 {
     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert_utf32;
     try {
-        return convert_utf32.from_bytes(utf8.cbegin(), utf8.cend());
+        return convert_utf32.from_bytes(utf8.data(), utf8.data() + utf8.size());
     } catch (const std::range_error& e) {
-        log_error("to_utf32: Invalid UTF8 string: {}", utf8);
-        return std::u32string();
+        log::error("to_utf32: Invalid UTF8 string: {} ({})", utf8, e.what());
+        return {};
     }
 }
 
+
+template <class Elem>
+std::string _to_utf8(std::basic_string_view<Elem> wstr)
+{
+    std::wstring_convert<std::codecvt_utf8<Elem>, Elem> convert;
+    try {
+        return convert.to_bytes(wstr.data(), wstr.data() + wstr.size());
+    } catch (const std::range_error& e) {
+        log::error("to_utf8: Invalid UTF16/32 string ({})", e.what());
+        return {};
+    }
+}
+
+std::string to_utf8(std::u16string_view wstr) { return _to_utf8(wstr); }
+std::string to_utf8(std::u32string_view wstr) { return _to_utf8(wstr); }
+
+#ifdef _WIN32
+std::string to_utf8(std::wstring_view wstr) { return _to_utf8(wstr); }
+#endif
 
 std::string to_utf8(char32_t codepoint)
 {
@@ -131,44 +227,41 @@ std::string to_utf8(char32_t codepoint)
 }
 
 
-const char* utf8_next(const char* pos)
+int utf8_char_length(char8_t first)
 {
-    auto first = (unsigned char) *pos;
     if (first == 0) {
-        return pos;
-    } else
+        return 0;
+    }
     if ((first & 0b10000000) == 0) {
         // 0xxxxxxx -> 1 byte
-        return pos + 1;
-    } else
+        return 1;
+    }
     if ((first & 0b11100000) == 0b11000000) {
         // 110xxxxx -> 2 bytes
-        return pos + 2;
-    } else
+        return 2;
+    }
     if ((first & 0b11110000) == 0b11100000) {
         // 1110xxxx -> 3 bytes
-        return pos + 3;
-    } else
+        return 3;
+    }
     if ((first & 0b11111000) == 0b11110000) {
         // 11110xxx -> 4 bytes
-        return pos + 4;
-    } else {
-        log_error("utf8_next: Invalid UTF8 string, encountered code 0x{:02x}", int(first));
-        return pos + 1;
+        return 4;
     }
+    log::error("utf8_char_length: Invalid UTF8 string, encountered code 0x{:02x}", int(first));
+    return 1;
 }
 
 
-std::string::const_reverse_iterator
-utf8_prev(std::string::const_reverse_iterator pos)
+const char8_t* utf8_prev(const char8_t* utf8)
 {
-    while ((*pos & 0b11000000) == 0b10000000)
-        ++pos;
-    return pos + 1;
+    while ((static_cast<unsigned char>(*utf8) & 0b11000000) == 0b10000000)
+        --utf8;
+    return utf8 - 1;
 }
 
 
-size_t utf8_length(string_view str)
+size_t utf8_length(std::string_view str)
 {
     size_t length = 0;
     for (auto pos = str.cbegin(); pos != str.cend(); pos = utf8_next(pos)) {
@@ -178,19 +271,17 @@ size_t utf8_length(string_view str)
 }
 
 
+size_t utf8_offset(std::string_view str, size_t n_chars)
+{
+    return utf8_offset_iter(str.cbegin(), str.cend(), n_chars) - str.cbegin();
+}
+
+
 string_view utf8_substr(string_view str, size_t pos, size_t count)
 {
-    auto begin = str.cbegin();
-    while (pos > 0 && begin != str.cend()) {
-        begin = utf8_next(begin);
-        --pos;
-    }
-    auto end = begin;
-    while (count > 0 && end != str.cend()) {
-        end = utf8_next(end);
-        --count;
-    }
-    return {begin, size_t(end - begin)};
+    auto begin = utf8_offset_iter(str.cbegin(), str.cend(), pos);
+    auto end = utf8_offset_iter(begin, str.cend(), count);
+    return {&*begin, size_t(end - begin)};
 }
 
 
@@ -200,22 +291,52 @@ char32_t utf8_codepoint(const char* utf8)
     if ((c0 & 0x80) == 0) {
         // 0xxxxxxx -> 1 byte
         return char32_t(c0 & 0x7f);
-    } else
+    }
     if ((c0 & 0xe0) == 0xc0) {
         // 110xxxxx -> 2 bytes
         return char32_t(((c0 & 0x1f) << 6) | (utf8[1] & 0x3f));
-    } else
+    }
     if ((c0 & 0xf0) == 0xe0) {
         // 1110xxxx -> 3 bytes
         return char32_t(((c0 & 0x0f) << 12) | ((utf8[1] & 0x3f) << 6) | (utf8[2] & 0x3f));
-    } else
+    }
     if ((c0 & 0xf8) == 0xf0) {
         // 11110xxx -> 4 bytes
         return char32_t(((c0 & 0x07) << 18) | ((utf8[1] & 0x3f) << 12) | ((utf8[2] & 0x3f) << 6) | (utf8[3] & 0x3f));
-    } else {
-        log_error("utf8_codepoint: Invalid UTF8 string, encountered code {:02x}", int(c0));
-        return 0;
     }
+    log::error("utf8_codepoint: Invalid UTF8 string, encountered code {:02x}", int(c0));
+    return 0;
+}
+
+
+std::pair<int, char32_t> utf8_codepoint_and_length(std::string_view utf8)
+{
+    if (utf8.empty())
+        return {0, 0};
+    char c0 = utf8[0];
+    if ((c0 & 0x80) == 0) {
+        // 0xxxxxxx -> 1 byte
+        return {1, char32_t(c0 & 0x7f)};
+    }
+    if (utf8.size() == 1)
+        return {0, 0};
+    if ((c0 & 0xe0) == 0xc0) {
+        // 110xxxxx -> 2 bytes
+        return {2, char32_t(((c0 & 0x1f) << 6) | (utf8[1] & 0x3f))};
+    }
+    if (utf8.size() == 2)
+        return {0, 0};
+    if ((c0 & 0xf0) == 0xe0) {
+        // 1110xxxx -> 3 bytes
+        return {3, char32_t(((c0 & 0x0f) << 12) | ((utf8[1] & 0x3f) << 6) | (utf8[2] & 0x3f))};
+    }
+    if (utf8.size() == 3)
+        return {0, 0};
+    if ((c0 & 0xf8) == 0xf0) {
+        // 11110xxx -> 4 bytes
+        return {4, char32_t(((c0 & 0x07) << 18) | ((utf8[1] & 0x3f) << 12) | ((utf8[2] & 0x3f) << 6) | (utf8[3] & 0x3f))};
+    }
+    return {0, -1};
 }
 
 
@@ -247,6 +368,39 @@ size_t utf8_partial_end(string_view str)
 
     // The UTF-8 sequence is properly closed.
     return 0;
+}
+
+
+unsigned c32_width(char32_t c)
+{
+    using namespace wcw;
+    int w = widechar_wcwidth(c);
+    switch (w) {
+        case widechar_combining:
+            return 0;
+
+        case widechar_nonprint:
+        case widechar_ambiguous:
+        case widechar_private_use:
+        case widechar_unassigned:
+            return 1;
+
+        case widechar_widened_in_9:
+            return 2;
+
+        default:
+            return w < 0 ? 1 : unsigned(w);
+    }
+}
+
+
+size_t utf8_width(std::string_view str)
+{
+    size_t w = 0;
+    for (auto pos = str.cbegin(); pos != str.cend(); pos = utf8_next(pos)) {
+        w += c32_width(utf8_codepoint(&*pos));
+    }
+    return w;
 }
 
 

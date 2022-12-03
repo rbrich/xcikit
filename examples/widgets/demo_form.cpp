@@ -1,40 +1,35 @@
-// demo_form.cpp created on 2018-06-23, part of XCI toolkit
-// Copyright 2018 Radek Brich
+// demo_form.cpp created on 2018-06-23 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "MousePosInfo.h"
+#include "graphics/common.h"
+
 #include <xci/widgets/Button.h>
 #include <xci/widgets/FpsDisplay.h>
 #include <xci/widgets/Form.h>
-#include <xci/graphics/Window.h>
 #include <xci/widgets/Label.h>
 #include <xci/core/Vfs.h>
-#include <xci/core/format.h>
 #include <xci/config.h>
+
+#include <fmt/core.h>
+#include <iostream>
 #include <cstdlib>
 
 // this brings in all required namespaces
 using namespace xci::demo;
 
-int main()
+int main(int argc, const char* argv[])
 {
     Vfs vfs;
-    vfs.mount(XCI_SHARE_DIR);
+    if (!vfs.mount(XCI_SHARE))
+        return EXIT_FAILURE;
 
     Renderer renderer {vfs};
     Window window {renderer};
-    window.create({800, 600}, "XCI form demo");
+    setup_window(window, "XCI form demo", argv);
 
     Theme theme(renderer);
     if (!theme.load_default())
@@ -44,7 +39,7 @@ int main()
 
     // Form #1
     Form form1 {theme};
-    form1.set_position({-1.0f, -0.5f});
+    form1.set_position({-50_vp, -25_vp});
     root.add(form1);
 
     std::string input_text = "2018-06-23";
@@ -62,15 +57,15 @@ int main()
 
     // Form #1 output
     Label output_text(theme);
-    output_text.set_position({0.2f, -0.5f});
+    output_text.set_position({10_vp, -25_vp});
     output_text.text().set_color(Color(180, 100, 140));
     button.on_click([&output_text, &input_text, &checkbox1, &checkbox2]
                      (View& view) {
-        auto text = format("Submitted:\n\n"
-                           "input_text = {}\n\n"
-                           "checkbox1 = {}\n\n"
-                           "checkbox2 = {}\n\n",
-                           input_text, checkbox1, checkbox2);
+        auto text = fmt::format("Submitted:\n\n"
+                                "input_text = {}\n\n"
+                                "checkbox1 = {}\n\n"
+                                "checkbox2 = {}\n\n",
+                                input_text, checkbox1, checkbox2);
         output_text.text().set_string(text);
         output_text.resize(view);
     });
@@ -78,7 +73,7 @@ int main()
 
     // Form #2
     Form form2(theme);
-    form2.set_position({-1.0f, 0.2f});
+    form2.set_position({-50_vp, 10_vp});
     root.add(form2);
 
     std::string name = "Player1";
@@ -89,21 +84,33 @@ int main()
 
     // Mouse pos
     MousePosInfo mouse_pos_info(theme);
-    mouse_pos_info.set_position({-1.2f, 0.9f});
+    mouse_pos_info.set_position({-60_vp, 45_vp});
     root.add(mouse_pos_info);
 
     // FPS
     FpsDisplay fps_display(theme);
-    fps_display.set_position({-1.2f, -0.8f});
+    fps_display.set_position({-60_vp, -40_vp});
     root.add(fps_display);
 
     window.set_refresh_mode(RefreshMode::OnDemand);
     //window.set_debug_flags(View::DebugFlags(View::Debug::LineBaseLine));
 
-    window.set_key_callback([&root](View& v, const KeyEvent& e) {
-        if (e.action == Action::Press && e.key == Key::D) {
-            root.dump(std::cout);
-            std::cout << std::endl;
+    window.set_key_callback([&root, &window](View& v, const KeyEvent& ev) {
+        if (ev.action != Action::Press)
+            return;
+        switch (ev.key) {
+            case Key::Escape:
+                window.close();
+                break;
+            case Key::F11:
+                window.toggle_fullscreen();
+                break;
+            case Key::D:
+                root.dump(std::cout);
+                std::cout << std::endl;
+                break;
+            default:
+                break;
         }
     });
 

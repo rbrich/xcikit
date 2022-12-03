@@ -1,17 +1,8 @@
-// TextTerminal.h created on 2018-07-19, part of XCI toolkit
-// Copyright 2018, 2019 Radek Brich
+// TextTerminal.h created on 2018-07-19 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_WIDGETS_TEXTTERMINAL_H
 #define XCI_WIDGETS_TEXTTERMINAL_H
@@ -22,16 +13,20 @@
 #include <xci/graphics/Shape.h>
 #include <xci/graphics/Primitives.h>
 #include <xci/graphics/View.h>
+#include <xci/graphics/Shader.h>
 #include <xci/core/geometry.h>
 #include <string_view>
 #include <vector>
 #include <chrono>
 #include <bitset>
-#include <xci/graphics/Shader.h>
 
 namespace xci::widgets {
 
 using graphics::FramebufferPixels;
+using graphics::FramebufferSize;
+using graphics::FramebufferRect;
+using graphics::VariRect;
+using namespace graphics::unit_literals;
 
 
 // Gory bits...
@@ -42,10 +37,10 @@ namespace terminal {
 // ----------------------
 // Codes 16 to 31 are reserved for attribute introducers
 // Number of parameters are deducible from introducer value:
-// 16-19 -> 0
-// 20-23 -> 1
-// 24-27 -> 2
-// 28-31 -> 3
+// 16-19 (0x10-0x13) -> 0
+// 20-23 (0x14-0x17)-> 1
+// 24-27 (0x18-0x1b)-> 1
+// 28-31 (0x1c-0x1f)-> 3
 // The same pattern applies for lower ctl codes too:
 //  0-3  -> 0
 //  4-7  -> 1
@@ -54,26 +49,22 @@ namespace terminal {
 namespace ctl {
     static constexpr uint8_t blanks = 7;        // blanks (1b param - num of cells)
 
-    static constexpr uint8_t first_introducer = 16;
-    static constexpr uint8_t default_fg = 16;
-    static constexpr uint8_t default_bg = 17;
-    static constexpr uint8_t fg8bit = 20;
-    static constexpr uint8_t bg8bit = 21;
-    static constexpr uint8_t set_attrs = 22;
-    static constexpr uint8_t fg24bit = 30;
-    static constexpr uint8_t bg24bit = 31;
-    static constexpr uint8_t last_introducer = 31;
-}
+    static constexpr uint8_t default_fg = 0x10;
+    static constexpr uint8_t default_bg = 0x11;
+    static constexpr uint8_t fg8bit = 0x14;
+    static constexpr uint8_t bg8bit = 0x15;
+    static constexpr uint8_t font_style = 0x18;
+    static constexpr uint8_t decoration = 0x19;
+    static constexpr uint8_t mode = 0x1a;
+    static constexpr uint8_t fg24bit = 0x1e;
+    static constexpr uint8_t bg24bit = 0x1f;
 
-// Encoding of attributes byte
-static constexpr uint8_t c_font_style_mask = 0b00000011;
-static constexpr uint8_t c_decoration_mask = 0b00011100;
-static constexpr uint8_t c_mode_mask       = 0b01100000;
-static constexpr int c_decoration_shift = 2;
-static constexpr int c_mode_shift = 5;
+    static constexpr uint8_t first_introducer = 0x10;
+    static constexpr uint8_t last_introducer = 0x1f;
+} // namespace ctl
 
 
-enum class Color4bit {
+enum class Color4bit : uint8_t {
     Black, Red, Green, Yellow, Blue, Magenta, Cyan, White,
     BrightBlack, BrightRed, BrightGreen, BrightYellow,
     BrightBlue, BrightMagenta, BrightCyan, BrightWhite
@@ -82,13 +73,48 @@ using Color8bit = uint8_t;
 using Color24bit = graphics::Color;  // alpha channel is ignored
 
 
+enum class FontStyle {
+    Regular,        // 000
+    Italic,         // 001
+    Bold,           // 010
+    BoldItalic,     // 011
+    Light,          // 100
+    LightItalic,    // 101
+};
+
+
+enum class Decoration {
+    None,
+    Underlined,
+    Overlined,
+    CrossedOut,
+    //Framed,
+    //Encircled,
+};
+
+
+enum class Mode {
+    Normal,
+    Bright,
+    //Blink,
+    //Conceal,
+    //Reverse,
+};
+
+
 class Renderer {
 public:
-    virtual void set_font_style(text::FontStyle font_style) = 0;
-    virtual void set_fg_color(graphics::Color fg) = 0;
-    virtual void set_bg_color(graphics::Color bg) = 0;
+    virtual void set_font_style(FontStyle font_style) = 0;
+    virtual void set_decoration(Decoration decoration) = 0;
+    virtual void set_mode(Mode mode) = 0;
+    virtual void set_default_fg_color() = 0;
+    virtual void set_default_bg_color() = 0;
+    virtual void set_fg_color(Color8bit fg) = 0;
+    virtual void set_bg_color(Color8bit bg) = 0;
+    virtual void set_fg_color(Color24bit fg) = 0;
+    virtual void set_bg_color(Color24bit bg) = 0;
     virtual void draw_blanks(size_t num) = 0;
-    virtual void draw_char(text::CodePoint code_point) = 0;
+    virtual void draw_chars(std::string_view utf8) = 0;
 };
 
 
@@ -115,6 +141,7 @@ public:
 
     /// Decode attribute sequence from string_view into object state
     /// This is usable for incremental (running) decoder.
+    /// \returns Number of bytes consumed
     size_t decode(std::string_view sv);
 
     // ------------------------------------------------------------------------
@@ -127,8 +154,9 @@ public:
     void set_default_fg();
     void set_default_bg();
 
-    void set_italic(bool italic) { set_bit(Attr); m_attr[Italic] = italic; }
-    void set_bold(bool bold) { set_bit(Attr); m_attr[Bold] = bold; }
+    void set_font_style(terminal::FontStyle style);
+    void set_mode(Mode mode);
+    void set_decoration(Decoration decoration);
 
     // Update this to go after `other` in stream,
     // ie. reset/skip all attributes set in `other`.
@@ -137,11 +165,15 @@ public:
     // ------------------------------------------------------------------------
     // Accessors
 
-    bool has_attr() const { return m_set[Attr]; }
-    text::FontStyle font_style() const { return text::FontStyle(m_attr.to_ulong() & c_font_style_mask); }
+    bool has_font_style() const { return m_set[FlagFontStyle]; }
+    bool has_decoration() const { return m_set[FlagDecoration]; }
+    bool has_mode() const { return m_set[FlagMode]; }
+    FontStyle font_style() const { return has_font_style() ? m_font_style : FontStyle::Regular; }
+    Mode mode() const { return has_mode() ? m_mode : Mode::Normal; }
+    Decoration decoration() const { return has_decoration() ? m_decoration : Decoration::None; }
 
-    bool has_fg() const { return m_set[Fg]; }
-    bool has_bg() const { return m_set[Bg]; }
+    bool has_fg() const { return m_set[FlagFg]; }
+    bool has_bg() const { return m_set[FlagBg]; }
     graphics::Color fg() const;
     graphics::Color bg() const;
 
@@ -151,22 +183,24 @@ private:
     void set_bit(size_t i) { m_set.set(i, true); }
 
 private:
-    enum class ColorMode { ColorDefault, Color8bit, Color24bit };
+    enum class ColorMode: uint8_t { ColorDefault, Color8bit, Color24bit };
     uint8_t m_fg_r, m_fg_g, m_fg_b;
     uint8_t m_bg_r, m_bg_g, m_bg_b;
     ColorMode m_fg = ColorMode::ColorDefault;
     ColorMode m_bg = ColorMode::ColorDefault;
 
-    enum { Italic, Bold, _attr_count_ };
-    std::bitset<_attr_count_> m_attr;
+    FontStyle m_font_style = FontStyle::Regular;
+    Mode m_mode = Mode::Normal;
+    Decoration m_decoration = Decoration::None;
 
-    enum { Attr, Fg, Bg, _flag_count_};
+    enum { FlagFontStyle, FlagDecoration, FlagMode, FlagFg, FlagBg, _flag_count_};
     std::bitset<_flag_count_> m_set;
 };
 
 
 class Line {
 public:
+    Line() { m_content.reserve(100); }
 
     /// Clear the line and set initial attributes.
     void clear(const Attributes& attr);
@@ -197,14 +231,10 @@ public:
     /// \returns        new pos (ie. start + skip)
     size_t content_skip(size_t skip, size_t start, Attributes& attr);
 
-    int length() const;
+    size_t length() const;
 
     bool is_blanked() const { return m_flags[BlankLine]; }
     bool is_page_blanked() const { return m_flags[BlankPage]; }
-
-private:
-    const char* content_begin() const { return m_content.c_str(); }
-    const char* content_end() const { return m_content.c_str() + m_content.size(); }
 
 private:
     std::string m_content;
@@ -228,14 +258,14 @@ private:
 
 class Buffer {
 public:
-    Buffer() : m_lines(1) {}
+    Buffer() : m_lines(1) { m_lines.reserve(100); }
 
     void add_line();
     void remove_lines(size_t start, size_t count);
 
     size_t size() const { return m_lines.size(); }
 
-    Line& operator[] (int line_index) { return m_lines[line_index]; }
+    Line& operator[] (size_t line_index) { return m_lines[line_index]; }
 
 private:
     std::vector<Line> m_lines;
@@ -249,8 +279,8 @@ public:
              graphics::PrimitiveType::TriFans),
       m_shader(renderer.get_shader(graphics::ShaderId::Cursor)) {}
 
-    void update(View& view, const ViewportRect& rect);
-    void draw(View& view, const ViewportCoords& pos);
+    void update(View& view, const FramebufferRect& rect);
+    void draw(View& view, VariCoords pos);
 
 private:
     graphics::Primitives m_quad;
@@ -258,7 +288,7 @@ private:
 };
 
 
-} // terminal
+} // namespace terminal
 
 
 class TextTerminal: public Widget {
@@ -271,7 +301,7 @@ public:
 
     /// Set font size and font scaling mode:
     /// \param size     size in viewport units
-    void set_font_size(ViewportUnits size);
+    void set_font_size(VariUnits size);
 
     /// Set requested terminal size in cells (i.e. do not scale the number of cells
     /// according to widget size - keep it fixed)
@@ -293,6 +323,10 @@ public:
     /// Forced line end (disallow reflow for current line).
     void break_line() { current_line().set_hard_break(); }
     void new_line();
+
+    /// Get contents of Nth line of current page
+    terminal::Line& line(size_t n) { return (*m_buffer)[m_buffer_offset + n]; }
+    /// Get contents of current line (where cursor is)
     terminal::Line& current_line() { return (*m_buffer)[m_buffer_offset + m_cursor.y]; }
 
     /// Erase `num` chars from `first`, replacing them with current attr (blanks)
@@ -321,7 +355,10 @@ public:
     // ------------------------------------------------------------------------
     // Cursor positioning
 
-    void set_cursor_pos(core::Vec2u pos);
+    /// Cursor position is 0-based
+    void set_cursor_pos(core::Vec2u pos) { set_cursor_x(pos.x); set_cursor_y(pos.y); }
+    void set_cursor_x(uint32_t x) { m_cursor.x = std::min(x, m_cells.x); }
+    void set_cursor_y(uint32_t y);
     core::Vec2u cursor_pos() const { return m_cursor; }
 
     // ------------------------------------------------------------------------
@@ -349,25 +386,13 @@ public:
     // ------------------------------------------------------------------------
     // Text attributes
 
-    using FontStyle = text::FontStyle;
+    using FontStyle = terminal::FontStyle;
     void set_font_style(FontStyle style);
 
-    enum class Decoration {
-        None,
-        Underlined,
-        Overlined,
-        CrossedOut,
-        Framed,
-        Encircled,
-    };
+    using Decoration = terminal::Decoration;
     void set_decoration(Decoration decoration);
 
-    enum class Mode {
-        Normal,
-        Blink,
-        Conceal,
-        Reverse,
-    };
+    using Mode = terminal::Mode;
     void set_mode(Mode mode);
 
     // ------------------------------------------------------------------------
@@ -398,8 +423,8 @@ private:
     static constexpr double c_scroll_end = std::numeric_limits<double>::infinity();
 
     FramebufferPixels m_font_size = 0;
-    ViewportUnits m_font_size_requested {14.0};
-    ViewportSize m_cell_size;
+    VariUnits m_font_size_requested { 14_px };
+    FramebufferSize m_cell_size;
     core::Vec2u m_cells = {80, 25};  // rows, columns
     bool m_resize_cells = true;
     std::unique_ptr<terminal::Buffer> m_buffer = std::make_unique<terminal::Buffer>();
@@ -410,6 +435,7 @@ private:
     std::chrono::nanoseconds m_bell_time {0};
 
     graphics::ColoredSprites m_sprites;
+    graphics::Sprites m_emoji_sprites;
     graphics::Shape m_boxes;
     terminal::Caret m_caret;  // visual indicator of cursor position
     graphics::Shape m_frame;  // for visual bell

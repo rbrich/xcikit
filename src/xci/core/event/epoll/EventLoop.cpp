@@ -1,17 +1,8 @@
-// epoll/EventLoop.cpp created on 2019-03-26, part of XCI toolkit
+// epoll/EventLoop.cpp created on 2019-03-26 as part of xcikit project
+// https://github.com/rbrich/xcikit
+//
 // Copyright 2019 Radek Brich
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "EventLoop.h"
 #include <xci/core/log.h>
@@ -27,7 +18,7 @@ EventLoop::EventLoop()
 {
     m_epoll_fd = epoll_create1(EPOLL_CLOEXEC);
     if (m_epoll_fd == -1) {
-        log_error("EventLoop: epoll_create1: {m}");
+        log::error("EventLoop: epoll_create1: {m}");
         return;
     }
 }
@@ -49,7 +40,7 @@ void EventLoop::run()
         if (rnum == -1) {
             if (errno == EINTR)
                 continue;
-            log_error("EventLoop: poll: {m}");
+            log::error("EventLoop: poll: {m}");
             break;
         }
 
@@ -75,7 +66,7 @@ void EventLoop::_register(int fd, Watch& watch, uint32_t epoll_events)
     ev.data.ptr = &watch;
     int rc = epoll_ctl(m_epoll_fd, EPOLL_CTL_ADD, fd, &ev);
     if (rc == -1) {
-        log_error("EventLoop: epoll_ctl(ADD): {m}");
+        log::error("EventLoop: epoll_ctl(ADD): {m}");
     }
 }
 
@@ -86,7 +77,7 @@ void EventLoop::_unregister(int fd, Watch& watch)
         return;
     int rc = epoll_ctl(m_epoll_fd, EPOLL_CTL_DEL, fd, nullptr);
     if (rc == -1 && errno != EBADF) {
-        log_error("EventLoop: epoll_ctl(DEL): {m}");
+        log::error("EventLoop: epoll_ctl(DEL): {m}");
     }
 }
 

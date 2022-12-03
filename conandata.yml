@@ -1,0 +1,89 @@
+# Run detect_system_deps.py to detect dependencies preinstalled in system.
+# conanfile.py accepts options in format `system_<req_name>` or `with_<req_name>`.
+#
+# The `system_<req_name>` option allows choosing between preinstalled dependency
+# and a dependency that needs to be installed from ConanCenter.
+#
+# The `with_<req_name>` option enables/disables the system dependency.
+# This doesn't allow installing the dependency from ConanCenter.
+# Currently, only "hyperscan" is such an option.
+#
+# Requirement options:
+# * `cmake` - what to look for in CMake, e.g. "fmt/8.0.0" -> `find_package(fmt 8.0.0)`
+# * `conan` - what to add to Conan's requires
+# * `upstream` - when installing directly from upstream (instead of via ConanCenter),
+#                specifies the repo and commit to download: "<site> <repo> <commit>"
+# * `prereq` - what option from `conanfile.py` requires this dependency
+#
+# Run `precache_upstream_deps.py` to download and export `upstream` deps as specified.
+# This is alternative to ConanCenter, but may be needed when a fix didn't yet make it
+# into ConanCenter. The `upstream` must contain a `CMakeLists.txt` with installation commands.
+
+requirements:
+  fmt:
+    cmake: "fmt/9.0.0"
+    conan: "fmt/9.1.0"
+  range_v3:
+    cmake: "range-v3/0.12.0"
+    conan: "range-v3/0.12.0"
+    upstream: "github.com ericniebler/range-v3 0.12.0"
+    cmake_defs: RANGE_V3_TESTS=OFF RANGE_V3_EXAMPLES=OFF RANGE_V3_PERF=OFF RANGE_V3_DOCS=OFF RANGE_V3_HEADER_CHECKS=OFF
+  pegtl:
+    cmake: "pegtl/"
+    conan: "taocpp-pegtl/3.2.7"
+    upstream: "github.com taocpp/PEGTL 3.2.7"
+    cmake_defs: PEGTL_BUILD_TESTS=OFF PEGTL_BUILD_EXAMPLES=OFF
+  magic_enum:
+    cmake: "magic_enum/0.7.3"
+    conan: "magic_enum/0.8.1"
+  zlib:
+    cmake: "ZLIB/"
+    conan: "zlib/1.2.13"
+    prereq:
+      - data
+  glfw:
+    cmake: "glfw3/3.3.0"
+    conan: "glfw/3.3.8"
+    prereq:
+      - graphics
+  vulkan:
+    cmake: "Vulkan/1.2.0"
+    conan: "vulkan-loader/1.3.231"
+    prereq:
+      - graphics
+  freetype:
+    cmake: "Freetype/2.10.0"
+    conan: "freetype/2.12.1"
+    prereq:
+      - text
+  harfbuzz:
+    cmake: "harfbuzz/"
+    conan: "harfbuzz/5.3.1"
+    prereq:
+      - text
+  hyperscan:
+    cmake: "Hyperscan/"
+    prereq:
+      - tools
+  boost:
+    cmake: "Boost/1.75.0"
+    conan: "pfr/2.0.3"
+    prereq:
+      - data
+  catch2:
+    cmake: "Catch2/3"
+    conan: "catch2/3.2.0"
+    upstream: "github.com catchorg/Catch2 v3.2.0"
+    cmake_defs: CATCH_INSTALL_DOCS=OFF CMAKE_CXX_STANDARD=20
+    prereq:
+      - tests
+  benchmark:
+    cmake: "benchmark/1.5.0"
+    conan: "benchmark/1.7.1"
+    prereq:
+      - benchmarks
+  incbin:
+    cmake: "incbin/"
+    conan: "incbin/cci.20211107"
+    prereq:
+      - examples

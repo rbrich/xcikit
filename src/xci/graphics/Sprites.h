@@ -1,17 +1,8 @@
-// Sprites.h created on 2018-03-04, part of XCI toolkit
-// Copyright 2018, 2019 Radek Brich
+// Sprites.h created on 2018-03-04 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_SPRITES_H
 #define XCI_GRAPHICS_SPRITES_H
@@ -36,7 +27,7 @@ using xci::core::Vec2f;
 class Sprites {
 public:
     explicit Sprites(Renderer& renderer, Texture& texture,
-                     const Color& color = Color::White());
+                     Color color = Color::White());
 
     // Reserve memory for `num` sprites.
     void reserve(size_t num);
@@ -46,18 +37,18 @@ public:
 
     // Add new sprite containing whole texture
     // `rect` defines position and size of the sprite
-    void add_sprite(const ViewportRect& rect);
+    void add_sprite(const FramebufferRect& rect);
 
     // Add new sprite containing a cutoff from the texture
     // `rect` defines position and size of the sprite
-    void add_sprite(const ViewportRect& rect, const Rect_u& texrect);
+    void add_sprite(const FramebufferRect& rect, const Rect_u& texrect);
 
     // Update sprites attributes according to settings (color etc.)
     void update();
 
     // Draw all sprites to `view` at `pos`.
     // Final sprite position is `pos` + sprite's relative position
-    void draw(View& view, const ViewportCoords& pos);
+    void draw(View& view, VariCoords pos);
 
 private:
     Texture& m_texture;
@@ -72,29 +63,29 @@ private:
 class ColoredSprites {
 public:
     explicit ColoredSprites(Renderer& renderer, Texture& texture,
-                            const Color& color = Color::White());
+                            Color color = Color::White());
 
     // Reserve memory for `num` sprites.
     void reserve(size_t num);
     void clear() { m_quads.clear(); }
 
-    void set_color(const Color& color) { m_color = color; }
-    const Color& color() const { return m_color; }
+    void set_color(Color color) { m_color = color; }
+    Color color() const { return m_color; }
 
     // Add new sprite containing whole texture
     // `rect` defines position and size of the sprite
-    void add_sprite(const ViewportRect& rect);
+    void add_sprite(const FramebufferRect& rect);
 
     // Add new sprite containing a cutoff from the texture
     // `rect` defines position and size of the sprite
-    void add_sprite(const ViewportRect& rect, const Rect_u& texrect);
+    void add_sprite(const FramebufferRect& rect, const Rect_u& texrect);
 
     // Update sprites attributes according to settings (color etc.)
     void update();
 
     // Draw all sprites to `view` at `pos`.
     // Final sprite position is `pos` + sprite's relative position
-    void draw(View& view, const ViewportCoords& pos);
+    void draw(View& view, VariCoords pos);
 
 private:
     Texture& m_texture;

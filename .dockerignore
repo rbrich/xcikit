@@ -1,0 +1,8 @@
+*
+!docker/emscripten/conan
+!build.sh
+!detect_system_deps.py
+!precache_upstream_deps.py
+!conanfile.py
+!conandata.yml
+!VERSION

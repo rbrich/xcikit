@@ -1,112 +1,156 @@
-#include <utility>
-
-// SymbolTable.h created on 2019-07-14, part of XCI toolkit
-// Copyright 2019 Radek Brich
+// SymbolTable.h created on 2019-07-14 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2019–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#ifndef XCI_SCRIPT_SYMBOLTABLE_H
-#define XCI_SCRIPT_SYMBOLTABLE_H
+#ifndef XCI_SCRIPT_SYMBOL_TABLE_H
+#define XCI_SCRIPT_SYMBOL_TABLE_H
 
+#include <xci/core/container/ChunkedStack.h>
+#include <xci/core/mixin.h>
 #include <vector>
-#include <list>
 #include <string>
+#include <string_view>
 
 namespace xci::script {
-
 
 class Symbol;
 class SymbolTable;
 class Function;
+class Scope;
 class Class;
 class Module;
+class TypeInfo;
 
 
-using Index = size_t;
-static constexpr Index no_index {SIZE_MAX};
+using Index = uint32_t;
+static constexpr Index no_index {~0u};
+
+using Size = uint32_t;
+
 
 class SymbolPointer {
 public:
     SymbolPointer() = default;
-    SymbolPointer(SymbolTable& symtab, Index idx) : m_symtab(&symtab), m_index(idx) {}
+    SymbolPointer(SymbolTable& symtab, Index idx) : m_symtab(&symtab), m_symidx(idx) {}
 
-    explicit operator bool() const { return m_symtab != nullptr && m_index != no_index; }
+    explicit operator bool() const { return m_symtab != nullptr && m_symidx != no_index; }
 
-    SymbolPointer& operator= (const SymbolPointer& rhs) = default;
-
-    Symbol& operator* ();
     const Symbol& operator*() const;
+    const Symbol* operator->() const;
+    Symbol* operator->();
 
-    Symbol* operator-> ();
-    const Symbol* operator-> () const;
+    Scope& get_scope(const Scope& hier) const;
+    Scope& get_generic_scope() const;
+    Index get_scope_index(const Scope& hier) const;
+    Index get_generic_scope_index() const;
+    Function& get_function(const Scope& hier) const;
+
+    const TypeInfo& get_type() const;
+
+    Class& get_class() const;
 
     SymbolTable* symtab() const { return m_symtab; }
-    Index symidx() const { return m_index; }
+    Index symidx() const { return m_symidx; }
 
-    bool operator==(const SymbolPointer& rhs) const {
-        return m_symtab == rhs.m_symtab && m_index == rhs.m_index;
+    bool operator==(const SymbolPointer& rhs) const = default;
+    bool operator<(const SymbolPointer& rhs) const {
+        return std::tie(m_symtab, m_symidx) < std::tie(rhs.m_symtab, rhs.m_symidx);
+    }
+
+    template<class Archive>
+    void save(Archive& ar) const {
+        ar("symtab", symtab_qualified_name()) ("symidx", m_symidx);
+    }
+
+    template<class Archive>
+    void load(Archive& ar) {
+        std::string qualified_name;
+        ar(qualified_name)(m_symidx);
+        m_symtab = &ar.ctx().module.symtab_by_qualified_name(qualified_name);
     }
 
 private:
-    SymbolTable* m_symtab = nullptr;  // owning table
-    Index m_index = no_index;         // index of item in the table
+    std::string symtab_qualified_name() const;
+
+    SymbolTable* m_symtab = nullptr;   // owning table
+    Index m_symidx = no_index;         // index of item in the table
 };
+
+
+using SymbolPointerList = std::vector<SymbolPointer>;
 
 
 class Symbol {
 public:
     enum Type {
         Unresolved,
-        Value,              // either local value in function scope or static value (module-level)
-        Parameter,          // function parameter in function scope
-        Nonlocal,           // non-local value in function scope, i.e. a capture from outer scope
-        Function,           // static function (module-level)
-        Module,             // imported module (module-level)
-        Instruction,        // intrinsics (e.g. __equal_32) resolve to this, index is Opcode
-        Class,              // type class
-        Method,             // method declaration: index = class index, ref = symbol in class scope
-        Instance,           // instance of type class
-        TypeName,           // type
-        TypeVar,            // type variable
+
+        // module-level
+        Module,             // imported module
+        Function,           // scope-level function (index = subscope index in scope)
+        Value,              // static value
+        TypeName,           // type information (index = type index in module)
+        Class,              // type class (index = class index in module)
+        Instance,           // instance of type class (index = instance index in module)
+        Method,             // method declaration (index = class index, ref = symbol in class scope)
+
+        // function scope
+        Parameter,          // function parameter
+        Nonlocal,           // non-local parameter, i.e. a capture from outer scope
+        Instruction,        // intrinsics resolve to this, the index is Opcode
+        TypeVar,            // type variable in generic function (index = var ID)
+
+        // struct type
+        StructItem,         // name = item name, index = struct type index in module
+
+        // special
+        TypeId,             // translate type name to type ID (index = type index in builtin if < 32, else type index in current module + 32)
     };
 
+    Symbol() = default;  // only for deserialization
     explicit Symbol(std::string name) : m_name(std::move(name)) {}
-    Symbol(std::string name, Index idx) : m_name(std::move(name)), m_type(Value), m_index(idx) {}
     Symbol(std::string name, Type type) : m_name(std::move(name)), m_type(type) {}
     Symbol(std::string name, Type type, Index idx) : m_name(std::move(name)), m_type(type), m_index(idx) {}
     Symbol(std::string name, Type type, Index idx, size_t depth)
         : m_name(std::move(name)), m_type(type), m_index(idx), m_depth(depth) {}
     Symbol(const SymbolPointer& ref, Type type)
             : m_name(ref->name()), m_type(type), m_ref(ref) {}
-    Symbol(const SymbolPointer& ref, Type type, size_t depth)
-        : m_name(ref->name()), m_type(type), m_index(ref.symidx()),
-          m_depth(depth), m_ref(ref) {}
+    Symbol(const SymbolPointer& ref, Type type, Index idx, size_t depth)
+            : m_name(ref->name()), m_type(type), m_index(idx),
+              m_depth(depth), m_ref(ref) {}
+
+    bool operator==(const Symbol&) const = default;
 
     const std::string& name() const { return m_name; }
     Type type() const { return m_type; }
     Index index() const { return m_index; }
     size_t depth() const { return m_depth; }
     SymbolPointer ref() const { return m_ref; }
-    // in case of overloaded function, this points to next overload
-    SymbolPointer next() const { return m_next; }
     bool is_callable() const { return m_is_callable; }
+    bool is_defined() const { return m_is_defined; }
 
-    void set_type(Type type) { m_type = type; }
-    void set_index(Index idx) { m_index = idx; }
-    void set_depth(size_t depth) { m_depth = depth; }
-    void set_ref(const SymbolPointer& ref) { m_ref = ref; }
-    void set_next(const SymbolPointer& next) { m_next = next; }
-    void set_callable(bool callable) { m_is_callable = callable; }
+    Symbol& set_type(Type type) { m_type = type; return *this; }
+    Symbol& set_index(Index idx) { m_index = idx; return *this; }
+    Symbol& set_depth(size_t depth) { m_depth = depth; return *this; }
+    Symbol& set_ref(const SymbolPointer& ref) { m_ref = ref; return *this; }
+    Symbol& set_callable(bool callable) { m_is_callable = callable; return *this; }
+    Symbol& set_defined(bool defined) { m_is_defined = defined; return *this; }
+
+    template<class Archive>
+    void save(Archive& ar) const {
+        uint8_t flags = uint8_t(m_is_callable) | uint8_t(unsigned(m_is_defined) << 1);
+        ar ("name", m_name) ("type", m_type) ("index", m_index) ("depth", m_depth) ("flags", flags);
+    }
+
+    template<class Archive>
+    void load(Archive& ar) {
+        uint8_t flags = 0;
+        ar(m_name)(m_type)(m_index)(m_depth)(flags);
+        m_is_callable = bool(flags & 0x01);
+        m_is_defined = bool(flags & 0x02);
+    }
 
 private:
     std::string m_name;
@@ -114,8 +158,8 @@ private:
     Index m_index = no_index;
     size_t m_depth = 0;  // 1 = parent, 2 = parent of parent, ...
     SymbolPointer m_ref;
-    SymbolPointer m_next;
-    bool m_is_callable = false;
+    bool m_is_callable: 1 = false;
+    bool m_is_defined: 1 = false;  // only declared / already defined
 };
 
 
@@ -126,20 +170,28 @@ private:
 /// Count and indexes of actual local variables are computed from symbol table
 /// (by skipping unused symbols).
 
-class SymbolTable {
+class SymbolTable: private core::NonCopyable {
 public:
     SymbolTable() = default;
-    explicit SymbolTable(std::string name, SymbolTable* parent = nullptr)
-        : m_name(std::move(name)), m_parent(parent) {}
+    explicit SymbolTable(std::string name, SymbolTable* parent = nullptr);
 
+    void set_name(const std::string& name) { m_name = name; }
     const std::string& name() const { return m_name; }
+    std::string qualified_name() const;
 
     SymbolTable& add_child(const std::string& name);
     SymbolTable* parent() const { return m_parent; }
+    unsigned level() const { return depth(nullptr) - 1; }  // number of parents above this symtab
+    unsigned depth(const SymbolTable* p_symtab) const;  // number of parents up to `p_symtab`
 
     // related function
     void set_function(Function* function) { m_function = function; }
     Function* function() const { return m_function; }
+
+    // scope for Function symbols
+    void set_scope(Scope* scope) { m_scope = scope; }
+    Scope* scope() { return m_scope; }
+    const Scope* scope() const { return m_scope; }
 
     // related class
     void set_class(Class* cls) { m_class = cls; }
@@ -155,12 +207,15 @@ public:
     const Symbol& get(Index idx) const;
 
     // find symbol in this table
-    SymbolPointer find_by_name(const std::string& name);
+    SymbolPointer find(const Symbol& symbol);
+    SymbolPointer find_by_name(std::string_view name);
+    SymbolPointer find_by_index(Symbol::Type type, Index index);
     SymbolPointer find_last_of(const std::string& name, Symbol::Type type);
+    SymbolPointer find_last_of(Symbol::Type type);
 
-    // return actual number of nonlocals (skipping unreferenced symbols)
-    size_t count_nonlocals() const;
-    void update_nonlocal_indices();
+    SymbolPointerList filter(const std::string& name, Symbol::Type type);
+
+    Size count(Symbol::Type type) const;
 
     // FIXME: use Pointer<T> / ConstPointer<T> directly as iterator
     using const_iterator = typename std::vector<Symbol>::const_iterator;
@@ -186,23 +241,38 @@ public:
     public:
         explicit Children(const SymbolTable& symtab) : m_symtab(symtab) {}
 
-        using const_iterator = typename std::list<SymbolTable>::const_iterator;
-        const_iterator begin() const { return m_symtab.m_children.begin(); }
-        const_iterator end() const { return m_symtab.m_children.end(); }
+        using const_iterator = typename core::ChunkedStack<SymbolTable>::const_iterator;
+        const_iterator begin() const { return m_symtab.m_children.cbegin(); }
+        const_iterator end() const { return m_symtab.m_children.cend(); }
 
     private:
         const SymbolTable& m_symtab;
     };
 
     Children children() const { return Children{*this}; }
+    SymbolTable* find_child_by_name(std::string_view name);
+
+    template<class Archive>
+    void save(Archive& ar) const {
+        ar ("name", m_name) ("symbols", m_symbols) ("children", m_children);
+    }
+
+    template<class Archive>
+    void load(Archive& ar) {
+        ar(m_name)(m_symbols)(m_children);
+        for (SymbolTable& child : m_children) {
+            child.m_parent = this;
+        }
+    }
 
 private:
-    std::string m_name;   // only for debugging
+    std::string m_name;
     SymbolTable* m_parent = nullptr;
+    Scope* m_scope = nullptr;
     Function* m_function = nullptr;
     Class* m_class = nullptr;
     Module* m_module = nullptr;
-    std::list<SymbolTable> m_children;  // NOTE: member addresses must not change
+    core::ChunkedStack<SymbolTable> m_children;  // NOTE: member addresses must not change
     std::vector<Symbol> m_symbols;
 };
 

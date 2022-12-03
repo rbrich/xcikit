@@ -1,7 +1,7 @@
 // Renderer.h created on 2018-04-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2021 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_RENDERER_H
@@ -11,9 +11,12 @@
 #include <xci/core/geometry.h>
 #include <xci/core/Vfs.h>
 #include <xci/config.h>
+#include <xci/graphics/vulkan/Pipeline.h>
+#include <xci/graphics/vulkan/DescriptorPool.h>
 
 #include <vulkan/vulkan.h>
 
+#include <unordered_map>
 #include <optional>
 #include <memory>
 #include <array>
@@ -32,7 +35,7 @@ enum class PresentMode {
 };
 
 
-class Renderer {
+class Renderer: private core::NonCopyable {
 public:
     explicit Renderer(core::Vfs& vfs);
     ~Renderer();
@@ -46,6 +49,18 @@ public:
     /// - FifoRelaxed    - mostly vsync, late frame can be displayed immediately
     void set_present_mode(PresentMode mode);
 
+    void set_device_id(uint32_t device_id) { m_device_id = device_id; }
+
+    // -------------------------------------------------------------------------
+    // Device limits
+
+    // Max texture size
+    uint32_t max_image_dimension_2d() const { return m_max_image_dimension_2d; }
+    VkDeviceSize min_uniform_offset_alignment() const { return m_min_uniform_offset_alignment; }
+
+    // -------------------------------------------------------------------------
+    // Shaders
+
     /// Get one of the predefined shaders
     /// \param shader_id Use `Custom` to create new shader
     /// \return shared_ptr to the shader or nullptr on error
@@ -58,9 +73,37 @@ public:
 
     void clear_shader_cache();
 
+    // -------------------------------------------------------------------------
+    // Pipelines
+
+    PipelineLayout& get_pipeline_layout(const PipelineLayoutCreateInfo& ci);
+    Pipeline& get_pipeline(const PipelineCreateInfo& ci);
+
+    void clear_pipeline_cache();
+
+    // -------------------------------------------------------------------------
+    // Descriptor pools
+
+    /// Get an existing descriptor pool or create a new one. All pools are created with constant
+    /// maxSets size, usually much bigger than requested by reserved_sets parameter.
+    /// Multiple requests will get the same pool. The returned object is a RAII helper which will
+    /// release reserved_sets when disposed of, so the reserved capacity will become available
+    /// to satisfy future requests.
+    /// The pool_sizes given here are per descriptor set. They are hashed and used to lookup
+    /// a specific pool in cache.
+    /// \param reserved_sets    Specify how many sets will you allocate from the pool, at maximum.
+    /// \param pool_sizes       Sizes *per single descriptor set*.
+    /// \return A facade to actual pool, which is owned by Renderer and shared as its capacity allows.
+    SharedDescriptorPool get_descriptor_pool(uint32_t reserved_sets, DescriptorPoolSizes pool_sizes);
+
+    void clear_descriptor_pool_cache() { m_descriptor_pool.clear(); }
+
+    // -------------------------------------------------------------------------
+    // Surface
+
     void create_surface(GLFWwindow* window);
     void destroy_surface();
-    void reset_framebuffer(VkExtent2D new_size = {0, 0});
+    void reset_framebuffer(VkExtent2D new_size = {UINT32_MAX, UINT32_MAX});
 
     // Vulkan handles
     VkInstance vk_instance() const { return m_instance; }
@@ -85,12 +128,19 @@ private:
     void destroy_framebuffers();
 
     std::optional<uint32_t> query_queue_families(VkPhysicalDevice device);
+    void query_surface_capabilities(VkPhysicalDevice device, VkExtent2D new_size);
     bool query_swapchain(VkPhysicalDevice device);
+
+    void load_device_limits(const VkPhysicalDeviceLimits& limits);
 
 private:
     core::Vfs& m_vfs;
-    static constexpr auto c_num_shaders = (size_t) ShaderId::_NumItems_;
+    static constexpr auto c_num_shaders = (size_t) ShaderId::NumItems_;
     std::array<std::unique_ptr<Shader>, c_num_shaders> m_shader = {};
+
+    std::unordered_map<PipelineLayoutCreateInfo, PipelineLayout> m_pipeline_layout;
+    std::unordered_map<PipelineCreateInfo, Pipeline> m_pipeline;
+    std::unordered_map<DescriptorPoolSizes, std::vector<DescriptorPool>> m_descriptor_pool;
 
     VkInstance m_instance {};
     VkSurfaceKHR m_surface {};
@@ -116,6 +166,12 @@ private:
 #ifdef XCI_DEBUG_VULKAN
     VkDebugUtilsMessengerEXT m_debug_messenger {};
 #endif
+
+    uint32_t m_device_id = ~0u;  // requested deviceID
+
+    // Device limits
+    uint32_t m_max_image_dimension_2d = 0;
+    VkDeviceSize m_min_uniform_offset_alignment = 0;
 };
 
 

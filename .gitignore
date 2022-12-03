@@ -2,6 +2,11 @@
 /*build*/
 /test_package/build/
 /share/fonts/Hack/
-/share/shaders/*.spv
-/share.dar
-/share.zip
+/share/fonts/Hack-*.tar.xz
+/share/fonts/Noto/
+/share/fonts/Lora-*.zip
+/share/fonts/Lora/
+/share/fonts/RobotoMono/
+/share/fonts/cmake.lock
+
+/.idea/

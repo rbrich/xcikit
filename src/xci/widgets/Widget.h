@@ -1,17 +1,8 @@
-// Widget.h created on 2018-04-23, part of XCI toolkit
-// Copyright 2018, 2019 Radek Brich
+// Widget.h created on 2018-04-23 as part of xcikit project
+// https://github.com/rbrich/xcikit
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// Copyright 2018–2022 Radek Brich
+// Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_WIDGETS_WIDGET_H
 #define XCI_WIDGETS_WIDGET_H
@@ -31,10 +22,13 @@ using graphics::CharEvent;
 using graphics::MousePosEvent;
 using graphics::MouseBtnEvent;
 using graphics::ScrollEvent;
-using graphics::ViewportUnits;
-using graphics::ViewportCoords;
-using graphics::ViewportSize;
-using graphics::ViewportRect;
+using graphics::VariUnits;
+using graphics::VariCoords;
+using graphics::VariSize;
+using graphics::FramebufferPixels;
+using graphics::FramebufferCoords;
+using graphics::FramebufferSize;
+using graphics::FramebufferRect;
 
 
 struct State {
@@ -44,23 +38,23 @@ struct State {
 
 class Widget {
 public:
-    explicit Widget(Theme& theme);
+    explicit Widget(Theme& theme) : m_theme(theme) {}
     virtual ~Widget() = default;
 
     Theme& theme() const { return m_theme; }
 
     // Set position of widget, relative to the parent
-    void set_position(const ViewportCoords& pos) { m_position = pos; }
-    const ViewportCoords& position() const { return m_position; }
+    void set_position(const VariCoords& pos);
+    const FramebufferCoords& position() const { return m_position; }
 
     // Set size of widget.
     // This may not be respected by actual implementation,
     // but it determines space taken in layout.
-    void set_size(const ViewportSize& size) { m_size = size; }
-    const ViewportSize& size() const { return m_size; }
+    void set_size(const VariSize& size);
+    const FramebufferSize& size() const { return m_size; }
 
-    ViewportRect aabb() const { return {m_position, m_size}; }
-    ViewportUnits baseline() const { return m_baseline; }
+    FramebufferRect aabb() const { return {m_position, m_size}; }
+    FramebufferPixels baseline() const { return m_baseline; }
 
     // Accept keyboard focus by cycling with tab key
     void set_tab_focusable(bool enabled) { m_tab_focusable = enabled; }
@@ -73,13 +67,18 @@ public:
     // Accept keyboard focus by tab or click
     void set_focusable(bool enabled) { m_tab_focusable = enabled; m_click_focusable = enabled; }
 
+    // Hidden widget doesn't receive update/draw events (when it's a child of Composite)
+    void set_hidden(bool hidden) { m_hidden = hidden; }
+    void toggle_hidden() { m_hidden = !m_hidden; }
+    bool is_hidden() const { return m_hidden; }
+
     // Test if point is contained inside widget area
-    virtual bool contains(const ViewportCoords& point) const { return aabb().contains(point); }
+    virtual bool contains(FramebufferCoords point) const { return aabb().contains(point); }
 
     // Events need to be injected into root widget.
     // This can be set up using Bind helper or manually by calling these methods.
 
-    virtual void resize(View& view) {}
+    virtual void resize(View& view);
     virtual void update(View& view, State state) {}
     virtual void draw(View& view) = 0;
     virtual bool key_event(View& view, const KeyEvent& ev) { return false; }
@@ -87,7 +86,7 @@ public:
     virtual void mouse_pos_event(View& view, const MousePosEvent& ev) {}
     virtual bool mouse_button_event(View& view, const MouseBtnEvent& ev) { return false; }
     virtual void scroll_event(View& view, const ScrollEvent& ev) {}
-    virtual bool click_focus(View& view, ViewportCoords pos) { return is_click_focusable() && contains(pos); }
+    virtual bool click_focus(View& view, FramebufferCoords pos) { return is_click_focusable() && contains(pos); }
     virtual bool tab_focus(View& view, int& step) { return is_tab_focusable(); }
 
     // Debug dump
@@ -95,17 +94,20 @@ public:
     virtual void partial_dump(std::ostream& stream, const std::string& nl_prefix);
 
 protected:
-    void set_baseline(ViewportUnits baseline) { m_baseline = baseline; }
+    void set_baseline(FramebufferPixels baseline) { m_baseline = baseline; }
 
 private:
     Theme& m_theme;
-    ViewportCoords m_position;
-    ViewportSize m_size;
-    ViewportUnits m_baseline = 0;
+    VariCoords m_position_request;
+    VariSize m_size_request;
+    FramebufferCoords m_position;
+    FramebufferSize m_size;
+    FramebufferPixels m_baseline = 0;
 
     // Flags
-    bool m_tab_focusable : 1;
-    bool m_click_focusable : 1;
+    bool m_tab_focusable : 1 = false;
+    bool m_click_focusable : 1 = false;
+    bool m_hidden : 1 = false;
 };
 
 
@@ -122,7 +124,7 @@ public:
     Widget* focus() const { return m_focus; }
 
     // impl Widget
-    bool contains(const ViewportCoords& point) const override;
+    bool contains(FramebufferCoords point) const override;
 
     void resize(View& view) override;
     void update(View& view, State state) override;
@@ -132,7 +134,7 @@ public:
     void mouse_pos_event(View& view, const MousePosEvent& ev) override;
     bool mouse_button_event(View& view, const MouseBtnEvent& ev) override;
     void scroll_event(View& view, const ScrollEvent& ev) override;
-    bool click_focus(View& view, ViewportCoords pos) override;
+    bool click_focus(View& view, FramebufferCoords pos) override;
     bool tab_focus(View& view, int& step) override;
 
     // Debug dump
