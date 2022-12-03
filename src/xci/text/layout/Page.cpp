@@ -50,10 +50,11 @@ Word::Word(Page& page, const std::string& utf8)
         auto advance = FramebufferCoords{shaped_glyph.advance * scale};
         if (glyph != nullptr) {
             // Expand text bounds by glyph bounds
-            FramebufferRect rect{pen.x,
-                                 pen.y - m_baseline,
-                                 advance.x,
-                                 font_height};
+            const FramebufferRect rect{
+                    pen.x,
+                    pen.y - m_baseline,
+                    advance.x,
+                    font_height};
 
             m_bbox.extend(rect);
         }

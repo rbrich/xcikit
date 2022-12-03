@@ -1,7 +1,7 @@
 // GlyphCluster.h created on 2019-12-16 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019 Radek Brich
+// Copyright 2019–2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_TEXT_GLYPH_CLUSTER_H
@@ -15,7 +15,8 @@ namespace xci::graphics { class Renderer; }
 
 namespace xci::text {
 
-using xci::graphics::ViewportCoords;
+using graphics::FramebufferCoords;
+using graphics::FramebufferSize;
 using xci::graphics::ViewportSize;
 
 class Font;
@@ -49,13 +50,13 @@ public:
     // ------------------------------------------------------------------------
 
     /// Pen is a position in page where elements are printed
-    ViewportCoords pen() const { return m_pen; }
+    FramebufferCoords pen() const { return m_pen; }
 
     /// Set pen to absolute viewport position
-    void set_pen(ViewportCoords pen) { m_pen = pen; }
+    void set_pen(FramebufferCoords pen) { m_pen = pen; }
 
     /// Move pen relatively to its current position
-    void move_pen(ViewportSize rel) { m_pen += rel; }
+    void move_pen(FramebufferSize rel) { m_pen += rel; }
 
     // ------------------------------------------------------------------------
 
@@ -65,10 +66,10 @@ public:
     /// Reserve memory for `num` sprites.
     void reserve(size_t num) { m_sprites.reserve(num); }
 
-    /// \param code_point   Used to look up the glyph to be renderer.
+    /// \param glyph_index  Used to look up the glyph to be renderer.
     /// \param pos          Top left corner of the positioned glyph.
     /// \param size_factor  The glyph's pixel size will be multiplied by this.
-    void add_glyph(const graphics::View& view, CodePoint code_point);
+    void add_glyph(const graphics::View& view, GlyphIndex glyph_index);
 
     /// \param str          UTF-8 string
     void add_string(const graphics::View& view, const std::string& str);
@@ -77,12 +78,12 @@ public:
     void recreate() { m_sprites.update(); }
 
     /// Draw the glyphs. Call `recreate` before this.
-    void draw(graphics::View& view, const ViewportCoords& pos) { m_sprites.draw(view, pos); }
+    void draw(graphics::View& view, FramebufferCoords pos) { m_sprites.draw(view, pos); }
 
 private:
     Font& m_font;
     graphics::ColoredSprites m_sprites;
-    ViewportCoords m_pen;
+    FramebufferCoords m_pen;
 };
 
 

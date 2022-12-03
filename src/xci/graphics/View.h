@@ -183,7 +183,7 @@ public:
     FramebufferSize framebuffer_size() const { return m_framebuffer_size; }
 
     /// Viewport center in framebuffer coordinates.
-    /// Start at these coordinates to center thinks in the viewport.
+    /// Start at these coordinates to center things in the viewport.
     FramebufferCoords framebuffer_center() const;
 
     /// Viewport origin in real (underlying) framebuffer coordinates.
