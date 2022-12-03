@@ -393,7 +393,7 @@ FramebufferPixels Page::space_width()
 {
     m_style.apply_view(target());
     auto* glyph = m_style.font()->get_glyph_for_char(' ');
-    return FramebufferPixels{glyph->advance() * m_style.scale()};
+    return FramebufferPixels{glyph->advance().x * m_style.scale()};
 }
 
 

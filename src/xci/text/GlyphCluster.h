@@ -67,9 +67,8 @@ public:
     void reserve(size_t num) { m_sprites.reserve(num); }
 
     /// \param glyph_index  Used to look up the glyph to be renderer.
-    /// \param pos          Top left corner of the positioned glyph.
-    /// \param size_factor  The glyph's pixel size will be multiplied by this.
-    void add_glyph(const graphics::View& view, GlyphIndex glyph_index);
+    /// \returns Glyph's advance value
+    FramebufferSize add_glyph(const graphics::View& view, GlyphIndex glyph_index);
 
     /// \param str          UTF-8 string
     void add_string(const graphics::View& view, const std::string& str);

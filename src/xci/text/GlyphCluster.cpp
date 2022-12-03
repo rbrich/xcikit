@@ -20,11 +20,11 @@ GlyphCluster::GlyphCluster(graphics::Renderer& renderer, Font& font)
 {}
 
 
-void GlyphCluster::add_glyph(const graphics::View& view, GlyphIndex glyph_index)
+FramebufferSize GlyphCluster::add_glyph(const graphics::View& view, GlyphIndex glyph_index)
 {
     auto* glyph = m_font.get_glyph(glyph_index);
     if (glyph == nullptr)
-        return;
+        return {};
 
     auto bearing = FramebufferSize{glyph->bearing()};
     auto glyph_size = FramebufferSize{glyph->size()};
@@ -35,7 +35,7 @@ void GlyphCluster::add_glyph(const graphics::View& view, GlyphIndex glyph_index)
             glyph_size.y};
     m_sprites.add_sprite(rect, glyph->tex_coords());
 
-    m_pen.x += FramebufferPixels{glyph->advance()};
+    return FramebufferSize{glyph->advance()};
 }
 
 
@@ -43,6 +43,7 @@ void GlyphCluster::add_string(const graphics::View& view, const std::string& str
 {
     for (const auto& shaped_glyph : m_font.shape_text(str)) {
         add_glyph(view, shaped_glyph.glyph_index);
+        m_pen += FramebufferCoords{shaped_glyph.advance};
     }
 }
 
