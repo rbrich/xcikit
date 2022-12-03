@@ -159,11 +159,6 @@ jobs:
           ${{ matrix.os }}-${{ matrix.name }}-
           ${{ matrix.os }}-
 
-    - name: conan inconsistent cache workaround
-      if: startsWith(runner.os, 'Windows')
-      run: conan remove -f harfbuzz
-      shell: bash
-
     - name: deps
       run: ./build.sh deps $BUILD_ARGS
       shell: bash
