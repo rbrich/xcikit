@@ -8,7 +8,6 @@
 #define XCIKIT_HIGHLIGHTER_H
 
 #include <xci/core/TermCtl.h>
-#include <tao/pegtl/contrib/parse_tree.hpp>
 #include <string_view>
 #include <string>
 
