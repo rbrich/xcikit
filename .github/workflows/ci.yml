@@ -132,6 +132,9 @@ jobs:
         conan profile update "settings.taocpp-pegtl:compiler.cppstd=20" default
         conan profile update "settings.magic_enum:compiler.cppstd=20" default
         conan profile update "settings.pfr:compiler.cppstd=20" default
+        conan profile update "options.harfbuzz:with_glib=True" default
+        conan profile update "options.freetype:with_bzip2=True" default
+        conan profile update "options.freetype:with_brotli=True" default
         if [[ "$RUNNER_OS" == "Linux" ]]; then
             if [[ "$CXX" = clang* ]]; then
                 conan profile update "settings.compiler.libcxx=libc++" default
