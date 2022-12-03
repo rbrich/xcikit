@@ -18,6 +18,11 @@ jobs:
           cc: gcc-11
           cxx: g++-11
           build_args: ""
+        - os: ubuntu-22.04
+          name: "GCC 12 / Release"
+          cc: gcc-12
+          cxx: g++-12
+          build_args: ""
         - os: ubuntu-20.04
           name: "Clang 12 / Release"
           cc: clang-12
@@ -36,10 +41,10 @@ jobs:
           cxx: clang++-14
           apt: libc++-14-dev libc++abi-14-dev
           build_args: ""
-        - os: ubuntu-20.04
-          name: "GCC 10 / Debug ASAN"
-          cc: gcc-10
-          cxx: g++-10
+        - os: ubuntu-22.04
+          name: "GCC 12 / Debug ASAN"
+          cc: gcc-12
+          cxx: g++-12
           build_args: "--debug --asan --ubsan"
         - os: ubuntu-20.04
           name: "GCC 10 / MinSizeRel Unity"
