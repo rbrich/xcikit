@@ -22,14 +22,14 @@ file(DOWNLOAD
 
 # Lora font - download and extract in SOURCE dir
 message(STATUS "Assets: Lora font")
-set(LORA_VERSION "v2.210")
-set(LORA_ARCHIVE "Lora-Variable.zip")
+set(LORA_VERSION "v3.003")
+set(LORA_ARCHIVE "Lora-${LORA_VERSION}.zip")
 file(DOWNLOAD
     https://github.com/cyrealtype/Lora-Cyrillic/releases/download/${LORA_VERSION}/${LORA_ARCHIVE}
     ${CMAKE_CURRENT_SOURCE_DIR}/${LORA_ARCHIVE}
-    EXPECTED_HASH SHA1=d088d2f8108225559de5d289f551a28b0a843ae8
+    EXPECTED_HASH SHA1=674844b12428ddbbcfa595ca0efecce2c8ff291d
     SHOW_PROGRESS)
-if (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/Lora/Lora-VF.ttf)
+if (NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/Lora/Lora[wght].ttf)
     file(ARCHIVE_EXTRACT INPUT ${CMAKE_CURRENT_SOURCE_DIR}/${LORA_ARCHIVE}
         PATTERNS variable/*.ttf
         DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}
@@ -68,8 +68,8 @@ set(FONTS
     Hack/Hack-BoldItalic.ttf
     Hack/Hack-Italic.ttf
     Hack/Hack-Regular.ttf
-    Lora/Lora-VF.ttf
-    Lora/Lora-Italic-VF.ttf
+    Lora/Lora[wght].ttf
+    Lora/Lora-Italic[wght].ttf
     Noto/NotoColorEmoji.ttf
     MaterialIcons/MaterialIcons-Regular.woff
     RobotoMono/RobotoMono_wght.ttf
