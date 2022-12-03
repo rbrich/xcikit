@@ -146,13 +146,13 @@ jobs:
             conan profile update "settings.compiler.libcxx=libc++" default
             conan profile update "settings.os.version=$MACOSX_DEPLOYMENT_TARGET" default
         fi
-        echo "::set-output name=conan_home::$(conan config home)"
+        echo "CONAN_HOME=$(conan config home)" >> $GITHUB_OUTPUT
       shell: bash
 
     - name: conan cache
       uses: actions/cache@v3
       with:
-        path: ${{ steps.tools.outputs.conan_home }}/data
+        path: ${{ steps.tools.outputs.CONAN_HOME }}/data
         key: ${{ matrix.os }}-${{ matrix.name }}-${{ hashFiles('conanfile.py', 'conandata.yml') }}-${{github.sha}}
         restore-keys: |
           ${{ matrix.os }}-${{ matrix.name }}-${{ hashFiles('conanfile.py', 'conandata.yml') }}-
