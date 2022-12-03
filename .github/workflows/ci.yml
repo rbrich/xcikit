@@ -126,7 +126,12 @@ jobs:
         # Install conan
         pip3 --no-cache-dir install conan
         conan profile new default --detect --force
-        conan profile update "settings.compiler.cppstd=20" default
+        conan profile update "settings.catch2:compiler.cppstd=20" default
+        conan profile update "settings.fmt:compiler.cppstd=20" default
+        conan profile update "settings.range-v3:compiler.cppstd=20" default
+        conan profile update "settings.taocpp-pegtl:compiler.cppstd=20" default
+        conan profile update "settings.magic_enum:compiler.cppstd=20" default
+        conan profile update "settings.pfr:compiler.cppstd=20" default
         if [[ "$RUNNER_OS" == "Linux" ]]; then
             if [[ "$CXX" = clang* ]]; then
                 conan profile update "settings.compiler.libcxx=libc++" default
