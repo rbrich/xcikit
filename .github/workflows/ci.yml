@@ -126,6 +126,7 @@ jobs:
         # Install conan
         pip3 --no-cache-dir install conan
         conan profile new default --detect --force
+        conan profile update "settings.xcikit:compiler.cppstd=20" default
         conan profile update "settings.catch2:compiler.cppstd=20" default
         conan profile update "settings.fmt:compiler.cppstd=20" default
         conan profile update "settings.range-v3:compiler.cppstd=20" default

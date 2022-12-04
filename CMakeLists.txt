@@ -104,7 +104,7 @@ endif()
 find_package(fmt REQUIRED)
 
 # magic enum
-if (XCI_DATA)
+if (XCI_DATA OR BUILD_EXAMPLES)
     find_package(magic_enum REQUIRED)
 endif()
 

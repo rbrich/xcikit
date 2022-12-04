@@ -8,21 +8,17 @@
 #define XCI_COMPAT_MACROS_H
 
 
-#if __cplusplus >= 201703L || __has_cpp_attribute(fallthrough)
-#   define FALLTHROUGH [[fallthrough]]
-#else
-#   define FALLTHROUGH
-#endif
-
-
+// Force inline / always inline
 #ifdef _MSC_VER
-#   define UNREACHABLE     __assume(0)
+#   define XCI_UNREACHABLE  __assume(0)
+#   define XCI_INLINE       __forceinline
 #else
-#   define UNREACHABLE     __builtin_unreachable()
+#   define XCI_UNREACHABLE  __builtin_unreachable()
+#   define XCI_INLINE       inline __attribute__((always_inline))
 #endif
 
 
-// because [[maybe_unused]] can't be applied to a statement
-#define UNUSED      (void)
+// Alternative to [[maybe_unused]] which can be applied to a statement
+#define XCI_UNUSED          (void)
 
 #endif // include guard

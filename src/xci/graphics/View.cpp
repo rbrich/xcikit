@@ -74,7 +74,7 @@ std::ostream& operator<<(std::ostream& s, VariUnits rhs)
         case VariUnits::Screen: return s << rhs.screen() << "px";
         case VariUnits::Viewport: return s << rhs.viewport() << "vp";
     }
-    UNREACHABLE;
+    XCI_UNREACHABLE;
 }
 
 

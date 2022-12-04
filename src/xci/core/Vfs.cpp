@@ -427,7 +427,7 @@ VfsFile ZipArchive::read_file(const std::string& path)
 
     return VfsFile("", std::move(buffer_ptr));
 #else
-    UNUSED path;
+    XCI_UNUSED path;
     log::error("ZipArchive: Not supported (not compiled with XCI_WITH_ZIP)");
     return {};
 #endif
@@ -445,13 +445,13 @@ Vfs::Vfs(Loaders loaders)
     switch (loaders) {
         case Loaders::All:
             m_loaders.emplace_back(std::make_unique<vfs::ZipArchiveLoader>());
-            FALLTHROUGH;
+            [[fallthrough]];
         case Loaders::NoZip:
             m_loaders.emplace_back(std::make_unique<vfs::DarArchiveLoader>());
-            FALLTHROUGH;
+            [[fallthrough]];
         case Loaders::NoArchives:
             m_loaders.emplace_back(std::make_unique<vfs::RealDirectoryLoader>());
-            FALLTHROUGH;
+            [[fallthrough]];
         case Loaders::None:
             break;
     }

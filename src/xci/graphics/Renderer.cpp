@@ -50,7 +50,7 @@ static Logger::Level vulkan_severity_to_log_level(
             return Logger::Level::Warning;
         default:
             assert(!"unexpected log level");
-            FALLTHROUGH;
+            [[fallthrough]];
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
             return Logger::Level::Error;
     }
@@ -265,7 +265,7 @@ bool Renderer::load_shader(ShaderId shader_id, Shader& shader)
         case ShaderId::NumItems_:
             return false;
     }
-    UNREACHABLE;
+    XCI_UNREACHABLE;
 }
 
 

@@ -122,6 +122,7 @@ class XcikitConan(ConanFile):
             yield info
 
     def configure(self):
+        tools.check_min_cppstd(self, "20")
         # Dependent options - remove their requirements
         if self.options.widgets:
             del self.options.text

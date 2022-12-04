@@ -34,7 +34,7 @@ public:
                 case FontStyle::Light:       return "[l]";
                 case FontStyle::LightItalic: return "[li]";
             }
-            UNREACHABLE;
+            XCI_UNREACHABLE;
         }());
         m_font_style = font_style;
     }
@@ -47,7 +47,7 @@ public:
                 case Decoration::Overlined:     return "[‾]";
                 case Decoration::CrossedOut:    return "[-]";
             }
-            UNREACHABLE;
+            XCI_UNREACHABLE;
         }());
     }
     void set_mode(terminal::Mode mode) override {
@@ -57,7 +57,7 @@ public:
                 case Mode::Normal:        return "[n]";
                 case Mode::Bright:        return "[+]";
             }
-            UNREACHABLE;
+            XCI_UNREACHABLE;
         }());
     }
     void set_default_fg_color() override {

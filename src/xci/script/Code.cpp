@@ -71,7 +71,7 @@ std::ostream& operator<<(std::ostream& os, Opcode v)
         case Opcode::Jump:              return os << "JUMP";
         case Opcode::JumpIfNot:         return os << "JUMP_IF_NOT";
     }
-    UNREACHABLE;
+    XCI_UNREACHABLE;
 }
 
 

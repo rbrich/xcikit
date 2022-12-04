@@ -36,6 +36,9 @@ requirements:
   magic_enum:
     cmake: "magic_enum/0.7.3"
     conan: "magic_enum/0.8.1"
+    prereq:
+      - data
+      - examples
   zlib:
     cmake: "ZLIB/"
     conan: "zlib/1.2.13"

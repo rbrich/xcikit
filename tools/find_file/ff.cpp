@@ -1229,7 +1229,7 @@ int main(int argc, const char* argv[])
                 fmt::print(stderr,"ff: readdir({}): {}\n", path.file_path(), error_str());
                 return true;
         }
-        UNREACHABLE;
+        XCI_UNREACHABLE;
     });
 
     if (paths.empty()) {

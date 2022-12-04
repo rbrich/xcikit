@@ -173,7 +173,7 @@ Fill gaps between different systems and compilers.
 
 * `dl.h` - `dlopen` etc. for Windows
 * `endian.h` - Linux-like macros provided for macOS and Windows
-* `macros.h` - `FALLTHROUGH`, `UNREACHABLE`, `UNUSED`
+* `macros.h` - `XCI_UNREACHABLE`, `XCI_INLINE`, `XCI_UNUSED`
 * `unistd.h` - Minimal Unix compatibility header for Windows
 
 == Tools
