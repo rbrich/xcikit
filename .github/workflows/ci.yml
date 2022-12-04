@@ -94,11 +94,6 @@ jobs:
         architecture: 'x64'
     - uses: ilammy/msvc-dev-cmd@v1
 
-    - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2
-      with:
-        key: ${{ matrix.os }}-${{ matrix.name }}
-
     - name: "install tools and deps"
       id: tools
       run: |
@@ -126,6 +121,10 @@ jobs:
         elif [[ "$RUNNER_OS" == "Windows" ]]; then
             # remove MinGW's link as it collides with MSVC
             mv /usr/bin/link /usr/bin/link.orig
+            # upgrade tools
+            choco install ccache ninja
+            which ccache; ccache --version
+            which ninja; ninja --version
         fi
         # Install conan
         pip3 --no-cache-dir install conan
@@ -152,6 +151,11 @@ jobs:
             conan profile update "settings.os.version=$MACOSX_DEPLOYMENT_TARGET" default
         fi
         echo "CONAN_HOME=$(conan config home)" >> $GITHUB_OUTPUT
+
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2.5
+      with:
+        key: ${{ matrix.os }}-${{ matrix.name }}
 
     - name: conan cache
       uses: actions/cache@v3
