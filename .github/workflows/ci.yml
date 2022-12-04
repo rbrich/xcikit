@@ -1,6 +1,10 @@
 name: CI
 on: [push]
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build:
 
@@ -148,7 +152,6 @@ jobs:
             conan profile update "settings.os.version=$MACOSX_DEPLOYMENT_TARGET" default
         fi
         echo "CONAN_HOME=$(conan config home)" >> $GITHUB_OUTPUT
-      shell: bash
 
     - name: conan cache
       uses: actions/cache@v3
@@ -163,33 +166,26 @@ jobs:
     - name: conan workaround - glib fails as build requirement (conan-center-index/issues/14125)
       if: ${{ matrix.os == 'windows-2022' }}
       run: conan install --build missing -pr=default -pr:b=default glib/2.75.0@
-      shell: bash
 
     - name: deps
       run: ./build.sh deps $BUILD_ARGS
-      shell: bash
 
     - name: configure
       run: ./build.sh config $BUILD_ARGS
-      shell: bash
 
     - name: build
       run: ./build.sh build $BUILD_ARGS
-      shell: bash
 
     - name: test
       run: ./build.sh test $BUILD_ARGS
-      shell: bash
 
     - name: install
       if: ${{ matrix.name == 'Release build' }}
       run: ./build.sh install $BUILD_ARGS
-      shell: bash
 
     - name: package
       if: ${{ matrix.name == 'Release build' }}
       run: ./build.sh package $BUILD_ARGS
-      shell: bash
 
     - name: artifacts - tarball
       if: ${{ matrix.name == 'Release build' }}
@@ -213,4 +209,3 @@ jobs:
 #        conan remote add xcikit https://api.bintray.com/conan/rbrich/xcikit
 #        conan user -p $CONAN_PASSWORD -r xcikit rbrich
 #        conan upload "xcikit/*@rbrich/stable" --all --no-overwrite --check --confirm -r=xcikit
-#      shell: bash
