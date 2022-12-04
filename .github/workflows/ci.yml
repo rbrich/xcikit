@@ -5,6 +5,9 @@ defaults:
   run:
     shell: bash
 
+env:
+  CCACHE_SLOPPINESS: pch_defines,time_macros
+
 jobs:
   build:
 
