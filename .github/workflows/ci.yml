@@ -1,6 +1,13 @@
 name: CI
 on: [push]
 
+defaults:
+  run:
+    shell: bash
+
+env:
+  CCACHE_SLOPPINESS: pch_defines,time_macros
+
 jobs:
   build:
 
@@ -62,8 +69,8 @@ jobs:
           os_target: "11.0"
           build_args: ""
         - os: macos-12
-          name: "Xcode 14 / Release"
-          clang: Xcode_14.0
+          name: "Xcode 14.1 / Release"
+          clang: Xcode_14.1
           os_target: "12.0"
           build_args: ""
         - os: windows-2019
@@ -89,11 +96,6 @@ jobs:
         python-version: '3.x'
         architecture: 'x64'
     - uses: ilammy/msvc-dev-cmd@v1
-
-    - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2
-      with:
-        key: ${{ matrix.os }}-${{ matrix.name }}
 
     - name: "install tools and deps"
       id: tools
@@ -122,6 +124,10 @@ jobs:
         elif [[ "$RUNNER_OS" == "Windows" ]]; then
             # remove MinGW's link as it collides with MSVC
             mv /usr/bin/link /usr/bin/link.orig
+            # upgrade tools
+            choco install ccache ninja
+            which ccache; ccache --version
+            which ninja; ninja --version
         fi
         # Install conan
         pip3 --no-cache-dir install conan
@@ -148,7 +154,11 @@ jobs:
             conan profile update "settings.os.version=$MACOSX_DEPLOYMENT_TARGET" default
         fi
         echo "CONAN_HOME=$(conan config home)" >> $GITHUB_OUTPUT
-      shell: bash
+
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2.5
+      with:
+        key: ${{ matrix.os }}-${{ matrix.name }}
 
     - name: conan cache
       uses: actions/cache@v3
@@ -163,33 +173,26 @@ jobs:
     - name: conan workaround - glib fails as build requirement (conan-center-index/issues/14125)
       if: ${{ matrix.os == 'windows-2022' }}
       run: conan install --build missing -pr=default -pr:b=default glib/2.75.0@
-      shell: bash
 
     - name: deps
       run: ./build.sh deps $BUILD_ARGS
-      shell: bash
 
     - name: configure
       run: ./build.sh config $BUILD_ARGS
-      shell: bash
 
     - name: build
       run: ./build.sh build $BUILD_ARGS
-      shell: bash
 
     - name: test
       run: ./build.sh test $BUILD_ARGS
-      shell: bash
 
     - name: install
       if: ${{ matrix.name == 'Release build' }}
       run: ./build.sh install $BUILD_ARGS
-      shell: bash
 
     - name: package
       if: ${{ matrix.name == 'Release build' }}
       run: ./build.sh package $BUILD_ARGS
-      shell: bash
 
     - name: artifacts - tarball
       if: ${{ matrix.name == 'Release build' }}
@@ -213,4 +216,3 @@ jobs:
 #        conan remote add xcikit https://api.bintray.com/conan/rbrich/xcikit
 #        conan user -p $CONAN_PASSWORD -r xcikit rbrich
 #        conan upload "xcikit/*@rbrich/stable" --all --no-overwrite --check --confirm -r=xcikit
-#      shell: bash

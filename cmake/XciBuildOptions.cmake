@@ -53,7 +53,7 @@ if (ENABLE_LTO)
 endif()
 
 if (ENABLE_CCACHE)
-    find_program(CCACHE_EXECUTABLE ccache)
+    find_program(CCACHE_EXECUTABLE sccache ccache)
     if (CCACHE_EXECUTABLE)
         message(STATUS "Found ccache: ${CCACHE_EXECUTABLE}")
         set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_EXECUTABLE})
