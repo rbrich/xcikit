@@ -34,7 +34,7 @@ using namespace xci::core;
 using namespace xci::core::argparser;
 
 
-static constexpr auto c_version = "0.7";
+static constexpr auto c_version = "0.8";
 
 
 enum PatternId: unsigned {
