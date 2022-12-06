@@ -1,11 +1,15 @@
-from conans import ConanFile, CMake, tools
+from conan import ConanFile
+from conan.tools.files import load
+from conan.tools.build import check_min_cppstd
+from conan.tools.cmake import CMakeToolchain, CMakeDeps, CMake, cmake_layout
 import conans.model.build_info
-# from conan.tools.cmake import CMakeToolchain, CMakeDeps, CMake
+from pathlib import Path
+
+required_conan_version = ">=1.53.0"
 
 
 class XcikitConan(ConanFile):
     name = "xcikit"
-    version = tools.load("VERSION").strip()
     license = "Apache-2.0"
     author = "Radek Brich"
     url = "https://github.com/rbrich/xcikit"
@@ -80,23 +84,24 @@ class XcikitConan(ConanFile):
         "with_hyperscan": False,
 
         # Disable unnecessary transient deps by default.
-        "freetype:with_bzip2": False,
-        "freetype:with_brotli": False,
-        "harfbuzz:with_glib": False,
-        "vulkan-loader:with_wsi_xcb": False,
-        "vulkan-loader:with_wsi_xlib": False,
-        "vulkan-loader:with_wsi_wayland": False,
-        "vulkan-loader:with_wsi_directfb": False,
+        "freetype/*:with_bzip2": False,
+        "freetype/*:with_brotli": False,
+        "harfbuzz/*:with_glib": False,
+        "vulkan-loader/*:with_wsi_xcb": False,
+        "vulkan-loader/*:with_wsi_xlib": False,
+        "vulkan-loader/*:with_wsi_wayland": False,
+        "vulkan-loader/*:with_wsi_directfb": False,
     }
 
-    generators = ("cmake_find_package_multi", "cmake_paths")
-    exports = ("VERSION",)
-    exports_sources = ("CMakeLists.txt", "config.h.in", "xcikit-config.cmake.in",
+    exports_sources = ("VERSION", "CMakeLists.txt", "config.h.in", "xcikit-config.cmake.in",
                        "cmake/**", "src/**", "examples/**", "tests/**", "benchmarks/**", "tools/**",
                        "share/**", "third_party/**",
                        "!build/**", "!cmake-build-*/**")
 
     _cmake = None
+
+    def set_version(self):
+        self.version = load(self, Path(self.recipe_folder) / "VERSION").strip()
 
     def _check_prereq(self, prereq):
         if not prereq:
@@ -121,8 +126,10 @@ class XcikitConan(ConanFile):
             info.setdefault('prereq', [])
             yield info
 
+    def validate(self):
+        check_min_cppstd(self, "20")
+
     def configure(self):
-        tools.check_min_cppstd(self, "20")
         # Dependent options - remove their requirements
         if self.options.widgets:
             del self.options.text
@@ -147,6 +154,9 @@ class XcikitConan(ConanFile):
             # Install requirement via Conan if `system_<lib>` option exists and is set to False
             opt = self.options.get_safe('system_' + info['name'])
             if opt is not None and not opt:
+                # if 'tests' in info['prereq'] or 'benchmarks' in info['prereq']:
+                #     self.test_requires(info['conan'])
+                # else:
                 self.requires(info['conan'])
 
     def _set_cmake_defs(self, defs):
@@ -163,32 +173,30 @@ class XcikitConan(ConanFile):
         defs["BUILD_BENCHMARKS"] = self.options.benchmarks
         defs["XCI_WITH_HYPERSCAN"] = self.options.get_safe('with_hyperscan', False)
 
-    def _configure_cmake(self):
-        cmake = CMake(self)
-        self._set_cmake_defs(cmake.definitions)
-        cmake.configure()
-        return cmake
+    def generate(self):
+        tc = CMakeToolchain(self, generator="Ninja")
+        self._set_cmake_defs(tc.variables)
+        tc.generate()
 
-    # def generate(self):
-    #     tc = CMakeToolchain(self, generator="Ninja")
-    #     self._set_cmake_defs(tc.variables)
-    #     tc.generate()
-    #
-    #     deps = CMakeDeps(self)
-    #     deps.build_context_activated = ['catch2', 'benchmark']
-    #     deps.generate()
+        deps = CMakeDeps(self)
+        deps.build_context_activated = ['catch2', 'benchmark']
+        deps.generate()
 
     def build(self):
-        cmake = self._configure_cmake()
+        cmake = CMake(self)
+        cmake.configure()
         cmake.build()
 
     def package(self):
-        cmake = self._configure_cmake()
+        cmake = CMake(self)
         cmake.install()
 
     def test(self):
-        cmake = self._configure_cmake()
+        cmake = CMake(self)
         cmake.test()
+
+    def layout(self):
+        cmake_layout(self)
 
     def _add_dep(self, opt: str, component: conans.model.build_info.Component,
                  cmake_dep: str, conan_dep=None):
