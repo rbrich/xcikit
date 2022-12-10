@@ -159,7 +159,7 @@ class XcikitConan(ConanFile):
         defs["XCI_WIDGETS"] = self.options.widgets
         defs["BUILD_TOOLS"] = self.options.tools
         defs["BUILD_EXAMPLES"] = self.options.examples
-        defs["BUILD_TESTING"] = self.options.tests
+        defs["BUILD_TESTS"] = self.options.tests
         defs["BUILD_BENCHMARKS"] = self.options.benchmarks
         defs["XCI_WITH_HYPERSCAN"] = self.options.get_safe('with_hyperscan', False)
 
