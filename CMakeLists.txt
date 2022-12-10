@@ -1,7 +1,7 @@
 # 3.18.4 in Debian 11
 # 3.16.3 in Emscripten Docker image
 # 3.16 introduced CMAKE_MESSAGE_INDENT
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.16...3.25)
 file(STRINGS "VERSION" XCI_VERSION)
 project(xcikit
     LANGUAGES CXX
