@@ -377,6 +377,13 @@ struct GrepContext {
         const auto& buf0 = bufs.buffer[0];
         const auto& buf1 = bufs.buffer[1];
 
+        // Overlapping matches: The overlapping part already highlighted, skip it and continue from the end.
+        if (from < last_end) {
+            from = last_end;
+            if (to < from)
+                return;  // The match is completely contained in previous match
+        }
+
         if (binary) {
             // The binary output is split to lines of 64 bytes.
             // A match may span multiple lines.
