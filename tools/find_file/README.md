@@ -43,7 +43,17 @@ Example:
 
 <img width="512" alt="ff_stats" src="https://user-images.githubusercontent.com/6216152/107156217-5b636080-697d-11eb-9836-8ed936fd1b2a.png">
 
-Whoa! One megabyte of code. Almost full 💾.
+### Browse binary executable files
+
+Use `--xmagic` to filter ELF/Mach-O files. These are executables, libraries, .o files.
+
+Useful inside installation directory (build artifacts) to skip data files and focus on executable code.
+
+Example:
+- `-j1` for ordered output (otherwise, it's interleaved from multiple threads).
+- `-l` for detailed listing (file attributes)
+
+<img width="544" alt="ff_xmagic" src="https://user-images.githubusercontent.com/6216152/207453664-05c1df89-bd0c-4de7-8080-72a152d0c3bb.png">
 
 Development
 -----------
