@@ -109,12 +109,12 @@ inline std::string xci_tparm(const char* seq, Args... args) {
 }
 
 // Note that this cannot be implemented with variadic template,
-// because the arguments must not be evaluated unless is_initialized() is true
-#define XCI_TERM_APPEND(...) append_seq(xci_tparm(__VA_ARGS__))
+// because the arguments must not be evaluated unless is_tty() is true
+#define XCI_TERM_APPEND(...) _append_seq(is_tty() ? xci_tparm(__VA_ARGS__) : "")
 
 #if XCI_WITH_TERMINFO == 1
     // delegate to TermInfo
-    #define TERM_APPEND(...) append_seq(tparm(__VA_ARGS__))
+    #define TERM_APPEND(...) _append_seq(is_tty() ? tparm(__VA_ARGS__) : "")
     static unsigned _plus_one(unsigned arg) { return arg; }  // already corrected with Terminfo -> noop
 #else
     // delegate to our implementation

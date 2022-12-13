@@ -191,6 +191,8 @@ std::string to_lower(std::string_view str)
 
 std::u32string to_utf32(string_view utf8)
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert_utf32;
     try {
         return convert_utf32.from_bytes(utf8.data(), utf8.data() + utf8.size());
@@ -198,12 +200,15 @@ std::u32string to_utf32(string_view utf8)
         log::error("to_utf32: Invalid UTF8 string: {} ({})", utf8, e.what());
         return {};
     }
+#pragma clang diagnostic pop
 }
 
 
 template <class Elem>
 std::string _to_utf8(std::basic_string_view<Elem> wstr)
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     std::wstring_convert<std::codecvt_utf8<Elem>, Elem> convert;
     try {
         return convert.to_bytes(wstr.data(), wstr.data() + wstr.size());
@@ -211,6 +216,7 @@ std::string _to_utf8(std::basic_string_view<Elem> wstr)
         log::error("to_utf8: Invalid UTF16/32 string ({})", e.what());
         return {};
     }
+#pragma clang diagnostic pop
 }
 
 std::string to_utf8(std::u16string_view wstr) { return _to_utf8(wstr); }
@@ -222,8 +228,11 @@ std::string to_utf8(std::wstring_view wstr) { return _to_utf8(wstr); }
 
 std::string to_utf8(char32_t codepoint)
 {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert_utf32;
     return convert_utf32.to_bytes(codepoint);
+#pragma clang diagnostic pop
 }
 
 
