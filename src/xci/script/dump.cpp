@@ -773,7 +773,7 @@ std::ostream& operator<<(std::ostream& os, const Function& f)
         case Function::Kind::Native:    return os << "<native>" << endl;
         case Function::Kind::Undefined: return os << "<undefined>" << endl;
     }
-    UNREACHABLE;
+    XCI_UNREACHABLE;
 }
 
 
@@ -785,7 +785,7 @@ std::ostream& operator<<(std::ostream& os, Function::Kind v)
         case Function::Kind::Generic: return os << "generic";
         case Function::Kind::Native:  return os << "native";
     }
-    UNREACHABLE;
+    XCI_UNREACHABLE;
 }
 
 
@@ -1040,7 +1040,7 @@ std::ostream& operator<<(std::ostream& os, const TypeInfo& v)
         case Type::Stream:      return os << "Stream";
         case Type::Named:       return os << v.name();
     }
-    UNREACHABLE;
+    XCI_UNREACHABLE;
 }
 
 

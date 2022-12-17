@@ -10,6 +10,7 @@
 #include <fmt/format.h>
 #include <vector>
 #include <string>
+#include <string_view>
 #include <ostream>
 #include <array>
 #include <span>
@@ -170,8 +171,6 @@ public:
     TermCtl& soft_reset();
 
     // Cached seq
-    TermCtl& append_seq(const char* seq) { if (is_tty()) m_seq += seq; return *this; }
-    TermCtl& append_seq(const std::string& seq) { if (is_tty()) m_seq += seq;  return *this; }
     std::string seq() { return std::move(m_seq); }
     void write() { write_raw(seq()); }
     void write_nl() { m_seq.append(1, '\n'); write(seq()); }
@@ -371,6 +370,8 @@ private:
     TermCtl& _save_cursor();
     TermCtl& _restore_cursor();
     TermCtl& _tab_set_all(std::span<const unsigned> n_cols);
+    TermCtl& _append_seq(const char* seq) { if (seq) m_seq += seq; return *this; }  // needed for TermInfo, which returns NULL for unknown seqs
+    TermCtl& _append_seq(std::string_view seq) { m_seq += seq; return *this; }
 
     std::string m_seq;  // cached capability sequences
     WriteCallback m_write_cb {};

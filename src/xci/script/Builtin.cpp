@@ -43,7 +43,7 @@ const char* builtin::op_to_function_name(ast::Operator::Op op)
         case Op::UnaryPlus:     return nullptr;
         case Op::DotCall:       return nullptr;
     }
-    UNREACHABLE;
+    XCI_UNREACHABLE;
 }
 
 

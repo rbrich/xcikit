@@ -34,7 +34,7 @@ using namespace xci::core;
 using namespace xci::core::argparser;
 
 
-static constexpr auto c_version = "0.7";
+static constexpr auto c_version = "0.8";
 
 
 enum PatternId: unsigned {
@@ -377,6 +377,13 @@ struct GrepContext {
         const auto& buf0 = bufs.buffer[0];
         const auto& buf1 = bufs.buffer[1];
 
+        // Overlapping matches: The overlapping part already highlighted, skip it and continue from the end.
+        if (from < last_end) {
+            from = last_end;
+            if (to < from)
+                return;  // The match is completely contained in previous match
+        }
+
         if (binary) {
             // The binary output is split to lines of 64 bytes.
             // A match may span multiple lines.
@@ -713,7 +720,7 @@ public:
                          const ScanFileCallback& cb) {
         int fd = path.open();
         if (fd == -1) {
-            if (errno != ELOOP)  // O_NOFOLLOW -> it's a symlink
+            if (errno != ELOOP)  // ELOOP = a symlink when opening with O_NOFOLLOW
                 fmt::print(stderr,"ff: open({}): {}\n", path.file_path(), error_str());
             return {false};
         }
@@ -785,6 +792,75 @@ private:
 };
 
 
+class XMagicDatabase {
+    static constexpr unsigned MagicSize = 4;
+
+public:
+    enum ScanResult {
+        Elf,
+        MachO32,
+        MachO64,
+        MachOFat,
+
+        NotMatched,
+
+        OpenError,
+        ReadError,
+    };
+
+    ScanResult match_file(const FileTree::PathNode& path) {
+        int fd = path.open();
+        if (fd == -1) {
+            if (errno != ELOOP)  // ELOOP = a symlink when opening with O_NOFOLLOW
+                fmt::print(stderr,"ff: open({}): {}\n", path.file_path(), error_str());
+            return OpenError;
+        }
+        char buffer[MagicSize];
+        auto size = ::read(fd, buffer, sizeof buffer);
+        ::close(fd);
+        if (size == -1) {
+            fmt::print(stderr,"ff: read({}): {}\n", path.file_path(), error_str());
+            return ReadError;
+        }
+        if (size < MagicSize) {
+            return NotMatched;
+        }
+        return match(buffer);
+    }
+
+    ScanResult match(const char* buffer) {
+        for (const auto& m : magic_table) {
+            const auto r = std::memcmp(m.bytes, buffer, MagicSize);
+            if (r == 0)
+                return m.type;
+            // The table is ordered from low to high.
+            // If the buffer has smaller bytes than current table item,
+            // no further items can be matched.
+            if (r > 0)
+                return NotMatched;
+        }
+        return NotMatched;
+    }
+
+private:
+    // All magics in this table are 4-byte long.
+    // If needed to match MZ executables, some support for 2-byte magic would need to ba added.
+    struct Magic {
+        ScanResult type;
+        const unsigned char bytes[MagicSize];
+    };
+    static constexpr Magic magic_table[] = {
+        // NOTE: Keep the table ordered from low to high!
+        Magic{MachOFat, {0xCA, 0xFE, 0xBA, 0xBE}},  // Mach-O Fat Binary, or Java class file
+        Magic{MachO32,  {0xCE, 0xFA, 0xED, 0xFE}},  // Mach-O binary (32-bit), little endian file
+        Magic{MachO64,  {0xCF, 0xFA, 0xED, 0xFE}},  // Mach-O binary (64-bit), little endian file
+        Magic{MachO32,  {0xFE, 0xED, 0xFA, 0xCE}},  // Mach-O binary (32-bit), big endian file
+        Magic{MachO64,  {0xFE, 0xED, 0xFA, 0xCF}},  // Mach-O binary (64-bit), big endian file
+        Magic{Elf,      {0x7F, 'E', 'L', 'F'}},     // Executable and Linkable Format
+    };
+};
+
+
 int main(int argc, const char* argv[])
 {
     bool fixed = false;
@@ -805,6 +881,7 @@ int main(int argc, const char* argv[])
     int jobs = 2 * cpu_count();
     size_t size_from = 0;
     size_t size_to = 0;
+    bool filter_xmagic = false;
     mode_t type_mask = 0;
     const char* pattern = nullptr;
     const char* grep_pattern = nullptr;
@@ -833,6 +910,7 @@ int main(int argc, const char* argv[])
                     [&type_mask, &show_dirs](const char* arg){ show_dirs = true; return parse_types(arg, type_mask); }),
             Option("--size BETWEEN", "Filter files by size: [MIN]..[MAX], each site is optional, e.g. 1M..2M, 42K (eq. 42K..), ..1G",
                     [&size_from, &size_to](const char* arg){ return parse_size_filter(arg, size_from, size_to); }),
+            Option("-x, --xmagic", "Filter binary executable files by magic bytes in header (ELF, Mach-O, etc.)", filter_xmagic),
             Option("-g, --grep PATTERN", "Filter files by content, i.e. \"grep\"", grep_pattern),
             Option("-G, --grep-mode", "Switch to grep mode (positional arg PATTERN is searched in content instead of file names)", grep_mode),
             Option("-b, --binary", "Grep: Show matches in binary files.", binary_grep),
@@ -1010,7 +1088,7 @@ int main(int argc, const char* argv[])
     FileTree ft(jobs-1,
                 [show_hidden, show_dirs, single_device, long_form, highlight_match,
                  type_mask, size_from, size_to, max_depth, search_in_special_dirs,
-                 quiet, quiet_grep, binary_grep,
+                 quiet, quiet_grep, binary_grep, filter_xmagic,
                  &re_db, &grep_db, &re_scratch, &theme, &dev_ids, &counters]
                 (int tn, const FileTree::PathNode& path, FileTree::Type t)
     {
@@ -1126,6 +1204,13 @@ int main(int argc, const char* argv[])
                 if (size_to && size_t(st.st_size) > size_to)
                     return descend;
 
+                if (filter_xmagic) {
+                    XMagicDatabase xmagic_db;
+                    auto res = xmagic_db.match_file(path);
+                    if (res >= XMagicDatabase::NotMatched)
+                        return descend;
+                }
+
                 std::string content;
                 if (t == FileTree::File && grep_db) {
                     GrepContext ctx { .theme = theme };
@@ -1229,7 +1314,7 @@ int main(int argc, const char* argv[])
                 fmt::print(stderr,"ff: readdir({}): {}\n", path.file_path(), error_str());
                 return true;
         }
-        UNREACHABLE;
+        XCI_UNREACHABLE;
     });
 
     if (paths.empty()) {

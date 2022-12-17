@@ -35,7 +35,10 @@ requirements:
     cmake_defs: PEGTL_BUILD_TESTS=OFF PEGTL_BUILD_EXAMPLES=OFF
   magic_enum:
     cmake: "magic_enum/0.7.3"
-    conan: "magic_enum/0.8.1"
+    conan: "magic_enum/0.8.2"
+    prereq:
+      - data
+      - examples
   zlib:
     cmake: "ZLIB/"
     conan: "zlib/1.2.13"
@@ -72,14 +75,14 @@ requirements:
       - data
   catch2:
     cmake: "Catch2/3"
-    conan: "catch2/3.2.0"
+    conan: "catch2/3.2.1"
     upstream: "github.com catchorg/Catch2 v3.2.0"
     cmake_defs: CATCH_INSTALL_DOCS=OFF CMAKE_CXX_STANDARD=20
     prereq:
       - tests
   benchmark:
     cmake: "benchmark/1.5.0"
-    conan: "benchmark/1.7.0"
+    conan: "benchmark/1.7.1"
     prereq:
       - benchmarks
   incbin:

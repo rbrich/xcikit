@@ -1,6 +1,13 @@
 name: CI
 on: [push]
 
+defaults:
+  run:
+    shell: bash
+
+env:
+  CCACHE_SLOPPINESS: pch_defines,time_macros
+
 jobs:
   build:
 
@@ -17,6 +24,11 @@ jobs:
           name: "GCC 11 / Release"
           cc: gcc-11
           cxx: g++-11
+          build_args: ""
+        - os: ubuntu-22.04
+          name: "GCC 12 / Release"
+          cc: gcc-12
+          cxx: g++-12
           build_args: ""
         - os: ubuntu-20.04
           name: "Clang 12 / Release"
@@ -36,10 +48,10 @@ jobs:
           cxx: clang++-14
           apt: libc++-14-dev libc++abi-14-dev
           build_args: ""
-        - os: ubuntu-20.04
-          name: "GCC 10 / Debug ASAN"
-          cc: gcc-10
-          cxx: g++-10
+        - os: ubuntu-22.04
+          name: "GCC 12 / Debug ASAN"
+          cc: gcc-12
+          cxx: g++-12
           build_args: "--debug --asan --ubsan"
         - os: ubuntu-20.04
           name: "GCC 10 / MinSizeRel Unity"
@@ -57,16 +69,16 @@ jobs:
           os_target: "11.0"
           build_args: ""
         - os: macos-12
-          name: "Xcode 14 / Release"
-          clang: Xcode_14.0
+          name: "Xcode 14.1 / Release"
+          clang: Xcode_14.1
           os_target: "12.0"
           build_args: ""
         - os: windows-2019
           name: "VS 16 / Release"
           build_args: "-DCMAKE_DISABLE_PRECOMPILE_HEADERS=1"
-#        - os: windows-2022
-#          name: "VS 17 / Release"
-#          build_args: "-DCMAKE_DISABLE_PRECOMPILE_HEADERS=1"
+        - os: windows-2022
+          name: "VS 17 / Release"
+          build_args: "-DCMAKE_DISABLE_PRECOMPILE_HEADERS=1"
 
     name: ${{ matrix.os }} / ${{ matrix.name }}
 
@@ -84,11 +96,6 @@ jobs:
         python-version: '3.x'
         architecture: 'x64'
     - uses: ilammy/msvc-dev-cmd@v1
-
-    - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2
-      with:
-        key: ${{ matrix.os }}-${{ matrix.name }}
 
     - name: "install tools and deps"
       id: tools
@@ -117,11 +124,24 @@ jobs:
         elif [[ "$RUNNER_OS" == "Windows" ]]; then
             # remove MinGW's link as it collides with MSVC
             mv /usr/bin/link /usr/bin/link.orig
+            # upgrade tools
+            choco install ccache ninja
+            which ccache; ccache --version
+            which ninja; ninja --version
         fi
         # Install conan
         pip3 --no-cache-dir install conan
         conan profile new default --detect --force
-        conan profile update "settings.compiler.cppstd=20" default
+        conan profile update "settings.xcikit:compiler.cppstd=20" default
+        conan profile update "settings.catch2:compiler.cppstd=20" default
+        conan profile update "settings.fmt:compiler.cppstd=20" default
+        conan profile update "settings.range-v3:compiler.cppstd=20" default
+        conan profile update "settings.taocpp-pegtl:compiler.cppstd=20" default
+        conan profile update "settings.magic_enum:compiler.cppstd=20" default
+        conan profile update "settings.pfr:compiler.cppstd=20" default
+        conan profile update "options.harfbuzz:with_glib=True" default
+        conan profile update "options.freetype:with_bzip2=True" default
+        conan profile update "options.freetype:with_brotli=True" default
         if [[ "$RUNNER_OS" == "Linux" ]]; then
             if [[ "$CXX" = clang* ]]; then
                 conan profile update "settings.compiler.libcxx=libc++" default
@@ -133,49 +153,46 @@ jobs:
             conan profile update "settings.compiler.libcxx=libc++" default
             conan profile update "settings.os.version=$MACOSX_DEPLOYMENT_TARGET" default
         fi
-        echo "::set-output name=conan_home::$(conan config home)"
-      shell: bash
+        echo "CONAN_HOME=$(conan config home)" >> $GITHUB_OUTPUT
+
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2.5
+      with:
+        key: ${{ matrix.os }}-${{ matrix.name }}
 
     - name: conan cache
       uses: actions/cache@v3
       with:
-        path: ${{ steps.tools.outputs.conan_home }}/data
+        path: ${{ steps.tools.outputs.CONAN_HOME }}/data
         key: ${{ matrix.os }}-${{ matrix.name }}-${{ hashFiles('conanfile.py', 'conandata.yml') }}-${{github.sha}}
         restore-keys: |
           ${{ matrix.os }}-${{ matrix.name }}-${{ hashFiles('conanfile.py', 'conandata.yml') }}-
           ${{ matrix.os }}-${{ matrix.name }}-
           ${{ matrix.os }}-
 
-    - name: conan inconsistent cache workaround
-      if: startsWith(runner.os, 'Windows')
-      run: conan remove -f harfbuzz
-      shell: bash
+    - name: conan workaround - glib fails as build requirement (conan-center-index/issues/14125)
+      if: ${{ matrix.os == 'windows-2022' }}
+      run: conan install --build missing -pr=default -pr:b=default glib/2.75.0@
 
     - name: deps
       run: ./build.sh deps $BUILD_ARGS
-      shell: bash
 
     - name: configure
       run: ./build.sh config $BUILD_ARGS
-      shell: bash
 
     - name: build
       run: ./build.sh build $BUILD_ARGS
-      shell: bash
 
     - name: test
       run: ./build.sh test $BUILD_ARGS
-      shell: bash
 
     - name: install
       if: ${{ matrix.name == 'Release build' }}
       run: ./build.sh install $BUILD_ARGS
-      shell: bash
 
     - name: package
       if: ${{ matrix.name == 'Release build' }}
       run: ./build.sh package $BUILD_ARGS
-      shell: bash
 
     - name: artifacts - tarball
       if: ${{ matrix.name == 'Release build' }}
@@ -199,4 +216,3 @@ jobs:
 #        conan remote add xcikit https://api.bintray.com/conan/rbrich/xcikit
 #        conan user -p $CONAN_PASSWORD -r xcikit rbrich
 #        conan upload "xcikit/*@rbrich/stable" --all --no-overwrite --check --confirm -r=xcikit
-#      shell: bash

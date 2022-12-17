@@ -157,7 +157,7 @@ Font::Glyph* Font::get_glyph(GlyphIndex glyph_index)
 
     // fill metrics
     glyph.m_bearing = glyph_render.bearing;
-    glyph.m_advance = glyph_render.advance.x;
+    glyph.m_advance = glyph_render.advance;
 
     // insert into cache
     auto glyph_item = m_glyphs.emplace(glyph_key, glyph);

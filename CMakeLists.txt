@@ -1,14 +1,13 @@
 # 3.18.4 in Debian 11
 # 3.16.3 in Emscripten Docker image
 # 3.16 introduced CMAKE_MESSAGE_INDENT
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.16...3.25)
 file(STRINGS "VERSION" XCI_VERSION)
 project(xcikit
     LANGUAGES CXX
     VERSION "${XCI_VERSION}"
     HOMEPAGE_URL "https://github.com/rbrich/xcikit")
 
-include(CTest)
 include(GNUInstallDirs)
 
 # Optional libraries (only xci-core is required)
@@ -25,12 +24,8 @@ cmake_dependent_option(XCI_DATA "Enable component: xci-data" ON
 # Libraries are always built. The rest is optional:
 option(BUILD_TOOLS "Disable to skip building tools." ON)
 option(BUILD_EXAMPLES "Disable to skip building examples." ON)
-option(BUILD_TESTS "Disable to skip building tests (BUILD_TESTING also works)." ON)
+option(BUILD_TESTS "Disable to skip building tests." ON)
 option(BUILD_BENCHMARKS "Disable to skip building benchmarks." ON)
-
-if (BUILD_TESTING AND NOT BUILD_TESTS)
-    set(BUILD_TESTING OFF)
-endif()
 
 # Individual tools
 option(BUILD_DATI_TOOL "Disable to skip building 'dati' (Data Inspect) tool." ON)
@@ -104,12 +99,12 @@ endif()
 find_package(fmt REQUIRED)
 
 # magic enum
-if (XCI_DATA)
+if (XCI_DATA OR BUILD_EXAMPLES)
     find_package(magic_enum REQUIRED)
 endif()
 
 # Catch
-if (BUILD_TESTING)
+if (BUILD_TESTS)
     find_package(Catch2 3 REQUIRED)
 endif()
 
@@ -248,7 +243,7 @@ endif()
 # Tests        #
 # ------------ #
 
-if (BUILD_TESTING)
+if (BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
@@ -345,7 +340,7 @@ if (${BUILD_TOOLS})
     pop_indent()
 endif()
 print_flag("? examples!                    " ${BUILD_EXAMPLES})
-print_flag("? tests!                       " ${BUILD_TESTING})
+print_flag("? tests!                       " ${BUILD_TESTS})
 print_flag("? benchmarks!                  " ${BUILD_BENCHMARKS})
 pop_indent()
 

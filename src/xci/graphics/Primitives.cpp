@@ -244,7 +244,7 @@ static uint32_t get_vertex_float_count(VertexFormat format)
         case VertexFormat::V2c4t2: return 8;
         case VertexFormat::V2c4t22: return 10;
     }
-    UNREACHABLE;
+    XCI_UNREACHABLE;
 }
 
 

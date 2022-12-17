@@ -15,10 +15,11 @@ add_library(xci-text
     FontLibrary.cpp
     FontTexture.cpp
     Font.cpp
-    Text.cpp
+    GlyphCluster.cpp
     Layout.cpp
     Markup.cpp
     Style.cpp
+    Text.cpp
     layout/Page.cpp
     $<TARGET_OBJECTS:third_party::rbp>
     )

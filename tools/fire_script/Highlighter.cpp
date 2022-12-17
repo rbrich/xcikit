@@ -9,6 +9,7 @@
 #include <xci/core/mixin.h>
 
 #include <tao/pegtl.hpp>
+#include <tao/pegtl/contrib/parse_tree.hpp>
 
 #ifndef NDEBUG
 #include <tao/pegtl/contrib/analyze.hpp>
@@ -29,9 +30,9 @@ using namespace xci::core::parser::unescape;
 // This is a simplified version of the grammar from "xci/script/Parser.cpp".
 // The main reason for not sharing the grammar with the actual parser is that
 // this one needs to be much less strict - it must allow invalid and incomplete input.
-// Some more nondeterminants are added for the purpose of syntax highlithing,
+// Some more nondeterminants are added for the purpose of syntax highlighting,
 // and some are removed because information about the actual structure (i.e. AST)
-// is not needed for the highligher. For example, infix/prefix operators don't need
+// is not needed for the highlighter. For example, infix/prefix operators don't need
 // to be distinguished and invalid combination of operators is fine here: "1 + / 2".
 // Imagine the cursor in the middle of that string...
 

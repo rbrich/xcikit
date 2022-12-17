@@ -449,7 +449,7 @@ int Operator::precedence() const
         case UnaryPlus:     return 13;
         case UnaryMinus:    return 13;
     }
-    UNREACHABLE;
+    XCI_UNREACHABLE;
 }
 
 
@@ -490,7 +490,7 @@ const char* Operator::to_cstr() const
         case Operator::Subscript:   return "!";
         case Operator::DotCall:     return ".";
     }
-    UNREACHABLE;
+    XCI_UNREACHABLE;
 }
 
 

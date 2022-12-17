@@ -80,13 +80,9 @@ class XcikitConan(ConanFile):
         "with_hyperscan": False,
 
         # Disable unnecessary transient deps by default.
-        "freetype:with_png": True,
-        "freetype:with_zlib": False,
         "freetype:with_bzip2": False,
         "freetype:with_brotli": False,
         "harfbuzz:with_glib": False,
-        "harfbuzz:with_gdi": False,
-        "harfbuzz:with_uniscribe": False,
         "vulkan-loader:with_wsi_xcb": False,
         "vulkan-loader:with_wsi_xlib": False,
         "vulkan-loader:with_wsi_wayland": False,
@@ -126,6 +122,7 @@ class XcikitConan(ConanFile):
             yield info
 
     def configure(self):
+        tools.check_min_cppstd(self, "20")
         # Dependent options - remove their requirements
         if self.options.widgets:
             del self.options.text
@@ -162,7 +159,7 @@ class XcikitConan(ConanFile):
         defs["XCI_WIDGETS"] = self.options.widgets
         defs["BUILD_TOOLS"] = self.options.tools
         defs["BUILD_EXAMPLES"] = self.options.examples
-        defs["BUILD_TESTING"] = self.options.tests
+        defs["BUILD_TESTS"] = self.options.tests
         defs["BUILD_BENCHMARKS"] = self.options.benchmarks
         defs["XCI_WITH_HYPERSCAN"] = self.options.get_safe('with_hyperscan', False)
 

@@ -398,7 +398,7 @@ public:
                 break;
             }
             case Symbol::Unresolved:
-                UNREACHABLE;
+                XCI_UNREACHABLE;
         }
         // if it's a function object, execute it
         if (sym.type() == Symbol::Nonlocal && sym.is_callable()) {

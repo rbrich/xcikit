@@ -39,9 +39,9 @@ int main(int argc, const char* argv[])
     setup_window(window, "XCI layout demo", argv);
 
     Font font {renderer, 1024u};
-    if (!font.add_face(vfs, "fonts/Lora/Lora-VF.ttf", 0))
+    if (!font.add_face(vfs, "fonts/Lora/Lora[wght].ttf", 0))
         return EXIT_FAILURE;
-    if (!font.add_face(vfs, "fonts/Lora/Lora-Italic-VF.ttf", 0))
+    if (!font.add_face(vfs, "fonts/Lora/Lora-Italic[wght].ttf", 0))
         return EXIT_FAILURE;
 
     Font mono_font{renderer};

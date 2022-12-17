@@ -271,7 +271,7 @@ void PipelineCreateInfo::set_vertex_format(VertexFormat format)
             attr_desc_count = 4;
             break;
         default:
-            UNREACHABLE;
+            XCI_UNREACHABLE;
     }
     assert(attr_desc_count != 0);
     assert(attr_desc_count <= m_attr_descs.size());

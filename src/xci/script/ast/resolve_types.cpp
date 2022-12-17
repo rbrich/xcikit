@@ -394,7 +394,7 @@ public:
                 return;
             case Symbol::Nonlocal:
             case Symbol::Unresolved:
-                UNREACHABLE;
+                XCI_UNREACHABLE;
         }
         v.ti = m_value_type;
     }

@@ -183,7 +183,7 @@ public:
     FramebufferSize framebuffer_size() const { return m_framebuffer_size; }
 
     /// Viewport center in framebuffer coordinates.
-    /// Start at these coordinates to center thinks in the viewport.
+    /// Start at these coordinates to center things in the viewport.
     FramebufferCoords framebuffer_center() const;
 
     /// Viewport origin in real (underlying) framebuffer coordinates.
@@ -222,7 +222,7 @@ public:
             case VariUnits::Screen: return px_to_fb(value.screen());
             case VariUnits::Viewport: return vp_to_fb(value.viewport());
         }
-        UNREACHABLE;
+        XCI_UNREACHABLE;
     }
 
     ScreenPixels fb_to_px(FramebufferPixels value) const {
@@ -239,7 +239,7 @@ public:
             case VariUnits::Screen: return value.screen();
             case VariUnits::Viewport: return vp_to_px(value.viewport());
         }
-        UNREACHABLE;
+        XCI_UNREACHABLE;
     }
 
     // Convert coords / size to framebuffer / screen:
@@ -261,7 +261,7 @@ public:
             case VariUnits::Screen: return px_to_fb(ScreenSize{size.x.screen(), size.y.screen()});
             case VariUnits::Viewport: return vp_to_fb(ViewportSize{size.x.viewport(), size.y.viewport()});
         }
-        UNREACHABLE;
+        XCI_UNREACHABLE;
     }
 
     ScreenSize fb_to_px(FramebufferSize size) const {
@@ -281,7 +281,7 @@ public:
             case VariUnits::Screen: return {size.x.screen(), size.y.screen()};
             case VariUnits::Viewport: return vp_to_px(ViewportSize{size.x.viewport(), size.y.viewport()});
         }
-        UNREACHABLE;
+        XCI_UNREACHABLE;
     }
 
     // Convert rect to framebuffer / screen:
@@ -327,7 +327,7 @@ public:
             case VariUnits::Screen: return px_to_vp(value.screen());
             case VariUnits::Viewport: return value.viewport();
         }
-        UNREACHABLE;
+        XCI_UNREACHABLE;
     }
 
     ViewportSize px_to_vp(ScreenSize size) const {

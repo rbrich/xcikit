@@ -109,7 +109,7 @@ inline void error(fmt::string_view fmt, T&&... args) {
     Logger::default_instance().log(Logger::Level::Error, fmt::vformat(fmt, vargs));
 }
 
-}  // namespace log
+} // namespace log
 } // namespace xci::core
 
 

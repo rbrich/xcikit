@@ -1,6 +1,7 @@
 # basic build options
 option(BUILD_SHARED_LIBS "Build shared libs instead of static libs." OFF)
 option(BUILD_FRAMEWORKS "Build shared libs as OSX frameworks. Implies BUILD_SHARED_LIBS." OFF)
+option(BUILD_WITH_DEBUG_INFO "Generate debug info also for Release, MinSizeRel. Doesn't affect Debug, RelWithDebInfo." OFF)
 
 # sanitizers (runtime checking tools)
 option(BUILD_WITH_ASAN "Build with AddressSanitizer." OFF)
@@ -38,6 +39,16 @@ if (BUILD_FRAMEWORKS)
     set(BUILD_SHARED_LIBS ON)
 endif()
 
+if (BUILD_WITH_DEBUG_INFO)
+    if (NOT MSVC)
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g")
+        set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} -g")
+    else()
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Z7")
+        set(CMAKE_CXX_FLAGS_MINSIZEREL "${CMAKE_CXX_FLAGS_MINSIZEREL} /Z7")
+    endif()
+endif()
+
 if (ENABLE_LTO)
     # check for LTO (fail when unavailable) and enable it globally
     include(CheckIPOSupported)
@@ -53,7 +64,7 @@ if (ENABLE_LTO)
 endif()
 
 if (ENABLE_CCACHE)
-    find_program(CCACHE_EXECUTABLE ccache)
+    find_program(CCACHE_EXECUTABLE sccache ccache)
     if (CCACHE_EXECUTABLE)
         message(STATUS "Found ccache: ${CCACHE_EXECUTABLE}")
         set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_EXECUTABLE})
@@ -151,6 +162,9 @@ endif ()
 # To get useful debuginfo, we need frame pointer
 if (NOT MSVC)
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} -fno-omit-frame-pointer")
+    if (BUILD_WITH_DEBUG_INFO)
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-omit-frame-pointer")
+    endif()
 endif()
 
 # MinSizeRel - enable more optimization (-Oz)
