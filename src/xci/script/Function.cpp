@@ -127,7 +127,8 @@ void Function::copy_body(const Function& src)
 }
 
 
-bool Function::CompiledBody::operator==(const Function::CompiledBody& rhs) const {
+bool Function::CompiledBody::operator==(const Function::CompiledBody& rhs) const
+{
     return code == rhs.code;
 }
 
@@ -142,6 +143,9 @@ bool Function::NativeBody::operator==(const Function::NativeBody& rhs) const
 {
     return native == rhs.native;
 }
+
+
+// -----------------------------------------------------------------------------
 
 
 Scope::Scope(Module& module, Index function_idx, Scope* parent_scope)

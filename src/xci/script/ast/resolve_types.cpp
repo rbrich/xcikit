@@ -686,6 +686,14 @@ private:
                 }
                 break;
             case Type::Function:
+                if (deduced.type() != Type::Function || sig.signature().arity() != deduced.signature().arity()) {
+                    exc_cb(sig, deduced);
+                    break;
+                }
+                for (auto&& [sig_arg, deduced_arg] : zip(sig.signature().params, deduced.signature().params)) {
+                    specialize_arg(sig_arg, deduced_arg, type_args, exc_cb);
+                }
+                specialize_arg(sig.signature().return_type, deduced.signature().return_type, type_args, exc_cb);
                 break;
             default:
                 // Int32 etc. (never generic)
@@ -713,6 +721,10 @@ private:
                     resolve_generic_type(type_args, sub);
                 break;
             case Type::Function:
+                sig = TypeInfo(std::make_shared<Signature>(sig.signature()));  // copy
+                for (auto& prm : sig.signature().params)
+                    resolve_generic_type(type_args, prm);
+                resolve_generic_type(type_args, sig.signature().return_type);
                 break;
             default:
                 // Int32 etc. (never generic)
