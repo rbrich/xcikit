@@ -657,6 +657,12 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
                     " l1=fun b { l2=fun c { l3=fun d { a;b;c; l1b 42L; l1b d }; l3 b}; l2 a };"
                     " wrapped = fun x { l1b 'x'; l1 x }; wrapped a }; l0 2") == "2;'x';2;2;2;2;42L;2;2");
 
+    // function as parameter
+    CHECK(interpret("call = fun f:(Int->Int) x:Int -> Int { f x }; ident = fun a:Int -> Int { a }; call ident 42") == "42");  // non-generic
+    CHECK(interpret("call = fun<X,Y> f:(X->Y) x:X -> Y { f x }; ident = fun<A> a:A -> A { a }; call ident 42") == "42");  // generic, explicitly-typed
+    CHECK(interpret("call = fun<X,Y> f:(X->Y) x:X -> Y { f x }; ident = fun a { a }; call ident 42") == "42");
+    CHECK(interpret("call = fun f x { f x }; ident = fun a { a }; call ident 42") == "42");
+
     // "Funarg problem" (upwards)
     auto def_succ = "succ = fun Int->Int { __value 1 .__load_static; __add 0x88 }; "s;
     auto def_compose = " compose = fun f g { fun x { f (g x) } }; "s;

@@ -256,4 +256,20 @@ size_t Scope::nonlocal_raw_offset(Index index, const TypeInfo& ti) const
 }
 
 
+void Scope::add_spec_arg(Index index, const SourceLocation& source_loc, SymbolPointer symptr)
+{
+    m_spec_args.emplace_back(SpecArg{index, source_loc, symptr});
+}
+
+
+const Scope::SpecArg* Scope::get_spec_arg(Index index) const
+{
+    auto it = std::find_if(m_spec_args.begin(), m_spec_args.end(),
+                           [index](const SpecArg& a){ return a.index == index; });
+    if (it == m_spec_args.end())
+        return nullptr;
+    return &*it;
+}
+
+
 } // namespace xci::script

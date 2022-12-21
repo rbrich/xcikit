@@ -64,8 +64,9 @@ static std::pair<const Candidate*, bool> find_best_candidate(const std::vector<C
 class ResolveTypesVisitor final: public ast::VisitorExclTypes {
     struct CallArg {
         TypeInfo type_info;
-        bool literal_value;
         SourceLocation source_loc;
+        SymbolPointer symptr;  // needed for specialization of a generic function passed as an arg
+        bool literal_value;
     };
     using CallArgs = std::vector<CallArg>;
 
@@ -193,7 +194,7 @@ public:
         m_value_type = v.ti;
 
         // Add the inferred struct type to module, point StructItem symbols to it
-        Index index = module().add_type(v.ti);
+        const Index index = module().add_type(v.ti);
         for (auto& item : v.items) {
             item.first.symbol->set_index(index);
         }
@@ -226,7 +227,7 @@ public:
                 }
                 // check type of args (they must be Int or Byte)
                 for (const auto&& [i, arg] : m_call_args | enumerate) {
-                    Type t = arg.type_info.type();
+                    const Type t = arg.type_info.type();
                     if (t != Type::Unknown && t != Type::Byte && t != Type::Int32)
                         throw UnexpectedArgumentType(i+1, ti_int32(),
                                                      arg.type_info, arg.source_loc);
@@ -262,14 +263,14 @@ public:
                 if (v.definition) {
                     Function& fn = v.definition->symbol().get_function(m_scope);
                     for (const auto& p : fn.signature().params)
-                        m_call_args.push_back({p, false, v.source_loc});
+                        m_call_args.push_back({p, v.source_loc, {}, false});
                     m_call_ret = fn.signature().return_type;
                 }
 
                 // find prototype of the function, resolve actual type of T
                 const auto& symmod = symtab.module() == nullptr ? module() : *symtab.module();
                 auto& cls = symmod.get_class(sym.index());
-                Index cls_fn_idx = cls.get_index_of_function(sym.ref()->index());
+                const Index cls_fn_idx = cls.get_index_of_function(sym.ref()->index());
                 const auto& cls_fn = sym.ref().get_generic_scope().function();
                 auto inst_types = resolve_instance_types(cls_fn.signature());
                 std::vector<TypeInfo> resolved_types;
@@ -335,7 +336,7 @@ public:
                     assert(m_call_args.empty());
                     if (v.ti.is_callable()) {
                         for (const auto& t : v.ti.signature().params)
-                            m_call_args.push_back({t, false, v.source_loc});
+                            m_call_args.push_back({t, v.source_loc, {}, false});
                         m_call_ret = v.ti.signature().return_type;
                     } else {
                         // A naked type, consider it a function return type
@@ -353,6 +354,7 @@ public:
                     v.module = res.module;
                     v.index = res.scope_index;
                     m_value_type = res.type;
+                    m_symptr = res.symptr;
                     if (v.definition) {
                         m_call_args.clear();
                         m_call_ret = {};
@@ -371,7 +373,19 @@ public:
                 break;
             case Symbol::Parameter: {
                 const auto* ref_scope = m_scope.find_parent_scope(&symtab);
-                m_value_type = ref_scope->function().parameter(sym.index());
+                const auto& sig_type = ref_scope->function().parameter(sym.index());
+                if (ref_scope == &m_scope) {
+                    const auto* spec_arg = m_scope.get_spec_arg(sym.index());
+                    if (spec_arg) {
+                        auto specialized = specialize_function(spec_arg->symptr, spec_arg->source_loc);
+                        if (specialized) {
+                            specialize_arg(sig_type, specialized->type_info, m_scope.type_args(), {});
+                            m_value_type = std::move(specialized->type_info);
+                            break;
+                        }
+                    }
+                }
+                m_value_type = sig_type;
                 break;
             }
             case Symbol::Value:
@@ -414,9 +428,10 @@ public:
         CallArgs args;
         for (auto& arg : v.args) {
             m_literal_value = true;
+            m_symptr = {};
             arg->apply(*this);
             assert(arg->source_loc);
-            args.push_back({m_value_type.effective_type(), m_literal_value, arg->source_loc});
+            args.push_back({m_value_type.effective_type(), arg->source_loc, m_symptr, m_literal_value});
         }
         // append args to m_call_args (note that m_call_args might be used
         // when evaluating each argument, so we cannot push to them above)
@@ -505,9 +520,10 @@ public:
     void visit(ast::WithContext& v) override {
         // resolve type of context (StructInit leads to incomplete struct type)
         m_literal_value = true;
+        m_symptr = {};
         v.context->apply(*this);
         // lookup the enter function with the resolved context type
-        m_call_args.push_back({m_value_type, m_literal_value, v.context->source_loc});
+        m_call_args.push_back({m_value_type, v.context->source_loc, m_symptr, m_literal_value});
         m_call_ret = ti_unknown();
         v.enter_function.apply(*this);
         m_call_args.clear();
@@ -516,11 +532,12 @@ public:
         // re-resolve type of context (match actual struct type as found by resolving `with` function)
         m_cast_type = enter_sig.params[0];
         m_literal_value = true;
+        m_symptr = {};
         v.context->apply(*this);
         assert(m_value_type == enter_sig.params[0]);
         // lookup the leave function, it's arg type is same as enter functions return type
         v.leave_type = enter_sig.return_type.effective_type();
-        m_call_args.push_back({v.leave_type, m_literal_value, v.context->source_loc});
+        m_call_args.push_back({v.leave_type, v.context->source_loc, m_symptr, m_literal_value});
         m_call_ret = ti_void();
         v.leave_function.apply(*this);
         m_call_args.clear();
@@ -538,8 +555,8 @@ public:
 
         // This is a nested function in a function we're currently specializing.
         // Make sure we work on specialized nested function, not original (generic) one.
-        bool parent_is_specialized = scope.parent()->has_function() &&
-                                     scope.parent()->function().is_specialized();
+        const bool parent_is_specialized = scope.parent()->has_function() &&
+                                           scope.parent()->function().is_specialized();
         if (parent_is_specialized) {
             assert(!scope.function().is_specialized());
             auto clone_fn_idx = clone_function(scope);
@@ -610,6 +627,7 @@ public:
         resolve_generic_type(m_scope.type_args(), v.to_type);
         m_cast_type = v.to_type;
         m_literal_value = true;
+        m_symptr = {};
         v.expression->apply(*this);
         m_cast_type = {};
         // Cast to Void -> don't call the cast function, just drop the expression result from stack
@@ -620,7 +638,7 @@ public:
             return;
         }
         // lookup the cast function with the resolved arg/return types
-        m_call_args.push_back({m_value_type, m_literal_value, v.expression->source_loc});
+        m_call_args.push_back({m_value_type, v.expression->source_loc, m_symptr, m_literal_value});
         m_call_ret = v.to_type;
         v.cast_function->apply(*this);
         // set the effective type of the Cast expression and clean the call types
@@ -630,7 +648,7 @@ public:
     }
 
 private:
-    Module& module() { return m_scope.module(); }
+    Module& module() const { return m_scope.module(); }
     Function& function() const { return m_scope.function(); }
 
     Index get_type_id(TypeInfo&& type_info) {
@@ -767,18 +785,21 @@ private:
     // * use the deduced return type to resolve type variables in generic return type
     // Modifies `fn` in place - it should be already copied.
     // Throw when the signature doesn't match the call args or deduced return type.
-    void specialize_to_call_args(Scope& scope, const ast::Block& body, const SourceLocation& loc) const
+    void specialize_to_call_args(Scope& scope, const ast::Block& body, const SourceLocation& loc)
     {
         auto& signature = scope.function().signature();
         for (size_t i = 0; i < std::min(signature.params.size(), m_call_args.size()); i++) {
             const auto& arg = m_call_args[i];
-            const auto& out_type = signature.params[i];
+            const auto& sig_type = signature.params[i];
             if (arg.type_info.is_unknown())
                 continue;
-            specialize_arg(out_type, arg.type_info, scope.type_args(),
+            specialize_arg(sig_type, arg.type_info, scope.type_args(),
                     [i, &loc](const TypeInfo& exp, const TypeInfo& got) {
                         throw UnexpectedArgumentType(i+1, exp, got, loc);
                     });
+            if (arg.type_info.is_callable() && arg.symptr) {
+                scope.add_spec_arg(i, arg.source_loc, arg.symptr);
+            }
         }
         // resolve generic vars to received types
         resolve_type_vars(signature, scope.type_args());
@@ -801,7 +822,7 @@ private:
         Index scope_index;
     };
 
-    Index clone_function(const Scope& scope)
+    Index clone_function(const Scope& scope) const
     {
         const auto& fn = scope.function();
         auto clone_fn_idx = module().add_function(Function(module(), fn.symtab())).index;
@@ -815,7 +836,7 @@ private:
         return clone_fn_idx;
     }
 
-    Index clone_scope(Scope& scope, Index fn_idx)
+    Index clone_scope(Scope& scope, Index fn_idx) const
     {
         auto fscope_idx = module().add_scope(Scope{module(), fn_idx, scope.parent()});
         auto& fscope = module().get_scope(fscope_idx);
@@ -1047,6 +1068,21 @@ private:
                 m_cast_type = res->params.front();
                 v.args[i - 1]->apply(*this);
             }
+            if (res->params.front().is_callable()) {
+                // resolve overload in case the arg is a function that was specialized
+                auto orig_call_args = std::move(m_call_args);
+                auto orig_call_ret = std::move(m_call_ret);
+
+                m_call_args.clear();
+                for (const auto& p : res->params.front().signature().params)
+                    m_call_args.push_back({p, arg.source_loc, {}, false});
+                m_call_ret = res->params.front().signature().return_type;
+
+                v.args[i - 1]->apply(*this);
+
+                m_call_args = std::move(orig_call_args);
+                m_call_ret = std::move(orig_call_ret);
+            }
             // resolve arg if it's a type var and the signature has a known type in its place
             if (arg.type_info.is_generic() && !res->params.front().is_generic()) {
                 specialize_arg(arg.type_info, res->params.front(),
@@ -1172,6 +1208,7 @@ private:
     TypeInfo m_value_type;  // inferred type of the value
     TypeInfo m_cast_type;   // target type of Cast
     bool m_literal_value = true;  // the m_value_type is a literal (for Call args, set false if not)
+    SymbolPointer m_symptr;  // the symptr related to m_value_type (for specialization of functions passed as arguments)
 
     // signature for resolving overloaded functions and templates
     CallArgs m_call_args;  // actual argument types
