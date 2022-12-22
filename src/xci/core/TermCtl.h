@@ -172,7 +172,8 @@ public:
 
     // Cached seq
     std::string seq() { return std::move(m_seq); }
-    void write() { write(seq()); }
+    void write() { write_raw(seq()); }
+    void write_nl() { m_seq.append(1, '\n'); write(seq()); }
     friend std::ostream& operator<<(std::ostream& os, TermCtl& t) { return os << t.seq(); }
 
     // Formatting helpers
@@ -214,7 +215,7 @@ public:
     }
 
     void write(std::string_view buf);
-    void write_nl();
+    void write_raw(std::string_view buf);  // doesn't check newline
 
     class StreamBuf : public std::streambuf {
     public:

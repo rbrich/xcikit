@@ -764,20 +764,16 @@ std::string TermCtl::raw_input(bool isig)
 void TermCtl::write(std::string_view buf)
 {
     m_at_newline = buf.ends_with('\n');
+    write_raw(buf);
+}
+
+
+void TermCtl::write_raw(std::string_view buf)
+{
     if (m_write_cb)
         m_write_cb(buf);
     else
         core::write(m_fd, buf);
-}
-
-
-void TermCtl::write_nl()
-{
-    m_at_newline = true;
-    if (m_write_cb)
-        m_write_cb("\n");
-    else
-        core::write(m_fd, "\n");
 }
 
 
@@ -971,7 +967,7 @@ std::string TermCtl::query(std::string_view request, TermCtl& tin)
 {
     std::string res;
     tin.with_raw_mode([this, request, &tin, &res] {
-        write(request);
+        write_raw(request);
         res = tin.input(std::chrono::milliseconds{100});
     });
     return res;

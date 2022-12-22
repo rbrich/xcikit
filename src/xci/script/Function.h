@@ -66,7 +66,7 @@ public:
     size_t parameter_offset(Index idx) const;
 
     // function signature
-    void set_signature(const std::shared_ptr<Signature>& newsig) { m_signature = newsig; }
+    void set_signature(const std::shared_ptr<Signature>& sig) { m_signature = sig; }
     std::shared_ptr<Signature> signature_ptr() const { return m_signature; }
     Signature& signature() { return *m_signature; }
     const Signature& signature() const { return *m_signature; }
@@ -274,6 +274,10 @@ public:
         return m_type_args[sym];
     }
 
+    bool empty() const noexcept { return m_type_args.empty(); }
+    const_iterator begin() const noexcept { return m_type_args.begin(); }
+    const_iterator end() const noexcept { return m_type_args.end(); }
+
 private:
     std::map<SymbolPointer, TypeInfo> m_type_args;
 };
@@ -300,7 +304,7 @@ public:
     Index get_index_of_subscope(Index mod_scope_idx) const;
     Scope& get_subscope(Index idx) const;
     Size num_subscopes() const { return Size(m_subscopes.size()); }
-    bool has_subscopes() const { return !m_subscopes.empty(); }
+    bool has_subscopes() const noexcept { return !m_subscopes.empty(); }
     const std::vector<Index>& subscopes() const { return m_subscopes; }
 
     // SymbolTable mapping (a SymbolTable may map to multiple scope hierarchies)
@@ -316,12 +320,22 @@ public:
     };
     void add_nonlocal(Index index);
     void add_nonlocal(Index index, TypeInfo ti, Index fn_scope_idx = no_index);
-    bool has_nonlocals() const { return !m_nonlocals.empty(); }
+    bool has_nonlocals() const noexcept { return !m_nonlocals.empty(); }
     const std::vector<Nonlocal>& nonlocals() const { return m_nonlocals; }
     size_t nonlocal_raw_offset(Index index, const TypeInfo& ti) const;
 
+    struct SpecArg {
+        Index index;  // index from the respective Symbol::Parameter
+        SourceLocation source_loc;
+        SymbolPointer symptr;
+    };
+
+    void add_spec_arg(Index index, const SourceLocation& source_loc, SymbolPointer symptr);
+    const SpecArg* get_spec_arg(Index index) const;
+
     const TypeArgs& type_args() const { return m_type_args; }
     TypeArgs& type_args() { return m_type_args; }
+    bool has_type_args() const noexcept { return !m_type_args.empty(); }
 
 private:
     Module* m_module = nullptr;
@@ -329,6 +343,7 @@ private:
     Scope* m_parent_scope = nullptr;  // matches `m_symtab.parent()`, but can be a specialized function, while symtab is only lexical
     std::vector<Index> m_subscopes;  // nested scopes (Index into module scopes)
     std::vector<Nonlocal> m_nonlocals;
+    std::vector<SpecArg> m_spec_args;  // if this scope is specialization of a function, this contains symbols passed as args (they can be generic functions)
     TypeArgs m_type_args;  // resolved type variables or explicit type args
 };
 
