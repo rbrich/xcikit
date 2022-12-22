@@ -399,8 +399,8 @@ from_string = fun<T> x:String -> T { parse x () }
 // -----------------------------------------------------------------------------
 
 
-succ = fun<T> x:T -> T { x + 1 }
-pred = fun<T> x:T -> T { x - 1 }
+succ = fun<T> x:T -> T { x + 1:T }
+pred = fun<T> x:T -> T { x - 1:T }
 larger = fun<T> x:T y:T -> T { if x > y then x else y }
 smaller = fun<T> x:T y:T -> T { if x < y then x else y }
 sign = fun x:Int -> Int { if x < 0 then -1  if x > 0 then +1  else 0 }

@@ -671,6 +671,7 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     CHECK(interpret(def_succ_compose + "plustwo = {compose succ succ}; plustwo 42") == "44");
     CHECK(interpret(def_succ_compose + "plustwo = compose succ succ; plusfour = compose plustwo plustwo;  plustwo 42; plusfour 42") == "44;46");
     // TODO: compose generic functions
+    //CHECK(interpret_std("compose = fun<X,Y,Z> f:(Y->Z) g:(X->Y) -> Z { fun x:X -> Z { f (g x) } }; same = compose pred succ; same 42") == "42");
     //CHECK(interpret_std(def_compose + "same = compose pred succ; same 42") == "42");
 }
 
