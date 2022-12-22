@@ -183,7 +183,6 @@ fi
 VERSION=$(conan inspect . --raw version)$(git rev-parse --short HEAD 2>/dev/null | sed 's/^/+/' ; :)
 BUILD_CONFIG="${PLATFORM}-${ARCH}-${BUILD_TYPE}"
 [[ -z "${GENERATOR}" ]] && setup_ninja && GENERATOR="Ninja"
-[[ -n "${GENERATOR}" ]] && BUILD_CONFIG="${BUILD_CONFIG}-${GENERATOR// }"
 [[ -n "${GENERATOR}" ]] && CMAKE_ARGS+=(-G "${GENERATOR}")
 BUILD_DIR=${BUILD_DIR:-"${ROOT_DIR}/build/${BUILD_CONFIG}"}
 INSTALL_DIR=${INSTALL_DIR:-"${ROOT_DIR}/artifacts/${BUILD_CONFIG}"}
