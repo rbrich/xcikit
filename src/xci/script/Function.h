@@ -332,6 +332,8 @@ public:
 
     void add_spec_arg(Index index, const SourceLocation& source_loc, SymbolPointer symptr);
     const SpecArg* get_spec_arg(Index index) const;
+    const std::vector<SpecArg>& spec_args() const { return m_spec_args; }
+    bool has_spec_args() const noexcept { return !m_spec_args.empty(); }
 
     const TypeArgs& type_args() const { return m_type_args; }
     TypeArgs& type_args() { return m_type_args; }

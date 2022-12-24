@@ -1184,7 +1184,7 @@ std::ostream& operator<<(std::ostream& os, const Scope& v)
         }
     }
     os << '\t';
-    bool orig_parenthesize_fun_types = stream_options(os).parenthesize_fun_types;
+    const bool orig_parenthesize_fun_types = stream_options(os).parenthesize_fun_types;
     stream_options(os).parenthesize_fun_types = true;
     if (v.has_type_args()) {
         os << "Type args: ";
@@ -1198,6 +1198,18 @@ std::ostream& operator<<(std::ostream& os, const Scope& v)
         }
     }
     stream_options(os).parenthesize_fun_types = orig_parenthesize_fun_types;
+    os << '\t';
+    if (v.has_spec_args()) {
+        os << "Spec args: ";
+        bool first = true;
+        for (const auto& arg : v.spec_args()) {
+            if (!first)
+                os << ", ";
+            else
+                first = false;
+            os << arg.index << "=" << arg.symptr->name();
+        }
+    }
     return os;
 }
 
