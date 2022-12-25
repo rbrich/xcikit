@@ -280,17 +280,20 @@ Type TypeInfo::underlying_type() const
 
 bool TypeInfo::is_generic() const
 {
-    if (m_type == Type::Unknown)
-        return true;
-    if (m_type == Type::Function)
-        return signature_ptr()->has_any_generic();
-    if (m_type == Type::List)
-        return elem_type().is_generic();
-    if (m_type == Type::Tuple)
-        return ranges::any_of(subtypes(), [](const TypeInfo& type_info) {
-            return type_info.is_generic();
-        });
-    return false;
+    switch (m_type) {
+        case Type::Unknown:
+            return bool(generic_var());
+        case Type::Function:
+            return signature_ptr()->has_any_generic();
+        case Type::List:
+            return elem_type().is_generic();
+        case Type::Tuple:
+            return ranges::any_of(subtypes(), [](const TypeInfo& type_info) {
+                return type_info.is_generic();
+            });
+        default:
+            return false;
+    }
 }
 
 

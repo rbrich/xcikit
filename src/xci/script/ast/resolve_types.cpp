@@ -180,7 +180,8 @@ public:
             }
         }
         m_value_type = type_check.resolve(ti_list(std::move(elem_type)), v.source_loc);
-        if (m_value_type.is_generic() && type_check.eval_type())
+        assert(m_value_type.is_list());
+        if (m_value_type.elem_type().is_unknown() && type_check.eval_type())
             m_value_type = std::move(type_check.eval_type());
         // FIXME: allow generic type: fun <T> Void->[T] { []:[T] }
         if (m_value_type.elem_type().is_generic())
@@ -389,15 +390,13 @@ public:
             case Symbol::Parameter: {
                 const auto* ref_scope = m_scope.find_parent_scope(&symtab);
                 const auto& sig_type = ref_scope->function().parameter(sym.index());
-                if (ref_scope == &m_scope) {
-                    const auto* spec_arg = m_scope.get_spec_arg(sym.index());
-                    if (spec_arg) {
-                        auto specialized = specialize_function(spec_arg->symptr, spec_arg->source_loc);
-                        if (specialized) {
-                            specialize_arg(sig_type, specialized->type_info, m_scope.type_args(), {});
-                            m_value_type = std::move(specialized->type_info);
-                            break;
-                        }
+                const auto* spec_arg = ref_scope->get_spec_arg(sym.index());
+                if (spec_arg) {
+                    auto specialized = specialize_function(spec_arg->symptr, spec_arg->source_loc);
+                    if (specialized) {
+                        specialize_arg(sig_type, specialized->type_info, m_scope.type_args(), {});
+                        m_value_type = std::move(specialized->type_info);
+                        break;
                     }
                 }
                 m_value_type = sig_type;
@@ -775,8 +774,8 @@ private:
     void resolve_return_type(Signature& sig, const TypeInfo& deduced,
                              TypeArgs& type_args, const SourceLocation& loc) const
     {
-        if (sig.return_type.is_unknown()) {
-            if (deduced.is_unknown() && !sig.has_any_generic())
+        if (sig.return_type.is_unknown() || sig.return_type.is_generic()) {
+            if (deduced.is_unknown() && !deduced.is_generic() && !sig.has_any_generic())
                 throw MissingExplicitType(loc);
             if (deduced.is_callable() && &sig == &deduced.signature())
                 throw MissingExplicitType(loc);  // the return type is recursive!

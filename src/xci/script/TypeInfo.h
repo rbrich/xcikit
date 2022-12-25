@@ -117,10 +117,11 @@ public:
     bool is_callable() const { return underlying_type() == Type::Function; }
     bool is_void() const { return is_tuple() && subtypes().empty(); }
     bool is_bool() const { return underlying_type() == Type::Bool; }
+    bool is_list() const { return underlying_type() == Type::List; }
     bool is_tuple() const { return underlying_type() == Type::Tuple; }
     bool is_struct() const { return underlying_type() == Type::Struct; }
 
-    bool is_generic() const;
+    bool is_generic() const;  // deep check, e.g. T, [T], Int->T
     void replace_var(SymbolPointer var, const TypeInfo& ti);
 
     // If the type is function without args, get its return type.
