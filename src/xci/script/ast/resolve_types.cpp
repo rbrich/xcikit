@@ -891,6 +891,16 @@ private:
             return {};  // not generic, nothing to specialize
         if (generic_fn.signature().params.size() > m_call_sig.n_args())
             return {};  // not enough call args
+        if (!function().is_specialized()
+            && (!scope.parent()->has_function() || !scope.parent()->function().is_specialized()))
+        {
+            // when not specializing the parent function...
+            if (std::all_of(m_call_sig.args.cbegin(), m_call_sig.args.cend(),
+                            [](const CallArg& arg) {
+                                return arg.type_info.is_generic();
+                            }))
+                return {};  // do not specialize with generic args
+        }
 
         // Check already created specializations if one of them matches
         for (auto spec_scope_idx : module().get_spec_functions(symptr)) {
