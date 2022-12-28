@@ -190,9 +190,10 @@ struct UnexpectedTypeArg : public ScriptError {
 };
 
 struct UnexpectedGenericFunction : public ScriptError {
+    explicit UnexpectedGenericFunction(string_view fn_desc)
+            : ScriptError(fmt::format("unexpected generic function: {}", fn_desc)) {}
     explicit UnexpectedGenericFunction(string_view fn_desc, const SourceLocation& loc)
-            : ScriptError(fmt::format("generic function must be named or immediately called: {}",
-                            fn_desc), loc) {}
+            : ScriptError(fmt::format("unexpected generic function: {}", fn_desc), loc) {}
 };
 
 

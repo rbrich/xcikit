@@ -619,8 +619,6 @@ public:
             }
             resolve_types(scope, v.body);
             m_value_type = TypeInfo{fn.signature_ptr()};
-            if (!fn.has_any_generic())
-                fn.set_compile();
         }
 
         // parameterless function is equivalent to its return type (eager evaluation)
@@ -775,8 +773,11 @@ private:
                              TypeArgs& type_args, const SourceLocation& loc) const
     {
         if (sig.return_type.is_unknown() || sig.return_type.is_generic()) {
-            if (deduced.is_unknown() && !deduced.is_generic() && !sig.has_any_generic())
-                throw MissingExplicitType(loc);
+            if (deduced.is_unknown() && !deduced.is_generic()) {
+                if (!sig.has_any_generic())
+                    throw MissingExplicitType(loc);
+                return;  // nothing to resolve
+            }
             if (deduced.is_callable() && &sig == &deduced.signature())
                 throw MissingExplicitType(loc);  // the return type is recursive!
             specialize_arg(sig.return_type, deduced, type_args,
@@ -840,7 +841,6 @@ private:
         auto clone_fn_idx = module().add_function(Function(module(), fn.symtab())).index;
         auto& clone_fn = module().get_function(clone_fn_idx);
         auto clone_sig = std::make_shared<Signature>(fn.signature());  // copy, not ref
-        clone_fn.set_compile();
         clone_fn.set_signature(clone_sig);
         if (fn.is_generic()) {
             clone_fn.set_ast(fn.ast());
@@ -1225,13 +1225,18 @@ void resolve_types(Scope& scope, const ast::Block& block)
     for (const auto& stmt : block.statements) {
         stmt->apply(visitor);
     }
-    // if the return type is still Unknown, change it to Void (the body is empty)
     auto& fn = scope.function();
-    if (!fn.signature().has_generic_params()
-        && fn.signature().return_type.is_unknown())
-    {
-        fn.signature().return_type = ti_void();
+    if (fn.signature().has_any_generic()) {
+        // the resolved function is generic - not allowed in main scope
+        if (scope.parent() == nullptr) {
+            stringstream sig_str;
+            sig_str << fn.name() << ':' << fn.signature();
+            throw UnexpectedGenericFunction(sig_str.str());
+        }
+        return;
     }
+    // not generic -> compile
+    fn.set_compile();
 }
 
 

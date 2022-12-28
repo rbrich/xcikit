@@ -34,7 +34,7 @@ MatchScore match_type(const TypeInfo& candidate, const TypeInfo& actual)
     if (candidate.is_tuple() && actual.is_struct())
         return MatchScore::coerce() + match_tuple_to_struct(candidate, actual);
     if (candidate == actual) {
-        if (actual.is_generic() || candidate.is_generic())
+        if (actual.is_unknown_or_generic() || candidate.is_unknown_or_generic())
             return MatchScore::generic();
         else
             return MatchScore::exact();

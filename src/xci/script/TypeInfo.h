@@ -122,6 +122,7 @@ public:
     bool is_struct() const { return underlying_type() == Type::Struct; }
 
     bool is_generic() const;  // deep check, e.g. T, [T], Int->T
+    bool is_unknown_or_generic() const { return is_unknown() || is_generic(); }
     void replace_var(SymbolPointer var, const TypeInfo& ti);
 
     // If the type is function without args, get its return type.

@@ -53,8 +53,8 @@ public:
         if (!v)
             return os << "[ ]";
         os << '[' << int(v.m_exact);
-        if (v.m_coerce != 0) os << '~' << int(v.m_coerce);
-        if (v.m_generic != 0) os << '?' << int(v.m_generic);
+        if (v.m_coerce != 0) os << ',' << int(v.m_coerce) << '~';
+        if (v.m_generic != 0) os << ',' << int(v.m_generic) << '?';
         return os << ']';
     }
 

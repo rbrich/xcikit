@@ -218,14 +218,14 @@ TEST_CASE( "Raw strings", "[script][parser]" )
 
 TEST_CASE( "Parsing types", "[script][parser]")
 {
-    CHECK(parse("type MyInt = Int") == "type MyInt = Int");
-    CHECK(parse("type MyList = [Int]") == "type MyList = [Int]");
-    CHECK(parse("type MyTuple = (String, Int)") == "type MyTuple = (String, Int)");
-    CHECK(parse("type MyTuple = String, Int") == "type MyTuple = (String, Int)");  // The round brackets are optional, added in AST dump for clarity
-    CHECK(parse("type MyListOfTuples = [String, Int]") == "type MyListOfTuples = [(String, Int)]");
-    CHECK(parse("type MyListOfTuples2 = [(String, Int), Int]") == "type MyListOfTuples2 = [((String, Int), Int)]");
-    CHECK(parse("MyAlias = Int") == "MyAlias = Int");
-    CHECK(parse("MyAlias2 = [Int]") == "MyAlias2 = [Int]");
+    CHECK(parse("type MyInt = Int") == "type MyInt = Int; ()");
+    CHECK(parse("type MyList = [Int]") == "type MyList = [Int]; ()");
+    CHECK(parse("type MyTuple = (String, Int)") == "type MyTuple = (String, Int); ()");
+    CHECK(parse("type MyTuple = String, Int") == "type MyTuple = (String, Int); ()");  // The round brackets are optional, added in AST dump for clarity
+    CHECK(parse("type MyListOfTuples = [String, Int]") == "type MyListOfTuples = [(String, Int)]; ()");
+    CHECK(parse("type MyListOfTuples2 = [(String, Int), Int]") == "type MyListOfTuples2 = [((String, Int), Int)]; ()");
+    CHECK(parse("MyAlias = Int") == "MyAlias = Int; ()");
+    CHECK(parse("MyAlias2 = [Int]") == "MyAlias2 = [Int]; ()");
 }
 
 
@@ -264,8 +264,8 @@ TEST_CASE( "Operator precedence", "[script][parser]" )
     // right associative:
     CHECK(parse("a ** b ** c ** d") == "(a ** (b ** (c ** d)))");
     // functions
-    CHECK(parse("a fun b {} c") == "a fun b {} c");
-    CHECK(parse("a (fun b {}) c") == "a (fun b {}) c");
+    CHECK(parse("a fun b {} c") == "a fun b {()} c");
+    CHECK(parse("a (fun b {}) c") == "a (fun b {()}) c");
     // function calls
     CHECK(interpret_std("succ 9 + larger 5 4 + 1") == "16");
     CHECK(interpret_std("(succ 9) + (larger 5 4) + 1") == "16");
@@ -560,8 +560,8 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
 
 TEST_CASE( "Blocks", "[script][interpreter]" )
 {
-    CHECK(parse("{}") == "{}");
-    CHECK(parse("{{}}") == "{{}}");
+    CHECK(parse("{}") == "{()}");  // empty function -> return Void auto-added in AST
+    CHECK(parse("{{}}") == "{{()}}");
 
     // blocks are evaluated and return a value
     CHECK(interpret("{}") == "()");  // empty function (has Void type)
@@ -582,7 +582,7 @@ TEST_CASE( "Blocks", "[script][interpreter]" )
 
 TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
 {
-    CHECK(parse("fun Int -> Int {}") == "fun Int -> Int {}");
+    CHECK(parse("fun Int -> Int {}") == "fun Int -> Int {()}");
 
     // returned lambda
     CHECK(interpret_std("fun x:Int->Int { x + 1 }") == "<lambda_0> Int32 -> Int32");  // non-generic is fine
@@ -1094,7 +1094,7 @@ TEST_CASE( "Fold const expressions", "[script][optimizer]" )
     // collapse block with single statement
     CHECK(optimize("{ 1 }") == "1");
     CHECK(optimize("{{{ 1 }}}") == "1");
-    CHECK(optimize("a = {{1}}") == "a = 1");
+    CHECK(optimize("a = {{1}}") == "a = 1; ()");
 
     // collapse function call with constant arguments
     CHECK(optimize("f=fun a:Int {a}; f 42") == "f = fun a:Int -> $R {a}; 42");
