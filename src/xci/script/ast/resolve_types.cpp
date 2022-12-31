@@ -753,7 +753,7 @@ private:
         resolve_types(scope, body);
         auto deduced_ret = signature.return_type;
         // resolve generic return type
-        if (!deduced_ret.is_unknown())
+        if (!deduced_ret.is_unknown() && deduced_ret != sig_ret)
             specialize_arg(sig_ret, deduced_ret, scope.type_args(),
                            [](const TypeInfo& exp, const TypeInfo& got) {
                                throw UnexpectedReturnType(exp, got);
@@ -811,9 +811,11 @@ private:
             assert(scope.function_index() != generic_scope.function_index());  // already cloned
             fn.set_specialized();
             specialize_to_call_args(scope, fn.ast(), loc);
+            const auto scope_idx = symptr.get_scope_index(m_scope);
+            module().add_spec_function(symptr, scope_idx);
             return std::make_optional<Specialized>({
                     TypeInfo{fn.signature_ptr()},
-                    symptr.get_scope_index(m_scope)
+                    scope_idx
             });
         }
 

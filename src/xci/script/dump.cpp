@@ -1194,6 +1194,8 @@ std::ostream& operator<<(std::ostream& os, const Scope& v)
                 os << ", ";
             else
                 first = false;
+            if (&v.function().symtab() != arg.first.symtab())
+                os << arg.first.symtab()->qualified_name() << "::";  // qualify non-own symbols
             os << arg.first->name() << "=" << arg.second;
         }
     }
