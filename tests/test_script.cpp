@@ -652,7 +652,8 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; inner 3 + inner 4 }; "
                         "outer 1; outer 2; __module.__n_fn") == "9;11;6");
     // * specializations with different types from the same template
-    CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; inner 3 + (inner 4l):T }; outer 2") == "11");
+    CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; inner 3 + (inner 4l):T }; outer 2") == "11");  // outer is actually deduced to Int32 -> Int32, because Add is defined only for same types
+    CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; (inner 3):T + (inner 4l):T }; outer 2; outer 3l") == "11;13L");
     CHECK(interpret("l0=fun a { l1b=fun b { a;b };"
                     " l1=fun b { l2=fun c { l3=fun d { a;b;c; l1b 42L; l1b d }; l3 b}; l2 a };"
                     " wrapped = fun x { l1b 'x'; l1 x }; wrapped a }; l0 2") == "2;'x';2;2;2;2;42L;2;2");

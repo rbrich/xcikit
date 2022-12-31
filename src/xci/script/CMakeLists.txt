@@ -12,6 +12,8 @@ add_library(xci-script
     ast/resolve_symbols.cpp
     ast/resolve_types.cpp
     parser/raw_string.cpp
+    typing/TypeChecker.cpp
+    typing/OverloadResolver.cpp
     Builtin.cpp
     Class.cpp
     Code.cpp
@@ -30,7 +32,6 @@ add_library(xci-script
     Stream.cpp
     SymbolTable.cpp
     TypeInfo.cpp
-    TypeChecker.cpp
     dump.cpp)
 add_library(xcikit::xci-script ALIAS xci-script)
 

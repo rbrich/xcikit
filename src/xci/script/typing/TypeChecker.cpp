@@ -5,7 +5,7 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "TypeChecker.h"
-#include "Error.h"
+#include <xci/script/Error.h>
 
 namespace xci::script {
 
