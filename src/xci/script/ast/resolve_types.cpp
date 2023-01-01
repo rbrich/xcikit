@@ -7,6 +7,7 @@
 #include "resolve_types.h"
 #include <xci/script/typing/TypeChecker.h>
 #include <xci/script/typing/OverloadResolver.h>
+#include <xci/script/typing/GenericResolver.h>
 #include <xci/script/Value.h>
 #include <xci/script/Builtin.h>
 #include <xci/script/Function.h>
@@ -25,7 +26,6 @@ using std::stringstream;
 using std::endl;
 
 using ranges::views::enumerate;
-using ranges::views::zip;
 
 
 class ResolveTypesVisitor final: public ast::VisitorExclTypes {
@@ -46,7 +46,7 @@ public:
                 const auto& source_loc = dfn.expression ?
                                 dfn.expression->source_loc : dfn.variable.identifier.source_loc;
                 resolve_return_type(fn.signature(), m_value_type,
-                                    dfn.symbol().get_scope(m_scope).type_args(), source_loc);
+                                    dfn.symbol().get_scope(m_scope), source_loc);
             }
         }
 
@@ -63,8 +63,8 @@ public:
 
     void visit(ast::Return& ret) override {
         ret.expression->apply(*this);
-        resolve_return_type(function().signature(), m_value_type, m_scope.type_args(),
-                ret.expression->source_loc);
+        resolve_return_type(function().signature(), m_value_type, m_scope,
+                            ret.expression->source_loc);
     }
 
     void visit(ast::Class& v) override {
@@ -566,7 +566,7 @@ public:
     void visit(ast::Cast& v) override {
         // resolve the inner expression -> m_value_type
         // (the Expression might use the specified type from `m_cast_type`)
-        resolve_generic_type(m_scope.type_args(), v.to_type);
+        resolve_generic_type(m_scope, v.to_type);
         m_cast_type = v.to_type;
         m_literal_value = true;
         m_symptr = {};
@@ -702,7 +702,7 @@ private:
 
     // Check return type matches and set it to concrete type if it's generic.
     void resolve_return_type(Signature& sig, const TypeInfo& deduced,
-                             TypeArgs& type_args, const SourceLocation& loc) const
+                             Scope& scope, const SourceLocation& loc) const
     {
         if (sig.return_type.is_unknown() || sig.return_type.is_generic()) {
             if (deduced.is_unknown() && !deduced.is_generic()) {
@@ -712,11 +712,11 @@ private:
             }
             if (deduced.is_callable() && &sig == &deduced.signature())
                 throw MissingExplicitType(loc);  // the return type is recursive!
-            specialize_arg(sig.return_type, deduced, type_args,
+            specialize_arg(sig.return_type, deduced, scope.type_args(),
                     [](const TypeInfo& exp, const TypeInfo& got) {
                         throw UnexpectedReturnType(exp, got);
                     });
-            resolve_type_vars(sig, type_args);  // fill in concrete types using new type var info
+            resolve_type_vars(sig, scope.type_args());  // fill in concrete types using new type var info
             sig.return_type = deduced;  // Unknown/var=0 not handled by resolve_type_vars
             return;
         }
