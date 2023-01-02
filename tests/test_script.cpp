@@ -508,14 +508,14 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     // alias (not a strong type)
     CHECK(interpret_std("X=Int; x:X = 42; x:Int64") == "42L");
     // tuple
-    std::string my_tuple = "type MyTuple = (String, Int); ";
+    const std::string my_tuple = "type MyTuple = (String, Int); ";
     CHECK(interpret(R"(TupleAlias = (String, Int); a:TupleAlias = "hello", 42; a)") == R"(("hello", 42))");
     CHECK(interpret(my_tuple + R"(a:MyTuple = "hello", 42; a)") == R"(("hello", 42))");
     CHECK(interpret(my_tuple + R"(type Tuple2 = (String, MyTuple); a:Tuple2 = ("hello", ("a", 1)); a)") == R"(("hello", ("a", 1)))");
     // struct
     CHECK(interpret(R"(a:(name: String, age: Int) = ("hello", 42); a)") == R"((name="hello", age=42))");  // anonymous
     CHECK(interpret(R"(Rec = (name: String, age: Int); a:Rec = (name="hello", age=42); a)") == R"((name="hello", age=42))");  // alias
-    std::string my_struct = "type MyStruct = (name:String, age:Int); ";  // named struct
+    const std::string my_struct = "type MyStruct = (name:String, age:Int); ";  // named struct
     CHECK(interpret(my_struct + R"( a:MyStruct = (name="hello", age=42); a)") == R"((name="hello", age=42))");
     CHECK(interpret(my_struct + R"( a:MyStruct = "hello", 42; a)") == R"((name="hello", age=42))");
     // struct defaults (left out fields get default "zero" value)
@@ -595,8 +595,8 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     CHECK(interpret_std("b = 3 + fun x {2*x} 2; b") == "7");
 
     // generic function in local scope
-    CHECK(interpret_std("outer = fun y { inner = fun x { x+1 }; inner y }; outer 2") == "3");
     CHECK(interpret("outer = fun y { inner = fun x { x;y }; inner 3 }; outer 2") == "3;2");
+    CHECK(interpret_std("outer = fun y { inner = fun x { x+1 }; inner y }; outer 2") == "3");
 
     // argument propagation:
     CHECK(interpret_std("f = fun a:Int { fun b:Int { a+b } }; f 1 2") == "3");  //  `f` returns a function which consumes the second arg
@@ -640,6 +640,7 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
                         "}; outer 2") == "4");
 
     // closure: fully generic
+    CHECK(interpret("outer = fun y { inner = fun x { x }; inner y }; outer 2") == "2");
     CHECK(interpret_std("outer = fun y { inner = fun x { x + y }; inner 3 * inner y }; outer 2") == "20");
     CHECK(interpret_std("outer = fun y {"
                         "  inner = fun x { x + y };"
@@ -650,7 +651,7 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     // multiple specializations
     // * each specialization is generated only once
     CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; inner 3 + inner 4 }; "
-                        "outer 1; outer 2; __module.__n_fn") == "9;11;6");
+                        "outer 1; outer 2; __module.__n_fn") == "9;11;5");
     // * specializations with different types from the same template
     CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; inner 3 + (inner 4l):T }; outer 2") == "11");  // outer is actually deduced to Int32 -> Int32, because Add is defined only for same types
     CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; (inner 3):T + (inner 4l):T }; outer 2; outer 3l") == "11;13L");

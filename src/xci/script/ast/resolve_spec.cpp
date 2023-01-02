@@ -1,14 +1,13 @@
-// resolve_types.cpp created on 2019-06-13 as part of xcikit project
+// resolve_spec.cpp created on 2022-08-13 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2022–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#include "resolve_types.h"
+#include "resolve_spec.h"
 #include <xci/script/typing/TypeChecker.h>
 #include <xci/script/typing/OverloadResolver.h>
 #include <xci/script/typing/GenericResolver.h>
-#include <xci/script/Value.h>
 #include <xci/script/Builtin.h>
 #include <xci/script/Function.h>
 #include <xci/script/Error.h>
@@ -23,19 +22,15 @@
 namespace xci::script {
 
 using std::stringstream;
-using std::endl;
-
-using ranges::views::enumerate;
 
 
-class ResolveTypesVisitor final: public ast::VisitorExclTypes {
+class ResolveSpecVisitor final: public ast::VisitorExclTypes {
 public:
     using VisitorExclTypes::visit;
 
-    explicit ResolveTypesVisitor(Scope& scope) : m_scope(scope) {}
+    explicit ResolveSpecVisitor(Scope& scope) : m_scope(scope) {}
 
     void visit(ast::Definition& dfn) override {
-        // Expression might use the specified type from `dfn.symbol().get_function(m_scope).signature()`
         if (dfn.expression) {
             dfn.expression->apply(*this);
 
@@ -46,7 +41,7 @@ public:
                 const auto& source_loc = dfn.expression ?
                                 dfn.expression->source_loc : dfn.variable.identifier.source_loc;
                 resolve_return_type(fn.signature(), m_value_type,
-                                    dfn.symbol().get_scope(m_scope), source_loc);
+                                    dfn.symbol().get_scope(m_scope).type_args(), source_loc);
             }
         }
 
@@ -55,11 +50,15 @@ public:
 
     void visit(ast::Invocation& inv) override {
         inv.expression->apply(*this);
+        auto res_type = m_value_type.effective_type();
+        // Unknown in intrinsics function
+        if (!res_type.is_void() && !res_type.is_unknown())
+            inv.type_id = get_type_id(std::move(res_type));
     }
 
     void visit(ast::Return& ret) override {
         ret.expression->apply(*this);
-        resolve_return_type(function().signature(), m_value_type, m_scope,
+        resolve_return_type(function().signature(), m_value_type, m_scope.type_args(),
                             ret.expression->source_loc);
     }
 
@@ -78,16 +77,10 @@ public:
     }
 
     void visit(ast::Tuple& v) override {
-        TypeChecker type_check(std::move(v.ti), std::move(m_cast_type));
-        // build TypeInfo from subtypes
-        std::vector<TypeInfo> subtypes;
-        subtypes.reserve(v.items.size());
         for (auto& item : v.items) {
             item->apply(*this);
-            subtypes.push_back(m_value_type.effective_type());
         }
-        m_value_type = type_check.resolve(TypeInfo(std::move(subtypes)), v.source_loc);
-        v.ti = m_value_type;
+        m_value_type = v.ti;
     }
 
     void visit(ast::List& v) override {
@@ -97,16 +90,16 @@ public:
         if (!type_check.eval_type() && v.items.empty())
             elem_type = ti_void();
         else for (auto& item : v.items) {
-            item->apply(*this);
-            if (item.get() == v.items.front().get()) {
-                // first item
-                elem_type = std::move(m_value_type);
-            } else {
-                // other items
-                if (elem_type != m_value_type)
-                    throw ListElemTypeMismatch(elem_type, m_value_type, item->source_loc);
+                item->apply(*this);
+                if (item.get() == v.items.front().get()) {
+                    // first item
+                    elem_type = std::move(m_value_type);
+                } else {
+                    // other items
+                    if (elem_type != m_value_type)
+                        throw ListElemTypeMismatch(elem_type, m_value_type, item->source_loc);
+                }
             }
-        }
         m_value_type = type_check.resolve(ti_list(std::move(elem_type)), v.source_loc);
         assert(m_value_type.is_list());
         if (m_value_type.elem_type().is_unknown() && type_check.eval_type())
@@ -150,7 +143,7 @@ public:
         m_value_type = v.ti;
 
         // Add the inferred struct type to module, point StructItem symbols to it
-        const Index index = module().add_type(v.ti);
+        Index index = module().add_type(v.ti);
         for (auto& item : v.items) {
             item.first.symbol->set_index(index);
         }
@@ -165,33 +158,9 @@ public:
         m_literal_value = false;
 
         switch (sym.type()) {
-            case Symbol::Instruction: {
-                // the instructions are low-level, untyped - set return type to Unknown
-                m_value_type = {};
-                // check number of args - it depends on Opcode
-                auto opcode = (Opcode) sym.index();
-                if (opcode <= Opcode::NoArgLast) {
-                    if (m_call_sig.n_args() != 0)
-                        throw UnexpectedArgumentCount(0, m_call_sig.n_args(), v.source_loc);
-                } else if (opcode <= Opcode::L1ArgLast) {
-                    if (m_call_sig.n_args() != 1)
-                        throw UnexpectedArgumentCount(1, m_call_sig.n_args(), v.source_loc);
-                } else {
-                    assert(opcode <= Opcode::L2ArgLast);
-                    if (m_call_sig.n_args() != 2)
-                        throw UnexpectedArgumentCount(2, m_call_sig.n_args(), v.source_loc);
-                }
-                // check type of args (they must be Int or Byte)
-                for (const auto&& [i, arg] : m_call_sig.args | enumerate) {
-                    const Type t = arg.type_info.type();
-                    if (t != Type::Unknown && t != Type::Byte && t != Type::Int32)
-                        throw UnexpectedArgumentType(i+1, ti_int32(),
-                                                     arg.type_info, arg.source_loc);
-                }
-                // cleanup - args are now fully processed
+            case Symbol::Instruction:
                 m_call_sig.clear();
                 break;
-            }
             case Symbol::TypeId: {
                 if (v.ti.is_unknown()) {
                     // try to resolve via known type args
@@ -200,15 +169,20 @@ public:
                     auto resolved = type_args.get(var);
                     if (resolved) {
                         v.ti = resolved;
+                    } else {
+                        // unresolved -> unknown type id
+                        m_value_type = {};
+                        return;
                     }
                 }
+                // Record the resolved Type ID for Compiler
+                v.index = get_type_id(v.ti);
                 m_value_type = ti_int32();
-                return;  // do not overwrite v.ti below
+                return;  // do not overwrite m_value_type below
             }
             case Symbol::Class:
             case Symbol::Instance:
-                // TODO
-                return;
+                break;
             case Symbol::Method: {
                 if (v.definition) {
                     const Function& fn = v.definition->symbol().get_function(m_scope);
@@ -224,8 +198,11 @@ public:
                 std::vector<TypeInfo> resolved_types;
                 for (Index i = 1; i <= cls.symtab().count(Symbol::TypeVar); ++i) {
                     auto symptr = cls.symtab().find_by_index(Symbol::TypeVar, i);
-                    resolved_types.push_back(inst_types.get(symptr));
+                    TypeInfo ti;
+                    get_type_arg(symptr, ti, inst_types);
+                    resolved_types.push_back(ti);
                 }
+
                 // find instance using resolved T
                 std::vector<Candidate> candidates;
                 for (auto inst_psym : v.sym_list) {
@@ -234,40 +211,42 @@ public:
                     if (inst_mod == nullptr)
                         inst_mod = &module();
                     auto& inst = inst_mod->get_instance(inst_psym->index());
-                    auto inst_fn_info = inst.get_function(cls_fn_idx);
-                    const auto& fn = inst_mod->get_scope(inst_fn_info.scope_index).function();
+                    auto inst_fn = inst.get_function(cls_fn_idx);
                     auto m = match_params(inst.types(), resolved_types);
-                    candidates.push_back({inst_mod, inst_fn_info.scope_index, inst_psym, TypeInfo{fn.signature_ptr()}, m});
+                    candidates.push_back({inst_mod, inst_fn.scope_index, inst_psym, TypeInfo{}, m});
                 }
 
                 auto [found, conflict] = find_best_candidate(candidates);
 
                 if (found && !conflict) {
-                    v.module = found->module;
-                    v.index = found->scope_index;
-                    m_value_type = found->type;
-                    break;
-                }
-
-                // Partial instantiation with generic args -> just resolve the type, not the concrete instance
-                if (conflict && found->match.is_generic()) {
-                    m_value_type = TypeInfo(cls_fn.signature_ptr());
-                    resolve_generic_type(m_value_type, inst_types);
+                    auto spec_idx = specialize_instance(found->symptr, cls_fn_idx, v.identifier.source_loc);
+                    if (spec_idx != no_index) {
+                        auto& inst = module().get_instance(spec_idx);
+                        auto inst_scope_idx = inst.get_function(cls_fn_idx).scope_index;
+                        v.module = &module();
+                        v.index = inst_scope_idx;
+                    } else {
+                        v.module = found->module;
+                        v.index = found->scope_index;
+                    }
+                    auto& fn = v.module->get_scope(v.index).function();
+                    m_value_type = TypeInfo{fn.signature_ptr()};
                     break;
                 }
 
                 // ERROR couldn't find single matching instance for `args`
                 stringstream o_candidates;
                 for (const auto& c : candidates) {
+                    auto& fn = c.module->get_scope(c.scope_index).function();
                     o_candidates << "   " << c.match << "  "
-                                 << c.type.signature() << endl;
+                                 << fn.signature() << std::endl;
                 }
                 stringstream o_ftype;
                 o_ftype << m_call_sig.signature();
                 if (conflict)
-                    throw FunctionConflict(v.identifier.name, o_ftype.str(), o_candidates.str(), v.identifier.source_loc);
+                    throw FunctionConflict(v.identifier.name, o_ftype.str(), o_candidates.str(), v.source_loc);
                 else
-                    throw FunctionNotFound(v.identifier.name, o_ftype.str(), o_candidates.str(), v.identifier.source_loc);
+                    throw FunctionNotFound(v.identifier.name, o_ftype.str(), o_candidates.str(), v.source_loc);
             }
             case Symbol::Function:
             case Symbol::StructItem: {
@@ -282,60 +261,55 @@ public:
                     }
                 }
 
-                // Resolve overload
-                auto res = resolve_overload(v.sym_list, v.identifier);
-                // The referenced function must have been defined
-                if (!res.type.effective_type())
-                    throw MissingExplicitType(v.identifier.name, v.identifier.source_loc);
-
-                if (res.symptr->type() == Symbol::Function) {
-                    v.module = res.module;
-                    v.index = res.scope_index;
-                    m_value_type = res.type;
-                    m_symptr = res.symptr;
+                // Specialize
+                if (sym.type() == Symbol::Function) {
+                    auto specialized = specialize_function(v.identifier.symbol, v.identifier.source_loc);
+                    if (specialized) {
+                        v.module = &module();
+                        v.index = specialized->scope_index;
+                        v.ti = std::move(specialized->type_info);
+                    } else {
+                        // If the function was passed as parameter, save its symbol for later specialization
+                        m_symptr = v.identifier.symbol;
+                    }
                     if (v.definition) {
                         m_call_sig.clear();
                     }
                 } else {
-                    assert(res.symptr->type() == Symbol::StructItem);
-                    m_value_type = res.type.signature().return_type;
+                    assert(sym.type() == Symbol::StructItem);
                     m_call_sig.clear();
                 }
-                v.identifier.symbol = res.symptr;
-                break;
-            }
-            case Symbol::Module:
-                m_value_type = TypeInfo{Type::Module};
-                break;
-            case Symbol::Parameter: {
-                const auto* ref_scope = m_scope.find_parent_scope(&symtab);
-                const auto& sig_type = ref_scope->function().parameter(sym.index());
-                m_value_type = sig_type;
                 break;
             }
             case Symbol::Value:
-                if (sym.index() == no_index) {
-                    // Intrinsics
-                    // __value - expects a single parameter
-                    if (m_call_sig.n_args() != 1)
-                        throw UnexpectedArgumentCount(1, m_call_sig.n_args(), v.source_loc);
-                    // cleanup - args are now fully processed
-                    m_call_sig.clear();
-                    // __value returns index (Int32)
-                    m_value_type = ti_int32();
-                } else {
-                    m_value_type = v.ti;
+            case Symbol::Module:
+            case Symbol::Parameter: {
+                const auto* ref_scope = m_scope.find_parent_scope(&symtab);
+                if (ref_scope) {
+                    const auto& sig_type = ref_scope->function().parameter(sym.index());
+                    const auto* spec_arg = ref_scope->get_spec_arg(sym.index());
+                    if (spec_arg) {
+                        auto specialized = specialize_function(spec_arg->symptr, spec_arg->source_loc);
+                        if (specialized) {
+                            specialize_arg(sig_type, specialized->type_info, m_scope.type_args(), {});
+                            v.ti = std::move(specialized->type_info);
+                            break;
+                        }
+                    }
+                    //v.ti = sig_type;
                 }
                 break;
+            }
             case Symbol::TypeName:
             case Symbol::TypeVar:
-                // TODO
-                return;
+                break;
             case Symbol::Nonlocal:
             case Symbol::Unresolved:
                 XCI_UNREACHABLE;
         }
-        v.ti = m_value_type;
+        m_value_type = v.ti;
+        if (m_value_type.is_generic())
+            resolve_generic_type(m_value_type, m_scope);
     }
 
     void visit(ast::Call& v) override {
@@ -350,17 +324,18 @@ public:
         TypeChecker type_check(std::move(m_type_info), std::move(m_cast_type));
 
         // resolve each argument
-        std::vector<CallArg> args;
+        std::vector<CallArg> call_args;
         for (auto& arg : v.args) {
             m_literal_value = true;
             m_symptr = {};
             arg->apply(*this);
             assert(arg->source_loc);
-            args.push_back({m_value_type.effective_type(), arg->source_loc, m_symptr, m_literal_value});
+            call_args.push_back({m_value_type.effective_type(), arg->source_loc, m_symptr, m_literal_value});
         }
         // append args to m_call_args (note that m_call_args might be used
         // when evaluating each argument, so we cannot push to them above)
-        std::move(args.begin(), args.end(), std::back_inserter(m_call_sig.args));
+        m_call_sig.clear();
+        std::move(call_args.begin(), call_args.end(), std::back_inserter(m_call_sig.args));
         m_call_sig.return_type = std::move(type_check.eval_type());
         m_literal_value = false;
 
@@ -368,50 +343,24 @@ public:
         // (it may use args types for overload resolution)
         v.callable->apply(*this);
 
-        if (!m_value_type.is_callable() && !m_call_sig.empty()) {
-            throw UnexpectedArgument(1, m_value_type, m_call_sig.args[0].source_loc);
-        }
-
-        if (m_value_type.is_callable()) {
-            // result is new signature with args removed (applied)
-            auto new_signature = consume_params_from_call_args(m_value_type.signature(), v);
-            if (new_signature->params.empty()) {
-                if (v.definition == nullptr) {
-                    // effective type of zero-arg function is its return type
-                    m_value_type = new_signature->return_type;
-                } else {
-                    // Not really calling, just defining, e.g. `f = compose u v`
-                    // Keep the return type as is, making it `() -> <lambda type>`
-                    m_value_type = TypeInfo{new_signature};
-                }
-                v.partial_args = 0;
-            } else {
-                if (v.partial_args != 0) {
-                    // partial function call
-                    if (v.definition != nullptr) {
-                        v.partial_index = v.definition->symbol().get_scope_index(m_scope);
-                    } else {
-                        SymbolTable& fn_symtab = function().symtab().add_child("?/partial");
-                        Function fn {module(), fn_symtab};
-                        auto fn_idx = module().add_function(std::move(fn)).index;
-                        v.partial_index = module().add_scope(Scope{module(), fn_idx, &m_scope});
-                        m_scope.add_subscope(v.partial_index);
-                    }
-                    auto& fn = module().get_scope(v.partial_index).function();
-                    fn.signature() = *new_signature;
-                    fn.signature().nonlocals.clear();
-                    fn.signature().partial.clear();
-                    for (const auto& arg : m_call_sig.args) {
-                        fn.add_partial(TypeInfo{arg.type_info});
-                    }
-                    assert(!fn.has_any_generic());
-                    fn.set_compile();
-                }
-                m_value_type = TypeInfo{new_signature};
+        // Second pass of args, now with resolved types
+        // (if a generic function was passed in args, it can be specialized now)
+        call_args = std::move(m_call_sig.args);
+        unsigned i = 0;
+        for (auto& arg : v.args) {
+            if (i >= call_args.size())
+                break;
+            auto call_ti = std::move(call_args[i++].type_info);
+            if (call_ti.is_callable()) {
+                m_call_sig.load_from(call_ti.signature(), arg->source_loc);
+                arg->apply(*this);
             }
         }
+
         m_call_sig.clear();
-        v.ti = m_value_type;
+        m_value_type = v.ti;
+        if (m_value_type.is_generic())
+            resolve_generic_type(m_value_type, m_scope);
     }
 
     void visit(ast::OpCall& v) override {
@@ -419,25 +368,11 @@ public:
     }
 
     void visit(ast::Condition& v) override {
-        TypeInfo expr_type;
         for (auto& item : v.if_then_expr) {
             item.first->apply(*this);
-            if (m_value_type != ti_bool())
-                throw ConditionNotBool();
             item.second->apply(*this);
-            // check that all then-expressions have the same type
-            if (&item == &v.if_then_expr.front()) {
-                expr_type = m_value_type;
-            } else {
-                if (expr_type != m_value_type)
-                    throw BranchTypeMismatch(expr_type, m_value_type);
-            }
         }
-
         v.else_expr->apply(*this);
-        if (expr_type != m_value_type)
-            throw BranchTypeMismatch(expr_type, m_value_type);
-
         m_literal_value = false;
     }
 
@@ -476,15 +411,54 @@ public:
         }
         auto& scope = module().get_scope(v.scope_index);
 
+        // This is a nested function in a function we're currently specializing.
+        // Make sure we work on specialized nested function, not original (generic) one.
+        const bool parent_is_specialized = scope.parent()->has_function() &&
+                                           scope.parent()->function().is_specialized();
+        if (parent_is_specialized) {
+            assert(!scope.function().is_specialized());
+            auto clone_fn_idx = clone_function(scope);
+            auto& clone_fn = module().get_function(clone_fn_idx);
+            clone_fn.ensure_ast_copy();
+            scope.set_function_index(clone_fn_idx);
+        }
+
         Function& fn = scope.function();
 
         m_value_type = TypeInfo{fn.signature_ptr()};
         m_literal_value = false;
-        v.call_args = m_call_sig.n_args();
+        m_value_type = v.ti;
 
-        if (fn.has_generic_params()) {
-            resolve_types(scope, v.body);
-            m_value_type = TypeInfo{fn.signature_ptr()};
+        if (parent_is_specialized) {
+            if (!v.definition) {
+                fn.set_specialized();
+                specialize_to_call_args(scope, fn.ast(), v.source_loc);
+                if (fn.has_any_generic()) {
+                    stringstream sig_str;
+                    sig_str << fn.name() << ':' << fn.signature();
+                    throw UnexpectedGenericFunction(sig_str.str(), v.source_loc);
+                }
+                m_value_type = TypeInfo{fn.signature_ptr()};
+            }
+        } else if (fn.has_generic_params()) {
+            if (!v.definition) {
+                // immediately called or returned generic function
+                // -> try to instantiate the specialization
+                auto clone_fn_idx = clone_function(scope);
+                auto& clone_fn = module().get_function(clone_fn_idx);
+                clone_fn.set_specialized();
+                scope.set_function_index(clone_fn_idx);
+                specialize_to_call_args(scope, clone_fn.ast(), v.source_loc);
+                if (clone_fn.has_any_generic()) {
+                    stringstream sig_str;
+                    sig_str << clone_fn.name() << ':' << clone_fn.signature();
+                    throw UnexpectedGenericFunction(sig_str.str(), v.source_loc);
+                }
+                m_value_type = TypeInfo{clone_fn.signature_ptr()};
+            }/* else {
+                resolve_spec(scope, v.body);
+                m_value_type = TypeInfo{fn.signature_ptr()};
+            }*/
         } else {
             // compile body and resolve return type
             if (v.definition) {
@@ -493,15 +467,12 @@ public:
                 auto& fn_dfn = symptr.get_function(m_scope);
                 fn_dfn.set_signature(m_value_type.signature_ptr());
             }
-            resolve_types(scope, v.body);
+            resolve_spec(scope, v.body);
             m_value_type = TypeInfo{fn.signature_ptr()};
         }
 
-        // parameterless function is equivalent to its return type (eager evaluation)
-        /* while (m_value_type.is_callable() && m_value_type.signature().params.empty()) {
-            m_value_type = m_value_type.signature().return_type;
-        }*/
-
+        if (m_value_type.is_generic())
+            resolve_generic_type(m_value_type, m_scope);
         v.ti = m_value_type;
     }
 
@@ -510,7 +481,7 @@ public:
     void visit(ast::Cast& v) override {
         // resolve the inner expression -> m_value_type
         // (the Expression might use the specified type from `m_cast_type`)
-        resolve_generic_type(m_scope, v.to_type);
+        resolve_generic_type(v.to_type, m_scope.type_args());
         m_cast_type = v.to_type;
         m_literal_value = true;
         m_symptr = {};
@@ -537,23 +508,31 @@ private:
     Module& module() const { return m_scope.module(); }
     Function& function() const { return m_scope.function(); }
 
-    /// store resolved param TypeVars in current scope
-    void store_resolved_param_type_vars(const TypeArgs& type_args)
-    {
-        for (const auto& s : function().symtab()) {
-            SymbolPointer var = function().symtab().find(s);
-            if (s.type() == Symbol::TypeVar) {
-                TypeInfo ti;
-                get_type_arg(var, ti, type_args);
-                if (ti)
-                    m_scope.type_args().set(var, ti);
-            }
+    Index get_type_id(TypeInfo&& type_info) {
+        // is the type builtin?
+        const Module& builtin_module = module().module_manager().builtin_module();
+        Index type_id = builtin_module.find_type(type_info);
+        if (type_id >= 32) {
+            // add to current module
+            type_id = 32 + module().add_type(std::move(type_info));
         }
+        return type_id;
+    }
+
+    Index get_type_id(const TypeInfo& type_info) {
+        // is the type builtin?
+        const Module& builtin_module = module().module_manager().builtin_module();
+        Index type_id = builtin_module.find_type(type_info);
+        if (type_id >= 32) {
+            // add to current module
+            type_id = 32 + module().add_type(type_info);
+        }
+        return type_id;
     }
 
     // Check return type matches and set it to concrete type if it's generic.
     void resolve_return_type(Signature& sig, const TypeInfo& deduced,
-                             Scope& scope, const SourceLocation& loc) const
+                             TypeArgs& type_args, const SourceLocation& loc) const
     {
         if (sig.return_type.is_unknown() || sig.return_type.is_generic()) {
             if (deduced.is_unknown() && !deduced.is_generic()) {
@@ -563,11 +542,11 @@ private:
             }
             if (deduced.is_callable() && &sig == &deduced.signature())
                 throw MissingExplicitType(loc);  // the return type is recursive!
-            specialize_arg(sig.return_type, deduced, scope.type_args(),
+            specialize_arg(sig.return_type, deduced, type_args,
                     [](const TypeInfo& exp, const TypeInfo& got) {
                         throw UnexpectedReturnType(exp, got);
                     });
-            resolve_type_vars(sig, scope.type_args());  // fill in concrete types using new type var info
+            resolve_type_vars(sig, type_args);  // fill in concrete types using new type var info
             sig.return_type = deduced;  // Unknown/var=0 not handled by resolve_type_vars
             return;
         }
@@ -577,163 +556,228 @@ private:
 
     // Specialize a generic function:
     // * use m_call_args to resolve actual types of type variable
+    // * resolve function body (deduce actual return type)
     // * use the deduced return type to resolve type variables in generic return type
-    std::shared_ptr<Signature> specialize_to_call_args(const std::shared_ptr<Signature>& signature) const
+    // Modifies `fn` in place - it should be already copied.
+    // Throw when the signature doesn't match the call args or deduced return type.
+    void specialize_to_call_args(Scope& scope, const ast::Block& body, const SourceLocation& loc)
     {
-        auto res = std::make_shared<Signature>(*signature);  // a copy to work on (modified below)
-        auto sig = res;
-        TypeArgs call_type_args;
-        size_t i = 0;
-        size_t arg_n = 1;
-        for (const auto& arg : m_call_sig.args) {
-            if (i >= sig->params.size()) {
-                if (sig->return_type.type() == Type::Function) {
-                    // continue with specializing args of a returned function
-                    resolve_type_vars(*sig, call_type_args);
-                    auto new_ret = std::make_shared<Signature>(sig->return_type.signature());
-                    sig->return_type = TypeInfo{new_ret};
-                    sig = std::move(new_ret);
-                    i = 0;
-                } else {
-                    throw UnexpectedArgument(arg_n, TypeInfo{signature}, arg.source_loc);
+//        assert(!scope.has_type_args());
+//        scope.type_args() = m_scope.type_args();
+//        assert(!scope.has_spec_args());
+//        scope.spec_args() = m_scope.spec_args();
+
+        {
+            size_t i = 0;
+            size_t arg_n = 1;
+            auto sig = scope.function().signature_ptr();
+            resolve_type_vars(*sig, scope);
+            for (const auto& arg : m_call_sig.args) {
+                if (i >= sig->params.size()) {
+                    if (sig->return_type.type() == Type::Function) {
+                        // continue with specializing args of a returned function
+                        resolve_type_vars(*sig, scope.type_args());
+                        auto new_ret = std::make_shared<Signature>(sig->return_type.signature());
+                        sig->return_type = TypeInfo{new_ret};
+                        sig = std::move(new_ret);
+                        i = 0;
+                    } else {
+                        throw UnexpectedArgument(arg_n, TypeInfo{scope.function().signature_ptr()}, arg.source_loc);
+                    }
+                }
+                const auto& sig_type = sig->params[i++];
+                if (arg.type_info.is_unknown())
+                    continue;
+                specialize_arg(sig_type, arg.type_info, scope.type_args(),
+                               [arg_n, &loc](const TypeInfo& exp, const TypeInfo& got) {
+                                   throw UnexpectedArgumentType(arg_n, exp, got, loc);
+                               });
+                ++arg_n;
+                if (arg.type_info.is_callable() && arg.symptr) {
+                    scope.add_spec_arg(i-1, arg.source_loc, arg.symptr);
                 }
             }
-            const auto& sig_type = sig->params[i++];
-//            if (arg.type_info.is_unknown())
-//                continue;
-            if (sig_type.is_generic()) {
-                specialize_arg(sig_type, arg.type_info,
-                               call_type_args,
-                               [](const TypeInfo& exp, const TypeInfo& got) {});
-            }
-            ++arg_n;
-//            if (arg.type_info.is_callable() && arg.symptr) {
-//                scope.add_spec_arg(i-1, arg.source_loc, arg.symptr);
-//            }
+            // resolve generic vars to received types
+            resolve_type_vars(*sig, scope.type_args());
         }
-        if (sig->return_type.is_generic()) {
-            specialize_arg(sig->return_type, m_call_sig.return_type,
-                           call_type_args,
-                           [](const TypeInfo& exp, const TypeInfo& got) {});
-        }
-        // resolve generic vars to received types
-        if (!call_type_args.empty()) {
-            resolve_type_vars(*res, call_type_args);
-            return res;
-        }
-        return {};
+        auto& signature = scope.function().signature();
+        // resolve function body to get actual return type
+        auto sig_ret = signature.return_type;
+        resolve_spec(scope, body);
+        auto deduced_ret = signature.return_type;
+        // resolve generic return type
+        if (!deduced_ret.is_unknown() && deduced_ret != sig_ret)
+            specialize_arg(sig_ret, deduced_ret, scope.type_args(),
+                           [](const TypeInfo& exp, const TypeInfo& got) {
+                               throw UnexpectedReturnType(exp, got);
+                           });
+        resolve_generic_type(sig_ret, scope.type_args());
+        signature.return_type = sig_ret;
     }
 
-    /// Find matching function overload according to m_call_args
-    Candidate resolve_overload(const SymbolPointerList& sym_list, const ast::Identifier& identifier)
+    struct Specialized {
+        TypeInfo type_info;
+        Index scope_index;
+    };
+
+    Index clone_function(const Scope& scope) const
     {
-        std::vector<Candidate> candidates;
-        for (auto symptr : sym_list) {
-            // resolve nonlocal
-            while (symptr->depth() != 0)
-                symptr = symptr->ref();
-
-            auto* symmod = symptr.symtab()->module();
-            assert(symmod != nullptr);
-            Index scope_idx;
-            std::shared_ptr<Signature> sig_ptr;
-            if (symptr->type() == Symbol::Function) {
-                scope_idx = symptr.get_generic_scope_index();
-                auto& fn = symmod->get_scope(scope_idx).function();
-                sig_ptr = fn.signature_ptr();
-            } else {
-                assert(symptr->type() == Symbol::StructItem);
-                scope_idx = no_index;
-                sig_ptr = std::make_shared<Signature>();
-                const auto& struct_type = symptr.get_type();
-                sig_ptr->add_parameter(TypeInfo{struct_type});
-                const auto* item_type = struct_type.struct_item_by_name(symptr->name());
-                assert(item_type != nullptr);
-                sig_ptr->set_return_type(*item_type);
-            }
-            auto match = match_signature(*sig_ptr);
-            candidates.push_back({symmod, scope_idx, symptr, TypeInfo{std::move(sig_ptr)}, match});
+        const auto& fn = scope.function();
+        auto clone_fn_idx = module().add_function(Function(module(), fn.symtab())).index;
+        auto& clone_fn = module().get_function(clone_fn_idx);
+        auto clone_sig = std::make_shared<Signature>(fn.signature());  // copy, not ref
+        clone_fn.set_signature(clone_sig);
+        if (fn.is_generic()) {
+            clone_fn.set_ast(fn.ast());
         }
-
-        auto [found, conflict] = find_best_candidate(candidates);
-
-        if (found && !conflict) {
-            if (found->symptr->type() == Symbol::Function) {
-                auto specialized = specialize_to_call_args(found->type.signature_ptr());
-                if (specialized) {
-                    auto r = *found;
-                    r.type = TypeInfo(std::move(specialized));
-                    return r;
-                }
-            }
-            return *found;
-        }
-
-        // format the error message (candidates)
-        stringstream o_candidates;
-        for (const auto& c : candidates) {
-            o_candidates << "   " << c.match << "  "
-                         << c.type.signature() << endl;
-        }
-        stringstream o_ftype;
-        o_ftype << m_call_sig.signature();
-        if (conflict) {
-            // ERROR found multiple matching functions
-            throw FunctionConflict(identifier.name, o_ftype.str(), o_candidates.str(), identifier.source_loc);
-        } else {
-            // ERROR couldn't find matching function for `args`
-            throw FunctionNotFound(identifier.name, o_ftype.str(), o_candidates.str(), identifier.source_loc);
-        }
+        return clone_fn_idx;
     }
 
-    // Consume params from `orig_signature` according to `m_call_args`, creating new signature
-    std::shared_ptr<Signature> consume_params_from_call_args(const Signature& orig_signature, ast::Call& v)
+    Index clone_scope(Scope& scope, Index fn_idx) const
     {
-        auto res = std::make_shared<Signature>(orig_signature);
-        int i = 0;
-        for (const auto& arg : m_call_sig.args) {
-            ++i;
-            // check there are more params to consume
-            while (res->params.empty()) {
-                if (res->return_type.type() == Type::Function) {
-                    // collapse returned function, start consuming its params
-                    res = std::make_shared<Signature>(res->return_type.signature());
-                    ++v.wrapped_execs;
-                    v.partial_args = 0;
-                } else {
-                    throw UnexpectedArgument(i, TypeInfo{std::make_shared<Signature>(orig_signature)}, arg.source_loc);
-                }
+        auto fscope_idx = module().add_scope(Scope{module(), fn_idx, scope.parent()});
+        auto& fscope = module().get_scope(fscope_idx);
+        fscope.copy_subscopes(scope);
+        return fscope_idx;
+    }
+
+    /// Given a generic function, create a copy and specialize it to call args.
+    /// * create a copy of original generic function in this module
+    /// * copy function's AST
+    /// * keep original symbol table (with relative references, like parameter #1 at depth -2)
+    /// Symbols in copied AST still point to original generic function.
+    /// \param symptr   Pointer to symbol pointing to original function
+    /// \returns TypeInfo and Index of the specialized function in this module
+    std::optional<Specialized> specialize_function(SymbolPointer symptr, const SourceLocation& loc)
+    {
+        auto& scope = symptr.get_scope(m_scope);
+        auto& fn = scope.function();
+        if (m_scope.find_parent_scope(&fn.symtab()))
+            return {};  // recursive call - cannot specialize parent function from nested
+
+        const auto& generic_scope = symptr.get_generic_scope();
+        const auto& generic_fn = generic_scope.function();
+
+        if (&scope != &generic_scope && !fn.is_specialized()) {
+            // This scope is already a clone made for parent specialized function.
+            // Reuse it and specialize the function inside.
+            if (scope.function_index() == generic_scope.function_index()) {
+                auto clone_fn_idx = clone_function(scope);
+                auto& clone_fn = module().get_function(clone_fn_idx);
+                clone_fn.ensure_ast_copy();
+                scope.set_function_index(clone_fn_idx);
             }
-            // check type of next param
-            const auto m = match_type(arg.type_info, res->params.front());
-            if (!(m.is_exact() || m.is_generic() || (m.is_coerce() && arg.literal_value))) {
-                throw UnexpectedArgumentType(i, res->params[0], arg.type_info, arg.source_loc);
-            }
-            if (m.is_coerce()) {
-                // Update type_info of the coerced literal argument
-                m_cast_type = res->params.front();
-                v.args[i - 1]->apply(*this);
-            }
-            if (res->params.front().is_callable()) {
-                // resolve overload in case the arg is a function that was specialized
-                auto orig_call_sig = std::move(m_call_sig);
-                m_call_sig.load_from(res->params.front().signature(), arg.source_loc);
-                v.args[i - 1]->apply(*this);
-                m_call_sig = std::move(orig_call_sig);
-            }
-            // resolve arg if it's a type var and the signature has a known type in its place
-            if (arg.type_info.is_generic() && !res->params.front().is_generic()) {
-                specialize_arg(arg.type_info, res->params.front(),
-                        m_scope.type_args(),  // current function, not the called one
-                        [i, &arg](const TypeInfo& exp, const TypeInfo& got) {
-                            throw UnexpectedArgumentType(i, exp, got, arg.source_loc);
-                        });
-            }
-            // consume next param
-            ++ v.partial_args;
-            res->params.erase(res->params.begin());
+            auto& fspec = scope.function();
+            fspec.set_specialized();
+            specialize_to_call_args(scope, fspec.ast(), loc);
+            const auto scope_idx = symptr.get_scope_index(m_scope);
+            module().add_spec_function(symptr, scope_idx);
+            return std::make_optional<Specialized>({
+                    TypeInfo{fspec.signature_ptr()},
+                    scope_idx
+            });
         }
+
+        if (generic_fn.is_specialized())
+            return {};  // already specialized
+        if (!generic_fn.is_generic() || !generic_fn.has_any_generic())
+            return {};  // not generic, nothing to specialize
+        if (generic_fn.signature().params.size() > m_call_sig.n_args())
+            return {};  // not enough call args
+        if (!function().is_specialized()
+            && (!scope.parent()->has_function() || !scope.parent()->function().is_specialized()))
+        {
+            // when not specializing the parent function...
+            if (std::all_of(m_call_sig.args.cbegin(), m_call_sig.args.cend(),
+                            [](const CallArg& arg) {
+                                return arg.type_info.is_generic();
+                            }))
+                return {};  // do not specialize with generic args
+        }
+
+        // Check already created specializations if one of them matches
+        for (auto spec_scope_idx : module().get_spec_functions(symptr)) {
+            auto& spec_scope = module().get_scope(spec_scope_idx);
+            if (spec_scope.parent() != scope.parent())
+                continue;  // the specialization is from a different scope hierarchy
+            auto& spec_fn = spec_scope.function();
+            const auto& spec_sig = spec_fn.signature_ptr();
+            if (match_signature(*spec_sig).is_exact())
+                return std::make_optional<Specialized>({
+                        TypeInfo{spec_sig},
+                        spec_scope_idx
+                });
+        }
+
+        auto fspec_idx = clone_function(generic_scope);
+        auto& fspec = module().get_function(fspec_idx);
+        fspec.set_specialized();
+        fspec.ensure_ast_copy();
+        auto fscope_idx = clone_scope(scope, fspec_idx);
+        auto& fscope = module().get_scope(fscope_idx);
+        specialize_to_call_args(fscope, fspec.ast(), loc);
+
+        auto res = std::make_optional<Specialized>({
+                TypeInfo{fspec.signature_ptr()},
+                fscope_idx
+        });
+
+        assert(symptr->depth() == 0);
+        // add to specialized functions in this module
+        module().add_spec_function(symptr, fscope_idx);
         return res;
+    }
+
+    /// Specialize a generic instance and all functions it contains
+    /// * create a specialized copy of the instance in module()
+    /// * create specialized copies of all instance functions in module()
+    /// * refer to original symbols (no new symbols are created)
+    /// \param symptr       SymbolPointer to the generic instance
+    /// \param cls_fn_idx   Index in class of the called method, to help resolving instance types
+    /// \param loc          SourceLocation of an expression that is being compiled
+    /// \returns Index of the specialized instance in module()
+    ///          or no_index if the original instance is not generic
+    Index specialize_instance(SymbolPointer symptr,
+                              Index cls_fn_idx,
+                              const SourceLocation& loc)
+    {
+        auto* inst_mod = symptr.symtab()->module();
+        auto& inst = inst_mod->get_instance(symptr->index());
+        if (!inst.is_generic())
+            return no_index;
+
+        // Resolve instance types using the m_call_args
+        // and the called method (instance function with known Index)
+        const auto& called_inst_fn = inst.get_function(cls_fn_idx).symptr.get_function(m_scope);
+        auto resolved_types = resolve_instance_types(called_inst_fn.signature());
+        auto inst_types = inst.types();
+        for (auto& it : inst_types)
+            resolve_generic_type(it, resolved_types);
+
+        // Check already created specializations if one of them matches
+        for (auto spec_idx : module().get_spec_instances(symptr)) {
+            auto& spec_inst = module().get_instance(spec_idx);
+            if (spec_inst.types() == inst_types)
+                return spec_idx;
+        }
+
+        Instance spec(inst.class_(), inst.symtab());
+        spec.set_types(inst_types);
+
+        for (Index i = 0; i != inst.num_functions(); ++i) {
+            auto fn_info = inst.get_function(i);
+            auto specialized = specialize_function(fn_info.symptr, loc);
+            if (specialized) {
+                spec.set_function(i, specialized->scope_index, fn_info.symptr);
+            } else {
+                spec.set_function(i, fn_info.scope_index, fn_info.symptr);
+            }
+        }
+
+        // add to specialized instance in this module
+        auto spec_idx = module().add_instance(std::move(spec)).index;
+        module().add_spec_instance(symptr, spec_idx);
+        return spec_idx;
     }
 
     /// \returns total MatchScore of all parameters and return value, or mismatch
@@ -853,9 +897,9 @@ private:
 };
 
 
-void resolve_types(Scope& scope, const ast::Block& block)
+void resolve_spec(Scope& scope, const ast::Block& block)
 {
-    ResolveTypesVisitor visitor {scope};
+    ResolveSpecVisitor visitor {scope};
     for (const auto& stmt : block.statements) {
         stmt->apply(visitor);
     }
