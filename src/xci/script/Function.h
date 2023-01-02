@@ -258,13 +258,13 @@ public:
     }
 
     std::pair<iterator, bool> set(SymbolPointer sym, TypeInfo&& ti) {
-        if (ti.is_unknown())
+        if (ti.is_unknown() && !ti.is_generic())
             return { m_type_args.end(), true };  // "inserted" Unknown to nowhere
         return m_type_args.try_emplace(sym, std::move(ti));
     }
 
     std::pair<iterator, bool> set(SymbolPointer sym, const TypeInfo& ti) {
-        if (ti.is_unknown())
+        if (ti.is_unknown() && (!ti.is_generic() || ti.generic_var() == sym))
             return { m_type_args.end(), true };  // "inserted" Unknown to nowhere
         return m_type_args.try_emplace(sym, ti);
     }

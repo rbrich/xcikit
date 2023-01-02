@@ -115,7 +115,6 @@ public:
         if (m_value_type.elem_type().is_generic())
             throw MissingExplicitType(v.source_loc);
         v.ti = m_value_type;
-        v.elem_type_id = get_type_id(m_value_type.elem_type());
     }
 
     void visit(ast::StructInit& v) override {
@@ -377,7 +376,8 @@ public:
             auto new_signature = consume_params_from_call_args(m_value_type.signature(), v);
             if (new_signature->params.empty()) {
                 if (v.definition == nullptr) {
-                    // effective type of zero-arg function is its return type
+                    // all args consumed, or a zero-arg function being called
+                    // -> effective type is the return type
                     m_value_type = new_signature->return_type;
                 } else {
                     // Not really calling, just defining, e.g. `f = compose u v`
@@ -510,7 +510,7 @@ public:
     void visit(ast::Cast& v) override {
         // resolve the inner expression -> m_value_type
         // (the Expression might use the specified type from `m_cast_type`)
-        resolve_generic_type(m_scope, v.to_type);
+        resolve_generic_type(v.to_type, m_scope);
         m_cast_type = v.to_type;
         m_literal_value = true;
         m_symptr = {};
@@ -689,7 +689,7 @@ private:
     // Consume params from `orig_signature` according to `m_call_args`, creating new signature
     std::shared_ptr<Signature> consume_params_from_call_args(const Signature& orig_signature, ast::Call& v)
     {
-        auto res = std::make_shared<Signature>(orig_signature);
+        auto res = std::make_shared<Signature>(orig_signature);  // a copy to work on (modified below)
         int i = 0;
         for (const auto& arg : m_call_sig.args) {
             ++i;
@@ -705,19 +705,20 @@ private:
                 }
             }
             // check type of next param
-            const auto m = match_type(arg.type_info, res->params.front());
+            const auto& sig_param = res->params.front();
+            const auto m = match_type(arg.type_info, sig_param);
             if (!(m.is_exact() || m.is_generic() || (m.is_coerce() && arg.literal_value))) {
-                throw UnexpectedArgumentType(i, res->params[0], arg.type_info, arg.source_loc);
+                throw UnexpectedArgumentType(i, sig_param, arg.type_info, arg.source_loc);
             }
             if (m.is_coerce()) {
                 // Update type_info of the coerced literal argument
-                m_cast_type = res->params.front();
+                m_cast_type = sig_param;
                 v.args[i - 1]->apply(*this);
             }
-            if (res->params.front().is_callable()) {
+            if (sig_param.is_callable()) {
                 // resolve overload in case the arg is a function that was specialized
                 auto orig_call_sig = std::move(m_call_sig);
-                m_call_sig.load_from(res->params.front().signature(), arg.source_loc);
+                m_call_sig.load_from(sig_param.signature(), arg.source_loc);
                 v.args[i - 1]->apply(*this);
                 m_call_sig = std::move(orig_call_sig);
             }

@@ -16,10 +16,13 @@
 namespace xci::script {
 
 
-void resolve_generic_type(const TypeArgs& type_args, TypeInfo& sig);
-void resolve_generic_type(const Scope& scope, TypeInfo& sig);
+void get_type_arg(SymbolPointer var, TypeInfo& sig, const TypeArgs& type_args);
+
+void resolve_generic_type(TypeInfo& sig, const TypeArgs& type_args);
+void resolve_generic_type(TypeInfo& sig, const Scope& scope);
 
 void resolve_type_vars(Signature& signature, const TypeArgs& type_args);
+void resolve_type_vars(Signature& signature, const Scope& scope);
 
 void specialize_arg(const TypeInfo& sig, const TypeInfo& deduced,
                     TypeArgs& type_args,

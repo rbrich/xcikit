@@ -13,39 +13,63 @@ namespace xci::script {
 using ranges::views::zip;
 
 
-void resolve_generic_type(const TypeArgs& type_args, TypeInfo& sig)
+static void set_type_arg(SymbolPointer var, const TypeInfo& deduced, TypeArgs& type_args,
+                         const std::function<void(const TypeInfo& exp, const TypeInfo& got)>& exc_cb)
+{
+    auto [it, inserted] = type_args.set(var, deduced);
+    if (!inserted) {
+        TypeInfo& existing = it->second;
+        if (!match_type(existing, deduced))
+            exc_cb(existing, deduced);
+        if (existing.is_unknown()) {
+            if (existing.generic_var())
+                set_type_arg(existing.generic_var(), deduced, type_args, exc_cb);
+            else
+                existing = deduced;
+        }
+    }
+}
+
+
+void get_type_arg(SymbolPointer var, TypeInfo& sig, const TypeArgs& type_args)
+{
+    for (;;) {
+        auto ti = type_args.get(var);
+        if (ti.is_unknown() && ti.generic_var()) {
+            sig = ti;
+            var = ti.generic_var();
+            continue;
+        }
+        if (ti) {
+            sig = ti;
+        }
+        break;
+    }
+}
+
+
+void resolve_generic_type(TypeInfo& sig, const TypeArgs& type_args)
 {
     switch (sig.type()) {
         case Type::Unknown: {
             auto var = sig.generic_var();
             if (var) {
-                for (;;) {
-                    auto ti = type_args.get(var);
-                    if (ti.is_unknown() && ti.generic_var()) {
-                        sig = ti;
-                        var = ti.generic_var();
-                        continue;
-                    }
-                    if (ti) {
-                        sig = ti;
-                    }
-                    break;
-                }
+                get_type_arg(var, sig, type_args);
             }
             break;
         }
         case Type::List:
-            resolve_generic_type(type_args, sig.elem_type());
+            resolve_generic_type(sig.elem_type(), type_args);
             break;
         case Type::Tuple:
             for (auto& sub : sig.subtypes())
-                resolve_generic_type(type_args, sub);
+                resolve_generic_type(sub, type_args);
             break;
         case Type::Function:
             sig = TypeInfo(std::make_shared<Signature>(sig.signature()));  // copy
             for (auto& prm : sig.signature().params)
-                resolve_generic_type(type_args, prm);
-            resolve_generic_type(type_args, sig.signature().return_type);
+                resolve_generic_type(prm, type_args);
+            resolve_generic_type(sig.signature().return_type, type_args);
             break;
         default:
             // Int32 etc. (never generic)
@@ -54,7 +78,7 @@ void resolve_generic_type(const TypeArgs& type_args, TypeInfo& sig)
 }
 
 
-void resolve_generic_type(const Scope& scope, TypeInfo& sig)
+void resolve_generic_type(TypeInfo& sig, const Scope& scope)
 {
     switch (sig.type()) {
         case Type::Unknown: {
@@ -81,17 +105,17 @@ void resolve_generic_type(const Scope& scope, TypeInfo& sig)
             break;
         }
         case Type::List:
-            resolve_generic_type(scope, sig.elem_type());
+            resolve_generic_type(sig.elem_type(), scope);
             break;
         case Type::Tuple:
             for (auto& sub : sig.subtypes())
-                resolve_generic_type(scope, sub);
+                resolve_generic_type(sub, scope);
             break;
         case Type::Function:
             sig = TypeInfo(std::make_shared<Signature>(sig.signature()));  // copy
             for (auto& prm : sig.signature().params)
-                resolve_generic_type(scope, prm);
-            resolve_generic_type(scope, sig.signature().return_type);
+                resolve_generic_type(prm, scope);
+            resolve_generic_type(sig.signature().return_type, scope);
             break;
         default:
             // Int32 etc. (never generic)
@@ -103,27 +127,18 @@ void resolve_generic_type(const Scope& scope, TypeInfo& sig)
 void resolve_type_vars(Signature& signature, const TypeArgs& type_args)
 {
     for (auto& arg_type : signature.params) {
-        resolve_generic_type(type_args, arg_type);
+        resolve_generic_type(arg_type, type_args);
     }
-    resolve_generic_type(type_args, signature.return_type);
+    resolve_generic_type(signature.return_type, type_args);
 }
 
 
-static void set_type_arg(SymbolPointer var, const TypeInfo& deduced, TypeArgs& type_args,
-                  const std::function<void(const TypeInfo& exp, const TypeInfo& got)>& exc_cb)
+void resolve_type_vars(Signature& signature, const Scope& scope)
 {
-    auto [it, inserted] = type_args.set(var, deduced);
-    if (!inserted) {
-        TypeInfo& existing = it->second;
-        if (!match_type(existing, deduced))
-            exc_cb(existing, deduced);
-        if (existing.is_unknown()) {
-            if (existing.generic_var())
-                set_type_arg(existing.generic_var(), deduced, type_args, exc_cb);
-            else
-                existing = deduced;
-        }
+    for (auto& arg_type : signature.params) {
+        resolve_generic_type(arg_type, scope);
     }
+    resolve_generic_type(signature.return_type, scope);
 }
 
 
