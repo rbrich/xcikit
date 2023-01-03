@@ -115,3 +115,4 @@ workflows:
       - conan_package:
           name: Ubuntu 22.04 - Clang 14 - Conan package
           image: ubuntu
+          build-args: -o xcikit:tools=False -o xcikit:examples=False -o xcikit:tests=False -o xcikit:benchmarks=False

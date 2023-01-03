@@ -57,11 +57,11 @@ class XcikitConan(ConanFile):
         "text": True,
         "widgets": True,
 
-        # Also build and install:
-        "tools": False,
-        "examples": False,
-        "tests": False,
-        "benchmarks": False,
+        # Also build and package:
+        "tools": True,
+        "examples": True,
+        "tests": True,
+        "benchmarks": True,
 
         # System dependencies (instead of Conan):
         "system_fmt": False,
