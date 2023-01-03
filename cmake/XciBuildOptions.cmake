@@ -15,6 +15,13 @@ option(FAIL_ON_WARNINGS "Treat warnings as errors. Applies also to clang-tidy." 
 option(ENABLE_TIDY "Run clang-tidy on each compiled file, when available." OFF)
 option(ENABLE_IWYU "Run iwyu (Include What You Use) on each compiled file, when available." OFF)
 
+# default build type + possible values for cmake gui
+if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build." FORCE)
+endif()
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+
 # optimizations
 if(CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
     set(MINSIZE ON)
@@ -27,10 +34,6 @@ option(ENABLE_CCACHE "Use ccache as compiler launcher, when available." ON)
 
 # cosmetics
 option(FORCE_COLORS "Force colored compiler output." OFF)
-
-# Build type options
-set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo" "")
-message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)  # override to "default" for shared libs
