@@ -2,6 +2,10 @@
 # 3.16.3 in Emscripten Docker image
 # 3.16 introduced CMAKE_MESSAGE_INDENT
 cmake_minimum_required(VERSION 3.16...3.25)
+
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+include(XciBuildType)
+
 file(STRINGS "VERSION" XCI_VERSION)
 project(xcikit
     LANGUAGES CXX
@@ -65,7 +69,7 @@ option(XCI_DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
 set(XCI_CXX_STANDARD 20)
 
 set(XCIKIT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
 if (CMAKE_CROSSCOMPILING)
     # Needed for Emscripten to find packages in build dir
     list(APPEND CMAKE_FIND_ROOT_PATH "/")
