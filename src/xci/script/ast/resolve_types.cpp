@@ -373,6 +373,7 @@ public:
 
         if (m_value_type.is_callable()) {
             // result is new signature with args removed (applied)
+            resolve_generic_args_to_signature(m_value_type.signature(), v);
             auto new_signature = consume_params_from_call_args(m_value_type.signature(), v);
             if (new_signature->params.empty()) {
                 if (v.definition == nullptr) {
@@ -538,7 +539,7 @@ private:
     Function& function() const { return m_scope.function(); }
 
     /// store resolved param TypeVars in current scope
-    void store_resolved_param_type_vars(const TypeArgs& type_args)
+    void store_resolved_param_type_vars(Scope& scope, const TypeArgs& type_args)
     {
         for (const auto& s : function().symtab()) {
             SymbolPointer var = function().symtab().find(s);
@@ -546,7 +547,7 @@ private:
                 TypeInfo ti;
                 get_type_arg(var, ti, type_args);
                 if (ti)
-                    m_scope.type_args().set(var, ti);
+                    scope.type_args().set(var, ti);
             }
         }
     }
@@ -586,7 +587,7 @@ private:
         size_t i = 0;
         size_t arg_n = 1;
         for (const auto& arg : m_call_sig.args) {
-            if (i >= sig->params.size()) {
+            while (i >= sig->params.size()) {
                 if (sig->return_type.type() == Type::Function) {
                     // continue with specializing args of a returned function
                     resolve_type_vars(*sig, call_type_args);
@@ -735,6 +736,39 @@ private:
             res->params.erase(res->params.begin());
         }
         return res;
+    }
+
+    // Resolve generic `m_call_args` that are concrete in `orig_signature`
+    void resolve_generic_args_to_signature(const Signature& signature, ast::Call& v)
+    {
+        auto* sig = &signature;
+        size_t i = 0;
+        TypeArgs param_type_args;
+        for (const auto& arg : m_call_sig.args) {
+            // check there are more params to consume
+            while (i >= sig->params.size()) {
+                if (sig->return_type.type() == Type::Function) {
+                    // continue resolving params of returned function
+                    sig = &sig->return_type.signature();
+                    i = 0;
+                } else {
+                    throw UnexpectedArgument(i+1, TypeInfo{std::make_shared<Signature>(signature)}, arg.source_loc);
+                }
+            }
+            // next param
+            const auto& sig_type = sig->params[i++];
+            if (!sig_type.is_generic()) {
+                // resolve arg if it's a type var and the signature has a known type in its place
+                if (arg.type_info.is_generic()) {
+                    specialize_arg(arg.type_info, sig_type,
+                                   param_type_args,
+                                   [i, &arg](const TypeInfo& exp, const TypeInfo& got) {
+                                       throw UnexpectedArgumentType(i, exp, got, arg.source_loc);
+                                   });
+                }
+            }
+        }
+        store_resolved_param_type_vars(m_scope, param_type_args);
     }
 
     /// \returns total MatchScore of all parameters and return value, or mismatch
