@@ -266,8 +266,8 @@ public:
                     auto specialized = specialize_function(v.identifier.symbol, v.identifier.source_loc);
                     if (specialized) {
                         v.module = &module();
-                        v.index = specialized->scope_index;
-                        v.ti = std::move(specialized->type_info);
+                        v.index = specialized.scope_index;
+                        v.ti = std::move(specialized.type_info);
                     } else {
                         // If the function was passed as parameter, save its symbol for later specialization
                         m_symptr = v.identifier.symbol;
@@ -617,7 +617,8 @@ private:
 
     struct Specialized {
         TypeInfo type_info;
-        Index scope_index;
+        Index scope_index = no_index;
+        operator bool() const noexcept { return scope_index != no_index; }
     };
 
     Index clone_function(const Scope& scope) const
@@ -633,7 +634,7 @@ private:
         return clone_fn_idx;
     }
 
-    Index clone_scope(Scope& scope, Index fn_idx) const
+    Index clone_scope(const Scope& scope, Index fn_idx) const
     {
         auto fscope_idx = module().add_scope(Scope{module(), fn_idx, scope.parent()});
         auto& fscope = module().get_scope(fscope_idx);
@@ -648,7 +649,7 @@ private:
     /// Symbols in copied AST still point to original generic function.
     /// \param symptr   Pointer to symbol pointing to original function
     /// \returns TypeInfo and Index of the specialized function in this module
-    std::optional<Specialized> specialize_function(SymbolPointer symptr, const SourceLocation& loc)
+    Specialized specialize_function(SymbolPointer symptr, const SourceLocation& loc)
     {
         auto& scope = symptr.get_scope(m_scope);
         auto& fn = scope.function();
@@ -665,6 +666,7 @@ private:
                 auto clone_fn_idx = clone_function(scope);
                 auto& clone_fn = module().get_function(clone_fn_idx);
                 clone_fn.ensure_ast_copy();
+                scope.set_module(module());
                 scope.set_function_index(clone_fn_idx);
             }
             auto& fspec = scope.function();
@@ -672,10 +674,7 @@ private:
             specialize_to_call_args(scope, fspec.ast(), loc);
             const auto scope_idx = symptr.get_scope_index(m_scope);
             module().add_spec_function(symptr, scope_idx);
-            return std::make_optional<Specialized>({
-                    TypeInfo{fspec.signature_ptr()},
-                    scope_idx
-            });
+            return {TypeInfo{fspec.signature_ptr()}, scope_idx};
         }
 
         if (generic_fn.is_specialized())
@@ -703,10 +702,7 @@ private:
             auto& spec_fn = spec_scope.function();
             const auto& spec_sig = spec_fn.signature_ptr();
             if (match_signature(*spec_sig).is_exact())
-                return std::make_optional<Specialized>({
-                        TypeInfo{spec_sig},
-                        spec_scope_idx
-                });
+                return {TypeInfo{spec_sig}, spec_scope_idx};
         }
 
         auto fspec_idx = clone_function(generic_scope);
@@ -717,15 +713,10 @@ private:
         auto& fscope = module().get_scope(fscope_idx);
         specialize_to_call_args(fscope, fspec.ast(), loc);
 
-        auto res = std::make_optional<Specialized>({
-                TypeInfo{fspec.signature_ptr()},
-                fscope_idx
-        });
-
         assert(symptr->depth() == 0);
         // add to specialized functions in this module
         module().add_spec_function(symptr, fscope_idx);
-        return res;
+        return {TypeInfo{fspec.signature_ptr()}, fscope_idx};
     }
 
     /// Specialize a generic instance and all functions it contains
@@ -768,7 +759,7 @@ private:
             auto fn_info = inst.get_function(i);
             auto specialized = specialize_function(fn_info.symptr, loc);
             if (specialized) {
-                spec.set_function(i, specialized->scope_index, fn_info.symptr);
+                spec.set_function(i, specialized.scope_index, fn_info.symptr);
             } else {
                 spec.set_function(i, fn_info.scope_index, fn_info.symptr);
             }

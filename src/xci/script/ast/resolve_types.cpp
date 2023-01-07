@@ -662,9 +662,12 @@ private:
             if (found->symptr->type() == Symbol::Function) {
                 auto specialized = specialize_to_call_args(found->type.signature_ptr());
                 if (specialized) {
-                    auto r = *found;
-                    r.type = TypeInfo(std::move(specialized));
-                    return r;
+                    return Candidate {
+                        .module = found->module,
+                        .scope_index = found->scope_index,
+                        .symptr = found->symptr,
+                        .type = TypeInfo(std::move(specialized)),
+                    };
                 }
             }
             return *found;
