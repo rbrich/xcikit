@@ -84,7 +84,7 @@ auto Module::add_scope(Scope&& scope) -> ScopeIdx
     auto scope_idx = m_scopes.add(std::move(scope)).index;
     auto& rscope = get_scope(scope_idx);
     if (rscope.function_index() != no_index) {
-        auto& symtab = get_function(rscope.function_index()).symtab();
+        auto& symtab = rscope.module().get_function(rscope.function_index()).symtab();
         if (symtab.scope() == nullptr) {
             symtab.set_scope(&rscope);
         }

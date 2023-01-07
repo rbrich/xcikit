@@ -269,6 +269,12 @@ public:
         return m_type_args.try_emplace(sym, ti);
     }
 
+    void add_from(const TypeArgs& other) {
+        for (const auto& it : other.m_type_args) {
+            set(it.first, it.second);
+        }
+    }
+
     // Must not query Unknown or a symbol that is not in the map
     TypeInfo& operator[] (SymbolPointer sym) {
         return m_type_args[sym];
@@ -289,12 +295,14 @@ public:
     explicit Scope(Module& module, Index function_idx, Scope* parent_scope);
 
     Module& module() const { return *m_module; }
-    Scope* parent() const { return m_parent_scope; }
+    void set_module(Module& mod) { m_module = &mod; }
 
     bool has_function() const { return m_function != no_index; }
     Function& function() const;
     void set_function_index(Index fn_idx) { m_function = fn_idx; }
     Index function_index() const { return m_function; }
+
+    Scope* parent() const { return m_parent_scope; }
 
     // Nested functions
     Index add_subscope(Index scope_idx);

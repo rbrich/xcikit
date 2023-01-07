@@ -10,6 +10,7 @@
 #include "TypeChecker.h"
 #include <xci/script/TypeInfo.h>
 #include <xci/script/Source.h>
+#include <xci/script/Function.h>
 
 namespace xci::script {
 
@@ -61,6 +62,8 @@ struct Candidate {
 /// Find best match from candidates
 std::pair<const Candidate*, bool> find_best_candidate(const std::vector<Candidate>& candidates);
 
+/// Resolve type variables in a function signature according to call signature
+TypeArgs specialize_signature(const std::shared_ptr<Signature>& signature, const CallSignature& call_sig);
 
 }  // namespace xci::script
 

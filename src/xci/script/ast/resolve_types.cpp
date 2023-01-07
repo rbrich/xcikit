@@ -576,55 +576,6 @@ private:
             throw UnexpectedReturnType(sig.return_type, deduced);
     }
 
-    // Specialize a generic function:
-    // * use m_call_args to resolve actual types of type variable
-    // * use the deduced return type to resolve type variables in generic return type
-    std::shared_ptr<Signature> specialize_to_call_args(const std::shared_ptr<Signature>& signature) const
-    {
-        auto res = std::make_shared<Signature>(*signature);  // a copy to work on (modified below)
-        auto sig = res;
-        TypeArgs call_type_args;
-        size_t i = 0;
-        size_t arg_n = 1;
-        for (const auto& arg : m_call_sig.args) {
-            while (i >= sig->params.size()) {
-                if (sig->return_type.type() == Type::Function) {
-                    // continue with specializing args of a returned function
-                    resolve_type_vars(*sig, call_type_args);
-                    auto new_ret = std::make_shared<Signature>(sig->return_type.signature());
-                    sig->return_type = TypeInfo{new_ret};
-                    sig = std::move(new_ret);
-                    i = 0;
-                } else {
-                    throw UnexpectedArgument(arg_n, TypeInfo{signature}, arg.source_loc);
-                }
-            }
-            const auto& sig_type = sig->params[i++];
-//            if (arg.type_info.is_unknown())
-//                continue;
-            if (sig_type.is_generic()) {
-                specialize_arg(sig_type, arg.type_info,
-                               call_type_args,
-                               [](const TypeInfo& exp, const TypeInfo& got) {});
-            }
-            ++arg_n;
-//            if (arg.type_info.is_callable() && arg.symptr) {
-//                scope.add_spec_arg(i-1, arg.source_loc, arg.symptr);
-//            }
-        }
-        if (sig->return_type.is_generic()) {
-            specialize_arg(sig->return_type, m_call_sig.return_type,
-                           call_type_args,
-                           [](const TypeInfo& exp, const TypeInfo& got) {});
-        }
-        // resolve generic vars to received types
-        if (!call_type_args.empty()) {
-            resolve_type_vars(*res, call_type_args);
-            return res;
-        }
-        return {};
-    }
-
     /// Find matching function overload according to m_call_args
     Candidate resolve_overload(const SymbolPointerList& sym_list, const ast::Identifier& identifier)
     {
@@ -659,14 +610,17 @@ private:
         auto [found, conflict] = find_best_candidate(candidates);
 
         if (found && !conflict) {
-            if (found->symptr->type() == Symbol::Function) {
-                auto specialized = specialize_to_call_args(found->type.signature_ptr());
-                if (specialized) {
+            if (found->symptr->type() == Symbol::Function && found->type.is_generic()) {
+                auto call_type_args = specialize_signature(found->type.signature_ptr(), m_call_sig);
+                if (!call_type_args.empty()) {
+                    // resolve generic vars to received types
+                    auto new_sig = std::make_shared<Signature>(found->type.signature());  // copy
+                    resolve_type_vars(*new_sig, call_type_args);
                     return Candidate {
                         .module = found->module,
                         .scope_index = found->scope_index,
                         .symptr = found->symptr,
-                        .type = TypeInfo(std::move(specialized)),
+                        .type = TypeInfo(std::move(new_sig)),
                     };
                 }
             }

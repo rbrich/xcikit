@@ -562,44 +562,20 @@ private:
     // Throw when the signature doesn't match the call args or deduced return type.
     void specialize_to_call_args(Scope& scope, const ast::Block& body, const SourceLocation& loc)
     {
-//        assert(!scope.has_type_args());
-//        scope.type_args() = m_scope.type_args();
+//        if (scope.parent() != &m_scope)
+//            scope.type_args().add_from(m_scope.type_args());
 //        assert(!scope.has_spec_args());
 //        scope.spec_args() = m_scope.spec_args();
 
         {
-            size_t i = 0;
-            size_t arg_n = 1;
             auto sig = scope.function().signature_ptr();
             resolve_type_vars(*sig, scope);
-            for (const auto& arg : m_call_sig.args) {
-                if (i >= sig->params.size()) {
-                    if (sig->return_type.type() == Type::Function) {
-                        // continue with specializing args of a returned function
-                        resolve_type_vars(*sig, scope.type_args());
-                        auto new_ret = std::make_shared<Signature>(sig->return_type.signature());
-                        sig->return_type = TypeInfo{new_ret};
-                        sig = std::move(new_ret);
-                        i = 0;
-                    } else {
-                        throw UnexpectedArgument(arg_n, TypeInfo{scope.function().signature_ptr()}, arg.source_loc);
-                    }
-                }
-                const auto& sig_type = sig->params[i++];
-                if (arg.type_info.is_unknown())
-                    continue;
-                specialize_arg(sig_type, arg.type_info, scope.type_args(),
-                               [arg_n, &loc](const TypeInfo& exp, const TypeInfo& got) {
-                                   throw UnexpectedArgumentType(arg_n, exp, got, loc);
-                               });
-                ++arg_n;
-                if (arg.type_info.is_callable() && arg.symptr) {
-                    scope.add_spec_arg(i-1, arg.source_loc, arg.symptr);
-                }
-            }
+            TypeArgs call_type_args = specialize_signature(sig, m_call_sig);
             // resolve generic vars to received types
-            resolve_type_vars(*sig, scope.type_args());
+            resolve_type_vars(*sig, call_type_args);
+            scope.type_args().add_from(call_type_args);
         }
+
         auto& signature = scope.function().signature();
         // resolve function body to get actual return type
         auto sig_ret = signature.return_type;

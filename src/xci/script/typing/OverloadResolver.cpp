@@ -5,6 +5,7 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "OverloadResolver.h"
+#include "GenericResolver.h"
 
 namespace xci::script {
 
@@ -30,6 +31,44 @@ std::pair<const Candidate*, bool> find_best_candidate(const std::vector<Candidat
         }
     }
     return {found, conflict};
+}
+
+
+TypeArgs specialize_signature(const std::shared_ptr<Signature>& signature, const CallSignature& call_sig)
+{
+    auto sig = signature;
+    TypeArgs call_type_args;
+    size_t i = 0;
+    size_t arg_n = 1;
+    for (const auto& arg : call_sig.args) {
+        while (i >= sig->params.size()) {
+            if (sig->return_type.type() == Type::Function) {
+                // continue with specializing args of a returned function
+                sig = sig->return_type.signature_ptr();
+                i = 0;
+            } else {
+                throw UnexpectedArgument(arg_n, TypeInfo{signature}, arg.source_loc);
+            }
+        }
+        const auto& sig_type = sig->params[i++];
+        //            if (arg.type_info.is_unknown())
+        //                continue;
+        if (sig_type.is_generic()) {
+            specialize_arg(sig_type, arg.type_info,
+                           call_type_args,
+                           [](const TypeInfo& exp, const TypeInfo& got) {});
+        }
+        ++arg_n;
+        //            if (arg.type_info.is_callable() && arg.symptr) {
+        //                scope.add_spec_arg(i-1, arg.source_loc, arg.symptr);
+        //            }
+    }
+    if (sig->return_type.is_generic()) {
+        specialize_arg(sig->return_type, call_sig.return_type,
+                       call_type_args,
+                       [](const TypeInfo& exp, const TypeInfo& got) {});
+    }
+    return call_type_args;
 }
 
 
