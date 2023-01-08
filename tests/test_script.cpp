@@ -672,8 +672,14 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     CHECK(interpret(def_succ_compose + "plustwo = compose succ succ; plustwo 42") == "44");
     CHECK(interpret(def_succ_compose + "plustwo = {compose succ succ}; plustwo 42") == "44");
     CHECK(interpret(def_succ_compose + "plustwo = compose succ succ; plusfour = compose plustwo plustwo;  plustwo 42; plusfour 42") == "44;46");
-    // TODO: compose generic functions
-    //CHECK(interpret_std("compose = fun<X,Y,Z> f:(Y->Z) g:(X->Y) -> Z { fun x:X -> Z { f (g x) } }; same = compose pred succ; same 42") == "42");
+    // compose generic functions
+    CHECK(interpret("call = fun<X,Y> f:(X->Y) -> (X->Y) { fun x:X { f x } }; ident = fun<T> y:T -> T { y }; same={call ident}; same 42") == "42");
+    CHECK(interpret("call = fun<X,Y> f:(X->Y) { fun x:X { f x } }; ident = fun y { y }; same={call ident}; same 42") == "42");
+    //CHECK(interpret("call = fun<X,Y> f:(X->Y) { fun x { f x } }; ident = fun y { y }; same={call ident}; same 42") == "42");
+    //CHECK(interpret("call = fun f { fun x { f x } }; ident = fun y { y }; same={call ident}; same 42") == "42");
+
+    CHECK(interpret_std("compose = fun<X,Y,Z> f:(Y->Z) g:(X->Y) -> (X->Z) { fun x:X -> Z { f (g x) } }; same = {compose pred succ}; same 42") == "42");
+    //CHECK(interpret_std("compose = fun<X,Y,Z> f:(Y->Z) g:(X->Y) -> (X->Z) { fun x:X -> Z { f (g x) } }; same = compose pred succ; same 42") == "42");
     //CHECK(interpret_std(def_compose + "same = compose pred succ; same 42") == "42");
 }
 
@@ -682,6 +688,8 @@ TEST_CASE( "Partial function call", "[script][interpreter]" )
 {
     // partial call: `add 1` returns a lambda which takes single argument
     CHECK(interpret_std("(add 1) 2") == "3");
+    CHECK(interpret_std("(add (1+3)) 2") == "6");
+    //CHECK(interpret_std("(add (add 1)) 2 3") == "6");
     CHECK(interpret_std("{add 1} 2") == "3");
     CHECK(interpret_std("f=add 1; f 2") == "3");
     CHECK(interpret_std("f={add 1}; f 2") == "3");

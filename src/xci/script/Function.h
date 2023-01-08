@@ -338,11 +338,6 @@ public:
         SymbolPointer symptr;
     };
 
-    void add_spec_arg(Index index, const SourceLocation& source_loc, SymbolPointer symptr);
-    const SpecArg* get_spec_arg(Index index) const;
-    const std::vector<SpecArg>& spec_args() const { return m_spec_args; }
-    bool has_spec_args() const noexcept { return !m_spec_args.empty(); }
-
     const TypeArgs& type_args() const { return m_type_args; }
     TypeArgs& type_args() { return m_type_args; }
     bool has_type_args() const noexcept { return !m_type_args.empty(); }
@@ -353,7 +348,6 @@ private:
     Scope* m_parent_scope = nullptr;  // matches `m_symtab.parent()`, but can be a specialized function, while symtab is only lexical
     std::vector<Index> m_subscopes;  // nested scopes (Index into module scopes)
     std::vector<Nonlocal> m_nonlocals;
-    std::vector<SpecArg> m_spec_args;  // if this scope is specialization of a function, this contains symbols passed as args (they can be generic functions)
     TypeArgs m_type_args;  // resolved type variables or explicit type args
 };
 

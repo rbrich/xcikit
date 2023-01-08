@@ -291,7 +291,6 @@ public:
                     v.module = res.module;
                     v.index = res.scope_index;
                     m_value_type = res.type;
-                    m_symptr = res.symptr;
                     if (v.definition) {
                         m_call_sig.clear();
                     }
@@ -349,17 +348,19 @@ public:
         TypeChecker type_check(std::move(m_type_info), std::move(m_cast_type));
 
         // resolve each argument
-        std::vector<CallArg> args;
+        std::vector<CallArg> call_args;
+        auto orig_call_sig = std::move(m_call_sig);
         for (auto& arg : v.args) {
+            m_call_sig.clear();
             m_literal_value = true;
-            m_symptr = {};
             arg->apply(*this);
             assert(arg->source_loc);
-            args.push_back({m_value_type.effective_type(), arg->source_loc, m_symptr, m_literal_value});
+            call_args.push_back({m_value_type.effective_type(), arg->source_loc, m_literal_value});
         }
         // append args to m_call_args (note that m_call_args might be used
         // when evaluating each argument, so we cannot push to them above)
-        std::move(args.begin(), args.end(), std::back_inserter(m_call_sig.args));
+        m_call_sig = std::move(orig_call_sig);
+        std::move(call_args.begin(), call_args.end(), std::back_inserter(m_call_sig.args));
         m_call_sig.return_type = std::move(type_check.eval_type());
         m_literal_value = false;
 
@@ -411,6 +412,7 @@ public:
                 m_value_type = TypeInfo{new_signature};
             }
         }
+
         m_call_sig.clear();
         v.ti = m_value_type;
     }
@@ -445,10 +447,9 @@ public:
     void visit(ast::WithContext& v) override {
         // resolve type of context (StructInit leads to incomplete struct type)
         m_literal_value = true;
-        m_symptr = {};
         v.context->apply(*this);
         // lookup the enter function with the resolved context type
-        m_call_sig.add_arg({m_value_type, v.context->source_loc, m_symptr, m_literal_value});
+        m_call_sig.add_arg({m_value_type, v.context->source_loc, m_literal_value});
         m_call_sig.return_type = ti_unknown();
         v.enter_function.apply(*this);
         m_call_sig.args.clear();
@@ -457,12 +458,11 @@ public:
         // re-resolve type of context (match actual struct type as found by resolving `with` function)
         m_cast_type = enter_sig.params[0];
         m_literal_value = true;
-        m_symptr = {};
         v.context->apply(*this);
         assert(m_value_type == enter_sig.params[0]);
         // lookup the leave function, it's arg type is same as enter functions return type
         v.leave_type = enter_sig.return_type.effective_type();
-        m_call_sig.add_arg({v.leave_type, v.context->source_loc, m_symptr, m_literal_value});
+        m_call_sig.add_arg({v.leave_type, v.context->source_loc, m_literal_value});
         m_call_sig.return_type = ti_void();
         v.leave_function.apply(*this);
         m_call_sig.clear();
@@ -514,7 +514,6 @@ public:
         resolve_generic_type(v.to_type, m_scope);
         m_cast_type = v.to_type;
         m_literal_value = true;
-        m_symptr = {};
         v.expression->apply(*this);
         m_cast_type = {};
         // Cast to Void -> don't call the cast function, just drop the expression result from stack
@@ -525,7 +524,7 @@ public:
             return;
         }
         // lookup the cast function with the resolved arg/return types
-        m_call_sig.add_arg({m_value_type, v.expression->source_loc, m_symptr, m_literal_value});
+        m_call_sig.add_arg({m_value_type, v.expression->source_loc, m_literal_value});
         m_call_sig.return_type = v.to_type;
         v.cast_function->apply(*this);
         // set the effective type of the Cast expression and clean the call types
@@ -838,7 +837,6 @@ private:
     TypeInfo m_value_type;  // inferred type of the value
     TypeInfo m_cast_type;   // target type of Cast
     bool m_literal_value = true;  // the m_value_type is a literal (for Call args, set false if not)
-    SymbolPointer m_symptr;  // the symptr related to m_value_type (for specialization of functions passed as arguments)
 
     // signature for resolving overloaded functions and templates
     CallSignature m_call_sig;   // actual argument types + expected return type

@@ -59,9 +59,6 @@ TypeArgs specialize_signature(const std::shared_ptr<Signature>& signature, const
                            [](const TypeInfo& exp, const TypeInfo& got) {});
         }
         ++arg_n;
-        //            if (arg.type_info.is_callable() && arg.symptr) {
-        //                scope.add_spec_arg(i-1, arg.source_loc, arg.symptr);
-        //            }
     }
     if (sig->return_type.is_generic()) {
         specialize_arg(sig->return_type, call_sig.return_type,

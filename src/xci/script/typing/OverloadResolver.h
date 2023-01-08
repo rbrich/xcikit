@@ -18,7 +18,6 @@ namespace xci::script {
 struct CallArg {
     TypeInfo type_info;
     SourceLocation source_loc;
-    SymbolPointer symptr;  // needed for specialization of a generic function passed as an arg
     bool literal_value;
 };
 
@@ -36,7 +35,7 @@ struct CallSignature {
     void load_from(const Signature& sig, const SourceLocation& source_loc) {
         args.clear();
         for (const auto& p : sig.params)
-            args.push_back({p, source_loc, {}, false});
+            args.push_back({p, source_loc, false});
         return_type = sig.return_type;
     }
 
