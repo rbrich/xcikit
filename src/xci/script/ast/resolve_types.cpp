@@ -366,7 +366,7 @@ public:
         // (it may use args types for overload resolution)
         v.callable->apply(*this);
 
-        if (!m_value_type.is_callable() && !m_call_sig.empty()) {
+        if (!m_value_type.is_callable() && !m_value_type.is_unknown() && !m_call_sig.empty()) {
             throw UnexpectedArgument(1, m_value_type, m_call_sig.args[0].source_loc);
         }
 
@@ -388,6 +388,9 @@ public:
             } else {
                 m_value_type = TypeInfo{new_signature};
             }
+        } else if (m_value_type.is_unknown()) {
+            // if the callable has generic type F, we cannot process it now - reset to Unknown
+            m_value_type = {};
         }
 
         m_call_sig.clear();
@@ -768,17 +771,10 @@ void resolve_types(Scope& scope, const ast::Block& block)
         stmt->apply(visitor);
     }
     auto& fn = scope.function();
-    if (fn.has_any_generic()) {
-        // the resolved function is generic - not allowed in main scope
-        if (scope.parent() == nullptr) {
-            stringstream sig_str;
-            sig_str << fn.name() << ':' << fn.signature();
-            throw UnexpectedGenericFunction(sig_str.str());
-        }
-        return;
+    if (!fn.has_any_generic()) {
+        // not generic -> compile
+        fn.set_compile();
     }
-    // not generic -> compile
-    fn.set_compile();
 }
 
 
