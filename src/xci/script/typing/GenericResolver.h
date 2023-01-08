@@ -28,6 +28,8 @@ void specialize_arg(const TypeInfo& sig, const TypeInfo& deduced,
                     TypeArgs& type_args,
                     const std::function<void(const TypeInfo& exp, const TypeInfo& got)>& exc_cb);
 
+/// check `scope` for TypeVar symbols and store their resolved type to scope
+void store_resolved_param_type_vars(Scope& scope, const TypeArgs& type_args);
 
 }  // namespace xci::script
 

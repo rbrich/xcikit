@@ -187,4 +187,19 @@ void specialize_arg(const TypeInfo& sig, const TypeInfo& deduced,
 }
 
 
+void store_resolved_param_type_vars(Scope& scope, const TypeArgs& type_args)
+{
+    auto& symtab = scope.function().symtab();
+    for (const auto& s : symtab) {
+        const SymbolPointer var = symtab.find(s);
+        if (s.type() == Symbol::TypeVar) {
+            TypeInfo ti;
+            get_type_arg(var, ti, type_args);
+            if (ti)
+                scope.type_args().set(var, ti);
+        }
+    }
+}
+
+
 }  // namespace xci::script

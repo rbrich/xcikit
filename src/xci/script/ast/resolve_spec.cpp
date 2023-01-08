@@ -143,7 +143,7 @@ public:
         m_value_type = v.ti;
 
         // Add the inferred struct type to module, point StructItem symbols to it
-        Index index = module().add_type(v.ti);
+        const Index index = module().add_type(v.ti);
         for (auto& item : v.items) {
             item.first.symbol->set_index(index);
         }
@@ -340,6 +340,48 @@ public:
         // using resolved args, resolve the callable itself
         // (it may use args types for overload resolution)
         v.callable->apply(*this);
+
+        if (m_value_type.is_callable()) {
+            // result is new signature with args removed (applied)
+            const auto param_type_args = resolve_generic_args_to_signature(m_value_type.signature(), m_call_sig);
+            store_resolved_param_type_vars(m_scope, param_type_args);
+            auto new_signature = consume_params_from_call_args(m_value_type.signature_ptr(), v);
+            if (new_signature->params.empty()) {
+                if (v.definition == nullptr) {
+                    // all args consumed, or a zero-arg function being called
+                    // -> effective type is the return type
+                    v.ti = new_signature->return_type;
+                } else {
+                    // Not really calling, just defining, e.g. `f = compose u v`
+                    // Keep the return type as is, making it `() -> <lambda type>`
+                    v.ti = TypeInfo{new_signature};
+                }
+                v.partial_args = 0;
+            } else {
+                if (v.partial_args != 0) {
+                    // partial function call
+                    if (v.definition != nullptr) {
+                        v.partial_index = v.definition->symbol().get_scope_index(m_scope);
+                    } else {
+                        SymbolTable& fn_symtab = function().symtab().add_child("?/partial");
+                        Function fn {module(), fn_symtab};
+                        auto fn_idx = module().add_function(std::move(fn)).index;
+                        v.partial_index = module().add_scope(Scope{module(), fn_idx, &m_scope});
+                        m_scope.add_subscope(v.partial_index);
+                    }
+                    auto& fn = module().get_scope(v.partial_index).function();
+                    fn.signature() = *new_signature;
+                    fn.signature().nonlocals.clear();
+                    fn.signature().partial.clear();
+                    for (const auto& arg : m_call_sig.args) {
+                        fn.add_partial(TypeInfo{arg.type_info});
+                    }
+                    assert(!fn.has_any_generic());
+                    fn.set_compile();
+                }
+                v.ti = TypeInfo{new_signature};
+            }
+        }
 
         // Second pass of args, now with resolved types
         // (if a generic function was passed in args, it can be specialized now)
@@ -547,6 +589,50 @@ private:
         }
         if (sig.return_type != deduced)
             throw UnexpectedReturnType(sig.return_type, deduced);
+    }
+
+    // Consume params from `signature` according to `m_call_args`, creating new signature
+    SignaturePtr consume_params_from_call_args(const SignaturePtr& signature, ast::Call& v)
+    {
+        auto res = std::make_shared<Signature>(*signature);  // a copy to work on (modified below)
+        const TypeArgs call_type_args = specialize_signature(signature, m_call_sig);
+        int i = 0;
+        v.partial_args = 0;
+        v.wrapped_execs = 0;
+        for (const auto& arg : m_call_sig.args) {
+            ++i;
+            // check there are more params to consume
+            while (res->params.empty()) {
+                assert(res->return_type.type() == Type::Function);  // checked by specialize_signature() above
+                // collapse returned function, start consuming its params
+                res = std::make_shared<Signature>(res->return_type.signature());
+                ++v.wrapped_execs;
+                v.partial_args = 0;
+            }
+            // check type of next param
+            const auto& sig_param = res->params.front();
+            const auto m = match_type(arg.type_info, sig_param);
+            if (!(m.is_exact() || m.is_generic() || (m.is_coerce() && arg.literal_value))) {
+                throw UnexpectedArgumentType(i, sig_param, arg.type_info, arg.source_loc);
+            }
+            if (m.is_coerce()) {
+                // Update type_info of the coerced literal argument
+                m_cast_type = sig_param;
+                v.args[i - 1]->apply(*this);
+            }
+            if (sig_param.is_callable()) {
+                // resolve overload in case the arg is a function that was specialized
+                auto orig_call_sig = std::move(m_call_sig);
+                m_call_sig.load_from(sig_param.signature(), arg.source_loc);
+                v.args[i - 1]->apply(*this);
+                m_call_sig = std::move(orig_call_sig);
+            }
+            // consume next param
+            ++ v.partial_args;
+            res->params.erase(res->params.begin());
+        }
+        resolve_type_vars(*res, call_type_args);
+        return res;
     }
 
     // Specialize a generic function:

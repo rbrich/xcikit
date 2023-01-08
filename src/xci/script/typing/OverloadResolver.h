@@ -61,8 +61,11 @@ struct Candidate {
 /// Find best match from candidates
 std::pair<const Candidate*, bool> find_best_candidate(const std::vector<Candidate>& candidates);
 
-/// Resolve type variables in a function signature according to call signature
-TypeArgs specialize_signature(const std::shared_ptr<Signature>& signature, const CallSignature& call_sig);
+/// Resolve type variables in `signature` according to `call_sig`
+TypeArgs specialize_signature(const SignaturePtr& signature, const CallSignature& call_sig);
+
+/// Resolve type variables in `call_args` that are concrete in `signature`
+TypeArgs resolve_generic_args_to_signature(const Signature& signature, const CallSignature& call_sig);
 
 }  // namespace xci::script
 

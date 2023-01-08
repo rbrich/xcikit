@@ -66,8 +66,8 @@ public:
     size_t parameter_offset(Index idx) const;
 
     // function signature
-    void set_signature(const std::shared_ptr<Signature>& sig) { m_signature = sig; }
-    std::shared_ptr<Signature> signature_ptr() const { return m_signature; }
+    void set_signature(const SignaturePtr& sig) { m_signature = sig; }
+    SignaturePtr signature_ptr() const { return m_signature; }
     Signature& signature() { return *m_signature; }
     const Signature& signature() const { return *m_signature; }
 
@@ -231,7 +231,7 @@ private:
     Module* m_module = nullptr;
     SymbolTable* m_symtab = nullptr;
     // function signature
-    std::shared_ptr<Signature> m_signature;
+    SignaturePtr m_signature;
     // function body (depending on kind of function)
     std::variant<std::monostate, CompiledBody, GenericBody, NativeBody> m_body;
     // flags

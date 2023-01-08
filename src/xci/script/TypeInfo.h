@@ -283,6 +283,8 @@ struct Signature {
     }
 };
 
+using SignaturePtr = std::shared_ptr<Signature>;
+
 
 struct NamedType {
     std::string name;
@@ -316,8 +318,8 @@ inline TypeInfo ti_string() { return TypeInfo(Type::String); }
 inline TypeInfo ti_stream() { return TypeInfo(Type::Stream); }
 inline TypeInfo ti_module() { return TypeInfo(Type::Module); }
 
-inline TypeInfo ti_function(std::shared_ptr<Signature>&& signature)
-{ return TypeInfo(std::forward<std::shared_ptr<Signature>>(signature)); }
+inline TypeInfo ti_function(SignaturePtr&& signature)
+{ return TypeInfo(std::forward<SignaturePtr>(signature)); }
 
 inline TypeInfo ti_list(TypeInfo&& elem) { return TypeInfo(TypeInfo::list_of, std::forward<TypeInfo>(elem)); }
 inline TypeInfo ti_chars() { return TypeInfo{TypeInfo::list_of, ti_char()}; }
