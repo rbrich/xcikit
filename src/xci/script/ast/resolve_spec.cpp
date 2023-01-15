@@ -263,16 +263,17 @@ public:
 
                 // Specialize
                 if (sym.type() == Symbol::Function) {
-                    auto specialized = specialize_function(v.identifier.symbol, v.identifier.source_loc);
-                    if (specialized) {
-                        v.module = &module();
-                        v.index = specialized.scope_index;
-                        v.ti = std::move(specialized.type_info);
-                    } else if (v.ti.is_generic()) {
-                        auto& scope = v.module->get_scope(v.index);
-                        auto& fn = scope.function();
-                        if (!fn.has_any_generic())
+                    auto& scope = v.module->get_scope(v.index);
+                    auto& fn = scope.function();
+                    if (!fn.is_specialized()) {
+                        auto specialized = specialize_function(v.identifier.symbol, v.identifier.source_loc);
+                        if (specialized) {
+                            v.module = &module();
+                            v.index = specialized.scope_index;
+                            v.ti = std::move(specialized.type_info);
+                        } else if (v.ti.is_generic() && !fn.has_any_generic()) {
                             v.ti = TypeInfo(fn.signature_ptr());
+                        }
                     }
                     if (v.definition) {
                         m_call_sig.clear();
@@ -724,6 +725,7 @@ private:
                 scope.set_module(module());
                 scope.set_function_index(clone_fn_idx);
             }
+            scope.type_args().add_from(m_scope.type_args());
             auto& fspec = scope.function();
             fspec.set_specialized();
             specialize_to_call_args(scope, fspec.ast(), loc);
@@ -766,6 +768,12 @@ private:
         fspec.ensure_ast_copy();
         auto fscope_idx = clone_scope(scope, fspec_idx);
         auto& fscope = module().get_scope(fscope_idx);
+
+        // Copy type args from current scope.
+        // This is needed when the current scope is not in parent relation to fspec
+        // (that happens when the function being specialized was called)
+        fscope.type_args().add_from(m_scope.type_args());
+
         specialize_to_call_args(fscope, fspec.ast(), loc);
 
         assert(symptr->depth() == 0);
