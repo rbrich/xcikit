@@ -170,10 +170,6 @@ jobs:
           ${{ matrix.os }}-${{ matrix.name }}-
           ${{ matrix.os }}-
 
-    - name: conan workaround - glib fails as build requirement (conan-center-index/issues/14125)
-      if: ${{ matrix.os == 'windows-2022' }}
-      run: conan install --build missing -pr=default -pr:b=default glib/2.75.0@
-
     - name: deps
       run: ./build.sh deps $BUILD_ARGS
 
