@@ -269,7 +269,7 @@ struct Signature {
     bool has_nonvoid_params() const;
     bool has_any_generic() const { return has_generic_params() || has_generic_return_type() || has_generic_nonlocals(); }
 
-    unsigned arity() const noexcept { return params.size(); }
+    unsigned arity() const noexcept { return unsigned(params.size()); }
 
     explicit operator bool() const { return !params.empty() || return_type; }
 

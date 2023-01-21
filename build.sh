@@ -171,13 +171,17 @@ while [[ $# -gt 0 ]] ; do
     esac
 done
 
-ARCH="$(uname -m)"
 PLATFORM="$(uname)"
+ARCH="$(uname -m)"
 if [[ "${EMSCRIPTEN}" -eq 1 ]] ; then
     PLATFORM="emscripten"
     ARCH="wasm"
 elif [[ ${PLATFORM} = "Darwin" ]] ; then
     PLATFORM="macos${MACOSX_DEPLOYMENT_TARGET}"
+elif [[ ${PLATFORM} = "Linux" ]] ; then
+    PLATFORM="linux"
+elif [[ ${PLATFORM} = MINGW* ]] ; then
+    PLATFORM="windows$(uname | cut -d- -f2)"
 fi
 
 VERSION=$(conan inspect . --raw version)$(git rev-parse --short HEAD 2>/dev/null | sed 's/^/+/' ; :)
