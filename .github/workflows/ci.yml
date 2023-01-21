@@ -59,8 +59,8 @@ jobs:
           cxx: g++-10
           build_args: "--minsize --unity"
         - os: macos-11
-          name: "Clang 14 / Release"
-          clang: llvm@14
+          name: "Clang 15 / Release"
+          clang: llvm@15
           os_target: "11.0"
           build_args: ""
         - os: macos-11
