@@ -1,0 +1,21 @@
+= Contributing to xcikit
+
+First, note that this is a personal hobby project. It's basically my playground for C++ and graphics stuff.
+Sometimes I rewrite things. Sometimes I drop things I no longer like. Some parts might be quite broken at times.
+
+== You've found a bug
+
+Please report an issue, or submit a fix as a pull request. Bug fixes are welcome!
+
+== You want to add a feature
+
+You're of course free to fork this project, and develop your feature.
+If you want it merged eventually, it might be better to discuss it first.
+
+== By submitting a pull request
+
+* You confirm that you are the author of the code and that you have the right to license the contribution to the xcikit project owner.
+
+* You confirm that your contribution is not bound by any software patents or other means that could conflict with licensing under current or any future xcikit license.
+
+* You agree that your contribution is licensed under the xcikit license, and you agree to any future changes to the licensing.
