@@ -360,21 +360,20 @@ auto EditLine::finish_input() -> std::pair<bool, std::string_view>
     m_history_cursor = -1;
     m_history_orig_buffer.clear();
 
-    return {m_state != State::ControlBreak,m_edit_buffer.content_view()};
+    return {m_state != State::ControlBreak, m_edit_buffer.content_view()};
 }
 
 
-bool EditLine::feed_input(std::string_view data)
+bool EditLine::advance_input()
 {
-    m_input_buffer += data;
     for (;;) {
         process_input();
         if (m_state == State::Continue)
             continue;
         if (m_state == State::NeedMoreInputData)
-            return true;
+            return false;
         // Finished, ControlBreak
-        return false;
+        return true;
     }
 }
 

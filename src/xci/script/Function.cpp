@@ -175,9 +175,9 @@ Index Scope::add_subscope(Index scope_idx)
 
 void Scope::copy_subscopes(const Scope& from)
 {
-    for (Index scope_idx : from.m_subscopes) {
+    for (const Index scope_idx : from.m_subscopes) {
         auto& orig = module().get_scope(scope_idx);
-        Scope sub(module(), orig.function_index(), this);
+        Scope sub(orig.module(), orig.function_index(), this);
         auto sub_idx = module().add_scope(std::move(sub));
         module().get_scope(sub_idx).copy_subscopes(orig);
         add_subscope(sub_idx);
@@ -253,22 +253,6 @@ size_t Scope::nonlocal_raw_offset(Index index, const TypeInfo& ti) const
     }
     assert(!"nonlocal index out of range");
     return 0;
-}
-
-
-void Scope::add_spec_arg(Index index, const SourceLocation& source_loc, SymbolPointer symptr)
-{
-    m_spec_args.emplace_back(SpecArg{index, source_loc, symptr});
-}
-
-
-const Scope::SpecArg* Scope::get_spec_arg(Index index) const
-{
-    auto it = std::find_if(m_spec_args.begin(), m_spec_args.end(),
-                           [index](const SpecArg& a){ return a.index == index; });
-    if (it == m_spec_args.end())
-        return nullptr;
-    return &*it;
 }
 
 

@@ -218,14 +218,14 @@ TEST_CASE( "Raw strings", "[script][parser]" )
 
 TEST_CASE( "Parsing types", "[script][parser]")
 {
-    CHECK(parse("type MyInt = Int") == "type MyInt = Int");
-    CHECK(parse("type MyList = [Int]") == "type MyList = [Int]");
-    CHECK(parse("type MyTuple = (String, Int)") == "type MyTuple = (String, Int)");
-    CHECK(parse("type MyTuple = String, Int") == "type MyTuple = (String, Int)");  // The round brackets are optional, added in AST dump for clarity
-    CHECK(parse("type MyListOfTuples = [String, Int]") == "type MyListOfTuples = [(String, Int)]");
-    CHECK(parse("type MyListOfTuples2 = [(String, Int), Int]") == "type MyListOfTuples2 = [((String, Int), Int)]");
-    CHECK(parse("MyAlias = Int") == "MyAlias = Int");
-    CHECK(parse("MyAlias2 = [Int]") == "MyAlias2 = [Int]");
+    CHECK(parse("type MyInt = Int") == "type MyInt = Int; ()");
+    CHECK(parse("type MyList = [Int]") == "type MyList = [Int]; ()");
+    CHECK(parse("type MyTuple = (String, Int)") == "type MyTuple = (String, Int); ()");
+    CHECK(parse("type MyTuple = String, Int") == "type MyTuple = (String, Int); ()");  // The round brackets are optional, added in AST dump for clarity
+    CHECK(parse("type MyListOfTuples = [String, Int]") == "type MyListOfTuples = [(String, Int)]; ()");
+    CHECK(parse("type MyListOfTuples2 = [(String, Int), Int]") == "type MyListOfTuples2 = [((String, Int), Int)]; ()");
+    CHECK(parse("MyAlias = Int") == "MyAlias = Int; ()");
+    CHECK(parse("MyAlias2 = [Int]") == "MyAlias2 = [Int]; ()");
 }
 
 
@@ -264,8 +264,8 @@ TEST_CASE( "Operator precedence", "[script][parser]" )
     // right associative:
     CHECK(parse("a ** b ** c ** d") == "(a ** (b ** (c ** d)))");
     // functions
-    CHECK(parse("a fun b {} c") == "a fun b {} c");
-    CHECK(parse("a (fun b {}) c") == "a (fun b {}) c");
+    CHECK(parse("a fun b {} c") == "a fun b {()} c");
+    CHECK(parse("a (fun b {}) c") == "a (fun b {()}) c");
     // function calls
     CHECK(interpret_std("succ 9 + larger 5 4 + 1") == "16");
     CHECK(interpret_std("(succ 9) + (larger 5 4) + 1") == "16");
@@ -508,14 +508,14 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     // alias (not a strong type)
     CHECK(interpret_std("X=Int; x:X = 42; x:Int64") == "42L");
     // tuple
-    std::string my_tuple = "type MyTuple = (String, Int); ";
+    const std::string my_tuple = "type MyTuple = (String, Int); ";
     CHECK(interpret(R"(TupleAlias = (String, Int); a:TupleAlias = "hello", 42; a)") == R"(("hello", 42))");
     CHECK(interpret(my_tuple + R"(a:MyTuple = "hello", 42; a)") == R"(("hello", 42))");
     CHECK(interpret(my_tuple + R"(type Tuple2 = (String, MyTuple); a:Tuple2 = ("hello", ("a", 1)); a)") == R"(("hello", ("a", 1)))");
     // struct
     CHECK(interpret(R"(a:(name: String, age: Int) = ("hello", 42); a)") == R"((name="hello", age=42))");  // anonymous
     CHECK(interpret(R"(Rec = (name: String, age: Int); a:Rec = (name="hello", age=42); a)") == R"((name="hello", age=42))");  // alias
-    std::string my_struct = "type MyStruct = (name:String, age:Int); ";  // named struct
+    const std::string my_struct = "type MyStruct = (name:String, age:Int); ";  // named struct
     CHECK(interpret(my_struct + R"( a:MyStruct = (name="hello", age=42); a)") == R"((name="hello", age=42))");
     CHECK(interpret(my_struct + R"( a:MyStruct = "hello", 42; a)") == R"((name="hello", age=42))");
     // struct defaults (left out fields get default "zero" value)
@@ -560,8 +560,8 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
 
 TEST_CASE( "Blocks", "[script][interpreter]" )
 {
-    CHECK(parse("{}") == "{}");
-    CHECK(parse("{{}}") == "{{}}");
+    CHECK(parse("{}") == "{()}");  // empty function -> return Void auto-added in AST
+    CHECK(parse("{{}}") == "{{()}}");
 
     // blocks are evaluated and return a value
     CHECK(interpret("{}") == "()");  // empty function (has Void type)
@@ -582,7 +582,7 @@ TEST_CASE( "Blocks", "[script][interpreter]" )
 
 TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
 {
-    CHECK(parse("fun Int -> Int {}") == "fun Int -> Int {}");
+    CHECK(parse("fun Int -> Int {}") == "fun Int -> Int {()}");
 
     // returned lambda
     CHECK(interpret_std("fun x:Int->Int { x + 1 }") == "<lambda_0> Int32 -> Int32");  // non-generic is fine
@@ -595,8 +595,8 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     CHECK(interpret_std("b = 3 + fun x {2*x} 2; b") == "7");
 
     // generic function in local scope
-    CHECK(interpret_std("outer = fun y { inner = fun x { x+1 }; inner y }; outer 2") == "3");
     CHECK(interpret("outer = fun y { inner = fun x { x;y }; inner 3 }; outer 2") == "3;2");
+    CHECK(interpret_std("outer = fun y { inner = fun x { x+1 }; inner y }; outer 2") == "3");
 
     // argument propagation:
     CHECK(interpret_std("f = fun a:Int { fun b:Int { a+b } }; f 1 2") == "3");  //  `f` returns a function which consumes the second arg
@@ -640,6 +640,7 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
                         "}; outer 2") == "4");
 
     // closure: fully generic
+    CHECK(interpret("outer = fun y { inner = fun x { x }; inner y }; outer 2") == "2");
     CHECK(interpret_std("outer = fun y { inner = fun x { x + y }; inner 3 * inner y }; outer 2") == "20");
     CHECK(interpret_std("outer = fun y {"
                         "  inner = fun x { x + y };"
@@ -650,9 +651,10 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     // multiple specializations
     // * each specialization is generated only once
     CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; inner 3 + inner 4 }; "
-                        "outer 1; outer 2; __module.__n_fn") == "9;11;6");
+                        "outer 1; outer 2; __module.__n_fn") == "9;11;5");
     // * specializations with different types from the same template
-    CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; inner 3 + (inner 4l):T }; outer 2") == "11");
+    CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; inner 3 + (inner 4l):T }; outer 2") == "11");  // outer is actually deduced to Int32 -> Int32, because Add is defined only for same types
+    CHECK(interpret_std("outer = fun<T> y:T { inner = fun<U> x:U { x + y:U }; (inner 3):T + (inner 4l):T }; outer 2; outer 3l") == "11;13L");
     CHECK(interpret("l0=fun a { l1b=fun b { a;b };"
                     " l1=fun b { l2=fun c { l3=fun d { a;b;c; l1b 42L; l1b d }; l3 b}; l2 a };"
                     " wrapped = fun x { l1b 'x'; l1 x }; wrapped a }; l0 2") == "2;'x';2;2;2;2;42L;2;2");
@@ -670,8 +672,14 @@ TEST_CASE( "Functions and lambdas", "[script][interpreter]" )
     CHECK(interpret(def_succ_compose + "plustwo = compose succ succ; plustwo 42") == "44");
     CHECK(interpret(def_succ_compose + "plustwo = {compose succ succ}; plustwo 42") == "44");
     CHECK(interpret(def_succ_compose + "plustwo = compose succ succ; plusfour = compose plustwo plustwo;  plustwo 42; plusfour 42") == "44;46");
-    // TODO: compose generic functions
-    //CHECK(interpret_std("compose = fun<X,Y,Z> f:(Y->Z) g:(X->Y) -> Z { fun x:X -> Z { f (g x) } }; same = compose pred succ; same 42") == "42");
+    // compose generic functions
+    CHECK(interpret("call = fun<X,Y> f:(X->Y) -> (X->Y) { fun x:X { f x } }; ident = fun<T> y:T -> T { y }; same={call ident}; same 42") == "42");
+    CHECK(interpret("call = fun<X,Y> f:(X->Y) { fun x:X { f x } }; ident = fun y { y }; same={call ident}; same 42") == "42");
+    CHECK(interpret("call = fun<X,Y> f:(X->Y) { fun x { f x } }; ident = fun y { y }; same={call ident}; same 42") == "42");
+    //CHECK(interpret("call = fun f { fun x { f x } }; ident = fun y { y }; same={call ident}; same 42") == "42");
+
+    CHECK(interpret_std("compose = fun<X,Y,Z> f:(Y->Z) g:(X->Y) -> (X->Z) { fun x:X -> Z { f (g x) } }; same = {compose pred succ}; same 42") == "42");
+    //CHECK(interpret_std("compose = fun<X,Y,Z> f:(Y->Z) g:(X->Y) -> (X->Z) { fun x:X -> Z { f (g x) } }; same = compose pred succ; same 42") == "42");
     //CHECK(interpret_std(def_compose + "same = compose pred succ; same 42") == "42");
 }
 
@@ -680,6 +688,8 @@ TEST_CASE( "Partial function call", "[script][interpreter]" )
 {
     // partial call: `add 1` returns a lambda which takes single argument
     CHECK(interpret_std("(add 1) 2") == "3");
+    CHECK(interpret_std("(add (1+3)) 2") == "6");
+    //CHECK(interpret_std("(add (add 1)) 2 3") == "6");
     CHECK(interpret_std("{add 1} 2") == "3");
     CHECK(interpret_std("f=add 1; f 2") == "3");
     CHECK(interpret_std("f={add 1}; f 2") == "3");
@@ -1094,7 +1104,7 @@ TEST_CASE( "Fold const expressions", "[script][optimizer]" )
     // collapse block with single statement
     CHECK(optimize("{ 1 }") == "1");
     CHECK(optimize("{{{ 1 }}}") == "1");
-    CHECK(optimize("a = {{1}}") == "a = 1");
+    CHECK(optimize("a = {{1}}") == "a = 1; ()");
 
     // collapse function call with constant arguments
     CHECK(optimize("f=fun a:Int {a}; f 42") == "f = fun a:Int -> $R {a}; 42");

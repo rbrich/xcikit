@@ -373,6 +373,8 @@ void Block::finish()
             return;
         }
     }
+    // no Invocation or Return found -> add implicit Return(Void)
+    statements.emplace_back(std::make_unique<Return>(std::make_unique<Literal>(TypedValue{ti_void()})));
 }
 
 

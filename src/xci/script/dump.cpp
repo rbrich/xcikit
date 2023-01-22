@@ -1064,7 +1064,7 @@ std::ostream& operator<<(std::ostream& os, const Signature& v)
         }
         os << " | ";
     }
-    bool orig_parenthesize_fun_types = stream_options(os).parenthesize_fun_types;
+    const bool orig_parenthesize_fun_types = stream_options(os).parenthesize_fun_types;
     stream_options(os).parenthesize_fun_types = true;
     if (!v.params.empty()) {
         for (const auto& ti : v.params) {
@@ -1160,7 +1160,9 @@ std::ostream& operator<<(std::ostream& os, const SymbolTable& v)
 
 std::ostream& operator<<(std::ostream& os, const Scope& v)
 {
-    os << "Function #" << v.function_index() << " (" << v.function().name() << ")";
+    if (v.has_function()) {
+        os << "Function #" << v.function_index() << " (" << v.function().name() << ")";
+    }
     os << '\t';
     if (v.has_subscopes()) {
         os << "Subscopes: ";
@@ -1184,7 +1186,7 @@ std::ostream& operator<<(std::ostream& os, const Scope& v)
         }
     }
     os << '\t';
-    bool orig_parenthesize_fun_types = stream_options(os).parenthesize_fun_types;
+    const bool orig_parenthesize_fun_types = stream_options(os).parenthesize_fun_types;
     stream_options(os).parenthesize_fun_types = true;
     if (v.has_type_args()) {
         os << "Type args: ";
@@ -1194,10 +1196,27 @@ std::ostream& operator<<(std::ostream& os, const Scope& v)
                 os << ", ";
             else
                 first = false;
+            if (&v.function().symtab() != arg.first.symtab())
+                os << arg.first.symtab()->qualified_name() << "::";  // qualify non-own symbols
             os << arg.first->name() << "=" << arg.second;
         }
     }
     stream_options(os).parenthesize_fun_types = orig_parenthesize_fun_types;
+    return os;
+}
+
+
+std::ostream& operator<<(std::ostream& os, const TypeArgs& v)
+{
+    bool first = true;
+    for (const auto& arg : v) {
+        if (!first)
+            os << ", ";
+        else
+            first = false;
+        os << arg.first.symtab()->qualified_name() << "::";
+        os << arg.first->name() << "=" << arg.second;
+    }
     return os;
 }
 

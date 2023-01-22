@@ -9,6 +9,7 @@
 #include "ast/resolve_symbols.h"
 #include "ast/resolve_decl.h"
 #include "ast/resolve_types.h"
+#include "ast/resolve_spec.h"
 #include "ast/resolve_nonlocals.h"
 #include "ast/fold_const_expr.h"
 #include "ast/fold_dot_call.h"
@@ -722,6 +723,9 @@ bool Compiler::compile(Scope& scope, ast::Module& ast)
 
     if ((flags & Flags::ResolveTypes) == Flags::ResolveTypes)
         resolve_types(scope, ast.body);
+
+    if ((flags & Flags::ResolveSpec) == Flags::ResolveSpec)
+        resolve_spec(scope, ast.body);
 
     if ((flags & Flags::ResolveNonlocals) == Flags::ResolveNonlocals)
         resolve_nonlocals(scope, ast.body);

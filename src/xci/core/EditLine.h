@@ -73,9 +73,12 @@ public:
     /// Show prompt and start incremental input
     void start_input(std::string_view prompt);
 
-    /// Feed input data, process them and advance input state
-    /// \returns true = continue feeding, false = done, call finish_input
-    bool feed_input(std::string_view data);
+    /// Feed input data
+    void feed_input(std::string_view data) { m_input_buffer += data; }
+
+    /// Process input and advance input state
+    /// \returns false = continue feeding, true = done, call finish_input
+    bool advance_input();
 
     /// Finish editing and return result
     /// \returns (ok, content)   !ok when cancelled (Ctrl-C)

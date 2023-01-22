@@ -5,7 +5,7 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "resolve_decl.h"
-#include <xci/script/TypeChecker.h>
+#include <xci/script/typing/TypeChecker.h>
 #include <xci/script/Builtin.h>
 #include <xci/script/Function.h>
 #include <xci/script/Error.h>

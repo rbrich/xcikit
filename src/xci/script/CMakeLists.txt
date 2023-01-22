@@ -8,10 +8,14 @@ add_library(xci-script
     ast/fold_dot_call.cpp
     ast/fold_tuple.cpp
     ast/resolve_decl.cpp
+    ast/resolve_spec.cpp
     ast/resolve_nonlocals.cpp
     ast/resolve_symbols.cpp
     ast/resolve_types.cpp
     parser/raw_string.cpp
+    typing/TypeChecker.cpp
+    typing/GenericResolver.cpp
+    typing/OverloadResolver.cpp
     Builtin.cpp
     Class.cpp
     Code.cpp
@@ -30,7 +34,6 @@ add_library(xci-script
     Stream.cpp
     SymbolTable.cpp
     TypeInfo.cpp
-    TypeChecker.cpp
     dump.cpp)
 add_library(xcikit::xci-script ALIAS xci-script)
 

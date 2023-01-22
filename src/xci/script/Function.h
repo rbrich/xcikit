@@ -66,8 +66,8 @@ public:
     size_t parameter_offset(Index idx) const;
 
     // function signature
-    void set_signature(const std::shared_ptr<Signature>& sig) { m_signature = sig; }
-    std::shared_ptr<Signature> signature_ptr() const { return m_signature; }
+    void set_signature(const SignaturePtr& sig) { m_signature = sig; }
+    SignaturePtr signature_ptr() const { return m_signature; }
     Signature& signature() { return *m_signature; }
     const Signature& signature() const { return *m_signature; }
 
@@ -231,7 +231,7 @@ private:
     Module* m_module = nullptr;
     SymbolTable* m_symtab = nullptr;
     // function signature
-    std::shared_ptr<Signature> m_signature;
+    SignaturePtr m_signature;
     // function body (depending on kind of function)
     std::variant<std::monostate, CompiledBody, GenericBody, NativeBody> m_body;
     // flags
@@ -258,15 +258,21 @@ public:
     }
 
     std::pair<iterator, bool> set(SymbolPointer sym, TypeInfo&& ti) {
-        if (ti.is_unknown())
+        if (ti.is_unknown() && (!ti.is_generic() || ti.generic_var() == sym))
             return { m_type_args.end(), true };  // "inserted" Unknown to nowhere
         return m_type_args.try_emplace(sym, std::move(ti));
     }
 
     std::pair<iterator, bool> set(SymbolPointer sym, const TypeInfo& ti) {
-        if (ti.is_unknown())
+        if (ti.is_unknown() && (!ti.is_generic() || ti.generic_var() == sym))
             return { m_type_args.end(), true };  // "inserted" Unknown to nowhere
         return m_type_args.try_emplace(sym, ti);
+    }
+
+    void add_from(const TypeArgs& other) {
+        for (const auto& it : other.m_type_args) {
+            set(it.first, it.second);
+        }
     }
 
     // Must not query Unknown or a symbol that is not in the map
@@ -289,12 +295,14 @@ public:
     explicit Scope(Module& module, Index function_idx, Scope* parent_scope);
 
     Module& module() const { return *m_module; }
-    Scope* parent() const { return m_parent_scope; }
+    void set_module(Module& mod) { m_module = &mod; }
 
     bool has_function() const { return m_function != no_index; }
     Function& function() const;
     void set_function_index(Index fn_idx) { m_function = fn_idx; }
     Index function_index() const { return m_function; }
+
+    Scope* parent() const { return m_parent_scope; }
 
     // Nested functions
     Index add_subscope(Index scope_idx);
@@ -330,9 +338,6 @@ public:
         SymbolPointer symptr;
     };
 
-    void add_spec_arg(Index index, const SourceLocation& source_loc, SymbolPointer symptr);
-    const SpecArg* get_spec_arg(Index index) const;
-
     const TypeArgs& type_args() const { return m_type_args; }
     TypeArgs& type_args() { return m_type_args; }
     bool has_type_args() const noexcept { return !m_type_args.empty(); }
@@ -343,7 +348,6 @@ private:
     Scope* m_parent_scope = nullptr;  // matches `m_symtab.parent()`, but can be a specialized function, while symtab is only lexical
     std::vector<Index> m_subscopes;  // nested scopes (Index into module scopes)
     std::vector<Nonlocal> m_nonlocals;
-    std::vector<SpecArg> m_spec_args;  // if this scope is specialization of a function, this contains symbols passed as args (they can be generic functions)
     TypeArgs m_type_args;  // resolved type variables or explicit type args
 };
 

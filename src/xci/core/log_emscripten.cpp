@@ -11,7 +11,6 @@ namespace xci::core {
 
 
 Logger::Logger(Level level) : m_level(level) {}
-Logger::~Logger() = default;
 
 
 void Logger::default_handler(Logger::Level lvl, std::string_view msg)

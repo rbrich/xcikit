@@ -37,7 +37,6 @@ public:
     static Logger& default_instance(Logger::Level initial_level = Level::Trace);
 
     explicit Logger(Level level);
-    ~Logger();
 
     // Set minimal level of messages to be logged.
     // Messages below this level are dropped.
