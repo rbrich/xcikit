@@ -33,6 +33,10 @@ void Program::process_args(char* argv[])
 {
     opts.parse(argv);
 
+    if (opts.prog_opts.verbose) {
+        Logger::default_instance().set_level(Logger::Level::Trace);
+    }
+
     if (!opts.prog_opts.schema_file.empty()) {
         Module dummy_module(ctx.interpreter.module_manager());
         if (!dummy_module.write_schema_to_file(opts.prog_opts.schema_file))

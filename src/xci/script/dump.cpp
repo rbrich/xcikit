@@ -1206,4 +1206,19 @@ std::ostream& operator<<(std::ostream& os, const Scope& v)
 }
 
 
+std::ostream& operator<<(std::ostream& os, const TypeArgs& v)
+{
+    bool first = true;
+    for (const auto& arg : v) {
+        if (!first)
+            os << ", ";
+        else
+            first = false;
+        os << arg.first.symtab()->qualified_name() << "::";
+        os << arg.first->name() << "=" << arg.second;
+    }
+    return os;
+}
+
+
 } // namespace xci::script

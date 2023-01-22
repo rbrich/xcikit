@@ -82,10 +82,13 @@ std::ostream& operator<<(std::ostream& os, const SymbolTable& v);
 
 // Scopes
 std::ostream& operator<<(std::ostream& os, const Scope& v);
+std::ostream& operator<<(std::ostream& os, const TypeArgs& v);
 
 } // namespace xci::script
 
 template <> struct fmt::formatter<xci::script::TypeInfo> : ostream_formatter {};
+template <> struct fmt::formatter<xci::script::Signature> : ostream_formatter {};
+template <> struct fmt::formatter<xci::script::TypeArgs> : ostream_formatter {};
 
 
 #endif // include guard

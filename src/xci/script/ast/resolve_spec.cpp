@@ -13,6 +13,7 @@
 #include <xci/script/Error.h>
 #include <xci/script/dump.h>
 #include <xci/compat/macros.h>
+#include <xci/core/log.h>
 
 #include <range/v3/view/enumerate.hpp>
 
@@ -22,6 +23,7 @@
 namespace xci::script {
 
 using std::stringstream;
+using namespace xci::core;
 
 
 class ResolveSpecVisitor final: public ast::VisitorExclTypes {
@@ -644,6 +646,9 @@ private:
     // Throw when the signature doesn't match the call args or deduced return type.
     void specialize_to_call_args(Scope& scope, const ast::Block& body, const SourceLocation& loc)
     {
+        log::debug("Specialize '{}' to {}\nType args: {}",
+                   scope.function().name(), m_call_sig.signature(), scope.type_args());
+
 //        if (scope.parent() != &m_scope)
 //            scope.type_args().add_from(m_scope.type_args());
 
