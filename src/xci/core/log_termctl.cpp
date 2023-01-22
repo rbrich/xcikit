@@ -30,8 +30,7 @@ static const char* c_log_format[] = {
         "                            {t:bold}...{t:normal}    {fg:bold}{fg:yellow}{2}{t:normal}\n",
         "                            {t:bold}...{t:normal}    {fg:bold}{fg:red}{2}{t:normal}\n",
 };
-static const char* c_log_intro = "{t:underline}   Date      Time    TID   Level  Message   {t:normal}\n";
-static const char* c_log_outro = "{t:overline}                 End of Log                 {t:normal}\n";
+static const char* c_log_intro = "{t:underline}   Date      Time    TID    Level  Message   {t:normal}\n";
 
 
 Logger::Logger(Level level) : m_level(level)
@@ -39,15 +38,6 @@ Logger::Logger(Level level) : m_level(level)
     if (m_level <= Level::Info) {
         TermCtl& t = TermCtl::stderr_instance();
         t.print(c_log_intro);
-    }
-}
-
-
-Logger::~Logger()
-{
-    if (m_level <= Level::Info) {
-        TermCtl& t = TermCtl::stderr_instance();
-        t.print(c_log_outro);
     }
 }
 
