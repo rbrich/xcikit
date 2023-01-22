@@ -26,9 +26,9 @@ static const char* c_log_format[] = {
         "{:%F %T} {fg:cyan}{:6x}{t:normal}  {t:bold}ERROR{t:normal}  {t:bold}{fg:red}{}{t:normal}\n",
         "                            {t:bold}...{t:normal}    {fg:blue}{2}{t:normal}\n",
         "                            {t:bold}...{t:normal}    {fg:white}{2}{t:normal}\n",
-        "                            {t:bold}...{t:normal}    {fg:bold}{fg:white}{2}{t:normal}\n",
-        "                            {t:bold}...{t:normal}    {fg:bold}{fg:yellow}{2}{t:normal}\n",
-        "                            {t:bold}...{t:normal}    {fg:bold}{fg:red}{2}{t:normal}\n",
+        "                            {t:bold}...{t:normal}    {t:bold}{fg:white}{2}{t:normal}\n",
+        "                            {t:bold}...{t:normal}    {t:bold}{fg:yellow}{2}{t:normal}\n",
+        "                            {t:bold}...{t:normal}    {t:bold}{fg:red}{2}{t:normal}\n",
 };
 static const char* c_log_intro = "{t:underline}   Date      Time    TID    Level  Message   {t:normal}\n";
 
