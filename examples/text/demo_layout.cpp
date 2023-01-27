@@ -81,9 +81,9 @@ int main(int argc, const char* argv[])
     help_text_2.set_color(Color(50, 200, 100));
     help_text_2.set_font_size(3_vp);
 
-    Text help_text_3(font, "Resize the window to watch the reflow.");
+    Text help_text_3(mono_font, "Resize the window to watch the reflow.");
     help_text_3.set_color(Color(200, 100, 50));
-    help_text_3.set_font_size(3.5_vp);
+    help_text_3.set_font_size(3_vp);
 
     Sprites font_texture(renderer, font.texture(), Color(0, 50, 255));
 
