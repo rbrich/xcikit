@@ -1,7 +1,7 @@
 // TextInput.cpp created on 2018-06-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "TextInput.h"
@@ -88,7 +88,9 @@ void TextInput::update(View& view, State state)
 {
     view.finish_draw();
     m_layout.update(view);
-    if (last_hover() == LastHover::Inside) {
+    if (state.focused) {
+        m_bg_rect.set_outline_color(theme().color(ColorId::Focus));
+    } else if (last_hover() == LastHover::Inside) {
         m_bg_rect.set_outline_color(theme().color(ColorId::Hover));
     } else {
         m_bg_rect.set_outline_color(theme().color(ColorId::Default));
