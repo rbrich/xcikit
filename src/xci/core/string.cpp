@@ -1,7 +1,7 @@
 // string.cpp created on 2018-03-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "string.h"
@@ -186,6 +186,13 @@ std::string to_lower(std::string_view str)
         str.begin(), str.end(),
         result.begin(), [](char c){ return (char) std::tolower(c); });
     return result;
+}
+
+
+bool ci_equal(std::string_view s1, std::string_view s2)
+{
+    return std::equal(s1.begin(), s1.end(), s2.begin(), s2.end(),
+                      [](char a, char b) { return std::tolower(a) == std::tolower(b); });
 }
 
 
