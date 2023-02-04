@@ -1,7 +1,7 @@
 // Markup.h created on 2018-03-10 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_TEXT_MARKUP_H
@@ -11,15 +11,17 @@
 
 namespace xci::text {
 
-/// Minimal XML-like markup language.
+/// Minimal markup language. Any similarity to HTML is purely coincidental.
 ///
-/// Supported tokens:
+/// Supported tags:
 /// * `<br>` - line break ('\n')
 /// * `<p>` or `\n\n` - paragraph break - not a pair element!
 /// * `<tab>` or `\t` - tabulator
-/// * `<b>` ... `</b>` - bold
-/// * `<i>` ... `</i>` - italic
-/// * `<name>` ... `</name>` - named span
+/// * `<b>`, `</b>` - bold, not bold
+/// * `<i>`, `</i>` - italic, not italic
+/// * `<c:#ABC>` - set RGB color (3 hex digits)
+/// * `</c>` - reset color to default
+/// * `<s:name>` ... `</s:name>` - named span
 
 class Markup {
 public:

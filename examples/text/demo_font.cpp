@@ -1,7 +1,7 @@
 // demo_font.cpp created on 2018-03-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "graphics/common.h"
@@ -65,14 +65,14 @@ int main(int argc, const char* argv[])
     text.set_color(Color::White());
 
     Text emoji;
-    emoji.set_markup_string("🥛🍸🥃🥂🍷🍹⚗️🧂");
+    emoji.set_fixed_string("🥛🍸🥃🥂🍷🍹⚗️🧂");
     emoji.set_font(emoji_font);
     emoji.set_font_size(10_vp);
 
     static constexpr auto help_color_normal = Color(200, 100, 50);
     static constexpr auto help_color_highlight = Color(255, 170, 120);
-    Text help_text(font, "<smooth><b>[s]</b> smooth scaling</smooth> <tab>"
-                         "<font><b>[f]</b> font scaling</font><br>"
+    Text help_text(font, "<s:smooth><b>[s]</b> smooth scaling</s:smooth> <tab>"
+                         "<s:font><b>[f]</b> font scaling</s:font><br>"
                          "(Resize window to observe the scaling effect.)", Text::Format::Markup);
     help_text.set_color(help_color_normal);
     help_text.set_font_size(5_vp);
