@@ -24,7 +24,7 @@ class MousePosInfo: public Widget {
 public:
     explicit MousePosInfo(Theme& theme)
             : Widget(theme),
-              m_text(theme.font(), "Mouse: ")
+              m_text(theme.base_font(), "Mouse: ")
     {
         m_text.set_color(Color(255, 150, 50));
     }

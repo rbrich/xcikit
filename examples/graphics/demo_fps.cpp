@@ -31,7 +31,7 @@ int main(int argc, const char* argv[])
     Theme theme(renderer);
     if (!theme.load_default())
         return EXIT_FAILURE;
-    auto& font = theme.font();
+    auto& font = theme.base_font();
 
     Shape rts(renderer, Color(0, 0, 40, 128), Color(180, 180, 0));
     rts.set_antialiasing(2);

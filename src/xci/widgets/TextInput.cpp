@@ -22,7 +22,7 @@ TextInput::TextInput(Theme& theme, const std::string& string)
       m_cursor_shape(theme.renderer(), Color::Yellow(), Color::Transparent())
 {
     set_focusable(true);
-    m_layout.set_default_font(&theme.font());
+    m_layout.set_default_font(&theme.base_font());
 }
 
 

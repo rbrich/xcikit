@@ -16,6 +16,13 @@ namespace xci::graphics { class Renderer; }
 
 namespace xci::widgets {
 
+enum class FontId {
+    Base,       // base font
+    Emoji,      // emoji font (fallback)
+    Icon,       // icons
+    Alt,        // alternative font
+};
+
 enum class IconId {
     None,
     CheckBoxUnchecked,
@@ -51,17 +58,20 @@ public:
     // default theme
     bool load_default();
 
-    // base font
-    bool load_font_face(const core::Vfs& vfs, const char* file_path, int face_index);
-    text::Font& font() { return m_font; }
-
-    // emoji font (fallback)
-    bool load_emoji_font_face(const core::Vfs& vfs, const char* file_path, int face_index);
-    text::Font& emoji_font() { return m_emoji_font; }
+    /// Load font face from VFS
+    /// Multiple faces can be loaded into the same target FontID, e.g. Regular, Bold, Italic.
+    /// \param vfs          VFS where to look for the font file
+    /// \param file_path    path to font file inside the VFS
+    /// \param face_index   index of font face in the font file which should be loaded (0 = default / single face)
+    /// \param font_id      target FontID to which the face should be added
+    bool load_font_face(const core::Vfs& vfs, const char* file_path, int face_index, FontId font_id);
+    text::Font& font(FontId font_id) { return m_fonts[size_t(font_id)]; }
+    text::Font& base_font() { return font(FontId::Base); }
+    text::Font& emoji_font() { return font(FontId::Emoji); }
+    text::Font& icon_font() { return font(FontId::Icon); }
+    text::Font& alt_font() { return font(FontId::Alt); }
 
     // icons
-    bool load_icon_font_face(const core::Vfs& vfs, const char* file_path, int face_index);
-    text::Font& icon_font() { return m_icon_font; }
     void set_icon_codepoint(IconId icon_id, text::CodePoint codepoint);
     text::CodePoint icon_codepoint(IconId icon_id);
 
@@ -71,9 +81,7 @@ public:
 
 private:
     graphics::Renderer& m_renderer;
-    text::Font m_font;  // base font
-    text::Font m_emoji_font;  // emojis
-    text::Font m_icon_font;  // icons
+    std::array<text::Font, sizeof(FontId)> m_fonts;
     IconMap m_icon_map {};
     // colors
     ColorMap m_color_map;
