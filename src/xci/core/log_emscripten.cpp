@@ -30,6 +30,8 @@ void Logger::default_handler(Logger::Level lvl, std::string_view msg)
         case Logger::Level::Error:
             em_level = EM_LOG_ERROR;
             break;
+        case Logger::Level::None:
+            return;
     }
     emscripten_log(EM_LOG_CONSOLE | em_level, "%s", std::string(msg).c_str());
 }

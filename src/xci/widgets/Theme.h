@@ -1,7 +1,7 @@
 // Theme.h created on 2018-04-10 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_WIDGETS_THEME_H
