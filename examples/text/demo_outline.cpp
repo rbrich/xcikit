@@ -1,7 +1,7 @@
 // demo_outline.cpp created on 2021-11-21 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021–2022 Radek Brich
+// Copyright 2021–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "graphics/common.h"
@@ -20,10 +20,10 @@ using namespace xci::core;
 
 static const char * sample_text =
 "Text without outline. <i>Text without outline</i>\n\n"
-"<white_outline>Transparent text with white outline. <i>Transparent text with white outline.</i></white_outline>\n\n"
-"<black_white>Black text with white outline. <i>Black text with white outline.</i></black_white>\n\n"
-"<blue_white>Blue text with white outline. <i>Blue text with white outline.</i></blue_white>\n\n"
-"<white_red>White text with red outline. <i>White text with red outline.</i></white_red>\n\n"
+"<s:white_outline>Transparent text with white outline. <i>Transparent text with white outline.</i></s:white_outline>\n\n"
+"<s:black_white>Black text with white outline. <i>Black text with white outline.</i></s:black_white>\n\n"
+"<s:blue_white>Blue text with white outline. <i>Blue text with white outline.</i></s:blue_white>\n\n"
+"<s:white_red>White text with red outline. <i>White text with red outline.</i></s:white_red>\n\n"
 "";
 
 

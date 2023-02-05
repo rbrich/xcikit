@@ -1,14 +1,16 @@
 // test_graphics.cpp created on 2018-08-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <catch2/catch_test_macros.hpp>
 
 #include <xci/graphics/Color.h>
 #include <xci/graphics/View.h>
+#include <xci/core/log.h>
 
+using namespace xci::core;
 using namespace xci::graphics;
 using namespace xci::graphics::unit_literals;
 
@@ -32,6 +34,25 @@ TEST_CASE( "Indexed colors", "[Color]" )
     CHECK( Color(232) == Color(8, 8, 8) );
     CHECK( Color(254) == Color(228, 228, 228) );
     CHECK( Color(255) == Color(238, 238, 238) );
+}
+
+
+TEST_CASE( "Color from string", "[Color]" )
+{
+    CHECK( Color("black") == Color::Black() );
+    CHECK( Color("White") == Color::White() );
+    CHECK( Color("CYAN") == Color::Cyan() );
+    CHECK( Color("#08f") == Color(0, 0x88, 0xff) );
+    CHECK( Color("#08f7") == Color(0, 0x88, 0xff, 0x77) );
+    CHECK( Color("#1234AB") == Color(0x12, 0x34, 0xAB) );
+    CHECK( Color("#1234AB00") == Color(0x12, 0x34, 0xAB, 0) );
+
+    // Invalid values => red color + log error
+    Logger::default_instance(Logger::Level::None);
+    CHECK( Color("UNKNOWN") == Color::Red() );
+    CHECK( Color("#12345") == Color::Red() );
+    CHECK( Color("#1234567") == Color::Red() );
+    CHECK( Color("#123456789") == Color::Red() );
 }
 
 

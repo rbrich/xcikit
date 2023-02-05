@@ -60,7 +60,7 @@ void Icon::resize(View& view)
         m_layout.add_word(to_utf8(theme().icon_codepoint(m_icon_id)));
         m_layout.end_span("icon");
         m_layout.reset_offset();
-        m_layout.set_font(&theme().font());
+        m_layout.set_font(&theme().base_font());
         m_layout.add_space();
         m_layout.add_word(m_text);
         m_needs_refresh = false;

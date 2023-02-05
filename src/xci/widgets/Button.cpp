@@ -20,7 +20,7 @@ Button::Button(Theme& theme, const std::string &string)
               Color(10, 20, 40), theme.color(ColorId::Default))
 {
     set_focusable(true);
-    m_layout.set_default_font(&theme.font());
+    m_layout.set_default_font(&theme.base_font());
     Markup markup(m_layout);
     markup.parse(string);
 }

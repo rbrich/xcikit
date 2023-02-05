@@ -1,7 +1,7 @@
 // string.h created on 2018-03-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_STRING_H
@@ -130,7 +130,10 @@ std::string unescape_uni(std::string_view str);
 // Convert string to lower case
 std::string to_lower(std::string_view str);
 
-// Convert UTF8 string to UTF32, ie. extract Unicode code points.
+// Case-insensitive string comparison
+bool ci_equal(std::string_view s1, std::string_view s2);
+
+// Convert UTF8 string to UTF32, i.e. extract Unicode code points.
 // In case of invalid source string, logs error and returns empty string.
 std::u32string to_utf32(std::string_view utf8);
 

@@ -39,7 +39,7 @@ void FpsDisplay::resize(View& view)
     m_quad.clear();
     create_sprite(view);
 
-    m_text.set_font(theme().font());
+    m_text.set_font(theme().base_font());
     m_text.set_font_size(size().y / 2);
 }
 

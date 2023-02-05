@@ -606,7 +606,7 @@ void terminal::Caret::draw(View& view, VariCoords pos)
 
 TextTerminal::TextTerminal(Theme& theme)
         : Widget(theme),
-          m_sprites(theme.renderer(), theme.font().texture(), Color(7)),
+          m_sprites(theme.renderer(), theme.base_font().texture(), Color(7)),
           m_emoji_sprites(theme.renderer(), theme.emoji_font().texture(), Color(7)),
           m_boxes(theme.renderer(), Color(0)),
           m_caret(theme.renderer()),
@@ -816,7 +816,7 @@ void TextTerminal::cancel_scrollback()
 void TextTerminal::resize(View& view)
 {
     Widget::resize(view);
-    auto& font = theme().font();
+    auto& font = theme().base_font();
     m_font_size = view.to_fb(m_font_size_requested);
     font.set_size(m_font_size.as<unsigned>());
     m_cell_size = {font.max_advance(), font.height()};
@@ -836,7 +836,7 @@ void TextTerminal::update(View& view, State state)
 {
     view.finish_draw();
 
-    auto& font = theme().font();
+    auto& font = theme().base_font();
     font.set_size(m_font_size.as<unsigned>());
 
     auto& emoji_font = theme().emoji_font();

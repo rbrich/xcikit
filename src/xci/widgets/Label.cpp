@@ -14,7 +14,7 @@ using graphics::FramebufferCoords;
 Label::Label(Theme& theme)
     : Widget(theme)
 {
-    m_text.set_font(theme.font());
+    m_text.set_font(theme.base_font());
 }
 
 
