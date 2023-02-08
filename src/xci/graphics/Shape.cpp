@@ -1,11 +1,13 @@
 // Shape.cpp created on 2018-04-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Shape.h"
 #include "Renderer.h"
+#include <cmath>
+#include <cstdlib>
 
 
 namespace xci::graphics {
@@ -20,6 +22,15 @@ Shape::Shape(Renderer& renderer, Color fill_color, Color outline_color)
           m_rectangle_shader(renderer.get_shader(ShaderId::Rectangle)),
           m_ellipse_shader(renderer.get_shader(ShaderId::Ellipse))
 {}
+
+
+void Shape::add_line(FramebufferCoords a, FramebufferCoords b, FramebufferPixels thickness)
+{
+    add_line_slice(
+            { std::min(a.x, b.x), std::min(a.y, b.y),
+              std::abs(a.x.value - b.x.value), std::abs(a.y.value - b.y.value) },
+            a, b, thickness);
+}
 
 
 void Shape::add_line_slice(const FramebufferRect& slice,
@@ -147,11 +158,19 @@ void Shape::add_ellipse_slice(const FramebufferRect& slice, const FramebufferRec
 }
 
 
+void Shape::add_circle(FramebufferCoords center, float radius, FramebufferPixels outline_thickness)
+{
+    add_ellipse({center.x - radius, center.y - radius, 2 * radius, 2 * radius},
+                outline_thickness);
+}
+
+
+
 void
 Shape::add_rounded_rectangle(const FramebufferRect& rect, FramebufferPixels radius,
                              FramebufferPixels outline_thickness)
 {
-    // the shape is composed from 7-slice pattern:
+    // The shape is composed of 7-slice pattern:
     // corner ellipse slices and center rectangle slices
     auto x = rect.x;
     auto y = rect.y;
