@@ -68,6 +68,16 @@ int main(int argc, const char* argv[])
     prim.set_texture(1, texture);
     prim.set_blend(BlendFunc::AlphaBlend);
 
+    // Colored polygon
+    Primitives poly {renderer,
+                     VertexFormat::V2c4, PrimitiveType::TriFans};
+    Shader poly_shader {renderer};
+    poly_shader.load_from_file(
+            vfs.read_file("shaders/poly_c.vert.spv").path(),
+            vfs.read_file("shaders/poly_c.frag.spv").path());
+    poly.set_shader(poly_shader);
+    poly.set_blend(BlendFunc::AlphaBlend);
+
     // Higher-level object which wraps Primitives and can draw different basic shapes
     // using specifically prepared internal shaders (in this case, it draws a rectangle)
     Shape shape {renderer};
@@ -95,6 +105,16 @@ int main(int argc, const char* argv[])
 
         prim.update();
 
+        poly.clear();
+        poly.begin_primitive();
+        poly.add_vertex(view.vp_to_fb({20_vp, -40_vp}), {1.0f, 0.0f, 1.0f});
+        poly.add_vertex(view.vp_to_fb({30_vp, 0_vp}), {0.0f, 1.0f, 0.0f});
+        poly.add_vertex(view.vp_to_fb({60_vp, -10_vp}), {0.0f, 0.0f, 1.0f});
+        poly.add_vertex(view.vp_to_fb({60_vp, -30_vp}), {0.0f, 1.0f, 1.0f});
+        poly.add_vertex(view.vp_to_fb({40_vp, -50_vp}), {1.0f, 1.0f, 0.0f});
+        poly.end_primitive();
+        poly.update();
+
         shape.clear();
         shape.add_rectangle(view.vp_to_fb({-37.5_vp, -15_vp, 100_vp, 60_vp}), view.vp_to_fb(2.5_vp));
         shape.update();
@@ -102,6 +122,7 @@ int main(int argc, const char* argv[])
 
     window.set_draw_callback([&](View& view) {
         prim.draw(view);
+        poly.draw(view);
         shape.draw(view, {0_fb, 0_fb});
     });
 

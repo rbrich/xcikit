@@ -1,7 +1,7 @@
 // Primitives.cpp created on 2018-08-03 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Primitives.h"
@@ -239,8 +239,10 @@ Primitives::~Primitives()
 static uint32_t get_vertex_float_count(VertexFormat format)
 {
     switch (format) {
+        case VertexFormat::V2: return 2;
         case VertexFormat::V2t2: return 4;
         case VertexFormat::V2t22: return 6;
+        case VertexFormat::V2c4: return 6;
         case VertexFormat::V2c4t2: return 8;
         case VertexFormat::V2c4t22: return 10;
     }
@@ -283,6 +285,16 @@ void Primitives::end_primitive()
 }
 
 
+void Primitives::add_vertex(FramebufferCoords xy)
+{
+    assert(m_format == VertexFormat::V2);
+    assert(m_open_vertices != -1);
+    m_open_vertices++;
+    m_vertex_data.push_back(xy.x.value);
+    m_vertex_data.push_back(xy.y.value);
+}
+
+
 void Primitives::add_vertex(FramebufferCoords xy, float u, float v)
 {
     assert(m_format == VertexFormat::V2t2);
@@ -306,6 +318,20 @@ void Primitives::add_vertex(FramebufferCoords xy, float u1, float v1, float u2, 
     m_vertex_data.push_back(v1);
     m_vertex_data.push_back(u2);
     m_vertex_data.push_back(v2);
+}
+
+
+void Primitives::add_vertex(FramebufferCoords xy, Color color)
+{
+    assert(m_format == VertexFormat::V2c4);
+    assert(m_open_vertices != -1);
+    m_open_vertices++;
+    m_vertex_data.push_back(xy.x.value);
+    m_vertex_data.push_back(xy.y.value);
+    m_vertex_data.push_back(color.red_f());
+    m_vertex_data.push_back(color.green_f());
+    m_vertex_data.push_back(color.blue_f());
+    m_vertex_data.push_back(color.alpha_f());
 }
 
 
