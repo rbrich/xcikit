@@ -1,7 +1,7 @@
 // Renderer.cpp created on 2018-11-24 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Renderer.h"
@@ -817,6 +817,18 @@ void Renderer::set_present_mode(PresentMode mode)
     destroy_swapchain();
     create_swapchain();
     create_framebuffers();
+}
+
+
+PresentMode Renderer::present_mode() const
+{
+    switch (m_present_mode) {
+        default:
+        case VK_PRESENT_MODE_IMMEDIATE_KHR:     return PresentMode::Immediate;
+        case VK_PRESENT_MODE_MAILBOX_KHR:       return PresentMode::Mailbox;
+        case VK_PRESENT_MODE_FIFO_KHR:          return PresentMode::Fifo;
+        case VK_PRESENT_MODE_FIFO_RELAXED_KHR:  return PresentMode::FifoRelaxed;
+    }
 }
 
 
