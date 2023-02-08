@@ -14,7 +14,7 @@ void Form::add_input(const std::string& label, std::string& text_input)
 {
     // Label
     m_labels.emplace_back(theme(), label);
-    add(m_labels.back());
+    add_child(m_labels.back());
     add_hint(Form::Hint::NextColumn);
     // TextInput
     m_text_inputs.emplace_back(theme(), text_input);
@@ -22,7 +22,7 @@ void Form::add_input(const std::string& label, std::string& text_input)
     m_text_inputs.back().on_change([p_text_input, &text_input](View&) {
         text_input = p_text_input->string();
     });
-    add(m_text_inputs.back());
+    add_child(m_text_inputs.back());
     add_hint(Form::Hint::NextRow);
 }
 
@@ -31,7 +31,7 @@ void Form::add_input(const std::string& label, bool& checkbox)
 {
     // Label
     m_labels.emplace_back(theme(), label);
-    add(m_labels.back());
+    add_child(m_labels.back());
     add_hint(Form::Hint::NextColumn);
     // Checkbox
     m_checkboxes.emplace_back(theme());
@@ -40,7 +40,7 @@ void Form::add_input(const std::string& label, bool& checkbox)
     m_checkboxes.back().on_change([p_checkbox, &checkbox]() {
         checkbox = p_checkbox->checked();
     });
-    add(m_checkboxes.back());
+    add_child(m_checkboxes.back());
     add_hint(Form::Hint::NextRow);
 }
 

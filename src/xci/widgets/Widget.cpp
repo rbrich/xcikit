@@ -49,12 +49,6 @@ void Widget::partial_dump(std::ostream& stream, const std::string& nl_prefix)
 }
 
 
-void Composite::add(Widget& child)
-{
-    m_child.push_back(&child);
-}
-
-
 bool Composite::contains(FramebufferCoords point) const
 {
     return any_of(m_child, [&point](const Widget* child){ return child->contains(point); });
