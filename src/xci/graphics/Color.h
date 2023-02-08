@@ -48,13 +48,21 @@ struct Color {
     /// Predefined named colors
     static constexpr Color Transparent() { return {0, 0, 0, 0}; }
     static constexpr Color Black() { return {0, 0, 0}; }
+    static constexpr Color Grey() { return {128, 128, 128}; }
+    static constexpr Color Silver() { return {192, 192, 192}; }
     static constexpr Color White() { return {255, 255, 255}; }
     static constexpr Color Red() { return {255, 0, 0}; }
-    static constexpr Color Green() { return {0, 255, 0}; }
+    static constexpr Color Lime() { return {0, 255, 0}; }
     static constexpr Color Blue() { return {0, 0, 255}; }
     static constexpr Color Cyan() { return {0, 255, 255}; }
     static constexpr Color Magenta() { return {255, 0, 255}; }
     static constexpr Color Yellow() { return {255, 255, 0}; }
+    static constexpr Color Maroon() { return {128, 0, 0}; }
+    static constexpr Color Green() { return {0, 128, 0}; }
+    static constexpr Color Navy() { return {0, 0, 128}; }
+    static constexpr Color Teal() { return {0, 128, 128}; }
+    static constexpr Color Purple() { return {128, 0, 128}; }
+    static constexpr Color Olive() { return {128, 128, 0}; }
 
     /// Parse color from string spec
     ///
