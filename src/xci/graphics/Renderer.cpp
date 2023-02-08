@@ -109,6 +109,9 @@ Renderer::Renderer(core::Vfs& vfs)
 
     VkInstanceCreateInfo instance_create_info = {
             .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+#ifdef VK_KHR_portability_enumeration
+            .flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR,
+#endif
             .pApplicationInfo = &application_info,
     };
 
@@ -165,6 +168,11 @@ Renderer::Renderer(core::Vfs& vfs)
 
     // this should enable debug messenger for create/destroy of the instance itself
     instance_create_info.pNext = &debugCreateInfo;
+#endif
+
+#ifdef VK_KHR_portability_enumeration
+    // Required for MoltenVK
+    extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 #endif
 
     uint32_t ext_count = 0;
