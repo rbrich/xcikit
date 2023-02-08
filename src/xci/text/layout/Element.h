@@ -1,7 +1,7 @@
 // Element.h created on 2018-03-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_TEXT_LAYOUT_PAGE_ELEMENT_H
@@ -14,6 +14,7 @@
 namespace xci::text::layout {
 
 using graphics::VariUnits;
+using graphics::VariCoords;
 using graphics::VariSize;
 
 
@@ -52,6 +53,18 @@ private:
 };
 
 
+class SetLineSpacing: public Element {
+public:
+    explicit SetLineSpacing(float multiplier) : m_multiplier(multiplier) {}
+    void apply(Page& page) override {
+        page.set_line_spacing(m_multiplier);
+    }
+
+private:
+    float m_multiplier;
+};
+
+
 class AddTabStop: public Element {
 public:
     explicit AddTabStop(VariUnits tab_stop) : m_tab_stop(tab_stop) {}
@@ -81,6 +94,19 @@ public:
 
 private:
     VariSize m_offset;
+};
+
+
+class MoveTo: public Element {
+public:
+    explicit MoveTo(VariCoords coords) : m_coords(coords) {}
+    void apply(Page& page) override {
+        page.finish_line();
+        page.set_origin(page.target().to_fb(m_coords));
+    }
+
+private:
+    VariCoords m_coords;
 };
 
 
