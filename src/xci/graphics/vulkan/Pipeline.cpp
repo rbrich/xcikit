@@ -254,6 +254,11 @@ void PipelineCreateInfo::set_vertex_format(VertexFormat format)
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32_SFLOAT, 2 * sf};
             attr_desc_count = 2;
             break;
+        case VertexFormat::V2t3:
+            stride = 5;
+            m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32_SFLOAT, 2 * sf};
+            attr_desc_count = 2;
+            break;
         case VertexFormat::V2t22:
             stride = 6;
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32_SFLOAT, 2 * sf};

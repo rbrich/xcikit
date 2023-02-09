@@ -121,6 +121,7 @@ public:
     void end_primitive();
     void add_vertex(FramebufferCoords xy);
     void add_vertex(FramebufferCoords xy, float u, float v);
+    void add_vertex(FramebufferCoords xy, float u, float v, float w);
     void add_vertex(FramebufferCoords xy, float u1, float v1, float u2, float v2);
     void add_vertex(FramebufferCoords xy, Color color);
     void add_vertex(FramebufferCoords xy, Color color, float u, float v);

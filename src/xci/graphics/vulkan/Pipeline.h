@@ -26,6 +26,7 @@ class Shader;
 enum class VertexFormat {
     V2,         // 2 vertex coords
     V2t2,       // 2 vertex coords, 2 texture coords (all float)
+    V2t3,       // 2 vertex coords, 3 texture coords (or barycentric coords)
     V2t22,      // 2 vertex coords, 2 + 2 texture coords (all float)
     V2c4,       // 2 vertex coords, RGBA color
     V2c4t2,     // 2 vertex coords, RGBA color, 2 texture coords (all float)

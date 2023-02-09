@@ -583,6 +583,7 @@ void terminal::Caret::update(View& view, const FramebufferRect& rect)
     m_quad.end_primitive();
 
     // pure white
+    m_quad.clear_uniforms();
     m_quad.add_uniform(1, {0.7, 0.7, 0.7}, {0.7, 0.7, 0.7});
     // green
     //m_quad.add_uniform(1, {0.0, 0.7, 0.3}, Color::Green());

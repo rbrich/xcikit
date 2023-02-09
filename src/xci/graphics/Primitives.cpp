@@ -241,6 +241,7 @@ static uint32_t get_vertex_float_count(VertexFormat format)
     switch (format) {
         case VertexFormat::V2: return 2;
         case VertexFormat::V2t2: return 4;
+        case VertexFormat::V2t3: return 5;
         case VertexFormat::V2t22: return 6;
         case VertexFormat::V2c4: return 6;
         case VertexFormat::V2c4t2: return 8;
@@ -304,6 +305,19 @@ void Primitives::add_vertex(FramebufferCoords xy, float u, float v)
     m_vertex_data.push_back(xy.y.value);
     m_vertex_data.push_back(u);
     m_vertex_data.push_back(v);
+}
+
+
+void Primitives::add_vertex(FramebufferCoords xy, float u, float v, float w)
+{
+    assert(m_format == VertexFormat::V2t3);
+    assert(m_open_vertices != -1);
+    m_open_vertices++;
+    m_vertex_data.push_back(xy.x.value);
+    m_vertex_data.push_back(xy.y.value);
+    m_vertex_data.push_back(u);
+    m_vertex_data.push_back(v);
+    m_vertex_data.push_back(w);
 }
 
 
@@ -375,7 +389,6 @@ void Primitives::clear()
     destroy_pipeline();
     m_vertex_data.clear();
     m_index_data.clear();
-    clear_uniforms();
     m_closed_vertices = 0;
     m_open_vertices = -1;
 }

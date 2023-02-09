@@ -41,6 +41,25 @@ void generate_checkerboard(Texture& texture)
 }
 
 
+void update_poly(Primitives& poly, const View& view, float time_frac)
+{
+    poly.clear();
+    poly.begin_primitive();
+    poly.add_vertex(view.vp_to_fb({40_vp, -20_vp}), 0.0f, 0.0f, 1.0f);
+    float b1 = 1.0f;
+    float b2 = 0.0f;
+    constexpr int edges = 9;
+    const float angle = 2 * std::acos(-1) / edges;
+    for (int i = 0; i <= edges; i++) {
+        auto v = Vec2{15_vp, 15_vp}.rotate(-angle * (i + time_frac));
+        poly.add_vertex(view.vp_to_fb(Vec2{40_vp, -20_vp} + v), b1, b2, 0.0f);
+        std::swap(b1, b2);
+    }
+    poly.end_primitive();
+    poly.update();
+}
+
+
 int main(int argc, const char* argv[])
 {
     Vfs vfs;
@@ -70,21 +89,26 @@ int main(int argc, const char* argv[])
 
     // Colored polygon
     Primitives poly {renderer,
-                     VertexFormat::V2c4, PrimitiveType::TriFans};
+                     VertexFormat::V2t3, PrimitiveType::TriFans};
     Shader poly_shader {renderer};
     poly_shader.load_from_file(
-            vfs.read_file("shaders/poly_c.vert.spv").path(),
-            vfs.read_file("shaders/poly_c.frag.spv").path());
+            vfs.read_file("shaders/poly_outline.vert.spv").path(),
+            vfs.read_file("shaders/poly_outline.frag.spv").path());
     poly.set_shader(poly_shader);
+    poly.add_uniform(1, Color::Blue(), Color::Yellow());
+    poly.add_uniform(2, 0.8, 2);
+    poly.add_uniform(3, 0.05);
     poly.set_blend(BlendFunc::AlphaBlend);
 
     // Higher-level object which wraps Primitives and can draw different basic shapes
     // using specifically prepared internal shaders (in this case, it draws a rectangle)
     Shape shape {renderer};
     shape.set_fill_color(Color(30, 40, 50, 128));
-    shape.set_outline_color(Color(180, 180, 0));
-    shape.set_softness(1);
+    shape.set_outline_color(Color(0, 180, 0));
+    shape.set_softness(0.5);
     shape.set_antialiasing(1);
+
+    float elapsed_acc = 0;
 
     window.set_size_callback([&](View& view) {
         prim.clear();
@@ -105,19 +129,18 @@ int main(int argc, const char* argv[])
 
         prim.update();
 
-        poly.clear();
-        poly.begin_primitive();
-        poly.add_vertex(view.vp_to_fb({20_vp, -40_vp}), {1.0f, 0.0f, 1.0f});
-        poly.add_vertex(view.vp_to_fb({30_vp, 0_vp}), {0.0f, 1.0f, 0.0f});
-        poly.add_vertex(view.vp_to_fb({60_vp, -10_vp}), {0.0f, 0.0f, 1.0f});
-        poly.add_vertex(view.vp_to_fb({60_vp, -30_vp}), {0.0f, 1.0f, 1.0f});
-        poly.add_vertex(view.vp_to_fb({40_vp, -50_vp}), {1.0f, 1.0f, 0.0f});
-        poly.end_primitive();
-        poly.update();
+        update_poly(poly, view, elapsed_acc);
 
         shape.clear();
-        shape.add_rectangle(view.vp_to_fb({-37.5_vp, -15_vp, 100_vp, 60_vp}), view.vp_to_fb(2.5_vp));
+        shape.add_rectangle(view.vp_to_fb({-10_vp, 10_vp, 60_vp, 40_vp}), view.vp_to_fb(2.5_vp));
         shape.update();
+    });
+
+    window.set_update_callback([&](View& view, std::chrono::nanoseconds elapsed) {
+        elapsed_acc += elapsed.count() / 1e9;
+        elapsed_acc -= trunc(elapsed_acc);
+
+        update_poly(poly, view, elapsed_acc);
     });
 
     window.set_draw_callback([&](View& view) {
@@ -126,7 +149,7 @@ int main(int argc, const char* argv[])
         shape.draw(view, {0_fb, 0_fb});
     });
 
-    window.set_refresh_mode(RefreshMode::OnDemand);
+    window.set_refresh_mode(RefreshMode::Periodic);
     window.display();
     return EXIT_SUCCESS;
 }

@@ -33,6 +33,8 @@ set(SHADER_SOURCES
     cursor.frag
     poly_c.vert
     poly_c.frag
+    poly_outline.vert
+    poly_outline.frag
     )
 
 set(outputs)

@@ -61,6 +61,12 @@ struct Vec2 {
         return std::abs(dx) + std::abs(dy);
     }
 
+    Vec2<T> rotate(float angle_radians) const {
+        const float c = std::cos(angle_radians);
+        const float s = std::sin(angle_radians);
+        return {x * c - y * s, x * s + y * c};
+    }
+
     Vec2<T>& operator +=(const Vec2<T>& rhs) {
         x += rhs.x;
         y += rhs.y;
