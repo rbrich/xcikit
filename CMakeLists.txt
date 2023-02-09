@@ -126,13 +126,7 @@ find_package(Doxygen)
 
 # TInfo (ncurses)
 if (XCI_WITH_TERMINFO)
-    find_library(TERMINFO_LIBRARY NAMES terminfo tinfo curses ncurses ncursesw)
-    if (TERMINFO_LIBRARY)
-        message(STATUS "Found terminfo: ${TERMINFO_LIBRARY}")
-        add_library(terminfo::terminfo INTERFACE IMPORTED)
-        set_target_properties(terminfo::terminfo PROPERTIES
-            INTERFACE_LINK_LIBRARIES "${TERMINFO_LIBRARY}")
-    endif()
+    find_package(Terminfo)
 endif ()
 
 # Run configuration checks
@@ -381,7 +375,9 @@ if (XCI_INSTALL_DEVEL)
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xcikit)
 
     # Make our CMake modules available to clients
-    install(FILES cmake/XciBuildOptions.cmake DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xcikit)
+    install(FILES
+        cmake/XciBuildOptions.cmake cmake/FindTerminfo.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xcikit)
 endif()
 
 
