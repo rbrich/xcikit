@@ -376,7 +376,9 @@ if (XCI_INSTALL_DEVEL)
 
     # Make our CMake modules available to clients
     install(FILES
-        cmake/XciBuildOptions.cmake cmake/FindTerminfo.cmake
+        cmake/XciBuildOptions.cmake
+        cmake/FindGLSLC.cmake
+        cmake/FindTerminfo.cmake
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xcikit)
 endif()
 

@@ -1,7 +1,7 @@
 // demo_vulkan.cpp created on 2019-10-22 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "common.h"
@@ -45,13 +45,14 @@ void update_poly(Primitives& poly, const View& view, float time_frac)
 {
     poly.clear();
     poly.begin_primitive();
-    poly.add_vertex(view.vp_to_fb({40_vp, -20_vp}), 0.0f, 0.0f, 1.0f);
-    float b1 = 1.0f;
+    float b1 = 20.0f;  // lower = thicker outline
     float b2 = 0.0f;
-    constexpr int edges = 9;
+    constexpr int edges = 10;
     const float angle = 2 * std::acos(-1) / edges;
+    poly.add_vertex(view.vp_to_fb({40_vp, -20_vp}), 0.0f, 0.0f, b1);
     for (int i = 0; i <= edges; i++) {
-        auto v = Vec2{15_vp, 15_vp}.rotate(-angle * (i + time_frac));
+        const float k = 0.5 * (1 + i % 2);
+        auto v = Vec2{k*15_vp, k*15_vp}.rotate(-angle * (i + 2*time_frac));
         poly.add_vertex(view.vp_to_fb(Vec2{40_vp, -20_vp} + v), b1, b2, 0.0f);
         std::swap(b1, b2);
     }
@@ -92,12 +93,11 @@ int main(int argc, const char* argv[])
                      VertexFormat::V2t3, PrimitiveType::TriFans};
     Shader poly_shader {renderer};
     poly_shader.load_from_file(
-            vfs.read_file("shaders/poly_outline.vert.spv").path(),
-            vfs.read_file("shaders/poly_outline.frag.spv").path());
+            vfs.read_file("shaders/polygon.vert.spv").path(),
+            vfs.read_file("shaders/polygon.frag.spv").path());
     poly.set_shader(poly_shader);
     poly.add_uniform(1, Color::Blue(), Color::Yellow());
-    poly.add_uniform(2, 0.8, 2);
-    poly.add_uniform(3, 0.05);
+    poly.add_uniform(2, 0.8, 2);  // softness, antialiasing
     poly.set_blend(BlendFunc::AlphaBlend);
 
     // Higher-level object which wraps Primitives and can draw different basic shapes
@@ -138,7 +138,7 @@ int main(int argc, const char* argv[])
 
     window.set_update_callback([&](View& view, std::chrono::nanoseconds elapsed) {
         elapsed_acc += elapsed.count() / 1e9;
-        elapsed_acc -= trunc(elapsed_acc);
+        elapsed_acc -= std::trunc(elapsed_acc);
 
         update_poly(poly, view, elapsed_acc);
     });

@@ -1,7 +1,7 @@
 // geometry.h created on 2018-03-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_GEOMETRY_H
@@ -256,6 +256,18 @@ float line_circle_intersection(const Vec2<T> &origin,
         return t;
     else
         return INFINITY;
+}
+
+
+/// Compute distance from a point to an infinite line
+/// \param point            The point
+/// \param line_p1, line_p2 Two points on an infinite line
+/// \returns                Distance in same units
+template <typename T>
+T dist_point_to_line(const Vec2<T>& point, const Vec2<T>& line_p1, const Vec2<T>& line_p2)
+{
+    const auto a = (line_p2.x - line_p1.x) * (line_p1.y - point.y) - (line_p1.x - point.x) * (line_p2.y - line_p1.y);
+    return static_cast<T>(std::abs(cast_to_numeric(a))) / line_p1.dist(line_p2);
 }
 
 

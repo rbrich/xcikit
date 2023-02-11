@@ -13,6 +13,7 @@
 #include <xci/graphics/View.h>
 #include <xci/core/geometry.h>
 #include <xci/core/mixin.h>
+#include <span>
 
 namespace xci::graphics {
 
@@ -85,12 +86,26 @@ public:
     /// \param rect                 Position and size
     /// \param radius               Corner radius
     /// \param outline_thickness    The outline goes from edge to inside.
-    ///                             This parameter defines how far (in display units).
+    ///                             This parameter defines how far (in framebuffer pixels).
     void add_rounded_rectangle(const FramebufferRect& rect, FramebufferPixels radius,
                                FramebufferPixels outline_thickness = 0);
 
+    /// Add a polygon.
+    /// It can be regular or irregular, convex or concave. The only limitation is that
+    /// that each vertex must be directly visible from the center, without crossing any edges.
+    /// \param center       Invisible center of TriFan structure.
+    ///                     Triangles are constructed from center to each edge.
+    /// \param vertices     Edge vertices around center, in CCW order.
+    /// \param outline_thickness    The outline goes from edge to inside.
+    ///                             This parameter defines how far (in framebuffer pixels).
+    void add_polygon(FramebufferCoords center, std::span<FramebufferCoords> vertices,
+                     FramebufferPixels outline_thickness = 0);
+
     /// Reserve memory for a number of `lines`, `rectangles`, `ellipses`.
-    void reserve(size_t lines, size_t rectangles, size_t ellipses);
+    void reserve_lines(size_t lines) { m_lines.reserve(4 * lines); }
+    void reserve_rectangles(size_t rectangles) { m_rectangles.reserve(4 * rectangles); }
+    void reserve_ellipses(size_t ellipses) { m_ellipses.reserve(4 * ellipses); }
+    void reserve_polygons(size_t polygon_edges) { m_polygons.reserve(polygon_edges); }
 
     /// Remove all shapes and clear all state (colors etc.)
     void clear();
@@ -111,10 +126,12 @@ private:
     Primitives m_lines;
     Primitives m_rectangles;
     Primitives m_ellipses;
+    Primitives m_polygons;
 
     Shader& m_line_shader;
     Shader& m_rectangle_shader;
     Shader& m_ellipse_shader;
+    Shader& m_polygon_shader;
 };
 
 

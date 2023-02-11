@@ -250,10 +250,10 @@ bool Renderer::load_shader(ShaderId shader_id, Shader& shader)
             return shader.load_from_vfs(vfs(),
                     "shaders/sprite_c.vert.spv",
                     "shaders/sprite_c.frag.spv");
-        case ShaderId::PolyC:
+        case ShaderId::FlatC:
             return shader.load_from_vfs(vfs(),
-                    "shaders/poly_c.vert.spv",
-                    "shaders/poly_c.frag.spv");
+                    "shaders/flat_c.vert.spv",
+                    "shaders/flat_c.frag.spv");
         case ShaderId::Line:
             return shader.load_from_vfs(vfs(),
                     "shaders/line.vert.spv",
@@ -266,6 +266,10 @@ bool Renderer::load_shader(ShaderId shader_id, Shader& shader)
             return shader.load_from_vfs(vfs(),
                     "shaders/ellipse.vert.spv",
                     "shaders/ellipse.frag.spv");
+        case ShaderId::Polygon:
+            return shader.load_from_vfs(vfs(),
+                    "shaders/polygon.vert.spv",
+                    "shaders/polygon.frag.spv");
         case ShaderId::Fps:
             return shader.load_from_vfs(vfs(),
                     "shaders/fps.vert.spv",

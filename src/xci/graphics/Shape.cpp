@@ -6,6 +6,7 @@
 
 #include "Shape.h"
 #include "Renderer.h"
+#include <xci/core/geometry.h>
 #include <cmath>
 #include <cstdlib>
 
@@ -18,9 +19,11 @@ Shape::Shape(Renderer& renderer, Color fill_color, Color outline_color)
           m_lines(renderer, VertexFormat::V2t2, PrimitiveType::TriFans),
           m_rectangles(renderer, VertexFormat::V2c4t22, PrimitiveType::TriFans),
           m_ellipses(renderer, VertexFormat::V2t22, PrimitiveType::TriFans),
+          m_polygons(renderer, VertexFormat::V2t3, PrimitiveType::TriFans),
           m_line_shader(renderer.get_shader(ShaderId::Line)),
           m_rectangle_shader(renderer.get_shader(ShaderId::Rectangle)),
-          m_ellipse_shader(renderer.get_shader(ShaderId::Ellipse))
+          m_ellipse_shader(renderer.get_shader(ShaderId::Ellipse)),
+          m_polygon_shader(renderer.get_shader(ShaderId::Polygon))
 {}
 
 
@@ -165,10 +168,8 @@ void Shape::add_circle(FramebufferCoords center, float radius, FramebufferPixels
 }
 
 
-
-void
-Shape::add_rounded_rectangle(const FramebufferRect& rect, FramebufferPixels radius,
-                             FramebufferPixels outline_thickness)
+void Shape::add_rounded_rectangle(const FramebufferRect& rect, FramebufferPixels radius,
+                                  FramebufferPixels outline_thickness)
 {
     // The shape is composed of 7-slice pattern:
     // corner ellipse slices and center rectangle slices
@@ -187,19 +188,34 @@ Shape::add_rounded_rectangle(const FramebufferRect& rect, FramebufferPixels radi
     add_rectangle_slice({x,   y+r,   w, h-rr}, rect, outline_thickness);
 }
 
+
+void Shape::add_polygon(FramebufferCoords center, std::span<FramebufferCoords> vertices,
+                        FramebufferPixels outline_thickness)
+{
+    // Use barycentric coordinates inside each triangle to:
+    // * identify the outer edge (it has barycentric Z near 0)
+    // * set threshold for the outline (outline drawn where barycentric Z < 1.0)
+    // All barycentric coords are multiplied by (distance from center to edge) / outline_thickness.
+    assert(vertices.size() >= 2);
+    const auto d = xci::core::dist_point_to_line(center, vertices[0], vertices[1]);
+    float b1 = (d / outline_thickness).value;
+    float b2 = 0.0f;
+    m_polygons.begin_primitive();
+    m_polygons.add_vertex(center, 0.0f, 0.0f, b1);
+    for (const auto vertex : vertices) {
+        m_polygons.add_vertex(vertex, b1, b2, 0.0f);
+        std::swap(b1, b2);
+    }
+    m_polygons.end_primitive();
+}
+
+
 void Shape::clear()
 {
     m_lines.clear();
     m_rectangles.clear();
     m_ellipses.clear();
-}
-
-
-void Shape::reserve(size_t lines, size_t rectangles, size_t ellipses)
-{
-    m_lines.reserve(4 * lines);
-    m_rectangles.reserve(4 * rectangles);
-    m_ellipses.reserve(4 * ellipses);
+    m_polygons.clear();
 }
 
 
@@ -234,6 +250,16 @@ void Shape::update()
         m_ellipses.set_blend(BlendFunc::AlphaBlend);
         m_ellipses.update();
     }
+
+    // polygons
+    if (!m_polygons.empty()) {
+        m_polygons.clear_uniforms();
+        m_polygons.add_uniform(1, m_fill_color, m_outline_color);
+        m_polygons.add_uniform(2, m_softness, m_antialiasing);
+        m_polygons.set_shader(m_polygon_shader);
+        m_polygons.set_blend(BlendFunc::AlphaBlend);
+        m_polygons.update();
+    }
 }
 
 
@@ -250,6 +276,10 @@ void Shape::draw(View& view, VariCoords pos)
     // ellipses
     if (!m_ellipses.empty())
         m_ellipses.draw(view, pos);
+
+    // polygons
+    if (!m_polygons.empty())
+        m_polygons.draw(view, pos);
 }
 
 
