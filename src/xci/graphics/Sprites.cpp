@@ -57,6 +57,7 @@ void Sprites::add_sprite(const FramebufferRect& rect, const Rect_u& texrect)
 
 void Sprites::update()
 {
+    m_quads.clear_uniforms();
     m_quads.add_uniform(1, m_color);
     m_quads.set_blend(BlendFunc::AlphaBlend);
     m_quads.set_texture(2, m_texture);

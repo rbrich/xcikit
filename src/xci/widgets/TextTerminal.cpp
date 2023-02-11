@@ -583,6 +583,7 @@ void terminal::Caret::update(View& view, const FramebufferRect& rect)
     m_quad.end_primitive();
 
     // pure white
+    m_quad.clear_uniforms();
     m_quad.add_uniform(1, {0.7, 0.7, 0.7}, {0.7, 0.7, 0.7});
     // green
     //m_quad.add_uniform(1, {0.0, 0.7, 0.3}, Color::Green());
@@ -847,7 +848,7 @@ void TextTerminal::update(View& view, State state)
     m_sprites.reserve(expected_num_cells);
     m_emoji_sprites.clear();
     m_boxes.clear();
-    m_boxes.reserve(0, expected_num_cells, 0);
+    m_boxes.reserve_rectangles(expected_num_cells);
 
     FramebufferCoords pen;
     size_t buffer_first, buffer_last;

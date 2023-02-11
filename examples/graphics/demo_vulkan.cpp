@@ -1,7 +1,7 @@
 // demo_vulkan.cpp created on 2019-10-22 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "common.h"
@@ -41,6 +41,26 @@ void generate_checkerboard(Texture& texture)
 }
 
 
+void update_poly(Primitives& poly, const View& view, float time_frac)
+{
+    poly.clear();
+    poly.begin_primitive();
+    float b1 = 20.0f;  // lower = thicker outline
+    float b2 = 0.0f;
+    constexpr int edges = 10;
+    const float angle = 2 * std::acos(-1) / edges;
+    poly.add_vertex(view.vp_to_fb({40_vp, -20_vp}), 0.0f, 0.0f, b1);
+    for (int i = 0; i <= edges; i++) {
+        const float k = 0.5 * (1 + i % 2);
+        auto v = Vec2{k*15_vp, k*15_vp}.rotate(-angle * (i + 2*time_frac));
+        poly.add_vertex(view.vp_to_fb(Vec2{40_vp, -20_vp} + v), b1, b2, 0.0f);
+        std::swap(b1, b2);
+    }
+    poly.end_primitive();
+    poly.update();
+}
+
+
 int main(int argc, const char* argv[])
 {
     Vfs vfs;
@@ -68,13 +88,27 @@ int main(int argc, const char* argv[])
     prim.set_texture(1, texture);
     prim.set_blend(BlendFunc::AlphaBlend);
 
+    // Colored polygon
+    Primitives poly {renderer,
+                     VertexFormat::V2t3, PrimitiveType::TriFans};
+    Shader poly_shader {renderer};
+    poly_shader.load_from_file(
+            vfs.read_file("shaders/polygon.vert.spv").path(),
+            vfs.read_file("shaders/polygon.frag.spv").path());
+    poly.set_shader(poly_shader);
+    poly.add_uniform(1, Color::Blue(), Color::Yellow());
+    poly.add_uniform(2, 0.8, 2);  // softness, antialiasing
+    poly.set_blend(BlendFunc::AlphaBlend);
+
     // Higher-level object which wraps Primitives and can draw different basic shapes
     // using specifically prepared internal shaders (in this case, it draws a rectangle)
     Shape shape {renderer};
     shape.set_fill_color(Color(30, 40, 50, 128));
-    shape.set_outline_color(Color(180, 180, 0));
-    shape.set_softness(1);
+    shape.set_outline_color(Color(0, 180, 0));
+    shape.set_softness(0.5);
     shape.set_antialiasing(1);
+
+    float elapsed_acc = 0;
 
     window.set_size_callback([&](View& view) {
         prim.clear();
@@ -95,17 +129,27 @@ int main(int argc, const char* argv[])
 
         prim.update();
 
+        update_poly(poly, view, elapsed_acc);
+
         shape.clear();
-        shape.add_rectangle(view.vp_to_fb({-37.5_vp, -15_vp, 100_vp, 60_vp}), view.vp_to_fb(2.5_vp));
+        shape.add_rectangle(view.vp_to_fb({-10_vp, 10_vp, 60_vp, 40_vp}), view.vp_to_fb(2.5_vp));
         shape.update();
+    });
+
+    window.set_update_callback([&](View& view, std::chrono::nanoseconds elapsed) {
+        elapsed_acc += elapsed.count() / 1e9;
+        elapsed_acc -= std::trunc(elapsed_acc);
+
+        update_poly(poly, view, elapsed_acc);
     });
 
     window.set_draw_callback([&](View& view) {
         prim.draw(view);
+        poly.draw(view);
         shape.draw(view, {0_fb, 0_fb});
     });
 
-    window.set_refresh_mode(RefreshMode::OnDemand);
+    window.set_refresh_mode(RefreshMode::Periodic);
     window.display();
     return EXIT_SUCCESS;
 }

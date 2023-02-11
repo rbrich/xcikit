@@ -1,7 +1,7 @@
 // Pipeline.h created on 2021-08-10 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021 Radek Brich
+// Copyright 2021–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_VULKAN_PIPELINE_H
@@ -24,8 +24,11 @@ class Shader;
 
 
 enum class VertexFormat {
+    V2,         // 2 vertex coords
     V2t2,       // 2 vertex coords, 2 texture coords (all float)
+    V2t3,       // 2 vertex coords, 3 texture coords (or barycentric coords)
     V2t22,      // 2 vertex coords, 2 + 2 texture coords (all float)
+    V2c4,       // 2 vertex coords, RGBA color
     V2c4t2,     // 2 vertex coords, RGBA color, 2 texture coords (all float)
     V2c4t22,    // 2 vertex coords, RGBA color, 2 + 2 texture coords (all float)
 };

@@ -1,7 +1,7 @@
 // demo_rectangles.cpp created on 2018-03-19 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "common.h"
@@ -32,7 +32,8 @@ int main(int argc, const char* argv[])
     Text shapes_help(font, "[r] rectangles\n"
                            "[o] rounded rectangles\n"
                            "[e] ellipses\n"
-                           "[l] lines\n");
+                           "[l] lines\n"
+                           "[p] polygons\n");
     shapes_help.set_color(Color(200, 100, 50));
     Text option_help(font, "[a] antialiasing\n"
                            "[s] softness\n");
@@ -125,6 +126,18 @@ int main(int argc, const char* argv[])
                     shape.add_line_slice({c.x, t, w2, h2}, {r-w4, t}, {r, c.y}, th);
                     shape.add_line_slice({c.x, c.y, w2, h2}, {r, b-h4}, {c.x, b}, th);
                     shape.add_line_slice({l, c.y, w2, h2}, {l+w4, b}, {l, c.y}, th);
+                };
+                break;
+            case Key::P:
+                add_shape_fn = [](Shape& shape, const FramebufferRect& rect, FramebufferPixels th) {
+                    constexpr int edges = 14;
+                    const float angle = 2 * std::acos(-1) / edges;
+                    const auto center = rect.center();
+                    std::vector<FramebufferCoords> vertices;
+                    for (int i = 0; i <= edges; i++) {
+                        vertices.emplace_back(center + ((0.3 + 0.2 * (i % 2)) * rect.size()).rotate(-angle * i));
+                    }
+                    shape.add_polygon(center, vertices, th);
                 };
                 break;
             case Key::A:

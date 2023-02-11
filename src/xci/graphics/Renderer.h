@@ -1,7 +1,7 @@
 // Renderer.h created on 2018-04-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_RENDERER_H
@@ -48,6 +48,7 @@ public:
     /// - Fifo*          - full vsync, requests are queued (*default)
     /// - FifoRelaxed    - mostly vsync, late frame can be displayed immediately
     void set_present_mode(PresentMode mode);
+    PresentMode present_mode() const;
 
     void set_device_id(uint32_t device_id) { m_device_id = device_id; }
 

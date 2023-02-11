@@ -1,7 +1,7 @@
 // Page.h created on 2018-03-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_TEXT_LAYOUT_PAGE_H
@@ -48,7 +48,7 @@ public:
 private:
     std::vector<FontFace::GlyphPlacement> m_shaped;
     Style m_style;
-    FramebufferCoords m_pos;  // relative to page origin (top-left corner)
+    FramebufferCoords m_pos;  // relative to page (top-left corner)
     FramebufferRect m_bbox;
     FramebufferPixels m_baseline = 0;  // relative to bbox top
 
@@ -144,10 +144,18 @@ public:
     void set_alignment(Alignment alignment) { m_alignment = alignment; }
     Alignment get_alignment() const { return m_alignment; }
 
+    void set_line_spacing(float multiplier) { m_line_spacing = multiplier; }
+
+    // Tab stops are relative to origin
     void add_tab_stop(FramebufferPixels x);
     void reset_tab_stops() { m_tab_stops.clear(); }
 
     // ------------------------------------------------------------------------
+
+    // Origin is a position in page where current run started (on line-break, pen returns to origin)\
+    // Also moves pen to new origin.
+    void set_origin(FramebufferCoords origin) { m_origin = origin; m_pen = origin; }
+    FramebufferCoords origin() const { return m_origin; }
 
     // Pen is a position in page where elements are printed
     void set_pen(FramebufferCoords pen) { m_pen = pen; m_pen_offset = {}; }
@@ -160,11 +168,12 @@ public:
     void set_pen_offset(FramebufferSize pen_offset) { m_pen_offset = pen_offset; }
     FramebufferSize pen_offset() const { return m_pen_offset; }
 
-    // Finish current line, apply alignment and move to next one.
+    // Finish current line, apply alignment and move to line beginning.
+    // Does not add vertical space! This is only "carriage return".
     // Does nothing if current line is empty.
     void finish_line();
 
-    // Add vertical space.
+    // Add vertical space ("line feed").
     void advance_line(float lines = 1.0f);
 
     // Add a space after last word. Does nothing if current line is empty.
@@ -203,9 +212,11 @@ private:
     const graphics::View* m_target = nullptr;
 
     // running state
+    FramebufferCoords m_origin;  // origin where pen started (used for "carriage return")
     FramebufferCoords m_pen;  // pen position
     FramebufferSize m_pen_offset;
     Style m_style;  // text style
+    float m_line_spacing = 1.0f;
 
     // page attributes
     FramebufferPixels m_width = 0;  // page width

@@ -1,7 +1,7 @@
 // Renderer.cpp created on 2018-11-24 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Renderer.h"
@@ -109,6 +109,9 @@ Renderer::Renderer(core::Vfs& vfs)
 
     VkInstanceCreateInfo instance_create_info = {
             .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+#ifdef VK_KHR_portability_enumeration
+            .flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR,
+#endif
             .pApplicationInfo = &application_info,
     };
 
@@ -165,6 +168,11 @@ Renderer::Renderer(core::Vfs& vfs)
 
     // this should enable debug messenger for create/destroy of the instance itself
     instance_create_info.pNext = &debugCreateInfo;
+#endif
+
+#ifdef VK_KHR_portability_enumeration
+    // Required for MoltenVK
+    extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
 #endif
 
     uint32_t ext_count = 0;
@@ -242,6 +250,10 @@ bool Renderer::load_shader(ShaderId shader_id, Shader& shader)
             return shader.load_from_vfs(vfs(),
                     "shaders/sprite_c.vert.spv",
                     "shaders/sprite_c.frag.spv");
+        case ShaderId::FlatC:
+            return shader.load_from_vfs(vfs(),
+                    "shaders/flat_c.vert.spv",
+                    "shaders/flat_c.frag.spv");
         case ShaderId::Line:
             return shader.load_from_vfs(vfs(),
                     "shaders/line.vert.spv",
@@ -254,6 +266,10 @@ bool Renderer::load_shader(ShaderId shader_id, Shader& shader)
             return shader.load_from_vfs(vfs(),
                     "shaders/ellipse.vert.spv",
                     "shaders/ellipse.frag.spv");
+        case ShaderId::Polygon:
+            return shader.load_from_vfs(vfs(),
+                    "shaders/polygon.vert.spv",
+                    "shaders/polygon.frag.spv");
         case ShaderId::Fps:
             return shader.load_from_vfs(vfs(),
                     "shaders/fps.vert.spv",
@@ -809,6 +825,18 @@ void Renderer::set_present_mode(PresentMode mode)
     destroy_swapchain();
     create_swapchain();
     create_framebuffers();
+}
+
+
+PresentMode Renderer::present_mode() const
+{
+    switch (m_present_mode) {
+        default:
+        case VK_PRESENT_MODE_IMMEDIATE_KHR:     return PresentMode::Immediate;
+        case VK_PRESENT_MODE_MAILBOX_KHR:       return PresentMode::Mailbox;
+        case VK_PRESENT_MODE_FIFO_KHR:          return PresentMode::Fifo;
+        case VK_PRESENT_MODE_FIFO_RELAXED_KHR:  return PresentMode::FifoRelaxed;
+    }
 }
 
 

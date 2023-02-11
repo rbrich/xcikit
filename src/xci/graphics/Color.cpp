@@ -44,15 +44,25 @@ struct NamedColor{
 };
 
 
+// Table of named colors.
+// All names and values are compatible with CSS.
 static constexpr std::array c_named_colors = {
     NamedColor("Black", Color::Black()),
+    NamedColor("Grey", Color::Grey()),
+    NamedColor("Silver", Color::Silver()),
     NamedColor("White", Color::White()),
     NamedColor("Red", Color::Red()),
-    NamedColor("Green", Color::Green()),
+    NamedColor("Lime", Color::Lime()),
     NamedColor("Blue", Color::Blue()),
     NamedColor("Cyan", Color::Cyan()),
     NamedColor("Magenta", Color::Magenta()),
     NamedColor("Yellow", Color::Yellow()),
+    NamedColor("Maroon", Color::Maroon()),
+    NamedColor("Green", Color::Green()),
+    NamedColor("Navy", Color::Navy()),
+    NamedColor("Teal", Color::Teal()),
+    NamedColor("Purple", Color::Purple()),
+    NamedColor("Olive", Color::Olive()),
 };
 
 

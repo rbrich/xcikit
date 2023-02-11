@@ -1,7 +1,7 @@
 // Shape.h created on 2018-04-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_SHAPES_H
@@ -13,6 +13,7 @@
 #include <xci/graphics/View.h>
 #include <xci/core/geometry.h>
 #include <xci/core/mixin.h>
+#include <span>
 
 namespace xci::graphics {
 
@@ -37,55 +38,83 @@ public:
     Color fill_color() const { return m_fill_color; }
     Color outline_color() const { return m_outline_color; }
 
-    // Add a slice of infinite line
-    // `a`, `b`            - two points to define the line
-    // `slice`             - rectangular region in which the line is visible
-    // `thickness`         - line width, measured perpendicularly from a-b
-    //
-    //   ---- a --- b ----
-    //                    > thickness
-    //   -----------------
+    /// Add a line segment
+    /// \param a, b         Two points to define the line
+    /// \param thickness    Line width, measured perpendicularly from a-b
+    void add_line(FramebufferCoords a, FramebufferCoords b,
+                  FramebufferPixels thickness);
+
+    /// Add a slice of infinite line
+    /// \param a, b         Two points to define the line
+    /// \param slice`       Rectangular region in which the line is visible
+    /// \param thickness    Line width, measured perpendicularly from a-b
+    ///
+    ///   ---- a --- b ----
+    ///                    > thickness
+    ///   -----------------
     void add_line_slice(const FramebufferRect& slice,
                         FramebufferCoords a, FramebufferCoords b,
                         FramebufferPixels thickness);
 
-    // Add new rectangle.
-    // `rect`              - rectangle position and size
-    // `outline_thickness` - the outline actually goes from edge to inside
-    //                       this parameter defines how far (in framebuffer pixels)
+    /// Add new rectangle.
+    /// \param rect                 Rectangle position and size.
+    /// \param outline_thickness    The outline goes from edge to inside.
+    ///                             This parameter defines how far (in framebuffer pixels).
     void add_rectangle(const FramebufferRect& rect,
                        FramebufferPixels outline_thickness = 0);
     void add_rectangle_slice(const FramebufferRect& slice, const FramebufferRect& rect,
                              FramebufferPixels outline_thickness = 0);
 
-    // Add new ellipse.
-    // `rect`              - ellipse position and size
-    // `outline_thickness` - the outline actually goes from edge to inside
-    //                       this parameter defines how far (in framebuffer pixels)
+    /// Add new ellipse.
+    /// \param rect                 Ellipse position and size
+    /// \param outline_thickness    The outline goes from edge to inside.
+    ///                             This parameter defines how far (in framebuffer pixels).
     void add_ellipse(const FramebufferRect& rect,
                      FramebufferPixels outline_thickness = 0);
     void add_ellipse_slice(const FramebufferRect& slice, const FramebufferRect& ellipse,
                            FramebufferPixels outline_thickness = 0);
 
-    // Add new rounded rectangle.
-    // `rect`              - position and size
-    // `radius`            - corner radius
-    // `outline_thickness` - the outline actually goes from edge to inside
-    //                       this parameter defines how far (in display units)
+    /// Add new circle.
+    /// \param center               A point the circle has center
+    /// \param radius               Radius of the circle
+    /// \param outline_thickness    The outline goes from edge to inside.
+    ///                             This parameter defines how far (in framebuffer pixels).
+    void add_circle(FramebufferCoords center, float radius,
+                    FramebufferPixels outline_thickness = 0);
+
+    /// Add new rounded rectangle.
+    /// \param rect                 Position and size
+    /// \param radius               Corner radius
+    /// \param outline_thickness    The outline goes from edge to inside.
+    ///                             This parameter defines how far (in framebuffer pixels).
     void add_rounded_rectangle(const FramebufferRect& rect, FramebufferPixels radius,
                                FramebufferPixels outline_thickness = 0);
 
-    // Reserve memory for a number of `lines`, `rectangles`, `ellipses`.
-    void reserve(size_t lines, size_t rectangles, size_t ellipses);
+    /// Add a polygon.
+    /// It can be regular or irregular, convex or concave. The only limitation is that
+    /// that each vertex must be directly visible from the center, without crossing any edges.
+    /// \param center       Invisible center of TriFan structure.
+    ///                     Triangles are constructed from center to each edge.
+    /// \param vertices     Edge vertices around center, in CCW order.
+    /// \param outline_thickness    The outline goes from edge to inside.
+    ///                             This parameter defines how far (in framebuffer pixels).
+    void add_polygon(FramebufferCoords center, std::span<const FramebufferCoords> vertices,
+                     FramebufferPixels outline_thickness = 0);
 
-    // Remove all shapes and clear all state (colors etc.)
+    /// Reserve memory for a number of `lines`, `rectangles`, `ellipses`.
+    void reserve_lines(size_t lines) { m_lines.reserve(4 * lines); }
+    void reserve_rectangles(size_t rectangles) { m_rectangles.reserve(4 * rectangles); }
+    void reserve_ellipses(size_t ellipses) { m_ellipses.reserve(4 * ellipses); }
+    void reserve_polygons(size_t polygon_edges) { m_polygons.reserve(polygon_edges); }
+
+    /// Remove all shapes and clear all state (colors etc.)
     void clear();
 
-    // Update shapes attributes according to settings (color etc.)
+    /// Update shapes attributes according to settings (color etc.)
     void update();
 
-    // Draw all shapes to `view` at `pos`.
-    // Final shape position is `pos` + shapes' relative position
+    /// Draw all shapes to `view` at `pos`.
+    /// Final shape position is `pos` + shapes' relative position
     void draw(View& view, VariCoords pos);
 
 private:
@@ -97,10 +126,12 @@ private:
     Primitives m_lines;
     Primitives m_rectangles;
     Primitives m_ellipses;
+    Primitives m_polygons;
 
     Shader& m_line_shader;
     Shader& m_rectangle_shader;
     Shader& m_ellipse_shader;
+    Shader& m_polygon_shader;
 };
 
 

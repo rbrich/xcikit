@@ -1,7 +1,7 @@
 // Page.cpp created on 2018-03-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <xci/text/layout/Page.h>
@@ -65,6 +65,7 @@ Word::Word(Page& page, const std::string& utf8)
     // Check line end
     if (page.width() > 0.0f && page.pen().x + pen.x > page.width()) {
         page.finish_line();
+        page.advance_line();
     }
 
     // Set position according to pen
@@ -317,13 +318,13 @@ void Page::add_tab_stop(FramebufferPixels x)
 
 void Page::finish_line()
 {
-    // If the current line has any content...
-    if (!m_lines.back().is_empty()) {
-        // Apply alignment
-        m_lines.back().align(m_alignment, m_width);
-        // Add new line
-        m_lines.emplace_back();
-    }
+    if (m_lines.back().is_empty())
+        return;  // already at a new line
+
+    // Apply alignment
+    m_lines.back().align(m_alignment, m_width);
+    // Add new line
+    m_lines.emplace_back();
     // Add new part to open spans
     for (auto& span_pair : m_spans) {
         auto& span = span_pair.second;
@@ -332,8 +333,7 @@ void Page::finish_line()
         }
     }
     // Move pen
-    m_pen.x = 0;
-    advance_line();
+    m_pen.x = m_origin.x;
 }
 
 
@@ -341,7 +341,7 @@ void Page::advance_line(float lines)
 {
     m_style.apply_view(target());
     auto height = FramebufferPixels{m_style.font()->height() * m_style.scale()};
-    m_pen.y += lines * height;
+    m_pen.y += lines * m_line_spacing * height;
 }
 
 
@@ -357,11 +357,11 @@ void Page::add_tab()
     auto tab_stop = m_tab_stops.begin();
     FramebufferPixels x = 0;
     while (x <= m_pen.x && tab_stop != m_tab_stops.end()) {
-        x = *tab_stop++;
+        x = m_origin.x + *tab_stop++;
     }
     // apply generic tabs
     if (x <= m_pen.x) {
-        FramebufferPixels tab_size = 8 * space_width();
+        const FramebufferPixels tab_size = 8 * space_width();
         if (tab_size > 0.f)
             while (x <= m_pen.x)
                 x += tab_size;

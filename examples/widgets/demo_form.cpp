@@ -40,7 +40,7 @@ int main(int argc, const char* argv[])
     // Form #1
     Form form1 {theme};
     form1.set_position({-50_vp, -25_vp});
-    root.add(form1);
+    root.add_child(form1);
 
     std::string input_text = "2018-06-23";
     form1.add_input("date", input_text);
@@ -53,7 +53,7 @@ int main(int argc, const char* argv[])
 
     Button button(theme, "submit");
     form1.add_hint(Form::Hint::NextColumn);
-    form1.add(button);
+    form1.add_child(button);
 
     // Form #1 output
     Label output_text(theme);
@@ -69,12 +69,12 @@ int main(int argc, const char* argv[])
         output_text.text().set_string(text);
         output_text.resize(view);
     });
-    root.add(output_text);
+    root.add_child(output_text);
 
     // Form #2
     Form form2(theme);
     form2.set_position({-50_vp, 10_vp});
-    root.add(form2);
+    root.add_child(form2);
 
     std::string name = "Player1";
     form2.add_input("name", name);
@@ -85,12 +85,12 @@ int main(int argc, const char* argv[])
     // Mouse pos
     MousePosInfo mouse_pos_info(theme);
     mouse_pos_info.set_position({-60_vp, 45_vp});
-    root.add(mouse_pos_info);
+    root.add_child(mouse_pos_info);
 
     // FPS
     FpsDisplay fps_display(theme);
     fps_display.set_position({-60_vp, -40_vp});
-    root.add(fps_display);
+    root.add_child(fps_display);
 
     window.set_refresh_mode(RefreshMode::OnDemand);
     //window.set_debug_flags(View::DebugFlags(View::Debug::LineBaseLine));

@@ -1,7 +1,7 @@
 // Window.cpp created on 2019-10-22 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Window.h"
@@ -422,6 +422,7 @@ void Window::draw()
                 vkResetFences(m_renderer.vk_device(),
                         1, &m_cmd_buf_fences[m_current_cmd_buf]));
 
+        m_command_buffers.release_resources(m_current_cmd_buf);
         m_command_buffers.begin(m_current_cmd_buf);
 
         const FloatColor clear_value(m_clear_color);
@@ -480,7 +481,6 @@ void Window::draw()
         log::error("vkQueuePresentKHR failed: {}", int(rc));
 
     m_current_cmd_buf = (m_current_cmd_buf + 1) % cmd_buf_count;
-    m_command_buffers.release_resources(m_current_cmd_buf);
     m_draw_finished = false;
 }
 

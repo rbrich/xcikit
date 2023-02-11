@@ -42,12 +42,12 @@ jobs:
           cxx: clang++-13
           apt: libc++-13-dev libc++abi-13-dev
           build_args: ""
-        - os: ubuntu-22.04
-          name: "Clang 14 / Release"
-          cc: clang-14
-          cxx: clang++-14
-          apt: libc++-14-dev libc++abi-14-dev
-          build_args: ""
+#        - os: ubuntu-22.04
+#          name: "Clang 14 / Release"
+#          cc: clang-14
+#          cxx: clang++-14
+#          apt: libc++-14-dev libc++abi-14-dev
+#          build_args: ""
         - os: ubuntu-22.04
           name: "GCC 12 / Debug ASAN"
           cc: gcc-12

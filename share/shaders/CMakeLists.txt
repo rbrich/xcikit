@@ -31,6 +31,10 @@ set(SHADER_SOURCES
     fps.frag
     cursor.vert
     cursor.frag
+    flat_c.vert
+    flat_c.frag
+    polygon.vert
+    polygon.frag
     )
 
 set(outputs)

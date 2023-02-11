@@ -63,9 +63,9 @@ struct Action<OpenElem>
         if (seq == "tab")
             return ctx.get_layout().add_tab();
         if (seq == "br")
-            return ctx.get_layout().finish_line();
+            return ctx.get_layout().new_line();
         if (seq == "p")
-            return ctx.get_layout().advance_line(0.5f);
+            return ctx.get_layout().new_line(1.5f);
         if (seq == "b")
             return ctx.get_layout().set_bold();
         if (seq == "i")
@@ -135,7 +135,7 @@ struct Action<Paragraph>
     static void apply(const Input &in, Markup &ctx)
     {
         dump_token("par", in);
-        ctx.get_layout().advance_line(0.5f);
+        ctx.get_layout().new_line(1.5f);
     }
 };
 

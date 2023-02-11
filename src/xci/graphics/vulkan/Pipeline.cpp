@@ -1,13 +1,12 @@
 // Pipeline.cpp created on 2021-08-10 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2021 Radek Brich
+// Copyright 2021–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Pipeline.h"
 #include "VulkanError.h"
 #include <xci/graphics/Renderer.h>
-#include <xci/compat/macros.h>
 
 #include <cassert>
 #include <bit>
@@ -246,9 +245,18 @@ void PipelineCreateInfo::set_vertex_format(VertexFormat format)
     uint32_t stride;
     uint32_t attr_desc_count = 0;
     switch (format) {
+        case VertexFormat::V2:
+            stride = 2;
+            attr_desc_count = 1;
+            break;
         case VertexFormat::V2t2:
             stride = 4;
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32_SFLOAT, 2 * sf};
+            attr_desc_count = 2;
+            break;
+        case VertexFormat::V2t3:
+            stride = 5;
+            m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32_SFLOAT, 2 * sf};
             attr_desc_count = 2;
             break;
         case VertexFormat::V2t22:
@@ -256,6 +264,11 @@ void PipelineCreateInfo::set_vertex_format(VertexFormat format)
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32_SFLOAT, 2 * sf};
             m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32_SFLOAT, 4 * sf};
             attr_desc_count = 3;
+            break;
+        case VertexFormat::V2c4:
+            stride = 6;
+            m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 2 * sf};
+            attr_desc_count = 2;
             break;
         case VertexFormat::V2c4t2:
             stride = 8;
@@ -270,8 +283,6 @@ void PipelineCreateInfo::set_vertex_format(VertexFormat format)
             m_attr_descs[3] = {3, 0, VK_FORMAT_R32G32_SFLOAT, 8 * sf};
             attr_desc_count = 4;
             break;
-        default:
-            XCI_UNREACHABLE;
     }
     assert(attr_desc_count != 0);
     assert(attr_desc_count <= m_attr_descs.size());
