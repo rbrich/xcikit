@@ -189,7 +189,7 @@ void Shape::add_rounded_rectangle(const FramebufferRect& rect, FramebufferPixels
 }
 
 
-void Shape::add_polygon(FramebufferCoords center, std::span<FramebufferCoords> vertices,
+void Shape::add_polygon(FramebufferCoords center, std::span<const FramebufferCoords> vertices,
                         FramebufferPixels outline_thickness)
 {
     // Use barycentric coordinates inside each triangle to:

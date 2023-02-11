@@ -98,7 +98,7 @@ public:
     /// \param vertices     Edge vertices around center, in CCW order.
     /// \param outline_thickness    The outline goes from edge to inside.
     ///                             This parameter defines how far (in framebuffer pixels).
-    void add_polygon(FramebufferCoords center, std::span<FramebufferCoords> vertices,
+    void add_polygon(FramebufferCoords center, std::span<const FramebufferCoords> vertices,
                      FramebufferPixels outline_thickness = 0);
 
     /// Reserve memory for a number of `lines`, `rectangles`, `ellipses`.
