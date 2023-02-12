@@ -12,8 +12,6 @@
 #include "Shader.h"
 #include "vulkan/VulkanError.h"
 
-#include <xci/compat/macros.h>
-
 #include <cassert>
 #include <cstring>
 
@@ -236,24 +234,9 @@ Primitives::~Primitives()
 }
 
 
-static uint32_t get_vertex_float_count(VertexFormat format)
-{
-    switch (format) {
-        case VertexFormat::V2: return 2;
-        case VertexFormat::V2t2: return 4;
-        case VertexFormat::V2t3: return 5;
-        case VertexFormat::V2t22: return 6;
-        case VertexFormat::V2c4: return 6;
-        case VertexFormat::V2c4t2: return 8;
-        case VertexFormat::V2c4t22: return 10;
-    }
-    XCI_UNREACHABLE;
-}
-
-
 void Primitives::reserve(size_t vertices)
 {
-    m_vertex_data.reserve(vertices * get_vertex_float_count(m_format));
+    m_vertex_data.reserve(vertices * get_vertex_format_stride(m_format));
     // heuristic for quads (won't match for other primitives)
     // each 4 vertices (a quad) require 6 indices (two triangles)
     m_index_data.reserve(vertices / 4 * 6);
@@ -286,101 +269,17 @@ void Primitives::end_primitive()
 }
 
 
-void Primitives::add_vertex(FramebufferCoords xy)
+VertexData Primitives::add_vertex(FramebufferCoords xy)
 {
-    assert(m_format == VertexFormat::V2);
     assert(m_open_vertices != -1);
     m_open_vertices++;
     m_vertex_data.push_back(xy.x.value);
     m_vertex_data.push_back(xy.y.value);
-}
-
-
-void Primitives::add_vertex(FramebufferCoords xy, float u, float v)
-{
-    assert(m_format == VertexFormat::V2t2);
-    assert(m_open_vertices != -1);
-    m_open_vertices++;
-    m_vertex_data.push_back(xy.x.value);
-    m_vertex_data.push_back(xy.y.value);
-    m_vertex_data.push_back(u);
-    m_vertex_data.push_back(v);
-}
-
-
-void Primitives::add_vertex(FramebufferCoords xy, float u, float v, float w)
-{
-    assert(m_format == VertexFormat::V2t3);
-    assert(m_open_vertices != -1);
-    m_open_vertices++;
-    m_vertex_data.push_back(xy.x.value);
-    m_vertex_data.push_back(xy.y.value);
-    m_vertex_data.push_back(u);
-    m_vertex_data.push_back(v);
-    m_vertex_data.push_back(w);
-}
-
-
-void Primitives::add_vertex(FramebufferCoords xy, float u1, float v1, float u2, float v2)
-{
-    assert(m_format == VertexFormat::V2t22);
-    assert(m_open_vertices != -1);
-    m_open_vertices++;
-    m_vertex_data.push_back(xy.x.value);
-    m_vertex_data.push_back(xy.y.value);
-    m_vertex_data.push_back(u1);
-    m_vertex_data.push_back(v1);
-    m_vertex_data.push_back(u2);
-    m_vertex_data.push_back(v2);
-}
-
-
-void Primitives::add_vertex(FramebufferCoords xy, Color color)
-{
-    assert(m_format == VertexFormat::V2c4);
-    assert(m_open_vertices != -1);
-    m_open_vertices++;
-    m_vertex_data.push_back(xy.x.value);
-    m_vertex_data.push_back(xy.y.value);
-    m_vertex_data.push_back(color.red_f());
-    m_vertex_data.push_back(color.green_f());
-    m_vertex_data.push_back(color.blue_f());
-    m_vertex_data.push_back(color.alpha_f());
-}
-
-
-void Primitives::add_vertex(FramebufferCoords xy, Color color, float u, float v)
-{
-    assert(m_format == VertexFormat::V2c4t2);
-    assert(m_open_vertices != -1);
-    m_open_vertices++;
-    m_vertex_data.push_back(xy.x.value);
-    m_vertex_data.push_back(xy.y.value);
-    m_vertex_data.push_back(color.red_f());
-    m_vertex_data.push_back(color.green_f());
-    m_vertex_data.push_back(color.blue_f());
-    m_vertex_data.push_back(color.alpha_f());
-    m_vertex_data.push_back(u);
-    m_vertex_data.push_back(v);
-}
-
-
-void
-Primitives::add_vertex(FramebufferCoords xy, Color color, float u1, float v1, float u2, float v2)
-{
-    assert(m_format == VertexFormat::V2c4t22);
-    assert(m_open_vertices != -1);
-    m_open_vertices++;
-    m_vertex_data.push_back(xy.x.value);
-    m_vertex_data.push_back(xy.y.value);
-    m_vertex_data.push_back(color.red_f());
-    m_vertex_data.push_back(color.green_f());
-    m_vertex_data.push_back(color.blue_f());
-    m_vertex_data.push_back(color.alpha_f());
-    m_vertex_data.push_back(u1);
-    m_vertex_data.push_back(v1);
-    m_vertex_data.push_back(u2);
-    m_vertex_data.push_back(v2);
+#ifndef NDEBUG
+    return VertexData(m_vertex_data, get_vertex_format_stride(m_format) - 2);
+#else
+    return VertexData(m_vertex_data);
+#endif
 }
 
 

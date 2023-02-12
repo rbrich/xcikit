@@ -108,6 +108,39 @@ using PrimitivesBuffersPtr = std::shared_ptr<PrimitivesBuffers>;
 using PrimitivesDescriptorSetsPtr = std::shared_ptr<PrimitivesDescriptorSets>;
 
 
+class VertexData {
+public:
+#ifndef NDEBUG
+    explicit VertexData(std::vector<float>& data, size_t expected) : m_vertex_data(data), m_expected(expected) {}
+    ~VertexData() { assert(m_expected == 0); }
+#else
+    explicit VertexData(std::vector<float>& data) : m_vertex_data(data) {}
+#endif
+
+    VertexData& uv(float u, float v) { add(u); add(v); return *this; }
+    VertexData& uvw(float u, float v, float w) { add(u); add(v); add(w); return *this; }
+    VertexData& color(Color color) {
+        add(color.red_f());
+        add(color.green_f());
+        add(color.blue_f());
+        add(color.alpha_f());
+        return *this;
+    }
+
+private:
+    void add(float d) {
+        m_vertex_data.push_back(d);
+#ifndef NDEBUG
+        assert(--m_expected >= 0);
+#endif
+    }
+    std::vector<float>& m_vertex_data;
+#ifndef NDEBUG
+    size_t m_expected;  // expected data (number of floats)
+#endif
+};
+
+
 class Primitives: private core::NonCopyable {
 public:
     explicit Primitives(Renderer& renderer, VertexFormat format, PrimitiveType type);
@@ -119,13 +152,12 @@ public:
 
     void begin_primitive();
     void end_primitive();
-    void add_vertex(FramebufferCoords xy);
-    void add_vertex(FramebufferCoords xy, float u, float v);
-    void add_vertex(FramebufferCoords xy, float u, float v, float w);
-    void add_vertex(FramebufferCoords xy, float u1, float v1, float u2, float v2);
-    void add_vertex(FramebufferCoords xy, Color color);
-    void add_vertex(FramebufferCoords xy, Color color, float u, float v);
-    void add_vertex(FramebufferCoords xy, Color color, float u1, float v1, float u2, float v2);
+
+    /// Add vertex coords + data
+    /// Example:
+    ///     add_vertex({0.0f, 0.0f})(Color::Black())(1.0f, 2.0f);
+    VertexData add_vertex(FramebufferCoords xy);
+
     void clear();
     bool empty() const { return m_vertex_data.empty(); }
 

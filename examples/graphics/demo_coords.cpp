@@ -1,7 +1,7 @@
 // demo_coords.cpp created on 2018-03-18 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "common.h"
@@ -9,7 +9,7 @@
 #include <xci/text/Font.h>
 #include <xci/text/Text.h>
 #include <xci/graphics/Sprites.h>
-#include <xci/graphics/Shape.h>
+#include <xci/graphics/shape/Rectangle.h>
 #include <xci/graphics/Color.h>
 #include <xci/core/Vfs.h>
 #include <xci/config.h>
@@ -57,8 +57,7 @@ int main(int argc, const char* argv[])
                          "[f] fixed  \t[t] top-left\t[-] smaller\n");
     help_text.set_color(Color(200, 100, 50));
 
-    Shape unit_square(renderer, Color::Transparent(),
-        Color(0.7, 0.7, 0.7));
+    Rectangle unit_square(renderer);
 
     bool scaling = true;
     ViewOrigin view_origin = ViewOrigin::Center;
@@ -133,7 +132,7 @@ int main(int argc, const char* argv[])
             unit_square.add_rectangle(view.vp_to_fb({-50, -50, 100, 100}), view.px_to_fb(1_px));
         else
             unit_square.add_rectangle(view.vp_to_fb({0, 0, 100, 100}), view.px_to_fb(1_px));
-        unit_square.update();
+        unit_square.update(Color::Transparent(), Color::Grey());
     });
 
     window.set_draw_callback([&](View& view) {

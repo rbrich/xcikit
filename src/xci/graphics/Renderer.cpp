@@ -250,26 +250,38 @@ bool Renderer::load_shader(ShaderId shader_id, Shader& shader)
             return shader.load_from_vfs(vfs(),
                     "shaders/sprite_c.vert.spv",
                     "shaders/sprite_c.frag.spv");
-        case ShaderId::FlatC:
-            return shader.load_from_vfs(vfs(),
-                    "shaders/flat_c.vert.spv",
-                    "shaders/flat_c.frag.spv");
         case ShaderId::Line:
             return shader.load_from_vfs(vfs(),
                     "shaders/line.vert.spv",
                     "shaders/line.frag.spv");
+        case ShaderId::LineC:
+            return shader.load_from_vfs(vfs(),
+                    "shaders/line_c.vert.spv",
+                    "shaders/line_c.frag.spv");
         case ShaderId::Rectangle:
             return shader.load_from_vfs(vfs(),
                     "shaders/rectangle.vert.spv",
                     "shaders/rectangle.frag.spv");
+        case ShaderId::RectangleC:
+            return shader.load_from_vfs(vfs(),
+                    "shaders/rectangle_c.vert.spv",
+                    "shaders/rectangle_c.frag.spv");
         case ShaderId::Ellipse:
             return shader.load_from_vfs(vfs(),
                     "shaders/ellipse.vert.spv",
                     "shaders/ellipse.frag.spv");
+        case ShaderId::EllipseC:
+            return shader.load_from_vfs(vfs(),
+                    "shaders/ellipse_c.vert.spv",
+                    "shaders/ellipse_c.frag.spv");
         case ShaderId::Polygon:
             return shader.load_from_vfs(vfs(),
                     "shaders/polygon.vert.spv",
                     "shaders/polygon.frag.spv");
+        case ShaderId::PolygonC:
+            return shader.load_from_vfs(vfs(),
+                    "shaders/polygon_c.vert.spv",
+                    "shaders/polygon_c.frag.spv");
         case ShaderId::Fps:
             return shader.load_from_vfs(vfs(),
                     "shaders/fps.vert.spv",

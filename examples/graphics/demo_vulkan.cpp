@@ -9,7 +9,7 @@
 #include <xci/graphics/Primitives.h>
 #include <xci/graphics/Shader.h>
 #include <xci/graphics/Texture.h>
-#include <xci/graphics/Shape.h>
+#include <xci/graphics/shape/Rectangle.h>
 #include <xci/core/Vfs.h>
 #include <xci/config.h>
 
@@ -49,11 +49,11 @@ void update_poly(Primitives& poly, const View& view, float time_frac)
     float b2 = 0.0f;
     constexpr int edges = 10;
     const float angle = 2 * std::acos(-1) / edges;
-    poly.add_vertex(view.vp_to_fb({40_vp, -20_vp}), 0.0f, 0.0f, b1);
+    poly.add_vertex(view.vp_to_fb({40_vp, -20_vp})).uvw(0.0f, 0.0f, b1);
     for (int i = 0; i <= edges; i++) {
         const float k = 0.5 * (1 + i % 2);
         auto v = Vec2{k*15_vp, k*15_vp}.rotate(-angle * (i + 2*time_frac));
-        poly.add_vertex(view.vp_to_fb(Vec2{40_vp, -20_vp} + v), b1, b2, 0.0f);
+        poly.add_vertex(view.vp_to_fb(Vec2{40_vp, -20_vp} + v)).uvw(b1, b2, 0.0f);
         std::swap(b1, b2);
     }
     poly.end_primitive();
@@ -102,11 +102,7 @@ int main(int argc, const char* argv[])
 
     // Higher-level object which wraps Primitives and can draw different basic shapes
     // using specifically prepared internal shaders (in this case, it draws a rectangle)
-    Shape shape {renderer};
-    shape.set_fill_color(Color(30, 40, 50, 128));
-    shape.set_outline_color(Color(0, 180, 0));
-    shape.set_softness(0.5);
-    shape.set_antialiasing(1);
+    Rectangle rect {renderer};
 
     float elapsed_acc = 0;
 
@@ -114,26 +110,26 @@ int main(int argc, const char* argv[])
         prim.clear();
 
         prim.begin_primitive();
-        prim.add_vertex(view.vp_to_fb({-50_vp, -50_vp}), {1.0f, 0.0f, 0.0f}, 0, 0);
-        prim.add_vertex(view.vp_to_fb({-50_vp, 0_vp}), {0.0f, 0.0f, 1.0f}, 0, 0);
-        prim.add_vertex(view.vp_to_fb({0_vp, 0_vp}),  {1.0f, 0.0f, 1.0f}, 0, 0);
-        prim.add_vertex(view.vp_to_fb({0_vp, -50_vp}), {1.0f, 1.0f, 0.0f}, 0, 0);
+        prim.add_vertex(view.vp_to_fb({-50_vp, -50_vp})).color({1.0f, 0.0f, 0.0f}).uv(0, 0);
+        prim.add_vertex(view.vp_to_fb({-50_vp, 0_vp})).color({0.0f, 0.0f, 1.0f}).uv(0, 0);
+        prim.add_vertex(view.vp_to_fb({0_vp, 0_vp})).color({1.0f, 0.0f, 1.0f}).uv(0, 0);
+        prim.add_vertex(view.vp_to_fb({0_vp, -50_vp})).color({1.0f, 1.0f, 0.0f}).uv(0, 0);
         prim.end_primitive();
 
         prim.begin_primitive();
-        prim.add_vertex(view.vp_to_fb({-25_vp, -25_vp}), {1.0f, 0.0f, 0.0f}, 0, 0);
-        prim.add_vertex(view.vp_to_fb({-25_vp, 25_vp}), {0.0f, 1.0f, 0.0f}, 0, 1.0);
-        prim.add_vertex(view.vp_to_fb({25_vp, 25_vp}), {0.0f, 0.0f, 1.0f}, 1.0, 1.0);
-        prim.add_vertex(view.vp_to_fb({25_vp, -25_vp}), {1.0f, 1.0f, 0.0f}, 1.0, 0);
+        prim.add_vertex(view.vp_to_fb({-25_vp, -25_vp})).color({1.0f, 0.0f, 0.0f}).uv(0, 0);
+        prim.add_vertex(view.vp_to_fb({-25_vp, 25_vp})).color({0.0f, 1.0f, 0.0f}).uv(0, 1.0);
+        prim.add_vertex(view.vp_to_fb({25_vp, 25_vp})).color({0.0f, 0.0f, 1.0f}).uv(1.0, 1.0);
+        prim.add_vertex(view.vp_to_fb({25_vp, -25_vp})).color({1.0f, 1.0f, 0.0f}).uv(1.0, 0);
         prim.end_primitive();
 
         prim.update();
 
         update_poly(poly, view, elapsed_acc);
 
-        shape.clear();
-        shape.add_rectangle(view.vp_to_fb({-10_vp, 10_vp, 60_vp, 40_vp}), view.vp_to_fb(2.5_vp));
-        shape.update();
+        rect.clear();
+        rect.add_rectangle(view.vp_to_fb({-10_vp, 10_vp, 60_vp, 40_vp}), view.vp_to_fb(2.5_vp));
+        rect.update(Color(30, 40, 50, 128), Color(0, 180, 0), 0.5, 1);
     });
 
     window.set_update_callback([&](View& view, std::chrono::nanoseconds elapsed) {
@@ -146,7 +142,7 @@ int main(int argc, const char* argv[])
     window.set_draw_callback([&](View& view) {
         prim.draw(view);
         poly.draw(view);
-        shape.draw(view, {0_fb, 0_fb});
+        rect.draw(view, {0_fb, 0_fb});
     });
 
     window.set_refresh_mode(RefreshMode::Periodic);

@@ -13,7 +13,7 @@
 #include "Style.h"
 #include <xci/graphics/View.h>
 #include <xci/graphics/Color.h>
-#include <xci/graphics/Shape.h>
+#include <xci/graphics/shape/Rectangle.h>
 #include <xci/core/geometry.h>
 #include <xci/core/container/ChunkedStack.h>
 
@@ -159,7 +159,7 @@ private:
     Alignment m_default_alignment = Alignment::Left;
     std::vector<VariUnits> m_default_tab_stops;
 
-    mutable core::ChunkedStack<graphics::Shape> m_debug_shapes;
+    mutable core::ChunkedStack<graphics::Rectangle> m_debug_rects;
 };
 
 

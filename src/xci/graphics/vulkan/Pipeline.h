@@ -31,7 +31,13 @@ enum class VertexFormat {
     V2c4,       // 2 vertex coords, RGBA color
     V2c4t2,     // 2 vertex coords, RGBA color, 2 texture coords (all float)
     V2c4t22,    // 2 vertex coords, RGBA color, 2 + 2 texture coords (all float)
+    V2c44t3,    // 2 vertex coords, 2x RGBA color, 3 texture coords (or barycentric coords)
+    V2c44t22,   // 2 vertex coords, 2x RGBA color, 2 + 2 texture coords (all float)
 };
+
+/// Get stride or size of vertex format data.
+/// Counted in floats, i.e. multiply by 4 to get stride in bytes.
+unsigned get_vertex_format_stride(VertexFormat format);
 
 
 enum class BlendFunc {
@@ -96,7 +102,7 @@ private:
 
     std::array<VkPipelineShaderStageCreateInfo, 2> m_shader_stages;
     VkVertexInputBindingDescription m_binding_desc {};
-    std::array<VkVertexInputAttributeDescription, 4> m_attr_descs;
+    std::array<VkVertexInputAttributeDescription, 5> m_attr_descs;
     VkPipelineVertexInputStateCreateInfo m_vertex_input_ci;
     VkPipelineInputAssemblyStateCreateInfo m_input_assembly_ci;
     VkPipelineViewportStateCreateInfo m_viewport_state_ci;

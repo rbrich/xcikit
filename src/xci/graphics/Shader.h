@@ -28,11 +28,14 @@ enum class ShaderId {
     Sprite = 0,
     SpriteR,  // R channel as alpha, color from uniform
     SpriteC,  // R channel as alpha, color from vertex
-    FlatC,    // color from vertex
     Line,
+    LineC,
     Rectangle,
+    RectangleC,
     Ellipse,
+    EllipseC,
     Polygon,
+    PolygonC,
     Fps,
     Cursor,
 

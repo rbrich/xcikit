@@ -11,6 +11,7 @@
 #include <xci/graphics/Renderer.h>
 #include <xci/graphics/Window.h>
 #include <xci/graphics/Sprites.h>
+#include <xci/graphics/shape/Rectangle.h>
 #include <xci/core/Vfs.h>
 #include <xci/config.h>
 #include <cstdlib>
@@ -91,8 +92,7 @@ int main(int argc, const char* argv[])
     Sprites font_texture(renderer, font.texture(), Color::Blue());
     Sprites emoji_font_texture(renderer, emoji_font.texture(), Color::Blue());
 
-    Shape rects(renderer, Color::Transparent(),
-            Color(0.7, 0.7, 0.7));
+    Rectangle rects(renderer);
 
     FramebufferPixels emoji_offset = 0.f;
 
@@ -118,7 +118,7 @@ int main(int argc, const char* argv[])
         rects.clear();
         rects.add_rectangle(enl_rect, view.px_to_fb(1_px));
         rects.add_rectangle(enl_rect.moved({0, emoji_offset}), view.px_to_fb(1_px));
-        rects.update();
+        rects.update(Color::Transparent(), Color::Grey());
     });
 
     window.set_draw_callback([&](View& view) {

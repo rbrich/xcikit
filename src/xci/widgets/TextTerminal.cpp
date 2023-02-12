@@ -1,7 +1,7 @@
 // TextTerminal.cpp created on 2018-07-19 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "TextTerminal.h"
@@ -564,22 +564,22 @@ void terminal::Caret::update(View& view, const FramebufferRect& rect)
 {
     view.finish_draw();
 
-    auto x1 = rect.x;
-    auto y1 = rect.y;
-    auto x2 = rect.x + rect.w;
-    auto y2 = rect.y + rect.h;
-    auto outline_thickness = view.px_to_vp(1_px);
-    float tx = 2.0f * outline_thickness.value / rect.w.value;
-    float ty = 2.0f * outline_thickness.value / rect.h.value;
-    float ix = 1.0f + tx / (1.0f - tx);
-    float iy = 1.0f + ty / (1.0f - ty);
+    const auto x1 = rect.x;
+    const auto y1 = rect.y;
+    const auto x2 = rect.x + rect.w;
+    const auto y2 = rect.y + rect.h;
+    const auto outline_thickness = view.px_to_vp(1_px);
+    const float tx = 2.0f * outline_thickness.value / rect.w.value;
+    const float ty = 2.0f * outline_thickness.value / rect.h.value;
+    const float ix = 1.0f + tx / (1.0f - tx);
+    const float iy = 1.0f + ty / (1.0f - ty);
 
     m_quad.clear();
     m_quad.begin_primitive();
-    m_quad.add_vertex({x1, y1}, -ix, -iy);
-    m_quad.add_vertex({x1, y2}, -ix, +iy);
-    m_quad.add_vertex({x2, y2}, +ix, +iy);
-    m_quad.add_vertex({x2, y1}, +ix, -iy);
+    m_quad.add_vertex({x1, y1}).uv(-ix, -iy);
+    m_quad.add_vertex({x1, y2}).uv(-ix, +iy);
+    m_quad.add_vertex({x2, y2}).uv(+ix, +iy);
+    m_quad.add_vertex({x2, y1}).uv(+ix, -iy);
     m_quad.end_primitive();
 
     // pure white
@@ -609,9 +609,9 @@ TextTerminal::TextTerminal(Theme& theme)
         : Widget(theme),
           m_sprites(theme.renderer(), theme.base_font().texture(), Color(7)),
           m_emoji_sprites(theme.renderer(), theme.emoji_font().texture(), Color(7)),
-          m_boxes(theme.renderer(), Color(0)),
+          m_boxes(theme.renderer()),
           m_caret(theme.renderer()),
-          m_frame(theme.renderer(), Color::Transparent(), Color::Transparent())
+          m_frame(theme.renderer())
 {
     set_focusable(true);
 }
@@ -827,9 +827,8 @@ void TextTerminal::resize(View& view)
     }
 
     m_frame.clear();
-    m_frame.add_rectangle(FramebufferRect{{0, 0}, size()},
-                          view.vp_to_fb(0.5_vp));
-    m_frame.update();
+    m_frame.add_rectangle(FramebufferRect{{0, 0}, size()}, view.px_to_fb(3_px));
+    m_frame.update(Color::Transparent(), Color(1.f, 0.f, 0.f, m_bell_alpha));
 }
 
 
@@ -848,7 +847,7 @@ void TextTerminal::update(View& view, State state)
     m_sprites.reserve(expected_num_cells);
     m_emoji_sprites.clear();
     m_boxes.clear();
-    m_boxes.reserve_rectangles(expected_num_cells);
+    m_boxes.reserve(expected_num_cells);
 
     FramebufferCoords pen;
     size_t buffer_first, buffer_last;
@@ -869,7 +868,6 @@ void TextTerminal::update(View& view, State state)
         // Reset attributes
         font.set_style(text::FontStyle::Regular);
         m_sprites.set_color(Color(7));
-        m_boxes.set_fill_color(Color(0));
 
         class LineRenderer: public terminal::Renderer {
         public:
@@ -896,45 +894,45 @@ void TextTerminal::update(View& view, State state)
                 switch (mode) {
                     default:
                     case Mode::Normal:
-                        if (m_fg < 8)
-                            term.m_sprites.set_color(Color(m_fg));
+                        if (m_fg8 < 8)
+                            term.m_sprites.set_color(Color(m_fg8));
                         break;
                     case Mode::Bright:
-                        if (m_fg < 8)
-                            term.m_sprites.set_color(Color(m_fg + 8));
+                        if (m_fg8 < 8)
+                            term.m_sprites.set_color(Color(m_fg8 + 8));
                         break;
                 }
             }
             Color8bit _apply_fg8_mode() {
-                return m_mode == Mode::Bright && m_fg < 8 ? m_fg + 8 : m_fg;
+                return m_mode == Mode::Bright && m_fg8 < 8 ? m_fg8 + 8 : m_fg8;
             }
             void set_default_fg_color() override {
-                m_fg = 7;
+                m_fg8 = 7;
                 term.m_sprites.set_color(Color(m_mode == Mode::Bright ? 15 : 7));
             }
             void set_default_bg_color() override {
-                m_bg = 0;
-                term.m_boxes.set_fill_color(Color(0));
+                m_bg8 = 0;
+                m_bg24 = Color(0);
             }
             void set_fg_color(Color8bit fg) override {
-                m_fg = fg;
+                m_fg8 = fg;
                 term.m_sprites.set_color(Color(m_mode == Mode::Bright && fg < 8 ? fg + 8 : fg));
             }
             void set_bg_color(Color8bit bg) override {
-                m_bg = bg;
-                term.m_boxes.set_fill_color(Color(bg));
+                m_bg8 = bg;
+                m_bg24 = Color(bg);
             }
             void set_fg_color(Color24bit fg) override {
-                m_fg = 255;
+                m_fg8 = 255;
                 term.m_sprites.set_color(fg);
             }
             void set_bg_color(Color24bit bg) override {
-                m_bg = 255;
-                term.m_boxes.set_fill_color(bg);
+                m_bg8 = 255;
+                m_bg24 = bg;
             }
             void draw_blanks(size_t num) override {
                 const auto& cell_size = term.m_cell_size;
-                term.m_boxes.add_rectangle({pen.x, pen.y, cell_size.x * num, cell_size.y});
+                term.m_boxes.add_rectangle({pen.x, pen.y, cell_size.x * num, cell_size.y}, m_bg24);
                 pen.x += cell_size.x * num;
                 column += num;
             }
@@ -983,7 +981,7 @@ void TextTerminal::update(View& view, State state)
                     ++column;
                 }
                 const auto n = column - start_column;
-                term.m_boxes.add_rectangle({start_pen.x, start_pen.y, cell_size.x * n, cell_size.y});
+                term.m_boxes.add_rectangle({start_pen.x, start_pen.y, cell_size.x * n, cell_size.y}, m_bg24);
             }
 
             /// \returns char_index of first non-consumed char
@@ -1015,6 +1013,8 @@ void TextTerminal::update(View& view, State state)
                 return std::string_view::npos;
             }
 
+            Color24bit last_bg24() const { return m_bg24; }
+
         private:
             TextTerminal& term;
             FramebufferCoords& pen;
@@ -1022,8 +1022,9 @@ void TextTerminal::update(View& view, State state)
             text::Font& font;
             text::Font& emoji_font;
             FramebufferPixels ascender;
-            Color8bit m_fg = 7;
-            Color8bit m_bg = 0;
+            Color24bit m_bg24 = Color(0);
+            Color8bit m_bg8 = 0;
+            Color8bit m_fg8 = 7;
             Mode m_mode = Mode::Normal;
         } line_renderer(*this, pen, column, font, emoji_font);
 
@@ -1034,7 +1035,7 @@ void TextTerminal::update(View& view, State state)
             FramebufferRect rect {
                     pen.x, pen.y,
                     m_cell_size.x * (m_cells.x - column), m_cell_size.y };
-            m_boxes.add_rectangle(rect);
+            m_boxes.add_rectangle(rect, line_renderer.last_bg24());
         }
 
         // draw rest of blanked page
@@ -1042,7 +1043,7 @@ void TextTerminal::update(View& view, State state)
             FramebufferRect rect {
                     0, pen.y + m_cell_size.y,
                     m_cell_size.x * m_cells.x, m_cell_size.y * (m_cells.y - row - 1) };
-            m_boxes.add_rectangle(rect);
+            m_boxes.add_rectangle(rect, line_renderer.last_bg24());
         }
 
         pen.x = 0;
@@ -1057,9 +1058,8 @@ void TextTerminal::update(View& view, State state)
 
     if (m_bell_time > 0ns) {
         m_bell_time -= state.elapsed;
-        auto alpha = (float) duration_cast<milliseconds>(m_bell_time).count() / 500.f;
-        m_frame.set_outline_color(Color(1.f, 0.f, 0.f, alpha));
-        m_frame.update();
+        m_bell_alpha = (float) duration_cast<milliseconds>(m_bell_time).count() / 500.f;
+        m_frame.update(Color::Transparent(), Color(1.f, 0.f, 0.f, m_bell_alpha));
         // Request new draw and wakeup event loop immediately
         view.refresh();
         view.window()->wakeup();

@@ -9,7 +9,7 @@
 
 #include <xci/text/Style.h>
 #include <xci/graphics/Sprites.h>
-#include <xci/graphics/Shape.h>
+#include <xci/graphics/shape/Rectangle.h>
 #include <xci/core/geometry.h>
 #include <xci/core/container/ChunkedStack.h>
 
@@ -54,7 +54,7 @@ private:
 
     mutable std::optional<graphics::Sprites> m_sprites;
     mutable std::optional<graphics::Sprites> m_outline_sprites;
-    mutable core::ChunkedStack<graphics::Shape> m_debug_shapes;
+    mutable core::ChunkedStack<graphics::Rectangle> m_debug_rects;
 };
 
 
