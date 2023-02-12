@@ -1,7 +1,7 @@
 // vulkan_error.h created on 2019-12-05 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include <vulkan/vulkan_core.h>  // VkResult
@@ -85,7 +85,7 @@ private:
 
 #ifndef VK_TRY
 #define VK_TRY(msg, expr) \
-    do { VkResult res = (expr); if (res != VK_SUCCESS) throw VulkanError(msg, res); } while(0)
+    do { const VkResult res = (expr); if (res != VK_SUCCESS) throw VulkanError(msg, res); } while(0)
 #endif
 
 
