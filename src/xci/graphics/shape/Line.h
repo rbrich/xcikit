@@ -49,7 +49,7 @@ public:
 class ColoredLine: public VaryingColorShape {
 public:
     explicit ColoredLine(Renderer& renderer)
-    : VaryingColorShape(renderer, VertexFormat::V2c44t22, PrimitiveType::TriFans, ShaderId::LineC) {}
+    : VaryingColorShape(renderer, VertexFormat::V2c44t2, PrimitiveType::TriFans, ShaderId::LineC) {}
 
     /// Reserve memory for a number of lines.
     void reserve(size_t lines) { m_primitives.reserve(4 * lines); }

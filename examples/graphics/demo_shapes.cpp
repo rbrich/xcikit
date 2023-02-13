@@ -16,7 +16,6 @@
 #include <xci/core/Vfs.h>
 #include <xci/config.h>
 #include <variant>
-#include <array>
 #include <cstdlib>
 
 using namespace xci::text;
@@ -24,23 +23,25 @@ using namespace xci::text;
 
 class VariantShape {
 public:
-    VariantShape(Renderer& renderer) : m_shape(std::in_place_type<Rectangle>, renderer) {}
+    VariantShape(Renderer& renderer) : m_shape(std::in_place_type<ColoredRectangle>, renderer) {}
 
     template <typename T>
     void switch_type(Renderer& renderer) {
         m_shape.emplace<T>(renderer);
     }
 
-    void add_shape(View& view, const ViewportRect& vp_rect, FramebufferPixels th) {
-        std::visit([&view, rect = view.vp_to_fb(vp_rect), th] (auto& shape) {
+    void add_shape(View& view, const ViewportRect& vp_rect,
+                   Color fill_color, Color outline_color, FramebufferPixels th)
+    {
+        std::visit([&view, rect = view.vp_to_fb(vp_rect), fill_color, outline_color, th] (auto& shape) {
             using T = std::decay_t<decltype(shape)>;
-            if constexpr (std::is_same_v<T, Rectangle>) {
-                shape.add_rectangle(rect, th);
-            } else if constexpr (std::is_same_v<T, RoundedRectangle>) {
-                shape.add_rounded_rectangle(rect, view.vp_to_fb(2.5_vp), th);
-            } else if constexpr (std::is_same_v<T, Ellipse>) {
-                shape.add_ellipse(rect, th);
-            } else if constexpr (std::is_same_v<T, Line>) {
+            if constexpr (std::is_same_v<T, ColoredRectangle>) {
+                shape.add_rectangle(rect, fill_color, outline_color, th);
+            } else if constexpr (std::is_same_v<T, ColoredRoundedRectangle>) {
+                shape.add_rounded_rectangle(rect, view.vp_to_fb(2.5_vp), fill_color, outline_color, th);
+            } else if constexpr (std::is_same_v<T, ColoredEllipse>) {
+                shape.add_ellipse(rect, fill_color, outline_color, th);
+            } else if constexpr (std::is_same_v<T, ColoredLine>) {
                 const auto l = rect.left();
                 const auto t = rect.top();
                 const auto r = rect.right();
@@ -50,11 +51,11 @@ public:
                 const auto w4 = rect.w / 4;
                 const auto h4 = rect.h / 4;
                 const auto c = rect.center();
-                shape.add_line_slice({l, t, w2, h2}, {l, t+h4}, {c.x, t}, th);
-                shape.add_line_slice({c.x, t, w2, h2}, {r-w4, t}, {r, c.y}, th);
-                shape.add_line_slice({c.x, c.y, w2, h2}, {r, b-h4}, {c.x, b}, th);
-                shape.add_line_slice({l, c.y, w2, h2}, {l+w4, b}, {l, c.y}, th);
-            } else if constexpr (std::is_same_v<T, Polygon>) {
+                shape.add_line_slice({l, t, w2, h2}, {l, t+h4}, {c.x, t}, fill_color, outline_color, th);
+                shape.add_line_slice({c.x, t, w2, h2}, {r-w4, t}, {r, c.y}, fill_color, outline_color, th);
+                shape.add_line_slice({c.x, c.y, w2, h2}, {r, b-h4}, {c.x, b}, fill_color, outline_color, th);
+                shape.add_line_slice({l, c.y, w2, h2}, {l+w4, b}, {l, c.y}, fill_color, outline_color, th);
+            } else if constexpr (std::is_same_v<T, ColoredPolygon>) {
                 constexpr int edges = 14;
                 const float angle = 2 * std::acos(-1) / edges;
                 const auto center = rect.center();
@@ -62,7 +63,7 @@ public:
                 for (int i = 0; i <= edges; i++) {
                     vertices.emplace_back(center + ((0.3 + 0.2 * (i % 2)) * rect.size()).rotate(-angle * i));
                 }
-                shape.add_polygon(center, vertices, th);
+                shape.add_polygon(center, vertices, fill_color, outline_color, th);
             }
         }, m_shape);
     }
@@ -73,11 +74,9 @@ public:
         }, m_shape);
     }
 
-    void update(Color fill_color, Color outline_color,
-                float softness, float antialiasing)
-    {
+    void update(float softness, float antialiasing) {
         std::visit([=](auto& shape) {
-            shape.update(fill_color, outline_color, softness, antialiasing);
+            shape.update(softness, antialiasing);
         }, m_shape);
     }
 
@@ -88,7 +87,7 @@ public:
     }
 
 private:
-    std::variant<Rectangle, RoundedRectangle, Ellipse, Line, Polygon> m_shape;
+    std::variant<ColoredRectangle, ColoredRoundedRectangle, ColoredEllipse, ColoredLine, ColoredPolygon> m_shape;
 };
 
 
@@ -116,35 +115,25 @@ int main(int argc, const char* argv[])
                            "[s] softness\n");
     option_help.set_color(Color(200, 100, 50));
 
-    std::array<VariantShape, 7> shapes { renderer, renderer, renderer, renderer, renderer, renderer, renderer };
+    VariantShape shape { renderer };
     int antialiasing = 0;
     int softness = 0;
 
     auto recreate_shapes = [&](View& view) {
         view.finish_draw();
 
-        for (VariantShape& shape : shapes) {
-            shape.clear();
-        }
+        shape.clear();
 
         // Border scaled with viewport size
-        shapes[0].add_shape(view, {-50_vp, -30_vp, 100_vp, 60_vp}, view.vp_to_fb(2.5_vp));
-        shapes[1].add_shape(view, {-30_vp, -40_vp, 60_vp, 80_vp}, view.vp_to_fb(1_vp));
+        shape.add_shape(view, {-50_vp, -30_vp, 100_vp, 60_vp}, Color(0, 0, 40, 128), Color(180, 180, 0), view.vp_to_fb(2.5_vp));
+        shape.add_shape(view, {-30_vp, -40_vp, 60_vp, 80_vp}, Color(0, 0, 40, 128), Color(180, 180, 0), view.vp_to_fb(1_vp));
 
         // Constant border width, in screen pixels
-        shapes[2].add_shape(view, { 0_vp,  0_vp, 25_vp, 25_vp}, view.px_to_fb(1_px));
-        shapes[3].add_shape(view, { 5_vp,  5_vp, 25_vp, 25_vp}, view.px_to_fb(2_px));
-        shapes[4].add_shape(view, {10_vp, 10_vp, 25_vp, 25_vp}, view.px_to_fb(3_px));
-        shapes[5].add_shape(view, {15_vp, 15_vp, 25_vp, 25_vp}, view.px_to_fb(4_px));
-        shapes[6].add_shape(view, {20_vp, 20_vp, 25_vp, 25_vp}, view.px_to_fb(5_px));
+        for (size_t i = 0; i < 5; i++)
+            shape.add_shape(view, {-22.5_vp + i * 5_vp, -22.5_vp + i * 5_vp, 25_vp, 25_vp},
+                            Color(40, 40, 0, 128), Color(255, 255, 0), view.px_to_fb((i + 1) * 1_px));
 
-        for (VariantShape& shape : shapes) {
-            if (&shape == &shapes[0] || &shape == &shapes[1]) {
-                shape.update(Color(0, 0, 40, 128), Color(180, 180, 0), softness, antialiasing);
-            } else {
-                shape.update(Color(40, 40, 0, 128), Color(255, 255, 0), softness, antialiasing);
-            }
-        }
+        shape.update(softness, antialiasing);
     };
 
     window.set_key_callback([&](View& view, KeyEvent ev) {
@@ -159,24 +148,19 @@ int main(int argc, const char* argv[])
                 window.toggle_fullscreen();
                 break;
             case Key::R:
-                for (auto& vs : shapes)
-                    vs.switch_type<Rectangle>(renderer);
+                shape.switch_type<ColoredRectangle>(renderer);
                 break;
             case Key::O:
-                for (auto& vs : shapes)
-                    vs.switch_type<RoundedRectangle>(renderer);
+                shape.switch_type<ColoredRoundedRectangle>(renderer);
                 break;
             case Key::E:
-                for (auto& vs : shapes)
-                    vs.switch_type<Ellipse>(renderer);
+                shape.switch_type<ColoredEllipse>(renderer);
                 break;
             case Key::L:
-                for (auto& vs : shapes)
-                    vs.switch_type<Line>(renderer);
+                shape.switch_type<ColoredLine>(renderer);
                 break;
             case Key::P:
-                for (auto& vs : shapes)
-                    vs.switch_type<Polygon>(renderer);
+                shape.switch_type<ColoredPolygon>(renderer);
                 break;
             case Key::A:
                 antialiasing = (antialiasing == 0) ? 2 : 0;
@@ -202,11 +186,7 @@ int main(int argc, const char* argv[])
         shapes_help.draw(view, {-vs.x / 2 + 5_vp, -vs.y / 2 + 5_vp});
         option_help.draw(view, {vs.x / 2 - 25_vp, -vs.y / 2 + 5_vp});
 
-        shapes[0].draw(view, {0_vp, 0_vp});
-        shapes[1].draw(view, {0_vp, 0_vp});
-
-        for (size_t i = 2; i <= 6; i++)
-            shapes[i].draw(view, {-22.5_vp, -22.5_vp});
+        shape.draw(view, {0_vp, 0_vp});
     });
 
     window.set_refresh_mode(RefreshMode::OnDemand);

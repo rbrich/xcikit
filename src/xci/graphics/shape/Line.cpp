@@ -70,23 +70,23 @@ void ColoredLine::add_line_slice(const FramebufferRect& slice,
 {
     auto dir = (b-a).norm();
     auto rotate = [dir](float x, float y) -> Vec2f {
-        float xnew = x * dir.x.value + y * dir.y.value;
-        float ynew = -x * dir.y.value + y * dir.x.value;
+        const float xnew = x * dir.x.value + y * dir.y.value;
+        const float ynew = -x * dir.y.value + y * dir.x.value;
         return {xnew, ynew};
     };
 
-    auto x1 = slice.x;
-    auto y1 = slice.y;
-    auto x2 = slice.x + slice.w;
-    auto y2 = slice.y + slice.h;
-    float ax = ((slice.x - a.x) / thickness).value;
-    float ay = ((slice.y - a.y) / thickness).value;
-    float bx = ((x2 - a.x) / thickness).value;
-    float by = ((y2 - a.y) / thickness).value;
-    auto t1 = rotate(ax, ay);
-    auto t2 = rotate(ax, by);
-    auto t3 = rotate(bx, by);
-    auto t4 = rotate(bx, ay);
+    const auto x1 = slice.x;
+    const auto y1 = slice.y;
+    const auto x2 = slice.x + slice.w;
+    const auto y2 = slice.y + slice.h;
+    const float ax = ((slice.x - a.x) / thickness).value;
+    const float ay = ((slice.y - a.y) / thickness).value;
+    const float bx = ((x2 - a.x) / thickness).value;
+    const float by = ((y2 - a.y) / thickness).value;
+    const auto t1 = rotate(ax, ay);
+    const auto t2 = rotate(ax, by);
+    const auto t3 = rotate(bx, by);
+    const auto t4 = rotate(bx, ay);
     m_primitives.begin_primitive();
     m_primitives.add_vertex({x1, y1}).color(fill_color).color(outline_color).uv(t1.x, t1.y);
     m_primitives.add_vertex({x1, y2}).color(fill_color).color(outline_color).uv(t2.x, t2.y);

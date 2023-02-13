@@ -25,6 +25,7 @@ unsigned get_vertex_format_stride(VertexFormat format)
         case VertexFormat::V2c4: return 6;
         case VertexFormat::V2c4t2: return 8;
         case VertexFormat::V2c4t22: return 10;
+        case VertexFormat::V2c44t2: return 12;
         case VertexFormat::V2c44t3: return 13;
         case VertexFormat::V2c44t22: return 14;
     }
@@ -291,6 +292,12 @@ void PipelineCreateInfo::set_vertex_format(VertexFormat format)
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 2 * sf};
             m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32_SFLOAT, 6 * sf};
             m_attr_descs[3] = {3, 0, VK_FORMAT_R32G32_SFLOAT, 8 * sf};
+            attr_desc_count = 4;
+            break;
+        case VertexFormat::V2c44t2:
+            m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 2 * sf};
+            m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 6 * sf};
+            m_attr_descs[3] = {3, 0, VK_FORMAT_R32G32_SFLOAT, 10 * sf};
             attr_desc_count = 4;
             break;
         case VertexFormat::V2c44t3:
