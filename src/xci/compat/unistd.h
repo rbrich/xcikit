@@ -1,7 +1,7 @@
 // unistd.h created on 2020-01-19 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2020 Radek Brich
+// Copyright 2020, 2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 ///=========================================================================///
@@ -18,10 +18,6 @@
 ///                             I know what I'm doing and I don't really    ///
 ///                             care how secure my program is on this       ///
 ///                             platform, sorry...)                         ///
-///                                                                         ///
-/// And also some unwanted features:                                        ///
-///                                                                         ///
-/// -DNOMINMAX                                                              ///
 ///                                                                         ///
 /// This header doesn't add to macro hell, it uses inline functions         ///
 /// whenever possible, even for 1:1 mapping. Because nobody likes to fight  ///
@@ -47,12 +43,13 @@ extern char **environ;
 
 #else
 
+#include <xci/compat/windows.h>
+
 #include <stdio.h>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <io.h>
 #include <direct.h>
-#include <windows.h>
 #include <type_traits>
 
 using ssize_t = std::make_signed<size_t>::type;

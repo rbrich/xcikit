@@ -15,7 +15,7 @@
 #include <dlfcn.h>
 #else
 
-#include <windows.h>
+#include <xci/compat/windows.h>
 
 #define RTLD_LAZY 1
 

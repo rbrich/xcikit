@@ -5,7 +5,7 @@ using namespace xci::core::log;
 
 #ifdef _WIN32
 
-#include <windows.h>
+#include <xci/compat/windows.h>
 
 #define EXPORT __declspec(dllexport)
 

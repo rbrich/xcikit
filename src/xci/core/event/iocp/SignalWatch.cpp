@@ -6,9 +6,9 @@
 
 #include "SignalWatch.h"
 #include <xci/core/log.h>
+#include <xci/compat/windows.h>
 #include <csignal>
 #include <cassert>
-#include <windows.h>
 #include <stdio.h>
 
 namespace xci::core {
