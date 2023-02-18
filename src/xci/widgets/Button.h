@@ -1,14 +1,14 @@
 // Button.h created on 2018-03-21 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_WIDGETS_BUTTON_H
 #define XCI_WIDGETS_BUTTON_H
 
 #include <xci/widgets/Widget.h>
-#include <xci/graphics/Shape.h>
+#include <xci/graphics/shape/Rectangle.h>
 #include <xci/graphics/Color.h>
 #include <xci/text/Font.h>
 #include <xci/text/Text.h>
@@ -37,10 +37,12 @@ public:
     bool mouse_button_event(View& view, const MouseBtnEvent& ev) override;
 
 private:
-    graphics::Shape m_bg_rect;
+    graphics::Rectangle m_bg_rect;
     text::Layout m_layout;
     VariUnits m_padding = 1_vp;
     VariUnits m_outline_thickness = 0.25_vp;
+    Color m_fill_color = Color(10, 20, 40);
+    Color m_outline_color;
 };
 
 

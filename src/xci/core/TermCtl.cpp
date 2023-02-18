@@ -25,7 +25,6 @@
 #include <xci/config.h>
 
 #ifdef _WIN32
-    #include <windows.h>
     static_assert(sizeof(unsigned long) == sizeof(DWORD));
 #else
     #include <termios.h>

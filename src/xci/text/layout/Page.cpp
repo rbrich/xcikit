@@ -94,23 +94,20 @@ void Word::update(const graphics::View& target)
 
     auto& renderer = target.window()->renderer();
 
-    m_debug_shapes.clear();
+    m_debug_rects.clear();
     m_sprites.reset();
     m_outline_sprites.reset();
 
     if (target.has_debug_flag(View::Debug::WordBBox)) {
-        m_debug_shapes.emplace_back(renderer,
-                Color(0, 150, 0),
-                Color(50, 250, 50));
-        m_debug_shapes.back().add_rectangle(m_bbox, 1_fb);
-        m_debug_shapes.back().update();
+        m_debug_rects.emplace_back(renderer);
+        m_debug_rects.back().add_rectangle(m_bbox, 1_fb);
+        m_debug_rects.back().update(Color(0, 150, 0),
+                                    Color(50, 250, 50));
     }
 
     bool show_bboxes = target.has_debug_flag(View::Debug::GlyphBBox);
     if (show_bboxes) {
-        m_debug_shapes.emplace_back(renderer,
-                Color(150, 0, 0),
-                Color(250, 50, 50));
+        m_debug_rects.emplace_back(renderer);
     }
 
     auto render_sprites = [&](std::optional<graphics::Sprites>& sprites, graphics::Color color) {
@@ -130,7 +127,7 @@ void Word::update(const graphics::View& target)
                                      glyph_size.y * scale};
                 sprites->add_sprite(rect, glyph->tex_coords());
                 if (show_bboxes)
-                    m_debug_shapes.back().add_rectangle(rect, 1_fb);
+                    m_debug_rects.back().add_rectangle(rect, 1_fb);
             }
             pen += advance;
         }
@@ -147,22 +144,24 @@ void Word::update(const graphics::View& target)
         render_sprites(m_outline_sprites, m_style.outline_color());
     }
 
-    if (show_bboxes)
-        m_debug_shapes.back().update();
+    if (show_bboxes) {
+        m_debug_rects.back().update(Color(150, 0, 0),
+                                    Color(250, 50, 50));
+    }
 
     if (target.has_debug_flag(View::Debug::WordBasePoint)) {
         const auto fb_1px = target.px_to_fb(1_px);
-        m_debug_shapes.emplace_back(renderer, Color(150, 0, 255));
-        m_debug_shapes.back().add_rectangle({- fb_1px, - fb_1px, 2 * fb_1px, 2 * fb_1px});
-        m_debug_shapes.back().update();
+        m_debug_rects.emplace_back(renderer);
+        m_debug_rects.back().add_rectangle({- fb_1px, - fb_1px, 2 * fb_1px, 2 * fb_1px});
+        m_debug_rects.back().update(Color(150, 0, 255));
     }
 }
 
 
 void Word::draw(graphics::View& target, FramebufferCoords pos) const
 {
-    for (auto& shape : m_debug_shapes) {
-        shape.draw(target, m_pos + pos);
+    for (auto& rects : m_debug_rects) {
+        rects.draw(target, m_pos + pos);
     }
 
     if (m_outline_sprites)
@@ -172,9 +171,9 @@ void Word::draw(graphics::View& target, FramebufferCoords pos) const
         m_sprites->draw(target, m_pos + pos);
 
     if (target.has_debug_flag(View::Debug::WordBasePoint)
-    && !m_debug_shapes.empty()) {
+    && !m_debug_rects.empty()) {
         // basepoint needs to be drawn on-top (it's the last debug shape)
-        m_debug_shapes.back().draw(target, m_pos + pos);
+        m_debug_rects.back().draw(target, m_pos + pos);
     }
 }
 

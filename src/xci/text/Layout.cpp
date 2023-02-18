@@ -6,7 +6,6 @@
 
 #include "Layout.h"
 
-#include <xci/graphics/Shape.h>
 #include <xci/graphics/View.h>
 #include <xci/graphics/Window.h>
 
@@ -125,59 +124,56 @@ void Layout::update(const View& target)
 
     auto& renderer = target.window()->renderer();
     const auto fb_1px = target.px_to_fb(1_px);
-    m_debug_shapes.clear();
+    m_debug_rects.clear();
 
     // Debug: page bbox
     if (target.has_debug_flag(View::Debug::PageBBox)) {
-        m_debug_shapes.emplace_back(renderer,
-                Color(150, 150, 0, 128),
-                Color(200, 200, 50));
-        m_debug_shapes.back().add_rectangle(bbox(), fb_1px);
-        m_debug_shapes.back().update();
+        m_debug_rects.emplace_back(renderer);
+        m_debug_rects.back().add_rectangle(bbox(), fb_1px);
+        m_debug_rects.back().update(Color(150, 150, 0, 128),
+                                    Color(200, 200, 50));
     }
 
     // Debug: span bboxes
     if (target.has_debug_flag(View::Debug::SpanBBox)) {
-        m_debug_shapes.emplace_back(renderer,
-                Color(100, 0, 150, 128),
-                Color(200, 50, 250));
+        m_debug_rects.emplace_back(renderer);
         m_page.foreach_span([&](const Span& span) {
             for (const auto& part : span.parts()) {
-                m_debug_shapes.back().add_rectangle(part.bbox(), fb_1px);
+                m_debug_rects.back().add_rectangle(part.bbox(), fb_1px);
             }
         });
-        m_debug_shapes.back().update();
+        m_debug_rects.back().update(Color(100, 0, 150, 128),
+                                    Color(200, 50, 250));
     }
 
     // Debug: line bboxes
     if (target.has_debug_flag(View::Debug::LineBBox)) {
-        m_debug_shapes.emplace_back(renderer,
-                Color(0, 50, 150, 128),
-                Color(50, 50, 250));
+        m_debug_rects.emplace_back(renderer);
         m_page.foreach_line([&](const Line& line) {
-            m_debug_shapes.back().add_rectangle(line.bbox(), fb_1px);
+            m_debug_rects.back().add_rectangle(line.bbox(), fb_1px);
         });
-        m_debug_shapes.back().update();
+        m_debug_rects.back().update(Color(0, 50, 150, 128),
+                                    Color(50, 50, 250));
     }
 
     // Debug: line baselines
     if (target.has_debug_flag(View::Debug::LineBaseLine)) {
-        m_debug_shapes.emplace_back(renderer, Color(255, 50, 150));
+        m_debug_rects.emplace_back(renderer);
         m_page.foreach_line([&](const Line& line) {
             auto rect = line.bbox();
             rect.y += line.baseline();
             rect.h = fb_1px;
-            m_debug_shapes.back().add_rectangle(rect);
+            m_debug_rects.back().add_rectangle(rect);
         });
-        m_debug_shapes.back().update();
+        m_debug_rects.back().update(Color(255, 50, 150));
     }
 }
 
 
 void Layout::draw(View& view, VariCoords pos) const
 {
-    for (auto& shape : m_debug_shapes) {
-        shape.draw(view, pos);
+    for (auto& rects : m_debug_rects) {
+        rects.draw(view, pos);
     }
 
     m_page.foreach_word([&](const Word& word) {

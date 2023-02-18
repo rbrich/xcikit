@@ -1,7 +1,7 @@
 // TextTerminal.h created on 2018-07-19 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_WIDGETS_TEXTTERMINAL_H
@@ -10,7 +10,7 @@
 #include <xci/widgets/Widget.h>
 #include <xci/text/FontFace.h>
 #include <xci/graphics/Sprites.h>
-#include <xci/graphics/Shape.h>
+#include <xci/graphics/shape/Rectangle.h>
 #include <xci/graphics/Primitives.h>
 #include <xci/graphics/View.h>
 #include <xci/graphics/Shader.h>
@@ -73,7 +73,7 @@ using Color8bit = uint8_t;
 using Color24bit = graphics::Color;  // alpha channel is ignored
 
 
-enum class FontStyle {
+enum class FontStyle : uint8_t {
     Regular,        // 000
     Italic,         // 001
     Bold,           // 010
@@ -83,7 +83,7 @@ enum class FontStyle {
 };
 
 
-enum class Decoration {
+enum class Decoration : uint8_t {
     None,
     Underlined,
     Overlined,
@@ -93,7 +93,7 @@ enum class Decoration {
 };
 
 
-enum class Mode {
+enum class Mode : uint8_t {
     Normal,
     Bright,
     //Blink,
@@ -433,12 +433,13 @@ private:
     core::Vec2u m_cursor;  // x/y of cursor on screen
     terminal::Attributes m_attrs;  // current attributes
     std::chrono::nanoseconds m_bell_time {0};
+    float m_bell_alpha = 0;  // state of visual bell (alpha channel of frame color)
 
     graphics::ColoredSprites m_sprites;
     graphics::Sprites m_emoji_sprites;
-    graphics::Shape m_boxes;
+    graphics::ColoredRectangle m_boxes;
     terminal::Caret m_caret;  // visual indicator of cursor position
-    graphics::Shape m_frame;  // for visual bell
+    graphics::Rectangle m_frame;  // for visual bell
 };
 
 

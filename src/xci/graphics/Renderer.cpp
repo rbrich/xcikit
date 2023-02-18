@@ -98,7 +98,7 @@ Renderer::Renderer(core::Vfs& vfs)
     if (!glfwVulkanSupported())
         VK_THROW("Vulkan not supported.");
 
-    VkApplicationInfo application_info = {
+    const VkApplicationInfo application_info = {
             .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
             .pApplicationName = "an xci-graphics based app",
             .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
@@ -181,7 +181,7 @@ Renderer::Renderer(core::Vfs& vfs)
     vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, ext_props.data());
     log::info("Vulkan: {} extensions available:", ext_count);
     for (const auto& props : ext_props) {
-        bool enable = any_of(extensions, [&](const char* name) {
+        const bool enable = any_of(extensions, [&](const char* name) {
             return strcmp(name, props.extensionName) == 0;
         });
         log::info("[{}] {} (spec {})",
@@ -250,26 +250,38 @@ bool Renderer::load_shader(ShaderId shader_id, Shader& shader)
             return shader.load_from_vfs(vfs(),
                     "shaders/sprite_c.vert.spv",
                     "shaders/sprite_c.frag.spv");
-        case ShaderId::FlatC:
-            return shader.load_from_vfs(vfs(),
-                    "shaders/flat_c.vert.spv",
-                    "shaders/flat_c.frag.spv");
         case ShaderId::Line:
             return shader.load_from_vfs(vfs(),
                     "shaders/line.vert.spv",
                     "shaders/line.frag.spv");
+        case ShaderId::LineC:
+            return shader.load_from_vfs(vfs(),
+                    "shaders/line_c.vert.spv",
+                    "shaders/line_c.frag.spv");
         case ShaderId::Rectangle:
             return shader.load_from_vfs(vfs(),
                     "shaders/rectangle.vert.spv",
                     "shaders/rectangle.frag.spv");
+        case ShaderId::RectangleC:
+            return shader.load_from_vfs(vfs(),
+                    "shaders/rectangle_c.vert.spv",
+                    "shaders/rectangle_c.frag.spv");
         case ShaderId::Ellipse:
             return shader.load_from_vfs(vfs(),
                     "shaders/ellipse.vert.spv",
                     "shaders/ellipse.frag.spv");
+        case ShaderId::EllipseC:
+            return shader.load_from_vfs(vfs(),
+                    "shaders/ellipse_c.vert.spv",
+                    "shaders/ellipse_c.frag.spv");
         case ShaderId::Polygon:
             return shader.load_from_vfs(vfs(),
                     "shaders/polygon.vert.spv",
                     "shaders/polygon.frag.spv");
+        case ShaderId::PolygonC:
+            return shader.load_from_vfs(vfs(),
+                    "shaders/polygon_c.vert.spv",
+                    "shaders/polygon_c.frag.spv");
         case ShaderId::Fps:
             return shader.load_from_vfs(vfs(),
                     "shaders/fps.vert.spv",
@@ -493,23 +505,19 @@ void Renderer::create_device()
     // create VkDevice
     {
         const float queue_priorities[] = {1.0f};
-        VkDeviceQueueCreateInfo queue_create_info = {
+        const VkDeviceQueueCreateInfo queue_create_info = {
                 .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
                 .queueFamilyIndex = graphics_queue_family,
                 .queueCount = 1,
                 .pQueuePriorities = queue_priorities,
         };
 
-        VkPhysicalDeviceFeatures device_features = {};
+        const VkPhysicalDeviceFeatures device_features = {};
 
-        VkDeviceCreateInfo device_create_info = {
+        const VkDeviceCreateInfo device_create_info = {
                 .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
                 .queueCreateInfoCount = 1,
                 .pQueueCreateInfos = &queue_create_info,
-//#ifdef XCI_DEBUG_VULKAN
-//                .enabledLayerCount = (uint32_t) enabled_layers.size(),
-//                .ppEnabledLayerNames = enabled_layers.data(),
-//#endif
                 .enabledExtensionCount = (uint32_t) chosen_device_extensions.size(),
                 .ppEnabledExtensionNames = chosen_device_extensions.data(),
                 .pEnabledFeatures = &device_features,
@@ -525,7 +533,7 @@ void Renderer::create_device()
 
     // create VkCommandPool
     {
-        VkCommandPoolCreateInfo command_pool_ci = {
+        const VkCommandPoolCreateInfo command_pool_ci = {
                 .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
                 .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
                 .queueFamilyIndex = graphics_queue_family,
@@ -535,7 +543,7 @@ void Renderer::create_device()
                         nullptr, &m_command_pool));
     }
     {
-        VkCommandPoolCreateInfo command_pool_ci = {
+        const VkCommandPoolCreateInfo command_pool_ci = {
                 .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
                 .flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
                 .queueFamilyIndex = graphics_queue_family,
@@ -559,7 +567,7 @@ void Renderer::destroy_device()
 
 void Renderer::create_swapchain()
 {
-    VkSwapchainCreateInfoKHR swapchain_create_info {
+    const VkSwapchainCreateInfoKHR swapchain_create_info {
             .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
             .surface = m_surface,
             .minImageCount = m_image_count,
@@ -624,7 +632,7 @@ void Renderer::destroy_swapchain()
 
 void Renderer::create_renderpass()
 {
-    VkAttachmentDescription color_attachment = {
+    const VkAttachmentDescription color_attachment = {
             .format = m_surface_format.format,
             .samples = VK_SAMPLE_COUNT_1_BIT,
             .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
@@ -635,18 +643,18 @@ void Renderer::create_renderpass()
             .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
     };
 
-    VkAttachmentReference color_attachment_ref = {
+    const VkAttachmentReference color_attachment_ref = {
             .attachment = 0,  // layout(location = 0)
             .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
     };
 
-    VkSubpassDescription subpass = {
+    const VkSubpassDescription subpass = {
             .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
             .colorAttachmentCount = 1,
             .pColorAttachments = &color_attachment_ref,
     };
 
-    VkSubpassDependency dependency = {
+    const VkSubpassDependency dependency = {
             .srcSubpass = VK_SUBPASS_EXTERNAL,
             .dstSubpass = 0,
             .srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -657,7 +665,7 @@ void Renderer::create_renderpass()
                     VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
     };
 
-    VkRenderPassCreateInfo render_pass_ci = {
+    const VkRenderPassCreateInfo render_pass_ci = {
             .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
             .attachmentCount = 1,
             .pAttachments = &color_attachment,
@@ -685,7 +693,7 @@ void Renderer::create_framebuffers()
     for (size_t i = 0; i < m_image_count; i++) {
         VkImageView attachments[] = { m_image_views[i] };
 
-        VkFramebufferCreateInfo framebuffer_ci = {
+        const VkFramebufferCreateInfo framebuffer_ci = {
                 .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
                 .renderPass = m_render_pass,
                 .attachmentCount = 1,

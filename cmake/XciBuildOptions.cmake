@@ -171,8 +171,6 @@ endif()
 if (MSVC)
     # Enable standards-conforming compiler behavior
     add_compile_options(/permissive- /Zc:preprocessor /Zc:inline /Zc:__cplusplus)
-    # Disable min/max macros (very bad in C++)
-    add_compile_definitions(NOMINMAX)
     # Read all source files as utf-8
     add_compile_options(/utf-8)
     # xci/script/Machine.cpp : fatal error C1128: number of sections exceeded object file format limit: compile with /bigobj

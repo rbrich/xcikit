@@ -18,11 +18,16 @@ add_library(xci-graphics
     Primitives.cpp
     Renderer.cpp
     Shader.cpp
-    Shape.cpp
     Sprites.cpp
     Texture.cpp
     View.cpp
     Window.cpp
+    shape/Ellipse.cpp
+    shape/Line.cpp
+    shape/Polygon.cpp
+    shape/Rectangle.cpp
+    shape/RoundedRectangle.cpp
+    shape/Shape.cpp
     vulkan/CommandBuffers.cpp
     vulkan/DescriptorPool.cpp
     vulkan/DeviceMemory.cpp

@@ -1,7 +1,7 @@
 // Button.cpp created on 2018-03-21 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Button.h"
@@ -16,8 +16,8 @@ using namespace xci::text;
 
 Button::Button(Theme& theme, const std::string &string)
     : Widget(theme),
-      m_bg_rect(theme.renderer(),
-              Color(10, 20, 40), theme.color(ColorId::Default))
+      m_bg_rect(theme.renderer()),
+      m_outline_color(theme.color(ColorId::Default))
 {
     set_focusable(true);
     m_layout.set_default_font(&theme.base_font());
@@ -29,8 +29,8 @@ Button::Button(Theme& theme, const std::string &string)
 void Button::set_decoration_color(graphics::Color fill,
                                   graphics::Color outline)
 {
-    m_bg_rect.set_fill_color(fill);
-    m_bg_rect.set_outline_color(outline);
+    m_fill_color = fill;
+    m_outline_color = outline;
 }
 
 
@@ -55,20 +55,20 @@ void Button::resize(View& view)
     rect.y = 0;
     m_bg_rect.clear();
     m_bg_rect.add_rectangle(rect, view.to_fb(m_outline_thickness));
-    m_bg_rect.update();
+    m_bg_rect.update(m_fill_color, m_outline_color);
 }
 
 
 void Button::update(View& view, State state)
 {
     if (state.focused) {
-        m_bg_rect.set_outline_color(theme().color(ColorId::Focus));
+        m_outline_color = theme().color(ColorId::Focus);
     } else if (last_hover() == LastHover::Inside) {
-        m_bg_rect.set_outline_color(theme().color(ColorId::Hover));
+        m_outline_color = theme().color(ColorId::Hover);
     } else {
-        m_bg_rect.set_outline_color(theme().color(ColorId::Default));
+        m_outline_color = theme().color(ColorId::Default);
     }
-    m_bg_rect.update();
+    m_bg_rect.update(m_fill_color, m_outline_color);
 }
 
 
