@@ -152,7 +152,7 @@ public:
 
     // ------------------------------------------------------------------------
 
-    // Origin is a position in page where current run started (on line-break, pen returns to origin)\
+    // Origin is a position in page where current run started (on line-break, pen returns to origin)
     // Also moves pen to new origin.
     void set_origin(FramebufferCoords origin) { m_origin = origin; m_pen = origin; }
     FramebufferCoords origin() const { return m_origin; }

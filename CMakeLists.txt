@@ -1,7 +1,7 @@
 # 3.18.4 in Debian 11
-# 3.16.3 in Emscripten Docker image
-# 3.16 introduced CMAKE_MESSAGE_INDENT
-cmake_minimum_required(VERSION 3.16...3.25)
+# 3.22.1 in Ubuntu 22.04 / Emscripten Docker image
+# 3.25.1 in Debian 12
+cmake_minimum_required(VERSION 3.18...3.25)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(XciBuildType)

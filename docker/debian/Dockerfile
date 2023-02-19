@@ -2,9 +2,9 @@
 # Debian 12 with GCC 12
 #
 # CI builder (DockerHub public image), local build check:
-#   docker build --pull --build-arg UID=$(id -u) --build-arg BASE=bullseye -t rbrich/xcikit-debian:11 . -f docker/debian/Dockerfile
+#   docker build --pull --build-arg UID=$(id -u) -t rbrich/xcikit-debian:11 . -f docker/debian/Dockerfile
 #   docker run --rm -v $PWD:/src -w /src -it rbrich/xcikit-debian:11
-# Or:
+# Or with Debian 12:
 #   docker build --pull --build-arg UID=$(id -u) --build-arg BASE=bookworm -t rbrich/xcikit-debian:12 . -f docker/debian/Dockerfile
 #   docker run --rm -v $PWD:/src -w /src -it rbrich/xcikit-debian:12
 # CMake arguments (for Clion IDE):
