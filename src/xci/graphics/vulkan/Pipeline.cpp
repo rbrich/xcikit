@@ -22,12 +22,14 @@ unsigned get_vertex_format_stride(VertexFormat format)
         case VertexFormat::V2t2: return 4;
         case VertexFormat::V2t3: return 5;
         case VertexFormat::V2t22: return 6;
+        case VertexFormat::V2t222: return 8;
         case VertexFormat::V2c4: return 6;
         case VertexFormat::V2c4t2: return 8;
         case VertexFormat::V2c4t22: return 10;
         case VertexFormat::V2c44t2: return 12;
         case VertexFormat::V2c44t3: return 13;
         case VertexFormat::V2c44t22: return 14;
+        case VertexFormat::V2c44t222: return 16;
     }
     XCI_UNREACHABLE;
 }
@@ -279,6 +281,12 @@ void PipelineCreateInfo::set_vertex_format(VertexFormat format)
             m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32_SFLOAT, 4 * sf};
             attr_desc_count = 3;
             break;
+        case VertexFormat::V2t222:
+            m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32_SFLOAT, 2 * sf};
+            m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32_SFLOAT, 4 * sf};
+            m_attr_descs[3] = {3, 0, VK_FORMAT_R32G32_SFLOAT, 6 * sf};
+            attr_desc_count = 4;
+            break;
         case VertexFormat::V2c4:
             m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 2 * sf};
             attr_desc_count = 2;
@@ -312,6 +320,14 @@ void PipelineCreateInfo::set_vertex_format(VertexFormat format)
             m_attr_descs[3] = {3, 0, VK_FORMAT_R32G32_SFLOAT, 10 * sf};
             m_attr_descs[4] = {4, 0, VK_FORMAT_R32G32_SFLOAT, 12 * sf};
             attr_desc_count = 5;
+            break;
+        case VertexFormat::V2c44t222:
+            m_attr_descs[1] = {1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 2 * sf};
+            m_attr_descs[2] = {2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, 6 * sf};
+            m_attr_descs[3] = {3, 0, VK_FORMAT_R32G32_SFLOAT, 10 * sf};
+            m_attr_descs[4] = {4, 0, VK_FORMAT_R32G32_SFLOAT, 12 * sf};
+            m_attr_descs[5] = {5, 0, VK_FORMAT_R32G32_SFLOAT, 14 * sf};
+            attr_desc_count = 6;
             break;
     }
     assert(attr_desc_count != 0);

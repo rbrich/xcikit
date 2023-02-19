@@ -38,6 +38,10 @@ set(SHADER_SOURCES
     rectangle.frag
     rectangle_c.vert
     rectangle_c.frag
+    rounded_rectangle.vert
+    rounded_rectangle.frag
+    rounded_rectangle_c.vert
+    rounded_rectangle_c.frag
     sprite.vert
     sprite.frag
     sprite_c.vert

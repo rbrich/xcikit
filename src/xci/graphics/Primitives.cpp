@@ -35,7 +35,7 @@ void PrimitivesBuffers::create(
         const std::vector<std::byte>& uniform_data)
 {
     // vertex buffer
-    VkBufferCreateInfo vertex_buffer_ci = {
+    const VkBufferCreateInfo vertex_buffer_ci = {
             .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
             .size = sizeof(vertex_data[0]) * vertex_data.size(),
             .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
@@ -49,7 +49,7 @@ void PrimitivesBuffers::create(
     auto vertex_offset = m_device_memory.reserve(vertex_mem_req);
 
     // index buffer
-    VkBufferCreateInfo index_buffer_ci = {
+    const VkBufferCreateInfo index_buffer_ci = {
             .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
             .size = sizeof(index_data[0]) * index_data.size(),
             .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
@@ -64,7 +64,7 @@ void PrimitivesBuffers::create(
 
     // uniform buffers
     for (size_t i = 0; i < Window::cmd_buf_count; i++) {
-        VkBufferCreateInfo uniform_buffer_ci = {
+        const VkBufferCreateInfo uniform_buffer_ci = {
                 .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
                 .size = uniform_base + uniform_data.size(),
                 .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -99,7 +99,7 @@ void PrimitivesBuffers::create(
 
 void PrimitivesBuffers::bind(VkCommandBuffer cmd_buf)
 {
-    VkDeviceSize offset = 0;
+    const VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(cmd_buf, 0, 1, &m_vertex_buffer, &offset);
     vkCmdBindIndexBuffer(cmd_buf, m_index_buffer, 0, VK_INDEX_TYPE_UINT16);
 }
@@ -387,7 +387,7 @@ void Primitives::draw(View& view)
     vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->vk());
 
     // set viewport
-    VkViewport viewport = {
+    const VkViewport viewport = {
             .x = 0.0f,
             .y = 0.0f,
             .width = (float) m_renderer.vk_image_extent().width,

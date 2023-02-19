@@ -13,21 +13,47 @@ namespace xci::graphics {
 void RoundedRectangle::add_rounded_rectangle(const FramebufferRect& rect, FramebufferPixels radius,
                                              FramebufferPixels outline_thickness)
 {
-    // The shape is composed of 7-slice pattern:
-    // corner ellipse slices and center rectangle slices
-    auto x = rect.x;
-    auto y = rect.y;
-    auto w = rect.w;
-    auto h = rect.h;
-    auto r = std::max(radius, outline_thickness * 1.1f);
-    auto rr = 2 * r;
-    m_ellipses.add_ellipse_slice({x,     y,     r, r}, {x,      y,      rr, rr}, outline_thickness);
-    m_ellipses.add_ellipse_slice({x+w-r, y,     r, r}, {x+w-rr, y,      rr, rr}, outline_thickness);
-    m_ellipses.add_ellipse_slice({x,     y+h-r, r, r}, {x,      y+h-rr, rr, rr}, outline_thickness);
-    m_ellipses.add_ellipse_slice({x+w-r, y+h-r, r, r}, {x+w-rr, y+h-rr, rr, rr}, outline_thickness);
-    m_rectangles.add_rectangle_slice({x+r, y,     w-rr, r}, rect, outline_thickness);
-    m_rectangles.add_rectangle_slice({x+r, y+h-r, w-rr, r}, rect, outline_thickness);
-    m_rectangles.add_rectangle_slice({x,   y+r,   w, h-rr}, rect, outline_thickness);
+    const auto x1 = rect.x;
+    const auto y1 = rect.y;
+    const auto x2 = rect.x + rect.w;
+    const auto y2 = rect.y + rect.h;
+    const float sx = 0.5f * rect.w.value;
+    const float sy = 0.5f * rect.h.value;
+    const float t = outline_thickness.value;
+    const float r = radius.value;
+    m_primitives.begin_primitive();
+    m_primitives.add_vertex({x1, y1}).uv(-1.0f, -1.0f).uv(sx, sy).uv(t, r);
+    m_primitives.add_vertex({x1, y2}).uv(-1.0f, +1.0f).uv(sx, sy).uv(t, r);
+    m_primitives.add_vertex({x2, y2}).uv(+1.0f, +1.0f).uv(sx, sy).uv(t, r);
+    m_primitives.add_vertex({x2, y1}).uv(+1.0f, -1.0f).uv(sx, sy).uv(t, r);
+    m_primitives.end_primitive();
+}
+
+
+void RoundedRectangle::add_rounded_rectangle_slice(
+        const FramebufferRect& slice, const FramebufferRect& rect, FramebufferPixels radius,
+        FramebufferPixels outline_thickness)
+{
+    const auto x1 = slice.x;
+    const auto y1 = slice.y;
+    const auto x2 = slice.x + slice.w;
+    const auto y2 = slice.y + slice.h;
+    const auto rcx = rect.x + rect.w/2;
+    const auto rcy = rect.y + rect.h/2;
+    const float ax = (2.0f * (slice.x - rcx) / rect.w).value;
+    const float ay = (2.0f * (slice.y - rcy) / rect.h).value;
+    const float bx = (2.0f * (x2 - rcx) / rect.w).value;
+    const float by = (2.0f * (y2 - rcy) / rect.h).value;
+    const float sx = 0.5f * rect.w.value;
+    const float sy = 0.5f * rect.h.value;
+    const float t = outline_thickness.value;
+    const float r = radius.value;
+    m_primitives.begin_primitive();
+    m_primitives.add_vertex({x1, y1}).uv(ax, ay).uv(sx, sy).uv(t, r);
+    m_primitives.add_vertex({x1, y2}).uv(ax, by).uv(sx, sy).uv(t, r);
+    m_primitives.add_vertex({x2, y2}).uv(bx, by).uv(sx, sy).uv(t, r);
+    m_primitives.add_vertex({x2, y1}).uv(bx, ay).uv(sx, sy).uv(t, r);
+    m_primitives.end_primitive();
 }
 
 
@@ -38,21 +64,47 @@ void RoundedRectangle::add_rounded_rectangle(const FramebufferRect& rect, Frameb
 void ColoredRoundedRectangle::add_rounded_rectangle(const FramebufferRect& rect, FramebufferPixels radius,
                          Color fill_color, Color outline_color, FramebufferPixels outline_thickness)
 {
-    // The shape is composed of 7-slice pattern:
-    // corner ellipse slices and center rectangle slices
-    auto x = rect.x;
-    auto y = rect.y;
-    auto w = rect.w;
-    auto h = rect.h;
-    auto r = std::max(radius, outline_thickness * 1.1f);
-    auto rr = 2 * r;
-    m_ellipses.add_ellipse_slice({x,     y,     r, r}, {x,      y,      rr, rr}, fill_color, outline_color, outline_thickness);
-    m_ellipses.add_ellipse_slice({x+w-r, y,     r, r}, {x+w-rr, y,      rr, rr}, fill_color, outline_color, outline_thickness);
-    m_ellipses.add_ellipse_slice({x,     y+h-r, r, r}, {x,      y+h-rr, rr, rr}, fill_color, outline_color, outline_thickness);
-    m_ellipses.add_ellipse_slice({x+w-r, y+h-r, r, r}, {x+w-rr, y+h-rr, rr, rr}, fill_color, outline_color, outline_thickness);
-    m_rectangles.add_rectangle_slice({x+r, y,     w-rr, r}, rect, fill_color, outline_color, outline_thickness);
-    m_rectangles.add_rectangle_slice({x+r, y+h-r, w-rr, r}, rect, fill_color, outline_color, outline_thickness);
-    m_rectangles.add_rectangle_slice({x,   y+r,   w, h-rr}, rect, fill_color, outline_color, outline_thickness);
+    const auto x1 = rect.x;
+    const auto y1 = rect.y;
+    const auto x2 = rect.x + rect.w;
+    const auto y2 = rect.y + rect.h;
+    const float sx = 0.5f * rect.w.value;
+    const float sy = 0.5f * rect.h.value;
+    const float t = outline_thickness.value;
+    const float r = radius.value;
+    m_primitives.begin_primitive();
+    m_primitives.add_vertex({x1, y1}).color(fill_color).color(outline_color).uv(-1.0f, -1.0f).uv(sx, sy).uv(t, r);
+    m_primitives.add_vertex({x1, y2}).color(fill_color).color(outline_color).uv(-1.0f, +1.0f).uv(sx, sy).uv(t, r);
+    m_primitives.add_vertex({x2, y2}).color(fill_color).color(outline_color).uv(+1.0f, +1.0f).uv(sx, sy).uv(t, r);
+    m_primitives.add_vertex({x2, y1}).color(fill_color).color(outline_color).uv(+1.0f, -1.0f).uv(sx, sy).uv(t, r);
+    m_primitives.end_primitive();
+}
+
+
+void ColoredRoundedRectangle::add_rounded_rectangle_slice(
+        const FramebufferRect& slice, const FramebufferRect& rect, FramebufferPixels radius,
+        Color fill_color, Color outline_color, FramebufferPixels outline_thickness)
+{
+    const auto x1 = slice.x;
+    const auto y1 = slice.y;
+    const auto x2 = slice.x + slice.w;
+    const auto y2 = slice.y + slice.h;
+    const auto rcx = rect.x + rect.w/2;
+    const auto rcy = rect.y + rect.h/2;
+    const float ax = (2.0f * (slice.x - rcx) / rect.w).value;
+    const float ay = (2.0f * (slice.y - rcy) / rect.h).value;
+    const float bx = (2.0f * (x2 - rcx) / rect.w).value;
+    const float by = (2.0f * (y2 - rcy) / rect.h).value;
+    const float sx = 0.5f * rect.w.value;
+    const float sy = 0.5f * rect.h.value;
+    const float t = outline_thickness.value;
+    const float r = radius.value;
+    m_primitives.begin_primitive();
+    m_primitives.add_vertex({x1, y1}).color(fill_color).color(outline_color).uv(ax, ay).uv(sx, sy).uv(t, r);
+    m_primitives.add_vertex({x1, y2}).color(fill_color).color(outline_color).uv(ax, by).uv(sx, sy).uv(t, r);
+    m_primitives.add_vertex({x2, y2}).color(fill_color).color(outline_color).uv(bx, by).uv(sx, sy).uv(t, r);
+    m_primitives.add_vertex({x2, y1}).color(fill_color).color(outline_color).uv(bx, ay).uv(sx, sy).uv(t, r);
+    m_primitives.end_primitive();
 }
 
 

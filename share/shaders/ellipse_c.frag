@@ -23,10 +23,11 @@ layout(location = 0) out vec4 out_color;
 void main() {
     float ri = length(in_border_inner);
     float ro = length(in_border_outer);
-    float f = fwidth(ri) * attr.antialiasing + (ri/ro - 1) * attr.softness;
-    float alpha = smoothstep(1-f/2, 1+f/2, ri);
-    out_color = mix(in_fill_color, in_outline_color, alpha);
-    f = fwidth(ro) * attr.antialiasing + (1 - ro/ri) * attr.softness;
-    alpha = smoothstep(1-f/2, 1+f/2, ro);
-    out_color = mix(out_color, vec4(0,0,0,0), alpha);
+    float fa = 0.5 * fwidth(ro) * attr.antialiasing;
+    if (ro > 1+fa)
+        discard;
+    float fi = fa + 0.5 * (ri/ro - 1) * attr.softness;
+    out_color = mix(in_fill_color, in_outline_color, smoothstep(1-fi, 1+fi, ri));
+    float fo = fa + 0.5 * (1 - ro/ri) * attr.softness;
+    out_color = mix(out_color, vec4(0,0,0,0), smoothstep(1-fo, 1+fo, ro));
 }
