@@ -116,8 +116,8 @@ int main(int argc, const char* argv[])
     option_help.set_color(Color(200, 100, 50));
 
     VariantShape shape { renderer };
-    int antialiasing = 0;
-    int softness = 0;
+    bool antialiasing = false;
+    bool softness = false;
 
     auto recreate_shapes = [&](View& view) {
         view.finish_draw();
@@ -133,7 +133,7 @@ int main(int argc, const char* argv[])
             shape.add_shape(view, {-22.5_vp + i * 5_vp, -22.5_vp + i * 5_vp, 25_vp, 25_vp},
                             Color(40, 40, 0, 128), Color(255, 255, 0), view.px_to_fb((i + 1) * 1_px));
 
-        shape.update(softness, antialiasing);
+        shape.update(int(softness) * 1.0f, int(antialiasing) * 2.0f);
     };
 
     window.set_key_callback([&](View& view, KeyEvent ev) {
@@ -163,10 +163,10 @@ int main(int argc, const char* argv[])
                 shape.switch_type<ColoredPolygon>(renderer);
                 break;
             case Key::A:
-                antialiasing = (antialiasing == 0) ? 2 : 0;
+                antialiasing = !antialiasing;
                 break;
             case Key::S:
-                softness = (softness == 0) ? 1 : 0;
+                softness = !softness;
                 break;
             default:
                 return;

@@ -30,8 +30,7 @@ void main() {
         alpha = smoothstep(1-f/2, 1+f/2, ro);
         out_color = mix(out_color, vec4(0,0,0,0), alpha);
     } else {
-        float eps = 1e-6;
-        out_color = mix(color.fill, color.outline, step(1 - eps, ri));
+        out_color = mix(color.fill, color.outline, step(1, ri));
         out_color = mix(out_color, vec4(0,0,0,0), step(1, ro));
     }
 }

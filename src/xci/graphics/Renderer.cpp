@@ -266,6 +266,14 @@ bool Renderer::load_shader(ShaderId shader_id, Shader& shader)
             return shader.load_from_vfs(vfs(),
                     "shaders/rectangle_c.vert.spv",
                     "shaders/rectangle_c.frag.spv");
+        case ShaderId::RoundedRectangle:
+            return shader.load_from_vfs(vfs(),
+                    "shaders/rounded_rectangle.vert.spv",
+                    "shaders/rounded_rectangle.frag.spv");
+        case ShaderId::RoundedRectangleC:
+            return shader.load_from_vfs(vfs(),
+                    "shaders/rounded_rectangle_c.vert.spv",
+                    "shaders/rounded_rectangle_c.frag.spv");
         case ShaderId::Ellipse:
             return shader.load_from_vfs(vfs(),
                     "shaders/ellipse.vert.spv",
