@@ -65,17 +65,36 @@ public:
     // to a copy of TermCtl instance, which can then be send to stream
 
     enum class Color: uint8_t {
-        Default = 9,
         Black = 0, Red, Green, Yellow, Blue, Magenta, Cyan, White,
+        Invalid = 8, Default = 9,
         BrightBlack = 10, BrightRed, BrightGreen, BrightYellow,
         BrightBlue, BrightMagenta, BrightCyan, BrightWhite,
+        Last = BrightWhite
     };
-    enum class Mode: uint8_t { Normal,  // reset all attributes
+    static constexpr const char* c_color_names[] = {
+        "black", "red", "green", "yellow", "blue", "magenta", "cyan", "white",
+        "invalid", "default",
+        "*black", "*red", "*green", "*yellow",
+        "*blue", "*magenta", "*cyan", "*white"
+    };
+    static_assert(std::size(c_color_names) == size_t(Color::Last) + 1);
+
+    enum class Mode: uint8_t {
+        Normal,  // reset all attributes
         Bold, Dim, Italic, Underline, Overline, CrossOut, Frame,
         Blink, Reverse, Hidden,
         NormalIntensity, NoItalic, NoUnderline, NoOverline, NoCrossOut, NoFrame,
-        NoBlink, NoReverse, NoHidden
+        NoBlink, NoReverse, NoHidden,
+        Last = NoHidden
     };
+    static constexpr const char* c_mode_names[] = {
+        "normal",
+        "bold", "dim", "italic", "underline", "overline", "cross_out", "frame",
+        "blink", "reverse", "hidden",
+        "normal_intensity", "no_italic", "no_underline", "no_overline", "no_cross_out", "no_frame",
+        "no_blink", "no_reverse", "no_hidden"
+    };
+    static_assert(std::size(c_mode_names) == size_t(Mode::Last) + 1);
 
     // foreground
     TermCtl& fg(Color color);
@@ -185,7 +204,15 @@ public:
     };
     struct ColorPlaceholder: Placeholder {
         using ValueType = Color;
-        static Color parse(std::string_view name);
+        static constexpr Color parse(std::string_view name) {
+            Color r = Color::Black;
+            for (const char* n : c_color_names) {
+                if (name == n)
+                    return r;
+                r = static_cast<Color>(uint8_t(r) + 1);
+            }
+            throw fmt::format_error("invalid color name: " + std::string(name));
+        }
     };
     struct FgPlaceholder: ColorPlaceholder {
         std::string seq(Color color) const;
@@ -195,7 +222,15 @@ public:
     };
     struct ModePlaceholder: Placeholder {
         using ValueType = Mode;
-        static Mode parse(std::string_view name);
+        static constexpr Mode parse(std::string_view name) {
+            Mode r = Mode::Normal;
+            for (const char* n : c_mode_names) {
+                if (name == n)
+                    return r;
+                r = static_cast<Mode>(uint8_t(r) + 1);
+            }
+            throw fmt::format_error("invalid mode name: " + std::string(name));
+        }
         std::string seq(Mode mode) const;
     };
 
