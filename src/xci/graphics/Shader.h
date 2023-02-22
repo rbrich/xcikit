@@ -13,6 +13,7 @@
 #include <vulkan/vulkan.h>
 
 #include <string>
+#include <span>
 #include <memory>
 #include <filesystem>
 
@@ -69,9 +70,17 @@ public:
             const char* vertex_data, int vertex_size,
             const char* fragment_data, int fragment_size);
 
+    /// Load program directly from memory
+    /// This overloads takes int32 code data.
+    bool load_from_memory(std::span<const uint32_t> vertex_code,
+                          std::span<const uint32_t> fragment_code);
+
     // Vulkan handles:
     VkShaderModule vk_vertex_module() const { return m_vertex_module; }
     VkShaderModule vk_fragment_module() const { return m_fragment_module; }
+
+    /// Auxiliary function to read spirv file into int32 vector.
+    static std::vector<std::uint32_t> read_spirv_file(const fs::path& pathname);
 
 private:
     VkShaderModule create_module(const uint32_t* code, size_t size);

@@ -17,7 +17,7 @@ namespace xci::graphics {
 using namespace xci::core;
 
 
-static std::vector<std::uint32_t> read_spirv_file(const fs::path& pathname)
+std::vector<std::uint32_t> Shader::read_spirv_file(const fs::path& pathname)
 {
     std::ifstream f(pathname, std::ios::ate | std::ios::binary);
     if (!f)
@@ -72,20 +72,13 @@ VkShaderModule Shader::create_module(const uint32_t* code, size_t size)
 
 bool Shader::load_from_file(const fs::path& vertex, const fs::path& fragment)
 {
-    clear();
-
     auto vertex_code = read_spirv_file(vertex);
     auto fragment_code = read_spirv_file(fragment);
 
     if (vertex_code.empty() || fragment_code.empty())
         return false;
 
-    m_vertex_module = create_module(
-            vertex_code.data(),
-            vertex_code.size() * sizeof(uint32_t));
-    m_fragment_module = create_module(
-            fragment_code.data(),
-            fragment_code.size() * sizeof(uint32_t));
+    load_from_memory(vertex_code, fragment_code);
 
     log::info("Loaded vertex shader: {}", vertex);
     log::info("Loaded fragment shader: {}", fragment);
@@ -107,6 +100,16 @@ bool Shader::load_from_memory(
             reinterpret_cast<const uint32_t*>(vertex_data), vertex_size);
     m_fragment_module = create_module(
             reinterpret_cast<const uint32_t*>(fragment_data), fragment_size);
+    return true;
+}
+
+
+bool Shader::load_from_memory(std::span<const uint32_t> vertex_code,
+                              std::span<const uint32_t> fragment_code)
+{
+    clear();
+    m_vertex_module = create_module(vertex_code.data(), vertex_code.size_bytes());
+    m_fragment_module = create_module(fragment_code.data(), fragment_code.size_bytes());
     return true;
 }
 
