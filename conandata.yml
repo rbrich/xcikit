@@ -54,6 +54,11 @@ requirements:
     conan: "vulkan-loader/1.3.231"
     prereq:
       - graphics
+  spirv-cross:
+    conan: "spirv-cross/cci.20211113"
+    prereq:
+      - graphics
+      - tools
   freetype:
     cmake: "Freetype/2.10.0"
     conan: "freetype/2.13.0"

@@ -191,6 +191,16 @@ ViewportCoords View::viewport_center() const
 }
 
 
+ViewportCoords View::viewport_top_left(ViewportCoords offset) const
+{
+    if (m_origin == ViewOrigin::TopLeft) {
+        return offset;
+    } else {
+        return offset - 0.5f * m_viewport_size;
+    }
+}
+
+
 auto View::push_offset(VariCoords offset) -> PopHelper<FramebufferCoords>
 {
     m_offset.push_back(this->offset() + to_fb(offset));

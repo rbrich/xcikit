@@ -22,6 +22,8 @@ class Form: public Composite {
 public:
     explicit Form(Theme& theme) : Composite(theme) {}
 
+    void clear();
+
     // High-level interface
     void add_input(const std::string& label, std::string& text_input);
     void add_input(const std::string& label, bool& checkbox);
@@ -39,6 +41,8 @@ public:
     void resize(View& view) override;
 
 private:
+    using Composite::clear_children;
+
     VariCoords m_margin = {1_vp, 1_vp};
 
     struct ChildHint {

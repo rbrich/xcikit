@@ -206,6 +206,7 @@ public:
     /// Coordinates of viewport center in viewport units.
     /// By default {0, 0}. With TopLeft origin, it will be e.g. {66.66, 50}
     ViewportCoords viewport_center() const;
+    ViewportCoords viewport_top_left(ViewportCoords offset = {}) const;
 
     // Convert units to framebuffer / screen:
 

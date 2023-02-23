@@ -8,8 +8,9 @@
 /// A tool for developing GLSL shaders.
 
 #include "compile_shader.h"
+#include "reflect_shader.h"
 
-#include <xci/widgets/Button.h>
+#include <xci/widgets/Form.h>
 #include <xci/graphics/Window.h>
 #include <xci/graphics/shape/Polygon.h>
 #include <xci/graphics/vulkan/VulkanError.h>
@@ -26,7 +27,7 @@ using namespace xci::widgets;
 static constexpr auto c_version = "0.1";
 
 
-static bool reload_shader(ShaderCompiler& sc, Shader& shader,
+static bool reload_shader(ShaderCompiler& sc, Shader& shader, ReflectShader& refl,
                           fs::path vert_path, fs::path frag_path)
 {
     auto vert_spv = sc.compile_shader(ShaderStage::Vertex, vert_path);
@@ -41,7 +42,25 @@ static bool reload_shader(ShaderCompiler& sc, Shader& shader,
         return false;
     }
 
+    refl.reflect(frag_spv);
+
     return shader.load_from_memory(vert_spv, frag_spv);
+}
+
+
+static void populate_uniforms(Primitives& prim, Form& form, const ReflectShader& refl)
+{
+    form.clear();
+    for (const auto& block : refl.get_uniform_blocks()) {
+        for (const auto& member : block.members) {
+            static bool checkbox;
+            form.add_input(member.name, checkbox);
+        }
+    }
+
+    prim.clear_uniforms();
+    prim.add_uniform(1, Color::White(), Color::Green());
+    prim.add_uniform(2, 1.0f, 2.0f);
 }
 
 
@@ -92,8 +111,10 @@ int main(int argc, const char* argv[])
         return EXIT_FAILURE;
 
     ShaderCompiler sc;
+    ReflectShader refl;
+
     Shader shader {renderer};
-    if (!reload_shader(sc, shader, vert_path, frag_path))
+    if (!reload_shader(sc, shader, refl, vert_path, frag_path))
         return EXIT_FAILURE;
 
     FSDispatch watch;
@@ -105,12 +126,13 @@ int main(int argc, const char* argv[])
     if (!watch.add_watch(vert_path, reload_cb) || !watch.add_watch(frag_path, reload_cb))
         return EXIT_FAILURE;
 
+    Form form {theme};
+
     Primitives prim {renderer,
                     VertexFormat::V2t2, PrimitiveType::TriFans};
     prim.set_shader(shader);
     prim.set_blend(BlendFunc::AlphaBlend);
-    prim.add_uniform(1, Color::White(), Color::Green());
-    prim.add_uniform(2, 1.0f, 2.0f);
+    populate_uniforms(prim, form, refl);
 
     Polygon poly {renderer};
 
@@ -143,21 +165,27 @@ int main(int argc, const char* argv[])
         elapsed_acc -= std::trunc(elapsed_acc);
 
         if (reload) {
-            (void) reload_shader(sc, shader, vert_path, frag_path);
+            reload = false;
+            (void) reload_shader(sc, shader, refl, vert_path, frag_path);
             prim.set_shader(shader);
+            populate_uniforms(prim, form, refl);
             prim.update();
+            form.resize(view);
         }
 
         // TODO: pass elapsed time to shader as uniform
     });
 
     window.set_draw_callback([&](View& view) {
+        auto pop_offset = view.push_offset(view.to_fb(
+                view.viewport_top_left({0.5 * view.viewport_size().x, 50_vp})));
         prim.draw(view);
         poly.draw(view);
     });
 
     window.set_refresh_mode(RefreshMode::Periodic);
 
+    Bind bind(window, form);
     window.display();
     return EXIT_SUCCESS;
 }

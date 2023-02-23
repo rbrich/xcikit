@@ -10,6 +10,16 @@
 namespace xci::widgets {
 
 
+void Form::clear()
+{
+    clear_children();
+    m_hint.clear();
+    m_labels.clear();
+    m_text_inputs.clear();
+    m_checkboxes.clear();
+}
+
+
 void Form::add_input(const std::string& label, std::string& text_input)
 {
     // Label
