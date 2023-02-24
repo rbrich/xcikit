@@ -1,7 +1,7 @@
 // Form.h created on 2018-06-22 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_WIDGETS_FORM_H
@@ -11,6 +11,7 @@
 #include <xci/widgets/Label.h>
 #include <xci/widgets/TextInput.h>
 #include <xci/widgets/Checkbox.h>
+#include <xci/widgets/ColorPicker.h>
 #include <xci/core/container/ChunkedStack.h>
 
 namespace xci::widgets {
@@ -25,8 +26,10 @@ public:
     void clear();
 
     // High-level interface
+    Label& add_label(const std::string& label);
     void add_input(const std::string& label, std::string& text_input);
     void add_input(const std::string& label, bool& checkbox);
+    void add_input(const std::string& label, Color& color);
 
     // Low-level interface
     enum class Hint {
@@ -57,6 +60,7 @@ private:
     core::ChunkedStack<Label> m_labels;
     core::ChunkedStack<TextInput> m_text_inputs;
     core::ChunkedStack<Checkbox> m_checkboxes;
+    core::ChunkedStack<ColorPicker> m_color_pickers;
 };
 
 

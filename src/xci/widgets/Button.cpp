@@ -46,7 +46,7 @@ void Button::resize(View& view)
     m_layout.typeset(view);
     m_layout.update(view);
     auto rect = m_layout.bbox();
-    rect.enlarge(view.to_fb(m_padding));
+    apply_padding(rect, view);
     set_size(rect.size());
     set_baseline(-rect.y);
     Widget::resize(view);
@@ -75,7 +75,7 @@ void Button::update(View& view, State state)
 void Button::draw(View& view)
 {
     const auto layout_pos = m_layout.bbox().top_left();
-    const auto padding = view.to_fb(m_padding);
+    const auto padding = padding_fb(view);
     m_bg_rect.draw(view, position());
     m_layout.draw(view, position() + FramebufferCoords{padding - layout_pos.x, padding - layout_pos.y});
 }

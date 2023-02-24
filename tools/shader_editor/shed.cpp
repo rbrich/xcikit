@@ -11,6 +11,7 @@
 #include "reflect_shader.h"
 
 #include <xci/widgets/Form.h>
+#include <xci/widgets/Label.h>
 #include <xci/graphics/Window.h>
 #include <xci/graphics/shape/Polygon.h>
 #include <xci/graphics/vulkan/VulkanError.h>
@@ -21,6 +22,7 @@
 
 using namespace xci::core;
 using namespace xci::core::argparser;
+using namespace xci::text;
 using namespace xci::widgets;
 
 
@@ -51,10 +53,12 @@ static bool reload_shader(ShaderCompiler& sc, Shader& shader, ReflectShader& ref
 static void populate_uniforms(Primitives& prim, Form& form, const ReflectShader& refl)
 {
     form.clear();
+    form.add_label("Uniforms:").layout().set_default_font_style(FontStyle::Bold);
+
     for (const auto& block : refl.get_uniform_blocks()) {
         for (const auto& member : block.members) {
-            static bool checkbox;
-            form.add_input(member.name, checkbox);
+            static Color color = Color::Yellow();
+            form.add_input(member.name, color);
         }
     }
 
@@ -181,6 +185,22 @@ int main(int argc, const char* argv[])
                 view.viewport_top_left({0.5 * view.viewport_size().x, 50_vp})));
         prim.draw(view);
         poly.draw(view);
+    });
+
+    window.set_key_callback([&window](View& v, const KeyEvent& ev) {
+        if (ev.action != Action::Press)
+            return;
+        switch (ev.key) {
+            case Key::Escape:
+            case Key::Q:
+                window.close();
+                break;
+            case Key::F11:
+                window.toggle_fullscreen();
+                break;
+            default:
+                break;
+        }
     });
 
     window.set_refresh_mode(RefreshMode::Periodic);

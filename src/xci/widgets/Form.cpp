@@ -1,7 +1,7 @@
 // Form.cpp created on 2018-06-22 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Form.h"
@@ -17,6 +17,16 @@ void Form::clear()
     m_labels.clear();
     m_text_inputs.clear();
     m_checkboxes.clear();
+    m_color_pickers.clear();
+}
+
+
+Label& Form::add_label(const std::string& label)
+{
+    m_labels.emplace_back(theme(), label);
+    add_child(m_labels.back());
+    add_hint(Form::Hint::NextRow);
+    return m_labels.back();
 }
 
 
@@ -51,6 +61,23 @@ void Form::add_input(const std::string& label, bool& checkbox)
         checkbox = p_checkbox->checked();
     });
     add_child(m_checkboxes.back());
+    add_hint(Form::Hint::NextRow);
+}
+
+
+void Form::add_input(const std::string& label, Color& color)
+{
+    // Label
+    m_labels.emplace_back(theme(), label);
+    add_child(m_labels.back());
+    add_hint(Form::Hint::NextColumn);
+    // ColorPicker
+    m_color_pickers.emplace_back(theme(), color);
+    auto& widget = m_color_pickers.back();
+    m_color_pickers.back().on_change([&widget, &color](View&) {
+        color = widget.color();
+    });
+    add_child(m_color_pickers.back());
     add_hint(Form::Hint::NextRow);
 }
 

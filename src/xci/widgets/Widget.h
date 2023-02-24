@@ -17,6 +17,7 @@
 namespace xci::widgets {
 
 using namespace xci::graphics;
+using namespace xci::graphics::unit_literals;
 
 
 struct State {
@@ -99,8 +100,7 @@ private:
 };
 
 
-// Manages list of child widgets and forwards events to them
-
+/// Manages list of child widgets and forwards events to them
 class Composite: public Widget {
 public:
     explicit Composite(Theme& theme) : Widget(theme) {}
@@ -140,7 +140,7 @@ private:
 };
 
 
-// Clickable widget mixin
+/// Clickable widget mixin
 class Clickable {
 public:
     using HoverCallback = std::function<void(View&, bool inside)>;
@@ -177,8 +177,26 @@ private:
     LastHover m_last_hover {LastHover::None};
 };
 
-// Connects window to root widget through event callbacks
 
+class Padded {
+public:
+    void set_padding(VariUnits padding) { m_padding = padding; }
+
+protected:
+    void apply_padding(FramebufferRect& rect, const View& view) const {
+        rect.enlarge(padding_fb(view));
+    }
+
+    FramebufferPixels padding_fb(const View& view) const {
+        return view.to_fb(m_padding);
+    }
+
+private:
+    VariUnits m_padding = 0.7_vp;
+};
+
+
+/// Connects window to root widget through event callbacks
 class Bind {
 public:
     Bind(graphics::Window& window, Widget& root);

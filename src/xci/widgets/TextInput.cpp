@@ -71,7 +71,7 @@ void TextInput::resize(View& view)
 
     auto rect = m_layout.bbox();
     rect.w = width;
-    rect.enlarge(view.to_fb(m_padding));
+    apply_padding(rect, view);
     set_size(rect.size());
     set_baseline(-rect.y);
     Widget::resize(view);
@@ -106,7 +106,7 @@ void TextInput::update(View& view, State state)
 void TextInput::draw(View& view)
 {
     auto rect = m_layout.bbox();
-    const auto padding = view.to_fb(m_padding);
+    const auto padding = padding_fb(view);
     auto pos = position() + FramebufferCoords{padding - rect.x - m_content_pos,
                                               padding - rect.y};
     m_bg_rect.draw(view, position());
