@@ -22,6 +22,19 @@ Spinner::Spinner(Theme& theme, float value)
 }
 
 
+void Spinner::set_decoration_color(graphics::Color fill, graphics::Color outline)
+{
+    m_fill_color = fill;
+    m_outline_color = outline;
+}
+
+
+void Spinner::set_text_color(graphics::Color color)
+{
+    m_layout.set_default_color(color);
+}
+
+
 void Spinner::resize(View& view)
 {
     view.finish_draw();
@@ -64,7 +77,8 @@ void Spinner::draw(View& view)
     const auto padding = padding_fb(view);
     m_bg_rect.draw(view, position());
     m_bg_rect.draw(view, position());
-    m_layout.draw(view, position() + FramebufferCoords{padding - layout_pos.x, padding - layout_pos.y});
+    m_layout.draw(view, position() + FramebufferCoords{padding.x - layout_pos.x,
+                                                       padding.y - layout_pos.y});
 }
 
 

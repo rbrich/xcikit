@@ -20,7 +20,7 @@ void Widget::set_position(const VariCoords& pos)
 {
     m_position_request = pos;
     if (pos.x.type() == VariUnits::Framebuffer && pos.y.type() == VariUnits::Framebuffer)
-        m_position = {pos.x.framebuffer(), pos.y.framebuffer()};
+        m_position = {pos.x.as_framebuffer(), pos.y.as_framebuffer()};
 }
 
 
@@ -28,7 +28,7 @@ void Widget::set_size(const VariSize& size)
 {
     m_size_request = size;
     if (size.x.type() == VariUnits::Framebuffer && size.y.type() == VariUnits::Framebuffer)
-        m_size = {size.x.framebuffer(), size.y.framebuffer()};
+        m_size = {size.x.as_framebuffer(), size.y.as_framebuffer()};
 }
 
 

@@ -79,7 +79,7 @@ void Label::draw(View& view)
     auto pop_offset = view.push_offset(position());
     auto rect = m_layout.bbox();
     const auto padding = padding_fb(view);
-    FramebufferCoords pos = {padding - rect.x, padding - rect.y};
+    FramebufferCoords pos = {padding.x - rect.x, padding.y - rect.y};
     m_layout.draw(view, pos);
 }
 

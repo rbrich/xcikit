@@ -203,6 +203,14 @@ struct Rect {
         h += 2 * radius;
     }
 
+    // Enlarge Rect to all sides by `radius`
+    void enlarge(const Vec2<T>& radius) {
+        x -= radius.x;
+        y -= radius.y;
+        w += 2 * radius.x;
+        h += 2 * radius.y;
+    }
+
     inline T left() const { return x; }
     inline T top() const { return y; }
     inline T right() const { return x + w; }

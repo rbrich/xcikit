@@ -70,15 +70,15 @@ TEST_CASE( "Variant units", "[VariUnits]" )
     CHECK( VariUnits(-3_vp).type() == VariUnits::Viewport );
 
     // Value is preserved
-    CHECK( VariUnits(0_fb).framebuffer() == 0_fb );
-    CHECK( VariUnits(0_px).screen() == 0_px );
-    CHECK( VariUnits(0_vp).viewport() == 0_vp );
-    CHECK( VariUnits(4_fb).framebuffer() == 4_fb );
-    CHECK( VariUnits(5_px).screen() == 5_px );
-    CHECK( VariUnits(6_vp).viewport() == 6_vp );
-    CHECK( VariUnits(-4_fb).framebuffer() == -4_fb );
-    CHECK( VariUnits(-5_px).screen() == -5_px );
-    CHECK( VariUnits(-6_vp).viewport() == -6_vp );
+    CHECK( VariUnits(0_fb).as_framebuffer() == 0_fb );
+    CHECK( VariUnits(0_px).as_screen() == 0_px );
+    CHECK( VariUnits(0_vp).as_viewport() == 0_vp );
+    CHECK( VariUnits(4_fb).as_framebuffer() == 4_fb );
+    CHECK( VariUnits(5_px).as_screen() == 5_px );
+    CHECK( VariUnits(6_vp).as_viewport() == 6_vp );
+    CHECK( VariUnits(-4_fb).as_framebuffer() == -4_fb );
+    CHECK( VariUnits(-5_px).as_screen() == -5_px );
+    CHECK( VariUnits(-6_vp).as_viewport() == -6_vp );
 
     // Limits (overflow is asserted, UB in release)
     CHECK( VariUnits(524287.95_fb).raw_storage() == 0x1fffffc0 );

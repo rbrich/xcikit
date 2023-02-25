@@ -10,36 +10,65 @@ namespace xci::widgets {
 
 
 ColorPicker::ColorPicker(Theme& theme, Color color)
-        : Widget(theme),
+        : Composite(theme),
+          m_spinner_r(theme, color.r),
+          m_spinner_g(theme, color.g),
+          m_spinner_b(theme, color.b),
+          m_spinner_a(theme, color.a),
           m_sample_box(theme.renderer()),
           m_color(color),
           m_decoration(theme.color(ColorId::Default))
 {
-    set_focusable(true);
-    m_layout.set_default_font(&theme.base_font());
-    update_text();
+    m_spinner_r.set_text_color(Color(255, 50, 0));
+    m_spinner_g.set_text_color(Color(0, 192, 50));
+    m_spinner_b.set_text_color(Color(50, 100, 255));
+    m_spinner_a.set_text_color(theme.color(ColorId::Default));
+
+    using std::ref;
+    for (auto& spinner : {ref(m_spinner_r), ref(m_spinner_g), ref(m_spinner_b), ref(m_spinner_a)}) {
+        spinner.get().set_format_cb([](float v) { return fmt::format("{:02X}", int(v)); });
+        spinner.get().set_step(1);
+        spinner.get().set_bounds(0, 255);
+        spinner.get().set_decoration_color(Color::Transparent(), Color::Transparent());
+        spinner.get().set_padding({0.35_vp, 0.7_vp});
+        add_child(spinner.get());
+    }
+}
+
+
+void ColorPicker::set_padding(VariSize padding)
+{
+    using std::ref;
+    for (auto& spinner : {ref(m_spinner_r), ref(m_spinner_g), ref(m_spinner_b), ref(m_spinner_a)}) {
+        spinner.get().set_padding({padding.x.mul(0.5), padding.y});
+    }
 }
 
 
 void ColorPicker::resize(View& view)
 {
-    view.finish_draw();
-    m_layout.typeset(view);
-    m_layout.update(view);
-    auto rect = m_layout.bbox();
-    apply_padding(rect, view);
-
-    rect.w += rect.h + padding_fb(view);  // make space for sample box
-    set_size(rect.size());
-    set_baseline(-rect.y);
-    Widget::resize(view);
-
+    m_spinner_r.resize(view);
+    auto rect = m_spinner_r.aabb();
     rect.x = 0;
     rect.y = 0;
-    rect.w = rect.h;
+    const auto spinner_w = rect.w;
+    const auto sample_w = rect.h;
+    const auto padding = view.to_fb(0.5_vp);
+    rect.w = sample_w;
     m_sample_box.clear();
-    m_sample_box.add_rectangle(rect, view.to_fb(1_px));
+    m_sample_box.add_rectangle(rect, view.to_fb(m_outline_thickness));
     m_sample_box.update(m_color, m_decoration);
+
+    rect.w += sample_w + padding + 4*spinner_w;
+    set_size(rect.size());
+    set_baseline(-rect.y);
+
+    m_spinner_r.set_position({sample_w + padding + spinner_w*0, 0_fb});
+    m_spinner_g.set_position({sample_w + padding + spinner_w*1, 0_fb});
+    m_spinner_b.set_position({sample_w + padding + spinner_w*2, 0_fb});
+    m_spinner_a.set_position({sample_w + padding + spinner_w*3, 0_fb});
+
+    Composite::resize(view);
 }
 
 
@@ -47,89 +76,20 @@ void ColorPicker::update(View& view, State state)
 {
     if (state.focused) {
         m_decoration = theme().color(ColorId::Focus);
-    } else if (last_hover() == LastHover::Inside) {
-        m_decoration = theme().color(ColorId::Hover);
+//    } else if (last_hover() == LastHover::Inside) {
+//        m_decoration = theme().color(ColorId::Hover);
     } else {
         m_decoration = theme().color(ColorId::Default);
     }
     m_sample_box.update(m_color, m_decoration);
+    Composite::update(view, state);
 }
 
 
 void ColorPicker::draw(View& view)
 {
-    const auto layout_pos = m_layout.bbox().top_left();
-    const auto padding = padding_fb(view);
     m_sample_box.draw(view, position());
-    m_layout.draw(view, position()
-                        + FramebufferCoords{padding - layout_pos.x + size().y + padding,
-                                            padding - layout_pos.y}); // ^__ height+padding = sample box
-}
-
-
-bool ColorPicker::key_event(View& view, const KeyEvent& ev)
-{
-    if (ev.action == Action::Press && ev.key == Key::Enter) {
-        do_click(view);
-        return true;
-    }
-    return false;
-}
-
-
-void ColorPicker::mouse_pos_event(View& view, const MousePosEvent& ev)
-{
-    const auto p = ev.pos - view.offset();
-    do_hover(view, contains(p));
-
-    auto* r = m_layout.get_span("R");
-    if (r && r->contains(p)) {
-        r->adjust_color(Color::Red());
-    }
-}
-
-
-bool ColorPicker::mouse_button_event(View& view, const MouseBtnEvent& ev)
-{
-    if (ev.action == Action::Press &&
-        ev.button == MouseButton::Left)
-    {
-        const auto p = ev.pos - view.offset();
-        if (contains(p)) {
-            do_click(view);
-
-            if (m_layout.get_span("R")->contains(p)) {
-
-            }
-
-            return true;
-        }
-    }
-    return false;
-}
-
-
-void ColorPicker::update_text()
-{
-    m_layout.set_color(Color(192, 50, 0));
-    m_layout.begin_span("R");
-    m_layout.add_word(fmt::format("{:02X}", m_color.r));
-    m_layout.end_span("R");
-    m_layout.add_space();
-    m_layout.set_color(Color::Green());
-    m_layout.begin_span("G");
-    m_layout.add_word(fmt::format("{:02X}", m_color.g));
-    m_layout.end_span("G");
-    m_layout.add_space();
-    m_layout.set_color(Color(0, 100, 255));
-    m_layout.begin_span("B");
-    m_layout.add_word(fmt::format("{:02X}", m_color.b));
-    m_layout.end_span("B");
-    m_layout.add_space();
-    m_layout.set_color(Color::Grey());
-    m_layout.begin_span("A");
-    m_layout.add_word(fmt::format("{:02X}", m_color.a));
-    m_layout.end_span("A");
+    Composite::draw(view);
 }
 
 

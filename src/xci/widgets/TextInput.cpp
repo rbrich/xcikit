@@ -107,8 +107,8 @@ void TextInput::draw(View& view)
 {
     auto rect = m_layout.bbox();
     const auto padding = padding_fb(view);
-    auto pos = position() + FramebufferCoords{padding - rect.x - m_content_pos,
-                                              padding - rect.y};
+    auto pos = position() + FramebufferCoords{padding.x - rect.x - m_content_pos,
+                                              padding.y - rect.y};
     m_bg_rect.draw(view, position());
     auto pop_crop = view.push_crop(aabb().enlarged(-view.to_fb(m_outline_thickness)));
     m_layout.draw(view, pos);

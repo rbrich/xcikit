@@ -180,19 +180,20 @@ private:
 
 class Padded {
 public:
-    void set_padding(VariUnits padding) { m_padding = padding; }
+    void set_padding(VariUnits padding) { m_padding = {padding, padding}; }
+    void set_padding(VariSize padding) { m_padding = padding; }
 
 protected:
     void apply_padding(FramebufferRect& rect, const View& view) const {
         rect.enlarge(padding_fb(view));
     }
 
-    FramebufferPixels padding_fb(const View& view) const {
+    FramebufferSize padding_fb(const View& view) const {
         return view.to_fb(m_padding);
     }
 
 private:
-    VariUnits m_padding = 0.7_vp;
+    VariSize m_padding = {0.7_vp, 0.7_vp};
 };
 
 

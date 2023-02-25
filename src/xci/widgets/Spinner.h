@@ -24,6 +24,9 @@ public:
     void set_step(float step) { m_step = step; }
     void set_bounds(float lower, float upper) { m_lower_bound = lower; m_upper_bound = upper; }
 
+    void set_decoration_color(graphics::Color fill, graphics::Color outline);
+    void set_text_color(graphics::Color color);
+
     using FormatCb = std::function<std::string(float value)>;
     void set_format_cb(FormatCb&& cb) { m_format_cb = std::move(cb); update_text(); }
 
