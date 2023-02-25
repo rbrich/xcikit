@@ -37,6 +37,8 @@ enum class ShaderId {
     RoundedRectangleC,
     Ellipse,
     EllipseC,
+    Triangle,
+    TriangleC,
     Polygon,
     PolygonC,
     Fps,

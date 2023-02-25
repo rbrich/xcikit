@@ -47,6 +47,8 @@ set(SHADER_SOURCES
     sprite_c.vert
     sprite_c.frag
     sprite_r.frag
+    triangle.frag
+    triangle_c.frag
     )
 
 set(outputs)

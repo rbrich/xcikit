@@ -1,6 +1,8 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
+// Vertex shader: polygon_c.vert
+
 layout(binding = 1) uniform Attr {
     float softness;
     float antialiasing;
@@ -13,7 +15,7 @@ layout(location = 2) in vec3 in_barycentric;
 layout(location = 0) out vec4 out_color;
 
 void main() {
-    float r = in_barycentric.z;
+    float r = min(min(in_barycentric.x, in_barycentric.y), in_barycentric.z);
     if (attr.antialiasing > 0 || attr.softness > 0) {
         float f = fwidth(r) * attr.antialiasing + attr.softness;
         float alpha = smoothstep(1-f/2, 1+f/2, r);
