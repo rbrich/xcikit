@@ -127,7 +127,6 @@ bool Composite::mouse_button_event(View& view, const MouseBtnEvent& ev)
 
 void Composite::scroll_event(View& view, const ScrollEvent& ev)
 {
-    // TODO: mouse-over widget, enter/exit events, propagate scroll to only one Widget
     for (auto& child : m_child)
         child->scroll_event(view, ev);
 }

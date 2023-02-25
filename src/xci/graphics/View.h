@@ -386,7 +386,7 @@ public:
     // the UpdateCallback, ie.
     //      view.refresh();
     //      view.window()->wakeup();
-    // That is: redraw and generate empty event, thus skiping the next blocking
+    // That is: redraw and generate empty event, thus skipping the next blocking
     // wait for events and returning back to UpdateCallback, which wakes up again etc.
     void refresh() { m_needs_refresh = true; }
     bool pop_refresh();

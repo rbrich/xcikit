@@ -31,7 +31,7 @@ public:
 
 private:
     text::Layout m_layout;
-    bool m_need_typeset = true;
+    bool m_need_typeset = false;
 };
 
 

@@ -6,14 +6,15 @@ add_library(xci-widgets
     Button.cpp
     Checkbox.cpp
     ColorPicker.cpp
+    Form.cpp
     FpsDisplay.cpp
     Icon.cpp
+    Label.cpp
+    Spinner.cpp
+    TextInput.cpp
+    TextTerminal.cpp
     Theme.cpp
     Widget.cpp
-    TextInput.cpp
-    Form.cpp
-    Label.cpp
-    TextTerminal.cpp
     )
 add_library(xcikit::xci-widgets ALIAS xci-widgets)
 
