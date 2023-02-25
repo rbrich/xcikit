@@ -35,6 +35,8 @@ public:
     //bool mouse_button_event(View& view, const MouseBtnEvent& ev) override;
 
 private:
+    void value_changed(View& view);
+
     Spinner m_spinner_r;
     Spinner m_spinner_g;
     Spinner m_spinner_b;

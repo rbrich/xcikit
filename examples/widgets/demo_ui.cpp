@@ -104,7 +104,7 @@ int main(int argc, const char* argv[])
     Spinner spinner2(theme, 0x80);
     spinner2.set_position({-40_vp, 14_vp});
     spinner2.set_format_cb([](float v){ return fmt::format("{:02X}", int(v)); });
-    spinner2.set_step(1);
+    spinner2.set_step(1, 16);
     spinner2.set_bounds(0, 255);
     root.add_child(spinner2);
 

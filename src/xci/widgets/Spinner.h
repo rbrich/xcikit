@@ -21,7 +21,7 @@ public:
     void set_value(float value) { m_value = value; }
     float value() const { return m_value; }
 
-    void set_step(float step) { m_step = step; }
+    void set_step(float step, float big_step) { m_step = step; m_big_step = big_step; }
     void set_bounds(float lower, float upper) { m_lower_bound = lower; m_upper_bound = upper; }
 
     void set_decoration_color(graphics::Color fill, graphics::Color outline);
@@ -43,6 +43,7 @@ public:
 
 private:
     void update_text();
+    void change_value(View& view, float change);  // check bounds, call change_cb
 
     text::Layout m_layout;
     graphics::Rectangle m_bg_rect;
@@ -55,6 +56,7 @@ private:
     FormatCb m_format_cb = [](float v) { return fmt::format("{:.2f}", v); };
     float m_value = 0.0f;
     float m_step = 0.01f;
+    float m_big_step = 0.10f;
     float m_lower_bound = 0.0f;
     float m_upper_bound = 1.0f;
 };

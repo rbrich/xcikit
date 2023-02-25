@@ -84,11 +84,30 @@ void Spinner::draw(View& view)
 
 bool Spinner::key_event(View& view, const KeyEvent& ev)
 {
-    if (ev.action == Action::Press && ev.key == Key::Enter) {
-        do_click(view);
-        return true;
+    if (ev.action == Action::Release)
+        return false;
+
+    switch (ev.key) {
+        case Key::Enter:
+            do_click(view);
+            return true;
+
+        case Key::Up:
+            change_value(view, m_step);
+            return true;
+        case Key::Down:
+            change_value(view, -m_step);
+            return true;
+        case Key::PageUp:
+            change_value(view, m_big_step);
+            return true;
+        case Key::PageDown:
+            change_value(view, -m_big_step);
+            return true;
+
+        default:
+            return false;
     }
-    return false;
 }
 
 
@@ -116,16 +135,7 @@ void Spinner::scroll_event(View& view, const ScrollEvent& ev)
     if (last_hover() != LastHover::Inside)
         return;
 
-    m_value += m_step * round(ev.offset.y * 10);
-    if (m_value > m_upper_bound)
-        m_value = m_upper_bound;
-    if (m_value < m_lower_bound)
-        m_value = m_lower_bound;
-    update_text();
-    view.finish_draw();
-    m_layout.typeset(view);
-    m_layout.update(view);
-    view.refresh();
+    change_value(view, m_step * round(ev.offset.y * 10));
 }
 
 
@@ -133,6 +143,23 @@ void Spinner::update_text()
 {
     m_layout.clear();
     m_layout.add_word(m_format_cb(m_value));
+}
+
+
+void Spinner::change_value(View& view, float change)
+{
+    m_value += change;
+    if (m_value > m_upper_bound)
+        m_value = m_upper_bound;
+    if (m_value < m_lower_bound)
+        m_value = m_lower_bound;
+    if (m_change_cb)
+        m_change_cb(view);
+    update_text();
+    view.finish_draw();
+    m_layout.typeset(view);
+    m_layout.update(view);
+    view.refresh();
 }
 
 
