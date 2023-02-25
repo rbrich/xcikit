@@ -30,6 +30,7 @@ ColorPicker::ColorPicker(Theme& theme, Color color)
         spinner.get().set_step(1, 16);
         spinner.get().set_bounds(0, 255);
         spinner.get().set_decoration_color(Color::Transparent(), Color::Transparent());
+        spinner.get().set_outline_thickness(0_fb);
         spinner.get().set_padding({0.35_vp, 0.7_vp});
         spinner.get().on_change([this](View& view) { value_changed(view); });
         add_child(spinner.get());

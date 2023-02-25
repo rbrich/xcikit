@@ -12,11 +12,13 @@ namespace xci::widgets {
 Spinner::Spinner(Theme& theme, float value)
         : Widget(theme),
           m_bg_rect(theme.renderer()),
+          m_arrow(theme.renderer()),
           m_arrow_color(theme.color(ColorId::Default)),
           m_outline_color(theme.color(ColorId::Default)),
           m_value(value)
 {
     set_focusable(true);
+    m_arrow.reserve(2);
     m_layout.set_default_font(&theme.base_font());
     update_text();
 }
@@ -51,6 +53,8 @@ void Spinner::resize(View& view)
     m_bg_rect.clear();
     m_bg_rect.add_rectangle(rect, view.to_fb(m_outline_thickness));
     m_bg_rect.update(m_fill_color, m_outline_color);
+
+    update_arrows(view);
 }
 
 
@@ -68,6 +72,7 @@ void Spinner::update(View& view, State state)
         m_outline_color = focus;
     m_arrow_color = focus;
     m_bg_rect.update(m_fill_color, m_outline_color);
+    update_arrows(view);
 }
 
 
@@ -79,6 +84,7 @@ void Spinner::draw(View& view)
     m_bg_rect.draw(view, position());
     m_layout.draw(view, position() + FramebufferCoords{padding.x - layout_pos.x,
                                                        padding.y - layout_pos.y});
+    m_arrow.draw(view, position());
 }
 
 
@@ -143,6 +149,26 @@ void Spinner::update_text()
 {
     m_layout.clear();
     m_layout.add_word(m_format_cb(m_value));
+}
+
+
+void Spinner::update_arrows(View& view)
+{
+    const auto sz = size();
+    const auto th = view.to_fb(m_outline_thickness);
+    const auto mx = sz.x / 2;
+    const auto h = sz.y;
+    const auto p = padding_fb(view).y;
+    m_arrow.clear();
+    m_arrow.add_triangle({mx, th + 0.2 * p},
+                         {mx - p, 1.3 * p},
+                         {mx + p, 1.3 * p},
+                         m_arrow_color);
+    m_arrow.add_triangle({mx, h - (th + 0.2 * p)},
+                         {mx + p, h - 1.3 * p},
+                         {mx - p, h - 1.3 * p},
+                         m_arrow_color);
+    m_arrow.update(0, 1);
 }
 
 

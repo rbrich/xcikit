@@ -51,7 +51,8 @@ public:
     /// \param outline_thickness    The outline goes from edge to inside.
     ///                             This parameter defines how far (in framebuffer pixels).
     void add_triangle(FramebufferCoords v1, FramebufferCoords v2, FramebufferCoords v3,
-                      Color fill_color, Color outline_color, FramebufferPixels outline_thickness);
+                      Color fill_color, Color outline_color = Color::Transparent(),
+                      FramebufferPixels outline_thickness = 0);
 };
 
 
