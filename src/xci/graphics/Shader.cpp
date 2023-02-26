@@ -1,7 +1,7 @@
 // Shader.cpp created on 2018-09-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Shader.h"
@@ -11,7 +11,6 @@
 #include <xci/core/file.h>
 
 #include <cassert>
-#include <cstring>
 
 namespace xci::graphics {
 
@@ -58,7 +57,7 @@ bool Shader::load_from_vfs(const Vfs& vfs, const std::string& vertex, const std:
 
 VkShaderModule Shader::create_module(const uint32_t* code, size_t size)
 {
-    VkShaderModuleCreateInfo module_create_info = {
+    const VkShaderModuleCreateInfo module_create_info = {
             .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
             .codeSize = size,
             .pCode = code,

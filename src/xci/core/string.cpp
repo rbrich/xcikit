@@ -1,7 +1,7 @@
 // string.cpp created on 2018-03-23 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018, 2019 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "string.h"
@@ -189,8 +189,19 @@ std::string to_lower(std::string_view str)
 }
 
 
+bool ci_equal(std::string_view s1, std::string_view s2)
+{
+    return std::equal(s1.begin(), s1.end(), s2.begin(), s2.end(),
+                      [](char a, char b) { return std::tolower(a) == std::tolower(b); });
+}
+
+
 std::u32string to_utf32(string_view utf8)
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert_utf32;
     try {
         return convert_utf32.from_bytes(utf8.data(), utf8.data() + utf8.size());
@@ -198,12 +209,19 @@ std::u32string to_utf32(string_view utf8)
         log::error("to_utf32: Invalid UTF8 string: {} ({})", utf8, e.what());
         return {};
     }
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 }
 
 
 template <class Elem>
 std::string _to_utf8(std::basic_string_view<Elem> wstr)
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
     std::wstring_convert<std::codecvt_utf8<Elem>, Elem> convert;
     try {
         return convert.to_bytes(wstr.data(), wstr.data() + wstr.size());
@@ -211,6 +229,9 @@ std::string _to_utf8(std::basic_string_view<Elem> wstr)
         log::error("to_utf8: Invalid UTF16/32 string ({})", e.what());
         return {};
     }
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 }
 
 std::string to_utf8(std::u16string_view wstr) { return _to_utf8(wstr); }
@@ -222,8 +243,15 @@ std::string to_utf8(std::wstring_view wstr) { return _to_utf8(wstr); }
 
 std::string to_utf8(char32_t codepoint)
 {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> convert_utf32;
     return convert_utf32.to_bytes(codepoint);
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 }
 
 

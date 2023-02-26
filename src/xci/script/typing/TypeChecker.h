@@ -4,11 +4,11 @@
 // Copyright 2022 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#ifndef XCIKIT_TYPECHECKER_H
-#define XCIKIT_TYPECHECKER_H
+#ifndef XCI_SCRIPT_TYPE_CHECKER_H
+#define XCI_SCRIPT_TYPE_CHECKER_H
 
-#include "TypeInfo.h"
-#include "Source.h"
+#include <xci/script/TypeInfo.h>
+#include <xci/script/Source.h>
 #include <compare>
 
 namespace xci::script {
@@ -53,8 +53,8 @@ public:
         if (!v)
             return os << "[ ]";
         os << '[' << int(v.m_exact);
-        if (v.m_coerce != 0) os << '~' << int(v.m_coerce);
-        if (v.m_generic != 0) os << '?' << int(v.m_generic);
+        if (v.m_coerce != 0) os << ',' << int(v.m_coerce) << '~';
+        if (v.m_generic != 0) os << ',' << int(v.m_generic) << '?';
         return os << ']';
     }
 

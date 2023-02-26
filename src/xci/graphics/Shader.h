@@ -1,7 +1,7 @@
 // Shader.h created on 2018-04-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_SHADER_H
@@ -29,8 +29,15 @@ enum class ShaderId {
     SpriteR,  // R channel as alpha, color from uniform
     SpriteC,  // R channel as alpha, color from vertex
     Line,
+    LineC,
     Rectangle,
+    RectangleC,
+    RoundedRectangle,
+    RoundedRectangleC,
     Ellipse,
+    EllipseC,
+    Polygon,
+    PolygonC,
     Fps,
     Cursor,
 

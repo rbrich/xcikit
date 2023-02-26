@@ -397,8 +397,8 @@ struct Reference: public Expression {
 
     // resolved function/method:
     SymbolPointerList sym_list;  // list of overloaded Functions, or Instances in case of Method
-    Module* module = nullptr;   // module with function
-    Index index = no_index;     // index of function scope in module
+    Module* module = nullptr;   // module with referenced function
+    Index index = no_index;     // index of referenced function scope in module
     TypeInfo ti;
 };
 

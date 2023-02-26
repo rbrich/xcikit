@@ -1,7 +1,7 @@
 // log.h created on 2018-03-01 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_CORE_LOG_H
@@ -26,6 +26,7 @@ public:
         Info,
         Warning,
         Error,
+        None,  // disable logging
     };
 
     // Initialize default logger, Call this before anything that logs
@@ -37,7 +38,6 @@ public:
     static Logger& default_instance(Logger::Level initial_level = Level::Trace);
 
     explicit Logger(Level level);
-    ~Logger();
 
     // Set minimal level of messages to be logged.
     // Messages below this level are dropped.

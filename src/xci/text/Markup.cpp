@@ -1,7 +1,7 @@
 // Markup.cpp created on 2018-03-10 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Markup.h"
@@ -23,7 +23,10 @@ using namespace tao::pegtl;
 // ----------------------------------------------------------------------------
 // Grammar
 
-struct ControlSeq: seq< one<'<'>, plus<not_one<'<', '>'>>, one<'>'> > {};
+struct OpenElem: plus<not_one<'<', '>'>> {};
+struct CloseElem: plus<not_one<'<', '>'>> {};
+
+struct Tag: seq< one<'<'>, sor<seq<one<'/'>, CloseElem>, OpenElem>, one<'>'> > {};
 
 struct Word: plus<not_at<space>, sor< not_one<'<'>, two<'<'> >> {};
 
@@ -33,7 +36,7 @@ struct Tab: one<'\t'> {};
 
 struct Space: plus<space> {};
 
-struct Grammar: must< star<sor< ControlSeq, Word, Paragraph, Tab, Space >>, eof > {};
+struct Grammar: must< star<sor< Tag, Word, Paragraph, Tab, Space >>, eof > {};
 
 // ----------------------------------------------------------------------------
 // Actions
@@ -50,34 +53,56 @@ template<typename Rule>
 struct Action : nothing<Rule> {};
 
 template<>
-struct Action<ControlSeq>
+struct Action<OpenElem>
 {
     template<typename Input>
     static void apply(const Input &in, Markup &ctx)
     {
         dump_token("csq", in);
         auto seq = in.string();
-        if (seq == "<tab>")
+        if (seq == "tab")
             return ctx.get_layout().add_tab();
-        if (seq == "<br>")
-            return ctx.get_layout().finish_line();
-        if (seq == "<p>")
-            return ctx.get_layout().advance_line(0.5f);
-        if (seq == "<b>")
+        if (seq == "br")
+            return ctx.get_layout().new_line();
+        if (seq == "p")
+            return ctx.get_layout().new_line(1.5f);
+        if (seq == "b")
             return ctx.get_layout().set_bold();
-        if (seq == "</b>")
-            return ctx.get_layout().set_bold(false);
-        if (seq == "<i>")
+        if (seq == "i")
             return ctx.get_layout().set_italic();
-        if (seq == "</i>")
-            return ctx.get_layout().set_italic(false);
-        if (seq[1] == '/') {
-            auto name = seq.substr(2, seq.size() - 3);
-            ctx.get_layout().end_span(name);
-        } else {
-            auto name = seq.substr(1, seq.size() - 2);
-            ctx.get_layout().begin_span(name);
+        if (seq.starts_with("c:")) {
+            return ctx.get_layout().set_color(graphics::Color(seq.substr(2)));
         }
+        if (seq.starts_with("s:")) {
+            auto name = seq.substr(2);
+            return ctx.get_layout().begin_span(name);
+        }
+        // Unknown tag - leave uninterpreted
+        ctx.get_layout().add_word(std::string("<") + seq + ">");
+    }
+};
+
+template<>
+struct Action<CloseElem>
+{
+    template<typename Input>
+    static void apply(const Input &in, Markup &ctx)
+    {
+        dump_token("end", in);
+        auto seq = in.string();
+        if (seq == "b")
+            return ctx.get_layout().set_bold(false);
+        if (seq == "i")
+            return ctx.get_layout().set_italic(false);
+        if (seq == "c" || seq.starts_with("c:")) {
+            return ctx.get_layout().reset_color();
+        }
+        if (seq.starts_with("s:")) {
+            auto name = seq.substr(2);
+            return ctx.get_layout().end_span(name);
+        }
+        // Unknown tag - leave uninterpreted
+        ctx.get_layout().add_word(std::string("</") + seq + ">");
     }
 };
 
@@ -110,7 +135,7 @@ struct Action<Paragraph>
     static void apply(const Input &in, Markup &ctx)
     {
         dump_token("par", in);
-        ctx.get_layout().advance_line(0.5f);
+        ctx.get_layout().new_line(1.5f);
     }
 };
 

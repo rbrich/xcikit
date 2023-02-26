@@ -1,7 +1,7 @@
 // demo_layout.cpp created on 2018-03-10 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "graphics/common.h"
@@ -23,15 +23,15 @@ using namespace xci::core;
 // FIXME: comma may land on next line when reflowed
 
 static const char * sample_text =
-        "Each paragraph is broken into lines. "
-        "The lines are further <span1>broken into words</span1>, each of which "
-        "is shaped and rendered as a run of glyphs."
+        "Each paragraph is broken into <c:#AAF>lines</c>. "
+        "The lines are further <s:span1>broken into <c:#AAF>words</c></s:span1>, each of which "
+        "is shaped and rendered as a run of <c:#AAF>glyphs</c>."
         "\n\n"
         "Each line is bound to a base line, each word is attached to a base point. "
         "To justify the text to a column, the residual space can be uniformly "
-        "<span2>divided between all words</span2> on the line. (This is not yet implemented.)"
+        "<s:span2>divided between all words</s:span2> on the line. (This is not yet implemented.)"
         "\n\n"
-        "Here is a ligature: infinity ∞";
+        "Here is a ligature: in<c:#FAA>fi</c>nity ∞";
 
 
 int main(int argc, const char* argv[])
@@ -81,9 +81,9 @@ int main(int argc, const char* argv[])
     help_text_2.set_color(Color(50, 200, 100));
     help_text_2.set_font_size(3_vp);
 
-    Text help_text_3(font, "Resize the window to watch the reflow.");
+    Text help_text_3(mono_font, "Resize the window to watch the reflow.");
     help_text_3.set_color(Color(200, 100, 50));
-    help_text_3.set_font_size(3.5_vp);
+    help_text_3.set_font_size(3_vp);
 
     Sprites font_texture(renderer, font.texture(), Color(0, 50, 255));
 

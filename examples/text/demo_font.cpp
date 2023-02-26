@@ -1,7 +1,7 @@
 // demo_font.cpp created on 2018-03-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "graphics/common.h"
@@ -11,6 +11,7 @@
 #include <xci/graphics/Renderer.h>
 #include <xci/graphics/Window.h>
 #include <xci/graphics/Sprites.h>
+#include <xci/graphics/shape/Rectangle.h>
 #include <xci/core/Vfs.h>
 #include <xci/config.h>
 #include <cstdlib>
@@ -65,14 +66,14 @@ int main(int argc, const char* argv[])
     text.set_color(Color::White());
 
     Text emoji;
-    emoji.set_markup_string("🥛🍸🥃🥂🍷🍹⚗️🧂");
+    emoji.set_fixed_string("🥛🍸🥃🥂🍷🍹⚗️🧂");
     emoji.set_font(emoji_font);
     emoji.set_font_size(10_vp);
 
     static constexpr auto help_color_normal = Color(200, 100, 50);
     static constexpr auto help_color_highlight = Color(255, 170, 120);
-    Text help_text(font, "<smooth><b>[s]</b> smooth scaling</smooth> <tab>"
-                         "<font><b>[f]</b> font scaling</font><br>"
+    Text help_text(font, "<s:smooth><b>[s]</b> smooth scaling</s:smooth> <tab>"
+                         "<s:font><b>[f]</b> font scaling</s:font><br>"
                          "(Resize window to observe the scaling effect.)", Text::Format::Markup);
     help_text.set_color(help_color_normal);
     help_text.set_font_size(5_vp);
@@ -91,8 +92,7 @@ int main(int argc, const char* argv[])
     Sprites font_texture(renderer, font.texture(), Color::Blue());
     Sprites emoji_font_texture(renderer, emoji_font.texture(), Color::Blue());
 
-    Shape rects(renderer, Color::Transparent(),
-            Color(0.7, 0.7, 0.7));
+    Rectangle rects(renderer);
 
     FramebufferPixels emoji_offset = 0.f;
 
@@ -118,7 +118,7 @@ int main(int argc, const char* argv[])
         rects.clear();
         rects.add_rectangle(enl_rect, view.px_to_fb(1_px));
         rects.add_rectangle(enl_rect.moved({0, emoji_offset}), view.px_to_fb(1_px));
-        rects.update();
+        rects.update(Color::Transparent(), Color::Grey());
     });
 
     window.set_draw_callback([&](View& view) {

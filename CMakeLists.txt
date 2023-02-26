@@ -1,14 +1,17 @@
 # 3.18.4 in Debian 11
-# 3.16.3 in Emscripten Docker image
-# 3.16 introduced CMAKE_MESSAGE_INDENT
-cmake_minimum_required(VERSION 3.16)
+# 3.22.1 in Ubuntu 22.04 / Emscripten Docker image
+# 3.25.1 in Debian 12
+cmake_minimum_required(VERSION 3.18...3.25)
+
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+include(XciBuildType)
+
 file(STRINGS "VERSION" XCI_VERSION)
 project(xcikit
     LANGUAGES CXX
     VERSION "${XCI_VERSION}"
     HOMEPAGE_URL "https://github.com/rbrich/xcikit")
 
-include(CTest)
 include(GNUInstallDirs)
 
 # Optional libraries (only xci-core is required)
@@ -25,12 +28,8 @@ cmake_dependent_option(XCI_DATA "Enable component: xci-data" ON
 # Libraries are always built. The rest is optional:
 option(BUILD_TOOLS "Disable to skip building tools." ON)
 option(BUILD_EXAMPLES "Disable to skip building examples." ON)
-option(BUILD_TESTS "Disable to skip building tests (BUILD_TESTING also works)." ON)
+option(BUILD_TESTS "Disable to skip building tests." ON)
 option(BUILD_BENCHMARKS "Disable to skip building benchmarks." ON)
-
-if (BUILD_TESTING AND NOT BUILD_TESTS)
-    set(BUILD_TESTING OFF)
-endif()
 
 # Individual tools
 option(BUILD_DATI_TOOL "Disable to skip building 'dati' (Data Inspect) tool." ON)
@@ -70,7 +69,7 @@ option(XCI_DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
 set(XCI_CXX_STANDARD 20)
 
 set(XCIKIT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+
 if (CMAKE_CROSSCOMPILING)
     # Needed for Emscripten to find packages in build dir
     list(APPEND CMAKE_FIND_ROOT_PATH "/")
@@ -109,7 +108,7 @@ if (XCI_DATA OR BUILD_EXAMPLES)
 endif()
 
 # Catch
-if (BUILD_TESTING)
+if (BUILD_TESTS)
     find_package(Catch2 3 REQUIRED)
 endif()
 
@@ -127,13 +126,7 @@ find_package(Doxygen)
 
 # TInfo (ncurses)
 if (XCI_WITH_TERMINFO)
-    find_library(TERMINFO_LIBRARY NAMES terminfo tinfo curses ncurses ncursesw)
-    if (TERMINFO_LIBRARY)
-        message(STATUS "Found terminfo: ${TERMINFO_LIBRARY}")
-        add_library(terminfo::terminfo INTERFACE IMPORTED)
-        set_target_properties(terminfo::terminfo PROPERTIES
-            INTERFACE_LINK_LIBRARIES "${TERMINFO_LIBRARY}")
-    endif()
+    find_package(Terminfo)
 endif ()
 
 # Run configuration checks
@@ -248,7 +241,7 @@ endif()
 # Tests        #
 # ------------ #
 
-if (BUILD_TESTING)
+if (BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
@@ -345,7 +338,7 @@ if (${BUILD_TOOLS})
     pop_indent()
 endif()
 print_flag("? examples!                    " ${BUILD_EXAMPLES})
-print_flag("? tests!                       " ${BUILD_TESTING})
+print_flag("? tests!                       " ${BUILD_TESTS})
 print_flag("? benchmarks!                  " ${BUILD_BENCHMARKS})
 pop_indent()
 
@@ -382,7 +375,11 @@ if (XCI_INSTALL_DEVEL)
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xcikit)
 
     # Make our CMake modules available to clients
-    install(FILES cmake/XciBuildOptions.cmake DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xcikit)
+    install(FILES
+        cmake/XciBuildOptions.cmake
+        cmake/FindGLSLC.cmake
+        cmake/FindTerminfo.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/xcikit)
 endif()
 
 

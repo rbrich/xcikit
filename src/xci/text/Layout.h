@@ -1,7 +1,7 @@
 // Layout.h created on 2018-03-10 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_TEXT_LAYOUT_H
@@ -13,7 +13,7 @@
 #include "Style.h"
 #include <xci/graphics/View.h>
 #include <xci/graphics/Color.h>
-#include <xci/graphics/Shape.h>
+#include <xci/graphics/shape/Rectangle.h>
 #include <xci/core/geometry.h>
 #include <xci/core/container/ChunkedStack.h>
 
@@ -66,6 +66,9 @@ public:
     // Set text alignment
     void set_alignment(Alignment alignment);
 
+    // Set line spacing (multiple of default line height)
+    void set_line_spacing(float multiplier);
+
     // Horizontal tab stops. Following Tab elements will add horizontal space
     // up to next tab stop.
     void add_tab_stop(VariUnits x);
@@ -75,6 +78,9 @@ public:
     // This can be used to create subscript/superscript.
     void set_offset(VariSize offset);
     void reset_offset() { set_offset({0_fb, 0_fb}); }
+
+    // Move to absolute position. Implies finish_line().
+    void move_to(VariCoords coords);
 
     // Set font and text style.
     // Also affects spacing (which depends on font metrics).
@@ -86,10 +92,7 @@ public:
     void set_color(Color color);
     void reset_color();
 
-    // ------------------------------------------------------------------------
-    // Text elements
-
-    // Word should be actual word. Punctuation can be attached to it
+    // Word should be an actual word. Punctuation can be attached to it
     // or pushed separately as another "word". No whitespace should be contained
     // in the word, unless it is meant to behave as hard, unbreakable space.
     void add_word(std::string_view word);
@@ -100,11 +103,15 @@ public:
     // Put horizontal tab onto line. It takes all space up to next tabstop.
     void add_tab();
 
-    // Finish current line, apply alignment and move to next one.
+    // Add a new line
+    void new_line(float lines = 1.0f) { finish_line(); advance_line(lines); }
+
+    // Finish current line, apply alignment and move to line beginning.
+    // Does not add vertical space! This is only "carriage return".
     // Does nothing if current line is empty.
     void finish_line();
 
-    // Add vertical space. Implies `finish_line`.
+    // Add vertical space ("line feed").
     void advance_line(float lines = 1.0f);
 
     // ------------------------------------------------------------------------
@@ -152,7 +159,7 @@ private:
     Alignment m_default_alignment = Alignment::Left;
     std::vector<VariUnits> m_default_tab_stops;
 
-    mutable core::ChunkedStack<graphics::Shape> m_debug_shapes;
+    mutable core::ChunkedStack<graphics::Rectangle> m_debug_rects;
 };
 
 

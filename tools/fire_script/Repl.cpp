@@ -113,11 +113,12 @@ bool Repl::evaluate_module(Module& module, EvalMode mode)
 
     // print scopes
     if (m_opts.print_symtab) {
-        t.stream() << "Scope trees:\n";
+        t.write("Scope trees:\n");
+        t.tab_set_all({8, 30, 30, 30, 30, 30, 30}).write();
         for (unsigned i = 0; i != module.num_scopes(); ++i) {
             t.stream() << '[' << i << "]\t" << module.get_scope(i) << '\n';
         }
-        t.stream() << '\n';
+        t.tab_set_every(8).write_nl();
     }
 
     // print compiled module content

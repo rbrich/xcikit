@@ -9,6 +9,7 @@
 #include "ast/resolve_symbols.h"
 #include "ast/resolve_decl.h"
 #include "ast/resolve_types.h"
+#include "ast/resolve_spec.h"
 #include "ast/resolve_nonlocals.h"
 #include "ast/fold_const_expr.h"
 #include "ast/fold_dot_call.h"
@@ -93,7 +94,7 @@ public:
                 });
                 pos += ti.size();
             }
-            for (const auto& ti : reverse(function().parameters())) {
+            for (const auto& ti : function().parameters()) {
                 ti.foreach_heap_slot([this, pos](size_t offset) {
                     // DEC_REF <addr in params>
                     function().code().add_L1(Opcode::DecRef, pos + offset);
@@ -249,6 +250,10 @@ public:
                     // INC_REF <stack_offset>
                     code().add_L1(Opcode::IncRef, offset);
                 });
+                // if it's a function object, execute it
+                if (sym.is_callable()) {
+                    code().add_opcode(Opcode::Execute);
+                }
                 break;
             }
             case Symbol::Value: {
@@ -283,6 +288,10 @@ public:
                 ti.foreach_heap_slot([this](size_t offset) {
                     code().add_L1(Opcode::IncRef, offset);
                 });
+                if (m_callable && ti.is_callable()) {
+                    // EXECUTE
+                    code().add_opcode(Opcode::Execute);
+                }
                 break;
             }
             case Symbol::Method: {
@@ -400,16 +409,12 @@ public:
             case Symbol::Unresolved:
                 XCI_UNREACHABLE;
         }
-        // if it's a function object, execute it
-        if (sym.type() == Symbol::Nonlocal && sym.is_callable()) {
-            code().add_opcode(Opcode::Execute);
-        }
     }
 
     void visit(ast::Call& v) override {
         // call the function or push the function as value
 
-        bool orig_callable = m_callable;
+        const bool orig_callable = m_callable;
         m_intrinsic = v.intrinsic;
         m_instruction_args.clear();
 
@@ -718,6 +723,9 @@ bool Compiler::compile(Scope& scope, ast::Module& ast)
 
     if ((flags & Flags::ResolveTypes) == Flags::ResolveTypes)
         resolve_types(scope, ast.body);
+
+    if ((flags & Flags::ResolveSpec) == Flags::ResolveSpec)
+        resolve_spec(scope, ast.body);
 
     if ((flags & Flags::ResolveNonlocals) == Flags::ResolveNonlocals)
         resolve_nonlocals(scope, ast.body);

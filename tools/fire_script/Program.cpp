@@ -33,6 +33,10 @@ void Program::process_args(char* argv[])
 {
     opts.parse(argv);
 
+    if (opts.prog_opts.verbose) {
+        Logger::default_instance().set_level(Logger::Level::Trace);
+    }
+
     if (!opts.prog_opts.schema_file.empty()) {
         Module dummy_module(ctx.interpreter.module_manager());
         if (!dummy_module.write_schema_to_file(opts.prog_opts.schema_file))
@@ -135,7 +139,9 @@ void Program::repl_prompt()
 
 void Program::repl_step(std::string_view partial_input)
 {
-    if (! edit_line().feed_input(partial_input)) {
+    edit_line().feed_input(partial_input);
+    // returns true for each newline, false when input is exhausted (need more data)
+    while (edit_line().advance_input()) {
         auto [ok, line] = edit_line().finish_input();
         if (ok)
             evaluate_input(line);

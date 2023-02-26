@@ -1,7 +1,7 @@
 // Primitives.cpp created on 2018-08-03 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Primitives.h"
@@ -11,8 +11,6 @@
 #include "Texture.h"
 #include "Shader.h"
 #include "vulkan/VulkanError.h"
-
-#include <xci/compat/macros.h>
 
 #include <cassert>
 #include <cstring>
@@ -37,7 +35,7 @@ void PrimitivesBuffers::create(
         const std::vector<std::byte>& uniform_data)
 {
     // vertex buffer
-    VkBufferCreateInfo vertex_buffer_ci = {
+    const VkBufferCreateInfo vertex_buffer_ci = {
             .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
             .size = sizeof(vertex_data[0]) * vertex_data.size(),
             .usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
@@ -51,7 +49,7 @@ void PrimitivesBuffers::create(
     auto vertex_offset = m_device_memory.reserve(vertex_mem_req);
 
     // index buffer
-    VkBufferCreateInfo index_buffer_ci = {
+    const VkBufferCreateInfo index_buffer_ci = {
             .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
             .size = sizeof(index_data[0]) * index_data.size(),
             .usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
@@ -66,7 +64,7 @@ void PrimitivesBuffers::create(
 
     // uniform buffers
     for (size_t i = 0; i < Window::cmd_buf_count; i++) {
-        VkBufferCreateInfo uniform_buffer_ci = {
+        const VkBufferCreateInfo uniform_buffer_ci = {
                 .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
                 .size = uniform_base + uniform_data.size(),
                 .usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -101,7 +99,7 @@ void PrimitivesBuffers::create(
 
 void PrimitivesBuffers::bind(VkCommandBuffer cmd_buf)
 {
-    VkDeviceSize offset = 0;
+    const VkDeviceSize offset = 0;
     vkCmdBindVertexBuffers(cmd_buf, 0, 1, &m_vertex_buffer, &offset);
     vkCmdBindIndexBuffer(cmd_buf, m_index_buffer, 0, VK_INDEX_TYPE_UINT16);
 }
@@ -236,21 +234,9 @@ Primitives::~Primitives()
 }
 
 
-static uint32_t get_vertex_float_count(VertexFormat format)
-{
-    switch (format) {
-        case VertexFormat::V2t2: return 4;
-        case VertexFormat::V2t22: return 6;
-        case VertexFormat::V2c4t2: return 8;
-        case VertexFormat::V2c4t22: return 10;
-    }
-    XCI_UNREACHABLE;
-}
-
-
 void Primitives::reserve(size_t vertices)
 {
-    m_vertex_data.reserve(vertices * get_vertex_float_count(m_format));
+    m_vertex_data.reserve(vertices * get_vertex_format_stride(m_format));
     // heuristic for quads (won't match for other primitives)
     // each 4 vertices (a quad) require 6 indices (two triangles)
     m_index_data.reserve(vertices / 4 * 6);
@@ -283,64 +269,17 @@ void Primitives::end_primitive()
 }
 
 
-void Primitives::add_vertex(FramebufferCoords xy, float u, float v)
+VertexData Primitives::add_vertex(FramebufferCoords xy)
 {
-    assert(m_format == VertexFormat::V2t2);
     assert(m_open_vertices != -1);
     m_open_vertices++;
     m_vertex_data.push_back(xy.x.value);
     m_vertex_data.push_back(xy.y.value);
-    m_vertex_data.push_back(u);
-    m_vertex_data.push_back(v);
-}
-
-
-void Primitives::add_vertex(FramebufferCoords xy, float u1, float v1, float u2, float v2)
-{
-    assert(m_format == VertexFormat::V2t22);
-    assert(m_open_vertices != -1);
-    m_open_vertices++;
-    m_vertex_data.push_back(xy.x.value);
-    m_vertex_data.push_back(xy.y.value);
-    m_vertex_data.push_back(u1);
-    m_vertex_data.push_back(v1);
-    m_vertex_data.push_back(u2);
-    m_vertex_data.push_back(v2);
-}
-
-
-void Primitives::add_vertex(FramebufferCoords xy, Color color, float u, float v)
-{
-    assert(m_format == VertexFormat::V2c4t2);
-    assert(m_open_vertices != -1);
-    m_open_vertices++;
-    m_vertex_data.push_back(xy.x.value);
-    m_vertex_data.push_back(xy.y.value);
-    m_vertex_data.push_back(color.red_f());
-    m_vertex_data.push_back(color.green_f());
-    m_vertex_data.push_back(color.blue_f());
-    m_vertex_data.push_back(color.alpha_f());
-    m_vertex_data.push_back(u);
-    m_vertex_data.push_back(v);
-}
-
-
-void
-Primitives::add_vertex(FramebufferCoords xy, Color color, float u1, float v1, float u2, float v2)
-{
-    assert(m_format == VertexFormat::V2c4t22);
-    assert(m_open_vertices != -1);
-    m_open_vertices++;
-    m_vertex_data.push_back(xy.x.value);
-    m_vertex_data.push_back(xy.y.value);
-    m_vertex_data.push_back(color.red_f());
-    m_vertex_data.push_back(color.green_f());
-    m_vertex_data.push_back(color.blue_f());
-    m_vertex_data.push_back(color.alpha_f());
-    m_vertex_data.push_back(u1);
-    m_vertex_data.push_back(v1);
-    m_vertex_data.push_back(u2);
-    m_vertex_data.push_back(v2);
+#ifndef NDEBUG
+    return VertexData(m_vertex_data, get_vertex_format_stride(m_format) - 2);
+#else
+    return VertexData(m_vertex_data);
+#endif
 }
 
 
@@ -349,7 +288,6 @@ void Primitives::clear()
     destroy_pipeline();
     m_vertex_data.clear();
     m_index_data.clear();
-    clear_uniforms();
     m_closed_vertices = 0;
     m_open_vertices = -1;
 }
@@ -449,7 +387,7 @@ void Primitives::draw(View& view)
     vkCmdBindPipeline(cmd_buf, VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipeline->vk());
 
     // set viewport
-    VkViewport viewport = {
+    const VkViewport viewport = {
             .x = 0.0f,
             .y = 0.0f,
             .width = (float) m_renderer.vk_image_extent().width,

@@ -27,6 +27,10 @@ if (@XCI_WITH_ZIP@)
     find_dependency(libzip)
 endif()
 
+if (@XCI_WITH_TERMINFO@)
+    find_dependency(Terminfo)
+endif()
+
 # xcikit targets
 
 include("${CMAKE_CURRENT_LIST_DIR}/xcikit-targets.cmake")

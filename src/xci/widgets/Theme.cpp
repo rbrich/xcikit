@@ -1,7 +1,7 @@
 // Theme.cpp created on 2018-04-10 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Theme.h"
@@ -15,23 +15,26 @@ namespace xci::widgets {
 
 Theme::Theme(graphics::Renderer& renderer)
         : m_renderer(renderer),
-          m_font(renderer), m_emoji_font(renderer, 1024u), m_icon_font(renderer)
+          m_fonts{text::Font(renderer),  // base
+                  text::Font(renderer, 1024u),  // emoji
+                  text::Font(renderer),  // icon
+                  text::Font(renderer)}  // alt
 {}
 
 
 bool Theme::load_default()
 {
-    core::Vfs& vfs = m_renderer.vfs();
+    const core::Vfs& vfs = m_renderer.vfs();
 
     // Base font
-    TRY(load_font_face(vfs, "fonts/RobotoMono/RobotoMono_wght.ttf", 0));
-    TRY(load_font_face(vfs, "fonts/RobotoMono/RobotoMono-Italic_wght.ttf", 0));
+    TRY(load_font_face(vfs, "fonts/RobotoMono/RobotoMono_wght.ttf", 0, FontId::Base));
+    TRY(load_font_face(vfs, "fonts/RobotoMono/RobotoMono-Italic_wght.ttf", 0, FontId::Base));
 
     // Emoji font
-    TRY(load_emoji_font_face(vfs, "fonts/Noto/NotoColorEmoji.ttf", 0));
+    TRY(load_font_face(vfs, "fonts/Noto/NotoColorEmoji.ttf", 0, FontId::Emoji));
 
     // Material Icons
-    TRY(load_icon_font_face(vfs, "fonts/MaterialIcons/MaterialIcons-Regular.woff", 0));
+    TRY(load_font_face(vfs, "fonts/MaterialIcons/MaterialIcons-Regular.woff", 0, FontId::Icon));
     set_icon_codepoint(IconId::None, L' ');
     set_icon_codepoint(IconId::CheckBoxUnchecked, L'\ue835');
     set_icon_codepoint(IconId::CheckBoxChecked, L'\ue834');
@@ -47,21 +50,9 @@ bool Theme::load_default()
 }
 
 
-bool Theme::load_font_face(const core::Vfs& vfs, const char* file_path, int face_index)
+bool Theme::load_font_face(const core::Vfs& vfs, const char* file_path, int face_index, FontId font_id)
 {
-    return m_font.add_face(vfs, file_path, face_index);
-}
-
-
-bool Theme::load_emoji_font_face(const core::Vfs& vfs, const char* file_path, int face_index)
-{
-    return m_emoji_font.add_face(vfs, file_path, face_index);
-}
-
-
-bool Theme::load_icon_font_face(const core::Vfs& vfs, const char* file_path, int face_index)
-{
-    return m_icon_font.add_face(vfs, file_path, face_index);
+    return m_fonts[size_t(font_id)].add_face(vfs, file_path, face_index);
 }
 
 

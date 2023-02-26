@@ -16,21 +16,37 @@ endif()
 # ------------ #
 
 set(SHADER_SOURCES
-    rectangle.vert
-    rectangle.frag
-    sprite.vert
-    sprite.frag
-    sprite_r.frag
-    sprite_c.vert
-    sprite_c.frag
-    line.vert
-    line.frag
-    ellipse.vert
-    ellipse.frag
-    fps.vert
-    fps.frag
     cursor.vert
     cursor.frag
+    ellipse.vert
+    ellipse.frag
+    ellipse_c.vert
+    ellipse_c.frag
+    flat_c.vert
+    flat_c.frag
+    fps.vert
+    fps.frag
+    line.vert
+    line.frag
+    line_c.vert
+    line_c.frag
+    polygon.vert
+    polygon.frag
+    polygon_c.vert
+    polygon_c.frag
+    rectangle.vert
+    rectangle.frag
+    rectangle_c.vert
+    rectangle_c.frag
+    rounded_rectangle.vert
+    rounded_rectangle.frag
+    rounded_rectangle_c.vert
+    rounded_rectangle_c.frag
+    sprite.vert
+    sprite.frag
+    sprite_c.vert
+    sprite_c.frag
+    sprite_r.frag
     )
 
 set(outputs)

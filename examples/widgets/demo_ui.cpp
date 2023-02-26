@@ -46,7 +46,7 @@ int main(int argc, const char* argv[])
     for (auto i : {0,1,2,3,4}) {
         text_inputs.emplace_back(theme, "input");
         text_inputs.back().set_position({-50_vp, -25_vp + i * 6_vp});
-        root.add(text_inputs.back());
+        root.add_child(text_inputs.back());
     }
 
     std::deque<Button> buttons;
@@ -59,7 +59,7 @@ int main(int argc, const char* argv[])
             btn_self->set_text_color(random_color());
             btn_self->resize(view);
         });
-        root.add(buttons.back());
+        root.add_child(buttons.back());
     }
 
     std::deque<Checkbox> checkboxes;
@@ -67,16 +67,16 @@ int main(int argc, const char* argv[])
         checkboxes.emplace_back(theme);
         checkboxes.back().set_text("Checkbox " + std::to_string(i+1));
         checkboxes.back().set_position({25_vp, -25_vp + i * 3_vp});
-        root.add(checkboxes.back());
+        root.add_child(checkboxes.back());
     }
 
     MousePosInfo mouse_pos_info {theme};
     mouse_pos_info.set_position({-60_vp, 45_vp});
-    root.add(mouse_pos_info);
+    root.add_child(mouse_pos_info);
 
     FpsDisplay fps_display {theme};
     fps_display.set_position({-60_vp, -40_vp});
-    root.add(fps_display);
+    root.add_child(fps_display);
 
     window.set_key_callback([&](View& view, KeyEvent ev) {
         if (ev.action != Action::Press)

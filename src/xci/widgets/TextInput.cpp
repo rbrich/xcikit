@@ -1,7 +1,7 @@
 // TextInput.cpp created on 2018-06-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "TextInput.h"
@@ -18,11 +18,12 @@ using namespace xci::core;
 TextInput::TextInput(Theme& theme, const std::string& string)
     : Widget(theme),
       m_buffer(string),
-      m_bg_rect(theme.renderer(), Color(10, 20, 40), theme.color(ColorId::Default)),
-      m_cursor_shape(theme.renderer(), Color::Yellow(), Color::Transparent())
+      m_bg_rect(theme.renderer()),
+      m_cursor_shape(theme.renderer()),
+      m_outline_color(theme.color(ColorId::Default))
 {
     set_focusable(true);
-    m_layout.set_default_font(&theme.font());
+    m_layout.set_default_font(&theme.base_font());
 }
 
 
@@ -35,8 +36,8 @@ void TextInput::set_string(const std::string& string)
 void TextInput::set_decoration_color(graphics::Color fill,
                                      graphics::Color outline)
 {
-    m_bg_rect.set_fill_color(fill);
-    m_bg_rect.set_outline_color(outline);
+    m_fill_color = fill;
+    m_outline_color = outline;
 }
 
 
@@ -66,7 +67,7 @@ void TextInput::resize(View& view)
     if (cursor_box.x > m_content_pos + width)
         m_content_pos = cursor_box.x - width;
     m_cursor_shape.add_rectangle(cursor_box);
-    m_cursor_shape.update();
+    m_cursor_shape.update(Color::Yellow());
 
     auto rect = m_layout.bbox();
     rect.w = width;
@@ -80,7 +81,7 @@ void TextInput::resize(View& view)
     rect.y = 0;
     m_bg_rect.clear();
     m_bg_rect.add_rectangle(rect, view.to_fb(m_outline_thickness));
-    m_bg_rect.update();
+    m_bg_rect.update(m_fill_color, m_outline_color);
 }
 
 
@@ -88,15 +89,17 @@ void TextInput::update(View& view, State state)
 {
     view.finish_draw();
     m_layout.update(view);
-    if (last_hover() == LastHover::Inside) {
-        m_bg_rect.set_outline_color(theme().color(ColorId::Hover));
+    if (state.focused) {
+        m_outline_color = theme().color(ColorId::Focus);
+    } else if (last_hover() == LastHover::Inside) {
+        m_outline_color = theme().color(ColorId::Hover);
     } else {
-        m_bg_rect.set_outline_color(theme().color(ColorId::Default));
+        m_outline_color = theme().color(ColorId::Default);
     }
-    m_bg_rect.update();
+    m_bg_rect.update(m_fill_color, m_outline_color);
     m_draw_cursor = state.focused;
     if (m_draw_cursor)
-        m_cursor_shape.update();
+        m_cursor_shape.update(Color::Yellow());
 }
 
 

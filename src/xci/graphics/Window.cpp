@@ -1,7 +1,7 @@
 // Window.cpp created on 2019-10-22 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Window.h"
@@ -22,11 +22,11 @@ Window::~Window()
 {
     const auto vk_device = m_renderer.vk_device();
     if (vk_device != VK_NULL_HANDLE) {
-        for (auto* fence : m_cmd_buf_fences)
+        for (VkFence fence : m_cmd_buf_fences)
             vkDestroyFence(vk_device, fence, nullptr);
-        for (auto* sem : m_render_semaphore)
+        for (VkSemaphore sem : m_render_semaphore)
             vkDestroySemaphore(vk_device, sem, nullptr);
-        for (auto* sem : m_image_semaphore)
+        for (VkSemaphore sem : m_image_semaphore)
             vkDestroySemaphore(vk_device, sem, nullptr);
     }
 
@@ -320,7 +320,7 @@ void Window::setup_view()
             static_assert(int(Action::Release) == GLFW_RELEASE, "GLFW_RELEASE");
             static_assert(int(Action::Press) == GLFW_PRESS, "GLFW_PRESS");
             static_assert(int(Action::Repeat) == GLFW_REPEAT, "GLFW_REPEAT");
-            ModKey mod = {
+            const ModKey mod = {
                     bool(mods & GLFW_MOD_SHIFT),
                     bool(mods & GLFW_MOD_CONTROL),
                     bool(mods & GLFW_MOD_ALT),
@@ -344,11 +344,11 @@ void Window::create_command_buffers()
 {
     m_command_buffers.create(m_renderer.vk_command_pool(), cmd_buf_count);
 
-    VkFenceCreateInfo fence_ci {
+    const VkFenceCreateInfo fence_ci {
             .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
             .flags = VK_FENCE_CREATE_SIGNALED_BIT,
     };
-    VkSemaphoreCreateInfo semaphore_ci = {
+    const VkSemaphoreCreateInfo semaphore_ci = {
            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
     };
     for (size_t i = 0; i < cmd_buf_count; ++i) {
@@ -379,7 +379,7 @@ void Window::finish_draw()
 
 void Window::resize_framebuffer(int w, int h)
 {
-    VkExtent2D new_size {uint32_t(w), uint32_t(h)};
+    const VkExtent2D new_size {uint32_t(w), uint32_t(h)};
     m_renderer.reset_framebuffer(new_size);
 
     const auto& actual_size = m_renderer.vk_image_extent();  // normally the same
@@ -422,10 +422,11 @@ void Window::draw()
                 vkResetFences(m_renderer.vk_device(),
                         1, &m_cmd_buf_fences[m_current_cmd_buf]));
 
+        m_command_buffers.release_resources(m_current_cmd_buf);
         m_command_buffers.begin(m_current_cmd_buf);
 
         const FloatColor clear_value(m_clear_color);
-        VkRenderPassBeginInfo render_pass_info = {
+        const VkRenderPassBeginInfo render_pass_info = {
                 .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
                 .renderPass = m_renderer.vk_render_pass(),
                 .framebuffer = m_renderer.vk_framebuffer(image_index),
@@ -450,7 +451,7 @@ void Window::draw()
     VkSemaphore wait_semaphores[] = {m_image_semaphore[m_current_cmd_buf]};
     VkSemaphore signal_semaphores[] = {m_render_semaphore[m_current_cmd_buf]};
     VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    VkSubmitInfo submit_info = {
+    const VkSubmitInfo submit_info = {
             .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
             .waitSemaphoreCount = 1,
             .pWaitSemaphores = wait_semaphores,
@@ -465,7 +466,7 @@ void Window::draw()
                     m_cmd_buf_fences[m_current_cmd_buf]));
 
     VkSwapchainKHR swapchains[] = {m_renderer.vk_swapchain()};
-    VkPresentInfoKHR present_info = {
+    const VkPresentInfoKHR present_info = {
             .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
             .waitSemaphoreCount = 1,
             .pWaitSemaphores = signal_semaphores,
@@ -480,7 +481,6 @@ void Window::draw()
         log::error("vkQueuePresentKHR failed: {}", int(rc));
 
     m_current_cmd_buf = (m_current_cmd_buf + 1) % cmd_buf_count;
-    m_command_buffers.release_resources(m_current_cmd_buf);
     m_draw_finished = false;
 }
 

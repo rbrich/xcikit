@@ -1,7 +1,7 @@
 // Sprites.cpp created on 2018-03-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Sprites.h"
@@ -36,27 +36,28 @@ void Sprites::add_sprite(const FramebufferRect& rect)
 // Position a sprite with cutoff from the texture
 void Sprites::add_sprite(const FramebufferRect& rect, const Rect_u& texrect)
 {
-    auto x1 = rect.x;
-    auto y1 = rect.y;
-    auto x2 = rect.x + rect.w;
-    auto y2 = rect.y + rect.h;
-    auto ts = m_texture.size();
-    float tl = (float)texrect.left() / ts.x;
-    float tr = (float)texrect.right() / ts.x;
-    float tb = (float)texrect.bottom() / ts.y;
-    float tt = (float)texrect.top() / ts.y;
+    const auto x1 = rect.x;
+    const auto y1 = rect.y;
+    const auto x2 = rect.x + rect.w;
+    const auto y2 = rect.y + rect.h;
+    const auto ts = m_texture.size();
+    const float tl = (float)texrect.left() / ts.x;
+    const float tr = (float)texrect.right() / ts.x;
+    const float tb = (float)texrect.bottom() / ts.y;
+    const float tt = (float)texrect.top() / ts.y;
 
     m_quads.begin_primitive();
-    m_quads.add_vertex({x1, y1}, tl, tt);
-    m_quads.add_vertex({x1, y2}, tl, tb);
-    m_quads.add_vertex({x2, y2}, tr, tb);
-    m_quads.add_vertex({x2, y1}, tr, tt);
+    m_quads.add_vertex({x1, y1}).uv(tl, tt);
+    m_quads.add_vertex({x1, y2}).uv(tl, tb);
+    m_quads.add_vertex({x2, y2}).uv(tr, tb);
+    m_quads.add_vertex({x2, y1}).uv(tr, tt);
     m_quads.end_primitive();
 }
 
 
 void Sprites::update()
 {
+    m_quads.clear_uniforms();
     m_quads.add_uniform(1, m_color);
     m_quads.set_blend(BlendFunc::AlphaBlend);
     m_quads.set_texture(2, m_texture);
@@ -98,21 +99,21 @@ void ColoredSprites::add_sprite(const FramebufferRect& rect)
 // Position a sprite with cutoff from the texture
 void ColoredSprites::add_sprite(const FramebufferRect& rect, const Rect_u& texrect)
 {
-    auto x1 = rect.x;
-    auto y1 = rect.y;
-    auto x2 = rect.x + rect.w;
-    auto y2 = rect.y + rect.h;
-    auto ts = m_texture.size();
-    float tl = (float)texrect.left() / (float)ts.x;
-    float tr = (float)texrect.right() / (float)ts.x;
-    float tb = (float)texrect.bottom() / (float)ts.y;
-    float tt = (float)texrect.top() / (float)ts.y;
+    const auto x1 = rect.x;
+    const auto y1 = rect.y;
+    const auto x2 = rect.x + rect.w;
+    const auto y2 = rect.y + rect.h;
+    const auto ts = m_texture.size();
+    const float tl = (float)texrect.left() / (float)ts.x;
+    const float tr = (float)texrect.right() / (float)ts.x;
+    const float tb = (float)texrect.bottom() / (float)ts.y;
+    const float tt = (float)texrect.top() / (float)ts.y;
 
     m_quads.begin_primitive();
-    m_quads.add_vertex({x1, y1}, m_color, tl, tt);
-    m_quads.add_vertex({x1, y2}, m_color, tl, tb);
-    m_quads.add_vertex({x2, y2}, m_color, tr, tb);
-    m_quads.add_vertex({x2, y1}, m_color, tr, tt);
+    m_quads.add_vertex({x1, y1}).color(m_color).uv(tl, tt);
+    m_quads.add_vertex({x1, y2}).color(m_color).uv(tl, tb);
+    m_quads.add_vertex({x2, y2}).color(m_color).uv(tr, tb);
+    m_quads.add_vertex({x2, y1}).color(m_color).uv(tr, tt);
     m_quads.end_primitive();
 }
 

@@ -13,7 +13,7 @@
     #include <sys/time.h>
 #else
     #include <xci/core/bit.h>
-    #include <Windows.h>
+    #include <xci/compat/windows.h>
     #include <psapi.h>
 #endif
 

@@ -25,7 +25,6 @@
 #include <xci/config.h>
 
 #ifdef _WIN32
-    #include <windows.h>
     static_assert(sizeof(unsigned long) == sizeof(DWORD));
 #else
     #include <termios.h>
@@ -109,12 +108,12 @@ inline std::string xci_tparm(const char* seq, Args... args) {
 }
 
 // Note that this cannot be implemented with variadic template,
-// because the arguments must not be evaluated unless is_initialized() is true
-#define XCI_TERM_APPEND(...) append_seq(xci_tparm(__VA_ARGS__))
+// because the arguments must not be evaluated unless is_tty() is true
+#define XCI_TERM_APPEND(...) _append_seq(is_tty() ? xci_tparm(__VA_ARGS__) : "")
 
 #if XCI_WITH_TERMINFO == 1
     // delegate to TermInfo
-    #define TERM_APPEND(...) append_seq(tparm(__VA_ARGS__))
+    #define TERM_APPEND(...) _append_seq(is_tty() ? tparm(__VA_ARGS__) : "")
     static unsigned _plus_one(unsigned arg) { return arg; }  // already corrected with Terminfo -> noop
 #else
     // delegate to our implementation
@@ -764,20 +763,16 @@ std::string TermCtl::raw_input(bool isig)
 void TermCtl::write(std::string_view buf)
 {
     m_at_newline = buf.ends_with('\n');
+    write_raw(buf);
+}
+
+
+void TermCtl::write_raw(std::string_view buf)
+{
     if (m_write_cb)
         m_write_cb(buf);
     else
         core::write(m_fd, buf);
-}
-
-
-void TermCtl::write_nl()
-{
-    m_at_newline = true;
-    if (m_write_cb)
-        m_write_cb("\n");
-    else
-        core::write(m_fd, "\n");
 }
 
 
@@ -971,7 +966,7 @@ std::string TermCtl::query(std::string_view request, TermCtl& tin)
 {
     std::string res;
     tin.with_raw_mode([this, request, &tin, &res] {
-        write(request);
+        write_raw(request);
         res = tin.input(std::chrono::milliseconds{100});
     });
     return res;

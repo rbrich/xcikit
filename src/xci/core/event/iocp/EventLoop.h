@@ -7,7 +7,7 @@
 #ifndef XCI_CORE_IOCP_EVENTLOOP_H
 #define XCI_CORE_IOCP_EVENTLOOP_H
 
-#include <windows.h>
+#include <xci/compat/windows.h>
 #include <chrono>
 #include <deque>
 

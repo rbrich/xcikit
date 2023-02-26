@@ -136,6 +136,16 @@ ScreenCoords View::screen_center() const
 }
 
 
+ScreenCoords View::screen_top_left(ScreenCoords offset) const
+{
+    if (m_origin == ViewOrigin::TopLeft) {
+        return offset;
+    } else {
+        return offset - 0.5f * m_screen_size;
+    }
+}
+
+
 bool View::set_framebuffer_size(FramebufferSize size)
 {
     bool changed = (m_framebuffer_size != size);

@@ -1,12 +1,11 @@
 // Layout.cpp created on 2018-03-10 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Layout.h"
 
-#include <xci/graphics/Shape.h>
 #include <xci/graphics/View.h>
 #include <xci/graphics/Window.h>
 
@@ -125,59 +124,56 @@ void Layout::update(const View& target)
 
     auto& renderer = target.window()->renderer();
     const auto fb_1px = target.px_to_fb(1_px);
-    m_debug_shapes.clear();
+    m_debug_rects.clear();
 
     // Debug: page bbox
     if (target.has_debug_flag(View::Debug::PageBBox)) {
-        m_debug_shapes.emplace_back(renderer,
-                Color(150, 150, 0, 128),
-                Color(200, 200, 50));
-        m_debug_shapes.back().add_rectangle(bbox(), fb_1px);
-        m_debug_shapes.back().update();
+        m_debug_rects.emplace_back(renderer);
+        m_debug_rects.back().add_rectangle(bbox(), fb_1px);
+        m_debug_rects.back().update(Color(150, 150, 0, 128),
+                                    Color(200, 200, 50));
     }
 
     // Debug: span bboxes
     if (target.has_debug_flag(View::Debug::SpanBBox)) {
-        m_debug_shapes.emplace_back(renderer,
-                Color(100, 0, 150, 128),
-                Color(200, 50, 250));
+        m_debug_rects.emplace_back(renderer);
         m_page.foreach_span([&](const Span& span) {
             for (const auto& part : span.parts()) {
-                m_debug_shapes.back().add_rectangle(part.bbox(), fb_1px);
+                m_debug_rects.back().add_rectangle(part.bbox(), fb_1px);
             }
         });
-        m_debug_shapes.back().update();
+        m_debug_rects.back().update(Color(100, 0, 150, 128),
+                                    Color(200, 50, 250));
     }
 
     // Debug: line bboxes
     if (target.has_debug_flag(View::Debug::LineBBox)) {
-        m_debug_shapes.emplace_back(renderer,
-                Color(0, 50, 150, 128),
-                Color(50, 50, 250));
+        m_debug_rects.emplace_back(renderer);
         m_page.foreach_line([&](const Line& line) {
-            m_debug_shapes.back().add_rectangle(line.bbox(), fb_1px);
+            m_debug_rects.back().add_rectangle(line.bbox(), fb_1px);
         });
-        m_debug_shapes.back().update();
+        m_debug_rects.back().update(Color(0, 50, 150, 128),
+                                    Color(50, 50, 250));
     }
 
     // Debug: line baselines
     if (target.has_debug_flag(View::Debug::LineBaseLine)) {
-        m_debug_shapes.emplace_back(renderer, Color(255, 50, 150));
+        m_debug_rects.emplace_back(renderer);
         m_page.foreach_line([&](const Line& line) {
             auto rect = line.bbox();
             rect.y += line.baseline();
             rect.h = fb_1px;
-            m_debug_shapes.back().add_rectangle(rect);
+            m_debug_rects.back().add_rectangle(rect);
         });
-        m_debug_shapes.back().update();
+        m_debug_rects.back().update(Color(255, 50, 150));
     }
 }
 
 
 void Layout::draw(View& view, VariCoords pos) const
 {
-    for (auto& shape : m_debug_shapes) {
-        shape.draw(view, pos);
+    for (auto& rects : m_debug_rects) {
+        rects.draw(view, pos);
     }
 
     m_page.foreach_word([&](const Word& word) {
@@ -198,6 +194,12 @@ void Layout::set_alignment(Alignment alignment)
 }
 
 
+void Layout::set_line_spacing(float multiplier)
+{
+    m_elements.push_back(std::make_unique<SetLineSpacing>(multiplier));
+}
+
+
 void Layout::add_tab_stop(VariUnits x)
 {
     m_elements.push_back(std::make_unique<AddTabStop>(x));
@@ -213,6 +215,12 @@ void Layout::reset_tab_stops()
 void Layout::set_offset(VariSize offset)
 {
     m_elements.push_back(std::make_unique<SetOffset>(offset));
+}
+
+
+void Layout::move_to(VariCoords coords)
+{
+    m_elements.push_back(std::make_unique<MoveTo>(coords));
 }
 
 
@@ -284,7 +292,6 @@ void Layout::finish_line()
 
 void Layout::advance_line(float lines)
 {
-    m_elements.push_back(std::make_unique<FinishLine>());
     m_elements.push_back(std::make_unique<AdvanceLine>(lines));
 }
 

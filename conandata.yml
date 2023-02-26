@@ -35,7 +35,7 @@ requirements:
     cmake_defs: PEGTL_BUILD_TESTS=OFF PEGTL_BUILD_EXAMPLES=OFF
   magic_enum:
     cmake: "magic_enum/0.7.3"
-    conan: "magic_enum/0.8.1"
+    conan: "magic_enum/0.8.2"
     prereq:
       - data
       - examples
@@ -56,12 +56,12 @@ requirements:
       - graphics
   freetype:
     cmake: "Freetype/2.10.0"
-    conan: "freetype/2.12.1"
+    conan: "freetype/2.13.0"
     prereq:
       - text
   harfbuzz:
     cmake: "harfbuzz/"
-    conan: "harfbuzz/5.3.1"
+    conan: "harfbuzz/6.0.0"
     prereq:
       - text
   hyperscan:
@@ -75,7 +75,7 @@ requirements:
       - data
   catch2:
     cmake: "Catch2/3"
-    conan: "catch2/3.2.0"
+    conan: "catch2/3.3.1"
     upstream: "github.com catchorg/Catch2 v3.2.0"
     cmake_defs: CATCH_INSTALL_DOCS=OFF CMAKE_CXX_STANDARD=20
     prereq:

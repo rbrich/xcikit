@@ -1,7 +1,7 @@
 // TextInput.h created on 2018-06-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_WIDGETS_TEXTINPUT_H
@@ -9,7 +9,7 @@
 
 #include <xci/widgets/Widget.h>
 #include <xci/text/Layout.h>
-#include <xci/graphics/Shape.h>
+#include <xci/graphics/shape/Rectangle.h>
 #include <xci/core/EditBuffer.h>
 
 namespace xci::widgets {
@@ -48,11 +48,13 @@ public:
 private:
     core::EditBuffer m_buffer;
     text::Layout m_layout;
-    graphics::Shape m_bg_rect;
-    graphics::Shape m_cursor_shape;
+    graphics::Rectangle m_bg_rect;
+    graphics::Rectangle m_cursor_shape;
     VariUnits m_width = 20_vp;
     VariUnits m_padding = 1_vp;
     VariUnits m_outline_thickness = 0.25_vp;
+    Color m_fill_color = Color(10, 20, 40);
+    Color m_outline_color;
     FramebufferPixels m_content_pos = 0;
     ChangeCallback m_change_cb;
     bool m_draw_cursor = false;

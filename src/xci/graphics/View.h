@@ -174,6 +174,7 @@ public:
     bool set_screen_size(ScreenSize size);
     ScreenSize screen_size() const { return m_screen_size; }
     ScreenCoords screen_center() const;
+    ScreenCoords screen_top_left(ScreenCoords offset = {}) const;
 
     // Size of the view in framebuffer pixels.
     // This is used for pixel-perfect font rendering.

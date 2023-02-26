@@ -27,7 +27,8 @@ public:
         ResolveSymbols      = 0x0004,
         ResolveDecl         = 0x0008,
         ResolveTypes        = 0x0010,
-        ResolveNonlocals    = 0x0020,
+        ResolveSpec         = 0x0020,
+        ResolveNonlocals    = 0x0040,
         FoldConstExpr       = 0x0001 << 16,
 
         // Bit masks
@@ -43,7 +44,8 @@ public:
         PPSymbols       = ResolveSymbols | PPDotCall | PPTuple,
         PPDecl          = ResolveDecl | PPSymbols,
         PPTypes         = ResolveTypes | PPDecl,
-        PPNonlocals     = ResolveNonlocals | PPTypes,
+        PPSpec          = ResolveSpec | PPTypes,
+        PPNonlocals     = ResolveNonlocals | PPSpec,
 
         // Optimization
         O0 = 0,

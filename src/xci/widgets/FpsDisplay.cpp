@@ -1,7 +1,7 @@
 // FpsDisplay.cpp created on 2018-04-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "FpsDisplay.h"
@@ -39,7 +39,7 @@ void FpsDisplay::resize(View& view)
     m_quad.clear();
     create_sprite(view);
 
-    m_text.set_font(theme().font());
+    m_text.set_font(theme().base_font());
     m_text.set_font_size(size().y / 2);
 }
 
@@ -96,10 +96,10 @@ void FpsDisplay::create_sprite(View& view)
     auto y2 = size().y;
     m_quad.reserve(4);
     m_quad.begin_primitive();
-    m_quad.add_vertex({x1, y1}, 0, 0);
-    m_quad.add_vertex({x1, y2}, 0, 1);
-    m_quad.add_vertex({x2, y2}, 1, 1);
-    m_quad.add_vertex({x2, y1}, 1, 0);
+    m_quad.add_vertex({x1, y1}).uv(0, 0);
+    m_quad.add_vertex({x1, y2}).uv(0, 1);
+    m_quad.add_vertex({x2, y2}).uv(1, 1);
+    m_quad.add_vertex({x2, y1}).uv(1, 0);
     m_quad.end_primitive();
     m_quad.set_texture(1, m_texture);
     m_quad.set_shader(m_shader);

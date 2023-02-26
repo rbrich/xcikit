@@ -410,6 +410,17 @@ Run the build (only 'core' and 'script' components work at this time):
 ./build.sh --debug --emscripten --profile emscripten core script
 ----
 
+[#package]
+=== Building Conan package
+
+The defaults in the Conan recipe (`conanfile.py`) are meant to make it easier for consumers (`conan install`) than packagers. That means, the tests and examples are built and packaged by default. Add the following options to build a package with only the development libs:
+
+[source,bash]
+----
+conan create . --build=missing -o xcikit:tools=False -o xcikit:examples=False -o xcikit:tests=False -o xcikit:benchmarks=False
+----
+
+
 == How to use in a client program
 
 === Linking with a client using only CMake

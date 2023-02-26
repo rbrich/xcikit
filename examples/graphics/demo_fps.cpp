@@ -1,14 +1,14 @@
 // demo_fps.cpp created on 2018-04-14 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "common.h"
 
 #include <xci/widgets/FpsDisplay.h>
 #include <xci/text/Text.h>
-#include <xci/graphics/Shape.h>
+#include <xci/graphics/shape/Ellipse.h>
 #include <xci/core/Vfs.h>
 #include <xci/config.h>
 
@@ -31,13 +31,10 @@ int main(int argc, const char* argv[])
     Theme theme(renderer);
     if (!theme.load_default())
         return EXIT_FAILURE;
-    auto& font = theme.font();
+    auto& font = theme.base_font();
 
-    Shape rts(renderer, Color(0, 0, 40, 128), Color(180, 180, 0));
-    rts.set_antialiasing(2);
-
-    Shape rts_px(renderer, Color(40, 40, 0, 128), Color(255, 255, 0));
-    rts_px.set_antialiasing(2);
+    Ellipse rts(renderer);
+    Ellipse rts_px(renderer);
 
     FpsDisplay fps_display(theme);
     fps_display.set_position({-60_vp, -35_vp});
@@ -50,12 +47,18 @@ int main(int argc, const char* argv[])
 
     window.set_size_callback([&](View& view) {
         // Viewport units - the border scales with viewport size
-        ShapeBuilder(view, rts)
+        EllipseBuilder(view, rts)
+            .set_antialiasing(2)
+            .set_fill_color(Color(0, 0, 40, 128))
+            .set_outline_color(Color(180, 180, 0))
             .add_ellipse({-50_vp, -30_vp, 100_vp, 60_vp}, 2.5_vp)
             .add_ellipse({-30_vp, -40_vp, 60_vp, 80_vp}, 1_vp);
 
         // Constant border width, in screen pixels
-        ShapeBuilder(view, rts_px)
+        EllipseBuilder(view, rts_px)
+            .set_antialiasing(2)
+            .set_fill_color(Color(40, 40, 0, 128))
+            .set_outline_color(Color(255, 255, 0))
             .add_ellipse({ 0_vp,  0_vp, 25_vp, 25_vp}, 1_px)
             .add_ellipse({ 5_vp,  5_vp, 25_vp, 25_vp}, 2_px)
             .add_ellipse({10_vp, 10_vp, 25_vp, 25_vp}, 3_px)

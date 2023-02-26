@@ -127,7 +127,8 @@ void Function::copy_body(const Function& src)
 }
 
 
-bool Function::CompiledBody::operator==(const Function::CompiledBody& rhs) const {
+bool Function::CompiledBody::operator==(const Function::CompiledBody& rhs) const
+{
     return code == rhs.code;
 }
 
@@ -142,6 +143,9 @@ bool Function::NativeBody::operator==(const Function::NativeBody& rhs) const
 {
     return native == rhs.native;
 }
+
+
+// -----------------------------------------------------------------------------
 
 
 Scope::Scope(Module& module, Index function_idx, Scope* parent_scope)
@@ -171,9 +175,9 @@ Index Scope::add_subscope(Index scope_idx)
 
 void Scope::copy_subscopes(const Scope& from)
 {
-    for (Index scope_idx : from.m_subscopes) {
+    for (const Index scope_idx : from.m_subscopes) {
         auto& orig = module().get_scope(scope_idx);
-        Scope sub(module(), orig.function_index(), this);
+        Scope sub(orig.module(), orig.function_index(), this);
         auto sub_idx = module().add_scope(std::move(sub));
         module().get_scope(sub_idx).copy_subscopes(orig);
         add_subscope(sub_idx);

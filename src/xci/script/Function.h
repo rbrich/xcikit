@@ -66,8 +66,8 @@ public:
     size_t parameter_offset(Index idx) const;
 
     // function signature
-    void set_signature(const std::shared_ptr<Signature>& newsig) { m_signature = newsig; }
-    std::shared_ptr<Signature> signature_ptr() const { return m_signature; }
+    void set_signature(const SignaturePtr& sig) { m_signature = sig; }
+    SignaturePtr signature_ptr() const { return m_signature; }
     Signature& signature() { return *m_signature; }
     const Signature& signature() const { return *m_signature; }
 
@@ -231,7 +231,7 @@ private:
     Module* m_module = nullptr;
     SymbolTable* m_symtab = nullptr;
     // function signature
-    std::shared_ptr<Signature> m_signature;
+    SignaturePtr m_signature;
     // function body (depending on kind of function)
     std::variant<std::monostate, CompiledBody, GenericBody, NativeBody> m_body;
     // flags
@@ -258,21 +258,31 @@ public:
     }
 
     std::pair<iterator, bool> set(SymbolPointer sym, TypeInfo&& ti) {
-        if (ti.is_unknown())
+        if (ti.is_unknown() && (!ti.is_generic() || ti.generic_var() == sym))
             return { m_type_args.end(), true };  // "inserted" Unknown to nowhere
         return m_type_args.try_emplace(sym, std::move(ti));
     }
 
     std::pair<iterator, bool> set(SymbolPointer sym, const TypeInfo& ti) {
-        if (ti.is_unknown())
+        if (ti.is_unknown() && (!ti.is_generic() || ti.generic_var() == sym))
             return { m_type_args.end(), true };  // "inserted" Unknown to nowhere
         return m_type_args.try_emplace(sym, ti);
+    }
+
+    void add_from(const TypeArgs& other) {
+        for (const auto& it : other.m_type_args) {
+            set(it.first, it.second);
+        }
     }
 
     // Must not query Unknown or a symbol that is not in the map
     TypeInfo& operator[] (SymbolPointer sym) {
         return m_type_args[sym];
     }
+
+    bool empty() const noexcept { return m_type_args.empty(); }
+    const_iterator begin() const noexcept { return m_type_args.begin(); }
+    const_iterator end() const noexcept { return m_type_args.end(); }
 
 private:
     std::map<SymbolPointer, TypeInfo> m_type_args;
@@ -285,12 +295,14 @@ public:
     explicit Scope(Module& module, Index function_idx, Scope* parent_scope);
 
     Module& module() const { return *m_module; }
-    Scope* parent() const { return m_parent_scope; }
+    void set_module(Module& mod) { m_module = &mod; }
 
     bool has_function() const { return m_function != no_index; }
     Function& function() const;
     void set_function_index(Index fn_idx) { m_function = fn_idx; }
     Index function_index() const { return m_function; }
+
+    Scope* parent() const { return m_parent_scope; }
 
     // Nested functions
     Index add_subscope(Index scope_idx);
@@ -300,7 +312,7 @@ public:
     Index get_index_of_subscope(Index mod_scope_idx) const;
     Scope& get_subscope(Index idx) const;
     Size num_subscopes() const { return Size(m_subscopes.size()); }
-    bool has_subscopes() const { return !m_subscopes.empty(); }
+    bool has_subscopes() const noexcept { return !m_subscopes.empty(); }
     const std::vector<Index>& subscopes() const { return m_subscopes; }
 
     // SymbolTable mapping (a SymbolTable may map to multiple scope hierarchies)
@@ -316,12 +328,19 @@ public:
     };
     void add_nonlocal(Index index);
     void add_nonlocal(Index index, TypeInfo ti, Index fn_scope_idx = no_index);
-    bool has_nonlocals() const { return !m_nonlocals.empty(); }
+    bool has_nonlocals() const noexcept { return !m_nonlocals.empty(); }
     const std::vector<Nonlocal>& nonlocals() const { return m_nonlocals; }
     size_t nonlocal_raw_offset(Index index, const TypeInfo& ti) const;
 
+    struct SpecArg {
+        Index index;  // index from the respective Symbol::Parameter
+        SourceLocation source_loc;
+        SymbolPointer symptr;
+    };
+
     const TypeArgs& type_args() const { return m_type_args; }
     TypeArgs& type_args() { return m_type_args; }
+    bool has_type_args() const noexcept { return !m_type_args.empty(); }
 
 private:
     Module* m_module = nullptr;

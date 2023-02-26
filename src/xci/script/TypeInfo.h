@@ -117,10 +117,12 @@ public:
     bool is_callable() const { return underlying_type() == Type::Function; }
     bool is_void() const { return is_tuple() && subtypes().empty(); }
     bool is_bool() const { return underlying_type() == Type::Bool; }
+    bool is_list() const { return underlying_type() == Type::List; }
     bool is_tuple() const { return underlying_type() == Type::Tuple; }
     bool is_struct() const { return underlying_type() == Type::Struct; }
 
-    bool is_generic() const;
+    bool is_generic() const;  // deep check, e.g. T, [T], Int->T
+    bool is_unknown_or_generic() const { return is_unknown() || is_generic(); }
     void replace_var(SymbolPointer var, const TypeInfo& ti);
 
     // If the type is function without args, get its return type.
@@ -267,6 +269,8 @@ struct Signature {
     bool has_nonvoid_params() const;
     bool has_any_generic() const { return has_generic_params() || has_generic_return_type() || has_generic_nonlocals(); }
 
+    unsigned arity() const noexcept { return unsigned(params.size()); }
+
     explicit operator bool() const { return !params.empty() || return_type; }
 
     bool operator==(const Signature& rhs) const = default;
@@ -278,6 +282,8 @@ struct Signature {
            ("params", params) ("return_type", return_type);
     }
 };
+
+using SignaturePtr = std::shared_ptr<Signature>;
 
 
 struct NamedType {
@@ -312,8 +318,8 @@ inline TypeInfo ti_string() { return TypeInfo(Type::String); }
 inline TypeInfo ti_stream() { return TypeInfo(Type::Stream); }
 inline TypeInfo ti_module() { return TypeInfo(Type::Module); }
 
-inline TypeInfo ti_function(std::shared_ptr<Signature>&& signature)
-{ return TypeInfo(std::forward<std::shared_ptr<Signature>>(signature)); }
+inline TypeInfo ti_function(SignaturePtr&& signature)
+{ return TypeInfo(std::forward<SignaturePtr>(signature)); }
 
 inline TypeInfo ti_list(TypeInfo&& elem) { return TypeInfo(TypeInfo::list_of, std::forward<TypeInfo>(elem)); }
 inline TypeInfo ti_chars() { return TypeInfo{TypeInfo::list_of, ti_char()}; }

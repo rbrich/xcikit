@@ -93,7 +93,7 @@ endif()
 
 # Link with tinfo if available
 if (XCI_WITH_TERMINFO)
-    target_link_libraries(xci-core PRIVATE terminfo::terminfo)
+    target_link_libraries(xci-core PRIVATE Terminfo::terminfo)
 endif()
 
 if (BUILD_SHARED_LIBS)

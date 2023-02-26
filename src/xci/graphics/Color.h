@@ -1,7 +1,7 @@
 // Color.h created on 2018-03-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_COLOR_H
@@ -9,6 +9,8 @@
 
 #include <cstdint>
 #include <tuple>
+#include <string_view>
+#include <ostream>
 
 namespace xci::graphics {
 
@@ -46,11 +48,35 @@ struct Color {
     /// Predefined named colors
     static constexpr Color Transparent() { return {0, 0, 0, 0}; }
     static constexpr Color Black() { return {0, 0, 0}; }
+    static constexpr Color Grey() { return {128, 128, 128}; }
+    static constexpr Color Silver() { return {192, 192, 192}; }
     static constexpr Color White() { return {255, 255, 255}; }
     static constexpr Color Red() { return {255, 0, 0}; }
-    static constexpr Color Green() { return {0, 255, 0}; }
+    static constexpr Color Lime() { return {0, 255, 0}; }
     static constexpr Color Blue() { return {0, 0, 255}; }
+    static constexpr Color Cyan() { return {0, 255, 255}; }
+    static constexpr Color Magenta() { return {255, 0, 255}; }
     static constexpr Color Yellow() { return {255, 255, 0}; }
+    static constexpr Color Maroon() { return {128, 0, 0}; }
+    static constexpr Color Green() { return {0, 128, 0}; }
+    static constexpr Color Navy() { return {0, 0, 128}; }
+    static constexpr Color Teal() { return {0, 128, 128}; }
+    static constexpr Color Purple() { return {128, 0, 128}; }
+    static constexpr Color Olive() { return {128, 128, 0}; }
+
+    /// Parse color from string spec
+    ///
+    /// Supported formats:
+    /// * named color, e.g. "Black" (case insensitive)
+    /// * palette index / 1-2 hex digits, e.g. #07
+    /// * RGB / 3 hex digits, e.g. `#08f`
+    /// * RGBA / 4 hex digits, e.g. `#08f7`
+    /// * RGB / 6 hex digits, e.g. `#0080ff`
+    /// * RGBA / 8 hex digits, e.g. `#0080ff77`
+    ///
+    /// When the spec doesn't match any of these formats or any of known color names,
+    /// an error message is logged and the color is set to Red.
+    explicit Color(std::string_view spec);
 
     // Access components as float values (0.0 .. 1.0)
     // See FloatColor below for conversion of whole Color to float[4] format
@@ -67,6 +93,10 @@ struct Color {
     constexpr bool operator==(Color rhs) const
         { return std::tie(r, g, b, a) == std::tie(rhs.r, rhs.g, rhs.b, rhs.a); }
     constexpr bool operator!=(Color rhs) const { return !(rhs == *this); }
+
+    friend std::ostream& operator <<(std::ostream& s, Color c) {
+        return s << "Color(" << int(c.r) << ',' << int(c.g) << ',' << int(c.b) << ',' << int(c.a) << ')';
+    }
 
     // Direct access to components
     uint8_t r = 0;    // red
