@@ -184,7 +184,7 @@ elif [[ ${PLATFORM} = MINGW* ]] ; then
     PLATFORM="windows$(uname | cut -d- -f2)"
 fi
 
-VERSION=$(conan inspect . --raw version)$(git rev-parse --short HEAD 2>/dev/null | sed 's/^/+/' ; :)
+VERSION=$(cat "${ROOT_DIR}/VERSION")$(git rev-parse --short HEAD 2>/dev/null | sed 's/^/+/' ; :)
 BUILD_CONFIG="${PLATFORM}-${ARCH}-${BUILD_TYPE}"
 [[ -z "${GENERATOR}" ]] && setup_ninja && GENERATOR="Ninja"
 [[ -n "${GENERATOR}" ]] && CMAKE_ARGS+=(-G "${GENERATOR}")
@@ -204,10 +204,10 @@ if [[ -z "$component_default" ]]; then
         name_upper="$(echo "$name" | tr '[:lower:]' '[:upper:]')"
         if [[ -z "${!component_var}" ]] ; then
             CMAKE_ARGS+=(-D "XCI_${name_upper}=OFF")
-            CONAN_ARGS+=(-o "xcikit:${name}=False")
+            CONAN_ARGS+=(-o "xcikit/*:${name}=False")
         else
             CMAKE_ARGS+=(-D "XCI_${name_upper}=ON")
-            CONAN_ARGS+=(-o "xcikit:${name}=True")
+            CONAN_ARGS+=(-o "xcikit/*:${name}=True")
             DETECT_ARGS+=("${name}")
         fi
     done
@@ -223,17 +223,17 @@ if [[ -z "$part_default" ]]; then
         name_upper="$(echo "$name" | tr '[:lower:]' '[:upper:]')"
         if [[ -z "${!part_var}" ]] ; then
             CMAKE_ARGS+=(-D "BUILD_${name_upper}=OFF")
-            CONAN_ARGS+=(-o "xcikit:${name}=False")
+            CONAN_ARGS+=(-o "xcikit/*:${name}=False")
         else
             CMAKE_ARGS+=(-D "BUILD_${name_upper}=ON")
-            CONAN_ARGS+=(-o "xcikit:${name}=True")
+            CONAN_ARGS+=(-o "xcikit/*:${name}=True")
             DETECT_ARGS+=("${name}")
         fi
     done
 else
     DETECT_ARGS+=("${PARTS[@]}")
     for name in "${PARTS[@]}" ; do
-        CONAN_ARGS+=(-o "xcikit:${name}=True")
+        CONAN_ARGS+=(-o "xcikit/*:${name}=True")
     done
 fi
 

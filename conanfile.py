@@ -198,7 +198,7 @@ class XcikitConan(ConanFile):
     def layout(self):
         cmake_layout(self)
 
-    def _add_dep(self, opt: str, component: conans.model.build_info.Component,
+    def _add_dep(self, opt: str, component: conans.model.build_info._Component,
                  cmake_dep: str, conan_dep=None):
         opt_val = self.options.get_safe(opt)
         if opt_val is None:  # system option deleted
