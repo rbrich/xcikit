@@ -14,6 +14,7 @@
 # * `upstream` - when installing directly from upstream (instead of via ConanCenter),
 #                specifies the repo and commit to download: "<site> <repo> <commit>"
 # * `prereq` - what option from `conanfile.py` requires this dependency
+#              (multiple options are evaluated as either-or)
 #
 # Run `precache_upstream_deps.py` to download and export `upstream` deps as specified.
 # This is alternative to ConanCenter, but may be needed when a fix didn't yet make it
@@ -58,8 +59,7 @@ requirements:
     cmake: "spirv-cross/"
     conan: "spirv-cross/cci.20211113"
     prereq:
-      - graphics
-      - tools
+      - shed_tool
   freetype:
     cmake: "Freetype/2.10.0"
     conan: "freetype/2.13.0"
@@ -73,7 +73,7 @@ requirements:
   hyperscan:
     cmake: "Hyperscan/"
     prereq:
-      - tools
+      - ff_tool
   boost:
     cmake: "Boost/1.75.0"
     conan: "pfr/2.0.3"

@@ -28,6 +28,13 @@ class XcikitConan(ConanFile):
         "tests": [True, False],
         "benchmarks": [True, False],
 
+        # Individual tools
+        "dati_tool": [True, False],
+        "ff_tool": [True, False],
+        "fire_tool": [True, False],
+        "shed_tool": [True, False],
+        "tc_tool": [True, False],
+
         # System dependencies (instead of Conan):
         "system_fmt": [True, False],
         "system_zlib": [True, False],
@@ -63,6 +70,13 @@ class XcikitConan(ConanFile):
         "examples": True,
         "tests": True,
         "benchmarks": True,
+
+        # Individual tools
+        "dati_tool": True,
+        "ff_tool": True,
+        "fire_tool": True,
+        "shed_tool": True,
+        "tc_tool": True,
 
         # System dependencies (instead of Conan):
         "system_fmt": False,
@@ -100,15 +114,6 @@ class XcikitConan(ConanFile):
 
     _cmake = None
 
-    def _check_prereq(self, prereq):
-        if not prereq:
-            return True
-        for p in prereq:
-            # Missing option -> forced enabled (see self.configure)
-            if self.options.get_safe(p, True):
-                return True
-        return False
-
     def config_options(self):
         if self.settings.os != "Linux":
             del self.options["vulkan-loader"].with_wsi_xcb
@@ -123,20 +128,58 @@ class XcikitConan(ConanFile):
             info.setdefault('prereq', [])
             yield info
 
+    def _check_prereq(self, prereq):
+        if not prereq:
+            return True
+        for p in prereq:
+            if getattr(self.options, p):
+                return True
+        return False
+
     def configure(self):
         tools.check_min_cppstd(self, "20")
-        # Dependent options - remove their requirements
+        remove_options = []
+        # Dependent options
         if self.options.widgets:
-            del self.options.text
-            del self.options.graphics
+            remove_options += ["text", "graphics"]
+            self.options.text = True
+            self.options.graphics = True
         elif self.options.text:
-            del self.options.graphics
+            remove_options += ["graphics"]
+            self.options.graphics = True
         elif self.options.script:
-            del self.options.data
+            remove_options += ["data"]
+            self.options.data = True
+
+        if not self.options.tools:
+            remove_options += ["dati_tool", "ff_tool", "fire_tool", "shed_tool", "tc_tool"]
+            self.options.dati_tool = False
+            self.options.ff_tool = False
+            self.options.fire_tool = False
+            self.options.shed_tool = False
+            self.options.tc_tool = False
+        else:
+            if not self.options.widgets:
+                remove_options += ["shed_tool"]
+                self.options.shed_tool = False
+            if not self.options.script:
+                remove_options += ["fire_tool"]
+                self.options.fire_tool = False
+            if not self.options.data:
+                remove_options += ["dati_tool"]
+                self.options.dati_tool = False
+            if not self.options.with_hyperscan:
+                remove_options += ["ff_tool"]
+                self.options.ff_tool = False
+
         # Remove system_ options for disabled components
         for info in self._requirements():
             if not self._check_prereq(info['prereq']):
                 self.options.remove(info['option'])
+
+        # Remove dependent / implicit options
+        for opt in remove_options:
+            self.options.remove(opt)
         if self.settings.os == "Emscripten":
             # These are imported from Emscripten Ports
             del self.options.system_zlib
@@ -162,7 +205,11 @@ class XcikitConan(ConanFile):
         defs["BUILD_TOOLS"] = self.options.tools
         defs["BUILD_EXAMPLES"] = self.options.examples
         defs["BUILD_TESTS"] = self.options.tests
-        defs["BUILD_BENCHMARKS"] = self.options.benchmarks
+        defs["BUILD_DATI_TOOL"] = self.options.get_safe('dati_tool', True)
+        defs["BUILD_FF_TOOL"] = self.options.get_safe('ff_tool', True)
+        defs["BUILD_FIRE_TOOL"] = self.options.get_safe('fire_tool', True)
+        defs["BUILD_SHED_TOOL"] = self.options.get_safe('shed_tool', True)
+        defs["BUILD_TC_TOOL"] = self.options.get_safe('tc_tool', True)
         defs["XCI_WITH_HYPERSCAN"] = self.options.get_safe('with_hyperscan', False)
 
     def _configure_cmake(self):

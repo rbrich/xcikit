@@ -37,6 +37,14 @@ def add_required_components(options):
             result.add('graphics')
         if name == 'script':
             result.add('data')
+        if name == 'tools':
+            if 'widgets' in result:
+                result.add('shed_tool')
+            if 'script' in result:
+                result.add('fire_tool')
+            if 'data' in result:
+                result.add('dati_tool')
+            result |= {'ff_tool', 'tc_tool'}
     return result
 
 
