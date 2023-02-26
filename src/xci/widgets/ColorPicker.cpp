@@ -63,7 +63,7 @@ void ColorPicker::resize(View& view)
 
     rect.w += sample_w + padding + 4*spinner_w;
     set_size(rect.size());
-    set_baseline(-rect.y);
+    set_baseline(m_spinner_r.baseline());
 
     m_spinner_r.set_position({sample_w + padding + spinner_w*0, 0_fb});
     m_spinner_g.set_position({sample_w + padding + spinner_w*1, 0_fb});

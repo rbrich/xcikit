@@ -7,10 +7,9 @@
 /// Shader Editor (shed) tool
 /// A tool for developing GLSL shaders.
 
-#include "compile_shader.h"
-#include "reflect_shader.h"
+#include "ShaderCompiler.h"
+#include "UniformEditor.h"
 
-#include <xci/widgets/Form.h>
 #include <xci/widgets/Label.h>
 #include <xci/graphics/Window.h>
 #include <xci/graphics/shape/Polygon.h>
@@ -23,13 +22,13 @@
 using namespace xci::core;
 using namespace xci::core::argparser;
 using namespace xci::text;
-using namespace xci::widgets;
+using namespace xci::shed;
 
 
 static constexpr auto c_version = "0.1";
 
 
-static bool reload_shader(ShaderCompiler& sc, Shader& shader, ReflectShader& refl,
+static bool reload_shader(ShaderCompiler& sc, Shader& shader, UniformEditor& unifed,
                           fs::path vert_path, fs::path frag_path)
 {
     auto vert_spv = sc.compile_shader(ShaderStage::Vertex, vert_path);
@@ -44,27 +43,11 @@ static bool reload_shader(ShaderCompiler& sc, Shader& shader, ReflectShader& ref
         return false;
     }
 
-    refl.reflect(frag_spv);
+    auto res = sc.reflect_shader(frag_spv);
+    if (res)
+        unifed.populate_form(res);
 
     return shader.load_from_memory(vert_spv, frag_spv);
-}
-
-
-static void populate_uniforms(Primitives& prim, Form& form, const ReflectShader& refl)
-{
-    form.clear();
-    form.add_label("Uniforms:").layout().set_default_font_style(FontStyle::Bold);
-
-    for (const auto& block : refl.get_uniform_blocks()) {
-        for (const auto& member : block.members) {
-            static Color color = Color::Yellow();
-            form.add_input(member.name, color);
-        }
-    }
-
-    prim.clear_uniforms();
-    prim.add_uniform(1, Color::White(), Color::Green());
-    prim.add_uniform(2, 1.0f, 2.0f);
 }
 
 
@@ -114,13 +97,6 @@ int main(int argc, const char* argv[])
     if (!theme.load_default())
         return EXIT_FAILURE;
 
-    ShaderCompiler sc;
-    ReflectShader refl;
-
-    Shader shader {renderer};
-    if (!reload_shader(sc, shader, refl, vert_path, frag_path))
-        return EXIT_FAILURE;
-
     FSDispatch watch;
     std::atomic_bool reload {false};
     auto reload_cb = [&reload](FSDispatch::Event ev) {
@@ -130,13 +106,18 @@ int main(int argc, const char* argv[])
     if (!watch.add_watch(vert_path, reload_cb) || !watch.add_watch(frag_path, reload_cb))
         return EXIT_FAILURE;
 
-    Form form {theme};
-
     Primitives prim {renderer,
                     VertexFormat::V2t2, PrimitiveType::TriFans};
-    prim.set_shader(shader);
     prim.set_blend(BlendFunc::AlphaBlend);
-    populate_uniforms(prim, form, refl);
+
+    UniformEditor unifed(theme);
+
+    Shader shader {renderer};
+    ShaderCompiler compiler;
+    if (!reload_shader(compiler, shader, unifed, vert_path, frag_path))
+        return EXIT_FAILURE;
+    prim.set_shader(shader);
+    unifed.setup_uniforms(prim);
 
     Polygon poly {renderer};
 
@@ -170,12 +151,13 @@ int main(int argc, const char* argv[])
 
         if (reload) {
             reload = false;
-            (void) reload_shader(sc, shader, refl, vert_path, frag_path);
+            (void) reload_shader(compiler, shader, unifed, vert_path, frag_path);
             prim.set_shader(shader);
-            populate_uniforms(prim, form, refl);
-            prim.update();
-            form.resize(view);
+            unifed.resize(view);
         }
+
+        unifed.setup_uniforms(prim);
+        prim.update();
 
         // TODO: pass elapsed time to shader as uniform
     });
@@ -205,7 +187,7 @@ int main(int argc, const char* argv[])
 
     window.set_refresh_mode(RefreshMode::Periodic);
 
-    Bind bind(window, form);
+    Bind bind(window, unifed);
     window.display();
     return EXIT_SUCCESS;
 }

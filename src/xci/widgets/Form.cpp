@@ -17,6 +17,7 @@ void Form::clear()
     m_labels.clear();
     m_text_inputs.clear();
     m_checkboxes.clear();
+    m_spinners.clear();
     m_color_pickers.clear();
 }
 
@@ -61,6 +62,23 @@ void Form::add_input(const std::string& label, bool& checkbox)
         checkbox = p_checkbox->checked();
     });
     add_child(m_checkboxes.back());
+    add_hint(Form::Hint::NextRow);
+}
+
+
+void Form::add_input(const std::string& label, float& spinner)
+{
+    // Label
+    m_labels.emplace_back(theme(), label);
+    add_child(m_labels.back());
+    add_hint(Form::Hint::NextColumn);
+    // Checkbox
+    m_spinners.emplace_back(theme(), spinner);
+    auto* p_spinner = &m_spinners.back();
+    m_spinners.back().on_change([p_spinner, &spinner](View&) {
+        spinner = p_spinner->value();
+    });
+    add_child(m_spinners.back());
     add_hint(Form::Hint::NextRow);
 }
 

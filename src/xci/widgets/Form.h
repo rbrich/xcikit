@@ -11,6 +11,7 @@
 #include <xci/widgets/Label.h>
 #include <xci/widgets/TextInput.h>
 #include <xci/widgets/Checkbox.h>
+#include <xci/widgets/Spinner.h>
 #include <xci/widgets/ColorPicker.h>
 #include <xci/core/container/ChunkedStack.h>
 
@@ -29,6 +30,7 @@ public:
     Label& add_label(const std::string& label);
     void add_input(const std::string& label, std::string& text_input);
     void add_input(const std::string& label, bool& checkbox);
+    void add_input(const std::string& label, float& spinner);
     void add_input(const std::string& label, Color& color);
 
     // Low-level interface
@@ -60,6 +62,7 @@ private:
     core::ChunkedStack<Label> m_labels;
     core::ChunkedStack<TextInput> m_text_inputs;
     core::ChunkedStack<Checkbox> m_checkboxes;
+    core::ChunkedStack<Spinner> m_spinners;
     core::ChunkedStack<ColorPicker> m_color_pickers;
 };
 
