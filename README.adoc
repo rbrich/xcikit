@@ -225,13 +225,14 @@ Installing the dependencies with *_system package managers_*:
 +
 ----
 apt install libzip-dev cmake ninja-build
-pip3 install conan
+pip3 install 'conan<2.0'
 ----
 - macOS (Homebrew):
 +
 ----
 # Tools
-brew install cmake ninja ccache conan
+brew install cmake ninja ccache
+pip3 install 'conan<2.0'
 # Libs
 brew install pegtl libzip freetype glfw doxygen catch2 google-benchmark hyperscan
 ----
@@ -240,7 +241,7 @@ brew install pegtl libzip freetype glfw doxygen catch2 google-benchmark hypersca
 ----
 # Tools
 port install cmake ninja ccache
-pip3 install conan
+pip3 install 'conan<2.0'
 # Libs
 port install vulkan-* MoltenVK glfw-devel harfbuzz-devel hyperscan libfmt catch2
 ----
@@ -338,7 +339,7 @@ What doesn't work:
 
     * `git` (to clone the project)
     * `cmake`, `ninja` (build tools)
-    * `conan` (C++ package manager)
+    * `conan 1.x` (C++ package manager)
     * `cl` (VS compiler)
 
 4. Beginning from the last one:
@@ -350,7 +351,7 @@ What doesn't work:
     * Now we should have `cl`, `cmake` and `ninja` working.
     * (For convenience, add https://stackoverflow.com/a/69027383/6013024[Git Bash + VS] configuration to https://docs.microsoft.com/en-us/windows/terminal/[Windows Terminal].)
 
-5. Install conan: `pip install conan` (Python should also work via VS developer tools)
+5. Install conan: `pip install 'conan<2.0'` (Python should also work via VS developer tools)
 
 6. Run `./build.sh`
 
@@ -364,11 +365,11 @@ Works with Clion, and may work with Visual Studio (I did not try).
 Open the project, let the IDE load the top-level `CMakeLists.txt`.
 Add the following cmake parameter, so it also installs Conan dependencies:
 
-```
+----
 -DCONAN_INSTALL=ON
-```
+----
 
-You still need `conan` command working. Install it either via `pip` or use the standalone installer from https://conan.io/.
+You still need `conan` command working.
 
 [#emscripten]
 === Porting to Emscripten
