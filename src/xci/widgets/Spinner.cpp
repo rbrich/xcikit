@@ -141,7 +141,7 @@ void Spinner::scroll_event(View& view, const ScrollEvent& ev)
     if (last_hover() != LastHover::Inside)
         return;
 
-    change_value(view, m_step * round(ev.offset.y * 10));
+    change_value(view, m_step * std::round(ev.offset.y * 10));
 }
 
 

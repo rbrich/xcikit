@@ -1,4 +1,3 @@
-find_package(GLSLC REQUIRED)
 find_package(spirv-cross REQUIRED)
 
 # shed (Shader Editor)
