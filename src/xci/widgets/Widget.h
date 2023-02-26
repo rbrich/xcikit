@@ -11,6 +11,7 @@
 #include <xci/graphics/Window.h>
 #include <xci/graphics/View.h>
 #include <xci/core/geometry.h>
+#include <xci/core/mixin.h>
 #include <utility>
 #include <vector>
 
@@ -25,7 +26,7 @@ struct State {
     bool focused = false;
 };
 
-class Widget {
+class Widget: private core::NonMovable, private core::NonCopyable {
 public:
     explicit Widget(Theme& theme) : m_theme(theme) {}
     virtual ~Widget() = default;

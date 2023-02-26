@@ -24,7 +24,7 @@ public:
     void set_color(Color color) { m_color = color; }
     Color color() const { return m_color; }
 
-    using ChangeCallback = std::function<void(View&)>;
+    using ChangeCallback = std::function<void(ColorPicker&)>;
     void on_change(ChangeCallback cb) { m_change_cb = std::move(cb); }
 
     void resize(View& view) override;
@@ -35,7 +35,7 @@ public:
     //bool mouse_button_event(View& view, const MouseBtnEvent& ev) override;
 
 private:
-    void value_changed(View& view);
+    void value_changed();
 
     Spinner m_spinner_r;
     Spinner m_spinner_g;

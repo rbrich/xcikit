@@ -33,7 +33,7 @@ public:
     void set_decoration_color(graphics::Color fill, graphics::Color outline);
     void set_text_color(graphics::Color color) { m_layout.set_default_color(color); }
 
-    using ChangeCallback = std::function<void(View&)>;
+    using ChangeCallback = std::function<void(TextInput&)>;
     void on_change(ChangeCallback cb) { m_change_cb = std::move(cb); }
 
     void resize(View& view) override;

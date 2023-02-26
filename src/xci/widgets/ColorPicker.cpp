@@ -32,7 +32,7 @@ ColorPicker::ColorPicker(Theme& theme, Color color)
         spinner.get().set_decoration_color(Color::Transparent(), Color::Transparent());
         spinner.get().set_outline_thickness(0_fb);
         spinner.get().set_padding({0.35_vp, 0.7_vp});
-        spinner.get().on_change([this](View& view) { value_changed(view); });
+        spinner.get().on_change([this](Spinner&) { value_changed(); });
         add_child(spinner.get());
     }
 }
@@ -95,7 +95,7 @@ void ColorPicker::draw(View& view)
 }
 
 
-void ColorPicker::value_changed(View& view)
+void ColorPicker::value_changed()
 {
     m_color = {
         uint8_t(m_spinner_r.value()),
@@ -104,7 +104,7 @@ void ColorPicker::value_changed(View& view)
         uint8_t(m_spinner_a.value()),
     };
     if (m_change_cb)
-        m_change_cb(view);
+        m_change_cb(*this);
     m_sample_box.update(m_color, m_decoration);
 }
 

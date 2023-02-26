@@ -32,7 +32,7 @@ public:
     using FormatCb = std::function<std::string(float value)>;
     void set_format_cb(FormatCb&& cb) { m_format_cb = std::move(cb); update_text(); }
 
-    using ChangeCallback = std::function<void(View&)>;
+    using ChangeCallback = std::function<void(Spinner&)>;
     void on_change(ChangeCallback cb) { m_change_cb = std::move(cb); }
 
     void resize(View& view) override;

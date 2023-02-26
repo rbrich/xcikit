@@ -111,6 +111,10 @@ int main(int argc, const char* argv[])
     prim.set_blend(BlendFunc::AlphaBlend);
 
     UniformEditor unifed(theme);
+    unifed.on_change([&prim](UniformEditor& o) {
+        o.setup_uniforms(prim);
+        prim.update();
+    });
 
     Shader shader {renderer};
     ShaderCompiler compiler;
@@ -153,11 +157,10 @@ int main(int argc, const char* argv[])
             reload = false;
             (void) reload_shader(compiler, shader, unifed, vert_path, frag_path);
             prim.set_shader(shader);
+            unifed.setup_uniforms(prim);
+            prim.update();
             unifed.resize(view);
         }
-
-        unifed.setup_uniforms(prim);
-        prim.update();
 
         // TODO: pass elapsed time to shader as uniform
     });

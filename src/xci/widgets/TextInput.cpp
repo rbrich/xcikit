@@ -161,7 +161,7 @@ bool TextInput::key_event(View& view, const KeyEvent& ev)
     resize(view);
     view.refresh();
     if (m_change_cb)
-        m_change_cb(view);
+        m_change_cb(*this);
     return true;
 }
 
@@ -173,7 +173,7 @@ void TextInput::char_event(View& view, const CharEvent& ev)
     resize(view);
     view.refresh();
     if (m_change_cb)
-        m_change_cb(view);
+        m_change_cb(*this);
 }
 
 

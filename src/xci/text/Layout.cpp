@@ -25,74 +25,84 @@ void Layout::clear()
 }
 
 
-void Layout::set_default_page_width(VariUnits width)
+Layout& Layout::set_default_page_width(VariUnits width)
 {
     m_default_width = width;
     m_page.clear();
+    return *this;
 }
 
 
-void Layout::set_default_font(Font* font)
+Layout& Layout::set_default_font(Font* font)
 {
     m_default_style.set_font(font);
     m_page.clear();
+    return *this;
 }
 
 
-void Layout::set_default_font_size(VariUnits size, bool allow_scale)
+Layout& Layout::set_default_font_size(VariUnits size, bool allow_scale)
 {
     m_default_style.set_size(size);
     m_default_style.set_allow_scale(allow_scale);
     m_page.clear();
+    return *this;
 }
 
 
-void Layout::set_default_font_style(FontStyle font_style)
+Layout& Layout::set_default_font_style(FontStyle font_style)
 {
     m_default_style.set_font_style(font_style);
     m_page.clear();
+    return *this;
 }
 
 
-void Layout::set_default_font_weight(uint16_t weight)
+Layout& Layout::set_default_font_weight(uint16_t weight)
 {
     m_default_style.set_font_weight(weight);
     m_page.clear();
+    return *this;
 }
 
 
-void Layout::set_default_color(graphics::Color color)
+Layout& Layout::set_default_color(graphics::Color color)
 {
     m_default_style.set_color(color);
     m_page.clear();
+    return *this;
 }
 
 
-void Layout::set_default_outline_radius(VariUnits radius)
+Layout& Layout::set_default_outline_radius(VariUnits radius)
 {
     m_default_style.set_outline_radius(radius);
     m_page.clear();
+    return *this;
 }
 
 
-void Layout::set_default_outline_color(graphics::Color color)
+Layout& Layout::set_default_outline_color(graphics::Color color)
 {
     m_default_style.set_outline_color(color);
     m_page.clear();
+    return *this;
 }
 
 
-void Layout::set_default_tab_stops(std::vector<VariUnits> stops)
+Layout& Layout::set_default_tab_stops(std::vector<VariUnits> stops)
 {
     m_default_tab_stops = std::move(stops);
     m_page.clear();
+    return *this;
 }
 
 
-void Layout::set_default_alignment(Alignment alignment)
+Layout& Layout::set_default_alignment(Alignment alignment)
 {
     m_default_alignment = alignment;
     m_page.clear();
+    return *this;
 }
 
 

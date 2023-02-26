@@ -25,7 +25,10 @@ UniformEditor::UniformEditor(Theme& theme)
 void UniformEditor::populate_form(const ShaderCompiler::ShaderResources& res)
 {
     m_form.clear();
-    m_form.add_label("Uniforms:").layout().set_default_font_style(FontStyle::Bold);
+    m_form.add_label("Uniforms:").layout()
+            .set_default_font_style(FontStyle::Bold)
+            .set_default_outline_color(Color::Black())
+            .set_default_outline_radius(1_px);
 
     static std::array color_shuffle = {Color::Green(), Color::White(), Color::Olive(), Color::Teal()};
     unsigned color_idx = 0;
@@ -34,16 +37,34 @@ void UniformEditor::populate_form(const ShaderCompiler::ShaderResources& res)
     for (const auto& block : res.uniform_blocks) {
         for (const auto& member : block.members) {
             // set binding for last member only
-            unsigned binding = (&member == &block.members.back())? block.binding : ~0u;
+            const unsigned binding = (&member == &block.members.back())? block.binding : ~0u;
             if (member.vec_size == 1) {
                 m_uniforms.emplace_back(Uniform{0.0f, binding});
-                m_form.add_input(member.name, get<float>(m_uniforms.back().value));
+                float& value = get<float>(m_uniforms.back().value);
+                auto [label, spinner] = m_form.add_input(member.name, value);
+                label.layout()
+                        .set_default_outline_color(Color::Black())
+                        .set_default_outline_radius(1_px);
+                spinner.on_change([this, &value](Spinner& o) {
+                    value = o.value();
+                    if (m_change_cb)
+                        m_change_cb(*this);
+                });
             } else if (member.vec_size == 4) {
                 Color color = color_shuffle[color_idx++];
                 if (color_idx >= color_shuffle.size())
                     color_idx = 0;
                 m_uniforms.emplace_back(Uniform{color, binding});
-                m_form.add_input(member.name, get<Color>(m_uniforms.back().value));
+                Color& value = get<Color>(m_uniforms.back().value);
+                auto [label, color_picker] = m_form.add_input(member.name, value);
+                label.layout()
+                        .set_default_outline_color(Color::Black())
+                        .set_default_outline_radius(1_px);
+                color_picker.on_change([this, &value](ColorPicker& o) {
+                    value = o.color();
+                    if (m_change_cb)
+                        m_change_cb(*this);
+                });
             }
         }
     }

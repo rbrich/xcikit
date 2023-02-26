@@ -180,7 +180,7 @@ void Spinner::change_value(View& view, float change)
     if (m_value < m_lower_bound)
         m_value = m_lower_bound;
     if (m_change_cb)
-        m_change_cb(view);
+        m_change_cb(*this);
     update_text();
     view.finish_draw();
     m_layout.typeset(view);

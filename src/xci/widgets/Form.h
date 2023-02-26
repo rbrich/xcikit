@@ -27,11 +27,11 @@ public:
     void clear();
 
     // High-level interface
-    Label& add_label(const std::string& label);
-    void add_input(const std::string& label, std::string& text_input);
-    void add_input(const std::string& label, bool& checkbox);
-    void add_input(const std::string& label, float& spinner);
-    void add_input(const std::string& label, Color& color);
+    auto add_label(const std::string& label) -> Label&;
+    auto add_input(const std::string& label, std::string& text) -> std::pair<Label&, TextInput&>;
+    auto add_input(const std::string& label, bool& value) -> std::pair<Label&, Checkbox&>;
+    auto add_input(const std::string& label, float& value) -> std::pair<Label&, Spinner&>;
+    auto add_input(const std::string& label, Color& color) -> std::pair<Label&, ColorPicker&>;
 
     // Low-level interface
     enum class Hint {

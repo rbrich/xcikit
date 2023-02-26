@@ -40,16 +40,16 @@ public:
     void clear();
 
     // These are not affected by `clear`
-    void set_default_page_width(VariUnits width);
-    void set_default_font(Font* font);
-    void set_default_font_size(VariUnits size, bool allow_scale = true);
-    void set_default_font_style(FontStyle font_style);
-    void set_default_font_weight(uint16_t weight);
-    void set_default_color(Color color);
-    void set_default_outline_radius(VariUnits radius);
-    void set_default_outline_color(Color color);
-    void set_default_tab_stops(std::vector<VariUnits> stops);
-    void set_default_alignment(Alignment alignment);
+    Layout& set_default_page_width(VariUnits width);
+    Layout& set_default_font(Font* font);
+    Layout& set_default_font_size(VariUnits size, bool allow_scale = true);
+    Layout& set_default_font_style(FontStyle font_style);
+    Layout& set_default_font_weight(uint16_t weight);
+    Layout& set_default_color(Color color);
+    Layout& set_default_outline_radius(VariUnits radius);
+    Layout& set_default_outline_color(Color color);
+    Layout& set_default_tab_stops(std::vector<VariUnits> stops);
+    Layout& set_default_alignment(Alignment alignment);
 
     const Style& default_style() const { return m_default_style; }
 

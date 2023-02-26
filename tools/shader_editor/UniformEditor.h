@@ -13,6 +13,7 @@
 #include <xci/graphics/Primitives.h>
 #include <deque>
 #include <variant>
+#include <functional>
 
 namespace xci::shed {
 
@@ -27,6 +28,9 @@ public:
 
     void setup_uniforms(Primitives& prim);
 
+    using ChangeCallback = std::function<void(UniformEditor&)>;
+    void on_change(ChangeCallback cb) { m_change_cb = std::move(cb); }
+
 private:
     Form m_form;
 
@@ -35,6 +39,7 @@ private:
         unsigned binding = ~0u;  // only set for last uniform in the block
     };
     std::deque<Uniform> m_uniforms;
+    ChangeCallback m_change_cb;
 };
 
 

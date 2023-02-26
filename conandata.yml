@@ -55,6 +55,7 @@ requirements:
     prereq:
       - graphics
   spirv-cross:
+    cmake: "spirv-cross/"
     conan: "spirv-cross/cci.20211113"
     prereq:
       - graphics
