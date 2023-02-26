@@ -10,7 +10,7 @@ FROM emscripten/emsdk:3.1.31 AS builder
 RUN echo "dev tools"; apt-get update && apt-get install --no-install-recommends -y \
     gdb ninja-build python3-setuptools && rm -rf /var/lib/apt/lists/*
 
-RUN echo "conan"; pip3 --no-cache-dir install conan
+RUN echo "conan"; pip3 --no-cache-dir install 'conan<2.0'
 
 ARG UID=10001
 RUN useradd -m -p np -u ${UID} -s /bin/bash builder
