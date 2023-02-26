@@ -1,8 +1,11 @@
+# The compiler.version must match Clang version inside the image:
+#     /emsdk/upstream/bin/clang++ --version
+
 [settings]
 os=Emscripten
 arch=wasm
 compiler=clang
-compiler.version=16
+compiler.version=17
 compiler.cppstd=20
 build_type=Release
 [options]
