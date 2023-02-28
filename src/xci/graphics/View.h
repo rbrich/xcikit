@@ -120,6 +120,7 @@ public:
     // Cannot overload operators, because we have implicit ctor from actual units.
     VariUnits mul(float v);
 
+    operator bool() const { return m_storage != 0; }
     friend std::ostream& operator <<(std::ostream& s, VariUnits rhs);
 
 private:

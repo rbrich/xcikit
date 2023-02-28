@@ -125,7 +125,17 @@ int main(int argc, const char* argv[])
 
     Polygon poly {renderer};
 
+    struct {
+        bool all : 1 = false;
+        bool frame : 1 = false;
+        bool uniforms : 1 = false;
+    } hide;
+
     window.set_size_callback([&](View& view) {
+        auto tl = view.viewport_top_left({45_vp, 1_vp});
+        unifed.set_position({-tl.x, tl.y});
+
+        // a quad with the shader
         prim.clear();
         prim.begin_primitive();
         prim.add_vertex(view.vp_to_fb({-49_vp, -49_vp})).uv(-1, -1);
@@ -135,6 +145,7 @@ int main(int argc, const char* argv[])
         prim.end_primitive();
         prim.update();
 
+        // frame
         poly.clear();
         poly.add_polygon(view.vp_to_fb({0_vp, 0_vp}),
                          std::vector{
@@ -166,17 +177,24 @@ int main(int argc, const char* argv[])
     });
 
     window.set_draw_callback([&](View& view) {
-        auto pop_offset = view.push_offset(view.to_fb(
-                view.viewport_top_left({0.5 * view.viewport_size().x, 50_vp})));
         prim.draw(view);
-        poly.draw(view);
+        if (!hide.all && !hide.frame)
+            poly.draw(view);
     });
 
-    window.set_key_callback([&window](View& v, const KeyEvent& ev) {
+    window.set_key_callback([&window, &hide, &unifed](View& v, const KeyEvent& ev) {
         if (ev.action != Action::Press)
             return;
         switch (ev.key) {
             case Key::Escape:
+                hide.all = ! hide.all;
+                break;
+            case Key::F:
+                hide.frame = ! hide.frame;
+                break;
+            case Key::U:
+                hide.uniforms = ! hide.uniforms;
+                break;
             case Key::Q:
                 window.close();
                 break;
@@ -186,6 +204,7 @@ int main(int argc, const char* argv[])
             default:
                 break;
         }
+        unifed.set_hidden(hide.all || hide.uniforms);
     });
 
     window.set_refresh_mode(RefreshMode::Periodic);
