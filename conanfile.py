@@ -28,7 +28,7 @@ class XcikitConan(ConanFile):
         "tests": [True, False],
         "benchmarks": [True, False],
 
-        # Individual tools
+        # Individual tools ("tools" must be enabled too)
         "dati_tool": [True, False],
         "ff_tool": [True, False],
         "fire_tool": [True, False],

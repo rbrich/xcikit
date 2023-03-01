@@ -21,11 +21,19 @@ run() { echo "➤➤➤ $*"; "$@"; }
 
 print_usage()
 {
-    echo "Usage: ./build.sh [PHASE, ...] [COMPONENT, ...] [PART, ...] [-G CMAKE_GENERATOR] [-j JOBS] [-D CMAKE_DEF, ...]"
+    echo "Usage: ./build.sh [PHASE, ...] [COMPONENT, ...] [PART, ...] [TOOL, ...]"
+    echo "                  [-G CMAKE_GENERATOR] [-j JOBS] [-D CMAKE_DEF, ...]"
     echo "                  [--debug|--minsize] [--emscripten] [--unity] [--tidy] [--update]"
+    echo
     echo "Where: PHASE = clean | deps | config | build | test | install | package | graphviz (default: deps..install)"
     echo "       COMPONENT = core | data | script | graphics | text | widgets (default: all)"
-    echo "       PART = libs | tools | examples | tests | benchmarks (default: all)"
+    echo "       PART = libs | tools | examples | tests | benchmarks (default: all, 'libs' are implicit)"
+    echo "       TOOL = dati | ff | fire | shed | tc (default: all, narrows 'tools')"
+    echo
+    echo "Group aliases:"
+    echo "       only-ff => core tools ff"
+    echo "       only-shed => widgets tools shed"
+    echo
     echo "Other options:"
     echo "      -G CMAKE_GENERATOR      Unix Makefiles | Ninja | ... (default: Ninja if available, Unix Makefiles otherwise)"
     echo "      -j JOBS                 Parallel jobs for build and test phases"
@@ -83,6 +91,7 @@ header()
 phase_default=yes
 component_default=yes
 part_default=yes
+tool_default=yes
 while [[ $# -gt 0 ]] ; do
     case "$1" in
         clean | deps | config | build | test | install | package | graphviz )
@@ -96,6 +105,26 @@ while [[ $# -gt 0 ]] ; do
         libs | tools | examples | tests | benchmarks )
             part_default=
             declare "part_$1=yes"
+            shift 1 ;;
+        dati | ff | fire | shed | tc )
+            tool_default=
+            declare "tool_$1=yes"
+            shift 1 ;;
+        only-ff )
+            component_default=
+            component_core=yes
+            part_default=
+            part_tools=yes
+            tool_default=
+            tool_ff=yes
+            shift 1 ;;
+        only-shed )
+            component_default=
+            component_widgets=yes
+            part_default=
+            part_tools=yes
+            tool_default=
+            tool_shed=yes
             shift 1 ;;
         -G )
             GENERATOR="$2"
@@ -237,6 +266,28 @@ else
     done
 fi
 
+TOOLS=(dati ff fire shed tc)
+if [[ -z "$tool_default" ]]; then
+    # Disable tools that were not selected
+    for name in "${TOOLS[@]}" ; do
+        tool_var="tool_$name"
+        name_upper="$(echo "$name" | tr '[:lower:]' '[:upper:]')"
+        if [[ -z "${!tool_var}" ]] ; then
+            CMAKE_ARGS+=(-D "BUILD_${name_upper}_TOOL=OFF")
+            CONAN_ARGS+=(-o "xcikit:${name}_tool=False")
+        else
+            CMAKE_ARGS+=(-D "BUILD_${name_upper}_TOOL=ON")
+            CONAN_ARGS+=(-o "xcikit:${name}_tool=True")
+            DETECT_ARGS+=("${name}_tool")
+        fi
+    done
+else
+    DETECT_ARGS+=("${TOOLS[@]}_tool")
+    for name in "${TOOLS[@]}" ; do
+        CONAN_ARGS+=(-o "xcikit:${name}_tool=True")
+    done
+fi
+
 CMAKE_ARGS+=(-D"XCI_INSTALL_DEVEL=${INSTALL_DEVEL}")
 
 # Ninja: force compiler colors, if the output goes to terminal
@@ -282,7 +333,7 @@ if phase deps; then
         if [[ "$EMSCRIPTEN" -eq 0 ]]; then
             if [[ ! -f 'system_deps.txt' ]] ; then
                 echo 'Checking for preinstalled dependencies...'
-                "${PYTHON}" "${ROOT_DIR}/detect_system_deps.py" "${DETECT_ARGS[@]}" | tee 'system_deps.txt'
+                run "${PYTHON}" "${ROOT_DIR}/detect_system_deps.py" "${DETECT_ARGS[@]}" | tee 'system_deps.txt'
             fi
             # shellcheck disable=SC2207
             CONAN_ARGS+=($(tail -n1 'system_deps.txt'))
@@ -359,8 +410,13 @@ if phase graphviz; then
     (
         cd "${BUILD_DIR}"
         cmake --graphviz=deps.dot "${ROOT_DIR}"
+        echo
+        echo '# Dependency graph:'
+        sed -nE 's#.*// (.*xci-.*)#\1#p' deps.dot
+        echo
+        echo '# SVG export:'
         dot -T svg -o deps.svg deps.dot
-        command -v open >/dev/null && open deps.svg
+        realpath deps.svg
     )
     echo
 fi
