@@ -39,6 +39,7 @@ struct Units {
     bool operator !=(Units rhs) const { return value != rhs.value; }
 
     Units operator -() const { return -value; }
+    Units operator +() const { return +value; }
     Units operator +=(Units rhs) { value += rhs.value; return value; }
     Units operator -=(Units rhs) { value -= rhs.value; return value; }
     friend Units operator *(Units lhs, Units rhs) { return lhs.value * rhs.value; }

@@ -118,6 +118,7 @@ public:
 #endif
 
     VertexData& uv(float u, float v) { add(u); add(v); return *this; }
+    VertexData& uv(Vec2f uv) { add(uv.x); add(uv.y); return *this; }
     VertexData& uvw(float u, float v, float w) { add(u); add(v); add(w); return *this; }
     VertexData& color(Color color) {
         add(color.red_f());

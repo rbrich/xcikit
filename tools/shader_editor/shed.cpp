@@ -8,11 +8,11 @@
 /// A tool for developing GLSL shaders.
 
 #include "ShaderCompiler.h"
+#include "CoordEditor.h"
 #include "UniformEditor.h"
 
 #include <xci/widgets/Label.h>
 #include <xci/graphics/Window.h>
-#include <xci/graphics/shape/Polygon.h>
 #include <xci/graphics/vulkan/VulkanError.h>
 #include <xci/core/ArgParser.h>
 #include <xci/core/TermCtl.h>
@@ -123,7 +123,7 @@ int main(int argc, const char* argv[])
     prim.set_shader(shader);
     unifed.setup_uniforms(prim);
 
-    Polygon poly {renderer};
+    CoordEditor coord_editor(theme, prim);
 
     struct {
         bool all : 1 = false;
@@ -134,28 +134,6 @@ int main(int argc, const char* argv[])
     window.set_size_callback([&](View& view) {
         auto tl = view.viewport_top_left({45_vp, 1_vp});
         unifed.set_position({-tl.x, tl.y});
-
-        // a quad with the shader
-        prim.clear();
-        prim.begin_primitive();
-        prim.add_vertex(view.vp_to_fb({-49_vp, -49_vp})).uv(-1, -1);
-        prim.add_vertex(view.vp_to_fb({-49_vp, 49_vp})).uv(-1, 1);
-        prim.add_vertex(view.vp_to_fb({49_vp, 49_vp})).uv(1, 1);
-        prim.add_vertex(view.vp_to_fb({49_vp, -49_vp})).uv(1, -1);
-        prim.end_primitive();
-        prim.update();
-
-        // frame
-        poly.clear();
-        poly.add_polygon(view.vp_to_fb({0_vp, 0_vp}),
-                         std::vector{
-                                 view.vp_to_fb({-49_vp, -49_vp}),
-                                 view.vp_to_fb({-49_vp, 49_vp}),
-                                 view.vp_to_fb({49_vp, 49_vp}),
-                                 view.vp_to_fb({49_vp, -49_vp}),
-                                 view.vp_to_fb({-49_vp, -49_vp})},
-                         1_fb);
-        poly.update(Color::Transparent(), Color::Grey());
     });
 
     float elapsed_acc = 0;
@@ -178,11 +156,9 @@ int main(int argc, const char* argv[])
 
     window.set_draw_callback([&](View& view) {
         prim.draw(view);
-        if (!hide.all && !hide.frame)
-            poly.draw(view);
     });
 
-    window.set_key_callback([&window, &hide, &unifed](View& v, const KeyEvent& ev) {
+    window.set_key_callback([&](View& v, const KeyEvent& ev) {
         if (ev.action != Action::Press)
             return;
         switch (ev.key) {
@@ -195,6 +171,10 @@ int main(int argc, const char* argv[])
             case Key::U:
                 hide.uniforms = ! hide.uniforms;
                 break;
+            case Key::T:
+                coord_editor.toggle_triangle();
+                coord_editor.resize(v);
+                break;
             case Key::Q:
                 window.close();
                 break;
@@ -205,11 +185,16 @@ int main(int argc, const char* argv[])
                 break;
         }
         unifed.set_hidden(hide.all || hide.uniforms);
+        coord_editor.set_hidden(hide.all || hide.frame);
     });
 
     window.set_refresh_mode(RefreshMode::Periodic);
 
-    Bind bind(window, unifed);
+    Composite root {theme};
+    root.add_child(coord_editor);
+    root.add_child(unifed);
+
+    Bind bind(window, root);
     window.display();
     return EXIT_SUCCESS;
 }
