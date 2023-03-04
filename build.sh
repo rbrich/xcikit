@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
+set -e -o pipefail
 cd "$(dirname "$0")"
 
 ROOT_DIR="$PWD"
@@ -53,12 +53,6 @@ print_usage()
     echo "      --toolchain FILE        CMAKE_TOOLCHAIN_FILE - select build toolchain"
 }
 
-phase()
-{
-    local PHASE="phase_$1"
-    test -n "${!PHASE}" -o \( -n "${phase_default}" -a "$1" != "clean" -a "$1" != "package" -a "$1" != "graphviz" \)
-}
-
 setup_ninja()
 {
     command -v ninja >/dev/null || return 1
@@ -87,44 +81,47 @@ header()
     fi
 }
 
-# parse args...
+
 phase_default=yes
 component_default=yes
 part_default=yes
 tool_default=yes
+
+phase()
+{
+    local PHASE="phase_$1"
+    test -n "${!PHASE}" -o \( -n "${phase_default}" -a "$1" != "clean" -a "$1" != "package" -a "$1" != "graphviz" \)
+}
+
+enable_phase()      { phase_default=; eval "phase_$1=yes"; }
+enable_component()  { component_default=; eval "component_$1=yes"; }
+enable_part()       { part_default=; eval "part_$1=yes"; }
+enable_tool()       { tool_default=; eval "tool_$1=yes"; }
+
+# parse args...
 while [[ $# -gt 0 ]] ; do
     case "$1" in
         clean | deps | config | build | test | install | package | graphviz )
-            phase_default=
-            declare "phase_$1=yes"
+            enable_phase "$1"
             shift 1 ;;
         core | data | script | graphics | text | widgets )
-            component_default=
-            declare "component_$1=yes"
+            enable_component "$1"
             shift 1 ;;
         libs | tools | examples | tests | benchmarks )
-            part_default=
-            declare "part_$1=yes"
+            enable_part "$1"
             shift 1 ;;
         dati | ff | fire | shed | tc )
-            tool_default=
-            declare "tool_$1=yes"
+            enable_tool "$1"
             shift 1 ;;
         only-ff )
-            component_default=
-            component_core=yes
-            part_default=
-            part_tools=yes
-            tool_default=
-            tool_ff=yes
+            enable_component 'core'
+            enable_part 'tools'
+            enable_tool 'ff'
             shift 1 ;;
         only-shed )
-            component_default=
-            component_widgets=yes
-            part_default=
-            part_tools=yes
-            tool_default=
-            tool_shed=yes
+            enable_component 'widgets'
+            enable_part 'tools'
+            enable_tool 'shed'
             shift 1 ;;
         -G )
             GENERATOR="$2"
