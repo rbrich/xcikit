@@ -79,6 +79,10 @@ struct Vec2 {
         return *this;
     }
 
+    operator bool() const noexcept {
+        return x != T{} || y != T{};
+    }
+
 public:
     T x {};
     T y {};

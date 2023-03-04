@@ -51,6 +51,25 @@ void CoordEditor::draw(View& view)
 
 void CoordEditor::mouse_pos_event(View& view, const MousePosEvent& ev)
 {
+    // pan
+    if (m_dragging && m_active_vertex == ~0u) {
+        if (!m_pan_pos) {
+            m_pan_pos = ev.pos;
+            return;  // initialized
+        }
+        const auto d = view.fb_to_vp(ev.pos - m_pan_pos);
+        if (!d)
+            return;  // no change
+        m_pan_pos = ev.pos;
+        auto& vs = m_is_triangle? m_triangle_vertices : m_quad_vertices;
+        for (auto& v : vs) {
+            v.xy += d;
+        }
+        m_need_reconstruct = true;
+        return;
+    }
+
+    // drag vertices
     if (m_dragging && m_active_vertex != ~0u) {
         auto& v = (m_is_triangle? m_triangle_vertices : m_quad_vertices)[m_active_vertex];
         const auto np = view.fb_to_vp(ev.pos);
@@ -88,6 +107,7 @@ bool CoordEditor::mouse_button_event(View& view, const MouseBtnEvent& ev)
 
     if (!m_dragging && ev.action == Action::Press) {
         m_dragging = true;
+        m_pan_pos = {};
         return true;
     }
 

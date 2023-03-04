@@ -65,6 +65,7 @@ private:
             {{+49_vp, -49_vp}, {+1, -1}},
     };
     unsigned m_active_vertex = ~0u;
+    FramebufferCoords m_pan_pos;
     bool m_dragging = false;
     bool m_is_triangle = true;
     bool m_need_reconstruct = false;
