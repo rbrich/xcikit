@@ -64,9 +64,7 @@ option(XCI_DEBUG_VULKAN "Log info about Vulkan calls and errors." OFF)
 option(XCI_DEBUG_TRACE "Enable trace log messages." OFF)
 option(XCI_DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
 
-# The C++20 standard will stay as minimal requirement until C++23 is well established among compilers.
-# That means at least until year 2024. By that time, xcikit should have an actual release branch.
-# Another major version will be created before bumping the requirement.
+# Minimal requirement is (at least partial) C++20.
 set(XCI_CXX_STANDARD 20)
 
 set(XCIKIT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
