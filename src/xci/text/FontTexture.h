@@ -10,7 +10,7 @@
 #include <rbp/MaxRectsBinPack.h>
 #include <xci/graphics/Renderer.h>
 #include <xci/graphics/Texture.h>
-#include <xci/core/geometry/Vec2.h>
+#include <xci/geometry/Vec2.h>
 
 namespace xci::text {
 

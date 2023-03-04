@@ -5,7 +5,7 @@
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Triangle.h"
-#include <xci/core/geometry/Vec2.h>
+#include <xci/geometry/Vec2.h>
 
 
 namespace xci::graphics {

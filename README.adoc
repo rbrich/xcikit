@@ -162,10 +162,13 @@ Core utilities. These have little or no dependencies. Mostly just stdlib + OS AP
 * `dispatch.h` - Watch files and notify on changes. Useful for auto-reloading of resource files.
 * `file.h` - Read whole files. Path utilities (dirname, basename, …).
 * `format.h` - Formatted strings. Similar to Python's `format()`.
-* `geometry/*.h` - 2D vector, rectangle. Linear algebra.
 * `rtti.h` - C++ demangled type names.
 * `string.h` - String manipulation, unicode utilities.
 * `sys.h` - A replacement for `std::this_thread::get_id()`, providing the canonical TID.
+
+=== xci::geometry
+
+Linear algebra: vectors, matrices, 2D rectangle, geometric computations.
 
 === xci::compat
 

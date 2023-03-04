@@ -10,7 +10,7 @@
 #include "View.h"
 #include <xci/graphics/vulkan/CommandBuffers.h>
 #include <xci/graphics/Color.h>
-#include <xci/core/geometry/Vec2.h>
+#include <xci/geometry/Vec2.h>
 #include <xci/core/mixin.h>
 
 #include <vulkan/vulkan.h>

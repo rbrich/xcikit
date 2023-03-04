@@ -10,7 +10,7 @@
 #include <xci/graphics/Renderer.h>
 #include <xci/graphics/Primitives.h>
 #include <xci/graphics/Color.h>
-#include <xci/core/geometry/Vec2.h>
+#include <xci/geometry/Vec2.h>
 
 namespace xci::graphics { class View; }
 

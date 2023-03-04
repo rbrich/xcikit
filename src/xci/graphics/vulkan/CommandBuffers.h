@@ -8,8 +8,8 @@
 #define XCI_GRAPHICS_VULKAN_COMMAND_BUFFERS_H
 
 #include <vulkan/vulkan.h>
-#include <xci/core/geometry/Vec2.h>
-#include <xci/core/geometry/Rect.h>
+#include <xci/geometry/Vec2.h>
+#include <xci/geometry/Rect.h>
 #include <array>
 #include <vector>
 #include <memory>

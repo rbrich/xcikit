@@ -4,8 +4,8 @@
 // Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
-#ifndef XCI_CORE_GEOMETRY_RECT_H
-#define XCI_CORE_GEOMETRY_RECT_H
+#ifndef XCI_GEOMETRY_RECT_H
+#define XCI_GEOMETRY_RECT_H
 
 #include "Vec2.h"
 
