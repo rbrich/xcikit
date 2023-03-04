@@ -6,7 +6,7 @@
 
 #include "TextInput.h"
 #include <xci/core/string.h>
-#include <xci/core/geometry.h>
+#include <xci/core/geometry/Vec2.h>
 
 namespace xci::widgets {
 

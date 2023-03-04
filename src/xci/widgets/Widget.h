@@ -10,7 +10,7 @@
 #include <xci/widgets/Theme.h>
 #include <xci/graphics/Window.h>
 #include <xci/graphics/View.h>
-#include <xci/core/geometry.h>
+#include <xci/core/geometry/Vec2.h>
 #include <xci/core/mixin.h>
 #include <utility>
 #include <vector>

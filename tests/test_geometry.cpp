@@ -6,7 +6,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include <xci/core/geometry.h>
+#include <xci/core/geometry/Vec2.h>
 
 using namespace xci::core;
 

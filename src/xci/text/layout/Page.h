@@ -10,7 +10,7 @@
 #include <xci/text/Style.h>
 #include <xci/graphics/Sprites.h>
 #include <xci/graphics/shape/Rectangle.h>
-#include <xci/core/geometry.h>
+#include <xci/core/geometry/Vec2.h>
 #include <xci/core/container/ChunkedStack.h>
 
 #include <string>

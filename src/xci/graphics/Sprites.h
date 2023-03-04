@@ -1,7 +1,7 @@
 // Sprites.h created on 2018-03-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_SPRITES_H
@@ -10,7 +10,7 @@
 #include <xci/graphics/Renderer.h>
 #include <xci/graphics/Primitives.h>
 #include <xci/graphics/Color.h>
-#include <xci/core/geometry.h>
+#include <xci/core/geometry/Vec2.h>
 
 namespace xci::graphics { class View; }
 

@@ -1,13 +1,14 @@
 // View.h created on 2018-03-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_VIEW_H
 #define XCI_GRAPHICS_VIEW_H
 
-#include <xci/core/geometry.h>
+#include <xci/core/geometry/Vec2.h>
+#include <xci/core/geometry/Rect.h>
 #include <xci/compat/macros.h>
 
 #include <fmt/ostream.h>

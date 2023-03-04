@@ -1,14 +1,14 @@
 // Text.h created on 2018-03-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_TEXT_TEXT_H
 #define XCI_TEXT_TEXT_H
 
 #include "Layout.h"
-#include <xci/core/geometry.h>
+#include <xci/core/geometry/Vec2.h>
 #include <xci/graphics/View.h>
 
 #include <string>

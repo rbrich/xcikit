@@ -1,14 +1,14 @@
 // FontFace.h created on 2018-03-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_TEXT_FONTFACE_H
 #define XCI_TEXT_FONTFACE_H
 
 #include <xci/text/FontLibrary.h>
-#include <xci/core/geometry.h>
+#include <xci/core/geometry/Vec2.h>
 #include <xci/core/Buffer.h>
 #include <xci/core/mixin.h>
 
