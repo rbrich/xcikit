@@ -102,4 +102,4 @@ using Rect_f = Rect<float>;
 
 } // namespace xci::core
 
-#endif //XCI_CORE_GEOMETRY_H
+#endif // include guard

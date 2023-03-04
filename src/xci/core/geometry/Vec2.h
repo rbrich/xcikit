@@ -197,4 +197,4 @@ T dist_point_to_line(const Vec2<T>& point, const Vec2<T>& line_p1, const Vec2<T>
 
 } // namespace xci::core
 
-#endif //XCI_CORE_GEOMETRY_H
+#endif // include guard
