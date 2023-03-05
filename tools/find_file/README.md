@@ -71,14 +71,8 @@ Not planned:
 Build
 -----
 
-Configure cmake to build just `ff` tool + necessary libs (run from repo root, not tools subdirectory):
+Build only ff tool `ff` tool + necessary libs (run from repo root, not tools subdirectory):
 
 ```bash
-mkdir build; cd build
-cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release --install-prefix $PWD/artifacts \
-  -DXCI_WITH_HYPERSCAN=ON -DXCI_WITH_PEGTL=OFF \
-  -DXCI_GRAPHICS=OFF -DXCI_DATA=OFF -DXCI_SCRIPT=OFF -DXCI_TEXT=OFF -DXCI_WIDGETS=OFF \
-  -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_BENCHMARKS=OFF -DXCI_INSTALL_DEVEL=OFF
+./build.sh only-ff
 ```
-
-Note that `ccmake` tool may be more convenient to flip the switches, especially if the above command line becomes outdated.

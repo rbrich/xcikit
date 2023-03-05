@@ -27,7 +27,7 @@ RUN echo "xcikit deps"; apt-get update && apt-get install --no-install-recommend
     librange-v3-dev libglfw3-dev glslang-tools libvulkan-dev libfreetype6-dev libharfbuzz-dev \
     libhyperscan-dev libbenchmark-dev && rm -rf /var/lib/apt/lists/*
 
-RUN echo "conan"; pip3 --no-cache-dir install conan
+RUN echo "conan"; pip3 --no-cache-dir install 'conan<2.0'
 
 ARG UID=10002
 RUN useradd -m -p np -u ${UID} -s /bin/bash builder

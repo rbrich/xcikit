@@ -35,6 +35,7 @@ option(BUILD_BENCHMARKS "Disable to skip building benchmarks." ON)
 option(BUILD_DATI_TOOL "Disable to skip building 'dati' (Data Inspect) tool." ON)
 option(BUILD_FF_TOOL "Disable to skip building 'ff' (Find File) tool." ON)
 option(BUILD_FIRE_TOOL "Disable to skip building 'fire' (Fire Script) tool." ON)
+option(BUILD_SHED_TOOL "Disable to skip building 'shed' (Shader Editor) tool." ON)
 option(BUILD_TC_TOOL "Disable to skip building 'tc' (Term Ctl) tool." ON)
 
 # Optional installation artifacts:
@@ -63,9 +64,7 @@ option(XCI_DEBUG_VULKAN "Log info about Vulkan calls and errors." OFF)
 option(XCI_DEBUG_TRACE "Enable trace log messages." OFF)
 option(XCI_DEBUG_MARKUP_DUMP_TOKENS "Text markup parser debugging." OFF)
 
-# The C++20 standard will stay as minimal requirement until C++23 is well established among compilers.
-# That means at least until year 2024. By that time, xcikit should have an actual release branch.
-# Another major version will be created before bumping the requirement.
+# Minimal requirement is (at least partial) C++20.
 set(XCI_CXX_STANDARD 20)
 
 set(XCIKIT_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
@@ -234,6 +233,9 @@ if (BUILD_TOOLS)
     if (BUILD_FIRE_TOOL AND XCI_SCRIPT)
         add_subdirectory(tools/fire_script)
     endif()
+    if (BUILD_SHED_TOOL AND XCI_WIDGETS)
+        add_subdirectory(tools/shader_editor)
+    endif()
 endif()
 
 
@@ -335,6 +337,8 @@ if (${BUILD_TOOLS})
     print_trgt("? dati! (req. xci-data)        " dati)
     print_trgt("? ff!   (req. Hyperscan)       " ff)
     print_trgt("? fire! (req. xci-script)      " fire)
+    print_trgt("? shed! (req. xci-widgets)     " shed)
+    print_trgt("? tc!                          " tc)
     pop_indent()
 endif()
 print_flag("? examples!                    " ${BUILD_EXAMPLES})

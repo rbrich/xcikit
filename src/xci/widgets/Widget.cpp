@@ -20,7 +20,7 @@ void Widget::set_position(const VariCoords& pos)
 {
     m_position_request = pos;
     if (pos.x.type() == VariUnits::Framebuffer && pos.y.type() == VariUnits::Framebuffer)
-        m_position = {pos.x.framebuffer(), pos.y.framebuffer()};
+        m_position = {pos.x.as_framebuffer(), pos.y.as_framebuffer()};
 }
 
 
@@ -28,7 +28,7 @@ void Widget::set_size(const VariSize& size)
 {
     m_size_request = size;
     if (size.x.type() == VariUnits::Framebuffer && size.y.type() == VariUnits::Framebuffer)
-        m_size = {size.x.framebuffer(), size.y.framebuffer()};
+        m_size = {size.x.as_framebuffer(), size.y.as_framebuffer()};
 }
 
 
@@ -107,8 +107,10 @@ void Composite::char_event(View& view, const CharEvent& ev)
 void Composite::mouse_pos_event(View& view, const MousePosEvent& ev)
 {
     auto pop_offset = view.push_offset(position());
-    for (auto& child : m_child)
-        child->mouse_pos_event(view, ev);
+    for (auto& child : m_child) {
+        if (!child->is_hidden())
+            child->mouse_pos_event(view, ev);
+    }
 }
 
 
@@ -116,6 +118,8 @@ bool Composite::mouse_button_event(View& view, const MouseBtnEvent& ev)
 {
     auto pop_offset = view.push_offset(position());
     for (auto& child : m_child) {
+        if (child->is_hidden())
+            continue;
         // Propagate the event
         bool handled = child->mouse_button_event(view, ev);
         if (handled)
@@ -127,9 +131,10 @@ bool Composite::mouse_button_event(View& view, const MouseBtnEvent& ev)
 
 void Composite::scroll_event(View& view, const ScrollEvent& ev)
 {
-    // TODO: mouse-over widget, enter/exit events, propagate scroll to only one Widget
-    for (auto& child : m_child)
-        child->scroll_event(view, ev);
+    for (auto& child : m_child) {
+        if (!child->is_hidden())
+            child->scroll_event(view, ev);
+    }
 }
 
 
@@ -138,6 +143,8 @@ bool Composite::click_focus(View& view, FramebufferCoords pos)
     bool handled = false;
     auto* original_focus = m_focus;
     for (auto& child : m_child) {
+        if (child->is_hidden())
+            continue;
         // Propagate the event
         if (child->click_focus(view, pos - position())) {
             m_focus = child;
@@ -268,7 +275,8 @@ Bind::Bind(graphics::Window& window, Widget& root)
     window.set_update_callback([&](View& v, std::chrono::nanoseconds t) {
         if (m_update_cb)
             m_update_cb(v, t);
-        root.update(v, State{ .elapsed = t });
+        if (!root.is_hidden())
+            root.update(v, State{ .elapsed = t });
     });
 
     m_size_cb = window.size_callback();
@@ -282,14 +290,15 @@ Bind::Bind(graphics::Window& window, Widget& root)
     window.set_draw_callback([&](View& v) {
         if (m_draw_cb)
             m_draw_cb(v);
-        root.draw(v);
+        if (!root.is_hidden())
+            root.draw(v);
     });
 
     m_key_cb = window.key_callback();
     window.set_key_callback([&](View& v, const KeyEvent& e) {
         if (m_key_cb)
             m_key_cb(v, e);
-        if (root.key_event(v, e))
+        if (root.is_hidden() || root.key_event(v, e))
             return;
         // Switch focus with Tab, Shift+Tab
         if (e.action == Action::Press && e.key == Key::Tab) {
@@ -307,29 +316,34 @@ Bind::Bind(graphics::Window& window, Widget& root)
     window.set_char_callback([&](View& v, const CharEvent& e) {
         if (m_char_cb)
             m_char_cb(v, e);
-        root.char_event(v, e);
+        if (!root.is_hidden())
+            root.char_event(v, e);
     });
 
     m_mpos_cb = window.mouse_position_callback();
     window.set_mouse_position_callback([&](View& v, const MousePosEvent& e) {
         if (m_mpos_cb)
             m_mpos_cb(v, e);
-        root.mouse_pos_event(v, e);
+        if (!root.is_hidden())
+            root.mouse_pos_event(v, e);
     });
 
     m_mbtn_cb = window.mouse_button_callback();
     window.set_mouse_button_callback([&](View& v, const MouseBtnEvent& e) {
         if (m_mbtn_cb)
             m_mbtn_cb(v, e);
-        root.click_focus(v, e.pos);
-        root.mouse_button_event(v, e);
+        if (!root.is_hidden()) {
+            root.click_focus(v, e.pos);
+            root.mouse_button_event(v, e);
+        }
     });
 
     m_scroll_cb = window.scroll_callback();
     window.set_scroll_callback([&](View& v, const ScrollEvent& e) {
         if (m_scroll_cb)
             m_scroll_cb(v, e);
-        root.scroll_event(v, e);
+        if (!root.is_hidden())
+            root.scroll_event(v, e);
     });
 }
 

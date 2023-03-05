@@ -58,7 +58,7 @@ int main(int argc, const char* argv[])
     // Form #1 output
     Label output_text(theme);
     output_text.set_position({10_vp, -25_vp});
-    output_text.text().set_color(Color(180, 100, 140));
+    output_text.set_color(Color(180, 100, 140));
     button.on_click([&output_text, &input_text, &checkbox1, &checkbox2]
                      (View& view) {
         auto text = fmt::format("Submitted:\n\n"
@@ -66,7 +66,7 @@ int main(int argc, const char* argv[])
                                 "checkbox1 = {}\n\n"
                                 "checkbox2 = {}\n\n",
                                 input_text, checkbox1, checkbox2);
-        output_text.text().set_string(text);
+        output_text.set_string(text);
         output_text.resize(view);
     });
     root.add_child(output_text);

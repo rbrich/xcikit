@@ -44,12 +44,12 @@ int main()
 
     // Setup hot reload
 
-    FSDispatchPtr watch = std::make_shared<FSDispatch>();
-    int wd = watch->add_watch(filename, [](FSDispatch::Event ev) {
+    FSDispatch watch;
+    bool wd = watch.add_watch(filename, [](FSDispatch::Event ev) {
         if (ev == FSDispatch::Event::Create || ev == FSDispatch::Event::Modify)
             reload = true;
     });
-    if (wd == -1)
+    if (!wd)
         return EXIT_FAILURE;
 
     // Main loop

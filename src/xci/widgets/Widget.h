@@ -10,13 +10,15 @@
 #include <xci/widgets/Theme.h>
 #include <xci/graphics/Window.h>
 #include <xci/graphics/View.h>
-#include <xci/core/geometry.h>
+#include <xci/geometry/Vec2.h>
+#include <xci/core/mixin.h>
 #include <utility>
 #include <vector>
 
 namespace xci::widgets {
 
 using namespace xci::graphics;
+using namespace xci::graphics::unit_literals;
 
 
 struct State {
@@ -24,7 +26,7 @@ struct State {
     bool focused = false;
 };
 
-class Widget {
+class Widget: private core::NonMovable, private core::NonCopyable {
 public:
     explicit Widget(Theme& theme) : m_theme(theme) {}
     virtual ~Widget() = default;
@@ -99,8 +101,7 @@ private:
 };
 
 
-// Manages list of child widgets and forwards events to them
-
+/// Manages list of child widgets and forwards events to them
 class Composite: public Widget {
 public:
     explicit Composite(Theme& theme) : Widget(theme) {}
@@ -140,7 +141,7 @@ private:
 };
 
 
-// Clickable widget mixin
+/// Clickable widget mixin
 class Clickable {
 public:
     using HoverCallback = std::function<void(View&, bool inside)>;
@@ -177,8 +178,27 @@ private:
     LastHover m_last_hover {LastHover::None};
 };
 
-// Connects window to root widget through event callbacks
 
+class Padded {
+public:
+    void set_padding(VariUnits padding) { m_padding = {padding, padding}; }
+    void set_padding(VariSize padding) { m_padding = padding; }
+
+protected:
+    void apply_padding(FramebufferRect& rect, const View& view) const {
+        rect.enlarge(padding_fb(view));
+    }
+
+    FramebufferSize padding_fb(const View& view) const {
+        return view.to_fb(m_padding);
+    }
+
+private:
+    VariSize m_padding = {0.7_vp, 0.7_vp};
+};
+
+
+/// Connects window to root widget through event callbacks
 class Bind {
 public:
     Bind(graphics::Window& window, Widget& root);

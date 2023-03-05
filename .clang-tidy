@@ -30,6 +30,7 @@ Checks: >
   modernize-*,
   -modernize-avoid-c-arrays,
   -modernize-deprecated-headers,
+  -modernize-use-auto,
   -modernize-use-nodiscard,
   -modernize-use-nullptr,
   -modernize-use-trailing-return-type,

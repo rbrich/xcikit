@@ -170,8 +170,7 @@ void Window::set_scroll_callback(Window::ScrollCallback scroll_cb)
 {
     m_scroll_cb = std::move(scroll_cb);
     if (m_scroll_cb) {
-        glfwSetScrollCallback(m_window, [](GLFWwindow* window, double xoffset,
-                                           double yoffset) {
+        glfwSetScrollCallback(m_window, [](GLFWwindow* window, double xoffset, double yoffset) {
             auto self = (Window*) glfwGetWindowUserPointer(window);
             self->m_scroll_cb(self->m_view, ScrollEvent{{float(xoffset), float(yoffset)}});
         });

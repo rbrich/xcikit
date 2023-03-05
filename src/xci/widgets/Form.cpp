@@ -1,7 +1,7 @@
 // Form.cpp created on 2018-06-22 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Form.h"
@@ -10,38 +10,101 @@
 namespace xci::widgets {
 
 
-void Form::add_input(const std::string& label, std::string& text_input)
+void Form::clear()
 {
-    // Label
-    m_labels.emplace_back(theme(), label);
-    add_child(m_labels.back());
-    add_hint(Form::Hint::NextColumn);
-    // TextInput
-    m_text_inputs.emplace_back(theme(), text_input);
-    auto* p_text_input = &m_text_inputs.back();
-    m_text_inputs.back().on_change([p_text_input, &text_input](View&) {
-        text_input = p_text_input->string();
-    });
-    add_child(m_text_inputs.back());
-    add_hint(Form::Hint::NextRow);
+    clear_children();
+    m_hint.clear();
+    m_labels.clear();
+    m_text_inputs.clear();
+    m_checkboxes.clear();
+    m_spinners.clear();
+    m_color_pickers.clear();
 }
 
 
-void Form::add_input(const std::string& label, bool& checkbox)
+Label& Form::add_label(const std::string& label)
+{
+    m_labels.emplace_back(theme(), label);
+    add_child(m_labels.back());
+    add_hint(Form::Hint::NextRow);
+    return m_labels.back();
+}
+
+
+auto Form::add_input(const std::string& label, std::string& text) -> std::pair<Label&, TextInput&>
 {
     // Label
     m_labels.emplace_back(theme(), label);
-    add_child(m_labels.back());
+    auto& w_label = m_labels.back();
+    add_child(w_label);
+    add_hint(Form::Hint::NextColumn);
+    // TextInput
+    m_text_inputs.emplace_back(theme(), text);
+    auto& w_text_input = m_text_inputs.back();
+    w_text_input.on_change([&text](TextInput& o) {
+        text = o.string();
+    });
+    add_child(w_text_input);
+    add_hint(Form::Hint::NextRow);
+    return {w_label, w_text_input};
+}
+
+
+auto Form::add_input(const std::string& label, bool& value) -> std::pair<Label&, Checkbox&>
+{
+    // Label
+    m_labels.emplace_back(theme(), label);
+    auto& w_label = m_labels.back();
+    add_child(w_label);
     add_hint(Form::Hint::NextColumn);
     // Checkbox
     m_checkboxes.emplace_back(theme());
-    m_checkboxes.back().set_checked(checkbox);
-    auto* p_checkbox = &m_checkboxes.back();
-    m_checkboxes.back().on_change([p_checkbox, &checkbox]() {
-        checkbox = p_checkbox->checked();
+    auto& w_checkbox = m_checkboxes.back();
+    w_checkbox.set_checked(value);
+    w_checkbox.on_change([&value](Checkbox& o) {
+        value = o.checked();
     });
-    add_child(m_checkboxes.back());
+    add_child(w_checkbox);
     add_hint(Form::Hint::NextRow);
+    return {w_label, w_checkbox};
+}
+
+
+auto Form::add_input(const std::string& label, float& value) -> std::pair<Label&, Spinner&>
+{
+    // Label
+    m_labels.emplace_back(theme(), label);
+    auto& w_label = m_labels.back();
+    add_child(w_label);
+    add_hint(Form::Hint::NextColumn);
+    // Checkbox
+    m_spinners.emplace_back(theme(), value);
+    auto& w_spinner = m_spinners.back();
+    w_spinner.on_change([&value](Spinner& o) {
+        value = o.value();
+    });
+    add_child(w_spinner);
+    add_hint(Form::Hint::NextRow);
+    return {w_label, w_spinner};
+}
+
+
+auto Form::add_input(const std::string& label, Color& color) -> std::pair<Label&, ColorPicker&>
+{
+    // Label
+    m_labels.emplace_back(theme(), label);
+    auto& w_label = m_labels.back();
+    add_child(w_label);
+    add_hint(Form::Hint::NextColumn);
+    // ColorPicker
+    m_color_pickers.emplace_back(theme(), color);
+    auto& w_color_picker = m_color_pickers.back();
+    w_color_picker.on_change([&color](ColorPicker& o) {
+        color = o.color();
+    });
+    add_child(w_color_picker);
+    add_hint(Form::Hint::NextRow);
+    return {w_label, w_color_picker};
 }
 
 

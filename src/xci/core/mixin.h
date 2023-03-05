@@ -20,6 +20,8 @@ public:
 protected:
     NonCopyable() = default;
     ~NonCopyable() = default;
+    NonCopyable(NonCopyable&&) = default;
+    NonCopyable& operator =(NonCopyable&&) = default;
 };
 
 

@@ -274,13 +274,13 @@ void ArgParser::validate() const
             if (shortopt != 0) {
                 if (std::find_if(shorts.cbegin(), shorts.cend(),
                         [shortopt](char v){ return shortopt == v; }) != shorts.cend())
-                    throw BadOptionDescription(fmt::format("name -{} repeated", shortopt), opt.desc());
+                    throw BadOptionDescription(fmt::format("duplicate name -{} in", shortopt), opt.desc());
                 shorts.push_back(shortopt);
             } else {
                 assert(!longopt.empty());
                 if (std::find_if(longs.cbegin(), longs.cend(),
                         [longopt](string_view v){ return longopt == v; }) != longs.cend())
-                    throw BadOptionDescription(fmt::format("name --{} repeated", longopt), opt.desc());
+                    throw BadOptionDescription(fmt::format("duplicate name --{} in", longopt), opt.desc());
                 longs.push_back(longopt);
             }
         });

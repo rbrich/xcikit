@@ -13,6 +13,7 @@
 #include <xci/graphics/shape/Ellipse.h>
 #include <xci/graphics/shape/Line.h>
 #include <xci/graphics/shape/Polygon.h>
+#include <xci/graphics/shape/Triangle.h>
 #include <xci/core/Vfs.h>
 #include <xci/config.h>
 #include <variant>
@@ -64,6 +65,9 @@ public:
                     vertices.emplace_back(center + ((0.3 + 0.2 * (i % 2)) * rect.size()).rotate(-angle * i));
                 }
                 shape.add_polygon(center, vertices, fill_color, outline_color, th);
+            } else if constexpr (std::is_same_v<T, ColoredTriangle>) {
+                shape.add_triangle({rect.x, rect.y}, {rect.x, rect.y+rect.h}, {rect.x+rect.w, rect.y},
+                                   fill_color, outline_color, th);
             }
         }, m_shape);
     }
@@ -87,7 +91,8 @@ public:
     }
 
 private:
-    std::variant<ColoredRectangle, ColoredRoundedRectangle, ColoredEllipse, ColoredLine, ColoredPolygon> m_shape;
+    std::variant<ColoredRectangle, ColoredRoundedRectangle, ColoredEllipse, ColoredLine,
+                 ColoredPolygon, ColoredTriangle> m_shape;
 };
 
 
@@ -109,7 +114,8 @@ int main(int argc, const char* argv[])
                            "[o] rounded rectangles\n"
                            "[e] ellipses\n"
                            "[l] lines\n"
-                           "[p] polygons\n");
+                           "[p] polygons\n"
+                           "[t] triangles\n");
     shapes_help.set_color(Color(200, 100, 50));
     Text option_help(font, "[a] antialiasing\n"
                            "[s] softness\n");
@@ -161,6 +167,9 @@ int main(int argc, const char* argv[])
                 break;
             case Key::P:
                 shape.switch_type<ColoredPolygon>(renderer);
+                break;
+            case Key::T:
+                shape.switch_type<ColoredTriangle>(renderer);
                 break;
             case Key::A:
                 antialiasing = !antialiasing;

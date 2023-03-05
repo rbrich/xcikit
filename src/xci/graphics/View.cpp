@@ -22,21 +22,21 @@ VariUnits::Type VariUnits::type() const
 }
 
 
-FramebufferPixels VariUnits::framebuffer() const
+FramebufferPixels VariUnits::as_framebuffer() const
 {
     assert(type() == Framebuffer);
     return { float(m_storage) / float(1<<10) };
 }
 
 
-ScreenPixels VariUnits::screen() const
+ScreenPixels VariUnits::as_screen() const
 {
     assert(type() == Screen);
     return { float(m_storage ^ 0x20000000) / float(1<<10) };
 }
 
 
-ViewportUnits VariUnits::viewport() const
+ViewportUnits VariUnits::as_viewport() const
 {
     assert(type() == Viewport);
     return { float(m_storage ^ 0x40000000) / float(1<<16) };
@@ -67,12 +67,23 @@ int32_t VariUnits::to_storage(ViewportUnits vp)
 }
 
 
+VariUnits VariUnits::mul(float v)
+{
+    switch (type()) {
+        case VariUnits::Framebuffer: return v * as_framebuffer();
+        case VariUnits::Screen: return v * as_screen();
+        case VariUnits::Viewport: return v * as_viewport();
+    }
+    XCI_UNREACHABLE;
+}
+
+
 std::ostream& operator<<(std::ostream& s, VariUnits rhs)
 {
     switch (rhs.type()) {
-        case VariUnits::Framebuffer: return s << rhs.framebuffer() << "fb";
-        case VariUnits::Screen: return s << rhs.screen() << "px";
-        case VariUnits::Viewport: return s << rhs.viewport() << "vp";
+        case VariUnits::Framebuffer: return s << rhs.as_framebuffer() << "fb";
+        case VariUnits::Screen: return s << rhs.as_screen() << "px";
+        case VariUnits::Viewport: return s << rhs.as_viewport() << "vp";
     }
     XCI_UNREACHABLE;
 }
@@ -187,6 +198,16 @@ ViewportCoords View::viewport_center() const
         return 0.5f * m_viewport_size;
     } else {
         return {0, 0};
+    }
+}
+
+
+ViewportCoords View::viewport_top_left(ViewportCoords offset) const
+{
+    if (m_origin == ViewOrigin::TopLeft) {
+        return offset;
+    } else {
+        return offset - 0.5f * m_viewport_size;
     }
 }
 

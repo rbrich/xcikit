@@ -1,14 +1,15 @@
 // CommandBuffers.h created on 2019-12-08 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2021 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_VULKAN_COMMAND_BUFFERS_H
 #define XCI_GRAPHICS_VULKAN_COMMAND_BUFFERS_H
 
 #include <vulkan/vulkan.h>
-#include <xci/core/geometry.h>
+#include <xci/geometry/Vec2.h>
+#include <xci/geometry/Rect.h>
 #include <array>
 #include <vector>
 #include <memory>

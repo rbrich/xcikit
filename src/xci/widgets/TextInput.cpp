@@ -6,7 +6,7 @@
 
 #include "TextInput.h"
 #include <xci/core/string.h>
-#include <xci/core/geometry.h>
+#include <xci/geometry/Vec2.h>
 
 namespace xci::widgets {
 
@@ -71,7 +71,7 @@ void TextInput::resize(View& view)
 
     auto rect = m_layout.bbox();
     rect.w = width;
-    rect.enlarge(view.to_fb(m_padding));
+    apply_padding(rect, view);
     set_size(rect.size());
     set_baseline(-rect.y);
     Widget::resize(view);
@@ -106,9 +106,9 @@ void TextInput::update(View& view, State state)
 void TextInput::draw(View& view)
 {
     auto rect = m_layout.bbox();
-    const auto padding = view.to_fb(m_padding);
-    auto pos = position() + FramebufferCoords{padding - rect.x - m_content_pos,
-                                              padding - rect.y};
+    const auto padding = padding_fb(view);
+    auto pos = position() + FramebufferCoords{padding.x - rect.x - m_content_pos,
+                                              padding.y - rect.y};
     m_bg_rect.draw(view, position());
     auto pop_crop = view.push_crop(aabb().enlarged(-view.to_fb(m_outline_thickness)));
     m_layout.draw(view, pos);
@@ -161,7 +161,7 @@ bool TextInput::key_event(View& view, const KeyEvent& ev)
     resize(view);
     view.refresh();
     if (m_change_cb)
-        m_change_cb(view);
+        m_change_cb(*this);
     return true;
 }
 
@@ -173,7 +173,7 @@ void TextInput::char_event(View& view, const CharEvent& ev)
     resize(view);
     view.refresh();
     if (m_change_cb)
-        m_change_cb(view);
+        m_change_cb(*this);
 }
 
 

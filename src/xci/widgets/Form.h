@@ -1,7 +1,7 @@
 // Form.h created on 2018-06-22 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_WIDGETS_FORM_H
@@ -11,6 +11,8 @@
 #include <xci/widgets/Label.h>
 #include <xci/widgets/TextInput.h>
 #include <xci/widgets/Checkbox.h>
+#include <xci/widgets/Spinner.h>
+#include <xci/widgets/ColorPicker.h>
 #include <xci/core/container/ChunkedStack.h>
 
 namespace xci::widgets {
@@ -22,9 +24,14 @@ class Form: public Composite {
 public:
     explicit Form(Theme& theme) : Composite(theme) {}
 
+    void clear();
+
     // High-level interface
-    void add_input(const std::string& label, std::string& text_input);
-    void add_input(const std::string& label, bool& checkbox);
+    auto add_label(const std::string& label) -> Label&;
+    auto add_input(const std::string& label, std::string& text) -> std::pair<Label&, TextInput&>;
+    auto add_input(const std::string& label, bool& value) -> std::pair<Label&, Checkbox&>;
+    auto add_input(const std::string& label, float& value) -> std::pair<Label&, Spinner&>;
+    auto add_input(const std::string& label, Color& color) -> std::pair<Label&, ColorPicker&>;
 
     // Low-level interface
     enum class Hint {
@@ -39,6 +46,8 @@ public:
     void resize(View& view) override;
 
 private:
+    using Composite::clear_children;
+
     VariCoords m_margin = {1_vp, 1_vp};
 
     struct ChildHint {
@@ -53,6 +62,8 @@ private:
     core::ChunkedStack<Label> m_labels;
     core::ChunkedStack<TextInput> m_text_inputs;
     core::ChunkedStack<Checkbox> m_checkboxes;
+    core::ChunkedStack<Spinner> m_spinners;
+    core::ChunkedStack<ColorPicker> m_color_pickers;
 };
 
 

@@ -1,14 +1,15 @@
 // Texture.h created on 2018-03-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 
 #ifndef XCI_GRAPHICS_TEXTURE_H
 #define XCI_GRAPHICS_TEXTURE_H
 
-#include <xci/core/geometry.h>
+#include <xci/geometry/Vec2.h>
+#include <xci/geometry/Rect.h>
 #include "vulkan/DeviceMemory.h"
 
 #include <vulkan/vulkan.h>
