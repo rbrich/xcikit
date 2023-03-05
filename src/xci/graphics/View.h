@@ -1,13 +1,14 @@
 // View.h created on 2018-03-04 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2022 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_GRAPHICS_VIEW_H
 #define XCI_GRAPHICS_VIEW_H
 
-#include <xci/core/geometry.h>
+#include <xci/geometry/Vec2.h>
+#include <xci/geometry/Rect.h>
 #include <xci/compat/macros.h>
 
 #include <fmt/ostream.h>
@@ -39,15 +40,13 @@ struct Units {
     bool operator !=(Units rhs) const { return value != rhs.value; }
 
     Units operator -() const { return -value; }
-    Units operator +(Units rhs) const { return value + rhs.value; }
-    Units operator -(Units rhs) const { return value - rhs.value; }
-    Units operator *(Units rhs) const { return value * rhs.value; }
-    Units operator /(Units rhs) const { return value / rhs.value; }
+    Units operator +() const { return +value; }
     Units operator +=(Units rhs) { value += rhs.value; return value; }
     Units operator -=(Units rhs) { value -= rhs.value; return value; }
-    friend Units operator *(T lhs, Units rhs) { return lhs * rhs.value; }
-    friend Units operator +(T lhs, Units rhs) { return lhs + rhs.value; }
-    friend Units operator -(T lhs, Units rhs) { return lhs - rhs.value; }
+    friend Units operator *(Units lhs, Units rhs) { return lhs.value * rhs.value; }
+    friend Units operator /(Units lhs, Units rhs) { return lhs.value / rhs.value; }
+    friend Units operator +(Units lhs, Units rhs) { return lhs.value + rhs.value; }
+    friend Units operator -(Units lhs, Units rhs) { return lhs.value - rhs.value; }
     friend std::ostream& operator <<(std::ostream& s, Units rhs) { return s << rhs.value; }
 
     constexpr Unit unit() const { return u; }
@@ -112,13 +111,18 @@ public:
 
     // Get contained value
     // Unchecked (assert in debug). Returns garbage when asked for different type than contained.
-    FramebufferPixels framebuffer() const;
-    ScreenPixels screen() const;
-    ViewportUnits viewport() const;
+    FramebufferPixels as_framebuffer() const;
+    ScreenPixels as_screen() const;
+    ViewportUnits as_viewport() const;
 
     // For tests
     int32_t raw_storage() const { return m_storage; }
 
+    // Limited operations directly on VariUnits.
+    // Cannot overload operators, because we have implicit ctor from actual units.
+    VariUnits mul(float v);
+
+    operator bool() const { return m_storage != 0; }
     friend std::ostream& operator <<(std::ostream& s, VariUnits rhs);
 
 private:
@@ -206,6 +210,7 @@ public:
     /// Coordinates of viewport center in viewport units.
     /// By default {0, 0}. With TopLeft origin, it will be e.g. {66.66, 50}
     ViewportCoords viewport_center() const;
+    ViewportCoords viewport_top_left(ViewportCoords offset = {}) const;
 
     // Convert units to framebuffer / screen:
 
@@ -219,9 +224,9 @@ public:
 
     FramebufferPixels to_fb(VariUnits value) const {
         switch (value.type()) {
-            case VariUnits::Framebuffer: return value.framebuffer();
-            case VariUnits::Screen: return px_to_fb(value.screen());
-            case VariUnits::Viewport: return vp_to_fb(value.viewport());
+            case VariUnits::Framebuffer: return value.as_framebuffer();
+            case VariUnits::Screen: return px_to_fb(value.as_screen());
+            case VariUnits::Viewport: return vp_to_fb(value.as_viewport());
         }
         XCI_UNREACHABLE;
     }
@@ -236,9 +241,9 @@ public:
 
     ScreenPixels to_px(VariUnits value) const {
         switch (value.type()) {
-            case VariUnits::Framebuffer: return fb_to_px(value.framebuffer());
-            case VariUnits::Screen: return value.screen();
-            case VariUnits::Viewport: return vp_to_px(value.viewport());
+            case VariUnits::Framebuffer: return fb_to_px(value.as_framebuffer());
+            case VariUnits::Screen: return value.as_screen();
+            case VariUnits::Viewport: return vp_to_px(value.as_viewport());
         }
         XCI_UNREACHABLE;
     }
@@ -258,9 +263,9 @@ public:
     FramebufferSize to_fb(VariSize size) const {
         assert(size.x.type() == size.y.type());
         switch (size.x.type()) {
-            case VariUnits::Framebuffer: return {size.x.framebuffer(), size.y.framebuffer()};
-            case VariUnits::Screen: return px_to_fb(ScreenSize{size.x.screen(), size.y.screen()});
-            case VariUnits::Viewport: return vp_to_fb(ViewportSize{size.x.viewport(), size.y.viewport()});
+            case VariUnits::Framebuffer: return {size.x.as_framebuffer(), size.y.as_framebuffer()};
+            case VariUnits::Screen: return px_to_fb(ScreenSize{size.x.as_screen(), size.y.as_screen()});
+            case VariUnits::Viewport: return vp_to_fb(ViewportSize{size.x.as_viewport(), size.y.as_viewport()});
         }
         XCI_UNREACHABLE;
     }
@@ -278,9 +283,9 @@ public:
     ScreenSize to_px(VariSize size) const {
         assert(size.x.type() == size.y.type());
         switch (size.x.type()) {
-            case VariUnits::Framebuffer: return fb_to_px(FramebufferSize{size.x.framebuffer(), size.y.framebuffer()});
-            case VariUnits::Screen: return {size.x.screen(), size.y.screen()};
-            case VariUnits::Viewport: return vp_to_px(ViewportSize{size.x.viewport(), size.y.viewport()});
+            case VariUnits::Framebuffer: return fb_to_px(FramebufferSize{size.x.as_framebuffer(), size.y.as_framebuffer()});
+            case VariUnits::Screen: return {size.x.as_screen(), size.y.as_screen()};
+            case VariUnits::Viewport: return vp_to_px(ViewportSize{size.x.as_viewport(), size.y.as_viewport()});
         }
         XCI_UNREACHABLE;
     }
@@ -324,9 +329,9 @@ public:
 
     ViewportUnits to_vp(VariUnits value) const {
         switch (value.type()) {
-            case VariUnits::Framebuffer: return fb_to_vp(value.framebuffer());
-            case VariUnits::Screen: return px_to_vp(value.screen());
-            case VariUnits::Viewport: return value.viewport();
+            case VariUnits::Framebuffer: return fb_to_vp(value.as_framebuffer());
+            case VariUnits::Screen: return px_to_vp(value.as_screen());
+            case VariUnits::Viewport: return value.as_viewport();
         }
         XCI_UNREACHABLE;
     }
@@ -385,7 +390,7 @@ public:
     // the UpdateCallback, ie.
     //      view.refresh();
     //      view.window()->wakeup();
-    // That is: redraw and generate empty event, thus skiping the next blocking
+    // That is: redraw and generate empty event, thus skipping the next blocking
     // wait for events and returning back to UpdateCallback, which wakes up again etc.
     void refresh() { m_needs_refresh = true; }
     bool pop_refresh();

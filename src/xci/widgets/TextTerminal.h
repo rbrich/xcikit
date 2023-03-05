@@ -14,7 +14,7 @@
 #include <xci/graphics/Primitives.h>
 #include <xci/graphics/View.h>
 #include <xci/graphics/Shader.h>
-#include <xci/core/geometry.h>
+#include <xci/geometry/Vec2.h>
 #include <string_view>
 #include <vector>
 #include <chrono>

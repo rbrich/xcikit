@@ -28,6 +28,7 @@ add_library(xci-graphics
     shape/Rectangle.cpp
     shape/RoundedRectangle.cpp
     shape/Shape.cpp
+    shape/Triangle.cpp
     vulkan/CommandBuffers.cpp
     vulkan/DescriptorPool.cpp
     vulkan/DeviceMemory.cpp

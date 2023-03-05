@@ -1,6 +1,3 @@
-// WORKAROUND: this must be included before log.h, seems to be bug in fmt/8.0.1 + GCC 10
-#include <fmt/ostream.h>
-
 #include <xci/graphics/Window.h>
 #include <xci/graphics/Renderer.h>
 #include <xci/graphics/vulkan/VulkanError.h>

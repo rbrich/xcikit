@@ -35,7 +35,7 @@ void Checkbox::set_checked(bool checked)
     set_icon(m_checked ? IconId::CheckBoxChecked
                        : IconId::CheckBoxUnchecked);
     if (m_change_cb)
-        m_change_cb();
+        m_change_cb(*this);
 }
 
 

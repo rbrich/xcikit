@@ -19,7 +19,7 @@ using xci::graphics::FramebufferPixels;
 using namespace xci::graphics::unit_literals;
 
 
-class TextInput: public Widget, public Clickable {
+class TextInput: public Widget, public Clickable, public Padded {
 public:
     explicit TextInput(Theme& theme, const std::string& string);
 
@@ -28,13 +28,12 @@ public:
 
     void set_font_size(VariUnits size) { m_layout.set_default_font_size(size); }
     void set_width(VariUnits width) { m_width = width; }
-    void set_padding(VariUnits padding) { m_padding = padding; }
     void set_outline_thickness(VariUnits thickness) { m_outline_thickness = thickness; }
 
     void set_decoration_color(graphics::Color fill, graphics::Color outline);
     void set_text_color(graphics::Color color) { m_layout.set_default_color(color); }
 
-    using ChangeCallback = std::function<void(View&)>;
+    using ChangeCallback = std::function<void(TextInput&)>;
     void on_change(ChangeCallback cb) { m_change_cb = std::move(cb); }
 
     void resize(View& view) override;
@@ -51,7 +50,6 @@ private:
     graphics::Rectangle m_bg_rect;
     graphics::Rectangle m_cursor_shape;
     VariUnits m_width = 20_vp;
-    VariUnits m_padding = 1_vp;
     VariUnits m_outline_thickness = 0.25_vp;
     Color m_fill_color = Color(10, 20, 40);
     Color m_outline_color;

@@ -282,6 +282,14 @@ bool Renderer::load_shader(ShaderId shader_id, Shader& shader)
             return shader.load_from_vfs(vfs(),
                     "shaders/ellipse_c.vert.spv",
                     "shaders/ellipse_c.frag.spv");
+        case ShaderId::Triangle:
+            return shader.load_from_vfs(vfs(),
+                    "shaders/polygon.vert.spv",
+                    "shaders/triangle.frag.spv");
+        case ShaderId::TriangleC:
+            return shader.load_from_vfs(vfs(),
+                    "shaders/polygon_c.vert.spv",
+                    "shaders/triangle_c.frag.spv");
         case ShaderId::Polygon:
             return shader.load_from_vfs(vfs(),
                     "shaders/polygon.vert.spv",

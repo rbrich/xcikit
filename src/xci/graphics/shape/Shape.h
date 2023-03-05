@@ -22,7 +22,7 @@ public:
 
     /// Draw all shapes to `view` at `pos`.
     /// Final shape position is `pos` + shapes' relative position
-    void draw(View& view, VariCoords pos) {
+    void draw(View& view, VariCoords pos = {}) {
         if (!m_primitives.empty())
             m_primitives.draw(view, pos);
     }

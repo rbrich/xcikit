@@ -29,6 +29,7 @@ def parse_args():
 
 def add_required_components(options):
     result = set(options)
+    all_tools = None
     for name in options:
         if name == 'widgets':
             result.add('text')
@@ -37,6 +38,18 @@ def add_required_components(options):
             result.add('graphics')
         if name == 'script':
             result.add('data')
+        if name == 'tools' and all_tools is None:
+            all_tools = True
+        if name.endswith('_tool'):
+            all_tools = False
+    if all_tools:
+        if 'widgets' in result:
+            result.add('shed_tool')
+        if 'script' in result:
+            result.add('fire_tool')
+        if 'data' in result:
+            result.add('dati_tool')
+        result |= {'ff_tool', 'tc_tool'}
     return result
 
 

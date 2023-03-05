@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
+set -e -o pipefail
 cd "$(dirname "$0")"
 
 ROOT_DIR="$PWD"
@@ -21,11 +21,19 @@ run() { echo "➤➤➤ $*"; "$@"; }
 
 print_usage()
 {
-    echo "Usage: ./build.sh [PHASE, ...] [COMPONENT, ...] [PART, ...] [-G CMAKE_GENERATOR] [-j JOBS] [-D CMAKE_DEF, ...]"
+    echo "Usage: ./build.sh [PHASE, ...] [COMPONENT, ...] [PART, ...] [TOOL, ...]"
+    echo "                  [-G CMAKE_GENERATOR] [-j JOBS] [-D CMAKE_DEF, ...]"
     echo "                  [--debug|--minsize] [--emscripten] [--unity] [--tidy] [--update]"
+    echo
     echo "Where: PHASE = clean | deps | config | build | test | install | package | graphviz (default: deps..install)"
     echo "       COMPONENT = core | data | script | graphics | text | widgets (default: all)"
-    echo "       PART = libs | tools | examples | tests | benchmarks (default: all)"
+    echo "       PART = libs | tools | examples | tests | benchmarks (default: all, 'libs' are implicit)"
+    echo "       TOOL = dati | ff | fire | shed | tc (default: all, narrows 'tools')"
+    echo
+    echo "Group aliases:"
+    echo "       only-ff => core tools ff"
+    echo "       only-shed => widgets tools shed"
+    echo
     echo "Other options:"
     echo "      -G CMAKE_GENERATOR      Unix Makefiles | Ninja | ... (default: Ninja if available, Unix Makefiles otherwise)"
     echo "      -j JOBS                 Parallel jobs for build and test phases"
@@ -43,12 +51,6 @@ print_usage()
     echo "      --build-dir             Build directory (default: ./build/<build-config>)"
     echo "      --install-dir           Installation directory (default: ./artifacts/<build-config>)"
     echo "      --toolchain FILE        CMAKE_TOOLCHAIN_FILE - select build toolchain"
-}
-
-phase()
-{
-    local PHASE="phase_$1"
-    test -n "${!PHASE}" -o \( -n "${phase_default}" -a "$1" != "clean" -a "$1" != "package" -a "$1" != "graphviz" \)
 }
 
 setup_ninja()
@@ -79,23 +81,47 @@ header()
     fi
 }
 
-# parse args...
+
 phase_default=yes
 component_default=yes
 part_default=yes
+tool_default=yes
+
+phase()
+{
+    local PHASE="phase_$1"
+    test -n "${!PHASE}" -o \( -n "${phase_default}" -a "$1" != "clean" -a "$1" != "package" -a "$1" != "graphviz" \)
+}
+
+enable_phase()      { phase_default=; eval "phase_$1=yes"; }
+enable_component()  { component_default=; eval "component_$1=yes"; }
+enable_part()       { part_default=; eval "part_$1=yes"; }
+enable_tool()       { tool_default=; eval "tool_$1=yes"; }
+
+# parse args...
 while [[ $# -gt 0 ]] ; do
     case "$1" in
         clean | deps | config | build | test | install | package | graphviz )
-            phase_default=
-            declare "phase_$1=yes"
+            enable_phase "$1"
             shift 1 ;;
         core | data | script | graphics | text | widgets )
-            component_default=
-            declare "component_$1=yes"
+            enable_component "$1"
             shift 1 ;;
         libs | tools | examples | tests | benchmarks )
-            part_default=
-            declare "part_$1=yes"
+            enable_part "$1"
+            shift 1 ;;
+        dati | ff | fire | shed | tc )
+            enable_tool "$1"
+            shift 1 ;;
+        only-ff )
+            enable_component 'core'
+            enable_part 'tools'
+            enable_tool 'ff'
+            shift 1 ;;
+        only-shed )
+            enable_component 'widgets'
+            enable_part 'tools'
+            enable_tool 'shed'
             shift 1 ;;
         -G )
             GENERATOR="$2"
@@ -237,6 +263,28 @@ else
     done
 fi
 
+TOOLS=(dati ff fire shed tc)
+if [[ -z "$tool_default" ]]; then
+    # Disable tools that were not selected
+    for name in "${TOOLS[@]}" ; do
+        tool_var="tool_$name"
+        name_upper="$(echo "$name" | tr '[:lower:]' '[:upper:]')"
+        if [[ -z "${!tool_var}" ]] ; then
+            CMAKE_ARGS+=(-D "BUILD_${name_upper}_TOOL=OFF")
+            CONAN_ARGS+=(-o "xcikit:${name}_tool=False")
+        else
+            CMAKE_ARGS+=(-D "BUILD_${name_upper}_TOOL=ON")
+            CONAN_ARGS+=(-o "xcikit:${name}_tool=True")
+            DETECT_ARGS+=("${name}_tool")
+        fi
+    done
+else
+    DETECT_ARGS+=("${TOOLS[@]}_tool")
+    for name in "${TOOLS[@]}" ; do
+        CONAN_ARGS+=(-o "xcikit:${name}_tool=True")
+    done
+fi
+
 CMAKE_ARGS+=(-D"XCI_INSTALL_DEVEL=${INSTALL_DEVEL}")
 
 # Ninja: force compiler colors, if the output goes to terminal
@@ -282,7 +330,7 @@ if phase deps; then
         if [[ "$EMSCRIPTEN" -eq 0 ]]; then
             if [[ ! -f 'system_deps.txt' ]] ; then
                 echo 'Checking for preinstalled dependencies...'
-                "${PYTHON}" "${ROOT_DIR}/detect_system_deps.py" "${DETECT_ARGS[@]}" | tee 'system_deps.txt'
+                run "${PYTHON}" "${ROOT_DIR}/detect_system_deps.py" "${DETECT_ARGS[@]}" | tee 'system_deps.txt'
             fi
             # shellcheck disable=SC2207
             CONAN_ARGS+=($(tail -n1 'system_deps.txt'))
@@ -359,8 +407,13 @@ if phase graphviz; then
     (
         cd "${BUILD_DIR}"
         cmake --graphviz=deps.dot "${ROOT_DIR}"
+        echo
+        echo '# Dependency graph:'
+        sed -nE 's#.*// (.*xci-.*)#\1#p' deps.dot
+        echo
+        echo '# SVG export:'
         dot -T svg -o deps.svg deps.dot
-        command -v open >/dev/null && open deps.svg
+        realpath deps.svg
     )
     echo
 fi

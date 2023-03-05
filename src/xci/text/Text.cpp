@@ -20,37 +20,6 @@ Text::Text(Font& font, const std::string &string, Format format)
 }
 
 
-static void parse_plain(Layout& layout, const std::string& s)
-{
-    auto it = s.begin();
-    auto word = s.end();
-    auto finish_word = [&] {
-        if (word == s.end())
-            return;
-        layout.add_word(std::string{word, it});
-        word = s.end();
-    };
-    while (it != s.end()) {
-        switch (*it) {
-            case '\t':
-                finish_word();
-                layout.add_tab();
-                break;
-            case '\n':
-                finish_word();
-                layout.new_line();
-                break;
-            default:
-                if (word == s.end())
-                    word = it;
-                break;
-        }
-        ++it;
-    }
-    finish_word();
-}
-
-
 void Text::set_string(const std::string& string, Format format)
 {
     m_layout.clear();

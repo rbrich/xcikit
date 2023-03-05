@@ -1,7 +1,7 @@
 // FontTexture.h created on 2018-03-02 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2018–2021 Radek Brich
+// Copyright 2018–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #ifndef XCI_TEXT_FONTTEXTURE_H
@@ -10,7 +10,7 @@
 #include <rbp/MaxRectsBinPack.h>
 #include <xci/graphics/Renderer.h>
 #include <xci/graphics/Texture.h>
-#include <xci/core/geometry.h>
+#include <xci/geometry/Vec2.h>
 
 namespace xci::text {
 

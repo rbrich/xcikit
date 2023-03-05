@@ -26,7 +26,7 @@ public:
     void set_checked(bool checked);
     bool checked() const { return m_checked; }
 
-    using ChangeCallback = std::function<void()>;
+    using ChangeCallback = std::function<void(Checkbox&)>;
     void on_change(ChangeCallback cb) { m_change_cb = std::move(cb); }
 
     bool key_event(View& view, const KeyEvent& ev) override;

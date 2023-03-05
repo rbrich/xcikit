@@ -38,6 +38,13 @@ private:
 };
 
 
+/// Even more minimalistic parser
+/// Supported control:
+/// * `\n` - line break
+/// * `\t` - tabulator
+void parse_plain(Layout& layout, const std::string& s);
+
+
 } // namespace xci::text
 
 #endif // XCI_TEXT_MARKUP_H
