@@ -14,7 +14,7 @@
 # * `upstream` - when installing directly from upstream (instead of via ConanCenter),
 #                specifies the repo and commit to download: "<site> <repo> <commit>"
 # * `prereq` - what option from `conanfile.py` requires this dependency
-#              (multiple options are evaluated as either-or)
+#              (multiple options are evaluated as logical OR)
 #
 # Run `precache_upstream_deps.py` to download and export `upstream` deps as specified.
 # This is alternative to ConanCenter, but may be needed when a fix didn't yet make it

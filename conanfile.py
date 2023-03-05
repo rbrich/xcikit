@@ -2,7 +2,6 @@ from conan import ConanFile
 from conan.tools.files import load
 from conan.tools.build import check_min_cppstd
 from conan.tools.cmake import CMakeToolchain, CMakeDeps, CMake, cmake_layout
-import conans.model.build_info
 from pathlib import Path
 
 required_conan_version = ">=1.53.0"
@@ -247,7 +246,7 @@ class XcikitConan(ConanFile):
     def layout(self):
         cmake_layout(self)
 
-    def _add_dep(self, opt: str, component: conans.model.build_info._Component,
+    def _add_dep(self, opt: str, component,
                  cmake_dep: str, conan_dep=None):
         opt_val = self.options.get_safe(opt)
         if opt_val is None:  # system option deleted

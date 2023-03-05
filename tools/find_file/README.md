@@ -71,7 +71,7 @@ Not planned:
 Build
 -----
 
-Build only ff tool `ff` tool + necessary libs (run from repo root, not tools subdirectory):
+Build only `ff` tool + necessary libs (run from repo root, not tools subdirectory):
 
 ```bash
 ./build.sh only-ff

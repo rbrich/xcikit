@@ -8,6 +8,7 @@ BUILD_TYPE="Release"
 INSTALL_DEVEL=0
 GENERATOR=
 EMSCRIPTEN=0
+SYSTEM_DEPS=1
 PRECACHE_DEPS=0
 PRECACHE_ARGS=()
 JOBS_ARGS=()
@@ -47,7 +48,8 @@ print_usage()
     echo "      --tidy                  Run clang-tidy on each compiled file"
     echo "      --update                Passed to conan - update dependencies"
     echo "      --profile, -pr PROFILE  Passed to conan - use the profile"
-    echo "      --precache-deps         Call precache_upstream_deps.py, useful for CI"
+    echo "      --no-system-deps        Detect and use system-installed / precached deps"
+    echo "      --precache-deps         Call precache_upstream_deps.py, useful for CI (cannot be used together with --no-system-deps)"
     echo "      --build-dir             Build directory (default: ./build/<build-config>)"
     echo "      --install-dir           Installation directory (default: ./artifacts/<build-config>)"
     echo "      --toolchain FILE        CMAKE_TOOLCHAIN_FILE - select build toolchain"
@@ -171,6 +173,9 @@ while [[ $# -gt 0 ]] ; do
         --update )
             CONAN_ARGS+=('--update')
             shift 1 ;;
+        --no-system-deps )
+            SYSTEM_DEPS=0
+            shift 1 ;;
         --precache-deps )
             PRECACHE_DEPS=1
             shift 1 ;;
@@ -202,6 +207,7 @@ ARCH="$(uname -m)"
 if [[ "${EMSCRIPTEN}" -eq 1 ]] ; then
     PLATFORM="emscripten"
     ARCH="wasm"
+    SYSTEM_DEPS=0
 elif [[ ${PLATFORM} = "Darwin" ]] ; then
     PLATFORM="macos${MACOSX_DEPLOYMENT_TARGET}"
 elif [[ ${PLATFORM} = "Linux" ]] ; then
@@ -327,7 +333,7 @@ if phase deps; then
     (
         run cd "${BUILD_DIR}"
 
-        if [[ "$EMSCRIPTEN" -eq 0 ]]; then
+        if [[ "${SYSTEM_DEPS}" -eq 1 ]]; then
             if [[ ! -f 'system_deps.txt' ]] ; then
                 echo 'Checking for preinstalled dependencies...'
                 run "${PYTHON}" "${ROOT_DIR}/detect_system_deps.py" "${DETECT_ARGS[@]}" | tee 'system_deps.txt'
@@ -351,7 +357,7 @@ if phase config; then
         [[ "$EMSCRIPTEN" -eq 1 ]] && WRAPPER=emcmake
         run cd "${BUILD_DIR}"
         # shellcheck disable=SC2207
-        [[ "$EMSCRIPTEN" -eq 0 ]] && CMAKE_ARGS+=($(tail -n2 'system_deps.txt' | head -n1))
+        [[ "${SYSTEM_DEPS}" -eq 1 ]] && CMAKE_ARGS+=($(tail -n2 'system_deps.txt' | head -n1))
         XCI_CMAKE_COLORS=1 run ${WRAPPER} cmake "${ROOT_DIR}" \
             "${CMAKE_ARGS[@]}" \
             -D"CMAKE_BUILD_TYPE=${BUILD_TYPE}" \
