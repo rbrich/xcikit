@@ -1,13 +1,13 @@
-# Debian 11 with GCC 10
+# Debian 12 with GCC 12
 #
 # CI builder (DockerHub public image), local build check:
-#   docker build --pull --build-arg UID=$(id -u) -t rbrich/xcikit-debian:11 . -f docker/debian/Dockerfile
-#   docker run --rm -v $PWD:/src -w /src -it rbrich/xcikit-debian:11
+#   docker build --pull --build-arg UID=$(id -u) -t rbrich/xcikit-debian:12 . -f docker/debian_12/Dockerfile
+#   docker run --rm -v $PWD:/src -w /src -it rbrich/xcikit-debian:12
 # CMake arguments (for Clion IDE):
 #   -DFORCE_COLORS=1 -DCONAN_INSTALL=1
 #   -DCONAN_OPTIONS="xcikit:system_glfw=True;xcikit:system_vulkan=True;xcikit:system_freetype=True;xcikit:system_harfbuzz=True;xcikit:system_benchmark=True;xcikit:system_zlib=True;xcikit:system_range_v3=True;xcikit:with_hyperscan=True"
 
-FROM debian:bullseye-slim AS builder
+FROM debian:bookworm-slim AS builder
 
 RUN echo "gcc"; apt-get update && apt-get install --no-install-recommends -y \
     g++ && rm -rf /var/lib/apt/lists/*
@@ -22,7 +22,7 @@ RUN echo "xcikit deps"; apt-get update && apt-get install --no-install-recommend
     librange-v3-dev libglfw3-dev glslang-tools libvulkan-dev libfreetype6-dev libharfbuzz-dev \
     libhyperscan-dev libbenchmark-dev && rm -rf /var/lib/apt/lists/*
 
-RUN echo "conan"; pip3 install --no-cache-dir 'conan<2.0'
+RUN echo "conan"; pip3 install --no-cache-dir --break-system-packages 'conan<2.0'
 
 ARG UID=10002
 RUN useradd -m -p np -u ${UID} -s /bin/bash builder
