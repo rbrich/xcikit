@@ -1,7 +1,7 @@
 # Ubuntu 22.04 with Clang-Tidy 14
 #
 # CI builder (DockerHub public image), local build check:
-#   docker build --pull --build-arg UID=$(id -u) -t rbrich/xcikit-ubuntu . -f docker/ubuntu/Dockerfile
+#   docker build --pull --build-arg UID=$(id -u) -t rbrich/xcikit-ubuntu . -f docker/ubuntu_22.04.dockerfile
 #   docker run --rm -v $PWD:/src -w /src -it rbrich/xcikit-ubuntu
 # CMake arguments (for Clion IDE):
 #   -DFORCE_COLORS=1 -DCONAN_INSTALL=1
@@ -23,7 +23,7 @@ RUN echo "xcikit deps"; apt-get update && apt-get install --no-install-recommend
     librange-v3-dev libglfw3-dev glslang-tools libvulkan-dev libfreetype6-dev libharfbuzz-dev \
     libhyperscan-dev libbenchmark-dev && rm -rf /var/lib/apt/lists/*
 
-RUN echo "conan"; pip3 --no-cache-dir install 'conan<2.0'
+RUN echo "conan"; pip3 --no-cache-dir install conan
 
 ARG UID=10002
 RUN useradd -m -p np -u ${UID} -s /bin/bash builder

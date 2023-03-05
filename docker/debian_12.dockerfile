@@ -1,7 +1,7 @@
 # Debian 12 with GCC 12
 #
 # CI builder (DockerHub public image), local build check:
-#   docker build --pull --build-arg UID=$(id -u) -t rbrich/xcikit-debian:12 . -f docker/debian_12/Dockerfile
+#   docker build --pull --build-arg UID=$(id -u) -t rbrich/xcikit-debian:12 . -f docker/debian_12.dockerfile
 #   docker run --rm -v $PWD:/src -w /src -it rbrich/xcikit-debian:12
 # CMake arguments (for Clion IDE):
 #   -DFORCE_COLORS=1 -DCONAN_INSTALL=1

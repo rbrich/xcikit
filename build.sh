@@ -344,6 +344,7 @@ if phase deps; then
 
         run conan install "${ROOT_DIR}" \
             --build missing \
+            --output-folder="${BUILD_DIR}" \
             -s "build_type=${BUILD_TYPE}" \
             "${CONAN_ARGS[@]}"
     )

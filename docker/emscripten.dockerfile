@@ -1,5 +1,5 @@
 # CI builder with Emscripten (DockerHub public image), local build check:
-#   docker build --pull --build-arg UID=$(id -u) -t rbrich/xcikit-emscripten . -f docker/emscripten/Dockerfile
+#   docker build --pull --build-arg UID=$(id -u) -t rbrich/xcikit-emscripten . -f docker/emscripten.dockerfile
 #   docker run --rm -v $PWD:/src -w /src -it rbrich/xcikit-emscripten
 # CMake arguments (for Clion IDE):
 #   -DCMAKE_TOOLCHAIN_FILE=/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake
@@ -10,7 +10,7 @@ FROM emscripten/emsdk:3.1.32 AS builder
 RUN echo "dev tools"; apt-get update && apt-get install --no-install-recommends -y \
     gdb ninja-build python3-setuptools && rm -rf /var/lib/apt/lists/*
 
-RUN echo "conan"; pip3 --no-cache-dir install 'conan<2.0'
+RUN echo "conan"; pip3 --no-cache-dir install conan
 
 ARG UID=10001
 RUN useradd -m -p np -u ${UID} -s /bin/bash builder

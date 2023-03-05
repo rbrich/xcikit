@@ -135,7 +135,8 @@ class XcikitConan(ConanFile):
     def validate(self):
         check_min_cppstd(self, "20")
 
-    def _check_prereq(self, prereq, options):
+    @staticmethod
+    def _check_prereq(prereq, options):
         if not prereq:
             return True
         for p in prereq:
@@ -242,9 +243,6 @@ class XcikitConan(ConanFile):
     def test(self):
         cmake = CMake(self)
         cmake.test()
-
-    def layout(self):
-        cmake_layout(self)
 
     def _add_dep(self, opt: str, component,
                  cmake_dep: str, conan_dep=None):
