@@ -61,7 +61,7 @@ requirements:
       - graphics
   spirv-cross:
     cmake: "spirv-cross/"
-    conan: "spirv-cross/cci.20211113"
+    conan: "spirv-cross/cci.20210621"
     prereq:
       - shed_tool
   freetype:
