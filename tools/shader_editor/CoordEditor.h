@@ -11,8 +11,8 @@
 
 #include <xci/widgets/Widget.h>
 #include <xci/graphics/Primitives.h>
-#include <xci/graphics/shape/Polygon.h>
 #include <xci/graphics/shape/Triangle.h>
+#include <xci/graphics/shape/Rectangle.h>
 #include <xci/graphics/shape/Ellipse.h>
 
 #include <vector>
@@ -28,7 +28,7 @@ class CoordEditor: public Widget {
 public:
     explicit CoordEditor(Theme& theme, Primitives& prim);
 
-    void toggle_triangle() { m_is_triangle = !m_is_triangle; }
+    void toggle_triangle_quad() { m_is_quad = !m_is_quad; }
 
     using ChangeCallback = std::function<void(CoordEditor&)>;
     void on_change(ChangeCallback cb) { m_change_cb = std::move(cb); }
@@ -44,30 +44,28 @@ private:
     void reconstruct(View& view);
 
     Primitives& m_prim;
-    Polygon m_poly;
+    Rectangle m_rectangle;
     Triangle m_triangle;
     ColoredEllipse m_circles;
     ChangeCallback m_change_cb;
 
     struct Point {
-        ViewportCoords xy;
+        ViewportCoords pos;
         Vec2f uv;
+    };
+    std::vector<Point> m_quad_vertices {
+            {{-49_vp, -49_vp}, {-1, -1}},
+            {{+49_vp, +49_vp}, {+1, +1}},
     };
     std::vector<Point> m_triangle_vertices {
             {{-49_vp, -49_vp}, {0.0, 0.0}},
             {{-49_vp, +49_vp}, {0.5, 0.0}},
             {{+49_vp, +49_vp}, {1.0, 1.0}},
     };
-    std::vector<Point> m_quad_vertices {
-            {{-49_vp, -49_vp}, {-1, -1}},
-            {{-49_vp, +49_vp}, {-1, +1}},
-            {{+49_vp, +49_vp}, {+1, +1}},
-            {{+49_vp, -49_vp}, {+1, -1}},
-    };
     unsigned m_active_vertex = ~0u;
     FramebufferCoords m_pan_pos;
     bool m_dragging = false;
-    bool m_is_triangle = true;
+    bool m_is_quad = true;
     bool m_need_reconstruct = false;
 };
 

@@ -172,7 +172,7 @@ int main(int argc, const char* argv[])
                 hide.uniforms = ! hide.uniforms;
                 break;
             case Key::T:
-                coord_editor.toggle_triangle();
+                coord_editor.toggle_triangle_quad();
                 coord_editor.resize(v);
                 break;
             case Key::Q:
