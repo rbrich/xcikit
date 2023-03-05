@@ -16,10 +16,9 @@ ARG UID=10001
 RUN useradd -m -p np -u ${UID} -s /bin/bash builder
 USER builder
 
-ENV CONAN_USER_HOME=/home/builder
-COPY --chown=builder docker/emscripten/conan/profile $CONAN_USER_HOME/.conan/profiles/default
-COPY --chown=builder docker/emscripten/conan/settings.yml $CONAN_USER_HOME/.conan/settings.yml
-RUN conan config set general.revisions_enabled=1
+COPY --chown=builder docker/conan /home/builder/conan
+RUN conan config install /home/builder/conan
+ENV CONAN_DEFAULT_PROFILE=emscripten
 
 # Preinstall Conan deps
 ENV XCIKIT=/home/builder/xcikit

@@ -14,7 +14,7 @@ PRECACHE_ARGS=()
 JOBS_ARGS=()
 CMAKE_ARGS=(-D"CMAKE_CXX_EXTENSIONS=OFF" -D"CMAKE_POSITION_INDEPENDENT_CODE=ON")
 CONAN_ARGS=()
-CONAN_PROFILE=${CONAN_DEFAULT_PROFILE_PATH:-default}
+CONAN_PROFILE=${CONAN_DEFAULT_PROFILE:-default}
 DETECT_ARGS=()
 CSI=$'\x1b['
 
@@ -226,7 +226,7 @@ PACKAGE_OUTPUT_DIR="${ROOT_DIR}/artifacts"
 PACKAGE_FILENAME="xcikit-${VERSION}-${PLATFORM}-${ARCH}"
 [[ ${BUILD_TYPE} != "Release" ]] && PACKAGE_FILENAME="${PACKAGE_FILENAME}-${BUILD_TYPE}"
 
-CONAN_ARGS+=("-pr=$CONAN_PROFILE" "-pr:b=$CONAN_PROFILE")
+CONAN_ARGS+=("-pr=${CONAN_PROFILE}" "-pr:b=${CONAN_PROFILE}")
 
 COMPONENTS=(data script graphics text widgets)
 if [[ -z "$component_default" ]]; then
@@ -277,17 +277,17 @@ if [[ -z "$tool_default" ]]; then
         name_upper="$(echo "$name" | tr '[:lower:]' '[:upper:]')"
         if [[ -z "${!tool_var}" ]] ; then
             CMAKE_ARGS+=(-D "BUILD_${name_upper}_TOOL=OFF")
-            CONAN_ARGS+=(-o "xcikit:${name}_tool=False")
+            CONAN_ARGS+=(-o "xcikit/*:${name}_tool=False")
         else
             CMAKE_ARGS+=(-D "BUILD_${name_upper}_TOOL=ON")
-            CONAN_ARGS+=(-o "xcikit:${name}_tool=True")
+            CONAN_ARGS+=(-o "xcikit/*:${name}_tool=True")
             DETECT_ARGS+=("${name}_tool")
         fi
     done
 else
     DETECT_ARGS+=("${TOOLS[@]}_tool")
     for name in "${TOOLS[@]}" ; do
-        CONAN_ARGS+=(-o "xcikit:${name}_tool=True")
+        CONAN_ARGS+=(-o "xcikit/*:${name}_tool=True")
     done
 fi
 

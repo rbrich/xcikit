@@ -135,57 +135,57 @@ class XcikitConan(ConanFile):
     def validate(self):
         check_min_cppstd(self, "20")
 
-    def _check_prereq(self, prereq):
+    def _check_prereq(self, prereq, options):
         if not prereq:
             return True
         for p in prereq:
-            if getattr(self.options, p):
+            if options[p]:
                 return True
         return False
 
     def configure(self):
-        remove_options = []
+        options = dict(self.options.items())  # evaluated options for _check_prereq
         # Dependent options
-        if self.options.widgets:
-            remove_options += ["text", "graphics"]
-            self.options.text = True
-            self.options.graphics = True
-        elif self.options.text:
-            remove_options += ["graphics"]
-            self.options.graphics = True
-        elif self.options.script:
-            remove_options += ["data"]
-            self.options.data = True
-
-        if not self.options.tools:
-            remove_options += ["dati_tool", "ff_tool", "fire_tool", "shed_tool", "tc_tool"]
-            self.options.dati_tool = False
-            self.options.ff_tool = False
-            self.options.fire_tool = False
-            self.options.shed_tool = False
-            self.options.tc_tool = False
+        if options['widgets']:
+            del self.options.text
+            options['text'] = True
+        if options['text']:
+            del self.options.graphics
+            options['graphics'] = True
+        if options['script']:
+            del self.options.data
+            options['data'] = True
+        if not options['tools']:
+            del self.options.dati_tool
+            del self.options.ff_tool
+            del self.options.fire_tool
+            del self.options.shed_tool
+            del self.options.tc_tool
+            options['dati_tool'] = False
+            options['ff_tool'] = False
+            options['fire_tool'] = False
+            options['shed_tool'] = False
+            options['tc_tool'] = False
         else:
-            if not self.options.widgets:
-                remove_options += ["shed_tool"]
-                self.options.shed_tool = False
-            if not self.options.script:
-                remove_options += ["fire_tool"]
-                self.options.fire_tool = False
-            if not self.options.data:
-                remove_options += ["dati_tool"]
-                self.options.dati_tool = False
-            if not self.options.with_hyperscan:
-                remove_options += ["ff_tool"]
-                self.options.ff_tool = False
+            if not options['widgets']:
+                del self.options.shed_tool
+                options['shed_tool'] = False
+            if not options['script']:
+                del self.options.fire_tool
+                options['fire_tool'] = False
+            if not options['data']:
+                del self.options.dati_tool
+                options['dati_tool'] = False
+            if not options['with_hyperscan']:
+                del self.options.ff_tool
+                options['ff_tool'] = False
 
         # Remove system_ options for disabled components
         for info in self._requirements():
-            if not self._check_prereq(info['prereq']):
+            if not self._check_prereq(info['prereq'], options):
                 self.options.remove(info['option'])
 
         # Remove dependent / implicit options
-        for opt in remove_options:
-            self.options.remove(opt)
         if self.settings.os == "Emscripten":
             # These are imported from Emscripten Ports
             del self.options.system_zlib
