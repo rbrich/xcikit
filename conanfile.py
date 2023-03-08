@@ -102,10 +102,6 @@ class XcikitConan(ConanFile):
         "freetype/*:with_bzip2": False,
         "freetype/*:with_brotli": False,
         "harfbuzz/*:with_glib": False,
-        "vulkan-loader/*:with_wsi_xcb": False,
-        "vulkan-loader/*:with_wsi_xlib": False,
-        "vulkan-loader/*:with_wsi_wayland": False,
-        "vulkan-loader/*:with_wsi_directfb": False,
     }
 
     exports_sources = ("VERSION", "CMakeLists.txt", "config.h.in", "xcikit-config.cmake.in",
@@ -117,13 +113,6 @@ class XcikitConan(ConanFile):
 
     def set_version(self):
         self.version = load(self, Path(self.recipe_folder) / "VERSION").strip()
-
-    def config_options(self):
-        if self.settings.os != "Linux":
-            del self.options["vulkan-loader"].with_wsi_xcb
-            del self.options["vulkan-loader"].with_wsi_xlib
-            del self.options["vulkan-loader"].with_wsi_wayland
-            del self.options["vulkan-loader"].with_wsi_directfb
 
     def _requirements(self):
         for name, info in self.conan_data["requirements"].items():
@@ -145,7 +134,8 @@ class XcikitConan(ConanFile):
         return False
 
     def configure(self):
-        options = dict(self.options.items())  # evaluated options for _check_prereq
+        # evaluated options for _check_prereq
+        options = {k: v[0] == 'T' for k, v in self.options.items()}
         # Dependent options
         if options['widgets']:
             del self.options.text
@@ -184,7 +174,7 @@ class XcikitConan(ConanFile):
         # Remove system_ options for disabled components
         for info in self._requirements():
             if not self._check_prereq(info['prereq'], options):
-                self.options.remove(info['option'])
+                delattr(self.options, info['option'])
 
         # Remove dependent / implicit options
         if self.settings.os == "Emscripten":

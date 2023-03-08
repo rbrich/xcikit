@@ -405,7 +405,7 @@ CXXFLAGS=-flto=thin
 LDFLAGS=-flto=thin
 ----
 
-See a working example of such profile in the link:docker/emscripten/conan/profile[docker/emscripten] directory.
+See a working example of such profile in the link:docker/conan/profiles/emscripten[docker/emscripten] directory.
 
 Run the build (only 'core' and 'script' components work at this time):
 
