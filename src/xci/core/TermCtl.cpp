@@ -782,13 +782,13 @@ void TermCtl::sanitize_newline(TermCtl& tin)
     // non-generic solution for Xterm.js - all output must go through TermCtl
     (void) tin;
     if (!m_at_newline)
-        write((const char*)u8"⏎\n");
+        write("⏎\n");
 #else
     // generic solution - this works even when something sidesteps TermCtl
     // and writes directly to the terminal
     auto [row, col] = get_cursor_position(tin);
     if (col > 0 || (col == -1 && !m_at_newline)) {
-        write((const char*)u8"⏎\n");
+        write("⏎\n");
     }
 #endif
 }

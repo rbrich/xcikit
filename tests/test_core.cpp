@@ -20,8 +20,6 @@ using namespace xci::core;
 using namespace std::string_literals;
 using xci::core::log::format;
 
-#define UTF8(l)  (const char*)u8 ## l
-
 
 TEST_CASE( "Format placeholders", "[log]" )
 {
@@ -60,7 +58,7 @@ TEST_CASE( "read_binary_file", "[file]" )
 
 TEST_CASE( "utf8_length", "[string]" )
 {
-    std::string s = UTF8("河北梆子");
+    std::string s = "河北梆子";
     CHECK(s.size() == 4 * 3);
     CHECK(utf8_length(s) == 4);
 
@@ -77,29 +75,29 @@ TEST_CASE( "utf8_length", "[string]" )
 
 TEST_CASE( "to_utf32", "[string]" )
 {
-    CHECK(to_utf32(UTF8("Červeňoučký 🦞")) == U"Červeňoučký 🦞");
+    CHECK(to_utf32("Červeňoučký 🦞") == U"Červeňoučký 🦞");
 }
 
 
 TEST_CASE( "to_utf8", "[string]" )
 {
-    CHECK(to_utf8(0x1F99E) == UTF8("🦞"));
+    CHECK(to_utf8(0x1F99E) == "🦞");
 }
 
 
 TEST_CASE( "utf8_codepoint", "[string]" )
 {
-    CHECK(utf8_codepoint(UTF8("\n")) == 0xa);
-    CHECK(utf8_codepoint(UTF8("#")) == '#');
-    CHECK(utf8_codepoint(UTF8("ž")) == 0x017E);
-    CHECK(utf8_codepoint(UTF8("€")) == 0x20AC);
+    CHECK(utf8_codepoint("\n") == 0xa);
+    CHECK(utf8_codepoint("#") == '#');
+    CHECK(utf8_codepoint("ž") == 0x017E);
+    CHECK(utf8_codepoint("€") == 0x20AC);
 
-    std::string s3 = UTF8("人");
+    std::string s3 = "人";
     CHECK(s3.size() == 3);
     CHECK(utf8_length(s3) == 1);
     CHECK(utf8_codepoint(s3.data()) == 0x4EBA);
 
-    std::string s4 = UTF8("🦞");
+    std::string s4 = "🦞";
     CHECK(s4.size() == 4);
     CHECK(utf8_length(s4) == 1);
     CHECK(utf8_codepoint(s4.data()) == 0x1F99E);
@@ -141,22 +139,22 @@ TEST_CASE( "to_lower", "[string]" )
 
 TEST_CASE( "utf8_partial_end", "[string]" )
 {
-    CHECK(utf8_partial_end(UTF8("")) == 0);
-    CHECK(utf8_partial_end(UTF8("hello")) == 0);
+    CHECK(utf8_partial_end("") == 0);
+    CHECK(utf8_partial_end("hello") == 0);
 
-    std::string s = UTF8("fň");
+    std::string s = "fň";
     REQUIRE(s.size() == 3);  // 1 + 2
     CHECK(utf8_partial_end(s) == 0);
     CHECK(utf8_partial_end(s.substr(0, 2)) == 1);
     CHECK(utf8_partial_end(s.substr(0, 1)) == 0);
 
-    s = UTF8("€");
+    s = "€";
     REQUIRE(s.size() == 3);
     CHECK(utf8_partial_end(s) == 0);
     CHECK(utf8_partial_end(s.substr(0, 2)) == 2);
     CHECK(utf8_partial_end(s.substr(0, 1)) == 1);
 
-    s = UTF8("😈");  // F0 9F 98 88
+    s = "😈";  // F0 9F 98 88
     REQUIRE(s.size() == 4);
     CHECK(utf8_partial_end(s) == 0);
     CHECK(utf8_partial_end(s.substr(0, 3)) == 3);
@@ -279,17 +277,17 @@ TEST_CASE( "PathNode", "[FileTree]" )
 
 TEST_CASE( "c32_width", "[TermCtl]" )
 {
-    CHECK(c32_width(utf8_codepoint(UTF8(" "))) == 1);
-    CHECK(c32_width(utf8_codepoint(UTF8("❓"))) == 2);
-    CHECK(c32_width(utf8_codepoint(UTF8("🐎"))) == 2);
-    CHECK(c32_width(utf8_codepoint(UTF8("🔥"))) == 2);
+    CHECK(c32_width(utf8_codepoint(" ")) == 1);
+    CHECK(c32_width(utf8_codepoint("❓")) == 2);
+    CHECK(c32_width(utf8_codepoint("🐎")) == 2);
+    CHECK(c32_width(utf8_codepoint("🔥")) == 2);
 }
 
 
 TEST_CASE( "stripped_width", "[TermCtl]" )
 {
     CHECK(TermCtl::stripped_width("test") == 4);
-    CHECK(TermCtl::stripped_width(UTF8("❓")) == 2);
+    CHECK(TermCtl::stripped_width("❓") == 2);
     TermCtl t(1, TermCtl::IsTty::Always);
     CHECK(TermCtl::stripped_width(t.format("{fg:green}test{t:normal}")) == 4);
     CHECK(TermCtl::stripped_width("\x1b[32mtest\x1b(B\x1b[m") == 4);
