@@ -404,14 +404,17 @@ void TermCtl::set_is_tty(IsTty is_tty)
         case STDIN_FILENO:
             std_handle = STD_INPUT_HANDLE;
             req_mode = ENABLE_VIRTUAL_TERMINAL_INPUT;
+            SetConsoleCP(CP_UTF8);
             break;
         case STDOUT_FILENO:
             std_handle = STD_OUTPUT_HANDLE;
             req_mode = ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+            SetConsoleOutputCP(CP_UTF8);
             break;
         case STDERR_FILENO:
             std_handle = STD_ERROR_HANDLE;
             req_mode = ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+            SetConsoleOutputCP(CP_UTF8);
             break;
         default:
             return;
@@ -468,7 +471,26 @@ auto TermCtl::size() const -> Size
     }
     return {ws.ws_row, ws.ws_col};
 #else
-    return {0, 0};
+    HANDLE h;
+    switch (m_fd) {
+        case STDOUT_FILENO: h = GetStdHandle(STD_OUTPUT_HANDLE); break;
+        case STDERR_FILENO: h = GetStdHandle(STD_ERROR_HANDLE); break;
+        case STDIN_FILENO:
+        default:
+            return {};
+    }
+    if (h == INVALID_HANDLE_VALUE) {
+        log::error("GetStdHandle: {m:l}");
+        return {};
+    }
+
+    CONSOLE_SCREEN_BUFFER_INFO info;
+    if (!GetConsoleScreenBufferInfo(h, &info)) {
+        log::error("GetConsoleScreenBufferInfo: {m:l}");
+        return {};
+    }
+    const auto size = info.dwSize;
+    return {uint16_t(size.Y), uint16_t(size.X)};
 #endif
 }
 
@@ -702,7 +724,6 @@ void TermCtl::with_raw_mode(const std::function<void()>& cb, bool isig)
 std::string TermCtl::input(std::chrono::microseconds timeout)
 {
     assert(m_fd == STDIN_FILENO);
-    char buf[100] {};
 
 #ifdef _WIN32
     HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
@@ -710,13 +731,14 @@ std::string TermCtl::input(std::chrono::microseconds timeout)
         log::error("GetStdHandle: {m:l}");
         return {};
     }
+    constexpr unsigned max_chars = 100;
+    wchar_t buf[max_chars] {};
     DWORD num_chars_read = 0;
-    BOOL res = ReadConsole(h, buf, sizeof buf, &num_chars_read, nullptr);
-    if (res == 0) {
+    if (!ReadConsoleW(h, buf, max_chars, &num_chars_read, nullptr)) {
         log::error("ReadConsole: {m:l}");
         return {};
     }
-    return {buf, size_t(num_chars_read)};
+    return to_utf8({buf, size_t(num_chars_read)});
 #else
     auto timeout_secs = std::chrono::floor<std::chrono::seconds>(timeout);
     struct timeval tv = {(time_t) timeout_secs.count(), (suseconds_t) (timeout - timeout_secs).count()};
@@ -725,6 +747,7 @@ std::string TermCtl::input(std::chrono::microseconds timeout)
     FD_ZERO(&fds);
     FD_SET(m_fd,&fds);
 
+    char buf[100] {};
     ssize_t res;
     do {
         res = ::select(m_fd + 1, &fds, nullptr, nullptr, ptv);
@@ -769,10 +792,11 @@ void TermCtl::write(std::string_view buf)
 
 void TermCtl::write_raw(std::string_view buf)
 {
-    if (m_write_cb)
+    if (m_write_cb) {
         m_write_cb(buf);
-    else
+    } else {
         core::write(m_fd, buf);
+    }
 }
 
 
@@ -782,13 +806,13 @@ void TermCtl::sanitize_newline(TermCtl& tin)
     // non-generic solution for Xterm.js - all output must go through TermCtl
     (void) tin;
     if (!m_at_newline)
-        write((const char*)u8"⏎\n");
+        write("⏎\n");
 #else
     // generic solution - this works even when something sidesteps TermCtl
     // and writes directly to the terminal
     auto [row, col] = get_cursor_position(tin);
     if (col > 0 || (col == -1 && !m_at_newline)) {
-        write((const char*)u8"⏎\n");
+        write("⏎\n");
     }
 #endif
 }

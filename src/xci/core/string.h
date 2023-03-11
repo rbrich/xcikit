@@ -148,20 +148,20 @@ std::string to_utf8(std::wstring_view wstr);
 // Convert single UTF32 char to UTF8 string. Can't fail.
 std::string to_utf8(char32_t codepoint);
 
-int utf8_char_length(char8_t first);
-inline const char8_t* utf8_next(const char8_t* utf8) { return utf8 + utf8_char_length(*utf8); }
+int utf8_char_length(char first);
+inline const char* utf8_next(const char* utf8) { return utf8 + utf8_char_length(*utf8); }
 
 template <StringIterator I>
 I utf8_next(I iter) {
-    const auto* a = reinterpret_cast<const char8_t*>(&*iter);
+    const auto* a = reinterpret_cast<const char*>(&*iter);
     return iter + (utf8_next(a) - a);
 }
 
-const char8_t* utf8_prev(const char8_t* utf8);
+const char* utf8_prev(const char* utf8);
 
 template <StringReverseIterator RI>
 RI utf8_prev(RI riter) {
-    const auto* a = reinterpret_cast<const char8_t*>(&*riter);
+    const auto* a = reinterpret_cast<const char*>(&*riter);
     return riter + (a - utf8_prev(a));
 }
 
