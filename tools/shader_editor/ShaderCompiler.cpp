@@ -11,12 +11,14 @@
 
 #include <fmt/core.h>
 #include <spirv_glsl.hpp>
+#include <range/v3/view/enumerate.hpp>
 
 #include <cstdlib>
 
 using namespace xci::graphics;
 using namespace xci::core;
 using namespace spirv_cross;
+using ranges::views::enumerate;
 
 
 ShaderCompiler::ShaderCompiler()
@@ -68,9 +70,7 @@ auto ShaderCompiler::reflect_shader(const std::vector<uint32_t>& spv) -> ShaderR
             continue;
         }
         block.members.reserve(block_type.member_types.size());
-        unsigned idx = -1;
-        for (const auto member_type : block_type.member_types) {
-            ++idx;
+        for (const auto [idx, member_type] : block_type.member_types | enumerate) {
             const auto& type = glsl.get_type(member_type);
             if (type.basetype != SPIRType::Float) {
                 // Only floats are supported at member level
