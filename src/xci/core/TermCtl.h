@@ -53,8 +53,9 @@ public:
 
     // Detect terminal size, return {0,0} if not detected
     struct Size {
-        unsigned short rows;
-        unsigned short cols;
+        uint16_t rows;
+        uint16_t cols;
+        friend std::ostream& operator<<(std::ostream& os, Size s) { return os << '(' << s.rows << ", " << s.cols << ')'; }
     };
     Size size() const;
 

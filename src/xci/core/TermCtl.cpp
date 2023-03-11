@@ -471,7 +471,26 @@ auto TermCtl::size() const -> Size
     }
     return {ws.ws_row, ws.ws_col};
 #else
-    return {0, 0};
+    HANDLE h;
+    switch (m_fd) {
+        case STDOUT_FILENO: h = GetStdHandle(STD_OUTPUT_HANDLE); break;
+        case STDERR_FILENO: h = GetStdHandle(STD_ERROR_HANDLE); break;
+        case STDIN_FILENO:
+        default:
+            return {};
+    }
+    if (h == INVALID_HANDLE_VALUE) {
+        log::error("GetStdHandle: {m:l}");
+        return {};
+    }
+
+    CONSOLE_SCREEN_BUFFER_INFO info;
+    if (!GetConsoleScreenBufferInfo(h, &info)) {
+        log::error("GetConsoleScreenBufferInfo: {m:l}");
+        return {};
+    }
+    const auto size = info.dwSize;
+    return {uint16_t(size.Y), uint16_t(size.X)};
 #endif
 }
 

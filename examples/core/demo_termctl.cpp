@@ -22,6 +22,7 @@ int main()
     TermCtl& t = TermCtl::stdout_instance();
 
     cout << (t.is_tty() ? "terminal initialized" : "terminal not supported") << endl;
+    cout << "size: " << t.size() << endl;
     cout << t.bold().red().on_blue() << "SUPER RED " << t.normal() << "<-----" << endl;
 
     cout << t.move_up().move_right(6).bold().green() << "GREEN" <<t.normal() << endl;
