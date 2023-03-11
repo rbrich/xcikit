@@ -705,7 +705,6 @@ void TermCtl::with_raw_mode(const std::function<void()>& cb, bool isig)
 std::string TermCtl::input(std::chrono::microseconds timeout)
 {
     assert(m_fd == STDIN_FILENO);
-    char buf[100] {};
 
 #ifdef _WIN32
     HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
@@ -713,13 +712,14 @@ std::string TermCtl::input(std::chrono::microseconds timeout)
         log::error("GetStdHandle: {m:l}");
         return {};
     }
+    constexpr unsigned max_chars = 100;
+    wchar_t buf[max_chars] {};
     DWORD num_chars_read = 0;
-    BOOL res = ReadConsole(h, buf, sizeof buf, &num_chars_read, nullptr);
-    if (res == 0) {
+    if (!ReadConsoleW(h, buf, max_chars, &num_chars_read, nullptr)) {
         log::error("ReadConsole: {m:l}");
         return {};
     }
-    return {buf, size_t(num_chars_read)};
+    return to_utf8({buf, size_t(num_chars_read)});
 #else
     auto timeout_secs = std::chrono::floor<std::chrono::seconds>(timeout);
     struct timeval tv = {(time_t) timeout_secs.count(), (suseconds_t) (timeout - timeout_secs).count()};
@@ -728,6 +728,7 @@ std::string TermCtl::input(std::chrono::microseconds timeout)
     FD_ZERO(&fds);
     FD_SET(m_fd,&fds);
 
+    char buf[100] {};
     ssize_t res;
     do {
         res = ::select(m_fd + 1, &fds, nullptr, nullptr, ptv);
