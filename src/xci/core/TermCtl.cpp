@@ -404,14 +404,17 @@ void TermCtl::set_is_tty(IsTty is_tty)
         case STDIN_FILENO:
             std_handle = STD_INPUT_HANDLE;
             req_mode = ENABLE_VIRTUAL_TERMINAL_INPUT;
+            SetConsoleCP(CP_UTF8);
             break;
         case STDOUT_FILENO:
             std_handle = STD_OUTPUT_HANDLE;
             req_mode = ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+            SetConsoleOutputCP(CP_UTF8);
             break;
         case STDERR_FILENO:
             std_handle = STD_ERROR_HANDLE;
             req_mode = ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+            SetConsoleOutputCP(CP_UTF8);
             break;
         default:
             return;
@@ -769,10 +772,11 @@ void TermCtl::write(std::string_view buf)
 
 void TermCtl::write_raw(std::string_view buf)
 {
-    if (m_write_cb)
+    if (m_write_cb) {
         m_write_cb(buf);
-    else
+    } else {
         core::write(m_fd, buf);
+    }
 }
 
 
