@@ -283,7 +283,8 @@ endif()
 # ------------- #
 
 function(print_flag msg flag)
-    if ($ENV{XCI_CMAKE_COLORS})
+    # https://gitlab.kitware.com/cmake/cmake/-/issues/16183
+    if (DEFINED ENV{XCI_CMAKE_COLORS} AND NOT WIN32)
         string (ASCII 27 esc)
         if (flag)
             string(REPLACE "?" "${esc}[1\;32m[x]" msg1 ${msg})

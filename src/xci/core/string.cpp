@@ -255,7 +255,7 @@ std::string to_utf8(char32_t codepoint)
 }
 
 
-int utf8_char_length(char8_t first)
+int utf8_char_length(char first)
 {
     if (first == 0) {
         return 0;
@@ -281,7 +281,7 @@ int utf8_char_length(char8_t first)
 }
 
 
-const char8_t* utf8_prev(const char8_t* utf8)
+const char* utf8_prev(const char* utf8)
 {
     while ((static_cast<unsigned char>(*utf8) & 0b11000000) == 0b10000000)
         --utf8;

@@ -18,8 +18,8 @@ void Triangle::add_triangle(FramebufferCoords v1, FramebufferCoords v2, Framebuf
     // * identify the outer edge (it has minimum of barycentric axes near 0)
     // * set threshold for the outline (outline drawn where barycentric minimum < 1.0)
     // All barycentric coords are multiplied by (distance from center to edge) / outline_thickness.
-    if (outline_thickness < 0.01)
-        outline_thickness = 0.01;
+    if (outline_thickness < 0.01f)
+        outline_thickness = 0.01f;
     const float b1 = (xci::core::dist_point_to_line(v1, v2, v3) / outline_thickness).value;
     const float b2 = (xci::core::dist_point_to_line(v2, v3, v1) / outline_thickness).value;
     const float b3 = (xci::core::dist_point_to_line(v3, v1, v2) / outline_thickness).value;
@@ -37,8 +37,8 @@ void Triangle::add_triangle(FramebufferCoords v1, FramebufferCoords v2, Framebuf
 void ColoredTriangle::add_triangle(FramebufferCoords v1, FramebufferCoords v2, FramebufferCoords v3,
                                    Color fill_color, Color outline_color, FramebufferPixels outline_thickness)
 {
-    if (outline_thickness < 0.01)
-        outline_thickness = 0.01;
+    if (outline_thickness < 0.01f)
+        outline_thickness = 0.01f;
     const float b1 = (xci::core::dist_point_to_line(v1, v2, v3) / outline_thickness).value;
     const float b2 = (xci::core::dist_point_to_line(v2, v3, v1) / outline_thickness).value;
     const float b3 = (xci::core::dist_point_to_line(v3, v1, v2) / outline_thickness).value;

@@ -293,10 +293,12 @@ if [[ -t 1 && "${GENERATOR}" = "Ninja" ]]; then
 fi
 
 if [[ -z "$PYTHON" ]] ; then
-    for name in py python3 ; do
-        if command -v $name >/dev/null ; then PYTHON=$name; break; fi
+    for name in python3 python; do
+        if command -v $name >/dev/null && $name -c '' 2>/dev/null; then PYTHON=$name; break; fi
     done
 fi
+
+export XCI_CMAKE_COLORS=1
 
 header "Settings"
 echo "CONAN_ARGS:   ${CONAN_ARGS[*]}"
@@ -352,7 +354,7 @@ if phase config; then
         run cd "${BUILD_DIR}"
         # shellcheck disable=SC2207
         [[ "$EMSCRIPTEN" -eq 0 ]] && CMAKE_ARGS+=($(tail -n2 'system_deps.txt' | head -n1))
-        XCI_CMAKE_COLORS=1 run ${WRAPPER} cmake "${ROOT_DIR}" \
+        run ${WRAPPER} cmake "${ROOT_DIR}" \
             "${CMAKE_ARGS[@]}" \
             -D"CMAKE_BUILD_TYPE=${BUILD_TYPE}" \
             -D"CMAKE_INSTALL_PREFIX=${INSTALL_DIR}" \
