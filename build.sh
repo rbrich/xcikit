@@ -293,8 +293,8 @@ if [[ -t 1 && "${GENERATOR}" = "Ninja" ]]; then
 fi
 
 if [[ -z "$PYTHON" ]] ; then
-    for name in py python3 ; do
-        if command -v $name >/dev/null ; then PYTHON=$name; break; fi
+    for name in python3 python; do
+        if command -v $name >/dev/null && $name -c '' 2>/dev/null; then PYTHON=$name; break; fi
     done
 fi
 
