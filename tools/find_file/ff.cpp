@@ -39,6 +39,7 @@ static constexpr auto c_version = "0.8";
 
 enum PatternId: unsigned {
     IdMatch = 0,            // default ID, user pattern matched
+    IdExclusion,            // exclusion pattern
     IdNewline = 10,         // newline pattern, for counting lines
     IdBinary,               // pattern for detecting binary files
     IdFinishBuffer,         // finish buffer (going to swap buffers)
@@ -648,13 +649,13 @@ public:
     explicit operator bool() const { return m_db != nullptr; }
     operator const hs_database_t *() const { return m_db; }
 
-    void add(const char* pattern, unsigned int flags, unsigned int id=0) {
+    void add(const char* pattern, unsigned int flags, PatternId id=IdMatch) {
         m_patterns.emplace_back(pattern);
         m_flags.push_back(flags);
         m_ids.push_back(id);
     }
 
-    void add_literal(const char* literal, unsigned int flags, unsigned int id=0) {
+    void add_literal(const char* literal, unsigned int flags, PatternId id=IdMatch) {
         // Escape non-alphanumeric characters in literal to hex
         // See: https://github.com/intel/hyperscan/issues/191
         std::string pattern;
@@ -671,7 +672,7 @@ public:
         m_ids.push_back(id);
     }
 
-    void add_extension(const char* ext, unsigned int flags, unsigned int id=0) {
+    void add_file_extension(const char* ext, unsigned int flags, PatternId id=IdMatch) {
         // Match file extension, i.e. '.' + ext at end of filename
         auto pattern = std::string("\\.") + ext + '$';
         m_patterns.push_back(pattern);
@@ -792,6 +793,22 @@ private:
 };
 
 
+static auto analyze_pattern(const char* pattern, int flags)
+        -> std::unique_ptr<hs_expr_info_t, decltype(&free)>
+{
+    hs_expr_info_t* re_info = nullptr;
+    hs_compile_error_t *re_compile_err;
+    hs_error_t rc = hs_expression_info(pattern, flags, &re_info, &re_compile_err);
+    if (rc != HS_SUCCESS) {
+        fmt::print(stderr,"ff: hs_expression_info({}): ({}) {}\n", pattern, rc, re_compile_err->message);
+        hs_free_compile_error(re_compile_err);
+        return {nullptr, [](void*){}};
+    }
+    hs_free_compile_error(re_compile_err);
+    return {re_info, free};
+}
+
+
 class XMagicDatabase {
     static constexpr unsigned MagicSize = 4;
 
@@ -887,6 +904,7 @@ int main(int argc, const char* argv[])
     const char* grep_pattern = nullptr;
     std::vector<fs::path> paths;
     std::vector<const char*> extensions;
+    std::vector<const char*> exclusions;
 
     TermCtl& term = TermCtl::stdout_instance();
 
@@ -897,6 +915,7 @@ int main(int argc, const char* argv[])
             Option("-F, --fixed", "Match literal string instead of (default) regex", fixed),
             Option("-i, --ignore-case", "Enable case insensitive matching", ignore_case),
             Option("-e, --ext EXT ...", "Match only files with extension EXT (shortcut for pattern '\\.EXT$')", extensions),
+            Option("-E, --exclude PATTERN ...", "Exclude files matching PATTERN", exclusions),
             Option("-H, --search-hidden", "Don't skip hidden files", show_hidden),
             Option("-D, --search-dirnames", "Don't skip directory entries", show_dirs),
             Option("-S, --search-in-special-dirs", "Allow descending into special directories: " + default_ignore_list(", "), search_in_special_dirs),
@@ -948,11 +967,25 @@ int main(int argc, const char* argv[])
         pattern = nullptr;
 
     HyperscanDatabase re_db;
+    for (const char* exclusion : exclusions) {
+        const int flags = HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP | HS_FLAG_SINGLEMATCH;
+        {
+            auto re_info = analyze_pattern(exclusion, flags);
+            if (!re_info)
+                return 1;
+            if (re_info->min_width == 0) {
+                // Pattern matches empty buffer
+                fmt::print(stderr,"ff: exclude pattern matches empty buffer: {}\n", grep_pattern);
+                return 1;
+            }
+        }
+        // add exclusion pattern
+        re_db.add(exclusion, flags, IdExclusion);
+    }
     if (pattern) {
         int flags = HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP;
         if (ignore_case)
             flags |= HS_FLAG_CASELESS;
-        hs_compile_error_t *re_compile_err;
         if (fixed) {
             if (highlight_match)
                 flags |= HS_FLAG_SOM_LEFTMOST;
@@ -960,20 +993,16 @@ int main(int argc, const char* argv[])
                 flags |= HS_FLAG_SINGLEMATCH;
             re_db.add_literal(pattern, flags);
         } else {
-            // analyze pattern
-            hs_expr_info_t* re_info = nullptr;
-            hs_error_t rc = hs_expression_info(pattern, flags, &re_info, &re_compile_err);
-            if (rc != HS_SUCCESS) {
-                fmt::print(stderr,"ff: hs_expression_info({}): ({}) {}\n", pattern, rc, re_compile_err->message);
-                hs_free_compile_error(re_compile_err);
-                return 1;
+            {
+                auto re_info = analyze_pattern(pattern, flags);
+                if (!re_info)
+                    return 1;
+                if (re_info->min_width == 0) {
+                    // Pattern matches empty buffer
+                    highlight_match = false;
+                    flags |= HS_FLAG_ALLOWEMPTY;
+                }
             }
-            if (re_info->min_width == 0) {
-                // Pattern matches empty buffer
-                highlight_match = false;
-                flags |= HS_FLAG_ALLOWEMPTY;
-            }
-            free(re_info);
 
             // add pattern
             if (highlight_match)
@@ -993,7 +1022,7 @@ int main(int argc, const char* argv[])
         else
             flags |= HS_FLAG_SINGLEMATCH;
         for (const char* ext : extensions) {
-            re_db.add_extension(ext, flags);
+            re_db.add_file_extension(ext, flags);
         }
     }
 
@@ -1009,7 +1038,6 @@ int main(int argc, const char* argv[])
             flags |= HS_FLAG_SOM_LEFTMOST;
         else
             flags |= HS_FLAG_SINGLEMATCH;
-        hs_compile_error_t *re_compile_err;
 
         // Count newlines
         grep_db.add_literal("\n", flags, IdNewline);
@@ -1030,22 +1058,16 @@ int main(int argc, const char* argv[])
         if (fixed) {
             grep_db.add_literal(grep_pattern, flags);
         } else {
-            // analyze pattern
-            hs_expr_info_t* re_info = nullptr;
-            hs_error_t rc = hs_expression_info(grep_pattern, flags, &re_info, &re_compile_err);
-            if (rc != HS_SUCCESS) {
-                fmt::print(stderr,"ff: hs_expression_info({}): ({}) {}\n", grep_pattern, rc, re_compile_err->message);
-                hs_free_compile_error(re_compile_err);
-                return 1;
+            {
+                auto re_info = analyze_pattern(grep_pattern, flags);
+                if (!re_info)
+                    return 1;
+                if (re_info->min_width == 0) {
+                    // Pattern matches empty buffer
+                    fmt::print(stderr,"ff: grep pattern matches empty buffer: {}\n", grep_pattern);
+                    return 1;
+                }
             }
-            if (re_info->min_width == 0) {
-                // Pattern matches empty buffer
-                fmt::print(stderr,"ff: grep pattern matches empty buffer: {}\n", grep_pattern);
-                hs_free_compile_error(re_compile_err);
-                free(re_info);
-                return 1;
-            }
-            free(re_info);
 
             // add pattern
             grep_db.add(grep_pattern, flags);
@@ -1145,10 +1167,14 @@ int main(int argc, const char* argv[])
                                 [] (unsigned int id, unsigned long long from,
                                     unsigned long long to, unsigned int flags, void *ctx)
                                 {
+                                    if (id == IdExclusion)
+                                        return 1;  // terminate scan
                                     auto* m = static_cast<std::vector<std::pair<int, int>>*>(ctx);
                                     m->emplace_back(from, to);
                                     return 0;
                                 }, &matches);
+                        if (r == HS_SCAN_TERMINATED)
+                            return false;  // skip (exclusion)
                         if (r != HS_SUCCESS) {
                             fmt::print(stderr,"ff: hs_scan({}): Unable to scan ({})\n", path.name(), r);
                             return descend;
@@ -1158,14 +1184,21 @@ int main(int argc, const char* argv[])
                         highlight_path(out, t, path, theme, matches[0].first, matches[0].second);
                     } else {
                         // match, no highlight
+                        bool excluded = false;
                         auto r = hs_scan(re_db, path.name_data(), path.name_len(), 0, re_scratch[tn],
                                 [] (unsigned int id, unsigned long long from,
                                     unsigned long long to, unsigned int flags, void *ctx)
                                 {
+                                    if (id == IdExclusion) {
+                                        bool& excluded = *static_cast<bool*>(ctx);
+                                        excluded = true;
+                                    }
                                     // stop scanning on first match
                                     return 1;
-                                }, nullptr);
+                                }, &excluded);
                         // returns HS_SCAN_TERMINATED on match (because callback returns 1)
+                        if (r == HS_SCAN_TERMINATED && excluded)
+                            return false;  // skip (exclusion)
                         if (r == HS_SUCCESS)
                             return descend;  // not matched
                         if (r != HS_SCAN_TERMINATED) {
