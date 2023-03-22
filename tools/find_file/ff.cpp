@@ -238,8 +238,8 @@ static bool parse_size_filter(const char* arg, size_t& size_from, size_t& size_t
 }
 
 
-static void highlight_path(std::string& out, FileTree::Type t, const FileTree::PathNode& path, const Theme& theme,
-                           const int so=0, const int eo=0)
+static void highlight_path(std::string& out,
+                           FileTree::Type t, const FileTree::PathNode& path, const Theme& theme)
 {
     out.reserve(path.size() + 30);  // reserve some space also for escape sequences
     if (t == FileTree::Directory) {
@@ -250,18 +250,45 @@ static void highlight_path(std::string& out, FileTree::Type t, const FileTree::P
         out += path.parent_dir_path();
         out += theme.file_name;
     }
-    if (so != eo) {
-        std::string_view name = path.name();
-        out += name.substr(0, so);
+    out += path.name();
+    out += theme.normal;
+}
+
+
+static void highlight_path(std::string& out,
+                           FileTree::Type t, const FileTree::PathNode& path, const Theme& theme,
+                           const unsigned so, const unsigned eo)
+{
+    out.reserve(path.size() + 30);  // reserve some space also for escape sequences
+    const std::string_view fp = path.file_path();
+    if (t == FileTree::Directory) {
+        out += theme.dir;
+        out += fp.substr(0, so);
         out += theme.highlight;
-        out += name.substr(so, eo - so);
-        if (t == FileTree::Directory)
-            out += theme.dir;
-        else
-            out += theme.file_name;
-        out += name.substr(eo);
+        out += fp.substr(so, eo - so);
+        out += theme.dir;
+        out += fp.substr(eo);
     } else {
-        out += path.name();
+        const unsigned dlen = path.dir_len();
+        out += theme.file_dir;
+        if (so < dlen) {
+            out += fp.substr(0, so);
+        } else {
+            out += fp.substr(0, dlen);
+            out += theme.file_name;
+            out += fp.substr(dlen, so - dlen);
+        }
+        out += theme.highlight;
+        out += fp.substr(so, eo - so);
+        if (eo < dlen) {
+            out += theme.file_dir;
+            out += fp.substr(eo, dlen - eo);
+            out += theme.file_name;
+            out += fp.substr(dlen);
+        } else {
+            out += theme.file_name;
+            out += fp.substr(eo);
+        }
     }
     out += theme.normal;
 }
@@ -1094,7 +1121,7 @@ int main(int argc, const char* argv[])
     Theme theme {
         .normal = term.normal().seq(),
         .dir = term.bold().cyan().seq(),
-        .file_dir = term.cyan().seq(),
+        .file_dir = term.normal().cyan().seq(),
         .file_name = term.normal().seq(),
         .highlight = term.bold().bright_yellow().seq(),
         .grep_highlight = term.bold().bright_yellow().underline().seq(),
@@ -1136,8 +1163,8 @@ int main(int argc, const char* argv[])
                     if (!search_in_special_dirs && is_default_ignored(path.file_path())) {
                         descend = false;
                     }
-                    if (!show_dirs || path.name_empty()) {
-                        // path.component is empty when this is root report from walk_cwd()
+                    if (!show_dirs || !path.has_name()) {
+                        // path.name is empty when this is root report from walk_cwd()
                         counters.seen_dirs.fetch_sub(1, std::memory_order_relaxed);  // small correction - don't count implicitly searched CWD
                         return descend;
                     }
@@ -1160,49 +1187,61 @@ int main(int argc, const char* argv[])
 
                 std::string out;
                 if (re_db) {
+                    auto file_path = path.file_path();
                     if (highlight_match) {
                         // match, with highlight
-                        std::vector<std::pair<int, int>> matches;
-                        auto r = hs_scan(re_db, path.name_data(), path.name_len(), 0, re_scratch[tn],
+                        struct {
+                            std::vector<std::pair<unsigned, unsigned>> matches;
+                            unsigned dir_len;
+                        } ctx { .dir_len = path.dir_len() };
+                        auto r = hs_scan(re_db, file_path.data(), file_path.size(), 0, re_scratch[tn],
                                 [] (unsigned int id, unsigned long long from,
-                                    unsigned long long to, unsigned int flags, void *ctx)
+                                    unsigned long long to, unsigned int flags, void *ctx_data)
                                 {
                                     if (id == IdExclusion)
                                         return 1;  // terminate scan
-                                    auto* m = static_cast<std::vector<std::pair<int, int>>*>(ctx);
-                                    m->emplace_back(from, to);
+                                    auto& x = *static_cast<decltype(ctx)*>(ctx_data);
+                                    // skip if the match is only in dir part
+                                    if (to > x.dir_len)
+                                        x.matches.emplace_back(from, to);
                                     return 0;
-                                }, &matches);
+                                }, &ctx);
                         if (r == HS_SCAN_TERMINATED)
                             return false;  // skip (exclusion)
                         if (r != HS_SUCCESS) {
                             fmt::print(stderr,"ff: hs_scan({}): Unable to scan ({})\n", path.name(), r);
                             return descend;
                         }
-                        if (matches.empty())
+                        if (ctx.matches.empty())
                             return descend;  // not matched
-                        highlight_path(out, t, path, theme, matches[0].first, matches[0].second);
+                        highlight_path(out, t, path, theme, ctx.matches[0].first, ctx.matches[0].second);
                     } else {
                         // match, no highlight
-                        bool excluded = false;
-                        auto r = hs_scan(re_db, path.name_data(), path.name_len(), 0, re_scratch[tn],
+                        struct {
+                            bool excluded = false;
+                            unsigned dir_len;
+                        } ctx { .dir_len = path.dir_len() };
+                        auto r = hs_scan(re_db, file_path.data(), file_path.size(), 0, re_scratch[tn],
                                 [] (unsigned int id, unsigned long long from,
-                                    unsigned long long to, unsigned int flags, void *ctx)
+                                    unsigned long long to, unsigned int flags, void *ctx_data)
                                 {
+                                    auto& x = *static_cast<decltype(&ctx)>(ctx_data);
                                     if (id == IdExclusion) {
-                                        bool& excluded = *static_cast<bool*>(ctx);
-                                        excluded = true;
+                                        x.excluded = true;
+                                    } else if (to <= x.dir_len) {
+                                        // skip if the match is only in dir part
+                                        return 0;
                                     }
                                     // stop scanning on first match
                                     return 1;
-                                }, &excluded);
+                                }, &ctx);
                         // returns HS_SCAN_TERMINATED on match (because callback returns 1)
-                        if (r == HS_SCAN_TERMINATED && excluded)
+                        if (r == HS_SCAN_TERMINATED && ctx.excluded)
                             return false;  // skip (exclusion)
                         if (r == HS_SUCCESS)
                             return descend;  // not matched
                         if (r != HS_SCAN_TERMINATED) {
-                            fmt::print(stderr,"ff: hs_scan({}): ({}) Unable to scan\n", path.name(), r);
+                            fmt::print(stderr,"ff: hs_scan({}): ({}) Unable to scan\n", file_path, r);
                             return descend;
                         }
                         highlight_path(out, t, path, theme);

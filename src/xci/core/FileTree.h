@@ -163,19 +163,15 @@ public:
             return {m_path_storage, m_dir_len};
         }
 
+        /// Get name part of contained path
         std::string_view name() const {
             return {m_path_storage + m_dir_len, m_name_len};
         }
 
-        /// To be used together with name_len().
-        /// NOT null-terminated.
-        const char* name_data() const {
-            return m_path_storage + m_dir_len;
-        }
-
-        unsigned int name_len() const { return m_name_len; }
-        bool name_empty() const { return m_name_len == 0; }
-        unsigned int size() const { return m_dir_len + m_name_len; }
+        bool has_name() const { return m_name_len != 0; }
+        unsigned dir_len() const { return m_dir_len; }
+        unsigned name_len() const { return m_name_len; }
+        unsigned size() const { return m_dir_len + m_name_len; }
 
         bool has_parent() const { return bool(m_parent); }
         int parent_fd() const { return m_parent->fd(); }
