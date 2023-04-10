@@ -994,6 +994,8 @@ int main(int argc, const char* argv[])
         pattern = nullptr;
 
     HyperscanDatabase re_db;
+
+    bool re_exclusion_only = true;
     for (const char* exclusion : exclusions) {
         const int flags = HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP | HS_FLAG_SINGLEMATCH;
         {
@@ -1009,6 +1011,7 @@ int main(int argc, const char* argv[])
         // add exclusion pattern
         re_db.add(exclusion, flags, IdExclusion);
     }
+
     if (pattern) {
         int flags = HS_FLAG_DOTALL | HS_FLAG_UTF8 | HS_FLAG_UCP;
         if (ignore_case)
@@ -1038,6 +1041,7 @@ int main(int argc, const char* argv[])
                 flags |= HS_FLAG_SINGLEMATCH;
             re_db.add(pattern, flags);
         }
+        re_exclusion_only = false;
     }
 
     if (!extensions.empty()) {
@@ -1051,6 +1055,7 @@ int main(int argc, const char* argv[])
         for (const char* ext : extensions) {
             re_db.add_file_extension(ext, flags);
         }
+        re_exclusion_only = false;
     }
 
     if (!re_db.compile(HS_MODE_BLOCK))
@@ -1135,7 +1140,7 @@ int main(int argc, const char* argv[])
     Counters counters;
 
     FileTree ft(jobs-1,
-                [show_hidden, show_dirs, single_device, long_form, highlight_match,
+                [show_hidden, show_dirs, single_device, long_form, highlight_match, re_exclusion_only,
                  type_mask, size_from, size_to, max_depth, search_in_special_dirs,
                  quiet, quiet_grep, binary_grep, filter_xmagic,
                  &re_db, &grep_db, &re_scratch, &theme, &dev_ids, &counters]
@@ -1188,7 +1193,7 @@ int main(int argc, const char* argv[])
                 std::string out;
                 if (re_db) {
                     auto file_path = path.file_path();
-                    if (highlight_match) {
+                    if (highlight_match && !re_exclusion_only) {
                         // match, with highlight
                         struct {
                             std::vector<std::pair<unsigned, unsigned>> matches;
@@ -1238,9 +1243,9 @@ int main(int argc, const char* argv[])
                         // returns HS_SCAN_TERMINATED on match (because callback returns 1)
                         if (r == HS_SCAN_TERMINATED && ctx.excluded)
                             return false;  // skip (exclusion)
-                        if (r == HS_SUCCESS)
+                        if (!re_exclusion_only && r == HS_SUCCESS)
                             return descend;  // not matched
-                        if (r != HS_SCAN_TERMINATED) {
+                        if (r != HS_SUCCESS && r != HS_SCAN_TERMINATED) {
                             fmt::print(stderr,"ff: hs_scan({}): ({}) Unable to scan\n", file_path, r);
                             return descend;
                         }
