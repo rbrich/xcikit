@@ -496,9 +496,9 @@ public:
         m_literal_value = true;
         v.expression->apply(*this);
         m_cast_type = {};
-        // Cast to Void -> don't call the cast function, just drop the expression result from stack
+        m_value_type = m_value_type.effective_type();
         // Cast to the same type or same underlying type (from/to a named type) -> noop
-        if (v.to_type.is_void() || is_same_underlying(m_value_type.effective_type(), v.to_type)) {
+        if (is_same_underlying(m_value_type, v.to_type)) {
             v.cast_function.reset();
             m_value_type = v.to_type;
             return;

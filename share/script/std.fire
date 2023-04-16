@@ -277,7 +277,7 @@ class Cast T R {
     cast : T -> R
 }
 
-// Note: Cast to Void is handled by the compiler, instances with R=Void are ignored.
+instance<T> Cast T Void { cast = {} }
 
 instance Cast Bool Byte { cast = { __noop } }
 instance Cast Bool UInt32 { cast = { __cast 0x13 } }
