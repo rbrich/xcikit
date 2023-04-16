@@ -59,6 +59,11 @@ public:
 
         dfn.variable.identifier.symbol = symptr;
         symptr->set_callable(true);
+
+        // Switch to symtab of the new function
+        auto orig_symtab = m_symtab;
+        m_symtab = &symptr.get_function(m_scope).symtab();
+
         if (dfn.variable.type)
             dfn.variable.type->apply(*this);
         if (dfn.expression) {
@@ -66,6 +71,8 @@ public:
             dfn.expression->definition = &dfn;
             dfn.expression->apply(*this);
         }
+
+        m_symtab = orig_symtab;
 
         if (m_class) {
             // export symbol to outer scope
