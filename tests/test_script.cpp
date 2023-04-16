@@ -943,15 +943,6 @@ TEST_CASE( "Slice", "[script][interpreter]" )
 }
 
 
-TEST_CASE( "Explicit type params", "[script][interpreter]")
-{
-    // no generic params or return value, only an explicit type param,
-    // which is used directly in the body and requires explicit instantiations
-    CHECK(interpret("type_id = fun<T> () -> Int { __type_id<T> }; "
-                    "x = type_id<Int>; x; type_id<String>; type_id<Void>") == "6;10;0");
-}
-
-
 TEST_CASE( "Type classes", "[script][interpreter]" )
 {
     CHECK(interpret("class XEq T { xeq : T T -> Bool }; "
@@ -1011,6 +1002,25 @@ TEST_CASE( "Compiler intrinsics", "[script][interpreter]" )
     // Static value
     CHECK(interpret("add42 = fun Int->Int { __load_static (__value 42); __add 0x88 }; add42 8") == "50");
     CHECK(interpret("add42 = fun Int->Int { __value 42 . __load_static; __add 0x88 }; add42 8") == "50");
+}
+
+
+TEST_CASE( "Explicit type params", "[script][interpreter]")
+{
+    // no generic params or return value, only an explicit type param,
+    // which is used directly in the body and requires explicit instantiations
+    CHECK(interpret("type_id = fun<T> () -> Int { __type_id<T> }; "
+                    "x = type_id<Int>; x; type_id<String>; type_id<Void>") == "6;10;0");
+}
+
+
+TEST_CASE( "Type introspection", "[script][interpreter]")
+{
+    CHECK(interpret_std("type_name<Void>; type_name<String>; type_name<Int>") == R"=("()";"String";"Int32")=");
+    CHECK(interpret_std("type_name<(Float,String)>; type_name<[Int64]>") == R"=("(Float32, String)";"[Int64]")=");
+    CHECK(interpret_std("type_name<(name:String, age:Int)>") == R"=("(name: String, age: Int32)")=");
+    CHECK(interpret_std("X=Int; type_name<X>") == R"=("Int32")=");
+    CHECK(interpret_std("type MyInt=Int; type_name<MyInt>") == R"=("MyInt")=");
 }
 
 

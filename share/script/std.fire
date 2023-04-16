@@ -397,7 +397,12 @@ to_string = fun<T> x:T -> String { format x () }
 from_string = fun<T> x:String -> T { parse x () }
 
 // -----------------------------------------------------------------------------
+// Type introspection
 
+type_name = fun<T> Void -> String { __type_name __type_id<T> }
+
+
+// -----------------------------------------------------------------------------
 
 succ = fun<T> x:T -> T { x + 1:T }
 pred = fun<T> x:T -> T { x - 1:T }
