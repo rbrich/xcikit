@@ -943,6 +943,15 @@ TEST_CASE( "Slice", "[script][interpreter]" )
 }
 
 
+TEST_CASE( "Explicit type params", "[script][interpreter]")
+{
+    // no generic params or return value, only an explicit type param,
+    // which is used directly in the body and requires explicit instantiations
+    CHECK(interpret("type_id = fun<T> () -> Int { __type_id<T> }; "
+                    "x = type_id<Int>; x; type_id<String>; type_id<Void>") == "6;10;0");
+}
+
+
 TEST_CASE( "Type classes", "[script][interpreter]" )
 {
     CHECK(interpret("class XEq T { xeq : T T -> Bool }; "

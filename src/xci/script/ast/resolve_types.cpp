@@ -234,7 +234,7 @@ public:
                     auto inst_fn_info = inst.get_function(cls_fn_idx);
                     const auto& fn = inst_mod->get_scope(inst_fn_info.scope_index).function();
                     auto m = match_params(inst.types(), resolved_types);
-                    candidates.push_back({inst_mod, inst_fn_info.scope_index, inst_psym, TypeInfo{fn.signature_ptr()}, m});
+                    candidates.push_back({inst_mod, inst_fn_info.scope_index, inst_psym, TypeInfo{fn.signature_ptr()}, {}, m});
                 }
 
                 auto [found, conflict] = find_best_candidate(candidates);
@@ -280,7 +280,7 @@ public:
                 }
 
                 // Resolve overload
-                auto res = resolve_overload(v.sym_list, v.identifier);
+                auto res = resolve_overload(v.sym_list, v.identifier, v.type_args_ti);
                 // The referenced function must have been defined
                 if (!res.type.effective_type())
                     throw MissingExplicitType(v.identifier.name, v.identifier.source_loc);
@@ -542,7 +542,8 @@ private:
     }
 
     /// Find matching function overload according to m_call_args
-    Candidate resolve_overload(const SymbolPointerList& sym_list, const ast::Identifier& identifier)
+    Candidate resolve_overload(const SymbolPointerList& sym_list, const ast::Identifier& identifier,
+                               const std::vector<TypeInfo>& type_args)
     {
         std::vector<Candidate> candidates;
         for (auto symptr : sym_list) {
@@ -554,10 +555,35 @@ private:
             assert(symmod != nullptr);
             Index scope_idx;
             SignaturePtr sig_ptr;
+            TypeArgs res_type_args;
             if (symptr->type() == Symbol::Function) {
                 scope_idx = symptr.get_generic_scope_index();
                 auto& fn = symmod->get_scope(scope_idx).function();
-                sig_ptr = fn.signature_ptr();
+                if (type_args.size() > fn.symtab().count(Symbol::TypeVar)) {
+                    // skip - not enough type vars for explicit type args
+                    candidates.push_back({symmod, scope_idx, symptr, TypeInfo{fn.signature_ptr()}, {}, MatchScore{-1}});
+                    continue;
+                }
+                if (!type_args.empty()) {
+                    res_type_args = symmod->get_scope(scope_idx).type_args();
+                    unsigned i = 0;
+                    bool compatible = true;
+                    for (auto var : fn.symtab().filter(Symbol::TypeVar)) {
+                        set_type_arg(var, type_args[i++], res_type_args,
+                                     [&compatible](const TypeInfo& exp, const TypeInfo& got) { compatible = false; });
+                        if (i >= type_args.size())
+                            break;
+                    }
+                    if (!compatible) {
+                        // skip - incompatible type args
+                        candidates.push_back({symmod, scope_idx, symptr, TypeInfo{fn.signature_ptr()}, std::move(res_type_args), MatchScore{-1}});
+                        continue;
+                    }
+                    sig_ptr = std::make_shared<Signature>(fn.signature());  // copy
+                    resolve_type_vars(*sig_ptr, res_type_args);
+                } else {
+                    sig_ptr = fn.signature_ptr();
+                }
             } else {
                 assert(symptr->type() == Symbol::StructItem);
                 scope_idx = no_index;
@@ -569,14 +595,14 @@ private:
                 sig_ptr->set_return_type(*item_type);
             }
             auto match = match_signature(*sig_ptr);
-            candidates.push_back({symmod, scope_idx, symptr, TypeInfo{std::move(sig_ptr)}, match});
+            candidates.push_back({symmod, scope_idx, symptr, TypeInfo{std::move(sig_ptr)}, std::move(res_type_args), match});
         }
 
         auto [found, conflict] = find_best_candidate(candidates);
 
         if (found && !conflict) {
             if (found->symptr->type() == Symbol::Function && found->type.is_generic()) {
-                auto call_type_args = specialize_signature(found->type.signature_ptr(), m_call_sig);
+                auto call_type_args = specialize_signature(found->type.signature_ptr(), m_call_sig, found->type_args);
                 if (!call_type_args.empty()) {
                     // resolve generic vars to received types
                     auto new_sig = std::make_shared<Signature>(found->type.signature());  // copy
@@ -595,11 +621,23 @@ private:
         // format the error message (candidates)
         stringstream o_candidates;
         for (const auto& c : candidates) {
-            o_candidates << "   " << c.match << "  "
-                         << c.type.signature() << std::endl;
+            o_candidates << "   " << c.match << "  ";
+            if (!c.type_args.empty())
+                o_candidates << '<' << c.type_args << "> ";
+            o_candidates << c.type.signature() << std::endl;
         }
         stringstream o_ftype;
-        o_ftype << identifier.name << ' ' << m_call_sig.signature();
+        o_ftype << identifier.name;
+        if (!type_args.empty()) {
+            o_ftype << '<';
+            for (const auto& type_arg : type_args) {
+                if (&type_arg != &type_args.front())
+                    o_ftype << ", ";
+                o_ftype << type_arg;
+            }
+            o_ftype << '>';
+        }
+        o_ftype << ' ' << m_call_sig.signature();
         if (conflict) {
             // ERROR found multiple matching functions
             throw FunctionConflict(o_ftype.str(), o_candidates.str(), identifier.source_loc);

@@ -34,10 +34,9 @@ std::pair<const Candidate*, bool> find_best_candidate(const std::vector<Candidat
 }
 
 
-TypeArgs specialize_signature(const SignaturePtr& signature, const CallSignature& call_sig)
+TypeArgs specialize_signature(const SignaturePtr& signature, const CallSignature& call_sig, TypeArgs call_type_args)
 {
     auto sig = signature;
-    TypeArgs call_type_args;
     size_t i = 0;
     size_t arg_n = 1;
     for (const auto& arg : call_sig.args) {

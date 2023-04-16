@@ -213,6 +213,7 @@ public:
     SymbolPointer find_last_of(const std::string& name, Symbol::Type type);
     SymbolPointer find_last_of(Symbol::Type type);
 
+    SymbolPointerList filter(Symbol::Type type);
     SymbolPointerList filter(const std::string& name, Symbol::Type type);
 
     Size count(Symbol::Type type) const;
