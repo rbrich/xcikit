@@ -186,10 +186,15 @@ public:
         const auto& symtab = *v.identifier.symbol.symtab();
         const auto& sym = *v.identifier.symbol;
 
-        if (v.type_arg) {
-            if (sym.type() != Symbol::TypeId)
-                throw UnexpectedTypeArg(v.type_arg->source_loc);
-            v.type_arg->apply(*this);
+        if (!v.type_args.empty()) {
+            if (sym.type() != Symbol::Function && sym.type() != Symbol::TypeId)
+                throw UnexpectedTypeArg(v.type_args.front()->source_loc);
+            auto orig_type_info = std::move(m_type_info);
+            for (auto& type_arg : v.type_args) {
+                type_arg->apply(*this);
+                v.type_args_ti.push_back(std::move(m_type_info));
+            }
+            m_type_info = std::move(orig_type_info);
         }
 
         switch (sym.type()) {
@@ -199,9 +204,12 @@ public:
                 return;
             }
             case Symbol::TypeId: {
-                if (!v.type_arg)
+                if (v.type_args_ti.empty())
                     throw MissingTypeArg(v.source_loc);
-                v.ti = std::move(m_type_info);
+                if (v.type_args_ti.size() > 1)
+                    throw UnexpectedTypeArg(v.type_args[1]->source_loc);
+                v.ti = std::move(v.type_args_ti.front());
+                v.type_args_ti.clear();
                 break;
             }
             case Symbol::Class:

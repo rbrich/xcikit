@@ -158,7 +158,7 @@ struct Block: if_must< one<'{'>, NSC, sor< one<'}'>, seq<SepList<Statement>, NSC
 struct Function: sor< Block, if_must< KeywordFun, NSC, FunctionDecl, NSC, Block> > {};
 struct ParenthesizedExpr: if_must< one<'('>, NSC, opt<Expression<NSC>, NSC>, one<')'> > {};
 struct ExprPrefix: if_must< PrefixOperator, SC, ExprOperand<SC>, SC > {};
-struct TypeArgs: seq< one<'<'>, Type, one<'>'> > {};
+struct TypeArgs: seq< one<'<'>, Type, SC, star_must<one<','>, SC, Type, SC>, one<'>'> > {};
 struct Reference: seq<Identifier, opt<TypeArgs>, not_at<one<'"'>>> {};
 struct List: if_must< one<'['>, NSC, opt<ExprInfix<NSC>, NSC>, one<']'> > {};
 struct Cast: seq<SC, one<':'>, SC, Type> {};
@@ -873,7 +873,7 @@ struct Action<Type> : change_states< std::unique_ptr<ast::Type> >  {
 
     template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::Reference& ref) {
-        ref.type_arg = std::move(type);
+        ref.type_args.push_back(std::move(type));
     }
 };
 

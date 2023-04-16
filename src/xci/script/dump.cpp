@@ -28,6 +28,7 @@ struct StreamOptions {
     bool module_verbose : 1;  // Module: dump function bodies etc.
     bool parenthesize_fun_types : 1;
     bool multiline : 1;
+    bool qualify_type_args : 1;
     unsigned level : 6;
     std::bitset<32> rules;
 };
@@ -433,13 +434,20 @@ std::ostream& operator<<(std::ostream& os, const Reference& v)
         os << endl
            << more_indent
            << put_indent << v.identifier;
-        if (v.type_arg)
-           os << put_indent << "type_arg: " << *v.type_arg;
+        for (const auto& type_arg : v.type_args)
+           os << put_indent << "type_arg: " << *type_arg;
         return os << less_indent;
     } else {
         os << v.identifier;
-        if (v.type_arg)
-            os << '<' << *v.type_arg << '>';
+        for (const auto& type_arg : v.type_args) {
+            if (&type_arg == &v.type_args.front())
+                os << '<';
+            else
+                os << ", ";
+            os << *type_arg;
+            if (&type_arg == &v.type_args.back())
+                os << '>';
+        }
         return os;
     }
 }
@@ -1208,13 +1216,15 @@ std::ostream& operator<<(std::ostream& os, const Scope& v)
 
 std::ostream& operator<<(std::ostream& os, const TypeArgs& v)
 {
+    const bool qualify = stream_options(os).qualify_type_args;
     bool first = true;
     for (const auto& arg : v) {
         if (!first)
             os << ", ";
         else
             first = false;
-        os << arg.first.symtab()->qualified_name() << "::";
+        if (qualify)
+            os << arg.first.symtab()->qualified_name() << "::";
         os << arg.first->name() << "=" << arg.second;
     }
     return os;
