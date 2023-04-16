@@ -11,7 +11,6 @@
 #include <xci/script/Error.h>
 #include <xci/script/dump.h>
 #include <range/v3/view/enumerate.hpp>
-#include <range/v3/algorithm/any_of.hpp>
 #include <vector>
 #include <set>
 #include <sstream>
@@ -205,7 +204,7 @@ public:
                 throw StructDuplicateKey(item.first.name, item.first.source_loc);
 
             item.second->apply(*this);
-            item.first.symbol = symtab().add({item.first.name, Symbol::StructItem, no_index});
+            item.first.symbol = module().symtab().add({item.first.name, Symbol::StructItem, no_index});
         }
     }
 
@@ -232,10 +231,10 @@ public:
     }
 
     void visit(ast::Call& v) override {
-        v.callable->apply(*this);
         for (auto& arg : v.args) {
             arg->apply(*this);
         }
+        v.callable->apply(*this);
     }
 
     void visit(ast::OpCall& v) override {
@@ -359,7 +358,7 @@ public:
                 throw StructDuplicateKey(name, st.identifier.source_loc);
 
             st.type->apply(*this);
-            st.identifier.symbol = symtab().add({name, Symbol::StructItem, no_index});
+            st.identifier.symbol = module().symtab().add({name, Symbol::StructItem, no_index});
         }
     }
 
@@ -452,10 +451,10 @@ private:
     }
 
     SymbolPointerList find_all_symbols_of_type(const std::string& name, Symbol::Type type) {
-        // lookup in this and parent scopes (including this module scope)
         SymbolPointerList res;
-        for (auto* p_symtab = &symtab(); p_symtab != nullptr; p_symtab = p_symtab->parent()) {
-            auto sym_list = p_symtab->filter(name, type);
+        // lookup in this module
+        {
+            auto sym_list = module().symtab().filter(name, type);
             res.insert(res.end(), sym_list.begin(), sym_list.end());
         }
         // imported modules

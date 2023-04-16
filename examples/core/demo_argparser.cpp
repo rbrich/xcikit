@@ -14,7 +14,7 @@ using std::endl;
 
 bool check_color(const char* arg)
 {
-    std::string color(arg);
+    const std::string color(arg);
     return color == "red" || color == "green" || color == "blue";
 }
 

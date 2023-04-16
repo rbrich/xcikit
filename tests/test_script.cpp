@@ -536,6 +536,7 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     CHECK(interpret_std(my_tuple + R"(a = ("hello", 42):MyTuple; a)") == R"(("hello", 42))");
     CHECK_THROWS_AS(interpret_std(my_tuple + "(1, 2):MyTuple"), FunctionNotFound);  // bad cast
     // struct member access
+    CHECK(interpret(R"( (name="hello", age=42, valid=true).age )") == "42");
     CHECK(interpret(my_struct + R"( a:MyStruct = (name="hello", age=42); a.name; a.age)") == R"("hello";42)");
     CHECK(interpret(R"(a = (name="hello", age=42, valid=true); a.name; a.age; a.valid)") == R"("hello";42;true)");
     CHECK(interpret(my_struct + R"(f = fun a:MyStruct { a.name }; f (name="hello", age=42))") == R"("hello")");
@@ -1032,7 +1033,7 @@ TEST_CASE( "Native to Value mapping", "[script][native]" )
     CHECK(native::ValueType<int64_t>(1ll << 60).value() == 1ll << 60);
     CHECK(native::ValueType<float>(3.14f).value() == 3.14f);
     CHECK(native::ValueType<double>(2./3).value() == 2./3);
-    native::ValueType<std::string>str ("test"s);
+    const native::ValueType<std::string> str ("test"s);
     CHECK(str.value() == "test"s);
     str.decref();
 }

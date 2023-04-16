@@ -905,7 +905,7 @@ std::ostream& operator<<(std::ostream& os, const Module& v)
         }
         os << f.qualified_name();
         if (f.signature())
-            os << ": " << f.signature();
+            os << ' ' << f.signature();
         os << '\n';
         if (verbose && f.kind() == Function::Kind::Generic) {
             os << more_indent << put_indent << f.ast() << less_indent;

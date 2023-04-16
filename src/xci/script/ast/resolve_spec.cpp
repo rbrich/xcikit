@@ -244,11 +244,11 @@ public:
                                  << fn.signature() << std::endl;
                 }
                 stringstream o_ftype;
-                o_ftype << m_call_sig.signature();
+                o_ftype << v.identifier.name << ' ' << m_call_sig.signature();
                 if (conflict)
-                    throw FunctionConflict(v.identifier.name, o_ftype.str(), o_candidates.str(), v.source_loc);
+                    throw FunctionConflict(o_ftype.str(), o_candidates.str(), v.source_loc);
                 else
-                    throw FunctionNotFound(v.identifier.name, o_ftype.str(), o_candidates.str(), v.source_loc);
+                    throw FunctionNotFound(o_ftype.str(), o_candidates.str(), v.source_loc);
             }
             case Symbol::Function:
             case Symbol::StructItem: {

@@ -214,7 +214,7 @@ public:
                 break;
             }
             case Symbol::Function: {
-                // specified type in definition
+                // specified type in declaration
                 v.ti = std::move(m_type_info);
                 break;
             }

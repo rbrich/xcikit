@@ -260,15 +260,15 @@ public:
                                  << c.type.signature() << std::endl;
                 }
                 stringstream o_ftype;
-                o_ftype << m_call_sig.signature();
+                o_ftype << v.identifier.name << ' ' << m_call_sig.signature();
                 if (conflict)
-                    throw FunctionConflict(v.identifier.name, o_ftype.str(), o_candidates.str(), v.identifier.source_loc);
+                    throw FunctionConflict(o_ftype.str(), o_candidates.str(), v.identifier.source_loc);
                 else
-                    throw FunctionNotFound(v.identifier.name, o_ftype.str(), o_candidates.str(), v.identifier.source_loc);
+                    throw FunctionNotFound(o_ftype.str(), o_candidates.str(), v.identifier.source_loc);
             }
             case Symbol::Function:
             case Symbol::StructItem: {
-                // specified type in definition
+                // specified type in declaration
                 if (sym.type() == Symbol::Function && v.definition && v.ti) {
                     assert(m_call_sig.empty());
                     if (v.ti.is_callable()) {
@@ -599,13 +599,13 @@ private:
                          << c.type.signature() << std::endl;
         }
         stringstream o_ftype;
-        o_ftype << m_call_sig.signature();
+        o_ftype << identifier.name << ' ' << m_call_sig.signature();
         if (conflict) {
             // ERROR found multiple matching functions
-            throw FunctionConflict(identifier.name, o_ftype.str(), o_candidates.str(), identifier.source_loc);
+            throw FunctionConflict(o_ftype.str(), o_candidates.str(), identifier.source_loc);
         } else {
             // ERROR couldn't find matching function for `args`
-            throw FunctionNotFound(identifier.name, o_ftype.str(), o_candidates.str(), identifier.source_loc);
+            throw FunctionNotFound(o_ftype.str(), o_candidates.str(), identifier.source_loc);
         }
     }
 

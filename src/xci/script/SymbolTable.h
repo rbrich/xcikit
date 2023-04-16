@@ -198,7 +198,7 @@ public:
     Class* class_() const { return m_class; }
 
     // related module
-    void set_module(Module* module) { m_module = module; }
+    void set_module(Module* mod) { m_module = mod; }
     Module* module() const { return m_module; }
 
     SymbolPointer add(Symbol&& symbol);
