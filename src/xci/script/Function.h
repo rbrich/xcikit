@@ -341,6 +341,7 @@ public:
     const TypeArgs& type_args() const { return m_type_args; }
     TypeArgs& type_args() { return m_type_args; }
     bool has_type_args() const noexcept { return !m_type_args.empty(); }
+    bool has_unresolved_type_params() const;
 
 private:
     Module* m_module = nullptr;

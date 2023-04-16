@@ -753,7 +753,7 @@ void Compiler::compile_all_functions(Scope& main)
             continue; // already compiled
         if (!fn.has_compile()) {
             // keep generic, make sure AST is copied
-            assert(fn.has_any_generic());
+            assert(fn.has_any_generic() || scope.has_unresolved_type_params());
             fn.ensure_ast_copy();
             continue;
         }

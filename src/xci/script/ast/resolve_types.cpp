@@ -771,7 +771,7 @@ void resolve_types(Scope& scope, const ast::Block& block)
         stmt->apply(visitor);
     }
     auto& fn = scope.function();
-    if (!fn.has_any_generic()) {
+    if (!fn.has_any_generic() && !scope.has_unresolved_type_params()) {
         // not generic -> compile
         fn.set_compile();
     }

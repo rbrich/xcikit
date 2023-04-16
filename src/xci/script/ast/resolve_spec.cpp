@@ -227,6 +227,8 @@ public:
                         auto inst_scope_idx = inst.get_function(cls_fn_idx).scope_index;
                         v.module = &module();
                         v.index = inst_scope_idx;
+                        auto& scope = v.module->get_scope(v.index);
+                        scope.type_args().add_from(inst_types);
                     } else {
                         v.module = found->module;
                         v.index = found->scope_index;
@@ -481,7 +483,7 @@ public:
                 }
                 m_value_type = TypeInfo{fn.signature_ptr()};
             }
-        } else if (fn.has_generic_params()) {
+        } else if (fn.has_generic_params() || scope.has_unresolved_type_params()) {
             if (!v.definition) {
                 // immediately called or returned generic function
                 // -> try to instantiate the specialization
@@ -741,7 +743,7 @@ private:
 
         if (generic_fn.is_specialized())
             return {};  // already specialized
-        if (!generic_fn.is_generic() || !generic_fn.has_any_generic())
+        if (!generic_fn.is_generic() || !(generic_fn.has_any_generic() || generic_scope.has_unresolved_type_params()))
             return {};  // not generic, nothing to specialize
         if (generic_fn.signature().params.size() > m_call_sig.n_args())
             return {};  // not enough call args

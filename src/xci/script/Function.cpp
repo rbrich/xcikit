@@ -256,4 +256,14 @@ size_t Scope::nonlocal_raw_offset(Index index, const TypeInfo& ti) const
 }
 
 
+bool Scope::has_unresolved_type_params() const
+{
+    SymbolTable& symtab = function().symtab();
+    return std::any_of(symtab.begin(), symtab.end(), [this, &symtab](const Symbol& sym) {
+        return sym.type() == Symbol::TypeVar && sym.name().front() != '$' &&
+               m_type_args.get(symtab.find(sym)).is_unknown();
+    });
+}
+
+
 } // namespace xci::script
