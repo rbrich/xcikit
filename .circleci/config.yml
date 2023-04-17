@@ -89,7 +89,7 @@ jobs:
           command: ./detect_system_deps.py widgets script | tail -n1 | tee system_deps.txt
       - run:
           name: Conan package
-          command: conan create -pr:b=default . $(cat system_deps.txt) << parameters.build-args >>
+          command: conan create -pr:b=$CONAN_DEFAULT_PROFILE . $(cat system_deps.txt) << parameters.build-args >>
 
 workflows:
   version: 2
