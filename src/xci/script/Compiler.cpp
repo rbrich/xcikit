@@ -46,7 +46,7 @@ public:
             fn.ensure_ast_copy();
             return;
         }
-        if (fn.is_undefined() || (fn.is_generic() && !fn.has_compile())) {
+        if (fn.is_undefined()) {
             fn.set_code();
             auto* orig_code = m_code;
             m_code = &fn.code();
@@ -217,7 +217,7 @@ public:
                 break;
             }
             case Symbol::TypeId: {
-                value::Int32 type_id_val((int32_t) v.index);
+                const value::Int32 type_id_val((int32_t) v.index);
                 if (m_intrinsic) {
                     m_instruction_args.emplace_back(type_id_val);
                     return;
@@ -538,8 +538,6 @@ public:
             m_compiler.compile_function(scope, v.body);
         }
 
-        if (func.symtab().parent() != &function().symtab())
-            return;  // instance function -> just compile it
         if (scope.has_nonlocals()) {
             if (v.definition) {
                 /*if (!func.has_parameters()) {
@@ -576,16 +574,6 @@ public:
 
     void visit(ast::Cast& v) override {
         v.expression->apply(*this);
-        if (v.to_type.is_void()) {
-            // cast to Void - remove the expression result from stack
-            v.expression->type_info().foreach_heap_slot([this](size_t offset) {
-                // DEC_REF <offset>
-                function().code().add_L1(Opcode::DecRef, offset);
-            });
-            // DROP 0 <size>
-            function().code().add_L2(Opcode::Drop, 0, v.expression->type_info().size());
-            return;
-        }
         if (v.cast_function)
             v.cast_function->apply(*this);
     }
@@ -765,7 +753,7 @@ void Compiler::compile_all_functions(Scope& main)
             continue; // already compiled
         if (!fn.has_compile()) {
             // keep generic, make sure AST is copied
-            assert(fn.has_any_generic());
+            assert(fn.has_any_generic() || scope.has_unresolved_type_params());
             fn.ensure_ast_copy();
             continue;
         }

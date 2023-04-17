@@ -257,6 +257,19 @@ SymbolPointer SymbolTable::find_last_of(Symbol::Type type)
 }
 
 
+SymbolPointerList SymbolTable::filter(Symbol::Type type)
+{
+    SymbolPointerList res;
+    Index i = 0;
+    for (const auto& sym : m_symbols) {
+        if (sym.type() == type)
+            res.emplace_back(*this, i);
+        ++i;
+    }
+    return res;
+}
+
+
 SymbolPointerList SymbolTable::filter(const std::string& name, Symbol::Type type)
 {
     SymbolPointerList res;

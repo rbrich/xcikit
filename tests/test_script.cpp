@@ -536,6 +536,7 @@ TEST_CASE( "User-defined types", "[script][interpreter]" )
     CHECK(interpret_std(my_tuple + R"(a = ("hello", 42):MyTuple; a)") == R"(("hello", 42))");
     CHECK_THROWS_AS(interpret_std(my_tuple + "(1, 2):MyTuple"), FunctionNotFound);  // bad cast
     // struct member access
+    CHECK(interpret(R"( (name="hello", age=42, valid=true).age )") == "42");
     CHECK(interpret(my_struct + R"( a:MyStruct = (name="hello", age=42); a.name; a.age)") == R"("hello";42)");
     CHECK(interpret(R"(a = (name="hello", age=42, valid=true); a.name; a.age; a.valid)") == R"("hello";42;true)");
     CHECK(interpret(my_struct + R"(f = fun a:MyStruct { a.name }; f (name="hello", age=42))") == R"("hello")");
@@ -824,6 +825,8 @@ TEST_CASE( "If-expression", "[script][interpreter]" )
 TEST_CASE( "Casting", "[script][interpreter]" )
 {
     CHECK(interpret_std("\"drop this\":Void") == "()");
+    CHECK(interpret_std("{42}:Void") == "()");
+    CHECK(interpret_std("(fun x { x + 1 }):Void") == "()");
     CHECK(interpret_std("\"drop this\":()") == "()");
     CHECK(interpret_std("\"noop\":String") == "\"noop\"");
     CHECK(interpret_std("42:Int64") == "42L");
@@ -1002,6 +1005,25 @@ TEST_CASE( "Compiler intrinsics", "[script][interpreter]" )
 }
 
 
+TEST_CASE( "Explicit type params", "[script][interpreter]")
+{
+    // no generic params or return value, only an explicit type param,
+    // which is used directly in the body and requires explicit instantiations
+    CHECK(interpret("type_id = fun<T> () -> Int { __type_id<T> }; "
+                    "x = type_id<Int>; x; type_id<String>; type_id<Void>") == "6;10;0");
+}
+
+
+TEST_CASE( "Type introspection", "[script][interpreter]")
+{
+    CHECK(interpret_std("type_name<Void>; type_name<String>; type_name<Int>") == R"=("()";"String";"Int32")=");
+    CHECK(interpret_std("type_name<(Float,String)>; type_name<[Int64]>") == R"=("(Float32, String)";"[Int64]")=");
+    CHECK(interpret_std("type_name<(name:String, age:Int)>") == R"=("(name: String, age: Int32)")=");
+    CHECK(interpret_std("X=Int; type_name<X>") == R"=("Int32")=");
+    CHECK(interpret_std("type MyInt=Int; type_name<MyInt>") == R"=("MyInt")=");
+}
+
+
 TEST_CASE( "Native to TypeInfo mapping", "[script][native]" )
 {
     CHECK(native::make_type_info<void>().is_void());
@@ -1032,7 +1054,7 @@ TEST_CASE( "Native to Value mapping", "[script][native]" )
     CHECK(native::ValueType<int64_t>(1ll << 60).value() == 1ll << 60);
     CHECK(native::ValueType<float>(3.14f).value() == 3.14f);
     CHECK(native::ValueType<double>(2./3).value() == 2./3);
-    native::ValueType<std::string>str ("test"s);
+    const native::ValueType<std::string> str ("test"s);
     CHECK(str.value() == "test"s);
     str.decref();
 }

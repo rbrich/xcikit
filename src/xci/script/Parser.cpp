@@ -145,7 +145,8 @@ struct Type: sor< ParenthesizedType, ListType, TypeName > {};
 // * in general, rules inside parentheses or brackets use NSC, rules outside use SC
 // * this allows leaving out semicolons but still support multiline expressions
 template<class S> struct Call: seq< ExprCallable, plus<RS, S, ExprArgSafe> > {};
-template<class S> struct DotCall: if_must< one<'.'>, SC, seq< ExprCallable, star<RS, S, ExprArgSafe> > > {};
+template<class S> struct DotCallRight: seq< ExprCallable, star<RS, S, ExprArgSafe> > {};
+template<class S> struct DotCall: if_must< one<'.'>, SC, DotCallRight<S> > {};
 template<class S> struct ExprOperand: sor<Call<S>, ExprArgSafe, ExprPrefix> {};
 template<class S> struct ExprInfixRight: seq< sor< DotCall<S>, seq<InfixOperator, NSC, ExprOperand<S>> >, S, opt< ExprInfixRight<S> > > {};
 template<class S> struct TrailingComma: opt<S, one<','>> {};
@@ -157,7 +158,7 @@ struct Block: if_must< one<'{'>, NSC, sor< one<'}'>, seq<SepList<Statement>, NSC
 struct Function: sor< Block, if_must< KeywordFun, NSC, FunctionDecl, NSC, Block> > {};
 struct ParenthesizedExpr: if_must< one<'('>, NSC, opt<Expression<NSC>, NSC>, one<')'> > {};
 struct ExprPrefix: if_must< PrefixOperator, SC, ExprOperand<SC>, SC > {};
-struct TypeArgs: seq< one<'<'>, Type, one<'>'> > {};
+struct TypeArgs: seq< one<'<'>, Type, SC, star_must<one<','>, SC, Type, SC>, one<'>'> > {};
 struct Reference: seq<Identifier, opt<TypeArgs>, not_at<one<'"'>>> {};
 struct List: if_must< one<'['>, NSC, opt<ExprInfix<NSC>, NSC>, one<']'> > {};
 struct Cast: seq<SC, one<':'>, SC, Type> {};
@@ -872,7 +873,7 @@ struct Action<Type> : change_states< std::unique_ptr<ast::Type> >  {
 
     template<typename Input>
     static void success(const Input &in, std::unique_ptr<ast::Type>& type, ast::Reference& ref) {
-        ref.type_arg = std::move(type);
+        ref.type_args.push_back(std::move(type));
     }
 };
 
@@ -1393,6 +1394,8 @@ template<> ErrMsg Control<until<eolf>>::errmsg = {"unterminated comment", {}};
 template<> ErrMsg Control<Expression<SC>>::errmsg = {"expected expression", {}};
 template<> ErrMsg Control<Expression<NSC>>::errmsg = {"expected expression", {}};
 template<> ErrMsg Control<DeclParams>::errmsg = {"expected function parameter declaration", {}};
+template<> ErrMsg Control<DotCallRight<SC>>::errmsg = {"expected function name and args", {}};
+template<> ErrMsg Control<DotCallRight<NSC>>::errmsg = {"expected function name and args", {}};
 template<> ErrMsg Control<ExprInfixRight<SC>>::errmsg = {"expected infix operator", {}};
 template<> ErrMsg Control<ExprInfixRight<NSC>>::errmsg = {"expected infix operator", {}};
 template<> ErrMsg Control<Variable>::errmsg = {"expected variable name", {}};
@@ -1401,6 +1404,7 @@ template<> ErrMsg Control<Type>::errmsg = {"expected type", {}};
 template<> ErrMsg Control<TypeName>::errmsg = {"expected type name", {}};
 template<> ErrMsg Control<StringContent>::errmsg = {"unclosed string literal", {}};
 template<> ErrMsg Control<RawStringContent>::errmsg = {"unclosed raw string literal", {}};
+template<> ErrMsg Control<FunctionDecl>::errmsg = {"expected function declaration", {}};
 
 // default message
 #ifndef NDEBUG

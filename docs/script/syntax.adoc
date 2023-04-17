@@ -9,7 +9,7 @@ endif::[]
 
 = Fire Script
 
-*_Language description, v0.9_*
+*_Language description, v0.10_*
 
 toc::[]
 
@@ -803,6 +803,7 @@ A function returning `()` doesn't push any data on the stack.
 The size of the value is effectively zero, so the value doesn't exist at all.
 It's only known to the compiler for the purpose of type checking.
 
+[#user-defined-types]
 === User-defined types
 
 User-defined types are made by giving a name to a type, or to a composition of types.
@@ -1038,6 +1039,43 @@ Comprehensions:
 [2*x for x in [1..10] if x > 3]
 [2*x | x <= [1..10], x > 3]
 ----
+
+
+== Type introspection
+
+There is a set of builtin functions that can be called on types to obtain various meta information.
+
+The functions are usually generic, instantiated with type arguments, and taking no real arguments.
+
+[source,fire]
+----
+type_name = fun<T> Void -> String { /* compiler intrinsics */ }
+// Used as:
+type_name<String>   // -> "String"
+String.type_name    // equivalent
+----
+
+The last line is a syntax sugar.
+Dot-call on a type is transformed into applying that type as a type argument of the function.
+It can still take normal arguments:
+
+[source,fire]
+----
+String.myfun "hello"  // => myfun<String> "hello"
+----
+
+A special builtin `TypeOf` can be used to obtain type of an expression.
+It takes a single argument and returns its type.
+It can only be used in context where a type is expected:
+
+[source,fire]
+----
+String   // syntax error
+TypeOf "abc"   // syntax error
+(TypeOf "abc").type_name     // -> "String"
+type_name<TypeOf "abc">     // -> "String"
+----
+
 
 [#side-effects]
 == Side Effects

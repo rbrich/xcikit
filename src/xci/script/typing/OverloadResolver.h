@@ -54,6 +54,7 @@ struct Candidate {
     Index scope_index;
     SymbolPointer symptr;
     TypeInfo type;
+    TypeArgs type_args;
     MatchScore match;
 };
 
@@ -62,7 +63,7 @@ struct Candidate {
 std::pair<const Candidate*, bool> find_best_candidate(const std::vector<Candidate>& candidates);
 
 /// Resolve type variables in `signature` according to `call_sig`
-TypeArgs specialize_signature(const SignaturePtr& signature, const CallSignature& call_sig);
+TypeArgs specialize_signature(const SignaturePtr& signature, const CallSignature& call_sig, TypeArgs call_type_args = {});
 
 /// Resolve type variables in `call_args` that are concrete in `signature`
 TypeArgs resolve_generic_args_to_signature(const Signature& signature, const CallSignature& call_sig);

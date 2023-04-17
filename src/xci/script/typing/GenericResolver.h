@@ -15,7 +15,10 @@
 
 namespace xci::script {
 
+using UnexpectedTypeCallback = std::function<void(const TypeInfo& exp, const TypeInfo& got)>;
 
+void set_type_arg(SymbolPointer var, const TypeInfo& deduced, TypeArgs& type_args,
+                  const UnexpectedTypeCallback& exc_cb);
 void get_type_arg(SymbolPointer var, TypeInfo& sig, const TypeArgs& type_args);
 
 void resolve_generic_type(TypeInfo& sig, const TypeArgs& type_args);
@@ -26,7 +29,7 @@ void resolve_type_vars(Signature& signature, const Scope& scope);
 
 void specialize_arg(const TypeInfo& sig, const TypeInfo& deduced,
                     TypeArgs& type_args,
-                    const std::function<void(const TypeInfo& exp, const TypeInfo& got)>& exc_cb);
+                    const UnexpectedTypeCallback& exc_cb);
 
 /// check `scope` for TypeVar symbols and store their resolved type to scope
 void store_resolved_param_type_vars(Scope& scope, const TypeArgs& type_args);

@@ -393,13 +393,14 @@ struct Reference: public Expression {
     const TypeInfo& type_info() const override { return ti; }
 
     Identifier identifier;
-    std::unique_ptr<Type> type_arg;  // explicit type argument: e.g. <Int>
+    std::vector<std::unique_ptr<Type>> type_args;  // explicit type arguments: e.g. myfun<Int, String>
 
     // resolved function/method:
     SymbolPointerList sym_list;  // list of overloaded Functions, or Instances in case of Method
     Module* module = nullptr;   // module with referenced function
     Index index = no_index;     // index of referenced function scope in module
     TypeInfo ti;
+    std::vector<TypeInfo> type_args_ti;
 };
 
 struct Call: public Expression {

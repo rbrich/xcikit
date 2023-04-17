@@ -1,12 +1,14 @@
 // Builtin.cpp created on 2019-05-20 as part of xcikit project
 // https://github.com/rbrich/xcikit
 //
-// Copyright 2019–2022 Radek Brich
+// Copyright 2019–2023 Radek Brich
 // Licensed under the Apache License, Version 2.0 (see LICENSE file)
 
 #include "Builtin.h"
+#include "dump.h"
 #include <xci/core/string.h>
 #include <xci/compat/macros.h>
+#include <sstream>
 
 namespace xci::script {
 
@@ -411,8 +413,24 @@ static void introspect_module(Stack& stack, void*, void*)
 }
 
 
+static void introspect_type_name(Stack& stack, void*, void*)
+{
+    auto type_id = stack.pull<value::Int32>().value();
+    const Module& mod = stack.frame().function.module();
+    std::ostringstream os;
+    if (type_id < 32) {
+        // builtin module
+        os << mod.get_imported_module(0).get_type(type_id);
+    } else {
+        os << mod.get_type(type_id - 32);
+    }
+    stack.push(value::String{os.str()});
+}
+
+
 void BuiltinModule::add_introspections()
 {
+    add_native_function("__type_name", {ti_int32()}, ti_string(), introspect_type_name);
     // return the builtin module
     add_native_function("__builtin",
             [](void* m) -> Module& { return *static_cast<Module*>(m); },

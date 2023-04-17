@@ -198,18 +198,18 @@ struct UnexpectedGenericFunction : public ScriptError {
 
 
 struct FunctionNotFound : public ScriptError {
-    explicit FunctionNotFound(string_view name, string_view args,
+    explicit FunctionNotFound(string_view fn_desc,
                               string_view candidates, const SourceLocation& loc)
-        : ScriptError(fmt::format("function not found: {}: {}\n"
-                             "   Candidates:\n{}", name, args, candidates), loc) {}
+        : ScriptError(fmt::format("function not found: {}\n"
+                             "   Candidates:\n{}", fn_desc, candidates), loc) {}
 };
 
 
 struct FunctionConflict : public ScriptError {
-    explicit FunctionConflict(string_view name, string_view args,
+    explicit FunctionConflict(string_view fn_desc,
                               string_view candidates, const SourceLocation& loc)
-            : ScriptError(fmt::format("function cannot be uniquely resolved: {}: {}\n"
-                                 "   Candidates:\n{}", name, args, candidates), loc) {}
+            : ScriptError(fmt::format("function cannot be uniquely resolved: {}\n"
+                                 "   Candidates:\n{}", fn_desc, candidates), loc) {}
 };
 
 

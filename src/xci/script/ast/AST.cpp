@@ -192,8 +192,7 @@ void Reference::copy_to(Reference& r) const
 {
     Expression::copy_to(r);
     r.identifier = identifier;
-    if (type_arg)
-        r.type_arg = type_arg->make_copy();
+    r.type_args = copy_ptr_vector(type_args);
     r.sym_list = sym_list;
     r.module = module;
     r.index = index;
