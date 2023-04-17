@@ -102,6 +102,10 @@ class XcikitConan(ConanFile):
         "freetype/*:with_bzip2": False,
         "freetype/*:with_brotli": False,
         "harfbuzz/*:with_glib": False,
+        "vulkan-loader/*:with_wsi_xcb": False,
+        "vulkan-loader/*:with_wsi_xlib": False,
+        "vulkan-loader/*:with_wsi_wayland": False,
+        "vulkan-loader/*:with_wsi_directfb": False,
     }
 
     exports_sources = ("VERSION", "CMakeLists.txt", "config.h.in", "xcikit-config.cmake.in",
