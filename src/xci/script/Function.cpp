@@ -17,14 +17,14 @@ Function::Function()
 {}
 
 
-Function::Function(Module& module)
-        : m_module(&module),
+Function::Function(Module& mod)
+        : m_module(&mod),
           m_signature(std::make_shared<Signature>())
 {}
 
 
-Function::Function(Module& module, SymbolTable& symtab)
-        : m_module(&module), m_symtab(&symtab),
+Function::Function(Module& mod, SymbolTable& symtab)
+        : m_module(&mod), m_symtab(&symtab),
           m_signature(std::make_shared<Signature>())
 {
     m_symtab->set_function(this);
@@ -94,6 +94,15 @@ std::vector<TypeInfo> Function::closure_types() const
     closure.reserve(closure.size() + partial().size());
     std::copy(partial().cbegin(), partial().cend(), std::back_inserter(closure));
     return closure;
+}
+
+
+size_t Function::num_type_params() const
+{
+    return std::count_if(symtab().begin(), symtab().end(),
+             [](const Symbol& sym) {
+                 return sym.type() == Symbol::TypeVar && sym.name().front() != '$';
+             });
 }
 
 

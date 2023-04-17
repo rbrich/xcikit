@@ -559,7 +559,7 @@ private:
             if (symptr->type() == Symbol::Function) {
                 scope_idx = symptr.get_generic_scope_index();
                 auto& fn = symmod->get_scope(scope_idx).function();
-                if (type_args.size() > fn.symtab().count(Symbol::TypeVar)) {
+                if (type_args.size() > fn.num_type_params()) {
                     // skip - not enough type vars for explicit type args
                     candidates.push_back({symmod, scope_idx, symptr, TypeInfo{fn.signature_ptr()}, {}, MatchScore{-1}});
                     continue;
@@ -569,9 +569,12 @@ private:
                     unsigned i = 0;
                     bool compatible = true;
                     for (auto var : fn.symtab().filter(Symbol::TypeVar)) {
-                        set_type_arg(var, type_args[i++], res_type_args,
-                                     [&compatible](const TypeInfo& exp, const TypeInfo& got) { compatible = false; });
-                        if (i >= type_args.size())
+                        if (var->name().front() == '$')
+                            continue;
+                        set_type_arg(var, type_args[i], res_type_args,
+                                     [&compatible](const TypeInfo& exp, const TypeInfo& got)
+                                     { compatible = false; });
+                        if (++i >= type_args.size())
                             break;
                     }
                     if (!compatible) {

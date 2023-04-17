@@ -41,8 +41,8 @@ class Stack;
 class Function {
 public:
     Function();  // only for deserialization!
-    explicit Function(Module& module);  // only for deserialization!
-    explicit Function(Module& module, SymbolTable& symtab);
+    explicit Function(Module& mod);  // only for deserialization!
+    explicit Function(Module& mod, SymbolTable& symtab);
     Function(Function&& rhs) noexcept;
     Function& operator =(Function&&) = delete;
 
@@ -111,6 +111,7 @@ public:
     bool has_any_generic() const { return m_signature->has_any_generic(); }
     bool has_generic_params() const { return m_signature->has_generic_params(); }
     bool has_generic_return_type() const { return m_signature->has_generic_return_type(); }
+    size_t num_type_params() const;
 
     // Kind of function body
 

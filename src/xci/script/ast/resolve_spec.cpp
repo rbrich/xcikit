@@ -763,7 +763,8 @@ private:
         if (!type_args.empty()) {
             unsigned i = 0;
             for (auto var : fn.symtab().filter(Symbol::TypeVar)) {
-                assert(var->name().front() != '$');
+                if (var->name().front() == '$')
+                    continue;
                 set_type_arg(var, type_args[i], explicit_type_args,
                              [i, &loc](const TypeInfo& exp, const TypeInfo& got)
                              { throw UnexpectedArgumentType(i, exp, got, loc); });
